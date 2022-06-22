@@ -108,10 +108,38 @@ func (f flowkitClient) SendTransaction(
 		return nil, nil, err
 	}
 
-	tx.SetSigner(proposer)
-	tx.Sign()
+	tx, err = sign(proposer, tx)
+	if err != nil {
+		return nil, nil, err
+	}
 
-	return f.services.Transactions.Send(signer, code, codeFilename, gasLimit, args, network)
+	for _, auth := range authorizers {
+		tx, err = sign(auth, tx)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	tx, err = sign(payer, tx)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return f.services.Transactions.SendSigned(tx.FlowTransaction().Encode(), true)
+}
+
+func sign(signer *flowkit.Account, tx *flowkit.Transaction) (*flowkit.Transaction, error) {
+	err := tx.SetSigner(signer)
+	if err != nil {
+		return nil, err
+	}
+
+	tx, err = tx.Sign()
+	if err != nil {
+		return nil, err
+	}
+
+	return tx, nil
 }
 
 func (f flowkitClient) GetAccount(address flow.Address) (*flow.Account, error) {
