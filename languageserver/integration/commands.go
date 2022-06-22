@@ -155,7 +155,7 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...json.RawMe
 		return nil, fmt.Errorf("failed to parse JSON arguments")
 	}
 
-	_, txResult, err := i.sharedServices.SendTransaction(signers, code, txArgs)
+	_, txResult, err := i.flowClient.SendTransaction(signers, code, txArgs)
 	if err != nil {
 		return nil, errorWithMessage(conn, ErrorMessageTransactionError, err)
 	}
@@ -223,7 +223,7 @@ func (i *FlowIntegration) executeScript(conn protocol.Conn, args ...json.RawMess
 	}
 
 	// Execute script via shared library
-	scriptResult, err := i.sharedServices.ExecuteScript(code, scriptArgs, "", "")
+	scriptResult, err := i.flowClient.ExecuteScript(code, scriptArgs, "", "")
 	if err != nil {
 		return nil, errorWithMessage(conn, ErrorMessageScriptExecution, err)
 	}
@@ -274,7 +274,7 @@ func (i *FlowIntegration) switchActiveAccount(conn protocol.Conn, args ...json.R
 
 // createAccount creates a new account and returns its address.
 func (i *FlowIntegration) createAccount(conn protocol.Conn, args ...json.RawMessage) (interface{}, error) {
-	account, err := i.sharedServices.CreateAccount()
+	account, err := i.flowClient.CreateAccount()
 	if err != nil {
 		return nil, errorWithMessage(conn, ErrorMessageAccountCreate, err)
 	}
@@ -308,7 +308,7 @@ func (i *FlowIntegration) createDefaultAccounts(conn protocol.Conn, args ...json
 
 	accounts := make([]*flow.Account, count+1)
 	for index := 1; index < count+1; index++ {
-		account, err := i.sharedServices.CreateAccount()
+		account, err := i.flowClient.CreateAccount()
 		if err != nil {
 			return nil, errorWithMessage(conn, ErrorMessageAccountCreate, err)
 		}
@@ -375,7 +375,7 @@ func (i *FlowIntegration) deployContract(conn protocol.Conn, args ...json.RawMes
 		return nil, errorWithMessage(conn, fmt.Sprintf("failed to load contract code: %s", path.Path), err)
 	}
 
-	_, deployError := i.sharedServices.DeployContract(address, name, code)
+	_, deployError := i.flowClient.DeployContract(address, name, code)
 	if deployError != nil {
 		return nil, errorWithMessage(conn, ErrorMessageDeploy, deployError)
 	}

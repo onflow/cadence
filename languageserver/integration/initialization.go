@@ -55,7 +55,7 @@ func (i *FlowIntegration) initialize(initializationOptions any) error {
 		return err
 	}
 
-	i.sharedServices = services.NewServices(grpcGateway, state, logger)
+	i.flowClient = services.NewServices(grpcGateway, state, logger)
 	i.state = state
 
 	return nil

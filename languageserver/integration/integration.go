@@ -33,8 +33,8 @@ type FlowIntegration struct {
 
 	activeAccount ClientAccount
 
-	sharedServices flowClient
-	state          *flowkit.State
+	flowClient flowClient
+	state      *flowkit.State
 }
 
 func NewFlowIntegration(s *server.Server, enableFlowClient bool) (*FlowIntegration, error) {
