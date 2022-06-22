@@ -265,7 +265,11 @@ func (l FlowLocation) QualifiedIdentifier(typeID common.TypeID) string {
 }
 
 func (l FlowLocation) String() string {
-	return "flow"
+	return FlowLocationPrefix
+}
+
+func (l FlowLocation) Description() string {
+	return FlowLocationPrefix
 }
 
 func (l FlowLocation) MarshalJSON() ([]byte, error) {

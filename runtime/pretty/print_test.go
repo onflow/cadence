@@ -37,6 +37,9 @@ func (testError) Error() string {
 }
 
 func TestPrintBrokenCode(t *testing.T) {
+
+	t.Parallel()
+
 	const code = `pub resource R {}`
 	lineCount := len(strings.Split(code, "\n"))
 
@@ -67,5 +70,45 @@ func TestPrintBrokenCode(t *testing.T) {
 	require.Equal(t,
 		"error: test error\n"+
 			" --> test:3:0\n",
-		sb.String())
+		sb.String(),
+	)
+}
+
+func TestPrintTabs(t *testing.T) {
+
+	t.Parallel()
+
+	const code = "\t  \t   let x = 1"
+
+	location := common.StringLocation("test")
+
+	var sb strings.Builder
+	printer := NewErrorPrettyPrinter(&sb, false)
+	err := printer.PrettyPrintError(
+		testError{
+			Range: ast.Range{
+				StartPos: ast.Position{
+					Line:   1,
+					Column: 7,
+				},
+				EndPos: ast.Position{
+					Line:   1,
+					Column: 9,
+				},
+			},
+		},
+		location,
+		map[common.Location]string{
+			location: code,
+		},
+	)
+	require.NoError(t, err)
+	require.Equal(t,
+		"error: test error\n"+
+			" --> test:1:7\n"+
+			"  |\n"+
+			"1 | \t  \t   let x = 1\n"+
+			"  | \t  \t   ^^^\n",
+		sb.String(),
+	)
 }

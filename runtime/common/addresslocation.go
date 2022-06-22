@@ -98,6 +98,14 @@ func (l AddressLocation) QualifiedIdentifier(typeID TypeID) string {
 	return pieces[2]
 }
 
+func (l AddressLocation) Description() string {
+	return fmt.Sprintf(
+		"contract %s in account %s",
+		l.Name,
+		l.Address.Hex(),
+	)
+}
+
 func (l AddressLocation) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
 		Type    string

@@ -3005,45 +3005,6 @@ func TestRuntimeNoAtreeSendOnClosedChannelDuringCommit(t *testing.T) {
 	})
 }
 
-func TestStorageReadNoImplicitWrite(t *testing.T) {
-
-	t.Parallel()
-
-	rt := newTestInterpreterRuntime()
-
-	address, err := common.HexToAddress("0x1")
-	require.NoError(t, err)
-
-	runtimeInterface := &testRuntimeInterface{
-		storage: newTestLedger(nil, func(_, _, _ []byte) {
-			assert.FailNow(t, "unexpected write")
-		}),
-		getSigningAccounts: func() ([]Address, error) {
-			return []Address{address}, nil
-		},
-	}
-
-	err = rt.ExecuteTransaction(
-		Script{
-			Source: []byte((`
-              transaction {
-			    prepare(signer: AuthAccount) {
-			        let ref = getAccount(0x2)
-			            .getCapability(/public/test)
-			            .borrow<&AnyStruct>()
-                    assert(ref == nil)
-			    }
-              }
-            `)),
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  common.TransactionLocation{},
-		},
-	)
-	require.NoError(t, err)
-}
-
 // TestRuntimeStorageEnumCase tests the writing an enum case to storage,
 // reading it back from storage, as well as using it to index into a dictionary.
 //
@@ -3216,4 +3177,43 @@ func TestRuntimeStorageEnumCase(t *testing.T) {
 		},
 		loggedMessages,
 	)
+}
+
+func TestStorageReadNoImplicitWrite(t *testing.T) {
+
+	t.Parallel()
+
+	rt := newTestInterpreterRuntime()
+
+	address, err := common.HexToAddress("0x1")
+	require.NoError(t, err)
+
+	runtimeInterface := &testRuntimeInterface{
+		storage: newTestLedger(nil, func(_, _, _ []byte) {
+			assert.FailNow(t, "unexpected write")
+		}),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{address}, nil
+		},
+	}
+
+	err = rt.ExecuteTransaction(
+		Script{
+			Source: []byte((`
+              transaction {
+			    prepare(signer: AuthAccount) {
+			        let ref = getAccount(0x2)
+			            .getCapability(/public/test)
+			            .borrow<&AnyStruct>()
+                    assert(ref == nil)
+			    }
+              }
+            `)),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  common.TransactionLocation{},
+		},
+	)
+	require.NoError(t, err)
 }
