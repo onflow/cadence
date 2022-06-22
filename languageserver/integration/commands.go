@@ -20,21 +20,14 @@ package integration
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/url"
-	"strings"
-	"time"
-
-	"github.com/onflow/cadence"
-
-	"github.com/onflow/flow-cli/pkg/flowkit"
-	"github.com/onflow/flow-go-sdk"
-	"github.com/onflow/flow-go-sdk/crypto"
 
 	"github.com/onflow/cadence/languageserver/protocol"
 	"github.com/onflow/cadence/languageserver/server"
+	"github.com/onflow/flow-cli/pkg/flowkit"
+	"github.com/onflow/flow-go-sdk"
 )
 
 const (
@@ -84,10 +77,6 @@ func (i *FlowIntegration) commands() []server.Command {
 			Name:    CommandCreateDefaultAccounts,
 			Handler: i.createDefaultAccounts,
 		},
-		{
-			Name:    CommandInitAccountManager,
-			Handler: i.initAccountManager,
-		},
 	}
 }
 
@@ -97,54 +86,6 @@ func (i *FlowIntegration) commands() []server.Command {
 type ClientAccount struct {
 	Name    string       `json:"name"`
 	Address flow.Address `json:"address"`
-}
-
-// makeManagerCode replaces service account placeholder with actual address and returns byte array
-//
-// There should be exactly 2 arguments:
-//   * Cadence script template
-//   * service account address represented as string sans 0x prefix
-func makeManagerCode(script string, serviceAddress string) []byte {
-	injected := strings.ReplaceAll(script, "SERVICE_ACCOUNT_ADDRESS", serviceAddress)
-	return []byte(injected)
-}
-
-// initAccountManager initializes Account manager on service account
-//
-// No arguments are expected
-func (i *FlowIntegration) initAccountManager(conn protocol.Conn, args ...json.RawMessage) (interface{}, error) {
-	serviceAccount, err := i.state.EmulatorServiceAccount()
-	if err != nil {
-		return nil, errorWithMessage(conn, ErrorMessageServiceAccount, err)
-	}
-
-	serviceAddress := serviceAccount.Address().String()
-
-	// Check if emulator is up
-	err = i.waitForNetwork()
-	if err != nil {
-		return nil, errorWithMessage(conn, ErrorMessageEmulator, err)
-	}
-
-	name := "AccountManager"
-	code := makeManagerCode(fmt.Sprintf(contractAccountManager, serviceAccountName), serviceAddress)
-	update, err := i.isContractDeployed(serviceAccount.Address(), name)
-	if err != nil {
-		return nil, errorWithMessage(conn, fmt.Sprintf("can't read contract from account %s", serviceAddress), err)
-	}
-
-	_, deployError := i.sharedServices.DeployContract(
-		serviceAccount,
-		name,
-		code,
-		update,
-	)
-
-	if deployError != nil {
-		return nil, errorWithMessage(conn, ErrorMessageDeploy, err)
-	}
-
-	return nil, err
 }
 
 // sendTransaction handles submitting a transaction defined in the
@@ -338,12 +279,7 @@ func (i *FlowIntegration) createAccount(conn protocol.Conn, args ...json.RawMess
 		return nil, errorWithMessage(conn, ErrorMessageAccountCreate, err)
 	}
 
-	clientAccount, err := i.storeAccountHelper(conn, account.Address)
-	if err != nil {
-		return nil, errorWithMessage(conn, ErrorMessageAccountCreate, err)
-	}
-
-	return clientAccount, nil
+	return account, nil
 }
 
 // createDefaultAccounts creates a set of default accounts and returns their addresses.
@@ -370,32 +306,13 @@ func (i *FlowIntegration) createDefaultAccounts(conn protocol.Conn, args ...json
 
 	showMessage(conn, fmt.Sprintf("Creating %d default accounts", count))
 
-	// Check if emulator is up
-	err = i.waitForNetwork()
-	if err != nil {
-		return nil, errorWithMessage(conn, ErrorMessageEmulator, err)
-	}
-
-	accounts := make([]ClientAccount, count+1)
-
-	// Get service account
-	serviceAccount, err := i.state.EmulatorServiceAccount()
-	if err != nil {
-		return nil, errorWithMessage(conn, ErrorMessageServiceAccount, err)
-	}
-
-	// Add service account to a list of accounts
-	accounts[0] = ClientAccount{
-		Name:    serviceAccountName,
-		Address: serviceAccount.Address(),
-	}
-
+	accounts := make([]*flow.Account, count+1)
 	for index := 1; index < count+1; index++ {
-		account, err := i.createAccount(conn)
+		account, err := i.sharedServices.CreateAccount()
 		if err != nil {
 			return nil, errorWithMessage(conn, ErrorMessageAccountCreate, err)
 		}
-		accounts[index] = account.(ClientAccount)
+		accounts[index] = account //account.(ClientAccount) // todo see why return
 	}
 
 	return accounts, nil
@@ -441,120 +358,30 @@ func (i *FlowIntegration) deployContract(conn protocol.Conn, args ...json.RawMes
 		)
 	}
 
-	var to string
-	err = json.Unmarshal(args[2], &to)
+	var rawAddress string
+	err = json.Unmarshal(args[2], &rawAddress)
 	if err != nil {
 		return nil, errorWithMessage(
 			conn, ErrorMessageArguments,
 			fmt.Errorf("invalid address argument: %#+v: %w", args[2], err),
 		)
 	}
+	address := flow.HexToAddress(rawAddress)
 
-	showMessage(conn, fmt.Sprintf("Deploying contract %s to account %s", name, to))
-
-	// Send transaction via shared library
-	signer, err := i.state.EmulatorServiceAccount()
-	if err != nil {
-		return nil, errorWithMessage(conn, fmt.Sprintf("service account error"), err)
-	}
-
-	update, err := i.isContractDeployed(flow.HexToAddress(to), name)
-	if err != nil {
-		return nil, errorWithMessage(conn, fmt.Sprintf("can't read contract from account %s", to), err)
-	}
+	showMessage(conn, fmt.Sprintf("Deploying contract %s to account %s", name, rawAddress))
 
 	code, err := i.state.ReadFile(path.Path)
 	if err != nil {
 		return nil, errorWithMessage(conn, fmt.Sprintf("failed to load contract code: %s", path.Path), err)
 	}
 
-	_, deployError := i.sharedServices.DeployContract(signer, name, code, update)
+	_, deployError := i.sharedServices.DeployContract(address, name, code)
 	if deployError != nil {
 		return nil, errorWithMessage(conn, ErrorMessageDeploy, deployError)
 	}
 
 	showMessage(conn, fmt.Sprintf("Status: contract %s has been deployed to %s", name, to))
 	return nil, err
-}
-
-// getServicePrivateKey returns private key for service account
-func (i *FlowIntegration) getServicePrivateKey() (*crypto.PrivateKey, error) {
-	serviceAccount, err := i.state.EmulatorServiceAccount()
-	if err != nil {
-		return nil, err
-	}
-
-	return serviceAccount.Key().PrivateKey()
-}
-
-// storeAccountHelper sends transaction to store account on chain
-func (i *FlowIntegration) storeAccountHelper(conn protocol.Conn, address flow.Address) (newAccount ClientAccount, err error) {
-
-	serviceAccount, err := i.state.EmulatorServiceAccount()
-	if err != nil {
-		return ClientAccount{}, errorWithMessage(conn, ErrorMessageServiceAccount, err)
-	}
-
-	serviceAddress := serviceAccount.Address().String()
-
-	// Store new account
-	code := makeManagerCode(transactionAddAccount, serviceAddress)
-	txArgs := []cadence.Value{
-		cadence.NewAddress(address),
-	}
-
-	const gasLimit uint64 = 1000
-
-	_, txResult, err := i.sharedServices.SendTransaction(
-		serviceAccount,
-		nil,
-		serviceAccount,
-		code,
-		"",
-		gasLimit,
-		txArgs,
-		"",
-	)
-	if err != nil {
-		return ClientAccount{}, errorWithMessage(conn, ErrorMessageAccountStore, err)
-	}
-
-	events := flowkit.EventsFromTransaction(txResult)
-	name := strings.ReplaceAll(events[0].Values["name"], `"`, "")
-
-	newAccount = ClientAccount{
-		Name:    name,
-		Address: address,
-	}
-
-	return
-}
-
-func (i *FlowIntegration) isContractDeployed(address flow.Address, name string) (bool, error) {
-	account, err := i.sharedServices.GetAccount(address)
-
-	if err != nil {
-		return false, err
-	}
-
-	return account.Contracts[name] != nil, nil
-}
-func (i *FlowIntegration) waitForNetwork() error {
-	// Ping the emulator server for 30 seconds until it is available
-	timer := time.NewTimer(30 * time.Second)
-RetryLoop:
-	for {
-		select {
-		case <-timer.C:
-			return errors.New("emulator server timed out")
-		default:
-			_, err := i.sharedServices.Status.Ping("emulator")
-			if err == nil {
-				break RetryLoop
-			}
-		}
-	}
-	return nil
 }
 
 // showMessage sends a "show message" notification

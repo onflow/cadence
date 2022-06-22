@@ -17,10 +17,9 @@ type flowClient interface {
 	) (cadence.Value, error)
 
 	DeployContract(
-		account *flowkit.Account,
+		address flow.Address,
 		contractName string,
 		contractSource []byte,
-		update bool,
 	) (*flow.Account, error)
 
 	SendTransaction(
@@ -51,12 +50,17 @@ func (f flowkitClient) ExecuteScript(
 }
 
 func (f flowkitClient) DeployContract(
-	account *flowkit.Account,
+	address flow.Address,
 	contractName string,
 	contractSource []byte,
-	update bool,
 ) (*flow.Account, error) {
-	return f.services.Accounts.AddContract(account, contractName, contractSource, update)
+	service, err := f.state.EmulatorServiceAccount()
+	if err != nil {
+		return nil, err
+	}
+
+	account := createSigner(address, service)
+	return f.services.Accounts.AddContract(account, contractName, contractSource, true)
 }
 
 func (f flowkitClient) SendTransaction(
@@ -96,11 +100,7 @@ func (f flowkitClient) SendTransaction(
 	}
 	// sign with all authorizers
 	for _, auth := range authorizers {
-		signer := &flowkit.Account{}
-		signer.SetAddress(auth)
-		signer.SetKey(service.Key())
-
-		tx, err = sign(signer, tx)
+		tx, err = sign(createSigner(auth, service), tx)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -112,20 +112,6 @@ func (f flowkitClient) SendTransaction(
 	}
 
 	return f.services.Transactions.SendSigned(tx.FlowTransaction().Encode(), true)
-}
-
-func sign(signer *flowkit.Account, tx *flowkit.Transaction) (*flowkit.Transaction, error) {
-	err := tx.SetSigner(signer)
-	if err != nil {
-		return nil, err
-	}
-
-	tx, err = tx.Sign()
-	if err != nil {
-		return nil, err
-	}
-
-	return tx, nil
 }
 
 func (f flowkitClient) GetAccount(address flow.Address) (*flow.Account, error) {
@@ -150,4 +136,30 @@ func (f flowkitClient) CreateAccount() (*flow.Account, error) {
 		[]crypto.HashAlgorithm{crypto.SHA3_256},
 		nil,
 	)
+}
+
+// Helpers
+//
+
+// createSigner creates a new flowkit account used for signing but using the key of the existing account.
+func createSigner(address flow.Address, account *flowkit.Account) *flowkit.Account {
+	signer := &flowkit.Account{}
+	signer.SetAddress(address)
+	signer.SetKey(account.Key())
+	return signer
+}
+
+// sign sets the signer on a transaction and calls the sign method.
+func sign(signer *flowkit.Account, tx *flowkit.Transaction) (*flowkit.Transaction, error) {
+	err := tx.SetSigner(signer)
+	if err != nil {
+		return nil, err
+	}
+
+	tx, err = tx.Sign()
+	if err != nil {
+		return nil, err
+	}
+
+	return tx, nil
 }
