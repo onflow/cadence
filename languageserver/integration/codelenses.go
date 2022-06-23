@@ -209,11 +209,11 @@ func (i *FlowIntegration) resolveAccounts(signers []string) ([]flow.Address, []s
 	var absentAccounts []string
 	var resolvedAccounts []flow.Address
 	for _, signer := range signers {
-		resolvedAddress, _ := i.getAccountAddress(signer)
-		if resolvedAddress == flow.EmptyAddress {
+		account := i.flowClient.GetClientAccount(signer)
+		if account == nil {
 			absentAccounts = append(absentAccounts, signer)
 		} else {
-			resolvedAccounts = append(resolvedAccounts, resolvedAddress)
+			resolvedAccounts = append(resolvedAccounts, account.Address)
 		}
 	}
 	return resolvedAccounts, absentAccounts
@@ -321,9 +321,9 @@ func (i *FlowIntegration) contractCodeLenses(
 	signer string,
 ) *protocol.CodeLens {
 	var title string
-	resolvedAddress, _ := i.getAccountAddress(signer)
+	account := i.flowClient.GetClientAccount(signer)
 
-	if resolvedAddress == flow.EmptyAddress {
+	if account == nil {
 		title = fmt.Sprintf("%s Specified account %s does not exist",
 			prefixError,
 			signer,
@@ -343,7 +343,7 @@ func (i *FlowIntegration) contractCodeLenses(
 		signer,
 	)
 
-	arguments, _ := encodeJSONArguments(uri, name, resolvedAddress)
+	arguments, _ := encodeJSONArguments(uri, name, account.Address)
 
 	return makeCodeLens(
 		CommandDeployContract,
