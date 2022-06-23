@@ -25,26 +25,14 @@ import (
 	"errors"
 
 	"github.com/onflow/flow-go-sdk"
-	"github.com/onflow/flow-go-sdk/crypto"
 )
 
 // Config defines configuration for the Language Server. These options are
 // determined by the client and passed to the server at initialization.
 type Config struct {
-	// The address where the emulator is running.
-	EmulatorAddr string
-
-	// Active account
-	activeAccount ClientAccount
-
-	// path to flow.json
-	configPath string
-}
-
-type AccountPrivateKey struct {
-	PrivateKey crypto.PrivateKey
-	SigAlgo    crypto.SignatureAlgorithm
-	HashAlgo   crypto.HashAlgorithm
+	activeAccount    ClientAccount
+	numberOfAccounts int
+	configPath       string // path to flow.json
 }
 
 // configFromInitializationOptions creates a new config instance from the

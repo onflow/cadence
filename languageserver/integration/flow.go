@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"fmt"
 	"net/url"
 
 	"github.com/onflow/cadence"
@@ -18,13 +19,34 @@ type flowClient interface {
 	SendTransaction(authorizers []flow.Address, location *url.URL, args []cadence.Value) (*flow.TransactionResult, error)
 	GetAccount(address flow.Address) (*flow.Account, error)
 	CreateAccount() (*flow.Account, error)
+	GetClientAccount(name string) *ClientAccount
+	SetActiveClientAccount(name string) error
 }
 
 var _ flowClient = flowkitClient{}
 
+// todo: check if we need this struct at all, could we just use the flow.Account returned from the flowkit
+
+type ClientAccount struct {
+	Name    string
+	Address flow.Address
+}
+
+var names = []string{
+	"Alice", "Bob", "Charlie",
+	"Dave", "Eve", "Faythe",
+	"Grace", "Heidi", "Ivan",
+	"Judy", "Michael", "Niaj",
+	"Olivia", "Oscar", "Peggy",
+	"Rupert", "Sybil", "Ted",
+	"Victor", "Walter",
+}
+
 type flowkitClient struct {
-	services *services.Services
-	state    *flowkit.State
+	services      *services.Services
+	state         *flowkit.State
+	accounts      []*ClientAccount
+	activeAccount *ClientAccount
 }
 
 func NewFlowkitClient(config Config, loader flowkit.ReaderWriter) (*flowkitClient, error) {
@@ -45,10 +67,48 @@ func NewFlowkitClient(config Config, loader flowkit.ReaderWriter) (*flowkitClien
 		return nil, err
 	}
 
-	return &flowkitClient{
+	client := &flowkitClient{
 		services: services.NewServices(grpcGateway, state, logger),
 		state:    state,
-	}, nil
+	}
+
+	if config.numberOfAccounts > len(names) {
+		return nil, fmt.Errorf(fmt.Sprintf("can only use up to %d accounts", len(names)))
+	}
+
+	client.accounts = make([]*ClientAccount, config.numberOfAccounts)
+	for i := 0; i < config.numberOfAccounts; i++ {
+		account, err := client.CreateAccount()
+		if err != nil {
+			return nil, err
+		}
+
+		client.accounts[i] = &ClientAccount{
+			Name:    names[i],
+			Address: account.Address,
+		}
+	}
+	client.activeAccount = client.accounts[0] // make first active by default
+
+	return client, nil
+}
+
+func (f flowkitClient) GetClientAccount(name string) *ClientAccount {
+	for _, account := range f.accounts {
+		if account.Name == name {
+			return account
+		}
+	}
+	return nil
+}
+
+func (f flowkitClient) SetActiveClientAccount(name string) error {
+	account := f.GetClientAccount(name)
+	if account == nil {
+		return fmt.Errorf(fmt.Sprintf("account with a name %s not found", name))
+	}
+	f.activeAccount = account
+	return nil
 }
 
 func (f flowkitClient) ExecuteScript(

@@ -20,7 +20,6 @@ package integration
 
 import (
 	"fmt"
-	"io/ioutil"
 
 	"github.com/onflow/cadence"
 
@@ -28,10 +27,10 @@ import (
 	"github.com/onflow/flow-go-sdk"
 )
 
-func resolveFileImport(location common.StringLocation) (string, error) {
+func (i *FlowIntegration) resolveFileImport(location common.StringLocation) (string, error) {
 	filename := string(location)
 
-	data, err := ioutil.ReadFile(filename)
+	data, err := i.loader.ReadFile(filename)
 	if err != nil {
 		return "", err
 	}

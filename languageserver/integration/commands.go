@@ -79,14 +79,6 @@ func (i *FlowIntegration) commands() []server.Command {
 	}
 }
 
-// ClientAccount will be used to
-// * store active account on language server to sign transactions and deploy contracts
-// * return newly created accounts to client
-type ClientAccount struct {
-	Name    string       `json:"name"`
-	Address flow.Address `json:"address"`
-}
-
 // sendTransaction handles submitting a transaction defined in the
 // source document in VS Code.
 //
@@ -219,8 +211,7 @@ func (i *FlowIntegration) executeScript(conn protocol.Conn, args ...json.RawMess
 // when submitting transactions.
 //
 // There should be 2 arguments:
-//	 * name of the new active acount
-//   * address of the new active account
+//	 * name of the new active account
 func (i *FlowIntegration) switchActiveAccount(conn protocol.Conn, args ...json.RawMessage) (interface{}, error) {
 	err := server.CheckCommandArgumentCount(args, 2)
 	if err != nil {
@@ -237,21 +228,11 @@ func (i *FlowIntegration) switchActiveAccount(conn protocol.Conn, args ...json.R
 		)
 	}
 
-	var addressHex string
-	err = json.Unmarshal(args[1], &addressHex)
+	err = i.flowClient.SetActiveClientAccount(name)
 	if err != nil {
-		return nil, errorWithMessage(
-			conn,
-			ErrorMessageArguments,
-			fmt.Errorf("invalid address argument: %#+v: %w", args[1], err),
-		)
+		return nil, err
 	}
-	address := flow.HexToAddress(addressHex)
 
-	i.activeAccount = ClientAccount{
-		Name:    name,
-		Address: address,
-	}
 	return nil, nil
 }
 
@@ -263,44 +244,6 @@ func (i *FlowIntegration) createAccount(conn protocol.Conn, args ...json.RawMess
 	}
 
 	return account, nil
-}
-
-// todo this should be remove as its not needed to be called by the client anymore but should be part of the flow client bootstrap procedure
-
-// createDefaultAccounts creates a set of default accounts and returns their addresses.
-//
-// There should be exactly 1 argument:
-// * number of accounts to be created
-func (i *FlowIntegration) createDefaultAccounts(conn protocol.Conn, args ...json.RawMessage) (interface{}, error) {
-	err := server.CheckCommandArgumentCount(args, 1)
-	if err != nil {
-		return nil, errorWithMessage(conn, ErrorMessageArguments, err)
-	}
-
-	// Note that extension will send this value as float64 and not int
-	var n float64
-	err = json.Unmarshal(args[0], &n)
-	if err != nil {
-		return nil, errorWithMessage(
-			conn,
-			ErrorMessageArguments,
-			fmt.Errorf("invalid count argument: %#+v: %w", args[0], err),
-		)
-	}
-	count := int(n)
-
-	showMessage(conn, fmt.Sprintf("Creating %d default accounts", count))
-
-	accounts := make([]*flow.Account, count+1)
-	for index := 1; index < count+1; index++ {
-		account, err := i.flowClient.CreateAccount()
-		if err != nil {
-			return nil, errorWithMessage(conn, ErrorMessageAccountCreate, err)
-		}
-		accounts[index] = account //account.(ClientAccount) // todo see why return
-	}
-
-	return accounts, nil
 }
 
 // deployContract deploys the contract to the configured account with the code of the given
