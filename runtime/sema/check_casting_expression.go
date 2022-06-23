@@ -124,8 +124,8 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 						Range:        ast.NewRangeFromPositioned(checker.memoryGauge, leftHandExpression),
 					},
 				)
-			} else if checker.lintingEnabled && IsSubType(leftHandType, rightHandType) {
-				checker.Elaboration.AlwaysSucceedingCastTypes[expression] = struct {
+			} else if checker.lintingEnabled {
+				checker.Elaboration.RuntimeCastTypes[expression] = struct {
 					Left  Type
 					Right Type
 				}{Left: leftHandType, Right: rightHandType}
@@ -143,10 +143,12 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 		// the inferred-type of the expression. i.e: exprActualType == rightHandType
 		// Then, it is not possible to determine whether the target type is redundant.
 		// Therefore, don't check for redundant casts, if there are errors.
-		if checker.lintingEnabled &&
-			!hasErrors &&
-			isRedundantCast(leftHandExpression, exprActualType, rightHandType, checker.expectedType) {
-			checker.Elaboration.RedundantCastTypes[expression] = rightHandType
+		if checker.lintingEnabled && !hasErrors {
+			checker.Elaboration.StaticCastTypes[expression] = CastType{
+				ExprActualType: exprActualType,
+				TargetType:     rightHandType,
+				ExpectedType:   checker.expectedType,
+			}
 		}
 
 		return rightHandType
@@ -397,20 +399,4 @@ func FailableCastCanSucceed(subType, superType Type) bool {
 	}
 
 	return true
-}
-
-// isRedundantCast checks whether a simple cast is redundant.
-// Checks for two cases:
-//    - Case I: Contextually expected type is same as the casted type (target type).
-//    - Case II: Expression is self typed, and is same as the casted type (target type).
-func isRedundantCast(expr ast.Expression, exprInferredType, targetType, expectedType Type) bool {
-	if expectedType != nil &&
-		!expectedType.IsInvalidType() &&
-		expectedType.Equal(targetType) {
-		return true
-	}
-
-	checkCastVisitor := &CheckCastVisitor{}
-
-	return checkCastVisitor.IsRedundantCast(expr, exprInferredType, targetType)
 }

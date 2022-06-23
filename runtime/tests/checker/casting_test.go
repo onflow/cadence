@@ -5933,7 +5933,7 @@ func TestCheckResourceConstructorReturn(t *testing.T) {
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
 
-func TestCheckUnnecessaryCasts(t *testing.T) {
+func TestCheckStaticCastElaboration(t *testing.T) {
 
 	t.Parallel()
 
@@ -5949,9 +5949,9 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 
 			require.NoError(t, err)
 
-			require.Len(t, checker.Elaboration.RedundantCastTypes, 1)
-			for _, ty := range checker.Elaboration.RedundantCastTypes { // nolint:maprangecheck
-				assert.Equal(t, sema.Int8Type, ty)
+			require.Len(t, checker.Elaboration.StaticCastTypes, 1)
+			for _, cast := range checker.Elaboration.StaticCastTypes { // nolint:maprangecheck
+				assert.Equal(t, sema.Int8Type, cast.TargetType)
 			}
 		})
 
@@ -5964,9 +5964,9 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 
 			require.NoError(t, err)
 
-			require.Len(t, checker.Elaboration.RedundantCastTypes, 2)
-			for _, ty := range checker.Elaboration.RedundantCastTypes { // nolint:maprangecheck
-				assert.Equal(t, sema.Int8Type, ty)
+			require.Len(t, checker.Elaboration.StaticCastTypes, 2)
+			for _, cast := range checker.Elaboration.StaticCastTypes { // nolint:maprangecheck
+				assert.Equal(t, sema.Int8Type, cast.TargetType)
 			}
 		})
 
@@ -5979,9 +5979,9 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 
 			require.NoError(t, err)
 
-			require.Len(t, checker.Elaboration.RedundantCastTypes, 1)
-			for _, ty := range checker.Elaboration.RedundantCastTypes { // nolint:maprangecheck
-				assert.Equal(t, sema.Int8Type, ty)
+			require.Len(t, checker.Elaboration.StaticCastTypes, 2)
+			for _, cast := range checker.Elaboration.StaticCastTypes { // nolint:maprangecheck
+				assert.Equal(t, sema.Int8Type, cast.TargetType)
 			}
 		})
 
@@ -5994,9 +5994,9 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 
 			require.NoError(t, err)
 
-			require.Len(t, checker.Elaboration.RedundantCastTypes, 1)
-			for _, ty := range checker.Elaboration.RedundantCastTypes { // nolint:maprangecheck
-				assert.Equal(t, sema.CharacterType, ty)
+			require.Len(t, checker.Elaboration.StaticCastTypes, 1)
+			for _, cast := range checker.Elaboration.StaticCastTypes { // nolint:maprangecheck
+				assert.Equal(t, sema.CharacterType, cast.TargetType)
 			}
 		})
 
@@ -6009,9 +6009,9 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 
 			require.NoError(t, err)
 
-			require.Len(t, checker.Elaboration.RedundantCastTypes, 1)
-			for _, ty := range checker.Elaboration.RedundantCastTypes { // nolint:maprangecheck
-				assert.Equal(t, sema.UInt8Type, ty)
+			require.Len(t, checker.Elaboration.StaticCastTypes, 1)
+			for _, cast := range checker.Elaboration.StaticCastTypes { // nolint:maprangecheck
+				assert.Equal(t, sema.UInt8Type, cast.TargetType)
 			}
 		})
 
@@ -6028,8 +6028,7 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 			assert.IsType(t, &sema.NotDeclaredError{}, errors[0])
 			assert.IsType(t, &sema.NotDeclaredError{}, errors[1])
 
-			// Shouldn't log hints for undeclared types
-			require.Len(t, checker.Elaboration.RedundantCastTypes, 0)
+			require.Len(t, checker.Elaboration.StaticCastTypes, 1)
 		})
 
 		t.Run("with generics", func(t *testing.T) {
@@ -6064,11 +6063,7 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 			)
 
 			require.NoError(t, err)
-
-			// Even though expected type is available via the generics,
-			// inferring arg type from the generics is not supported yet.
-			// Therefore the cast is not redundant.
-			require.Len(t, checker.Elaboration.RedundantCastTypes, 0)
+			require.Len(t, checker.Elaboration.StaticCastTypes, 1)
 		})
 	})
 
@@ -6084,9 +6079,9 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 
 			require.NoError(t, err)
 
-			require.Len(t, checker.Elaboration.RedundantCastTypes, 1)
-			for _, ty := range checker.Elaboration.RedundantCastTypes { // nolint:maprangecheck
-				assert.Equal(t, sema.StringType, ty)
+			require.Len(t, checker.Elaboration.StaticCastTypes, 1)
+			for _, cast := range checker.Elaboration.StaticCastTypes { // nolint:maprangecheck
+				assert.Equal(t, sema.StringType, cast.TargetType)
 			}
 		})
 
@@ -6099,9 +6094,9 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 
 			require.NoError(t, err)
 
-			require.Len(t, checker.Elaboration.RedundantCastTypes, 1)
-			for _, ty := range checker.Elaboration.RedundantCastTypes { // nolint:maprangecheck
-				assert.Equal(t, sema.BoolType, ty)
+			require.Len(t, checker.Elaboration.StaticCastTypes, 1)
+			for _, cast := range checker.Elaboration.StaticCastTypes { // nolint:maprangecheck
+				assert.Equal(t, sema.BoolType, cast.TargetType)
 			}
 		})
 
@@ -6114,11 +6109,11 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 
 			require.NoError(t, err)
 
-			require.Len(t, checker.Elaboration.RedundantCastTypes, 1)
-			for _, ty := range checker.Elaboration.RedundantCastTypes { // nolint:maprangecheck
+			require.Len(t, checker.Elaboration.StaticCastTypes, 1)
+			for _, cast := range checker.Elaboration.StaticCastTypes { // nolint:maprangecheck
 				assert.Equal(t, &sema.OptionalType{
 					Type: sema.NeverType,
-				}, ty)
+				}, cast.TargetType)
 			}
 		})
 
@@ -6133,9 +6128,9 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 
 			require.NoError(t, err)
 
-			require.Len(t, checker.Elaboration.RedundantCastTypes, 1)
-			for _, ty := range checker.Elaboration.RedundantCastTypes { // nolint:maprangecheck
-				assert.Equal(t, sema.Int8Type, ty)
+			require.Len(t, checker.Elaboration.StaticCastTypes, 2)
+			for _, cast := range checker.Elaboration.StaticCastTypes { // nolint:maprangecheck
+				assert.Equal(t, sema.Int8Type, cast.ExprActualType)
 			}
 		})
 
@@ -6150,9 +6145,9 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 
 			require.NoError(t, err)
 
-			require.Len(t, checker.Elaboration.RedundantCastTypes, 1)
-			for _, ty := range checker.Elaboration.RedundantCastTypes { // nolint:maprangecheck
-				assert.Equal(t, sema.Int8Type, ty)
+			require.Len(t, checker.Elaboration.StaticCastTypes, 2)
+			for _, cast := range checker.Elaboration.StaticCastTypes { // nolint:maprangecheck
+				assert.Equal(t, sema.Int8Type, cast.ExprActualType)
 			}
 		})
 
@@ -6162,14 +6157,13 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 			checker, err := ParseAndCheckWithAny(t, `
                 let x: Int8 = 5
                 let y: String = x as Int8
-                let z: String = x as Integer
             `)
 
 			require.Error(t, err)
 
-			require.Len(t, checker.Elaboration.RedundantCastTypes, 1)
-			for _, ty := range checker.Elaboration.RedundantCastTypes { // nolint:maprangecheck
-				assert.Equal(t, sema.Int8Type, ty)
+			require.Len(t, checker.Elaboration.StaticCastTypes, 1)
+			for _, cast := range checker.Elaboration.StaticCastTypes { // nolint:maprangecheck
+				assert.Equal(t, sema.Int8Type, cast.TargetType)
 			}
 		})
 
@@ -6183,7 +6177,10 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 
 			require.NoError(t, err)
 
-			require.Len(t, checker.Elaboration.RedundantCastTypes, 0)
+			require.Len(t, checker.Elaboration.StaticCastTypes, 2)
+			for _, cast := range checker.Elaboration.StaticCastTypes { // nolint:maprangecheck
+				assert.Equal(t, sema.AnyStructType, cast.ExpectedType)
+			}
 		})
 
 		t.Run("Fixed point literal", func(t *testing.T) {
@@ -6195,9 +6192,9 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 
 			require.NoError(t, err)
 
-			require.Len(t, checker.Elaboration.RedundantCastTypes, 1)
-			for _, ty := range checker.Elaboration.RedundantCastTypes { // nolint:maprangecheck
-				assert.Equal(t, sema.UFix64Type, ty)
+			require.Len(t, checker.Elaboration.StaticCastTypes, 1)
+			for _, cast := range checker.Elaboration.StaticCastTypes { // nolint:maprangecheck
+				assert.Equal(t, sema.UFix64Type, cast.TargetType)
 			}
 
 			checker, err = ParseAndCheckWithAny(t, `
@@ -6206,9 +6203,9 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 
 			require.NoError(t, err)
 
-			require.Len(t, checker.Elaboration.RedundantCastTypes, 1)
-			for _, ty := range checker.Elaboration.RedundantCastTypes { // nolint:maprangecheck
-				assert.Equal(t, sema.Fix64Type, ty)
+			require.Len(t, checker.Elaboration.StaticCastTypes, 1)
+			for _, cast := range checker.Elaboration.StaticCastTypes { // nolint:maprangecheck
+				assert.Equal(t, sema.Fix64Type, cast.TargetType)
 			}
 		})
 
@@ -6221,11 +6218,11 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 
 			require.NoError(t, err)
 
-			require.Len(t, checker.Elaboration.RedundantCastTypes, 1)
-			for _, ty := range checker.Elaboration.RedundantCastTypes { // nolint:maprangecheck
+			require.Len(t, checker.Elaboration.StaticCastTypes, 1)
+			for _, cast := range checker.Elaboration.StaticCastTypes { // nolint:maprangecheck
 				assert.Equal(t, &sema.VariableSizedType{
 					Type: sema.IntType,
-				}, ty)
+				}, cast.TargetType)
 			}
 		})
 
@@ -6238,7 +6235,12 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 
 			require.NoError(t, err)
 
-			require.Len(t, checker.Elaboration.RedundantCastTypes, 0)
+			require.Len(t, checker.Elaboration.StaticCastTypes, 1)
+			for _, cast := range checker.Elaboration.StaticCastTypes { // nolint:maprangecheck
+				assert.Equal(t, &sema.VariableSizedType{
+					Type: sema.UInt8Type,
+				}, cast.TargetType)
+			}
 		})
 
 		t.Run("Array, all elements self typed", func(t *testing.T) {
@@ -6253,11 +6255,11 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 
 			require.NoError(t, err)
 
-			require.Len(t, checker.Elaboration.RedundantCastTypes, 1)
-			for _, ty := range checker.Elaboration.RedundantCastTypes { // nolint:maprangecheck
+			require.Len(t, checker.Elaboration.StaticCastTypes, 1)
+			for _, cast := range checker.Elaboration.StaticCastTypes { // nolint:maprangecheck
 				assert.Equal(t, &sema.VariableSizedType{
 					Type: sema.Int8Type,
-				}, ty)
+				}, cast.TargetType)
 			}
 		})
 
@@ -6273,7 +6275,7 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 
 			require.Error(t, err)
 
-			require.Len(t, checker.Elaboration.RedundantCastTypes, 0)
+			require.Len(t, checker.Elaboration.StaticCastTypes, 0)
 		})
 
 		t.Run("Nested array, all elements self typed", func(t *testing.T) {
@@ -6288,13 +6290,13 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 
 			require.NoError(t, err)
 
-			require.Len(t, checker.Elaboration.RedundantCastTypes, 1)
-			for _, ty := range checker.Elaboration.RedundantCastTypes { // nolint:maprangecheck
+			require.Len(t, checker.Elaboration.StaticCastTypes, 1)
+			for _, cast := range checker.Elaboration.StaticCastTypes { // nolint:maprangecheck
 				assert.Equal(t, &sema.VariableSizedType{
 					Type: &sema.VariableSizedType{
 						Type: sema.Int8Type,
 					},
-				}, ty)
+				}, cast.TargetType)
 			}
 		})
 
@@ -6309,7 +6311,14 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 
 			require.NoError(t, err)
 
-			require.Len(t, checker.Elaboration.RedundantCastTypes, 0)
+			require.Len(t, checker.Elaboration.StaticCastTypes, 1)
+			for _, cast := range checker.Elaboration.StaticCastTypes { // nolint:maprangecheck
+				assert.Equal(t, &sema.VariableSizedType{
+					Type: &sema.VariableSizedType{
+						Type: sema.Int8Type,
+					},
+				}, cast.TargetType)
+			}
 		})
 
 		t.Run("Dictionary, invalid typed entries", func(t *testing.T) {
@@ -6324,7 +6333,7 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 
 			require.Error(t, err)
 
-			require.Len(t, checker.Elaboration.RedundantCastTypes, 0)
+			require.Len(t, checker.Elaboration.StaticCastTypes, 0)
 		})
 
 		t.Run("Nested dictionary, all entries self typed", func(t *testing.T) {
@@ -6339,15 +6348,15 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 
 			require.NoError(t, err)
 
-			require.Len(t, checker.Elaboration.RedundantCastTypes, 1)
-			for _, ty := range checker.Elaboration.RedundantCastTypes { // nolint:maprangecheck
+			require.Len(t, checker.Elaboration.StaticCastTypes, 1)
+			for _, cast := range checker.Elaboration.StaticCastTypes { // nolint:maprangecheck
 				assert.Equal(t, &sema.DictionaryType{
 					KeyType: sema.Int8Type,
 					ValueType: &sema.DictionaryType{
 						KeyType:   sema.Int8Type,
 						ValueType: sema.Int8Type,
 					},
-				}, ty)
+				}, cast.TargetType)
 			}
 		})
 
@@ -6363,7 +6372,16 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 
 			require.NoError(t, err)
 
-			require.Len(t, checker.Elaboration.RedundantCastTypes, 0)
+			require.Len(t, checker.Elaboration.StaticCastTypes, 2)
+			for _, cast := range checker.Elaboration.StaticCastTypes { // nolint:maprangecheck
+				assert.Equal(t, &sema.DictionaryType{
+					KeyType: sema.Int8Type,
+					ValueType: &sema.DictionaryType{
+						KeyType:   sema.Int8Type,
+						ValueType: sema.Int8Type,
+					},
+				}, cast.TargetType)
+			}
 		})
 
 		t.Run("Reference, without type", func(t *testing.T) {
@@ -6376,7 +6394,7 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 
 			require.NoError(t, err)
 
-			require.Len(t, checker.Elaboration.RedundantCastTypes, 0)
+			require.Len(t, checker.Elaboration.StaticCastTypes, 0)
 		})
 
 		t.Run("Reference, with type", func(t *testing.T) {
@@ -6389,7 +6407,7 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 
 			require.NoError(t, err)
 
-			require.Len(t, checker.Elaboration.RedundantCastTypes, 0)
+			require.Len(t, checker.Elaboration.StaticCastTypes, 0)
 		})
 
 		t.Run("Conditional expr valid", func(t *testing.T) {
@@ -6401,7 +6419,12 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 
 			require.NoError(t, err)
 
-			require.Len(t, checker.Elaboration.RedundantCastTypes, 0)
+			require.Len(t, checker.Elaboration.StaticCastTypes, 1)
+			for _, cast := range checker.Elaboration.StaticCastTypes { // nolint:maprangecheck
+				assert.Equal(t, &sema.OptionalType{
+					Type: sema.UFix64Type,
+				}, cast.TargetType)
+			}
 		})
 
 		t.Run("Conditional expr invalid", func(t *testing.T) {
@@ -6413,10 +6436,12 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 
 			require.NoError(t, err)
 
-			// Ideally this should give hints. But the current impl
-			// is not capable if detecting redundant casts, when the
-			// join of types is involved.
-			require.Len(t, checker.Elaboration.RedundantCastTypes, 0)
+			require.Len(t, checker.Elaboration.StaticCastTypes, 1)
+			for _, cast := range checker.Elaboration.StaticCastTypes { // nolint:maprangecheck
+				assert.Equal(t, &sema.OptionalType{
+					Type: sema.Fix64Type,
+				}, cast.TargetType)
+			}
 		})
 
 		t.Run("Conditional expr", func(t *testing.T) {
@@ -6428,9 +6453,9 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 
 			require.NoError(t, err)
 
-			require.Len(t, checker.Elaboration.RedundantCastTypes, 1)
-			for _, ty := range checker.Elaboration.RedundantCastTypes { // nolint:maprangecheck
-				assert.Equal(t, sema.UFix64Type, ty)
+			require.Len(t, checker.Elaboration.StaticCastTypes, 1)
+			for _, cast := range checker.Elaboration.StaticCastTypes { // nolint:maprangecheck
+				assert.Equal(t, sema.UFix64Type, cast.TargetType)
 			}
 		})
 
@@ -6447,9 +6472,9 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 
 			require.NoError(t, err)
 
-			require.Len(t, checker.Elaboration.RedundantCastTypes, 1)
-			for _, ty := range checker.Elaboration.RedundantCastTypes { // nolint:maprangecheck
-				assert.Equal(t, sema.UIntType, ty)
+			require.Len(t, checker.Elaboration.StaticCastTypes, 1)
+			for _, cast := range checker.Elaboration.StaticCastTypes { // nolint:maprangecheck
+				assert.Equal(t, sema.UIntType, cast.TargetType)
 			}
 		})
 
@@ -6471,9 +6496,9 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 
 			require.NoError(t, err)
 
-			require.Len(t, checker.Elaboration.RedundantCastTypes, 1)
-			for _, ty := range checker.Elaboration.RedundantCastTypes { // nolint:maprangecheck
-				assert.Equal(t, sema.StringType, ty)
+			require.Len(t, checker.Elaboration.StaticCastTypes, 1)
+			for _, cast := range checker.Elaboration.StaticCastTypes { // nolint:maprangecheck
+				assert.Equal(t, sema.StringType, cast.TargetType)
 			}
 		})
 
@@ -6487,9 +6512,9 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 
 			require.NoError(t, err)
 
-			require.Len(t, checker.Elaboration.RedundantCastTypes, 1)
-			for _, ty := range checker.Elaboration.RedundantCastTypes { // nolint:maprangecheck
-				assert.Equal(t, sema.IntType, ty)
+			require.Len(t, checker.Elaboration.StaticCastTypes, 1)
+			for _, cast := range checker.Elaboration.StaticCastTypes { // nolint:maprangecheck
+				assert.Equal(t, sema.IntType, cast.TargetType)
 			}
 		})
 
@@ -6504,10 +6529,10 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 
 			require.NoError(t, err)
 
-			require.Len(t, checker.Elaboration.RedundantCastTypes, 1)
-			for _, ty := range checker.Elaboration.RedundantCastTypes { // nolint:maprangecheck
-				assert.IsType(t, &sema.CompositeType{}, ty)
-				compositeType := ty.(*sema.CompositeType)
+			require.Len(t, checker.Elaboration.StaticCastTypes, 1)
+			for _, cast := range checker.Elaboration.StaticCastTypes { // nolint:maprangecheck
+				assert.IsType(t, &sema.CompositeType{}, cast.TargetType)
+				compositeType := cast.TargetType.(*sema.CompositeType)
 				assert.Equal(t, "Foo", compositeType.Identifier)
 			}
 		})
@@ -6522,9 +6547,9 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 
 			require.NoError(t, err)
 
-			require.Len(t, checker.Elaboration.RedundantCastTypes, 1)
-			for _, ty := range checker.Elaboration.RedundantCastTypes { // nolint:maprangecheck
-				assert.Equal(t, sema.IntType, ty)
+			require.Len(t, checker.Elaboration.StaticCastTypes, 1)
+			for _, cast := range checker.Elaboration.StaticCastTypes { // nolint:maprangecheck
+				assert.Equal(t, sema.IntType, cast.TargetType)
 			}
 		})
 
@@ -6538,9 +6563,9 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 
 			require.NoError(t, err)
 
-			require.Len(t, checker.Elaboration.RedundantCastTypes, 2)
-			for _, ty := range checker.Elaboration.RedundantCastTypes { // nolint:maprangecheck
-				assert.Equal(t, sema.PublicPathType, ty)
+			require.Len(t, checker.Elaboration.StaticCastTypes, 2)
+			for _, cast := range checker.Elaboration.StaticCastTypes { // nolint:maprangecheck
+				assert.Equal(t, sema.PublicPathType, cast.TargetType)
 			}
 		})
 
@@ -6553,9 +6578,9 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 
 			require.NoError(t, err)
 
-			require.Len(t, checker.Elaboration.RedundantCastTypes, 1)
-			for _, ty := range checker.Elaboration.RedundantCastTypes { // nolint:maprangecheck
-				assert.Equal(t, sema.BoolType, ty)
+			require.Len(t, checker.Elaboration.StaticCastTypes, 1)
+			for _, cast := range checker.Elaboration.StaticCastTypes { // nolint:maprangecheck
+				assert.Equal(t, sema.BoolType, cast.TargetType)
 			}
 
 			checker, err = ParseAndCheckWithAny(t, `
@@ -6565,9 +6590,9 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 
 			require.NoError(t, err)
 
-			require.Len(t, checker.Elaboration.RedundantCastTypes, 1)
-			for _, ty := range checker.Elaboration.RedundantCastTypes { // nolint:maprangecheck
-				assert.Equal(t, sema.Fix64Type, ty)
+			require.Len(t, checker.Elaboration.StaticCastTypes, 1)
+			for _, cast := range checker.Elaboration.StaticCastTypes { // nolint:maprangecheck
+				assert.Equal(t, sema.Fix64Type, cast.TargetType)
 			}
 		})
 
@@ -6599,9 +6624,9 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 
 			require.NoError(t, err)
 
-			require.Len(t, checker.Elaboration.RedundantCastTypes, 1)
-			for _, ty := range checker.Elaboration.RedundantCastTypes { // nolint:maprangecheck
-				assert.IsType(t, &sema.FunctionType{}, ty)
+			require.Len(t, checker.Elaboration.StaticCastTypes, 1)
+			for _, cast := range checker.Elaboration.StaticCastTypes { // nolint:maprangecheck
+				assert.IsType(t, &sema.FunctionType{}, cast.TargetType)
 			}
 		})
 	})
