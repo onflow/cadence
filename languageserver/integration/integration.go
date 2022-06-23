@@ -28,8 +28,8 @@ import (
 type FlowIntegration struct {
 	server *server.Server
 
-	entryPointInfo map[protocol.DocumentURI]entryPointInfo
-	contractInfo   map[protocol.DocumentURI]contractInfo
+	entryPointInfo map[protocol.DocumentURI]*entryPointInfo
+	contractInfo   map[protocol.DocumentURI]*contractInfo
 
 	flowClient flowClient
 	loader     flowkit.ReaderWriter
@@ -38,8 +38,8 @@ type FlowIntegration struct {
 func NewFlowIntegration(s *server.Server, enableFlowClient bool) (*FlowIntegration, error) {
 	integration := &FlowIntegration{
 		server:         s,
-		entryPointInfo: map[protocol.DocumentURI]entryPointInfo{},
-		contractInfo:   map[protocol.DocumentURI]contractInfo{},
+		entryPointInfo: map[protocol.DocumentURI]*entryPointInfo{},
+		contractInfo:   map[protocol.DocumentURI]*contractInfo{},
 		loader:         &afero.Afero{Fs: afero.NewOsFs()},
 	}
 

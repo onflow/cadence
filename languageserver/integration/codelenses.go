@@ -75,9 +75,7 @@ func (i *FlowIntegration) showDeployContractAction(
 	version int32,
 	checker *sema.Checker,
 ) ([]*protocol.CodeLens, error) {
-	if i.contractInfo[uri].documentVersion != version {
-		i.contractInfo[uri] = updateContractInfo(version, checker)
-	}
+	i.contractInfo[uri].update(version, checker)
 
 	contractInfo := i.contractInfo[uri]
 	kind := contractInfo.kind
@@ -117,9 +115,7 @@ func (i *FlowIntegration) entryPointActions(
 	[]*protocol.CodeLens,
 	error,
 ) {
-	if i.entryPointInfo[uri].documentVersion != version {
-		i.entryPointInfo[uri] = updateEntryPointInfo(version, checker)
-	}
+	i.entryPointInfo[uri].update(version, checker)
 
 	entryPointInfo := i.entryPointInfo[uri]
 	if entryPointInfo.kind == entryPointKindUnknown || entryPointInfo.startPos == nil {

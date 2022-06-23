@@ -48,49 +48,46 @@ type entryPointInfo struct {
 	numberOfSigners       int
 }
 
-func updateEntryPointInfo(
+func (e *entryPointInfo) update(
 	version int32,
 	checker *sema.Checker,
-) entryPointInfo {
-	var startPos *ast.Position
-	var kind entryPointKind
-	var docString string
-	var parameters []*sema.Parameter
-	var numberOfSigners int
+) {
+	if e.documentVersion == version {
+		return // do nothing if version haven't changed
+	}
 
+	var docString string
 	transactionDeclaration := checker.Program.SoleTransactionDeclaration()
 	functionDeclaration := sema.FunctionEntryPointDeclaration(checker.Program)
 
 	if transactionDeclaration != nil {
-		startPos = &transactionDeclaration.StartPos
-		kind = entryPointKindTransaction
 		docString = transactionDeclaration.DocString
 		transactionType := checker.Elaboration.TransactionDeclarationTypes[transactionDeclaration]
-		parameters = transactionType.Parameters
-		numberOfSigners = len(transactionType.PrepareParameters)
-	} else {
-		if functionDeclaration != nil {
-			startPos = &functionDeclaration.StartPos
-			kind = entryPointKindScript
-			docString = functionDeclaration.DocString
-			functionType := checker.Elaboration.FunctionDeclarationFunctionTypes[functionDeclaration]
-			parameters = functionType.Parameters
-		}
+		e.startPos = &transactionDeclaration.StartPos
+		e.kind = entryPointKindTransaction
+		e.parameters = transactionType.Parameters
+		e.numberOfSigners = len(transactionType.PrepareParameters)
+	} else if functionDeclaration != nil {
+		docString = functionDeclaration.DocString
+		functionType := checker.Elaboration.FunctionDeclarationFunctionTypes[functionDeclaration]
+		e.startPos = &functionDeclaration.StartPos
+		e.kind = entryPointKindScript
+		e.parameters = functionType.Parameters
+		e.numberOfSigners = 0
 	}
 
 	var pragmaSigners [][]string
 	var pragmaArgumentStrings []string
 	var pragmaArguments [][]Argument
 
-	if startPos != nil {
+	if e.startPos != nil {
+		parameterTypes := make([]sema.Type, len(e.parameters))
 
-		parameterTypes := make([]sema.Type, len(parameters))
-
-		for i, parameter := range parameters {
+		for i, parameter := range e.parameters {
 			parameterTypes[i] = parameter.TypeAnnotation.Type
 		}
 
-		if len(parameters) > 0 {
+		if len(e.parameters) > 0 {
 			for _, pragmaArgumentString := range parser2.ParseDocstringPragmaArguments(docString) {
 				arguments, err := runtime.ParseLiteralArgumentList(pragmaArgumentString, parameterTypes, nil)
 				// TODO: record error and show diagnostic
@@ -114,14 +111,8 @@ func updateEntryPointInfo(
 		}
 	}
 
-	return entryPointInfo{
-		documentVersion:       version,
-		startPos:              startPos,
-		kind:                  kind,
-		parameters:            parameters,
-		pragmaArgumentStrings: pragmaArgumentStrings,
-		pragmaArguments:       pragmaArguments,
-		pragmaSignersStrings:  pragmaSigners,
-		numberOfSigners:       numberOfSigners,
-	}
+	e.documentVersion = version
+	e.pragmaArgumentStrings = pragmaArgumentStrings
+	e.pragmaArguments = pragmaArguments
+	e.pragmaSignersStrings = pragmaSigners
 }

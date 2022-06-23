@@ -44,45 +44,44 @@ type contractInfo struct {
 	pragmaSignersStrings  [][]string
 }
 
-func updateContractInfo(
+func (c *contractInfo) update(
 	version int32,
 	checker *sema.Checker,
-) contractInfo {
-	var name string
-	var startPos *ast.Position
-	var kind contractKind
-	var docString string
-	var parameters []*sema.Parameter
+) {
+	if c.documentVersion == version {
+		return // if no change in version do nothing
+	}
 
+	var docString string
 	contractDeclaration := checker.Program.SoleContractDeclaration()
 	contractInterfaceDeclaration := checker.Program.SoleContractInterfaceDeclaration()
 
 	if contractDeclaration != nil {
-		name = contractDeclaration.Identifier.Identifier
-		startPos = &contractDeclaration.StartPos
-		kind = contractTypeDeclaration
 		docString = contractDeclaration.DocString
 		contractType := checker.Elaboration.CompositeDeclarationTypes[contractDeclaration]
-		parameters = contractType.ConstructorParameters
+		c.name = contractDeclaration.Identifier.Identifier
+		c.startPos = &contractDeclaration.StartPos
+		c.kind = contractTypeDeclaration
+		c.parameters = contractType.ConstructorParameters
 	} else if contractInterfaceDeclaration != nil {
-		name = contractInterfaceDeclaration.Identifier.Identifier
-		startPos = &contractInterfaceDeclaration.StartPos
-		kind = contractTypeInterface
 		docString = contractInterfaceDeclaration.DocString
+		c.name = contractInterfaceDeclaration.Identifier.Identifier
+		c.startPos = &contractInterfaceDeclaration.StartPos
+		c.kind = contractTypeInterface
 	}
 
 	var pragmaSigners [][]string
 	var pragmaArgumentStrings []string
 	var pragmaArguments [][]Argument
 
-	if startPos != nil {
-		parameterTypes := make([]sema.Type, len(parameters))
+	if c.startPos != nil {
+		parameterTypes := make([]sema.Type, len(c.parameters))
 
-		for i, parameter := range parameters {
+		for i, parameter := range c.parameters {
 			parameterTypes[i] = parameter.TypeAnnotation.Type
 		}
 
-		if len(parameters) > 0 {
+		if len(c.parameters) > 0 {
 			for _, pragmaArgumentString := range parser2.ParseDocstringPragmaArguments(docString) {
 				arguments, err := runtime.ParseLiteralArgumentList(pragmaArgumentString, parameterTypes, nil)
 				// TODO: record error and show diagnostic
@@ -106,14 +105,8 @@ func updateContractInfo(
 		}
 	}
 
-	return contractInfo{
-		documentVersion:       version,
-		startPos:              startPos,
-		kind:                  kind,
-		name:                  name,
-		parameters:            parameters,
-		pragmaArgumentStrings: pragmaArgumentStrings,
-		pragmaArguments:       pragmaArguments,
-		pragmaSignersStrings:  pragmaSigners,
-	}
+	c.documentVersion = version
+	c.pragmaSignersStrings = pragmaSigners
+	c.pragmaArguments = pragmaArguments
+	c.pragmaArgumentStrings = pragmaArgumentStrings
 }
