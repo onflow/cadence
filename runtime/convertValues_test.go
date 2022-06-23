@@ -1765,7 +1765,7 @@ func TestExportTypeValue(t *testing.T) {
 		program, err := parser2.ParseProgram(code, nil)
 		require.NoError(t, err)
 
-		checker, err := sema.NewChecker(program, TestLocation, nil)
+		checker, err := sema.NewChecker(program, TestLocation, nil, false)
 		require.NoError(t, err)
 
 		err = checker.Check()
@@ -1851,7 +1851,7 @@ func TestExportCapabilityValue(t *testing.T) {
 		program, err := parser2.ParseProgram(code, nil)
 		require.NoError(t, err)
 
-		checker, err := sema.NewChecker(program, TestLocation, nil)
+		checker, err := sema.NewChecker(program, TestLocation, nil, false)
 		require.NoError(t, err)
 
 		err = checker.Check()
@@ -1949,7 +1949,7 @@ func TestExportLinkValue(t *testing.T) {
 		program, err := parser2.ParseProgram(code, nil)
 		require.NoError(t, err)
 
-		checker, err := sema.NewChecker(program, TestLocation, nil)
+		checker, err := sema.NewChecker(program, TestLocation, nil, false)
 		require.NoError(t, err)
 
 		err = checker.Check()
@@ -4459,7 +4459,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 	t.Parallel()
 
 	program := interpreter.Program{
-		Elaboration: sema.NewElaboration(nil),
+		Elaboration: sema.NewElaboration(nil, false),
 	}
 
 	inter := newTestInterpreter(t)
@@ -4596,7 +4596,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 		t.Parallel()
 
 		program := interpreter.Program{
-			Elaboration: sema.NewElaboration(nil),
+			Elaboration: sema.NewElaboration(nil, false),
 		}
 
 		inter := newTestInterpreter(t)

@@ -714,10 +714,7 @@ var _ errors.UserError = NonStorableValueError{}
 func (NonStorableValueError) IsUserError() {}
 
 func (e NonStorableValueError) Error() string {
-	return fmt.Sprintf(
-		"cannot store non-storable value: %s",
-		e.Value,
-	)
+	return "cannot store non-storable value"
 }
 
 // NonStorableStaticTypeError
@@ -801,4 +798,18 @@ func (e InvalidPublicKeyError) Error() string {
 
 func (e InvalidPublicKeyError) Unwrap() error {
 	return e.Err
+}
+
+// NonTransferableValueError
+//
+type NonTransferableValueError struct {
+	Value Value
+}
+
+var _ errors.UserError = NonTransferableValueError{}
+
+func (NonTransferableValueError) IsUserError() {}
+
+func (e NonTransferableValueError) Error() string {
+	return "cannot transfer non-transferable value"
 }

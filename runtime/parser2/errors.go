@@ -39,7 +39,7 @@ func (e Error) Error() string {
 	var sb strings.Builder
 	sb.WriteString("Parsing failed:\n")
 	printErr := pretty.NewErrorPrettyPrinter(&sb, false).
-		PrettyPrintError(e, nil, map[common.LocationID]string{"": e.Code})
+		PrettyPrintError(e, nil, map[common.Location]string{nil: e.Code})
 	if printErr != nil {
 		panic(printErr)
 	}

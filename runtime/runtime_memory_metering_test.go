@@ -134,11 +134,11 @@ func TestInterpreterElaborationImportMetering(t *testing.T) {
 
 			meter := newTestMemoryGauge()
 
-			accountCodes := map[common.LocationID][]byte{}
+			accountCodes := map[common.Location][]byte{}
 
 			runtimeInterface := &testRuntimeInterface{
 				getCode: func(location Location) (bytes []byte, err error) {
-					return accountCodes[location.ID()], nil
+					return accountCodes[location], nil
 				},
 				storage: newTestLedger(nil, nil),
 				getSigningAccounts: func() ([]Address, error) {
@@ -150,7 +150,7 @@ func TestInterpreterElaborationImportMetering(t *testing.T) {
 						Address: address,
 						Name:    name,
 					}
-					accountCodes[location.ID()] = code
+					accountCodes[location] = code
 					return nil
 				},
 				getAccountContractCode: func(address Address, name string) (code []byte, err error) {
@@ -158,7 +158,7 @@ func TestInterpreterElaborationImportMetering(t *testing.T) {
 						Address: address,
 						Name:    name,
 					}
-					code = accountCodes[location.ID()]
+					code = accountCodes[location]
 					return code, nil
 				},
 				meterMemory: func(usage common.MemoryUsage) error {

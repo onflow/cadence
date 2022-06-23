@@ -167,7 +167,7 @@ func (t InterfaceStaticType) Equal(other StaticType) bool {
 		return false
 	}
 
-	return common.LocationsMatch(otherInterfaceType.Location, t.Location) &&
+	return otherInterfaceType.Location == t.Location &&
 		otherInterfaceType.QualifiedIdentifier == t.QualifiedIdentifier
 }
 

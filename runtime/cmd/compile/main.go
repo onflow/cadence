@@ -40,7 +40,7 @@ func main() {
 
 	location := common.NewStringLocation(nil, path)
 
-	codes := map[common.LocationID]string{}
+	codes := map[common.Location]string{}
 
 	program, must := cmd.PrepareProgramFromFile(location, codes)
 
