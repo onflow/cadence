@@ -135,3 +135,64 @@ func TestReferenceOperatorAnalyzer(t *testing.T) {
 		diagnostics,
 	)
 }
+
+func TestForceOperatorAnalyzer(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("unnecessary", func(t *testing.T) {
+
+		t.Parallel()
+
+		diagnostics := testAnalyzers(t,
+			`
+			pub contract Test {
+				pub fun test() {
+					let x = 3
+					let y = x!
+				}
+			}
+			`,
+			analyzers.UnnecessaryForceAnalyzer,
+		)
+
+		require.Equal(
+			t,
+			[]analysis.Diagnostic{
+				{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 73, Line: 5, Column: 13},
+						EndPos:   ast.Position{Offset: 74, Line: 5, Column: 14},
+					},
+					Location: testLocation,
+					Category: "lint",
+					Message:  "unnecessary force operator",
+				},
+			},
+			diagnostics,
+		)
+	})
+
+	t.Run("valid", func(t *testing.T) {
+
+		t.Parallel()
+
+		diagnostics := testAnalyzers(t,
+			`
+			pub contract Test {
+				pub fun test() {
+					let x: Int? = 3
+					let y = x!
+				}
+			}
+			`,
+			analyzers.UnnecessaryForceAnalyzer,
+		)
+
+		require.Equal(
+			t,
+			[]analysis.Diagnostic(nil),
+			diagnostics,
+		)
+	})
+}

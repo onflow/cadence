@@ -90,7 +90,7 @@ func TestArrayStorage(t *testing.T) {
 	t.Parallel()
 
 	importLocationHandlerFunc := func(inter *Interpreter, location common.Location) Import {
-		elaboration := sema.NewElaboration(nil)
+		elaboration := sema.NewElaboration(nil, false)
 		elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
 		return VirtualImport{Elaboration: elaboration}
 	}

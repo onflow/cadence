@@ -101,6 +101,7 @@ func ParseAndCheckWithOptionsAndMemoryMetering(
 			program,
 			options.Location,
 			memoryGauge,
+			true,
 			checkerOptions...,
 		)
 		if err != nil {

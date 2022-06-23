@@ -1153,6 +1153,7 @@ func (r *interpreterRuntime) check(
 		program,
 		startContext.Location,
 		memoryGauge,
+		false,
 		append(
 			[]sema.Option{
 				sema.WithPredeclaredValues(valueDeclarations),

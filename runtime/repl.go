@@ -69,6 +69,7 @@ func NewREPL(
 		nil,
 		common.REPLLocation{},
 		nil,
+		false,
 		checkerOptions...,
 	)
 	if err != nil {

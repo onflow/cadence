@@ -94,6 +94,7 @@ func (programs Programs) check(
 		program,
 		location,
 		nil,
+		true,
 		sema.WithPredeclaredValues(semaPredeclaredValues),
 		sema.WithPredeclaredTypes(stdlib.FlowDefaultPredeclaredTypes),
 		sema.WithLocationHandler(

@@ -38,7 +38,7 @@ func TestCheckNumberConversionReplacementHint(t *testing.T) {
 
 		t.Parallel()
 
-		checker, err := ParseAndCheckWithLinting(t, `
+		checker, err := ParseAndCheck(t, `
            let x = Fix64(1)
         `)
 
@@ -58,7 +58,7 @@ func TestCheckNumberConversionReplacementHint(t *testing.T) {
 
 		t.Parallel()
 
-		checker, err := ParseAndCheckWithLinting(t, `
+		checker, err := ParseAndCheck(t, `
            let x = UFix64(1)
         `)
 
@@ -78,7 +78,7 @@ func TestCheckNumberConversionReplacementHint(t *testing.T) {
 
 		t.Parallel()
 
-		checker, err := ParseAndCheckWithLinting(t, `
+		checker, err := ParseAndCheck(t, `
            let x = Fix64(-1)
         `)
 
@@ -100,7 +100,7 @@ func TestCheckNumberConversionReplacementHint(t *testing.T) {
 
 		t.Parallel()
 
-		checker, err := ParseAndCheckWithLinting(t, `
+		checker, err := ParseAndCheck(t, `
            let x = UFix64(1.2)
         `)
 
@@ -120,7 +120,7 @@ func TestCheckNumberConversionReplacementHint(t *testing.T) {
 
 		t.Parallel()
 
-		checker, err := ParseAndCheckWithLinting(t, `
+		checker, err := ParseAndCheck(t, `
            let x = Fix64(-1.2)
         `)
 
@@ -144,7 +144,7 @@ func TestCheckNumberConversionReplacementHint(t *testing.T) {
 
 		t.Parallel()
 
-		checker, err := ParseAndCheckWithLinting(t, `
+		checker, err := ParseAndCheck(t, `
            let x = UInt8(1)
         `)
 
@@ -164,7 +164,7 @@ func TestCheckNumberConversionReplacementHint(t *testing.T) {
 
 		t.Parallel()
 
-		checker, err := ParseAndCheckWithLinting(t, `
+		checker, err := ParseAndCheck(t, `
            let x = Int8(1)
         `)
 
@@ -184,7 +184,7 @@ func TestCheckNumberConversionReplacementHint(t *testing.T) {
 
 		t.Parallel()
 
-		checker, err := ParseAndCheckWithLinting(t, `
+		checker, err := ParseAndCheck(t, `
            let x = Int8(-1)
         `)
 
@@ -204,7 +204,7 @@ func TestCheckNumberConversionReplacementHint(t *testing.T) {
 
 		t.Parallel()
 
-		checker, err := ParseAndCheckWithLinting(t, `
+		checker, err := ParseAndCheck(t, `
            let x = Int(1)
         `)
 
@@ -224,7 +224,7 @@ func TestCheckNumberConversionReplacementHint(t *testing.T) {
 
 		t.Parallel()
 
-		checker, err := ParseAndCheckWithLinting(t, `
+		checker, err := ParseAndCheck(t, `
            let x = Int(-1)
         `)
 
