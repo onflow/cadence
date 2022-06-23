@@ -19,7 +19,6 @@
 package errors
 
 import (
-	goErrors "errors"
 	"fmt"
 	"runtime/debug"
 
@@ -29,7 +28,7 @@ import (
 // NewUnreachableError creates an internal error that indicates executing an unimplemented path.
 //
 func NewUnreachableError() InternalError {
-	return NewUnexpectedErrorFromCause(goErrors.New("unreachable"))
+	return NewUnexpectedError("unreachable")
 }
 
 // InternalError is an implementation error, e.g: an unreachable code path (UnreachableError).
