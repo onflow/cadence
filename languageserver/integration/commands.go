@@ -34,9 +34,9 @@ const (
 	CommandExecuteScript         = "cadence.server.flow.executeScript"
 	CommandDeployContract        = "cadence.server.flow.deployContract"
 	CommandCreateAccount         = "cadence.server.flow.createAccount"
-	CommandCreateDefaultAccounts = "cadence.server.flow.createDefaultAccounts"
+	CommandCreateDefaultAccounts = "cadence.server.flow.createDefaultAccounts" // todo why do we need this, should be default on startup
 	CommandSwitchActiveAccount   = "cadence.server.flow.switchActiveAccount"
-	CommandInitAccountManager    = "cadence.server.flow.initAccountManager"
+	CommandInitAccountManager    = "cadence.server.flow.initAccountManager" // todo remove
 
 	ErrorMessageEmulator          = "emulator error"
 	ErrorMessageServiceAccount    = "service account error"
@@ -264,6 +264,8 @@ func (i *FlowIntegration) createAccount(conn protocol.Conn, args ...json.RawMess
 
 	return account, nil
 }
+
+// todo this should be remove as its not needed to be called by the client anymore but should be part of the flow client bootstrap procedure
 
 // createDefaultAccounts creates a set of default accounts and returns their addresses.
 //

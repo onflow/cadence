@@ -21,6 +21,8 @@ package integration
 import (
 	"github.com/onflow/cadence/languageserver/protocol"
 	"github.com/onflow/cadence/languageserver/server"
+	"github.com/onflow/flow-cli/pkg/flowkit"
+	"github.com/spf13/afero"
 )
 
 type FlowIntegration struct {
@@ -33,6 +35,7 @@ type FlowIntegration struct {
 	activeAccount ClientAccount
 
 	flowClient flowClient
+	loader     flowkit.ReaderWriter
 }
 
 func NewFlowIntegration(s *server.Server, enableFlowClient bool) (*FlowIntegration, error) {
@@ -40,6 +43,7 @@ func NewFlowIntegration(s *server.Server, enableFlowClient bool) (*FlowIntegrati
 		server:         s,
 		entryPointInfo: map[protocol.DocumentURI]entryPointInfo{},
 		contractInfo:   map[protocol.DocumentURI]contractInfo{},
+		loader:         &afero.Afero{Fs: afero.NewOsFs()},
 	}
 
 	options := []server.Option{

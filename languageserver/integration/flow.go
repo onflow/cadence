@@ -5,6 +5,8 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/flow-cli/pkg/flowkit"
+	"github.com/onflow/flow-cli/pkg/flowkit/gateway"
+	"github.com/onflow/flow-cli/pkg/flowkit/output"
 	"github.com/onflow/flow-cli/pkg/flowkit/services"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/crypto"
@@ -23,6 +25,30 @@ var _ flowClient = flowkitClient{}
 type flowkitClient struct {
 	services *services.Services
 	state    *flowkit.State
+}
+
+func NewFlowkitClient(config Config, loader flowkit.ReaderWriter) (*flowkitClient, error) {
+	state, err := flowkit.Load([]string{config.configPath}, loader)
+	if err != nil {
+		return nil, err
+	}
+
+	logger := output.NewStdoutLogger(output.NoneLog)
+
+	serviceAccount, err := state.EmulatorServiceAccount()
+	if err != nil {
+		return nil, err
+	}
+
+	grpcGateway := gateway.NewEmulatorGateway(serviceAccount)
+	if err != nil {
+		return nil, err
+	}
+
+	return &flowkitClient{
+		services: services.NewServices(grpcGateway, state, logger),
+		state:    state,
+	}, nil
 }
 
 func (f flowkitClient) ExecuteScript(
