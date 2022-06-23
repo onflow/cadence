@@ -2112,17 +2112,8 @@ func (interpreter *Interpreter) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclarat
 	panic(errors.NewUnreachableError())
 }
 
-func (interpreter *Interpreter) CheckValueTransferTargetType(value Value, targetType sema.Type) bool {
-
-	if targetType == nil {
-		return true
-	}
-
-	if interpreter.IsSubTypeOfSemaType(value.StaticType(interpreter), targetType) {
-		return true
-	}
-
-	return false
+func (interpreter *Interpreter) ValueIsSubtypeOfSemaType(value Value, targetType sema.Type) bool {
+	return interpreter.IsSubTypeOfSemaType(value.StaticType(interpreter), targetType)
 }
 
 func (interpreter *Interpreter) transferAndConvert(
@@ -2146,7 +2137,10 @@ func (interpreter *Interpreter) transferAndConvert(
 		targetType,
 	)
 
-	if !interpreter.CheckValueTransferTargetType(result, targetType) {
+	// Defensively check the value's type matches the target type
+	if targetType != nil &&
+		!interpreter.ValueIsSubtypeOfSemaType(result, targetType) {
+
 		panic(ValueTransferTypeError{
 			TargetType:    targetType,
 			LocationRange: getLocationRange(),
@@ -4252,7 +4246,7 @@ func (interpreter *Interpreter) getUserCompositeType(location common.Location, t
 func (interpreter *Interpreter) getNativeCompositeType(qualifiedIdentifier string) (*sema.CompositeType, error) {
 	ty := sema.NativeCompositeTypes[qualifiedIdentifier]
 	if ty == nil {
-		return ty, TypeLoadingError{
+		return nil, TypeLoadingError{
 			TypeID: common.TypeID(qualifiedIdentifier),
 		}
 	}
@@ -4280,6 +4274,7 @@ func (interpreter *Interpreter) getInterfaceType(location common.Location, quali
 			TypeID: typeID,
 		}
 	}
+
 	return ty, nil
 }
 
