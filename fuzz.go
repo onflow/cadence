@@ -21,7 +21,7 @@ package cadence
 import (
 	"unicode/utf8"
 
-	"github.com/onflow/cadence/runtime/parser2"
+	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -32,7 +32,7 @@ func Fuzz(data []byte) int {
 		return 0
 	}
 
-	program, err := parser2.ParseProgram(string(data), nil)
+	program, err := parser.ParseProgram(string(data), nil)
 
 	if err != nil {
 		return 0

@@ -24,7 +24,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/runtime/parser2"
+	"github.com/onflow/cadence/runtime/parser"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -207,7 +207,7 @@ func TestParseError(t *testing.T) {
 	_, err := analysis.Load(config, contractLocation)
 	require.Error(t, err)
 
-	var parserError parser2.Error
+	var parserError parser.Error
 	require.ErrorAs(t, err, &parserError)
 }
 

@@ -26,7 +26,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/parser2"
+	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 )
@@ -149,9 +149,9 @@ func (r *REPL) Accept(code string) (inputIsComplete bool) {
 	inputIsComplete = true
 
 	var err error
-	result, errs := parser2.ParseStatements(code, nil)
+	result, errs := parser.ParseStatements(code, nil)
 	if len(errs) > 0 {
-		err = parser2.Error{
+		err = parser.Error{
 			Code:   code,
 			Errors: errs,
 		}

@@ -27,7 +27,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/parser2"
+	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -48,9 +48,9 @@ func ParseLiteral(
 	cadence.Value,
 	error,
 ) {
-	expression, errs := parser2.ParseExpression(literal, inter)
+	expression, errs := parser.ParseExpression(literal, inter)
 	if len(errs) > 0 {
-		return nil, parser2.Error{
+		return nil, parser.Error{
 			Code:   literal,
 			Errors: errs,
 		}
@@ -71,9 +71,9 @@ func ParseLiteralArgumentList(
 	[]cadence.Value,
 	error,
 ) {
-	arguments, errs := parser2.ParseArgumentList(argumentList, inter)
+	arguments, errs := parser.ParseArgumentList(argumentList, inter)
 	if len(errs) > 0 {
-		return nil, parser2.Error{
+		return nil, parser.Error{
 			Errors: errs,
 		}
 	}

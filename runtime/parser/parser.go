@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package parser2
+package parser
 
 import (
 	"fmt"
@@ -26,7 +26,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/parser2/lexer"
+	"github.com/onflow/cadence/runtime/parser/lexer"
 )
 
 // expressionDepthLimit is the limit of how deeply nested an expression can get

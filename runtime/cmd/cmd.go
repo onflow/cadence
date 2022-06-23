@@ -26,7 +26,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/parser2"
+	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/pretty"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
@@ -62,7 +62,7 @@ func PrepareProgramFromFile(location common.StringLocation, codes map[common.Loc
 func PrepareProgram(code string, location common.Location, codes map[common.Location]string) (*ast.Program, func(error)) {
 	must := mustClosure(location, codes)
 
-	program, err := parser2.ParseProgram(code, nil)
+	program, err := parser.ParseProgram(code, nil)
 	codes[location] = code
 	must(err)
 

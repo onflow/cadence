@@ -30,7 +30,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/parser2"
+	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/pretty"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/utils"
@@ -75,7 +75,7 @@ func ParseAndCheckWithOptionsAndMemoryMetering(
 		options.Location = utils.TestLocation
 	}
 
-	program, err := parser2.ParseProgram(code, memoryGauge)
+	program, err := parser.ParseProgram(code, memoryGauge)
 	if !options.IgnoreParseError && !assert.NoError(t, err) {
 		var sb strings.Builder
 		location := options.Location

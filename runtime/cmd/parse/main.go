@@ -34,7 +34,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/parser2"
+	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/pretty"
 )
 
@@ -175,7 +175,7 @@ func runPath(path string, bench bool) (res result, succeeded bool) {
 			}
 		}()
 
-		program, err = parser2.ParseProgram(code, nil)
+		program, err = parser.ParseProgram(code, nil)
 		if !bench {
 			res.Program = program
 		}
@@ -189,7 +189,7 @@ func runPath(path string, bench bool) (res result, succeeded bool) {
 
 	if bench {
 		benchRes := benchParse(func() (err error) {
-			_, err = parser2.ParseProgram(code, nil)
+			_, err = parser.ParseProgram(code, nil)
 			return
 		})
 		res.Bench = &benchResult{
