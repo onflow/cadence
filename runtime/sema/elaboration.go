@@ -91,9 +91,9 @@ type Elaboration struct {
 	ForceExpressionTypes                map[*ast.ForceExpression]Type
 }
 
-func NewElaboration(gauge common.MemoryGauge) *Elaboration {
+func NewElaboration(gauge common.MemoryGauge, lintingEnabled bool) *Elaboration {
 	common.UseMemory(gauge, common.ElaborationMemoryUsage)
-	return &Elaboration{
+	elaboration := &Elaboration{
 		lock:                                new(sync.RWMutex),
 		FunctionDeclarationFunctionTypes:    map[*ast.FunctionDeclaration]*FunctionType{},
 		VariableDeclarationValueTypes:       map[*ast.VariableDeclaration]Type{},
@@ -146,8 +146,12 @@ func NewElaboration(gauge common.MemoryGauge) *Elaboration {
 		ReferenceExpressionBorrowTypes:      map[*ast.ReferenceExpression]Type{},
 		IndexExpressionIndexedTypes:         map[*ast.IndexExpression]ValueIndexableType{},
 		IndexExpressionIndexingTypes:        map[*ast.IndexExpression]Type{},
-		ForceExpressionTypes:                map[*ast.ForceExpression]Type{},
 	}
+	if lintingEnabled {
+		elaboration.ForceExpressionTypes = map[*ast.ForceExpression]Type{}
+	}
+	return elaboration
+
 }
 
 func (e *Elaboration) IsChecking() bool {

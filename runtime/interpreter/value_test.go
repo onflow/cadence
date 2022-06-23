@@ -84,7 +84,7 @@ func TestOwnerNewArray(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration(nil)
+	elaboration := sema.NewElaboration(nil, false)
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
 
 	inter, err := NewInterpreter(
@@ -123,7 +123,7 @@ func TestOwnerArrayDeepCopy(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration(nil)
+	elaboration := sema.NewElaboration(nil, false)
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
 
 	inter, err := NewInterpreter(
@@ -186,7 +186,7 @@ func TestOwnerArrayElement(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration(nil)
+	elaboration := sema.NewElaboration(nil, false)
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
 
 	inter, err := NewInterpreter(
@@ -224,7 +224,7 @@ func TestOwnerArraySetIndex(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration(nil)
+	elaboration := sema.NewElaboration(nil, false)
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
 
 	inter, err := NewInterpreter(
@@ -272,7 +272,7 @@ func TestOwnerArrayAppend(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration(nil)
+	elaboration := sema.NewElaboration(nil, false)
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
 
 	inter, err := NewInterpreter(
@@ -314,7 +314,7 @@ func TestOwnerArrayInsert(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration(nil)
+	elaboration := sema.NewElaboration(nil, false)
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
 
 	inter, err := NewInterpreter(
@@ -356,7 +356,7 @@ func TestOwnerArrayRemove(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration(nil)
+	elaboration := sema.NewElaboration(nil, false)
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
 
 	inter, err := NewInterpreter(
@@ -396,7 +396,7 @@ func TestOwnerNewDictionary(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration(nil)
+	elaboration := sema.NewElaboration(nil, false)
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
 
 	inter, err := NewInterpreter(
@@ -439,7 +439,7 @@ func TestOwnerDictionary(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration(nil)
+	elaboration := sema.NewElaboration(nil, false)
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
 
 	inter, err := NewInterpreter(
@@ -482,7 +482,7 @@ func TestOwnerDictionaryCopy(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration(nil)
+	elaboration := sema.NewElaboration(nil, false)
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
 
 	inter, err := NewInterpreter(
@@ -549,7 +549,7 @@ func TestOwnerDictionarySetSome(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration(nil)
+	elaboration := sema.NewElaboration(nil, false)
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
 
 	inter, err := NewInterpreter(
@@ -599,7 +599,7 @@ func TestOwnerDictionaryInsertNonExisting(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration(nil)
+	elaboration := sema.NewElaboration(nil, false)
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
 
 	inter, err := NewInterpreter(
@@ -650,7 +650,7 @@ func TestOwnerDictionaryRemove(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration(nil)
+	elaboration := sema.NewElaboration(nil, false)
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
 
 	inter, err := NewInterpreter(
@@ -707,7 +707,7 @@ func TestOwnerDictionaryInsertExisting(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration(nil)
+	elaboration := sema.NewElaboration(nil, false)
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
 
 	inter, err := NewInterpreter(
@@ -3576,7 +3576,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		)
 		members.Set("foo", fooField)
 
-		elaboration := sema.NewElaboration(nil)
+		elaboration := sema.NewElaboration(nil, false)
 		elaboration.CompositeTypes[compositeType.ID()] = compositeType
 
 		inter, err := NewInterpreter(

@@ -1798,6 +1798,7 @@ func (s *Server) getDiagnostics(
 		program,
 		location,
 		nil,
+		false,
 		sema.WithPredeclaredValues(valueDeclarations),
 		sema.WithPredeclaredTypes(typeDeclarations),
 		sema.WithLocationHandler(

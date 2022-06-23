@@ -1808,6 +1808,7 @@ func TestInterpretHostFunction(t *testing.T) {
 		program,
 		TestLocation,
 		nil,
+		false,
 		sema.WithPredeclaredValues(
 			[]sema.ValueDeclaration{
 				testFunction,
@@ -1914,6 +1915,7 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 		program,
 		TestLocation,
 		nil,
+		false,
 		sema.WithPredeclaredValues(
 			[]sema.ValueDeclaration{
 				testFunction,

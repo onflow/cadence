@@ -1319,7 +1319,7 @@ func TestCheckAlwaysSucceedingDynamicCast(t *testing.T) {
 			operation.Symbol(),
 		)
 
-		checker, err := ParseAndCheckWithLinting(t, types+usage)
+		checker, err := ParseAndCheck(t, types+usage)
 
 		errs := ExpectCheckerErrors(t, err, 1)
 

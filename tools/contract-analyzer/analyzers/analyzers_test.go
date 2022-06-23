@@ -141,6 +141,9 @@ func TestForceOperatorAnalyzer(t *testing.T) {
 	t.Parallel()
 
 	t.Run("unnecessary", func(t *testing.T) {
+
+		t.Parallel()
+
 		diagnostics := testAnalyzers(t,
 			`
 			pub contract Test {
@@ -171,6 +174,9 @@ func TestForceOperatorAnalyzer(t *testing.T) {
 	})
 
 	t.Run("valid", func(t *testing.T) {
+
+		t.Parallel()
+
 		diagnostics := testAnalyzers(t,
 			`
 			pub contract Test {

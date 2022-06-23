@@ -162,6 +162,7 @@ func PrepareChecker(
 		program,
 		location,
 		nil,
+		false,
 		defaultCheckerOptions...,
 	)
 	must(err)
