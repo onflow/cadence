@@ -21,6 +21,7 @@ package common
 import (
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/onflow/cadence/runtime/errors"

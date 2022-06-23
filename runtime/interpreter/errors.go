@@ -806,6 +806,10 @@ type NonTransferableValueError struct {
 	Value Value
 }
 
+var _ errors.UserError = NonTransferableValueError{}
+
+func (NonTransferableValueError) IsUserError() {}
+
 func (e NonTransferableValueError) Error() string {
 	return "cannot transfer non-transferable value"
 }
