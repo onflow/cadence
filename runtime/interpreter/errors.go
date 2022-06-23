@@ -622,3 +622,13 @@ type NonTransferableValueError struct {
 func (e NonTransferableValueError) Error() string {
 	return "cannot transfer non-transferable value"
 }
+
+// DuplicateKeyInResourceDictionaryError
+//
+type DuplicateKeyInResourceDictionaryError struct {
+	LocationRange
+}
+
+func (e DuplicateKeyInResourceDictionaryError) Error() string {
+	return "duplicate key in resource dictionary"
+}

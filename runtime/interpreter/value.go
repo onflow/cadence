@@ -15398,12 +15398,35 @@ func NewDictionaryValueWithAddress(
 	// values are added to the dictionary after creation, not here
 	v = newDictionaryValueFromConstructor(interpreter, dictionaryType, 0, constructor)
 
+	// NOTE: lazily initialized when needed for performance reasons
+	var lazyIsResourceTyped *bool
+
 	for i := 0; i < keysAndValuesCount; i += 2 {
 		key := keysAndValues[i]
 		value := keysAndValues[i+1]
-		// TODO: handle existing value
+
 		// TODO: provide proper location range
-		_ = v.Insert(interpreter, ReturnEmptyLocationRange, key, value)
+		existingValue := v.Insert(interpreter, ReturnEmptyLocationRange, key, value)
+
+		// If the dictionary already contained a value for the key,
+		// and the dictionary is resource-typed,
+		// then we need to prevent a resource loss
+
+		if _, ok := existingValue.(*SomeValue); ok {
+
+			// Lazily determine if the dictionary is resource-typed, once
+
+			if lazyIsResourceTyped == nil {
+				isResourceTyped := v.SemaType(interpreter).IsResourceType()
+				lazyIsResourceTyped = &isResourceTyped
+			}
+
+			if *lazyIsResourceTyped {
+				panic(DuplicateKeyInResourceDictionaryError{
+					// TODO: provide proper location range
+				})
+			}
+		}
 	}
 
 	return v
