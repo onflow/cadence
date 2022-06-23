@@ -92,7 +92,8 @@ func (i *FlowIntegration) showDeployContractAction(
 	var codeLenses []*protocol.CodeLens
 
 	if len(signersList) == 0 {
-		signersList = append(signersList, []string{i.activeAccount.Name})
+		activeAccount := i.flowClient.GetActiveClientAccount().Address.String()
+		signersList = append(signersList, []string{activeAccount})
 	}
 
 	for _, signers := range signersList {
@@ -139,7 +140,8 @@ func (i *FlowIntegration) entryPointActions(
 	}
 
 	if len(signersList) == 0 {
-		signersList = append(signersList, []string{i.activeAccount.Name})
+		activeAccount := i.flowClient.GetActiveClientAccount()
+		signersList = append(signersList, []string{activeAccount.Name})
 	}
 
 	for index, argumentList := range argumentLists {

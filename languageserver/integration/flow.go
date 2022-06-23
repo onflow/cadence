@@ -20,6 +20,7 @@ type flowClient interface {
 	GetAccount(address flow.Address) (*flow.Account, error)
 	CreateAccount() (*flow.Account, error)
 	GetClientAccount(name string) *ClientAccount
+	GetActiveClientAccount() *ClientAccount
 	SetActiveClientAccount(name string) error
 }
 
@@ -28,8 +29,8 @@ var _ flowClient = flowkitClient{}
 // todo: check if we need this struct at all, could we just use the flow.Account returned from the flowkit
 
 type ClientAccount struct {
-	Name    string
-	Address flow.Address
+	*flow.Account
+	Name string
 }
 
 var names = []string{
@@ -84,8 +85,8 @@ func NewFlowkitClient(configPath string, numberOfAccounts int, loader flowkit.Re
 		}
 
 		client.accounts[i] = &ClientAccount{
+			Account: account,
 			Name:    names[i],
-			Address: account.Address,
 		}
 	}
 	client.activeAccount = client.accounts[0] // make first active by default
@@ -109,6 +110,10 @@ func (f flowkitClient) SetActiveClientAccount(name string) error {
 	}
 	f.activeAccount = account
 	return nil
+}
+
+func (f flowkitClient) GetActiveClientAccount() *ClientAccount {
+	return f.activeAccount
 }
 
 func (f flowkitClient) ExecuteScript(
