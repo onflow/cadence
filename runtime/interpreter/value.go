@@ -15004,6 +15004,12 @@ func (v *CompositeValue) Transfer(
 	needsStoreTo := address != currentAddress
 	isResourceKinded := v.IsResourceKinded(interpreter)
 
+	if needsStoreTo && v.Kind == common.CompositeKindContract {
+		panic(NonTransferableValueError{
+			Value: v,
+		})
+	}
+
 	if needsStoreTo || !isResourceKinded {
 		iterator, err := v.dictionary.Iterator()
 		if err != nil {
