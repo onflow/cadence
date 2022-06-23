@@ -1305,7 +1305,7 @@ func TestCheckAlwaysSucceedingDynamicCast(t *testing.T) {
           struct S2 {}
         `
 
-	test := func(t *testing.T, operation ast.Operation, hintType sema.Hint) {
+	test := func(t *testing.T, operation ast.Operation) {
 
 		t.Parallel()
 
@@ -1325,18 +1325,13 @@ func TestCheckAlwaysSucceedingDynamicCast(t *testing.T) {
 
 		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 
-		hints := checker.Hints()
-
-		require.Len(t, hints, 1)
-
-		require.IsType(t, hintType, hints[0])
+		require.Len(t, checker.Elaboration.AlwaysSucceedingCastTypes, 1)
 	}
 
 	t.Run("failable", func(t *testing.T) {
 		test(
 			t,
 			ast.OperationFailableCast,
-			&sema.AlwaysSucceedingFailableCastHint{},
 		)
 	})
 
@@ -1344,7 +1339,6 @@ func TestCheckAlwaysSucceedingDynamicCast(t *testing.T) {
 		test(
 			t,
 			ast.OperationForceCast,
-			&sema.AlwaysSucceedingForceCastHint{},
 		)
 	})
 }

@@ -125,29 +125,10 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 					},
 				)
 			} else if checker.lintingEnabled && IsSubType(leftHandType, rightHandType) {
-
-				switch expression.Operation {
-				case ast.OperationFailableCast:
-					checker.hint(
-						&AlwaysSucceedingFailableCastHint{
-							ValueType:  leftHandType,
-							TargetType: rightHandType,
-							Range:      ast.NewRangeFromPositioned(checker.memoryGauge, expression),
-						},
-					)
-
-				case ast.OperationForceCast:
-					checker.hint(
-						&AlwaysSucceedingForceCastHint{
-							ValueType:  leftHandType,
-							TargetType: rightHandType,
-							Range:      ast.NewRangeFromPositioned(checker.memoryGauge, expression),
-						},
-					)
-
-				default:
-					panic(errors.NewUnreachableError())
-				}
+				checker.Elaboration.AlwaysSucceedingCastTypes[expression] = struct {
+					Left  Type
+					Right Type
+				}{Left: leftHandType, Right: rightHandType}
 			}
 		}
 
@@ -165,12 +146,7 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 		if checker.lintingEnabled &&
 			!hasErrors &&
 			isRedundantCast(leftHandExpression, exprActualType, rightHandType, checker.expectedType) {
-			checker.hint(
-				&UnnecessaryCastHint{
-					TargetType: rightHandType,
-					Range:      ast.NewRangeFromPositioned(checker.memoryGauge, expression.TypeAnnotation),
-				},
-			)
+			checker.Elaboration.RedundantCastTypes[expression] = rightHandType
 		}
 
 		return rightHandType
