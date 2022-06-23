@@ -811,3 +811,17 @@ func (NonTransferableValueError) IsUserError() {}
 func (e NonTransferableValueError) Error() string {
 	return "cannot transfer non-transferable value"
 }
+
+// DuplicateKeyInResourceDictionaryError
+//
+type DuplicateKeyInResourceDictionaryError struct {
+	LocationRange
+}
+
+var _ errors.UserError = DuplicateKeyInResourceDictionaryError{}
+
+func (DuplicateKeyInResourceDictionaryError) IsUserError() {}
+
+func (e DuplicateKeyInResourceDictionaryError) Error() string {
+	return "duplicate key in resource dictionary"
+}
