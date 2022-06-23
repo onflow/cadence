@@ -18,20 +18,29 @@
 
 package integration
 
-func (i *FlowIntegration) initialize(initializationOptions any) error {
-	// Parse the configuration options sent from the client
-	conf, err := configFromInitializationOptions(initializationOptions)
-	if err != nil {
-		return err
-	}
-	i.config = conf
-	i.activeAccount = conf.activeAccount
+import "errors"
 
-	flowClient, err := NewFlowkitClient(i.config, i.loader)
+func (i *FlowIntegration) initialize(initializationOptions any) error {
+	optsMap, ok := initializationOptions.(map[string]any)
+	if !ok {
+		return errors.New("invalid initialization options")
+	}
+
+	configPath, ok := optsMap["configPath"].(string)
+	if !ok || configPath == "" {
+		return errors.New("initialization options: invalid config path")
+	}
+
+	numberOfAccounts, ok := optsMap["numberOfAccounts"].(int)
+	if !ok || configPath == "" {
+		return errors.New("initialization options: invalid config path")
+	}
+
+	client, err := NewFlowkitClient(configPath, numberOfAccounts, i.loader)
 	if err != nil {
 		return err
 	}
-	i.flowClient = flowClient
+	i.flowClient = client
 
 	return nil
 }

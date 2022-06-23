@@ -27,12 +27,9 @@ import (
 
 type FlowIntegration struct {
 	server *server.Server
-	config Config
 
 	entryPointInfo map[protocol.DocumentURI]entryPointInfo
 	contractInfo   map[protocol.DocumentURI]contractInfo
-
-	activeAccount ClientAccount
 
 	flowClient flowClient
 	loader     flowkit.ReaderWriter

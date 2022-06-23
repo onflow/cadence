@@ -49,8 +49,8 @@ type flowkitClient struct {
 	activeAccount *ClientAccount
 }
 
-func NewFlowkitClient(config Config, loader flowkit.ReaderWriter) (*flowkitClient, error) {
-	state, err := flowkit.Load([]string{config.configPath}, loader)
+func NewFlowkitClient(configPath string, numberOfAccounts int, loader flowkit.ReaderWriter) (*flowkitClient, error) {
+	state, err := flowkit.Load([]string{configPath}, loader)
 	if err != nil {
 		return nil, err
 	}
@@ -72,12 +72,12 @@ func NewFlowkitClient(config Config, loader flowkit.ReaderWriter) (*flowkitClien
 		state:    state,
 	}
 
-	if config.numberOfAccounts > len(names) {
+	if numberOfAccounts > len(names) {
 		return nil, fmt.Errorf(fmt.Sprintf("can only use up to %d accounts", len(names)))
 	}
 
-	client.accounts = make([]*ClientAccount, config.numberOfAccounts)
-	for i := 0; i < config.numberOfAccounts; i++ {
+	client.accounts = make([]*ClientAccount, numberOfAccounts)
+	for i := 0; i < numberOfAccounts; i++ {
 		account, err := client.CreateAccount()
 		if err != nil {
 			return nil, err

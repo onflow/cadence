@@ -53,7 +53,6 @@ func (i *FlowIntegration) resolveAddressContractNames(address common.Address) ([
 }
 
 func (i *FlowIntegration) resolveAddressImport(location common.AddressLocation) (string, error) {
-
 	account, err := i.getAccount(location.Address)
 	if err != nil {
 		return "", err
