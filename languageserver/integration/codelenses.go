@@ -117,7 +117,9 @@ func (i *FlowIntegration) entryPointActions(
 	[]*protocol.CodeLens,
 	error,
 ) {
-	i.updateEntryPointInfoIfNeeded(uri, version, checker)
+	if i.entryPointInfo[uri].documentVersion != version {
+		i.entryPointInfo[uri] = updateEntryPointInfo(version, checker)
+	}
 
 	entryPointInfo := i.entryPointInfo[uri]
 	if entryPointInfo.kind == entryPointKindUnknown || entryPointInfo.startPos == nil {

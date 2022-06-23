@@ -25,8 +25,6 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/sema"
-
-	"github.com/onflow/cadence/languageserver/protocol"
 )
 
 type entryPointKind uint8
@@ -50,15 +48,10 @@ type entryPointInfo struct {
 	numberOfSigners       int
 }
 
-func (i *FlowIntegration) updateEntryPointInfoIfNeeded(
-	uri protocol.DocumentURI,
+func updateEntryPointInfo(
 	version int32,
 	checker *sema.Checker,
-) {
-	if i.entryPointInfo[uri].documentVersion == version {
-		return
-	}
-
+) entryPointInfo {
 	var startPos *ast.Position
 	var kind entryPointKind
 	var docString string
@@ -121,7 +114,7 @@ func (i *FlowIntegration) updateEntryPointInfoIfNeeded(
 		}
 	}
 
-	i.entryPointInfo[uri] = entryPointInfo{
+	return entryPointInfo{
 		documentVersion:       version,
 		startPos:              startPos,
 		kind:                  kind,
