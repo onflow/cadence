@@ -70,15 +70,21 @@ func TestDecodeScriptLocationTypeID(t *testing.T) {
 
 		t.Parallel()
 
-		_, _, err := decodeScriptLocationTypeID(nil, "s.test")
-		require.EqualError(t, err, "invalid script location type ID: missing qualified identifier")
+		location, qualifiedIdentifier, err := decodeScriptLocationTypeID(nil, "s.0102")
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			ScriptLocation{0x1, 0x2},
+			location,
+		)
+		assert.Empty(t, qualifiedIdentifier)
 	})
 
 	t.Run("missing qualified identifier", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, _, err := decodeScriptLocationTypeID(nil, "X.test.T")
+		_, _, err := decodeScriptLocationTypeID(nil, "X.0102.T")
 		require.EqualError(t, err, "invalid script location type ID: invalid prefix: expected \"s\", got \"X\"")
 	})
 

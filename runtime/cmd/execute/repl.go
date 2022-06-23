@@ -42,7 +42,7 @@ func RunREPL() {
 	errorPrettyPrinter := pretty.NewErrorPrettyPrinter(os.Stderr, true)
 
 	repl, err := runtime.NewREPL(
-		func(err error, location common.Location, codes map[common.LocationID]string) {
+		func(err error, location common.Location, codes map[common.Location]string) {
 			printErr := errorPrettyPrinter.PrettyPrintError(err, location, codes)
 			if printErr != nil {
 				panic(printErr)
@@ -51,7 +51,6 @@ func RunREPL() {
 		func(value interpreter.Value) {
 			fmt.Println(formatValue(value))
 		},
-		nil,
 		nil,
 	)
 

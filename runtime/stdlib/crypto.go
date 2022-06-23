@@ -42,6 +42,7 @@ var CryptoChecker = func() *sema.Checker {
 		program,
 		location,
 		nil,
+		false,
 		sema.WithPredeclaredValues(BuiltinFunctions.ToSemaValueDeclarations()),
 		sema.WithPredeclaredTypes(BuiltinTypes.ToTypeDeclarations()),
 	)

@@ -6268,10 +6268,14 @@ func (t *CapabilityType) GetMembers() map[string]MemberResolver {
 	return t.memberResolvers
 }
 
+const CapabilityTypeBorrowField = "borrow"
+const CapabilityTypeCheckField = "check"
+const CapabilityTypeAddressField = "address"
+
 func (t *CapabilityType) initializeMemberResolvers() {
 	t.memberResolversOnce.Do(func() {
 		t.memberResolvers = withBuiltinMembers(t, map[string]MemberResolver{
-			"borrow": {
+			CapabilityTypeBorrowField: {
 				Kind: common.DeclarationKindFunction,
 				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicFunctionMember(
@@ -6283,7 +6287,7 @@ func (t *CapabilityType) initializeMemberResolvers() {
 					)
 				},
 			},
-			"check": {
+			CapabilityTypeCheckField: {
 				Kind: common.DeclarationKindFunction,
 				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicFunctionMember(
@@ -6295,7 +6299,7 @@ func (t *CapabilityType) initializeMemberResolvers() {
 					)
 				},
 			},
-			"address": {
+			CapabilityTypeAddressField: {
 				Kind: common.DeclarationKindField,
 				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicConstantFieldMember(

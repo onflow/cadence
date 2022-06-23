@@ -509,7 +509,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 	senderAddress := common.MustBytesToAddress([]byte{0x2})
 	receiverAddress := common.MustBytesToAddress([]byte{0x3})
 
-	accountCodes := map[common.LocationID][]byte{}
+	accountCodes := map[common.Location][]byte{}
 
 	var events []cadence.Event
 
@@ -517,7 +517,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
-			return accountCodes[location.ID()], nil
+			return accountCodes[location], nil
 		},
 		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
@@ -529,14 +529,14 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 				Address: address,
 				Name:    name,
 			}
-			return accountCodes[location.ID()], nil
+			return accountCodes[location], nil
 		},
 		updateAccountContractCode: func(address Address, name string, code []byte) error {
 			location := common.AddressLocation{
 				Address: address,
 				Name:    name,
 			}
-			accountCodes[location.ID()] = code
+			accountCodes[location] = code
 			return nil
 		},
 		emitEvent: func(event cadence.Event) error {

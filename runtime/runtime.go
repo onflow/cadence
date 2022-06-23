@@ -41,7 +41,7 @@ type Script struct {
 	Arguments [][]byte
 }
 
-type importResolutionResults map[common.LocationID]bool
+type importResolutionResults map[common.Location]bool
 
 // Runtime is a runtime capable of executing Cadence.
 type Runtime interface {
@@ -109,11 +109,6 @@ type Runtime interface {
 	//
 	SetDebugger(debugger *interpreter.Debugger)
 }
-
-var typeDeclarations = append(
-	stdlib.FlowBuiltInTypes,
-	stdlib.BuiltinTypes...,
-).ToTypeDeclarations()
 
 type ImportResolver = func(location common.Location) (program *ast.Program, e error)
 
@@ -1171,10 +1166,11 @@ func (r *interpreterRuntime) check(
 		program,
 		startContext.Location,
 		memoryGauge,
+		false,
 		append(
 			[]sema.Option{
 				sema.WithPredeclaredValues(valueDeclarations),
-				sema.WithPredeclaredTypes(typeDeclarations),
+				sema.WithPredeclaredTypes(stdlib.FlowDefaultPredeclaredTypes),
 				sema.WithValidTopLevelDeclarationsHandler(validTopLevelDeclarations),
 				sema.WithLocationHandler(
 					func(identifiers []Identifier, location Location) (res []ResolvedLocation, err error) {
@@ -1196,14 +1192,14 @@ func (r *interpreterRuntime) check(
 							context := startContext.WithLocation(importedLocation)
 
 							// Check for cyclic imports
-							if checkedImports[importedLocation.ID()] {
+							if checkedImports[importedLocation] {
 								return nil, &sema.CyclicImportsError{
 									Location: importedLocation,
 									Range:    importRange,
 								}
 							} else {
-								checkedImports[importedLocation.ID()] = true
-								defer delete(checkedImports, importedLocation.ID())
+								checkedImports[importedLocation] = true
+								defer delete(checkedImports, importedLocation)
 							}
 
 							program, err := r.getProgram(context, functions, values, checkerOptions, checkedImports)
@@ -1279,6 +1275,8 @@ func (r *interpreterRuntime) newInterpreter(
 	}
 
 	defaultOptions := []interpreter.Option{
+		// NOTE: storage option must be provided *before* the predeclared values option,
+		// as predeclared values may rely on storage
 		interpreter.WithStorage(storage),
 		interpreter.WithPredeclaredValues(preDeclaredValues),
 		interpreter.WithOnEventEmittedHandler(
@@ -2203,7 +2201,7 @@ func (r *interpreterRuntime) instantiateContract(
 				// If the contract is the deployed contract, instantiate it using
 				// the provided constructor and given arguments
 
-				if common.LocationsMatch(compositeType.Location, contractType.Location) &&
+				if compositeType.Location == contractType.Location &&
 					compositeType.Identifier == contractType.Identifier {
 
 					value, err := inter.InvokeFunctionValue(

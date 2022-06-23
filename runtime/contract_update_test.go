@@ -35,7 +35,7 @@ import (
 func TestContractUpdateWithDependencies(t *testing.T) {
 
 	runtime := newTestInterpreterRuntime()
-	accountCodes := map[common.LocationID][]byte{}
+	accountCodes := map[common.Location][]byte{}
 	signerAccount := common.MustBytesToAddress([]byte{0x1})
 	fooLocation := common.AddressLocation{
 		Address: signerAccount,
@@ -46,7 +46,7 @@ func TestContractUpdateWithDependencies(t *testing.T) {
 
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
-			return accountCodes[location.ID()], nil
+			return accountCodes[location], nil
 		},
 		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
@@ -58,14 +58,14 @@ func TestContractUpdateWithDependencies(t *testing.T) {
 				Address: address,
 				Name:    name,
 			}
-			return accountCodes[location.ID()], nil
+			return accountCodes[location], nil
 		},
 		updateAccountContractCode: func(address Address, name string, code []byte) error {
 			location := common.AddressLocation{
 				Address: address,
 				Name:    name,
 			}
-			accountCodes[location.ID()] = code
+			accountCodes[location] = code
 			return nil
 		},
 		emitEvent: func(event cadence.Event) error {

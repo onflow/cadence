@@ -1714,7 +1714,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				// in the same location as it was declared
 
 				if compositeType.Kind == common.CompositeKindResource &&
-					!common.LocationsMatch(invocation.Interpreter.Location, compositeType.Location) {
+					invocation.Interpreter.Location != compositeType.Location {
 
 					panic(ResourceConstructionError{
 						CompositeType: compositeType,
@@ -3991,16 +3991,16 @@ func (interpreter *Interpreter) capabilityBorrowFunction(
 		interpreter,
 		func(invocation Invocation) Value {
 
-			if borrowType == nil {
-				typeParameterPair := invocation.TypeParameterTypes.Oldest()
-				if typeParameterPair != nil {
-					ty := typeParameterPair.Value
-					var ok bool
-					borrowType, ok = ty.(*sema.ReferenceType)
-					if !ok {
-						panic(errors.NewUnreachableError())
-					}
+			// NOTE: if a type argument is provided for the function,
+			// use it *instead* of the type of the value (if any)
 
+			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			if typeParameterPair != nil {
+				ty := typeParameterPair.Value
+				var ok bool
+				borrowType, ok = ty.(*sema.ReferenceType)
+				if !ok {
+					panic(errors.NewUnreachableError())
 				}
 			}
 
@@ -4062,17 +4062,16 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 		interpreter,
 		func(invocation Invocation) Value {
 
-			if borrowType == nil {
+			// NOTE: if a type argument is provided for the function,
+			// use it *instead* of the type of the value (if any)
 
-				typeParameterPair := invocation.TypeParameterTypes.Oldest()
-				if typeParameterPair != nil {
-					ty := typeParameterPair.Value
-					var ok bool
-					borrowType, ok = ty.(*sema.ReferenceType)
-					if !ok {
-						panic(errors.NewUnreachableError())
-					}
-
+			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			if typeParameterPair != nil {
+				ty := typeParameterPair.Value
+				var ok bool
+				borrowType, ok = ty.(*sema.ReferenceType)
+				if !ok {
+					panic(errors.NewUnreachableError())
 				}
 			}
 
