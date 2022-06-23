@@ -63,7 +63,12 @@ func TestExportValue(t *testing.T) {
 			if tt.valueFactory != nil {
 				value = tt.valueFactory(inter)
 			}
-			actual, err := exportValueWithInterpreter(value, inter, seenReferences{})
+			actual, err := exportValueWithInterpreter(
+				value,
+				inter,
+				interpreter.ReturnEmptyLocationRange,
+				seenReferences{},
+			)
 			if tt.expected == nil {
 				require.Error(t, err)
 			} else {
@@ -482,7 +487,12 @@ func TestImportValue(t *testing.T) {
 
 			inter := newTestInterpreter(t)
 
-			actual, err := importValue(inter, tt.value, tt.expectedType)
+			actual, err := importValue(
+				inter,
+				interpreter.ReturnEmptyLocationRange,
+				tt.value,
+				tt.expectedType,
+			)
 
 			if tt.expected == nil {
 				require.Error(t, err)
@@ -827,7 +837,7 @@ func TestImportRuntimeType(t *testing.T) {
 			expected: interpreter.PrimitiveStaticTypeCharacter,
 		},
 		{
-			label:    "Addresss",
+			label:    "Address",
 			actual:   cadence.AddressType{},
 			expected: interpreter.PrimitiveStaticTypeAddress,
 		},
@@ -1720,7 +1730,12 @@ func TestExportTypeValue(t *testing.T) {
 		value := interpreter.TypeValue{
 			Type: nil,
 		}
-		actual, err := exportValueWithInterpreter(value, newTestInterpreter(t), seenReferences{})
+		actual, err := exportValueWithInterpreter(
+			value,
+			newTestInterpreter(t),
+			interpreter.ReturnEmptyLocationRange,
+			seenReferences{},
+		)
 		require.NoError(t, err)
 
 		expected := cadence.TypeValue{
@@ -1764,7 +1779,7 @@ func TestExportTypeValue(t *testing.T) {
 			},
 		}
 
-		actual, err := ExportValue(ty, inter)
+		actual, err := ExportValue(ty, inter, interpreter.ReturnEmptyLocationRange)
 		require.NoError(t, err)
 
 		assert.Equal(t,
@@ -1805,7 +1820,12 @@ func TestExportCapabilityValue(t *testing.T) {
 			BorrowType: interpreter.PrimitiveStaticTypeInt,
 		}
 
-		actual, err := exportValueWithInterpreter(capability, newTestInterpreter(t), seenReferences{})
+		actual, err := exportValueWithInterpreter(
+			capability,
+			newTestInterpreter(t),
+			interpreter.ReturnEmptyLocationRange,
+			seenReferences{},
+		)
 		require.NoError(t, err)
 
 		expected := cadence.Capability{
@@ -1847,7 +1867,12 @@ func TestExportCapabilityValue(t *testing.T) {
 			BorrowType: interpreter.NewCompositeStaticTypeComputeTypeID(inter, TestLocation, "S"),
 		}
 
-		actual, err := exportValueWithInterpreter(capability, inter, seenReferences{})
+		actual, err := exportValueWithInterpreter(
+			capability,
+			inter,
+			interpreter.ReturnEmptyLocationRange,
+			seenReferences{},
+		)
 		require.NoError(t, err)
 
 		expected := cadence.Capability{
@@ -1876,7 +1901,12 @@ func TestExportCapabilityValue(t *testing.T) {
 			},
 		}
 
-		actual, err := exportValueWithInterpreter(capability, newTestInterpreter(t), seenReferences{})
+		actual, err := exportValueWithInterpreter(
+			capability,
+			newTestInterpreter(t),
+			interpreter.ReturnEmptyLocationRange,
+			seenReferences{},
+		)
 		require.NoError(t, err)
 
 		expected := cadence.Capability{
@@ -1905,7 +1935,12 @@ func TestExportLinkValue(t *testing.T) {
 			Type: interpreter.PrimitiveStaticTypeInt,
 		}
 
-		actual, err := exportValueWithInterpreter(link, newTestInterpreter(t), seenReferences{})
+		actual, err := exportValueWithInterpreter(
+			link,
+			newTestInterpreter(t),
+			interpreter.ReturnEmptyLocationRange,
+			seenReferences{},
+		)
 		require.NoError(t, err)
 
 		expected := cadence.Link{
@@ -1944,7 +1979,12 @@ func TestExportLinkValue(t *testing.T) {
 			Type: interpreter.NewCompositeStaticTypeComputeTypeID(inter, TestLocation, "S"),
 		}
 
-		actual, err := exportValueWithInterpreter(capability, inter, seenReferences{})
+		actual, err := exportValueWithInterpreter(
+			capability,
+			inter,
+			interpreter.ReturnEmptyLocationRange,
+			seenReferences{},
+		)
 		require.NoError(t, err)
 
 		expected := cadence.Link{
@@ -2928,7 +2968,12 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 			common.Address{},
 		)
 
-		actual, err := exportValueWithInterpreter(value, inter, seenReferences{})
+		actual, err := exportValueWithInterpreter(
+			value,
+			inter,
+			interpreter.ReturnEmptyLocationRange,
+			seenReferences{},
+		)
 		require.NoError(t, err)
 
 		assert.Equal(t,
@@ -2947,6 +2992,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 
 		actual, err := importValue(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			value,
 			sema.ByteArrayType,
 		)
@@ -2982,7 +3028,12 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 			interpreter.NewUnmeteredStringValue("foo"),
 		)
 
-		actual, err := exportValueWithInterpreter(value, inter, seenReferences{})
+		actual, err := exportValueWithInterpreter(
+			value,
+			inter,
+			interpreter.ReturnEmptyLocationRange,
+			seenReferences{},
+		)
 		require.NoError(t, err)
 
 		assert.Equal(t,
@@ -3007,6 +3058,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 
 		actual, err := importValue(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			value,
 			&sema.VariableSizedType{
 				Type: sema.AnyStructType,
@@ -3049,6 +3101,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 
 		actual, err := importValue(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			value,
 			sema.AnyStructType,
 		)
@@ -3105,7 +3158,12 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 			},
 		)
 
-		actual, err := exportValueWithInterpreter(value, newTestInterpreter(t), seenReferences{})
+		actual, err := exportValueWithInterpreter(
+			value,
+			newTestInterpreter(t),
+			interpreter.ReturnEmptyLocationRange,
+			seenReferences{},
+		)
 		require.NoError(t, err)
 
 		assert.Equal(t,
@@ -3124,6 +3182,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 
 		actual, err := importValue(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			value,
 			&sema.DictionaryType{
 				KeyType:   sema.StringType,
@@ -3162,7 +3221,12 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 			interpreter.NewUnmeteredStringValue("b"), interpreter.NewUnmeteredIntValueFromInt64(2),
 		)
 
-		actual, err := exportValueWithInterpreter(value, inter, seenReferences{})
+		actual, err := exportValueWithInterpreter(
+			value,
+			inter,
+			interpreter.ReturnEmptyLocationRange,
+			seenReferences{},
+		)
 		require.NoError(t, err)
 
 		assert.Equal(t,
@@ -3199,6 +3263,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 
 		actual, err := importValue(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			value,
 			&sema.DictionaryType{
 				KeyType:   sema.StringType,
@@ -3260,6 +3325,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 
 		actual, err := importValue(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			value,
 			sema.AnyStructType,
 		)
@@ -4544,7 +4610,12 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 
 		t.Parallel()
 
-		actual, err := exportValueWithInterpreter(internalCompositeValue, inter, seenReferences{})
+		actual, err := exportValueWithInterpreter(
+			internalCompositeValue,
+			inter,
+			interpreter.ReturnEmptyLocationRange,
+			seenReferences{},
+		)
 		require.NoError(t, err)
 
 		assert.Equal(t,
@@ -4568,6 +4639,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 
 		actual, err := importValue(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			externalCompositeValue,
 			semaCompositeType,
 		)

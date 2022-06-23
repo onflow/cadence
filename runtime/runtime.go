@@ -338,6 +338,7 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val 
 		functionEntryPointType.Parameters,
 		script.Arguments,
 		context.Interface,
+		interpreter.ReturnEmptyLocationRange,
 	)
 
 	value, inter, err := r.interpret(
@@ -356,7 +357,7 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val 
 
 	// Export before committing storage
 
-	result, err := exportValue(value)
+	result, err := exportValue(value, interpreter.ReturnEmptyLocationRange)
 	if err != nil {
 		return nil, newError(err, context)
 	}
@@ -397,6 +398,7 @@ func scriptExecutionFunction(
 	parameters []*sema.Parameter,
 	arguments [][]byte,
 	runtimeInterface Interface,
+	getLocationRange func() interpreter.LocationRange,
 ) interpretFunc {
 	return func(inter *interpreter.Interpreter) (value interpreter.Value, err error) {
 
@@ -411,8 +413,10 @@ func scriptExecutionFunction(
 		values, err := validateArgumentParams(
 			inter,
 			runtimeInterface,
+			interpreter.ReturnEmptyLocationRange,
 			arguments,
-			parameters)
+			parameters,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -618,7 +622,7 @@ func (r *interpreterRuntime) InvokeContractFunction(
 	}
 
 	var exportedValue cadence.Value
-	exportedValue, err = ExportValue(value, inter)
+	exportedValue, err = ExportValue(value, inter, interpreter.ReturnEmptyLocationRange)
 	if err != nil {
 		return nil, newError(err, context)
 	}
@@ -865,6 +869,7 @@ func (r *interpreterRuntime) transactionExecutionFunction(
 		values, err := validateArgumentParams(
 			inter,
 			runtimeInterface,
+			interpreter.ReturnEmptyLocationRange,
 			arguments,
 			parameters,
 		)
@@ -881,6 +886,7 @@ func (r *interpreterRuntime) transactionExecutionFunction(
 func validateArgumentParams(
 	inter *interpreter.Interpreter,
 	runtimeInterface Interface,
+	getLocationRange func() interpreter.LocationRange,
 	arguments [][]byte,
 	parameters []*sema.Parameter,
 ) (
@@ -925,7 +931,12 @@ func validateArgumentParams(
 		var arg interpreter.Value
 		panicError := userPanicToError(func() {
 			// if importing an invalid public key, this call panics
-			arg, err = importValue(inter, value, parameterType)
+			arg, err = importValue(
+				inter,
+				getLocationRange,
+				value,
+				parameterType,
+			)
 		})
 
 		if panicError != nil {
@@ -1702,7 +1713,12 @@ func (r *interpreterRuntime) emitEvent(
 		Fields: fields,
 	}
 
-	exportedEvent, err := exportEvent(inter, eventValue, seenReferences{})
+	exportedEvent, err := exportEvent(
+		inter,
+		eventValue,
+		getLocationRange,
+		seenReferences{},
+	)
 	if err != nil {
 		return err
 	}
@@ -1717,6 +1733,7 @@ func (r *interpreterRuntime) emitAccountEvent(
 	eventType *sema.CompositeType,
 	runtimeInterface Interface,
 	eventFields []exportableValue,
+	getLocationRange func() interpreter.LocationRange,
 ) {
 	eventValue := exportableEvent{
 		Type:   eventType,
@@ -1735,7 +1752,12 @@ func (r *interpreterRuntime) emitAccountEvent(
 		))
 	}
 
-	exportedEvent, err := exportEvent(gauge, eventValue, seenReferences{})
+	exportedEvent, err := exportEvent(
+		gauge,
+		eventValue,
+		getLocationRange,
+		seenReferences{},
+	)
 	if err != nil {
 		panic(err)
 	}
@@ -1809,6 +1831,7 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 			[]exportableValue{
 				newExportableValue(addressValue, inter),
 			},
+			getLocationRange,
 		)
 
 		return r.newAuthAccountValue(
@@ -1984,6 +2007,7 @@ func (r *interpreterRuntime) newAddPublicKeyFunction(
 					newExportableValue(addressValue, inter),
 					newExportableValue(publicKeyValue, inter),
 				},
+				invocation.GetLocationRange,
 			)
 
 			return interpreter.VoidValue{}
@@ -2033,6 +2057,7 @@ func (r *interpreterRuntime) newRemovePublicKeyFunction(
 					newExportableValue(addressValue, inter),
 					newExportableValue(publicKeyValue, inter),
 				},
+				invocation.GetLocationRange,
 			)
 
 			return interpreter.VoidValue{}
@@ -2763,6 +2788,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 					stdlib.AccountContractUpdatedEventType,
 					startContext.Interface,
 					eventArguments,
+					invocation.GetLocationRange,
 				)
 			} else {
 				r.emitAccountEvent(
@@ -2770,6 +2796,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 					stdlib.AccountContractAddedEventType,
 					startContext.Interface,
 					eventArguments,
+					invocation.GetLocationRange,
 				)
 			}
 
@@ -3028,6 +3055,7 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 						newExportableValue(codeHashValue, inter),
 						newExportableValue(nameValue, inter),
 					},
+					invocation.GetLocationRange,
 				)
 
 				return interpreter.NewSomeValueNonCopying(
@@ -3131,7 +3159,7 @@ func (r *interpreterRuntime) executeNonProgram(interpret interpretFunc, context 
 		return nil, nil
 	}
 
-	return exportValue(value)
+	return exportValue(value, interpreter.ReturnEmptyLocationRange)
 }
 
 func (r *interpreterRuntime) ReadStored(
@@ -3315,6 +3343,7 @@ func (r *interpreterRuntime) newAccountKeysAddFunction(
 					newExportableValue(addressValue, inter),
 					newExportableValue(publicKeyValue, inter),
 				},
+				invocation.GetLocationRange,
 			)
 
 			return NewAccountKeyValue(
@@ -3423,6 +3452,7 @@ func (r *interpreterRuntime) newAccountKeysRevokeFunction(
 					newExportableValue(addressValue, inter),
 					newExportableValue(indexValue, inter),
 				},
+				invocation.GetLocationRange,
 			)
 
 			return interpreter.NewSomeValueNonCopying(
