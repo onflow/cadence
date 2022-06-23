@@ -75,7 +75,9 @@ func (i *FlowIntegration) showDeployContractAction(
 	version int32,
 	checker *sema.Checker,
 ) ([]*protocol.CodeLens, error) {
-	i.updateContractInfoIfNeeded(uri, version, checker)
+	if i.contractInfo[uri].documentVersion != version {
+		i.contractInfo[uri] = updateContractInfo(version, checker)
+	}
 
 	contractInfo := i.contractInfo[uri]
 	kind := contractInfo.kind

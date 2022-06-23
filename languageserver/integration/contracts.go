@@ -23,8 +23,6 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/sema"
-
-	"github.com/onflow/cadence/languageserver/protocol"
 )
 
 type contractKind uint8
@@ -46,15 +44,10 @@ type contractInfo struct {
 	pragmaSignersStrings  [][]string
 }
 
-func (i FlowIntegration) updateContractInfoIfNeeded(
-	uri protocol.DocumentURI,
+func updateContractInfo(
 	version int32,
 	checker *sema.Checker,
-) {
-	if i.contractInfo[uri].documentVersion == version {
-		return
-	}
-
+) contractInfo {
 	var name string
 	var startPos *ast.Position
 	var kind contractKind
@@ -83,7 +76,6 @@ func (i FlowIntegration) updateContractInfoIfNeeded(
 	var pragmaArguments [][]Argument
 
 	if startPos != nil {
-
 		parameterTypes := make([]sema.Type, len(parameters))
 
 		for i, parameter := range parameters {
@@ -114,7 +106,7 @@ func (i FlowIntegration) updateContractInfoIfNeeded(
 		}
 	}
 
-	i.contractInfo[uri] = contractInfo{
+	return contractInfo{
 		documentVersion:       version,
 		startPos:              startPos,
 		kind:                  kind,
