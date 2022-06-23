@@ -177,7 +177,6 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 		t.Run("second save", func(t *testing.T) {
 
 			_, err := inter.Invoke("test")
-
 			require.Error(t, err)
 
 			require.ErrorAs(t, err, &interpreter.OverwriteError{})
@@ -224,7 +223,6 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 		t.Run("second save", func(t *testing.T) {
 
 			_, err := inter.Invoke("test")
-
 			require.Error(t, err)
 
 			require.ErrorAs(t, err, &interpreter.OverwriteError{})
@@ -400,6 +398,7 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 			// load
 
 			_, err = inter.Invoke("loadR2")
+			require.Error(t, err)
 
 			require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 
@@ -481,6 +480,8 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 			// load
 
 			_, err = inter.Invoke("loadS2")
+			require.Error(t, err)
+
 			require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 
 			// NOTE: check loaded value was *not* removed from storage
@@ -575,6 +576,8 @@ func TestInterpretAuthAccount_copy(t *testing.T) {
 		// load
 
 		_, err = inter.Invoke("copyS2")
+		require.Error(t, err)
+
 		require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 
 		// NOTE: check loaded value was *not* removed from storage
@@ -702,6 +705,8 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 		t.Run("borrow R2", func(t *testing.T) {
 
 			_, err := inter.Invoke("borrowR2")
+			require.Error(t, err)
+
 			require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 
 			// NOTE: check loaded value was *not* removed from storage
@@ -711,6 +716,7 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 		t.Run("change after borrow", func(t *testing.T) {
 
 			_, err := inter.Invoke("changeAfterBorrow")
+			require.Error(t, err)
 
 			require.ErrorAs(t, err, &interpreter.DereferenceError{})
 		})
@@ -839,6 +845,8 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 		t.Run("borrow S2", func(t *testing.T) {
 
 			_, err = inter.Invoke("borrowS2")
+			require.Error(t, err)
+
 			require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 
 			// NOTE: check loaded value was *not* removed from storage
@@ -848,6 +856,7 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 		t.Run("change after borrow", func(t *testing.T) {
 
 			_, err := inter.Invoke("changeAfterBorrow")
+			require.Error(t, err)
 
 			require.ErrorAs(t, err, &interpreter.DereferenceError{})
 		})
@@ -855,6 +864,7 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 		t.Run("borrow as invalid type", func(t *testing.T) {
 			_, err = inter.Invoke("invalidBorrowS")
 			require.Error(t, err)
+
 			require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 		})
 	})
