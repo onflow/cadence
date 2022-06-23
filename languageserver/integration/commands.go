@@ -30,24 +30,18 @@ import (
 )
 
 const (
-	CommandSendTransaction       = "cadence.server.flow.sendTransaction"
-	CommandExecuteScript         = "cadence.server.flow.executeScript"
-	CommandDeployContract        = "cadence.server.flow.deployContract"
-	CommandCreateAccount         = "cadence.server.flow.createAccount"
-	CommandCreateDefaultAccounts = "cadence.server.flow.createDefaultAccounts" // todo why do we need this, should be default on startup
-	CommandSwitchActiveAccount   = "cadence.server.flow.switchActiveAccount"
-	CommandInitAccountManager    = "cadence.server.flow.initAccountManager" // todo remove
+	CommandSendTransaction     = "cadence.server.flow.sendTransaction"
+	CommandExecuteScript       = "cadence.server.flow.executeScript"
+	CommandDeployContract      = "cadence.server.flow.deployContract"
+	CommandCreateAccount       = "cadence.server.flow.createAccount"
+	CommandSwitchActiveAccount = "cadence.server.flow.switchActiveAccount"
 
-	ErrorMessageEmulator          = "emulator error"
-	ErrorMessageServiceAccount    = "service account error"
-	ErrorMessageTransactionError  = "transaction error"
-	ErrorMessageServiceAccountKey = "service account private key error"
-	ErrorMessageAccountCreate     = "create account error"
-	ErrorMessageAccountStore      = "store account error"
-	ErrorMessagePrivateKeyDecoder = "private key decoder error"
-	ErrorMessageDeploy            = "deployment error"
-	ErrorMessageScriptExecution   = "script error"
-	ErrorMessageArguments         = "arguments error"
+	ErrorMessageServiceAccount   = "service account error"
+	ErrorMessageTransactionError = "transaction error"
+	ErrorMessageAccountCreate    = "create account error"
+	ErrorMessageDeploy           = "deployment error"
+	ErrorMessageScriptExecution  = "script error"
+	ErrorMessageArguments        = "arguments error"
 )
 
 func (i *FlowIntegration) commands() []server.Command {
@@ -71,10 +65,6 @@ func (i *FlowIntegration) commands() []server.Command {
 		{
 			Name:    CommandCreateAccount,
 			Handler: i.createAccount,
-		},
-		{
-			Name:    CommandCreateDefaultAccounts,
-			Handler: i.createDefaultAccounts,
 		},
 	}
 }
