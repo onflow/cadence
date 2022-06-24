@@ -262,7 +262,8 @@ var CastAnalyzer = (func() *analysis.Analyzer {
 					if ok && isRedundantCast(castingExpression.Expression,
 						redundantType.ExprActualType,
 						redundantType.TargetType,
-						redundantType.ExpectedType) {
+						redundantType.ExpectedType,
+					) {
 						report(
 							analysis.Diagnostic{
 								Location: location,
