@@ -31,6 +31,12 @@ type MemberInfo struct {
 	AccessedType Type
 }
 
+type CastType struct {
+	ExprActualType Type
+	TargetType     Type
+	ExpectedType   Type
+}
+
 type Elaboration struct {
 	lock                                *sync.RWMutex
 	FunctionDeclarationFunctionTypes    map[*ast.FunctionDeclaration]*FunctionType
@@ -89,6 +95,11 @@ type Elaboration struct {
 	IndexExpressionIndexedTypes         map[*ast.IndexExpression]ValueIndexableType
 	IndexExpressionIndexingTypes        map[*ast.IndexExpression]Type
 	ForceExpressionTypes                map[*ast.ForceExpression]Type
+	RuntimeCastTypes                    map[*ast.CastingExpression]struct {
+		Left  Type
+		Right Type
+	}
+	StaticCastTypes map[*ast.CastingExpression]CastType
 }
 
 func NewElaboration(gauge common.MemoryGauge, lintingEnabled bool) *Elaboration {
@@ -149,6 +160,11 @@ func NewElaboration(gauge common.MemoryGauge, lintingEnabled bool) *Elaboration 
 	}
 	if lintingEnabled {
 		elaboration.ForceExpressionTypes = map[*ast.ForceExpression]Type{}
+		elaboration.StaticCastTypes = map[*ast.CastingExpression]CastType{}
+		elaboration.RuntimeCastTypes = map[*ast.CastingExpression]struct {
+			Left  Type
+			Right Type
+		}{}
 	}
 	return elaboration
 
