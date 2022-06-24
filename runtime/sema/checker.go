@@ -87,7 +87,6 @@ type Checker struct {
 	PredeclaredTypes                   []TypeDeclaration
 	accessCheckMode                    AccessCheckMode
 	errors                             []error
-	hints                              []Hint
 	valueActivations                   *VariableActivations
 	resources                          *Resources
 	typeActivations                    *VariableActivations
@@ -443,10 +442,6 @@ func (checker *Checker) report(err error) {
 	if checker.errorShortCircuitingEnabled {
 		panic(stopChecking{})
 	}
-}
-
-func (checker *Checker) hint(hint Hint) {
-	checker.hints = append(checker.hints, hint)
 }
 
 func (checker *Checker) UserDefinedValues() map[string]*Variable {
@@ -1854,10 +1849,6 @@ func (checker *Checker) ResetErrors() {
 	checker.errors = nil
 }
 
-func (checker *Checker) ResetHints() {
-	checker.hints = nil
-}
-
 const invalidTypeDeclarationAccessModifierExplanation = "type declarations must be public"
 
 func (checker *Checker) checkDeclarationAccessModifier(
@@ -2415,10 +2406,6 @@ func (checker *Checker) convertInstantiationType(t *ast.InstantiationType) Type 
 	}
 
 	return parameterizedType.Instantiate(typeArguments, checker.report)
-}
-
-func (checker *Checker) Hints() []Hint {
-	return checker.hints
 }
 
 func (checker *Checker) VisitExpression(expr ast.Expression, expectedType Type) Type {

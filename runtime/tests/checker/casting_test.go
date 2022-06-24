@@ -6606,10 +6606,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 
 			require.NoError(t, err)
 
-			hints := checker.Hints()
-
-			// Binary expressions are currently skipped from checking.
-			require.Len(t, hints, 0)
+			require.Len(t, checker.Elaboration.StaticCastTypes, 2)
 		})
 
 		t.Run("Function expr", func(t *testing.T) {

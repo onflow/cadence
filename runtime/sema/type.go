@@ -3276,14 +3276,20 @@ func numberFunctionArgumentExpressionsChecker(targetType Type) ArgumentExpressio
 		case *ast.IntegerExpression:
 			if CheckIntegerLiteral(nil, argument, targetType, checker.report) {
 				if checker.lintingEnabled {
-					suggestIntegerLiteralConversionReplacement(checker, argument, targetType, invocationRange)
+					checker.Elaboration.NumberConversionArgumentTypes[argument] = struct {
+						Type  Type
+						Range ast.Range
+					}{Type: targetType, Range: invocationRange}
 				}
 			}
 
 		case *ast.FixedPointExpression:
 			if CheckFixedPointLiteral(nil, argument, targetType, checker.report) {
 				if checker.lintingEnabled {
-					suggestFixedPointLiteralConversionReplacement(checker, targetType, argument, invocationRange)
+					checker.Elaboration.NumberConversionArgumentTypes[argument] = struct {
+						Type  Type
+						Range ast.Range
+					}{Type: targetType, Range: invocationRange}
 				}
 			}
 		}
@@ -3349,135 +3355,6 @@ var StringTypeEncodeHexFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		StringType,
 	),
-}
-
-func suggestIntegerLiteralConversionReplacement(
-	checker *Checker,
-	argument *ast.IntegerExpression,
-	targetType Type,
-	invocationRange ast.Range,
-) {
-	negative := argument.Value.Sign() < 0
-
-	if IsSameTypeKind(targetType, FixedPointType) {
-
-		// If the integer literal is converted to a fixed-point type,
-		// suggest replacing it with a fixed-point literal
-
-		signed := IsSameTypeKind(targetType, SignedFixedPointType)
-
-		var hintExpression ast.Expression = ast.NewFixedPointExpression(
-			checker.memoryGauge,
-			"",
-			negative,
-			common.NewBigIntFromAbsoluteValue(checker.memoryGauge, argument.Value),
-			common.NewBigInt(checker.memoryGauge),
-			1,
-			argument.Range,
-		)
-
-		// If the fixed-point literal is positive
-		// and the target fixed-point type is signed,
-		// then a static cast is required
-
-		if !negative && signed {
-			hintExpression = ast.NewCastingExpression(
-				checker.memoryGauge,
-				hintExpression,
-				ast.OperationCast,
-				ast.NewTypeAnnotation(
-					checker.memoryGauge,
-					false,
-					ast.NewNominalType(
-						checker.memoryGauge,
-						ast.NewIdentifier(
-							checker.memoryGauge,
-							targetType.String(),
-							ast.EmptyPosition,
-						),
-						nil,
-					),
-					ast.EmptyPosition,
-				),
-				nil,
-			)
-		}
-
-		checker.hint(
-			&ReplacementHint{
-				Expression: hintExpression,
-				Range:      invocationRange,
-			},
-		)
-
-	} else if IsSameTypeKind(targetType, IntegerType) {
-
-		// If the integer literal is converted to an integer type,
-		// suggest replacing it with a fixed-point literal
-
-		var hintExpression ast.Expression = argument
-
-		// If the target type is not `Int`,
-		// then a static cast is required,
-		// as all integer literals (positive and negative)
-		// are inferred to be of type `Int`
-
-		if !IsSameTypeKind(targetType, IntType) {
-			hintExpression = ast.NewCastingExpression(
-				checker.memoryGauge,
-				hintExpression,
-				ast.OperationCast,
-				ast.NewTypeAnnotation(
-					checker.memoryGauge,
-					false,
-					ast.NewNominalType(
-						checker.memoryGauge,
-						ast.NewIdentifier(
-							checker.memoryGauge,
-							targetType.String(),
-							ast.EmptyPosition,
-						),
-						nil,
-					),
-					ast.EmptyPosition,
-				),
-				nil,
-			)
-		}
-
-		checker.hint(
-			&ReplacementHint{
-				Expression: hintExpression,
-				Range:      invocationRange,
-			},
-		)
-	}
-}
-
-func suggestFixedPointLiteralConversionReplacement(
-	checker *Checker,
-	targetType Type,
-	argument *ast.FixedPointExpression,
-	invocationRange ast.Range,
-) {
-	// If the fixed-point literal is converted to a fixed-point type,
-	// suggest replacing it with a fixed-point literal
-
-	if !IsSameTypeKind(targetType, FixedPointType) {
-		return
-	}
-
-	negative := argument.Negative
-	signed := IsSameTypeKind(targetType, SignedFixedPointType)
-
-	if (!negative && !signed) || (negative && signed) {
-		checker.hint(
-			&ReplacementHint{
-				Expression: argument,
-				Range:      invocationRange,
-			},
-		)
-	}
 }
 
 func pathConversionFunctionType(pathType Type) *FunctionType {
