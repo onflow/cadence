@@ -57,6 +57,9 @@ func TestInterpretMemberAccessType(t *testing.T) {
                     }
                 `)
 
+				// Construct an instance of type S
+				// by calling its constructor function of the same name
+
 				value, err := inter.Invoke("S")
 				require.NoError(t, err)
 
@@ -97,6 +100,9 @@ func TestInterpretMemberAccessType(t *testing.T) {
                     }
                 `)
 
+				// Construct an instance of type S2
+				// by calling its constructor function of the same name
+
 				value, err := inter.Invoke("S2")
 				require.NoError(t, err)
 
@@ -131,6 +137,9 @@ func TestInterpretMemberAccessType(t *testing.T) {
                         s?.foo
                     }
                 `)
+
+				// Construct an instance of type S
+				// by calling its constructor function of the same name
 
 				value, err := inter.Invoke("S")
 				require.NoError(t, err)
@@ -167,6 +176,9 @@ func TestInterpretMemberAccessType(t *testing.T) {
                         s?.foo
                     }
                 `)
+
+				// Construct an instance of type S2
+				// by calling its constructor function of the same name
 
 				value, err := inter.Invoke("S2")
 				require.NoError(t, err)
@@ -212,6 +224,9 @@ func TestInterpretMemberAccessType(t *testing.T) {
                     }
                 `)
 
+				// Construct an instance of type S
+				// by calling its constructor function of the same name
+
 				value, err := inter.Invoke("S")
 				require.NoError(t, err)
 
@@ -256,6 +271,9 @@ func TestInterpretMemberAccessType(t *testing.T) {
                     }
                 `)
 
+				// Construct an instance of type S2
+				// by calling its constructor function of the same name
+
 				value, err := inter.Invoke("S2")
 				require.NoError(t, err)
 
@@ -294,6 +312,9 @@ func TestInterpretMemberAccessType(t *testing.T) {
                         si?.foo
                     }
                 `)
+
+				// Construct an instance of type S
+				// by calling its constructor function of the same name
 
 				value, err := inter.Invoke("S")
 				require.NoError(t, err)
@@ -335,6 +356,9 @@ func TestInterpretMemberAccessType(t *testing.T) {
                     }
                 `)
 
+				// Construct an instance of type S2
+				// by calling its constructor function of the same name
+
 				value, err := inter.Invoke("S2")
 				require.NoError(t, err)
 
@@ -374,6 +398,9 @@ func TestInterpretMemberAccessType(t *testing.T) {
                         ref.foo = 2
                     }
                 `)
+
+				// Construct an instance of type S
+				// by calling its constructor function of the same name
 
 				value, err := inter.Invoke("S")
 				require.NoError(t, err)
@@ -419,6 +446,9 @@ func TestInterpretMemberAccessType(t *testing.T) {
                     }
                 `)
 
+				// Construct an instance of type S2
+				// by calling its constructor function of the same name
+
 				value, err := inter.Invoke("S2")
 				require.NoError(t, err)
 
@@ -457,6 +487,9 @@ func TestInterpretMemberAccessType(t *testing.T) {
                         ref?.foo
                     }
                 `)
+
+				// Construct an instance of type S
+				// by calling its constructor function of the same name
 
 				value, err := inter.Invoke("S")
 				require.NoError(t, err)
@@ -500,6 +533,9 @@ func TestInterpretMemberAccessType(t *testing.T) {
                     }
                 `)
 
+				// Construct an instance of type S2
+				// by calling its constructor function of the same name
+
 				value, err := inter.Invoke("S2")
 				require.NoError(t, err)
 
@@ -519,5 +555,4 @@ func TestInterpretMemberAccessType(t *testing.T) {
 			})
 		})
 	})
-
 }
