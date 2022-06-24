@@ -196,3 +196,105 @@ func TestForceOperatorAnalyzer(t *testing.T) {
 		)
 	})
 }
+
+func TestCastingAnalyzer(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("redundant", func(t *testing.T) {
+
+		t.Parallel()
+
+		diagnostics := testAnalyzers(t,
+			`
+			pub contract Test {
+				pub fun test() {
+					let x = true as Bool
+				}
+			}
+			`,
+			analyzers.RedundantCastAnalyzer,
+		)
+
+		require.Equal(
+			t,
+			[]analysis.Diagnostic{
+				{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 66, Line: 4, Column: 21},
+						EndPos:   ast.Position{Offset: 69, Line: 4, Column: 24},
+					},
+					Location: testLocation,
+					Category: "lint",
+					Message:  "cast to `Bool` is redundant",
+				},
+			},
+			diagnostics,
+		)
+	})
+
+	t.Run("always succeeding force", func(t *testing.T) {
+
+		t.Parallel()
+
+		diagnostics := testAnalyzers(t,
+			`
+			pub contract Test {
+				pub fun test() {
+					let x = true as! Bool
+				}
+			}
+			`,
+			analyzers.RedundantCastAnalyzer,
+		)
+
+		require.Equal(
+			t,
+			[]analysis.Diagnostic{
+				{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 58, Line: 4, Column: 13},
+						EndPos:   ast.Position{Offset: 70, Line: 4, Column: 25},
+					},
+					Location: testLocation,
+					Category: "lint",
+					Message:  "force cast ('as!') from `Bool` to `Bool` always succeeds",
+				},
+			},
+			diagnostics,
+		)
+	})
+
+	t.Run("always succeeding failable", func(t *testing.T) {
+
+		t.Parallel()
+
+		diagnostics := testAnalyzers(t,
+			`
+			pub contract Test {
+				pub fun test() {
+					let x = true as? Bool
+				}
+			}
+			`,
+			analyzers.RedundantCastAnalyzer,
+		)
+
+		require.Equal(
+			t,
+			[]analysis.Diagnostic{
+				{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 58, Line: 4, Column: 13},
+						EndPos:   ast.Position{Offset: 70, Line: 4, Column: 25},
+					},
+					Location: testLocation,
+					Category: "lint",
+					Message:  "failable cast ('as?') from `Bool` to `Bool` always succeeds",
+				},
+			},
+			diagnostics,
+		)
+	})
+
+}
