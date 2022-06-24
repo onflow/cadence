@@ -231,7 +231,7 @@ func isRedundantCast(expr ast.Expression, exprInferredType, targetType, expected
 	return checkCastVisitor.IsRedundantCast(expr, exprInferredType, targetType)
 }
 
-var CastAnalyzer = (func() *analysis.Analyzer {
+var RedundantCastAnalyzer = (func() *analysis.Analyzer {
 
 	elementFilter := []ast.Element{
 		(*ast.CastingExpression)(nil),
@@ -316,6 +316,6 @@ var CastAnalyzer = (func() *analysis.Analyzer {
 func init() {
 	registerAnalyzer(
 		"cast-analysis",
-		CastAnalyzer,
+		RedundantCastAnalyzer,
 	)
 }

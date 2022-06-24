@@ -213,7 +213,7 @@ func TestCastingAnalyzer(t *testing.T) {
 				}
 			}
 			`,
-			analyzers.CastAnalyzer,
+			analyzers.RedundantCastAnalyzer,
 		)
 
 		require.Equal(
@@ -245,7 +245,7 @@ func TestCastingAnalyzer(t *testing.T) {
 				}
 			}
 			`,
-			analyzers.CastAnalyzer,
+			analyzers.RedundantCastAnalyzer,
 		)
 
 		require.Equal(
@@ -277,7 +277,7 @@ func TestCastingAnalyzer(t *testing.T) {
 				}
 			}
 			`,
-			analyzers.CastAnalyzer,
+			analyzers.RedundantCastAnalyzer,
 		)
 
 		require.Equal(
