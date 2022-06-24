@@ -19,6 +19,10 @@
 package integration
 
 import (
+	"fmt"
+
+	"github.com/onflow/cadence/languageserver/conversion"
+	"github.com/onflow/cadence/languageserver/protocol"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/parser2"
@@ -34,6 +38,7 @@ const (
 )
 
 type contractInfo struct {
+	uri                   protocol.DocumentURI
 	documentVersion       int32
 	startPos              *ast.Position
 	kind                  contractKind
@@ -44,10 +49,7 @@ type contractInfo struct {
 	pragmaSignersStrings  [][]string
 }
 
-func (c *contractInfo) update(
-	version int32,
-	checker *sema.Checker,
-) {
+func (c *contractInfo) update(uri protocol.DocumentURI, version int32, checker *sema.Checker) {
 	if c.documentVersion == version {
 		return // if no change in version do nothing
 	}
@@ -105,8 +107,47 @@ func (c *contractInfo) update(
 		}
 	}
 
+	c.uri = uri
 	c.documentVersion = version
 	c.pragmaSignersStrings = pragmaSigners
 	c.pragmaArguments = pragmaArguments
 	c.pragmaArgumentStrings = pragmaArgumentStrings
+}
+
+func (c contractInfo) codelens(client flowClient) []*protocol.CodeLens {
+	if c.kind == contractTypeUnknown || c.startPos == nil {
+		return nil
+	}
+
+	signersList := c.pragmaSignersStrings[:]
+	if len(signersList) == 0 {
+		activeAccount := client.GetActiveClientAccount().Address.String()
+		signersList = append(signersList, []string{activeAccount}) // todo refactor list in list
+	}
+
+	codelensRange := conversion.ASTToProtocolRange(*c.startPos, *c.startPos)
+	var codeLenses []*protocol.CodeLens
+
+	for _, signers := range signersList {
+		var title string
+		signer := signers[0] // todo refactor list in list
+
+		account := client.GetClientAccount(signer)
+		if account == nil {
+			title = fmt.Sprintf("%s Specified account %s does not exist", prefixError, signer)
+			codeLenses = append(codeLenses, makeActionlessCodelens(title, codelensRange))
+		}
+
+		titleBody := "Deploy contract"
+		if c.kind == contractTypeInterface {
+			titleBody = "Deploy contract interface"
+		}
+
+		title = fmt.Sprintf("%s %s %s to %s", prefixOK, titleBody, c.name, signers)
+		arguments, _ := encodeJSONArguments(c.uri, c.name, account.Address)
+		codelens := makeCodeLens(CommandDeployContract, title, codelensRange, arguments)
+		codeLenses = append(codeLenses, codelens)
+	}
+
+	return codeLenses
 }
