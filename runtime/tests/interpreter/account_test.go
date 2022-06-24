@@ -97,6 +97,7 @@ func testAccount(
 			},
 			Options: []interpreter.Option{
 				interpreter.WithPredeclaredValues(valueDeclarations.ToInterpreterValueDeclarations()),
+				makeContractValueHandler(nil, nil, nil),
 			},
 		},
 	)
