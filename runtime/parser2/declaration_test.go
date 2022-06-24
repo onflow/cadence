@@ -268,7 +268,7 @@ func TestParseParameterList(t *testing.T) {
 	parse := func(input string) (any, []error) {
 		return Parse(
 			input,
-			func(p *parser) any {
+			func(p *parser) (any, error) {
 				return parseParameterList(p)
 			},
 			nil,
@@ -965,7 +965,7 @@ func TestParseAccess(t *testing.T) {
 	parse := func(input string) (any, []error) {
 		return Parse(
 			input,
-			func(p *parser) any {
+			func(p *parser) (any, error) {
 				return parseAccess(p)
 			},
 			nil,
@@ -1663,7 +1663,7 @@ func TestParseFieldWithVariableKind(t *testing.T) {
 	parse := func(input string) (any, []error) {
 		return Parse(
 			input,
-			func(p *parser) any {
+			func(p *parser) (any, error) {
 				return parseFieldWithVariableKind(p, ast.AccessNotSpecified, nil, "")
 			},
 			nil,
