@@ -41,7 +41,7 @@ func (r *resolvers) fileImport(location common.StringLocation) (string, error) {
 }
 
 func (r *resolvers) addressImport(location common.AddressLocation) (string, error) {
-	account, err := r.client.GetAccount(flow.HexToAddress(location.String()))
+	account, err := r.client.GetAccount(flow.HexToAddress(location.Address.String()))
 	if err != nil {
 		return "", err
 	}
