@@ -31,8 +31,8 @@ type FlowIntegration struct {
 	entryPointInfo map[protocol.DocumentURI]*entryPointInfo
 	contractInfo   map[protocol.DocumentURI]*contractInfo
 
-	flowClient flowClient
-	loader     flowkit.ReaderWriter
+	client flowClient
+	loader flowkit.ReaderWriter
 }
 
 func NewFlowIntegration(s *server.Server, enableFlowClient bool) (*FlowIntegration, error) {
@@ -55,7 +55,7 @@ func NewFlowIntegration(s *server.Server, enableFlowClient bool) (*FlowIntegrati
 
 	if enableFlowClient {
 		client := NewFlowkitClient(integration.loader)
-		integration.flowClient = client
+		integration.client = client
 		resolve.client = client
 
 		options = append(options,

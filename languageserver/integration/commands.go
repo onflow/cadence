@@ -130,7 +130,7 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...json.RawMe
 		return nil, fmt.Errorf("failed to parse JSON arguments")
 	}
 
-	txResult, err := i.flowClient.SendTransaction(signers, location, txArgs)
+	txResult, err := i.client.SendTransaction(signers, location, txArgs)
 	if err != nil {
 		return nil, errorWithMessage(conn, ErrorMessageTransactionError, err)
 	}
@@ -188,7 +188,7 @@ func (i *FlowIntegration) executeScript(conn protocol.Conn, args ...json.RawMess
 		)
 	}
 
-	scriptResult, err := i.flowClient.ExecuteScript(path, scriptArgs)
+	scriptResult, err := i.client.ExecuteScript(path, scriptArgs)
 	if err != nil {
 		return nil, errorWithMessage(conn, ErrorMessageScriptExecution, err)
 	}
@@ -218,7 +218,7 @@ func (i *FlowIntegration) switchActiveAccount(conn protocol.Conn, args ...json.R
 		)
 	}
 
-	err = i.flowClient.SetActiveClientAccount(name)
+	err = i.client.SetActiveClientAccount(name)
 	if err != nil {
 		return nil, err
 	}
@@ -228,7 +228,7 @@ func (i *FlowIntegration) switchActiveAccount(conn protocol.Conn, args ...json.R
 
 // createAccount creates a new account and returns its address.
 func (i *FlowIntegration) createAccount(conn protocol.Conn, args ...json.RawMessage) (interface{}, error) {
-	account, err := i.flowClient.CreateAccount()
+	account, err := i.client.CreateAccount()
 	if err != nil {
 		return nil, errorWithMessage(conn, ErrorMessageAccountCreate, err)
 	}
@@ -288,7 +288,7 @@ func (i *FlowIntegration) deployContract(conn protocol.Conn, args ...json.RawMes
 
 	showMessage(conn, fmt.Sprintf("Deploying contract %s to account %s", name, rawAddress))
 
-	_, deployError := i.flowClient.DeployContract(address, name, location)
+	_, deployError := i.client.DeployContract(address, name, location)
 	if deployError != nil {
 		return nil, errorWithMessage(conn, ErrorMessageDeploy, deployError)
 	}

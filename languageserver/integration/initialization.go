@@ -36,7 +36,7 @@ func (i *FlowIntegration) initialize(initializationOptions any) error {
 		return errors.New("initialization options: invalid config path")
 	}
 
-	err := i.flowClient.Initialize(configPath, numberOfAccounts)
+	err := i.client.Initialize(configPath, numberOfAccounts)
 	if err != nil {
 		return err
 	}
