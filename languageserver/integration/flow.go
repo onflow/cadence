@@ -13,6 +13,7 @@ import (
 	"github.com/onflow/flow-go-sdk/crypto"
 )
 
+//go:generate go run github.com/vektra/mockery/cmd/mockery --name flowClient --filename mock_flow_test.go --inpkg
 type flowClient interface {
 	Initialize(configPath string, numberOfAccounts int) error
 	GetClientAccount(name string) *ClientAccount
