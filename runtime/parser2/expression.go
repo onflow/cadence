@@ -1134,7 +1134,6 @@ func definePathExpression() {
 }
 
 func defineReferenceExpression() {
-
 	defineExpr(prefixExpr{
 		tokenType:    lexer.TokenAmpersand,
 		bindingPower: exprLeftBindingPowerUnaryPrefix,
