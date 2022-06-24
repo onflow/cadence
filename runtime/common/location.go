@@ -37,21 +37,8 @@ type Location interface {
 	TypeID(memoryGauge MemoryGauge, qualifiedIdentifier string) TypeID
 	// QualifiedIdentifier returns the qualified identifier for the given type ID
 	QualifiedIdentifier(typeID TypeID) string
-}
-
-// LocationsMatch returns true if both locations are nil or their IDs are the same.
-//
-func LocationsMatch(first, second Location) bool {
-
-	if first == nil {
-		return second == nil
-	}
-
-	if second == nil {
-		return false
-	}
-
-	return first.ID() == second.ID()
+	// Description returns a human-readable description. For example, it can be used in error messages
+	Description() string
 }
 
 // LocationsInSameAccount returns true if both locations are nil,
@@ -79,7 +66,7 @@ func LocationsInSameAccount(first, second Location) bool {
 		return firstAddressLocation.Address == secondAddressLocation.Address
 	}
 
-	return first.ID() == second.ID()
+	return first == second
 }
 
 // LocationID
@@ -118,12 +105,12 @@ func NewMeteredTypeID(memoryGauge MemoryGauge, parts ...string) TypeID {
 	return TypeID(jointString)
 }
 
-func NewTypeIDFromQualifiedName(location Location, qualifiedIdentifier string) TypeID {
+func NewTypeIDFromQualifiedName(memoryGauge MemoryGauge, location Location, qualifiedIdentifier string) TypeID {
 	if location == nil {
 		return TypeID(qualifiedIdentifier)
 	}
 
-	return location.TypeID(nil, qualifiedIdentifier)
+	return location.TypeID(memoryGauge, qualifiedIdentifier)
 }
 
 type TypeIDDecoder func(gauge MemoryGauge, typeID string) (location Location, qualifiedIdentifier string, err error)
@@ -160,8 +147,8 @@ func DecodeTypeID(gauge MemoryGauge, typeID string) (location Location, qualifie
 	return decoder(gauge, typeID)
 }
 
-// HasImportLocation
+// HasLocation
 
-type HasImportLocation interface {
+type HasLocation interface {
 	ImportLocation() Location
 }

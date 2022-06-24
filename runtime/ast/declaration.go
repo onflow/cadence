@@ -18,14 +18,22 @@
 
 package ast
 
-import "github.com/onflow/cadence/runtime/common"
+import (
+	"fmt"
+
+	"github.com/turbolent/prettier"
+
+	"github.com/onflow/cadence/runtime/common"
+)
 
 type Declaration interface {
 	Element
+	fmt.Stringer
 	isDeclaration()
 	DeclarationIdentifier() *Identifier
 	DeclarationKind() common.DeclarationKind
 	DeclarationAccess() Access
 	DeclarationMembers() *Members
 	DeclarationDocString() string
+	Doc() prettier.Doc
 }

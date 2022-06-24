@@ -43,7 +43,7 @@ type Script struct {
 	Arguments [][]byte
 }
 
-type importResolutionResults map[common.LocationID]bool
+type importResolutionResults map[common.Location]bool
 
 // Runtime is a runtime capable of executing Cadence.
 type Runtime interface {
@@ -106,12 +106,11 @@ type Runtime interface {
 	// ReadLinked dereferences the path and returns the value stored at the target
 	//
 	ReadLinked(address common.Address, path cadence.Path, context Context) (cadence.Value, error)
-}
 
-var typeDeclarations = append(
-	stdlib.FlowBuiltInTypes,
-	stdlib.BuiltinTypes...,
-).ToTypeDeclarations()
+	// SetDebugger configures interpreters with the given debugger.
+	//
+	SetDebugger(debugger *interpreter.Debugger)
+}
 
 type ImportResolver = func(location common.Location) (program *ast.Program, e error)
 
@@ -160,6 +159,7 @@ func reportMetric(
 // interpreterRuntime is a interpreter-based version of the Flow runtime.
 type interpreterRuntime struct {
 	coverageReport                       *CoverageReport
+	debugger                             *interpreter.Debugger
 	contractUpdateValidationEnabled      bool
 	atreeValidationEnabled               bool
 	tracingEnabled                       bool
@@ -236,6 +236,9 @@ func (r *interpreterRuntime) Recover(onError func(error), context Context) {
 		err = recovered
 	case error:
 		err = newError(recovered, context)
+	default:
+		err = fmt.Errorf("%s", recovered)
+		err = newError(err, context)
 	}
 
 	onError(err)
@@ -263,6 +266,10 @@ func (r *interpreterRuntime) SetInvalidatedResourceValidationEnabled(enabled boo
 
 func (r *interpreterRuntime) SetResourceOwnerChangeHandlerEnabled(enabled bool) {
 	r.resourceOwnerChangeHandlerEnabled = enabled
+}
+
+func (r *interpreterRuntime) SetDebugger(debugger *interpreter.Debugger) {
+	r.debugger = debugger
 }
 
 func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val cadence.Value, err error) {
@@ -936,14 +943,16 @@ func validateArgumentParams(
 		}
 
 		// Ensure the argument is of an importable type
+		argType := arg.StaticType(inter)
+
 		if !arg.IsImportable(inter) {
 			return nil, &ArgumentNotImportableError{
-				Type: arg.StaticType(inter),
+				Type: argType,
 			}
 		}
 
 		// Check that decoded value is a subtype of static parameter type
-		if !inter.IsSubTypeOfSemaType(arg.StaticType(inter), parameterType) {
+		if !inter.IsSubTypeOfSemaType(argType, parameterType) {
 			return nil, &InvalidEntryPointArgumentError{
 				Index: i,
 				Err: &InvalidValueTypeError{
@@ -953,12 +962,10 @@ func validateArgumentParams(
 		}
 
 		// Check whether the decoded value conforms to the type associated with the value
-		conformanceResults := interpreter.TypeConformanceResults{}
 		if !arg.ConformsToStaticType(
 			inter,
 			interpreter.ReturnEmptyLocationRange,
-			arg.StaticType(inter),
-			conformanceResults,
+			interpreter.TypeConformanceResults{},
 		) {
 			return nil, &InvalidEntryPointArgumentError{
 				Index: i,
@@ -1146,10 +1153,11 @@ func (r *interpreterRuntime) check(
 		program,
 		startContext.Location,
 		memoryGauge,
+		false,
 		append(
 			[]sema.Option{
 				sema.WithPredeclaredValues(valueDeclarations),
-				sema.WithPredeclaredTypes(typeDeclarations),
+				sema.WithPredeclaredTypes(stdlib.FlowDefaultPredeclaredTypes),
 				sema.WithValidTopLevelDeclarationsHandler(validTopLevelDeclarations),
 				sema.WithLocationHandler(
 					func(identifiers []Identifier, location Location) (res []ResolvedLocation, err error) {
@@ -1171,14 +1179,14 @@ func (r *interpreterRuntime) check(
 							context := startContext.WithLocation(importedLocation)
 
 							// Check for cyclic imports
-							if checkedImports[importedLocation.ID()] {
+							if checkedImports[importedLocation] {
 								return nil, &sema.CyclicImportsError{
 									Location: importedLocation,
 									Range:    importRange,
 								}
 							} else {
-								checkedImports[importedLocation.ID()] = true
-								defer delete(checkedImports, importedLocation.ID())
+								checkedImports[importedLocation] = true
+								defer delete(checkedImports, importedLocation)
 							}
 
 							program, err := r.getProgram(context, functions, values, checkerOptions, checkedImports)
@@ -1254,6 +1262,8 @@ func (r *interpreterRuntime) newInterpreter(
 	}
 
 	defaultOptions := []interpreter.Option{
+		// NOTE: storage option must be provided *before* the predeclared values option,
+		// as predeclared values may rely on storage
 		interpreter.WithStorage(storage),
 		interpreter.WithPredeclaredValues(preDeclaredValues),
 		interpreter.WithOnEventEmittedHandler(
@@ -1414,6 +1424,7 @@ func (r *interpreterRuntime) newInterpreter(
 		interpreter.WithOnResourceOwnerChangeHandler(r.resourceOwnerChangedHandler(context.Interface)),
 		interpreter.WithInvalidatedResourceValidationEnabled(r.invalidatedResourceValidationEnabled),
 		interpreter.WithMemoryGauge(memoryGauge),
+		interpreter.WithDebugger(r.debugger),
 	}
 
 	defaultOptions = append(defaultOptions,
@@ -2177,7 +2188,7 @@ func (r *interpreterRuntime) instantiateContract(
 				// If the contract is the deployed contract, instantiate it using
 				// the provided constructor and given arguments
 
-				if common.LocationsMatch(compositeType.Location, contractType.Location) &&
+				if compositeType.Location == contractType.Location &&
 					compositeType.Identifier == contractType.Identifier {
 
 					value, err := inter.InvokeFunctionValue(
@@ -2692,20 +2703,19 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 
 			if r.contractUpdateValidationEnabled && isUpdate {
 
-				var oldProgram *interpreter.Program
-				oldProgram, err = r.getProgram(
-					context,
-					functions,
-					stdlib.BuiltinValues,
-					checkerOptions,
-					importResolutionResults{},
-				)
+				oldCode, err := r.getCode(context)
 				handleContractUpdateError(err)
+
+				oldProgram, err := parser2.ParseProgram(string(oldCode), inter)
+
+				if !ignoreUpdatedProgramParserError(err) {
+					handleContractUpdateError(err)
+				}
 
 				validator := NewContractUpdateValidator(
 					context.Location,
 					nameArgument,
-					oldProgram.Program,
+					oldProgram,
 					program.Program,
 				)
 				err = validator.Validate()
@@ -2773,6 +2783,28 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 		},
 		sema.AuthAccountContractsTypeAddFunctionType,
 	)
+}
+
+// ignoreUpdatedProgramParserError determines if the parsing error
+// for a program that is being updated can be ignored.
+func ignoreUpdatedProgramParserError(err error) bool {
+	parserError, ok := err.(parser2.Error)
+	if !ok {
+		return false
+	}
+
+	// Are all parse errors ones that can be ignored?
+	for _, parseError := range parserError.Errors {
+		// Missing commas in parameter lists were reported starting
+		// with https://github.com/onflow/cadence/pull/1073.
+		// Allow existing contracts with such an error to be updated
+		_, ok := parseError.(*parser2.MissingCommaInParameterListError)
+		if !ok {
+			return false
+		}
+	}
+
+	return true
 }
 
 type updateAccountContractCodeOptions struct {

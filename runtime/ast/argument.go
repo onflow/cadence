@@ -20,7 +20,8 @@ package ast
 
 import (
 	"encoding/json"
-	"strings"
+
+	"github.com/turbolent/prettier"
 
 	"github.com/onflow/cadence/runtime/common"
 )
@@ -68,13 +69,7 @@ func (a *Argument) EndPosition(memoryGauge common.MemoryGauge) Position {
 }
 
 func (a *Argument) String() string {
-	var builder strings.Builder
-	if a.Label != "" {
-		builder.WriteString(a.Label)
-		builder.WriteString(": ")
-	}
-	builder.WriteString(a.Expression.String())
-	return builder.String()
+	return Prettier(a)
 }
 
 func (a *Argument) MarshalJSON() ([]byte, error) {
@@ -86,4 +81,15 @@ func (a *Argument) MarshalJSON() ([]byte, error) {
 		Range: NewUnmeteredRangeFromPositioned(a),
 		Alias: (*Alias)(a),
 	})
+}
+
+func (a *Argument) Doc() prettier.Doc {
+	argumentDoc := a.Expression.Doc()
+	if a.Label == "" {
+		return argumentDoc
+	}
+	return prettier.Concat{
+		prettier.Text(a.Label + ": "),
+		argumentDoc,
+	}
 }

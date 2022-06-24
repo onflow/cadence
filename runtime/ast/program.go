@@ -21,6 +21,8 @@ package ast
 import (
 	"encoding/json"
 
+	"github.com/turbolent/prettier"
+
 	"github.com/onflow/cadence/runtime/common"
 )
 
@@ -30,11 +32,17 @@ type Program struct {
 	indices      programIndices
 }
 
+var _ Element = &Program{}
+
 func NewProgram(memoryGauge common.MemoryGauge, declarations []Declaration) *Program {
 	common.UseMemory(memoryGauge, common.ProgramMemoryUsage)
 	return &Program{
 		declarations: declarations,
 	}
+}
+
+func (*Program) ElementType() ElementType {
+	return ElementTypeProgram
 }
 
 func (p *Program) Declarations() []Declaration {
@@ -62,8 +70,8 @@ func (p *Program) Accept(visitor Visitor) Repr {
 	return visitor.VisitProgram(p)
 }
 
-func (d *Program) Walk(walkChild func(Element)) {
-	walkDeclarations(walkChild, d.declarations)
+func (p *Program) Walk(walkChild func(Element)) {
+	walkDeclarations(walkChild, p.declarations)
 }
 
 func (p *Program) PragmaDeclarations() []*PragmaDeclaration {
@@ -171,4 +179,21 @@ func (p *Program) MarshalJSON() ([]byte, error) {
 		Declarations: p.declarations,
 		Alias:        (*Alias)(p),
 	})
+}
+
+var programSeparatorDoc = prettier.Concat{
+	prettier.HardLine{},
+	prettier.HardLine{},
+}
+
+func (p *Program) Doc() prettier.Doc {
+	declarations := p.Declarations()
+
+	docs := make([]prettier.Doc, 0, len(declarations))
+
+	for _, declaration := range declarations {
+		docs = append(docs, declaration.Doc())
+	}
+
+	return prettier.Join(programSeparatorDoc, docs...)
 }

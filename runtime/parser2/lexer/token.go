@@ -24,7 +24,7 @@ import (
 
 type Token struct {
 	Type  TokenType
-	Value interface{}
+	Value any
 	ast.Range
 }
 

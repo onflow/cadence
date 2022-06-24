@@ -206,21 +206,44 @@ func DefaultFlowBuiltinImpls() FlowBuiltinImpls {
 	}
 }
 
+var FlowDefaultPredeclaredTypes = append(
+	FlowBuiltInTypes,
+	BuiltinTypes...,
+).ToTypeDeclarations()
+
+func FlowDefaultPredeclaredValues(impls FlowBuiltinImpls) (
+	[]sema.ValueDeclaration,
+	[]interpreter.ValueDeclaration,
+) {
+	functionDeclarations := append(
+		FlowBuiltInFunctions(impls),
+		BuiltinFunctions...,
+	)
+
+	return append(
+			functionDeclarations.ToSemaValueDeclarations(),
+			BuiltinValues.ToSemaValueDeclarations()...,
+		),
+		append(
+			functionDeclarations.ToInterpreterValueDeclarations(),
+			BuiltinValues.ToInterpreterValueDeclarations()...,
+		)
+}
+
 // Flow location
 
 type FlowLocation struct{}
 
+var _ common.Location = FlowLocation{}
+
 const FlowLocationPrefix = "flow"
 
 func (l FlowLocation) ID() common.LocationID {
-	return common.NewLocationID(FlowLocationPrefix)
+	return FlowLocationPrefix
 }
 
-func (l FlowLocation) MeteredID(memoryGauge common.MemoryGauge) common.LocationID {
-	return common.NewMeteredLocationID(
-		memoryGauge,
-		FlowLocationPrefix,
-	)
+func (l FlowLocation) MeteredID(_ common.MemoryGauge) common.LocationID {
+	return FlowLocationPrefix
 }
 
 func (l FlowLocation) TypeID(memoryGauge common.MemoryGauge, qualifiedIdentifier string) common.TypeID {
@@ -242,7 +265,11 @@ func (l FlowLocation) QualifiedIdentifier(typeID common.TypeID) string {
 }
 
 func (l FlowLocation) String() string {
-	return "flow"
+	return FlowLocationPrefix
+}
+
+func (l FlowLocation) Description() string {
+	return FlowLocationPrefix
 }
 
 func (l FlowLocation) MarshalJSON() ([]byte, error) {

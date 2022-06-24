@@ -80,7 +80,7 @@ func (e *MissingLocationError) Error() string {
 
 type CheckerError struct {
 	Location common.Location
-	Codes    map[common.LocationID]string
+	Codes    map[common.Location]string
 	Errors   []error
 }
 
@@ -89,7 +89,7 @@ func (e CheckerError) Error() string {
 	sb.WriteString("Checking failed:\n")
 	codes := e.Codes
 	if codes == nil {
-		codes = map[common.LocationID]string{}
+		codes = map[common.Location]string{}
 	}
 	printErr := pretty.NewErrorPrettyPrinter(&sb, false).
 		PrettyPrintError(e, e.Location, codes)
@@ -703,6 +703,13 @@ func (e *NotDeclaredMemberError) Error() string {
 }
 
 func (e *NotDeclaredMemberError) SecondaryError() string {
+	if optionalType, ok := e.Type.(*OptionalType); ok {
+		members := optionalType.Type.GetMembers()
+		name := e.Name
+		if _, ok := members[name]; ok {
+			return fmt.Sprintf("type is optional, consider optional-chaining: ?.%s", name)
+		}
+	}
 	return "unknown member"
 }
 
@@ -1807,7 +1814,11 @@ type InvalidResourceAssignmentError struct {
 }
 
 func (e *InvalidResourceAssignmentError) Error() string {
-	return "cannot assign to resource-typed target. consider force assigning (<-!) or swapping (<->)"
+	return "cannot assign to resource-typed target"
+}
+
+func (e *InvalidResourceAssignmentError) SecondaryError() string {
+	return "consider force assigning (<-!) or swapping (<->)"
 }
 
 func (*InvalidResourceAssignmentError) isSemanticError() {}

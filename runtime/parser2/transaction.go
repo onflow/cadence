@@ -224,11 +224,7 @@ func parseTransactionExecute(p *parser) *ast.SpecialFunctionDeclaration {
 			p.memoryGauge,
 			ast.AccessNotSpecified,
 			identifier,
-			ast.NewParameterList(
-				p.memoryGauge,
-				nil,
-				ast.EmptyRange,
-			),
+			nil,
 			nil,
 			ast.NewFunctionBlock(
 				p.memoryGauge,

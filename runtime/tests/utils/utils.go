@@ -41,7 +41,7 @@ const ImportedLocation = common.StringLocation("imported")
 // AssertEqualWithDiff asserts that two objects are equal.
 //
 // If the objects are not equal, this function prints a human-readable diff.
-func AssertEqualWithDiff(t *testing.T, expected, actual interface{}) {
+func AssertEqualWithDiff(t *testing.T, expected, actual any) {
 	if !assert.Equal(t, expected, actual) {
 		// the maximum levels of a struct to recurse into
 		// this prevents infinite recursion from circular references

@@ -2439,11 +2439,11 @@ func TestParseReferenceExpressionStatement(t *testing.T) {
 				Value:           big.NewInt(1),
 				Base:            10,
 				Range: ast.Range{
-					StartPos: ast.Position{Offset: 18, Line: 2, Column: 17},
-					EndPos:   ast.Position{Offset: 18, Line: 2, Column: 17},
+					StartPos: ast.Position{Offset: 21, Line: 2, Column: 20},
+					EndPos:   ast.Position{Offset: 21, Line: 2, Column: 20},
 				},
 			},
-			StartPos: ast.Position{Offset: 17, Line: 2, Column: 16},
+			StartPos: ast.Position{Offset: 20, Line: 2, Column: 19},
 		},
 		Operation: ast.OperationCast,
 		TypeAnnotation: &ast.TypeAnnotation{
@@ -2451,12 +2451,12 @@ func TestParseReferenceExpressionStatement(t *testing.T) {
 				Type: &ast.NominalType{
 					Identifier: ast.Identifier{
 						Identifier: "Int",
-						Pos:        ast.Position{Offset: 24, Line: 2, Column: 23},
+						Pos:        ast.Position{Offset: 27, Line: 2, Column: 26},
 					},
 				},
-				StartPos: ast.Position{Offset: 23, Line: 2, Column: 22},
+				StartPos: ast.Position{Offset: 26, Line: 2, Column: 25},
 			},
-			StartPos: ast.Position{Offset: 23, Line: 2, Column: 22},
+			StartPos: ast.Position{Offset: 26, Line: 2, Column: 25},
 		},
 	}
 
@@ -2464,13 +2464,13 @@ func TestParseReferenceExpressionStatement(t *testing.T) {
 		IsConstant: true,
 		Identifier: ast.Identifier{
 			Identifier: "x",
-			Pos:        ast.Position{Line: 2, Column: 12, Offset: 13},
+			Pos:        ast.Position{Offset: 16, Line: 2, Column: 15},
 		},
-		StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
+		StartPos: ast.Position{Offset: 12, Line: 2, Column: 11},
 		Value:    castingExpression,
 		Transfer: &ast.Transfer{
 			Operation: ast.TransferOperationCopy,
-			Pos:       ast.Position{Offset: 15, Line: 2, Column: 14},
+			Pos:       ast.Position{Offset: 18, Line: 2, Column: 17},
 		},
 	}
 
@@ -2484,10 +2484,10 @@ func TestParseReferenceExpressionStatement(t *testing.T) {
 					Expression: &ast.IdentifierExpression{
 						Identifier: ast.Identifier{
 							Identifier: "x",
-							Pos:        ast.Position{Offset: 40, Line: 3, Column: 12},
+							Pos:        ast.Position{Offset: 43, Line: 3, Column: 12},
 						},
 					},
-					EndPos: ast.Position{Offset: 41, Line: 3, Column: 13},
+					EndPos: ast.Position{Offset: 44, Line: 3, Column: 13},
 				},
 			},
 		},

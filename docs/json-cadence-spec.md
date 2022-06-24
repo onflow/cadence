@@ -2,7 +2,7 @@
 title: JSON-Cadence Data Interchange Format
 ---
 
-> Version 0.2.0
+> Version 0.3.0
 
 JSON-Cadence is a data interchange format used to represent Cadence values as language-independent JSON objects.
 
@@ -11,6 +11,8 @@ This format includes less type information than a complete [ABI](https://en.wiki
 - **Human-readability** - JSON-Cadence is easy to read and comprehend, which speeds up development and debugging.
 - **Compatibility** - JSON is a common format with built-in support in most high-level programming languages, making it easy to parse on a variety of platforms.
 - **Portability** - JSON-Cadence is self-describing and thus can be transported and decoded without accompanying type definitions (i.e. an ABI).
+
+# Values
 
 ---
 
@@ -317,13 +319,13 @@ Composite fields are encoded as a list of name-value pairs in the order in which
 
 ---
 
-## Type
+## Type Value
 
 ```json
 {
   "type": "Type",
   "value": {
-    "staticType": "..."
+    "staticType": <type>
   }
 }
 ```
@@ -334,7 +336,9 @@ Composite fields are encoded as a list of name-value pairs in the order in which
 {
   "type": "Type",
   "value": {
-    "staticType": "Int"
+    "staticType": {
+      "kind": "Int",
+    }
   }
 }
 ```
@@ -349,7 +353,7 @@ Composite fields are encoded as a list of name-value pairs in the order in which
   "value": {
     "path": <path>,
     "address": "0x0",  // as hex-encoded string with 0x prefix
-    "borrowType": "<type ID>",
+    "borrowType": <type>,
   }
 }
 ```
@@ -362,7 +366,464 @@ Composite fields are encoded as a list of name-value pairs in the order in which
   "value": {
     "path": "/public/someInteger",
     "address": "0x1",
-    "borrowType": "Int",
+    "borrowType": {
+      "kind": "Int"
+    },
+  }
+}
+```
+
+---
+
+# Types
+
+## Simple Types
+
+These are basic types like `Int`, `String`, or `StoragePath`. 
+
+```json
+{
+  "kind": "Any" | "AnyStruct" | "AnyResource" | "Type" | 
+    "Void" | "Never" | "Bool" | "String" | "Character" | 
+    "Bytes" | "Address" | "Number" | "SignedNumber" | 
+    "Integer" | "SignedInteger" | "FixedPoint" | 
+    "SignedFixedPoint" | "Int" | "Int8" | "Int16" | 
+    "Int32" | "Int64" | "Int128" | "Int256" | "UInt" | 
+    "UInt8" | "UInt16" | "UInt32" | "UInt64" | "UInt128" | 
+    "UInt256" | "Word8" | "Word16" | "Word32" | "Word64" | 
+    "Fix64" | "UFix64" | "Path" | "CapabilityPath" | "StoragePath" |
+    "PublicPath" | "PrivatePath" | "AuthAccount" | "PublicAccount" | 
+    "AuthAccount.Keys" | "PublicAccount.Keys" | "AuthAccount.Contracts" | 
+    "PublicAccount.Contracts" | "DeployedContract" | "AccountKey" | "Block" 
+}
+```
+
+### Example
+
+```json
+{
+  "kind": "UInt8"
+}
+```
+
+---
+
+## Optional Types
+
+```json
+{
+  "kind": "Optional",
+  "type": <type>
+}
+```
+
+### Example 
+
+```json
+{
+  "kind": "Optional",
+  "type": {
+    "kind": "String"
+  }
+}
+```
+
+---
+
+## Variable Sized Array Types
+
+```json
+{
+  "kind": "VariableSizedArray",
+  "type": <type>
+}
+```
+
+### Example 
+
+```json
+{
+  "kind": "VariableSizedArray",
+  "type": {
+    "kind": "String"
+  }
+}
+```
+
+---
+
+## Constant Sized Array Types
+
+```json
+{
+  "kind": "ConstantSizedArray",
+  "type": <type>,
+  "size": <length of array>,
+}
+```
+
+### Example 
+
+```json
+{
+  "kind": "ConstantSizedArray",
+  "type": {
+    "kind": "String"
+  },
+  "size":3
+}
+```
+
+---
+
+## Dictionary Types
+
+```json
+{
+  "kind": "Dictionary",
+  "key": <type>,
+  "value": <type>
+}
+```
+
+### Example 
+
+```json
+{
+  "kind": "Dictionary",
+  "key": {
+    "kind": "String"
+  }, 
+  "value": {
+    "kind": "UInt16"
+  }, 
+}
+```
+
+---
+
+## Composite Types
+
+```json
+{
+  "kind": "Struct" | "Resource" | "Event" | "Contract" | "StructInterface" | "ResourceInterface" | "ContractInterface",
+  "type": "", // this field exists only to keep parity with the enum structure below; the value must be the empty string
+  "typeID": "<fully qualified type ID>",
+  "initializers": [
+    <initializer at index 0>,
+    <initializer at index 1>
+    // ...
+  ],
+  "fields": [
+    <field at index 0>,
+    <field at index 1>
+    // ...
+  ],
+}
+```
+
+### Example 
+
+```json
+{
+  "kind": "Resource",
+  "type": "",
+  "typeID": "0x3.GreatContract.GreatNFT",
+  "initializers":[
+    [
+      {
+        "label": "foo",
+        "id": "bar",
+        "type": {
+          "kind": "String"
+        }
+      }
+    ]
+  ],
+  "fields": [
+    {
+      "id": "foo",
+      "type": {
+        "kind": "String"
+      }
+    }
+  ]
+}
+```
+
+---
+
+## Field Types
+
+```json
+{
+  "id": "<name of field>",
+  "type": <type>
+}
+```
+
+### Example 
+
+```json
+{
+  "id": "foo",
+  "type": {
+    "kind": "String"
+  }
+}
+```
+
+---
+
+## Parameter Types
+
+```json
+{
+  "label": "<label>",
+  "id": "<identifier>",
+  "type": <type>
+}
+```
+
+### Example 
+
+```json
+{
+  "label": "foo",
+  "id": "bar",
+  "type": {
+    "kind": "String"
+  }
+}
+```
+
+---
+
+## Initializer Types
+
+Initializer types are encoded a list of parameters to the initializer. 
+
+```json
+[
+  <parameter at index 0>, 
+  <parameter at index 1>,
+  // ... 
+]
+```
+
+### Example 
+
+```json
+[
+  {
+    "label": "foo",
+    "id": "bar",
+    "type": {
+      "kind": "String"
+    }
+  }
+]
+```
+
+---
+
+## Function Types
+
+```json
+{
+  "kind": "Function",
+  "typeID": "<function name>",
+  "parameters": [
+    <parameter at index 0>, 
+    <parameter at index 1>,
+    // ... 
+  ], 
+  "return": <type>
+}
+```
+
+### Example 
+
+```json
+{
+  "kind": "Function",
+  "typeID": "foo",
+  "parameters": [
+    {
+      "label": "foo",
+      "id": "bar",
+      "type": {
+        "kind": "String"
+      }
+    } 
+  ], 
+  "return": {
+    "kind": "String"
+  }
+}
+```
+
+---
+
+## Reference Types
+
+```json
+{
+  "kind": "Reference",
+  "authorized": true | false,
+  "type": <type>
+}
+```
+
+### Example 
+
+```json
+{
+  "kind": "Reference",
+  "authorized": true,
+  "type": {
+    "kind": "String"
+  }
+}
+```
+
+---
+
+## Restricted Types
+
+```json
+{
+  "kind": "Restriction",
+  "typeID": "<fully qualified type ID>",
+  "type": <type>,
+  "restrictions": [
+    <type at index 0>,
+    <type at index 1>,
+    //...
+  ]
+}
+```
+
+### Example 
+
+```json
+{
+  "kind": "Restriction",
+  "typeID": "0x3.GreatContract.GreatNFT",
+  "type": {
+    "kind": "AnyResource",
+  },
+  "restrictions": [
+    {
+        "kind": "ResourceInterface",
+        "typeID": "0x1.FungibleToken.Receiver",
+        "fields": [
+            {
+                "id": "uuid",
+                "type": {
+                    "kind": "UInt64"
+                }
+            }
+        ],
+        "initializers": [],
+        "type": ""
+    }
+  ]
+}
+```
+
+---
+
+## Capability Types
+
+```json
+{
+  "kind": "Capability",
+  "type": <type>
+}
+```
+
+### Example 
+
+```json
+{
+  "kind": "Capability",
+  "type": {
+    "kind": "Reference",
+    "authorized": true,
+    "type": {
+      "kind": "String"
+    }
+  }
+}
+```
+
+---
+
+## Enum Types
+
+```json
+{
+  "kind": "Enum",
+  "type": <type>,
+  "typeID": "<fully qualified type ID>",
+  "initializers":[],
+  "fields": [
+    {
+      "id": "rawValue",
+      "type": <type>
+    }
+  ]
+}
+```
+
+### Example 
+
+```json
+{
+  "kind": "Enum",
+  "type": {
+    "kind": "String"
+  },
+  "typeID": "0x3.GreatContract.GreatEnum",
+  "initializers":[],
+  "fields": [
+    {
+      "id": "rawValue",
+      "type": {
+        "kind": "String"
+      }
+    }
+  ]
+}
+```
+
+## Repeated Types
+
+When a composite type appears more than once within the same JSON type encoding, either because it is
+recursive or because it is repeated (e.g. in a composite field), the composite is instead 
+represented by its type ID. 
+
+### Example
+
+```json
+{
+  "type":"Type",
+  "value": {
+    "staticType": {
+      "kind":"Resource",
+      "typeID":"0x3.GreatContract.NFT",
+      "fields":[
+        {"id":"foo",
+        "type": {
+          "kind":"Optional",
+          "type":"0x3.GreatContract.NFT" // recursive NFT resource type is instead encoded as an ID
+          }
+        }
+      ],
+      "initializers":[],
+      "type":""
+    }
   }
 }
 ```

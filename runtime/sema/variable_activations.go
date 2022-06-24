@@ -129,7 +129,7 @@ func (a *VariableActivation) ForEach(cb func(string, *Variable) error) error {
 }
 
 var variableActivationPool = sync.Pool{
-	New: func() interface{} {
+	New: func() any {
 		return &VariableActivation{}
 	},
 }

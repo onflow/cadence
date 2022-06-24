@@ -21,6 +21,8 @@ package ast
 import (
 	"encoding/json"
 
+	"github.com/turbolent/prettier"
+
 	"github.com/onflow/cadence/runtime/common"
 )
 
@@ -31,6 +33,9 @@ type PragmaDeclaration struct {
 	Range
 }
 
+var _ Element = &PragmaDeclaration{}
+var _ Declaration = &PragmaDeclaration{}
+
 func NewPragmaDeclaration(gauge common.MemoryGauge, expression Expression, declRange Range) *PragmaDeclaration {
 	common.UseMemory(gauge, common.PragmaDeclarationMemoryUsage)
 
@@ -38,6 +43,10 @@ func NewPragmaDeclaration(gauge common.MemoryGauge, expression Expression, declR
 		Expression: expression,
 		Range:      declRange,
 	}
+}
+
+func (*PragmaDeclaration) ElementType() ElementType {
+	return ElementTypePragmaDeclaration
 }
 
 func (*PragmaDeclaration) isDeclaration() {}
@@ -81,4 +90,15 @@ func (d *PragmaDeclaration) MarshalJSON() ([]byte, error) {
 		Type:  "PragmaDeclaration",
 		Alias: (*Alias)(d),
 	})
+}
+
+func (d *PragmaDeclaration) Doc() prettier.Doc {
+	return prettier.Concat{
+		prettier.Text("#"),
+		d.Expression.Doc(),
+	}
+}
+
+func (d *PragmaDeclaration) String() string {
+	return Prettier(d)
 }

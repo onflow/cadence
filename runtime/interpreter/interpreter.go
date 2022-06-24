@@ -328,7 +328,7 @@ type Interpreter struct {
 	effectivePredeclaredValues     map[string]ValueDeclaration
 	activations                    *VariableActivations
 	Globals                        GlobalVariables
-	allInterpreters                map[common.LocationID]*Interpreter
+	allInterpreters                map[common.Location]*Interpreter
 	typeCodes                      TypeCodes
 	Transactions                   []*HostFunctionValue
 	Storage                        Storage
@@ -363,6 +363,7 @@ type Interpreter struct {
 	invalidatedResourceValidationEnabled bool
 	resourceVariables                    map[ResourceKindedValue]*Variable
 	memoryGauge                          common.MemoryGauge
+	CallStack                            *CallStack
 }
 
 var _ common.MemoryGauge = &Interpreter{}
@@ -601,9 +602,19 @@ func WithExitHandler(handler ExitHandlerFunc) Option {
 // WithAllInterpreters returns an interpreter option which sets
 // the given map of interpreters as the map of all interpreters.
 //
-func WithAllInterpreters(allInterpreters map[common.LocationID]*Interpreter) Option {
+func WithAllInterpreters(allInterpreters map[common.Location]*Interpreter) Option {
 	return func(interpreter *Interpreter) error {
 		interpreter.SetAllInterpreters(allInterpreters)
+		return nil
+	}
+}
+
+// WithCallStack returns an interpreter option which sets
+// the given slice of invocations as the slice of all invocations.
+//
+func WithCallStack(callStack *CallStack) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.CallStack = callStack
 		return nil
 	}
 }
@@ -702,7 +713,8 @@ func NewInterpreter(program *Program, location common.Location, options ...Optio
 	interpreter.activations.PushNewWithParent(baseActivation)
 
 	defaultOptions := []Option{
-		WithAllInterpreters(map[common.LocationID]*Interpreter{}),
+		WithAllInterpreters(map[common.Location]*Interpreter{}),
+		WithCallStack(&CallStack{}),
 		withTypeCodes(TypeCodes{
 			CompositeCodes:       map[sema.TypeID]CompositeTypeCode{},
 			InterfaceCodes:       map[sema.TypeID]WrapperCode{},
@@ -857,13 +869,12 @@ func (interpreter *Interpreter) SetExitHandler(function ExitHandlerFunc) {
 
 // SetAllInterpreters sets the given map of interpreters as the map of all interpreters.
 //
-func (interpreter *Interpreter) SetAllInterpreters(allInterpreters map[common.LocationID]*Interpreter) {
+func (interpreter *Interpreter) SetAllInterpreters(allInterpreters map[common.Location]*Interpreter) {
 	interpreter.allInterpreters = allInterpreters
 
 	// Register self
 	if interpreter.Location != nil {
-		locationID := interpreter.Location.MeteredID(interpreter.memoryGauge)
-		interpreter.allInterpreters[locationID] = interpreter
+		interpreter.allInterpreters[interpreter.Location] = interpreter
 	}
 }
 
@@ -1016,26 +1027,10 @@ func (interpreter *Interpreter) invokeVariable(
 		}
 	}
 
-	return interpreter.prepareInvoke(functionValue, functionType, arguments)
+	return interpreter.invokeExternally(functionValue, functionType, arguments)
 }
 
-func (interpreter *Interpreter) prepareInvokeTransaction(
-	index int,
-	arguments []Value,
-) (value Value, err error) {
-	if index >= len(interpreter.Transactions) {
-		return nil, TransactionNotDeclaredError{Index: index}
-	}
-
-	functionValue := interpreter.Transactions[index]
-
-	transactionType := interpreter.Program.Elaboration.TransactionTypes[index]
-	functionType := transactionType.EntryPointFunctionType()
-
-	return interpreter.prepareInvoke(functionValue, functionType, arguments)
-}
-
-func (interpreter *Interpreter) prepareInvoke(
+func (interpreter *Interpreter) invokeExternally(
 	functionValue FunctionValue,
 	functionType *sema.FunctionType,
 	arguments []Value,
@@ -1118,7 +1113,16 @@ func (interpreter *Interpreter) InvokeTransaction(index int, arguments ...Value)
 		err = internalErr
 	})
 
-	_, err = interpreter.prepareInvokeTransaction(index, arguments)
+	if index >= len(interpreter.Transactions) {
+		return TransactionNotDeclaredError{Index: index}
+	}
+
+	functionValue := interpreter.Transactions[index]
+
+	transactionType := interpreter.Program.Elaboration.TransactionTypes[index]
+	functionType := transactionType.EntryPointFunctionType()
+
+	_, err = interpreter.invokeExternally(functionValue, functionType, arguments)
 	return err
 }
 
@@ -1156,7 +1160,10 @@ func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 			}
 		}
 
-		onError(err)
+		interpreterErr := err.(Error)
+		interpreterErr.StackTrace = interpreter.CallStack.Invocations[:]
+
+		onError(interpreterErr)
 	}
 }
 
@@ -1258,6 +1265,10 @@ func (interpreter *Interpreter) VisitProgram(program *ast.Program) ast.Repr {
 	}
 
 	return nil
+}
+
+func (interpreter *Interpreter) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunctionDeclaration) ast.Repr {
+	return interpreter.VisitFunctionDeclaration(declaration.FunctionDeclaration)
 }
 
 func (interpreter *Interpreter) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration) ast.Repr {
@@ -1700,7 +1711,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				// in the same location as it was declared
 
 				if compositeType.Kind == common.CompositeKindResource &&
-					!common.LocationsMatch(invocation.Interpreter.Location, compositeType.Location) {
+					invocation.Interpreter.Location != compositeType.Location {
 
 					panic(ResourceConstructionError{
 						CompositeType: compositeType,
@@ -2607,11 +2618,9 @@ func (interpreter *Interpreter) ensureLoadedWithLocationHandler(
 	loadLocation func() Import,
 ) *Interpreter {
 
-	locationID := location.MeteredID(interpreter.memoryGauge)
-
 	// If a sub-interpreter already exists, return it
 
-	subInterpreter := interpreter.allInterpreters[locationID]
+	subInterpreter := interpreter.allInterpreters[location]
 	if subInterpreter != nil {
 		return subInterpreter
 	}
@@ -2656,7 +2665,7 @@ func (interpreter *Interpreter) ensureLoadedWithLocationHandler(
 
 		// Virtual import does not register interpreter itself,
 		// unlike InterpreterImport
-		interpreter.allInterpreters[locationID] = subInterpreter
+		interpreter.allInterpreters[location] = subInterpreter
 
 		subInterpreter.Program = &Program{
 			Elaboration: virtualImport.Elaboration,
@@ -2691,6 +2700,7 @@ func (interpreter *Interpreter) NewSubInterpreter(
 		WithImportLocationHandler(interpreter.importLocationHandler),
 		WithUUIDHandler(interpreter.uuidHandler),
 		WithAllInterpreters(interpreter.allInterpreters),
+		WithCallStack(interpreter.CallStack),
 		WithAtreeValueValidationEnabled(interpreter.atreeValueValidationEnabled),
 		WithAtreeStorageValidationEnabled(interpreter.atreeStorageValidationEnabled),
 		withTypeCodes(interpreter.typeCodes),
@@ -3051,13 +3061,14 @@ func init() {
 
 				return NewSomeValueNonCopying(
 					invocation.Interpreter,
-					TypeValue{
-						Type: NewDictionaryStaticType(
+					NewTypeValue(
+						invocation.Interpreter,
+						NewDictionaryStaticType(
 							invocation.Interpreter,
 							keyType,
 							valueType,
 						),
-					},
+					),
 				)
 			},
 			sema.DictionaryTypeFunctionType,
@@ -3081,9 +3092,10 @@ func init() {
 
 				return NewSomeValueNonCopying(
 					invocation.Interpreter,
-					TypeValue{
-						Type: ConvertSemaToStaticType(invocation.Interpreter, composite),
-					},
+					NewTypeValue(
+						invocation.Interpreter,
+						ConvertSemaToStaticType(invocation.Interpreter, composite),
+					),
 				)
 			},
 			sema.CompositeTypeFunctionType,
@@ -3108,9 +3120,10 @@ func init() {
 
 				return NewSomeValueNonCopying(
 					invocation.Interpreter,
-					TypeValue{
-						Type: ConvertSemaToStaticType(invocation.Interpreter, interfaceType),
-					},
+					NewTypeValue(
+						invocation.Interpreter,
+						ConvertSemaToStaticType(invocation.Interpreter, interfaceType),
+					),
 				)
 			},
 			sema.InterfaceTypeFunctionType,
@@ -3241,13 +3254,14 @@ func RestrictedTypeFunction(invocation Invocation) Value {
 
 	return NewSomeValueNonCopying(
 		invocation.Interpreter,
-		TypeValue{
-			Type: NewRestrictedStaticType(
+		NewTypeValue(
+			invocation.Interpreter,
+			NewRestrictedStaticType(
 				invocation.Interpreter,
 				ConvertSemaToStaticType(invocation.Interpreter, ty),
 				staticRestrictions,
 			),
-		},
+		),
 	)
 }
 
@@ -3328,12 +3342,13 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 					panic(errors.NewUnreachableError())
 				}
 
-				return TypeValue{
-					Type: NewOptionalStaticType(
+				return NewTypeValue(
+					invocation.Interpreter,
+					NewOptionalStaticType(
 						invocation.Interpreter,
 						typeValue.Type,
 					),
-				}
+				)
 			},
 			sema.OptionalTypeFunctionType,
 		),
@@ -3347,13 +3362,14 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 					panic(errors.NewUnreachableError())
 				}
 
-				return TypeValue{
+				return NewTypeValue(
+					invocation.Interpreter,
 					//nolint:gosimple
-					Type: NewVariableSizedStaticType(
+					NewVariableSizedStaticType(
 						invocation.Interpreter,
 						typeValue.Type,
 					),
-				}
+				)
 			},
 			sema.VariableSizedArrayTypeFunctionType,
 		),
@@ -3372,13 +3388,14 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 					panic(errors.NewUnreachableError())
 				}
 
-				return TypeValue{
-					Type: NewConstantSizedStaticType(
+				return NewTypeValue(
+					invocation.Interpreter,
+					NewConstantSizedStaticType(
 						invocation.Interpreter,
 						typeValue.Type,
 						int64(sizeValue.ToInt()),
 					),
-				}
+				)
 			},
 			sema.ConstantSizedArrayTypeFunctionType,
 		),
@@ -3397,14 +3414,15 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 					panic(errors.NewUnreachableError())
 				}
 
-				return TypeValue{
-					Type: NewReferenceStaticType(
+				return NewTypeValue(
+					invocation.Interpreter,
+					NewReferenceStaticType(
 						invocation.Interpreter,
 						bool(authorizedValue),
 						typeValue.Type,
 						nil,
 					),
-				}
+				)
 			},
 			sema.ReferenceTypeFunctionType,
 		),
@@ -3427,12 +3445,13 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 
 				return NewSomeValueNonCopying(
 					invocation.Interpreter,
-					TypeValue{
-						Type: NewCapabilityStaticType(
+					NewTypeValue(
+						invocation.Interpreter,
+						NewCapabilityStaticType(
 							invocation.Interpreter,
 							ty,
 						),
-					},
+					),
 				)
 			},
 			sema.CapabilityTypeFunctionType,
@@ -3450,7 +3469,6 @@ func defineRuntimeTypeConstructorFunctions(activation *VariableActivation) {
 //
 var typeFunction = NewUnmeteredHostFunctionValue(
 	func(invocation Invocation) Value {
-
 		typeParameterPair := invocation.TypeParameterTypes.Oldest()
 		if typeParameterPair == nil {
 			panic(errors.NewUnreachableError())
@@ -3458,10 +3476,8 @@ var typeFunction = NewUnmeteredHostFunctionValue(
 
 		ty := typeParameterPair.Value
 
-		// TODO TypeValue metering is more complicated.
-		// 	    Here, staticType conversion should be delayed but can't be.
 		staticType := ConvertSemaToStaticType(invocation.Interpreter, ty)
-		return NewUnmeteredTypeValue(staticType)
+		return NewTypeValue(invocation.Interpreter, staticType)
 	},
 	&sema.FunctionType{
 		ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.MetaType),
@@ -3521,7 +3537,6 @@ var stringFunction = func() Value {
 					inter,
 					memoryUsage,
 					func() string {
-						// TODO: meter
 						bytes, _ := ByteArrayValueToByteSlice(inter, argument)
 						return hex.EncodeToString(bytes)
 					},
@@ -3693,9 +3708,10 @@ func (interpreter *Interpreter) authAccountTypeFunction(addressValue AddressValu
 
 			return NewSomeValueNonCopying(
 				invocation.Interpreter,
-				TypeValue{
-					Type: value.StaticType(invocation.Interpreter),
-				},
+				NewTypeValue(
+					invocation.Interpreter,
+					value.StaticType(invocation.Interpreter),
+				),
 			)
 		},
 
@@ -3844,7 +3860,6 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 			}
 
 			borrowType, ok := typeParameterPair.Value.(*sema.ReferenceType)
-
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
@@ -3973,16 +3988,16 @@ func (interpreter *Interpreter) capabilityBorrowFunction(
 		interpreter,
 		func(invocation Invocation) Value {
 
-			if borrowType == nil {
-				typeParameterPair := invocation.TypeParameterTypes.Oldest()
-				if typeParameterPair != nil {
-					ty := typeParameterPair.Value
-					var ok bool
-					borrowType, ok = ty.(*sema.ReferenceType)
-					if !ok {
-						panic(errors.NewUnreachableError())
-					}
+			// NOTE: if a type argument is provided for the function,
+			// use it *instead* of the type of the value (if any)
 
+			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			if typeParameterPair != nil {
+				ty := typeParameterPair.Value
+				var ok bool
+				borrowType, ok = ty.(*sema.ReferenceType)
+				if !ok {
+					panic(errors.NewUnreachableError())
 				}
 			}
 
@@ -4044,17 +4059,16 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 		interpreter,
 		func(invocation Invocation) Value {
 
-			if borrowType == nil {
+			// NOTE: if a type argument is provided for the function,
+			// use it *instead* of the type of the value (if any)
 
-				typeParameterPair := invocation.TypeParameterTypes.Oldest()
-				if typeParameterPair != nil {
-					ty := typeParameterPair.Value
-					var ok bool
-					borrowType, ok = ty.(*sema.ReferenceType)
-					if !ok {
-						panic(errors.NewUnreachableError())
-					}
-
+			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			if typeParameterPair != nil {
+				ty := typeParameterPair.Value
+				var ok bool
+				borrowType, ok = ty.(*sema.ReferenceType)
+				if !ok {
+					panic(errors.NewUnreachableError())
 				}
 			}
 
@@ -4183,9 +4197,7 @@ func (interpreter *Interpreter) getElaboration(location common.Location) *sema.E
 
 	inter := interpreter.EnsureLoaded(location)
 
-	locationID := location.MeteredID(interpreter.memoryGauge)
-
-	subInterpreter := inter.allInterpreters[locationID]
+	subInterpreter := inter.allInterpreters[location]
 	if subInterpreter == nil || subInterpreter.Program == nil {
 		return nil
 	}
@@ -4376,7 +4388,7 @@ func (interpreter *Interpreter) getTypeFunction(self Value) *HostFunctionValue {
 		interpreter,
 		func(invocation Invocation) Value {
 			staticType := self.StaticType(invocation.Interpreter)
-			return NewUnmeteredTypeValue(staticType)
+			return NewTypeValue(invocation.Interpreter, staticType)
 		},
 		sema.GetTypeFunctionType,
 	)
@@ -4417,13 +4429,13 @@ func (interpreter *Interpreter) checkContainerMutation(
 	}
 }
 
-func (interpreter *Interpreter) checkResourceNotDestroyed(value Value, getLocationRange func() LocationRange) {
+func (interpreter *Interpreter) checkReferencedResourceNotDestroyed(value Value, getLocationRange func() LocationRange) {
 	resourceKindedValue, ok := value.(ResourceKindedValue)
 	if !ok || !resourceKindedValue.IsDestroyed() {
 		return
 	}
 
-	panic(InvalidatedResourceError{
+	panic(DestroyedResourceError{
 		LocationRange: getLocationRange(),
 	})
 }

@@ -104,6 +104,7 @@ to the `prepare` phase of the transaction.
       // Account storage API (see the section below for documentation)
 
       fun save<T>(_ value: T, to: StoragePath)
+      fun type(at path: StoragePath): Type?
       fun load<T>(from: StoragePath): T?
       fun copy<T: AnyStruct>(from: StoragePath): T?
 

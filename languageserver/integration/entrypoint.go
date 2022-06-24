@@ -40,7 +40,7 @@ const (
 var SignersRegexp = regexp.MustCompile(`[\w-]+`)
 
 type entryPointInfo struct {
-	documentVersion       float64
+	documentVersion       int32
 	startPos              *ast.Position
 	kind                  entryPointKind
 	parameters            []*sema.Parameter
@@ -51,8 +51,8 @@ type entryPointInfo struct {
 }
 
 func (i *FlowIntegration) updateEntryPointInfoIfNeeded(
-	uri protocol.DocumentUri,
-	version float64,
+	uri protocol.DocumentURI,
+	version int32,
 	checker *sema.Checker,
 ) {
 	if i.entryPointInfo[uri].documentVersion == version {
@@ -99,7 +99,7 @@ func (i *FlowIntegration) updateEntryPointInfoIfNeeded(
 
 		if len(parameters) > 0 {
 			for _, pragmaArgumentString := range parser2.ParseDocstringPragmaArguments(docString) {
-				arguments, err := runtime.ParseLiteralArgumentList(pragmaArgumentString, parameterTypes)
+				arguments, err := runtime.ParseLiteralArgumentList(pragmaArgumentString, parameterTypes, nil)
 				// TODO: record error and show diagnostic
 				if err != nil {
 					continue

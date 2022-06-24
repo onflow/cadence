@@ -112,7 +112,7 @@ type postfixType struct {
 	leftDenotation postfixTypeFunc
 }
 
-func defineType(def interface{}) {
+func defineType(def any) {
 	switch def := def.(type) {
 	case prefixType:
 		tokenType := def.tokenType
@@ -679,6 +679,17 @@ func parseParameterTypeAnnotations(p *parser) (typeAnnotations []*ast.TypeAnnota
 }
 
 func parseType(p *parser, rightBindingPower int) ast.Type {
+
+	if p.typeDepth == typeDepthLimit {
+		panic(TypeDepthLimitReachedError{
+			Pos: p.current.StartPos,
+		})
+	}
+
+	p.typeDepth++
+	defer func() {
+		p.typeDepth--
+	}()
 
 	p.skipSpaceAndComments(true)
 	t := p.current

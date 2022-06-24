@@ -15,8 +15,8 @@ Numbers can be written in various bases. Numbers are assumed to be decimal by de
 Non-decimal literals have a specific prefix.
 
 | Numeral system  | Prefix | Characters                                                            |
-|:----------------|:-------|:----------------------------------------------------------------------|
-| **Decimal**     | *None* | one or more numbers (`0` to `9`)                                      |
+| :-------------- | :----- | :-------------------------------------------------------------------- |
+| **Decimal**     | _None_ | one or more numbers (`0` to `9`)                                      |
 | **Binary**      | `0b`   | one or more zeros or ones (`0` or `1`)                                |
 | **Octal**       | `0o`   | one or more numbers in the range `0` to `7`                           |
 | **Hexadecimal** | `0x`   | one or more numbers, or characters `a` to `f`, lowercase or uppercase |
@@ -67,8 +67,8 @@ let binaryNumber = 0b10_11_01
 ## Integers
 
 Integers are numbers without a fractional part.
-They are either *signed* (positive, zero, or negative)
-or *unsigned* (positive or zero).
+They are either _signed_ (positive, zero, or negative)
+or _unsigned_ (positive or zero).
 
 Signed integer types which check for overflow and underflow have an `Int` prefix
 and can represent values in the following ranges:
@@ -259,15 +259,18 @@ If the result is lower than the minimum of the operands' type, the minimum is re
 Saturating addition, subtraction, multiplication, and division are provided as functions with the prefix `saturating`:
 
 - `Int8`, `Int16`, `Int32`, `Int64`, `Int128`, `Int256`, `Fix64`:
+
   - `saturatingAdd`
   - `saturatingSubtract`
   - `saturatingMultiply`
   - `saturatingDivide`
 
 - `Int`:
+
   - none
 
 - `UInt8`, `UInt16`, `UInt32`, `UInt64`, `UInt128`, `UInt256`, `UFix64`:
+
   - `saturatingAdd`
   - `saturatingSubtract`
   - `saturatingMultiply`
@@ -331,11 +334,14 @@ Addresses have multiple built-in functions you can use.
 - `cadence•fun toString(): String`
 
   Returns the string representation of the address.
+  The result has a `0x` prefix and is zero-padded.
 
   ```cadence
   let someAddress: Address = 0x436164656E636521
+  someAddress.toString()   // is "0x436164656E636521"
 
-  someAddress.toString()  // is "0x436164656E636521"
+  let shortAddress: Address = 0x1
+  shortAddress.toString()  // is "0x0000000000000001"
   ```
 
 - `cadence•fun toBytes(): [UInt8]`
@@ -824,7 +830,7 @@ Strings have multiple built-in functions you can use:
   let example = "hello"
   let new = "world"
 
-  // Concatenate the new string onto the example string and return thenew string.
+  // Concatenate the new string onto the example string and return the new string.
   let helloWorld = example.concat(new)
   // `helloWorld` is now `"helloworld"`
   ```
@@ -865,6 +871,7 @@ Strings have multiple built-in functions you can use:
 
   example.decodeHex()  // is `[67, 97, 100, 101, 110, 99, 101, 33]`
   ```
+
 - `cadence•fun toLower(): String`
   Returns a string where all upper case letters are replaced with lowercase characters
 
@@ -886,7 +893,7 @@ The `String` type also provides the following functions:
   String.encodeHex(data)  // is `"010203cade"`
   ```
 
-`String`s are also indexable, returning a `Character` value. 
+`String`s are also indexable, returning a `Character` value.
 
 ```cadence
 let str = "abc"
@@ -928,7 +935,7 @@ Array literals start with an opening square bracket `[` and end with a closing s
 Arrays either have a fixed size or are variably sized, i.e., elements can be added and removed.
 
 Fixed-size array types have the form `[T; N]`, where `T` is the element type,
-and `N` is the size of the array.  `N` has to be statically known, meaning
+and `N` is the size of the array. `N` has to be statically known, meaning
 that it needs to be an integer literal.
 For example, a fixed-size array of 3 `Int8` elements has the type `[Int8; 3]`.
 
@@ -1104,18 +1111,18 @@ are available for both variable-sized and fixed-sized or variable-sized arrays.
   Returns the index of the first element matching the given object in the array, nil if no match.
   Available if `T` is not resource-kinded and equatable.
 
- ```cadence
-  // Declare an array of integers.
-  let numbers = [42, 23, 31, 12]
+```cadence
+ // Declare an array of integers.
+ let numbers = [42, 23, 31, 12]
 
-  // Check if the array contains 31
-  let index = numbers.firstIndex(of: 31)
-  // `index` is 2
+ // Check if the array contains 31
+ let index = numbers.firstIndex(of: 31)
+ // `index` is 2
 
-  // Check if the array contains 22
-  let index = numbers.firstIndex(of: 22)
-  // `index` is nil
-  ```
+ // Check if the array contains 22
+ let index = numbers.firstIndex(of: 22)
+ // `index` is nil
+```
 
 - `cadence•fun slice(from: Int, upTo: Int): [T]`
 
@@ -1150,7 +1157,7 @@ It is invalid to use one of these functions on a fixed-sized array.
 
   Adds the new element `element` of type `T` to the end of the array.
 
-  The new element must be the same type as all the other elements in the array. 
+  The new element must be the same type as all the other elements in the array.
 
   This function [mutates](../access-control) the array.
 
@@ -1498,7 +1505,7 @@ booleans[0] = true
 
 - `cadence•let keys: [K]`
 
-  Returns an array of the keys of type `K` in the dictionary.  This does not
+  Returns an array of the keys of type `K` in the dictionary. This does not
   modify the dictionary, just returns a copy of the keys as an array.
   If the dictionary is empty, this returns an empty array.
 
@@ -1514,7 +1521,7 @@ booleans[0] = true
 
 - `cadence•let values: [V]`
 
-  Returns an array of the values of type `V` in the dictionary.  This does not
+  Returns an array of the values of type `V` in the dictionary. This does not
   modify the dictionary, just returns a copy of the values as an array.
   If the dictionary is empty, this returns an empty array.
 
@@ -1560,4 +1567,3 @@ and [`Equatable`](interfaces#equatable-interface) [interfaces](interfaces).
 
 Most of the built-in types, like booleans and integers,
 are hashable and equatable, so can be used as keys in dictionaries.
-

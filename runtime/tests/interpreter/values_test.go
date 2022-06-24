@@ -62,7 +62,7 @@ func TestRandomMapOperations(t *testing.T) {
 	inter, err := interpreter.NewInterpreter(
 		&interpreter.Program{
 			Program:     ast.NewProgram(nil, []ast.Declaration{}),
-			Elaboration: sema.NewElaboration(nil),
+			Elaboration: sema.NewElaboration(nil, false),
 		},
 		utils.TestLocation,
 		interpreter.WithStorage(storage),
@@ -501,7 +501,7 @@ func TestRandomArrayOperations(t *testing.T) {
 	inter, err := interpreter.NewInterpreter(
 		&interpreter.Program{
 			Program:     ast.NewProgram(nil, []ast.Declaration{}),
-			Elaboration: sema.NewElaboration(nil),
+			Elaboration: sema.NewElaboration(nil, false),
 		},
 		utils.TestLocation,
 		interpreter.WithStorage(storage),
@@ -859,7 +859,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 	inter, err := interpreter.NewInterpreter(
 		&interpreter.Program{
 			Program:     ast.NewProgram(nil, []ast.Declaration{}),
-			Elaboration: sema.NewElaboration(nil),
+			Elaboration: sema.NewElaboration(nil, false),
 		},
 		utils.TestLocation,
 		interpreter.WithStorage(storage),
@@ -1013,7 +1013,7 @@ func newCompositeValue(
 
 	fields := make([]interpreter.CompositeField, fieldsCount)
 
-	fieldNames := make(map[string]interface{}, fieldsCount)
+	fieldNames := make(map[string]any, fieldsCount)
 
 	for i := 0; i < fieldsCount; {
 		fieldName := randomUTF8String()
@@ -1634,14 +1634,14 @@ const (
 )
 
 type valueMap struct {
-	values map[interface{}]interpreter.Value
-	keys   map[interface{}]interpreter.Value
+	values map[any]interpreter.Value
+	keys   map[any]interpreter.Value
 }
 
 func newValueMap(size int) *valueMap {
 	return &valueMap{
-		values: make(map[interface{}]interpreter.Value, size),
-		keys:   make(map[interface{}]interpreter.Value, size),
+		values: make(map[any]interpreter.Value, size),
+		keys:   make(map[any]interpreter.Value, size),
 	}
 }
 
@@ -1682,7 +1682,7 @@ func (m *valueMap) foreach(apply func(key, value interpreter.Value) (exit bool))
 	}
 }
 
-func (m *valueMap) internalKey(inter *interpreter.Interpreter, key interpreter.Value) interface{} {
+func (m *valueMap) internalKey(inter *interpreter.Interpreter, key interpreter.Value) any {
 	switch key := key.(type) {
 	case *interpreter.StringValue:
 		return *key

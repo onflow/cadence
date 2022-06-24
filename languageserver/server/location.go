@@ -61,7 +61,7 @@ func locationToPath(location common.Location) string {
 	return string(stringLocation)
 }
 
-func uriToLocation(uri protocol.DocumentUri) common.StringLocation {
+func uriToLocation(uri protocol.DocumentURI) common.StringLocation {
 	return common.StringLocation(
 		strings.TrimPrefix(string(uri), filePrefix),
 	)

@@ -286,25 +286,30 @@ func TestCheckNestedTypeInvalidChildType(t *testing.T) {
 
 	t.Parallel()
 
-	test := func(t *testing.T, ty sema.Type) {
-		_, err := ParseAndCheckWithOptions(t,
-			`let u: T.U = nil`,
-			ParseAndCheckOptions{
-				Options: []sema.Option{
-					sema.WithPredeclaredTypes([]sema.TypeDeclaration{
-						stdlib.StandardLibraryType{
-							Name: "T",
-							Type: ty,
-							Kind: common.DeclarationKindType,
-						},
-					}),
+	test := func(t *testing.T, name string, ty sema.Type) {
+		t.Run(name, func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheckWithOptions(t,
+				`let u: T.U = nil`,
+				ParseAndCheckOptions{
+					Options: []sema.Option{
+						sema.WithPredeclaredTypes([]sema.TypeDeclaration{
+							stdlib.StandardLibraryType{
+								Name: "T",
+								Type: ty,
+								Kind: common.DeclarationKindType,
+							},
+						}),
+					},
 				},
-			},
-		)
+			)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+			errs := ExpectCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.InvalidNestedTypeError{}, errs[0])
+			assert.IsType(t, &sema.InvalidNestedTypeError{}, errs[0])
+		})
 	}
 
 	testCases := map[string]sema.Type{
@@ -314,13 +319,7 @@ func TestCheckNestedTypeInvalidChildType(t *testing.T) {
 	}
 
 	for name, ty := range testCases {
-
-		t.Run(name, func(t *testing.T) {
-
-			t.Parallel()
-
-			test(t, ty)
-		})
+		test(t, name, ty)
 	}
 }
 

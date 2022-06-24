@@ -30,7 +30,7 @@ func TestTransactionLocation_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
 
-	loc := TransactionLocation([]byte{0x1, 0x2})
+	loc := TransactionLocation{0x1, 0x2}
 
 	actual, err := json.Marshal(loc)
 	require.NoError(t, err)
@@ -39,7 +39,7 @@ func TestTransactionLocation_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "TransactionLocation",
-            "Transaction": "0102"
+            "Transaction": "0102000000000000000000000000000000000000000000000000000000000000"
         }
         `,
 		string(actual),
@@ -70,15 +70,21 @@ func TestDecodeTransactionLocationTypeID(t *testing.T) {
 
 		t.Parallel()
 
-		_, _, err := decodeTransactionLocationTypeID(nil, "t.test")
-		require.EqualError(t, err, "invalid transaction location type ID: missing qualified identifier")
+		location, qualifiedIdentifier, err := decodeTransactionLocationTypeID(nil, "t.0102")
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			TransactionLocation{0x1, 0x2},
+			location,
+		)
+		assert.Empty(t, qualifiedIdentifier)
 	})
 
 	t.Run("missing qualified identifier", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, _, err := decodeTransactionLocationTypeID(nil, "X.test.T")
+		_, _, err := decodeTransactionLocationTypeID(nil, "X.0102.T")
 		require.EqualError(t, err, "invalid transaction location type ID: invalid prefix: expected \"t\", got \"X\"")
 	})
 

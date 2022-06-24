@@ -24,6 +24,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/turbolent/prettier"
 
 	"github.com/onflow/cadence/runtime/common"
 )
@@ -32,7 +33,7 @@ func TestImportDeclaration_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &ImportDeclaration{
+	decl := &ImportDeclaration{
 		Identifiers: []Identifier{
 			{
 				Identifier: "foo",
@@ -47,7 +48,7 @@ func TestImportDeclaration_MarshalJSON(t *testing.T) {
 		},
 	}
 
-	actual, err := json.Marshal(ty)
+	actual, err := json.Marshal(decl)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -72,4 +73,169 @@ func TestImportDeclaration_MarshalJSON(t *testing.T) {
         `,
 		string(actual),
 	)
+}
+
+func TestImportDeclaration_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("no identifiers", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &ImportDeclaration{
+			Location: common.StringLocation("test"),
+		}
+
+		require.Equal(
+			t,
+			prettier.Concat{
+				prettier.Text("import"),
+				prettier.Text(" "),
+				prettier.Text("\"test\""),
+			},
+			decl.Doc(),
+		)
+	})
+
+	t.Run("one identifier", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &ImportDeclaration{
+			Identifiers: []Identifier{
+				{
+					Identifier: "foo",
+				},
+			},
+			Location: common.AddressLocation{
+				Address: common.MustBytesToAddress([]byte{0x1}),
+			},
+		}
+
+		require.Equal(
+			t,
+			prettier.Concat{
+				prettier.Text("import"),
+				prettier.Group{
+					Doc: prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.Line{},
+							prettier.Text("foo"),
+							prettier.Line{},
+							prettier.Text("from "),
+						},
+					},
+				},
+				prettier.Text("0x1"),
+			},
+			decl.Doc(),
+		)
+	})
+
+	t.Run("two identifiers", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &ImportDeclaration{
+			Identifiers: []Identifier{
+				{
+					Identifier: "foo",
+				},
+				{
+					Identifier: "bar",
+				},
+			},
+			Location: common.IdentifierLocation("test"),
+		}
+
+		require.Equal(
+			t,
+			prettier.Concat{
+				prettier.Text("import"),
+				prettier.Group{
+					Doc: prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.Line{},
+							prettier.Text("foo"),
+							prettier.Concat{
+								prettier.Text(","),
+								prettier.Line{},
+							},
+							prettier.Text("bar"),
+							prettier.Line{},
+							prettier.Text("from "),
+						},
+					},
+				},
+				prettier.Text("test"),
+			},
+			decl.Doc(),
+		)
+	})
+}
+
+func TestImportDeclaration_String(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("no identifiers", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &ImportDeclaration{
+			Location: common.StringLocation("test"),
+		}
+
+		require.Equal(
+			t,
+			`import "test"`,
+			decl.String(),
+		)
+	})
+
+	t.Run("one identifier", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &ImportDeclaration{
+			Identifiers: []Identifier{
+				{
+					Identifier: "foo",
+				},
+			},
+			Location: common.AddressLocation{
+				Address: common.MustBytesToAddress([]byte{0x1}),
+			},
+		}
+
+		require.Equal(
+			t,
+			`import foo from 0x1`,
+			decl.String(),
+		)
+	})
+
+	t.Run("two identifiers", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &ImportDeclaration{
+			Identifiers: []Identifier{
+				{
+					Identifier: "foo",
+				},
+				{
+					Identifier: "bar",
+				},
+			},
+			Location: common.IdentifierLocation("test"),
+		}
+
+		require.Equal(
+			t,
+			`import foo, bar from test`,
+			decl.String(),
+		)
+	})
 }

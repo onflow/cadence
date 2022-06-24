@@ -82,11 +82,11 @@ func newContractDeploymentTransactor(t *testing.T, updateValidationEnabled bool)
 		WithContractUpdateValidationEnabled(updateValidationEnabled),
 	)
 
-	accountCodes := map[common.LocationID][]byte{}
+	accountCodes := map[common.Location][]byte{}
 	var events []cadence.Event
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
-			return accountCodes[location.ID()], nil
+			return accountCodes[location], nil
 		},
 		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
@@ -98,14 +98,14 @@ func newContractDeploymentTransactor(t *testing.T, updateValidationEnabled bool)
 				Address: address,
 				Name:    name,
 			}
-			return accountCodes[location.ID()], nil
+			return accountCodes[location], nil
 		},
 		updateAccountContractCode: func(address Address, name string, code []byte) error {
 			location := common.AddressLocation{
 				Address: address,
 				Name:    name,
 			}
-			accountCodes[location.ID()] = code
+			accountCodes[location] = code
 			return nil
 		},
 		removeAccountContractCode: func(address Address, name string) error {
@@ -113,7 +113,7 @@ func newContractDeploymentTransactor(t *testing.T, updateValidationEnabled bool)
 				Address: address,
 				Name:    name,
 			}
-			delete(accountCodes, location.ID())
+			delete(accountCodes, location)
 			return nil
 		},
 		emitEvent: func(event cadence.Event) error {
@@ -2157,6 +2157,92 @@ func TestRuntimeContractUpdateConformanceChanges(t *testing.T) {
 		err := testDeployAndUpdate(t, contractValidationEnabled, "Test", oldCode, newCode)
 		require.NoError(t, err)
 	})
+
+	t.Run("missing comma in parameter list of old contract", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := common.MustBytesToAddress([]byte{0x42})
+
+		const contractName = "Test"
+
+		const oldCode = `
+          pub contract Test {
+              pub fun test(a: Int b: Int) {}
+          }
+        `
+
+		const newCode = `
+          pub contract Test {
+              pub fun test(a: Int, b: Int) {}
+          }
+        `
+
+		rt := newTestInterpreterRuntime(
+			WithContractUpdateValidationEnabled(contractValidationEnabled),
+		)
+
+		contractLocation := common.AddressLocation{
+			Address: address,
+			Name:    contractName,
+		}
+
+		accountCodes := map[common.Location][]byte{
+			contractLocation: []byte(oldCode),
+		}
+
+		var events []cadence.Event
+		runtimeInterface := &testRuntimeInterface{
+			getCode: func(location Location) (bytes []byte, err error) {
+				return accountCodes[location], nil
+			},
+			storage: newTestLedger(nil, nil),
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{address}, nil
+			},
+			resolveLocation: singleIdentifierLocationResolver(t),
+			getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+				location := common.AddressLocation{
+					Address: address,
+					Name:    name,
+				}
+				return accountCodes[location], nil
+			},
+			updateAccountContractCode: func(address Address, name string, code []byte) error {
+				location := common.AddressLocation{
+					Address: address,
+					Name:    name,
+				}
+				accountCodes[location] = code
+				return nil
+			},
+			removeAccountContractCode: func(address Address, name string) error {
+				location := common.AddressLocation{
+					Address: address,
+					Name:    name,
+				}
+				delete(accountCodes, location)
+				return nil
+			},
+			emitEvent: func(event cadence.Event) error {
+				events = append(events, event)
+				return nil
+			},
+		}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		err := rt.ExecuteTransaction(
+			Script{
+				Source: []byte(newContractUpdateTransaction(contractName, newCode)),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+	})
 }
 
 func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
@@ -2171,13 +2257,12 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 
 	address := common.MustBytesToAddress([]byte{0x42})
 
-	location := common.AddressLocation{
+	contractLocation := common.AddressLocation{
 		Address: address,
 		Name:    name,
 	}
-	contractLocationID := location.ID()
 
-	type locationAccessCounts map[common.LocationID]int
+	type locationAccessCounts map[common.Location]int
 
 	newTester := func() (
 		runtimeInterface *testRuntimeInterface,
@@ -2189,7 +2274,7 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 			WithContractUpdateValidationEnabled(true),
 		)
 
-		accountCodes := map[common.LocationID][]byte{}
+		accountCodes := map[common.Location][]byte{}
 		var events []cadence.Event
 
 		programGets = locationAccessCounts{}
@@ -2197,34 +2282,32 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 
 		runtimeInterface = &testRuntimeInterface{
 			getProgram: func(location Location) (*interpreter.Program, error) {
-				locationID := location.ID()
 
 				if runtimeInterface.programs == nil {
-					runtimeInterface.programs = map[common.LocationID]*interpreter.Program{}
+					runtimeInterface.programs = map[common.Location]*interpreter.Program{}
 				}
 
-				program := runtimeInterface.programs[locationID]
+				program := runtimeInterface.programs[location]
 				if program != nil {
-					programGets[locationID]++
+					programGets[location]++
 				}
 
 				return program, nil
 			},
 			setProgram: func(location Location, program *interpreter.Program) error {
-				locationID := location.ID()
 
-				programSets[locationID]++
+				programSets[location]++
 
 				if runtimeInterface.programs == nil {
-					runtimeInterface.programs = map[common.LocationID]*interpreter.Program{}
+					runtimeInterface.programs = map[common.Location]*interpreter.Program{}
 				}
 
-				runtimeInterface.programs[locationID] = program
+				runtimeInterface.programs[location] = program
 
 				return nil
 			},
 			getCode: func(location Location) (bytes []byte, err error) {
-				return accountCodes[location.ID()], nil
+				return accountCodes[location], nil
 			},
 			storage: newTestLedger(nil, nil),
 			getSigningAccounts: func() ([]Address, error) {
@@ -2236,14 +2319,14 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 					Address: address,
 					Name:    name,
 				}
-				return accountCodes[location.ID()], nil
+				return accountCodes[location], nil
 			},
 			updateAccountContractCode: func(address Address, name string, code []byte) error {
 				location := common.AddressLocation{
 					Address: address,
 					Name:    name,
 				}
-				accountCodes[location.ID()] = code
+				accountCodes[location] = code
 				return nil
 			},
 			removeAccountContractCode: func(address Address, name string) error {
@@ -2251,7 +2334,7 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 					Address: address,
 					Name:    name,
 				}
-				delete(accountCodes, location.ID())
+				delete(accountCodes, location)
 				return nil
 			},
 			emitEvent: func(event cadence.Event) error {
@@ -2299,35 +2382,35 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 
 		addTx := newContractAddTransaction(name, oldCode)
 
-		txLocationID := common.TransactionLocation{0}.ID()
+		txLocation := common.TransactionLocation{0}
 
 		// Deploy to first
 
 		err := executeTransaction1(addTx)
 		require.NoError(t, err)
-		require.Nil(t, runtimeInterface1.programs[contractLocationID])
+		require.Nil(t, runtimeInterface1.programs[contractLocation])
 
 		require.Equal(t, locationAccessCounts{}, programGets1)
 		// NOTE: deployed contract is *correctly* *NOT* set,
 		// as contract deployments and updates are delayed to the end of the transaction,
 		// so should not influence program storage
-		require.Equal(t, locationAccessCounts{txLocationID: 1}, programSets1)
+		require.Equal(t, locationAccessCounts{txLocation: 1}, programSets1)
 
 		// Deploy to second
 
 		err = executeTransaction2(addTx)
 		require.NoError(t, err)
-		require.Nil(t, runtimeInterface2.programs[contractLocationID])
+		require.Nil(t, runtimeInterface2.programs[contractLocation])
 		require.Equal(t, locationAccessCounts{}, programGets2)
 		// See NOTE above
-		require.Equal(t, locationAccessCounts{txLocationID: 1}, programSets2)
+		require.Equal(t, locationAccessCounts{txLocation: 1}, programSets2)
 	})
 
 	t.Run("Import only on second", func(t *testing.T) {
 
 		clearLocationAccessCounts()
 
-		txLocationID := common.TransactionLocation{1}.ID()
+		txLocation := common.TransactionLocation{1}
 
 		importTx := fmt.Sprintf(
 			`
@@ -2346,14 +2429,14 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 
 		// only ran import TX against second,
 		// so first should not have the program
-		assert.Nil(t, runtimeInterface1.programs[contractLocationID])
+		assert.Nil(t, runtimeInterface1.programs[contractLocation])
 
 		// NOTE: program in cache of second
-		assert.NotNil(t, runtimeInterface2.programs[contractLocationID])
+		assert.NotNil(t, runtimeInterface2.programs[contractLocation])
 
 		assert.Equal(t,
 			locationAccessCounts{
-				contractLocationID: 1,
+				contractLocation: 1,
 			},
 			programGets2,
 		)
@@ -2362,8 +2445,8 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 		assert.Equal(
 			t,
 			locationAccessCounts{
-				contractLocationID: 1,
-				txLocationID:       1,
+				contractLocation: 1,
+				txLocation:       1,
 			},
 			programSets2,
 		)
@@ -2373,9 +2456,9 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 
 		clearLocationAccessCounts()
 
-		txLocationID1 := common.TransactionLocation{1}.ID()
+		txLocation1 := common.TransactionLocation{1}
 		// second has seen an additional transaction (import, above)
-		txLocationID2 := common.TransactionLocation{2}.ID()
+		txLocation2 := common.TransactionLocation{2}
 
 		updateTx := newContractUpdateTransaction(name, newCode)
 
@@ -2385,7 +2468,7 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 		require.NoError(t, err)
 
 		// NOTE: the program was not available in the cache (no successful get).
-		// So the old code is parsed and checked – and *MUST* be set!
+		// The old code is only parsed, and program does not need to be set.
 
 		assert.Equal(t,
 			locationAccessCounts{},
@@ -2394,8 +2477,7 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 		assert.Equal(
 			t,
 			locationAccessCounts{
-				contractLocationID: 1,
-				txLocationID1:      1,
+				txLocation1: 1,
 			},
 			programSets1,
 		)
@@ -2406,18 +2488,16 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 		require.NoError(t, err)
 
 		// NOTE: the program was available in the cache (successful get).
-		// So the old code is parsed and checked, and does not need to be set.
+		// The old code is only parsed, and does not need to be set.
 
 		assert.Equal(t,
-			locationAccessCounts{
-				contractLocationID: 1,
-			},
+			locationAccessCounts{},
 			programGets2,
 		)
 		assert.Equal(
 			t,
 			locationAccessCounts{
-				txLocationID2: 1,
+				txLocation2: 1,
 			},
 			programSets2,
 		)

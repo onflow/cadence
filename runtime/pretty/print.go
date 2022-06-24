@@ -33,6 +33,11 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
+type Writer interface {
+	io.Writer
+	io.StringWriter
+}
+
 func colorizeError(message string) string {
 	return aurora.Colorize(message, aurora.RedFg|aurora.BrightFg|aurora.BoldFm).String()
 }
@@ -49,25 +54,32 @@ func colorizeMeta(meta string) string {
 	return aurora.Blue(meta).String()
 }
 
-const errorPrefix = "error"
+const ErrorPrefix = "error"
+const messageSeparator = ": "
 const excerptArrow = "--> "
 const excerptDots = "... "
 const maxLineLength = 500
 
-func FormatErrorMessage(message string, useColor bool) string {
-	// prepare prefix
-	formattedErrorPrefix := errorPrefix
-	if useColor {
-		formattedErrorPrefix = colorizeError(errorPrefix)
+func FormatErrorMessage(prefix string, message string, useColor bool) string {
+	if prefix == "" && message == "" {
+		return ""
 	}
 
-	// prepare message
-	message = ": " + message
+	var builder strings.Builder
+
 	if useColor {
-		message = colorizeMessage(message)
+		builder.WriteString(colorizeError(prefix))
+		builder.WriteString(colorizeMessage(messageSeparator))
+		builder.WriteString(colorizeMessage(message))
+	} else {
+		builder.WriteString(prefix)
+		builder.WriteString(messageSeparator)
+		builder.WriteString(message)
 	}
 
-	return formattedErrorPrefix + message + "\n"
+	builder.WriteByte('\n')
+
+	return builder.String()
 }
 
 type excerpt struct {
@@ -77,7 +89,7 @@ type excerpt struct {
 	isError  bool
 }
 
-func newExcerpt(obj interface{}, message string, isError bool) excerpt {
+func newExcerpt(obj any, message string, isError bool) excerpt {
 	excerpt := excerpt{
 		message: message,
 		isError: isError,
@@ -113,11 +125,11 @@ func sortExcerpts(excerpts []excerpt) {
 }
 
 type ErrorPrettyPrinter struct {
-	writer   io.Writer
+	writer   Writer
 	useColor bool
 }
 
-func NewErrorPrettyPrinter(writer io.Writer, useColor bool) ErrorPrettyPrinter {
+func NewErrorPrettyPrinter(writer Writer, useColor bool) ErrorPrettyPrinter {
 	return ErrorPrettyPrinter{
 		writer:   writer,
 		useColor: useColor,
@@ -125,13 +137,13 @@ func NewErrorPrettyPrinter(writer io.Writer, useColor bool) ErrorPrettyPrinter {
 }
 
 func (p ErrorPrettyPrinter) writeString(str string) {
-	_, err := p.writer.Write([]byte(str))
+	_, err := p.writer.WriteString(str)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func (p ErrorPrettyPrinter) PrettyPrintError(err error, location common.Location, codes map[common.LocationID]string) error {
+func (p ErrorPrettyPrinter) PrettyPrintError(err error, location common.Location, codes map[common.Location]string) error {
 
 	// writeString panics when the write to the writer fails, so recover those errors and return them.
 	// This way we don't need to if-err for every single writer write
@@ -154,7 +166,7 @@ func (p ErrorPrettyPrinter) PrettyPrintError(err error, location common.Location
 	var printError func(err error, location common.Location) error
 	printError = func(err error, location common.Location) error {
 
-		if err, ok := err.(common.HasImportLocation); ok {
+		if err, ok := err.(common.HasLocation); ok {
 			importLocation := err.ImportLocation()
 			if importLocation != nil {
 				location = importLocation
@@ -167,7 +179,7 @@ func (p ErrorPrettyPrinter) PrettyPrintError(err error, location common.Location
 
 				childLocation := location
 
-				if childErr, ok := childErr.(common.HasImportLocation); ok {
+				if childErr, ok := childErr.(common.HasLocation); ok {
 					importLocation := childErr.ImportLocation()
 					if importLocation != nil {
 						childLocation = importLocation
@@ -187,12 +199,7 @@ func (p ErrorPrettyPrinter) PrettyPrintError(err error, location common.Location
 			p.writeString("\n")
 		}
 
-		var locationID common.LocationID
-		if location != nil {
-			locationID = location.ID()
-		}
-
-		p.prettyPrintError(err, location, codes[locationID])
+		p.prettyPrintError(err, location, codes[location])
 		i++
 		return nil
 	}
@@ -202,7 +209,12 @@ func (p ErrorPrettyPrinter) PrettyPrintError(err error, location common.Location
 
 func (p ErrorPrettyPrinter) prettyPrintError(err error, location common.Location, code string) {
 
-	p.writeString(FormatErrorMessage(err.Error(), p.useColor))
+	prefix := ErrorPrefix
+	if secondaryError, ok := err.(errors.HasPrefix); ok {
+		prefix = secondaryError.Prefix()
+	}
+
+	p.writeString(FormatErrorMessage(prefix, err.Error(), p.useColor))
 
 	message := ""
 	if secondaryError, ok := err.(errors.SecondaryError); ok {
@@ -294,8 +306,18 @@ func (p ErrorPrettyPrinter) writeCodeExcerpts(
 			// indicator line
 			p.writeString(emptyLineNumbers)
 
-			for i := 0; i <= excerpt.startPos.Column; i++ {
-				p.writeString(" ")
+			indicatorLength := excerpt.startPos.Column
+			if indicatorLength >= maxLineLength {
+				indicatorLength = maxLineLength
+			}
+
+			p.writeString(" ")
+			for i := 0; i < indicatorLength; i++ {
+				c := line[i]
+				if c != '\t' {
+					c = ' '
+				}
+				p.writeString(string(c))
 			}
 
 			columns := 1

@@ -265,10 +265,10 @@ func TestParseParameterList(t *testing.T) {
 
 	t.Parallel()
 
-	parse := func(input string) (interface{}, []error) {
+	parse := func(input string) (any, []error) {
 		return Parse(
 			input,
-			func(p *parser) interface{} {
+			func(p *parser) any {
 				return parseParameterList(p)
 			},
 			nil,
@@ -462,9 +462,8 @@ func TestParseParameterList(t *testing.T) {
 		_, errs := parse("( a b : Int   c : Int )")
 		utils.AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "parser: expected comma, got start of parameter",
-					Pos:     ast.Position{Offset: 14, Line: 1, Column: 14},
+				&MissingCommaInParameterListError{
+					Pos: ast.Position{Offset: 14, Line: 1, Column: 14},
 				},
 			},
 			errs,
@@ -963,10 +962,10 @@ func TestParseAccess(t *testing.T) {
 
 	t.Parallel()
 
-	parse := func(input string) (interface{}, []error) {
+	parse := func(input string) (any, []error) {
 		return Parse(
 			input,
-			func(p *parser) interface{} {
+			func(p *parser) any {
 				return parseAccess(p)
 			},
 			nil,
@@ -1649,10 +1648,10 @@ func TestParseFieldWithVariableKind(t *testing.T) {
 
 	t.Parallel()
 
-	parse := func(input string) (interface{}, []error) {
+	parse := func(input string) (any, []error) {
 		return Parse(
 			input,
-			func(p *parser) interface{} {
+			func(p *parser) any {
 				return parseFieldWithVariableKind(p, ast.AccessNotSpecified, nil, "")
 			},
 			nil,
@@ -2292,7 +2291,6 @@ func TestParseTransactionDeclaration(t *testing.T) {
 								Identifier: "execute",
 								Pos:        ast.Position{Offset: 14, Line: 1, Column: 14},
 							},
-							ParameterList: &ast.ParameterList{},
 							FunctionBlock: &ast.FunctionBlock{
 								Block: &ast.Block{
 									Range: ast.Range{
@@ -2469,7 +2467,6 @@ func TestParseTransactionDeclaration(t *testing.T) {
 								Identifier: "execute",
 								Pos:        ast.Position{Offset: 104, Line: 10, Column: 6},
 							},
-							ParameterList:        &ast.ParameterList{},
 							ReturnTypeAnnotation: nil,
 							FunctionBlock: &ast.FunctionBlock{
 								Block: &ast.Block{
@@ -2710,7 +2707,6 @@ func TestParseTransactionDeclaration(t *testing.T) {
 								Identifier: "execute",
 								Pos:        ast.Position{Offset: 136, Line: 14, Column: 6},
 							},
-							ParameterList:        &ast.ParameterList{},
 							ReturnTypeAnnotation: nil,
 							FunctionBlock: &ast.FunctionBlock{
 								Block: &ast.Block{
@@ -2951,7 +2947,6 @@ func TestParseTransactionDeclaration(t *testing.T) {
 								Identifier: "execute",
 								Pos:        ast.Position{Offset: 179, Line: 18, Column: 6},
 							},
-							ParameterList:        &ast.ParameterList{},
 							ReturnTypeAnnotation: nil,
 							FunctionBlock: &ast.FunctionBlock{
 								Block: &ast.Block{

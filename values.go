@@ -38,7 +38,7 @@ type Value interface {
 	isValue()
 	Type() Type
 	MeteredType(gauge common.MemoryGauge) Type
-	ToGoValue() interface{}
+	ToGoValue() any
 	fmt.Stringer
 }
 
@@ -60,7 +60,7 @@ func NewVoid() Void {
 }
 
 func NewMeteredVoid(memoryGauge common.MemoryGauge) Void {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindCadenceVoid)
+	common.UseMemory(memoryGauge, common.CadenceVoidValueMemoryUsage)
 	return NewVoid()
 }
 
@@ -74,7 +74,7 @@ func (Void) MeteredType(gauge common.MemoryGauge) Type {
 	return NewMeteredVoidType(gauge)
 }
 
-func (Void) ToGoValue() interface{} {
+func (Void) ToGoValue() any {
 	return nil
 }
 
@@ -95,7 +95,7 @@ func NewOptional(value Value) Optional {
 }
 
 func NewMeteredOptional(memoryGauge common.MemoryGauge, value Value) Optional {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindCadenceOptional)
+	common.UseMemory(memoryGauge, common.CadenceOptionalValueMemoryUsage)
 	return NewOptional(value)
 }
 
@@ -128,7 +128,7 @@ func (o Optional) MeteredType(gauge common.MemoryGauge) Type {
 	)
 }
 
-func (o Optional) ToGoValue() interface{} {
+func (o Optional) ToGoValue() any {
 	if o.Value == nil {
 		return nil
 	}
@@ -156,7 +156,7 @@ func NewBool(b bool) Bool {
 }
 
 func NewMeteredBool(memoryGauge common.MemoryGauge, b bool) Bool {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindCadenceBool)
+	common.UseMemory(memoryGauge, common.CadenceBoolValueMemoryUsage)
 	return NewBool(b)
 }
 
@@ -170,7 +170,7 @@ func (Bool) MeteredType(gauge common.MemoryGauge) Type {
 	return NewMeteredBoolType(gauge)
 }
 
-func (v Bool) ToGoValue() interface{} {
+func (v Bool) ToGoValue() any {
 	return bool(v)
 }
 
@@ -212,7 +212,7 @@ func (String) MeteredType(gauge common.MemoryGauge) Type {
 	return NewMeteredStringType(gauge)
 }
 
-func (v String) ToGoValue() interface{} {
+func (v String) ToGoValue() any {
 	return string(v)
 }
 
@@ -241,7 +241,7 @@ func (Bytes) MeteredType(gauge common.MemoryGauge) Type {
 	return NewMeteredBytesType(gauge)
 }
 
-func (v Bytes) ToGoValue() interface{} {
+func (v Bytes) ToGoValue() any {
 	return []byte(v)
 }
 
@@ -286,7 +286,7 @@ func (Character) MeteredType(gauge common.MemoryGauge) Type {
 	return NewMeteredCharacterType(gauge)
 }
 
-func (v Character) ToGoValue() interface{} {
+func (v Character) ToGoValue() any {
 	return string(v)
 }
 
@@ -307,7 +307,7 @@ func NewAddress(b [AddressLength]byte) Address {
 }
 
 func NewMeteredAddress(memoryGauge common.MemoryGauge, b [AddressLength]byte) Address {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindCadenceAddress)
+	common.UseMemory(memoryGauge, common.CadenceAddressValueMemoryUsage)
 	return NewAddress(b)
 }
 
@@ -318,7 +318,7 @@ func BytesToAddress(b []byte) Address {
 }
 
 func BytesToMeteredAddress(memoryGauge common.MemoryGauge, b []byte) Address {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindCadenceAddress)
+	common.UseMemory(memoryGauge, common.CadenceAddressValueMemoryUsage)
 	return BytesToAddress(b)
 }
 
@@ -332,7 +332,7 @@ func (Address) MeteredType(gauge common.MemoryGauge) Type {
 	return NewMeteredAddressType(gauge)
 }
 
-func (v Address) ToGoValue() interface{} {
+func (v Address) ToGoValue() any {
 	return [AddressLength]byte(v)
 }
 
@@ -384,7 +384,7 @@ func (Int) MeteredType(gauge common.MemoryGauge) Type {
 	return NewMeteredIntType(gauge)
 }
 
-func (v Int) ToGoValue() interface{} {
+func (v Int) ToGoValue() any {
 	return v.Big()
 }
 
@@ -423,7 +423,7 @@ func NewMeteredInt8(memoryGauge common.MemoryGauge, v int8) Int8 {
 
 func (Int8) isValue() {}
 
-func (v Int8) ToGoValue() interface{} {
+func (v Int8) ToGoValue() any {
 	return int8(v)
 }
 
@@ -470,7 +470,7 @@ func (Int16) MeteredType(gauge common.MemoryGauge) Type {
 	return NewMeteredInt16Type(gauge)
 }
 
-func (v Int16) ToGoValue() interface{} {
+func (v Int16) ToGoValue() any {
 	return int16(v)
 }
 
@@ -511,7 +511,7 @@ func (Int32) MeteredType(gauge common.MemoryGauge) Type {
 	return NewMeteredInt32Type(gauge)
 }
 
-func (v Int32) ToGoValue() interface{} {
+func (v Int32) ToGoValue() any {
 	return int32(v)
 }
 
@@ -552,7 +552,7 @@ func (Int64) MeteredType(gauge common.MemoryGauge) Type {
 	return NewMeteredInt64Type(gauge)
 }
 
-func (v Int64) ToGoValue() interface{} {
+func (v Int64) ToGoValue() any {
 	return int64(v)
 }
 
@@ -609,7 +609,7 @@ func (Int128) MeteredType(gauge common.MemoryGauge) Type {
 	return NewMeteredInt128Type(gauge)
 }
 
-func (v Int128) ToGoValue() interface{} {
+func (v Int128) ToGoValue() any {
 	return v.Big()
 }
 
@@ -672,7 +672,7 @@ func (Int256) MeteredType(gauge common.MemoryGauge) Type {
 	return NewMeteredInt256Type(gauge)
 }
 
-func (v Int256) ToGoValue() interface{} {
+func (v Int256) ToGoValue() any {
 	return v.Big()
 }
 
@@ -731,7 +731,7 @@ func (UInt) MeteredType(gauge common.MemoryGauge) Type {
 	return NewMeteredUIntType(gauge)
 }
 
-func (v UInt) ToGoValue() interface{} {
+func (v UInt) ToGoValue() any {
 	return v.Big()
 }
 
@@ -778,7 +778,7 @@ func (UInt8) MeteredType(gauge common.MemoryGauge) Type {
 	return NewMeteredUInt8Type(gauge)
 }
 
-func (v UInt8) ToGoValue() interface{} {
+func (v UInt8) ToGoValue() any {
 	return uint8(v)
 }
 
@@ -817,7 +817,7 @@ func (UInt16) MeteredType(gauge common.MemoryGauge) Type {
 	return NewMeteredUInt16Type(gauge)
 }
 
-func (v UInt16) ToGoValue() interface{} {
+func (v UInt16) ToGoValue() any {
 	return uint16(v)
 }
 
@@ -858,7 +858,7 @@ func (UInt32) MeteredType(gauge common.MemoryGauge) Type {
 	return NewMeteredUInt32Type(gauge)
 }
 
-func (v UInt32) ToGoValue() interface{} {
+func (v UInt32) ToGoValue() any {
 	return uint32(v)
 }
 
@@ -899,7 +899,7 @@ func (UInt64) MeteredType(gauge common.MemoryGauge) Type {
 	return NewMeteredUInt64Type(gauge)
 }
 
-func (v UInt64) ToGoValue() interface{} {
+func (v UInt64) ToGoValue() any {
 	return uint64(v)
 }
 
@@ -956,7 +956,7 @@ func (UInt128) MeteredType(gauge common.MemoryGauge) Type {
 	return NewMeteredUInt128Type(gauge)
 }
 
-func (v UInt128) ToGoValue() interface{} {
+func (v UInt128) ToGoValue() any {
 	return v.Big()
 }
 
@@ -1019,7 +1019,7 @@ func (UInt256) MeteredType(gauge common.MemoryGauge) Type {
 	return NewMeteredUInt256Type(gauge)
 }
 
-func (v UInt256) ToGoValue() interface{} {
+func (v UInt256) ToGoValue() any {
 	return v.Big()
 }
 
@@ -1066,7 +1066,7 @@ func (Word8) MeteredType(gauge common.MemoryGauge) Type {
 	return NewMeteredWord8Type(gauge)
 }
 
-func (v Word8) ToGoValue() interface{} {
+func (v Word8) ToGoValue() any {
 	return uint8(v)
 }
 
@@ -1105,7 +1105,7 @@ func (Word16) MeteredType(gauge common.MemoryGauge) Type {
 	return NewMeteredWord16Type(gauge)
 }
 
-func (v Word16) ToGoValue() interface{} {
+func (v Word16) ToGoValue() any {
 	return uint16(v)
 }
 
@@ -1146,7 +1146,7 @@ func (Word32) MeteredType(gauge common.MemoryGauge) Type {
 	return NewMeteredWord32Type(gauge)
 }
 
-func (v Word32) ToGoValue() interface{} {
+func (v Word32) ToGoValue() any {
 	return uint32(v)
 }
 
@@ -1187,7 +1187,7 @@ func (Word64) MeteredType(gauge common.MemoryGauge) Type {
 	return NewMeteredWord64Type(gauge)
 }
 
-func (v Word64) ToGoValue() interface{} {
+func (v Word64) ToGoValue() any {
 	return uint64(v)
 }
 
@@ -1249,7 +1249,7 @@ func (Fix64) MeteredType(gauge common.MemoryGauge) Type {
 	return NewMeteredFix64Type(gauge)
 }
 
-func (v Fix64) ToGoValue() interface{} {
+func (v Fix64) ToGoValue() any {
 	return int64(v)
 }
 
@@ -1318,7 +1318,7 @@ func (UFix64) MeteredType(gauge common.MemoryGauge) Type {
 	return NewMeteredUFix64Type(gauge)
 }
 
-func (v UFix64) ToGoValue() interface{} {
+func (v UFix64) ToGoValue() any {
 	return uint64(v)
 }
 
@@ -1377,8 +1377,8 @@ func (v Array) WithType(arrayType ArrayType) Array {
 	return v
 }
 
-func (v Array) ToGoValue() interface{} {
-	ret := make([]interface{}, len(v.Values))
+func (v Array) ToGoValue() any {
+	ret := make([]any, len(v.Values))
 
 	for i, e := range v.Values {
 		ret[i] = e.ToGoValue()
@@ -1413,9 +1413,7 @@ func NewMeteredDictionary(
 	size int,
 	constructor func() ([]KeyValuePair, error),
 ) (Dictionary, error) {
-	baseUse, lengthUse := common.NewCadenceDictionaryMemoryUsages(size)
-	common.UseMemory(gauge, baseUse)
-	common.UseMemory(gauge, lengthUse)
+	common.UseMemory(gauge, common.CadenceDictionaryValueMemoryUsage)
 
 	pairs, err := constructor()
 	if err != nil {
@@ -1439,8 +1437,8 @@ func (v Dictionary) WithType(dictionaryType DictionaryType) Dictionary {
 	return v
 }
 
-func (v Dictionary) ToGoValue() interface{} {
-	ret := map[interface{}]interface{}{}
+func (v Dictionary) ToGoValue() any {
+	ret := map[any]any{}
 
 	for _, p := range v.Pairs {
 		ret[p.Key.ToGoValue()] = p.Value.ToGoValue()
@@ -1476,7 +1474,7 @@ type KeyValuePair struct {
 }
 
 func NewMeteredKeyValuePair(gauge common.MemoryGauge, key, value Value) KeyValuePair {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceKeyValuePair)
+	common.UseMemory(gauge, common.CadenceKeyValuePairMemoryUsage)
 	return KeyValuePair{
 		Key:   key,
 		Value: value,
@@ -1527,8 +1525,8 @@ func (v Struct) WithType(typ *StructType) Struct {
 	return v
 }
 
-func (v Struct) ToGoValue() interface{} {
-	ret := make([]interface{}, len(v.Fields))
+func (v Struct) ToGoValue() any {
+	ret := make([]any, len(v.Fields))
 
 	for i, field := range v.Fields {
 		ret[i] = field.ToGoValue()
@@ -1605,8 +1603,8 @@ func (v Resource) WithType(typ *ResourceType) Resource {
 	return v
 }
 
-func (v Resource) ToGoValue() interface{} {
-	ret := make([]interface{}, len(v.Fields))
+func (v Resource) ToGoValue() any {
+	ret := make([]any, len(v.Fields))
 
 	for i, field := range v.Fields {
 		ret[i] = field.ToGoValue()
@@ -1662,8 +1660,8 @@ func (v Event) WithType(typ *EventType) Event {
 	return v
 }
 
-func (v Event) ToGoValue() interface{} {
-	ret := make([]interface{}, len(v.Fields))
+func (v Event) ToGoValue() any {
+	ret := make([]any, len(v.Fields))
 
 	for i, field := range v.Fields {
 		ret[i] = field.ToGoValue()
@@ -1718,8 +1716,8 @@ func (v Contract) WithType(typ *ContractType) Contract {
 	return v
 }
 
-func (v Contract) ToGoValue() interface{} {
-	ret := make([]interface{}, len(v.Fields))
+func (v Contract) ToGoValue() any {
+	ret := make([]any, len(v.Fields))
 
 	for i, field := range v.Fields {
 		ret[i] = field.ToGoValue()
@@ -1750,7 +1748,7 @@ func NewLink(targetPath Path, borrowType string) Link {
 }
 
 func NewMeteredLink(gauge common.MemoryGauge, targetPath Path, borrowType string) Link {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceLink)
+	common.UseMemory(gauge, common.CadenceLinkValueMemoryUsage)
 	return NewLink(targetPath, borrowType)
 }
 
@@ -1764,7 +1762,7 @@ func (v Link) MeteredType(_ common.MemoryGauge) Type {
 	return v.Type()
 }
 
-func (v Link) ToGoValue() interface{} {
+func (v Link) ToGoValue() any {
 	return nil
 }
 
@@ -1792,7 +1790,7 @@ func NewPath(domain, identifier string) Path {
 }
 
 func NewMeteredPath(gauge common.MemoryGauge, domain, identifier string) Path {
-	common.UseConstantMemory(gauge, common.MemoryKindCadencePath)
+	common.UseMemory(gauge, common.CadencePathValueMemoryUsage)
 	return NewPath(domain, identifier)
 }
 
@@ -1806,7 +1804,7 @@ func (Path) MeteredType(gauge common.MemoryGauge) Type {
 	return NewMeteredPathType(gauge)
 }
 
-func (Path) ToGoValue() interface{} {
+func (Path) ToGoValue() any {
 	return nil
 }
 
@@ -1832,7 +1830,7 @@ func NewTypeValue(staticType Type) TypeValue {
 }
 
 func NewMeteredTypeValue(gauge common.MemoryGauge, staticType Type) TypeValue {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceTypeValue)
+	common.UseMemory(gauge, common.CadenceTypeValueMemoryUsage)
 	return NewTypeValue(staticType)
 }
 
@@ -1846,7 +1844,7 @@ func (TypeValue) MeteredType(gauge common.MemoryGauge) Type {
 	return NewMeteredMetaType(gauge)
 }
 
-func (TypeValue) ToGoValue() interface{} {
+func (TypeValue) ToGoValue() any {
 	return nil
 }
 
@@ -1873,7 +1871,7 @@ func NewCapability(path Path, address Address, borrowType Type) Capability {
 }
 
 func NewMeteredCapability(gauge common.MemoryGauge, path Path, address Address, borrowType Type) Capability {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceCapability)
+	common.UseMemory(gauge, common.CadenceCapabilityValueMemoryUsage)
 	return NewCapability(path, address, borrowType)
 }
 
@@ -1887,7 +1885,7 @@ func (v Capability) MeteredType(gauge common.MemoryGauge) Type {
 	return NewMeteredCapabilityType(gauge, v.BorrowType)
 }
 
-func (Capability) ToGoValue() interface{} {
+func (Capability) ToGoValue() any {
 	return nil
 }
 
@@ -1941,8 +1939,8 @@ func (v Enum) WithType(typ *EnumType) Enum {
 	return v
 }
 
-func (v Enum) ToGoValue() interface{} {
-	ret := make([]interface{}, len(v.Fields))
+func (v Enum) ToGoValue() any {
+	ret := make([]any, len(v.Fields))
 
 	for i, field := range v.Fields {
 		ret[i] = field.ToGoValue()

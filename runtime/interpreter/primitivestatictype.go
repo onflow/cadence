@@ -19,6 +19,9 @@
 package interpreter
 
 import (
+	"fmt"
+	"strconv"
+
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
@@ -27,6 +30,8 @@ import (
 //go:generate go run golang.org/x/tools/cmd/stringer -type=PrimitiveStaticType -trimprefix=PrimitiveStaticType
 
 // PrimitiveStaticType
+
+var PrimitiveStaticTypes = _PrimitiveStaticType_map
 
 type PrimitiveStaticType uint
 
@@ -39,11 +44,28 @@ func (t PrimitiveStaticType) Equal(other StaticType) bool {
 	return t == otherPrimitiveType
 }
 
+const primitiveStaticTypePrefix = "PrimitiveStaticType"
+
+var primitiveStaticTypeConstantLength = len(primitiveStaticTypePrefix) + 2 // + 2 for parentheses
+
+func (t PrimitiveStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
+	if str, ok := PrimitiveStaticTypes[t]; ok {
+		common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(len(str)))
+		return str
+	}
+
+	memoryAmount := primitiveStaticTypeConstantLength + OverEstimateIntStringLength(int(t))
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(memoryAmount))
+
+	rawValueStr := strconv.FormatInt(int64(t), 10)
+	return fmt.Sprintf("%s(%s)", primitiveStaticTypePrefix, rawValueStr)
+}
+
 func NewPrimitiveStaticType(
 	memoryGauge common.MemoryGauge,
 	staticType PrimitiveStaticType,
 ) PrimitiveStaticType {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindPrimitiveStaticType)
+	common.UseMemory(memoryGauge, common.PrimitiveStaticTypeMemoryUsage)
 	return staticType
 }
 

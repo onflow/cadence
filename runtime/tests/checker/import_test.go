@@ -534,7 +534,7 @@ func TestCheckInvalidImportCycleSelf(t *testing.T) {
 
 	require.NoError(t, err)
 
-	elaborations := map[common.LocationID]*sema.Elaboration{}
+	elaborations := map[common.Location]*sema.Elaboration{}
 
 	check := func(code string, location common.Location) error {
 		_, err := ParseAndCheckWithOptions(t,
@@ -545,13 +545,13 @@ func TestCheckInvalidImportCycleSelf(t *testing.T) {
 					sema.WithImportHandler(
 						func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
 
-							elaboration, ok := elaborations[importedLocation.ID()]
+							elaboration, ok := elaborations[importedLocation]
 							if !ok {
 								subChecker, err := checker.SubChecker(importedProgram, importedLocation)
 								if err != nil {
 									return nil, err
 								}
-								elaborations[importedLocation.ID()] = subChecker.Elaboration
+								elaborations[importedLocation] = subChecker.Elaboration
 								err = subChecker.Check()
 								if err != nil {
 									return nil, err
@@ -628,7 +628,7 @@ func TestCheckInvalidImportCycleTwoLocations(t *testing.T) {
 		return nil
 	}
 
-	elaborations := map[common.LocationID]*sema.Elaboration{}
+	elaborations := map[common.Location]*sema.Elaboration{}
 
 	_, err = ParseAndCheckWithOptions(t,
 		codeEven,
@@ -639,13 +639,13 @@ func TestCheckInvalidImportCycleTwoLocations(t *testing.T) {
 					func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
 						importedProgram := getProgram(importedLocation)
 
-						elaboration, ok := elaborations[importedLocation.ID()]
+						elaboration, ok := elaborations[importedLocation]
 						if !ok {
 							subChecker, err := checker.SubChecker(importedProgram, importedLocation)
 							if err != nil {
 								return nil, err
 							}
-							elaborations[importedLocation.ID()] = subChecker.Elaboration
+							elaborations[importedLocation] = subChecker.Elaboration
 							err = subChecker.Check()
 							if err != nil {
 								return nil, err

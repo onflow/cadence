@@ -3275,14 +3275,14 @@ func numberFunctionArgumentExpressionsChecker(targetType Type) ArgumentExpressio
 		switch argument := argument.(type) {
 		case *ast.IntegerExpression:
 			if CheckIntegerLiteral(nil, argument, targetType, checker.report) {
-				if checker.lintEnabled {
+				if checker.lintingEnabled {
 					suggestIntegerLiteralConversionReplacement(checker, argument, targetType, invocationRange)
 				}
 			}
 
 		case *ast.FixedPointExpression:
 			if CheckFixedPointLiteral(nil, argument, targetType, checker.report) {
-				if checker.lintEnabled {
+				if checker.lintingEnabled {
 					suggestFixedPointLiteralConversionReplacement(checker, targetType, argument, invocationRange)
 				}
 			}
@@ -3370,14 +3370,14 @@ func suggestIntegerLiteralConversionReplacement(
 			checker.memoryGauge,
 			"",
 			negative,
-			new(big.Int).Abs(argument.Value),
-			new(big.Int),
+			common.NewBigIntFromAbsoluteValue(checker.memoryGauge, argument.Value),
+			common.NewBigInt(checker.memoryGauge),
 			1,
 			argument.Range,
 		)
 
 		// If the fixed-point literal is positive
-		// and the the target fixed-point type is signed,
+		// and the target fixed-point type is signed,
 		// then a static cast is required
 
 		if !negative && signed {
@@ -6268,10 +6268,14 @@ func (t *CapabilityType) GetMembers() map[string]MemberResolver {
 	return t.memberResolvers
 }
 
+const CapabilityTypeBorrowField = "borrow"
+const CapabilityTypeCheckField = "check"
+const CapabilityTypeAddressField = "address"
+
 func (t *CapabilityType) initializeMemberResolvers() {
 	t.memberResolversOnce.Do(func() {
 		t.memberResolvers = withBuiltinMembers(t, map[string]MemberResolver{
-			"borrow": {
+			CapabilityTypeBorrowField: {
 				Kind: common.DeclarationKindFunction,
 				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicFunctionMember(
@@ -6283,7 +6287,7 @@ func (t *CapabilityType) initializeMemberResolvers() {
 					)
 				},
 			},
-			"check": {
+			CapabilityTypeCheckField: {
 				Kind: common.DeclarationKindFunction,
 				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicFunctionMember(
@@ -6295,7 +6299,7 @@ func (t *CapabilityType) initializeMemberResolvers() {
 					)
 				},
 			},
-			"address": {
+			CapabilityTypeAddressField: {
 				Kind: common.DeclarationKindField,
 				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicConstantFieldMember(

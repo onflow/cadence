@@ -56,7 +56,7 @@ func NewSimpleCompositeValue(
 	stringer func(common.MemoryGauge, SeenReferences) string,
 ) *SimpleCompositeValue {
 
-	common.UseMemory(inter, common.SimpleCompositeBaseMemoryUsage)
+	common.UseMemory(inter, common.SimpleCompositeValueBaseMemoryUsage)
 	common.UseMemory(inter, common.NewSimpleCompositeMemoryUsage(len(fields)+len(computedFields)))
 
 	return &SimpleCompositeValue{
@@ -201,12 +201,26 @@ func (v *SimpleCompositeValue) MeteredString(memoryGauge common.MemoryGauge, see
 }
 
 func (v *SimpleCompositeValue) ConformsToStaticType(
-	inter *Interpreter,
-	_ func() LocationRange,
-	staticType StaticType,
-	_ TypeConformanceResults,
+	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
+	results TypeConformanceResults,
 ) bool {
-	return staticType.Equal(v.StaticType(inter))
+
+	for _, fieldName := range v.FieldNames {
+		value, ok := v.Fields[fieldName]
+		if !ok {
+			continue
+		}
+		if !value.ConformsToStaticType(
+			interpreter,
+			getLocationRange,
+			results,
+		) {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (v *SimpleCompositeValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {

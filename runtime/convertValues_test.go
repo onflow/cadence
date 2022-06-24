@@ -1176,7 +1176,7 @@ func TestImportRuntimeType(t *testing.T) {
 		},
 		{
 			label: "RestrictedType",
-			actual: cadence.RestrictedType{
+			actual: &cadence.RestrictedType{
 				Type: &cadence.StructType{
 					Location:            TestLocation,
 					QualifiedIdentifier: "S",
@@ -1743,7 +1743,7 @@ func TestExportTypeValue(t *testing.T) {
 		program, err := parser2.ParseProgram(code, nil)
 		require.NoError(t, err)
 
-		checker, err := sema.NewChecker(program, TestLocation, nil)
+		checker, err := sema.NewChecker(program, TestLocation, nil, false)
 		require.NoError(t, err)
 
 		err = checker.Check()
@@ -1769,7 +1769,7 @@ func TestExportTypeValue(t *testing.T) {
 
 		assert.Equal(t,
 			cadence.TypeValue{
-				StaticType: cadence.RestrictedType{
+				StaticType: (&cadence.RestrictedType{
 					Type: &cadence.StructType{
 						QualifiedIdentifier: "S",
 						Location:            TestLocation,
@@ -1782,7 +1782,7 @@ func TestExportTypeValue(t *testing.T) {
 							Fields:              []cadence.Field{},
 						},
 					},
-				}.WithID("S.test.S{S.test.SI}"),
+				}).WithID("S.test.S{S.test.SI}"),
 			},
 			actual,
 		)
@@ -1829,7 +1829,7 @@ func TestExportCapabilityValue(t *testing.T) {
 		program, err := parser2.ParseProgram(code, nil)
 		require.NoError(t, err)
 
-		checker, err := sema.NewChecker(program, TestLocation, nil)
+		checker, err := sema.NewChecker(program, TestLocation, nil, false)
 		require.NoError(t, err)
 
 		err = checker.Check()
@@ -1927,7 +1927,7 @@ func TestExportLinkValue(t *testing.T) {
 		program, err := parser2.ParseProgram(code, nil)
 		require.NoError(t, err)
 
-		checker, err := sema.NewChecker(program, TestLocation, nil)
+		checker, err := sema.NewChecker(program, TestLocation, nil, false)
 		require.NoError(t, err)
 
 		err = checker.Check()
@@ -4421,7 +4421,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 	t.Parallel()
 
 	program := interpreter.Program{
-		Elaboration: sema.NewElaboration(nil),
+		Elaboration: sema.NewElaboration(nil, false),
 	}
 
 	inter := newTestInterpreter(t)
@@ -4558,7 +4558,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 		t.Parallel()
 
 		program := interpreter.Program{
-			Elaboration: sema.NewElaboration(nil),
+			Elaboration: sema.NewElaboration(nil, false),
 		}
 
 		inter := newTestInterpreter(t)

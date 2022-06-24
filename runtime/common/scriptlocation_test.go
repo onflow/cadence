@@ -30,7 +30,7 @@ func TestScriptLocation_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
 
-	loc := ScriptLocation([]byte{0x1, 0x2})
+	loc := ScriptLocation{0x1, 0x2}
 
 	actual, err := json.Marshal(loc)
 	require.NoError(t, err)
@@ -39,7 +39,7 @@ func TestScriptLocation_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "ScriptLocation",
-            "Script": "0102"
+            "Script": "0102000000000000000000000000000000000000000000000000000000000000"
         }
         `,
 		string(actual),
@@ -70,15 +70,21 @@ func TestDecodeScriptLocationTypeID(t *testing.T) {
 
 		t.Parallel()
 
-		_, _, err := decodeScriptLocationTypeID(nil, "s.test")
-		require.EqualError(t, err, "invalid script location type ID: missing qualified identifier")
+		location, qualifiedIdentifier, err := decodeScriptLocationTypeID(nil, "s.0102")
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			ScriptLocation{0x1, 0x2},
+			location,
+		)
+		assert.Empty(t, qualifiedIdentifier)
 	})
 
 	t.Run("missing qualified identifier", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, _, err := decodeScriptLocationTypeID(nil, "X.test.T")
+		_, _, err := decodeScriptLocationTypeID(nil, "X.0102.T")
 		require.EqualError(t, err, "invalid script location type ID: invalid prefix: expected \"s\", got \"X\"")
 	})
 

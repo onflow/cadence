@@ -153,7 +153,7 @@ func (k CompositeKind) ConstructionKeyword() string {
 	return "create"
 }
 
-func (k CompositeKind) DestructionKeyword() interface{} {
+func (k CompositeKind) DestructionKeyword() any {
 	if k != CompositeKindResource {
 		return ""
 	}

@@ -144,7 +144,7 @@ func TestType_ID(t *testing.T) {
 			"S.test.FooI",
 		},
 		{
-			RestrictedType{}.WithID("S.test.Foo{S.test.FooI}"),
+			(&RestrictedType{}).WithID("S.test.Foo{S.test.FooI}"),
 			"S.test.Foo{S.test.FooI}",
 		},
 	}

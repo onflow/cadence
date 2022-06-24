@@ -21,6 +21,7 @@ package parser2
 import (
 	"fmt"
 	"math/big"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -28,6 +29,7 @@ import (
 	"go.uber.org/goleak"
 
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/parser2/lexer"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -51,7 +53,7 @@ func TestParseInvalid(t *testing.T) {
 	for _, test := range []test{
 		{unexpectedToken, "X"},
 		{unexpectedToken, "paste your code in here"},
-		{expectedExpression, "# a ( b > c > d > e > f > g > h > i > j > k > l > m > n > o > p > q > r > s > t > u > v > w > x > y > z > A > B > C > D > E > F>"},
+		{expectedExpression, "# a ( b > c > d > e > f > g > h > i > j > k > l > m > n > o > p > q > r >"},
 		{missingTypeAnnotation, "#0x0<{},>()"},
 	} {
 		t.Run(test.code, func(t *testing.T) {
@@ -71,7 +73,7 @@ func TestParseBuffering(t *testing.T) {
 
 		_, errs := Parse(
 			"a b c d",
-			func(p *parser) interface{} {
+			func(p *parser) any {
 				p.mustOneString(lexer.TokenIdentifier, "a")
 				p.mustOne(lexer.TokenSpace)
 
@@ -100,7 +102,7 @@ func TestParseBuffering(t *testing.T) {
 
 		_, errs := Parse(
 			"a b x d",
-			func(p *parser) interface{} {
+			func(p *parser) any {
 				p.mustOneString(lexer.TokenIdentifier, "a")
 				p.mustOne(lexer.TokenSpace)
 
@@ -137,7 +139,7 @@ func TestParseBuffering(t *testing.T) {
 
 		_, errs := Parse(
 			"a b c d",
-			func(p *parser) interface{} {
+			func(p *parser) any {
 				p.mustOneString(lexer.TokenIdentifier, "a")
 				p.mustOne(lexer.TokenSpace)
 
@@ -169,7 +171,7 @@ func TestParseBuffering(t *testing.T) {
 
 		_, errs := Parse(
 			"a b c d",
-			func(p *parser) interface{} {
+			func(p *parser) any {
 				p.mustOneString(lexer.TokenIdentifier, "a")
 				p.mustOne(lexer.TokenSpace)
 
@@ -217,7 +219,7 @@ func TestParseBuffering(t *testing.T) {
 
 		_, errs := Parse(
 			"a b c x",
-			func(p *parser) interface{} {
+			func(p *parser) any {
 				p.mustOneString(lexer.TokenIdentifier, "a")
 				p.mustOne(lexer.TokenSpace)
 
@@ -370,7 +372,7 @@ func TestParseEOF(t *testing.T) {
 
 	_, errs := Parse(
 		"a b",
-		func(p *parser) interface{} {
+		func(p *parser) any {
 			p.mustOneString(lexer.TokenIdentifier, "a")
 			p.skipSpaceAndComments(true)
 			p.mustOneString(lexer.TokenIdentifier, "b")
@@ -493,6 +495,26 @@ func TestParseArgumentList(t *testing.T) {
 		)
 	})
 
+	t.Run("fatal error from lack of memory", func(t *testing.T) {
+		gauge := makeLimitingMemoryGauge()
+		gauge.Limit(common.MemoryKindSyntaxToken, 0)
+
+		var panicMsg any
+		(func() {
+			defer func() {
+				panicMsg = recover()
+			}()
+
+			ParseArgumentList(`(1, b: true)`, gauge)
+		})()
+
+		require.IsType(t, common.FatalError{}, panicMsg)
+
+		fatalError, _ := panicMsg.(common.FatalError)
+		var expectedError limitingMemoryGaugeError
+		assert.ErrorAs(t, fatalError, &expectedError)
+	})
+
 	t.Run("valid", func(t *testing.T) {
 		t.Parallel()
 
@@ -606,4 +628,137 @@ func TestParseInvalidSingleQuoteImport(t *testing.T) {
 	_, err := ParseProgram(`import 'X'`, nil)
 
 	require.EqualError(t, err, "Parsing failed:\nerror: unrecognized character: U+0027 '''\n --> :1:7\n  |\n1 | import 'X'\n  |        ^\n\nerror: unexpected end in import declaration: expected string, address, or identifier\n --> :1:7\n  |\n1 | import 'X'\n  |        ^\n")
+}
+
+func TestParseExpressionDepthLimit(t *testing.T) {
+
+	t.Parallel()
+
+	var builder strings.Builder
+	builder.WriteString("let x = y")
+	for i := 0; i < 20; i++ {
+		builder.WriteString(" ?? z")
+	}
+
+	code := builder.String()
+
+	_, err := ParseProgram(code, nil)
+	require.Error(t, err)
+
+	utils.AssertEqualWithDiff(t,
+		[]error{
+			ExpressionDepthLimitReachedError{
+				Pos: ast.Position{
+					Offset: 88,
+					Line:   1,
+					Column: 88,
+				},
+			},
+		},
+		err.(Error).Errors,
+	)
+}
+
+func TestParseTypeDepthLimit(t *testing.T) {
+
+	t.Parallel()
+
+	const nesting = 20
+
+	var builder strings.Builder
+	builder.WriteString("let x: T<")
+	for i := 0; i < nesting; i++ {
+		builder.WriteString("T<")
+	}
+	builder.WriteString("U")
+	for i := 0; i < nesting; i++ {
+		builder.WriteString(">")
+	}
+	builder.WriteString(">? = nil")
+
+	code := builder.String()
+
+	_, err := ParseProgram(code, nil)
+	require.Error(t, err)
+
+	utils.AssertEqualWithDiff(t,
+		[]error{
+			TypeDepthLimitReachedError{
+				Pos: ast.Position{
+					Offset: 39,
+					Line:   1,
+					Column: 39,
+				},
+			},
+		},
+		err.(Error).Errors,
+	)
+}
+
+func TestParseLocalReplayLimit(t *testing.T) {
+	t.Parallel()
+
+	var builder strings.Builder
+	builder.WriteString("let t = T")
+	for i := 0; i < 30; i++ {
+		builder.WriteString("<T")
+	}
+	builder.WriteString(">()")
+
+	code := builder.String()
+	_, errs := ParseProgram(code, nil)
+	utils.AssertEqualWithDiff(t,
+		Error{
+			Code: code,
+			Errors: []error{
+				&SyntaxError{
+					Message: fmt.Sprintf(
+						"program too ambiguous, local replay limit of %d tokens exceeded",
+						localTokenReplayCountLimit,
+					),
+					Pos: ast.Position{
+						Offset: 44,
+						Line:   1,
+						Column: 44,
+					},
+				},
+			},
+		},
+		errs,
+	)
+}
+
+func TestParseGlobalReplayLimit(t *testing.T) {
+
+	t.Parallel()
+
+	var builder strings.Builder
+	for j := 0; j < 2; j++ {
+		builder.WriteString(";let t = T")
+		for i := 0; i < 16; i++ {
+			builder.WriteString("<T")
+		}
+	}
+
+	code := builder.String()
+	_, errs := ParseProgram(code, nil)
+	utils.AssertEqualWithDiff(t,
+		Error{
+			Code: code,
+			Errors: []error{
+				&SyntaxError{
+					Message: fmt.Sprintf(
+						"program too ambiguous, global replay limit of %d tokens exceeded",
+						globalTokenReplayCountLimit,
+					),
+					Pos: ast.Position{
+						Offset: 84,
+						Line:   1,
+						Column: 84,
+					},
+				},
+			},
+		},
+		errs,
+	)
 }

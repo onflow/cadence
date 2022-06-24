@@ -29,6 +29,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/pretty"
 	"github.com/onflow/cadence/runtime/sema"
@@ -77,9 +78,9 @@ func ParseAndCheckWithOptionsAndMemoryMetering(
 	program, err := parser2.ParseProgram(code, memoryGauge)
 	if !options.IgnoreParseError && !assert.NoError(t, err) {
 		var sb strings.Builder
-		locationID := options.Location.ID()
+		location := options.Location
 		printErr := pretty.NewErrorPrettyPrinter(&sb, true).
-			PrettyPrintError(err, options.Location, map[common.LocationID]string{locationID: code})
+			PrettyPrintError(err, location, map[common.Location]string{location: code})
 		if printErr != nil {
 			panic(printErr)
 		}
@@ -100,6 +101,7 @@ func ParseAndCheckWithOptionsAndMemoryMetering(
 			program,
 			options.Location,
 			memoryGauge,
+			true,
 			checkerOptions...,
 		)
 		if err != nil {
@@ -181,6 +183,9 @@ func ExpectCheckerErrors(t *testing.T, err error, count int) []error {
 
 	for _, checkerErr := range errs {
 		_ = checkerErr.Error()
+		if hasSecondaryError, ok := checkerErr.(errors.SecondaryError); ok {
+			_ = hasSecondaryError.SecondaryError()
+		}
 	}
 
 	return errs

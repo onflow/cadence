@@ -27,6 +27,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/onflow/cadence/runtime/common"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -311,6 +313,52 @@ func TestParseAdvancedExpression(t *testing.T) {
 			},
 			result,
 		)
+	})
+
+	t.Run("FatalError in setExprMetaLeftDenotation", func(t *testing.T) {
+
+		t.Parallel()
+
+		gauge := makeLimitingMemoryGauge()
+		gauge.debug = true
+		gauge.Limit(common.MemoryKindPosition, 11)
+
+		var panicMsg any
+		(func() {
+			defer func() {
+				panicMsg = recover()
+			}()
+			ParseExpression("1 < 2", gauge)
+		})()
+
+		require.IsType(t, common.FatalError{}, panicMsg)
+
+		fatalError, _ := panicMsg.(common.FatalError)
+		var expectedError limitingMemoryGaugeError
+		assert.ErrorAs(t, fatalError, &expectedError)
+	})
+
+	t.Run("FatalError in parser.report", func(t *testing.T) {
+
+		t.Parallel()
+
+		gauge := makeLimitingMemoryGauge()
+		gauge.Limit(common.MemoryKindIntegerExpression, 1)
+
+		var panicMsg any
+		(func() {
+			defer func() {
+				panicMsg = recover()
+			}()
+
+			ParseExpression("1 < 2 > 3", gauge)
+		})()
+
+		require.IsType(t, common.FatalError{}, panicMsg)
+
+		fatalError, _ := panicMsg.(common.FatalError)
+		var expectedError limitingMemoryGaugeError
+		assert.ErrorAs(t, fatalError, &expectedError)
 	})
 
 	t.Run("less and greater", func(t *testing.T) {
@@ -5873,33 +5921,49 @@ func TestParseInvalidNegativeIntegerLiteralWithIncorrectPrefix(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestParseReplayLimit(t *testing.T) {
+type limitingMemoryGauge struct {
+	limited map[common.MemoryKind]bool   // which kinds to limit
+	limits  map[common.MemoryKind]uint64 // limits of limited kinds
+	totals  map[common.MemoryKind]uint64 // metered memory. for debugging
+	debug   bool                         // print totals after each allocation
+}
 
-	t.Parallel()
+type limitingMemoryGaugeError string
 
-	var builder strings.Builder
-	builder.WriteString("let t = T")
-	for i := 0; i < 100; i++ {
-		builder.WriteString("<T")
+func (e limitingMemoryGaugeError) Error() string {
+	return string(e)
+}
+
+func makeLimitingMemoryGauge() *limitingMemoryGauge {
+	g := limitingMemoryGauge{
+		limited: make(map[common.MemoryKind]bool),
+		limits:  make(map[common.MemoryKind]uint64),
+		totals:  make(map[common.MemoryKind]uint64),
 	}
-	builder.WriteString(">()")
+	return &g
+}
 
-	code := builder.String()
-	_, errs := ParseProgram(code, nil)
-	utils.AssertEqualWithDiff(t,
-		Error{
-			Code: code,
-			Errors: []error{
-				&SyntaxError{
-					Message: fmt.Sprintf("program too ambiguous, replay limit of %d tokens exceeded", tokenReplayLimit),
-					Pos: ast.Position{
-						Offset: 210,
-						Line:   1,
-						Column: 210,
-					},
-				},
-			},
-		},
-		errs,
-	)
+func (g *limitingMemoryGauge) Limit(kind common.MemoryKind, limit uint64) {
+	g.limited[kind] = true
+	g.limits[kind] = limit
+}
+
+func (g *limitingMemoryGauge) MeterMemory(usage common.MemoryUsage) error {
+	g.totals[usage.Kind] += usage.Amount
+
+	if g.debug {
+		fmt.Println(g.totals)
+	}
+
+	if !g.limited[usage.Kind] {
+		return nil
+	}
+
+	if g.limits[usage.Kind] < usage.Amount {
+		return limitingMemoryGaugeError(fmt.Sprintf(`reached limit for "%s"`, usage.Kind.String()))
+	}
+
+	g.limits[usage.Kind] -= usage.Amount
+
+	return nil
 }

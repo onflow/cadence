@@ -72,7 +72,7 @@ func SetupDebugStdout() {
 // Log is a helper to log to a file during debugging or development.
 //
 // You can view logs by using the command `tail -f ./debug.log` in the root langauge server folder.
-func Log(msg ...interface{}) {
+func Log(msg ...any) {
 	SetupLogging()
-	log.Println(msg)
+	log.Println(msg...)
 }

@@ -30,6 +30,8 @@ const StringLocationPrefix = "S"
 //
 type StringLocation string
 
+var _ Location = StringLocation("")
+
 func NewStringLocation(gauge MemoryGauge, id string) StringLocation {
 	UseMemory(gauge, NewRawStringMemoryUsage(len(id)))
 	return StringLocation(id)
@@ -67,6 +69,10 @@ func (l StringLocation) QualifiedIdentifier(typeID TypeID) string {
 }
 
 func (l StringLocation) String() string {
+	return string(l)
+}
+
+func (l StringLocation) Description() string {
 	return string(l)
 }
 
