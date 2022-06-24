@@ -231,7 +231,7 @@ func exportArrayValue(
 	cadence.Array,
 	error,
 ) {
-	return cadence.NewMeteredArray(
+	array, err := cadence.NewMeteredArray(
 		inter,
 		v.Count(),
 		func() ([]cadence.Value, error) {
@@ -257,6 +257,13 @@ func exportArrayValue(
 			return values, nil
 		},
 	)
+	if err != nil {
+		return cadence.Array{}, err
+	}
+
+	exportType := ExportType(v.SemaType(inter), map[sema.TypeID]cadence.Type{}).(cadence.ArrayType)
+
+	return array.WithType(exportType), err
 }
 
 func exportCompositeValue(
@@ -536,7 +543,7 @@ func exportDictionaryValue(
 	cadence.Dictionary,
 	error,
 ) {
-	return cadence.NewMeteredDictionary(
+	dictionary, err := cadence.NewMeteredDictionary(
 		inter,
 		v.Count(),
 		func() ([]cadence.KeyValuePair, error) {
@@ -575,6 +582,13 @@ func exportDictionaryValue(
 			return pairs, nil
 		},
 	)
+	if err != nil {
+		return cadence.Dictionary{}, err
+	}
+
+	exportType := ExportType(v.SemaType(inter), map[sema.TypeID]cadence.Type{}).(cadence.DictionaryType)
+
+	return dictionary.WithType(exportType), err
 }
 
 func exportLinkValue(v interpreter.LinkValue, inter *interpreter.Interpreter) cadence.Link {
