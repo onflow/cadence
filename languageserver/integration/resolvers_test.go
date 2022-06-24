@@ -78,4 +78,10 @@ func Test_AddressImport(t *testing.T) {
 		assert.EqualError(t, err, "failed to get account with address 0000000000000002")
 		assert.Empty(t, resolved)
 	})
+
+	t.Run("address contract names", func(t *testing.T) {
+		contracts, err := resolver.addressContractNames(a)
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, []string{"foo", "test"}, contracts)
+	})
 }
