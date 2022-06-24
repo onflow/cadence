@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -39,23 +40,42 @@ func Test_AddressImport(t *testing.T) {
 		client: mock,
 	}
 
+	a, _ := common.HexToAddress("1")
+	address := common.NewAddressLocation(nil, a, "test")
+	flowAddress := flow.HexToAddress(a.String())
+
+	mock.
+		On("GetAccount", flowAddress).
+		Return(&flow.Account{
+			Address: flowAddress,
+			Contracts: map[string][]byte{
+				"test": []byte("hello tests"),
+				"foo":  []byte("foo bar"),
+			},
+		}, nil)
+
+	nonExisting := flow.HexToAddress("2")
+	mock.
+		On("GetAccount", nonExisting).
+		Return(nil, fmt.Errorf("failed to get account with address %s", nonExisting.String()))
+
 	t.Run("existing address", func(t *testing.T) {
-		a, _ := common.HexToAddress("1")
-		address := common.NewAddressLocation(nil, a, "test")
-		flowAddress := flow.HexToAddress(a.String())
-
-		mock.
-			On("GetAccount", flowAddress).
-			Return(&flow.Account{
-				Address: flowAddress,
-				Contracts: map[string][]byte{
-					"test": []byte("hello tests"),
-					"foo":  []byte("foo bar"),
-				},
-			}, nil)
-
 		resolved, err := resolver.addressImport(address)
 		assert.NoError(t, err)
 		assert.Equal(t, "hello tests", resolved)
+	})
+
+	t.Run("non existing contract import", func(t *testing.T) {
+		address.Name = "invalid"
+		resolved, err := resolver.addressImport(address)
+		assert.NoError(t, err)
+		assert.Empty(t, resolved)
+	})
+
+	t.Run("non existing address", func(t *testing.T) {
+		address.Address, _ = common.HexToAddress("2")
+		resolved, err := resolver.addressImport(address)
+		assert.EqualError(t, err, "failed to get account with address 0000000000000002")
+		assert.Empty(t, resolved)
 	})
 }
