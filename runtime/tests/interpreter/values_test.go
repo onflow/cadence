@@ -100,6 +100,7 @@ func TestRandomMapOperations(t *testing.T) {
 
 		testMap = interpreter.NewDictionaryValueWithAddress(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -199,6 +200,7 @@ func TestRandomMapOperations(t *testing.T) {
 
 		dictionary := interpreter.NewDictionaryValueWithAddress(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -247,6 +249,7 @@ func TestRandomMapOperations(t *testing.T) {
 
 		dictionary := interpreter.NewDictionaryValueWithAddress(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -294,6 +297,7 @@ func TestRandomMapOperations(t *testing.T) {
 
 		dictionary := interpreter.NewDictionaryValueWithAddress(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -358,6 +362,7 @@ func TestRandomMapOperations(t *testing.T) {
 
 		dictionary := interpreter.NewDictionaryValueWithAddress(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -447,6 +452,7 @@ func TestRandomMapOperations(t *testing.T) {
 
 		dictionary := interpreter.NewDictionaryValueWithAddress(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -533,6 +539,7 @@ func TestRandomArrayOperations(t *testing.T) {
 
 		testArray = interpreter.NewArrayValue(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -617,6 +624,7 @@ func TestRandomArrayOperations(t *testing.T) {
 
 		testArray = interpreter.NewArrayValue(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -651,6 +659,7 @@ func TestRandomArrayOperations(t *testing.T) {
 
 		testArray = interpreter.NewArrayValue(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -688,6 +697,7 @@ func TestRandomArrayOperations(t *testing.T) {
 
 		testArray = interpreter.NewArrayValue(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -738,6 +748,7 @@ func TestRandomArrayOperations(t *testing.T) {
 
 		testArray = interpreter.NewArrayValue(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -808,6 +819,7 @@ func TestRandomArrayOperations(t *testing.T) {
 
 		array := interpreter.NewArrayValue(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -1061,6 +1073,7 @@ func newCompositeValue(
 
 	testComposite := interpreter.NewCompositeValue(
 		inter,
+		interpreter.ReturnEmptyLocationRange,
 		location,
 		identifier,
 		kind,
@@ -1172,6 +1185,7 @@ func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) inte
 
 		return interpreter.NewDictionaryValueWithAddress(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			interpreter.DictionaryStaticType{
 				KeyType:   v.Type.KeyType,
 				ValueType: v.Type.ValueType,
@@ -1188,6 +1202,7 @@ func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) inte
 
 		return interpreter.NewArrayValue(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			v.Type,
 			v.GetOwner(),
 			elements...,
@@ -1203,6 +1218,7 @@ func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) inte
 
 		return interpreter.NewCompositeValue(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			v.Location,
 			v.QualifiedIdentifier,
 			v.Kind,
@@ -1372,6 +1388,7 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpre
 
 		enum := interpreter.NewCompositeValue(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			location,
 			enumType.QualifiedIdentifier(),
 			enumType.Kind,
@@ -1436,6 +1453,7 @@ func randomDictionaryValue(
 
 	return interpreter.NewDictionaryValueWithAddress(
 		inter,
+		interpreter.ReturnEmptyLocationRange,
 		interpreter.DictionaryStaticType{
 			KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 			ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -1460,6 +1478,7 @@ func randomArrayValue(inter *interpreter.Interpreter, currentDepth int) interpre
 
 	return interpreter.NewArrayValue(
 		inter,
+		interpreter.ReturnEmptyLocationRange,
 		interpreter.VariableSizedStaticType{
 			Type: interpreter.PrimitiveStaticTypeAnyStruct,
 		},
@@ -1520,6 +1539,7 @@ func randomCompositeValue(
 
 	return interpreter.NewCompositeValue(
 		inter,
+		interpreter.ReturnEmptyLocationRange,
 		location,
 		identifier,
 		kind,

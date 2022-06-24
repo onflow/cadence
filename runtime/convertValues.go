@@ -1249,6 +1249,7 @@ func importArrayValue(
 
 	return interpreter.NewArrayValue(
 		inter,
+		getLocationRange,
 		staticArrayType,
 		common.Address{},
 		values...,
@@ -1343,6 +1344,7 @@ func importDictionaryValue(
 
 	return interpreter.NewDictionaryValue(
 		inter,
+		getLocationRange,
 		dictionaryStaticType,
 		keysAndValues...,
 	), nil
@@ -1425,6 +1427,7 @@ func importCompositeValue(
 
 	return interpreter.NewCompositeValue(
 		inter,
+		getLocationRange,
 		location,
 		qualifiedIdentifier,
 		kind,

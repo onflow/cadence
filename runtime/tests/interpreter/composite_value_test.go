@@ -107,6 +107,7 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 
 				value := interpreter.NewCompositeValue(
 					inter,
+					interpreter.ReturnEmptyLocationRange,
 					TestLocation,
 					fruitType.Identifier,
 					common.CompositeKindStructure,

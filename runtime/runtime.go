@@ -2357,6 +2357,7 @@ func (r *interpreterRuntime) getBlockAtHeight(
 	height uint64,
 	runtimeInterface Interface,
 	inter *interpreter.Interpreter,
+	getLocationRange func() interpreter.LocationRange,
 ) (
 	interpreter.Value,
 	error,
@@ -2378,7 +2379,9 @@ func (r *interpreterRuntime) getBlockAtHeight(
 		return nil, nil
 	}
 
-	return NewBlockValue(inter, block), nil
+	blockValue := NewBlockValue(inter, getLocationRange, block)
+
+	return blockValue, nil
 }
 
 func (r *interpreterRuntime) newGetCurrentBlockFunction(runtimeInterface Interface) interpreter.HostFunction {
@@ -2395,6 +2398,7 @@ func (r *interpreterRuntime) newGetCurrentBlockFunction(runtimeInterface Interfa
 			height,
 			runtimeInterface,
 			invocation.Interpreter,
+			invocation.GetLocationRange,
 		)
 		if err != nil {
 			panic(err)
@@ -2414,6 +2418,7 @@ func (r *interpreterRuntime) newGetBlockFunction(runtimeInterface Interface) int
 			uint64(heightValue),
 			runtimeInterface,
 			invocation.Interpreter,
+			invocation.GetLocationRange,
 		)
 		if err != nil {
 			panic(err)
@@ -3081,12 +3086,18 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 func (r *interpreterRuntime) newAccountContractsGetNamesFunction(
 	addressValue interpreter.AddressValue,
 	runtimeInterface Interface,
-) func(inter *interpreter.Interpreter) *interpreter.ArrayValue {
+) func(
+	inter *interpreter.Interpreter,
+	getLocationRange func() interpreter.LocationRange,
+) *interpreter.ArrayValue {
 
 	// Converted addresses can be cached and don't have to be recomputed on each function invocation
 	address := addressValue.ToAddress()
 
-	return func(inter *interpreter.Interpreter) *interpreter.ArrayValue {
+	return func(
+		inter *interpreter.Interpreter,
+		getLocationRange func() interpreter.LocationRange,
+	) *interpreter.ArrayValue {
 		var names []string
 		var err error
 		wrapPanic(func() {
@@ -3108,10 +3119,21 @@ func (r *interpreterRuntime) newAccountContractsGetNamesFunction(
 			)
 		}
 
-		return interpreter.NewArrayValue(inter, interpreter.NewVariableSizedStaticType(
+		arrayType := interpreter.NewVariableSizedStaticType(
 			inter,
-			interpreter.NewPrimitiveStaticType(inter, interpreter.PrimitiveStaticTypeString),
-		), common.Address{}, values...)
+			interpreter.NewPrimitiveStaticType(
+				inter,
+				interpreter.PrimitiveStaticTypeString,
+			),
+		)
+
+		return interpreter.NewArrayValue(
+			inter,
+			getLocationRange,
+			arrayType,
+			common.Address{},
+			values...,
+		)
 	}
 }
 
@@ -3245,7 +3267,11 @@ var blockIDMemoryUsage = common.NewNumberMemoryUsage(
 	8 * int(unsafe.Sizeof(interpreter.UInt8Value(0))),
 )
 
-func NewBlockValue(inter *interpreter.Interpreter, block Block) interpreter.Value {
+func NewBlockValue(
+	inter *interpreter.Interpreter,
+	getLocationRange func() interpreter.LocationRange,
+	block Block,
+) interpreter.Value {
 
 	// height
 	heightValue := interpreter.NewUInt64Value(
@@ -3272,6 +3298,7 @@ func NewBlockValue(inter *interpreter.Interpreter, block Block) interpreter.Valu
 
 	idValue := interpreter.NewArrayValue(
 		inter,
+		getLocationRange,
 		BlockIDStaticType,
 		common.Address{},
 		values...,

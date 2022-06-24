@@ -1312,6 +1312,7 @@ type ArrayValue struct {
 
 func NewArrayValue(
 	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
 	arrayType ArrayStaticType,
 	address common.Address,
 	values ...Value,
@@ -1336,8 +1337,7 @@ func NewArrayValue(
 
 			value = value.Transfer(
 				interpreter,
-				// TODO: provide proper location range
-				ReturnEmptyLocationRange,
+				getLocationRange,
 				atree.Address(address),
 				true,
 				nil,
@@ -14149,6 +14149,7 @@ func NewUnmeteredCompositeField(name string, value Value) CompositeField {
 
 func NewCompositeValue(
 	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
 	location common.Location,
 	qualifiedIdentifier string,
 	kind common.CompositeKind,
@@ -14212,8 +14213,7 @@ func NewCompositeValue(
 	for _, field := range fields {
 		v.SetMember(
 			interpreter,
-			// TODO: provide proper location range
-			ReturnEmptyLocationRange,
+			getLocationRange,
 			field.Name,
 			field.Value,
 		)
@@ -15243,6 +15243,7 @@ func (v *CompositeValue) RemoveField(
 
 func NewEnumCaseValue(
 	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
 	enumType *sema.CompositeType,
 	rawValue NumberValue,
 	functions map[string]FunctionValue,
@@ -15257,6 +15258,7 @@ func NewEnumCaseValue(
 
 	v := NewCompositeValue(
 		interpreter,
+		getLocationRange,
 		enumType.Location,
 		enumType.QualifiedIdentifier(),
 		enumType.Kind,
@@ -15282,11 +15284,13 @@ type DictionaryValue struct {
 
 func NewDictionaryValue(
 	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
 	dictionaryType DictionaryStaticType,
 	keysAndValues ...Value,
 ) *DictionaryValue {
 	return NewDictionaryValueWithAddress(
 		interpreter,
+		getLocationRange,
 		dictionaryType,
 		common.Address{},
 		keysAndValues...,
@@ -15295,6 +15299,7 @@ func NewDictionaryValue(
 
 func NewDictionaryValueWithAddress(
 	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
 	dictionaryType DictionaryStaticType,
 	address common.Address,
 	keysAndValues ...Value,
@@ -15350,8 +15355,7 @@ func NewDictionaryValueWithAddress(
 		key := keysAndValues[i]
 		value := keysAndValues[i+1]
 		// TODO: handle existing value
-		// TODO: provide proper location range
-		_ = v.Insert(interpreter, ReturnEmptyLocationRange, key, value)
+		_ = v.Insert(interpreter, getLocationRange, key, value)
 	}
 
 	return v
@@ -18420,6 +18424,7 @@ func NewPublicKeyValue(
 
 	publicKeyValue := NewCompositeValue(
 		interpreter,
+		getLocationRange,
 		sema.PublicKeyType.Location,
 		sema.PublicKeyType.QualifiedIdentifier(),
 		sema.PublicKeyType.Kind,

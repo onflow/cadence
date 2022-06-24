@@ -1337,11 +1337,13 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 
 						expectedDictionary := interpreter.NewDictionaryValue(
 							inter,
+							interpreter.ReturnEmptyLocationRange,
 							interpreter.DictionaryStaticType{
 								KeyType:   interpreter.PrimitiveStaticTypeString,
 								ValueType: interpreter.PrimitiveStaticTypeInt,
 							},
-							interpreter.NewUnmeteredStringValue("test"), interpreter.NewUnmeteredIntValueFromInt64(42),
+							interpreter.NewUnmeteredStringValue("test"),
+							interpreter.NewUnmeteredIntValueFromInt64(42),
 						)
 
 						AssertValuesEqual(

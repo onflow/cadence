@@ -164,6 +164,7 @@ func TestExportValue(t *testing.T) {
 			valueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
 				return interpreter.NewArrayValue(
 					inter,
+					interpreter.ReturnEmptyLocationRange,
 					interpreter.VariableSizedStaticType{
 						Type: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
@@ -177,6 +178,7 @@ func TestExportValue(t *testing.T) {
 			valueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
 				return interpreter.NewArrayValue(
 					inter,
+					interpreter.ReturnEmptyLocationRange,
 					interpreter.VariableSizedStaticType{
 						Type: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
@@ -195,6 +197,7 @@ func TestExportValue(t *testing.T) {
 			valueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
 				return interpreter.NewDictionaryValue(
 					inter,
+					interpreter.ReturnEmptyLocationRange,
 					interpreter.DictionaryStaticType{
 						KeyType:   interpreter.PrimitiveStaticTypeString,
 						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -208,6 +211,7 @@ func TestExportValue(t *testing.T) {
 			valueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
 				return interpreter.NewDictionaryValue(
 					inter,
+					interpreter.ReturnEmptyLocationRange,
 					interpreter.DictionaryStaticType{
 						KeyType:   interpreter.PrimitiveStaticTypeString,
 						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -455,6 +459,7 @@ func TestExportValue(t *testing.T) {
 					interpreter.NewUnmeteredStringValue("C"),
 					interpreter.NewArrayValue(
 						newTestInterpreter(t),
+						interpreter.ReturnEmptyLocationRange,
 						interpreter.ByteArrayStaticType,
 						common.Address{},
 					),
@@ -548,6 +553,7 @@ func TestImportValue(t *testing.T) {
 			value: cadence.NewArray([]cadence.Value{}),
 			expected: interpreter.NewArrayValue(
 				newTestInterpreter(t),
+				interpreter.ReturnEmptyLocationRange,
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
@@ -565,6 +571,7 @@ func TestImportValue(t *testing.T) {
 			}),
 			expected: interpreter.NewArrayValue(
 				newTestInterpreter(t),
+				interpreter.ReturnEmptyLocationRange,
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
@@ -580,6 +587,7 @@ func TestImportValue(t *testing.T) {
 			label: "Dictionary",
 			expected: interpreter.NewDictionaryValue(
 				newTestInterpreter(t),
+				interpreter.ReturnEmptyLocationRange,
 				interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeString,
 					ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -595,6 +603,7 @@ func TestImportValue(t *testing.T) {
 			label: "Dictionary (non-empty)",
 			expected: interpreter.NewDictionaryValue(
 				newTestInterpreter(t),
+				interpreter.ReturnEmptyLocationRange,
 				interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeString,
 					ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -2962,6 +2971,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 
 		value := interpreter.NewArrayValue(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -3003,6 +3013,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 			inter,
 			interpreter.NewArrayValue(
 				inter,
+				interpreter.ReturnEmptyLocationRange,
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeUInt8,
 				},
@@ -3020,6 +3031,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 
 		value := interpreter.NewArrayValue(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -3071,6 +3083,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 			inter,
 			interpreter.NewArrayValue(
 				inter,
+				interpreter.ReturnEmptyLocationRange,
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
@@ -3112,6 +3125,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 			inter,
 			interpreter.NewArrayValue(
 				inter,
+				interpreter.ReturnEmptyLocationRange,
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.VariableSizedStaticType{
 						Type: interpreter.PrimitiveStaticTypeInt8,
@@ -3120,6 +3134,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 				common.Address{},
 				interpreter.NewArrayValue(
 					inter,
+					interpreter.ReturnEmptyLocationRange,
 					interpreter.VariableSizedStaticType{
 						Type: interpreter.PrimitiveStaticTypeInt8,
 					},
@@ -3129,6 +3144,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 				),
 				interpreter.NewArrayValue(
 					inter,
+					interpreter.ReturnEmptyLocationRange,
 					interpreter.VariableSizedStaticType{
 						Type: interpreter.PrimitiveStaticTypeInt8,
 					},
@@ -3152,6 +3168,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 
 		value := interpreter.NewDictionaryValue(
 			newTestInterpreter(t),
+			interpreter.ReturnEmptyLocationRange,
 			interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeString,
 				ValueType: interpreter.PrimitiveStaticTypeInt,
@@ -3196,6 +3213,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 			inter,
 			interpreter.NewDictionaryValue(
 				inter,
+				interpreter.ReturnEmptyLocationRange,
 				interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeString,
 					ValueType: interpreter.PrimitiveStaticTypeUInt8,
@@ -3213,6 +3231,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 
 		value := interpreter.NewDictionaryValue(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeString,
 				ValueType: interpreter.PrimitiveStaticTypeInt,
@@ -3277,6 +3296,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 			inter,
 			interpreter.NewDictionaryValue(
 				inter,
+				interpreter.ReturnEmptyLocationRange,
 				interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeString,
 					ValueType: interpreter.PrimitiveStaticTypeInt,
@@ -3336,6 +3356,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 			inter,
 			interpreter.NewDictionaryValue(
 				inter,
+				interpreter.ReturnEmptyLocationRange,
 				interpreter.DictionaryStaticType{
 					KeyType: interpreter.PrimitiveStaticTypeString,
 					ValueType: interpreter.DictionaryStaticType{
@@ -3347,6 +3368,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 				interpreter.NewUnmeteredStringValue("a"),
 				interpreter.NewDictionaryValue(
 					inter,
+					interpreter.ReturnEmptyLocationRange,
 					interpreter.DictionaryStaticType{
 						KeyType:   interpreter.PrimitiveStaticTypeInt8,
 						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -3358,6 +3380,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 				interpreter.NewUnmeteredStringValue("b"),
 				interpreter.NewDictionaryValue(
 					inter,
+					interpreter.ReturnEmptyLocationRange,
 					interpreter.DictionaryStaticType{
 						KeyType:   interpreter.PrimitiveStaticTypeSignedInteger,
 						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -4509,6 +4532,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 
 	internalArrayValue := interpreter.NewArrayValue(
 		inter,
+		interpreter.ReturnEmptyLocationRange,
 		staticArrayType,
 		common.Address{},
 		interpreter.NewUnmeteredIntValueFromInt64(42),
@@ -4539,6 +4563,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 
 	internalDictionaryValue := interpreter.NewDictionaryValue(
 		inter,
+		interpreter.ReturnEmptyLocationRange,
 		staticDictionaryType,
 		interpreter.NewUnmeteredStringValue("a"), internalArrayValue,
 	)
@@ -4592,6 +4617,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 
 	internalCompositeValue := interpreter.NewCompositeValue(
 		inter,
+		interpreter.ReturnEmptyLocationRange,
 		TestLocation,
 		"Foo",
 		common.CompositeKindStructure,

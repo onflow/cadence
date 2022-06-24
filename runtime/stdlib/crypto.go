@@ -131,12 +131,16 @@ func cryptoAlgorithmEnumConstructorType(
 	return constructorType
 }
 
+type enumCaseConstructor func(
+	inter *interpreter.Interpreter,
+	rawValue uint8,
+) *interpreter.CompositeValue
+
 func cryptoAlgorithmEnumValue(
 	inter *interpreter.Interpreter,
-	getLocationRange func() interpreter.LocationRange,
 	enumType *sema.CompositeType,
 	enumCases []sema.CryptoAlgorithm,
-	caseConstructor func(inter *interpreter.Interpreter, rawValue uint8) *interpreter.CompositeValue,
+	caseConstructor enumCaseConstructor,
 ) interpreter.Value {
 
 	caseCount := len(enumCases)
@@ -153,7 +157,7 @@ func cryptoAlgorithmEnumValue(
 
 	return interpreter.EnumConstructorFunction(
 		inter,
-		getLocationRange,
+		interpreter.ReturnEmptyLocationRange,
 		enumType,
 		caseValues,
 		constructorNestedVariables,
