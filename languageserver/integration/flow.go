@@ -14,14 +14,15 @@ import (
 )
 
 type flowClient interface {
+	Initialize(configPath string, numberOfAccounts int) error
+	GetClientAccount(name string) *ClientAccount
+	GetActiveClientAccount() *ClientAccount
+	SetActiveClientAccount(name string) error
 	ExecuteScript(location *url.URL, args []cadence.Value) (cadence.Value, error)
 	DeployContract(address flow.Address, name string, location *url.URL) (*flow.Account, error)
 	SendTransaction(authorizers []flow.Address, location *url.URL, args []cadence.Value) (*flow.TransactionResult, error)
 	GetAccount(address flow.Address) (*flow.Account, error)
 	CreateAccount() (*flow.Account, error)
-	GetClientAccount(name string) *ClientAccount
-	GetActiveClientAccount() *ClientAccount
-	SetActiveClientAccount(name string) error
 }
 
 var _ flowClient = flowkitClient{}
@@ -45,53 +46,57 @@ var names = []string{
 
 type flowkitClient struct {
 	services      *services.Services
+	loader        flowkit.ReaderWriter
 	state         *flowkit.State
 	accounts      []*ClientAccount
 	activeAccount *ClientAccount
 }
 
-func NewFlowkitClient(configPath string, numberOfAccounts int, loader flowkit.ReaderWriter) (*flowkitClient, error) {
-	state, err := flowkit.Load([]string{configPath}, loader)
-	if err != nil {
-		return nil, err
+func NewFlowkitClient(loader flowkit.ReaderWriter) *flowkitClient {
+	return &flowkitClient{
+		loader: loader,
 	}
+}
+
+func (f flowkitClient) Initialize(configPath string, numberOfAccounts int) error {
+	state, err := flowkit.Load([]string{configPath}, f.loader)
+	if err != nil {
+		return err
+	}
+	f.state = state
 
 	logger := output.NewStdoutLogger(output.NoneLog)
 
 	serviceAccount, err := state.EmulatorServiceAccount()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	grpcGateway := gateway.NewEmulatorGateway(serviceAccount)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	client := &flowkitClient{
-		services: services.NewServices(grpcGateway, state, logger),
-		state:    state,
-	}
+	f.services = services.NewServices(grpcGateway, state, logger)
 
 	if numberOfAccounts > len(names) {
-		return nil, fmt.Errorf(fmt.Sprintf("can only use up to %d accounts", len(names)))
+		return fmt.Errorf(fmt.Sprintf("can only use up to %d accounts", len(names)))
 	}
 
-	client.accounts = make([]*ClientAccount, numberOfAccounts)
+	f.accounts = make([]*ClientAccount, numberOfAccounts)
 	for i := 0; i < numberOfAccounts; i++ {
-		account, err := client.CreateAccount()
+		account, err := f.CreateAccount()
 		if err != nil {
-			return nil, err
+			return err
 		}
 
-		client.accounts[i] = &ClientAccount{
+		f.accounts[i] = &ClientAccount{
 			Account: account,
 			Name:    names[i],
 		}
 	}
-	client.activeAccount = client.accounts[0] // make first active by default
-
-	return client, nil
+	f.activeAccount = f.accounts[0] // make first active by default
+	return nil
 }
 
 func (f flowkitClient) GetClientAccount(name string) *ClientAccount {

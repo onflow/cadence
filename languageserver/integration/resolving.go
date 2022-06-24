@@ -19,16 +19,20 @@
 package integration
 
 import (
-	"fmt"
-
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/flow-cli/pkg/flowkit"
 	"github.com/onflow/flow-go-sdk"
 )
 
-func (i *FlowIntegration) resolveFileImport(location common.StringLocation) (string, error) {
+type resolvers struct {
+	client flowClient
+	loader flowkit.ReaderWriter
+}
+
+func (r *resolvers) fileImport(location common.StringLocation) (string, error) {
 	filename := string(location)
 
-	data, err := i.loader.ReadFile(filename)
+	data, err := r.loader.ReadFile(filename)
 	if err != nil {
 		return "", err
 	}
@@ -36,8 +40,17 @@ func (i *FlowIntegration) resolveFileImport(location common.StringLocation) (str
 	return string(data), nil
 }
 
-func (i *FlowIntegration) resolveAddressContractNames(address common.Address) ([]string, error) {
-	account, err := i.getAccount(address)
+func (r *resolvers) addressImport(location common.AddressLocation) (string, error) {
+	account, err := r.client.GetAccount(flow.HexToAddress(location.String()))
+	if err != nil {
+		return "", err
+	}
+
+	return string(account.Contracts[location.Name]), nil
+}
+
+func (r *resolvers) addressContractNames(address common.Address) ([]string, error) {
+	account, err := r.client.GetAccount(flow.HexToAddress(address.String()))
 	if err != nil {
 		return nil, err
 	}
@@ -50,29 +63,4 @@ func (i *FlowIntegration) resolveAddressContractNames(address common.Address) ([
 	}
 
 	return names, nil
-}
-
-func (i *FlowIntegration) resolveAddressImport(location common.AddressLocation) (string, error) {
-	account, err := i.getAccount(location.Address)
-	if err != nil {
-		return "", err
-	}
-
-	return string(account.Contracts[location.Name]), nil
-}
-
-func (i *FlowIntegration) getAccount(address common.Address) (*flow.Account, error) {
-	account, err := i.flowClient.GetAccount(
-		flow.HexToAddress(address.String()),
-	)
-
-	if err != nil {
-		return nil, fmt.Errorf(
-			"cannot get account with address %s: %w",
-			address.ShortHexWithPrefix(),
-			err,
-		)
-	}
-
-	return account, nil
 }

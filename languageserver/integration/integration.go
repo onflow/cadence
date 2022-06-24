@@ -36,24 +36,33 @@ type FlowIntegration struct {
 }
 
 func NewFlowIntegration(s *server.Server, enableFlowClient bool) (*FlowIntegration, error) {
+	loader := &afero.Afero{Fs: afero.NewOsFs()}
 	integration := &FlowIntegration{
 		server:         s,
 		entryPointInfo: map[protocol.DocumentURI]*entryPointInfo{},
 		contractInfo:   map[protocol.DocumentURI]*contractInfo{},
-		loader:         &afero.Afero{Fs: afero.NewOsFs()},
+		loader:         loader,
+	}
+
+	resolve := resolvers{
+		loader: loader,
 	}
 
 	options := []server.Option{
 		server.WithDiagnosticProvider(diagnostics),
-		server.WithStringImportResolver(integration.resolveFileImport),
+		server.WithStringImportResolver(resolve.fileImport),
 	}
 
 	if enableFlowClient {
+		client := NewFlowkitClient(integration.loader)
+		integration.flowClient = client
+		resolve.client = client
+
 		options = append(options,
 			server.WithInitializationOptionsHandler(integration.initialize),
 			server.WithCodeLensProvider(integration.codeLenses),
-			server.WithAddressImportResolver(integration.resolveAddressImport),
-			server.WithAddressContractNamesResolver(integration.resolveAddressContractNames),
+			server.WithAddressImportResolver(resolve.addressImport),
+			server.WithAddressContractNamesResolver(resolve.addressContractNames),
 		)
 
 		for _, command := range integration.commands() {

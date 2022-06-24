@@ -36,11 +36,10 @@ func (i *FlowIntegration) initialize(initializationOptions any) error {
 		return errors.New("initialization options: invalid config path")
 	}
 
-	client, err := NewFlowkitClient(configPath, numberOfAccounts, i.loader)
+	err := i.flowClient.Initialize(configPath, numberOfAccounts)
 	if err != nil {
 		return err
 	}
-	i.flowClient = client
 
 	return nil
 }
