@@ -19,21 +19,13 @@
 package integration
 
 import (
+	"errors"
+
 	"github.com/onflow/cadence/languageserver/protocol"
 	"github.com/onflow/cadence/languageserver/server"
 	"github.com/onflow/flow-cli/pkg/flowkit"
 	"github.com/spf13/afero"
 )
-
-type FlowIntegration struct {
-	server *server.Server
-
-	entryPointInfo map[protocol.DocumentURI]*entryPointInfo
-	contractInfo   map[protocol.DocumentURI]*contractInfo
-
-	client flowClient
-	loader flowkit.ReaderWriter
-}
 
 func NewFlowIntegration(s *server.Server, enableFlowClient bool) (*FlowIntegration, error) {
 	loader := &afero.Afero{Fs: afero.NewOsFs()}
@@ -76,4 +68,38 @@ func NewFlowIntegration(s *server.Server, enableFlowClient bool) (*FlowIntegrati
 	}
 
 	return integration, nil
+}
+
+type FlowIntegration struct {
+	server *server.Server
+
+	entryPointInfo map[protocol.DocumentURI]*entryPointInfo
+	contractInfo   map[protocol.DocumentURI]*contractInfo
+
+	client flowClient
+	loader flowkit.ReaderWriter
+}
+
+func (i *FlowIntegration) initialize(initializationOptions any) error {
+	optsMap, ok := initializationOptions.(map[string]any)
+	if !ok {
+		return errors.New("invalid initialization options")
+	}
+
+	configPath, ok := optsMap["configPath"].(string)
+	if !ok || configPath == "" {
+		return errors.New("initialization options: invalid config path")
+	}
+
+	numberOfAccounts, ok := optsMap["numberOfAccounts"].(int)
+	if !ok || configPath == "" {
+		return errors.New("initialization options: invalid config path")
+	}
+
+	err := i.client.Initialize(configPath, numberOfAccounts)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
