@@ -3,6 +3,9 @@ package integration
 import (
 	"testing"
 
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/flow-go-sdk"
+
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )
@@ -31,11 +34,28 @@ func Test_FileImport(t *testing.T) {
 }
 
 func Test_AddressImport(t *testing.T) {
+	mock := &mockFlowClient{}
 	resolver := resolvers{
-		client: nil,
+		client: mock,
 	}
 
 	t.Run("existing address", func(t *testing.T) {
+		a, _ := common.HexToAddress("1")
+		address := common.NewAddressLocation(nil, a, "test")
+		flowAddress := flow.HexToAddress(a.String())
 
+		mock.
+			On("GetAccount", flowAddress).
+			Return(&flow.Account{
+				Address: flowAddress,
+				Contracts: map[string][]byte{
+					"test": []byte("hello tests"),
+					"foo":  []byte("foo bar"),
+				},
+			}, nil)
+
+		resolved, err := resolver.addressImport(address)
+		assert.NoError(t, err)
+		assert.Equal(t, "hello tests", resolved)
 	})
 }
