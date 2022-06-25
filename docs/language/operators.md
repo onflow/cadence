@@ -420,6 +420,65 @@ Values of these types need to be cast to the desired type before performing the 
 let z: Bool = (x as! Int8) > (y as! Int8)
 ```
 
+## Bitwise Operators
+
+Bitwise operators enable the manipulation of individual bits of integers.
+They're often used in low-level programming.
+
+- Bitwise AND: `a & b`
+
+  Returns a new integer whose bits are 1 only if the bits were 1 in *both* input integers:
+
+  ```cadence
+  let firstFiveBits = 0b11111000
+  let lastFiveBits  = 0b00011111
+  let middleTwoBits = firstFiveBits & lastFiveBits  // is 0b00011000
+  ```
+
+- Bitwise OR: `a | b`
+
+  Returns a new integer whose bits are 1 only if the bits were 1 in *either* input integers:
+
+  ```cadence
+  let someBits = 0b10110010
+  let moreBits = 0b01011110
+  let combinedbits = someBits | moreBits  // is 0b11111110
+  ```
+
+- Bitwise XOR: `a ^ b`
+
+  Returns a new integer whose bits are set to 1 where the input bits are different,
+  and are set to 0 where the input bits are the same:
+
+  ```cadence
+  let firstBits = 0b00010100
+  let otherBits = 0b00000101
+  let outputBits = firstBits ^ otherBits  // is 0b00010001
+  ```
+
+### Bitwise Shifting Operators
+
+- Bitwise LEFT SHIFT: `a << b`
+
+  Returns a new integer with all bits moved to the left by a certain number of places.
+
+  ```cadence
+  let someBits = 4  // is 0b00000100
+  let shiftedBits = someBits << 2   // is 0b00010000
+  ```
+
+- Bitwise RIGHT SHIFT: `a >> b`
+
+  Returns a new integer with all bits moved to the right by a certain number of places.
+
+  ```cadence
+  let someBits = 8  // is 0b00001000
+  let shiftedBits = someBits >> 2   // is 0b00000010
+  ```
+
+For unsigned integersm, the bitwise shifting operators perform [logical shifting](https://en.wikipedia.org/wiki/Logical_shift),
+for signed integers, they perform [arithmetic shifting](https://en.wikipedia.org/wiki/Arithmetic_shift).
+
 ## Ternary Conditional Operator
 
 There is only one ternary conditional operator, the ternary conditional operator (`a ? b : c`).
