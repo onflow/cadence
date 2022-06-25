@@ -16,23 +16,7 @@ They are either unary, binary, or ternary.
   The first operator symbol appears between the first and second value,
   the second operator symbol appears between the second and third value (infix).
 
-## Negation
-
-The `-` unary operator negates an integer:
-
-```cadence
-let a = 1
--a  // is `-1`
-```
-
-The `!` unary operator logically negates a boolean:
-
-```cadence
-let a = true
-!a  // is `false`
-```
-
-## Assignment
+## Assignment Operator
 
 The binary assignment operator `=` can be used
 to assign a new value to a variable.
@@ -103,7 +87,7 @@ dictionaries[false][3] = 0
 //}`
 ```
 
-## Swapping
+## Swapping Operator
 
 The binary swap operator `<->` can be used
 to exchange the values of two variables.
@@ -140,9 +124,16 @@ a <-> b
 Both sides of the swap operation must be an identifier,
 followed by one or more index or access expressions.
 
-## Arithmetic
+## Arithmetic Operators
 
-There are four arithmetic operators:
+The unary pefix operator  `-` negates an integer:
+
+```cadence
+let a = 1
+-a  // is `-1`
+```
+
+There are four binary arithmetic operators:
 
 - Addition: `+`
 - Subtraction: `-`
@@ -226,10 +217,11 @@ let b: Word8 = 0
 b - 1  // is `255`
 ```
 
-#### Arithmetics on number super-types
-Arithmetic operators are not supported for number supertypes (`Number`, `SignedNumber`
-`FixedPoint`, `SignedFixedPoint`, `Integer`, `SignedInteger`), as they may or may not
-succeed at run-time.
+### Arithmetics on number super-types
+
+Arithmetic operators are not supported for number supertypes
+(`Number`, `SignedNumber`, `FixedPoint`, `SignedFixedPoint`, `Integer`, `SignedInteger`),
+as they may or may not succeed at run-time.
 
 ```cadence
 let x: Integer = 3 as Int8
@@ -247,6 +239,15 @@ let z: Integer = (x as! Int8) + (y as! Int8)
 ## Logical Operators
 
 Logical operators work with the boolean values `true` and `false`.
+
+- Logical NOT: `!a`
+
+  This unary prefix operator logically negates a boolean:
+
+  ```cadence
+  let a = true
+  !a  // is `false`
+  ```
 
 - Logical AND: `a && b`
 
@@ -276,7 +277,7 @@ Logical operators work with the boolean values `true` and `false`.
 
   If the left-hand side is true, the right-hand side is not evaluated.
 
-## Comparison operators
+## Comparison Operators
 
 Comparison operators work with boolean and integer values.
 
@@ -402,10 +403,11 @@ Comparison operators work with boolean and integer values.
   2 >= 1  // is `true`
   ```
 
-#### Comparing number super-types
+### Comparing number super-types
+
 Similar to arithmetic operators, comparison operators are also not supported for number supertypes
-(`Number`, `SignedNumber` `FixedPoint`, `SignedFixedPoint`, `Integer`, `SignedInteger`), as they
-may or may not succeed at run-time.
+(`Number`, `SignedNumber` `FixedPoint`, `SignedFixedPoint`, `Integer`, `SignedInteger`),
+as they may or may not succeed at run-time.
 
 ```cadence
 let x: Integer = 3 as Int8
