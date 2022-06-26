@@ -72,6 +72,10 @@ func (l IdentifierLocation) String() string {
 	return string(l)
 }
 
+func (l IdentifierLocation) Description() string {
+	return string(l)
+}
+
 func (l IdentifierLocation) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
 		Type       string

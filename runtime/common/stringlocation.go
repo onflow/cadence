@@ -72,6 +72,10 @@ func (l StringLocation) String() string {
 	return string(l)
 }
 
+func (l StringLocation) Description() string {
+	return string(l)
+}
+
 func (l StringLocation) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
 		Type   string

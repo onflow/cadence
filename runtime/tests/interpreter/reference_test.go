@@ -472,9 +472,11 @@ func TestInterpretResourceReferenceAfterMove(t *testing.T) {
 		)
 
 		arrayRef := &interpreter.EphemeralReferenceValue{
-			Authorized:   false,
-			Value:        array,
-			BorrowedType: rType,
+			Authorized: false,
+			Value:      array,
+			BorrowedType: &sema.VariableSizedType{
+				Type: rType,
+			},
 		}
 
 		value, err := inter.Invoke("test", arrayRef)
@@ -524,9 +526,13 @@ func TestInterpretResourceReferenceAfterMove(t *testing.T) {
 		)
 
 		arrayRef := &interpreter.EphemeralReferenceValue{
-			Authorized:   false,
-			Value:        array,
-			BorrowedType: rType,
+			Authorized: false,
+			Value:      array,
+			BorrowedType: &sema.VariableSizedType{
+				Type: &sema.VariableSizedType{
+					Type: rType,
+				},
+			},
 		}
 
 		value, err := inter.Invoke("test", arrayRef)
@@ -577,9 +583,14 @@ func TestInterpretResourceReferenceAfterMove(t *testing.T) {
 		)
 
 		arrayRef := &interpreter.EphemeralReferenceValue{
-			Authorized:   false,
-			Value:        array,
-			BorrowedType: rType,
+			Authorized: false,
+			Value:      array,
+			BorrowedType: &sema.VariableSizedType{
+				Type: &sema.DictionaryType{
+					KeyType:   sema.IntType,
+					ValueType: rType,
+				},
+			},
 		}
 
 		value, err := inter.Invoke("test", arrayRef)

@@ -276,7 +276,7 @@ func TestRuntimeError(t *testing.T) {
 			t,
 			err,
 			"Execution failed:\n"+
-				" --> 01:5:16\n"+
+				" --> 0100000000000000000000000000000000000000000000000000000000000000:5:16\n"+
 				"  |\n"+
 				"5 |                 add()\n"+
 				"  |                 ^^^^^\n"+
@@ -303,15 +303,15 @@ func TestRuntimeError(t *testing.T) {
 		var location common.TransactionLocation
 		copy(location[:], id)
 
-		codes := map[common.LocationID]string{
-			location.ID(): `
+		codes := map[common.Location]string{
+			location: `
               // import program that has errors
               import A from 0x1
             `,
 			common.AddressLocation{
 				Address: common.MustBytesToAddress([]byte{0x1}),
 				Name:    "A",
-			}.ID(): `
+			}: `
               // import program that has errors
               import B from 0x2
 
@@ -326,7 +326,7 @@ func TestRuntimeError(t *testing.T) {
 			common.AddressLocation{
 				Address: common.MustBytesToAddress([]byte{0x2}),
 				Name:    "B",
-			}.ID(): `
+			}: `
               // invalid top-level declaration
               pub fun bar() {
                   // invalid reference to undeclared variable
@@ -355,7 +355,7 @@ func TestRuntimeError(t *testing.T) {
 					Name:    name,
 					Address: address,
 				}
-				code := codes[location.ID()]
+				code := codes[location]
 				return []byte(code), nil
 			},
 		}
@@ -363,7 +363,7 @@ func TestRuntimeError(t *testing.T) {
 		rt := newTestInterpreterRuntime()
 		err = rt.ExecuteTransaction(
 			Script{
-				Source: []byte(codes[location.ID()]),
+				Source: []byte(codes[location]),
 			},
 			Context{
 				Interface: runtimeInterface,
