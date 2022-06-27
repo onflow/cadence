@@ -16,14 +16,14 @@
  * limitations under the License.
  */
 
-package parser2
+package parser
 
 import (
 	"fmt"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/parser2/lexer"
+	"github.com/onflow/cadence/runtime/parser/lexer"
 )
 
 const (

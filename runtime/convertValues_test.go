@@ -33,7 +33,7 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/parser2"
+	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -1818,7 +1818,7 @@ func TestExportTypeValue(t *testing.T) {
           pub struct S: SI {}
 
         `
-		program, err := parser2.ParseProgram(code, nil)
+		program, err := parser.ParseProgram(code, nil)
 		require.NoError(t, err)
 
 		checker, err := sema.NewChecker(program, TestLocation, nil, false)
@@ -1909,7 +1909,7 @@ func TestExportCapabilityValue(t *testing.T) {
 		const code = `
           pub struct S {}
         `
-		program, err := parser2.ParseProgram(code, nil)
+		program, err := parser.ParseProgram(code, nil)
 		require.NoError(t, err)
 
 		checker, err := sema.NewChecker(program, TestLocation, nil, false)
@@ -2022,7 +2022,7 @@ func TestExportLinkValue(t *testing.T) {
 		const code = `
           pub struct S {}
         `
-		program, err := parser2.ParseProgram(code, nil)
+		program, err := parser.ParseProgram(code, nil)
 		require.NoError(t, err)
 
 		checker, err := sema.NewChecker(program, TestLocation, nil, false)

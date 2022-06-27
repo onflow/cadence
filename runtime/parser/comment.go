@@ -16,13 +16,13 @@
  * limitations under the License.
  */
 
-package parser2
+package parser
 
 import (
 	"fmt"
 	"strings"
 
-	"github.com/onflow/cadence/runtime/parser2/lexer"
+	"github.com/onflow/cadence/runtime/parser/lexer"
 )
 
 const blockCommentStart = "/*"

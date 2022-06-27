@@ -33,7 +33,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	runtimeErrors "github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/parser2"
+	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 )
@@ -1098,7 +1098,7 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 	var parse *ast.Program
 	reportMetric(
 		func() {
-			parse, err = parser2.ParseProgram(string(code), memoryGauge)
+			parse, err = parser.ParseProgram(string(code), memoryGauge)
 		},
 		context.Interface,
 		func(metrics Metrics, duration time.Duration) {
@@ -2736,7 +2736,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 				oldCode, err := r.getCode(context)
 				handleContractUpdateError(err)
 
-				oldProgram, err := parser2.ParseProgram(string(oldCode), inter)
+				oldProgram, err := parser.ParseProgram(string(oldCode), inter)
 
 				if !ignoreUpdatedProgramParserError(err) {
 					handleContractUpdateError(err)
@@ -2820,7 +2820,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 // ignoreUpdatedProgramParserError determines if the parsing error
 // for a program that is being updated can be ignored.
 func ignoreUpdatedProgramParserError(err error) bool {
-	parserError, ok := err.(parser2.Error)
+	parserError, ok := err.(parser.Error)
 	if !ok {
 		return false
 	}
@@ -2830,7 +2830,7 @@ func ignoreUpdatedProgramParserError(err error) bool {
 		// Missing commas in parameter lists were reported starting
 		// with https://github.com/onflow/cadence/pull/1073.
 		// Allow existing contracts with such an error to be updated
-		_, ok := parseError.(*parser2.MissingCommaInParameterListError)
+		_, ok := parseError.(*parser.MissingCommaInParameterListError)
 		if !ok {
 			return false
 		}
@@ -3021,7 +3021,7 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 				if r.contractUpdateValidationEnabled {
 
 					memoryGauge, _ := runtimeInterface.(common.MemoryGauge)
-					existingProgram, err := parser2.ParseProgram(string(code), memoryGauge)
+					existingProgram, err := parser.ParseProgram(string(code), memoryGauge)
 
 					// If the existing code is not parsable (i.e: `err != nil`), that shouldn't be a reason to
 					// fail the contract removal. Therefore, validate only if the code is a valid one.

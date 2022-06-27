@@ -35,7 +35,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/parser2"
+	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/pretty"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
@@ -1774,7 +1774,7 @@ func TestInterpretHostFunction(t *testing.T) {
 	const code = `
       pub let a = test(1, 2)
     `
-	program, err := parser2.ParseProgram(code, nil)
+	program, err := parser.ParseProgram(code, nil)
 
 	require.NoError(t, err)
 
@@ -1854,7 +1854,7 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 	const code = `
       pub let nothing = test(1, true, "test")
     `
-	program, err := parser2.ParseProgram(code, nil)
+	program, err := parser.ParseProgram(code, nil)
 
 	require.NoError(t, err)
 
