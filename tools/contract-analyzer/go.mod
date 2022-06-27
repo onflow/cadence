@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/logrusorgru/aurora v2.0.3+incompatible
-	github.com/onflow/cadence v0.24.2-0.20220622183137-98e4457cb888
+	github.com/onflow/cadence v0.24.2-0.20220627150521-b803f9b296b7
 	github.com/onflow/flow-cli v0.36.1
 	github.com/onflow/flow-go-sdk v0.26.1
 	github.com/spf13/afero v1.8.2
@@ -124,5 +124,3 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	lukechampine.com/blake3 v1.1.7 // indirect
 )
-
-replace github.com/onflow/cadence => ../..

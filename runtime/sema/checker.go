@@ -114,7 +114,7 @@ type Checker struct {
 	checkHandler                       CheckHandlerFunc
 	expectedType                       Type
 	memberAccountAccessHandler         MemberAccountAccessHandlerFunc
-	lintingEnabled                     bool
+	extendedElaboration                bool
 	errorShortCircuitingEnabled        bool
 	// memoryGauge is used for metering memory usage
 	memoryGauge common.MemoryGauge
@@ -250,7 +250,7 @@ func WithErrorShortCircuitingEnabled(enabled bool) Option {
 	}
 }
 
-func NewChecker(program *ast.Program, location common.Location, memoryGauge common.MemoryGauge, lintingEnabled bool, options ...Option) (*Checker, error) {
+func NewChecker(program *ast.Program, location common.Location, memoryGauge common.MemoryGauge, extendedElaboration bool, options ...Option) (*Checker, error) {
 
 	if location == nil {
 		return nil, &MissingLocationError{}
@@ -272,8 +272,8 @@ func NewChecker(program *ast.Program, location common.Location, memoryGauge comm
 		typeActivations:     typeActivations,
 		functionActivations: functionActivations,
 		containerTypes:      map[Type]bool{},
-		Elaboration:         NewElaboration(memoryGauge, lintingEnabled),
-		lintingEnabled:      lintingEnabled,
+		Elaboration:         NewElaboration(memoryGauge, extendedElaboration),
+		extendedElaboration: extendedElaboration,
 		memoryGauge:         memoryGauge,
 	}
 
@@ -300,7 +300,7 @@ func (checker *Checker) SubChecker(program *ast.Program, location common.Locatio
 		program,
 		location,
 		checker.memoryGauge,
-		checker.lintingEnabled,
+		checker.extendedElaboration,
 		WithPredeclaredValues(checker.PredeclaredValues),
 		WithPredeclaredTypes(checker.PredeclaredTypes),
 		WithAccessCheckMode(checker.accessCheckMode),
