@@ -424,7 +424,7 @@ let z: Bool = (x as! Int8) > (y as! Int8)
 
 ## Bitwise Operators
 
-Bitwise operators enable the manipulation of individual bits of integers.
+Bitwise operators enable the manipulation of individual bits of unsigned and signed integers.
 They're often used in low-level programming.
 
 - Bitwise AND: `a & b`
