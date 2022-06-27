@@ -166,7 +166,7 @@ func TestRuntimeDebuggerBreakpoints(t *testing.T) {
 				Source: []byte(`
                   transaction {
                       prepare(signer: AuthAccount) {
-			    	      let answer = 42
+                          let answer = 42
                           log("Hello, World!")
                       }
                   }
