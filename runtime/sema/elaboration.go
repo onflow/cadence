@@ -106,7 +106,7 @@ type Elaboration struct {
 	}
 }
 
-func NewElaboration(gauge common.MemoryGauge, lintingEnabled bool) *Elaboration {
+func NewElaboration(gauge common.MemoryGauge, extendedElaboration bool) *Elaboration {
 	common.UseMemory(gauge, common.ElaborationMemoryUsage)
 	elaboration := &Elaboration{
 		lock:                                new(sync.RWMutex),
@@ -162,7 +162,7 @@ func NewElaboration(gauge common.MemoryGauge, lintingEnabled bool) *Elaboration 
 		IndexExpressionIndexedTypes:         map[*ast.IndexExpression]ValueIndexableType{},
 		IndexExpressionIndexingTypes:        map[*ast.IndexExpression]Type{},
 	}
-	if lintingEnabled {
+	if extendedElaboration {
 		elaboration.ForceExpressionTypes = map[*ast.ForceExpression]Type{}
 		elaboration.StaticCastTypes = map[*ast.CastingExpression]CastType{}
 		elaboration.RuntimeCastTypes = map[*ast.CastingExpression]struct {
