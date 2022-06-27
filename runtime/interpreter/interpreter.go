@@ -1590,7 +1590,10 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 			var nestedVariable *Variable
 			lexicalScope, nestedVariable =
-				interpreter.declareCompositeValue(nestedCompositeDeclaration, lexicalScope)
+				interpreter.declareCompositeValue(
+					nestedCompositeDeclaration,
+					lexicalScope,
+				)
 
 			memberIdentifier := nestedCompositeDeclaration.Identifier.Identifier
 			nestedVariables[memberIdentifier] = nestedVariable
@@ -1762,6 +1765,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 				value := NewCompositeValue(
 					interpreter,
+					invocation.GetLocationRange,
 					location,
 					qualifiedIdentifier,
 					declaration.CompositeKind,
@@ -1863,8 +1867,11 @@ func (interpreter *Interpreter) declareEnumConstructor(
 			},
 		}
 
+		getLocationRange := locationRangeGetter(interpreter, location, enumCase)
+
 		caseValue := NewCompositeValue(
 			interpreter,
+			getLocationRange,
 			location,
 			qualifiedIdentifier,
 			declaration.CompositeKind,

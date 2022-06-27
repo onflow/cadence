@@ -31,6 +31,8 @@ var authAccountContractsTypeID = sema.AuthAccountContractsType.ID()
 var authAccountContractsStaticType StaticType = PrimitiveStaticTypeAuthAccountContracts // unmetered
 var authAccountContractsFieldNames []string = nil
 
+type ContractNamesGetter func(interpreter *Interpreter, getLocationRange func() LocationRange) *ArrayValue
+
 func NewAuthAccountContractsValue(
 	inter *Interpreter,
 	address AddressValue,
@@ -38,7 +40,7 @@ func NewAuthAccountContractsValue(
 	updateFunction FunctionValue,
 	getFunction FunctionValue,
 	removeFunction FunctionValue,
-	namesGetter func(interpreter *Interpreter) *ArrayValue,
+	namesGetter ContractNamesGetter,
 ) Value {
 
 	fields := map[string]Value{
@@ -49,8 +51,11 @@ func NewAuthAccountContractsValue(
 	}
 
 	computedFields := map[string]ComputedField{
-		sema.AuthAccountContractsTypeNamesField: func(interpreter *Interpreter, _ func() LocationRange) Value {
-			return namesGetter(interpreter)
+		sema.AuthAccountContractsTypeNamesField: func(
+			interpreter *Interpreter,
+			getLocationRange func() LocationRange,
+		) Value {
+			return namesGetter(interpreter, getLocationRange)
 		},
 	}
 
@@ -85,7 +90,7 @@ func NewPublicAccountContractsValue(
 	inter *Interpreter,
 	address AddressValue,
 	getFunction FunctionValue,
-	namesGetter func(interpreter *Interpreter) *ArrayValue,
+	namesGetter ContractNamesGetter,
 ) Value {
 
 	fields := map[string]Value{
@@ -93,8 +98,11 @@ func NewPublicAccountContractsValue(
 	}
 
 	computedFields := map[string]ComputedField{
-		sema.PublicAccountContractsTypeNamesField: func(interpreter *Interpreter, _ func() LocationRange) Value {
-			return namesGetter(interpreter)
+		sema.PublicAccountContractsTypeNamesField: func(
+			interpreter *Interpreter,
+			getLocationRange func() LocationRange,
+		) Value {
+			return namesGetter(interpreter, getLocationRange)
 		},
 	}
 

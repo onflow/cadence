@@ -97,6 +97,7 @@ func TestInterpretStringDecodeHex(t *testing.T) {
 		inter,
 		interpreter.NewArrayValue(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeUInt8,
 			},
@@ -148,6 +149,7 @@ func TestInterpretStringUtf8Field(t *testing.T) {
 		inter,
 		interpreter.NewArrayValue(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeUInt8,
 			},
