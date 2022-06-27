@@ -449,8 +449,8 @@ They're often used in low-level programming.
 
 - Bitwise XOR: `a ^ b`
 
-  Returns a new integer whose bits are set to 1 where the input bits are different,
-  and are set to 0 where the input bits are the same:
+  Returns a new integer whose bits are 1 where the input bits are different,
+  and are 0 where the input bits are the same:
 
   ```cadence
   let firstBits = 0b00010100
@@ -478,7 +478,7 @@ They're often used in low-level programming.
   let shiftedBits = someBits >> 2   // is 0b00000010
   ```
 
-For unsigned integersm, the bitwise shifting operators perform [logical shifting](https://en.wikipedia.org/wiki/Logical_shift),
+For unsigned integers, the bitwise shifting operators perform [logical shifting](https://en.wikipedia.org/wiki/Logical_shift),
 for signed integers, they perform [arithmetic shifting](https://en.wikipedia.org/wiki/Arithmetic_shift).
 
 ## Ternary Conditional Operator
@@ -507,7 +507,7 @@ let y = 1 > 2 ? nil : 3
 
 The static casting operator `as` can be used to statically type cast a value to a type.
 
-If the static type of the value is a subtype of the given type that should be casted to,
+If the static type of the value is a subtype of the given type (the "target" type),
 the operator returns the value as the given type.
 
 The cast is performed statically, i.e. when the program is type-checked.
@@ -545,8 +545,8 @@ let result = something as Int
 
 The conditional downcasting operator `as?` can be used to dynamically type cast a value to a type.
 The operator returns an optional.
-If the value has a run-time type that is a subtype of the given type that should be casted to,
-the operator returns the value as the given type,
+If the value has a run-time type that is a subtype of the target type
+the operator returns the value as the target type,
 otherwise the result is `nil`.
 
 The cast is performed at run-time, i.e. when the program is executed,
@@ -572,9 +572,7 @@ let boolean = something as? Bool
 // `boolean` is `nil` and has type `Bool?`
 ```
 
-Downcasting works for nested types (e.g. arrays),
-interfaces (if a [resource](resources) interface not to a concrete resource),
-and optionals.
+Downcasting works for concrete types, but also works e.g. for nested types (e.g. arrays), interfaces, optionals, etc.
 
 ```cadence
 // Declare a constant named `values` which has type `[AnyStruct]`,

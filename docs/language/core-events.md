@@ -2,10 +2,10 @@
 title: Core Events
 ---
 
-Core events are events emitted directly from the FVM (Flow virtual machine).
+Core events are events emitted directly from the FVM (Flow Virtual Machine).
 The events have the same name on all networks and do not follow the standard naming (they have no address).
 
-Refer the [`PublicKey` section](crypto/#publickey) for more details on the information provided for account key events.
+Refer to the [`PublicKey` section](crypto/#publickey) for more details on the information provided for account key events.
 
 ### Account Created
 
