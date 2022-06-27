@@ -95,11 +95,15 @@ type Elaboration struct {
 	IndexExpressionIndexedTypes         map[*ast.IndexExpression]ValueIndexableType
 	IndexExpressionIndexingTypes        map[*ast.IndexExpression]Type
 	ForceExpressionTypes                map[*ast.ForceExpression]Type
-	RuntimeCastTypes                    map[*ast.CastingExpression]struct {
+	StaticCastTypes                     map[*ast.CastingExpression]CastType
+	NumberConversionArgumentTypes       map[ast.Expression]struct {
+		Type  Type
+		Range ast.Range
+	}
+	RuntimeCastTypes map[*ast.CastingExpression]struct {
 		Left  Type
 		Right Type
 	}
-	StaticCastTypes map[*ast.CastingExpression]CastType
 }
 
 func NewElaboration(gauge common.MemoryGauge, lintingEnabled bool) *Elaboration {
@@ -164,6 +168,10 @@ func NewElaboration(gauge common.MemoryGauge, lintingEnabled bool) *Elaboration 
 		elaboration.RuntimeCastTypes = map[*ast.CastingExpression]struct {
 			Left  Type
 			Right Type
+		}{}
+		elaboration.NumberConversionArgumentTypes = map[ast.Expression]struct {
+			Type  Type
+			Range ast.Range
 		}{}
 	}
 	return elaboration
