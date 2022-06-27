@@ -88,8 +88,8 @@ func TestNeedSyntaxAndImport(t *testing.T) {
 	programs, err := analysis.Load(config, txLocation)
 	require.NoError(t, err)
 
-	require.NotNil(t, programs[txLocation.ID()])
-	require.NotNil(t, programs[contractLocation.ID()])
+	require.NotNil(t, programs[txLocation])
+	require.NotNil(t, programs[contractLocation])
 
 	type locationRange struct {
 		location common.Location

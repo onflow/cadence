@@ -581,6 +581,8 @@ func TestBLSAggregateSignatures(t *testing.T) {
 			cadence.UInt8(3),
 			cadence.UInt8(4),
 			cadence.UInt8(5),
+		}).WithType(cadence.VariableSizedArrayType{
+			ElementType: cadence.UInt8Type{},
 		}),
 		result,
 	)
@@ -651,6 +653,8 @@ func TestBLSAggregatePublicKeys(t *testing.T) {
 			cadence.UInt8(2),
 			cadence.UInt8(1),
 			cadence.UInt8(2),
+		}).WithType(cadence.VariableSizedArrayType{
+			ElementType: cadence.UInt8Type{},
 		}),
 		result.(cadence.Optional).Value.(cadence.Struct).Fields[0],
 	)

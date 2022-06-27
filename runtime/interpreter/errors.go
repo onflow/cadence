@@ -510,19 +510,17 @@ func (e InvocationArgumentTypeError) Error() string {
 	)
 }
 
-// InvocationReceiverTypeError
+// MemberAccessTypeError
 //
-type InvocationReceiverTypeError struct {
-	SelfType     sema.Type
-	ReceiverType sema.Type
+type MemberAccessTypeError struct {
+	ExpectedType sema.Type
 	LocationRange
 }
 
-func (e InvocationReceiverTypeError) Error() string {
+func (e MemberAccessTypeError) Error() string {
 	return fmt.Sprintf(
-		"invalid invocation on %s: expected %s",
-		e.SelfType.QualifiedString(),
-		e.ReceiverType.QualifiedString(),
+		"invalid member access: expected %s",
+		e.ExpectedType.QualifiedString(),
 	)
 }
 
@@ -578,10 +576,7 @@ type NonStorableValueError struct {
 }
 
 func (e NonStorableValueError) Error() string {
-	return fmt.Sprintf(
-		"cannot store non-storable value: %s",
-		e.Value,
-	)
+	return "cannot store non-storable value"
 }
 
 // NonStorableStaticTypeError
@@ -649,4 +644,14 @@ func (e InvalidPublicKeyError) Error() string {
 
 func (e InvalidPublicKeyError) Unwrap() error {
 	return e.Err
+}
+
+// NonTransferableValueError
+//
+type NonTransferableValueError struct {
+	Value Value
+}
+
+func (e NonTransferableValueError) Error() string {
+	return "cannot transfer non-transferable value"
 }

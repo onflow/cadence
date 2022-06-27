@@ -85,6 +85,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 
 						value := interpreter.NewCompositeValue(
 							inter,
+							interpreter.ReturnEmptyLocationRange,
 							location,
 							"Foo",
 							common.CompositeKindContract,
@@ -104,7 +105,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 							),
 						}
 
-						elaboration := sema.NewElaboration(nil)
+						elaboration := sema.NewElaboration(nil, false)
 						elaboration.CompositeTypes[fooType.ID()] = fooType
 
 						return interpreter.VirtualImport{

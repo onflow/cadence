@@ -69,6 +69,7 @@ func NewREPL(
 		nil,
 		common.REPLLocation{},
 		nil,
+		false,
 		checkerOptions...,
 	)
 	if err != nil {
@@ -167,7 +168,6 @@ func (r *REPL) Accept(code string) (inputIsComplete bool) {
 	}
 
 	r.checker.ResetErrors()
-	r.checker.ResetHints()
 
 	for _, element := range result {
 

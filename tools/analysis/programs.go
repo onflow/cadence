@@ -26,7 +26,7 @@ import (
 	"github.com/onflow/cadence/runtime/stdlib"
 )
 
-type Programs map[common.LocationID]*Program
+type Programs map[common.Location]*Program
 
 func (programs Programs) Load(config *Config, location common.Location) error {
 	return programs.load(config, location, nil, ast.Range{})
@@ -39,7 +39,7 @@ func (programs Programs) load(
 	importRange ast.Range,
 ) error {
 
-	if programs[location.ID()] != nil {
+	if programs[location] != nil {
 		return nil
 	}
 
@@ -68,7 +68,7 @@ func (programs Programs) load(
 		}
 	}
 
-	programs[location.ID()] = &Program{
+	programs[location] = &Program{
 		Location:    location,
 		Code:        code,
 		Program:     program,
@@ -94,6 +94,7 @@ func (programs Programs) check(
 		program,
 		location,
 		nil,
+		true,
 		sema.WithPredeclaredValues(semaPredeclaredValues),
 		sema.WithPredeclaredTypes(stdlib.FlowDefaultPredeclaredTypes),
 		sema.WithLocationHandler(
@@ -116,7 +117,7 @@ func (programs Programs) check(
 						return nil, err
 					}
 
-					elaboration = programs[importedLocation.ID()].Elaboration
+					elaboration = programs[importedLocation].Elaboration
 				}
 
 				return sema.ElaborationImport{

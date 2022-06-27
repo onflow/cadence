@@ -72,7 +72,12 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 
 		inter := newTestInterpreter(t)
 
-		codeHash, err := importValue(inter, codeHashValue, sema.ByteArrayType)
+		codeHash, err := importValue(
+			inter,
+			interpreter.ReturnEmptyLocationRange,
+			codeHashValue,
+			sema.ByteArrayType,
+		)
 		require.NoError(t, err)
 
 		actualCodeHash, err := interpreter.ByteArrayValueToByteSlice(inter, codeHash)
