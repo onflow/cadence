@@ -16,7 +16,7 @@ They are either unary, binary, or ternary.
   The first operator symbol appears between the first and second value,
   the second operator symbol appears between the second and third value (infix).
 
-## Assignment Operator
+## Assignment Operator (`=`)
 
 The binary assignment operator `=` can be used
 to assign a new value to a variable.
@@ -87,7 +87,16 @@ dictionaries[false][3] = 0
 //}`
 ```
 
-## Swapping Operator
+## Force-assignment operator (`<-!`)
+
+The force-assignment operator (`<-!`) assigns a resource-typed value
+to an optional-typed variable if the variable is nil.
+If the variable being assigned to is non-nil,
+the execution of the program aborts.
+
+The force-assignment operator is only used for [resource types](resources).
+
+## Swapping Operator (`<->`)
 
 The binary swap operator `<->` can be used
 to exchange the values of two variables.
@@ -503,7 +512,7 @@ let y = 1 > 2 ? nil : 3
 
 ## Casting Operators
 
-### Static Casting Operator
+### Static Casting Operator (`as`)
 
 The static casting operator `as` can be used to statically type cast a value to a type.
 
@@ -541,7 +550,7 @@ let something: AnyStruct = 1
 let result = something as Int
 ```
 
-### Conditional Downcasting Operator
+### Conditional Downcasting Operator (`as?`)
 
 The conditional downcasting operator `as?` can be used to dynamically type cast a value to a type.
 The operator returns an optional.
@@ -587,7 +596,7 @@ let second = values[1] as? Bool
 // `second` is `true` and has type `Bool?`
 ```
 
-### Force-downcasting Operator
+### Force-downcasting Operator (`as!`)
 
 The force-downcasting operator `as!` behaves like the
 [conditional downcasting operator `as?`](#conditional-downcasting-operator).
@@ -613,6 +622,121 @@ let number = something as! Int
 let boolean = something as! Bool
 // Run-time error
 ```
+
+## Optional Operators
+
+### Nil-Coalescing Operator (`??`)
+
+The nil-coalescing operator `??` returns
+the value inside an optional if it contains a value,
+or returns an alternative value if the optional has no value,
+i.e., the optional value is `nil`.
+
+If the left-hand side is non-nil, the right-hand side is not evaluated.
+
+```cadence
+// Declare a constant which has an optional integer type
+//
+let a: Int? = nil
+
+// Declare a constant with a non-optional integer type,
+// which is initialized to `a` if it is non-nil, or 42 otherwise.
+//
+let b: Int = a ?? 42
+// `b` is 42, as `a` is nil
+```
+
+The nil-coalescing operator can only be applied
+to values which have an optional type.
+
+```cadence
+// Declare a constant with a non-optional integer type.
+//
+let a = 1
+
+// Invalid: nil-coalescing operator is applied to a value which has a non-optional type
+// (a has the non-optional type `Int`).
+//
+let b = a ?? 2
+```
+
+```cadence
+// Invalid: nil-coalescing operator is applied to a value which has a non-optional type
+// (the integer literal is of type `Int`).
+//
+let c = 1 ?? 2
+```
+
+The type of the right-hand side of the operator (the alternative value) must be a subtype
+of the type of left-hand side, i.e. the right-hand side of the operator must
+be the non-optional or optional type matching the type of the left-hand side.
+
+```cadence
+// Declare a constant with an optional integer type.
+//
+let a: Int? = nil
+let b: Int? = 1
+let c = a ?? b
+// `c` is `1` and has type `Int?`
+
+// Invalid: nil-coalescing operator is applied to a value of type `Int?`,
+// but the alternative has type `Bool`.
+//
+let d = a ?? false
+```
+
+### Force Unwrap Operator (`!`)
+
+The force-unwrap operator (`!`) returns
+the value inside an optional if it contains a value,
+or panics and aborts the execution if the optional has no value,
+i.e., the optional value is `nil`.
+
+```cadence
+// Declare a constant which has an optional integer type
+//
+let a: Int? = nil
+
+// Declare a constant with a non-optional integer type,
+// which is initialized to `a` if `a` is non-nil.
+// If `a` is nil, the program aborts.
+//
+let b: Int = a!
+// The program aborts because `a` is nil.
+
+// Declare another optional integer constant
+let c: Int? = 3
+
+// Declare a non-optional integer
+// which is initialized to `c` if `c` is non-nil.
+// If `c` is nil, the program aborts.
+let d: Int = c!
+// `d` is initialized to 3 because c isn't nil.
+
+```
+
+The force-unwrap operator can only be applied
+to values which have an optional type.
+
+```cadence
+// Declare a constant with a non-optional integer type.
+//
+let a = 1
+
+// Invalid: force-unwrap operator is applied to a value which has a
+// non-optional type (`a` has the non-optional type `Int`).
+//
+let b = a!
+```
+
+```cadence
+// Invalid: The force-unwrap operator is applied
+// to a value which has a non-optional type
+// (the integer literal is of type `Int`).
+//
+let c = 1!
+```
+
 
 ## Precedence and Associativity
 
