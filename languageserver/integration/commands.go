@@ -146,6 +146,7 @@ func (i *FlowIntegration) initAccountManager(conn protocol.Conn, args ...json.Ra
 		name,
 		code,
 		update,
+		[]cadence.Value{},
 	)
 
 	if deployError != nil {
@@ -567,7 +568,7 @@ func (i *FlowIntegration) deployContract(conn protocol.Conn, args ...json.RawMes
 		return nil, errorWithMessage(conn, fmt.Sprintf("failed to load contract code: %s", path.Path), err)
 	}
 
-	_, deployError := i.sharedServices.Accounts.AddContract(signer, name, code, update)
+	_, deployError := i.sharedServices.Accounts.AddContract(signer, name, code, update, []cadence.Value{})
 	if deployError != nil {
 		return nil, errorWithMessage(conn, ErrorMessageDeploy, deployError)
 	}
