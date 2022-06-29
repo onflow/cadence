@@ -24,7 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/parser2"
+	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/tests/examples"
 )
 
@@ -34,7 +34,7 @@ func TestInspector_Elements(t *testing.T) {
 
 	t.Parallel()
 
-	program, err := parser2.ParseProgram(examples.FungibleTokenContractInterface, nil)
+	program, err := parser.ParseProgram(examples.FungibleTokenContractInterface, nil)
 	require.NoError(t, err)
 
 	inspector := ast.NewInspector(program)
@@ -103,7 +103,7 @@ func TestInspectorTypeFiltering(t *testing.T) {
       }
     `
 
-	program, err := parser2.ParseProgram(code, nil)
+	program, err := parser.ParseProgram(code, nil)
 	require.NoError(t, err)
 
 	inspector := ast.NewInspector(program)

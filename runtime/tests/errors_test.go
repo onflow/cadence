@@ -31,7 +31,7 @@ import (
 
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/parser2"
+	"github.com/onflow/cadence/runtime/parser"
 )
 
 // TestErrorInterfaceConformance checks whether all the error structs implement
@@ -72,7 +72,7 @@ func TestErrorInterfaceConformance(t *testing.T) {
 	// Wrapper errors doesn't implement any interfaces.
 	// hence, skip them from the check.
 	wrapperErrors := []error{
-		parser2.Error{},
+		parser.Error{},
 		interpreter.Error{},
 		runtime.Error{},
 		interpreter.StackTraceError{},
@@ -95,7 +95,7 @@ func TestErrorInterfaceConformance(t *testing.T) {
 		"github.com/onflow/cadence/runtime",
 		"github.com/onflow/cadence/runtime/interpreter",
 		"github.com/onflow/cadence/runtime/sema",
-		"github.com/onflow/cadence/runtime/parser2",
+		"github.com/onflow/cadence/runtime/parser",
 		"github.com/onflow/cadence/runtime/stdlib",
 
 		// Currently, doesnt support:

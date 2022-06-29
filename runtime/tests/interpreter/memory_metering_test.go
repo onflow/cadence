@@ -8713,7 +8713,7 @@ func TestInterpretFunctionStaticType(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindFunctionStaticType))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindFunctionStaticType))
 	})
 }
 

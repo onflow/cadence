@@ -26,13 +26,13 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/parser2"
+	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-var InvalidLiteralError = parser2.NewUnpositionedSyntaxError("invalid literal")
-var UnsupportedLiteralError = parser2.NewUnpositionedSyntaxError("unsupported literal")
-var LiteralExpressionTypeError = parser2.NewUnpositionedSyntaxError("input is not a literal")
+var InvalidLiteralError = parser.NewUnpositionedSyntaxError("invalid literal")
+var UnsupportedLiteralError = parser.NewUnpositionedSyntaxError("unsupported literal")
+var LiteralExpressionTypeError = parser.NewUnpositionedSyntaxError("input is not a literal")
 
 // ParseLiteral parses a single literal string, that should have the given type.
 //
@@ -47,9 +47,9 @@ func ParseLiteral(
 	cadence.Value,
 	error,
 ) {
-	expression, errs := parser2.ParseExpression(literal, inter)
+	expression, errs := parser.ParseExpression(literal, inter)
 	if len(errs) > 0 {
-		return nil, parser2.Error{
+		return nil, parser.Error{
 			Code:   literal,
 			Errors: errs,
 		}
@@ -70,9 +70,9 @@ func ParseLiteralArgumentList(
 	[]cadence.Value,
 	error,
 ) {
-	arguments, errs := parser2.ParseArgumentList(argumentList, inter)
+	arguments, errs := parser.ParseArgumentList(argumentList, inter)
 	if len(errs) > 0 {
-		return nil, parser2.Error{
+		return nil, parser.Error{
 			Errors: errs,
 		}
 	}
@@ -81,7 +81,7 @@ func ParseLiteralArgumentList(
 	parameterCount := len(parameterTypes)
 
 	if argumentCount != parameterCount {
-		return nil, parser2.NewUnpositionedSyntaxError(
+		return nil, parser.NewUnpositionedSyntaxError(
 			"invalid number of arguments: got %d, expected %d",
 			argumentCount,
 			parameterCount,
@@ -94,7 +94,7 @@ func ParseLiteralArgumentList(
 		parameterType := parameterTypes[i]
 		value, err := LiteralValue(inter, argument.Expression, parameterType)
 		if err != nil {
-			return nil, parser2.NewUnpositionedSyntaxError(
+			return nil, parser.NewUnpositionedSyntaxError(
 				"invalid argument at index %d: %v", i, err,
 			)
 		}
@@ -144,7 +144,7 @@ func pathLiteralValue(memoryGauge common.MemoryGauge, expression ast.Expression,
 	}
 
 	if !sema.IsSubType(pathType, ty) {
-		return nil, parser2.NewUnpositionedSyntaxError(
+		return nil, parser.NewUnpositionedSyntaxError(
 			"path literal type %s is not subtype of requested path type %s",
 			pathType, ty,
 		)
@@ -191,7 +191,7 @@ func integerLiteralValue(
 		return nil, err
 	}
 
-	return ExportValue(convertedValue, inter)
+	return ExportValue(convertedValue, inter, interpreter.ReturnEmptyLocationRange)
 }
 
 func convertIntValue(

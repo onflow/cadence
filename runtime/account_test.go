@@ -779,7 +779,10 @@ func newBytesValue(bytes []byte) cadence.Array {
 	for index, value := range bytes {
 		result[index] = cadence.NewUInt8(value)
 	}
-	return cadence.NewArray(result)
+	return cadence.NewArray(result).
+		WithType(cadence.VariableSizedArrayType{
+			ElementType: cadence.UInt8Type{},
+		})
 }
 
 func newSignAlgoValue(signAlgo sema.SignatureAlgorithm) cadence.Enum {
@@ -1527,7 +1530,9 @@ func TestPublicAccountContracts(t *testing.T) {
 					cadence.UInt8(1),
 					cadence.UInt8(2),
 				},
-			},
+			}.WithType(cadence.VariableSizedArrayType{
+				ElementType: cadence.UInt8Type{},
+			}),
 			array.Values[1],
 		)
 	})
