@@ -626,23 +626,21 @@ func (e InvocationArgumentTypeError) Error() string {
 	)
 }
 
-// InvocationReceiverTypeError
+// MemberAccessTypeError
 //
-type InvocationReceiverTypeError struct {
-	SelfType     sema.Type
-	ReceiverType sema.Type
+type MemberAccessTypeError struct {
+	ExpectedType sema.Type
 	LocationRange
 }
 
-var _ errors.UserError = InvocationReceiverTypeError{}
+var _ errors.UserError = MemberAccessTypeError{}
 
-func (InvocationReceiverTypeError) IsUserError() {}
+func (MemberAccessTypeError) IsUserError() {}
 
-func (e InvocationReceiverTypeError) Error() string {
+func (e MemberAccessTypeError) Error() string {
 	return fmt.Sprintf(
-		"invalid invocation on %s: expected %s",
-		e.SelfType.QualifiedString(),
-		e.ReceiverType.QualifiedString(),
+		"invalid member access: expected %s",
+		e.ExpectedType.QualifiedString(),
 	)
 }
 

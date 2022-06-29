@@ -27,6 +27,7 @@ import (
 func NewSignatureAlgorithmCase(inter *interpreter.Interpreter, rawValue uint8) *interpreter.CompositeValue {
 	return interpreter.NewEnumCaseValue(
 		inter,
+		interpreter.ReturnEmptyLocationRange,
 		sema.SignatureAlgorithmType,
 		interpreter.NewUInt8Value(inter, func() uint8 {
 			return rawValue
@@ -44,7 +45,6 @@ var signatureAlgorithmConstructor = StandardLibraryValue{
 	ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
 		return cryptoAlgorithmEnumValue(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
 			sema.SignatureAlgorithmType,
 			sema.SignatureAlgorithms,
 			NewSignatureAlgorithmCase,
