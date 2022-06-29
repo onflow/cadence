@@ -67,7 +67,7 @@ func TestRuntimeTypeStorage(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: tx1,
 		},
@@ -78,7 +78,7 @@ func TestRuntimeTypeStorage(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: tx2,
 		},
@@ -135,7 +135,7 @@ func TestRuntimeBlockFieldTypes(t *testing.T) {
 		}
 
 		nextTransactionLocation := newTransactionLocationGenerator()
-		err := runtime.ExecuteTransaction(
+		err, _ := runtime.ExecuteTransaction(
 			Script{
 				Source: script,
 			},

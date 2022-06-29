@@ -68,7 +68,7 @@ func TestRuntimeDebugger(t *testing.T) {
 		nextTransactionLocation := newTransactionLocationGenerator()
 		runtime.SetDebugger(debugger)
 
-		err := runtime.ExecuteTransaction(
+		err, _ := runtime.ExecuteTransaction(
 			Script{
 				Source: []byte(`
                   transaction {

@@ -172,7 +172,7 @@ func TestInterpreterElaborationImportMetering(t *testing.T) {
 			nextTransactionLocation := newTransactionLocationGenerator()
 
 			for j := 0; j <= imports; j++ {
-				err := runtime.ExecuteTransaction(
+				err, _ := runtime.ExecuteTransaction(
 					Script{
 						Source: utils.DeploymentTransaction(fmt.Sprintf("C%d", j), contracts[j]),
 					},
@@ -873,7 +873,7 @@ func TestStorageCommitsMetering(t *testing.T) {
 
 		runtime := newTestInterpreterRuntime()
 
-		err := runtime.ExecuteTransaction(
+		err, _ := runtime.ExecuteTransaction(
 			Script{
 				Source: code,
 			},
@@ -911,7 +911,7 @@ func TestStorageCommitsMetering(t *testing.T) {
 
 		runtime := newTestInterpreterRuntime()
 
-		err := runtime.ExecuteTransaction(
+		err, _ := runtime.ExecuteTransaction(
 			Script{
 				Source: code,
 			},
@@ -957,7 +957,7 @@ func TestStorageCommitsMetering(t *testing.T) {
 
 		runtime := newTestInterpreterRuntime()
 
-		err := runtime.ExecuteTransaction(
+		err, _ := runtime.ExecuteTransaction(
 			Script{
 				Source: code,
 			},

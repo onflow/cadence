@@ -133,7 +133,7 @@ func TestRuntimeTransaction_AddPublicKey(t *testing.T) {
 				}
 			}
 
-			err := rt.ExecuteTransaction(
+			err, _ := rt.ExecuteTransaction(
 				Script{
 					Source:    []byte(tt.code),
 					Arguments: args,
@@ -219,7 +219,7 @@ func TestRuntimeStoreAccountAPITypes(t *testing.T) {
 
 		runtimeInterface := &testRuntimeInterface{}
 
-		err := rt.ExecuteTransaction(
+		err, _ := rt.ExecuteTransaction(
 			Script{
 				Source: script,
 			},
@@ -431,7 +431,7 @@ func TestRuntimeAuthAccountKeysAdd(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := rt.ExecuteTransaction(
+	err, _ := rt.ExecuteTransaction(
 		Script{
 			Source:    []byte(code),
 			Arguments: encodeArgs([]cadence.Value{pubKey}),
@@ -953,7 +953,7 @@ func (test accountKeyTestCase) executeTransaction(
 ) error {
 	args := encodeArgs(test.args)
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source:    []byte(test.code),
 			Arguments: args,
@@ -1373,7 +1373,7 @@ func TestAuthAccountContracts(t *testing.T) {
 
 		nextTransactionLocation := newTransactionLocationGenerator()
 
-		err := rt.ExecuteTransaction(
+		err, _ := rt.ExecuteTransaction(
 			Script{
 				Source: script,
 			},
@@ -1411,7 +1411,7 @@ func TestAuthAccountContracts(t *testing.T) {
 
 		nextTransactionLocation := newTransactionLocationGenerator()
 
-		err := rt.ExecuteTransaction(
+		err, _ := rt.ExecuteTransaction(
 			Script{
 				Source: script,
 			},
@@ -1457,7 +1457,7 @@ func TestAuthAccountContracts(t *testing.T) {
 
 		nextTransactionLocation := newTransactionLocationGenerator()
 
-		err := rt.ExecuteTransaction(
+		err, _ := rt.ExecuteTransaction(
 			Script{
 				Source: script,
 			},

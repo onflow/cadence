@@ -555,7 +555,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 	// Deploy Fungible Token contract
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: utils.DeploymentTransaction(
 				"FungibleToken",
@@ -571,7 +571,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 	// Deploy Flow Token contract
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: []byte(fmt.Sprintf(
 				`
@@ -601,7 +601,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 		signerAccount = address
 
-		err = runtime.ExecuteTransaction(
+		err, _ = runtime.ExecuteTransaction(
 			Script{
 				Source: []byte(realSetupFlowTokenAccountTransaction),
 			},
@@ -622,7 +622,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 	signerAccount = contractsAddress
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: []byte(realMintFlowTokenTransaction),
 			Arguments: encodeArgs([]cadence.Value{
@@ -649,7 +649,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 
-		err = runtime.ExecuteTransaction(
+		err, _ = runtime.ExecuteTransaction(
 			Script{
 				Source: []byte(realFlowTokenTransferTransaction),
 				Arguments: encodeArgs([]cadence.Value{

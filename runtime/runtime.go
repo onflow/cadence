@@ -57,20 +57,14 @@ type Runtime interface {
 	//
 	// This function returns an error if the program has errors (e.g syntax errors, type errors),
 	// or if the execution fails.
-	ExecuteTransaction(Script, Context) error
+	ExecuteTransaction(Script, Context) (error, *interpreter.Interpreter)
 
 	// InvokeContractFunction invokes a contract function with the given arguments.
 	//
 	// This function returns an error if the execution fails.
 	// If the contract function accepts an AuthAccount as a parameter the corresponding argument can be an interpreter.Address.
 	// returns a cadence.Value
-	InvokeContractFunction(
-		contractLocation common.AddressLocation,
-		functionName string,
-		arguments []interpreter.Value,
-		argumentTypes []sema.Type,
-		context Context,
-	) (cadence.Value, error)
+	InvokeContractFunction(contractLocation common.AddressLocation, functionName string, arguments []interpreter.Value, argumentTypes []sema.Type, context Context, inter *interpreter.Interpreter) (cadence.Value, error)
 
 	// ParseAndCheckProgram parses and checks the given code without executing the program.
 	//
@@ -521,13 +515,7 @@ func (r *interpreterRuntime) newAuthAccountValue(
 	)
 }
 
-func (r *interpreterRuntime) InvokeContractFunction(
-	contractLocation common.AddressLocation,
-	functionName string,
-	arguments []interpreter.Value,
-	argumentTypes []sema.Type,
-	context Context,
-) (val cadence.Value, err error) {
+func (r *interpreterRuntime) InvokeContractFunction(contractLocation common.AddressLocation, functionName string, arguments []interpreter.Value, argumentTypes []sema.Type, context Context, inter *interpreter.Interpreter) (val cadence.Value, err error) {
 	defer r.Recover(
 		func(internalErr error) {
 			err = internalErr
@@ -550,20 +538,21 @@ func (r *interpreterRuntime) InvokeContractFunction(
 		interpreterOptions,
 		checkerOptions,
 	)
-
-	// create interpreter
-	_, inter, err := r.interpret(
-		nil,
-		context,
-		storage,
-		functions,
-		stdlib.BuiltinValues,
-		interpreterOptions,
-		checkerOptions,
-		nil,
-	)
-	if err != nil {
-		return nil, newError(err, context)
+	if inter == nil {
+		// create interpreter
+		_, inter, err = r.interpret(
+			nil,
+			context,
+			storage,
+			functions,
+			stdlib.BuiltinValues,
+			interpreterOptions,
+			checkerOptions,
+			nil,
+		)
+		if err != nil {
+			return nil, newError(err, context)
+		}
 	}
 
 	// ensure the contract is loaded
@@ -673,7 +662,7 @@ func (r *interpreterRuntime) convertArgument(
 	return argument
 }
 
-func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) (err error) {
+func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) (err error, inter *interpreter.Interpreter) {
 	defer r.Recover(
 		func(internalErr error) {
 			err = internalErr
@@ -707,7 +696,7 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 		importResolutionResults{},
 	)
 	if err != nil {
-		return newError(err, context)
+		return newError(err, context), nil
 	}
 
 	transactions := program.Elaboration.TransactionTypes
@@ -716,7 +705,7 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 		err = InvalidTransactionCountError{
 			Count: transactionCount,
 		}
-		return newError(err, context)
+		return newError(err, context), nil
 	}
 
 	transactionType := transactions[0]
@@ -726,7 +715,7 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 		authorizers, err = context.Interface.GetSigningAccounts()
 	})
 	if err != nil {
-		return newError(err, context)
+		return newError(err, context), nil
 	}
 	// check parameter count
 
@@ -739,7 +728,7 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 			Expected: transactionParameterCount,
 			Actual:   argumentCount,
 		}
-		return newError(err, context)
+		return newError(err, context), nil
 	}
 
 	transactionAuthorizerCount := len(transactionType.PrepareParameters)
@@ -748,7 +737,7 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 			Expected: transactionAuthorizerCount,
 			Actual:   authorizerCount,
 		}
-		return newError(err, context)
+		return newError(err, context), nil
 	}
 
 	// gather authorizers
@@ -774,7 +763,7 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 		return authorizerValues
 	}
 
-	_, inter, err := r.interpret(
+	_, inter, err = r.interpret(
 		program,
 		context,
 		storage,
@@ -790,16 +779,16 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 		),
 	)
 	if err != nil {
-		return newError(err, context)
+		return newError(err, context), inter
 	}
 
 	// Write back all stored values, which were actually just cached, back into storage
 	err = r.commitStorage(storage, inter)
 	if err != nil {
-		return newError(err, context)
+		return newError(err, context), inter
 	}
 
-	return nil
+	return nil, inter
 }
 
 func wrapPanic(f func()) {

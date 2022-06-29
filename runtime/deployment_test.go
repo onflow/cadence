@@ -166,7 +166,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 
 		nextTransactionLocation := newTransactionLocationGenerator()
 
-		err := runtime.ExecuteTransaction(
+		err, _ := runtime.ExecuteTransaction(
 			Script{
 				Source: script,
 			},

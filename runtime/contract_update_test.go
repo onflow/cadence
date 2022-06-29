@@ -134,7 +134,7 @@ func TestContractUpdateWithDependencies(t *testing.T) {
 
 	// Deploy 'Foo' contract
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: utils.DeploymentTransaction(
 				"Foo",
@@ -152,7 +152,7 @@ func TestContractUpdateWithDependencies(t *testing.T) {
 
 	signerAccount = common.MustBytesToAddress([]byte{0x2})
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: utils.DeploymentTransaction(
 				"Bar",
@@ -169,7 +169,7 @@ func TestContractUpdateWithDependencies(t *testing.T) {
 	// Update 'Foo' contract to change function signature
 
 	signerAccount = common.MustBytesToAddress([]byte{0x1})
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: []byte(fmt.Sprintf(
 				`
@@ -198,7 +198,7 @@ func TestContractUpdateWithDependencies(t *testing.T) {
 
 	checkGetSetProgram = true
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: []byte(fmt.Sprintf(
 				`

@@ -862,7 +862,7 @@ func TestRuntimeInvalidTransactionArgumentAccount(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: script,
 		},
@@ -903,7 +903,7 @@ func TestRuntimeTransactionWithAccount(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: script,
 		},
@@ -1206,7 +1206,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 				return json.Decode(runtimeInterface, b)
 			}
 
-			err := rt.ExecuteTransaction(
+			err, _ := rt.ExecuteTransaction(
 				Script{
 					Source:    []byte(tc.script),
 					Arguments: tc.args,
@@ -1575,7 +1575,7 @@ func TestRuntimeProgramWithNoTransaction(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: script,
 		},
@@ -1607,7 +1607,7 @@ func TestRuntimeProgramWithMultipleTransaction(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: script,
 		},
@@ -1729,7 +1729,7 @@ func TestRuntimeStorage(t *testing.T) {
 
 			nextTransactionLocation := newTransactionLocationGenerator()
 
-			err := runtime.ExecuteTransaction(
+			err, _ := runtime.ExecuteTransaction(
 				Script{
 					Source: script,
 				},
@@ -1832,7 +1832,7 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: script1,
 		},
@@ -1843,7 +1843,7 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: script2,
 		},
@@ -1854,7 +1854,7 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: script3,
 		},
@@ -1934,7 +1934,7 @@ func TestRuntimeStorageMultipleTransactionsResourceFunction(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: script1,
 		},
@@ -1945,7 +1945,7 @@ func TestRuntimeStorageMultipleTransactionsResourceFunction(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: script2,
 		},
@@ -2026,7 +2026,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: script1,
 		},
@@ -2037,7 +2037,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: script2,
 		},
@@ -2116,7 +2116,7 @@ func TestRuntimeCompositeFunctionInvocationFromImportingProgram(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: script1,
 		},
@@ -2127,7 +2127,7 @@ func TestRuntimeCompositeFunctionInvocationFromImportingProgram(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: script2,
 		},
@@ -2202,7 +2202,7 @@ func TestRuntimeResourceContractUseThroughReference(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: script1,
 		},
@@ -2213,7 +2213,7 @@ func TestRuntimeResourceContractUseThroughReference(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: script2,
 		},
@@ -2293,7 +2293,7 @@ func TestRuntimeResourceContractUseThroughLink(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: script1,
 		},
@@ -2304,7 +2304,7 @@ func TestRuntimeResourceContractUseThroughLink(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: script2,
 		},
@@ -2398,7 +2398,7 @@ func TestRuntimeResourceContractWithInterface(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: script1,
 		},
@@ -2409,7 +2409,7 @@ func TestRuntimeResourceContractWithInterface(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: script2,
 		},
@@ -2789,7 +2789,7 @@ func TestRuntimeStorageChanges(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: script1,
 		},
@@ -2800,7 +2800,7 @@ func TestRuntimeStorageChanges(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: script2,
 		},
@@ -2843,7 +2843,7 @@ func TestRuntimeAccountAddress(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: script,
 		},
@@ -2886,7 +2886,7 @@ func TestRuntimePublicAccountAddress(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: script,
 		},
@@ -2974,7 +2974,7 @@ func TestRuntimeAccountPublishAndAccess(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: script1,
 		},
@@ -2985,7 +2985,7 @@ func TestRuntimeAccountPublishAndAccess(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: script2,
 		},
@@ -3031,7 +3031,7 @@ func TestRuntimeTransaction_CreateAccount(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: script,
 		},
@@ -3117,7 +3117,7 @@ func TestRuntimeContractAccount(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: deploy,
 		},
@@ -3228,7 +3228,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: deploy,
 		},
@@ -3242,182 +3242,134 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 	assert.NotNil(t, accountCode)
 
 	t.Run("simple function", func(tt *testing.T) {
-		_, err = runtime.InvokeContractFunction(
-			common.AddressLocation{
-				Address: addressValue,
-				Name:    "Test",
-			},
-			"hello",
-			nil,
-			nil,
-			Context{
-				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
-			},
-		)
+		_, err = runtime.InvokeContractFunction(common.AddressLocation{
+			Address: addressValue,
+			Name:    "Test",
+		}, "hello", nil, nil, Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		}, nil)
 		require.NoError(tt, err)
 
 		assert.Equal(tt, `"Hello World!"`, loggedMessage)
 	})
 
 	t.Run("function with parameter", func(tt *testing.T) {
-		_, err = runtime.InvokeContractFunction(
-			common.AddressLocation{
-				Address: addressValue,
-				Name:    "Test",
-			},
-			"helloArg",
-			[]interpreter.Value{
-				interpreter.NewUnmeteredStringValue("there!"),
-			},
-			[]sema.Type{
-				sema.StringType,
-			},
-			Context{
-				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
-			},
-		)
+		_, err = runtime.InvokeContractFunction(common.AddressLocation{
+			Address: addressValue,
+			Name:    "Test",
+		}, "helloArg", []interpreter.Value{
+			interpreter.NewUnmeteredStringValue("there!"),
+		}, []sema.Type{
+			sema.StringType,
+		}, Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		}, nil)
 		require.NoError(tt, err)
 
 		assert.Equal(tt, `"Hello there!"`, loggedMessage)
 	})
 	t.Run("function with return type", func(tt *testing.T) {
-		_, err = runtime.InvokeContractFunction(
-			common.AddressLocation{
-				Address: addressValue,
-				Name:    "Test",
-			},
-			"helloReturn",
-			[]interpreter.Value{
-				interpreter.NewUnmeteredStringValue("there!"),
-			},
-			[]sema.Type{
-				sema.StringType,
-			},
-			Context{
-				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
-			},
-		)
+		_, err = runtime.InvokeContractFunction(common.AddressLocation{
+			Address: addressValue,
+			Name:    "Test",
+		}, "helloReturn", []interpreter.Value{
+			interpreter.NewUnmeteredStringValue("there!"),
+		}, []sema.Type{
+			sema.StringType,
+		}, Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		}, nil)
 		require.NoError(tt, err)
 
 		assert.Equal(tt, `"Hello return!"`, loggedMessage)
 	})
 	t.Run("function with multiple arguments", func(tt *testing.T) {
 
-		_, err = runtime.InvokeContractFunction(
-			common.AddressLocation{
-				Address: addressValue,
-				Name:    "Test",
-			},
-			"helloMultiArg",
-			[]interpreter.Value{
-				interpreter.NewUnmeteredStringValue("number"),
-				interpreter.NewUnmeteredIntValueFromInt64(42),
-				interpreter.AddressValue(addressValue),
-			},
-			[]sema.Type{
-				sema.StringType,
-				sema.IntType,
-				&sema.AddressType{},
-			},
-			Context{
-				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
-			},
-		)
+		_, err = runtime.InvokeContractFunction(common.AddressLocation{
+			Address: addressValue,
+			Name:    "Test",
+		}, "helloMultiArg", []interpreter.Value{
+			interpreter.NewUnmeteredStringValue("number"),
+			interpreter.NewUnmeteredIntValueFromInt64(42),
+			interpreter.AddressValue(addressValue),
+		}, []sema.Type{
+			sema.StringType,
+			sema.IntType,
+			&sema.AddressType{},
+		}, Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		}, nil)
 		require.NoError(tt, err)
 
 		assert.Equal(tt, `"Hello number 42 from 0x0000000000000001"`, loggedMessage)
 	})
 
 	t.Run("function with not enough arguments panics", func(tt *testing.T) {
-		_, err = runtime.InvokeContractFunction(
-			common.AddressLocation{
-				Address: addressValue,
-				Name:    "Test",
-			},
-			"helloMultiArg",
-			[]interpreter.Value{
-				interpreter.NewUnmeteredStringValue("number"),
-				interpreter.NewUnmeteredIntValueFromInt64(42),
-			},
-			[]sema.Type{
-				sema.StringType,
-				sema.IntType,
-			},
-			Context{
-				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
-			},
-		)
+		_, err = runtime.InvokeContractFunction(common.AddressLocation{
+			Address: addressValue,
+			Name:    "Test",
+		}, "helloMultiArg", []interpreter.Value{
+			interpreter.NewUnmeteredStringValue("number"),
+			interpreter.NewUnmeteredIntValueFromInt64(42),
+		}, []sema.Type{
+			sema.StringType,
+			sema.IntType,
+		}, Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		}, nil)
 
 		require.Error(tt, err)
 		assert.ErrorAs(tt, err, &Error{})
 	})
 
 	t.Run("function with incorrect argument type errors", func(tt *testing.T) {
-		_, err = runtime.InvokeContractFunction(
-			common.AddressLocation{
-				Address: addressValue,
-				Name:    "Test",
-			},
-			"helloArg",
-			[]interpreter.Value{
-				interpreter.NewUnmeteredIntValueFromInt64(42),
-			},
-			[]sema.Type{
-				sema.IntType,
-			},
-			Context{
-				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
-			},
-		)
+		_, err = runtime.InvokeContractFunction(common.AddressLocation{
+			Address: addressValue,
+			Name:    "Test",
+		}, "helloArg", []interpreter.Value{
+			interpreter.NewUnmeteredIntValueFromInt64(42),
+		}, []sema.Type{
+			sema.IntType,
+		}, Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		}, nil)
 		require.ErrorAs(tt, err, &interpreter.ValueTransferTypeError{})
 	})
 
 	t.Run("function with auth account works", func(tt *testing.T) {
-		_, err = runtime.InvokeContractFunction(
-			common.AddressLocation{
-				Address: addressValue,
-				Name:    "Test",
-			},
-			"helloAuthAcc",
-			[]interpreter.Value{
-				interpreter.AddressValue(addressValue),
-			},
-			[]sema.Type{
-				sema.AuthAccountType,
-			},
-			Context{
-				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
-			},
-		)
+		_, err = runtime.InvokeContractFunction(common.AddressLocation{
+			Address: addressValue,
+			Name:    "Test",
+		}, "helloAuthAcc", []interpreter.Value{
+			interpreter.AddressValue(addressValue),
+		}, []sema.Type{
+			sema.AuthAccountType,
+		}, Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		}, nil)
 		require.NoError(tt, err)
 
 		assert.Equal(tt, `"Hello 0x0000000000000001"`, loggedMessage)
 	})
 	t.Run("function with public account works", func(tt *testing.T) {
-		_, err = runtime.InvokeContractFunction(
-			common.AddressLocation{
-				Address: addressValue,
-				Name:    "Test",
-			},
-			"helloPublicAcc",
-			[]interpreter.Value{
-				interpreter.AddressValue(addressValue),
-			},
-			[]sema.Type{
-				sema.PublicAccountType,
-			},
-			Context{
-				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
-			},
-		)
+		_, err = runtime.InvokeContractFunction(common.AddressLocation{
+			Address: addressValue,
+			Name:    "Test",
+		}, "helloPublicAcc", []interpreter.Value{
+			interpreter.AddressValue(addressValue),
+		}, []sema.Type{
+			sema.PublicAccountType,
+		}, Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		}, nil)
 		require.NoError(tt, err)
 
 		assert.Equal(tt, `"Hello pub 0x0000000000000001"`, loggedMessage)
@@ -3493,7 +3445,7 @@ func TestRuntimeContractNestedResource(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: deploy,
 		},
@@ -3506,7 +3458,7 @@ func TestRuntimeContractNestedResource(t *testing.T) {
 
 	assert.NotNil(t, accountCode)
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: tx,
 		},
@@ -3588,7 +3540,7 @@ func TestRuntimeStorageLoadedDestructionConcreteType(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: deploy,
 		},
@@ -3601,7 +3553,7 @@ func TestRuntimeStorageLoadedDestructionConcreteType(t *testing.T) {
 
 	assert.NotNil(t, accountCode)
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: tx,
 		},
@@ -3683,7 +3635,7 @@ func TestRuntimeStorageLoadedDestructionAnyResource(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: deploy,
 		},
@@ -3696,7 +3648,7 @@ func TestRuntimeStorageLoadedDestructionAnyResource(t *testing.T) {
 
 	assert.NotNil(t, accountCode)
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: tx,
 		},
@@ -3784,7 +3736,7 @@ func TestRuntimeStorageLoadedDestructionAfterRemoval(t *testing.T) {
 
 	// Deploy the contract
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: deploy,
 		},
@@ -3799,7 +3751,7 @@ func TestRuntimeStorageLoadedDestructionAfterRemoval(t *testing.T) {
 
 	// Remove the contract
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: removal,
 		},
@@ -3814,7 +3766,7 @@ func TestRuntimeStorageLoadedDestructionAfterRemoval(t *testing.T) {
 
 	// Destroy
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: tx,
 		},
@@ -4025,7 +3977,7 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: deploy,
 		},
@@ -4036,7 +3988,7 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: setup1Transaction,
 		},
@@ -4049,7 +4001,7 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
 
 	signerAccount = address2Value
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: setup2Transaction,
 		},
@@ -4170,7 +4122,7 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: deploy,
 		},
@@ -4181,7 +4133,7 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: setup1Transaction,
 		},
@@ -4192,7 +4144,7 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: setup2Transaction,
 		},
@@ -4334,7 +4286,7 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 	nextTransactionLocation := newTransactionLocationGenerator()
 
 	deployTransaction := makeDeployTransaction("TestContractInterface", contractInterfaceCode)
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: deployTransaction,
 		},
@@ -4346,7 +4298,7 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 	require.NoError(t, err)
 
 	deployTransaction = makeDeployTransaction("TestContract", contractCode)
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: deployTransaction,
 		},
@@ -4357,7 +4309,7 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: setupCode,
 		},
@@ -4373,7 +4325,7 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 
 			t.Run(fmt.Sprintf("%d/%d", a, b), func(t *testing.T) {
 
-				err = runtime.ExecuteTransaction(
+				err, _ = runtime.ExecuteTransaction(
 					Script{
 						Source: makeUseCode(a, b),
 					},
@@ -4437,7 +4389,7 @@ func TestRuntimeBlock(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: script,
 		},
@@ -4493,7 +4445,7 @@ func TestRuntimeUnsafeRandom(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: script,
 		},
@@ -4533,7 +4485,7 @@ func TestRuntimeTransactionTopLevelDeclarations(t *testing.T) {
 
 		nextTransactionLocation := newTransactionLocationGenerator()
 
-		err := runtime.ExecuteTransaction(
+		err, _ := runtime.ExecuteTransaction(
 			Script{
 				Source: script,
 			},
@@ -4562,7 +4514,7 @@ func TestRuntimeTransactionTopLevelDeclarations(t *testing.T) {
 
 		nextTransactionLocation := newTransactionLocationGenerator()
 
-		err := runtime.ExecuteTransaction(
+		err, _ := runtime.ExecuteTransaction(
 			Script{
 				Source: script,
 			},
@@ -4642,7 +4594,7 @@ func TestRuntimeStoreIntegerTypes(t *testing.T) {
 
 			nextTransactionLocation := newTransactionLocationGenerator()
 
-			err := runtime.ExecuteTransaction(
+			err, _ := runtime.ExecuteTransaction(
 				Script{
 					Source: deploy,
 				},
@@ -4795,7 +4747,7 @@ func TestRuntimeResourceOwnerFieldUseComposite(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: deploy,
 		},
@@ -4806,7 +4758,7 @@ func TestRuntimeResourceOwnerFieldUseComposite(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: tx,
 		},
@@ -4827,7 +4779,7 @@ func TestRuntimeResourceOwnerFieldUseComposite(t *testing.T) {
 	)
 
 	loggedMessages = nil
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: tx2,
 		},
@@ -4984,7 +4936,7 @@ func TestRuntimeResourceOwnerFieldUseArray(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: deploy,
 		},
@@ -4995,7 +4947,7 @@ func TestRuntimeResourceOwnerFieldUseArray(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: tx,
 		},
@@ -5019,7 +4971,7 @@ func TestRuntimeResourceOwnerFieldUseArray(t *testing.T) {
 	)
 
 	loggedMessages = nil
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: tx2,
 		},
@@ -5165,7 +5117,7 @@ func TestRuntimeResourceOwnerFieldUseDictionary(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: deploy,
 		},
@@ -5176,7 +5128,7 @@ func TestRuntimeResourceOwnerFieldUseDictionary(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: tx,
 		},
@@ -5200,7 +5152,7 @@ func TestRuntimeResourceOwnerFieldUseDictionary(t *testing.T) {
 	)
 
 	loggedMessages = nil
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: tx2,
 		},
@@ -5316,7 +5268,7 @@ func TestRuntimeMetrics(t *testing.T) {
 	nextTransactionLocation := newTransactionLocationGenerator()
 
 	transactionLocation := nextTransactionLocation()
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: script1,
 		},
@@ -5352,7 +5304,7 @@ func TestRuntimeMetrics(t *testing.T) {
 
 	transactionLocation = nextTransactionLocation()
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: script2,
 		},
@@ -5475,7 +5427,7 @@ func TestRuntimeContractWriteback(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: deploy,
 		},
@@ -5511,7 +5463,7 @@ func TestRuntimeContractWriteback(t *testing.T) {
 
 	writes = nil
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: readTx,
 		},
@@ -5526,7 +5478,7 @@ func TestRuntimeContractWriteback(t *testing.T) {
 
 	writes = nil
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: writeTx,
 		},
@@ -5617,7 +5569,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: deploy,
 		},
@@ -5653,7 +5605,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 
 	writes = nil
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: []byte(`
               import Test from 0xCADE
@@ -5707,7 +5659,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 
 	writes = nil
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: readTx,
 		},
@@ -5734,7 +5686,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 
 	writes = nil
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: writeTx,
 		},
@@ -5784,7 +5736,7 @@ func TestRuntimeExternalError(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := interpreterRuntime.ExecuteTransaction(
+	err, _ := interpreterRuntime.ExecuteTransaction(
 		Script{
 			Source: script,
 		},
@@ -5886,7 +5838,7 @@ func TestRuntimeDeployCodeCaching(t *testing.T) {
 
 	signerAddresses = []Address{{accountCounter}}
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: createAccountTx,
 		},
@@ -5901,7 +5853,7 @@ func TestRuntimeDeployCodeCaching(t *testing.T) {
 
 	signerAddresses = []Address{{accountCounter}}
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: deployTx,
 		},
@@ -5916,7 +5868,7 @@ func TestRuntimeDeployCodeCaching(t *testing.T) {
 
 	callTx := []byte(fmt.Sprintf(callHelloTxTemplate, Address{accountCounter}))
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: callTx,
 		},
@@ -6036,7 +5988,7 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 
 	signerAddresses = []Address{{accountCounter}}
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: createAccountTx,
 		},
@@ -6055,7 +6007,7 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 
 	codeChanged = false
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: deployTx,
 		},
@@ -6104,7 +6056,7 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 	programHits = nil
 	codeChanged = false
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: updateTx,
 		},
@@ -6245,7 +6197,7 @@ func TestRuntimeNoProgramsHitForToplevelPrograms(t *testing.T) {
 
 	// create the account
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: createAccountTx,
 		},
@@ -6258,7 +6210,7 @@ func TestRuntimeNoProgramsHitForToplevelPrograms(t *testing.T) {
 
 	signerAddresses = []Address{{accountCounter}}
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: deployTx,
 		},
@@ -6273,7 +6225,7 @@ func TestRuntimeNoProgramsHitForToplevelPrograms(t *testing.T) {
 
 	callTx := []byte(fmt.Sprintf(callHelloTxTemplate, Address{accountCounter}))
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: callTx,
 		},
@@ -6423,7 +6375,7 @@ func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
 	codeChanged = false
 	deployTx1 := utils.DeploymentTransaction("Test", []byte(contract1))
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: deployTx1,
 		},
@@ -6485,7 +6437,7 @@ func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
 
 	deployTx2 := utils.UpdateTransaction("Test", []byte(contract2))
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: deployTx2,
 		},
@@ -6860,7 +6812,7 @@ func TestRuntimeStackOverflow(t *testing.T) {
 
 	// Deploy
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: deployTx,
 		},
@@ -6971,7 +6923,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 
 		nextTransactionLocation := newTransactionLocationGenerator()
 
-		err := runtime.ExecuteTransaction(
+		err, _ := runtime.ExecuteTransaction(
 			Script{
 				Source: script,
 			},
@@ -7031,7 +6983,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 		nextTransactionLocation := newTransactionLocationGenerator()
 
 		deploy := utils.DeploymentTransaction("Test", contract)
-		err := runtime.ExecuteTransaction(
+		err, _ := runtime.ExecuteTransaction(
 			Script{
 				Source: deploy,
 			},
@@ -7044,19 +6996,13 @@ func TestRuntimeInternalErrors(t *testing.T) {
 
 		assert.NotNil(t, accountCode)
 
-		_, err = runtime.InvokeContractFunction(
-			common.AddressLocation{
-				Address: addressValue,
-				Name:    "Test",
-			},
-			"hello",
-			nil,
-			nil,
-			Context{
-				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
-			},
-		)
+		_, err = runtime.InvokeContractFunction(common.AddressLocation{
+			Address: addressValue,
+			Name:    "Test",
+		}, "hello", nil, nil, Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		}, nil)
 
 		require.Error(t, err)
 		require.ErrorAs(t, err, &Error{})
@@ -7267,7 +7213,7 @@ func TestRuntimeComputationMetring(t *testing.T) {
 
 			nextTransactionLocation := newTransactionLocationGenerator()
 
-			err := runtime.ExecuteTransaction(
+			err, _ := runtime.ExecuteTransaction(
 				Script{
 					Source: script,
 				},
@@ -7317,7 +7263,7 @@ func TestRuntimeImportAnyStruct(t *testing.T) {
 		return json.Decode(runtimeInterface, b)
 	}
 
-	err := rt.ExecuteTransaction(
+	err, _ := rt.ExecuteTransaction(
 		Script{
 			Source: []byte(`
 			  transaction(args: [AnyStruct]) {

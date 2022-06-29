@@ -136,7 +136,7 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: deploy,
 		},
@@ -149,7 +149,7 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 
 	assert.NotNil(t, accountCode)
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: setupTx,
 		},
@@ -173,7 +173,7 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
      }
    `)
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: insertTx,
 		},
@@ -199,7 +199,7 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 
 	loggedMessages = nil
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: readTx},
 		Context{
@@ -227,7 +227,7 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 
 	loggedMessages = nil
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: updateTx,
 		},
@@ -259,7 +259,7 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 
 	loggedMessages = nil
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: replaceTx,
 		},
@@ -299,7 +299,7 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 
 	loggedMessages = nil
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: removeTx,
 		},
@@ -324,7 +324,7 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 
 	loggedMessages = nil
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: readTx,
 		},
@@ -359,7 +359,7 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 
 	loggedMessages = nil
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: destroyTx,
 		},
@@ -492,7 +492,7 @@ func TestRuntimeResourceDictionaryValues_Nested(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: deploy,
 		},
@@ -505,7 +505,7 @@ func TestRuntimeResourceDictionaryValues_Nested(t *testing.T) {
 
 	assert.NotNil(t, accountCode)
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: setupTx,
 		},
@@ -531,7 +531,7 @@ func TestRuntimeResourceDictionaryValues_Nested(t *testing.T) {
      }
    `)
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: insertTx,
 		},
@@ -557,7 +557,7 @@ func TestRuntimeResourceDictionaryValues_Nested(t *testing.T) {
 
 	loggedMessages = nil
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: readTx,
 		},
@@ -679,7 +679,7 @@ func TestRuntimeResourceDictionaryValues_DictionaryTransfer(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: deploy,
 		},
@@ -692,7 +692,7 @@ func TestRuntimeResourceDictionaryValues_DictionaryTransfer(t *testing.T) {
 
 	assert.NotNil(t, accountCode)
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: setupTx,
 		},
@@ -720,7 +720,7 @@ func TestRuntimeResourceDictionaryValues_DictionaryTransfer(t *testing.T) {
 
 	loggedMessages = nil
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: transferTx,
 		},
@@ -816,7 +816,7 @@ func TestRuntimeResourceDictionaryValues_Removal(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: deployTx,
 		},
@@ -827,7 +827,7 @@ func TestRuntimeResourceDictionaryValues_Removal(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: setupTx,
 		},
@@ -838,7 +838,7 @@ func TestRuntimeResourceDictionaryValues_Removal(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: borrowTx,
 		},
@@ -849,7 +849,7 @@ func TestRuntimeResourceDictionaryValues_Removal(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: loadTx,
 		},
@@ -930,7 +930,7 @@ func TestRuntimeSResourceDictionaryValues_Destruction(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: deployTx,
 		},
@@ -941,7 +941,7 @@ func TestRuntimeSResourceDictionaryValues_Destruction(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 
 		Script{
 			Source: setupTx,
@@ -953,7 +953,7 @@ func TestRuntimeSResourceDictionaryValues_Destruction(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: testTx,
 		},
@@ -1071,7 +1071,7 @@ func TestRuntimeResourceDictionaryValues_Insertion(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: deployTx,
 		},
@@ -1082,7 +1082,7 @@ func TestRuntimeResourceDictionaryValues_Insertion(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: setupTx,
 		},
@@ -1093,7 +1093,7 @@ func TestRuntimeResourceDictionaryValues_Insertion(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: borrowTx,
 		},
@@ -1104,7 +1104,7 @@ func TestRuntimeResourceDictionaryValues_Insertion(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: loadTx,
 		},
@@ -1225,7 +1225,7 @@ func TestRuntimeResourceDictionaryValues_ValueTransferAndDestroy(t *testing.T) {
 	nextTransactionLocation := newTransactionLocationGenerator()
 
 	signers = []Address{signer1}
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: deployTx,
 		},
@@ -1237,7 +1237,7 @@ func TestRuntimeResourceDictionaryValues_ValueTransferAndDestroy(t *testing.T) {
 	require.NoError(t, err)
 
 	signers = []Address{signer2}
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: setupTx,
 		},
@@ -1249,7 +1249,7 @@ func TestRuntimeResourceDictionaryValues_ValueTransferAndDestroy(t *testing.T) {
 	require.NoError(t, err)
 
 	signers = []Address{signer3}
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: setupTx,
 		},
@@ -1261,7 +1261,7 @@ func TestRuntimeResourceDictionaryValues_ValueTransferAndDestroy(t *testing.T) {
 	require.NoError(t, err)
 
 	signers = []Address{signer2}
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: mintTx,
 		},
@@ -1273,7 +1273,7 @@ func TestRuntimeResourceDictionaryValues_ValueTransferAndDestroy(t *testing.T) {
 	require.NoError(t, err)
 
 	signers = []Address{signer2, signer3}
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: transferTx,
 		},
@@ -1285,7 +1285,7 @@ func TestRuntimeResourceDictionaryValues_ValueTransferAndDestroy(t *testing.T) {
 	require.NoError(t, err)
 
 	signers = []Address{signer3}
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: destroyTx,
 		},
@@ -1359,7 +1359,7 @@ func BenchmarkRuntimeResourceDictionaryValues(b *testing.B) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: deploy,
 		},
@@ -1372,7 +1372,7 @@ func BenchmarkRuntimeResourceDictionaryValues(b *testing.B) {
 
 	assert.NotNil(b, accountCode)
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: setupTx,
 		},
@@ -1400,7 +1400,7 @@ func BenchmarkRuntimeResourceDictionaryValues(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 
-		err = runtime.ExecuteTransaction(
+		err, _ = runtime.ExecuteTransaction(
 			Script{
 				Source: readTx,
 			},

@@ -349,7 +349,7 @@ func TestRuntimeError(t *testing.T) {
 		}
 
 		rt := newTestInterpreterRuntime()
-		err = rt.ExecuteTransaction(
+		err, _ = rt.ExecuteTransaction(
 			Script{
 				Source: []byte(codes[location.ID()]),
 			},

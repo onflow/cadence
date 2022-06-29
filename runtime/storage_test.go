@@ -178,7 +178,7 @@ func TestRuntimeStorageWrite(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: tx,
 		},
@@ -248,7 +248,7 @@ func TestRuntimeAccountStorage(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: script,
 		},
@@ -557,7 +557,7 @@ func TestRuntimePublicCapabilityBorrowTypeConfusion(t *testing.T) {
 		deployTestContractTx,
 	} {
 
-		err := runtime.ExecuteTransaction(
+		err, _ := runtime.ExecuteTransaction(
 			Script{
 				Source: deployTx,
 			},
@@ -606,7 +606,7 @@ transaction {
 }
 `
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: []byte(testTx),
 		},
@@ -642,7 +642,7 @@ func TestRuntimeStorageReadAndBorrow(t *testing.T) {
 
 	// Store a value and link a capability
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: []byte(`
               transaction {
@@ -783,7 +783,7 @@ func TestRuntimeTopShotContractDeployment(t *testing.T) {
 		return json.Decode(runtimeInterface, b)
 	}
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: utils.DeploymentTransaction(
 				"TopShot",
@@ -797,7 +797,7 @@ func TestRuntimeTopShotContractDeployment(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: utils.DeploymentTransaction(
 				"TopShotShardedCollection",
@@ -811,7 +811,7 @@ func TestRuntimeTopShotContractDeployment(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: utils.DeploymentTransaction(
 				"TopshotAdminReceiver",
@@ -889,7 +889,7 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
 
 	signerAddress = topShotAddress
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: deployTx,
 		},
@@ -902,7 +902,7 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
 
 	// Mint moments
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: []byte(`
               import TopShot from 0x0b2a3299cc857e29
@@ -956,7 +956,7 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
 
 	signerAddress = common.MustBytesToAddress([]byte{0x42})
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: []byte(setupTx),
 		},
@@ -1005,7 +1005,7 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source:    []byte(transferTx),
 			Arguments: [][]byte{encodedArg},
@@ -1177,7 +1177,7 @@ func TestRuntimeBatchMintAndTransfer(t *testing.T) {
 
 	signerAddress = contractAddress
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: deployTx,
 		},
@@ -1190,7 +1190,7 @@ func TestRuntimeBatchMintAndTransfer(t *testing.T) {
 
 	// Mint moments
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: []byte(`
               import Test from 0x1
@@ -1237,7 +1237,7 @@ func TestRuntimeBatchMintAndTransfer(t *testing.T) {
 
 	signerAddress = common.MustBytesToAddress([]byte{0x2})
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: []byte(setupTx),
 		},
@@ -1285,7 +1285,7 @@ func TestRuntimeBatchMintAndTransfer(t *testing.T) {
 	encodedArg, err := json.Encode(cadence.NewArray(values))
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source:    []byte(transferTx),
 			Arguments: [][]byte{encodedArg},
@@ -1319,7 +1319,7 @@ func TestRuntimeStorageUnlink(t *testing.T) {
 
 	// Store a value and link a capability
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: []byte(`
               transaction {
@@ -1345,7 +1345,7 @@ func TestRuntimeStorageUnlink(t *testing.T) {
 
 	// Unlink the capability
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: []byte(`
             transaction {
@@ -1366,7 +1366,7 @@ func TestRuntimeStorageUnlink(t *testing.T) {
 
 	// Get the capability after unlink
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: []byte(`
               transaction {
@@ -1436,7 +1436,7 @@ func TestRuntimeStorageSaveCapability(t *testing.T) {
 					typeArgument = fmt.Sprintf("<%s>", ty.ID())
 				}
 
-				err := runtime.ExecuteTransaction(
+				err, _ := runtime.ExecuteTransaction(
 					Script{
 						Source: []byte(fmt.Sprintf(
 							`
@@ -1535,7 +1535,7 @@ func TestRuntimeStorageReferenceCast(t *testing.T) {
 
 	// Deploy contract
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: deployTx,
 		},
@@ -1567,7 +1567,7 @@ func TestRuntimeStorageReferenceCast(t *testing.T) {
       }
     `
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: []byte(testTx),
 		},
@@ -1628,7 +1628,7 @@ func TestRuntimeStorageNonStorable(t *testing.T) {
 
 			nextTransactionLocation := newTransactionLocationGenerator()
 
-			err := runtime.ExecuteTransaction(
+			err, _ := runtime.ExecuteTransaction(
 				Script{
 					Source: tx,
 				},
@@ -1671,7 +1671,7 @@ func TestRuntimeStorageRecursiveReference(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: []byte(code),
 		},
@@ -1719,7 +1719,7 @@ func TestRuntimeStorageTransfer(t *testing.T) {
        }
     `)
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: storeTx,
 		},
@@ -1743,7 +1743,7 @@ func TestRuntimeStorageTransfer(t *testing.T) {
        }
     `)
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: transferTx,
 		},
@@ -1858,7 +1858,7 @@ func TestRuntimeResourceOwnerChange(t *testing.T) {
 
 	signers = []Address{address1}
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: deployTx,
 		},
@@ -1883,7 +1883,7 @@ func TestRuntimeResourceOwnerChange(t *testing.T) {
       }
     `)
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: storeTx,
 		},
@@ -1909,7 +1909,7 @@ func TestRuntimeResourceOwnerChange(t *testing.T) {
       }
     `)
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: transferTx,
 		},
@@ -2255,7 +2255,7 @@ transaction {
 
 	// Deploy contract
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: utils.DeploymentTransaction(
 				"Test",
@@ -2271,7 +2271,7 @@ transaction {
 
 	// Run transaction
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: []byte(tx),
 		},
@@ -2391,7 +2391,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		// Deploy contract
 
-		err := runtime.ExecuteTransaction(
+		err, _ := runtime.ExecuteTransaction(
 			Script{
 				Source: utils.DeploymentTransaction(
 					"TestContract",
@@ -2412,7 +2412,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 			common.MustBytesToAddress([]byte{0x2}),
 		}
 
-		err = runtime.ExecuteTransaction(
+		err, _ = runtime.ExecuteTransaction(
 			Script{
 				Source: []byte(tx),
 			},
@@ -2526,7 +2526,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		// Deploy contract
 
-		err := runtime.ExecuteTransaction(
+		err, _ := runtime.ExecuteTransaction(
 			Script{
 				Source: utils.DeploymentTransaction(
 					"TestContract",
@@ -2542,7 +2542,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		// Run transaction
 
-		err = runtime.ExecuteTransaction(
+		err, _ = runtime.ExecuteTransaction(
 			Script{
 				Source: []byte(tx),
 			},
@@ -2667,7 +2667,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		// Deploy contract
 
-		err := runtime.ExecuteTransaction(
+		err, _ := runtime.ExecuteTransaction(
 			Script{
 				Source: utils.DeploymentTransaction(
 					"TestContract",
@@ -2683,7 +2683,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		// Run transaction
 
-		err = runtime.ExecuteTransaction(
+		err, _ = runtime.ExecuteTransaction(
 			Script{
 				Source: []byte(tx),
 			},
@@ -2795,7 +2795,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		// Deploy contract
 
-		err := runtime.ExecuteTransaction(
+		err, _ := runtime.ExecuteTransaction(
 			Script{
 				Source: utils.DeploymentTransaction(
 					"TestContract",
@@ -2811,7 +2811,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		// Run transaction
 
-		err = runtime.ExecuteTransaction(
+		err, _ = runtime.ExecuteTransaction(
 			Script{
 				Source: []byte(tx),
 			},
@@ -2921,7 +2921,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		// Deploy contract
 
-		err := runtime.ExecuteTransaction(
+		err, _ := runtime.ExecuteTransaction(
 			Script{
 				Source: utils.DeploymentTransaction(
 					"TestContract",
@@ -2937,7 +2937,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		// Run transaction
 
-		err = runtime.ExecuteTransaction(
+		err, _ = runtime.ExecuteTransaction(
 			Script{
 				Source: []byte(tx),
 			},
@@ -2989,7 +2989,7 @@ func TestRuntimeNoAtreeSendOnClosedChannelDuringCommit(t *testing.T) {
 
 			nextTransactionLocation := newTransactionLocationGenerator()
 
-			err := runtime.ExecuteTransaction(
+			err, _ := runtime.ExecuteTransaction(
 				Script{
 					Source: []byte(code),
 				},
@@ -3023,7 +3023,7 @@ func TestStorageReadNoImplicitWrite(t *testing.T) {
 		},
 	}
 
-	err = rt.ExecuteTransaction(
+	err, _ = rt.ExecuteTransaction(
 		Script{
 			Source: []byte((`
               transaction {
@@ -3094,7 +3094,7 @@ func TestRuntimeStorageEnumCase(t *testing.T) {
 
 	// Deploy contract
 
-	err := runtime.ExecuteTransaction(
+	err, _ := runtime.ExecuteTransaction(
 		Script{
 			Source: utils.DeploymentTransaction(
 				"C",
@@ -3163,7 +3163,7 @@ func TestRuntimeStorageEnumCase(t *testing.T) {
 
 	// Store enum case
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: []byte(`
               import C from 0x1
@@ -3186,7 +3186,7 @@ func TestRuntimeStorageEnumCase(t *testing.T) {
 
 	// Load enum case
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: []byte(`
               import C from 0x1

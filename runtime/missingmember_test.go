@@ -2089,7 +2089,7 @@ pub contract ItemNFT: NonFungibleToken {
 		{"ItemNFT", itemContract},
 	} {
 
-		err = runtime.ExecuteTransaction(
+		err, _ = runtime.ExecuteTransaction(
 			Script{
 				Source: utils.DeploymentTransaction(
 					contract.name,
@@ -2108,7 +2108,7 @@ pub contract ItemNFT: NonFungibleToken {
 
 	signerAddress = flowTokenAddress
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: []byte(fmt.Sprintf(
 				`
@@ -2238,7 +2238,7 @@ transaction {
 
 	signerAddress = testAddress
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: []byte(initializeAccount),
 		},
@@ -2280,7 +2280,7 @@ transaction() {
 
 	signerAddress = contractsAddress
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: []byte(createGarmentDatas),
 		},
@@ -2322,7 +2322,7 @@ transaction() {
 
 	signerAddress = contractsAddress
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: []byte(createMaterialDatas),
 		},
@@ -2356,7 +2356,7 @@ transaction() {
 
 	signerAddress = contractsAddress
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: []byte(createItemAllocations),
 		},
@@ -2397,7 +2397,7 @@ transaction() {
 
 	signerAddress = contractsAddress
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: []byte(createItemDatas),
 		},
@@ -2450,7 +2450,7 @@ transaction(recipientAddr: Address, garmentDataID: UInt32, royaltyVaultAddr: Add
 
 	signerAddress = contractsAddress
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: []byte(mintGarment),
 			Arguments: [][]byte{
@@ -2508,7 +2508,7 @@ transaction(recipientAddr: Address, materialDataID: UInt32, royaltyVaultAddr: Ad
 
 	signerAddress = contractsAddress
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: []byte(mintMaterial),
 			Arguments: [][]byte{
@@ -2584,7 +2584,7 @@ transaction(recipientAddr: Address, name: String, garmentWithdrawID: UInt64, mat
 	itemString, err := cadence.NewString("item")
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: []byte(mintItem),
 			Arguments: [][]byte{
@@ -3901,7 +3901,7 @@ pub contract AuctionDutch {
 
 	signerAddress = flowTokenAddress
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: []byte(fmt.Sprintf(
 				`
@@ -3933,7 +3933,7 @@ pub contract AuctionDutch {
 		{"AuctionDutch", auctionDutchContract},
 	} {
 
-		err = runtime.ExecuteTransaction(
+		err, _ = runtime.ExecuteTransaction(
 			Script{
 				Source: utils.DeploymentTransaction(
 					contract.name,
@@ -4022,7 +4022,7 @@ transaction(recipient: Address, amount: UFix64) {
 
 		signerAddress = address
 
-		err = runtime.ExecuteTransaction(
+		err, _ = runtime.ExecuteTransaction(
 			Script{
 				Source: []byte(setupFlowTokenAccountTransaction),
 			},
@@ -4037,7 +4037,7 @@ transaction(recipient: Address, amount: UFix64) {
 
 		signerAddress = flowTokenAddress
 
-		err = runtime.ExecuteTransaction(
+		err, _ = runtime.ExecuteTransaction(
 			Script{
 				Source: []byte(mintTransaction),
 				Arguments: encodeArgs([]cadence.Value{
@@ -4088,7 +4088,7 @@ transaction(recipient: Address, amount: UFix64) {
 
 	signerAddress = contractsAddress
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: []byte(artCollectionTransaction),
 		},
@@ -4133,7 +4133,7 @@ transaction(recipient: Address, amount: UFix64) {
 
 	signerAddress = bidderAddress
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: []byte(bidTransaction),
 		},
@@ -4158,7 +4158,7 @@ transaction(recipient: Address, amount: UFix64) {
 
 	signerAddress = bidderAddress
 
-	err = runtime.ExecuteTransaction(
+	err, _ = runtime.ExecuteTransaction(
 		Script{
 			Source: []byte(cancelBidTransaction),
 		},
@@ -4745,7 +4745,7 @@ pub contract ExampleMarketplace {
 
 		signerAddress = contract.signer
 
-		err = runtime.ExecuteTransaction(
+		err, _ = runtime.ExecuteTransaction(
 			Script{
 				Source: utils.DeploymentTransaction(
 					contract.name,
@@ -4979,7 +4979,7 @@ transaction {
 	} {
 		signerAddress = tx.signer
 
-		err = runtime.ExecuteTransaction(
+		err, _ = runtime.ExecuteTransaction(
 			Script{
 				Source: []byte(tx.code),
 			},

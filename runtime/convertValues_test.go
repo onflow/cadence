@@ -1633,7 +1633,7 @@ func TestExportReferenceValue(t *testing.T) {
 
 		// Act
 
-		err = rt.ExecuteTransaction(
+		err, _ = rt.ExecuteTransaction(
 			Script{
 				Source: []byte(transaction),
 			},

@@ -228,7 +228,7 @@ func TestRuntimeContract(t *testing.T) {
 
 		t.Run("add", func(t *testing.T) {
 
-			err := runtime.ExecuteTransaction(
+			err, _ := runtime.ExecuteTransaction(
 				Script{
 					Source:    addTx,
 					Arguments: nil,
@@ -294,7 +294,7 @@ func TestRuntimeContract(t *testing.T) {
 			loggedMessages = nil
 			events = nil
 
-			err := runtime.ExecuteTransaction(
+			err, _ := runtime.ExecuteTransaction(
 				Script{
 					Source: addTx,
 				},
@@ -321,7 +321,7 @@ func TestRuntimeContract(t *testing.T) {
 			loggedMessages = nil
 			events = nil
 
-			err := runtime.ExecuteTransaction(
+			err, _ := runtime.ExecuteTransaction(
 				Script{
 					Source: updateTx,
 				},
@@ -365,7 +365,7 @@ func TestRuntimeContract(t *testing.T) {
 			loggedMessages = nil
 			events = nil
 
-			err := runtime.ExecuteTransaction(
+			err, _ := runtime.ExecuteTransaction(
 				Script{
 					Source: removeTx,
 				},
@@ -404,7 +404,7 @@ func TestRuntimeContract(t *testing.T) {
 			loggedMessages = nil
 			events = nil
 
-			err := runtime.ExecuteTransaction(
+			err, _ := runtime.ExecuteTransaction(
 				Script{
 					Source:    addTx,
 					Arguments: nil,
@@ -461,7 +461,7 @@ func TestRuntimeContract(t *testing.T) {
 			loggedMessages = nil
 			events = nil
 
-			err := runtime.ExecuteTransaction(
+			err, _ := runtime.ExecuteTransaction(
 				Script{
 					Source: removeAndAddTx,
 				},
@@ -720,7 +720,7 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 		{"C", contractC},
 	} {
 		tx := addTx(contract.name, contract.code)
-		err := runtime.ExecuteTransaction(
+		err, _ := runtime.ExecuteTransaction(
 			Script{
 				Source: tx,
 			},
@@ -744,7 +744,7 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 
 		loggedMessages = nil
 
-		err := runtime.ExecuteTransaction(
+		err, _ := runtime.ExecuteTransaction(
 			Script{
 				Source: tx,
 			},
@@ -769,7 +769,7 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 
 		loggedMessages = nil
 
-		err := runtime.ExecuteTransaction(
+		err, _ := runtime.ExecuteTransaction(
 			Script{
 				Source: tx,
 			},
@@ -794,7 +794,7 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 
 		loggedMessages = nil
 
-		err := runtime.ExecuteTransaction(
+		err, _ := runtime.ExecuteTransaction(
 			Script{
 				Source: tx,
 			},
