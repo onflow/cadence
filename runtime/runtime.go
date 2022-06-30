@@ -553,6 +553,8 @@ func (r *interpreterRuntime) InvokeContractFunction(contractLocation common.Addr
 		if err != nil {
 			return nil, newError(err, context)
 		}
+	} else {
+		inter.Storage = storage
 	}
 
 	// ensure the contract is loaded
