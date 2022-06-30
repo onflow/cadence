@@ -7,9 +7,9 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/mattn/go-isatty v0.0.14
 	github.com/mitchellh/mapstructure v1.4.3
-	github.com/onflow/cadence v0.24.3
-	github.com/onflow/flow-cli v0.35.1-0.20220608231110-c253ad512117
-	github.com/onflow/flow-go-sdk v0.26.0
+	github.com/onflow/cadence v0.24.6
+	github.com/onflow/flow-cli v0.37.1
+	github.com/onflow/flow-go-sdk v0.26.4
 	github.com/sourcegraph/jsonrpc2 v0.1.0
 	github.com/spf13/afero v1.8.2
 	github.com/stretchr/testify v1.7.1
@@ -74,9 +74,9 @@ require (
 	github.com/onflow/atree v0.3.1-0.20220531231935-525fbc26f40a // indirect
 	github.com/onflow/flow-core-contracts/lib/go/contracts v0.11.2-0.20220513155751-c4c1f8d59f83 // indirect
 	github.com/onflow/flow-core-contracts/lib/go/templates v0.11.2-0.20220513155751-c4c1f8d59f83 // indirect
-	github.com/onflow/flow-emulator v0.32.1-0.20220608220535-c3d005f9ac92 // indirect
+	github.com/onflow/flow-emulator v0.33.3 // indirect
 	github.com/onflow/flow-ft/lib/go/contracts v0.5.0 // indirect
-	github.com/onflow/flow-go v0.26.3 // indirect
+	github.com/onflow/flow-go v0.26.12 // indirect
 	github.com/onflow/flow-go/crypto v0.24.3 // indirect
 	github.com/onflow/flow/protobuf/go/flow v0.3.1 // indirect
 	github.com/onflow/sdks v0.4.4 // indirect
