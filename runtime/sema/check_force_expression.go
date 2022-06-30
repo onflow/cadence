@@ -40,7 +40,7 @@ func (checker *Checker) VisitForceExpression(expression *ast.ForceExpression) as
 		ResourceInvalidationKindMoveDefinite,
 	)
 
-	if checker.lintingEnabled {
+	if checker.extendedElaboration {
 		checker.Elaboration.ForceExpressionTypes[expression] = valueType
 	}
 

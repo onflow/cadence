@@ -21,7 +21,10 @@ package interpreter
 import (
 	"sync/atomic"
 
+	"github.com/bits-and-blooms/bitset"
+
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 )
 
 type Stop struct {
@@ -33,12 +36,14 @@ type Debugger struct {
 	pauseRequested uint32
 	stops          chan Stop
 	continues      chan struct{}
+	breakpoints    map[common.Location]*bitset.BitSet
 }
 
 func NewDebugger() *Debugger {
 	return &Debugger{
-		stops:     make(chan Stop),
-		continues: make(chan struct{}),
+		stops:       make(chan Stop),
+		continues:   make(chan struct{}),
+		breakpoints: map[common.Location]*bitset.BitSet{},
 	}
 }
 
@@ -46,9 +51,44 @@ func (d *Debugger) Stops() <-chan Stop {
 	return d.stops
 }
 
+func (d *Debugger) AddBreakpoint(location common.Location, line uint) {
+	breakpoints, ok := d.breakpoints[location]
+	if !ok {
+		breakpoints = bitset.New(1024)
+		d.breakpoints[location] = breakpoints
+	}
+	breakpoints.Set(line)
+}
+
+func (d *Debugger) RemoveBreakpoint(location common.Location, line uint) {
+	breakpoints, ok := d.breakpoints[location]
+	if !ok {
+		return
+	}
+	breakpoints.Clear(line)
+}
+
+func (d *Debugger) ClearBreakpoints() {
+	for location := range d.breakpoints { //nolint:maprangecheck
+		delete(d.breakpoints, location)
+	}
+}
+
+func (d *Debugger) ClearBreakpointsForLocation(location common.Location) {
+	delete(d.breakpoints, location)
+}
+
 func (d *Debugger) onStatement(interpreter *Interpreter, statement ast.Statement) {
 	if !atomic.CompareAndSwapUint32(&d.pauseRequested, 1, 0) {
-		return
+		breakpoints, ok := d.breakpoints[interpreter.Location]
+		if !ok {
+			return
+		}
+
+		startPosition := statement.StartPosition()
+		if !breakpoints.Test(uint(startPosition.Line)) {
+			return
+		}
 	}
 
 	d.stops <- Stop{
