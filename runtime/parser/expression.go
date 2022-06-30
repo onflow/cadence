@@ -1141,27 +1141,17 @@ func definePathExpression() {
 }
 
 func defineReferenceExpression() {
-	setExprNullDenotation(
-		lexer.TokenAmpersand,
-		func(p *parser, token lexer.Token) ast.Expression {
-			p.skipSpaceAndComments(true)
-			expression := parseExpression(p, exprLeftBindingPowerCasting-exprBindingPowerGap)
-
-			p.skipSpaceAndComments(true)
-
-			castingExpression, ok := expression.(*ast.CastingExpression)
-			if !ok {
-				panic(fmt.Errorf("expected casting expression"))
-			}
-
+	defineExpr(prefixExpr{
+		tokenType:    lexer.TokenAmpersand,
+		bindingPower: exprLeftBindingPowerUnaryPrefix,
+		nullDenotation: func(p *parser, right ast.Expression, tokenRange ast.Range) ast.Expression {
 			return ast.NewReferenceExpression(
 				p.memoryGauge,
-				castingExpression.Expression,
-				castingExpression.TypeAnnotation.Type,
-				token.StartPos,
+				right,
+				tokenRange.StartPos,
 			)
 		},
-	)
+	})
 }
 
 func defineMemberExpression() {
