@@ -22,11 +22,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/onflow/cadence"
 	"io/ioutil"
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/onflow/cadence"
 
 	"github.com/onflow/flow-cli/pkg/flowkit"
 	"github.com/onflow/flow-go-sdk"
@@ -647,7 +648,7 @@ func (i *FlowIntegration) storeAccountHelper(conn protocol.Conn, address flow.Ad
 	}
 
 	events := flowkit.EventsFromTransaction(txResult)
-	name := strings.ReplaceAll(events[0].Values["name"], `"`, "")
+	name := strings.ReplaceAll(events[0].Values["name"].String(), `"`, "")
 
 	newAccount = ClientAccount{
 		Name:    name,
