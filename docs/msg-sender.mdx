@@ -6,7 +6,7 @@ One question that every Solidity user asks when they start programming in Cadenc
 
 **"How do I get the account who authorized the transaction?"**
 
-In the Ethereum world, this account is referred to as `msg.sender`. 
+In the Ethereum world, this account is referred to as `msg.sender`.
 On Ethereum, checking `msg.sender` is used to modify a function's behaviour depending on who authorized it.
 Doing so is key to identity, permissions, ownership and security on Ethereum.
 
@@ -17,10 +17,10 @@ not least because each transaction can be signed by more than one account.
 This then translates to the transaction having access to all of the signers' accounts.
 A further difference from Ethereum is that while Ethereum and Flow both have accounts
 that can contain contract code and data, in Cadence the resources that individual users own (such as NFTs)
-are placed in the *user* account's storage area rather than the contract account's.
+are placed in the _user_ account's storage area rather than the contract account's.
 
 All of this means that a task that would be implemented
-by a single central contract checking `msg.sender` in Solidity 
+by a single central contract checking `msg.sender` in Solidity
 will require a different approach in Cadence. The design of Cadence is intentionally different;
 it follows a [Capability-based security model](https://en.wikipedia.org/wiki/Capability-based_security)
 instead of an [Access-Control List-based model](https://en.wikipedia.org/wiki/Access-control_list).
@@ -61,7 +61,7 @@ This is described in the Patterns document:
 Limiting a user's control of resources that they own except in exceptional circumstances
 is considered un-Flow-like. If you must implement allow/block listing of accounts
 for regulatory compliance, route calls from functions in your resources
-through `access(contract)` code on their contract that checksan admin-controlled dictionary
+through `access(contract)` code on their contract that checks an admin-controlled dictionary
 containing the information required to check for allowed or blocked accounts.
 
 This code could check the resource owner, but doing so is an antipattern (see below)
@@ -129,7 +129,7 @@ by the admin as function arguments.
 
 ## Checking Contract.account
 
-Contracts [have the member variable `let account: Account`]((/cadence/language/contracts/)),
+Contracts [have the member variable `let account: Account`](<(/cadence/language/contracts/)>),
 which is the account in which the contract is deployed:
 
 This is of limited use in replacing `msg.sender`, as it is essentially a tautology on Flow
@@ -138,6 +138,6 @@ because contracts are deployed to the account to which you deploy them.
 ## Checking Resource.owner
 
 Resources that are in storage (but not those that are located in-memory,
-e.g. when a resource has just been created) [have the implicit field `let owner: PublicAccount?`]((/cadence/language/resources/#resource-owner))
+e.g. when a resource has just been created) [have the implicit field `let owner: PublicAccount?`](<(/cadence/language/resources/#resource-owner)>)
 
 This can be defeated by using a newly created resource, as the owner will then be nil.
