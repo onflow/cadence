@@ -129,7 +129,7 @@ by the admin as function arguments.
 
 ## Checking Contract.account
 
-Contracts [have the member variable `let account: Account`]((/cadence/language/contracts/)),
+Contracts [have the member variable `let account: Account`](/cadence/language/contracts/#account-access),
 which is the account in which the contract is deployed:
 
 This is of limited use in replacing `msg.sender`, as it is essentially a tautology on Flow
@@ -138,6 +138,6 @@ because contracts are deployed to the account to which you deploy them.
 ## Checking Resource.owner
 
 Resources that are in storage (but not those that are located in-memory,
-e.g. when a resource has just been created) [have the implicit field `let owner: PublicAccount?`]((/cadence/language/resources/#resource-owner))
+e.g. when a resource has just been created) [have the implicit field `let owner: PublicAccount?`](/cadence/language/resources/#resource-owner)
 
 This can be defeated by using a newly created resource, as the owner will then be nil.
