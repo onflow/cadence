@@ -19,7 +19,6 @@
 package parser
 
 import (
-	"fmt"
 	"io/ioutil"
 	"strings"
 
@@ -96,18 +95,25 @@ func ParseTokenStream(
 
 	defer func() {
 		if r := recover(); r != nil {
-			var err error
 			switch r := r.(type) {
-			case errors.InternalError:
-				// do not treat internal errors as syntax errors
+			case ParseError:
+				// Report parser errors.
+				p.report(r)
+
+			// Do not treat non-parser errors as syntax errors.
+			case errors.InternalError, errors.UserError:
+				// Also do not wrap non-parser errors, that are already
+				// known cadence errors. i.e: internal errors / user errors.
+				// e.g: `errors.MemoryError`
 				panic(r)
 			case error:
-				err = r
+				// Any other error/panic is an internal error.
+				// Thus, wrap with an UnexpectedError to mark it as an internal error
+				// and propagate up the call stack.
+				panic(errors.NewUnexpectedErrorFromCause(r))
 			default:
-				err = fmt.Errorf("parser: %v", r)
+				panic(errors.NewUnexpectedError("parser: %v", r))
 			}
-
-			p.report(err)
 
 			result = nil
 			errs = p.errors
@@ -140,33 +146,30 @@ func ParseTokenStream(
 	result = parse(p)
 
 	if !p.current.Is(lexer.TokenEOF) {
-		p.report(fmt.Errorf("unexpected token: %s", p.current.Type))
+		p.reportSyntaxError("unexpected token: %s", p.current.Type)
 	}
 
 	return result, p.errors
 }
 
+func (p *parser) panicSyntaxError(message string, params ...any) {
+	panic(NewSyntaxError(p.current.StartPos, message, params...))
+}
+
+func (p *parser) reportSyntaxError(message string, params ...any) {
+	p.report(NewSyntaxError(p.current.StartPos, message, params...))
+}
+
 func (p *parser) report(errs ...error) {
 	for _, err := range errs {
 
-		// If the reported error is not yet a parse error,
-		// create a `SyntaxError` at the current position
-
-		var ok bool
-
-		// MemoryError should abort parsing
-		_, ok = err.(errors.MemoryError)
-		if ok {
-			panic(err)
-		}
-
-		var parseError ParseError
-		parseError, ok = err.(ParseError)
+		// Only `ParserError`s must be reported.
+		// If the reported error is not a parse error, then it's an internal error (go runtime errors),
+		// or a fatal error (e.g: MemoryError)
+		// Hence, terminate parsing.
+		parseError, ok := err.(ParseError)
 		if !ok {
-			parseError = &SyntaxError{
-				Pos:     p.current.StartPos,
-				Message: err.Error(),
-			}
+			panic(err)
 		}
 
 		// Add the errors to the buffered errors if buffering,
@@ -203,10 +206,10 @@ func (p *parser) next() {
 			}
 			parseError, ok := err.(ParseError)
 			if !ok {
-				parseError = &SyntaxError{
-					Pos:     token.StartPos,
-					Message: err.Error(),
-				}
+				parseError = NewSyntaxError(
+					token.StartPos,
+					err.Error(),
+				)
 			}
 			p.report(parseError)
 			continue
@@ -221,7 +224,7 @@ func (p *parser) next() {
 func (p *parser) mustOne(tokenType lexer.TokenType) lexer.Token {
 	t := p.current
 	if !t.Is(tokenType) {
-		panic(fmt.Errorf("expected token %s", tokenType))
+		p.panicSyntaxError("expected token %s", tokenType)
 	}
 	p.next()
 	return t
@@ -230,7 +233,7 @@ func (p *parser) mustOne(tokenType lexer.TokenType) lexer.Token {
 func (p *parser) mustOneString(tokenType lexer.TokenType, string string) lexer.Token {
 	t := p.current
 	if !t.IsString(tokenType, string) {
-		panic(fmt.Errorf("expected token %s with string value %s", tokenType, string))
+		p.panicSyntaxError("expected token %s with string value %s", tokenType, string)
 	}
 	p.next()
 	return t
@@ -290,11 +293,11 @@ const localTokenReplayCountLimit = 1 << 6
 // during a parse
 const globalTokenReplayCountLimit = 1 << 10
 
-func checkReplayCount(total, additional, limit uint, kind string) uint {
+func (p *parser) checkReplayCount(total, additional, limit uint, kind string) uint {
 	newTotal := total + additional
 	// Check for overflow (uint) and for exceeding the limit
 	if newTotal < total || newTotal > limit {
-		panic(fmt.Errorf("program too ambiguous, %s replay limit of %d tokens exceeded", kind, limit))
+		p.panicSyntaxError("program too ambiguous, %s replay limit of %d tokens exceeded", kind, limit)
 	}
 	return newTotal
 }
@@ -311,14 +314,14 @@ func (p *parser) replayBuffered() {
 
 	replayedCount := uint(cursor - backtrackCursor)
 
-	p.localReplayedTokensCount = checkReplayCount(
+	p.localReplayedTokensCount = p.checkReplayCount(
 		p.localReplayedTokensCount,
 		replayedCount,
 		localTokenReplayCountLimit,
 		"local",
 	)
 
-	p.globalReplayedTokensCount = checkReplayCount(
+	p.globalReplayedTokensCount = p.checkReplayCount(
 		p.globalReplayedTokensCount,
 		replayedCount,
 		globalTokenReplayCountLimit,

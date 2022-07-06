@@ -19,8 +19,6 @@
 package parser
 
 import (
-	"fmt"
-
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/parser/lexer"
@@ -58,10 +56,10 @@ func parseStatements(p *parser, isEndToken func(token lexer.Token) bool) (statem
 					previousLine := previousStatement.EndPosition(p.memoryGauge).Line
 					currentStartPos := statement.StartPosition()
 					if previousLine == currentStartPos.Line {
-						p.report(&SyntaxError{
-							Message: "statements on the same line must be separated with a semicolon",
-							Pos:     currentStartPos,
-						})
+						p.report(NewSyntaxError(
+							currentStartPos,
+							"statements on the same line must be separated with a semicolon",
+						))
 					}
 				}
 			}
@@ -336,10 +334,10 @@ func parseForStatement(p *parser) *ast.ForStatement {
 	p.skipSpaceAndComments(true)
 
 	if p.current.IsString(lexer.TokenIdentifier, keywordIn) {
-		p.report(fmt.Errorf(
+		p.reportSyntaxError(
 			"expected identifier, got keyword %q",
 			keywordIn,
-		))
+		)
 		p.next()
 	}
 
@@ -361,11 +359,11 @@ func parseForStatement(p *parser) *ast.ForStatement {
 	}
 
 	if !p.current.IsString(lexer.TokenIdentifier, keywordIn) {
-		p.report(fmt.Errorf(
+		p.reportSyntaxError(
 			"expected keyword %q, got %s",
 			keywordIn,
 			p.current.Type,
-		))
+		)
 	}
 
 	p.next()
@@ -546,12 +544,12 @@ func parseSwitchStatement(p *parser) *ast.SwitchStatement {
 func parseSwitchCases(p *parser) (cases []*ast.SwitchCase) {
 
 	reportUnexpected := func() {
-		p.report(fmt.Errorf(
+		p.reportSyntaxError(
 			"unexpected token: got %s, expected %q or %q",
 			p.current.Type,
 			keywordCase,
 			keywordDefault,
-		))
+		)
 		p.next()
 	}
 
@@ -609,11 +607,11 @@ func parseSwitchCase(p *parser, hasExpression bool) *ast.SwitchCase {
 	colonPos := p.current.StartPos
 
 	if !p.current.Is(lexer.TokenColon) {
-		p.report(fmt.Errorf(
+		p.reportSyntaxError(
 			"expected %s, got %s",
 			lexer.TokenColon,
 			p.current.Type,
-		))
+		)
 	}
 
 	p.next()
