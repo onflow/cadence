@@ -156,7 +156,7 @@ storagePath.toString()  // is "/storage/path"
 
 [More info](https://docs.onflow.org/cadence/language/accounts/#paths) on Paths
 
-## <- (lower than, hyphen) (Move operator)
+## `<-` (lower than, hyphen) (Move operator)
 
 The move operator `<-` replaces the assignment operator `=` in assignments that involve resources. To make assignment of resources explicit, the move operator `<-` must be used when:
 
@@ -186,7 +186,7 @@ let a <- [
 ]
 ```
 
-## <-! (lower than, hyphen, exclamation mark) (Force-assignment move operator)
+## `<-!` (lower than, hyphen, exclamation mark) (Force-assignment move operator)
 
 Assigns a resource value to an optional variable if the variable is `nil` (if it is not nil, it aborts)
 
@@ -199,7 +199,7 @@ var a: @R? <- nil
 a <-! create R()
 ```
 
-## <-> (lower than, hyphen, greater than) (Swap operator)
+## `<->` (lower than, hyphen, greater than) (Swap operator)
 
 `<->` is referred to as the Swap operator. It swaps values between the variables to the left and right of it. [More info](https://docs.onflow.org/cadence/language/operators/#swapping)
 
@@ -327,5 +327,4 @@ fun double(_ x: Int): Int {
     return x * 2
 }
 ```
-
 
