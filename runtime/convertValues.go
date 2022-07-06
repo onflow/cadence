@@ -894,8 +894,6 @@ func importValue(
 			v.Address,
 			v.BorrowType,
 		)
-	case cadence.Link:
-		return nil, errors.NewDefaultUserError("cannot import value of type %T", value)
 	default:
 		// This means the implementation has unhandled types.
 		// Hence, return an internal error
