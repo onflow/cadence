@@ -1327,7 +1327,7 @@ func defaultExprMetaLeftDenotation(
 	result ast.Expression,
 	done bool,
 ) {
-	if rightBindingPower >= exprLeftBindingPower(p, p.current) {
+	if rightBindingPower >= exprLeftBindingPower(p) {
 		return left, true
 	}
 
@@ -1344,7 +1344,8 @@ func defaultExprMetaLeftDenotation(
 	return result, false
 }
 
-func exprLeftBindingPower(p *parser, token lexer.Token) int {
+func exprLeftBindingPower(p *parser) int {
+	token := p.current
 	tokenType := token.Type
 	if tokenType == lexer.TokenIdentifier {
 		identifier, ok := token.Value.(string)

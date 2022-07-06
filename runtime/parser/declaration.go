@@ -390,7 +390,7 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 			location = common.NewStringLocation(p.memoryGauge, parsedString)
 
 		case lexer.TokenHexadecimalIntegerLiteral:
-			location = parseHexadecimalLocation(p, p.memoryGauge, p.current.Value.(string))
+			location = parseHexadecimalLocation(p)
 
 		default:
 			panic(errors.NewUnreachableError())
@@ -594,7 +594,9 @@ func isNextTokenCommaOrFrom(p *parser) bool {
 	}
 }
 
-func parseHexadecimalLocation(p *parser, memoryGauge common.MemoryGauge, literal string) common.AddressLocation {
+func parseHexadecimalLocation(p *parser) common.AddressLocation {
+	literal := p.current.Value.(string)
+
 	bytes := []byte(strings.ReplaceAll(literal[2:], "_", ""))
 
 	length := len(bytes)
@@ -616,7 +618,7 @@ func parseHexadecimalLocation(p *parser, memoryGauge common.MemoryGauge, literal
 		p.reportSyntaxError(err.Error())
 	}
 
-	return common.NewAddressLocation(memoryGauge, address, "")
+	return common.NewAddressLocation(p.memoryGauge, address, "")
 }
 
 // parseEventDeclaration parses an event declaration.
