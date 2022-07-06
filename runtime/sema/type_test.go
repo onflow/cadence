@@ -721,7 +721,7 @@ func TestCommonSuperType(t *testing.T) {
 			if r := recover(); r != nil {
 				err, _ := r.(error)
 				require.Error(t, err)
-				assert.Equal(t, "duplicate type tag: {32 0}", err.Error())
+				assert.Contains(t, err.Error(), "duplicate type tag: {32 0}")
 			}
 		}()
 

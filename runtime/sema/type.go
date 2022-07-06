@@ -6399,7 +6399,7 @@ func GetMembersAsMap(members []*Member) *StringMemberOrderedMap {
 		name := member.Identifier.Identifier
 		_, ok := membersMap.Get(name)
 		if ok {
-			panic(fmt.Errorf("invalid duplicate member: %s", name))
+			panic(errors.NewUnexpectedError("invalid duplicate member: %s", name))
 		}
 		membersMap.Set(name, member)
 	}

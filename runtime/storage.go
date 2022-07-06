@@ -19,7 +19,6 @@
 package runtime
 
 import (
-	"fmt"
 	"runtime"
 	"sort"
 
@@ -27,6 +26,7 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 )
 
@@ -110,7 +110,7 @@ func (s *Storage) GetStorageMap(
 		isStorageIndex := dataLength == storageIndexLength
 		if dataLength > 0 && !isStorageIndex {
 			// TODO: add dedicated error type?
-			panic(fmt.Errorf(
+			panic(errors.NewUnexpectedError(
 				"invalid storage index for storage map with domain '%s': expected length %d, got %d",
 				domain, storageIndexLength, dataLength,
 			))
@@ -361,7 +361,7 @@ func (s *Storage) CheckHealth() error {
 
 	for _, storageMapStorageID := range storageMapStorageIDs {
 		if _, ok := accountRootSlabIDs[storageMapStorageID]; !ok {
-			return fmt.Errorf("account storage map points to non-existing slab %s", storageMapStorageID)
+			return errors.NewUnexpectedError("account storage map points to non-existing slab %s", storageMapStorageID)
 		}
 
 		found[storageMapStorageID] = struct{}{}
@@ -391,7 +391,7 @@ func (s *Storage) CheckHealth() error {
 			return a.Compare(b) < 0
 		})
 
-		return fmt.Errorf("slabs not referenced from account storage: %s", unreferencedRootSlabIDs)
+		return errors.NewUnexpectedError("slabs not referenced from account storage: %s", unreferencedRootSlabIDs)
 	}
 
 	return nil

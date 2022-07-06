@@ -53,7 +53,7 @@ func (e Error) ChildErrors() []error {
 // ParserError
 
 type ParseError interface {
-	error
+	errors.UserError
 	ast.HasPosition
 	isParseError()
 }
@@ -66,8 +66,11 @@ type SyntaxError struct {
 }
 
 var _ ParseError = &SyntaxError{}
+var _ errors.UserError = &SyntaxError{}
 
 func (*SyntaxError) isParseError() {}
+
+func (*SyntaxError) IsUserError() {}
 
 func (e *SyntaxError) StartPosition() ast.Position {
 	return e.Pos
@@ -88,8 +91,11 @@ type JuxtaposedUnaryOperatorsError struct {
 }
 
 var _ ParseError = &JuxtaposedUnaryOperatorsError{}
+var _ errors.UserError = &JuxtaposedUnaryOperatorsError{}
 
 func (*JuxtaposedUnaryOperatorsError) isParseError() {}
+
+func (*JuxtaposedUnaryOperatorsError) IsUserError() {}
 
 func (e *JuxtaposedUnaryOperatorsError) StartPosition() ast.Position {
 	return e.Pos
@@ -113,8 +119,11 @@ type InvalidIntegerLiteralError struct {
 }
 
 var _ ParseError = &InvalidIntegerLiteralError{}
+var _ errors.UserError = &InvalidIntegerLiteralError{}
 
 func (*InvalidIntegerLiteralError) isParseError() {}
+
+func (*InvalidIntegerLiteralError) IsUserError() {}
 
 func (e *InvalidIntegerLiteralError) Error() string {
 	if e.IntegerLiteralKind == IntegerLiteralKindUnknown {
@@ -157,8 +166,11 @@ type ExpressionDepthLimitReachedError struct {
 }
 
 var _ ParseError = ExpressionDepthLimitReachedError{}
+var _ errors.UserError = ExpressionDepthLimitReachedError{}
 
 func (ExpressionDepthLimitReachedError) isParseError() {}
+
+func (ExpressionDepthLimitReachedError) IsUserError() {}
 
 func (e ExpressionDepthLimitReachedError) Error() string {
 	return fmt.Sprintf(
@@ -183,8 +195,11 @@ type TypeDepthLimitReachedError struct {
 }
 
 var _ ParseError = TypeDepthLimitReachedError{}
+var _ errors.UserError = TypeDepthLimitReachedError{}
 
 func (TypeDepthLimitReachedError) isParseError() {}
+
+func (TypeDepthLimitReachedError) IsUserError() {}
 
 func (e TypeDepthLimitReachedError) Error() string {
 	return fmt.Sprintf(
@@ -208,8 +223,11 @@ type MissingCommaInParameterListError struct {
 }
 
 var _ ParseError = &MissingCommaInParameterListError{}
+var _ errors.UserError = &MissingCommaInParameterListError{}
 
 func (*MissingCommaInParameterListError) isParseError() {}
+
+func (*MissingCommaInParameterListError) IsUserError() {}
 
 func (e *MissingCommaInParameterListError) StartPosition() ast.Position {
 	return e.Pos
