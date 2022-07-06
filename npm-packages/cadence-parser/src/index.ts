@@ -19,13 +19,6 @@
 import { go } from './go'
 import WebAssemblyInstantiatedSource = WebAssembly.WebAssemblyInstantiatedSource
 
-declare global {
-  namespace NodeJS {
-    interface Global {
-     [key: string]: any
-    }
-  }
-}
 
 export class CadenceParser {
 
@@ -62,13 +55,13 @@ export class CadenceParser {
     }
 
     // NOTE: don't await the promise, just ignore it, as it is only resolved when the program exists
-    go.run(instantiatedSource.instance).then(() => {})
+    go.run(instantiatedSource.instance).then(() => { })
   }
 
-  private constructor() {}
+  private constructor() { }
 
   public parse(code: string): any {
-    const result = global[CadenceParser.functionName('parse')](code)
+    const result = globalThis[CadenceParser.functionName('parse')](code)
     return JSON.parse(result)
   }
 
@@ -83,7 +76,7 @@ export class CadenceParser {
     // When the language server writes to a file, e.g. standard output or standard error,
     // then log the output in the console
 
-    global.fs.writeSync = function (fileDescriptor: number, buf: Uint8Array): number {
+    globalThis.fs.writeSync = function (fileDescriptor: number, buf: Uint8Array): number {
       // Get the currently buffered output for the given file descriptor,
       // or initialize it, if there is no buffered output yet.
 

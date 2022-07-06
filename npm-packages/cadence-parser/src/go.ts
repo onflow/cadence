@@ -1,66 +1,63 @@
 // Copyright 2018 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
-import getRandomValues from 'get-random-values';
-
-const encoder = new TextEncoder();
-const decoder = new TextDecoder("utf-8");
-
 const enosys = () => {
   const err = new Error("not implemented");
   (err as any).code = "ENOSYS";
   return err;
 };
 
-// NOTE: required and used by the WASM binary
-let outputBuf = "";
-(global as any).fs = {
-  constants: { O_WRONLY: -1, O_RDWR: -1, O_CREAT: -1, O_TRUNC: -1, O_APPEND: -1, O_EXCL: -1 }, // unused
-  writeSync(_fd, buf) {
-    outputBuf += decoder.decode(buf);
-    const nl = outputBuf.lastIndexOf("\n");
-    if (nl != -1) {
-      console.log(outputBuf.substr(0, nl));
-      outputBuf = outputBuf.substr(nl + 1);
-    }
-    return buf.length;
-  },
-  write(fd, buf, offset, length, position, callback) {
-    if (offset !== 0 || length !== buf.length || position !== null) {
-      callback(enosys());
-      return;
-    }
-    const n = this.writeSync(fd, buf);
-    callback(null, n);
-  },
-  chmod(_path, _mode, callback) { callback(enosys()); },
-  chown(_path, _uid, _gid, callback) { callback(enosys()); },
-  close(_fd, callback) { callback(enosys()); },
-  fchmod(_fd, _mode, callback) { callback(enosys()); },
-  fchown(_fd, _uid, _gid, callback) { callback(enosys()); },
-  fstat(_fd, callback) { callback(enosys()); },
-  fsync(_fd, callback) { callback(null); },
-  ftruncate(_fd, _length, callback) { callback(enosys()); },
-  lchown(_path, _uid, _gid, callback) { callback(enosys()); },
-  link(_path, _link, callback) { callback(enosys()); },
-  lstat(_path, callback) { callback(enosys()); },
-  mkdir(_path, _perm, callback) { callback(enosys()); },
-  open(_path, _flags, _mode, callback) { callback(enosys()); },
-  read(_fd, _buffer, _offset, _length, _position, callback) { callback(enosys()); },
-  readdir(_path, callback) { callback(enosys()); },
-  readlink(_path, callback) { callback(enosys()); },
-  rename(_from, _to, callback) { callback(enosys()); },
-  rmdir(_path, callback) { callback(enosys()); },
-  stat(_path, callback) { callback(enosys()); },
-  symlink(_path, _link, callback) { callback(enosys()); },
-  truncate(_path, _length, callback) { callback(enosys()); },
-  unlink(_path, callback) { callback(enosys()); },
-  utimes(_path, _atime, _mtime, callback) { callback(enosys()); },
-};
+const IS_NODE = typeof process !== 'undefined' && process.versions != null && process.versions.node != null
 
-// NOTE: required and used by the WASM binary
-if (!global.process) {
-  (global as any).process = {
+if (!globalThis.fs) {
+  let outputBuf = "";
+  globalThis.fs = {
+    constants: { O_WRONLY: -1, O_RDWR: -1, O_CREAT: -1, O_TRUNC: -1, O_APPEND: -1, O_EXCL: -1 }, // unused
+    writeSync(_fd, buf) {
+      outputBuf += decoder.decode(buf);
+      const nl = outputBuf.lastIndexOf("\n");
+      if (nl != -1) {
+        console.log(outputBuf.substr(0, nl));
+        outputBuf = outputBuf.substr(nl + 1);
+      }
+      return buf.length;
+    },
+    write(fd, buf, offset, length, position, callback) {
+      if (offset !== 0 || length !== buf.length || position !== null) {
+        callback(enosys());
+        return;
+      }
+      const n = this.writeSync(fd, buf);
+      callback(null, n);
+    },
+    chmod(_path, _mode, callback) { callback(enosys()); },
+    chown(_path, _uid, _gid, callback) { callback(enosys()); },
+    close(_fd, callback) { callback(enosys()); },
+    fchmod(_fd, _mode, callback) { callback(enosys()); },
+    fchown(_fd, _uid, _gid, callback) { callback(enosys()); },
+    fstat(_fd, callback) { callback(enosys()); },
+    fsync(_fd, callback) { callback(null); },
+    ftruncate(_fd, _length, callback) { callback(enosys()); },
+    lchown(_path, _uid, _gid, callback) { callback(enosys()); },
+    link(_path, _link, callback) { callback(enosys()); },
+    lstat(_path, callback) { callback(enosys()); },
+    mkdir(_path, _perm, callback) { callback(enosys()); },
+    open(_path, _flags, _mode, callback) { callback(enosys()); },
+    read(_fd, _buffer, _offset, _length, _position, callback) { callback(enosys()); },
+    readdir(_path, callback) { callback(enosys()); },
+    readlink(_path, callback) { callback(enosys()); },
+    rename(_from, _to, callback) { callback(enosys()); },
+    rmdir(_path, callback) { callback(enosys()); },
+    stat(_path, callback) { callback(enosys()); },
+    symlink(_path, _link, callback) { callback(enosys()); },
+    truncate(_path, _length, callback) { callback(enosys()); },
+    unlink(_path, callback) { callback(enosys()); },
+    utimes(_path, _atime, _mtime, callback) { callback(enosys()); },
+  };
+}
+
+if (!globalThis.process) {
+  (globalThis as any).process = {
     getuid() { return -1; },
     getgid() { return -1; },
     geteuid() { return -1; },
@@ -74,12 +71,57 @@ if (!global.process) {
   }
 }
 
+if (!globalThis.performance) {
+  if (IS_NODE) {
+    (globalThis as any).performance = {
+      now() {
+        const [sec, nsec] = process.hrtime();
+        return sec * 1000 + nsec / 1000000;
+      },
+    };
+  } else {
+    throw new Error("globalThis.performance is not available, polyfill required");
+  }
+}
+
+if (!globalThis.crypto) {
+  if (IS_NODE) {
+    const crypto = require("crypto");
+    (globalThis as any).crypto = {
+      getRandomValues(b) {
+        crypto.randomFillSync(b);
+      },
+    };
+  } else {
+    throw new Error("globalThis.crypto is not available, polyfill required");
+  }
+}
+
+if (!globalThis.TextEncoder) {
+  if (IS_NODE) {
+    globalThis.TextEncoder = require("util").TextEncoder;
+  } else {
+    throw new Error("globalThis.TextEncoder is not available, polyfill required");
+  }
+}
+
+if (!globalThis.TextDecoder) {
+  if (IS_NODE) {
+    globalThis.TextDecoder = require("util").TextDecoder;
+  } else {
+    throw new Error("globalThis.TextDecoder is not available, polyfill required");
+  }
+}
+
+const encoder = new (TextEncoder as any)("utf-8");
+const decoder = new TextDecoder("utf-8");
+
 class Go {
   argv: string[];
   env: Record<string, any>;
-  exit: (code: any) => void;
+  exit: (code?: number) => void;
   _exitPromise: Promise<unknown>;
-  _resolveExitPromise: ((...args: any) => void) | undefined;
+  _resolveExitPromise?: ((...args: any) => void);
   _pendingEvent: any;
   _scheduledTimeouts: Map<any, any>;
   _nextCallbackTimeoutID: number;
@@ -145,12 +187,12 @@ class Go {
       "syscall/js.copyBytesToJS": (sp: any) => void; debug: (value: any) => void;
     };
   };
-  exited: boolean | undefined;
+  exited?: boolean;
 
   constructor() {
     this.argv = ["js"];
     this.env = {};
-    this.exit = (code) => {
+    this.exit = IS_NODE ? process.exit : (code?: number) => {
       if (code !== 0) {
         console.warn("exit code:", code);
       }
@@ -162,18 +204,18 @@ class Go {
     this._scheduledTimeouts = new Map();
     this._nextCallbackTimeoutID = 1;
 
-    const setInt64 = (addr, v) => {
+    const setInt64 = (addr: number, v: any) => {
       this.mem.setUint32(addr + 0, v, true);
       this.mem.setUint32(addr + 4, Math.floor(v / 4294967296), true);
     }
 
-    const getInt64 = (addr) => {
+    const getInt64 = (addr: number) => {
       const low = this.mem.getUint32(addr + 0, true);
       const high = this.mem.getInt32(addr + 4, true);
       return low + high * 4294967296;
     }
 
-    const loadValue = (addr) => {
+    const loadValue = (addr: number) => {
       const f = this.mem.getFloat64(addr, true);
       if (f === 0) {
         return undefined;
@@ -186,7 +228,7 @@ class Go {
       return this._values[id];
     }
 
-    const storeValue = (addr, v) => {
+    const storeValue = (addr: number, v: any) => {
       const nanHead = 0x7FF80000;
 
       if (typeof v === "number" && v !== 0) {
@@ -236,13 +278,13 @@ class Go {
       this.mem.setUint32(addr, id, true);
     }
 
-    const loadSlice = (addr) => {
+    const loadSlice = (addr: number) => {
       const array = getInt64(addr + 0);
       const len = getInt64(addr + 8);
       return new Uint8Array(this._inst.exports.mem.buffer, array, len);
     }
 
-    const loadSliceOfValues = (addr) => {
+    const loadSliceOfValues = (addr: number) => {
       const array = getInt64(addr + 0);
       const len = getInt64(addr + 8);
       const a = new Array(len);
@@ -252,7 +294,7 @@ class Go {
       return a;
     }
 
-    const loadString = (addr) => {
+    const loadString = (addr: number) => {
       const saddr = getInt64(addr + 0);
       const len = getInt64(addr + 8);
       return decoder.decode(new DataView(this._inst.exports.mem.buffer, saddr, len));
@@ -285,7 +327,7 @@ class Go {
           const fd = getInt64(sp + 8);
           const p = getInt64(sp + 16);
           const n = this.mem.getInt32(sp + 24, true);
-          global.fs.writeSync(fd, new Uint8Array(this._inst.exports.mem.buffer, p, n));
+          globalThis.fs.writeSync(fd, new Uint8Array(this._inst.exports.mem.buffer, p, n));
         },
 
         // func resetMemoryDataView()
@@ -339,7 +381,7 @@ class Go {
         // func getRandomData(r []byte)
         "runtime.getRandomData": (sp) => {
           sp >>>= 0;
-          getRandomValues(loadSlice(sp + 8));
+          globalThis.crypto.getRandomValues(loadSlice(sp + 8));
         },
 
         // func finalizeRef(v ref)
@@ -509,7 +551,7 @@ class Go {
     };
   }
 
-  async run(instance) {
+  async run(instance: WebAssembly.Instance) {
     if (!(instance instanceof WebAssembly.Instance)) {
       throw new Error("Go.run: WebAssembly.Instance expected");
     }
@@ -521,7 +563,7 @@ class Go {
       null,
       true,
       false,
-      global,
+      globalThis,
       this,
     ];
     this._goRefCounts = new Array(this._values.length).fill(Infinity); // number of references that Go has to a JS value, indexed by reference id
@@ -530,9 +572,9 @@ class Go {
       [null, 2],
       [true, 3],
       [false, 4],
-      [global, 5],
+      [globalThis, 5],
       [this, 6],
-    ] as [unknown, number][]);
+    ] as [any, number][]);
     this._idPool = [];   // unused ids that have been garbage collected
     this.exited = false; // whether the Go program has exited
 
@@ -553,7 +595,7 @@ class Go {
     const argc = this.argv.length;
 
     const argvPtrs: number[] = [];
-    this.argv.forEach((arg) => {
+    this.argv.forEach((arg: string) => {
       argvPtrs.push(strPtr(arg));
     });
     argvPtrs.push(0);
@@ -565,7 +607,7 @@ class Go {
     argvPtrs.push(0);
 
     const argv = offset;
-    argvPtrs.forEach((ptr) => {
+    argvPtrs.forEach((ptr: number) => {
       this.mem.setUint32(offset, ptr, true);
       this.mem.setUint32(offset + 4, 0, true);
       offset += 8;
@@ -573,9 +615,9 @@ class Go {
 
     // The linker guarantees global data starts from at least wasmMinDataAddr.
     // Keep in sync with cmd/link/internal/ld/data.go:wasmMinDataAddr.
-    const wasmMinDataAddr = 4096 + 4096;
+    const wasmMinDataAddr = 4096 + 8192;
     if (offset >= wasmMinDataAddr) {
-      throw new Error("command line too long");
+      throw new Error("total length of command line and environment variables exceeds limit");
     }
 
     this._inst.exports.run(argc, argv);
@@ -596,7 +638,7 @@ class Go {
   }
 
   _makeFuncWrapper(id: number) {
-    return (...args: unknown[]) => {
+    return (...args: any) => {
       const event = { id: id, this: this, args, result: null };
       this._pendingEvent = event;
       this._resume();

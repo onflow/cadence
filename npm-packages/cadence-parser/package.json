@@ -35,8 +35,5 @@
   },
   "files": [
     "dist/**/*"
-  ],
-  "dependencies": {
-    "get-random-values": "^2.0.0"
-  }
+  ]
 }
