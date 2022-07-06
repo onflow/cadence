@@ -110,8 +110,6 @@ var exprLeftDenotations = [lexer.TokenMax]exprLeftDenotationFunc{}
 var exprMetaLeftDenotations = [lexer.TokenMax]exprMetaLeftDenotationFunc{}
 
 func defineExpr(def any) {
-	var err error
-
 	switch def := def.(type) {
 	case infixExpr:
 		tokenType := def.tokenType
@@ -123,7 +121,7 @@ func defineExpr(def any) {
 			rightBindingPower--
 		}
 
-		err = setExprLeftDenotation(
+		setExprLeftDenotation(
 			tokenType,
 			func(parser *parser, _ lexer.Token, left ast.Expression) (ast.Expression, error) {
 				right, err := parseExpression(parser, rightBindingPower)
@@ -185,7 +183,7 @@ func defineExpr(def any) {
 	case postfixExpr:
 		tokenType := def.tokenType
 		setExprLeftBindingPower(tokenType, def.bindingPower)
-		err = setExprLeftDenotation(
+		setExprLeftDenotation(
 			tokenType,
 			func(p *parser, token lexer.Token, left ast.Expression) (ast.Expression, error) {
 				return def.leftDenotation(p, left, token.Range)
@@ -194,13 +192,6 @@ func defineExpr(def any) {
 
 	default:
 		panic(errors.NewUnreachableError())
-	}
-
-	// It is OK to panic here, since this method is only called inside `init()`.
-	// Returning the error from here explodes the error handling in `init` function.
-	// So panic it here, which has the same effect.
-	if err != nil {
-		panic(err)
 	}
 }
 
@@ -231,17 +222,16 @@ func setExprIdentifierLeftBindingPower(keyword string, power int) {
 	exprIdentifierLeftBindingPowers[keyword] = power
 }
 
-func setExprLeftDenotation(tokenType lexer.TokenType, leftDenotation exprLeftDenotationFunc) error {
+func setExprLeftDenotation(tokenType lexer.TokenType, leftDenotation exprLeftDenotationFunc) {
 	current := exprLeftDenotations[tokenType]
 	if current != nil {
-		return NewUnpositionedSyntaxError(
+		panic(NewUnpositionedSyntaxError(
 			"expression left denotation for token %s already exists",
 			tokenType,
-		)
+		))
 	}
 
 	exprLeftDenotations[tokenType] = leftDenotation
-	return nil
 }
 
 func setExprMetaLeftDenotation(tokenType lexer.TokenType, metaLeftDenotation exprMetaLeftDenotationFunc) {
@@ -358,10 +348,7 @@ func init() {
 		operation:        ast.OperationMod,
 	})
 
-	err := defineCastingExpression()
-	if err != nil {
-		panic(err)
-	}
+	defineCastingExpression()
 
 	defineExpr(literalExpr{
 		tokenType: lexer.TokenBinaryIntegerLiteral,
@@ -542,33 +529,14 @@ func init() {
 	})
 
 	defineNestedExpression()
-	err = defineInvocationExpression()
-	if err != nil {
-		panic(err)
-	}
-
+	defineInvocationExpression()
 	defineArrayExpression()
 	defineDictionaryExpression()
-
-	err = defineIndexExpression()
-	if err != nil {
-		panic(err)
-	}
-
+	defineIndexExpression()
 	definePathExpression()
-
-	err = defineConditionalExpression()
-	if err != nil {
-		panic(err)
-	}
-
+	defineConditionalExpression()
 	defineReferenceExpression()
-
-	err = defineMemberExpression()
-	if err != nil {
-		panic(err)
-	}
-
+	defineMemberExpression()
 	defineIdentifierExpression()
 
 	setExprNullDenotation(lexer.TokenEOF, func(parser *parser, token lexer.Token) (ast.Expression, error) {
@@ -608,7 +576,6 @@ func defineLessThanOrTypeArgumentsExpression() {
 		lexer.TokenLess,
 		func(p *parser, rightBindingPower int, left ast.Expression) (result ast.Expression, err error, done bool) {
 
-			var isInvocation bool
 			var typeArguments []*ast.TypeAnnotation
 
 			// Start buffering before skipping the `<` token,
@@ -628,12 +595,11 @@ func defineLessThanOrTypeArgumentsExpression() {
 			// and the start of an argument list, i.e. the open paren token `(`.
 			//
 			// This parse may fail, in which case we just ignore the error,
-			// with the exception of fatal errors.
+			// except for fatal errors.
 
 			var argumentsStartPos ast.Position
 
-			// Ignore the error
-			_ = func() error {
+			err = func() error {
 				defer func() {
 					err := recover()
 					// MemoryError should abort parsing
@@ -661,12 +627,11 @@ func defineLessThanOrTypeArgumentsExpression() {
 
 				argumentsStartPos = parenOpenToken.EndPos
 
-				isInvocation = true
-
 				return nil
 			}()
 
-			if isInvocation {
+			// `err` is nil means the expression is an invocation
+			if err == nil {
 
 				// The expression was determined to be an invocation.
 				// Still, it should have maybe not been parsed if the right binding power
@@ -911,10 +876,10 @@ func parseFunctionExpression(p *parser, token lexer.Token) (*ast.FunctionExpress
 	), nil
 }
 
-func defineCastingExpression() error {
+func defineCastingExpression() {
 
 	setExprIdentifierLeftBindingPower(keywordAs, exprLeftBindingPowerCasting)
-	err := setExprLeftDenotation(
+	setExprLeftDenotation(
 		lexer.TokenIdentifier,
 		func(parser *parser, t lexer.Token, left ast.Expression) (ast.Expression, error) {
 			switch t.Value.(string) {
@@ -936,10 +901,6 @@ func defineCastingExpression() error {
 			}
 		},
 	)
-
-	if err != nil {
-		return err
-	}
 
 	for _, tokenOperation := range []struct {
 		token     lexer.TokenType
@@ -978,13 +939,8 @@ func defineCastingExpression() error {
 		})(operation)
 
 		setExprLeftBindingPower(tokenType, exprLeftBindingPowerCasting)
-		err = setExprLeftDenotation(tokenType, leftDenotation)
-		if err != nil {
-			return err
-		}
+		setExprLeftDenotation(tokenType, leftDenotation)
 	}
-
-	return nil
 }
 
 func parseCreateExpressionRemainder(p *parser, token lexer.Token) (*ast.CreateExpression, error) {
@@ -1004,10 +960,10 @@ func parseCreateExpressionRemainder(p *parser, token lexer.Token) (*ast.CreateEx
 //
 //     invocation : '(' ( argument ( ',' argument )* )? ')'
 //
-func defineInvocationExpression() error {
+func defineInvocationExpression() {
 	setExprLeftBindingPower(lexer.TokenParenOpen, exprLeftBindingPowerAccess)
 
-	return setExprLeftDenotation(
+	setExprLeftDenotation(
 		lexer.TokenParenOpen,
 		func(p *parser, token lexer.Token, left ast.Expression) (ast.Expression, error) {
 			arguments, endPos, err := parseArgumentListRemainder(p)
@@ -1241,9 +1197,9 @@ func defineDictionaryExpression() {
 	)
 }
 
-func defineIndexExpression() error {
+func defineIndexExpression() {
 	setExprLeftBindingPower(lexer.TokenBracketOpen, exprLeftBindingPowerAccess)
-	return setExprLeftDenotation(
+	setExprLeftDenotation(
 		lexer.TokenBracketOpen,
 		func(p *parser, token lexer.Token, left ast.Expression) (ast.Expression, error) {
 			firstIndexExpr, err := parseExpression(p, lowestBindingPower)
@@ -1270,9 +1226,9 @@ func defineIndexExpression() error {
 	)
 }
 
-func defineConditionalExpression() error {
+func defineConditionalExpression() {
 	setExprLeftBindingPower(lexer.TokenQuestionMark, exprLeftBindingPowerTernary)
-	return setExprLeftDenotation(
+	setExprLeftDenotation(
 		lexer.TokenQuestionMark,
 		func(p *parser, _ lexer.Token, left ast.Expression) (ast.Expression, error) {
 			testExpression := left
@@ -1344,21 +1300,18 @@ func defineReferenceExpression() {
 	})
 }
 
-func defineMemberExpression() error {
+func defineMemberExpression() {
 
 	setExprLeftBindingPower(lexer.TokenDot, exprLeftBindingPowerAccess)
-	err := setExprLeftDenotation(
+	setExprLeftDenotation(
 		lexer.TokenDot,
 		func(p *parser, token lexer.Token, left ast.Expression) (ast.Expression, error) {
 			return parseMemberAccess(p, token, left, false), nil
 		},
 	)
-	if err != nil {
-		return err
-	}
 
 	setExprLeftBindingPower(lexer.TokenQuestionMarkDot, exprLeftBindingPowerAccess)
-	return setExprLeftDenotation(
+	setExprLeftDenotation(
 		lexer.TokenQuestionMarkDot,
 		func(p *parser, token lexer.Token, left ast.Expression) (ast.Expression, error) {
 			return parseMemberAccess(p, token, left, true), nil

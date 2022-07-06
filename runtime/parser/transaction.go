@@ -51,12 +51,17 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 	// Parameter list (optional)
 
 	var parameterList *ast.ParameterList
+	var err error
+
 	if p.current.Is(lexer.TokenParenOpen) {
-		parameterList, _ = parseParameterList(p)
+		parameterList, err = parseParameterList(p)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	p.skipSpaceAndComments(true)
-	_, err := p.mustOne(lexer.TokenBraceOpen)
+	_, err = p.mustOne(lexer.TokenBraceOpen)
 	if err != nil {
 		return nil, err
 	}
