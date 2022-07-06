@@ -59,8 +59,10 @@ func ParseLiteral(
 }
 
 // ParseLiteralArgumentList parses an argument list with literals, that should have the given types.
-//
 // Returns an error if the code is not a valid argument list, or the arguments are not literals.
+//
+// Note: This method is not used directly within Cadence, but used by downstream dependencies
+// such as CLI, playground, etc. Hence, shouldn't be moved to test.
 //
 func ParseLiteralArgumentList(
 	argumentList string,
