@@ -31,7 +31,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	runtimeErrors "github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/parser2"
+	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 )
@@ -355,6 +355,7 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val 
 		functionEntryPointType.Parameters,
 		script.Arguments,
 		context.Interface,
+		interpreter.ReturnEmptyLocationRange,
 	)
 
 	value, inter, err := r.interpret(
@@ -373,7 +374,7 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val 
 
 	// Export before committing storage
 
-	result, err := exportValue(value)
+	result, err := exportValue(value, interpreter.ReturnEmptyLocationRange)
 	if err != nil {
 		return nil, newError(err, context)
 	}
@@ -414,6 +415,7 @@ func scriptExecutionFunction(
 	parameters []*sema.Parameter,
 	arguments [][]byte,
 	runtimeInterface Interface,
+	getLocationRange func() interpreter.LocationRange,
 ) interpretFunc {
 	return func(inter *interpreter.Interpreter) (value interpreter.Value, err error) {
 
@@ -428,8 +430,10 @@ func scriptExecutionFunction(
 		values, err := validateArgumentParams(
 			inter,
 			runtimeInterface,
+			interpreter.ReturnEmptyLocationRange,
 			arguments,
-			parameters)
+			parameters,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -635,7 +639,7 @@ func (r *interpreterRuntime) InvokeContractFunction(
 	}
 
 	var exportedValue cadence.Value
-	exportedValue, err = ExportValue(value, inter)
+	exportedValue, err = ExportValue(value, inter, interpreter.ReturnEmptyLocationRange)
 	if err != nil {
 		return nil, newError(err, context)
 	}
@@ -878,6 +882,7 @@ func (r *interpreterRuntime) transactionExecutionFunction(
 		values, err := validateArgumentParams(
 			inter,
 			runtimeInterface,
+			interpreter.ReturnEmptyLocationRange,
 			arguments,
 			parameters,
 		)
@@ -894,6 +899,7 @@ func (r *interpreterRuntime) transactionExecutionFunction(
 func validateArgumentParams(
 	inter *interpreter.Interpreter,
 	runtimeInterface Interface,
+	getLocationRange func() interpreter.LocationRange,
 	arguments [][]byte,
 	parameters []*sema.Parameter,
 ) (
@@ -938,7 +944,12 @@ func validateArgumentParams(
 		var arg interpreter.Value
 		panicError := userPanicToError(func() {
 			// if importing an invalid public key, this call panics
-			arg, err = importValue(inter, value, parameterType)
+			arg, err = importValue(
+				inter,
+				getLocationRange,
+				value,
+				parameterType,
+			)
 		})
 
 		if panicError != nil {
@@ -1100,7 +1111,7 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 	var parse *ast.Program
 	reportMetric(
 		func() {
-			parse, err = parser2.ParseProgram(string(code), memoryGauge)
+			parse, err = parser.ParseProgram(string(code), memoryGauge)
 		},
 		context.Interface,
 		func(metrics Metrics, duration time.Duration) {
@@ -1716,7 +1727,12 @@ func (r *interpreterRuntime) emitEvent(
 		Fields: fields,
 	}
 
-	exportedEvent, err := exportEvent(inter, eventValue, seenReferences{})
+	exportedEvent, err := exportEvent(
+		inter,
+		eventValue,
+		getLocationRange,
+		seenReferences{},
+	)
 	if err != nil {
 		return err
 	}
@@ -1731,6 +1747,7 @@ func (r *interpreterRuntime) emitAccountEvent(
 	eventType *sema.CompositeType,
 	runtimeInterface Interface,
 	eventFields []exportableValue,
+	getLocationRange func() interpreter.LocationRange,
 ) {
 	eventValue := exportableEvent{
 		Type:   eventType,
@@ -1749,7 +1766,12 @@ func (r *interpreterRuntime) emitAccountEvent(
 		))
 	}
 
-	exportedEvent, err := exportEvent(gauge, eventValue, seenReferences{})
+	exportedEvent, err := exportEvent(
+		gauge,
+		eventValue,
+		getLocationRange,
+		seenReferences{},
+	)
 	if err != nil {
 		panic(err)
 	}
@@ -1823,6 +1845,7 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 			[]exportableValue{
 				newExportableValue(addressValue, inter),
 			},
+			getLocationRange,
 		)
 
 		return r.newAuthAccountValue(
@@ -1998,6 +2021,7 @@ func (r *interpreterRuntime) newAddPublicKeyFunction(
 					newExportableValue(addressValue, inter),
 					newExportableValue(publicKeyValue, inter),
 				},
+				invocation.GetLocationRange,
 			)
 
 			return interpreter.VoidValue{}
@@ -2047,6 +2071,7 @@ func (r *interpreterRuntime) newRemovePublicKeyFunction(
 					newExportableValue(addressValue, inter),
 					newExportableValue(publicKeyValue, inter),
 				},
+				invocation.GetLocationRange,
 			)
 
 			return interpreter.VoidValue{}
@@ -2346,6 +2371,7 @@ func (r *interpreterRuntime) getBlockAtHeight(
 	height uint64,
 	runtimeInterface Interface,
 	inter *interpreter.Interpreter,
+	getLocationRange func() interpreter.LocationRange,
 ) (
 	interpreter.Value,
 	error,
@@ -2367,7 +2393,9 @@ func (r *interpreterRuntime) getBlockAtHeight(
 		return nil, nil
 	}
 
-	return NewBlockValue(inter, block), nil
+	blockValue := NewBlockValue(inter, getLocationRange, block)
+
+	return blockValue, nil
 }
 
 func (r *interpreterRuntime) newGetCurrentBlockFunction(runtimeInterface Interface) interpreter.HostFunction {
@@ -2384,6 +2412,7 @@ func (r *interpreterRuntime) newGetCurrentBlockFunction(runtimeInterface Interfa
 			height,
 			runtimeInterface,
 			invocation.Interpreter,
+			invocation.GetLocationRange,
 		)
 		if err != nil {
 			panic(err)
@@ -2403,6 +2432,7 @@ func (r *interpreterRuntime) newGetBlockFunction(runtimeInterface Interface) int
 			uint64(heightValue),
 			runtimeInterface,
 			invocation.Interpreter,
+			invocation.GetLocationRange,
 		)
 		if err != nil {
 			panic(err)
@@ -2719,7 +2749,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 				oldCode, err := r.getCode(context)
 				handleContractUpdateError(err)
 
-				oldProgram, err := parser2.ParseProgram(string(oldCode), inter)
+				oldProgram, err := parser.ParseProgram(string(oldCode), inter)
 
 				if !ignoreUpdatedProgramParserError(err) {
 					handleContractUpdateError(err)
@@ -2777,6 +2807,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 					stdlib.AccountContractUpdatedEventType,
 					startContext.Interface,
 					eventArguments,
+					invocation.GetLocationRange,
 				)
 			} else {
 				r.emitAccountEvent(
@@ -2784,6 +2815,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 					stdlib.AccountContractAddedEventType,
 					startContext.Interface,
 					eventArguments,
+					invocation.GetLocationRange,
 				)
 			}
 
@@ -2801,7 +2833,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 // ignoreUpdatedProgramParserError determines if the parsing error
 // for a program that is being updated can be ignored.
 func ignoreUpdatedProgramParserError(err error) bool {
-	parserError, ok := err.(parser2.Error)
+	parserError, ok := err.(parser.Error)
 	if !ok {
 		return false
 	}
@@ -2811,7 +2843,7 @@ func ignoreUpdatedProgramParserError(err error) bool {
 		// Missing commas in parameter lists were reported starting
 		// with https://github.com/onflow/cadence/pull/1073.
 		// Allow existing contracts with such an error to be updated
-		_, ok := parseError.(*parser2.MissingCommaInParameterListError)
+		_, ok := parseError.(*parser.MissingCommaInParameterListError)
 		if !ok {
 			return false
 		}
@@ -3002,7 +3034,7 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 				if r.contractUpdateValidationEnabled {
 
 					memoryGauge, _ := runtimeInterface.(common.MemoryGauge)
-					existingProgram, err := parser2.ParseProgram(string(code), memoryGauge)
+					existingProgram, err := parser.ParseProgram(string(code), memoryGauge)
 
 					// If the existing code is not parsable (i.e: `err != nil`), that shouldn't be a reason to
 					// fail the contract removal. Therefore, validate only if the code is a valid one.
@@ -3042,6 +3074,7 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 						newExportableValue(codeHashValue, inter),
 						newExportableValue(nameValue, inter),
 					},
+					invocation.GetLocationRange,
 				)
 
 				return interpreter.NewSomeValueNonCopying(
@@ -3067,12 +3100,18 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 func (r *interpreterRuntime) newAccountContractsGetNamesFunction(
 	addressValue interpreter.AddressValue,
 	runtimeInterface Interface,
-) func(inter *interpreter.Interpreter) *interpreter.ArrayValue {
+) func(
+	inter *interpreter.Interpreter,
+	getLocationRange func() interpreter.LocationRange,
+) *interpreter.ArrayValue {
 
 	// Converted addresses can be cached and don't have to be recomputed on each function invocation
 	address := addressValue.ToAddress()
 
-	return func(inter *interpreter.Interpreter) *interpreter.ArrayValue {
+	return func(
+		inter *interpreter.Interpreter,
+		getLocationRange func() interpreter.LocationRange,
+	) *interpreter.ArrayValue {
 		var names []string
 		var err error
 		wrapPanic(func() {
@@ -3094,10 +3133,21 @@ func (r *interpreterRuntime) newAccountContractsGetNamesFunction(
 			)
 		}
 
-		return interpreter.NewArrayValue(inter, interpreter.NewVariableSizedStaticType(
+		arrayType := interpreter.NewVariableSizedStaticType(
 			inter,
-			interpreter.NewPrimitiveStaticType(inter, interpreter.PrimitiveStaticTypeString),
-		), common.Address{}, values...)
+			interpreter.NewPrimitiveStaticType(
+				inter,
+				interpreter.PrimitiveStaticTypeString,
+			),
+		)
+
+		return interpreter.NewArrayValue(
+			inter,
+			getLocationRange,
+			arrayType,
+			common.Address{},
+			values...,
+		)
 	}
 }
 
@@ -3145,7 +3195,7 @@ func (r *interpreterRuntime) executeNonProgram(interpret interpretFunc, context 
 		return nil, nil
 	}
 
-	return exportValue(value)
+	return exportValue(value, interpreter.ReturnEmptyLocationRange)
 }
 
 func (r *interpreterRuntime) ReadStored(
@@ -3231,7 +3281,11 @@ var blockIDMemoryUsage = common.NewNumberMemoryUsage(
 	8 * int(unsafe.Sizeof(interpreter.UInt8Value(0))),
 )
 
-func NewBlockValue(inter *interpreter.Interpreter, block Block) interpreter.Value {
+func NewBlockValue(
+	inter *interpreter.Interpreter,
+	getLocationRange func() interpreter.LocationRange,
+	block Block,
+) interpreter.Value {
 
 	// height
 	heightValue := interpreter.NewUInt64Value(
@@ -3258,6 +3312,7 @@ func NewBlockValue(inter *interpreter.Interpreter, block Block) interpreter.Valu
 
 	idValue := interpreter.NewArrayValue(
 		inter,
+		getLocationRange,
 		BlockIDStaticType,
 		common.Address{},
 		values...,
@@ -3329,6 +3384,7 @@ func (r *interpreterRuntime) newAccountKeysAddFunction(
 					newExportableValue(addressValue, inter),
 					newExportableValue(publicKeyValue, inter),
 				},
+				invocation.GetLocationRange,
 			)
 
 			return NewAccountKeyValue(
@@ -3437,6 +3493,7 @@ func (r *interpreterRuntime) newAccountKeysRevokeFunction(
 					newExportableValue(addressValue, inter),
 					newExportableValue(indexValue, inter),
 				},
+				invocation.GetLocationRange,
 			)
 
 			return interpreter.NewSomeValueNonCopying(

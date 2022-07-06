@@ -1,7 +1,8 @@
 github.com/onflow/cadence ()
 
 github.com/davecgh/go-spew/spew (file)
-github.com/onflow/cadence/runtime/parser2 (file)
+github.com/onflow/cadence/runtime/interpreter ()
+github.com/onflow/cadence/runtime/parser (file)
 github.com/onflow/cadence/runtime/pretty (runtime)
 github.com/opentracing/opentracing-go (network)
 github.com/stretchr/testify/assert (runtime, file, network)

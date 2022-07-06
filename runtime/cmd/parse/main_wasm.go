@@ -27,7 +27,7 @@ import (
 	"syscall/js"
 
 	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/parser2"
+	"github.com/onflow/cadence/runtime/parser"
 )
 
 const globalFunctionNamePrefix = "CADENCE_PARSER"
@@ -68,7 +68,7 @@ func parse(code string) string {
 			}
 		}()
 
-		res.Program, res.Error = parser2.ParseProgram(code, nil)
+		res.Program, res.Error = parser.ParseProgram(code, nil)
 	}()
 
 	serialized, err := json.Marshal(res)

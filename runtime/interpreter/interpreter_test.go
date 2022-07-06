@@ -155,7 +155,7 @@ func TestInterpreterBoxing(t *testing.T) {
 	}
 }
 
-func BenchmarkTransfer(b *testing.B) {
+func BenchmarkValueIsSubtypeOfSemaType(b *testing.B) {
 
 	b.ReportAllocs()
 
@@ -179,12 +179,18 @@ func BenchmarkTransfer(b *testing.B) {
 		Size: size,
 	}
 
-	array := NewArrayValue(inter, typ, owner, values...)
+	array := NewArrayValue(
+		inter,
+		ReturnEmptyLocationRange,
+		typ,
+		owner,
+		values...,
+	)
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		ok := inter.CheckValueTransferTargetType(array, semaType)
+		ok := inter.ValueIsSubtypeOfSemaType(array, semaType)
 		assert.True(b, ok)
 	}
 }

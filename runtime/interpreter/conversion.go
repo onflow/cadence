@@ -96,6 +96,7 @@ func ByteSliceToByteArrayValue(interpreter *Interpreter, buf []byte) *ArrayValue
 
 	return NewArrayValue(
 		interpreter,
+		ReturnEmptyLocationRange,
 		ByteArrayStaticType,
 		common.Address{},
 		values...,

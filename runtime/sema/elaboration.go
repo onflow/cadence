@@ -31,6 +31,12 @@ type MemberInfo struct {
 	AccessedType Type
 }
 
+type CastType struct {
+	ExprActualType Type
+	TargetType     Type
+	ExpectedType   Type
+}
+
 type Elaboration struct {
 	lock                                *sync.RWMutex
 	FunctionDeclarationFunctionTypes    map[*ast.FunctionDeclaration]*FunctionType
@@ -89,9 +95,18 @@ type Elaboration struct {
 	IndexExpressionIndexedTypes         map[*ast.IndexExpression]ValueIndexableType
 	IndexExpressionIndexingTypes        map[*ast.IndexExpression]Type
 	ForceExpressionTypes                map[*ast.ForceExpression]Type
+	StaticCastTypes                     map[*ast.CastingExpression]CastType
+	NumberConversionArgumentTypes       map[ast.Expression]struct {
+		Type  Type
+		Range ast.Range
+	}
+	RuntimeCastTypes map[*ast.CastingExpression]struct {
+		Left  Type
+		Right Type
+	}
 }
 
-func NewElaboration(gauge common.MemoryGauge, lintingEnabled bool) *Elaboration {
+func NewElaboration(gauge common.MemoryGauge, extendedElaboration bool) *Elaboration {
 	common.UseMemory(gauge, common.ElaborationMemoryUsage)
 	elaboration := &Elaboration{
 		lock:                                new(sync.RWMutex),
@@ -147,8 +162,17 @@ func NewElaboration(gauge common.MemoryGauge, lintingEnabled bool) *Elaboration 
 		IndexExpressionIndexedTypes:         map[*ast.IndexExpression]ValueIndexableType{},
 		IndexExpressionIndexingTypes:        map[*ast.IndexExpression]Type{},
 	}
-	if lintingEnabled {
+	if extendedElaboration {
 		elaboration.ForceExpressionTypes = map[*ast.ForceExpression]Type{}
+		elaboration.StaticCastTypes = map[*ast.CastingExpression]CastType{}
+		elaboration.RuntimeCastTypes = map[*ast.CastingExpression]struct {
+			Left  Type
+			Right Type
+		}{}
+		elaboration.NumberConversionArgumentTypes = map[ast.Expression]struct {
+			Type  Type
+			Range ast.Range
+		}{}
 	}
 	return elaboration
 
