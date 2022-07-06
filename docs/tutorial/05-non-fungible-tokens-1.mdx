@@ -13,7 +13,7 @@ meta:
     - Cadence
     - Resources
     - Capabilities
-tags: 
+tags:
   - reference
   - NFT
   - Non-Fungible Token
@@ -72,7 +72,7 @@ All NFTs on Flow implement the [NFT Token Standard](https://github.com/onflow/fl
 which defines a basic set of properties for NFTs on Flow.
 This tutorial, will teach you a basic method of creating an NFT
 to illustrate important language concepts.
-After completing the NFT tutorials, readers should visit 
+After completing the NFT tutorials, readers should visit
 [the NFT standard github repository](https://github.com/onflow/flow-nft)
 to learn how full, production-ready NFTs are created.
 
@@ -90,15 +90,11 @@ To get you comfortable using NFTs, this tutorial will teach you to:
 <Callout type="warning">
   It is important to remember that while this tutorial implements a working
   non-fungible token, it has been simplified for educational purposes and is not
-  what any project should use in production. See the{" "}
-  <a href="https://github.com/onflow/flow-nft" target="_blank">
-    Flow Fungible Token standard
-  </a>{" "}
-  for the standard interface and example implementation. Additionally check out
-  the{" "}
-  <a href="https://github.com/onflow/kitty-items" target="_blank">
-    Kitty Items Repo
-  </a>{" "}
+  what any project should use in production. See the
+  <a href="https://github.com/onflow/flow-nft" target="_blank">Flow Fungible Token standard</a>
+  for the standard interface and example implementation.
+  Additionally, check out the
+  <a href="https://github.com/onflow/kitty-items" target="_blank">Kitty Items Repo</a>
   for a production ready version!
 </Callout>
 
@@ -112,7 +108,7 @@ This tutorial will build on the concepts introduced in those tutorials.
 
 ---
 
-In Cadence, each NFT is represented by a resource with an integer ID. 
+In Cadence, each NFT is represented by a resource with an integer ID.
 Resources are a perfect type to represent NFTs
 because resources have important ownership rules that are enforced by the type system.
 They can only have one owner, cannot be copied, and cannot be accidentally or maliciously lost or duplicated.
@@ -127,7 +123,7 @@ This is out of the scope of this tutorial though.
 This paradigm has been defined by the Flow community and the details are contained in
 [the NFT metadata proposal.](https://github.com/onflow/flow/pull/636/files)
 
-When users on Flow want to transact with each other, 
+When users on Flow want to transact with each other,
 they can do so peer-to-peer and without having to interact with a central NFT contract
 by calling resource-defined methods in each users' account.
 

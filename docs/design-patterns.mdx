@@ -46,7 +46,7 @@ pub contract NamedFields {
 }
 
 // GOOD practice: Instead, use a field
-// 
+//
 pub contract NamedFields {
     pub resource Test {}
 
@@ -111,7 +111,7 @@ from the resource that you wish to access.
 Then call this on the resource that you wish to access the fields of in a script,
 and return the struct from the script.
 
-See [Script-Accessible Public Field](#script-accessible-public-field), above, for how best to expose this capability.
+See [Script-Accessible public field/function](#script-accessible-public-fieldfunction), above, for how best to expose this capability.
 
 ### Example Code
 
@@ -448,7 +448,7 @@ In that case, Cadence will not panic with a runtime error but the link function 
 The documentation states that: The link function does not check if the target path is valid/exists
 at the time the capability is created and does not check if the target value conforms to the given type.
 In that sense, it is a good practice to check if the link does already exist with `AuthAccount.getLinkTarget`
-before creating it with `AuthAccount.link()`. 
+before creating it with `AuthAccount.link()`.
 `AuthAccount.getLinkTarget` will return nil if the link does not exist.
 
 ### Example

@@ -4,9 +4,7 @@ title: Measuring Time In Cadence
 
 ## Accessing Time From Cadence
 
-Both the block height and the block timestamp are accessible from within Cadence code:
-
-[https://docs.onflow.org/cadence/language/environment-information/#block-information](https://docs.onflow.org/cadence/language/environment-information/#block-information)
+Both the [block height and the block timestamp](language/environment-information/#block-information) are accessible from within Cadence code.
 
 This means that they can be used to calculate dates and durations by smart contracts on Flow
 that need to lock resources until a particular point in the future, calculate values between a range of dates,
@@ -26,15 +24,17 @@ and thereby to time off-chain by the methods described in this article.
 and further optimizations are needed to achieve that.
 As of Feb 2021, the rate of block finalization on Mainnet is more than 0.5 blocks/s; with a standard deviation of ±0.1 blocks/s.
 Hence, a new block is finalized on average every 2 seconds.
-Note that block height only has a loose correlation with time, as the block rate naturally fluctuates.
-
-[https://docs.onflow.org/faq/operators#does-the-blockheight-go-up-1-every-second](https://docs.onflow.org/faq/operators#does-the-blockheight-go-up-1-every-second)
+Note that block height only has a loose correlation with time,
+as [the block rate naturally fluctuates](/faq/operators#does-the-blockheight-go-up-1-every-second).
 
 In addition to the natural variation described above,
 there are several theoretical block production attacks that could skew this relationship even further.
 These attacks are unlikely on Flow in the absence of byzantine nodes.
 The timestamp cannot be earlier than the timestamp of the previous block,
-and cannot be too far into the future ([currently ten seconds](https://github.com/onflow/flow-go/blob/master/module/builder/consensus/builder.go#L60)) - proposed blocks that fail to satisfy these conditions will be rejected by Flow's consensus algorithm. But the mere possibility of these attacks places an additional limit on the confidence with which we can use block heights or block timestamps to determine off-chain time from protocol-level data on-chain.
+and cannot be too far into the future ([currently ten seconds](https://github.com/onflow/flow-go/blob/master/module/builder/consensus/builder.go#L60))
+- proposed blocks that fail to satisfy these conditions will be rejected by Flow's consensus algorithm.
+But the mere possibility of these attacks places an additional limit on the confidence
+with which we can use block heights or block timestamps to determine off-chain time from protocol-level data on-chain.
 
 The block timestamp is not the only way to identify a block within the flow of off-chain time.
 Each block is numbered successively by its "height", block 70000 is followed by block 70001, 70002,

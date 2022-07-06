@@ -13,7 +13,7 @@ meta:
     - Cadence
     - Resources
     - Capabilities
-tags: 
+tags:
   - reference
   - NFT
   - Non-Fungible Token
@@ -279,8 +279,8 @@ There are a few new features that we use in this example, so let's walk through 
 
 We discussed above that when a dictionary stores a resource, it also becomes a resource!
 
-This means that the collection has to 
-have special rules for how to handle its own resource. 
+This means that the collection has to
+have special rules for how to handle its own resource.
 You wouldn't want it getting lost by accident!
 
 If the NFT `Collection` resource is destroyed with the `destroy` command,
@@ -336,9 +336,8 @@ this means that if a unique NFT wants to own another unique NFT,
 like a CryptoKitty owning a hat accessory,
 the Kitty literally stores the hat in its own storage and effectively owns it.
 The hat belongs to the CryptoKitty that it is stored in,
-and the hat can be transferred separately or along with the CryptoKitty that owns it,
+and the hat can be transferred separately or along with the CryptoKitty that owns it.
 
-<!-- This feature is covered in more detail in [Composable Resources: Kitty Hats](doc:composable-resources-kitty-hats). -->
 
 ## Restricting Access to the NFT Collection
 
@@ -451,7 +450,7 @@ One way to create NFTs is by having an admin mint new tokens and send them to a 
 For the purpose of learning, we are simply implementing minting as a public function here.
 
 Most would implement this by having an NFT Minter resource. This would restrict minting,
-because the owner of this resource is the only one that can mint tokens. 
+because the owner of this resource is the only one that can mint tokens.
 
 You can see an example of this in the [Marketplace tutorial.](/cadence/tutorial/06-marketplace-compose/)
 

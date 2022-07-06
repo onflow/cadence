@@ -6,7 +6,7 @@ One question that every Solidity user asks when they start programming in Cadenc
 
 **"How do I get the account who authorized the transaction?"**
 
-In the Ethereum world, this account is referred to as `msg.sender`. 
+In the Ethereum world, this account is referred to as `msg.sender`.
 On Ethereum, checking `msg.sender` is used to modify a function's behaviour depending on who authorized it.
 Doing so is key to identity, permissions, ownership and security on Ethereum.
 
@@ -20,7 +20,7 @@ that can contain contract code and data, in Cadence the resources that individua
 are placed in the *user* account's storage area rather than the contract account's.
 
 All of this means that a task that would be implemented
-by a single central contract checking `msg.sender` in Solidity 
+by a single central contract checking `msg.sender` in Solidity
 will require a different approach in Cadence. The design of Cadence is intentionally different;
 it follows a [Capability-based security model](https://en.wikipedia.org/wiki/Capability-based_security)
 instead of an [Access-Control List-based model](https://en.wikipedia.org/wiki/Access-control_list).
@@ -39,22 +39,15 @@ Admin facilities should be contained in Admin resources.
 This can be a single resource with capabilities to it provided through different interfaces
 to expose different functionality for different roles, or it can be different resources for each role.
 
-This is described in the Design Patterns document:
+This is described in the [Design Patterns document](design-patterns#init-singleton).
 
-[https://docs.onflow.org/cadence/design-patterns#init-singleton](https://docs.onflow.org/cadence/design-patterns#init-singleton)
-
-A good example of this is minting tokens:
-
-[https://github.com/onflow/kitty-items/KittyItems.cdc](https://github.com/onflow/kitty-items/blob/438988b6e7e100f46687cbe379bd7b0b88fd8ef4/cadence/contracts/KittyItems.cdc#L194)
+A good example of this is [minting tokens](https://github.com/onflow/kitty-items/blob/438988b6e7e100f46687cbe379bd7b0b88fd8ef4/cadence/contracts/KittyItems.cdc#L194).
 
 Where access to admin functionality must be given to several different accounts and/or be revocable,
 the Capability Receiver pattern supports this.
 
-This is described in the Patterns document:
-
-[https://docs.onflow.org/cadence/design-patterns#capability-receiver](https://docs.onflow.org/cadence/design-patterns#capability-receiver)
-
-[https://docs.onflow.org/cadence/design-patterns#capability-revocation](https://docs.onflow.org/cadence/design-patterns#capability-revocation)
+The Design Patterns document describes both [Capability Receivers](design-patterns#capability-receiver)
+and [Capability Revocation](design-patterns#capability-revocation).
 
 ## Allow/Block Listing
 
@@ -65,7 +58,8 @@ through `access(contract)` code on their contract that checksan admin-controlled
 containing the information required to check for allowed or blocked accounts.
 
 This code could check the resource owner, but doing so is an antipattern (see below)
-and should not be used as it cannot be relied on. [It is better to use an object's `uuid`:](https://docs.onflow.org/cadence/language/resources/#resource-identifier)
+and should not be used as it cannot be relied on.
+It is better to use a [resource's `uuid` field](language/resources#resource-identifier).
 
 It is important to note that the uuid does not identify the owner,
 and that resources can be transferred to different owners,
@@ -87,9 +81,7 @@ by providing the other user with a capability constrained to the desired interfa
 
 The capability can be revoked to remove the ability when required.
 
-[Revokable Capabilities are described in the Patterns document](/cadence/design-patterns#capability-revocation)]:
-
-[And they are discussed in the Tutorial](/cadence/tutorial/02-hello-world#creating-capabilities-and-references-to-stored-resources):
+Revokable capabilities is described in the [Design Patterns document](design-patterns#capability-revocation).
 
 ### Wrapped Capabilities
 
@@ -129,7 +121,7 @@ by the admin as function arguments.
 
 ## Checking Contract.account
 
-Contracts [have the member variable `let account: Account`]((/cadence/language/contracts/)),
+Contracts [have the member variable `let account: Account`](language/contracts),
 which is the account in which the contract is deployed:
 
 This is of limited use in replacing `msg.sender`, as it is essentially a tautology on Flow
@@ -138,6 +130,6 @@ because contracts are deployed to the account to which you deploy them.
 ## Checking Resource.owner
 
 Resources that are in storage (but not those that are located in-memory,
-e.g. when a resource has just been created) [have the implicit field `let owner: PublicAccount?`]((/cadence/language/resources/#resource-owner))
+e.g. when a resource has just been created) [have the implicit field `let owner: PublicAccount?`](language/resources#resource-owner)
 
 This can be defeated by using a newly created resource, as the owner will then be nil.

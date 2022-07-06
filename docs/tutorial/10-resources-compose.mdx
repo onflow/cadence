@@ -51,13 +51,6 @@ An important feature of CryptoKitties (and other applications on the Ethereum bl
 
 Here is a basic example of how we can replicate this feature in Cadence:
 
-<!-- [block:callout]
-{
-"type": "info",
-"body": ""
-}
-[/block] -->
-
 <Callout type="info">
 
 Open the account `0x01` tab which has the contract named `KittyVerse.cdc`. Deploy the code to account `0x01`
@@ -132,8 +125,10 @@ These definitions show how a Kitty resource could own hats.
 
 The hats are stored in a variable in the Kitty resource.
 
+```cadence
     // place where the Kitty hats are stored
     pub let items: <-{String: KittyHat}
+```
 
 A Kitty owner can take the hats off the Kitty and transfer them individually. Or the owner can transfer a Kitty that owns a hat, and the hat will go along with the Kitty.
 
