@@ -8,38 +8,49 @@ In this tutorial, we're going to walk through how resources can own other resour
 
 <Callout type="info">
 
-Open the starter code for this tutorial in the Flow Playground: <a href="https://play.onflow.org/cda4d057-5898-4a7f-be34-fd47ec75085f" target="_blank">https://play.onflow.org/cda4d057-5898-4a7f-be34-fd47ec75085f</a><br/>
+Open the starter code for this tutorial in the Flow Playground:
+<a href="https://play.onflow.org/cda4d057-5898-4a7f-be34-fd47ec75085f" target="_blank">https://play.onflow.org/cda4d057-5898-4a7f-be34-fd47ec75085f</a><br/>
 The tutorial will be asking you do take various actions to interact with this code.
 
 </Callout>
 
 <Callout type="info">
 
-Instructions that require you to take action are always included in a callout box like this one. These highlighted actions are all that you need to do to get your code running, but reading the rest is necessary to understand the language's design.
+Instructions that require you to take action are always included in a callout box like this one.
+These highlighted actions are all that you need to do to get your code running,
+but reading the rest is necessary to understand the language's design.
 
 </Callout>
 
-Resources owning other resources is a powerful feature in the world of blockchain and smart contracts. To showcase how this feature works on Flow, this tutorial will take you through these steps with a composable NFT:
+Resources owning other resources is a powerful feature in the world of blockchain and smart contracts.
+To showcase how this feature works on Flow, this tutorial will take you through these steps with a composable NFT:
 
 1. Deploy the `Kitty` and `KittyHat` definitions to account `0x01`
 2. Create a `Kitty` and two `KittyHat`s and store them in your account
 3. Move the Kitties and Hats around to see how composable NFTs function on Flow
 
-**Before proceeding with this tutorial**, we recommend following the instructions in [Getting Started](/cadence/tutorial/01-first-steps/) and [Hello, World!](/cadence/tutorial/02-hello-world/) to learn about the Playground and Cadence.
+**Before proceeding with this tutorial**, we recommend following the instructions in [Getting Started](01-first-steps)
+and [Hello, World!](02-hello-world) to learn about the Playground and Cadence.
 
-For additional support, see the [Playground Manual](/intro/playground-manual/)
+For additional support, see the [Playground Manual](/intro/playground-manual)
 
 ## Resources Owning Resources
 
 ---
 
-The NFT collections talked about in [Non-Fungible Tokens](/cadence/tutorial/04-non-fungible-tokens) are examples of resources that own other resources. We have a resource, the NFT collection, that has ownership of the NFT resources that are stored within it. The owner and anyone with a reference can move these resources around, but they still belong to the collection while they are in it and the code defined in the collection has ultimate control over the resources.
+The NFT collections talked about in [Non-Fungible Tokens](05-non-fungible-tokens-1) are examples of resources that own other resources.
+We have a resource, the NFT collection, that has ownership of the NFT resources that are stored within it.
+The owner and anyone with a reference can move these resources around,
+but they still belong to the collection while they are in it and the code defined in the collection has ultimate control over the resources.
 
 When the collection is moved or destroyed, all of the NFTs inside of it are moved or destroyed with it.
 
-If the owner of the collection transferred the whole collection resource to another user's account, all of the tokens will move to the other user's account with it. The tokens don't stay in the original owner's account. This is like handing someone your wallet instead of just a dollar bill. It isn't a common action, but certainly is possible.
+If the owner of the collection transferred the whole collection resource to another user's account,
+all of the tokens will move to the other user's account with it. The tokens don't stay in the original owner's account.
+This is like handing someone your wallet instead of just a dollar bill. It isn't a common action, but certainly is possible.
 
-References cannot be created for resources that are stored in other resources. The owning resource has control over it and therefore controls the type of access that external calls have on the stored resource.
+References cannot be created for resources that are stored in other resources.
+The owning resource has control over it and therefore controls the type of access that external calls have on the stored resource.
 
 ## Resources Owning Resources: An Example
 
@@ -47,7 +58,8 @@ References cannot be created for resources that are stored in other resources. T
 
 The NFT collection is a simple example of how resources can own other resources, but innovative and more powerful versions can be made.
 
-An important feature of CryptoKitties (and other applications on the Ethereum blockchain) is that any developer can make new experiences around the existing application. Even though the original contract didn't include specific support for CryptoKitty accessories (like hats), an independent developer was still able to make hats that Kitties from the original contract could use.
+An important feature of CryptoKitties (and other applications on the Ethereum blockchain) is that any developer can make new experiences around the existing application.
+Even though the original contract didn't include specific support for CryptoKitty accessories (like hats), an independent developer was still able to make hats that Kitties from the original contract could use.
 
 Here is a basic example of how we can replicate this feature in Cadence:
 

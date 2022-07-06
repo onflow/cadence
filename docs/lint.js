@@ -53,7 +53,7 @@ function index(document, path) {
     slugger.reset()
 
     visit(document, 'element', (node) => {
-        if (!['h2', 'h3'].includes(node.tagName)) {
+        if (!['h1', 'h2', 'h3'].includes(node.tagName)) {
             return
         }
 

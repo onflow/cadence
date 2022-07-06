@@ -54,7 +54,7 @@ contract LedgerToken {
 
 With Cadence, we use the new resource-oriented paradigm to implement fungible tokens and avoid using a central ledger
 because there are inherent problems with using a central ledger
-that are detailed in [the Fungible Tokens section below.](https://docs.onflow.org/cadence/tutorial/03-fungible-tokens/#fungible-tokens-an-in-depth-exploration)
+that are detailed in [the Fungible Tokens section below.](#fungible-tokens-an-in-depth-exploration)
 
 ### Flow Network Token
 
@@ -82,8 +82,8 @@ We're going to take you through these steps to get comfortable with the fungible
 5. Transfer tokens from one account to another.
 6. Use a script to read the accounts' balances.
 
-**Before proceeding with this tutorial**, we recommend following the instructions in [Getting Started](/cadence/tutorial/01-first-steps/)
-and [Hello, World!](/cadence/tutorial/02-hello-world/) to learn the basics of the language and the playground.
+**Before proceeding with this tutorial**, we recommend following the instructions in [Getting Started](01-first-steps)
+and [Hello, World!](02-hello-world) to learn the basics of the language and the playground.
 
 # Fungible Tokens on the Flow Emulator
 
@@ -292,7 +292,7 @@ If an address doesn’t have the correct resource type imported, the transaction
 
 **Important note: This protection is not in place for the Flow network currency,**
 **because every Flow account is initialized with a default Flow Token Vault**
-**in order to pay for [storage fees and transaction fees](https://docs.onflow.org/flow-token/concepts/#fees).**
+**in order to pay for [storage fees and transaction fees](/flow-token/concepts#fees).**
 
 ### Function Parameters
 
@@ -600,17 +600,12 @@ While we have made all our fields and functions public here, it is actually reco
 fields private unless it is explicitly needed to be public.
 
 <Callout type="warning">
-  This is especially important for array and dictionary types, which can have
-  their contents maliciously mutated if they are made public. This is one of THE
-  MOST COMMON security mistake that Cadence developers make, so it is vitally
-  important to be aware of this. See the cadence best practices document for
-  more info:
-  <a
-    href="https://docs.onflow.org/cadence/anti-patterns/#array-or-dictionary-fields-should-be-private"
-    target="_blank"
-  >
-    https://docs.onflow.org/cadence/anti-patterns/#array-or-dictionary-fields-should-be-private
-  </a>
+  This is especially important for array and dictionary types,
+  which can have their contents maliciously mutated if they are made public.
+  This is one of THE MOST COMMON security mistake that Cadence developers make,
+  so it is vitally important to be aware of this.
+
+  See the [Cadence Best Practices document](/cadence/anti-patterns#array-or-dictionary-fields-should-be-private) for more details.
 </Callout>
 
 ## Adding Interfaces to Our Fungible Token

@@ -523,7 +523,7 @@ The cast is performed statically, i.e. when the program is type-checked.
 Only the static type of the value is considered, not the run-time type of the value.
 
 This means it is not possible to downcast using this operator.
-Consider using the [conditional downcasting operator `as?`](#conditional-downcasting-operator) instead.
+Consider using the [conditional downcasting operator `as?`](#conditional-downcasting-operator-as) instead.
 
 ```cadence
 // Declare a constant named `integer` which has type `Int`.
@@ -599,7 +599,7 @@ let second = values[1] as? Bool
 ### Force-downcasting Operator (`as!`)
 
 The force-downcasting operator `as!` behaves like the
-[conditional downcasting operator `as?`](#conditional-downcasting-operator).
+[conditional downcasting operator `as?`](#conditional-downcasting-operator-as).
 However, if the cast succeeds, it returns a value of the given type instead of an optional,
 and if the cast fails, it aborts the program instead of returning `nil`,
 

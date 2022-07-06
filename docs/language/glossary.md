@@ -125,7 +125,7 @@ let b: Bool = !a
 // b is false
 ```
 
-When it immediately **succeeds** an *optional* variable, it [force-unwraps](operators#force-unwrap-operator) it.
+When it immediately **succeeds** an *optional* variable, it [force-unwraps](operators#force-unwrap-operator-) it.
 Force-unwrapping returns the value inside an optional if it contains a value,
 or panics and aborts the execution if the optional has no value, i.e. the optional value is nil.
 
@@ -160,7 +160,7 @@ storagePath.toString()  // is "/storage/path"
 
 ## `<-` (lower than, hyphen) (Move operator)
 
-The [move operator `<-`](resources#the-move-operator) is like the assignment operator `=`,
+The [move operator `<-`](resources#the-move-operator--) is like the assignment operator `=`,
 but must be used when the value is a [resource](resources).
 To make assignment of resources explicit, the move operator `<-` must be used when:
 
@@ -177,7 +177,7 @@ let a <- create R() // we instantiate a new resource and move it into a
 
 ## `<-!` (lower than, hyphen, exclamation mark) (Force-assignment move operator)
 
-The [force-assignment move operator `<-!`](operators#force-assignment-operator) moves a resource value to an optional variable.
+The [force-assignment move operator `<-!`](operators#force-assignment-operator--) moves a resource value to an optional variable.
 If the variable is `nil`, the move succeeds.
 If it is not nil, the program aborts.
 
@@ -190,12 +190,12 @@ a <-! create R()
 
 ## `<->` (lower than, hyphen, greater than) (Swap operator)
 
-The [swapping operator `<->`](operators#swapping-operator) swaps two resource between the variables to the left and right of it.
+The [swapping operator `<->`](operators#swapping-operator--) swaps two resource between the variables to the left and right of it.
 
 
 ## `+` (plus), `-` (minus), `*` (asterisk), `%` (percentage sign)
 
-These are all typical [arithmetic operators](operators#arithmetic):
+These are all typical [arithmetic operators](operators#arithmetic-operators):
 
 - Addition: `+`
 - Subtraction: `-`
@@ -232,7 +232,7 @@ let a = 1 > 2 ? 3 : 4
 
 ### Nil-Coalescing Operator
 
-The `?` (question mark) is also used in the [nil-coalescing operator `??`](operators#nil-coalescing-operator).
+The `?` (question mark) is also used in the [nil-coalescing operator `??`](operators#nil-coalescing-operator-).
 
 It returns the value inside the optional, if the optional contains a value,
 or returns an alternative value if the optional has no value, i.e., the optional value is nil.

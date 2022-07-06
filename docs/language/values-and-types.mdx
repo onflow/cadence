@@ -446,7 +446,7 @@ let maybeInt: Int? = 1
 let anything: AnyStruct = maybeInt
 ```
 
-[Conditional downcasting](operators#conditional-downcasting-operator) allows coercing
+[Conditional downcasting](operators#conditional-downcasting-operator-as) allows coercing
 a value which has the type `AnyStruct` or `AnyResource` back to its original type.
 
 ## Optionals
@@ -1393,9 +1393,7 @@ booleans[0] = true
 
 ### Dictionary Keys
 
-Dictionary keys must be hashable and equatable,
-i.e., must implement the [`Hashable`](interfaces#hashable-interface)
-and [`Equatable`](interfaces#equatable-interface) [interfaces](interfaces).
+Dictionary keys must be hashable and equatable.
 
 Most of the built-in types, like booleans and integers,
 are hashable and equatable, so can be used as keys in dictionaries.
