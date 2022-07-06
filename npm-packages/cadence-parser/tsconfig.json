@@ -13,9 +13,20 @@
     "sourceMap": true,
     "skipLibCheck": true,
     "baseUrl": ".",
-    "lib": ["dom", "es2015", "es2016"],
+    "esModuleInterop": true,
+    "lib": [
+      "dom",
+      "es2015",
+      "es2016"
+    ],
     "declaration": true,
+    "noImplicitAny": false,
     "outDir": "./dist"
   },
-  "exclude": ["node_modules", "dist", "tests", "*.js"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "tests",
+    "*.js"
+  ]
 }
