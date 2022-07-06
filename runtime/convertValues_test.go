@@ -21,7 +21,6 @@ package runtime
 import (
 	_ "embed"
 	"fmt"
-	"strings"
 	"testing"
 	"unicode/utf8"
 
@@ -72,7 +71,7 @@ func TestExportValue(t *testing.T) {
 			)
 			if tt.expected == nil {
 				require.Error(t, err)
-				if strings.HasSuffix(tt.label, "(invalid)") {
+				if tt.expected == nil {
 					assertInternalError(t, err)
 				} else {
 					assertUserError(t, err)
@@ -521,7 +520,11 @@ func TestImportValue(t *testing.T) {
 
 			if tt.expected == nil {
 				require.Error(t, err)
-				assertUserError(t, err)
+				if _, ok := tt.value.(cadence.Link); ok {
+					assertInternalError(t, err)
+				} else {
+					assertUserError(t, err)
+				}
 			} else {
 				require.NoError(t, err)
 				AssertValuesEqual(t, inter, tt.expected, actual)

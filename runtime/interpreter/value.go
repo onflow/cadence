@@ -14327,11 +14327,11 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func
 
 	interpreter.ReportComputation(common.ComputationKindDestroyCompositeValue, 1)
 
-	storageID := v.StorageID()
-
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(getLocationRange)
 	}
+
+	storageID := v.StorageID()
 
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
