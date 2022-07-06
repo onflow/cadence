@@ -19,11 +19,11 @@
 package common
 
 import (
-	"errors"
-	"fmt"
 	"math"
 	"math/big"
 	"unsafe"
+
+	"github.com/onflow/cadence/runtime/errors"
 )
 
 type MemoryUsage struct {
@@ -256,7 +256,7 @@ func UseMemory(gauge MemoryGauge, usage MemoryUsage) {
 
 	err := gauge.MeterMemory(usage)
 	if err != nil {
-		panic(FatalError{Err: err})
+		panic(errors.MemoryError{Err: err})
 	}
 }
 
@@ -679,7 +679,7 @@ func NewBitwiseAndBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 	)
 }
 
-var invalidLeftShift = errors.New("invalid left shift of non-Int64")
+var invalidLeftShift = errors.NewDefaultUserError("invalid left shift of non-Int64")
 
 func NewBitwiseLeftShiftBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 	// if b == 0:
@@ -810,18 +810,4 @@ func NewAtreeEncodedSlabMemoryUsage(slabsCount uint) MemoryUsage {
 		Kind:   MemoryKindAtreeEncodedSlab,
 		Amount: uint64(slabsCount),
 	}
-}
-
-// FatalError indicates an error that should end
-// the Cadence parsing, checking, or interpretation.
-type FatalError struct {
-	Err error
-}
-
-func (e FatalError) Unwrap() error {
-	return e.Err
-}
-
-func (e FatalError) Error() string {
-	return fmt.Sprintf("Fatal error: %s", e.Err.Error())
 }

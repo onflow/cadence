@@ -20,7 +20,6 @@ package parser
 
 import (
 	"encoding/hex"
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -68,7 +67,7 @@ func parseDeclaration(p *parser, docString string) ast.Declaration {
 		switch p.current.Type {
 		case lexer.TokenPragma:
 			if access != ast.AccessNotSpecified {
-				panic(fmt.Errorf("invalid access modifier for pragma"))
+				p.panicSyntaxError("invalid access modifier for pragma")
 			}
 			return parsePragmaDeclaration(p)
 		case lexer.TokenIdentifier:
@@ -90,13 +89,13 @@ func parseDeclaration(p *parser, docString string) ast.Declaration {
 
 			case KeywordTransaction:
 				if access != ast.AccessNotSpecified {
-					panic(fmt.Errorf("invalid access modifier for transaction"))
+					p.panicSyntaxError("invalid access modifier for transaction")
 				}
 				return parseTransactionDeclaration(p, docString)
 
 			case keywordPriv, keywordPub, keywordAccess:
 				if access != ast.AccessNotSpecified {
-					panic(fmt.Errorf("invalid second access modifier"))
+					p.panicSyntaxError("invalid second access modifier")
 				}
 				pos := p.current.StartPos
 				accessPos = &pos
@@ -137,18 +136,18 @@ func parseAccess(p *parser) ast.Access {
 		p.skipSpaceAndComments(true)
 
 		if !p.current.Is(lexer.TokenIdentifier) {
-			panic(fmt.Errorf(
+			p.panicSyntaxError(
 				"expected keyword %q, got %s",
 				keywordSet,
 				p.current.Type,
-			))
+			)
 		}
 		if p.current.Value != keywordSet {
-			panic(fmt.Errorf(
+			p.panicSyntaxError(
 				"expected keyword %q, got %q",
 				keywordSet,
 				p.current.Value,
-			))
+			)
 		}
 
 		// Skip the `set` keyword
@@ -169,7 +168,7 @@ func parseAccess(p *parser) ast.Access {
 		p.skipSpaceAndComments(true)
 
 		if !p.current.Is(lexer.TokenIdentifier) {
-			panic(fmt.Errorf(
+			p.panicSyntaxError(
 				"expected keyword %s, got %s",
 				common.EnumerateWords(
 					[]string{
@@ -181,7 +180,7 @@ func parseAccess(p *parser) ast.Access {
 					"or",
 				),
 				p.current.Type,
-			))
+			)
 		}
 
 		var access ast.Access
@@ -200,7 +199,7 @@ func parseAccess(p *parser) ast.Access {
 			access = ast.AccessPrivate
 
 		default:
-			panic(fmt.Errorf(
+			p.panicSyntaxError(
 				"expected keyword %s, got %q",
 				common.EnumerateWords(
 					[]string{
@@ -212,7 +211,7 @@ func parseAccess(p *parser) ast.Access {
 					"or",
 				),
 				p.current.Value,
-			))
+			)
 		}
 
 		// Skip the keyword
@@ -256,10 +255,10 @@ func parseVariableDeclaration(
 
 	p.skipSpaceAndComments(true)
 	if !p.current.Is(lexer.TokenIdentifier) {
-		panic(fmt.Errorf(
+		p.panicSyntaxError(
 			"expected identifier after start of variable declaration, got %s",
 			p.current.Type,
-		))
+		)
 	}
 
 	identifier := p.tokenToIdentifier(p.current)
@@ -281,7 +280,7 @@ func parseVariableDeclaration(
 	p.skipSpaceAndComments(true)
 	transfer := parseTransfer(p)
 	if transfer == nil {
-		panic(fmt.Errorf("expected transfer"))
+		p.panicSyntaxError("expected transfer")
 	}
 
 	value := parseExpression(p, lowestBindingPower)
@@ -387,12 +386,11 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 
 		switch p.current.Type {
 		case lexer.TokenString:
-			parsedString, errs := parseStringLiteral(p.current.Value.(string))
-			p.report(errs...)
+			parsedString := parseStringLiteral(p, p.current.Value.(string))
 			location = common.NewStringLocation(p.memoryGauge, parsedString)
 
 		case lexer.TokenHexadecimalIntegerLiteral:
-			location = parseHexadecimalLocation(p.memoryGauge, p.current.Value.(string))
+			location = parseHexadecimalLocation(p)
 
 		default:
 			panic(errors.NewUnreachableError())
@@ -419,10 +417,10 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 			p.next()
 
 		default:
-			panic(fmt.Errorf(
+			p.panicSyntaxError(
 				"unexpected token in import declaration: got %s, expected string, address, or identifier",
 				p.current.Type,
-			))
+			)
 		}
 	}
 
@@ -437,12 +435,12 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 			switch p.current.Type {
 			case lexer.TokenComma:
 				if !expectCommaOrFrom {
-					panic(fmt.Errorf(
+					p.panicSyntaxError(
 						"expected %s or keyword %q, got %s",
 						lexer.TokenIdentifier,
 						keywordFrom,
 						p.current.Type,
-					))
+					)
 				}
 				expectCommaOrFrom = false
 
@@ -461,11 +459,11 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 					}
 
 					if !isNextTokenCommaOrFrom(p) {
-						panic(fmt.Errorf(
+						p.panicSyntaxError(
 							"expected %s, got keyword %q",
 							lexer.TokenIdentifier,
 							p.current.Value,
-						))
+						)
 					}
 
 					// If the next token is either comma or 'from' token, then fall through
@@ -478,19 +476,19 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 				expectCommaOrFrom = true
 
 			case lexer.TokenEOF:
-				panic(fmt.Errorf(
+				p.panicSyntaxError(
 					"unexpected end in import declaration: expected %s or %s",
 					lexer.TokenIdentifier,
 					lexer.TokenComma,
-				))
+				)
 
 			default:
-				panic(fmt.Errorf(
+				p.panicSyntaxError(
 					"unexpected token in import declaration: got %s, expected keyword %q or %s",
 					p.current.Type,
 					keywordFrom,
 					lexer.TokenComma,
-				))
+				)
 			}
 		}
 	}
@@ -545,22 +543,22 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 			setIdentifierLocation(identifier)
 
 		default:
-			panic(fmt.Errorf(
+			p.panicSyntaxError(
 				"unexpected token in import declaration: got %s, expected keyword %q or %s",
 				p.current.Type,
 				keywordFrom,
 				lexer.TokenComma,
-			))
+			)
 		}
 
 	case lexer.TokenEOF:
-		panic(fmt.Errorf("unexpected end in import declaration: expected string, address, or identifier"))
+		p.panicSyntaxError("unexpected end in import declaration: expected string, address, or identifier")
 
 	default:
-		panic(fmt.Errorf(
+		p.panicSyntaxError(
 			"unexpected token in import declaration: got %s, expected string, address, or identifier",
 			p.current.Type,
-		))
+		)
 	}
 
 	return ast.NewImportDeclaration(
@@ -596,7 +594,9 @@ func isNextTokenCommaOrFrom(p *parser) bool {
 	}
 }
 
-func parseHexadecimalLocation(memoryGauge common.MemoryGauge, literal string) common.AddressLocation {
+func parseHexadecimalLocation(p *parser) common.AddressLocation {
+	literal := p.current.Value.(string)
+
 	bytes := []byte(strings.ReplaceAll(literal[2:], "_", ""))
 
 	length := len(bytes)
@@ -609,15 +609,16 @@ func parseHexadecimalLocation(memoryGauge common.MemoryGauge, literal string) co
 	_, err := hex.Decode(rawAddress, bytes)
 	if err != nil {
 		// unreachable, hex literal should always be valid
-		panic(err)
+		panic(errors.NewUnexpectedErrorFromCause(err))
 	}
 
 	address, err := common.BytesToAddress(rawAddress)
 	if err != nil {
-		panic(err)
+		// Any returned error is a syntax error. e.g: Address too large error.
+		p.reportSyntaxError(err.Error())
 	}
 
-	return common.NewAddressLocation(memoryGauge, address, "")
+	return common.NewAddressLocation(p.memoryGauge, address, "")
 }
 
 // parseEventDeclaration parses an event declaration.
@@ -641,10 +642,10 @@ func parseEventDeclaration(
 
 	p.skipSpaceAndComments(true)
 	if !p.current.Is(lexer.TokenIdentifier) {
-		panic(fmt.Errorf(
+		p.panicSyntaxError(
 			"expected identifier after start of event declaration, got %s",
 			p.current.Type,
-		))
+		)
 	}
 
 	identifier := p.tokenToIdentifier(p.current)
@@ -748,10 +749,10 @@ func parseFieldWithVariableKind(
 
 	p.skipSpaceAndComments(true)
 	if !p.current.Is(lexer.TokenIdentifier) {
-		panic(fmt.Errorf(
+		p.panicSyntaxError(
 			"expected identifier after start of field declaration, got %s",
 			p.current.Type,
-		))
+		)
 	}
 
 	identifier := p.tokenToIdentifier(p.current)
@@ -813,11 +814,11 @@ func parseCompositeOrInterfaceDeclaration(
 	for {
 		p.skipSpaceAndComments(true)
 		if !p.current.Is(lexer.TokenIdentifier) {
-			panic(fmt.Errorf(
+			p.panicSyntaxError(
 				"expected %s, got %s",
 				lexer.TokenIdentifier,
 				p.current.Type,
-			))
+			)
 		}
 
 		wasInterface := isInterface
@@ -825,10 +826,10 @@ func parseCompositeOrInterfaceDeclaration(
 		if p.current.Value == keywordInterface {
 			isInterface = true
 			if wasInterface {
-				panic(fmt.Errorf(
+				p.panicSyntaxError(
 					"expected interface name, got keyword %q",
 					keywordInterface,
-				))
+				)
 			}
 			// Skip the `interface` keyword
 			p.next()
@@ -852,10 +853,10 @@ func parseCompositeOrInterfaceDeclaration(
 		conformances, _ = parseNominalTypes(p, lexer.TokenBraceOpen)
 
 		if len(conformances) < 1 {
-			panic(fmt.Errorf(
+			p.panicSyntaxError(
 				"expected at least one conformance after %s",
 				lexer.TokenColon,
-			))
+			)
 		}
 	}
 
@@ -879,7 +880,7 @@ func parseCompositeOrInterfaceDeclaration(
 		// TODO: remove once interface conformances are supported
 		if len(conformances) > 0 {
 			// TODO: improve
-			panic(fmt.Errorf("unexpected conformances"))
+			p.panicSyntaxError("unexpected conformances")
 		}
 
 		return ast.NewInterfaceDeclaration(
@@ -983,7 +984,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) ast.Declaration
 
 			case keywordPriv, keywordPub, keywordAccess:
 				if access != ast.AccessNotSpecified {
-					panic(fmt.Errorf("unexpected access modifier"))
+					p.panicSyntaxError("unexpected access modifier")
 				}
 				pos := p.current.StartPos
 				accessPos = &pos
@@ -992,7 +993,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) ast.Declaration
 
 			default:
 				if previousIdentifierToken != nil {
-					panic(fmt.Errorf("unexpected %s", p.current.Type))
+					p.panicSyntaxError("unexpected %s", p.current.Type)
 				}
 
 				t := p.current
@@ -1004,7 +1005,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) ast.Declaration
 
 		case lexer.TokenColon:
 			if previousIdentifierToken == nil {
-				panic(fmt.Errorf("unexpected %s", p.current.Type))
+				p.panicSyntaxError("unexpected %s", p.current.Type)
 			}
 
 			identifier := p.tokenToIdentifier(*previousIdentifierToken)
@@ -1012,7 +1013,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) ast.Declaration
 
 		case lexer.TokenParenOpen:
 			if previousIdentifierToken == nil {
-				panic(fmt.Errorf("unexpected %s", p.current.Type))
+				p.panicSyntaxError("unexpected %s", p.current.Type)
 			}
 
 			identifier := p.tokenToIdentifier(*previousIdentifierToken)
@@ -1134,10 +1135,10 @@ func parseEnumCase(
 
 	p.skipSpaceAndComments(true)
 	if !p.current.Is(lexer.TokenIdentifier) {
-		panic(fmt.Errorf(
+		p.panicSyntaxError(
 			"expected identifier after start of enum case declaration, got %s",
 			p.current.Type,
-		))
+		)
 	}
 
 	identifier := p.tokenToIdentifier(p.current)

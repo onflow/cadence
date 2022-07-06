@@ -27,12 +27,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/onflow/cadence/runtime/common"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -315,7 +315,7 @@ func TestParseAdvancedExpression(t *testing.T) {
 		)
 	})
 
-	t.Run("FatalError in setExprMetaLeftDenotation", func(t *testing.T) {
+	t.Run("MemoryError in setExprMetaLeftDenotation", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -331,14 +331,14 @@ func TestParseAdvancedExpression(t *testing.T) {
 			ParseExpression("1 < 2", gauge)
 		})()
 
-		require.IsType(t, common.FatalError{}, panicMsg)
+		require.IsType(t, errors.MemoryError{}, panicMsg)
 
-		fatalError, _ := panicMsg.(common.FatalError)
+		fatalError, _ := panicMsg.(errors.MemoryError)
 		var expectedError limitingMemoryGaugeError
 		assert.ErrorAs(t, fatalError, &expectedError)
 	})
 
-	t.Run("FatalError in parser.report", func(t *testing.T) {
+	t.Run("MemoryError in parser.report", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -354,9 +354,9 @@ func TestParseAdvancedExpression(t *testing.T) {
 			ParseExpression("1 < 2 > 3", gauge)
 		})()
 
-		require.IsType(t, common.FatalError{}, panicMsg)
+		require.IsType(t, errors.MemoryError{}, panicMsg)
 
-		fatalError, _ := panicMsg.(common.FatalError)
+		fatalError, _ := panicMsg.(errors.MemoryError)
 		var expectedError limitingMemoryGaugeError
 		assert.ErrorAs(t, fatalError, &expectedError)
 	})

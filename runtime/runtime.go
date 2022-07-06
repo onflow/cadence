@@ -19,8 +19,6 @@
 package runtime
 
 import (
-	"errors"
-	"fmt"
 	goRuntime "runtime"
 	"time"
 	"unsafe"
@@ -223,25 +221,44 @@ func NewInterpreterRuntime(options ...Option) Runtime {
 	return runtime
 }
 
-func (r *interpreterRuntime) Recover(onError func(error), context Context) {
+func (r *interpreterRuntime) Recover(onError func(Error), context Context) {
 	recovered := recover()
 	if recovered == nil {
 		return
 	}
 
-	var err error
-	switch recovered := recovered.(type) {
-	case Error:
-		// avoid redundant wrapping
-		err = recovered
-	case error:
-		err = newError(recovered, context)
-	default:
-		err = fmt.Errorf("%s", recovered)
-		err = newError(err, context)
-	}
-
+	err := getWrappedError(recovered, context)
 	onError(err)
+}
+
+func getWrappedError(recovered any, context Context) Error {
+	switch recovered := recovered.(type) {
+
+	// If the error is already a `runtime.Error`, then avoid redundant wrapping.
+	case Error:
+		return recovered
+
+	// Wrap with `runtime.Error` to include meta info.
+	//
+	// The following set of errors are the only known types of errors that would reach this point.
+	// `interpreter.Error` is a generic wrapper for any error. Hence, it doesn't belong to any of the
+	// three types: `UserError`, `InternalError`, `ExternalError`.
+	// So it needs to be specially handled here
+	case runtimeErrors.InternalError,
+		runtimeErrors.UserError,
+		runtimeErrors.ExternalError,
+		interpreter.Error:
+		return newError(recovered.(error), context)
+
+	// Wrap any other unhandled error with a generic internal error first.
+	// And then wrap with `runtime.Error` to include meta info.
+	case error:
+		err := runtimeErrors.NewUnexpectedErrorFromCause(recovered)
+		return newError(err, context)
+	default:
+		err := runtimeErrors.NewUnexpectedError("%s", recovered)
+		return newError(err, context)
+	}
 }
 
 func (r *interpreterRuntime) SetCoverageReport(coverageReport *CoverageReport) {
@@ -274,7 +291,7 @@ func (r *interpreterRuntime) SetDebugger(debugger *interpreter.Debugger) {
 
 func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val cadence.Value, err error) {
 	defer r.Recover(
-		func(internalErr error) {
+		func(internalErr Error) {
 			err = internalErr
 		},
 		context,
@@ -528,7 +545,7 @@ func (r *interpreterRuntime) InvokeContractFunction(
 	context Context,
 ) (val cadence.Value, err error) {
 	defer r.Recover(
-		func(internalErr error) {
+		func(internalErr Error) {
 			err = internalErr
 		},
 		context,
@@ -674,7 +691,7 @@ func (r *interpreterRuntime) convertArgument(
 
 func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) (err error) {
 	defer r.Recover(
-		func(internalErr error) {
+		func(internalErr Error) {
 			err = internalErr
 		},
 		context,
@@ -804,50 +821,46 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 func wrapPanic(f func()) {
 	defer func() {
 		if r := recover(); r != nil {
-			var ok bool
-			// don't recover Go errors
-			goErr, ok := r.(goRuntime.Error)
-			if ok {
-				panic(goErr)
+			// don't wrap Go errors and internal errors
+			switch r := r.(type) {
+			case goRuntime.Error, runtimeErrors.InternalError:
+				panic(r)
+			default:
+				panic(runtimeErrors.ExternalError{
+					Recovered: r,
+				})
 			}
 
-			panic(interpreter.ExternalError{
-				Recovered: r,
-			})
 		}
 	}()
 	f()
 }
 
-// Executes `f`. On panic, the panic is returned as an error.
-// Wraps any non-`error` panics so panic is never propagated.
-func panicToError(f func()) (returnedError error) {
+// userPanicToError Executes `f` and gracefully handle `UserError` panics.
+// All on-user panics (including `InternalError` and `ExternalError`) are propagated up.
+//
+func userPanicToError(f func()) (returnedError error) {
 	defer func() {
 		if r := recover(); r != nil {
-			var ok bool
-			err, ok := r.(error)
-			if ok {
+			switch err := r.(type) {
+			case runtimeErrors.UserError:
+				// Return user errors
 				returnedError = err
-			} else {
-				returnedError = fmt.Errorf("%s", r)
+			case runtimeErrors.InternalError, runtimeErrors.ExternalError:
+				panic(err)
+
+			// Otherwise, panic.
+			// Also wrap with a `UnexpectedError` to mark it as an `InternalError`.
+			case error:
+				panic(runtimeErrors.NewUnexpectedErrorFromCause(err))
+			default:
+				panic(runtimeErrors.NewUnexpectedError("%s", r))
 			}
 		}
 	}()
+
 	f()
 	return nil
-}
-
-// Executes `f`. On panic, the panic is returned as an error.
-// Exception: panics when error is `goRuntime.Error` or `ExternalError`.
-func userPanicToError(f func()) error {
-	err := panicToError(f)
-
-	switch err := err.(type) {
-	case goRuntime.Error, interpreter.ExternalError:
-		panic(err)
-	default:
-		return err
-	}
 }
 
 func (r *interpreterRuntime) transactionExecutionFunction(
@@ -993,7 +1006,7 @@ func validateArgumentParams(
 			}
 
 			if !hasValidStaticType(inter, value) {
-				panic(fmt.Errorf("invalid static type for argument: %d", i))
+				panic(runtimeErrors.NewUnexpectedError("invalid static type for argument: %d", i))
 			}
 
 			return true
@@ -1030,7 +1043,7 @@ func (r *interpreterRuntime) ParseAndCheckProgram(
 	err error,
 ) {
 	defer r.Recover(
-		func(internalErr error) {
+		func(internalErr Error) {
 			err = internalErr
 		},
 		context,
@@ -1745,7 +1758,7 @@ func (r *interpreterRuntime) emitAccountEvent(
 	expectedLen := len(eventType.ConstructorParameters)
 
 	if actualLen != expectedLen {
-		panic(fmt.Errorf(
+		panic(runtimeErrors.NewDefaultUserError(
 			"event emission value mismatch: event %s: expected %d, got %d",
 			eventType.QualifiedString(),
 			expectedLen,
@@ -2121,7 +2134,7 @@ func (r *interpreterRuntime) loadContract(
 		}
 
 		if storedValue == nil {
-			panic(fmt.Errorf("failed to load contract: %s", compositeType.Location))
+			panic(runtimeErrors.NewDefaultUserError("failed to load contract: %s", compositeType.Location))
 		}
 
 		return storedValue.(*interpreter.CompositeValue)
@@ -2156,13 +2169,13 @@ func (r *interpreterRuntime) instantiateContract(
 	parameterCount := len(parameterTypes)
 
 	if argumentCount < parameterCount {
-		return nil, fmt.Errorf(
+		return nil, runtimeErrors.NewDefaultUserError(
 			"invalid argument count, too few arguments: expected %d, got %d, next missing argument: `%s`",
 			parameterCount, argumentCount,
 			parameterTypes[argumentCount],
 		)
 	} else if argumentCount > parameterCount {
-		return nil, fmt.Errorf(
+		return nil, runtimeErrors.NewDefaultUserError(
 			"invalid argument count, too many arguments: expected %d, got %d",
 			parameterCount,
 			argumentCount,
@@ -2177,7 +2190,7 @@ func (r *interpreterRuntime) instantiateContract(
 		argumentType := argumentTypes[i]
 		parameterTye := parameterTypes[i]
 		if !sema.IsSubType(argumentType, parameterTye) {
-			return nil, fmt.Errorf(
+			return nil, runtimeErrors.NewDefaultUserError(
 				"invalid argument %d: expected type `%s`, got `%s`",
 				i,
 				parameterTye,
@@ -2259,7 +2272,7 @@ func (r *interpreterRuntime) instantiateContract(
 
 	variable, ok := inter.Globals.Get(contractType.Identifier)
 	if !ok {
-		return nil, fmt.Errorf(
+		return nil, runtimeErrors.NewDefaultUserError(
 			"cannot find contract: `%s`",
 			contractType.Identifier,
 		)
@@ -2559,7 +2572,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 
 			code, err := interpreter.ByteArrayValueToByteSlice(inter, newCodeValue)
 			if err != nil {
-				panic("add requires the second argument to be an array")
+				panic(runtimeErrors.NewDefaultUserError("add requires the second argument to be an array"))
 			}
 
 			// Get the existing code
@@ -2567,7 +2580,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 			nameArgument := nameValue.Str
 
 			if nameArgument == "" {
-				panic(errors.New(
+				panic(runtimeErrors.NewDefaultUserError(
 					"contract name argument cannot be empty." +
 						"it must match the name of the deployed contract declaration or contract interface declaration",
 				))
@@ -2584,7 +2597,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 				// Ensure that there's a contract/contract-interface with the given name exists already
 
 				if len(existingCode) == 0 {
-					panic(fmt.Errorf(
+					panic(runtimeErrors.NewDefaultUserError(
 						"cannot update non-existing contract with name %q in account %s",
 						nameArgument,
 						address.ShortHexWithPrefix(),
@@ -2596,7 +2609,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 				// Ensure that no contract/contract interface with the given name exists already
 
 				if len(existingCode) > 0 {
-					panic(fmt.Errorf(
+					panic(runtimeErrors.NewDefaultUserError(
 						"cannot overwrite existing contract with name %q in account %s",
 						nameArgument,
 						address.ShortHexWithPrefix(),
@@ -2706,7 +2719,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 
 				context.SetCode(context.Location, string(code))
 
-				panic(fmt.Errorf(
+				panic(runtimeErrors.NewDefaultUserError(
 					"invalid %s: the code must declare exactly one contract or contract interface",
 					declarationKind.Name(),
 				))
@@ -2721,7 +2734,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 
 				context.SetCode(context.Location, string(code))
 
-				panic(fmt.Errorf(
+				panic(runtimeErrors.NewDefaultUserError(
 					"invalid %s: the name argument must match the name of the declaration: got %q, expected %q",
 					declarationKind.Name(),
 					nameArgument,
@@ -3194,7 +3207,7 @@ func (r *interpreterRuntime) ReadStored(
 	err error,
 ) {
 	defer r.Recover(
-		func(internalErr error) {
+		func(internalErr Error) {
 			err = internalErr
 		},
 		context,
@@ -3224,7 +3237,7 @@ func (r *interpreterRuntime) ReadLinked(
 	err error,
 ) {
 	defer r.Recover(
-		func(internalErr error) {
+		func(internalErr Error) {
 			err = internalErr
 		},
 		context,
@@ -3570,18 +3583,18 @@ func NewPublicKeyFromValue(
 
 	byteArray, err := interpreter.ByteArrayValueToByteSlice(inter, key)
 	if err != nil {
-		return nil, fmt.Errorf("public key needs to be a byte array. %w", err)
+		return nil, runtimeErrors.NewUnexpectedError("public key needs to be a byte array. %w", err)
 	}
 
 	// sign algo field
 	signAlgoField := publicKey.GetMember(inter, getLocationRange, sema.PublicKeySignAlgoField)
 	if signAlgoField == nil {
-		return nil, errors.New("sign algorithm is not set")
+		return nil, runtimeErrors.NewUnexpectedError("sign algorithm is not set")
 	}
 
 	signAlgoValue, ok := signAlgoField.(*interpreter.CompositeValue)
 	if !ok {
-		return nil, fmt.Errorf(
+		return nil, runtimeErrors.NewUnexpectedError(
 			"sign algorithm does not belong to type: %s",
 			sema.SignatureAlgorithmType.QualifiedString(),
 		)
@@ -3589,12 +3602,12 @@ func NewPublicKeyFromValue(
 
 	rawValue := signAlgoValue.GetField(inter, getLocationRange, sema.EnumRawValueFieldName)
 	if rawValue == nil {
-		return nil, errors.New("sign algorithm raw value is not set")
+		return nil, runtimeErrors.NewDefaultUserError("sign algorithm raw value is not set")
 	}
 
 	signAlgoRawValue, ok := rawValue.(interpreter.UInt8Value)
 	if !ok {
-		return nil, fmt.Errorf(
+		return nil, runtimeErrors.NewUnexpectedError(
 			"sign algorithm raw-value does not belong to type: %s",
 			sema.UInt8Type.QualifiedString(),
 		)
@@ -3828,12 +3841,12 @@ func verifySignature(
 
 	signature, err := interpreter.ByteArrayValueToByteSlice(inter, signatureValue)
 	if err != nil {
-		panic(fmt.Errorf("failed to get signature. %w", err))
+		panic(runtimeErrors.NewUnexpectedError("failed to get signature. %w", err))
 	}
 
 	signedData, err := interpreter.ByteArrayValueToByteSlice(inter, signedDataValue)
 	if err != nil {
-		panic(fmt.Errorf("failed to get signed data. %w", err))
+		panic(runtimeErrors.NewUnexpectedError("failed to get signed data. %w", err))
 	}
 
 	domainSeparationTag := domainSeparationTagValue.Str
@@ -3875,7 +3888,7 @@ func hash(
 
 	data, err := interpreter.ByteArrayValueToByteSlice(inter, dataValue)
 	if err != nil {
-		panic(fmt.Errorf("failed to get data. %w", err))
+		panic(runtimeErrors.NewUnexpectedError("failed to get data. %w", err))
 	}
 
 	var tag string

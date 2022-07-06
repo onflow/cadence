@@ -19,8 +19,6 @@
 package parser
 
 import (
-	"fmt"
-
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/parser/lexer"
@@ -83,12 +81,12 @@ func parseTransactionDeclaration(p *parser, docString string) *ast.TransactionDe
 			execute = parseTransactionExecute(p)
 
 		default:
-			panic(fmt.Errorf(
+			p.panicSyntaxError(
 				"unexpected identifier, expected keyword %q or %q, got %q",
 				keywordPrepare,
 				keywordExecute,
 				p.current.Value,
-			))
+			)
 		}
 	}
 
@@ -122,14 +120,14 @@ func parseTransactionDeclaration(p *parser, docString string) *ast.TransactionDe
 			switch p.current.Value {
 			case keywordExecute:
 				if execute != nil {
-					panic(fmt.Errorf("unexpected second %q block", keywordExecute))
+					p.panicSyntaxError("unexpected second %q block", keywordExecute)
 				}
 
 				execute = parseTransactionExecute(p)
 
 			case keywordPost:
 				if sawPost {
-					panic(fmt.Errorf("unexpected second post-conditions"))
+					p.panicSyntaxError("unexpected second post-conditions")
 				}
 				// Skip the `post` keyword
 				p.next()
@@ -138,12 +136,12 @@ func parseTransactionDeclaration(p *parser, docString string) *ast.TransactionDe
 				sawPost = true
 
 			default:
-				panic(fmt.Errorf(
+				p.panicSyntaxError(
 					"unexpected identifier, expected keyword %q or %q, got %q",
 					keywordExecute,
 					keywordPost,
 					p.current.Value,
-				))
+				)
 			}
 
 		case lexer.TokenBraceClose:
@@ -153,7 +151,7 @@ func parseTransactionDeclaration(p *parser, docString string) *ast.TransactionDe
 			atEnd = true
 
 		default:
-			panic(fmt.Errorf("unexpected token: %s", p.current.Type))
+			p.panicSyntaxError("unexpected token: %s", p.current.Type)
 		}
 	}
 

@@ -19,7 +19,6 @@
 package runtime
 
 import (
-	"fmt"
 	"math/big"
 
 	"github.com/onflow/cadence"
@@ -31,9 +30,9 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-var InvalidLiteralError = fmt.Errorf("invalid literal")
-var UnsupportedLiteralError = fmt.Errorf("unsupported literal")
-var LiteralExpressionTypeError = fmt.Errorf("input is not a literal")
+var InvalidLiteralError = parser.NewUnpositionedSyntaxError("invalid literal")
+var UnsupportedLiteralError = parser.NewUnpositionedSyntaxError("unsupported literal")
+var LiteralExpressionTypeError = parser.NewUnpositionedSyntaxError("input is not a literal")
 
 // ParseLiteral parses a single literal string, that should have the given type.
 //
@@ -60,8 +59,10 @@ func ParseLiteral(
 }
 
 // ParseLiteralArgumentList parses an argument list with literals, that should have the given types.
-//
 // Returns an error if the code is not a valid argument list, or the arguments are not literals.
+//
+// Note: This method is not used directly within Cadence, but used by downstream dependencies
+// such as CLI, playground, etc. Hence, shouldn't be moved to test.
 //
 func ParseLiteralArgumentList(
 	argumentList string,
@@ -82,7 +83,7 @@ func ParseLiteralArgumentList(
 	parameterCount := len(parameterTypes)
 
 	if argumentCount != parameterCount {
-		return nil, fmt.Errorf(
+		return nil, parser.NewUnpositionedSyntaxError(
 			"invalid number of arguments: got %d, expected %d",
 			argumentCount,
 			parameterCount,
@@ -95,7 +96,9 @@ func ParseLiteralArgumentList(
 		parameterType := parameterTypes[i]
 		value, err := LiteralValue(inter, argument.Expression, parameterType)
 		if err != nil {
-			return nil, fmt.Errorf("invalid argument at index %d: %w", i, err)
+			return nil, parser.NewUnpositionedSyntaxError(
+				"invalid argument at index %d: %v", i, err,
+			)
 		}
 		result[i] = value
 	}
@@ -143,7 +146,7 @@ func pathLiteralValue(memoryGauge common.MemoryGauge, expression ast.Expression,
 	}
 
 	if !sema.IsSubType(pathType, ty) {
-		return nil, fmt.Errorf(
+		return nil, parser.NewUnpositionedSyntaxError(
 			"path literal type %s is not subtype of requested path type %s",
 			pathType, ty,
 		)

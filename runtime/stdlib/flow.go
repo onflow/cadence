@@ -20,11 +20,11 @@ package stdlib
 
 import (
 	"encoding/json"
-	"fmt"
 	"math/rand"
 	"strings"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -185,17 +185,17 @@ func FlowBuiltInFunctions(impls FlowBuiltinImpls) StandardLibraryFunctions {
 func DefaultFlowBuiltinImpls() FlowBuiltinImpls {
 	return FlowBuiltinImpls{
 		CreateAccount: func(invocation interpreter.Invocation) interpreter.Value {
-			panic(fmt.Errorf("cannot create accounts"))
+			panic(errors.NewUnexpectedError("cannot create accounts"))
 		},
 		GetAccount: func(invocation interpreter.Invocation) interpreter.Value {
-			panic(fmt.Errorf("cannot get accounts"))
+			panic(errors.NewUnexpectedError("cannot get accounts"))
 		},
 		Log: LogFunction.Function.Function,
 		GetCurrentBlock: func(invocation interpreter.Invocation) interpreter.Value {
-			panic(fmt.Errorf("cannot get blocks"))
+			panic(errors.NewUnexpectedError("cannot get blocks"))
 		},
 		GetBlock: func(invocation interpreter.Invocation) interpreter.Value {
-			panic(fmt.Errorf("cannot get blocks"))
+			panic(errors.NewUnexpectedError("cannot get blocks"))
 		},
 		UnsafeRandom: func(invocation interpreter.Invocation) interpreter.Value {
 			return interpreter.NewUInt64Value(
@@ -294,7 +294,7 @@ func decodeFlowLocationTypeID(typeID string) (FlowLocation, string, error) {
 	const errorMessagePrefix = "invalid Flow location type ID"
 
 	newError := func(message string) (FlowLocation, string, error) {
-		return FlowLocation{}, "", fmt.Errorf("%s: %s", errorMessagePrefix, message)
+		return FlowLocation{}, "", errors.NewDefaultUserError("%s: %s", errorMessagePrefix, message)
 	}
 
 	if typeID == "" {
@@ -311,7 +311,7 @@ func decodeFlowLocationTypeID(typeID string) (FlowLocation, string, error) {
 	prefix := parts[0]
 
 	if prefix != FlowLocationPrefix {
-		return FlowLocation{}, "", fmt.Errorf(
+		return FlowLocation{}, "", errors.NewDefaultUserError(
 			"%s: invalid prefix: expected %q, got %q",
 			errorMessagePrefix,
 			FlowLocationPrefix,
