@@ -20,7 +20,7 @@
   "scripts": {
     "build": "npm run build:types && npm run build:esm && npm run build:cjs && GOARCH=wasm GOOS=js go build -o ./dist/cadence-parser.wasm ../../runtime/cmd/parse",
     "build:types": "tsc --emitDeclarationOnly --module system --outDir dist/types",
-    "build:esm": "tsc --module es2015 --target es6 --outDir dist/esm --declaration false",
+    "build:esm": "tsc --module es6 --target es6 --outDir dist/esm --declaration false",
     "build:cjs": "tsc --module commonjs --target es6 --outDir dist/cjs --declaration false",
     "test": "jest"
   },
