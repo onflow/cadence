@@ -23,13 +23,13 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-var _ ast.TypeEqualityChecker = &TypeEqualityChecker{}
+var _ ast.TypeEqualityChecker = &TypeComparator{}
 
-type TypeEqualityChecker struct {
+type TypeComparator struct {
 	RootDeclIdentifier *Identifier
 }
 
-func (c *TypeEqualityChecker) CheckNominalTypeEquality(expected *ast.NominalType, found ast.Type) error {
+func (c *TypeComparator) CheckNominalTypeEquality(expected *ast.NominalType, found ast.Type) error {
 	foundNominalType, ok := found.(*ast.NominalType)
 	if !ok {
 		return getTypeMismatchError(expected, found)
@@ -44,7 +44,7 @@ func (c *TypeEqualityChecker) CheckNominalTypeEquality(expected *ast.NominalType
 	return nil
 }
 
-func (c *TypeEqualityChecker) CheckOptionalTypeEquality(expected *ast.OptionalType, found ast.Type) error {
+func (c *TypeComparator) CheckOptionalTypeEquality(expected *ast.OptionalType, found ast.Type) error {
 	foundOptionalType, ok := found.(*ast.OptionalType)
 	if !ok {
 		return getTypeMismatchError(expected, found)
@@ -53,7 +53,7 @@ func (c *TypeEqualityChecker) CheckOptionalTypeEquality(expected *ast.OptionalTy
 	return expected.Type.CheckEqual(foundOptionalType.Type, c)
 }
 
-func (c *TypeEqualityChecker) CheckVariableSizedTypeEquality(expected *ast.VariableSizedType, found ast.Type) error {
+func (c *TypeComparator) CheckVariableSizedTypeEquality(expected *ast.VariableSizedType, found ast.Type) error {
 	foundVarSizedType, ok := found.(*ast.VariableSizedType)
 	if !ok {
 		return getTypeMismatchError(expected, found)
@@ -62,7 +62,7 @@ func (c *TypeEqualityChecker) CheckVariableSizedTypeEquality(expected *ast.Varia
 	return expected.Type.CheckEqual(foundVarSizedType.Type, c)
 }
 
-func (c *TypeEqualityChecker) CheckConstantSizedTypeEquality(expected *ast.ConstantSizedType, found ast.Type) error {
+func (c *TypeComparator) CheckConstantSizedTypeEquality(expected *ast.ConstantSizedType, found ast.Type) error {
 	foundConstSizedType, ok := found.(*ast.ConstantSizedType)
 	if !ok {
 		return getTypeMismatchError(expected, found)
@@ -78,7 +78,7 @@ func (c *TypeEqualityChecker) CheckConstantSizedTypeEquality(expected *ast.Const
 	return expected.Type.CheckEqual(foundConstSizedType.Type, c)
 }
 
-func (c *TypeEqualityChecker) CheckDictionaryTypeEquality(expected *ast.DictionaryType, found ast.Type) error {
+func (c *TypeComparator) CheckDictionaryTypeEquality(expected *ast.DictionaryType, found ast.Type) error {
 	foundDictionaryType, ok := found.(*ast.DictionaryType)
 	if !ok {
 		return getTypeMismatchError(expected, found)
@@ -92,7 +92,7 @@ func (c *TypeEqualityChecker) CheckDictionaryTypeEquality(expected *ast.Dictiona
 	return expected.ValueType.CheckEqual(foundDictionaryType.ValueType, c)
 }
 
-func (c *TypeEqualityChecker) CheckRestrictedTypeEquality(expected *ast.RestrictedType, found ast.Type) error {
+func (c *TypeComparator) CheckRestrictedTypeEquality(expected *ast.RestrictedType, found ast.Type) error {
 	foundRestrictedType, ok := found.(*ast.RestrictedType)
 	if !ok {
 		return getTypeMismatchError(expected, found)
@@ -131,7 +131,7 @@ func (c *TypeEqualityChecker) CheckRestrictedTypeEquality(expected *ast.Restrict
 	return nil
 }
 
-func (c *TypeEqualityChecker) CheckInstantiationTypeEquality(expected *ast.InstantiationType, found ast.Type) error {
+func (c *TypeComparator) CheckInstantiationTypeEquality(expected *ast.InstantiationType, found ast.Type) error {
 	foundInstType, ok := found.(*ast.InstantiationType)
 	if !ok {
 		return getTypeMismatchError(expected, found)
@@ -153,7 +153,7 @@ func (c *TypeEqualityChecker) CheckInstantiationTypeEquality(expected *ast.Insta
 	return nil
 }
 
-func (c *TypeEqualityChecker) CheckFunctionTypeEquality(expected *ast.FunctionType, found ast.Type) error {
+func (c *TypeComparator) CheckFunctionTypeEquality(expected *ast.FunctionType, found ast.Type) error {
 	foundFuncType, ok := found.(*ast.FunctionType)
 	if !ok || len(expected.ParameterTypeAnnotations) != len(foundFuncType.ParameterTypeAnnotations) {
 		return getTypeMismatchError(expected, found)
@@ -170,7 +170,7 @@ func (c *TypeEqualityChecker) CheckFunctionTypeEquality(expected *ast.FunctionTy
 	return expected.ReturnTypeAnnotation.Type.CheckEqual(foundFuncType.ReturnTypeAnnotation.Type, c)
 }
 
-func (c *TypeEqualityChecker) CheckReferenceTypeEquality(expected *ast.ReferenceType, found ast.Type) error {
+func (c *TypeComparator) CheckReferenceTypeEquality(expected *ast.ReferenceType, found ast.Type) error {
 	refType, ok := found.(*ast.ReferenceType)
 	if !ok {
 		return getTypeMismatchError(expected, found)
@@ -179,7 +179,7 @@ func (c *TypeEqualityChecker) CheckReferenceTypeEquality(expected *ast.Reference
 	return expected.Type.CheckEqual(refType.Type, c)
 }
 
-func (c *TypeEqualityChecker) checkNameEquality(expectedType *ast.NominalType, foundType *ast.NominalType) bool {
+func (c *TypeComparator) checkNameEquality(expectedType *ast.NominalType, foundType *ast.NominalType) bool {
 	isExpectedQualifiedName := expectedType.IsQualifiedName()
 	isFoundQualifiedName := foundType.IsQualifiedName()
 
@@ -204,7 +204,7 @@ func (c *TypeEqualityChecker) checkNameEquality(expectedType *ast.NominalType, f
 	return identifiersEqual(expectedType.NestedIdentifiers, foundType.NestedIdentifiers)
 }
 
-func (c *TypeEqualityChecker) checkIdentifierEquality(
+func (c *TypeComparator) checkIdentifierEquality(
 	qualifiedNominalType *ast.NominalType,
 	simpleNominalType *ast.NominalType,
 ) bool {

@@ -26,7 +26,7 @@ import (
 )
 
 type ContractUpdateValidator struct {
-	TypeEqualityChecker
+	TypeComparator
 
 	location     Location
 	contractName string
@@ -68,7 +68,7 @@ func (validator *ContractUpdateValidator) Validate() error {
 		return validator.getContractUpdateError()
 	}
 
-	validator.TypeEqualityChecker.RootDeclIdentifier = newRootDecl.DeclarationIdentifier()
+	validator.TypeComparator.RootDeclIdentifier = newRootDecl.DeclarationIdentifier()
 
 	validator.checkDeclarationUpdatability(oldRootDecl, newRootDecl)
 
