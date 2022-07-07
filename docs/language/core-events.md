@@ -97,7 +97,7 @@ pub event AccountContractUpdated(
 
 | Field       | Type      | Description                                              |
 | ----------- | --------- | -------------------------------------------------------- |
-| `address`   | `Address` | The address of the account the contract gets updated on  |
+| `address`   | `Address` | The address of the account where the updated contract is deployed  |
 | `codeHash`  | `[UInt8]` | Hash of the contract source code                         |
 | `contract`  | `String`  | The name of the the contract                             |
 
