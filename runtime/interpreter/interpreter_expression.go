@@ -702,8 +702,6 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 			locationRangeGetter(interpreter, interpreter.Location, entry.Value),
 		)
 
-		// TODO: panic for duplicate keys?
-
 		keyValuePairs = append(
 			keyValuePairs,
 			key,
