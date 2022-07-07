@@ -26,6 +26,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/getsentry/sentry-go"
@@ -39,10 +40,13 @@ import (
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
+	"github.com/onflow/cadence/tools/analysis"
 
 	"github.com/onflow/cadence/languageserver/conversion"
 	"github.com/onflow/cadence/languageserver/jsonrpc2"
 	"github.com/onflow/cadence/languageserver/protocol"
+
+	linter "github.com/onflow/cadence-lint/linter"
 )
 
 var functionDeclarations = append(
@@ -1954,8 +1958,23 @@ func (s *Server) getDiagnostics(
 		diagnostics = append(diagnostics, extraDiagnostics...)
 	}
 
-	for _, hint := range checker.Hints() {
-		diagnostic, codeActionsResolver := convertHint(hint, uri)
+	if checkError == nil {
+		return
+	}
+
+	analysisProgram := analysis.Program{
+		Program:     program,
+		Elaboration: checker.Elaboration,
+		Location:    checker.Location,
+		Code:        text,
+	}
+
+	var reportLock sync.Mutex
+
+	report := func(linterDiagnostic analysis.Diagnostic) {
+		reportLock.Lock()
+		defer reportLock.Unlock()
+		diagnostic, codeActionsResolver := convertDiagnostic(linterDiagnostic, uri)
 		if codeActionsResolver != nil {
 			codeActionsResolverID := uuid.New()
 			diagnostic.Data = codeActionsResolverID
@@ -1963,6 +1982,8 @@ func (s *Server) getDiagnostics(
 		}
 		diagnostics = append(diagnostics, diagnostic)
 	}
+
+	analysisProgram.Run(linter.LinterAnalyzers, report)
 
 	return
 }
@@ -3047,23 +3068,21 @@ func fieldDeclarationCodeActions(
 	return codeActions
 }
 
-// convertHint converts a checker hint to a diagnostic
-// and an optional code action to resolve the hint.
+// convertDiagnostic converts a linter diagnostic to a languagserver
+// and an optional code action to resolve the diagnostic.
 //
-func convertHint(
-	hint sema.Hint,
+func convertDiagnostic(
+	linterDiagnostic analysis.Diagnostic,
 	uri protocol.DocumentURI,
 ) (
 	protocol.Diagnostic,
 	func() []*protocol.CodeAction,
 ) {
-	startPosition := hint.StartPosition()
-	endPosition := hint.EndPosition(nil)
 
-	protocolRange := conversion.ASTToProtocolRange(startPosition, endPosition)
+	protocolRange := conversion.ASTToProtocolRange(linterDiagnostic.StartPos, linterDiagnostic.EndPos)
 
-	diagnostic := protocol.Diagnostic{
-		Message: hint.Hint(),
+	protocolDiagnostic := protocol.Diagnostic{
+		Message: linterDiagnostic.Message + " " + linterDiagnostic.SecondaryMessage,
 		// protocol.SeverityHint doesn't look prominent enough in VS Code,
 		// only the first character of the range is highlighted.
 		Severity: protocol.SeverityInformation,
@@ -3072,21 +3091,20 @@ func convertHint(
 
 	var codeActionsResolver func() []*protocol.CodeAction
 
-	switch hint := hint.(type) {
-	case *sema.ReplacementHint:
+	switch linterDiagnostic.Category {
+	case "replacement-hint":
 		codeActionsResolver = func() []*protocol.CodeAction {
-			replacement := hint.Expression.String()
 			return []*protocol.CodeAction{
 				{
-					Title:       fmt.Sprintf("Replace with suggestion `%s`", replacement),
+					Title:       protocolDiagnostic.Message,
 					Kind:        protocol.QuickFix,
-					Diagnostics: []protocol.Diagnostic{diagnostic},
+					Diagnostics: []protocol.Diagnostic{protocolDiagnostic},
 					Edit: protocol.WorkspaceEdit{
 						Changes: map[protocol.DocumentURI][]protocol.TextEdit{
 							uri: {
 								{
 									Range:   protocolRange,
-									NewText: replacement,
+									NewText: linterDiagnostic.SecondaryMessage,
 								},
 							},
 						},
@@ -3096,13 +3114,13 @@ func convertHint(
 			}
 		}
 
-	case *sema.RemovalHint:
+	case "removal-hint":
 		codeActionsResolver = func() []*protocol.CodeAction {
 			return []*protocol.CodeAction{
 				{
 					Title:       "Remove unnecessary code",
 					Kind:        protocol.QuickFix,
-					Diagnostics: []protocol.Diagnostic{diagnostic},
+					Diagnostics: []protocol.Diagnostic{protocolDiagnostic},
 					Edit: protocol.WorkspaceEdit{
 						Changes: map[protocol.DocumentURI][]protocol.TextEdit{
 							uri: {
@@ -3119,5 +3137,5 @@ func convertHint(
 		}
 	}
 
-	return diagnostic, codeActionsResolver
+	return protocolDiagnostic, codeActionsResolver
 }
