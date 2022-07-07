@@ -17321,6 +17321,11 @@ type EphemeralReferenceValue struct {
 	Authorized   bool
 	Value        Value
 	BorrowedType sema.Type
+
+	// originAddress is the address of the referencing resource value
+	// at the time of the reference creation.
+	// It is always empty if the referencing value is not a resource.
+	originAddress atree.Address
 }
 
 var _ Value = &EphemeralReferenceValue{}
@@ -17333,10 +17338,18 @@ func NewUnmeteredEphemeralReferenceValue(
 	value Value,
 	borrowedType sema.Type,
 ) *EphemeralReferenceValue {
+
+	var originAddress atree.Address
+	if resourceValue, ok := value.(ReferenceTrackedResourceKindedValue); ok {
+		currentStorageID := resourceValue.StorageID()
+		originAddress = currentStorageID.Address
+	}
+
 	return &EphemeralReferenceValue{
-		Authorized:   authorized,
-		Value:        value,
-		BorrowedType: borrowedType,
+		Authorized:    authorized,
+		Value:         value,
+		BorrowedType:  borrowedType,
+		originAddress: originAddress,
 	}
 }
 
@@ -17387,6 +17400,8 @@ func (v *EphemeralReferenceValue) StaticType(inter *Interpreter) StaticType {
 		panic(DereferenceError{})
 	}
 
+	v.checkReferenceResourceNotMoved(*referencedValue, ReturnEmptyLocationRange)
+
 	return NewReferenceStaticType(
 		inter,
 		v.Authorized,
@@ -17432,6 +17447,7 @@ func (v *EphemeralReferenceValue) GetMember(
 	self := *referencedValue
 
 	interpreter.checkReferencedResourceNotDestroyed(self, getLocationRange)
+	v.checkReferenceResourceNotMoved(self, getLocationRange)
 
 	return interpreter.getMember(self, getLocationRange, name)
 }
@@ -17451,6 +17467,7 @@ func (v *EphemeralReferenceValue) RemoveMember(
 	self := *referencedValue
 
 	interpreter.checkReferencedResourceNotDestroyed(self, getLocationRange)
+	v.checkReferenceResourceNotMoved(self, getLocationRange)
 
 	if memberAccessibleValue, ok := self.(MemberAccessibleValue); ok {
 		return memberAccessibleValue.RemoveMember(interpreter, getLocationRange, identifier)
@@ -17475,6 +17492,7 @@ func (v *EphemeralReferenceValue) SetMember(
 	self := *referencedValue
 
 	interpreter.checkReferencedResourceNotDestroyed(self, getLocationRange)
+	v.checkReferenceResourceNotMoved(self, getLocationRange)
 
 	interpreter.setMember(self, getLocationRange, name, value)
 }
@@ -17494,6 +17512,7 @@ func (v *EphemeralReferenceValue) GetKey(
 	self := *referencedValue
 
 	interpreter.checkReferencedResourceNotDestroyed(self, getLocationRange)
+	v.checkReferenceResourceNotMoved(self, getLocationRange)
 
 	return self.(ValueIndexableValue).
 		GetKey(interpreter, getLocationRange, key)
@@ -17515,6 +17534,7 @@ func (v *EphemeralReferenceValue) SetKey(
 	self := *referencedValue
 
 	interpreter.checkReferencedResourceNotDestroyed(self, getLocationRange)
+	v.checkReferenceResourceNotMoved(self, getLocationRange)
 
 	self.(ValueIndexableValue).
 		SetKey(interpreter, getLocationRange, key, value)
@@ -17536,6 +17556,7 @@ func (v *EphemeralReferenceValue) InsertKey(
 	self := *referencedValue
 
 	interpreter.checkReferencedResourceNotDestroyed(self, getLocationRange)
+	v.checkReferenceResourceNotMoved(self, getLocationRange)
 
 	self.(ValueIndexableValue).
 		InsertKey(interpreter, getLocationRange, key, value)
@@ -17556,6 +17577,7 @@ func (v *EphemeralReferenceValue) RemoveKey(
 	self := *referencedValue
 
 	interpreter.checkReferencedResourceNotDestroyed(self, getLocationRange)
+	v.checkReferenceResourceNotMoved(self, getLocationRange)
 
 	return self.(ValueIndexableValue).
 		RemoveKey(interpreter, getLocationRange, key)
@@ -17586,6 +17608,8 @@ func (v *EphemeralReferenceValue) ConformsToStaticType(
 	if referencedValue == nil {
 		return false
 	}
+
+	v.checkReferenceResourceNotMoved(*referencedValue, getLocationRange)
 
 	staticType := (*referencedValue).StaticType(interpreter)
 
@@ -17640,6 +17664,11 @@ func (v *EphemeralReferenceValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 ) Value {
+	referencedValue := v.ReferencedValue(interpreter, ReturnEmptyLocationRange)
+	if referencedValue != nil {
+		v.checkReferenceResourceNotMoved(*referencedValue, ReturnEmptyLocationRange)
+	}
+
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
 	}
@@ -17652,6 +17681,23 @@ func (v *EphemeralReferenceValue) Clone(_ *Interpreter) Value {
 
 func (*EphemeralReferenceValue) DeepRemove(_ *Interpreter) {
 	// NO-OP
+}
+
+func (v *EphemeralReferenceValue) checkReferenceResourceNotMoved(
+	referencedValue Value,
+	getLocationRange func() LocationRange,
+) {
+	referencedResource, ok := referencedValue.(ReferenceTrackedResourceKindedValue)
+	if !ok || referencedResource.IsDestroyed() {
+		return
+	}
+
+	currentAddress := referencedResource.StorageID().Address
+	if v.originAddress != currentAddress {
+		panic(MovedResourceReferenceError{
+			LocationRange: getLocationRange(),
+		})
+	}
 }
 
 // AddressValue

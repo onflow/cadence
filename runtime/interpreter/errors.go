@@ -865,3 +865,18 @@ func (InvalidHexLengthError) IsUserError() {}
 func (InvalidHexLengthError) Error() string {
 	return "hex string has non-even length"
 }
+
+// MovedResourceReferenceError is reported when accessing a reference value
+// that is pointing to a moved resource.
+//
+type MovedResourceReferenceError struct {
+	LocationRange
+}
+
+var _ errors.UserError = MovedResourceReferenceError{}
+
+func (MovedResourceReferenceError) IsUserError() {}
+
+func (e MovedResourceReferenceError) Error() string {
+	return "referring resource is moved"
+}
