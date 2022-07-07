@@ -32,12 +32,9 @@ a full implementation for **Non-Fungible Tokens (NFTs)**.
 
 Open the starter code for this tutorial in the Flow Playground:
 
-<a
-  href="https://play.onflow.org/af553a60-7b73-4e2e-b145-80a7c7e088dc"
-  target="_blank"
->
+<a href="https://play.onflow.org/af553a60-7b73-4e2e-b145-80a7c7e088dc" target="_blank">
   https://play.onflow.org/af553a60-7b73-4e2e-b145-80a7c7e088dc
-</a> <br />
+</a> <br/>
 The tutorial will ask you to take various actions to interact with this code.
 
 </Callout>
@@ -105,7 +102,7 @@ to enable more-sophisticated ways to interact with our NFTs.
 
 The next contract we look at is called `ExampleNFT`, it's stored in account `0x02`.
 This contract expands on the `BasicNFT` we looked at by adding:
-1. And `idCount` contract field that tracks unique NFT ids.
+1. An `idCount` contract field that tracks unique NFT ids.
 2. An `NFTReceiver` interface that exposes three functions for the collection
 3. Declares a resource called `Collection` that implements the `NFTReceiver` interface
 4. The `Collection` will declare fields and functions to interact with it,
@@ -337,7 +334,6 @@ like a CryptoKitty owning a hat accessory,
 the Kitty literally stores the hat in its own storage and effectively owns it.
 The hat belongs to the CryptoKitty that it is stored in,
 and the hat can be transferred separately or along with the CryptoKitty that owns it.
-
 
 ## Restricting Access to the NFT Collection
 

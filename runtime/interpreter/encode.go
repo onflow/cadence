@@ -20,7 +20,6 @@ package interpreter
 
 import (
 	"bytes"
-	"fmt"
 	"math"
 	"math/big"
 
@@ -28,6 +27,7 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 )
 
 const cborTagSize = 2
@@ -870,7 +870,7 @@ func encodeLocation(e *cbor.StreamEncoder, l common.Location) error {
 		return e.EncodeBytes(l[:])
 
 	default:
-		return fmt.Errorf("unsupported location: %T", l)
+		return errors.NewUnexpectedError("unsupported location: %T", l)
 	}
 }
 

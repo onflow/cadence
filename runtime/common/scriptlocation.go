@@ -23,6 +23,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/onflow/cadence/runtime/errors"
 )
 
 const ScriptLocationPrefix = "s"
@@ -102,7 +104,7 @@ func decodeScriptLocationTypeID(gauge MemoryGauge, typeID string) (ScriptLocatio
 	const errorMessagePrefix = "invalid script location type ID"
 
 	newError := func(message string) (ScriptLocation, string, error) {
-		return ScriptLocation{}, "", fmt.Errorf("%s: %s", errorMessagePrefix, message)
+		return ScriptLocation{}, "", errors.NewDefaultUserError("%s: %s", errorMessagePrefix, message)
 	}
 
 	if typeID == "" {
@@ -119,7 +121,7 @@ func decodeScriptLocationTypeID(gauge MemoryGauge, typeID string) (ScriptLocatio
 	prefix := parts[0]
 
 	if prefix != ScriptLocationPrefix {
-		return ScriptLocation{}, "", fmt.Errorf(
+		return ScriptLocation{}, "", errors.NewDefaultUserError(
 			"%s: invalid prefix: expected %q, got %q",
 			errorMessagePrefix,
 			ScriptLocationPrefix,
@@ -131,7 +133,7 @@ func decodeScriptLocationTypeID(gauge MemoryGauge, typeID string) (ScriptLocatio
 	UseMemory(gauge, NewBytesMemoryUsage(len(location)))
 
 	if err != nil {
-		return ScriptLocation{}, "", fmt.Errorf(
+		return ScriptLocation{}, "", errors.NewDefaultUserError(
 			"%s: invalid location: %w",
 			errorMessagePrefix,
 			err,

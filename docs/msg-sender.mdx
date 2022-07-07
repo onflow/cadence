@@ -17,7 +17,7 @@ not least because each transaction can be signed by more than one account.
 This then translates to the transaction having access to all of the signers' accounts.
 A further difference from Ethereum is that while Ethereum and Flow both have accounts
 that can contain contract code and data, in Cadence the resources that individual users own (such as NFTs)
-are placed in the *user* account's storage area rather than the contract account's.
+are placed in the _user_ account's storage area rather than the contract account's.
 
 All of this means that a task that would be implemented
 by a single central contract checking `msg.sender` in Solidity
@@ -54,7 +54,7 @@ and [Capability Revocation](design-patterns#capability-revocation).
 Limiting a user's control of resources that they own except in exceptional circumstances
 is considered un-Flow-like. If you must implement allow/block listing of accounts
 for regulatory compliance, route calls from functions in your resources
-through `access(contract)` code on their contract that checksan admin-controlled dictionary
+through `access(contract)` code on their contract that checks an admin-controlled dictionary
 containing the information required to check for allowed or blocked accounts.
 
 This code could check the resource owner, but doing so is an antipattern (see below)
@@ -121,7 +121,7 @@ by the admin as function arguments.
 
 ## Checking Contract.account
 
-Contracts [have the member variable `let account: Account`](language/contracts),
+Contracts [have the member variable `let account: Account`](language/contracts#account-access),
 which is the account in which the contract is deployed:
 
 This is of limited use in replacing `msg.sender`, as it is essentially a tautology on Flow

@@ -665,8 +665,11 @@ func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpres
 	// TODO: cache
 	arrayStaticType := ConvertSemaArrayTypeToStaticArrayType(interpreter, arrayType)
 
+	getLocationRange := locationRangeGetter(interpreter, interpreter.Location, expression)
+
 	return NewArrayValue(
 		interpreter,
+		getLocationRange,
 		arrayStaticType,
 		common.Address{},
 		copies...,
@@ -710,7 +713,14 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 
 	dictionaryStaticType := ConvertSemaDictionaryTypeToStaticDictionaryType(interpreter, dictionaryType)
 
-	return NewDictionaryValue(interpreter, dictionaryStaticType, keyValuePairs...)
+	getLocationRange := locationRangeGetter(interpreter, interpreter.Location, expression)
+
+	return NewDictionaryValue(
+		interpreter,
+		getLocationRange,
+		dictionaryStaticType,
+		keyValuePairs...,
+	)
 }
 
 func (interpreter *Interpreter) VisitMemberExpression(expression *ast.MemberExpression) ast.Repr {

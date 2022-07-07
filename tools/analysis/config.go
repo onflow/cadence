@@ -46,7 +46,7 @@ type Config struct {
 
 func NewSimpleConfig(
 	mode LoadMode,
-	codes map[common.LocationID]string,
+	codes map[common.Location]string,
 	contractNames map[common.Address][]string,
 	resolveAddressContracts func(common.Address) (contracts map[string]string, err error),
 ) *Config {
@@ -74,7 +74,7 @@ func NewSimpleConfig(
 				Address: address,
 				Name:    name,
 			}
-			codes[location.ID()] = code
+			codes[location] = code
 		}
 
 		contractNames[address] = names
@@ -121,7 +121,7 @@ func NewSimpleConfig(
 		) {
 			repeat := true
 			for {
-				code, ok := codes[location.ID()]
+				code, ok := codes[location]
 				if !ok {
 					if repeat {
 						if addressLocation, ok := location.(common.AddressLocation); ok {

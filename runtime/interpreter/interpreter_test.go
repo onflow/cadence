@@ -179,7 +179,13 @@ func BenchmarkValueIsSubtypeOfSemaType(b *testing.B) {
 		Size: size,
 	}
 
-	array := NewArrayValue(inter, typ, owner, values...)
+	array := NewArrayValue(
+		inter,
+		ReturnEmptyLocationRange,
+		typ,
+		owner,
+		values...,
+	)
 
 	b.ResetTimer()
 

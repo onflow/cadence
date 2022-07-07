@@ -19,9 +19,10 @@
 package common
 
 import (
-	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/onflow/cadence/runtime/errors"
 )
 
 // Location describes the origin of a Cadence script.
@@ -119,7 +120,7 @@ var typeIDDecoders = map[string]TypeIDDecoder{}
 
 func RegisterTypeIDDecoder(prefix string, decoder TypeIDDecoder) {
 	if _, ok := typeIDDecoders[prefix]; ok {
-		panic(fmt.Errorf("cannot register type ID decoder for already registered prefix: %s", prefix))
+		panic(errors.NewUnexpectedError("cannot register type ID decoder for already registered prefix: %s", prefix))
 	}
 	typeIDDecoders[prefix] = decoder
 }
@@ -128,7 +129,7 @@ func DecodeTypeID(gauge MemoryGauge, typeID string) (location Location, qualifie
 	pieces := strings.Split(typeID, ".")
 
 	if len(pieces) < 1 {
-		return nil, "", errors.New("invalid type ID: missing type name")
+		return nil, "", errors.NewDefaultUserError("invalid type ID: missing type name")
 	}
 
 	prefix := pieces[0]

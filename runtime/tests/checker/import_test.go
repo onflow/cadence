@@ -28,7 +28,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/parser2"
+	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -530,7 +530,7 @@ func TestCheckInvalidImportCycleSelf(t *testing.T) {
 	// will be checked by checker checking importing program
 
 	const code = `import "test"`
-	importedProgram, err := parser2.ParseProgram(code, nil)
+	importedProgram, err := parser.ParseProgram(code, nil)
 
 	require.NoError(t, err)
 
@@ -600,7 +600,7 @@ func TestCheckInvalidImportCycleTwoLocations(t *testing.T) {
           return odd(n - 1)
       }
     `
-	programEven, err := parser2.ParseProgram(codeEven, nil)
+	programEven, err := parser.ParseProgram(codeEven, nil)
 	require.NoError(t, err)
 
 	const codeOdd = `
@@ -613,7 +613,7 @@ func TestCheckInvalidImportCycleTwoLocations(t *testing.T) {
           return even(n - 1)
       }
     `
-	programOdd, err := parser2.ParseProgram(codeOdd, nil)
+	programOdd, err := parser.ParseProgram(codeOdd, nil)
 	require.NoError(t, err)
 
 	getProgram := func(location common.Location) *ast.Program {

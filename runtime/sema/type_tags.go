@@ -19,8 +19,6 @@
 package sema
 
 import (
-	"fmt"
-
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -45,7 +43,7 @@ func newTypeTagFromLowerMask(mask uint64) TypeTag {
 	}
 
 	if _, ok := allTypeTags[typeTag]; ok {
-		panic(fmt.Errorf("duplicate type tag: %v", typeTag))
+		panic(errors.NewUnexpectedError("duplicate type tag: %v", typeTag))
 	}
 
 	allTypeTags[typeTag] = true
@@ -62,7 +60,7 @@ func newTypeTagFromUpperMask(mask uint64) TypeTag {
 	}
 
 	if _, ok := allTypeTags[typeTag]; ok {
-		panic(fmt.Errorf("duplicate type tag: %v", typeTag))
+		panic(errors.NewUnexpectedError("duplicate type tag: %v", typeTag))
 	}
 
 	allTypeTags[typeTag] = true
@@ -677,7 +675,7 @@ func commonSuperTypeOfVariableSizedArrays(types []Type) Type {
 
 		arrayType, ok := typ.(*VariableSizedType)
 		if !ok {
-			panic(fmt.Errorf("expected variable-sized array type, found %s", typ))
+			panic(errors.NewUnexpectedError("expected variable-sized array type, found %s", typ))
 		}
 
 		elementTypes = append(elementTypes, arrayType.ElementType(false))
@@ -710,7 +708,7 @@ func commonSuperTypeOfConstantSizedArrays(types []Type) Type {
 
 		arrayType, ok := typ.(*ConstantSizedType)
 		if !ok {
-			panic(fmt.Errorf("expected constant-sized array type, found %s", typ))
+			panic(errors.NewUnexpectedError("expected constant-sized array type, found %s", typ))
 		}
 
 		elementTypes = append(elementTypes, arrayType.ElementType(false))
@@ -754,7 +752,7 @@ func commonSuperTypeOfDictionaries(types []Type) Type {
 
 		dictionaryType, ok := typ.(*DictionaryType)
 		if !ok {
-			panic(fmt.Errorf("expected dictionary type, found %s", typ))
+			panic(errors.NewUnexpectedError("expected dictionary type, found %s", typ))
 		}
 
 		valueTypes = append(valueTypes, dictionaryType.ValueType)
