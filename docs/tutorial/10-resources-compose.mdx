@@ -134,8 +134,7 @@ The hats are stored in a variable in the Kitty resource.
 
 ```cadence
     // place where the Kitty hats are stored
-    `pub let items: <-{String: KittyHat}`
-
+    pub let items: <-{String: KittyHat}
 A Kitty owner can take the hats off the Kitty and transfer them individually. Or the owner can transfer a Kitty that owns a hat, and the hat will go along with the Kitty.
 
 Here is a transaction to create a `Kitty` and a `KittyHat`, store the hat in the Kitty, then store it in your account storage.
