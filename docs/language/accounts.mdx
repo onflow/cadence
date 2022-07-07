@@ -163,10 +163,10 @@ to the `prepare` phase of the transaction.
   fun getAuthAccount(_ address: Address): AuthAccount
   ```
 
-  This `AuthAccount` object can perform all operations associated with authorized accounts, 
-  and as such this function is only available in scripts, 
-  which discard their changes upon completion. 
-  Attempting to use this function outside of a script will cause a type error. 
+  This `AuthAccount` object can perform all operations associated with authorized accounts,
+  and as such this function is only available in scripts,
+  which discard their changes upon completion.
+  Attempting to use this function outside of a script will cause a type error.
 
 ## Account Creation
 
@@ -198,7 +198,8 @@ struct AccountKey {
     let isRevoked: Bool
 }
 ```
-Refer the [PublicKey](crypto/#publickey) section for more details on the creation and validity of public keys.
+
+Refer to the [`PublicKey` section](crypto/#publickey) for more details on the creation and validity of public keys.
 
 ### Account Key API
 Account key API provides a set of functions to manage account keys.
@@ -393,7 +394,7 @@ to all its stored objects.
 
   Reads the type of an object from the account's storage which is stored under the given path, or nil if no object is stored under the given path.
 
-  If there is an object stored, the type of the object is returned without modifying the stored object. 
+  If there is an object stored, the type of the object is returned without modifying the stored object.
 
   The path must be a storage path, i.e., only the domain `storage` is allowed
 
@@ -410,7 +411,7 @@ to all its stored objects.
   A type argument for the parameter must be provided explicitly.
 
   The type `T` must be a supertype of the type of the loaded object.
-  If it is not, execution will abort with an error. 
+  If it is not, execution will abort with an error.
   The given type does not necessarily need to be exactly the same as the type of the loaded object.
 
   The path must be a storage path, i.e., only the domain `storage` is allowed.
@@ -427,7 +428,7 @@ to all its stored objects.
   A type argument for the parameter must be provided explicitly.
 
   The type `T` must be a supertype of the type of the copied structure.
-  If it is not, execution will abort with an error. 
+  If it is not, execution will abort with an error.
   The given type does not necessarily need to be exactly the same as
   the type of the copied structure.
 
@@ -532,7 +533,7 @@ This is possible using the `borrow` function of an `AuthAccount`:
   A type argument for the parameter must be provided explicitly.
   The type argument must be a reference to any type (`&Any`; `Any` is the supertype of all types).
   It must be possible to create the given reference type `T` for the stored /  borrowed object.
-  If it is not, execution will abort with an error. 
+  If it is not, execution will abort with an error.
   The given type does not necessarily need to be exactly the same as the type of the borrowed object.
 
   The path must be a storage path, i.e., only the domain `storage` is allowed.
@@ -609,7 +610,7 @@ An account's storage is limited by its storage capacity.
 
 An account's storage used is the sum of the size of all the data that is stored in an account (in MB).
 An account's storage capacity is a value that is calculated from the amount of FLOW
-that is stored in the account's main FLOW token vault. 
+that is stored in the account's main FLOW token vault.
 
 At the end of every transaction, the storage used is compared to the storage capacity.
 For all accounts involved in the transaction, if the account's storage used is greater than its storage capacity, the transaction will fail.
