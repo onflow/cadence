@@ -20,7 +20,7 @@ package integration
 
 import (
 	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/parser2"
+	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 
 	"github.com/onflow/cadence/languageserver/conversion"
@@ -63,7 +63,7 @@ func (i *FlowIntegration) transactionDeclarationCountDiagnostics(checker *sema.C
 			diagnostics = append(diagnostics, protocol.Diagnostic{
 				Range: conversion.ASTToProtocolRange(
 					position,
-					position.Shifted(nil, len(parser2.KeywordTransaction)-1),
+					position.Shifted(nil, len(parser.KeywordTransaction)-1),
 				),
 				Severity: protocol.SeverityWarning,
 				Message:  "Cannot declare more than one transaction per file",

@@ -36,7 +36,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/parser2"
+	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 
@@ -1798,6 +1798,7 @@ func (s *Server) getDiagnostics(
 		program,
 		location,
 		nil,
+		true,
 		sema.WithPredeclaredValues(valueDeclarations),
 		sema.WithPredeclaredTypes(typeDeclarations),
 		sema.WithLocationHandler(
@@ -2024,7 +2025,7 @@ func (s *Server) getDiagnosticsForParentError(
 // parse parses the given code and returns the resultant program.
 func parse(conn protocol.Conn, code, location string) (*ast.Program, error) {
 	start := time.Now()
-	program, err := parser2.ParseProgram(code, nil)
+	program, err := parser.ParseProgram(code, nil)
 	elapsed := time.Since(start)
 
 	conn.LogMessage(&protocol.LogMessageParams{
@@ -2066,7 +2067,7 @@ func (s *Server) resolveImport(location common.Location) (program *ast.Program, 
 		return nil, err
 	}
 
-	return parser2.ParseProgram(code, nil)
+	return parser.ParseProgram(code, nil)
 }
 
 func (s *Server) GetDocument(uri protocol.DocumentURI) (doc Document, ok bool) {
