@@ -44,12 +44,14 @@ func TestInspectValue(t *testing.T) {
 		dictValueValue := NewUnmeteredInt256ValueFromInt64(1)
 		dictValue := NewDictionaryValue(
 			inter,
+			ReturnEmptyLocationRange,
 			dictionaryStaticType,
 			dictValueKey, dictValueValue,
 		)
 
 		arrayValue := NewArrayValue(
 			inter,
+			ReturnEmptyLocationRange,
 			VariableSizedStaticType{
 				Type: dictionaryStaticType,
 			},

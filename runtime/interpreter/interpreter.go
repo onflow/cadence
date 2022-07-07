@@ -23,7 +23,6 @@ import (
 	goErrors "errors"
 	"fmt"
 	"math"
-	goRuntime "runtime"
 	"time"
 
 	"github.com/fxamacker/cbor/v2"
@@ -1129,14 +1128,18 @@ func (interpreter *Interpreter) InvokeTransaction(index int, arguments ...Value)
 func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 	if r := recover(); r != nil {
 		var err error
+
+		// Recover all errors, because interpreter can be directly invoked by FVM.
 		switch r := r.(type) {
-		case goRuntime.Error, ExternalError:
-			// Don't recover Go's or external panics
-			panic(r)
+		case Error,
+			errors.ExternalError,
+			errors.InternalError,
+			errors.UserError:
+			err = r.(error)
 		case error:
-			err = r
+			err = errors.NewUnexpectedErrorFromCause(r)
 		default:
-			err = fmt.Errorf("%s", r)
+			err = errors.NewUnexpectedError("%s", r)
 		}
 
 		// if the error is not yet an interpreter error, wrap it
@@ -1590,7 +1593,10 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 			var nestedVariable *Variable
 			lexicalScope, nestedVariable =
-				interpreter.declareCompositeValue(nestedCompositeDeclaration, lexicalScope)
+				interpreter.declareCompositeValue(
+					nestedCompositeDeclaration,
+					lexicalScope,
+				)
 
 			memberIdentifier := nestedCompositeDeclaration.Identifier.Identifier
 			nestedVariables[memberIdentifier] = nestedVariable
@@ -1762,6 +1768,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 				value := NewCompositeValue(
 					interpreter,
+					invocation.GetLocationRange,
 					location,
 					qualifiedIdentifier,
 					declaration.CompositeKind,
@@ -1863,8 +1870,11 @@ func (interpreter *Interpreter) declareEnumConstructor(
 			},
 		}
 
+		getLocationRange := locationRangeGetter(interpreter, location, enumCase)
+
 		caseValue := NewCompositeValue(
 			interpreter,
+			getLocationRange,
 			location,
 			qualifiedIdentifier,
 			declaration.CompositeKind,
@@ -4444,7 +4454,7 @@ func (interpreter *Interpreter) RemoveReferencedSlab(storable atree.Storable) {
 	storageID := atree.StorageID(storageIDStorable)
 	err := interpreter.Storage.Remove(storageID)
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 }
 
@@ -4455,7 +4465,7 @@ func (interpreter *Interpreter) maybeValidateAtreeValue(v atree.Value) {
 	if interpreter.atreeStorageValidationEnabled {
 		err := interpreter.Storage.CheckHealth()
 		if err != nil {
-			panic(ExternalError{err})
+			panic(errors.NewExternalError(err))
 		}
 	}
 }
@@ -4516,7 +4526,7 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 	case *atree.Array:
 		err := atree.ValidArray(value, value.Type(), tic, hip)
 		if err != nil {
-			panic(ExternalError{err})
+			panic(errors.NewExternalError(err))
 		}
 
 		err = atree.ValidArraySerialization(
@@ -4535,14 +4545,14 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 				goErrors.As(err, &nonStorableStaticTypeErr)) {
 
 				atree.PrintArray(value)
-				panic(ExternalError{err})
+				panic(errors.NewExternalError(err))
 			}
 		}
 
 	case *atree.OrderedMap:
 		err := atree.ValidMap(value, value.Type(), tic, hip)
 		if err != nil {
-			panic(ExternalError{err})
+			panic(errors.NewExternalError(err))
 		}
 
 		err = atree.ValidMapSerialization(
@@ -4561,7 +4571,7 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 				goErrors.As(err, &nonStorableStaticTypeErr)) {
 
 				atree.PrintMap(value)
-				panic(ExternalError{err})
+				panic(errors.NewExternalError(err))
 			}
 		}
 	}

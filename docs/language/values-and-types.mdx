@@ -1282,10 +1282,14 @@ booleans[0] = true
 - `cadence•fun insert(key: K, _ value: V): V?`
 
   Inserts the given value of type `V` into the dictionary under the given `key` of type `K`.
+  
+  The inserted key must have the same type as the dictionary's key type, and the inserted value must have the same type as the dictionary's value type.
 
   Returns the previous value as an optional
   if the dictionary contained the key,
   otherwise `nil`.
+  
+  Updates the value if the dictionary already contained the key.
 
   This function [mutates](../access-control) the dictionary.
 

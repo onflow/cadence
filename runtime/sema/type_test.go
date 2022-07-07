@@ -27,7 +27,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/parser2"
+	"github.com/onflow/cadence/runtime/parser"
 )
 
 func TestConstantSizedType_String(t *testing.T) {
@@ -640,7 +640,7 @@ func TestIdentifierCacheUpdate(t *testing.T) {
           }
 	`
 
-	program, err := parser2.ParseProgram(code, nil)
+	program, err := parser.ParseProgram(code, nil)
 	require.NoError(t, err)
 
 	checker, err := NewChecker(
@@ -721,7 +721,7 @@ func TestCommonSuperType(t *testing.T) {
 			if r := recover(); r != nil {
 				err, _ := r.(error)
 				require.Error(t, err)
-				assert.Equal(t, "duplicate type tag: {32 0}", err.Error())
+				assert.Contains(t, err.Error(), "duplicate type tag: {32 0}")
 			}
 		}()
 

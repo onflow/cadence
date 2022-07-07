@@ -43,6 +43,7 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 		invalid := []Value{
 			NewArrayValue(
 				inter,
+				ReturnEmptyLocationRange,
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeUInt64,
 				},
@@ -51,6 +52,7 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 			),
 			NewArrayValue(
 				inter,
+				ReturnEmptyLocationRange,
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInt256,
 				},
@@ -75,6 +77,7 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 		invalid := map[Value][]byte{
 			NewArrayValue(
 				inter,
+				ReturnEmptyLocationRange,
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInteger,
 				},
@@ -82,6 +85,7 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 			): {},
 			NewArrayValue(
 				inter,
+				ReturnEmptyLocationRange,
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInteger,
 				},
@@ -91,6 +95,7 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 			): {2, 3},
 			NewArrayValue(
 				inter,
+				ReturnEmptyLocationRange,
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInteger,
 				},

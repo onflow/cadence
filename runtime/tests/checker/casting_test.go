@@ -6384,7 +6384,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 			}
 		})
 
-		t.Run("Reference, without type", func(t *testing.T) {
+		t.Run("Reference, with cast", func(t *testing.T) {
 			t.Parallel()
 
 			checker, err := ParseAndCheckWithAny(t, `
@@ -6394,7 +6394,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 
 			require.NoError(t, err)
 
-			require.Len(t, checker.Elaboration.StaticCastTypes, 0)
+			require.Len(t, checker.Elaboration.StaticCastTypes, 1)
 		})
 
 		t.Run("Reference, with type", func(t *testing.T) {
@@ -6407,7 +6407,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 
 			require.NoError(t, err)
 
-			require.Len(t, checker.Elaboration.StaticCastTypes, 0)
+			require.Len(t, checker.Elaboration.StaticCastTypes, 1)
 		})
 
 		t.Run("Conditional expr valid", func(t *testing.T) {
@@ -6606,10 +6606,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 
 			require.NoError(t, err)
 
-			hints := checker.Hints()
-
-			// Binary expressions are currently skipped from checking.
-			require.Len(t, hints, 0)
+			require.Len(t, checker.Elaboration.StaticCastTypes, 2)
 		})
 
 		t.Run("Function expr", func(t *testing.T) {

@@ -87,7 +87,6 @@ type Checker struct {
 	PredeclaredTypes                   []TypeDeclaration
 	accessCheckMode                    AccessCheckMode
 	errors                             []error
-	hints                              []Hint
 	valueActivations                   *VariableActivations
 	resources                          *Resources
 	typeActivations                    *VariableActivations
@@ -115,7 +114,7 @@ type Checker struct {
 	checkHandler                       CheckHandlerFunc
 	expectedType                       Type
 	memberAccountAccessHandler         MemberAccountAccessHandlerFunc
-	lintingEnabled                     bool
+	extendedElaboration                bool
 	errorShortCircuitingEnabled        bool
 	// memoryGauge is used for metering memory usage
 	memoryGauge common.MemoryGauge
@@ -251,7 +250,7 @@ func WithErrorShortCircuitingEnabled(enabled bool) Option {
 	}
 }
 
-func NewChecker(program *ast.Program, location common.Location, memoryGauge common.MemoryGauge, lintingEnabled bool, options ...Option) (*Checker, error) {
+func NewChecker(program *ast.Program, location common.Location, memoryGauge common.MemoryGauge, extendedElaboration bool, options ...Option) (*Checker, error) {
 
 	if location == nil {
 		return nil, &MissingLocationError{}
@@ -273,8 +272,8 @@ func NewChecker(program *ast.Program, location common.Location, memoryGauge comm
 		typeActivations:     typeActivations,
 		functionActivations: functionActivations,
 		containerTypes:      map[Type]bool{},
-		Elaboration:         NewElaboration(memoryGauge, lintingEnabled),
-		lintingEnabled:      lintingEnabled,
+		Elaboration:         NewElaboration(memoryGauge, extendedElaboration),
+		extendedElaboration: extendedElaboration,
 		memoryGauge:         memoryGauge,
 	}
 
@@ -301,7 +300,7 @@ func (checker *Checker) SubChecker(program *ast.Program, location common.Locatio
 		program,
 		location,
 		checker.memoryGauge,
-		checker.lintingEnabled,
+		checker.extendedElaboration,
 		WithPredeclaredValues(checker.PredeclaredValues),
 		WithPredeclaredTypes(checker.PredeclaredTypes),
 		WithAccessCheckMode(checker.accessCheckMode),
@@ -443,10 +442,6 @@ func (checker *Checker) report(err error) {
 	if checker.errorShortCircuitingEnabled {
 		panic(stopChecking{})
 	}
-}
-
-func (checker *Checker) hint(hint Hint) {
-	checker.hints = append(checker.hints, hint)
 }
 
 func (checker *Checker) UserDefinedValues() map[string]*Variable {
@@ -1854,10 +1849,6 @@ func (checker *Checker) ResetErrors() {
 	checker.errors = nil
 }
 
-func (checker *Checker) ResetHints() {
-	checker.hints = nil
-}
-
 const invalidTypeDeclarationAccessModifierExplanation = "type declarations must be public"
 
 func (checker *Checker) checkDeclarationAccessModifier(
@@ -2415,10 +2406,6 @@ func (checker *Checker) convertInstantiationType(t *ast.InstantiationType) Type 
 	}
 
 	return parameterizedType.Instantiate(typeArguments, checker.report)
-}
-
-func (checker *Checker) Hints() []Hint {
-	return checker.hints
 }
 
 func (checker *Checker) VisitExpression(expr ast.Expression, expectedType Type) Type {
