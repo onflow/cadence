@@ -1755,6 +1755,8 @@ func (*Server) Exit(_ protocol.Conn) error {
 
 const filePrefix = "file://"
 
+var lintingAnalyzers = maps.Values(linter.Analyzers)
+
 // getDiagnostics parses and checks the given file and generates diagnostics
 // indicating each syntax or semantic error. Returns a list of diagnostics
 // that the caller is responsible for publishing to the client.
@@ -1984,7 +1986,7 @@ func (s *Server) getDiagnostics(
 		diagnostics = append(diagnostics, diagnostic)
 	}
 
-	analysisProgram.Run(maps.Values(linter.Analyzers), report)
+	analysisProgram.Run(lintingAnalyzers, report)
 
 	return
 }
