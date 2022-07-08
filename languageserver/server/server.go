@@ -3083,6 +3083,7 @@ func convertDiagnostic(
 	protocolRange := conversion.ASTToProtocolRange(linterDiagnostic.StartPos, linterDiagnostic.EndPos)
 
 	var protocolDiagnostic protocol.Diagnostic
+	var message string
 
 	var codeActionsResolver func() []*protocol.CodeAction
 
@@ -3108,14 +3109,7 @@ func convertDiagnostic(
 				},
 			}
 		}
-		protocolDiagnostic = protocol.Diagnostic{
-			Message: fmt.Sprintf("%s `%s`", linterDiagnostic.Message, linterDiagnostic.SecondaryMessage),
-			// protocol.SeverityHint doesn't look prominent enough in VS Code,
-			// only the first character of the range is highlighted.
-			Severity: protocol.SeverityInformation,
-			Range:    protocolRange,
-		}
-
+		message = fmt.Sprintf("%s `%s`", linterDiagnostic.Message, linterDiagnostic.SecondaryMessage)
 	case linter.RemovalCategory:
 		codeActionsResolver = func() []*protocol.CodeAction {
 			return []*protocol.CodeAction{
@@ -3137,21 +3131,17 @@ func convertDiagnostic(
 				},
 			}
 		}
-		protocolDiagnostic = protocol.Diagnostic{
-			Message: linterDiagnostic.Message,
-			// protocol.SeverityHint doesn't look prominent enough in VS Code,
-			// only the first character of the range is highlighted.
-			Severity: protocol.SeverityInformation,
-			Range:    protocolRange,
-		}
+		message = linterDiagnostic.Message
 	default:
-		protocolDiagnostic = protocol.Diagnostic{
-			Message: linterDiagnostic.Message,
-			// protocol.SeverityHint doesn't look prominent enough in VS Code,
-			// only the first character of the range is highlighted.
-			Severity: protocol.SeverityInformation,
-			Range:    protocolRange,
-		}
+		message = linterDiagnostic.Message
+	}
+
+	protocolDiagnostic = protocol.Diagnostic{
+		Message: message,
+		// protocol.SeverityHint doesn't look prominent enough in VS Code,
+		// only the first character of the range is highlighted.
+		Severity: protocol.SeverityInformation,
+		Range:    protocolRange,
 	}
 
 	return protocolDiagnostic, codeActionsResolver
