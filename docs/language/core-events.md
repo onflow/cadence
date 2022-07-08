@@ -5,7 +5,7 @@ title: Core Events
 Core events are events emitted directly from the FVM (Flow Virtual Machine).
 The events have the same name on all networks and do not follow the standard naming (they have no address).
 
-Refer to the [`PublicKey` section](crypto/#publickey) for more details on the information provided for account key events.
+Refer to the [`PublicKey` section](crypto#publickey) for more details on the information provided for account key events.
 
 ### Account Created
 
@@ -121,4 +121,3 @@ pub event AccountContractRemoved(
 | `address`   | `Address` | The address of the account the contract gets removed from |
 | `codeHash`  | `[UInt8]` | Hash of the contract source code                          |
 | `contract`  | `String`  | The name of the the contract                              |
-

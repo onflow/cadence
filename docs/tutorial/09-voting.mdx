@@ -15,11 +15,15 @@ The tutorial will be asking you to take various actions to interact with this co
 
 <Callout type="info">
 
-Instructions that require you to take action are always included in a callout box like this one. These highlighted actions are all that you need to do to get your code running, but reading the rest is necessary to understand the language's design.
+Instructions that require you to take action are always included in a callout box like this one.
+These highlighted actions are all that you need to do to get your code running,
+ but reading the rest is necessary to understand the language's design.
 
 </Callout>
 
-With the advent of blockchain technology and smart contracts, it has become popular to try to create decentralized voting mechanisms that allow large groups of users to vote completely on chain. This tutorial will provide a trivial example for how this might be achieved by using a resource-oriented programming model.
+With the advent of blockchain technology and smart contracts,
+it has become popular to try to create decentralized voting mechanisms that allow large groups of users to vote completely on chain.
+This tutorial will provide a trivial example for how this might be achieved by using a resource-oriented programming model.
 
 We'll take you through these steps to get comfortable with the Voting contract.
 
@@ -29,11 +33,18 @@ We'll take you through these steps to get comfortable with the Voting contract.
 4. Record and cast your vote in the central Voting contract
 5. Read the results of the vote
 
-Before proceeding with this tutorial, we highly recommend following the instructions in [Getting Started](/cadence/tutorial/01-first-steps/) and [Hello World](/cadence/tutorial/02-hello-world/) to learn how to use the Playground tools and to learn the fundamentals of Cadence.
+Before proceeding with this tutorial, we highly recommend following the instructions in [Getting Started](01-first-steps)
+and [Hello, World!](02-hello-world) to learn how to use the Playground tools and to learn the fundamentals of Cadence.
 
 ## A Voting Contract in Cadence
 
-In this contract, a Ballot is represented as a resource. An administrator can give Ballots to other accounts, then those account mark which proposals they vote for and submit the Ballot to the central smart contract to have their votes recorded. Using a resource type is logical for this application, because if a user wants to delegate their vote, they can send that Ballot to another account.
+In this contract, a Ballot is represented as a resource.
+An administrator can give Ballots to other accounts,
+then those account mark which proposals they vote for
+and submit the Ballot to the central smart contract to have their votes recorded.
+Using a resource type is logical for this application,
+because if a user wants to delegate their vote,
+they can send that Ballot to another account.
 
 ## Deploy the Contract
 

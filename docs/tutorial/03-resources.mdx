@@ -42,10 +42,10 @@ socialImageDescription: Resource smart contract image.
 This tutorial builds on the previous `Hello World` tutorial.
 Before beginning this tutorial, you should understand :
 
-- [Accounts](/cadence/language/accounts/)
-- [Transactions](/cadence/language/transactions/)
+- [Accounts](/cadence/language/accounts)
+- [Transactions](/cadence/language/transactions)
 - Signers
-- [Field types](/cadence/language/composite-types/)
+- [Field types](/cadence/language/composite-types)
 
 This tutorial will build on your understanding of accounts and how to interact with them by introducing resources.
 Resources are one of the Cadence's defining features.
@@ -71,7 +71,7 @@ To interact with resources, you'll learn a few important concepts:
 
 - Using the create keyword
 - The move operator `<-`
-- The [Account Storage API](https://docs.onflow.org/cadence/language/accounts/#account-storage-api)
+- The [Account Storage API](/cadence/language/accounts#account-storage-api)
 
 Let's start by looking at how to create a resource with the `create` keyword and the move operator `<-`.
 
@@ -162,11 +162,15 @@ init() {
 // ...
 ```
 
-All composite types like contracts, resources, and structs can have an optional `init()` function that only runs when the object is initially created.
-Cadence requires that all fields must be explicitly initialized, so if the object has any fields, this function has to be used to initialize them.
+All composite types like contracts, resources,
+and structs can have an optional `init()` function that only runs when the object is initially created.
+Cadence requires that all fields must be explicitly initialized,
+so if the object has any fields,
+this function has to be used to initialize them.
 
-Contracts also have read and write access to the storage of the account that they are deployed to by using the built-in [`self.account`](/cadence/language/contracts) object.
-This is an [`AuthAccount` object](/cadence/language/accounts/#authaccount)
+Contracts also have read and write access to the storage of the account that they are deployed to by using the built-in
+[`self.account`](/cadence/language/contracts) object.
+This is an [`AuthAccount` object](/cadence/language/accounts#authaccount)
 that gives them access to many different functions to interact with the private storage of the account.
 
 This contract's `init` function is simple, it logs the phrase `"Hello Asset"` to the console.
@@ -188,7 +192,7 @@ The `@` symbol specifies that it is a resource, of the type `HelloAsset` which w
 This function uses the move operator to create a resource of type `HelloAsset` and return it
 To create a new resource object, we use the `create` keyword
 
-Here we use the `<-` symbol. [This is the move operator](/cadence/language/resources/#themoveoperator).
+Here we use the `<-` symbol. [This is the move operator](/cadence/language/resources#the-move-operator--).
 The move operator `<-` replaces the assignment operator `=` in assignments that involve resources.
 To make the assignment of resources explicit, the move operator `<-` must be used when:
 
@@ -241,10 +245,10 @@ import HelloWorld from 0x01
 transaction {
 
 	prepare(acct: AuthAccount) {
-        // Here we create a resource and move it to the variable newHello, 
+        // Here we create a resource and move it to the variable newHello,
         // then we save it in the account storage
         let newHello <- HelloWorld.createHelloAsset()
-        
+
         acct.save(<-newHello, to: /storage/HelloAssetTutorial)
     }
 
@@ -263,15 +267,19 @@ Here's what this transaction does:
 4. `log` the text `HelloAsset created and stored` to the console.
 
 This is our first transaction using the `prepare` phase!
-The `prepare` phase is the only place that has access to the signing accounts' [private `AuthAccount` object](/cadence/language/accounts/#authaccount).
+The `prepare` phase is the only place that has access to the signing accounts'
+[private `AuthAccount` object](/cadence/language/accounts#authaccount).
 `AuthAccount` objects have many different methods that are used to interact with account storage.
-You can see the documentation for all of these in the [account section of the language reference](/cadence/language/accounts/#authaccount).
+You can see the documentation for all of these in the [account section of the language reference](/cadence/language/accounts#authaccount).
 In this tutorial, we'll be using `AuthAccount` methods to save and load from `/storage/`.
 The `prepare` phase can also create `/private/` and `/public/` links to the objects in `/storage/`,
 called [capabilities](/cadence/language/capability-based-access-control) (more on these later).
 
-By not allowing the execute phase to access account storage, we can statically verify which assets and areas of the signers' storage a given transaction can modify.
-Browser wallets and applications that submit transactions for users can use this to show what a transaction could alter, giving users information about transactions that wallets will be executing for them, and confidence that they aren't getting fed a malicious or dangerous transaction from an app or wallet.
+By not allowing the execute phase to access account storage,
+we can statically verify which assets and areas of the signers' storage a given transaction can modify.
+Browser wallets and applications that submit transactions for users can use this to show what a transaction could alter,
+giving users information about transactions that wallets will be executing for them,
+and confidence that they aren't getting fed a malicious or dangerous transaction from an app or wallet.
 
 Let's go over the transaction in more detail.
 To create a `HelloAsset` resource, we accessed the function `createHelloAsset()` from our contract, and moved the
@@ -282,23 +290,28 @@ let newHello <- HelloWorld.createHelloAsset()
 ```
 
 Next, we save the resource to the account storage.
-We use the [account storage API](https://docs.onflow.org/cadence/language/accounts/#account-storage-api) to interact with the account storage in Flow.
-To save the resource, we'll be using the [`save()`](https://docs.onflow.org/cadence/language/accounts/#account-storage-api) method from the account storage API to store the resource in the account at the path `/storage/HelloAssetTutorial`.
+We use the [account storage API](/cadence/language/accounts#account-storage-api) to interact with the account storage in Flow.
+To save the resource, we'll be using the
+[`save()`](/cadence/language/accounts#account-storage-api)
+method from the account storage API to store the resource in the account at the path `/storage/HelloAssetTutorial`.
 
 ```cadence
 acct.save(<-newHello, to: /storage/HelloAssetTutorial)
 ```
-The first parameter to `save` is the object that is being stored, and the `to` parameter is the path that the object is being stored at.
+The first parameter to `save` is the object that is being stored,
+and the `to` parameter is the path that the object is being stored at.
 The path must be a storage path, so only the domain `/storage/` is allowed as the `to` parameter.
 
 If there is already an object stored under the given path, the program aborts.
 Remember, the Cadence type system ensures that a resource can never be accidentally lost.
-When moving a resource to a field, into an array, into a dictionary, or into storage, there is the possibility that the location already contains a resource.
+When moving a resource to a field, into an array, into a dictionary, or into storage,
+there is the possibility that the location already contains a resource.
 Cadence forces the developer to handle the case of an existing resource so that it is not accidentally lost through an overwrite.
 
 It is also very important when choosing the name of your paths to pick an identifier
 that is very specific and unique to your project.
-Currently, account storage paths are global, so there is a chance that projects could use the same storage paths, **which could cause path conflicts**!
+Currently, account storage paths are global, so there is a chance that projects could use the same storage paths,
+**which could cause path conflicts**!
 This could be a headache for you, so choose unique path names to avoid this problem.
 
 Finally, in the execute phase we log the phrase `"Saved Hello Resource to account."` to the console.
@@ -327,12 +340,14 @@ You can also try removing the line of code that saves `newHello` to storage.
 <br />
 You should see an error for `newHello` that says `loss of resource`.
 This means that you are not handling the resource properly.
-If you ever see this error in any of your programs, it means there is a resource somewhere that is not being explicitly stored or destroyed, meaning the program is invalid.
+If you ever see this error in any of your programs,
+it means there is a resource somewhere that is not being explicitly stored or destroyed, meaning the program is invalid.
 <br />
 Add the line back to make the contract check properly.
 </Callout>
 
-In this case, this is the first time we have saved anything with the selected account, so we know that the storage spot at `/storage/HelloAssetTutorial` is empty.
+In this case, this is the first time we have saved anything with the selected account,
+so we know that the storage spot at `/storage/HelloAssetTutorial` is empty.
 In real applications, we would likely perform necessary checks and actions with the location path we are storing in
 to make sure we don't abort a transaction because of an accidental overwrite.
 
@@ -383,26 +398,29 @@ transaction {
 Here's what this transaction does:
 
 1. Import the `HelloWorld` definitions from account `0x01`
-2. Moves the `HelloAsset` object from storage to `helloResource` with the move operator and the `load` function from the [account storage API](https://docs.onflow.org/cadence/language/accounts/#account-storage-api)
+2. Moves the `HelloAsset` object from storage to `helloResource` with the move operator
+  and the `load` function from the [account storage API](/cadence/language/accounts#account-storage-api)
 3. Calls the `hello()` function of the `HelloAsset` resource stored in `helloResource` and logs the result
 4. Saves the resource in the account that we originally moved it from at the path `/storage/HelloAssetTutorial`
 
 We're going to be using the `prepare` phase again to load the resource because it
-has access to the signing accounts' [private `AuthAccount` object](/cadence/language/accounts/#authaccount).
+has access to the signing accounts' [private `AuthAccount` object](/cadence/language/accounts#authaccount).
 
 Let's go over the transaction in more detail.
-To remove an object from storage, we use the `load` method from the [account storage API](https://docs.onflow.org/cadence/language/accounts/#account-storage-api)
+To remove an object from storage, we use the `load` method from the [account storage API](/cadence/language/accounts#account-storage-api)
 
 ```cadence
 let helloResource <- acct.load<@HelloWorld.HelloAsset>(from: /storage/HelloAssetTutorial)
 ```
 
-If no object of the specified type is stored under the given path, the function returns `nil`. (This is an [Optional](/cadence/language/values-and-types/#optionals),
+If no object of the specified type is stored under the given path, the function returns `nil`.
+(This is an [Optional](/cadence/language/values-and-types#optionals),
 a special type of data that we will cover later)
 
 If the object at the given path is not of the specified type, Cadence will throw an error and the transaction will fail.
 
-If there is an object of the specified type at the path, the function returns that object and the account storage will no longer contain an object under the given path.
+If there is an object of the specified type at the path,
+the function returns that object and the account storage will no longer contain an object under the given path.
 
 The type parameter for the object type to load is contained in `<>`.
 A type argument for the parameter must be provided explicitly, which is `@HelloWorld.HelloAsset` here.
@@ -416,10 +434,10 @@ Next, we call the `hello()` function and log the output.
 log(helloResource?.hello())
 ```
 
-We use `?` because the values in the storage are returned as [optionals](/cadence/language/values-and-types/#optionals).
+We use `?` because the values in the storage are returned as [optionals](/cadence/language/values-and-types#optionals).
 Optionals are values that can represent the absence of a value.
 Optionals have two cases: either there is a value of the specified type, or there is nothing (`nil`).
-An optional type is declared using the `?` suffix.
+An optional type is declared using the `?` suffix.
 
 ```cadence
 let newResource: HelloAsset?  // could either have a value of type `HelloAsset`
@@ -449,7 +467,7 @@ and aborts the entire transaction if the object is `nil`.
 It is a more risky way of dealing with optionals, but if your program is ever in a state where a value being `nil`
 would defeat the purpose of the whole transaction, then the force-unwrap operator might be a good choice to deal with that.
 
-Refer to [Optionals In Cadence](/cadence/language/values-and-types/#optionals) to learn more about optionals and how they are used.
+Refer to [Optionals In Cadence](/cadence/language/values-and-types#optionals) to learn more about optionals and how they are used.
 
 <Callout type="info">
 
@@ -466,12 +484,16 @@ You should see something like this:
 
 ## Reviewing the Resource Contract
 
-This tutorial covered an introduction to resources in Cadence, using the account storage API and interacting with resources using transactions.
+This tutorial covered an introduction to resources in Cadence,
+using the account storage API and interacting with resources using transactions.
 
 You implemented a smart contract that is accessible in all scopes.
-The smart contract had a resource declared that implemented a function called `hello()` that returns the string `"Hello, World!"` and declared a function that can create a resource.
+The smart contract had a resource declared that implemented a function called `hello()`
+that returns the string `"Hello, World!"`
+and declared a function that can create a resource.
 
-Next, you deployed this contract in an account and implemented a transaction to create the resource in the smart contract and save it in the account `0x01` by using it as the signer for this transaction.
+Next, you deployed this contract in an account and implemented a transaction to create the resource in the smart contract
+and save it in the account `0x01` by using it as the signer for this transaction.
 
 Finally, you used a transaction to move the `HelloAsset` resource from account storage, call the `hello` method,
 and return it to the account storage.
@@ -482,7 +504,13 @@ Now that you have completed the tutorial, you have the basic knowledge to write 
 - Save, move, and load resources using the account storage API and the move operator `<-`
 - Use the `prepare` phase of a transaction to load resources from account storage
 
-Feel free to modify the smart contract to create different resources, experiment with the available [account storage API](https://docs.onflow.org/cadence/language/accounts/#account-storage-api), and write new transactions and scripts that execute different functions from your smart contract.
-Have a look at the [resource reference page](https://docs.onflow.org/cadence/language/resources/) to find out more about what you can do with resources.
+Feel free to modify the smart contract to create different resources,
+experiment with the available [account storage API](/cadence/language/accounts#account-storage-api),
+and write new transactions and scripts that execute different functions from your smart contract.
+Have a look at the [resource reference page](/cadence/language/resources)
+to find out more about what you can do with resources.
 
-You're on the right track to building more complex applications with Cadence, now is a great time to check out the [Cadence Best Practices document](https://docs.onflow.org/cadence/design-patterns/) and [Anti-patterns document](https://docs.onflow.org/cadence/anti-patterns/) as your applications become more complex.
+You're on the right track to building more complex applications with Cadence,
+now is a great time to check out the [Cadence Best Practices document](/cadence/design-patterns)
+and [Anti-patterns document](/cadence/anti-patterns)
+as your applications become more complex.
