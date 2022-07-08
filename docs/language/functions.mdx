@@ -202,33 +202,7 @@ fun doubleAndAddOne(_ x: Int): Int {
 doubleAndAddOne(2)  // is `5`
 ```
 
-## Function Overloading
-
-<Callout type="info">
-
-🚧 Status: Function overloading is not implemented.
-
-</Callout>
-
-It is possible to declare functions with the same name,
-as long as they have different sets of argument labels.
-This is known as function overloading.
-
-```cadence
-// Declare a function named "assert" which requires a test value
-// and a message argument.
-//
-fun assert(_ test: Bool, message: String) {
-    // ...
-}
-
-// Declare a function named "assert" which only requires a test value.
-// The function calls the `assert` function declared above.
-//
-fun assert(_ test: Bool) {
-    assert(test, message: "test is false")
-}
-```
+Functions do not support overloading.
 
 ## Function Expressions
 
@@ -446,17 +420,6 @@ Postconditions may only occur after preconditions, if any.
 
 A conditions block consists of one or more conditions.
 Conditions are expressions evaluating to a boolean.
-They may not call functions, i.e., they cannot have side-effects and must be pure expressions.
-Also, conditions may not contain function expressions.
-
-<!--
-
-TODO:
-
-For now, function calls are not allowed in preconditions and postconditions.
-See https://github.com/dapperlabs/flow-go/issues/70
-
--->
 
 Conditions may be written on separate lines,
 or multiple conditions can be written on the same line,
@@ -515,3 +478,30 @@ fun incrementN() {
     n = n + 1
 }
 ```
+
+## Functions are Values
+
+Functions are values ("first-class"), so they may be assigned to variables and fields
+or passed to functions as arguments.
+
+
+```cadence
+// Declare a function named `transform` which applies a function to each element
+// of an array of integers and returns a new array of the results.
+//
+pub fun transform(function: ((Int): Int), integers: [Int]): [Int] {
+    var newIntegers: [Int] = []
+    for integer in integers {
+        newIntegers.append(function(integer))
+    }
+    return newIntegers
+}
+
+pub fun double(_ integer: Int): Int {
+    return integer * 2
+}
+
+let newIntegers = transform(function: double, integers: [1, 2, 3])
+// `newIntegers` is `[2, 4, 6]`
+```
+

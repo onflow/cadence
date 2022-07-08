@@ -56,8 +56,7 @@ Field requirements can be annotated to
 require the implementation to be a variable field, by using the `var` keyword;
 require the implementation to be a constant field, by using the `let` keyword;
 or the field requirement may specify nothing,
-in which case the implementation may either be
-a variable field, a constant field, or a synthetic field.
+in which case the implementation may either be a variable or a constant field.
 
 Field requirements and function requirements must specify the required level of access.
 The access must be at least be public, so the `pub` keyword must be provided.
@@ -78,22 +77,10 @@ pub resource interface FungibleToken {
     // that is readable in all scopes (`pub`).
     //
     // Neither the `var` keyword, nor the `let` keyword is used,
-    // so the field may be implemented as either a variable field,
-    // a constant field, or a synthetic field.
+    // so the field may be implemented as either a variable
+    // or as a constant field.
     //
-    // The read balance must always be positive.
-    //
-    // NOTE: no requirement is made for the kind of field,
-    // it can be either variable or constant in the implementation.
-    //
-    pub balance: Int {
-        set(newBalance) {
-            pre {
-                newBalance >= 0:
-                    "Balances are always set as non-negative numbers"
-            }
-        }
-    }
+    pub balance: Int
 
     // Require the implementing type to provide an initializer that
     // given the initial balance, must initialize the balance field.
@@ -306,8 +293,8 @@ but also publicly settable (the `pub(set)` keyword is specified).
 ```cadence
 pub struct interface AnInterface {
     // Require the implementing type to provide a publicly readable
-    // field named `a` that has type `Int`. It may be a constant field,
-    // a variable field, or a synthetic field.
+    // field named `a` that has type `Int`. It may be a variable
+    // or a constant field.
     //
     pub a: Int
 }
@@ -442,37 +429,6 @@ shape.scale(factor: 3)
 shape.area  // is `54`
 ```
 
-## Interface Implementation Requirements
-
-<Callout type="info">
-
-🚧 Status: Interface implementation requirements is not implemented yet.
-
-</Callout>
-
-Interfaces can require implementing types
-to also implement other interfaces of the same kind.
-Interface implementation requirements can be declared
-by following the interface name with a colon (`:`)
-and one or more names of interfaces of the same kind, separated by commas.
-
-```cadence
-// Declare a structure interface named `Shape`.
-//
-pub struct interface Shape {}
-
-// Declare a structure interface named `Polygon`.
-// Require implementing types to also implement the structure interface `Shape`.
-//
-pub struct interface Polygon: Shape {}
-
-// Declare a structure named `Hexagon` that implements the `Polygon` interface.
-// This also is required to implement the `Shape` interface,
-// because the `Polygon` interface requires it.
-//
-pub struct Hexagon: Polygon {}
-```
-
 ## Interface Nesting
 
 <Callout type="info">
@@ -510,198 +466,4 @@ resource SomeOuter: OuterInterface {}
 //
 struct SomeInner: OuterInterface.InnerInterface {}
 
-```
-
-## Nested Type Requirements
-
-<Callout type="info">
-
-🚧 Status: Currently only contracts and contract interfaces support nested type requirements.
-
-</Callout>
-
-Interfaces can require implementing types to provide concrete nested types.
-For example, a resource interface may require an implementing type to provide a resource type.
-
-```cadence
-// Declare a resource interface named `FungibleToken`.
-//
-// Require implementing types to provide a resource type named `Vault`
-// which must have a field named `balance`.
-//
-resource interface FungibleToken {
-
-    pub resource Vault {
-        pub balance: Int
-    }
-}
-
-// Declare a resource named `ExampleToken` that implements the `FungibleToken` interface.
-//
-// The nested type `Vault` must be provided to conform to the interface.
-//
-resource ExampleToken: FungibleToken {
-
-    pub resource Vault {
-        pub var balance: Int
-
-        init(balance: Int) {
-            self.balance = balance
-        }
-    }
-}
-```
-
-## `Equatable` Interface
-
-<Callout type="info">
-
-🚧 Status: The `Equatable` interface is not implemented yet.
-
-</Callout>
-
-An equatable type is a type that can be compared for equality.
-Types are equatable when they  implement the `Equatable` interface.
-
-Equatable types can be compared for equality using the equals operator (`==`)
-or inequality using the unequals operator (`!=`).
-
-Most of the built-in types are equatable, like booleans and integers.
-Arrays are equatable when their elements are equatable.
-Dictionaries are equatable when their values are equatable.
-
-To make a type equatable the `Equatable` interface must be implemented,
-which requires the implementation of the function `equals`,
-which accepts another value that the given value should be compared for equality.
-
-```cadence
-struct interface Equatable {
-    pub fun equals(_ other: {Equatable}): Bool
-}
-```
-
-```cadence
-// Declare a struct named `Cat`, which has one field named `id`
-// that has type `Int`, i.e., the identifier of the cat.
-//
-// `Cat` also will implement the interface `Equatable`
-// to allow cats to be compared for equality.
-//
-struct Cat: Equatable {
-    pub let id: Int
-
-    init(id: Int) {
-        self.id = id
-    }
-
-    pub fun equals(_ other: {Equatable}): Bool {
-        if let otherCat = other as? Cat {
-            // Cats are equal if their identifier matches.
-            //
-            return otherCat.id == self.id
-        } else {
-            return false
-        }
-    }
-}
-
-Cat(1) == Cat(2)  // is `false`
-Cat(3) == Cat(3)  // is `true`
-```
-
-## `Hashable` Interface
-
-<Callout type="info">
-
-🚧 Status: The `Hashable` interface is not implemented yet.
-
-</Callout>
-
-A hashable type is a type that can be hashed to an integer hash value,
-i.e., it is distilled into a value that is used as evidence of inequality.
-Types are hashable when they implement the `Hashable` interface.
-
-Hashable types can be used as keys in dictionaries.
-
-Hashable types must also be equatable,
-i.e., they must also implement the `Equatable` interface.
-This is because the hash value is only evidence for inequality:
-two values that have different hash values are guaranteed to be unequal.
-However, if the hash values of two values are the same,
-then the two values could still be unequal
-and just happen to hash to the same hash value.
-In that case equality still needs to be determined through an equality check.
-Without `Equatable`, values could be added to a dictionary,
-but it would not be possible to retrieve them.
-
-Most of the built-in types are hashable, like booleans and integers.
-Arrays are hashable when their elements are hashable.
-Dictionaries are hashable when their values are equatable.
-
-Hashing a value means passing its essential components into a hash function.
-Essential components are those that are used in the type's implementation of `Equatable`.
-
-If two values are equal because their `equals` function returns true,
-then the implementation must return the same integer hash value for each of the two values.
-
-The implementation must also consistently return the same integer hash value during the execution
-of the program when the essential components have not changed.
-The integer hash value need not necessarily be the same across multiple executions.
-
-```cadence
-struct interface Hashable: Equatable {
-    pub hashValue: Int
-}
-```
-
-```cadence
-// Declare a structure named `Point` with two fields
-// named `x` and `y` that have type `Int`.
-//
-// `Point` is declared to implement the `Hashable` interface,
-// which also means it needs to implement the `Equatable` interface.
-//
-struct Point: Hashable {
-
-    pub(set) var x: Int
-    pub(set) var y: Int
-
-    init(x: Int, y: Int) {
-        self.x = x
-        self.y = y
-    }
-
-    // Implementing the function `equals` will allow points to be compared
-    // for equality and satisfies the `Equatable` interface.
-    //
-    pub fun equals(_ other: {Equatable}): Bool {
-        if let otherPoint = other as? Point {
-            // Points are equal if their coordinates match.
-            //
-            // The essential components are therefore the fields `x` and `y`,
-            // which must be used in the implementation of the field requirement
-            // `hashValue` of the `Hashable` interface.
-            //
-            return otherPoint.x == self.x
-                && otherPoint.y == self.y
-        } else {
-            return false
-        }
-    }
-
-    // Providing an implementation for the hash value field
-    // satisfies the `Hashable` interface.
-    //
-    pub synthetic hashValue: Int {
-        get {
-            // Calculate a hash value based on the essential components,
-            // the fields `x` and `y`.
-            //
-            var hash = 7
-            hash = 31 * hash + self.x
-            hash = 31 * hash + self.y
-            return hash
-        }
-    }
-}
 ```

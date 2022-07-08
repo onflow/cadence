@@ -13,7 +13,7 @@ meta:
     - Cadence
     - Resources
     - Capabilities
-tags: 
+tags:
   - reference
   - NFT
   - Non-Fungible Token
@@ -50,7 +50,7 @@ but reading the rest is necessary to understand the language's design.
 
 ## Storing Multiple NFTs in a Collection
 
-In the [last tutorial](/cadence/tutorial/05-non-fungible-tokens-1),
+In the [last tutorial](05-non-fungible-tokens-1),
 we created a simple `NFT` resource, stored in at a storage path,
 then used a multi-sig transaction to transfer it from one account to another.
 
@@ -276,8 +276,8 @@ There are a few new features that we use in this example, so let's walk through 
 
 We discussed above that when a dictionary stores a resource, it also becomes a resource!
 
-This means that the collection has to 
-have special rules for how to handle its own resource. 
+This means that the collection has to
+have special rules for how to handle its own resource.
 You wouldn't want it getting lost by accident!
 
 If the NFT `Collection` resource is destroyed with the `destroy` command,
@@ -316,7 +316,7 @@ pub fun getIDs(): [UInt64] {
 ```
 
 This can be used to iterate through the dictionary or just to see a list of what is stored.
-As you can see, [a variable length array type](/cadence/language/values-and-types/#arrays)
+As you can see, [a variable length array type](/cadence/language/values-and-types#arrays)
 is declared by enclosing the member type within square brackets (`[UInt64]`).
 
 ## Resources Owning Resources
@@ -333,7 +333,7 @@ this means that if a unique NFT wants to own another unique NFT,
 like a CryptoKitty owning a hat accessory,
 the Kitty literally stores the hat in its own storage and effectively owns it.
 The hat belongs to the CryptoKitty that it is stored in,
-and the hat can be transferred separately or along with the CryptoKitty that owns it,
+and the hat can be transferred separately or along with the CryptoKitty that owns it.
 
 ## Restricting Access to the NFT Collection
 
@@ -446,9 +446,9 @@ One way to create NFTs is by having an admin mint new tokens and send them to a 
 For the purpose of learning, we are simply implementing minting as a public function here.
 
 Most would implement this by having an NFT Minter resource. This would restrict minting,
-because the owner of this resource is the only one that can mint tokens. 
+because the owner of this resource is the only one that can mint tokens.
 
-You can see an example of this in the [Marketplace tutorial.](/cadence/tutorial/06-marketplace-compose/)
+You can see an example of this in the [Marketplace tutorial](08-marketplace-compose).
 
 <Callout type="info">
 

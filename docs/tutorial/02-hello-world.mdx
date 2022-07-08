@@ -10,7 +10,7 @@ meta:
     - Flow
     - Cadence
     - Hello World
-tags: 
+tags:
   - reference
   - cadence
   - tutorial
@@ -50,7 +50,7 @@ without the need for any trusted third party anywhere in the process, because th
 Programs that run on blockchains are commonly referred to as smart contracts
 because they mediate important functionality (such as currency) without having to rely on a central authority (like a bank).
 
-[Cadence is the resource-oriented programming language](https://docs.onflow.org/cadence)
+[Cadence is the resource-oriented programming language](/cadence)
 for developing smart contracts on the Flow Blockchain.
 
 This tutorial will walk you through an example of a smart contract that implements basic Cadence features,
@@ -111,7 +111,7 @@ If you haven't already, you'll need to follow this link to open a playground ses
   >
     https://play.onflow.org/8ae1a322-6e9d-4998-ae66-8e741fa81a5a?
   </a>
-  
+
 </Callout>
 
 
@@ -155,10 +155,10 @@ You would have used `var` to declare a variable, which that the value can be cha
 
 You can use `access(all)` and the `pub` keyword interchangeably.
 They are both examples of an access control specification that means an interface can be accessed in all scopes, but not written to in all scopes.
-For more information about the different levels of access control permitted in Cadence, refer to the [Access Control section of the language reference](/cadence/language/access-control/).
+For more information about the different levels of access control permitted in Cadence, refer to the [Access Control section of the language reference](/cadence/language/access-control).
 
 The `init()` section is called the initializer. It is a special function that only runs when the contract is first created.
-Objects similar to contracts, such as other [composite types like structs or resources](https://docs.onflow.org/cadence/language/composite-types/),
+Objects similar to contracts, such as other [composite types like structs or resources](/cadence/language/composite-types),
 require that the `init()` function initialize any fields that are declared in a composite type.
 In the above example, the initializer sets the `greeting` field to `"Hello, World!"` when the contract is initialized.
 
@@ -226,7 +226,7 @@ A [Transaction](/cadence/language/transactions) in Flow is defined as an arbitra
 When an account authorizes a transaction, the code in that transaction has access to the authorizers' private storage.
 An account authorizes a transaction by performing a cryptographic signature on the transaction with the account's private key,
 which should only be accessible to the account owner. Therefore, authorizers are also known as signers.
-In addition to being able to access the authorizer's private assets, 
+In addition to being able to access the authorizer's private assets,
 transactions can also read and call functions in public contracts, and access public domains in other users' accounts.
 For this tutorial, we use a transaction to call our `hello()` function.
 
@@ -304,5 +304,5 @@ Now that you have completed the tutorial, you have the basic knowledge to write 
 - Sign the transaction with one or multiple signers
 
 Feel free to modify the smart contract to implement different functions,
-experiment with the available [Cadence types](https://docs.onflow.org/cadence/language/values-and-types/),
+experiment with the available [Cadence types](/cadence/language/values-and-types),
 and write new transactions that execute multiple functions from your `HelloWorld` smart contract.

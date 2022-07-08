@@ -2,7 +2,7 @@
 title: Introduction to Cadence
 ---
 
-In a blockchain environment like Flow, programs that are stored on-chain in accounts are commonly referred to as smart contracts. 
+In a blockchain environment like Flow, programs that are stored on-chain in accounts are commonly referred to as smart contracts.
 A smart contract is a program that verifies and executes the performance of a contract without the need for a trusted third party.
 Programs that run on blockchains are commonly referred to as smart contracts because they mediate important functionality (such as currency)
 without having to rely on a central authority (like a bank).
@@ -25,7 +25,7 @@ This is Cadence's main form of access control.
 
 Cadence’s syntax is inspired by popular modern general-purpose programming languages
 like [Swift](https://developer.apple.com/swift/), [Kotlin](https://kotlinlang.org/), and [Rust](https://www.rust-lang.org/).
-Its use of resource types maps well to that of [Move](https://medium.com/coinmonks/overview-of-move-programming-language-a860ffd8f55d), 
+Its use of resource types maps well to that of [Move](https://medium.com/coinmonks/overview-of-move-programming-language-a860ffd8f55d),
 the programming language being developed by the Diem team.
 
 ## Cadence's Programming Language Pillars
@@ -34,15 +34,15 @@ the programming language being developed by the Diem team.
 
 Cadence, a new high-level programming language, observes the following requirements:
 
-- **Safety and Security:** Safety is the underlying reliability of any smart contract (i.e., it’s bug-free and performs its function). 
+- **Safety and Security:** Safety is the underlying reliability of any smart contract (i.e., it’s bug-free and performs its function).
 Security is the prevention of attacks on the network or smart contracts (i.e., unauthorized actions by malicious actors).
 Safety and security are critical in smart contracts because of the immutable nature of blockchains,
-and because they often deal with high-value assets. While auditing and reviewing code will be a crucial part of smart contract development, 
-Cadence maximizes efficiency while maintaining the highest levels of safety and security at its foundation. 
+and because they often deal with high-value assets. While auditing and reviewing code will be a crucial part of smart contract development,
+Cadence maximizes efficiency while maintaining the highest levels of safety and security at its foundation.
 It accomplishes this via a strong static type system, design by contract, and ownership primitives inspired by linear types (which are useful when dealing with assets).
-- **Clarity:** Code needs to be easy to read, and its meaning should be as unambiguous as possible. 
-It should also be suited for verification so that tooling can help with ensuring safety and security guarantees. 
-These guarantees can be achieved by making the code declarative and allowing the developer to express their intentions directly. 
+- **Clarity:** Code needs to be easy to read, and its meaning should be as unambiguous as possible.
+It should also be suited for verification so that tooling can help with ensuring safety and security guarantees.
+These guarantees can be achieved by making the code declarative and allowing the developer to express their intentions directly.
 We make those intentions explicit by design, which, along with readability, make auditing and reviewing more efficient, at a small cost to verbosity.
 - **Approachability:** Writing code and creating programs should be as approachable as possible.
 Incorporating features from languages like Swift and Rust, developers should find Cadence’s syntax and semantics familiar.
@@ -71,17 +71,17 @@ prior to publishing a smart contract on the blockchain.
 It is standard across many blockchains that modifying or updating a smart contract, even to fix a vulnerability, is not allowed.
 Thus, any bugs that are present in the smart contract will exist forever.
 
-For example, in 2016, an overlooked vulnerability in an Ethereum DAO smart contract (Decentralized Autonomous Organization) 
+For example, in 2016, an overlooked vulnerability in an Ethereum DAO smart contract (Decentralized Autonomous Organization)
 saw millions of dollars siphoned from a smart contract,
 eventually leading to a fork in Ethereum and two separate active blockchains (Ethereum and Ethereum Classic).
 
-Bug fixes are only possible if a smart contract is designed to support changes, 
+Bug fixes are only possible if a smart contract is designed to support changes,
 a feature that introduces complexity and security issues.
 Lengthy auditing and review processes can ensure a bug-free smart contract.
 Still, they add substantial time to the already time-consuming task of getting the smart contract’s core logic working correctly.
 
-Overlooked mistakes cause the most damaging scenarios. 
-It is easy to lose or duplicate monetary value or assets in existing languages because they don’t check relevant invariants 
+Overlooked mistakes cause the most damaging scenarios.
+It is easy to lose or duplicate monetary value or assets in existing languages because they don’t check relevant invariants
 or make it harder to express them.
 For example, a plain number represents a transferred amount that can be accidentally (or maliciously) multiplied or ignored.
 
@@ -100,7 +100,7 @@ This helps ensure the behavior of these smart contracts is apparent and not depe
 
 ### Security
 
-Security, in combination with safety, ensures the successful execution of a smart contract over time 
+Security, in combination with safety, ensures the successful execution of a smart contract over time
 by preventing unsanctioned access and guaranteeing that only authorized actions can be performed in the protocol.
 In some languages, functions are public by default, creating vulnerabilities that allow malicious users to find attack vectors.
 Cadence utilizes capability-based security, which allows the type system to enforce access control based on rules that users and developers have control over.
@@ -131,7 +131,7 @@ Developers using custom-made approaches such as the 'data separation' approach t
 may run into problems with the complexity of data structures,
 while developers using ‘delegatecall-based proxies` may run into problems with the consistency of memory layouts.
 Either way, these challenges compromise approachability and overall extensibility.
-Cadence has [contract upgradability built in by default](https://docs.onflow.org/cadence/language/contract-updatability/#gatsby-focus-wrapper),
+Cadence has [contract upgradability built in by default](language/contract-updatability),
 and contracts can be made immutable by removing all keys from an account.
 
 Cadence improves the clarity and extensibility of programs by utilizing interfaces to allow extensibility, code reuse, and interoperability between contracts.
@@ -143,7 +143,7 @@ like fixed-point arithmetic, which helps when working with currencies.
 
 ## Intuiting Ownership with Resources
 
-Most smart contract languages currently use a ledger-style approach to record ownership, 
+Most smart contract languages currently use a ledger-style approach to record ownership,
 where an asset is stored in the smart contract as an entry in a central ledger, and this ledger is the source of truth around asset ownership.
 There are many disadvantages to this design, especially when it comes to tracking the ownership of multiple assets belonging to a single account.
 To find out all of the assets that an account owns, you would have to enumerate all the possible smart contracts that could potentially include this account
@@ -185,4 +185,4 @@ but using an interpreter for the first version allows us to refine the language 
 ---
 
 Now that you've learned about the goals and design of Cadence and Flow, you're ready to get started with the Flow emulator and tools!
-Go to the [Getting Started](/cadence/tutorial/01-first-steps/) page to work through language fundamentals and tutorials.
+Go to the [Getting Started](tutorial/01-first-steps) page to work through language fundamentals and tutorials.
