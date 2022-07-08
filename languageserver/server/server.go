@@ -3133,8 +3133,9 @@ func convertDiagnostic(
 				},
 			}
 		}
-		message = linterDiagnostic.Message
-	default:
+	}
+	
+	if message == "" {
 		message = linterDiagnostic.Message
 	}
 
