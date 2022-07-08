@@ -507,8 +507,8 @@ github.com/onflow/atree v0.4.0/go.mod h1:7Qe1xaW0YewvouLXrugzMFUYXNoRQ8MT/UsVAWx
 github.com/onflow/cadence v0.15.0/go.mod h1:KMzDF6cIv6nb5PJW9aITaqazbmJX8MMeibFcpPP385M=
 github.com/onflow/cadence v0.24.2-0.20220627202951-5a06fec82b4a h1:Wr7+zfFj7ehr3nwNtQ9LXGpwS3MWDsUvnlX78aOnnZY=
 github.com/onflow/cadence v0.24.2-0.20220627202951-5a06fec82b4a/go.mod h1:g19FlFrcQsiegiZDe6wYtUCBO8O1hM1x/+l68aVO07k=
-github.com/onflow/cadence-lint v0.0.0-20220707200847-7dd34b963c25 h1:BwNzpGP8TBSA2mtVDHssRA1RU209H+sZEwodGY0RdTY=
-github.com/onflow/cadence-lint v0.0.0-20220707200847-7dd34b963c25/go.mod h1:DRpaOnB/oTu7FqmDvGq7Xl4q8WO4GvsugD9AOqIGIp4=
+github.com/onflow/cadence-lint v0.0.0-20220708152149-6a27c9fb4cba h1:KP9lWkI7QrF7oSetCa9bvgctrIft4fWc/rwNi0YwBe4=
+github.com/onflow/cadence-lint v0.0.0-20220708152149-6a27c9fb4cba/go.mod h1:DRpaOnB/oTu7FqmDvGq7Xl4q8WO4GvsugD9AOqIGIp4=
 github.com/onflow/flow-cli/pkg/flowkit v0.0.0-20220707185420-3d9998c6b114 h1:Yn83b2BzhZHd+W3cy+Ukd6Q7OKzvaDiIN8o8wsl1zis=
 github.com/onflow/flow-cli/pkg/flowkit v0.0.0-20220707185420-3d9998c6b114/go.mod h1:o3cep2V/P22xopmOiRPYdpotoZ8s6SLrvqH7w+r7CeI=
 github.com/onflow/flow-core-contracts/lib/go/contracts v0.11.2-0.20220620142725-49b5accb2a84 h1:VKIZufzFyxfeMbKeDIyttN2CmFYCzHOimr4xNFimVpA=
@@ -746,6 +746,7 @@ golang.org/x/exp v0.0.0-20200119233911-0405dc783f0a/go.mod h1:2RIsYlXP63K8oxa1u0
 golang.org/x/exp v0.0.0-20200207192155-f17229e696bd/go.mod h1:J/WKrq2StrnmMY6+EHIKF9dgMWnmCNThgcyBT1FY9mM=
 golang.org/x/exp v0.0.0-20200224162631-6cc2880d07d6/go.mod h1:3jZMyOhIsHpP37uCMkUooju7aAi5cS1Q23tOzKc+0MU=
 golang.org/x/exp v0.0.0-20220706164943-b4a6d9510983 h1:sUweFwmLOje8KNfXAVqGGAsmgJ/F8jJ6wBLJDt4BTKY=
+golang.org/x/exp v0.0.0-20220706164943-b4a6d9510983/go.mod h1:Kr81I6Kryrl9sr8s2FK3vxD90NdsKWRuOIl2O4CvYbA=
 golang.org/x/image v0.0.0-20180708004352-c73c2afc3b81/go.mod h1:ux5Hcp/YLpHSI86hEcLt0YII63i6oz57MZXIpbrjZUs=
 golang.org/x/image v0.0.0-20190227222117-0694c2d4d067/go.mod h1:kZ7UVZpmo3dzQBMxlp+ypCbDeSB+sBbTgSJuh5dn5js=
 golang.org/x/image v0.0.0-20190802002840-cff245a6509b/go.mod h1:FeLwcggjj3mMvU+oOTbSwawSJRM1uh48EjtB4UJZlP0=

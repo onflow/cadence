@@ -41,12 +41,13 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/tools/analysis"
+	"golang.org/x/exp/maps"
 
 	"github.com/onflow/cadence/languageserver/conversion"
 	"github.com/onflow/cadence/languageserver/jsonrpc2"
 	"github.com/onflow/cadence/languageserver/protocol"
 
-	linter "github.com/onflow/cadence-lint/linter"
+	linter "github.com/onflow/cadence-lint/analyzers"
 )
 
 var functionDeclarations = append(
@@ -564,7 +565,7 @@ func (s *Server) checkAndPublishDiagnostics(
 	version int32,
 ) {
 
-	diagnostics, _ := s.getDiagnostics(conn, uri, text, version)
+	diagnostics, _ := s.getDiagnostics(uri, text, version, conn.LogMessage)
 
 	// NOTE: always publish diagnostics and inform the client the checking completed
 
@@ -1760,10 +1761,10 @@ const filePrefix = "file://"
 //
 // Returns an error if an unexpected error occurred.
 func (s *Server) getDiagnostics(
-	conn protocol.Conn,
 	uri protocol.DocumentURI,
 	text string,
 	version int32,
+	log func(*protocol.LogMessageParams),
 ) (
 	diagnostics []protocol.Diagnostic,
 	diagnosticsErr error,
@@ -1776,14 +1777,14 @@ func (s *Server) getDiagnostics(
 	// The later will be ignored instead of being treated as no items
 	diagnostics = []protocol.Diagnostic{}
 
-	program, parseError := parse(conn, text, string(uri))
+	program, parseError := parse(text, string(uri), log)
 
 	// If there were parsing errors, convert each one to a diagnostic and exit
 	// without checking.
 
 	if parseError != nil {
 		if parentErr, ok := parseError.(errors.ParentError); ok {
-			parserDiagnostics := s.getDiagnosticsForParentError(conn, uri, parentErr, codeActionsResolvers)
+			parserDiagnostics := s.getDiagnosticsForParentError(uri, parentErr, codeActionsResolvers, log)
 			diagnostics = append(diagnostics, parserDiagnostics...)
 		}
 	}
@@ -1935,7 +1936,7 @@ func (s *Server) getDiagnostics(
 	elapsed := time.Since(start)
 
 	// Log how long it took to check the file
-	conn.LogMessage(&protocol.LogMessageParams{
+	log(&protocol.LogMessageParams{
 		Type:    protocol.Info,
 		Message: fmt.Sprintf("checking %s took %s", string(uri), elapsed),
 	})
@@ -1944,7 +1945,7 @@ func (s *Server) getDiagnostics(
 
 	if checkError != nil {
 		if parentErr, ok := checkError.(errors.ParentError); ok {
-			checkerDiagnostics := s.getDiagnosticsForParentError(conn, uri, parentErr, codeActionsResolvers)
+			checkerDiagnostics := s.getDiagnosticsForParentError(uri, parentErr, codeActionsResolvers, log)
 			diagnostics = append(diagnostics, checkerDiagnostics...)
 		}
 	}
@@ -1958,7 +1959,7 @@ func (s *Server) getDiagnostics(
 		diagnostics = append(diagnostics, extraDiagnostics...)
 	}
 
-	if checkError == nil {
+	if checkError != nil {
 		return
 	}
 
@@ -1983,7 +1984,7 @@ func (s *Server) getDiagnostics(
 		diagnostics = append(diagnostics, diagnostic)
 	}
 
-	analysisProgram.Run(linter.LinterAnalyzers, report)
+	analysisProgram.Run(maps.Values(linter.Analyzers), report)
 
 	return
 }
@@ -1993,17 +1994,17 @@ func (s *Server) getDiagnostics(
 //
 // Logs any conversion failures to the client.
 func (s *Server) getDiagnosticsForParentError(
-	conn protocol.Conn,
 	uri protocol.DocumentURI,
 	err errors.ParentError,
 	codeActionsResolvers map[uuid.UUID]func() []*protocol.CodeAction,
+	log func(*protocol.LogMessageParams),
 ) (
 	diagnostics []protocol.Diagnostic,
 ) {
 	for _, childErr := range err.ChildErrors() {
 		convertibleErr, ok := childErr.(convertibleError)
 		if !ok {
-			conn.LogMessage(&protocol.LogMessageParams{
+			log(&protocol.LogMessageParams{
 				Type:    protocol.Error,
 				Message: fmt.Sprintf("Unable to convert non-convertable error to diagnostic: %T", childErr),
 			})
@@ -2044,12 +2045,12 @@ func (s *Server) getDiagnosticsForParentError(
 }
 
 // parse parses the given code and returns the resultant program.
-func parse(conn protocol.Conn, code, location string) (*ast.Program, error) {
+func parse(code, location string, log func(*protocol.LogMessageParams)) (*ast.Program, error) {
 	start := time.Now()
 	program, err := parser.ParseProgram(code, nil)
 	elapsed := time.Since(start)
 
-	conn.LogMessage(&protocol.LogMessageParams{
+	log(&protocol.LogMessageParams{
 		Type:    protocol.Info,
 		Message: fmt.Sprintf("parsing %s took %s", location, elapsed),
 	})
@@ -3081,13 +3082,7 @@ func convertDiagnostic(
 
 	protocolRange := conversion.ASTToProtocolRange(linterDiagnostic.StartPos, linterDiagnostic.EndPos)
 
-	protocolDiagnostic := protocol.Diagnostic{
-		Message: linterDiagnostic.Message + " " + linterDiagnostic.SecondaryMessage,
-		// protocol.SeverityHint doesn't look prominent enough in VS Code,
-		// only the first character of the range is highlighted.
-		Severity: protocol.SeverityInformation,
-		Range:    protocolRange,
-	}
+	var protocolDiagnostic protocol.Diagnostic
 
 	var codeActionsResolver func() []*protocol.CodeAction
 
@@ -3096,7 +3091,7 @@ func convertDiagnostic(
 		codeActionsResolver = func() []*protocol.CodeAction {
 			return []*protocol.CodeAction{
 				{
-					Title:       protocolDiagnostic.Message,
+					Title:       fmt.Sprintf("%s `%s`", linterDiagnostic.Message, linterDiagnostic.SecondaryMessage),
 					Kind:        protocol.QuickFix,
 					Diagnostics: []protocol.Diagnostic{protocolDiagnostic},
 					Edit: protocol.WorkspaceEdit{
@@ -3112,6 +3107,13 @@ func convertDiagnostic(
 					IsPreferred: true,
 				},
 			}
+		}
+		protocolDiagnostic = protocol.Diagnostic{
+			Message: fmt.Sprintf("%s `%s`", linterDiagnostic.Message, linterDiagnostic.SecondaryMessage),
+			// protocol.SeverityHint doesn't look prominent enough in VS Code,
+			// only the first character of the range is highlighted.
+			Severity: protocol.SeverityInformation,
+			Range:    protocolRange,
 		}
 
 	case "removal-hint":
@@ -3134,6 +3136,21 @@ func convertDiagnostic(
 					IsPreferred: true,
 				},
 			}
+		}
+		protocolDiagnostic = protocol.Diagnostic{
+			Message: linterDiagnostic.Message,
+			// protocol.SeverityHint doesn't look prominent enough in VS Code,
+			// only the first character of the range is highlighted.
+			Severity: protocol.SeverityInformation,
+			Range:    protocolRange,
+		}
+	default:
+		protocolDiagnostic = protocol.Diagnostic{
+			Message: linterDiagnostic.Message,
+			// protocol.SeverityHint doesn't look prominent enough in VS Code,
+			// only the first character of the range is highlighted.
+			Severity: protocol.SeverityInformation,
+			Range:    protocolRange,
 		}
 	}
 
