@@ -151,7 +151,7 @@ let result = 4 / 2
 
 ### Path separator
 
-In a [Path](accounts#paths), the forward slash separates domain (e.g. `storage`, `private`, `public`) and the identifier.
+In a [Path](accounts#paths), the forward slash separates the domain (e.g. `storage`, `private`, `public`) and the identifier.
 
 ```cadence
 let storagePath = /storage/path
