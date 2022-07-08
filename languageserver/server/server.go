@@ -3087,7 +3087,7 @@ func convertDiagnostic(
 	var codeActionsResolver func() []*protocol.CodeAction
 
 	switch linterDiagnostic.Category {
-	case "replacement-hint":
+	case linter.ReplacementCategory:
 		codeActionsResolver = func() []*protocol.CodeAction {
 			return []*protocol.CodeAction{
 				{
@@ -3116,7 +3116,7 @@ func convertDiagnostic(
 			Range:    protocolRange,
 		}
 
-	case "removal-hint":
+	case linter.RemovalCategory:
 		codeActionsResolver = func() []*protocol.CodeAction {
 			return []*protocol.CodeAction{
 				{
