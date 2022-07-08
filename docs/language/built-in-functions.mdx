@@ -14,6 +14,7 @@ title: Built-in Functions
   ```
 
 ## assert
+
 `cadence•fun assert(_ condition: Bool, message: String)`
 
   Terminates the program if the given condition is false,
@@ -23,6 +24,7 @@ title: Built-in Functions
   The message argument is optional.
 
 ## unsafeRandom
+
 `cadence•fun unsafeRandom(): UInt64`
 
   Returns a pseudo-random number.
@@ -34,20 +36,13 @@ title: Built-in Functions
 
 ## RLP
 
-<Callout type="info">
-
-🚧 Status: This API is going to be available in an upcoming release of Cadence
-
-</Callout>
-
-
 RLP (Recursive Length Prefix) serialization allows the encoding of arbitrarily nested arrays of binary data.
 
 Cadence provides RLP decoding functions in the built-in `RLP` contract, which does not need to be imported.
 
 - `cadence•fun decodeString(_ input: [UInt8]): [UInt8]`
 
-  Decodes an RLP-encoded byte array (called string in the context of RLP). 
+  Decodes an RLP-encoded byte array (called string in the context of RLP).
   The byte array should only contain of a single encoded value for a string; if the encoded value type does not match, or it has trailing unnecessary bytes, the program aborts.
   If any error is encountered while decoding, the program aborts.
 

@@ -19,23 +19,21 @@
 package parser
 
 import (
-	"fmt"
-
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/parser/lexer"
 )
 
-func parseParameterList(p *parser) (parameterList *ast.ParameterList) {
+func parseParameterList(p *parser) (parameterList *ast.ParameterList, err error) {
 	var parameters []*ast.Parameter
 
 	p.skipSpaceAndComments(true)
 
 	if !p.current.Is(lexer.TokenParenOpen) {
-		panic(fmt.Errorf(
+		return nil, p.syntaxError(
 			"expected %s as start of parameter list, got %s",
 			lexer.TokenParenOpen,
 			p.current.Type,
-		))
+		)
 	}
 
 	startPos := p.current.StartPos
@@ -56,16 +54,20 @@ func parseParameterList(p *parser) (parameterList *ast.ParameterList) {
 					Pos: p.current.StartPos,
 				})
 			}
-			parameter := parseParameter(p)
+			parameter, err := parseParameter(p)
+			if err != nil {
+				return nil, err
+			}
+
 			parameters = append(parameters, parameter)
 			expectParameter = false
 
 		case lexer.TokenComma:
 			if expectParameter {
-				panic(fmt.Errorf(
+				return nil, p.syntaxError(
 					"expected parameter or end of parameter list, got %s",
 					p.current.Type,
-				))
+				)
 			}
 			// Skip the comma
 			p.next()
@@ -78,22 +80,22 @@ func parseParameterList(p *parser) (parameterList *ast.ParameterList) {
 			atEnd = true
 
 		case lexer.TokenEOF:
-			panic(fmt.Errorf(
+			return nil, p.syntaxError(
 				"missing %s at end of parameter list",
 				lexer.TokenParenClose,
-			))
+			)
 
 		default:
 			if expectParameter {
-				panic(fmt.Errorf(
+				return nil, p.syntaxError(
 					"expected parameter or end of parameter list, got %s",
 					p.current.Type,
-				))
+				)
 			} else {
-				panic(fmt.Errorf(
+				return nil, p.syntaxError(
 					"expected comma or end of parameter list, got %s",
 					p.current.Type,
-				))
+				)
 			}
 		}
 	}
@@ -106,28 +108,28 @@ func parseParameterList(p *parser) (parameterList *ast.ParameterList) {
 			startPos,
 			endPos,
 		),
-	)
+	), err
 }
 
-func parseParameter(p *parser) *ast.Parameter {
+func parseParameter(p *parser) (*ast.Parameter, error) {
 	p.skipSpaceAndComments(true)
 
 	startPos := p.current.StartPos
 	parameterPos := startPos
 
 	if !p.current.Is(lexer.TokenIdentifier) {
-		panic(fmt.Errorf(
+		return nil, p.syntaxError(
 			"expected argument label or parameter name, got %s",
 			p.current.Type,
-		))
+		)
 	}
 	argumentLabel := ""
 	parameterName, ok := p.current.Value.(string)
 	if !ok {
-		panic(fmt.Errorf(
+		return nil, p.syntaxError(
 			"expected parameter %s to be a string",
 			p.current,
-		))
+		)
 	}
 	// Skip the identifier
 	p.next()
@@ -140,10 +142,10 @@ func parseParameter(p *parser) *ast.Parameter {
 		argumentLabel = parameterName
 		parameterName, ok = p.current.Value.(string)
 		if !ok {
-			panic(fmt.Errorf(
+			return nil, p.syntaxError(
 				"expected parameter %s to be a string",
 				p.current,
-			))
+			)
 		}
 		parameterPos = p.current.StartPos
 		// Skip the identifier
@@ -152,18 +154,21 @@ func parseParameter(p *parser) *ast.Parameter {
 	}
 
 	if !p.current.Is(lexer.TokenColon) {
-		panic(fmt.Errorf(
+		return nil, p.syntaxError(
 			"expected %s after argument label/parameter name, got %s",
 			lexer.TokenColon,
 			p.current.Type,
-		))
+		)
 	}
 
 	// Skip the colon
 	p.next()
 	p.skipSpaceAndComments(true)
 
-	typeAnnotation := parseTypeAnnotation(p)
+	typeAnnotation, err := parseTypeAnnotation(p)
+	if err != nil {
+		return nil, err
+	}
 
 	endPos := typeAnnotation.EndPosition(p.memoryGauge)
 
@@ -181,7 +186,7 @@ func parseParameter(p *parser) *ast.Parameter {
 			startPos,
 			endPos,
 		),
-	)
+	), nil
 }
 
 func parseFunctionDeclaration(
@@ -190,7 +195,7 @@ func parseFunctionDeclaration(
 	access ast.Access,
 	accessPos *ast.Position,
 	docString string,
-) *ast.FunctionDeclaration {
+) (*ast.FunctionDeclaration, error) {
 
 	startPos := p.current.StartPos
 	if accessPos != nil {
@@ -202,10 +207,10 @@ func parseFunctionDeclaration(
 
 	p.skipSpaceAndComments(true)
 	if !p.current.Is(lexer.TokenIdentifier) {
-		panic(fmt.Errorf(
+		return nil, p.syntaxError(
 			"expected identifier after start of function declaration, got %s",
 			p.current.Type,
-		))
+		)
 	}
 
 	identifier := p.tokenToIdentifier(p.current)
@@ -213,8 +218,12 @@ func parseFunctionDeclaration(
 	// Skip the identifier
 	p.next()
 
-	parameterList, returnTypeAnnotation, functionBlock :=
+	parameterList, returnTypeAnnotation, functionBlock, err :=
 		parseFunctionParameterListAndRest(p, functionBlockIsOptional)
+
+	if err != nil {
+		return nil, err
+	}
 
 	return ast.NewFunctionDeclaration(
 		p.memoryGauge,
@@ -225,7 +234,7 @@ func parseFunctionDeclaration(
 		functionBlock,
 		startPos,
 		docString,
-	)
+	), nil
 }
 
 func parseFunctionParameterListAndRest(
@@ -235,15 +244,23 @@ func parseFunctionParameterListAndRest(
 	parameterList *ast.ParameterList,
 	returnTypeAnnotation *ast.TypeAnnotation,
 	functionBlock *ast.FunctionBlock,
+	err error,
 ) {
-	parameterList = parseParameterList(p)
+	parameterList, err = parseParameterList(p)
+	if err != nil {
+		return
+	}
 
 	p.skipSpaceAndComments(true)
 	if p.current.Is(lexer.TokenColon) {
 		// Skip the colon
 		p.next()
 		p.skipSpaceAndComments(true)
-		returnTypeAnnotation = parseTypeAnnotation(p)
+		returnTypeAnnotation, err = parseTypeAnnotation(p)
+		if err != nil {
+			return
+		}
+
 		p.skipSpaceAndComments(true)
 	} else {
 		positionBeforeMissingReturnType := parameterList.EndPos
@@ -268,7 +285,11 @@ func parseFunctionParameterListAndRest(
 	if !functionBlockIsOptional ||
 		p.current.Is(lexer.TokenBraceOpen) {
 
-		functionBlock = parseFunctionBlock(p)
+		functionBlock, err = parseFunctionBlock(p)
+		if err != nil {
+			return
+		}
 	}
+
 	return
 }

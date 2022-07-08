@@ -19,7 +19,6 @@
 package runtime
 
 import (
-	"fmt"
 	"math/big"
 
 	"github.com/onflow/cadence"
@@ -245,10 +244,9 @@ func exportValueWithInterpreter(
 			getLocationRange,
 			seenReferences,
 		)
+	default:
+		return nil, errors.NewUnexpectedError("cannot export value of type %T", value)
 	}
-
-	return nil, fmt.Errorf("cannot export value of type %T", value)
-
 }
 
 func exportSomeValue(
@@ -450,7 +448,7 @@ func exportCompositeValue(
 		return enum.WithType(t.(*cadence.EnumType)), nil
 	}
 
-	return nil, fmt.Errorf(
+	return nil, errors.NewDefaultUserError(
 		"invalid composite kind `%s`, must be %s",
 		compositeType.Kind,
 		common.EnumerateWords(
@@ -482,7 +480,7 @@ func exportSimpleCompositeValue(
 
 	compositeType, ok := staticType.(*sema.CompositeType)
 	if !ok {
-		return nil, fmt.Errorf(
+		return nil, errors.NewUnexpectedError(
 			"unexportable composite value: %s",
 			staticType,
 		)
@@ -590,7 +588,7 @@ func exportSimpleCompositeValue(
 		return enum.WithType(t.(*cadence.EnumType)), nil
 	}
 
-	return nil, fmt.Errorf(
+	return nil, errors.NewUnexpectedError(
 		"invalid composite kind `%s`, must be %s",
 		compositeType.Kind,
 		common.EnumerateWords(
@@ -896,9 +894,11 @@ func importValue(
 			v.Address,
 			v.BorrowType,
 		)
+	default:
+		// This means the implementation has unhandled types.
+		// Hence, return an internal error
+		return nil, errors.NewUnexpectedError("cannot import value of type %T", value)
 	}
-
-	return nil, fmt.Errorf("cannot import value of type %T", value)
 }
 func importUInt8(inter *interpreter.Interpreter, v cadence.UInt8) interpreter.UInt8Value {
 	return interpreter.NewUInt8Value(
@@ -1162,7 +1162,7 @@ func importCapability(
 
 	_, ok := borrowType.(cadence.ReferenceType)
 	if !ok {
-		return nil, fmt.Errorf(
+		return nil, errors.NewDefaultUserError(
 			"cannot import capability: expected reference, got '%s'",
 			borrowType.ID(),
 		)
@@ -1252,7 +1252,7 @@ func importArrayValue(
 
 		elementSuperType := sema.LeastCommonSuperType(types...)
 		if elementSuperType == sema.InvalidType {
-			return nil, fmt.Errorf("cannot import array: elements do not belong to the same type")
+			return nil, errors.NewUnexpectedError("cannot import array: elements do not belong to the same type")
 		}
 
 		staticArrayType = interpreter.NewVariableSizedStaticType(
@@ -1340,13 +1340,13 @@ func importDictionaryValue(
 		valueSuperType := sema.LeastCommonSuperType(valueTypes...)
 
 		if !sema.IsValidDictionaryKeyType(keySuperType) {
-			return nil, fmt.Errorf(
+			return nil, errors.NewDefaultUserError(
 				"cannot import dictionary: keys does not belong to the same type",
 			)
 		}
 
 		if valueSuperType == sema.InvalidType {
-			return nil, fmt.Errorf("cannot import dictionary: values does not belong to the same type")
+			return nil, errors.NewDefaultUserError("cannot import dictionary: values does not belong to the same type")
 		}
 
 		dictionaryStaticType = interpreter.NewDictionaryStaticType(
@@ -1432,7 +1432,7 @@ func importCompositeValue(
 			return importSignatureAlgorithm(inter, fields)
 
 		default:
-			return nil, fmt.Errorf(
+			return nil, errors.NewDefaultUserError(
 				"cannot import value of type %s",
 				qualifiedIdentifier,
 			)
@@ -1469,7 +1469,7 @@ func importPublicKey(
 		case sema.PublicKeyPublicKeyField:
 			arrayValue, ok := field.Value.(*interpreter.ArrayValue)
 			if !ok {
-				return nil, fmt.Errorf(
+				return nil, errors.NewDefaultUserError(
 					"cannot import value of type '%s'. invalid value for field '%s': %v",
 					ty,
 					field.Name,
@@ -1482,7 +1482,7 @@ func importPublicKey(
 		case sema.PublicKeySignAlgoField:
 			compositeValue, ok := field.Value.(*interpreter.CompositeValue)
 			if !ok {
-				return nil, fmt.Errorf(
+				return nil, errors.NewDefaultUserError(
 					"cannot import value of type '%s'. invalid value for field '%s': %v",
 					ty,
 					field.Name,
@@ -1493,7 +1493,7 @@ func importPublicKey(
 			signAlgoValue = compositeValue
 
 		default:
-			return nil, fmt.Errorf(
+			return nil, errors.NewDefaultUserError(
 				"cannot import value of type '%s'. invalid field '%s'",
 				ty,
 				field.Name,
@@ -1503,7 +1503,7 @@ func importPublicKey(
 	}
 
 	if publicKeyValue == nil {
-		return nil, fmt.Errorf(
+		return nil, errors.NewDefaultUserError(
 			"cannot import value of type '%s'. missing field '%s'",
 			ty,
 			sema.PublicKeyPublicKeyField,
@@ -1511,7 +1511,7 @@ func importPublicKey(
 	}
 
 	if signAlgoValue == nil {
-		return nil, fmt.Errorf(
+		return nil, errors.NewDefaultUserError(
 			"cannot import value of type '%s'. missing field '%s'",
 			ty,
 			sema.PublicKeySignAlgoField,
@@ -1545,7 +1545,7 @@ func importHashAlgorithm(
 		case sema.EnumRawValueFieldName:
 			rawValue, foundRawValue = field.Value.(interpreter.UInt8Value)
 			if !foundRawValue {
-				return nil, fmt.Errorf(
+				return nil, errors.NewDefaultUserError(
 					"cannot import value of type '%s'. invalid value for field '%s': %v",
 					ty,
 					field.Name,
@@ -1554,7 +1554,7 @@ func importHashAlgorithm(
 			}
 
 		default:
-			return nil, fmt.Errorf(
+			return nil, errors.NewDefaultUserError(
 				"cannot import value of type '%s'. invalid field '%s'",
 				ty,
 				field.Name,
@@ -1563,7 +1563,7 @@ func importHashAlgorithm(
 	}
 
 	if !foundRawValue {
-		return nil, fmt.Errorf(
+		return nil, errors.NewDefaultUserError(
 			"cannot import value of type '%s'. missing field '%s'",
 			ty,
 			sema.EnumRawValueFieldName,
@@ -1591,7 +1591,7 @@ func importSignatureAlgorithm(
 		case sema.EnumRawValueFieldName:
 			rawValue, foundRawValue = field.Value.(interpreter.UInt8Value)
 			if !foundRawValue {
-				return nil, fmt.Errorf(
+				return nil, errors.NewDefaultUserError(
 					"cannot import value of type '%s'. invalid value for field '%s': %v",
 					ty,
 					field.Name,
@@ -1600,7 +1600,7 @@ func importSignatureAlgorithm(
 			}
 
 		default:
-			return nil, fmt.Errorf(
+			return nil, errors.NewDefaultUserError(
 				"cannot import value of type '%s'. invalid field '%s'",
 				ty,
 				field.Name,
@@ -1609,7 +1609,7 @@ func importSignatureAlgorithm(
 	}
 
 	if !foundRawValue {
-		return nil, fmt.Errorf(
+		return nil, errors.NewDefaultUserError(
 			"cannot import value of type '%s'. missing field '%s'",
 			ty,
 			sema.EnumRawValueFieldName,

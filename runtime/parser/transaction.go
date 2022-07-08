@@ -19,8 +19,6 @@
 package parser
 
 import (
-	"fmt"
-
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/parser/lexer"
@@ -42,7 +40,7 @@ import (
 //         )
 //         '}'
 //
-func parseTransactionDeclaration(p *parser, docString string) *ast.TransactionDeclaration {
+func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionDeclaration, error) {
 
 	startPos := p.current.StartPos
 
@@ -53,16 +51,27 @@ func parseTransactionDeclaration(p *parser, docString string) *ast.TransactionDe
 	// Parameter list (optional)
 
 	var parameterList *ast.ParameterList
+	var err error
+
 	if p.current.Is(lexer.TokenParenOpen) {
-		parameterList = parseParameterList(p)
+		parameterList, err = parseParameterList(p)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	p.skipSpaceAndComments(true)
-	p.mustOne(lexer.TokenBraceOpen)
+	_, err = p.mustOne(lexer.TokenBraceOpen)
+	if err != nil {
+		return nil, err
+	}
 
 	// Fields
 
-	fields := parseTransactionFields(p)
+	fields, err := parseTransactionFields(p)
+	if err != nil {
+		return nil, err
+	}
 
 	// Prepare (optional) or execute (optional)
 
@@ -77,18 +86,24 @@ func parseTransactionDeclaration(p *parser, docString string) *ast.TransactionDe
 			identifier := p.tokenToIdentifier(p.current)
 			// Skip the `prepare` keyword
 			p.next()
-			prepare = parseSpecialFunctionDeclaration(p, false, ast.AccessNotSpecified, nil, identifier)
+			prepare, err = parseSpecialFunctionDeclaration(p, false, ast.AccessNotSpecified, nil, identifier)
+			if err != nil {
+				return nil, err
+			}
 
 		case keywordExecute:
-			execute = parseTransactionExecute(p)
+			execute, err = parseTransactionExecute(p)
+			if err != nil {
+				return nil, err
+			}
 
 		default:
-			panic(fmt.Errorf(
+			return nil, p.syntaxError(
 				"unexpected identifier, expected keyword %q or %q, got %q",
 				keywordPrepare,
 				keywordExecute,
 				p.current.Value,
-			))
+			)
 		}
 	}
 
@@ -101,7 +116,11 @@ func parseTransactionDeclaration(p *parser, docString string) *ast.TransactionDe
 		if p.current.IsString(lexer.TokenIdentifier, keywordPre) {
 			// Skip the `pre` keyword
 			p.next()
-			conditions := parseConditions(p, ast.ConditionKindPre)
+			conditions, err := parseConditions(p, ast.ConditionKindPre)
+			if err != nil {
+				return nil, err
+			}
+
 			preConditions = &conditions
 		}
 	}
@@ -122,28 +141,35 @@ func parseTransactionDeclaration(p *parser, docString string) *ast.TransactionDe
 			switch p.current.Value {
 			case keywordExecute:
 				if execute != nil {
-					panic(fmt.Errorf("unexpected second %q block", keywordExecute))
+					return nil, p.syntaxError("unexpected second %q block", keywordExecute)
 				}
 
-				execute = parseTransactionExecute(p)
+				execute, err = parseTransactionExecute(p)
+				if err != nil {
+					return nil, err
+				}
 
 			case keywordPost:
 				if sawPost {
-					panic(fmt.Errorf("unexpected second post-conditions"))
+					return nil, p.syntaxError("unexpected second post-conditions")
 				}
 				// Skip the `post` keyword
 				p.next()
-				conditions := parseConditions(p, ast.ConditionKindPost)
+				conditions, err := parseConditions(p, ast.ConditionKindPost)
+				if err != nil {
+					return nil, err
+				}
+
 				postConditions = &conditions
 				sawPost = true
 
 			default:
-				panic(fmt.Errorf(
+				return nil, p.syntaxError(
 					"unexpected identifier, expected keyword %q or %q, got %q",
 					keywordExecute,
 					keywordPost,
 					p.current.Value,
-				))
+				)
 			}
 
 		case lexer.TokenBraceClose:
@@ -153,7 +179,7 @@ func parseTransactionDeclaration(p *parser, docString string) *ast.TransactionDe
 			atEnd = true
 
 		default:
-			panic(fmt.Errorf("unexpected token: %s", p.current.Type))
+			return nil, p.syntaxError("unexpected token: %s", p.current.Type)
 		}
 	}
 
@@ -171,10 +197,10 @@ func parseTransactionDeclaration(p *parser, docString string) *ast.TransactionDe
 			startPos,
 			endPos,
 		),
-	)
+	), nil
 }
 
-func parseTransactionFields(p *parser) (fields []*ast.FieldDeclaration) {
+func parseTransactionFields(p *parser) (fields []*ast.FieldDeclaration, err error) {
 	for {
 		_, docString := p.parseTrivia(triviaOptions{
 			skipNewlines:    true,
@@ -193,7 +219,10 @@ func parseTransactionFields(p *parser) (fields []*ast.FieldDeclaration) {
 		case lexer.TokenIdentifier:
 			switch p.current.Value {
 			case keywordLet, keywordVar:
-				field := parseFieldWithVariableKind(p, ast.AccessNotSpecified, nil, docString)
+				field, err := parseFieldWithVariableKind(p, ast.AccessNotSpecified, nil, docString)
+				if err != nil {
+					return nil, err
+				}
 
 				fields = append(fields, field)
 				continue
@@ -208,14 +237,17 @@ func parseTransactionFields(p *parser) (fields []*ast.FieldDeclaration) {
 	}
 }
 
-func parseTransactionExecute(p *parser) *ast.SpecialFunctionDeclaration {
+func parseTransactionExecute(p *parser) (*ast.SpecialFunctionDeclaration, error) {
 	identifier := p.tokenToIdentifier(p.current)
 
 	// Skip the `execute` keyword
 	p.next()
 	p.skipSpaceAndComments(true)
 
-	block := parseBlock(p)
+	block, err := parseBlock(p)
+	if err != nil {
+		return nil, err
+	}
 
 	return ast.NewSpecialFunctionDeclaration(
 		p.memoryGauge,
@@ -235,5 +267,5 @@ func parseTransactionExecute(p *parser) *ast.SpecialFunctionDeclaration {
 			identifier.Pos,
 			"",
 		),
-	)
+	), nil
 }

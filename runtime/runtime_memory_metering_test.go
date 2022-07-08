@@ -23,14 +23,14 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/onflow/cadence/encoding/json"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/encoding/json"
 	jsoncdc "github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -1053,8 +1053,8 @@ func TestMemoryMeteringErrors(t *testing.T) {
 		require.IsType(t, Error{}, err)
 		runtimeError := err.(Error)
 
-		require.IsType(t, common.FatalError{}, runtimeError.Err)
-		fatalError := runtimeError.Err.(common.FatalError)
+		require.IsType(t, errors.MemoryError{}, runtimeError.Err)
+		fatalError := runtimeError.Err.(errors.MemoryError)
 
 		assert.Contains(t, fatalError.Error(), "memory limit exceeded")
 	})

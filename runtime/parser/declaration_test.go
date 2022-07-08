@@ -268,7 +268,7 @@ func TestParseParameterList(t *testing.T) {
 	parse := func(input string) (any, []error) {
 		return Parse(
 			input,
-			func(p *parser) any {
+			func(p *parser) (any, error) {
 				return parseParameterList(p)
 			},
 			nil,
@@ -965,7 +965,7 @@ func TestParseAccess(t *testing.T) {
 	parse := func(input string) (any, []error) {
 		return Parse(
 			input,
-			func(p *parser) any {
+			func(p *parser) (any, error) {
 				return parseAccess(p)
 			},
 			nil,
@@ -1280,7 +1280,19 @@ func TestParseImportDeclaration(t *testing.T) {
 			errs,
 		)
 
-		var expected []ast.Declaration
+		expected := []ast.Declaration{
+			&ast.ImportDeclaration{
+				Identifiers: nil,
+				Location: common.AddressLocation{
+					Address: common.MustBytesToAddress([]byte{0x0}),
+				},
+				LocationPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+					EndPos:   ast.Position{Line: 1, Column: 26, Offset: 26},
+				},
+			},
+		}
 
 		utils.AssertEqualWithDiff(t,
 			expected,
@@ -1651,7 +1663,7 @@ func TestParseFieldWithVariableKind(t *testing.T) {
 	parse := func(input string) (any, []error) {
 		return Parse(
 			input,
-			func(p *parser) any {
+			func(p *parser) (any, error) {
 				return parseFieldWithVariableKind(p, ast.AccessNotSpecified, nil, "")
 			},
 			nil,

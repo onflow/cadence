@@ -8,7 +8,7 @@ require (
 	github.com/mattn/go-isatty v0.0.14
 	github.com/mitchellh/mapstructure v1.4.3
 	github.com/onflow/cadence v0.24.6
-	github.com/onflow/flow-cli v0.37.2-0.20220630145041-83f2b3f1282e
+	github.com/onflow/flow-cli/pkg/flowkit v0.0.0-20220706175347-161c355e45d9
 	github.com/onflow/flow-go-sdk v0.26.4
 	github.com/sourcegraph/jsonrpc2 v0.1.0
 	github.com/spf13/afero v1.8.2
@@ -96,7 +96,6 @@ require (
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/spf13/viper v1.10.1 // indirect
-	github.com/stretchr/objx v0.2.0 // indirect
 	github.com/subosito/gotenv v1.2.0 // indirect
 	github.com/thoas/go-funk v0.9.2 // indirect
 	github.com/turbolent/prettier v0.0.0-20210613180524-3a3f5a5b49ba // indirect

@@ -20,7 +20,6 @@ package parser
 
 import (
 	"encoding/hex"
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -30,7 +29,7 @@ import (
 	"github.com/onflow/cadence/runtime/parser/lexer"
 )
 
-func parseDeclarations(p *parser, endTokenType lexer.TokenType) (declarations []ast.Declaration) {
+func parseDeclarations(p *parser, endTokenType lexer.TokenType) (declarations []ast.Declaration, err error) {
 	for {
 		_, docString := p.parseTrivia(triviaOptions{
 			skipNewlines:    true,
@@ -47,7 +46,12 @@ func parseDeclarations(p *parser, endTokenType lexer.TokenType) (declarations []
 			return
 
 		default:
-			declaration := parseDeclaration(p, docString)
+			var declaration ast.Declaration
+			declaration, err = parseDeclaration(p, docString)
+			if err != nil {
+				return
+			}
+
 			if declaration == nil {
 				return
 			}
@@ -57,7 +61,7 @@ func parseDeclarations(p *parser, endTokenType lexer.TokenType) (declarations []
 	}
 }
 
-func parseDeclaration(p *parser, docString string) ast.Declaration {
+func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 
 	access := ast.AccessNotSpecified
 	var accessPos *ast.Position
@@ -68,7 +72,7 @@ func parseDeclaration(p *parser, docString string) ast.Declaration {
 		switch p.current.Type {
 		case lexer.TokenPragma:
 			if access != ast.AccessNotSpecified {
-				panic(fmt.Errorf("invalid access modifier for pragma"))
+				return nil, p.syntaxError("invalid access modifier for pragma")
 			}
 			return parsePragmaDeclaration(p)
 		case lexer.TokenIdentifier:
@@ -90,22 +94,27 @@ func parseDeclaration(p *parser, docString string) ast.Declaration {
 
 			case KeywordTransaction:
 				if access != ast.AccessNotSpecified {
-					panic(fmt.Errorf("invalid access modifier for transaction"))
+					return nil, p.syntaxError("invalid access modifier for transaction")
 				}
 				return parseTransactionDeclaration(p, docString)
 
 			case keywordPriv, keywordPub, keywordAccess:
 				if access != ast.AccessNotSpecified {
-					panic(fmt.Errorf("invalid second access modifier"))
+					return nil, p.syntaxError("invalid second access modifier")
 				}
 				pos := p.current.StartPos
 				accessPos = &pos
-				access = parseAccess(p)
+				var err error
+				access, err = parseAccess(p)
+				if err != nil {
+					return nil, err
+				}
+
 				continue
 			}
 		}
 
-		return nil
+		return nil, nil
 	}
 }
 
@@ -116,20 +125,20 @@ func parseDeclaration(p *parser, docString string) ast.Declaration {
 //         | 'pub' ( '(' 'set' ')' )?
 //         | 'access' '(' ( 'self' | 'contract' | 'account' | 'all' ) ')'
 //
-func parseAccess(p *parser) ast.Access {
+func parseAccess(p *parser) (ast.Access, error) {
 
 	switch p.current.Value {
 	case keywordPriv:
 		// Skip the `priv` keyword
 		p.next()
-		return ast.AccessPrivate
+		return ast.AccessPrivate, nil
 
 	case keywordPub:
 		// Skip the `pub` keyword
 		p.next()
 		p.skipSpaceAndComments(true)
 		if !p.current.Is(lexer.TokenParenOpen) {
-			return ast.AccessPublic
+			return ast.AccessPublic, nil
 		}
 
 		// Skip the opening paren
@@ -137,39 +146,45 @@ func parseAccess(p *parser) ast.Access {
 		p.skipSpaceAndComments(true)
 
 		if !p.current.Is(lexer.TokenIdentifier) {
-			panic(fmt.Errorf(
+			return ast.AccessNotSpecified, p.syntaxError(
 				"expected keyword %q, got %s",
 				keywordSet,
 				p.current.Type,
-			))
+			)
 		}
 		if p.current.Value != keywordSet {
-			panic(fmt.Errorf(
+			return ast.AccessNotSpecified, p.syntaxError(
 				"expected keyword %q, got %q",
 				keywordSet,
 				p.current.Value,
-			))
+			)
 		}
 
 		// Skip the `set` keyword
 		p.next()
 		p.skipSpaceAndComments(true)
 
-		p.mustOne(lexer.TokenParenClose)
+		_, err := p.mustOne(lexer.TokenParenClose)
+		if err != nil {
+			return ast.AccessNotSpecified, err
+		}
 
-		return ast.AccessPublicSettable
+		return ast.AccessPublicSettable, nil
 
 	case keywordAccess:
 		// Skip the `access` keyword
 		p.next()
 		p.skipSpaceAndComments(true)
 
-		p.mustOne(lexer.TokenParenOpen)
+		_, err := p.mustOne(lexer.TokenParenOpen)
+		if err != nil {
+			return ast.AccessNotSpecified, err
+		}
 
 		p.skipSpaceAndComments(true)
 
 		if !p.current.Is(lexer.TokenIdentifier) {
-			panic(fmt.Errorf(
+			return ast.AccessNotSpecified, p.syntaxError(
 				"expected keyword %s, got %s",
 				common.EnumerateWords(
 					[]string{
@@ -181,7 +196,7 @@ func parseAccess(p *parser) ast.Access {
 					"or",
 				),
 				p.current.Type,
-			))
+			)
 		}
 
 		var access ast.Access
@@ -200,7 +215,7 @@ func parseAccess(p *parser) ast.Access {
 			access = ast.AccessPrivate
 
 		default:
-			panic(fmt.Errorf(
+			return ast.AccessNotSpecified, p.syntaxError(
 				"expected keyword %s, got %q",
 				common.EnumerateWords(
 					[]string{
@@ -212,19 +227,22 @@ func parseAccess(p *parser) ast.Access {
 					"or",
 				),
 				p.current.Value,
-			))
+			)
 		}
 
 		// Skip the keyword
 		p.next()
 		p.skipSpaceAndComments(true)
 
-		p.mustOne(lexer.TokenParenClose)
+		_, err = p.mustOne(lexer.TokenParenClose)
+		if err != nil {
+			return ast.AccessNotSpecified, err
+		}
 
-		return access
+		return access, nil
 
 	default:
-		panic(errors.NewUnreachableError())
+		return ast.AccessNotSpecified, errors.NewUnreachableError()
 	}
 }
 
@@ -242,7 +260,7 @@ func parseVariableDeclaration(
 	access ast.Access,
 	accessPos *ast.Position,
 	docString string,
-) *ast.VariableDeclaration {
+) (*ast.VariableDeclaration, error) {
 
 	startPos := p.current.StartPos
 	if accessPos != nil {
@@ -256,10 +274,10 @@ func parseVariableDeclaration(
 
 	p.skipSpaceAndComments(true)
 	if !p.current.Is(lexer.TokenIdentifier) {
-		panic(fmt.Errorf(
+		return nil, p.syntaxError(
 			"expected identifier after start of variable declaration, got %s",
 			p.current.Type,
-		))
+		)
 	}
 
 	identifier := p.tokenToIdentifier(p.current)
@@ -269,29 +287,39 @@ func parseVariableDeclaration(
 	p.skipSpaceAndComments(true)
 
 	var typeAnnotation *ast.TypeAnnotation
+	var err error
 
 	if p.current.Is(lexer.TokenColon) {
 		// Skip the colon
 		p.next()
 		p.skipSpaceAndComments(true)
 
-		typeAnnotation = parseTypeAnnotation(p)
+		typeAnnotation, err = parseTypeAnnotation(p)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	p.skipSpaceAndComments(true)
 	transfer := parseTransfer(p)
 	if transfer == nil {
-		panic(fmt.Errorf("expected transfer"))
+		return nil, p.syntaxError("expected transfer")
 	}
 
-	value := parseExpression(p, lowestBindingPower)
+	value, err := parseExpression(p, lowestBindingPower)
+	if err != nil {
+		return nil, err
+	}
 
 	p.skipSpaceAndComments(true)
 
 	secondTransfer := parseTransfer(p)
 	var secondValue ast.Expression
 	if secondTransfer != nil {
-		secondValue = parseExpression(p, lowestBindingPower)
+		secondValue, err = parseExpression(p, lowestBindingPower)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	variableDeclaration := ast.NewVariableDeclaration(
@@ -313,7 +341,7 @@ func parseVariableDeclaration(
 		castingExpression.ParentVariableDeclaration = variableDeclaration
 	}
 
-	return variableDeclaration
+	return variableDeclaration, nil
 }
 
 // parseTransfer parses a transfer.
@@ -349,10 +377,15 @@ func parseTransfer(p *parser) *ast.Transfer {
 	)
 }
 
-func parsePragmaDeclaration(p *parser) *ast.PragmaDeclaration {
+func parsePragmaDeclaration(p *parser) (*ast.PragmaDeclaration, error) {
 	startPos := p.current.StartPosition()
 	p.next()
-	expr := parseExpression(p, lowestBindingPower)
+
+	expr, err := parseExpression(p, lowestBindingPower)
+	if err != nil {
+		return nil, err
+	}
+
 	return ast.NewPragmaDeclaration(
 		p.memoryGauge,
 		expr,
@@ -361,7 +394,7 @@ func parsePragmaDeclaration(p *parser) *ast.PragmaDeclaration {
 			startPos,
 			expr.EndPosition(p.memoryGauge),
 		),
-	)
+	), nil
 }
 
 // parseImportDeclaration parses an import declaration
@@ -371,7 +404,7 @@ func parsePragmaDeclaration(p *parser) *ast.PragmaDeclaration {
 //         ( identifier (',' identifier)* 'from' )?
 //         ( string | hexadecimalLiteral | identifier )
 //
-func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
+func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 
 	startPosition := p.current.StartPos
 
@@ -387,12 +420,11 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 
 		switch p.current.Type {
 		case lexer.TokenString:
-			parsedString, errs := parseStringLiteral(p.current.Value.(string))
-			p.report(errs...)
+			parsedString := parseStringLiteral(p, p.current.Value.(string))
 			location = common.NewStringLocation(p.memoryGauge, parsedString)
 
 		case lexer.TokenHexadecimalIntegerLiteral:
-			location = parseHexadecimalLocation(p.memoryGauge, p.current.Value.(string))
+			location = parseHexadecimalLocation(p)
 
 		default:
 			panic(errors.NewUnreachableError())
@@ -408,7 +440,7 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 		endPos = identifier.EndPosition(p.memoryGauge)
 	}
 
-	parseLocation := func() {
+	parseLocation := func() error {
 		switch p.current.Type {
 		case lexer.TokenString, lexer.TokenHexadecimalIntegerLiteral:
 			parseStringOrAddressLocation()
@@ -419,14 +451,16 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 			p.next()
 
 		default:
-			panic(fmt.Errorf(
+			return p.syntaxError(
 				"unexpected token in import declaration: got %s, expected string, address, or identifier",
 				p.current.Type,
-			))
+			)
 		}
+
+		return nil
 	}
 
-	parseMoreIdentifiers := func() {
+	parseMoreIdentifiers := func() error {
 		expectCommaOrFrom := false
 
 		atEnd := false
@@ -437,12 +471,12 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 			switch p.current.Type {
 			case lexer.TokenComma:
 				if !expectCommaOrFrom {
-					panic(fmt.Errorf(
+					return p.syntaxError(
 						"expected %s or keyword %q, got %s",
 						lexer.TokenIdentifier,
 						keywordFrom,
 						p.current.Type,
-					))
+					)
 				}
 				expectCommaOrFrom = false
 
@@ -456,16 +490,25 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 						p.next()
 						p.skipSpaceAndComments(true)
 
-						parseLocation()
+						err := parseLocation()
+						if err != nil {
+							return err
+						}
+
 						break
 					}
 
-					if !isNextTokenCommaOrFrom(p) {
-						panic(fmt.Errorf(
+					isCommaOrFrom, err := isNextTokenCommaOrFrom(p)
+					if err != nil {
+						return err
+					}
+
+					if !isCommaOrFrom {
+						return p.syntaxError(
 							"expected %s, got keyword %q",
 							lexer.TokenIdentifier,
 							p.current.Value,
-						))
+						)
 					}
 
 					// If the next token is either comma or 'from' token, then fall through
@@ -478,24 +521,26 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 				expectCommaOrFrom = true
 
 			case lexer.TokenEOF:
-				panic(fmt.Errorf(
+				return p.syntaxError(
 					"unexpected end in import declaration: expected %s or %s",
 					lexer.TokenIdentifier,
 					lexer.TokenComma,
-				))
+				)
 
 			default:
-				panic(fmt.Errorf(
+				return p.syntaxError(
 					"unexpected token in import declaration: got %s, expected keyword %q or %s",
 					p.current.Type,
 					keywordFrom,
 					lexer.TokenComma,
-				))
+				)
 			}
 		}
+
+		return nil
 	}
 
-	maybeParseFromIdentifier := func(identifier ast.Identifier) {
+	maybeParseFromIdentifier := func(identifier ast.Identifier) error {
 		// The current identifier is maybe the `from` keyword,
 		// in which case the given (previous) identifier was
 		// an imported identifier and not the import location.
@@ -509,11 +554,15 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 			p.next()
 			p.skipSpaceAndComments(true)
 
-			parseLocation()
-
+			err := parseLocation()
+			if err != nil {
+				return err
+			}
 		} else {
 			setIdentifierLocation(identifier)
 		}
+
+		return nil
 	}
 
 	// Skip the `import` keyword
@@ -535,32 +584,36 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 			// The previous identifier is an imported identifier,
 			// not the import location
 			identifiers = append(identifiers, identifier)
-			parseMoreIdentifiers()
-
+			err := parseMoreIdentifiers()
+			if err != nil {
+				return nil, err
+			}
 		case lexer.TokenIdentifier:
-			maybeParseFromIdentifier(identifier)
-
+			err := maybeParseFromIdentifier(identifier)
+			if err != nil {
+				return nil, err
+			}
 		case lexer.TokenEOF:
 			// The previous identifier is the identifier location
 			setIdentifierLocation(identifier)
 
 		default:
-			panic(fmt.Errorf(
+			return nil, p.syntaxError(
 				"unexpected token in import declaration: got %s, expected keyword %q or %s",
 				p.current.Type,
 				keywordFrom,
 				lexer.TokenComma,
-			))
+			)
 		}
 
 	case lexer.TokenEOF:
-		panic(fmt.Errorf("unexpected end in import declaration: expected string, address, or identifier"))
+		return nil, p.syntaxError("unexpected end in import declaration: expected string, address, or identifier")
 
 	default:
-		panic(fmt.Errorf(
+		return nil, p.syntaxError(
 			"unexpected token in import declaration: got %s, expected string, address, or identifier",
 			p.current.Type,
-		))
+		)
 	}
 
 	return ast.NewImportDeclaration(
@@ -573,13 +626,15 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 			endPos,
 		),
 		locationPos,
-	)
+	), nil
 }
 
 // isNextTokenCommaOrFrom check whether the token to follow is a comma or a from token.
-func isNextTokenCommaOrFrom(p *parser) bool {
+func isNextTokenCommaOrFrom(p *parser) (b bool, err error) {
 	p.startBuffering()
-	defer p.replayBuffered()
+	defer func() {
+		err = p.replayBuffered()
+	}()
 
 	// skip the current token
 	p.next()
@@ -588,15 +643,17 @@ func isNextTokenCommaOrFrom(p *parser) bool {
 	// Lookahead the next token
 	switch p.current.Type {
 	case lexer.TokenIdentifier:
-		return p.current.Value == keywordFrom
+		return p.current.Value == keywordFrom, nil
 	case lexer.TokenComma:
-		return true
+		return true, nil
 	default:
-		return false
+		return false, nil
 	}
 }
 
-func parseHexadecimalLocation(memoryGauge common.MemoryGauge, literal string) common.AddressLocation {
+func parseHexadecimalLocation(p *parser) common.AddressLocation {
+	literal := p.current.Value.(string)
+
 	bytes := []byte(strings.ReplaceAll(literal[2:], "_", ""))
 
 	length := len(bytes)
@@ -609,15 +666,16 @@ func parseHexadecimalLocation(memoryGauge common.MemoryGauge, literal string) co
 	_, err := hex.Decode(rawAddress, bytes)
 	if err != nil {
 		// unreachable, hex literal should always be valid
-		panic(err)
+		panic(errors.NewUnexpectedErrorFromCause(err))
 	}
 
 	address, err := common.BytesToAddress(rawAddress)
 	if err != nil {
-		panic(err)
+		// Any returned error is a syntax error. e.g: Address too large error.
+		p.reportSyntaxError(err.Error())
 	}
 
-	return common.NewAddressLocation(memoryGauge, address, "")
+	return common.NewAddressLocation(p.memoryGauge, address, "")
 }
 
 // parseEventDeclaration parses an event declaration.
@@ -629,7 +687,7 @@ func parseEventDeclaration(
 	access ast.Access,
 	accessPos *ast.Position,
 	docString string,
-) *ast.CompositeDeclaration {
+) (*ast.CompositeDeclaration, error) {
 
 	startPos := p.current.StartPos
 	if accessPos != nil {
@@ -641,17 +699,20 @@ func parseEventDeclaration(
 
 	p.skipSpaceAndComments(true)
 	if !p.current.Is(lexer.TokenIdentifier) {
-		panic(fmt.Errorf(
+		return nil, p.syntaxError(
 			"expected identifier after start of event declaration, got %s",
 			p.current.Type,
-		))
+		)
 	}
 
 	identifier := p.tokenToIdentifier(p.current)
 	// Skip the identifier
 	p.next()
 
-	parameterList := parseParameterList(p)
+	parameterList, err := parseParameterList(p)
+	if err != nil {
+		return nil, err
+	}
 
 	initializer := ast.NewSpecialFunctionDeclaration(
 		p.memoryGauge,
@@ -688,7 +749,7 @@ func parseEventDeclaration(
 			startPos,
 			parameterList.EndPos,
 		),
-	)
+	), nil
 }
 
 // parseCompositeKind parses a composite kind.
@@ -727,7 +788,7 @@ func parseFieldWithVariableKind(
 	access ast.Access,
 	accessPos *ast.Position,
 	docString string,
-) *ast.FieldDeclaration {
+) (*ast.FieldDeclaration, error) {
 
 	startPos := p.current.StartPos
 	if accessPos != nil {
@@ -748,10 +809,10 @@ func parseFieldWithVariableKind(
 
 	p.skipSpaceAndComments(true)
 	if !p.current.Is(lexer.TokenIdentifier) {
-		panic(fmt.Errorf(
+		return nil, p.syntaxError(
 			"expected identifier after start of field declaration, got %s",
 			p.current.Type,
-		))
+		)
 	}
 
 	identifier := p.tokenToIdentifier(p.current)
@@ -759,11 +820,17 @@ func parseFieldWithVariableKind(
 	p.next()
 	p.skipSpaceAndComments(true)
 
-	p.mustOne(lexer.TokenColon)
+	_, err := p.mustOne(lexer.TokenColon)
+	if err != nil {
+		return nil, err
+	}
 
 	p.skipSpaceAndComments(true)
 
-	typeAnnotation := parseTypeAnnotation(p)
+	typeAnnotation, err := parseTypeAnnotation(p)
+	if err != nil {
+		return nil, err
+	}
 
 	return ast.NewFieldDeclaration(
 		p.memoryGauge,
@@ -777,7 +844,7 @@ func parseFieldWithVariableKind(
 			startPos,
 			typeAnnotation.EndPosition(p.memoryGauge),
 		),
-	)
+	), nil
 }
 
 // parseCompositeOrInterfaceDeclaration parses an event declaration.
@@ -795,7 +862,7 @@ func parseCompositeOrInterfaceDeclaration(
 	access ast.Access,
 	accessPos *ast.Position,
 	docString string,
-) ast.Declaration {
+) (ast.Declaration, error) {
 
 	startPos := p.current.StartPos
 	if accessPos != nil {
@@ -813,11 +880,11 @@ func parseCompositeOrInterfaceDeclaration(
 	for {
 		p.skipSpaceAndComments(true)
 		if !p.current.Is(lexer.TokenIdentifier) {
-			panic(fmt.Errorf(
+			return nil, p.syntaxError(
 				"expected %s, got %s",
 				lexer.TokenIdentifier,
 				p.current.Type,
-			))
+			)
 		}
 
 		wasInterface := isInterface
@@ -825,10 +892,10 @@ func parseCompositeOrInterfaceDeclaration(
 		if p.current.Value == keywordInterface {
 			isInterface = true
 			if wasInterface {
-				panic(fmt.Errorf(
+				return nil, p.syntaxError(
 					"expected interface name, got keyword %q",
 					keywordInterface,
-				))
+				)
 			}
 			// Skip the `interface` keyword
 			p.next()
@@ -844,30 +911,43 @@ func parseCompositeOrInterfaceDeclaration(
 	p.skipSpaceAndComments(true)
 
 	var conformances []*ast.NominalType
+	var err error
 
 	if p.current.Is(lexer.TokenColon) {
 		// Skip the colon
 		p.next()
 
-		conformances, _ = parseNominalTypes(p, lexer.TokenBraceOpen)
+		conformances, _, err = parseNominalTypes(p, lexer.TokenBraceOpen)
+		if err != nil {
+			return nil, err
+		}
 
 		if len(conformances) < 1 {
-			panic(fmt.Errorf(
+			return nil, p.syntaxError(
 				"expected at least one conformance after %s",
 				lexer.TokenColon,
-			))
+			)
 		}
 	}
 
 	p.skipSpaceAndComments(true)
 
-	p.mustOne(lexer.TokenBraceOpen)
+	_, err = p.mustOne(lexer.TokenBraceOpen)
+	if err != nil {
+		return nil, err
+	}
 
-	members := parseMembersAndNestedDeclarations(p, lexer.TokenBraceClose)
+	members, err := parseMembersAndNestedDeclarations(p, lexer.TokenBraceClose)
+	if err != nil {
+		return nil, err
+	}
 
 	p.skipSpaceAndComments(true)
 
-	endToken := p.mustOne(lexer.TokenBraceClose)
+	endToken, err := p.mustOne(lexer.TokenBraceClose)
+	if err != nil {
+		return nil, err
+	}
 
 	declarationRange := ast.NewRange(
 		p.memoryGauge,
@@ -879,7 +959,7 @@ func parseCompositeOrInterfaceDeclaration(
 		// TODO: remove once interface conformances are supported
 		if len(conformances) > 0 {
 			// TODO: improve
-			panic(fmt.Errorf("unexpected conformances"))
+			return nil, p.syntaxError("unexpected conformances")
 		}
 
 		return ast.NewInterfaceDeclaration(
@@ -890,7 +970,7 @@ func parseCompositeOrInterfaceDeclaration(
 			members,
 			docString,
 			declarationRange,
-		)
+		), nil
 	} else {
 		return ast.NewCompositeDeclaration(
 			p.memoryGauge,
@@ -901,7 +981,7 @@ func parseCompositeOrInterfaceDeclaration(
 			members,
 			docString,
 			declarationRange,
-		)
+		), nil
 	}
 }
 
@@ -910,7 +990,7 @@ func parseCompositeOrInterfaceDeclaration(
 //
 //     membersAndNestedDeclarations : ( memberOrNestedDeclaration ';'* )*
 //
-func parseMembersAndNestedDeclarations(p *parser, endTokenType lexer.TokenType) *ast.Members {
+func parseMembersAndNestedDeclarations(p *parser, endTokenType lexer.TokenType) (*ast.Members, error) {
 
 	var declarations []ast.Declaration
 
@@ -927,12 +1007,16 @@ func parseMembersAndNestedDeclarations(p *parser, endTokenType lexer.TokenType) 
 			continue
 
 		case endTokenType, lexer.TokenEOF:
-			return ast.NewMembers(p.memoryGauge, declarations)
+			return ast.NewMembers(p.memoryGauge, declarations), nil
 
 		default:
-			memberOrNestedDeclaration := parseMemberOrNestedDeclaration(p, docString)
+			memberOrNestedDeclaration, err := parseMemberOrNestedDeclaration(p, docString)
+			if err != nil {
+				return nil, err
+			}
+
 			if memberOrNestedDeclaration == nil {
-				return ast.NewMembers(p.memoryGauge, declarations)
+				return ast.NewMembers(p.memoryGauge, declarations), nil
 			}
 
 			declarations = append(declarations, memberOrNestedDeclaration)
@@ -951,7 +1035,7 @@ func parseMembersAndNestedDeclarations(p *parser, endTokenType lexer.TokenType) 
 //                               | eventDeclaration
 //                               | enumCase
 //
-func parseMemberOrNestedDeclaration(p *parser, docString string) ast.Declaration {
+func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaration, error) {
 
 	const functionBlockIsOptional = true
 
@@ -983,16 +1067,21 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) ast.Declaration
 
 			case keywordPriv, keywordPub, keywordAccess:
 				if access != ast.AccessNotSpecified {
-					panic(fmt.Errorf("unexpected access modifier"))
+					return nil, p.syntaxError("unexpected access modifier")
 				}
+
 				pos := p.current.StartPos
 				accessPos = &pos
-				access = parseAccess(p)
+				var err error
+				access, err = parseAccess(p)
+				if err != nil {
+					return nil, err
+				}
 				continue
 
 			default:
 				if previousIdentifierToken != nil {
-					panic(fmt.Errorf("unexpected %s", p.current.Type))
+					return nil, p.syntaxError("unexpected %s", p.current.Type)
 				}
 
 				t := p.current
@@ -1004,7 +1093,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) ast.Declaration
 
 		case lexer.TokenColon:
 			if previousIdentifierToken == nil {
-				panic(fmt.Errorf("unexpected %s", p.current.Type))
+				return nil, p.syntaxError("unexpected %s", p.current.Type)
 			}
 
 			identifier := p.tokenToIdentifier(*previousIdentifierToken)
@@ -1012,14 +1101,14 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) ast.Declaration
 
 		case lexer.TokenParenOpen:
 			if previousIdentifierToken == nil {
-				panic(fmt.Errorf("unexpected %s", p.current.Type))
+				return nil, p.syntaxError("unexpected %s", p.current.Type)
 			}
 
 			identifier := p.tokenToIdentifier(*previousIdentifierToken)
 			return parseSpecialFunctionDeclaration(p, functionBlockIsOptional, access, accessPos, identifier)
 		}
 
-		return nil
+		return nil, nil
 	}
 }
 
@@ -1029,18 +1118,24 @@ func parseFieldDeclarationWithoutVariableKind(
 	accessPos *ast.Position,
 	identifier ast.Identifier,
 	docString string,
-) *ast.FieldDeclaration {
+) (*ast.FieldDeclaration, error) {
 
 	startPos := identifier.Pos
 	if accessPos != nil {
 		startPos = *accessPos
 	}
 
-	p.mustOne(lexer.TokenColon)
+	_, err := p.mustOne(lexer.TokenColon)
+	if err != nil {
+		return nil, err
+	}
 
 	p.skipSpaceAndComments(true)
 
-	typeAnnotation := parseTypeAnnotation(p)
+	typeAnnotation, err := parseTypeAnnotation(p)
+	if err != nil {
+		return nil, err
+	}
 
 	return ast.NewFieldDeclaration(
 		p.memoryGauge,
@@ -1054,7 +1149,7 @@ func parseFieldDeclarationWithoutVariableKind(
 			startPos,
 			typeAnnotation.EndPosition(p.memoryGauge),
 		),
-	)
+	), nil
 }
 
 func parseSpecialFunctionDeclaration(
@@ -1063,7 +1158,7 @@ func parseSpecialFunctionDeclaration(
 	access ast.Access,
 	accessPos *ast.Position,
 	identifier ast.Identifier,
-) *ast.SpecialFunctionDeclaration {
+) (*ast.SpecialFunctionDeclaration, error) {
 
 	startPos := identifier.Pos
 	if accessPos != nil {
@@ -1073,7 +1168,10 @@ func parseSpecialFunctionDeclaration(
 	// TODO: switch to parseFunctionParameterListAndRest once old parser is deprecated:
 	//   allow a return type annotation while parsing, but reject later.
 
-	parameterList := parseParameterList(p)
+	parameterList, err := parseParameterList(p)
+	if err != nil {
+		return nil, err
+	}
 
 	p.skipSpaceAndComments(true)
 
@@ -1082,7 +1180,10 @@ func parseSpecialFunctionDeclaration(
 	if !functionBlockIsOptional ||
 		p.current.Is(lexer.TokenBraceOpen) {
 
-		functionBlock = parseFunctionBlock(p)
+		functionBlock, err = parseFunctionBlock(p)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	declarationKind := common.DeclarationKindUnknown
@@ -1110,7 +1211,7 @@ func parseSpecialFunctionDeclaration(
 			startPos,
 			"",
 		),
-	)
+	), nil
 }
 
 // parseEnumCase parses a field which has a variable kind.
@@ -1122,7 +1223,7 @@ func parseEnumCase(
 	access ast.Access,
 	accessPos *ast.Position,
 	docString string,
-) *ast.EnumCaseDeclaration {
+) (*ast.EnumCaseDeclaration, error) {
 
 	startPos := p.current.StartPos
 	if accessPos != nil {
@@ -1134,10 +1235,10 @@ func parseEnumCase(
 
 	p.skipSpaceAndComments(true)
 	if !p.current.Is(lexer.TokenIdentifier) {
-		panic(fmt.Errorf(
+		return nil, p.syntaxError(
 			"expected identifier after start of enum case declaration, got %s",
 			p.current.Type,
-		))
+		)
 	}
 
 	identifier := p.tokenToIdentifier(p.current)
@@ -1150,5 +1251,5 @@ func parseEnumCase(
 		identifier,
 		docString,
 		startPos,
-	)
+	), nil
 }

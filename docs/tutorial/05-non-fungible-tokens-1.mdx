@@ -13,7 +13,7 @@ meta:
     - Cadence
     - Resources
     - Capabilities
-tags: 
+tags:
   - reference
   - NFT
   - Non-Fungible Token
@@ -31,12 +31,9 @@ In this tutorial, we're going to deploy, store, and transfer **Non-Fungible Toke
 
 Open the starter code for this tutorial in the Flow Playground:
 
-<a
-  href="https://play.onflow.org/ae2f2a83-6698-4e03-93cf-70d35627e28e"
-  target="_blank"
->
+<a href="https://play.onflow.org/ae2f2a83-6698-4e03-93cf-70d35627e28e" target="_blank">
   https://play.onflow.org/ae2f2a83-6698-4e03-93cf-70d35627e28e
-</a> <br />
+</a> <br/>
 The tutorial will ask you to take various actions to interact with this code.
 
 </Callout>
@@ -56,9 +53,10 @@ Possible examples of NFTs include:
 CryptoKitties, Top Shot Moments, and tickets to a really fun concert.
 
 Instead of being represented in a central ledger, like in most smart contract languages,
-Cadence represents each NFT as a [resource object](https://docs.onflow.org/cadence/language/composite-types/)
+Cadence represents each NFT as a [resource object](/cadence/language/composite-types)
 that users store in their accounts.
-This allows NFTs to benefit from the resource ownership rules that are enforced by the [type system](https://docs.onflow.org/cadence/language/values-and-types/) -
+This allows NFTs to benefit from the resource ownership rules
+that are enforced by the [type system](/cadence/language/values-and-types) -
 resources can only have a single owner, they cannot be duplicated,
 and they cannot be lost due to accidental or malicious programming errors.
 These protections ensure that owners know that their NFT is safe and can represent an asset that has real value.
@@ -72,7 +70,7 @@ All NFTs on Flow implement the [NFT Token Standard](https://github.com/onflow/fl
 which defines a basic set of properties for NFTs on Flow.
 This tutorial, will teach you a basic method of creating an NFT
 to illustrate important language concepts.
-After completing the NFT tutorials, readers should visit 
+After completing the NFT tutorials, readers should visit
 [the NFT standard github repository](https://github.com/onflow/flow-nft)
 to learn how full, production-ready NFTs are created.
 
@@ -90,21 +88,19 @@ To get you comfortable using NFTs, this tutorial will teach you to:
 <Callout type="warning">
   It is important to remember that while this tutorial implements a working
   non-fungible token, it has been simplified for educational purposes and is not
-  what any project should use in production. See the{" "}
-  <a href="https://github.com/onflow/flow-nft" target="_blank">
-    Flow Fungible Token standard
-  </a>{" "}
-  for the standard interface and example implementation. Additionally check out
-  the{" "}
-  <a href="https://github.com/onflow/kitty-items" target="_blank">
-    Kitty Items Repo
-  </a>{" "}
+  what any project should use in production. See the
+  <a href="https://github.com/onflow/flow-nft" target="_blank">Flow Fungible Token standard</a>
+  for the standard interface and example implementation.
+  Additionally, check out the
+  <a href="https://github.com/onflow/kitty-items" target="_blank">Kitty Items Repo</a>
   for a production ready version!
 </Callout>
 
 **Before proceeding with this tutorial**, we highly recommend
-following the instructions in [Getting Started](/cadence/tutorial/01-first-steps/),
-[Hello, World!](/cadence/tutorial/02-hello-world/),[Resources](/cadence/tutorial/03-resources), and [Capabilities](/cadence/tutorial/04-capabilities)
+following the instructions in [Getting Started](01-first-steps),
+[Hello, World!](02-hello-world),
+[Resources](03-resources),
+and [Capabilities](04-capabilities)
 to learn how to use the Playground tools and to learn the fundamentals of Cadence.
 This tutorial will build on the concepts introduced in those tutorials.
 
@@ -112,12 +108,12 @@ This tutorial will build on the concepts introduced in those tutorials.
 
 ---
 
-In Cadence, each NFT is represented by a resource with an integer ID. 
+In Cadence, each NFT is represented by a resource with an integer ID.
 Resources are a perfect type to represent NFTs
 because resources have important ownership rules that are enforced by the type system.
 They can only have one owner, cannot be copied, and cannot be accidentally or maliciously lost or duplicated.
 These protections ensure that owners know that their NFT is safe and can represent an asset that has real value.
-For more information about resources, see the [resources tutorial](/cadence/tutorial/03-resources)
+For more information about resources, see the [resources tutorial](03-resources)
 
 An NFT is also usually represented by some sort of metadata like a name or a picture.
 Historically, most of this metadata has been stored off-chain,
@@ -127,7 +123,7 @@ This is out of the scope of this tutorial though.
 This paradigm has been defined by the Flow community and the details are contained in
 [the NFT metadata proposal.](https://github.com/onflow/flow/pull/636/files)
 
-When users on Flow want to transact with each other, 
+When users on Flow want to transact with each other,
 they can do so peer-to-peer and without having to interact with a central NFT contract
 by calling resource-defined methods in each users' account.
 
@@ -140,7 +136,7 @@ The contract will:
 2. Declare an ID field, a metadata field and an `init()` function in the NFT resource
 3. Create an `init()` function for the contract that saves an NFT to an account
 
-This contract relies on the [account storage API](/cadence/language/accounts/#authaccount) to save NFTs in the
+This contract relies on the [account storage API](/cadence/language/accounts#authaccount) to save NFTs in the
 `AuthAccount` object.
 
 ---
@@ -150,10 +146,7 @@ This contract relies on the [account storage API](/cadence/language/accounts/#au
 First, you'll need to follow this link to open a playground session
 with the Non-Fungible Token contracts, transactions, and scripts pre-loaded:
 
-<a
-  href="https://play.onflow.org/ae2f2a83-6698-4e03-93cf-70d35627e28e"
-  target="_blank"
->
+<a href="https://play.onflow.org/ae2f2a83-6698-4e03-93cf-70d35627e28e" target="_blank">
   https://play.onflow.org/ae2f2a83-6698-4e03-93cf-70d35627e28e
 </a>
 
@@ -355,7 +348,7 @@ to remember different paths for each NFT and to use a multisig transaction for t
 we would not have a very friendly developer and user experience.
 
 This is where the true utility of Cadence is shown.
-Continue on to the [next tutorial](/cadence/tutorial/05-non-fungible-tokens-2)
+Continue on to the [next tutorial](05-non-fungible-tokens-2)
 to find out how we can use capabilities and resources owning other resources
 to enhance the ease of use and safety of our NFTs.
 

@@ -22,7 +22,6 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"math/big"
@@ -30,6 +29,7 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -104,7 +104,7 @@ func (d *Decoder) Decode() (value cadence.Value, err error) {
 				panic(r)
 			}
 
-			err = fmt.Errorf("failed to decode value: %w", panicErr)
+			err = errors.NewDefaultUserError("failed to decode value: %w", panicErr)
 		}
 	}()
 
@@ -137,7 +137,7 @@ const (
 	returnKey       = "return"
 )
 
-var ErrInvalidJSONCadence = errors.New("invalid JSON Cadence structure")
+var ErrInvalidJSONCadence = errors.NewDefaultUserError("invalid JSON Cadence structure")
 
 func (d *Decoder) decodeJSON(v any) cadence.Value {
 	obj := toObject(v)
@@ -650,7 +650,7 @@ func (d *Decoder) decodeComposite(valueJSON any) composite {
 
 		// If the location is nil, and there is no native composite type with this ID, then it's an invalid type.
 		// Note: This is moved out from the common.DecodeTypeID() to avoid the circular dependency.
-		panic(fmt.Errorf("%s. invalid type ID: `%s`", ErrInvalidJSONCadence, typeID))
+		panic(errors.NewDefaultUserError("%s. invalid type ID: `%s`", ErrInvalidJSONCadence, typeID))
 	}
 
 	fields := obj.GetSlice(fieldsKey)

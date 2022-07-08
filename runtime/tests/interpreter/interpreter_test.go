@@ -9985,3 +9985,50 @@ func TestInterpretNilCoalesceReference(t *testing.T) {
 		variable.GetValue(),
 	)
 }
+
+func TestInterpretDictionaryDuplicateKey(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("struct", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+
+          struct S {}
+
+          fun test() {
+              let s1 = S()
+              let s2 = S()
+              {"a": s1, "a": s2}
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+
+          resource R {}
+
+          fun test() {
+              let r1 <- create R()
+              let r2 <- create R()
+              let rs <- {"a": <-r1, "a": <-r2}
+              destroy rs
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		require.ErrorAs(t, err, &interpreter.DuplicateKeyInResourceDictionaryError{})
+
+	})
+}

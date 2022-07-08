@@ -11,7 +11,7 @@ meta:
     - Cadence
     - Resources
     - Capabilities
-tags: 
+tags:
   - reference
   - cadence
   - tutorial
@@ -37,10 +37,10 @@ socialImageDescription: Capability smart contract image.
   language's design.
 </Callout>
 
-This tutorial builds on the [previous `Resource` tutorial](/cadence/tutorial/03-resources).
+This tutorial builds on the [previous `Resource` tutorial](03-resources).
 Before beginning this tutorial, you should have an idea of how accounts,transactions,resources, and signers work with basic field types.
 This tutorial will build on your understanding of accounts and resources.
-You'll learn how to interact with resources using [capabilities](https://docs.onflow.org/cadence/language/capability-based-access-control/)
+You'll learn how to interact with resources using [capabilities](/cadence/language/capability-based-access-control)
 In Cadence, resources are a composite type like a struct or a class, but with some special rules:
 - Each instance of a resource can only exist in exactly one location and cannot be copied.
 - Resources must be explicitly moved from one location to another when accessed.
@@ -65,7 +65,7 @@ In this tutorial, you will:
 
 ---
 Before following this tutorial, you should have the `HelloWorld` contract deployed in account `0x01`,
-just like in the [previous `Resource` contract tutorial](/cadence/tutorial/03-resources).
+just like in the [previous `Resource` contract tutorial](03-resources).
 
 <Callout type="info">
 
@@ -112,7 +112,7 @@ Click on the `Create Hello` transaction and send it with `0x01` as the signer.
 </Callout>
 
 The contract and transaction above creates and stores the resource we'll be using in this tutorial.
-For a more detailed breakdown of the contract, have a look at the [previous tutorial](/cadence/tutorial/03-resources).
+For a more detailed breakdown of the contract, have a look at the [previous tutorial](03-resources).
 
 ### Creating Capabilities and References to Stored Resources
 
@@ -123,7 +123,7 @@ stored in their accounts. (Explained more below)
 
 In this transaction, you create a new capability,
 then use the `link` function to create a public link to your `HelloAsset` resource object.
-Next you use that link to borrow a [reference](https://docs.onflow.org/cadence/language/references/)
+Next you use that link to borrow a [reference](/cadence/language/references)
 to the underlying object and call the `hello()` function.
 A detailed explanation of what is happening in this transaction
 is below the transaction code so, if you feel lost, keep reading!
@@ -189,22 +189,22 @@ Click the `Send` button to send the transaction.
 In this transaction, we use the prepare phase to:
 1. Create a capability with the `link` method to the stored object `HelloWorld.HelloAsset` from the account path `/storage/HelloAssetTutorial`
 2. Store the capability in the account path `/public/HelloAssetTutorial`
-3. Use the `borrow` method to create a reference to the object we linked to called `helloReference` 
-4. Call the `hello()` function using the reference we created, `helloReference` 
+3. Use the `borrow` method to create a reference to the object we linked to called `helloReference`
+4. Call the `hello()` function using the reference we created, `helloReference`
 
 You should see `"Hello, World"` show up in the console again.
 You might be confused that we were able to call a method on the `HelloAsset` object
 without actually being directly in control of it!
 It is also stored in the `/storage/` domain of the account, which should be private.
 
-This is because we created a [**capability**](/cadence/language/capability-based-access-control/) for the `HelloAsset` object.
+This is because we created a [**capability**](/cadence/language/capability-based-access-control) for the `HelloAsset` object.
 Capabilities are kind of like pointers in other languages.
 
 ### Capability Based Access Control
 
-[Capabilities](/cadence/language/capability-based-access-control/) allow the owners of objects
+[Capabilities](/cadence/language/capability-based-access-control) allow the owners of objects
 to specify what functionality of their private objects is available to others.
-Think of it kind of like an account's public API, if you're familiar with the concept. 
+Think of it kind of like an account's public API, if you're familiar with the concept.
 The account owner has private objects stored in their storage, like their collectibles or their money,
 but they might still want others to be able to see what collectibles they have in their account,
 or they want to allow anyone to deposit more money of a certain currency in their account.
@@ -242,7 +242,7 @@ They want any user in the network to be able to call the `hello()` method. So th
 To create a capability, we use the `AuthAccount.link` method to link a new capability to an object in storage.
 The type contained in `<>` is the restricted reference type that the capability represents.
 The capability says that whoever borrows a reference from this capability can only have access to the fields and methods
-that are specified by the type in `<>`. 
+that are specified by the type in `<>`.
 The specified type has to be a subtype of the type of the object being linked to,
 meaning that it cannot contain any fields or functions that the linked object doesn't have.
 
@@ -264,7 +264,8 @@ let helloReference = capability.borrow()
 ```
 
 This method creates the reference as the type we specified in `<>` in the `link` function.
-While borrowing the reference, we use [optional chaining](/cadence/language/composite-types/#accessing-fields-and-functions-of-composite-types-using-optional-chaining)
+While borrowing the reference, we use
+[optional chaining](/cadence/language/composite-types#accessing-fields-and-functions-of-composite-types-using-optional-chaining)
 because the borrowing of the reference could fail.
 The reference could be `nil` if the targeted storage slot is empty, is already borrowed,
 or if the requested type exceeds what is allowed by the capability.
@@ -354,13 +355,14 @@ let helloAccount = getAccount(0x01)
 
 The `PublicAccount` object is available to anyone in the network for every account,
 but only has access to a small subset of functions that can be read from the `/public/` domain in an account.
-Most of the [account storage API](https://docs.onflow.org/cadence/language/accounts/#account-storage-api)
+Most of the [account storage API](/cadence/language/accounts#account-storage-api)
 is not available on the `PublicAccount` object,
 and only signed transactions can make persistent changes to the `AuthAccount` object.
 `AuthAccount` can now be accessed publicly in scripts with the `getAuthAccount` function,
 but any changes are discarded after the script execution.
 With capabilities we can make resources saved to an account explicitly available in the `/public/` domain.
-See more about accounts here: https://docs.onflow.org/cadence/language/accounts/
+
+See the [language reference](/cadence/language/accounts) for more information about accounts.
 
 Then, the script gets the capability that was created in `Create Link`.
 
@@ -390,6 +392,7 @@ Let's execute the script to see it run correctly.
 Click the `Execute` button in the playground.
 
 </Callout>
+
 <Img src="https://storage.googleapis.com/flow-resources/documentation-assets/cadence-tuts/playground-execute.png" />
 
 You should see something like this print:
@@ -397,14 +400,15 @@ You should see something like this print:
 ```
 > "Hello, World"
 > Result > "void"
-
 ```
+
 Good work!
 Your script ran successfully.
 
 ## Reviewing Capabilities
 
-This tutorial expanded on the idea of resources in Cadence by expanding access scope to a resource using capabilities and covering more account storage API use-cases.
+This tutorial expanded on the idea of resources in Cadence by expanding access scope to a resource using capabilities
+and covering more account storage API use-cases.
 
 You deployed a smart contract with a resource, then created a capability to grant access to that resource.
 With the capability, you used the borrow method to create a reference and used the reference to call the
@@ -418,7 +422,12 @@ Now that you have completed the tutorial, you have the basic knowledge to write 
 - Create capabilities to grant access to resources in an account
 - Interact with resources using both signed transactions and scripts
 
-Feel free to modify the smart contract to create different resources, experiment with the available [account storage API](https://docs.onflow.org/cadence/language/accounts/#account-storage-api), and write new transactions and scripts that execute different functions from your smart contract.
-Have a look at the [capability-based access control page](https://docs.onflow.org/cadence/language/capability-based-access-control/) to find out more about what you can do with capabilities.
+Feel free to modify the smart contract to create different resources,
+experiment with the available [account storage API](/cadence/language/accounts#account-storage-api),
+and write new transactions and scripts that execute different functions from your smart contract.
+Have a look at the [capability-based access control page](/cadence/language/capability-based-access-control)
+to find out more about what you can do with capabilities.
 
-You're on the right track to building more complex applications with Cadence, now is a great time to check out the [Cadence Best Practices document](https://docs.onflow.org/cadence/design-patterns/) and [Anti-patterns document](https://docs.onflow.org/cadence/anti-patterns/) as your applications become more complex.
+You're on the right track to building more complex applications with Cadence,
+now is a great time to check out the [Cadence Best Practices document](/cadence/design-patterns)
+and [Anti-patterns document](/cadence/anti-patterns) as your applications become more complex.

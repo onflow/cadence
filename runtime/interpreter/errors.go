@@ -24,6 +24,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -34,6 +35,10 @@ type unsupportedOperation struct {
 	operation ast.Operation
 	ast.Range
 }
+
+var _ errors.InternalError = &unsupportedOperation{}
+
+func (*unsupportedOperation) IsInternalError() {}
 
 func (e *unsupportedOperation) Error() string {
 	return fmt.Sprintf(
@@ -105,6 +110,10 @@ type PositionedError struct {
 	ast.Range
 }
 
+var _ errors.UserError = PositionedError{}
+
+func (PositionedError) IsUserError() {}
+
 func (e PositionedError) Unwrap() error {
 	return e.Err
 }
@@ -113,23 +122,17 @@ func (e PositionedError) Error() string {
 	return e.Err.Error()
 }
 
-// ExternalError is an error that occurred externally.
-// It contains the recovered value.
-//
-type ExternalError struct {
-	Recovered any
-}
-
-func (e ExternalError) Error() string {
-	return fmt.Sprint(e.Recovered)
-}
-
 // NotDeclaredError
 
 type NotDeclaredError struct {
 	ExpectedKind common.DeclarationKind
 	Name         string
 }
+
+var _ errors.UserError = NotDeclaredError{}
+var _ errors.SecondaryError = NotDeclaredError{}
+
+func (NotDeclaredError) IsUserError() {}
 
 func (e NotDeclaredError) Error() string {
 	return fmt.Sprintf(
@@ -149,6 +152,10 @@ type NotInvokableError struct {
 	Value Value
 }
 
+var _ errors.UserError = NotInvokableError{}
+
+func (NotInvokableError) IsUserError() {}
+
 func (e NotInvokableError) Error() string {
 	return fmt.Sprintf("cannot call value: %#+v", e.Value)
 }
@@ -159,6 +166,10 @@ type ArgumentCountError struct {
 	ParameterCount int
 	ArgumentCount  int
 }
+
+var _ errors.UserError = ArgumentCountError{}
+
+func (ArgumentCountError) IsUserError() {}
 
 func (e ArgumentCountError) Error() string {
 	return fmt.Sprintf(
@@ -173,6 +184,10 @@ func (e ArgumentCountError) Error() string {
 type TransactionNotDeclaredError struct {
 	Index int
 }
+
+var _ errors.UserError = TransactionNotDeclaredError{}
+
+func (TransactionNotDeclaredError) IsUserError() {}
 
 func (e TransactionNotDeclaredError) Error() string {
 	return fmt.Sprintf(
@@ -189,6 +204,10 @@ type ConditionError struct {
 	LocationRange
 }
 
+var _ errors.UserError = ConditionError{}
+
+func (ConditionError) IsUserError() {}
+
 func (e ConditionError) Error() string {
 	if e.Message == "" {
 		return fmt.Sprintf("%s failed", e.ConditionKind.Name())
@@ -202,6 +221,10 @@ type RedeclarationError struct {
 	Name string
 }
 
+var _ errors.UserError = RedeclarationError{}
+
+func (RedeclarationError) IsUserError() {}
+
 func (e RedeclarationError) Error() string {
 	return fmt.Sprintf("cannot redeclare: `%s` is already declared", e.Name)
 }
@@ -212,6 +235,10 @@ type DereferenceError struct {
 	LocationRange
 }
 
+var _ errors.UserError = DereferenceError{}
+
+func (DereferenceError) IsUserError() {}
+
 func (e DereferenceError) Error() string {
 	return "dereference failed"
 }
@@ -219,6 +246,10 @@ func (e DereferenceError) Error() string {
 // OverflowError
 
 type OverflowError struct{}
+
+var _ errors.UserError = OverflowError{}
+
+func (OverflowError) IsUserError() {}
 
 func (e OverflowError) Error() string {
 	return "overflow"
@@ -228,6 +259,10 @@ func (e OverflowError) Error() string {
 
 type UnderflowError struct{}
 
+var _ errors.UserError = UnderflowError{}
+
+func (UnderflowError) IsUserError() {}
+
 func (e UnderflowError) Error() string {
 	return "underflow"
 }
@@ -235,6 +270,10 @@ func (e UnderflowError) Error() string {
 // UnderflowError
 
 type DivisionByZeroError struct{}
+
+var _ errors.UserError = DivisionByZeroError{}
+
+func (DivisionByZeroError) IsUserError() {}
 
 func (e DivisionByZeroError) Error() string {
 	return "division by zero"
@@ -245,6 +284,10 @@ func (e DivisionByZeroError) Error() string {
 type InvalidatedResourceError struct {
 	LocationRange
 }
+
+var _ errors.InternalError = InvalidatedResourceError{}
+
+func (InvalidatedResourceError) IsInternalError() {}
 
 func (e InvalidatedResourceError) Error() string {
 	return "internal error: resource is invalidated and cannot be used anymore"
@@ -257,6 +300,10 @@ type DestroyedResourceError struct {
 	LocationRange
 }
 
+var _ errors.UserError = DestroyedResourceError{}
+
+func (DestroyedResourceError) IsUserError() {}
+
 func (e DestroyedResourceError) Error() string {
 	return "resource was destroyed and cannot be used anymore"
 }
@@ -266,6 +313,10 @@ func (e DestroyedResourceError) Error() string {
 type ForceAssignmentToNonNilResourceError struct {
 	LocationRange
 }
+
+var _ errors.UserError = ForceAssignmentToNonNilResourceError{}
+
+func (ForceAssignmentToNonNilResourceError) IsUserError() {}
 
 func (e ForceAssignmentToNonNilResourceError) Error() string {
 	return "force assignment to non-nil resource-typed value"
@@ -277,6 +328,10 @@ type ForceNilError struct {
 	LocationRange
 }
 
+var _ errors.UserError = ForceNilError{}
+
+func (ForceNilError) IsUserError() {}
+
 func (e ForceNilError) Error() string {
 	return "unexpectedly found nil while forcing an Optional value"
 }
@@ -287,6 +342,10 @@ type ForceCastTypeMismatchError struct {
 	ExpectedType sema.Type
 	LocationRange
 }
+
+var _ errors.UserError = ForceCastTypeMismatchError{}
+
+func (ForceCastTypeMismatchError) IsUserError() {}
 
 func (e ForceCastTypeMismatchError) Error() string {
 	return fmt.Sprintf(
@@ -302,6 +361,10 @@ type TypeMismatchError struct {
 	LocationRange
 }
 
+var _ errors.UserError = TypeMismatchError{}
+
+func (TypeMismatchError) IsUserError() {}
+
 func (e TypeMismatchError) Error() string {
 	return fmt.Sprintf(
 		"type mismatch: expected %s",
@@ -316,6 +379,11 @@ type InvalidPathDomainError struct {
 	ExpectedDomains []common.PathDomain
 	LocationRange
 }
+
+var _ errors.UserError = InvalidPathDomainError{}
+var _ errors.SecondaryError = InvalidPathDomainError{}
+
+func (InvalidPathDomainError) IsUserError() {}
 
 func (e InvalidPathDomainError) Error() string {
 	return "invalid path domain"
@@ -344,6 +412,10 @@ type OverwriteError struct {
 	LocationRange
 }
 
+var _ errors.UserError = OverwriteError{}
+
+func (OverwriteError) IsUserError() {}
+
 func (e OverwriteError) Error() string {
 	return fmt.Sprintf(
 		"failed to save object: path %s in account %s already stores an object",
@@ -359,6 +431,10 @@ type CyclicLinkError struct {
 	Paths   []PathValue
 	LocationRange
 }
+
+var _ errors.UserError = CyclicLinkError{}
+
+func (CyclicLinkError) IsUserError() {}
 
 func (e CyclicLinkError) Error() string {
 	var builder strings.Builder
@@ -385,6 +461,10 @@ type ArrayIndexOutOfBoundsError struct {
 	LocationRange
 }
 
+var _ errors.UserError = ArrayIndexOutOfBoundsError{}
+
+func (ArrayIndexOutOfBoundsError) IsUserError() {}
+
 func (e ArrayIndexOutOfBoundsError) Error() string {
 	return fmt.Sprintf(
 		"array index out of bounds: %d, but size is %d",
@@ -402,6 +482,10 @@ type ArraySliceIndicesError struct {
 	LocationRange
 }
 
+var _ errors.UserError = ArraySliceIndicesError{}
+
+func (ArraySliceIndicesError) IsUserError() {}
+
 func (e ArraySliceIndicesError) Error() string {
 	return fmt.Sprintf(
 		"slice indices [%d:%d] are out of bounds (size %d)",
@@ -417,6 +501,10 @@ type InvalidSliceIndexError struct {
 	LocationRange
 }
 
+var _ errors.UserError = InvalidSliceIndexError{}
+
+func (InvalidSliceIndexError) IsUserError() {}
+
 func (e InvalidSliceIndexError) Error() string {
 	return fmt.Sprintf("invalid slice index: %d > %d", e.FromIndex, e.UpToIndex)
 }
@@ -428,6 +516,10 @@ type StringIndexOutOfBoundsError struct {
 	Length int
 	LocationRange
 }
+
+var _ errors.UserError = StringIndexOutOfBoundsError{}
+
+func (StringIndexOutOfBoundsError) IsUserError() {}
 
 func (e StringIndexOutOfBoundsError) Error() string {
 	return fmt.Sprintf(
@@ -446,6 +538,10 @@ type StringSliceIndicesError struct {
 	LocationRange
 }
 
+var _ errors.UserError = StringSliceIndicesError{}
+
+func (StringSliceIndicesError) IsUserError() {}
+
 func (e StringSliceIndicesError) Error() string {
 	return fmt.Sprintf(
 		"slice indices [%d:%d] are out of bounds (length %d)",
@@ -459,6 +555,10 @@ type EventEmissionUnavailableError struct {
 	LocationRange
 }
 
+var _ errors.UserError = EventEmissionUnavailableError{}
+
+func (EventEmissionUnavailableError) IsUserError() {}
+
 func (e EventEmissionUnavailableError) Error() string {
 	return "cannot emit event: unavailable"
 }
@@ -469,6 +569,10 @@ type UUIDUnavailableError struct {
 	LocationRange
 }
 
+var _ errors.UserError = UUIDUnavailableError{}
+
+func (UUIDUnavailableError) IsUserError() {}
+
 func (e UUIDUnavailableError) Error() string {
 	return "cannot get UUID: unavailable"
 }
@@ -478,6 +582,10 @@ func (e UUIDUnavailableError) Error() string {
 type TypeLoadingError struct {
 	TypeID common.TypeID
 }
+
+var _ errors.UserError = TypeLoadingError{}
+
+func (TypeLoadingError) IsUserError() {}
 
 func (e TypeLoadingError) Error() string {
 	return fmt.Sprintf("failed to load type: %s", e.TypeID)
@@ -490,6 +598,10 @@ type MissingMemberValueError struct {
 	LocationRange
 }
 
+var _ errors.UserError = MissingMemberValueError{}
+
+func (MissingMemberValueError) IsUserError() {}
+
 func (e MissingMemberValueError) Error() string {
 	return fmt.Sprintf("missing value for member `%s`", e.Name)
 }
@@ -501,6 +613,10 @@ type InvocationArgumentTypeError struct {
 	ParameterType sema.Type
 	LocationRange
 }
+
+var _ errors.UserError = InvocationArgumentTypeError{}
+
+func (InvocationArgumentTypeError) IsUserError() {}
 
 func (e InvocationArgumentTypeError) Error() string {
 	return fmt.Sprintf(
@@ -517,6 +633,10 @@ type MemberAccessTypeError struct {
 	LocationRange
 }
 
+var _ errors.UserError = MemberAccessTypeError{}
+
+func (MemberAccessTypeError) IsUserError() {}
+
 func (e MemberAccessTypeError) Error() string {
 	return fmt.Sprintf(
 		"invalid member access: expected %s",
@@ -531,6 +651,10 @@ type ValueTransferTypeError struct {
 	LocationRange
 }
 
+var _ errors.UserError = ValueTransferTypeError{}
+
+func (ValueTransferTypeError) IsUserError() {}
+
 func (e ValueTransferTypeError) Error() string {
 	return fmt.Sprintf(
 		"invalid transfer of value: expected %s",
@@ -544,6 +668,10 @@ type ResourceConstructionError struct {
 	CompositeType *sema.CompositeType
 	LocationRange
 }
+
+var _ errors.UserError = ResourceConstructionError{}
+
+func (ResourceConstructionError) IsUserError() {}
 
 func (e ResourceConstructionError) Error() string {
 	return fmt.Sprintf(
@@ -561,6 +689,10 @@ type ContainerMutationError struct {
 	LocationRange
 }
 
+var _ errors.UserError = ContainerMutationError{}
+
+func (ContainerMutationError) IsUserError() {}
+
 func (e ContainerMutationError) Error() string {
 	return fmt.Sprintf(
 		"invalid container update: expected a subtype of '%s', found '%s'",
@@ -575,6 +707,10 @@ type NonStorableValueError struct {
 	Value Value
 }
 
+var _ errors.UserError = NonStorableValueError{}
+
+func (NonStorableValueError) IsUserError() {}
+
 func (e NonStorableValueError) Error() string {
 	return "cannot store non-storable value"
 }
@@ -584,6 +720,10 @@ func (e NonStorableValueError) Error() string {
 type NonStorableStaticTypeError struct {
 	Type StaticType
 }
+
+var _ errors.UserError = NonStorableStaticTypeError{}
+
+func (NonStorableStaticTypeError) IsUserError() {}
 
 func (e NonStorableStaticTypeError) Error() string {
 	return fmt.Sprintf(
@@ -597,6 +737,10 @@ func (e NonStorableStaticTypeError) Error() string {
 type InterfaceMissingLocationError struct {
 	QualifiedIdentifier string
 }
+
+var _ errors.UserError = InterfaceMissingLocationError{}
+
+func (InterfaceMissingLocationError) IsUserError() {}
 
 func (e InterfaceMissingLocationError) Error() string {
 	return fmt.Sprintf(
@@ -614,6 +758,10 @@ type InvalidOperandsError struct {
 	RightType    StaticType
 	LocationRange
 }
+
+var _ errors.UserError = InvalidOperandsError{}
+
+func (InvalidOperandsError) IsUserError() {}
 
 func (e InvalidOperandsError) Error() string {
 	var op string
@@ -638,6 +786,10 @@ type InvalidPublicKeyError struct {
 	LocationRange
 }
 
+var _ errors.UserError = InvalidPublicKeyError{}
+
+func (InvalidPublicKeyError) IsUserError() {}
+
 func (e InvalidPublicKeyError) Error() string {
 	return fmt.Sprintf("invalid public key: %s, err: %s", e.PublicKey, e.Err)
 }
@@ -652,6 +804,24 @@ type NonTransferableValueError struct {
 	Value Value
 }
 
+var _ errors.UserError = NonTransferableValueError{}
+
+func (NonTransferableValueError) IsUserError() {}
+
 func (e NonTransferableValueError) Error() string {
 	return "cannot transfer non-transferable value"
+}
+
+// DuplicateKeyInResourceDictionaryError
+//
+type DuplicateKeyInResourceDictionaryError struct {
+	LocationRange
+}
+
+var _ errors.UserError = DuplicateKeyInResourceDictionaryError{}
+
+func (DuplicateKeyInResourceDictionaryError) IsUserError() {}
+
+func (e DuplicateKeyInResourceDictionaryError) Error() string {
+	return "duplicate key in resource dictionary"
 }

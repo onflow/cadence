@@ -21,26 +21,47 @@ package errors
 import (
 	"fmt"
 	"runtime/debug"
+
+	"golang.org/x/xerrors"
 )
 
-// UnreachableError
-
-// UnreachableError is an internal error in the runtime which should have never occurred
-// due to a programming error in the runtime.
+// NewUnreachableError creates an internal error that indicates executing an unimplemented path.
 //
-// NOTE: this error is not used for errors because of bugs in a user-provided program.
-// For program errors, see interpreter/errors.go
-//
-type UnreachableError struct {
-	Stack []byte
+func NewUnreachableError() InternalError {
+	return NewUnexpectedError("unreachable")
 }
 
-func (e UnreachableError) Error() string {
-	return fmt.Sprintf("unreachable\n%s", e.Stack)
+// InternalError is an implementation error, e.g: an unreachable code path (UnreachableError).
+// A program should never throw an InternalError in an ideal world.
+//
+// InternalError s must always be thrown and not be caught (recovered), i.e. be propagated up the call stack.
+//
+type InternalError interface {
+	error
+	IsInternalError()
 }
 
-func NewUnreachableError() *UnreachableError {
-	return &UnreachableError{Stack: debug.Stack()}
+// UserError is an error thrown for an error in the user-code, e.g. exceeding a metering limit.
+type UserError interface {
+	error
+	IsUserError()
+}
+
+// ExternalError is an error that occurred externally.
+// It contains the recovered value.
+//
+type ExternalError struct {
+	Recovered any
+}
+
+func NewExternalError(recovered any) ExternalError {
+	return ExternalError{
+		Recovered: recovered,
+	}
+}
+
+func (e ExternalError) Error() string {
+	return fmt.Sprint(e.Recovered)
 }
 
 // SecondaryError
@@ -71,4 +92,123 @@ type ParentError interface {
 //
 type HasPrefix interface {
 	Prefix() string
+}
+
+// MemoryError indicates a memory limit has reached and should end
+// the Cadence parsing, checking, or interpretation.
+type MemoryError struct {
+	Err error
+}
+
+var _ UserError = MemoryError{}
+
+func (MemoryError) IsUserError() {}
+
+func (e MemoryError) Unwrap() error {
+	return e.Err
+}
+
+func (e MemoryError) Error() string {
+	return fmt.Sprintf("memory error: %s", e.Err.Error())
+}
+
+// UnexpectedError is the default implementation of InternalError interface.
+// It's a generic error that wraps an implementation error, which should have never occurred.
+//
+// NOTE: This error is not used for errors occur due to bugs in a user-provided program.
+//
+type UnexpectedError struct {
+	Err   error
+	Stack []byte
+}
+
+var _ InternalError = UnexpectedError{}
+
+func (UnexpectedError) IsInternalError() {}
+
+func NewUnexpectedError(message string, arg ...any) UnexpectedError {
+	return UnexpectedError{
+		Err:   fmt.Errorf(message, arg...),
+		Stack: debug.Stack(),
+	}
+}
+
+func NewUnexpectedErrorFromCause(err error) UnexpectedError {
+	return UnexpectedError{
+		Err:   err,
+		Stack: debug.Stack(),
+	}
+}
+
+func (e UnexpectedError) Unwrap() error {
+	return e.Err
+}
+
+func (e UnexpectedError) Error() string {
+	return fmt.Sprintf("%s\n%s", e.Err.Error(), e.Stack)
+}
+
+// DefaultUserError is the default implementation of UserError interface.
+// It's a generic error that wraps a user error.
+//
+type DefaultUserError struct {
+	Err error
+}
+
+var _ UserError = DefaultUserError{}
+
+func (DefaultUserError) IsUserError() {}
+
+func NewDefaultUserError(message string, arg ...any) DefaultUserError {
+	return DefaultUserError{
+		Err: fmt.Errorf(message, arg...),
+	}
+}
+
+func (e DefaultUserError) Unwrap() error {
+	return e.Err
+}
+
+func (e DefaultUserError) Error() string {
+	return e.Err.Error()
+}
+
+// IsInternalError Checks whether a given error was caused by an InternalError.
+// An error in an internal error, if it has at-least one InternalError in the error chain.
+//
+func IsInternalError(err error) bool {
+	switch err := err.(type) {
+	case InternalError:
+		return true
+	case xerrors.Wrapper:
+		return IsInternalError(err.Unwrap())
+	default:
+		return false
+	}
+}
+
+// IsUserError Checks whether a given error was caused by an UserError.
+// An error in a user error, if it has at-least one UserError in the error chain.
+//
+func IsUserError(err error) bool {
+	switch err := err.(type) {
+	case UserError:
+		return true
+	case xerrors.Wrapper:
+		return IsUserError(err.Unwrap())
+	default:
+		return false
+	}
+}
+
+// GetExternalError returns the ExternalError in the error chain, if any
+func GetExternalError(err error) (ExternalError, bool) {
+	switch err := err.(type) {
+	case ExternalError:
+		return err, true
+	case xerrors.Wrapper:
+		return GetExternalError(err.Unwrap())
+	default:
+		return ExternalError{}, false
+	}
 }

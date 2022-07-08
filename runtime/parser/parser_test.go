@@ -26,10 +26,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"go.uber.org/goleak"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/parser/lexer"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -73,22 +75,47 @@ func TestParseBuffering(t *testing.T) {
 
 		_, errs := Parse(
 			"a b c d",
-			func(p *parser) any {
-				p.mustOneString(lexer.TokenIdentifier, "a")
-				p.mustOne(lexer.TokenSpace)
+			func(p *parser) (any, error) {
+				_, err := p.mustOneString(lexer.TokenIdentifier, "a")
+				if err != nil {
+					return nil, err
+				}
+
+				_, err = p.mustOne(lexer.TokenSpace)
+				if err != nil {
+					return nil, err
+				}
 
 				p.startBuffering()
 
-				p.mustOneString(lexer.TokenIdentifier, "b")
-				p.mustOne(lexer.TokenSpace)
-				p.mustOneString(lexer.TokenIdentifier, "c")
+				_, err = p.mustOneString(lexer.TokenIdentifier, "b")
+				if err != nil {
+					return nil, err
+				}
+
+				_, err = p.mustOne(lexer.TokenSpace)
+				if err != nil {
+					return nil, err
+				}
+
+				_, err = p.mustOneString(lexer.TokenIdentifier, "c")
+				if err != nil {
+					return nil, err
+				}
 
 				p.acceptBuffered()
 
-				p.mustOne(lexer.TokenSpace)
-				p.mustOneString(lexer.TokenIdentifier, "d")
+				_, err = p.mustOne(lexer.TokenSpace)
+				if err != nil {
+					return nil, err
+				}
 
-				return nil
+				_, err = p.mustOneString(lexer.TokenIdentifier, "d")
+				if err != nil {
+					return nil, err
+				}
+
+				return nil, nil
 			},
 			nil,
 		)
@@ -102,22 +129,47 @@ func TestParseBuffering(t *testing.T) {
 
 		_, errs := Parse(
 			"a b x d",
-			func(p *parser) any {
-				p.mustOneString(lexer.TokenIdentifier, "a")
-				p.mustOne(lexer.TokenSpace)
+			func(p *parser) (any, error) {
+				_, err := p.mustOneString(lexer.TokenIdentifier, "a")
+				if err != nil {
+					return nil, err
+				}
+
+				_, err = p.mustOne(lexer.TokenSpace)
+				if err != nil {
+					return nil, err
+				}
 
 				p.startBuffering()
 
-				p.mustOneString(lexer.TokenIdentifier, "b")
-				p.mustOne(lexer.TokenSpace)
-				p.mustOneString(lexer.TokenIdentifier, "c")
+				_, err = p.mustOneString(lexer.TokenIdentifier, "b")
+				if err != nil {
+					return nil, err
+				}
+
+				_, err = p.mustOne(lexer.TokenSpace)
+				if err != nil {
+					return nil, err
+				}
+
+				_, err = p.mustOneString(lexer.TokenIdentifier, "c")
+				if err != nil {
+					return nil, err
+				}
 
 				p.acceptBuffered()
 
-				p.mustOne(lexer.TokenSpace)
-				p.mustOneString(lexer.TokenIdentifier, "d")
+				_, err = p.mustOne(lexer.TokenSpace)
+				if err != nil {
+					return nil, err
+				}
 
-				return nil
+				_, err = p.mustOneString(lexer.TokenIdentifier, "d")
+				if err != nil {
+					return nil, err
+				}
+
+				return nil, nil
 			},
 			nil,
 		)
@@ -139,25 +191,58 @@ func TestParseBuffering(t *testing.T) {
 
 		_, errs := Parse(
 			"a b c d",
-			func(p *parser) any {
-				p.mustOneString(lexer.TokenIdentifier, "a")
-				p.mustOne(lexer.TokenSpace)
+			func(p *parser) (any, error) {
+				_, err := p.mustOneString(lexer.TokenIdentifier, "a")
+				if err != nil {
+					return nil, err
+				}
+				_, err = p.mustOne(lexer.TokenSpace)
+				if err != nil {
+					return nil, err
+				}
 
 				p.startBuffering()
 
-				p.mustOneString(lexer.TokenIdentifier, "b")
-				p.mustOne(lexer.TokenSpace)
-				p.mustOneString(lexer.TokenIdentifier, "c")
+				_, err = p.mustOneString(lexer.TokenIdentifier, "b")
+				if err != nil {
+					return nil, err
+				}
+				_, err = p.mustOne(lexer.TokenSpace)
+				if err != nil {
+					return nil, err
+				}
+				_, err = p.mustOneString(lexer.TokenIdentifier, "c")
+				if err != nil {
+					return nil, err
+				}
 
-				p.replayBuffered()
+				err = p.replayBuffered()
+				if err != nil {
+					return nil, err
+				}
 
-				p.mustOneString(lexer.TokenIdentifier, "b")
-				p.mustOne(lexer.TokenSpace)
-				p.mustOneString(lexer.TokenIdentifier, "c")
-				p.mustOne(lexer.TokenSpace)
-				p.mustOneString(lexer.TokenIdentifier, "d")
+				_, err = p.mustOneString(lexer.TokenIdentifier, "b")
+				if err != nil {
+					return nil, err
+				}
+				_, err = p.mustOne(lexer.TokenSpace)
+				if err != nil {
+					return nil, err
+				}
+				_, err = p.mustOneString(lexer.TokenIdentifier, "c")
+				if err != nil {
+					return nil, err
+				}
+				_, err = p.mustOne(lexer.TokenSpace)
+				if err != nil {
+					return nil, err
+				}
+				_, err = p.mustOneString(lexer.TokenIdentifier, "d")
+				if err != nil {
+					return nil, err
+				}
 
-				return nil
+				return nil, nil
 			},
 			nil,
 		)
@@ -171,41 +256,77 @@ func TestParseBuffering(t *testing.T) {
 
 		_, errs := Parse(
 			"a b c d",
-			func(p *parser) any {
-				p.mustOneString(lexer.TokenIdentifier, "a")
-				p.mustOne(lexer.TokenSpace)
+			func(p *parser) (any, error) {
+				_, err := p.mustOneString(lexer.TokenIdentifier, "a")
+				if err != nil {
+					return nil, err
+				}
+				_, err = p.mustOne(lexer.TokenSpace)
+				if err != nil {
+					return nil, err
+				}
 
 				p.startBuffering()
 
 				firstSucceeded := false
 				firstFailed := false
 
-				(func() {
+				// Ignore error
+				func() {
+					var bufferingError error
+
 					defer func() {
-						if r := recover(); r != nil {
+						if r := recover(); r != nil || bufferingError != nil {
 							firstFailed = true
 						}
 					}()
 
-					p.mustOneString(lexer.TokenIdentifier, "x")
-					p.mustOne(lexer.TokenSpace)
-					p.mustOneString(lexer.TokenIdentifier, "c")
+					_, bufferingError = p.mustOneString(lexer.TokenIdentifier, "x")
+					if bufferingError != nil {
+						return
+					}
+					_, bufferingError = p.mustOne(lexer.TokenSpace)
+					if bufferingError != nil {
+						return
+					}
+					_, bufferingError = p.mustOneString(lexer.TokenIdentifier, "c")
+					if bufferingError != nil {
+						return
+					}
 
 					firstSucceeded = true
-				})()
+				}()
 
 				assert.True(t, firstFailed)
 				assert.False(t, firstSucceeded)
 
-				p.replayBuffered()
+				err = p.replayBuffered()
+				if err != nil {
+					return nil, err
+				}
 
-				p.mustOneString(lexer.TokenIdentifier, "b")
-				p.mustOne(lexer.TokenSpace)
-				p.mustOneString(lexer.TokenIdentifier, "c")
-				p.mustOne(lexer.TokenSpace)
-				p.mustOneString(lexer.TokenIdentifier, "d")
+				_, err = p.mustOneString(lexer.TokenIdentifier, "b")
+				if err != nil {
+					return nil, err
+				}
+				_, err = p.mustOne(lexer.TokenSpace)
+				if err != nil {
+					return nil, err
+				}
+				_, err = p.mustOneString(lexer.TokenIdentifier, "c")
+				if err != nil {
+					return nil, err
+				}
+				_, err = p.mustOne(lexer.TokenSpace)
+				if err != nil {
+					return nil, err
+				}
+				_, err = p.mustOneString(lexer.TokenIdentifier, "d")
+				if err != nil {
+					return nil, err
+				}
 
-				return nil
+				return nil, nil
 			},
 			nil,
 		)
@@ -219,41 +340,76 @@ func TestParseBuffering(t *testing.T) {
 
 		_, errs := Parse(
 			"a b c x",
-			func(p *parser) any {
-				p.mustOneString(lexer.TokenIdentifier, "a")
-				p.mustOne(lexer.TokenSpace)
+			func(p *parser) (any, error) {
+				_, err := p.mustOneString(lexer.TokenIdentifier, "a")
+				if err != nil {
+					return nil, err
+				}
+				_, err = p.mustOne(lexer.TokenSpace)
+				if err != nil {
+					return nil, err
+				}
 
 				p.startBuffering()
 
 				firstSucceeded := false
 				firstFailed := false
 
-				(func() {
+				func() {
+					var bufferingError error
+
 					defer func() {
-						if r := recover(); r != nil {
+						if r := recover(); r != nil || bufferingError != nil {
 							firstFailed = true
 						}
 					}()
 
-					p.mustOneString(lexer.TokenIdentifier, "x")
-					p.mustOne(lexer.TokenSpace)
-					p.mustOneString(lexer.TokenIdentifier, "c")
+					_, bufferingError = p.mustOneString(lexer.TokenIdentifier, "x")
+					if bufferingError != nil {
+						return
+					}
+					_, bufferingError = p.mustOne(lexer.TokenSpace)
+					if bufferingError != nil {
+						return
+					}
+					_, bufferingError = p.mustOneString(lexer.TokenIdentifier, "c")
+					if bufferingError != nil {
+						return
+					}
 
 					firstSucceeded = true
-				})()
+				}()
 
 				assert.True(t, firstFailed)
 				assert.False(t, firstSucceeded)
 
-				p.replayBuffered()
+				err = p.replayBuffered()
+				if err != nil {
+					return nil, err
+				}
 
-				p.mustOneString(lexer.TokenIdentifier, "b")
-				p.mustOne(lexer.TokenSpace)
-				p.mustOneString(lexer.TokenIdentifier, "c")
-				p.mustOne(lexer.TokenSpace)
-				p.mustOneString(lexer.TokenIdentifier, "d")
+				_, err = p.mustOneString(lexer.TokenIdentifier, "b")
+				if err != nil {
+					return nil, err
+				}
+				_, err = p.mustOne(lexer.TokenSpace)
+				if err != nil {
+					return nil, err
+				}
+				_, err = p.mustOneString(lexer.TokenIdentifier, "c")
+				if err != nil {
+					return nil, err
+				}
+				_, err = p.mustOne(lexer.TokenSpace)
+				if err != nil {
+					return nil, err
+				}
+				_, err = p.mustOneString(lexer.TokenIdentifier, "d")
+				if err != nil {
+					return nil, err
+				}
 
-				return nil
+				return nil, nil
 			},
 			nil,
 		)
@@ -372,10 +528,16 @@ func TestParseEOF(t *testing.T) {
 
 	_, errs := Parse(
 		"a b",
-		func(p *parser) any {
-			p.mustOneString(lexer.TokenIdentifier, "a")
+		func(p *parser) (any, error) {
+			_, err := p.mustOneString(lexer.TokenIdentifier, "a")
+			if err != nil {
+				return nil, err
+			}
 			p.skipSpaceAndComments(true)
-			p.mustOneString(lexer.TokenIdentifier, "b")
+			_, err = p.mustOneString(lexer.TokenIdentifier, "b")
+			if err != nil {
+				return nil, err
+			}
 
 			p.next()
 
@@ -403,7 +565,7 @@ func TestParseEOF(t *testing.T) {
 				p.current,
 			)
 
-			return nil
+			return nil, nil
 		},
 		nil,
 	)
@@ -508,9 +670,9 @@ func TestParseArgumentList(t *testing.T) {
 			ParseArgumentList(`(1, b: true)`, gauge)
 		})()
 
-		require.IsType(t, common.FatalError{}, panicMsg)
+		require.IsType(t, errors.MemoryError{}, panicMsg)
 
-		fatalError, _ := panicMsg.(common.FatalError)
+		fatalError, _ := panicMsg.(errors.MemoryError)
 		var expectedError limitingMemoryGaugeError
 		assert.ErrorAs(t, fatalError, &expectedError)
 	})
