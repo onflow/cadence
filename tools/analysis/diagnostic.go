@@ -23,10 +23,18 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
+type DiagnosticCategory string
+
+const (
+	ReplacementHint   DiagnosticCategory = "replacement-hint"
+	RemovalHint       DiagnosticCategory = "removal-hint"
+	UpdateRecommended DiagnosticCategory = "update recommended"
+)
+
 type Diagnostic struct {
 	ast.Range
 	Location         common.Location
-	Category         string // optional
+	Category         DiagnosticCategory // optional
 	Message          string
 	SecondaryMessage string // optional
 }
