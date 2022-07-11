@@ -43,6 +43,59 @@ type Script struct {
 
 type importResolutionResults map[common.Location]bool
 
+// Executor is a continuation which represents a full unit of transaction/script
+// execution.
+//
+// The full unit of execution is divided into stages:
+//  1. Preprocess() initializes the executor in preparation for the actual
+//     transaction execution (e.g., parse / type check the input).  Note that
+//     the work done by Preprocess() should be embrassingly parallel.
+//  2. Execute() performs the actual transaction execution (e.g., run the
+//     interpreter to produce the transaction result).
+//  3. Result() returns the result of the full unit of execution.
+//
+// (TODO(patrick): maybe add Cleanup/Postprocess in the future)
+type Executor interface {
+	// Preprocess prepares the transaction/script for execution.
+	//
+	// This function returns an error if the program has errors (e.g., syntax
+	// errors, type errors).
+	//
+	// This method may be called multiple times.  Only the first call will
+	// trigger meaningful work; subsequent calls will return the cached return
+	// value from the original call (i.e., an Executor implementation must
+	// guard this method with sync.Once).
+	Preprocess() error
+
+	// Execute executes the transaction/script.
+	//
+	// This function returns an error if Preprocess failed or if the execution
+	// fails.
+	//
+	// This method may be called multiple times.  Only the first call will
+	// trigger meaningful work; subsequent calls will return the cached return
+	// value from the original call (i.e., an Executor implementation must
+	// guard this method with sync.Once).
+	//
+	// Note: Execute will invoke Preprocess to ensure Preprocess was called at
+	// least once.
+	Execute() error
+
+	// Result returns the transaction/scipt's execution result.
+	//
+	// This function returns an error if Preproces or Execute fails.  The
+	// cadence.Value is always nil for transaction.
+	//
+	// This method may be called multiple times.  Only the first call will
+	// trigger meaningful work; subsequent calls will return the cached return
+	// value from the original call (i.e., an Executor implementation must
+	// guard this method with sync.Once).
+	//
+	// Note: Result will invoke Execute to ensure Execute was called at least
+	// once.
+	Result() (cadence.Value, error)
+}
+
 // Runtime is a runtime capable of executing Cadence.
 type Runtime interface {
 	// ExecuteScript executes the given script.
@@ -50,6 +103,10 @@ type Runtime interface {
 	// This function returns an error if the program has errors (e.g syntax errors, type errors),
 	// or if the execution fails.
 	ExecuteScript(Script, Context) (cadence.Value, error)
+
+	// NewTransactionExecutor returns an executor which executes the given
+	// transaction.
+	NewTransactionExecutor(Script, Context) Executor
 
 	// ExecuteTransaction executes the given transaction.
 	//
@@ -689,133 +746,16 @@ func (r *interpreterRuntime) convertArgument(
 	return argument
 }
 
+func (r *interpreterRuntime) NewTransactionExecutor(script Script, context Context) Executor {
+	return newInterpreterTransactionExecutor(
+		r,
+		script,
+		context)
+}
+
 func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) (err error) {
-	defer r.Recover(
-		func(internalErr Error) {
-			err = internalErr
-		},
-		context,
-	)
-
-	context.InitializeCodesAndPrograms()
-
-	memoryGauge, _ := context.Interface.(common.MemoryGauge)
-
-	storage := NewStorage(context.Interface, memoryGauge)
-
-	var interpreterOptions []interpreter.Option
-	var checkerOptions []sema.Option
-
-	functions := r.standardLibraryFunctions(
-		context,
-		storage,
-		interpreterOptions,
-		checkerOptions,
-	)
-
-	program, err := r.parseAndCheckProgram(
-		script.Source,
-		context,
-		functions,
-		stdlib.BuiltinValues,
-		checkerOptions,
-		true,
-		importResolutionResults{},
-	)
-	if err != nil {
-		return newError(err, context)
-	}
-
-	transactions := program.Elaboration.TransactionTypes
-	transactionCount := len(transactions)
-	if transactionCount != 1 {
-		err = InvalidTransactionCountError{
-			Count: transactionCount,
-		}
-		return newError(err, context)
-	}
-
-	transactionType := transactions[0]
-
-	var authorizers []Address
-	wrapPanic(func() {
-		authorizers, err = context.Interface.GetSigningAccounts()
-	})
-	if err != nil {
-		return newError(err, context)
-	}
-	// check parameter count
-
-	argumentCount := len(script.Arguments)
-	authorizerCount := len(authorizers)
-
-	transactionParameterCount := len(transactionType.Parameters)
-	if argumentCount != transactionParameterCount {
-		err = InvalidEntryPointParameterCountError{
-			Expected: transactionParameterCount,
-			Actual:   argumentCount,
-		}
-		return newError(err, context)
-	}
-
-	transactionAuthorizerCount := len(transactionType.PrepareParameters)
-	if authorizerCount != transactionAuthorizerCount {
-		err = InvalidTransactionAuthorizerCountError{
-			Expected: transactionAuthorizerCount,
-			Actual:   authorizerCount,
-		}
-		return newError(err, context)
-	}
-
-	// gather authorizers
-
-	authorizerValues := func(inter *interpreter.Interpreter) []interpreter.Value {
-
-		authorizerValues := make([]interpreter.Value, authorizerCount)
-
-		for i, address := range authorizers {
-			authorizerValues[i] = r.newAuthAccountValue(
-				inter,
-				interpreter.NewAddressValue(
-					inter,
-					address,
-				),
-				context,
-				storage,
-				interpreterOptions,
-				checkerOptions,
-			)
-		}
-
-		return authorizerValues
-	}
-
-	_, inter, err := r.interpret(
-		program,
-		context,
-		storage,
-		functions,
-		stdlib.BuiltinValues,
-		interpreterOptions,
-		checkerOptions,
-		r.transactionExecutionFunction(
-			transactionType.Parameters,
-			script.Arguments,
-			context.Interface,
-			authorizerValues,
-		),
-	)
-	if err != nil {
-		return newError(err, context)
-	}
-
-	// Write back all stored values, which were actually just cached, back into storage
-	err = r.commitStorage(storage, inter)
-	if err != nil {
-		return newError(err, context)
-	}
-
-	return nil
+	_, err := r.NewTransactionExecutor(script, context).Result()
+	return err
 }
 
 func wrapPanic(f func()) {
