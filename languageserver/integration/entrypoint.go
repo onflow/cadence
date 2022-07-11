@@ -23,7 +23,7 @@ import (
 
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/parser2"
+	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 
 	"github.com/onflow/cadence/languageserver/protocol"
@@ -98,7 +98,7 @@ func (i *FlowIntegration) updateEntryPointInfoIfNeeded(
 		}
 
 		if len(parameters) > 0 {
-			for _, pragmaArgumentString := range parser2.ParseDocstringPragmaArguments(docString) {
+			for _, pragmaArgumentString := range parser.ParseDocstringPragmaArguments(docString) {
 				arguments, err := runtime.ParseLiteralArgumentList(pragmaArgumentString, parameterTypes, nil)
 				// TODO: record error and show diagnostic
 				if err != nil {
@@ -115,7 +115,7 @@ func (i *FlowIntegration) updateEntryPointInfoIfNeeded(
 			}
 		}
 
-		for _, pragmaSignerString := range parser2.ParseDocstringPragmaSigners(docString) {
+		for _, pragmaSignerString := range parser.ParseDocstringPragmaSigners(docString) {
 			signers := SignersRegexp.FindAllString(pragmaSignerString, -1)
 			pragmaSigners = append(pragmaSigners, signers)
 		}

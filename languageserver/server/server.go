@@ -26,6 +26,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/getsentry/sentry-go"
@@ -36,13 +37,17 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/parser2"
+	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
+	"github.com/onflow/cadence/tools/analysis"
+	"golang.org/x/exp/maps"
 
 	"github.com/onflow/cadence/languageserver/conversion"
 	"github.com/onflow/cadence/languageserver/jsonrpc2"
 	"github.com/onflow/cadence/languageserver/protocol"
+
+	linter "github.com/onflow/cadence-lint/analyzers"
 )
 
 var functionDeclarations = append(
@@ -560,7 +565,7 @@ func (s *Server) checkAndPublishDiagnostics(
 	version int32,
 ) {
 
-	diagnostics, _ := s.getDiagnostics(conn, uri, text, version)
+	diagnostics, _ := s.getDiagnostics(uri, text, version, conn.LogMessage)
 
 	// NOTE: always publish diagnostics and inform the client the checking completed
 
@@ -1750,16 +1755,18 @@ func (*Server) Exit(_ protocol.Conn) error {
 
 const filePrefix = "file://"
 
+var lintingAnalyzers = maps.Values(linter.Analyzers)
+
 // getDiagnostics parses and checks the given file and generates diagnostics
 // indicating each syntax or semantic error. Returns a list of diagnostics
 // that the caller is responsible for publishing to the client.
 //
 // Returns an error if an unexpected error occurred.
 func (s *Server) getDiagnostics(
-	conn protocol.Conn,
 	uri protocol.DocumentURI,
 	text string,
 	version int32,
+	log func(*protocol.LogMessageParams),
 ) (
 	diagnostics []protocol.Diagnostic,
 	diagnosticsErr error,
@@ -1772,14 +1779,14 @@ func (s *Server) getDiagnostics(
 	// The later will be ignored instead of being treated as no items
 	diagnostics = []protocol.Diagnostic{}
 
-	program, parseError := parse(conn, text, string(uri))
+	program, parseError := parse(text, string(uri), log)
 
 	// If there were parsing errors, convert each one to a diagnostic and exit
 	// without checking.
 
 	if parseError != nil {
 		if parentErr, ok := parseError.(errors.ParentError); ok {
-			parserDiagnostics := s.getDiagnosticsForParentError(conn, uri, parentErr, codeActionsResolvers)
+			parserDiagnostics := s.getDiagnosticsForParentError(uri, parentErr, codeActionsResolvers, log)
 			diagnostics = append(diagnostics, parserDiagnostics...)
 		}
 	}
@@ -1798,6 +1805,7 @@ func (s *Server) getDiagnostics(
 		program,
 		location,
 		nil,
+		true,
 		sema.WithPredeclaredValues(valueDeclarations),
 		sema.WithPredeclaredTypes(typeDeclarations),
 		sema.WithLocationHandler(
@@ -1930,7 +1938,7 @@ func (s *Server) getDiagnostics(
 	elapsed := time.Since(start)
 
 	// Log how long it took to check the file
-	conn.LogMessage(&protocol.LogMessageParams{
+	log(&protocol.LogMessageParams{
 		Type:    protocol.Info,
 		Message: fmt.Sprintf("checking %s took %s", string(uri), elapsed),
 	})
@@ -1939,7 +1947,7 @@ func (s *Server) getDiagnostics(
 
 	if checkError != nil {
 		if parentErr, ok := checkError.(errors.ParentError); ok {
-			checkerDiagnostics := s.getDiagnosticsForParentError(conn, uri, parentErr, codeActionsResolvers)
+			checkerDiagnostics := s.getDiagnosticsForParentError(uri, parentErr, codeActionsResolvers, log)
 			diagnostics = append(diagnostics, checkerDiagnostics...)
 		}
 	}
@@ -1953,8 +1961,23 @@ func (s *Server) getDiagnostics(
 		diagnostics = append(diagnostics, extraDiagnostics...)
 	}
 
-	for _, hint := range checker.Hints() {
-		diagnostic, codeActionsResolver := convertHint(hint, uri)
+	if checkError != nil {
+		return
+	}
+
+	analysisProgram := analysis.Program{
+		Program:     program,
+		Elaboration: checker.Elaboration,
+		Location:    checker.Location,
+		Code:        text,
+	}
+
+	var reportLock sync.Mutex
+
+	report := func(linterDiagnostic analysis.Diagnostic) {
+		reportLock.Lock()
+		defer reportLock.Unlock()
+		diagnostic, codeActionsResolver := convertDiagnostic(linterDiagnostic, uri)
 		if codeActionsResolver != nil {
 			codeActionsResolverID := uuid.New()
 			diagnostic.Data = codeActionsResolverID
@@ -1962,6 +1985,8 @@ func (s *Server) getDiagnostics(
 		}
 		diagnostics = append(diagnostics, diagnostic)
 	}
+
+	analysisProgram.Run(lintingAnalyzers, report)
 
 	return
 }
@@ -1971,17 +1996,17 @@ func (s *Server) getDiagnostics(
 //
 // Logs any conversion failures to the client.
 func (s *Server) getDiagnosticsForParentError(
-	conn protocol.Conn,
 	uri protocol.DocumentURI,
 	err errors.ParentError,
 	codeActionsResolvers map[uuid.UUID]func() []*protocol.CodeAction,
+	log func(*protocol.LogMessageParams),
 ) (
 	diagnostics []protocol.Diagnostic,
 ) {
 	for _, childErr := range err.ChildErrors() {
 		convertibleErr, ok := childErr.(convertibleError)
 		if !ok {
-			conn.LogMessage(&protocol.LogMessageParams{
+			log(&protocol.LogMessageParams{
 				Type:    protocol.Error,
 				Message: fmt.Sprintf("Unable to convert non-convertable error to diagnostic: %T", childErr),
 			})
@@ -2022,12 +2047,12 @@ func (s *Server) getDiagnosticsForParentError(
 }
 
 // parse parses the given code and returns the resultant program.
-func parse(conn protocol.Conn, code, location string) (*ast.Program, error) {
+func parse(code, location string, log func(*protocol.LogMessageParams)) (*ast.Program, error) {
 	start := time.Now()
-	program, err := parser2.ParseProgram(code, nil)
+	program, err := parser.ParseProgram(code, nil)
 	elapsed := time.Since(start)
 
-	conn.LogMessage(&protocol.LogMessageParams{
+	log(&protocol.LogMessageParams{
 		Type:    protocol.Info,
 		Message: fmt.Sprintf("parsing %s took %s", location, elapsed),
 	})
@@ -2066,7 +2091,7 @@ func (s *Server) resolveImport(location common.Location) (program *ast.Program, 
 		return nil, err
 	}
 
-	return parser2.ParseProgram(code, nil)
+	return parser.ParseProgram(code, nil)
 }
 
 func (s *Server) GetDocument(uri protocol.DocumentURI) (doc Document, ok bool) {
@@ -3046,46 +3071,38 @@ func fieldDeclarationCodeActions(
 	return codeActions
 }
 
-// convertHint converts a checker hint to a diagnostic
-// and an optional code action to resolve the hint.
+// convertDiagnostic converts a linter diagnostic to a languagserver
+// and an optional code action to resolve the diagnostic.
 //
-func convertHint(
-	hint sema.Hint,
+func convertDiagnostic(
+	linterDiagnostic analysis.Diagnostic,
 	uri protocol.DocumentURI,
 ) (
 	protocol.Diagnostic,
 	func() []*protocol.CodeAction,
 ) {
-	startPosition := hint.StartPosition()
-	endPosition := hint.EndPosition(nil)
 
-	protocolRange := conversion.ASTToProtocolRange(startPosition, endPosition)
+	protocolRange := conversion.ASTToProtocolRange(linterDiagnostic.StartPos, linterDiagnostic.EndPos)
 
-	diagnostic := protocol.Diagnostic{
-		Message: hint.Hint(),
-		// protocol.SeverityHint doesn't look prominent enough in VS Code,
-		// only the first character of the range is highlighted.
-		Severity: protocol.SeverityInformation,
-		Range:    protocolRange,
-	}
+	var protocolDiagnostic protocol.Diagnostic
+	var message string
 
 	var codeActionsResolver func() []*protocol.CodeAction
 
-	switch hint := hint.(type) {
-	case *sema.ReplacementHint:
+	switch linterDiagnostic.Category {
+	case linter.ReplacementCategory:
 		codeActionsResolver = func() []*protocol.CodeAction {
-			replacement := hint.Expression.String()
 			return []*protocol.CodeAction{
 				{
-					Title:       fmt.Sprintf("Replace with suggestion `%s`", replacement),
+					Title:       fmt.Sprintf("%s `%s`", linterDiagnostic.Message, linterDiagnostic.SecondaryMessage),
 					Kind:        protocol.QuickFix,
-					Diagnostics: []protocol.Diagnostic{diagnostic},
+					Diagnostics: []protocol.Diagnostic{protocolDiagnostic},
 					Edit: protocol.WorkspaceEdit{
 						Changes: map[protocol.DocumentURI][]protocol.TextEdit{
 							uri: {
 								{
 									Range:   protocolRange,
-									NewText: replacement,
+									NewText: linterDiagnostic.SecondaryMessage,
 								},
 							},
 						},
@@ -3094,14 +3111,14 @@ func convertHint(
 				},
 			}
 		}
-
-	case *sema.RemovalHint:
+		message = fmt.Sprintf("%s `%s`", linterDiagnostic.Message, linterDiagnostic.SecondaryMessage)
+	case linter.RemovalCategory:
 		codeActionsResolver = func() []*protocol.CodeAction {
 			return []*protocol.CodeAction{
 				{
 					Title:       "Remove unnecessary code",
 					Kind:        protocol.QuickFix,
-					Diagnostics: []protocol.Diagnostic{diagnostic},
+					Diagnostics: []protocol.Diagnostic{protocolDiagnostic},
 					Edit: protocol.WorkspaceEdit{
 						Changes: map[protocol.DocumentURI][]protocol.TextEdit{
 							uri: {
@@ -3117,6 +3134,18 @@ func convertHint(
 			}
 		}
 	}
+	
+	if message == "" {
+		message = linterDiagnostic.Message
+	}
 
-	return diagnostic, codeActionsResolver
+	protocolDiagnostic = protocol.Diagnostic{
+		Message: message,
+		// protocol.SeverityHint doesn't look prominent enough in VS Code,
+		// only the first character of the range is highlighted.
+		Severity: protocol.SeverityInformation,
+		Range:    protocolRange,
+	}
+
+	return protocolDiagnostic, codeActionsResolver
 }
