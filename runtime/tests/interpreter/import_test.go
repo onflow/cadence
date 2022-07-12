@@ -43,7 +43,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 		Kind:       common.CompositeKindContract,
 	}
 
-	fooType.Members = sema.NewStringMemberOrderedMap()
+	fooType.Members = &sema.StringMemberOrderedMap{}
 	fooType.Members.Set(
 		"bar",
 		sema.NewUnmeteredPublicFunctionMember(
@@ -63,7 +63,7 @@ func TestInterpretVirtualImport(t *testing.T) {
        }
     `
 
-	valueElements := sema.NewStringImportElementOrderedMap()
+	valueElements := &sema.StringImportElementOrderedMap{}
 
 	valueElements.Set("Foo", sema.ImportElement{
 		DeclarationKind: common.DeclarationKindStructure,

@@ -47,12 +47,12 @@ func (checker *Checker) VisitWhileStatement(statement *ast.WhileStatement) ast.R
 
 func (checker *Checker) reportResourceUsesInLoop(startPos, endPos ast.Position) {
 
-	checker.resources.ForEach(func(resource any, info ResourceInfo) {
+	checker.resources.ForEach(func(resource Resource, info ResourceInfo) {
 
 		// If the resource is a variable,
 		// only report an error if the variable was declared outside the loop
 
-		if variable, isVariable := resource.(*Variable); isVariable &&
+		if variable := resource.Variable; variable != nil &&
 			variable.Pos != nil &&
 			variable.Pos.Compare(startPos) > 0 &&
 			variable.Pos.Compare(endPos) < 0 {

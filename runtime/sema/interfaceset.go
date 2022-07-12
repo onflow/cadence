@@ -18,16 +18,20 @@
 
 package sema
 
+import (
+	"github.com/onflow/cadence/runtime/common/orderedmap"
+)
+
 // InterfaceSet
 
-type InterfaceSet InterfaceTypeStructOrderedMap
+type InterfaceSet orderedmap.OrderedMap[*InterfaceType, struct{}]
 
 func NewInterfaceSet() *InterfaceSet {
-	return (*InterfaceSet)(NewInterfaceTypeStructOrderedMap())
+	return (*InterfaceSet)(&orderedmap.OrderedMap[*InterfaceType, struct{}]{})
 }
 
-func (s *InterfaceSet) IsSubsetOf(other *InterfaceSet) bool {
-	orderedMap := (*InterfaceTypeStructOrderedMap)(s)
+func (s InterfaceSet) IsSubsetOf(other *InterfaceSet) bool {
+	orderedMap := (orderedmap.OrderedMap[*InterfaceType, struct{}])(s)
 
 	for pair := orderedMap.Oldest(); pair != nil; pair = pair.Next() {
 		interfaceType := pair.Key
@@ -39,24 +43,25 @@ func (s *InterfaceSet) IsSubsetOf(other *InterfaceSet) bool {
 	return true
 }
 
-func (s *InterfaceSet) Includes(interfaceType *InterfaceType) bool {
-	_, present := (*InterfaceTypeStructOrderedMap)(s).Get(interfaceType)
+func (s InterfaceSet) Includes(interfaceType *InterfaceType) bool {
+	orderedMap := (orderedmap.OrderedMap[*InterfaceType, struct{}])(s)
+	_, present := orderedMap.Get(interfaceType)
 	return present
 }
 
 func (s *InterfaceSet) Add(interfaceType *InterfaceType) {
-	orderedMap := (*InterfaceTypeStructOrderedMap)(s)
+	orderedMap := (*orderedmap.OrderedMap[*InterfaceType, struct{}])(s)
 	orderedMap.Set(interfaceType, struct{}{})
 }
 
-func (s *InterfaceSet) ForEach(f func(*InterfaceType)) {
-	orderedMap := (*InterfaceTypeStructOrderedMap)(s)
+func (s InterfaceSet) ForEach(f func(*InterfaceType)) {
+	orderedMap := (orderedmap.OrderedMap[*InterfaceType, struct{}])(s)
 	orderedMap.Foreach(func(interfaceType *InterfaceType, _ struct{}) {
 		f(interfaceType)
 	})
 }
 
-func (s *InterfaceSet) Len() int {
-	orderedMap := (*InterfaceTypeStructOrderedMap)(s)
+func (s InterfaceSet) Len() int {
+	orderedMap := (orderedmap.OrderedMap[*InterfaceType, struct{}])(s)
 	return orderedMap.Len()
 }

@@ -18,6 +18,8 @@
 
 package deps
 
+import "github.com/onflow/cadence/runtime/common/orderedmap"
+
 // NodeSet is a set of Node
 //
 type NodeSet interface {
@@ -63,33 +65,30 @@ func (m MapNodeSet) ForEach(f func(*Node) error) error {
 
 // OrderedNodeSet is a Node set backed by an ordered map
 //
-type OrderedNodeSet struct {
-	m *NodeStructOrderedMap
+type OrderedNodeSet orderedmap.OrderedMap[*Node, struct{}]
+
+var _ NodeSet = &OrderedNodeSet{}
+
+func (os *OrderedNodeSet) Add(node *Node) {
+	om := (*orderedmap.OrderedMap[*Node, struct{}])(os)
+	om.Set(node, struct{}{})
 }
 
-func NewOrderedNodeSet() NodeSet {
-	return OrderedNodeSet{
-		m: NewNodeStructOrderedMap(),
-	}
+func (os *OrderedNodeSet) Remove(node *Node) {
+	om := (*orderedmap.OrderedMap[*Node, struct{}])(os)
+	om.Delete(node)
 }
 
-var _ NodeSet = OrderedNodeSet{}
-
-func (o OrderedNodeSet) Add(node *Node) {
-	o.m.Set(node, struct{}{})
-}
-
-func (o OrderedNodeSet) Remove(node *Node) {
-	o.m.Delete(node)
-}
-
-func (o OrderedNodeSet) Contains(node *Node) bool {
-	_, ok := o.m.Get(node)
+func (os *OrderedNodeSet) Contains(node *Node) bool {
+	om := (*orderedmap.OrderedMap[*Node, struct{}])(os)
+	_, ok := om.Get(node)
 	return ok
 }
 
-func (o OrderedNodeSet) ForEach(f func(*Node) error) error {
-	return o.m.ForeachWithError(func(node *Node, _ struct{}) error {
+func (os *OrderedNodeSet) ForEach(f func(*Node) error) error {
+	om := (*orderedmap.OrderedMap[*Node, struct{}])(os)
+
+	return om.ForeachWithError(func(node *Node, _ struct{}) error {
 		return f(node)
 	})
 }

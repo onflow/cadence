@@ -78,7 +78,9 @@ func TestNode_AllDependents(t *testing.T) {
 	})
 
 	t.Run("OrderedNodeSet", func(t *testing.T) {
-		test(t, deps.NewOrderedNodeSet)
+		test(t, func() deps.NodeSet {
+			return &deps.OrderedNodeSet{}
+		})
 	})
 
 }
@@ -141,7 +143,9 @@ func TestNode_AllDependents_Circular(t *testing.T) {
 	})
 
 	t.Run("OrderedNodeSet", func(t *testing.T) {
-		test(t, deps.NewOrderedNodeSet)
+		test(t, func() deps.NodeSet {
+			return &deps.OrderedNodeSet{}
+		})
 	})
 
 }

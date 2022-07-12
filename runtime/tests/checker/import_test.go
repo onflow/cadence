@@ -699,7 +699,7 @@ func TestCheckImportVirtual(t *testing.T) {
 
 	fooType.Fields = []string{"bar"}
 
-	fooType.Members = sema.NewStringMemberOrderedMap()
+	fooType.Members = &sema.StringMemberOrderedMap{}
 	fooType.Members.Set(
 		"bar",
 		sema.NewUnmeteredPublicFunctionMember(
@@ -711,7 +711,7 @@ func TestCheckImportVirtual(t *testing.T) {
 			"",
 		))
 
-	valueElements := sema.NewStringImportElementOrderedMap()
+	valueElements := &sema.StringImportElementOrderedMap{}
 
 	valueElements.Set("Foo", sema.ImportElement{
 		DeclarationKind: common.DeclarationKindStructure,

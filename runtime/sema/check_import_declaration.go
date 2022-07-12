@@ -296,7 +296,7 @@ func (checker *Checker) importElements(
 
 	identifiersCount := len(requestedIdentifiers)
 	if identifiersCount > 0 && availableElements != nil {
-		elements = NewStringImportElementOrderedMap()
+		elements = &StringImportElementOrderedMap{}
 		for _, identifier := range requestedIdentifiers {
 			name := identifier.Identifier
 			element, ok := availableElements.Get(name)

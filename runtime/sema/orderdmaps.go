@@ -14,13 +14,18 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
- * Based on https://github.com/wk8/go-ordered-map, Copyright Jean Rougé
- *
  */
 
-package orderedmap
+package sema
 
-//go:generate go run github.com/cheekybits/genny -pkg=orderedmap -in=orderedmap.go -out=orderedmap_string_string.go gen "KeyType=string ValueType=string"
-//go:generate go run github.com/cheekybits/genny -pkg=orderedmap -in=orderedmap.go -out=orderedmap_string_interface.go gen "KeyType=string ValueType=any"
-//go:generate go run github.com/cheekybits/genny -pkg=orderedmap -in=orderedmap.go -out=orderedmap_string_struct.go gen "KeyType=string ValueType=struct{}"
+import (
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
+)
+
+type StringTypeOrderedMap = orderedmap.OrderedMap[string, Type]
+type StringMemberOrderedMap = orderedmap.OrderedMap[string, *Member]
+type StringVariableOrderedMap = orderedmap.OrderedMap[string, *Variable]
+type TypeParameterTypeOrderedMap = orderedmap.OrderedMap[*TypeParameter, Type]
+type StringImportElementOrderedMap = orderedmap.OrderedMap[string, ImportElement]
+type MemberFieldDeclarationOrderedMap = orderedmap.OrderedMap[*Member, *ast.FieldDeclaration]

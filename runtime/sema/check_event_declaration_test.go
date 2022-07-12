@@ -39,7 +39,7 @@ func TestIsValidEventParameterType(t *testing.T) {
 			Identifier: "Nested",
 		}
 		ty.Members = func() *StringMemberOrderedMap {
-			members := NewStringMemberOrderedMap()
+			members := &StringMemberOrderedMap{}
 			// field `nested` refers to the container type,
 			// leading to a recursive type declaration
 			const fieldName = "nested"

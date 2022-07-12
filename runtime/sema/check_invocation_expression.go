@@ -379,7 +379,7 @@ func (checker *Checker) checkInvocation(
 
 	typeArgumentCount := len(invocationExpression.TypeArguments)
 
-	typeArguments := NewTypeParameterTypeOrderedMap()
+	typeArguments := &TypeParameterTypeOrderedMap{}
 
 	// If the function type is generic, the invocation might provide
 	// explicit type arguments for the type parameters.

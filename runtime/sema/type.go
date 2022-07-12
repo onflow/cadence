@@ -2704,9 +2704,9 @@ func (*FunctionType) IsEquatable() bool {
 func (t *FunctionType) TypeAnnotationState() TypeAnnotationState {
 
 	for _, typeParameter := range t.TypeParameters {
-		typeParameterTypeAnnotationState := typeParameter.TypeBound.TypeAnnotationState()
-		if typeParameterTypeAnnotationState != TypeAnnotationStateValid {
-			return typeParameterTypeAnnotationState
+		TypeParameterTypeAnnotationState := typeParameter.TypeBound.TypeAnnotationState()
+		if TypeParameterTypeAnnotationState != TypeAnnotationStateValid {
+			return TypeParameterTypeAnnotationState
 		}
 	}
 
@@ -3110,7 +3110,7 @@ func init() {
 
 			addMember := func(member *Member) {
 				if functionType.Members == nil {
-					functionType.Members = NewStringMemberOrderedMap()
+					functionType.Members = &StringMemberOrderedMap{}
 				}
 				name := member.Identifier.Identifier
 				_, exists := functionType.Members.Get(name)
@@ -3315,7 +3315,7 @@ func init() {
 
 	addMember := func(member *Member) {
 		if functionType.Members == nil {
-			functionType.Members = NewStringMemberOrderedMap()
+			functionType.Members = &StringMemberOrderedMap{}
 		}
 		name := member.Identifier.Identifier
 		_, exists := functionType.Members.Get(name)
@@ -6394,7 +6394,7 @@ type CryptoAlgorithm interface {
 }
 
 func GetMembersAsMap(members []*Member) *StringMemberOrderedMap {
-	membersMap := NewStringMemberOrderedMap()
+	membersMap := &StringMemberOrderedMap{}
 	for _, member := range members {
 		name := member.Identifier.Identifier
 		_, ok := membersMap.Get(name)
