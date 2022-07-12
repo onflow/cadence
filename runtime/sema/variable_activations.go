@@ -23,7 +23,6 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -32,7 +31,7 @@ import (
 // i.e. it is used as a symbol table during semantic analysis.
 //
 type VariableActivation struct {
-	entries        *orderedmap.OrderedMap[string, *Variable]
+	entries        *StringVariableOrderedMap
 	Depth          int
 	Parent         *VariableActivation
 	LeaveCallbacks []func(EndPositionGetter)
@@ -87,7 +86,7 @@ func (a *VariableActivation) Find(name string) *Variable {
 //
 func (a *VariableActivation) Set(name string, variable *Variable) {
 	if a.entries == nil {
-		a.entries = &orderedmap.OrderedMap[string, *Variable]{}
+		a.entries = &StringVariableOrderedMap{}
 	}
 
 	a.entries.Set(name, variable)

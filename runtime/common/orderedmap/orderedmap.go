@@ -122,10 +122,6 @@ func (om *OrderedMap[K, V]) Delete(key K) (oldValue V, present bool) {
 
 // Len returns the length of the ordered map.
 func (om OrderedMap[K, V]) Len() int {
-	if om.pairs == nil {
-		return 0
-	}
-
 	return len(om.pairs)
 }
 

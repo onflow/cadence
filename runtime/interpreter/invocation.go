@@ -20,7 +20,6 @@ package interpreter
 
 import (
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -30,7 +29,7 @@ type Invocation struct {
 	Self               MemberAccessibleValue
 	Arguments          []Value
 	ArgumentTypes      []sema.Type
-	TypeParameterTypes *orderedmap.OrderedMap[*sema.TypeParameter, sema.Type]
+	typeParameterTypes *sema.TypeParameterTypeOrderedMap
 	GetLocationRange   func() LocationRange
 	Interpreter        *Interpreter
 }
@@ -40,7 +39,7 @@ func NewInvocation(
 	self MemberAccessibleValue,
 	arguments []Value,
 	argumentTypes []sema.Type,
-	typeParameterTypes *orderedmap.OrderedMap[*sema.TypeParameter, sema.Type],
+	typeParameterTypes *sema.TypeParameterTypeOrderedMap,
 	getLocationRange func() LocationRange,
 ) Invocation {
 	common.UseMemory(interpreter, common.InvocationMemoryUsage)
@@ -49,7 +48,7 @@ func NewInvocation(
 		Self:               self,
 		Arguments:          arguments,
 		ArgumentTypes:      argumentTypes,
-		TypeParameterTypes: typeParameterTypes,
+		typeParameterTypes: typeParameterTypes,
 		GetLocationRange:   getLocationRange,
 		Interpreter:        interpreter,
 	}

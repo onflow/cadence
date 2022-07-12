@@ -27,9 +27,11 @@ type ResourceUse struct {
 	UseAfterInvalidationReported bool
 }
 
+type PositionResourceUseOrderedMap = orderedmap.OrderedMap[ast.Position, ResourceUse]
+
 type ResourceUses struct {
 	Parent    *ResourceUses
-	positions *orderedmap.OrderedMap[ast.Position, ResourceUse]
+	positions *PositionResourceUseOrderedMap
 }
 
 // ForEach calls the given function for each resource use in the set.
@@ -139,7 +141,7 @@ func (rus *ResourceUses) Merge(other ResourceUses) {
 
 func (rus *ResourceUses) ensurePositions() {
 	if rus.positions == nil {
-		rus.positions = &orderedmap.OrderedMap[ast.Position, ResourceUse]{}
+		rus.positions = &PositionResourceUseOrderedMap{}
 	}
 }
 

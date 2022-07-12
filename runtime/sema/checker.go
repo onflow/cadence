@@ -27,7 +27,6 @@ import (
 	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -1766,7 +1765,7 @@ func (checker *Checker) checkUnusedExpressionResourceLoss(expressionType Type, e
 // in non resource composites (concrete or interface)
 //
 func (checker *Checker) checkResourceFieldNesting(
-	members *orderedmap.OrderedMap[string, *Member],
+	members *StringMemberOrderedMap,
 	compositeKind common.CompositeKind,
 	fieldPositionGetter func(name string) ast.Position,
 ) {

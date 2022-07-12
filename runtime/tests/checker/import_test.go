@@ -27,7 +27,6 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
@@ -700,7 +699,7 @@ func TestCheckImportVirtual(t *testing.T) {
 
 	fooType.Fields = []string{"bar"}
 
-	fooType.Members = &orderedmap.OrderedMap[string, *sema.Member]{}
+	fooType.Members = &sema.StringMemberOrderedMap{}
 	fooType.Members.Set(
 		"bar",
 		sema.NewUnmeteredPublicFunctionMember(
@@ -712,7 +711,7 @@ func TestCheckImportVirtual(t *testing.T) {
 			"",
 		))
 
-	valueElements := &orderedmap.OrderedMap[string, sema.ImportElement]{}
+	valueElements := &sema.StringImportElementOrderedMap{}
 
 	valueElements.Set("Foo", sema.ImportElement{
 		DeclarationKind: common.DeclarationKindStructure,

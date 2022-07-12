@@ -18,20 +18,15 @@
 
 package sema
 
-import (
-	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common/orderedmap"
-)
-
 type InitializationInfo struct {
 	ContainerType           Type
-	FieldMembers            *orderedmap.OrderedMap[*Member, *ast.FieldDeclaration]
+	FieldMembers            *MemberFieldDeclarationOrderedMap
 	InitializedFieldMembers *MemberSet
 }
 
 func NewInitializationInfo(
 	containerType Type,
-	fieldMembers *orderedmap.OrderedMap[*Member, *ast.FieldDeclaration],
+	fieldMembers *MemberFieldDeclarationOrderedMap,
 ) *InitializationInfo {
 	return &InitializationInfo{
 		ContainerType:           containerType,

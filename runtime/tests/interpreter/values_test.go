@@ -35,7 +35,6 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/utils"
@@ -1056,7 +1055,7 @@ func newCompositeValue(
 		Kind:       kind,
 	}
 
-	compositeType.Members = &orderedmap.OrderedMap[string, *sema.Member]{}
+	compositeType.Members = &sema.StringMemberOrderedMap{}
 	for _, field := range fields {
 		compositeType.Members.Set(
 			field.Name,
@@ -1522,7 +1521,7 @@ func randomCompositeValue(
 		Kind:       kind,
 	}
 
-	compositeType.Members = &orderedmap.OrderedMap[string, *sema.Member]{}
+	compositeType.Members = &sema.StringMemberOrderedMap{}
 	for _, field := range fields {
 		compositeType.Members.Set(
 			field.Name,

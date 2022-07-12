@@ -24,7 +24,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/common/orderedmap"
 )
 
 func TestIsValidEventParameterType(t *testing.T) {
@@ -39,8 +38,8 @@ func TestIsValidEventParameterType(t *testing.T) {
 			Kind:       common.CompositeKindStructure,
 			Identifier: "Nested",
 		}
-		ty.Members = func() *orderedmap.OrderedMap[string, *Member] {
-			members := &orderedmap.OrderedMap[string, *Member]{}
+		ty.Members = func() *StringMemberOrderedMap {
+			members := &StringMemberOrderedMap{}
 			// field `nested` refers to the container type,
 			// leading to a recursive type declaration
 			const fieldName = "nested"

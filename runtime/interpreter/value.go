@@ -17873,7 +17873,7 @@ func accountGetCapabilityFunction(
 			// NOTE: the type parameter is optional, for backwards compatibility
 
 			var borrowType *sema.ReferenceType
-			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			typeParameterPair := invocation.typeParameterTypes.Oldest()
 			if typeParameterPair != nil {
 				ty := typeParameterPair.Value
 				// we handle the nil case for this below

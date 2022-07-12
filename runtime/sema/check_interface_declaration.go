@@ -21,7 +21,6 @@ package sema
 import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -215,8 +214,8 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 		Location:      checker.Location,
 		Identifier:    identifier.Identifier,
 		CompositeKind: declaration.CompositeKind,
-		nestedTypes:   &orderedmap.OrderedMap[string, Type]{},
-		Members:       &orderedmap.OrderedMap[string, *Member]{},
+		nestedTypes:   &StringTypeOrderedMap{},
+		Members:       &StringMemberOrderedMap{},
 	}
 
 	variable, err := checker.typeActivations.DeclareType(typeDeclaration{

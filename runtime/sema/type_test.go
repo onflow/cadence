@@ -27,7 +27,6 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/parser"
 )
 
@@ -437,7 +436,7 @@ func TestRestrictedType_GetMember(t *testing.T) {
 			Identifier: "R",
 			Location:   common.StringLocation("a"),
 			Fields:     []string{},
-			Members:    &orderedmap.OrderedMap[string, *Member]{},
+			Members:    &StringMemberOrderedMap{},
 		}
 		ty := &RestrictedType{
 			Type:         resourceType,
@@ -477,7 +476,7 @@ func TestRestrictedType_GetMember(t *testing.T) {
 		interfaceType := &InterfaceType{
 			CompositeKind: common.CompositeKindResource,
 			Identifier:    "I",
-			Members:       &orderedmap.OrderedMap[string, *Member]{},
+			Members:       &StringMemberOrderedMap{},
 		}
 
 		resourceType := &CompositeType{
@@ -485,7 +484,7 @@ func TestRestrictedType_GetMember(t *testing.T) {
 			Identifier: "R",
 			Location:   common.StringLocation("a"),
 			Fields:     []string{},
-			Members:    &orderedmap.OrderedMap[string, *Member]{},
+			Members:    &StringMemberOrderedMap{},
 		}
 		restrictedType := &RestrictedType{
 			Type: resourceType,
@@ -547,7 +546,7 @@ func TestQualifiedIdentifierCreation(t *testing.T) {
 			Identifier: "A",
 			Location:   common.StringLocation("a"),
 			Fields:     []string{},
-			Members:    &orderedmap.OrderedMap[string, *Member]{},
+			Members:    &StringMemberOrderedMap{},
 		}
 
 		b := &CompositeType{
@@ -555,7 +554,7 @@ func TestQualifiedIdentifierCreation(t *testing.T) {
 			Identifier:    "B",
 			Location:      common.StringLocation("a"),
 			Fields:        []string{},
-			Members:       &orderedmap.OrderedMap[string, *Member]{},
+			Members:       &StringMemberOrderedMap{},
 			containerType: a,
 		}
 
@@ -564,7 +563,7 @@ func TestQualifiedIdentifierCreation(t *testing.T) {
 			Identifier:    "C",
 			Location:      common.StringLocation("a"),
 			Fields:        []string{},
-			Members:       &orderedmap.OrderedMap[string, *Member]{},
+			Members:       &StringMemberOrderedMap{},
 			containerType: b,
 		}
 
@@ -590,7 +589,7 @@ func BenchmarkQualifiedIdentifierCreation(b *testing.B) {
 		Identifier: "foo",
 		Location:   common.StringLocation("a"),
 		Fields:     []string{},
-		Members:    &orderedmap.OrderedMap[string, *Member]{},
+		Members:    &StringMemberOrderedMap{},
 	}
 
 	bar := &CompositeType{
@@ -598,7 +597,7 @@ func BenchmarkQualifiedIdentifierCreation(b *testing.B) {
 		Identifier:    "bar",
 		Location:      common.StringLocation("a"),
 		Fields:        []string{},
-		Members:       &orderedmap.OrderedMap[string, *Member]{},
+		Members:       &StringMemberOrderedMap{},
 		containerType: foo,
 	}
 
@@ -662,7 +661,7 @@ func TestIdentifierCacheUpdate(t *testing.T) {
 
 			var checkIdentifiers func(t *testing.T, typ Type)
 
-			checkNestedTypes := func(nestedTypes *orderedmap.OrderedMap[string, Type]) {
+			checkNestedTypes := func(nestedTypes *StringTypeOrderedMap) {
 				if nestedTypes != nil {
 					nestedTypes.Foreach(
 						func(_ string, typ Type) {
@@ -910,21 +909,21 @@ func TestCommonSuperType(t *testing.T) {
 			Location:      testLocation,
 			Identifier:    "I1",
 			CompositeKind: common.CompositeKindStructure,
-			Members:       &orderedmap.OrderedMap[string, *Member]{},
+			Members:       &StringMemberOrderedMap{},
 		}
 
 		interfaceType2 := &InterfaceType{
 			Location:      testLocation,
 			Identifier:    "I2",
 			CompositeKind: common.CompositeKindStructure,
-			Members:       &orderedmap.OrderedMap[string, *Member]{},
+			Members:       &StringMemberOrderedMap{},
 		}
 
 		interfaceType3 := &InterfaceType{
 			Location:      testLocation,
 			Identifier:    "I3",
 			CompositeKind: common.CompositeKindStructure,
-			Members:       &orderedmap.OrderedMap[string, *Member]{},
+			Members:       &StringMemberOrderedMap{},
 		}
 
 		newCompositeWithInterfaces := func(name string, interfaces ...*InterfaceType) *CompositeType {
@@ -933,7 +932,7 @@ func TestCommonSuperType(t *testing.T) {
 				Identifier:                    name,
 				Kind:                          common.CompositeKindStructure,
 				ExplicitInterfaceConformances: interfaces,
-				Members:                       &orderedmap.OrderedMap[string, *Member]{},
+				Members:                       &StringMemberOrderedMap{},
 			}
 		}
 
@@ -1377,7 +1376,7 @@ func TestCommonSuperType(t *testing.T) {
 			Location:      testLocation,
 			Identifier:    "I1",
 			CompositeKind: common.CompositeKindStructure,
-			Members:       &orderedmap.OrderedMap[string, *Member]{},
+			Members:       &StringMemberOrderedMap{},
 		}
 
 		restrictedType1 := &RestrictedType{
@@ -1421,7 +1420,7 @@ func TestCommonSuperType(t *testing.T) {
 			Location:      testLocation,
 			Identifier:    "I1",
 			CompositeKind: common.CompositeKindStructure,
-			Members:       &orderedmap.OrderedMap[string, *Member]{},
+			Members:       &StringMemberOrderedMap{},
 		}
 
 		restrictedType1 := &RestrictedType{
@@ -1466,7 +1465,7 @@ func TestCommonSuperType(t *testing.T) {
 				},
 			},
 			ReturnTypeAnnotation: NewTypeAnnotation(Int8Type),
-			Members:              &orderedmap.OrderedMap[string, *Member]{},
+			Members:              &StringMemberOrderedMap{},
 		}
 
 		funcType2 := &FunctionType{
@@ -1476,7 +1475,7 @@ func TestCommonSuperType(t *testing.T) {
 				},
 			},
 			ReturnTypeAnnotation: NewTypeAnnotation(Int8Type),
-			Members:              &orderedmap.OrderedMap[string, *Member]{},
+			Members:              &StringMemberOrderedMap{},
 		}
 
 		tests := []testCase{
@@ -1547,7 +1546,7 @@ func TestCommonSuperType(t *testing.T) {
 			Location:   testLocation,
 			Identifier: "T",
 			Kind:       common.CompositeKindStructure,
-			Members:    &orderedmap.OrderedMap[string, *Member]{},
+			Members:    &StringMemberOrderedMap{},
 		}
 
 		optionalStructType := &OptionalType{

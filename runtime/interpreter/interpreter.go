@@ -3473,7 +3473,7 @@ func defineRuntimeTypeConstructorFunctions(activation *VariableActivation) {
 //
 var typeFunction = NewUnmeteredHostFunctionValue(
 	func(invocation Invocation) Value {
-		typeParameterPair := invocation.TypeParameterTypes.Oldest()
+		typeParameterPair := invocation.typeParameterTypes.Oldest()
 		if typeParameterPair == nil {
 			panic(errors.NewUnreachableError())
 		}
@@ -3756,7 +3756,7 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 			// If there is value stored for the given path,
 			// check that it satisfies the type given as the type argument.
 
-			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			typeParameterPair := invocation.typeParameterTypes.Oldest()
 			if typeParameterPair == nil {
 				panic(errors.NewUnreachableError())
 			}
@@ -3811,7 +3811,7 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 				panic(errors.NewUnreachableError())
 			}
 
-			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			typeParameterPair := invocation.typeParameterTypes.Oldest()
 			if typeParameterPair == nil {
 				panic(errors.NewUnreachableError())
 			}
@@ -3858,7 +3858,7 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 		interpreter,
 		func(invocation Invocation) Value {
 
-			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			typeParameterPair := invocation.typeParameterTypes.Oldest()
 			if typeParameterPair == nil {
 				panic(errors.NewUnreachableError())
 			}
@@ -3995,7 +3995,7 @@ func (interpreter *Interpreter) capabilityBorrowFunction(
 			// NOTE: if a type argument is provided for the function,
 			// use it *instead* of the type of the value (if any)
 
-			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			typeParameterPair := invocation.typeParameterTypes.Oldest()
 			if typeParameterPair != nil {
 				ty := typeParameterPair.Value
 				var ok bool
@@ -4066,7 +4066,7 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 			// NOTE: if a type argument is provided for the function,
 			// use it *instead* of the type of the value (if any)
 
-			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			typeParameterPair := invocation.typeParameterTypes.Oldest()
 			if typeParameterPair != nil {
 				ty := typeParameterPair.Value
 				var ok bool

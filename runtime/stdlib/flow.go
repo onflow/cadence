@@ -24,7 +24,6 @@ import (
 	"strings"
 
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
@@ -334,7 +333,7 @@ func newFlowEventType(identifier string, parameters ...*sema.Parameter) *sema.Co
 		Location:   FlowLocation{},
 		Identifier: identifier,
 		Fields:     []string{},
-		Members:    &orderedmap.OrderedMap[string, *sema.Member]{},
+		Members:    &sema.StringMemberOrderedMap{},
 	}
 
 	for _, parameter := range parameters {

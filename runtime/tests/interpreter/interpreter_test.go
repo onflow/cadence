@@ -33,7 +33,6 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/parser"
@@ -6734,7 +6733,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 		Location:   TestLocation,
 		Identifier: "S",
 		Kind:       common.CompositeKindStructure,
-		Members:    &orderedmap.OrderedMap[string, *sema.Member]{},
+		Members:    &sema.StringMemberOrderedMap{},
 	}
 
 	storage := newUnmeteredInMemoryStorage()

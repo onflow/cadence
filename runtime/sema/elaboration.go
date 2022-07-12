@@ -23,7 +23,6 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/common/orderedmap"
 )
 
 type MemberInfo struct {
@@ -55,7 +54,7 @@ type Elaboration struct {
 	InvocationExpressionArgumentTypes   map[*ast.InvocationExpression][]Type
 	InvocationExpressionParameterTypes  map[*ast.InvocationExpression][]Type
 	InvocationExpressionReturnTypes     map[*ast.InvocationExpression]Type
-	InvocationExpressionTypeArguments   map[*ast.InvocationExpression]*orderedmap.OrderedMap[*TypeParameter, Type]
+	InvocationExpressionTypeArguments   map[*ast.InvocationExpression]*TypeParameterTypeOrderedMap
 	CastingStaticValueTypes             map[*ast.CastingExpression]Type
 	CastingTargetTypes                  map[*ast.CastingExpression]Type
 	ReturnStatementValueTypes           map[*ast.ReturnStatement]Type
@@ -86,8 +85,8 @@ type Elaboration struct {
 	InterfaceTypes                      map[TypeID]*InterfaceType
 	IdentifierInInvocationTypes         map[*ast.IdentifierExpression]Type
 	ImportDeclarationsResolvedLocations map[*ast.ImportDeclaration][]ResolvedLocation
-	GlobalValues                        *orderedmap.OrderedMap[string, *Variable]
-	GlobalTypes                         *orderedmap.OrderedMap[string, *Variable]
+	GlobalValues                        *StringVariableOrderedMap
+	GlobalTypes                         *StringVariableOrderedMap
 	TransactionTypes                    []*TransactionType
 	EffectivePredeclaredValues          map[string]ValueDeclaration
 	EffectivePredeclaredTypes           map[string]TypeDeclaration
@@ -126,7 +125,7 @@ func NewElaboration(gauge common.MemoryGauge, extendedElaboration bool) *Elabora
 		InvocationExpressionArgumentTypes:   map[*ast.InvocationExpression][]Type{},
 		InvocationExpressionParameterTypes:  map[*ast.InvocationExpression][]Type{},
 		InvocationExpressionReturnTypes:     map[*ast.InvocationExpression]Type{},
-		InvocationExpressionTypeArguments:   map[*ast.InvocationExpression]*orderedmap.OrderedMap[*TypeParameter, Type]{},
+		InvocationExpressionTypeArguments:   map[*ast.InvocationExpression]*TypeParameterTypeOrderedMap{},
 		CastingStaticValueTypes:             map[*ast.CastingExpression]Type{},
 		CastingTargetTypes:                  map[*ast.CastingExpression]Type{},
 		ReturnStatementValueTypes:           map[*ast.ReturnStatement]Type{},
@@ -155,8 +154,8 @@ func NewElaboration(gauge common.MemoryGauge, extendedElaboration bool) *Elabora
 		InterfaceTypes:                      map[TypeID]*InterfaceType{},
 		IdentifierInInvocationTypes:         map[*ast.IdentifierExpression]Type{},
 		ImportDeclarationsResolvedLocations: map[*ast.ImportDeclaration][]ResolvedLocation{},
-		GlobalValues:                        &orderedmap.OrderedMap[string, *Variable]{},
-		GlobalTypes:                         &orderedmap.OrderedMap[string, *Variable]{},
+		GlobalValues:                        &StringVariableOrderedMap{},
+		GlobalTypes:                         &StringVariableOrderedMap{},
 		EffectivePredeclaredValues:          map[string]ValueDeclaration{},
 		EffectivePredeclaredTypes:           map[string]TypeDeclaration{},
 		ReferenceExpressionBorrowTypes:      map[*ast.ReferenceExpression]Type{},

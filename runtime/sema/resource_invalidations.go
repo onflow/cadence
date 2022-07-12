@@ -22,9 +22,11 @@ import (
 	"github.com/onflow/cadence/runtime/common/orderedmap"
 )
 
+type ResourceInvalidationStructOrderedMap = orderedmap.OrderedMap[ResourceInvalidation, struct{}]
+
 type ResourceInvalidations struct {
 	Parent        *ResourceInvalidations
-	invalidations *orderedmap.OrderedMap[ResourceInvalidation, struct{}]
+	invalidations *ResourceInvalidationStructOrderedMap
 }
 
 // ForEach calls the given function for each resource invalidation in the set.
@@ -91,7 +93,7 @@ func (ris *ResourceInvalidations) Add(invalidation ResourceInvalidation) {
 		return
 	}
 	if ris.invalidations == nil {
-		ris.invalidations = &orderedmap.OrderedMap[ResourceInvalidation, struct{}]{}
+		ris.invalidations = &ResourceInvalidationStructOrderedMap{}
 	}
 	ris.invalidations.Set(invalidation, struct{}{})
 }

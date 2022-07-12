@@ -21,7 +21,6 @@ package sema
 import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -83,7 +82,7 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 		// The initializer must initialize all members that are fields,
 		// e.g. not composite functions (which are by definition constant and "initialized")
 
-		fieldMembers := &orderedmap.OrderedMap[*Member, *ast.FieldDeclaration]{}
+		fieldMembers := &MemberFieldDeclarationOrderedMap{}
 
 		for _, field := range declaration.Members.Fields() {
 			fieldName := field.Identifier.Identifier
@@ -421,8 +420,8 @@ func (checker *Checker) declareCompositeType(declaration *ast.CompositeDeclarati
 		Location:    checker.Location,
 		Kind:        declaration.CompositeKind,
 		Identifier:  identifier.Identifier,
-		nestedTypes: &orderedmap.OrderedMap[string, Type]{},
-		Members:     &orderedmap.OrderedMap[string, *Member]{},
+		nestedTypes: &StringTypeOrderedMap{},
+		Members:     &StringMemberOrderedMap{},
 	}
 
 	variable, err := checker.typeActivations.DeclareType(typeDeclaration{
@@ -505,7 +504,7 @@ func (checker *Checker) declareCompositeMembersAndValue(
 		panic(errors.NewUnreachableError())
 	}
 
-	declarationMembers := &orderedmap.OrderedMap[string, *Member]{}
+	declarationMembers := &StringMemberOrderedMap{}
 
 	(func() {
 		// Activate new scopes for nested types
@@ -604,7 +603,7 @@ func (checker *Checker) declareCompositeMembersAndValue(
 		// Declare members
 		// NOTE: *After* declaring nested composite and interface declarations
 
-		var members *orderedmap.OrderedMap[string, *Member]
+		var members *StringMemberOrderedMap
 		var fields []string
 		var origins map[string]*Origin
 
@@ -717,7 +716,7 @@ func (checker *Checker) declareCompositeConstructor(
 func (checker *Checker) declareContractValue(
 	declaration *ast.CompositeDeclaration,
 	compositeType *CompositeType,
-	declarationMembers *orderedmap.OrderedMap[string, *Member],
+	declarationMembers *StringMemberOrderedMap,
 ) {
 	_, err := checker.valueActivations.Declare(variableDeclaration{
 		identifier: declaration.Identifier.Identifier,
@@ -817,13 +816,13 @@ func EnumConstructorType(compositeType *CompositeType) *FunctionType {
 				Type: compositeType,
 			},
 		),
-		Members: &orderedmap.OrderedMap[string, *Member]{},
+		Members: &StringMemberOrderedMap{},
 	}
 }
 
 // checkMemberStorability check that all fields have a type that is storable.
 //
-func (checker *Checker) checkMemberStorability(members *orderedmap.OrderedMap[string, *Member]) {
+func (checker *Checker) checkMemberStorability(members *StringMemberOrderedMap) {
 
 	storableResults := map[*Member]bool{}
 
@@ -1352,7 +1351,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 	containerKind ContainerKind,
 	containerDeclarationKind common.DeclarationKind,
 ) (
-	members *orderedmap.OrderedMap[string, *Member],
+	members *StringMemberOrderedMap,
 	fieldNames []string,
 	origins map[string]*Origin,
 ) {
@@ -1374,7 +1373,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 	requireNonPrivateMemberAccess := containerKind == ContainerKindInterface
 
 	memberCount := len(fields) + len(functions)
-	members = &orderedmap.OrderedMap[string, *Member]{}
+	members = &StringMemberOrderedMap{}
 	if checker.positionInfoEnabled {
 		origins = make(map[string]*Origin, memberCount)
 	}
@@ -1530,13 +1529,13 @@ func (checker *Checker) eventMembersAndOrigins(
 	initializer *ast.SpecialFunctionDeclaration,
 	containerType *CompositeType,
 ) (
-	members *orderedmap.OrderedMap[string, *Member],
+	members *StringMemberOrderedMap,
 	fieldNames []string,
 	origins map[string]*Origin,
 ) {
 	parameters := initializer.FunctionDeclaration.ParameterList.Parameters
 
-	members = &orderedmap.OrderedMap[string, *Member]{}
+	members = &StringMemberOrderedMap{}
 	if checker.positionInfoEnabled {
 		origins = make(map[string]*Origin, len(parameters))
 	}
@@ -1582,7 +1581,7 @@ func (checker *Checker) enumMembersAndOrigins(
 	containerType *CompositeType,
 	containerDeclarationKind common.DeclarationKind,
 ) (
-	members *orderedmap.OrderedMap[string, *Member],
+	members *StringMemberOrderedMap,
 	fieldNames []string,
 	origins map[string]*Origin,
 ) {
@@ -1619,7 +1618,7 @@ func (checker *Checker) enumMembersAndOrigins(
 	// Each individual enum case is an instance of the enum type,
 	// so only has a single member, the raw value field
 
-	members = &orderedmap.OrderedMap[string, *Member]{}
+	members = &StringMemberOrderedMap{}
 	members.Set(
 		EnumRawValueFieldName,
 		&Member{
@@ -1948,7 +1947,7 @@ func (checker *Checker) checkUnknownSpecialFunctions(functions []*ast.SpecialFun
 func (checker *Checker) checkDestructors(
 	destructors []*ast.SpecialFunctionDeclaration,
 	fields map[string]*ast.FieldDeclaration,
-	members *orderedmap.OrderedMap[string, *Member],
+	members *StringMemberOrderedMap,
 	containerType Type,
 	containerDeclarationKind common.DeclarationKind,
 	containerDocString string,
@@ -2006,7 +2005,7 @@ func (checker *Checker) checkDestructors(
 // In interfaces this is allowed.
 //
 func (checker *Checker) checkNoDestructorNoResourceFields(
-	members *orderedmap.OrderedMap[string, *Member],
+	members *StringMemberOrderedMap,
 	fields map[string]*ast.FieldDeclaration,
 	containerType Type,
 	containerKind ContainerKind,
@@ -2086,7 +2085,7 @@ func (checker *Checker) checkCompositeResourceInvalidated(containerType Type) {
 //
 func (checker *Checker) checkResourceFieldsInvalidated(
 	containerType Type,
-	members *orderedmap.OrderedMap[string, *Member],
+	members *StringMemberOrderedMap,
 ) {
 	members.Foreach(func(_ string, member *Member) {
 

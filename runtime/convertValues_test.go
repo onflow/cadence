@@ -30,7 +30,6 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/parser"
@@ -4736,7 +4735,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 		Location:   TestLocation,
 		Identifier: "Foo",
 		Kind:       common.CompositeKindStructure,
-		Members:    &orderedmap.OrderedMap[string, *sema.Member]{},
+		Members:    &sema.StringMemberOrderedMap{},
 		Fields:     []string{"dictionary"},
 	}
 
