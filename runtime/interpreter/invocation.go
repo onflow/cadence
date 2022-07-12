@@ -29,7 +29,7 @@ type Invocation struct {
 	Self               MemberAccessibleValue
 	Arguments          []Value
 	ArgumentTypes      []sema.Type
-	typeParameterTypes *sema.TypeParameterTypeOrderedMap
+	TypeParameterTypes *sema.TypeParameterTypeOrderedMap
 	GetLocationRange   func() LocationRange
 	Interpreter        *Interpreter
 }
@@ -48,7 +48,7 @@ func NewInvocation(
 		Self:               self,
 		Arguments:          arguments,
 		ArgumentTypes:      argumentTypes,
-		typeParameterTypes: typeParameterTypes,
+		TypeParameterTypes: typeParameterTypes,
 		GetLocationRange:   getLocationRange,
 		Interpreter:        interpreter,
 	}
