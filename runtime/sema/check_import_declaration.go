@@ -21,6 +21,7 @@ package sema
 import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 )
 
 // Import declarations are handled in two phases:
@@ -278,7 +279,7 @@ func (checker *Checker) handleMissingImports(missing []ast.Identifier, available
 func (checker *Checker) importElements(
 	valueActivations *VariableActivations,
 	requestedIdentifiers []ast.Identifier,
-	availableElements *StringImportElementOrderedMap,
+	availableElements *orderedmap.OrderedMap[string, ImportElement],
 	filter func(name string) bool,
 ) (
 	found map[ast.Identifier]bool,
@@ -292,11 +293,11 @@ func (checker *Checker) importElements(
 
 	explicitlyImported := map[string]ast.Identifier{}
 
-	var elements *StringImportElementOrderedMap
+	var elements *orderedmap.OrderedMap[string, ImportElement]
 
 	identifiersCount := len(requestedIdentifiers)
 	if identifiersCount > 0 && availableElements != nil {
-		elements = NewStringImportElementOrderedMap()
+		elements = &orderedmap.OrderedMap[string, ImportElement]{}
 		for _, identifier := range requestedIdentifiers {
 			name := identifier.Identifier
 			element, ok := availableElements.Get(name)

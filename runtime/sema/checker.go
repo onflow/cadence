@@ -27,6 +27,7 @@ import (
 	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -1562,7 +1563,7 @@ func (checker *Checker) checkResourceLoss(depth int) {
 
 		if variable.Type.IsResourceType() &&
 			variable.DeclarationKind != common.DeclarationKindSelf &&
-			!checker.resources.Get(variable).DefinitivelyInvalidated {
+			!checker.resources.Get(Resource{Variable: variable}).DefinitivelyInvalidated {
 
 			checker.report(
 				&ResourceLossError{
@@ -1578,7 +1579,7 @@ func (checker *Checker) checkResourceLoss(depth int) {
 }
 
 type recordedResourceInvalidation struct {
-	resource     any
+	resource     Resource
 	invalidation ResourceInvalidation
 }
 
@@ -1625,10 +1626,12 @@ func (checker *Checker) recordResourceInvalidation(
 	}
 
 	if checker.allowSelfResourceFieldInvalidation && accessedSelfMember != nil {
-		checker.maybeAddResourceInvalidation(accessedSelfMember, invalidation)
+		res := Resource{Member: accessedSelfMember}
+
+		checker.maybeAddResourceInvalidation(res, invalidation)
 
 		return &recordedResourceInvalidation{
-			resource:     accessedSelfMember,
+			resource:     res,
 			invalidation: invalidation,
 		}
 	}
@@ -1655,10 +1658,12 @@ func (checker *Checker) recordResourceInvalidation(
 		)
 	}
 
-	checker.maybeAddResourceInvalidation(variable, invalidation)
+	res := Resource{Variable: variable}
+
+	checker.maybeAddResourceInvalidation(res, invalidation)
 
 	return &recordedResourceInvalidation{
-		resource:     variable,
+		resource:     res,
 		invalidation: invalidation,
 	}
 }
@@ -1761,7 +1766,7 @@ func (checker *Checker) checkUnusedExpressionResourceLoss(expressionType Type, e
 // in non resource composites (concrete or interface)
 //
 func (checker *Checker) checkResourceFieldNesting(
-	members *StringMemberOrderedMap,
+	members *orderedmap.OrderedMap[string, *Member],
 	compositeKind common.CompositeKind,
 	fieldPositionGetter func(name string) ast.Position,
 ) {
@@ -2525,7 +2530,7 @@ func (checker *Checker) declareGlobalRanges() {
 	checker.Elaboration.GlobalValues.Foreach(addRange)
 }
 
-func (checker *Checker) maybeAddResourceInvalidation(resource any, invalidation ResourceInvalidation) {
+func (checker *Checker) maybeAddResourceInvalidation(resource Resource, invalidation ResourceInvalidation) {
 	functionActivation := checker.functionActivations.Current()
 
 	if functionActivation.ReturnInfo.IsUnreachable() {

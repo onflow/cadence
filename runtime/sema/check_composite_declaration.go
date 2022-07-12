@@ -21,6 +21,7 @@ package sema
 import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -82,7 +83,7 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 		// The initializer must initialize all members that are fields,
 		// e.g. not composite functions (which are by definition constant and "initialized")
 
-		fieldMembers := NewMemberAstFieldDeclarationOrderedMap()
+		fieldMembers := &orderedmap.OrderedMap[*Member, *ast.FieldDeclaration]{}
 
 		for _, field := range declaration.Members.Fields() {
 			fieldName := field.Identifier.Identifier
@@ -420,8 +421,8 @@ func (checker *Checker) declareCompositeType(declaration *ast.CompositeDeclarati
 		Location:    checker.Location,
 		Kind:        declaration.CompositeKind,
 		Identifier:  identifier.Identifier,
-		nestedTypes: NewStringTypeOrderedMap(),
-		Members:     NewStringMemberOrderedMap(),
+		nestedTypes: &orderedmap.OrderedMap[string, Type]{},
+		Members:     &orderedmap.OrderedMap[string, *Member]{},
 	}
 
 	variable, err := checker.typeActivations.DeclareType(typeDeclaration{
@@ -504,7 +505,7 @@ func (checker *Checker) declareCompositeMembersAndValue(
 		panic(errors.NewUnreachableError())
 	}
 
-	declarationMembers := NewStringMemberOrderedMap()
+	declarationMembers := &orderedmap.OrderedMap[string, *Member]{}
 
 	(func() {
 		// Activate new scopes for nested types
@@ -603,7 +604,7 @@ func (checker *Checker) declareCompositeMembersAndValue(
 		// Declare members
 		// NOTE: *After* declaring nested composite and interface declarations
 
-		var members *StringMemberOrderedMap
+		var members *orderedmap.OrderedMap[string, *Member]
 		var fields []string
 		var origins map[string]*Origin
 
@@ -716,7 +717,7 @@ func (checker *Checker) declareCompositeConstructor(
 func (checker *Checker) declareContractValue(
 	declaration *ast.CompositeDeclaration,
 	compositeType *CompositeType,
-	declarationMembers *StringMemberOrderedMap,
+	declarationMembers *orderedmap.OrderedMap[string, *Member],
 ) {
 	_, err := checker.valueActivations.Declare(variableDeclaration{
 		identifier: declaration.Identifier.Identifier,
@@ -816,13 +817,13 @@ func EnumConstructorType(compositeType *CompositeType) *FunctionType {
 				Type: compositeType,
 			},
 		),
-		Members: NewStringMemberOrderedMap(),
+		Members: &orderedmap.OrderedMap[string, *Member]{},
 	}
 }
 
 // checkMemberStorability check that all fields have a type that is storable.
 //
-func (checker *Checker) checkMemberStorability(members *StringMemberOrderedMap) {
+func (checker *Checker) checkMemberStorability(members *orderedmap.OrderedMap[string, *Member]) {
 
 	storableResults := map[*Member]bool{}
 
@@ -1351,7 +1352,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 	containerKind ContainerKind,
 	containerDeclarationKind common.DeclarationKind,
 ) (
-	members *StringMemberOrderedMap,
+	members *orderedmap.OrderedMap[string, *Member],
 	fieldNames []string,
 	origins map[string]*Origin,
 ) {
@@ -1373,7 +1374,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 	requireNonPrivateMemberAccess := containerKind == ContainerKindInterface
 
 	memberCount := len(fields) + len(functions)
-	members = NewStringMemberOrderedMap()
+	members = &orderedmap.OrderedMap[string, *Member]{}
 	if checker.positionInfoEnabled {
 		origins = make(map[string]*Origin, memberCount)
 	}
@@ -1529,13 +1530,13 @@ func (checker *Checker) eventMembersAndOrigins(
 	initializer *ast.SpecialFunctionDeclaration,
 	containerType *CompositeType,
 ) (
-	members *StringMemberOrderedMap,
+	members *orderedmap.OrderedMap[string, *Member],
 	fieldNames []string,
 	origins map[string]*Origin,
 ) {
 	parameters := initializer.FunctionDeclaration.ParameterList.Parameters
 
-	members = NewStringMemberOrderedMap()
+	members = &orderedmap.OrderedMap[string, *Member]{}
 	if checker.positionInfoEnabled {
 		origins = make(map[string]*Origin, len(parameters))
 	}
@@ -1581,7 +1582,7 @@ func (checker *Checker) enumMembersAndOrigins(
 	containerType *CompositeType,
 	containerDeclarationKind common.DeclarationKind,
 ) (
-	members *StringMemberOrderedMap,
+	members *orderedmap.OrderedMap[string, *Member],
 	fieldNames []string,
 	origins map[string]*Origin,
 ) {
@@ -1618,7 +1619,7 @@ func (checker *Checker) enumMembersAndOrigins(
 	// Each individual enum case is an instance of the enum type,
 	// so only has a single member, the raw value field
 
-	members = NewStringMemberOrderedMap()
+	members = &orderedmap.OrderedMap[string, *Member]{}
 	members.Set(
 		EnumRawValueFieldName,
 		&Member{
@@ -1947,7 +1948,7 @@ func (checker *Checker) checkUnknownSpecialFunctions(functions []*ast.SpecialFun
 func (checker *Checker) checkDestructors(
 	destructors []*ast.SpecialFunctionDeclaration,
 	fields map[string]*ast.FieldDeclaration,
-	members *StringMemberOrderedMap,
+	members *orderedmap.OrderedMap[string, *Member],
 	containerType Type,
 	containerDeclarationKind common.DeclarationKind,
 	containerDocString string,
@@ -2005,7 +2006,7 @@ func (checker *Checker) checkDestructors(
 // In interfaces this is allowed.
 //
 func (checker *Checker) checkNoDestructorNoResourceFields(
-	members *StringMemberOrderedMap,
+	members *orderedmap.OrderedMap[string, *Member],
 	fields map[string]*ast.FieldDeclaration,
 	containerType Type,
 	containerKind ContainerKind,
@@ -2083,7 +2084,10 @@ func (checker *Checker) checkCompositeResourceInvalidated(containerType Type) {
 // checkResourceFieldsInvalidated checks that all resource fields for a container
 // type are invalidated.
 //
-func (checker *Checker) checkResourceFieldsInvalidated(containerType Type, members *StringMemberOrderedMap) {
+func (checker *Checker) checkResourceFieldsInvalidated(
+	containerType Type,
+	members *orderedmap.OrderedMap[string, *Member],
+) {
 	members.Foreach(func(_ string, member *Member) {
 
 		// NOTE: check the of the type annotation, not the type annotation's
@@ -2094,7 +2098,7 @@ func (checker *Checker) checkResourceFieldsInvalidated(containerType Type, membe
 			return
 		}
 
-		info := checker.resources.Get(member)
+		info := checker.resources.Get(Resource{Member: member})
 		if !info.DefinitivelyInvalidated {
 			checker.report(
 				&ResourceFieldNotInvalidatedError{
@@ -2110,7 +2114,7 @@ func (checker *Checker) checkResourceFieldsInvalidated(containerType Type, membe
 // checkResourceUseAfterInvalidation checks if a resource (variable or composite member)
 // is used after it was previously invalidated (moved or destroyed)
 //
-func (checker *Checker) checkResourceUseAfterInvalidation(resource any, usePosition ast.HasPosition) {
+func (checker *Checker) checkResourceUseAfterInvalidation(resource Resource, usePosition ast.HasPosition) {
 	resourceInfo := checker.resources.Get(resource)
 	if resourceInfo.Invalidations.Size() == 0 {
 		return

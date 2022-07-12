@@ -21,6 +21,7 @@ package sema
 import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -125,7 +126,7 @@ func (checker *Checker) accessedSelfMember(expression ast.Expression) *Member {
 		return nil
 	}
 
-	var members *StringMemberOrderedMap
+	var members *orderedmap.OrderedMap[string, *Member]
 	switch containerType := variable.Type.(type) {
 	case *CompositeType:
 		members = containerType.Members

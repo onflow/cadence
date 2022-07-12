@@ -21,6 +21,7 @@ package sema
 import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -35,7 +36,7 @@ func (checker *Checker) VisitTransactionDeclaration(declaration *ast.Transaction
 		checker.containerTypes[transactionType] = false
 	}()
 
-	fieldMembers := NewMemberAstFieldDeclarationOrderedMap()
+	fieldMembers := &orderedmap.OrderedMap[*Member, *ast.FieldDeclaration]{}
 
 	for _, field := range declaration.Fields {
 		fieldName := field.Identifier.Identifier
@@ -172,7 +173,7 @@ func (checker *Checker) checkTransactionBlocks(declaration *ast.TransactionDecla
 func (checker *Checker) visitTransactionPrepareFunction(
 	prepareFunction *ast.SpecialFunctionDeclaration,
 	transactionType *TransactionType,
-	fieldMembers *MemberAstFieldDeclarationOrderedMap,
+	fieldMembers *orderedmap.OrderedMap[*Member, *ast.FieldDeclaration],
 ) {
 	if prepareFunction == nil {
 		return

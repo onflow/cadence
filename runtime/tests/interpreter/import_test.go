@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -43,7 +44,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 		Kind:       common.CompositeKindContract,
 	}
 
-	fooType.Members = sema.NewStringMemberOrderedMap()
+	fooType.Members = &orderedmap.OrderedMap[string, *sema.Member]{}
 	fooType.Members.Set(
 		"bar",
 		sema.NewUnmeteredPublicFunctionMember(
@@ -63,7 +64,7 @@ func TestInterpretVirtualImport(t *testing.T) {
        }
     `
 
-	valueElements := sema.NewStringImportElementOrderedMap()
+	valueElements := &orderedmap.OrderedMap[string, sema.ImportElement]{}
 
 	valueElements.Set("Foo", sema.ImportElement{
 		DeclarationKind: common.DeclarationKindStructure,

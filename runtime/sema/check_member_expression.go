@@ -143,8 +143,10 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 		// By definition, the resource field can only be nested in a resource,
 		// so `self` is a resource, and the capture of it is checked separately
 
-		checker.checkResourceUseAfterInvalidation(accessedSelfMember, expression.Identifier)
-		checker.resources.AddUse(accessedSelfMember, expression.Identifier.Pos)
+		res := Resource{Member: accessedSelfMember}
+
+		checker.checkResourceUseAfterInvalidation(res, expression.Identifier)
+		checker.resources.AddUse(res, expression.Identifier.Pos)
 	}
 
 	identifier := expression.Identifier.Identifier

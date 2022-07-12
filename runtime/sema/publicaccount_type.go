@@ -20,6 +20,7 @@ package sema
 
 import (
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 )
 
 const PublicAccountTypeName = "PublicAccount"
@@ -42,9 +43,8 @@ var PublicAccountType = func() *CompositeType {
 		Kind:               common.CompositeKindStructure,
 		hasComputedMembers: true,
 		importable:         false,
-
-		nestedTypes: func() *StringTypeOrderedMap {
-			nestedTypes := NewStringTypeOrderedMap()
+		nestedTypes: func() *orderedmap.OrderedMap[string, Type] {
+			nestedTypes := &orderedmap.OrderedMap[string, Type]{}
 			nestedTypes.Set(AccountKeysTypeName, PublicAccountKeysType)
 			nestedTypes.Set(PublicAccountContractsTypeName, PublicAccountContractsType)
 			return nestedTypes

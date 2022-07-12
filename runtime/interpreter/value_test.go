@@ -34,6 +34,7 @@ import (
 
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	. "github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
@@ -57,7 +58,7 @@ var testCompositeValueType = &sema.CompositeType{
 	Location:   utils.TestLocation,
 	Identifier: "Test",
 	Kind:       common.CompositeKindStructure,
-	Members:    sema.NewStringMemberOrderedMap(),
+	Members:    &orderedmap.OrderedMap[string, *sema.Member]{},
 }
 
 func getMeterCompFuncWithExpectedKinds(
@@ -3636,7 +3637,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 
 		storage := newUnmeteredInMemoryStorage()
 
-		members := sema.NewStringMemberOrderedMap()
+		members := &orderedmap.OrderedMap[string, *sema.Member]{}
 
 		compositeType := &sema.CompositeType{
 			Location:   utils.TestLocation,

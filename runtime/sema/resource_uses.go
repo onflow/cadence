@@ -20,6 +20,7 @@ package sema
 
 import (
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 )
 
 type ResourceUse struct {
@@ -28,7 +29,7 @@ type ResourceUse struct {
 
 type ResourceUses struct {
 	Parent    *ResourceUses
-	positions *AstPositionResourceUseOrderedMap
+	positions *orderedmap.OrderedMap[ast.Position, ResourceUse]
 }
 
 // ForEach calls the given function for each resource use in the set.
@@ -96,9 +97,7 @@ func (rus *ResourceUses) Add(pos ast.Position) {
 	if rus.Contains(pos) {
 		return
 	}
-	if rus.positions == nil {
-		rus.positions = NewAstPositionResourceUseOrderedMap()
-	}
+	rus.ensurePositions()
 	rus.positions.Set(pos, ResourceUse{})
 }
 
@@ -108,9 +107,7 @@ func (rus *ResourceUses) Add(pos ast.Position) {
 func (rus *ResourceUses) MarkUseAfterInvalidationReported(pos ast.Position) {
 	use := rus.getOrEmpty(pos)
 	use.UseAfterInvalidationReported = true
-	if rus.positions == nil {
-		rus.positions = NewAstPositionResourceUseOrderedMap()
-	}
+	rus.ensurePositions()
 	rus.positions.Set(pos, use)
 }
 
@@ -124,9 +121,7 @@ func (rus ResourceUses) IsUseAfterInvalidationReported(pos ast.Position) bool {
 // Merge adds the resource uses of the given set to this set.
 //
 func (rus *ResourceUses) Merge(other ResourceUses) {
-	if rus.positions == nil {
-		rus.positions = NewAstPositionResourceUseOrderedMap()
-	}
+	rus.ensurePositions()
 
 	_ = other.ForEach(func(pos ast.Position, use ResourceUse) error {
 		if !use.UseAfterInvalidationReported {
@@ -140,6 +135,12 @@ func (rus *ResourceUses) Merge(other ResourceUses) {
 		// as the outer error is currently ignored!
 		return nil
 	})
+}
+
+func (rus *ResourceUses) ensurePositions() {
+	if rus.positions == nil {
+		rus.positions = &orderedmap.OrderedMap[ast.Position, ResourceUse]{}
+	}
 }
 
 // Size returns the number of resource uses in this set.

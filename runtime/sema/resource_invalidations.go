@@ -18,9 +18,13 @@
 
 package sema
 
+import (
+	"github.com/onflow/cadence/runtime/common/orderedmap"
+)
+
 type ResourceInvalidations struct {
 	Parent        *ResourceInvalidations
-	invalidations *ResourceInvalidationStructOrderedMap
+	invalidations *orderedmap.OrderedMap[ResourceInvalidation, struct{}]
 }
 
 // ForEach calls the given function for each resource invalidation in the set.
@@ -87,7 +91,7 @@ func (ris *ResourceInvalidations) Add(invalidation ResourceInvalidation) {
 		return
 	}
 	if ris.invalidations == nil {
-		ris.invalidations = NewResourceInvalidationStructOrderedMap()
+		ris.invalidations = &orderedmap.OrderedMap[ResourceInvalidation, struct{}]{}
 	}
 	ris.invalidations.Set(invalidation, struct{}{})
 }

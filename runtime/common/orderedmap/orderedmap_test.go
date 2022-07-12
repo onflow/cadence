@@ -19,8 +19,6 @@
  *
  */
 
-//go:generate go run github.com/cheekybits/genny -pkg=orderedmap -in=orderedmap.go -out=string_fruit_orderedmap_test.go gen "KeyType=string ValueType=*Fruit"
-
 package orderedmap
 
 import (
@@ -42,16 +40,15 @@ func TestOrderedMapOperations(t *testing.T) {
 	t.Parallel()
 
 	t.Run("test constructor", func(t *testing.T) {
-		om := NewKeyTypeValueTypeOrderedMap()
+		om := OrderedMap[string, *Fruit]{}
 		require.NotNil(t, om)
-		require.NotNil(t, om.list)
-		require.NotNil(t, om.pairs)
-		assert.Equal(t, 0, len(om.pairs))
-		assert.Equal(t, 0, om.list.Len())
+		require.Nil(t, om.list)
+		require.Nil(t, om.pairs)
+		assert.Equal(t, 0, om.Len())
 	})
 
 	t.Run("test map set", func(t *testing.T) {
-		om := NewKeyTypeValueTypeOrderedMap()
+		om := OrderedMap[string, *Fruit]{}
 		require.NotNil(t, om)
 
 		insertedValues := []*Fruit{
@@ -158,7 +155,7 @@ func TestOrderedMapOperations(t *testing.T) {
 			name := insertedValue.name
 			pair := om.GetPair(name)
 			require.NotNil(t, pair)
-			require.IsType(t, &KeyTypeValueTypePair{}, pair)
+			require.IsType(t, &Pair[string, *Fruit]{}, pair)
 			assert.Equal(t, name, pair.Key)
 			assert.Equal(t, insertedValue, pair.Value)
 		}
@@ -240,7 +237,7 @@ func TestOrderedMapOperations(t *testing.T) {
 		value := om.Oldest()
 
 		require.NotNil(t, value)
-		require.IsType(t, &KeyTypeValueTypePair{}, value)
+		require.IsType(t, &Pair[string, *Fruit]{}, value)
 
 		expected := insertedValues[0]
 		assert.Equal(t, expected.name, value.Key)
@@ -248,7 +245,7 @@ func TestOrderedMapOperations(t *testing.T) {
 	})
 
 	t.Run("test map get oldest for empty map", func(t *testing.T) {
-		om := NewKeyTypeValueTypeOrderedMap()
+		om := OrderedMap[string, *Fruit]{}
 		require.Nil(t, om.Oldest())
 	})
 
@@ -257,7 +254,7 @@ func TestOrderedMapOperations(t *testing.T) {
 		value := om.Newest()
 
 		require.NotNil(t, value)
-		require.IsType(t, &KeyTypeValueTypePair{}, value)
+		require.IsType(t, &Pair[string, *Fruit]{}, value)
 
 		expected := insertedValues[len(insertedValues)-1]
 		assert.Equal(t, expected.name, value.Key)
@@ -265,7 +262,7 @@ func TestOrderedMapOperations(t *testing.T) {
 	})
 
 	t.Run("test map get newest for empty map", func(t *testing.T) {
-		om := NewKeyTypeValueTypeOrderedMap()
+		om := OrderedMap[string, *Fruit]{}
 		require.Nil(t, om.Newest())
 	})
 
@@ -273,11 +270,8 @@ func TestOrderedMapOperations(t *testing.T) {
 		om, insertedValues := createAndPopulateMap(t)
 
 		var loopResult []*Fruit
-		om.Foreach(func(key KeyType, value ValueType) {
-			switch value := value.(type) {
-			case *Fruit:
-				loopResult = append(loopResult, value)
-			}
+		om.Foreach(func(key string, value *Fruit) {
+			loopResult = append(loopResult, value)
 		})
 
 		assert.Equal(t, insertedValues, loopResult)
@@ -287,7 +281,7 @@ func TestOrderedMapOperations(t *testing.T) {
 // TestGeneratedMapOperations tests the basic functionality of a generated map.
 // This is to make sure any update to the generator would not cause any regression issues.
 func TestGeneratedMapOperations(t *testing.T) {
-	fruits := NewStringFruitOrderedMap()
+	fruits := OrderedMap[string, *Fruit]{}
 	require.NotNil(t, fruits)
 
 	apple := &Fruit{name: "apple", color: "red", price: 1.5}
@@ -332,8 +326,8 @@ func TestGeneratedMapOperations(t *testing.T) {
 
 // Utility functions
 
-func createAndPopulateMap(t *testing.T) (*KeyTypeValueTypeOrderedMap, []*Fruit) {
-	om := NewKeyTypeValueTypeOrderedMap()
+func createAndPopulateMap(t *testing.T) (OrderedMap[string, *Fruit], []*Fruit) {
+	om := OrderedMap[string, *Fruit]{}
 	require.NotNil(t, om)
 
 	fruits := []*Fruit{

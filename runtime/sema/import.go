@@ -21,14 +21,15 @@ package sema
 import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 )
 
 // Import
 
 type Import interface {
-	AllValueElements() *StringImportElementOrderedMap
+	AllValueElements() *orderedmap.OrderedMap[string, ImportElement]
 	IsImportableValue(name string) bool
-	AllTypeElements() *StringImportElementOrderedMap
+	AllTypeElements() *orderedmap.OrderedMap[string, ImportElement]
 	IsImportableType(name string) bool
 	IsChecking() bool
 }
@@ -48,9 +49,11 @@ type ElaborationImport struct {
 	Elaboration *Elaboration
 }
 
-func variablesToImportElements(variables *StringVariableOrderedMap) *StringImportElementOrderedMap {
+func variablesToImportElements(
+	variables *orderedmap.OrderedMap[string, *Variable],
+) *orderedmap.OrderedMap[string, ImportElement] {
 
-	elements := NewStringImportElementOrderedMap()
+	elements := &orderedmap.OrderedMap[string, ImportElement]{}
 
 	variables.Foreach(func(name string, variable *Variable) {
 
@@ -65,7 +68,7 @@ func variablesToImportElements(variables *StringVariableOrderedMap) *StringImpor
 	return elements
 }
 
-func (i ElaborationImport) AllValueElements() *StringImportElementOrderedMap {
+func (i ElaborationImport) AllValueElements() *orderedmap.OrderedMap[string, ImportElement] {
 	return variablesToImportElements(i.Elaboration.GlobalValues)
 }
 
@@ -78,7 +81,7 @@ func (i ElaborationImport) IsImportableValue(name string) bool {
 	return !isPredeclaredValue
 }
 
-func (i ElaborationImport) AllTypeElements() *StringImportElementOrderedMap {
+func (i ElaborationImport) AllTypeElements() *orderedmap.OrderedMap[string, ImportElement] {
 	return variablesToImportElements(i.Elaboration.GlobalTypes)
 }
 
@@ -98,11 +101,11 @@ func (i ElaborationImport) IsChecking() bool {
 // VirtualImport
 
 type VirtualImport struct {
-	ValueElements *StringImportElementOrderedMap
-	TypeElements  *StringImportElementOrderedMap
+	ValueElements *orderedmap.OrderedMap[string, ImportElement]
+	TypeElements  *orderedmap.OrderedMap[string, ImportElement]
 }
 
-func (i VirtualImport) AllValueElements() *StringImportElementOrderedMap {
+func (i VirtualImport) AllValueElements() *orderedmap.OrderedMap[string, ImportElement] {
 	return i.ValueElements
 }
 
@@ -110,7 +113,7 @@ func (i VirtualImport) IsImportableValue(_ string) bool {
 	return true
 }
 
-func (i VirtualImport) AllTypeElements() *StringImportElementOrderedMap {
+func (i VirtualImport) AllTypeElements() *orderedmap.OrderedMap[string, ImportElement] {
 	return i.TypeElements
 }
 

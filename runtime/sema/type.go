@@ -28,6 +28,7 @@ import (
 	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -155,7 +156,7 @@ type Type interface {
 	//
 	Unify(
 		other Type,
-		typeParameters *TypeParameterTypeOrderedMap,
+		typeParameters *orderedmap.OrderedMap[*TypeParameter, Type],
 		report func(err error),
 		outerRange ast.Range,
 	) bool
@@ -166,7 +167,7 @@ type Type interface {
 	//
 	// If resolution fails, it returns `nil`.
 	//
-	Resolve(typeArguments *TypeParameterTypeOrderedMap) Type
+	Resolve(typeArguments *orderedmap.OrderedMap[*TypeParameter, Type]) Type
 
 	GetMembers() map[string]MemberResolver
 }
@@ -205,7 +206,7 @@ type ContainedType interface {
 type ContainerType interface {
 	Type
 	IsContainerType() bool
-	GetNestedTypes() *StringTypeOrderedMap
+	GetNestedTypes() *orderedmap.OrderedMap[string, Type]
 }
 
 func VisitThisAndNested(t Type, visit func(ty Type)) {
@@ -542,7 +543,7 @@ func (t *OptionalType) RewriteWithRestrictedTypes() (Type, bool) {
 
 func (t *OptionalType) Unify(
 	other Type,
-	typeParameters *TypeParameterTypeOrderedMap,
+	typeParameters *orderedmap.OrderedMap[*TypeParameter, Type],
 	report func(err error),
 	outerRange ast.Range,
 ) bool {
@@ -555,7 +556,7 @@ func (t *OptionalType) Unify(
 	return t.Type.Unify(otherOptional.Type, typeParameters, report, outerRange)
 }
 
-func (t *OptionalType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
+func (t *OptionalType) Resolve(typeArguments *orderedmap.OrderedMap[*TypeParameter, Type]) Type {
 
 	newInnerType := t.Type.Resolve(typeArguments)
 	if newInnerType == nil {
@@ -714,7 +715,7 @@ func (t *GenericType) RewriteWithRestrictedTypes() (result Type, rewritten bool)
 
 func (t *GenericType) Unify(
 	other Type,
-	typeParameters *TypeParameterTypeOrderedMap,
+	typeParameters *orderedmap.OrderedMap[*TypeParameter, Type],
 	report func(err error),
 	outerRange ast.Range,
 ) bool {
@@ -753,7 +754,7 @@ func (t *GenericType) Unify(
 	return true
 }
 
-func (t *GenericType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
+func (t *GenericType) Resolve(typeArguments *orderedmap.OrderedMap[*TypeParameter, Type]) Type {
 	ty, ok := typeArguments.Get(t.TypeParameter)
 	if !ok {
 		return nil
@@ -1001,11 +1002,11 @@ func (t *NumericType) MaxInt() *big.Int {
 	return t.maxInt
 }
 
-func (*NumericType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+func (*NumericType) Unify(_ Type, _ *orderedmap.OrderedMap[*TypeParameter, Type], _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *NumericType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
+func (t *NumericType) Resolve(_ *orderedmap.OrderedMap[*TypeParameter, Type]) Type {
 	return t
 }
 
@@ -1203,11 +1204,11 @@ func (t *FixedPointNumericType) Scale() uint {
 	return t.scale
 }
 
-func (*FixedPointNumericType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+func (*FixedPointNumericType) Unify(_ Type, _ *orderedmap.OrderedMap[*TypeParameter, Type], _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *FixedPointNumericType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
+func (t *FixedPointNumericType) Resolve(_ *orderedmap.OrderedMap[*TypeParameter, Type]) Type {
 	return t
 }
 
@@ -2137,7 +2138,7 @@ func (t *VariableSizedType) IndexingType() Type {
 
 func (t *VariableSizedType) Unify(
 	other Type,
-	typeParameters *TypeParameterTypeOrderedMap,
+	typeParameters *orderedmap.OrderedMap[*TypeParameter, Type],
 	report func(err error),
 	outerRange ast.Range,
 ) bool {
@@ -2150,7 +2151,7 @@ func (t *VariableSizedType) Unify(
 	return t.Type.Unify(otherArray.Type, typeParameters, report, outerRange)
 }
 
-func (t *VariableSizedType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
+func (t *VariableSizedType) Resolve(typeArguments *orderedmap.OrderedMap[*TypeParameter, Type]) Type {
 	newInnerType := t.Type.Resolve(typeArguments)
 	if newInnerType == nil {
 		return nil
@@ -2277,7 +2278,7 @@ func (t *ConstantSizedType) IndexingType() Type {
 
 func (t *ConstantSizedType) Unify(
 	other Type,
-	typeParameters *TypeParameterTypeOrderedMap,
+	typeParameters *orderedmap.OrderedMap[*TypeParameter, Type],
 	report func(err error),
 	outerRange ast.Range,
 ) bool {
@@ -2294,7 +2295,7 @@ func (t *ConstantSizedType) Unify(
 	return t.Type.Unify(otherArray.Type, typeParameters, report, outerRange)
 }
 
-func (t *ConstantSizedType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
+func (t *ConstantSizedType) Resolve(typeArguments *orderedmap.OrderedMap[*TypeParameter, Type]) Type {
 	newInnerType := t.Type.Resolve(typeArguments)
 	if newInnerType == nil {
 		return nil
@@ -2489,7 +2490,7 @@ type FunctionType struct {
 	ReturnTypeAnnotation     *TypeAnnotation
 	RequiredArgumentCount    *int
 	ArgumentExpressionsCheck ArgumentExpressionsCheck
-	Members                  *StringMemberOrderedMap
+	Members                  *orderedmap.OrderedMap[string, *Member]
 }
 
 func RequiredArgumentCount(count int) *int {
@@ -2704,9 +2705,9 @@ func (*FunctionType) IsEquatable() bool {
 func (t *FunctionType) TypeAnnotationState() TypeAnnotationState {
 
 	for _, typeParameter := range t.TypeParameters {
-		typeParameterTypeAnnotationState := typeParameter.TypeBound.TypeAnnotationState()
-		if typeParameterTypeAnnotationState != TypeAnnotationStateValid {
-			return typeParameterTypeAnnotationState
+		TypeParameterTypeAnnotationState := typeParameter.TypeBound.TypeAnnotationState()
+		if TypeParameterTypeAnnotationState != TypeAnnotationStateValid {
+			return TypeParameterTypeAnnotationState
 		}
 	}
 
@@ -2822,7 +2823,7 @@ func (t *FunctionType) ArgumentLabels() (argumentLabels []string) {
 
 func (t *FunctionType) Unify(
 	other Type,
-	typeParameters *TypeParameterTypeOrderedMap,
+	typeParameters *orderedmap.OrderedMap[*TypeParameter, Type],
 	report func(err error),
 	outerRange ast.Range,
 ) (
@@ -2873,7 +2874,7 @@ func (t *FunctionType) Unify(
 	return
 }
 
-func (t *FunctionType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
+func (t *FunctionType) Resolve(typeArguments *orderedmap.OrderedMap[*TypeParameter, Type]) Type {
 
 	// TODO: type parameters ?
 
@@ -3110,7 +3111,7 @@ func init() {
 
 			addMember := func(member *Member) {
 				if functionType.Members == nil {
-					functionType.Members = NewStringMemberOrderedMap()
+					functionType.Members = &orderedmap.OrderedMap[string, *Member]{}
 				}
 				name := member.Identifier.Identifier
 				_, exists := functionType.Members.Get(name)
@@ -3315,7 +3316,7 @@ func init() {
 
 	addMember := func(member *Member) {
 		if functionType.Members == nil {
-			functionType.Members = NewStringMemberOrderedMap()
+			functionType.Members = &orderedmap.OrderedMap[string, *Member]{}
 		}
 		name := member.Identifier.Identifier
 		_, exists := functionType.Members.Get(name)
@@ -3455,13 +3456,13 @@ type CompositeType struct {
 	explicitInterfaceConformanceSetOnce sync.Once
 	ExplicitInterfaceConformances       []*InterfaceType
 	ImplicitTypeRequirementConformances []*CompositeType
-	Members                             *StringMemberOrderedMap
+	Members                             *orderedmap.OrderedMap[string, *Member]
 	memberResolvers                     map[string]MemberResolver
 	memberResolversOnce                 sync.Once
 	Fields                              []string
 	// TODO: add support for overloaded initializers
 	ConstructorParameters []*Parameter
-	nestedTypes           *StringTypeOrderedMap
+	nestedTypes           *orderedmap.OrderedMap[string, Type]
 	containerType         Type
 	EnumRawType           Type
 	hasComputedMembers    bool
@@ -3744,12 +3745,12 @@ func (t *CompositeType) TypeRequirements() []*CompositeType {
 	return typeRequirements
 }
 
-func (*CompositeType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+func (*CompositeType) Unify(_ Type, _ *orderedmap.OrderedMap[*TypeParameter, Type], _ func(err error), _ ast.Range) bool {
 	// TODO:
 	return false
 }
 
-func (t *CompositeType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
+func (t *CompositeType) Resolve(_ *orderedmap.OrderedMap[*TypeParameter, Type]) Type {
 	return t
 }
 
@@ -3757,7 +3758,7 @@ func (t *CompositeType) IsContainerType() bool {
 	return t.nestedTypes != nil
 }
 
-func (t *CompositeType) GetNestedTypes() *StringTypeOrderedMap {
+func (t *CompositeType) GetNestedTypes() *orderedmap.OrderedMap[string, Type] {
 	return t.nestedTypes
 }
 
@@ -3982,14 +3983,14 @@ type InterfaceType struct {
 	Location            common.Location
 	Identifier          string
 	CompositeKind       common.CompositeKind
-	Members             *StringMemberOrderedMap
+	Members             *orderedmap.OrderedMap[string, *Member]
 	memberResolvers     map[string]MemberResolver
 	memberResolversOnce sync.Once
 	Fields              []string
 	// TODO: add support for overloaded initializers
 	InitializerParameters []*Parameter
 	containerType         Type
-	nestedTypes           *StringTypeOrderedMap
+	nestedTypes           *orderedmap.OrderedMap[string, Type]
 	cachedIdentifiers     *struct {
 		TypeID              TypeID
 		QualifiedIdentifier string
@@ -4195,12 +4196,12 @@ func (t *InterfaceType) RewriteWithRestrictedTypes() (Type, bool) {
 	}
 }
 
-func (*InterfaceType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+func (*InterfaceType) Unify(_ Type, _ *orderedmap.OrderedMap[*TypeParameter, Type], _ func(err error), _ ast.Range) bool {
 	// TODO:
 	return false
 }
 
-func (t *InterfaceType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
+func (t *InterfaceType) Resolve(_ *orderedmap.OrderedMap[*TypeParameter, Type]) Type {
 	return t
 }
 
@@ -4208,7 +4209,7 @@ func (t *InterfaceType) IsContainerType() bool {
 	return t.nestedTypes != nil
 }
 
-func (t *InterfaceType) GetNestedTypes() *StringTypeOrderedMap {
+func (t *InterfaceType) GetNestedTypes() *orderedmap.OrderedMap[string, Type] {
 	return t.nestedTypes
 }
 
@@ -4549,7 +4550,7 @@ type DictionaryEntryType struct {
 
 func (t *DictionaryType) Unify(
 	other Type,
-	typeParameters *TypeParameterTypeOrderedMap,
+	typeParameters *orderedmap.OrderedMap[*TypeParameter, Type],
 	report func(err error),
 	outerRange ast.Range,
 ) bool {
@@ -4564,7 +4565,7 @@ func (t *DictionaryType) Unify(
 	return keyUnified || valueUnified
 }
 
-func (t *DictionaryType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
+func (t *DictionaryType) Resolve(typeArguments *orderedmap.OrderedMap[*TypeParameter, Type]) Type {
 	newKeyType := t.KeyType.Resolve(typeArguments)
 	if newKeyType == nil {
 		return nil
@@ -4723,12 +4724,12 @@ func (t *ReferenceType) IndexingType() Type {
 	return referencedType.IndexingType()
 }
 
-func (*ReferenceType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+func (*ReferenceType) Unify(_ Type, _ *orderedmap.OrderedMap[*TypeParameter, Type], _ func(err error), _ ast.Range) bool {
 	// TODO:
 	return false
 }
 
-func (t *ReferenceType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
+func (t *ReferenceType) Resolve(_ *orderedmap.OrderedMap[*TypeParameter, Type]) Type {
 	// TODO:
 	return t
 }
@@ -4810,11 +4811,11 @@ func (*AddressType) IsSuperType() bool {
 	return false
 }
 
-func (*AddressType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+func (*AddressType) Unify(_ Type, _ *orderedmap.OrderedMap[*TypeParameter, Type], _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *AddressType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
+func (t *AddressType) Resolve(_ *orderedmap.OrderedMap[*TypeParameter, Type]) Type {
 	return t
 }
 
@@ -5553,7 +5554,7 @@ func IsNilType(ty Type) bool {
 }
 
 type TransactionType struct {
-	Members           *StringMemberOrderedMap
+	Members           *orderedmap.OrderedMap[string, *Member]
 	Fields            []string
 	PrepareParameters []*Parameter
 	Parameters        []*Parameter
@@ -5656,11 +5657,11 @@ func (t *TransactionType) GetMembers() map[string]MemberResolver {
 	return withBuiltinMembers(t, members)
 }
 
-func (*TransactionType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+func (*TransactionType) Unify(_ Type, _ *orderedmap.OrderedMap[*TypeParameter, Type], _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *TransactionType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
+func (t *TransactionType) Resolve(_ *orderedmap.OrderedMap[*TypeParameter, Type]) Type {
 	return t
 }
 
@@ -5898,12 +5899,12 @@ func (t *RestrictedType) GetMembers() map[string]MemberResolver {
 	return members
 }
 
-func (*RestrictedType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+func (*RestrictedType) Unify(_ Type, _ *orderedmap.OrderedMap[*TypeParameter, Type], _ func(err error), _ ast.Range) bool {
 	// TODO: how do we unify the restriction sets?
 	return false
 }
 
-func (t *RestrictedType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
+func (t *RestrictedType) Resolve(_ *orderedmap.OrderedMap[*TypeParameter, Type]) Type {
 	// TODO:
 	return t
 }
@@ -6020,7 +6021,7 @@ func (t *CapabilityType) RewriteWithRestrictedTypes() (Type, bool) {
 
 func (t *CapabilityType) Unify(
 	other Type,
-	typeParameters *TypeParameterTypeOrderedMap,
+	typeParameters *orderedmap.OrderedMap[*TypeParameter, Type],
 	report func(err error),
 	outerRange ast.Range,
 ) bool {
@@ -6036,7 +6037,7 @@ func (t *CapabilityType) Unify(
 	return t.BorrowType.Unify(otherCap.BorrowType, typeParameters, report, outerRange)
 }
 
-func (t *CapabilityType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
+func (t *CapabilityType) Resolve(typeArguments *orderedmap.OrderedMap[*TypeParameter, Type]) Type {
 	var resolvedBorrowType Type
 	if t.BorrowType != nil {
 		resolvedBorrowType = t.BorrowType.Resolve(typeArguments)
@@ -6393,8 +6394,8 @@ type CryptoAlgorithm interface {
 	DocString() string
 }
 
-func GetMembersAsMap(members []*Member) *StringMemberOrderedMap {
-	membersMap := NewStringMemberOrderedMap()
+func GetMembersAsMap(members []*Member) *orderedmap.OrderedMap[string, *Member] {
+	membersMap := &orderedmap.OrderedMap[string, *Member]{}
 	for _, member := range members {
 		name := member.Identifier.Identifier
 		_, ok := membersMap.Get(name)

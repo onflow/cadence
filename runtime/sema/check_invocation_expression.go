@@ -21,6 +21,7 @@ package sema
 import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 )
 
 func (checker *Checker) VisitInvocationExpression(invocationExpression *ast.InvocationExpression) ast.Repr {
@@ -379,7 +380,7 @@ func (checker *Checker) checkInvocation(
 
 	typeArgumentCount := len(invocationExpression.TypeArguments)
 
-	typeArguments := NewTypeParameterTypeOrderedMap()
+	typeArguments := &orderedmap.OrderedMap[*TypeParameter, Type]{}
 
 	// If the function type is generic, the invocation might provide
 	// explicit type arguments for the type parameters.
@@ -494,7 +495,7 @@ func (checker *Checker) checkInvocation(
 //
 func (checker *Checker) checkTypeParameterInference(
 	functionType *FunctionType,
-	typeArguments *TypeParameterTypeOrderedMap,
+	typeArguments *orderedmap.OrderedMap[*TypeParameter, Type],
 	invocationExpression *ast.InvocationExpression,
 ) {
 	for _, typeParameter := range functionType.TypeParameters {
@@ -523,7 +524,7 @@ func (checker *Checker) checkInvocationRequiredArgument(
 	argumentIndex int,
 	functionType *FunctionType,
 	argumentTypes []Type,
-	typeParameters *TypeParameterTypeOrderedMap,
+	typeParameters *orderedmap.OrderedMap[*TypeParameter, Type],
 ) (
 	parameterType Type,
 ) {
@@ -625,7 +626,7 @@ func (checker *Checker) reportInvalidTypeArgumentCount(
 func (checker *Checker) checkAndBindGenericTypeParameterTypeArguments(
 	typeArguments []*ast.TypeAnnotation,
 	typeParameters []*TypeParameter,
-	typeParameterTypes *TypeParameterTypeOrderedMap,
+	typeParameterTypes *orderedmap.OrderedMap[*TypeParameter, Type],
 ) {
 	for i := 0; i < len(typeArguments); i++ {
 		rawTypeArgument := typeArguments[i]

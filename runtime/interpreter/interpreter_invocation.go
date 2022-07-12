@@ -22,6 +22,7 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -58,7 +59,7 @@ func (interpreter *Interpreter) invokeFunctionValue(
 	expressions []ast.Expression,
 	argumentTypes []sema.Type,
 	parameterTypes []sema.Type,
-	typeParameterTypes *sema.TypeParameterTypeOrderedMap,
+	typeParameterTypes *orderedmap.OrderedMap[*sema.TypeParameter, sema.Type],
 	invocationPosition ast.HasPosition,
 ) Value {
 

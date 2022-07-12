@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
@@ -78,7 +79,7 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 		Kind:       common.CompositeKindStructure,
 	}
 
-	fruitType.Members = sema.NewStringMemberOrderedMap()
+	fruitType.Members = &orderedmap.OrderedMap[string, *sema.Member]{}
 
 	fruitType.Members.Set("name", sema.NewUnmeteredPublicConstantFieldMember(
 		fruitType,

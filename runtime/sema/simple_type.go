@@ -22,6 +22,7 @@ import (
 	"sync"
 
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 )
 
 type ValueIndexingInfo struct {
@@ -48,7 +49,7 @@ type SimpleType struct {
 	Members              func(*SimpleType) map[string]MemberResolver
 	members              map[string]MemberResolver
 	membersOnce          sync.Once
-	NestedTypes          *StringTypeOrderedMap
+	NestedTypes          *orderedmap.OrderedMap[string, Type]
 	ValueIndexingInfo    ValueIndexingInfo
 }
 
@@ -106,11 +107,11 @@ func (t *SimpleType) RewriteWithRestrictedTypes() (Type, bool) {
 	return t, false
 }
 
-func (*SimpleType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+func (*SimpleType) Unify(_ Type, _ *orderedmap.OrderedMap[*TypeParameter, Type], _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *SimpleType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
+func (t *SimpleType) Resolve(_ *orderedmap.OrderedMap[*TypeParameter, Type]) Type {
 	return t
 }
 
@@ -133,7 +134,7 @@ func (t *SimpleType) IsContainerType() bool {
 	return t.NestedTypes != nil
 }
 
-func (t *SimpleType) GetNestedTypes() *StringTypeOrderedMap {
+func (t *SimpleType) GetNestedTypes() *orderedmap.OrderedMap[string, Type] {
 	return t.NestedTypes
 }
 
