@@ -720,6 +720,7 @@ func parseEventDeclaration(
 		ast.NewFunctionDeclaration(
 			p.memoryGauge,
 			ast.AccessNotSpecified,
+			ast.UnspecifiedPurity,
 			ast.NewEmptyIdentifier(p.memoryGauge, ast.EmptyPosition),
 			parameterList,
 			nil,
@@ -1165,6 +1166,8 @@ func parseSpecialFunctionDeclaration(
 		startPos = *accessPos
 	}
 
+	purity := parsePurityAnnotation(p)
+
 	// TODO: switch to parseFunctionParameterListAndRest once old parser is deprecated:
 	//   allow a return type annotation while parsing, but reject later.
 
@@ -1204,6 +1207,7 @@ func parseSpecialFunctionDeclaration(
 		ast.NewFunctionDeclaration(
 			p.memoryGauge,
 			access,
+			purity,
 			identifier,
 			parameterList,
 			nil,

@@ -4401,6 +4401,7 @@ func TestFunctionExpression_MarshalJSON(t *testing.T) {
                 "StartPos": {"Offset": 16, "Line": 17, "Column": 18},
                 "EndPos": {"Offset": 19, "Line": 20, "Column": 21}
             },
+			"Purity": 0,
             "ReturnTypeAnnotation": {
                 "IsResource": true,
                 "AnnotatedType": {

@@ -255,6 +255,7 @@ func parseTransactionExecute(p *parser) (*ast.SpecialFunctionDeclaration, error)
 		ast.NewFunctionDeclaration(
 			p.memoryGauge,
 			ast.AccessNotSpecified,
+			ast.UnspecifiedPurity,
 			identifier,
 			nil,
 			nil,

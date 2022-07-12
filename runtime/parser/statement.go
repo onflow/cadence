@@ -155,6 +155,8 @@ func parseFunctionDeclarationOrFunctionExpressionStatement(p *parser) (ast.State
 
 	startPos := p.current.StartPos
 
+	purity := parsePurityAnnotation(p)
+
 	// Skip the `fun` keyword
 	p.next()
 
@@ -175,6 +177,7 @@ func parseFunctionDeclarationOrFunctionExpressionStatement(p *parser) (ast.State
 		return ast.NewFunctionDeclaration(
 			p.memoryGauge,
 			ast.AccessNotSpecified,
+			purity,
 			identifier,
 			parameterList,
 			returnTypeAnnotation,
@@ -193,6 +196,7 @@ func parseFunctionDeclarationOrFunctionExpressionStatement(p *parser) (ast.State
 			p.memoryGauge,
 			ast.NewFunctionExpression(
 				p.memoryGauge,
+				purity,
 				parameterList,
 				returnTypeAnnotation,
 				functionBlock,
