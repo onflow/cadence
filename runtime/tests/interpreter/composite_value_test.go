@@ -78,7 +78,7 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 		Kind:       common.CompositeKindStructure,
 	}
 
-	fruitType.Members = sema.NewStringMemberOrderedMap()
+	fruitType.Members = &sema.StringMemberOrderedMap{}
 
 	fruitType.Members.Set("name", sema.NewUnmeteredPublicConstantFieldMember(
 		fruitType,

@@ -333,7 +333,7 @@ func newFlowEventType(identifier string, parameters ...*sema.Parameter) *sema.Co
 		Location:   FlowLocation{},
 		Identifier: identifier,
 		Fields:     []string{},
-		Members:    sema.NewStringMemberOrderedMap(),
+		Members:    &sema.StringMemberOrderedMap{},
 	}
 
 	for _, parameter := range parameters {

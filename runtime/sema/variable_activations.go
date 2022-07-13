@@ -86,7 +86,7 @@ func (a *VariableActivation) Find(name string) *Variable {
 //
 func (a *VariableActivation) Set(name string, variable *Variable) {
 	if a.entries == nil {
-		a.entries = NewStringVariableOrderedMap()
+		a.entries = &StringVariableOrderedMap{}
 	}
 
 	a.entries.Set(name, variable)

@@ -35,7 +35,7 @@ func (checker *Checker) VisitTransactionDeclaration(declaration *ast.Transaction
 		checker.containerTypes[transactionType] = false
 	}()
 
-	fieldMembers := NewMemberAstFieldDeclarationOrderedMap()
+	fieldMembers := &MemberFieldDeclarationOrderedMap{}
 
 	for _, field := range declaration.Fields {
 		fieldName := field.Identifier.Identifier
@@ -172,7 +172,7 @@ func (checker *Checker) checkTransactionBlocks(declaration *ast.TransactionDecla
 func (checker *Checker) visitTransactionPrepareFunction(
 	prepareFunction *ast.SpecialFunctionDeclaration,
 	transactionType *TransactionType,
-	fieldMembers *MemberAstFieldDeclarationOrderedMap,
+	fieldMembers *MemberFieldDeclarationOrderedMap,
 ) {
 	if prepareFunction == nil {
 		return

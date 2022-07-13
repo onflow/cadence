@@ -4735,7 +4735,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 		Location:   TestLocation,
 		Identifier: "Foo",
 		Kind:       common.CompositeKindStructure,
-		Members:    sema.NewStringMemberOrderedMap(),
+		Members:    &sema.StringMemberOrderedMap{},
 		Fields:     []string{"dictionary"},
 	}
 
