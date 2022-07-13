@@ -78,6 +78,11 @@ type ImportHandlerFunc func(checker *Checker, importedLocation common.Location, 
 
 type MemberAccountAccessHandlerFunc func(checker *Checker, memberLocation common.Location) bool
 
+type PurityCheckScope struct {
+	EnforcePurity bool
+	CurrentPurity bool
+}
+
 // Checker
 
 type Checker struct {
@@ -116,6 +121,7 @@ type Checker struct {
 	memberAccountAccessHandler         MemberAccountAccessHandlerFunc
 	extendedElaboration                bool
 	errorShortCircuitingEnabled        bool
+	purityCheckScopes                  []PurityCheckScope
 	// memoryGauge is used for metering memory usage
 	memoryGauge common.MemoryGauge
 }
@@ -273,6 +279,7 @@ func NewChecker(program *ast.Program, location common.Location, memoryGauge comm
 		functionActivations: functionActivations,
 		containerTypes:      map[Type]bool{},
 		Elaboration:         NewElaboration(memoryGauge, extendedElaboration),
+		purityCheckScopes:   []PurityCheckScope{PurityCheckScope{}},
 		extendedElaboration: extendedElaboration,
 		memoryGauge:         memoryGauge,
 	}
@@ -379,6 +386,40 @@ func (checker *Checker) declareTypeDeclaration(declaration TypeDeclaration) {
 
 func (checker *Checker) IsChecked() bool {
 	return checker.isChecked
+}
+
+func (checker *Checker) CurrentPurityScope() PurityCheckScope {
+	return checker.purityCheckScopes[len(checker.purityCheckScopes)-1]
+}
+
+func (checker *Checker) PushNewPurityScope(enforce bool) {
+	checker.purityCheckScopes = append(checker.purityCheckScopes, PurityCheckScope{EnforcePurity: enforce, CurrentPurity: true})
+}
+
+func (checker *Checker) PopPurityScope() PurityCheckScope {
+	scope := checker.CurrentPurityScope()
+	checker.purityCheckScopes = checker.purityCheckScopes[:len(checker.purityCheckScopes)-1]
+	return scope
+}
+
+func (checker *Checker) ObserveImpureOperation(operation ast.Element) {
+	scope := checker.CurrentPurityScope()
+	// purity is monotonic, if we already know this scope is impure, there's no need to continue
+	if !scope.CurrentPurity {
+		return
+	}
+	scope.CurrentPurity = false
+	if scope.EnforcePurity {
+		checker.report(
+			&PurityError{Range: ast.NewRangeFromPositioned(checker.memoryGauge, operation)},
+		)
+	}
+}
+
+func (checker *Checker) InNewPurityScope(enforce bool, f func()) bool {
+	checker.PushNewPurityScope(enforce)
+	f()
+	return checker.PopPurityScope().CurrentPurity
 }
 
 type stopChecking struct{}
@@ -595,7 +636,7 @@ func (checker *Checker) checkTopLevelDeclarationValidity(declarations []ast.Decl
 }
 
 func (checker *Checker) declareGlobalFunctionDeclaration(declaration *ast.FunctionDeclaration) {
-	functionType := checker.functionType(declaration.ParameterList, declaration.ReturnTypeAnnotation)
+	functionType := checker.functionType(declaration.Purity, declaration.ParameterList, declaration.ReturnTypeAnnotation)
 	checker.Elaboration.FunctionDeclarationFunctionTypes[declaration] = functionType
 	checker.declareFunctionDeclaration(declaration, functionType)
 }
@@ -1409,6 +1450,7 @@ func (checker *Checker) ConvertTypeAnnotation(typeAnnotation *ast.TypeAnnotation
 }
 
 func (checker *Checker) functionType(
+	purity ast.FunctionPurity,
 	parameterList *ast.ParameterList,
 	returnTypeAnnotation *ast.TypeAnnotation,
 ) *FunctionType {
@@ -1418,6 +1460,7 @@ func (checker *Checker) functionType(
 		checker.ConvertTypeAnnotation(returnTypeAnnotation)
 
 	return &FunctionType{
+		Purity:               PurityFromAnnotation(purity),
 		Parameters:           convertedParameters,
 		ReturnTypeAnnotation: convertedReturnTypeAnnotation,
 	}

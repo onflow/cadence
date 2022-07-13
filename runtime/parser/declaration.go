@@ -80,7 +80,7 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 			case keywordLet, keywordVar:
 				return parseVariableDeclaration(p, access, accessPos, docString)
 
-			case keywordFun, keywordPure, keywordImpure:
+			case keywordFun, KeywordPure, KeywordImpure:
 				return parseFunctionDeclaration(p, false, access, accessPos, docString)
 
 			case keywordImport:

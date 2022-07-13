@@ -192,6 +192,7 @@ type jsonParameterType struct {
 type jsonFunctionType struct {
 	Kind       string              `json:"kind"`
 	TypeID     string              `json:"typeID"`
+	Purity     string              `json:"purity"`
 	Parameters []jsonParameterType `json:"parameters"`
 	Return     jsonValue           `json:"return"`
 }
@@ -644,6 +645,13 @@ func prepareFields(fieldTypes []cadence.Field, results typePreparationResults) [
 	return fields
 }
 
+func preparePurity(purity cadence.FunctionPurity) string {
+	if purity == cadence.PureFunction {
+		return "pure"
+	}
+	return "impure"
+}
+
 func prepareParameters(parameterTypes []cadence.Parameter, results typePreparationResults) []jsonParameterType {
 	parameters := make([]jsonParameterType, 0)
 	for _, param := range parameterTypes {
@@ -817,6 +825,7 @@ func prepareType(typ cadence.Type, results typePreparationResults) jsonValue {
 		return jsonFunctionType{
 			Kind:       "Function",
 			TypeID:     typ.ID(),
+			Purity:     preparePurity(typ.Purity),
 			Return:     prepareType(typ.ReturnType, results),
 			Parameters: prepareParameters(typ.Parameters, results),
 		}

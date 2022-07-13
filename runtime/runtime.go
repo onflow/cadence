@@ -1645,6 +1645,7 @@ func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interfa
 }
 
 var getAuthAccountFunctionType = &sema.FunctionType{
+	Purity: sema.PureFunction,
 	Parameters: []*sema.Parameter{{
 		Label:          sema.ArgumentLabelNotRequired,
 		Identifier:     "address",

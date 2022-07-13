@@ -1143,6 +1143,8 @@ type MemberMismatch struct {
 }
 
 type InitializerMismatch struct {
+	CompositePurity     FunctionPurity
+	InterfacePurity     FunctionPurity
 	CompositeParameters []*Parameter
 	InterfaceParameters []*Parameter
 }
@@ -3701,7 +3703,7 @@ func (e *InvalidEntryPointTypeError) Error() string {
 	)
 }
 
-// ImportedProgramError
+// ExternalMutationError
 
 type ExternalMutationError struct {
 	Name            string
@@ -3731,5 +3733,15 @@ func (e *ExternalMutationError) SecondaryError() string {
 		"Consider adding a setter for `%s` to `%s`",
 		e.Name,
 		e.ContainerType.QualifiedString(),
+	)
+}
+
+type PurityError struct {
+	ast.Range
+}
+
+func (e *PurityError) Error() string {
+	return fmt.Sprintf(
+		"Impure operation performed in pure context",
 	)
 }

@@ -51,6 +51,7 @@ func TestConstantSizedType_String_OfFunctionType(t *testing.T) {
 
 	ty := &ConstantSizedType{
 		Type: &FunctionType{
+			Purity: ImpureFunction,
 			Parameters: []*Parameter{
 				{
 					TypeAnnotation: NewTypeAnnotation(Int8Type),
@@ -65,6 +66,31 @@ func TestConstantSizedType_String_OfFunctionType(t *testing.T) {
 
 	assert.Equal(t,
 		"[((Int8): Int16); 2]",
+		ty.String(),
+	)
+}
+
+func TestConstantSizedType_String_OfPureFunctionType(t *testing.T) {
+
+	t.Parallel()
+
+	ty := &ConstantSizedType{
+		Type: &FunctionType{
+			Purity: PureFunction,
+			Parameters: []*Parameter{
+				{
+					TypeAnnotation: NewTypeAnnotation(Int8Type),
+				},
+			},
+			ReturnTypeAnnotation: NewTypeAnnotation(
+				Int16Type,
+			),
+		},
+		Size: 2,
+	}
+
+	assert.Equal(t,
+		"[(pure (Int8): Int16); 2]",
 		ty.String(),
 	)
 }
@@ -1459,6 +1485,7 @@ func TestCommonSuperType(t *testing.T) {
 		t.Parallel()
 
 		funcType1 := &FunctionType{
+			Purity: ImpureFunction,
 			Parameters: []*Parameter{
 				{
 					TypeAnnotation: NewTypeAnnotation(StringType),
@@ -1469,6 +1496,7 @@ func TestCommonSuperType(t *testing.T) {
 		}
 
 		funcType2 := &FunctionType{
+			Purity: ImpureFunction,
 			Parameters: []*Parameter{
 				{
 					TypeAnnotation: NewTypeAnnotation(IntType),

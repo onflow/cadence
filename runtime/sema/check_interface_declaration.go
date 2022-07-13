@@ -72,6 +72,7 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 		interfaceType,
 		declaration.DeclarationKind(),
 		declaration.DeclarationDocString(),
+		interfaceType.InitializerPurity,
 		interfaceType.InitializerParameters,
 		kind,
 		nil,
@@ -327,6 +328,8 @@ func (checker *Checker) declareInterfaceMembers(declaration *ast.InterfaceDeclar
 
 	interfaceType.InitializerParameters =
 		checker.initializerParameters(declaration.Members.Initializers())
+	interfaceType.InitializerPurity =
+		checker.initializerPurity(declaration.Members.Initializers())
 
 	// Declare nested declarations' members
 

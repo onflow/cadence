@@ -1489,6 +1489,7 @@ func TestEncodeType(t *testing.T) {
 				{	
 					"kind" : "Function",
 					"typeID":"Foo", 
+					"purity": "impure",
 					"return" : {"kind" : "Int"}, 
 					"parameters" : [
 						{"label" : "qux", "id" : "baz", "type": {"kind" : "String"}}

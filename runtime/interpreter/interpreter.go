@@ -60,6 +60,7 @@ type ExpressionStatementResult struct {
 //
 
 var emptyFunctionType = &sema.FunctionType{
+	Purity: sema.PureFunction,
 	ReturnTypeAnnotation: &sema.TypeAnnotation{
 		Type: sema.VoidType,
 	},
@@ -1607,6 +1608,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 	constructorType := &sema.FunctionType{
 		IsConstructor: true,
+		Purity:        compositeType.ConstructorPurity,
 		Parameters:    compositeType.ConstructorParameters,
 		ReturnTypeAnnotation: &sema.TypeAnnotation{
 			Type: compositeType,

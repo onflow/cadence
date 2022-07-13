@@ -62,6 +62,6 @@ const (
 	keywordSwitch      = "switch"
 	keywordDefault     = "default"
 	keywordEnum        = "enum"
-	keywordPure        = "pure"
-	keywordImpure      = "impure"
+	KeywordPure        = "pure"
+	KeywordImpure      = "impure"
 )

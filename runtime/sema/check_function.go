@@ -24,6 +24,15 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
+func PurityFromAnnotation(purity ast.FunctionPurity) FunctionPurity {
+	if purity == ast.PureFunction {
+		return PureFunction
+	} else if purity == ast.ImpureFunction {
+		return ImpureFunction
+	}
+	return UnknownPurity
+}
+
 func (checker *Checker) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration) ast.Repr {
 	return checker.visitFunctionDeclaration(
 		declaration,
@@ -69,7 +78,7 @@ func (checker *Checker) visitFunctionDeclaration(
 
 	functionType := checker.Elaboration.FunctionDeclarationFunctionTypes[declaration]
 	if functionType == nil {
-		functionType = checker.functionType(declaration.ParameterList, declaration.ReturnTypeAnnotation)
+		functionType = checker.functionType(declaration.Purity, declaration.ParameterList, declaration.ReturnTypeAnnotation)
 
 		if options.declareFunction {
 			checker.declareFunctionDeclaration(declaration, functionType)
@@ -173,11 +182,17 @@ func (checker *Checker) checkFunction(
 			functionActivation.InitializationInfo = initializationInfo
 
 			if functionBlock != nil {
-				checker.visitFunctionBlock(
-					functionBlock,
-					functionType.ReturnTypeAnnotation,
-					checkResourceLoss,
-				)
+				isPure := checker.InNewPurityScope(functionType.Purity == PureFunction, func() {
+					checker.visitFunctionBlock(
+						functionBlock,
+						functionType.ReturnTypeAnnotation,
+						checkResourceLoss,
+					)
+				})
+
+				if functionType.Purity == UnknownPurity {
+					functionType.Purity = Purity(isPure)
+				}
 
 				if mustExit {
 					returnType := functionType.ReturnTypeAnnotation.Type
@@ -394,10 +409,11 @@ func (checker *Checker) visitFunctionBlock(
 		func() {
 			// NOTE: not checking block as it enters a new scope
 			// and post-conditions need to be able to refer to block's declarations
-
 			checker.visitStatements(functionBlock.Block.Statements)
 		},
 	)
+
+	return
 }
 
 func (checker *Checker) declareResult(ty Type) {
@@ -423,7 +439,7 @@ func (checker *Checker) declareBefore() {
 func (checker *Checker) VisitFunctionExpression(expression *ast.FunctionExpression) ast.Repr {
 
 	// TODO: infer
-	functionType := checker.functionType(expression.ParameterList, expression.ReturnTypeAnnotation)
+	functionType := checker.functionType(expression.Purity, expression.ParameterList, expression.ReturnTypeAnnotation)
 
 	checker.Elaboration.FunctionExpressionFunctionType[expression] = functionType
 
