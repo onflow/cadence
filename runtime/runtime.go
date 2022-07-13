@@ -23,7 +23,7 @@ import (
 	"time"
 	"unsafe"
 
-	opentracing "github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go"
 	"golang.org/x/crypto/sha3"
 
 	"github.com/onflow/cadence"
@@ -3203,15 +3203,7 @@ func (r *interpreterRuntime) Storage(context Context) (*Storage, *interpreter.In
 		return nil, nil, newError(err, context)
 	}
 
-<<<<<<< HEAD
-	if value.Value == nil {
-		return nil, nil
-	}
-
-	return exportValue(value, interpreter.ReturnEmptyLocationRange)
-=======
 	return storage, inter, nil
->>>>>>> cb8684990 (provide interpreter with storage configured)
 }
 
 func (r *interpreterRuntime) ReadStored(
@@ -3244,7 +3236,7 @@ func (r *interpreterRuntime) ReadStored(
 
 	var exportedValue cadence.Value
 	if value != nil {
-		exportedValue, err = ExportValue(value, inter)
+		exportedValue, err = ExportValue(value, inter, interpreter.ReturnEmptyLocationRange)
 		if err != nil {
 			return nil, newError(err, context)
 		}
@@ -3298,7 +3290,7 @@ func (r *interpreterRuntime) ReadLinked(
 
 	var exportedValue cadence.Value
 	if value != nil {
-		exportedValue, err = ExportValue(value, inter)
+		exportedValue, err = ExportValue(value, inter, interpreter.ReturnEmptyLocationRange)
 		if err != nil {
 			return nil, newError(err, context)
 		}
