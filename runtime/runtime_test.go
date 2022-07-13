@@ -3293,8 +3293,8 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 				Name:    "Test",
 			},
 			"helloArg",
-			[]interpreter.Value{
-				interpreter.NewUnmeteredStringValue("there!"),
+			[]cadence.Value{
+				cadence.String("there!"),
 			},
 			[]sema.Type{
 				sema.StringType,
@@ -3315,8 +3315,8 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 				Name:    "Test",
 			},
 			"helloReturn",
-			[]interpreter.Value{
-				interpreter.NewUnmeteredStringValue("there!"),
+			[]cadence.Value{
+				cadence.String("there!"),
 			},
 			[]sema.Type{
 				sema.StringType,
@@ -3338,10 +3338,10 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 				Name:    "Test",
 			},
 			"helloMultiArg",
-			[]interpreter.Value{
-				interpreter.NewUnmeteredStringValue("number"),
-				interpreter.NewUnmeteredIntValueFromInt64(42),
-				interpreter.AddressValue(addressValue),
+			[]cadence.Value{
+				cadence.String("number"),
+				cadence.NewInt(42),
+				cadence.BytesToAddress(addressValue.Bytes()),
 			},
 			[]sema.Type{
 				sema.StringType,
@@ -3365,9 +3365,9 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 				Name:    "Test",
 			},
 			"helloMultiArg",
-			[]interpreter.Value{
-				interpreter.NewUnmeteredStringValue("number"),
-				interpreter.NewUnmeteredIntValueFromInt64(42),
+			[]cadence.Value{
+				cadence.String("number"),
+				cadence.NewInt(42),
 			},
 			[]sema.Type{
 				sema.StringType,
@@ -3390,8 +3390,8 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 				Name:    "Test",
 			},
 			"helloArg",
-			[]interpreter.Value{
-				interpreter.NewUnmeteredIntValueFromInt64(42),
+			[]cadence.Value{
+				cadence.NewInt(42),
 			},
 			[]sema.Type{
 				sema.IntType,
@@ -3411,8 +3411,8 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 				Name:    "Test",
 			},
 			"helloAuthAcc",
-			[]interpreter.Value{
-				interpreter.AddressValue(addressValue),
+			[]cadence.Value{
+				cadence.BytesToAddress(addressValue.Bytes()),
 			},
 			[]sema.Type{
 				sema.AuthAccountType,
@@ -3433,8 +3433,8 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 				Name:    "Test",
 			},
 			"helloPublicAcc",
-			[]interpreter.Value{
-				interpreter.AddressValue(addressValue),
+			[]cadence.Value{
+				cadence.BytesToAddress(addressValue.Bytes()),
 			},
 			[]sema.Type{
 				sema.PublicAccountType,

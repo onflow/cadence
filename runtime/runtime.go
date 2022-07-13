@@ -65,7 +65,7 @@ type Runtime interface {
 	InvokeContractFunction(
 		contractLocation common.AddressLocation,
 		functionName string,
-		arguments []interpreter.Value,
+		arguments []cadence.Value,
 		argumentTypes []sema.Type,
 		context Context,
 	) (cadence.Value, error)
@@ -540,7 +540,7 @@ func (r *interpreterRuntime) newAuthAccountValue(
 func (r *interpreterRuntime) InvokeContractFunction(
 	contractLocation common.AddressLocation,
 	functionName string,
-	arguments []interpreter.Value,
+	arguments []cadence.Value,
 	argumentTypes []sema.Type,
 	context Context,
 ) (val cadence.Value, err error) {
@@ -585,8 +585,10 @@ func (r *interpreterRuntime) InvokeContractFunction(
 	// ensure the contract is loaded
 	inter = inter.EnsureLoaded(contractLocation)
 
+	interpreterArguments := make([]interpreter.Value, len(arguments))
+
 	for i, argumentType := range argumentTypes {
-		arguments[i] = r.convertArgument(
+		ia, err := r.convertArgument(
 			inter,
 			arguments[i],
 			argumentType,
@@ -594,7 +596,16 @@ func (r *interpreterRuntime) InvokeContractFunction(
 			storage,
 			interpreterOptions,
 			checkerOptions,
+			func() interpreter.LocationRange {
+				return interpreter.LocationRange{
+					Location: context.Location,
+				}
+			},
 		)
+		if err != nil {
+			return nil, newError(err, context)
+		}
+		interpreterArguments[i] = ia
 	}
 
 	contractValue, err := inter.GetContractComposite(contractLocation)
@@ -606,7 +617,7 @@ func (r *interpreterRuntime) InvokeContractFunction(
 	invocation := interpreter.NewInvocation(
 		inter,
 		contractValue,
-		arguments,
+		interpreterArguments,
 		argumentTypes,
 		nil,
 		func() interpreter.LocationRange {
@@ -649,44 +660,52 @@ func (r *interpreterRuntime) InvokeContractFunction(
 
 func (r *interpreterRuntime) convertArgument(
 	inter *interpreter.Interpreter,
-	argument interpreter.Value,
+	argument cadence.Value,
 	argumentType sema.Type,
 	context Context,
 	storage *Storage,
 	interpreterOptions []interpreter.Option,
 	checkerOptions []sema.Option,
-) interpreter.Value {
+	getLocationRange func() interpreter.LocationRange,
+) (interpreter.Value, error) {
 	switch argumentType {
 	case sema.AuthAccountType:
 		// convert addresses to auth accounts so there is no need to construct an auth account value for the caller
-		if addressValue, ok := argument.(interpreter.AddressValue); ok {
+		if addressValue, ok := argument.(cadence.Address); ok {
 			return r.newAuthAccountValue(
 				inter,
 				interpreter.NewAddressValueFromConstructor(
 					inter,
-					addressValue.ToAddress,
+					func() common.Address { return common.MustBytesToAddress(addressValue.Bytes()) },
 				),
 				context,
 				storage,
 				interpreterOptions,
 				checkerOptions,
-			)
+			), nil
 		}
 	case sema.PublicAccountType:
 		// convert addresses to public accounts so there is no need to construct a public account value for the caller
-		if addressValue, ok := argument.(interpreter.AddressValue); ok {
+		if addressValue, ok := argument.(cadence.Address); ok {
 			return r.getPublicAccount(
 				inter,
 				interpreter.NewAddressValueFromConstructor(
 					inter,
-					addressValue.ToAddress,
+					func() common.Address { return common.MustBytesToAddress(addressValue.Bytes()) },
 				),
 				context.Interface,
 				storage,
-			)
+			), nil
 		}
+	default:
+		return importValue(
+			inter,
+			getLocationRange,
+			argument,
+			argumentType,
+		)
 	}
-	return argument
+	return nil, nil
 }
 
 func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) (err error) {
