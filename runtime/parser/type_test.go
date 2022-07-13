@@ -1016,6 +1016,7 @@ func TestParseFunctionType(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.FunctionType{
+				PurityAnnotation:         ast.UnspecifiedPurity,
 				ParameterTypeAnnotations: nil,
 				ReturnTypeAnnotation: &ast.TypeAnnotation{
 					IsResource: false,
@@ -1030,6 +1031,66 @@ func TestParseFunctionType(t *testing.T) {
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("pure function type", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseType("(pure ():Void)", nil)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.FunctionType{
+				PurityAnnotation:         ast.PureFunction,
+				ParameterTypeAnnotations: nil,
+				ReturnTypeAnnotation: &ast.TypeAnnotation{
+					IsResource: false,
+					Type: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "Void",
+							Pos:        ast.Position{Line: 1, Column: 9, Offset: 9},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 13, Offset: 13},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("impure function type", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseType("(impure ():Void)", nil)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.FunctionType{
+				PurityAnnotation:         ast.ImpureFunction,
+				ParameterTypeAnnotations: nil,
+				ReturnTypeAnnotation: &ast.TypeAnnotation{
+					IsResource: false,
+					Type: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "Void",
+							Pos:        ast.Position{Line: 1, Column: 11, Offset: 11},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 11, Offset: 11},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 15, Offset: 15},
 				},
 			},
 			result,
