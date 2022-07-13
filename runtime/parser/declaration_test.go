@@ -496,6 +496,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 							EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
 						},
 					},
+					Purity: ast.UnspecifiedPurity,
 					ReturnTypeAnnotation: &ast.TypeAnnotation{
 						IsResource: false,
 						Type: &ast.NominalType{
@@ -947,6 +948,98 @@ func TestParseFunctionDeclaration(t *testing.T) {
 							Range: ast.Range{
 								StartPos: ast.Position{Line: 1, Column: 15, Offset: 15},
 								EndPos:   ast.Position{Line: 1, Column: 26, Offset: 26},
+							},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("pure function", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseDeclarations("pure fun foo (): X { }", nil)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.FunctionDeclaration{
+					Identifier: ast.Identifier{
+						Identifier: "foo",
+						Pos:        ast.Position{Line: 1, Column: 9, Offset: 9},
+					},
+					ParameterList: &ast.ParameterList{
+						Parameters: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 13, Offset: 13},
+							EndPos:   ast.Position{Line: 1, Column: 14, Offset: 14},
+						},
+					},
+					Purity: ast.PureFunction,
+					ReturnTypeAnnotation: &ast.TypeAnnotation{
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "X",
+								Pos:        ast.Position{Line: 1, Column: 17, Offset: 17},
+							},
+						},
+						StartPos: ast.Position{Line: 1, Column: 17, Offset: 17},
+					},
+					FunctionBlock: &ast.FunctionBlock{
+						Block: &ast.Block{
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 1, Column: 19, Offset: 19},
+								EndPos:   ast.Position{Line: 1, Column: 21, Offset: 21},
+							},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("impure function", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseDeclarations("impure fun foo (): X { }", nil)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.FunctionDeclaration{
+					Identifier: ast.Identifier{
+						Identifier: "foo",
+						Pos:        ast.Position{Line: 1, Column: 11, Offset: 11},
+					},
+					ParameterList: &ast.ParameterList{
+						Parameters: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 15, Offset: 15},
+							EndPos:   ast.Position{Line: 1, Column: 16, Offset: 16},
+						},
+					},
+					Purity: ast.ImpureFunction,
+					ReturnTypeAnnotation: &ast.TypeAnnotation{
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "X",
+								Pos:        ast.Position{Line: 1, Column: 19, Offset: 19},
+							},
+						},
+						StartPos: ast.Position{Line: 1, Column: 19, Offset: 19},
+					},
+					FunctionBlock: &ast.FunctionBlock{
+						Block: &ast.Block{
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 1, Column: 21, Offset: 21},
+								EndPos:   ast.Position{Line: 1, Column: 23, Offset: 23},
 							},
 						},
 					},
