@@ -27,11 +27,11 @@ type Context struct {
 	Interface         Interface
 	Location          Location
 	PredeclaredValues []ValueDeclaration
-	codes             map[common.Location]string
+	codes             map[common.Location][]byte
 	programs          map[common.Location]*ast.Program
 }
 
-func (c Context) SetCode(location common.Location, code string) {
+func (c Context) SetCode(location common.Location, code []byte) {
 	c.codes[location] = code
 }
 
@@ -47,7 +47,7 @@ func (c Context) WithLocation(location common.Location) Context {
 
 func (c *Context) InitializeCodesAndPrograms() {
 	if c.codes == nil {
-		c.codes = map[common.Location]string{}
+		c.codes = map[common.Location][]byte{}
 	}
 
 	if c.programs == nil {
