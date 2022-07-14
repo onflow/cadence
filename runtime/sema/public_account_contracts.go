@@ -70,6 +70,7 @@ Returns nil if no contract/contract interface with the given name exists in the 
 `
 
 var publicAccountContractsTypeGetFunctionType = &FunctionType{
+	Purity: PureFunction,
 	Parameters: []*Parameter{
 		{
 			Identifier: "name",

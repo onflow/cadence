@@ -806,6 +806,7 @@ func (checker *Checker) declareEnumConstructor(
 
 func EnumConstructorType(compositeType *CompositeType) *FunctionType {
 	return &FunctionType{
+		Purity:        PureFunction,
 		IsConstructor: true,
 		Parameters: []*Parameter{
 			{
@@ -1841,6 +1842,17 @@ func (checker *Checker) checkCompositeFunctions(
 					checkResourceLoss: true,
 				},
 			)
+			fnType := checker.Elaboration.FunctionDeclarationFunctionTypes[function]
+			member, present := selfType.Members.Get(function.Identifier.Identifier)
+			if present {
+				// members resolvers are created before the purity analysis is performed, so we update
+				// unresolved purities with the correct values
+				fnMember, ok := member.TypeAnnotation.Type.(*FunctionType)
+				if ok {
+					fnMember.Purity = fnType.Purity
+				}
+			}
+
 		}()
 
 		if function.FunctionBlock == nil {

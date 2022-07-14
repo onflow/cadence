@@ -187,6 +187,10 @@ func (checker *Checker) checkInterfaceFunctions(
 				},
 			)
 
+			// we don't need to update the purity of interface methods here, because
+			// any method on an interface is by definition public, and therefore
+			// has an explicit purity annotation (or defaults to impure)
+
 			if function.FunctionBlock != nil {
 				checker.checkInterfaceSpecialFunctionBlock(
 					function.FunctionBlock,

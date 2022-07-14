@@ -68,6 +68,7 @@ The function returns nil if the array is empty or if decoding one of the signatu
 const blsAggregateSignaturesFunctionName = "aggregateSignatures"
 
 var blsAggregateSignaturesFunctionType = &sema.FunctionType{
+	Purity: sema.PureFunction,
 	Parameters: []*sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
@@ -95,6 +96,7 @@ The function returns nil if the array is empty or any of the input keys is not a
 const blsAggregatePublicKeysFunctionName = "aggregatePublicKeys"
 
 var blsAggregatePublicKeysFunctionType = &sema.FunctionType{
+	Purity: sema.PureFunction,
 	Parameters: []*sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,

@@ -34,6 +34,7 @@ The message argument is optional.
 `
 
 var assertFunctionType = &sema.FunctionType{
+	Purity: sema.PureFunction,
 	Parameters: []*sema.Parameter{
 		{
 			Label:          sema.ArgumentLabelNotRequired,

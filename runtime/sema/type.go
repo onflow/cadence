@@ -2901,11 +2901,6 @@ func (t *FunctionType) Unify(
 		return false
 	}
 
-	// TODO: how should purity interact with unification
-	if t.Purity != otherFunction.Purity {
-		return false
-	}
-
 	// TODO: type parameters ?
 
 	if len(t.TypeParameters) > 0 ||

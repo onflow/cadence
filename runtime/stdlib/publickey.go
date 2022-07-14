@@ -29,6 +29,7 @@ Constructs a new public key
 `
 
 var publicKeyConstructorFunctionType = &sema.FunctionType{
+	Purity: sema.PureFunction,
 	Parameters: []*sema.Parameter{
 		{
 			Identifier:     sema.PublicKeyPublicKeyField,

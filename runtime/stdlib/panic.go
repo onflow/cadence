@@ -46,6 +46,7 @@ Terminates the program unconditionally and reports a message which explains why 
 var PanicFunction = NewStandardLibraryFunction(
 	"panic",
 	&sema.FunctionType{
+		Purity: sema.PureFunction,
 		Parameters: []*sema.Parameter{
 			{
 				Label:          sema.ArgumentLabelNotRequired,

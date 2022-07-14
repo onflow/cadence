@@ -292,6 +292,7 @@ The path must be a storage path, i.e., only the domain ` + "`storage`" + ` is al
 `
 
 var AuthAccountTypeTypeFunctionType = &FunctionType{
+	Purity: PureFunction,
 	Parameters: []*Parameter{
 		{
 			Label:          "at",
@@ -328,6 +329,7 @@ var AuthAccountTypeCopyFunctionType = func() *FunctionType {
 	}
 
 	return &FunctionType{
+		Purity: PureFunction,
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
@@ -371,6 +373,7 @@ var AuthAccountTypeBorrowFunctionType = func() *FunctionType {
 	}
 
 	return &FunctionType{
+		Purity: PureFunction,
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
@@ -416,6 +419,7 @@ var AuthAccountTypeLinkFunctionType = func() *FunctionType {
 	}
 
 	return &FunctionType{
+		Purity: PureFunction,
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
@@ -481,6 +485,7 @@ var AuthAccountTypeGetCapabilityFunctionType = func() *FunctionType {
 	}
 
 	return &FunctionType{
+		Purity: PureFunction,
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
@@ -506,6 +511,7 @@ Returns the capability at the given private or public path, or nil if it does no
 `
 
 var AccountTypeGetLinkTargetFunctionType = &FunctionType{
+	Purity: PureFunction,
 	Parameters: []*Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
@@ -575,6 +581,7 @@ var AuthAccountKeysTypeAddFunctionType = &FunctionType{
 }
 
 var AccountKeysTypeGetFunctionType = &FunctionType{
+	Purity: PureFunction,
 	Parameters: []*Parameter{
 		{
 			Identifier:     AccountKeyKeyIndexField,

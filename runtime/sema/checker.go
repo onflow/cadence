@@ -49,6 +49,7 @@ var beforeType = func() *FunctionType {
 	)
 
 	return &FunctionType{
+		Purity: PureFunction,
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
@@ -279,7 +280,7 @@ func NewChecker(program *ast.Program, location common.Location, memoryGauge comm
 		functionActivations: functionActivations,
 		containerTypes:      map[Type]bool{},
 		Elaboration:         NewElaboration(memoryGauge, extendedElaboration),
-		purityCheckScopes:   []PurityCheckScope{PurityCheckScope{}},
+		purityCheckScopes:   []PurityCheckScope{{}},
 		extendedElaboration: extendedElaboration,
 		memoryGauge:         memoryGauge,
 	}
@@ -1301,7 +1302,14 @@ func (checker *Checker) convertFunctionType(t *ast.FunctionType) Type {
 
 	returnTypeAnnotation := checker.ConvertTypeAnnotation(t.ReturnTypeAnnotation)
 
+	// function type annotations default to impure (TODO: is this ideal behavior)
+	purity := PurityFromAnnotation(t.PurityAnnotation)
+	if purity == UnknownPurity {
+		purity = ImpureFunction
+	}
+
 	return &FunctionType{
+		Purity:               purity,
 		Parameters:           parameters,
 		ReturnTypeAnnotation: returnTypeAnnotation,
 	}

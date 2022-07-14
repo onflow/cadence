@@ -550,7 +550,7 @@ func TestBeforeType_Strings(t *testing.T) {
 
 	t.Parallel()
 
-	expected := "(<T: AnyStruct>(_ value: T): T)"
+	expected := "(pure <T: AnyStruct>(_ value: T): T)"
 
 	assert.Equal(t,
 		expected,

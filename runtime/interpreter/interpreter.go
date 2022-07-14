@@ -3136,6 +3136,7 @@ func init() {
 		),
 	)
 
+	// TODO: Add an option to this for a pure function
 	defineBaseValue(
 		baseActivation,
 		"FunctionType",
@@ -3486,6 +3487,7 @@ var typeFunction = NewUnmeteredHostFunctionValue(
 		return NewTypeValue(invocation.Interpreter, staticType)
 	},
 	&sema.FunctionType{
+		Purity:               sema.PureFunction,
 		ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.MetaType),
 	},
 )
@@ -3511,6 +3513,7 @@ var stringFunction = func() Value {
 			return emptyString
 		},
 		&sema.FunctionType{
+			Purity: sema.PureFunction,
 			ReturnTypeAnnotation: sema.NewTypeAnnotation(
 				sema.StringType,
 			),
