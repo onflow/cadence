@@ -163,7 +163,7 @@ func (checker *Checker) declareInterfaceNestedTypes(
 
 func (checker *Checker) checkInterfaceFunctions(
 	functions []*ast.FunctionDeclaration,
-	selfType Type,
+	selfType NominalType,
 	declarationKind common.DeclarationKind,
 	selfDocString string,
 ) {
@@ -187,9 +187,7 @@ func (checker *Checker) checkInterfaceFunctions(
 				},
 			)
 
-			// we don't need to update the purity of interface methods here, because
-			// any method on an interface is by definition public, and therefore
-			// has an explicit purity annotation (or defaults to impure)
+			checker.updateMemberPurity(function, selfType)
 
 			if function.FunctionBlock != nil {
 				checker.checkInterfaceSpecialFunctionBlock(

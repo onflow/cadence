@@ -80,7 +80,7 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 			case keywordLet, keywordVar:
 				return parseVariableDeclaration(p, access, accessPos, docString)
 
-			case keywordFun, KeywordPure, KeywordImpure:
+			case keywordFun, keywordPure, keywordImpure:
 				return parseFunctionDeclaration(p, false, access, accessPos, docString)
 
 			case keywordImport:
@@ -1057,7 +1057,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 			case keywordCase:
 				return parseEnumCase(p, access, accessPos, docString)
 
-			case keywordFun:
+			case keywordFun, keywordPure, keywordImpure:
 				return parseFunctionDeclaration(p, functionBlockIsOptional, access, accessPos, docString)
 
 			case keywordEvent:

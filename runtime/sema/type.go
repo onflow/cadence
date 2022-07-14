@@ -192,6 +192,12 @@ type MemberResolver struct {
 	) *Member
 }
 
+// supertype of interfaces and composites
+type NominalType interface {
+	Type
+	MemberMap() *StringMemberOrderedMap
+}
+
 // ContainedType is a type which might have a container type
 //
 type ContainedType interface {
@@ -3672,6 +3678,10 @@ func (t *CompositeType) Equal(other Type) bool {
 		otherStructure.ID() == t.ID()
 }
 
+func (t *CompositeType) MemberMap() *StringMemberOrderedMap {
+	return t.Members
+}
+
 func (t *CompositeType) GetMembers() map[string]MemberResolver {
 	t.initializeMemberResolvers()
 	return t.memberResolvers
@@ -4162,6 +4172,10 @@ func (t *InterfaceType) Equal(other Type) bool {
 
 	return otherInterface.CompositeKind == t.CompositeKind &&
 		otherInterface.ID() == t.ID()
+}
+
+func (t *InterfaceType) MemberMap() *StringMemberOrderedMap {
+	return t.Members
 }
 
 func (t *InterfaceType) GetMembers() map[string]MemberResolver {
