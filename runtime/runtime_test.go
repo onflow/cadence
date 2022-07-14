@@ -7405,3 +7405,28 @@ func assertRuntimeErrorIsExternalError(t *testing.T, err error) {
 	innerError := runtimeError.Unwrap()
 	require.ErrorAs(t, innerError, &runtimeErrors.ExternalError{})
 }
+
+func BenchmarkRuntimeScriptNoop(b *testing.B) {
+
+	runtimeInterface := &testRuntimeInterface{
+		storage: newTestLedger(nil, nil),
+	}
+
+	context := Context{
+		Interface: runtimeInterface,
+		Location:  common.ScriptLocation{},
+	}
+
+	require.NotNil(b, stdlib.CryptoChecker)
+
+	runtime := NewInterpreterRuntime()
+
+	source := []byte("pub fun main() {}")
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		_, _ = runtime.ExecuteScript(Script{Source: source}, context)
+	}
+}

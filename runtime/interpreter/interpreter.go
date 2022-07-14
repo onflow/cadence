@@ -324,7 +324,6 @@ type Interpreter struct {
 	Program                        *Program
 	Location                       common.Location
 	PredeclaredValues              []ValueDeclaration
-	effectivePredeclaredValues     map[string]ValueDeclaration
 	activations                    *VariableActivations
 	Globals                        GlobalVariables
 	allInterpreters                map[common.Location]*Interpreter
@@ -473,7 +472,6 @@ func WithPredeclaredValues(predeclaredValues []ValueDeclaration) Option {
 			}
 			name := declaration.ValueDeclarationName()
 			interpreter.Globals.Set(name, variable)
-			interpreter.effectivePredeclaredValues[name] = declaration
 		}
 
 		return nil
@@ -698,11 +696,10 @@ var baseActivation = func() *VariableActivation {
 func NewInterpreter(program *Program, location common.Location, options ...Option) (*Interpreter, error) {
 
 	interpreter := &Interpreter{
-		Program:                    program,
-		Location:                   location,
-		Globals:                    map[string]*Variable{},
-		effectivePredeclaredValues: map[string]ValueDeclaration{},
-		resourceVariables:          map[ResourceKindedValue]*Variable{},
+		Program:           program,
+		Location:          location,
+		Globals:           map[string]*Variable{},
+		resourceVariables: map[ResourceKindedValue]*Variable{},
 	}
 
 	interpreter.activations = NewVariableActivations(interpreter)
