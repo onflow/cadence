@@ -1396,7 +1396,7 @@ func (r *interpreterRuntime) newInterpreter(
 				signature *interpreter.ArrayValue,
 				signedData *interpreter.ArrayValue,
 				domainSeparationTag *interpreter.StringValue,
-				hashAlgorithm *interpreter.CompositeValue,
+				hashAlgorithm *interpreter.SimpleCompositeValue,
 				publicKey interpreter.MemberAccessibleValue,
 			) interpreter.BoolValue {
 				return verifySignature(
@@ -3592,7 +3592,7 @@ func NewPublicKeyFromValue(
 		return nil, runtimeErrors.NewUnexpectedError("sign algorithm is not set")
 	}
 
-	signAlgoValue, ok := signAlgoField.(*interpreter.CompositeValue)
+	signAlgoValue, ok := signAlgoField.(*interpreter.SimpleCompositeValue)
 	if !ok {
 		return nil, runtimeErrors.NewUnexpectedError(
 			"sign algorithm does not belong to type: %s",
@@ -3600,7 +3600,7 @@ func NewPublicKeyFromValue(
 		)
 	}
 
-	rawValue := signAlgoValue.GetField(inter, getLocationRange, sema.EnumRawValueFieldName)
+	rawValue := signAlgoValue.GetMember(inter, getLocationRange, sema.EnumRawValueFieldName)
 	if rawValue == nil {
 		return nil, runtimeErrors.NewDefaultUserError("sign algorithm raw value is not set")
 	}
@@ -3633,8 +3633,7 @@ func NewPublicKeyValue(
 			publicKey.PublicKey,
 		),
 		stdlib.NewSignatureAlgorithmCase(
-			inter,
-			publicKey.SignAlgo.RawValue(),
+			interpreter.UInt8Value(publicKey.SignAlgo.RawValue()),
 		),
 		func(
 			inter *interpreter.Interpreter,
@@ -3661,7 +3660,9 @@ func NewAccountKeyValue(
 			accountKey.PublicKey,
 			validatePublicKey,
 		),
-		stdlib.NewHashAlgorithmCase(inter, accountKey.HashAlgo.RawValue()),
+		stdlib.NewHashAlgorithmCase(
+			interpreter.UInt8Value(accountKey.HashAlgo.RawValue()),
+		),
 		interpreter.NewUFix64ValueWithInteger(
 			inter, func() uint64 {
 				return uint64(accountKey.Weight)
@@ -3676,9 +3677,9 @@ func NewHashAlgorithmFromValue(
 	getLocationRange func() interpreter.LocationRange,
 	value interpreter.Value,
 ) HashAlgorithm {
-	hashAlgoValue := value.(*interpreter.CompositeValue)
+	hashAlgoValue := value.(*interpreter.SimpleCompositeValue)
 
-	rawValue := hashAlgoValue.GetField(inter, getLocationRange, sema.EnumRawValueFieldName)
+	rawValue := hashAlgoValue.GetMember(inter, getLocationRange, sema.EnumRawValueFieldName)
 	if rawValue == nil {
 		panic("cannot find hash algorithm raw value")
 	}
@@ -3834,7 +3835,7 @@ func verifySignature(
 	signatureValue *interpreter.ArrayValue,
 	signedDataValue *interpreter.ArrayValue,
 	domainSeparationTagValue *interpreter.StringValue,
-	hashAlgorithmValue *interpreter.CompositeValue,
+	hashAlgorithmValue *interpreter.SimpleCompositeValue,
 	publicKeyValue interpreter.MemberAccessibleValue,
 	runtimeInterface Interface,
 ) interpreter.BoolValue {
