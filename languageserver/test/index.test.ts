@@ -51,10 +51,12 @@ async function withConnection(f: (connection: ProtocolConnection) => Promise<voi
 
   let initOpts = null
   if (enableFlowClient) {
+    // flow client initialization options where we pass the location of flow.json
+    // and service account name and its address
     initOpts = {
       configPath: "./flow.json",
-      activeAccountName: "service-account",
-      activeAccountAddress: "0xf8d6e0586b0a20c7"
+      activeAccountName: "service-account", // default service account name
+      activeAccountAddress: "0xf8d6e0586b0a20c7" // default service address for emulator network
     }
   }
 
