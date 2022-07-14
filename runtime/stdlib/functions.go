@@ -36,7 +36,6 @@ type StandardLibraryFunction struct {
 	DocString      string
 	Function       *interpreter.HostFunctionValue
 	ArgumentLabels []string
-	Available      func(common.Location) bool
 }
 
 func (f StandardLibraryFunction) ValueDeclarationName() string {
@@ -65,13 +64,6 @@ func (StandardLibraryFunction) ValueDeclarationPosition() ast.Position {
 
 func (StandardLibraryFunction) ValueDeclarationIsConstant() bool {
 	return true
-}
-
-func (f StandardLibraryFunction) ValueDeclarationAvailable(location common.Location) bool {
-	if f.Available == nil {
-		return true
-	}
-	return f.Available(location)
 }
 
 func (f StandardLibraryFunction) ValueDeclarationArgumentLabels() []string {

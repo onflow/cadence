@@ -319,10 +319,6 @@ func (checker *Checker) SetMemoryGauge(gauge common.MemoryGauge) {
 
 func (checker *Checker) declareValue(declaration ValueDeclaration) *Variable {
 
-	if !declaration.ValueDeclarationAvailable(checker.Location) {
-		return nil
-	}
-
 	name := declaration.ValueDeclarationName()
 	variable, err := checker.valueActivations.Declare(variableDeclaration{
 		identifier: name,

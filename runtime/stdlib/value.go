@@ -31,7 +31,6 @@ type StandardLibraryValue struct {
 	DocString    string
 	ValueFactory func(*interpreter.Interpreter) interpreter.Value
 	Kind         common.DeclarationKind
-	Available    func(common.Location) bool
 }
 
 func (v StandardLibraryValue) ValueDeclarationName() string {
@@ -60,13 +59,6 @@ func (StandardLibraryValue) ValueDeclarationPosition() ast.Position {
 
 func (v StandardLibraryValue) ValueDeclarationIsConstant() bool {
 	return v.Kind != common.DeclarationKindVariable
-}
-
-func (v StandardLibraryValue) ValueDeclarationAvailable(location common.Location) bool {
-	if v.Available == nil {
-		return true
-	}
-	return v.Available(location)
 }
 
 func (StandardLibraryValue) ValueDeclarationArgumentLabels() []string {

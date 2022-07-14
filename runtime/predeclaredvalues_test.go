@@ -19,130 +19,107 @@
 package runtime
 
 import (
-	"fmt"
+	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/tests/checker"
+	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestRuntimePredeclaredValues(t *testing.T) {
 
 	t.Parallel()
 
-	// Declare four programs.
-	// Program 0x1 imports 0x2, 0x3, and 0x4.
-	// All programs attempt to call a function 'foo'.
-	// Only predeclare a function 'foo' for 0x2 and 0x4.
-	// Both functions have the same name, but different types.
-
-	address2 := common.MustBytesToAddress([]byte{0x2})
-	address3 := common.MustBytesToAddress([]byte{0x3})
-	address4 := common.MustBytesToAddress([]byte{0x4})
-
-	valueDeclaration1 := ValueDeclaration{
-		Name: "foo",
-		Type: &sema.FunctionType{
-			ReturnTypeAnnotation: &sema.TypeAnnotation{
-				Type: sema.VoidType,
-			},
-		},
-		Kind:           common.DeclarationKindFunction,
-		IsConstant:     true,
-		ArgumentLabels: nil,
-		Available: func(location common.Location) bool {
-			addressLocation, ok := location.(common.AddressLocation)
-			return ok && addressLocation.Address == address2
-		},
-		Value: nil,
+	valueDeclaration := ValueDeclaration{
+		Name:       "foo",
+		Type:       sema.IntType,
+		Kind:       common.DeclarationKindFunction,
+		IsConstant: true,
+		Value:      interpreter.NewUnmeteredIntValueFromInt64(2),
 	}
 
-	valueDeclaration2 := ValueDeclaration{
-		Name: "foo",
-		Type: &sema.FunctionType{
-			Parameters: []*sema.Parameter{
-				{
-					Label:          sema.ArgumentLabelNotRequired,
-					Identifier:     "n",
-					TypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
-				},
-			},
-			ReturnTypeAnnotation: &sema.TypeAnnotation{
-				Type: sema.VoidType,
-			},
-		},
-		Kind:           common.DeclarationKindFunction,
-		IsConstant:     true,
-		ArgumentLabels: nil,
-		Available: func(location common.Location) bool {
-			addressLocation, ok := location.(common.AddressLocation)
-			return ok && addressLocation.Address == address4
-		},
-		Value: nil,
-	}
+	contract := []byte(`
+	  pub contract C {
+	      pub fun foo(): Int {
+	          return foo
+	      }
+	  }
+	`)
 
-	program2 := []byte(`pub contract C2 { pub fun main() { foo() } }`)
-	program3 := []byte(`pub contract C3 { pub fun main() { foo() } }`)
-	program4 := []byte(`pub contract C4 { pub fun main() { foo(1) } }`)
+	script := []byte(`
+	  import C from 0x1
 
-	program1 := []byte(`
-	  import 0x2
-	  import 0x3
-	  import 0x4
-
-	  pub fun main() {
-		  foo()
+	  pub fun main(): Int {
+		  return foo + C.foo()
 	  }
 	`)
 
 	runtime := newTestInterpreterRuntime()
 
+	deploy := utils.DeploymentTransaction("C", contract)
+
+	var accountCode []byte
+	var events []cadence.Event
+
 	runtimeInterface := &testRuntimeInterface{
-		getAccountContractCode: func(address Address, name string) (bytes []byte, err error) {
-			switch address {
-			case address2:
-				return program2, nil
-			case address3:
-				return program3, nil
-			case address4:
-				return program4, nil
-			default:
-				return nil, fmt.Errorf("unknown address: %s", address.ShortHexWithPrefix())
-			}
+		getCode: func(_ Location) (bytes []byte, err error) {
+			return accountCode, nil
+		},
+		storage: newTestLedger(nil, nil),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{common.MustBytesToAddress([]byte{0x1})}, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+			return accountCode, nil
+		},
+		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
+			accountCode = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
 		},
 	}
 
-	_, err := runtime.ExecuteScript(
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(
 		Script{
-			Source: program1,
+			Source: deploy,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			PredeclaredValues: []ValueDeclaration{
+				valueDeclaration,
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	result, err := runtime.ExecuteScript(
+		Script{
+			Source: script,
 		},
 		Context{
 			Interface: runtimeInterface,
 			Location:  common.ScriptLocation{},
 			PredeclaredValues: []ValueDeclaration{
-				valueDeclaration1,
-				valueDeclaration2,
+				valueDeclaration,
 			},
 		},
 	)
+	require.NoError(t, err)
 
-	var checkerErr *sema.CheckerError
-	require.ErrorAs(t, err, &checkerErr)
-
-	errs := checker.ExpectCheckerErrors(t, err, 2)
-
-	// The illegal use of 'foo' in 0x3 should be reported
-
-	var importedProgramError *sema.ImportedProgramError
-	require.ErrorAs(t, errs[0], &importedProgramError)
-	//require.Equal(t, location3, importedProgramError.ImportLocation)
-	importedErrs := checker.ExpectCheckerErrors(t, importedProgramError.Err, 1)
-	require.IsType(t, &sema.NotDeclaredError{}, importedErrs[0])
-
-	// The illegal use of 'foo' in 0x1 should be reported
-
-	require.IsType(t, &sema.NotDeclaredError{}, errs[1])
+	require.Equal(t,
+		cadence.Int{Value: big.NewInt(4)},
+		result,
+	)
 }

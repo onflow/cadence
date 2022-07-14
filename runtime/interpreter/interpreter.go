@@ -1433,10 +1433,6 @@ func (interpreter *Interpreter) visitCondition(condition *ast.Condition) {
 
 func (interpreter *Interpreter) declareValue(declaration ValueDeclaration) *Variable {
 
-	if !declaration.ValueDeclarationAvailable(interpreter.Location) {
-		return nil
-	}
-
 	return interpreter.declareVariable(
 		declaration.ValueDeclarationName(),
 		declaration.ValueDeclarationValue(interpreter),
