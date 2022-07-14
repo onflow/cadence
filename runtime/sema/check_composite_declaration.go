@@ -1154,6 +1154,12 @@ func (checker *Checker) memberSatisfied(compositeMember, interfaceMember *Member
 				return false
 			}
 
+			// Functions are covariant in their purity
+
+			if compositeMemberFunctionType.Purity != interfaceMemberFunctionType.Purity && compositeMemberFunctionType.Purity != PureFunction {
+				return false
+			}
+
 			// Functions are invariant in their parameter types
 
 			for i, subParameter := range compositeMemberFunctionType.Parameters {
