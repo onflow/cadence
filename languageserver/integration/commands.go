@@ -35,36 +35,33 @@ const (
 	CommandDeployContract      = "cadence.server.flow.deployContract"
 	CommandCreateAccount       = "cadence.server.flow.createAccount"
 	CommandSwitchActiveAccount = "cadence.server.flow.switchActiveAccount"
-
-	ErrorMessageServiceAccount   = "service account error"
-	ErrorMessageTransactionError = "transaction error"
-	ErrorMessageAccountCreate    = "create account error"
-	ErrorMessageDeploy           = "deployment error"
-	ErrorMessageScriptExecution  = "script error"
-	ErrorMessageArguments        = "arguments error"
 )
 
-func (i *FlowIntegration) commands() []server.Command {
+type commands struct {
+	client flowClient
+}
+
+func (c *commands) getAll() []server.Command {
 	return []server.Command{
 		{
 			Name:    CommandSendTransaction,
-			Handler: i.sendTransaction,
+			Handler: c.sendTransaction,
 		},
 		{
 			Name:    CommandExecuteScript,
-			Handler: i.executeScript,
+			Handler: c.executeScript,
 		},
 		{
 			Name:    CommandDeployContract,
-			Handler: i.deployContract,
+			Handler: c.deployContract,
 		},
 		{
 			Name:    CommandSwitchActiveAccount,
-			Handler: i.switchActiveAccount,
+			Handler: c.switchActiveAccount,
 		},
 		{
 			Name:    CommandCreateAccount,
-			Handler: i.createAccount,
+			Handler: c.createAccount,
 		},
 	}
 }
@@ -75,49 +72,27 @@ func (i *FlowIntegration) commands() []server.Command {
 // There should be exactly 2 arguments:
 //   * the DocumentURI of the file to submit
 //   * the arguments, encoded as JSON-CDC
-func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...json.RawMessage) (interface{}, error) {
+func (c *commands) sendTransaction(conn protocol.Conn, args ...json.RawMessage) (interface{}, error) {
 	err := server.CheckCommandArgumentCount(args, 3)
 	if err != nil {
-		return nil, errorWithMessage(conn, ErrorMessageArguments, err)
+		return nil, fmt.Errorf("arguments error: %w", err)
 	}
 
-	var uri string
-	err = json.Unmarshal(args[0], &uri)
+	location, err := parseLocation(args[0])
 	if err != nil {
-		return nil, errorWithMessage(
-			conn,
-			ErrorMessageArguments,
-			fmt.Errorf("invalid URI argument: %#+v: %w", args[0], err),
-		)
-	}
-
-	location, err := url.Parse(uri)
-	if err != nil {
-		return nil, errorWithMessage(
-			conn,
-			ErrorMessageArguments,
-			fmt.Errorf("invalid path argument: %#+v", uri),
-		)
+		return nil, err
 	}
 
 	var argsJSON string
 	err = json.Unmarshal(args[1], &argsJSON)
 	if err != nil {
-		return nil, errorWithMessage(
-			conn,
-			ErrorMessageArguments,
-			fmt.Errorf("invalid arguments: %#+v: %w", args[1], err),
-		)
+		return nil, fmt.Errorf("invalid arguments: %#+v: %w", args[1], err)
 	}
 
 	var signerList []any
 	err = json.Unmarshal(args[2], &argsJSON)
 	if err != nil {
-		return nil, errorWithMessage(
-			conn,
-			ErrorMessageArguments,
-			fmt.Errorf("invalid signer list: %#+v: %w", args[2], err),
-		)
+		return nil, fmt.Errorf("invalid signer list: %#+v: %w", args[2], err)
 	}
 
 	signers := make([]flow.Address, len(signerList))
@@ -130,13 +105,12 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...json.RawMe
 		return nil, fmt.Errorf("failed to parse JSON arguments")
 	}
 
-	txResult, err := i.client.SendTransaction(signers, location, txArgs)
+	txResult, err := c.client.SendTransaction(signers, location, txArgs)
 	if err != nil {
-		return nil, errorWithMessage(conn, ErrorMessageTransactionError, err)
+		return nil, fmt.Errorf("transaction error: %w", err)
 	}
 
-	showMessage(conn, fmt.Sprintf("Transaction status: %s", txResult.Status.String()))
-	return nil, err
+	return fmt.Sprintf("Transaction status: %s", txResult.Status.String()), err
 }
 
 // executeScript handles executing a script defined in the source document.
@@ -144,57 +118,34 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...json.RawMe
 // There should be exactly 2 arguments:
 //   * the DocumentURI of the file to submit
 //   * the arguments, encoded as JSON-CDC
-func (i *FlowIntegration) executeScript(conn protocol.Conn, args ...json.RawMessage) (interface{}, error) {
+func (c *commands) executeScript(conn protocol.Conn, args ...json.RawMessage) (interface{}, error) {
 	err := server.CheckCommandArgumentCount(args, 2)
 	if err != nil {
-		return nil, errorWithMessage(conn, ErrorMessageArguments, err)
+		return nil, fmt.Errorf("arguments error: %w", err)
 	}
 
-	var uri string
-	err = json.Unmarshal(args[0], &uri)
+	location, err := parseLocation(args[0])
 	if err != nil {
-		return nil, errorWithMessage(
-			conn,
-			ErrorMessageArguments,
-			fmt.Errorf("invalid URI argument: %#+v: %w", args[0], err),
-		)
-	}
-
-	path, pathError := url.Parse(uri)
-	if pathError != nil {
-		return nil, errorWithMessage(
-			conn,
-			ErrorMessageArguments,
-			fmt.Errorf("invalid path argument: %#+v", uri),
-		)
+		return nil, err
 	}
 
 	var argsJSON string
 	err = json.Unmarshal(args[1], &argsJSON)
 	if err != nil {
-		return nil, errorWithMessage(
-			conn,
-			ErrorMessageArguments,
-			fmt.Errorf("invalid arguments: %#+v: %w", args[1], err),
-		)
+		return nil, fmt.Errorf("invalid arguments: %#+v: %w", args[1], err)
 	}
 
 	scriptArgs, err := flowkit.ParseArgumentsJSON(argsJSON)
 	if err != nil {
-		return nil, errorWithMessage(
-			conn,
-			ErrorMessageScriptExecution,
-			fmt.Errorf("arguments error: %w", err),
-		)
+		return nil, fmt.Errorf("arguments error: %w", err)
 	}
 
-	scriptResult, err := i.client.ExecuteScript(path, scriptArgs)
+	scriptResult, err := c.client.ExecuteScript(location, scriptArgs)
 	if err != nil {
-		return nil, errorWithMessage(conn, ErrorMessageScriptExecution, err)
+		return nil, fmt.Errorf("script error: %w", err)
 	}
 
-	showMessage(conn, fmt.Sprintf("Result: %s", scriptResult.String()))
-	return nil, nil
+	return fmt.Sprintf("Result: %s", scriptResult.String()), nil
 }
 
 // switchActiveAccount sets the account that is currently active and could be used
@@ -202,35 +153,31 @@ func (i *FlowIntegration) executeScript(conn protocol.Conn, args ...json.RawMess
 //
 // There should be 2 arguments:
 //	 * name of the new active account
-func (i *FlowIntegration) switchActiveAccount(conn protocol.Conn, args ...json.RawMessage) (interface{}, error) {
+func (c *commands) switchActiveAccount(conn protocol.Conn, args ...json.RawMessage) (interface{}, error) {
 	err := server.CheckCommandArgumentCount(args, 2)
 	if err != nil {
-		return nil, errorWithMessage(conn, ErrorMessageArguments, err)
+		return nil, fmt.Errorf("arguments error: %w", err)
 	}
 
 	var name string
 	err = json.Unmarshal(args[0], &name)
 	if err != nil {
-		return nil, errorWithMessage(
-			conn,
-			ErrorMessageArguments,
-			fmt.Errorf("invalid name argument: %#+v: %w", args[0], err),
-		)
+		return nil, fmt.Errorf("invalid name argument: %#+v: %w", args[0], err)
 	}
 
-	err = i.client.SetActiveClientAccount(name)
+	err = c.client.SetActiveClientAccount(name)
 	if err != nil {
 		return nil, err
 	}
 
-	return nil, nil
+	return fmt.Sprintf("Account switched to %s", name), nil
 }
 
 // createAccount creates a new account and returns its address.
-func (i *FlowIntegration) createAccount(conn protocol.Conn, args ...json.RawMessage) (interface{}, error) {
-	account, err := i.client.CreateAccount()
+func (c *commands) createAccount(conn protocol.Conn, args ...json.RawMessage) (interface{}, error) {
+	account, err := c.client.CreateAccount()
 	if err != nil {
-		return nil, errorWithMessage(conn, ErrorMessageAccountCreate, err)
+		return nil, fmt.Errorf("create account error: %w", err)
 	}
 
 	return account, nil
@@ -242,79 +189,49 @@ func (i *FlowIntegration) createAccount(conn protocol.Conn, args ...json.RawMess
 // There should be exactly 2 arguments:
 //   * the DocumentURI of the file to submit
 //   * the name of the contract
-func (i *FlowIntegration) deployContract(conn protocol.Conn, args ...json.RawMessage) (interface{}, error) {
+func (c *commands) deployContract(conn protocol.Conn, args ...json.RawMessage) (interface{}, error) {
 	err := server.CheckCommandArgumentCount(args, 3)
 	if err != nil {
-		return flow.Address{}, errorWithMessage(conn, ErrorMessageServiceAccount, err)
+		return flow.Address{}, fmt.Errorf("arguments error: %w", err)
 	}
 
-	var uri string
-	err = json.Unmarshal(args[0], &uri)
+	location, err := parseLocation(args[0])
 	if err != nil {
-		return nil, errorWithMessage(
-			conn,
-			ErrorMessageArguments,
-			fmt.Errorf("invalid URI argument: %#+v: %w", args[0], err),
-		)
-	}
-
-	location, pathError := url.Parse(uri)
-	if pathError != nil {
-		return nil, errorWithMessage(
-			conn,
-			ErrorMessageArguments,
-			fmt.Errorf("invalid path argument: %#+v", uri),
-		)
+		return nil, err
 	}
 
 	var name string
 	err = json.Unmarshal(args[1], &name)
 	if err != nil {
-		return nil, errorWithMessage(
-			conn, ErrorMessageArguments,
-			fmt.Errorf("invalid name argument: %#+v: %w", args[1], err),
-		)
+		return nil, fmt.Errorf("invalid name argument: %#+v: %w", args[1], err)
 	}
 
 	var rawAddress string
 	err = json.Unmarshal(args[2], &rawAddress)
 	if err != nil {
-		return nil, errorWithMessage(
-			conn, ErrorMessageArguments,
-			fmt.Errorf("invalid address argument: %#+v: %w", args[2], err),
-		)
+		return nil, fmt.Errorf("invalid address argument: %#+v: %w", args[2], err)
 	}
 	address := flow.HexToAddress(rawAddress)
 
-	showMessage(conn, fmt.Sprintf("Deploying contract %s to account %s", name, rawAddress))
-
-	_, deployError := i.client.DeployContract(address, name, location)
+	_, deployError := c.client.DeployContract(address, name, location)
 	if deployError != nil {
-		return nil, errorWithMessage(conn, ErrorMessageDeploy, deployError)
+		return nil, fmt.Errorf("error deploying contract: %w", deployError)
 	}
 
-	showMessage(conn, fmt.Sprintf("Status: contract %s has been deployed to %s", name, rawAddress))
-	return nil, err
+	return fmt.Sprintf("Status: contract %s has been deployed to %s", name, rawAddress), err
 }
 
-// showMessage sends a "show message" notification
-func showMessage(conn protocol.Conn, message string) {
-	conn.ShowMessage(&protocol.ShowMessageParams{
-		Type:    protocol.Info,
-		Message: message,
-	})
-}
+func parseLocation(arg []byte) (*url.URL, error) {
+	var uri string
+	err := json.Unmarshal(arg, &uri)
+	if err != nil {
+		return nil, fmt.Errorf("invalid URI argument: %#+v: %w", arg, err)
+	}
 
-// showMessage sends a "show error" notification
-func showError(conn protocol.Conn, errorMessage string) {
-	conn.ShowMessage(&protocol.ShowMessageParams{
-		Type:    protocol.Error,
-		Message: errorMessage,
-	})
-}
+	location, err := url.Parse(uri)
+	if err != nil {
+		return nil, fmt.Errorf("invalid path argument: %#+v", uri)
+	}
 
-func errorWithMessage(conn protocol.Conn, prefix string, err error) error {
-	errorMessage := fmt.Sprintf("%s: %#+v", prefix, err)
-	showError(conn, errorMessage)
-	return fmt.Errorf("%s", errorMessage)
+	return location, nil
 }
