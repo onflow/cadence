@@ -321,14 +321,13 @@ describe("script execution", () => {
 
   test("script executes and result is returned", async() => {
     await withConnection(async (connection) => {
-
       const resultPromise = new Promise<ShowMessageParams>(res =>
           connection.onNotification(ShowMessageNotification.type, res)
       )
 
       await connection.sendRequest(ExecuteCommandRequest.type, {
         command: "cadence.server.flow.executeScript",
-        arguments: ["file:///Users/dapper/Dev/cadence/languageserver/test/script.cdc", "[]"]
+        arguments: [`file://${__dirname}/script.cdc`, "[]"]
       })
 
       const result = await resultPromise
