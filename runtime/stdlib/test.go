@@ -20,7 +20,6 @@ package stdlib
 
 import (
 	"fmt"
-
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
@@ -244,14 +243,53 @@ var blockchainExecuteScriptFunctionType = &sema.FunctionType{
 
 var blockchainExecuteScriptFunction = interpreter.NewUnmeteredHostFunctionValue(
 	func(invocation interpreter.Invocation) interpreter.Value {
-		script, ok := invocation.Arguments[0].(*interpreter.StringValue)
+		scriptString, ok := invocation.Arguments[0].(*interpreter.StringValue)
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
 
-		fmt.Println("executing script... \n", script)
+		// Strip off the starting and ending double quotes
+		script := scriptString.String()
+		script = script[1 : len(script)-1]
 
-		return interpreter.VoidValue{}
+		var result interpreter.ScriptResult
+
+		testFramework := invocation.Interpreter.TestFramework
+		if testFramework != nil {
+			result = testFramework.RunScript(script)
+		} else {
+			panic(interpreter.TestFrameworkNotProvidedError{})
+		}
+
+		err := result.Error
+		if err != nil {
+			// TODO: Revisit this logic
+			if errors.IsUserError(err) {
+				panic(TestFailedError{
+					Err: err,
+				})
+			} else {
+				panic(err)
+			}
+		}
+
+		return result.Value
 	},
 	blockchainExecuteScriptFunctionType,
 )
+
+type TestFailedError struct {
+	Err error
+}
+
+var _ errors.UserError = TestFailedError{}
+
+func (TestFailedError) IsUserError() {}
+
+func (e TestFailedError) Unwrap() error {
+	return e.Err
+}
+
+func (e TestFailedError) Error() string {
+	return fmt.Sprintf("test failed: %s", e.Err.Error())
+}

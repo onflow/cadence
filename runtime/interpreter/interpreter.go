@@ -363,6 +363,7 @@ type Interpreter struct {
 	resourceVariables                    map[ResourceKindedValue]*Variable
 	memoryGauge                          common.MemoryGauge
 	CallStack                            *CallStack
+	TestFramework                        TestFramework
 }
 
 var _ common.MemoryGauge = &Interpreter{}
@@ -685,6 +686,15 @@ func WithDebugger(debugger *Debugger) Option {
 	}
 }
 
+// WithTestFramework returns an interpreter option which sets the given debugger
+//
+func WithTestFramework(testFramework TestFramework) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetTestFramework(testFramework)
+		return nil
+	}
+}
+
 // Create a base-activation so that it can be reused across all interpreters.
 //
 var baseActivation = func() *VariableActivation {
@@ -911,6 +921,12 @@ func (interpreter *Interpreter) setTypeCodes(typeCodes TypeCodes) {
 //
 func (interpreter *Interpreter) SetDebugger(debugger *Debugger) {
 	interpreter.debugger = debugger
+}
+
+// SetTestFramework sets the test framework to be used for running tests.
+//
+func (interpreter *Interpreter) SetTestFramework(testFramework TestFramework) {
+	interpreter.TestFramework = testFramework
 }
 
 // locationRangeGetter returns a function that returns the location range

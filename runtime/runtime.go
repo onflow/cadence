@@ -944,7 +944,7 @@ func validateArgumentParams(
 		var arg interpreter.Value
 		panicError := userPanicToError(func() {
 			// if importing an invalid public key, this call panics
-			arg, err = importValue(
+			arg, err = ImportValue(
 				inter,
 				getLocationRange,
 				value,

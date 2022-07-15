@@ -66,8 +66,8 @@ func TestBlockchain(t *testing.T) {
 
 	script := `
         pub fun main() {
-          var bc = Test.Blockchain()
-          bc.executeScript("pub fun foo() {}")
+            var bc = Test.Blockchain()
+            bc.executeScript("pub fun foo() {}")
         }
     `
 

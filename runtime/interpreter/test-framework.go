@@ -19,14 +19,27 @@
  *
  */
 
-package runtime
+package interpreter
 
-import "github.com/onflow/cadence/runtime/interpreter"
+import (
+	"github.com/onflow/cadence/runtime/errors"
+)
 
-type Network interface {
-	RunScript(code string) Result
+type TestFramework interface {
+	RunScript(code string) ScriptResult
 }
 
-type Result struct {
-	value interpreter.Value
+type ScriptResult struct {
+	Value Value
+	Error error
+}
+
+type TestFrameworkNotProvidedError struct{}
+
+var _ errors.InternalError = TestFrameworkNotProvidedError{}
+
+func (TestFrameworkNotProvidedError) IsInternalError() {}
+
+func (e TestFrameworkNotProvidedError) Error() string {
+	return "test framework not provided"
 }
