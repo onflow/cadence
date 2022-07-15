@@ -1101,7 +1101,7 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 	}
 
 	if storeProgram {
-		context.SetCode(context.Location, string(code))
+		context.SetCode(context.Location, code)
 	}
 
 	memoryGauge, _ := context.Interface.(common.MemoryGauge)
@@ -2639,7 +2639,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 				// Update the code for the error pretty printing
 				// NOTE: only do this when an error occurs
 
-				context.SetCode(context.Location, string(code))
+				context.SetCode(context.Location, code)
 
 				panic(&InvalidContractDeploymentError{
 					Err:           err,
@@ -2668,7 +2668,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 				// Update the code for the error pretty printing
 				// NOTE: only do this when an error occurs
 
-				context.SetCode(context.Location, string(code))
+				context.SetCode(context.Location, code)
 
 				panic(&InvalidContractDeploymentError{
 					Err:           err,
@@ -2718,7 +2718,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 				// Update the code for the error pretty printing
 				// NOTE: only do this when an error occurs
 
-				context.SetCode(context.Location, string(code))
+				context.SetCode(context.Location, code)
 
 				panic(runtimeErrors.NewDefaultUserError(
 					"invalid %s: the code must declare exactly one contract or contract interface",
@@ -2733,7 +2733,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 				// Update the code for the error pretty printing
 				// NOTE: only do this when an error occurs
 
-				context.SetCode(context.Location, string(code))
+				context.SetCode(context.Location, code)
 
 				panic(runtimeErrors.NewDefaultUserError(
 					"invalid %s: the name argument must match the name of the declaration: got %q, expected %q",
@@ -2789,7 +2789,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 				// Update the code for the error pretty printing
 				// NOTE: only do this when an error occurs
 
-				context.SetCode(context.Location, string(code))
+				context.SetCode(context.Location, code)
 
 				panic(err)
 			}
