@@ -57,7 +57,8 @@ func NewFlowIntegration(s *server.Server, enableFlowClient bool) (*FlowIntegrati
 			server.WithAddressContractNamesResolver(resolve.addressContractNames),
 		)
 
-		for _, command := range integration.commands() {
+		comm := commands{client: client}
+		for _, command := range comm.getAll() {
 			options = append(options, server.WithCommand(command))
 		}
 	}
