@@ -57,7 +57,7 @@ var testCompositeValueType = &sema.CompositeType{
 	Location:   utils.TestLocation,
 	Identifier: "Test",
 	Kind:       common.CompositeKindStructure,
-	Members:    sema.NewStringMemberOrderedMap(),
+	Members:    &sema.StringMemberOrderedMap{},
 }
 
 func getMeterCompFuncWithExpectedKinds(
@@ -3636,7 +3636,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 
 		storage := newUnmeteredInMemoryStorage()
 
-		members := sema.NewStringMemberOrderedMap()
+		members := &sema.StringMemberOrderedMap{}
 
 		compositeType := &sema.CompositeType{
 			Location:   utils.TestLocation,

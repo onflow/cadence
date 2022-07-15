@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+import getRandomValues from 'get-random-values';
+
 const encoder = new TextEncoder("utf-8");
 const decoder = new TextDecoder("utf-8");
 
@@ -267,7 +269,7 @@ class Go {
 				// func getRandomData(r []byte)
 				"runtime.getRandomData": (sp) => {
 					sp >>>= 0;
-					crypto.getRandomValues(loadSlice(sp + 8));
+					getRandomValues(loadSlice(sp + 8));
 				},
 
 				// func finalizeRef(v ref)

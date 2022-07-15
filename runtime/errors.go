@@ -39,10 +39,17 @@ type Error struct {
 }
 
 func newError(err error, context Context) Error {
+	codes := make(map[common.Location]string, len(context.codes))
+
+	// Regardless of iteration order, the final result will be the same.
+	for location, code := range context.codes { //nolint:maprangecheck
+		codes[location] = string(code)
+	}
+
 	return Error{
 		Err:      err,
 		Location: context.Location,
-		Codes:    context.codes,
+		Codes:    codes,
 		Programs: context.programs,
 	}
 }

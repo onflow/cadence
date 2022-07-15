@@ -6733,7 +6733,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 		Location:   TestLocation,
 		Identifier: "S",
 		Kind:       common.CompositeKindStructure,
-		Members:    sema.NewStringMemberOrderedMap(),
+		Members:    &sema.StringMemberOrderedMap{},
 	}
 
 	storage := newUnmeteredInMemoryStorage()

@@ -1055,7 +1055,7 @@ func newCompositeValue(
 		Kind:       kind,
 	}
 
-	compositeType.Members = sema.NewStringMemberOrderedMap()
+	compositeType.Members = &sema.StringMemberOrderedMap{}
 	for _, field := range fields {
 		compositeType.Members.Set(
 			field.Name,
@@ -1521,7 +1521,7 @@ func randomCompositeValue(
 		Kind:       kind,
 	}
 
-	compositeType.Members = sema.NewStringMemberOrderedMap()
+	compositeType.Members = &sema.StringMemberOrderedMap{}
 	for _, field := range fields {
 		compositeType.Members.Set(
 			field.Name,

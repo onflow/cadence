@@ -106,7 +106,7 @@ This contract expands on the `BasicNFT` we looked at by adding:
 2. An `NFTReceiver` interface that exposes three functions for the collection
 3. Declares a resource called `Collection` that implements the `NFTReceiver` interface
 4. The `Collection` will declare fields and functions to interact with it,
-including `ownedNFTs`,`init()`, `withdraw()`,`destroy()`, and other important functions
+including `ownedNFTs`, `init()`, `withdraw()`, `destroy()`, and other important functions
 5. Next, the contract declares functions that create a new NFT (`mintNFT()`) and an empty collection (`createEmptyCollection()`)
 7. Finally, the contract declares an `init()` function that initializes the path fields,
 creates an empty collection as well as a reference to it,
@@ -128,7 +128,7 @@ It contains what was already in `BasicNFT.cdc` plus additional resource declarat
 // ExampleNFT.cdc
 //
 // This is a complete version of the ExampleNFT contract
-// that includes withdraw and deposit functionality, as well as a
+// that includes withdraw and deposit functionalities, as well as a
 // collection resource that can be used to bundle NFTs together.
 //
 // Learn more about non-fungible tokens in this tutorial: https://docs.onflow.org/docs/non-fungible-tokens
@@ -517,10 +517,10 @@ pub fun main() {
 
 ```
 
-You should see that account `0x01` owns the NFT with `id=1`
+You should see that account `0x01` owns the NFT with `id = 1`
 
 ```
-"Account 2 NFTs"
+"Account 1 NFTs"
 [1]
 ```
 
