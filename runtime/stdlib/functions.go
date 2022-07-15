@@ -42,7 +42,7 @@ func (f StandardLibraryFunction) ValueDeclarationName() string {
 	return f.Name
 }
 
-func (f StandardLibraryFunction) ValueDeclarationValue(_ *interpreter.Interpreter) interpreter.Value {
+func (f StandardLibraryFunction) ValueDeclarationValue() interpreter.Value {
 	return f.Function
 }
 
@@ -102,14 +102,6 @@ type StandardLibraryFunctions []StandardLibraryFunction
 
 func (functions StandardLibraryFunctions) ToSemaValueDeclarations() []sema.ValueDeclaration {
 	valueDeclarations := make([]sema.ValueDeclaration, len(functions))
-	for i, function := range functions {
-		valueDeclarations[i] = function
-	}
-	return valueDeclarations
-}
-
-func (functions StandardLibraryFunctions) ToInterpreterValueDeclarations() []interpreter.ValueDeclaration {
-	valueDeclarations := make([]interpreter.ValueDeclaration, len(functions))
 	for i, function := range functions {
 		valueDeclarations[i] = function
 	}

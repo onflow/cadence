@@ -56,24 +56,20 @@ func testAccount(
 	// `authAccount`
 
 	authAccountValueDeclaration := stdlib.StandardLibraryValue{
-		Name: "authAccount",
-		Type: sema.AuthAccountType,
-		ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
-			return newTestAuthAccountValue(inter, address)
-		},
-		Kind: common.DeclarationKindConstant,
+		Name:  "authAccount",
+		Type:  sema.AuthAccountType,
+		Value: newTestAuthAccountValue(nil, address),
+		Kind:  common.DeclarationKindConstant,
 	}
 	valueDeclarations = append(valueDeclarations, authAccountValueDeclaration)
 
 	// `pubAccount`
 
 	pubAccountValueDeclaration := stdlib.StandardLibraryValue{
-		Name: "pubAccount",
-		Type: sema.PublicAccountType,
-		ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
-			return newTestPublicAccountValue(inter, address)
-		},
-		Kind: common.DeclarationKindConstant,
+		Name:  "pubAccount",
+		Type:  sema.PublicAccountType,
+		Value: newTestPublicAccountValue(nil, address),
+		Kind:  common.DeclarationKindConstant,
 	}
 	valueDeclarations = append(valueDeclarations, pubAccountValueDeclaration)
 
@@ -89,6 +85,12 @@ func testAccount(
 	accountValueDeclaration.Name = "account"
 	valueDeclarations = append(valueDeclarations, accountValueDeclaration)
 
+	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+
+	for _, valueDeclaration := range valueDeclarations {
+		baseActivation.Declare(valueDeclaration)
+	}
+
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		code,
 		ParseCheckAndInterpretOptions{
@@ -96,7 +98,7 @@ func testAccount(
 				sema.WithPredeclaredValues(valueDeclarations.ToSemaValueDeclarations()),
 			},
 			Options: []interpreter.Option{
-				interpreter.WithPredeclaredValues(valueDeclarations.ToInterpreterValueDeclarations()),
+				interpreter.WithBaseActivation(baseActivation),
 				makeContractValueHandler(nil, nil, nil),
 			},
 		},

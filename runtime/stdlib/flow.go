@@ -213,7 +213,7 @@ var FlowDefaultPredeclaredTypes = append(
 
 func FlowDefaultPredeclaredValues(impls FlowBuiltinImpls) (
 	[]sema.ValueDeclaration,
-	[]interpreter.ValueDeclaration,
+	[]StandardLibraryFunction,
 ) {
 	functionDeclarations := append(
 		FlowBuiltInFunctions(impls),
@@ -224,10 +224,7 @@ func FlowDefaultPredeclaredValues(impls FlowBuiltinImpls) (
 			functionDeclarations.ToSemaValueDeclarations(),
 			BuiltinValues.ToSemaValueDeclarations()...,
 		),
-		append(
-			functionDeclarations.ToInterpreterValueDeclarations(),
-			BuiltinValues.ToInterpreterValueDeclarations()...,
-		)
+		functionDeclarations
 }
 
 // Flow location

@@ -178,10 +178,8 @@ var blsContractValue = interpreter.NewSimpleCompositeValue(
 )
 
 var blsContract = StandardLibraryValue{
-	Name: "BLS",
-	Type: blsContractType,
-	ValueFactory: func(_ *interpreter.Interpreter) interpreter.Value {
-		return blsContractValue
-	},
-	Kind: common.DeclarationKindContract,
+	Name:  "BLS",
+	Type:  blsContractType,
+	Value: blsContractValue,
+	Kind:  common.DeclarationKindContract,
 }

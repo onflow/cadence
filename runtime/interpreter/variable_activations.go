@@ -113,6 +113,17 @@ func (a *VariableActivation) Set(name string, value *Variable) {
 	a.entries[name] = value
 }
 
+func (a *VariableActivation) Declare(declaration ValueDeclaration) {
+
+	value := declaration.ValueDeclarationValue()
+	variable := NewVariableWithValue(a.memoryGauge, value)
+
+	a.Set(
+		declaration.ValueDeclarationName(),
+		variable,
+	)
+}
+
 // VariableActivations is a stack of activation records.
 // Each entry represents a new activation record.
 //

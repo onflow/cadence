@@ -20,5 +20,5 @@ package interpreter
 
 type ValueDeclaration interface {
 	ValueDeclarationName() string
-	ValueDeclarationValue(interpreter *Interpreter) Value
+	ValueDeclarationValue() Value
 }

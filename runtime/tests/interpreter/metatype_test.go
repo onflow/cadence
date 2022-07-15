@@ -119,21 +119,21 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 
 		t.Parallel()
 
-		valueDeclarations := stdlib.StandardLibraryValues{
-			{
-				Name: "unknownType",
-				Type: sema.MetaType,
-				ValueFactory: func(i *interpreter.Interpreter) interpreter.Value {
-					return interpreter.TypeValue{
-						Type: nil,
-					}
-				},
-				Kind: common.DeclarationKindConstant,
+		unknownType := stdlib.StandardLibraryValue{
+			Name: "unknownType",
+			Type: sema.MetaType,
+			Value: interpreter.TypeValue{
+				Type: nil,
 			},
+			Kind: common.DeclarationKindConstant,
 		}
 
-		semaValueDeclarations := valueDeclarations.ToSemaValueDeclarations()
-		interpreterValueDeclarations := valueDeclarations.ToInterpreterValueDeclarations()
+		valueDeclarations := []sema.ValueDeclaration{
+			unknownType,
+		}
+
+		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+		baseActivation.Declare(unknownType)
 
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
@@ -141,10 +141,10 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
             `,
 			ParseCheckAndInterpretOptions{
 				CheckerOptions: []sema.Option{
-					sema.WithPredeclaredValues(semaValueDeclarations),
+					sema.WithPredeclaredValues(valueDeclarations),
 				},
 				Options: []interpreter.Option{
-					interpreter.WithPredeclaredValues(interpreterValueDeclarations),
+					interpreter.WithBaseActivation(baseActivation),
 				},
 			},
 		)
@@ -166,27 +166,27 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 			{
 				Name: "unknownType1",
 				Type: sema.MetaType,
-				ValueFactory: func(i *interpreter.Interpreter) interpreter.Value {
-					return interpreter.TypeValue{
-						Type: nil,
-					}
+				Value: interpreter.TypeValue{
+					Type: nil,
 				},
 				Kind: common.DeclarationKindConstant,
 			},
 			{
 				Name: "unknownType2",
 				Type: sema.MetaType,
-				ValueFactory: func(i *interpreter.Interpreter) interpreter.Value {
-					return interpreter.TypeValue{
-						Type: nil,
-					}
+				Value: interpreter.TypeValue{
+					Type: nil,
 				},
 				Kind: common.DeclarationKindConstant,
 			},
 		}
 
 		semaValueDeclarations := valueDeclarations.ToSemaValueDeclarations()
-		interpreterValueDeclarations := valueDeclarations.ToInterpreterValueDeclarations()
+
+		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+		for _, valueDeclaration := range valueDeclarations {
+			baseActivation.Declare(valueDeclaration)
+		}
 
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
@@ -197,7 +197,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 					sema.WithPredeclaredValues(semaValueDeclarations),
 				},
 				Options: []interpreter.Option{
-					interpreter.WithPredeclaredValues(interpreterValueDeclarations),
+					interpreter.WithBaseActivation(baseActivation),
 				},
 			},
 		)
@@ -260,17 +260,19 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 			{
 				Name: "unknownType",
 				Type: sema.MetaType,
-				ValueFactory: func(i *interpreter.Interpreter) interpreter.Value {
-					return interpreter.TypeValue{
-						Type: nil,
-					}
+				Value: interpreter.TypeValue{
+					Type: nil,
 				},
 				Kind: common.DeclarationKindConstant,
 			},
 		}
 
 		semaValueDeclarations := valueDeclarations.ToSemaValueDeclarations()
-		interpreterValueDeclarations := valueDeclarations.ToInterpreterValueDeclarations()
+
+		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+		for _, valueDeclaration := range valueDeclarations {
+			baseActivation.Declare(valueDeclaration)
+		}
 
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
@@ -281,7 +283,7 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 					sema.WithPredeclaredValues(semaValueDeclarations),
 				},
 				Options: []interpreter.Option{
-					interpreter.WithPredeclaredValues(interpreterValueDeclarations),
+					interpreter.WithBaseActivation(baseActivation),
 				},
 			},
 		)
@@ -389,17 +391,19 @@ func TestInterpretIsInstance(t *testing.T) {
 		{
 			Name: "unknownType",
 			Type: sema.MetaType,
-			ValueFactory: func(i *interpreter.Interpreter) interpreter.Value {
-				return interpreter.TypeValue{
-					Type: nil,
-				}
+			Value: interpreter.TypeValue{
+				Type: nil,
 			},
 			Kind: common.DeclarationKindConstant,
 		},
 	}
 
 	semaValueDeclarations := valueDeclarations.ToSemaValueDeclarations()
-	interpreterValueDeclarations := valueDeclarations.ToInterpreterValueDeclarations()
+
+	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+	for _, valueDeclaration := range valueDeclarations {
+		baseActivation.Declare(valueDeclaration)
+	}
 
 	for _, testCase := range cases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -408,7 +412,7 @@ func TestInterpretIsInstance(t *testing.T) {
 					sema.WithPredeclaredValues(semaValueDeclarations),
 				},
 				Options: []interpreter.Option{
-					interpreter.WithPredeclaredValues(interpreterValueDeclarations),
+					interpreter.WithBaseActivation(baseActivation),
 				},
 			})
 			require.NoError(t, err)
@@ -530,17 +534,19 @@ func TestInterpretIsSubtype(t *testing.T) {
 		{
 			Name: "unknownType",
 			Type: sema.MetaType,
-			ValueFactory: func(_ *interpreter.Interpreter) interpreter.Value {
-				return interpreter.TypeValue{
-					Type: nil,
-				}
+			Value: interpreter.TypeValue{
+				Type: nil,
 			},
 			Kind: common.DeclarationKindConstant,
 		},
 	}
 
 	semaValueDeclarations := valueDeclarations.ToSemaValueDeclarations()
-	interpreterValueDeclarations := valueDeclarations.ToInterpreterValueDeclarations()
+
+	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+	for _, valueDeclaration := range valueDeclarations {
+		baseActivation.Declare(valueDeclaration)
+	}
 
 	for _, testCase := range cases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -549,7 +555,7 @@ func TestInterpretIsSubtype(t *testing.T) {
 					sema.WithPredeclaredValues(semaValueDeclarations),
 				},
 				Options: []interpreter.Option{
-					interpreter.WithPredeclaredValues(interpreterValueDeclarations),
+					interpreter.WithBaseActivation(baseActivation),
 				},
 			})
 			require.NoError(t, err)
@@ -709,7 +715,11 @@ func TestInterpretGetType(t *testing.T) {
 				}
 
 			valueDeclarations := standardLibraryFunctions.ToSemaValueDeclarations()
-			values := standardLibraryFunctions.ToInterpreterValueDeclarations()
+
+			baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+			for _, valueDeclaration := range standardLibraryFunctions {
+				baseActivation.Declare(valueDeclaration)
+			}
 
 			storage := newUnmeteredInMemoryStorage()
 
@@ -721,7 +731,7 @@ func TestInterpretGetType(t *testing.T) {
 					},
 					Options: []interpreter.Option{
 						interpreter.WithStorage(storage),
-						interpreter.WithPredeclaredValues(values),
+						interpreter.WithBaseActivation(baseActivation),
 					},
 				},
 			)

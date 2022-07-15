@@ -14522,7 +14522,7 @@ func (v *CompositeValue) OwnerValue(interpreter *Interpreter, getLocationRange f
 		return NewNilValue(interpreter)
 	}
 
-	ownerAccount := interpreter.publicAccountHandler(interpreter, AddressValue(address))
+	ownerAccount := interpreter.publicAccountHandler(AddressValue(address))
 
 	// Owner must be of `PublicAccount` type.
 	interpreter.ExpectType(ownerAccount, sema.PublicAccountType, getLocationRange)
@@ -17848,14 +17848,14 @@ func (AddressValue) ChildStorables() []atree.Storable {
 }
 
 func accountGetCapabilityFunction(
-	inter *Interpreter,
+	gauge common.MemoryGauge,
 	addressValue AddressValue,
 	pathType sema.Type,
 	funcType *sema.FunctionType,
 ) *HostFunctionValue {
 
 	return NewHostFunctionValue(
-		inter,
+		gauge,
 		func(invocation Invocation) Value {
 
 			path, ok := invocation.Arguments[0].(PathValue)
@@ -17885,7 +17885,7 @@ func accountGetCapabilityFunction(
 				borrowStaticType = ConvertSemaToStaticType(invocation.Interpreter, borrowType)
 			}
 
-			return NewCapabilityValue(inter, addressValue, path, borrowStaticType)
+			return NewCapabilityValue(gauge, addressValue, path, borrowStaticType)
 		},
 		funcType,
 	)

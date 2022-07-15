@@ -49,10 +49,8 @@ func TestInterpretTransferCheck(t *testing.T) {
 				Name: "fruit",
 				Type: ty,
 				// NOTE: not an instance of the type
-				ValueFactory: func(_ *interpreter.Interpreter) interpreter.Value {
-					return interpreter.NewUnmeteredStringValue("fruit")
-				},
-				Kind: common.DeclarationKindConstant,
+				Value: interpreter.NewUnmeteredStringValue("fruit"),
+				Kind:  common.DeclarationKindConstant,
 			},
 		}
 
@@ -62,6 +60,12 @@ func TestInterpretTransferCheck(t *testing.T) {
 				Type: ty,
 				Kind: common.DeclarationKindStructure,
 			},
+		}
+
+		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+
+		for _, valueDeclaration := range valueDeclarations {
+			baseActivation.Declare(valueDeclaration)
 		}
 
 		inter, err := parseCheckAndInterpretWithOptions(t,
@@ -76,7 +80,7 @@ func TestInterpretTransferCheck(t *testing.T) {
 					sema.WithPredeclaredTypes(typeDeclarations.ToTypeDeclarations()),
 				},
 				Options: []interpreter.Option{
-					interpreter.WithPredeclaredValues(valueDeclarations.ToInterpreterValueDeclarations()),
+					interpreter.WithBaseActivation(baseActivation),
 				},
 			},
 		)

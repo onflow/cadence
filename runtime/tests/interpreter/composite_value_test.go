@@ -98,32 +98,31 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 		{
 			Name: "fruit",
 			Type: fruitType,
-			ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
-				fields := []interpreter.CompositeField{
-					{
-						Name:  "name",
-						Value: interpreter.NewUnmeteredStringValue("Apple"),
-					},
+			Value: func() interpreter.Value {
+				fields := map[string]interpreter.Value{
+					"name": interpreter.NewUnmeteredStringValue("Apple"),
 				}
 
-				value := interpreter.NewCompositeValue(
-					inter,
-					interpreter.ReturnEmptyLocationRange,
-					TestLocation,
-					fruitType.Identifier,
-					common.CompositeKindStructure,
+				staticType := interpreter.CompositeStaticType{
+					Location:            TestLocation,
+					QualifiedIdentifier: fruitType.Identifier,
+				}
+
+				return interpreter.NewSimpleCompositeValue(
+					nil,
+					fruitType.ID(),
+					staticType,
+					[]string{"name", "color"},
 					fields,
-					common.Address{},
-				)
-
-				value.ComputedFields = map[string]interpreter.ComputedField{
-					"color": func(_ *interpreter.Interpreter, _ func() interpreter.LocationRange) interpreter.Value {
-						return interpreter.NewUnmeteredStringValue("Red")
+					map[string]interpreter.ComputedField{
+						"color": func(_ *interpreter.Interpreter, _ func() interpreter.LocationRange) interpreter.Value {
+							return interpreter.NewUnmeteredStringValue("Red")
+						},
 					},
-				}
-
-				return value
-			},
+					nil,
+					nil,
+				)
+			}(),
 			Kind: common.DeclarationKindConstant,
 		},
 	}
@@ -136,6 +135,12 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 		},
 	}
 
+	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+
+	for _, valueDeclaration := range valueDeclarations {
+		baseActivation.Declare(valueDeclaration)
+	}
+
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		code,
 		ParseCheckAndInterpretOptions{
@@ -145,7 +150,7 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 			},
 			Options: []interpreter.Option{
 				interpreter.WithStorage(storage),
-				interpreter.WithPredeclaredValues(valueDeclarations.ToInterpreterValueDeclarations()),
+				interpreter.WithBaseActivation(baseActivation),
 			},
 		},
 	)

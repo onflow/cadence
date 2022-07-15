@@ -51,13 +51,17 @@ func TestAssert(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
+	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+
+	for _, declaration := range BuiltinFunctions {
+		baseActivation.Declare(declaration)
+	}
+
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
 		checker.Location,
 		interpreter.WithStorage(storage),
-		interpreter.WithPredeclaredValues(
-			BuiltinFunctions.ToInterpreterValueDeclarations(),
-		),
+		interpreter.WithBaseActivation(baseActivation),
 	)
 	require.Nil(t, err)
 
@@ -112,11 +116,17 @@ func TestPanic(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
+	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+
+	for _, declaration := range BuiltinFunctions {
+		baseActivation.Declare(declaration)
+	}
+
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
 		checker.Location,
 		interpreter.WithStorage(storage),
-		interpreter.WithPredeclaredValues(BuiltinFunctions.ToInterpreterValueDeclarations()),
+		interpreter.WithBaseActivation(baseActivation),
 	)
 	require.Nil(t, err)
 

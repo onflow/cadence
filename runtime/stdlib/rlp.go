@@ -241,10 +241,8 @@ var rlpContractValue = interpreter.NewSimpleCompositeValue(
 )
 
 var rlpContract = StandardLibraryValue{
-	Name: "RLP",
-	Type: rlpContractType,
-	ValueFactory: func(_ *interpreter.Interpreter) interpreter.Value {
-		return rlpContractValue
-	},
-	Kind: common.DeclarationKindContract,
+	Name:  "RLP",
+	Type:  rlpContractType,
+	Value: rlpContractValue,
+	Kind:  common.DeclarationKindContract,
 }

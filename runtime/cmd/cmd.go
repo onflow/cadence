@@ -83,6 +83,12 @@ func DefaultCheckerInterpreterOptions(
 	semaPredeclaredValues, interpreterPredeclaredValues :=
 		stdlib.FlowDefaultPredeclaredValues(impls)
 
+	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+
+	for _, valueDeclaration := range interpreterPredeclaredValues {
+		baseActivation.Declare(valueDeclaration)
+	}
+
 	return []sema.Option{
 			sema.WithPredeclaredValues(semaPredeclaredValues),
 			sema.WithPredeclaredTypes(stdlib.FlowDefaultPredeclaredTypes),
@@ -120,7 +126,7 @@ func DefaultCheckerInterpreterOptions(
 			),
 		},
 		[]interpreter.Option{
-			interpreter.WithPredeclaredValues(interpreterPredeclaredValues),
+			interpreter.WithBaseActivation(baseActivation),
 		}
 }
 

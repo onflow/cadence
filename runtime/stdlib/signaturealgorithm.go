@@ -60,8 +60,6 @@ var signatureAlgorithmConstructor = StandardLibraryValue{
 		sema.SignatureAlgorithmType,
 		sema.SignatureAlgorithms,
 	),
-	ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
-		return signatureAlgorithmConstructorValue
-	},
-	Kind: common.DeclarationKindEnum,
+	Value: signatureAlgorithmConstructorValue,
+	Kind:  common.DeclarationKindEnum,
 }

@@ -1085,26 +1085,29 @@ func TestInterpretFunctionWithPostConditionAndResourceResult(t *testing.T) {
 		{
 			Name: "check",
 			Type: checkFunctionType,
-			ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
-				return interpreter.NewHostFunctionValue(
-					inter,
-					func(invocation interpreter.Invocation) interpreter.Value {
-						checkCalled = true
+			Value: interpreter.NewHostFunctionValue(
+				nil,
+				func(invocation interpreter.Invocation) interpreter.Value {
+					checkCalled = true
 
-						argument := invocation.Arguments[0]
-						require.IsType(t, &interpreter.EphemeralReferenceValue{}, argument)
+					argument := invocation.Arguments[0]
+					require.IsType(t, &interpreter.EphemeralReferenceValue{}, argument)
 
-						return interpreter.VoidValue{}
-					},
-					checkFunctionType,
-				)
-			},
+					return interpreter.VoidValue{}
+				},
+				checkFunctionType,
+			),
 			Kind: common.DeclarationKindConstant,
 		},
 	}
 
 	semaValueDeclarations := valueDeclarations.ToSemaValueDeclarations()
-	interpreterValueDeclarations := valueDeclarations.ToInterpreterValueDeclarations()
+
+	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+
+	for _, valueDeclaration := range valueDeclarations {
+		baseActivation.Declare(valueDeclaration)
+	}
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
@@ -1155,7 +1158,7 @@ func TestInterpretFunctionWithPostConditionAndResourceResult(t *testing.T) {
 				sema.WithPredeclaredValues(semaValueDeclarations),
 			},
 			Options: []interpreter.Option{
-				interpreter.WithPredeclaredValues(interpreterValueDeclarations),
+				interpreter.WithBaseActivation(baseActivation),
 			},
 		},
 	)
