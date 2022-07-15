@@ -1635,7 +1635,24 @@ func (s *Server) ExecuteCommand(conn protocol.Conn, params *protocol.ExecuteComm
 	if !ok {
 		return nil, fmt.Errorf("invalid command: %s", params.Command)
 	}
-	return f(conn, params.Arguments...)
+
+	res, err := f(conn, params.Arguments...)
+	if err != nil {
+		conn.ShowMessage(&protocol.ShowMessageParams{
+			Type:    protocol.Error,
+			Message: fmt.Sprintf("executing command: %s failed with error: %s", params.Command, err.Error()),
+		})
+		return nil, err
+	}
+
+	if res != nil {
+		conn.ShowMessage(&protocol.ShowMessageParams{
+			Type:    protocol.Info,
+			Message: fmt.Sprintf("%v", res),
+		})
+	}
+
+	return res, nil
 }
 
 // DocumentSymbol is called every time the document contents change and returns a
