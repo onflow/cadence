@@ -47,7 +47,7 @@ func NewEmulatorBackend() *EmulatorBackend {
 }
 
 func (e *EmulatorBackend) RunScript(code string) interpreter.ScriptResult {
-	fmt.Println("I'm trying to execute script:", code)
+	fmt.Println("Executing script:", code)
 
 	result, err := e.blockchain.ExecuteScript([]byte(code), [][]byte{})
 	if err != nil {
@@ -101,7 +101,6 @@ func newInterpreter() (*interpreter.Interpreter, error) {
 		nil,
 		utils.TestLocation,
 		interpreter.WithStorage(interpreter.NewInMemoryStorage(nil)),
-		interpreter.WithTestFramework(&EmulatorBackend{}),
 		interpreter.WithPredeclaredValues(predeclaredInterpreterValues),
 		interpreter.WithImportLocationHandler(func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 			switch location {

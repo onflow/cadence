@@ -20,6 +20,8 @@ package stdlib
 
 import (
 	"fmt"
+	"strconv"
+
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
@@ -248,9 +250,16 @@ var blockchainExecuteScriptFunction = interpreter.NewUnmeteredHostFunctionValue(
 			panic(errors.NewUnreachableError())
 		}
 
-		// Strip off the starting and ending double quotes
-		script := scriptString.String()
-		script = script[1 : len(script)-1]
+		// String conversion of the value gives the quoted string.
+		// Unquote the script-string to remove starting/ending quotes
+		// and to unescape the string literals in the code.
+		//
+		// TODO: Is the reverse conversion loss-less?
+
+		script, err := strconv.Unquote(scriptString.String())
+		if err != nil {
+			panic(errors.NewUnexpectedErrorFromCause(err))
+		}
 
 		var result interpreter.ScriptResult
 
@@ -261,7 +270,7 @@ var blockchainExecuteScriptFunction = interpreter.NewUnmeteredHostFunctionValue(
 			panic(interpreter.TestFrameworkNotProvidedError{})
 		}
 
-		err := result.Error
+		err = result.Error
 		if err != nil {
 			// TODO: Revisit this logic
 			if errors.IsUserError(err) {
