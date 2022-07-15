@@ -53,7 +53,7 @@ var AuthAccountType = func() *CompositeType {
 		Kind:               common.CompositeKindStructure,
 		hasComputedMembers: true,
 		importable:         false,
-		nestedTypes: func() *StringTypeOrderedMap {
+		NestedTypes: func() *StringTypeOrderedMap {
 			nestedTypes := &StringTypeOrderedMap{}
 			nestedTypes.Set(AuthAccountContractsTypeName, AuthAccountContractsType)
 			nestedTypes.Set(AccountKeysTypeName, AuthAccountKeysType)
@@ -173,7 +173,7 @@ var AuthAccountType = func() *CompositeType {
 	}
 
 	authAccountType.Members = GetMembersAsMap(members)
-	authAccountType.Fields = getFieldNames(members)
+	authAccountType.Fields = GetFieldNames(members)
 	return authAccountType
 }()
 
@@ -551,7 +551,7 @@ var AuthAccountKeysType = func() *CompositeType {
 	}
 
 	accountKeys.Members = GetMembersAsMap(members)
-	accountKeys.Fields = getFieldNames(members)
+	accountKeys.Fields = GetFieldNames(members)
 	return accountKeys
 }()
 

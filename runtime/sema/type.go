@@ -3461,7 +3461,7 @@ type CompositeType struct {
 	Fields                              []string
 	// TODO: add support for overloaded initializers
 	ConstructorParameters []*Parameter
-	nestedTypes           *StringTypeOrderedMap
+	NestedTypes           *StringTypeOrderedMap
 	containerType         Type
 	EnumRawType           Type
 	hasComputedMembers    bool
@@ -3529,8 +3529,8 @@ func (t *CompositeType) checkIdentifiersCached() {
 		panic(errors.NewUnreachableError())
 	}
 
-	if t.nestedTypes != nil {
-		t.nestedTypes.Foreach(checkIdentifiersCached)
+	if t.NestedTypes != nil {
+		t.NestedTypes.Foreach(checkIdentifiersCached)
 	}
 }
 
@@ -3717,7 +3717,7 @@ func (t *CompositeType) InterfaceType() *InterfaceType {
 		Fields:                t.Fields,
 		InitializerParameters: t.ConstructorParameters,
 		containerType:         t.containerType,
-		nestedTypes:           t.nestedTypes,
+		nestedTypes:           t.NestedTypes,
 	}
 }
 
@@ -3754,11 +3754,11 @@ func (t *CompositeType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 }
 
 func (t *CompositeType) IsContainerType() bool {
-	return t.nestedTypes != nil
+	return t.NestedTypes != nil
 }
 
 func (t *CompositeType) GetNestedTypes() *StringTypeOrderedMap {
-	return t.nestedTypes
+	return t.NestedTypes
 }
 
 func (t *CompositeType) initializeMemberResolvers() {
@@ -6269,7 +6269,7 @@ var AccountKeyType = func() *CompositeType {
 	}
 
 	accountKeyType.Members = GetMembersAsMap(members)
-	accountKeyType.Fields = getFieldNames(members)
+	accountKeyType.Fields = GetFieldNames(members)
 	return accountKeyType
 }()
 
@@ -6337,7 +6337,7 @@ var PublicKeyType = func() *CompositeType {
 	}
 
 	publicKeyType.Members = GetMembersAsMap(members)
-	publicKeyType.Fields = getFieldNames(members)
+	publicKeyType.Fields = GetFieldNames(members)
 
 	return publicKeyType
 }()
@@ -6407,7 +6407,7 @@ func GetMembersAsMap(members []*Member) *StringMemberOrderedMap {
 	return membersMap
 }
 
-func getFieldNames(members []*Member) []string {
+func GetFieldNames(members []*Member) []string {
 	fields := make([]string, 0)
 	for _, member := range members {
 		if member.DeclarationKind == common.DeclarationKindField {

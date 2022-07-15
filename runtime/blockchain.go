@@ -14,24 +14,19 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Based on https://github.com/wk8/go-ordered-map, Copyright Jean Rougé
+ *
  */
 
-package stdlib
+package runtime
 
-var BuiltinFunctions = StandardLibraryFunctions{
-	AssertFunction,
-	PanicFunction,
-	publicKeyConstructor,
+import "github.com/onflow/cadence/runtime/interpreter"
+
+type Network interface {
+	RunScript(code string) Result
 }
 
-var HelperFunctions = StandardLibraryFunctions{
-	LogFunction,
-}
-
-var BuiltinValues = StandardLibraryValues{
-	signatureAlgorithmConstructor,
-	hashAlgorithmConstructor,
-	blsContract,
-	rlpContract,
-	testContract,
+type Result struct {
+	value interpreter.Value
 }

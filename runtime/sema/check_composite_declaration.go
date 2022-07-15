@@ -217,7 +217,7 @@ func (checker *Checker) declareCompositeNestedTypes(
 	compositeType := checker.Elaboration.CompositeDeclarationTypes[declaration]
 	nestedDeclarations := checker.Elaboration.CompositeNestedDeclarations[declaration]
 
-	compositeType.nestedTypes.Foreach(func(name string, nestedType Type) {
+	compositeType.NestedTypes.Foreach(func(name string, nestedType Type) {
 
 		nestedDeclaration := nestedDeclarations[name]
 
@@ -420,7 +420,7 @@ func (checker *Checker) declareCompositeType(declaration *ast.CompositeDeclarati
 		Location:    checker.Location,
 		Kind:        declaration.CompositeKind,
 		Identifier:  identifier.Identifier,
-		nestedTypes: &StringTypeOrderedMap{},
+		NestedTypes: &StringTypeOrderedMap{},
 		Members:     &StringMemberOrderedMap{},
 	}
 
@@ -476,12 +476,12 @@ func (checker *Checker) declareCompositeType(declaration *ast.CompositeDeclarati
 	checker.Elaboration.CompositeNestedDeclarations[declaration] = nestedDeclarations
 
 	for _, nestedInterfaceType := range nestedInterfaceTypes {
-		compositeType.nestedTypes.Set(nestedInterfaceType.Identifier, nestedInterfaceType)
+		compositeType.NestedTypes.Set(nestedInterfaceType.Identifier, nestedInterfaceType)
 		nestedInterfaceType.SetContainerType(compositeType)
 	}
 
 	for _, nestedCompositeType := range nestedCompositeTypes {
-		compositeType.nestedTypes.Set(nestedCompositeType.Identifier, nestedCompositeType)
+		compositeType.NestedTypes.Set(nestedCompositeType.Identifier, nestedCompositeType)
 		nestedCompositeType.SetContainerType(compositeType)
 	}
 
@@ -1055,7 +1055,7 @@ func (checker *Checker) checkCompositeConformance(
 			return
 		}
 
-		nestedCompositeType, ok := compositeType.nestedTypes.Get(name)
+		nestedCompositeType, ok := compositeType.NestedTypes.Get(name)
 		if !ok {
 			missingNestedCompositeTypes = append(missingNestedCompositeTypes, requiredCompositeType)
 			return

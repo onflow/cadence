@@ -1199,6 +1199,9 @@ func (r *interpreterRuntime) check(
 						case stdlib.CryptoChecker.Location:
 							elaboration = stdlib.CryptoChecker.Elaboration
 
+						case stdlib.TestContractLocation:
+							elaboration = stdlib.TestContractChecker.Elaboration
+
 						default:
 							context := startContext.WithLocation(importedLocation)
 
@@ -1476,6 +1479,16 @@ func (r *interpreterRuntime) importLocationHandler(
 		switch location {
 		case stdlib.CryptoChecker.Location:
 			program := interpreter.ProgramFromChecker(stdlib.CryptoChecker)
+			subInterpreter, err := inter.NewSubInterpreter(program, location)
+			if err != nil {
+				panic(err)
+			}
+			return interpreter.InterpreterImport{
+				Interpreter: subInterpreter,
+			}
+
+		case stdlib.TestContractLocation:
+			program := interpreter.ProgramFromChecker(stdlib.TestContractChecker)
 			subInterpreter, err := inter.NewSubInterpreter(program, location)
 			if err != nil {
 				panic(err)
