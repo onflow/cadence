@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/onflow/cadence/languageserver/protocol"
 	"github.com/onflow/cadence/languageserver/server"
 	"github.com/onflow/flow-cli/pkg/flowkit"
 	"github.com/onflow/flow-go-sdk"
@@ -72,7 +71,7 @@ func (c *commands) getAll() []server.Command {
 // There should be exactly 2 arguments:
 //   * the DocumentURI of the file to submit
 //   * the arguments, encoded as JSON-CDC
-func (c *commands) sendTransaction(conn protocol.Conn, args ...json.RawMessage) (interface{}, error) {
+func (c *commands) sendTransaction(args ...json.RawMessage) (interface{}, error) {
 	err := server.CheckCommandArgumentCount(args, 3)
 	if err != nil {
 		return nil, fmt.Errorf("arguments error: %w", err)
@@ -118,7 +117,7 @@ func (c *commands) sendTransaction(conn protocol.Conn, args ...json.RawMessage) 
 // There should be exactly 2 arguments:
 //   * the DocumentURI of the file to submit
 //   * the arguments, encoded as JSON-CDC
-func (c *commands) executeScript(conn protocol.Conn, args ...json.RawMessage) (interface{}, error) {
+func (c *commands) executeScript(args ...json.RawMessage) (interface{}, error) {
 	err := server.CheckCommandArgumentCount(args, 2)
 	if err != nil {
 		return nil, fmt.Errorf("arguments error: %w", err)
@@ -153,7 +152,7 @@ func (c *commands) executeScript(conn protocol.Conn, args ...json.RawMessage) (i
 //
 // There should be 2 arguments:
 //	 * name of the new active account
-func (c *commands) switchActiveAccount(conn protocol.Conn, args ...json.RawMessage) (interface{}, error) {
+func (c *commands) switchActiveAccount(args ...json.RawMessage) (interface{}, error) {
 	err := server.CheckCommandArgumentCount(args, 2)
 	if err != nil {
 		return nil, fmt.Errorf("arguments error: %w", err)
@@ -174,7 +173,7 @@ func (c *commands) switchActiveAccount(conn protocol.Conn, args ...json.RawMessa
 }
 
 // createAccount creates a new account and returns its address.
-func (c *commands) createAccount(conn protocol.Conn, args ...json.RawMessage) (interface{}, error) {
+func (c *commands) createAccount(args ...json.RawMessage) (interface{}, error) {
 	account, err := c.client.CreateAccount()
 	if err != nil {
 		return nil, fmt.Errorf("create account error: %w", err)
@@ -189,7 +188,7 @@ func (c *commands) createAccount(conn protocol.Conn, args ...json.RawMessage) (i
 // There should be exactly 2 arguments:
 //   * the DocumentURI of the file to submit
 //   * the name of the contract
-func (c *commands) deployContract(conn protocol.Conn, args ...json.RawMessage) (interface{}, error) {
+func (c *commands) deployContract(args ...json.RawMessage) (interface{}, error) {
 	err := server.CheckCommandArgumentCount(args, 3)
 	if err != nil {
 		return flow.Address{}, fmt.Errorf("arguments error: %w", err)

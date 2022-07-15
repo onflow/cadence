@@ -142,7 +142,7 @@ func (d Document) HasAnyPrecedingStringsAtPosition(options []string, line, colum
 
 // CommandHandler represents the form of functions that handle commands
 // submitted from the client using workspace/executeCommand.
-type CommandHandler func(conn protocol.Conn, args ...json2.RawMessage) (interface{}, error)
+type CommandHandler func(args ...json2.RawMessage) (interface{}, error)
 
 // AddressImportResolver is a function that is used to resolve address imports
 //
@@ -1631,12 +1631,12 @@ func (s *Server) ExecuteCommand(conn protocol.Conn, params *protocol.ExecuteComm
 		Message: fmt.Sprintf("called execute command: %s", params.Command),
 	})
 
-	f, ok := s.commands[params.Command]
+	commandHandler, ok := s.commands[params.Command]
 	if !ok {
 		return nil, fmt.Errorf("invalid command: %s", params.Command)
 	}
 
-	res, err := f(conn, params.Arguments...)
+	res, err := commandHandler(params.Arguments...)
 	if err != nil {
 		conn.ShowMessage(&protocol.ShowMessageParams{
 			Type:    protocol.Error,
@@ -2112,7 +2112,7 @@ func (s *Server) defaultCommands() []Command {
 //
 // There should be exactly 1 argument:
 //   * the DocumentURI of the file to submit
-func (s *Server) getEntryPointParameters(_ protocol.Conn, args ...json2.RawMessage) (interface{}, error) {
+func (s *Server) getEntryPointParameters(args ...json2.RawMessage) (interface{}, error) {
 
 	err := CheckCommandArgumentCount(args, 1)
 	if err != nil {
@@ -2143,7 +2143,7 @@ func (s *Server) getEntryPointParameters(_ protocol.Conn, args ...json2.RawMessa
 //
 // There should be exactly 1 argument:
 //   * the DocumentURI of the file to submit
-func (s *Server) getContractInitializerParameters(_ protocol.Conn, args ...json2.RawMessage) (interface{}, error) {
+func (s *Server) getContractInitializerParameters(args ...json2.RawMessage) (interface{}, error) {
 
 	err := CheckCommandArgumentCount(args, 1)
 	if err != nil {
@@ -2186,7 +2186,7 @@ func (s *Server) getContractInitializerParameters(_ protocol.Conn, args ...json2
 // There should be exactly 2 arguments:
 //   * the DocumentURI of the file to submit
 //   * the array of arguments
-func (s *Server) parseEntryPointArguments(_ protocol.Conn, args ...json2.RawMessage) (interface{}, error) {
+func (s *Server) parseEntryPointArguments(args ...json2.RawMessage) (interface{}, error) {
 
 	err := CheckCommandArgumentCount(args, 2)
 	if err != nil {
