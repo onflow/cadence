@@ -128,8 +128,8 @@ var unsafeRandomFunctionType = &sema.FunctionType{
 	),
 }
 
-// FlowBuiltinImpls defines the set of functions needed to implement the Flow
-// built-in functions.
+// FlowBuiltinImpls defines the set of functions
+// needed to implement the Flow built-in functions.
 type FlowBuiltinImpls struct {
 	CreateAccount   interpreter.HostFunction
 	GetAccount      interpreter.HostFunction
@@ -139,48 +139,48 @@ type FlowBuiltinImpls struct {
 	UnsafeRandom    interpreter.HostFunction
 }
 
-// FlowBuiltInFunctions returns a list of standard library functions, bound to
-// the provided implementation.
-func FlowBuiltInFunctions(impls FlowBuiltinImpls) StandardLibraryFunctions {
-	return StandardLibraryFunctions{
-		NewStandardLibraryFunction(
-			"AuthAccount",
-			authAccountFunctionType,
-			authAccountFunctionDocString,
-			impls.CreateAccount,
-		),
-		NewStandardLibraryFunction(
-			"getAccount",
-			getAccountFunctionType,
-			getAccountFunctionDocString,
-			impls.GetAccount,
-		),
-		NewStandardLibraryFunction(
-			"log",
-			LogFunctionType,
-			logFunctionDocString,
-			impls.Log,
-		),
-		NewStandardLibraryFunction(
-			"getCurrentBlock",
-			getCurrentBlockFunctionType,
-			getCurrentBlockFunctionDocString,
-			impls.GetCurrentBlock,
-		),
-		NewStandardLibraryFunction(
-			"getBlock",
-			getBlockFunctionType,
-			getBlockFunctionDocString,
-			impls.GetBlock,
-		),
-		NewStandardLibraryFunction(
-			"unsafeRandom",
-			unsafeRandomFunctionType,
-			unsafeRandomFunctionDocString,
-			impls.UnsafeRandom,
-		),
-	}
-}
+// FlowBuiltInFunctions returns a list of standard library functions,
+// bound to the provided implementation.
+//func FlowBuiltInFunctions(impls FlowBuiltinImpls) []StandardLibraryFunction {
+//	return []StandardLibraryFunction{
+//		NewStandardLibraryFunction(
+//			"AuthAccount",
+//			authAccountFunctionType,
+//			authAccountFunctionDocString,
+//			impls.CreateAccount,
+//		),
+//		NewStandardLibraryFunction(
+//			"getAccount",
+//			getAccountFunctionType,
+//			getAccountFunctionDocString,
+//			impls.GetAccount,
+//		),
+//		NewStandardLibraryFunction(
+//			"log",
+//			LogFunctionType,
+//			logFunctionDocString,
+//			impls.Log,
+//		),
+//		NewStandardLibraryFunction(
+//			"getCurrentBlock",
+//			getCurrentBlockFunctionType,
+//			getCurrentBlockFunctionDocString,
+//			impls.GetCurrentBlock,
+//		),
+//		NewStandardLibraryFunction(
+//			"getBlock",
+//			getBlockFunctionType,
+//			getBlockFunctionDocString,
+//			impls.GetBlock,
+//		),
+//		NewStandardLibraryFunction(
+//			"unsafeRandom",
+//			unsafeRandomFunctionType,
+//			unsafeRandomFunctionDocString,
+//			impls.UnsafeRandom,
+//		),
+//	}
+//}
 
 func DefaultFlowBuiltinImpls() FlowBuiltinImpls {
 	return FlowBuiltinImpls{
@@ -206,26 +206,26 @@ func DefaultFlowBuiltinImpls() FlowBuiltinImpls {
 	}
 }
 
-var FlowDefaultPredeclaredTypes = append(
-	FlowBuiltInTypes,
-	BuiltinTypes...,
-).ToTypeDeclarations()
-
-func FlowDefaultPredeclaredValues(impls FlowBuiltinImpls) (
-	[]sema.ValueDeclaration,
-	[]StandardLibraryFunction,
-) {
-	functionDeclarations := append(
-		FlowBuiltInFunctions(impls),
-		BuiltinFunctions...,
-	)
-
-	return append(
-			functionDeclarations.ToSemaValueDeclarations(),
-			BuiltinValues.ToSemaValueDeclarations()...,
-		),
-		functionDeclarations
-}
+//var FlowDefaultPredeclaredTypes = append(
+//	FlowBuiltInTypes,
+//	BuiltinTypes...,
+//)
+//
+//func FlowDefaultPredeclaredValues(impls FlowBuiltinImpls) (
+//	[]sema.ValueDeclaration,
+//	[]StandardLibraryFunction,
+//) {
+//	functionDeclarations := append(
+//		FlowBuiltInFunctions(impls),
+//		BuiltinFunctions...,
+//	)
+//
+//	return append(
+//			functionDeclarations,
+//			BuiltinValues...,
+//		),
+//		functionDeclarations
+//}
 
 // Flow location
 
@@ -434,4 +434,4 @@ var AccountContractRemovedEventType = newFlowEventType(
 	AccountEventContractParameter,
 )
 
-var FlowBuiltInTypes StandardLibraryTypes
+var FlowBuiltInTypes []StandardLibraryType

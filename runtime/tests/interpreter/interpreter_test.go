@@ -72,16 +72,16 @@ func parseCheckAndInterpretWithMemoryMetering(
 	code string,
 	memoryGauge common.MemoryGauge,
 ) *interpreter.Interpreter {
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.PanicFunction)
+
 	inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(
 		t,
 		code,
 		ParseCheckAndInterpretOptions{
 			CheckerOptions: []sema.Option{
-				sema.WithPredeclaredValues(
-					stdlib.StandardLibraryFunctions{
-						stdlib.PanicFunction,
-					}.ToSemaValueDeclarations(),
-				),
+				sema.WithBaseValueActivation(baseValueActivation),
 			},
 		},
 		memoryGauge,
@@ -1806,16 +1806,15 @@ func TestInterpretHostFunction(t *testing.T) {
 		},
 	)
 
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(testFunction)
+
 	checker, err := sema.NewChecker(
 		program,
 		TestLocation,
 		nil,
 		false,
-		sema.WithPredeclaredValues(
-			[]sema.ValueDeclaration{
-				testFunction,
-			},
-		),
+		sema.WithBaseValueActivation(baseValueActivation),
 	)
 	require.NoError(t, err)
 
@@ -1912,16 +1911,15 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 		},
 	)
 
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(testFunction)
+
 	checker, err := sema.NewChecker(
 		program,
 		TestLocation,
 		nil,
 		false,
-		sema.WithPredeclaredValues(
-			[]sema.ValueDeclaration{
-				testFunction,
-			},
-		),
+		sema.WithBaseValueActivation(baseValueActivation),
 	)
 	require.NoError(t, err)
 
@@ -3912,10 +3910,8 @@ func TestInterpretImportError(t *testing.T) {
 
 	var importedChecker1, importedChecker2 *sema.Checker
 
-	valueDeclarations :=
-		stdlib.StandardLibraryFunctions{
-			stdlib.PanicFunction,
-		}.ToSemaValueDeclarations()
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.PanicFunction)
 
 	parseAndCheck := func(code string, location common.Location) *sema.Checker {
 		checker, err := checker.ParseAndCheckWithOptions(t,
@@ -3923,7 +3919,7 @@ func TestInterpretImportError(t *testing.T) {
 			checker.ParseAndCheckOptions{
 				Location: location,
 				Options: []sema.Option{
-					sema.WithPredeclaredValues(valueDeclarations),
+					sema.WithBaseValueActivation(baseValueActivation),
 					sema.WithImportHandler(
 						func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
 							switch importedLocation {
@@ -4681,43 +4677,38 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 			),
 		}
 
-		standardLibraryFunctions :=
-			stdlib.StandardLibraryFunctions{
-				{
-					Name: "getStorageReference",
-					Type: getStorageReferenceFunctionType,
-					Function: interpreter.NewUnmeteredHostFunctionValue(
-						func(invocation interpreter.Invocation) interpreter.Value {
+		valueDeclaration := stdlib.StandardLibraryFunction{
+			Name: "getStorageReference",
+			Type: getStorageReferenceFunctionType,
+			Function: interpreter.NewUnmeteredHostFunctionValue(
+				func(invocation interpreter.Invocation) interpreter.Value {
 
-							authorized := bool(invocation.Arguments[0].(interpreter.BoolValue))
+					authorized := bool(invocation.Arguments[0].(interpreter.BoolValue))
 
-							riType := getType("RI").(*sema.InterfaceType)
-							rType := getType("R")
+					riType := getType("RI").(*sema.InterfaceType)
+					rType := getType("R")
 
-							return &interpreter.StorageReferenceValue{
-								Authorized:           authorized,
-								TargetStorageAddress: storageAddress,
-								TargetPath:           storagePath,
-								BorrowedType: &sema.RestrictedType{
-									Type: rType,
-									Restrictions: []*sema.InterfaceType{
-										riType,
-									},
-								},
-							}
+					return &interpreter.StorageReferenceValue{
+						Authorized:           authorized,
+						TargetStorageAddress: storageAddress,
+						TargetPath:           storagePath,
+						BorrowedType: &sema.RestrictedType{
+							Type: rType,
+							Restrictions: []*sema.InterfaceType{
+								riType,
+							},
 						},
-						getStorageReferenceFunctionType,
-					),
+					}
 				},
-			}
+				getStorageReferenceFunctionType,
+			),
+		}
 
-		valueDeclarations := standardLibraryFunctions.ToSemaValueDeclarations()
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(valueDeclaration)
 
 		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-
-		for _, valueDeclaration := range standardLibraryFunctions {
-			baseActivation.Declare(valueDeclaration)
-		}
+		baseActivation.Declare(valueDeclaration)
 
 		storage := newUnmeteredInMemoryStorage()
 
@@ -4749,7 +4740,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
             `,
 			ParseCheckAndInterpretOptions{
 				CheckerOptions: []sema.Option{
-					sema.WithPredeclaredValues(valueDeclarations),
+					sema.WithBaseValueActivation(baseValueActivation),
 				},
 				Options: []interpreter.Option{
 					interpreter.WithStorage(storage),
@@ -6970,26 +6961,26 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 				testCase.String(),
 			)
 
-			valueDeclarations := stdlib.StandardLibraryValues{
-				{
-					Name:  "s",
-					Type:  sType,
-					Value: sValue,
-					Kind:  common.DeclarationKindConstant,
-				},
-			}
+			baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+			baseValueActivation.DeclareValue(stdlib.StandardLibraryValue{
+				Name:  "s",
+				Type:  sType,
+				Value: sValue,
+				Kind:  common.DeclarationKindConstant,
+			})
+
+			baseTypeActivation := sema.NewVariableActivation(sema.BaseTypeActivation)
+			baseTypeActivation.DeclareType(stdlib.StandardLibraryType{
+				Name: "S",
+				Type: sType,
+				Kind: common.DeclarationKindStructure,
+			})
 
 			inter, err := parseCheckAndInterpretWithOptions(
 				t, code, ParseCheckAndInterpretOptions{
 					CheckerOptions: []sema.Option{
-						sema.WithPredeclaredValues(valueDeclarations.ToSemaValueDeclarations()),
-						sema.WithPredeclaredTypes([]sema.TypeDeclaration{
-							stdlib.StandardLibraryType{
-								Name: "S",
-								Type: sType,
-								Kind: common.DeclarationKindStructure,
-							},
-						}),
+						sema.WithBaseValueActivation(baseValueActivation),
+						sema.WithBaseTypeActivation(baseTypeActivation),
 					},
 					Options: []interpreter.Option{
 						interpreter.WithStorage(storage),
@@ -7771,18 +7762,11 @@ func TestInterpretOptionalChainingFieldReadAndNilCoalescing(t *testing.T) {
 
 	t.Parallel()
 
-	standardLibraryFunctions :=
-		stdlib.StandardLibraryFunctions{
-			stdlib.PanicFunction,
-		}
-
-	valueDeclarations := standardLibraryFunctions.ToSemaValueDeclarations()
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.PanicFunction)
 
 	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-
-	for _, valueDeclaration := range standardLibraryFunctions {
-		baseActivation.Declare(valueDeclaration)
-	}
+	baseActivation.Declare(stdlib.PanicFunction)
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
@@ -7799,7 +7783,7 @@ func TestInterpretOptionalChainingFieldReadAndNilCoalescing(t *testing.T) {
         `,
 		ParseCheckAndInterpretOptions{
 			CheckerOptions: []sema.Option{
-				sema.WithPredeclaredValues(valueDeclarations),
+				sema.WithBaseValueActivation(baseValueActivation),
 			},
 			Options: []interpreter.Option{
 				interpreter.WithBaseActivation(baseActivation),
@@ -7820,10 +7804,8 @@ func TestInterpretOptionalChainingFunctionCallAndNilCoalescing(t *testing.T) {
 
 	t.Parallel()
 
-	valueDeclarations :=
-		[]sema.ValueDeclaration{
-			stdlib.PanicFunction,
-		}
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.PanicFunction)
 
 	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
 	baseActivation.Declare(stdlib.PanicFunction)
@@ -7841,7 +7823,7 @@ func TestInterpretOptionalChainingFunctionCallAndNilCoalescing(t *testing.T) {
         `,
 		ParseCheckAndInterpretOptions{
 			CheckerOptions: []sema.Option{
-				sema.WithPredeclaredValues(valueDeclarations),
+				sema.WithBaseValueActivation(baseValueActivation),
 			},
 			Options: []interpreter.Option{
 				interpreter.WithBaseActivation(baseActivation),
@@ -7977,9 +7959,8 @@ func TestInterpretFungibleTokenContract(t *testing.T) {
 		"\n",
 	)
 
-	valueDeclarations := []sema.ValueDeclaration{
-		stdlib.PanicFunction,
-	}
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.PanicFunction)
 
 	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
 	baseActivation.Declare(stdlib.PanicFunction)
@@ -7992,7 +7973,7 @@ func TestInterpretFungibleTokenContract(t *testing.T) {
 				makeContractValueHandler(nil, nil, nil),
 			},
 			CheckerOptions: []sema.Option{
-				sema.WithPredeclaredValues(valueDeclarations),
+				sema.WithBaseValueActivation(baseValueActivation),
 			},
 		},
 	)
@@ -8411,9 +8392,8 @@ func TestInterpretHexDecode(t *testing.T) {
 
 	t.Run("in Cadence", func(t *testing.T) {
 
-		valueDeclarations := []sema.ValueDeclaration{
-			stdlib.PanicFunction,
-		}
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(stdlib.PanicFunction)
 
 		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
 		baseActivation.Declare(stdlib.PanicFunction)
@@ -8468,7 +8448,7 @@ func TestInterpretHexDecode(t *testing.T) {
             `,
 			ParseCheckAndInterpretOptions{
 				CheckerOptions: []sema.Option{
-					sema.WithPredeclaredValues(valueDeclarations),
+					sema.WithBaseValueActivation(baseValueActivation),
 				},
 				Options: []interpreter.Option{
 					interpreter.WithBaseActivation(baseActivation),
@@ -8804,9 +8784,8 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 		Kind:  common.DeclarationKindConstant,
 	}
 
-	valueDeclarations := []sema.ValueDeclaration{
-		valueDeclaration,
-	}
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(valueDeclaration)
 
 	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
 	baseActivation.Declare(valueDeclaration)
@@ -8815,7 +8794,7 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 		code,
 		ParseCheckAndInterpretOptions{
 			CheckerOptions: []sema.Option{
-				sema.WithPredeclaredValues(valueDeclarations),
+				sema.WithBaseValueActivation(baseValueActivation),
 			},
 			Options: []interpreter.Option{
 				interpreter.WithBaseActivation(baseActivation),
@@ -9367,9 +9346,8 @@ func TestInterpretNestedDestroy(t *testing.T) {
 		},
 	)
 
-	valueDeclarations := []sema.ValueDeclaration{
-		logFunction,
-	}
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(logFunction)
 
 	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
 	baseActivation.Declare(logFunction)
@@ -9423,7 +9401,7 @@ func TestInterpretNestedDestroy(t *testing.T) {
 				interpreter.WithBaseActivation(baseActivation),
 			},
 			CheckerOptions: []sema.Option{
-				sema.WithPredeclaredValues(valueDeclarations),
+				sema.WithBaseValueActivation(baseValueActivation),
 			},
 			HandleCheckerError: nil,
 		},
@@ -9947,9 +9925,8 @@ func TestInterpretNilCoalesceReference(t *testing.T) {
 
 	t.Parallel()
 
-	valueDeclarations := []sema.ValueDeclaration{
-		stdlib.PanicFunction,
-	}
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.PanicFunction)
 
 	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
 	baseActivation.Declare(stdlib.PanicFunction)
@@ -9961,7 +9938,7 @@ func TestInterpretNilCoalesceReference(t *testing.T) {
         `,
 		ParseCheckAndInterpretOptions{
 			CheckerOptions: []sema.Option{
-				sema.WithPredeclaredValues(valueDeclarations),
+				sema.WithBaseValueActivation(baseValueActivation),
 			},
 			Options: []interpreter.Option{
 				interpreter.WithBaseActivation(baseActivation),

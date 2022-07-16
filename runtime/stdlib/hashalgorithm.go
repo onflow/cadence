@@ -110,7 +110,7 @@ var hashAlgorithmConstructorValue = cryptoAlgorithmEnumValue(
 	NewHashAlgorithmCase,
 )
 
-var hashAlgorithmConstructor = StandardLibraryValue{
+var HashAlgorithmConstructor = StandardLibraryValue{
 	Name: sema.HashAlgorithmTypeName,
 	Type: cryptoAlgorithmEnumConstructorType(
 		sema.HashAlgorithmType,

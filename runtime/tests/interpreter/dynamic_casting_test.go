@@ -3500,14 +3500,15 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 		Kind:  common.DeclarationKindConstant,
 	}
 
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(capabilityValueDeclaration)
+
 	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
 	baseActivation.Declare(capabilityValueDeclaration)
 
 	options := ParseCheckAndInterpretOptions{
 		CheckerOptions: []sema.Option{
-			sema.WithPredeclaredValues([]sema.ValueDeclaration{
-				capabilityValueDeclaration,
-			}),
+			sema.WithBaseValueActivation(baseValueActivation),
 		},
 		Options: []interpreter.Option{
 			interpreter.WithBaseActivation(baseActivation),

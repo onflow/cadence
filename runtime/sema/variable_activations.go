@@ -128,6 +128,40 @@ func (a *VariableActivation) ForEach(cb func(string, *Variable) error) error {
 	return nil
 }
 
+func (a *VariableActivation) DeclareValue(declaration ValueDeclaration) {
+	name := declaration.ValueDeclarationName()
+
+	a.Set(name, &Variable{
+		Identifier:      name,
+		DeclarationKind: declaration.ValueDeclarationKind(),
+		Type:            declaration.ValueDeclarationType(),
+		// TODO: add access to ValueDeclaration and use declaration's access instead here
+		Access:          ast.AccessPublic,
+		IsConstant:      declaration.ValueDeclarationIsConstant(),
+		ArgumentLabels:  declaration.ValueDeclarationArgumentLabels(),
+		Pos:             declaration.ValueDeclarationPosition(),
+		DocString:       declaration.ValueDeclarationDocString(),
+		ActivationDepth: 0,
+	})
+}
+
+func (a *VariableActivation) DeclareType(declaration TypeDeclaration) {
+	name := declaration.TypeDeclarationName()
+
+	a.Set(name, &Variable{
+		Identifier:      name,
+		DeclarationKind: declaration.TypeDeclarationKind(),
+		Type:            declaration.TypeDeclarationType(),
+		// TODO: add access to TypeDeclaration and use declaration's access instead here
+		Access:         ast.AccessPublic,
+		IsConstant:     true,
+		ArgumentLabels: nil,
+		Pos:            declaration.TypeDeclarationPosition(),
+		// TODO: DocString
+		ActivationDepth: 0,
+	})
+}
+
 var variableActivationPool = sync.Pool{
 	New: func() any {
 		return &VariableActivation{}

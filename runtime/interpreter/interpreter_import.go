@@ -83,13 +83,6 @@ func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.Res
 	for _, name := range names {
 		variable := variables[name]
 
-		// don't import predeclared values
-		if subInterpreter.Program != nil {
-			if _, ok := subInterpreter.Program.Elaboration.EffectivePredeclaredValues[name]; ok {
-				continue
-			}
-		}
-
 		interpreter.setVariable(name, variable)
 		interpreter.Globals.Set(name, variable)
 	}

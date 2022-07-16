@@ -1890,11 +1890,8 @@ func BenchmarkCheckContractInterfaceFungibleTokenConformance(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	panicDeclarationOption := sema.WithPredeclaredValues(
-		stdlib.StandardLibraryFunctions{
-			stdlib.PanicFunction,
-		}.ToSemaValueDeclarations(),
-	)
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.PanicFunction)
 
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -1906,7 +1903,7 @@ func BenchmarkCheckContractInterfaceFungibleTokenConformance(b *testing.B) {
 			nil,
 			false,
 			sema.WithAccessCheckMode(sema.AccessCheckModeNotSpecifiedUnrestricted),
-			panicDeclarationOption,
+			sema.WithBaseValueActivation(baseValueActivation),
 		)
 		if err != nil {
 			b.Fatal(err)

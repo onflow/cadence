@@ -51,7 +51,7 @@ func testAccount(
 	func() map[storageKey]interpreter.Value,
 ) {
 
-	var valueDeclarations stdlib.StandardLibraryValues
+	var valueDeclarations []stdlib.StandardLibraryValue
 
 	// `authAccount`
 
@@ -85,6 +85,11 @@ func testAccount(
 	accountValueDeclaration.Name = "account"
 	valueDeclarations = append(valueDeclarations, accountValueDeclaration)
 
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	for _, valueDeclaration := range valueDeclarations {
+		baseValueActivation.DeclareValue(valueDeclaration)
+	}
+
 	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
 
 	for _, valueDeclaration := range valueDeclarations {
@@ -95,7 +100,7 @@ func testAccount(
 		code,
 		ParseCheckAndInterpretOptions{
 			CheckerOptions: []sema.Option{
-				sema.WithPredeclaredValues(valueDeclarations.ToSemaValueDeclarations()),
+				sema.WithBaseValueActivation(baseValueActivation),
 			},
 			Options: []interpreter.Option{
 				interpreter.WithBaseActivation(baseActivation),

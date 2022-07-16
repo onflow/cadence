@@ -54,7 +54,7 @@ var signatureAlgorithmConstructorValue = cryptoAlgorithmEnumValue(
 	NewSignatureAlgorithmCase,
 )
 
-var signatureAlgorithmConstructor = StandardLibraryValue{
+var SignatureAlgorithmConstructor = StandardLibraryValue{
 	Name: sema.SignatureAlgorithmTypeName,
 	Type: cryptoAlgorithmEnumConstructorType(
 		sema.SignatureAlgorithmType,

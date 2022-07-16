@@ -1081,33 +1081,30 @@ func TestInterpretFunctionWithPostConditionAndResourceResult(t *testing.T) {
 			sema.VoidType,
 		),
 	}
-	valueDeclarations := stdlib.StandardLibraryValues{
-		{
-			Name: "check",
-			Type: checkFunctionType,
-			Value: interpreter.NewHostFunctionValue(
-				nil,
-				func(invocation interpreter.Invocation) interpreter.Value {
-					checkCalled = true
 
-					argument := invocation.Arguments[0]
-					require.IsType(t, &interpreter.EphemeralReferenceValue{}, argument)
+	valueDeclaration := stdlib.StandardLibraryValue{
+		Name: "check",
+		Type: checkFunctionType,
+		Value: interpreter.NewHostFunctionValue(
+			nil,
+			func(invocation interpreter.Invocation) interpreter.Value {
+				checkCalled = true
 
-					return interpreter.VoidValue{}
-				},
-				checkFunctionType,
-			),
-			Kind: common.DeclarationKindConstant,
-		},
+				argument := invocation.Arguments[0]
+				require.IsType(t, &interpreter.EphemeralReferenceValue{}, argument)
+
+				return interpreter.VoidValue{}
+			},
+			checkFunctionType,
+		),
+		Kind: common.DeclarationKindConstant,
 	}
 
-	semaValueDeclarations := valueDeclarations.ToSemaValueDeclarations()
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(valueDeclaration)
 
 	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-
-	for _, valueDeclaration := range valueDeclarations {
-		baseActivation.Declare(valueDeclaration)
-	}
+	baseActivation.Declare(valueDeclaration)
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
@@ -1155,7 +1152,7 @@ func TestInterpretFunctionWithPostConditionAndResourceResult(t *testing.T) {
         `,
 		ParseCheckAndInterpretOptions{
 			CheckerOptions: []sema.Option{
-				sema.WithPredeclaredValues(semaValueDeclarations),
+				sema.WithBaseValueActivation(baseValueActivation),
 			},
 			Options: []interpreter.Option{
 				interpreter.WithBaseActivation(baseActivation),

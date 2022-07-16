@@ -101,7 +101,6 @@ func DefaultCheckerInterpreterOptions(
 					}
 
 					stringLocation, ok := importedLocation.(common.StringLocation)
-
 					if !ok {
 						return nil, &sema.CheckerError{
 							Location: checker.Location,

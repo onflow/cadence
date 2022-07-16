@@ -58,8 +58,8 @@ func (StandardLibraryFunction) ValueDeclarationKind() common.DeclarationKind {
 	return common.DeclarationKindFunction
 }
 
-func (StandardLibraryFunction) ValueDeclarationPosition() ast.Position {
-	return ast.EmptyPosition
+func (StandardLibraryFunction) ValueDeclarationPosition() *ast.Position {
+	return nil
 }
 
 func (StandardLibraryFunction) ValueDeclarationIsConstant() bool {
@@ -94,18 +94,6 @@ func NewStandardLibraryFunction(
 		Function:       functionValue,
 		ArgumentLabels: argumentLabels,
 	}
-}
-
-// StandardLibraryFunctions
-
-type StandardLibraryFunctions []StandardLibraryFunction
-
-func (functions StandardLibraryFunctions) ToSemaValueDeclarations() []sema.ValueDeclaration {
-	valueDeclarations := make([]sema.ValueDeclaration, len(functions))
-	for i, function := range functions {
-		valueDeclarations[i] = function
-	}
-	return valueDeclarations
 }
 
 // AssertionError

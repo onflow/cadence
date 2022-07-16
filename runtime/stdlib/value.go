@@ -53,8 +53,8 @@ func (v StandardLibraryValue) ValueDeclarationKind() common.DeclarationKind {
 	return v.Kind
 }
 
-func (StandardLibraryValue) ValueDeclarationPosition() ast.Position {
-	return ast.EmptyPosition
+func (StandardLibraryValue) ValueDeclarationPosition() *ast.Position {
+	return nil
 }
 
 func (v StandardLibraryValue) ValueDeclarationIsConstant() bool {
@@ -63,16 +63,4 @@ func (v StandardLibraryValue) ValueDeclarationIsConstant() bool {
 
 func (StandardLibraryValue) ValueDeclarationArgumentLabels() []string {
 	return nil
-}
-
-// StandardLibraryValues
-
-type StandardLibraryValues []StandardLibraryValue
-
-func (values StandardLibraryValues) ToSemaValueDeclarations() []sema.ValueDeclaration {
-	valueDeclarations := make([]sema.ValueDeclaration, len(values))
-	for i, value := range values {
-		valueDeclarations[i] = value
-	}
-	return valueDeclarations
 }

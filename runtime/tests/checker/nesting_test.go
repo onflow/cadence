@@ -291,17 +291,18 @@ func TestCheckNestedTypeInvalidChildType(t *testing.T) {
 
 			t.Parallel()
 
+			baseTypeActivation := sema.NewVariableActivation(sema.BaseTypeActivation)
+			baseTypeActivation.DeclareType(stdlib.StandardLibraryType{
+				Name: "T",
+				Type: ty,
+				Kind: common.DeclarationKindType,
+			})
+
 			_, err := ParseAndCheckWithOptions(t,
 				`let u: T.U = nil`,
 				ParseAndCheckOptions{
 					Options: []sema.Option{
-						sema.WithPredeclaredTypes([]sema.TypeDeclaration{
-							stdlib.StandardLibraryType{
-								Name: "T",
-								Type: ty,
-								Kind: common.DeclarationKindType,
-							},
-						}),
+						sema.WithBaseTypeActivation(baseTypeActivation),
 					},
 				},
 			)

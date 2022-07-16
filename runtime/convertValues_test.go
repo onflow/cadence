@@ -1154,6 +1154,7 @@ func TestImportRuntimeType(t *testing.T) {
 			expected: interpreter.CompositeStaticType{
 				Location:            TestLocation,
 				QualifiedIdentifier: "S",
+				TypeID:
 			},
 		},
 		{

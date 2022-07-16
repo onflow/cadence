@@ -240,7 +240,7 @@ var rlpContractValue = interpreter.NewSimpleCompositeValue(
 	nil,
 )
 
-var rlpContract = StandardLibraryValue{
+var RLPContract = StandardLibraryValue{
 	Name:  "RLP",
 	Type:  rlpContractType,
 	Value: rlpContractValue,

@@ -177,7 +177,7 @@ var blsContractValue = interpreter.NewSimpleCompositeValue(
 	nil,
 )
 
-var blsContract = StandardLibraryValue{
+var BLSContract = StandardLibraryValue{
 	Name:  "BLS",
 	Type:  blsContractType,
 	Value: blsContractValue,

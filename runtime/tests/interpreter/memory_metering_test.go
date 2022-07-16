@@ -1048,7 +1048,10 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 
 		meter := newTestMemoryGauge()
 
-		valueDeclarations := stdlib.BuiltinFunctions.ToSemaValueDeclarations()
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		for _, valueDeclaration := range stdlib.BuiltinFunctions {
+			baseValueActivation.DeclareValue(valueDeclaration)
+		}
 
 		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
 		for _, valueDeclaration := range stdlib.BuiltinFunctions {
@@ -1060,7 +1063,7 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 			script,
 			ParseCheckAndInterpretOptions{
 				CheckerOptions: []sema.Option{
-					sema.WithPredeclaredValues(valueDeclarations),
+					sema.WithBaseValueActivation(baseValueActivation),
 				},
 				Options: []interpreter.Option{
 					interpreter.WithBaseActivation(baseActivation),
@@ -1089,9 +1092,13 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
             }
         `
 
-		var predeclaredSemaValues []sema.ValueDeclaration
-		predeclaredSemaValues = append(predeclaredSemaValues, stdlib.BuiltinFunctions.ToSemaValueDeclarations()...)
-		predeclaredSemaValues = append(predeclaredSemaValues, stdlib.BuiltinValues.ToSemaValueDeclarations()...)
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		for _, valueDeclaration := range stdlib.BuiltinFunctions {
+			baseValueActivation.DeclareValue(valueDeclaration)
+		}
+		for _, valueDeclaration := range stdlib.BuiltinValues {
+			baseValueActivation.DeclareValue(valueDeclaration)
+		}
 
 		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
 
@@ -1108,7 +1115,7 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 			script,
 			ParseCheckAndInterpretOptions{
 				CheckerOptions: []sema.Option{
-					sema.WithPredeclaredValues(predeclaredSemaValues),
+					sema.WithBaseValueActivation(baseValueActivation),
 				},
 				Options: []interpreter.Option{
 					interpreter.WithBaseActivation(baseActivation),
@@ -1148,9 +1155,13 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
             }
         `
 
-		var predeclaredSemaValues []sema.ValueDeclaration
-		predeclaredSemaValues = append(predeclaredSemaValues, stdlib.BuiltinFunctions.ToSemaValueDeclarations()...)
-		predeclaredSemaValues = append(predeclaredSemaValues, stdlib.BuiltinValues.ToSemaValueDeclarations()...)
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		for _, valueDeclaration := range stdlib.BuiltinFunctions {
+			baseValueActivation.DeclareValue(valueDeclaration)
+		}
+		for _, valueDeclaration := range stdlib.BuiltinValues {
+			baseValueActivation.DeclareValue(valueDeclaration)
+		}
 
 		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
 
@@ -1167,7 +1178,7 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 			script,
 			ParseCheckAndInterpretOptions{
 				CheckerOptions: []sema.Option{
-					sema.WithPredeclaredValues(predeclaredSemaValues),
+					sema.WithBaseValueActivation(baseValueActivation),
 				},
 				Options: []interpreter.Option{
 					interpreter.WithBaseActivation(baseActivation),
@@ -9337,9 +9348,8 @@ func TestInterpretValueStringConversion(t *testing.T) {
 			},
 		)
 
-		valueDeclarations := []sema.ValueDeclaration{
-			logFunction,
-		}
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(logFunction)
 
 		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
 		baseActivation.Declare(logFunction)
@@ -9350,7 +9360,7 @@ func TestInterpretValueStringConversion(t *testing.T) {
 					interpreter.WithBaseActivation(baseActivation),
 				},
 				CheckerOptions: []sema.Option{
-					sema.WithPredeclaredValues(valueDeclarations),
+					sema.WithBaseValueActivation(baseValueActivation),
 				},
 			},
 			meter,
@@ -9682,9 +9692,8 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 			},
 		)
 
-		valueDeclarations := []sema.ValueDeclaration{
-			logFunction,
-		}
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(logFunction)
 
 		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
 		baseActivation.Declare(logFunction)
@@ -9695,7 +9704,7 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 					interpreter.WithBaseActivation(baseActivation),
 				},
 				CheckerOptions: []sema.Option{
-					sema.WithPredeclaredValues(valueDeclarations),
+					sema.WithBaseValueActivation(baseValueActivation),
 				},
 			},
 			meter,

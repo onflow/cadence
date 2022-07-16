@@ -1226,12 +1226,12 @@ func (r *interpreterRuntime) check(
 						}, nil
 					},
 				),
-				sema.WithCheckHandler(func(location common.Location, check func()) {
+				sema.WithCheckHandler(func(checker *sema.Checker, check func()) {
 					reportMetric(
 						check,
 						startContext.Interface,
 						func(metrics Metrics, duration time.Duration) {
-							metrics.ProgramChecked(location, duration)
+							metrics.ProgramChecked(checker.Location, duration)
 						},
 					)
 				}),
