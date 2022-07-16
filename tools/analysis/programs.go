@@ -87,16 +87,11 @@ func (programs Programs) check(
 	error,
 ) {
 
-	semaPredeclaredValues, _ :=
-		stdlib.FlowDefaultPredeclaredValues(stdlib.FlowBuiltinImpls{})
-
 	checker, err := sema.NewChecker(
 		program,
 		location,
 		nil,
 		true,
-		sema.WithPredeclaredValues(semaPredeclaredValues),
-		sema.WithPredeclaredTypes(stdlib.FlowDefaultPredeclaredTypes),
 		sema.WithLocationHandler(
 			sema.AddressLocationHandlerFunc(
 				config.ResolveAddressContractNames,

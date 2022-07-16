@@ -45,7 +45,6 @@ func TestAssert(t *testing.T) {
 		utils.TestLocation,
 		nil,
 		false,
-		sema.WithPredeclaredValues(BuiltinFunctions.ToSemaValueDeclarations()),
 	)
 	require.Nil(t, err)
 
@@ -110,7 +109,6 @@ func TestPanic(t *testing.T) {
 		utils.TestLocation,
 		nil,
 		false,
-		sema.WithPredeclaredValues(BuiltinFunctions.ToSemaValueDeclarations()),
 	)
 	require.Nil(t, err)
 

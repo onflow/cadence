@@ -74,24 +74,14 @@ var checkers = map[common.Location]*sema.Checker{}
 func DefaultCheckerInterpreterOptions(
 	checkers map[common.Location]*sema.Checker,
 	codes map[common.Location]string,
-	impls stdlib.FlowBuiltinImpls,
 ) (
 	[]sema.Option,
 	[]interpreter.Option,
 ) {
 
-	semaPredeclaredValues, interpreterPredeclaredValues :=
-		stdlib.FlowDefaultPredeclaredValues(impls)
-
-	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-
-	for _, valueDeclaration := range interpreterPredeclaredValues {
-		baseActivation.Declare(valueDeclaration)
-	}
+	// TODO: checker and interpreter base activations
 
 	return []sema.Option{
-			sema.WithPredeclaredValues(semaPredeclaredValues),
-			sema.WithPredeclaredTypes(stdlib.FlowDefaultPredeclaredTypes),
 			sema.WithImportHandler(
 				func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
 					if importedLocation == stdlib.CryptoChecker.Location {
@@ -124,9 +114,7 @@ func DefaultCheckerInterpreterOptions(
 				},
 			),
 		},
-		[]interpreter.Option{
-			interpreter.WithBaseActivation(baseActivation),
-		}
+		[]interpreter.Option{}
 }
 
 // PrepareChecker prepares and initializes a checker with a given code as a string,
@@ -143,7 +131,6 @@ func PrepareChecker(
 		DefaultCheckerInterpreterOptions(
 			checkers,
 			codes,
-			stdlib.FlowBuiltinImpls{},
 		)
 
 	defaultCheckerOptions = append(
@@ -196,7 +183,6 @@ func PrepareInterpreter(filename string, debugger *interpreter.Debugger) (*inter
 		DefaultCheckerInterpreterOptions(
 			checkers,
 			codes,
-			stdlib.DefaultFlowBuiltinImpls(),
 		)
 
 	// NOTE: storage option must be provided *before* the predeclared values option,

@@ -21,13 +21,14 @@ package runtime
 import (
 	"time"
 
-	opentracing "github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go"
 
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 type Interface interface {
@@ -107,7 +108,7 @@ type Interface interface {
 	// GetCurrentBlockHeight returns the current block height.
 	GetCurrentBlockHeight() (uint64, error)
 	// GetBlockAtHeight returns the block at the given height.
-	GetBlockAtHeight(height uint64) (block Block, exists bool, err error)
+	GetBlockAtHeight(height uint64) (block stdlib.Block, exists bool, err error)
 	// UnsafeRandom returns a random uint64, where the process of random number derivation is not cryptographically
 	// secure.
 	UnsafeRandom() (uint64, error)

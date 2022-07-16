@@ -28,7 +28,6 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 type REPL struct {
@@ -52,7 +51,6 @@ func NewREPL(
 		cmd.DefaultCheckerInterpreterOptions(
 			checkers,
 			codes,
-			stdlib.DefaultFlowBuiltinImpls(),
 		)
 
 	defaultCheckerOptions = append(

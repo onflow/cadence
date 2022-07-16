@@ -18,15 +18,26 @@
 
 package stdlib
 
-var BuiltinFunctions = []StandardLibraryFunction{
-	AssertFunction,
-	PanicFunction,
-	PublicKeyConstructor,
-}
+import (
+	goRuntime "runtime"
 
-var BuiltinValues = []StandardLibraryValue{
-	SignatureAlgorithmConstructor,
-	HashAlgorithmConstructor,
-	BLSContract,
-	RLPContract,
+	"github.com/onflow/cadence/runtime/errors"
+)
+
+func wrapPanic(f func()) {
+	defer func() {
+		if r := recover(); r != nil {
+			// don't wrap Go errors and internal errors
+			switch r := r.(type) {
+			case goRuntime.Error, errors.InternalError:
+				panic(r)
+			default:
+				panic(errors.ExternalError{
+					Recovered: r,
+				})
+			}
+
+		}
+	}()
+	f()
 }

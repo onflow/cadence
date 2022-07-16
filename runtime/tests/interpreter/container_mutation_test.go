@@ -445,13 +445,24 @@ func TestArrayMutation(t *testing.T) {
 	})
 
 	t.Run("invalid function mutation", func(t *testing.T) {
+
 		t.Parallel()
 
+		valueDeclaration := stdlib.NewStandardLibraryFunction(
+			"log",
+			stdlib.LogFunctionType,
+			"",
+			func(invocation interpreter.Invocation) interpreter.Value {
+				assert.Fail(t, "unexpected call of log")
+				return interpreter.VoidValue{}
+			},
+		)
+
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-		baseValueActivation.DeclareValue(stdlib.LogFunction)
+		baseValueActivation.DeclareValue(valueDeclaration)
 
 		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-		baseActivation.Declare(stdlib.LogFunction)
+		baseActivation.Declare(valueDeclaration)
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
                 fun test() {
@@ -824,13 +835,24 @@ func TestDictionaryMutation(t *testing.T) {
 	})
 
 	t.Run("invalid function mutation", func(t *testing.T) {
+
 		t.Parallel()
 
+		valueDeclaration := stdlib.NewStandardLibraryFunction(
+			"log",
+			stdlib.LogFunctionType,
+			"",
+			func(invocation interpreter.Invocation) interpreter.Value {
+				assert.Fail(t, "unexpected call of log")
+				return interpreter.VoidValue{}
+			},
+		)
+
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-		baseValueActivation.DeclareValue(stdlib.LogFunction)
+		baseValueActivation.DeclareValue(valueDeclaration)
 
 		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-		baseActivation.Declare(stdlib.LogFunction)
+		baseActivation.Declare(valueDeclaration)
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
                fun test() {
@@ -879,6 +901,7 @@ func TestDictionaryMutation(t *testing.T) {
 	})
 
 	t.Run("valid function mutation", func(t *testing.T) {
+
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `

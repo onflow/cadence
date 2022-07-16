@@ -24,17 +24,6 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-const BlockHashLength = 32
-
-type BlockHash [BlockHashLength]byte
-
-type Block struct {
-	Height    uint64
-	View      uint64
-	Hash      BlockHash
-	Timestamp int64
-}
-
 type ResolvedLocation = sema.ResolvedLocation
 type Identifier = ast.Identifier
 type Location = common.Location

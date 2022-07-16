@@ -401,7 +401,7 @@ func (i *testRuntimeInterface) GetCurrentBlockHeight() (uint64, error) {
 	return 1, nil
 }
 
-func (i *testRuntimeInterface) GetBlockAtHeight(height uint64) (block Block, exists bool, err error) {
+func (i *testRuntimeInterface) GetBlockAtHeight(height uint64) (block stdlib.Block, exists bool, err error) {
 
 	buf := new(bytes.Buffer)
 	err = binary.Write(buf, binary.BigEndian, height)
@@ -410,10 +410,10 @@ func (i *testRuntimeInterface) GetBlockAtHeight(height uint64) (block Block, exi
 	}
 
 	encoded := buf.Bytes()
-	var hash BlockHash
+	var hash stdlib.BlockHash
 	copy(hash[sema.BlockIDSize-len(encoded):], encoded)
 
-	block = Block{
+	block = stdlib.Block{
 		Height:    height,
 		View:      height,
 		Hash:      hash,
