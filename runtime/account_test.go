@@ -1717,7 +1717,7 @@ func TestGetAuthAccount(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("script location", func(t *testing.T) {
+	t.Run("script", func(t *testing.T) {
 		t.Parallel()
 
 		rt := newTestInterpreterRuntime()
@@ -1848,15 +1848,17 @@ func TestGetAuthAccount(t *testing.T) {
 		assert.IsType(t, &sema.ArgumentCountError{}, errs[0])
 	})
 
-	t.Run("transaction location", func(t *testing.T) {
+	t.Run("transaction", func(t *testing.T) {
 		t.Parallel()
 
 		rt := newTestInterpreterRuntime()
 
 		script := []byte(`
-            pub fun main(): UInt64 {
-                let acc = getAuthAccount(0x02)
-                return acc.storageUsed
+            transaction {
+		        prepare() {
+                    let acc = getAuthAccount(0x02)
+                    log(acc.storageUsed)
+		        }
             }
         `)
 
@@ -1866,7 +1868,7 @@ func TestGetAuthAccount(t *testing.T) {
 			},
 		}
 
-		_, err := rt.ExecuteScript(
+		err := rt.ExecuteTransaction(
 			Script{
 				Source: script,
 			},
