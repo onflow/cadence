@@ -27,27 +27,38 @@ import (
 type Environment struct {
 	baseActivation      *interpreter.VariableActivation
 	baseValueActivation *sema.VariableActivation
+	Interface           Interface
 }
 
-func newEnvironment(declarations ...stdlib.StandardLibraryValue) Environment {
+func (e *Environment) ProgramLog(message string) error {
+	return e.Interface.ProgramLog(message)
+}
+
+func newEnvironment() *Environment {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-
-	for _, valueDeclaration := range declarations {
-		baseValueActivation.DeclareValue(valueDeclaration)
-		baseActivation.Declare(valueDeclaration)
-	}
-
-	return Environment{
+	return &Environment{
 		baseActivation:      baseActivation,
 		baseValueActivation: baseValueActivation,
 	}
 }
 
-func NewScriptEnvironment(declarations ...stdlib.StandardLibraryValue) Environment {
-	return newEnvironment(append(declarations, stdlib.BuiltinValues...)...)
+func (e *Environment) Declare(valueDeclaration stdlib.StandardLibraryValue) {
+	e.baseValueActivation.DeclareValue(valueDeclaration)
+	e.baseActivation.Declare(valueDeclaration)
 }
 
-func NewTransactionEnvironment(declarations ...stdlib.StandardLibraryValue) Environment {
-	return newEnvironment(append(declarations, stdlib.BuiltinValues...)...)
+func NewScriptEnvironment(declarations ...stdlib.StandardLibraryValue) *Environment {
+	environment := NewBaseEnvironment()
+	// TODO: add getAuthAccount
+	return environment
+}
+
+func NewBaseEnvironment(declarations ...stdlib.StandardLibraryValue) *Environment {
+	environment := newEnvironment()
+	for _, valueDeclaration := range stdlib.BuiltinValues {
+		environment.Declare(valueDeclaration)
+	}
+	environment.Declare(stdlib.NewLogFunction(environment))
+	return environment
 }

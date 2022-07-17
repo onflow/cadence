@@ -304,6 +304,7 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val 
 
 	// TODO: allow caller to pass this in so it can be reused
 	environment := NewScriptEnvironment()
+	environment.Interface = context.Interface
 
 	program, err := r.parseAndCheckProgram(
 		script.Source,
@@ -432,7 +433,7 @@ func (r *interpreterRuntime) interpret(
 	program *interpreter.Program,
 	context Context,
 	storage *Storage,
-	environment Environment,
+	environment *Environment,
 	f interpretFunc,
 ) (
 	exportableValue,
@@ -502,7 +503,8 @@ func (r *interpreterRuntime) InvokeContractFunction(
 	storage := NewStorage(context.Interface, memoryGauge)
 
 	// TODO: allow caller to pass this in so it can be reused
-	environment := NewTransactionEnvironment()
+	environment := NewBaseEnvironment()
+	environment.Interface = context.Interface
 
 	// create interpreter
 	_, inter, err := r.interpret(
@@ -633,7 +635,8 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 	storage := NewStorage(context.Interface, memoryGauge)
 
 	// TODO: allow caller to pass this in so it can be reused
-	environment := NewTransactionEnvironment()
+	environment := NewBaseEnvironment()
+	environment.Interface = context.Interface
 
 	program, err := r.parseAndCheckProgram(
 		script.Source,
@@ -970,7 +973,8 @@ func (r *interpreterRuntime) ParseAndCheckProgram(
 	context.InitializeCodesAndPrograms()
 
 	// TODO: allow caller to pass this in so it can be reused
-	environment := NewTransactionEnvironment()
+	environment := NewBaseEnvironment()
+	environment.Interface = context.Interface
 
 	program, err = r.parseAndCheckProgram(
 		code,
@@ -989,7 +993,7 @@ func (r *interpreterRuntime) ParseAndCheckProgram(
 func (r *interpreterRuntime) parseAndCheckProgram(
 	code []byte,
 	context Context,
-	environment Environment,
+	environment *Environment,
 	storeProgram bool,
 	checkedImports importResolutionResults,
 ) (
@@ -1058,7 +1062,7 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 func (r *interpreterRuntime) check(
 	program *ast.Program,
 	startContext Context,
-	environment Environment,
+	environment *Environment,
 	checkedImports importResolutionResults,
 ) (
 	elaboration *sema.Elaboration,
@@ -1145,7 +1149,7 @@ func (r *interpreterRuntime) newInterpreter(
 	program *interpreter.Program,
 	context Context,
 	storage *Storage,
-	environment Environment,
+	environment *Environment,
 ) (*interpreter.Interpreter, error) {
 
 	memoryGauge, _ := context.Interface.(common.MemoryGauge)
@@ -1356,7 +1360,7 @@ func (r *interpreterRuntime) newInterpreter(
 
 func (r *interpreterRuntime) importLocationHandler(
 	startContext Context,
-	environment Environment,
+	environment *Environment,
 ) interpreter.ImportLocationHandlerFunc {
 
 	return func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
@@ -1395,7 +1399,7 @@ func (r *interpreterRuntime) importLocationHandler(
 //
 func (r *interpreterRuntime) getProgram(
 	context Context,
-	environment Environment,
+	environment *Environment,
 	checkedImports importResolutionResults,
 ) (
 	program *interpreter.Program,
@@ -1603,7 +1607,7 @@ func (r *interpreterRuntime) instantiateContract(
 	constructorArguments []interpreter.Value,
 	argumentTypes []sema.Type,
 	storage *Storage,
-	environment Environment,
+	environment *Environment,
 ) (
 	*interpreter.CompositeValue,
 	error,
@@ -1766,7 +1770,7 @@ func (r *interpreterRuntime) updateAccountContractCode(
 	contractType *sema.CompositeType,
 	constructorArguments []interpreter.Value,
 	constructorArgumentTypes []sema.Type,
-	environment Environment,
+	environment *Environment,
 	options updateAccountContractCodeOptions,
 ) error {
 	// If the code declares a contract, instantiate it and store it.
@@ -1843,7 +1847,7 @@ func (r *interpreterRuntime) onStatementHandler() interpreter.OnStatementFunc {
 func (r *interpreterRuntime) executeNonProgram(
 	interpret interpretFunc,
 	context Context,
-	environment Environment,
+	environment *Environment,
 ) (cadence.Value, error) {
 	context.InitializeCodesAndPrograms()
 
@@ -1887,7 +1891,8 @@ func (r *interpreterRuntime) ReadStored(
 	)
 
 	// TODO: allow caller to pass this in so it can be reused
-	environment := NewTransactionEnvironment()
+	environment := NewBaseEnvironment()
+	environment.Interface = context.Interface
 
 	return r.executeNonProgram(
 		func(inter *interpreter.Interpreter) (interpreter.Value, error) {
@@ -1921,7 +1926,8 @@ func (r *interpreterRuntime) ReadLinked(
 	)
 
 	// TODO: allow caller to pass this in so it can be reused
-	environment := NewTransactionEnvironment()
+	environment := NewBaseEnvironment()
+	environment.Interface = context.Interface
 
 	return r.executeNonProgram(
 		func(inter *interpreter.Interpreter) (interpreter.Value, error) {
