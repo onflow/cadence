@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/opentracing/opentracing-go"
-	"golang.org/x/crypto/sha3"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/ast"
@@ -1519,11 +1518,6 @@ func (r *interpreterRuntime) getCode(context Context) (code []byte, err error) {
 	}
 
 	return code, nil
-}
-
-func CodeToHashValue(inter *interpreter.Interpreter, code []byte) *interpreter.ArrayValue {
-	codeHash := sha3.Sum256(code)
-	return interpreter.ByteSliceToByteArrayValue(inter, codeHash[:])
 }
 
 func (r *interpreterRuntime) loadContract(

@@ -19,6 +19,8 @@
 package stdlib
 
 import (
+	"golang.org/x/crypto/sha3"
+
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -60,6 +62,7 @@ type AuthAccountHandler interface {
 	AccountEncodedKeyAdditionHandler
 	AccountEncodedKeyRevocationHandler
 	AuthAccountKeysHandler
+	AuthAccountContractsHandler
 }
 
 type AccountCreator interface {
@@ -186,15 +189,13 @@ func NewAuthAccountValue(
 		newStorageCapacityGetFunction(handler, addressValue),
 		newAddPublicKeyFunction(gauge, handler, addressValue),
 		newRemovePublicKeyFunction(gauge, handler, addressValue),
-		// TODO:
-		nil,
-		//func() interpreter.Value {
-		//	return newAuthAccountContractsValue(
-		//		gauge,
-		//		handler,
-		//		addressValue,
-		//	)
-		//},
+		func() interpreter.Value {
+			return newAuthAccountContractsValue(
+				gauge,
+				handler,
+				addressValue,
+			)
+		},
 		func() interpreter.Value {
 			return newAuthAccountKeysValue(
 				gauge,
@@ -205,41 +206,48 @@ func NewAuthAccountValue(
 	)
 }
 
-//func newAuthAccountContracts(
-//	gauge common.MemoryGauge,
-//	addressValue interpreter.AddressValue,
-//) interpreter.Value {
-//	return interpreter.NewAuthAccountContractsValue(
-//		gauge,
-//		addressValue,
-//		newAuthAccountContractsChangeFunction(
-//			gauge,
-//          handler,
-//			addressValue,
-//			false,
-//		),
-//		newAuthAccountContractsChangeFunction(
-//			gauge,
-//          handler,
-//			addressValue,
-//			true,
-//		),
-//		newAccountContractsGetFunction(
-//			gauge,
-//          handler,
-//			addressValue,
-//		),
-//		newAuthAccountContractsRemoveFunction(
-//			gauge,
-//          handler,
-//			addressValue,
-//		),
-//		r.newAccountContractsGetNamesFunction(
-//          handler,
-//			addressValue,
-//		),
-//	)
-//}
+type AuthAccountContractsHandler interface {
+	AccountContractProvider
+	AccountContractRemovalHandler
+	AccountContractNamesProvider
+}
+
+func newAuthAccountContractsValue(
+	gauge common.MemoryGauge,
+	handler AuthAccountContractsHandler,
+	addressValue interpreter.AddressValue,
+) interpreter.Value {
+	return interpreter.NewAuthAccountContractsValue(
+		gauge,
+		addressValue,
+		newAuthAccountContractsChangeFunction(
+			gauge,
+			handler,
+			addressValue,
+			false,
+		),
+		newAuthAccountContractsChangeFunction(
+			gauge,
+			handler,
+			addressValue,
+			true,
+		),
+		newAccountContractsGetFunction(
+			gauge,
+			handler,
+			addressValue,
+		),
+		newAuthAccountContractsRemoveFunction(
+			gauge,
+			handler,
+			addressValue,
+		),
+		newAccountContractsGetNamesFunction(
+			handler,
+			addressValue,
+		),
+	)
+}
 
 type AuthAccountKeysHandler interface {
 	AccountKeyProvider
@@ -775,8 +783,8 @@ func newPublicAccountContractsValue(
 			addressValue,
 		),
 		newAccountContractsGetNamesFunction(
-			addressValue,
 			handler,
+			addressValue,
 		),
 	)
 }
@@ -787,8 +795,8 @@ type AccountContractNamesProvider interface {
 }
 
 func newAccountContractsGetNamesFunction(
-	addressValue interpreter.AddressValue,
 	provider AccountContractNamesProvider,
+	addressValue interpreter.AddressValue,
 ) func(
 	inter *interpreter.Interpreter,
 	getLocationRange func() interpreter.LocationRange,
@@ -893,384 +901,391 @@ func newAccountContractsGetFunction(
 	)
 }
 
-//// newAuthAccountContractsChangeFunction called when e.g.
-//// - adding: `AuthAccount.contracts.add(name: "Foo", code: [...])` (isUpdate = false)
-//// - updating: `AuthAccount.contracts.update__experimental(name: "Foo", code: [...])` (isUpdate = true)
-////
-//func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
-//	gauge common.MemoryGauge,
-//  handler,
-//	addressValue interpreter.AddressValue,
-//	isUpdate bool,
-//) *interpreter.HostFunctionValue {
-//	return interpreter.NewHostFunctionValue(
-//		gauge,
-//		func(invocation interpreter.Invocation) interpreter.Value {
-//
-//			const requiredArgumentCount = 2
-//
-//			nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
-//			if !ok {
-//				panic(runtimeErrors.NewUnreachableError())
-//			}
-//
-//			newCodeValue, ok := invocation.Arguments[1].(*interpreter.ArrayValue)
-//			if !ok {
-//				panic(runtimeErrors.NewUnreachableError())
-//			}
-//
-//			constructorArguments := invocation.Arguments[requiredArgumentCount:]
-//			constructorArgumentTypes := invocation.ArgumentTypes[requiredArgumentCount:]
-//
-//			code, err := interpreter.ByteArrayValueToByteSlice(gauge, newCodeValue)
-//			if err != nil {
-//				panic(runtimeErrors.NewDefaultUserError("add requires the second argument to be an array"))
-//			}
-//
-//			// Get the existing code
-//
-//			nameArgument := nameValue.Str
-//
-//			if nameArgument == "" {
-//				panic(runtimeErrors.NewDefaultUserError(
-//					"contract name argument cannot be empty." +
-//						"it must match the name of the deployed contract declaration or contract interface declaration",
-//				))
-//			}
-//
-//			address := addressValue.ToAddress()
-//			existingCode, err := handler.GetAccountContractCode(address, nameArgument)
-//			if err != nil {
-//				panic(err)
-//			}
-//
-//			if isUpdate {
-//				// We are updating an existing contract.
-//				// Ensure that there's a contract/contract-interface with the given name exists already
-//
-//				if len(existingCode) == 0 {
-//					panic(runtimeErrors.NewDefaultUserError(
-//						"cannot update non-existing contract with name %q in account %s",
-//						nameArgument,
-//						address.ShortHexWithPrefix(),
-//					))
-//				}
-//
-//			} else {
-//				// We are adding a new contract.
-//				// Ensure that no contract/contract interface with the given name exists already
-//
-//				if len(existingCode) > 0 {
-//					panic(runtimeErrors.NewDefaultUserError(
-//						"cannot overwrite existing contract with name %q in account %s",
-//						nameArgument,
-//						address.ShortHexWithPrefix(),
-//					))
-//				}
-//			}
-//
-//			// Check the code
-//
-//			location := common.NewAddressLocation(invocation.Interpreter, address, nameArgument)
-//
-//			context := startContext.WithLocation(location)
-//
-//			handleContractUpdateError := func(err error) {
-//				if err == nil {
-//					return
-//				}
-//
-//				// Update the code for the error pretty printing
-//				// NOTE: only do this when an error occurs
-//
-//				context.SetCode(context.Location, code)
-//
-//				panic(&InvalidContractDeploymentError{
-//					Err:           err,
-//					LocationRange: invocation.GetLocationRange(),
-//				})
-//			}
-//
-//			// NOTE: do NOT use the program obtained from the host environment, as the current program.
-//			// Always re-parse and re-check the new program.
-//
-//			// NOTE: *DO NOT* store the program – the new or updated program
-//			// should not be effective during the execution
-//
-//			const storeProgram = false
-//
-//			program, err := r.parseAndCheckProgram(
-//				code,
-//				context,
-//				storeProgram,
-//				importResolutionResults{},
-//			)
-//			if err != nil {
-//				// Update the code for the error pretty printing
-//				// NOTE: only do this when an error occurs
-//
-//				context.SetCode(context.Location, code)
-//
-//				panic(&InvalidContractDeploymentError{
-//					Err:           err,
-//					LocationRange: invocation.GetLocationRange(),
-//				})
-//			}
-//
-//			// The code may declare exactly one contract or one contract interface.
-//
-//			var contractTypes []*sema.CompositeType
-//			var contractInterfaceTypes []*sema.InterfaceType
-//
-//			program.Elaboration.GlobalTypes.Foreach(func(_ string, variable *sema.Variable) {
-//				switch ty := variable.Type.(type) {
-//				case *sema.CompositeType:
-//					if ty.Kind == common.CompositeKindContract {
-//						contractTypes = append(contractTypes, ty)
-//					}
-//
-//				case *sema.InterfaceType:
-//					if ty.CompositeKind == common.CompositeKindContract {
-//						contractInterfaceTypes = append(contractInterfaceTypes, ty)
-//					}
-//				}
-//			})
-//
-//			var deployedType sema.Type
-//			var contractType *sema.CompositeType
-//			var contractInterfaceType *sema.InterfaceType
-//			var declaredName string
-//			var declarationKind common.DeclarationKind
-//
-//			switch {
-//			case len(contractTypes) == 1 && len(contractInterfaceTypes) == 0:
-//				contractType = contractTypes[0]
-//				declaredName = contractType.Identifier
-//				deployedType = contractType
-//				declarationKind = common.DeclarationKindContract
-//			case len(contractInterfaceTypes) == 1 && len(contractTypes) == 0:
-//				contractInterfaceType = contractInterfaceTypes[0]
-//				declaredName = contractInterfaceType.Identifier
-//				deployedType = contractInterfaceType
-//				declarationKind = common.DeclarationKindContractInterface
-//			}
-//
-//			if deployedType == nil {
-//				// Update the code for the error pretty printing
-//				// NOTE: only do this when an error occurs
-//
-//				context.SetCode(context.Location, code)
-//
-//				panic(runtimeErrors.NewDefaultUserError(
-//					"invalid %s: the code must declare exactly one contract or contract interface",
-//					declarationKind.Name(),
-//				))
-//			}
-//
-//			// The declared contract or contract interface must have the name
-//			// passed to the constructor as the first argument
-//
-//			if declaredName != nameArgument {
-//				// Update the code for the error pretty printing
-//				// NOTE: only do this when an error occurs
-//
-//				context.SetCode(context.Location, code)
-//
-//				panic(runtimeErrors.NewDefaultUserError(
-//					"invalid %s: the name argument must match the name of the declaration: got %q, expected %q",
-//					declarationKind.Name(),
-//					nameArgument,
-//					declaredName,
-//				))
-//			}
-//
-//			// Validate the contract update (if enabled)
-//
-//			if r.contractUpdateValidationEnabled && isUpdate {
-//
-//				oldCode, err := r.getCode(context)
-//				handleContractUpdateError(err)
-//
-//				oldProgram, err := parser.ParseProgram(string(oldCode), gauge)
-//
-//				if !ignoreUpdatedProgramParserError(err) {
-//					handleContractUpdateError(err)
-//				}
-//
-//				validator := NewContractUpdateValidator(
-//					context.Location,
-//					nameArgument,
-//					oldProgram,
-//					program.Program,
-//				)
-//				err = validator.Validate()
-//				handleContractUpdateError(err)
-//			}
-//
-//			inter := invocation.Interpreter
-//
-//			err = r.updateAccountContractCode(
-//				program,
-//				context,
-//				storage,
-//				declaredName,
-//				code,
-//				addressValue,
-//				contractType,
-//				constructorArguments,
-//				constructorArgumentTypes,
-//				updateAccountContractCodeOptions{
-//					createContract: !isUpdate,
-//				},
-//			)
-//			if err != nil {
-//				// Update the code for the error pretty printing
-//				// NOTE: only do this when an error occurs
-//
-//				context.SetCode(context.Location, code)
-//
-//				panic(err)
-//			}
-//
-//			codeHashValue := CodeToHashValue(inter, code)
-//
-//			eventArguments := []exportableValue{
-//				newExportableValue(addressValue, inter),
-//				newExportableValue(codeHashValue, inter),
-//				newExportableValue(nameValue, inter),
-//			}
-//
-//			var eventType *sema.CompositeType
-//
-//			if isUpdate {
-//				eventType = AccountContractUpdatedEventType
-//			} else {
-//				eventType = AccountContractAddedEventType
-//			}
-//
-//			emitEventFields(
-//				inter,
-//				invocation.GetLocationRange,
-//				eventType,
-//				eventArguments,
-//				startContext.Interface.EmitEvent,
-//			)
-//
-//			return interpreter.NewDeployedContractValue(
-//				inter,
-//				addressValue,
-//				nameValue,
-//				newCodeValue,
-//			)
-//		},
-//		sema.AuthAccountContractsTypeAddFunctionType,
-//	)
-//}
+type AccountContractAdditionHandler interface {
+	EventEmitter
+	AccountContractProvider
+}
 
-//func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
-//	gauge common.MemoryGauge,
-//	addressValue interpreter.AddressValue,
-//	runtimeInterface Interface,
-//	storage *Storage,
-//) *interpreter.HostFunctionValue {
+// newAuthAccountContractsChangeFunction called when e.g.
+// - adding: `AuthAccount.contracts.add(name: "Foo", code: [...])` (isUpdate = false)
+// - updating: `AuthAccount.contracts.update__experimental(name: "Foo", code: [...])` (isUpdate = true)
 //
-//	// Converted addresses can be cached and don't have to be recomputed on each function invocation
-//	address := addressValue.ToAddress()
-//
-//	return interpreter.NewHostFunctionValue(
-//		gauge,
-//		func(invocation interpreter.Invocation) interpreter.Value {
-//
-//			inter := invocation.Interpreter
-//			nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
-//			if !ok {
-//				panic(runtimeErrors.NewUnreachableError())
-//			}
-//			name := nameValue.Str
-//
-//			// Get the current code
-//
-//			var code []byte
-//			var err error
-//			wrapPanic(func() {
-//				code, err = runtimeInterface.GetAccountContractCode(address, name)
-//			})
-//			if err != nil {
-//				panic(err)
-//			}
-//
-//			// Only remove the contract code, remove the contract value, and emit an event,
-//			// if there is currently code deployed for the given contract name
-//
-//			if len(code) > 0 {
-//
-//				// NOTE: *DO NOT* call SetProgram – the program removal
-//				// should not be effective during the execution, only after
-//
-//				// Deny removing a contract, if the contract validation is enabled, and
-//				// the existing code contains enums.
-//				if r.contractUpdateValidationEnabled {
-//					existingProgram, err := parser.ParseProgram(string(code), gauge)
-//
-//					// If the existing code is not parsable (i.e: `err != nil`), that shouldn't be a reason to
-//					// fail the contract removal. Therefore, validate only if the code is a valid one.
-//					if err == nil && containsEnumsInProgram(existingProgram) {
-//						panic(&ContractRemovalError{
-//							Name:          name,
-//							LocationRange: invocation.GetLocationRange(),
-//						})
-//					}
-//				}
-//
-//				wrapPanic(func() {
-//					err = runtimeInterface.RemoveAccountContractCode(address, name)
-//				})
-//				if err != nil {
-//					panic(err)
-//				}
-//
-//				// NOTE: the contract recording function delays the write
-//				// until the end of the execution of the program
-//
-//				storage.recordContractUpdate(
-//					addressValue.ToAddress(),
-//					name,
-//					nil,
-//				)
-//
-//				codeHashValue := CodeToHashValue(inter, code)
-//
-//				emitEventFields(
-//					inter,
-//					invocation.GetLocationRange,
-//					AccountContractRemovedEventType,
-//					[]exportableValue{
-//						newExportableValue(addressValue, inter),
-//						newExportableValue(codeHashValue, inter),
-//						newExportableValue(nameValue, inter),
-//					},
-//					runtimeInterface.EmitEvent,
-//				)
-//
-//				return interpreter.NewSomeValueNonCopying(
-//					inter,
-//					interpreter.NewDeployedContractValue(
-//						inter,
-//						addressValue,
-//						nameValue,
-//						interpreter.ByteSliceToByteArrayValue(
-//							inter,
-//							code,
-//						),
-//					),
-//				)
-//			} else {
-//				return interpreter.NewNilValue(invocation.Interpreter)
-//			}
-//		},
-//		sema.AuthAccountContractsTypeRemoveFunctionType,
-//	)
-//}
+func newAuthAccountContractsChangeFunction(
+	gauge common.MemoryGauge,
+	handler AccountContractAdditionHandler,
+	addressValue interpreter.AddressValue,
+	isUpdate bool,
+) *interpreter.HostFunctionValue {
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		func(invocation interpreter.Invocation) interpreter.Value {
+
+			const requiredArgumentCount = 2
+
+			nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			newCodeValue, ok := invocation.Arguments[1].(*interpreter.ArrayValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			// TODO:
+			//constructorArguments := invocation.Arguments[requiredArgumentCount:]
+			//constructorArgumentTypes := invocation.ArgumentTypes[requiredArgumentCount:]
+
+			code, err := interpreter.ByteArrayValueToByteSlice(gauge, newCodeValue)
+			if err != nil {
+				panic(errors.NewDefaultUserError("add requires the second argument to be an array"))
+			}
+
+			// Get the existing code
+
+			nameArgument := nameValue.Str
+
+			if nameArgument == "" {
+				panic(errors.NewDefaultUserError(
+					"contract name argument cannot be empty." +
+						"it must match the name of the deployed contract declaration or contract interface declaration",
+				))
+			}
+
+			address := addressValue.ToAddress()
+			existingCode, err := handler.GetAccountContractCode(address, nameArgument)
+			if err != nil {
+				panic(err)
+			}
+
+			if isUpdate {
+				// We are updating an existing contract.
+				// Ensure that there's a contract/contract-interface with the given name exists already
+
+				if len(existingCode) == 0 {
+					panic(errors.NewDefaultUserError(
+						"cannot update non-existing contract with name %q in account %s",
+						nameArgument,
+						address.ShortHexWithPrefix(),
+					))
+				}
+
+			} else {
+				// We are adding a new contract.
+				// Ensure that no contract/contract interface with the given name exists already
+
+				if len(existingCode) > 0 {
+					panic(errors.NewDefaultUserError(
+						"cannot overwrite existing contract with name %q in account %s",
+						nameArgument,
+						address.ShortHexWithPrefix(),
+					))
+				}
+			}
+
+			// TODO:
+			//// Check the code
+			//
+			//location := common.NewAddressLocation(invocation.Interpreter, address, nameArgument)
+			//
+			//context := startContext.WithLocation(location)
+			//
+			//handleContractUpdateError := func(err error) {
+			//	if err == nil {
+			//		return
+			//	}
+			//
+			//	// Update the code for the error pretty printing
+			//	// NOTE: only do this when an error occurs
+			//
+			//	context.SetCode(context.Location, code)
+			//
+			//	panic(&InvalidContractDeploymentError{
+			//		Err:           err,
+			//		LocationRange: invocation.GetLocationRange(),
+			//	})
+			//}
+			//
+			//// NOTE: do NOT use the program obtained from the host environment, as the current program.
+			//// Always re-parse and re-check the new program.
+			//
+			//// NOTE: *DO NOT* store the program – the new or updated program
+			//// should not be effective during the execution
+			//
+			//const storeProgram = false
+			//
+			//program, err := r.parseAndCheckProgram(
+			//	code,
+			//	context,
+			//	storeProgram,
+			//	importResolutionResults{},
+			//)
+			//if err != nil {
+			//	// Update the code for the error pretty printing
+			//	// NOTE: only do this when an error occurs
+			//
+			//	context.SetCode(context.Location, code)
+			//
+			//	panic(&InvalidContractDeploymentError{
+			//		Err:           err,
+			//		LocationRange: invocation.GetLocationRange(),
+			//	})
+			//}
+			//
+			//// The code may declare exactly one contract or one contract interface.
+			//
+			//var contractTypes []*sema.CompositeType
+			//var contractInterfaceTypes []*sema.InterfaceType
+			//
+			//program.Elaboration.GlobalTypes.Foreach(func(_ string, variable *sema.Variable) {
+			//	switch ty := variable.Type.(type) {
+			//	case *sema.CompositeType:
+			//		if ty.Kind == common.CompositeKindContract {
+			//			contractTypes = append(contractTypes, ty)
+			//		}
+			//
+			//	case *sema.InterfaceType:
+			//		if ty.CompositeKind == common.CompositeKindContract {
+			//			contractInterfaceTypes = append(contractInterfaceTypes, ty)
+			//		}
+			//	}
+			//})
+			//
+			//var deployedType sema.Type
+			//var contractType *sema.CompositeType
+			//var contractInterfaceType *sema.InterfaceType
+			//var declaredName string
+			//var declarationKind common.DeclarationKind
+			//
+			//switch {
+			//case len(contractTypes) == 1 && len(contractInterfaceTypes) == 0:
+			//	contractType = contractTypes[0]
+			//	declaredName = contractType.Identifier
+			//	deployedType = contractType
+			//	declarationKind = common.DeclarationKindContract
+			//case len(contractInterfaceTypes) == 1 && len(contractTypes) == 0:
+			//	contractInterfaceType = contractInterfaceTypes[0]
+			//	declaredName = contractInterfaceType.Identifier
+			//	deployedType = contractInterfaceType
+			//	declarationKind = common.DeclarationKindContractInterface
+			//}
+			//
+			//if deployedType == nil {
+			//	// Update the code for the error pretty printing
+			//	// NOTE: only do this when an error occurs
+			//
+			//	context.SetCode(context.Location, code)
+			//
+			//	panic(errors.NewDefaultUserError(
+			//		"invalid %s: the code must declare exactly one contract or contract interface",
+			//		declarationKind.Name(),
+			//	))
+			//}
+			//
+			//// The declared contract or contract interface must have the name
+			//// passed to the constructor as the first argument
+			//
+			//if declaredName != nameArgument {
+			//	// Update the code for the error pretty printing
+			//	// NOTE: only do this when an error occurs
+			//
+			//	context.SetCode(context.Location, code)
+			//
+			//	panic(errors.NewDefaultUserError(
+			//		"invalid %s: the name argument must match the name of the declaration: got %q, expected %q",
+			//		declarationKind.Name(),
+			//		nameArgument,
+			//		declaredName,
+			//	))
+			//}
+			//
+			//// Validate the contract update (if enabled)
+			//
+			//if isUpdate {
+			//
+			//	oldCode, err := r.getCode(context)
+			//	handleContractUpdateError(err)
+			//
+			//	oldProgram, err := parser.ParseProgram(string(oldCode), gauge)
+			//
+			//	if !ignoreUpdatedProgramParserError(err) {
+			//		handleContractUpdateError(err)
+			//	}
+			//
+			//	validator := NewContractUpdateValidator(
+			//		context.Location,
+			//		nameArgument,
+			//		oldProgram,
+			//		program.Program,
+			//	)
+			//	err = validator.Validate()
+			//	handleContractUpdateError(err)
+			//}
+
+			inter := invocation.Interpreter
+
+			// TODO:
+			//err = r.updateAccountContractCode(
+			//	program,
+			//	context,
+			//	storage,
+			//	declaredName,
+			//	code,
+			//	addressValue,
+			//	contractType,
+			//	constructorArguments,
+			//	constructorArgumentTypes,
+			//	updateAccountContractCodeOptions{
+			//		createContract: !isUpdate,
+			//	},
+			//)
+			//if err != nil {
+			//	// Update the code for the error pretty printing
+			//	// NOTE: only do this when an error occurs
+			//
+			//	context.SetCode(context.Location, code)
+			//
+			//	panic(err)
+			//}
+
+			var eventType *sema.CompositeType
+
+			if isUpdate {
+				eventType = AccountContractUpdatedEventType
+			} else {
+				eventType = AccountContractAddedEventType
+			}
+
+			codeHashValue := CodeToHashValue(inter, code)
+
+			handler.EmitEvent(
+				inter,
+				eventType,
+				[]interpreter.Value{
+					addressValue,
+					codeHashValue,
+					nameValue,
+				},
+				invocation.GetLocationRange,
+			)
+
+			return interpreter.NewDeployedContractValue(
+				inter,
+				addressValue,
+				nameValue,
+				newCodeValue,
+			)
+		},
+		sema.AuthAccountContractsTypeAddFunctionType,
+	)
+}
+
+type AccountContractRemovalHandler interface {
+	EventEmitter
+	AccountContractProvider
+	RemoveAccountContractCode(address common.Address, name string) error
+}
+
+func newAuthAccountContractsRemoveFunction(
+	gauge common.MemoryGauge,
+	handler AccountContractRemovalHandler,
+	addressValue interpreter.AddressValue,
+) *interpreter.HostFunctionValue {
+
+	// Converted addresses can be cached and don't have to be recomputed on each function invocation
+	address := addressValue.ToAddress()
+
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		func(invocation interpreter.Invocation) interpreter.Value {
+
+			inter := invocation.Interpreter
+			nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+			name := nameValue.Str
+
+			// Get the current code
+
+			var code []byte
+			var err error
+			wrapPanic(func() {
+				code, err = handler.GetAccountContractCode(address, name)
+			})
+			if err != nil {
+				panic(err)
+			}
+
+			// Only remove the contract code, remove the contract value, and emit an event,
+			// if there is currently code deployed for the given contract name
+
+			if len(code) > 0 {
+
+				// NOTE: *DO NOT* call SetProgram – the program removal
+				// should not be effective during the execution, only after
+
+				// TODO:
+				//existingProgram, err := parser.ParseProgram(string(code), gauge)
+				//
+				//// If the existing code is not parsable (i.e: `err != nil`),
+				//// that shouldn't be a reason to fail the contract removal.
+				//// Therefore, validate only if the code is a valid one.
+				//if err == nil && containsEnumsInProgram(existingProgram) {
+				//	panic(&ContractRemovalError{
+				//		Name:          name,
+				//		LocationRange: invocation.GetLocationRange(),
+				//	})
+				//}
+				//
+				//wrapPanic(func() {
+				//	err = handler.RemoveAccountContractCode(address, name)
+				//})
+				//if err != nil {
+				//	panic(err)
+				//}
+				//
+				//// NOTE: the contract recording function delays the write
+				//// until the end of the execution of the program
+				//
+				//storage.recordContractUpdate(
+				//	addressValue.ToAddress(),
+				//	name,
+				//	nil,
+				//)
+
+				codeHashValue := CodeToHashValue(inter, code)
+
+				handler.EmitEvent(
+					inter,
+					AccountContractRemovedEventType,
+					[]interpreter.Value{
+						addressValue,
+						codeHashValue,
+						nameValue,
+					},
+					invocation.GetLocationRange,
+				)
+
+				return interpreter.NewSomeValueNonCopying(
+					inter,
+					interpreter.NewDeployedContractValue(
+						inter,
+						addressValue,
+						nameValue,
+						interpreter.ByteSliceToByteArrayValue(
+							inter,
+							code,
+						),
+					),
+				)
+			} else {
+				return interpreter.NewNilValue(invocation.Interpreter)
+			}
+		},
+		sema.AuthAccountContractsTypeRemoveFunctionType,
+	)
+}
 
 const getAccountFunctionDocString = `
 Returns the public account for the given address
@@ -1458,4 +1473,9 @@ func NewHashAlgorithmFromValue(
 	hashAlgoRawValue := rawValue.(interpreter.UInt8Value)
 
 	return sema.HashAlgorithm(hashAlgoRawValue.ToInt())
+}
+
+func CodeToHashValue(inter *interpreter.Interpreter, code []byte) *interpreter.ArrayValue {
+	codeHash := sha3.Sum256(code)
+	return interpreter.ByteSliceToByteArrayValue(inter, codeHash[:])
 }
