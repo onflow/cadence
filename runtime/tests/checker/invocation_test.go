@@ -316,9 +316,9 @@ func TestCheckInvocationWithOnlyVarargs(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(stdlib.StandardLibraryFunction{
-		Name: "foo",
-		Type: &sema.FunctionType{
+	baseValueActivation.DeclareValue(stdlib.NewStandardLibraryFunction(
+		"foo",
+		&sema.FunctionType{
 			ReturnTypeAnnotation: &sema.TypeAnnotation{
 				Type: sema.VoidType,
 			},
@@ -328,7 +328,9 @@ func TestCheckInvocationWithOnlyVarargs(t *testing.T) {
 				return &count
 			}(),
 		},
-	})
+		"",
+		nil,
+	))
 
 	_, err := ParseAndCheckWithOptions(t,
 		`

@@ -24,11 +24,10 @@ import (
 )
 
 type Context struct {
-	Interface         Interface
-	Location          Location
-	PredeclaredValues []ValueDeclaration
-	codes             map[common.Location][]byte
-	programs          map[common.Location]*ast.Program
+	Interface Interface
+	Location  Location
+	codes     map[common.Location][]byte
+	programs  map[common.Location]*ast.Program
 }
 
 func (c Context) SetCode(location common.Location, code []byte) {

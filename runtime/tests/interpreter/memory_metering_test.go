@@ -1049,12 +1049,12 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 		meter := newTestMemoryGauge()
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-		for _, valueDeclaration := range stdlib.BuiltinFunctions {
+		for _, valueDeclaration := range stdlib.BuiltinValues {
 			baseValueActivation.DeclareValue(valueDeclaration)
 		}
 
 		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-		for _, valueDeclaration := range stdlib.BuiltinFunctions {
+		for _, valueDeclaration := range stdlib.BuiltinValues {
 			baseActivation.Declare(valueDeclaration)
 		}
 
@@ -1093,18 +1093,11 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
         `
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-		for _, valueDeclaration := range stdlib.BuiltinFunctions {
-			baseValueActivation.DeclareValue(valueDeclaration)
-		}
 		for _, valueDeclaration := range stdlib.BuiltinValues {
 			baseValueActivation.DeclareValue(valueDeclaration)
 		}
 
 		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-
-		for _, valueDeclaration := range stdlib.BuiltinFunctions {
-			baseActivation.Declare(valueDeclaration)
-		}
 		for _, valueDeclaration := range stdlib.BuiltinValues {
 			baseActivation.Declare(valueDeclaration)
 		}
@@ -1156,18 +1149,11 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
         `
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-		for _, valueDeclaration := range stdlib.BuiltinFunctions {
-			baseValueActivation.DeclareValue(valueDeclaration)
-		}
 		for _, valueDeclaration := range stdlib.BuiltinValues {
 			baseValueActivation.DeclareValue(valueDeclaration)
 		}
 
 		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-
-		for _, valueDeclaration := range stdlib.BuiltinFunctions {
-			baseActivation.Declare(valueDeclaration)
-		}
 		for _, valueDeclaration := range stdlib.BuiltinValues {
 			baseActivation.Declare(valueDeclaration)
 		}

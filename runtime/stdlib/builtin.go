@@ -18,13 +18,10 @@
 
 package stdlib
 
-var BuiltinFunctions = []StandardLibraryFunction{
+var BuiltinValues = []StandardLibraryValue{
 	AssertFunction,
 	PanicFunction,
 	PublicKeyConstructor,
-}
-
-var BuiltinValues = []StandardLibraryValue{
 	SignatureAlgorithmConstructor,
 	HashAlgorithmConstructor,
 	BLSContract,

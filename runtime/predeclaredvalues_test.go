@@ -28,6 +28,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -35,12 +36,11 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 
 	t.Parallel()
 
-	valueDeclaration := ValueDeclaration{
-		Name:       "foo",
-		Type:       sema.IntType,
-		Kind:       common.DeclarationKindFunction,
-		IsConstant: true,
-		Value:      interpreter.NewUnmeteredIntValueFromInt64(2),
+	valueDeclaration := stdlib.StandardLibraryValue{
+		Name:  "foo",
+		Type:  sema.IntType,
+		Kind:  common.DeclarationKindFunction,
+		Value: interpreter.NewUnmeteredIntValueFromInt64(2),
 	}
 
 	contract := []byte(`
@@ -90,6 +90,9 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
+	// TODO: create custom environments
+	_ = valueDeclaration
+
 	err := runtime.ExecuteTransaction(
 		Script{
 			Source: deploy,
@@ -97,9 +100,6 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
-			PredeclaredValues: []ValueDeclaration{
-				valueDeclaration,
-			},
 		},
 	)
 	require.NoError(t, err)
@@ -111,9 +111,6 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  common.ScriptLocation{},
-			PredeclaredValues: []ValueDeclaration{
-				valueDeclaration,
-			},
 		},
 	)
 	require.NoError(t, err)

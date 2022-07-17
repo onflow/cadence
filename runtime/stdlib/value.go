@@ -26,11 +26,12 @@ import (
 )
 
 type StandardLibraryValue struct {
-	Name      string
-	Type      sema.Type
-	DocString string
-	Value     interpreter.Value
-	Kind      common.DeclarationKind
+	Name           string
+	Type           sema.Type
+	DocString      string
+	Value          interpreter.Value
+	Kind           common.DeclarationKind
+	ArgumentLabels []string
 }
 
 func (v StandardLibraryValue) ValueDeclarationName() string {
@@ -61,6 +62,6 @@ func (v StandardLibraryValue) ValueDeclarationIsConstant() bool {
 	return v.Kind != common.DeclarationKindVariable
 }
 
-func (StandardLibraryValue) ValueDeclarationArgumentLabels() []string {
-	return nil
+func (v StandardLibraryValue) ValueDeclarationArgumentLabels() []string {
+	return v.ArgumentLabels
 }

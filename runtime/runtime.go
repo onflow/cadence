@@ -28,7 +28,7 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	runtimeErrors "github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
@@ -243,19 +243,19 @@ func getWrappedError(recovered any, context Context) Error {
 	// `interpreter.Error` is a generic wrapper for any error. Hence, it doesn't belong to any of the
 	// three types: `UserError`, `InternalError`, `ExternalError`.
 	// So it needs to be specially handled here
-	case runtimeErrors.InternalError,
-		runtimeErrors.UserError,
-		runtimeErrors.ExternalError,
+	case errors.InternalError,
+		errors.UserError,
+		errors.ExternalError,
 		interpreter.Error:
 		return newError(recovered.(error), context)
 
 	// Wrap any other unhandled error with a generic internal error first.
 	// And then wrap with `runtime.Error` to include meta info.
 	case error:
-		err := runtimeErrors.NewUnexpectedErrorFromCause(recovered)
+		err := errors.NewUnexpectedErrorFromCause(recovered)
 		return newError(err, context)
 	default:
-		err := runtimeErrors.NewUnexpectedError("%s", recovered)
+		err := errors.NewUnexpectedError("%s", recovered)
 		return newError(err, context)
 	}
 }
@@ -302,13 +302,13 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val 
 
 	storage := NewStorage(context.Interface, memoryGauge)
 
-	var checkerOptions []sema.Option
-	var interpreterOptions []interpreter.Option
+	// TODO: allow caller to pass this in so it can be reused
+	environment := NewScriptEnvironment()
 
 	program, err := r.parseAndCheckProgram(
 		script.Source,
 		context,
-		checkerOptions,
+		environment,
 		true,
 		importResolutionResults{},
 	)
@@ -352,8 +352,7 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val 
 		program,
 		context,
 		storage,
-		interpreterOptions,
-		checkerOptions,
+		environment,
 		interpret,
 	)
 	if err != nil {
@@ -433,8 +432,7 @@ func (r *interpreterRuntime) interpret(
 	program *interpreter.Program,
 	context Context,
 	storage *Storage,
-	interpreterOptions []interpreter.Option,
-	checkerOptions []sema.Option,
+	environment Environment,
 	f interpretFunc,
 ) (
 	exportableValue,
@@ -446,8 +444,7 @@ func (r *interpreterRuntime) interpret(
 		program,
 		context,
 		storage,
-		interpreterOptions,
-		checkerOptions,
+		environment,
 	)
 	if err != nil {
 		return exportableValue{}, nil, err
@@ -504,16 +501,15 @@ func (r *interpreterRuntime) InvokeContractFunction(
 
 	storage := NewStorage(context.Interface, memoryGauge)
 
-	var interpreterOptions []interpreter.Option
-	var checkerOptions []sema.Option
+	// TODO: allow caller to pass this in so it can be reused
+	environment := NewTransactionEnvironment()
 
 	// create interpreter
 	_, inter, err := r.interpret(
 		nil,
 		context,
 		storage,
-		interpreterOptions,
-		checkerOptions,
+		environment,
 		nil,
 	)
 	if err != nil {
@@ -530,8 +526,6 @@ func (r *interpreterRuntime) InvokeContractFunction(
 			argumentType,
 			context,
 			storage,
-			interpreterOptions,
-			checkerOptions,
 		)
 	}
 
@@ -591,8 +585,6 @@ func (r *interpreterRuntime) convertArgument(
 	argumentType sema.Type,
 	context Context,
 	storage *Storage,
-	interpreterOptions []interpreter.Option,
-	checkerOptions []sema.Option,
 ) interpreter.Value {
 	// TODO:
 	//switch argumentType {
@@ -607,8 +599,6 @@ func (r *interpreterRuntime) convertArgument(
 	//			),
 	//			context,
 	//			storage,
-	//			interpreterOptions,
-	//			checkerOptions,
 	//		)
 	//	}
 	//case sema.PublicAccountType:
@@ -642,13 +632,13 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 
 	storage := NewStorage(context.Interface, memoryGauge)
 
-	var interpreterOptions []interpreter.Option
-	var checkerOptions []sema.Option
+	// TODO: allow caller to pass this in so it can be reused
+	environment := NewTransactionEnvironment()
 
 	program, err := r.parseAndCheckProgram(
 		script.Source,
 		context,
-		checkerOptions,
+		environment,
 		true,
 		importResolutionResults{},
 	)
@@ -714,8 +704,6 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 		//			),
 		//			context,
 		//			storage,
-		//			interpreterOptions,
-		//			checkerOptions,
 		//		),
 		//	)
 		//}
@@ -727,8 +715,7 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 		program,
 		context,
 		storage,
-		interpreterOptions,
-		checkerOptions,
+		environment,
 		r.transactionExecutionFunction(
 			transactionType.Parameters,
 			script.Arguments,
@@ -754,10 +741,10 @@ func wrapPanic(f func()) {
 		if r := recover(); r != nil {
 			// don't wrap Go errors and internal errors
 			switch r := r.(type) {
-			case goRuntime.Error, runtimeErrors.InternalError:
+			case goRuntime.Error, errors.InternalError:
 				panic(r)
 			default:
-				panic(runtimeErrors.ExternalError{
+				panic(errors.ExternalError{
 					Recovered: r,
 				})
 			}
@@ -774,18 +761,18 @@ func userPanicToError(f func()) (returnedError error) {
 	defer func() {
 		if r := recover(); r != nil {
 			switch err := r.(type) {
-			case runtimeErrors.UserError:
+			case errors.UserError:
 				// Return user errors
 				returnedError = err
-			case runtimeErrors.InternalError, runtimeErrors.ExternalError:
+			case errors.InternalError, errors.ExternalError:
 				panic(err)
 
 			// Otherwise, panic.
 			// Also wrap with a `UnexpectedError` to mark it as an `InternalError`.
 			case error:
-				panic(runtimeErrors.NewUnexpectedErrorFromCause(err))
+				panic(errors.NewUnexpectedErrorFromCause(err))
 			default:
-				panic(runtimeErrors.NewUnexpectedError("%s", r))
+				panic(errors.NewUnexpectedError("%s", r))
 			}
 		}
 	}()
@@ -937,7 +924,7 @@ func validateArgumentParams(
 			}
 
 			if !hasValidStaticType(inter, value) {
-				panic(runtimeErrors.NewUnexpectedError("invalid static type for argument: %d", i))
+				panic(errors.NewUnexpectedError("invalid static type for argument: %d", i))
 			}
 
 			return true
@@ -982,12 +969,13 @@ func (r *interpreterRuntime) ParseAndCheckProgram(
 
 	context.InitializeCodesAndPrograms()
 
-	var checkerOptions []sema.Option
+	// TODO: allow caller to pass this in so it can be reused
+	environment := NewTransactionEnvironment()
 
 	program, err = r.parseAndCheckProgram(
 		code,
 		context,
-		checkerOptions,
+		environment,
 		true,
 		importResolutionResults{},
 	)
@@ -1001,7 +989,7 @@ func (r *interpreterRuntime) ParseAndCheckProgram(
 func (r *interpreterRuntime) parseAndCheckProgram(
 	code []byte,
 	context Context,
-	checkerOptions []sema.Option,
+	environment Environment,
 	storeProgram bool,
 	checkedImports importResolutionResults,
 ) (
@@ -1043,7 +1031,7 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 
 	// Check
 
-	elaboration, err := r.check(parse, context, checkerOptions, checkedImports)
+	elaboration, err := r.check(parse, context, environment, checkedImports)
 	if err != nil {
 		return nil, wrapError(err)
 	}
@@ -1070,7 +1058,7 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 func (r *interpreterRuntime) check(
 	program *ast.Program,
 	startContext Context,
-	checkerOptions []sema.Option,
+	environment Environment,
 	checkedImports importResolutionResults,
 ) (
 	elaboration *sema.Elaboration,
@@ -1084,64 +1072,60 @@ func (r *interpreterRuntime) check(
 		startContext.Location,
 		memoryGauge,
 		false,
-		append(
-			[]sema.Option{
-				sema.WithValidTopLevelDeclarationsHandler(validTopLevelDeclarations),
-				sema.WithLocationHandler(
-					func(identifiers []Identifier, location Location) (res []ResolvedLocation, err error) {
-						wrapPanic(func() {
-							res, err = startContext.Interface.ResolveLocation(identifiers, location)
-						})
-						return
-					},
-				),
-				sema.WithImportHandler(
-					func(checker *sema.Checker, importedLocation common.Location, importRange ast.Range) (sema.Import, error) {
-
-						var elaboration *sema.Elaboration
-						switch importedLocation {
-						case stdlib.CryptoChecker.Location:
-							elaboration = stdlib.CryptoChecker.Elaboration
-
-						default:
-							context := startContext.WithLocation(importedLocation)
-
-							// Check for cyclic imports
-							if checkedImports[importedLocation] {
-								return nil, &sema.CyclicImportsError{
-									Location: importedLocation,
-									Range:    importRange,
-								}
-							} else {
-								checkedImports[importedLocation] = true
-								defer delete(checkedImports, importedLocation)
-							}
-
-							program, err := r.getProgram(context, checkerOptions, checkedImports)
-							if err != nil {
-								return nil, err
-							}
-
-							elaboration = program.Elaboration
-						}
-
-						return sema.ElaborationImport{
-							Elaboration: elaboration,
-						}, nil
-					},
-				),
-				sema.WithCheckHandler(func(checker *sema.Checker, check func()) {
-					reportMetric(
-						check,
-						startContext.Interface,
-						func(metrics Metrics, duration time.Duration) {
-							metrics.ProgramChecked(checker.Location, duration)
-						},
-					)
-				}),
+		sema.WithBaseValueActivation(environment.baseValueActivation),
+		sema.WithValidTopLevelDeclarationsHandler(validTopLevelDeclarations),
+		sema.WithLocationHandler(
+			func(identifiers []Identifier, location Location) (res []ResolvedLocation, err error) {
+				wrapPanic(func() {
+					res, err = startContext.Interface.ResolveLocation(identifiers, location)
+				})
+				return
 			},
-			checkerOptions...,
-		)...,
+		),
+		sema.WithImportHandler(
+			func(checker *sema.Checker, importedLocation common.Location, importRange ast.Range) (sema.Import, error) {
+
+				var elaboration *sema.Elaboration
+				switch importedLocation {
+				case stdlib.CryptoChecker.Location:
+					elaboration = stdlib.CryptoChecker.Elaboration
+
+				default:
+					context := startContext.WithLocation(importedLocation)
+
+					// Check for cyclic imports
+					if checkedImports[importedLocation] {
+						return nil, &sema.CyclicImportsError{
+							Location: importedLocation,
+							Range:    importRange,
+						}
+					} else {
+						checkedImports[importedLocation] = true
+						defer delete(checkedImports, importedLocation)
+					}
+
+					program, err := r.getProgram(context, environment, checkedImports)
+					if err != nil {
+						return nil, err
+					}
+
+					elaboration = program.Elaboration
+				}
+
+				return sema.ElaborationImport{
+					Elaboration: elaboration,
+				}, nil
+			},
+		),
+		sema.WithCheckHandler(func(checker *sema.Checker, check func()) {
+			reportMetric(
+				check,
+				startContext.Interface,
+				func(metrics Metrics, duration time.Duration) {
+					metrics.ProgramChecked(checker.Location, duration)
+				},
+			)
+		}),
 	)
 	if err != nil {
 		return nil, err
@@ -1161,8 +1145,7 @@ func (r *interpreterRuntime) newInterpreter(
 	program *interpreter.Program,
 	context Context,
 	storage *Storage,
-	interpreterOptions []interpreter.Option,
-	checkerOptions []sema.Option,
+	environment Environment,
 ) (*interpreter.Interpreter, error) {
 
 	memoryGauge, _ := context.Interface.(common.MemoryGauge)
@@ -1171,6 +1154,8 @@ func (r *interpreterRuntime) newInterpreter(
 		// NOTE: storage option must be provided *before* the predeclared values option,
 		// as predeclared values may rely on storage
 		interpreter.WithStorage(storage),
+		// TODO: depends on transaction/script
+		interpreter.WithBaseActivation(environment.baseActivation),
 		interpreter.WithOnEventEmittedHandler(
 			func(
 				inter *interpreter.Interpreter,
@@ -1178,17 +1163,19 @@ func (r *interpreterRuntime) newInterpreter(
 				eventValue *interpreter.CompositeValue,
 				eventType *sema.CompositeType,
 			) error {
-				return r.emitEvent(
+				emitEventValue(
 					inter,
 					getLocationRange,
-					context.Interface,
-					eventValue,
 					eventType,
+					eventValue,
+					context.Interface.EmitEvent,
 				)
+
+				return nil
 			},
 		),
 		interpreter.WithInjectedCompositeFieldsHandler(
-			r.injectedCompositeFieldsHandler(context, storage, interpreterOptions, checkerOptions),
+			r.injectedCompositeFieldsHandler(context, storage),
 		),
 		interpreter.WithUUIDHandler(func() (uuid uint64, err error) {
 			wrapPanic(func() {
@@ -1214,7 +1201,7 @@ func (r *interpreterRuntime) newInterpreter(
 			},
 		),
 		interpreter.WithImportLocationHandler(
-			r.importLocationHandler(context, checkerOptions),
+			r.importLocationHandler(context, environment),
 		),
 		interpreter.WithOnStatementHandler(
 			r.onStatementHandler(),
@@ -1355,23 +1342,21 @@ func (r *interpreterRuntime) newInterpreter(
 		interpreter.WithDebugger(r.debugger),
 	}
 
-	defaultOptions = append(defaultOptions,
+	defaultOptions = append(
+		defaultOptions,
 		r.meteringInterpreterOptions(context.Interface)...,
 	)
 
 	return interpreter.NewInterpreter(
 		program,
 		context.Location,
-		append(
-			defaultOptions,
-			interpreterOptions...,
-		)...,
+		defaultOptions...,
 	)
 }
 
 func (r *interpreterRuntime) importLocationHandler(
 	startContext Context,
-	checkerOptions []sema.Option,
+	environment Environment,
 ) interpreter.ImportLocationHandlerFunc {
 
 	return func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
@@ -1389,7 +1374,7 @@ func (r *interpreterRuntime) importLocationHandler(
 		default:
 			context := startContext.WithLocation(location)
 
-			program, err := r.getProgram(context, checkerOptions, importResolutionResults{})
+			program, err := r.getProgram(context, environment, importResolutionResults{})
 			if err != nil {
 				panic(err)
 			}
@@ -1410,7 +1395,7 @@ func (r *interpreterRuntime) importLocationHandler(
 //
 func (r *interpreterRuntime) getProgram(
 	context Context,
-	checkerOptions []sema.Option,
+	environment Environment,
 	checkedImports importResolutionResults,
 ) (
 	program *interpreter.Program,
@@ -1435,7 +1420,7 @@ func (r *interpreterRuntime) getProgram(
 		program, err = r.parseAndCheckProgram(
 			code,
 			context,
-			checkerOptions,
+			environment,
 			true,
 			checkedImports,
 		)
@@ -1452,8 +1437,6 @@ func (r *interpreterRuntime) getProgram(
 func (r *interpreterRuntime) injectedCompositeFieldsHandler(
 	context Context,
 	storage *Storage,
-	interpreterOptions []interpreter.Option,
-	checkerOptions []sema.Option,
 ) interpreter.InjectedCompositeFieldsHandlerFunc {
 	return func(
 		inter *interpreter.Interpreter,
@@ -1476,7 +1459,7 @@ func (r *interpreterRuntime) injectedCompositeFieldsHandler(
 				//case common.AddressLocation:
 				//	address = location.Address
 				//default:
-				//	panic(runtimeErrors.NewUnreachableError())
+				//	panic(errors.NewUnreachableError())
 				//}
 				//
 				//addressValue := interpreter.NewAddressValue(
@@ -1491,8 +1474,6 @@ func (r *interpreterRuntime) injectedCompositeFieldsHandler(
 					//	addressValue,
 					//	context,
 					//	storage,
-					//	interpreterOptions,
-					//	checkerOptions,
 					//),
 				}
 			}
@@ -1564,101 +1545,9 @@ func (r *interpreterRuntime) getCode(context Context) (code []byte, err error) {
 	return code, nil
 }
 
-// emitEvent converts an event value to native Go types and emits it to the runtime interface.
-func (r *interpreterRuntime) emitEvent(
-	inter *interpreter.Interpreter,
-	getLocationRange func() interpreter.LocationRange,
-	runtimeInterface Interface,
-	event *interpreter.CompositeValue,
-	eventType *sema.CompositeType,
-) error {
-	fields := make([]exportableValue, len(eventType.ConstructorParameters))
-
-	for i, parameter := range eventType.ConstructorParameters {
-		value := event.GetField(inter, getLocationRange, parameter.Identifier)
-		fields[i] = newExportableValue(value, inter)
-	}
-
-	eventValue := exportableEvent{
-		Type:   eventType,
-		Fields: fields,
-	}
-
-	exportedEvent, err := exportEvent(
-		inter,
-		eventValue,
-		getLocationRange,
-		seenReferences{},
-	)
-	if err != nil {
-		return err
-	}
-	wrapPanic(func() {
-		err = runtimeInterface.EmitEvent(exportedEvent)
-	})
-	return err
-}
-
-func (r *interpreterRuntime) emitAccountEvent(
-	gauge common.MemoryGauge,
-	eventType *sema.CompositeType,
-	runtimeInterface Interface,
-	eventFields []exportableValue,
-	getLocationRange func() interpreter.LocationRange,
-) {
-	eventValue := exportableEvent{
-		Type:   eventType,
-		Fields: eventFields,
-	}
-
-	actualLen := len(eventFields)
-	expectedLen := len(eventType.ConstructorParameters)
-
-	if actualLen != expectedLen {
-		panic(runtimeErrors.NewDefaultUserError(
-			"event emission value mismatch: event %s: expected %d, got %d",
-			eventType.QualifiedString(),
-			expectedLen,
-			actualLen,
-		))
-	}
-
-	exportedEvent, err := exportEvent(
-		gauge,
-		eventValue,
-		getLocationRange,
-		seenReferences{},
-	)
-	if err != nil {
-		panic(err)
-	}
-	wrapPanic(func() {
-		err = runtimeInterface.EmitEvent(exportedEvent)
-	})
-	if err != nil {
-		panic(err)
-	}
-}
-
 func CodeToHashValue(inter *interpreter.Interpreter, code []byte) *interpreter.ArrayValue {
 	codeHash := sha3.Sum256(code)
 	return interpreter.ByteSliceToByteArrayValue(inter, codeHash[:])
-}
-
-// recordContractValue records the update of the given contract value.
-// It is only recorded and only written at the end of the execution
-//
-func (r *interpreterRuntime) recordContractValue(
-	storage *Storage,
-	addressValue interpreter.AddressValue,
-	name string,
-	contractValue *interpreter.CompositeValue,
-) {
-	storage.recordContractUpdate(
-		addressValue.ToAddress(),
-		name,
-		contractValue,
-	)
 }
 
 func (r *interpreterRuntime) loadContract(
@@ -1699,7 +1588,7 @@ func (r *interpreterRuntime) loadContract(
 		}
 
 		if storedValue == nil {
-			panic(runtimeErrors.NewDefaultUserError("failed to load contract: %s", compositeType.Location))
+			panic(errors.NewDefaultUserError("failed to load contract: %s", compositeType.Location))
 		}
 
 		return storedValue.(*interpreter.CompositeValue)
@@ -1714,8 +1603,7 @@ func (r *interpreterRuntime) instantiateContract(
 	constructorArguments []interpreter.Value,
 	argumentTypes []sema.Type,
 	storage *Storage,
-	interpreterOptions []interpreter.Option,
-	checkerOptions []sema.Option,
+	environment Environment,
 ) (
 	*interpreter.CompositeValue,
 	error,
@@ -1732,13 +1620,13 @@ func (r *interpreterRuntime) instantiateContract(
 	parameterCount := len(parameterTypes)
 
 	if argumentCount < parameterCount {
-		return nil, runtimeErrors.NewDefaultUserError(
+		return nil, errors.NewDefaultUserError(
 			"invalid argument count, too few arguments: expected %d, got %d, next missing argument: `%s`",
 			parameterCount, argumentCount,
 			parameterTypes[argumentCount],
 		)
 	} else if argumentCount > parameterCount {
-		return nil, runtimeErrors.NewDefaultUserError(
+		return nil, errors.NewDefaultUserError(
 			"invalid argument count, too many arguments: expected %d, got %d",
 			parameterCount,
 			argumentCount,
@@ -1753,7 +1641,7 @@ func (r *interpreterRuntime) instantiateContract(
 		argumentType := argumentTypes[i]
 		parameterTye := parameterTypes[i]
 		if !sema.IsSubType(argumentType, parameterTye) {
-			return nil, runtimeErrors.NewDefaultUserError(
+			return nil, errors.NewDefaultUserError(
 				"invalid argument %d: expected type `%s`, got `%s`",
 				i,
 				parameterTye,
@@ -1772,58 +1660,53 @@ func (r *interpreterRuntime) instantiateContract(
 
 	var contract *interpreter.CompositeValue
 
-	allInterpreterOptions := interpreterOptions[:]
-
-	allInterpreterOptions = append(
-		allInterpreterOptions,
-		interpreter.WithContractValueHandler(
-			func(
-				inter *interpreter.Interpreter,
-				compositeType *sema.CompositeType,
-				constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
-				invocationRange ast.Range,
-			) *interpreter.CompositeValue {
-
-				constructor := constructorGenerator(address)
-
-				// If the contract is the deployed contract, instantiate it using
-				// the provided constructor and given arguments
-
-				if compositeType.Location == contractType.Location &&
-					compositeType.Identifier == contractType.Identifier {
-
-					value, err := inter.InvokeFunctionValue(
-						constructor,
-						constructorArguments,
-						argumentTypes,
-						parameterTypes,
-						invocationRange,
-					)
-					if err != nil {
-						panic(err)
-					}
-
-					return value.(*interpreter.CompositeValue)
-				}
-
-				// The contract is not the deployed contract, load it from storage
-				return r.loadContract(
-					inter,
-					compositeType,
-					constructorGenerator,
-					invocationRange,
-					storage,
-				)
-			},
-		),
-	)
+	// TODO:
+	//interpreter.WithContractValueHandler(
+	//	func(
+	//		inter *interpreter.Interpreter,
+	//		compositeType *sema.CompositeType,
+	//		constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
+	//		invocationRange ast.Range,
+	//	) *interpreter.CompositeValue {
+	//
+	//		constructor := constructorGenerator(address)
+	//
+	//		// If the contract is the deployed contract, instantiate it using
+	//		// the provided constructor and given arguments
+	//
+	//		if compositeType.Location == contractType.Location &&
+	//			compositeType.Identifier == contractType.Identifier {
+	//
+	//			value, err := inter.InvokeFunctionValue(
+	//				constructor,
+	//				constructorArguments,
+	//				argumentTypes,
+	//				parameterTypes,
+	//				invocationRange,
+	//			)
+	//			if err != nil {
+	//				panic(err)
+	//			}
+	//
+	//			return value.(*interpreter.CompositeValue)
+	//		}
+	//
+	//		// The contract is not the deployed contract, load it from storage
+	//		return r.loadContract(
+	//			inter,
+	//			compositeType,
+	//			constructorGenerator,
+	//			invocationRange,
+	//			storage,
+	//		)
+	//	},
+	//
 
 	_, inter, err := r.interpret(
 		program,
 		context,
 		storage,
-		allInterpreterOptions,
-		checkerOptions,
+		environment,
 		nil,
 	)
 
@@ -1833,7 +1716,7 @@ func (r *interpreterRuntime) instantiateContract(
 
 	variable, ok := inter.Globals.Get(contractType.Identifier)
 	if !ok {
-		return nil, runtimeErrors.NewDefaultUserError(
+		return nil, errors.NewDefaultUserError(
 			"cannot find contract: `%s`",
 			contractType.Identifier,
 		)
@@ -1842,289 +1725,6 @@ func (r *interpreterRuntime) instantiateContract(
 	contract = variable.GetValue().(*interpreter.CompositeValue)
 
 	return contract, err
-}
-
-// newAuthAccountContractsChangeFunction called when e.g.
-// - adding: `AuthAccount.contracts.add(name: "Foo", code: [...])` (isUpdate = false)
-// - updating: `AuthAccount.contracts.update__experimental(name: "Foo", code: [...])` (isUpdate = true)
-//
-func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
-	gauge common.MemoryGauge,
-	addressValue interpreter.AddressValue,
-	startContext Context,
-	storage *Storage,
-	interpreterOptions []interpreter.Option,
-	checkerOptions []sema.Option,
-	isUpdate bool,
-) *interpreter.HostFunctionValue {
-	return interpreter.NewHostFunctionValue(
-		gauge,
-		func(invocation interpreter.Invocation) interpreter.Value {
-
-			const requiredArgumentCount = 2
-
-			nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
-			if !ok {
-				panic(runtimeErrors.NewUnreachableError())
-			}
-
-			newCodeValue, ok := invocation.Arguments[1].(*interpreter.ArrayValue)
-			if !ok {
-				panic(runtimeErrors.NewUnreachableError())
-			}
-
-			constructorArguments := invocation.Arguments[requiredArgumentCount:]
-			constructorArgumentTypes := invocation.ArgumentTypes[requiredArgumentCount:]
-
-			code, err := interpreter.ByteArrayValueToByteSlice(gauge, newCodeValue)
-			if err != nil {
-				panic(runtimeErrors.NewDefaultUserError("add requires the second argument to be an array"))
-			}
-
-			// Get the existing code
-
-			nameArgument := nameValue.Str
-
-			if nameArgument == "" {
-				panic(runtimeErrors.NewDefaultUserError(
-					"contract name argument cannot be empty." +
-						"it must match the name of the deployed contract declaration or contract interface declaration",
-				))
-			}
-
-			address := addressValue.ToAddress()
-			existingCode, err := startContext.Interface.GetAccountContractCode(address, nameArgument)
-			if err != nil {
-				panic(err)
-			}
-
-			if isUpdate {
-				// We are updating an existing contract.
-				// Ensure that there's a contract/contract-interface with the given name exists already
-
-				if len(existingCode) == 0 {
-					panic(runtimeErrors.NewDefaultUserError(
-						"cannot update non-existing contract with name %q in account %s",
-						nameArgument,
-						address.ShortHexWithPrefix(),
-					))
-				}
-
-			} else {
-				// We are adding a new contract.
-				// Ensure that no contract/contract interface with the given name exists already
-
-				if len(existingCode) > 0 {
-					panic(runtimeErrors.NewDefaultUserError(
-						"cannot overwrite existing contract with name %q in account %s",
-						nameArgument,
-						address.ShortHexWithPrefix(),
-					))
-				}
-			}
-
-			// Check the code
-
-			location := common.NewAddressLocation(invocation.Interpreter, address, nameArgument)
-
-			context := startContext.WithLocation(location)
-
-			handleContractUpdateError := func(err error) {
-				if err == nil {
-					return
-				}
-
-				// Update the code for the error pretty printing
-				// NOTE: only do this when an error occurs
-
-				context.SetCode(context.Location, code)
-
-				panic(&InvalidContractDeploymentError{
-					Err:           err,
-					LocationRange: invocation.GetLocationRange(),
-				})
-			}
-
-			// NOTE: do NOT use the program obtained from the host environment, as the current program.
-			// Always re-parse and re-check the new program.
-
-			// NOTE: *DO NOT* store the program – the new or updated program
-			// should not be effective during the execution
-
-			const storeProgram = false
-
-			program, err := r.parseAndCheckProgram(
-				code,
-				context,
-				checkerOptions,
-				storeProgram,
-				importResolutionResults{},
-			)
-			if err != nil {
-				// Update the code for the error pretty printing
-				// NOTE: only do this when an error occurs
-
-				context.SetCode(context.Location, code)
-
-				panic(&InvalidContractDeploymentError{
-					Err:           err,
-					LocationRange: invocation.GetLocationRange(),
-				})
-			}
-
-			// The code may declare exactly one contract or one contract interface.
-
-			var contractTypes []*sema.CompositeType
-			var contractInterfaceTypes []*sema.InterfaceType
-
-			program.Elaboration.GlobalTypes.Foreach(func(_ string, variable *sema.Variable) {
-				switch ty := variable.Type.(type) {
-				case *sema.CompositeType:
-					if ty.Kind == common.CompositeKindContract {
-						contractTypes = append(contractTypes, ty)
-					}
-
-				case *sema.InterfaceType:
-					if ty.CompositeKind == common.CompositeKindContract {
-						contractInterfaceTypes = append(contractInterfaceTypes, ty)
-					}
-				}
-			})
-
-			var deployedType sema.Type
-			var contractType *sema.CompositeType
-			var contractInterfaceType *sema.InterfaceType
-			var declaredName string
-			var declarationKind common.DeclarationKind
-
-			switch {
-			case len(contractTypes) == 1 && len(contractInterfaceTypes) == 0:
-				contractType = contractTypes[0]
-				declaredName = contractType.Identifier
-				deployedType = contractType
-				declarationKind = common.DeclarationKindContract
-			case len(contractInterfaceTypes) == 1 && len(contractTypes) == 0:
-				contractInterfaceType = contractInterfaceTypes[0]
-				declaredName = contractInterfaceType.Identifier
-				deployedType = contractInterfaceType
-				declarationKind = common.DeclarationKindContractInterface
-			}
-
-			if deployedType == nil {
-				// Update the code for the error pretty printing
-				// NOTE: only do this when an error occurs
-
-				context.SetCode(context.Location, code)
-
-				panic(runtimeErrors.NewDefaultUserError(
-					"invalid %s: the code must declare exactly one contract or contract interface",
-					declarationKind.Name(),
-				))
-			}
-
-			// The declared contract or contract interface must have the name
-			// passed to the constructor as the first argument
-
-			if declaredName != nameArgument {
-				// Update the code for the error pretty printing
-				// NOTE: only do this when an error occurs
-
-				context.SetCode(context.Location, code)
-
-				panic(runtimeErrors.NewDefaultUserError(
-					"invalid %s: the name argument must match the name of the declaration: got %q, expected %q",
-					declarationKind.Name(),
-					nameArgument,
-					declaredName,
-				))
-			}
-
-			// Validate the contract update (if enabled)
-
-			if r.contractUpdateValidationEnabled && isUpdate {
-
-				oldCode, err := r.getCode(context)
-				handleContractUpdateError(err)
-
-				oldProgram, err := parser.ParseProgram(string(oldCode), gauge)
-
-				if !ignoreUpdatedProgramParserError(err) {
-					handleContractUpdateError(err)
-				}
-
-				validator := NewContractUpdateValidator(
-					context.Location,
-					nameArgument,
-					oldProgram,
-					program.Program,
-				)
-				err = validator.Validate()
-				handleContractUpdateError(err)
-			}
-
-			inter := invocation.Interpreter
-
-			err = r.updateAccountContractCode(
-				inter,
-				program,
-				context,
-				storage,
-				declaredName,
-				code,
-				addressValue,
-				contractType,
-				constructorArguments,
-				constructorArgumentTypes,
-				interpreterOptions,
-				checkerOptions,
-				updateAccountContractCodeOptions{
-					createContract: !isUpdate,
-				},
-			)
-			if err != nil {
-				// Update the code for the error pretty printing
-				// NOTE: only do this when an error occurs
-
-				context.SetCode(context.Location, code)
-
-				panic(err)
-			}
-
-			codeHashValue := CodeToHashValue(inter, code)
-
-			eventArguments := []exportableValue{
-				newExportableValue(addressValue, inter),
-				newExportableValue(codeHashValue, inter),
-				newExportableValue(nameValue, inter),
-			}
-
-			if isUpdate {
-				r.emitAccountEvent(
-					inter,
-					stdlib.AccountContractUpdatedEventType,
-					startContext.Interface,
-					eventArguments,
-					invocation.GetLocationRange,
-				)
-			} else {
-				r.emitAccountEvent(
-					inter,
-					stdlib.AccountContractAddedEventType,
-					startContext.Interface,
-					eventArguments,
-					invocation.GetLocationRange,
-				)
-			}
-
-			return interpreter.NewDeployedContractValue(
-				inter,
-				addressValue,
-				nameValue,
-				newCodeValue,
-			)
-		},
-		sema.AuthAccountContractsTypeAddFunctionType,
-	)
 }
 
 // ignoreUpdatedProgramParserError determines if the parsing error
@@ -2157,7 +1757,6 @@ type updateAccountContractCodeOptions struct {
 // This function is only used for the new account code/contract API.
 //
 func (r *interpreterRuntime) updateAccountContractCode(
-	inter *interpreter.Interpreter,
 	program *interpreter.Program,
 	context Context,
 	storage *Storage,
@@ -2167,8 +1766,7 @@ func (r *interpreterRuntime) updateAccountContractCode(
 	contractType *sema.CompositeType,
 	constructorArguments []interpreter.Value,
 	constructorArgumentTypes []sema.Type,
-	interpreterOptions []interpreter.Option,
-	checkerOptions []sema.Option,
+	environment Environment,
 	options updateAccountContractCodeOptions,
 ) error {
 	// If the code declares a contract, instantiate it and store it.
@@ -2200,8 +1798,7 @@ func (r *interpreterRuntime) updateAccountContractCode(
 			constructorArguments,
 			constructorArgumentTypes,
 			storage,
-			interpreterOptions,
-			checkerOptions,
+			environment,
 		)
 
 		if err != nil {
@@ -2221,169 +1818,14 @@ func (r *interpreterRuntime) updateAccountContractCode(
 		// NOTE: the contract recording delays the write
 		// until the end of the execution of the program
 
-		r.recordContractValue(
-			storage,
-			addressValue,
+		storage.recordContractUpdate(
+			addressValue.ToAddress(),
 			name,
 			contractValue,
 		)
 	}
 
 	return nil
-}
-
-func (r *interpreterRuntime) newAccountContractsGetFunction(
-	gauge common.MemoryGauge,
-	addressValue interpreter.AddressValue,
-	runtimeInterface Interface,
-) *interpreter.HostFunctionValue {
-
-	// Converted addresses can be cached and don't have to be recomputed on each function invocation
-	address := addressValue.ToAddress()
-
-	return interpreter.NewHostFunctionValue(
-		gauge,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
-			if !ok {
-				panic(runtimeErrors.NewUnreachableError())
-			}
-			name := nameValue.Str
-
-			var code []byte
-			var err error
-			wrapPanic(func() {
-				code, err = runtimeInterface.GetAccountContractCode(address, name)
-			})
-			if err != nil {
-				panic(err)
-			}
-
-			if len(code) > 0 {
-				return interpreter.NewSomeValueNonCopying(
-					invocation.Interpreter,
-					interpreter.NewDeployedContractValue(
-						invocation.Interpreter,
-						addressValue,
-						nameValue,
-						interpreter.ByteSliceToByteArrayValue(
-							invocation.Interpreter,
-							code,
-						),
-					),
-				)
-			} else {
-				return interpreter.NewNilValue(invocation.Interpreter)
-			}
-		},
-		sema.AuthAccountContractsTypeGetFunctionType,
-	)
-}
-
-func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
-	gauge common.MemoryGauge,
-	addressValue interpreter.AddressValue,
-	runtimeInterface Interface,
-	storage *Storage,
-) *interpreter.HostFunctionValue {
-
-	// Converted addresses can be cached and don't have to be recomputed on each function invocation
-	address := addressValue.ToAddress()
-
-	return interpreter.NewHostFunctionValue(
-		gauge,
-		func(invocation interpreter.Invocation) interpreter.Value {
-
-			inter := invocation.Interpreter
-			nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
-			if !ok {
-				panic(runtimeErrors.NewUnreachableError())
-			}
-			name := nameValue.Str
-
-			// Get the current code
-
-			var code []byte
-			var err error
-			wrapPanic(func() {
-				code, err = runtimeInterface.GetAccountContractCode(address, name)
-			})
-			if err != nil {
-				panic(err)
-			}
-
-			// Only remove the contract code, remove the contract value, and emit an event,
-			// if there is currently code deployed for the given contract name
-
-			if len(code) > 0 {
-
-				// NOTE: *DO NOT* call SetProgram – the program removal
-				// should not be effective during the execution, only after
-
-				// Deny removing a contract, if the contract validation is enabled, and
-				// the existing code contains enums.
-				if r.contractUpdateValidationEnabled {
-					existingProgram, err := parser.ParseProgram(string(code), gauge)
-
-					// If the existing code is not parsable (i.e: `err != nil`), that shouldn't be a reason to
-					// fail the contract removal. Therefore, validate only if the code is a valid one.
-					if err == nil && containsEnumsInProgram(existingProgram) {
-						panic(&ContractRemovalError{
-							Name:          name,
-							LocationRange: invocation.GetLocationRange(),
-						})
-					}
-				}
-
-				wrapPanic(func() {
-					err = runtimeInterface.RemoveAccountContractCode(address, name)
-				})
-				if err != nil {
-					panic(err)
-				}
-
-				// NOTE: the contract recording function delays the write
-				// until the end of the execution of the program
-
-				r.recordContractValue(
-					storage,
-					addressValue,
-					name,
-					nil,
-				)
-
-				codeHashValue := CodeToHashValue(inter, code)
-
-				r.emitAccountEvent(
-					inter,
-					stdlib.AccountContractRemovedEventType,
-					runtimeInterface,
-					[]exportableValue{
-						newExportableValue(addressValue, inter),
-						newExportableValue(codeHashValue, inter),
-						newExportableValue(nameValue, inter),
-					},
-					invocation.GetLocationRange,
-				)
-
-				return interpreter.NewSomeValueNonCopying(
-					inter,
-					interpreter.NewDeployedContractValue(
-						inter,
-						addressValue,
-						nameValue,
-						interpreter.ByteSliceToByteArrayValue(
-							inter,
-							code,
-						),
-					),
-				)
-			} else {
-				return interpreter.NewNilValue(invocation.Interpreter)
-			}
-		},
-		sema.AuthAccountContractsTypeRemoveFunctionType,
-	)
 }
 
 func (r *interpreterRuntime) onStatementHandler() interpreter.OnStatementFunc {
@@ -2398,7 +1840,11 @@ func (r *interpreterRuntime) onStatementHandler() interpreter.OnStatementFunc {
 	}
 }
 
-func (r *interpreterRuntime) executeNonProgram(interpret interpretFunc, context Context) (cadence.Value, error) {
+func (r *interpreterRuntime) executeNonProgram(
+	interpret interpretFunc,
+	context Context,
+	environment Environment,
+) (cadence.Value, error) {
 	context.InitializeCodesAndPrograms()
 
 	var program *interpreter.Program
@@ -2407,15 +1853,11 @@ func (r *interpreterRuntime) executeNonProgram(interpret interpretFunc, context 
 
 	storage := NewStorage(context.Interface, memoryGauge)
 
-	var interpreterOptions []interpreter.Option
-	var checkerOptions []sema.Option
-
 	value, _, err := r.interpret(
 		program,
 		context,
 		storage,
-		interpreterOptions,
-		checkerOptions,
+		environment,
 		interpret,
 	)
 	if err != nil {
@@ -2444,6 +1886,9 @@ func (r *interpreterRuntime) ReadStored(
 		context,
 	)
 
+	// TODO: allow caller to pass this in so it can be reused
+	environment := NewTransactionEnvironment()
+
 	return r.executeNonProgram(
 		func(inter *interpreter.Interpreter) (interpreter.Value, error) {
 			pathValue := importPathValue(inter, path)
@@ -2456,6 +1901,7 @@ func (r *interpreterRuntime) ReadStored(
 			return value, nil
 		},
 		context,
+		environment,
 	)
 }
 
@@ -2473,6 +1919,9 @@ func (r *interpreterRuntime) ReadLinked(
 		},
 		context,
 	)
+
+	// TODO: allow caller to pass this in so it can be reused
+	environment := NewTransactionEnvironment()
 
 	return r.executeNonProgram(
 		func(inter *interpreter.Interpreter) (interpreter.Value, error) {
@@ -2500,6 +1949,7 @@ func (r *interpreterRuntime) ReadLinked(
 			return value, nil
 		},
 		context,
+		environment,
 	)
 }
 
@@ -2540,18 +1990,18 @@ func NewPublicKeyFromValue(
 
 	byteArray, err := interpreter.ByteArrayValueToByteSlice(inter, key)
 	if err != nil {
-		return nil, runtimeErrors.NewUnexpectedError("public key needs to be a byte array. %w", err)
+		return nil, errors.NewUnexpectedError("public key needs to be a byte array. %w", err)
 	}
 
 	// sign algo field
 	signAlgoField := publicKey.GetMember(inter, getLocationRange, sema.PublicKeySignAlgoField)
 	if signAlgoField == nil {
-		return nil, runtimeErrors.NewUnexpectedError("sign algorithm is not set")
+		return nil, errors.NewUnexpectedError("sign algorithm is not set")
 	}
 
 	signAlgoValue, ok := signAlgoField.(*interpreter.SimpleCompositeValue)
 	if !ok {
-		return nil, runtimeErrors.NewUnexpectedError(
+		return nil, errors.NewUnexpectedError(
 			"sign algorithm does not belong to type: %s",
 			sema.SignatureAlgorithmType.QualifiedString(),
 		)
@@ -2559,12 +2009,12 @@ func NewPublicKeyFromValue(
 
 	rawValue := signAlgoValue.GetMember(inter, getLocationRange, sema.EnumRawValueFieldName)
 	if rawValue == nil {
-		return nil, runtimeErrors.NewDefaultUserError("sign algorithm raw value is not set")
+		return nil, errors.NewDefaultUserError("sign algorithm raw value is not set")
 	}
 
 	signAlgoRawValue, ok := rawValue.(interpreter.UInt8Value)
 	if !ok {
-		return nil, runtimeErrors.NewUnexpectedError(
+		return nil, errors.NewUnexpectedError(
 			"sign algorithm raw-value does not belong to type: %s",
 			sema.UInt8Type.QualifiedString(),
 		)
@@ -2703,7 +2153,7 @@ func blsAggregateSignatures(
 	signaturesValue.Iterate(inter, func(element interpreter.Value) (resume bool) {
 		signature, ok := element.(*interpreter.ArrayValue)
 		if !ok {
-			panic(runtimeErrors.NewUnreachableError())
+			panic(errors.NewUnreachableError())
 		}
 
 		bytes, err := interpreter.ByteArrayValueToByteSlice(inter, signature)
@@ -2748,7 +2198,7 @@ func blsAggregatePublicKeys(
 	publicKeysValue.Iterate(inter, func(element interpreter.Value) (resume bool) {
 		publicKeyValue, ok := element.(*interpreter.CompositeValue)
 		if !ok {
-			panic(runtimeErrors.NewUnreachableError())
+			panic(errors.NewUnreachableError())
 		}
 
 		publicKey, err := NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
@@ -2799,12 +2249,12 @@ func verifySignature(
 
 	signature, err := interpreter.ByteArrayValueToByteSlice(inter, signatureValue)
 	if err != nil {
-		panic(runtimeErrors.NewUnexpectedError("failed to get signature. %w", err))
+		panic(errors.NewUnexpectedError("failed to get signature. %w", err))
 	}
 
 	signedData, err := interpreter.ByteArrayValueToByteSlice(inter, signedDataValue)
 	if err != nil {
-		panic(runtimeErrors.NewUnexpectedError("failed to get signed data. %w", err))
+		panic(errors.NewUnexpectedError("failed to get signed data. %w", err))
 	}
 
 	domainSeparationTag := domainSeparationTagValue.Str
@@ -2846,7 +2296,7 @@ func hash(
 
 	data, err := interpreter.ByteArrayValueToByteSlice(inter, dataValue)
 	if err != nil {
-		panic(runtimeErrors.NewUnexpectedError("failed to get data. %w", err))
+		panic(errors.NewUnexpectedError("failed to get data. %w", err))
 	}
 
 	var tag string

@@ -43,7 +43,7 @@ type UnsafeRandomGenerator interface {
 	UnsafeRandom() (uint64, error)
 }
 
-func NewUnsafeRandomFunction(generator UnsafeRandomGenerator) StandardLibraryFunction {
+func NewUnsafeRandomFunction(generator UnsafeRandomGenerator) StandardLibraryValue {
 	return NewStandardLibraryFunction(
 		"unsafeRandom",
 		unsafeRandomFunctionType,

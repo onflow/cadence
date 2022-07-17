@@ -1015,7 +1015,6 @@ func (interpreter *Interpreter) invokeVariable(
 
 	// function must be invokable
 	functionType, ok := ty.(*sema.FunctionType)
-
 	if !ok {
 		return nil, NotInvokableError{
 			Value: variableValue,

@@ -19,6 +19,9 @@
 package stdlib
 
 import (
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -40,6 +43,95 @@ var authAccountFunctionType = &sema.FunctionType{
 	),
 }
 
+type EventEmitter interface {
+	EmitEvent(
+		inter *interpreter.Interpreter,
+		eventType *sema.CompositeType,
+		values []interpreter.Value,
+		getLocationRange func() interpreter.LocationRange,
+	) error
+}
+
+type AuthAccountHandler interface {
+}
+
+type AccountCreator interface {
+	EventEmitter
+	AuthAccountHandler
+	// CreateAccount creates a new account.
+	CreateAccount(payer common.Address) (address common.Address, err error)
+}
+
+func NewAuthAccountConstructor(creator AccountCreator) StandardLibraryValue {
+	return NewStandardLibraryFunction(
+		"AuthAccount",
+		authAccountFunctionType,
+		authAccountFunctionDocString,
+		func(invocation interpreter.Invocation) interpreter.Value {
+
+			payer, ok := invocation.Arguments[0].(interpreter.MemberAccessibleValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			inter := invocation.Interpreter
+			getLocationRange := invocation.GetLocationRange
+
+			inter.ExpectType(
+				payer,
+				sema.AuthAccountType,
+				getLocationRange,
+			)
+
+			payerValue := payer.GetMember(
+				inter,
+				getLocationRange,
+				sema.AuthAccountAddressField,
+			)
+			if payerValue == nil {
+				panic(errors.NewUnexpectedError("payer address is not set"))
+			}
+
+			payerAddressValue, ok := payerValue.(interpreter.AddressValue)
+			if !ok {
+				panic(errors.NewUnexpectedError("payer address is not address"))
+			}
+
+			payerAddress := payerAddressValue.ToAddress()
+
+			addressValue := interpreter.NewAddressValueFromConstructor(
+				inter,
+				func() (address common.Address) {
+					var err error
+					wrapPanic(func() {
+						address, err = creator.CreateAccount(payerAddress)
+					})
+					if err != nil {
+						panic(err)
+					}
+
+					return
+				},
+			)
+
+			err := creator.EmitEvent(
+				inter,
+				AccountCreatedEventType,
+				[]interpreter.Value{addressValue},
+				getLocationRange,
+			)
+			if err != nil {
+				panic(err)
+			}
+
+			return NewAuthAccountValue(
+				inter,
+				creator,
+				addressValue,
+			)
+		})
+}
+
 const getAuthAccountDocString = `
 Returns the AuthAccount for the given address. Only available in scripts
 `
@@ -53,145 +145,57 @@ var getAuthAccountFunctionType = &sema.FunctionType{
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.AuthAccountType),
 }
 
-const getAccountFunctionDocString = `
-Returns the public account for the given address
-`
+func NewGetAuthAccountFunction(handler AuthAccountHandler) StandardLibraryValue {
+	return NewStandardLibraryFunction(
+		"getAuthAccount",
+		getAuthAccountFunctionType,
+		getAuthAccountDocString,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			accountAddress, ok := invocation.Arguments[0].(interpreter.AddressValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
 
-var getAccountFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{
-		{
-			Label:      sema.ArgumentLabelNotRequired,
-			Identifier: "address",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				&sema.AddressType{},
-			),
-		},
-	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		sema.PublicAccountType,
-	),
+			return NewAuthAccountValue(
+				invocation.Interpreter,
+				handler,
+				accountAddress,
+			)
+		})
 }
 
-//		NewStandardLibraryFunction(
-//			"AuthAccount",
-//			authAccountFunctionType,
-//			authAccountFunctionDocString,
-//			impls.CreateAccount,
-//		),
-//		NewStandardLibraryFunction(
-//			"getAccount",
-//			getAccountFunctionType,
-//			getAccountFunctionDocString,
-//			impls.GetAccount,
-//		),
+func NewAuthAccountValue(
+	gauge common.MemoryGauge,
+	handler AuthAccountHandler,
+	addressValue interpreter.AddressValue,
+) interpreter.Value {
+	// TODO:
+	return nil
+	//	return interpreter.NewAuthAccountValue(
+	//		gauge,
+	//		addressValue,
+	//		accountBalanceGetFunction(addressValue, context.Interface),
+	//		accountAvailableBalanceGetFunction(addressValue, context.Interface),
+	//		storageUsedGetFunction(addressValue, context.Interface, storage),
+	//		storageCapacityGetFunction(addressValue, context.Interface, storage),
+	//		r.newAddPublicKeyFunction(gauge, addressValue, context.Interface),
+	//		r.newRemovePublicKeyFunction(gauge, addressValue, context.Interface),
+	//		func() interpreter.Value {
+	//			return newAuthAccountContractsValue(
+	//				gauge,
+	//				addressValue,
+	//			)
+	//		},
+	//		func() interpreter.Value {
+	//			return r.newAuthAccountKeys(
+	//				gauge,
+	//				addressValue,
+	//				context.Interface,
+	//			)
+	//		},
+	//	)
+}
 
-// NewStandardLibraryFunction(
-//				"getAuthAccount",
-//				getAuthAccountFunctionType,
-//				getAuthAccountDocString,
-//				r.newGetAuthAccountFunction(context, storage, interpreterOptions, checkerOptions),
-//			)
-//
-//func (r *interpreterRuntime) newAuthAccountValue(
-//	gauge common.MemoryGauge,
-//	addressValue interpreter.AddressValue,
-//	context Context,
-//	storage *Storage,
-//	interpreterOptions []interpreter.Option,
-//	checkerOptions []sema.Option,
-//) interpreter.Value {
-//	return interpreter.NewAuthAccountValue(
-//		gauge,
-//		addressValue,
-//		accountBalanceGetFunction(addressValue, context.Interface),
-//		accountAvailableBalanceGetFunction(addressValue, context.Interface),
-//		storageUsedGetFunction(addressValue, context.Interface, storage),
-//		storageCapacityGetFunction(addressValue, context.Interface, storage),
-//		r.newAddPublicKeyFunction(gauge, addressValue, context.Interface),
-//		r.newRemovePublicKeyFunction(gauge, addressValue, context.Interface),
-//		func() interpreter.Value {
-//			return r.newAuthAccountContracts(
-//				gauge,
-//				addressValue,
-//				context,
-//				storage,
-//				interpreterOptions,
-//				checkerOptions,
-//			)
-//		},
-//		func() interpreter.Value {
-//			return r.newAuthAccountKeys(
-//				gauge,
-//				addressValue,
-//				context.Interface,
-//			)
-//		},
-//	)
-//}
-//
-//
-//
-//func (r *interpreterRuntime) newGetAuthAccountFunction(
-//	context Context,
-//	storage *Storage,
-//	interpreterOptions []interpreter.Option,
-//	checkerOptions []sema.Option,
-//) interpreter.HostFunction {
-//	return func(invocation interpreter.Invocation) interpreter.Value {
-//		accountAddress, ok := invocation.Arguments[0].(interpreter.AddressValue)
-//		if !ok {
-//			panic(runtimeErrors.NewUnreachableError())
-//		}
-//
-//		return r.newAuthAccountValue(
-//			invocation.Interpreter,
-//			accountAddress,
-//			context,
-//			storage,
-//			interpreterOptions,
-//			checkerOptions,
-//		)
-//	}
-//}
-//
-//func (r *interpreterRuntime) newGetAccountFunction(runtimeInterface Interface, storage *Storage) interpreter.HostFunction {
-//	return func(invocation interpreter.Invocation) interpreter.Value {
-//		accountAddress, ok := invocation.Arguments[0].(interpreter.AddressValue)
-//		if !ok {
-//			panic(runtimeErrors.NewUnreachableError())
-//		}
-//
-//		return r.getPublicAccount(
-//			invocation.Interpreter,
-//			accountAddress,
-//			runtimeInterface,
-//			storage,
-//		)
-//	}
-//}
-//
-//func (r *interpreterRuntime) getPublicAccount(
-//	gauge common.MemoryGauge,
-//	accountAddress interpreter.AddressValue,
-//	runtimeInterface Interface,
-//	storage *Storage,
-//) interpreter.Value {
-//
-//	return interpreter.NewPublicAccountValue(
-//		gauge,
-//		accountAddress,
-//		accountBalanceGetFunction(accountAddress, runtimeInterface),
-//		accountAvailableBalanceGetFunction(accountAddress, runtimeInterface),
-//		storageUsedGetFunction(accountAddress, runtimeInterface, storage),
-//		storageCapacityGetFunction(accountAddress, runtimeInterface, storage),
-//		func() interpreter.Value {
-//			return r.newPublicAccountKeys(gauge, accountAddress, runtimeInterface)
-//		},
-//		func() interpreter.Value {
-//			return r.newPublicAccountContracts(gauge, accountAddress, runtimeInterface)
-//		},
-//	)
-//}
 //
 //func (r *interpreterRuntime) newAuthAccountContracts(
 //	gauge common.MemoryGauge,
@@ -266,76 +270,6 @@ var getAccountFunctionType = &sema.FunctionType{
 //	)
 //}
 //
-//func (r *interpreterRuntime) newCreateAccountFunction(
-//	context Context,
-//	storage *Storage,
-//	interpreterOptions []interpreter.Option,
-//	checkerOptions []sema.Option,
-//) interpreter.HostFunction {
-//	return func(invocation interpreter.Invocation) interpreter.Value {
-//
-//		payer, ok := invocation.Arguments[0].(interpreter.MemberAccessibleValue)
-//		if !ok {
-//			panic(runtimeErrors.NewUnreachableError())
-//		}
-//
-//		inter := invocation.Interpreter
-//		getLocationRange := invocation.GetLocationRange
-//
-//		invocation.Interpreter.ExpectType(
-//			payer,
-//			sema.AuthAccountType,
-//			getLocationRange,
-//		)
-//
-//		payerAddressValue := payer.GetMember(
-//			inter,
-//			getLocationRange,
-//			sema.AuthAccountAddressField,
-//		)
-//		if payerAddressValue == nil {
-//			panic("address is not set")
-//		}
-//
-//		payerAddress := payerAddressValue.(interpreter.AddressValue).ToAddress()
-//
-//		addressGetter := func() (address common.Address) {
-//			var err error
-//			wrapPanic(func() {
-//				address, err = context.Interface.CreateAccount(payerAddress)
-//			})
-//			if err != nil {
-//				panic(err)
-//			}
-//
-//			return
-//		}
-//
-//		addressValue := interpreter.NewAddressValueFromConstructor(
-//			invocation.Interpreter,
-//			addressGetter,
-//		)
-//
-//		r.emitAccountEvent(
-//			inter,
-//			stdlib.AccountCreatedEventType,
-//			context.Interface,
-//			[]exportableValue{
-//				newExportableValue(addressValue, inter),
-//			},
-//			getLocationRange,
-//		)
-//
-//		return r.newAuthAccountValue(
-//			inter,
-//			addressValue,
-//			context,
-//			storage,
-//			interpreterOptions,
-//			checkerOptions,
-//		)
-//	}
-//}
 //
 //func accountBalanceGetFunction(
 //	addressValue interpreter.AddressValue,
@@ -821,3 +755,502 @@ var getAccountFunctionType = &sema.FunctionType{
 //		)
 //	}
 //}
+//
+//
+//func (r *interpreterRuntime) newAccountContractsGetFunction(
+//	gauge common.MemoryGauge,
+//	addressValue interpreter.AddressValue,
+//	runtimeInterface Interface,
+//) *interpreter.HostFunctionValue {
+//
+//	// Converted addresses can be cached and don't have to be recomputed on each function invocation
+//	address := addressValue.ToAddress()
+//
+//	return interpreter.NewHostFunctionValue(
+//		gauge,
+//		func(invocation interpreter.Invocation) interpreter.Value {
+//			nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
+//			if !ok {
+//				panic(runtimeErrors.NewUnreachableError())
+//			}
+//			name := nameValue.Str
+//
+//			var code []byte
+//			var err error
+//			wrapPanic(func() {
+//				code, err = runtimeInterface.GetAccountContractCode(address, name)
+//			})
+//			if err != nil {
+//				panic(err)
+//			}
+//
+//			if len(code) > 0 {
+//				return interpreter.NewSomeValueNonCopying(
+//					invocation.Interpreter,
+//					interpreter.NewDeployedContractValue(
+//						invocation.Interpreter,
+//						addressValue,
+//						nameValue,
+//						interpreter.ByteSliceToByteArrayValue(
+//							invocation.Interpreter,
+//							code,
+//						),
+//					),
+//				)
+//			} else {
+//				return interpreter.NewNilValue(invocation.Interpreter)
+//			}
+//		},
+//		sema.AuthAccountContractsTypeGetFunctionType,
+//	)
+//}
+//
+//// newAuthAccountContractsChangeFunction called when e.g.
+//// - adding: `AuthAccount.contracts.add(name: "Foo", code: [...])` (isUpdate = false)
+//// - updating: `AuthAccount.contracts.update__experimental(name: "Foo", code: [...])` (isUpdate = true)
+////
+//func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
+//	gauge common.MemoryGauge,
+//	addressValue interpreter.AddressValue,
+//	startContext Context,
+//	storage *Storage,
+//	interpreterOptions []interpreter.Option,
+//	checkerOptions []sema.Option,
+//	isUpdate bool,
+//) *interpreter.HostFunctionValue {
+//	return interpreter.NewHostFunctionValue(
+//		gauge,
+//		func(invocation interpreter.Invocation) interpreter.Value {
+//
+//			const requiredArgumentCount = 2
+//
+//			nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
+//			if !ok {
+//				panic(runtimeErrors.NewUnreachableError())
+//			}
+//
+//			newCodeValue, ok := invocation.Arguments[1].(*interpreter.ArrayValue)
+//			if !ok {
+//				panic(runtimeErrors.NewUnreachableError())
+//			}
+//
+//			constructorArguments := invocation.Arguments[requiredArgumentCount:]
+//			constructorArgumentTypes := invocation.ArgumentTypes[requiredArgumentCount:]
+//
+//			code, err := interpreter.ByteArrayValueToByteSlice(gauge, newCodeValue)
+//			if err != nil {
+//				panic(runtimeErrors.NewDefaultUserError("add requires the second argument to be an array"))
+//			}
+//
+//			// Get the existing code
+//
+//			nameArgument := nameValue.Str
+//
+//			if nameArgument == "" {
+//				panic(runtimeErrors.NewDefaultUserError(
+//					"contract name argument cannot be empty." +
+//						"it must match the name of the deployed contract declaration or contract interface declaration",
+//				))
+//			}
+//
+//			address := addressValue.ToAddress()
+//			existingCode, err := startContext.Interface.GetAccountContractCode(address, nameArgument)
+//			if err != nil {
+//				panic(err)
+//			}
+//
+//			if isUpdate {
+//				// We are updating an existing contract.
+//				// Ensure that there's a contract/contract-interface with the given name exists already
+//
+//				if len(existingCode) == 0 {
+//					panic(runtimeErrors.NewDefaultUserError(
+//						"cannot update non-existing contract with name %q in account %s",
+//						nameArgument,
+//						address.ShortHexWithPrefix(),
+//					))
+//				}
+//
+//			} else {
+//				// We are adding a new contract.
+//				// Ensure that no contract/contract interface with the given name exists already
+//
+//				if len(existingCode) > 0 {
+//					panic(runtimeErrors.NewDefaultUserError(
+//						"cannot overwrite existing contract with name %q in account %s",
+//						nameArgument,
+//						address.ShortHexWithPrefix(),
+//					))
+//				}
+//			}
+//
+//			// Check the code
+//
+//			location := common.NewAddressLocation(invocation.Interpreter, address, nameArgument)
+//
+//			context := startContext.WithLocation(location)
+//
+//			handleContractUpdateError := func(err error) {
+//				if err == nil {
+//					return
+//				}
+//
+//				// Update the code for the error pretty printing
+//				// NOTE: only do this when an error occurs
+//
+//				context.SetCode(context.Location, code)
+//
+//				panic(&InvalidContractDeploymentError{
+//					Err:           err,
+//					LocationRange: invocation.GetLocationRange(),
+//				})
+//			}
+//
+//			// NOTE: do NOT use the program obtained from the host environment, as the current program.
+//			// Always re-parse and re-check the new program.
+//
+//			// NOTE: *DO NOT* store the program – the new or updated program
+//			// should not be effective during the execution
+//
+//			const storeProgram = false
+//
+//			program, err := r.parseAndCheckProgram(
+//				code,
+//				context,
+//				checkerOptions,
+//				storeProgram,
+//				importResolutionResults{},
+//			)
+//			if err != nil {
+//				// Update the code for the error pretty printing
+//				// NOTE: only do this when an error occurs
+//
+//				context.SetCode(context.Location, code)
+//
+//				panic(&InvalidContractDeploymentError{
+//					Err:           err,
+//					LocationRange: invocation.GetLocationRange(),
+//				})
+//			}
+//
+//			// The code may declare exactly one contract or one contract interface.
+//
+//			var contractTypes []*sema.CompositeType
+//			var contractInterfaceTypes []*sema.InterfaceType
+//
+//			program.Elaboration.GlobalTypes.Foreach(func(_ string, variable *sema.Variable) {
+//				switch ty := variable.Type.(type) {
+//				case *sema.CompositeType:
+//					if ty.Kind == common.CompositeKindContract {
+//						contractTypes = append(contractTypes, ty)
+//					}
+//
+//				case *sema.InterfaceType:
+//					if ty.CompositeKind == common.CompositeKindContract {
+//						contractInterfaceTypes = append(contractInterfaceTypes, ty)
+//					}
+//				}
+//			})
+//
+//			var deployedType sema.Type
+//			var contractType *sema.CompositeType
+//			var contractInterfaceType *sema.InterfaceType
+//			var declaredName string
+//			var declarationKind common.DeclarationKind
+//
+//			switch {
+//			case len(contractTypes) == 1 && len(contractInterfaceTypes) == 0:
+//				contractType = contractTypes[0]
+//				declaredName = contractType.Identifier
+//				deployedType = contractType
+//				declarationKind = common.DeclarationKindContract
+//			case len(contractInterfaceTypes) == 1 && len(contractTypes) == 0:
+//				contractInterfaceType = contractInterfaceTypes[0]
+//				declaredName = contractInterfaceType.Identifier
+//				deployedType = contractInterfaceType
+//				declarationKind = common.DeclarationKindContractInterface
+//			}
+//
+//			if deployedType == nil {
+//				// Update the code for the error pretty printing
+//				// NOTE: only do this when an error occurs
+//
+//				context.SetCode(context.Location, code)
+//
+//				panic(runtimeErrors.NewDefaultUserError(
+//					"invalid %s: the code must declare exactly one contract or contract interface",
+//					declarationKind.Name(),
+//				))
+//			}
+//
+//			// The declared contract or contract interface must have the name
+//			// passed to the constructor as the first argument
+//
+//			if declaredName != nameArgument {
+//				// Update the code for the error pretty printing
+//				// NOTE: only do this when an error occurs
+//
+//				context.SetCode(context.Location, code)
+//
+//				panic(runtimeErrors.NewDefaultUserError(
+//					"invalid %s: the name argument must match the name of the declaration: got %q, expected %q",
+//					declarationKind.Name(),
+//					nameArgument,
+//					declaredName,
+//				))
+//			}
+//
+//			// Validate the contract update (if enabled)
+//
+//			if r.contractUpdateValidationEnabled && isUpdate {
+//
+//				oldCode, err := r.getCode(context)
+//				handleContractUpdateError(err)
+//
+//				oldProgram, err := parser.ParseProgram(string(oldCode), gauge)
+//
+//				if !ignoreUpdatedProgramParserError(err) {
+//					handleContractUpdateError(err)
+//				}
+//
+//				validator := NewContractUpdateValidator(
+//					context.Location,
+//					nameArgument,
+//					oldProgram,
+//					program.Program,
+//				)
+//				err = validator.Validate()
+//				handleContractUpdateError(err)
+//			}
+//
+//			inter := invocation.Interpreter
+//
+//			err = r.updateAccountContractCode(
+//				program,
+//				context,
+//				storage,
+//				declaredName,
+//				code,
+//				addressValue,
+//				contractType,
+//				constructorArguments,
+//				constructorArgumentTypes,
+//				interpreterOptions,
+//				checkerOptions,
+//				updateAccountContractCodeOptions{
+//					createContract: !isUpdate,
+//				},
+//			)
+//			if err != nil {
+//				// Update the code for the error pretty printing
+//				// NOTE: only do this when an error occurs
+//
+//				context.SetCode(context.Location, code)
+//
+//				panic(err)
+//			}
+//
+//			codeHashValue := CodeToHashValue(inter, code)
+//
+//			eventArguments := []exportableValue{
+//				newExportableValue(addressValue, inter),
+//				newExportableValue(codeHashValue, inter),
+//				newExportableValue(nameValue, inter),
+//			}
+//
+//			var eventType *sema.CompositeType
+//
+//			if isUpdate {
+//				eventType = stdlib.AccountContractUpdatedEventType
+//			} else {
+//				eventType = stdlib.AccountContractAddedEventType
+//			}
+//
+//			emitEventFields(
+//				inter,
+//				invocation.GetLocationRange,
+//				eventType,
+//				eventArguments,
+//				startContext.Interface.EmitEvent,
+//			)
+//
+//			return interpreter.NewDeployedContractValue(
+//				inter,
+//				addressValue,
+//				nameValue,
+//				newCodeValue,
+//			)
+//		},
+//		sema.AuthAccountContractsTypeAddFunctionType,
+//	)
+//}
+
+//func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
+//	gauge common.MemoryGauge,
+//	addressValue interpreter.AddressValue,
+//	runtimeInterface Interface,
+//	storage *Storage,
+//) *interpreter.HostFunctionValue {
+//
+//	// Converted addresses can be cached and don't have to be recomputed on each function invocation
+//	address := addressValue.ToAddress()
+//
+//	return interpreter.NewHostFunctionValue(
+//		gauge,
+//		func(invocation interpreter.Invocation) interpreter.Value {
+//
+//			inter := invocation.Interpreter
+//			nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
+//			if !ok {
+//				panic(runtimeErrors.NewUnreachableError())
+//			}
+//			name := nameValue.Str
+//
+//			// Get the current code
+//
+//			var code []byte
+//			var err error
+//			wrapPanic(func() {
+//				code, err = runtimeInterface.GetAccountContractCode(address, name)
+//			})
+//			if err != nil {
+//				panic(err)
+//			}
+//
+//			// Only remove the contract code, remove the contract value, and emit an event,
+//			// if there is currently code deployed for the given contract name
+//
+//			if len(code) > 0 {
+//
+//				// NOTE: *DO NOT* call SetProgram – the program removal
+//				// should not be effective during the execution, only after
+//
+//				// Deny removing a contract, if the contract validation is enabled, and
+//				// the existing code contains enums.
+//				if r.contractUpdateValidationEnabled {
+//					existingProgram, err := parser.ParseProgram(string(code), gauge)
+//
+//					// If the existing code is not parsable (i.e: `err != nil`), that shouldn't be a reason to
+//					// fail the contract removal. Therefore, validate only if the code is a valid one.
+//					if err == nil && containsEnumsInProgram(existingProgram) {
+//						panic(&ContractRemovalError{
+//							Name:          name,
+//							LocationRange: invocation.GetLocationRange(),
+//						})
+//					}
+//				}
+//
+//				wrapPanic(func() {
+//					err = runtimeInterface.RemoveAccountContractCode(address, name)
+//				})
+//				if err != nil {
+//					panic(err)
+//				}
+//
+//				// NOTE: the contract recording function delays the write
+//				// until the end of the execution of the program
+//
+//				storage.recordContractUpdate(
+//					addressValue.ToAddress(),
+//					name,
+//					nil,
+//				)
+//
+//				codeHashValue := CodeToHashValue(inter, code)
+//
+//				emitEventFields(
+//					inter,
+//					invocation.GetLocationRange,
+//					stdlib.AccountContractRemovedEventType,
+//					[]exportableValue{
+//						newExportableValue(addressValue, inter),
+//						newExportableValue(codeHashValue, inter),
+//						newExportableValue(nameValue, inter),
+//					},
+//					runtimeInterface.EmitEvent,
+//				)
+//
+//				return interpreter.NewSomeValueNonCopying(
+//					inter,
+//					interpreter.NewDeployedContractValue(
+//						inter,
+//						addressValue,
+//						nameValue,
+//						interpreter.ByteSliceToByteArrayValue(
+//							inter,
+//							code,
+//						),
+//					),
+//				)
+//			} else {
+//				return interpreter.NewNilValue(invocation.Interpreter)
+//			}
+//		},
+//		sema.AuthAccountContractsTypeRemoveFunctionType,
+//	)
+//}
+
+const getAccountFunctionDocString = `
+Returns the public account for the given address
+`
+
+var getAccountFunctionType = &sema.FunctionType{
+	Parameters: []*sema.Parameter{
+		{
+			Label:      sema.ArgumentLabelNotRequired,
+			Identifier: "address",
+			TypeAnnotation: sema.NewTypeAnnotation(
+				&sema.AddressType{},
+			),
+		},
+	},
+	ReturnTypeAnnotation: sema.NewTypeAnnotation(
+		sema.PublicAccountType,
+	),
+}
+
+type PublicAccountHandler interface {
+}
+
+func NewGetAccountFunction(handler PublicAccountHandler) StandardLibraryValue {
+	return NewStandardLibraryFunction(
+		"getAccount",
+		getAccountFunctionType,
+		getAccountFunctionDocString,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			accountAddress, ok := invocation.Arguments[0].(interpreter.AddressValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			return NewPublicAccountValue(
+				invocation.Interpreter,
+				handler,
+				accountAddress,
+			)
+		},
+	)
+}
+
+func NewPublicAccountValue(
+	inter *interpreter.Interpreter,
+	handler PublicAccountHandler,
+	addressValue interpreter.AddressValue,
+) interpreter.Value {
+	// TODO:
+	return nil
+	//return interpreter.NewPublicAccountValue(
+	////gauge,
+	////accountAddress,
+	////accountBalanceGetFunction(accountAddress, runtimeInterface),
+	////accountAvailableBalanceGetFunction(accountAddress, runtimeInterface),
+	////storageUsedGetFunction(accountAddress, runtimeInterface, storage),
+	////storageCapacityGetFunction(accountAddress, runtimeInterface, storage),
+	////func() interpreter.Value {
+	////	return r.newPublicAccountKeys(gauge, accountAddress, runtimeInterface)
+	////},
+	////func() interpreter.Value {
+	////	return r.newPublicAccountContracts(gauge, accountAddress, runtimeInterface)
+	////},
+	//)
+}

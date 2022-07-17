@@ -75,7 +75,7 @@ type BlockAtHeightProvider interface {
 	GetBlockAtHeight(height uint64) (block Block, exists bool, err error)
 }
 
-func NewGetBlockFunction(provider BlockAtHeightProvider) StandardLibraryFunction {
+func NewGetBlockFunction(provider BlockAtHeightProvider) StandardLibraryValue {
 	return NewStandardLibraryFunction(
 		"getBlock",
 		getBlockFunctionType,
@@ -194,7 +194,7 @@ type CurrentBlockProvider interface {
 	GetCurrentBlockHeight() (uint64, error)
 }
 
-func NewGetCurrentBlockFunction(provider CurrentBlockProvider) StandardLibraryFunction {
+func NewGetCurrentBlockFunction(provider CurrentBlockProvider) StandardLibraryValue {
 	return NewStandardLibraryFunction(
 		"getCurrentBlock",
 		getCurrentBlockFunctionType,

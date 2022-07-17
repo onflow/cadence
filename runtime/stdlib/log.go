@@ -47,7 +47,7 @@ type Logger interface {
 	ProgramLog(message string) error
 }
 
-func NewLogFunction(logger Logger) StandardLibraryFunction {
+func NewLogFunction(logger Logger) StandardLibraryValue {
 	return NewStandardLibraryFunction(
 		"log",
 		LogFunctionType,

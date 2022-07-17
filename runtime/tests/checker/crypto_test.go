@@ -165,9 +165,6 @@ func TestCheckVerifyPoP(t *testing.T) {
 	for _, valueDeclaration := range stdlib.BuiltinValues {
 		baseValueActivation.DeclareValue(valueDeclaration)
 	}
-	for _, valueDeclaration := range stdlib.BuiltinFunctions {
-		baseValueActivation.DeclareValue(valueDeclaration)
-	}
 
 	_, err := ParseAndCheckWithOptions(t,
 		`
@@ -193,9 +190,6 @@ func TestCheckVerifyPoPInvalidArgument(t *testing.T) {
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	for _, valueDeclaration := range stdlib.BuiltinValues {
-		baseValueActivation.DeclareValue(valueDeclaration)
-	}
-	for _, valueDeclaration := range stdlib.BuiltinFunctions {
 		baseValueActivation.DeclareValue(valueDeclaration)
 	}
 
@@ -271,9 +265,6 @@ func TestCheckBLSAggregatePublicKeys(t *testing.T) {
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	for _, valueDeclaration := range stdlib.BuiltinValues {
-		baseValueActivation.DeclareValue(valueDeclaration)
-	}
-	for _, valueDeclaration := range stdlib.BuiltinFunctions {
 		baseValueActivation.DeclareValue(valueDeclaration)
 	}
 

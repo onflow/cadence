@@ -32,14 +32,18 @@ func TestCheckPredeclaredValues(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(stdlib.StandardLibraryFunction{
-		Name: "foo",
-		Type: &sema.FunctionType{
+
+	valueDeclaration := stdlib.NewStandardLibraryFunction(
+		"foo",
+		&sema.FunctionType{
 			ReturnTypeAnnotation: &sema.TypeAnnotation{
 				Type: sema.VoidType,
 			},
 		},
-	})
+		"",
+		nil,
+	)
+	baseValueActivation.DeclareValue(valueDeclaration)
 
 	_, err := ParseAndCheckWithOptions(t,
 		`

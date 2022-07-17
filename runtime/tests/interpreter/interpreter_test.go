@@ -4677,32 +4677,29 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 			),
 		}
 
-		valueDeclaration := stdlib.StandardLibraryFunction{
-			Name: "getStorageReference",
-			Type: getStorageReferenceFunctionType,
-			Function: interpreter.NewUnmeteredHostFunctionValue(
-				func(invocation interpreter.Invocation) interpreter.Value {
+		valueDeclaration := stdlib.NewStandardLibraryFunction(
+			"getStorageReference",
+			getStorageReferenceFunctionType,
+			"",
+			func(invocation interpreter.Invocation) interpreter.Value {
+				authorized := bool(invocation.Arguments[0].(interpreter.BoolValue))
 
-					authorized := bool(invocation.Arguments[0].(interpreter.BoolValue))
+				riType := getType("RI").(*sema.InterfaceType)
+				rType := getType("R")
 
-					riType := getType("RI").(*sema.InterfaceType)
-					rType := getType("R")
-
-					return &interpreter.StorageReferenceValue{
-						Authorized:           authorized,
-						TargetStorageAddress: storageAddress,
-						TargetPath:           storagePath,
-						BorrowedType: &sema.RestrictedType{
-							Type: rType,
-							Restrictions: []*sema.InterfaceType{
-								riType,
-							},
+				return &interpreter.StorageReferenceValue{
+					Authorized:           authorized,
+					TargetStorageAddress: storageAddress,
+					TargetPath:           storagePath,
+					BorrowedType: &sema.RestrictedType{
+						Type: rType,
+						Restrictions: []*sema.InterfaceType{
+							riType,
 						},
-					}
-				},
-				getStorageReferenceFunctionType,
-			),
-		}
+					},
+				}
+			},
+		)
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(valueDeclaration)

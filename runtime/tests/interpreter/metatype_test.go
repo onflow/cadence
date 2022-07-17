@@ -693,21 +693,19 @@ func TestInterpretGetType(t *testing.T) {
 				),
 			}
 
-			valueDeclaration := stdlib.StandardLibraryFunction{
-				Name: "getStorageReference",
-				Type: getStorageReferenceFunctionType,
-				Function: interpreter.NewUnmeteredHostFunctionValue(
-					func(invocation interpreter.Invocation) interpreter.Value {
-						return &interpreter.StorageReferenceValue{
-							Authorized:           true,
-							TargetStorageAddress: storageAddress,
-							TargetPath:           storagePath,
-							BorrowedType:         sema.IntType,
-						}
-					},
-					getStorageReferenceFunctionType,
-				),
-			}
+			valueDeclaration := stdlib.NewStandardLibraryFunction(
+				"getStorageReference",
+				getStorageReferenceFunctionType,
+				"",
+				func(invocation interpreter.Invocation) interpreter.Value {
+					return &interpreter.StorageReferenceValue{
+						Authorized:           true,
+						TargetStorageAddress: storageAddress,
+						TargetPath:           storagePath,
+						BorrowedType:         sema.IntType,
+					}
+				},
+			)
 
 			baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 			baseValueActivation.DeclareValue(valueDeclaration)
