@@ -528,8 +528,7 @@ func (r *interpreterRuntime) InvokeContractFunction(
 			inter,
 			arguments[i],
 			argumentType,
-			context,
-			storage,
+			environment,
 		)
 	}
 
@@ -587,38 +586,34 @@ func (r *interpreterRuntime) convertArgument(
 	gauge common.MemoryGauge,
 	argument interpreter.Value,
 	argumentType sema.Type,
-	context Context,
-	storage *Storage,
+	environment *Environment,
 ) interpreter.Value {
-	// TODO:
-	//switch argumentType {
-	//case sema.AuthAccountType:
-	//	// convert addresses to auth accounts so there is no need to construct an auth account value for the caller
-	//	if addressValue, ok := argument.(interpreter.AddressValue); ok {
-	//		return r.newAuthAccountValue(
-	//			gauge,
-	//			interpreter.NewAddressValueFromConstructor(
-	//				gauge,
-	//				addressValue.ToAddress,
-	//			),
-	//			context,
-	//			storage,
-	//		)
-	//	}
-	//case sema.PublicAccountType:
-	//	// convert addresses to public accounts so there is no need to construct a public account value for the caller
-	//	if addressValue, ok := argument.(interpreter.AddressValue); ok {
-	//		return r.getPublicAccount(
-	//			gauge,
-	//			interpreter.NewAddressValueFromConstructor(
-	//				gauge,
-	//				addressValue.ToAddress,
-	//			),
-	//			context.Interface,
-	//			storage,
-	//		)
-	//	}
-	//}
+	switch argumentType {
+	case sema.AuthAccountType:
+		// convert addresses to auth accounts so there is no need to construct an auth account value for the caller
+		if addressValue, ok := argument.(interpreter.AddressValue); ok {
+			return stdlib.NewAuthAccountValue(
+				gauge,
+				environment,
+				interpreter.NewAddressValueFromConstructor(
+					gauge,
+					addressValue.ToAddress,
+				),
+			)
+		}
+	case sema.PublicAccountType:
+		// convert addresses to public accounts so there is no need to construct a public account value for the caller
+		if addressValue, ok := argument.(interpreter.AddressValue); ok {
+			return stdlib.NewPublicAccountValue(
+				gauge,
+				environment,
+				interpreter.NewAddressValueFromConstructor(
+					gauge,
+					addressValue.ToAddress,
+				),
+			)
+		}
+	}
 	return argument
 }
 
@@ -699,20 +694,19 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 
 		authorizerValues := make([]interpreter.Value, 0, authorizerCount)
 
-		// TODO:
-		//for _, address := range authorizers {
-		//	authorizerValues = append(
-		//		authorizerValues, r.newAuthAccountValue(
-		//			inter,
-		//			interpreter.NewAddressValue(
-		//				inter,
-		//				address,
-		//			),
-		//			context,
-		//			storage,
-		//		),
-		//	)
-		//}
+		for _, address := range authorizers {
+			authorizerValues = append(
+				authorizerValues,
+				stdlib.NewAuthAccountValue(
+					inter,
+					environment,
+					interpreter.NewAddressValue(
+						inter,
+						address,
+					),
+				),
+			)
+		}
 
 		return authorizerValues
 	}
@@ -1181,7 +1175,7 @@ func (r *interpreterRuntime) newInterpreter(
 			},
 		),
 		interpreter.WithInjectedCompositeFieldsHandler(
-			r.injectedCompositeFieldsHandler(context, storage),
+			r.injectedCompositeFieldsHandler(environment),
 		),
 		interpreter.WithUUIDHandler(func() (uuid uint64, err error) {
 			wrapPanic(func() {
@@ -1212,17 +1206,15 @@ func (r *interpreterRuntime) newInterpreter(
 		interpreter.WithOnStatementHandler(
 			r.onStatementHandler(),
 		),
-		// TODO:
-		//interpreter.WithPublicAccountHandler(
-		//	func(address interpreter.AddressValue) interpreter.Value {
-		//		return r.getPublicAccount(
-		//			memoryGauge,
-		//			address,
-		//			context.Interface,
-		//			storage,
-		//		)
-		//	},
-		//),
+		interpreter.WithPublicAccountHandler(
+			func(address interpreter.AddressValue) interpreter.Value {
+				return stdlib.NewPublicAccountValue(
+					memoryGauge,
+					environment,
+					address,
+				)
+			},
+		),
 		interpreter.WithPublicKeyValidationHandler(func(
 			inter *interpreter.Interpreter,
 			getLocationRange func() interpreter.LocationRange,
@@ -1441,8 +1433,7 @@ func (r *interpreterRuntime) getProgram(
 }
 
 func (r *interpreterRuntime) injectedCompositeFieldsHandler(
-	context Context,
-	storage *Storage,
+	environment *Environment,
 ) interpreter.InjectedCompositeFieldsHandlerFunc {
 	return func(
 		inter *interpreter.Interpreter,
@@ -1458,29 +1449,26 @@ func (r *interpreterRuntime) injectedCompositeFieldsHandler(
 		default:
 			switch compositeKind {
 			case common.CompositeKindContract:
-				// TODO:
-				//var address Address
-				//
-				//switch location := location.(type) {
-				//case common.AddressLocation:
-				//	address = location.Address
-				//default:
-				//	panic(errors.NewUnreachableError())
-				//}
-				//
-				//addressValue := interpreter.NewAddressValue(
-				//	inter,
-				//	address,
-				//)
+				var address Address
+
+				switch location := location.(type) {
+				case common.AddressLocation:
+					address = location.Address
+				default:
+					panic(errors.NewUnreachableError())
+				}
+
+				addressValue := interpreter.NewAddressValue(
+					inter,
+					address,
+				)
 
 				return map[string]interpreter.Value{
-					// TODO:
-					//"account": r.newAuthAccountValue(
-					//	inter,
-					//	addressValue,
-					//	context,
-					//	storage,
-					//),
+					"account": stdlib.NewAuthAccountValue(
+						inter,
+						environment,
+						addressValue,
+					),
 				}
 			}
 		}
