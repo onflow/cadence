@@ -36,6 +36,9 @@ var _ stdlib.Logger = &Environment{}
 var _ stdlib.BlockAtHeightProvider = &Environment{}
 var _ stdlib.CurrentBlockProvider = &Environment{}
 var _ stdlib.PublicAccountHandler = &Environment{}
+var _ stdlib.AccountCreator = &Environment{}
+var _ stdlib.EventEmitter = &Environment{}
+var _ stdlib.AuthAccountHandler = &Environment{}
 
 func newEnvironment() *Environment {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
@@ -60,6 +63,7 @@ func NewBaseEnvironment(declarations ...stdlib.StandardLibraryValue) *Environmen
 	env.Declare(stdlib.NewGetBlockFunction(env))
 	env.Declare(stdlib.NewGetCurrentBlockFunction(env))
 	env.Declare(stdlib.NewGetAccountFunction(env))
+	env.Declare(stdlib.NewAuthAccountConstructor(env))
 	for _, declaration := range declarations {
 		env.Declare(declaration)
 	}
@@ -114,4 +118,50 @@ func (e *Environment) GetAccountContractNames(address common.Address) ([]string,
 
 func (e *Environment) GetAccountContractCode(address common.Address, name string) ([]byte, error) {
 	return e.Interface.GetAccountContractCode(address, name)
+}
+
+func (e *Environment) CreateAccount(payer common.Address) (address common.Address, err error) {
+	return e.Interface.CreateAccount(payer)
+}
+
+func (e *Environment) EmitEvent(
+	inter *interpreter.Interpreter,
+	eventType *sema.CompositeType,
+	values []interpreter.Value,
+	getLocationRange func() interpreter.LocationRange,
+) {
+	eventFields := make([]exportableValue, len(values))
+
+	for _, value := range values {
+		eventFields = append(eventFields, newExportableValue(value, inter))
+	}
+
+	emitEventFields(
+		inter,
+		getLocationRange,
+		eventType,
+		eventFields,
+		e.Interface.EmitEvent,
+	)
+}
+
+func (e *Environment) AddEncodedAccountKey(address common.Address, key []byte) error {
+	return e.Interface.AddEncodedAccountKey(address, key)
+}
+
+func (e *Environment) RevokeEncodedAccountKey(address common.Address, index int) ([]byte, error) {
+	return e.Interface.RevokeEncodedAccountKey(address, index)
+}
+
+func (e *Environment) AddAccountKey(
+	address common.Address,
+	key *stdlib.PublicKey,
+	algo sema.HashAlgorithm,
+	weight int,
+) (*stdlib.AccountKey, error) {
+	return e.Interface.AddAccountKey(address, key, algo, weight)
+}
+
+func (e *Environment) RevokeAccountKey(address common.Address, index int) (*stdlib.AccountKey, error) {
+	return e.Interface.RevokeAccountKey(address, index)
 }

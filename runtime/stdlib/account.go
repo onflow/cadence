@@ -49,7 +49,7 @@ type EventEmitter interface {
 		eventType *sema.CompositeType,
 		values []interpreter.Value,
 		getLocationRange func() interpreter.LocationRange,
-	) error
+	)
 }
 
 type AuthAccountHandler interface {
@@ -57,6 +57,9 @@ type AuthAccountHandler interface {
 	AvailableBalanceProvider
 	StorageUsedProvider
 	StorageCapacityProvider
+	AccountEncodedKeyAdditionHandler
+	AccountEncodedKeyRevocationHandler
+	AuthAccountKeysHandler
 }
 
 type AccountCreator interface {
@@ -118,15 +121,12 @@ func NewAuthAccountConstructor(creator AccountCreator) StandardLibraryValue {
 				},
 			)
 
-			err := creator.EmitEvent(
+			creator.EmitEvent(
 				inter,
 				AccountCreatedEventType,
 				[]interpreter.Value{addressValue},
 				getLocationRange,
 			)
-			if err != nil {
-				panic(err)
-			}
 
 			return NewAuthAccountValue(
 				inter,
@@ -184,13 +184,10 @@ func NewAuthAccountValue(
 		newAccountAvailableBalanceGetFunction(gauge, handler, addressValue),
 		newStorageUsedGetFunction(handler, addressValue),
 		newStorageCapacityGetFunction(handler, addressValue),
+		newAddPublicKeyFunction(gauge, handler, addressValue),
+		newRemovePublicKeyFunction(gauge, handler, addressValue),
 		// TODO:
 		nil,
-		nil,
-		nil,
-		nil,
-		//newAddPublicKeyFunction(gauge, handler, addressValue),
-		//newRemovePublicKeyFunction(gauge, handler, addressValue),
 		//func() interpreter.Value {
 		//	return newAuthAccountContractsValue(
 		//		gauge,
@@ -198,13 +195,13 @@ func NewAuthAccountValue(
 		//		addressValue,
 		//	)
 		//},
-		//func() interpreter.Value {
-		//	return newAuthAccountKeysValjue(
-		//		gauge,
-		//		handler,
-		//		addressValue,
-		//	)
-		//},
+		func() interpreter.Value {
+			return newAuthAccountKeysValue(
+				gauge,
+				handler,
+				addressValue,
+			)
+		},
 	)
 }
 
@@ -243,33 +240,38 @@ func NewAuthAccountValue(
 //		),
 //	)
 //}
-//
-//func (r *interpreterRuntime) newAuthAccountKeys(
-//	gauge common.MemoryGauge,
-//	addressValue interpreter.AddressValue,
-//	runtimeInterface Interface,
-//) interpreter.Value {
-//	return interpreter.NewAuthAccountKeysValue(
-//		gauge,
-//		addressValue,
-//		r.newAccountKeysAddFunction(
-//			gauge,
-//			addressValue,
-//			runtimeInterface,
-//		),
-//		r.newAccountKeysGetFunction(
-//			gauge,
-//			addressValue,
-//			runtimeInterface,
-//		),
-//		r.newAccountKeysRevokeFunction(
-//			gauge,
-//			addressValue,
-//			runtimeInterface,
-//		),
-//	)
-//}
-//
+
+type AuthAccountKeysHandler interface {
+	AccountKeyProvider
+	AccountKeyAdditionHandler
+	AccountKeyRevocationHandler
+}
+
+func newAuthAccountKeysValue(
+	gauge common.MemoryGauge,
+	handler AuthAccountKeysHandler,
+	addressValue interpreter.AddressValue,
+) interpreter.Value {
+	return interpreter.NewAuthAccountKeysValue(
+		gauge,
+		addressValue,
+		newAccountKeysAddFunction(
+			gauge,
+			handler,
+			addressValue,
+		),
+		newAccountKeysGetFunction(
+			gauge,
+			handler,
+			addressValue,
+		),
+		newAccountKeysRevokeFunction(
+			gauge,
+			handler,
+			addressValue,
+		),
+	)
+}
 
 type BalanceProvider interface {
 	// GetAccountBalance gets accounts default flow token balance.
@@ -410,165 +412,180 @@ func newStorageCapacityGetFunction(
 	}
 }
 
-//func (r *interpreterRuntime) newAddPublicKeyFunction(
-//	gauge common.MemoryGauge,
-//	addressValue interpreter.AddressValue,
-//	runtimeInterface Interface,
-//) *interpreter.HostFunctionValue {
-//
-//	// Converted addresses can be cached and don't have to be recomputed on each function invocation
-//	address := addressValue.ToAddress()
-//
-//	return interpreter.NewHostFunctionValue(
-//		gauge,
-//		func(invocation interpreter.Invocation) interpreter.Value {
-//			publicKeyValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
-//			if !ok {
-//				panic(runtimeErrors.NewUnreachableError())
-//			}
-//
-//			publicKey, err := interpreter.ByteArrayValueToByteSlice(gauge, publicKeyValue)
-//			if err != nil {
-//				panic("addPublicKey requires the first argument to be a byte array")
-//			}
-//
-//			wrapPanic(func() {
-//				err = runtimeInterface.AddEncodedAccountKey(address, publicKey)
-//			})
-//			if err != nil {
-//				panic(err)
-//			}
-//
-//			inter := invocation.Interpreter
-//
-//			r.emitAccountEvent(
-//				gauge,
-//				AccountKeyAddedEventType,
-//				runtimeInterface,
-//				[]exportableValue{
-//					newExportableValue(addressValue, inter),
-//					newExportableValue(publicKeyValue, inter),
-//				},
-//				invocation.GetLocationRange,
-//			)
-//
-//			return interpreter.VoidValue{}
-//		},
-//		sema.AuthAccountTypeAddPublicKeyFunctionType,
-//	)
-//}
-//
-//func (r *interpreterRuntime) newRemovePublicKeyFunction(
-//	gauge common.MemoryGauge,
-//	addressValue interpreter.AddressValue,
-//	runtimeInterface Interface,
-//) *interpreter.HostFunctionValue {
-//
-//	// Converted addresses can be cached and don't have to be recomputed on each function invocation
-//	address := addressValue.ToAddress()
-//
-//	return interpreter.NewHostFunctionValue(
-//		gauge,
-//		func(invocation interpreter.Invocation) interpreter.Value {
-//			index, ok := invocation.Arguments[0].(interpreter.IntValue)
-//			if !ok {
-//				panic(runtimeErrors.NewUnreachableError())
-//			}
-//
-//			var publicKey []byte
-//			var err error
-//			wrapPanic(func() {
-//				publicKey, err = runtimeInterface.RevokeEncodedAccountKey(address, index.ToInt())
-//			})
-//			if err != nil {
-//				panic(err)
-//			}
-//
-//			inter := invocation.Interpreter
-//
-//			publicKeyValue := interpreter.ByteSliceToByteArrayValue(
-//				inter,
-//				publicKey,
-//			)
-//
-//			r.emitAccountEvent(
-//				gauge,
-//				AccountKeyRemovedEventType,
-//				runtimeInterface,
-//				[]exportableValue{
-//					newExportableValue(addressValue, inter),
-//					newExportableValue(publicKeyValue, inter),
-//				},
-//				invocation.GetLocationRange,
-//			)
-//
-//			return interpreter.VoidValue{}
-//		},
-//		sema.AuthAccountTypeRemovePublicKeyFunctionType,
-//	)
-//}
-//
-//func (r *interpreterRuntime) newAccountKeysAddFunction(
-//	gauge common.MemoryGauge,
-//	addressValue interpreter.AddressValue,
-//	runtimeInterface Interface,
-//) *interpreter.HostFunctionValue {
-//
-//	// Converted addresses can be cached and don't have to be recomputed on each function invocation
-//	address := addressValue.ToAddress()
-//
-//	return interpreter.NewHostFunctionValue(
-//		gauge,
-//		func(invocation interpreter.Invocation) interpreter.Value {
-//			publicKeyValue, ok := invocation.Arguments[0].(*interpreter.CompositeValue)
-//			if !ok {
-//				panic(runtimeErrors.NewUnreachableError())
-//			}
-//
-//			inter := invocation.Interpreter
-//			getLocationRange := invocation.GetLocationRange
-//
-//			publicKey, err := NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
-//			if err != nil {
-//				panic(err)
-//			}
-//
-//			hashAlgo := NewHashAlgorithmFromValue(inter, getLocationRange, invocation.Arguments[1])
-//			weightValue, ok := invocation.Arguments[2].(interpreter.UFix64Value)
-//			if !ok {
-//				panic(runtimeErrors.NewUnreachableError())
-//			}
-//			weight := weightValue.ToInt()
-//
-//			var accountKey *AccountKey
-//			wrapPanic(func() {
-//				accountKey, err = runtimeInterface.AddAccountKey(address, publicKey, hashAlgo, weight)
-//			})
-//			if err != nil {
-//				panic(err)
-//			}
-//
-//			r.emitAccountEvent(
-//				inter,
-//				AccountKeyAddedEventType,
-//				runtimeInterface,
-//				[]exportableValue{
-//					newExportableValue(addressValue, inter),
-//					newExportableValue(publicKeyValue, inter),
-//				},
-//				invocation.GetLocationRange,
-//			)
-//
-//			return NewAccountKeyValue(
-//				inter,
-//				getLocationRange,
-//				accountKey,
-//				inter.PublicKeyValidationHandler,
-//			)
-//		},
-//		sema.AuthAccountKeysTypeAddFunctionType,
-//	)
-//}
+type AccountEncodedKeyAdditionHandler interface {
+	EventEmitter
+	// AddEncodedAccountKey appends an encoded key to an account.
+	AddEncodedAccountKey(address common.Address, key []byte) error
+}
+
+func newAddPublicKeyFunction(
+	gauge common.MemoryGauge,
+	handler AccountEncodedKeyAdditionHandler,
+	addressValue interpreter.AddressValue,
+) *interpreter.HostFunctionValue {
+
+	// Converted addresses can be cached and don't have to be recomputed on each function invocation
+	address := addressValue.ToAddress()
+
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			publicKeyValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			publicKey, err := interpreter.ByteArrayValueToByteSlice(gauge, publicKeyValue)
+			if err != nil {
+				panic("addPublicKey requires the first argument to be a byte array")
+			}
+
+			wrapPanic(func() {
+				err = handler.AddEncodedAccountKey(address, publicKey)
+			})
+			if err != nil {
+				panic(err)
+			}
+
+			inter := invocation.Interpreter
+
+			handler.EmitEvent(
+				inter,
+				AccountKeyAddedEventType,
+				[]interpreter.Value{
+					addressValue,
+					publicKeyValue,
+				},
+				invocation.GetLocationRange,
+			)
+
+			return interpreter.VoidValue{}
+		},
+		sema.AuthAccountTypeAddPublicKeyFunctionType,
+	)
+}
+
+type AccountEncodedKeyRevocationHandler interface {
+	EventEmitter
+	// RevokeEncodedAccountKey removes a key from an account by index, add returns the encoded key.
+	RevokeEncodedAccountKey(address common.Address, index int) ([]byte, error)
+}
+
+func newRemovePublicKeyFunction(
+	gauge common.MemoryGauge,
+	handler AccountEncodedKeyRevocationHandler,
+	addressValue interpreter.AddressValue,
+) *interpreter.HostFunctionValue {
+
+	// Converted addresses can be cached and don't have to be recomputed on each function invocation
+	address := addressValue.ToAddress()
+
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			index, ok := invocation.Arguments[0].(interpreter.IntValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			var publicKey []byte
+			var err error
+			wrapPanic(func() {
+				publicKey, err = handler.RevokeEncodedAccountKey(address, index.ToInt())
+			})
+			if err != nil {
+				panic(err)
+			}
+
+			inter := invocation.Interpreter
+
+			publicKeyValue := interpreter.ByteSliceToByteArrayValue(
+				inter,
+				publicKey,
+			)
+
+			handler.EmitEvent(
+				inter,
+				AccountKeyRemovedEventType,
+				[]interpreter.Value{
+					addressValue,
+					publicKeyValue,
+				},
+				invocation.GetLocationRange,
+			)
+
+			return interpreter.VoidValue{}
+		},
+		sema.AuthAccountTypeRemovePublicKeyFunctionType,
+	)
+}
+
+type AccountKeyAdditionHandler interface {
+	EventEmitter
+	// AddAccountKey appends a key to an account.
+	AddAccountKey(address common.Address, key *PublicKey, algo sema.HashAlgorithm, weight int) (*AccountKey, error)
+}
+
+func newAccountKeysAddFunction(
+	gauge common.MemoryGauge,
+	handler AccountKeyAdditionHandler,
+	addressValue interpreter.AddressValue,
+) *interpreter.HostFunctionValue {
+
+	// Converted addresses can be cached and don't have to be recomputed on each function invocation
+	address := addressValue.ToAddress()
+
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			publicKeyValue, ok := invocation.Arguments[0].(*interpreter.CompositeValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			inter := invocation.Interpreter
+			getLocationRange := invocation.GetLocationRange
+
+			publicKey, err := NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
+			if err != nil {
+				panic(err)
+			}
+
+			hashAlgo := NewHashAlgorithmFromValue(inter, getLocationRange, invocation.Arguments[1])
+			weightValue, ok := invocation.Arguments[2].(interpreter.UFix64Value)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+			weight := weightValue.ToInt()
+
+			var accountKey *AccountKey
+			wrapPanic(func() {
+				accountKey, err = handler.AddAccountKey(address, publicKey, hashAlgo, weight)
+			})
+			if err != nil {
+				panic(err)
+			}
+
+			handler.EmitEvent(
+				inter,
+				AccountKeyAddedEventType,
+				[]interpreter.Value{
+					addressValue,
+					publicKeyValue,
+				},
+				invocation.GetLocationRange,
+			)
+
+			return NewAccountKeyValue(
+				inter,
+				getLocationRange,
+				accountKey,
+				inter.PublicKeyValidationHandler,
+			)
+		},
+		sema.AuthAccountKeysTypeAddFunctionType,
+	)
+}
 
 type AccountKey struct {
 	KeyIndex  int
@@ -646,66 +663,78 @@ func newAccountKeysGetFunction(
 	)
 }
 
-//func (r *interpreterRuntime) newAccountKeysRevokeFunction(
-//	gauge common.MemoryGauge,
-//	addressValue interpreter.AddressValue,
-//	runtimeInterface Interface,
-//) *interpreter.HostFunctionValue {
-//
-//	// Converted addresses can be cached and don't have to be recomputed on each function invocation
-//	address := addressValue.ToAddress()
-//
-//	return interpreter.NewHostFunctionValue(
-//		gauge,
-//		func(invocation interpreter.Invocation) interpreter.Value {
-//			indexValue, ok := invocation.Arguments[0].(interpreter.IntValue)
-//			if !ok {
-//				panic(runtimeErrors.NewUnreachableError())
-//			}
-//			index := indexValue.ToInt()
-//
-//			var err error
-//			var accountKey *AccountKey
-//			wrapPanic(func() {
-//				accountKey, err = runtimeInterface.RevokeAccountKey(address, index)
-//			})
-//			if err != nil {
-//				panic(err)
-//			}
-//
-//			// Here it is expected the host function to return a nil key, if a key is not found at the given index.
-//			// This is done because, if the host function returns an error when a key is not found, then
-//			// currently there's no way to distinguish between a 'key not found error' vs other internal errors.
-//			if accountKey == nil {
-//				return interpreter.NewNilValue(invocation.Interpreter)
-//			}
-//
-//			inter := invocation.Interpreter
-//
-//			r.emitAccountEvent(
-//				inter,
-//				AccountKeyRemovedEventType,
-//				runtimeInterface,
-//				[]exportableValue{
-//					newExportableValue(addressValue, inter),
-//					newExportableValue(indexValue, inter),
-//				},
-//				invocation.GetLocationRange,
-//			)
-//
-//			return interpreter.NewSomeValueNonCopying(
-//				inter,
-//				NewAccountKeyValue(
-//					inter,
-//					invocation.GetLocationRange,
-//					accountKey,
-//					DoNotValidatePublicKey, // key from FVM has already been validated
-//				),
-//			)
-//		},
-//		sema.AuthAccountKeysTypeRevokeFunctionType,
-//	)
-//}
+type AccountKeyRevocationHandler interface {
+	EventEmitter
+	// RevokeAccountKey removes a key from an account by index.
+	RevokeAccountKey(address common.Address, index int) (*AccountKey, error)
+}
+
+func newAccountKeysRevokeFunction(
+	gauge common.MemoryGauge,
+	handler AccountKeyRevocationHandler,
+	addressValue interpreter.AddressValue,
+) *interpreter.HostFunctionValue {
+
+	// Converted addresses can be cached and don't have to be recomputed on each function invocation
+	address := addressValue.ToAddress()
+
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			indexValue, ok := invocation.Arguments[0].(interpreter.IntValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+			index := indexValue.ToInt()
+
+			var err error
+			var accountKey *AccountKey
+			wrapPanic(func() {
+				accountKey, err = handler.RevokeAccountKey(address, index)
+			})
+			if err != nil {
+				panic(err)
+			}
+
+			// Here it is expected the host function to return a nil key, if a key is not found at the given index.
+			// This is done because, if the host function returns an error when a key is not found, then
+			// currently there's no way to distinguish between a 'key not found error' vs other internal errors.
+			if accountKey == nil {
+				return interpreter.NewNilValue(invocation.Interpreter)
+			}
+
+			inter := invocation.Interpreter
+
+			handler.EmitEvent(
+				inter,
+				AccountKeyRemovedEventType,
+				[]interpreter.Value{
+					addressValue,
+					indexValue,
+				},
+				invocation.GetLocationRange,
+			)
+
+			return interpreter.NewSomeValueNonCopying(
+				inter,
+				NewAccountKeyValue(
+					inter,
+					invocation.GetLocationRange,
+					accountKey,
+					// public keys are assumed to be already validated.
+					func(
+						_ *interpreter.Interpreter,
+						_ func() interpreter.LocationRange,
+						_ *interpreter.CompositeValue,
+					) error {
+						return nil
+					},
+				),
+			)
+		},
+		sema.AuthAccountKeysTypeRevokeFunctionType,
+	)
+}
 
 type PublicAccountKeysHandler interface {
 	AccountKeyProvider
