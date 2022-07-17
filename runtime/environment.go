@@ -19,6 +19,7 @@
 package runtime
 
 import (
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
@@ -28,11 +29,13 @@ type Environment struct {
 	baseActivation      *interpreter.VariableActivation
 	baseValueActivation *sema.VariableActivation
 	Interface           Interface
+	Storage             *Storage
 }
 
 var _ stdlib.Logger = &Environment{}
 var _ stdlib.BlockAtHeightProvider = &Environment{}
 var _ stdlib.CurrentBlockProvider = &Environment{}
+var _ stdlib.PublicAccountHandler = &Environment{}
 
 func newEnvironment() *Environment {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
@@ -48,21 +51,25 @@ func (e *Environment) Declare(valueDeclaration stdlib.StandardLibraryValue) {
 	e.baseActivation.Declare(valueDeclaration)
 }
 
-func NewScriptEnvironment(declarations ...stdlib.StandardLibraryValue) *Environment {
-	environment := NewBaseEnvironment()
-	// TODO: add getAuthAccount
-	return environment
+func NewBaseEnvironment(declarations ...stdlib.StandardLibraryValue) *Environment {
+	env := newEnvironment()
+	for _, valueDeclaration := range stdlib.BuiltinValues {
+		env.Declare(valueDeclaration)
+	}
+	env.Declare(stdlib.NewLogFunction(env))
+	env.Declare(stdlib.NewGetBlockFunction(env))
+	env.Declare(stdlib.NewGetCurrentBlockFunction(env))
+	env.Declare(stdlib.NewGetAccountFunction(env))
+	for _, declaration := range declarations {
+		env.Declare(declaration)
+	}
+	return env
 }
 
-func NewBaseEnvironment(declarations ...stdlib.StandardLibraryValue) *Environment {
-	environment := newEnvironment()
-	for _, valueDeclaration := range stdlib.BuiltinValues {
-		environment.Declare(valueDeclaration)
-	}
-	environment.Declare(stdlib.NewLogFunction(environment))
-	environment.Declare(stdlib.NewGetBlockFunction(environment))
-	environment.Declare(stdlib.NewGetCurrentBlockFunction(environment))
-	return environment
+func NewScriptEnvironment(declarations ...stdlib.StandardLibraryValue) *Environment {
+	env := NewBaseEnvironment(declarations...)
+	env.Declare(stdlib.NewGetAuthAccountFunction(env))
+	return env
 }
 
 func (e *Environment) ProgramLog(message string) error {
@@ -75,4 +82,36 @@ func (e *Environment) GetBlockAtHeight(height uint64) (block stdlib.Block, exist
 
 func (e *Environment) GetCurrentBlockHeight() (uint64, error) {
 	return e.Interface.GetCurrentBlockHeight()
+}
+
+func (e *Environment) GetAccountBalance(address common.Address) (uint64, error) {
+	return e.Interface.GetAccountBalance(address)
+}
+
+func (e *Environment) GetAccountAvailableBalance(address common.Address) (uint64, error) {
+	return e.Interface.GetAccountAvailableBalance(address)
+}
+
+func (e *Environment) CommitStorage(inter *interpreter.Interpreter, commitContractUpdates bool) error {
+	return e.Storage.Commit(inter, commitContractUpdates)
+}
+
+func (e *Environment) GetStorageUsed(address common.Address) (uint64, error) {
+	return e.Interface.GetStorageUsed(address)
+}
+
+func (e *Environment) GetStorageCapacity(address common.Address) (uint64, error) {
+	return e.Interface.GetStorageCapacity(address)
+}
+
+func (e *Environment) GetAccountKey(address common.Address, index int) (*stdlib.AccountKey, error) {
+	return e.Interface.GetAccountKey(address, index)
+}
+
+func (e *Environment) GetAccountContractNames(address common.Address) ([]string, error) {
+	return e.Interface.GetAccountContractNames(address)
+}
+
+func (e *Environment) GetAccountContractCode(address common.Address, name string) ([]byte, error) {
+	return e.Interface.GetAccountContractCode(address, name)
 }

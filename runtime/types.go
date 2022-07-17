@@ -56,16 +56,3 @@ const (
 	HashAlgorithmKMAC128_BLS_BLS12_381 = sema.HashAlgorithmKMAC128_BLS_BLS12_381
 	HashAlgorithmKECCAK_256            = sema.HashAlgorithmKECCAK_256
 )
-
-type AccountKey struct {
-	KeyIndex  int
-	PublicKey *PublicKey
-	HashAlgo  HashAlgorithm
-	Weight    int
-	IsRevoked bool
-}
-
-type PublicKey struct {
-	PublicKey []byte
-	SignAlgo  SignatureAlgorithm
-}

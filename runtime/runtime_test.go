@@ -135,17 +135,22 @@ func newTestInterpreterRuntime(options ...Option) Runtime {
 }
 
 type testRuntimeInterface struct {
-	resolveLocation           func(identifiers []Identifier, location Location) ([]ResolvedLocation, error)
-	getCode                   func(_ Location) ([]byte, error)
-	getProgram                func(Location) (*interpreter.Program, error)
-	setProgram                func(Location, *interpreter.Program) error
-	storage                   testLedger
-	createAccount             func(payer Address) (address Address, err error)
-	addEncodedAccountKey      func(address Address, publicKey []byte) error
-	removeEncodedAccountKey   func(address Address, index int) (publicKey []byte, err error)
-	addAccountKey             func(address Address, publicKey *PublicKey, hashAlgo HashAlgorithm, weight int) (*AccountKey, error)
-	getAccountKey             func(address Address, index int) (*AccountKey, error)
-	removeAccountKey          func(address Address, index int) (*AccountKey, error)
+	resolveLocation         func(identifiers []Identifier, location Location) ([]ResolvedLocation, error)
+	getCode                 func(_ Location) ([]byte, error)
+	getProgram              func(Location) (*interpreter.Program, error)
+	setProgram              func(Location, *interpreter.Program) error
+	storage                 testLedger
+	createAccount           func(payer Address) (address Address, err error)
+	addEncodedAccountKey    func(address Address, publicKey []byte) error
+	removeEncodedAccountKey func(address Address, index int) (publicKey []byte, err error)
+	addAccountKey           func(
+		address Address,
+		publicKey *stdlib.PublicKey,
+		hashAlgo HashAlgorithm,
+		weight int,
+	) (*stdlib.AccountKey, error)
+	getAccountKey             func(address Address, index int) (*stdlib.AccountKey, error)
+	removeAccountKey          func(address Address, index int) (*stdlib.AccountKey, error)
 	updateAccountContractCode func(address Address, name string, code []byte) error
 	getAccountContractCode    func(address Address, name string) (code []byte, err error)
 	removeAccountContractCode func(address Address, name string) (err error)
@@ -181,10 +186,10 @@ type testRuntimeInterface struct {
 	getStorageCapacity         func(_ Address) (uint64, error)
 	programs                   map[common.Location]*interpreter.Program
 	implementationDebugLog     func(message string) error
-	validatePublicKey          func(publicKey *PublicKey) error
-	bLSVerifyPOP               func(pk *PublicKey, s []byte) (bool, error)
+	validatePublicKey          func(publicKey *stdlib.PublicKey) error
+	bLSVerifyPOP               func(pk *stdlib.PublicKey, s []byte) (bool, error)
 	blsAggregateSignatures     func(sigs [][]byte) ([]byte, error)
-	blsAggregatePublicKeys     func(keys []*PublicKey) (*PublicKey, error)
+	blsAggregatePublicKeys     func(keys []*stdlib.PublicKey) (*stdlib.PublicKey, error)
 	getAccountContractNames    func(address Address) ([]string, error)
 	recordTrace                func(operation string, location common.Location, duration time.Duration, logs []opentracing.LogRecord)
 	meterMemory                func(usage common.MemoryUsage) error
@@ -284,21 +289,26 @@ func (i *testRuntimeInterface) RevokeEncodedAccountKey(address Address, index in
 	return i.removeEncodedAccountKey(address, index)
 }
 
-func (i *testRuntimeInterface) AddAccountKey(address Address, publicKey *PublicKey, hashAlgo HashAlgorithm, weight int) (*AccountKey, error) {
+func (i *testRuntimeInterface) AddAccountKey(
+	address Address,
+	publicKey *stdlib.PublicKey,
+	hashAlgo HashAlgorithm,
+	weight int,
+) (*stdlib.AccountKey, error) {
 	if i.addAccountKey == nil {
 		panic("must specify testRuntimeInterface.addAccountKey")
 	}
 	return i.addAccountKey(address, publicKey, hashAlgo, weight)
 }
 
-func (i *testRuntimeInterface) GetAccountKey(address Address, index int) (*AccountKey, error) {
+func (i *testRuntimeInterface) GetAccountKey(address Address, index int) (*stdlib.AccountKey, error) {
 	if i.getAccountKey == nil {
 		panic("must specify testRuntimeInterface.getAccountKey")
 	}
 	return i.getAccountKey(address, index)
 }
 
-func (i *testRuntimeInterface) RevokeAccountKey(address Address, index int) (*AccountKey, error) {
+func (i *testRuntimeInterface) RevokeAccountKey(address Address, index int) (*stdlib.AccountKey, error) {
 	if i.removeAccountKey == nil {
 		panic("must specify testRuntimeInterface.removeAccountKey")
 	}
@@ -499,7 +509,7 @@ func (i *testRuntimeInterface) ImplementationDebugLog(message string) error {
 	return i.implementationDebugLog(message)
 }
 
-func (i *testRuntimeInterface) ValidatePublicKey(key *PublicKey) error {
+func (i *testRuntimeInterface) ValidatePublicKey(key *stdlib.PublicKey) error {
 	if i.validatePublicKey == nil {
 		return errors.New("mock defaults to public key validation failure")
 	}
@@ -507,7 +517,7 @@ func (i *testRuntimeInterface) ValidatePublicKey(key *PublicKey) error {
 	return i.validatePublicKey(key)
 }
 
-func (i *testRuntimeInterface) BLSVerifyPOP(key *PublicKey, s []byte) (bool, error) {
+func (i *testRuntimeInterface) BLSVerifyPOP(key *stdlib.PublicKey, s []byte) (bool, error) {
 	if i.bLSVerifyPOP == nil {
 		return false, nil
 	}
@@ -523,7 +533,7 @@ func (i *testRuntimeInterface) BLSAggregateSignatures(sigs [][]byte) ([]byte, er
 	return i.blsAggregateSignatures(sigs)
 }
 
-func (i *testRuntimeInterface) BLSAggregatePublicKeys(keys []*PublicKey) (*PublicKey, error) {
+func (i *testRuntimeInterface) BLSAggregatePublicKeys(keys []*stdlib.PublicKey) (*stdlib.PublicKey, error) {
 	if i.blsAggregatePublicKeys == nil {
 		return nil, nil
 	}

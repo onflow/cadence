@@ -8826,7 +8826,7 @@ func newTestAuthAccountValue(gauge common.MemoryGauge, addressValue interpreter.
 		func(invocation interpreter.Invocation) interpreter.Value {
 			panic(errors.NewUnreachableError())
 		},
-		stdlib.PanicFunction.Type,
+		stdlib.PanicFunction.Type.(*sema.FunctionType),
 	)
 
 	return interpreter.NewAuthAccountValue(
@@ -8880,7 +8880,7 @@ func newTestPublicAccountValue(gauge common.MemoryGauge, addressValue interprete
 		func(invocation interpreter.Invocation) interpreter.Value {
 			panic(errors.NewUnreachableError())
 		},
-		stdlib.PanicFunction.Type,
+		stdlib.PanicFunction.Type.(*sema.FunctionType),
 	)
 
 	return interpreter.NewPublicAccountValue(

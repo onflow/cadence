@@ -392,10 +392,10 @@ func TestExportValue(t *testing.T) {
 				return interpreter.NewAccountKeyValue(
 					inter,
 					interpreter.NewUnmeteredIntValueFromInt64(1),
-					NewPublicKeyValue(
+					stdlib.NewPublicKeyValue(
 						inter,
 						interpreter.ReturnEmptyLocationRange,
-						&PublicKey{
+						&stdlib.PublicKey{
 							PublicKey: []byte{1, 2, 3},
 							SignAlgo:  2,
 						},
@@ -4091,7 +4091,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 					runtimeInterface := &testRuntimeInterface{
 						storage: storage,
-						validatePublicKey: func(publicKey *PublicKey) error {
+						validatePublicKey: func(publicKey *stdlib.PublicKey) error {
 							publicKeyValidated = true
 							return publicKeyActualError
 						},
@@ -4546,7 +4546,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,
-			validatePublicKey: func(publicKey *PublicKey) error {
+			validatePublicKey: func(publicKey *stdlib.PublicKey) error {
 				publicKeyValidated = true
 				return nil
 			},
@@ -4619,7 +4619,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,
-			validatePublicKey: func(publicKey *PublicKey) error {
+			validatePublicKey: func(publicKey *stdlib.PublicKey) error {
 				publicKeyValidated = true
 				return nil
 			},

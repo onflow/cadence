@@ -53,6 +53,10 @@ type EventEmitter interface {
 }
 
 type AuthAccountHandler interface {
+	BalanceProvider
+	AvailableBalanceProvider
+	StorageUsedProvider
+	StorageCapacityProvider
 }
 
 type AccountCreator interface {
@@ -129,7 +133,8 @@ func NewAuthAccountConstructor(creator AccountCreator) StandardLibraryValue {
 				creator,
 				addressValue,
 			)
-		})
+		},
+	)
 }
 
 const getAuthAccountDocString = `
@@ -156,12 +161,15 @@ func NewGetAuthAccountFunction(handler AuthAccountHandler) StandardLibraryValue 
 				panic(errors.NewUnreachableError())
 			}
 
+			gauge := invocation.Interpreter
+
 			return NewAuthAccountValue(
-				invocation.Interpreter,
+				gauge,
 				handler,
 				accountAddress,
 			)
-		})
+		},
+	)
 }
 
 func NewAuthAccountValue(
@@ -169,77 +177,69 @@ func NewAuthAccountValue(
 	handler AuthAccountHandler,
 	addressValue interpreter.AddressValue,
 ) interpreter.Value {
-	// TODO:
-	return nil
-	//	return interpreter.NewAuthAccountValue(
-	//		gauge,
-	//		addressValue,
-	//		accountBalanceGetFunction(addressValue, context.Interface),
-	//		accountAvailableBalanceGetFunction(addressValue, context.Interface),
-	//		storageUsedGetFunction(addressValue, context.Interface, storage),
-	//		storageCapacityGetFunction(addressValue, context.Interface, storage),
-	//		r.newAddPublicKeyFunction(gauge, addressValue, context.Interface),
-	//		r.newRemovePublicKeyFunction(gauge, addressValue, context.Interface),
-	//		func() interpreter.Value {
-	//			return newAuthAccountContractsValue(
-	//				gauge,
-	//				addressValue,
-	//			)
-	//		},
-	//		func() interpreter.Value {
-	//			return r.newAuthAccountKeys(
-	//				gauge,
-	//				addressValue,
-	//				context.Interface,
-	//			)
-	//		},
-	//	)
+	return interpreter.NewAuthAccountValue(
+		gauge,
+		addressValue,
+		newAccountBalanceGetFunction(gauge, handler, addressValue),
+		newAccountAvailableBalanceGetFunction(gauge, handler, addressValue),
+		newStorageUsedGetFunction(handler, addressValue),
+		newStorageCapacityGetFunction(handler, addressValue),
+		// TODO:
+		nil,
+		nil,
+		nil,
+		nil,
+		//newAddPublicKeyFunction(gauge, handler, addressValue),
+		//newRemovePublicKeyFunction(gauge, handler, addressValue),
+		//func() interpreter.Value {
+		//	return newAuthAccountContractsValue(
+		//		gauge,
+		//		handler,
+		//		addressValue,
+		//	)
+		//},
+		//func() interpreter.Value {
+		//	return newAuthAccountKeysValjue(
+		//		gauge,
+		//		handler,
+		//		addressValue,
+		//	)
+		//},
+	)
 }
 
-//
-//func (r *interpreterRuntime) newAuthAccountContracts(
+//func newAuthAccountContracts(
 //	gauge common.MemoryGauge,
 //	addressValue interpreter.AddressValue,
-//	context Context,
-//	storage *Storage,
-//	interpreterOptions []interpreter.Option,
-//	checkerOptions []sema.Option,
 //) interpreter.Value {
 //	return interpreter.NewAuthAccountContractsValue(
 //		gauge,
 //		addressValue,
-//		r.newAuthAccountContractsChangeFunction(
+//		newAuthAccountContractsChangeFunction(
 //			gauge,
+//          handler,
 //			addressValue,
-//			context,
-//			storage,
-//			interpreterOptions,
-//			checkerOptions,
 //			false,
 //		),
-//		r.newAuthAccountContractsChangeFunction(
+//		newAuthAccountContractsChangeFunction(
 //			gauge,
+//          handler,
 //			addressValue,
-//			context,
-//			storage,
-//			interpreterOptions,
-//			checkerOptions,
 //			true,
 //		),
-//		r.newAccountContractsGetFunction(
+//		newAccountContractsGetFunction(
 //			gauge,
+//          handler,
 //			addressValue,
-//			context.Interface,
 //		),
-//		r.newAuthAccountContractsRemoveFunction(
+//		newAuthAccountContractsRemoveFunction(
 //			gauge,
+//          handler,
 //			addressValue,
-//			context.Interface,
-//			storage,
 //		),
 //		r.newAccountContractsGetNamesFunction(
+//          handler,
 //			addressValue,
-//			context.Interface,
 //		),
 //	)
 //}
@@ -270,130 +270,146 @@ func NewAuthAccountValue(
 //	)
 //}
 //
-//
-//func accountBalanceGetFunction(
-//	addressValue interpreter.AddressValue,
-//	runtimeInterface Interface,
-//) func() interpreter.UFix64Value {
-//
-//	// Converted addresses can be cached and don't have to be recomputed on each function invocation
-//	address := addressValue.ToAddress()
-//
-//	return func() interpreter.UFix64Value {
-//		balanceGetter := func() (balance uint64) {
-//			var err error
-//			wrapPanic(func() {
-//				balance, err = runtimeInterface.GetAccountBalance(address)
-//			})
-//			if err != nil {
-//				panic(err)
-//			}
-//
-//			return
-//		}
-//
-//		return interpreter.NewUFix64Value(runtimeInterface, balanceGetter)
-//	}
-//}
-//
-//func accountAvailableBalanceGetFunction(
-//	addressValue interpreter.AddressValue,
-//	runtimeInterface Interface,
-//) func() interpreter.UFix64Value {
-//
-//	// Converted addresses can be cached and don't have to be recomputed on each function invocation
-//	address := addressValue.ToAddress()
-//
-//	return func() interpreter.UFix64Value {
-//		balanceGetter := func() (balance uint64) {
-//			var err error
-//			wrapPanic(func() {
-//				balance, err = runtimeInterface.GetAccountAvailableBalance(address)
-//			})
-//			if err != nil {
-//				panic(err)
-//			}
-//
-//			return
-//		}
-//
-//		return interpreter.NewUFix64Value(runtimeInterface, balanceGetter)
-//	}
-//}
-//
-//func storageUsedGetFunction(
-//	addressValue interpreter.AddressValue,
-//	runtimeInterface Interface,
-//	storage *Storage,
-//) func(inter *interpreter.Interpreter) interpreter.UInt64Value {
-//
-//	// Converted addresses can be cached and don't have to be recomputed on each function invocation
-//	address := addressValue.ToAddress()
-//
-//	return func(inter *interpreter.Interpreter) interpreter.UInt64Value {
-//
-//		// NOTE: flush the cached values, so the host environment
-//		// can properly calculate the amount of storage used by the account
-//		const commitContractUpdates = false
-//		err := storage.Commit(inter, commitContractUpdates)
-//		if err != nil {
-//			panic(err)
-//		}
-//
-//		return interpreter.NewUInt64Value(
-//			inter,
-//			func() uint64 {
-//				var capacity uint64
-//				wrapPanic(func() {
-//					capacity, err = runtimeInterface.GetStorageUsed(address)
-//				})
-//				if err != nil {
-//					panic(err)
-//				}
-//				return capacity
-//			},
-//		)
-//	}
-//}
-//
-//func storageCapacityGetFunction(
-//	addressValue interpreter.AddressValue,
-//	runtimeInterface Interface,
-//	storage *Storage,
-//) func(inter *interpreter.Interpreter) interpreter.UInt64Value {
-//
-//	// Converted addresses can be cached and don't have to be recomputed on each function invocation
-//	address := addressValue.ToAddress()
-//
-//	return func(inter *interpreter.Interpreter) interpreter.UInt64Value {
-//
-//		var err error
-//
-//		// NOTE: flush the cached values, so the host environment
-//		// can properly calculate the amount of storage available for the account
-//		const commitContractUpdates = false
-//		err = storage.Commit(inter, commitContractUpdates)
-//		if err != nil {
-//			panic(err)
-//		}
-//
-//		return interpreter.NewUInt64Value(
-//			inter,
-//			func() uint64 {
-//				var capacity uint64
-//				wrapPanic(func() {
-//					capacity, err = runtimeInterface.GetStorageCapacity(address)
-//				})
-//				if err != nil {
-//					panic(err)
-//				}
-//				return capacity
-//			},
-//		)
-//
-//	}
-//}
-//
+
+type BalanceProvider interface {
+	// GetAccountBalance gets accounts default flow token balance.
+	GetAccountBalance(address common.Address) (uint64, error)
+}
+
+func newAccountBalanceGetFunction(
+	gauge common.MemoryGauge,
+	provider BalanceProvider,
+	addressValue interpreter.AddressValue,
+) func() interpreter.UFix64Value {
+
+	// Converted addresses can be cached and don't have to be recomputed on each function invocation
+	address := addressValue.ToAddress()
+
+	return func() interpreter.UFix64Value {
+		return interpreter.NewUFix64Value(gauge, func() (balance uint64) {
+			var err error
+			wrapPanic(func() {
+				balance, err = provider.GetAccountBalance(address)
+			})
+			if err != nil {
+				panic(err)
+			}
+
+			return
+		})
+	}
+}
+
+type AvailableBalanceProvider interface {
+	// GetAccountAvailableBalance gets accounts default flow token balance - balance that is reserved for storage.
+	GetAccountAvailableBalance(address common.Address) (uint64, error)
+}
+
+func newAccountAvailableBalanceGetFunction(
+	gauge common.MemoryGauge,
+	provider AvailableBalanceProvider,
+	addressValue interpreter.AddressValue,
+) func() interpreter.UFix64Value {
+
+	// Converted addresses can be cached and don't have to be recomputed on each function invocation
+	address := addressValue.ToAddress()
+
+	return func() interpreter.UFix64Value {
+		return interpreter.NewUFix64Value(gauge, func() (balance uint64) {
+			var err error
+			wrapPanic(func() {
+				balance, err = provider.GetAccountAvailableBalance(address)
+			})
+			if err != nil {
+				panic(err)
+			}
+
+			return
+		})
+	}
+}
+
+type StorageUsedProvider interface {
+	CommitStorage(inter *interpreter.Interpreter, commitContractUpdates bool) error
+	// GetStorageUsed gets storage used in bytes by the address at the moment of the function call.
+	GetStorageUsed(address common.Address) (uint64, error)
+}
+
+func newStorageUsedGetFunction(
+	provider StorageUsedProvider,
+	addressValue interpreter.AddressValue,
+) func(inter *interpreter.Interpreter) interpreter.UInt64Value {
+
+	// Converted addresses can be cached and don't have to be recomputed on each function invocation
+	address := addressValue.ToAddress()
+
+	return func(inter *interpreter.Interpreter) interpreter.UInt64Value {
+
+		// NOTE: flush the cached values, so the host environment
+		// can properly calculate the amount of storage used by the account
+		const commitContractUpdates = false
+		err := provider.CommitStorage(inter, commitContractUpdates)
+		if err != nil {
+			panic(err)
+		}
+
+		return interpreter.NewUInt64Value(
+			inter,
+			func() uint64 {
+				var capacity uint64
+				wrapPanic(func() {
+					capacity, err = provider.GetStorageUsed(address)
+				})
+				if err != nil {
+					panic(err)
+				}
+				return capacity
+			},
+		)
+	}
+}
+
+type StorageCapacityProvider interface {
+	CommitStorage(inter *interpreter.Interpreter, commitContractUpdates bool) error
+	// GetStorageCapacity gets storage capacity in bytes on the address.
+	GetStorageCapacity(address common.Address) (uint64, error)
+}
+
+func newStorageCapacityGetFunction(
+	provider StorageCapacityProvider,
+	addressValue interpreter.AddressValue,
+) func(inter *interpreter.Interpreter) interpreter.UInt64Value {
+
+	// Converted addresses can be cached and don't have to be recomputed on each function invocation
+	address := addressValue.ToAddress()
+
+	return func(inter *interpreter.Interpreter) interpreter.UInt64Value {
+
+		// NOTE: flush the cached values, so the host environment
+		// can properly calculate the amount of storage available for the account
+		const commitContractUpdates = false
+		err := provider.CommitStorage(inter, commitContractUpdates)
+		if err != nil {
+			panic(err)
+		}
+
+		return interpreter.NewUInt64Value(
+			inter,
+			func() uint64 {
+				var capacity uint64
+				wrapPanic(func() {
+					capacity, err = provider.GetStorageCapacity(address)
+				})
+				if err != nil {
+					panic(err)
+				}
+				return capacity
+			},
+		)
+
+	}
+}
+
 //func (r *interpreterRuntime) newAddPublicKeyFunction(
 //	gauge common.MemoryGauge,
 //	addressValue interpreter.AddressValue,
@@ -427,7 +443,7 @@ func NewAuthAccountValue(
 //
 //			r.emitAccountEvent(
 //				gauge,
-//				stdlib.AccountKeyAddedEventType,
+//				AccountKeyAddedEventType,
 //				runtimeInterface,
 //				[]exportableValue{
 //					newExportableValue(addressValue, inter),
@@ -477,7 +493,7 @@ func NewAuthAccountValue(
 //
 //			r.emitAccountEvent(
 //				gauge,
-//				stdlib.AccountKeyRemovedEventType,
+//				AccountKeyRemovedEventType,
 //				runtimeInterface,
 //				[]exportableValue{
 //					newExportableValue(addressValue, inter),
@@ -534,7 +550,7 @@ func NewAuthAccountValue(
 //
 //			r.emitAccountEvent(
 //				inter,
-//				stdlib.AccountKeyAddedEventType,
+//				AccountKeyAddedEventType,
 //				runtimeInterface,
 //				[]exportableValue{
 //					newExportableValue(addressValue, inter),
@@ -553,58 +569,83 @@ func NewAuthAccountValue(
 //		sema.AuthAccountKeysTypeAddFunctionType,
 //	)
 //}
-//
-//func (r *interpreterRuntime) newAccountKeysGetFunction(
-//	gauge common.MemoryGauge,
-//	addressValue interpreter.AddressValue,
-//	runtimeInterface Interface,
-//) *interpreter.HostFunctionValue {
-//
-//	// Converted addresses can be cached and don't have to be recomputed on each function invocation
-//	address := addressValue.ToAddress()
-//
-//	return interpreter.NewHostFunctionValue(
-//		gauge,
-//		func(invocation interpreter.Invocation) interpreter.Value {
-//			indexValue, ok := invocation.Arguments[0].(interpreter.IntValue)
-//			if !ok {
-//				panic(runtimeErrors.NewUnreachableError())
-//			}
-//			index := indexValue.ToInt()
-//
-//			var err error
-//			var accountKey *AccountKey
-//			wrapPanic(func() {
-//				accountKey, err = runtimeInterface.GetAccountKey(address, index)
-//			})
-//
-//			if err != nil {
-//				panic(err)
-//			}
-//
-//			// Here it is expected the host function to return a nil key, if a key is not found at the given index.
-//			// This is done because, if the host function returns an error when a key is not found, then
-//			// currently there's no way to distinguish between a 'key not found error' vs other internal errors.
-//			if accountKey == nil {
-//				return interpreter.NewNilValue(invocation.Interpreter)
-//			}
-//
-//			inter := invocation.Interpreter
-//
-//			return interpreter.NewSomeValueNonCopying(
-//				inter,
-//				NewAccountKeyValue(
-//					inter,
-//					invocation.GetLocationRange,
-//					accountKey,
-//					DoNotValidatePublicKey, // key from FVM has already been validated
-//				),
-//			)
-//		},
-//		sema.AccountKeysTypeGetFunctionType,
-//	)
-//}
-//
+
+type AccountKey struct {
+	KeyIndex  int
+	PublicKey *PublicKey
+	HashAlgo  sema.HashAlgorithm
+	Weight    int
+	IsRevoked bool
+}
+
+type PublicKey struct {
+	PublicKey []byte
+	SignAlgo  sema.SignatureAlgorithm
+}
+
+type AccountKeyProvider interface {
+	// GetAccountKey retrieves a key from an account by index.
+	GetAccountKey(address common.Address, index int) (*AccountKey, error)
+}
+
+func newAccountKeysGetFunction(
+	gauge common.MemoryGauge,
+	provider AccountKeyProvider,
+	addressValue interpreter.AddressValue,
+) *interpreter.HostFunctionValue {
+
+	// Converted addresses can be cached and don't have to be recomputed on each function invocation
+	address := addressValue.ToAddress()
+
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			indexValue, ok := invocation.Arguments[0].(interpreter.IntValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+			index := indexValue.ToInt()
+
+			var err error
+			var accountKey *AccountKey
+			wrapPanic(func() {
+				accountKey, err = provider.GetAccountKey(address, index)
+			})
+
+			if err != nil {
+				panic(err)
+			}
+
+			// Here it is expected the host function to return a nil key, if a key is not found at the given index.
+			// This is done because, if the host function returns an error when a key is not found, then
+			// currently there's no way to distinguish between a 'key not found error' vs other internal errors.
+			if accountKey == nil {
+				return interpreter.NewNilValue(invocation.Interpreter)
+			}
+
+			inter := invocation.Interpreter
+
+			return interpreter.NewSomeValueNonCopying(
+				inter,
+				NewAccountKeyValue(
+					inter,
+					invocation.GetLocationRange,
+					accountKey,
+					// public keys are assumed to be already validated.
+					func(
+						_ *interpreter.Interpreter,
+						_ func() interpreter.LocationRange,
+						_ *interpreter.CompositeValue,
+					) error {
+						return nil
+					},
+				),
+			)
+		},
+		sema.AccountKeysTypeGetFunctionType,
+	)
+}
+
 //func (r *interpreterRuntime) newAccountKeysRevokeFunction(
 //	gauge common.MemoryGauge,
 //	addressValue interpreter.AddressValue,
@@ -643,7 +684,7 @@ func NewAuthAccountValue(
 //
 //			r.emitAccountEvent(
 //				inter,
-//				stdlib.AccountKeyRemovedEventType,
+//				AccountKeyRemovedEventType,
 //				runtimeInterface,
 //				[]exportableValue{
 //					newExportableValue(addressValue, inter),
@@ -665,157 +706,172 @@ func NewAuthAccountValue(
 //		sema.AuthAccountKeysTypeRevokeFunctionType,
 //	)
 //}
-//
-//func (r *interpreterRuntime) newPublicAccountKeys(
-//	gauge common.MemoryGauge,
-//	addressValue interpreter.AddressValue,
-//	runtimeInterface Interface,
-//) interpreter.Value {
-//	return interpreter.NewPublicAccountKeysValue(
-//		gauge,
-//		addressValue,
-//		r.newAccountKeysGetFunction(
-//			gauge,
-//			addressValue,
-//			runtimeInterface,
-//		),
-//	)
-//}
-//
-//func (r *interpreterRuntime) newPublicAccountContracts(
-//	gauge common.MemoryGauge,
-//	addressValue interpreter.AddressValue,
-//	runtimeInterface Interface,
-//) interpreter.Value {
-//	return interpreter.NewPublicAccountContractsValue(
-//		gauge,
-//		addressValue,
-//		r.newAccountContractsGetFunction(
-//			gauge,
-//			addressValue,
-//			runtimeInterface,
-//		),
-//		r.newAccountContractsGetNamesFunction(
-//			addressValue,
-//			runtimeInterface,
-//		),
-//	)
-//}
-//
-//func (r *interpreterRuntime) newAccountContractsGetNamesFunction(
-//	addressValue interpreter.AddressValue,
-//	runtimeInterface Interface,
-//) func(
-//	inter *interpreter.Interpreter,
-//	getLocationRange func() interpreter.LocationRange,
-//) *interpreter.ArrayValue {
-//
-//	// Converted addresses can be cached and don't have to be recomputed on each function invocation
-//	address := addressValue.ToAddress()
-//
-//	return func(
-//		inter *interpreter.Interpreter,
-//		getLocationRange func() interpreter.LocationRange,
-//	) *interpreter.ArrayValue {
-//		var names []string
-//		var err error
-//		wrapPanic(func() {
-//			names, err = runtimeInterface.GetAccountContractNames(address)
-//		})
-//		if err != nil {
-//			panic(err)
-//		}
-//
-//		values := make([]interpreter.Value, len(names))
-//		for i, name := range names {
-//			memoryUsage := common.NewStringMemoryUsage(len(name))
-//			values[i] = interpreter.NewStringValue(
-//				inter,
-//				memoryUsage,
-//				func() string {
-//					return name
-//				},
-//			)
-//		}
-//
-//		arrayType := interpreter.NewVariableSizedStaticType(
-//			inter,
-//			interpreter.NewPrimitiveStaticType(
-//				inter,
-//				interpreter.PrimitiveStaticTypeString,
-//			),
-//		)
-//
-//		return interpreter.NewArrayValue(
-//			inter,
-//			getLocationRange,
-//			arrayType,
-//			common.Address{},
-//			values...,
-//		)
-//	}
-//}
-//
-//
-//func (r *interpreterRuntime) newAccountContractsGetFunction(
-//	gauge common.MemoryGauge,
-//	addressValue interpreter.AddressValue,
-//	runtimeInterface Interface,
-//) *interpreter.HostFunctionValue {
-//
-//	// Converted addresses can be cached and don't have to be recomputed on each function invocation
-//	address := addressValue.ToAddress()
-//
-//	return interpreter.NewHostFunctionValue(
-//		gauge,
-//		func(invocation interpreter.Invocation) interpreter.Value {
-//			nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
-//			if !ok {
-//				panic(runtimeErrors.NewUnreachableError())
-//			}
-//			name := nameValue.Str
-//
-//			var code []byte
-//			var err error
-//			wrapPanic(func() {
-//				code, err = runtimeInterface.GetAccountContractCode(address, name)
-//			})
-//			if err != nil {
-//				panic(err)
-//			}
-//
-//			if len(code) > 0 {
-//				return interpreter.NewSomeValueNonCopying(
-//					invocation.Interpreter,
-//					interpreter.NewDeployedContractValue(
-//						invocation.Interpreter,
-//						addressValue,
-//						nameValue,
-//						interpreter.ByteSliceToByteArrayValue(
-//							invocation.Interpreter,
-//							code,
-//						),
-//					),
-//				)
-//			} else {
-//				return interpreter.NewNilValue(invocation.Interpreter)
-//			}
-//		},
-//		sema.AuthAccountContractsTypeGetFunctionType,
-//	)
-//}
-//
+
+type PublicAccountKeysHandler interface {
+	AccountKeyProvider
+}
+
+func newPublicAccountKeysValue(
+	gauge common.MemoryGauge,
+	handler PublicAccountKeysHandler,
+	addressValue interpreter.AddressValue,
+) interpreter.Value {
+	return interpreter.NewPublicAccountKeysValue(
+		gauge,
+		addressValue,
+		newAccountKeysGetFunction(
+			gauge,
+			handler,
+			addressValue,
+		),
+	)
+}
+
+type PublicAccountContractsHandler interface {
+	AccountContractNamesProvider
+	AccountContractProvider
+}
+
+func newPublicAccountContractsValue(
+	gauge common.MemoryGauge,
+	handler PublicAccountContractsHandler,
+	addressValue interpreter.AddressValue,
+) interpreter.Value {
+	return interpreter.NewPublicAccountContractsValue(
+		gauge,
+		addressValue,
+		newAccountContractsGetFunction(
+			gauge,
+			handler,
+			addressValue,
+		),
+		newAccountContractsGetNamesFunction(
+			addressValue,
+			handler,
+		),
+	)
+}
+
+type AccountContractNamesProvider interface {
+	// GetAccountContractNames returns the names of all contracts deployed in an account.
+	GetAccountContractNames(address common.Address) ([]string, error)
+}
+
+func newAccountContractsGetNamesFunction(
+	addressValue interpreter.AddressValue,
+	provider AccountContractNamesProvider,
+) func(
+	inter *interpreter.Interpreter,
+	getLocationRange func() interpreter.LocationRange,
+) *interpreter.ArrayValue {
+
+	// Converted addresses can be cached and don't have to be recomputed on each function invocation
+	address := addressValue.ToAddress()
+
+	return func(
+		inter *interpreter.Interpreter,
+		getLocationRange func() interpreter.LocationRange,
+	) *interpreter.ArrayValue {
+		var names []string
+		var err error
+		wrapPanic(func() {
+			names, err = provider.GetAccountContractNames(address)
+		})
+		if err != nil {
+			panic(err)
+		}
+
+		values := make([]interpreter.Value, len(names))
+		for i, name := range names {
+			memoryUsage := common.NewStringMemoryUsage(len(name))
+			values[i] = interpreter.NewStringValue(
+				inter,
+				memoryUsage,
+				func() string {
+					return name
+				},
+			)
+		}
+
+		arrayType := interpreter.NewVariableSizedStaticType(
+			inter,
+			interpreter.NewPrimitiveStaticType(
+				inter,
+				interpreter.PrimitiveStaticTypeString,
+			),
+		)
+
+		return interpreter.NewArrayValue(
+			inter,
+			getLocationRange,
+			arrayType,
+			common.Address{},
+			values...,
+		)
+	}
+}
+
+type AccountContractProvider interface {
+	// GetAccountContractCode returns the code associated with an account contract.
+	GetAccountContractCode(address common.Address, name string) ([]byte, error)
+}
+
+func newAccountContractsGetFunction(
+	gauge common.MemoryGauge,
+	provider AccountContractProvider,
+	addressValue interpreter.AddressValue,
+) *interpreter.HostFunctionValue {
+
+	// Converted addresses can be cached and don't have to be recomputed on each function invocation
+	address := addressValue.ToAddress()
+
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+			name := nameValue.Str
+
+			var code []byte
+			var err error
+			wrapPanic(func() {
+				code, err = provider.GetAccountContractCode(address, name)
+			})
+			if err != nil {
+				panic(err)
+			}
+
+			if len(code) > 0 {
+				return interpreter.NewSomeValueNonCopying(
+					invocation.Interpreter,
+					interpreter.NewDeployedContractValue(
+						invocation.Interpreter,
+						addressValue,
+						nameValue,
+						interpreter.ByteSliceToByteArrayValue(
+							invocation.Interpreter,
+							code,
+						),
+					),
+				)
+			} else {
+				return interpreter.NewNilValue(invocation.Interpreter)
+			}
+		},
+		sema.AuthAccountContractsTypeGetFunctionType,
+	)
+}
+
 //// newAuthAccountContractsChangeFunction called when e.g.
 //// - adding: `AuthAccount.contracts.add(name: "Foo", code: [...])` (isUpdate = false)
 //// - updating: `AuthAccount.contracts.update__experimental(name: "Foo", code: [...])` (isUpdate = true)
 ////
 //func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 //	gauge common.MemoryGauge,
+//  handler,
 //	addressValue interpreter.AddressValue,
-//	startContext Context,
-//	storage *Storage,
-//	interpreterOptions []interpreter.Option,
-//	checkerOptions []sema.Option,
 //	isUpdate bool,
 //) *interpreter.HostFunctionValue {
 //	return interpreter.NewHostFunctionValue(
@@ -854,7 +910,7 @@ func NewAuthAccountValue(
 //			}
 //
 //			address := addressValue.ToAddress()
-//			existingCode, err := startContext.Interface.GetAccountContractCode(address, nameArgument)
+//			existingCode, err := handler.GetAccountContractCode(address, nameArgument)
 //			if err != nil {
 //				panic(err)
 //			}
@@ -917,7 +973,6 @@ func NewAuthAccountValue(
 //			program, err := r.parseAndCheckProgram(
 //				code,
 //				context,
-//				checkerOptions,
 //				storeProgram,
 //				importResolutionResults{},
 //			)
@@ -1035,8 +1090,6 @@ func NewAuthAccountValue(
 //				contractType,
 //				constructorArguments,
 //				constructorArgumentTypes,
-//				interpreterOptions,
-//				checkerOptions,
 //				updateAccountContractCodeOptions{
 //					createContract: !isUpdate,
 //				},
@@ -1061,9 +1114,9 @@ func NewAuthAccountValue(
 //			var eventType *sema.CompositeType
 //
 //			if isUpdate {
-//				eventType = stdlib.AccountContractUpdatedEventType
+//				eventType = AccountContractUpdatedEventType
 //			} else {
-//				eventType = stdlib.AccountContractAddedEventType
+//				eventType = AccountContractAddedEventType
 //			}
 //
 //			emitEventFields(
@@ -1161,7 +1214,7 @@ func NewAuthAccountValue(
 //				emitEventFields(
 //					inter,
 //					invocation.GetLocationRange,
-//					stdlib.AccountContractRemovedEventType,
+//					AccountContractRemovedEventType,
 //					[]exportableValue{
 //						newExportableValue(addressValue, inter),
 //						newExportableValue(codeHashValue, inter),
@@ -1210,6 +1263,12 @@ var getAccountFunctionType = &sema.FunctionType{
 }
 
 type PublicAccountHandler interface {
+	BalanceProvider
+	AvailableBalanceProvider
+	StorageUsedProvider
+	StorageCapacityProvider
+	PublicAccountKeysHandler
+	PublicAccountContractsHandler
 }
 
 func NewGetAccountFunction(handler PublicAccountHandler) StandardLibraryValue {
@@ -1233,24 +1292,141 @@ func NewGetAccountFunction(handler PublicAccountHandler) StandardLibraryValue {
 }
 
 func NewPublicAccountValue(
-	inter *interpreter.Interpreter,
+	gauge common.MemoryGauge,
 	handler PublicAccountHandler,
 	addressValue interpreter.AddressValue,
 ) interpreter.Value {
-	// TODO:
-	return nil
-	//return interpreter.NewPublicAccountValue(
-	////gauge,
-	////accountAddress,
-	////accountBalanceGetFunction(accountAddress, runtimeInterface),
-	////accountAvailableBalanceGetFunction(accountAddress, runtimeInterface),
-	////storageUsedGetFunction(accountAddress, runtimeInterface, storage),
-	////storageCapacityGetFunction(accountAddress, runtimeInterface, storage),
-	////func() interpreter.Value {
-	////	return r.newPublicAccountKeys(gauge, accountAddress, runtimeInterface)
-	////},
-	////func() interpreter.Value {
-	////	return r.newPublicAccountContracts(gauge, accountAddress, runtimeInterface)
-	////},
-	//)
+	return interpreter.NewPublicAccountValue(
+		gauge,
+		addressValue,
+		newAccountBalanceGetFunction(gauge, handler, addressValue),
+		newAccountAvailableBalanceGetFunction(gauge, handler, addressValue),
+		newStorageUsedGetFunction(handler, addressValue),
+		newStorageCapacityGetFunction(handler, addressValue),
+		func() interpreter.Value {
+			return newPublicAccountKeysValue(gauge, handler, addressValue)
+		},
+		func() interpreter.Value {
+			return newPublicAccountContractsValue(gauge, handler, addressValue)
+		},
+	)
+}
+
+func NewAccountKeyValue(
+	inter *interpreter.Interpreter,
+	getLocationRange func() interpreter.LocationRange,
+	accountKey *AccountKey,
+	validatePublicKey interpreter.PublicKeyValidationHandlerFunc,
+) interpreter.Value {
+	return interpreter.NewAccountKeyValue(
+		inter,
+		interpreter.NewIntValueFromInt64(inter, int64(accountKey.KeyIndex)),
+		NewPublicKeyValue(
+			inter,
+			getLocationRange,
+			accountKey.PublicKey,
+			validatePublicKey,
+		),
+		NewHashAlgorithmCase(
+			interpreter.UInt8Value(accountKey.HashAlgo.RawValue()),
+		),
+		interpreter.NewUFix64ValueWithInteger(
+			inter, func() uint64 {
+				return uint64(accountKey.Weight)
+			},
+		),
+		interpreter.BoolValue(accountKey.IsRevoked),
+	)
+}
+
+func NewPublicKeyFromValue(
+	inter *interpreter.Interpreter,
+	getLocationRange func() interpreter.LocationRange,
+	publicKey interpreter.MemberAccessibleValue,
+) (
+	*PublicKey,
+	error,
+) {
+	// publicKey field
+	key := publicKey.GetMember(inter, getLocationRange, sema.PublicKeyPublicKeyField)
+
+	byteArray, err := interpreter.ByteArrayValueToByteSlice(inter, key)
+	if err != nil {
+		return nil, errors.NewUnexpectedError("public key needs to be a byte array. %w", err)
+	}
+
+	// sign algo field
+	signAlgoField := publicKey.GetMember(inter, getLocationRange, sema.PublicKeySignAlgoField)
+	if signAlgoField == nil {
+		return nil, errors.NewUnexpectedError("sign algorithm is not set")
+	}
+
+	signAlgoValue, ok := signAlgoField.(*interpreter.SimpleCompositeValue)
+	if !ok {
+		return nil, errors.NewUnexpectedError(
+			"sign algorithm does not belong to type: %s",
+			sema.SignatureAlgorithmType.QualifiedString(),
+		)
+	}
+
+	rawValue := signAlgoValue.GetMember(inter, getLocationRange, sema.EnumRawValueFieldName)
+	if rawValue == nil {
+		return nil, errors.NewDefaultUserError("sign algorithm raw value is not set")
+	}
+
+	signAlgoRawValue, ok := rawValue.(interpreter.UInt8Value)
+	if !ok {
+		return nil, errors.NewUnexpectedError(
+			"sign algorithm raw-value does not belong to type: %s",
+			sema.UInt8Type.QualifiedString(),
+		)
+	}
+
+	return &PublicKey{
+		PublicKey: byteArray,
+		SignAlgo:  sema.SignatureAlgorithm(signAlgoRawValue.ToInt()),
+	}, nil
+}
+
+func NewPublicKeyValue(
+	inter *interpreter.Interpreter,
+	getLocationRange func() interpreter.LocationRange,
+	publicKey *PublicKey,
+	validatePublicKey interpreter.PublicKeyValidationHandlerFunc,
+) *interpreter.CompositeValue {
+	return interpreter.NewPublicKeyValue(
+		inter,
+		getLocationRange,
+		interpreter.ByteSliceToByteArrayValue(
+			inter,
+			publicKey.PublicKey,
+		),
+		NewSignatureAlgorithmCase(
+			interpreter.UInt8Value(publicKey.SignAlgo.RawValue()),
+		),
+		func(
+			inter *interpreter.Interpreter,
+			getLocationRange func() interpreter.LocationRange,
+			publicKeyValue *interpreter.CompositeValue,
+		) error {
+			return validatePublicKey(inter, getLocationRange, publicKeyValue)
+		},
+	)
+}
+
+func NewHashAlgorithmFromValue(
+	inter *interpreter.Interpreter,
+	getLocationRange func() interpreter.LocationRange,
+	value interpreter.Value,
+) sema.HashAlgorithm {
+	hashAlgoValue := value.(*interpreter.SimpleCompositeValue)
+
+	rawValue := hashAlgoValue.GetMember(inter, getLocationRange, sema.EnumRawValueFieldName)
+	if rawValue == nil {
+		panic("cannot find hash algorithm raw value")
+	}
+
+	hashAlgoRawValue := rawValue.(interpreter.UInt8Value)
+
+	return sema.HashAlgorithm(hashAlgoRawValue.ToInt())
 }
