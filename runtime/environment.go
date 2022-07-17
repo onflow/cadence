@@ -175,3 +175,7 @@ func (e *Environment) RevokeAccountKey(address common.Address, index int) (*stdl
 func (e *Environment) RemoveAccountContractCode(address common.Address, name string) error {
 	return e.Interface.RemoveAccountContractCode(address, name)
 }
+
+func (e *Environment) RecordContractRemoval(address common.Address, name string) {
+	e.Storage.recordContractUpdate(address, name, nil)
+}

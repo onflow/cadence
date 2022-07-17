@@ -30,6 +30,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 func newContractDeployTransaction(function, name, code string) string {
@@ -83,7 +84,7 @@ func newContractDeploymentTransactor(t *testing.T) func(code string) error {
 	accountCodes := map[common.Location][]byte{}
 	var events []cadence.Event
 	runtimeInterface := &testRuntimeInterface{
-		getCode: func(location Location) (bytes []byte, err error) {
+		getCode: func(location common.Location) (bytes []byte, err error) {
 			return accountCodes[location], nil
 		},
 		storage: newTestLedger(nil, nil),
@@ -1830,7 +1831,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 }
 
 func assertContractRemovalError(t *testing.T, err error, name string) {
-	var contractRemovalError *ContractRemovalError
+	var contractRemovalError *stdlib.ContractRemovalError
 	require.ErrorAs(t, err, &contractRemovalError)
 
 	assert.Equal(t, name, contractRemovalError.Name)
@@ -1843,7 +1844,7 @@ func assertDeclTypeChangeError(
 	oldKind common.DeclarationKind,
 	newKind common.DeclarationKind,
 ) {
-	var declTypeChangeError *InvalidDeclarationKindChangeError
+	var declTypeChangeError *stdlib.InvalidDeclarationKindChangeError
 	require.ErrorAs(t, err, &declTypeChangeError)
 
 	assert.Equal(t, oldKind, declTypeChangeError.OldKind)
@@ -1852,7 +1853,7 @@ func assertDeclTypeChangeError(
 }
 
 func assertExtraneousFieldError(t *testing.T, err error, erroneousDeclName string, fieldName string) {
-	var extraFieldError *ExtraneousFieldError
+	var extraFieldError *stdlib.ExtraneousFieldError
 	require.ErrorAs(t, err, &extraFieldError)
 
 	assert.Equal(t, fieldName, extraFieldError.FieldName)
@@ -1867,13 +1868,13 @@ func assertFieldTypeMismatchError(
 	expectedType string,
 	foundType string,
 ) {
-	var fieldMismatchError *FieldMismatchError
+	var fieldMismatchError *stdlib.FieldMismatchError
 	require.ErrorAs(t, err, &fieldMismatchError)
 
 	assert.Equal(t, fieldName, fieldMismatchError.FieldName)
 	assert.Equal(t, erroneousDeclName, fieldMismatchError.DeclName)
 
-	var typeMismatchError *TypeMismatchError
+	var typeMismatchError *stdlib.TypeMismatchError
 	assert.ErrorAs(t, fieldMismatchError.Err, &typeMismatchError)
 
 	assert.Equal(t, expectedType, typeMismatchError.ExpectedType.String())
@@ -1885,14 +1886,14 @@ func assertConformanceMismatchError(
 	err error,
 	erroneousDeclName string,
 ) {
-	var conformanceMismatchError *ConformanceMismatchError
+	var conformanceMismatchError *stdlib.ConformanceMismatchError
 	require.ErrorAs(t, err, &conformanceMismatchError)
 
 	assert.Equal(t, erroneousDeclName, conformanceMismatchError.DeclName)
 }
 
 func assertEnumCaseMismatchError(t *testing.T, err error, expectedEnumCase string, foundEnumCase string) {
-	var enumMismatchError *EnumCaseMismatchError
+	var enumMismatchError *stdlib.EnumCaseMismatchError
 	require.ErrorAs(t, err, &enumMismatchError)
 
 	assert.Equal(t, expectedEnumCase, enumMismatchError.ExpectedName)
@@ -1900,7 +1901,7 @@ func assertEnumCaseMismatchError(t *testing.T, err error, expectedEnumCase strin
 }
 
 func assertMissingEnumCasesError(t *testing.T, err error, declName string, expectedCases int, foundCases int) {
-	var missingEnumCasesError *MissingEnumCasesError
+	var missingEnumCasesError *stdlib.MissingEnumCasesError
 	require.ErrorAs(t, err, &missingEnumCasesError)
 
 	assert.Equal(t, declName, missingEnumCasesError.DeclName)
@@ -1909,7 +1910,7 @@ func assertMissingEnumCasesError(t *testing.T, err error, declName string, expec
 }
 
 func assertMissingDeclarationError(t *testing.T, err error, declName string) bool {
-	var missingDeclError *MissingDeclarationError
+	var missingDeclError *stdlib.MissingDeclarationError
 	require.ErrorAs(t, err, &missingDeclError)
 
 	return assert.Equal(t, declName, missingDeclError.Name)
@@ -1922,13 +1923,13 @@ func getSingleContractUpdateErrorCause(t *testing.T, err error, contractName str
 	return updateErr.Errors[0]
 }
 
-func getContractUpdateError(t *testing.T, err error, contractName string) *ContractUpdateError {
+func getContractUpdateError(t *testing.T, err error, contractName string) *stdlib.ContractUpdateError {
 	require.Error(t, err)
 
 	var invalidContractDeploymentErr *InvalidContractDeploymentError
 	require.ErrorAs(t, err, &invalidContractDeploymentErr)
 
-	var contractUpdateErr *ContractUpdateError
+	var contractUpdateErr *stdlib.ContractUpdateError
 	require.ErrorAs(t, err, &contractUpdateErr)
 
 	assert.Equal(t, contractName, contractUpdateErr.ContractName)
@@ -2152,7 +2153,7 @@ func TestRuntimeContractUpdateConformanceChanges(t *testing.T) {
 
 		var events []cadence.Event
 		runtimeInterface := &testRuntimeInterface{
-			getCode: func(location Location) (bytes []byte, err error) {
+			getCode: func(location common.Location) (bytes []byte, err error) {
 				return accountCodes[location], nil
 			},
 			storage: newTestLedger(nil, nil),
@@ -2238,7 +2239,7 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 		programSets = locationAccessCounts{}
 
 		runtimeInterface = &testRuntimeInterface{
-			getProgram: func(location Location) (*interpreter.Program, error) {
+			getProgram: func(location common.Location) (*interpreter.Program, error) {
 
 				if runtimeInterface.programs == nil {
 					runtimeInterface.programs = map[common.Location]*interpreter.Program{}
@@ -2251,7 +2252,7 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 
 				return program, nil
 			},
-			setProgram: func(location Location, program *interpreter.Program) error {
+			setProgram: func(location common.Location, program *interpreter.Program) error {
 
 				programSets[location]++
 
@@ -2263,7 +2264,7 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 
 				return nil
 			},
-			getCode: func(location Location) (bytes []byte, err error) {
+			getCode: func(location common.Location) (bytes []byte, err error) {
 				return accountCodes[location], nil
 			},
 			storage: newTestLedger(nil, nil),

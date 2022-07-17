@@ -19,11 +19,14 @@
 package stdlib
 
 import (
+	"fmt"
+
 	"golang.org/x/crypto/sha3"
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -1180,10 +1183,245 @@ func newAuthAccountContractsChangeFunction(
 	)
 }
 
+//
+//func (r *interpreterRuntime) instantiateContract(
+//	program *interpreter.Program,
+//	context Context,
+//	address common.Address,
+//	contractType *sema.CompositeType,
+//	constructorArguments []interpreter.Value,
+//	argumentTypes []sema.Type,
+//	storage *Storage,
+//	environment *Environment,
+//) (
+//	*interpreter.CompositeValue,
+//	error,
+//) {
+//	parameterTypes := make([]sema.Type, len(contractType.ConstructorParameters))
+//
+//	for i, constructorParameter := range contractType.ConstructorParameters {
+//		parameterTypes[i] = constructorParameter.TypeAnnotation.Type
+//	}
+//
+//	// Check argument count
+//
+//	argumentCount := len(argumentTypes)
+//	parameterCount := len(parameterTypes)
+//
+//	if argumentCount < parameterCount {
+//		return nil, errors.NewDefaultUserError(
+//			"invalid argument count, too few arguments: expected %d, got %d, next missing argument: `%s`",
+//			parameterCount, argumentCount,
+//			parameterTypes[argumentCount],
+//		)
+//	} else if argumentCount > parameterCount {
+//		return nil, errors.NewDefaultUserError(
+//			"invalid argument count, too many arguments: expected %d, got %d",
+//			parameterCount,
+//			argumentCount,
+//		)
+//	}
+//
+//	// argumentCount now equals to parameterCount
+//
+//	// Check arguments match parameter
+//
+//	for i := 0; i < argumentCount; i++ {
+//		argumentType := argumentTypes[i]
+//		parameterTye := parameterTypes[i]
+//		if !sema.IsSubType(argumentType, parameterTye) {
+//			return nil, errors.NewDefaultUserError(
+//				"invalid argument %d: expected type `%s`, got `%s`",
+//				i,
+//				parameterTye,
+//				argumentType,
+//			)
+//		}
+//	}
+//
+//	// Use a custom contract value handler that detects if the requested contract value
+//	// is for the contract declaration that is being deployed.
+//	//
+//	// If the contract is the deployed contract, instantiate it using
+//	// the provided constructor and given arguments.
+//	//
+//	// If the contract is not the deployed contract, load it from storage.
+//
+//	var contract *interpreter.CompositeValue
+//
+//	// TODO:
+//	//interpreter.WithContractValueHandler(
+//	//	func(
+//	//		inter *interpreter.Interpreter,
+//	//		compositeType *sema.CompositeType,
+//	//		constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
+//	//		invocationRange ast.Range,
+//	//	) *interpreter.CompositeValue {
+//	//
+//	//		constructor := constructorGenerator(address)
+//	//
+//	//		// If the contract is the deployed contract, instantiate it using
+//	//		// the provided constructor and given arguments
+//	//
+//	//		if compositeType.Location == contractType.Location &&
+//	//			compositeType.Identifier == contractType.Identifier {
+//	//
+//	//			value, err := inter.InvokeFunctionValue(
+//	//				constructor,
+//	//				constructorArguments,
+//	//				argumentTypes,
+//	//				parameterTypes,
+//	//				invocationRange,
+//	//			)
+//	//			if err != nil {
+//	//				panic(err)
+//	//			}
+//	//
+//	//			return value.(*interpreter.CompositeValue)
+//	//		}
+//	//
+//	//		// The contract is not the deployed contract, load it from storage
+//	//		return r.loadContract(
+//	//			inter,
+//	//			compositeType,
+//	//			constructorGenerator,
+//	//			invocationRange,
+//	//			storage,
+//	//		)
+//	//	},
+//	//
+//
+//	_, inter, err := r.interpret(
+//		program,
+//		context,
+//		storage,
+//		environment,
+//		nil,
+//	)
+//
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	variable, ok := inter.Globals.Get(contractType.Identifier)
+//	if !ok {
+//		return nil, errors.NewDefaultUserError(
+//			"cannot find contract: `%s`",
+//			contractType.Identifier,
+//		)
+//	}
+//
+//	contract = variable.GetValue().(*interpreter.CompositeValue)
+//
+//	return contract, err
+//}
+//
+//// ignoreUpdatedProgramParserError determines if the parsing error
+//// for a program that is being updated can be ignored.
+//func ignoreUpdatedProgramParserError(err error) bool {
+//	parserError, ok := err.(parser.Error)
+//	if !ok {
+//		return false
+//	}
+//
+//	// Are all parse errors ones that can be ignored?
+//	for _, parseError := range parserError.Errors {
+//		// Missing commas in parameter lists were reported starting
+//		// with https://github.com/onflow/cadence/pull/1073.
+//		// Allow existing contracts with such an error to be updated
+//		_, ok := parseError.(*parser.MissingCommaInParameterListError)
+//		if !ok {
+//			return false
+//		}
+//	}
+//
+//	return true
+//}
+//
+//type updateAccountContractCodeOptions struct {
+//	createContract bool
+//}
+//
+//// updateAccountContractCode updates an account contract's code.
+//// This function is only used for the new account code/contract API.
+////
+//func (r *interpreterRuntime) updateAccountContractCode(
+//	program *interpreter.Program,
+//	context Context,
+//	storage *Storage,
+//	name string,
+//	code []byte,
+//	addressValue interpreter.AddressValue,
+//	contractType *sema.CompositeType,
+//	constructorArguments []interpreter.Value,
+//	constructorArgumentTypes []sema.Type,
+//	environment *Environment,
+//	options updateAccountContractCodeOptions,
+//) error {
+//	// If the code declares a contract, instantiate it and store it.
+//	//
+//	// This function might be called when
+//	// 1. A contract is deployed (contractType is non-nil).
+//	// 2. A contract interface is deployed (contractType is nil).
+//	//
+//	// If a contract is deployed, it is only instantiated
+//	// when options.createContract is true,
+//	// i.e. the Cadence `add` function is used.
+//	// If the Cadence `update__experimental` function is used,
+//	// the new contract will NOT be deployed (options.createContract is false).
+//
+//	var contractValue *interpreter.CompositeValue
+//
+//	createContract := contractType != nil && options.createContract
+//
+//	address := addressValue.ToAddress()
+//
+//	var err error
+//
+//	if createContract {
+//		contractValue, err = r.instantiateContract(
+//			program,
+//			context,
+//			address,
+//			contractType,
+//			constructorArguments,
+//			constructorArgumentTypes,
+//			storage,
+//			environment,
+//		)
+//
+//		if err != nil {
+//			return err
+//		}
+//	}
+//
+//	// NOTE: only update account code if contract instantiation succeeded
+//	wrapPanic(func() {
+//		err = context.Interface.UpdateAccountContractCode(address, name, code)
+//	})
+//	if err != nil {
+//		return err
+//	}
+//
+//	if createContract {
+//		// NOTE: the contract recording delays the write
+//		// until the end of the execution of the program
+//
+//		storage.recordContractUpdate(
+//			addressValue.ToAddress(),
+//			name,
+//			contractValue,
+//		)
+//	}
+//
+//	return nil
+//}
+
 type AccountContractRemovalHandler interface {
 	EventEmitter
 	AccountContractProvider
 	RemoveAccountContractCode(address common.Address, name string) error
+	RecordContractRemoval(address common.Address, name string)
 }
 
 func newAuthAccountContractsRemoveFunction(
@@ -1225,34 +1463,29 @@ func newAuthAccountContractsRemoveFunction(
 				// NOTE: *DO NOT* call SetProgram – the program removal
 				// should not be effective during the execution, only after
 
-				// TODO:
-				//existingProgram, err := parser.ParseProgram(string(code), gauge)
-				//
-				//// If the existing code is not parsable (i.e: `err != nil`),
-				//// that shouldn't be a reason to fail the contract removal.
-				//// Therefore, validate only if the code is a valid one.
-				//if err == nil && containsEnumsInProgram(existingProgram) {
-				//	panic(&ContractRemovalError{
-				//		Name:          name,
-				//		LocationRange: invocation.GetLocationRange(),
-				//	})
-				//}
-				//
-				//wrapPanic(func() {
-				//	err = handler.RemoveAccountContractCode(address, name)
-				//})
-				//if err != nil {
-				//	panic(err)
-				//}
-				//
-				//// NOTE: the contract recording function delays the write
-				//// until the end of the execution of the program
-				//
-				//storage.recordContractUpdate(
-				//	addressValue.ToAddress(),
-				//	name,
-				//	nil,
-				//)
+				existingProgram, err := parser.ParseProgram(string(code), gauge)
+
+				// If the existing code is not parsable (i.e: `err != nil`),
+				// that shouldn't be a reason to fail the contract removal.
+				// Therefore, validate only if the code is a valid one.
+				if err == nil && containsEnumsInProgram(existingProgram) {
+					panic(&ContractRemovalError{
+						Name:          name,
+						LocationRange: invocation.GetLocationRange(),
+					})
+				}
+
+				wrapPanic(func() {
+					err = handler.RemoveAccountContractCode(address, name)
+				})
+				if err != nil {
+					panic(err)
+				}
+
+				// NOTE: the contract recording function delays the write
+				// until the end of the execution of the program
+
+				handler.RecordContractRemoval(address, name)
 
 				codeHashValue := CodeToHashValue(inter, code)
 
@@ -1285,6 +1518,21 @@ func newAuthAccountContractsRemoveFunction(
 		},
 		sema.AuthAccountContractsTypeRemoveFunctionType,
 	)
+}
+
+// ContractRemovalError
+//
+type ContractRemovalError struct {
+	Name string
+	interpreter.LocationRange
+}
+
+var _ errors.UserError = &ContractRemovalError{}
+
+func (*ContractRemovalError) IsUserError() {}
+
+func (e *ContractRemovalError) Error() string {
+	return fmt.Sprintf("cannot remove contract `%s`", e.Name)
 }
 
 const getAccountFunctionDocString = `
