@@ -33,6 +33,7 @@ type Environment struct {
 }
 
 var _ stdlib.Logger = &Environment{}
+var _ stdlib.UnsafeRandomGenerator = &Environment{}
 var _ stdlib.BlockAtHeightProvider = &Environment{}
 var _ stdlib.CurrentBlockProvider = &Environment{}
 var _ stdlib.PublicAccountHandler = &Environment{}
@@ -60,6 +61,7 @@ func NewBaseEnvironment(declarations ...stdlib.StandardLibraryValue) *Environmen
 		env.Declare(valueDeclaration)
 	}
 	env.Declare(stdlib.NewLogFunction(env))
+	env.Declare(stdlib.NewUnsafeRandomFunction(env))
 	env.Declare(stdlib.NewGetBlockFunction(env))
 	env.Declare(stdlib.NewGetCurrentBlockFunction(env))
 	env.Declare(stdlib.NewGetAccountFunction(env))
@@ -78,6 +80,10 @@ func NewScriptEnvironment(declarations ...stdlib.StandardLibraryValue) *Environm
 
 func (e *Environment) ProgramLog(message string) error {
 	return e.Interface.ProgramLog(message)
+}
+
+func (e *Environment) UnsafeRandom() (uint64, error) {
+	return e.Interface.UnsafeRandom()
 }
 
 func (e *Environment) GetBlockAtHeight(height uint64) (block stdlib.Block, exists bool, err error) {
@@ -130,7 +136,7 @@ func (e *Environment) EmitEvent(
 	values []interpreter.Value,
 	getLocationRange func() interpreter.LocationRange,
 ) {
-	eventFields := make([]exportableValue, len(values))
+	eventFields := make([]exportableValue, 0, len(values))
 
 	for _, value := range values {
 		eventFields = append(eventFields, newExportableValue(value, inter))
