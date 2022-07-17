@@ -79,10 +79,6 @@ type Runtime interface {
 	//
 	SetCoverageReport(coverageReport *CoverageReport)
 
-	// SetContractUpdateValidationEnabled configures if contract update validation is enabled.
-	//
-	SetContractUpdateValidationEnabled(enabled bool)
-
 	// SetAtreeValidationEnabled configures if atree validation is enabled.
 	SetAtreeValidationEnabled(enabled bool)
 
@@ -157,7 +153,6 @@ func reportMetric(
 type interpreterRuntime struct {
 	coverageReport                       *CoverageReport
 	debugger                             *interpreter.Debugger
-	contractUpdateValidationEnabled      bool
 	atreeValidationEnabled               bool
 	tracingEnabled                       bool
 	resourceOwnerChangeHandlerEnabled    bool
@@ -165,15 +160,6 @@ type interpreterRuntime struct {
 }
 
 type Option func(Runtime)
-
-// WithContractUpdateValidationEnabled returns a runtime option
-// that configures if contract update validation is enabled.
-//
-func WithContractUpdateValidationEnabled(enabled bool) Option {
-	return func(runtime Runtime) {
-		runtime.SetContractUpdateValidationEnabled(enabled)
-	}
-}
 
 // WithAtreeValidationEnabled returns a runtime option
 // that configures if atree validation is enabled.
@@ -262,10 +248,6 @@ func getWrappedError(recovered any, context Context) Error {
 
 func (r *interpreterRuntime) SetCoverageReport(coverageReport *CoverageReport) {
 	r.coverageReport = coverageReport
-}
-
-func (r *interpreterRuntime) SetContractUpdateValidationEnabled(enabled bool) {
-	r.contractUpdateValidationEnabled = enabled
 }
 
 func (r *interpreterRuntime) SetAtreeValidationEnabled(enabled bool) {
