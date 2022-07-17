@@ -89,12 +89,16 @@ func NewGetBlockFunction(provider BlockAtHeightProvider) StandardLibraryValue {
 			memoryGauge := invocation.Interpreter
 			getLocationRange := invocation.GetLocationRange
 
-			return getBlockAtHeight(
-				memoryGauge,
-				getLocationRange,
+			block, exists := getBlockAtHeight(
 				provider,
 				uint64(heightValue),
 			)
+			if !exists {
+				return interpreter.NewNilValue(memoryGauge)
+			}
+
+			blockValue := NewBlockValue(memoryGauge, getLocationRange, block)
+			return interpreter.NewSomeValueNonCopying(memoryGauge, blockValue)
 		},
 	)
 }
@@ -164,15 +168,13 @@ func NewBlockValue(
 }
 
 func getBlockAtHeight(
-	memoryGauge *interpreter.Interpreter,
-	getLocationRange func() interpreter.LocationRange,
 	provider BlockAtHeightProvider,
 	height uint64,
-) interpreter.Value {
-	var block Block
-	var exists bool
+) (
+	block Block,
+	exists bool,
+) {
 	var err error
-
 	wrapPanic(func() {
 		block, exists, err = provider.GetBlockAtHeight(height)
 	})
@@ -180,12 +182,7 @@ func getBlockAtHeight(
 		panic(err)
 	}
 
-	if !exists {
-		return interpreter.NewNilValue(memoryGauge)
-	}
-
-	blockValue := NewBlockValue(memoryGauge, getLocationRange, block)
-	return interpreter.NewSomeValueNonCopying(memoryGauge, blockValue)
+	return block, exists
 }
 
 type CurrentBlockProvider interface {
@@ -210,15 +207,18 @@ func NewGetCurrentBlockFunction(provider CurrentBlockProvider) StandardLibraryVa
 				panic(err)
 			}
 
-			memoryGauge := invocation.Interpreter
-			getLocationRange := invocation.GetLocationRange
-
-			return getBlockAtHeight(
-				memoryGauge,
-				getLocationRange,
+			block, exists := getBlockAtHeight(
 				provider,
 				height,
 			)
+			if !exists {
+				panic(errors.NewUnexpectedError("cannot get current block"))
+			}
+
+			memoryGauge := invocation.Interpreter
+			getLocationRange := invocation.GetLocationRange
+
+			return NewBlockValue(memoryGauge, getLocationRange, block)
 		},
 	)
 }

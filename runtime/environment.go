@@ -30,9 +30,9 @@ type Environment struct {
 	Interface           Interface
 }
 
-func (e *Environment) ProgramLog(message string) error {
-	return e.Interface.ProgramLog(message)
-}
+var _ stdlib.Logger = &Environment{}
+var _ stdlib.BlockAtHeightProvider = &Environment{}
+var _ stdlib.CurrentBlockProvider = &Environment{}
 
 func newEnvironment() *Environment {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
@@ -60,5 +60,19 @@ func NewBaseEnvironment(declarations ...stdlib.StandardLibraryValue) *Environmen
 		environment.Declare(valueDeclaration)
 	}
 	environment.Declare(stdlib.NewLogFunction(environment))
+	environment.Declare(stdlib.NewGetBlockFunction(environment))
+	environment.Declare(stdlib.NewGetCurrentBlockFunction(environment))
 	return environment
+}
+
+func (e *Environment) ProgramLog(message string) error {
+	return e.Interface.ProgramLog(message)
+}
+
+func (e *Environment) GetBlockAtHeight(height uint64) (block stdlib.Block, exists bool, err error) {
+	return e.Interface.GetBlockAtHeight(height)
+}
+
+func (e *Environment) GetCurrentBlockHeight() (uint64, error) {
+	return e.Interface.GetCurrentBlockHeight()
 }
