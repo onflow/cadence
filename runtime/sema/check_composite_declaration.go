@@ -1155,9 +1155,11 @@ func (checker *Checker) memberSatisfied(compositeMember, interfaceMember *Member
 			}
 
 			// Functions are covariant in their purity
-
-			if compositeMemberFunctionType.Purity != interfaceMemberFunctionType.Purity && compositeMemberFunctionType.Purity != PureFunction {
-				return false
+			// TODO: Remove first check, we should never encounter unknownpurity
+			if compositeMemberFunctionType.Purity != UnknownPurity && interfaceMemberFunctionType.Purity != UnknownPurity {
+				if compositeMemberFunctionType.Purity != interfaceMemberFunctionType.Purity && compositeMemberFunctionType.Purity != PureFunction {
+					return false
+				}
 			}
 
 			// Functions are invariant in their parameter types

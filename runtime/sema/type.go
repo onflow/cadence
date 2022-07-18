@@ -5324,8 +5324,11 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		}
 
 		// pure functions are subtypes of impure functions
-		if typedSubType.Purity != typedSuperType.Purity && typedSubType.Purity != PureFunction {
-			return false
+		// TODO: Remove first check, we should never encounter unknownpurity
+		if typedSubType.Purity != UnknownPurity && typedSuperType.Purity != UnknownPurity {
+			if typedSubType.Purity != typedSuperType.Purity && typedSubType.Purity != PureFunction {
+				return false
+			}
 		}
 
 		if len(typedSubType.Parameters) != len(typedSuperType.Parameters) {

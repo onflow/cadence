@@ -302,7 +302,7 @@ func TestCheckAccount_save(t *testing.T) {
                       }
 
                       fun test() {
-                          authAccount.save<((): Int)>(one, to: /%s/one)
+                          authAccount.save<(pure (): Int)>(one, to: /%s/one)
                       }
                     `,
 					domainIdentifier,
