@@ -42,7 +42,7 @@ type CoverageReport struct {
 	Coverage map[common.LocationID]*LocationCoverage `json:"coverage"`
 }
 
-func (r *CoverageReport) AddLineHit(location common.Location, line int) {
+func (r *CoverageReport) AddLineHit(location Location, line int) {
 	locationID := location.ID()
 	locationCoverage := r.Coverage[locationID]
 	if locationCoverage == nil {

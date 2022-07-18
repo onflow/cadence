@@ -81,10 +81,10 @@ func newContractRemovalTransaction(contractName string) string {
 func newContractDeploymentTransactor(t *testing.T) func(code string) error {
 	rt := newTestInterpreterRuntime()
 
-	accountCodes := map[common.Location][]byte{}
+	accountCodes := map[Location][]byte{}
 	var events []cadence.Event
 	runtimeInterface := &testRuntimeInterface{
-		getCode: func(location common.Location) (bytes []byte, err error) {
+		getCode: func(location Location) (bytes []byte, err error) {
 			return accountCodes[location], nil
 		},
 		storage: newTestLedger(nil, nil),
@@ -2147,13 +2147,13 @@ func TestRuntimeContractUpdateConformanceChanges(t *testing.T) {
 			Name:    contractName,
 		}
 
-		accountCodes := map[common.Location][]byte{
+		accountCodes := map[Location][]byte{
 			contractLocation: []byte(oldCode),
 		}
 
 		var events []cadence.Event
 		runtimeInterface := &testRuntimeInterface{
-			getCode: func(location common.Location) (bytes []byte, err error) {
+			getCode: func(location Location) (bytes []byte, err error) {
 				return accountCodes[location], nil
 			},
 			storage: newTestLedger(nil, nil),
@@ -2222,7 +2222,7 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 		Name:    name,
 	}
 
-	type locationAccessCounts map[common.Location]int
+	type locationAccessCounts map[Location]int
 
 	newTester := func() (
 		runtimeInterface *testRuntimeInterface,
@@ -2232,17 +2232,17 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 	) {
 		rt := newTestInterpreterRuntime()
 
-		accountCodes := map[common.Location][]byte{}
+		accountCodes := map[Location][]byte{}
 		var events []cadence.Event
 
 		programGets = locationAccessCounts{}
 		programSets = locationAccessCounts{}
 
 		runtimeInterface = &testRuntimeInterface{
-			getProgram: func(location common.Location) (*interpreter.Program, error) {
+			getProgram: func(location Location) (*interpreter.Program, error) {
 
 				if runtimeInterface.programs == nil {
-					runtimeInterface.programs = map[common.Location]*interpreter.Program{}
+					runtimeInterface.programs = map[Location]*interpreter.Program{}
 				}
 
 				program := runtimeInterface.programs[location]
@@ -2252,19 +2252,19 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 
 				return program, nil
 			},
-			setProgram: func(location common.Location, program *interpreter.Program) error {
+			setProgram: func(location Location, program *interpreter.Program) error {
 
 				programSets[location]++
 
 				if runtimeInterface.programs == nil {
-					runtimeInterface.programs = map[common.Location]*interpreter.Program{}
+					runtimeInterface.programs = map[Location]*interpreter.Program{}
 				}
 
 				runtimeInterface.programs[location] = program
 
 				return nil
 			},
-			getCode: func(location common.Location) (bytes []byte, err error) {
+			getCode: func(location Location) (bytes []byte, err error) {
 				return accountCodes[location], nil
 			},
 			storage: newTestLedger(nil, nil),

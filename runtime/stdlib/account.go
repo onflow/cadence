@@ -925,6 +925,7 @@ type AccountContractAdditionHandler interface {
 		*interpreter.CompositeValue,
 		error,
 	)
+	TemporarilyRecordCode(location common.AddressLocation, code []byte)
 }
 
 // newAuthAccountContractsChangeFunction called when e.g.
@@ -1015,8 +1016,7 @@ func newAuthAccountContractsChangeFunction(
 				// Update the code for the error pretty printing
 				// NOTE: only do this when an error occurs
 
-				// TODO:
-				//context.SetCode(location, code)
+				handler.TemporarilyRecordCode(location, code)
 
 				panic(&InvalidContractDeploymentError{
 					Err:           err,
@@ -1081,8 +1081,7 @@ func newAuthAccountContractsChangeFunction(
 				// Update the code for the error pretty printing
 				// NOTE: only do this when an error occurs
 
-				// TODO:
-				//context.SetCode(location, code)
+				handler.TemporarilyRecordCode(location, code)
 
 				panic(errors.NewDefaultUserError(
 					"invalid %s: the code must declare exactly one contract or contract interface",
@@ -1097,8 +1096,7 @@ func newAuthAccountContractsChangeFunction(
 				// Update the code for the error pretty printing
 				// NOTE: only do this when an error occurs
 
-				// TODO:
-				//context.SetCode(location, code)
+				handler.TemporarilyRecordCode(location, code)
 
 				panic(errors.NewDefaultUserError(
 					"invalid %s: the name argument must match the name of the declaration: got %q, expected %q",
@@ -1150,8 +1148,7 @@ func newAuthAccountContractsChangeFunction(
 				// Update the code for the error pretty printing
 				// NOTE: only do this when an error occurs
 
-				// TODO:
-				//context.SetCode(location, code)
+				handler.TemporarilyRecordCode(location, code)
 
 				panic(err)
 			}
@@ -1454,7 +1451,7 @@ func newAuthAccountContractsRemoveFunction(
 
 			if len(code) > 0 {
 
-				// NOTE: *DO NOT* call SetProgram – the program removal
+				// NOTE: *DO NOT* call setProgram – the program removal
 				// should not be effective during the execution, only after
 
 				existingProgram, err := parser.ParseProgram(string(code), gauge)

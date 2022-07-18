@@ -166,9 +166,9 @@ type testRuntimeInterface struct {
 	generateUUID       func() (uint64, error)
 	meterComputation   func(compKind common.ComputationKind, intensity uint) error
 	decodeArgument     func(b []byte, t cadence.Type) (cadence.Value, error)
-	programParsed      func(location common.Location, duration time.Duration)
-	programChecked     func(location common.Location, duration time.Duration)
-	programInterpreted func(location common.Location, duration time.Duration)
+	programParsed      func(location Location, duration time.Duration)
+	programChecked     func(location Location, duration time.Duration)
+	programInterpreted func(location Location, duration time.Duration)
 	unsafeRandom       func() (uint64, error)
 	verifySignature    func(
 		signature []byte,
@@ -184,14 +184,14 @@ type testRuntimeInterface struct {
 	getAccountAvailableBalance func(_ Address) (uint64, error)
 	getStorageUsed             func(_ Address) (uint64, error)
 	getStorageCapacity         func(_ Address) (uint64, error)
-	programs                   map[common.Location]*interpreter.Program
+	programs                   map[Location]*interpreter.Program
 	implementationDebugLog     func(message string) error
 	validatePublicKey          func(publicKey *stdlib.PublicKey) error
 	bLSVerifyPOP               func(pk *stdlib.PublicKey, s []byte) (bool, error)
 	blsAggregateSignatures     func(sigs [][]byte) ([]byte, error)
 	blsAggregatePublicKeys     func(keys []*stdlib.PublicKey) (*stdlib.PublicKey, error)
 	getAccountContractNames    func(address Address) ([]string, error)
-	recordTrace                func(operation string, location common.Location, duration time.Duration, logs []opentracing.LogRecord)
+	recordTrace                func(operation string, location Location, duration time.Duration, logs []opentracing.LogRecord)
 	meterMemory                func(usage common.MemoryUsage) error
 }
 
@@ -220,7 +220,7 @@ func (i *testRuntimeInterface) GetCode(location Location) ([]byte, error) {
 func (i *testRuntimeInterface) GetProgram(location Location) (*interpreter.Program, error) {
 	if i.getProgram == nil {
 		if i.programs == nil {
-			i.programs = map[common.Location]*interpreter.Program{}
+			i.programs = map[Location]*interpreter.Program{}
 		}
 		return i.programs[location], nil
 	}
@@ -231,7 +231,7 @@ func (i *testRuntimeInterface) GetProgram(location Location) (*interpreter.Progr
 func (i *testRuntimeInterface) SetProgram(location Location, program *interpreter.Program) error {
 	if i.setProgram == nil {
 		if i.programs == nil {
-			i.programs = map[common.Location]*interpreter.Program{}
+			i.programs = map[Location]*interpreter.Program{}
 		}
 		i.programs[location] = program
 		return nil
@@ -386,21 +386,21 @@ func (i *testRuntimeInterface) DecodeArgument(b []byte, t cadence.Type) (cadence
 	return i.decodeArgument(b, t)
 }
 
-func (i *testRuntimeInterface) ProgramParsed(location common.Location, duration time.Duration) {
+func (i *testRuntimeInterface) ProgramParsed(location Location, duration time.Duration) {
 	if i.programParsed == nil {
 		return
 	}
 	i.programParsed(location, duration)
 }
 
-func (i *testRuntimeInterface) ProgramChecked(location common.Location, duration time.Duration) {
+func (i *testRuntimeInterface) ProgramChecked(location Location, duration time.Duration) {
 	if i.programChecked == nil {
 		return
 	}
 	i.programChecked(location, duration)
 }
 
-func (i *testRuntimeInterface) ProgramInterpreted(location common.Location, duration time.Duration) {
+func (i *testRuntimeInterface) ProgramInterpreted(location Location, duration time.Duration) {
 	if i.programInterpreted == nil {
 		return
 	}
@@ -549,7 +549,7 @@ func (i *testRuntimeInterface) GetAccountContractNames(address Address) ([]strin
 	return i.getAccountContractNames(address)
 }
 
-func (i *testRuntimeInterface) RecordTrace(operation string, location common.Location, duration time.Duration, logs []opentracing.LogRecord) {
+func (i *testRuntimeInterface) RecordTrace(operation string, location Location, duration time.Duration, logs []opentracing.LogRecord) {
 	if i.recordTrace == nil {
 		return
 	}
@@ -599,7 +599,7 @@ func TestRuntimeImport(t *testing.T) {
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
 		},
-		programChecked: func(location common.Location, duration time.Duration) {
+		programChecked: func(location Location, duration time.Duration) {
 			checkCount += 1
 		},
 	}
@@ -651,7 +651,7 @@ func TestRuntimeConcurrentImport(t *testing.T) {
 
 	var checkCount uint64
 	var programsLock sync.RWMutex
-	programs := map[common.Location]*interpreter.Program{}
+	programs := map[Location]*interpreter.Program{}
 
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
@@ -662,7 +662,7 @@ func TestRuntimeConcurrentImport(t *testing.T) {
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
 		},
-		programChecked: func(location common.Location, duration time.Duration) {
+		programChecked: func(location Location, duration time.Duration) {
 			atomic.AddUint64(&checkCount, 1)
 		},
 		setProgram: func(location Location, program *interpreter.Program) error {
@@ -724,8 +724,8 @@ func TestRuntimeProgramSetAndGet(t *testing.T) {
 
 	t.Parallel()
 
-	programs := map[common.Location]*interpreter.Program{}
-	programsHits := make(map[common.Location]bool)
+	programs := map[Location]*interpreter.Program{}
+	programsHits := make(map[Location]bool)
 
 	importedScript := []byte(`
       transaction {
@@ -737,7 +737,7 @@ func TestRuntimeProgramSetAndGet(t *testing.T) {
 
 	runtime := newTestInterpreterRuntime()
 	runtimeInterface := &testRuntimeInterface{
-		getProgram: func(location common.Location) (*interpreter.Program, error) {
+		getProgram: func(location Location) (*interpreter.Program, error) {
 			program, found := programs[location]
 			programsHits[location] = found
 			if !found {
@@ -745,7 +745,7 @@ func TestRuntimeProgramSetAndGet(t *testing.T) {
 			}
 			return program, nil
 		},
-		setProgram: func(location common.Location, program *interpreter.Program) error {
+		setProgram: func(location Location, program *interpreter.Program) error {
 			programs[location] = program
 			return nil
 		},
@@ -4024,7 +4024,7 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
       }
     `)
 
-	accountCodes := map[common.Location][]byte{}
+	accountCodes := map[Location][]byte{}
 	var events []cadence.Event
 
 	signerAccount := address1Value
@@ -4166,7 +4166,7 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
       }
     `)
 
-	accountCodes := map[common.Location][]byte{}
+	accountCodes := map[Location][]byte{}
 	var events []cadence.Event
 
 	signerAccount := address1Value
@@ -4327,7 +4327,7 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 		)
 	}
 
-	accountCodes := map[common.Location][]byte{}
+	accountCodes := map[Location][]byte{}
 	var events []cadence.Event
 
 	var nextAccount byte = 0x2
@@ -4776,7 +4776,7 @@ func TestRuntimeResourceOwnerFieldUseComposite(t *testing.T) {
       }
     `)
 
-	accountCodes := map[common.Location][]byte{}
+	accountCodes := map[Location][]byte{}
 	var events []cadence.Event
 	var loggedMessages []string
 
@@ -4983,7 +4983,7 @@ func TestRuntimeResourceOwnerFieldUseArray(t *testing.T) {
       }
     `)
 
-	accountCodes := map[common.Location][]byte{}
+	accountCodes := map[Location][]byte{}
 	var events []cadence.Event
 	var loggedMessages []string
 
@@ -5164,7 +5164,7 @@ func TestRuntimeResourceOwnerFieldUseDictionary(t *testing.T) {
       }
     `)
 
-	accountCodes := map[common.Location][]byte{}
+	accountCodes := map[Location][]byte{}
 	var events []cadence.Event
 	var loggedMessages []string
 
@@ -5307,9 +5307,9 @@ func TestRuntimeMetrics(t *testing.T) {
 	storage := newTestLedger(nil, nil)
 
 	type reports struct {
-		programParsed      map[common.Location]int
-		programChecked     map[common.Location]int
-		programInterpreted map[common.Location]int
+		programParsed      map[Location]int
+		programChecked     map[Location]int
+		programInterpreted map[Location]int
 	}
 
 	newRuntimeInterface := func() (runtimeInterface Interface, r *reports) {

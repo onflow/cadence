@@ -512,7 +512,7 @@ func TestRuntimePublicCapabilityBorrowTypeConfusion(t *testing.T) {
 
 	deployTestContractTx := utils.DeploymentTransaction("TestContract", []byte(testContract))
 
-	accountCodes := map[common.Location][]byte{}
+	accountCodes := map[Location][]byte{}
 	var events []cadence.Event
 	var loggedMessages []string
 
@@ -1126,7 +1126,7 @@ func TestRuntimeBatchMintAndTransfer(t *testing.T) {
 
 	var signerAddress common.Address
 
-	accountCodes := map[common.Location]string{}
+	accountCodes := map[Location]string{}
 
 	var uuid uint64
 
@@ -1496,7 +1496,7 @@ func TestRuntimeStorageReferenceCast(t *testing.T) {
       }
     `))
 
-	accountCodes := map[common.Location][]byte{}
+	accountCodes := map[Location][]byte{}
 	var events []cadence.Event
 	var loggedMessages []string
 
@@ -1799,7 +1799,7 @@ func TestRuntimeResourceOwnerChange(t *testing.T) {
 		newAddress common.Address
 	}
 
-	accountCodes := map[common.Location][]byte{}
+	accountCodes := map[Location][]byte{}
 	var events []cadence.Event
 	var loggedMessages []string
 	var resourceOwnerChanges []resourceOwnerChange
@@ -2209,7 +2209,7 @@ transaction {
 
 	testAddress := common.MustBytesToAddress([]byte{0x1})
 
-	accountCodes := map[common.Location][]byte{}
+	accountCodes := map[Location][]byte{}
 
 	var events []cadence.Event
 
@@ -2338,7 +2338,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		runtime := newTestInterpreterRuntime()
 
-		accountCodes := map[common.Location][]byte{}
+		accountCodes := map[Location][]byte{}
 
 		var events []cadence.Event
 
@@ -2475,7 +2475,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		testAddress := common.MustBytesToAddress([]byte{0x1})
 
-		accountCodes := map[common.Location][]byte{}
+		accountCodes := map[Location][]byte{}
 
 		var events []cadence.Event
 
@@ -2616,7 +2616,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		testAddress := common.MustBytesToAddress([]byte{0x1})
 
-		accountCodes := map[common.Location][]byte{}
+		accountCodes := map[Location][]byte{}
 
 		var events []cadence.Event
 
@@ -2744,7 +2744,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		testAddress := common.MustBytesToAddress([]byte{0x1})
 
-		accountCodes := map[common.Location][]byte{}
+		accountCodes := map[Location][]byte{}
 
 		var events []cadence.Event
 
@@ -2870,7 +2870,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		testAddress := common.MustBytesToAddress([]byte{0x1})
 
-		accountCodes := map[common.Location][]byte{}
+		accountCodes := map[Location][]byte{}
 
 		var events []cadence.Event
 
@@ -3016,7 +3016,7 @@ func TestRuntimeStorageEnumCase(t *testing.T) {
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
-	accountCodes := map[common.Location][]byte{}
+	accountCodes := map[Location][]byte{}
 	var events []cadence.Event
 	var loggedMessages []string
 

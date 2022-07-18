@@ -509,7 +509,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 	senderAddress := common.MustBytesToAddress([]byte{0x2})
 	receiverAddress := common.MustBytesToAddress([]byte{0x3})
 
-	accountCodes := map[common.Location][]byte{}
+	accountCodes := map[Location][]byte{}
 
 	var events []cadence.Event
 

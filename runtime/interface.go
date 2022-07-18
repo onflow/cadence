@@ -139,7 +139,7 @@ type Interface interface {
 	// GetAccountContractNames returns the names of all contracts deployed in an account.
 	GetAccountContractNames(address Address) ([]string, error)
 	// RecordTrace records a opentracing trace
-	RecordTrace(operation string, location common.Location, duration time.Duration, logs []opentracing.LogRecord)
+	RecordTrace(operation string, location Location, duration time.Duration, logs []opentracing.LogRecord)
 	// BLSVerifyPOP verifies a proof of possession (PoP) for the receiver public key.
 	BLSVerifyPOP(pk *stdlib.PublicKey, s []byte) (bool, error)
 	// BLSAggregateSignatures aggregate multiple BLS signatures into one.
@@ -158,7 +158,7 @@ type Interface interface {
 }
 
 type Metrics interface {
-	ProgramParsed(location common.Location, duration time.Duration)
-	ProgramChecked(location common.Location, duration time.Duration)
-	ProgramInterpreted(location common.Location, duration time.Duration)
+	ProgramParsed(location Location, duration time.Duration)
+	ProgramChecked(location Location, duration time.Duration)
+	ProgramInterpreted(location Location, duration time.Duration)
 }

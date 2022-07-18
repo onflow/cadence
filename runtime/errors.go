@@ -23,7 +23,6 @@ import (
 	"strings"
 
 	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/pretty"
@@ -33,24 +32,25 @@ import (
 // Error is the containing type for all errors produced by the runtime.
 type Error struct {
 	Err      error
-	Location common.Location
-	Codes    map[common.Location]string
-	Programs map[common.Location]*ast.Program
+	Location Location
+	Codes    map[Location]string
+	Programs map[Location]*ast.Program
 }
 
-func newError(err error, context Context) Error {
-	codes := make(map[common.Location]string, len(context.codes))
+func newError(err error, location Location, codesAndPrograms codesAndPrograms) Error {
+
+	codes := make(map[Location]string, len(codesAndPrograms.codes))
 
 	// Regardless of iteration order, the final result will be the same.
-	for location, code := range context.codes { //nolint:maprangecheck
+	for location, code := range codesAndPrograms.codes { //nolint:maprangecheck
 		codes[location] = string(code)
 	}
 
 	return Error{
 		Err:      err,
-		Location: context.Location,
+		Location: location,
 		Codes:    codes,
-		Programs: context.programs,
+		Programs: codesAndPrograms.programs,
 	}
 }
 
@@ -289,7 +289,7 @@ func (e *ArgumentNotImportableError) Error() string {
 //
 type ParsingCheckingError struct {
 	Err      error
-	Location common.Location
+	Location Location
 }
 
 var _ errors.UserError = &ParsingCheckingError{}
@@ -309,6 +309,6 @@ func (e *ParsingCheckingError) Unwrap() error {
 	return e.Err
 }
 
-func (e *ParsingCheckingError) ImportLocation() common.Location {
+func (e *ParsingCheckingError) ImportLocation() Location {
 	return e.Location
 }

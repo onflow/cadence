@@ -35,8 +35,9 @@ import (
 type Environment struct {
 	baseActivation                        *interpreter.VariableActivation
 	baseValueActivation                   *sema.VariableActivation
-	Interface                             Interface
-	Storage                               *Storage
+	runtimeInterface                      Interface
+	storage                               *Storage
+	codesAndPrograms                      codesAndPrograms
 	deployedContractConstructorInvocation *stdlib.DeployedContractConstructorInvocation
 }
 
@@ -82,9 +83,14 @@ func NewScriptEnvironment(declarations ...stdlib.StandardLibraryValue) *Environm
 	return env
 }
 
-func (e *Environment) Configure(runtimeInterface Interface, storage *Storage) {
-	e.Interface = runtimeInterface
-	e.Storage = storage
+func (e *Environment) Configure(
+	runtimeInterface Interface,
+	codesAndPrograms codesAndPrograms,
+	storage *Storage,
+) {
+	e.runtimeInterface = runtimeInterface
+	e.codesAndPrograms = codesAndPrograms
+	e.storage = storage
 }
 
 func (e *Environment) Declare(valueDeclaration stdlib.StandardLibraryValue) {
@@ -93,59 +99,59 @@ func (e *Environment) Declare(valueDeclaration stdlib.StandardLibraryValue) {
 }
 
 func (e *Environment) MeterMemory(usage common.MemoryUsage) error {
-	return e.Interface.MeterMemory(usage)
+	return e.runtimeInterface.MeterMemory(usage)
 }
 
 func (e *Environment) ProgramLog(message string) error {
-	return e.Interface.ProgramLog(message)
+	return e.runtimeInterface.ProgramLog(message)
 }
 
 func (e *Environment) UnsafeRandom() (uint64, error) {
-	return e.Interface.UnsafeRandom()
+	return e.runtimeInterface.UnsafeRandom()
 }
 
 func (e *Environment) GetBlockAtHeight(height uint64) (block stdlib.Block, exists bool, err error) {
-	return e.Interface.GetBlockAtHeight(height)
+	return e.runtimeInterface.GetBlockAtHeight(height)
 }
 
 func (e *Environment) GetCurrentBlockHeight() (uint64, error) {
-	return e.Interface.GetCurrentBlockHeight()
+	return e.runtimeInterface.GetCurrentBlockHeight()
 }
 
 func (e *Environment) GetAccountBalance(address common.Address) (uint64, error) {
-	return e.Interface.GetAccountBalance(address)
+	return e.runtimeInterface.GetAccountBalance(address)
 }
 
 func (e *Environment) GetAccountAvailableBalance(address common.Address) (uint64, error) {
-	return e.Interface.GetAccountAvailableBalance(address)
+	return e.runtimeInterface.GetAccountAvailableBalance(address)
 }
 
 func (e *Environment) CommitStorage(inter *interpreter.Interpreter, commitContractUpdates bool) error {
-	return e.Storage.Commit(inter, commitContractUpdates)
+	return e.storage.Commit(inter, commitContractUpdates)
 }
 
 func (e *Environment) GetStorageUsed(address common.Address) (uint64, error) {
-	return e.Interface.GetStorageUsed(address)
+	return e.runtimeInterface.GetStorageUsed(address)
 }
 
 func (e *Environment) GetStorageCapacity(address common.Address) (uint64, error) {
-	return e.Interface.GetStorageCapacity(address)
+	return e.runtimeInterface.GetStorageCapacity(address)
 }
 
 func (e *Environment) GetAccountKey(address common.Address, index int) (*stdlib.AccountKey, error) {
-	return e.Interface.GetAccountKey(address, index)
+	return e.runtimeInterface.GetAccountKey(address, index)
 }
 
 func (e *Environment) GetAccountContractNames(address common.Address) ([]string, error) {
-	return e.Interface.GetAccountContractNames(address)
+	return e.runtimeInterface.GetAccountContractNames(address)
 }
 
 func (e *Environment) GetAccountContractCode(address common.Address, name string) ([]byte, error) {
-	return e.Interface.GetAccountContractCode(address, name)
+	return e.runtimeInterface.GetAccountContractCode(address, name)
 }
 
 func (e *Environment) CreateAccount(payer common.Address) (address common.Address, err error) {
-	return e.Interface.CreateAccount(payer)
+	return e.runtimeInterface.CreateAccount(payer)
 }
 
 func (e *Environment) EmitEvent(
@@ -165,16 +171,16 @@ func (e *Environment) EmitEvent(
 		getLocationRange,
 		eventType,
 		eventFields,
-		e.Interface.EmitEvent,
+		e.runtimeInterface.EmitEvent,
 	)
 }
 
 func (e *Environment) AddEncodedAccountKey(address common.Address, key []byte) error {
-	return e.Interface.AddEncodedAccountKey(address, key)
+	return e.runtimeInterface.AddEncodedAccountKey(address, key)
 }
 
 func (e *Environment) RevokeEncodedAccountKey(address common.Address, index int) ([]byte, error) {
-	return e.Interface.RevokeEncodedAccountKey(address, index)
+	return e.runtimeInterface.RevokeEncodedAccountKey(address, index)
 }
 
 func (e *Environment) AddAccountKey(
@@ -183,23 +189,23 @@ func (e *Environment) AddAccountKey(
 	algo sema.HashAlgorithm,
 	weight int,
 ) (*stdlib.AccountKey, error) {
-	return e.Interface.AddAccountKey(address, key, algo, weight)
+	return e.runtimeInterface.AddAccountKey(address, key, algo, weight)
 }
 
 func (e *Environment) RevokeAccountKey(address common.Address, index int) (*stdlib.AccountKey, error) {
-	return e.Interface.RevokeAccountKey(address, index)
+	return e.runtimeInterface.RevokeAccountKey(address, index)
 }
 
 func (e *Environment) UpdateAccountContractCode(address common.Address, name string, code []byte) error {
-	return e.Interface.UpdateAccountContractCode(address, name, code)
+	return e.runtimeInterface.UpdateAccountContractCode(address, name, code)
 }
 
 func (e *Environment) RemoveAccountContractCode(address common.Address, name string) error {
-	return e.Interface.RemoveAccountContractCode(address, name)
+	return e.runtimeInterface.RemoveAccountContractCode(address, name)
 }
 
 func (e *Environment) RecordContractRemoval(address common.Address, name string) {
-	e.Storage.recordContractUpdate(address, name, nil)
+	e.storage.recordContractUpdate(address, name, nil)
 }
 
 func (e *Environment) RecordContractUpdate(
@@ -207,7 +213,11 @@ func (e *Environment) RecordContractUpdate(
 	name string,
 	contractValue *interpreter.CompositeValue,
 ) {
-	e.Storage.recordContractUpdate(address, name, contractValue)
+	e.storage.recordContractUpdate(address, name, contractValue)
+}
+
+func (e *Environment) TemporarilyRecordCode(location common.AddressLocation, code []byte) {
+	e.codesAndPrograms.setCode(location, code)
 }
 
 func (e *Environment) ParseAndCheckProgram(
@@ -243,8 +253,7 @@ func (e *Environment) parseAndCheckProgram(
 	}
 
 	if storeProgram {
-		// TODO:
-		//context.SetCode(location, code)
+		e.codesAndPrograms.setCode(location, code)
 	}
 
 	// Parse
@@ -254,7 +263,7 @@ func (e *Environment) parseAndCheckProgram(
 		func() {
 			parse, err = parser.ParseProgram(string(code), e)
 		},
-		e.Interface,
+		e.runtimeInterface,
 		func(metrics Metrics, duration time.Duration) {
 			metrics.ProgramParsed(location, duration)
 		},
@@ -264,8 +273,7 @@ func (e *Environment) parseAndCheckProgram(
 	}
 
 	if storeProgram {
-		// TODO:
-		//context.SetProgram(location, parse)
+		e.codesAndPrograms.setProgram(location, parse)
 	}
 
 	// Check
@@ -284,7 +292,7 @@ func (e *Environment) parseAndCheckProgram(
 
 	if storeProgram {
 		wrapPanic(func() {
-			err = e.Interface.SetProgram(location, program)
+			err = e.runtimeInterface.SetProgram(location, program)
 		})
 		if err != nil {
 			return nil, err
@@ -331,7 +339,7 @@ func (e *Environment) check(
 func (e *Environment) newLocationHandler() sema.LocationHandlerFunc {
 	return func(identifiers []Identifier, location Location) (res []ResolvedLocation, err error) {
 		wrapPanic(func() {
-			res, err = e.Interface.ResolveLocation(identifiers, location)
+			res, err = e.runtimeInterface.ResolveLocation(identifiers, location)
 		})
 		return
 	}
@@ -341,7 +349,7 @@ func (e *Environment) newCheckHandler() sema.CheckHandlerFunc {
 	return func(checker *sema.Checker, check func()) {
 		reportMetric(
 			check,
-			e.Interface,
+			e.runtimeInterface,
 			func(metrics Metrics, duration time.Duration) {
 				metrics.ProgramChecked(checker.Location, duration)
 			},
@@ -403,7 +411,7 @@ func (e *Environment) getProgram(
 	err error,
 ) {
 	wrapPanic(func() {
-		program, err = e.Interface.GetProgram(location)
+		program, err = e.runtimeInterface.GetProgram(location)
 	})
 	if err != nil {
 		return nil, err
@@ -427,8 +435,7 @@ func (e *Environment) getProgram(
 		}
 	}
 
-	// TODO:
-	//context.SetProgram(location, program.Program)
+	e.codesAndPrograms.setProgram(location, program.Program)
 
 	return program, nil
 }
@@ -436,14 +443,14 @@ func (e *Environment) getProgram(
 func (e *Environment) getCode(location common.Location) (code []byte, err error) {
 	if addressLocation, ok := location.(common.AddressLocation); ok {
 		wrapPanic(func() {
-			code, err = e.Interface.GetAccountContractCode(
+			code, err = e.runtimeInterface.GetAccountContractCode(
 				addressLocation.Address,
 				addressLocation.Name,
 			)
 		})
 	} else {
 		wrapPanic(func() {
-			code, err = e.Interface.GetCode(location)
+			code, err = e.runtimeInterface.GetCode(location)
 		})
 	}
 	return
@@ -458,7 +465,7 @@ func (e *Environment) newInterpreter(
 
 	options := []interpreter.Option{
 		// TODO: should only depend on environment, so configuration can be reused
-		interpreter.WithStorage(e.Storage),
+		interpreter.WithStorage(e.storage),
 		interpreter.WithMemoryGauge(e),
 		interpreter.WithBaseActivation(e.baseActivation),
 		interpreter.WithOnEventEmittedHandler(e.newOnEventEmittedHandler()),
@@ -508,7 +515,7 @@ func (e *Environment) newOnRecordTraceHandler() interpreter.OnRecordTraceFunc {
 		logs []opentracing.LogRecord,
 	) {
 		wrapPanic(func() {
-			e.Interface.RecordTrace(functionName, interpreter.Location, duration, logs)
+			e.runtimeInterface.RecordTrace(functionName, interpreter.Location, duration, logs)
 		})
 	}
 }
@@ -535,7 +542,7 @@ func (e *Environment) newHashHandler() interpreter.HashHandlerFunc {
 
 		var result []byte
 		wrapPanic(func() {
-			result, err = e.Interface.Hash(data, tag, hashAlgorithm)
+			result, err = e.runtimeInterface.Hash(data, tag, hashAlgorithm)
 		})
 		if err != nil {
 			panic(err)
@@ -582,7 +589,7 @@ func (e *Environment) newSignatureVerificationHandler() interpreter.SignatureVer
 
 		var valid bool
 		wrapPanic(func() {
-			valid, err = e.Interface.VerifySignature(
+			valid, err = e.runtimeInterface.VerifySignature(
 				signature,
 				domainSeparationTag,
 				signedData,
@@ -613,7 +620,7 @@ func (e *Environment) newPublicKeyValidationHandler() interpreter.PublicKeyValid
 		}
 
 		wrapPanic(func() {
-			err = e.Interface.ValidatePublicKey(publicKey)
+			err = e.runtimeInterface.ValidatePublicKey(publicKey)
 		})
 
 		return err
@@ -666,7 +673,7 @@ func (e *Environment) newContractValueHandler() interpreter.ContractValueHandler
 func (e *Environment) newUUIDHandler() interpreter.UUIDHandlerFunc {
 	return func() (uuid uint64, err error) {
 		wrapPanic(func() {
-			uuid, err = e.Interface.GenerateUUID()
+			uuid, err = e.runtimeInterface.GenerateUUID()
 		})
 		return
 	}
@@ -684,7 +691,7 @@ func (e *Environment) newOnEventEmittedHandler() interpreter.OnEventEmittedFunc 
 			getLocationRange,
 			eventType,
 			eventValue,
-			e.Interface.EmitEvent,
+			e.runtimeInterface.EmitEvent,
 		)
 
 		return nil
@@ -790,7 +797,7 @@ func (e *Environment) loadContract(
 		switch location := compositeType.Location.(type) {
 
 		case common.AddressLocation:
-			storageMap := e.Storage.GetStorageMap(
+			storageMap := e.storage.GetStorageMap(
 				location.Address,
 				StorageDomainContract,
 				false,
@@ -840,7 +847,7 @@ func (e *Environment) meteringInterpreterOptions() []interpreter.Option {
 			func(compKind common.ComputationKind, intensity uint) {
 				var err error
 				wrapPanic(func() {
-					err = e.Interface.MeterComputation(compKind, intensity)
+					err = e.runtimeInterface.MeterComputation(compKind, intensity)
 				})
 				if err != nil {
 					panic(err)
@@ -906,7 +913,7 @@ func (e *Environment) interpret(
 			}
 			result, err = f(inter)
 		},
-		e.Interface,
+		e.runtimeInterface,
 		func(metrics Metrics, duration time.Duration) {
 			metrics.ProgramInterpreted(location, duration)
 		},
@@ -934,7 +941,7 @@ func (e *Environment) newResourceOwnerChangedHandler() interpreter.OnResourceOwn
 		newOwner common.Address,
 	) {
 		wrapPanic(func() {
-			e.Interface.ResourceOwnerChanged(
+			e.runtimeInterface.ResourceOwnerChanged(
 				interpreter,
 				resource,
 				oldOwner,
@@ -963,7 +970,7 @@ func (e *Environment) newBLSVerifyPopFunction() interpreter.BLSVerifyPoPHandlerF
 
 		var valid bool
 		wrapPanic(func() {
-			valid, err = e.Interface.BLSVerifyPOP(publicKey, signature)
+			valid, err = e.runtimeInterface.BLSVerifyPOP(publicKey, signature)
 		})
 		if err != nil {
 			panic(err)
@@ -1000,7 +1007,7 @@ func (e *Environment) newBLSAggregateSignaturesFunction() interpreter.BLSAggrega
 		var err error
 		var aggregatedSignature []byte
 		wrapPanic(func() {
-			aggregatedSignature, err = e.Interface.BLSAggregateSignatures(bytesArray)
+			aggregatedSignature, err = e.runtimeInterface.BLSAggregateSignatures(bytesArray)
 		})
 
 		// If the crypto layer produces an error, we have invalid input, return nil
@@ -1047,7 +1054,7 @@ func (e *Environment) newBLSAggregatePublicKeysFunction(
 		var err error
 		var aggregatedPublicKey *stdlib.PublicKey
 		wrapPanic(func() {
-			aggregatedPublicKey, err = e.Interface.BLSAggregatePublicKeys(publicKeys)
+			aggregatedPublicKey, err = e.runtimeInterface.BLSAggregatePublicKeys(publicKeys)
 		})
 
 		// If the crypto layer produces an error, we have invalid input, return nil

@@ -36,7 +36,7 @@ type Script struct {
 	Arguments [][]byte
 }
 
-type importResolutionResults map[common.Location]bool
+type importResolutionResults map[Location]bool
 
 // Runtime is a runtime capable of executing Cadence.
 type Runtime interface {
@@ -96,7 +96,7 @@ type Runtime interface {
 	SetDebugger(debugger *interpreter.Debugger)
 }
 
-type ImportResolver = func(location common.Location) (program *ast.Program, e error)
+type ImportResolver = func(location Location) (program *ast.Program, e error)
 
 var validTopLevelDeclarationsInTransaction = []common.DeclarationKind{
 	common.DeclarationKindImport,
@@ -111,7 +111,7 @@ var validTopLevelDeclarationsInAccountCode = []common.DeclarationKind{
 	common.DeclarationKindContractInterface,
 }
 
-func validTopLevelDeclarations(location common.Location) []common.DeclarationKind {
+func validTopLevelDeclarations(location Location) []common.DeclarationKind {
 	switch location.(type) {
 	case common.TransactionLocation:
 		return validTopLevelDeclarationsInTransaction
@@ -196,17 +196,17 @@ func NewInterpreterRuntime(options ...Option) Runtime {
 	return runtime
 }
 
-func (r *interpreterRuntime) Recover(onError func(Error), context Context) {
+func (r *interpreterRuntime) Recover(onError func(Error), location Location, codesAndPrograms codesAndPrograms) {
 	recovered := recover()
 	if recovered == nil {
 		return
 	}
 
-	err := getWrappedError(recovered, context)
+	err := getWrappedError(recovered, location, codesAndPrograms)
 	onError(err)
 }
 
-func getWrappedError(recovered any, context Context) Error {
+func getWrappedError(recovered any, location Location, codesAndPrograms codesAndPrograms) Error {
 	switch recovered := recovered.(type) {
 
 	// If the error is already a `runtime.Error`, then avoid redundant wrapping.
@@ -223,16 +223,16 @@ func getWrappedError(recovered any, context Context) Error {
 		errors.UserError,
 		errors.ExternalError,
 		interpreter.Error:
-		return newError(recovered.(error), context)
+		return newError(recovered.(error), location, codesAndPrograms)
 
 	// Wrap any other unhandled error with a generic internal error first.
 	// And then wrap with `runtime.Error` to include meta info.
 	case error:
 		err := errors.NewUnexpectedErrorFromCause(recovered)
-		return newError(err, context)
+		return newError(err, location, codesAndPrograms)
 	default:
 		err := errors.NewUnexpectedError("%s", recovered)
-		return newError(err, context)
+		return newError(err, location, codesAndPrograms)
 	}
 }
 
@@ -257,33 +257,41 @@ func (r *interpreterRuntime) SetDebugger(debugger *interpreter.Debugger) {
 }
 
 func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val cadence.Value, err error) {
+
+	location := context.Location
+
+	codesAndPrograms := newCodesAndPrograms()
+
 	defer r.Recover(
 		func(internalErr Error) {
 			err = internalErr
 		},
-		context,
+		location,
+		codesAndPrograms,
 	)
-
-	context.InitializeCodesAndPrograms()
 
 	storage := NewStorage(context.Interface, context.Interface)
 
 	// TODO: allow caller to pass this in so it can be reused
 	environment := NewScriptEnvironment()
-	environment.Configure(context.Interface, storage)
+	environment.Configure(
+		context.Interface,
+		codesAndPrograms,
+		storage,
+	)
 
 	program, err := environment.ParseAndCheckProgram(
 		script.Source,
-		context.Location,
+		location,
 		true,
 	)
 	if err != nil {
-		return nil, newError(err, context)
+		return nil, newError(err, location, codesAndPrograms)
 	}
 
 	functionEntryPointType, err := program.Elaboration.FunctionEntryPointType()
 	if err != nil {
-		return nil, newError(err, context)
+		return nil, newError(err, location, codesAndPrograms)
 	}
 
 	// Ensure the entry point's parameter types are importable
@@ -293,7 +301,7 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val 
 				err = &ScriptParameterTypeNotImportableError{
 					Type: param.TypeAnnotation.Type,
 				}
-				return nil, newError(err, context)
+				return nil, newError(err, location, codesAndPrograms)
 			}
 		}
 	}
@@ -303,23 +311,22 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val 
 		err = &InvalidScriptReturnTypeError{
 			Type: functionEntryPointType.ReturnTypeAnnotation.Type,
 		}
-		return nil, newError(err, context)
+		return nil, newError(err, location, codesAndPrograms)
 	}
 
 	interpret := scriptExecutionFunction(
 		functionEntryPointType.Parameters,
 		script.Arguments,
 		context.Interface,
-		interpreter.ReturnEmptyLocationRange,
 	)
 
 	value, inter, err := environment.interpret(
-		context.Location,
+		location,
 		program,
 		interpret,
 	)
 	if err != nil {
-		return nil, newError(err, context)
+		return nil, newError(err, location, codesAndPrograms)
 	}
 
 	// Export before committing storage
@@ -329,7 +336,7 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val 
 		interpreter.ReturnEmptyLocationRange,
 	)
 	if err != nil {
-		return nil, newError(err, context)
+		return nil, newError(err, location, codesAndPrograms)
 	}
 
 	// Write back all stored values, which were actually just cached, back into storage.
@@ -339,7 +346,7 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val 
 
 	err = r.commitStorage(storage, inter)
 	if err != nil {
-		return nil, newError(err, context)
+		return nil, newError(err, location, codesAndPrograms)
 	}
 
 	return result, nil
@@ -368,7 +375,6 @@ func scriptExecutionFunction(
 	parameters []*sema.Parameter,
 	arguments [][]byte,
 	runtimeInterface Interface,
-	getLocationRange func() interpreter.LocationRange,
 ) interpretFunc {
 	return func(inter *interpreter.Interpreter) (value interpreter.Value, err error) {
 
@@ -401,29 +407,37 @@ func (r *interpreterRuntime) InvokeContractFunction(
 	argumentTypes []sema.Type,
 	context Context,
 ) (val cadence.Value, err error) {
+
+	location := context.Location
+
+	codesAndPrograms := newCodesAndPrograms()
+
 	defer r.Recover(
 		func(internalErr Error) {
 			err = internalErr
 		},
-		context,
+		location,
+		codesAndPrograms,
 	)
-
-	context.InitializeCodesAndPrograms()
 
 	storage := NewStorage(context.Interface, context.Interface)
 
 	// TODO: allow caller to pass this in so it can be reused
 	environment := NewBaseEnvironment()
-	environment.Configure(context.Interface, storage)
+	environment.Configure(
+		context.Interface,
+		codesAndPrograms,
+		storage,
+	)
 
 	// create interpreter
 	_, inter, err := environment.interpret(
-		context.Location,
+		location,
 		nil,
 		nil,
 	)
 	if err != nil {
-		return nil, newError(err, context)
+		return nil, newError(err, location, codesAndPrograms)
 	}
 
 	// ensure the contract is loaded
@@ -440,7 +454,7 @@ func (r *interpreterRuntime) InvokeContractFunction(
 
 	contractValue, err := inter.GetContractComposite(contractLocation)
 	if err != nil {
-		return nil, newError(err, context)
+		return nil, newError(err, location, codesAndPrograms)
 	}
 
 	// prepare invocation
@@ -461,28 +475,27 @@ func (r *interpreterRuntime) InvokeContractFunction(
 
 	contractFunction, ok := contractMember.(interpreter.FunctionValue)
 	if !ok {
-		return nil, newError(
-			interpreter.NotInvokableError{
-				Value: contractFunction,
-			},
-			context)
+		err := interpreter.NotInvokableError{
+			Value: contractFunction,
+		}
+		return nil, newError(err, location, codesAndPrograms)
 	}
 
 	value, err := inter.InvokeFunction(contractFunction, invocation)
 	if err != nil {
-		return nil, newError(err, context)
+		return nil, newError(err, location, codesAndPrograms)
 	}
 
 	// Write back all stored values, which were actually just cached, back into storage
 	err = r.commitStorage(storage, inter)
 	if err != nil {
-		return nil, newError(err, context)
+		return nil, newError(err, location, codesAndPrograms)
 	}
 
 	var exportedValue cadence.Value
 	exportedValue, err = ExportValue(value, inter, interpreter.ReturnEmptyLocationRange)
 	if err != nil {
-		return nil, newError(err, context)
+		return nil, newError(err, location, codesAndPrograms)
 	}
 
 	return exportedValue, nil
@@ -524,28 +537,36 @@ func (r *interpreterRuntime) convertArgument(
 }
 
 func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) (err error) {
+
+	location := context.Location
+
+	codesAndPrograms := newCodesAndPrograms()
+
 	defer r.Recover(
 		func(internalErr Error) {
 			err = internalErr
 		},
-		context,
+		location,
+		codesAndPrograms,
 	)
-
-	context.InitializeCodesAndPrograms()
 
 	storage := NewStorage(context.Interface, context.Interface)
 
 	// TODO: allow caller to pass this in so it can be reused
 	environment := NewBaseEnvironment()
-	environment.Configure(context.Interface, storage)
+	environment.Configure(
+		context.Interface,
+		codesAndPrograms,
+		storage,
+	)
 
 	program, err := environment.ParseAndCheckProgram(
 		script.Source,
-		context.Location,
+		location,
 		true,
 	)
 	if err != nil {
-		return newError(err, context)
+		return newError(err, location, codesAndPrograms)
 	}
 
 	transactions := program.Elaboration.TransactionTypes
@@ -554,7 +575,7 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 		err = InvalidTransactionCountError{
 			Count: transactionCount,
 		}
-		return newError(err, context)
+		return newError(err, location, codesAndPrograms)
 	}
 
 	transactionType := transactions[0]
@@ -564,7 +585,7 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 		authorizers, err = context.Interface.GetSigningAccounts()
 	})
 	if err != nil {
-		return newError(err, context)
+		return newError(err, location, codesAndPrograms)
 	}
 	// check parameter count
 
@@ -577,7 +598,7 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 			Expected: transactionParameterCount,
 			Actual:   argumentCount,
 		}
-		return newError(err, context)
+		return newError(err, location, codesAndPrograms)
 	}
 
 	transactionAuthorizerCount := len(transactionType.PrepareParameters)
@@ -586,7 +607,7 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 			Expected: transactionAuthorizerCount,
 			Actual:   authorizerCount,
 		}
-		return newError(err, context)
+		return newError(err, location, codesAndPrograms)
 	}
 
 	// gather authorizers
@@ -613,7 +634,7 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 	}
 
 	_, inter, err := environment.interpret(
-		context.Location,
+		location,
 		program,
 		r.transactionExecutionFunction(
 			transactionType.Parameters,
@@ -623,13 +644,13 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 		),
 	)
 	if err != nil {
-		return newError(err, context)
+		return newError(err, location, codesAndPrograms)
 	}
 
 	// Write back all stored values, which were actually just cached, back into storage
 	err = r.commitStorage(storage, inter)
 	if err != nil {
-		return newError(err, context)
+		return newError(err, location, codesAndPrograms)
 	}
 
 	return nil
@@ -859,26 +880,33 @@ func (r *interpreterRuntime) ParseAndCheckProgram(
 	program *interpreter.Program,
 	err error,
 ) {
+	location := context.Location
+
+	codesAndPrograms := newCodesAndPrograms()
+
 	defer r.Recover(
 		func(internalErr Error) {
 			err = internalErr
 		},
-		context,
+		location,
+		codesAndPrograms,
 	)
-
-	context.InitializeCodesAndPrograms()
 
 	// TODO: allow caller to pass this in so it can be reused
 	environment := NewBaseEnvironment()
-	environment.Configure(context.Interface, nil)
+	environment.Configure(
+		context.Interface,
+		codesAndPrograms,
+		nil,
+	)
 
 	program, err = environment.ParseAndCheckProgram(
 		code,
-		context.Location,
+		location,
 		true,
 	)
 	if err != nil {
-		return nil, newError(err, context)
+		return nil, newError(err, location, codesAndPrograms)
 	}
 
 	return program, nil
@@ -888,21 +916,28 @@ func (r *interpreterRuntime) executeNonProgram(
 	interpret interpretFunc,
 	context Context,
 ) (cadence.Value, error) {
-	context.InitializeCodesAndPrograms()
+
+	location := context.Location
+
+	codesAndPrograms := newCodesAndPrograms()
 
 	storage := NewStorage(context.Interface, context.Interface)
 
 	// TODO: allow caller to pass this in so it can be reused
 	environment := NewBaseEnvironment()
-	environment.Configure(context.Interface, storage)
+	environment.Configure(
+		context.Interface,
+		codesAndPrograms,
+		storage,
+	)
 
 	value, inter, err := environment.interpret(
-		context.Location,
+		location,
 		nil,
 		interpret,
 	)
 	if err != nil {
-		return nil, newError(err, context)
+		return nil, newError(err, location, codesAndPrograms)
 	}
 
 	if value == nil {
@@ -925,11 +960,16 @@ func (r *interpreterRuntime) ReadStored(
 	val cadence.Value,
 	err error,
 ) {
+	location := context.Location
+
+	codesAndPrograms := newCodesAndPrograms()
+
 	defer r.Recover(
 		func(internalErr Error) {
 			err = internalErr
 		},
-		context,
+		location,
+		codesAndPrograms,
 	)
 
 	return r.executeNonProgram(
@@ -955,11 +995,16 @@ func (r *interpreterRuntime) ReadLinked(
 	val cadence.Value,
 	err error,
 ) {
+	location := context.Location
+
+	codesAndPrograms := newCodesAndPrograms()
+
 	defer r.Recover(
 		func(internalErr Error) {
 			err = internalErr
 		},
-		context,
+		location,
+		codesAndPrograms,
 	)
 
 	return r.executeNonProgram(
