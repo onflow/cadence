@@ -101,7 +101,7 @@ func (c *commands) sendTransaction(args ...json.RawMessage) (interface{}, error)
 
 	txArgs, err := flowkit.ParseArgumentsJSON(argsJSON)
 	if err != nil {
-		return nil, fmt.Errorf("invalid transaction arguments encoding: %v", argsJSON)
+		return nil, fmt.Errorf("invalid transactions arguments cadence encoding format: %v", argsJSON)
 	}
 
 	txResult, err := c.client.SendTransaction(signers, location, txArgs)
@@ -131,12 +131,12 @@ func (c *commands) executeScript(args ...json.RawMessage) (interface{}, error) {
 	var argsJSON string
 	err = json.Unmarshal(args[1], &argsJSON)
 	if err != nil {
-		return nil, fmt.Errorf("invalid script arguments: %v", args[1])
+		return nil, fmt.Errorf("invalid script arguments: %s", args[1])
 	}
 
 	scriptArgs, err := flowkit.ParseArgumentsJSON(argsJSON)
 	if err != nil {
-		return nil, fmt.Errorf("invalid script arguments encoding: %w", err)
+		return nil, fmt.Errorf("invalid script arguments cadence encoding format: %s, error: %s", argsJSON, err)
 	}
 
 	scriptResult, err := c.client.ExecuteScript(location, scriptArgs)
@@ -224,7 +224,6 @@ func parseLocation(arg []byte) (*url.URL, error) {
 	var uri string
 	err := json.Unmarshal(arg, &uri)
 	if err != nil {
-		fmt.Println("###", err)
 		return nil, fmt.Errorf("invalid URI argument: %s", arg)
 	}
 
