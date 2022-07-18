@@ -23,7 +23,7 @@ import (
 	"time"
 	"unsafe"
 
-	opentracing "github.com/opentracing/opentracing-go"
+	"go.opentelemetry.io/otel/attribute"
 	"golang.org/x/crypto/sha3"
 
 	"github.com/onflow/cadence"
@@ -1434,9 +1434,9 @@ func (r *interpreterRuntime) newInterpreter(
 				interpreter *interpreter.Interpreter,
 				functionName string,
 				duration time.Duration,
-				logs []opentracing.LogRecord,
+				attrs []attribute.KeyValue,
 			) {
-				context.Interface.RecordTrace(functionName, interpreter.Location, duration, logs)
+				context.Interface.RecordTrace(functionName, interpreter.Location, duration, attrs)
 			},
 		),
 		interpreter.WithTracingEnabled(r.tracingEnabled),
