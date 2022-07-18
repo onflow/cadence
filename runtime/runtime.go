@@ -270,8 +270,7 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val 
 
 	// TODO: allow caller to pass this in so it can be reused
 	environment := NewScriptEnvironment()
-	environment.Interface = context.Interface
-	environment.Storage = storage
+	environment.Configure(context.Interface, storage)
 
 	program, err := environment.ParseAndCheckProgram(
 		script.Source,
@@ -415,8 +414,7 @@ func (r *interpreterRuntime) InvokeContractFunction(
 
 	// TODO: allow caller to pass this in so it can be reused
 	environment := NewBaseEnvironment()
-	environment.Interface = context.Interface
-	environment.Storage = storage
+	environment.Configure(context.Interface, storage)
 
 	// create interpreter
 	_, inter, err := environment.interpret(
@@ -539,8 +537,7 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 
 	// TODO: allow caller to pass this in so it can be reused
 	environment := NewBaseEnvironment()
-	environment.Interface = context.Interface
-	environment.Storage = storage
+	environment.Configure(context.Interface, storage)
 
 	program, err := environment.ParseAndCheckProgram(
 		script.Source,
@@ -873,7 +870,7 @@ func (r *interpreterRuntime) ParseAndCheckProgram(
 
 	// TODO: allow caller to pass this in so it can be reused
 	environment := NewBaseEnvironment()
-	environment.Interface = context.Interface
+	environment.Configure(context.Interface, nil)
 
 	program, err = environment.ParseAndCheckProgram(
 		code,
@@ -890,9 +887,14 @@ func (r *interpreterRuntime) ParseAndCheckProgram(
 func (r *interpreterRuntime) executeNonProgram(
 	interpret interpretFunc,
 	context Context,
-	environment *Environment,
 ) (cadence.Value, error) {
 	context.InitializeCodesAndPrograms()
+
+	storage := NewStorage(context.Interface, context.Interface)
+
+	// TODO: allow caller to pass this in so it can be reused
+	environment := NewBaseEnvironment()
+	environment.Configure(context.Interface, storage)
 
 	value, inter, err := environment.interpret(
 		context.Location,
@@ -930,10 +932,6 @@ func (r *interpreterRuntime) ReadStored(
 		context,
 	)
 
-	// TODO: allow caller to pass this in so it can be reused
-	environment := NewBaseEnvironment()
-	environment.Interface = context.Interface
-
 	return r.executeNonProgram(
 		func(inter *interpreter.Interpreter) (interpreter.Value, error) {
 			pathValue := importPathValue(inter, path)
@@ -946,7 +944,6 @@ func (r *interpreterRuntime) ReadStored(
 			return value, nil
 		},
 		context,
-		environment,
 	)
 }
 
@@ -964,10 +961,6 @@ func (r *interpreterRuntime) ReadLinked(
 		},
 		context,
 	)
-
-	// TODO: allow caller to pass this in so it can be reused
-	environment := NewBaseEnvironment()
-	environment.Interface = context.Interface
 
 	return r.executeNonProgram(
 		func(inter *interpreter.Interpreter) (interpreter.Value, error) {
@@ -995,6 +988,5 @@ func (r *interpreterRuntime) ReadLinked(
 			return value, nil
 		},
 		context,
-		environment,
 	)
 }

@@ -82,6 +82,11 @@ func NewScriptEnvironment(declarations ...stdlib.StandardLibraryValue) *Environm
 	return env
 }
 
+func (e *Environment) Configure(runtimeInterface Interface, storage *Storage) {
+	e.Interface = runtimeInterface
+	e.Storage = storage
+}
+
 func (e *Environment) Declare(valueDeclaration stdlib.StandardLibraryValue) {
 	e.baseValueActivation.DeclareValue(valueDeclaration)
 	e.baseActivation.Declare(valueDeclaration)
