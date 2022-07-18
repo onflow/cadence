@@ -851,9 +851,9 @@ func (checker *Checker) initializerPurity(initializers []*ast.SpecialFunctionDec
 	if initializerCount > 0 {
 		firstInitializer := initializers[0]
 		purity := PurityFromAnnotation(firstInitializer.FunctionDeclaration.Purity)
-		// all initializers are public, so they default to impure without an annotation
+		// all initializers are public, but because they typically have no side-effects they default to pure
 		if purity == UnknownPurity {
-			return ImpureFunction
+			return PureFunction
 		}
 		return purity
 	}
