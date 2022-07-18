@@ -232,7 +232,13 @@ func WithErrorShortCircuitingEnabled(enabled bool) Option {
 	}
 }
 
-func NewChecker(program *ast.Program, location common.Location, memoryGauge common.MemoryGauge, extendedElaboration bool, options ...Option) (*Checker, error) {
+func NewChecker(
+	program *ast.Program,
+	location common.Location,
+	memoryGauge common.MemoryGauge,
+	extendedElaboration bool,
+	options ...Option,
+) (*Checker, error) {
 
 	if location == nil {
 		return nil, &MissingLocationError{}

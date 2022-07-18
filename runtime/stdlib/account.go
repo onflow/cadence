@@ -909,7 +909,6 @@ type AccountContractAdditionHandler interface {
 	EventEmitter
 	AccountContractProvider
 	ParseAndCheckProgram(
-		gauge common.MemoryGauge,
 		code []byte,
 		location common.Location,
 		program bool,
@@ -918,7 +917,6 @@ type AccountContractAdditionHandler interface {
 	UpdateAccountContractCode(address common.Address, name string, code []byte) error
 	RecordContractUpdate(address common.Address, name string, value *interpreter.CompositeValue)
 	InterpretContract(
-		gauge common.MemoryGauge,
 		location common.AddressLocation,
 		program *interpreter.Program,
 		name string,
@@ -1035,7 +1033,6 @@ func newAuthAccountContractsChangeFunction(
 			const storeProgram = false
 
 			program, err := handler.ParseAndCheckProgram(
-				gauge,
 				code,
 				location,
 				storeProgram,
@@ -1136,7 +1133,6 @@ func newAuthAccountContractsChangeFunction(
 			inter := invocation.Interpreter
 
 			err = updateAccountContractCode(
-				gauge,
 				handler,
 				location,
 				program,
@@ -1265,7 +1261,6 @@ type updateAccountContractCodeOptions struct {
 // This function is only used for the new account code/contract API.
 //
 func updateAccountContractCode(
-	gauge common.MemoryGauge,
 	handler AccountContractAdditionHandler,
 	location common.AddressLocation,
 	program *interpreter.Program,
@@ -1299,7 +1294,6 @@ func updateAccountContractCode(
 
 	if createContract {
 		contractValue, err = instantiateContract(
-			gauge,
 			handler,
 			location,
 			program,
@@ -1345,7 +1339,6 @@ type DeployedContractConstructorInvocation struct {
 }
 
 func instantiateContract(
-	gauge common.MemoryGauge,
 	handler AccountContractAdditionHandler,
 	location common.AddressLocation,
 	program *interpreter.Program,
@@ -1405,7 +1398,6 @@ func instantiateContract(
 	// If the contract is not the deployed contract, load it from storage.
 
 	return handler.InterpretContract(
-		gauge,
 		location,
 		program,
 		contractType.Identifier,

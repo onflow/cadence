@@ -46,6 +46,7 @@ var _ stdlib.PublicAccountHandler = &Environment{}
 var _ stdlib.AccountCreator = &Environment{}
 var _ stdlib.EventEmitter = &Environment{}
 var _ stdlib.AuthAccountHandler = &Environment{}
+var _ common.MemoryGauge = &Environment{}
 
 func newEnvironment() *Environment {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
@@ -54,11 +55,6 @@ func newEnvironment() *Environment {
 		baseActivation:      baseActivation,
 		baseValueActivation: baseValueActivation,
 	}
-}
-
-func (e *Environment) Declare(valueDeclaration stdlib.StandardLibraryValue) {
-	e.baseValueActivation.DeclareValue(valueDeclaration)
-	e.baseActivation.Declare(valueDeclaration)
 }
 
 func NewBaseEnvironment(declarations ...stdlib.StandardLibraryValue) *Environment {
@@ -82,6 +78,15 @@ func NewScriptEnvironment(declarations ...stdlib.StandardLibraryValue) *Environm
 	env := NewBaseEnvironment(declarations...)
 	env.Declare(stdlib.NewGetAuthAccountFunction(env))
 	return env
+}
+
+func (e *Environment) Declare(valueDeclaration stdlib.StandardLibraryValue) {
+	e.baseValueActivation.DeclareValue(valueDeclaration)
+	e.baseActivation.Declare(valueDeclaration)
+}
+
+func (e *Environment) MeterMemory(usage common.MemoryUsage) error {
+	return e.Interface.MeterMemory(usage)
 }
 
 func (e *Environment) ProgramLog(message string) error {
@@ -199,7 +204,6 @@ func (e *Environment) RecordContractUpdate(
 }
 
 func (e *Environment) ParseAndCheckProgram(
-	gauge common.MemoryGauge,
 	code []byte,
 	location common.Location,
 	storeProgram bool,
@@ -208,7 +212,6 @@ func (e *Environment) ParseAndCheckProgram(
 	error,
 ) {
 	return e.parseAndCheckProgram(
-		gauge,
 		code,
 		location,
 		storeProgram,
@@ -217,7 +220,6 @@ func (e *Environment) ParseAndCheckProgram(
 }
 
 func (e *Environment) parseAndCheckProgram(
-	gauge common.MemoryGauge,
 	code []byte,
 	location common.Location,
 	storeProgram bool,
@@ -243,7 +245,7 @@ func (e *Environment) parseAndCheckProgram(
 	var parse *ast.Program
 	reportMetric(
 		func() {
-			parse, err = parser.ParseProgram(string(code), gauge)
+			parse, err = parser.ParseProgram(string(code), e)
 		},
 		e.Interface,
 		func(metrics Metrics, duration time.Duration) {
@@ -261,7 +263,7 @@ func (e *Environment) parseAndCheckProgram(
 
 	// Check
 
-	elaboration, err := e.check(gauge, location, parse, checkedImports)
+	elaboration, err := e.check(location, parse, checkedImports)
 	if err != nil {
 		return nil, wrapError(err)
 	}
@@ -286,7 +288,6 @@ func (e *Environment) parseAndCheckProgram(
 }
 
 func (e *Environment) check(
-	gauge common.MemoryGauge,
 	location common.Location,
 	program *ast.Program,
 	checkedImports importResolutionResults,
@@ -297,7 +298,7 @@ func (e *Environment) check(
 	checker, err := sema.NewChecker(
 		program,
 		location,
-		gauge,
+		e,
 		false,
 		sema.WithBaseValueActivation(e.baseValueActivation),
 		sema.WithValidTopLevelDeclarationsHandler(validTopLevelDeclarations),
@@ -334,7 +335,7 @@ func (e *Environment) check(
 						defer delete(checkedImports, importedLocation)
 					}
 
-					program, err := e.getProgram(gauge, importedLocation, checkedImports)
+					program, err := e.getProgram(importedLocation, checkedImports)
 					if err != nil {
 						return nil, err
 					}
@@ -371,15 +372,14 @@ func (e *Environment) check(
 	return elaboration, nil
 }
 
-func (e *Environment) GetProgram(gauge common.MemoryGauge, location Location) (*interpreter.Program, error) {
-	return e.getProgram(gauge, location, importResolutionResults{})
+func (e *Environment) GetProgram(location Location) (*interpreter.Program, error) {
+	return e.getProgram(location, importResolutionResults{})
 }
 
 // getProgram returns the existing program at the given location, if available.
 // If it is not available, it loads the code, and then parses and checks it.
 //
 func (e *Environment) getProgram(
-	gauge common.MemoryGauge,
 	location Location,
 	checkedImports importResolutionResults,
 ) (
@@ -401,7 +401,6 @@ func (e *Environment) getProgram(
 		}
 
 		program, err = e.parseAndCheckProgram(
-			gauge,
 			code,
 			location,
 			true,
@@ -435,14 +434,13 @@ func (e *Environment) getCode(location common.Location) (code []byte, err error)
 }
 
 func (e *Environment) newInterpreter(
-	gauge common.MemoryGauge,
 	location common.Location,
 	program *interpreter.Program,
 ) (*interpreter.Interpreter, error) {
 
 	defaultOptions := []interpreter.Option{
 		interpreter.WithStorage(e.Storage),
-		interpreter.WithMemoryGauge(gauge),
+		interpreter.WithMemoryGauge(e),
 		interpreter.WithBaseActivation(e.baseActivation),
 		interpreter.WithOnEventEmittedHandler(e.onEventEmittedHandler()),
 		interpreter.WithInjectedCompositeFieldsHandler(e.injectedCompositeFieldsHandler()),
@@ -451,7 +449,7 @@ func (e *Environment) newInterpreter(
 		interpreter.WithImportLocationHandler(e.importLocationHandler()),
 		interpreter.WithPublicAccountHandler(
 			func(address interpreter.AddressValue) interpreter.Value {
-				return stdlib.NewPublicAccountValue(gauge, e, address)
+				return stdlib.NewPublicAccountValue(e, e, address)
 			},
 		),
 		interpreter.WithPublicKeyValidationHandler(e.publicKeyValidationHandler()),
@@ -758,7 +756,7 @@ func (e *Environment) importLocationHandler() interpreter.ImportLocationHandlerF
 			}
 
 		default:
-			program, err := e.GetProgram(inter, location)
+			program, err := e.GetProgram(location)
 			if err != nil {
 				panic(err)
 			}
@@ -862,7 +860,6 @@ func (e *Environment) loadContract(
 //}
 
 func (e *Environment) InterpretContract(
-	gauge common.MemoryGauge,
 	location common.AddressLocation,
 	program *interpreter.Program,
 	name string,
@@ -876,7 +873,7 @@ func (e *Environment) InterpretContract(
 		e.deployedContractConstructorInvocation = nil
 	}()
 
-	_, inter, err := e.interpret(gauge, location, program, nil)
+	_, inter, err := e.interpret(location, program, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -895,7 +892,6 @@ func (e *Environment) InterpretContract(
 }
 
 func (e *Environment) interpret(
-	gauge common.MemoryGauge,
 	location common.Location,
 	program *interpreter.Program,
 	f interpretFunc,
@@ -904,7 +900,7 @@ func (e *Environment) interpret(
 	*interpreter.Interpreter,
 	error,
 ) {
-	inter, err := e.newInterpreter(gauge, location, program)
+	inter, err := e.newInterpreter(location, program)
 	if err != nil {
 		return nil, nil, err
 	}

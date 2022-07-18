@@ -266,9 +266,7 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val 
 
 	context.InitializeCodesAndPrograms()
 
-	memoryGauge, _ := context.Interface.(common.MemoryGauge)
-
-	storage := NewStorage(context.Interface, memoryGauge)
+	storage := NewStorage(context.Interface, context.Interface)
 
 	// TODO: allow caller to pass this in so it can be reused
 	environment := NewScriptEnvironment()
@@ -276,7 +274,6 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val 
 	environment.Storage = storage
 
 	program, err := environment.ParseAndCheckProgram(
-		memoryGauge,
 		script.Source,
 		context.Location,
 		true,
@@ -318,7 +315,6 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val 
 	)
 
 	value, inter, err := environment.interpret(
-		memoryGauge,
 		context.Location,
 		program,
 		interpret,
@@ -415,9 +411,7 @@ func (r *interpreterRuntime) InvokeContractFunction(
 
 	context.InitializeCodesAndPrograms()
 
-	memoryGauge, _ := context.Interface.(common.MemoryGauge)
-
-	storage := NewStorage(context.Interface, memoryGauge)
+	storage := NewStorage(context.Interface, context.Interface)
 
 	// TODO: allow caller to pass this in so it can be reused
 	environment := NewBaseEnvironment()
@@ -426,7 +420,6 @@ func (r *interpreterRuntime) InvokeContractFunction(
 
 	// create interpreter
 	_, inter, err := environment.interpret(
-		memoryGauge,
 		context.Location,
 		nil,
 		nil,
@@ -542,9 +535,7 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 
 	context.InitializeCodesAndPrograms()
 
-	memoryGauge, _ := context.Interface.(common.MemoryGauge)
-
-	storage := NewStorage(context.Interface, memoryGauge)
+	storage := NewStorage(context.Interface, context.Interface)
 
 	// TODO: allow caller to pass this in so it can be reused
 	environment := NewBaseEnvironment()
@@ -552,7 +543,6 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 	environment.Storage = storage
 
 	program, err := environment.ParseAndCheckProgram(
-		memoryGauge,
 		script.Source,
 		context.Location,
 		true,
@@ -626,7 +616,6 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 	}
 
 	_, inter, err := environment.interpret(
-		memoryGauge,
 		context.Location,
 		program,
 		r.transactionExecutionFunction(
@@ -882,14 +871,11 @@ func (r *interpreterRuntime) ParseAndCheckProgram(
 
 	context.InitializeCodesAndPrograms()
 
-	memoryGauge, _ := context.Interface.(common.MemoryGauge)
-
 	// TODO: allow caller to pass this in so it can be reused
 	environment := NewBaseEnvironment()
 	environment.Interface = context.Interface
 
 	program, err = environment.ParseAndCheckProgram(
-		memoryGauge,
 		code,
 		context.Location,
 		true,
@@ -908,10 +894,7 @@ func (r *interpreterRuntime) executeNonProgram(
 ) (cadence.Value, error) {
 	context.InitializeCodesAndPrograms()
 
-	memoryGauge, _ := context.Interface.(common.MemoryGauge)
-
 	value, inter, err := environment.interpret(
-		memoryGauge,
 		context.Location,
 		nil,
 		interpret,
