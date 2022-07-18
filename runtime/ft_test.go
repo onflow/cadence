@@ -644,6 +644,8 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 	signerAccount = senderAddress
 
+	environment := NewBaseEnvironment()
+
 	b.ReportAllocs()
 	b.ResetTimer()
 
@@ -658,8 +660,9 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 				}),
 			},
 			Context{
-				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
+				Interface:   runtimeInterface,
+				Location:    nextTransactionLocation(),
+				Environment: environment,
 			},
 		)
 		require.NoError(b, err)
