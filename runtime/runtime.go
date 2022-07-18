@@ -272,8 +272,10 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val 
 
 	storage := NewStorage(context.Interface, context.Interface)
 
-	// TODO: allow caller to pass this in so it can be reused
-	environment := NewScriptEnvironment()
+	environment := context.Environment
+	if environment == nil {
+		environment = NewScriptEnvironment()
+	}
 	environment.Configure(
 		context.Interface,
 		codesAndPrograms,
@@ -422,8 +424,10 @@ func (r *interpreterRuntime) InvokeContractFunction(
 
 	storage := NewStorage(context.Interface, context.Interface)
 
-	// TODO: allow caller to pass this in so it can be reused
-	environment := NewBaseEnvironment()
+	environment := context.Environment
+	if environment == nil {
+		environment = NewBaseEnvironment()
+	}
 	environment.Configure(
 		context.Interface,
 		codesAndPrograms,
@@ -552,8 +556,10 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 
 	storage := NewStorage(context.Interface, context.Interface)
 
-	// TODO: allow caller to pass this in so it can be reused
-	environment := NewBaseEnvironment()
+	environment := context.Environment
+	if environment == nil {
+		environment = NewBaseEnvironment()
+	}
 	environment.Configure(
 		context.Interface,
 		codesAndPrograms,
@@ -892,8 +898,10 @@ func (r *interpreterRuntime) ParseAndCheckProgram(
 		codesAndPrograms,
 	)
 
-	// TODO: allow caller to pass this in so it can be reused
-	environment := NewBaseEnvironment()
+	environment := context.Environment
+	if environment == nil {
+		environment = NewBaseEnvironment()
+	}
 	environment.Configure(
 		context.Interface,
 		codesAndPrograms,
@@ -923,8 +931,10 @@ func (r *interpreterRuntime) executeNonProgram(
 
 	storage := NewStorage(context.Interface, context.Interface)
 
-	// TODO: allow caller to pass this in so it can be reused
-	environment := NewBaseEnvironment()
+	environment := context.Environment
+	if environment == nil {
+		environment = NewBaseEnvironment()
+	}
 	environment.Configure(
 		context.Interface,
 		codesAndPrograms,

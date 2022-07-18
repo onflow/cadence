@@ -88,29 +88,34 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	// Run transaction
 
-	// TODO: create custom environments
-	_ = valueDeclaration
+	transactionEnvironment := NewBaseEnvironment(valueDeclaration)
 
 	err := runtime.ExecuteTransaction(
 		Script{
 			Source: deploy,
 		},
 		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
+			Interface:   runtimeInterface,
+			Location:    common.TransactionLocation{},
+			Environment: transactionEnvironment,
 		},
 	)
 	require.NoError(t, err)
+
+	// Run script
+
+	scriptEnvironment := NewScriptEnvironment(valueDeclaration)
 
 	result, err := runtime.ExecuteScript(
 		Script{
 			Source: script,
 		},
 		Context{
-			Interface: runtimeInterface,
-			Location:  common.ScriptLocation{},
+			Interface:   runtimeInterface,
+			Location:    common.ScriptLocation{},
+			Environment: scriptEnvironment,
 		},
 	)
 	require.NoError(t, err)

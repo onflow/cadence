@@ -23,8 +23,9 @@ import (
 )
 
 type Context struct {
-	Interface Interface
-	Location  Location
+	Interface   Interface
+	Location    Location
+	Environment *Environment
 }
 
 type codesAndPrograms struct {
