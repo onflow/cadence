@@ -131,4 +131,52 @@ func TestCheckPuritySubtyping(t *testing.T) {
 		assert.IsType(t, &sema.ConformanceError{}, errs[0])
 	})
 
+	t.Run("interface implementation initializer success", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		struct interface I {
+			pure init()
+		}
+
+		struct S: I {
+			pure init() {}
+		}
+		`)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("interface implementation initializer explicit failure", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		struct interface I {
+			pure init()
+		}
+
+		struct S: I {
+			impure init() {}
+		}
+		`)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+	t.Run("interface implementation initializer implicit failure", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		struct interface I {
+			pure init()
+		}
+
+		struct S: I {
+			init() {}
+		}
+		`)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
 }

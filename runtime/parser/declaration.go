@@ -66,6 +66,9 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 	access := ast.AccessNotSpecified
 	var accessPos *ast.Position
 
+	purity := ast.UnspecifiedPurity
+	var purityPos *ast.Position
+
 	for {
 		p.skipSpaceAndComments(true)
 
@@ -80,8 +83,8 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 			case keywordLet, keywordVar:
 				return parseVariableDeclaration(p, access, accessPos, docString)
 
-			case keywordFun, keywordPure, keywordImpure:
-				return parseFunctionDeclaration(p, false, access, accessPos, docString)
+			case keywordFun:
+				return parseFunctionDeclaration(p, false, access, accessPos, purity, purityPos, docString)
 
 			case keywordImport:
 				return parseImportDeclaration(p)
@@ -97,6 +100,15 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 					return nil, p.syntaxError("invalid access modifier for transaction")
 				}
 				return parseTransactionDeclaration(p, docString)
+
+			case keywordPure, keywordImpure:
+				if purity != ast.UnspecifiedPurity {
+					return nil, p.syntaxError("invalid second purity modifier")
+				}
+				pos := p.current.StartPos
+				purityPos = &pos
+				purity = parsePurityAnnotation(p)
+				continue
 
 			case keywordPriv, keywordPub, keywordAccess:
 				if access != ast.AccessNotSpecified {
@@ -1043,6 +1055,9 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 	access := ast.AccessNotSpecified
 	var accessPos *ast.Position
 
+	purity := ast.UnspecifiedPurity
+	var purityPos *ast.Position
+
 	var previousIdentifierToken *lexer.Token
 
 	for {
@@ -1057,14 +1072,23 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 			case keywordCase:
 				return parseEnumCase(p, access, accessPos, docString)
 
-			case keywordFun, keywordPure, keywordImpure:
-				return parseFunctionDeclaration(p, functionBlockIsOptional, access, accessPos, docString)
+			case keywordFun:
+				return parseFunctionDeclaration(p, functionBlockIsOptional, access, accessPos, purity, purityPos, docString)
 
 			case keywordEvent:
 				return parseEventDeclaration(p, access, accessPos, docString)
 
 			case keywordStruct, keywordResource, keywordContract, keywordEnum:
 				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, docString)
+
+			case keywordPure, keywordImpure:
+				if purity != ast.UnspecifiedPurity {
+					return nil, p.syntaxError("invalid second purity modifier")
+				}
+				pos := p.current.StartPos
+				purityPos = &pos
+				purity = parsePurityAnnotation(p)
+				continue
 
 			case keywordPriv, keywordPub, keywordAccess:
 				if access != ast.AccessNotSpecified {
@@ -1106,7 +1130,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 			}
 
 			identifier := p.tokenToIdentifier(*previousIdentifierToken)
-			return parseSpecialFunctionDeclaration(p, functionBlockIsOptional, access, accessPos, identifier)
+			return parseSpecialFunctionDeclaration(p, functionBlockIsOptional, access, accessPos, purity, purityPos, identifier)
 		}
 
 		return nil, nil
@@ -1158,15 +1182,19 @@ func parseSpecialFunctionDeclaration(
 	functionBlockIsOptional bool,
 	access ast.Access,
 	accessPos *ast.Position,
+	purity ast.FunctionPurity,
+	purityPos *ast.Position,
 	identifier ast.Identifier,
 ) (*ast.SpecialFunctionDeclaration, error) {
 
 	startPos := identifier.Pos
+	// access modifier will precede purity if both exist
+	if purityPos != nil {
+		startPos = *purityPos
+	}
 	if accessPos != nil {
 		startPos = *accessPos
 	}
-
-	purity := parsePurityAnnotation(p)
 
 	// TODO: switch to parseFunctionParameterListAndRest once old parser is deprecated:
 	//   allow a return type annotation while parsing, but reject later.
@@ -1195,6 +1223,9 @@ func parseSpecialFunctionDeclaration(
 		declarationKind = common.DeclarationKindInitializer
 
 	case keywordDestroy:
+		if purity == ast.PureFunction {
+			return nil, NewSyntaxError(*purityPos, "invalid pure annotation on destructor")
+		}
 		declarationKind = common.DeclarationKindDestructor
 
 	case keywordPrepare:

@@ -1049,6 +1049,18 @@ func TestParseFunctionDeclaration(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("double purity annot", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseDeclarations("pure impure fun foo (): X { }", nil)
+		require.Equal(t, 1, len(errs))
+		require.Equal(t, errs[0], &SyntaxError{
+			Message: "invalid second purity modifier",
+			Pos:     ast.Position{Offset: 5, Line: 1, Column: 5},
+		})
+	})
 }
 
 func TestParseAccess(t *testing.T) {
@@ -2152,6 +2164,61 @@ func TestParseCompositeDeclaration(t *testing.T) {
 		)
 	})
 
+	t.Run("struct with pure initializer", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseDeclarations(`struct S { 
+			pure init() {}
+		}`, nil)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.CompositeDeclaration{
+					Access:        ast.AccessNotSpecified,
+					CompositeKind: common.CompositeKindStructure,
+					Identifier: ast.Identifier{
+						Identifier: "S",
+						Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+					},
+					Members: ast.NewUnmeteredMembers(
+						[]ast.Declaration{&ast.SpecialFunctionDeclaration{
+							Kind: common.DeclarationKindInitializer,
+							FunctionDeclaration: &ast.FunctionDeclaration{
+								Purity: ast.PureFunction,
+								Identifier: ast.Identifier{
+									Identifier: "init",
+									Pos:        ast.Position{Offset: 20, Line: 2, Column: 8},
+								},
+								ParameterList: &ast.ParameterList{
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 24, Line: 2, Column: 12},
+										EndPos:   ast.Position{Offset: 25, Line: 2, Column: 13},
+									},
+								},
+								FunctionBlock: &ast.FunctionBlock{
+									Block: &ast.Block{
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 27, Line: 2, Column: 15},
+											EndPos:   ast.Position{Offset: 28, Line: 2, Column: 16},
+										},
+									},
+								},
+								StartPos: ast.Position{Offset: 15, Line: 2, Column: 3},
+							},
+						}},
+					),
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						EndPos:   ast.Position{Line: 3, Column: 2, Offset: 32},
+					},
+				},
+			},
+			result,
+		)
+	})
+
 	t.Run("struct with impure member", func(t *testing.T) {
 
 		t.Parallel()
@@ -2215,6 +2282,79 @@ func TestParseCompositeDeclaration(t *testing.T) {
 		)
 	})
 
+	t.Run("resource with impure destructor", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseDeclarations(`struct S { 
+			impure destroy() {}
+		}`, nil)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.CompositeDeclaration{
+					Access:        ast.AccessNotSpecified,
+					CompositeKind: common.CompositeKindStructure,
+					Identifier: ast.Identifier{
+						Identifier: "S",
+						Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+					},
+					Members: ast.NewUnmeteredMembers(
+						[]ast.Declaration{&ast.SpecialFunctionDeclaration{
+							Kind: common.DeclarationKindDestructor,
+							FunctionDeclaration: &ast.FunctionDeclaration{
+								Purity: ast.ImpureFunction,
+								Identifier: ast.Identifier{
+									Identifier: "destroy",
+									Pos:        ast.Position{Offset: 22, Line: 2, Column: 10},
+								},
+								ParameterList: &ast.ParameterList{
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 29, Line: 2, Column: 17},
+										EndPos:   ast.Position{Offset: 30, Line: 2, Column: 18},
+									},
+								},
+								FunctionBlock: &ast.FunctionBlock{
+									Block: &ast.Block{
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 32, Line: 2, Column: 20},
+											EndPos:   ast.Position{Offset: 33, Line: 2, Column: 21},
+										},
+									},
+								},
+								StartPos: ast.Position{Offset: 15, Line: 2, Column: 3},
+							},
+						}},
+					),
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						EndPos:   ast.Position{Line: 3, Column: 2, Offset: 37},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("resource with pure destructor", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseDeclarations(`struct S { 
+			pure destroy() {}
+		}`, nil)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid pure annotation on destructor",
+					Pos:     ast.Position{Offset: 15, Line: 2, Column: 3},
+				},
+			},
+			errs,
+		)
+	})
 }
 
 func TestParseInterfaceDeclaration(t *testing.T) {

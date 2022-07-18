@@ -209,15 +209,19 @@ func parseFunctionDeclaration(
 	functionBlockIsOptional bool,
 	access ast.Access,
 	accessPos *ast.Position,
+	purity ast.FunctionPurity,
+	purityPos *ast.Position,
 	docString string,
 ) (*ast.FunctionDeclaration, error) {
 
 	startPos := p.current.StartPos
+	// access modifier will precede purity if both exist
+	if purityPos != nil {
+		startPos = *purityPos
+	}
 	if accessPos != nil {
 		startPos = *accessPos
 	}
-
-	purity := parsePurityAnnotation(p)
 
 	// Skip the `fun` keyword
 	p.next()
