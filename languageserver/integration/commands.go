@@ -85,13 +85,13 @@ func (c *commands) sendTransaction(args ...json.RawMessage) (interface{}, error)
 	var argsJSON string
 	err = json.Unmarshal(args[1], &argsJSON)
 	if err != nil {
-		return nil, fmt.Errorf("invalid arguments: %#+v: %w", args[1], err)
+		return nil, fmt.Errorf("invalid transaction arguments: %v", args[1])
 	}
 
 	var signerList []any
 	err = json.Unmarshal(args[2], &argsJSON)
 	if err != nil {
-		return nil, fmt.Errorf("invalid signer list: %#+v: %w", args[2], err)
+		return nil, fmt.Errorf("invalid signer list: %v", args[2])
 	}
 
 	signers := make([]flow.Address, len(signerList))
@@ -101,7 +101,7 @@ func (c *commands) sendTransaction(args ...json.RawMessage) (interface{}, error)
 
 	txArgs, err := flowkit.ParseArgumentsJSON(argsJSON)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse JSON arguments")
+		return nil, fmt.Errorf("invalid transaction arguments encoding: %v", argsJSON)
 	}
 
 	txResult, err := c.client.SendTransaction(signers, location, txArgs)
@@ -131,12 +131,12 @@ func (c *commands) executeScript(args ...json.RawMessage) (interface{}, error) {
 	var argsJSON string
 	err = json.Unmarshal(args[1], &argsJSON)
 	if err != nil {
-		return nil, fmt.Errorf("invalid arguments: %#+v: %w", args[1], err)
+		return nil, fmt.Errorf("invalid script arguments: %v", args[1])
 	}
 
 	scriptArgs, err := flowkit.ParseArgumentsJSON(argsJSON)
 	if err != nil {
-		return nil, fmt.Errorf("arguments error: %w", err)
+		return nil, fmt.Errorf("invalid script arguments encoding: %w", err)
 	}
 
 	scriptResult, err := c.client.ExecuteScript(location, scriptArgs)
@@ -224,12 +224,13 @@ func parseLocation(arg []byte) (*url.URL, error) {
 	var uri string
 	err := json.Unmarshal(arg, &uri)
 	if err != nil {
-		return nil, fmt.Errorf("invalid URI argument: %#+v: %w", arg, err)
+		fmt.Println("###", err)
+		return nil, fmt.Errorf("invalid URI argument: %s", arg)
 	}
 
 	location, err := url.Parse(uri)
 	if err != nil {
-		return nil, fmt.Errorf("invalid path argument: %#+v", uri)
+		return nil, fmt.Errorf("invalid path argument: %s", uri)
 	}
 
 	return location, nil
