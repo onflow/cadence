@@ -54,7 +54,7 @@ type importResolutionResults map[common.Location]bool
 //     interpreter to produce the transaction result).
 //  3. Result() returns the result of the full unit of execution.
 //
-// (TODO(patrick): maybe add Cleanup/Postprocess in the future)
+// TODO: maybe add Cleanup/Postprocess in the future
 type Executor interface {
 	// Preprocess prepares the transaction/script for execution.
 	//
