@@ -1926,7 +1926,7 @@ func getSingleContractUpdateErrorCause(t *testing.T, err error, contractName str
 func getContractUpdateError(t *testing.T, err error, contractName string) *stdlib.ContractUpdateError {
 	require.Error(t, err)
 
-	var invalidContractDeploymentErr *InvalidContractDeploymentError
+	var invalidContractDeploymentErr *stdlib.InvalidContractDeploymentError
 	require.ErrorAs(t, err, &invalidContractDeploymentErr)
 
 	var contractUpdateErr *stdlib.ContractUpdateError

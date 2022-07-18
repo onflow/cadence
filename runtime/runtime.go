@@ -22,14 +22,11 @@ import (
 	goRuntime "runtime"
 	"time"
 
-	"github.com/opentracing/opentracing-go"
-
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 )
@@ -72,11 +69,6 @@ type Runtime interface {
 	//
 	// This function returns an error if the program contains any syntax or semantic errors.
 	ParseAndCheckProgram(source []byte, context Context) (*interpreter.Program, error)
-
-	// SetCoverageReport activates reporting coverage in the given report.
-	// Passing nil disables coverage reporting (default).
-	//
-	SetCoverageReport(coverageReport *CoverageReport)
 
 	// SetAtreeValidationEnabled configures if atree validation is enabled.
 	SetAtreeValidationEnabled(enabled bool)
@@ -150,7 +142,6 @@ func reportMetric(
 
 // interpreterRuntime is a interpreter-based version of the Flow runtime.
 type interpreterRuntime struct {
-	coverageReport                       *CoverageReport
 	debugger                             *interpreter.Debugger
 	atreeValidationEnabled               bool
 	tracingEnabled                       bool
@@ -245,10 +236,6 @@ func getWrappedError(recovered any, context Context) Error {
 	}
 }
 
-func (r *interpreterRuntime) SetCoverageReport(coverageReport *CoverageReport) {
-	r.coverageReport = coverageReport
-}
-
 func (r *interpreterRuntime) SetAtreeValidationEnabled(enabled bool) {
 	r.atreeValidationEnabled = enabled
 }
@@ -288,12 +275,11 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val 
 	environment.Interface = context.Interface
 	environment.Storage = storage
 
-	program, err := r.parseAndCheckProgram(
+	program, err := environment.ParseAndCheckProgram(
+		memoryGauge,
 		script.Source,
-		context,
-		environment,
+		context.Location,
 		true,
-		importResolutionResults{},
 	)
 	if err != nil {
 		return nil, newError(err, context)
@@ -331,11 +317,10 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val 
 		interpreter.ReturnEmptyLocationRange,
 	)
 
-	value, inter, err := r.interpret(
+	value, inter, err := environment.interpret(
+		memoryGauge,
+		context.Location,
 		program,
-		context,
-		storage,
-		environment,
 		interpret,
 	)
 	if err != nil {
@@ -343,8 +328,11 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val 
 	}
 
 	// Export before committing storage
-
-	result, err := exportValue(value, interpreter.ReturnEmptyLocationRange)
+	exportableValue := newExportableValue(value, inter)
+	result, err := exportValue(
+		exportableValue,
+		interpreter.ReturnEmptyLocationRange,
+	)
 	if err != nil {
 		return nil, newError(err, context)
 	}
@@ -411,59 +399,6 @@ func scriptExecutionFunction(
 	}
 }
 
-func (r *interpreterRuntime) interpret(
-	program *interpreter.Program,
-	context Context,
-	storage *Storage,
-	environment *Environment,
-	f interpretFunc,
-) (
-	exportableValue,
-	*interpreter.Interpreter,
-	error,
-) {
-
-	inter, err := r.newInterpreter(
-		program,
-		context,
-		storage,
-		environment,
-	)
-	if err != nil {
-		return exportableValue{}, nil, err
-	}
-
-	var result interpreter.Value
-
-	reportMetric(
-		func() {
-			err = inter.Interpret()
-			if err != nil || f == nil {
-				return
-			}
-			result, err = f(inter)
-		},
-		context.Interface,
-		func(metrics Metrics, duration time.Duration) {
-			metrics.ProgramInterpreted(context.Location, duration)
-		},
-	)
-
-	if err != nil {
-		return exportableValue{}, nil, err
-	}
-
-	var exportedValue exportableValue
-	if f != nil {
-		exportedValue = newExportableValue(result, inter)
-	}
-
-	if inter.ExitHandler != nil {
-		err = inter.ExitHandler()
-	}
-	return exportedValue, inter, err
-}
-
 func (r *interpreterRuntime) InvokeContractFunction(
 	contractLocation common.AddressLocation,
 	functionName string,
@@ -490,11 +425,10 @@ func (r *interpreterRuntime) InvokeContractFunction(
 	environment.Storage = storage
 
 	// create interpreter
-	_, inter, err := r.interpret(
+	_, inter, err := environment.interpret(
+		memoryGauge,
+		context.Location,
 		nil,
-		context,
-		storage,
-		environment,
 		nil,
 	)
 	if err != nil {
@@ -617,12 +551,11 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 	environment.Interface = context.Interface
 	environment.Storage = storage
 
-	program, err := r.parseAndCheckProgram(
+	program, err := environment.ParseAndCheckProgram(
+		memoryGauge,
 		script.Source,
-		context,
-		environment,
+		context.Location,
 		true,
-		importResolutionResults{},
 	)
 	if err != nil {
 		return newError(err, context)
@@ -692,11 +625,10 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 		return authorizerValues
 	}
 
-	_, inter, err := r.interpret(
+	_, inter, err := environment.interpret(
+		memoryGauge,
+		context.Location,
 		program,
-		context,
-		storage,
-		environment,
 		r.transactionExecutionFunction(
 			transactionType.Parameters,
 			script.Arguments,
@@ -950,631 +882,23 @@ func (r *interpreterRuntime) ParseAndCheckProgram(
 
 	context.InitializeCodesAndPrograms()
 
+	memoryGauge, _ := context.Interface.(common.MemoryGauge)
+
 	// TODO: allow caller to pass this in so it can be reused
 	environment := NewBaseEnvironment()
 	environment.Interface = context.Interface
 
-	program, err = r.parseAndCheckProgram(
+	program, err = environment.ParseAndCheckProgram(
+		memoryGauge,
 		code,
-		context,
-		environment,
+		context.Location,
 		true,
-		importResolutionResults{},
 	)
 	if err != nil {
 		return nil, newError(err, context)
 	}
 
 	return program, nil
-}
-
-func (r *interpreterRuntime) parseAndCheckProgram(
-	code []byte,
-	context Context,
-	environment *Environment,
-	storeProgram bool,
-	checkedImports importResolutionResults,
-) (
-	program *interpreter.Program,
-	err error,
-) {
-	wrapError := func(err error) error {
-		return &ParsingCheckingError{
-			Err:      err,
-			Location: context.Location,
-		}
-	}
-
-	if storeProgram {
-		context.SetCode(context.Location, code)
-	}
-
-	memoryGauge, _ := context.Interface.(common.MemoryGauge)
-
-	// Parse
-
-	var parse *ast.Program
-	reportMetric(
-		func() {
-			parse, err = parser.ParseProgram(string(code), memoryGauge)
-		},
-		context.Interface,
-		func(metrics Metrics, duration time.Duration) {
-			metrics.ProgramParsed(context.Location, duration)
-		},
-	)
-	if err != nil {
-		return nil, wrapError(err)
-	}
-
-	if storeProgram {
-		context.SetProgram(context.Location, parse)
-	}
-
-	// Check
-
-	elaboration, err := r.check(parse, context, environment, checkedImports)
-	if err != nil {
-		return nil, wrapError(err)
-	}
-
-	// Return
-
-	program = &interpreter.Program{
-		Program:     parse,
-		Elaboration: elaboration,
-	}
-
-	if storeProgram {
-		wrapPanic(func() {
-			err = context.Interface.SetProgram(context.Location, program)
-		})
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return program, nil
-}
-
-func (r *interpreterRuntime) check(
-	program *ast.Program,
-	startContext Context,
-	environment *Environment,
-	checkedImports importResolutionResults,
-) (
-	elaboration *sema.Elaboration,
-	err error,
-) {
-
-	memoryGauge, _ := startContext.Interface.(common.MemoryGauge)
-
-	checker, err := sema.NewChecker(
-		program,
-		startContext.Location,
-		memoryGauge,
-		false,
-		sema.WithBaseValueActivation(environment.baseValueActivation),
-		sema.WithValidTopLevelDeclarationsHandler(validTopLevelDeclarations),
-		sema.WithLocationHandler(
-			func(identifiers []Identifier, location Location) (res []ResolvedLocation, err error) {
-				wrapPanic(func() {
-					res, err = startContext.Interface.ResolveLocation(identifiers, location)
-				})
-				return
-			},
-		),
-		sema.WithImportHandler(
-			func(checker *sema.Checker, importedLocation common.Location, importRange ast.Range) (sema.Import, error) {
-
-				var elaboration *sema.Elaboration
-				switch importedLocation {
-				case stdlib.CryptoChecker.Location:
-					elaboration = stdlib.CryptoChecker.Elaboration
-
-				default:
-					context := startContext.WithLocation(importedLocation)
-
-					// Check for cyclic imports
-					if checkedImports[importedLocation] {
-						return nil, &sema.CyclicImportsError{
-							Location: importedLocation,
-							Range:    importRange,
-						}
-					} else {
-						checkedImports[importedLocation] = true
-						defer delete(checkedImports, importedLocation)
-					}
-
-					program, err := r.getProgram(context, environment, checkedImports)
-					if err != nil {
-						return nil, err
-					}
-
-					elaboration = program.Elaboration
-				}
-
-				return sema.ElaborationImport{
-					Elaboration: elaboration,
-				}, nil
-			},
-		),
-		sema.WithCheckHandler(func(checker *sema.Checker, check func()) {
-			reportMetric(
-				check,
-				startContext.Interface,
-				func(metrics Metrics, duration time.Duration) {
-					metrics.ProgramChecked(checker.Location, duration)
-				},
-			)
-		}),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	elaboration = checker.Elaboration
-
-	err = checker.Check()
-	if err != nil {
-		return nil, err
-	}
-
-	return elaboration, nil
-}
-
-func (r *interpreterRuntime) newInterpreter(
-	program *interpreter.Program,
-	context Context,
-	storage *Storage,
-	environment *Environment,
-) (*interpreter.Interpreter, error) {
-
-	memoryGauge, _ := context.Interface.(common.MemoryGauge)
-
-	defaultOptions := []interpreter.Option{
-		// NOTE: storage option must be provided *before* the predeclared values option,
-		// as predeclared values may rely on storage
-		interpreter.WithStorage(storage),
-		interpreter.WithBaseActivation(environment.baseActivation),
-		interpreter.WithOnEventEmittedHandler(
-			func(
-				inter *interpreter.Interpreter,
-				getLocationRange func() interpreter.LocationRange,
-				eventValue *interpreter.CompositeValue,
-				eventType *sema.CompositeType,
-			) error {
-				emitEventValue(
-					inter,
-					getLocationRange,
-					eventType,
-					eventValue,
-					context.Interface.EmitEvent,
-				)
-
-				return nil
-			},
-		),
-		interpreter.WithInjectedCompositeFieldsHandler(
-			r.injectedCompositeFieldsHandler(environment),
-		),
-		interpreter.WithUUIDHandler(func() (uuid uint64, err error) {
-			wrapPanic(func() {
-				uuid, err = context.Interface.GenerateUUID()
-			})
-			return
-		}),
-		interpreter.WithContractValueHandler(
-			func(
-				inter *interpreter.Interpreter,
-				compositeType *sema.CompositeType,
-				constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
-				invocationRange ast.Range,
-			) *interpreter.CompositeValue {
-
-				return r.loadContract(
-					inter,
-					compositeType,
-					constructorGenerator,
-					invocationRange,
-					storage,
-				)
-			},
-		),
-		interpreter.WithImportLocationHandler(
-			r.importLocationHandler(context, environment),
-		),
-		interpreter.WithOnStatementHandler(
-			r.onStatementHandler(),
-		),
-		interpreter.WithPublicAccountHandler(
-			func(address interpreter.AddressValue) interpreter.Value {
-				return stdlib.NewPublicAccountValue(
-					memoryGauge,
-					environment,
-					address,
-				)
-			},
-		),
-		interpreter.WithPublicKeyValidationHandler(func(
-			inter *interpreter.Interpreter,
-			getLocationRange func() interpreter.LocationRange,
-			publicKey *interpreter.CompositeValue,
-		) error {
-			return validatePublicKey(
-				inter,
-				getLocationRange,
-				publicKey,
-				context.Interface,
-			)
-		}),
-		interpreter.WithBLSCryptoFunctions(
-			func(
-				inter *interpreter.Interpreter,
-				getLocationRange func() interpreter.LocationRange,
-				publicKeyValue interpreter.MemberAccessibleValue,
-				signature *interpreter.ArrayValue,
-			) interpreter.BoolValue {
-				return blsVerifyPoP(
-					inter,
-					getLocationRange,
-					publicKeyValue,
-					signature,
-					context.Interface,
-				)
-			},
-			func(
-				inter *interpreter.Interpreter,
-				getLocationRange func() interpreter.LocationRange,
-				signatures *interpreter.ArrayValue,
-			) interpreter.OptionalValue {
-				return blsAggregateSignatures(
-					inter,
-					context.Interface,
-					signatures,
-				)
-			},
-			func(
-				inter *interpreter.Interpreter,
-				getLocationRange func() interpreter.LocationRange,
-				publicKeys *interpreter.ArrayValue,
-			) interpreter.OptionalValue {
-				return blsAggregatePublicKeys(
-					inter,
-					getLocationRange,
-					publicKeys,
-					func(
-						inter *interpreter.Interpreter,
-						getLocationRange func() interpreter.LocationRange,
-						publicKey *interpreter.CompositeValue,
-					) error {
-						return validatePublicKey(
-							inter,
-							getLocationRange,
-							publicKey,
-							context.Interface,
-						)
-					},
-					context.Interface,
-				)
-			},
-		),
-		interpreter.WithSignatureVerificationHandler(
-			func(
-				inter *interpreter.Interpreter,
-				getLocationRange func() interpreter.LocationRange,
-				signature *interpreter.ArrayValue,
-				signedData *interpreter.ArrayValue,
-				domainSeparationTag *interpreter.StringValue,
-				hashAlgorithm *interpreter.SimpleCompositeValue,
-				publicKey interpreter.MemberAccessibleValue,
-			) interpreter.BoolValue {
-				return verifySignature(
-					inter,
-					getLocationRange,
-					signature,
-					signedData,
-					domainSeparationTag,
-					hashAlgorithm,
-					publicKey,
-					context.Interface,
-				)
-			},
-		),
-		interpreter.WithHashHandler(
-			func(
-				inter *interpreter.Interpreter,
-				getLocationRange func() interpreter.LocationRange,
-				data *interpreter.ArrayValue,
-				tag *interpreter.StringValue,
-				hashAlgorithm interpreter.MemberAccessibleValue,
-			) *interpreter.ArrayValue {
-				return hash(
-					inter,
-					getLocationRange,
-					data,
-					tag,
-					hashAlgorithm,
-					context.Interface,
-				)
-			},
-		),
-		interpreter.WithOnRecordTraceHandler(
-			func(
-				interpreter *interpreter.Interpreter,
-				functionName string,
-				duration time.Duration,
-				logs []opentracing.LogRecord,
-			) {
-				context.Interface.RecordTrace(functionName, interpreter.Location, duration, logs)
-			},
-		),
-		interpreter.WithTracingEnabled(r.tracingEnabled),
-		interpreter.WithAtreeValueValidationEnabled(r.atreeValidationEnabled),
-		// NOTE: ignore r.atreeValidationEnabled here,
-		// and disable storage validation after each value modification.
-		// Instead, storage is validated after commits (if validation is enabled).
-		interpreter.WithAtreeStorageValidationEnabled(false),
-		interpreter.WithOnResourceOwnerChangeHandler(r.resourceOwnerChangedHandler(context.Interface)),
-		interpreter.WithInvalidatedResourceValidationEnabled(r.invalidatedResourceValidationEnabled),
-		interpreter.WithMemoryGauge(memoryGauge),
-		interpreter.WithDebugger(r.debugger),
-	}
-
-	defaultOptions = append(
-		defaultOptions,
-		r.meteringInterpreterOptions(context.Interface)...,
-	)
-
-	return interpreter.NewInterpreter(
-		program,
-		context.Location,
-		defaultOptions...,
-	)
-}
-
-func (r *interpreterRuntime) importLocationHandler(
-	startContext Context,
-	environment *Environment,
-) interpreter.ImportLocationHandlerFunc {
-
-	return func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
-		switch location {
-		case stdlib.CryptoChecker.Location:
-			program := interpreter.ProgramFromChecker(stdlib.CryptoChecker)
-			subInterpreter, err := inter.NewSubInterpreter(program, location)
-			if err != nil {
-				panic(err)
-			}
-			return interpreter.InterpreterImport{
-				Interpreter: subInterpreter,
-			}
-
-		default:
-			context := startContext.WithLocation(location)
-
-			program, err := r.getProgram(context, environment, importResolutionResults{})
-			if err != nil {
-				panic(err)
-			}
-
-			subInterpreter, err := inter.NewSubInterpreter(program, location)
-			if err != nil {
-				panic(err)
-			}
-			return interpreter.InterpreterImport{
-				Interpreter: subInterpreter,
-			}
-		}
-	}
-}
-
-// getProgram returns the existing program at the given location, if available.
-// If it is not available, it loads the code, and then parses and checks it.
-//
-func (r *interpreterRuntime) getProgram(
-	context Context,
-	environment *Environment,
-	checkedImports importResolutionResults,
-) (
-	program *interpreter.Program,
-	err error,
-) {
-
-	wrapPanic(func() {
-		program, err = context.Interface.GetProgram(context.Location)
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	if program == nil {
-
-		var code []byte
-		code, err = r.getCode(context)
-		if err != nil {
-			return nil, err
-		}
-
-		program, err = r.parseAndCheckProgram(
-			code,
-			context,
-			environment,
-			true,
-			checkedImports,
-		)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	context.SetProgram(context.Location, program.Program)
-
-	return program, nil
-}
-
-func (r *interpreterRuntime) injectedCompositeFieldsHandler(
-	environment *Environment,
-) interpreter.InjectedCompositeFieldsHandlerFunc {
-	return func(
-		inter *interpreter.Interpreter,
-		location Location,
-		_ string,
-		compositeKind common.CompositeKind,
-	) map[string]interpreter.Value {
-
-		switch location {
-		case stdlib.CryptoChecker.Location:
-			return nil
-
-		default:
-			switch compositeKind {
-			case common.CompositeKindContract:
-				var address Address
-
-				switch location := location.(type) {
-				case common.AddressLocation:
-					address = location.Address
-				default:
-					panic(errors.NewUnreachableError())
-				}
-
-				addressValue := interpreter.NewAddressValue(
-					inter,
-					address,
-				)
-
-				return map[string]interpreter.Value{
-					"account": stdlib.NewAuthAccountValue(
-						inter,
-						environment,
-						addressValue,
-					),
-				}
-			}
-		}
-
-		return nil
-	}
-}
-
-func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interface) []interpreter.Option {
-	callStackDepth := 0
-	// TODO: make runtime interface function
-	const callStackDepthLimit = 2000
-
-	checkCallStackDepth := func() {
-
-		if callStackDepth <= callStackDepthLimit {
-			return
-		}
-
-		panic(CallStackLimitExceededError{
-			Limit: callStackDepthLimit,
-		})
-	}
-
-	return []interpreter.Option{
-		interpreter.WithOnFunctionInvocationHandler(
-			func(_ *interpreter.Interpreter, _ int) {
-				callStackDepth++
-				checkCallStackDepth()
-			},
-		),
-		interpreter.WithOnInvokedFunctionReturnHandler(
-			func(_ *interpreter.Interpreter, _ int) {
-				callStackDepth--
-			},
-		),
-		interpreter.WithOnMeterComputationFuncHandler(
-			func(compKind common.ComputationKind, intensity uint) {
-				var err error
-				wrapPanic(func() {
-					err = runtimeInterface.MeterComputation(compKind, intensity)
-				})
-				if err != nil {
-					panic(err)
-				}
-			},
-		),
-	}
-}
-
-func (r *interpreterRuntime) getCode(context Context) (code []byte, err error) {
-	if addressLocation, ok := context.Location.(common.AddressLocation); ok {
-		wrapPanic(func() {
-			code, err = context.Interface.GetAccountContractCode(
-				addressLocation.Address,
-				addressLocation.Name,
-			)
-		})
-	} else {
-		wrapPanic(func() {
-			code, err = context.Interface.GetCode(context.Location)
-		})
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	return code, nil
-}
-
-func (r *interpreterRuntime) loadContract(
-	inter *interpreter.Interpreter,
-	compositeType *sema.CompositeType,
-	constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
-	invocationRange ast.Range,
-	storage *Storage,
-) *interpreter.CompositeValue {
-
-	switch compositeType.Location {
-	case stdlib.CryptoChecker.Location:
-		contract, err := stdlib.NewCryptoContract(
-			inter,
-			constructorGenerator(common.Address{}),
-			invocationRange,
-		)
-		if err != nil {
-			panic(err)
-		}
-		return contract
-
-	default:
-
-		var storedValue interpreter.Value
-
-		switch location := compositeType.Location.(type) {
-
-		case common.AddressLocation:
-			storageMap := storage.GetStorageMap(
-				location.Address,
-				StorageDomainContract,
-				false,
-			)
-			if storageMap != nil {
-				storedValue = storageMap.ReadValue(inter, location.Name)
-			}
-		}
-
-		if storedValue == nil {
-			panic(errors.NewDefaultUserError("failed to load contract: %s", compositeType.Location))
-		}
-
-		return storedValue.(*interpreter.CompositeValue)
-	}
-}
-
-func (r *interpreterRuntime) onStatementHandler() interpreter.OnStatementFunc {
-	if r.coverageReport == nil {
-		return nil
-	}
-
-	return func(inter *interpreter.Interpreter, statement ast.Statement) {
-		location := inter.Location
-		line := statement.StartPosition().Line
-		r.coverageReport.AddLineHit(location, line)
-	}
 }
 
 func (r *interpreterRuntime) executeNonProgram(
@@ -1584,28 +908,28 @@ func (r *interpreterRuntime) executeNonProgram(
 ) (cadence.Value, error) {
 	context.InitializeCodesAndPrograms()
 
-	var program *interpreter.Program
-
 	memoryGauge, _ := context.Interface.(common.MemoryGauge)
 
-	storage := NewStorage(context.Interface, memoryGauge)
-
-	value, _, err := r.interpret(
-		program,
-		context,
-		storage,
-		environment,
+	value, inter, err := environment.interpret(
+		memoryGauge,
+		context.Location,
+		nil,
 		interpret,
 	)
 	if err != nil {
 		return nil, newError(err, context)
 	}
 
-	if value.Value == nil {
+	if value == nil {
 		return nil, nil
 	}
 
-	return exportValue(value, interpreter.ReturnEmptyLocationRange)
+	exportedValue := newExportableValue(value, inter)
+
+	return exportValue(
+		exportedValue,
+		interpreter.ReturnEmptyLocationRange,
+	)
 }
 
 func (r *interpreterRuntime) ReadStored(
@@ -1690,248 +1014,4 @@ func (r *interpreterRuntime) ReadLinked(
 		context,
 		environment,
 	)
-}
-
-func (r *interpreterRuntime) resourceOwnerChangedHandler(
-	runtimeInterface Interface,
-) interpreter.OnResourceOwnerChangeFunc {
-	if !r.resourceOwnerChangeHandlerEnabled {
-		return nil
-	}
-	return func(
-		interpreter *interpreter.Interpreter,
-		resource *interpreter.CompositeValue,
-		oldOwner common.Address,
-		newOwner common.Address,
-	) {
-		wrapPanic(func() {
-			runtimeInterface.ResourceOwnerChanged(
-				interpreter,
-				resource,
-				oldOwner,
-				newOwner,
-			)
-		})
-	}
-}
-
-func validatePublicKey(
-	inter *interpreter.Interpreter,
-	getLocationRange func() interpreter.LocationRange,
-	publicKeyValue *interpreter.CompositeValue,
-	runtimeInterface Interface,
-) error {
-	publicKey, err := stdlib.NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
-	if err != nil {
-		return err
-	}
-
-	wrapPanic(func() {
-		err = runtimeInterface.ValidatePublicKey(publicKey)
-	})
-
-	return err
-}
-
-func blsVerifyPoP(
-	inter *interpreter.Interpreter,
-	getLocationRange func() interpreter.LocationRange,
-	publicKeyValue interpreter.MemberAccessibleValue,
-	signatureValue *interpreter.ArrayValue,
-	runtimeInterface Interface,
-) interpreter.BoolValue {
-
-	publicKey, err := stdlib.NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
-	if err != nil {
-		panic(err)
-	}
-
-	signature, err := interpreter.ByteArrayValueToByteSlice(inter, signatureValue)
-	if err != nil {
-		panic(err)
-	}
-
-	var valid bool
-	wrapPanic(func() {
-		valid, err = runtimeInterface.BLSVerifyPOP(publicKey, signature)
-	})
-	if err != nil {
-		panic(err)
-	}
-
-	return interpreter.BoolValue(valid)
-}
-
-func blsAggregateSignatures(
-	inter *interpreter.Interpreter,
-	runtimeInterface Interface,
-	signaturesValue *interpreter.ArrayValue,
-) interpreter.OptionalValue {
-
-	bytesArray := make([][]byte, 0, signaturesValue.Count())
-	signaturesValue.Iterate(inter, func(element interpreter.Value) (resume bool) {
-		signature, ok := element.(*interpreter.ArrayValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-
-		bytes, err := interpreter.ByteArrayValueToByteSlice(inter, signature)
-		if err != nil {
-			panic(err)
-		}
-
-		bytesArray = append(bytesArray, bytes)
-
-		// Continue iteration
-		return true
-	})
-
-	var err error
-	var aggregatedSignature []byte
-	wrapPanic(func() {
-		aggregatedSignature, err = runtimeInterface.BLSAggregateSignatures(bytesArray)
-	})
-
-	// If the crypto layer produces an error, we have invalid input, return nil
-	if err != nil {
-		return interpreter.NilValue{}
-	}
-
-	aggregatedSignatureValue := interpreter.ByteSliceToByteArrayValue(inter, aggregatedSignature)
-
-	return interpreter.NewSomeValueNonCopying(
-		inter,
-		aggregatedSignatureValue,
-	)
-}
-
-func blsAggregatePublicKeys(
-	inter *interpreter.Interpreter,
-	getLocationRange func() interpreter.LocationRange,
-	publicKeysValue *interpreter.ArrayValue,
-	validator interpreter.PublicKeyValidationHandlerFunc,
-	runtimeInterface Interface,
-) interpreter.OptionalValue {
-
-	publicKeys := make([]*stdlib.PublicKey, 0, publicKeysValue.Count())
-	publicKeysValue.Iterate(inter, func(element interpreter.Value) (resume bool) {
-		publicKeyValue, ok := element.(*interpreter.CompositeValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-
-		publicKey, err := stdlib.NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
-		if err != nil {
-			panic(err)
-		}
-
-		publicKeys = append(publicKeys, publicKey)
-
-		// Continue iteration
-		return true
-	})
-
-	var err error
-	var aggregatedPublicKey *stdlib.PublicKey
-	wrapPanic(func() {
-		aggregatedPublicKey, err = runtimeInterface.BLSAggregatePublicKeys(publicKeys)
-	})
-
-	// If the crypto layer produces an error, we have invalid input, return nil
-	if err != nil {
-		return interpreter.NilValue{}
-	}
-
-	aggregatedPublicKeyValue := stdlib.NewPublicKeyValue(
-		inter,
-		getLocationRange,
-		aggregatedPublicKey,
-		validator,
-	)
-
-	return interpreter.NewSomeValueNonCopying(
-		inter,
-		aggregatedPublicKeyValue,
-	)
-}
-
-func verifySignature(
-	inter *interpreter.Interpreter,
-	getLocationRange func() interpreter.LocationRange,
-	signatureValue *interpreter.ArrayValue,
-	signedDataValue *interpreter.ArrayValue,
-	domainSeparationTagValue *interpreter.StringValue,
-	hashAlgorithmValue *interpreter.SimpleCompositeValue,
-	publicKeyValue interpreter.MemberAccessibleValue,
-	runtimeInterface Interface,
-) interpreter.BoolValue {
-
-	signature, err := interpreter.ByteArrayValueToByteSlice(inter, signatureValue)
-	if err != nil {
-		panic(errors.NewUnexpectedError("failed to get signature. %w", err))
-	}
-
-	signedData, err := interpreter.ByteArrayValueToByteSlice(inter, signedDataValue)
-	if err != nil {
-		panic(errors.NewUnexpectedError("failed to get signed data. %w", err))
-	}
-
-	domainSeparationTag := domainSeparationTagValue.Str
-
-	hashAlgorithm := stdlib.NewHashAlgorithmFromValue(inter, getLocationRange, hashAlgorithmValue)
-
-	publicKey, err := stdlib.NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
-	if err != nil {
-		return false
-	}
-
-	var valid bool
-	wrapPanic(func() {
-		valid, err = runtimeInterface.VerifySignature(
-			signature,
-			domainSeparationTag,
-			signedData,
-			publicKey.PublicKey,
-			publicKey.SignAlgo,
-			hashAlgorithm,
-		)
-	})
-
-	if err != nil {
-		panic(err)
-	}
-
-	return interpreter.BoolValue(valid)
-}
-
-func hash(
-	inter *interpreter.Interpreter,
-	getLocationRange func() interpreter.LocationRange,
-	dataValue *interpreter.ArrayValue,
-	tagValue *interpreter.StringValue,
-	hashAlgorithmValue interpreter.Value,
-	runtimeInterface Interface,
-) *interpreter.ArrayValue {
-
-	data, err := interpreter.ByteArrayValueToByteSlice(inter, dataValue)
-	if err != nil {
-		panic(errors.NewUnexpectedError("failed to get data. %w", err))
-	}
-
-	var tag string
-	if tagValue != nil {
-		tag = tagValue.Str
-	}
-
-	hashAlgorithm := stdlib.NewHashAlgorithmFromValue(inter, getLocationRange, hashAlgorithmValue)
-
-	var result []byte
-	wrapPanic(func() {
-		result, err = runtimeInterface.Hash(data, tag, hashAlgorithm)
-	})
-	if err != nil {
-		panic(err)
-	}
-
-	return interpreter.ByteSliceToByteArrayValue(inter, result)
 }
