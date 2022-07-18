@@ -754,7 +754,7 @@ func (r *interpreterRuntime) NewTransactionExecutor(script Script, context Conte
 }
 
 func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) (err error) {
-	_, err := r.NewTransactionExecutor(script, context).Result()
+	_, err = r.NewTransactionExecutor(script, context).Result()
 	return err
 }
 
