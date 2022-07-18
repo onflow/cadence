@@ -21,6 +21,8 @@ package runtime
 import (
 	"time"
 
+	"github.com/opentracing/opentracing-go"
+
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
@@ -302,61 +304,10 @@ func (e *Environment) check(
 		false,
 		sema.WithBaseValueActivation(e.baseValueActivation),
 		sema.WithValidTopLevelDeclarationsHandler(validTopLevelDeclarations),
-		sema.WithLocationHandler(
-			func(identifiers []Identifier, location Location) (res []ResolvedLocation, err error) {
-				wrapPanic(func() {
-					res, err = e.Interface.ResolveLocation(identifiers, location)
-				})
-				return
-			},
-		),
-		sema.WithImportHandler(
-			func(
-				checker *sema.Checker,
-				importedLocation common.Location,
-				importRange ast.Range,
-			) (sema.Import, error) {
-
-				var elaboration *sema.Elaboration
-				switch importedLocation {
-				case stdlib.CryptoChecker.Location:
-					elaboration = stdlib.CryptoChecker.Elaboration
-
-				default:
-
-					// Check for cyclic imports
-					if checkedImports[importedLocation] {
-						return nil, &sema.CyclicImportsError{
-							Location: importedLocation,
-							Range:    importRange,
-						}
-					} else {
-						checkedImports[importedLocation] = true
-						defer delete(checkedImports, importedLocation)
-					}
-
-					program, err := e.getProgram(importedLocation, checkedImports)
-					if err != nil {
-						return nil, err
-					}
-
-					elaboration = program.Elaboration
-				}
-
-				return sema.ElaborationImport{
-					Elaboration: elaboration,
-				}, nil
-			},
-		),
-		sema.WithCheckHandler(func(checker *sema.Checker, check func()) {
-			reportMetric(
-				check,
-				e.Interface,
-				func(metrics Metrics, duration time.Duration) {
-					metrics.ProgramChecked(checker.Location, duration)
-				},
-			)
-		}),
+		sema.WithLocationHandler(e.newLocationHandler()),
+		// TODO: should only depend on environment, so configuration can be reused
+		sema.WithImportHandler(e.newImportHandler(checkedImports)),
+		sema.WithCheckHandler(e.newCheckHandler()),
 	)
 	if err != nil {
 		return nil, err
@@ -370,6 +321,66 @@ func (e *Environment) check(
 	}
 
 	return elaboration, nil
+}
+
+func (e *Environment) newLocationHandler() sema.LocationHandlerFunc {
+	return func(identifiers []Identifier, location Location) (res []ResolvedLocation, err error) {
+		wrapPanic(func() {
+			res, err = e.Interface.ResolveLocation(identifiers, location)
+		})
+		return
+	}
+}
+
+func (e *Environment) newCheckHandler() sema.CheckHandlerFunc {
+	return func(checker *sema.Checker, check func()) {
+		reportMetric(
+			check,
+			e.Interface,
+			func(metrics Metrics, duration time.Duration) {
+				metrics.ProgramChecked(checker.Location, duration)
+			},
+		)
+	}
+}
+
+func (e *Environment) newImportHandler(checkedImports importResolutionResults) sema.ImportHandlerFunc {
+	return func(
+		checker *sema.Checker,
+		importedLocation common.Location,
+		importRange ast.Range,
+	) (sema.Import, error) {
+
+		var elaboration *sema.Elaboration
+		switch importedLocation {
+		case stdlib.CryptoChecker.Location:
+			elaboration = stdlib.CryptoChecker.Elaboration
+
+		default:
+
+			// Check for cyclic imports
+			if checkedImports[importedLocation] {
+				return nil, &sema.CyclicImportsError{
+					Location: importedLocation,
+					Range:    importRange,
+				}
+			} else {
+				checkedImports[importedLocation] = true
+				defer delete(checkedImports, importedLocation)
+			}
+
+			program, err := e.getProgram(importedLocation, checkedImports)
+			if err != nil {
+				return nil, err
+			}
+
+			elaboration = program.Elaboration
+		}
+
+		return sema.ElaborationImport{
+			Elaboration: elaboration,
+		}, nil
+	}
 }
 
 func (e *Environment) GetProgram(location Location) (*interpreter.Program, error) {
@@ -438,21 +449,18 @@ func (e *Environment) newInterpreter(
 	program *interpreter.Program,
 ) (*interpreter.Interpreter, error) {
 
-	defaultOptions := []interpreter.Option{
+	options := []interpreter.Option{
+		// TODO: should only depend on environment, so configuration can be reused
 		interpreter.WithStorage(e.Storage),
 		interpreter.WithMemoryGauge(e),
 		interpreter.WithBaseActivation(e.baseActivation),
-		interpreter.WithOnEventEmittedHandler(e.onEventEmittedHandler()),
-		interpreter.WithInjectedCompositeFieldsHandler(e.injectedCompositeFieldsHandler()),
-		interpreter.WithUUIDHandler(e.uuidHandler()),
-		interpreter.WithContractValueHandler(e.contractValueHandler()),
-		interpreter.WithImportLocationHandler(e.importLocationHandler()),
-		interpreter.WithPublicAccountHandler(
-			func(address interpreter.AddressValue) interpreter.Value {
-				return stdlib.NewPublicAccountValue(e, e, address)
-			},
-		),
-		interpreter.WithPublicKeyValidationHandler(e.publicKeyValidationHandler()),
+		interpreter.WithOnEventEmittedHandler(e.newOnEventEmittedHandler()),
+		interpreter.WithInjectedCompositeFieldsHandler(e.newInjectedCompositeFieldsHandler()),
+		interpreter.WithUUIDHandler(e.newUUIDHandler()),
+		interpreter.WithContractValueHandler(e.newContractValueHandler()),
+		interpreter.WithImportLocationHandler(e.newImportLocationHandler()),
+		interpreter.WithPublicAccountHandler(e.newPublicAccountHandler()),
+		interpreter.WithPublicKeyValidationHandler(e.newPublicKeyValidationHandler()),
 		// TODO:
 		//interpreter.WithBLSCryptoFunctions(
 		//	func(
@@ -505,60 +513,84 @@ func (e *Environment) newInterpreter(
 		//		)
 		//	},
 		//),
-		interpreter.WithSignatureVerificationHandler(e.signatureVerificationHandler()),
-		//interpreter.WithHashHandler(
-		//	func(
-		//		inter *interpreter.Interpreter,
-		//		getLocationRange func() interpreter.LocationRange,
-		//		data *interpreter.ArrayValue,
-		//		tag *interpreter.StringValue,
-		//		hashAlgorithm interpreter.MemberAccessibleValue,
-		//	) *interpreter.ArrayValue {
-		//		return hash(
-		//			inter,
-		//			getLocationRange,
-		//			data,
-		//			tag,
-		//			hashAlgorithm,
-		//			context.Interface,
-		//		)
-		//	},
-		//),
-		//interpreter.WithOnRecordTraceHandler(
-		//	func(
-		//		interpreter *interpreter.Interpreter,
-		//		functionName string,
-		//		duration time.Duration,
-		//		logs []opentracing.LogRecord,
-		//	) {
-		//		context.Interface.RecordTrace(functionName, interpreter.Location, duration, logs)
-		//	},
-		//),
+		interpreter.WithSignatureVerificationHandler(e.newSignatureVerificationHandler()),
+		interpreter.WithHashHandler(e.newHashHandler()),
+		interpreter.WithOnRecordTraceHandler(e.newOnRecordTraceHandler()),
+		interpreter.WithOnResourceOwnerChangeHandler(e.newResourceOwnerChangedHandler()),
+		// TODO:
 		//interpreter.WithTracingEnabled(r.tracingEnabled),
 		//interpreter.WithAtreeValueValidationEnabled(r.atreeValidationEnabled),
 		//// NOTE: ignore r.atreeValidationEnabled here,
 		//// and disable storage validation after each value modification.
 		//// Instead, storage is validated after commits (if validation is enabled).
 		//interpreter.WithAtreeStorageValidationEnabled(false),
-		//interpreter.WithOnResourceOwnerChangeHandler(r.resourceOwnerChangedHandler(context.Interface)),
 		//interpreter.WithInvalidatedResourceValidationEnabled(r.invalidatedResourceValidationEnabled),
 		//interpreter.WithDebugger(r.debugger),
 	}
 
-	// TODO:
-	//defaultOptions = append(
-	//	defaultOptions,
-	//	r.meteringInterpreterOptions(context.Interface)...,
-	//)
+	options = append(
+		options,
+		e.meteringInterpreterOptions()...,
+	)
 
 	return interpreter.NewInterpreter(
 		program,
 		location,
-		defaultOptions...,
+		options...,
 	)
 }
 
-func (e *Environment) signatureVerificationHandler() interpreter.SignatureVerificationHandlerFunc {
+func (e *Environment) newOnRecordTraceHandler() interpreter.OnRecordTraceFunc {
+	return func(
+		interpreter *interpreter.Interpreter,
+		functionName string,
+		duration time.Duration,
+		logs []opentracing.LogRecord,
+	) {
+		wrapPanic(func() {
+			e.Interface.RecordTrace(functionName, interpreter.Location, duration, logs)
+		})
+	}
+}
+
+func (e *Environment) newHashHandler() interpreter.HashHandlerFunc {
+	return func(
+		inter *interpreter.Interpreter,
+		getLocationRange func() interpreter.LocationRange,
+		dataValue *interpreter.ArrayValue,
+		tagValue *interpreter.StringValue,
+		hashAlgorithmValue interpreter.MemberAccessibleValue,
+	) *interpreter.ArrayValue {
+		data, err := interpreter.ByteArrayValueToByteSlice(inter, dataValue)
+		if err != nil {
+			panic(errors.NewUnexpectedError("failed to get data. %w", err))
+		}
+
+		var tag string
+		if tagValue != nil {
+			tag = tagValue.Str
+		}
+
+		hashAlgorithm := stdlib.NewHashAlgorithmFromValue(inter, getLocationRange, hashAlgorithmValue)
+
+		var result []byte
+		wrapPanic(func() {
+			result, err = e.Interface.Hash(data, tag, hashAlgorithm)
+		})
+		if err != nil {
+			panic(err)
+		}
+		return interpreter.ByteSliceToByteArrayValue(inter, result)
+	}
+}
+
+func (e *Environment) newPublicAccountHandler() interpreter.PublicAccountHandlerFunc {
+	return func(address interpreter.AddressValue) interpreter.Value {
+		return stdlib.NewPublicAccountValue(e, e, address)
+	}
+}
+
+func (e *Environment) newSignatureVerificationHandler() interpreter.SignatureVerificationHandlerFunc {
 	return func(
 		inter *interpreter.Interpreter,
 		getLocationRange func() interpreter.LocationRange,
@@ -608,7 +640,7 @@ func (e *Environment) signatureVerificationHandler() interpreter.SignatureVerifi
 	}
 }
 
-func (e *Environment) publicKeyValidationHandler() interpreter.PublicKeyValidationHandlerFunc {
+func (e *Environment) newPublicKeyValidationHandler() interpreter.PublicKeyValidationHandlerFunc {
 	return func(
 		inter *interpreter.Interpreter,
 		getLocationRange func() interpreter.LocationRange,
@@ -628,7 +660,7 @@ func (e *Environment) publicKeyValidationHandler() interpreter.PublicKeyValidati
 	}
 }
 
-func (e *Environment) contractValueHandler() interpreter.ContractValueHandlerFunc {
+func (e *Environment) newContractValueHandler() interpreter.ContractValueHandlerFunc {
 	return func(
 		inter *interpreter.Interpreter,
 		compositeType *sema.CompositeType,
@@ -671,7 +703,7 @@ func (e *Environment) contractValueHandler() interpreter.ContractValueHandlerFun
 	}
 }
 
-func (e *Environment) uuidHandler() interpreter.UUIDHandlerFunc {
+func (e *Environment) newUUIDHandler() interpreter.UUIDHandlerFunc {
 	return func() (uuid uint64, err error) {
 		wrapPanic(func() {
 			uuid, err = e.Interface.GenerateUUID()
@@ -680,7 +712,7 @@ func (e *Environment) uuidHandler() interpreter.UUIDHandlerFunc {
 	}
 }
 
-func (e *Environment) onEventEmittedHandler() interpreter.OnEventEmittedFunc {
+func (e *Environment) newOnEventEmittedHandler() interpreter.OnEventEmittedFunc {
 	return func(
 		inter *interpreter.Interpreter,
 		getLocationRange func() interpreter.LocationRange,
@@ -699,7 +731,7 @@ func (e *Environment) onEventEmittedHandler() interpreter.OnEventEmittedFunc {
 	}
 }
 
-func (e *Environment) injectedCompositeFieldsHandler() interpreter.InjectedCompositeFieldsHandlerFunc {
+func (e *Environment) newInjectedCompositeFieldsHandler() interpreter.InjectedCompositeFieldsHandlerFunc {
 	return func(
 		inter *interpreter.Interpreter,
 		location Location,
@@ -742,7 +774,7 @@ func (e *Environment) injectedCompositeFieldsHandler() interpreter.InjectedCompo
 	}
 }
 
-func (e *Environment) importLocationHandler() interpreter.ImportLocationHandlerFunc {
+func (e *Environment) newImportLocationHandler() interpreter.ImportLocationHandlerFunc {
 	return func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 		switch location {
 		case stdlib.CryptoChecker.Location:
@@ -816,48 +848,47 @@ func (e *Environment) loadContract(
 	}
 }
 
-// TODO:
-//func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interface) []interpreter.Option {
-//	callStackDepth := 0
-//	// TODO: make runtime interface function
-//	const callStackDepthLimit = 2000
-//
-//	checkCallStackDepth := func() {
-//
-//		if callStackDepth <= callStackDepthLimit {
-//			return
-//		}
-//
-//		panic(CallStackLimitExceededError{
-//			Limit: callStackDepthLimit,
-//		})
-//	}
-//
-//	return []interpreter.Option{
-//		interpreter.WithOnFunctionInvocationHandler(
-//			func(_ *interpreter.Interpreter, _ int) {
-//				callStackDepth++
-//				checkCallStackDepth()
-//			},
-//		),
-//		interpreter.WithOnInvokedFunctionReturnHandler(
-//			func(_ *interpreter.Interpreter, _ int) {
-//				callStackDepth--
-//			},
-//		),
-//		interpreter.WithOnMeterComputationFuncHandler(
-//			func(compKind common.ComputationKind, intensity uint) {
-//				var err error
-//				wrapPanic(func() {
-//					err = runtimeInterface.MeterComputation(compKind, intensity)
-//				})
-//				if err != nil {
-//					panic(err)
-//				}
-//			},
-//		),
-//	}
-//}
+func (e *Environment) meteringInterpreterOptions() []interpreter.Option {
+	callStackDepth := 0
+	// TODO: make runtime interface function
+	const callStackDepthLimit = 2000
+
+	checkCallStackDepth := func() {
+
+		if callStackDepth <= callStackDepthLimit {
+			return
+		}
+
+		panic(CallStackLimitExceededError{
+			Limit: callStackDepthLimit,
+		})
+	}
+
+	return []interpreter.Option{
+		interpreter.WithOnFunctionInvocationHandler(
+			func(_ *interpreter.Interpreter, _ int) {
+				callStackDepth++
+				checkCallStackDepth()
+			},
+		),
+		interpreter.WithOnInvokedFunctionReturnHandler(
+			func(_ *interpreter.Interpreter, _ int) {
+				callStackDepth--
+			},
+		),
+		interpreter.WithOnMeterComputationFuncHandler(
+			func(compKind common.ComputationKind, intensity uint) {
+				var err error
+				wrapPanic(func() {
+					err = e.Interface.MeterComputation(compKind, intensity)
+				})
+				if err != nil {
+					panic(err)
+				}
+			},
+		),
+	}
+}
 
 func (e *Environment) InterpretContract(
 	location common.AddressLocation,
@@ -930,28 +961,28 @@ func (e *Environment) interpret(
 	return result, inter, err
 }
 
-//func (r *interpreterRuntime) resourceOwnerChangedHandler(
-//	runtimeInterface Interface,
-//) interpreter.OnResourceOwnerChangeFunc {
-//	if !r.resourceOwnerChangeHandlerEnabled {
-//		return nil
-//	}
-//	return func(
-//		interpreter *interpreter.Interpreter,
-//		resource *interpreter.CompositeValue,
-//		oldOwner common.Address,
-//		newOwner common.Address,
-//	) {
-//		wrapPanic(func() {
-//			runtimeInterface.ResourceOwnerChanged(
-//				interpreter,
-//				resource,
-//				oldOwner,
-//				newOwner,
-//			)
-//		})
-//	}
-//}
+func (e *Environment) newResourceOwnerChangedHandler() interpreter.OnResourceOwnerChangeFunc {
+	// TODO:
+	//if !r.resourceOwnerChangeHandlerEnabled {
+	//	return nil
+	//}
+
+	return func(
+		interpreter *interpreter.Interpreter,
+		resource *interpreter.CompositeValue,
+		oldOwner common.Address,
+		newOwner common.Address,
+	) {
+		wrapPanic(func() {
+			e.Interface.ResourceOwnerChanged(
+				interpreter,
+				resource,
+				oldOwner,
+				newOwner,
+			)
+		})
+	}
+}
 
 //func blsVerifyPoP(
 //	inter *interpreter.Interpreter,
@@ -1076,34 +1107,3 @@ func (e *Environment) interpret(
 //}
 //
 //
-//func hash(
-//	inter *interpreter.Interpreter,
-//	getLocationRange func() interpreter.LocationRange,
-//	dataValue *interpreter.ArrayValue,
-//	tagValue *interpreter.StringValue,
-//	hashAlgorithmValue interpreter.Value,
-//	runtimeInterface Interface,
-//) *interpreter.ArrayValue {
-//
-//	data, err := interpreter.ByteArrayValueToByteSlice(inter, dataValue)
-//	if err != nil {
-//		panic(errors.NewUnexpectedError("failed to get data. %w", err))
-//	}
-//
-//	var tag string
-//	if tagValue != nil {
-//		tag = tagValue.Str
-//	}
-//
-//	hashAlgorithm := stdlib.NewHashAlgorithmFromValue(inter, getLocationRange, hashAlgorithmValue)
-//
-//	var result []byte
-//	wrapPanic(func() {
-//		result, err = runtimeInterface.Hash(data, tag, hashAlgorithm)
-//	})
-//	if err != nil {
-//		panic(err)
-//	}
-//
-//	return interpreter.ByteSliceToByteArrayValue(inter, result)
-//}

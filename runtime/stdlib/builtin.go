@@ -21,9 +21,16 @@ package stdlib
 var BuiltinValues = []StandardLibraryValue{
 	AssertFunction,
 	PanicFunction,
-	PublicKeyConstructor,
 	SignatureAlgorithmConstructor,
-	HashAlgorithmConstructor,
-	BLSContract,
 	RLPContract,
+	// TODO: refactor. should be function accepting handler,
+	//   instead of relying on callback on interpreter (PublicKeyValidationHandler, SignatureVerificationHandler)
+	PublicKeyConstructor,
+	// TODO: refactor. should be function accepting handler,
+	//   instead of relying on callback on interpreter (HashHandler)
+	HashAlgorithmConstructor,
+	// TODO: refactor. should be function accepting handler,
+	//   instead of relying on callback on interpreter
+	//   (BLSVerifyPoPHandler, BLSAggregateSignaturesHandler, BLSAggregatePublicKeysHandler)
+	BLSContract,
 }
