@@ -185,7 +185,8 @@ func (executor *interpreterContractFunctionExecutor) execute() (val cadence.Valu
 			interpreter.NotInvokableError{
 				Value: contractFunction,
 			},
-			executor.context)
+			executor.context,
+		)
 	}
 
 	value, err := inter.InvokeFunction(contractFunction, invocation)
