@@ -114,6 +114,16 @@ type Runtime interface {
 	// or if the execution fails.
 	ExecuteTransaction(Script, Context) error
 
+	// NewContractFunctionExecutor returns an executor which invokes a contract
+	// function with the given arguments.
+	NewContractFunctionExecutor(
+		contractLocation common.AddressLocation,
+		functionName string,
+		arguments []interpreter.Value,
+		argumentTypes []sema.Type,
+		context Context,
+	) Executor
+
 	// InvokeContractFunction invokes a contract function with the given arguments.
 	//
 	// This function returns an error if the execution fails.
@@ -603,156 +613,36 @@ func (r *interpreterRuntime) newAuthAccountValue(
 	)
 }
 
+func (r *interpreterRuntime) NewContractFunctionExecutor(
+	contractLocation common.AddressLocation,
+	functionName string,
+	arguments []interpreter.Value,
+	argumentTypes []sema.Type,
+	context Context,
+) Executor {
+	return newInterpreterContractFunctionExecutor(
+		r,
+		contractLocation,
+		functionName,
+		arguments,
+		argumentTypes,
+		context)
+}
+
 func (r *interpreterRuntime) InvokeContractFunction(
 	contractLocation common.AddressLocation,
 	functionName string,
 	arguments []interpreter.Value,
 	argumentTypes []sema.Type,
 	context Context,
-) (val cadence.Value, err error) {
-	defer r.Recover(
-		func(internalErr Error) {
-			err = internalErr
-		},
-		context,
-	)
-
-	context.InitializeCodesAndPrograms()
-
-	memoryGauge, _ := context.Interface.(common.MemoryGauge)
-
-	storage := NewStorage(context.Interface, memoryGauge)
-
-	var interpreterOptions []interpreter.Option
-	var checkerOptions []sema.Option
-
-	functions := r.standardLibraryFunctions(
-		context,
-		storage,
-		interpreterOptions,
-		checkerOptions,
-	)
-
-	// create interpreter
-	_, inter, err := r.interpret(
-		nil,
-		context,
-		storage,
-		functions,
-		stdlib.BuiltinValues,
-		interpreterOptions,
-		checkerOptions,
-		nil,
-	)
-	if err != nil {
-		return nil, newError(err, context)
-	}
-
-	// ensure the contract is loaded
-	inter = inter.EnsureLoaded(contractLocation)
-
-	for i, argumentType := range argumentTypes {
-		arguments[i] = r.convertArgument(
-			inter,
-			arguments[i],
-			argumentType,
-			context,
-			storage,
-			interpreterOptions,
-			checkerOptions,
-		)
-	}
-
-	contractValue, err := inter.GetContractComposite(contractLocation)
-	if err != nil {
-		return nil, newError(err, context)
-	}
-
-	// prepare invocation
-	invocation := interpreter.NewInvocation(
-		inter,
-		contractValue,
+) (cadence.Value, error) {
+	return r.NewContractFunctionExecutor(
+		contractLocation,
+		functionName,
 		arguments,
 		argumentTypes,
-		nil,
-		func() interpreter.LocationRange {
-			return interpreter.LocationRange{
-				Location: context.Location,
-			}
-		},
-	)
-
-	contractMember := contractValue.GetMember(inter, invocation.GetLocationRange, functionName)
-
-	contractFunction, ok := contractMember.(interpreter.FunctionValue)
-	if !ok {
-		return nil, newError(
-			interpreter.NotInvokableError{
-				Value: contractFunction,
-			},
-			context)
-	}
-
-	value, err := inter.InvokeFunction(contractFunction, invocation)
-	if err != nil {
-		return nil, newError(err, context)
-	}
-
-	// Write back all stored values, which were actually just cached, back into storage
-	err = r.commitStorage(storage, inter)
-	if err != nil {
-		return nil, newError(err, context)
-	}
-
-	var exportedValue cadence.Value
-	exportedValue, err = ExportValue(value, inter, interpreter.ReturnEmptyLocationRange)
-	if err != nil {
-		return nil, newError(err, context)
-	}
-
-	return exportedValue, nil
-}
-
-func (r *interpreterRuntime) convertArgument(
-	inter *interpreter.Interpreter,
-	argument interpreter.Value,
-	argumentType sema.Type,
-	context Context,
-	storage *Storage,
-	interpreterOptions []interpreter.Option,
-	checkerOptions []sema.Option,
-) interpreter.Value {
-	switch argumentType {
-	case sema.AuthAccountType:
-		// convert addresses to auth accounts so there is no need to construct an auth account value for the caller
-		if addressValue, ok := argument.(interpreter.AddressValue); ok {
-			return r.newAuthAccountValue(
-				inter,
-				interpreter.NewAddressValueFromConstructor(
-					inter,
-					addressValue.ToAddress,
-				),
-				context,
-				storage,
-				interpreterOptions,
-				checkerOptions,
-			)
-		}
-	case sema.PublicAccountType:
-		// convert addresses to public accounts so there is no need to construct a public account value for the caller
-		if addressValue, ok := argument.(interpreter.AddressValue); ok {
-			return r.getPublicAccount(
-				inter,
-				interpreter.NewAddressValueFromConstructor(
-					inter,
-					addressValue.ToAddress,
-				),
-				context.Interface,
-				storage,
-			)
-		}
-	}
-	return argument
+		context,
+	).Result()
 }
 
 func (r *interpreterRuntime) NewTransactionExecutor(script Script, context Context) Executor {
