@@ -239,7 +239,8 @@ var blockchainExecuteScriptFunctionType = &sema.FunctionType{
 		},
 	},
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		sema.VoidType,
+		// TODO: Use generics
+		sema.AnyStructType,
 	),
 }
 

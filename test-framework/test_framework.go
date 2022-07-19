@@ -94,6 +94,7 @@ func parseCheckAndInterpret(script string) (*ast.Program, *interpreter.Interpret
 func newInterpreterFromChecker(checker *sema.Checker) (*interpreter.Interpreter, error) {
 	predeclaredInterpreterValues := stdlib.BuiltinFunctions.ToInterpreterValueDeclarations()
 	predeclaredInterpreterValues = append(predeclaredInterpreterValues, stdlib.BuiltinValues.ToInterpreterValueDeclarations()...)
+	predeclaredInterpreterValues = append(predeclaredInterpreterValues, stdlib.HelperFunctions.ToInterpreterValueDeclarations()...)
 
 	return interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
@@ -133,6 +134,7 @@ func newInterpreterFromChecker(checker *sema.Checker) (*interpreter.Interpreter,
 func newChecker(program *ast.Program) (*sema.Checker, error) {
 	predeclaredSemaValues := stdlib.BuiltinFunctions.ToSemaValueDeclarations()
 	predeclaredSemaValues = append(predeclaredSemaValues, stdlib.BuiltinValues.ToSemaValueDeclarations()...)
+	predeclaredSemaValues = append(predeclaredSemaValues, stdlib.HelperFunctions.ToSemaValueDeclarations()...)
 
 	return sema.NewChecker(
 		program,

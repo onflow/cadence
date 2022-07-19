@@ -41,7 +41,8 @@ func TestExecuteScript(t *testing.T) {
 	code := `
         pub fun test() {
             var bc = Test.Blockchain()
-            bc.executeScript("pub fun foo(): String {  return \"hello\" }")
+            var result = bc.executeScript("pub fun main(): Int {  return 1 + 2 }")
+            log(result)
         }
     `
 
