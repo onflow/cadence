@@ -34,6 +34,7 @@ const (
 	CommandDeployContract      = "cadence.server.flow.deployContract"
 	CommandCreateAccount       = "cadence.server.flow.createAccount"
 	CommandSwitchActiveAccount = "cadence.server.flow.switchActiveAccount"
+	CommandGetAccounts         = "cadence.server.flow.getAccounts"
 )
 
 type commands struct {
@@ -61,6 +62,10 @@ func (c *commands) getAll() []server.Command {
 		{
 			Name:    CommandCreateAccount,
 			Handler: c.createAccount,
+		},
+		{
+			Name:    CommandGetAccounts,
+			Handler: c.getAccounts,
 		},
 	}
 }
@@ -170,6 +175,11 @@ func (c *commands) switchActiveAccount(args ...json.RawMessage) (interface{}, er
 	}
 
 	return fmt.Sprintf("Account switched to %s", name), nil
+}
+
+// getAccounts return the client account list with information about the active client.
+func (c *commands) getAccounts(_ ...json.RawMessage) (interface{}, error) {
+	return c.client.GetClientAccounts(), nil
 }
 
 // createAccount creates a new account and returns its address.

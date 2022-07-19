@@ -18,6 +18,7 @@ type flowClient interface {
 	Initialize(configPath string, numberOfAccounts int) error
 	GetClientAccount(name string) *ClientAccount
 	GetActiveClientAccount() *ClientAccount
+	GetClientAccounts() []*ClientAccount
 	SetActiveClientAccount(name string) error
 	ExecuteScript(location *url.URL, args []cadence.Value) (cadence.Value, error)
 	DeployContract(address flow.Address, name string, location *url.URL) (*flow.Account, error)
@@ -32,7 +33,8 @@ var _ flowClient = flowkitClient{}
 
 type ClientAccount struct {
 	*flow.Account
-	Name string
+	Name   string
+	active bool
 }
 
 var names = []string{
@@ -46,11 +48,10 @@ var names = []string{
 }
 
 type flowkitClient struct {
-	services      *services.Services
-	loader        flowkit.ReaderWriter
-	state         *flowkit.State
-	accounts      []*ClientAccount
-	activeAccount *ClientAccount
+	services *services.Services
+	loader   flowkit.ReaderWriter
+	state    *flowkit.State
+	accounts []*ClientAccount
 }
 
 func NewFlowkitClient(loader flowkit.ReaderWriter) *flowkitClient {
@@ -96,7 +97,8 @@ func (f flowkitClient) Initialize(configPath string, numberOfAccounts int) error
 			Name:    names[i],
 		}
 	}
-	f.activeAccount = f.accounts[0] // make first active by default
+
+	f.accounts[0].active = true // make first active by default
 	return nil
 }
 
@@ -109,17 +111,32 @@ func (f flowkitClient) GetClientAccount(name string) *ClientAccount {
 	return nil
 }
 
+func (f flowkitClient) GetClientAccounts() []*ClientAccount {
+	return f.accounts
+}
+
 func (f flowkitClient) SetActiveClientAccount(name string) error {
+	activeAcc := f.GetActiveClientAccount()
+	if activeAcc != nil {
+		activeAcc.active = false
+	}
+
 	account := f.GetClientAccount(name)
 	if account == nil {
 		return fmt.Errorf(fmt.Sprintf("account with a name %s not found", name))
 	}
-	f.activeAccount = account
+
+	account.active = true
 	return nil
 }
 
 func (f flowkitClient) GetActiveClientAccount() *ClientAccount {
-	return f.activeAccount
+	for _, account := range f.accounts {
+		if account.active {
+			return account
+		}
+	}
+	return nil
 }
 
 func (f flowkitClient) ExecuteScript(
