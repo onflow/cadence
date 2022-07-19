@@ -23,8 +23,9 @@ package test
 
 import (
 	"fmt"
+	"github.com/onflow/cadence"
 
-	emulator "github.com/onflow/flow-emulator"
+	//emulator "github.com/onflow/flow-emulator"
 
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
@@ -37,24 +38,24 @@ import (
 var _ interpreter.TestFramework = &EmulatorBackend{}
 
 type EmulatorBackend struct {
-	blockchain *emulator.Blockchain
+	//blockchain *emulator.Blockchain
 }
 
 func NewEmulatorBackend() *EmulatorBackend {
 	return &EmulatorBackend{
-		blockchain: newBlockchain(),
+		//blockchain: newBlockchain(),
 	}
 }
 
 func (e *EmulatorBackend) RunScript(code string) interpreter.ScriptResult {
 	fmt.Println("Executing script:", code)
 
-	result, err := e.blockchain.ExecuteScript([]byte(code), [][]byte{})
-	if err != nil {
-		return interpreter.ScriptResult{
-			Error: err,
-		}
-	}
+	//result, err := e.blockchain.ExecuteScript([]byte(code), [][]byte{})
+	//if err != nil {
+	//	return interpreter.ScriptResult{
+	//		Error: err,
+	//	}
+	//}
 
 	// TODO: maybe re-use interpreter? Only needed for value conversion
 	inter, err := newInterpreter()
@@ -64,7 +65,7 @@ func (e *EmulatorBackend) RunScript(code string) interpreter.ScriptResult {
 		}
 	}
 
-	value, err := runtime.ImportValue(inter, interpreter.ReturnEmptyLocationRange, result.Value, nil)
+	value, err := runtime.ImportValue(inter, interpreter.ReturnEmptyLocationRange /*result.Value*/, cadence.Void{}, nil)
 	if err != nil {
 		return interpreter.ScriptResult{
 			Error: err,
@@ -76,22 +77,22 @@ func (e *EmulatorBackend) RunScript(code string) interpreter.ScriptResult {
 	}
 }
 
-// newBlockchain returns an emulator blockchain for testing.
-func newBlockchain(opts ...emulator.Option) *emulator.Blockchain {
-	b, err := emulator.NewBlockchain(
-		append(
-			[]emulator.Option{
-				emulator.WithStorageLimitEnabled(false),
-			},
-			opts...,
-		)...,
-	)
-	if err != nil {
-		panic(err)
-	}
-
-	return b
-}
+//// newBlockchain returns an emulator blockchain for testing.
+//func newBlockchain(opts ...emulator.Option) *emulator.Blockchain {
+//	b, err := emulator.NewBlockchain(
+//		append(
+//			[]emulator.Option{
+//				emulator.WithStorageLimitEnabled(false),
+//			},
+//			opts...,
+//		)...,
+//	)
+//	if err != nil {
+//		panic(err)
+//	}
+//
+//	return b
+//}
 
 func newInterpreter() (*interpreter.Interpreter, error) {
 	predeclaredInterpreterValues := stdlib.BuiltinFunctions.ToInterpreterValueDeclarations()
