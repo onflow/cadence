@@ -54,7 +54,7 @@ pub fun transferNFT(id: UInt64, owner: AuthAccount) {
 
     // deposit the stolen funds in the contract owners vault
     // BAD
-    contractVault.deposit(<-stolenTokens)
+    contractVault.deposit(from: <-stolenTokens)
 }
 ...
 ```

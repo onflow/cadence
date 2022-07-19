@@ -224,7 +224,7 @@ let counterRefNew = countCapNew.borrow()
 // Invalid: Cannot access the counter object in storage directly,
 // the `borrow` function is not available for public accounts
 //
-let counterRef2 = publicAccount.borrow<&Counter>(/storage/counter)
+let counterRef2 = publicAccount.borrow<&Counter>(from: /storage/counter)
 ```
 
 The address of a capability can be obtained from the `address` field of the capability:
