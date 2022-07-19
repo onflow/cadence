@@ -7422,21 +7422,26 @@ func BenchmarkRuntimeScriptNoop(b *testing.B) {
 		storage: newTestLedger(nil, nil),
 	}
 
+	script := Script{
+		Source: []byte("pub fun main() {}"),
+	}
+
+	environment := NewScriptInterpreterEnvironment(Config{})
+
 	context := Context{
-		Interface: runtimeInterface,
-		Location:  common.ScriptLocation{},
+		Interface:   runtimeInterface,
+		Location:    common.ScriptLocation{},
+		Environment: environment,
 	}
 
 	require.NotNil(b, stdlib.CryptoChecker)
 
 	runtime := newTestInterpreterRuntime()
 
-	source := []byte("pub fun main() {}")
-
 	b.ReportAllocs()
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		_, _ = runtime.ExecuteScript(Script{Source: source}, context)
+		_, _ = runtime.ExecuteScript(script, context)
 	}
 }
