@@ -191,7 +191,7 @@ func (c *commands) createAccount(_ ...json.RawMessage) (interface{}, error) {
 func (c *commands) deployContract(args ...json.RawMessage) (interface{}, error) {
 	err := server.CheckCommandArgumentCount(args, 3)
 	if err != nil {
-		return flow.Address{}, fmt.Errorf("arguments error: %w", err)
+		return nil, fmt.Errorf("arguments error: %w", err)
 	}
 
 	location, err := parseLocation(args[0])
@@ -202,13 +202,13 @@ func (c *commands) deployContract(args ...json.RawMessage) (interface{}, error) 
 	var name string
 	err = json.Unmarshal(args[1], &name)
 	if err != nil {
-		return nil, fmt.Errorf("invalid name argument: %#+v: %w", args[1], err)
+		return nil, fmt.Errorf("invalid name argument: %s", args[1])
 	}
 
 	var rawAddress string
 	err = json.Unmarshal(args[2], &rawAddress)
 	if err != nil {
-		return nil, fmt.Errorf("invalid address argument: %#+v: %w", args[2], err)
+		return nil, fmt.Errorf("invalid address argument: %s", args[2])
 	}
 	address := flow.HexToAddress(rawAddress)
 
@@ -217,7 +217,7 @@ func (c *commands) deployContract(args ...json.RawMessage) (interface{}, error) 
 		return nil, fmt.Errorf("error deploying contract: %w", deployError)
 	}
 
-	return fmt.Sprintf("Status: contract %s has been deployed to %s", name, rawAddress), err
+	return fmt.Sprintf("Contract %s has been deployed to %s", name, rawAddress), err
 }
 
 func parseLocation(arg []byte) (*url.URL, error) {

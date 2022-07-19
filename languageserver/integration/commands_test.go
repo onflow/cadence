@@ -24,28 +24,34 @@ var invalidCadenceValue, _ = json.Marshal(`[{ "type": "Bool", "value": "we are t
 var cadenceVal, _ = cadence.NewString("woo")
 var validCadenceArg, _ = json.Marshal(`[{ "type": "String", "value": "woo" }]`)
 
+func runTestInputs(name string, t *testing.T, f func(args ...json.RawMessage) (any, error), inputs []argInputTest) {
+	t.Run(name, func(t *testing.T) {
+		for _, in := range inputs {
+			resp, err := f(in.args...)
+
+			assert.EqualError(t, err, in.err, fmt.Sprintf("%s", in.args))
+			assert.Nil(t, resp)
+		}
+	})
+}
+
 func Test_ExecuteScript(t *testing.T) {
 	mock := &mockFlowClient{}
 	cmds := commands{client: mock}
 
-	t.Run("Invalid arguments", func(t *testing.T) {
-		inputs := []argInputTest{
+	runTestInputs(
+		"invalid arguments",
+		t,
+		cmds.executeScript,
+		[]argInputTest{
 			{args: []json.RawMessage{[]byte("")}, err: "arguments error: expected 2 arguments, got 1"},
 			{args: []json.RawMessage{[]byte("1"), []byte("2")}, err: "invalid URI argument: 1"},
 			{args: []json.RawMessage{locationURL, []byte("3")}, err: "invalid script arguments: 3"},
 			{args: []json.RawMessage{locationURL, invalidCadenceArg}, err: "invalid script arguments cadence encoding format: {foo}, error: invalid character 'f' looking for beginning of object key string"},
 			{args: []json.RawMessage{locationURL, invalidCadenceValue}, err: `invalid script arguments cadence encoding format: [{ "type": "Bool", "value": "we are the knights who say niii" }], error: failed to decode value: invalid JSON Cadence structure`},
-		}
+		})
 
-		for _, in := range inputs {
-			resp, err := cmds.executeScript(in.args...)
-
-			assert.EqualError(t, err, in.err)
-			assert.Nil(t, resp)
-		}
-	})
-
-	t.Run("Successful script execution with arguments", func(t *testing.T) {
+	t.Run("successful script execution with arguments", func(t *testing.T) {
 		location, _ := url.Parse(locationString)
 		result, _ := cadence.NewString("hoo")
 
@@ -63,23 +69,18 @@ func Test_ExecuteTransaction(t *testing.T) {
 	mock := &mockFlowClient{}
 	cmds := commands{client: mock}
 
-	t.Run("invalid arguments", func(t *testing.T) {
-		inputs := []argInputTest{
+	runTestInputs(
+		"invalid arguments",
+		t,
+		cmds.sendTransaction,
+		[]argInputTest{
 			{args: []json.RawMessage{[]byte("")}, err: "arguments error: expected 3 arguments, got 1"},
 			{args: []json.RawMessage{[]byte("1"), []byte("2"), []byte("3")}, err: "invalid URI argument: 1"},
 			{args: []json.RawMessage{locationURL, []byte("2"), []byte("3")}, err: "invalid transaction arguments: 2"},
 			{args: []json.RawMessage{locationURL, validCadenceArg, []byte("3")}, err: "invalid signer list: 3"},
-		}
+		})
 
-		for _, in := range inputs {
-			resp, err := cmds.sendTransaction(in.args...)
-
-			assert.EqualError(t, err, in.err)
-			assert.Nil(t, resp)
-		}
-	})
-
-	t.Run("Successful transaction execution", func(t *testing.T) {
+	t.Run("successful transaction execution", func(t *testing.T) {
 		address := "0x1"
 		list := []flow.Address{flow.HexToAddress(address)}
 		location, _ := url.Parse(locationString)
@@ -99,21 +100,16 @@ func Test_SwitchActiveAccount(t *testing.T) {
 	client := NewFlowkitClient(nil)
 	cmds := commands{client}
 
-	t.Run("invalid arguments", func(t *testing.T) {
-		name, _ := json.Marshal("koko")
-
-		inputs := []argInputTest{
+	name, _ := json.Marshal("koko")
+	runTestInputs(
+		"invalid arguments",
+		t,
+		cmds.switchActiveAccount,
+		[]argInputTest{
 			{args: []json.RawMessage{[]byte("1")}, err: "invalid name argument value: 1"},
 			{args: []json.RawMessage{[]byte("1"), []byte("2")}, err: "arguments error: expected 1 arguments, got 2"},
 			{args: []json.RawMessage{name}, err: "account with a name koko not found"},
-		}
-
-		for _, in := range inputs {
-			resp, err := cmds.switchActiveAccount(in.args...)
-			assert.EqualError(t, err, in.err)
-			assert.Nil(t, resp)
-		}
-	})
+		})
 
 	t.Run("switch accounts with valid name", func(t *testing.T) {
 		name := "Alice"
@@ -127,5 +123,37 @@ func Test_SwitchActiveAccount(t *testing.T) {
 
 		assert.NoError(t, err)
 		assert.Equal(t, "Account switched to Alice", resp)
+	})
+}
+
+func Test_DeployContract(t *testing.T) {
+	mock := &mockFlowClient{}
+	cmds := commands{mock}
+
+	name, _ := json.Marshal("NFT")
+	runTestInputs(
+		"invalid arguments",
+		t,
+		cmds.deployContract,
+		[]argInputTest{
+			{args: []json.RawMessage{[]byte("1")}, err: "arguments error: expected 3 arguments, got 1"},
+			{args: []json.RawMessage{[]byte("1"), []byte("2"), []byte("3")}, err: "invalid URI argument: 1"},
+			{args: []json.RawMessage{locationURL, []byte("2"), []byte("3")}, err: "invalid name argument: 2"},
+			{args: []json.RawMessage{locationURL, name, []byte("3")}, err: "invalid address argument: 3"},
+			{args: []json.RawMessage{locationURL, name, []byte("3")}, err: "invalid address argument: 3"},
+		})
+
+	t.Run("successful deploy contract", func(t *testing.T) {
+		address := "0x1"
+		location, _ := url.Parse(locationString)
+		addressArg, _ := json.Marshal(address)
+
+		mock.
+			On("DeployContract", flow.HexToAddress(address), "NFT", location).
+			Return(nil, nil) // return nil as account since we don't need to check it
+
+		res, err := cmds.deployContract(locationURL, name, addressArg)
+		assert.NoError(t, err)
+		assert.Equal(t, "Contract NFT has been deployed to 0x1", res)
 	})
 }
