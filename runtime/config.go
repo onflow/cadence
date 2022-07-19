@@ -32,8 +32,6 @@ type Config struct {
 	TracingEnabled bool
 	// ResourceOwnerChangeCallbackEnabled configures if the resource owner change callback is enabled.
 	ResourceOwnerChangeHandlerEnabled bool
-	// InvalidatedResourceValidationEnabled configures if invalidated resource validation is enabled.
-	InvalidatedResourceValidationEnabled bool
 	// CoverageReportingEnabled configures if coverage reporting is enabled.
 	CoverageReportingEnabled bool
 }

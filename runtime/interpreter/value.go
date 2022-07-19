@@ -14355,7 +14355,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func
 
 	// if composite was deserialized, dynamically link in the destructor
 	if v.Destructor == nil {
-		v.Destructor = interpreter.typeCodes.CompositeCodes[v.TypeID()].DestructorFunction
+		v.Destructor = interpreter.sharedState.typeCodes.CompositeCodes[v.TypeID()].DestructorFunction
 	}
 
 	destructor := v.Destructor
@@ -14512,7 +14512,7 @@ func (v *CompositeValue) InitializeFunctions(interpreter *Interpreter) {
 		return
 	}
 
-	v.Functions = interpreter.typeCodes.CompositeCodes[v.TypeID()].CompositeFunctions
+	v.Functions = interpreter.sharedState.typeCodes.CompositeCodes[v.TypeID()].CompositeFunctions
 }
 
 func (v *CompositeValue) OwnerValue(interpreter *Interpreter, getLocationRange func() LocationRange) OptionalValue {

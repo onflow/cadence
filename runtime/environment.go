@@ -532,7 +532,6 @@ func (e *interpreterEnvironment) newInterpreter(
 		// and disable storage validation after each value modification.
 		// Instead, storage is validated after commits (if validation is enabled).
 		interpreter.WithAtreeStorageValidationEnabled(false),
-		interpreter.WithInvalidatedResourceValidationEnabled(e.config.InvalidatedResourceValidationEnabled),
 		interpreter.WithDebugger(e.config.Debugger),
 		interpreter.WithOnStatementHandler(e.onStatementHandler()),
 	}

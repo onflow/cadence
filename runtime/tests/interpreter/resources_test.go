@@ -2113,37 +2113,29 @@ func TestInterpreterResourcePreCondition(t *testing.T) {
 
 	t.Parallel()
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
-		`
-        resource S {}
+	inter := parseCheckAndInterpret(t, `
+      resource S {}
 
-        struct interface Receiver {
-            pub fun deposit(from: @S) {
-                post {
-                    from != nil: ""
-                }
-            }
-        }
-        
-        struct Vault: Receiver {
-            pub fun deposit(from: @S) {
-                destroy from
-            }
-        }
-    
-    
-        fun test() {
-            Vault().deposit(from: <-create S())
-        }`,
-		ParseCheckAndInterpretOptions{
-			Options: []interpreter.Option{
-				interpreter.WithInvalidatedResourceValidationEnabled(true),
-			},
-		},
-	)
-	require.NoError(t, err)
+      struct interface Receiver {
+          pub fun deposit(from: @S) {
+              post {
+                  from != nil: ""
+              }
+          }
+      }
 
-	_, err = inter.Invoke("test")
+      struct Vault: Receiver {
+          pub fun deposit(from: @S) {
+              destroy from
+          }
+      }
+
+      fun test() {
+          Vault().deposit(from: <-create S())
+      }
+	`)
+
+	_, err := inter.Invoke("test")
 	require.NoError(t, err)
 }
 
@@ -2151,37 +2143,29 @@ func TestInterpreterResourcePostCondition(t *testing.T) {
 
 	t.Parallel()
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
-		`
-        resource S {}
+	inter := parseCheckAndInterpret(t, `
+      resource S {}
 
-        struct interface Receiver {
-            pub fun deposit(from: @S) {
-                post {
-                    from != nil: ""
-                }
-            }
-        }
-        
-        struct Vault: Receiver {
-            pub fun deposit(from: @S) {
-                destroy from
-            }
-        }
-    
-    
-        fun test() {
-            Vault().deposit(from: <-create S())
-        }`,
-		ParseCheckAndInterpretOptions{
-			Options: []interpreter.Option{
-				interpreter.WithInvalidatedResourceValidationEnabled(true),
-			},
-		},
-	)
-	require.NoError(t, err)
+      struct interface Receiver {
+          pub fun deposit(from: @S) {
+              post {
+                  from != nil: ""
+              }
+          }
+      }
 
-	_, err = inter.Invoke("test")
+      struct Vault: Receiver {
+          pub fun deposit(from: @S) {
+              destroy from
+          }
+      }
+
+      fun test() {
+          Vault().deposit(from: <-create S())
+      }
+	`)
+
+	_, err := inter.Invoke("test")
 	require.NoError(t, err)
 }
 
@@ -2189,46 +2173,38 @@ func TestInterpreterResourcePreAndPostCondition(t *testing.T) {
 
 	t.Parallel()
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
-		`
-        resource S {}
+	inter := parseCheckAndInterpret(t, `
+      resource S {}
 
-        struct interface Receiver {
-            pub fun deposit(from: @S) {
-                pre {
-                    from != nil: ""
-                }
-                post {
-                    from != nil: ""
-                }
-            }
-        }
-        
-        struct Vault: Receiver {
-            pub fun deposit(from: @S) {
-                pre {
-                    from != nil: ""
-                }
-                post {
-                    1 > 0: ""
-                }
-                destroy from
-            }
-        }
-    
-    
-        fun test() {
-            Vault().deposit(from: <-create S())
-        }`,
-		ParseCheckAndInterpretOptions{
-			Options: []interpreter.Option{
-				interpreter.WithInvalidatedResourceValidationEnabled(true),
-			},
-		},
-	)
-	require.NoError(t, err)
+      struct interface Receiver {
+          pub fun deposit(from: @S) {
+              pre {
+                  from != nil: ""
+              }
+              post {
+                  from != nil: ""
+              }
+          }
+      }
 
-	_, err = inter.Invoke("test")
+      struct Vault: Receiver {
+          pub fun deposit(from: @S) {
+              pre {
+                  from != nil: ""
+              }
+              post {
+                  1 > 0: ""
+              }
+              destroy from
+          }
+      }
+
+      fun test() {
+          Vault().deposit(from: <-create S())
+      }
+	`)
+
+	_, err := inter.Invoke("test")
 	require.NoError(t, err)
 }
 
@@ -2236,46 +2212,38 @@ func TestInterpreterResourceConditionAdditionalParam(t *testing.T) {
 
 	t.Parallel()
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
-		`
-        resource S {}
+	inter := parseCheckAndInterpret(t, `
+      resource S {}
 
-        struct interface Receiver {
-            pub fun deposit(from: @S, other: UInt64) {
-                pre {
-                    from != nil: ""
-                }
-                post {
-                    other > 0: ""
-                }
-            }
-        }
-        
-        struct Vault: Receiver {
-            pub fun deposit(from: @S, other: UInt64) {
-                pre {
-                    from != nil: ""
-                }
-                post {
-                    other > 0: ""
-                }
-                destroy from
-            }
-        }
-    
-    
-        fun test() {
-            Vault().deposit(from: <-create S(), other: 42)
-        }`,
-		ParseCheckAndInterpretOptions{
-			Options: []interpreter.Option{
-				interpreter.WithInvalidatedResourceValidationEnabled(true),
-			},
-		},
-	)
-	require.NoError(t, err)
+      struct interface Receiver {
+          pub fun deposit(from: @S, other: UInt64) {
+              pre {
+                  from != nil: ""
+              }
+              post {
+                  other > 0: ""
+              }
+          }
+      }
 
-	_, err = inter.Invoke("test")
+      struct Vault: Receiver {
+          pub fun deposit(from: @S, other: UInt64) {
+              pre {
+                  from != nil: ""
+              }
+              post {
+                  other > 0: ""
+              }
+              destroy from
+          }
+      }
+
+      fun test() {
+          Vault().deposit(from: <-create S(), other: 42)
+      }
+	`)
+
+	_, err := inter.Invoke("test")
 	require.NoError(t, err)
 }
 
@@ -2283,56 +2251,49 @@ func TestInterpreterResourceDoubleWrappedCondition(t *testing.T) {
 
 	t.Parallel()
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
-		`
-        resource S {}
+	inter := parseCheckAndInterpret(t, `
+      resource S {}
 
-        struct interface A {
-            pub fun deposit(from: @S) {
-                pre {
-                    from != nil: ""
-                }
-                post {
-                    from != nil: ""
-                }
-            }
-        }
-        
-        struct interface B {
-            pub fun deposit(from: @S) {
-                pre {
-                    from != nil: ""
-                }
-                post {
-                    from != nil: ""
-                }
-            }
-        }
-    
-        struct Vault: A, B {
-            pub fun deposit(from: @S) {
-                pre {
-                    from != nil: ""
-                }
-                post {
-                    1 > 0: ""
-                }
-                destroy from
-            }
-        }
-    
-        fun test() {
-            Vault().deposit(from: <-create S())
-        }`,
-		ParseCheckAndInterpretOptions{
-			Options: []interpreter.Option{
-				interpreter.WithInvalidatedResourceValidationEnabled(true),
-			},
-		},
-	)
-	require.NoError(t, err)
+      struct interface A {
+          pub fun deposit(from: @S) {
+              pre {
+                  from != nil: ""
+              }
+              post {
+                  from != nil: ""
+              }
+          }
+      }
 
-	_, err = inter.Invoke("test")
+      struct interface B {
+          pub fun deposit(from: @S) {
+              pre {
+                  from != nil: ""
+              }
+              post {
+                  from != nil: ""
+              }
+          }
+      }
+
+      struct Vault: A, B {
+          pub fun deposit(from: @S) {
+              pre {
+                  from != nil: ""
+              }
+              post {
+                  1 > 0: ""
+              }
+              destroy from
+          }
+      }
+
+      fun test() {
+          Vault().deposit(from: <-create S())
+      }
+	`)
+
+	_, err := inter.Invoke("test")
 	require.NoError(t, err)
 }
 

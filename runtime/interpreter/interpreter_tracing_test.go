@@ -37,7 +37,7 @@ func setupInterpreterWithTracingCallBack(
 ) *interpreter.Interpreter {
 	storage := newUnmeteredInMemoryStorage()
 	inter, err := interpreter.NewInterpreter(
-		&interpreter.Program{},
+		nil,
 		utils.TestLocation,
 		interpreter.WithOnRecordTraceHandler(
 			func(inter *interpreter.Interpreter,

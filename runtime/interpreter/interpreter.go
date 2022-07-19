@@ -320,46 +320,42 @@ type Storage interface {
 type ReferencedResourceKindedValues map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}
 
 type Interpreter struct {
-	Program                        *Program
-	Location                       common.Location
-	activations                    *VariableActivations
-	Globals                        GlobalVariables
-	allInterpreters                map[common.Location]*Interpreter
-	typeCodes                      TypeCodes
-	Transactions                   []*HostFunctionValue
-	Storage                        Storage
-	onEventEmitted                 OnEventEmittedFunc
-	onStatement                    OnStatementFunc
-	onLoopIteration                OnLoopIterationFunc
-	onFunctionInvocation           OnFunctionInvocationFunc
-	onInvokedFunctionReturn        OnInvokedFunctionReturnFunc
-	onRecordTrace                  OnRecordTraceFunc
-	onResourceOwnerChange          OnResourceOwnerChangeFunc
-	onMeterComputation             OnMeterComputationFunc
-	injectedCompositeFieldsHandler InjectedCompositeFieldsHandlerFunc
-	contractValueHandler           ContractValueHandlerFunc
-	importLocationHandler          ImportLocationHandlerFunc
-	publicAccountHandler           PublicAccountHandlerFunc
-	uuidHandler                    UUIDHandlerFunc
-	PublicKeyValidationHandler     PublicKeyValidationHandlerFunc
-	SignatureVerificationHandler   SignatureVerificationHandlerFunc
-	BLSVerifyPoPHandler            BLSVerifyPoPHandlerFunc
-	BLSAggregateSignaturesHandler  BLSAggregateSignaturesHandlerFunc
-	BLSAggregatePublicKeysHandler  BLSAggregatePublicKeysHandlerFunc
-	HashHandler                    HashHandlerFunc
-	ExitHandler                    ExitHandlerFunc
-	interpreted                    bool
-	statement                      ast.Statement
-	debugger                       *Debugger
-	atreeValueValidationEnabled    bool
-	atreeStorageValidationEnabled  bool
-	tracingEnabled                 bool
-	// TODO: ideally this would be a weak map, but Go has no weak references
-	referencedResourceKindedValues       ReferencedResourceKindedValues
+	Program                              *Program
+	Location                             common.Location
+	sharedState                          *sharedState
+	activations                          *VariableActivations
+	Globals                              GlobalVariables
+	Transactions                         []*HostFunctionValue
+	Storage                              Storage
+	onEventEmitted                       OnEventEmittedFunc
+	onStatement                          OnStatementFunc
+	onLoopIteration                      OnLoopIterationFunc
+	onFunctionInvocation                 OnFunctionInvocationFunc
+	onInvokedFunctionReturn              OnInvokedFunctionReturnFunc
+	onRecordTrace                        OnRecordTraceFunc
+	onResourceOwnerChange                OnResourceOwnerChangeFunc
+	onMeterComputation                   OnMeterComputationFunc
+	injectedCompositeFieldsHandler       InjectedCompositeFieldsHandlerFunc
+	contractValueHandler                 ContractValueHandlerFunc
+	importLocationHandler                ImportLocationHandlerFunc
+	publicAccountHandler                 PublicAccountHandlerFunc
+	uuidHandler                          UUIDHandlerFunc
+	PublicKeyValidationHandler           PublicKeyValidationHandlerFunc
+	SignatureVerificationHandler         SignatureVerificationHandlerFunc
+	BLSVerifyPoPHandler                  BLSVerifyPoPHandlerFunc
+	BLSAggregateSignaturesHandler        BLSAggregateSignaturesHandlerFunc
+	BLSAggregatePublicKeysHandler        BLSAggregatePublicKeysHandlerFunc
+	HashHandler                          HashHandlerFunc
+	ExitHandler                          ExitHandlerFunc
+	interpreted                          bool
+	statement                            ast.Statement
+	debugger                             *Debugger
+	atreeValueValidationEnabled          bool
+	atreeStorageValidationEnabled        bool
+	tracingEnabled                       bool
 	invalidatedResourceValidationEnabled bool
 	resourceVariables                    map[ResourceKindedValue]*Variable
 	memoryGauge                          common.MemoryGauge
-	CallStack                            *CallStack
 	baseActivation                       *VariableActivation
 }
 
@@ -586,26 +582,6 @@ func WithExitHandler(handler ExitHandlerFunc) Option {
 	}
 }
 
-// WithAllInterpreters returns an interpreter option which sets
-// the given map of interpreters as the map of all interpreters.
-//
-func WithAllInterpreters(allInterpreters map[common.Location]*Interpreter) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetAllInterpreters(allInterpreters)
-		return nil
-	}
-}
-
-// WithCallStack returns an interpreter option which sets
-// the given slice of invocations as the slice of all invocations.
-//
-func WithCallStack(callStack *CallStack) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.CallStack = callStack
-		return nil
-	}
-}
-
 // WithAtreeValueValidationEnabled returns an interpreter option which sets
 // the atree validation option.
 //
@@ -636,34 +612,6 @@ func WithTracingEnabled(enabled bool) Option {
 	}
 }
 
-// WithInvalidatedResourceValidationEnabled returns an interpreter option which sets
-// the resource validation option.
-//
-func WithInvalidatedResourceValidationEnabled(enabled bool) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetInvalidatedResourceValidationEnabled(enabled)
-		return nil
-	}
-}
-
-// withTypeCodes returns an interpreter option which sets the type codes.
-//
-func withTypeCodes(typeCodes TypeCodes) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.setTypeCodes(typeCodes)
-		return nil
-	}
-}
-
-// withReferencedResourceKindedValues returns an interpreter option which sets the referenced values.
-//
-func withReferencedResourceKindedValues(referencedResourceKindedValues ReferencedResourceKindedValues) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.referencedResourceKindedValues = referencedResourceKindedValues
-		return nil
-	}
-}
-
 // WithDebugger returns an interpreter option which sets the given debugger
 //
 func WithDebugger(debugger *Debugger) Option {
@@ -684,14 +632,39 @@ var BaseActivation = func() *VariableActivation {
 	return activation
 }()
 
-func NewInterpreter(program *Program, location common.Location, options ...Option) (*Interpreter, error) {
+func NewInterpreter(
+	program *Program,
+	location common.Location,
+	options ...Option,
+) (*Interpreter, error) {
+	return newInterpreter(
+		program,
+		location,
+		newSharedState(),
+		options...,
+	)
+}
+
+func newInterpreter(
+	program *Program,
+	location common.Location,
+	sharedState *sharedState,
+	options ...Option,
+) (*Interpreter, error) {
 
 	interpreter := &Interpreter{
-		Program:           program,
-		Location:          location,
-		Globals:           map[string]*Variable{},
-		resourceVariables: map[ResourceKindedValue]*Variable{},
-		baseActivation:    BaseActivation,
+		Program:                              program,
+		Location:                             location,
+		sharedState:                          sharedState,
+		Globals:                              map[string]*Variable{},
+		resourceVariables:                    map[ResourceKindedValue]*Variable{},
+		baseActivation:                       BaseActivation,
+		invalidatedResourceValidationEnabled: true,
+	}
+
+	// Register self
+	if location != nil {
+		sharedState.allInterpreters[location] = interpreter
 	}
 
 	interpreter.activations = NewVariableActivations(interpreter)
@@ -707,24 +680,6 @@ func NewInterpreter(program *Program, location common.Location, options ...Optio
 }
 
 func (interpreter *Interpreter) configure(options []Option) error {
-	defaultOptions := []Option{
-		WithAllInterpreters(map[common.Location]*Interpreter{}),
-		WithCallStack(&CallStack{}),
-		withTypeCodes(TypeCodes{
-			CompositeCodes:       map[sema.TypeID]CompositeTypeCode{},
-			InterfaceCodes:       map[sema.TypeID]WrapperCode{},
-			TypeRequirementCodes: map[sema.TypeID]WrapperCode{},
-		}),
-		withReferencedResourceKindedValues(map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}{}),
-		WithInvalidatedResourceValidationEnabled(true),
-	}
-
-	for _, option := range defaultOptions {
-		err := option(interpreter)
-		if err != nil {
-			return err
-		}
-	}
 
 	for _, option := range options {
 		err := option(interpreter)
@@ -862,17 +817,6 @@ func (interpreter *Interpreter) SetExitHandler(function ExitHandlerFunc) {
 	interpreter.ExitHandler = function
 }
 
-// SetAllInterpreters sets the given map of interpreters as the map of all interpreters.
-//
-func (interpreter *Interpreter) SetAllInterpreters(allInterpreters map[common.Location]*Interpreter) {
-	interpreter.allInterpreters = allInterpreters
-
-	// Register self
-	if interpreter.Location != nil {
-		interpreter.allInterpreters[interpreter.Location] = interpreter
-	}
-}
-
 // SetAtreeValueValidationEnabled sets the atree value validation option.
 //
 func (interpreter *Interpreter) SetAtreeValueValidationEnabled(enabled bool) {
@@ -889,18 +833,6 @@ func (interpreter *Interpreter) SetAtreeStorageValidationEnabled(enabled bool) {
 //
 func (interpreter *Interpreter) SetTracingEnabled(enabled bool) {
 	interpreter.tracingEnabled = enabled
-}
-
-// SetInvalidatedResourceValidationEnabled sets the invalidated resource validation option.
-//
-func (interpreter *Interpreter) SetInvalidatedResourceValidationEnabled(enabled bool) {
-	interpreter.invalidatedResourceValidationEnabled = enabled
-}
-
-// setTypeCodes sets the type codes.
-//
-func (interpreter *Interpreter) setTypeCodes(typeCodes TypeCodes) {
-	interpreter.typeCodes = typeCodes
 }
 
 // SetDebugger sets the debugger.
@@ -1159,7 +1091,7 @@ func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 		}
 
 		interpreterErr := err.(Error)
-		interpreterErr.StackTrace = interpreter.CallStack.Invocations[:]
+		interpreterErr.StackTrace = interpreter.sharedState.callStack.Invocations[:]
 
 		onError(interpreterErr)
 	}
@@ -1671,7 +1603,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	for i := len(compositeType.ExplicitInterfaceConformances) - 1; i >= 0; i-- {
 		conformance := compositeType.ExplicitInterfaceConformances[i]
 
-		wrapFunctions(interpreter.typeCodes.InterfaceCodes[conformance.ID()])
+		wrapFunctions(interpreter.sharedState.typeCodes.InterfaceCodes[conformance.ID()])
 	}
 
 	typeRequirements := compositeType.TypeRequirements()
@@ -1679,10 +1611,10 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	for i := len(typeRequirements) - 1; i >= 0; i-- {
 		typeRequirement := typeRequirements[i]
 
-		wrapFunctions(interpreter.typeCodes.TypeRequirementCodes[typeRequirement.ID()])
+		wrapFunctions(interpreter.sharedState.typeCodes.TypeRequirementCodes[typeRequirement.ID()])
 	}
 
-	interpreter.typeCodes.CompositeCodes[compositeType.ID()] = CompositeTypeCode{
+	interpreter.sharedState.typeCodes.CompositeCodes[compositeType.ID()] = CompositeTypeCode{
 		DestructorFunction: destructorFunction,
 		CompositeFunctions: functions,
 	}
@@ -2384,7 +2316,7 @@ func (interpreter *Interpreter) declareInterface(
 	destructorFunctionWrapper := interpreter.destructorFunctionWrapper(declaration.Members, lexicalScope)
 	functionWrappers := interpreter.functionWrappers(declaration.Members, lexicalScope)
 
-	interpreter.typeCodes.InterfaceCodes[typeID] = WrapperCode{
+	interpreter.sharedState.typeCodes.InterfaceCodes[typeID] = WrapperCode{
 		InitializerFunctionWrapper: initializerFunctionWrapper,
 		DestructorFunctionWrapper:  destructorFunctionWrapper,
 		FunctionWrappers:           functionWrappers,
@@ -2418,7 +2350,7 @@ func (interpreter *Interpreter) declareTypeRequirement(
 	destructorFunctionWrapper := interpreter.destructorFunctionWrapper(declaration.Members, lexicalScope)
 	functionWrappers := interpreter.functionWrappers(declaration.Members, lexicalScope)
 
-	interpreter.typeCodes.TypeRequirementCodes[typeID] = WrapperCode{
+	interpreter.sharedState.typeCodes.TypeRequirementCodes[typeID] = WrapperCode{
 		InitializerFunctionWrapper: initializerFunctionWrapper,
 		DestructorFunctionWrapper:  destructorFunctionWrapper,
 		FunctionWrappers:           functionWrappers,
@@ -2618,7 +2550,7 @@ func (interpreter *Interpreter) ensureLoadedWithLocationHandler(
 
 	// If a sub-interpreter already exists, return it
 
-	subInterpreter := interpreter.allInterpreters[location]
+	subInterpreter := interpreter.sharedState.allInterpreters[location]
 	if subInterpreter != nil {
 		return subInterpreter
 	}
@@ -2658,12 +2590,12 @@ func (interpreter *Interpreter) ensureLoadedWithLocationHandler(
 			subInterpreter.Globals.Set(global.Name, variable)
 		}
 
-		subInterpreter.typeCodes.
+		subInterpreter.sharedState.typeCodes.
 			Merge(virtualImport.TypeCodes)
 
 		// Virtual import does not register interpreter itself,
 		// unlike InterpreterImport
-		interpreter.allInterpreters[location] = subInterpreter
+		interpreter.sharedState.allInterpreters[location] = subInterpreter
 
 		subInterpreter.Program = &Program{
 			Elaboration: virtualImport.Elaboration,
@@ -2697,12 +2629,8 @@ func (interpreter *Interpreter) NewSubInterpreter(
 		WithContractValueHandler(interpreter.contractValueHandler),
 		WithImportLocationHandler(interpreter.importLocationHandler),
 		WithUUIDHandler(interpreter.uuidHandler),
-		WithAllInterpreters(interpreter.allInterpreters),
-		WithCallStack(interpreter.CallStack),
 		WithAtreeValueValidationEnabled(interpreter.atreeValueValidationEnabled),
 		WithAtreeStorageValidationEnabled(interpreter.atreeStorageValidationEnabled),
-		withTypeCodes(interpreter.typeCodes),
-		withReferencedResourceKindedValues(interpreter.referencedResourceKindedValues),
 		WithPublicAccountHandler(interpreter.publicAccountHandler),
 		WithPublicKeyValidationHandler(interpreter.PublicKeyValidationHandler),
 		WithSignatureVerificationHandler(interpreter.SignatureVerificationHandler),
@@ -2721,9 +2649,10 @@ func (interpreter *Interpreter) NewSubInterpreter(
 		WithMemoryGauge(interpreter.memoryGauge),
 	}
 
-	return NewInterpreter(
+	return newInterpreter(
 		program,
 		location,
+		interpreter.sharedState,
 		append(
 			defaultOptions,
 			options...,
@@ -4195,7 +4124,7 @@ func (interpreter *Interpreter) getElaboration(location common.Location) *sema.E
 
 	inter := interpreter.EnsureLoaded(location)
 
-	subInterpreter := inter.allInterpreters[location]
+	subInterpreter := inter.sharedState.allInterpreters[location]
 	if subInterpreter == nil || subInterpreter.Program == nil {
 		return nil
 	}
@@ -4575,10 +4504,10 @@ func (interpreter *Interpreter) trackReferencedResourceKindedValue(
 	id atree.StorageID,
 	value ReferenceTrackedResourceKindedValue,
 ) {
-	values := interpreter.referencedResourceKindedValues[id]
+	values := interpreter.sharedState.referencedResourceKindedValues[id]
 	if values == nil {
 		values = map[ReferenceTrackedResourceKindedValue]struct{}{}
-		interpreter.referencedResourceKindedValues[id] = values
+		interpreter.sharedState.referencedResourceKindedValues[id] = values
 	}
 	values[value] = struct{}{}
 }
@@ -4588,7 +4517,7 @@ func (interpreter *Interpreter) updateReferencedResource(
 	newStorageID atree.StorageID,
 	updateFunc func(value ReferenceTrackedResourceKindedValue),
 ) {
-	values := interpreter.referencedResourceKindedValues[currentStorageID]
+	values := interpreter.sharedState.referencedResourceKindedValues[currentStorageID]
 	if values == nil {
 		return
 	}
@@ -4596,8 +4525,8 @@ func (interpreter *Interpreter) updateReferencedResource(
 		updateFunc(value)
 	}
 	if newStorageID != currentStorageID {
-		interpreter.referencedResourceKindedValues[newStorageID] = values
-		interpreter.referencedResourceKindedValues[currentStorageID] = nil
+		interpreter.sharedState.referencedResourceKindedValues[newStorageID] = values
+		interpreter.sharedState.referencedResourceKindedValues[currentStorageID] = nil
 	}
 }
 
