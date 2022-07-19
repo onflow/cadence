@@ -177,7 +177,8 @@ func (executor *interpreterContractFunctionExecutor) execute() (val cadence.Valu
 	contractMember := contractValue.GetMember(
 		inter,
 		invocation.GetLocationRange,
-		executor.functionName)
+		executor.functionName,
+	)
 
 	contractFunction, ok := contractMember.(interpreter.FunctionValue)
 	if !ok {
