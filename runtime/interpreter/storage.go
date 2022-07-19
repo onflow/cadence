@@ -20,7 +20,6 @@ package interpreter
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"math"
 	"strings"
@@ -74,14 +73,14 @@ func ConvertStoredValue(gauge common.MemoryGauge, value atree.Value) (Value, err
 		case compositeTypeInfo:
 			return newCompositeValueFromConstructor(gauge, value.Count(), typeInfo, func() *atree.OrderedMap { return value }), nil
 		default:
-			return nil, fmt.Errorf("invalid ordered map type info: %T", typeInfo)
+			return nil, errors.NewUnexpectedError("invalid ordered map type info: %T", typeInfo)
 		}
 
 	case Value:
 		return value, nil
 
 	default:
-		return nil, fmt.Errorf("cannot convert stored value: %T", value)
+		return nil, errors.NewUnexpectedError("cannot convert stored value: %T", value)
 	}
 }
 
@@ -207,7 +206,7 @@ func StorableSize(storable atree.Storable) (uint32, error) {
 
 	size := writer.length
 	if size > math.MaxUint32 {
-		return 0, fmt.Errorf("storable size is too large: expected max uint32, got %d", size)
+		return 0, errors.NewUnexpectedError("storable size is too large: expected max uint32, got %d", size)
 	}
 
 	return uint32(size), nil

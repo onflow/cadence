@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -84,10 +85,17 @@ func (ri ResourceInfo) Clone() ResourceInfo {
 	}
 }
 
+// A Resource is a variable or a member
+//
+type Resource struct {
+	*Variable
+	*Member
+}
+
 // Resources is a map which contains invalidation info for resources.
 //
 type Resources struct {
-	resources *AnyResourceInfoOrderedMap
+	resources *orderedmap.OrderedMap[Resource, ResourceInfo]
 	// JumpsOrReturns indicates that the (branch of) the function
 	// contains a definite return, break, or continue statement
 	JumpsOrReturns bool
@@ -98,14 +106,14 @@ type Resources struct {
 
 func NewResources() *Resources {
 	return &Resources{
-		resources: NewAnyResourceInfoOrderedMap(),
+		resources: &orderedmap.OrderedMap[Resource, ResourceInfo]{},
 	}
 }
 
 func (ris *Resources) String() string {
 	var builder strings.Builder
 	builder.WriteString("Resources:")
-	ris.ForEach(func(resource any, info ResourceInfo) {
+	ris.ForEach(func(resource Resource, info ResourceInfo) {
 		builder.WriteString("- ")
 		builder.WriteString(fmt.Sprint(resource))
 		builder.WriteString(": ")
@@ -115,7 +123,7 @@ func (ris *Resources) String() string {
 	return builder.String()
 }
 
-func (ris *Resources) Get(resource any) ResourceInfo {
+func (ris *Resources) Get(resource Resource) ResourceInfo {
 	info, _ := ris.resources.Get(resource)
 	return info
 }
@@ -123,7 +131,7 @@ func (ris *Resources) Get(resource any) ResourceInfo {
 // AddInvalidation adds the given invalidation to the set of invalidations for the given resource.
 // If the invalidation is not temporary, marks the resource to be definitely invalidated.
 //
-func (ris *Resources) AddInvalidation(resource any, invalidation ResourceInvalidation) {
+func (ris *Resources) AddInvalidation(resource Resource, invalidation ResourceInvalidation) {
 	info, _ := ris.resources.Get(resource)
 	info.Invalidations.Add(invalidation)
 	if invalidation.Kind.IsDefinite() {
@@ -135,7 +143,7 @@ func (ris *Resources) AddInvalidation(resource any, invalidation ResourceInvalid
 // RemoveTemporaryMoveInvalidation removes the given invalidation
 // from the set of invalidations for the given resource.
 //
-func (ris *Resources) RemoveTemporaryMoveInvalidation(resource any, invalidation ResourceInvalidation) {
+func (ris *Resources) RemoveTemporaryMoveInvalidation(resource Resource, invalidation ResourceInvalidation) {
 	if invalidation.Kind != ResourceInvalidationKindMoveTemporary {
 		panic(errors.NewUnreachableError())
 	}
@@ -147,19 +155,19 @@ func (ris *Resources) RemoveTemporaryMoveInvalidation(resource any, invalidation
 
 // AddUse adds the given use position to the set of use positions for the given resource.
 //
-func (ris *Resources) AddUse(resource any, use ast.Position) {
+func (ris *Resources) AddUse(resource Resource, use ast.Position) {
 	info, _ := ris.resources.Get(resource)
 	info.UsePositions.Add(use)
 	ris.resources.Set(resource, info)
 }
 
-func (ris *Resources) MarkUseAfterInvalidationReported(resource any, pos ast.Position) {
+func (ris *Resources) MarkUseAfterInvalidationReported(resource Resource, pos ast.Position) {
 	info, _ := ris.resources.Get(resource)
 	info.UsePositions.MarkUseAfterInvalidationReported(pos)
 	ris.resources.Set(resource, info)
 }
 
-func (ris *Resources) IsUseAfterInvalidationReported(resource any, pos ast.Position) bool {
+func (ris *Resources) IsUseAfterInvalidationReported(resource Resource, pos ast.Position) bool {
 	info, _ := ris.resources.Get(resource)
 	return info.UsePositions.IsUseAfterInvalidationReported(pos)
 }
@@ -181,7 +189,7 @@ func (ris *Resources) Size() int {
 	return ris.resources.Len()
 }
 
-func (ris *Resources) ForEach(f func(resource any, info ResourceInfo)) {
+func (ris *Resources) ForEach(f func(resource Resource, info ResourceInfo)) {
 	ris.resources.Foreach(f)
 }
 
@@ -201,7 +209,7 @@ func (ris *Resources) MergeBranches(thenResources *Resources, elseResources *Res
 
 	merged := make(map[any]struct{})
 
-	merge := func(resource any) {
+	merge := func(resource Resource) {
 
 		// Only merge each resource once.
 		// We iterate over the resources of the then-branch
@@ -264,7 +272,7 @@ func (ris *Resources) MergeBranches(thenResources *Resources, elseResources *Res
 
 	// Merge the resource info of all resources in the then-branch
 
-	thenResources.ForEach(func(resource any, _ ResourceInfo) {
+	thenResources.ForEach(func(resource Resource, _ ResourceInfo) {
 		merge(resource)
 	})
 
@@ -272,7 +280,7 @@ func (ris *Resources) MergeBranches(thenResources *Resources, elseResources *Res
 	// then merge the resource info of all resources in it
 
 	if elseResources != nil {
-		elseResources.ForEach(func(resource any, _ ResourceInfo) {
+		elseResources.ForEach(func(resource Resource, _ ResourceInfo) {
 			merge(resource)
 		})
 	}

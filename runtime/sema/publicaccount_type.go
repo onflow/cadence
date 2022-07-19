@@ -42,9 +42,8 @@ var PublicAccountType = func() *CompositeType {
 		Kind:               common.CompositeKindStructure,
 		hasComputedMembers: true,
 		importable:         false,
-
 		nestedTypes: func() *StringTypeOrderedMap {
-			nestedTypes := NewStringTypeOrderedMap()
+			nestedTypes := &StringTypeOrderedMap{}
 			nestedTypes.Set(AccountKeysTypeName, PublicAccountKeysType)
 			nestedTypes.Set(PublicAccountContractsTypeName, PublicAccountContractsType)
 			return nestedTypes

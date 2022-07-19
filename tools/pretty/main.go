@@ -29,11 +29,11 @@ import (
 
 	"github.com/turbolent/prettier"
 
-	"github.com/onflow/cadence/runtime/parser2"
+	"github.com/onflow/cadence/runtime/parser"
 )
 
 func pretty(code string, maxLineWidth int) string {
-	program, err := parser2.ParseProgram(code, nil)
+	program, err := parser.ParseProgram(code, nil)
 	if err != nil {
 		return err.Error()
 	}

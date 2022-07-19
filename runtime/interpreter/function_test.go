@@ -81,6 +81,7 @@ func TestFunctionStaticType(t *testing.T) {
 
 		compositeValue := NewCompositeValue(
 			inter,
+			ReturnEmptyLocationRange,
 			utils.TestLocation,
 			"foo",
 			common.CompositeKindStructure,

@@ -51,10 +51,12 @@ async function withConnection(f: (connection: ProtocolConnection) => Promise<voi
 
   let initOpts = null
   if (enableFlowClient) {
+    // flow client initialization options where we pass the location of flow.json
+    // and service account name and its address
     initOpts = {
       configPath: "./flow.json",
-      activeAccountName: "service-account",
-      activeAccountAddress: "0xf8d6e0586b0a20c7"
+      activeAccountName: "service-account", // default service account name
+      activeAccountAddress: "0xf8d6e0586b0a20c7" // default service address for emulator network
     }
   }
 
@@ -319,14 +321,13 @@ describe("script execution", () => {
 
   test("script executes and result is returned", async() => {
     await withConnection(async (connection) => {
-
       const resultPromise = new Promise<ShowMessageParams>(res =>
           connection.onNotification(ShowMessageNotification.type, res)
       )
 
       await connection.sendRequest(ExecuteCommandRequest.type, {
         command: "cadence.server.flow.executeScript",
-        arguments: ["file:///Users/dapper/Dev/cadence/languageserver/test/script.cdc", "[]"]
+        arguments: [`file://${__dirname}/script.cdc`, "[]"]
       })
 
       const result = await resultPromise

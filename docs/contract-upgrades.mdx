@@ -11,9 +11,12 @@ I have an incompatible upgrade for a contract. How can I deploy this?
 Please don't perform incompatible upgrades between contract versions in the same account.
 There is too much that can go wrong.
 
-You can make compatible upgrades and then run a post-upgrade function on the new contract code if needed: [Contract upgradability](https://docs.onflow.org/cadence/language/contract-updatability/)
+You can make [compatible upgrades](language/contract-updatability) and then run a post-upgrade function on the new contract code if needed.
 
-If you must replace your contract rather than update it, the simplest solution is to add or increase a suffix on any named paths in the contract code (e.g. /public/MyProjectVault becomes /public/MyProjectVault002) in addition to making the incompatible changes, then create a new account and deploy the updated contract there.
+If you must replace your contract rather than update it,
+the simplest solution is to add or increase a suffix on any named paths in the contract code
+(e.g. `/public/MyProjectVault` becomes `/public/MyProjectVault002`) in addition to making the incompatible changes,
+then create a new account and deploy the updated contract there.
 
 ⚠️ Flow identifies types relative to addresses, so you will also need to provide _upgrade transactions_ to exchange the old contract's resources for the new contract's ones. Make sure to inform users as soon as possible when and how they will need to perform this task.
 

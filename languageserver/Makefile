@@ -43,6 +43,7 @@ unit-test:
 .PHONY: e2e-test
 e2e-test:
 	cd test && npm install && npm t
+	GO111MODULE=on go test -parallel 8 ./...
 
 .PHONY: wasm
 wasm:

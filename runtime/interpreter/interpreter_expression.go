@@ -133,10 +133,15 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 	target := interpreter.evalExpression(memberExpression.Expression)
 	identifier := memberExpression.Identifier.Identifier
 	getLocationRange := locationRangeGetter(interpreter, interpreter.Location, memberExpression)
+
 	_, isNestedResourceMove := interpreter.Program.Elaboration.IsNestedResourceMoveExpression[memberExpression]
+
 	return getterSetter{
 		target: target,
 		get: func(allowMissing bool) Value {
+
+			interpreter.checkMemberAccess(memberExpression, target, getLocationRange)
+
 			isOptional := memberExpression.Optional
 
 			if isOptional {
@@ -177,8 +182,48 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 			return resultValue
 		},
 		set: func(value Value) {
+			interpreter.checkMemberAccess(memberExpression, target, getLocationRange)
+
 			interpreter.setMember(target, getLocationRange, identifier, value)
 		},
+	}
+}
+
+func (interpreter *Interpreter) checkMemberAccess(
+	memberExpression *ast.MemberExpression,
+	target Value,
+	getLocationRange func() LocationRange,
+) {
+	memberInfo := interpreter.Program.Elaboration.MemberExpressionMemberInfos[memberExpression]
+	expectedType := memberInfo.AccessedType
+
+	switch expectedType := expectedType.(type) {
+	case *sema.TransactionType:
+		// TODO: maybe also check transactions.
+		//   they are composites with a type ID which has an empty qualified ID, i.e. no type is available
+
+		return
+
+	case *sema.CompositeType:
+		// TODO: also check built-in values.
+		//   blocked by standard library values (RLP, BLS, etc.),
+		//   which are implemented as contracts, but currently do not have their type registered
+
+		if expectedType.Location == nil {
+			return
+		}
+	}
+
+	if _, ok := target.(*StorageReferenceValue); ok {
+		// NOTE: Storage reference value accesses are already checked in  StorageReferenceValue.dereference
+		return
+	}
+
+	if !interpreter.ValueIsSubtypeOfSemaType(target, expectedType) {
+		panic(MemberAccessTypeError{
+			ExpectedType:  expectedType,
+			LocationRange: getLocationRange(),
+		})
 	}
 }
 
@@ -620,8 +665,11 @@ func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpres
 	// TODO: cache
 	arrayStaticType := ConvertSemaArrayTypeToStaticArrayType(interpreter, arrayType)
 
+	getLocationRange := locationRangeGetter(interpreter, interpreter.Location, expression)
+
 	return NewArrayValue(
 		interpreter,
+		getLocationRange,
 		arrayStaticType,
 		common.Address{},
 		copies...,
@@ -654,8 +702,6 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 			locationRangeGetter(interpreter, interpreter.Location, entry.Value),
 		)
 
-		// TODO: panic for duplicate keys?
-
 		keyValuePairs = append(
 			keyValuePairs,
 			key,
@@ -665,7 +711,14 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 
 	dictionaryStaticType := ConvertSemaDictionaryTypeToStaticDictionaryType(interpreter, dictionaryType)
 
-	return NewDictionaryValue(interpreter, dictionaryStaticType, keyValuePairs...)
+	getLocationRange := locationRangeGetter(interpreter, interpreter.Location, expression)
+
+	return NewDictionaryValue(
+		interpreter,
+		getLocationRange,
+		dictionaryStaticType,
+		keyValuePairs...,
+	)
 }
 
 func (interpreter *Interpreter) VisitMemberExpression(expression *ast.MemberExpression) ast.Repr {
@@ -751,12 +804,11 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 
 	arguments := interpreter.visitExpressionsNonCopying(argumentExpressions)
 
-	typeParameterTypes :=
-		interpreter.Program.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
-	argumentTypes :=
-		interpreter.Program.Elaboration.InvocationExpressionArgumentTypes[invocationExpression]
-	parameterTypes :=
-		interpreter.Program.Elaboration.InvocationExpressionParameterTypes[invocationExpression]
+	elaboration := interpreter.Program.Elaboration
+
+	typeParameterTypes := elaboration.InvocationExpressionTypeArguments[invocationExpression]
+	argumentTypes := elaboration.InvocationExpressionArgumentTypes[invocationExpression]
+	parameterTypes := elaboration.InvocationExpressionParameterTypes[invocationExpression]
 
 	line := invocationExpression.StartPosition().Line
 

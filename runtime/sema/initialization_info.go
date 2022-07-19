@@ -20,13 +20,13 @@ package sema
 
 type InitializationInfo struct {
 	ContainerType           Type
-	FieldMembers            *MemberAstFieldDeclarationOrderedMap
+	FieldMembers            *MemberFieldDeclarationOrderedMap
 	InitializedFieldMembers *MemberSet
 }
 
 func NewInitializationInfo(
 	containerType Type,
-	fieldMembers *MemberAstFieldDeclarationOrderedMap,
+	fieldMembers *MemberFieldDeclarationOrderedMap,
 ) *InitializationInfo {
 	return &InitializationInfo{
 		ContainerType:           containerType,

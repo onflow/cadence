@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+import getRandomValues from 'get-random-values';
+
 const encoder = new TextEncoder("utf-8");
 const decoder = new TextDecoder("utf-8");
 
@@ -267,7 +269,7 @@ class Go {
 				// func getRandomData(r []byte)
 				"runtime.getRandomData": (sp) => {
 					sp >>>= 0;
-					crypto.getRandomValues(loadSlice(sp + 8));
+					getRandomValues(loadSlice(sp + 8));
 				},
 
 				// func finalizeRef(v ref)
@@ -501,9 +503,9 @@ class Go {
 
 		// The linker guarantees global data starts from at least wasmMinDataAddr.
 		// Keep in sync with cmd/link/internal/ld/data.go:wasmMinDataAddr.
-		const wasmMinDataAddr = 4096 + 4096;
+		const wasmMinDataAddr = 4096 + 8192;
 		if (offset >= wasmMinDataAddr) {
-			throw new Error("command line too long");
+			throw new Error("total length of command line and environment variables exceeds limit");
 		}
 
 		this._inst.exports.run(argc, argv);

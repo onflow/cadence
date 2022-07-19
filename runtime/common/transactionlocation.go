@@ -23,17 +23,22 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/onflow/cadence/runtime/errors"
 )
 
 const TransactionLocationPrefix = "t"
 
 // TransactionLocation
 //
-type TransactionLocation []byte
+type TransactionLocation [32]byte
 
-func NewTransactionLocation(gauge MemoryGauge, script []byte) TransactionLocation {
-	UseMemory(gauge, NewBytesMemoryUsage(len(script)))
-	return TransactionLocation(script)
+var _ Location = TransactionLocation{}
+
+func NewTransactionLocation(gauge MemoryGauge, identifier []byte) (location TransactionLocation) {
+	UseMemory(gauge, NewBytesMemoryUsage(len(identifier)))
+	copy(location[:], identifier)
+	return
 }
 
 func (l TransactionLocation) ID() LocationID {
@@ -68,7 +73,11 @@ func (l TransactionLocation) QualifiedIdentifier(typeID TypeID) string {
 }
 
 func (l TransactionLocation) String() string {
-	return hex.EncodeToString(l)
+	return hex.EncodeToString(l[:])
+}
+
+func (l TransactionLocation) Description() string {
+	return fmt.Sprintf("transaction with ID %s", hex.EncodeToString(l[:]))
 }
 
 func (l TransactionLocation) MarshalJSON() ([]byte, error) {
@@ -95,7 +104,7 @@ func decodeTransactionLocationTypeID(gauge MemoryGauge, typeID string) (Transact
 	const errorMessagePrefix = "invalid transaction location type ID"
 
 	newError := func(message string) (TransactionLocation, string, error) {
-		return nil, "", fmt.Errorf("%s: %s", errorMessagePrefix, message)
+		return TransactionLocation{}, "", errors.NewDefaultUserError("%s: %s", errorMessagePrefix, message)
 	}
 
 	if typeID == "" {
@@ -104,18 +113,15 @@ func decodeTransactionLocationTypeID(gauge MemoryGauge, typeID string) (Transact
 
 	parts := strings.SplitN(typeID, ".", 3)
 
-	pieceCount := len(parts)
-	switch pieceCount {
-	case 1:
+	partCount := len(parts)
+	if partCount == 1 {
 		return newError("missing location")
-	case 2:
-		return newError("missing qualified identifier")
 	}
 
 	prefix := parts[0]
 
 	if prefix != TransactionLocationPrefix {
-		return nil, "", fmt.Errorf(
+		return TransactionLocation{}, "", errors.NewDefaultUserError(
 			"%s: invalid prefix: expected %q, got %q",
 			errorMessagePrefix,
 			TransactionLocationPrefix,
@@ -127,14 +133,20 @@ func decodeTransactionLocationTypeID(gauge MemoryGauge, typeID string) (Transact
 	UseMemory(gauge, NewBytesMemoryUsage(len(location)))
 
 	if err != nil {
-		return nil, "", fmt.Errorf(
+		return TransactionLocation{}, "", errors.NewDefaultUserError(
 			"%s: invalid location: %w",
 			errorMessagePrefix,
 			err,
 		)
 	}
 
-	qualifiedIdentifier := parts[2]
+	var qualifiedIdentifier string
+	if partCount > 2 {
+		qualifiedIdentifier = parts[2]
+	}
 
-	return location, qualifiedIdentifier, nil
+	var result TransactionLocation
+	copy(result[:], location)
+
+	return result, qualifiedIdentifier, nil
 }

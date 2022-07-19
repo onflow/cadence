@@ -28,7 +28,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/parser2"
+	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -530,11 +530,11 @@ func TestCheckInvalidImportCycleSelf(t *testing.T) {
 	// will be checked by checker checking importing program
 
 	const code = `import "test"`
-	importedProgram, err := parser2.ParseProgram(code, nil)
+	importedProgram, err := parser.ParseProgram(code, nil)
 
 	require.NoError(t, err)
 
-	elaborations := map[common.LocationID]*sema.Elaboration{}
+	elaborations := map[common.Location]*sema.Elaboration{}
 
 	check := func(code string, location common.Location) error {
 		_, err := ParseAndCheckWithOptions(t,
@@ -545,13 +545,13 @@ func TestCheckInvalidImportCycleSelf(t *testing.T) {
 					sema.WithImportHandler(
 						func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
 
-							elaboration, ok := elaborations[importedLocation.ID()]
+							elaboration, ok := elaborations[importedLocation]
 							if !ok {
 								subChecker, err := checker.SubChecker(importedProgram, importedLocation)
 								if err != nil {
 									return nil, err
 								}
-								elaborations[importedLocation.ID()] = subChecker.Elaboration
+								elaborations[importedLocation] = subChecker.Elaboration
 								err = subChecker.Check()
 								if err != nil {
 									return nil, err
@@ -600,7 +600,7 @@ func TestCheckInvalidImportCycleTwoLocations(t *testing.T) {
           return odd(n - 1)
       }
     `
-	programEven, err := parser2.ParseProgram(codeEven, nil)
+	programEven, err := parser.ParseProgram(codeEven, nil)
 	require.NoError(t, err)
 
 	const codeOdd = `
@@ -613,7 +613,7 @@ func TestCheckInvalidImportCycleTwoLocations(t *testing.T) {
           return even(n - 1)
       }
     `
-	programOdd, err := parser2.ParseProgram(codeOdd, nil)
+	programOdd, err := parser.ParseProgram(codeOdd, nil)
 	require.NoError(t, err)
 
 	getProgram := func(location common.Location) *ast.Program {
@@ -628,7 +628,7 @@ func TestCheckInvalidImportCycleTwoLocations(t *testing.T) {
 		return nil
 	}
 
-	elaborations := map[common.LocationID]*sema.Elaboration{}
+	elaborations := map[common.Location]*sema.Elaboration{}
 
 	_, err = ParseAndCheckWithOptions(t,
 		codeEven,
@@ -639,13 +639,13 @@ func TestCheckInvalidImportCycleTwoLocations(t *testing.T) {
 					func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
 						importedProgram := getProgram(importedLocation)
 
-						elaboration, ok := elaborations[importedLocation.ID()]
+						elaboration, ok := elaborations[importedLocation]
 						if !ok {
 							subChecker, err := checker.SubChecker(importedProgram, importedLocation)
 							if err != nil {
 								return nil, err
 							}
-							elaborations[importedLocation.ID()] = subChecker.Elaboration
+							elaborations[importedLocation] = subChecker.Elaboration
 							err = subChecker.Check()
 							if err != nil {
 								return nil, err
@@ -699,7 +699,7 @@ func TestCheckImportVirtual(t *testing.T) {
 
 	fooType.Fields = []string{"bar"}
 
-	fooType.Members = sema.NewStringMemberOrderedMap()
+	fooType.Members = &sema.StringMemberOrderedMap{}
 	fooType.Members.Set(
 		"bar",
 		sema.NewUnmeteredPublicFunctionMember(
@@ -711,7 +711,7 @@ func TestCheckImportVirtual(t *testing.T) {
 			"",
 		))
 
-	valueElements := sema.NewStringImportElementOrderedMap()
+	valueElements := &sema.StringImportElementOrderedMap{}
 
 	valueElements.Set("Foo", sema.ImportElement{
 		DeclarationKind: common.DeclarationKindStructure,

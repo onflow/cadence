@@ -372,7 +372,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 
 		executeScript(script, meter, structValue)
 		assert.Equal(t, uint64(1), meter[common.MemoryKindCompositeValueBase])
-		assert.Equal(t, uint64(168), meter[common.MemoryKindRawString])
+		assert.Equal(t, uint64(104), meter[common.MemoryKindRawString])
 	})
 }
 
@@ -570,13 +570,13 @@ func TestScriptDecodedLocationMetering(t *testing.T) {
 	tests := []importTest{
 		{
 			MemoryKind: common.MemoryKindBytes,
-			Weight:     3 + 1,
+			Weight:     32 + 1,
 			Name:       "script",
-			Location:   common.ScriptLocation([]byte{1, 2, 3}),
+			Location:   common.ScriptLocation{1, 2, 3},
 		},
 		{
 			MemoryKind: common.MemoryKindRawString,
-			Weight:     175,
+			Weight:     119,
 			Name:       "string",
 			Location:   common.StringLocation("abc"),
 		},

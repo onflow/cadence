@@ -2020,15 +2020,15 @@ pub contract ItemNFT: NonFungibleToken {
 }
 `
 
-	accountCodes := map[common.LocationID][]byte{
+	accountCodes := map[common.Location][]byte{
 		common.AddressLocation{
 			Address: ftAddress,
 			Name:    "FungibleToken",
-		}.ID(): []byte(realFungibleTokenContractInterface),
+		}: []byte(realFungibleTokenContractInterface),
 		common.AddressLocation{
 			Address: nftAddress,
 			Name:    "NonFungibleToken",
-		}.ID(): []byte(realNonFungibleTokenInterface),
+		}: []byte(realNonFungibleTokenInterface),
 	}
 
 	var events []cadence.Event
@@ -2039,7 +2039,7 @@ pub contract ItemNFT: NonFungibleToken {
 
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
-			return accountCodes[location.ID()], nil
+			return accountCodes[location], nil
 		},
 		storage: storage,
 		getSigningAccounts: func() ([]Address, error) {
@@ -2051,14 +2051,14 @@ pub contract ItemNFT: NonFungibleToken {
 				Address: address,
 				Name:    name,
 			}
-			return accountCodes[location.ID()], nil
+			return accountCodes[location], nil
 		},
 		updateAccountContractCode: func(address Address, name string, code []byte) error {
 			location := common.AddressLocation{
 				Address: address,
 				Name:    name,
 			}
-			accountCodes[location.ID()] = code
+			accountCodes[location] = code
 			return nil
 		},
 		emitEvent: func(event cadence.Event) error {
@@ -3839,15 +3839,15 @@ pub contract AuctionDutch {
 	}
 }
 `
-	accountCodes := map[common.LocationID][]byte{
+	accountCodes := map[common.Location][]byte{
 		common.AddressLocation{
 			Address: ftAddress,
 			Name:    "FungibleToken",
-		}.ID(): []byte(realFungibleTokenContractInterface),
+		}: []byte(realFungibleTokenContractInterface),
 		common.AddressLocation{
 			Address: nftAddress,
 			Name:    "NonFungibleToken",
-		}.ID(): []byte(realNonFungibleTokenInterface),
+		}: []byte(realNonFungibleTokenInterface),
 	}
 
 	var events []cadence.Event
@@ -3858,7 +3858,7 @@ pub contract AuctionDutch {
 
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
-			return accountCodes[location.ID()], nil
+			return accountCodes[location], nil
 		},
 		storage: storage,
 		getSigningAccounts: func() ([]Address, error) {
@@ -3870,14 +3870,14 @@ pub contract AuctionDutch {
 				Address: address,
 				Name:    name,
 			}
-			return accountCodes[location.ID()], nil
+			return accountCodes[location], nil
 		},
 		updateAccountContractCode: func(address Address, name string, code []byte) error {
 			location := common.AddressLocation{
 				Address: address,
 				Name:    name,
 			}
-			accountCodes[location.ID()] = code
+			accountCodes[location] = code
 			return nil
 		},
 		emitEvent: func(event cadence.Event) error {
@@ -4685,7 +4685,7 @@ pub contract ExampleMarketplace {
 
 	`
 
-	accountCodes := map[common.LocationID][]byte{}
+	accountCodes := map[common.Location][]byte{}
 	var events []cadence.Event
 	var logs []string
 	var signerAddress common.Address
@@ -4694,7 +4694,7 @@ pub contract ExampleMarketplace {
 
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
-			return accountCodes[location.ID()], nil
+			return accountCodes[location], nil
 		},
 		storage: storage,
 		getSigningAccounts: func() ([]Address, error) {
@@ -4706,14 +4706,14 @@ pub contract ExampleMarketplace {
 				Address: address,
 				Name:    name,
 			}
-			return accountCodes[location.ID()], nil
+			return accountCodes[location], nil
 		},
 		updateAccountContractCode: func(address Address, name string, code []byte) error {
 			location := common.AddressLocation{
 				Address: address,
 				Name:    name,
 			}
-			accountCodes[location.ID()] = code
+			accountCodes[location] = code
 			return nil
 		},
 		emitEvent: func(event cadence.Event) error {

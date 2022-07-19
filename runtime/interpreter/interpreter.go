@@ -23,7 +23,6 @@ import (
 	goErrors "errors"
 	"fmt"
 	"math"
-	goRuntime "runtime"
 	"time"
 
 	"github.com/fxamacker/cbor/v2"
@@ -328,7 +327,7 @@ type Interpreter struct {
 	effectivePredeclaredValues     map[string]ValueDeclaration
 	activations                    *VariableActivations
 	Globals                        GlobalVariables
-	allInterpreters                map[common.LocationID]*Interpreter
+	allInterpreters                map[common.Location]*Interpreter
 	typeCodes                      TypeCodes
 	Transactions                   []*HostFunctionValue
 	Storage                        Storage
@@ -602,7 +601,7 @@ func WithExitHandler(handler ExitHandlerFunc) Option {
 // WithAllInterpreters returns an interpreter option which sets
 // the given map of interpreters as the map of all interpreters.
 //
-func WithAllInterpreters(allInterpreters map[common.LocationID]*Interpreter) Option {
+func WithAllInterpreters(allInterpreters map[common.Location]*Interpreter) Option {
 	return func(interpreter *Interpreter) error {
 		interpreter.SetAllInterpreters(allInterpreters)
 		return nil
@@ -713,7 +712,7 @@ func NewInterpreter(program *Program, location common.Location, options ...Optio
 	interpreter.activations.PushNewWithParent(baseActivation)
 
 	defaultOptions := []Option{
-		WithAllInterpreters(map[common.LocationID]*Interpreter{}),
+		WithAllInterpreters(map[common.Location]*Interpreter{}),
 		WithCallStack(&CallStack{}),
 		withTypeCodes(TypeCodes{
 			CompositeCodes:       map[sema.TypeID]CompositeTypeCode{},
@@ -869,13 +868,12 @@ func (interpreter *Interpreter) SetExitHandler(function ExitHandlerFunc) {
 
 // SetAllInterpreters sets the given map of interpreters as the map of all interpreters.
 //
-func (interpreter *Interpreter) SetAllInterpreters(allInterpreters map[common.LocationID]*Interpreter) {
+func (interpreter *Interpreter) SetAllInterpreters(allInterpreters map[common.Location]*Interpreter) {
 	interpreter.allInterpreters = allInterpreters
 
 	// Register self
 	if interpreter.Location != nil {
-		locationID := interpreter.Location.MeteredID(interpreter.memoryGauge)
-		interpreter.allInterpreters[locationID] = interpreter
+		interpreter.allInterpreters[interpreter.Location] = interpreter
 	}
 }
 
@@ -1130,14 +1128,18 @@ func (interpreter *Interpreter) InvokeTransaction(index int, arguments ...Value)
 func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 	if r := recover(); r != nil {
 		var err error
+
+		// Recover all errors, because interpreter can be directly invoked by FVM.
 		switch r := r.(type) {
-		case goRuntime.Error, ExternalError:
-			// Don't recover Go's or external panics
-			panic(r)
+		case Error,
+			errors.ExternalError,
+			errors.InternalError,
+			errors.UserError:
+			err = r.(error)
 		case error:
-			err = r
+			err = errors.NewUnexpectedErrorFromCause(r)
 		default:
-			err = fmt.Errorf("%s", r)
+			err = errors.NewUnexpectedError("%s", r)
 		}
 
 		// if the error is not yet an interpreter error, wrap it
@@ -1591,7 +1593,10 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 			var nestedVariable *Variable
 			lexicalScope, nestedVariable =
-				interpreter.declareCompositeValue(nestedCompositeDeclaration, lexicalScope)
+				interpreter.declareCompositeValue(
+					nestedCompositeDeclaration,
+					lexicalScope,
+				)
 
 			memberIdentifier := nestedCompositeDeclaration.Identifier.Identifier
 			nestedVariables[memberIdentifier] = nestedVariable
@@ -1712,7 +1717,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				// in the same location as it was declared
 
 				if compositeType.Kind == common.CompositeKindResource &&
-					!common.LocationsMatch(invocation.Interpreter.Location, compositeType.Location) {
+					invocation.Interpreter.Location != compositeType.Location {
 
 					panic(ResourceConstructionError{
 						CompositeType: compositeType,
@@ -1763,6 +1768,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 				value := NewCompositeValue(
 					interpreter,
+					invocation.GetLocationRange,
 					location,
 					qualifiedIdentifier,
 					declaration.CompositeKind,
@@ -1864,8 +1870,11 @@ func (interpreter *Interpreter) declareEnumConstructor(
 			},
 		}
 
+		getLocationRange := locationRangeGetter(interpreter, location, enumCase)
+
 		caseValue := NewCompositeValue(
 			interpreter,
+			getLocationRange,
 			location,
 			qualifiedIdentifier,
 			declaration.CompositeKind,
@@ -2124,17 +2133,8 @@ func (interpreter *Interpreter) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclarat
 	panic(errors.NewUnreachableError())
 }
 
-func (interpreter *Interpreter) CheckValueTransferTargetType(value Value, targetType sema.Type) bool {
-
-	if targetType == nil {
-		return true
-	}
-
-	if interpreter.IsSubTypeOfSemaType(value.StaticType(interpreter), targetType) {
-		return true
-	}
-
-	return false
+func (interpreter *Interpreter) ValueIsSubtypeOfSemaType(value Value, targetType sema.Type) bool {
+	return interpreter.IsSubTypeOfSemaType(value.StaticType(interpreter), targetType)
 }
 
 func (interpreter *Interpreter) transferAndConvert(
@@ -2158,7 +2158,10 @@ func (interpreter *Interpreter) transferAndConvert(
 		targetType,
 	)
 
-	if !interpreter.CheckValueTransferTargetType(result, targetType) {
+	// Defensively check the value's type matches the target type
+	if targetType != nil &&
+		!interpreter.ValueIsSubtypeOfSemaType(result, targetType) {
+
 		panic(ValueTransferTypeError{
 			TargetType:    targetType,
 			LocationRange: getLocationRange(),
@@ -2619,11 +2622,9 @@ func (interpreter *Interpreter) ensureLoadedWithLocationHandler(
 	loadLocation func() Import,
 ) *Interpreter {
 
-	locationID := location.MeteredID(interpreter.memoryGauge)
-
 	// If a sub-interpreter already exists, return it
 
-	subInterpreter := interpreter.allInterpreters[locationID]
+	subInterpreter := interpreter.allInterpreters[location]
 	if subInterpreter != nil {
 		return subInterpreter
 	}
@@ -2668,7 +2669,7 @@ func (interpreter *Interpreter) ensureLoadedWithLocationHandler(
 
 		// Virtual import does not register interpreter itself,
 		// unlike InterpreterImport
-		interpreter.allInterpreters[locationID] = subInterpreter
+		interpreter.allInterpreters[location] = subInterpreter
 
 		subInterpreter.Program = &Program{
 			Elaboration: virtualImport.Elaboration,
@@ -3991,16 +3992,16 @@ func (interpreter *Interpreter) capabilityBorrowFunction(
 		interpreter,
 		func(invocation Invocation) Value {
 
-			if borrowType == nil {
-				typeParameterPair := invocation.TypeParameterTypes.Oldest()
-				if typeParameterPair != nil {
-					ty := typeParameterPair.Value
-					var ok bool
-					borrowType, ok = ty.(*sema.ReferenceType)
-					if !ok {
-						panic(errors.NewUnreachableError())
-					}
+			// NOTE: if a type argument is provided for the function,
+			// use it *instead* of the type of the value (if any)
 
+			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			if typeParameterPair != nil {
+				ty := typeParameterPair.Value
+				var ok bool
+				borrowType, ok = ty.(*sema.ReferenceType)
+				if !ok {
+					panic(errors.NewUnreachableError())
 				}
 			}
 
@@ -4062,17 +4063,16 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 		interpreter,
 		func(invocation Invocation) Value {
 
-			if borrowType == nil {
+			// NOTE: if a type argument is provided for the function,
+			// use it *instead* of the type of the value (if any)
 
-				typeParameterPair := invocation.TypeParameterTypes.Oldest()
-				if typeParameterPair != nil {
-					ty := typeParameterPair.Value
-					var ok bool
-					borrowType, ok = ty.(*sema.ReferenceType)
-					if !ok {
-						panic(errors.NewUnreachableError())
-					}
-
+			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			if typeParameterPair != nil {
+				ty := typeParameterPair.Value
+				var ok bool
+				borrowType, ok = ty.(*sema.ReferenceType)
+				if !ok {
+					panic(errors.NewUnreachableError())
 				}
 			}
 
@@ -4201,9 +4201,7 @@ func (interpreter *Interpreter) getElaboration(location common.Location) *sema.E
 
 	inter := interpreter.EnsureLoaded(location)
 
-	locationID := location.MeteredID(interpreter.memoryGauge)
-
-	subInterpreter := inter.allInterpreters[locationID]
+	subInterpreter := inter.allInterpreters[location]
 	if subInterpreter == nil || subInterpreter.Program == nil {
 		return nil
 	}
@@ -4266,7 +4264,7 @@ func (interpreter *Interpreter) getUserCompositeType(location common.Location, t
 func (interpreter *Interpreter) getNativeCompositeType(qualifiedIdentifier string) (*sema.CompositeType, error) {
 	ty := sema.NativeCompositeTypes[qualifiedIdentifier]
 	if ty == nil {
-		return ty, TypeLoadingError{
+		return nil, TypeLoadingError{
 			TypeID: common.TypeID(qualifiedIdentifier),
 		}
 	}
@@ -4294,6 +4292,7 @@ func (interpreter *Interpreter) getInterfaceType(location common.Location, quali
 			TypeID: typeID,
 		}
 	}
+
 	return ty, nil
 }
 
@@ -4455,7 +4454,7 @@ func (interpreter *Interpreter) RemoveReferencedSlab(storable atree.Storable) {
 	storageID := atree.StorageID(storageIDStorable)
 	err := interpreter.Storage.Remove(storageID)
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 }
 
@@ -4466,7 +4465,7 @@ func (interpreter *Interpreter) maybeValidateAtreeValue(v atree.Value) {
 	if interpreter.atreeStorageValidationEnabled {
 		err := interpreter.Storage.CheckHealth()
 		if err != nil {
-			panic(ExternalError{err})
+			panic(errors.NewExternalError(err))
 		}
 	}
 }
@@ -4527,7 +4526,7 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 	case *atree.Array:
 		err := atree.ValidArray(value, value.Type(), tic, hip)
 		if err != nil {
-			panic(ExternalError{err})
+			panic(errors.NewExternalError(err))
 		}
 
 		err = atree.ValidArraySerialization(
@@ -4546,14 +4545,14 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 				goErrors.As(err, &nonStorableStaticTypeErr)) {
 
 				atree.PrintArray(value)
-				panic(ExternalError{err})
+				panic(errors.NewExternalError(err))
 			}
 		}
 
 	case *atree.OrderedMap:
 		err := atree.ValidMap(value, value.Type(), tic, hip)
 		if err != nil {
-			panic(ExternalError{err})
+			panic(errors.NewExternalError(err))
 		}
 
 		err = atree.ValidMapSerialization(
@@ -4572,7 +4571,7 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 				goErrors.As(err, &nonStorableStaticTypeErr)) {
 
 				atree.PrintMap(value)
-				panic(ExternalError{err})
+				panic(errors.NewExternalError(err))
 			}
 		}
 	}

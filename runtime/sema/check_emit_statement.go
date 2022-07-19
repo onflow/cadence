@@ -49,7 +49,7 @@ func (checker *Checker) VisitEmitStatement(statement *ast.EmitStatement) ast.Rep
 
 	// Check that the emitted event is declared in the same location
 
-	if !common.LocationsMatch(compositeType.Location, checker.Location) {
+	if compositeType.Location != checker.Location {
 
 		checker.report(
 			&EmitImportedEventError{

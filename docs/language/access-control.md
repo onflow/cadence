@@ -30,7 +30,7 @@ will be covered in a later section.
 Top-level declarations
 (variables, constants, functions, structures, resources, interfaces)
 and fields (in structures, and resources) are always only able to be written
-to and mutated (modified, such as by indexed assignment or methods like `append`) 
+to and mutated (modified, such as by indexed assignment or methods like `append`)
 in the scope where it is defined (self).
 
 There are four levels of access control defined in the code that specify where
@@ -100,7 +100,7 @@ To summarize the behavior for functions:
 | `access(account)`        | Current, inner, and other contracts in same account |
 | `pub` / `access(all)`    | **All**                                             |
 
-Declarations of structures, resources, events, and [contracts](../contracts) can only be public.
+Declarations of structures, resources, events, and [contracts](contracts) can only be public.
 However, even though the declarations/types are publicly visible,
 resources can only be created from inside the contract they are declared in.
 
@@ -144,7 +144,7 @@ pub struct SomeStruct {
     //
     pub(set) var e: Int
 
-    // Arrays and dictionaries declared without (set) cannot be 
+    // Arrays and dictionaries declared without (set) cannot be
     // mutated in external scopes
     pub let arr: [Int]
 

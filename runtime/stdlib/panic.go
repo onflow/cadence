@@ -31,6 +31,10 @@ type PanicError struct {
 	interpreter.LocationRange
 }
 
+var _ errors.UserError = PanicError{}
+
+func (PanicError) IsUserError() {}
+
 func (e PanicError) Error() string {
 	return fmt.Sprintf("panic: %s", e.Message)
 }

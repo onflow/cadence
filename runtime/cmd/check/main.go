@@ -220,7 +220,7 @@ func runPath(
 	var program *ast.Program
 	var must func(error)
 
-	codes := map[common.LocationID]string{}
+	codes := map[common.Location]string{}
 
 	location := common.NewStringLocation(nil, path)
 

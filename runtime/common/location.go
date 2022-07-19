@@ -19,9 +19,10 @@
 package common
 
 import (
-	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/onflow/cadence/runtime/errors"
 )
 
 // Location describes the origin of a Cadence script.
@@ -37,21 +38,8 @@ type Location interface {
 	TypeID(memoryGauge MemoryGauge, qualifiedIdentifier string) TypeID
 	// QualifiedIdentifier returns the qualified identifier for the given type ID
 	QualifiedIdentifier(typeID TypeID) string
-}
-
-// LocationsMatch returns true if both locations are nil or their IDs are the same.
-//
-func LocationsMatch(first, second Location) bool {
-
-	if first == nil {
-		return second == nil
-	}
-
-	if second == nil {
-		return false
-	}
-
-	return first.ID() == second.ID()
+	// Description returns a human-readable description. For example, it can be used in error messages
+	Description() string
 }
 
 // LocationsInSameAccount returns true if both locations are nil,
@@ -79,7 +67,7 @@ func LocationsInSameAccount(first, second Location) bool {
 		return firstAddressLocation.Address == secondAddressLocation.Address
 	}
 
-	return first.ID() == second.ID()
+	return first == second
 }
 
 // LocationID
@@ -132,7 +120,7 @@ var typeIDDecoders = map[string]TypeIDDecoder{}
 
 func RegisterTypeIDDecoder(prefix string, decoder TypeIDDecoder) {
 	if _, ok := typeIDDecoders[prefix]; ok {
-		panic(fmt.Errorf("cannot register type ID decoder for already registered prefix: %s", prefix))
+		panic(errors.NewUnexpectedError("cannot register type ID decoder for already registered prefix: %s", prefix))
 	}
 	typeIDDecoders[prefix] = decoder
 }
@@ -141,7 +129,7 @@ func DecodeTypeID(gauge MemoryGauge, typeID string) (location Location, qualifie
 	pieces := strings.Split(typeID, ".")
 
 	if len(pieces) < 1 {
-		return nil, "", errors.New("invalid type ID: missing type name")
+		return nil, "", errors.NewDefaultUserError("invalid type ID: missing type name")
 	}
 
 	prefix := pieces[0]
@@ -160,8 +148,8 @@ func DecodeTypeID(gauge MemoryGauge, typeID string) (location Location, qualifie
 	return decoder(gauge, typeID)
 }
 
-// HasImportLocation
+// HasLocation
 
-type HasImportLocation interface {
+type HasLocation interface {
 	ImportLocation() Location
 }
