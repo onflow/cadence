@@ -140,6 +140,22 @@ func (_m *mockFlowClient) GetClientAccount(name string) *ClientAccount {
 	return r0
 }
 
+// GetClientAccounts provides a mock function with given fields:
+func (_m *mockFlowClient) GetClientAccounts() []*ClientAccount {
+	ret := _m.Called()
+
+	var r0 []*ClientAccount
+	if rf, ok := ret.Get(0).(func() []*ClientAccount); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ClientAccount)
+		}
+	}
+
+	return r0
+}
+
 // Initialize provides a mock function with given fields: configPath, numberOfAccounts
 func (_m *mockFlowClient) Initialize(configPath string, numberOfAccounts int) error {
 	ret := _m.Called(configPath, numberOfAccounts)
