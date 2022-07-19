@@ -38,6 +38,7 @@ type Environment interface {
 		runtimeInterface Interface,
 		codesAndPrograms codesAndPrograms,
 		storage *Storage,
+		coverageReport *CoverageReport,
 	)
 	ParseAndCheckProgram(
 		code []byte,
@@ -67,6 +68,7 @@ type interpreterEnvironment struct {
 	baseValueActivation                   *sema.VariableActivation
 	runtimeInterface                      Interface
 	storage                               *Storage
+	coverageReport                        *CoverageReport
 	codesAndPrograms                      codesAndPrograms
 	deployedContractConstructorInvocation *stdlib.DeployedContractConstructorInvocation
 }
@@ -116,10 +118,12 @@ func (e *interpreterEnvironment) Configure(
 	runtimeInterface Interface,
 	codesAndPrograms codesAndPrograms,
 	storage *Storage,
+	coverageReport *CoverageReport,
 ) {
 	e.runtimeInterface = runtimeInterface
 	e.codesAndPrograms = codesAndPrograms
 	e.storage = storage
+	e.coverageReport = coverageReport
 }
 
 func (e *interpreterEnvironment) Declare(valueDeclaration stdlib.StandardLibraryValue) {
@@ -530,6 +534,7 @@ func (e *interpreterEnvironment) newInterpreter(
 		interpreter.WithAtreeStorageValidationEnabled(false),
 		interpreter.WithInvalidatedResourceValidationEnabled(e.config.InvalidatedResourceValidationEnabled),
 		interpreter.WithDebugger(e.config.Debugger),
+		interpreter.WithOnStatementHandler(e.onStatementHandler()),
 	}
 
 	options = append(
@@ -542,6 +547,18 @@ func (e *interpreterEnvironment) newInterpreter(
 		location,
 		options...,
 	)
+}
+
+func (e *interpreterEnvironment) onStatementHandler() interpreter.OnStatementFunc {
+	if !e.config.CoverageReportingEnabled {
+		return nil
+	}
+
+	return func(inter *interpreter.Interpreter, statement ast.Statement) {
+		location := inter.Location
+		line := statement.StartPosition().Line
+		e.coverageReport.AddLineHit(location, line)
+	}
 }
 
 func (e *interpreterEnvironment) newOnRecordTraceHandler() interpreter.OnRecordTraceFunc {

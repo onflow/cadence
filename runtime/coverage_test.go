@@ -32,12 +32,11 @@ import (
 
 func TestRuntimeCoverage(t *testing.T) {
 
-	// TODO:
-	t.Skip("TODO")
-
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewInterpreterRuntime(Config{
+		CoverageReportingEnabled: true,
+	})
 
 	importedScript := []byte(`
      pub fun answer(): Int {
@@ -76,16 +75,14 @@ func TestRuntimeCoverage(t *testing.T) {
 
 	coverageReport := NewCoverageReport()
 
-	// TODO:
-	//runtime.SetCoverageReport(coverageReport)
-
 	value, err := runtime.ExecuteScript(
 		Script{
 			Source: script,
 		},
 		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
+			Interface:      runtimeInterface,
+			Location:       nextTransactionLocation(),
+			CoverageReport: coverageReport,
 		},
 	)
 	require.NoError(t, err)

@@ -198,6 +198,7 @@ func (r interpreterRuntime) ExecuteScript(script Script, context Context) (val c
 		context.Interface,
 		codesAndPrograms,
 		storage,
+		context.CoverageReport,
 	)
 
 	program, err := environment.ParseAndCheckProgram(
@@ -333,6 +334,7 @@ func (r interpreterRuntime) InvokeContractFunction(
 		context.Interface,
 		codesAndPrograms,
 		storage,
+		context.CoverageReport,
 	)
 
 	// create interpreter
@@ -453,6 +455,7 @@ func (r interpreterRuntime) ExecuteTransaction(script Script, context Context) (
 		context.Interface,
 		codesAndPrograms,
 		storage,
+		context.CoverageReport,
 	)
 
 	program, err := environment.ParseAndCheckProgram(
@@ -791,6 +794,7 @@ func (r interpreterRuntime) ParseAndCheckProgram(
 		context.Interface,
 		codesAndPrograms,
 		nil,
+		context.CoverageReport,
 	)
 
 	program, err = environment.ParseAndCheckProgram(
@@ -824,6 +828,7 @@ func (r interpreterRuntime) executeNonProgram(
 		context.Interface,
 		codesAndPrograms,
 		storage,
+		context.CoverageReport,
 	)
 
 	value, inter, err := environment.Interpret(

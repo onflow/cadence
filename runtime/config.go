@@ -22,6 +22,8 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 )
 
+// Config is a constant/read-only configuration of an environment.
+//
 type Config struct {
 	Debugger *interpreter.Debugger
 	// AtreeValidationEnabled configures if atree validation is enabled.
@@ -32,4 +34,6 @@ type Config struct {
 	ResourceOwnerChangeHandlerEnabled bool
 	// InvalidatedResourceValidationEnabled configures if invalidated resource validation is enabled.
 	InvalidatedResourceValidationEnabled bool
+	// CoverageReportingEnabled configures if coverage reporting is enabled.
+	CoverageReportingEnabled bool
 }
