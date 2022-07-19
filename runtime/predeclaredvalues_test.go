@@ -90,7 +90,8 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 
 	// Run transaction
 
-	transactionEnvironment := NewBaseEnvironment(valueDeclaration)
+	transactionEnvironment := NewBaseInterpreterEnvironment(Config{})
+	transactionEnvironment.Declare(valueDeclaration)
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -106,7 +107,8 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 
 	// Run script
 
-	scriptEnvironment := NewScriptEnvironment(valueDeclaration)
+	scriptEnvironment := NewScriptInterpreterEnvironment(Config{})
+	scriptEnvironment.Declare(valueDeclaration)
 
 	result, err := runtime.ExecuteScript(
 		Script{

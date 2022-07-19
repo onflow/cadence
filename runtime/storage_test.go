@@ -1771,8 +1771,9 @@ func TestRuntimeResourceOwnerChange(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
-	runtime.SetResourceOwnerChangeHandlerEnabled(true)
+	runtime := NewInterpreterRuntime(Config{
+		ResourceOwnerChangeHandlerEnabled: true,
+	})
 
 	address1 := common.MustBytesToAddress([]byte{0x1})
 	address2 := common.MustBytesToAddress([]byte{0x2})

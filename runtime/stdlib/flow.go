@@ -225,5 +225,3 @@ var AccountContractRemovedEventType = newFlowEventType(
 	AccountEventCodeHashParameter,
 	AccountEventContractParameter,
 )
-
-var FlowBuiltInTypes []StandardLibraryType

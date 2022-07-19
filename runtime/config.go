@@ -19,32 +19,17 @@
 package runtime
 
 import (
-	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/interpreter"
 )
 
-type Context struct {
-	Interface      Interface
-	Location       Location
-	Environment    Environment
-	CoverageReport *CoverageReport
-}
-
-type codesAndPrograms struct {
-	codes    map[Location][]byte
-	programs map[Location]*ast.Program
-}
-
-func (c codesAndPrograms) setCode(location Location, code []byte) {
-	c.codes[location] = code
-}
-
-func (c codesAndPrograms) setProgram(location Location, program *ast.Program) {
-	c.programs[location] = program
-}
-
-func newCodesAndPrograms() codesAndPrograms {
-	return codesAndPrograms{
-		codes:    map[Location][]byte{},
-		programs: map[Location]*ast.Program{},
-	}
+type Config struct {
+	Debugger *interpreter.Debugger
+	// AtreeValidationEnabled configures if atree validation is enabled.
+	AtreeValidationEnabled bool
+	// TracingEnabled configures if tracing is enabled.
+	TracingEnabled bool
+	// ResourceOwnerChangeCallbackEnabled configures if the resource owner change callback is enabled.
+	ResourceOwnerChangeHandlerEnabled bool
+	// InvalidatedResourceValidationEnabled configures if invalidated resource validation is enabled.
+	InvalidatedResourceValidationEnabled bool
 }

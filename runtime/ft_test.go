@@ -644,7 +644,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 	signerAccount = senderAddress
 
-	environment := NewBaseEnvironment()
+	environment := NewBaseInterpreterEnvironment(Config{})
 
 	b.ReportAllocs()
 	b.ResetTimer()

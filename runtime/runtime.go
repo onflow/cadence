@@ -28,7 +28,6 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 type Script struct {
@@ -70,19 +69,6 @@ type Runtime interface {
 	// This function returns an error if the program contains any syntax or semantic errors.
 	ParseAndCheckProgram(source []byte, context Context) (*interpreter.Program, error)
 
-	// SetAtreeValidationEnabled configures if atree validation is enabled.
-	SetAtreeValidationEnabled(enabled bool)
-
-	// SetTracingEnabled configures if tracing is enabled.
-	SetTracingEnabled(enabled bool)
-
-	// SetInvalidatedResourceValidationEnabled configures
-	// if invalidated resource validation is enabled.
-	SetInvalidatedResourceValidationEnabled(enabled bool)
-
-	// SetResourceOwnerChangeHandlerEnabled configures if the resource owner change callback is enabled.
-	SetResourceOwnerChangeHandlerEnabled(enabled bool)
-
 	// ReadStored reads the value stored at the given path
 	//
 	ReadStored(address common.Address, path cadence.Path, context Context) (cadence.Value, error)
@@ -90,10 +76,6 @@ type Runtime interface {
 	// ReadLinked dereferences the path and returns the value stored at the target
 	//
 	ReadLinked(address common.Address, path cadence.Path, context Context) (cadence.Value, error)
-
-	// SetDebugger configures interpreters with the given debugger.
-	//
-	SetDebugger(debugger *interpreter.Debugger)
 }
 
 type ImportResolver = func(location Location) (program *ast.Program, e error)
@@ -140,63 +122,19 @@ func reportMetric(
 	report(metrics, elapsed)
 }
 
-// interpreterRuntime is a interpreter-based version of the Flow runtime.
+// interpreterRuntime is an interpreter-based version of the Flow runtime.
 type interpreterRuntime struct {
-	debugger                             *interpreter.Debugger
-	atreeValidationEnabled               bool
-	tracingEnabled                       bool
-	resourceOwnerChangeHandlerEnabled    bool
-	invalidatedResourceValidationEnabled bool
-}
-
-type Option func(Runtime)
-
-// WithAtreeValidationEnabled returns a runtime option
-// that configures if atree validation is enabled.
-//
-func WithAtreeValidationEnabled(enabled bool) Option {
-	return func(runtime Runtime) {
-		runtime.SetAtreeValidationEnabled(enabled)
-	}
-}
-
-// WithTracingEnabled returns a runtime option
-// that configures if tracing is enabled.
-//
-func WithTracingEnabled(enabled bool) Option {
-	return func(runtime Runtime) {
-		runtime.SetTracingEnabled(enabled)
-	}
-}
-
-// WithInvalidatedResourceValidationEnabled returns a runtime option
-// that configures if invalidated resource validation is enabled.
-//
-func WithInvalidatedResourceValidationEnabled(enabled bool) Option {
-	return func(runtime Runtime) {
-		runtime.SetInvalidatedResourceValidationEnabled(enabled)
-	}
-}
-
-// WithResourceOwnerChangeCallbackEnabled returns a runtime option
-// that configures if the resource owner change callback is enabled.
-//
-func WithResourceOwnerChangeCallbackEnabled(enabled bool) Option {
-	return func(runtime Runtime) {
-		runtime.SetResourceOwnerChangeHandlerEnabled(enabled)
-	}
+	defaultConfig Config
 }
 
 // NewInterpreterRuntime returns a interpreter-based version of the Flow runtime.
-func NewInterpreterRuntime(options ...Option) Runtime {
-	runtime := &interpreterRuntime{}
-	for _, option := range options {
-		option(runtime)
+func NewInterpreterRuntime(defaultConfig Config) Runtime {
+	return interpreterRuntime{
+		defaultConfig: defaultConfig,
 	}
-	return runtime
 }
 
-func (r *interpreterRuntime) Recover(onError func(Error), location Location, codesAndPrograms codesAndPrograms) {
+func (r interpreterRuntime) Recover(onError func(Error), location Location, codesAndPrograms codesAndPrograms) {
 	recovered := recover()
 	if recovered == nil {
 		return
@@ -236,27 +174,7 @@ func getWrappedError(recovered any, location Location, codesAndPrograms codesAnd
 	}
 }
 
-func (r *interpreterRuntime) SetAtreeValidationEnabled(enabled bool) {
-	r.atreeValidationEnabled = enabled
-}
-
-func (r *interpreterRuntime) SetTracingEnabled(enabled bool) {
-	r.tracingEnabled = enabled
-}
-
-func (r *interpreterRuntime) SetInvalidatedResourceValidationEnabled(enabled bool) {
-	r.invalidatedResourceValidationEnabled = enabled
-}
-
-func (r *interpreterRuntime) SetResourceOwnerChangeHandlerEnabled(enabled bool) {
-	r.resourceOwnerChangeHandlerEnabled = enabled
-}
-
-func (r *interpreterRuntime) SetDebugger(debugger *interpreter.Debugger) {
-	r.debugger = debugger
-}
-
-func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val cadence.Value, err error) {
+func (r interpreterRuntime) ExecuteScript(script Script, context Context) (val cadence.Value, err error) {
 
 	location := context.Location
 
@@ -274,7 +192,7 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val 
 
 	environment := context.Environment
 	if environment == nil {
-		environment = NewScriptEnvironment()
+		environment = NewScriptInterpreterEnvironment(r.defaultConfig)
 	}
 	environment.Configure(
 		context.Interface,
@@ -322,7 +240,7 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val 
 		context.Interface,
 	)
 
-	value, inter, err := environment.interpret(
+	value, inter, err := environment.Interpret(
 		location,
 		program,
 		interpret,
@@ -346,7 +264,7 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val 
 	// Even though this function is `ExecuteScript`, that doesn't imply the changes
 	// to storage will be actually persisted
 
-	err = r.commitStorage(storage, inter)
+	err = environment.CommitStorage(inter)
 	if err != nil {
 		return nil, newError(err, location, codesAndPrograms)
 	}
@@ -354,30 +272,13 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val 
 	return result, nil
 }
 
-func (r *interpreterRuntime) commitStorage(storage *Storage, inter *interpreter.Interpreter) error {
-	const commitContractUpdates = true
-	err := storage.Commit(inter, commitContractUpdates)
-	if err != nil {
-		return err
-	}
-
-	if r.atreeValidationEnabled {
-		err = storage.CheckHealth()
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-type interpretFunc func(inter *interpreter.Interpreter) (interpreter.Value, error)
+type InterpretFunc func(inter *interpreter.Interpreter) (interpreter.Value, error)
 
 func scriptExecutionFunction(
 	parameters []*sema.Parameter,
 	arguments [][]byte,
 	runtimeInterface Interface,
-) interpretFunc {
+) InterpretFunc {
 	return func(inter *interpreter.Interpreter) (value interpreter.Value, err error) {
 
 		// Recover internal panics and return them as an error.
@@ -402,7 +303,7 @@ func scriptExecutionFunction(
 	}
 }
 
-func (r *interpreterRuntime) InvokeContractFunction(
+func (r interpreterRuntime) InvokeContractFunction(
 	contractLocation common.AddressLocation,
 	functionName string,
 	arguments []interpreter.Value,
@@ -426,7 +327,7 @@ func (r *interpreterRuntime) InvokeContractFunction(
 
 	environment := context.Environment
 	if environment == nil {
-		environment = NewBaseEnvironment()
+		environment = NewBaseInterpreterEnvironment(r.defaultConfig)
 	}
 	environment.Configure(
 		context.Interface,
@@ -435,7 +336,7 @@ func (r *interpreterRuntime) InvokeContractFunction(
 	)
 
 	// create interpreter
-	_, inter, err := environment.interpret(
+	_, inter, err := environment.Interpret(
 		location,
 		nil,
 		nil,
@@ -491,7 +392,7 @@ func (r *interpreterRuntime) InvokeContractFunction(
 	}
 
 	// Write back all stored values, which were actually just cached, back into storage
-	err = r.commitStorage(storage, inter)
+	err = environment.CommitStorage(inter)
 	if err != nil {
 		return nil, newError(err, location, codesAndPrograms)
 	}
@@ -505,42 +406,30 @@ func (r *interpreterRuntime) InvokeContractFunction(
 	return exportedValue, nil
 }
 
-func (r *interpreterRuntime) convertArgument(
+func (r interpreterRuntime) convertArgument(
 	gauge common.MemoryGauge,
 	argument interpreter.Value,
 	argumentType sema.Type,
-	environment *Environment,
+	environment Environment,
 ) interpreter.Value {
 	switch argumentType {
 	case sema.AuthAccountType:
 		// convert addresses to auth accounts so there is no need to construct an auth account value for the caller
 		if addressValue, ok := argument.(interpreter.AddressValue); ok {
-			return stdlib.NewAuthAccountValue(
-				gauge,
-				environment,
-				interpreter.NewAddressValueFromConstructor(
-					gauge,
-					addressValue.ToAddress,
-				),
-			)
+			address := interpreter.NewAddressValueFromConstructor(gauge, addressValue.ToAddress)
+			return environment.NewAuthAccountValue(address)
 		}
 	case sema.PublicAccountType:
 		// convert addresses to public accounts so there is no need to construct a public account value for the caller
 		if addressValue, ok := argument.(interpreter.AddressValue); ok {
-			return stdlib.NewPublicAccountValue(
-				gauge,
-				environment,
-				interpreter.NewAddressValueFromConstructor(
-					gauge,
-					addressValue.ToAddress,
-				),
-			)
+			address := interpreter.NewAddressValueFromConstructor(gauge, addressValue.ToAddress)
+			return environment.NewPublicAccountValue(address)
 		}
 	}
 	return argument
 }
 
-func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) (err error) {
+func (r interpreterRuntime) ExecuteTransaction(script Script, context Context) (err error) {
 
 	location := context.Location
 
@@ -558,7 +447,7 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 
 	environment := context.Environment
 	if environment == nil {
-		environment = NewBaseEnvironment()
+		environment = NewBaseInterpreterEnvironment(r.defaultConfig)
 	}
 	environment.Configure(
 		context.Interface,
@@ -623,38 +512,34 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 		authorizerValues := make([]interpreter.Value, 0, authorizerCount)
 
 		for _, address := range authorizers {
+			addressValue := interpreter.NewAddressValue(inter, address)
 			authorizerValues = append(
 				authorizerValues,
-				stdlib.NewAuthAccountValue(
-					inter,
-					environment,
-					interpreter.NewAddressValue(
-						inter,
-						address,
-					),
-				),
+				environment.NewAuthAccountValue(addressValue),
 			)
 		}
 
 		return authorizerValues
 	}
 
-	_, inter, err := environment.interpret(
+	interpretFunc := r.transactionExecutionFunction(
+		transactionType.Parameters,
+		script.Arguments,
+		context.Interface,
+		authorizerValues,
+	)
+
+	_, inter, err := environment.Interpret(
 		location,
 		program,
-		r.transactionExecutionFunction(
-			transactionType.Parameters,
-			script.Arguments,
-			context.Interface,
-			authorizerValues,
-		),
+		interpretFunc,
 	)
 	if err != nil {
 		return newError(err, location, codesAndPrograms)
 	}
 
 	// Write back all stored values, which were actually just cached, back into storage
-	err = r.commitStorage(storage, inter)
+	err = environment.CommitStorage(inter)
 	if err != nil {
 		return newError(err, location, codesAndPrograms)
 	}
@@ -707,12 +592,12 @@ func userPanicToError(f func()) (returnedError error) {
 	return nil
 }
 
-func (r *interpreterRuntime) transactionExecutionFunction(
+func (r interpreterRuntime) transactionExecutionFunction(
 	parameters []*sema.Parameter,
 	arguments [][]byte,
 	runtimeInterface Interface,
 	authorizerValues func(*interpreter.Interpreter) []interpreter.Value,
-) interpretFunc {
+) InterpretFunc {
 	return func(inter *interpreter.Interpreter) (value interpreter.Value, err error) {
 
 		// Recover internal panics and return them as an error.
@@ -879,7 +764,7 @@ func hasValidStaticType(inter *interpreter.Interpreter, value interpreter.Value)
 // ParseAndCheckProgram parses the given code and checks it.
 // Returns a program that can be interpreted (AST + elaboration).
 //
-func (r *interpreterRuntime) ParseAndCheckProgram(
+func (r interpreterRuntime) ParseAndCheckProgram(
 	code []byte,
 	context Context,
 ) (
@@ -900,7 +785,7 @@ func (r *interpreterRuntime) ParseAndCheckProgram(
 
 	environment := context.Environment
 	if environment == nil {
-		environment = NewBaseEnvironment()
+		environment = NewBaseInterpreterEnvironment(r.defaultConfig)
 	}
 	environment.Configure(
 		context.Interface,
@@ -920,8 +805,8 @@ func (r *interpreterRuntime) ParseAndCheckProgram(
 	return program, nil
 }
 
-func (r *interpreterRuntime) executeNonProgram(
-	interpret interpretFunc,
+func (r interpreterRuntime) executeNonProgram(
+	interpret InterpretFunc,
 	context Context,
 ) (cadence.Value, error) {
 
@@ -933,7 +818,7 @@ func (r *interpreterRuntime) executeNonProgram(
 
 	environment := context.Environment
 	if environment == nil {
-		environment = NewBaseEnvironment()
+		environment = NewBaseInterpreterEnvironment(r.defaultConfig)
 	}
 	environment.Configure(
 		context.Interface,
@@ -941,7 +826,7 @@ func (r *interpreterRuntime) executeNonProgram(
 		storage,
 	)
 
-	value, inter, err := environment.interpret(
+	value, inter, err := environment.Interpret(
 		location,
 		nil,
 		interpret,
@@ -962,7 +847,7 @@ func (r *interpreterRuntime) executeNonProgram(
 	)
 }
 
-func (r *interpreterRuntime) ReadStored(
+func (r interpreterRuntime) ReadStored(
 	address common.Address,
 	path cadence.Path,
 	context Context,
@@ -997,7 +882,7 @@ func (r *interpreterRuntime) ReadStored(
 	)
 }
 
-func (r *interpreterRuntime) ReadLinked(
+func (r interpreterRuntime) ReadLinked(
 	address common.Address,
 	path cadence.Path,
 	context Context,

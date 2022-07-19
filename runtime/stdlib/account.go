@@ -344,7 +344,7 @@ func newAccountAvailableBalanceGetFunction(
 }
 
 type StorageUsedProvider interface {
-	CommitStorage(inter *interpreter.Interpreter, commitContractUpdates bool) error
+	CommitStorageTemporarily(inter *interpreter.Interpreter) error
 	// GetStorageUsed gets storage used in bytes by the address at the moment of the function call.
 	GetStorageUsed(address common.Address) (uint64, error)
 }
@@ -361,8 +361,7 @@ func newStorageUsedGetFunction(
 
 		// NOTE: flush the cached values, so the host environment
 		// can properly calculate the amount of storage used by the account
-		const commitContractUpdates = false
-		err := provider.CommitStorage(inter, commitContractUpdates)
+		err := provider.CommitStorageTemporarily(inter)
 		if err != nil {
 			panic(err)
 		}
@@ -384,7 +383,7 @@ func newStorageUsedGetFunction(
 }
 
 type StorageCapacityProvider interface {
-	CommitStorage(inter *interpreter.Interpreter, commitContractUpdates bool) error
+	CommitStorageTemporarily(inter *interpreter.Interpreter) error
 	// GetStorageCapacity gets storage capacity in bytes on the address.
 	GetStorageCapacity(address common.Address) (uint64, error)
 }
@@ -401,8 +400,7 @@ func newStorageCapacityGetFunction(
 
 		// NOTE: flush the cached values, so the host environment
 		// can properly calculate the amount of storage available for the account
-		const commitContractUpdates = false
-		err := provider.CommitStorage(inter, commitContractUpdates)
+		err := provider.CommitStorageTemporarily(inter)
 		if err != nil {
 			panic(err)
 		}

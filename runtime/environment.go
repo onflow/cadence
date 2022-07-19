@@ -32,7 +32,37 @@ import (
 	"github.com/onflow/cadence/runtime/stdlib"
 )
 
-type Environment struct {
+type Environment interface {
+	Declare(valueDeclaration stdlib.StandardLibraryValue)
+	Configure(
+		runtimeInterface Interface,
+		codesAndPrograms codesAndPrograms,
+		storage *Storage,
+	)
+	ParseAndCheckProgram(
+		code []byte,
+		location common.Location,
+		storeProgram bool,
+	) (
+		*interpreter.Program,
+		error,
+	)
+	Interpret(
+		location common.Location,
+		program *interpreter.Program,
+		f InterpretFunc,
+	) (
+		interpreter.Value,
+		*interpreter.Interpreter,
+		error,
+	)
+	CommitStorage(inter *interpreter.Interpreter) error
+	NewAuthAccountValue(address interpreter.AddressValue) interpreter.Value
+	NewPublicAccountValue(address interpreter.AddressValue) interpreter.Value
+}
+
+type interpreterEnvironment struct {
+	config                                Config
 	baseActivation                        *interpreter.VariableActivation
 	baseValueActivation                   *sema.VariableActivation
 	runtimeInterface                      Interface
@@ -41,27 +71,29 @@ type Environment struct {
 	deployedContractConstructorInvocation *stdlib.DeployedContractConstructorInvocation
 }
 
-var _ stdlib.Logger = &Environment{}
-var _ stdlib.UnsafeRandomGenerator = &Environment{}
-var _ stdlib.BlockAtHeightProvider = &Environment{}
-var _ stdlib.CurrentBlockProvider = &Environment{}
-var _ stdlib.PublicAccountHandler = &Environment{}
-var _ stdlib.AccountCreator = &Environment{}
-var _ stdlib.EventEmitter = &Environment{}
-var _ stdlib.AuthAccountHandler = &Environment{}
-var _ common.MemoryGauge = &Environment{}
+var _ Environment = &interpreterEnvironment{}
+var _ stdlib.Logger = &interpreterEnvironment{}
+var _ stdlib.UnsafeRandomGenerator = &interpreterEnvironment{}
+var _ stdlib.BlockAtHeightProvider = &interpreterEnvironment{}
+var _ stdlib.CurrentBlockProvider = &interpreterEnvironment{}
+var _ stdlib.PublicAccountHandler = &interpreterEnvironment{}
+var _ stdlib.AccountCreator = &interpreterEnvironment{}
+var _ stdlib.EventEmitter = &interpreterEnvironment{}
+var _ stdlib.AuthAccountHandler = &interpreterEnvironment{}
+var _ common.MemoryGauge = &interpreterEnvironment{}
 
-func newEnvironment() *Environment {
+func newInterpreterEnvironment(config Config) *interpreterEnvironment {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-	return &Environment{
+	return &interpreterEnvironment{
+		config:              config,
 		baseActivation:      baseActivation,
 		baseValueActivation: baseValueActivation,
 	}
 }
 
-func NewBaseEnvironment(declarations ...stdlib.StandardLibraryValue) *Environment {
-	env := newEnvironment()
+func NewBaseInterpreterEnvironment(config Config) *interpreterEnvironment {
+	env := newInterpreterEnvironment(config)
 	for _, valueDeclaration := range stdlib.BuiltinValues {
 		env.Declare(valueDeclaration)
 	}
@@ -71,19 +103,16 @@ func NewBaseEnvironment(declarations ...stdlib.StandardLibraryValue) *Environmen
 	env.Declare(stdlib.NewGetCurrentBlockFunction(env))
 	env.Declare(stdlib.NewGetAccountFunction(env))
 	env.Declare(stdlib.NewAuthAccountConstructor(env))
-	for _, declaration := range declarations {
-		env.Declare(declaration)
-	}
 	return env
 }
 
-func NewScriptEnvironment(declarations ...stdlib.StandardLibraryValue) *Environment {
-	env := NewBaseEnvironment(declarations...)
+func NewScriptInterpreterEnvironment(config Config) Environment {
+	env := NewBaseInterpreterEnvironment(config)
 	env.Declare(stdlib.NewGetAuthAccountFunction(env))
 	return env
 }
 
-func (e *Environment) Configure(
+func (e *interpreterEnvironment) Configure(
 	runtimeInterface Interface,
 	codesAndPrograms codesAndPrograms,
 	storage *Storage,
@@ -93,68 +122,77 @@ func (e *Environment) Configure(
 	e.storage = storage
 }
 
-func (e *Environment) Declare(valueDeclaration stdlib.StandardLibraryValue) {
+func (e *interpreterEnvironment) Declare(valueDeclaration stdlib.StandardLibraryValue) {
 	e.baseValueActivation.DeclareValue(valueDeclaration)
 	e.baseActivation.Declare(valueDeclaration)
 }
 
-func (e *Environment) MeterMemory(usage common.MemoryUsage) error {
+func (e *interpreterEnvironment) NewAuthAccountValue(address interpreter.AddressValue) interpreter.Value {
+	return stdlib.NewAuthAccountValue(e, e, address)
+}
+
+func (e *interpreterEnvironment) NewPublicAccountValue(address interpreter.AddressValue) interpreter.Value {
+	return stdlib.NewPublicAccountValue(e, e, address)
+}
+
+func (e *interpreterEnvironment) MeterMemory(usage common.MemoryUsage) error {
 	return e.runtimeInterface.MeterMemory(usage)
 }
 
-func (e *Environment) ProgramLog(message string) error {
+func (e *interpreterEnvironment) ProgramLog(message string) error {
 	return e.runtimeInterface.ProgramLog(message)
 }
 
-func (e *Environment) UnsafeRandom() (uint64, error) {
+func (e *interpreterEnvironment) UnsafeRandom() (uint64, error) {
 	return e.runtimeInterface.UnsafeRandom()
 }
 
-func (e *Environment) GetBlockAtHeight(height uint64) (block stdlib.Block, exists bool, err error) {
+func (e *interpreterEnvironment) GetBlockAtHeight(height uint64) (block stdlib.Block, exists bool, err error) {
 	return e.runtimeInterface.GetBlockAtHeight(height)
 }
 
-func (e *Environment) GetCurrentBlockHeight() (uint64, error) {
+func (e *interpreterEnvironment) GetCurrentBlockHeight() (uint64, error) {
 	return e.runtimeInterface.GetCurrentBlockHeight()
 }
 
-func (e *Environment) GetAccountBalance(address common.Address) (uint64, error) {
+func (e *interpreterEnvironment) GetAccountBalance(address common.Address) (uint64, error) {
 	return e.runtimeInterface.GetAccountBalance(address)
 }
 
-func (e *Environment) GetAccountAvailableBalance(address common.Address) (uint64, error) {
+func (e *interpreterEnvironment) GetAccountAvailableBalance(address common.Address) (uint64, error) {
 	return e.runtimeInterface.GetAccountAvailableBalance(address)
 }
 
-func (e *Environment) CommitStorage(inter *interpreter.Interpreter, commitContractUpdates bool) error {
+func (e *interpreterEnvironment) CommitStorageTemporarily(inter *interpreter.Interpreter) error {
+	const commitContractUpdates = false
 	return e.storage.Commit(inter, commitContractUpdates)
 }
 
-func (e *Environment) GetStorageUsed(address common.Address) (uint64, error) {
+func (e *interpreterEnvironment) GetStorageUsed(address common.Address) (uint64, error) {
 	return e.runtimeInterface.GetStorageUsed(address)
 }
 
-func (e *Environment) GetStorageCapacity(address common.Address) (uint64, error) {
+func (e *interpreterEnvironment) GetStorageCapacity(address common.Address) (uint64, error) {
 	return e.runtimeInterface.GetStorageCapacity(address)
 }
 
-func (e *Environment) GetAccountKey(address common.Address, index int) (*stdlib.AccountKey, error) {
+func (e *interpreterEnvironment) GetAccountKey(address common.Address, index int) (*stdlib.AccountKey, error) {
 	return e.runtimeInterface.GetAccountKey(address, index)
 }
 
-func (e *Environment) GetAccountContractNames(address common.Address) ([]string, error) {
+func (e *interpreterEnvironment) GetAccountContractNames(address common.Address) ([]string, error) {
 	return e.runtimeInterface.GetAccountContractNames(address)
 }
 
-func (e *Environment) GetAccountContractCode(address common.Address, name string) ([]byte, error) {
+func (e *interpreterEnvironment) GetAccountContractCode(address common.Address, name string) ([]byte, error) {
 	return e.runtimeInterface.GetAccountContractCode(address, name)
 }
 
-func (e *Environment) CreateAccount(payer common.Address) (address common.Address, err error) {
+func (e *interpreterEnvironment) CreateAccount(payer common.Address) (address common.Address, err error) {
 	return e.runtimeInterface.CreateAccount(payer)
 }
 
-func (e *Environment) EmitEvent(
+func (e *interpreterEnvironment) EmitEvent(
 	inter *interpreter.Interpreter,
 	eventType *sema.CompositeType,
 	values []interpreter.Value,
@@ -175,15 +213,15 @@ func (e *Environment) EmitEvent(
 	)
 }
 
-func (e *Environment) AddEncodedAccountKey(address common.Address, key []byte) error {
+func (e *interpreterEnvironment) AddEncodedAccountKey(address common.Address, key []byte) error {
 	return e.runtimeInterface.AddEncodedAccountKey(address, key)
 }
 
-func (e *Environment) RevokeEncodedAccountKey(address common.Address, index int) ([]byte, error) {
+func (e *interpreterEnvironment) RevokeEncodedAccountKey(address common.Address, index int) ([]byte, error) {
 	return e.runtimeInterface.RevokeEncodedAccountKey(address, index)
 }
 
-func (e *Environment) AddAccountKey(
+func (e *interpreterEnvironment) AddAccountKey(
 	address common.Address,
 	key *stdlib.PublicKey,
 	algo sema.HashAlgorithm,
@@ -192,23 +230,23 @@ func (e *Environment) AddAccountKey(
 	return e.runtimeInterface.AddAccountKey(address, key, algo, weight)
 }
 
-func (e *Environment) RevokeAccountKey(address common.Address, index int) (*stdlib.AccountKey, error) {
+func (e *interpreterEnvironment) RevokeAccountKey(address common.Address, index int) (*stdlib.AccountKey, error) {
 	return e.runtimeInterface.RevokeAccountKey(address, index)
 }
 
-func (e *Environment) UpdateAccountContractCode(address common.Address, name string, code []byte) error {
+func (e *interpreterEnvironment) UpdateAccountContractCode(address common.Address, name string, code []byte) error {
 	return e.runtimeInterface.UpdateAccountContractCode(address, name, code)
 }
 
-func (e *Environment) RemoveAccountContractCode(address common.Address, name string) error {
+func (e *interpreterEnvironment) RemoveAccountContractCode(address common.Address, name string) error {
 	return e.runtimeInterface.RemoveAccountContractCode(address, name)
 }
 
-func (e *Environment) RecordContractRemoval(address common.Address, name string) {
+func (e *interpreterEnvironment) RecordContractRemoval(address common.Address, name string) {
 	e.storage.recordContractUpdate(address, name, nil)
 }
 
-func (e *Environment) RecordContractUpdate(
+func (e *interpreterEnvironment) RecordContractUpdate(
 	address common.Address,
 	name string,
 	contractValue *interpreter.CompositeValue,
@@ -216,11 +254,11 @@ func (e *Environment) RecordContractUpdate(
 	e.storage.recordContractUpdate(address, name, contractValue)
 }
 
-func (e *Environment) TemporarilyRecordCode(location common.AddressLocation, code []byte) {
+func (e *interpreterEnvironment) TemporarilyRecordCode(location common.AddressLocation, code []byte) {
 	e.codesAndPrograms.setCode(location, code)
 }
 
-func (e *Environment) ParseAndCheckProgram(
+func (e *interpreterEnvironment) ParseAndCheckProgram(
 	code []byte,
 	location common.Location,
 	storeProgram bool,
@@ -236,7 +274,7 @@ func (e *Environment) ParseAndCheckProgram(
 	)
 }
 
-func (e *Environment) parseAndCheckProgram(
+func (e *interpreterEnvironment) parseAndCheckProgram(
 	code []byte,
 	location common.Location,
 	storeProgram bool,
@@ -302,7 +340,7 @@ func (e *Environment) parseAndCheckProgram(
 	return program, nil
 }
 
-func (e *Environment) check(
+func (e *interpreterEnvironment) check(
 	location common.Location,
 	program *ast.Program,
 	checkedImports importResolutionResults,
@@ -336,7 +374,7 @@ func (e *Environment) check(
 	return elaboration, nil
 }
 
-func (e *Environment) newLocationHandler() sema.LocationHandlerFunc {
+func (e *interpreterEnvironment) newLocationHandler() sema.LocationHandlerFunc {
 	return func(identifiers []Identifier, location Location) (res []ResolvedLocation, err error) {
 		wrapPanic(func() {
 			res, err = e.runtimeInterface.ResolveLocation(identifiers, location)
@@ -345,7 +383,7 @@ func (e *Environment) newLocationHandler() sema.LocationHandlerFunc {
 	}
 }
 
-func (e *Environment) newCheckHandler() sema.CheckHandlerFunc {
+func (e *interpreterEnvironment) newCheckHandler() sema.CheckHandlerFunc {
 	return func(checker *sema.Checker, check func()) {
 		reportMetric(
 			check,
@@ -357,7 +395,7 @@ func (e *Environment) newCheckHandler() sema.CheckHandlerFunc {
 	}
 }
 
-func (e *Environment) newImportHandler(checkedImports importResolutionResults) sema.ImportHandlerFunc {
+func (e *interpreterEnvironment) newImportHandler(checkedImports importResolutionResults) sema.ImportHandlerFunc {
 	return func(
 		checker *sema.Checker,
 		importedLocation common.Location,
@@ -396,14 +434,14 @@ func (e *Environment) newImportHandler(checkedImports importResolutionResults) s
 	}
 }
 
-func (e *Environment) GetProgram(location Location) (*interpreter.Program, error) {
+func (e *interpreterEnvironment) GetProgram(location Location) (*interpreter.Program, error) {
 	return e.getProgram(location, importResolutionResults{})
 }
 
 // getProgram returns the existing program at the given location, if available.
 // If it is not available, it loads the code, and then parses and checks it.
 //
-func (e *Environment) getProgram(
+func (e *interpreterEnvironment) getProgram(
 	location Location,
 	checkedImports importResolutionResults,
 ) (
@@ -440,7 +478,7 @@ func (e *Environment) getProgram(
 	return program, nil
 }
 
-func (e *Environment) getCode(location common.Location) (code []byte, err error) {
+func (e *interpreterEnvironment) getCode(location common.Location) (code []byte, err error) {
 	if addressLocation, ok := location.(common.AddressLocation); ok {
 		wrapPanic(func() {
 			code, err = e.runtimeInterface.GetAccountContractCode(
@@ -456,7 +494,7 @@ func (e *Environment) getCode(location common.Location) (code []byte, err error)
 	return
 }
 
-func (e *Environment) newInterpreter(
+func (e *interpreterEnvironment) newInterpreter(
 	location common.Location,
 	program *interpreter.Program,
 ) (*interpreter.Interpreter, error) {
@@ -484,15 +522,14 @@ func (e *Environment) newInterpreter(
 		interpreter.WithHashHandler(e.newHashHandler()),
 		interpreter.WithOnRecordTraceHandler(e.newOnRecordTraceHandler()),
 		interpreter.WithOnResourceOwnerChangeHandler(e.newResourceOwnerChangedHandler()),
-		// TODO:
-		//interpreter.WithTracingEnabled(r.tracingEnabled),
-		//interpreter.WithAtreeValueValidationEnabled(r.atreeValidationEnabled),
-		//// NOTE: ignore r.atreeValidationEnabled here,
-		//// and disable storage validation after each value modification.
-		//// Instead, storage is validated after commits (if validation is enabled).
-		//interpreter.WithAtreeStorageValidationEnabled(false),
-		//interpreter.WithInvalidatedResourceValidationEnabled(r.invalidatedResourceValidationEnabled),
-		//interpreter.WithDebugger(r.debugger),
+		interpreter.WithTracingEnabled(e.config.TracingEnabled),
+		interpreter.WithAtreeValueValidationEnabled(e.config.AtreeValidationEnabled),
+		// NOTE: ignore r.atreeValidationEnabled here,
+		// and disable storage validation after each value modification.
+		// Instead, storage is validated after commits (if validation is enabled).
+		interpreter.WithAtreeStorageValidationEnabled(false),
+		interpreter.WithInvalidatedResourceValidationEnabled(e.config.InvalidatedResourceValidationEnabled),
+		interpreter.WithDebugger(e.config.Debugger),
 	}
 
 	options = append(
@@ -507,7 +544,7 @@ func (e *Environment) newInterpreter(
 	)
 }
 
-func (e *Environment) newOnRecordTraceHandler() interpreter.OnRecordTraceFunc {
+func (e *interpreterEnvironment) newOnRecordTraceHandler() interpreter.OnRecordTraceFunc {
 	return func(
 		interpreter *interpreter.Interpreter,
 		functionName string,
@@ -520,7 +557,7 @@ func (e *Environment) newOnRecordTraceHandler() interpreter.OnRecordTraceFunc {
 	}
 }
 
-func (e *Environment) newHashHandler() interpreter.HashHandlerFunc {
+func (e *interpreterEnvironment) newHashHandler() interpreter.HashHandlerFunc {
 	return func(
 		inter *interpreter.Interpreter,
 		getLocationRange func() interpreter.LocationRange,
@@ -551,13 +588,13 @@ func (e *Environment) newHashHandler() interpreter.HashHandlerFunc {
 	}
 }
 
-func (e *Environment) newPublicAccountHandler() interpreter.PublicAccountHandlerFunc {
+func (e *interpreterEnvironment) newPublicAccountHandler() interpreter.PublicAccountHandlerFunc {
 	return func(address interpreter.AddressValue) interpreter.Value {
 		return stdlib.NewPublicAccountValue(e, e, address)
 	}
 }
 
-func (e *Environment) newSignatureVerificationHandler() interpreter.SignatureVerificationHandlerFunc {
+func (e *interpreterEnvironment) newSignatureVerificationHandler() interpreter.SignatureVerificationHandlerFunc {
 	return func(
 		inter *interpreter.Interpreter,
 		getLocationRange func() interpreter.LocationRange,
@@ -607,7 +644,7 @@ func (e *Environment) newSignatureVerificationHandler() interpreter.SignatureVer
 	}
 }
 
-func (e *Environment) newPublicKeyValidationHandler() interpreter.PublicKeyValidationHandlerFunc {
+func (e *interpreterEnvironment) newPublicKeyValidationHandler() interpreter.PublicKeyValidationHandlerFunc {
 	return func(
 		inter *interpreter.Interpreter,
 		getLocationRange func() interpreter.LocationRange,
@@ -627,7 +664,7 @@ func (e *Environment) newPublicKeyValidationHandler() interpreter.PublicKeyValid
 	}
 }
 
-func (e *Environment) newContractValueHandler() interpreter.ContractValueHandlerFunc {
+func (e *interpreterEnvironment) newContractValueHandler() interpreter.ContractValueHandlerFunc {
 	return func(
 		inter *interpreter.Interpreter,
 		compositeType *sema.CompositeType,
@@ -670,7 +707,7 @@ func (e *Environment) newContractValueHandler() interpreter.ContractValueHandler
 	}
 }
 
-func (e *Environment) newUUIDHandler() interpreter.UUIDHandlerFunc {
+func (e *interpreterEnvironment) newUUIDHandler() interpreter.UUIDHandlerFunc {
 	return func() (uuid uint64, err error) {
 		wrapPanic(func() {
 			uuid, err = e.runtimeInterface.GenerateUUID()
@@ -679,7 +716,7 @@ func (e *Environment) newUUIDHandler() interpreter.UUIDHandlerFunc {
 	}
 }
 
-func (e *Environment) newOnEventEmittedHandler() interpreter.OnEventEmittedFunc {
+func (e *interpreterEnvironment) newOnEventEmittedHandler() interpreter.OnEventEmittedFunc {
 	return func(
 		inter *interpreter.Interpreter,
 		getLocationRange func() interpreter.LocationRange,
@@ -698,7 +735,7 @@ func (e *Environment) newOnEventEmittedHandler() interpreter.OnEventEmittedFunc 
 	}
 }
 
-func (e *Environment) newInjectedCompositeFieldsHandler() interpreter.InjectedCompositeFieldsHandlerFunc {
+func (e *interpreterEnvironment) newInjectedCompositeFieldsHandler() interpreter.InjectedCompositeFieldsHandlerFunc {
 	return func(
 		inter *interpreter.Interpreter,
 		location Location,
@@ -741,7 +778,7 @@ func (e *Environment) newInjectedCompositeFieldsHandler() interpreter.InjectedCo
 	}
 }
 
-func (e *Environment) newImportLocationHandler() interpreter.ImportLocationHandlerFunc {
+func (e *interpreterEnvironment) newImportLocationHandler() interpreter.ImportLocationHandlerFunc {
 	return func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 		switch location {
 		case stdlib.CryptoChecker.Location:
@@ -771,7 +808,7 @@ func (e *Environment) newImportLocationHandler() interpreter.ImportLocationHandl
 	}
 }
 
-func (e *Environment) loadContract(
+func (e *interpreterEnvironment) loadContract(
 	inter *interpreter.Interpreter,
 	compositeType *sema.CompositeType,
 	constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
@@ -815,7 +852,7 @@ func (e *Environment) loadContract(
 	}
 }
 
-func (e *Environment) meteringInterpreterOptions() []interpreter.Option {
+func (e *interpreterEnvironment) meteringInterpreterOptions() []interpreter.Option {
 	callStackDepth := 0
 	// TODO: make runtime interface function
 	const callStackDepthLimit = 2000
@@ -857,7 +894,7 @@ func (e *Environment) meteringInterpreterOptions() []interpreter.Option {
 	}
 }
 
-func (e *Environment) InterpretContract(
+func (e *interpreterEnvironment) InterpretContract(
 	location common.AddressLocation,
 	program *interpreter.Program,
 	name string,
@@ -871,7 +908,7 @@ func (e *Environment) InterpretContract(
 		e.deployedContractConstructorInvocation = nil
 	}()
 
-	_, inter, err := e.interpret(location, program, nil)
+	_, inter, err := e.Interpret(location, program, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -889,10 +926,10 @@ func (e *Environment) InterpretContract(
 	return
 }
 
-func (e *Environment) interpret(
+func (e *interpreterEnvironment) Interpret(
 	location common.Location,
 	program *interpreter.Program,
-	f interpretFunc,
+	f InterpretFunc,
 ) (
 	interpreter.Value,
 	*interpreter.Interpreter,
@@ -928,11 +965,10 @@ func (e *Environment) interpret(
 	return result, inter, err
 }
 
-func (e *Environment) newResourceOwnerChangedHandler() interpreter.OnResourceOwnerChangeFunc {
-	// TODO:
-	//if !r.resourceOwnerChangeHandlerEnabled {
-	//	return nil
-	//}
+func (e *interpreterEnvironment) newResourceOwnerChangedHandler() interpreter.OnResourceOwnerChangeFunc {
+	if !e.config.ResourceOwnerChangeHandlerEnabled {
+		return nil
+	}
 
 	return func(
 		interpreter *interpreter.Interpreter,
@@ -951,7 +987,7 @@ func (e *Environment) newResourceOwnerChangedHandler() interpreter.OnResourceOwn
 	}
 }
 
-func (e *Environment) newBLSVerifyPopFunction() interpreter.BLSVerifyPoPHandlerFunc {
+func (e *interpreterEnvironment) newBLSVerifyPopFunction() interpreter.BLSVerifyPoPHandlerFunc {
 	return func(
 		inter *interpreter.Interpreter,
 		getLocationRange func() interpreter.LocationRange,
@@ -979,7 +1015,7 @@ func (e *Environment) newBLSVerifyPopFunction() interpreter.BLSVerifyPoPHandlerF
 	}
 }
 
-func (e *Environment) newBLSAggregateSignaturesFunction() interpreter.BLSAggregateSignaturesHandlerFunc {
+func (e *interpreterEnvironment) newBLSAggregateSignaturesFunction() interpreter.BLSAggregateSignaturesHandlerFunc {
 	return func(
 		inter *interpreter.Interpreter,
 		getLocationRange func() interpreter.LocationRange,
@@ -1024,7 +1060,7 @@ func (e *Environment) newBLSAggregateSignaturesFunction() interpreter.BLSAggrega
 	}
 }
 
-func (e *Environment) newBLSAggregatePublicKeysFunction(
+func (e *interpreterEnvironment) newBLSAggregatePublicKeysFunction(
 	publicKeyValidationHandler interpreter.PublicKeyValidationHandlerFunc,
 ) interpreter.BLSAggregatePublicKeysHandlerFunc {
 	return func(
@@ -1074,4 +1110,21 @@ func (e *Environment) newBLSAggregatePublicKeysFunction(
 			aggregatedPublicKeyValue,
 		)
 	}
+}
+
+func (e *interpreterEnvironment) CommitStorage(inter *interpreter.Interpreter) error {
+	const commitContractUpdates = true
+	err := e.storage.Commit(inter, commitContractUpdates)
+	if err != nil {
+		return err
+	}
+
+	if e.config.AtreeValidationEnabled {
+		err = e.storage.CheckHealth()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

@@ -3686,7 +3686,7 @@ func TestTypeValueImport(t *testing.T) {
 		encodedArg, err := json.Encode(typeValue)
 		require.NoError(t, err)
 
-		rt := NewInterpreterRuntime()
+		rt := newTestInterpreterRuntime()
 
 		var ok bool
 
@@ -3737,7 +3737,7 @@ func TestTypeValueImport(t *testing.T) {
 		encodedArg, err := json.Encode(typeValue)
 		require.NoError(t, err)
 
-		rt := NewInterpreterRuntime()
+		rt := newTestInterpreterRuntime()
 
 		runtimeInterface := &testRuntimeInterface{
 			meterMemory: func(_ common.MemoryUsage) error {
@@ -3791,7 +3791,7 @@ func TestCapabilityValueImport(t *testing.T) {
 		encodedArg, err := json.Encode(capabilityValue)
 		require.NoError(t, err)
 
-		rt := NewInterpreterRuntime()
+		rt := newTestInterpreterRuntime()
 
 		var ok bool
 
@@ -3844,7 +3844,7 @@ func TestCapabilityValueImport(t *testing.T) {
 		encodedArg, err := json.Encode(capabilityValue)
 		require.NoError(t, err)
 
-		rt := NewInterpreterRuntime()
+		rt := newTestInterpreterRuntime()
 
 		runtimeInterface := &testRuntimeInterface{
 			meterMemory: func(_ common.MemoryUsage) error {
@@ -3891,7 +3891,7 @@ func TestCapabilityValueImport(t *testing.T) {
 		encodedArg, err := json.Encode(capabilityValue)
 		require.NoError(t, err)
 
-		rt := NewInterpreterRuntime()
+		rt := newTestInterpreterRuntime()
 
 		runtimeInterface := &testRuntimeInterface{
 			meterMemory: func(_ common.MemoryUsage) error {
@@ -3938,7 +3938,7 @@ func TestCapabilityValueImport(t *testing.T) {
 		encodedArg, err := json.Encode(capabilityValue)
 		require.NoError(t, err)
 
-		rt := NewInterpreterRuntime()
+		rt := newTestInterpreterRuntime()
 
 		runtimeInterface := &testRuntimeInterface{
 			log: func(s string) {
@@ -3994,7 +3994,7 @@ func TestCapabilityValueImport(t *testing.T) {
 		encodedArg, err := json.Encode(capabilityValue)
 		require.NoError(t, err)
 
-		rt := NewInterpreterRuntime()
+		rt := newTestInterpreterRuntime()
 
 		runtimeInterface := &testRuntimeInterface{
 			log: func(s string) {

@@ -128,10 +128,10 @@ func newTestLedger(
 	return storage
 }
 
-func newTestInterpreterRuntime(options ...Option) Runtime {
-	rt := NewInterpreterRuntime(options...)
-	rt.SetAtreeValidationEnabled(true)
-	return rt
+func newTestInterpreterRuntime() Runtime {
+	return NewInterpreterRuntime(Config{
+		AtreeValidationEnabled: true,
+	})
 }
 
 type testRuntimeInterface struct {
@@ -7429,7 +7429,7 @@ func BenchmarkRuntimeScriptNoop(b *testing.B) {
 
 	require.NotNil(b, stdlib.CryptoChecker)
 
-	runtime := NewInterpreterRuntime()
+	runtime := newTestInterpreterRuntime()
 
 	source := []byte("pub fun main() {}")
 
