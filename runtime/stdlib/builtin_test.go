@@ -39,6 +39,7 @@ func testInterpreter(t *testing.T, code string, valueDeclaration StandardLibrary
 		code,
 		nil,
 	)
+	require.NoError(t, err)
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 
