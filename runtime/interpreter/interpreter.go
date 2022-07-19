@@ -325,7 +325,7 @@ type Interpreter struct {
 	Location                       common.Location
 	PredeclaredValues              []ValueDeclaration
 	effectivePredeclaredValues     map[string]ValueDeclaration
-	activations                    *VariableActivations
+	Activations                    *VariableActivations
 	Globals                        GlobalVariables
 	allInterpreters                map[common.Location]*Interpreter
 	typeCodes                      TypeCodes
@@ -686,7 +686,7 @@ func WithDebugger(debugger *Debugger) Option {
 	}
 }
 
-// WithTestFramework returns an interpreter option which sets the given debugger
+// WithTestFramework returns an interpreter option which sets the given test framework
 //
 func WithTestFramework(testFramework TestFramework) Option {
 	return func(interpreter *Interpreter) error {
@@ -715,11 +715,11 @@ func NewInterpreter(program *Program, location common.Location, options ...Optio
 		resourceVariables:          map[ResourceKindedValue]*Variable{},
 	}
 
-	interpreter.activations = NewVariableActivations(interpreter)
+	interpreter.Activations = NewVariableActivations(interpreter)
 
 	// Start a new activation/scope for the current program.
 	// Use the base activation as the parent.
-	interpreter.activations.PushNewWithParent(baseActivation)
+	interpreter.Activations.PushNewWithParent(baseActivation)
 
 	defaultOptions := []Option{
 		WithAllInterpreters(map[common.Location]*Interpreter{}),
@@ -946,7 +946,7 @@ func locationRangeGetter(
 }
 
 func (interpreter *Interpreter) findVariable(name string) *Variable {
-	return interpreter.activations.Find(name)
+	return interpreter.Activations.Find(name)
 }
 
 func (interpreter *Interpreter) findOrDeclareVariable(name string) *Variable {
@@ -958,7 +958,7 @@ func (interpreter *Interpreter) findOrDeclareVariable(name string) *Variable {
 }
 
 func (interpreter *Interpreter) setVariable(name string, variable *Variable) {
-	interpreter.activations.Set(name, variable)
+	interpreter.Activations.Set(name, variable)
 }
 
 func (interpreter *Interpreter) Interpret() (err error) {
@@ -1042,10 +1042,10 @@ func (interpreter *Interpreter) invokeVariable(
 		}
 	}
 
-	return interpreter.invokeExternally(functionValue, functionType, arguments)
+	return interpreter.InvokeExternally(functionValue, functionType, arguments)
 }
 
-func (interpreter *Interpreter) invokeExternally(
+func (interpreter *Interpreter) InvokeExternally(
 	functionValue FunctionValue,
 	functionType *sema.FunctionType,
 	arguments []Value,
@@ -1137,7 +1137,7 @@ func (interpreter *Interpreter) InvokeTransaction(index int, arguments ...Value)
 	transactionType := interpreter.Program.Elaboration.TransactionTypes[index]
 	functionType := transactionType.EntryPointFunctionType()
 
-	_, err = interpreter.invokeExternally(functionValue, functionType, arguments)
+	_, err = interpreter.InvokeExternally(functionValue, functionType, arguments)
 	return err
 }
 
@@ -1300,7 +1300,7 @@ func (interpreter *Interpreter) VisitFunctionDeclaration(declaration *ast.Functi
 	variable := interpreter.findOrDeclareVariable(identifier)
 
 	// lexical scope: variables in functions are bound to what is visible at declaration time
-	lexicalScope := interpreter.activations.CurrentOrNew()
+	lexicalScope := interpreter.Activations.CurrentOrNew()
 
 	// make the function itself available inside the function
 	lexicalScope.Set(identifier, variable)
@@ -1352,8 +1352,8 @@ func (interpreter *Interpreter) functionDeclarationValue(
 
 func (interpreter *Interpreter) VisitBlock(block *ast.Block) ast.Repr {
 	// block scope: each block gets an activation record
-	interpreter.activations.PushNewWithCurrent()
-	defer interpreter.activations.Pop()
+	interpreter.Activations.PushNewWithCurrent()
+	defer interpreter.Activations.Pop()
 
 	return interpreter.visitStatements(block.Statements)
 }
@@ -1372,8 +1372,8 @@ func (interpreter *Interpreter) visitFunctionBody(
 ) Value {
 
 	// block scope: each function block gets an activation record
-	interpreter.activations.PushNewWithCurrent()
-	defer interpreter.activations.Pop()
+	interpreter.Activations.PushNewWithCurrent()
+	defer interpreter.Activations.Pop()
 
 	result := interpreter.visitStatements(beforeStatements)
 	if ret, ok := result.(functionReturn); ok {
@@ -1519,7 +1519,7 @@ func (interpreter *Interpreter) visitAssignment(
 func (interpreter *Interpreter) VisitCompositeDeclaration(declaration *ast.CompositeDeclaration) ast.Repr {
 
 	// lexical scope: variables in functions are bound to what is visible at declaration time
-	lexicalScope := interpreter.activations.CurrentOrNew()
+	lexicalScope := interpreter.Activations.CurrentOrNew()
 
 	_, _ = interpreter.declareCompositeValue(declaration, lexicalScope)
 
@@ -1577,8 +1577,8 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	nestedVariables := map[string]*Variable{}
 
 	(func() {
-		interpreter.activations.PushNewWithCurrent()
-		defer interpreter.activations.Pop()
+		interpreter.Activations.PushNewWithCurrent()
+		defer interpreter.Activations.Pop()
 
 		// Pre-declare empty variables for all interfaces, composites, and function declarations
 		predeclare := func(identifier ast.Identifier) {
@@ -2372,7 +2372,7 @@ func (interpreter *Interpreter) Unbox(getLocationRange func() LocationRange, val
 func (interpreter *Interpreter) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaration) ast.Repr {
 
 	// lexical scope: variables in functions are bound to what is visible at declaration time
-	lexicalScope := interpreter.activations.CurrentOrNew()
+	lexicalScope := interpreter.Activations.CurrentOrNew()
 
 	interpreter.declareInterface(declaration, lexicalScope)
 
@@ -2387,8 +2387,8 @@ func (interpreter *Interpreter) declareInterface(
 	// of nested declarations won't be visible after the containing declaration
 
 	(func() {
-		interpreter.activations.PushNewWithCurrent()
-		defer interpreter.activations.Pop()
+		interpreter.Activations.PushNewWithCurrent()
+		defer interpreter.Activations.Pop()
 
 		for _, nestedInterfaceDeclaration := range declaration.Members.Interfaces() {
 			interpreter.declareInterface(nestedInterfaceDeclaration, lexicalScope)
@@ -2421,8 +2421,8 @@ func (interpreter *Interpreter) declareTypeRequirement(
 	// of nested declarations won't be visible after the containing declaration
 
 	(func() {
-		interpreter.activations.PushNewWithCurrent()
-		defer interpreter.activations.Pop()
+		interpreter.Activations.PushNewWithCurrent()
+		defer interpreter.Activations.Pop()
 
 		for _, nestedInterfaceDeclaration := range declaration.Members.Interfaces() {
 			interpreter.declareInterface(nestedInterfaceDeclaration, lexicalScope)
@@ -2528,8 +2528,8 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 				// Start a new activation record.
 				// Lexical scope: use the function declaration's activation record,
 				// not the current one (which would be dynamic scope)
-				interpreter.activations.PushNewWithParent(lexicalScope)
-				defer interpreter.activations.Pop()
+				interpreter.Activations.PushNewWithParent(lexicalScope)
+				defer interpreter.Activations.Pop()
 
 				if declaration.ParameterList != nil {
 					interpreter.bindParameterArguments(
@@ -2741,6 +2741,7 @@ func (interpreter *Interpreter) NewSubInterpreter(
 		WithOnResourceOwnerChangeHandler(interpreter.onResourceOwnerChange),
 		WithOnMeterComputationFuncHandler(interpreter.onMeterComputation),
 		WithMemoryGauge(interpreter.memoryGauge),
+		WithTestFramework(interpreter.TestFramework),
 	}
 
 	return NewInterpreter(

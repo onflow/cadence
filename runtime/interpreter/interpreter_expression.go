@@ -868,7 +868,7 @@ func (interpreter *Interpreter) visitEntries(entries []ast.DictionaryEntry) []Di
 func (interpreter *Interpreter) VisitFunctionExpression(expression *ast.FunctionExpression) ast.Repr {
 
 	// lexical scope: variables in functions are bound to what is visible at declaration time
-	lexicalScope := interpreter.activations.CurrentOrNew()
+	lexicalScope := interpreter.Activations.CurrentOrNew()
 
 	functionType := interpreter.Program.Elaboration.FunctionExpressionFunctionType[expression]
 

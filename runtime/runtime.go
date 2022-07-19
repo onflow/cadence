@@ -1581,6 +1581,9 @@ func (r *interpreterRuntime) injectedCompositeFieldsHandler(
 		case stdlib.CryptoChecker.Location:
 			return nil
 
+		case stdlib.TestContractChecker.Location:
+			return nil
+
 		default:
 			switch compositeKind {
 			case common.CompositeKindContract:
@@ -2120,6 +2123,17 @@ func (r *interpreterRuntime) loadContract(
 	switch compositeType.Location {
 	case stdlib.CryptoChecker.Location:
 		contract, err := stdlib.NewCryptoContract(
+			inter,
+			constructorGenerator(common.Address{}),
+			invocationRange,
+		)
+		if err != nil {
+			panic(err)
+		}
+		return contract
+
+	case stdlib.TestContractLocation:
+		contract, err := stdlib.NewTestContract(
 			inter,
 			constructorGenerator(common.Address{}),
 			invocationRange,

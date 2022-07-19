@@ -3717,7 +3717,7 @@ func (t *CompositeType) InterfaceType() *InterfaceType {
 		Fields:                t.Fields,
 		InitializerParameters: t.ConstructorParameters,
 		containerType:         t.containerType,
-		nestedTypes:           t.NestedTypes,
+		NestedTypes:           t.NestedTypes,
 	}
 }
 
@@ -3727,7 +3727,7 @@ func (t *CompositeType) TypeRequirements() []*CompositeType {
 
 	if containerComposite, ok := t.containerType.(*CompositeType); ok {
 		for _, conformance := range containerComposite.ExplicitInterfaceConformances {
-			ty, ok := conformance.nestedTypes.Get(t.Identifier)
+			ty, ok := conformance.NestedTypes.Get(t.Identifier)
 			if !ok {
 				continue
 			}
@@ -3989,7 +3989,7 @@ type InterfaceType struct {
 	// TODO: add support for overloaded initializers
 	InitializerParameters []*Parameter
 	containerType         Type
-	nestedTypes           *StringTypeOrderedMap
+	NestedTypes           *StringTypeOrderedMap
 	cachedIdentifiers     *struct {
 		TypeID              TypeID
 		QualifiedIdentifier string
@@ -4028,8 +4028,8 @@ func (t *InterfaceType) checkIdentifiersCached() {
 		panic(errors.NewUnreachableError())
 	}
 
-	if t.nestedTypes != nil {
-		t.nestedTypes.Foreach(checkIdentifiersCached)
+	if t.NestedTypes != nil {
+		t.NestedTypes.Foreach(checkIdentifiersCached)
 	}
 }
 
@@ -4205,11 +4205,11 @@ func (t *InterfaceType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 }
 
 func (t *InterfaceType) IsContainerType() bool {
-	return t.nestedTypes != nil
+	return t.NestedTypes != nil
 }
 
 func (t *InterfaceType) GetNestedTypes() *StringTypeOrderedMap {
-	return t.nestedTypes
+	return t.NestedTypes
 }
 
 func (t *InterfaceType) FieldPosition(name string, declaration *ast.InterfaceDeclaration) ast.Position {

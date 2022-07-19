@@ -19,10 +19,11 @@
 package runtime
 
 import (
-	"github.com/onflow/cadence"
-	"github.com/stretchr/testify/require"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 

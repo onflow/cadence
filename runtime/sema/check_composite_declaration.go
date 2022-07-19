@@ -1046,7 +1046,7 @@ func (checker *Checker) checkCompositeConformance(
 
 	// Determine missing nested composite type definitions
 
-	interfaceType.nestedTypes.Foreach(func(name string, typeRequirement Type) {
+	interfaceType.NestedTypes.Foreach(func(name string, typeRequirement Type) {
 
 		// Only nested composite declarations are type requirements of the interface
 

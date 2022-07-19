@@ -39,10 +39,16 @@ func TestRunningSingleTest(t *testing.T) {
 
 func TestExecuteScript(t *testing.T) {
 	code := `
+        import Test
+
         pub fun test() {
-            var bc = Test.Blockchain()
-            var result = bc.executeScript("pub fun main(): Int {  return 1 + 2 }")
-            log(result)
+            var blockchain = Test.newEmulatorBlockchain()
+            var result = blockchain.executeScript("pub fun main(): Int {  return 2 + 3 }")
+
+            assert(result.status == Test.ResultStatus.succeeded)
+            assert((result.returnValue! as! Int) == 5)
+
+            log(result.returnValue)
         }
     `
 

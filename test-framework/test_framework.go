@@ -91,6 +91,14 @@ func parseCheckAndInterpret(script string) (*ast.Program, *interpreter.Interpret
 	return program, inter
 }
 
+func init() {
+	// TODO: find a better way to do this.
+	// 	Option I: Move this logic behind a 'test' flag
+	// 	Option II: Virtually move the 'EmulatorBackend' native struct inside the 'Test' contract
+	//	Any other?
+	sema.NativeCompositeTypes[stdlib.EmulatorBackendType.QualifiedIdentifier()] = stdlib.EmulatorBackendType
+}
+
 func newInterpreterFromChecker(checker *sema.Checker) (*interpreter.Interpreter, error) {
 	predeclaredInterpreterValues := stdlib.BuiltinFunctions.ToInterpreterValueDeclarations()
 	predeclaredInterpreterValues = append(predeclaredInterpreterValues, stdlib.BuiltinValues.ToInterpreterValueDeclarations()...)
@@ -128,6 +136,40 @@ func newInterpreterFromChecker(checker *sema.Checker) (*interpreter.Interpreter,
 				panic(errors.NewUnexpectedError("importing programs not implemented"))
 			}
 		}),
+		interpreter.WithContractValueHandler(
+			func(inter *interpreter.Interpreter,
+				compositeType *sema.CompositeType,
+				constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
+				invocationRange ast.Range) *interpreter.CompositeValue {
+
+				switch compositeType.Location {
+				case stdlib.CryptoChecker.Location:
+					contract, err := stdlib.NewCryptoContract(
+						inter,
+						constructorGenerator(common.Address{}),
+						invocationRange,
+					)
+					if err != nil {
+						panic(err)
+					}
+					return contract
+
+				case stdlib.TestContractLocation:
+					contract, err := stdlib.NewTestContract(
+						inter,
+						constructorGenerator(common.Address{}),
+						invocationRange,
+					)
+					if err != nil {
+						panic(err)
+					}
+					return contract
+
+				default:
+					panic("importing other contracts not supported yet")
+				}
+			},
+		),
 	)
 }
 
