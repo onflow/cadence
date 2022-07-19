@@ -245,6 +245,10 @@ func (e *entryPointInfo) transactionCodelens(index int, argumentList []Argument,
 // helpers
 //
 
+// Codelens message prefixes
+const prefixOK = "💡"
+const prefixError = "🚫"
+
 func resolveAccounts(client flowClient, signers []string) ([]flow.Address, []string) {
 	var absentAccounts []string
 	var resolvedAccounts []flow.Address
@@ -257,4 +261,42 @@ func resolveAccounts(client flowClient, signers []string) ([]flow.Address, []str
 		}
 	}
 	return resolvedAccounts, absentAccounts
+}
+
+func makeActionlessCodelens(title string, lensRange protocol.Range) *protocol.CodeLens {
+	return &protocol.CodeLens{
+		Range: lensRange,
+		Command: protocol.Command{
+			Title: title,
+		},
+	}
+}
+
+func makeCodeLens(
+	command string,
+	title string,
+	lensRange protocol.Range,
+	arguments []json.RawMessage,
+) *protocol.CodeLens {
+	return &protocol.CodeLens{
+		Range: lensRange,
+		Command: protocol.Command{
+			Title:     title,
+			Command:   command,
+			Arguments: arguments,
+		},
+	}
+}
+
+// todo: test this and refactor / remove if not needed
+func encodeJSONArguments(args ...interface{}) ([]json.RawMessage, error) {
+	result := make([]json.RawMessage, 0, len(args))
+	for _, arg := range args {
+		argJSON, err := json.Marshal(arg)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, argJSON)
+	}
+	return result, nil
 }

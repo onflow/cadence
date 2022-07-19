@@ -21,6 +21,8 @@ package integration
 import (
 	"errors"
 
+	"github.com/onflow/cadence/runtime/sema"
+
 	"github.com/onflow/cadence/languageserver/protocol"
 	"github.com/onflow/cadence/languageserver/server"
 	"github.com/onflow/flow-cli/pkg/flowkit"
@@ -103,4 +105,27 @@ func (i *FlowIntegration) initialize(initializationOptions any) error {
 	}
 
 	return nil
+}
+
+func (i *FlowIntegration) codeLenses(
+	uri protocol.DocumentURI,
+	version int32,
+	checker *sema.Checker,
+) (
+	[]*protocol.CodeLens,
+	error,
+) {
+	var actions []*protocol.CodeLens
+
+	// Add code lenses for contracts and contract interfaces
+	contract := i.contractInfo[uri]
+	contract.update(uri, version, checker)
+	actions = append(actions, contract.codelens(i.client)...)
+
+	// Add code lenses for scripts and transactions
+	entryPoint := i.entryPointInfo[uri]
+	entryPoint.update(uri, version, checker)
+	actions = append(actions, entryPoint.codelens(i.client)...)
+
+	return actions, nil
 }

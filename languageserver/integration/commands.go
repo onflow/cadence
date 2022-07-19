@@ -173,7 +173,7 @@ func (c *commands) switchActiveAccount(args ...json.RawMessage) (interface{}, er
 }
 
 // createAccount creates a new account and returns its address.
-func (c *commands) createAccount(args ...json.RawMessage) (interface{}, error) {
+func (c *commands) createAccount(_ ...json.RawMessage) (interface{}, error) {
 	account, err := c.client.CreateAccount()
 	if err != nil {
 		return nil, fmt.Errorf("create account error: %w", err)
