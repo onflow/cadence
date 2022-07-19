@@ -1,4 +1,7 @@
-
+// Test contract is the standard library that provides testing functionality in Cadence.
+//
+// TODO: Name is yet to be finalized
+//
 pub contract Test {
 
     pub struct Blockchain {
@@ -74,6 +77,8 @@ pub contract Test {
         }
     }
 
+    // BlockchainBackend is the interface to be implemented by the backend providers.
+    //
     pub struct interface BlockchainBackend {
 
         // fun addTransaction(_ transaction: Transaction)

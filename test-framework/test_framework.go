@@ -35,6 +35,15 @@ import (
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
+// This Provides utility methods to easily run test-scripts.
+// Example use-case:
+//   - To run all tests in a script:
+//         RunTests("source code")
+//   - To run a single test method in a script:
+//         RunTest("source code", "testMethodName")
+//
+// It is assumed that all test methods start with the 'test' prefix.
+
 const testFunctionPrefix = "test"
 
 type Results map[string]error

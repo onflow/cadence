@@ -21,9 +21,11 @@ package runtime
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -46,6 +48,8 @@ func TestAssert(t *testing.T) {
 	t.Parallel()
 
 	script := `
+        import Test
+
         pub fun main() {
           Test.assert(false, "condition not satisfied")
         }
@@ -58,7 +62,8 @@ func TestAssert(t *testing.T) {
 	}
 
 	_, err := executeScript(script, runtimeInterface)
-	require.NoError(t, err)
+	require.Error(t, err)
+	assert.ErrorAs(t, err, &stdlib.AssertionError{})
 }
 
 func TestBlockchain(t *testing.T) {
@@ -66,8 +71,10 @@ func TestBlockchain(t *testing.T) {
 	t.Parallel()
 
 	script := `
+        import Test
+
         pub fun main() {
-            var bc = Test.Blockchain()
+            var bc = Test.newEmulatorBlockchain()
             bc.executeScript("pub fun foo() {}")
         }
     `
@@ -79,5 +86,7 @@ func TestBlockchain(t *testing.T) {
 	}
 
 	_, err := executeScript(script, runtimeInterface)
+
+	// TODO: fix the 'EmulatorBackend' type loading error.
 	require.NoError(t, err)
 }

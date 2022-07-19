@@ -25,6 +25,10 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
+// TestFramework is the interface to be implemented by the test providers.
+// Cadence standard library talk to the test providers via this interface.
+// This is used as a way to inject test provider dependencies dynamically.
+//
 type TestFramework interface {
 	RunScript(code string) ScriptResult
 }
@@ -34,6 +38,9 @@ type ScriptResult struct {
 	Error error
 }
 
+// TestFrameworkNotProvidedError is the error thrown if test-stdlib functionality is
+// used without providing a test-framework implementation.
+//
 type TestFrameworkNotProvidedError struct{}
 
 var _ errors.InternalError = TestFrameworkNotProvidedError{}

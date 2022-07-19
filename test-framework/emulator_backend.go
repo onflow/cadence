@@ -34,6 +34,8 @@ import (
 
 var _ interpreter.TestFramework = &EmulatorBackend{}
 
+// EmulatorBackend is the emulator-backed implementation of the interpreter.TestFramework.
+//
 type EmulatorBackend struct {
 	blockchain *emulator.Blockchain
 }
@@ -95,6 +97,8 @@ func newBlockchain(opts ...emulator.Option) *emulator.Blockchain {
 	return b
 }
 
+// newInterpreter creates an interpreter instance needed for the value conversion.
+//
 func newInterpreter() (*interpreter.Interpreter, error) {
 	predeclaredInterpreterValues := stdlib.BuiltinFunctions.ToInterpreterValueDeclarations()
 	predeclaredInterpreterValues = append(predeclaredInterpreterValues, stdlib.BuiltinValues.ToInterpreterValueDeclarations()...)

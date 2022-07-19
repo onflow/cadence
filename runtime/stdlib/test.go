@@ -31,6 +31,10 @@ import (
 	"github.com/onflow/cadence/runtime/stdlib/contracts"
 )
 
+// This is the Cadence standard library for writing tests.
+// It provides the Cadence constructs (structs, functions, etc.) that are needed to
+// write tests in Cadence.
+
 const testContractTypeName = "Test"
 const blockchainTypeName = "Blockchain"
 const blockchainBackendTypeName = "BlockchainBackend"
@@ -277,7 +281,7 @@ var testNewEmulatorBlockchainFunction = interpreter.NewUnmeteredHostFunctionValu
 
 // 'EmulatorBackend' struct.
 //
-// EmulatorBackend is the native implementation of the Test.BlockchainBackend interface.
+// 'EmulatorBackend' is the native implementation of the 'Test.BlockchainBackend' interface.
 // It provides a blockchain backed by the emulator.
 
 const emulatorBackendTypeName = "EmulatorBackend"
@@ -315,8 +319,8 @@ const emulatorBackendExecuteScriptFunctionName = "executeScript"
 const emulatorBackendExecuteScriptFunctionDocString = `execute script function`
 
 var emulatorBackendExecuteScriptFunctionType = func() *sema.FunctionType {
-	// type of "executeScript" of the implementation ("EmulatorBackend")
-	// is same as that of the "BlockchainBackend"
+	// The type of the 'executeScript' function of 'EmulatorBackend' (interface-implementation)
+	// is same as that of 'BlockchainBackend' interface.
 	typ, ok := blockchainBackendInterfaceType.Members.Get(emulatorBackendExecuteScriptFunctionName)
 	if !ok {
 		panic(errors.NewUnexpectedError(
