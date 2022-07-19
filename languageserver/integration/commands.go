@@ -85,23 +85,23 @@ func (c *commands) sendTransaction(args ...json.RawMessage) (interface{}, error)
 	var argsJSON string
 	err = json.Unmarshal(args[1], &argsJSON)
 	if err != nil {
-		return nil, fmt.Errorf("invalid transaction arguments: %v", args[1])
+		return nil, fmt.Errorf("invalid transaction arguments: %s", args[1])
+	}
+
+	txArgs, err := flowkit.ParseArgumentsJSON(argsJSON)
+	if err != nil {
+		return nil, fmt.Errorf("invalid transactions arguments cadence encoding format: %s, error: %s", argsJSON, err)
 	}
 
 	var signerList []any
-	err = json.Unmarshal(args[2], &argsJSON)
+	err = json.Unmarshal(args[2], &signerList)
 	if err != nil {
-		return nil, fmt.Errorf("invalid signer list: %v", args[2])
+		return nil, fmt.Errorf("invalid signer list: %s", args[2])
 	}
 
 	signers := make([]flow.Address, len(signerList))
 	for i, v := range signerList {
 		signers[i] = flow.HexToAddress(v.(string))
-	}
-
-	txArgs, err := flowkit.ParseArgumentsJSON(argsJSON)
-	if err != nil {
-		return nil, fmt.Errorf("invalid transactions arguments cadence encoding format: %v", argsJSON)
 	}
 
 	txResult, err := c.client.SendTransaction(signers, location, txArgs)
