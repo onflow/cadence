@@ -94,3 +94,38 @@ func Test_ExecuteTransaction(t *testing.T) {
 		assert.Equal(t, "Transaction status: SEALED", res)
 	})
 }
+
+func Test_SwitchActiveAccount(t *testing.T) {
+	client := NewFlowkitClient(nil)
+	cmds := commands{client}
+
+	t.Run("invalid arguments", func(t *testing.T) {
+		name, _ := json.Marshal("koko")
+
+		inputs := []argInputTest{
+			{args: []json.RawMessage{[]byte("1")}, err: "invalid name argument value: 1"},
+			{args: []json.RawMessage{[]byte("1"), []byte("2")}, err: "arguments error: expected 1 arguments, got 2"},
+			{args: []json.RawMessage{name}, err: "account with a name koko not found"},
+		}
+
+		for _, in := range inputs {
+			resp, err := cmds.switchActiveAccount(in.args...)
+			assert.EqualError(t, err, in.err)
+			assert.Nil(t, resp)
+		}
+	})
+
+	t.Run("switch accounts with valid name", func(t *testing.T) {
+		name := "Alice"
+		client.accounts = []*ClientAccount{{
+			Account: nil,
+			Name:    name,
+		}}
+
+		nameArg, _ := json.Marshal(name)
+		resp, err := cmds.switchActiveAccount(nameArg)
+
+		assert.NoError(t, err)
+		assert.Equal(t, "Account switched to Alice", resp)
+	})
+}

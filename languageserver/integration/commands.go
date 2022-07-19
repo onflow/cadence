@@ -153,7 +153,7 @@ func (c *commands) executeScript(args ...json.RawMessage) (interface{}, error) {
 // There should be 2 arguments:
 //	 * name of the new active account
 func (c *commands) switchActiveAccount(args ...json.RawMessage) (interface{}, error) {
-	err := server.CheckCommandArgumentCount(args, 2)
+	err := server.CheckCommandArgumentCount(args, 1)
 	if err != nil {
 		return nil, fmt.Errorf("arguments error: %w", err)
 	}
@@ -161,7 +161,7 @@ func (c *commands) switchActiveAccount(args ...json.RawMessage) (interface{}, er
 	var name string
 	err = json.Unmarshal(args[0], &name)
 	if err != nil {
-		return nil, fmt.Errorf("invalid name argument: %#+v: %w", args[0], err)
+		return nil, fmt.Errorf("invalid name argument value: %s", args[0])
 	}
 
 	err = c.client.SetActiveClientAccount(name)
