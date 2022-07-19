@@ -177,16 +177,16 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 
 	identifier := declaration.Identifier.Identifier
 
-	variable, err := checker.valueActivations.Declare(variableDeclaration{
-		identifier:               identifier,
-		ty:                       declarationType,
-		docString:                declaration.DocString,
-		access:                   declaration.Access,
-		kind:                     declaration.DeclarationKind(),
-		pos:                      declaration.Identifier.Pos,
-		isConstant:               declaration.IsConstant,
-		argumentLabels:           nil,
-		allowOuterScopeShadowing: true,
+	variable, err := checker.ValueActivations.Declare(VariableDeclaration{
+		Identifier:               identifier,
+		Type:                     declarationType,
+		DocString:                declaration.DocString,
+		Access:                   declaration.Access,
+		Kind:                     declaration.DeclarationKind(),
+		Pos:                      declaration.Identifier.Pos,
+		IsConstant:               declaration.IsConstant,
+		ArgumentLabels:           nil,
+		AllowOuterScopeShadowing: true,
 	})
 	checker.report(err)
 
@@ -201,7 +201,7 @@ func (checker *Checker) recordVariableDeclarationRange(
 	identifier string,
 	declarationType Type,
 ) {
-	activation := checker.valueActivations.Current()
+	activation := checker.ValueActivations.Current()
 	activation.LeaveCallbacks = append(
 		activation.LeaveCallbacks,
 		func(getEndPosition EndPositionGetter) {

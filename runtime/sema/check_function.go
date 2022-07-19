@@ -97,16 +97,16 @@ func (checker *Checker) declareFunctionDeclaration(
 ) {
 	argumentLabels := declaration.ParameterList.EffectiveArgumentLabels()
 
-	_, err := checker.valueActivations.Declare(variableDeclaration{
-		identifier:               declaration.Identifier.Identifier,
-		ty:                       functionType,
-		docString:                declaration.DocString,
-		access:                   declaration.Access,
-		kind:                     common.DeclarationKindFunction,
-		pos:                      declaration.Identifier.Pos,
-		isConstant:               true,
-		argumentLabels:           argumentLabels,
-		allowOuterScopeShadowing: false,
+	_, err := checker.ValueActivations.Declare(VariableDeclaration{
+		Identifier:               declaration.Identifier.Identifier,
+		Type:                     functionType,
+		DocString:                declaration.DocString,
+		Access:                   declaration.Access,
+		Kind:                     common.DeclarationKindFunction,
+		Pos:                      declaration.Identifier.Pos,
+		IsConstant:               true,
+		ArgumentLabels:           argumentLabels,
+		AllowOuterScopeShadowing: false,
 	})
 	checker.report(err)
 
@@ -150,7 +150,7 @@ func (checker *Checker) checkFunction(
 
 	checker.functionActivations.WithFunction(
 		functionType,
-		checker.valueActivations.Depth(),
+		checker.ValueActivations.Depth(),
 		func(functionActivation *FunctionActivation) {
 			// NOTE: important to begin scope in function activation, so that
 			//   variable declarations will have proper function activation
@@ -283,13 +283,13 @@ func (checker *Checker) declareParameters(
 	parameterList *ast.ParameterList,
 	parameters []*Parameter,
 ) {
-	depth := checker.valueActivations.Depth()
+	depth := checker.ValueActivations.Depth()
 
 	for i, parameter := range parameterList.Parameters {
 		identifier := parameter.Identifier
 
 		// check if variable with this identifier is already declared in the current scope
-		existingVariable := checker.valueActivations.Find(identifier.Identifier)
+		existingVariable := checker.ValueActivations.Find(identifier.Identifier)
 		if existingVariable != nil && existingVariable.ActivationDepth == depth {
 			checker.report(
 				&RedeclarationError{
@@ -314,7 +314,7 @@ func (checker *Checker) declareParameters(
 			ActivationDepth: depth,
 			Pos:             &identifier.Pos,
 		}
-		checker.valueActivations.Set(identifier.Identifier, variable)
+		checker.ValueActivations.Set(identifier.Identifier, variable)
 		if checker.positionInfoEnabled {
 			checker.recordVariableDeclarationOccurrence(identifier.Identifier, variable)
 		}
@@ -401,7 +401,7 @@ func (checker *Checker) visitFunctionBlock(
 }
 
 func (checker *Checker) declareResult(ty Type) {
-	_, err := checker.valueActivations.DeclareImplicitConstant(
+	_, err := checker.ValueActivations.DeclareImplicitConstant(
 		ResultIdentifier,
 		ty,
 		common.DeclarationKindConstant,
@@ -411,7 +411,7 @@ func (checker *Checker) declareResult(ty Type) {
 }
 
 func (checker *Checker) declareBefore() {
-	_, err := checker.valueActivations.DeclareImplicitConstant(
+	_, err := checker.ValueActivations.DeclareImplicitConstant(
 		BeforeIdentifier,
 		beforeType,
 		common.DeclarationKindFunction,

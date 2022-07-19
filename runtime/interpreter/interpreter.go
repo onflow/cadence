@@ -157,7 +157,7 @@ type ContractValueHandlerFunc func(
 	compositeType *sema.CompositeType,
 	constructorGenerator func(common.Address) *HostFunctionValue,
 	invocationRange ast.Range,
-) *CompositeValue
+) Value
 
 // ImportLocationHandlerFunc is a function that handles imports of locations.
 //
@@ -1827,14 +1827,26 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	if declaration.CompositeKind == common.CompositeKindContract {
 		variable.getter = func() Value {
 			positioned := ast.NewRangeFromPositioned(interpreter, declaration.Identifier)
-			contract := interpreter.contractValueHandler(
+			valueHandler := interpreter.contractValueHandler(
 				interpreter,
 				compositeType,
 				constructorGenerator,
 				positioned,
 			)
-			contract.NestedVariables = nestedVariables
-			return contract
+
+			// Under normal circumstances, a contract value is always a CompositeValue.
+			// However, in the test framework, an imported contract, is constructed via a constructor function.
+			// Hence, during tests, the value is a HostFunctionValue.
+			switch valueHandler := valueHandler.(type) {
+			case *CompositeValue:
+				valueHandler.NestedVariables = nestedVariables
+			case *HostFunctionValue:
+				valueHandler.NestedVariables = nestedVariables
+			default:
+				panic(errors.NewUnreachableError())
+			}
+
+			return valueHandler
 		}
 	} else {
 		constructor := constructorGenerator(common.Address{})

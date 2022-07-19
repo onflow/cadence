@@ -87,7 +87,7 @@ type Checker struct {
 	PredeclaredTypes                   []TypeDeclaration
 	accessCheckMode                    AccessCheckMode
 	errors                             []error
-	valueActivations                   *VariableActivations
+	ValueActivations                   *VariableActivations
 	resources                          *Resources
 	typeActivations                    *VariableActivations
 	containerTypes                     map[Type]bool
@@ -267,7 +267,7 @@ func NewChecker(program *ast.Program, location common.Location, memoryGauge comm
 	checker := &Checker{
 		Program:             program,
 		Location:            location,
-		valueActivations:    valueActivations,
+		ValueActivations:    valueActivations,
 		resources:           NewResources(),
 		typeActivations:     typeActivations,
 		functionActivations: functionActivations,
@@ -324,17 +324,17 @@ func (checker *Checker) declareValue(declaration ValueDeclaration) *Variable {
 	}
 
 	name := declaration.ValueDeclarationName()
-	variable, err := checker.valueActivations.Declare(variableDeclaration{
-		identifier: name,
-		ty:         declaration.ValueDeclarationType(),
-		docString:  declaration.ValueDeclarationDocString(),
+	variable, err := checker.ValueActivations.Declare(VariableDeclaration{
+		Identifier: name,
+		Type:       declaration.ValueDeclarationType(),
+		DocString:  declaration.ValueDeclarationDocString(),
 		// TODO: add access to ValueDeclaration and use declaration's access instead here
-		access:                   ast.AccessPublic,
-		kind:                     declaration.ValueDeclarationKind(),
-		pos:                      declaration.ValueDeclarationPosition(),
-		isConstant:               declaration.ValueDeclarationIsConstant(),
-		argumentLabels:           declaration.ValueDeclarationArgumentLabels(),
-		allowOuterScopeShadowing: false,
+		Access:                   ast.AccessPublic,
+		Kind:                     declaration.ValueDeclarationKind(),
+		Pos:                      declaration.ValueDeclarationPosition(),
+		IsConstant:               declaration.ValueDeclarationIsConstant(),
+		ArgumentLabels:           declaration.ValueDeclarationArgumentLabels(),
+		AllowOuterScopeShadowing: false,
 	})
 	checker.report(err)
 	if checker.positionInfoEnabled {
@@ -866,7 +866,7 @@ func (checker *Checker) declareGlobalDeclaration(declaration ast.Declaration) {
 }
 
 func (checker *Checker) declareGlobalValue(name string) {
-	variable := checker.valueActivations.Find(name)
+	variable := checker.ValueActivations.Find(name)
 	if variable == nil {
 		return
 	}
@@ -913,7 +913,7 @@ func (checker *Checker) inSwitch() bool {
 
 func (checker *Checker) findAndCheckValueVariable(identifierExpression *ast.IdentifierExpression, recordOccurrence bool) *Variable {
 	identifier := identifierExpression.Identifier
-	variable := checker.valueActivations.Find(identifier.Identifier)
+	variable := checker.ValueActivations.Find(identifier.Identifier)
 	if variable == nil {
 		checker.report(
 			&NotDeclaredError{
@@ -1538,15 +1538,15 @@ func (checker *Checker) recordFunctionDeclarationOrigin(
 
 func (checker *Checker) enterValueScope() {
 	//fmt.Printf("ENTER: %d\n", checker.valueActivations.Depth())
-	checker.valueActivations.Enter()
+	checker.ValueActivations.Enter()
 }
 
 func (checker *Checker) leaveValueScope(getEndPosition EndPositionGetter, checkResourceLoss bool) {
 	if checkResourceLoss {
-		checker.checkResourceLoss(checker.valueActivations.Depth())
+		checker.checkResourceLoss(checker.ValueActivations.Depth())
 	}
 
-	checker.valueActivations.Leave(getEndPosition)
+	checker.ValueActivations.Leave(getEndPosition)
 }
 
 // TODO: prune resource variables declared in function's scope
@@ -1558,7 +1558,7 @@ func (checker *Checker) leaveValueScope(getEndPosition EndPositionGetter, checkR
 //
 func (checker *Checker) checkResourceLoss(depth int) {
 
-	checker.valueActivations.ForEachVariableDeclaredInAndBelow(depth, func(name string, variable *Variable) {
+	checker.ValueActivations.ForEachVariableDeclaredInAndBelow(depth, func(name string, variable *Variable) {
 
 		if variable.Type.IsResourceType() &&
 			variable.DeclarationKind != common.DeclarationKindSelf &&
@@ -2164,7 +2164,7 @@ func (checker *Checker) checkVariableMove(expression ast.Expression) {
 		return
 	}
 
-	variable := checker.valueActivations.Find(identifierExpression.Identifier.Identifier)
+	variable := checker.ValueActivations.Find(identifierExpression.Identifier.Identifier)
 	if variable == nil {
 		return
 	}
@@ -2284,7 +2284,7 @@ func (checker *Checker) checkInvalidInterfaceAsType(ty Type, pos ast.HasPosition
 }
 
 func (checker *Checker) ValueActivationDepth() int {
-	return checker.valueActivations.Depth()
+	return checker.ValueActivations.Depth()
 }
 
 func (checker *Checker) TypeActivationDepth() int {

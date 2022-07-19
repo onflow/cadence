@@ -146,7 +146,7 @@ func (checker *Checker) importResolvedLocation(resolvedLocation ResolvedLocation
 
 	allValueElements := imp.AllValueElements()
 	foundValues, invalidAccessedValues := checker.importElements(
-		checker.valueActivations,
+		checker.ValueActivations,
 		resolvedLocation.Identifiers,
 		allValueElements,
 		imp.IsImportableValue,
@@ -252,14 +252,14 @@ func (checker *Checker) handleMissingImports(missing []ast.Identifier, available
 		// NOTE: declare constant variable with invalid type to silence rest of program
 		const access = ast.AccessPrivate
 
-		_, err := checker.valueActivations.Declare(variableDeclaration{
-			identifier:               identifier.Identifier,
-			ty:                       InvalidType,
-			access:                   access,
-			kind:                     common.DeclarationKindValue,
-			pos:                      identifier.Pos,
-			isConstant:               true,
-			allowOuterScopeShadowing: false,
+		_, err := checker.ValueActivations.Declare(VariableDeclaration{
+			Identifier:               identifier.Identifier,
+			Type:                     InvalidType,
+			Access:                   access,
+			Kind:                     common.DeclarationKindValue,
+			Pos:                      identifier.Pos,
+			IsConstant:               true,
+			AllowOuterScopeShadowing: false,
 		})
 		checker.report(err)
 
@@ -335,17 +335,17 @@ func (checker *Checker) importElements(
 				}
 			}
 
-			_, err := valueActivations.Declare(variableDeclaration{
-				identifier: name,
-				ty:         element.Type,
+			_, err := valueActivations.Declare(VariableDeclaration{
+				Identifier: name,
+				Type:       element.Type,
 				// TODO: implies that type is "re-exported"
-				access: access,
-				kind:   element.DeclarationKind,
+				Access: access,
+				Kind:   element.DeclarationKind,
 				// TODO:
-				pos:                      ast.EmptyPosition,
-				isConstant:               true,
-				argumentLabels:           element.ArgumentLabels,
-				allowOuterScopeShadowing: false,
+				Pos:                      ast.EmptyPosition,
+				IsConstant:               true,
+				ArgumentLabels:           element.ArgumentLabels,
+				AllowOuterScopeShadowing: false,
 			})
 			checker.report(err)
 		})

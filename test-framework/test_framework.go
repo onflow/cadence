@@ -64,8 +64,11 @@ func RunTests(script string) Results {
 
 func parseCheckAndInterpret(script string) (*ast.Program, *interpreter.Interpreter) {
 	program, err := parser.ParseProgram(script, nil)
+	if err != nil {
+		panic(err)
+	}
 
-	checker, err := newChecker(program)
+	checker, err := newChecker(program, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -124,19 +127,45 @@ func newInterpreterFromChecker(checker *sema.Checker) (*interpreter.Interpreter,
 				}
 
 			default:
+				switch location := location.(type) {
+				case common.StringLocation:
+					importedChecker := LoadProgramFromFile(location)
+					program := interpreter.ProgramFromChecker(importedChecker)
+					subInterpreter, err := inter.NewSubInterpreter(program, location)
+					if err != nil {
+						panic(err)
+					}
+
+					return interpreter.InterpreterImport{
+						Interpreter: subInterpreter,
+					}
+				}
+
 				panic(errors.NewUnexpectedError("importing programs not implemented"))
 			}
+		}),
+		interpreter.WithContractValueHandler(func(
+			inter *interpreter.Interpreter,
+			compositeType *sema.CompositeType,
+			constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
+			invocationRange ast.Range,
+		) interpreter.Value {
+			return constructorGenerator(common.Address{})
 		}),
 	)
 }
 
-func newChecker(program *ast.Program) (*sema.Checker, error) {
+func newChecker(program *ast.Program, location common.Location) (*sema.Checker, error) {
 	predeclaredSemaValues := stdlib.BuiltinFunctions.ToSemaValueDeclarations()
 	predeclaredSemaValues = append(predeclaredSemaValues, stdlib.BuiltinValues.ToSemaValueDeclarations()...)
 
+	if location == nil {
+		location = utils.TestLocation
+	}
+
 	return sema.NewChecker(
 		program,
-		utils.TestLocation,
+		location,
 		nil,
 		true,
 		sema.WithPredeclaredValues(predeclaredSemaValues),
@@ -152,7 +181,40 @@ func newChecker(program *ast.Program) (*sema.Checker, error) {
 					elaboration = stdlib.TestContractChecker.Elaboration
 
 				default:
-					return nil, errors.NewUnexpectedError("importing programs not implemented")
+					switch location := importedLocation.(type) {
+					case common.StringLocation:
+						importedChecker := LoadProgramFromFile(location)
+						elaboration = importedChecker.Elaboration
+
+						contractDecl := importedChecker.Program.SoleContractDeclaration()
+						compositeType := elaboration.CompositeDeclarationTypes[contractDecl]
+
+						constructorType, constructorArgumentLabels := importedChecker.CompositeConstructorType(contractDecl, compositeType)
+						//constructorType.Members = compositeType
+
+						// Remove the contract variable, and instead declare a constructor.
+						elaboration.GlobalValues.Delete(compositeType.Identifier)
+
+						// Declare a constructor
+						_, err := checker.ValueActivations.Declare(sema.VariableDeclaration{
+							Identifier:               contractDecl.Identifier.Identifier,
+							Type:                     constructorType,
+							DocString:                contractDecl.DocString,
+							Access:                   contractDecl.Access,
+							Kind:                     contractDecl.DeclarationKind(),
+							Pos:                      contractDecl.Identifier.Pos,
+							IsConstant:               true,
+							ArgumentLabels:           constructorArgumentLabels,
+							AllowOuterScopeShadowing: false,
+						})
+
+						if err != nil {
+							panic(err)
+						}
+
+					default:
+						return nil, errors.NewUnexpectedError("importing programs not implemented")
+					}
 				}
 
 				return sema.ElaborationImport{
@@ -179,3 +241,37 @@ func PrettyPrintResult(funcName string, err error) string {
 
 	return fmt.Sprintf("- FAIL: %s\n\t\t%s\n", funcName, err.Error())
 }
+
+func LoadProgramFromFile(location common.StringLocation) *sema.Checker {
+	code := loadSourceCodeFromFile(location)
+
+	program, err := parser.ParseProgram(code, nil)
+
+	checker, err := newChecker(program, location)
+	if err != nil {
+		panic(err)
+	}
+
+	err = checker.Check()
+	if err != nil {
+		panic(err)
+	}
+
+	return checker
+}
+
+func loadSourceCodeFromFile(location common.Location) string {
+	// TODO
+	return fooContract
+}
+
+const fooContract = `
+pub contract FooContract {
+    init() {
+    }
+
+    pub fun hello(): String {
+        return "hello from Foo"
+    }
+}
+`

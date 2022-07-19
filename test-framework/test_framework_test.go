@@ -48,3 +48,20 @@ func TestExecuteScript(t *testing.T) {
 	err := RunTest(code, "test")
 	assert.NoError(t, err)
 }
+
+func TestLoadContract(t *testing.T) {
+	code := `
+        import FooContract from "./FooContract"
+
+        pub fun test() {
+            var foo = FooContract()
+            foo.hello()
+        }
+
+        pub struct Bar {
+        }
+    `
+
+	err := RunTest(code, "test")
+	assert.NoError(t, err)
+}
