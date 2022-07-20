@@ -27,7 +27,6 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
@@ -48,14 +47,33 @@ const testFunctionPrefix = "test"
 
 type Results map[string]error
 
-func RunTest(script string, funcName string) error {
-	_, inter := parseCheckAndInterpret(script)
-	_, err := inter.Invoke(funcName)
+type ImportResolver func(location common.Location) (string, error)
+
+type TestRunner struct {
+	importResolver ImportResolver
+}
+
+func NewTestRunner(importResolver ImportResolver) *TestRunner {
+	return &TestRunner{
+		importResolver: importResolver,
+	}
+}
+
+func (r *TestRunner) RunTest(script string, funcName string) error {
+	_, inter, err := r.parseCheckAndInterpret(script)
+	if err != nil {
+		return err
+	}
+
+	_, err = inter.Invoke(funcName)
 	return err
 }
 
-func RunTests(script string) Results {
-	program, inter := parseCheckAndInterpret(script)
+func (r *TestRunner) RunTests(script string) (Results, error) {
+	program, inter, err := r.parseCheckAndInterpret(script)
+	if err != nil {
+		return nil, err
+	}
 
 	results := make(Results)
 
@@ -68,42 +86,42 @@ func RunTests(script string) Results {
 		}
 	}
 
-	return results
+	return results, nil
 }
 
-func parseCheckAndInterpret(script string) (*ast.Program, *interpreter.Interpreter) {
+func (r *TestRunner) parseCheckAndInterpret(script string) (*ast.Program, *interpreter.Interpreter, error) {
 	program, err := parser.ParseProgram(script, nil)
 	if err != nil {
-		panic(err)
+		return nil, nil, err
 	}
 
-	checker, err := newChecker(program, nil)
+	checker, err := r.newChecker(program, nil)
 	if err != nil {
-		panic(err)
+		return nil, nil, err
 	}
 
 	err = checker.Check()
 	if err != nil {
-		panic(err)
+		return nil, nil, err
 	}
 
 	// TODO: validate test function signature
 	//   e.g: no return values, no arguments, etc.
 
-	inter, err := newInterpreterFromChecker(checker)
+	inter, err := r.newInterpreterFromChecker(checker)
 	if err != nil {
-		panic(err)
+		return nil, nil, err
 	}
 
 	err = inter.Interpret()
 	if err != nil {
-		panic(err)
+		return nil, nil, err
 	}
 
-	return program, inter
+	return program, inter, nil
 }
 
-func newInterpreterFromChecker(checker *sema.Checker) (*interpreter.Interpreter, error) {
+func (r *TestRunner) newInterpreterFromChecker(checker *sema.Checker) (*interpreter.Interpreter, error) {
 	predeclaredInterpreterValues := stdlib.BuiltinFunctions.ToInterpreterValueDeclarations()
 	predeclaredInterpreterValues = append(predeclaredInterpreterValues, stdlib.BuiltinValues.ToInterpreterValueDeclarations()...)
 	predeclaredInterpreterValues = append(predeclaredInterpreterValues, stdlib.HelperFunctions.ToInterpreterValueDeclarations()...)
@@ -137,21 +155,20 @@ func newInterpreterFromChecker(checker *sema.Checker) (*interpreter.Interpreter,
 				}
 
 			default:
-				switch location := location.(type) {
-				case common.StringLocation:
-					importedChecker := LoadProgramFromFile(location)
-					program := interpreter.ProgramFromChecker(importedChecker)
-					subInterpreter, err := inter.NewSubInterpreter(program, location)
-					if err != nil {
-						panic(err)
-					}
-
-					return interpreter.InterpreterImport{
-						Interpreter: subInterpreter,
-					}
+				importedChecker, err := r.parseAndCheckImport(location)
+				if err != nil {
+					panic(err)
 				}
 
-				panic(errors.NewUnexpectedError("importing programs not implemented"))
+				program := interpreter.ProgramFromChecker(importedChecker)
+				subInterpreter, err := inter.NewSubInterpreter(program, location)
+				if err != nil {
+					panic(err)
+				}
+
+				return interpreter.InterpreterImport{
+					Interpreter: subInterpreter,
+				}
 			}
 		}),
 		interpreter.WithContractValueHandler(func(
@@ -192,7 +209,7 @@ func newInterpreterFromChecker(checker *sema.Checker) (*interpreter.Interpreter,
 	)
 }
 
-func newChecker(program *ast.Program, location common.Location) (*sema.Checker, error) {
+func (r *TestRunner) newChecker(program *ast.Program, location common.Location) (*sema.Checker, error) {
 	predeclaredSemaValues := stdlib.BuiltinFunctions.ToSemaValueDeclarations()
 	predeclaredSemaValues = append(predeclaredSemaValues, stdlib.BuiltinValues.ToSemaValueDeclarations()...)
 	predeclaredSemaValues = append(predeclaredSemaValues, stdlib.HelperFunctions.ToSemaValueDeclarations()...)
@@ -219,39 +236,37 @@ func newChecker(program *ast.Program, location common.Location) (*sema.Checker, 
 					elaboration = stdlib.TestContractChecker.Elaboration
 
 				default:
-					switch location := importedLocation.(type) {
-					case common.StringLocation:
-						importedChecker := LoadProgramFromFile(location)
-						elaboration = importedChecker.Elaboration
+					importedChecker, err := r.parseAndCheckImport(importedLocation)
+					if err != nil {
+						return nil, err
+					}
 
-						contractDecl := importedChecker.Program.SoleContractDeclaration()
-						compositeType := elaboration.CompositeDeclarationTypes[contractDecl]
+					elaboration = importedChecker.Elaboration
 
-						constructorType, constructorArgumentLabels := importedChecker.CompositeConstructorType(contractDecl, compositeType)
-						//constructorType.Members = compositeType
+					contractDecl := importedChecker.Program.SoleContractDeclaration()
+					compositeType := elaboration.CompositeDeclarationTypes[contractDecl]
 
-						// Remove the contract variable, and instead declare a constructor.
-						elaboration.GlobalValues.Delete(compositeType.Identifier)
+					constructorType, constructorArgumentLabels := importedChecker.CompositeConstructorType(contractDecl, compositeType)
+					//constructorType.Members = compositeType
 
-						// Declare a constructor
-						_, err := checker.ValueActivations.Declare(sema.VariableDeclaration{
-							Identifier:               contractDecl.Identifier.Identifier,
-							Type:                     constructorType,
-							DocString:                contractDecl.DocString,
-							Access:                   contractDecl.Access,
-							Kind:                     contractDecl.DeclarationKind(),
-							Pos:                      contractDecl.Identifier.Pos,
-							IsConstant:               true,
-							ArgumentLabels:           constructorArgumentLabels,
-							AllowOuterScopeShadowing: false,
-						})
+					// Remove the contract variable, and instead declare a constructor.
+					elaboration.GlobalValues.Delete(compositeType.Identifier)
 
-						if err != nil {
-							panic(err)
-						}
+					// Declare a constructor
+					_, err = checker.ValueActivations.Declare(sema.VariableDeclaration{
+						Identifier:               contractDecl.Identifier.Identifier,
+						Type:                     constructorType,
+						DocString:                contractDecl.DocString,
+						Access:                   contractDecl.Access,
+						Kind:                     contractDecl.DeclarationKind(),
+						Pos:                      contractDecl.Identifier.Pos,
+						IsConstant:               true,
+						ArgumentLabels:           constructorArgumentLabels,
+						AllowOuterScopeShadowing: false,
+					})
 
-					default:
-						return nil, errors.NewUnexpectedError("importing programs not implemented")
+					if err != nil {
+						return nil, err
 					}
 				}
 
@@ -261,6 +276,34 @@ func newChecker(program *ast.Program, location common.Location) (*sema.Checker, 
 			},
 		),
 	)
+}
+
+func (r *TestRunner) parseAndCheckImport(location common.Location) (*sema.Checker, error) {
+	if r.importResolver == nil {
+		return nil, ImportResolverNotProvidedError{}
+	}
+
+	code, err := r.importResolver(location)
+	if err != nil {
+		return nil, err
+	}
+
+	program, err := parser.ParseProgram(code, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	checker, err := r.newChecker(program, location)
+	if err != nil {
+		return nil, err
+	}
+
+	err = checker.Check()
+	if err != nil {
+		return nil, err
+	}
+
+	return checker, nil
 }
 
 func PrettyPrintResults(results Results) string {
@@ -279,37 +322,3 @@ func PrettyPrintResult(funcName string, err error) string {
 
 	return fmt.Sprintf("- FAIL: %s\n\t\t%s\n", funcName, err.Error())
 }
-
-func LoadProgramFromFile(location common.StringLocation) *sema.Checker {
-	code := loadSourceCodeFromFile(location)
-
-	program, err := parser.ParseProgram(code, nil)
-
-	checker, err := newChecker(program, location)
-	if err != nil {
-		panic(err)
-	}
-
-	err = checker.Check()
-	if err != nil {
-		panic(err)
-	}
-
-	return checker
-}
-
-func loadSourceCodeFromFile(location common.Location) string {
-	// TODO
-	return fooContract
-}
-
-const fooContract = `
-pub contract FooContract {
-    init() {
-    }
-
-    pub fun hello(): String {
-        return "hello from Foo"
-    }
-}
-`
