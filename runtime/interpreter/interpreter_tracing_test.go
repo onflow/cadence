@@ -39,16 +39,16 @@ func setupInterpreterWithTracingCallBack(
 	inter, err := interpreter.NewInterpreter(
 		nil,
 		utils.TestLocation,
-		interpreter.WithOnRecordTraceHandler(
-			func(inter *interpreter.Interpreter,
+		&interpreter.Config{
+			OnRecordTrace: func(inter *interpreter.Interpreter,
 				operationName string,
 				duration time.Duration,
 				logs []opentracing.LogRecord) {
 				tracingCallback(operationName)
 			},
-		),
-		interpreter.WithStorage(storage),
-		interpreter.WithTracingEnabled(true),
+			Storage:        storage,
+			TracingEnabled: true,
+		},
 	)
 	require.NoError(t, err)
 	return inter

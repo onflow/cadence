@@ -142,8 +142,8 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 				CheckerOptions: []sema.Option{
 					sema.WithBaseValueActivation(baseValueActivation),
 				},
-				Options: []interpreter.Option{
-					interpreter.WithBaseActivation(baseActivation),
+				Config: &interpreter.Config{
+					BaseActivation: baseActivation,
 				},
 			},
 		)
@@ -198,8 +198,8 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 				CheckerOptions: []sema.Option{
 					sema.WithBaseValueActivation(baseValueActivation),
 				},
-				Options: []interpreter.Option{
-					interpreter.WithBaseActivation(baseActivation),
+				Config: &interpreter.Config{
+					BaseActivation: baseActivation,
 				},
 			},
 		)
@@ -287,8 +287,8 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 				CheckerOptions: []sema.Option{
 					sema.WithBaseValueActivation(baseValueActivation),
 				},
-				Options: []interpreter.Option{
-					interpreter.WithBaseActivation(baseActivation),
+				Config: &interpreter.Config{
+					BaseActivation: baseActivation,
 				},
 			},
 		)
@@ -413,8 +413,8 @@ func TestInterpretIsInstance(t *testing.T) {
 				CheckerOptions: []sema.Option{
 					sema.WithBaseValueActivation(baseValueActivation),
 				},
-				Options: []interpreter.Option{
-					interpreter.WithBaseActivation(baseActivation),
+				Config: &interpreter.Config{
+					BaseActivation: baseActivation,
 				},
 			})
 			require.NoError(t, err)
@@ -553,8 +553,8 @@ func TestInterpretIsSubtype(t *testing.T) {
 				CheckerOptions: []sema.Option{
 					sema.WithBaseValueActivation(baseValueActivation),
 				},
-				Options: []interpreter.Option{
-					interpreter.WithBaseActivation(baseActivation),
+				Config: &interpreter.Config{
+					BaseActivation: baseActivation,
 				},
 			})
 			require.NoError(t, err)
@@ -721,9 +721,9 @@ func TestInterpretGetType(t *testing.T) {
 					CheckerOptions: []sema.Option{
 						sema.WithBaseValueActivation(baseValueActivation),
 					},
-					Options: []interpreter.Option{
-						interpreter.WithStorage(storage),
-						interpreter.WithBaseActivation(baseActivation),
+					Config: &interpreter.Config{
+						Storage:        storage,
+						BaseActivation: baseActivation,
 					},
 				},
 			)

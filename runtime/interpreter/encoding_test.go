@@ -96,7 +96,13 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 		require.Error(t, err)
 	} else {
 		require.NoError(t, err)
-		inter, err := NewInterpreter(nil, TestLocation, WithStorage(test.storage))
+		inter, err := NewInterpreter(
+			nil,
+			TestLocation,
+			&Config{
+				Storage: test.storage,
+			},
+		)
 
 		decodedValue := StoredValue(inter, decoded, test.storage)
 
@@ -275,7 +281,7 @@ func TestEncodeDecodeArray(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				storage: inter.Storage,
+				storage: inter.Config.Storage,
 				value:   expected,
 				encoded: []byte{
 					// tag
@@ -308,7 +314,7 @@ func TestEncodeDecodeArray(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				storage: inter.Storage,
+				storage: inter.Config.Storage,
 				value:   expected,
 				encoded: []byte{
 					// tag
@@ -344,7 +350,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				storage: inter.Storage,
+				storage: inter.Config.Storage,
 				value:   expected,
 				encoded: []byte{
 					// tag
@@ -382,7 +388,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				storage: inter.Storage,
+				storage: inter.Config.Storage,
 				value:   expected,
 				encoded: []byte{
 					// tag
@@ -522,7 +528,7 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 
 		t.Parallel()
 
-		inter, err := NewInterpreter(nil, nil)
+		inter, err := NewInterpreter(nil, nil, &Config{})
 		require.NoError(t, err)
 
 		expected := NewUnmeteredIntValueFromInt64(1_000_000_000)
@@ -1480,7 +1486,7 @@ func TestEncodeDecodeUIntValue(t *testing.T) {
 
 		t.Parallel()
 
-		inter, err := NewInterpreter(nil, nil)
+		inter, err := NewInterpreter(nil, nil, &Config{})
 		require.NoError(t, err)
 
 		expected := NewUnmeteredUIntValueFromUint64(1_000_000_000)

@@ -150,9 +150,9 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 					check()
 				}),
 			},
-			Options: []interpreter.Option{
-				interpreter.WithStorage(storage),
-				interpreter.WithBaseActivation(baseActivation),
+			Config: &interpreter.Config{
+				Storage:        storage,
+				BaseActivation: baseActivation,
 			},
 		},
 	)

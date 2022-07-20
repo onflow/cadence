@@ -526,7 +526,7 @@ func (interpreter *Interpreter) VisitIntegerExpression(expression *ast.IntegerEx
 // This method assumes the range validations are done prior to calling this method. (i.e: at semantic level)
 //
 func (interpreter *Interpreter) NewIntegerValueFromBigInt(value *big.Int, integerSubType sema.Type) Value {
-	memoryGauge := interpreter.memoryGauge
+	memoryGauge := interpreter.Config.MemoryGauge
 
 	// NOTE: cases meter manually and call the unmetered constructors to avoid allocating closures
 
@@ -751,7 +751,7 @@ func (interpreter *Interpreter) VisitConditionalExpression(expression *ast.Condi
 func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *ast.InvocationExpression) ast.Repr {
 
 	// tracing
-	if interpreter.tracingEnabled {
+	if interpreter.Config.TracingEnabled {
 		startTime := time.Now()
 		invokedExpression := invocationExpression.InvokedExpression.String()
 		defer func() {
@@ -810,9 +810,7 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 	argumentTypes := elaboration.InvocationExpressionArgumentTypes[invocationExpression]
 	parameterTypes := elaboration.InvocationExpressionParameterTypes[invocationExpression]
 
-	line := invocationExpression.StartPosition().Line
-
-	interpreter.reportFunctionInvocation(line)
+	interpreter.reportFunctionInvocation()
 
 	resultValue := interpreter.invokeFunctionValue(
 		function,
@@ -824,7 +822,7 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 		invocationExpression,
 	)
 
-	interpreter.reportInvokedFunctionReturn(line)
+	interpreter.reportInvokedFunctionReturn()
 
 	// If this is invocation is optional chaining, wrap the result
 	// as an optional, as the result is expected to be an optional

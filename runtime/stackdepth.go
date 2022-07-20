@@ -16,36 +16,36 @@
  * limitations under the License.
  */
 
-package interpreter_test
+package runtime
 
-import (
-	"testing"
+const defaultStackDepthLimit = 2000
 
-	"github.com/stretchr/testify/require"
+type stackDepthLimiter struct {
+	depth uint64
+	limit uint64
+}
 
-	"github.com/onflow/cadence/runtime/interpreter"
-)
+func newStackDepthLimiter(stackDepthLimit uint64) *stackDepthLimiter {
+	if stackDepthLimit == 0 {
+		stackDepthLimit = defaultStackDepthLimit
+	}
+	return &stackDepthLimiter{
+		limit: stackDepthLimit,
+	}
+}
 
-func TestInterpretContractWithNestedDeclaration(t *testing.T) {
+func (limiter *stackDepthLimiter) OnFunctionInvocation() {
+	limiter.depth++
 
-	t.Parallel()
+	if limiter.depth <= limiter.limit {
+		return
+	}
 
-	_, err := parseCheckAndInterpretWithOptions(t,
-		`
-	      contract C {
+	panic(CallStackLimitExceededError{
+		Limit: limiter.limit,
+	})
+}
 
-	          struct S {}
-
-	          init() {
-	              C.S()
-	          }
-	      }
-	    `,
-		ParseCheckAndInterpretOptions{
-			Config: &interpreter.Config{
-				ContractValueHandler: makeContractValueHandler(nil, nil, nil),
-			},
-		},
-	)
-	require.NoError(t, err)
+func (limiter *stackDepthLimiter) OnInvokedFunctionReturn() {
+	limiter.depth--
 }

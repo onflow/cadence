@@ -71,6 +71,8 @@ type interpreterEnvironment struct {
 	coverageReport                        *CoverageReport
 	codesAndPrograms                      codesAndPrograms
 	deployedContractConstructorInvocation *stdlib.DeployedContractConstructorInvocation
+	interpreterConfig                     *interpreter.Config
+	stackDepthLimiter                     *stackDepthLimiter
 }
 
 var _ Environment = &interpreterEnvironment{}
@@ -87,10 +89,50 @@ var _ common.MemoryGauge = &interpreterEnvironment{}
 func newInterpreterEnvironment(config Config) *interpreterEnvironment {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-	return &interpreterEnvironment{
+
+	env := &interpreterEnvironment{
 		config:              config,
 		baseActivation:      baseActivation,
 		baseValueActivation: baseValueActivation,
+		stackDepthLimiter:   newStackDepthLimiter(config.StackDepthLimit),
+	}
+	env.interpreterConfig = env.newInterpreterConfig()
+	return env
+}
+
+func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
+	publicKeyValidationHandler := e.newPublicKeyValidationHandler()
+
+	return &interpreter.Config{
+		InvalidatedResourceValidationEnabled: true,
+		MemoryGauge:                          e,
+		BaseActivation:                       e.baseActivation,
+		OnEventEmitted:                       e.newOnEventEmittedHandler(),
+		InjectedCompositeFieldsHandler:       e.newInjectedCompositeFieldsHandler(),
+		UUIDHandler:                          e.newUUIDHandler(),
+		ContractValueHandler:                 e.newContractValueHandler(),
+		ImportLocationHandler:                e.newImportLocationHandler(),
+		PublicAccountHandler:                 e.newPublicAccountHandler(),
+		PublicKeyValidationHandler:           publicKeyValidationHandler,
+		BLSVerifyPoPHandler:                  e.newBLSVerifyPopFunction(),
+		BLSAggregateSignaturesHandler:        e.newBLSAggregateSignaturesFunction(),
+		BLSAggregatePublicKeysHandler:        e.newBLSAggregatePublicKeysFunction(publicKeyValidationHandler),
+		SignatureVerificationHandler:         e.newSignatureVerificationHandler(),
+		HashHandler:                          e.newHashHandler(),
+		OnRecordTrace:                        e.newOnRecordTraceHandler(),
+		OnResourceOwnerChange:                e.newResourceOwnerChangedHandler(),
+		TracingEnabled:                       e.config.TracingEnabled,
+		AtreeValueValidationEnabled:          e.config.AtreeValidationEnabled,
+		// NOTE: ignore e.config.AtreeValidationEnabled here,
+		// and disable storage validation after each value modification.
+		// Instead, storage is validated after commits (if validation is enabled),
+		// see interpreterEnvironment.CommitStorage
+		AtreeStorageValidationEnabled: false,
+		Debugger:                      e.config.Debugger,
+		OnStatement:                   e.onStatementHandler(),
+		OnMeterComputation:            e.newOnMeterComputation(),
+		OnFunctionInvocation:          e.newOnFunctionInvocationHandler(),
+		OnInvokedFunctionReturn:       e.newOnInvokedFunctionReturnHandler(),
 	}
 }
 
@@ -123,7 +165,9 @@ func (e *interpreterEnvironment) Configure(
 	e.runtimeInterface = runtimeInterface
 	e.codesAndPrograms = codesAndPrograms
 	e.storage = storage
+	e.interpreterConfig.Storage = storage
 	e.coverageReport = coverageReport
+	e.stackDepthLimiter.depth = 0
 }
 
 func (e *interpreterEnvironment) Declare(valueDeclaration stdlib.StandardLibraryValue) {
@@ -503,48 +547,10 @@ func (e *interpreterEnvironment) newInterpreter(
 	program *interpreter.Program,
 ) (*interpreter.Interpreter, error) {
 
-	publicKeyValidationHandler := e.newPublicKeyValidationHandler()
-
-	options := []interpreter.Option{
-		// TODO: should only depend on environment, so configuration can be reused
-		interpreter.WithStorage(e.storage),
-		interpreter.WithMemoryGauge(e),
-		interpreter.WithBaseActivation(e.baseActivation),
-		interpreter.WithOnEventEmittedHandler(e.newOnEventEmittedHandler()),
-		interpreter.WithInjectedCompositeFieldsHandler(e.newInjectedCompositeFieldsHandler()),
-		interpreter.WithUUIDHandler(e.newUUIDHandler()),
-		interpreter.WithContractValueHandler(e.newContractValueHandler()),
-		interpreter.WithImportLocationHandler(e.newImportLocationHandler()),
-		interpreter.WithPublicAccountHandler(e.newPublicAccountHandler()),
-		interpreter.WithPublicKeyValidationHandler(publicKeyValidationHandler),
-		interpreter.WithBLSCryptoFunctions(
-			e.newBLSVerifyPopFunction(),
-			e.newBLSAggregateSignaturesFunction(),
-			e.newBLSAggregatePublicKeysFunction(publicKeyValidationHandler),
-		),
-		interpreter.WithSignatureVerificationHandler(e.newSignatureVerificationHandler()),
-		interpreter.WithHashHandler(e.newHashHandler()),
-		interpreter.WithOnRecordTraceHandler(e.newOnRecordTraceHandler()),
-		interpreter.WithOnResourceOwnerChangeHandler(e.newResourceOwnerChangedHandler()),
-		interpreter.WithTracingEnabled(e.config.TracingEnabled),
-		interpreter.WithAtreeValueValidationEnabled(e.config.AtreeValidationEnabled),
-		// NOTE: ignore r.atreeValidationEnabled here,
-		// and disable storage validation after each value modification.
-		// Instead, storage is validated after commits (if validation is enabled).
-		interpreter.WithAtreeStorageValidationEnabled(false),
-		interpreter.WithDebugger(e.config.Debugger),
-		interpreter.WithOnStatementHandler(e.onStatementHandler()),
-	}
-
-	options = append(
-		options,
-		e.meteringInterpreterOptions()...,
-	)
-
 	return interpreter.NewInterpreter(
 		program,
 		location,
-		options...,
+		e.interpreterConfig,
 	)
 }
 
@@ -868,45 +874,27 @@ func (e *interpreterEnvironment) loadContract(
 	}
 }
 
-func (e *interpreterEnvironment) meteringInterpreterOptions() []interpreter.Option {
-	callStackDepth := 0
-	// TODO: make runtime interface function
-	const callStackDepthLimit = 2000
-
-	checkCallStackDepth := func() {
-
-		if callStackDepth <= callStackDepthLimit {
-			return
-		}
-
-		panic(CallStackLimitExceededError{
-			Limit: callStackDepthLimit,
-		})
+func (e *interpreterEnvironment) newOnFunctionInvocationHandler() func(_ *interpreter.Interpreter) {
+	return func(_ *interpreter.Interpreter) {
+		e.stackDepthLimiter.OnFunctionInvocation()
 	}
+}
 
-	return []interpreter.Option{
-		interpreter.WithOnFunctionInvocationHandler(
-			func(_ *interpreter.Interpreter, _ int) {
-				callStackDepth++
-				checkCallStackDepth()
-			},
-		),
-		interpreter.WithOnInvokedFunctionReturnHandler(
-			func(_ *interpreter.Interpreter, _ int) {
-				callStackDepth--
-			},
-		),
-		interpreter.WithOnMeterComputationFuncHandler(
-			func(compKind common.ComputationKind, intensity uint) {
-				var err error
-				wrapPanic(func() {
-					err = e.runtimeInterface.MeterComputation(compKind, intensity)
-				})
-				if err != nil {
-					panic(err)
-				}
-			},
-		),
+func (e *interpreterEnvironment) newOnInvokedFunctionReturnHandler() func(_ *interpreter.Interpreter) {
+	return func(_ *interpreter.Interpreter) {
+		e.stackDepthLimiter.OnInvokedFunctionReturn()
+	}
+}
+
+func (e *interpreterEnvironment) newOnMeterComputation() interpreter.OnMeterComputationFunc {
+	return func(compKind common.ComputationKind, intensity uint) {
+		var err error
+		wrapPanic(func() {
+			err = e.runtimeInterface.MeterComputation(compKind, intensity)
+		})
+		if err != nil {
+			panic(err)
+		}
 	}
 }
 
@@ -975,10 +963,7 @@ func (e *interpreterEnvironment) Interpret(
 		return nil, nil, err
 	}
 
-	if inter.ExitHandler != nil {
-		err = inter.ExitHandler()
-	}
-	return result, inter, err
+	return result, inter, nil
 }
 
 func (e *interpreterEnvironment) newResourceOwnerChangedHandler() interpreter.OnResourceOwnerChangeFunc {

@@ -41,7 +41,9 @@ func TestValueDeepCopyAndDeepRemove(t *testing.T) {
 	inter, err := NewInterpreter(
 		nil,
 		utils.TestLocation,
-		WithStorage(storage),
+		&Config{
+			Storage: storage,
+		},
 	)
 	require.NoError(t, err)
 

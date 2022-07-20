@@ -47,11 +47,7 @@ func NewREPL(
 	checkers := map[Location]*sema.Checker{}
 	codes := map[Location]string{}
 
-	defaultCheckerOptions, defaultInterpreterOptions :=
-		cmd.DefaultCheckerInterpreterOptions(
-			checkers,
-			codes,
-		)
+	defaultCheckerOptions := cmd.DefaultCheckerOptions(checkers, codes)
 
 	defaultCheckerOptions = append(
 		defaultCheckerOptions,
@@ -81,23 +77,18 @@ func NewREPL(
 	// NOTE: storage option must be provided *before* the predeclared values option,
 	// as predeclared values may rely on storage
 
-	interpreterOptions := []interpreter.Option{
-		interpreter.WithStorage(storage),
-		interpreter.WithUUIDHandler(func() (uint64, error) {
+	config := &interpreter.Config{
+		Storage: storage,
+		UUIDHandler: func() (uint64, error) {
 			defer func() { uuid++ }()
 			return uuid, nil
-		}),
+		},
 	}
-
-	interpreterOptions = append(
-		interpreterOptions,
-		defaultInterpreterOptions...,
-	)
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
 		checker.Location,
-		interpreterOptions...,
+		config,
 	)
 	if err != nil {
 		return nil, err

@@ -336,8 +336,8 @@ func TestArrayMutation(t *testing.T) {
 				CheckerOptions: []sema.Option{
 					sema.WithBaseValueActivation(baseValueActivation),
 				},
-				Options: []interpreter.Option{
-					interpreter.WithBaseActivation(baseActivation),
+				Config: &interpreter.Config{
+					BaseActivation: baseActivation,
 				},
 			},
 		)
@@ -475,8 +475,8 @@ func TestArrayMutation(t *testing.T) {
 				CheckerOptions: []sema.Option{
 					sema.WithBaseValueActivation(baseValueActivation),
 				},
-				Options: []interpreter.Option{
-					interpreter.WithBaseActivation(baseActivation),
+				Config: &interpreter.Config{
+					BaseActivation: baseActivation,
 				},
 			},
 		)
@@ -726,8 +726,8 @@ func TestDictionaryMutation(t *testing.T) {
 				CheckerOptions: []sema.Option{
 					sema.WithBaseValueActivation(baseValueActivation),
 				},
-				Options: []interpreter.Option{
-					interpreter.WithBaseActivation(baseActivation),
+				Config: &interpreter.Config{
+					BaseActivation: baseActivation,
 				},
 			},
 		)
@@ -865,8 +865,8 @@ func TestDictionaryMutation(t *testing.T) {
 				CheckerOptions: []sema.Option{
 					sema.WithBaseValueActivation(baseValueActivation),
 				},
-				Options: []interpreter.Option{
-					interpreter.WithBaseActivation(baseActivation),
+				Config: &interpreter.Config{
+					BaseActivation: baseActivation,
 				},
 			},
 		)

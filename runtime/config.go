@@ -34,4 +34,6 @@ type Config struct {
 	ResourceOwnerChangeHandlerEnabled bool
 	// CoverageReportingEnabled configures if coverage reporting is enabled.
 	CoverageReportingEnabled bool
+	// StackDepthLimit specifies the maximum depth for call stacks.
+	StackDepthLimit uint64
 }
