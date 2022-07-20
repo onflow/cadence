@@ -11,7 +11,7 @@ Supports generating documentation for following declarations:
 The tool currently supports generating documentation in Markdown format.
 
 ## How To Run
-Navigate to `<cadence_dir>/tools/docgen` directory and run:
+Navigate to `<cadence_dir>/tools/docgen/cmd` directory and run:
 ```
 go run main.go <path_to_cadence_file> <output_dir>
 ```

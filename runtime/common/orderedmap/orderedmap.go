@@ -22,14 +22,14 @@
 package orderedmap
 
 import (
-	"container/list"
+	"github.com/onflow/cadence/runtime/common/list"
 )
 
 // OrderedMap
 //
 type OrderedMap[K comparable, V any] struct {
 	pairs map[K]*Pair[K, V]
-	list  *list.List
+	list  *list.List[*Pair[K, V]]
 }
 
 func (om *OrderedMap[K, V]) ensureInitialized() {
@@ -37,7 +37,7 @@ func (om *OrderedMap[K, V]) ensureInitialized() {
 		return
 	}
 	om.pairs = make(map[K]*Pair[K, V])
-	om.list = list.New()
+	om.list = list.New[*Pair[K, V]]()
 }
 
 // Clear removes all entries from this ordered map.
@@ -178,7 +178,7 @@ type Pair[K any, V any] struct {
 	Key   K
 	Value V
 
-	element *list.Element
+	element *list.Element[*Pair[K, V]]
 }
 
 // Next returns a pointer to the next pair.
@@ -191,9 +191,9 @@ func (p Pair[K, V]) Prev() *Pair[K, V] {
 	return elementToPair[K, V](p.element.Prev())
 }
 
-func elementToPair[K any, V any](element *list.Element) *Pair[K, V] {
+func elementToPair[K any, V any](element *list.Element[*Pair[K, V]]) *Pair[K, V] {
 	if element == nil {
 		return nil
 	}
-	return element.Value.(*Pair[K, V])
+	return element.Value
 }

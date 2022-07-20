@@ -429,7 +429,7 @@ func TestDictionaryStorage(t *testing.T) {
 	})
 }
 
-func TestStorageOverwriteAndRemove(t *testing.T) {
+func TestInterpretStorageOverwriteAndRemove(t *testing.T) {
 
 	t.Parallel()
 
