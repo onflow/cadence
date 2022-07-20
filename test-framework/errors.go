@@ -21,8 +21,9 @@
 
 package test
 
-// ImportResolverNotProvidedError
-
+// ImportResolverNotProvidedError is thrown if the import resolver is not
+// set in the TestRunner, when running tests.
+//
 type ImportResolverNotProvidedError struct {
 	Err error
 }

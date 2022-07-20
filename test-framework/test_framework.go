@@ -23,6 +23,7 @@ package test
 
 import (
 	"fmt"
+	"github.com/onflow/cadence/runtime/tests/utils"
 	"strings"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -31,7 +32,6 @@ import (
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
-	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 // This Provides utility methods to easily run test-scripts.
@@ -47,18 +47,28 @@ const testFunctionPrefix = "test"
 
 type Results map[string]error
 
+// ImportResolver is used to resolve and get the source code for imports.
+// Must be provided by the user of the TestRunner.
+//
 type ImportResolver func(location common.Location) (string, error)
 
+// TestRunner runs tests.
+//
 type TestRunner struct {
 	importResolver ImportResolver
 }
 
-func NewTestRunner(importResolver ImportResolver) *TestRunner {
-	return &TestRunner{
-		importResolver: importResolver,
-	}
+func NewTestRunner() *TestRunner {
+	return &TestRunner{}
 }
 
+func (r *TestRunner) WithImportResolver(importResolver ImportResolver) *TestRunner {
+	r.importResolver = importResolver
+	return r
+}
+
+// RunTest runs a single test in the provided test script.
+//
 func (r *TestRunner) RunTest(script string, funcName string) error {
 	_, inter, err := r.parseCheckAndInterpret(script)
 	if err != nil {
@@ -69,6 +79,8 @@ func (r *TestRunner) RunTest(script string, funcName string) error {
 	return err
 }
 
+// RunTests runs all the tests in the provided test script.
+//
 func (r *TestRunner) RunTests(script string) (Results, error) {
 	program, inter, err := r.parseCheckAndInterpret(script)
 	if err != nil {
@@ -95,7 +107,7 @@ func (r *TestRunner) parseCheckAndInterpret(script string) (*ast.Program, *inter
 		return nil, nil, err
 	}
 
-	checker, err := r.newChecker(program, nil)
+	checker, err := r.newChecker(program, utils.TestLocation)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -202,6 +214,8 @@ func (r *TestRunner) newInterpreterFromChecker(checker *sema.Checker) (*interpre
 				return contract
 
 			default:
+				// During tests, imported contracts can be constructed using the constructor,
+				// similar to structs. Therefore, generate a constructor function.
 				return constructorGenerator(common.Address{})
 			}
 		},
@@ -213,10 +227,6 @@ func (r *TestRunner) newChecker(program *ast.Program, location common.Location) 
 	predeclaredSemaValues := stdlib.BuiltinFunctions.ToSemaValueDeclarations()
 	predeclaredSemaValues = append(predeclaredSemaValues, stdlib.BuiltinValues.ToSemaValueDeclarations()...)
 	predeclaredSemaValues = append(predeclaredSemaValues, stdlib.HelperFunctions.ToSemaValueDeclarations()...)
-
-	if location == nil {
-		location = utils.TestLocation
-	}
 
 	return sema.NewChecker(
 		program,
@@ -247,7 +257,6 @@ func (r *TestRunner) newChecker(program *ast.Program, location common.Location) 
 					compositeType := elaboration.CompositeDeclarationTypes[contractDecl]
 
 					constructorType, constructorArgumentLabels := importedChecker.CompositeConstructorType(contractDecl, compositeType)
-					//constructorType.Members = compositeType
 
 					// Remove the contract variable, and instead declare a constructor.
 					elaboration.GlobalValues.Delete(compositeType.Identifier)
@@ -306,6 +315,8 @@ func (r *TestRunner) parseAndCheckImport(location common.Location) (*sema.Checke
 	return checker, nil
 }
 
+// PrettyPrintResults is a utility function to pretty print the test results.
+//
 func PrettyPrintResults(results Results) string {
 	var sb strings.Builder
 	sb.WriteString("Test Results\n")

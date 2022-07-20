@@ -20,13 +20,14 @@ package test
 
 import (
 	"errors"
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/tests/checker"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/tests/checker"
 )
 
 func TestRunningMultipleTests(t *testing.T) {
@@ -42,7 +43,7 @@ func TestRunningMultipleTests(t *testing.T) {
         }
     `
 
-	runner := NewTestRunner(nil)
+	runner := NewTestRunner()
 	results, err := runner.RunTests(code)
 	assert.NoError(t, err)
 
@@ -64,7 +65,7 @@ func TestRunningSingleTest(t *testing.T) {
         }
     `
 
-	runner := NewTestRunner(nil)
+	runner := NewTestRunner()
 
 	err := runner.RunTest(code, "testFunc1")
 	assert.Error(t, err)
@@ -89,16 +90,15 @@ func TestExecuteScript(t *testing.T) {
             log(result.returnValue)
         }
     `
-	runner := NewTestRunner(nil)
+	runner := NewTestRunner()
 	err := runner.RunTest(code, "test")
 	assert.NoError(t, err)
 }
 
-func TestLoadContract(t *testing.T) {
+func TestImportContract(t *testing.T) {
 	t.Parallel()
 
-	t.Run("valid", func(t *testing.T) {
-
+	t.Run("init no params", func(t *testing.T) {
 		t.Parallel()
 
 		code := `
@@ -106,7 +106,7 @@ func TestLoadContract(t *testing.T) {
 
             pub fun test() {
                 var foo = FooContract()
-                var result = foo.hello()
+                var result = foo.sayHello()
                 assert(result == "hello from Foo")
             }
         `
@@ -115,23 +115,61 @@ func TestLoadContract(t *testing.T) {
             pub contract FooContract {
                 init() {}
 
-                pub fun hello(): String {
+                pub fun sayHello(): String {
                     return "hello from Foo"
                 }
             }
         `
 
-		loadSourceCodeFromFile := func(location common.Location) (string, error) {
+		importResolver := func(location common.Location) (string, error) {
 			return fooContract, nil
 		}
 
-		runner := NewTestRunner(loadSourceCodeFromFile)
+		runner := NewTestRunner().WithImportResolver(importResolver)
 
 		err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
 	})
 
-	t.Run("invalid", func(t *testing.T) {
+	t.Run("init with params", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import FooContract from "./FooContract"
+
+            pub fun test() {
+                var foo = FooContract(greeting: "hello from Foo")
+                var result = foo.sayHello()
+                assert(result == "hello from Foo")
+            }
+        `
+
+		fooContract := `
+            pub contract FooContract {
+
+                pub var greeting: String
+
+                init(greeting: String) {
+                    self.greeting = greeting
+                }
+
+                pub fun sayHello(): String {
+                    return self.greeting
+                }
+            }
+        `
+
+		importResolver := func(location common.Location) (string, error) {
+			return fooContract, nil
+		}
+
+		runner := NewTestRunner().WithImportResolver(importResolver)
+
+		err := runner.RunTest(code, "test")
+		assert.NoError(t, err)
+	})
+
+	t.Run("invalid import", func(t *testing.T) {
 		t.Parallel()
 
 		code := `
@@ -142,11 +180,11 @@ func TestLoadContract(t *testing.T) {
             }
         `
 
-		loadSourceCodeFromFile := func(location common.Location) (string, error) {
+		importResolver := func(location common.Location) (string, error) {
 			return "", errors.New("cannot load file")
 		}
 
-		runner := NewTestRunner(loadSourceCodeFromFile)
+		runner := NewTestRunner().WithImportResolver(importResolver)
 
 		err := runner.RunTest(code, "test")
 		assert.Error(t, err)
@@ -171,7 +209,7 @@ func TestLoadContract(t *testing.T) {
             }
         `
 
-		runner := NewTestRunner(nil)
+		runner := NewTestRunner()
 		err := runner.RunTest(code, "test")
 		assert.Error(t, err)
 

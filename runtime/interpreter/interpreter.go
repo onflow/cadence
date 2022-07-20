@@ -1835,7 +1835,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 			)
 
 			// Under normal circumstances, a contract value is always a CompositeValue.
-			// However, in the test framework, an imported contract, is constructed via a constructor function.
+			// However, in the test framework, an imported contract is constructed via a constructor function.
 			// Hence, during tests, the value is a HostFunctionValue.
 			switch valueHandler := valueHandler.(type) {
 			case *CompositeValue:
