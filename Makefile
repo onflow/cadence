@@ -57,7 +57,7 @@ lint-github-actions: build-linter
 
 .PHONY: lint
 lint: build-linter
-	tools/golangci-lint/golangci-lint run $(LINTERS) -v ./...
+	tools/golangci-lint/golangci-lint run $(LINTERS) --timeout=5m -v ./...
 
 
 .PHONY: fix-lint

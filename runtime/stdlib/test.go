@@ -26,90 +26,153 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib/contracts"
 )
 
-var TestContractLocation = common.IdentifierLocation("Test")
+// This is the Cadence standard library for writing tests.
+// It provides the Cadence constructs (structs, functions, etc.) that are needed to
+// write tests in Cadence.
+
+const testContractTypeName = "Test"
+const blockchainTypeName = "Blockchain"
+const blockchainBackendTypeName = "BlockchainBackend"
+const scriptResultTypeName = "ScriptResult"
+const resultStatusTypeName = "ResultStatus"
+const succeededCaseName = "succeeded"
+
+var TestContractLocation = common.IdentifierLocation(testContractTypeName)
 
 var TestContractChecker = func() *sema.Checker {
-	checker, err := sema.NewChecker(
-		ast.NewProgram(nil, nil),
+
+	program, err := parser.ParseProgram(contracts.TestContract, nil)
+	if err != nil {
+		panic(err)
+	}
+
+	var checker *sema.Checker
+	checker, err = sema.NewChecker(
+		program,
 		TestContractLocation,
 		nil,
 		false,
 		sema.WithPredeclaredValues(BuiltinFunctions.ToSemaValueDeclarations()),
 		sema.WithPredeclaredTypes(BuiltinTypes.ToTypeDeclarations()),
 	)
-
 	if err != nil {
 		panic(err)
 	}
 
-	checker.Elaboration.CompositeTypes[testBlockchainType.ID()] = testBlockchainType
+	err = checker.Check()
+	if err != nil {
+		panic(err)
+	}
 
 	return checker
 }()
 
-const testContractTypeName = "Test"
-
-var testContractType = func() *sema.CompositeType {
-	ty := &sema.CompositeType{
-		Identifier: testContractTypeName,
-		Kind:       common.CompositeKindContract,
+func NewTestContract(
+	inter *interpreter.Interpreter,
+	constructor interpreter.FunctionValue,
+	invocationRange ast.Range,
+) (
+	*interpreter.CompositeValue,
+	error,
+) {
+	value, err := inter.InvokeFunctionValue(
+		constructor,
+		[]interpreter.Value{},
+		testContractInitializerTypes,
+		testContractInitializerTypes,
+		invocationRange,
+	)
+	if err != nil {
+		return nil, err
 	}
 
-	ty.Members = sema.GetMembersAsMap([]*sema.Member{
+	compositeValue := value.(*interpreter.CompositeValue)
+
+	// Inject natively implemented function values
+	compositeValue.Functions[testAssertFunctionName] = testAssertFunction
+	compositeValue.Functions[testNewEmulatorBlockchainFunctionName] = testNewEmulatorBlockchainFunction
+
+	return compositeValue, nil
+}
+
+var testContractType = func() *sema.CompositeType {
+	variable, ok := TestContractChecker.Elaboration.GlobalTypes.Get(testContractTypeName)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+	return variable.Type.(*sema.CompositeType)
+}()
+
+var testContractInitializerTypes = func() (result []sema.Type) {
+	result = make([]sema.Type, len(testContractType.ConstructorParameters))
+	for i, parameter := range testContractType.ConstructorParameters {
+		result[i] = parameter.TypeAnnotation.Type
+	}
+	return result
+}()
+
+var blockchainBackendInterfaceType = func() *sema.InterfaceType {
+	typ, ok := testContractType.NestedTypes.Get(blockchainBackendTypeName)
+	if !ok {
+		panic(errors.NewUnexpectedError("cannot find type %s.%s", testContractTypeName, blockchainBackendTypeName))
+	}
+
+	interfaceType, ok := typ.(*sema.InterfaceType)
+	if !ok {
+		panic(errors.NewUnexpectedError("invalid type for %s. expected interface", blockchainBackendTypeName))
+	}
+
+	return interfaceType
+}()
+
+func init() {
+
+	// Enrich 'Test' contract with natively implemented functions
+	testContractType.Members.Set(
+		testAssertFunctionName,
 		sema.NewUnmeteredPublicFunctionMember(
-			ty,
+			testContractType,
 			testAssertFunctionName,
 			testAssertFunctionType,
 			testAssertFunctionDocString,
 		),
+	)
+	testContractType.Members.Set(
+		testNewEmulatorBlockchainFunctionName,
 		sema.NewUnmeteredPublicFunctionMember(
-			ty,
-			blockchainTypeName,
-			blockchainConstructorType,
-			blockchainConstructorDocString,
+			testContractType,
+			testNewEmulatorBlockchainFunctionName,
+			testNewEmulatorBlockchainFunctionType,
+			testNewEmulatorBlockchainFunctionDocString,
 		),
-	})
+	)
 
-	nestedTypes := &sema.StringTypeOrderedMap{}
-	nestedTypes.Set(blockchainTypeName, testBlockchainType)
-	ty.NestedTypes = nestedTypes
+	// Enrich 'Test' contract elaboration with natively implemented composite types.
+	// e.g: 'EmulatorBackend' type.
+	TestContractChecker.Elaboration.CompositeTypes[EmulatorBackendType.ID()] = EmulatorBackendType
+}
 
-	return ty
+var blockchainType = func() sema.Type {
+	typ, ok := testContractType.NestedTypes.Get(blockchainTypeName)
+	if !ok {
+		panic(errors.NewUnexpectedError(
+			"cannot find type %s.%s",
+			testContractTypeName,
+			blockchainTypeName,
+		))
+	}
+
+	return typ
 }()
 
-var testContract = StandardLibraryValue{
-	Name: testContractTypeName,
-	Type: testContractType,
-	ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
-		return interpreter.NewSimpleCompositeValue(
-			inter,
-			testContractType.ID(),
-			testContractStaticType,
-			nil,
-			testContractFields,
-			nil,
-			nil,
-			nil,
-		)
-	},
-	Kind: common.DeclarationKindContract,
-}
-
-var testContractFields = map[string]interpreter.Value{
-	testAssertFunctionName: testAssertFunction,
-	blockchainTypeName:     blockchainConstructor,
-}
-
-var testContractTypeID = testContractType.ID()
-var testContractStaticType interpreter.StaticType = interpreter.CompositeStaticType{
-	QualifiedIdentifier: testContractType.Identifier,
-	TypeID:              testContractTypeID,
-}
-
 // Functions belong to the 'Test' contract
+
+// 'Test.assert' function
 
 const testAssertFunctionDocString = `assert function of Test contract`
 
@@ -160,90 +223,134 @@ var testAssertFunction = interpreter.NewUnmeteredHostFunctionValue(
 	testAssertFunctionType,
 )
 
-// 'Blockchain' struct
+// 'Test.newEmulatorBlockchain' function
 
-const blockchainTypeName = "Blockchain"
+const testNewEmulatorBlockchainFunctionDocString = `newEmulatorBlockchain function of Test contract`
 
-var testBlockchainType = func() *sema.CompositeType {
+const testNewEmulatorBlockchainFunctionName = "newEmulatorBlockchain"
+
+var testNewEmulatorBlockchainFunctionType = &sema.FunctionType{
+	Parameters: []*sema.Parameter{},
+	ReturnTypeAnnotation: sema.NewTypeAnnotation(
+		blockchainType,
+	),
+}
+
+var testNewEmulatorBlockchainFunction = interpreter.NewUnmeteredHostFunctionValue(
+	func(invocation interpreter.Invocation) interpreter.Value {
+
+		// Create an `EmulatorBackend`
+		emulatorBackend := newEmulatorBackend(invocation.Interpreter)
+
+		// Create a 'Blockchain' struct value, that wraps the emulator backend,
+		// by calling the constructor of 'Blockchain'.
+
+		testContract := invocation.Self.(*interpreter.CompositeValue)
+		blockchainConstructorVar := testContract.NestedVariables[blockchainTypeName]
+		blockchainConstructor, ok := blockchainConstructorVar.GetValue().(*interpreter.HostFunctionValue)
+		if !ok {
+			panic(errors.NewUnexpectedError("invalid type for constructor"))
+		}
+
+		blockchain, err := invocation.Interpreter.InvokeExternally(
+			blockchainConstructor,
+			blockchainConstructor.Type,
+			[]interpreter.Value{
+				emulatorBackend,
+			},
+		)
+
+		if err != nil {
+			panic(err)
+		}
+
+		return blockchain
+	},
+	testNewEmulatorBlockchainFunctionType,
+)
+
+// 'EmulatorBackend' struct.
+//
+// 'EmulatorBackend' is the native implementation of the 'Test.BlockchainBackend' interface.
+// It provides a blockchain backed by the emulator.
+
+const emulatorBackendTypeName = "EmulatorBackend"
+
+var EmulatorBackendType = func() *sema.CompositeType {
 
 	ty := &sema.CompositeType{
-		Identifier: blockchainTypeName,
+		Identifier: emulatorBackendTypeName,
 		Kind:       common.CompositeKindStructure,
 		Location:   TestContractLocation,
+		ExplicitInterfaceConformances: []*sema.InterfaceType{
+			blockchainBackendInterfaceType,
+		},
 	}
 
 	var members = []*sema.Member{
 		sema.NewUnmeteredPublicFunctionMember(
 			ty,
-			blockchainExecuteScriptFunctionName,
-			blockchainExecuteScriptFunctionType,
-			blockchainExecuteScriptFunctionDocString,
+			emulatorBackendExecuteScriptFunctionName,
+			emulatorBackendExecuteScriptFunctionType,
+			emulatorBackendExecuteScriptFunctionDocString,
 		),
 	}
 
 	ty.Members = sema.GetMembersAsMap(members)
 	ty.Fields = sema.GetFieldNames(members)
+
 	return ty
 }()
 
-// Functions belong to the 'Blockchain' struct
-
-// Blockchain constructor
-
-const blockchainConstructorDocString = `This is the Blockchain constructor`
-
-var blockchainConstructorType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		testBlockchainType,
-	),
-}
-
-var blockchainConstructor = interpreter.NewUnmeteredHostFunctionValue(
-	func(invocation interpreter.Invocation) interpreter.Value {
-		var fields = []interpreter.CompositeField{
-			{
-				Name:  blockchainExecuteScriptFunctionName,
-				Value: blockchainExecuteScriptFunction,
-			},
-		}
-
-		blockchain := interpreter.NewCompositeValue(
-			invocation.Interpreter,
-			interpreter.ReturnEmptyLocationRange,
-			common.IdentifierLocation(testContractTypeID),
-			blockchainTypeName,
-			common.CompositeKindStructure,
-			fields,
-			common.Address{},
-		)
-
-		return blockchain
-	},
-	testAssertFunctionType,
-)
-
-// Execute script function
-
-const blockchainExecuteScriptFunctionName = "executeScript"
-const blockchainExecuteScriptFunctionDocString = `execute script function`
-
-var blockchainExecuteScriptFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{
+func newEmulatorBackend(inter *interpreter.Interpreter) *interpreter.CompositeValue {
+	var fields = []interpreter.CompositeField{
 		{
-			Label:      sema.ArgumentLabelNotRequired,
-			Identifier: "script",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.StringType,
-			),
+			Name:  emulatorBackendExecuteScriptFunctionName,
+			Value: emulatorBackendExecuteScriptFunction,
 		},
-	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		sema.VoidType,
-	),
+	}
+
+	return interpreter.NewCompositeValue(
+		inter,
+		interpreter.ReturnEmptyLocationRange,
+		EmulatorBackendType.Location,
+		emulatorBackendTypeName,
+		common.CompositeKindStructure,
+		fields,
+		common.Address{},
+	)
 }
 
-var blockchainExecuteScriptFunction = interpreter.NewUnmeteredHostFunctionValue(
+// 'EmulatorBackend.executeScript' function
+
+const emulatorBackendExecuteScriptFunctionName = "executeScript"
+
+const emulatorBackendExecuteScriptFunctionDocString = `execute script function`
+
+var emulatorBackendExecuteScriptFunctionType = func() *sema.FunctionType {
+	// The type of the 'executeScript' function of 'EmulatorBackend' (interface-implementation)
+	// is same as that of 'BlockchainBackend' interface.
+	typ, ok := blockchainBackendInterfaceType.Members.Get(emulatorBackendExecuteScriptFunctionName)
+	if !ok {
+		panic(errors.NewUnexpectedError(
+			"cannot find type %s.%s",
+			blockchainBackendTypeName,
+			emulatorBackendExecuteScriptFunctionName,
+		))
+	}
+
+	functionType, ok := typ.TypeAnnotation.Type.(*sema.FunctionType)
+	if !ok {
+		panic(errors.NewUnexpectedError(
+			"invalid type for %s. expected function",
+			emulatorBackendExecuteScriptFunctionName,
+		))
+	}
+
+	return functionType
+}()
+
+var emulatorBackendExecuteScriptFunction = interpreter.NewUnmeteredHostFunctionValue(
 	func(invocation interpreter.Invocation) interpreter.Value {
 		scriptString, ok := invocation.Arguments[0].(*interpreter.StringValue)
 		if !ok {
@@ -282,10 +389,50 @@ var blockchainExecuteScriptFunction = interpreter.NewUnmeteredHostFunctionValue(
 			}
 		}
 
-		return result.Value
+		return createScriptResult(invocation.Interpreter, result.Value)
 	},
-	blockchainExecuteScriptFunctionType,
+	emulatorBackendExecuteScriptFunctionType,
 )
+
+// createScriptResult Creates a "ScriptResult" using the return value of the executed script.
+//
+func createScriptResult(inter *interpreter.Interpreter, returnValue interpreter.Value) interpreter.Value {
+	// Lookup and get 'ResultStatus.succeeded' value.
+
+	resultStatusConstructorVar := inter.Activations.Find(resultStatusTypeName)
+	resultStatusConstructor, ok := resultStatusConstructorVar.GetValue().(*interpreter.HostFunctionValue)
+	if !ok {
+		panic(errors.NewUnexpectedError("invalid type for constructor"))
+	}
+
+	succeededVar := resultStatusConstructor.NestedVariables[succeededCaseName]
+	succeeded := succeededVar.GetValue()
+
+	// Create a 'ScriptResult' by calling its constructor.
+
+	scriptResultConstructorVar := inter.Activations.Find(scriptResultTypeName)
+	scriptResultConstructor, ok := scriptResultConstructorVar.GetValue().(*interpreter.HostFunctionValue)
+	if !ok {
+		panic(errors.NewUnexpectedError("invalid type for constructor"))
+	}
+
+	scriptResult, err := inter.InvokeExternally(
+		scriptResultConstructor,
+		scriptResultConstructor.Type,
+		[]interpreter.Value{
+			succeeded,
+			returnValue,
+		},
+	)
+
+	if err != nil {
+		panic(err)
+	}
+
+	return scriptResult
+}
+
+// TestFailedError
 
 type TestFailedError struct {
 	Err error

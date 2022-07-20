@@ -16,21 +16,11 @@
  * limitations under the License.
  */
 
-package stdlib
+package contracts
 
-var BuiltinFunctions = StandardLibraryFunctions{
-	AssertFunction,
-	PanicFunction,
-	publicKeyConstructor,
-}
+import (
+	_ "embed"
+)
 
-var HelperFunctions = StandardLibraryFunctions{
-	LogFunction,
-}
-
-var BuiltinValues = StandardLibraryValues{
-	signatureAlgorithmConstructor,
-	hashAlgorithmConstructor,
-	blsContract,
-	rlpContract,
-}
+//go:embed test.cdc
+var TestContract string

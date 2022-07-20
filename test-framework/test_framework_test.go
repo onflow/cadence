@@ -1,10 +1,28 @@
+/*
+ * Cadence - The resource-oriented smart contract programming language
+ *
+ * Copyright 2019-2022 Dapper Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package test
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRunningMultipleTests(t *testing.T) {
@@ -19,7 +37,9 @@ func TestRunningMultipleTests(t *testing.T) {
     `
 
 	results := RunTests(code)
-	fmt.Println(PrettyPrintResults(results))
+	require.Len(t, results, 2)
+	assert.Error(t, results["testFunc1"])
+	assert.NoError(t, results["testFunc2"])
 }
 
 func TestRunningSingleTest(t *testing.T) {
@@ -34,14 +54,24 @@ func TestRunningSingleTest(t *testing.T) {
     `
 
 	err := RunTest(code, "testFunc1")
-	fmt.Println(PrettyPrintResult("testFunc1", err))
+	assert.Error(t, err)
+
+	err = RunTest(code, "testFunc2")
+	assert.NoError(t, err)
 }
 
 func TestExecuteScript(t *testing.T) {
 	code := `
+        import Test
+
         pub fun test() {
-            var bc = Test.Blockchain()
-            bc.executeScript("pub fun foo(): String {  return \"hello\" }")
+            var blockchain = Test.newEmulatorBlockchain()
+            var result = blockchain.executeScript("pub fun main(): Int {  return 2 + 3 }")
+
+            assert(result.status == Test.ResultStatus.succeeded)
+            assert((result.returnValue! as! Int) == 5)
+
+            log(result.returnValue)
         }
     `
 

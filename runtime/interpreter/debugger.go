@@ -119,5 +119,5 @@ func (d *Debugger) Next() Stop {
 }
 
 func (d *Debugger) CurrentActivation(interpreter *Interpreter) *VariableActivation {
-	return interpreter.activations.Current()
+	return interpreter.Activations.Current()
 }

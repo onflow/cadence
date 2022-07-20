@@ -118,8 +118,8 @@ func (interpreter *Interpreter) invokeInterpretedFunction(
 	// Start a new activation record.
 	// Lexical scope: use the function declaration's activation record,
 	// not the current one (which would be dynamic scope)
-	interpreter.activations.PushNewWithParent(function.Activation)
-	interpreter.activations.Current().isFunction = true
+	interpreter.Activations.PushNewWithParent(function.Activation)
+	interpreter.Activations.Current().isFunction = true
 
 	interpreter.CallStack.Push(invocation)
 
@@ -144,7 +144,7 @@ func (interpreter *Interpreter) invokeInterpretedFunctionActivated(
 		}
 		interpreter.CallStack.Pop()
 	}()
-	defer interpreter.activations.Pop()
+	defer interpreter.Activations.Pop()
 
 	if function.ParameterList != nil {
 		interpreter.bindParameterArguments(function.ParameterList, arguments)

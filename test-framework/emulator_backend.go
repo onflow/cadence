@@ -22,10 +22,7 @@
 package test
 
 import (
-	"fmt"
-	"github.com/onflow/cadence"
-
-	//emulator "github.com/onflow/flow-emulator"
+	emulator "github.com/onflow/flow-emulator"
 
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
@@ -37,25 +34,31 @@ import (
 
 var _ interpreter.TestFramework = &EmulatorBackend{}
 
+// EmulatorBackend is the emulator-backed implementation of the interpreter.TestFramework.
+//
 type EmulatorBackend struct {
-	//blockchain *emulator.Blockchain
+	blockchain *emulator.Blockchain
 }
 
 func NewEmulatorBackend() *EmulatorBackend {
 	return &EmulatorBackend{
-		//blockchain: newBlockchain(),
+		blockchain: newBlockchain(),
 	}
 }
 
 func (e *EmulatorBackend) RunScript(code string) interpreter.ScriptResult {
-	fmt.Println("Executing script:", code)
+	result, err := e.blockchain.ExecuteScript([]byte(code), [][]byte{})
+	if err != nil {
+		return interpreter.ScriptResult{
+			Error: err,
+		}
+	}
 
-	//result, err := e.blockchain.ExecuteScript([]byte(code), [][]byte{})
-	//if err != nil {
-	//	return interpreter.ScriptResult{
-	//		Error: err,
-	//	}
-	//}
+	if result.Error != nil {
+		return interpreter.ScriptResult{
+			Error: result.Error,
+		}
+	}
 
 	// TODO: maybe re-use interpreter? Only needed for value conversion
 	inter, err := newInterpreter()
@@ -65,7 +68,7 @@ func (e *EmulatorBackend) RunScript(code string) interpreter.ScriptResult {
 		}
 	}
 
-	value, err := runtime.ImportValue(inter, interpreter.ReturnEmptyLocationRange /*result.Value*/, cadence.Void{}, nil)
+	value, err := runtime.ImportValue(inter, interpreter.ReturnEmptyLocationRange, result.Value, nil)
 	if err != nil {
 		return interpreter.ScriptResult{
 			Error: err,
@@ -77,23 +80,25 @@ func (e *EmulatorBackend) RunScript(code string) interpreter.ScriptResult {
 	}
 }
 
-//// newBlockchain returns an emulator blockchain for testing.
-//func newBlockchain(opts ...emulator.Option) *emulator.Blockchain {
-//	b, err := emulator.NewBlockchain(
-//		append(
-//			[]emulator.Option{
-//				emulator.WithStorageLimitEnabled(false),
-//			},
-//			opts...,
-//		)...,
-//	)
-//	if err != nil {
-//		panic(err)
-//	}
-//
-//	return b
-//}
+// newBlockchain returns an emulator blockchain for testing.
+func newBlockchain(opts ...emulator.Option) *emulator.Blockchain {
+	b, err := emulator.NewBlockchain(
+		append(
+			[]emulator.Option{
+				emulator.WithStorageLimitEnabled(false),
+			},
+			opts...,
+		)...,
+	)
+	if err != nil {
+		panic(err)
+	}
 
+	return b
+}
+
+// newInterpreter creates an interpreter instance needed for the value conversion.
+//
 func newInterpreter() (*interpreter.Interpreter, error) {
 	predeclaredInterpreterValues := stdlib.BuiltinFunctions.ToInterpreterValueDeclarations()
 	predeclaredInterpreterValues = append(predeclaredInterpreterValues, stdlib.BuiltinValues.ToInterpreterValueDeclarations()...)

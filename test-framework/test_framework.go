@@ -35,6 +35,15 @@ import (
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
+// This Provides utility methods to easily run test-scripts.
+// Example use-case:
+//   - To run all tests in a script:
+//         RunTests("source code")
+//   - To run a single test method in a script:
+//         RunTest("source code", "testMethodName")
+//
+// It is assumed that all test methods start with the 'test' prefix.
+
 const testFunctionPrefix = "test"
 
 type Results map[string]error
@@ -97,6 +106,7 @@ func parseCheckAndInterpret(script string) (*ast.Program, *interpreter.Interpret
 func newInterpreterFromChecker(checker *sema.Checker) (*interpreter.Interpreter, error) {
 	predeclaredInterpreterValues := stdlib.BuiltinFunctions.ToInterpreterValueDeclarations()
 	predeclaredInterpreterValues = append(predeclaredInterpreterValues, stdlib.BuiltinValues.ToInterpreterValueDeclarations()...)
+	predeclaredInterpreterValues = append(predeclaredInterpreterValues, stdlib.HelperFunctions.ToInterpreterValueDeclarations()...)
 
 	return interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
@@ -150,14 +160,42 @@ func newInterpreterFromChecker(checker *sema.Checker) (*interpreter.Interpreter,
 			constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
 			invocationRange ast.Range,
 		) interpreter.Value {
-			return constructorGenerator(common.Address{})
-		}),
+
+			switch compositeType.Location {
+			case stdlib.CryptoChecker.Location:
+				contract, err := stdlib.NewCryptoContract(
+					inter,
+					constructorGenerator(common.Address{}),
+					invocationRange,
+				)
+				if err != nil {
+					panic(err)
+				}
+				return contract
+
+			case stdlib.TestContractLocation:
+				contract, err := stdlib.NewTestContract(
+					inter,
+					constructorGenerator(common.Address{}),
+					invocationRange,
+				)
+				if err != nil {
+					panic(err)
+				}
+				return contract
+
+			default:
+				return constructorGenerator(common.Address{})
+			}
+		},
+		),
 	)
 }
 
 func newChecker(program *ast.Program, location common.Location) (*sema.Checker, error) {
 	predeclaredSemaValues := stdlib.BuiltinFunctions.ToSemaValueDeclarations()
 	predeclaredSemaValues = append(predeclaredSemaValues, stdlib.BuiltinValues.ToSemaValueDeclarations()...)
+	predeclaredSemaValues = append(predeclaredSemaValues, stdlib.HelperFunctions.ToSemaValueDeclarations()...)
 
 	if location == nil {
 		location = utils.TestLocation
