@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -43,7 +44,7 @@ func executeScript(script string, runtimeInterface Interface) (cadence.Value, er
 	)
 }
 
-func TestAssert(t *testing.T) {
+func TestAssertFunction(t *testing.T) {
 
 	t.Parallel()
 
@@ -75,6 +76,29 @@ func TestBlockchain(t *testing.T) {
 
         pub fun main() {
             var bc = Test.newEmulatorBlockchain()
+        }
+    `
+
+	storage := newTestLedger(nil, nil)
+
+	runtimeInterface := &testRuntimeInterface{
+		storage: storage,
+	}
+
+	_, err := executeScript(script, runtimeInterface)
+
+	require.NoError(t, err)
+}
+
+func TestExecuteScript(t *testing.T) {
+
+	t.Parallel()
+
+	script := `
+        import Test
+
+        pub fun main() {
+            var bc = Test.newEmulatorBlockchain()
             bc.executeScript("pub fun foo() {}")
         }
     `
@@ -87,6 +111,6 @@ func TestBlockchain(t *testing.T) {
 
 	_, err := executeScript(script, runtimeInterface)
 
-	// TODO: fix the 'EmulatorBackend' type loading error.
-	require.NoError(t, err)
+	require.Error(t, err)
+	assert.ErrorAs(t, err, &interpreter.TestFrameworkNotProvidedError{})
 }

@@ -100,14 +100,6 @@ func parseCheckAndInterpret(script string) (*ast.Program, *interpreter.Interpret
 	return program, inter
 }
 
-func init() {
-	// TODO: find a better way to do this.
-	// 	Option I: Move this logic behind a 'test' flag
-	// 	Option II: Virtually move the 'EmulatorBackend' native struct inside the 'Test' contract
-	//	Any other?
-	sema.NativeCompositeTypes[stdlib.EmulatorBackendType.QualifiedIdentifier()] = stdlib.EmulatorBackendType
-}
-
 func newInterpreterFromChecker(checker *sema.Checker) (*interpreter.Interpreter, error) {
 	predeclaredInterpreterValues := stdlib.BuiltinFunctions.ToInterpreterValueDeclarations()
 	predeclaredInterpreterValues = append(predeclaredInterpreterValues, stdlib.BuiltinValues.ToInterpreterValueDeclarations()...)

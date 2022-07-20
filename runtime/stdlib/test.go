@@ -131,8 +131,8 @@ var blockchainBackendInterfaceType = func() *sema.InterfaceType {
 }()
 
 func init() {
-	// Enrich 'Test' contract with natively implemented functions
 
+	// Enrich 'Test' contract with natively implemented functions
 	testContractType.Members.Set(
 		testAssertFunctionName,
 		sema.NewUnmeteredPublicFunctionMember(
@@ -142,7 +142,6 @@ func init() {
 			testAssertFunctionDocString,
 		),
 	)
-
 	testContractType.Members.Set(
 		testNewEmulatorBlockchainFunctionName,
 		sema.NewUnmeteredPublicFunctionMember(
@@ -152,6 +151,10 @@ func init() {
 			testNewEmulatorBlockchainFunctionDocString,
 		),
 	)
+
+	// Enrich 'Test' contract elaboration with natively implemented composite types.
+	// e.g: 'EmulatorBackend' type.
+	TestContractChecker.Elaboration.CompositeTypes[EmulatorBackendType.ID()] = EmulatorBackendType
 }
 
 var blockchainType = func() sema.Type {
@@ -235,22 +238,9 @@ var testNewEmulatorBlockchainFunctionType = &sema.FunctionType{
 
 var testNewEmulatorBlockchainFunction = interpreter.NewUnmeteredHostFunctionValue(
 	func(invocation interpreter.Invocation) interpreter.Value {
-		var fields = []interpreter.CompositeField{
-			{
-				Name:  emulatorBackendExecuteScriptFunctionName,
-				Value: emulatorBackendExecuteScriptFunction,
-			},
-		}
 
-		emulatorBackend := interpreter.NewCompositeValue(
-			invocation.Interpreter,
-			interpreter.ReturnEmptyLocationRange,
-			nil,
-			emulatorBackendTypeName,
-			common.CompositeKindStructure,
-			fields,
-			common.Address{},
-		)
+		// Create an `EmulatorBackend`
+		emulatorBackend := newEmulatorBackend(invocation.Interpreter)
 
 		// Create a 'Blockchain' struct value, that wraps the emulator backend,
 		// by calling the constructor of 'Blockchain'.
@@ -291,7 +281,7 @@ var EmulatorBackendType = func() *sema.CompositeType {
 	ty := &sema.CompositeType{
 		Identifier: emulatorBackendTypeName,
 		Kind:       common.CompositeKindStructure,
-		Location:   nil, // native
+		Location:   TestContractLocation,
 		ExplicitInterfaceConformances: []*sema.InterfaceType{
 			blockchainBackendInterfaceType,
 		},
@@ -311,6 +301,25 @@ var EmulatorBackendType = func() *sema.CompositeType {
 
 	return ty
 }()
+
+func newEmulatorBackend(inter *interpreter.Interpreter) *interpreter.CompositeValue {
+	var fields = []interpreter.CompositeField{
+		{
+			Name:  emulatorBackendExecuteScriptFunctionName,
+			Value: emulatorBackendExecuteScriptFunction,
+		},
+	}
+
+	return interpreter.NewCompositeValue(
+		inter,
+		interpreter.ReturnEmptyLocationRange,
+		EmulatorBackendType.Location,
+		emulatorBackendTypeName,
+		common.CompositeKindStructure,
+		fields,
+		common.Address{},
+	)
+}
 
 // 'EmulatorBackend.executeScript' function
 
