@@ -235,7 +235,9 @@ func (executor *interpreterContractFunctionExecutor) convertArgument(
 				inter,
 				interpreter.NewAddressValueFromConstructor(
 					inter,
-					func() common.Address { return common.MustBytesToAddress(addressValue.Bytes()) },
+					func() common.Address {
+						return common.Address(addressValue)
+					},
 				),
 				executor.context,
 				executor.storage,
@@ -250,19 +252,19 @@ func (executor *interpreterContractFunctionExecutor) convertArgument(
 				inter,
 				interpreter.NewAddressValueFromConstructor(
 					inter,
-					func() common.Address { return common.MustBytesToAddress(addressValue.Bytes()) },
+					func() common.Address {
+						return common.Address(addressValue)
+					},
 				),
 				executor.context.Interface,
 				executor.storage,
 			), nil
 		}
-	default:
-		return importValue(
-			inter,
-			getLocationRange,
-			argument,
-			argumentType,
-		)
 	}
-	return nil, nil
+	return importValue(
+		inter,
+		getLocationRange,
+		argument,
+		argumentType,
+	)
 }

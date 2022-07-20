@@ -3382,7 +3382,6 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 		require.Error(tt, err)
 		assert.ErrorAs(tt, err, &Error{})
 	})
-
 	t.Run("function with incorrect argument type errors", func(tt *testing.T) {
 		_, err = runtime.InvokeContractFunction(
 			common.AddressLocation{
@@ -3403,7 +3402,28 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 		)
 		require.ErrorAs(tt, err, &interpreter.ValueTransferTypeError{})
 	})
-
+	t.Run("function with un-importable argument errors and error propagates", func(tt *testing.T) {
+		_, err = runtime.InvokeContractFunction(
+			common.AddressLocation{
+				Address: addressValue,
+				Name:    "Test",
+			},
+			"helloArg",
+			[]cadence.Value{
+				cadence.Capability{
+					BorrowType: cadence.AddressType{}, // this will error during `importValue`
+				},
+			},
+			[]sema.Type{
+				&sema.CapabilityType{},
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.ErrorContains(tt, err, "cannot import capability")
+	})
 	t.Run("function with auth account works", func(tt *testing.T) {
 		_, err = runtime.InvokeContractFunction(
 			common.AddressLocation{
