@@ -116,12 +116,7 @@ type Occurrence struct {
 }
 
 func (o *Occurrences) All() []Occurrence {
-	values := o.tree.Values()
-	occurrences := make([]Occurrence, len(values))
-	for i, occurrence := range values {
-		occurrences[i] = occurrence
-	}
-	return occurrences
+	return o.tree.Values()
 }
 
 func (o *Occurrences) Find(pos Position) *Occurrence {

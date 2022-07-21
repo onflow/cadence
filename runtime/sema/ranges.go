@@ -50,12 +50,7 @@ func (r *Ranges) Put(startPos, endPos ast.Position, ra Range) {
 }
 
 func (r *Ranges) All() []Range {
-	values := r.tree.Values()
-	ranges := make([]Range, len(values))
-	for i, r := range values {
-		ranges[i] = r
-	}
-	return ranges
+	return r.tree.Values()
 }
 
 func (r *Ranges) FindAll(pos Position) []Range {
