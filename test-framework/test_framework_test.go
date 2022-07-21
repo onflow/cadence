@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/checker"
 )
@@ -220,5 +221,60 @@ func TestImportContract(t *testing.T) {
 		assert.IsType(t, ImportResolverNotProvidedError{}, importedProgramError.Err)
 
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[1])
+	})
+}
+
+func TestUsingEnv(t *testing.T) {
+	t.Parallel()
+
+	t.Run("public key creation", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            pub fun test() {
+                var publicKey = PublicKey(
+                    publicKey: "1234".decodeHex(),
+                    signatureAlgorithm: SignatureAlgorithm.ECDSA_secp256k1
+                )
+            }
+        `
+
+		runner := NewTestRunner()
+		err := runner.RunTest(code, "test")
+		assert.Error(t, err)
+		publicKeyError := interpreter.InvalidPublicKeyError{}
+		assert.ErrorAs(t, err, &publicKeyError)
+	})
+
+	t.Run("public account", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            pub fun test() {
+                var acc = getAccount(0x01)
+                var bal = acc.balance
+                assert(acc.balance == 0.0)
+            }
+        `
+
+		runner := NewTestRunner()
+		err := runner.RunTest(code, "test")
+		assert.NoError(t, err)
+	})
+
+	t.Run("auth account", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            pub fun test() {
+                var acc = getAuthAccount(0x01)
+                var bal = acc.balance
+                assert(acc.balance == 0.0)
+            }
+        `
+
+		runner := NewTestRunner()
+		err := runner.RunTest(code, "test")
+		assert.NoError(t, err)
 	})
 }

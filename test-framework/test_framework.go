@@ -22,10 +22,19 @@
 package test
 
 import (
+	"context"
 	"fmt"
-	"github.com/onflow/cadence/runtime/tests/utils"
+	"math"
 	"strings"
 
+	"github.com/rs/zerolog"
+
+	"github.com/onflow/flow-go/engine/execution/testutil"
+	"github.com/onflow/flow-go/fvm"
+	"github.com/onflow/flow-go/fvm/programs"
+	"github.com/onflow/flow-go/fvm/state"
+
+	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -44,6 +53,8 @@ import (
 // It is assumed that all test methods start with the 'test' prefix.
 
 const testFunctionPrefix = "test"
+
+var testScriptLocation = common.NewScriptLocation(nil, []byte("test"))
 
 type Results map[string]error
 
@@ -89,7 +100,7 @@ func (r *TestRunner) RunTests(script string) (Results, error) {
 
 	results := make(Results)
 
-	for _, funcDecl := range program.FunctionDeclarations() {
+	for _, funcDecl := range program.Program.FunctionDeclarations() {
 		funcName := funcDecl.Identifier.Identifier
 
 		if strings.HasPrefix(funcName, testFunctionPrefix) {
@@ -101,18 +112,18 @@ func (r *TestRunner) RunTests(script string) (Results, error) {
 	return results, nil
 }
 
-func (r *TestRunner) parseCheckAndInterpret(script string) (*ast.Program, *interpreter.Interpreter, error) {
-	program, err := parser.ParseProgram(script, nil)
-	if err != nil {
-		return nil, nil, err
+func (r *TestRunner) parseCheckAndInterpret(script string) (*interpreter.Program, *interpreter.Interpreter, error) {
+	ctx := runtime.Context{
+		Interface: newScriptEnvironment(),
+		Location:  testScriptLocation,
 	}
 
-	checker, err := r.newChecker(program, utils.TestLocation)
-	if err != nil {
-		return nil, nil, err
-	}
+	testRuntime := runtime.NewTestFrameworkRuntime()
 
-	err = checker.Check()
+	var checkerOptions = r.checkerOptions()
+	var interpreterOptions = r.interpreterOptions()
+
+	program, err := testRuntime.ParseAndCheck([]byte(script), ctx, checkerOptions, interpreterOptions)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -120,7 +131,16 @@ func (r *TestRunner) parseCheckAndInterpret(script string) (*ast.Program, *inter
 	// TODO: validate test function signature
 	//   e.g: no return values, no arguments, etc.
 
-	inter, err := r.newInterpreterFromChecker(checker)
+	memoryGauge, _ := ctx.Interface.(common.MemoryGauge)
+	storage := runtime.NewStorage(ctx.Interface, memoryGauge)
+
+	inter, err := testRuntime.Interpret(
+		program,
+		storage,
+		ctx,
+		checkerOptions,
+		interpreterOptions,
+	)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -133,56 +153,109 @@ func (r *TestRunner) parseCheckAndInterpret(script string) (*ast.Program, *inter
 	return program, inter, nil
 }
 
-func (r *TestRunner) newInterpreterFromChecker(checker *sema.Checker) (*interpreter.Interpreter, error) {
-	predeclaredInterpreterValues := stdlib.BuiltinFunctions.ToInterpreterValueDeclarations()
-	predeclaredInterpreterValues = append(predeclaredInterpreterValues, stdlib.BuiltinValues.ToInterpreterValueDeclarations()...)
-	predeclaredInterpreterValues = append(predeclaredInterpreterValues, stdlib.HelperFunctions.ToInterpreterValueDeclarations()...)
+func (r *TestRunner) checkerOptions() []sema.Option {
+	return []sema.Option{
+		sema.WithImportHandler(
+			func(checker *sema.Checker, importedLocation common.Location, importRange ast.Range) (sema.Import, error) {
+				var elaboration *sema.Elaboration
+				switch importedLocation {
+				case stdlib.CryptoChecker.Location:
+					elaboration = stdlib.CryptoChecker.Elaboration
 
-	return interpreter.NewInterpreter(
-		interpreter.ProgramFromChecker(checker),
-		checker.Location,
-		interpreter.WithStorage(interpreter.NewInMemoryStorage(nil)),
+				case stdlib.TestContractLocation:
+					elaboration = stdlib.TestContractChecker.Elaboration
+
+				default:
+					importedChecker, err := r.parseAndCheckImport(importedLocation)
+					if err != nil {
+						return nil, err
+					}
+
+					elaboration = importedChecker.Elaboration
+
+					contractDecl := importedChecker.Program.SoleContractDeclaration()
+					compositeType := elaboration.CompositeDeclarationTypes[contractDecl]
+
+					constructorType, constructorArgumentLabels := importedChecker.CompositeConstructorType(contractDecl, compositeType)
+
+					// Remove the contract variable, and instead declare a constructor.
+					elaboration.GlobalValues.Delete(compositeType.Identifier)
+
+					// Declare a constructor
+					_, err = checker.ValueActivations.Declare(sema.VariableDeclaration{
+						Identifier:               contractDecl.Identifier.Identifier,
+						Type:                     constructorType,
+						DocString:                contractDecl.DocString,
+						Access:                   contractDecl.Access,
+						Kind:                     contractDecl.DeclarationKind(),
+						Pos:                      contractDecl.Identifier.Pos,
+						IsConstant:               true,
+						ArgumentLabels:           constructorArgumentLabels,
+						AllowOuterScopeShadowing: false,
+					})
+
+					if err != nil {
+						return nil, err
+					}
+				}
+
+				return sema.ElaborationImport{
+					Elaboration: elaboration,
+				}, nil
+			},
+		),
+	}
+}
+
+func (r *TestRunner) interpreterOptions() []interpreter.Option {
+	return []interpreter.Option{
+		// TODO: The default injected fields handler only supports 'address' locations.
+		//   However, during tests, it is possible to get non-address locations. e.g: file paths.
+		//   Thus, need to properly handle them. Make this nil for now.
+		interpreter.WithInjectedCompositeFieldsHandler(nil),
+
 		interpreter.WithTestFramework(NewEmulatorBackend()),
-		interpreter.WithPredeclaredValues(predeclaredInterpreterValues),
-		interpreter.WithImportLocationHandler(func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
-			switch location {
-			case stdlib.CryptoChecker.Location:
-				program := interpreter.ProgramFromChecker(stdlib.CryptoChecker)
-				subInterpreter, err := inter.NewSubInterpreter(program, location)
-				if err != nil {
-					panic(err)
-				}
-				return interpreter.InterpreterImport{
-					Interpreter: subInterpreter,
-				}
+		interpreter.WithImportLocationHandler(
+			func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+				switch location {
+				case stdlib.CryptoChecker.Location:
+					program := interpreter.ProgramFromChecker(stdlib.CryptoChecker)
+					subInterpreter, err := inter.NewSubInterpreter(program, location)
+					if err != nil {
+						panic(err)
+					}
+					return interpreter.InterpreterImport{
+						Interpreter: subInterpreter,
+					}
 
-			case stdlib.TestContractLocation:
-				program := interpreter.ProgramFromChecker(stdlib.TestContractChecker)
-				subInterpreter, err := inter.NewSubInterpreter(program, location)
-				if err != nil {
-					panic(err)
-				}
-				return interpreter.InterpreterImport{
-					Interpreter: subInterpreter,
-				}
+				case stdlib.TestContractLocation:
+					program := interpreter.ProgramFromChecker(stdlib.TestContractChecker)
+					subInterpreter, err := inter.NewSubInterpreter(program, location)
+					if err != nil {
+						panic(err)
+					}
+					return interpreter.InterpreterImport{
+						Interpreter: subInterpreter,
+					}
 
-			default:
-				importedChecker, err := r.parseAndCheckImport(location)
-				if err != nil {
-					panic(err)
-				}
+				default:
+					importedChecker, err := r.parseAndCheckImport(location)
+					if err != nil {
+						panic(err)
+					}
 
-				program := interpreter.ProgramFromChecker(importedChecker)
-				subInterpreter, err := inter.NewSubInterpreter(program, location)
-				if err != nil {
-					panic(err)
-				}
+					program := interpreter.ProgramFromChecker(importedChecker)
+					subInterpreter, err := inter.NewSubInterpreter(program, location)
+					if err != nil {
+						panic(err)
+					}
 
-				return interpreter.InterpreterImport{
-					Interpreter: subInterpreter,
+					return interpreter.InterpreterImport{
+						Interpreter: subInterpreter,
+					}
 				}
-			}
-		}),
+			},
+		),
 		interpreter.WithContractValueHandler(func(
 			inter *interpreter.Interpreter,
 			compositeType *sema.CompositeType,
@@ -218,9 +291,25 @@ func (r *TestRunner) newInterpreterFromChecker(checker *sema.Checker) (*interpre
 				// similar to structs. Therefore, generate a constructor function.
 				return constructorGenerator(common.Address{})
 			}
-		},
-		),
-	)
+		}),
+	}
+}
+
+// newScriptEnvironment creates an environment for test scripts to run.
+// Leverages the functionality of FVM.
+//
+func newScriptEnvironment() *fvm.ScriptEnv {
+	vm := fvm.NewVirtualMachine(runtime.NewTestFrameworkRuntime())
+	ctx := fvm.NewContext(zerolog.Nop())
+	emptyPrograms := programs.NewEmptyPrograms()
+
+	view := testutil.RootBootstrappedLedger(vm, ctx)
+	v := view.NewChild()
+
+	st := state.NewState(v, state.WithMaxInteractionSizeAllowed(math.MaxUint64))
+	sth := state.NewStateHolder(st)
+
+	return fvm.NewScriptEnvironment(context.Background(), ctx, vm, sth, emptyPrograms)
 }
 
 func (r *TestRunner) newChecker(program *ast.Program, location common.Location) (*sema.Checker, error) {
