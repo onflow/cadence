@@ -222,6 +222,10 @@ func TestImportContract(t *testing.T) {
 
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[1])
 	})
+
+	// TODO:
+	//  - Add tests for using 'Test' contract in the imported contract. Should this be supported or not?
+	//  - What to do with imports of imports?
 }
 
 func TestUsingEnv(t *testing.T) {
@@ -274,6 +278,41 @@ func TestUsingEnv(t *testing.T) {
         `
 
 		runner := NewTestRunner()
+		err := runner.RunTest(code, "test")
+		assert.NoError(t, err)
+	})
+
+	// Imported programs also should have the access to the env.
+	t.Run("account access in imported program", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import FooContract from "./FooContract"
+
+            pub fun test() {
+                var foo = FooContract()
+                var result = foo.getBalance()
+                assert(result == 0.0)
+            }
+        `
+
+		fooContract := `
+            pub contract FooContract {
+                init() {}
+
+                pub fun getBalance(): UFix64 {
+                    var acc = getAccount(0x01)
+                    return acc.balance
+                }
+            }
+        `
+
+		importResolver := func(location common.Location) (string, error) {
+			return fooContract, nil
+		}
+
+		runner := NewTestRunner().WithImportResolver(importResolver)
+
 		err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
 	})

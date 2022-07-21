@@ -38,7 +38,6 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 )
@@ -67,10 +66,13 @@ type ImportResolver func(location common.Location) (string, error)
 //
 type TestRunner struct {
 	importResolver ImportResolver
+	testRuntime    *runtime.TestFrameworkRuntime
 }
 
 func NewTestRunner() *TestRunner {
-	return &TestRunner{}
+	return &TestRunner{
+		testRuntime: runtime.NewTestFrameworkRuntime(),
+	}
 }
 
 func (r *TestRunner) WithImportResolver(importResolver ImportResolver) *TestRunner {
@@ -118,12 +120,10 @@ func (r *TestRunner) parseCheckAndInterpret(script string) (*interpreter.Program
 		Location:  testScriptLocation,
 	}
 
-	testRuntime := runtime.NewTestFrameworkRuntime()
+	var checkerOptions = r.checkerOptions(ctx)
+	var interpreterOptions = r.interpreterOptions(ctx)
 
-	var checkerOptions = r.checkerOptions()
-	var interpreterOptions = r.interpreterOptions()
-
-	program, err := testRuntime.ParseAndCheck([]byte(script), ctx, checkerOptions, interpreterOptions)
+	program, err := r.testRuntime.ParseAndCheck([]byte(script), ctx, checkerOptions, interpreterOptions)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -134,7 +134,7 @@ func (r *TestRunner) parseCheckAndInterpret(script string) (*interpreter.Program
 	memoryGauge, _ := ctx.Interface.(common.MemoryGauge)
 	storage := runtime.NewStorage(ctx.Interface, memoryGauge)
 
-	inter, err := testRuntime.Interpret(
+	inter, err := r.testRuntime.Interpret(
 		program,
 		storage,
 		ctx,
@@ -153,7 +153,7 @@ func (r *TestRunner) parseCheckAndInterpret(script string) (*interpreter.Program
 	return program, inter, nil
 }
 
-func (r *TestRunner) checkerOptions() []sema.Option {
+func (r *TestRunner) checkerOptions(ctx runtime.Context) []sema.Option {
 	return []sema.Option{
 		sema.WithImportHandler(
 			func(checker *sema.Checker, importedLocation common.Location, importRange ast.Range) (sema.Import, error) {
@@ -166,17 +166,18 @@ func (r *TestRunner) checkerOptions() []sema.Option {
 					elaboration = stdlib.TestContractChecker.Elaboration
 
 				default:
-					importedChecker, err := r.parseAndCheckImport(importedLocation)
+					importedProgram, importedElaboration, err := r.parseAndCheckImport(importedLocation, ctx)
 					if err != nil {
 						return nil, err
 					}
 
-					elaboration = importedChecker.Elaboration
+					elaboration = importedElaboration
 
-					contractDecl := importedChecker.Program.SoleContractDeclaration()
+					contractDecl := importedProgram.SoleContractDeclaration()
 					compositeType := elaboration.CompositeDeclarationTypes[contractDecl]
 
-					constructorType, constructorArgumentLabels := importedChecker.CompositeConstructorType(contractDecl, compositeType)
+					constructorType, constructorArgumentLabels :=
+						sema.CompositeConstructorType(importedElaboration, contractDecl, compositeType)
 
 					// Remove the contract variable, and instead declare a constructor.
 					elaboration.GlobalValues.Delete(compositeType.Identifier)
@@ -207,7 +208,7 @@ func (r *TestRunner) checkerOptions() []sema.Option {
 	}
 }
 
-func (r *TestRunner) interpreterOptions() []interpreter.Option {
+func (r *TestRunner) interpreterOptions(ctx runtime.Context) []interpreter.Option {
 	return []interpreter.Option{
 		// TODO: The default injected fields handler only supports 'address' locations.
 		//   However, during tests, it is possible to get non-address locations. e.g: file paths.
@@ -239,12 +240,16 @@ func (r *TestRunner) interpreterOptions() []interpreter.Option {
 					}
 
 				default:
-					importedChecker, err := r.parseAndCheckImport(location)
+					importedProgram, importedElaboration, err := r.parseAndCheckImport(location, ctx)
 					if err != nil {
 						panic(err)
 					}
 
-					program := interpreter.ProgramFromChecker(importedChecker)
+					program := &interpreter.Program{
+						Program:     importedProgram,
+						Elaboration: importedElaboration,
+					}
+
 					subInterpreter, err := inter.NewSubInterpreter(program, location)
 					if err != nil {
 						panic(err)
@@ -312,96 +317,27 @@ func newScriptEnvironment() *fvm.ScriptEnv {
 	return fvm.NewScriptEnvironment(context.Background(), ctx, vm, sth, emptyPrograms)
 }
 
-func (r *TestRunner) newChecker(program *ast.Program, location common.Location) (*sema.Checker, error) {
-	predeclaredSemaValues := stdlib.BuiltinFunctions.ToSemaValueDeclarations()
-	predeclaredSemaValues = append(predeclaredSemaValues, stdlib.BuiltinValues.ToSemaValueDeclarations()...)
-	predeclaredSemaValues = append(predeclaredSemaValues, stdlib.HelperFunctions.ToSemaValueDeclarations()...)
-
-	return sema.NewChecker(
-		program,
-		location,
-		nil,
-		true,
-		sema.WithPredeclaredValues(predeclaredSemaValues),
-		sema.WithPredeclaredTypes(stdlib.FlowDefaultPredeclaredTypes),
-		sema.WithImportHandler(
-			func(checker *sema.Checker, importedLocation common.Location, importRange ast.Range) (sema.Import, error) {
-				var elaboration *sema.Elaboration
-				switch importedLocation {
-				case stdlib.CryptoChecker.Location:
-					elaboration = stdlib.CryptoChecker.Elaboration
-
-				case stdlib.TestContractLocation:
-					elaboration = stdlib.TestContractChecker.Elaboration
-
-				default:
-					importedChecker, err := r.parseAndCheckImport(importedLocation)
-					if err != nil {
-						return nil, err
-					}
-
-					elaboration = importedChecker.Elaboration
-
-					contractDecl := importedChecker.Program.SoleContractDeclaration()
-					compositeType := elaboration.CompositeDeclarationTypes[contractDecl]
-
-					constructorType, constructorArgumentLabels := importedChecker.CompositeConstructorType(contractDecl, compositeType)
-
-					// Remove the contract variable, and instead declare a constructor.
-					elaboration.GlobalValues.Delete(compositeType.Identifier)
-
-					// Declare a constructor
-					_, err = checker.ValueActivations.Declare(sema.VariableDeclaration{
-						Identifier:               contractDecl.Identifier.Identifier,
-						Type:                     constructorType,
-						DocString:                contractDecl.DocString,
-						Access:                   contractDecl.Access,
-						Kind:                     contractDecl.DeclarationKind(),
-						Pos:                      contractDecl.Identifier.Pos,
-						IsConstant:               true,
-						ArgumentLabels:           constructorArgumentLabels,
-						AllowOuterScopeShadowing: false,
-					})
-
-					if err != nil {
-						return nil, err
-					}
-				}
-
-				return sema.ElaborationImport{
-					Elaboration: elaboration,
-				}, nil
-			},
-		),
-	)
-}
-
-func (r *TestRunner) parseAndCheckImport(location common.Location) (*sema.Checker, error) {
+func (r *TestRunner) parseAndCheckImport(location common.Location, startCtx runtime.Context) (*ast.Program, *sema.Elaboration, error) {
 	if r.importResolver == nil {
-		return nil, ImportResolverNotProvidedError{}
+		return nil, nil, ImportResolverNotProvidedError{}
 	}
 
 	code, err := r.importResolver(location)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	program, err := parser.ParseProgram(code, nil)
+	ctx := startCtx.WithLocation(location)
+
+	var checkerOptions = r.checkerOptions(ctx)
+	var interpreterOptions = r.interpreterOptions(ctx)
+
+	program, err := r.testRuntime.ParseAndCheck([]byte(code), ctx, checkerOptions, interpreterOptions)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	checker, err := r.newChecker(program, location)
-	if err != nil {
-		return nil, err
-	}
-
-	err = checker.Check()
-	if err != nil {
-		return nil, err
-	}
-
-	return checker, nil
+	return program.Program, program.Elaboration, nil
 }
 
 // PrettyPrintResults is a utility function to pretty print the test results.
