@@ -329,8 +329,24 @@ func (r *TestRunner) parseAndCheckImport(location common.Location, startCtx runt
 
 	ctx := startCtx.WithLocation(location)
 
-	var checkerOptions = r.checkerOptions(ctx)
-	var interpreterOptions = r.interpreterOptions(ctx)
+	// Use separate checker-options and interpreter-options for the imports.
+	// For e.g: imports are not supported for imported programs (i.e: nested imports are not supported).
+	var checkerOptions = []sema.Option{
+		sema.WithImportHandler(
+			func(checker *sema.Checker, importedLocation common.Location, importRange ast.Range) (sema.Import, error) {
+				return nil, fmt.Errorf("nested imports are not supported")
+			},
+		),
+	}
+
+	var interpreterOptions = []interpreter.Option{
+		interpreter.WithInjectedCompositeFieldsHandler(nil),
+		interpreter.WithImportLocationHandler(
+			func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+				panic(fmt.Errorf("nested imports are not supported"))
+			},
+		),
+	}
 
 	program, err := r.testRuntime.ParseAndCheck([]byte(code), ctx, checkerOptions, interpreterOptions)
 	if err != nil {

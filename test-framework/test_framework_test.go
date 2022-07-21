@@ -20,6 +20,7 @@ package test
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -223,9 +224,49 @@ func TestImportContract(t *testing.T) {
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[1])
 	})
 
-	// TODO:
-	//  - Add tests for using 'Test' contract in the imported contract. Should this be supported or not?
-	//  - What to do with imports of imports?
+	t.Run("nested imports", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import FooContract from "./FooContract"
+
+            pub fun test() {}
+        `
+
+		fooContract := `
+           import BarContract from 0x01
+
+            pub contract FooContract {
+                init() {}
+            }
+        `
+		barContract := `
+            pub contract BarContract {
+                init() {}
+            }
+        `
+
+		importResolver := func(location common.Location) (string, error) {
+			switch location := location.(type) {
+			case common.StringLocation:
+				if location == "./FooContract" {
+					return fooContract, nil
+				}
+			case common.AddressLocation:
+				if location.ID() == "A.0000000000000001.BarContract" {
+					return barContract, nil
+				}
+			}
+
+			return "", fmt.Errorf("unsupported import %s", location.ID())
+		}
+
+		runner := NewTestRunner().WithImportResolver(importResolver)
+
+		err := runner.RunTest(code, "test")
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "nested imports are not supported")
+	})
 }
 
 func TestUsingEnv(t *testing.T) {

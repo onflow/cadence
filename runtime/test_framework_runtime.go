@@ -25,6 +25,8 @@ import (
 	"github.com/onflow/cadence/runtime/stdlib"
 )
 
+var _ Runtime = &TestFrameworkRuntime{}
+
 // TestFrameworkRuntime is the Runtime implementation used by the test framework.
 // It's a wrapper around interpreterRuntime, exposing additional functionalities
 // needed for running tests.
@@ -79,7 +81,7 @@ func (r *TestFrameworkRuntime) ParseAndCheck(
 		functions,
 		stdlib.BuiltinValues,
 		checkerOptions,
-		true,
+		false,
 		importResolutionResults{},
 	)
 	if err != nil {
