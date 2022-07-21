@@ -22,17 +22,17 @@ import "math/rand"
 
 // IntervalST
 
-type IntervalST struct {
-	root *node
+type IntervalST[T any] struct {
+	root *node[T]
 }
 
-func (t *IntervalST) Get(interval Interval) any {
+func (t *IntervalST[T]) Get(interval Interval) (T, bool) {
 	return t.get(t.root, interval)
 }
 
-func (t *IntervalST) get(x *node, interval Interval) any {
+func (t *IntervalST[T]) get(x *node[T], interval Interval) (result T, present bool) {
 	if x == nil {
-		return nil
+		return
 	}
 	switch cmp := interval.Compare(x.interval); {
 	case cmp < 0:
@@ -40,23 +40,24 @@ func (t *IntervalST) get(x *node, interval Interval) any {
 	case cmp > 0:
 		return t.get(x.right, interval)
 	default:
-		return x.value
+		return x.value, true
 	}
 }
 
-func (t *IntervalST) Contains(interval Interval) bool {
-	return t.Get(interval) != nil
+func (t *IntervalST[T]) Contains(interval Interval) bool {
+	_, present := t.Get(interval)
+	return present
 }
 
 // Put associates an interval with a value.
 //
 // NOTE: does *not* check if the interval already exists
 //
-func (t *IntervalST) Put(interval Interval, value any) {
+func (t *IntervalST[T]) Put(interval Interval, value T) {
 	t.root = t.randomizedInsert(t.root, interval, value)
 }
 
-func (t *IntervalST) randomizedInsert(x *node, interval Interval, value any) *node {
+func (t *IntervalST[T]) randomizedInsert(x *node[T], interval Interval, value T) *node[T] {
 	if x == nil {
 		return newNode(interval, value)
 	}
@@ -77,7 +78,7 @@ func (t *IntervalST) randomizedInsert(x *node, interval Interval, value any) *no
 	return x
 }
 
-func (t *IntervalST) rootInsert(x *node, interval Interval, value any) *node {
+func (t *IntervalST[T]) rootInsert(x *node[T], interval Interval, value T) *node[T] {
 	if x == nil {
 		return newNode(interval, value)
 	}
@@ -94,51 +95,51 @@ func (t *IntervalST) rootInsert(x *node, interval Interval, value any) *node {
 	return x
 }
 
-func (t *IntervalST) SearchInterval(interval Interval) (*Interval, any) {
+func (t *IntervalST[T]) SearchInterval(interval Interval) (*Interval, T, bool) {
 	return t.searchInterval(t.root, interval)
 }
 
-func (t *IntervalST) searchInterval(x *node, interval Interval) (*Interval, any) {
+func (t *IntervalST[T]) searchInterval(x *node[T], interval Interval) (i *Interval, value T, present bool) {
 	for x != nil {
 		if x.interval.Intersects(interval) {
-			return &x.interval, x.value
+			return &x.interval, x.value, true
 		} else if x.left == nil || x.left.max.Compare(interval.Min) < 0 {
 			x = x.right
 		} else {
 			x = x.left
 		}
 	}
-	return nil, nil
+	return i, value, present
 }
 
-func (t *IntervalST) Search(p Position) (*Interval, any) {
+func (t *IntervalST[T]) Search(p Position) (*Interval, T, bool) {
 	return t.search(t.root, p)
 }
 
-func (t *IntervalST) search(x *node, p Position) (*Interval, any) {
+func (t *IntervalST[T]) search(x *node[T], p Position) (i *Interval, value T, present bool) {
 	for x != nil {
 		if x.interval.Contains(p) {
-			return &x.interval, x.value
+			return &x.interval, x.value, true
 		} else if x.left == nil || x.left.max.Compare(p) < 0 {
 			x = x.right
 		} else {
 			x = x.left
 		}
 	}
-	return nil, nil
+	return i, value, false
 }
 
-type Entry struct {
+type Entry[T any] struct {
 	Interval Interval
-	Value    any
+	Value    T
 }
 
-func (t *IntervalST) SearchAll(p Position) []Entry {
+func (t *IntervalST[T]) SearchAll(p Position) []Entry[T] {
 	_, entries := t.searchAll(t.root, p, nil)
 	return entries
 }
 
-func (t *IntervalST) searchAll(n *node, p Position, entries []Entry) (bool, []Entry) {
+func (t *IntervalST[T]) searchAll(n *node[T], p Position, entries []Entry[T]) (bool, []Entry[T]) {
 	found1 := false
 	found2 := false
 	found3 := false
@@ -150,7 +151,7 @@ func (t *IntervalST) searchAll(n *node, p Position, entries []Entry) (bool, []En
 	if n.interval.Contains(p) {
 		found1 = true
 		entries = append(entries,
-			Entry{
+			Entry[T]{
 				Interval: n.interval,
 				Value:    n.value,
 			},
@@ -170,10 +171,10 @@ func (t *IntervalST) searchAll(n *node, p Position, entries []Entry) (bool, []En
 	return found, entries
 }
 
-func (t *IntervalST) Values() []any {
+func (t *IntervalST[T]) Values() []T {
 	return t.root.Values()
 }
 
-func (t *IntervalST) check() bool {
+func (t *IntervalST[T]) check() bool {
 	return t.root.checkCount() && t.root.checkMax()
 }
