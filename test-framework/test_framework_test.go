@@ -26,6 +26,8 @@ import (
 )
 
 func TestRunningMultipleTests(t *testing.T) {
+	t.Parallel()
+
 	code := `
         pub fun testFunc1() {
             assert(false)
@@ -43,6 +45,8 @@ func TestRunningMultipleTests(t *testing.T) {
 }
 
 func TestRunningSingleTest(t *testing.T) {
+	t.Parallel()
+
 	code := `
         pub fun testFunc1() {
             assert(false)
@@ -61,6 +65,8 @@ func TestRunningSingleTest(t *testing.T) {
 }
 
 func TestExecuteScript(t *testing.T) {
+	t.Parallel()
+
 	code := `
         import Test
 
