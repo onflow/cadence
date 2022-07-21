@@ -39,11 +39,19 @@ This ensures that there is little noise and variance in the results.
 
 - Disable using:
 
-  ```sh
-  echo 1|sudo tee /sys/devices/system/cpu/intel_pstate/no_turbo
-  ```
+  - On Intel:
 
-  (If it has no effect, disable via BIOS)
+    ```sh
+    echo 1|sudo tee /sys/devices/system/cpu/intel_pstate/no_turbo
+    ```
+
+    (If it has no effect, disable via BIOS)
+
+  - On AMD:
+
+    ```sh
+    echo "0" | sudo tee /sys/devices/system/cpu/cpufreq/boost
+    ```
 
 - Check with:
 
