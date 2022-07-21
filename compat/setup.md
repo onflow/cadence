@@ -42,7 +42,7 @@ This ensures that there is little noise and variance in the results.
   - On Intel:
 
     ```sh
-    echo 1|sudo tee /sys/devices/system/cpu/intel_pstate/no_turbo
+    echo 1 | sudo tee /sys/devices/system/cpu/intel_pstate/no_turbo
     ```
 
     (If it has no effect, disable via BIOS)
@@ -72,7 +72,7 @@ This ensures that there is little noise and variance in the results.
 - Disable using:
 
   ```sh
-  echo off > /sys/devices/system/cpu/smt/control
+  echo off | sudo tee /sys/devices/system/cpu/smt/control
   ```
 
 - Check with:
