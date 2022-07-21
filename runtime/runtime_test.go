@@ -32,7 +32,7 @@ import (
 	"time"
 
 	"github.com/onflow/atree"
-	"github.com/opentracing/opentracing-go"
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -186,7 +186,7 @@ type testRuntimeInterface struct {
 	blsAggregateSignatures     func(sigs [][]byte) ([]byte, error)
 	blsAggregatePublicKeys     func(keys []*PublicKey) (*PublicKey, error)
 	getAccountContractNames    func(address Address) ([]string, error)
-	recordTrace                func(operation string, location common.Location, duration time.Duration, logs []opentracing.LogRecord)
+	recordTrace                func(operation string, location common.Location, duration time.Duration, attrs []attribute.KeyValue)
 	meterMemory                func(usage common.MemoryUsage) error
 }
 
@@ -539,11 +539,11 @@ func (i *testRuntimeInterface) GetAccountContractNames(address Address) ([]strin
 	return i.getAccountContractNames(address)
 }
 
-func (i *testRuntimeInterface) RecordTrace(operation string, location common.Location, duration time.Duration, logs []opentracing.LogRecord) {
+func (i *testRuntimeInterface) RecordTrace(operation string, location common.Location, duration time.Duration, attrs []attribute.KeyValue) {
 	if i.recordTrace == nil {
 		return
 	}
-	i.recordTrace(operation, location, duration, logs)
+	i.recordTrace(operation, location, duration, attrs)
 }
 
 func (i *testRuntimeInterface) MeterMemory(usage common.MemoryUsage) error {

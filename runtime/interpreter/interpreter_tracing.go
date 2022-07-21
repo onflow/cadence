@@ -21,8 +21,7 @@ package interpreter
 import (
 	"time"
 
-	"github.com/opentracing/opentracing-go"
-	"github.com/opentracing/opentracing-go/log"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 const (
@@ -56,103 +55,93 @@ func (interpreter *Interpreter) reportImportTrace(importPath string, duration ti
 	interpreter.onRecordTrace(interpreter, tracingImportPrefix+importPath, duration, nil)
 }
 
-func prepareArrayAndMapValueTraceLogs(typeInfo string, count int) []opentracing.LogRecord {
-	return []opentracing.LogRecord{
-		{
-			Timestamp: time.Now(),
-			Fields: []log.Field{
-				log.Int("count", count),
-				log.String("type", typeInfo),
-			},
-		},
+func prepareArrayAndMapValueTraceAttrs(typeInfo string, count int) []attribute.KeyValue {
+	return []attribute.KeyValue{
+		attribute.Int("count", count),
+		attribute.String("type", typeInfo),
 	}
 }
 
 func (interpreter *Interpreter) reportArrayValueConstructTrace(typeInfo string, count int, duration time.Duration) {
-	interpreter.onRecordTrace(interpreter, tracingArrayPrefix+tracingConstructPostfix, duration, prepareArrayAndMapValueTraceLogs(typeInfo, count))
+	interpreter.onRecordTrace(interpreter, tracingArrayPrefix+tracingConstructPostfix, duration, prepareArrayAndMapValueTraceAttrs(typeInfo, count))
 }
 
 func (interpreter *Interpreter) reportArrayValueDeepRemoveTrace(typeInfo string, count int, duration time.Duration) {
-	interpreter.onRecordTrace(interpreter, tracingArrayPrefix+tracingDeepRemovePostfix, duration, prepareArrayAndMapValueTraceLogs(typeInfo, count))
+	interpreter.onRecordTrace(interpreter, tracingArrayPrefix+tracingDeepRemovePostfix, duration, prepareArrayAndMapValueTraceAttrs(typeInfo, count))
 }
 
 func (interpreter *Interpreter) reportArrayValueDestroyTrace(typeInfo string, count int, duration time.Duration) {
-	interpreter.onRecordTrace(interpreter, tracingArrayPrefix+tracingDestroyPostfix, duration, prepareArrayAndMapValueTraceLogs(typeInfo, count))
+	interpreter.onRecordTrace(interpreter, tracingArrayPrefix+tracingDestroyPostfix, duration, prepareArrayAndMapValueTraceAttrs(typeInfo, count))
 }
 
 func (interpreter *Interpreter) reportArrayValueTransferTrace(typeInfo string, count int, duration time.Duration) {
-	interpreter.onRecordTrace(interpreter, tracingArrayPrefix+tracingTransferPostfix, duration, prepareArrayAndMapValueTraceLogs(typeInfo, count))
+	interpreter.onRecordTrace(interpreter, tracingArrayPrefix+tracingTransferPostfix, duration, prepareArrayAndMapValueTraceAttrs(typeInfo, count))
 }
 
 func (interpreter *Interpreter) reportArrayValueConformsToStaticTypeTrace(typeInfo string, count int, duration time.Duration) {
-	interpreter.onRecordTrace(interpreter, tracingArrayPrefix+tracingConformsToStaticTypePostfix, duration, prepareArrayAndMapValueTraceLogs(typeInfo, count))
+	interpreter.onRecordTrace(interpreter, tracingArrayPrefix+tracingConformsToStaticTypePostfix, duration, prepareArrayAndMapValueTraceAttrs(typeInfo, count))
 }
 
 func (interpreter *Interpreter) reportDictionaryValueConstructTrace(typeInfo string, count int, duration time.Duration) {
-	interpreter.onRecordTrace(interpreter, tracingDictionaryPrefix+tracingConstructPostfix, duration, prepareArrayAndMapValueTraceLogs(typeInfo, count))
+	interpreter.onRecordTrace(interpreter, tracingDictionaryPrefix+tracingConstructPostfix, duration, prepareArrayAndMapValueTraceAttrs(typeInfo, count))
 }
 
 func (interpreter *Interpreter) reportDictionaryValueDeepRemoveTrace(typeInfo string, count int, duration time.Duration) {
-	interpreter.onRecordTrace(interpreter, tracingDictionaryPrefix+tracingDeepRemovePostfix, duration, prepareArrayAndMapValueTraceLogs(typeInfo, count))
+	interpreter.onRecordTrace(interpreter, tracingDictionaryPrefix+tracingDeepRemovePostfix, duration, prepareArrayAndMapValueTraceAttrs(typeInfo, count))
 }
 
 func (interpreter *Interpreter) reportDictionaryValueDestroyTrace(typeInfo string, count int, duration time.Duration) {
-	interpreter.onRecordTrace(interpreter, tracingDictionaryPrefix+tracingDestroyPostfix, duration, prepareArrayAndMapValueTraceLogs(typeInfo, count))
+	interpreter.onRecordTrace(interpreter, tracingDictionaryPrefix+tracingDestroyPostfix, duration, prepareArrayAndMapValueTraceAttrs(typeInfo, count))
 }
 
 func (interpreter *Interpreter) reportDictionaryValueTransferTrace(typeInfo string, count int, duration time.Duration) {
-	interpreter.onRecordTrace(interpreter, tracingDictionaryPrefix+tracingTransferPostfix, duration, prepareArrayAndMapValueTraceLogs(typeInfo, count))
+	interpreter.onRecordTrace(interpreter, tracingDictionaryPrefix+tracingTransferPostfix, duration, prepareArrayAndMapValueTraceAttrs(typeInfo, count))
 }
 
 func (interpreter *Interpreter) reportDictionaryValueConformsToStaticTypeTrace(typeInfo string, count int, duration time.Duration) {
-	interpreter.onRecordTrace(interpreter, tracingDictionaryPrefix+tracingConformsToStaticTypePostfix, duration, prepareArrayAndMapValueTraceLogs(typeInfo, count))
+	interpreter.onRecordTrace(interpreter, tracingDictionaryPrefix+tracingConformsToStaticTypePostfix, duration, prepareArrayAndMapValueTraceAttrs(typeInfo, count))
 }
 
 func (interpreter *Interpreter) reportDictionaryValueGetMemberTrace(typeInfo string, count int, name string, duration time.Duration) {
-	interpreter.onRecordTrace(interpreter, tracingDictionaryPrefix+tracingGetMemberPrefix+name, duration, prepareArrayAndMapValueTraceLogs(typeInfo, count))
+	interpreter.onRecordTrace(interpreter, tracingDictionaryPrefix+tracingGetMemberPrefix+name, duration, prepareArrayAndMapValueTraceAttrs(typeInfo, count))
 }
 
-func prepareCompositeValueTraceLogs(owner, typeID, kind string) []opentracing.LogRecord {
-	return []opentracing.LogRecord{
-		{
-			Timestamp: time.Now(),
-			Fields: []log.Field{
-				log.String("owner", owner),
-				log.String("typeID", typeID),
-				log.String("kind", kind),
-			},
-		},
+func prepareCompositeValueTraceAttrs(owner, typeID, kind string) []attribute.KeyValue {
+	return []attribute.KeyValue{
+		attribute.String("owner", owner),
+		attribute.String("typeID", typeID),
+		attribute.String("kind", kind),
 	}
 }
 
 func (interpreter *Interpreter) reportCompositeValueConstructTrace(owner, typeID, kind string, duration time.Duration) {
-	interpreter.onRecordTrace(interpreter, tracingCompositePrefix+tracingConstructPostfix, duration, prepareCompositeValueTraceLogs(owner, typeID, kind))
+	interpreter.onRecordTrace(interpreter, tracingCompositePrefix+tracingConstructPostfix, duration, prepareCompositeValueTraceAttrs(owner, typeID, kind))
 }
 
 func (interpreter *Interpreter) reportCompositeValueDeepRemoveTrace(owner, typeID, kind string, duration time.Duration) {
-	interpreter.onRecordTrace(interpreter, tracingCompositePrefix+tracingDeepRemovePostfix, duration, prepareCompositeValueTraceLogs(owner, typeID, kind))
+	interpreter.onRecordTrace(interpreter, tracingCompositePrefix+tracingDeepRemovePostfix, duration, prepareCompositeValueTraceAttrs(owner, typeID, kind))
 }
 
 func (interpreter *Interpreter) reportCompositeValueDestroyTrace(owner, typeID, kind string, duration time.Duration) {
-	interpreter.onRecordTrace(interpreter, tracingCompositePrefix+tracingDestroyPostfix, duration, prepareCompositeValueTraceLogs(owner, typeID, kind))
+	interpreter.onRecordTrace(interpreter, tracingCompositePrefix+tracingDestroyPostfix, duration, prepareCompositeValueTraceAttrs(owner, typeID, kind))
 }
 
 func (interpreter *Interpreter) reportCompositeValueTransferTrace(owner, typeID, kind string, duration time.Duration) {
-	interpreter.onRecordTrace(interpreter, tracingCompositePrefix+tracingTransferPostfix, duration, prepareCompositeValueTraceLogs(owner, typeID, kind))
+	interpreter.onRecordTrace(interpreter, tracingCompositePrefix+tracingTransferPostfix, duration, prepareCompositeValueTraceAttrs(owner, typeID, kind))
 }
 
 func (interpreter *Interpreter) reportCompositeValueConformsToStaticTypeTrace(owner, typeID, kind string, duration time.Duration) {
-	interpreter.onRecordTrace(interpreter, tracingCompositePrefix+tracingConformsToStaticTypePostfix, duration, prepareCompositeValueTraceLogs(owner, typeID, kind))
+	interpreter.onRecordTrace(interpreter, tracingCompositePrefix+tracingConformsToStaticTypePostfix, duration, prepareCompositeValueTraceAttrs(owner, typeID, kind))
 }
 
 func (interpreter *Interpreter) reportCompositeValueGetMemberTrace(owner, typeID, kind, name string, duration time.Duration) {
-	interpreter.onRecordTrace(interpreter, tracingCompositePrefix+tracingGetMemberPrefix+name, duration, prepareCompositeValueTraceLogs(owner, typeID, kind))
+	interpreter.onRecordTrace(interpreter, tracingCompositePrefix+tracingGetMemberPrefix+name, duration, prepareCompositeValueTraceAttrs(owner, typeID, kind))
 }
 
 func (interpreter *Interpreter) reportCompositeValueSetMemberTrace(owner, typeID, kind, name string, duration time.Duration) {
-	interpreter.onRecordTrace(interpreter, tracingCompositePrefix+tracingSetMemberPrefix+name, duration, prepareCompositeValueTraceLogs(owner, typeID, kind))
+	interpreter.onRecordTrace(interpreter, tracingCompositePrefix+tracingSetMemberPrefix+name, duration, prepareCompositeValueTraceAttrs(owner, typeID, kind))
 }
 
 func (interpreter *Interpreter) reportCompositeValueRemoveMemberTrace(owner, typeID, kind, name string, duration time.Duration) {
-	interpreter.onRecordTrace(interpreter, tracingCompositePrefix+tracingRemoveMemberPrefix+name, duration, prepareCompositeValueTraceLogs(owner, typeID, kind))
+	interpreter.onRecordTrace(interpreter, tracingCompositePrefix+tracingRemoveMemberPrefix+name, duration, prepareCompositeValueTraceAttrs(owner, typeID, kind))
 }
