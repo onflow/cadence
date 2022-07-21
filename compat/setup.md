@@ -50,7 +50,7 @@ This ensures that there is little noise and variance in the results.
   - On AMD:
 
     ```sh
-    echo "0" | sudo tee /sys/devices/system/cpu/cpufreq/boost
+    echo 0 | sudo tee /sys/devices/system/cpu/cpufreq/boost
     ```
 
 - Check with:
@@ -103,7 +103,7 @@ systemctl stop polkit.service
 - Disable using:
 
   ```sh
-  echo 0 > /proc/sys/kernel/randomize_va_space
+  echo 0 | sudo tee /proc/sys/kernel/randomize_va_space
   ```
 
 - Check with:
