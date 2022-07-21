@@ -616,7 +616,7 @@ func (i *FlowIntegration) storeAccountHelper(conn protocol.Conn, address flow.Ad
 	}
 
 	events := flowkit.EventsFromTransaction(txResult)
-	name := strings.ReplaceAll(events[0].Values["name"], `"`, "")
+	name := strings.ReplaceAll(events[0].Values["name"].String(), `"`, "")
 
 	newAccount = ClientAccount{
 		Name:    name,
