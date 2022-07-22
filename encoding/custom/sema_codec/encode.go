@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"io"
 	"math/big"
-	goRuntime "runtime"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -74,27 +73,14 @@ func NewSemaEncoder(w io.Writer) *SemaEncoder {
 // Encode writes the custom-encoded representation of the given sema type to this
 // encoder's io.Writer.
 //
-// This function returns an error if the given sema type is not supported
-// by this encoder.
+// This function returns an error if the given sema type is not supported by this encoder.
 func (e *SemaEncoder) Encode(t sema.Type) (err error) {
-	defer func() {
-		if panicErr := capturePanic("failed to encode sema type: %w"); panicErr != nil {
-			err = panicErr
-		}
-	}()
-
 	return e.EncodeType(t)
 }
 
 // EncodeElaboration serializes the CompositeType and InterfaceType values in the Elaboration.
 // The rest of the Elaboration is NOT serialized because they are not needed for encoding external values.
 func (e *SemaEncoder) EncodeElaboration(el *sema.Elaboration) (err error) {
-	defer func() {
-		if panicErr := capturePanic("failed to encode elaboration: %w"); panicErr != nil {
-			err = panicErr
-		}
-	}()
-
 	err = EncodeMap(e, el.CompositeTypes, e.EncodeCompositeType)
 	if err != nil {
 		return
@@ -1100,24 +1086,6 @@ func EncodeMap[V sema.Type](e *SemaEncoder, m map[common.TypeID]V, encodeFn func
 		}
 	}
 
-	return
-}
-
-func capturePanic(errorFormatting string) (err error) {
-	if r := recover(); r != nil {
-		// don't recover Go errors
-		goErr, ok := r.(goRuntime.Error)
-		if ok {
-			panic(goErr)
-		}
-
-		panicErr, isError := r.(error)
-		if !isError {
-			panic(r)
-		}
-
-		err = fmt.Errorf(errorFormatting, panicErr)
-	}
 	return
 }
 

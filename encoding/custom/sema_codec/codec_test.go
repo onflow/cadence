@@ -32,6 +32,8 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
+// TODO add t.Parralel() to all of the tests
+
 func TestSemaCodecSimpleTypes(t *testing.T) {
 	t.Parallel()
 
@@ -544,6 +546,26 @@ func TestSemaCodecMiscTypes(t *testing.T) {
 		default:
 			assert.Fail(t, "Decoded type is not *sema.RestrictionType")
 		}
+	})
+}
+
+func TestSemaCodecFailures(t *testing.T) {
+	t.Parallel()
+
+	t.Run("DecodeSema return error", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := sema_codec.DecodeSema(nil, []byte{0xff})
+		assert.ErrorContains(t, err, "unknown type", "encoding unknown type succeeded when it shouldn't have")
+	})
+
+	t.Run("Go error panic when encoding", func(t *testing.T) {
+		t.Parallel()
+
+		assert.Panics(t, func() {
+			var nilCompositeType *sema.CompositeType
+			_, _ = sema_codec.EncodeSema(nilCompositeType)
+		})
 	})
 }
 

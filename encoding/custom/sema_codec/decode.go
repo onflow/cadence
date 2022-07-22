@@ -75,22 +75,10 @@ func NewSemaDecoder(memoryGauge common.MemoryGauge, r io.Reader) *SemaDecoder {
 // is malformed, does not conform to the custom specification, or contains
 // an unknown composite type.
 func (d *SemaDecoder) Decode() (t sema.Type, err error) {
-	defer func() {
-		if panicErr := capturePanic("failed to decode sema type: %w"); panicErr != nil {
-			err = panicErr
-		}
-	}()
-
 	return d.DecodeType()
 }
 
 func (d *SemaDecoder) DecodeElaboration() (el *sema.Elaboration, err error) {
-	defer func() {
-		if panicErr := capturePanic("failed to decode elaboration: %w"); panicErr != nil {
-			err = panicErr
-		}
-	}()
-
 	el = sema.NewElaboration(d.memoryGauge, false)
 
 	err = DecodeMap(d, el.CompositeTypes, d.DecodeCompositeType)

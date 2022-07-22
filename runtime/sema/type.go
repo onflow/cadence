@@ -3572,13 +3572,7 @@ func (t *CompositeType) QualifiedIdentifier() string {
 }
 
 func (t *CompositeType) ID() TypeID {
-	if t == nil {
-		panic("*CompositeType is nil")
-	}
 	t.initializeIdentifiers()
-	if t.cachedIdentifiers == nil {
-		panic("*CompositeType.cachedIdentifiers is nil")
-	}
 	return t.cachedIdentifiers.TypeID
 }
 
