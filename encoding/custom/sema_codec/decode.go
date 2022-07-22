@@ -14,17 +14,6 @@ import (
 // Sema
 //
 
-type LocatedReader struct {
-	r        io.Reader
-	location int
-}
-
-func (l *LocatedReader) Read(p []byte) (n int, err error) {
-	n, err = l.r.Read(p)
-	l.location += n
-	return
-}
-
 // A SemaDecoder decodes custom-encoded representations of Cadence values.
 type SemaDecoder struct {
 	r           LocatedReader
@@ -67,22 +56,18 @@ func NewSemaDecoder(memoryGauge common.MemoryGauge, r io.Reader) *SemaDecoder {
 // is malformed, does not conform to the custom specification, or contains
 // an unknown composite type.
 func (d *SemaDecoder) Decode() (t sema.Type, err error) {
-	// capture panics that occur during decoding
 	defer func() {
-		if r := recover(); r != nil {
-			panicErr, isError := r.(error)
-			if !isError {
-				panic(r)
-			}
-
-			err = fmt.Errorf("failed to decode value: %w", panicErr)
-		}
+		err = capturePanic("failed to decode sema type: %w")
 	}()
 
 	return d.DecodeType()
 }
 
 func (d *SemaDecoder) DecodeElaboration() (el *sema.Elaboration, err error) {
+	defer func() {
+		err = capturePanic("failed to decode elaboration: %w")
+	}()
+
 	el = sema.NewElaboration(d.memoryGauge, false)
 
 	err = DecodeMap(d, el.CompositeTypes, d.DecodeCompositeType)
@@ -1056,5 +1041,16 @@ func DecodeMap[V sema.Type](d *SemaDecoder, mapToPopulate map[common.TypeID]V, d
 		mapToPopulate[common.TypeID(k)] = v
 	}
 
+	return
+}
+
+type LocatedReader struct {
+	r        io.Reader
+	location int
+}
+
+func (l *LocatedReader) Read(p []byte) (n int, err error) {
+	n, err = l.r.Read(p)
+	l.location += n
 	return
 }

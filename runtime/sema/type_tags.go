@@ -110,14 +110,6 @@ func (t TypeTag) BelongsTo(typeTag TypeTag) bool {
 	return t.And(typeTag).Equals(t)
 }
 
-func (t TypeTag) UpperMask() uint64 {
-	return t.upperMask
-}
-
-func (t TypeTag) LowerMask() uint64 {
-	return t.lowerMask
-}
-
 /*
  * Following defines the masks used to represent known types in Cadence.
  * Each of the numeric/simple type has a unique dedicated mask. All the derived

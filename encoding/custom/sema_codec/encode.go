@@ -12,17 +12,6 @@ import (
 	goRuntime "runtime"
 )
 
-type LengthyWriter struct {
-	w      io.Writer
-	length int
-}
-
-func (l *LengthyWriter) Write(p []byte) (n int, err error) {
-	n, err = l.w.Write(p)
-	l.length += n
-	return
-}
-
 // A SemaEncoder converts Sema types into custom-encoded bytes.
 type SemaEncoder struct {
 	w        LengthyWriter
@@ -60,28 +49,17 @@ func NewSemaEncoder(w io.Writer) *SemaEncoder {
 	return &SemaEncoder{w: LengthyWriter{w: w}, typeDefs: map[sema.Type]int{}}
 }
 
+// TODO include leading byte with version information
+//      maybe include other metadata too, like the size the decoder's typeDefs map will be
+
 // Encode writes the custom-encoded representation of the given sema type to this
 // encoder's io.Writer.
 //
 // This function returns an error if the given sema type is not supported
 // by this encoder.
 func (e *SemaEncoder) Encode(t sema.Type) (err error) {
-	// capture panics that occur during struct preparation
 	defer func() {
-		if r := recover(); r != nil {
-			// don't recover Go errors
-			goErr, ok := r.(goRuntime.Error)
-			if ok {
-				panic(goErr)
-			}
-
-			panicErr, isError := r.(error)
-			if !isError {
-				panic(r)
-			}
-
-			err = fmt.Errorf("failed to encode value: %w", panicErr)
-		}
+		err = capturePanic("failed to encode sema type: %w")
 	}()
 
 	return e.EncodeType(t)
@@ -90,6 +68,10 @@ func (e *SemaEncoder) Encode(t sema.Type) (err error) {
 // EncodeElaboration serializes the CompositeType and InterfaceType values in the Elaboration.
 // The rest of the Elaboration is NOT serialized because they are not needed for encoding external values.
 func (e *SemaEncoder) EncodeElaboration(el *sema.Elaboration) (err error) {
+	defer func() {
+		err = capturePanic("failed to encode elaboration: %w")
+	}()
+
 	err = EncodeMap(e, el.CompositeTypes, e.EncodeCompositeType)
 	if err != nil {
 		return
@@ -548,15 +530,6 @@ func (e *SemaEncoder) EncodeBigInt(bi *big.Int) (err error) {
 	}
 
 	return e.EncodeBytes(bi.Bytes())
-}
-
-func (e *SemaEncoder) EncodeTypeTag(tag sema.TypeTag) (err error) {
-	err = e.EncodeUInt64(tag.UpperMask())
-	if err != nil {
-		return
-	}
-
-	return e.EncodeUInt64(tag.LowerMask())
 }
 
 func (e *SemaEncoder) EncodeTypeIdentifier(id EncodedSema) (err error) {
@@ -1103,5 +1076,34 @@ func EncodeMap[V sema.Type](e *SemaEncoder, m map[common.TypeID]V, encodeFn func
 		}
 	}
 
+	return
+}
+
+func capturePanic(errorFormatting string) (err error) {
+	if r := recover(); r != nil {
+		// don't recover Go errors
+		goErr, ok := r.(goRuntime.Error)
+		if ok {
+			panic(goErr)
+		}
+
+		panicErr, isError := r.(error)
+		if !isError {
+			panic(r)
+		}
+
+		err = fmt.Errorf(errorFormatting, panicErr)
+	}
+	return
+}
+
+type LengthyWriter struct {
+	w      io.Writer
+	length int
+}
+
+func (l *LengthyWriter) Write(p []byte) (n int, err error) {
+	n, err = l.w.Write(p)
+	l.length += n
 	return
 }
