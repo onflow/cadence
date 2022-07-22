@@ -19,6 +19,7 @@
 package interpreter_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -52,14 +53,14 @@ func TestInterpretCompositeValue(t *testing.T) {
 		RequireValuesEqual(
 			t,
 			inter,
-			interpreter.NewStringValue("Apple"),
+			interpreter.NewUnmeteredStringValue("Apple"),
 			inter.Globals["name"].GetValue(),
 		)
 
 		RequireValuesEqual(
 			t,
 			inter,
-			interpreter.NewStringValue("Red"),
+			interpreter.NewUnmeteredStringValue("Red"),
 			inter.Globals["color"].GetValue(),
 		)
 	})
@@ -68,7 +69,7 @@ func TestInterpretCompositeValue(t *testing.T) {
 // Utility methods
 func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 
-	storage := interpreter.NewInMemoryStorage()
+	storage := newUnmeteredInMemoryStorage()
 
 	// 'fruit' composite type
 	fruitType := &sema.CompositeType{
@@ -77,16 +78,16 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 		Kind:       common.CompositeKindStructure,
 	}
 
-	fruitType.Members = sema.NewStringMemberOrderedMap()
+	fruitType.Members = &sema.StringMemberOrderedMap{}
 
-	fruitType.Members.Set("name", sema.NewPublicConstantFieldMember(
+	fruitType.Members.Set("name", sema.NewUnmeteredPublicConstantFieldMember(
 		fruitType,
 		"name",
 		sema.StringType,
 		"This is the name",
 	))
 
-	fruitType.Members.Set("color", sema.NewPublicConstantFieldMember(
+	fruitType.Members.Set("color", sema.NewUnmeteredPublicConstantFieldMember(
 		fruitType,
 		"color",
 		sema.StringType,
@@ -101,12 +102,13 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 				fields := []interpreter.CompositeField{
 					{
 						Name:  "name",
-						Value: interpreter.NewStringValue("Apple"),
+						Value: interpreter.NewUnmeteredStringValue("Apple"),
 					},
 				}
 
 				value := interpreter.NewCompositeValue(
 					inter,
+					interpreter.ReturnEmptyLocationRange,
 					TestLocation,
 					fruitType.Identifier,
 					common.CompositeKindStructure,
@@ -116,7 +118,7 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 
 				value.ComputedFields = map[string]interpreter.ComputedField{
 					"color": func(_ *interpreter.Interpreter, _ func() interpreter.LocationRange) interpreter.Value {
-						return interpreter.NewStringValue("Red")
+						return interpreter.NewUnmeteredStringValue("Red")
 					},
 				}
 
@@ -150,4 +152,42 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 	require.NoError(t, err)
 
 	return inter
+}
+
+func TestInterpretContractTransfer(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(t *testing.T, value string) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		code := fmt.Sprintf(
+			`
+              contract C {}
+
+              fun test() {
+                  authAccount.save(%s, to: /storage/c)
+              }
+		    `,
+			value,
+		)
+		inter, _ := testAccount(t, address, true, code)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		var nonTransferableValueError interpreter.NonTransferableValueError
+		require.ErrorAs(t, err, &nonTransferableValueError)
+	}
+
+	t.Run("simple", func(t *testing.T) {
+		test(t, "C as AnyStruct")
+	})
+
+	t.Run("nested", func(t *testing.T) {
+		test(t, "[C as AnyStruct]")
+	})
 }

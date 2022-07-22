@@ -36,7 +36,7 @@ func TestCompositeStorage(t *testing.T) {
 
 	t.Parallel()
 
-	storage := NewInMemoryStorage()
+	storage := newUnmeteredInMemoryStorage()
 
 	inter, err := NewInterpreter(
 		nil,
@@ -47,6 +47,7 @@ func TestCompositeStorage(t *testing.T) {
 
 	value := NewCompositeValue(
 		inter,
+		ReturnEmptyLocationRange,
 		TestLocation,
 		"TestStruct",
 		common.CompositeKindStructure,
@@ -72,7 +73,7 @@ func TestCompositeStorage(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, ok)
 
-	storedValue := StoredValue(retrievedStorable, storage)
+	storedValue := StoredValue(inter, retrievedStorable, storage)
 
 	require.IsType(t, storedValue, &CompositeValue{})
 	storedComposite := storedValue.(*CompositeValue)
@@ -90,7 +91,7 @@ func TestArrayStorage(t *testing.T) {
 	t.Parallel()
 
 	importLocationHandlerFunc := func(inter *Interpreter, location common.Location) Import {
-		elaboration := sema.NewElaboration()
+		elaboration := sema.NewElaboration(nil, false)
 		elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
 		return VirtualImport{Elaboration: elaboration}
 	}
@@ -99,7 +100,7 @@ func TestArrayStorage(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		storage := newUnmeteredInMemoryStorage()
 
 		inter, err := NewInterpreter(
 			nil,
@@ -115,6 +116,7 @@ func TestArrayStorage(t *testing.T) {
 
 		value := NewArrayValue(
 			inter,
+			ReturnEmptyLocationRange,
 			VariableSizedStaticType{
 				Type: element.StaticType(inter),
 			},
@@ -130,7 +132,7 @@ func TestArrayStorage(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, ok)
 
-		require.False(t, bool(value.Contains(nil, nil, element)))
+		require.False(t, bool(value.Contains(inter, nil, element)))
 
 		value.Insert(
 			inter,
@@ -139,7 +141,7 @@ func TestArrayStorage(t *testing.T) {
 			element,
 		)
 
-		require.True(t, bool(value.Contains(nil, nil, element)))
+		require.True(t, bool(value.Contains(inter, nil, element)))
 
 		// array + original composite element + new copy of composite element
 		require.Equal(t, 3, storage.BasicSlabStorage.Count())
@@ -148,7 +150,7 @@ func TestArrayStorage(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, ok)
 
-		storedValue := StoredValue(retrievedStorable, storage)
+		storedValue := StoredValue(inter, retrievedStorable, storage)
 
 		require.IsType(t, storedValue, &ArrayValue{})
 		storedArray := storedValue.(*ArrayValue)
@@ -162,7 +164,7 @@ func TestArrayStorage(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		storage := newUnmeteredInMemoryStorage()
 
 		inter, err := NewInterpreter(
 			nil,
@@ -178,6 +180,7 @@ func TestArrayStorage(t *testing.T) {
 
 		value := NewArrayValue(
 			inter,
+			ReturnEmptyLocationRange,
 			VariableSizedStaticType{
 				Type: element.StaticType(inter),
 			},
@@ -185,7 +188,7 @@ func TestArrayStorage(t *testing.T) {
 			element,
 		)
 
-		require.True(t, bool(value.Contains(nil, nil, element)))
+		require.True(t, bool(value.Contains(inter, nil, element)))
 
 		require.NotEqual(t, atree.StorageIDUndefined, value.StorageID())
 
@@ -208,12 +211,12 @@ func TestArrayStorage(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, ok)
 
-		storedValue := StoredValue(retrievedStorable, storage)
+		storedValue := StoredValue(inter, retrievedStorable, storage)
 
 		require.IsType(t, storedValue, &ArrayValue{})
 		storedArray := storedValue.(*ArrayValue)
 
-		require.False(t, bool(storedArray.Contains(nil, nil, element)))
+		require.False(t, bool(storedArray.Contains(inter, nil, element)))
 	})
 }
 
@@ -225,7 +228,7 @@ func TestDictionaryStorage(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		storage := newUnmeteredInMemoryStorage()
 
 		inter, err := NewInterpreter(
 			nil,
@@ -236,6 +239,7 @@ func TestDictionaryStorage(t *testing.T) {
 
 		value := NewDictionaryValue(
 			inter,
+			ReturnEmptyLocationRange,
 			DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeString,
 				ValueType: PrimitiveStaticTypeAnyStruct,
@@ -250,14 +254,14 @@ func TestDictionaryStorage(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, ok)
 
-		entryKey := NewStringValue("test")
+		entryKey := NewUnmeteredStringValue("test")
 		entryValue := BoolValue(true)
 
 		value.SetKey(
 			inter,
 			ReturnEmptyLocationRange,
 			entryKey,
-			NewSomeValueNonCopying(entryValue),
+			NewUnmeteredSomeValueNonCopying(entryValue),
 		)
 
 		require.Equal(t, 1, storage.BasicSlabStorage.Count())
@@ -266,7 +270,7 @@ func TestDictionaryStorage(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, ok)
 
-		storedValue := StoredValue(retrievedStorable, storage)
+		storedValue := StoredValue(inter, retrievedStorable, storage)
 
 		require.IsType(t, storedValue, &DictionaryValue{})
 		storedDictionary := storedValue.(*DictionaryValue)
@@ -281,7 +285,7 @@ func TestDictionaryStorage(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		storage := newUnmeteredInMemoryStorage()
 
 		inter, err := NewInterpreter(
 			nil,
@@ -292,12 +296,13 @@ func TestDictionaryStorage(t *testing.T) {
 
 		value := NewDictionaryValue(
 			inter,
+			ReturnEmptyLocationRange,
 			DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeString,
 				ValueType: PrimitiveStaticTypeAnyStruct,
 			},
-			NewStringValue("test"),
-			NewSomeValueNonCopying(BoolValue(true)),
+			NewUnmeteredStringValue("test"),
+			NewUnmeteredSomeValueNonCopying(BoolValue(true)),
 		)
 
 		require.NotEqual(t, atree.StorageIDUndefined, value.StorageID())
@@ -311,7 +316,7 @@ func TestDictionaryStorage(t *testing.T) {
 		value.SetKey(
 			inter,
 			ReturnEmptyLocationRange,
-			NewStringValue("test"),
+			NewUnmeteredStringValue("test"),
 			NilValue{},
 		)
 
@@ -321,7 +326,7 @@ func TestDictionaryStorage(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, ok)
 
-		storedValue := StoredValue(retrievedStorable, storage)
+		storedValue := StoredValue(inter, retrievedStorable, storage)
 
 		require.IsType(t, storedValue, &DictionaryValue{})
 	})
@@ -330,7 +335,7 @@ func TestDictionaryStorage(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		storage := newUnmeteredInMemoryStorage()
 
 		inter, err := NewInterpreter(
 			nil,
@@ -341,12 +346,13 @@ func TestDictionaryStorage(t *testing.T) {
 
 		value := NewDictionaryValue(
 			inter,
+			ReturnEmptyLocationRange,
 			DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeString,
 				ValueType: PrimitiveStaticTypeAnyStruct,
 			},
-			NewStringValue("test"),
-			NewSomeValueNonCopying(BoolValue(true)),
+			NewUnmeteredStringValue("test"),
+			NewUnmeteredSomeValueNonCopying(BoolValue(true)),
 		)
 
 		require.NotEqual(t, atree.StorageIDUndefined, value.StorageID())
@@ -360,7 +366,7 @@ func TestDictionaryStorage(t *testing.T) {
 		value.Remove(
 			inter,
 			ReturnEmptyLocationRange,
-			NewStringValue("test"),
+			NewUnmeteredStringValue("test"),
 		)
 
 		require.Equal(t, 1, storage.BasicSlabStorage.Count())
@@ -369,7 +375,7 @@ func TestDictionaryStorage(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, ok)
 
-		storedValue := StoredValue(retrievedStorable, storage)
+		storedValue := StoredValue(inter, retrievedStorable, storage)
 
 		require.IsType(t, storedValue, &DictionaryValue{})
 	})
@@ -378,7 +384,7 @@ func TestDictionaryStorage(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		storage := newUnmeteredInMemoryStorage()
 
 		inter, err := NewInterpreter(
 			nil,
@@ -389,6 +395,7 @@ func TestDictionaryStorage(t *testing.T) {
 
 		value := NewDictionaryValue(
 			inter,
+			ReturnEmptyLocationRange,
 			DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeString,
 				ValueType: PrimitiveStaticTypeAnyStruct,
@@ -406,8 +413,8 @@ func TestDictionaryStorage(t *testing.T) {
 		value.Insert(
 			inter,
 			ReturnEmptyLocationRange,
-			NewStringValue("test"),
-			NewSomeValueNonCopying(BoolValue(true)),
+			NewUnmeteredStringValue("test"),
+			NewUnmeteredSomeValueNonCopying(BoolValue(true)),
 		)
 
 		require.Equal(t, 1, storage.BasicSlabStorage.Count())
@@ -416,17 +423,17 @@ func TestDictionaryStorage(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, ok)
 
-		storedValue := StoredValue(retrievedStorable, storage)
+		storedValue := StoredValue(inter, retrievedStorable, storage)
 
 		require.IsType(t, storedValue, &DictionaryValue{})
 	})
 }
 
-func TestStorageOverwriteAndRemove(t *testing.T) {
+func TestInterpretStorageOverwriteAndRemove(t *testing.T) {
 
 	t.Parallel()
 
-	storage := NewInMemoryStorage()
+	storage := newUnmeteredInMemoryStorage()
 
 	inter, err := NewInterpreter(
 		nil,
@@ -439,11 +446,12 @@ func TestStorageOverwriteAndRemove(t *testing.T) {
 
 	array1 := NewArrayValue(
 		inter,
+		ReturnEmptyLocationRange,
 		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
 		address,
-		NewStringValue("first"),
+		NewUnmeteredStringValue("first"),
 	)
 
 	const identifier = "test"
@@ -455,11 +463,12 @@ func TestStorageOverwriteAndRemove(t *testing.T) {
 
 	array2 := NewArrayValue(
 		inter,
+		ReturnEmptyLocationRange,
 		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
 		address,
-		NewStringValue("second"),
+		NewUnmeteredStringValue("second"),
 	)
 
 	storageMap.WriteValue(inter, identifier, array2)

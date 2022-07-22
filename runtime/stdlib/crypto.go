@@ -23,14 +23,14 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	errors2 "github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/parser2"
+	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib/contracts"
 )
 
 var CryptoChecker = func() *sema.Checker {
 
-	program, err := parser2.ParseProgram(contracts.Crypto)
+	program, err := parser.ParseProgram(contracts.Crypto, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -41,6 +41,8 @@ var CryptoChecker = func() *sema.Checker {
 	checker, err = sema.NewChecker(
 		program,
 		location,
+		nil,
+		false,
 		sema.WithPredeclaredValues(BuiltinFunctions.ToSemaValueDeclarations()),
 		sema.WithPredeclaredTypes(BuiltinTypes.ToTypeDeclarations()),
 	)
@@ -103,7 +105,7 @@ func cryptoAlgorithmEnumConstructorType(
 
 	members := make([]*sema.Member, len(enumCases))
 	for i, algo := range enumCases {
-		members[i] = sema.NewPublicConstantFieldMember(
+		members[i] = sema.NewUnmeteredPublicConstantFieldMember(
 			enumType,
 			algo.Name(),
 			enumType,
@@ -130,12 +132,16 @@ func cryptoAlgorithmEnumConstructorType(
 	return constructorType
 }
 
+type enumCaseConstructor func(
+	inter *interpreter.Interpreter,
+	rawValue uint8,
+) *interpreter.CompositeValue
+
 func cryptoAlgorithmEnumValue(
 	inter *interpreter.Interpreter,
-	getLocationRange func() interpreter.LocationRange,
 	enumType *sema.CompositeType,
 	enumCases []sema.CryptoAlgorithm,
-	caseConstructor func(inter *interpreter.Interpreter, rawValue uint8) *interpreter.CompositeValue,
+	caseConstructor enumCaseConstructor,
 ) interpreter.Value {
 
 	caseCount := len(enumCases)
@@ -147,12 +153,12 @@ func cryptoAlgorithmEnumValue(
 		caseValue := caseConstructor(inter, rawValue)
 		caseValues[i] = caseValue
 		constructorNestedVariables[enumCase.Name()] =
-			interpreter.NewVariableWithValue(caseValue)
+			interpreter.NewVariableWithValue(inter, caseValue)
 	}
 
 	return interpreter.EnumConstructorFunction(
 		inter,
-		getLocationRange,
+		interpreter.ReturnEmptyLocationRange,
 		enumType,
 		caseValues,
 		constructorNestedVariables,

@@ -30,3 +30,8 @@ build:
 .PHONY: test
 test:
 	cd test && npm install && npm t
+	GO111MODULE=on go test -parallel 8 ./...
+
+.PHONY: wasm
+wasm:
+	GOARCH=wasm GOOS=js go build -o languageserver.wasm  ./cmd/languageserver

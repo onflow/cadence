@@ -33,13 +33,16 @@ var hashAlgorithmFunctions = map[string]interpreter.FunctionValue{
 func NewHashAlgorithmCase(inter *interpreter.Interpreter, rawValue uint8) *interpreter.CompositeValue {
 	return interpreter.NewEnumCaseValue(
 		inter,
+		interpreter.ReturnEmptyLocationRange,
 		sema.HashAlgorithmType,
-		interpreter.UInt8Value(rawValue),
+		interpreter.NewUInt8Value(inter, func() uint8 {
+			return rawValue
+		}),
 		hashAlgorithmFunctions,
 	)
 }
 
-var hashAlgorithmHashFunction = interpreter.NewHostFunctionValue(
+var hashAlgorithmHashFunction = interpreter.NewUnmeteredHostFunctionValue(
 	func(invocation interpreter.Invocation) interpreter.Value {
 		dataValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
 		if !ok {
@@ -68,7 +71,7 @@ var hashAlgorithmHashFunction = interpreter.NewHostFunctionValue(
 	sema.HashAlgorithmTypeHashFunctionType,
 )
 
-var hashAlgorithmHashWithTagFunction = interpreter.NewHostFunctionValue(
+var hashAlgorithmHashWithTagFunction = interpreter.NewUnmeteredHostFunctionValue(
 	func(invocation interpreter.Invocation) interpreter.Value {
 		dataValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
 		if !ok {
@@ -112,7 +115,6 @@ var hashAlgorithmConstructor = StandardLibraryValue{
 	ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
 		return cryptoAlgorithmEnumValue(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
 			sema.HashAlgorithmType,
 			sema.HashAlgorithms,
 			NewHashAlgorithmCase,

@@ -27,7 +27,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/parser2"
+	"github.com/onflow/cadence/runtime/parser"
 )
 
 func TestConstantSizedType_String(t *testing.T) {
@@ -436,7 +436,7 @@ func TestRestrictedType_GetMember(t *testing.T) {
 			Identifier: "R",
 			Location:   common.StringLocation("a"),
 			Fields:     []string{},
-			Members:    NewStringMemberOrderedMap(),
+			Members:    &StringMemberOrderedMap{},
 		}
 		ty := &RestrictedType{
 			Type:         resourceType,
@@ -444,7 +444,7 @@ func TestRestrictedType_GetMember(t *testing.T) {
 		}
 
 		fieldName := "s"
-		resourceType.Members.Set(fieldName, NewPublicConstantFieldMember(
+		resourceType.Members.Set(fieldName, NewUnmeteredPublicConstantFieldMember(
 			ty.Type,
 			fieldName,
 			IntType,
@@ -456,9 +456,14 @@ func TestRestrictedType_GetMember(t *testing.T) {
 		require.Contains(t, actualMembers, fieldName)
 
 		var reportedError error
-		actualMember := actualMembers[fieldName].Resolve(fieldName, ast.Range{}, func(err error) {
-			reportedError = err
-		})
+		actualMember := actualMembers[fieldName].Resolve(
+			nil,
+			fieldName,
+			ast.Range{},
+			func(err error) {
+				reportedError = err
+			},
+		)
 
 		assert.IsType(t, &InvalidRestrictedTypeMemberAccessError{}, reportedError)
 		assert.NotNil(t, actualMember)
@@ -471,7 +476,7 @@ func TestRestrictedType_GetMember(t *testing.T) {
 		interfaceType := &InterfaceType{
 			CompositeKind: common.CompositeKindResource,
 			Identifier:    "I",
-			Members:       NewStringMemberOrderedMap(),
+			Members:       &StringMemberOrderedMap{},
 		}
 
 		resourceType := &CompositeType{
@@ -479,7 +484,7 @@ func TestRestrictedType_GetMember(t *testing.T) {
 			Identifier: "R",
 			Location:   common.StringLocation("a"),
 			Fields:     []string{},
-			Members:    NewStringMemberOrderedMap(),
+			Members:    &StringMemberOrderedMap{},
 		}
 		restrictedType := &RestrictedType{
 			Type: resourceType,
@@ -490,14 +495,14 @@ func TestRestrictedType_GetMember(t *testing.T) {
 
 		fieldName := "s"
 
-		resourceType.Members.Set(fieldName, NewPublicConstantFieldMember(
+		resourceType.Members.Set(fieldName, NewUnmeteredPublicConstantFieldMember(
 			restrictedType.Type,
 			fieldName,
 			IntType,
 			"",
 		))
 
-		interfaceMember := NewPublicConstantFieldMember(
+		interfaceMember := NewUnmeteredPublicConstantFieldMember(
 			restrictedType.Type,
 			fieldName,
 			IntType,
@@ -509,7 +514,7 @@ func TestRestrictedType_GetMember(t *testing.T) {
 
 		require.Contains(t, actualMembers, fieldName)
 
-		actualMember := actualMembers[fieldName].Resolve(fieldName, ast.Range{}, nil)
+		actualMember := actualMembers[fieldName].Resolve(nil, fieldName, ast.Range{}, nil)
 
 		assert.Same(t, interfaceMember, actualMember)
 	})
@@ -541,7 +546,7 @@ func TestQualifiedIdentifierCreation(t *testing.T) {
 			Identifier: "A",
 			Location:   common.StringLocation("a"),
 			Fields:     []string{},
-			Members:    NewStringMemberOrderedMap(),
+			Members:    &StringMemberOrderedMap{},
 		}
 
 		b := &CompositeType{
@@ -549,7 +554,7 @@ func TestQualifiedIdentifierCreation(t *testing.T) {
 			Identifier:    "B",
 			Location:      common.StringLocation("a"),
 			Fields:        []string{},
-			Members:       NewStringMemberOrderedMap(),
+			Members:       &StringMemberOrderedMap{},
 			containerType: a,
 		}
 
@@ -558,7 +563,7 @@ func TestQualifiedIdentifierCreation(t *testing.T) {
 			Identifier:    "C",
 			Location:      common.StringLocation("a"),
 			Fields:        []string{},
-			Members:       NewStringMemberOrderedMap(),
+			Members:       &StringMemberOrderedMap{},
 			containerType: b,
 		}
 
@@ -584,7 +589,7 @@ func BenchmarkQualifiedIdentifierCreation(b *testing.B) {
 		Identifier: "foo",
 		Location:   common.StringLocation("a"),
 		Fields:     []string{},
-		Members:    NewStringMemberOrderedMap(),
+		Members:    &StringMemberOrderedMap{},
 	}
 
 	bar := &CompositeType{
@@ -592,7 +597,7 @@ func BenchmarkQualifiedIdentifierCreation(b *testing.B) {
 		Identifier:    "bar",
 		Location:      common.StringLocation("a"),
 		Fields:        []string{},
-		Members:       NewStringMemberOrderedMap(),
+		Members:       &StringMemberOrderedMap{},
 		containerType: foo,
 	}
 
@@ -635,12 +640,14 @@ func TestIdentifierCacheUpdate(t *testing.T) {
           }
 	`
 
-	program, err := parser2.ParseProgram(code)
+	program, err := parser.ParseProgram(code, nil)
 	require.NoError(t, err)
 
 	checker, err := NewChecker(
 		program,
 		common.StringLocation("test"),
+		nil,
+		false,
 	)
 	require.NoError(t, err)
 
@@ -714,7 +721,7 @@ func TestCommonSuperType(t *testing.T) {
 			if r := recover(); r != nil {
 				err, _ := r.(error)
 				require.Error(t, err)
-				assert.Equal(t, "duplicate type tag: {32 0}", err.Error())
+				assert.Contains(t, err.Error(), "duplicate type tag: {32 0}")
 			}
 		}()
 
@@ -872,25 +879,6 @@ func TestCommonSuperType(t *testing.T) {
 				expectedSuperType: nilType,
 			},
 			{
-				name: "optional",
-				types: []Type{
-					nilType,
-					Int8Type,
-				},
-				expectedSuperType: &OptionalType{
-					Type: Int8Type,
-				},
-			},
-			{
-				name: "optional with heterogeneous types",
-				types: []Type{
-					nilType,
-					Int8Type,
-					StringType,
-				},
-				expectedSuperType: AnyStructType,
-			},
-			{
 				name: "never type",
 				types: []Type{
 					NeverType,
@@ -921,21 +909,21 @@ func TestCommonSuperType(t *testing.T) {
 			Location:      testLocation,
 			Identifier:    "I1",
 			CompositeKind: common.CompositeKindStructure,
-			Members:       NewStringMemberOrderedMap(),
+			Members:       &StringMemberOrderedMap{},
 		}
 
 		interfaceType2 := &InterfaceType{
 			Location:      testLocation,
 			Identifier:    "I2",
 			CompositeKind: common.CompositeKindStructure,
-			Members:       NewStringMemberOrderedMap(),
+			Members:       &StringMemberOrderedMap{},
 		}
 
 		interfaceType3 := &InterfaceType{
 			Location:      testLocation,
 			Identifier:    "I3",
 			CompositeKind: common.CompositeKindStructure,
-			Members:       NewStringMemberOrderedMap(),
+			Members:       &StringMemberOrderedMap{},
 		}
 
 		newCompositeWithInterfaces := func(name string, interfaces ...*InterfaceType) *CompositeType {
@@ -944,7 +932,7 @@ func TestCommonSuperType(t *testing.T) {
 				Identifier:                    name,
 				Kind:                          common.CompositeKindStructure,
 				ExplicitInterfaceConformances: interfaces,
-				Members:                       NewStringMemberOrderedMap(),
+				Members:                       &StringMemberOrderedMap{},
 			}
 		}
 
@@ -1388,7 +1376,7 @@ func TestCommonSuperType(t *testing.T) {
 			Location:      testLocation,
 			Identifier:    "I1",
 			CompositeKind: common.CompositeKindStructure,
-			Members:       NewStringMemberOrderedMap(),
+			Members:       &StringMemberOrderedMap{},
 		}
 
 		restrictedType1 := &RestrictedType{
@@ -1432,7 +1420,7 @@ func TestCommonSuperType(t *testing.T) {
 			Location:      testLocation,
 			Identifier:    "I1",
 			CompositeKind: common.CompositeKindStructure,
-			Members:       NewStringMemberOrderedMap(),
+			Members:       &StringMemberOrderedMap{},
 		}
 
 		restrictedType1 := &RestrictedType{
@@ -1477,7 +1465,7 @@ func TestCommonSuperType(t *testing.T) {
 				},
 			},
 			ReturnTypeAnnotation: NewTypeAnnotation(Int8Type),
-			Members:              NewStringMemberOrderedMap(),
+			Members:              &StringMemberOrderedMap{},
 		}
 
 		funcType2 := &FunctionType{
@@ -1487,7 +1475,7 @@ func TestCommonSuperType(t *testing.T) {
 				},
 			},
 			ReturnTypeAnnotation: NewTypeAnnotation(Int8Type),
-			Members:              NewStringMemberOrderedMap(),
+			Members:              &StringMemberOrderedMap{},
 		}
 
 		tests := []testCase{
@@ -1547,6 +1535,118 @@ func TestCommonSuperType(t *testing.T) {
 				assert.NotNil(t, typ, fmt.Sprintf("not implemented %v", typeTag))
 			})
 		}
+	})
+
+	t.Run("Optional types", func(t *testing.T) {
+		t.Parallel()
+
+		testLocation := common.StringLocation("test")
+
+		structType := &CompositeType{
+			Location:   testLocation,
+			Identifier: "T",
+			Kind:       common.CompositeKindStructure,
+			Members:    &StringMemberOrderedMap{},
+		}
+
+		optionalStructType := &OptionalType{
+			Type: structType,
+		}
+
+		doubleOptionalStructType := &OptionalType{
+			Type: &OptionalType{
+				Type: structType,
+			},
+		}
+
+		tests := []testCase{
+			{
+				name: "simple types",
+				types: []Type{
+					&OptionalType{
+						Type: IntType,
+					},
+					Int8Type,
+					StringType,
+				},
+				expectedSuperType: AnyStructType,
+			},
+			{
+				name: "nil with simple type",
+				types: []Type{
+					nilType,
+					Int8Type,
+				},
+				expectedSuperType: &OptionalType{
+					Type: Int8Type,
+				},
+			},
+			{
+				name: "nil with heterogeneous types",
+				types: []Type{
+					nilType,
+					Int8Type,
+					StringType,
+				},
+				expectedSuperType: AnyStructType,
+			},
+			{
+				name: "multi-level simple optional types",
+				types: []Type{
+					Int8Type,
+					&OptionalType{
+						Type: Int8Type,
+					},
+					&OptionalType{
+						Type: &OptionalType{
+							Type: Int8Type,
+						},
+					},
+				},
+
+				// supertype of `T`, `T?`, `T??` is `T??`
+				expectedSuperType: &OptionalType{
+					Type: &OptionalType{
+						Type: Int8Type,
+					},
+				},
+			},
+			{
+				name: "multi-level optional structs",
+				types: []Type{
+					structType,
+					optionalStructType,
+					doubleOptionalStructType,
+				},
+
+				// supertype of `T`, `T?`, `T??` is `T??`
+				expectedSuperType: doubleOptionalStructType,
+			},
+			{
+				name: "multi-level heterogeneous optional types",
+				types: []Type{
+					&OptionalType{
+						Type: Int8Type,
+					},
+					optionalStructType,
+					doubleOptionalStructType,
+				},
+
+				expectedSuperType: AnyStructType,
+			},
+			{
+				name: "multi-level heterogeneous types",
+				types: []Type{
+					Int8Type,
+					optionalStructType,
+					doubleOptionalStructType,
+				},
+
+				expectedSuperType: AnyStructType,
+			},
+		}
+
+		testLeastCommonSuperType(t, tests)
 	})
 }
 

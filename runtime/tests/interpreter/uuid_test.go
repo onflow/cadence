@@ -84,7 +84,7 @@ func TestInterpretResourceUUID(t *testing.T) {
 
 	var uuid uint64
 
-	storage := interpreter.NewInMemoryStorage()
+	storage := newUnmeteredInMemoryStorage()
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(importingChecker),
@@ -146,7 +146,7 @@ func TestInterpretResourceUUID(t *testing.T) {
 		RequireValuesEqual(
 			t,
 			inter,
-			interpreter.UInt64Value(i),
+			interpreter.NewUnmeteredUInt64Value(uint64(i)),
 			uuidValue,
 		)
 	}

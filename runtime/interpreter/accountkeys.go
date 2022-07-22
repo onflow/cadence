@@ -21,6 +21,7 @@ package interpreter
 import (
 	"fmt"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -28,12 +29,10 @@ import (
 
 var authAccountKeysTypeID = sema.AuthAccountKeysType.ID()
 var authAccountKeysStaticType StaticType = PrimitiveStaticTypeAuthAccountKeys
-var authAccountKeysDynamicType DynamicType = CompositeDynamicType{
-	StaticType: sema.AuthAccountKeysType,
-}
 
 // NewAuthAccountKeysValue constructs a AuthAccount.Keys value.
 func NewAuthAccountKeysValue(
+	inter *Interpreter,
 	address AddressValue,
 	addFunction FunctionValue,
 	getFunction FunctionValue,
@@ -47,17 +46,19 @@ func NewAuthAccountKeysValue(
 	}
 
 	var str string
-	stringer := func(_ SeenReferences) string {
+	stringer := func(memoryGauge common.MemoryGauge, _ SeenReferences) string {
 		if str == "" {
-			str = fmt.Sprintf("AuthAccount.Keys(%s)", address)
+			common.UseMemory(memoryGauge, common.AuthAccountKeysStringMemoryUsage)
+			addressStr := address.MeteredString(memoryGauge, SeenReferences{})
+			str = fmt.Sprintf("AuthAccount.Keys(%s)", addressStr)
 		}
 		return str
 	}
 
 	return NewSimpleCompositeValue(
+		inter,
 		authAccountKeysTypeID,
 		authAccountKeysStaticType,
-		authAccountKeysDynamicType,
 		nil,
 		fields,
 		nil,
@@ -70,12 +71,10 @@ func NewAuthAccountKeysValue(
 
 var publicAccountKeysTypeID = sema.PublicAccountKeysType.ID()
 var publicAccountKeysStaticType StaticType = PrimitiveStaticTypePublicAccountKeys
-var publicAccountKeysDynamicType DynamicType = CompositeDynamicType{
-	StaticType: sema.PublicAccountKeysType,
-}
 
 // NewPublicAccountKeysValue constructs a PublicAccount.Keys value.
 func NewPublicAccountKeysValue(
+	inter *Interpreter,
 	address AddressValue,
 	getFunction FunctionValue,
 ) Value {
@@ -85,17 +84,19 @@ func NewPublicAccountKeysValue(
 	}
 
 	var str string
-	stringer := func(_ SeenReferences) string {
+	stringer := func(memoryGauge common.MemoryGauge, _ SeenReferences) string {
 		if str == "" {
-			str = fmt.Sprintf("PublicAccount.Keys(%s)", address)
+			common.UseMemory(memoryGauge, common.PublicAccountKeysStringMemoryUsage)
+			addressStr := address.MeteredString(memoryGauge, SeenReferences{})
+			str = fmt.Sprintf("PublicAccount.Keys(%s)", addressStr)
 		}
 		return str
 	}
 
 	return NewSimpleCompositeValue(
+		inter,
 		publicAccountKeysTypeID,
 		publicAccountKeysStaticType,
-		publicAccountKeysDynamicType,
 		nil,
 		fields,
 		nil,

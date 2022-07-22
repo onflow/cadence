@@ -49,7 +49,7 @@ func TestInterpretToString(t *testing.T) {
 			AssertValuesEqual(
 				t,
 				inter,
-				interpreter.NewStringValue("42"),
+				interpreter.NewUnmeteredStringValue("42"),
 				inter.Globals["y"].GetValue(),
 			)
 		})
@@ -67,7 +67,7 @@ func TestInterpretToString(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewStringValue("0x0000000000000042"),
+			interpreter.NewUnmeteredStringValue("0x0000000000000042"),
 			inter.Globals["y"].GetValue(),
 		)
 	})
@@ -83,10 +83,10 @@ func TestInterpretToString(t *testing.T) {
 
 			if isSigned {
 				literal = "-12.34"
-				expected = interpreter.NewStringValue("-12.34000000")
+				expected = interpreter.NewUnmeteredStringValue("-12.34000000")
 			} else {
 				literal = "12.34"
-				expected = interpreter.NewStringValue("12.34000000")
+				expected = interpreter.NewUnmeteredStringValue("12.34000000")
 			}
 
 			inter := parseCheckAndInterpret(t,
@@ -128,18 +128,19 @@ func TestInterpretToBytes(t *testing.T) {
 			inter,
 			interpreter.NewArrayValue(
 				inter,
+				interpreter.ReturnEmptyLocationRange,
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeUInt8,
 				},
 				common.Address{},
-				interpreter.UInt8Value(0x0),
-				interpreter.UInt8Value(0x0),
-				interpreter.UInt8Value(0x0),
-				interpreter.UInt8Value(0x0),
-				interpreter.UInt8Value(0x0),
-				interpreter.UInt8Value(0x12),
-				interpreter.UInt8Value(0x34),
-				interpreter.UInt8Value(0x56),
+				interpreter.NewUnmeteredUInt8Value(0x0),
+				interpreter.NewUnmeteredUInt8Value(0x0),
+				interpreter.NewUnmeteredUInt8Value(0x0),
+				interpreter.NewUnmeteredUInt8Value(0x0),
+				interpreter.NewUnmeteredUInt8Value(0x0),
+				interpreter.NewUnmeteredUInt8Value(0x12),
+				interpreter.NewUnmeteredUInt8Value(0x34),
+				interpreter.NewUnmeteredUInt8Value(0x56),
 			),
 			inter.Globals["y"].GetValue(),
 		)

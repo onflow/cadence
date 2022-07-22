@@ -32,7 +32,7 @@ func (checker *Checker) VisitPragmaDeclaration(p *ast.PragmaDeclaration) ast.Rep
 	if !(isInvocPragma || isIdentPragma) {
 		checker.report(&InvalidPragmaError{
 			Message: "must be identifier or invocation expression",
-			Range:   ast.NewRangeFromPositioned(p.Expression),
+			Range:   ast.NewRangeFromPositioned(checker.memoryGauge, p.Expression),
 		})
 	}
 
@@ -41,7 +41,7 @@ func (checker *Checker) VisitPragmaDeclaration(p *ast.PragmaDeclaration) ast.Rep
 		if len(invocPragma.TypeArguments) > 0 {
 			checker.report(&InvalidPragmaError{
 				Message: "type arguments not supported",
-				Range:   ast.NewRangeFromPositioned(invocPragma),
+				Range:   ast.NewRangeFromPositioned(checker.memoryGauge, invocPragma),
 			})
 		}
 		// Ensure arguments are string expressions
@@ -50,7 +50,7 @@ func (checker *Checker) VisitPragmaDeclaration(p *ast.PragmaDeclaration) ast.Rep
 			if !ok {
 				checker.report(&InvalidPragmaError{
 					Message: "invalid argument",
-					Range:   ast.NewRangeFromPositioned(invocPragma),
+					Range:   ast.NewRangeFromPositioned(checker.memoryGauge, invocPragma),
 				})
 			}
 		}

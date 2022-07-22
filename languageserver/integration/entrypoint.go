@@ -23,7 +23,7 @@ import (
 
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/parser2"
+	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 
 	"github.com/onflow/cadence/languageserver/protocol"
@@ -40,7 +40,7 @@ const (
 var SignersRegexp = regexp.MustCompile(`[\w-]+`)
 
 type entryPointInfo struct {
-	documentVersion       float64
+	documentVersion       int32
 	startPos              *ast.Position
 	kind                  entryPointKind
 	parameters            []*sema.Parameter
@@ -51,8 +51,8 @@ type entryPointInfo struct {
 }
 
 func (i *FlowIntegration) updateEntryPointInfoIfNeeded(
-	uri protocol.DocumentUri,
-	version float64,
+	uri protocol.DocumentURI,
+	version int32,
 	checker *sema.Checker,
 ) {
 	if i.entryPointInfo[uri].documentVersion == version {
@@ -98,8 +98,8 @@ func (i *FlowIntegration) updateEntryPointInfoIfNeeded(
 		}
 
 		if len(parameters) > 0 {
-			for _, pragmaArgumentString := range parser2.ParseDocstringPragmaArguments(docString) {
-				arguments, err := runtime.ParseLiteralArgumentList(pragmaArgumentString, parameterTypes)
+			for _, pragmaArgumentString := range parser.ParseDocstringPragmaArguments(docString) {
+				arguments, err := runtime.ParseLiteralArgumentList(pragmaArgumentString, parameterTypes, nil)
 				// TODO: record error and show diagnostic
 				if err != nil {
 					continue
@@ -115,7 +115,7 @@ func (i *FlowIntegration) updateEntryPointInfoIfNeeded(
 			}
 		}
 
-		for _, pragmaSignerString := range parser2.ParseDocstringPragmaSigners(docString) {
+		for _, pragmaSignerString := range parser.ParseDocstringPragmaSigners(docString) {
 			signers := SignersRegexp.FindAllString(pragmaSignerString, -1)
 			pragmaSigners = append(pragmaSigners, signers)
 		}

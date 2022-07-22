@@ -21,6 +21,7 @@ package interpreter
 import (
 	"github.com/onflow/atree"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/format"
 	"github.com/onflow/cadence/runtime/sema"
@@ -29,36 +30,38 @@ import (
 // SimpleCompositeValue
 
 type SimpleCompositeValue struct {
-	TypeID      sema.TypeID
-	staticType  StaticType
-	dynamicType DynamicType
+	TypeID     sema.TypeID
+	staticType StaticType
 	// FieldNames are the names of the field members (i.e. not functions, and not computed fields), in order
 	FieldNames      []string
 	Fields          map[string]Value
 	ComputedFields  map[string]ComputedField
-	fieldFormatters map[string]func(Value, SeenReferences) string
+	fieldFormatters map[string]func(common.MemoryGauge, Value, SeenReferences) string
 	// stringer is an optional function that is used to produce the string representation of the value.
 	// If nil, the FieldNames are used.
-	stringer func(SeenReferences) string
+	stringer func(common.MemoryGauge, SeenReferences) string
 }
 
 var _ Value = &SimpleCompositeValue{}
 var _ MemberAccessibleValue = &SimpleCompositeValue{}
 
 func NewSimpleCompositeValue(
+	inter *Interpreter,
 	typeID sema.TypeID,
 	staticType StaticType,
-	dynamicType DynamicType,
 	fieldNames []string,
 	fields map[string]Value,
 	computedFields map[string]ComputedField,
-	fieldFormatters map[string]func(Value, SeenReferences) string,
-	stringer func(SeenReferences) string,
+	fieldFormatters map[string]func(common.MemoryGauge, Value, SeenReferences) string,
+	stringer func(common.MemoryGauge, SeenReferences) string,
 ) *SimpleCompositeValue {
+
+	common.UseMemory(inter, common.SimpleCompositeValueBaseMemoryUsage)
+	common.UseMemory(inter, common.NewSimpleCompositeMemoryUsage(len(fields)+len(computedFields)))
+
 	return &SimpleCompositeValue{
 		TypeID:          typeID,
 		staticType:      staticType,
-		dynamicType:     dynamicType,
 		FieldNames:      fieldNames,
 		Fields:          fields,
 		ComputedFields:  computedFields,
@@ -76,7 +79,7 @@ func (v *SimpleCompositeValue) Accept(interpreter *Interpreter, visitor Visitor)
 // ForEachField iterates over all field-name field-value pairs of the composite value.
 // It does NOT iterate over computed fields and functions!
 //
-func (v *SimpleCompositeValue) ForEachField(f func(fieldName string, fieldValue Value)) {
+func (v *SimpleCompositeValue) ForEachField(_ *Interpreter, f func(fieldName string, fieldValue Value)) {
 	for _, fieldName := range v.FieldNames {
 		fieldValue := v.Fields[fieldName]
 		f(fieldName, fieldValue)
@@ -86,18 +89,23 @@ func (v *SimpleCompositeValue) ForEachField(f func(fieldName string, fieldValue 
 // Walk iterates over all field values of the composite value.
 // It does NOT walk the computed fields and functions!
 //
-func (v *SimpleCompositeValue) Walk(walkChild func(Value)) {
-	v.ForEachField(func(_ string, fieldValue Value) {
+func (v *SimpleCompositeValue) Walk(interpreter *Interpreter, walkChild func(Value)) {
+	v.ForEachField(interpreter, func(_ string, fieldValue Value) {
 		walkChild(fieldValue)
 	})
 }
 
-func (v *SimpleCompositeValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return v.dynamicType
-}
-
 func (v *SimpleCompositeValue) StaticType(_ *Interpreter) StaticType {
 	return v.staticType
+}
+
+func (v *SimpleCompositeValue) IsImportable(inter *Interpreter) bool {
+	staticType := v.StaticType(inter)
+	semaType, err := inter.ConvertStaticToSemaType(staticType)
+	if err != nil {
+		panic(err)
+	}
+	return semaType.IsImportable(map[*sema.Member]bool{})
 }
 
 func (v *SimpleCompositeValue) GetMember(
@@ -135,9 +143,13 @@ func (v *SimpleCompositeValue) String() string {
 }
 
 func (v *SimpleCompositeValue) RecursiveString(seenReferences SeenReferences) string {
+	return v.MeteredString(nil, seenReferences)
+}
+
+func (v *SimpleCompositeValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
 
 	if v.stringer != nil {
-		return v.stringer(seenReferences)
+		return v.stringer(memoryGauge, seenReferences)
 	}
 
 	var fields []struct {
@@ -145,17 +157,19 @@ func (v *SimpleCompositeValue) RecursiveString(seenReferences SeenReferences) st
 		Value string
 	}
 
+	strLen := emptyCompositeStringLen
+
 	for _, fieldName := range v.FieldNames {
 		fieldValue := v.Fields[fieldName]
 
 		var value string
 		if v.fieldFormatters != nil {
 			if fieldFormatter, ok := v.fieldFormatters[fieldName]; ok {
-				value = fieldFormatter(fieldValue, seenReferences)
+				value = fieldFormatter(memoryGauge, fieldValue, seenReferences)
 			}
 		}
 		if value == "" {
-			value = fieldValue.RecursiveString(seenReferences)
+			value = fieldValue.MeteredString(memoryGauge, seenReferences)
 		}
 
 		fields = append(fields, struct {
@@ -165,18 +179,48 @@ func (v *SimpleCompositeValue) RecursiveString(seenReferences SeenReferences) st
 			Name:  fieldName,
 			Value: value,
 		})
+
+		strLen += len(fieldName)
 	}
 
-	return format.Composite(string(v.TypeID), fields)
+	typeId := string(v.TypeID)
+
+	// bodyLen = len(fieldNames) + len(typeId) + (n times colon+space) + ((n-1) times comma+space)
+	//         = len(fieldNames) + len(typeId) + 2n + 2n - 2
+	//         = len(fieldNames) + len(typeId) + 4n - 2
+	//
+	// Since (-2) only occurs if its non-empty, ignore the (-2). i.e: overestimate
+	// 		bodyLen = len(fieldNames) + len(typeId) + 4n
+	//
+	// Value of each field is metered separately.
+	strLen = strLen + len(typeId) + len(fields)*4
+
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(strLen))
+
+	return format.Composite(typeId, fields)
 }
 
 func (v *SimpleCompositeValue) ConformsToStaticType(
-	inter *Interpreter,
-	_ func() LocationRange,
-	staticType StaticType,
-	_ TypeConformanceResults,
+	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
+	results TypeConformanceResults,
 ) bool {
-	return staticType.Equal(v.StaticType(inter))
+
+	for _, fieldName := range v.FieldNames {
+		value, ok := v.Fields[fieldName]
+		if !ok {
+			continue
+		}
+		if !value.ConformsToStaticType(
+			interpreter,
+			getLocationRange,
+			results,
+		) {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (v *SimpleCompositeValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -218,7 +262,6 @@ func (v *SimpleCompositeValue) Clone(interpreter *Interpreter) Value {
 	return &SimpleCompositeValue{
 		TypeID:          v.TypeID,
 		staticType:      v.staticType,
-		dynamicType:     v.dynamicType,
 		FieldNames:      v.FieldNames,
 		Fields:          clonedFields,
 		ComputedFields:  v.ComputedFields,

@@ -29,6 +29,117 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
+func TestCheckReference(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("variable declaration type annotation", func(t *testing.T) {
+
+		t.Parallel()
+
+		t.Run("non-auth", func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+              let x: &Int = &1
+            `)
+
+			require.NoError(t, err)
+
+		})
+
+		t.Run("auth", func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+              let x: auth &Int = &1
+            `)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("non-reference type", func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+              let x: Int = &1
+            `)
+
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.NonReferenceTypeReferenceError{}, errs[0])
+		})
+	})
+
+	t.Run("variable declaration type annotation", func(t *testing.T) {
+
+		t.Run("non-auth", func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+              let x = &1 as &Int
+            `)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("non-auth", func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+              let x = &1 as auth &Int
+            `)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("non-reference type", func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+              let x = &1 as Int
+            `)
+
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.NonReferenceTypeReferenceError{}, errs[0])
+		})
+	})
+
+	t.Run("invalid non-auth to auth cast", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          let x = &1 as &Int as auth &Int
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("missing type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          let x = &1
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeAnnotationRequiredError{}, errs[0])
+	})
+
+}
+
 func TestCheckReferenceTypeOuter(t *testing.T) {
 
 	t.Parallel()
@@ -1071,6 +1182,26 @@ func TestCheckReferenceExpressionOfOptional(t *testing.T) {
 	})
 }
 
+func TestCheckNilCoalesceReference(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheckWithPanic(t, `
+      let xs = {"a": 1}
+      let ref = &xs["a"] as &Int? ?? panic("no a")
+    `)
+	require.NoError(t, err)
+
+	refValueType := RequireGlobalValue(t, checker.Elaboration, "ref")
+
+	assert.Equal(t,
+		&sema.ReferenceType{
+			Type: sema.IntType,
+		},
+		refValueType,
+	)
+}
+
 func TestCheckInvalidReferenceExpressionNonReferenceAmbiguous(t *testing.T) {
 
 	t.Parallel()
@@ -1093,10 +1224,12 @@ func TestCheckInvalidReferenceExpressionNonReferenceAnyResource(t *testing.T) {
       let y = &x as AnyResource{}
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := ExpectCheckerErrors(t, err, 4)
 
-	assert.IsType(t, &sema.NonReferenceTypeReferenceError{}, errs[0])
-	assert.IsType(t, &sema.NotDeclaredError{}, errs[1])
+	assert.IsType(t, &sema.MissingResourceAnnotationError{}, errs[0])
+	assert.IsType(t, &sema.NonReferenceTypeReferenceError{}, errs[1])
+	assert.IsType(t, &sema.NotDeclaredError{}, errs[2])
+	assert.IsType(t, &sema.IncorrectTransferOperationError{}, errs[3])
 }
 
 func TestCheckInvalidReferenceExpressionNonReferenceAnyStruct(t *testing.T) {

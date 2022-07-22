@@ -39,7 +39,7 @@ func (checker *Checker) VisitEmitStatement(statement *ast.EmitStatement) ast.Rep
 		checker.report(
 			&EmitNonEventError{
 				Type:  ty,
-				Range: ast.NewRangeFromPositioned(statement.InvocationExpression),
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, statement.InvocationExpression),
 			},
 		)
 		return nil
@@ -49,12 +49,12 @@ func (checker *Checker) VisitEmitStatement(statement *ast.EmitStatement) ast.Rep
 
 	// Check that the emitted event is declared in the same location
 
-	if !common.LocationsMatch(compositeType.Location, checker.Location) {
+	if compositeType.Location != checker.Location {
 
 		checker.report(
 			&EmitImportedEventError{
 				Type:  ty,
-				Range: ast.NewRangeFromPositioned(statement.InvocationExpression),
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, statement.InvocationExpression),
 			},
 		)
 	}

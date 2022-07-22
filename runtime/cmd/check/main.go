@@ -220,9 +220,9 @@ func runPath(
 	var program *ast.Program
 	var must func(error)
 
-	codes := map[common.LocationID]string{}
+	codes := map[common.Location]string{}
 
-	location := common.StringLocation(path)
+	location := common.NewStringLocation(nil, path)
 
 	func() {
 		defer func() {

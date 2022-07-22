@@ -18,11 +18,15 @@
 
 package sema
 
+import (
+	"github.com/onflow/cadence/runtime/common/orderedmap"
+)
+
 // MemberSet is set of members.
 //
 type MemberSet struct {
 	Parent  *MemberSet
-	members *MemberStructOrderedMap
+	members *orderedmap.OrderedMap[*Member, struct{}]
 }
 
 // NewMemberSet returns an empty member set.
@@ -37,7 +41,7 @@ func NewMemberSet(parent *MemberSet) *MemberSet {
 //
 func (ms *MemberSet) Add(member *Member) {
 	if ms.members == nil {
-		ms.members = NewMemberStructOrderedMap()
+		ms.members = &orderedmap.OrderedMap[*Member, struct{}]{}
 	}
 
 	ms.members.Set(member, struct{}{})

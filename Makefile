@@ -38,6 +38,11 @@ test:
 	sed -i -e 's/^.* 0 0$$//' coverage.txt
 	cd ./languageserver && make test
 
+.PHONY: fast-test
+fast-test:
+	# test all packages
+	GO111MODULE=on go test -parallel 8 ./...
+
 .PHONY: build
 build:
 	go build -o ./runtime/cmd/parse/parse ./runtime/cmd/parse
@@ -48,16 +53,16 @@ build:
 
 .PHONY: lint-github-actions
 lint-github-actions: build-linter
-	tools/golangci-lint/golangci-lint run --out-format=github-actions -v ./...
+	tools/golangci-lint/golangci-lint run --out-format=github-actions --timeout=5m  -v ./...
 
 .PHONY: lint
 lint: build-linter
-	tools/golangci-lint/golangci-lint run $(LINTERS) -v ./...
+	tools/golangci-lint/golangci-lint run $(LINTERS) --timeout=5m -v ./...
 
 
 .PHONY: fix-lint
 fix-lint: build-linter
-	tools/golangci-lint/golangci-lint run -v --fix $(LINTERS) ./...
+	tools/golangci-lint/golangci-lint run -v --fix --timeout=5m  $(LINTERS) ./...
 
 .PHONY: build-linter
 build-linter: tools/golangci-lint/golangci-lint tools/maprangecheck/maprangecheck.so tools/constructorcheck/constructorcheck.so

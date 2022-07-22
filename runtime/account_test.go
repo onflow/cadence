@@ -657,7 +657,10 @@ func newBytesValue(bytes []byte) cadence.Array {
 	for index, value := range bytes {
 		result[index] = cadence.NewUInt8(value)
 	}
-	return cadence.NewArray(result)
+	return cadence.NewArray(result).
+		WithType(cadence.VariableSizedArrayType{
+			ElementType: cadence.UInt8Type{},
+		})
 }
 
 func newSignAlgoValue(signAlgo sema.SignatureAlgorithm) cadence.Enum {
@@ -713,7 +716,7 @@ func accountKeyExportedValue(
 }
 
 func getAccountKeyTestRuntimeInterface(storage *testAccountKeyStorage) *testRuntimeInterface {
-	return &testRuntimeInterface{
+	runtimeInterface := &testRuntimeInterface{
 		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{{42}}, nil
@@ -766,10 +769,14 @@ func getAccountKeyTestRuntimeInterface(storage *testAccountKeyStorage) *testRunt
 			storage.events = append(storage.events, event)
 			return nil
 		},
-		decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-			return json.Decode(b)
+		meterMemory: func(_ common.MemoryUsage) error {
+			return nil
 		},
 	}
+	runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+		return json.Decode(runtimeInterface, b)
+	}
+	return runtimeInterface
 }
 
 func addAuthAccountKey(t *testing.T, runtime Runtime, runtimeInterface *testRuntimeInterface) {
@@ -1401,7 +1408,9 @@ func TestPublicAccountContracts(t *testing.T) {
 					cadence.UInt8(1),
 					cadence.UInt8(2),
 				},
-			},
+			}.WithType(cadence.VariableSizedArrayType{
+				ElementType: cadence.UInt8Type{},
+			}),
 			array.Values[1],
 		)
 	})

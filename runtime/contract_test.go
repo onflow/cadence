@@ -218,7 +218,7 @@ func TestRuntimeContract(t *testing.T) {
 		// so getting the storage map here once upfront would result in outdated data
 
 		getContractValueExists := func() bool {
-			storageMap := NewStorage(storage).
+			storageMap := NewStorage(storage, nil).
 				GetStorageMap(signerAddress, StorageDomainContract, false)
 			if storageMap == nil {
 				return false
@@ -649,7 +649,7 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 		)
 	}
 
-	accountCodes := map[common.LocationID][]byte{}
+	accountCodes := map[common.Location][]byte{}
 
 	var events []cadence.Event
 	var loggedMessages []string
@@ -664,7 +664,7 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 				Address: address,
 				Name:    name,
 			}
-			accountCodes[location.ID()] = code
+			accountCodes[location] = code
 			return nil
 		},
 		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
@@ -672,7 +672,7 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 				Address: address,
 				Name:    name,
 			}
-			code = accountCodes[location.ID()]
+			code = accountCodes[location]
 			return code, nil
 		},
 		removeAccountContractCode: func(address Address, name string) error {
@@ -680,7 +680,7 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 				Address: address,
 				Name:    name,
 			}
-			delete(accountCodes, location.ID())
+			delete(accountCodes, location)
 			return nil
 		},
 		resolveLocation: func(identifiers []ast.Identifier, location common.Location) (result []sema.ResolvedLocation, err error) {

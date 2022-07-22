@@ -36,6 +36,16 @@ type AddressLocation struct {
 	Name    string
 }
 
+var _ Location = AddressLocation{}
+
+func NewAddressLocation(gauge MemoryGauge, addr Address, name string) AddressLocation {
+	UseMemory(gauge, NewConstantMemoryUsage(MemoryKindAddressLocation))
+	return AddressLocation{
+		Address: addr,
+		Name:    name,
+	}
+}
+
 func (l AddressLocation) String() string {
 	if l.Name == "" {
 		return l.Address.String()
@@ -49,22 +59,29 @@ func (l AddressLocation) String() string {
 }
 
 func (l AddressLocation) ID() LocationID {
+	return l.MeteredID(nil)
+}
+
+func (l AddressLocation) MeteredID(memoryGauge MemoryGauge) LocationID {
 	if l.Name == "" {
-		return NewLocationID(
+		return NewMeteredLocationID(
+			memoryGauge,
 			AddressLocationPrefix,
 			l.Address.Hex(),
 		)
 	}
 
-	return NewLocationID(
+	return NewMeteredLocationID(
+		memoryGauge,
 		AddressLocationPrefix,
 		l.Address.Hex(),
 		l.Name,
 	)
 }
 
-func (l AddressLocation) TypeID(qualifiedIdentifier string) TypeID {
-	return NewTypeID(
+func (l AddressLocation) TypeID(memoryGauge MemoryGauge, qualifiedIdentifier string) TypeID {
+	return NewMeteredTypeID(
+		memoryGauge,
 		AddressLocationPrefix,
 		l.Address.Hex(),
 		qualifiedIdentifier,
@@ -79,6 +96,14 @@ func (l AddressLocation) QualifiedIdentifier(typeID TypeID) string {
 	}
 
 	return pieces[2]
+}
+
+func (l AddressLocation) Description() string {
+	return fmt.Sprintf(
+		"contract %s in account %s",
+		l.Name,
+		l.Address.Hex(),
+	)
 }
 
 func (l AddressLocation) MarshalJSON() ([]byte, error) {
@@ -96,18 +121,18 @@ func (l AddressLocation) MarshalJSON() ([]byte, error) {
 func init() {
 	RegisterTypeIDDecoder(
 		AddressLocationPrefix,
-		func(typeID string) (location Location, qualifiedIdentifier string, err error) {
-			return decodeAddressLocationTypeID(typeID)
+		func(gauge MemoryGauge, typeID string) (location Location, qualifiedIdentifier string, err error) {
+			return decodeAddressLocationTypeID(gauge, typeID)
 		},
 	)
 }
 
-func decodeAddressLocationTypeID(typeID string) (AddressLocation, string, error) {
+func decodeAddressLocationTypeID(gauge MemoryGauge, typeID string) (AddressLocation, string, error) {
 
 	const errorMessagePrefix = "invalid address location type ID"
 
 	newError := func(message string) (AddressLocation, string, error) {
-		return AddressLocation{}, "", fmt.Errorf("%s: %s", errorMessagePrefix, message)
+		return AddressLocation{}, "", errors.NewDefaultUserError("%s: %s", errorMessagePrefix, message)
 	}
 
 	if typeID == "" {
@@ -150,7 +175,7 @@ func decodeAddressLocationTypeID(typeID string) (AddressLocation, string, error)
 	prefix := parts[0]
 
 	if prefix != AddressLocationPrefix {
-		return AddressLocation{}, "", fmt.Errorf(
+		return AddressLocation{}, "", errors.NewDefaultUserError(
 			"%s: invalid prefix: expected %q, got %q",
 			errorMessagePrefix,
 			AddressLocationPrefix,
@@ -162,7 +187,7 @@ func decodeAddressLocationTypeID(typeID string) (AddressLocation, string, error)
 
 	rawAddress, err := hex.DecodeString(parts[1])
 	if err != nil {
-		return AddressLocation{}, "", fmt.Errorf(
+		return AddressLocation{}, "", errors.NewDefaultUserError(
 			"%s: invalid address: %w",
 			errorMessagePrefix,
 			err,
@@ -198,10 +223,7 @@ func decodeAddressLocationTypeID(typeID string) (AddressLocation, string, error)
 		return AddressLocation{}, "", err
 	}
 
-	location := AddressLocation{
-		Address: address,
-		Name:    name,
-	}
+	location := NewAddressLocation(gauge, address, name)
 
 	return location, qualifiedIdentifier, nil
 }

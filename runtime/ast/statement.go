@@ -20,13 +20,18 @@ package ast
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/turbolent/prettier"
+
+	"github.com/onflow/cadence/runtime/common"
 )
 
 type Statement interface {
 	Element
+	fmt.Stringer
 	isStatement()
+	Doc() prettier.Doc
 }
 
 // ReturnStatement
@@ -36,7 +41,20 @@ type ReturnStatement struct {
 	Range
 }
 
+var _ Element = &ReturnStatement{}
 var _ Statement = &ReturnStatement{}
+
+func NewReturnStatement(gauge common.MemoryGauge, expression Expression, stmtRange Range) *ReturnStatement {
+	common.UseMemory(gauge, common.ReturnStatementMemoryUsage)
+	return &ReturnStatement{
+		Expression: expression,
+		Range:      stmtRange,
+	}
+}
+
+func (*ReturnStatement) ElementType() ElementType {
+	return ElementTypeReturnStatement
+}
 
 func (*ReturnStatement) isStatement() {}
 
@@ -60,9 +78,12 @@ func (s *ReturnStatement) Doc() prettier.Doc {
 
 	return prettier.Concat{
 		returnStatementKeywordSpaceDoc,
-		// TODO: potentially parenthesize
 		s.Expression.Doc(),
 	}
+}
+
+func (s *ReturnStatement) String() string {
+	return Prettier(s)
 }
 
 func (s *ReturnStatement) MarshalJSON() ([]byte, error) {
@@ -82,7 +103,19 @@ type BreakStatement struct {
 	Range
 }
 
+var _ Element = &BreakStatement{}
 var _ Statement = &BreakStatement{}
+
+func NewBreakStatement(gauge common.MemoryGauge, tokenRange Range) *BreakStatement {
+	common.UseMemory(gauge, common.BreakStatementMemoryUsage)
+	return &BreakStatement{
+		Range: tokenRange,
+	}
+}
+
+func (*BreakStatement) ElementType() ElementType {
+	return ElementTypeBreakStatement
+}
 
 func (*BreakStatement) isStatement() {}
 
@@ -98,6 +131,10 @@ const breakStatementKeywordDoc = prettier.Text("break")
 
 func (*BreakStatement) Doc() prettier.Doc {
 	return breakStatementKeywordDoc
+}
+
+func (s *BreakStatement) String() string {
+	return Prettier(s)
 }
 
 func (s *BreakStatement) MarshalJSON() ([]byte, error) {
@@ -117,7 +154,19 @@ type ContinueStatement struct {
 	Range
 }
 
+var _ Element = &ContinueStatement{}
 var _ Statement = &ContinueStatement{}
+
+func NewContinueStatement(gauge common.MemoryGauge, tokenRange Range) *ContinueStatement {
+	common.UseMemory(gauge, common.ContinueStatementMemoryUsage)
+	return &ContinueStatement{
+		Range: tokenRange,
+	}
+}
+
+func (*ContinueStatement) ElementType() ElementType {
+	return ElementTypeContinueStatement
+}
 
 func (*ContinueStatement) isStatement() {}
 
@@ -133,6 +182,10 @@ const continueStatementKeywordDoc = prettier.Text("continue")
 
 func (*ContinueStatement) Doc() prettier.Doc {
 	return continueStatementKeywordDoc
+}
+
+func (s *ContinueStatement) String() string {
+	return Prettier(s)
 }
 
 func (s *ContinueStatement) MarshalJSON() ([]byte, error) {
@@ -151,6 +204,7 @@ func (s *ContinueStatement) MarshalJSON() ([]byte, error) {
 type IfStatementTest interface {
 	Element
 	isIfStatementTest()
+	Doc() prettier.Doc
 }
 
 // IfStatement
@@ -162,7 +216,28 @@ type IfStatement struct {
 	StartPos Position `json:"-"`
 }
 
+var _ Element = &IfStatement{}
 var _ Statement = &IfStatement{}
+
+func NewIfStatement(
+	gauge common.MemoryGauge,
+	test IfStatementTest,
+	thenBlock *Block,
+	elseBlock *Block,
+	startPos Position,
+) *IfStatement {
+	common.UseMemory(gauge, common.IfStatementMemoryUsage)
+	return &IfStatement{
+		Test:     test,
+		Then:     thenBlock,
+		Else:     elseBlock,
+		StartPos: startPos,
+	}
+}
+
+func (*IfStatement) ElementType() ElementType {
+	return ElementTypeIfStatement
+}
 
 func (*IfStatement) isStatement() {}
 
@@ -170,11 +245,11 @@ func (s *IfStatement) StartPosition() Position {
 	return s.StartPos
 }
 
-func (s *IfStatement) EndPosition() Position {
+func (s *IfStatement) EndPosition(memoryGauge common.MemoryGauge) Position {
 	if s.Else != nil {
-		return s.Else.EndPosition()
+		return s.Else.EndPosition(memoryGauge)
 	}
-	return s.Then.EndPosition()
+	return s.Then.EndPosition(memoryGauge)
 }
 
 func (s *IfStatement) Accept(visitor Visitor) Repr {
@@ -193,12 +268,7 @@ const ifStatementIfKeywordSpaceDoc = prettier.Text("if ")
 const ifStatementSpaceElseKeywordSpaceDoc = prettier.Text(" else ")
 
 func (s *IfStatement) Doc() prettier.Doc {
-	var testDoc prettier.Doc
-	// TODO: replace once IfStatementTest implements Doc
-	testWithDoc, ok := s.Test.(interface{ Doc() prettier.Doc })
-	if ok {
-		testDoc = testWithDoc.Doc()
-	}
+	testDoc := s.Test.Doc()
 
 	doc := prettier.Concat{
 		ifStatementIfKeywordSpaceDoc,
@@ -207,7 +277,7 @@ func (s *IfStatement) Doc() prettier.Doc {
 		s.Then.Doc(),
 	}
 
-	if s.Else != nil {
+	if s.Else != nil && len(s.Else.Statements) > 0 {
 		var elseDoc prettier.Doc
 		if len(s.Else.Statements) == 1 {
 			if elseIfStatement, ok := s.Else.Statements[0].(*IfStatement); ok {
@@ -232,6 +302,10 @@ func (s *IfStatement) Doc() prettier.Doc {
 	}
 }
 
+func (s *IfStatement) String() string {
+	return Prettier(s)
+}
+
 func (s *IfStatement) MarshalJSON() ([]byte, error) {
 	type Alias IfStatement
 	return json.Marshal(&struct {
@@ -240,7 +314,7 @@ func (s *IfStatement) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "IfStatement",
-		Range: NewRangeFromPositioned(s),
+		Range: NewUnmeteredRangeFromPositioned(s),
 		Alias: (*Alias)(s),
 	})
 }
@@ -253,7 +327,26 @@ type WhileStatement struct {
 	StartPos Position `json:"-"`
 }
 
+var _ Element = &WhileStatement{}
 var _ Statement = &WhileStatement{}
+
+func NewWhileStatement(
+	gauge common.MemoryGauge,
+	expression Expression,
+	block *Block,
+	startPos Position,
+) *WhileStatement {
+	common.UseMemory(gauge, common.WhileStatementMemoryUsage)
+	return &WhileStatement{
+		Test:     expression,
+		Block:    block,
+		StartPos: startPos,
+	}
+}
+
+func (*WhileStatement) ElementType() ElementType {
+	return ElementTypeWhileStatement
+}
 
 func (*WhileStatement) isStatement() {}
 
@@ -270,8 +363,8 @@ func (s *WhileStatement) StartPosition() Position {
 	return s.StartPos
 }
 
-func (s *WhileStatement) EndPosition() Position {
-	return s.Block.EndPosition()
+func (s *WhileStatement) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return s.Block.EndPosition(memoryGauge)
 }
 
 const whileStatementKeywordSpaceDoc = prettier.Text("while ")
@@ -287,6 +380,10 @@ func (s *WhileStatement) Doc() prettier.Doc {
 	}
 }
 
+func (s *WhileStatement) String() string {
+	return Prettier(s)
+}
+
 func (s *WhileStatement) MarshalJSON() ([]byte, error) {
 	type Alias WhileStatement
 	return json.Marshal(&struct {
@@ -295,7 +392,7 @@ func (s *WhileStatement) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "WhileStatement",
-		Range: NewRangeFromPositioned(s),
+		Range: NewUnmeteredRangeFromPositioned(s),
 		Alias: (*Alias)(s),
 	})
 }
@@ -310,7 +407,31 @@ type ForStatement struct {
 	StartPos   Position `json:"-"`
 }
 
+var _ Element = &ForStatement{}
 var _ Statement = &ForStatement{}
+
+func NewForStatement(
+	gauge common.MemoryGauge,
+	identifier Identifier,
+	index *Identifier,
+	block *Block,
+	expression Expression,
+	startPos Position,
+) *ForStatement {
+	common.UseMemory(gauge, common.ForStatementMemoryUsage)
+
+	return &ForStatement{
+		Identifier: identifier,
+		Index:      index,
+		Block:      block,
+		Value:      expression,
+		StartPos:   startPos,
+	}
+}
+
+func (*ForStatement) ElementType() ElementType {
+	return ElementTypeForStatement
+}
 
 func (*ForStatement) isStatement() {}
 
@@ -327,8 +448,8 @@ func (s *ForStatement) StartPosition() Position {
 	return s.StartPos
 }
 
-func (s *ForStatement) EndPosition() Position {
-	return s.Block.EndPosition()
+func (s *ForStatement) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return s.Block.EndPosition(memoryGauge)
 }
 
 const forStatementForKeywordSpaceDoc = prettier.Text("for ")
@@ -361,6 +482,10 @@ func (s *ForStatement) Doc() prettier.Doc {
 	}
 }
 
+func (s *ForStatement) String() string {
+	return Prettier(s)
+}
+
 func (s *ForStatement) MarshalJSON() ([]byte, error) {
 	type Alias ForStatement
 	return json.Marshal(&struct {
@@ -369,7 +494,7 @@ func (s *ForStatement) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "ForStatement",
-		Range: NewRangeFromPositioned(s),
+		Range: NewUnmeteredRangeFromPositioned(s),
 		Alias: (*Alias)(s),
 	})
 }
@@ -381,7 +506,24 @@ type EmitStatement struct {
 	StartPos             Position `json:"-"`
 }
 
+var _ Element = &EmitStatement{}
 var _ Statement = &EmitStatement{}
+
+func NewEmitStatement(
+	gauge common.MemoryGauge,
+	invocation *InvocationExpression,
+	startPos Position,
+) *EmitStatement {
+	common.UseMemory(gauge, common.EmitStatementMemoryUsage)
+	return &EmitStatement{
+		InvocationExpression: invocation,
+		StartPos:             startPos,
+	}
+}
+
+func (*EmitStatement) ElementType() ElementType {
+	return ElementTypeEmitStatement
+}
 
 func (*EmitStatement) isStatement() {}
 
@@ -389,8 +531,8 @@ func (s *EmitStatement) StartPosition() Position {
 	return s.StartPos
 }
 
-func (s *EmitStatement) EndPosition() Position {
-	return s.InvocationExpression.EndPosition()
+func (s *EmitStatement) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return s.InvocationExpression.EndPosition(memoryGauge)
 }
 
 func (s *EmitStatement) Accept(visitor Visitor) Repr {
@@ -406,9 +548,12 @@ const emitStatementKeywordSpaceDoc = prettier.Text("emit ")
 func (s *EmitStatement) Doc() prettier.Doc {
 	return prettier.Concat{
 		emitStatementKeywordSpaceDoc,
-		// TODO: potentially parenthesize
 		s.InvocationExpression.Doc(),
 	}
+}
+
+func (s *EmitStatement) String() string {
+	return Prettier(s)
 }
 
 func (s *EmitStatement) MarshalJSON() ([]byte, error) {
@@ -419,7 +564,7 @@ func (s *EmitStatement) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "EmitStatement",
-		Range: NewRangeFromPositioned(s),
+		Range: NewUnmeteredRangeFromPositioned(s),
 		Alias: (*Alias)(s),
 	})
 }
@@ -432,7 +577,27 @@ type AssignmentStatement struct {
 	Value    Expression
 }
 
+var _ Element = &AssignmentStatement{}
 var _ Statement = &AssignmentStatement{}
+
+func NewAssignmentStatement(
+	gauge common.MemoryGauge,
+	expression Expression,
+	transfer *Transfer,
+	value Expression,
+) *AssignmentStatement {
+	common.UseMemory(gauge, common.AssignmentStatementMemoryUsage)
+
+	return &AssignmentStatement{
+		Target:   expression,
+		Transfer: transfer,
+		Value:    value,
+	}
+}
+
+func (*AssignmentStatement) ElementType() ElementType {
+	return ElementTypeAssignmentStatement
+}
 
 func (*AssignmentStatement) isStatement() {}
 
@@ -444,8 +609,8 @@ func (s *AssignmentStatement) StartPosition() Position {
 	return s.Target.StartPosition()
 }
 
-func (s *AssignmentStatement) EndPosition() Position {
-	return s.Value.EndPosition()
+func (s *AssignmentStatement) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return s.Value.EndPosition(memoryGauge)
 }
 
 func (s *AssignmentStatement) Walk(walkChild func(Element)) {
@@ -469,6 +634,10 @@ func (s *AssignmentStatement) Doc() prettier.Doc {
 	}
 }
 
+func (s *AssignmentStatement) String() string {
+	return Prettier(s)
+}
+
 func (s *AssignmentStatement) MarshalJSON() ([]byte, error) {
 	type Alias AssignmentStatement
 	return json.Marshal(&struct {
@@ -477,7 +646,7 @@ func (s *AssignmentStatement) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "AssignmentStatement",
-		Range: NewRangeFromPositioned(s),
+		Range: NewUnmeteredRangeFromPositioned(s),
 		Alias: (*Alias)(s),
 	})
 }
@@ -489,7 +658,20 @@ type SwapStatement struct {
 	Right Expression
 }
 
+var _ Element = &SwapStatement{}
 var _ Statement = &SwapStatement{}
+
+func NewSwapStatement(gauge common.MemoryGauge, expression Expression, right Expression) *SwapStatement {
+	common.UseMemory(gauge, common.SwapStatementMemoryUsage)
+	return &SwapStatement{
+		Left:  expression,
+		Right: right,
+	}
+}
+
+func (*SwapStatement) ElementType() ElementType {
+	return ElementTypeSwapStatement
+}
 
 func (*SwapStatement) isStatement() {}
 
@@ -497,8 +679,8 @@ func (s *SwapStatement) StartPosition() Position {
 	return s.Left.StartPosition()
 }
 
-func (s *SwapStatement) EndPosition() Position {
-	return s.Right.EndPosition()
+func (s *SwapStatement) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return s.Right.EndPosition(memoryGauge)
 }
 
 func (s *SwapStatement) Accept(visitor Visitor) Repr {
@@ -522,6 +704,10 @@ func (s *SwapStatement) Doc() prettier.Doc {
 	}
 }
 
+func (s *SwapStatement) String() string {
+	return Prettier(s)
+}
+
 func (s *SwapStatement) MarshalJSON() ([]byte, error) {
 	type Alias SwapStatement
 	return json.Marshal(&struct {
@@ -530,7 +716,7 @@ func (s *SwapStatement) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "SwapStatement",
-		Range: NewRangeFromPositioned(s),
+		Range: NewUnmeteredRangeFromPositioned(s),
 		Alias: (*Alias)(s),
 	})
 }
@@ -541,7 +727,19 @@ type ExpressionStatement struct {
 	Expression Expression
 }
 
+var _ Element = &ExpressionStatement{}
 var _ Statement = &ExpressionStatement{}
+
+func NewExpressionStatement(gauge common.MemoryGauge, expression Expression) *ExpressionStatement {
+	common.UseMemory(gauge, common.ExpressionStatementMemoryUsage)
+	return &ExpressionStatement{
+		Expression: expression,
+	}
+}
+
+func (*ExpressionStatement) ElementType() ElementType {
+	return ElementTypeExpressionStatement
+}
 
 func (*ExpressionStatement) isStatement() {}
 
@@ -549,8 +747,8 @@ func (s *ExpressionStatement) StartPosition() Position {
 	return s.Expression.StartPosition()
 }
 
-func (s *ExpressionStatement) EndPosition() Position {
-	return s.Expression.EndPosition()
+func (s *ExpressionStatement) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return s.Expression.EndPosition(memoryGauge)
 }
 
 func (s *ExpressionStatement) Accept(visitor Visitor) Repr {
@@ -573,9 +771,13 @@ func (s *ExpressionStatement) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "ExpressionStatement",
-		Range: NewRangeFromPositioned(s),
+		Range: NewUnmeteredRangeFromPositioned(s),
 		Alias: (*Alias)(s),
 	})
+}
+
+func (s *ExpressionStatement) String() string {
+	return Prettier(s)
 }
 
 // SwitchStatement
@@ -586,7 +788,26 @@ type SwitchStatement struct {
 	Range
 }
 
+var _ Element = &SwitchStatement{}
 var _ Statement = &SwitchStatement{}
+
+func NewSwitchStatement(
+	gauge common.MemoryGauge,
+	expression Expression,
+	cases []*SwitchCase,
+	stmtRange Range,
+) *SwitchStatement {
+	common.UseMemory(gauge, common.SwitchStatementMemoryUsage)
+	return &SwitchStatement{
+		Expression: expression,
+		Cases:      cases,
+		Range:      stmtRange,
+	}
+}
+
+func (*SwitchStatement) ElementType() ElementType {
+	return ElementTypeSwitchStatement
+}
 
 func (*SwitchStatement) isStatement() {}
 
@@ -598,8 +819,9 @@ func (s *SwitchStatement) Walk(walkChild func(Element)) {
 	walkChild(s.Expression)
 	for _, switchCase := range s.Cases {
 		// The default case has no expression
-		if switchCase.Expression != nil {
-			walkChild(switchCase.Expression)
+		expression := switchCase.Expression
+		if expression != nil {
+			walkChild(expression)
 		}
 		walkStatements(walkChild, switchCase.Statements)
 	}
@@ -639,6 +861,10 @@ func (s *SwitchStatement) Doc() prettier.Doc {
 		prettier.HardLine{},
 		blockEndDoc,
 	}
+}
+
+func (s *SwitchStatement) String() string {
+	return Prettier(s)
 }
 
 func (s *SwitchStatement) MarshalJSON() ([]byte, error) {

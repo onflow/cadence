@@ -66,8 +66,9 @@ func init() {
 		return map[string]MemberResolver{
 			"identifier": {
 				Kind: common.DeclarationKindField,
-				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicConstantFieldMember(
+						memoryGauge,
 						t,
 						identifier,
 						StringType,
@@ -77,8 +78,9 @@ func init() {
 			},
 			"isSubtype": {
 				Kind: common.DeclarationKindFunction,
-				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicFunctionMember(
+						memoryGauge,
 						t,
 						identifier,
 						MetaTypeIsSubtypeFunctionType,

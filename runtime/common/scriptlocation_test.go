@@ -30,7 +30,7 @@ func TestScriptLocation_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
 
-	loc := ScriptLocation([]byte{0x1, 0x2})
+	loc := ScriptLocation{0x1, 0x2}
 
 	actual, err := json.Marshal(loc)
 	require.NoError(t, err)
@@ -39,7 +39,7 @@ func TestScriptLocation_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "ScriptLocation",
-            "Script": "0102"
+            "Script": "0102000000000000000000000000000000000000000000000000000000000000"
         }
         `,
 		string(actual),
@@ -54,7 +54,7 @@ func TestDecodeScriptLocationTypeID(t *testing.T) {
 
 		t.Parallel()
 
-		_, _, err := decodeScriptLocationTypeID("")
+		_, _, err := decodeScriptLocationTypeID(nil, "")
 		require.EqualError(t, err, "invalid script location type ID: missing prefix")
 	})
 
@@ -62,7 +62,7 @@ func TestDecodeScriptLocationTypeID(t *testing.T) {
 
 		t.Parallel()
 
-		_, _, err := decodeScriptLocationTypeID("s")
+		_, _, err := decodeScriptLocationTypeID(nil, "s")
 		require.EqualError(t, err, "invalid script location type ID: missing location")
 	})
 
@@ -70,15 +70,21 @@ func TestDecodeScriptLocationTypeID(t *testing.T) {
 
 		t.Parallel()
 
-		_, _, err := decodeScriptLocationTypeID("s.test")
-		require.EqualError(t, err, "invalid script location type ID: missing qualified identifier")
+		location, qualifiedIdentifier, err := decodeScriptLocationTypeID(nil, "s.0102")
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			ScriptLocation{0x1, 0x2},
+			location,
+		)
+		assert.Empty(t, qualifiedIdentifier)
 	})
 
 	t.Run("missing qualified identifier", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, _, err := decodeScriptLocationTypeID("X.test.T")
+		_, _, err := decodeScriptLocationTypeID(nil, "X.0102.T")
 		require.EqualError(t, err, "invalid script location type ID: invalid prefix: expected \"s\", got \"X\"")
 	})
 
@@ -86,7 +92,7 @@ func TestDecodeScriptLocationTypeID(t *testing.T) {
 
 		t.Parallel()
 
-		location, qualifiedIdentifier, err := decodeScriptLocationTypeID("s.0102.T")
+		location, qualifiedIdentifier, err := decodeScriptLocationTypeID(nil, "s.0102.T")
 		require.NoError(t, err)
 
 		assert.Equal(t,
@@ -100,7 +106,7 @@ func TestDecodeScriptLocationTypeID(t *testing.T) {
 
 		t.Parallel()
 
-		location, qualifiedIdentifier, err := decodeScriptLocationTypeID("s.0102.T.U")
+		location, qualifiedIdentifier, err := decodeScriptLocationTypeID(nil, "s.0102.T.U")
 		require.NoError(t, err)
 
 		assert.Equal(t,

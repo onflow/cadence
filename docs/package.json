@@ -1,0 +1,15 @@
+{
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "fastest-levenshtein": "^1.0.12",
+    "github-slugger": "^1.4.0",
+    "hast-util-to-string": "^2.0.0",
+    "remark-mdx": "^2.1.2",
+    "remark-parse": "^10.0.1",
+    "remark-rehype": "^10.1.0",
+    "unified": "^10.1.2",
+    "unist-util-visit": "^4.1.0",
+    "walk-sync": "^3.0.0"
+  }
+}

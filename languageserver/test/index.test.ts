@@ -9,21 +9,23 @@ import {
   StreamMessageWriter,
   TextDocumentItem,
   PublishDiagnosticsNotification,
-  PublishDiagnosticsParams
+  PublishDiagnosticsParams, ShowMessageNotification, NotificationMessage, ShowMessageParams
 } from "vscode-languageserver-protocol"
 
 import {execSync, spawn} from 'child_process'
 import * as path from "path"
+import * as fs from "fs";
 
 beforeAll(() => {
   execSync("go build ../cmd/languageserver", {cwd: __dirname})
 })
 
-async function withConnection(f: (connection: ProtocolConnection) => Promise<void>): Promise<void> {
+async function withConnection(f: (connection: ProtocolConnection) => Promise<void>, enableFlowClient = false): Promise<void> {
 
+  let opts = [`-enableFlowClient=${enableFlowClient}`]
   const child = spawn(
     path.resolve(__dirname, './languageserver'),
-    ['-enableFlowClient=false']
+    opts
   )
 
   let stderr = ""
@@ -47,12 +49,24 @@ async function withConnection(f: (connection: ProtocolConnection) => Promise<voi
 
   connection.listen()
 
+  let initOpts = null
+  if (enableFlowClient) {
+    // flow client initialization options where we pass the location of flow.json
+    // and service account name and its address
+    initOpts = {
+      configPath: "./flow.json",
+      activeAccountName: "service-account", // default service account name
+      activeAccountAddress: "0xf8d6e0586b0a20c7" // default service address for emulator network
+    }
+  }
+
   await connection.sendRequest(InitializeRequest.type,
     {
       capabilities: {},
       processId: process.pid,
       rootUri: '/',
       workspaceFolders: null,
+      initializationOptions: initOpts
     }
   )
 
@@ -221,4 +235,104 @@ describe("diagnostics", () => {
       `transaction() { execute { X } }`,
     )
   )
+
+  type TestDoc = {
+    name: string
+    code: string
+  }
+
+  type DocNotification = {
+    name: string
+    notification: Promise<PublishDiagnosticsParams>
+  }
+
+  const fooContractCode = fs.readFileSync('./foo.cdc', 'utf8')
+
+  async function testImports(docs: TestDoc[]): Promise<DocNotification[]> {
+    return new Promise<DocNotification[]>(resolve => {
+
+      withConnection(async (connection) => {
+        let docsNotifications: DocNotification[] = []
+
+        for (let doc of docs) {
+          const notification = new Promise<PublishDiagnosticsParams>((resolve) => {
+            connection.onNotification(PublishDiagnosticsNotification.type, (notification) => {
+              if (notification.uri == `file://${doc.name}.cdc`) {
+                resolve(notification)
+              }
+            })
+          })
+          docsNotifications.push({
+            name: doc.name,
+            notification: notification
+          })
+
+          await connection.sendNotification(DidOpenTextDocumentNotification.type, {
+            textDocument: TextDocumentItem.create(`file://${doc.name}.cdc`, "cadence", 1, doc.code)
+          })
+        }
+
+        resolve(docsNotifications)
+      })
+
+    })
+  }
+
+  test("script with import", async() => {
+    const contractName = "foo"
+    const scriptName = "script"
+    const scriptCode = `
+      import Foo from "./foo.cdc"
+      pub fun main() { log(Foo.bar) }
+    `
+
+    let docNotifications = await testImports([
+      { name: contractName, code: fooContractCode },
+      { name: scriptName, code: scriptCode }
+    ])
+
+    let script = await docNotifications.find(n => n.name == scriptName).notification
+    expect(script.uri).toEqual(`file://${scriptName}.cdc`)
+    expect(script.diagnostics).toHaveLength(0)
+  })
+
+  test("script import failure", async() => {
+    const contractName = "foo"
+    const scriptName = "script"
+    const scriptCode = `
+      import Foo from "./foo.cdc"
+      pub fun main() { log(Foo.zoo) }
+    `
+
+    let docNotifications = await testImports([
+      { name: contractName, code: fooContractCode },
+      { name: scriptName, code: scriptCode }
+    ])
+
+    let script = await docNotifications.find(n => n.name == scriptName).notification
+    expect(script.uri).toEqual(`file://${scriptName}.cdc`)
+    expect(script.diagnostics).toHaveLength(1)
+    expect(script.diagnostics[0].message).toEqual("value of type `Foo` has no member `zoo`. unknown member")
+  })
+
+})
+
+describe("script execution", () => {
+
+  test("script executes and result is returned", async() => {
+    await withConnection(async (connection) => {
+      const resultPromise = new Promise<ShowMessageParams>(res =>
+          connection.onNotification(ShowMessageNotification.type, res)
+      )
+
+      await connection.sendRequest(ExecuteCommandRequest.type, {
+        command: "cadence.server.flow.executeScript",
+        arguments: [`file://${__dirname}/script.cdc`, "[]"]
+      })
+
+      const result = await resultPromise
+      expect(result.message).toEqual(`Result: "HELLO WORLD"`)
+    }, true)
+  })
+
 })

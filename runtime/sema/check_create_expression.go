@@ -51,7 +51,7 @@ func (checker *Checker) VisitCreateExpression(expression *ast.CreateExpression) 
 
 		checker.report(
 			&InvalidConstructionError{
-				Range: ast.NewRangeFromPositioned(invocation),
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, invocation),
 			},
 		)
 
@@ -72,7 +72,7 @@ func (checker *Checker) checkResourceCreationOrDestruction(compositeType *Compos
 	contractType := containingContractKindedType(compositeType)
 
 	if contractType == nil {
-		if common.LocationsMatch(compositeType.Location, checker.Location) {
+		if compositeType.Location == checker.Location {
 			return
 		}
 	} else {
@@ -84,7 +84,7 @@ func (checker *Checker) checkResourceCreationOrDestruction(compositeType *Compos
 	checker.report(
 		&InvalidResourceCreationError{
 			Type:  compositeType,
-			Range: ast.NewRangeFromPositioned(positioned),
+			Range: ast.NewRangeFromPositioned(checker.memoryGauge, positioned),
 		},
 	)
 }

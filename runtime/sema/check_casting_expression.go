@@ -70,7 +70,7 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 
 				checker.report(
 					&InvalidFailableResourceDowncastOutsideOptionalBindingError{
-						Range: ast.NewRangeFromPositioned(expression),
+						Range: ast.NewRangeFromPositioned(checker.memoryGauge, expression),
 					},
 				)
 			}
@@ -78,7 +78,7 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 			if _, ok := expression.Expression.(*ast.IdentifierExpression); !ok {
 				checker.report(
 					&InvalidNonIdentifierFailableResourceDowncast{
-						Range: ast.NewRangeFromPositioned(expression.Expression),
+						Range: ast.NewRangeFromPositioned(checker.memoryGauge, expression.Expression),
 					},
 				)
 			}
@@ -99,7 +99,7 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 						&AlwaysFailingNonResourceCastingTypeError{
 							ValueType:  leftHandType,
 							TargetType: rightHandType,
-							Range:      ast.NewRangeFromPositioned(expression.TypeAnnotation),
+							Range:      ast.NewRangeFromPositioned(checker.memoryGauge, expression.TypeAnnotation),
 						},
 					)
 				}
@@ -109,7 +109,7 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 						&AlwaysFailingResourceCastingTypeError{
 							ValueType:  leftHandType,
 							TargetType: rightHandType,
-							Range:      ast.NewRangeFromPositioned(expression.TypeAnnotation),
+							Range:      ast.NewRangeFromPositioned(checker.memoryGauge, expression.TypeAnnotation),
 						},
 					)
 				}
@@ -121,33 +121,14 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 					&TypeMismatchError{
 						ActualType:   leftHandType,
 						ExpectedType: rightHandType,
-						Range:        ast.NewRangeFromPositioned(leftHandExpression),
+						Range:        ast.NewRangeFromPositioned(checker.memoryGauge, leftHandExpression),
 					},
 				)
-			} else if checker.lintEnabled && IsSubType(leftHandType, rightHandType) {
-
-				switch expression.Operation {
-				case ast.OperationFailableCast:
-					checker.hint(
-						&AlwaysSucceedingFailableCastHint{
-							ValueType:  leftHandType,
-							TargetType: rightHandType,
-							Range:      ast.NewRangeFromPositioned(expression),
-						},
-					)
-
-				case ast.OperationForceCast:
-					checker.hint(
-						&AlwaysSucceedingForceCastHint{
-							ValueType:  leftHandType,
-							TargetType: rightHandType,
-							Range:      ast.NewRangeFromPositioned(expression),
-						},
-					)
-
-				default:
-					panic(errors.NewUnreachableError())
-				}
+			} else if checker.extendedElaboration {
+				checker.Elaboration.RuntimeCastTypes[expression] = struct {
+					Left  Type
+					Right Type
+				}{Left: leftHandType, Right: rightHandType}
 			}
 		}
 
@@ -162,15 +143,12 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 		// the inferred-type of the expression. i.e: exprActualType == rightHandType
 		// Then, it is not possible to determine whether the target type is redundant.
 		// Therefore, don't check for redundant casts, if there are errors.
-		if checker.lintEnabled &&
-			!hasErrors &&
-			isRedundantCast(leftHandExpression, exprActualType, rightHandType, checker.expectedType) {
-			checker.hint(
-				&UnnecessaryCastHint{
-					TargetType: rightHandType,
-					Range:      ast.NewRangeFromPositioned(expression.TypeAnnotation),
-				},
-			)
+		if checker.extendedElaboration && !hasErrors {
+			checker.Elaboration.StaticCastTypes[expression] = CastType{
+				ExprActualType: exprActualType,
+				TargetType:     rightHandType,
+				ExpectedType:   checker.expectedType,
+			}
 		}
 
 		return rightHandType
@@ -421,20 +399,4 @@ func FailableCastCanSucceed(subType, superType Type) bool {
 	}
 
 	return true
-}
-
-// isRedundantCast checks whether a simple cast is redundant.
-// Checks for two cases:
-//    - Case I: Contextually expected type is same as the casted type (target type).
-//    - Case II: Expression is self typed, and is same as the casted type (target type).
-func isRedundantCast(expr ast.Expression, exprInferredType, targetType, expectedType Type) bool {
-	if expectedType != nil &&
-		!expectedType.IsInvalidType() &&
-		expectedType.Equal(targetType) {
-		return true
-	}
-
-	checkCastVisitor := &CheckCastVisitor{}
-
-	return checkCastVisitor.IsRedundantCast(expr, exprInferredType, targetType)
 }

@@ -22,6 +22,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
+
+	"github.com/getsentry/sentry-go"
 
 	"github.com/sourcegraph/jsonrpc2"
 )
@@ -31,6 +34,9 @@ type handler struct {
 }
 
 func (handler *handler) Handle(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrpc2.Request) {
+	defer sentry.Flush(2 * time.Second)
+	defer sentry.Recover()
+
 	method, ok := handler.server.Methods[req.Method]
 
 	if !ok {
@@ -71,7 +77,7 @@ func (handler *handler) Handle(ctx context.Context, conn *jsonrpc2.Conn, req *js
 	}
 }
 
-type Method func(*json.RawMessage) (interface{}, error)
+type Method func(*json.RawMessage) (any, error)
 
 type Server struct {
 	Methods map[string]Method
@@ -91,11 +97,11 @@ func (server *Server) Start(stream ObjectStream) <-chan struct{} {
 	return server.conn.DisconnectNotify()
 }
 
-func (server *Server) Notify(method string, params interface{}) error {
+func (server *Server) Notify(method string, params any) error {
 	return server.conn.Notify(context.Background(), method, params)
 }
 
-func (server *Server) Call(method string, params interface{}) error {
+func (server *Server) Call(method string, params any) error {
 	return server.conn.Call(context.Background(), method, params, nil)
 }
 

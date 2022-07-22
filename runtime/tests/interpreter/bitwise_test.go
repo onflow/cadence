@@ -30,60 +30,60 @@ import (
 var bitwiseTestValueFunctions = map[string]func(int) interpreter.NumberValue{
 	// Int*
 	"Int": func(v int) interpreter.NumberValue {
-		return interpreter.NewIntValueFromInt64(int64(v))
+		return interpreter.NewUnmeteredIntValueFromInt64(int64(v))
 	},
 	"Int8": func(v int) interpreter.NumberValue {
-		return interpreter.Int8Value(v)
+		return interpreter.NewUnmeteredInt8Value(int8(v))
 	},
 	"Int16": func(v int) interpreter.NumberValue {
-		return interpreter.Int16Value(v)
+		return interpreter.NewUnmeteredInt16Value(int16(v))
 	},
 	"Int32": func(v int) interpreter.NumberValue {
-		return interpreter.Int32Value(v)
+		return interpreter.NewUnmeteredInt32Value(int32(v))
 	},
 	"Int64": func(v int) interpreter.NumberValue {
-		return interpreter.Int64Value(v)
+		return interpreter.NewUnmeteredInt64Value(int64(v))
 	},
 	"Int128": func(v int) interpreter.NumberValue {
-		return interpreter.NewInt128ValueFromInt64(int64(v))
+		return interpreter.NewUnmeteredInt128ValueFromInt64(int64(v))
 	},
 	"Int256": func(v int) interpreter.NumberValue {
-		return interpreter.NewInt256ValueFromInt64(int64(v))
+		return interpreter.NewUnmeteredInt256ValueFromInt64(int64(v))
 	},
 	// UInt*
 	"UInt": func(v int) interpreter.NumberValue {
-		return interpreter.NewUIntValueFromUint64(uint64(v))
+		return interpreter.NewUnmeteredUIntValueFromUint64(uint64(v))
 	},
 	"UInt8": func(v int) interpreter.NumberValue {
-		return interpreter.UInt8Value(v)
+		return interpreter.NewUnmeteredUInt8Value(uint8(v))
 	},
 	"UInt16": func(v int) interpreter.NumberValue {
-		return interpreter.UInt16Value(v)
+		return interpreter.NewUnmeteredUInt16Value(uint16(v))
 	},
 	"UInt32": func(v int) interpreter.NumberValue {
-		return interpreter.UInt32Value(v)
+		return interpreter.NewUnmeteredUInt32Value(uint32(v))
 	},
 	"UInt64": func(v int) interpreter.NumberValue {
-		return interpreter.UInt64Value(v)
+		return interpreter.NewUnmeteredUInt64Value(uint64(v))
 	},
 	"UInt128": func(v int) interpreter.NumberValue {
-		return interpreter.NewUInt128ValueFromUint64(uint64(v))
+		return interpreter.NewUnmeteredUInt128ValueFromUint64(uint64(v))
 	},
 	"UInt256": func(v int) interpreter.NumberValue {
-		return interpreter.NewUInt256ValueFromUint64(uint64(v))
+		return interpreter.NewUnmeteredUInt256ValueFromUint64(uint64(v))
 	},
 	// Word*
 	"Word8": func(v int) interpreter.NumberValue {
-		return interpreter.Word8Value(v)
+		return interpreter.NewUnmeteredWord8Value(uint8(v))
 	},
 	"Word16": func(v int) interpreter.NumberValue {
-		return interpreter.Word16Value(v)
+		return interpreter.NewUnmeteredWord16Value(uint16(v))
 	},
 	"Word32": func(v int) interpreter.NumberValue {
-		return interpreter.Word32Value(v)
+		return interpreter.NewUnmeteredWord32Value(uint32(v))
 	},
 	"Word64": func(v int) interpreter.NumberValue {
-		return interpreter.Word64Value(v)
+		return interpreter.NewUnmeteredWord64Value(uint64(v))
 	},
 }
 

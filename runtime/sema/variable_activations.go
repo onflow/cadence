@@ -34,8 +34,10 @@ type VariableActivation struct {
 	entries        *StringVariableOrderedMap
 	Depth          int
 	Parent         *VariableActivation
-	LeaveCallbacks []func(getEndPosition func() ast.Position)
+	LeaveCallbacks []func(EndPositionGetter)
 }
+
+type EndPositionGetter func(common.MemoryGauge) ast.Position
 
 // NewVariableActivation returns as new activation with the given parent.
 // The parent may be nil.
@@ -84,7 +86,7 @@ func (a *VariableActivation) Find(name string) *Variable {
 //
 func (a *VariableActivation) Set(name string, variable *Variable) {
 	if a.entries == nil {
-		a.entries = NewStringVariableOrderedMap()
+		a.entries = &StringVariableOrderedMap{}
 	}
 
 	a.entries.Set(name, variable)
@@ -127,7 +129,7 @@ func (a *VariableActivation) ForEach(cb func(string, *Variable) error) error {
 }
 
 var variableActivationPool = sync.Pool{
-	New: func() interface{} {
+	New: func() any {
 		return &VariableActivation{}
 	},
 }
@@ -189,7 +191,7 @@ func (a *VariableActivations) Enter() {
 // Leave pops the top-most (current) activation
 // from the top of the activation stack.
 //
-func (a *VariableActivations) Leave(getEndPosition func() ast.Position) {
+func (a *VariableActivations) Leave(getEndPosition func(common.MemoryGauge) ast.Position) {
 	count := len(a.activations)
 	if count < 1 {
 		return

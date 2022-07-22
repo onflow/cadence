@@ -19,13 +19,15 @@
 package integration
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/onflow/cadence"
 	"io/ioutil"
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/onflow/cadence"
 
 	"github.com/onflow/flow-cli/pkg/flowkit"
 	"github.com/onflow/flow-go-sdk"
@@ -42,10 +44,7 @@ const (
 	CommandCreateAccount         = "cadence.server.flow.createAccount"
 	CommandCreateDefaultAccounts = "cadence.server.flow.createDefaultAccounts"
 	CommandSwitchActiveAccount   = "cadence.server.flow.switchActiveAccount"
-	CommandChangeEmulatorState   = "cadence.server.flow.changeEmulatorState"
 	CommandInitAccountManager    = "cadence.server.flow.initAccountManager"
-
-	ClientStartEmulator = "cadence.runEmulator"
 
 	ErrorMessageEmulator          = "emulator error"
 	ErrorMessageServiceAccount    = "service account error"
@@ -74,10 +73,6 @@ func (i *FlowIntegration) commands() []server.Command {
 		{
 			Name:    CommandDeployContract,
 			Handler: i.deployContract,
-		},
-		{
-			Name:    CommandChangeEmulatorState,
-			Handler: i.changeEmulatorState,
 		},
 		{
 			Name:    CommandSwitchActiveAccount,
@@ -119,7 +114,7 @@ func makeManagerCode(script string, serviceAddress string) []byte {
 // initAccountManager initializes Account manager on service account
 //
 // No arguments are expected
-func (i *FlowIntegration) initAccountManager(conn protocol.Conn, args ...interface{}) (interface{}, error) {
+func (i *FlowIntegration) initAccountManager(conn protocol.Conn, args ...json.RawMessage) (interface{}, error) {
 	serviceAccount, err := i.state.EmulatorServiceAccount()
 	if err != nil {
 		return nil, errorWithMessage(conn, ErrorMessageServiceAccount, err)
@@ -160,18 +155,19 @@ func (i *FlowIntegration) initAccountManager(conn protocol.Conn, args ...interfa
 // There should be exactly 2 arguments:
 //   * the DocumentURI of the file to submit
 //   * the arguments, encoded as JSON-CDC
-func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{}) (interface{}, error) {
+func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...json.RawMessage) (interface{}, error) {
 	err := server.CheckCommandArgumentCount(args, 3)
 	if err != nil {
 		return nil, errorWithMessage(conn, ErrorMessageArguments, err)
 	}
 
-	uri, ok := args[0].(string)
-	if !ok {
+	var uri string
+	err = json.Unmarshal(args[0], &uri)
+	if err != nil {
 		return nil, errorWithMessage(
 			conn,
 			ErrorMessageArguments,
-			fmt.Errorf("invalid URI argument: %#+v", args[0]),
+			fmt.Errorf("invalid URI argument: %#+v: %w", args[0], err),
 		)
 	}
 
@@ -184,16 +180,26 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{
 		)
 	}
 
-	argsJSON, ok := args[1].(string)
-	if !ok {
+	var argsJSON string
+	err = json.Unmarshal(args[1], &argsJSON)
+	if err != nil {
 		return nil, errorWithMessage(
 			conn,
 			ErrorMessageArguments,
-			fmt.Errorf("invalid arguments: %#+v", args[1]),
+			fmt.Errorf("invalid arguments: %#+v: %w", args[1], err),
 		)
 	}
 
-	signerList := args[2].([]interface{})
+	var signerList []any
+	err = json.Unmarshal(args[2], &argsJSON)
+	if err != nil {
+		return nil, errorWithMessage(
+			conn,
+			ErrorMessageArguments,
+			fmt.Errorf("invalid signer list: %#+v: %w", args[2], err),
+		)
+	}
+
 	signers := make([]flow.Address, len(signerList))
 	for i, v := range signerList {
 		signers[i] = flow.HexToAddress(v.(string))
@@ -252,6 +258,7 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{
 		maxGasLimit,
 		txArgs,
 		"",
+		true,
 	)
 
 	if err != nil {
@@ -274,7 +281,7 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{
 	// transaction error: &errors.errorString{s:"failed to decode partial transaction...
 	// ...encoding/hex: invalid byte: U+00F9 'ù'"
 	txBytes := []byte(fmt.Sprintf("%x", tx.FlowTransaction().Encode()))
-	_, txResult, err := i.sharedServices.Transactions.SendSigned(txBytes)
+	_, txResult, err := i.sharedServices.Transactions.SendSigned(txBytes, true)
 
 	if err != nil {
 		return nil, errorWithMessage(conn, ErrorMessageTransactionError, err)
@@ -289,18 +296,19 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{
 // There should be exactly 2 arguments:
 //   * the DocumentURI of the file to submit
 //   * the arguments, encoded as JSON-CDC
-func (i *FlowIntegration) executeScript(conn protocol.Conn, args ...interface{}) (interface{}, error) {
+func (i *FlowIntegration) executeScript(conn protocol.Conn, args ...json.RawMessage) (interface{}, error) {
 	err := server.CheckCommandArgumentCount(args, 2)
 	if err != nil {
 		return nil, errorWithMessage(conn, ErrorMessageArguments, err)
 	}
 
-	uri, ok := args[0].(string)
-	if !ok {
+	var uri string
+	err = json.Unmarshal(args[0], &uri)
+	if err != nil {
 		return nil, errorWithMessage(
 			conn,
 			ErrorMessageArguments,
-			fmt.Errorf("invalid URI argument: %#+v", args[0]),
+			fmt.Errorf("invalid URI argument: %#+v: %w", args[0], err),
 		)
 	}
 
@@ -313,12 +321,13 @@ func (i *FlowIntegration) executeScript(conn protocol.Conn, args ...interface{})
 		)
 	}
 
-	argsJSON, ok := args[1].(string)
-	if !ok {
+	var argsJSON string
+	err = json.Unmarshal(args[1], &argsJSON)
+	if err != nil {
 		return nil, errorWithMessage(
 			conn,
 			ErrorMessageArguments,
-			fmt.Errorf("invalid arguments: %#+v", args[1]),
+			fmt.Errorf("invalid arguments: %#+v: %w", args[1], err),
 		)
 	}
 
@@ -350,50 +359,36 @@ func (i *FlowIntegration) executeScript(conn protocol.Conn, args ...interface{})
 	return nil, nil
 }
 
-// changeEmulatorState sets current state of the emulator as reported by LSP
-// used to update Code Lenses with proper title
-//
-// There should be exactly 1 argument:
-// * current state of the emulator represented as byte
-func (i *FlowIntegration) changeEmulatorState(conn protocol.Conn, args ...interface{}) (interface{}, error) {
-	err := server.CheckCommandArgumentCount(args, 1)
-	if err != nil {
-		return nil, errorWithMessage(conn, ErrorMessageArguments, err)
-	}
-
-	emulatorState, ok := args[0].(float64)
-	if !ok {
-		return nil, errorWithMessage(
-			conn,
-			ErrorMessageArguments,
-			fmt.Errorf("invalid emulator state argument: %#+v", args[0]),
-		)
-	}
-
-	i.emulatorState = EmulatorState(emulatorState)
-	return nil, nil
-}
-
 // switchActiveAccount sets the account that is currently active and could be used
 // when submitting transactions.
 //
 // There should be 2 arguments:
 //	 * name of the new active acount
 //   * address of the new active account
-func (i *FlowIntegration) switchActiveAccount(conn protocol.Conn, args ...interface{}) (interface{}, error) {
+func (i *FlowIntegration) switchActiveAccount(conn protocol.Conn, args ...json.RawMessage) (interface{}, error) {
 	err := server.CheckCommandArgumentCount(args, 2)
 	if err != nil {
 		return nil, errorWithMessage(conn, ErrorMessageArguments, err)
 	}
 
-	name, ok := args[0].(string)
-	if !ok {
-		return nil, errorWithMessage(conn, ErrorMessageArguments, errors.New("invalid name argument"))
+	var name string
+	err = json.Unmarshal(args[0], &name)
+	if err != nil {
+		return nil, errorWithMessage(
+			conn,
+			ErrorMessageArguments,
+			fmt.Errorf("invalid name argument: %#+v: %w", args[0], err),
+		)
 	}
 
-	addressHex, ok := args[1].(string)
-	if !ok {
-		return nil, errorWithMessage(conn, ErrorMessageArguments, errors.New("invalid address argument"))
+	var addressHex string
+	err = json.Unmarshal(args[1], &addressHex)
+	if err != nil {
+		return nil, errorWithMessage(
+			conn,
+			ErrorMessageArguments,
+			fmt.Errorf("invalid address argument: %#+v: %w", args[1], err),
+		)
 	}
 	address := flow.HexToAddress(addressHex)
 
@@ -405,7 +400,7 @@ func (i *FlowIntegration) switchActiveAccount(conn protocol.Conn, args ...interf
 }
 
 // createAccount creates a new account and returns its address.
-func (i *FlowIntegration) createAccount(conn protocol.Conn, args ...interface{}) (interface{}, error) {
+func (i *FlowIntegration) createAccount(conn protocol.Conn, args ...json.RawMessage) (interface{}, error) {
 	address, err := i.createAccountHelper(conn)
 	if err != nil {
 		return nil, errorWithMessage(conn, ErrorMessageAccountCreate, err)
@@ -423,16 +418,21 @@ func (i *FlowIntegration) createAccount(conn protocol.Conn, args ...interface{})
 //
 // There should be exactly 1 argument:
 // * number of accounts to be created
-func (i *FlowIntegration) createDefaultAccounts(conn protocol.Conn, args ...interface{}) (interface{}, error) {
+func (i *FlowIntegration) createDefaultAccounts(conn protocol.Conn, args ...json.RawMessage) (interface{}, error) {
 	err := server.CheckCommandArgumentCount(args, 1)
 	if err != nil {
 		return nil, errorWithMessage(conn, ErrorMessageArguments, err)
 	}
 
 	// Note that extension will send this value as float64 and not int
-	n, ok := args[0].(float64)
-	if !ok {
-		return nil, errorWithMessage(conn, ErrorMessageArguments, errors.New("invalid count argument"))
+	var n float64
+	err = json.Unmarshal(args[0], &n)
+	if err != nil {
+		return nil, errorWithMessage(
+			conn,
+			ErrorMessageArguments,
+			fmt.Errorf("invalid count argument: %#+v: %w", args[0], err),
+		)
 	}
 	count := int(n)
 
@@ -475,18 +475,19 @@ func (i *FlowIntegration) createDefaultAccounts(conn protocol.Conn, args ...inte
 // There should be exactly 2 arguments:
 //   * the DocumentURI of the file to submit
 //   * the name of the contract
-func (i *FlowIntegration) deployContract(conn protocol.Conn, args ...interface{}) (interface{}, error) {
+func (i *FlowIntegration) deployContract(conn protocol.Conn, args ...json.RawMessage) (interface{}, error) {
 	err := server.CheckCommandArgumentCount(args, 3)
 	if err != nil {
 		return flow.Address{}, errorWithMessage(conn, ErrorMessageServiceAccount, err)
 	}
 
-	uri, ok := args[0].(string)
-	if !ok {
+	var uri string
+	err = json.Unmarshal(args[0], &uri)
+	if err != nil {
 		return nil, errorWithMessage(
 			conn,
 			ErrorMessageArguments,
-			fmt.Errorf("invalid URI argument: %#+v", args[0]),
+			fmt.Errorf("invalid URI argument: %#+v: %w", args[0], err),
 		)
 	}
 
@@ -499,19 +500,21 @@ func (i *FlowIntegration) deployContract(conn protocol.Conn, args ...interface{}
 		)
 	}
 
-	name, ok := args[1].(string)
-	if !ok {
+	var name string
+	err = json.Unmarshal(args[1], &name)
+	if err != nil {
 		return nil, errorWithMessage(
 			conn, ErrorMessageArguments,
-			fmt.Errorf("invalid name argument: %#+v", name),
+			fmt.Errorf("invalid name argument: %#+v: %w", args[1], err),
 		)
 	}
 
-	to := args[2].(string)
-	if !ok {
+	var to string
+	err = json.Unmarshal(args[2], &to)
+	if err != nil {
 		return nil, errorWithMessage(
 			conn, ErrorMessageArguments,
-			fmt.Errorf("invalid address argument: %#+v", to),
+			fmt.Errorf("invalid address argument: %#+v: %w", args[2], err),
 		)
 	}
 
@@ -571,8 +574,8 @@ func (i *FlowIntegration) createAccountHelper(conn protocol.Conn) (address flow.
 		signer,
 		keys,
 		weights,
-		crypto.ECDSA_P256,
-		crypto.SHA3_256,
+		[]crypto.SignatureAlgorithm{crypto.ECDSA_P256},
+		[]crypto.HashAlgorithm{crypto.SHA3_256},
 		nil,
 	)
 	if err != nil {
@@ -613,7 +616,7 @@ func (i *FlowIntegration) storeAccountHelper(conn protocol.Conn, address flow.Ad
 	}
 
 	events := flowkit.EventsFromTransaction(txResult)
-	name := strings.ReplaceAll(events[0].Values["name"], `"`, "")
+	name := strings.ReplaceAll(events[0].Values["name"].String(), `"`, "")
 
 	newAccount = ClientAccount{
 		Name:    name,

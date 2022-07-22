@@ -38,7 +38,7 @@ func TestExportRecursiveType(t *testing.T) {
 		Location:   utils.TestLocation,
 		Identifier: "Foo",
 		Kind:       common.CompositeKindResource,
-		Members:    sema.NewStringMemberOrderedMap(),
+		Members:    &sema.StringMemberOrderedMap{},
 		Fields:     []string{"foo"},
 	}
 

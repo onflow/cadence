@@ -19,9 +19,10 @@
 package common
 
 import (
-	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/onflow/cadence/runtime/errors"
 )
 
 // Location describes the origin of a Cadence script.
@@ -31,25 +32,14 @@ type Location interface {
 	fmt.Stringer
 	// ID returns the canonical ID for this import location.
 	ID() LocationID
+	// MeteredID returns the canonical ID for this import location, and the generated ID is memory metered.
+	MeteredID(memoryGauge MemoryGauge) LocationID
 	// TypeID returns a type ID for the given qualified identifier
-	TypeID(qualifiedIdentifier string) TypeID
+	TypeID(memoryGauge MemoryGauge, qualifiedIdentifier string) TypeID
 	// QualifiedIdentifier returns the qualified identifier for the given type ID
 	QualifiedIdentifier(typeID TypeID) string
-}
-
-// LocationsMatch returns true if both locations are nil or their IDs are the same.
-//
-func LocationsMatch(first, second Location) bool {
-
-	if first == nil {
-		return second == nil
-	}
-
-	if second == nil {
-		return false
-	}
-
-	return first.ID() == second.ID()
+	// Description returns a human-readable description. For example, it can be used in error messages
+	Description() string
 }
 
 // LocationsInSameAccount returns true if both locations are nil,
@@ -77,7 +67,7 @@ func LocationsInSameAccount(first, second Location) bool {
 		return firstAddressLocation.Address == secondAddressLocation.Address
 	}
 
-	return first.ID() == second.ID()
+	return first == second
 }
 
 // LocationID
@@ -88,6 +78,21 @@ func NewLocationID(parts ...string) LocationID {
 	return LocationID(strings.Join(parts, "."))
 }
 
+func NewMeteredLocationID(memoryGauge MemoryGauge, parts ...string) LocationID {
+	jointString := joinStrings(memoryGauge, parts)
+	return LocationID(jointString)
+}
+
+func joinStrings(memoryGauge MemoryGauge, parts []string) string {
+	l := 0
+	for _, part := range parts {
+		l += len(part) + 1
+	}
+	UseMemory(memoryGauge, NewRawStringMemoryUsage(l))
+
+	return strings.Join(parts, ".")
+}
+
 // TypeID
 //
 type TypeID string
@@ -96,30 +101,35 @@ func NewTypeID(parts ...string) TypeID {
 	return TypeID(strings.Join(parts, "."))
 }
 
-func NewTypeIDFromQualifiedName(location Location, qualifiedIdentifier string) TypeID {
+func NewMeteredTypeID(memoryGauge MemoryGauge, parts ...string) TypeID {
+	jointString := joinStrings(memoryGauge, parts)
+	return TypeID(jointString)
+}
+
+func NewTypeIDFromQualifiedName(memoryGauge MemoryGauge, location Location, qualifiedIdentifier string) TypeID {
 	if location == nil {
 		return TypeID(qualifiedIdentifier)
 	}
 
-	return location.TypeID(qualifiedIdentifier)
+	return location.TypeID(memoryGauge, qualifiedIdentifier)
 }
 
-type TypeIDDecoder func(typeID string) (location Location, qualifiedIdentifier string, err error)
+type TypeIDDecoder func(gauge MemoryGauge, typeID string) (location Location, qualifiedIdentifier string, err error)
 
 var typeIDDecoders = map[string]TypeIDDecoder{}
 
 func RegisterTypeIDDecoder(prefix string, decoder TypeIDDecoder) {
 	if _, ok := typeIDDecoders[prefix]; ok {
-		panic(fmt.Errorf("cannot register type ID decoder for already registered prefix: %s", prefix))
+		panic(errors.NewUnexpectedError("cannot register type ID decoder for already registered prefix: %s", prefix))
 	}
 	typeIDDecoders[prefix] = decoder
 }
 
-func DecodeTypeID(typeID string) (location Location, qualifiedIdentifier string, err error) {
+func DecodeTypeID(gauge MemoryGauge, typeID string) (location Location, qualifiedIdentifier string, err error) {
 	pieces := strings.Split(typeID, ".")
 
 	if len(pieces) < 1 {
-		return nil, "", errors.New("invalid type ID: missing type name")
+		return nil, "", errors.NewDefaultUserError("invalid type ID: missing type name")
 	}
 
 	prefix := pieces[0]
@@ -135,11 +145,11 @@ func DecodeTypeID(typeID string) (location Location, qualifiedIdentifier string,
 		return nil, typeID, nil
 	}
 
-	return decoder(typeID)
+	return decoder(gauge, typeID)
 }
 
-// HasImportLocation
+// HasLocation
 
-type HasImportLocation interface {
+type HasLocation interface {
 	ImportLocation() Location
 }

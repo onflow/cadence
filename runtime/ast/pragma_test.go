@@ -24,13 +24,14 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/turbolent/prettier"
 )
 
 func TestPragmaDeclaration_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
 
-	members := &PragmaDeclaration{
+	decl := &PragmaDeclaration{
 		Expression: &BoolExpression{
 			Value: false,
 			Range: Range{
@@ -44,7 +45,7 @@ func TestPragmaDeclaration_MarshalJSON(t *testing.T) {
 		},
 	}
 
-	actual, err := json.Marshal(members)
+	actual, err := json.Marshal(decl)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -62,5 +63,42 @@ func TestPragmaDeclaration_MarshalJSON(t *testing.T) {
         }
         `,
 		string(actual),
+	)
+}
+
+func TestPragmaDeclaration_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	decl := &PragmaDeclaration{
+		Expression: &BoolExpression{
+			Value: false,
+		},
+	}
+
+	require.Equal(
+		t,
+		prettier.Concat{
+			prettier.Text("#"),
+			prettier.Text("false"),
+		},
+		decl.Doc(),
+	)
+}
+
+func TestPragmaDeclaration_String(t *testing.T) {
+
+	t.Parallel()
+
+	decl := &PragmaDeclaration{
+		Expression: &BoolExpression{
+			Value: false,
+		},
+	}
+
+	require.Equal(
+		t,
+		"#false",
+		decl.String(),
 	)
 }

@@ -26,14 +26,13 @@ import (
 	"github.com/spf13/afero"
 )
 
-func (i *FlowIntegration) initialize(initializationOptions interface{}) error {
+func (i *FlowIntegration) initialize(initializationOptions any) error {
 	// Parse the configuration options sent from the client
 	conf, err := configFromInitializationOptions(initializationOptions)
 	if err != nil {
 		return err
 	}
 	i.config = conf
-	i.emulatorState = conf.emulatorState
 	i.activeAccount = conf.activeAccount
 
 	configurationPaths := []string{conf.configPath}
@@ -44,13 +43,14 @@ func (i *FlowIntegration) initialize(initializationOptions interface{}) error {
 		return err
 	}
 
-	network, err := state.Networks().ByName("emulator")
+	logger := output.NewStdoutLogger(output.NoneLog)
+
+	serviceAccount, err := state.EmulatorServiceAccount()
 	if err != nil {
 		return err
 	}
-	logger := output.NewStdoutLogger(output.NoneLog)
 
-	grpcGateway, err := gateway.NewGrpcGateway(network.Host)
+	grpcGateway := gateway.NewEmulatorGateway(serviceAccount)
 	if err != nil {
 		return err
 	}

@@ -43,27 +43,29 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 		invalid := []Value{
 			NewArrayValue(
 				inter,
+				ReturnEmptyLocationRange,
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeUInt64,
 				},
 				common.Address{},
-				UInt64Value(500),
+				NewUnmeteredUInt64Value(500),
 			),
 			NewArrayValue(
 				inter,
+				ReturnEmptyLocationRange,
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInt256,
 				},
 				common.Address{},
-				NewInt256ValueFromBigInt(largeBigInt),
+				NewUnmeteredInt256ValueFromBigInt(largeBigInt),
 			),
-			UInt64Value(500),
+			NewUnmeteredUInt64Value(500),
 			BoolValue(true),
-			NewStringValue("test"),
+			NewUnmeteredStringValue("test"),
 		}
 
 		for _, value := range invalid {
-			_, err := ByteArrayValueToByteSlice(value)
+			_, err := ByteArrayValueToByteSlice(inter, value)
 			require.Error(t, err)
 		}
 	})
@@ -75,6 +77,7 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 		invalid := map[Value][]byte{
 			NewArrayValue(
 				inter,
+				ReturnEmptyLocationRange,
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInteger,
 				},
@@ -82,26 +85,28 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 			): {},
 			NewArrayValue(
 				inter,
+				ReturnEmptyLocationRange,
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInteger,
 				},
 				common.Address{},
-				UInt64Value(2),
-				NewUInt128ValueFromUint64(3),
+				NewUnmeteredUInt64Value(2),
+				NewUnmeteredUInt128ValueFromUint64(3),
 			): {2, 3},
 			NewArrayValue(
 				inter,
+				ReturnEmptyLocationRange,
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInteger,
 				},
 				common.Address{},
-				UInt8Value(4),
-				NewIntValueFromInt64(5),
+				NewUnmeteredUInt8Value(4),
+				NewUnmeteredIntValueFromInt64(5),
 			): {4, 5},
 		}
 
 		for value, expected := range invalid {
-			result, err := ByteArrayValueToByteSlice(value)
+			result, err := ByteArrayValueToByteSlice(inter, value)
 			require.NoError(t, err)
 			require.Equal(t, expected, result)
 		}
@@ -118,12 +123,12 @@ func TestByteValueToByte(t *testing.T) {
 		require.True(t, ok)
 
 		invalid := []Value{
-			UInt64Value(500),
-			NewInt256ValueFromBigInt(largeBigInt),
+			NewUnmeteredUInt64Value(500),
+			NewUnmeteredInt256ValueFromBigInt(largeBigInt),
 		}
 
 		for _, value := range invalid {
-			_, err := ByteValueToByte(value)
+			_, err := ByteValueToByte(nil, value)
 			require.Error(t, err)
 		}
 	})
@@ -133,15 +138,15 @@ func TestByteValueToByte(t *testing.T) {
 		const maxInt8Plus2 = math.MaxInt8 + 2
 
 		invalid := map[Value]byte{
-			UInt64Value(2):               2,
-			NewUInt128ValueFromUint64(3): 3,
-			UInt8Value(4):                4,
-			NewIntValueFromInt64(5):      5,
-			UInt8Value(maxInt8Plus2):     maxInt8Plus2,
+			NewUnmeteredUInt64Value(2):            2,
+			NewUnmeteredUInt128ValueFromUint64(3): 3,
+			NewUnmeteredUInt8Value(4):             4,
+			NewUnmeteredIntValueFromInt64(5):      5,
+			NewUnmeteredUInt8Value(maxInt8Plus2):  maxInt8Plus2,
 		}
 
 		for value, expected := range invalid {
-			result, err := ByteValueToByte(value)
+			result, err := ByteValueToByte(nil, value)
 			require.NoError(t, err)
 			require.Equal(t, expected, result)
 		}

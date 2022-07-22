@@ -46,7 +46,7 @@ func main() {
 
 	js.Global().Set(
 		startFunctionName,
-		js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		js.FuncOf(func(this js.Value, args []js.Value) any {
 			id += 1
 			go start(id)
 			return id
@@ -69,7 +69,7 @@ func start(id int) {
 
 	global := js.Global()
 
-	writeObject := func(obj interface{}) error {
+	writeObject := func(obj any) error {
 		// The object / message is sent to the JS environment
 		// by serializing it to JSON and calling a global function
 
@@ -86,7 +86,7 @@ func start(id int) {
 		return nil
 	}
 
-	readObject := func(v interface{}) (err error) {
+	readObject := func(v any) (err error) {
 		// Set up a wait group which allows blocking this function
 		// until the JS environment calls back
 
@@ -102,7 +102,7 @@ func start(id int) {
 		toServerFunctionName := globalFunctionName(id, "toServer")
 		global.Set(
 			toServerFunctionName,
-			js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			js.FuncOf(func(this js.Value, args []js.Value) any {
 				defer func() {
 					global.Delete(toServerFunctionName)
 					wg.Done()
@@ -147,7 +147,7 @@ func start(id int) {
 
 	global.Set(
 		globalFunctionName(id, "onClientClose"),
-		js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		js.FuncOf(func(this js.Value, args []js.Value) any {
 			cancel()
 			return nil
 		}),

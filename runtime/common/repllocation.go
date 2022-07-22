@@ -20,8 +20,9 @@ package common
 
 import (
 	"encoding/json"
-	"fmt"
 	"strings"
+
+	"github.com/onflow/cadence/runtime/errors"
 )
 
 const REPLLocationPrefix = "REPL"
@@ -30,12 +31,19 @@ const REPLLocationPrefix = "REPL"
 //
 type REPLLocation struct{}
 
+var _ Location = REPLLocation{}
+
 func (l REPLLocation) ID() LocationID {
 	return REPLLocationPrefix
 }
 
-func (l REPLLocation) TypeID(qualifiedIdentifier string) TypeID {
-	return NewTypeID(
+func (l REPLLocation) MeteredID(memoryGauge MemoryGauge) LocationID {
+	return NewMeteredLocationID(memoryGauge, REPLLocationPrefix)
+}
+
+func (l REPLLocation) TypeID(memoryGauge MemoryGauge, qualifiedIdentifier string) TypeID {
+	return NewMeteredTypeID(
+		memoryGauge,
 		REPLLocationPrefix,
 		qualifiedIdentifier,
 	)
@@ -55,6 +63,10 @@ func (l REPLLocation) String() string {
 	return REPLLocationPrefix
 }
 
+func (l REPLLocation) Description() string {
+	return REPLLocationPrefix
+}
+
 func (l REPLLocation) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
 		Type string
@@ -66,7 +78,7 @@ func (l REPLLocation) MarshalJSON() ([]byte, error) {
 func init() {
 	RegisterTypeIDDecoder(
 		REPLLocationPrefix,
-		func(typeID string) (location Location, qualifiedIdentifier string, err error) {
+		func(_ MemoryGauge, typeID string) (location Location, qualifiedIdentifier string, err error) {
 			return decodeREPLLocationTypeID(typeID)
 		},
 	)
@@ -77,7 +89,7 @@ func decodeREPLLocationTypeID(typeID string) (REPLLocation, string, error) {
 	const errorMessagePrefix = "invalid REPL location type ID"
 
 	newError := func(message string) (REPLLocation, string, error) {
-		return REPLLocation{}, "", fmt.Errorf("%s: %s", errorMessagePrefix, message)
+		return REPLLocation{}, "", errors.NewDefaultUserError("%s: %s", errorMessagePrefix, message)
 	}
 
 	if typeID == "" {
@@ -94,7 +106,7 @@ func decodeREPLLocationTypeID(typeID string) (REPLLocation, string, error) {
 	prefix := parts[0]
 
 	if prefix != REPLLocationPrefix {
-		return REPLLocation{}, "", fmt.Errorf(
+		return REPLLocation{}, "", errors.NewDefaultUserError(
 			"%s: invalid prefix: expected %q, got %q",
 			errorMessagePrefix,
 			REPLLocationPrefix,

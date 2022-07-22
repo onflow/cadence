@@ -23,23 +23,39 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/onflow/cadence/runtime/errors"
 )
 
 const ScriptLocationPrefix = "s"
 
 // ScriptLocation
 //
-type ScriptLocation []byte
+type ScriptLocation [32]byte
+
+var _ Location = ScriptLocation{}
+
+func NewScriptLocation(gauge MemoryGauge, identifier []byte) (location ScriptLocation) {
+	UseMemory(gauge, NewBytesMemoryUsage(len(identifier)))
+	copy(location[:], identifier)
+	return
+}
 
 func (l ScriptLocation) ID() LocationID {
-	return NewLocationID(
+	return l.MeteredID(nil)
+}
+
+func (l ScriptLocation) MeteredID(memoryGauge MemoryGauge) LocationID {
+	return NewMeteredLocationID(
+		memoryGauge,
 		ScriptLocationPrefix,
 		l.String(),
 	)
 }
 
-func (l ScriptLocation) TypeID(qualifiedIdentifier string) TypeID {
-	return NewTypeID(
+func (l ScriptLocation) TypeID(memoryGauge MemoryGauge, qualifiedIdentifier string) TypeID {
+	return NewMeteredTypeID(
+		memoryGauge,
 		ScriptLocationPrefix,
 		l.String(),
 		qualifiedIdentifier,
@@ -57,7 +73,11 @@ func (l ScriptLocation) QualifiedIdentifier(typeID TypeID) string {
 }
 
 func (l ScriptLocation) String() string {
-	return hex.EncodeToString(l)
+	return hex.EncodeToString(l[:])
+}
+
+func (l ScriptLocation) Description() string {
+	return fmt.Sprintf("script with ID %s", hex.EncodeToString(l[:]))
 }
 
 func (l ScriptLocation) MarshalJSON() ([]byte, error) {
@@ -73,18 +93,18 @@ func (l ScriptLocation) MarshalJSON() ([]byte, error) {
 func init() {
 	RegisterTypeIDDecoder(
 		ScriptLocationPrefix,
-		func(typeID string) (location Location, qualifiedIdentifier string, err error) {
-			return decodeScriptLocationTypeID(typeID)
+		func(gauge MemoryGauge, typeID string) (location Location, qualifiedIdentifier string, err error) {
+			return decodeScriptLocationTypeID(gauge, typeID)
 		},
 	)
 }
 
-func decodeScriptLocationTypeID(typeID string) (ScriptLocation, string, error) {
+func decodeScriptLocationTypeID(gauge MemoryGauge, typeID string) (ScriptLocation, string, error) {
 
 	const errorMessagePrefix = "invalid script location type ID"
 
 	newError := func(message string) (ScriptLocation, string, error) {
-		return nil, "", fmt.Errorf("%s: %s", errorMessagePrefix, message)
+		return ScriptLocation{}, "", errors.NewDefaultUserError("%s: %s", errorMessagePrefix, message)
 	}
 
 	if typeID == "" {
@@ -93,18 +113,15 @@ func decodeScriptLocationTypeID(typeID string) (ScriptLocation, string, error) {
 
 	parts := strings.SplitN(typeID, ".", 3)
 
-	pieceCount := len(parts)
-	switch pieceCount {
-	case 1:
+	partCount := len(parts)
+	if partCount == 1 {
 		return newError("missing location")
-	case 2:
-		return newError("missing qualified identifier")
 	}
 
 	prefix := parts[0]
 
 	if prefix != ScriptLocationPrefix {
-		return nil, "", fmt.Errorf(
+		return ScriptLocation{}, "", errors.NewDefaultUserError(
 			"%s: invalid prefix: expected %q, got %q",
 			errorMessagePrefix,
 			ScriptLocationPrefix,
@@ -113,15 +130,23 @@ func decodeScriptLocationTypeID(typeID string) (ScriptLocation, string, error) {
 	}
 
 	location, err := hex.DecodeString(parts[1])
+	UseMemory(gauge, NewBytesMemoryUsage(len(location)))
+
 	if err != nil {
-		return nil, "", fmt.Errorf(
+		return ScriptLocation{}, "", errors.NewDefaultUserError(
 			"%s: invalid location: %w",
 			errorMessagePrefix,
 			err,
 		)
 	}
 
-	qualifiedIdentifier := parts[2]
+	var qualifiedIdentifier string
+	if partCount > 2 {
+		qualifiedIdentifier = parts[2]
+	}
 
-	return location, qualifiedIdentifier, nil
+	var result ScriptLocation
+	copy(result[:], location)
+
+	return result, qualifiedIdentifier, nil
 }

@@ -24,6 +24,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/turbolent/prettier"
 
 	"github.com/onflow/cadence/runtime/common"
 )
@@ -32,7 +33,7 @@ func TestFunctionDeclaration_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
 
-	expr := &FunctionDeclaration{
+	decl := &FunctionDeclaration{
 		Access: AccessPublic,
 		Identifier: Identifier{
 			Identifier: "xyz",
@@ -89,7 +90,7 @@ func TestFunctionDeclaration_MarshalJSON(t *testing.T) {
 		StartPos:  Position{Offset: 34, Line: 35, Column: 36},
 	}
 
-	actual, err := json.Marshal(expr)
+	actual, err := json.Marshal(decl)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -168,11 +169,139 @@ func TestFunctionDeclaration_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestFunctionDeclaration_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	decl := &FunctionDeclaration{
+		Access: AccessPublic,
+		Identifier: Identifier{
+			Identifier: "xyz",
+		},
+		ParameterList: &ParameterList{
+			Parameters: []*Parameter{
+				{
+					Label: "ok",
+					Identifier: Identifier{
+						Identifier: "foobar",
+					},
+					TypeAnnotation: &TypeAnnotation{
+						Type: &NominalType{
+							Identifier: Identifier{
+								Identifier: "AB",
+							},
+						},
+					},
+				},
+			},
+		},
+		ReturnTypeAnnotation: &TypeAnnotation{
+			IsResource: true,
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "CD",
+				},
+			},
+		},
+		FunctionBlock: &FunctionBlock{
+			Block: &Block{
+				Statements: []Statement{},
+			},
+		},
+	}
+
+	require.Equal(t,
+		prettier.Concat{
+			prettier.Text("pub"),
+			prettier.Space,
+			prettier.Text("fun "),
+			prettier.Text("xyz"),
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Group{
+						Doc: prettier.Concat{
+							prettier.Text("("),
+							prettier.Indent{
+								Doc: prettier.Concat{
+									prettier.SoftLine{},
+									prettier.Concat{
+										prettier.Text("ok"),
+										prettier.Text(" "),
+										prettier.Text("foobar"),
+										prettier.Text(": "),
+										prettier.Text("AB"),
+									},
+								},
+							},
+							prettier.SoftLine{},
+							prettier.Text(")"),
+						},
+					},
+					prettier.Text(": "),
+					prettier.Concat{
+						prettier.Text("@"),
+						prettier.Text("CD"),
+					},
+				},
+			},
+			prettier.Text(" {}"),
+		},
+		decl.Doc(),
+	)
+}
+
+func TestFunctionDeclaration_String(t *testing.T) {
+
+	t.Parallel()
+
+	decl := &FunctionDeclaration{
+		Access: AccessPublic,
+		Identifier: Identifier{
+			Identifier: "xyz",
+		},
+		ParameterList: &ParameterList{
+			Parameters: []*Parameter{
+				{
+					Label: "ok",
+					Identifier: Identifier{
+						Identifier: "foobar",
+					},
+					TypeAnnotation: &TypeAnnotation{
+						Type: &NominalType{
+							Identifier: Identifier{
+								Identifier: "AB",
+							},
+						},
+					},
+				},
+			},
+		},
+		ReturnTypeAnnotation: &TypeAnnotation{
+			IsResource: true,
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "CD",
+				},
+			},
+		},
+		FunctionBlock: &FunctionBlock{
+			Block: &Block{
+				Statements: []Statement{},
+			},
+		},
+	}
+
+	require.Equal(t,
+		"pub fun xyz(ok foobar: AB): @CD {}",
+		decl.String(),
+	)
+}
+
 func TestSpecialFunctionDeclaration_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
 
-	expr := &SpecialFunctionDeclaration{
+	decl := &SpecialFunctionDeclaration{
 		Kind: common.DeclarationKindInitializer,
 		FunctionDeclaration: &FunctionDeclaration{
 			Access: AccessNotSpecified,
@@ -232,7 +361,7 @@ func TestSpecialFunctionDeclaration_MarshalJSON(t *testing.T) {
 		},
 	}
 
-	actual, err := json.Marshal(expr)
+	actual, err := json.Marshal(decl)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -314,5 +443,136 @@ func TestSpecialFunctionDeclaration_MarshalJSON(t *testing.T) {
         }
         `,
 		string(actual),
+	)
+}
+
+func TestSpecialFunctionDeclaration_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	decl := &SpecialFunctionDeclaration{
+		Kind: common.DeclarationKindInitializer,
+		FunctionDeclaration: &FunctionDeclaration{
+			Access: AccessNotSpecified,
+			Identifier: Identifier{
+				Identifier: "xyz",
+			},
+			ParameterList: &ParameterList{
+				Parameters: []*Parameter{
+					{
+						Label: "ok",
+						Identifier: Identifier{
+							Identifier: "foobar",
+						},
+						TypeAnnotation: &TypeAnnotation{
+							Type: &NominalType{
+								Identifier: Identifier{
+									Identifier: "AB",
+								},
+							},
+						},
+					},
+				},
+			},
+			ReturnTypeAnnotation: &TypeAnnotation{
+				IsResource: true,
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "CD",
+					},
+				},
+			},
+			FunctionBlock: &FunctionBlock{
+				Block: &Block{
+					Statements: []Statement{},
+				},
+			},
+		},
+	}
+
+	require.Equal(t,
+		prettier.Concat{
+			prettier.Text("init"),
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Group{
+						Doc: prettier.Concat{
+							prettier.Text("("),
+							prettier.Indent{
+								Doc: prettier.Concat{
+									prettier.SoftLine{},
+									prettier.Concat{
+										prettier.Text("ok"),
+										prettier.Text(" "),
+										prettier.Text("foobar"),
+										prettier.Text(": "),
+										prettier.Text("AB"),
+									},
+								},
+							},
+							prettier.SoftLine{},
+							prettier.Text(")"),
+						},
+					},
+					prettier.Text(": "),
+					prettier.Concat{
+						prettier.Text("@"),
+						prettier.Text("CD"),
+					},
+				},
+			},
+			prettier.Text(" {}"),
+		},
+		decl.Doc(),
+	)
+}
+
+func TestSpecialFunctionDeclaration_String(t *testing.T) {
+
+	t.Parallel()
+
+	decl := &SpecialFunctionDeclaration{
+		Kind: common.DeclarationKindInitializer,
+		FunctionDeclaration: &FunctionDeclaration{
+			Access: AccessNotSpecified,
+			Identifier: Identifier{
+				Identifier: "xyz",
+			},
+			ParameterList: &ParameterList{
+				Parameters: []*Parameter{
+					{
+						Label: "ok",
+						Identifier: Identifier{
+							Identifier: "foobar",
+						},
+						TypeAnnotation: &TypeAnnotation{
+							Type: &NominalType{
+								Identifier: Identifier{
+									Identifier: "AB",
+								},
+							},
+						},
+					},
+				},
+			},
+			ReturnTypeAnnotation: &TypeAnnotation{
+				IsResource: true,
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "CD",
+					},
+				},
+			},
+			FunctionBlock: &FunctionBlock{
+				Block: &Block{
+					Statements: []Statement{},
+				},
+			},
+		},
+	}
+
+	require.Equal(t,
+		"init(ok foobar: AB): @CD {}",
+		decl.String(),
 	)
 }

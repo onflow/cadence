@@ -21,16 +21,14 @@ package interpreter
 import (
 	"fmt"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
 // AuthAccount
 
 var authAccountTypeID = sema.AuthAccountType.ID()
-var authAccountStaticType StaticType = PrimitiveStaticTypeAuthAccount
-var authAccountDynamicType DynamicType = CompositeDynamicType{
-	StaticType: sema.AuthAccountType,
-}
+var authAccountStaticType StaticType = PrimitiveStaticTypeAuthAccount // unmetered
 var authAccountFieldNames = []string{
 	sema.AuthAccountAddressField,
 	sema.AuthAccountContractsField,
@@ -39,6 +37,7 @@ var authAccountFieldNames = []string{
 
 // NewAuthAccountValue constructs an auth account value.
 func NewAuthAccountValue(
+	inter *Interpreter,
 	address AddressValue,
 	accountBalanceGet func() UFix64Value,
 	accountAvailableBalanceGet func() UFix64Value,
@@ -51,6 +50,7 @@ func NewAuthAccountValue(
 	fields := map[string]Value{
 		sema.AuthAccountAddressField: address,
 		sema.AuthAccountGetCapabilityField: accountGetCapabilityFunction(
+			inter,
 			address,
 			sema.CapabilityPathType,
 			sema.AuthAccountTypeGetCapabilityFunctionType,
@@ -112,17 +112,19 @@ func NewAuthAccountValue(
 	}
 
 	var str string
-	stringer := func(_ SeenReferences) string {
+	stringer := func(memoryGauge common.MemoryGauge, _ SeenReferences) string {
 		if str == "" {
-			str = fmt.Sprintf("AuthAccount(%s)", address)
+			common.UseMemory(memoryGauge, common.AuthAccountValueStringMemoryUsage)
+			addressStr := address.MeteredString(memoryGauge, SeenReferences{})
+			str = fmt.Sprintf("AuthAccount(%s)", addressStr)
 		}
 		return str
 	}
 
 	return NewSimpleCompositeValue(
+		inter,
 		authAccountTypeID,
 		authAccountStaticType,
-		authAccountDynamicType,
 		authAccountFieldNames,
 		fields,
 		computedFields,
@@ -134,10 +136,7 @@ func NewAuthAccountValue(
 // PublicAccount
 
 var publicAccountTypeID = sema.PublicAccountType.ID()
-var publicAccountStaticType StaticType = PrimitiveStaticTypePublicAccount
-var publicAccountDynamicType DynamicType = CompositeDynamicType{
-	StaticType: sema.PublicAccountType,
-}
+var publicAccountStaticType StaticType = PrimitiveStaticTypePublicAccount // unmetered
 var publicAccountFieldNames = []string{
 	sema.PublicAccountAddressField,
 	sema.PublicAccountContractsField,
@@ -146,6 +145,7 @@ var publicAccountFieldNames = []string{
 
 // NewPublicAccountValue constructs a public account value.
 func NewPublicAccountValue(
+	inter *Interpreter,
 	address AddressValue,
 	accountBalanceGet func() UFix64Value,
 	accountAvailableBalanceGet func() UFix64Value,
@@ -158,6 +158,7 @@ func NewPublicAccountValue(
 	fields := map[string]Value{
 		sema.PublicAccountAddressField: address,
 		sema.PublicAccountGetCapabilityField: accountGetCapabilityFunction(
+			inter,
 			address,
 			sema.PublicPathType,
 			sema.PublicAccountTypeGetCapabilityFunctionType,
@@ -198,17 +199,19 @@ func NewPublicAccountValue(
 	}
 
 	var str string
-	stringer := func(_ SeenReferences) string {
+	stringer := func(memoryGauge common.MemoryGauge, _ SeenReferences) string {
 		if str == "" {
-			str = fmt.Sprintf("PublicAccount(%s)", address)
+			common.UseMemory(memoryGauge, common.PublicAccountValueStringMemoryUsage)
+			addressStr := address.MeteredString(memoryGauge, SeenReferences{})
+			str = fmt.Sprintf("PublicAccount(%s)", addressStr)
 		}
 		return str
 	}
 
 	return NewSimpleCompositeValue(
+		inter,
 		publicAccountTypeID,
 		publicAccountStaticType,
-		publicAccountDynamicType,
 		publicAccountFieldNames,
 		fields,
 		computedFields,

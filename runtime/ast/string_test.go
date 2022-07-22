@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/parser2"
+	"github.com/onflow/cadence/runtime/parser"
 )
 
 func TestQuoteString(t *testing.T) {
@@ -76,7 +76,7 @@ func TestQuoteString(t *testing.T) {
 
 func TestStringQuick(t *testing.T) {
 	f := func(text string) bool {
-		res, errs := parser2.ParseExpression(ast.QuoteString(text))
+		res, errs := parser.ParseExpression(ast.QuoteString(text), nil)
 		if len(errs) > 0 {
 			return false
 		}

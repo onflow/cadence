@@ -42,9 +42,8 @@ var PublicAccountType = func() *CompositeType {
 		Kind:               common.CompositeKindStructure,
 		hasComputedMembers: true,
 		importable:         false,
-
 		nestedTypes: func() *StringTypeOrderedMap {
-			nestedTypes := NewStringTypeOrderedMap()
+			nestedTypes := &StringTypeOrderedMap{}
 			nestedTypes.Set(AccountKeysTypeName, PublicAccountKeysType)
 			nestedTypes.Set(PublicAccountContractsTypeName, PublicAccountContractsType)
 			return nestedTypes
@@ -52,55 +51,55 @@ var PublicAccountType = func() *CompositeType {
 	}
 
 	var members = []*Member{
-		NewPublicConstantFieldMember(
+		NewUnmeteredPublicConstantFieldMember(
 			publicAccountType,
 			PublicAccountAddressField,
 			&AddressType{},
 			accountTypeAddressFieldDocString,
 		),
-		NewPublicConstantFieldMember(
+		NewUnmeteredPublicConstantFieldMember(
 			publicAccountType,
 			PublicAccountBalanceField,
 			UFix64Type,
 			accountTypeAccountBalanceFieldDocString,
 		),
-		NewPublicConstantFieldMember(
+		NewUnmeteredPublicConstantFieldMember(
 			publicAccountType,
 			PublicAccountAvailableBalanceField,
 			UFix64Type,
 			accountTypeAccountAvailableBalanceFieldDocString,
 		),
-		NewPublicConstantFieldMember(
+		NewUnmeteredPublicConstantFieldMember(
 			publicAccountType,
 			PublicAccountStorageUsedField,
 			UInt64Type,
 			accountTypeStorageUsedFieldDocString,
 		),
-		NewPublicConstantFieldMember(
+		NewUnmeteredPublicConstantFieldMember(
 			publicAccountType,
 			PublicAccountStorageCapacityField,
 			UInt64Type,
 			accountTypeStorageCapacityFieldDocString,
 		),
-		NewPublicFunctionMember(
+		NewUnmeteredPublicFunctionMember(
 			publicAccountType,
 			PublicAccountGetCapabilityField,
 			PublicAccountTypeGetCapabilityFunctionType,
 			publicAccountTypeGetLinkTargetFunctionDocString,
 		),
-		NewPublicFunctionMember(
+		NewUnmeteredPublicFunctionMember(
 			publicAccountType,
 			PublicAccountGetTargetLinkField,
 			AccountTypeGetLinkTargetFunctionType,
 			accountTypeGetLinkTargetFunctionDocString,
 		),
-		NewPublicConstantFieldMember(
+		NewUnmeteredPublicConstantFieldMember(
 			publicAccountType,
 			PublicAccountKeysField,
 			PublicAccountKeysType,
 			accountTypeKeysFieldDocString,
 		),
-		NewPublicConstantFieldMember(
+		NewUnmeteredPublicConstantFieldMember(
 			publicAccountType,
 			PublicAccountContractsField,
 			PublicAccountContractsType,
@@ -123,7 +122,7 @@ var PublicAccountKeysType = func() *CompositeType {
 	}
 
 	var members = []*Member{
-		NewPublicFunctionMember(
+		NewUnmeteredPublicFunctionMember(
 			accountKeys,
 			AccountKeysGetFunctionName,
 			AccountKeysTypeGetFunctionType,

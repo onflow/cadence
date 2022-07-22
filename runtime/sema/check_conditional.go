@@ -82,14 +82,14 @@ func (checker *Checker) VisitConditionalExpression(expression *ast.ConditionalEx
 	if thenType.IsResourceType() {
 		checker.report(
 			&InvalidConditionalResourceOperandError{
-				Range: ast.NewRangeFromPositioned(expression.Then),
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, expression.Then),
 			},
 		)
 	}
 	if elseType.IsResourceType() {
 		checker.report(
 			&InvalidConditionalResourceOperandError{
-				Range: ast.NewRangeFromPositioned(expression.Else),
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, expression.Else),
 			},
 		)
 	}

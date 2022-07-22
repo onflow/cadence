@@ -51,9 +51,8 @@ var AuthAccountType = func() *CompositeType {
 		Kind:               common.CompositeKindStructure,
 		hasComputedMembers: true,
 		importable:         false,
-
 		nestedTypes: func() *StringTypeOrderedMap {
-			nestedTypes := NewStringTypeOrderedMap()
+			nestedTypes := &StringTypeOrderedMap{}
 			nestedTypes.Set(AuthAccountContractsTypeName, AuthAccountContractsType)
 			nestedTypes.Set(AccountKeysTypeName, AuthAccountKeysType)
 			return nestedTypes
@@ -61,97 +60,97 @@ var AuthAccountType = func() *CompositeType {
 	}
 
 	var members = []*Member{
-		NewPublicConstantFieldMember(
+		NewUnmeteredPublicConstantFieldMember(
 			authAccountType,
 			AuthAccountAddressField,
 			&AddressType{},
 			accountTypeAddressFieldDocString,
 		),
-		NewPublicConstantFieldMember(
+		NewUnmeteredPublicConstantFieldMember(
 			authAccountType,
 			AuthAccountBalanceField,
 			UFix64Type,
 			accountTypeAccountBalanceFieldDocString,
 		),
-		NewPublicConstantFieldMember(
+		NewUnmeteredPublicConstantFieldMember(
 			authAccountType,
 			AuthAccountAvailableBalanceField,
 			UFix64Type,
 			accountTypeAccountAvailableBalanceFieldDocString,
 		),
-		NewPublicConstantFieldMember(
+		NewUnmeteredPublicConstantFieldMember(
 			authAccountType,
 			AuthAccountStorageUsedField,
 			UInt64Type,
 			accountTypeStorageUsedFieldDocString,
 		),
-		NewPublicConstantFieldMember(
+		NewUnmeteredPublicConstantFieldMember(
 			authAccountType,
 			AuthAccountStorageCapacityField,
 			UInt64Type,
 			accountTypeStorageCapacityFieldDocString,
 		),
-		NewPublicFunctionMember(
+		NewUnmeteredPublicFunctionMember(
 			authAccountType,
 			AuthAccountSaveField,
 			AuthAccountTypeSaveFunctionType,
 			authAccountTypeSaveFunctionDocString,
 		),
-		NewPublicFunctionMember(
+		NewUnmeteredPublicFunctionMember(
 			authAccountType,
 			AuthAccountTypeField,
 			AuthAccountTypeTypeFunctionType,
 			authAccountTypeTypeFunctionDocString,
 		),
-		NewPublicFunctionMember(
+		NewUnmeteredPublicFunctionMember(
 			authAccountType,
 			AuthAccountLoadField,
 			AuthAccountTypeLoadFunctionType,
 			authAccountTypeLoadFunctionDocString,
 		),
-		NewPublicFunctionMember(
+		NewUnmeteredPublicFunctionMember(
 			authAccountType,
 			AuthAccountCopyField,
 			AuthAccountTypeCopyFunctionType,
 			authAccountTypeCopyFunctionDocString,
 		),
-		NewPublicFunctionMember(
+		NewUnmeteredPublicFunctionMember(
 			authAccountType,
 			AuthAccountBorrowField,
 			AuthAccountTypeBorrowFunctionType,
 			authAccountTypeBorrowFunctionDocString,
 		),
-		NewPublicFunctionMember(
+		NewUnmeteredPublicFunctionMember(
 			authAccountType,
 			AuthAccountLinkField,
 			AuthAccountTypeLinkFunctionType,
 			authAccountTypeLinkFunctionDocString,
 		),
-		NewPublicFunctionMember(
+		NewUnmeteredPublicFunctionMember(
 			authAccountType,
 			AuthAccountUnlinkField,
 			AuthAccountTypeUnlinkFunctionType,
 			authAccountTypeUnlinkFunctionDocString,
 		),
-		NewPublicFunctionMember(
+		NewUnmeteredPublicFunctionMember(
 			authAccountType,
 			AuthAccountGetCapabilityField,
 			AuthAccountTypeGetCapabilityFunctionType,
 			authAccountTypeGetCapabilityFunctionDocString,
 		),
-		NewPublicFunctionMember(
+		NewUnmeteredPublicFunctionMember(
 			authAccountType,
 			AuthAccountGetLinkTargetField,
 			AccountTypeGetLinkTargetFunctionType,
 			accountTypeGetLinkTargetFunctionDocString,
 		),
-		NewPublicConstantFieldMember(
+		NewUnmeteredPublicConstantFieldMember(
 			authAccountType,
 			AuthAccountContractsField,
 			AuthAccountContractsType,
 			accountTypeContractsFieldDocString,
 		),
-		NewPublicConstantFieldMember(
+		NewUnmeteredPublicConstantFieldMember(
 			authAccountType,
 			AuthAccountKeysField,
 			AuthAccountKeysType,
@@ -479,19 +478,19 @@ var AuthAccountKeysType = func() *CompositeType {
 	}
 
 	var members = []*Member{
-		NewPublicFunctionMember(
+		NewUnmeteredPublicFunctionMember(
 			accountKeys,
 			AccountKeysAddFunctionName,
 			AuthAccountKeysTypeAddFunctionType,
 			authAccountKeysTypeAddFunctionDocString,
 		),
-		NewPublicFunctionMember(
+		NewUnmeteredPublicFunctionMember(
 			accountKeys,
 			AccountKeysGetFunctionName,
 			AccountKeysTypeGetFunctionType,
 			accountKeysTypeGetFunctionDocString,
 		),
-		NewPublicFunctionMember(
+		NewUnmeteredPublicFunctionMember(
 			accountKeys,
 			AccountKeysRevokeFunctionName,
 			AuthAccountKeysTypeRevokeFunctionType,

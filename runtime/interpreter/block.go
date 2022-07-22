@@ -21,39 +21,44 @@ package interpreter
 import (
 	"fmt"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
 // Block
 
-var blockDynamicType DynamicType = BlockDynamicType{}
-var blockStaticType StaticType = PrimitiveStaticTypeBlock
+var blockStaticType StaticType = PrimitiveStaticTypeBlock // unmetered
 var blockFieldNames = []string{
 	sema.BlockTypeHeightFieldName,
 	sema.BlockTypeViewFieldName,
 	sema.BlockTypeIDFieldName,
 	sema.BlockTypeTimestampFieldName,
 }
-var blockFieldFormatters = map[string]func(Value, SeenReferences) string{
-	sema.BlockTypeIDFieldName: func(value Value, references SeenReferences) string {
-		bytes, err := ByteArrayValueToByteSlice(value)
-		if err != nil {
-			panic(err)
-		}
-		return fmt.Sprintf("0x%x", bytes)
-	},
+var blockFieldFormatters = func(inter *Interpreter) map[string]func(common.MemoryGauge, Value, SeenReferences) string {
+	return map[string]func(common.MemoryGauge, Value, SeenReferences) string{
+		sema.BlockTypeIDFieldName: func(memoryGauge common.MemoryGauge, value Value, references SeenReferences) string {
+			bytes, err := ByteArrayValueToByteSlice(inter, value)
+			if err != nil {
+				panic(err)
+			}
+
+			common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(len(bytes)*2+2))
+			return fmt.Sprintf("0x%x", bytes)
+		},
+	}
 }
 
 func NewBlockValue(
+	inter *Interpreter,
 	height UInt64Value,
 	view UInt64Value,
 	id *ArrayValue,
 	timestamp UFix64Value,
 ) *SimpleCompositeValue {
 	return NewSimpleCompositeValue(
+		inter,
 		sema.BlockType.TypeID,
 		blockStaticType,
-		blockDynamicType,
 		blockFieldNames,
 		map[string]Value{
 			sema.BlockTypeHeightFieldName:    height,
@@ -62,7 +67,7 @@ func NewBlockValue(
 			sema.BlockTypeTimestampFieldName: timestamp,
 		},
 		nil,
-		blockFieldFormatters,
+		blockFieldFormatters(inter),
 		nil,
 	)
 }

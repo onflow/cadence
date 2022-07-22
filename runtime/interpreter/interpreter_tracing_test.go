@@ -23,8 +23,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/opentracing/opentracing-go"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -35,7 +35,7 @@ func setupInterpreterWithTracingCallBack(
 	t *testing.T,
 	tracingCallback func(opName string),
 ) *interpreter.Interpreter {
-	storage := interpreter.NewInMemoryStorage()
+	storage := newUnmeteredInMemoryStorage()
 	inter, err := interpreter.NewInterpreter(
 		&interpreter.Program{},
 		utils.TestLocation,
@@ -43,7 +43,7 @@ func setupInterpreterWithTracingCallBack(
 			func(inter *interpreter.Interpreter,
 				operationName string,
 				duration time.Duration,
-				logs []opentracing.LogRecord) {
+				attrs []attribute.KeyValue) {
 				tracingCallback(operationName)
 			},
 		),
@@ -66,6 +66,7 @@ func TestInterpreterTracing(t *testing.T) {
 		owner := common.Address{0x1}
 		array := interpreter.NewArrayValue(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -94,11 +95,12 @@ func TestInterpreterTracing(t *testing.T) {
 		})
 		dict := interpreter.NewDictionaryValue(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeString,
 				ValueType: interpreter.PrimitiveStaticTypeInt,
 			},
-			interpreter.NewStringValue("test"), interpreter.NewIntValueFromInt64(42),
+			interpreter.NewUnmeteredStringValue("test"), interpreter.NewUnmeteredIntValueFromInt64(42),
 		)
 		require.NotNil(t, dict)
 		fmt.Println(traceOps)
@@ -152,6 +154,7 @@ func TestInterpreterTracing(t *testing.T) {
 
 		array := interpreter.NewArrayValue(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},

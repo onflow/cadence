@@ -101,14 +101,14 @@ func TestInterpretEnumCaseRawValue(t *testing.T) {
 	RequireValuesEqual(
 		t,
 		inter,
-		interpreter.Int64Value(0),
+		interpreter.NewUnmeteredInt64Value(0),
 		inter.Globals["a"].GetValue(),
 	)
 
 	RequireValuesEqual(
 		t,
 		inter,
-		interpreter.Int64Value(1),
+		interpreter.NewUnmeteredInt64Value(1),
 		inter.Globals["b"].GetValue(),
 	)
 }
@@ -135,6 +135,7 @@ func TestInterpretEnumCaseEquality(t *testing.T) {
 		inter,
 		interpreter.NewArrayValue(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
@@ -170,6 +171,7 @@ func TestInterpretEnumConstructor(t *testing.T) {
 		inter,
 		interpreter.NewArrayValue(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
@@ -204,6 +206,7 @@ func TestInterpretEnumInstance(t *testing.T) {
 		inter,
 		interpreter.NewArrayValue(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
@@ -261,7 +264,7 @@ func TestInterpretEnumInContract(t *testing.T) {
 	RequireValuesEqual(
 		t,
 		inter,
-		interpreter.UInt8Value(0),
+		interpreter.NewUnmeteredUInt8Value(0),
 		rawValue,
 	)
 }

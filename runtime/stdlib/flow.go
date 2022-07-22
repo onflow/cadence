@@ -20,11 +20,11 @@ package stdlib
 
 import (
 	"encoding/json"
-	"fmt"
 	"math/rand"
 	"strings"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -185,36 +185,70 @@ func FlowBuiltInFunctions(impls FlowBuiltinImpls) StandardLibraryFunctions {
 func DefaultFlowBuiltinImpls() FlowBuiltinImpls {
 	return FlowBuiltinImpls{
 		CreateAccount: func(invocation interpreter.Invocation) interpreter.Value {
-			panic(fmt.Errorf("cannot create accounts"))
+			panic(errors.NewUnexpectedError("cannot create accounts"))
 		},
 		GetAccount: func(invocation interpreter.Invocation) interpreter.Value {
-			panic(fmt.Errorf("cannot get accounts"))
+			panic(errors.NewUnexpectedError("cannot get accounts"))
 		},
 		Log: LogFunction.Function.Function,
 		GetCurrentBlock: func(invocation interpreter.Invocation) interpreter.Value {
-			panic(fmt.Errorf("cannot get blocks"))
+			panic(errors.NewUnexpectedError("cannot get blocks"))
 		},
 		GetBlock: func(invocation interpreter.Invocation) interpreter.Value {
-			panic(fmt.Errorf("cannot get blocks"))
+			panic(errors.NewUnexpectedError("cannot get blocks"))
 		},
 		UnsafeRandom: func(invocation interpreter.Invocation) interpreter.Value {
-			return interpreter.UInt64Value(rand.Uint64())
+			return interpreter.NewUInt64Value(
+				invocation.Interpreter,
+				rand.Uint64,
+			)
 		},
 	}
+}
+
+var FlowDefaultPredeclaredTypes = append(
+	FlowBuiltInTypes,
+	BuiltinTypes...,
+).ToTypeDeclarations()
+
+func FlowDefaultPredeclaredValues(impls FlowBuiltinImpls) (
+	[]sema.ValueDeclaration,
+	[]interpreter.ValueDeclaration,
+) {
+	functionDeclarations := append(
+		FlowBuiltInFunctions(impls),
+		BuiltinFunctions...,
+	)
+
+	return append(
+			functionDeclarations.ToSemaValueDeclarations(),
+			BuiltinValues.ToSemaValueDeclarations()...,
+		),
+		append(
+			functionDeclarations.ToInterpreterValueDeclarations(),
+			BuiltinValues.ToInterpreterValueDeclarations()...,
+		)
 }
 
 // Flow location
 
 type FlowLocation struct{}
 
+var _ common.Location = FlowLocation{}
+
 const FlowLocationPrefix = "flow"
 
 func (l FlowLocation) ID() common.LocationID {
-	return common.NewLocationID(FlowLocationPrefix)
+	return FlowLocationPrefix
 }
 
-func (l FlowLocation) TypeID(qualifiedIdentifier string) common.TypeID {
-	return common.NewTypeID(
+func (l FlowLocation) MeteredID(_ common.MemoryGauge) common.LocationID {
+	return FlowLocationPrefix
+}
+
+func (l FlowLocation) TypeID(memoryGauge common.MemoryGauge, qualifiedIdentifier string) common.TypeID {
+	return common.NewMeteredTypeID(
+		memoryGauge,
 		FlowLocationPrefix,
 		qualifiedIdentifier,
 	)
@@ -231,7 +265,11 @@ func (l FlowLocation) QualifiedIdentifier(typeID common.TypeID) string {
 }
 
 func (l FlowLocation) String() string {
-	return "flow"
+	return FlowLocationPrefix
+}
+
+func (l FlowLocation) Description() string {
+	return FlowLocationPrefix
 }
 
 func (l FlowLocation) MarshalJSON() ([]byte, error) {
@@ -245,7 +283,7 @@ func (l FlowLocation) MarshalJSON() ([]byte, error) {
 func init() {
 	common.RegisterTypeIDDecoder(
 		FlowLocationPrefix,
-		func(typeID string) (location common.Location, qualifiedIdentifier string, err error) {
+		func(_ common.MemoryGauge, typeID string) (location common.Location, qualifiedIdentifier string, err error) {
 			return decodeFlowLocationTypeID(typeID)
 		},
 	)
@@ -256,7 +294,7 @@ func decodeFlowLocationTypeID(typeID string) (FlowLocation, string, error) {
 	const errorMessagePrefix = "invalid Flow location type ID"
 
 	newError := func(message string) (FlowLocation, string, error) {
-		return FlowLocation{}, "", fmt.Errorf("%s: %s", errorMessagePrefix, message)
+		return FlowLocation{}, "", errors.NewDefaultUserError("%s: %s", errorMessagePrefix, message)
 	}
 
 	if typeID == "" {
@@ -273,7 +311,7 @@ func decodeFlowLocationTypeID(typeID string) (FlowLocation, string, error) {
 	prefix := parts[0]
 
 	if prefix != FlowLocationPrefix {
-		return FlowLocation{}, "", fmt.Errorf(
+		return FlowLocation{}, "", errors.NewDefaultUserError(
 			"%s: invalid prefix: expected %q, got %q",
 			errorMessagePrefix,
 			FlowLocationPrefix,
@@ -295,7 +333,7 @@ func newFlowEventType(identifier string, parameters ...*sema.Parameter) *sema.Co
 		Location:   FlowLocation{},
 		Identifier: identifier,
 		Fields:     []string{},
-		Members:    sema.NewStringMemberOrderedMap(),
+		Members:    &sema.StringMemberOrderedMap{},
 	}
 
 	for _, parameter := range parameters {
@@ -306,7 +344,7 @@ func newFlowEventType(identifier string, parameters ...*sema.Parameter) *sema.Co
 
 		eventType.Members.Set(
 			parameter.Identifier,
-			sema.NewPublicConstantFieldMember(
+			sema.NewUnmeteredPublicConstantFieldMember(
 				eventType,
 				parameter.Identifier,
 				parameter.TypeAnnotation.Type,

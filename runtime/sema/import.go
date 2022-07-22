@@ -48,9 +48,11 @@ type ElaborationImport struct {
 	Elaboration *Elaboration
 }
 
-func variablesToImportElements(variables *StringVariableOrderedMap) *StringImportElementOrderedMap {
+func variablesToImportElements(
+	variables *StringVariableOrderedMap,
+) *StringImportElementOrderedMap {
 
-	elements := NewStringImportElementOrderedMap()
+	elements := &StringImportElementOrderedMap{}
 
 	variables.Foreach(func(name string, variable *Variable) {
 

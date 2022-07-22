@@ -21,25 +21,26 @@ package interpreter
 import (
 	"fmt"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
 // AuthAccountContractsValue
 
 var authAccountContractsTypeID = sema.AuthAccountContractsType.ID()
-var authAccountContractsStaticType StaticType = PrimitiveStaticTypeAuthAccountContracts
-var authAccountContractsDynamicType DynamicType = CompositeDynamicType{
-	StaticType: sema.AuthAccountContractsType,
-}
+var authAccountContractsStaticType StaticType = PrimitiveStaticTypeAuthAccountContracts // unmetered
 var authAccountContractsFieldNames []string = nil
 
+type ContractNamesGetter func(interpreter *Interpreter, getLocationRange func() LocationRange) *ArrayValue
+
 func NewAuthAccountContractsValue(
+	inter *Interpreter,
 	address AddressValue,
 	addFunction FunctionValue,
 	updateFunction FunctionValue,
 	getFunction FunctionValue,
 	removeFunction FunctionValue,
-	namesGetter func(interpreter *Interpreter) *ArrayValue,
+	namesGetter ContractNamesGetter,
 ) Value {
 
 	fields := map[string]Value{
@@ -50,23 +51,28 @@ func NewAuthAccountContractsValue(
 	}
 
 	computedFields := map[string]ComputedField{
-		sema.AuthAccountContractsTypeNamesField: func(interpreter *Interpreter, _ func() LocationRange) Value {
-			return namesGetter(interpreter)
+		sema.AuthAccountContractsTypeNamesField: func(
+			interpreter *Interpreter,
+			getLocationRange func() LocationRange,
+		) Value {
+			return namesGetter(interpreter, getLocationRange)
 		},
 	}
 
 	var str string
-	stringer := func(_ SeenReferences) string {
+	stringer := func(memoryGauge common.MemoryGauge, _ SeenReferences) string {
 		if str == "" {
-			str = fmt.Sprintf("AuthAccount.Contracts(%s)", address)
+			common.UseMemory(memoryGauge, common.AuthAccountContractsStringMemoryUsage)
+			addressStr := address.MeteredString(memoryGauge, SeenReferences{})
+			str = fmt.Sprintf("AuthAccount.Contracts(%s)", addressStr)
 		}
 		return str
 	}
 
 	return NewSimpleCompositeValue(
+		inter,
 		authAccountContractsTypeID,
 		authAccountContractsStaticType,
-		authAccountContractsDynamicType,
 		authAccountContractsFieldNames,
 		fields,
 		computedFields,
@@ -79,14 +85,12 @@ func NewAuthAccountContractsValue(
 
 var publicAccountContractsTypeID = sema.PublicAccountContractsType.ID()
 var publicAccountContractsStaticType StaticType = PrimitiveStaticTypePublicAccountContracts
-var publicAccountContractsDynamicType DynamicType = CompositeDynamicType{
-	StaticType: sema.PublicAccountContractsType,
-}
 
 func NewPublicAccountContractsValue(
+	inter *Interpreter,
 	address AddressValue,
 	getFunction FunctionValue,
-	namesGetter func(interpreter *Interpreter) *ArrayValue,
+	namesGetter ContractNamesGetter,
 ) Value {
 
 	fields := map[string]Value{
@@ -94,23 +98,28 @@ func NewPublicAccountContractsValue(
 	}
 
 	computedFields := map[string]ComputedField{
-		sema.PublicAccountContractsTypeNamesField: func(interpreter *Interpreter, _ func() LocationRange) Value {
-			return namesGetter(interpreter)
+		sema.PublicAccountContractsTypeNamesField: func(
+			interpreter *Interpreter,
+			getLocationRange func() LocationRange,
+		) Value {
+			return namesGetter(interpreter, getLocationRange)
 		},
 	}
 
 	var str string
-	stringer := func(_ SeenReferences) string {
+	stringer := func(memoryGauge common.MemoryGauge, _ SeenReferences) string {
 		if str == "" {
-			str = fmt.Sprintf("PublicAccount.Contracts(%s)", address)
+			common.UseMemory(memoryGauge, common.PublicAccountContractsStringMemoryUsage)
+			addressStr := address.MeteredString(memoryGauge, SeenReferences{})
+			str = fmt.Sprintf("PublicAccount.Contracts(%s)", addressStr)
 		}
 		return str
 	}
 
 	return NewSimpleCompositeValue(
+		inter,
 		publicAccountContractsTypeID,
 		publicAccountContractsStaticType,
-		publicAccountContractsDynamicType,
 		nil,
 		fields,
 		computedFields,

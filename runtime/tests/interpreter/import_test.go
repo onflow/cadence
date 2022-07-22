@@ -43,10 +43,10 @@ func TestInterpretVirtualImport(t *testing.T) {
 		Kind:       common.CompositeKindContract,
 	}
 
-	fooType.Members = sema.NewStringMemberOrderedMap()
+	fooType.Members = &sema.StringMemberOrderedMap{}
 	fooType.Members.Set(
 		"bar",
-		sema.NewPublicFunctionMember(
+		sema.NewUnmeteredPublicFunctionMember(
 			fooType,
 			"bar",
 			&sema.FunctionType{
@@ -63,7 +63,7 @@ func TestInterpretVirtualImport(t *testing.T) {
        }
     `
 
-	valueElements := sema.NewStringImportElementOrderedMap()
+	valueElements := &sema.StringImportElementOrderedMap{}
 
 	valueElements.Set("Foo", sema.ImportElement{
 		DeclarationKind: common.DeclarationKindStructure,
@@ -85,6 +85,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 
 						value := interpreter.NewCompositeValue(
 							inter,
+							interpreter.ReturnEmptyLocationRange,
 							location,
 							"Foo",
 							common.CompositeKindContract,
@@ -94,8 +95,9 @@ func TestInterpretVirtualImport(t *testing.T) {
 
 						value.Functions = map[string]interpreter.FunctionValue{
 							"bar": interpreter.NewHostFunctionValue(
+								inter,
 								func(invocation interpreter.Invocation) interpreter.Value {
-									return interpreter.UInt64Value(42)
+									return interpreter.NewUnmeteredUInt64Value(42)
 								},
 								&sema.FunctionType{
 									ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.UIntType),
@@ -103,7 +105,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 							),
 						}
 
-						elaboration := sema.NewElaboration()
+						elaboration := sema.NewElaboration(nil, false)
 						elaboration.CompositeTypes[fooType.ID()] = fooType
 
 						return interpreter.VirtualImport{
@@ -141,7 +143,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.UInt64Value(42),
+		interpreter.NewUnmeteredUInt64Value(42),
 		value,
 	)
 }
@@ -265,7 +267,7 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	storage := interpreter.NewInMemoryStorage()
+	storage := newUnmeteredInMemoryStorage()
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(importingChecker),
@@ -312,7 +314,7 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewIntValueFromInt64(3),
+		interpreter.NewUnmeteredIntValueFromInt64(3),
 		value,
 	)
 }

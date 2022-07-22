@@ -34,9 +34,6 @@ type Config struct {
 	// The address where the emulator is running.
 	EmulatorAddr string
 
-	// Current emulator state
-	emulatorState EmulatorState
-
 	// Active account
 	activeAccount ClientAccount
 
@@ -55,17 +52,11 @@ type AccountPrivateKey struct {
 //
 // Returns an error if any fields are missing or malformed.
 //
-func configFromInitializationOptions(opts interface{}) (conf Config, err error) {
-	optsMap, ok := opts.(map[string]interface{})
+func configFromInitializationOptions(opts any) (conf Config, err error) {
+	optsMap, ok := opts.(map[string]any)
 	if !ok {
 		return Config{}, errors.New("invalid initialization options")
 	}
-
-	emulatorState, ok := optsMap["emulatorState"].(float64)
-	if !ok {
-		return Config{}, errors.New("initialization options: invalid emulator state")
-	}
-	conf.emulatorState = EmulatorState(emulatorState)
 
 	activeAccountName, ok := optsMap["activeAccountName"].(string)
 	if !ok {

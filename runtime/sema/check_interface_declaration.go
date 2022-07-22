@@ -214,8 +214,8 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 		Location:      checker.Location,
 		Identifier:    identifier.Identifier,
 		CompositeKind: declaration.CompositeKind,
-		nestedTypes:   NewStringTypeOrderedMap(),
-		Members:       NewStringMemberOrderedMap(),
+		nestedTypes:   &StringTypeOrderedMap{},
+		Members:       &StringMemberOrderedMap{},
 	}
 
 	variable, err := checker.typeActivations.DeclareType(typeDeclaration{
@@ -239,7 +239,7 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 		checker.report(
 			&InvalidInterfaceDeclarationError{
 				CompositeKind: declaration.CompositeKind,
-				Range:         ast.NewRangeFromPositioned(declaration.Identifier),
+				Range:         ast.NewRangeFromPositioned(checker.memoryGauge, declaration.Identifier),
 			},
 		)
 	}

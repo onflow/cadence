@@ -23,6 +23,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -59,7 +60,7 @@ func (StandardLibraryFunction) ValueDeclarationKind() common.DeclarationKind {
 }
 
 func (StandardLibraryFunction) ValueDeclarationPosition() ast.Position {
-	return ast.Position{}
+	return ast.EmptyPosition
 }
 
 func (StandardLibraryFunction) ValueDeclarationIsConstant() bool {
@@ -92,7 +93,7 @@ func NewStandardLibraryFunction(
 		argumentLabels[i] = parameter.EffectiveArgumentLabel()
 	}
 
-	functionValue := interpreter.NewHostFunctionValue(function, functionType)
+	functionValue := interpreter.NewUnmeteredHostFunctionValue(function, functionType)
 
 	return StandardLibraryFunction{
 		Name:           name,
@@ -129,6 +130,10 @@ type AssertionError struct {
 	Message string
 	interpreter.LocationRange
 }
+
+var _ errors.UserError = AssertionError{}
+
+func (AssertionError) IsUserError() {}
 
 func (e AssertionError) Error() string {
 	const message = "assertion failed"

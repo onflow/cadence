@@ -44,11 +44,12 @@ func (checker *Checker) VisitImportDeclaration(_ *ast.ImportDeclaration) ast.Rep
 }
 
 func (checker *Checker) declareImportDeclaration(declaration *ast.ImportDeclaration) ast.Repr {
-	locationRange := ast.Range{
-		StartPos: declaration.LocationPos,
+	locationRange := ast.NewRange(
+		checker.memoryGauge,
+		declaration.LocationPos,
 		// TODO: improve
-		EndPos: declaration.LocationPos,
-	}
+		declaration.LocationPos,
+	)
 
 	resolvedLocations, err := checker.resolveLocation(declaration.Identifiers, declaration.Location)
 	if err != nil {
@@ -181,7 +182,7 @@ func (checker *Checker) importResolvedLocation(resolvedLocation ResolvedLocation
 				Name:              identifier.Identifier,
 				RestrictingAccess: invalidAccessedElement.Access,
 				DeclarationKind:   invalidAccessedElement.DeclarationKind,
-				Range:             ast.NewRangeFromPositioned(identifier),
+				Range:             ast.NewRangeFromPositioned(checker.memoryGauge, identifier),
 			},
 		)
 	}
@@ -295,7 +296,7 @@ func (checker *Checker) importElements(
 
 	identifiersCount := len(requestedIdentifiers)
 	if identifiersCount > 0 && availableElements != nil {
-		elements = NewStringImportElementOrderedMap()
+		elements = &StringImportElementOrderedMap{}
 		for _, identifier := range requestedIdentifiers {
 			name := identifier.Identifier
 			element, ok := availableElements.Get(name)
@@ -341,7 +342,7 @@ func (checker *Checker) importElements(
 				access: access,
 				kind:   element.DeclarationKind,
 				// TODO:
-				pos:                      ast.Position{},
+				pos:                      ast.EmptyPosition,
 				isConstant:               true,
 				argumentLabels:           element.ArgumentLabels,
 				allowOuterScopeShadowing: false,

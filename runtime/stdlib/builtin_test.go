@@ -30,6 +30,10 @@ import (
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
+func newUnmeteredInMemoryStorage() interpreter.InMemoryStorage {
+	return interpreter.NewInMemoryStorage(nil)
+}
+
 func TestAssert(t *testing.T) {
 
 	t.Parallel()
@@ -39,11 +43,13 @@ func TestAssert(t *testing.T) {
 	checker, err := sema.NewChecker(
 		program,
 		utils.TestLocation,
+		nil,
+		false,
 		sema.WithPredeclaredValues(BuiltinFunctions.ToSemaValueDeclarations()),
 	)
 	require.Nil(t, err)
 
-	storage := interpreter.NewInMemoryStorage()
+	storage := newUnmeteredInMemoryStorage()
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
@@ -58,7 +64,7 @@ func TestAssert(t *testing.T) {
 	_, err = inter.Invoke(
 		"assert",
 		interpreter.BoolValue(false),
-		interpreter.NewStringValue("oops"),
+		interpreter.NewUnmeteredStringValue("oops"),
 	)
 	assert.Equal(t,
 		interpreter.Error{
@@ -83,7 +89,7 @@ func TestAssert(t *testing.T) {
 	_, err = inter.Invoke(
 		"assert",
 		interpreter.BoolValue(true),
-		interpreter.NewStringValue("oops"),
+		interpreter.NewUnmeteredStringValue("oops"),
 	)
 	assert.NoError(t, err)
 
@@ -98,11 +104,13 @@ func TestPanic(t *testing.T) {
 	checker, err := sema.NewChecker(
 		&ast.Program{},
 		utils.TestLocation,
+		nil,
+		false,
 		sema.WithPredeclaredValues(BuiltinFunctions.ToSemaValueDeclarations()),
 	)
 	require.Nil(t, err)
 
-	storage := interpreter.NewInMemoryStorage()
+	storage := newUnmeteredInMemoryStorage()
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
@@ -112,7 +120,7 @@ func TestPanic(t *testing.T) {
 	)
 	require.Nil(t, err)
 
-	_, err = inter.Invoke("panic", interpreter.NewStringValue("oops"))
+	_, err = inter.Invoke("panic", interpreter.NewUnmeteredStringValue("oops"))
 	assert.Equal(t,
 		interpreter.Error{
 			Err: PanicError{

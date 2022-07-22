@@ -26,23 +26,14 @@ import (
 	"github.com/onflow/cadence/languageserver/server"
 )
 
-type EmulatorState int
-
-const (
-	EmulatorOffline EmulatorState = iota
-	EmulatorStarting
-	EmulatorStarted
-)
-
 type FlowIntegration struct {
 	server *server.Server
 	config Config
 
-	entryPointInfo map[protocol.DocumentUri]entryPointInfo
-	contractInfo   map[protocol.DocumentUri]contractInfo
+	entryPointInfo map[protocol.DocumentURI]entryPointInfo
+	contractInfo   map[protocol.DocumentURI]contractInfo
 
 	activeAccount ClientAccount
-	emulatorState EmulatorState
 
 	sharedServices *services.Services
 	state          *flowkit.State
@@ -51,8 +42,8 @@ type FlowIntegration struct {
 func NewFlowIntegration(s *server.Server, enableFlowClient bool) (*FlowIntegration, error) {
 	integration := &FlowIntegration{
 		server:         s,
-		entryPointInfo: map[protocol.DocumentUri]entryPointInfo{},
-		contractInfo:   map[protocol.DocumentUri]contractInfo{},
+		entryPointInfo: map[protocol.DocumentURI]entryPointInfo{},
+		contractInfo:   map[protocol.DocumentURI]contractInfo{},
 	}
 
 	options := []server.Option{

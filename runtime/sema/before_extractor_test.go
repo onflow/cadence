@@ -25,20 +25,20 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/parser2"
+	"github.com/onflow/cadence/runtime/parser"
 )
 
 func TestBeforeExtractor(t *testing.T) {
 
 	t.Parallel()
 
-	expression, errs := parser2.ParseExpression(`
+	expression, errs := parser.ParseExpression(`
         before(x + before(y)) + z
-    `)
+    `, nil)
 
 	require.Empty(t, errs)
 
-	extractor := NewBeforeExtractor(nil)
+	extractor := NewBeforeExtractor(nil, nil)
 
 	identifier1 := ast.Identifier{
 		Identifier: extractor.ExpressionExtractor.FormatIdentifier(0),

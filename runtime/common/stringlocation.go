@@ -20,8 +20,9 @@ package common
 
 import (
 	"encoding/json"
-	"fmt"
 	"strings"
+
+	"github.com/onflow/cadence/runtime/errors"
 )
 
 const StringLocationPrefix = "S"
@@ -30,15 +31,28 @@ const StringLocationPrefix = "S"
 //
 type StringLocation string
 
+var _ Location = StringLocation("")
+
+func NewStringLocation(gauge MemoryGauge, id string) StringLocation {
+	UseMemory(gauge, NewRawStringMemoryUsage(len(id)))
+	return StringLocation(id)
+}
+
 func (l StringLocation) ID() LocationID {
-	return NewLocationID(
+	return l.MeteredID(nil)
+}
+
+func (l StringLocation) MeteredID(memoryGauge MemoryGauge) LocationID {
+	return NewMeteredLocationID(
+		memoryGauge,
 		StringLocationPrefix,
 		string(l),
 	)
 }
 
-func (l StringLocation) TypeID(qualifiedIdentifier string) TypeID {
-	return NewTypeID(
+func (l StringLocation) TypeID(memoryGauge MemoryGauge, qualifiedIdentifier string) TypeID {
+	return NewMeteredTypeID(
+		memoryGauge,
 		StringLocationPrefix,
 		string(l),
 		qualifiedIdentifier,
@@ -59,6 +73,10 @@ func (l StringLocation) String() string {
 	return string(l)
 }
 
+func (l StringLocation) Description() string {
+	return string(l)
+}
+
 func (l StringLocation) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
 		Type   string
@@ -72,18 +90,18 @@ func (l StringLocation) MarshalJSON() ([]byte, error) {
 func init() {
 	RegisterTypeIDDecoder(
 		StringLocationPrefix,
-		func(typeID string) (location Location, qualifiedIdentifier string, err error) {
-			return decodeStringLocationTypeID(typeID)
+		func(gauge MemoryGauge, typeID string) (location Location, qualifiedIdentifier string, err error) {
+			return decodeStringLocationTypeID(gauge, typeID)
 		},
 	)
 }
 
-func decodeStringLocationTypeID(typeID string) (StringLocation, string, error) {
+func decodeStringLocationTypeID(gauge MemoryGauge, typeID string) (StringLocation, string, error) {
 
 	const errorMessagePrefix = "invalid string location type ID"
 
 	newError := func(message string) (StringLocation, string, error) {
-		return "", "", fmt.Errorf("%s: %s", errorMessagePrefix, message)
+		return "", "", errors.NewDefaultUserError("%s: %s", errorMessagePrefix, message)
 	}
 
 	if typeID == "" {
@@ -103,7 +121,7 @@ func decodeStringLocationTypeID(typeID string) (StringLocation, string, error) {
 	prefix := parts[0]
 
 	if prefix != StringLocationPrefix {
-		return "", "", fmt.Errorf(
+		return "", "", errors.NewDefaultUserError(
 			"%s: invalid prefix: expected %q, got %q",
 			errorMessagePrefix,
 			StringLocationPrefix,
@@ -111,7 +129,7 @@ func decodeStringLocationTypeID(typeID string) (StringLocation, string, error) {
 		)
 	}
 
-	location := StringLocation(parts[1])
+	location := NewStringLocation(gauge, parts[1])
 	qualifiedIdentifier := parts[2]
 
 	return location, qualifiedIdentifier, nil

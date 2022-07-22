@@ -40,16 +40,18 @@ func TestInspectValue(t *testing.T) {
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeInt256,
 		}
-		dictValueKey := NewStringValue("hello world")
-		dictValueValue := NewInt256ValueFromInt64(1)
+		dictValueKey := NewUnmeteredStringValue("hello world")
+		dictValueValue := NewUnmeteredInt256ValueFromInt64(1)
 		dictValue := NewDictionaryValue(
 			inter,
+			ReturnEmptyLocationRange,
 			dictionaryStaticType,
 			dictValueKey, dictValueValue,
 		)
 
 		arrayValue := NewArrayValue(
 			inter,
+			ReturnEmptyLocationRange,
 			VariableSizedStaticType{
 				Type: dictionaryStaticType,
 			},
@@ -57,7 +59,7 @@ func TestInspectValue(t *testing.T) {
 			dictValue,
 		)
 
-		optionalValue := NewSomeValueNonCopying(arrayValue)
+		optionalValue := NewUnmeteredSomeValueNonCopying(arrayValue)
 
 		compositeValue = newTestCompositeValue(inter, common.Address{})
 		compositeValue.SetMember(
@@ -74,7 +76,7 @@ func TestInspectValue(t *testing.T) {
 	optionalValue := compositeValue.GetField(inter, ReturnEmptyLocationRange, "value").(*SomeValue)
 	arrayValue := optionalValue.InnerValue(inter, ReturnEmptyLocationRange).(*ArrayValue)
 	dictValue := arrayValue.Get(inter, ReturnEmptyLocationRange, 0).(*DictionaryValue)
-	dictValueKey := NewStringValue("hello world")
+	dictValueKey := NewUnmeteredStringValue("hello world")
 
 	dictValueValue, _ := dictValue.Get(inter, ReturnEmptyLocationRange, dictValueKey)
 
@@ -83,6 +85,7 @@ func TestInspectValue(t *testing.T) {
 		var inspectedValues []Value
 
 		InspectValue(
+			inter,
 			dictValue,
 			func(value Value) bool {
 				inspectedValues = append(inspectedValues, value)
@@ -110,6 +113,7 @@ func TestInspectValue(t *testing.T) {
 		var inspectedValues []Value
 
 		InspectValue(
+			inter,
 			compositeValue,
 			func(value Value) bool {
 				inspectedValues = append(inspectedValues, value)

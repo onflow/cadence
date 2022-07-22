@@ -40,8 +40,9 @@ var DeployedContractType = &SimpleType{
 		return map[string]MemberResolver{
 			DeployedContractTypeAddressFieldName: {
 				Kind: common.DeclarationKindField,
-				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicConstantFieldMember(
+						memoryGauge,
 						t,
 						identifier,
 						&AddressType{},
@@ -51,8 +52,9 @@ var DeployedContractType = &SimpleType{
 			},
 			DeployedContractTypeNameFieldName: {
 				Kind: common.DeclarationKindField,
-				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicConstantFieldMember(
+						memoryGauge,
 						t,
 						identifier,
 						StringType,
@@ -62,8 +64,9 @@ var DeployedContractType = &SimpleType{
 			},
 			DeployedContractTypeCodeFieldName: {
 				Kind: common.DeclarationKindField,
-				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicConstantFieldMember(
+						memoryGauge,
 						t,
 						identifier,
 						ByteArrayType,

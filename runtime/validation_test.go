@@ -52,12 +52,15 @@ func TestRuntimeArgumentImportMissingType(t *testing.T) {
 			getSigningAccounts: func() ([]Address, error) {
 				return nil, nil
 			},
-			decodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
-				return json.Decode(b)
-			},
 			getAccountContractCode: func(address Address, name string) (code []byte, err error) {
 				return nil, nil
 			},
+			meterMemory: func(_ common.MemoryUsage) error {
+				return nil
+			},
+		}
+		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(runtimeInterface, b)
 		}
 
 		nextTransactionLocation := newTransactionLocationGenerator()
@@ -99,12 +102,15 @@ func TestRuntimeArgumentImportMissingType(t *testing.T) {
 			getSigningAccounts: func() ([]Address, error) {
 				return nil, nil
 			},
-			decodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
-				return json.Decode(b)
-			},
 			getAccountContractCode: func(address Address, name string) (code []byte, err error) {
 				return nil, nil
 			},
+			meterMemory: func(_ common.MemoryUsage) error {
+				return nil
+			},
+		}
+		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(runtimeInterface, b)
 		}
 
 		nextTransactionLocation := newTransactionLocationGenerator()

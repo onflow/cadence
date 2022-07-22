@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/turbolent/prettier"
 )
 
 func TestParameterList_ParametersByIdentifier(t *testing.T) {
@@ -82,4 +83,126 @@ func TestParameterList_ParametersByIdentifier(t *testing.T) {
 
 		wg.Wait()
 	})
+}
+
+func TestParameterList_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	params := &ParameterList{
+		Parameters: []*Parameter{
+			{
+				Identifier: Identifier{Identifier: "e"},
+				TypeAnnotation: &TypeAnnotation{
+					Type: &NominalType{
+						Identifier: Identifier{Identifier: "E"},
+					},
+				},
+			},
+			{
+				Label:      "c",
+				Identifier: Identifier{Identifier: "d"},
+				TypeAnnotation: &TypeAnnotation{
+					Type: &NominalType{
+						Identifier: Identifier{Identifier: "D"},
+					},
+				},
+			},
+			{
+				Label:      "a",
+				Identifier: Identifier{Identifier: "b"},
+				TypeAnnotation: &TypeAnnotation{
+					Type: &NominalType{
+						Identifier: Identifier{Identifier: "B"},
+					},
+				},
+			},
+		},
+	}
+
+	require.Equal(t,
+		prettier.Group{
+			Doc: prettier.Concat{
+				prettier.Text("("),
+				prettier.Indent{
+					Doc: prettier.Concat{
+						prettier.SoftLine{},
+						prettier.Concat{
+							prettier.Concat{
+								prettier.Text("e"),
+								prettier.Text(": "),
+								prettier.Text("E"),
+							},
+							prettier.Concat{
+								prettier.Text(","),
+								prettier.Line{},
+							},
+							prettier.Concat{
+								prettier.Text("c"),
+								prettier.Text(" "),
+								prettier.Text("d"),
+								prettier.Text(": "),
+								prettier.Text("D"),
+							},
+							prettier.Concat{
+								prettier.Text(","),
+								prettier.Line{},
+							},
+							prettier.Concat{
+								prettier.Text("a"),
+								prettier.Text(" "),
+								prettier.Text("b"),
+								prettier.Text(": "),
+								prettier.Text("B"),
+							},
+						},
+					},
+				},
+				prettier.SoftLine{},
+				prettier.Text(")"),
+			},
+		},
+		params.Doc(),
+	)
+}
+
+func TestParameterList_String(t *testing.T) {
+
+	t.Parallel()
+
+	params := &ParameterList{
+		Parameters: []*Parameter{
+			{
+				Identifier: Identifier{Identifier: "e"},
+				TypeAnnotation: &TypeAnnotation{
+					Type: &NominalType{
+						Identifier: Identifier{Identifier: "E"},
+					},
+				},
+			},
+			{
+				Label:      "c",
+				Identifier: Identifier{Identifier: "d"},
+				TypeAnnotation: &TypeAnnotation{
+					Type: &NominalType{
+						Identifier: Identifier{Identifier: "D"},
+					},
+				},
+			},
+			{
+				Label:      "a",
+				Identifier: Identifier{Identifier: "b"},
+				TypeAnnotation: &TypeAnnotation{
+					Type: &NominalType{
+						Identifier: Identifier{Identifier: "B"},
+					},
+				},
+			},
+		},
+	}
+
+	require.Equal(t,
+		"(e: E, c d: D, a b: B)",
+		params.String(),
+	)
 }

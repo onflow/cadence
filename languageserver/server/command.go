@@ -18,9 +18,12 @@
 
 package server
 
-import "fmt"
+import (
+	json2 "encoding/json"
+	"fmt"
+)
 
-func CheckCommandArgumentCount(args []interface{}, expectedCount int) error {
+func CheckCommandArgumentCount(args []json2.RawMessage, expectedCount int) error {
 	if len(args) != expectedCount {
 		return fmt.Errorf("expected %d arguments, got %d", expectedCount, len(args))
 	}

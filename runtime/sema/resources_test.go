@@ -32,20 +32,20 @@ func TestResources_Add(t *testing.T) {
 
 	resources := NewResources()
 
-	varX := &Variable{
+	varX := Resource{Variable: &Variable{
 		Identifier: "x",
 		Type:       IntType,
-	}
+	}}
 
-	varY := &Variable{
+	varY := Resource{Variable: &Variable{
 		Identifier: "y",
 		Type:       IntType,
-	}
+	}}
 
-	varZ := &Variable{
+	varZ := Resource{Variable: &Variable{
 		Identifier: "z",
 		Type:       IntType,
-	}
+	}}
 
 	assert.Empty(t, resources.Get(varX).Invalidations.All())
 	assert.Empty(t, resources.Get(varY).Invalidations.All())
@@ -140,15 +140,15 @@ func TestResourceResources_ForEach(t *testing.T) {
 
 	resources := NewResources()
 
-	varX := &Variable{
+	varX := Resource{Variable: &Variable{
 		Identifier: "x",
 		Type:       IntType,
-	}
+	}}
 
-	varY := &Variable{
+	varY := Resource{Variable: &Variable{
 		Identifier: "y",
 		Type:       IntType,
-	}
+	}}
 
 	// add resources for X and Y
 
@@ -172,15 +172,15 @@ func TestResourceResources_ForEach(t *testing.T) {
 
 	result := map[*Variable][]ResourceInvalidation{}
 
-	resources.ForEach(func(resource interface{}, info ResourceInfo) {
-		variable := resource.(*Variable)
+	resources.ForEach(func(resource Resource, info ResourceInfo) {
+		variable := resource.Variable
 		result[variable] = info.Invalidations.All()
 	})
 
 	assert.Len(t, result, 2)
 
 	assert.ElementsMatch(t,
-		result[varX],
+		result[varX.Variable],
 		[]ResourceInvalidation{
 			{
 				Kind:     ResourceInvalidationKindMoveDefinite,
@@ -196,7 +196,7 @@ func TestResourceResources_ForEach(t *testing.T) {
 	)
 
 	assert.ElementsMatch(t,
-		result[varY],
+		result[varY.Variable],
 		[]ResourceInvalidation{
 			{
 				Kind:     ResourceInvalidationKindMoveDefinite,
@@ -214,20 +214,20 @@ func TestResources_MergeBranches(t *testing.T) {
 	resourcesThen := NewResources()
 	resourcesElse := NewResources()
 
-	varX := &Variable{
+	varX := Resource{Variable: &Variable{
 		Identifier: "x",
 		Type:       IntType,
-	}
+	}}
 
-	varY := &Variable{
+	varY := Resource{Variable: &Variable{
 		Identifier: "y",
 		Type:       IntType,
-	}
+	}}
 
-	varZ := &Variable{
+	varZ := Resource{Variable: &Variable{
 		Identifier: "z",
 		Type:       IntType,
-	}
+	}}
 
 	// invalidate X and Y in then branch
 
@@ -322,9 +322,9 @@ func TestResources_Clone(t *testing.T) {
 
 	t.Parallel()
 
-	varX := &Variable{Identifier: "x"}
-	varY := &Variable{Identifier: "y"}
-	varZ := &Variable{Identifier: "z"}
+	varX := Resource{Variable: &Variable{Identifier: "x"}}
+	varY := Resource{Variable: &Variable{Identifier: "y"}}
+	varZ := Resource{Variable: &Variable{Identifier: "z"}}
 
 	// Parent set with only X
 

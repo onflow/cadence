@@ -26,6 +26,14 @@ import (
 
 func (checker *Checker) VisitBinaryExpression(expression *ast.BinaryExpression) ast.Repr {
 
+	var leftType, rightType, resultType Type
+	defer func() {
+		elaboration := checker.Elaboration
+		elaboration.BinaryExpressionLeftTypes[expression] = leftType
+		elaboration.BinaryExpressionRightTypes[expression] = rightType
+		elaboration.BinaryExpressionResultTypes[expression] = resultType
+	}()
+
 	// The left-hand side is always evaluated.
 	// However, the right-hand side might not necessarily be evaluated,
 	// e.g. in boolean logic or in nil-coalescing
@@ -55,7 +63,7 @@ func (checker *Checker) VisitBinaryExpression(expression *ast.BinaryExpression) 
 	// Visit the expression, with contextually expected type. Use the expected type
 	// only for inferring wherever possible, but do not check for compatibility.
 	// Compatibility is checked separately for each operand kind.
-	leftType := checker.VisitExpressionWithForceType(expression.Left, expectedType, false)
+	leftType = checker.VisitExpressionWithForceType(expression.Left, expectedType, false)
 
 	leftIsInvalid := leftType.IsInvalidType()
 
@@ -63,7 +71,7 @@ func (checker *Checker) VisitBinaryExpression(expression *ast.BinaryExpression) 
 		panic(&unsupportedOperation{
 			kind:      common.OperationKindBinary,
 			operation: operation,
-			Range:     ast.NewRangeFromPositioned(expression),
+			Range:     ast.NewRangeFromPositioned(checker.memoryGauge, expression),
 		})
 	}
 
@@ -111,7 +119,7 @@ func (checker *Checker) VisitBinaryExpression(expression *ast.BinaryExpression) 
 			expectedType = leftType
 		}
 
-		rightType := checker.VisitExpressionWithForceType(expression.Right, expectedType, false)
+		rightType = checker.VisitExpressionWithForceType(expression.Right, expectedType, false)
 
 		rightIsInvalid := rightType.IsInvalidType()
 
@@ -122,18 +130,20 @@ func (checker *Checker) VisitBinaryExpression(expression *ast.BinaryExpression) 
 			BinaryOperationKindNonEqualityComparison,
 			BinaryOperationKindBitwise:
 
-			return checker.checkBinaryExpressionArithmeticOrNonEqualityComparisonOrBitwise(
+			resultType = checker.checkBinaryExpressionArithmeticOrNonEqualityComparisonOrBitwise(
 				expression, operation, operationKind,
 				leftType, rightType,
 				leftIsInvalid, rightIsInvalid, anyInvalid,
 			)
+			return resultType
 
 		case BinaryOperationKindEquality:
-			return checker.checkBinaryExpressionEquality(
+			resultType = checker.checkBinaryExpressionEquality(
 				expression, operation,
 				leftType, rightType,
 				anyInvalid,
 			)
+			return resultType
 
 		default:
 			return unsupportedOperation()
@@ -146,7 +156,7 @@ func (checker *Checker) VisitBinaryExpression(expression *ast.BinaryExpression) 
 		// That means that resource invalidation and returns
 		// are not definite, but only potential.
 
-		rightType := checker.checkPotentiallyUnevaluated(func() Type {
+		rightType = checker.checkPotentiallyUnevaluated(func() Type {
 			var expectedType Type
 			if !leftIsInvalid {
 				if optionalLeftType, ok := leftType.(*OptionalType); ok {
@@ -162,22 +172,19 @@ func (checker *Checker) VisitBinaryExpression(expression *ast.BinaryExpression) 
 
 		switch operationKind {
 		case BinaryOperationKindBooleanLogic:
-			return checker.checkBinaryExpressionBooleanLogic(
+			resultType = checker.checkBinaryExpressionBooleanLogic(
 				expression, operation,
 				leftType, rightType,
 				leftIsInvalid, rightIsInvalid, anyInvalid,
 			)
+			return resultType
 
 		case BinaryOperationKindNilCoalescing:
-			resultType := checker.checkBinaryExpressionNilCoalescing(
+			resultType = checker.checkBinaryExpressionNilCoalescing(
 				expression, operation,
 				leftType, rightType,
 				leftIsInvalid, rightIsInvalid,
 			)
-
-			checker.Elaboration.BinaryExpressionResultTypes[expression] = resultType
-			checker.Elaboration.BinaryExpressionRightTypes[expression] = rightType
-
 			return resultType
 
 		default:
@@ -224,7 +231,7 @@ func (checker *Checker) checkBinaryExpressionArithmeticOrNonEqualityComparisonOr
 					Operation: operation,
 					LeftType:  leftType,
 					RightType: rightType,
-					Range:     ast.NewRangeFromPositioned(expression),
+					Range:     ast.NewRangeFromPositioned(checker.memoryGauge, expression),
 				},
 			)
 			reportedInvalidOperands = true
@@ -237,7 +244,7 @@ func (checker *Checker) checkBinaryExpressionArithmeticOrNonEqualityComparisonOr
 					Side:         common.OperandSideLeft,
 					ExpectedType: expectedSuperType,
 					ActualType:   leftType,
-					Range:        ast.NewRangeFromPositioned(expression.Left),
+					Range:        ast.NewRangeFromPositioned(checker.memoryGauge, expression.Left),
 				},
 			)
 		}
@@ -249,7 +256,7 @@ func (checker *Checker) checkBinaryExpressionArithmeticOrNonEqualityComparisonOr
 					Side:         common.OperandSideRight,
 					ExpectedType: expectedSuperType,
 					ActualType:   rightType,
-					Range:        ast.NewRangeFromPositioned(expression.Right),
+					Range:        ast.NewRangeFromPositioned(checker.memoryGauge, expression.Right),
 				},
 			)
 		}
@@ -277,7 +284,7 @@ func (checker *Checker) checkBinaryExpressionArithmeticOrNonEqualityComparisonOr
 				Operation: operation,
 				LeftType:  leftType,
 				RightType: rightType,
-				Range:     ast.NewRangeFromPositioned(expression),
+				Range:     ast.NewRangeFromPositioned(checker.memoryGauge, expression),
 			},
 		)
 	}
@@ -315,7 +322,7 @@ func (checker *Checker) checkBinaryExpressionEquality(
 				Operation: operation,
 				LeftType:  leftType,
 				RightType: rightType,
-				Range:     ast.NewRangeFromPositioned(expression),
+				Range:     ast.NewRangeFromPositioned(checker.memoryGauge, expression),
 			},
 		)
 	}
@@ -344,7 +351,7 @@ func (checker *Checker) checkBinaryExpressionBooleanLogic(
 					Operation: operation,
 					LeftType:  leftType,
 					RightType: rightType,
-					Range:     ast.NewRangeFromPositioned(expression),
+					Range:     ast.NewRangeFromPositioned(checker.memoryGauge, expression),
 				},
 			)
 		}
@@ -356,7 +363,7 @@ func (checker *Checker) checkBinaryExpressionBooleanLogic(
 					Side:         common.OperandSideLeft,
 					ExpectedType: BoolType,
 					ActualType:   leftType,
-					Range:        ast.NewRangeFromPositioned(expression.Left),
+					Range:        ast.NewRangeFromPositioned(checker.memoryGauge, expression.Left),
 				},
 			)
 		}
@@ -368,7 +375,7 @@ func (checker *Checker) checkBinaryExpressionBooleanLogic(
 					Side:         common.OperandSideRight,
 					ExpectedType: BoolType,
 					ActualType:   rightType,
-					Range:        ast.NewRangeFromPositioned(expression.Right),
+					Range:        ast.NewRangeFromPositioned(checker.memoryGauge, expression.Right),
 				},
 			)
 		}
@@ -401,7 +408,7 @@ func (checker *Checker) checkBinaryExpressionNilCoalescing(
 					Side:         common.OperandSideLeft,
 					ExpectedType: &OptionalType{},
 					ActualType:   leftType,
-					Range:        ast.NewRangeFromPositioned(expression.Left),
+					Range:        ast.NewRangeFromPositioned(checker.memoryGauge, expression.Left),
 				},
 			)
 		}
@@ -424,7 +431,7 @@ func (checker *Checker) checkBinaryExpressionNilCoalescing(
 
 			checker.report(
 				&InvalidNilCoalescingRightResourceOperandError{
-					Range: ast.NewRangeFromPositioned(expression.Right),
+					Range: ast.NewRangeFromPositioned(checker.memoryGauge, expression.Right),
 				},
 			)
 		}
@@ -437,7 +444,7 @@ func (checker *Checker) checkBinaryExpressionNilCoalescing(
 					Side:         common.OperandSideRight,
 					ExpectedType: leftOptional,
 					ActualType:   rightType,
-					Range:        ast.NewRangeFromPositioned(expression.Right),
+					Range:        ast.NewRangeFromPositioned(checker.memoryGauge, expression.Right),
 				},
 			)
 		} else {

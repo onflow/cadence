@@ -30,6 +30,7 @@ import (
 	"github.com/onflow/cadence/encoding/json"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -322,9 +323,12 @@ func TestRuntimeSignatureAlgorithmImport(t *testing.T) {
 
 	runtime := newTestInterpreterRuntime()
 	runtimeInterface := &testRuntimeInterface{
-		decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-			return json.Decode(b)
+		meterMemory: func(_ common.MemoryUsage) error {
+			return nil
 		},
+	}
+	runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+		return json.Decode(runtimeInterface, b)
 	}
 
 	const script = `
@@ -406,12 +410,15 @@ func TestRuntimeHashAlgorithmImport(t *testing.T) {
 				}
 				return []byte{4, 5, 6}, nil
 			},
-			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-				return json.Decode(b)
-			},
 			log: func(message string) {
 				logs = append(logs, message)
 			},
+			meterMemory: func(_ common.MemoryUsage) error {
+				return nil
+			},
+		}
+		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(runtimeInterface, b)
 		}
 
 		value, err := runtime.ExecuteScript(
@@ -574,6 +581,8 @@ func TestBLSAggregateSignatures(t *testing.T) {
 			cadence.UInt8(3),
 			cadence.UInt8(4),
 			cadence.UInt8(5),
+		}).WithType(cadence.VariableSizedArrayType{
+			ElementType: cadence.UInt8Type{},
 		}),
 		result,
 	)
@@ -644,6 +653,8 @@ func TestBLSAggregatePublicKeys(t *testing.T) {
 			cadence.UInt8(2),
 			cadence.UInt8(1),
 			cadence.UInt8(2),
+		}).WithType(cadence.VariableSizedArrayType{
+			ElementType: cadence.UInt8Type{},
 		}),
 		result.(cadence.Optional).Value.(cadence.Struct).Fields[0],
 	)
@@ -747,9 +758,6 @@ func TestTraversingMerkleProof(t *testing.T) {
 
 	runtimeInterface := &testRuntimeInterface{
 		storage: storage,
-		decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-			return json.Decode(b)
-		},
 		hash: func(
 			data []byte,
 			tag string,
@@ -779,6 +787,12 @@ func TestTraversingMerkleProof(t *testing.T) {
 		log: func(message string) {
 			logMessages = append(logMessages, message)
 		},
+		meterMemory: func(_ common.MemoryUsage) error {
+			return nil
+		},
+	}
+	runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+		return json.Decode(runtimeInterface, b)
 	}
 
 	_, err := runtime.ExecuteScript(

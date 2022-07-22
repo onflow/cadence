@@ -1,29 +1,25 @@
----
-title: Glossary of Symbols and Operators
----
 
-A simple glossary containing Cadence's symbols and operators and their use (sorted in phonetical alphabetical order). Links to the relevant reference documentation are also provided.
-
+<Callout type="info">
 Tip: <kbd>CTRL</kbd>/<kbd>⌘</kbd> + <kbd>F</kbd> and type in the symbol or operator you want to look up.
+</Callout>
 
-## & (ampersand)
+## `&` (ampersand)
 
-The & (ampersand) symbol has several uses. 
+The `&` (ampersand) symbol has several uses.
 
 ### Reference
 
-The more Cadence-specific use is that of a Reference. In Cadence it is possible to create references to objects, i.e. resources or structures. A reference can be used to access fields and call functions on the referenced object. 
-
-References are created by using the & operator, followed by the object, the as keyword, and the type through which they should be accessed. The given type must be a supertype of the referenced object's type. [More info](https://docs.onflow.org/cadence/language/references/)
+If an expression starts with the `&` (ampersand) symbol, it creates a [reference](references).
 
 ```cadence
 let a: String = "hello"
 let refOfA: &String = &a as &String
 ```
 
-References may also be authorized if the `&` symbol is preceded by `auth` (otherwise the reference is unauthorized)
+References may also be authorized if the `&` symbol is preceded by `auth` (otherwise the reference is unauthorized).
 
-Authorized references have the auth modifier, i.e. the full syntax is `auth &T`, whereas unauthorized references do not have a modifier. Lastly, references are ephemeral, i.e they cannot be stored. [More info](https://docs.onflow.org/cadence/language/references/)
+Authorized references have the `auth` modifier, i.e. the full syntax is `auth &T`,
+whereas unauthorized references do not have a modifier.
 
 ```cadence
 let a: String = "hello"
@@ -32,7 +28,8 @@ let refOfA: &String = &a as auth &String
 
 ### Logical Operator
 
-It can be also used as a logical operator (AND), by appearing twice in succession (i.e. `&&`), similar to the double pipe symbol (`||`, which represents OR):
+It can be also used as a [logical operator (AND)](operators#logical-operators),
+by appearing twice in succession (i.e. `&&`):
 
 ```cadence
 let a = true
@@ -41,11 +38,13 @@ let b = false
 let c = a && b // false
 ```
 
-## @ (at) 
+## `@` (at)
 
-The `@` symbol before a type is used to annotate whether the type is a [resource](https://docs.onflow.org/cadence/language/resources/). Resources must therefore adhere to the resource-specific lifecycle in Cadence (create, destroy, move). [More info](https://docs.onflow.org/cadence/language/resources/).
+The `@` (at) symbol before a type is used to annotate whether the type is a [resource](resources).
 
-The `@` symbol must appear at the beginning of the type, not inside. For example, an array of `NFTs` is `@[NFT]` and not `[@NFT]`. This emphasizes the whole type acts like a resource.
+The `@` symbol must appear at the beginning of the type, not inside.
+For example, an array of `NFT`s is `@[NFT]`, not `[@NFT]`.
+This emphasizes the whole type acts like a resource.
 
 ```cadence
 // Declare a resource named `SomeResource`
@@ -66,10 +65,13 @@ pub fun use(resource: @SomeResource) {
 }
 ```
 
-## : (colon)
+## `:` (colon)
+
+The `:` (colon) symbol has several uses.
 
 ### Type Declaration
-If a colon follows a variable/constant/function declaration, it is used to declare its type.
+
+If a `:` (colon) follows a variable/constant/function declaration, it is used to declare its type.
 
 ```cadence
 let a: Bool = true // declares variable `a` with type `Bool`
@@ -81,25 +83,27 @@ fun addOne(x: Int): Int { // return type of Int
 }
 ```
 
-### Ternary Operator
+### Ternary Conditional Operator
 
-It can also be used in ternary operations to represent the "otherwise" section, such as the following:
+The `:` (colon) is also be used in [ternary operations](operators#ternary-conditional-operator) to represent the "otherwise" section,
+such as the following:
 
 ```cadence
 let a = 1 > 2 ? 3 : 4
-// should be read as: 
+// should be read as:
 //   "is 1 greater than 2?"
 //   "if YES, then set a = 3,
-//   "if NO, then set a = 4.
+//   "otherwise, set a = 4.
 ```
 
-## = (equals)
+## `=` (equals)
 
+The `=` (equals) symbol has several uses.
 
 ### Variable Declaration
 
 ```cadence
-let a = 1 // declares a variable `a` with value `1` 
+let a = 1 // declares a variable `a` with value `1`
 ```
 
 ### Assignment
@@ -108,9 +112,9 @@ let a = 1 // declares a variable `a` with value `1`
 a = 1  // assigns the value `1` to variable `a `
 ```
 
-## ! (exclamation mark)
+## `!` (exclamation mark)
 
-The exclamation mark has a different effect whether it precedes or succeeds a variable.
+The `!` (exclamation mark) symbol has a different effect whether it precedes or succeeds a variable.
 
 When it immediately **precedes** a boolean-type variable, it negates it.
 
@@ -121,7 +125,9 @@ let b: Bool = !a
 // b is false
 ```
 
-When it immediately **succeeds** an *optional* variable, it force-unwraps it. Force-unwrapping returns the value inside an optional if it contains a value, or panics and aborts the execution if the optional has no value, i.e., the optional value is nil. [More info](https://docs.onflow.org/cadence/language/values-and-types/#force-unwrap-)
+When it immediately **succeeds** an *optional* variable, it [force-unwraps](operators#force-unwrap-operator-) it.
+Force-unwrapping returns the value inside an optional if it contains a value,
+or panics and aborts the execution if the optional has no value, i.e. the optional value is nil.
 
 ```cadence
 let a: Int? = nil
@@ -131,43 +137,37 @@ let c: Int = a! // panics, because = nil
 let d: Int = b! // initialized correctly as 3
 ```
 
-## / (forward slash)
+## `/` (forward slash)
 
-The / (forward slash) symbol can be used in two ways: either as a division operator or as a path separator.
+The `/` (forward slash) symbol has several uses.
 
 ### Division Operator
-As a division operator `let a = 1/2`
+
+Inbetween two expressions, the forward slash acts as the [division operator](operators#arithmetic-operators).
 
 ```cadence
-let a: Fix64= 2.0
-let b: Fix64= 3.0
-let c = a / b // = 0.66666666
+let result = 4 / 2
 ```
-[More info](https://docs.onflow.org/cadence/language/values-and-types/#fixed-point-numbers) on division and Fixed point numbers in Cadence.
 
 ### Path separator
 
-In a [Path](https://docs.onflow.org/cadence/language/accounts/#paths), the forward slash separates domain (e.g. `storage`, `private`, `public`) and identifiers (much like in a traditional file store). [More info](https://docs.onflow.org/cadence/language/accounts/#paths)
+In a [Path](accounts#paths), the forward slash separates the domain (e.g. `storage`, `private`, `public`) and the identifier.
 
 ```cadence
 let storagePath = /storage/path
 storagePath.toString()  // is "/storage/path"
 ```
 
-[More info](https://docs.onflow.org/cadence/language/accounts/#paths) on Paths
+## `<-` (lower than, hyphen) (Move operator)
 
-## <- (lower than, hyphen) (Move operator)
-
-The move operator `<-` replaces the assignment operator `=` in assignments that involve resources. To make assignment of resources explicit, the move operator `<-` must be used when:
+The [move operator `<-`](resources#the-move-operator--) is like the assignment operator `=`,
+but must be used when the value is a [resource](resources).
+To make assignment of resources explicit, the move operator `<-` must be used when:
 
 - The resource is the initial value of a constant or variable,
 - The resource is moved to a different variable in an assignment,
 - The resource is moved to a function as an argument
 - The resource is returned from a function.
-
-This is because resources in Cadence are linear types meaning they can only exist in a single place at a time. So the move operator figuratively helps underline that that resource is being moved and will no longer be available in its previous location/state once it is moved.
-
-[More info](https://docs.onflow.org/cadence/language/resources/#the-move-operator--)
 
 ```cadence
 resource R {}
@@ -175,22 +175,11 @@ resource R {}
 let a <- create R() // we instantiate a new resource and move it into a
 ```
 
-Keep in mind that any time resources are involved, the move (or swap) operator must be used, including in Arrays and Dictionaries! [More info](https://docs.onflow.org/cadence/language/resources/#resources-in-arrays-and-dictionaries)
+## `<-!` (lower than, hyphen, exclamation mark) (Force-assignment move operator)
 
-```cadence
-resource R {}
-
-let a <- [
-  <- create R(), // we create a new resource R and move it into the Array
-  <- create R()  // another time
-]
-```
-
-## <-! (lower than, hyphen, exclamation mark) (Force-assignment move operator)
-
-Assigns a resource value to an optional variable if the variable is `nil` (if it is not nil, it aborts)
-
-This is only used for resources, as they use the move operator. [More info](https://docs.onflow.org/cadence/language/values-and-types/#force-assignment-operator--)
+The [force-assignment move operator `<-!`](operators#force-assignment-operator--) moves a resource value to an optional variable.
+If the variable is `nil`, the move succeeds.
+If it is not nil, the program aborts.
 
 ```cadence
 pub resource R {}
@@ -199,33 +188,28 @@ var a: @R? <- nil
 a <-! create R()
 ```
 
-## <-> (lower than, hyphen, greater than) (Swap operator)
+## `<->` (lower than, hyphen, greater than) (Swap operator)
 
-`<->` is referred to as the Swap operator. It swaps values between the variables to the left and right of it. [More info](https://docs.onflow.org/cadence/language/operators/#swapping)
+The [swapping operator `<->`](operators#swapping-operator--) swaps two resource between the variables to the left and right of it.
 
-```cadence
-let a = 1
-let b = 2
 
-a <-> b
-// a = 2
-// b = 1
-```
+## `+` (plus), `-` (minus), `*` (asterisk), `%` (percentage sign)
 
-## + (plus), - (minus), * (asterisk), % (percentage sign)
+These are all typical [arithmetic operators](operators#arithmetic-operators):
 
-These are all typical arithmetic operators. 
+- Addition: `+`
+- Subtraction: `-`
+- Multiplication: `*`
+- Remainder: `%`
 
-- Addition: +
-- Subtraction: -
-- Multiplication: *
-- Remainder: %
+## `?` (question mark)
 
-[More info](https://docs.onflow.org/cadence/language/operators/#arithmetic)
+The `?` (question mark) symbol has several uses.
 
-## ? (question mark)
+### Optional
 
-The ? (question mark) symbol has several uses. If a ? follows a variable/constant, it represents an optional. An optional can either have a value or *nothing at all*. 
+If a `?` (question mark) follows a variable/constant, it represents an optional.
+An optional can either have a value or *nothing at all*.
 
 ```cadence
 // Declare a constant which has an optional integer type
@@ -233,51 +217,25 @@ The ? (question mark) symbol has several uses. If a ? follows a variable/constan
 let a: Int? = nil
 ```
 
-When you see as?, that's a conditional downcasting operator. It can be used to downcast a value to a type. This operator returns an optional, and if the value has a type that is a subtype it will return the value as that type, otherwise it will return `nil`. [More info](https://docs.onflow.org/cadence/language/values-and-types/#conditional-downcasting-operator)
+### Ternary Conditional Operator
 
-```cadence
-// a simple interface that expects a property count
-resource interface HasCount {
-  count : Int
-}
-
-// a Counter resource that conforms to HasCount
-resource Counter: HasCount {
-      pub var count: Int
-
-    pub init(count: Int) {
-        self.count = count
-    }
-}
-
-// set a reference countRef to &counter with the hasCount interface 
-// this is important because ONLY methods in HasCount will be available!
-let countRef: &{HasCount} = &counter as &{HasCount}
-
-// BUT, we could also optionally downcast it to Counter
-let authCountRef: auth &{HasCount} = &counter as auth &{HasCount}
-let countRef2: &Counter = authCountRef as? &Counter
-```
-
-It is a big topic, so best to [read the documentation on it](https://docs.onflow.org/cadence/language/values-and-types/#optionals)
-
-
-It can also be used in ternary operations to represent the "otherwise" section, such as the following:
-
+The `?` (question mark) is also be used in [ternary operations](operators#ternary-conditional-operator) to represent the "then" section,
+such as the following:
 
 ```cadence
 let a = 1 > 2 ? 3 : 4
-// should be read as: 
+// should be read as:
 //   "is 1 greater than 2?"
 //   "if YES, then set a = 3,
-//   "if NO, then set a = 4.
+//   "otherwise, set a = 4.
 ```
 
-It can also be used as a nil-coalescing operator. 
-The nil-coalescing operator `??` returns the value inside an optional if it contains a value, 
-or returns an alternative value if the optional has no value, i.e., the optional value is nil. 
-The nil-coalescing operator can only be applied to values which have an optional type. 
-[More info](https://docs.onflow.org/cadence/language/values-and-types/#nil-coalescing-operator)
+### Nil-Coalescing Operator
+
+The `?` (question mark) is also used in the [nil-coalescing operator `??`](operators#nil-coalescing-operator-).
+
+It returns the value inside the optional, if the optional contains a value,
+or returns an alternative value if the optional has no value, i.e., the optional value is nil.
 
 ```cadence
 // Declare a constant which has an optional integer type
@@ -297,27 +255,30 @@ let b: Int = a ?? 42
 let c = 1 ?? 2
 ```
 
-## _ (underscore)
+## `_` (underscore)
 
 The `_` (underscore) symbol has several uses.
 
-It can be used in variable names, or to split up numerical components.
+### Names
 
-Examples:
+The `_` (underscore) can be used in names, e.g. in variables and types.
 
 ```cadence
-let _a = true // used as a variable name 
+let _a = true // used as a variable name
 let another_one = false
+```
 
-// or
+### Number Literals
 
+The `_` (underscore) can also be used to split up numerical components.
+
+```cadence
 let b = 100_000_000 // used to split up a number (supports all number types, e.g. 0b10_11_01)
 ```
 
-It can also be used to omit the function argument label. 
-Usually argument labels precede the parameter name. 
-The special argument label `_` indicates that a function call can omit the argument label. 
-[More info](https://docs.onflow.org/cadence/language/functions/#function-declarations) 
+### Argument Labels
+
+The `_` (underscore) can also be to indicate that a parameter in a [function](functions) has no argument label.
 
 ```cadence
 // The special argument label _ is specified for the parameter,
@@ -326,6 +287,6 @@ The special argument label `_` indicates that a function call can omit the argum
 fun double(_ x: Int): Int {
     return x * 2
 }
+
+let result = double(4)
 ```
-
-

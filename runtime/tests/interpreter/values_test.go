@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package interpreter
+package interpreter_test
 
 import (
 	"flag"
@@ -58,11 +58,11 @@ func TestRandomMapOperations(t *testing.T) {
 	fmt.Printf("Seed used for map opearations test: %d \n", seed)
 	rand.Seed(seed)
 
-	storage := interpreter.NewInMemoryStorage()
+	storage := newUnmeteredInMemoryStorage()
 	inter, err := interpreter.NewInterpreter(
 		&interpreter.Program{
-			Program:     ast.NewProgram([]ast.Declaration{}),
-			Elaboration: sema.NewElaboration(),
+			Program:     ast.NewProgram(nil, []ast.Declaration{}),
+			Elaboration: sema.NewElaboration(nil, false),
 		},
 		utils.TestLocation,
 		interpreter.WithStorage(storage),
@@ -100,6 +100,7 @@ func TestRandomMapOperations(t *testing.T) {
 
 		testMap = interpreter.NewDictionaryValueWithAddress(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -130,7 +131,7 @@ func TestRandomMapOperations(t *testing.T) {
 	t.Run("iterate", func(t *testing.T) {
 		require.Equal(t, testMap.Count(), entries.size())
 
-		testMap.Iterate(func(key, value interpreter.Value) (resume bool) {
+		testMap.Iterate(inter, func(key, value interpreter.Value) (resume bool) {
 			orgValue, ok := entries.get(inter, key)
 			require.True(t, ok, "cannot find key: %v", key)
 
@@ -199,6 +200,7 @@ func TestRandomMapOperations(t *testing.T) {
 
 		dictionary := interpreter.NewDictionaryValueWithAddress(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -247,6 +249,7 @@ func TestRandomMapOperations(t *testing.T) {
 
 		dictionary := interpreter.NewDictionaryValueWithAddress(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -294,6 +297,7 @@ func TestRandomMapOperations(t *testing.T) {
 
 		dictionary := interpreter.NewDictionaryValueWithAddress(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -358,6 +362,7 @@ func TestRandomMapOperations(t *testing.T) {
 
 		dictionary := interpreter.NewDictionaryValueWithAddress(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -447,6 +452,7 @@ func TestRandomMapOperations(t *testing.T) {
 
 		dictionary := interpreter.NewDictionaryValueWithAddress(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -497,11 +503,11 @@ func TestRandomArrayOperations(t *testing.T) {
 	fmt.Printf("Seed used for array opearations test: %d \n", seed)
 	rand.Seed(seed)
 
-	storage := interpreter.NewInMemoryStorage()
+	storage := newUnmeteredInMemoryStorage()
 	inter, err := interpreter.NewInterpreter(
 		&interpreter.Program{
-			Program:     ast.NewProgram([]ast.Declaration{}),
-			Elaboration: sema.NewElaboration(),
+			Program:     ast.NewProgram(nil, []ast.Declaration{}),
+			Elaboration: sema.NewElaboration(nil, false),
 		},
 		utils.TestLocation,
 		interpreter.WithStorage(storage),
@@ -533,6 +539,7 @@ func TestRandomArrayOperations(t *testing.T) {
 
 		testArray = interpreter.NewArrayValue(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -557,7 +564,7 @@ func TestRandomArrayOperations(t *testing.T) {
 		require.Equal(t, testArray.Count(), len(elements))
 
 		index := 0
-		testArray.Iterate(func(element interpreter.Value) (resume bool) {
+		testArray.Iterate(inter, func(element interpreter.Value) (resume bool) {
 			orgElement := elements[index]
 			utils.AssertValuesEqual(t, inter, orgElement, element)
 
@@ -617,6 +624,7 @@ func TestRandomArrayOperations(t *testing.T) {
 
 		testArray = interpreter.NewArrayValue(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -651,6 +659,7 @@ func TestRandomArrayOperations(t *testing.T) {
 
 		testArray = interpreter.NewArrayValue(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -688,6 +697,7 @@ func TestRandomArrayOperations(t *testing.T) {
 
 		testArray = interpreter.NewArrayValue(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -738,6 +748,7 @@ func TestRandomArrayOperations(t *testing.T) {
 
 		testArray = interpreter.NewArrayValue(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -808,6 +819,7 @@ func TestRandomArrayOperations(t *testing.T) {
 
 		array := interpreter.NewArrayValue(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -855,11 +867,11 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 	fmt.Printf("Seed used for compsoite opearations test: %d \n", seed)
 	rand.Seed(seed)
 
-	storage := interpreter.NewInMemoryStorage()
+	storage := newUnmeteredInMemoryStorage()
 	inter, err := interpreter.NewInterpreter(
 		&interpreter.Program{
-			Program:     ast.NewProgram([]ast.Declaration{}),
-			Elaboration: sema.NewElaboration(),
+			Program:     ast.NewProgram(nil, []ast.Declaration{}),
+			Elaboration: sema.NewElaboration(nil, false),
 		},
 		utils.TestLocation,
 		interpreter.WithStorage(storage),
@@ -896,7 +908,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 
 	t.Run("iterate", func(t *testing.T) {
 		fieldCount := 0
-		testComposite.ForEachField(func(name string, value interpreter.Value) {
+		testComposite.ForEachField(inter, func(name string, value interpreter.Value) {
 			orgValue, ok := orgFields[name]
 			require.True(t, ok)
 			utils.AssertValuesEqual(t, inter, orgValue, value)
@@ -1013,7 +1025,7 @@ func newCompositeValue(
 
 	fields := make([]interpreter.CompositeField, fieldsCount)
 
-	fieldNames := make(map[string]interface{}, fieldsCount)
+	fieldNames := make(map[string]any, fieldsCount)
 
 	for i := 0; i < fieldsCount; {
 		fieldName := randomUTF8String()
@@ -1024,10 +1036,10 @@ func newCompositeValue(
 		}
 		fieldNames[fieldName] = struct{}{}
 
-		field := interpreter.CompositeField{
-			Name:  fieldName,
-			Value: randomStorableValue(inter, 0),
-		}
+		field := interpreter.NewUnmeteredCompositeField(
+			fieldName,
+			randomStorableValue(inter, 0),
+		)
 
 		fields[i] = field
 		orgFields[field.Name] = deepCopyValue(inter, field.Value)
@@ -1043,11 +1055,11 @@ func newCompositeValue(
 		Kind:       kind,
 	}
 
-	compositeType.Members = sema.NewStringMemberOrderedMap()
+	compositeType.Members = &sema.StringMemberOrderedMap{}
 	for _, field := range fields {
 		compositeType.Members.Set(
 			field.Name,
-			sema.NewPublicConstantFieldMember(
+			sema.NewUnmeteredPublicConstantFieldMember(
 				compositeType,
 				field.Name,
 				sema.AnyStructType,
@@ -1061,6 +1073,7 @@ func newCompositeValue(
 
 	testComposite := interpreter.NewCompositeValue(
 		inter,
+		interpreter.ReturnEmptyLocationRange,
 		location,
 		identifier,
 		kind,
@@ -1094,7 +1107,7 @@ func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) inte
 	case interpreter.IntValue:
 		var n big.Int
 		n.Set(v.BigInt)
-		return interpreter.NewIntValueFromBigInt(&n)
+		return interpreter.NewUnmeteredIntValueFromBigInt(&n)
 	case interpreter.Int8Value,
 		interpreter.Int16Value,
 		interpreter.Int32Value,
@@ -1103,17 +1116,17 @@ func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) inte
 	case interpreter.Int128Value:
 		var n big.Int
 		n.Set(v.BigInt)
-		return interpreter.NewInt128ValueFromBigInt(&n)
+		return interpreter.NewUnmeteredInt128ValueFromBigInt(&n)
 	case interpreter.Int256Value:
 		var n big.Int
 		n.Set(v.BigInt)
-		return interpreter.NewInt256ValueFromBigInt(&n)
+		return interpreter.NewUnmeteredInt256ValueFromBigInt(&n)
 
 	// Uint
 	case interpreter.UIntValue:
 		var n big.Int
 		n.Set(v.BigInt)
-		return interpreter.NewUIntValueFromBigInt(&n)
+		return interpreter.NewUnmeteredUIntValueFromBigInt(&n)
 	case interpreter.UInt8Value,
 		interpreter.UInt16Value,
 		interpreter.UInt32Value,
@@ -1122,11 +1135,11 @@ func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) inte
 	case interpreter.UInt128Value:
 		var n big.Int
 		n.Set(v.BigInt)
-		return interpreter.NewUInt128ValueFromBigInt(&n)
+		return interpreter.NewUnmeteredUInt128ValueFromBigInt(&n)
 	case interpreter.UInt256Value:
 		var n big.Int
 		n.Set(v.BigInt)
-		return interpreter.NewUInt256ValueFromBigInt(&n)
+		return interpreter.NewUnmeteredUInt256ValueFromBigInt(&n)
 
 	case interpreter.Word8Value,
 		interpreter.Word16Value,
@@ -1138,17 +1151,17 @@ func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) inte
 		b := []byte(v.Str)
 		data := make([]byte, len(b))
 		copy(data, b)
-		return interpreter.NewStringValue(string(data))
+		return interpreter.NewUnmeteredStringValue(string(data))
 
 	case interpreter.AddressValue:
 		b := v[:]
 		data := make([]byte, len(b))
 		copy(data, b)
-		return interpreter.NewAddressValueFromBytes(data)
+		return interpreter.NewUnmeteredAddressValueFromBytes(data)
 	case interpreter.Fix64Value:
-		return interpreter.NewFix64ValueWithInteger(int64(v.ToInt()))
+		return interpreter.NewUnmeteredFix64ValueWithInteger(int64(v.ToInt()))
 	case interpreter.UFix64Value:
-		return interpreter.NewUFix64ValueWithInteger(uint64(v.ToInt()))
+		return interpreter.NewUnmeteredUFix64ValueWithInteger(uint64(v.ToInt()))
 
 	case interpreter.PathValue:
 		return interpreter.PathValue{
@@ -1164,7 +1177,7 @@ func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) inte
 
 	case *interpreter.DictionaryValue:
 		keyValues := make([]interpreter.Value, 0, v.Count()*2)
-		v.Iterate(func(key, value interpreter.Value) (resume bool) {
+		v.Iterate(inter, func(key, value interpreter.Value) (resume bool) {
 			keyValues = append(keyValues, deepCopyValue(inter, key))
 			keyValues = append(keyValues, deepCopyValue(inter, value))
 			return true
@@ -1172,6 +1185,7 @@ func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) inte
 
 		return interpreter.NewDictionaryValueWithAddress(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			interpreter.DictionaryStaticType{
 				KeyType:   v.Type.KeyType,
 				ValueType: v.Type.ValueType,
@@ -1181,28 +1195,30 @@ func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) inte
 		)
 	case *interpreter.ArrayValue:
 		elements := make([]interpreter.Value, 0, v.Count())
-		v.Iterate(func(value interpreter.Value) (resume bool) {
+		v.Iterate(inter, func(value interpreter.Value) (resume bool) {
 			elements = append(elements, deepCopyValue(inter, value))
 			return true
 		})
 
 		return interpreter.NewArrayValue(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			v.Type,
 			v.GetOwner(),
 			elements...,
 		)
 	case *interpreter.CompositeValue:
 		fields := make([]interpreter.CompositeField, 0)
-		v.ForEachField(func(name string, value interpreter.Value) {
-			fields = append(fields, interpreter.CompositeField{
-				Name:  name,
-				Value: deepCopyValue(inter, value),
-			})
+		v.ForEachField(inter, func(name string, value interpreter.Value) {
+			fields = append(fields, interpreter.NewUnmeteredCompositeField(
+				name,
+				deepCopyValue(inter, value),
+			))
 		})
 
 		return interpreter.NewCompositeValue(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			v.Location,
 			v.QualifiedIdentifier,
 			v.Kind,
@@ -1218,7 +1234,7 @@ func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) inte
 		}
 	case *interpreter.SomeValue:
 		innerValue := v.InnerValue(inter, interpreter.ReturnEmptyLocationRange)
-		return interpreter.NewSomeValueNonCopying(deepCopyValue(inter, innerValue))
+		return interpreter.NewUnmeteredSomeValueNonCopying(deepCopyValue(inter, innerValue))
 	case interpreter.NilValue:
 		return interpreter.NilValue{}
 	default:
@@ -1257,7 +1273,7 @@ func randomStorableValue(inter *interpreter.Interpreter, currentDepth int) inter
 			},
 		}
 	case Some:
-		return interpreter.NewSomeValueNonCopying(
+		return interpreter.NewUnmeteredSomeValueNonCopying(
 			randomStorableValue(inter, currentDepth+1),
 		)
 
@@ -1276,51 +1292,51 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpre
 
 	// Int
 	case Int:
-		return interpreter.NewIntValueFromInt64(int64(sign()) * rand.Int63())
+		return interpreter.NewUnmeteredIntValueFromInt64(int64(sign()) * rand.Int63())
 	case Int8:
-		return interpreter.Int8Value(randomInt(math.MaxUint8))
+		return interpreter.NewUnmeteredInt8Value(int8(randomInt(math.MaxUint8)))
 	case Int16:
-		return interpreter.Int16Value(randomInt(math.MaxUint16))
+		return interpreter.NewUnmeteredInt16Value(int16(randomInt(math.MaxUint16)))
 	case Int32:
-		return interpreter.Int32Value(int32(sign()) * rand.Int31())
+		return interpreter.NewUnmeteredInt32Value(int32(sign()) * rand.Int31())
 	case Int64:
-		return interpreter.Int64Value(int64(sign()) * rand.Int63())
+		return interpreter.NewUnmeteredInt64Value(int64(sign()) * rand.Int63())
 	case Int128:
-		return interpreter.NewInt128ValueFromInt64(int64(sign()) * rand.Int63())
+		return interpreter.NewUnmeteredInt128ValueFromInt64(int64(sign()) * rand.Int63())
 	case Int256:
-		return interpreter.NewInt256ValueFromInt64(int64(sign()) * rand.Int63())
+		return interpreter.NewUnmeteredInt256ValueFromInt64(int64(sign()) * rand.Int63())
 
 	// UInt
 	case UInt:
-		return interpreter.NewUIntValueFromUint64(rand.Uint64())
+		return interpreter.NewUnmeteredUIntValueFromUint64(rand.Uint64())
 	case UInt8:
-		return interpreter.UInt8Value(randomInt(math.MaxUint8))
+		return interpreter.NewUnmeteredUInt8Value(uint8(randomInt(math.MaxUint8)))
 	case UInt16:
-		return interpreter.UInt16Value(randomInt(math.MaxUint16))
+		return interpreter.NewUnmeteredUInt16Value(uint16(randomInt(math.MaxUint16)))
 	case UInt32:
-		return interpreter.UInt32Value(rand.Uint32())
+		return interpreter.NewUnmeteredUInt32Value(rand.Uint32())
 	case UInt64_1, UInt64_2, UInt64_3, UInt64_4: // should be more common
-		return interpreter.UInt64Value(rand.Uint64())
+		return interpreter.NewUnmeteredUInt64Value(rand.Uint64())
 	case UInt128:
-		return interpreter.NewUInt128ValueFromUint64(rand.Uint64())
+		return interpreter.NewUnmeteredUInt128ValueFromUint64(rand.Uint64())
 	case UInt256:
-		return interpreter.NewUInt256ValueFromUint64(rand.Uint64())
+		return interpreter.NewUnmeteredUInt256ValueFromUint64(rand.Uint64())
 
 	// Word
 	case Word8:
-		return interpreter.Word8Value(randomInt(math.MaxUint8))
+		return interpreter.NewUnmeteredWord8Value(uint8(randomInt(math.MaxUint8)))
 	case Word16:
-		return interpreter.Word16Value(randomInt(math.MaxUint16))
+		return interpreter.NewUnmeteredWord16Value(uint16(randomInt(math.MaxUint16)))
 	case Word32:
-		return interpreter.Word32Value(rand.Uint32())
+		return interpreter.NewUnmeteredWord32Value(rand.Uint32())
 	case Word64:
-		return interpreter.Word64Value(rand.Uint64())
+		return interpreter.NewUnmeteredWord64Value(rand.Uint64())
 
 	// Fixed point
 	case Fix64:
-		return interpreter.NewFix64ValueWithInteger(int64(sign()) * rand.Int63n(sema.Fix64TypeMaxInt))
+		return interpreter.NewUnmeteredFix64ValueWithInteger(int64(sign()) * rand.Int63n(sema.Fix64TypeMaxInt))
 	case UFix64:
-		return interpreter.NewUFix64ValueWithInteger(
+		return interpreter.NewUnmeteredUFix64ValueWithInteger(
 			uint64(rand.Int63n(
 				int64(sema.UFix64TypeMaxInt),
 			)),
@@ -1329,10 +1345,10 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpre
 	// String
 	case String_1, String_2, String_3, String_4: // small string - should be more common
 		size := randomInt(255)
-		return interpreter.NewStringValue(randomUTF8StringOfSize(size))
+		return interpreter.NewUnmeteredStringValue(randomUTF8StringOfSize(size))
 	case String_5: // large string
 		size := randomInt(4048) + 255
-		return interpreter.NewStringValue(randomUTF8StringOfSize(size))
+		return interpreter.NewUnmeteredStringValue(randomUTF8StringOfSize(size))
 
 	case Bool_True:
 		return interpreter.BoolValue(true)
@@ -1372,6 +1388,7 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpre
 
 		enum := interpreter.NewCompositeValue(
 			inter,
+			interpreter.ReturnEmptyLocationRange,
 			location,
 			enumType.QualifiedIdentifier(),
 			enumType.Kind,
@@ -1406,7 +1423,7 @@ func sign() int {
 func randomAddressValue() interpreter.AddressValue {
 	data := make([]byte, 8)
 	rand.Read(data)
-	return interpreter.NewAddressValueFromBytes(data)
+	return interpreter.NewUnmeteredAddressValueFromBytes(data)
 }
 
 func randomPathValue() interpreter.PathValue {
@@ -1436,6 +1453,7 @@ func randomDictionaryValue(
 
 	return interpreter.NewDictionaryValueWithAddress(
 		inter,
+		interpreter.ReturnEmptyLocationRange,
 		interpreter.DictionaryStaticType{
 			KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 			ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -1460,6 +1478,7 @@ func randomArrayValue(inter *interpreter.Interpreter, currentDepth int) interpre
 
 	return interpreter.NewArrayValue(
 		inter,
+		interpreter.ReturnEmptyLocationRange,
 		interpreter.VariableSizedStaticType{
 			Type: interpreter.PrimitiveStaticTypeAnyStruct,
 		},
@@ -1490,10 +1509,10 @@ func randomCompositeValue(
 	for i := 0; i < fieldsCount; i++ {
 		fieldName := randomUTF8String()
 
-		fields[i] = interpreter.CompositeField{
-			Name:  fieldName,
-			Value: randomStorableValue(inter, currentDepth+1),
-		}
+		fields[i] = interpreter.NewUnmeteredCompositeField(
+			fieldName,
+			randomStorableValue(inter, currentDepth+1),
+		)
 	}
 
 	compositeType := &sema.CompositeType{
@@ -1502,11 +1521,11 @@ func randomCompositeValue(
 		Kind:       kind,
 	}
 
-	compositeType.Members = sema.NewStringMemberOrderedMap()
+	compositeType.Members = &sema.StringMemberOrderedMap{}
 	for _, field := range fields {
 		compositeType.Members.Set(
 			field.Name,
-			sema.NewPublicConstantFieldMember(
+			sema.NewUnmeteredPublicConstantFieldMember(
 				compositeType,
 				field.Name,
 				sema.AnyStructType, // TODO: handle resources
@@ -1520,6 +1539,7 @@ func randomCompositeValue(
 
 	return interpreter.NewCompositeValue(
 		inter,
+		interpreter.ReturnEmptyLocationRange,
 		location,
 		identifier,
 		kind,
@@ -1634,14 +1654,14 @@ const (
 )
 
 type valueMap struct {
-	values map[interface{}]interpreter.Value
-	keys   map[interface{}]interpreter.Value
+	values map[any]interpreter.Value
+	keys   map[any]interpreter.Value
 }
 
 func newValueMap(size int) *valueMap {
 	return &valueMap{
-		values: make(map[interface{}]interpreter.Value, size),
-		keys:   make(map[interface{}]interpreter.Value, size),
+		values: make(map[any]interpreter.Value, size),
+		keys:   make(map[any]interpreter.Value, size),
 	}
 }
 
@@ -1682,7 +1702,7 @@ func (m *valueMap) foreach(apply func(key, value interpreter.Value) (exit bool))
 	}
 }
 
-func (m *valueMap) internalKey(inter *interpreter.Interpreter, key interpreter.Value) interface{} {
+func (m *valueMap) internalKey(inter *interpreter.Interpreter, key interpreter.Value) any {
 	switch key := key.(type) {
 	case *interpreter.StringValue:
 		return *key
