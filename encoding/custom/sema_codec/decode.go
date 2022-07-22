@@ -701,7 +701,7 @@ func (d *SemaDecoder) DecodeStringTypeOrderedMap() (om *sema.StringTypeOrderedMa
 		return
 	}
 
-	om =  &sema.StringTypeOrderedMap{}
+	om = &sema.StringTypeOrderedMap{}
 
 	for i := 0; i < length; i++ {
 		var key string

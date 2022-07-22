@@ -659,7 +659,6 @@ type GenericType struct {
 
 var _ Type = &GenericType{}
 
-
 func (*GenericType) IsType() {}
 
 func (t *GenericType) Tag() TypeTag {

@@ -495,9 +495,9 @@ func TestSemaCodecMiscTypes(t *testing.T) {
 			[]byte{byte(sema_codec.EncodedSemaRestrictedType)},
 			[]byte{byte(sema_codec.EncodedSemaNumericTypeIntType)},
 			[]byte{byte(sema_codec.EncodedBoolFalse)}, // array is not nil
-			[]byte{0, 0, 0, 1},                      // array length
+			[]byte{0, 0, 0, 1}, // array length
 			Concat([]byte{'s'}, location[:]),
-			[]byte{0, 0, 0, 6}, []byte("peaked"),    // identifier
+			[]byte{0, 0, 0, 6}, []byte("peaked"), // identifier
 			[]byte{byte(common.CompositeKindContract)},
 			[]byte{byte(sema_codec.EncodedBoolTrue)},                    // members is nil
 			[]byte{byte(sema_codec.EncodedBoolTrue)},                    // fields is nil
