@@ -79,7 +79,9 @@ func NewSemaEncoder(w io.Writer) *SemaEncoder {
 // by this encoder.
 func (e *SemaEncoder) Encode(t sema.Type) (err error) {
 	defer func() {
-		err = capturePanic("failed to encode sema type: %w")
+		if panicErr := capturePanic("failed to encode sema type: %w"); panicErr != nil {
+			err = panicErr
+		}
 	}()
 
 	return e.EncodeType(t)
@@ -89,7 +91,9 @@ func (e *SemaEncoder) Encode(t sema.Type) (err error) {
 // The rest of the Elaboration is NOT serialized because they are not needed for encoding external values.
 func (e *SemaEncoder) EncodeElaboration(el *sema.Elaboration) (err error) {
 	defer func() {
-		err = capturePanic("failed to encode elaboration: %w")
+		if panicErr := capturePanic("failed to encode elaboration: %w"); panicErr != nil {
+			err = panicErr
+		}
 	}()
 
 	err = EncodeMap(e, el.CompositeTypes, e.EncodeCompositeType)

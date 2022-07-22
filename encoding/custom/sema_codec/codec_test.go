@@ -553,7 +553,7 @@ func TestSemaCodecBadTypes(t *testing.T) {
 	t.Run("unknown type", func(t *testing.T) {
 		_, decoder, buffer := NewTestCodec()
 
-		fakeType := byte(255)
+		fakeType := byte(0xff)
 		buffer.Write([]byte{fakeType})
 
 		_, err := decoder.Decode()
