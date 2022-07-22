@@ -284,7 +284,7 @@ func isFixedPointNumericType(encodedSema EncodedSema) bool {
 }
 
 func (e *SemaEncoder) EncodeSimpleType(t *sema.SimpleType) (err error) {
-	subType := EncodedSemaUnknown
+	var subType EncodedSema
 
 	switch t {
 	case sema.AnyType:
@@ -449,7 +449,7 @@ func (e *SemaEncoder) EncodeGenericType(t *sema.GenericType) (err error) {
 }
 
 func (e *SemaEncoder) EncodeNumericType(t *sema.NumericType) (err error) {
-	numericType := EncodedSemaUnknown
+	var numericType EncodedSema
 
 	switch t {
 	case sema.NumberType:
@@ -508,7 +508,7 @@ func (e *SemaEncoder) EncodeNumericType(t *sema.NumericType) (err error) {
 }
 
 func (e *SemaEncoder) EncodeFixedPointNumericType(t *sema.FixedPointNumericType) (err error) {
-	fixedPointNumericType := EncodedSemaUnknown
+	var fixedPointNumericType EncodedSema
 
 	switch t {
 	case sema.Fix64Type:
@@ -1056,7 +1056,8 @@ func EncodeMap[V sema.Type](e *SemaEncoder, m map[common.TypeID]V, encodeFn func
 		return
 	}
 
-	for k, v := range m {
+	// The order of encoded key-value pairs does not matter so long as we don't rely on hashing encoded Elaborations.
+	for k, v := range m { //nolint:maprangecheck
 		err = e.EncodeString(string(k))
 		if err != nil {
 			return
