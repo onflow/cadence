@@ -125,10 +125,11 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 					},
 				)
 			} else if checker.extendedElaboration {
-				checker.Elaboration.RuntimeCastTypes[expression] = struct {
-					Left  Type
-					Right Type
-				}{Left: leftHandType, Right: rightHandType}
+				checker.Elaboration.RuntimeCastTypes[expression] =
+					RuntimeCastTypes{
+						Left:  leftHandType,
+						Right: rightHandType,
+					}
 			}
 		}
 
@@ -144,11 +145,12 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 		// Then, it is not possible to determine whether the target type is redundant.
 		// Therefore, don't check for redundant casts, if there are errors.
 		if checker.extendedElaboration && !hasErrors {
-			checker.Elaboration.StaticCastTypes[expression] = CastType{
-				ExprActualType: exprActualType,
-				TargetType:     rightHandType,
-				ExpectedType:   checker.expectedType,
-			}
+			checker.Elaboration.StaticCastTypes[expression] =
+				CastTypes{
+					ExprActualType: exprActualType,
+					TargetType:     rightHandType,
+					ExpectedType:   checker.expectedType,
+				}
 		}
 
 		return rightHandType
