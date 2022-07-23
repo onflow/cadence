@@ -602,6 +602,12 @@ func (d *SemaDecoder) DecodeInterfaceType() (t *sema.InterfaceType, err error) {
 	}
 	t.SetContainerType(containerType)
 
+	nestedTypes, err := d.DecodeStringTypeOrderedMap()
+	if err != nil {
+		return
+	}
+	t.SetNestedTypes(nestedTypes)
+
 	return
 }
 

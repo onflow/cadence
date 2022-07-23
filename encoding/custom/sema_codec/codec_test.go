@@ -1029,9 +1029,15 @@ func TestSemaCodecInterfaceType(t *testing.T) {
 			InitializerParameters: parameters,
 		}
 
-		// TODO container type
+		empty := &sema.InterfaceType{
+			Members: &sema.StringMemberOrderedMap{},
+		}
 
-		// TODO nested types
+		interfaceType.SetContainerType(empty)
+
+		nestedTypes := &sema.StringTypeOrderedMap{}
+		nestedTypes.Set("none", empty)
+		interfaceType.SetNestedTypes(nestedTypes)
 
 		encoder, decoder, buffer := NewTestCodec()
 
@@ -1082,9 +1088,22 @@ func TestSemaCodecInterfaceType(t *testing.T) {
 			[]byte(parameters[0].Identifier),
 			[]byte{byte(sema_codec.EncodedBoolTrue)},
 
-			[]byte{byte(sema_codec.EncodedSemaNilType)}, // no container type
+			[]byte{byte(sema_codec.EncodedSemaInterfaceType)}, // container type is empty interface
+			[]byte{sema_codec.NilLocationPrefix[0]},
+			[]byte{0, 0, 0, 0},
+			[]byte{byte(common.CompositeKindUnknown)},
+			[]byte{byte(sema_codec.EncodedBoolFalse)},
+			[]byte{0, 0, 0, 0},
+			[]byte{byte(sema_codec.EncodedBoolTrue)},
+			[]byte{byte(sema_codec.EncodedBoolTrue)},
+			[]byte{byte(sema_codec.EncodedSemaNilType)},
+			[]byte{byte(sema_codec.EncodedBoolTrue)},
 
-			[]byte{byte(sema_codec.EncodedBoolTrue)}, // no nested types
+			[]byte{byte(sema_codec.EncodedBoolFalse)}, // nested type
+			[]byte{0, 0, 0, 1},
+			[]byte{0, 0, 0, 4},
+			[]byte("none"),
+			[]byte{byte(sema_codec.EncodedSemaPointerType), 0, 0, 0, 0xb4}, // nested type is also container type
 		)
 
 		assert.Equal(t, expected, buffer.Bytes(), "encoded bytes differ")
@@ -1116,7 +1135,8 @@ func TestSemaCodecInterfaceType(t *testing.T) {
 
 			assert.Equal(t, parameters, i.InitializerParameters, "parameters")
 
-			assert.Nil(t, i.GetContainerType(), "container type")
+			assert.Equal(t, i.GetContainerType(), empty, "container type")
+			assert.Equal(t, i.GetNestedTypes(), nestedTypes, "nested types")
 		default:
 			assert.Fail(t, "Decoded type is not *sema.InterfaceType")
 		}
