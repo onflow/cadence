@@ -22,6 +22,11 @@
 package test
 
 import (
+	sdk "github.com/onflow/flow-go-sdk"
+	"github.com/onflow/flow-go-sdk/crypto"
+	"github.com/onflow/flow-go-sdk/test"
+	fvmCrypto "github.com/onflow/flow-go/fvm/crypto"
+
 	emulator "github.com/onflow/flow-emulator"
 
 	"github.com/onflow/cadence/runtime"
@@ -78,6 +83,110 @@ func (e *EmulatorBackend) RunScript(code string) interpreter.ScriptResult {
 	return interpreter.ScriptResult{
 		Value: value,
 	}
+}
+
+func (e EmulatorBackend) CreateAccount() *interpreter.Account {
+	keyGen := test.AccountKeyGenerator()
+	accountKey, signer := keyGen.NewWithSigner()
+
+	// This relies on flow-go-sdk/test returning an `InMemorySigner`.
+	// TODO: Maybe copy over the code for `AccountKeyGenerator`.
+	inMemSigner := signer.(crypto.InMemorySigner)
+
+	address, err := e.blockchain.CreateAccount([]*sdk.AccountKey{accountKey}, nil)
+	if err != nil {
+		panic(err)
+	}
+
+	return &interpreter.Account{
+		Address: common.Address(address),
+		AccountKey: &interpreter.AccountKey{
+			KeyIndex: accountKey.Index,
+			PublicKey: &interpreter.PublicKey{
+				PublicKey: accountKey.PublicKey.Encode(),
+				SignAlgo:  fvmCrypto.CryptoToRuntimeSigningAlgorithm(accountKey.PublicKey.Algorithm()),
+			},
+			HashAlgo:  fvmCrypto.CryptoToRuntimeHashingAlgorithm(accountKey.HashAlgo),
+			Weight:    accountKey.Weight,
+			IsRevoked: accountKey.Revoked,
+		},
+		PrivateKey: inMemSigner.PrivateKey.Encode(),
+	}
+}
+
+func (e *EmulatorBackend) AddTransaction(
+	code string,
+	authorizer common.Address,
+	signers []*interpreter.Account,
+) {
+
+	tx := e.newTransaction(code, authorizer)
+
+	err := e.signTransaction(tx, signers)
+	if err != nil {
+		panic(err)
+	}
+
+	err = e.blockchain.AddTransaction(*tx)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (e *EmulatorBackend) newTransaction(code string, authorizer common.Address) *sdk.Transaction {
+	serviceKey := e.blockchain.ServiceKey()
+
+	tx := sdk.NewTransaction().
+		SetScript([]byte(code)).
+		SetProposalKey(serviceKey.Address, serviceKey.Index, serviceKey.SequenceNumber).
+		SetPayer(serviceKey.Address).
+		AddAuthorizer(sdk.Address(authorizer))
+
+	return tx
+}
+
+func (e *EmulatorBackend) signTransaction(
+	tx *sdk.Transaction,
+	signerAccounts []*interpreter.Account,
+) error {
+
+	// Sign transaction with each signer
+	// Note: This code is borrowed from the flow-go-sdk.
+
+	for i := len(signerAccounts) - 1; i >= 0; i-- {
+		signerAccount := signerAccounts[i]
+
+		signAlgo := fvmCrypto.RuntimeToCryptoSigningAlgorithm(signerAccount.AccountKey.PublicKey.SignAlgo)
+		privateKey, err := crypto.DecodePrivateKey(signAlgo, signerAccount.PrivateKey)
+		if err != nil {
+			return err
+		}
+
+		hashAlgo := fvmCrypto.RuntimeToCryptoHashingAlgorithm(signerAccount.AccountKey.HashAlgo)
+		signer, err := crypto.NewInMemorySigner(privateKey, hashAlgo)
+
+		if i == 0 {
+			err = tx.SignEnvelope(sdk.Address(signerAccount.Address), 0, signer)
+		} else {
+			err = tx.SignPayload(sdk.Address(signerAccount.Address), 0, signer)
+		}
+
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (e *EmulatorBackend) ExecuteNextTransaction() interpreter.TransactionResult {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (e *EmulatorBackend) CommitBlock() {
+	//TODO implement me
+	panic("implement me")
 }
 
 // newBlockchain returns an emulator blockchain for testing.

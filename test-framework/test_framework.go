@@ -297,6 +297,13 @@ func (r *TestRunner) interpreterOptions(ctx runtime.Context) []interpreter.Optio
 				return constructorGenerator(common.Address{})
 			}
 		}),
+		interpreter.WithPublicAccountHandler(func(
+			inter *interpreter.Interpreter,
+			address interpreter.AddressValue,
+		) interpreter.Value {
+			// TODO:
+			return nil
+		}),
 	}
 }
 

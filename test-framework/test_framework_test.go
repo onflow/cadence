@@ -358,3 +358,47 @@ func TestUsingEnv(t *testing.T) {
 		assert.NoError(t, err)
 	})
 }
+
+func TestCreateAccount(t *testing.T) {
+	t.Parallel()
+
+	code := `
+        import Test
+
+        pub fun test() {
+            var blockchain = Test.newEmulatorBlockchain()
+            var account = blockchain.createAccount()
+        }
+    `
+
+	runner := NewTestRunner()
+	err := runner.RunTest(code, "test")
+	assert.NoError(t, err)
+}
+
+func TestExecutingTransactions(t *testing.T) {
+	t.Parallel()
+
+	t.Run("add transaction", func(t *testing.T) {
+		code := `
+            import Test
+
+            pub fun test() {
+                var blockchain = Test.newEmulatorBlockchain()
+                var account = blockchain.createAccount()
+
+                let tx = Test.Transaction(
+                    "transaction { execute{ assert(false) } }",
+                    account.address,
+                    [account]
+                )
+
+                blockchain.addTransaction(tx)
+            }
+        `
+
+		runner := NewTestRunner()
+		err := runner.RunTest(code, "test")
+		assert.NoError(t, err)
+	})
+}

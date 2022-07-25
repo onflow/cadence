@@ -16,9 +16,13 @@ pub contract Test {
             return self.backend.executeScript(script)
         }
 
-        //pub fun addTransaction(_ transaction: Transaction) {
-        //    self.backend.addTransaction(transaction)
-        //}
+        pub fun createAccount(): Account {
+            return self.backend.createAccount()
+        }
+
+        pub fun addTransaction(_ tx: Transaction) {
+            self.backend.addTransaction(tx)
+        }
 
         /// Executes the next transaction, if any.
         /// Returns the result of the transaction, or nil if no transaction was scheduled.
@@ -68,7 +72,7 @@ pub contract Test {
     }
 
     pub struct ScriptResult {
-        pub let status: ResultStatus
+        pub let status:      ResultStatus
         pub let returnValue: AnyStruct?
 
         init(_ status: ResultStatus, _ returnValue: AnyStruct?) {
@@ -77,16 +81,42 @@ pub contract Test {
         }
     }
 
+    pub struct Account {
+        pub let address:    Address
+        pub let accountKey: AccountKey
+        pub let privateKey: [UInt8]
+
+        init(_ address: Address, _ accountKey: AccountKey, _ privateKey: [UInt8]) {
+            self.address = address
+            self.accountKey = accountKey
+            self.privateKey = privateKey
+        }
+    }
+
+    pub struct Transaction {
+        pub let code:       String
+        pub let authorizer: Address
+        pub let signers:    [Account]
+
+        init(_ code: String, _ authorizer: Address, _ signers: [Account]) {
+            self.code = code
+            self.authorizer = authorizer
+            self.signers = signers
+        }
+    }
+
     // BlockchainBackend is the interface to be implemented by the backend providers.
     //
     pub struct interface BlockchainBackend {
 
-        // fun addTransaction(_ transaction: Transaction)
+        pub fun executeScript(_ script: String): ScriptResult
+
+        pub fun createAccount(): Account
+
+        pub fun addTransaction(_ transaction: Transaction)
 
         // fun executeNextTransaction(): TransactionResult?
 
         // fun commitBlock()
-
-        pub fun executeScript(_ script: String): ScriptResult
     }
 }
