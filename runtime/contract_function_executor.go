@@ -33,7 +33,7 @@ type interpreterContractFunctionExecutor struct {
 
 	contractLocation common.AddressLocation
 	functionName     string
-	arguments        []interpreter.Value
+	arguments        []cadence.Value
 	argumentTypes    []sema.Type
 	context          Context
 
@@ -55,7 +55,7 @@ func newInterpreterContractFunctionExecutor(
 	runtime *interpreterRuntime,
 	contractLocation common.AddressLocation,
 	functionName string,
-	arguments []interpreter.Value,
+	arguments []cadence.Value,
 	argumentTypes []sema.Type,
 	context Context,
 ) *interpreterContractFunctionExecutor {
@@ -147,12 +147,23 @@ func (executor *interpreterContractFunctionExecutor) execute() (val cadence.Valu
 	// ensure the contract is loaded
 	inter = inter.EnsureLoaded(executor.contractLocation)
 
+	interpreterArguments := make([]interpreter.Value, len(executor.arguments))
+
 	for i, argumentType := range executor.argumentTypes {
-		executor.arguments[i] = executor.convertArgument(
+		ia, err := executor.convertArgument(
 			inter,
 			executor.arguments[i],
 			argumentType,
+			func() interpreter.LocationRange {
+				return interpreter.LocationRange{
+					Location: executor.context.Location,
+				}
+			},
 		)
+		if err != nil {
+			return nil, newError(err, executor.context)
+		}
+		interpreterArguments[i] = ia
 	}
 
 	contractValue, err := inter.GetContractComposite(executor.contractLocation)
@@ -164,7 +175,7 @@ func (executor *interpreterContractFunctionExecutor) execute() (val cadence.Valu
 	invocation := interpreter.NewInvocation(
 		inter,
 		contractValue,
-		executor.arguments,
+		interpreterArguments,
 		executor.argumentTypes,
 		nil,
 		func() interpreter.LocationRange {
@@ -212,38 +223,48 @@ func (executor *interpreterContractFunctionExecutor) execute() (val cadence.Valu
 
 func (executor *interpreterContractFunctionExecutor) convertArgument(
 	inter *interpreter.Interpreter,
-	argument interpreter.Value,
+	argument cadence.Value,
 	argumentType sema.Type,
-) interpreter.Value {
+	getLocationRange func() interpreter.LocationRange,
+) (interpreter.Value, error) {
 	switch argumentType {
 	case sema.AuthAccountType:
 		// convert addresses to auth accounts so there is no need to construct an auth account value for the caller
-		if addressValue, ok := argument.(interpreter.AddressValue); ok {
+		if addressValue, ok := argument.(cadence.Address); ok {
 			return executor.runtime.newAuthAccountValue(
 				inter,
 				interpreter.NewAddressValueFromConstructor(
 					inter,
-					addressValue.ToAddress,
+					func() common.Address {
+						return common.Address(addressValue)
+					},
 				),
 				executor.context,
 				executor.storage,
 				executor.interpreterOptions,
 				executor.checkerOptions,
-			)
+			), nil
 		}
 	case sema.PublicAccountType:
 		// convert addresses to public accounts so there is no need to construct a public account value for the caller
-		if addressValue, ok := argument.(interpreter.AddressValue); ok {
+		if addressValue, ok := argument.(cadence.Address); ok {
 			return executor.runtime.getPublicAccount(
 				inter,
 				interpreter.NewAddressValueFromConstructor(
 					inter,
-					addressValue.ToAddress,
+					func() common.Address {
+						return common.Address(addressValue)
+					},
 				),
 				executor.context.Interface,
 				executor.storage,
-			)
+			), nil
 		}
 	}
-	return argument
+	return importValue(
+		inter,
+		getLocationRange,
+		argument,
+		argumentType,
+	)
 }
