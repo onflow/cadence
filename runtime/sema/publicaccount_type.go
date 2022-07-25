@@ -39,10 +39,10 @@ const PublicAccountPathsField = "paths"
 var PublicAccountType = func() *CompositeType {
 
 	publicAccountType := &CompositeType{
-		Identifier:         PublicAccountTypeName,
-		Kind:               common.CompositeKindStructure,
-		hasComputedMembers: true,
-		importable:         false,
+		Identifier:                PublicAccountTypeName,
+		Kind:                      common.CompositeKindStructure,
+		hasComputedMembers:        true,
+		ImportableWithoutLocation: false,
 		nestedTypes: func() *StringTypeOrderedMap {
 			nestedTypes := &StringTypeOrderedMap{}
 			nestedTypes.Set(AccountKeysTypeName, PublicAccountKeysType)
@@ -131,9 +131,9 @@ All the public paths of an account
 var PublicAccountKeysType = func() *CompositeType {
 
 	accountKeys := &CompositeType{
-		Identifier: AccountKeysTypeName,
-		Kind:       common.CompositeKindStructure,
-		importable: false,
+		Identifier:                AccountKeysTypeName,
+		Kind:                      common.CompositeKindStructure,
+		ImportableWithoutLocation: false,
 	}
 
 	var members = []*Member{

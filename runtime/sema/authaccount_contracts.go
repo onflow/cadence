@@ -34,9 +34,9 @@ const AuthAccountContractsTypeNamesField = "names"
 var AuthAccountContractsType = func() *CompositeType {
 
 	authAccountContractsType := &CompositeType{
-		Identifier: AuthAccountContractsTypeName,
-		Kind:       common.CompositeKindStructure,
-		importable: false,
+		Identifier:                AuthAccountContractsTypeName,
+		Kind:                      common.CompositeKindStructure,
+		ImportableWithoutLocation: false,
 	}
 
 	var members = []*Member{
