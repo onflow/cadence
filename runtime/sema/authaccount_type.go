@@ -41,6 +41,7 @@ const AuthAccountGetCapabilityField = "getCapability"
 const AuthAccountGetLinkTargetField = "getLinkTarget"
 const AuthAccountContractsField = "contracts"
 const AuthAccountKeysField = "keys"
+const AuthAccountPathsField = "paths"
 
 // AuthAccountType represents the authorized access to an account.
 // Access to an AuthAccount means having full access to its storage, public keys, and code.
@@ -170,12 +171,26 @@ var AuthAccountType = func() *CompositeType {
 			AuthAccountKeysType,
 			accountTypeKeysFieldDocString,
 		),
+		NewUnmeteredPublicConstantFieldMember(
+			authAccountType,
+			AuthAccountPathsField,
+			AuthAccountPathsType,
+			authAccountTypePathsFieldDocString,
+		),
 	}
 
 	authAccountType.Members = GetMembersAsMap(members)
 	authAccountType.Fields = getFieldNames(members)
 	return authAccountType
 }()
+
+var AuthAccountPathsType = &VariableSizedType{
+	Type: PathType,
+}
+
+const authAccountTypePathsFieldDocString = `
+All the storage paths of an account
+`
 
 var AuthAccountTypeAddPublicKeyFunctionType = &FunctionType{
 	Parameters: []*Parameter{

@@ -1508,3 +1508,128 @@ func TestPublicAccountContracts(t *testing.T) {
 	})
 
 }
+
+func TestCheckAccountPaths(t *testing.T) {
+
+	t.Parallel()
+	t.Run("capitalized", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t,
+			`
+			let paths = authAccount.Paths
+		`,
+		)
+
+		require.Error(t, err)
+		errors := ExpectCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.NotDeclaredMemberError{}, errors[0])
+		notDeclaredError := errors[0].(*sema.NotDeclaredMemberError)
+		assert.Equal(t, "Paths", notDeclaredError.Name)
+	})
+
+	t.Run("annotation", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t,
+			`
+			let paths: [Path] = authAccount.paths
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("incorrect annotation", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t,
+			`
+			let paths: [PublicPath] = authAccount.paths
+		`,
+		)
+
+		require.Error(t, err)
+		errors := ExpectCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
+	})
+
+	t.Run("publicAccount annotation", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t,
+			`
+			let paths: [PublicPath] = publicAccount.paths
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("publicAccount supertype annotation", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t,
+			`
+			let paths: [Path] = publicAccount.paths
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("publicAccount iteration", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t,
+			`
+			fun test() {
+				let paths = publicAccount.paths
+				for path in paths {
+					let cap = publicAccount.getCapability(path)
+				}
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("iteration type mismatch", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t,
+			`
+			fun test() {
+				let paths = authAccount.paths
+				for path in paths {
+					let t = authAccount.type(at: path)
+				}
+			}
+		`,
+		)
+
+		require.Error(t, err)
+		errors := ExpectCheckerErrors(t, err, 1)
+
+		// `type` expects a `StoragePath`, not a general `Path`
+		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
+		mismatchError := errors[0].(*sema.TypeMismatchError)
+		assert.Equal(t, "StoragePath", mismatchError.ExpectedType.QualifiedString())
+	})
+
+	t.Run("iteration", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t,
+			`
+			fun test() {
+				let paths = authAccount.paths
+				for path in paths {
+					let storagePath = path as! StoragePath
+					if storagePath != nil {
+						let t = authAccount.type(at: storagePath)
+					} else {
+						let capabilityPath = path as! CapabilityPath
+						let cap = authAccount.getCapability(capabilityPath)
+					}
+				}
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+}
