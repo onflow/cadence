@@ -3634,6 +3634,45 @@ func (interpreter *Interpreter) IsSubTypeOfSemaType(subType StaticType, superTyp
 	return sema.IsSubType(semaType, superType)
 }
 
+func (interpreter *Interpreter) domainIterator(address common.Address, domain common.PathDomain) []Value {
+	storageMap := interpreter.Storage.GetStorageMap(address, domain.Identifier(), false)
+	if storageMap == nil {
+		return []Value{}
+	}
+	iterator := storageMap.Iterator(interpreter)
+	values := make([]Value, 0, iterator.storage.Count())
+	for key := iterator.NextKey(); key != ""; key = iterator.NextKey() {
+		values = append(values, NewPathValue(interpreter, domain, key))
+	}
+	return values
+}
+
+func (interpreter *Interpreter) publicAccountPaths(addressValue AddressValue, getLocationRange func() LocationRange) *ArrayValue {
+	address := addressValue.ToAddress()
+	values := interpreter.domainIterator(address, common.PathDomainPublic)
+	return NewArrayValue(
+		interpreter,
+		getLocationRange,
+		NewVariableSizedStaticType(interpreter, PrimitiveStaticTypePublicPath),
+		address,
+		values...,
+	)
+}
+
+func (interpreter *Interpreter) allAccountPaths(addressValue AddressValue, getLocationRange func() LocationRange) *ArrayValue {
+	address := addressValue.ToAddress()
+	publicValues := interpreter.domainIterator(address, common.PathDomainPublic)
+	privateValues := interpreter.domainIterator(address, common.PathDomainPrivate)
+	storageValues := interpreter.domainIterator(address, common.PathDomainStorage)
+	return NewArrayValue(
+		interpreter,
+		getLocationRange,
+		NewVariableSizedStaticType(interpreter, PrimitiveStaticTypePath),
+		address,
+		append(append(publicValues, privateValues...), storageValues...)...,
+	)
+}
+
 func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValue) *HostFunctionValue {
 
 	// Converted addresses can be cached and don't have to be recomputed on each function invocation
