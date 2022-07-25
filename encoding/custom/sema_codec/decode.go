@@ -29,10 +29,6 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-//
-// Sema
-//
-
 // A SemaDecoder decodes custom-encoded representations of Cadence values.
 type SemaDecoder struct {
 	r           LocatedReader
