@@ -260,10 +260,10 @@ func newNativeEnumType(
 	membersConstructor func(enumType *CompositeType) []*Member,
 ) *CompositeType {
 	ty := &CompositeType{
-		Identifier:                identifier,
-		EnumRawType:               rawType,
-		Kind:                      common.CompositeKindEnum,
-		ImportableWithoutLocation: true,
+		Identifier:  identifier,
+		EnumRawType: rawType,
+		Kind:        common.CompositeKindEnum,
+		importable:  true,
 	}
 
 	// Members of the enum type are *not* the enum cases!
