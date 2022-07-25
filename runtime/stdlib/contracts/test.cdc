@@ -24,12 +24,12 @@ pub contract Test {
             self.backend.addTransaction(tx)
         }
 
-        /// Executes the next transaction, if any.
-        /// Returns the result of the transaction, or nil if no transaction was scheduled.
-        ///
-        //pub fun executeNextTransaction(): TransactionResult? {
-        //    return self.backend.executeNextTransaction()
-        //}
+        // Executes the next transaction, if any.
+        // Returns the result of the transaction, or nil if no transaction was scheduled.
+        //
+        pub fun executeNextTransaction(): TransactionResult? {
+            return self.backend.executeNextTransaction()
+        }
 
         //pub fun commitBlock() {
         //    self.backend.commitBlock()
@@ -95,10 +95,10 @@ pub contract Test {
 
     pub struct Transaction {
         pub let code:       String
-        pub let authorizer: Address
+        pub let authorizer: Address?
         pub let signers:    [Account]
 
-        init(_ code: String, _ authorizer: Address, _ signers: [Account]) {
+        init(_ code: String, _ authorizer: Address?, _ signers: [Account]) {
             self.code = code
             self.authorizer = authorizer
             self.signers = signers
@@ -115,7 +115,7 @@ pub contract Test {
 
         pub fun addTransaction(_ transaction: Transaction)
 
-        // fun executeNextTransaction(): TransactionResult?
+        pub fun executeNextTransaction(): TransactionResult?
 
         // fun commitBlock()
     }

@@ -380,6 +380,8 @@ func TestExecutingTransactions(t *testing.T) {
 	t.Parallel()
 
 	t.Run("add transaction", func(t *testing.T) {
+		t.Parallel()
+
 		code := `
             import Test
 
@@ -394,6 +396,109 @@ func TestExecutingTransactions(t *testing.T) {
                 )
 
                 blockchain.addTransaction(tx)
+            }
+        `
+
+		runner := NewTestRunner()
+		err := runner.RunTest(code, "test")
+		assert.NoError(t, err)
+	})
+
+	t.Run("run next transaction", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import Test
+
+            pub fun test() {
+                var blockchain = Test.newEmulatorBlockchain()
+                var account = blockchain.createAccount()
+
+                let tx = Test.Transaction(
+                    "transaction { execute{ assert(true) } }",
+                    nil,
+                    [account]
+                )
+
+                blockchain.addTransaction(tx)
+
+                let result = blockchain.executeNextTransaction()!
+                assert(result.status == Test.ResultStatus.succeeded)
+            }
+        `
+
+		runner := NewTestRunner()
+		err := runner.RunTest(code, "test")
+		assert.NoError(t, err)
+	})
+
+	t.Run("run next transaction with authorizer", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import Test
+
+            pub fun test() {
+                let blockchain = Test.newEmulatorBlockchain()
+                let account = blockchain.createAccount()
+
+                let tx = Test.Transaction(
+                    "transaction { prepare(acct: AuthAccount) {} execute{ assert(true) } }",
+                    account.address,
+                    [account]
+                )
+
+                blockchain.addTransaction(tx)
+
+                let result = blockchain.executeNextTransaction()!
+                assert(result.status == Test.ResultStatus.succeeded)
+            }
+        `
+
+		runner := NewTestRunner()
+		err := runner.RunTest(code, "test")
+		assert.NoError(t, err)
+	})
+
+	t.Run("transaction failure", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import Test
+
+            pub fun test() {
+                let blockchain = Test.newEmulatorBlockchain()
+                let account = blockchain.createAccount()
+
+                let tx = Test.Transaction(
+                    "transaction { execute{ assert(false) } }",
+                    nil,
+                    [account]
+                )
+
+                blockchain.addTransaction(tx)
+
+                let result = blockchain.executeNextTransaction()!
+                assert(result.status == Test.ResultStatus.failed)
+            }
+        `
+
+		runner := NewTestRunner()
+		err := runner.RunTest(code, "test")
+		assert.NoError(t, err)
+	})
+
+	t.Run("run non existing transaction", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import Test
+
+            pub fun test() {
+                var blockchain = Test.newEmulatorBlockchain()
+
+                let result = blockchain.executeNextTransaction()
+                assert(result == nil)
             }
         `
 

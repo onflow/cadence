@@ -14,9 +14,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
- * Based on https://github.com/wk8/go-ordered-map, Copyright Jean Rougé
- *
  */
 
 package test
@@ -51,16 +48,16 @@ func NewEmulatorBackend() *EmulatorBackend {
 	}
 }
 
-func (e *EmulatorBackend) RunScript(code string) interpreter.ScriptResult {
+func (e *EmulatorBackend) RunScript(code string) *interpreter.ScriptResult {
 	result, err := e.blockchain.ExecuteScript([]byte(code), [][]byte{})
 	if err != nil {
-		return interpreter.ScriptResult{
+		return &interpreter.ScriptResult{
 			Error: err,
 		}
 	}
 
 	if result.Error != nil {
-		return interpreter.ScriptResult{
+		return &interpreter.ScriptResult{
 			Error: result.Error,
 		}
 	}
@@ -68,19 +65,19 @@ func (e *EmulatorBackend) RunScript(code string) interpreter.ScriptResult {
 	// TODO: maybe re-use interpreter? Only needed for value conversion
 	inter, err := newInterpreter()
 	if err != nil {
-		return interpreter.ScriptResult{
+		return &interpreter.ScriptResult{
 			Error: err,
 		}
 	}
 
 	value, err := runtime.ImportValue(inter, interpreter.ReturnEmptyLocationRange, result.Value, nil)
 	if err != nil {
-		return interpreter.ScriptResult{
+		return &interpreter.ScriptResult{
 			Error: err,
 		}
 	}
 
-	return interpreter.ScriptResult{
+	return &interpreter.ScriptResult{
 		Value: value,
 	}
 }
@@ -116,7 +113,7 @@ func (e EmulatorBackend) CreateAccount() *interpreter.Account {
 
 func (e *EmulatorBackend) AddTransaction(
 	code string,
-	authorizer common.Address,
+	authorizer *common.Address,
 	signers []*interpreter.Account,
 ) {
 
@@ -133,14 +130,17 @@ func (e *EmulatorBackend) AddTransaction(
 	}
 }
 
-func (e *EmulatorBackend) newTransaction(code string, authorizer common.Address) *sdk.Transaction {
+func (e *EmulatorBackend) newTransaction(code string, authorizer *common.Address) *sdk.Transaction {
 	serviceKey := e.blockchain.ServiceKey()
 
 	tx := sdk.NewTransaction().
 		SetScript([]byte(code)).
 		SetProposalKey(serviceKey.Address, serviceKey.Index, serviceKey.SequenceNumber).
-		SetPayer(serviceKey.Address).
-		AddAuthorizer(sdk.Address(authorizer))
+		SetPayer(serviceKey.Address)
+
+	if authorizer != nil {
+		tx = tx.AddAuthorizer(sdk.Address(*authorizer))
+	}
 
 	return tx
 }
@@ -151,7 +151,7 @@ func (e *EmulatorBackend) signTransaction(
 ) error {
 
 	// Sign transaction with each signer
-	// Note: This code is borrowed from the flow-go-sdk.
+	// Note: Following logic is borrowed from the flow-ft.
 
 	for i := len(signerAccounts) - 1; i >= 0; i-- {
 		signerAccount := signerAccounts[i]
@@ -164,24 +164,55 @@ func (e *EmulatorBackend) signTransaction(
 
 		hashAlgo := fvmCrypto.RuntimeToCryptoHashingAlgorithm(signerAccount.AccountKey.HashAlgo)
 		signer, err := crypto.NewInMemorySigner(privateKey, hashAlgo)
-
-		if i == 0 {
-			err = tx.SignEnvelope(sdk.Address(signerAccount.Address), 0, signer)
-		} else {
-			err = tx.SignPayload(sdk.Address(signerAccount.Address), 0, signer)
+		if err != nil {
+			return err
 		}
 
+		err = tx.SignPayload(sdk.Address(signerAccount.Address), 0, signer)
 		if err != nil {
 			return err
 		}
 	}
 
+	serviceKey := e.blockchain.ServiceKey()
+	serviceSigner, err := serviceKey.Signer()
+	if err != nil {
+		return err
+	}
+
+	err = tx.SignEnvelope(serviceKey.Address, 0, serviceSigner)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func (e *EmulatorBackend) ExecuteNextTransaction() interpreter.TransactionResult {
-	//TODO implement me
-	panic("implement me")
+func (e *EmulatorBackend) ExecuteNextTransaction() *interpreter.TransactionResult {
+	result, err := e.blockchain.ExecuteNextTransaction()
+
+	if err != nil {
+		// If the returned error is `emulator.PendingBlockTransactionsExhaustedError`,
+		// that means there are no transactions to execute. Thus, return a dedicated
+		// error `interpreter.NoPendingTransactionsError`.
+		if _, ok := err.(*emulator.PendingBlockTransactionsExhaustedError); ok {
+			return &interpreter.TransactionResult{
+				Error: &interpreter.NoPendingTransactionsError{},
+			}
+		}
+
+		return &interpreter.TransactionResult{
+			Error: err,
+		}
+	}
+
+	if result.Error != nil {
+		return &interpreter.TransactionResult{
+			Error: result.Error,
+		}
+	}
+
+	return &interpreter.TransactionResult{}
 }
 
 func (e *EmulatorBackend) CommitBlock() {
