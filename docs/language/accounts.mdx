@@ -28,6 +28,9 @@ which represents the publicly available portion of an account.
       // Keys assigned to the account
       let keys: PublicAccount.Keys
 
+      // The public paths associated with this account
+      let paths: [PublicPath]
+
       // Storage operations
 
       fun getCapability<T>(_ path: PublicPath): Capability<T>
@@ -87,6 +90,9 @@ to the `prepare` phase of the transaction.
       // Keys assigned to the account
 
       let keys: AuthAccount.Keys
+
+      // All the paths associated with this account
+      let paths: [Path]
 
       // Key management
 
