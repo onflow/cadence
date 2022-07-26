@@ -65,7 +65,7 @@ type seenReferences map[*interpreter.EphemeralReferenceValue]struct{}
 
 // exportValueWithInterpreter exports the given internal (interpreter) value to an external value.
 //
-// The export is recursive, the results parameter prevents cycles:
+// The export is recursive, the seenReferences parameter prevents cycles:
 // it is checked at the start of the recursively called function,
 // and pre-set before a recursive call.
 //
@@ -221,6 +221,11 @@ func exportValueWithInterpreter(
 	case *interpreter.CapabilityValue:
 		return exportCapabilityValue(v, inter), nil
 	case *interpreter.EphemeralReferenceValue:
+		// TODO (robert) this strategy is very inefficient, right?
+		//      it looks like it exports the referenced value except for its ephemeral references...
+		//      even if the references value is a parent value too,
+		//      so it could almost double the eventual encoding size
+
 		// Break recursion through ephemeral references
 		if _, ok := seenReferences[v]; ok {
 			return nil, nil
