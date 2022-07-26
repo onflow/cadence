@@ -41,7 +41,7 @@ var _ interpreter.TestFramework = &EmulatorBackend{}
 type EmulatorBackend struct {
 	blockchain *emulator.Blockchain
 
-	// blockOffset is the next offset for the sequence number of the next transaction.
+	// blockOffset is the offset for the sequence number of the next transaction.
 	// This is equal to the number of transactions in the current block.
 	// Must be rest once the block is committed.
 	blockOffset uint64
@@ -206,12 +206,10 @@ func (e *EmulatorBackend) ExecuteNextTransaction() *interpreter.TransactionResul
 
 	if err != nil {
 		// If the returned error is `emulator.PendingBlockTransactionsExhaustedError`,
-		// that means there are no transactions to execute. Thus, return a dedicated
-		// error `interpreter.NoPendingTransactionsError`.
+		// that means there are no transactions to execute.
+		// Hence, return a nil result.
 		if _, ok := err.(*emulator.PendingBlockTransactionsExhaustedError); ok {
-			return &interpreter.TransactionResult{
-				Error: &interpreter.NoPendingTransactionsError{},
-			}
+			return nil
 		}
 
 		return &interpreter.TransactionResult{

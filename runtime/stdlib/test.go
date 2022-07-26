@@ -917,14 +917,12 @@ var emulatorBackendExecuteNextTransactionFunction = interpreter.NewUnmeteredHost
 
 		result := testFramework.ExecuteNextTransaction()
 
-		err := result.Error
-
-		// If there are no more transactions to run, then return `nil`.
-		if _, ok := err.(*interpreter.NoPendingTransactionsError); ok {
+		// If there are no transactions to run, then return `nil`.
+		if result == nil {
 			return interpreter.NilValue{}
 		}
 
-		succeeded := err == nil
+		succeeded := result.Error == nil
 
 		return createTransactionResult(invocation.Interpreter, succeeded)
 	},

@@ -83,16 +83,3 @@ func (TestFrameworkNotProvidedError) IsInternalError() {}
 func (e TestFrameworkNotProvidedError) Error() string {
 	return "test framework not provided"
 }
-
-// NoPendingTransactionsError indicates that the current pending block has finished executing
-// and has no more transactions to execute.
-//
-type NoPendingTransactionsError struct{}
-
-var _ errors.InternalError = NoPendingTransactionsError{}
-
-func (NoPendingTransactionsError) IsInternalError() {}
-
-func (e NoPendingTransactionsError) Error() string {
-	return "no more transaction to execute"
-}
