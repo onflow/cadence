@@ -95,8 +95,8 @@ func (i *FlowIntegration) initialize(initializationOptions any) error {
 	}
 
 	numberOfAccounts, ok := optsMap["numberOfAccounts"].(int)
-	if !ok || configPath == "" {
-		return errors.New("initialization options: invalid config path")
+	if !ok || numberOfAccounts == 0 {
+		return errors.New("initialization options: invalid account number value")
 	}
 
 	err := i.client.Initialize(configPath, numberOfAccounts)
