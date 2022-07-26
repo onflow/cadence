@@ -12,8 +12,8 @@ pub contract Test {
             self.backend = backend
         }
 
-        // Executes a script. Returns the result and the status.
-        // Result will be `nil` if the script failed.
+        // Executes a script and returns the script return value and the status.
+        // `returnValue` field of the result will be `nil` if the script failed.
         //
         pub fun executeScript(_ script: String): ScriptResult {
             return self.backend.executeScript(script)
