@@ -12,29 +12,43 @@ pub contract Test {
             self.backend = backend
         }
 
+        // Executes a script. Returns the result and the status.
+        // Result will be `nil` if the script failed.
+        //
         pub fun executeScript(_ script: String): ScriptResult {
             return self.backend.executeScript(script)
         }
 
+        // Creates a signer account by submitting an account creation transaction.
+        // The transaction is paid by the service account.
+        // The returned account can be used to sign and authorize transactions.
+        //
         pub fun createAccount(): Account {
             return self.backend.createAccount()
         }
 
+        // Add a transaction to the current block.
+        //
         pub fun addTransaction(_ tx: Transaction) {
             self.backend.addTransaction(tx)
         }
 
-        // Executes the next transaction, if any.
+        // Executes the next transaction in the block, if any.
         // Returns the result of the transaction, or nil if no transaction was scheduled.
         //
         pub fun executeNextTransaction(): TransactionResult? {
             return self.backend.executeNextTransaction()
         }
 
+        // Commit the current block.
+        // Committing will fail if there are un-executed transactions in the block.
+        //
         pub fun commitBlock() {
             self.backend.commitBlock()
         }
 
+        // Executes a given transaction and commit the current block.
+        //
         pub fun executeTransaction(_ transaction: Transaction): TransactionResult {
             self.addTransaction(transaction)
             let txResult = self.executeNextTransaction()!
@@ -42,13 +56,15 @@ pub contract Test {
             return txResult
         }
 
+        // Executes a given set of transactions and commit the current block.
+        //
         pub fun executeTransactions(_ transactions: [Transaction]): [TransactionResult] {
-            for transaction in transactions {
-                self.addTransaction(transaction)
+            for tx in transactions {
+                self.addTransaction(tx)
             }
 
             var results: [TransactionResult] = []
-            for transaction in transactions {
+            for tx in transactions {
                 let txResult = self.executeNextTransaction()!
                 results.append(txResult)
             }
@@ -58,11 +74,15 @@ pub contract Test {
         }
     }
 
+    // ResultStatus indicates status of a transaction or script execution.
+    //
     pub enum ResultStatus: UInt8 {
         pub case succeeded
         pub case failed
     }
 
+    // The result of a transaction execution.
+    //
     pub struct TransactionResult {
         pub let status: ResultStatus
 
@@ -71,6 +91,8 @@ pub contract Test {
         }
     }
 
+    // The result of a script execution.
+    //
     pub struct ScriptResult {
         pub let status:      ResultStatus
         pub let returnValue: AnyStruct?
@@ -81,6 +103,8 @@ pub contract Test {
         }
     }
 
+    // Account represents a user account in the blockchain.
+    //
     pub struct Account {
         pub let address:    Address
         pub let accountKey: AccountKey
@@ -93,6 +117,8 @@ pub contract Test {
         }
     }
 
+    // Transaction that can be submitted and executed on the blockchain.
+    //
     pub struct Transaction {
         pub let code:       String
         pub let authorizer: Address?

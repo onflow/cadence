@@ -79,7 +79,13 @@ func (r *TestRunner) WithImportResolver(importResolver ImportResolver) *TestRunn
 
 // RunTest runs a single test in the provided test script.
 //
-func (r *TestRunner) RunTest(script string, funcName string) error {
+func (r *TestRunner) RunTest(script string, funcName string) (err error) {
+	defer func() {
+		recoverPanics(func(internalErr error) {
+			err = internalErr
+		})
+	}()
+
 	_, inter, err := r.parseCheckAndInterpret(script)
 	if err != nil {
 		return err
@@ -91,24 +97,56 @@ func (r *TestRunner) RunTest(script string, funcName string) error {
 
 // RunTests runs all the tests in the provided test script.
 //
-func (r *TestRunner) RunTests(script string) (Results, error) {
+func (r *TestRunner) RunTests(script string) (results Results, err error) {
+	defer func() {
+		recoverPanics(func(internalErr error) {
+			err = internalErr
+		})
+	}()
+
 	program, inter, err := r.parseCheckAndInterpret(script)
 	if err != nil {
 		return nil, err
 	}
 
-	results := make(Results)
+	results = make(Results)
 
 	for _, funcDecl := range program.Program.FunctionDeclarations() {
 		funcName := funcDecl.Identifier.Identifier
 
-		if strings.HasPrefix(funcName, testFunctionPrefix) {
-			_, err := inter.Invoke(funcName)
-			results[funcName] = err
+		if !strings.HasPrefix(funcName, testFunctionPrefix) {
+			continue
 		}
+
+		err := r.invokeTestFunction(inter, funcName)
+		results[funcName] = err
 	}
 
 	return results, nil
+}
+
+func (r *TestRunner) invokeTestFunction(inter *interpreter.Interpreter, funcName string) (err error) {
+	// Individually fail each test-case for any internal error.
+	defer func() {
+		recoverPanics(func(internalErr error) {
+			err = internalErr
+		})
+	}()
+
+	_, err = inter.Invoke(funcName)
+	return err
+}
+
+func recoverPanics(onError func(error)) {
+	r := recover()
+	switch r := r.(type) {
+	case nil:
+		return
+	case error:
+		onError(r)
+	default:
+		onError(fmt.Errorf("%s", r))
+	}
 }
 
 func (r *TestRunner) parseCheckAndInterpret(script string) (*interpreter.Program, *interpreter.Interpreter, error) {

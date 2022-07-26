@@ -496,7 +496,6 @@ func TestExecutingTransactions(t *testing.T) {
 
             pub fun test() {
                 var blockchain = Test.newEmulatorBlockchain()
-
                 let result = blockchain.executeNextTransaction()
                 assert(result == nil)
             }
@@ -522,6 +521,68 @@ func TestExecutingTransactions(t *testing.T) {
 		runner := NewTestRunner()
 		err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
+	})
+
+	t.Run("commit un-executed block", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import Test
+
+            pub fun test() {
+                var blockchain = Test.newEmulatorBlockchain()
+                let account = blockchain.createAccount()
+
+                let tx = Test.Transaction(
+                    "transaction { execute{ assert(false) } }",
+                    nil,
+                    [account]
+                )
+
+                blockchain.addTransaction(tx)
+
+                blockchain.commitBlock()
+            }
+        `
+
+		runner := NewTestRunner()
+		err := runner.RunTest(code, "test")
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "cannot be committed before execution")
+	})
+
+	t.Run("commit partially executed block", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import Test
+
+            pub fun test() {
+                var blockchain = Test.newEmulatorBlockchain()
+                let account = blockchain.createAccount()
+
+                let tx = Test.Transaction(
+                    "transaction { execute{ assert(false) } }",
+                    nil,
+                    [account]
+                )
+
+                // Add two transactions
+                blockchain.addTransaction(tx)
+                blockchain.addTransaction(tx)
+
+                // But execute only one
+                blockchain.executeNextTransaction()
+
+                // Then try to commit
+                blockchain.commitBlock()
+            }
+        `
+
+		runner := NewTestRunner()
+		err := runner.RunTest(code, "test")
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "is currently being executed")
 	})
 
 	t.Run("multiple commit block", func(t *testing.T) {
@@ -665,4 +726,38 @@ func TestExecutingTransactions(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
+	t.Run("run transaction with pending transactions", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import Test
+
+            pub fun test() {
+                var blockchain = Test.newEmulatorBlockchain()
+                var account = blockchain.createAccount()
+
+                let tx1 = Test.Transaction(
+                    "transaction { execute{ assert(true) } }",
+                    nil,
+                    [account]
+                )
+
+                blockchain.addTransaction(tx1)
+
+                let tx2 = Test.Transaction(
+                    "transaction { execute{ assert(true) } }",
+                    nil,
+                    [account]
+                )
+                let result = blockchain.executeTransaction(tx2)!
+
+                assert(result.status == Test.ResultStatus.succeeded)
+            }
+        `
+
+		runner := NewTestRunner()
+		err := runner.RunTest(code, "test")
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "is currently being executed")
+	})
 }
