@@ -34,13 +34,13 @@ import (
 type TestFramework interface {
 	RunScript(code string) *ScriptResult
 
-	CreateAccount() *Account
+	CreateAccount() (*Account, error)
 
-	AddTransaction(code string, authorizer *common.Address, signers []*Account)
+	AddTransaction(code string, authorizer *common.Address, signers []*Account) error
 
 	ExecuteNextTransaction() *TransactionResult
 
-	CommitBlock()
+	CommitBlock() error
 }
 
 type ScriptResult struct {

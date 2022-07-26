@@ -82,7 +82,7 @@ func (e *EmulatorBackend) RunScript(code string) *interpreter.ScriptResult {
 	}
 }
 
-func (e EmulatorBackend) CreateAccount() *interpreter.Account {
+func (e EmulatorBackend) CreateAccount() (*interpreter.Account, error) {
 	keyGen := test.AccountKeyGenerator()
 	accountKey, signer := keyGen.NewWithSigner()
 
@@ -92,7 +92,7 @@ func (e EmulatorBackend) CreateAccount() *interpreter.Account {
 
 	address, err := e.blockchain.CreateAccount([]*sdk.AccountKey{accountKey}, nil)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	return &interpreter.Account{
@@ -108,26 +108,28 @@ func (e EmulatorBackend) CreateAccount() *interpreter.Account {
 			IsRevoked: accountKey.Revoked,
 		},
 		PrivateKey: inMemSigner.PrivateKey.Encode(),
-	}
+	}, nil
 }
 
 func (e *EmulatorBackend) AddTransaction(
 	code string,
 	authorizer *common.Address,
 	signers []*interpreter.Account,
-) {
+) error {
 
 	tx := e.newTransaction(code, authorizer)
 
 	err := e.signTransaction(tx, signers)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	err = e.blockchain.AddTransaction(*tx)
 	if err != nil {
-		panic(err)
+		return err
 	}
+
+	return nil
 }
 
 func (e *EmulatorBackend) newTransaction(code string, authorizer *common.Address) *sdk.Transaction {
@@ -215,9 +217,9 @@ func (e *EmulatorBackend) ExecuteNextTransaction() *interpreter.TransactionResul
 	return &interpreter.TransactionResult{}
 }
 
-func (e *EmulatorBackend) CommitBlock() {
-	//TODO implement me
-	panic("implement me")
+func (e *EmulatorBackend) CommitBlock() error {
+	_, err := e.blockchain.CommitBlock()
+	return err
 }
 
 // newBlockchain returns an emulator blockchain for testing.

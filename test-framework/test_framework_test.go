@@ -506,4 +506,39 @@ func TestExecutingTransactions(t *testing.T) {
 		err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
 	})
+
+	t.Run("commit block", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import Test
+
+            pub fun test() {
+                var blockchain = Test.newEmulatorBlockchain()
+                blockchain.commitBlock()
+            }
+        `
+
+		runner := NewTestRunner()
+		err := runner.RunTest(code, "test")
+		assert.NoError(t, err)
+	})
+
+	t.Run("multiple commit block", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import Test
+
+            pub fun test() {
+                var blockchain = Test.newEmulatorBlockchain()
+                blockchain.commitBlock()
+                blockchain.commitBlock()
+            }
+        `
+
+		runner := NewTestRunner()
+		err := runner.RunTest(code, "test")
+		assert.NoError(t, err)
+	})
 }

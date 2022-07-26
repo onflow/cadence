@@ -31,9 +31,9 @@ pub contract Test {
             return self.backend.executeNextTransaction()
         }
 
-        //pub fun commitBlock() {
-        //    self.backend.commitBlock()
-        //}
+        pub fun commitBlock() {
+            self.backend.commitBlock()
+        }
 
         //pub fun executeTransaction(_ transaction: Transaction): TransactionResult {
         //    self.addTransaction(transaction)
@@ -117,6 +117,6 @@ pub contract Test {
 
         pub fun executeNextTransaction(): TransactionResult?
 
-        // fun commitBlock()
+        pub fun commitBlock()
     }
 }

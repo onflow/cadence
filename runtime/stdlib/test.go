@@ -324,6 +324,12 @@ var EmulatorBackendType = func() *sema.CompositeType {
 			emulatorBackendExecuteNextTransactionFunctionType,
 			emulatorBackendExecuteNextTransactionFunctionDocString,
 		),
+		sema.NewUnmeteredPublicFunctionMember(
+			ty,
+			emulatorBackendCommitBlockFunctionName,
+			emulatorBackendCommitBlockFunctionType,
+			emulatorBackendCommitBlockFunctionDocString,
+		),
 	}
 
 	ty.Members = sema.GetMembersAsMap(members)
@@ -348,6 +354,10 @@ func newEmulatorBackend(inter *interpreter.Interpreter) *interpreter.CompositeVa
 		{
 			Name:  emulatorBackendExecuteNextTransactionFunctionName,
 			Value: emulatorBackendExecuteNextTransactionFunction,
+		},
+		{
+			Name:  emulatorBackendCommitBlockFunctionName,
+			Value: emulatorBackendCommitBlockFunction,
 		},
 	}
 
@@ -503,7 +513,11 @@ var emulatorBackendCreateAccountFunction = interpreter.NewUnmeteredHostFunctionV
 			panic(interpreter.TestFrameworkNotProvidedError{})
 		}
 
-		account := testFramework.CreateAccount()
+		account, err := testFramework.CreateAccount()
+		if err != nil {
+			panic(err)
+		}
+
 		return newAccountValue(invocation.Interpreter, account)
 	},
 	emulatorBackendCreateAccountFunctionType,
@@ -669,7 +683,10 @@ var emulatorBackendAddTransactionFunction = interpreter.NewUnmeteredHostFunction
 
 		signerAccounts := accountsFromValue(inter, signersValue)
 
-		testFramework.AddTransaction(code, authorizer, signerAccounts)
+		err = testFramework.AddTransaction(code, authorizer, signerAccounts)
+		if err != nil {
+			panic(err)
+		}
 
 		return interpreter.VoidValue{}
 	},
@@ -954,6 +971,52 @@ func createTransactionResult(inter *interpreter.Interpreter, succeeded bool) int
 
 	return transactionResult
 }
+
+// 'EmulatorBackend.commitBlock' function
+
+const emulatorBackendCommitBlockFunctionName = "commitBlock"
+
+const emulatorBackendCommitBlockFunctionDocString = `commit block function`
+
+var emulatorBackendCommitBlockFunctionType = func() *sema.FunctionType {
+	// The type of the 'commitBlock' function of 'EmulatorBackend' (interface-implementation)
+	// is same as that of 'BlockchainBackend' interface.
+	typ, ok := blockchainBackendInterfaceType.Members.Get(emulatorBackendCommitBlockFunctionName)
+	if !ok {
+		panic(errors.NewUnexpectedError(
+			"cannot find type %s.%s",
+			blockchainBackendTypeName,
+			emulatorBackendCommitBlockFunctionName,
+		))
+	}
+
+	functionType, ok := typ.TypeAnnotation.Type.(*sema.FunctionType)
+	if !ok {
+		panic(errors.NewUnexpectedError(
+			"invalid type for %s. expected function",
+			emulatorBackendCommitBlockFunctionName,
+		))
+	}
+
+	return functionType
+}()
+
+var emulatorBackendCommitBlockFunction = interpreter.NewUnmeteredHostFunctionValue(
+	func(invocation interpreter.Invocation) interpreter.Value {
+		testFramework := invocation.Interpreter.TestFramework
+		if testFramework == nil {
+			panic(interpreter.TestFrameworkNotProvidedError{})
+		}
+
+		err := testFramework.CommitBlock()
+		if err != nil {
+			panic(err)
+		}
+
+		return interpreter.VoidValue{}
+	},
+	emulatorBackendCommitBlockFunctionType,
+)
 
 // TestFailedError
 
