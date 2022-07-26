@@ -40,11 +40,17 @@ var _ interpreter.TestFramework = &EmulatorBackend{}
 //
 type EmulatorBackend struct {
 	blockchain *emulator.Blockchain
+
+	// blockOffset is the next offset for the sequence number of the next transaction.
+	// This is equal to the number of transactions in the current block.
+	// Must be rest once the block is committed.
+	blockOffset uint64
 }
 
 func NewEmulatorBackend() *EmulatorBackend {
 	return &EmulatorBackend{
-		blockchain: newBlockchain(),
+		blockchain:  newBlockchain(),
+		blockOffset: 0,
 	}
 }
 
@@ -129,15 +135,20 @@ func (e *EmulatorBackend) AddTransaction(
 		return err
 	}
 
+	// Increment the transaction sequence number offset for the current block.
+	e.blockOffset++
+
 	return nil
 }
 
 func (e *EmulatorBackend) newTransaction(code string, authorizer *common.Address) *sdk.Transaction {
 	serviceKey := e.blockchain.ServiceKey()
 
+	sequenceNumber := serviceKey.SequenceNumber + e.blockOffset
+
 	tx := sdk.NewTransaction().
 		SetScript([]byte(code)).
-		SetProposalKey(serviceKey.Address, serviceKey.Index, serviceKey.SequenceNumber).
+		SetProposalKey(serviceKey.Address, serviceKey.Index, sequenceNumber).
 		SetPayer(serviceKey.Address)
 
 	if authorizer != nil {
@@ -218,6 +229,9 @@ func (e *EmulatorBackend) ExecuteNextTransaction() *interpreter.TransactionResul
 }
 
 func (e *EmulatorBackend) CommitBlock() error {
+	// Reset the transaction offset for the current block.
+	e.blockOffset = 0
+
 	_, err := e.blockchain.CommitBlock()
 	return err
 }

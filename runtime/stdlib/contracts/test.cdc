@@ -35,27 +35,27 @@ pub contract Test {
             self.backend.commitBlock()
         }
 
-        //pub fun executeTransaction(_ transaction: Transaction): TransactionResult {
-        //    self.addTransaction(transaction)
-        //    let result = self.executeNextTransaction()!
-        //    self.commitBlock()
-        //    return result
-        //}
+        pub fun executeTransaction(_ transaction: Transaction): TransactionResult {
+            self.addTransaction(transaction)
+            let txResult = self.executeNextTransaction()!
+            self.commitBlock()
+            return txResult
+        }
 
-        //pub fun executeTransactions(_ transactions: [Transaction]): [TransactionResult] {
-        //    for transaction in transactions {
-        //        self.addTransaction(transaction)
-        //    }
+        pub fun executeTransactions(_ transactions: [Transaction]): [TransactionResult] {
+            for transaction in transactions {
+                self.addTransaction(transaction)
+            }
 
-        //    var results: [TransactionResult] = []
-        //    for transaction in transactions {
-        //        let result = self.executeNextTransaction()!
-        //        results.append(result)
-        //    }
+            var results: [TransactionResult] = []
+            for transaction in transactions {
+                let txResult = self.executeNextTransaction()!
+                results.append(txResult)
+            }
 
-        //    self.commitBlock()
-        //    return results
-        //}
+            self.commitBlock()
+            return results
+        }
     }
 
     pub enum ResultStatus: UInt8 {
