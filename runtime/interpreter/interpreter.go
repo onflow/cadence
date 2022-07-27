@@ -3673,6 +3673,50 @@ func (interpreter *Interpreter) allAccountPaths(addressValue AddressValue, getLo
 	)
 }
 
+func (interpreter *Interpreter) iterOverStorageDomain(addressValue AddressValue, domain common.PathDomain, pathType sema.Type) *HostFunctionValue {
+	address := addressValue.ToAddress()
+	storageMap := interpreter.Storage.GetStorageMap(address, domain.Identifier(), false)
+	storageIterator := storageMap.Iterator(interpreter)
+
+	return NewHostFunctionValue(
+		interpreter,
+		func(invocation Invocation) Value {
+			fn, ok := invocation.Arguments[0].(*InterpretedFunctionValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			getLocationRange := invocation.GetLocationRange
+
+			for key, value := storageIterator.Next(); key != "" && value != nil; key, value = storageIterator.Next() {
+				pathValue := NewPathValue(invocation.Interpreter, domain, key)
+				runtimeType := NewTypeValue(invocation.Interpreter, value.StaticType(invocation.Interpreter))
+
+				subInvocation := NewInvocation(
+					interpreter,
+					nil,
+					[]Value{pathValue, runtimeType},
+					[]sema.Type{pathType, sema.MetaType},
+					nil,
+					getLocationRange,
+				)
+
+				shouldContinue, ok := fn.invoke(subInvocation).(BoolValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				if !shouldContinue {
+					break
+				}
+			}
+
+			return NewVoidValue(invocation.Interpreter)
+		},
+		sema.AccountForEachFunctionType(pathType),
+	)
+}
+
 func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValue) *HostFunctionValue {
 
 	// Converted addresses can be cached and don't have to be recomputed on each function invocation

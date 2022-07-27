@@ -1906,14 +1906,17 @@ func TestInterpretAccount_StorageFields(t *testing.T) {
 func TestInterpretAccount_iteration(t *testing.T) {
 
 	t.Parallel()
+	t.Run("paths field", func(t *testing.T) {
 
-	address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+		t.Parallel()
 
-	inter, _ := testAccount(
-		t,
-		address,
-		true,
-		`
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(
+			t,
+			address,
+			true,
+			`
             fun saveStorage() {
 				account.save(0, to:/storage/foo)
 			}
@@ -1942,157 +1945,536 @@ func TestInterpretAccount_iteration(t *testing.T) {
 				return pubAccount.paths
 			}
             `,
-	)
+		)
 
-	t.Run("before any save", func(t *testing.T) {
-		value, err := inter.Invoke("getPaths")
-		require.NoError(t, err)
-		require.IsType(t, &interpreter.ArrayValue{}, value)
-		paths := arrayElements(inter, value.(*interpreter.ArrayValue))
-		require.Equal(t, 0, len(paths))
+		t.Run("before any save", func(t *testing.T) {
+			value, err := inter.Invoke("getPaths")
+			require.NoError(t, err)
+			require.IsType(t, &interpreter.ArrayValue{}, value)
+			paths := arrayElements(inter, value.(*interpreter.ArrayValue))
+			require.Equal(t, 0, len(paths))
 
-		value, err = inter.Invoke("getPublicPaths")
-		require.NoError(t, err)
-		require.IsType(t, &interpreter.ArrayValue{}, value)
-		paths = arrayElements(inter, value.(*interpreter.ArrayValue))
-		require.Equal(t, 0, len(paths))
+			value, err = inter.Invoke("getPublicPaths")
+			require.NoError(t, err)
+			require.IsType(t, &interpreter.ArrayValue{}, value)
+			paths = arrayElements(inter, value.(*interpreter.ArrayValue))
+			require.Equal(t, 0, len(paths))
+		})
+
+		t.Run("storage save", func(t *testing.T) {
+			_, err := inter.Invoke("saveStorage")
+			require.NoError(t, err)
+
+			value, err := inter.Invoke("getPaths")
+			require.NoError(t, err)
+			require.IsType(t, &interpreter.ArrayValue{}, value)
+			paths := arrayElements(inter, value.(*interpreter.ArrayValue))
+			require.Equal(t, 1, len(paths))
+			require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainStorage, "foo"), paths[0])
+
+			value, err = inter.Invoke("getPublicPaths")
+			require.NoError(t, err)
+			require.IsType(t, &interpreter.ArrayValue{}, value)
+			paths = arrayElements(inter, value.(*interpreter.ArrayValue))
+			require.Equal(t, 0, len(paths))
+		})
+
+		t.Run("public link", func(t *testing.T) {
+			_, err := inter.Invoke("linkPublic")
+			require.NoError(t, err)
+
+			value, err := inter.Invoke("getPaths")
+			require.NoError(t, err)
+			require.IsType(t, &interpreter.ArrayValue{}, value)
+			paths := arrayElements(inter, value.(*interpreter.ArrayValue))
+			require.Equal(t, 2, len(paths))
+			require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainPublic, "foo"), paths[0])
+			require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainStorage, "foo"), paths[1])
+
+			value, err = inter.Invoke("getPublicPaths")
+			require.NoError(t, err)
+			require.IsType(t, &interpreter.ArrayValue{}, value)
+			paths = arrayElements(inter, value.(*interpreter.ArrayValue))
+			require.Equal(t, 1, len(paths))
+			require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainPublic, "foo"), paths[0])
+		})
+
+		t.Run("private link", func(t *testing.T) {
+			_, err := inter.Invoke("linkPrivate")
+			require.NoError(t, err)
+
+			value, err := inter.Invoke("getPaths")
+			require.NoError(t, err)
+			require.IsType(t, &interpreter.ArrayValue{}, value)
+			paths := arrayElements(inter, value.(*interpreter.ArrayValue))
+			require.Equal(t, 3, len(paths))
+			require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainPublic, "foo"), paths[0])
+			require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainPrivate, "foo"), paths[1])
+			require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainStorage, "foo"), paths[2])
+
+			value, err = inter.Invoke("getPublicPaths")
+			require.NoError(t, err)
+			require.IsType(t, &interpreter.ArrayValue{}, value)
+			paths = arrayElements(inter, value.(*interpreter.ArrayValue))
+			require.Equal(t, 1, len(paths))
+			require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainPublic, "foo"), paths[0])
+		})
+
+		t.Run("private unlink", func(t *testing.T) {
+			_, err := inter.Invoke("unlinkPrivate")
+			require.NoError(t, err)
+
+			value, err := inter.Invoke("getPaths")
+			require.NoError(t, err)
+			require.IsType(t, &interpreter.ArrayValue{}, value)
+			paths := arrayElements(inter, value.(*interpreter.ArrayValue))
+			require.Equal(t, 2, len(paths))
+			require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainPublic, "foo"), paths[0])
+			require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainStorage, "foo"), paths[1])
+
+			value, err = inter.Invoke("getPublicPaths")
+			require.NoError(t, err)
+			require.IsType(t, &interpreter.ArrayValue{}, value)
+			paths = arrayElements(inter, value.(*interpreter.ArrayValue))
+			require.Equal(t, 1, len(paths))
+			require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainPublic, "foo"), paths[0])
+		})
+
+		t.Run("save storage bar", func(t *testing.T) {
+			_, err := inter.Invoke("saveOtherStorage")
+			require.NoError(t, err)
+
+			value, err := inter.Invoke("getPaths")
+			require.NoError(t, err)
+			require.IsType(t, &interpreter.ArrayValue{}, value)
+			paths := arrayElements(inter, value.(*interpreter.ArrayValue))
+			require.Equal(t, 3, len(paths))
+			require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainPublic, "foo"), paths[0])
+			require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainStorage, "foo"), paths[1])
+			require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainStorage, "bar"), paths[2])
+
+			value, err = inter.Invoke("getPublicPaths")
+			require.NoError(t, err)
+			require.IsType(t, &interpreter.ArrayValue{}, value)
+			paths = arrayElements(inter, value.(*interpreter.ArrayValue))
+			require.Equal(t, 1, len(paths))
+			require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainPublic, "foo"), paths[0])
+		})
+
+		t.Run("load storage", func(t *testing.T) {
+			_, err := inter.Invoke("loadStorage")
+			require.NoError(t, err)
+
+			value, err := inter.Invoke("getPaths")
+			require.NoError(t, err)
+			require.IsType(t, &interpreter.ArrayValue{}, value)
+			paths := arrayElements(inter, value.(*interpreter.ArrayValue))
+			require.Equal(t, 2, len(paths))
+			require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainPublic, "foo"), paths[0])
+			require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainStorage, "bar"), paths[1])
+
+			value, err = inter.Invoke("getPublicPaths")
+			require.NoError(t, err)
+			require.IsType(t, &interpreter.ArrayValue{}, value)
+			paths = arrayElements(inter, value.(*interpreter.ArrayValue))
+			require.Equal(t, 1, len(paths))
+			require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainPublic, "foo"), paths[0])
+		})
+
+		t.Run("unlink public", func(t *testing.T) {
+			_, err := inter.Invoke("unlinkPublic")
+			require.NoError(t, err)
+
+			value, err := inter.Invoke("getPaths")
+			require.NoError(t, err)
+			require.IsType(t, &interpreter.ArrayValue{}, value)
+			paths := arrayElements(inter, value.(*interpreter.ArrayValue))
+			require.Equal(t, 1, len(paths))
+			require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainStorage, "bar"), paths[0])
+
+			value, err = inter.Invoke("getPublicPaths")
+			require.NoError(t, err)
+			require.IsType(t, &interpreter.ArrayValue{}, value)
+			paths = arrayElements(inter, value.(*interpreter.ArrayValue))
+			require.Equal(t, 0, len(paths))
+		})
 	})
 
-	t.Run("storage save", func(t *testing.T) {
-		_, err := inter.Invoke("saveStorage")
-		require.NoError(t, err)
+	t.Run("forEachPublic PublicAccount", func(t *testing.T) {
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		value, err := inter.Invoke("getPaths")
-		require.NoError(t, err)
-		require.IsType(t, &interpreter.ArrayValue{}, value)
-		paths := arrayElements(inter, value.(*interpreter.ArrayValue))
-		require.Equal(t, 1, len(paths))
-		require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainStorage, "foo"), paths[0])
+		inter, _ := testAccount(
+			t,
+			address,
+			true,
+			`
+			struct S {
+				let value: Int
+				init(value: Int) {
+					self.value = value
+				}
+			}
 
-		value, err = inter.Invoke("getPublicPaths")
+			fun test(): Int {
+				account.save(S(value: 2), to: /storage/foo)
+				account.save("", to: /storage/bar)
+				account.link<&S>(/public/a, target:/storage/foo)
+				account.link<&String>(/public/b, target:/storage/bar)
+				account.link<&S>(/public/c, target:/storage/foo)
+				account.link<&S>(/public/d, target:/storage/foo)
+				account.link<&String>(/public/e, target:/storage/bar)
+
+				var total = 0
+				pubAccount.forEachPublic(fun (path: PublicPath, type: Type): Bool {
+					if type == Type<Capability<&S>>() {
+						total = total + pubAccount.getCapability<&S>(path).borrow()!.value
+					}
+					return true
+				})
+
+				return total
+			}
+            `,
+		)
+
+		value, err := inter.Invoke("test")
 		require.NoError(t, err)
-		require.IsType(t, &interpreter.ArrayValue{}, value)
-		paths = arrayElements(inter, value.(*interpreter.ArrayValue))
-		require.Equal(t, 0, len(paths))
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewIntValueFromInt64(nil, 6),
+			value,
+		)
 	})
 
-	t.Run("public link", func(t *testing.T) {
-		_, err := inter.Invoke("linkPublic")
-		require.NoError(t, err)
+	t.Run("forEachPublic PublicAccount number", func(t *testing.T) {
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		value, err := inter.Invoke("getPaths")
-		require.NoError(t, err)
-		require.IsType(t, &interpreter.ArrayValue{}, value)
-		paths := arrayElements(inter, value.(*interpreter.ArrayValue))
-		require.Equal(t, 2, len(paths))
-		require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainPublic, "foo"), paths[0])
-		require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainStorage, "foo"), paths[1])
+		inter, _ := testAccount(
+			t,
+			address,
+			true,
+			`
+			struct S {
+				let value: Int
+				init(value: Int) {
+					self.value = value
+				}
+			}
 
-		value, err = inter.Invoke("getPublicPaths")
+			fun test(): Int {
+				account.save(S(value: 2), to: /storage/foo)
+				account.save("", to: /storage/bar)
+				account.link<&S>(/public/a, target:/storage/foo)
+				account.link<&String>(/public/b, target:/storage/bar)
+				account.link<&S>(/public/c, target:/storage/foo)
+				account.link<&S>(/public/d, target:/storage/foo)
+				account.link<&String>(/public/e, target:/storage/bar)
+
+				var total = 0
+				pubAccount.forEachPublic(fun (path: PublicPath, type: Type): Bool {
+					total = total + 1
+					return true
+				})
+
+				return total
+			}
+            `,
+		)
+
+		value, err := inter.Invoke("test")
 		require.NoError(t, err)
-		require.IsType(t, &interpreter.ArrayValue{}, value)
-		paths = arrayElements(inter, value.(*interpreter.ArrayValue))
-		require.Equal(t, 1, len(paths))
-		require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainPublic, "foo"), paths[0])
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewIntValueFromInt64(nil, 5),
+			value,
+		)
 	})
 
-	t.Run("private link", func(t *testing.T) {
-		_, err := inter.Invoke("linkPrivate")
-		require.NoError(t, err)
+	t.Run("forEachPublic AuthAccount", func(t *testing.T) {
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		value, err := inter.Invoke("getPaths")
-		require.NoError(t, err)
-		require.IsType(t, &interpreter.ArrayValue{}, value)
-		paths := arrayElements(inter, value.(*interpreter.ArrayValue))
-		require.Equal(t, 3, len(paths))
-		require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainPublic, "foo"), paths[0])
-		require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainPrivate, "foo"), paths[1])
-		require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainStorage, "foo"), paths[2])
+		inter, _ := testAccount(
+			t,
+			address,
+			true,
+			`
+			struct S {
+				let value: Int
+				init(value: Int) {
+					self.value = value
+				}
+			}
 
-		value, err = inter.Invoke("getPublicPaths")
+			fun test(): Int {
+				account.save(S(value: 2), to: /storage/foo)
+				account.save("", to: /storage/bar)
+				account.link<&S>(/public/a, target:/storage/foo)
+				account.link<&String>(/public/b, target:/storage/bar)
+				account.link<&S>(/public/c, target:/storage/foo)
+				account.link<&S>(/public/d, target:/storage/foo)
+				account.link<&String>(/public/e, target:/storage/bar)
+
+				var total = 0
+				account.forEachPublic(fun (path: PublicPath, type: Type): Bool {
+					if type == Type<Capability<&S>>() {
+						total = total + account.getCapability<&S>(path).borrow()!.value
+					}
+					return true
+				})
+
+				return total
+			}
+            `,
+		)
+
+		value, err := inter.Invoke("test")
 		require.NoError(t, err)
-		require.IsType(t, &interpreter.ArrayValue{}, value)
-		paths = arrayElements(inter, value.(*interpreter.ArrayValue))
-		require.Equal(t, 1, len(paths))
-		require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainPublic, "foo"), paths[0])
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewIntValueFromInt64(nil, 6),
+			value,
+		)
 	})
 
-	t.Run("private unlink", func(t *testing.T) {
-		_, err := inter.Invoke("unlinkPrivate")
-		require.NoError(t, err)
+	t.Run("forEachPrivate", func(t *testing.T) {
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		value, err := inter.Invoke("getPaths")
-		require.NoError(t, err)
-		require.IsType(t, &interpreter.ArrayValue{}, value)
-		paths := arrayElements(inter, value.(*interpreter.ArrayValue))
-		require.Equal(t, 2, len(paths))
-		require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainPublic, "foo"), paths[0])
-		require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainStorage, "foo"), paths[1])
+		inter, _ := testAccount(
+			t,
+			address,
+			true,
+			`
+			struct S {
+				let value: Int
+				init(value: Int) {
+					self.value = value
+				}
+			}
 
-		value, err = inter.Invoke("getPublicPaths")
+			fun test(): Int {
+				account.save(S(value: 2), to: /storage/foo)
+				account.save("", to: /storage/bar)
+				account.link<&S>(/private/a, target:/storage/foo)
+				account.link<&String>(/private/b, target:/storage/bar)
+				account.link<&S>(/private/c, target:/storage/foo)
+				account.link<&S>(/public/d, target:/storage/foo)
+				account.link<&String>(/private/e, target:/storage/bar)
+
+				var total = 0
+				account.forEachPrivate(fun (path: PrivatePath, type: Type): Bool {
+					if type == Type<Capability<&S>>() {
+						total = total + account.getCapability<&S>(path).borrow()!.value
+					}
+					return true
+				})
+
+				return total
+			}
+            `,
+		)
+
+		value, err := inter.Invoke("test")
 		require.NoError(t, err)
-		require.IsType(t, &interpreter.ArrayValue{}, value)
-		paths = arrayElements(inter, value.(*interpreter.ArrayValue))
-		require.Equal(t, 1, len(paths))
-		require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainPublic, "foo"), paths[0])
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewIntValueFromInt64(nil, 4),
+			value,
+		)
 	})
 
-	t.Run("save storage bar", func(t *testing.T) {
-		_, err := inter.Invoke("saveOtherStorage")
-		require.NoError(t, err)
+	t.Run("forEachStored", func(t *testing.T) {
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		value, err := inter.Invoke("getPaths")
-		require.NoError(t, err)
-		require.IsType(t, &interpreter.ArrayValue{}, value)
-		paths := arrayElements(inter, value.(*interpreter.ArrayValue))
-		require.Equal(t, 3, len(paths))
-		require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainPublic, "foo"), paths[0])
-		require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainStorage, "foo"), paths[1])
-		require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainStorage, "bar"), paths[2])
+		inter, _ := testAccount(
+			t,
+			address,
+			true,
+			`
+			struct S {
+				let value: Int
+				init(value: Int) {
+					self.value = value
+				}
+			}
 
-		value, err = inter.Invoke("getPublicPaths")
+			fun test(): Int {
+				account.save(S(value: 1), to: /storage/foo1)
+				account.save(S(value: 2), to: /storage/foo2)
+				account.save(S(value: 5), to: /storage/foo3)
+				account.save("", to: /storage/bar1)
+				account.save(4, to: /storage/bar2)
+
+				var total = 0
+				account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+					if type == Type<S>() {
+						total = total + account.borrow<&S>(from: path)!.value
+					}
+					return true
+				})
+
+				return total
+			}
+            `,
+		)
+
+		value, err := inter.Invoke("test")
 		require.NoError(t, err)
-		require.IsType(t, &interpreter.ArrayValue{}, value)
-		paths = arrayElements(inter, value.(*interpreter.ArrayValue))
-		require.Equal(t, 1, len(paths))
-		require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainPublic, "foo"), paths[0])
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewIntValueFromInt64(nil, 8),
+			value,
+		)
 	})
 
-	t.Run("load storage", func(t *testing.T) {
-		_, err := inter.Invoke("loadStorage")
-		require.NoError(t, err)
+	t.Run("forEachStored with update", func(t *testing.T) {
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		value, err := inter.Invoke("getPaths")
-		require.NoError(t, err)
-		require.IsType(t, &interpreter.ArrayValue{}, value)
-		paths := arrayElements(inter, value.(*interpreter.ArrayValue))
-		require.Equal(t, 2, len(paths))
-		require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainPublic, "foo"), paths[0])
-		require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainStorage, "bar"), paths[1])
+		inter, _ := testAccount(
+			t,
+			address,
+			true,
+			`
+			struct S {
+				var value: Int
+				init(value: Int) {
+					self.value = value
+				}
+				fun increment() {
+					self.value = self.value + 1
+				}
+			}
 
-		value, err = inter.Invoke("getPublicPaths")
+			fun test(): Int {
+				account.save(S(value: 1), to: /storage/foo1)
+				account.save(S(value: 2), to: /storage/foo2)
+				account.save(S(value: 5), to: /storage/foo3)
+				account.save("", to: /storage/bar1)
+				account.save(4, to: /storage/bar2)
+
+				var total = 0
+				account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+					if type == Type<S>() {
+						account.borrow<&S>(from: path)!.increment()
+					}
+					return true
+				})
+				account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+					if type == Type<S>() {
+						total = total + account.borrow<&S>(from: path)!.value
+					}
+					return true
+				})
+
+				return total
+			}
+            `,
+		)
+
+		value, err := inter.Invoke("test")
 		require.NoError(t, err)
-		require.IsType(t, &interpreter.ArrayValue{}, value)
-		paths = arrayElements(inter, value.(*interpreter.ArrayValue))
-		require.Equal(t, 1, len(paths))
-		require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainPublic, "foo"), paths[0])
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewIntValueFromInt64(nil, 11),
+			value,
+		)
 	})
 
-	t.Run("unlink public", func(t *testing.T) {
-		_, err := inter.Invoke("unlinkPublic")
+	t.Run("forEachStored with mutation", func(t *testing.T) {
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(
+			t,
+			address,
+			true,
+			`
+			struct S {
+				var value: Int
+				init(value: Int) {
+					self.value = value
+				}
+				fun increment() {
+					self.value = self.value + 1
+				}
+			}
+
+			fun test(): Int {
+				account.save(S(value: 1), to: /storage/foo1)
+				account.save(S(value: 2), to: /storage/foo2)
+				account.save(S(value: 5), to: /storage/foo3)
+				account.save("qux", to: /storage/bar1)
+				account.save(4, to: /storage/bar2)
+
+				var total = 0
+				account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+					if type == Type<S>() {
+						total = total + account.borrow<&S>(from: path)!.value
+					}
+					if type == Type<String>() {
+						let id = account.load<String>(from: path)!
+						account.save(S(value:3), to: StoragePath(identifier: id)!)
+					}
+					return true
+				})
+
+				return total
+			}
+            `,
+		)
+
+		_, err := inter.Invoke("test")
+
+		// we test nothing about the value returned, but want to make sure there isn't a crash or something
 		require.NoError(t, err)
 
-		value, err := inter.Invoke("getPaths")
-		require.NoError(t, err)
-		require.IsType(t, &interpreter.ArrayValue{}, value)
-		paths := arrayElements(inter, value.(*interpreter.ArrayValue))
-		require.Equal(t, 1, len(paths))
-		require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainStorage, "bar"), paths[0])
+	})
 
-		value, err = inter.Invoke("getPublicPaths")
+	t.Run("forEachStored with early termination", func(t *testing.T) {
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(
+			t,
+			address,
+			true,
+			`
+			fun test(): Int {
+				account.save(1, to: /storage/foo1)
+				account.save(2, to: /storage/foo2)
+				account.save(3, to: /storage/foo3)
+				account.save(4, to: /storage/bar1)
+				account.save(5, to: /storage/bar2)
+
+				var seen = 0
+				var stuff: [&AnyStruct] = []
+				account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+					if seen >= 3 {
+						return false
+					}
+					stuff.append(account.borrow<&AnyStruct>(from: path)!)
+					seen = seen + 1
+					return true
+				})
+
+				return stuff.length
+			}
+            `,
+		)
+
+		value, err := inter.Invoke("test")
+
 		require.NoError(t, err)
-		require.IsType(t, &interpreter.ArrayValue{}, value)
-		paths = arrayElements(inter, value.(*interpreter.ArrayValue))
-		require.Equal(t, 0, len(paths))
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewIntValueFromInt64(nil, 3),
+			value,
+		)
+
 	})
 }

@@ -80,6 +80,15 @@ func NewAuthAccountValue(
 		sema.AuthAccountPathsField: func(inter *Interpreter, getLocationRange func() LocationRange) Value {
 			return inter.allAccountPaths(address, getLocationRange)
 		},
+		sema.AuthAccountForEachPublicField: func(inter *Interpreter, _ func() LocationRange) Value {
+			return inter.iterOverStorageDomain(address, common.PathDomainPublic, sema.PublicPathType)
+		},
+		sema.AuthAccountForEachPrivateField: func(inter *Interpreter, _ func() LocationRange) Value {
+			return inter.iterOverStorageDomain(address, common.PathDomainPrivate, sema.PrivatePathType)
+		},
+		sema.AuthAccountForEachStoredField: func(inter *Interpreter, _ func() LocationRange) Value {
+			return inter.iterOverStorageDomain(address, common.PathDomainStorage, sema.StoragePathType)
+		},
 		sema.AuthAccountBalanceField: func(_ *Interpreter, _ func() LocationRange) Value {
 			return accountBalanceGet()
 		},
@@ -190,6 +199,9 @@ func NewPublicAccountValue(
 		},
 		sema.PublicAccountPathsField: func(inter *Interpreter, getLocationRange func() LocationRange) Value {
 			return inter.publicAccountPaths(address, getLocationRange)
+		},
+		sema.PublicAccountForEachPublicField: func(inter *Interpreter, _ func() LocationRange) Value {
+			return inter.iterOverStorageDomain(address, common.PathDomainPublic, sema.PublicPathType)
 		},
 		sema.PublicAccountBalanceField: func(_ *Interpreter, _ func() LocationRange) Value {
 			return accountBalanceGet()
