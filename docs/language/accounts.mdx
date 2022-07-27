@@ -36,6 +36,9 @@ which represents the publicly available portion of an account.
       fun getCapability<T>(_ path: PublicPath): Capability<T>
       fun getLinkTarget(_ path: CapabilityPath): Path?
 
+      // Storage iteration  
+      fun forEachPublic(_ function: ((PublicPath, Type): Bool)): Void
+
       struct Contracts {
 
           let names: [String]
@@ -120,6 +123,11 @@ to the `prepare` phase of the transaction.
       fun getCapability<T>(_ path: CapabilityPath): Capability<T>
       fun getLinkTarget(_ path: CapabilityPath): Path?
       fun unlink(_ path: CapabilityPath)
+
+      // Storage iteration  
+      fun forEachPublic(_ function: ((PublicPath, Type): Bool)): Void
+      fun forEachPrivate(_ function: ((PrivatePath, Type): Bool)): Void
+      fun forEachStored(_ function: ((StoragePath, Type): Bool)): Void
 
       struct Contracts {
 
