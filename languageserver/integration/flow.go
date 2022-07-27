@@ -72,8 +72,8 @@ type flowkitClient struct {
 	accounts []*ClientAccount
 }
 
-func NewFlowkitClient(loader flowkit.ReaderWriter) *flowkitClient {
-	return &flowkitClient{
+func NewFlowkitClient(loader flowkit.ReaderWriter) flowkitClient {
+	return flowkitClient{
 		loader: loader,
 	}
 }
@@ -92,12 +92,12 @@ func (f flowkitClient) Initialize(configPath string, numberOfAccounts int) error
 		return err
 	}
 
-	grpcGateway := gateway.NewEmulatorGateway(serviceAccount)
+	hostedEmulator := gateway.NewEmulatorGateway(serviceAccount)
 	if err != nil {
 		return err
 	}
 
-	f.services = services.NewServices(grpcGateway, state, logger)
+	f.services = services.NewServices(hostedEmulator, state, logger)
 
 	if numberOfAccounts > len(names) {
 		return fmt.Errorf(fmt.Sprintf("can only use up to %d accounts", len(names)))
@@ -161,12 +161,12 @@ func (f flowkitClient) ExecuteScript(
 	location *url.URL,
 	args []cadence.Value,
 ) (cadence.Value, error) {
-	code, err := f.state.ReadFile(location.Path)
+	code, err := f.loader.ReadFile(location.Path)
 	if err != nil {
 		return nil, err
 	}
 
-	return f.services.Scripts.Execute(code, args, "", "") // todo check if it's ok that path is empty for resolving imports
+	return f.services.Scripts.Execute(code, args, location.Path, "") // todo check if it's ok that path is empty for resolving imports
 }
 
 func (f flowkitClient) DeployContract(
@@ -174,7 +174,7 @@ func (f flowkitClient) DeployContract(
 	name string,
 	location *url.URL,
 ) (*flow.Account, error) {
-	code, err := f.state.ReadFile(location.Path)
+	code, err := f.loader.ReadFile(location.Path)
 	if err != nil {
 		return nil, err
 	}
@@ -193,7 +193,7 @@ func (f flowkitClient) SendTransaction(
 	location *url.URL,
 	args []cadence.Value,
 ) (*flow.TransactionResult, error) {
-	code, err := f.state.ReadFile(location.Path)
+	code, err := f.loader.ReadFile(location.Path)
 	if err != nil {
 		return nil, err
 	}

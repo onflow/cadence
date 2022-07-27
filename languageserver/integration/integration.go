@@ -32,6 +32,7 @@ import (
 
 func NewFlowIntegration(s *server.Server, enableFlowClient bool) (*FlowIntegration, error) {
 	loader := &afero.Afero{Fs: afero.NewOsFs()}
+
 	integration := &FlowIntegration{
 		server:         s,
 		entryPointInfo: map[protocol.DocumentURI]*entryPointInfo{},
@@ -49,7 +50,7 @@ func NewFlowIntegration(s *server.Server, enableFlowClient bool) (*FlowIntegrati
 	}
 
 	if enableFlowClient {
-		client := NewFlowkitClient(integration.loader)
+		client := NewFlowkitClient(loader)
 		integration.client = client
 		resolve.client = client
 
