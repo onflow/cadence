@@ -2427,11 +2427,18 @@ func TestInterpretAccount_iteration(t *testing.T) {
             `,
 		)
 
-		_, err := inter.Invoke("test")
+		value, err := inter.Invoke("test")
 
-		// we test nothing about the value returned, but want to make sure there isn't a crash or something
+		// while we make no guarantees about the behavior of iteration with mutation, the behavior
+		// does still need to be deterministic, so we assert that the undefined behavior is the same every time
 		require.NoError(t, err)
 
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewIntValueFromInt64(nil, 6),
+			value,
+		)
 	})
 
 	t.Run("forEachStored with early termination", func(t *testing.T) {
