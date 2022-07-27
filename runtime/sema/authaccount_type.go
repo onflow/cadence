@@ -39,6 +39,9 @@ const AuthAccountLinkField = "link"
 const AuthAccountUnlinkField = "unlink"
 const AuthAccountGetCapabilityField = "getCapability"
 const AuthAccountGetLinkTargetField = "getLinkTarget"
+const AuthAccountForEachPublicField = "forEachPublic"
+const AuthAccountForEachPrivateField = "forEachPrivate"
+const AuthAccountForEachStoredField = "forEachStored"
 const AuthAccountContractsField = "contracts"
 const AuthAccountKeysField = "keys"
 const AuthAccountPathsField = "paths"
@@ -177,6 +180,24 @@ var AuthAccountType = func() *CompositeType {
 			AuthAccountPathsType,
 			authAccountTypePathsFieldDocString,
 		),
+		NewUnmeteredPublicConstantFieldMember(
+			authAccountType,
+			AuthAccountForEachPublicField,
+			AuthAccountForEachPublicFunctionType,
+			authAccountForEachPublicDocString,
+		),
+		NewUnmeteredPublicConstantFieldMember(
+			authAccountType,
+			AuthAccountForEachPrivateField,
+			AuthAccountForEachPrivateFunctionType,
+			authAccountForEachPrivateDocString,
+		),
+		NewUnmeteredPublicConstantFieldMember(
+			authAccountType,
+			AuthAccountForEachStoredField,
+			AuthAccountForEachStoredFunctionType,
+			authAccountForEachStoredDocString,
+		),
 	}
 
 	authAccountType.Members = GetMembersAsMap(members)
@@ -191,6 +212,24 @@ var AuthAccountPathsType = &VariableSizedType{
 const authAccountTypePathsFieldDocString = `
 All the storage paths of an account
 `
+
+const authAccountForEachPublicDocString = `
+Iterate over all the public paths of an account
+`
+
+const authAccountForEachPrivateDocString = `
+Iterate over all the private paths of an account
+`
+
+const authAccountForEachStoredDocString = `
+Iterate over all the storage paths of an account
+`
+
+var AuthAccountForEachPublicFunctionType = AccountForEachFunctionType(PublicPathType)
+
+var AuthAccountForEachPrivateFunctionType = AccountForEachFunctionType(PrivatePathType)
+
+var AuthAccountForEachStoredFunctionType = AccountForEachFunctionType(StoragePathType)
 
 var AuthAccountTypeAddPublicKeyFunctionType = &FunctionType{
 	Parameters: []*Parameter{
