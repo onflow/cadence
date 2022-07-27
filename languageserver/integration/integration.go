@@ -20,6 +20,7 @@ package integration
 
 import (
 	"errors"
+	"strconv"
 
 	"github.com/onflow/cadence/runtime/sema"
 
@@ -94,12 +95,16 @@ func (i *FlowIntegration) initialize(initializationOptions any) error {
 		return errors.New("initialization options: invalid config path")
 	}
 
-	numberOfAccounts, ok := optsMap["numberOfAccounts"].(int)
-	if !ok || numberOfAccounts == 0 {
+	numberOfAccountsString, ok := optsMap["numberOfAccounts"].(string)
+	if !ok || numberOfAccountsString == "" {
+		return errors.New("initialization options: invalid account number value, should be passed as a string")
+	}
+	numberOfAccounts, err := strconv.Atoi(numberOfAccountsString)
+	if err != nil {
 		return errors.New("initialization options: invalid account number value")
 	}
 
-	err := i.client.Initialize(configPath, numberOfAccounts)
+	err = i.client.Initialize(configPath, int(numberOfAccounts))
 	if err != nil {
 		return err
 	}
