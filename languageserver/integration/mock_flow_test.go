@@ -17,15 +17,15 @@ type mockFlowClient struct {
 }
 
 // CreateAccount provides a mock function with given fields:
-func (_m *mockFlowClient) CreateAccount() (*flow.Account, error) {
+func (_m *mockFlowClient) CreateAccount() (*ClientAccount, error) {
 	ret := _m.Called()
 
-	var r0 *flow.Account
-	if rf, ok := ret.Get(0).(func() *flow.Account); ok {
+	var r0 *ClientAccount
+	if rf, ok := ret.Get(0).(func() *ClientAccount); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*flow.Account)
+			r0 = ret.Get(0).(*ClientAccount)
 		}
 	}
 
