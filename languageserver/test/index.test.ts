@@ -378,9 +378,18 @@ describe("accounts", () => {
     await withConnection(async connection => {
       let result = await connection.sendRequest(ExecuteCommandRequest.type, {
         command: "cadence.server.flow.createAccount",
-        arguments: ["Bob"]
+        arguments: []
       })
 
+      expect(result.Active).toBeFalsy()
+      expect(result.Name).toBeDefined()
+
+      let accounts = await connection.sendRequest(ExecuteCommandRequest.type, {
+        command: "cadence.server.flow.getAccounts",
+        arguments: []
+      })
+
+      expect(accounts.filter(a => a.Name == result.Name)).toHaveLength(1)
     }, true)
   })
 
