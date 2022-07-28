@@ -50,7 +50,7 @@ func NewFlowIntegration(s *server.Server, enableFlowClient bool) (*FlowIntegrati
 	}
 
 	if enableFlowClient {
-		client := NewFlowkitClient(loader)
+		client := newFlowkitClient(loader)
 		integration.client = client
 		resolve.client = client
 
@@ -76,7 +76,7 @@ func NewFlowIntegration(s *server.Server, enableFlowClient bool) (*FlowIntegrati
 }
 
 type FlowIntegration struct {
-	server *server.Server
+	server *server.Server // todo remove since not used
 
 	entryPointInfo map[protocol.DocumentURI]*entryPointInfo
 	contractInfo   map[protocol.DocumentURI]*contractInfo
@@ -105,7 +105,7 @@ func (i *FlowIntegration) initialize(initializationOptions any) error {
 		return errors.New("initialization options: invalid account number value")
 	}
 
-	err = i.client.Initialize(configPath, int(numberOfAccounts))
+	err = i.client.Initialize(configPath, numberOfAccounts)
 	if err != nil {
 		return err
 	}

@@ -1651,6 +1651,7 @@ func (s *Server) ExecuteCommand(conn protocol.Conn, params *protocol.ExecuteComm
 	}
 
 	if res != nil {
+		// todo do we need to show message, since execute command returns a response I don't think we need to keep this
 		conn.ShowMessage(&protocol.ShowMessageParams{
 			Type:    protocol.Info,
 			Message: fmt.Sprintf("%v", res),

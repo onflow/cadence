@@ -115,7 +115,7 @@ func Test_ExecuteTransaction(t *testing.T) {
 }
 
 func Test_SwitchActiveAccount(t *testing.T) {
-	client := NewFlowkitClient(nil)
+	client := newFlowkitClient(nil)
 	cmds := commands{client}
 
 	name, _ := json.Marshal("koko")

@@ -114,7 +114,7 @@ func (c *contractInfo) update(uri protocol.DocumentURI, version int32, checker *
 	c.pragmaArgumentStrings = pragmaArgumentStrings
 }
 
-func (c contractInfo) codelens(client flowClient) []*protocol.CodeLens {
+func (c *contractInfo) codelens(client flowClient) []*protocol.CodeLens {
 	if c.kind == contractTypeUnknown || c.startPos == nil {
 		return nil
 	}
