@@ -77,7 +77,7 @@ async function withConnection(f: (connection: ProtocolConnection) => Promise<voi
   )
 
   // debug option when testing
-  // connection.onUnhandledNotification((e) => console.log("unhandled", e))
+  //connection.onUnhandledNotification((e) => console.log("unhandled", e))
 
   await f(connection)
 
@@ -341,40 +341,44 @@ describe("script execution", () => {
 
 })
 
+async function getAccounts(connection: ProtocolConnection) {
+  return connection.sendRequest(ExecuteCommandRequest.type, {
+    command: "cadence.server.flow.getAccounts",
+    arguments: []
+  })
+}
+
+async function switchAccount(connection: ProtocolConnection, name: string) {
+  return connection.sendRequest(ExecuteCommandRequest.type, {
+    command: "cadence.server.flow.switchActiveAccount",
+    arguments: [name]
+  })
+}
+
 describe("accounts", () => {
 
   test("get account list", async() => {
     await withConnection(async (connection) => {
-      let result = await connection.sendRequest(ExecuteCommandRequest.type, {
-        command: "cadence.server.flow.getAccounts",
-        arguments: []
-      })
+      let result = await getAccounts(connection)
 
-      expect(result.map(r => r.Address)).toEqual(["01cf0e2f2f715450", "179b6b1cb6755e31", "f3fcd2c1a78f5eee", "e03daebed8ca0615", "045a1763c93006ca"])
       expect(result.map(r => r.Name)).toEqual(["Alice", "Bob", "Charlie", "Dave", "Eve"])
+      expect(result.map(r => r.Address)).toEqual(["01cf0e2f2f715450", "179b6b1cb6755e31", "f3fcd2c1a78f5eee", "e03daebed8ca0615", "045a1763c93006ca"])
       expect(result.map(r => r.Active)).toEqual([true, false, false, false, false])
     }, true)
   })
 
   test("switch active account", async() => {
     await withConnection(async connection => {
-      let result = await connection.sendRequest(ExecuteCommandRequest.type, {
-        command: "cadence.server.flow.switchActiveAccount",
-        arguments: ["Bob"]
-      })
-
+      let result = await switchAccount(connection, "Bob")
       expect(result).toEqual("Account switched to Bob")
 
-      let active = await connection.sendRequest(ExecuteCommandRequest.type, {
-        command: "cadence.server.flow.getAccounts",
-        arguments: []
-      })
+      let active = await getAccounts(connection)
 
       expect(active.filter(a => a.Active).pop().Name).toEqual("Bob")
     }, true)
   })
 
-  test("crate an account", async() => {
+  test("create an account", async() => {
     await withConnection(async connection => {
       let result = await connection.sendRequest(ExecuteCommandRequest.type, {
         command: "cadence.server.flow.createAccount",
@@ -384,12 +388,23 @@ describe("accounts", () => {
       expect(result.Active).toBeFalsy()
       expect(result.Name).toBeDefined()
 
-      let accounts = await connection.sendRequest(ExecuteCommandRequest.type, {
-        command: "cadence.server.flow.getAccounts",
-        arguments: []
-      })
+      let accounts = await getAccounts(connection)
 
       expect(accounts.filter(a => a.Name == result.Name)).toHaveLength(1)
+    }, true)
+  })
+})
+
+describe("transactions", () => {
+
+  test("send a transaction", async() => {
+    await withConnection(async connection => {
+      let result = await connection.sendRequest(ExecuteCommandRequest.type, {
+        command: "cadence.server.flow.sendTransaction",
+        arguments: [`file://${__dirname}/transaction.cdc`, "[]", ["Alice"]]
+      })
+
+      expect(result).toEqual("")
     }, true)
   })
 
