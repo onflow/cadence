@@ -23,6 +23,8 @@ import (
 	"fmt"
 	"net/url"
 
+	"github.com/onflow/cadence/languageserver/test"
+
 	"github.com/onflow/cadence/languageserver/server"
 	"github.com/onflow/flow-cli/pkg/flowkit"
 	"github.com/onflow/flow-go-sdk"
@@ -76,7 +78,7 @@ func (c *commands) getAll() []server.Command {
 // There should be exactly 2 arguments:
 //   * the DocumentURI of the file to submit
 //   * the arguments, encoded as JSON-CDC
-func (c *commands) sendTransaction(args ...json.RawMessage) (interface{}, error) {
+func (c *commands) sendTransaction(args ...json.RawMessage) (any, error) {
 	err := server.CheckCommandArgumentCount(args, 3)
 	if err != nil {
 		return nil, fmt.Errorf("arguments error: %w", err)
@@ -98,18 +100,25 @@ func (c *commands) sendTransaction(args ...json.RawMessage) (interface{}, error)
 		return nil, fmt.Errorf("invalid transactions arguments cadence encoding format: %s, error: %s", argsJSON, err)
 	}
 
-	var signerList []any
+	var signerList []string
 	err = json.Unmarshal(args[2], &signerList)
 	if err != nil {
 		return nil, fmt.Errorf("invalid signer list: %s", args[2])
 	}
 
-	signers := make([]flow.Address, len(signerList))
-	for i, v := range signerList {
-		signers[i] = flow.HexToAddress(v.(string))
+	signerAddresses := make([]flow.Address, 0)
+	for _, name := range signerList {
+		account := c.client.GetClientAccount(name)
+		if account == nil {
+			return nil, fmt.Errorf("signer account with name %s doesn't exist", name)
+		}
+
+		signerAddresses = append(signerAddresses, account.Address)
 	}
 
-	txResult, err := c.client.SendTransaction(signers, location, txArgs)
+	test.Log("#send", signerAddresses, location, txArgs)
+	txResult, err := c.client.SendTransaction(signerAddresses, location, txArgs)
+	test.Log("#result", txResult, err)
 	if err != nil {
 		return nil, fmt.Errorf("transaction error: %w", err)
 	}
@@ -122,7 +131,7 @@ func (c *commands) sendTransaction(args ...json.RawMessage) (interface{}, error)
 // There should be exactly 2 arguments:
 //   * the DocumentURI of the file to submit
 //   * the arguments, encoded as JSON-CDC
-func (c *commands) executeScript(args ...json.RawMessage) (interface{}, error) {
+func (c *commands) executeScript(args ...json.RawMessage) (any, error) {
 	err := server.CheckCommandArgumentCount(args, 2)
 	if err != nil {
 		return nil, fmt.Errorf("arguments error: %w", err)
@@ -157,7 +166,7 @@ func (c *commands) executeScript(args ...json.RawMessage) (interface{}, error) {
 //
 // There should be 2 arguments:
 //	 * name of the new active account
-func (c *commands) switchActiveAccount(args ...json.RawMessage) (interface{}, error) {
+func (c *commands) switchActiveAccount(args ...json.RawMessage) (any, error) {
 	err := server.CheckCommandArgumentCount(args, 1)
 	if err != nil {
 		return nil, fmt.Errorf("arguments error: %w", err)
@@ -178,12 +187,12 @@ func (c *commands) switchActiveAccount(args ...json.RawMessage) (interface{}, er
 }
 
 // getAccounts return the client account list with information about the active client.
-func (c *commands) getAccounts(_ ...json.RawMessage) (interface{}, error) {
+func (c *commands) getAccounts(_ ...json.RawMessage) (any, error) {
 	return c.client.GetClientAccounts(), nil
 }
 
 // createAccount creates a new account and returns its address.
-func (c *commands) createAccount(_ ...json.RawMessage) (interface{}, error) {
+func (c *commands) createAccount(_ ...json.RawMessage) (any, error) {
 	account, err := c.client.CreateAccount()
 	if err != nil {
 		return nil, fmt.Errorf("create account error: %w", err)
@@ -198,7 +207,7 @@ func (c *commands) createAccount(_ ...json.RawMessage) (interface{}, error) {
 // There should be exactly 2 arguments:
 //   * the DocumentURI of the file to submit
 //   * the name of the contract
-func (c *commands) deployContract(args ...json.RawMessage) (interface{}, error) {
+func (c *commands) deployContract(args ...json.RawMessage) (any, error) {
 	err := server.CheckCommandArgumentCount(args, 3)
 	if err != nil {
 		return nil, fmt.Errorf("arguments error: %w", err)
