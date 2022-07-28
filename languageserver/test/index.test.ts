@@ -404,7 +404,7 @@ describe("transactions", () => {
         arguments: [`file://${__dirname}/transaction.cdc`, "[]", ["Alice"]]
       })
 
-      expect(result).toEqual("")
+      expect(result).toEqual("Transaction status: SEALED")
     }, true)
   })
 

@@ -219,11 +219,6 @@ func (f *flowkitClient) SendTransaction(
 		return nil, err
 	}
 
-	// sign with service as proposer
-	tx, err = sign(service, tx)
-	if err != nil {
-		return nil, err
-	}
 	// sign with all authorizers
 	for _, auth := range authorizers {
 		tx, err = sign(createSigner(auth, service), tx)
@@ -232,12 +227,13 @@ func (f *flowkitClient) SendTransaction(
 		}
 	}
 	// sign with service as payer
-	tx, err = sign(service, tx)
+	signed, err := sign(service, tx)
 	if err != nil {
 		return nil, err
 	}
 
-	_, res, err := f.services.Transactions.SendSigned(tx.FlowTransaction().Encode(), true)
+	_, res, err := f.services.Transactions.SendSigned([]byte(fmt.Sprintf("%x", signed.FlowTransaction().Encode())), true) // todo refactor after implementing accounts on state
+
 	return res, err
 }
 
