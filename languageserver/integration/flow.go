@@ -45,14 +45,14 @@ type flowClient interface {
 	CreateAccount() (*flow.Account, error)
 }
 
-var _ flowClient = flowkitClient{}
+var _ flowClient = &flowkitClient{}
 
 // todo: check if we need this struct at all, could we just use the flow.Account returned from the flowkit
 
 type ClientAccount struct {
 	*flow.Account
 	Name   string
-	active bool
+	Active bool
 }
 
 var names = []string{
@@ -72,13 +72,13 @@ type flowkitClient struct {
 	accounts []*ClientAccount
 }
 
-func NewFlowkitClient(loader flowkit.ReaderWriter) flowkitClient {
-	return flowkitClient{
+func newFlowkitClient(loader flowkit.ReaderWriter) *flowkitClient {
+	return &flowkitClient{
 		loader: loader,
 	}
 }
 
-func (f flowkitClient) Initialize(configPath string, numberOfAccounts int) error {
+func (f *flowkitClient) Initialize(configPath string, numberOfAccounts int) error {
 	state, err := flowkit.Load([]string{configPath}, f.loader)
 	if err != nil {
 		return err
@@ -116,11 +116,12 @@ func (f flowkitClient) Initialize(configPath string, numberOfAccounts int) error
 		}
 	}
 
-	f.accounts[0].active = true // make first active by default
+	f.accounts[0].Active = true // make first active by default
+
 	return nil
 }
 
-func (f flowkitClient) GetClientAccount(name string) *ClientAccount {
+func (f *flowkitClient) GetClientAccount(name string) *ClientAccount {
 	for _, account := range f.accounts {
 		if account.Name == name {
 			return account
@@ -129,14 +130,14 @@ func (f flowkitClient) GetClientAccount(name string) *ClientAccount {
 	return nil
 }
 
-func (f flowkitClient) GetClientAccounts() []*ClientAccount {
+func (f *flowkitClient) GetClientAccounts() []*ClientAccount {
 	return f.accounts
 }
 
-func (f flowkitClient) SetActiveClientAccount(name string) error {
+func (f *flowkitClient) SetActiveClientAccount(name string) error {
 	activeAcc := f.GetActiveClientAccount()
 	if activeAcc != nil {
-		activeAcc.active = false
+		activeAcc.Active = false
 	}
 
 	account := f.GetClientAccount(name)
@@ -144,20 +145,20 @@ func (f flowkitClient) SetActiveClientAccount(name string) error {
 		return fmt.Errorf(fmt.Sprintf("account with a name %s not found", name))
 	}
 
-	account.active = true
+	account.Active = true
 	return nil
 }
 
-func (f flowkitClient) GetActiveClientAccount() *ClientAccount {
+func (f *flowkitClient) GetActiveClientAccount() *ClientAccount {
 	for _, account := range f.accounts {
-		if account.active {
+		if account.Active {
 			return account
 		}
 	}
 	return nil
 }
 
-func (f flowkitClient) ExecuteScript(
+func (f *flowkitClient) ExecuteScript(
 	location *url.URL,
 	args []cadence.Value,
 ) (cadence.Value, error) {
@@ -169,7 +170,7 @@ func (f flowkitClient) ExecuteScript(
 	return f.services.Scripts.Execute(code, args, location.Path, "") // todo check if it's ok that path is empty for resolving imports
 }
 
-func (f flowkitClient) DeployContract(
+func (f *flowkitClient) DeployContract(
 	address flow.Address,
 	name string,
 	location *url.URL,
@@ -188,7 +189,7 @@ func (f flowkitClient) DeployContract(
 	return f.services.Accounts.AddContract(account, name, code, true)
 }
 
-func (f flowkitClient) SendTransaction(
+func (f *flowkitClient) SendTransaction(
 	authorizers []flow.Address,
 	location *url.URL,
 	args []cadence.Value,
@@ -245,11 +246,11 @@ func (f flowkitClient) SendTransaction(
 	return res, err
 }
 
-func (f flowkitClient) GetAccount(address flow.Address) (*flow.Account, error) {
+func (f *flowkitClient) GetAccount(address flow.Address) (*flow.Account, error) {
 	return f.services.Accounts.Get(address)
 }
 
-func (f flowkitClient) CreateAccount() (*flow.Account, error) {
+func (f *flowkitClient) CreateAccount() (*flow.Account, error) {
 	service, err := f.state.EmulatorServiceAccount()
 	if err != nil {
 		return nil, err
@@ -259,7 +260,7 @@ func (f flowkitClient) CreateAccount() (*flow.Account, error) {
 		return nil, err
 	}
 
-	return f.services.Accounts.Create(
+	account, err := f.services.Accounts.Create(
 		service,
 		[]crypto.PublicKey{(*serviceKey).PublicKey()},
 		[]int{flow.AccountKeyWeightThreshold},
@@ -267,6 +268,22 @@ func (f flowkitClient) CreateAccount() (*flow.Account, error) {
 		[]crypto.HashAlgorithm{crypto.SHA3_256},
 		nil,
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	nextIndex := len(f.GetClientAccounts()) + 1
+
+	if nextIndex > len(names) {
+		return nil, fmt.Errorf(fmt.Sprintf("account limit of %d reached", len(names)))
+	}
+
+	f.accounts = append(f.accounts, &ClientAccount{
+		Account: account,
+		Name:    names[nextIndex],
+	})
+
+	return account, nil
 }
 
 // Helpers
