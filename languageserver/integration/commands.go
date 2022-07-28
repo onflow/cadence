@@ -23,8 +23,6 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/onflow/cadence/languageserver/test"
-
 	"github.com/onflow/cadence/languageserver/server"
 	"github.com/onflow/flow-cli/pkg/flowkit"
 	"github.com/onflow/flow-go-sdk"
@@ -116,9 +114,7 @@ func (c *commands) sendTransaction(args ...json.RawMessage) (any, error) {
 		signerAddresses = append(signerAddresses, account.Address)
 	}
 
-	test.Log("#send", signerAddresses, location, txArgs)
 	txResult, err := c.client.SendTransaction(signerAddresses, location, txArgs)
-	test.Log("#result", txResult, err)
 	if err != nil {
 		return nil, fmt.Errorf("transaction error: %w", err)
 	}
