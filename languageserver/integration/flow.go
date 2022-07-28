@@ -103,14 +103,12 @@ func (f *flowkitClient) Initialize(configPath string, numberOfAccounts int) erro
 		return fmt.Errorf(fmt.Sprintf("can only use up to %d accounts", len(names)))
 	}
 
-	f.accounts = make([]*ClientAccount, numberOfAccounts)
+	f.accounts = make([]*ClientAccount, 0)
 	for i := 0; i < numberOfAccounts; i++ {
-		account, err := f.CreateAccount()
+		_, err := f.CreateAccount()
 		if err != nil {
 			return err
 		}
-
-		f.accounts[i] = account
 	}
 
 	f.accounts[0].Active = true // make first active by default
@@ -269,7 +267,7 @@ func (f *flowkitClient) CreateAccount() (*ClientAccount, error) {
 		return nil, err
 	}
 
-	nextIndex := len(f.GetClientAccounts()) + 1
+	nextIndex := len(f.GetClientAccounts())
 	if nextIndex > len(names) {
 		return nil, fmt.Errorf(fmt.Sprintf("account limit of %d reached", len(names)))
 	}
