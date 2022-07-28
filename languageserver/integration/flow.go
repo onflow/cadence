@@ -42,7 +42,7 @@ type flowClient interface {
 	DeployContract(address flow.Address, name string, location *url.URL) (*flow.Account, error)
 	SendTransaction(authorizers []flow.Address, location *url.URL, args []cadence.Value) (*flow.TransactionResult, error)
 	GetAccount(address flow.Address) (*flow.Account, error)
-	CreateAccount() (*flow.Account, error)
+	CreateAccount() (*ClientAccount, error)
 }
 
 var _ flowClient = &flowkitClient{}
@@ -110,10 +110,7 @@ func (f *flowkitClient) Initialize(configPath string, numberOfAccounts int) erro
 			return err
 		}
 
-		f.accounts[i] = &ClientAccount{
-			Account: account,
-			Name:    names[i],
-		}
+		f.accounts[i] = account
 	}
 
 	f.accounts[0].Active = true // make first active by default
@@ -250,7 +247,7 @@ func (f *flowkitClient) GetAccount(address flow.Address) (*flow.Account, error) 
 	return f.services.Accounts.Get(address)
 }
 
-func (f *flowkitClient) CreateAccount() (*flow.Account, error) {
+func (f *flowkitClient) CreateAccount() (*ClientAccount, error) {
 	service, err := f.state.EmulatorServiceAccount()
 	if err != nil {
 		return nil, err
@@ -273,17 +270,17 @@ func (f *flowkitClient) CreateAccount() (*flow.Account, error) {
 	}
 
 	nextIndex := len(f.GetClientAccounts()) + 1
-
 	if nextIndex > len(names) {
 		return nil, fmt.Errorf(fmt.Sprintf("account limit of %d reached", len(names)))
 	}
 
-	f.accounts = append(f.accounts, &ClientAccount{
+	clientAccount := &ClientAccount{
 		Account: account,
 		Name:    names[nextIndex],
-	})
+	}
+	f.accounts = append(f.accounts, clientAccount)
 
-	return account, nil
+	return clientAccount, nil
 }
 
 // Helpers
