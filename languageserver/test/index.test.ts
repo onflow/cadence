@@ -397,11 +397,22 @@ describe("accounts", () => {
 
 describe("transactions", () => {
 
-  test("send a transaction", async() => {
+  test("send a transaction with single signer", async() => {
     await withConnection(async connection => {
       let result = await connection.sendRequest(ExecuteCommandRequest.type, {
         command: "cadence.server.flow.sendTransaction",
         arguments: [`file://${__dirname}/transaction.cdc`, "[]", ["Alice"]]
+      })
+
+      expect(result).toEqual("Transaction status: SEALED")
+    }, true)
+  })
+
+  test("send a transaction with multiple signers", async() => {
+    await withConnection(async connection => {
+      let result = await connection.sendRequest(ExecuteCommandRequest.type, {
+        command: "cadence.server.flow.sendTransaction",
+        arguments: [`file://${__dirname}/transaction-multiple.cdc`, "[]", ["Alice", "Bob"]]
       })
 
       expect(result).toEqual("Transaction status: SEALED")
