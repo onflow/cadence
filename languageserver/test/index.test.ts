@@ -9,7 +9,12 @@ import {
   StreamMessageWriter,
   TextDocumentItem,
   PublishDiagnosticsNotification,
-  PublishDiagnosticsParams, ShowMessageNotification, NotificationMessage, ShowMessageParams
+  PublishDiagnosticsParams,
+  ShowMessageNotification,
+  NotificationMessage,
+  ShowMessageParams,
+  InitializedNotification,
+  InitializedParams, InitializeResult, InitializeParams, LogMessageNotification, RegistrationRequest
 } from "vscode-languageserver-protocol"
 
 import {execSync, spawn} from 'child_process'
@@ -55,9 +60,10 @@ async function withConnection(f: (connection: ProtocolConnection) => Promise<voi
     // and service account name and its address
     initOpts = {
       configPath: "./flow.json",
-      activeAccountName: "service-account", // default service account name
-      activeAccountAddress: "0xf8d6e0586b0a20c7" // default service address for emulator network
+      numberOfAccounts: "5",
     }
+
+    connection.onRequest(RegistrationRequest.type, () => {})
   }
 
   await connection.sendRequest(InitializeRequest.type,
@@ -69,6 +75,9 @@ async function withConnection(f: (connection: ProtocolConnection) => Promise<voi
       initializationOptions: initOpts
     }
   )
+
+  // debug option when testing
+  // connection.onUnhandledNotification((e) => console.log("unhandled", e))
 
   await f(connection)
 
@@ -321,17 +330,57 @@ describe("script execution", () => {
 
   test("script executes and result is returned", async() => {
     await withConnection(async (connection) => {
-      const resultPromise = new Promise<ShowMessageParams>(res =>
-          connection.onNotification(ShowMessageNotification.type, res)
-      )
-
-      await connection.sendRequest(ExecuteCommandRequest.type, {
+      let result = await connection.sendRequest(ExecuteCommandRequest.type, {
         command: "cadence.server.flow.executeScript",
         arguments: [`file://${__dirname}/script.cdc`, "[]"]
       })
 
-      const result = await resultPromise
-      expect(result.message).toEqual(`Result: "HELLO WORLD"`)
+      expect(result).toEqual(`Result: "HELLO WORLD"`)
+    }, true)
+  })
+
+})
+
+describe("accounts", () => {
+
+  test("get account list", async() => {
+    await withConnection(async (connection) => {
+      let result = await connection.sendRequest(ExecuteCommandRequest.type, {
+        command: "cadence.server.flow.getAccounts",
+        arguments: []
+      })
+
+      expect(result.map(r => r.Address)).toEqual(["01cf0e2f2f715450", "179b6b1cb6755e31", "f3fcd2c1a78f5eee", "e03daebed8ca0615", "045a1763c93006ca"])
+      expect(result.map(r => r.Name)).toEqual(["Alice", "Bob", "Charlie", "Dave", "Eve"])
+      expect(result.map(r => r.Active)).toEqual([true, false, false, false, false])
+    }, true)
+  })
+
+  test("switch active account", async() => {
+    await withConnection(async connection => {
+      let result = await connection.sendRequest(ExecuteCommandRequest.type, {
+        command: "cadence.server.flow.switchActiveAccount",
+        arguments: ["Bob"]
+      })
+
+      expect(result).toEqual("Account switched to Bob")
+
+      let active = await connection.sendRequest(ExecuteCommandRequest.type, {
+        command: "cadence.server.flow.getAccounts",
+        arguments: []
+      })
+
+      expect(active.filter(a => a.Active).pop().Name).toEqual("Bob")
+    }, true)
+  })
+
+  test("crate an account", async() => {
+    await withConnection(async connection => {
+      let result = await connection.sendRequest(ExecuteCommandRequest.type, {
+        command: "cadence.server.flow.createAccount",
+        arguments: ["Bob"]
+      })
+
     }, true)
   })
 
