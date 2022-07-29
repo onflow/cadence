@@ -34,22 +34,22 @@ import (
 //go:generate go run github.com/vektra/mockery/cmd/mockery --name flowClient --filename mock_flow_test.go --inpkg
 type flowClient interface {
 	Initialize(configPath string, numberOfAccounts int) error
-	GetClientAccount(name string) *ClientAccount
-	GetActiveClientAccount() *ClientAccount
-	GetClientAccounts() []*ClientAccount
+	GetClientAccount(name string) *clientAccount
+	GetActiveClientAccount() *clientAccount
+	GetClientAccounts() []*clientAccount
 	SetActiveClientAccount(name string) error
 	ExecuteScript(location *url.URL, args []cadence.Value) (cadence.Value, error)
 	DeployContract(address flow.Address, name string, location *url.URL) (*flow.Account, error)
 	SendTransaction(authorizers []flow.Address, location *url.URL, args []cadence.Value) (*flow.TransactionResult, error)
 	GetAccount(address flow.Address) (*flow.Account, error)
-	CreateAccount() (*ClientAccount, error)
+	CreateAccount() (*clientAccount, error)
 }
 
 var _ flowClient = &flowkitClient{}
 
 // todo: check if we need this struct at all, could we just use the flow.Account returned from the flowkit
 
-type ClientAccount struct {
+type clientAccount struct {
 	*flow.Account
 	Name   string
 	Active bool
@@ -69,8 +69,8 @@ type flowkitClient struct {
 	services      *services.Services
 	loader        flowkit.ReaderWriter
 	state         *flowkit.State
-	accounts      []*ClientAccount
-	activeAccount *ClientAccount
+	accounts      []*clientAccount
+	activeAccount *clientAccount
 }
 
 func newFlowkitClient(loader flowkit.ReaderWriter) *flowkitClient {
@@ -105,7 +105,7 @@ func (f *flowkitClient) Initialize(configPath string, numberOfAccounts int) erro
 		return fmt.Errorf("can not have 0 accounts")
 	}
 
-	f.accounts = make([]*ClientAccount, 0)
+	f.accounts = make([]*clientAccount, 0)
 	for i := 0; i < numberOfAccounts; i++ {
 		_, err := f.CreateAccount()
 		if err != nil {
@@ -119,7 +119,7 @@ func (f *flowkitClient) Initialize(configPath string, numberOfAccounts int) erro
 	return nil
 }
 
-func (f *flowkitClient) GetClientAccount(name string) *ClientAccount {
+func (f *flowkitClient) GetClientAccount(name string) *clientAccount {
 	for _, account := range f.accounts {
 		if account.Name == name {
 			return account
@@ -128,7 +128,7 @@ func (f *flowkitClient) GetClientAccount(name string) *ClientAccount {
 	return nil
 }
 
-func (f *flowkitClient) GetClientAccounts() []*ClientAccount {
+func (f *flowkitClient) GetClientAccounts() []*clientAccount {
 	return f.accounts
 }
 
@@ -148,7 +148,7 @@ func (f *flowkitClient) SetActiveClientAccount(name string) error {
 	return nil
 }
 
-func (f *flowkitClient) GetActiveClientAccount() *ClientAccount {
+func (f *flowkitClient) GetActiveClientAccount() *clientAccount {
 	return f.activeAccount
 }
 
@@ -240,7 +240,7 @@ func (f *flowkitClient) GetAccount(address flow.Address) (*flow.Account, error) 
 	return f.services.Accounts.Get(address)
 }
 
-func (f *flowkitClient) CreateAccount() (*ClientAccount, error) {
+func (f *flowkitClient) CreateAccount() (*clientAccount, error) {
 	service, err := f.state.EmulatorServiceAccount()
 	if err != nil {
 		return nil, err
@@ -267,7 +267,7 @@ func (f *flowkitClient) CreateAccount() (*ClientAccount, error) {
 		return nil, fmt.Errorf(fmt.Sprintf("account limit of %d reached", len(names)))
 	}
 
-	clientAccount := &ClientAccount{
+	clientAccount := &clientAccount{
 		Account: account,
 		Name:    names[nextIndex],
 	}

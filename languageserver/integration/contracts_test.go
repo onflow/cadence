@@ -57,7 +57,7 @@ func Test_ContractUpdate(t *testing.T) {
 
 		client.
 			On("GetActiveClientAccount").
-			Return(&ClientAccount{
+			Return(&clientAccount{
 				Account: nil,
 				Name:    "",
 				Active:  false,

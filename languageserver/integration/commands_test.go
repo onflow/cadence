@@ -109,7 +109,7 @@ func Test_ExecuteTransaction(t *testing.T) {
 
 		mock.
 			On("GetClientAccount", "Alice").
-			Return(&ClientAccount{
+			Return(&clientAccount{
 				Account: &flow.Account{
 					Address: address,
 				},
@@ -145,7 +145,7 @@ func Test_SwitchActiveAccount(t *testing.T) {
 	t.Run("switch accounts with valid name", func(t *testing.T) {
 		t.Parallel()
 		name := "Alice"
-		client.accounts = []*ClientAccount{{
+		client.accounts = []*clientAccount{{
 			Account: nil,
 			Name:    name,
 		}}

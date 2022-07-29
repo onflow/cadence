@@ -17,15 +17,15 @@ type mockFlowClient struct {
 }
 
 // CreateAccount provides a mock function with given fields:
-func (_m *mockFlowClient) CreateAccount() (*ClientAccount, error) {
+func (_m *mockFlowClient) CreateAccount() (*clientAccount, error) {
 	ret := _m.Called()
 
-	var r0 *ClientAccount
-	if rf, ok := ret.Get(0).(func() *ClientAccount); ok {
+	var r0 *clientAccount
+	if rf, ok := ret.Get(0).(func() *clientAccount); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*ClientAccount)
+			r0 = ret.Get(0).(*clientAccount)
 		}
 	}
 
@@ -109,15 +109,15 @@ func (_m *mockFlowClient) GetAccount(address flow.Address) (*flow.Account, error
 }
 
 // GetActiveClientAccount provides a mock function with given fields:
-func (_m *mockFlowClient) GetActiveClientAccount() *ClientAccount {
+func (_m *mockFlowClient) GetActiveClientAccount() *clientAccount {
 	ret := _m.Called()
 
-	var r0 *ClientAccount
-	if rf, ok := ret.Get(0).(func() *ClientAccount); ok {
+	var r0 *clientAccount
+	if rf, ok := ret.Get(0).(func() *clientAccount); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*ClientAccount)
+			r0 = ret.Get(0).(*clientAccount)
 		}
 	}
 
@@ -125,15 +125,15 @@ func (_m *mockFlowClient) GetActiveClientAccount() *ClientAccount {
 }
 
 // GetClientAccount provides a mock function with given fields: name
-func (_m *mockFlowClient) GetClientAccount(name string) *ClientAccount {
+func (_m *mockFlowClient) GetClientAccount(name string) *clientAccount {
 	ret := _m.Called(name)
 
-	var r0 *ClientAccount
-	if rf, ok := ret.Get(0).(func(string) *ClientAccount); ok {
+	var r0 *clientAccount
+	if rf, ok := ret.Get(0).(func(string) *clientAccount); ok {
 		r0 = rf(name)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*ClientAccount)
+			r0 = ret.Get(0).(*clientAccount)
 		}
 	}
 
@@ -141,15 +141,15 @@ func (_m *mockFlowClient) GetClientAccount(name string) *ClientAccount {
 }
 
 // GetClientAccounts provides a mock function with given fields:
-func (_m *mockFlowClient) GetClientAccounts() []*ClientAccount {
+func (_m *mockFlowClient) GetClientAccounts() []*clientAccount {
 	ret := _m.Called()
 
-	var r0 []*ClientAccount
-	if rf, ok := ret.Get(0).(func() []*ClientAccount); ok {
+	var r0 []*clientAccount
+	if rf, ok := ret.Get(0).(func() []*clientAccount); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*ClientAccount)
+			r0 = ret.Get(0).([]*clientAccount)
 		}
 	}
 
