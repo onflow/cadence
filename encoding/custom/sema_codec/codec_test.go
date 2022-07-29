@@ -23,9 +23,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/onflow/cadence/encoding/custom/common_codec"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/cadence/encoding/custom/common_codec"
 
 	"github.com/onflow/cadence/encoding/custom/sema_codec"
 	"github.com/onflow/cadence/runtime/ast"

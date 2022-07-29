@@ -22,10 +22,11 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/encoding/custom/common_codec"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/encoding/custom/common_codec"
 
 	"github.com/onflow/cadence/encoding/custom/value_codec"
 )
