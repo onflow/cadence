@@ -60,10 +60,10 @@ func (c *contractInfo) update(uri protocol.DocumentURI, version int32, checker *
 
 	if contractDeclaration != nil {
 		docString = contractDeclaration.DocString
-		contractType := checker.Elaboration.CompositeDeclarationTypes[contractDeclaration]
 		c.name = contractDeclaration.Identifier.Identifier
 		c.startPos = &contractDeclaration.StartPos
 		c.kind = contractTypeDeclaration
+		contractType := checker.Elaboration.CompositeDeclarationTypes[contractDeclaration]
 		c.parameters = contractType.ConstructorParameters
 	} else if contractInterfaceDeclaration != nil {
 		docString = contractInterfaceDeclaration.DocString
