@@ -95,7 +95,7 @@ func (c *commands) sendTransaction(args ...json.RawMessage) (any, error) {
 
 	txArgs, err := flowkit.ParseArgumentsJSON(argsJSON)
 	if err != nil {
-		return nil, fmt.Errorf("invalid transactions arguments cadence encoding format: %s, error: %s", argsJSON, err)
+		return nil, fmt.Errorf("invalid transaction arguments cadence encoding format: %s, error: %s", argsJSON, err)
 	}
 
 	var signerList []string
