@@ -3,6 +3,8 @@ package integration
 import (
 	"testing"
 
+	"github.com/onflow/flow-go-sdk"
+
 	"github.com/onflow/cadence/languageserver/protocol"
 
 	"github.com/stretchr/testify/assert"
@@ -15,6 +17,7 @@ import (
 
 func Test_ContractUpdate(t *testing.T) {
 	const code = `
+      /// pragma signers Alice
 	  pub contract HelloWorld {
 			pub let greeting: String
 
@@ -22,8 +25,8 @@ func Test_ContractUpdate(t *testing.T) {
 				return self.greeting
 			}
 
-			init(a: String) {
-				self.greeting = a
+			init() {
+				self.greeting = "hello"
 			}
      }
         `
@@ -45,24 +48,44 @@ func Test_ContractUpdate(t *testing.T) {
 		assert.Equal(t, protocol.DocumentURI("Hello"), contract.uri)
 		assert.Equal(t, "HelloWorld", contract.name)
 		assert.Equal(t, contractTypeDeclaration, contract.kind)
+		assert.Equal(t, nil, contract.pragmaArguments)
+		assert.Equal(t, nil, contract.pragmaArgumentStrings)
+		assert.Equal(t, []string{"Alice"}, contract.pragmaSignersNames)
 
 		assert.Len(t, contract.parameters, 1)
 		assert.Equal(t, "a", contract.parameters[0].Identifier)
 		assert.Equal(t, "", contract.parameters[0].Label)
 	})
 
-	t.Run("get codeleneses", func(t *testing.T) {
+	t.Run("get codelenses", func(t *testing.T) {
 		contract := &contractInfo{}
 		contract.update("Hello", 1, checker)
 
+		alice := &clientAccount{
+			Account: &flow.Account{
+				Address: flow.HexToAddress("0x1"),
+			},
+			Name:   "Alice",
+			Active: true,
+		}
+
 		client.
 			On("GetActiveClientAccount").
-			Return(&clientAccount{
-				Account: nil,
-				Name:    "",
-				Active:  false,
-			})
+			Return(alice)
 
-		contract.codelens(client)
+		client.
+			On("GetClientAccount", "Alice").
+			Return(alice)
+
+		codelenses := contract.codelens(client)
+
+		assert.Len(t, codelenses, 1)
+		assert.Equal(t, "💡 Deploy contract HelloWorld to Alice", codelenses[0].Command.Title)
+		assert.Equal(t, "cadence.server.flow.deployContract", codelenses[0].Command.Command)
+		assert.Equal(t, nil, codelenses[0].Data)
+		assert.Equal(t, protocol.Range{
+			Start: protocol.Position{Line: 2, Character: 3},
+			End:   protocol.Position{Line: 2, Character: 4},
+		}, codelenses[0].Range)
 	})
 }

@@ -46,7 +46,7 @@ type contractInfo struct {
 	parameters            []*sema.Parameter
 	pragmaArgumentStrings []string
 	pragmaArguments       [][]Argument
-	pragmaSignersStrings  [][]string
+	pragmaSignersNames    []string
 }
 
 func (c *contractInfo) update(uri protocol.DocumentURI, version int32, checker *sema.Checker) {
@@ -72,7 +72,7 @@ func (c *contractInfo) update(uri protocol.DocumentURI, version int32, checker *
 		c.kind = contractTypeInterface
 	}
 
-	var pragmaSigners [][]string
+	var pragmaSigners []string
 	var pragmaArgumentStrings []string
 	var pragmaArguments [][]Argument
 
@@ -103,13 +103,13 @@ func (c *contractInfo) update(uri protocol.DocumentURI, version int32, checker *
 
 		for _, pragmaSignerString := range parser.ParseDocstringPragmaSigners(docString) {
 			signers := SignersRegexp.FindAllString(pragmaSignerString, -1)
-			pragmaSigners = append(pragmaSigners, signers)
+			pragmaSigners = append(pragmaSigners, signers...)
 		}
 	}
 
 	c.uri = uri
 	c.documentVersion = version
-	c.pragmaSignersStrings = pragmaSigners
+	c.pragmaSignersNames = pragmaSigners
 	c.pragmaArguments = pragmaArguments
 	c.pragmaArgumentStrings = pragmaArgumentStrings
 }
@@ -119,23 +119,21 @@ func (c *contractInfo) codelens(client flowClient) []*protocol.CodeLens {
 		return nil
 	}
 
-	signersList := c.pragmaSignersStrings[:]
-	if len(signersList) == 0 {
-		activeAccount := client.GetActiveClientAccount().Address.String()
-		signersList = append(signersList, []string{activeAccount}) // todo refactor list in list
+	if len(c.pragmaSignersNames) == 0 { // default to active client account
+		c.pragmaSignersNames = []string{client.GetActiveClientAccount().Name}
 	}
 
 	codelensRange := conversion.ASTToProtocolRange(*c.startPos, *c.startPos)
 	var codeLenses []*protocol.CodeLens
 
-	for _, signers := range signersList {
+	for _, signer := range c.pragmaSignersNames {
 		var title string
-		signer := signers[0] // todo refactor list in list
 
 		account := client.GetClientAccount(signer)
 		if account == nil {
 			title = fmt.Sprintf("%s Specified account %s does not exist", prefixError, signer)
 			codeLenses = append(codeLenses, makeActionlessCodelens(title, codelensRange))
+			// todo should we continue in this case
 		}
 
 		titleBody := "Deploy contract"
@@ -143,7 +141,7 @@ func (c *contractInfo) codelens(client flowClient) []*protocol.CodeLens {
 			titleBody = "Deploy contract interface"
 		}
 
-		title = fmt.Sprintf("%s %s %s to %s", prefixOK, titleBody, c.name, signers)
+		title = fmt.Sprintf("%s %s %s to %s", prefixOK, titleBody, c.name, signer)
 		arguments, _ := encodeJSONArguments(c.uri, c.name, account.Address)
 		codelens := makeCodeLens(CommandDeployContract, title, codelensRange, arguments)
 		codeLenses = append(codeLenses, codelens)
