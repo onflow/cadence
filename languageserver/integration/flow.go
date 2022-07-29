@@ -66,10 +66,11 @@ var names = []string{
 }
 
 type flowkitClient struct {
-	services *services.Services
-	loader   flowkit.ReaderWriter
-	state    *flowkit.State
-	accounts []*ClientAccount
+	services      *services.Services
+	loader        flowkit.ReaderWriter
+	state         *flowkit.State
+	accounts      []*ClientAccount
+	activeAccount *ClientAccount
 }
 
 func newFlowkitClient(loader flowkit.ReaderWriter) *flowkitClient {
@@ -113,6 +114,7 @@ func (f *flowkitClient) Initialize(configPath string, numberOfAccounts int) erro
 	}
 
 	f.accounts[0].Active = true // make first active by default
+	f.activeAccount = f.accounts[0]
 
 	return nil
 }
@@ -142,16 +144,12 @@ func (f *flowkitClient) SetActiveClientAccount(name string) error {
 	}
 
 	account.Active = true
+	f.activeAccount = account
 	return nil
 }
 
 func (f *flowkitClient) GetActiveClientAccount() *ClientAccount {
-	for _, account := range f.accounts {
-		if account.Active {
-			return account
-		}
-	}
-	return nil
+	return f.activeAccount
 }
 
 func (f *flowkitClient) ExecuteScript(
