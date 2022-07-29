@@ -100,6 +100,10 @@ func (f *flowkitClient) Initialize(configPath string, numberOfAccounts int) erro
 		return fmt.Errorf(fmt.Sprintf("can only use up to %d accounts", len(names)))
 	}
 
+	if numberOfAccounts == 0 {
+		return fmt.Errorf("can not have 0 accounts")
+	}
+
 	f.accounts = make([]*ClientAccount, 0)
 	for i := 0; i < numberOfAccounts; i++ {
 		_, err := f.CreateAccount()
