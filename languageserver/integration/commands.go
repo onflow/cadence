@@ -73,9 +73,10 @@ func (c *commands) getAll() []server.Command {
 // sendTransaction handles submitting a transaction defined in the
 // source document in VS Code.
 //
-// There should be exactly 2 arguments:
+// There should be exactly 3 arguments:
 //   * the DocumentURI of the file to submit
 //   * the arguments, encoded as JSON-CDC
+//   * the signer names as list
 func (c *commands) sendTransaction(args ...json.RawMessage) (any, error) {
 	err := server.CheckCommandArgumentCount(args, 3)
 	if err != nil {
@@ -160,7 +161,7 @@ func (c *commands) executeScript(args ...json.RawMessage) (any, error) {
 // switchActiveAccount sets the account that is currently active and could be used
 // when submitting transactions.
 //
-// There should be 2 arguments:
+// There should be 1 argument:
 //	 * name of the new active account
 func (c *commands) switchActiveAccount(args ...json.RawMessage) (any, error) {
 	err := server.CheckCommandArgumentCount(args, 1)
@@ -200,9 +201,10 @@ func (c *commands) createAccount(_ ...json.RawMessage) (any, error) {
 // deployContract deploys the contract to the configured account with the code of the given
 // file.
 //
-// There should be exactly 2 arguments:
+// There should be exactly 3 arguments:
 //   * the DocumentURI of the file to submit
 //   * the name of the contract
+//   * the signer names as list
 func (c *commands) deployContract(args ...json.RawMessage) (any, error) {
 	err := server.CheckCommandArgumentCount(args, 3)
 	if err != nil {
@@ -220,19 +222,23 @@ func (c *commands) deployContract(args ...json.RawMessage) (any, error) {
 		return nil, fmt.Errorf("invalid name argument: %s", args[1])
 	}
 
-	var rawAddress string
-	err = json.Unmarshal(args[2], &rawAddress)
+	var signerName string
+	err = json.Unmarshal(args[2], &signerName)
 	if err != nil {
-		return nil, fmt.Errorf("invalid address argument: %s", args[2])
+		return nil, fmt.Errorf("invalid signer name: %s", args[2])
 	}
-	address := flow.HexToAddress(rawAddress)
 
-	_, deployError := c.client.DeployContract(address, name, location)
+	account := c.client.GetClientAccount(signerName)
+	if account == nil {
+		return nil, fmt.Errorf("signer account with name %s doesn't exist", name)
+	}
+
+	_, deployError := c.client.DeployContract(account.Address, name, location)
 	if deployError != nil {
 		return nil, fmt.Errorf("error deploying contract: %w", deployError)
 	}
 
-	return fmt.Sprintf("Contract %s has been deployed to %s", name, rawAddress), err
+	return fmt.Sprintf("Contract %s has been deployed to account %s", name, signerName), err
 }
 
 func parseLocation(arg []byte) (*url.URL, error) {
