@@ -44,6 +44,7 @@ var validCadenceArg, _ = json.Marshal(`[{ "type": "String", "value": "woo" }]`)
 
 func runTestInputs(name string, t *testing.T, f func(args ...json.RawMessage) (any, error), inputs []argInputTest) {
 	t.Run(name, func(t *testing.T) {
+		t.Parallel()
 		for _, in := range inputs {
 			resp, err := f(in.args...)
 
@@ -70,6 +71,7 @@ func Test_ExecuteScript(t *testing.T) {
 		})
 
 	t.Run("successful script execution with arguments", func(t *testing.T) {
+		t.Parallel()
 		location, _ := url.Parse(locationString)
 		result, _ := cadence.NewString("hoo")
 
@@ -99,10 +101,21 @@ func Test_ExecuteTransaction(t *testing.T) {
 		})
 
 	t.Run("successful transaction execution", func(t *testing.T) {
-		address := "0x1"
-		list := []flow.Address{flow.HexToAddress(address)}
+		t.Parallel()
+		address := flow.HexToAddress("0x1")
+		list := []flow.Address{address}
 		location, _ := url.Parse(locationString)
-		signers, _ := json.Marshal([]string{"0x1"})
+		signers, _ := json.Marshal([]string{"Alice"})
+
+		mock.
+			On("GetClientAccount", "Alice").
+			Return(&ClientAccount{
+				Account: &flow.Account{
+					Address: address,
+				},
+				Name:   "Alice",
+				Active: true,
+			})
 
 		mock.
 			On("SendTransaction", list, location, []cadence.Value{cadenceVal}).
@@ -130,6 +143,7 @@ func Test_SwitchActiveAccount(t *testing.T) {
 		})
 
 	t.Run("switch accounts with valid name", func(t *testing.T) {
+		t.Parallel()
 		name := "Alice"
 		client.accounts = []*ClientAccount{{
 			Account: nil,
@@ -162,6 +176,7 @@ func Test_DeployContract(t *testing.T) {
 		})
 
 	t.Run("successful deploy contract", func(t *testing.T) {
+		t.Parallel()
 		address := "0x1"
 		location, _ := url.Parse(locationString)
 		addressArg, _ := json.Marshal(address)
