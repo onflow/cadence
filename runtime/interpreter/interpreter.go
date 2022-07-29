@@ -3687,16 +3687,19 @@ func (interpreter *Interpreter) iterOverStorageDomain(addressValue AddressValue,
 			}
 
 			getLocationRange := invocation.GetLocationRange
+			inter := invocation.Interpreter
+
+			invocationTypeParams := []sema.Type{pathType, sema.MetaType}
 
 			for key, value := storageIterator.Next(); key != "" && value != nil; key, value = storageIterator.Next() {
-				pathValue := NewPathValue(invocation.Interpreter, domain, key)
-				runtimeType := NewTypeValue(invocation.Interpreter, value.StaticType(invocation.Interpreter))
+				pathValue := NewPathValue(inter, domain, key)
+				runtimeType := NewTypeValue(inter, value.StaticType(inter))
 
 				subInvocation := NewInvocation(
-					interpreter,
+					inter,
 					nil,
 					[]Value{pathValue, runtimeType},
-					[]sema.Type{pathType, sema.MetaType},
+					invocationTypeParams,
 					nil,
 					getLocationRange,
 				)
@@ -3711,7 +3714,7 @@ func (interpreter *Interpreter) iterOverStorageDomain(addressValue AddressValue,
 				}
 			}
 
-			return NewVoidValue(invocation.Interpreter)
+			return NewVoidValue(inter)
 		},
 		sema.AccountForEachFunctionType(pathType),
 	)

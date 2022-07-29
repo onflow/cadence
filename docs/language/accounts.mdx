@@ -125,9 +125,16 @@ to the `prepare` phase of the transaction.
       fun unlink(_ path: CapabilityPath)
 
       // Storage iteration  
-      fun forEachPublic(_ function: ((PublicPath, Type): Bool)): Void
-      fun forEachPrivate(_ function: ((PrivatePath, Type): Bool)): Void
-      fun forEachStored(_ function: ((StoragePath, Type): Bool)): Void
+      // Each of these iterates over every element in the specified domain, applying the
+      // function argument to each. The first argument of the function is the path 
+      // of the element, and the second is its runtime type. The `Bool` return value
+      // determines whether iteration continues; `true` will proceed to the next
+      // stored element, while `false` will terminate iteration.
+      // The specific order in which the objects are iterated over is undefined, 
+      // as is the behavior when a path is added or removed from storage
+      fun forEachPublic(_ function: ((PublicPath, Type): Bool))
+      fun forEachPrivate(_ function: ((PrivatePath, Type): Bool))
+      fun forEachStored(_ function: ((StoragePath, Type): Bool))
 
       struct Contracts {
 
