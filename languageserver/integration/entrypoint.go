@@ -23,14 +23,13 @@ import (
 	"fmt"
 	"regexp"
 
-	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/flow-go-sdk"
 
 	"github.com/onflow/cadence/languageserver/conversion"
 	"github.com/onflow/cadence/languageserver/protocol"
-
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 )
