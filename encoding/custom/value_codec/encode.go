@@ -30,8 +30,7 @@ import (
 
 // An Encoder converts Cadence values into custom-encoded bytes.
 type Encoder struct {
-	w        common_codec.LengthyWriter
-	typeDefs map[cadence.Type]int
+	w common_codec.LengthyWriter
 }
 
 // EncodeValue returns the custom-encoded representation of the given value.
@@ -63,13 +62,11 @@ func MustEncodeValue(value cadence.Value) []byte {
 // given io.Writer.
 func NewEncoder(w io.Writer) *Encoder {
 	return &Encoder{
-		w:        common_codec.NewLengthyWriter(w),
-		typeDefs: map[cadence.Type]int{},
+		w: common_codec.NewLengthyWriter(w),
 	}
 }
 
 // TODO include leading byte with version information
-//      maybe include other metadata too, like the size the decoder's typeDefs map will be
 
 // Encode writes the custom-encoded representation of the given value to this
 // encoder's io.Writer.
@@ -86,7 +83,6 @@ func (e *Encoder) Encode(value cadence.Value) (err error) {
 
 // EncodeValue encodes any supported cadence.Value.
 func (e *Encoder) EncodeValue(value cadence.Value) (err error) {
-	// Non-recursable types
 	switch v := value.(type) {
 	case cadence.Void:
 		return e.EncodeValueIdentifier(EncodedValueVoid)
@@ -96,9 +92,6 @@ func (e *Encoder) EncodeValue(value cadence.Value) (err error) {
 			return
 		}
 		return common_codec.EncodeBool(&e.w, bool(v))
-	}
-
-	switch v := value.(type) {
 	case cadence.Optional:
 		err = e.EncodeValueIdentifier(EncodedValueOptional)
 		if err != nil {
@@ -106,9 +99,6 @@ func (e *Encoder) EncodeValue(value cadence.Value) (err error) {
 		}
 		return e.EncodeOptional(v)
 	case cadence.Array:
-		// TODO if an array type is known ahead of time, what needs to be encoded and what can be excluded?
-		//      specifically, how much of ArrayType is needed? Just constant vs variable?
-		//		aka is Size part of what's known ahead of time? it's certainly encoded in the sema type
 		err = e.EncodeValueIdentifier(EncodedValueArray)
 		if err != nil {
 			return
@@ -193,14 +183,7 @@ func (e *Encoder) EncodeType(t cadence.Type) (err error) {
 		return e.EncodeTypeIdentifier(EncodedTypeAnyType)
 	case cadence.AnyStructType:
 		return e.EncodeTypeIdentifier(EncodedTypeAnyStructType)
-	}
 
-	if bufferOffset, usePointer := e.typeDefs[t]; usePointer {
-		return e.EncodePointer(bufferOffset)
-	}
-	e.typeDefs[t] = e.w.Len() + 1 // point to encoded type, not its identifier
-
-	switch actualType := t.(type) {
 	case cadence.ArrayType:
 		return e.EncodeArrayType(actualType)
 	}
@@ -221,30 +204,14 @@ const (
 
 	EncodedTypeVoid
 	EncodedTypeBool
+	EncodedTypeArray
+	EncodedTypeOptional
 
 	// Abstract Types
 
 	EncodedTypeAnyType
 	EncodedTypeAnyStructType
-
-	// Pointable Types
-
-	EncodedTypeArray
-	EncodedTypeOptional
-
-	// Other Types
-
-	EncodedTypePointer
 )
-
-func (e *Encoder) EncodePointer(bufferOffset int) (err error) {
-	err = e.write([]byte{byte(EncodedTypePointer)})
-	if err != nil {
-		return
-	}
-
-	return e.EncodeLength(bufferOffset)
-}
 
 func (e *Encoder) EncodeOptionalType(t cadence.OptionalType) (err error) {
 	return e.EncodeType(t.Type)

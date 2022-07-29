@@ -34,8 +34,7 @@ type Decoder struct {
 	r           common_codec.LocatedReader
 	buf         []byte
 	memoryGauge common.MemoryGauge
-	types       map[common.TypeID]*cadence.CompositeType
-	// abi any // TODO abi for cutting down on what needs to be transferred
+	// TODO abi for cutting down on what needs to be transferred
 }
 
 // Decode returns a Cadence value decoded from its custom-encoded representation.
@@ -138,12 +137,6 @@ func (d *Decoder) DecodeBool() (value cadence.Bool, err error) {
 	return
 }
 
-// TODO how am I to represent complex types?
-//      like a CompositeValue has a type... do I put it inside the CompositeValue encoding?
-//      what I want to do is put it early enough that the CompositeValue encoding can be very light
-//      maybe do it like: identifier type value
-//      have it so the identifier tells you the baset type
-
 func (d *Decoder) DecodeArray() (array cadence.Array, err error) {
 	arrayType, err := d.DecodeArrayType()
 	if err != nil {
@@ -185,13 +178,14 @@ func (d *Decoder) DecodeArrayType() (t cadence.ArrayType, err error) {
 	if err != nil {
 		return
 	}
+	encodedArrayType := EncodedArrayType(b[0])
 
 	elementType, err := d.DecodeType()
 	if err != nil {
 		return
 	}
 
-	switch EncodedArrayType(b[0]) {
+	switch encodedArrayType {
 	case EncodedArrayTypeVariable:
 		t = cadence.NewMeteredVariableSizedArrayType(d.memoryGauge, elementType)
 	case EncodedArrayTypeConstant:
@@ -202,7 +196,7 @@ func (d *Decoder) DecodeArrayType() (t cadence.ArrayType, err error) {
 		}
 		t = cadence.NewMeteredConstantSizedArrayType(d.memoryGauge, uint(size), elementType)
 	default:
-		err = fmt.Errorf("invalid array type encoding: %d", b[0])
+		err = fmt.Errorf("invalid array type encoding: %d", encodedArrayType)
 	}
 	return
 }

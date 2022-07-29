@@ -221,11 +221,6 @@ func exportValueWithInterpreter(
 	case *interpreter.CapabilityValue:
 		return exportCapabilityValue(v, inter), nil
 	case *interpreter.EphemeralReferenceValue:
-		// TODO (robert) this strategy is very inefficient, right?
-		//      it looks like it exports the referenced value except for its ephemeral references...
-		//      even if the references value is a parent value too,
-		//      so it could almost double the eventual encoding size
-
 		// Break recursion through ephemeral references
 		if _, ok := seenReferences[v]; ok {
 			return nil, nil
