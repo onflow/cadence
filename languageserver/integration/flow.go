@@ -93,9 +93,6 @@ func (f *flowkitClient) Initialize(configPath string, numberOfAccounts int) erro
 	}
 
 	hostedEmulator := gateway.NewEmulatorGateway(serviceAccount)
-	if err != nil {
-		return err
-	}
 
 	f.services = services.NewServices(hostedEmulator, state, logger)
 
