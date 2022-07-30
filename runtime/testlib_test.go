@@ -19,6 +19,8 @@
 package runtime
 
 import (
+	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/tests/checker"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -53,6 +55,28 @@ func TestAssertFunction(t *testing.T) {
 
         pub fun main() {
           Test.assert(false, "condition not satisfied")
+        }
+    `
+
+	storage := newTestLedger(nil, nil)
+
+	runtimeInterface := &testRuntimeInterface{
+		storage: storage,
+	}
+
+	_, err := executeScript(script, runtimeInterface)
+	require.Error(t, err)
+	assert.ErrorAs(t, err, &stdlib.AssertionError{})
+}
+
+func TestFailFunction(t *testing.T) {
+	t.Parallel()
+
+	script := `
+        import Test
+
+        pub fun main() {
+            Test.fail()
         }
     `
 
@@ -113,4 +137,272 @@ func TestExecuteScript(t *testing.T) {
 
 	require.Error(t, err)
 	assert.ErrorAs(t, err, &interpreter.TestFrameworkNotProvidedError{})
+}
+
+func TestEqualMatcher(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("success", func(t *testing.T) {
+		script := `
+            import Test
+
+            pub fun main() {
+                Test.expect("this string", Test.equal("this string"))
+            }
+        `
+
+		storage := newTestLedger(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+		}
+
+		_, err := executeScript(script, runtimeInterface)
+		require.NoError(t, err)
+	})
+
+	t.Run("fail", func(t *testing.T) {
+		script := `
+            import Test
+
+            pub fun main() {
+                Test.expect("this string", Test.equal("other string"))
+            }
+        `
+
+		storage := newTestLedger(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+		}
+
+		_, err := executeScript(script, runtimeInterface)
+		require.Error(t, err)
+		assert.ErrorAs(t, err, &stdlib.AssertionError{})
+	})
+
+	t.Run("different types", func(t *testing.T) {
+		script := `
+            import Test
+
+            pub fun main() {
+                Test.expect("string", Test.equal(1))
+            }
+        `
+
+		storage := newTestLedger(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+		}
+
+		_, err := executeScript(script, runtimeInterface)
+		require.Error(t, err)
+		assert.ErrorAs(t, err, &stdlib.AssertionError{})
+	})
+
+	t.Run("resources", func(t *testing.T) {
+		script := `
+            import Test
+
+            pub fun main() {
+                let f1 <- create Foo()
+                let f2 <- create Foo()
+                Test.expectResource(<-f1, Test.resourceEqual(<-f2))
+            }
+
+            pub resource Foo {}
+        `
+
+		storage := newTestLedger(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+		}
+
+		_, err := executeScript(script, runtimeInterface)
+		require.NoError(t, err)
+	})
+
+	t.Run("different resources", func(t *testing.T) {
+		script := `
+            import Test
+
+            pub fun main() {
+                let foo <- create Foo()
+                let bar <- create Bar()
+                Test.expectResource(<-foo, Test.resourceEqual(<-bar))
+            }
+
+            pub resource Foo {}
+            pub resource Bar {}
+        `
+
+		storage := newTestLedger(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+		}
+
+		_, err := executeScript(script, runtimeInterface)
+		require.Error(t, err)
+		assert.ErrorAs(t, err, &stdlib.AssertionError{})
+	})
+
+	t.Run("resources matcher with struct", func(t *testing.T) {
+		script := `
+            import Test
+
+            pub fun main() {
+                let f = Foo()
+                Test.resourceEqual(f)
+            }
+
+            pub struct Foo {}
+        `
+
+		storage := newTestLedger(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+		}
+
+		_, err := executeScript(script, runtimeInterface)
+		require.Error(t, err)
+
+		errors := checker.ExpectCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.TypeMismatchError{}, errors[0])
+		assert.IsType(t, &sema.MissingMoveOperationError{}, errors[1])
+	})
+
+	t.Run("struct matcher with resource", func(t *testing.T) {
+		script := `
+            import Test
+
+            pub fun main() {
+                let f <- create Foo()
+                Test.equal(<-f)
+            }
+
+            pub resource Foo {}
+        `
+
+		storage := newTestLedger(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+		}
+
+		_, err := executeScript(script, runtimeInterface)
+		require.Error(t, err)
+
+		errors := checker.ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errors[0])
+	})
+
+	t.Run("expect struct with (resource, struct matcher)", func(t *testing.T) {
+		script := `
+            import Test
+
+            pub fun main() {
+                let foo <- create Foo()
+                let bar = Bar()
+                Test.expect(<-foo, Test.equal(bar))
+            }
+
+            pub resource Foo {}
+            pub struct Bar {}
+        `
+
+		storage := newTestLedger(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+		}
+
+		_, err := executeScript(script, runtimeInterface)
+		require.Error(t, err)
+
+		errors := checker.ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errors[0])
+	})
+
+	t.Run("expect struct with (struct, resource matcher)", func(t *testing.T) {
+		script := `
+            import Test
+
+            pub fun main() {
+                let foo = Foo()
+                let bar <- create Bar()
+                Test.expect(foo, Test.resourceEqual(<-bar))
+            }
+
+            pub struct Foo {}
+            pub resource Bar {}
+        `
+
+		storage := newTestLedger(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+		}
+
+		_, err := executeScript(script, runtimeInterface)
+		require.Error(t, err)
+		assert.ErrorAs(t, err, &stdlib.AssertionError{})
+	})
+
+	t.Run("expect resource with (struct, resource matcher)", func(t *testing.T) {
+		script := `
+            import Test
+
+            pub fun main() {
+                let foo = Foo()
+                let bar <- create Bar()
+                Test.expectResource(foo, Test.resourceEqual(<-bar))
+            }
+
+            pub struct Foo {}
+            pub resource Bar {}
+        `
+
+		storage := newTestLedger(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+		}
+
+		_, err := executeScript(script, runtimeInterface)
+		require.Error(t, err)
+
+		errors := checker.ExpectCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.TypeMismatchError{}, errors[0])
+		assert.IsType(t, &sema.MissingMoveOperationError{}, errors[1])
+	})
+
+	t.Run("expect resource with (resource, struct matcher)", func(t *testing.T) {
+		script := `
+            import Test
+
+            pub fun main() {
+                let foo <- create Foo()
+                let bar = Bar()
+                Test.expectResource(<-foo, Test.equal(bar))
+            }
+
+            pub resource Foo {}
+            pub struct Bar {}
+        `
+
+		storage := newTestLedger(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+		}
+
+		_, err := executeScript(script, runtimeInterface)
+		require.Error(t, err)
+		assert.ErrorAs(t, err, &stdlib.AssertionError{})
+	})
 }
