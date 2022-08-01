@@ -467,8 +467,11 @@ describe("codelensses", () => {
       })
 
       expect(codelens).toHaveLength(1)
-      expect(codelens[0]).toEqual("")
-    }, true, true)
+      let c = codelens[0].command
+      expect(c.command).toEqual("cadence.server.flow.deployContract")
+      expect(c.title).toEqual("💡 Deploy contract Foo to Alice")
+      expect(c.arguments).toEqual(["file:///Users/dapper/Dev/cadence/languageserver/test/foo.cdc", "Foo", "01cf0e2f2f715450"])
+    }, true)
 
   })
 
