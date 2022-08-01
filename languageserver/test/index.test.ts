@@ -452,6 +452,7 @@ describe("contracts", () => {
 })
 
 describe("codelensses", () => {
+  const codelensRequest = "textDocument/codeLens"
 
   test("contract codelensses", async() => {
     await withConnection(async connection => {
@@ -462,7 +463,7 @@ describe("codelensses", () => {
         textDocument: document
       })
 
-      let codelens = await connection.sendRequest("textDocument/codeLens", {
+      let codelens = await connection.sendRequest(codelensRequest, {
         textDocument: document,
       })
 
@@ -474,5 +475,32 @@ describe("codelensses", () => {
     }, true)
 
   })
+
+  test("transactions codelensses", async() => {
+    await withConnection(async connection => {
+      let code = fs.readFileSync("./transaction.cdc")
+      let document = TextDocumentItem.create(`file://${__dirname}/transaction.cdc`, "cadence", 1, code.toString())
+
+      await connection.sendNotification(DidOpenTextDocumentNotification.type, {
+        textDocument: document
+      })
+
+      let codelens = await connection.sendRequest(codelensRequest, {
+        textDocument: document,
+      })
+
+      expect(codelens).toHaveLength(1)
+      let c = codelens[0].command
+      expect(c.command).toEqual("cadence.server.flow.sendTransaction")
+      expect(c.title).toEqual("💡 Send signed by Alice")
+      expect(c.arguments).toEqual([
+        "file:///Users/dapper/Dev/cadence/languageserver/test/transaction.cdc",
+        "[]",
+        ["01cf0e2f2f715450"]
+      ])
+    }, true)
+
+  })
+
 
 })
