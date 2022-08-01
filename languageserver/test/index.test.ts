@@ -5,16 +5,13 @@ import {
   ExitNotification,
   InitializeRequest,
   ProtocolConnection,
+  PublishDiagnosticsNotification,
+  PublishDiagnosticsParams,
+  RegistrationRequest,
   StreamMessageReader,
   StreamMessageWriter,
   TextDocumentItem,
-  PublishDiagnosticsNotification,
-  PublishDiagnosticsParams,
-  ShowMessageNotification,
-  NotificationMessage,
-  ShowMessageParams,
-  InitializedNotification,
-  InitializedParams, InitializeResult, InitializeParams, LogMessageNotification, RegistrationRequest
+  Trace, Tracer
 } from "vscode-languageserver-protocol"
 
 import {execSync, spawn} from 'child_process'
@@ -25,7 +22,15 @@ beforeAll(() => {
   execSync("go build ../cmd/languageserver", {cwd: __dirname})
 })
 
-async function withConnection(f: (connection: ProtocolConnection) => Promise<void>, enableFlowClient = false): Promise<void> {
+class ConsoleTracer implements Tracer {
+  log(dataObject: any): void;
+  log(message: string, data?: string): void;
+  log(dataObject: any, data?: string): void {
+    console.log("tracer >", dataObject, data)
+  }
+}
+
+async function withConnection(f: (connection: ProtocolConnection) => Promise<void>, enableFlowClient = false, debug = false): Promise<void> {
 
   let opts = [`-enableFlowClient=${enableFlowClient}`]
   const child = spawn(
@@ -77,7 +82,11 @@ async function withConnection(f: (connection: ProtocolConnection) => Promise<voi
   )
 
   // debug option when testing
-  //connection.onUnhandledNotification((e) => console.log("unhandled", e))
+  if (debug) {
+    connection.trace(Trace.Verbose, new ConsoleTracer(), true)
+    connection.onUnhandledNotification((e) => console.log("unhandled >", e))
+    connection.onError(e => console.log("err >", e))
+  }
 
   await f(connection)
 
@@ -417,6 +426,55 @@ describe("transactions", () => {
 
       expect(result).toEqual("Transaction status: SEALED")
     }, true)
+  })
+
+})
+
+describe("contracts", () => {
+
+  async function deploy(connection: ProtocolConnection, signer: string) {
+    return connection.sendRequest(ExecuteCommandRequest.type, {
+      command: "cadence.server.flow.deployContract",
+      arguments: [`file://${__dirname}/foo.cdc`, "Foo", signer]
+    })
+  }
+
+  test("deploy a contract", async() => {
+    await withConnection(async connection => {
+      let result = await deploy(connection, "")
+      expect(result).toEqual("Contract Foo has been deployed to account Alice")
+
+      result = await deploy(connection, "Bob")
+      expect(result).toEqual("Contract Foo has been deployed to account Bob")
+    }, true)
+  })
+
+})
+
+
+
+describe("codelensses", () => {
+
+  test("contract codelensses", async() => {
+    await withConnection(async connection => {
+      let code = fs.readFileSync("./foo.cdc")
+
+      let document = TextDocumentItem.create(`file://${__dirname}/foo.cdc`, "cadence", 1, code.toString())
+
+      await connection.sendNotification(DidOpenTextDocumentNotification.type, {
+        textDocument: document
+      })
+
+      await new Promise(res => setTimeout(res, 500))
+
+      let t = await connection.sendRequest("textDocument/codeLens", {
+        textDocument: { uri: document.uri },
+      })
+      console.log("######", t)
+
+      await new Promise(res => setTimeout(() => res, 3000))
+    }, true, true)
+
   })
 
 })
