@@ -1399,7 +1399,7 @@ func (v Array) String() string {
 // Dictionary
 
 type Dictionary struct {
-	DictionaryType Type
+	DictionaryType DictionaryType
 	Pairs          []KeyValuePair
 }
 
