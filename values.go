@@ -301,7 +301,7 @@ const AddressLength = 8
 
 type Address [AddressLength]byte
 
-var _ Value = Address([8]byte{})
+var _ Value = Address([AddressLength]byte{})
 
 func NewAddress(b [AddressLength]byte) Address {
 	return b

@@ -46,6 +46,8 @@ func (t TypeID) ID() string {
 
 type AnyType struct{}
 
+var _ Type = AnyType{}
+
 func NewAnyType() AnyType {
 	return AnyType{}
 }
@@ -65,6 +67,8 @@ func (AnyType) ID() string {
 
 type AnyStructType struct{}
 
+var _ Type = AnyStructType{}
+
 func NewAnyStructType() AnyStructType {
 	return AnyStructType{}
 }
@@ -83,6 +87,8 @@ func (AnyStructType) ID() string {
 // AnyResourceType
 
 type AnyResourceType struct{}
+
+var _ Type = AnyResourceType{}
 
 func NewAnyResourceType() AnyResourceType {
 	return AnyResourceType{}
@@ -105,6 +111,8 @@ type OptionalType struct {
 	Type Type
 }
 
+var _ Type = OptionalType{}
+
 func NewOptionalType(typ Type) OptionalType {
 	return OptionalType{Type: typ}
 }
@@ -123,6 +131,8 @@ func (t OptionalType) ID() string {
 // MetaType
 
 type MetaType struct{}
+
+var _ Type = MetaType{}
 
 func NewMetaType() MetaType {
 	return MetaType{}
@@ -143,6 +153,8 @@ func (MetaType) ID() string {
 
 type VoidType struct{}
 
+var _ Type = VoidType{}
+
 func NewVoidType() VoidType {
 	return VoidType{}
 }
@@ -161,6 +173,8 @@ func (VoidType) ID() string {
 // NeverType
 
 type NeverType struct{}
+
+var _ Type = NeverType{}
 
 func NewNeverType() NeverType {
 	return NeverType{}
@@ -181,6 +195,8 @@ func (NeverType) ID() string {
 
 type BoolType struct{}
 
+var _ Type = BoolType{}
+
 func NewBoolType() BoolType {
 	return BoolType{}
 }
@@ -199,6 +215,8 @@ func (BoolType) ID() string {
 // StringType
 
 type StringType struct{}
+
+var _ Type = StringType{}
 
 func NewStringType() StringType {
 	return StringType{}
@@ -219,6 +237,8 @@ func (StringType) ID() string {
 
 type CharacterType struct{}
 
+var _ Type = CharacterType{}
+
 func NewCharacterType() CharacterType {
 	return CharacterType{}
 }
@@ -237,6 +257,8 @@ func (CharacterType) ID() string {
 // BytesType
 
 type BytesType struct{}
+
+var _ Type = BytesType{}
 
 func NewBytesType() BytesType {
 	return BytesType{}
@@ -257,6 +279,8 @@ func (BytesType) ID() string {
 
 type AddressType struct{}
 
+var _ Type = AddressType{}
+
 func NewAddressType() AddressType {
 	return AddressType{}
 }
@@ -275,6 +299,8 @@ func (AddressType) ID() string {
 // NumberType
 
 type NumberType struct{}
+
+var _ Type = NumberType{}
 
 func NewNumberType() NumberType {
 	return NumberType{}
@@ -295,6 +321,8 @@ func (NumberType) ID() string {
 
 type SignedNumberType struct{}
 
+var _ Type = SignedNumberType{}
+
 func NewSignedNumberType() SignedNumberType {
 	return SignedNumberType{}
 }
@@ -313,6 +341,8 @@ func (SignedNumberType) ID() string {
 // IntegerType
 
 type IntegerType struct{}
+
+var _ Type = IntegerType{}
 
 func NewIntegerType() IntegerType {
 	return IntegerType{}
@@ -333,6 +363,8 @@ func (IntegerType) ID() string {
 
 type SignedIntegerType struct{}
 
+var _ Type = SignedIntegerType{}
+
 func NewSignedIntegerType() SignedIntegerType {
 	return SignedIntegerType{}
 }
@@ -351,6 +383,8 @@ func (SignedIntegerType) ID() string {
 // FixedPointType
 
 type FixedPointType struct{}
+
+var _ Type = FixedPointType{}
 
 func NewFixedPointType() FixedPointType {
 	return FixedPointType{}
@@ -371,6 +405,8 @@ func (FixedPointType) ID() string {
 
 type SignedFixedPointType struct{}
 
+var _ Type = SignedFixedPointType{}
+
 func NewSignedFixedPointType() SignedFixedPointType {
 	return SignedFixedPointType{}
 }
@@ -389,6 +425,8 @@ func (SignedFixedPointType) ID() string {
 // IntType
 
 type IntType struct{}
+
+var _ Type = IntType{}
 
 func NewIntType() IntType {
 	return IntType{}
@@ -409,6 +447,8 @@ func (IntType) ID() string {
 
 type Int8Type struct{}
 
+var _ Type = Int8Type{}
+
 func NewInt8Type() Int8Type {
 	return Int8Type{}
 }
@@ -427,6 +467,8 @@ func (Int8Type) ID() string {
 // Int16Type
 
 type Int16Type struct{}
+
+var _ Type = Int16Type{}
 
 func NewInt16Type() Int16Type {
 	return Int16Type{}
@@ -447,6 +489,8 @@ func (Int16Type) ID() string {
 
 type Int32Type struct{}
 
+var _ Type = Int32Type{}
+
 func NewInt32Type() Int32Type {
 	return Int32Type{}
 }
@@ -465,6 +509,8 @@ func (Int32Type) ID() string {
 // Int64Type
 
 type Int64Type struct{}
+
+var _ Type = Int64Type{}
 
 func NewInt64Type() Int64Type {
 	return Int64Type{}
@@ -485,6 +531,8 @@ func (Int64Type) ID() string {
 
 type Int128Type struct{}
 
+var _ Type = Int128Type{}
+
 func NewInt128Type() Int128Type {
 	return Int128Type{}
 }
@@ -503,6 +551,8 @@ func (Int128Type) ID() string {
 // Int256Type
 
 type Int256Type struct{}
+
+var _ Type = Int256Type{}
 
 func NewInt256Type() Int256Type {
 	return Int256Type{}
@@ -523,6 +573,8 @@ func (Int256Type) ID() string {
 
 type UIntType struct{}
 
+var _ Type = UIntType{}
+
 func NewUIntType() UIntType {
 	return UIntType{}
 }
@@ -541,6 +593,8 @@ func (UIntType) ID() string {
 // UInt8Type
 
 type UInt8Type struct{}
+
+var _ Type = UInt8Type{}
 
 func NewUInt8Type() UInt8Type {
 	return UInt8Type{}
@@ -561,6 +615,8 @@ func (UInt8Type) ID() string {
 
 type UInt16Type struct{}
 
+var _ Type = UInt16Type{}
+
 func NewUInt16Type() UInt16Type {
 	return UInt16Type{}
 }
@@ -579,6 +635,8 @@ func (UInt16Type) ID() string {
 // UInt32Type
 
 type UInt32Type struct{}
+
+var _ Type = UInt32Type{}
 
 func NewUInt32Type() UInt32Type {
 	return UInt32Type{}
@@ -599,6 +657,8 @@ func (UInt32Type) ID() string {
 
 type UInt64Type struct{}
 
+var _ Type = UInt64Type{}
+
 func NewUInt64Type() UInt64Type {
 	return UInt64Type{}
 }
@@ -617,6 +677,8 @@ func (UInt64Type) ID() string {
 // UInt128Type
 
 type UInt128Type struct{}
+
+var _ Type = UInt128Type{}
 
 func NewUInt128Type() UInt128Type {
 	return UInt128Type{}
@@ -637,6 +699,8 @@ func (UInt128Type) ID() string {
 
 type UInt256Type struct{}
 
+var _ Type = UInt256Type{}
+
 func NewUInt256Type() UInt256Type {
 	return UInt256Type{}
 }
@@ -655,6 +719,8 @@ func (UInt256Type) ID() string {
 // Word8Type
 
 type Word8Type struct{}
+
+var _ Type = Word8Type{}
 
 func NewWord8Type() Word8Type {
 	return Word8Type{}
@@ -675,6 +741,8 @@ func (Word8Type) ID() string {
 
 type Word16Type struct{}
 
+var _ Type = Word16Type{}
+
 func NewWord16Type() Word16Type {
 	return Word16Type{}
 }
@@ -693,6 +761,8 @@ func (Word16Type) ID() string {
 // Word32Type
 
 type Word32Type struct{}
+
+var _ Type = Word32Type{}
 
 func NewWord32Type() Word32Type {
 	return Word32Type{}
@@ -713,6 +783,8 @@ func (Word32Type) ID() string {
 
 type Word64Type struct{}
 
+var _ Type = Word64Type{}
+
 func NewWord64Type() Word64Type {
 	return Word64Type{}
 }
@@ -732,6 +804,8 @@ func (Word64Type) ID() string {
 
 type Fix64Type struct{}
 
+var _ Type = Fix64Type{}
+
 func NewFix64Type() Fix64Type {
 	return Fix64Type{}
 }
@@ -750,6 +824,8 @@ func (Fix64Type) ID() string {
 // UFix64Type
 
 type UFix64Type struct{}
+
+var _ Type = UFix64Type{}
 
 func NewUFix64Type() UFix64Type {
 	return UFix64Type{}
@@ -847,6 +923,8 @@ type DictionaryType struct {
 	KeyType     Type
 	ElementType Type
 }
+
+var _ Type = DictionaryType{}
 
 func NewDictionaryType(
 	keyType Type,
@@ -1421,6 +1499,8 @@ type FunctionType struct {
 	ReturnType Type
 }
 
+var _ Type = &FunctionType{}
+
 func NewFunctionType(
 	typeID string,
 	parameters []Parameter,
@@ -1461,6 +1541,8 @@ type ReferenceType struct {
 	Type       Type
 }
 
+var _ Type = ReferenceType{}
+
 func NewReferenceType(
 	authorized bool,
 	typ Type,
@@ -1497,6 +1579,8 @@ type RestrictedType struct {
 	Type         Type
 	Restrictions []Type
 }
+
+var _ Type = &RestrictedType{}
 
 func NewRestrictedType(
 	typeID string,
@@ -1535,6 +1619,8 @@ func (t *RestrictedType) WithID(id string) *RestrictedType {
 
 type BlockType struct{}
 
+var _ Type = BlockType{}
+
 func NewBlockType() BlockType {
 	return BlockType{}
 }
@@ -1555,6 +1641,8 @@ func (BlockType) ID() string {
 // PathType
 
 type PathType struct{}
+
+var _ Type = PathType{}
 
 func NewPathType() PathType {
 	return PathType{}
@@ -1577,6 +1665,8 @@ func (PathType) ID() string {
 
 type CapabilityPathType struct{}
 
+var _ Type = CapabilityPathType{}
+
 func NewCapabilityPathType() CapabilityPathType {
 	return CapabilityPathType{}
 }
@@ -1597,6 +1687,8 @@ func (CapabilityPathType) ID() string {
 // StoragePathType
 
 type StoragePathType struct{}
+
+var _ Type = StoragePathType{}
 
 func NewStoragePathType() StoragePathType {
 	return StoragePathType{}
@@ -1619,6 +1711,8 @@ func (StoragePathType) ID() string {
 
 type PublicPathType struct{}
 
+var _ Type = PublicPathType{}
+
 func NewPublicPathType() PublicPathType {
 	return PublicPathType{}
 }
@@ -1639,6 +1733,8 @@ func (PublicPathType) ID() string {
 // PrivatePathType
 
 type PrivatePathType struct{}
+
+var _ Type = PrivatePathType{}
 
 func NewPrivatePathType() PrivatePathType {
 	return PrivatePathType{}
@@ -1662,6 +1758,8 @@ func (PrivatePathType) ID() string {
 type CapabilityType struct {
 	BorrowType Type
 }
+
+var _ Type = CapabilityType{}
 
 func NewCapabilityType(borrowType Type) CapabilityType {
 	return CapabilityType{BorrowType: borrowType}
@@ -1692,6 +1790,8 @@ type EnumType struct {
 	Fields              []Field
 	Initializers        [][]Parameter
 }
+
+var _ Type = &EnumType{}
 
 func NewEnumType(
 	location common.Location,
@@ -1756,6 +1856,8 @@ func (t *EnumType) CompositeInitializers() [][]Parameter {
 // AuthAccountType
 type AuthAccountType struct{}
 
+var _ Type = AuthAccountType{}
+
 func NewAuthAccountType() AuthAccountType {
 	return AuthAccountType{}
 }
@@ -1796,6 +1898,8 @@ func (PublicAccountType) ID() string {
 // DeployedContractType
 type DeployedContractType struct{}
 
+var _ Type = DeployedContractType{}
+
 func NewDeployedContractType() DeployedContractType {
 	return DeployedContractType{}
 }
@@ -1815,6 +1919,8 @@ func (DeployedContractType) ID() string {
 
 // AuthAccountContractsType
 type AuthAccountContractsType struct{}
+
+var _ Type = AuthAccountContractsType{}
 
 func NewAuthAccountContractsType() AuthAccountContractsType {
 	return AuthAccountContractsType{}
@@ -1836,6 +1942,8 @@ func (AuthAccountContractsType) ID() string {
 // PublicAccountContractsType
 type PublicAccountContractsType struct{}
 
+var _ Type = PublicAccountContractsType{}
+
 func NewPublicAccountContractsType() PublicAccountContractsType {
 	return PublicAccountContractsType{}
 }
@@ -1855,6 +1963,8 @@ func (PublicAccountContractsType) ID() string {
 
 // AuthAccountKeysType
 type AuthAccountKeysType struct{}
+
+var _ Type = AuthAccountKeysType{}
 
 func NewAuthAccountKeysType() AuthAccountKeysType {
 	return AuthAccountKeysType{}
@@ -1876,6 +1986,8 @@ func (AuthAccountKeysType) ID() string {
 // PublicAccountContractsType
 type PublicAccountKeysType struct{}
 
+var _ Type = PublicAccountKeysType{}
+
 func NewPublicAccountKeysType() PublicAccountKeysType {
 	return PublicAccountKeysType{}
 }
@@ -1895,6 +2007,8 @@ func (PublicAccountKeysType) ID() string {
 
 // AccountKeyType
 type AccountKeyType struct{}
+
+var _ Type = AccountKeyType{}
 
 func NewAccountKeyType() AccountKeyType {
 	return AccountKeyType{}
