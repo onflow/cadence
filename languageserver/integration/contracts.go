@@ -21,6 +21,8 @@ package integration
 import (
 	"fmt"
 
+	"github.com/onflow/cadence/languageserver/test"
+
 	"github.com/onflow/cadence/languageserver/conversion"
 	"github.com/onflow/cadence/languageserver/protocol"
 	"github.com/onflow/cadence/runtime"
@@ -60,14 +62,14 @@ func (c *contractInfo) update(uri protocol.DocumentURI, version int32, checker *
 
 	if contractDeclaration != nil {
 		docString = contractDeclaration.DocString
-		c.name = contractDeclaration.Identifier.Identifier
+		c.name = contractDeclaration.Identifier.String()
 		c.startPos = &contractDeclaration.StartPos
 		c.kind = contractTypeDeclaration
 		contractType := checker.Elaboration.CompositeDeclarationTypes[contractDeclaration]
 		c.parameters = contractType.ConstructorParameters
 	} else if contractInterfaceDeclaration != nil {
 		docString = contractInterfaceDeclaration.DocString
-		c.name = contractInterfaceDeclaration.Identifier.Identifier
+		c.name = contractInterfaceDeclaration.Identifier.String()
 		c.startPos = &contractInterfaceDeclaration.StartPos
 		c.kind = contractTypeInterface
 	}
@@ -115,6 +117,8 @@ func (c *contractInfo) update(uri protocol.DocumentURI, version int32, checker *
 }
 
 func (c *contractInfo) codelens(client flowClient) []*protocol.CodeLens {
+	test.Log("##", c)
+
 	if c.kind == contractTypeUnknown || c.startPos == nil {
 		return nil
 	}
