@@ -451,28 +451,23 @@ describe("contracts", () => {
 
 })
 
-
-
 describe("codelensses", () => {
 
   test("contract codelensses", async() => {
     await withConnection(async connection => {
       let code = fs.readFileSync("./foo.cdc")
-
       let document = TextDocumentItem.create(`file://${__dirname}/foo.cdc`, "cadence", 1, code.toString())
 
       await connection.sendNotification(DidOpenTextDocumentNotification.type, {
         textDocument: document
       })
 
-      await new Promise(res => setTimeout(res, 500))
-
-      let t = await connection.sendRequest("textDocument/codeLens", {
-        textDocument: { uri: document.uri },
+      let codelens = await connection.sendRequest("textDocument/codeLens", {
+        textDocument: document,
       })
-      console.log("######", t)
 
-      await new Promise(res => setTimeout(() => res, 3000))
+      expect(codelens).toHaveLength(1)
+      expect(codelens[0]).toEqual("")
     }, true, true)
 
   })

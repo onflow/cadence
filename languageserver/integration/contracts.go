@@ -21,8 +21,6 @@ package integration
 import (
 	"fmt"
 
-	"github.com/onflow/cadence/languageserver/test"
-
 	"github.com/onflow/cadence/languageserver/conversion"
 	"github.com/onflow/cadence/languageserver/protocol"
 	"github.com/onflow/cadence/runtime"
@@ -117,8 +115,6 @@ func (c *contractInfo) update(uri protocol.DocumentURI, version int32, checker *
 }
 
 func (c *contractInfo) codelens(client flowClient) []*protocol.CodeLens {
-	test.Log("##", c)
-
 	if c.kind == contractTypeUnknown || c.startPos == nil {
 		return nil
 	}
