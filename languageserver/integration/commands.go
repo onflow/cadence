@@ -228,9 +228,14 @@ func (c *commands) deployContract(args ...json.RawMessage) (any, error) {
 		return nil, fmt.Errorf("invalid signer name: %s", args[2])
 	}
 
-	account := c.client.GetClientAccount(signerName)
-	if account == nil {
-		return nil, fmt.Errorf("signer account with name %s doesn't exist", name)
+	var account *clientAccount
+	if signerName == "" { // choose default active account
+		account = c.client.GetActiveClientAccount()
+	} else {
+		account = c.client.GetClientAccount(signerName)
+		if account == nil {
+			return nil, fmt.Errorf("signer account with name %s doesn't exist", signerName)
+		}
 	}
 
 	_, deployError := c.client.DeployContract(account.Address, name, location)
@@ -238,7 +243,7 @@ func (c *commands) deployContract(args ...json.RawMessage) (any, error) {
 		return nil, fmt.Errorf("error deploying contract: %w", deployError)
 	}
 
-	return fmt.Sprintf("Contract %s has been deployed to account %s", name, signerName), err
+	return fmt.Sprintf("Contract %s has been deployed to account %s", name, account.Name), err
 }
 
 func parseLocation(arg []byte) (*url.URL, error) {
