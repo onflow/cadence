@@ -125,13 +125,17 @@ func (i *FlowIntegration) codeLenses(
 
 	// Add code lenses for contracts and contract interfaces
 	contract := i.contractInfo[uri]
-	contract.update(uri, version, checker)
-	actions = append(actions, contract.codelens(i.client)...)
+	if contract != nil {
+		contract.update(uri, version, checker)
+		actions = append(actions, contract.codelens(i.client)...)
+	}
 
 	// Add code lenses for scripts and transactions
 	entryPoint := i.entryPointInfo[uri]
-	entryPoint.update(uri, version, checker)
-	actions = append(actions, entryPoint.codelens(i.client)...)
+	if entryPoint != nil {
+		entryPoint.update(uri, version, checker)
+		actions = append(actions, entryPoint.codelens(i.client)...)
+	}
 
 	return actions, nil
 }
