@@ -22,6 +22,9 @@ import (
 	"fmt"
 	"net/url"
 
+	"golang.org/x/exp/maps"
+	"golang.org/x/exp/slices"
+
 	"github.com/onflow/cadence"
 	"github.com/onflow/flow-cli/pkg/flowkit"
 	"github.com/onflow/flow-cli/pkg/flowkit/gateway"
@@ -179,8 +182,16 @@ func (f *flowkitClient) DeployContract(
 		return nil, err
 	}
 
+	flowAccount, err := f.services.Accounts.Get(address)
+	if err != nil {
+		return nil, err
+	}
+
+	// check if account already has a contract with this name deployed then update
+	updateExisting := slices.Contains(maps.Keys(flowAccount.Contracts), name)
+
 	account := createSigner(address, service)
-	return f.services.Accounts.AddContract(account, name, code, true)
+	return f.services.Accounts.AddContract(account, name, code, updateExisting)
 }
 
 func (f *flowkitClient) SendTransaction(
