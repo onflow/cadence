@@ -19,8 +19,6 @@
 package runtime
 
 import (
-	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/tests/checker"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -143,6 +141,72 @@ func TestEqualMatcher(t *testing.T) {
 
 	t.Parallel()
 
+	t.Run("equal matcher with primitive", func(t *testing.T) {
+		script := `
+            import Test
+
+            pub fun main() {
+                let f = Foo()
+                Test.equal(1)
+            }
+
+            pub struct Foo {}
+        `
+
+		storage := newTestLedger(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+		}
+
+		_, err := executeScript(script, runtimeInterface)
+		require.NoError(t, err)
+	})
+
+	t.Run("equal matcher with struct", func(t *testing.T) {
+		script := `
+            import Test
+
+            pub fun main() {
+                let f = Foo()
+                Test.equal(f)
+            }
+
+            pub struct Foo {}
+        `
+
+		storage := newTestLedger(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+		}
+
+		_, err := executeScript(script, runtimeInterface)
+		require.NoError(t, err)
+	})
+
+	t.Run("equal matcher with resource", func(t *testing.T) {
+		script := `
+            import Test
+
+            pub fun main() {
+                let f <- create Foo()
+                Test.equal(<-f)
+            }
+
+            pub resource Foo {}
+        `
+
+		storage := newTestLedger(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+		}
+
+		_, err := executeScript(script, runtimeInterface)
+		require.NoError(t, err)
+	})
+
 	t.Run("success", func(t *testing.T) {
 		script := `
             import Test
@@ -209,7 +273,7 @@ func TestEqualMatcher(t *testing.T) {
             pub fun main() {
                 let f1 <- create Foo()
                 let f2 <- create Foo()
-                Test.expectResource(<-f1, Test.resourceEqual(<-f2))
+                Test.expect(<-f1, Test.equal(<-f2))
             }
 
             pub resource Foo {}
@@ -232,7 +296,7 @@ func TestEqualMatcher(t *testing.T) {
             pub fun main() {
                 let foo <- create Foo()
                 let bar <- create Bar()
-                Test.expectResource(<-foo, Test.resourceEqual(<-bar))
+                Test.expect(<-foo, Test.equal(<-bar))
             }
 
             pub resource Foo {}
@@ -248,57 +312,6 @@ func TestEqualMatcher(t *testing.T) {
 		_, err := executeScript(script, runtimeInterface)
 		require.Error(t, err)
 		assert.ErrorAs(t, err, &stdlib.AssertionError{})
-	})
-
-	t.Run("resources matcher with struct", func(t *testing.T) {
-		script := `
-            import Test
-
-            pub fun main() {
-                let f = Foo()
-                Test.resourceEqual(f)
-            }
-
-            pub struct Foo {}
-        `
-
-		storage := newTestLedger(nil, nil)
-
-		runtimeInterface := &testRuntimeInterface{
-			storage: storage,
-		}
-
-		_, err := executeScript(script, runtimeInterface)
-		require.Error(t, err)
-
-		errors := checker.ExpectCheckerErrors(t, err, 2)
-		assert.IsType(t, &sema.TypeMismatchError{}, errors[0])
-		assert.IsType(t, &sema.MissingMoveOperationError{}, errors[1])
-	})
-
-	t.Run("struct matcher with resource", func(t *testing.T) {
-		script := `
-            import Test
-
-            pub fun main() {
-                let f <- create Foo()
-                Test.equal(<-f)
-            }
-
-            pub resource Foo {}
-        `
-
-		storage := newTestLedger(nil, nil)
-
-		runtimeInterface := &testRuntimeInterface{
-			storage: storage,
-		}
-
-		_, err := executeScript(script, runtimeInterface)
-		require.Error(t, err)
-
-		errors := checker.ExpectCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.TypeMismatchError{}, errors[0])
 	})
 
 	t.Run("expect struct with (resource, struct matcher)", func(t *testing.T) {
@@ -323,9 +336,7 @@ func TestEqualMatcher(t *testing.T) {
 
 		_, err := executeScript(script, runtimeInterface)
 		require.Error(t, err)
-
-		errors := checker.ExpectCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.TypeMismatchError{}, errors[0])
+		assert.ErrorAs(t, err, &stdlib.AssertionError{})
 	})
 
 	t.Run("expect struct with (struct, resource matcher)", func(t *testing.T) {
@@ -335,7 +346,7 @@ func TestEqualMatcher(t *testing.T) {
             pub fun main() {
                 let foo = Foo()
                 let bar <- create Bar()
-                Test.expect(foo, Test.resourceEqual(<-bar))
+                Test.expect(foo, Test.equal(<-bar))
             }
 
             pub struct Foo {}
@@ -360,7 +371,7 @@ func TestEqualMatcher(t *testing.T) {
             pub fun main() {
                 let foo = Foo()
                 let bar <- create Bar()
-                Test.expectResource(foo, Test.resourceEqual(<-bar))
+                Test.expect(foo, Test.equal(<-bar))
             }
 
             pub struct Foo {}
@@ -375,10 +386,7 @@ func TestEqualMatcher(t *testing.T) {
 
 		_, err := executeScript(script, runtimeInterface)
 		require.Error(t, err)
-
-		errors := checker.ExpectCheckerErrors(t, err, 2)
-		assert.IsType(t, &sema.TypeMismatchError{}, errors[0])
-		assert.IsType(t, &sema.MissingMoveOperationError{}, errors[1])
+		assert.ErrorAs(t, err, &stdlib.AssertionError{})
 	})
 
 	t.Run("expect resource with (resource, struct matcher)", func(t *testing.T) {
@@ -388,7 +396,7 @@ func TestEqualMatcher(t *testing.T) {
             pub fun main() {
                 let foo <- create Foo()
                 let bar = Bar()
-                Test.expectResource(<-foo, Test.equal(bar))
+                Test.expect(<-foo, Test.equal(bar))
             }
 
             pub resource Foo {}

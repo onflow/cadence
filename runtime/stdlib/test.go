@@ -118,11 +118,11 @@ func NewTestContract(
 
 	// Inject natively implemented function values
 	compositeValue.Functions[testAssertFunctionName] = testAssertFunction
+	compositeValue.Functions[testExpectFunctionName] = testExpectFunction
 	compositeValue.Functions[testNewEmulatorBlockchainFunctionName] = testNewEmulatorBlockchainFunction
 
 	// Inject natively implemented matchers
-	compositeValue.Functions[testEqualMatcherFunctionName] = testStructEqualMatcherFunction
-	compositeValue.Functions[testResourceEqualMatcherFunctionName] = testResourceEqualMatcherFunction
+	compositeValue.Functions[testEqualMatcherFunctionName] = testEqualMatcherFunction
 
 	return compositeValue, nil
 }
@@ -170,6 +170,15 @@ func init() {
 		),
 	)
 	testContractType.Members.Set(
+		testExpectFunctionName,
+		sema.NewUnmeteredPublicFunctionMember(
+			testContractType,
+			testExpectFunctionName,
+			testExpectFunctionType,
+			testExpectFunctionDocString,
+		),
+	)
+	testContractType.Members.Set(
 		testNewEmulatorBlockchainFunctionName,
 		sema.NewUnmeteredPublicFunctionMember(
 			testContractType,
@@ -187,15 +196,6 @@ func init() {
 			testEqualMatcherFunctionName,
 			testEqualMatcherFunctionType,
 			testEqualMatcherFunctionDocString,
-		),
-	)
-	testContractType.Members.Set(
-		testResourceEqualMatcherFunctionName,
-		sema.NewUnmeteredPublicFunctionMember(
-			testContractType,
-			testResourceEqualMatcherFunctionName,
-			testResourceEqualMatcherFunctionType,
-			testResourceEqualMatcherFunctionDocString,
 		),
 	)
 
@@ -269,6 +269,101 @@ var testAssertFunction = interpreter.NewUnmeteredHostFunctionValue(
 		return interpreter.VoidValue{}
 	},
 	testAssertFunctionType,
+)
+
+// 'Test.expect' function
+
+const testExpectFunctionDocString = `expect function of Test contract`
+
+const testExpectFunctionName = "expect"
+
+var testExpectFunctionType = &sema.FunctionType{
+	Parameters: []*sema.Parameter{
+		{
+			Label:      sema.ArgumentLabelNotRequired,
+			Identifier: "value",
+			TypeAnnotation: sema.NewTypeAnnotation(
+				&sema.GenericType{
+					TypeParameter: typeParameter,
+				},
+			),
+		},
+		{
+			Label:      sema.ArgumentLabelNotRequired,
+			Identifier: "matcher",
+			TypeAnnotation: sema.NewTypeAnnotation(
+				&sema.RestrictedType{
+					Type: sema.AnyStructType,
+					Restrictions: []*sema.InterfaceType{
+						matcherType,
+					},
+				},
+			),
+		},
+	},
+	TypeParameters: []*sema.TypeParameter{
+		typeParameter,
+	},
+	ReturnTypeAnnotation: sema.NewTypeAnnotation(
+		sema.VoidType,
+	),
+}
+
+var testExpectFunction = interpreter.NewUnmeteredHostFunctionValue(
+	func(invocation interpreter.Invocation) interpreter.Value {
+		value := invocation.Arguments[0]
+
+		matcher, ok := invocation.Arguments[1].(*interpreter.CompositeValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		inter := invocation.Interpreter
+
+		testField := matcher.GetMember(
+			inter,
+			interpreter.ReturnEmptyLocationRange,
+			matcherTestFieldName,
+		)
+
+		var functionValue interpreter.FunctionValue
+		var functionType *sema.FunctionType
+
+		switch testField := testField.(type) {
+		case *interpreter.InterpretedFunctionValue:
+			functionValue = testField
+			functionType = testField.Type
+		case *interpreter.HostFunctionValue:
+			functionValue = testField
+			functionType = testField.Type
+		default:
+			panic(errors.NewUnreachableError())
+		}
+
+		testResult, err := invocation.Interpreter.InvokeExternally(
+			functionValue,
+			functionType,
+			[]interpreter.Value{
+				value,
+			},
+		)
+
+		if err != nil {
+			panic(err)
+		}
+
+		result, ok := testResult.(interpreter.BoolValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		if !result {
+			panic(AssertionError{})
+		}
+
+		return interpreter.VoidValue{}
+	},
+	testExpectFunctionType,
 )
 
 // 'Test.newEmulatorBlockchain' function
@@ -1144,13 +1239,25 @@ const testEqualMatcherFunctionDocString = `
 Returns a matcher that succeeds if the tested value is equal to the given value
 `
 
+var typeParameter = &sema.TypeParameter{
+	TypeBound: sema.AnyType,
+	Name:      "T",
+	Optional:  true,
+}
+
 var testEqualMatcherFunctionType = &sema.FunctionType{
+	IsConstructor: false,
+	TypeParameters: []*sema.TypeParameter{
+		typeParameter,
+	},
 	Parameters: []*sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
 			Identifier: "value",
 			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.AnyStructType,
+				&sema.GenericType{
+					TypeParameter: typeParameter,
+				},
 			),
 		},
 	},
@@ -1159,12 +1266,14 @@ var testEqualMatcherFunctionType = &sema.FunctionType{
 	),
 }
 
-var testStructEqualMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
+var testEqualMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
 	func(invocation interpreter.Invocation) interpreter.Value {
 		otherValue, ok := invocation.Arguments[0].(interpreter.EquatableValue)
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
+
+		inter := invocation.Interpreter
 
 		equalTestFunc := interpreter.NewHostFunctionValue(
 			nil,
@@ -1176,7 +1285,7 @@ var testStructEqualMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
 				}
 
 				equal := thisValue.Equal(
-					invocation.Interpreter,
+					inter,
 					interpreter.ReturnEmptyLocationRange,
 					otherValue,
 				)
@@ -1186,62 +1295,13 @@ var testStructEqualMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
 			matcherTestType,
 		)
 
-		return newStructMatcher(invocation.Interpreter, invocation.Self, equalTestFunc)
+		if otherValue.IsResourceKinded(inter) {
+			return newResourceMatcher(inter, equalTestFunc)
+		}
+
+		return newStructMatcher(inter, invocation.Self, equalTestFunc)
 	},
 	testEqualMatcherFunctionType,
-)
-
-const testResourceEqualMatcherFunctionName = "resourceEqual"
-
-const testResourceEqualMatcherFunctionDocString = `
-Returns a matcher that succeeds if the tested value is equal to the given value
-`
-
-var testResourceEqualMatcherFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{
-		{
-			Label:      sema.ArgumentLabelNotRequired,
-			Identifier: "value",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.AnyResourceType,
-			),
-		},
-	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		resourceMatcherType,
-	),
-}
-
-var testResourceEqualMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
-	func(invocation interpreter.Invocation) interpreter.Value {
-		otherValue, ok := invocation.Arguments[0].(interpreter.EquatableValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-
-		equalTestFunc := interpreter.NewHostFunctionValue(
-			nil,
-			func(invocation interpreter.Invocation) interpreter.Value {
-
-				thisValue, ok := invocation.Arguments[0].(interpreter.EquatableValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				equal := thisValue.Equal(
-					invocation.Interpreter,
-					interpreter.ReturnEmptyLocationRange,
-					otherValue,
-				)
-
-				return interpreter.BoolValue(equal)
-			},
-			matcherTestType,
-		)
-
-		return newResourceMatcher(invocation.Interpreter, equalTestFunc)
-	},
-	testResourceEqualMatcherFunctionType,
 )
 
 // TestFailedError

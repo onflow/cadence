@@ -4,16 +4,6 @@
 ///
 pub contract Test {
 
-    /// Convenient function to return an expectation.
-    ///
-    pub fun expect(_ value: AnyStruct, _ matcher: AnyStruct{Matcher}) {
-        assert(matcher.test(value))
-    }
-
-    pub fun expectResource(_ value: @AnyResource, _ matcher: AnyStruct{Matcher}) {
-        assert(matcher.test(<-value))
-    }
-
     /// Convenient function to fail a test.
     /// Is equivalent to calling `assert(false)`
     ///
