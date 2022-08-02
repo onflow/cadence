@@ -23,8 +23,6 @@ import (
 	"fmt"
 	"regexp"
 
-	"github.com/onflow/flow-go-sdk"
-
 	"github.com/onflow/cadence/languageserver/conversion"
 	"github.com/onflow/cadence/languageserver/protocol"
 	"github.com/onflow/cadence/runtime"
@@ -52,7 +50,7 @@ type entryPointInfo struct {
 	parameters            []*sema.Parameter
 	pragmaArgumentStrings []string
 	pragmaArguments       [][]Argument
-	pragmaSignersStrings  [][]string
+	pragmaSignerNames     []string
 	numberOfSigners       int
 }
 
@@ -81,7 +79,7 @@ func (e *entryPointInfo) update(uri protocol.DocumentURI, version int32, checker
 		e.numberOfSigners = 0
 	}
 
-	var pragmaSigners [][]string
+	var pragmaSigners []string
 	var pragmaArgumentStrings []string
 	var pragmaArguments [][]Argument
 
@@ -112,7 +110,7 @@ func (e *entryPointInfo) update(uri protocol.DocumentURI, version int32, checker
 
 		for _, pragmaSignerString := range parser.ParseDocstringPragmaSigners(docString) {
 			signers := SignersRegexp.FindAllString(pragmaSignerString, -1)
-			pragmaSigners = append(pragmaSigners, signers)
+			pragmaSigners = append(pragmaSigners, signers...)
 		}
 	}
 
@@ -120,7 +118,7 @@ func (e *entryPointInfo) update(uri protocol.DocumentURI, version int32, checker
 	e.documentVersion = version
 	e.pragmaArgumentStrings = pragmaArgumentStrings
 	e.pragmaArguments = pragmaArguments
-	e.pragmaSignersStrings = pragmaSigners
+	e.pragmaSignerNames = pragmaSigners
 }
 
 // codelens shows an execute button when there is exactly one valid entry point
@@ -171,7 +169,6 @@ func (e *entryPointInfo) scriptCodelens(index int, argumentList []Argument) *pro
 }
 
 func (e *entryPointInfo) transactionCodelens(index int, argumentList []Argument, client flowClient) []*protocol.CodeLens {
-	codeLenses := make([]*protocol.CodeLens, 0)
 	codelensRange := conversion.ASTToProtocolRange(*e.startPos, *e.startPos)
 
 	var pragmaArguments string
@@ -179,66 +176,58 @@ func (e *entryPointInfo) transactionCodelens(index int, argumentList []Argument,
 		pragmaArguments = e.pragmaArgumentStrings[index]
 	}
 
-	signersList := e.pragmaSignersStrings[:]
-	if len(signersList) == 0 {
+	signerNames := e.pragmaSignerNames[:]
+	if len(signerNames) == 0 {
 		activeAccount := client.GetActiveClientAccount()
-		signersList = append(signersList, []string{activeAccount.Name}) // todo why list of lists
+		signerNames = []string{activeAccount.Name}
 	}
 
-	for _, signers := range signersList {
-
-		if e.numberOfSigners > len(signers) {
-			title := fmt.Sprintf(
-				"%s Not enough signers. Required: %v, passed: %v",
-				prefixError,
-				e.numberOfSigners,
-				len(signers),
-			)
-			codeLenses = append(codeLenses, makeActionlessCodelens(title, codelensRange))
-			continue
-		}
-
-		var codelens *protocol.CodeLens
-		accounts, absentAccounts := resolveAccounts(client, signers)
-
-		if len(absentAccounts) > 0 {
-			accountsNumeric := "account"
-			if len(accounts) > 1 {
-				accountsNumeric += "s"
-			}
-
-			title := fmt.Sprintf("%s Specified %s %s does not exist",
-				prefixError,
-				accountsNumeric,
-				common.EnumerateWords(absentAccounts, "and"),
-			)
-
-			codeLenses = append(codeLenses, makeActionlessCodelens(title, codelensRange))
-			continue
-		}
-
+	if e.numberOfSigners > len(signerNames) {
 		title := fmt.Sprintf(
-			"%s Send with %s signed by %s",
-			prefixOK,
-			pragmaArguments,
-			common.EnumerateWords(signers, "and"),
+			"%s Not enough signers. Required: %v, passed: %v",
+			prefixError,
+			e.numberOfSigners,
+			len(signerNames),
 		)
-		if len(argumentList) == 0 {
-			title = fmt.Sprintf(
-				"%s Send signed by %s",
-				prefixOK,
-				common.EnumerateWords(signers, "and"),
-			)
-		}
+		return []*protocol.CodeLens{makeActionlessCodelens(title, codelensRange)}
 
-		argsJSON, _ := json.Marshal(argumentList)
-		arguments, _ := encodeJSONArguments(e.uri, string(argsJSON), accounts)
-
-		codelens = makeCodeLens(CommandSendTransaction, title, codelensRange, arguments)
-		codeLenses = append(codeLenses, codelens)
 	}
 
-	return codeLenses
+	accounts, absentAccounts := resolveAccounts(client, signerNames)
+
+	if len(absentAccounts) > 0 {
+		accountsNumeric := "account"
+		if len(accounts) > 1 {
+			accountsNumeric += "s"
+		}
+
+		title := fmt.Sprintf("%s Specified %s %s does not exist",
+			prefixError,
+			accountsNumeric,
+			common.EnumerateWords(absentAccounts, "and"),
+		)
+
+		return []*protocol.CodeLens{makeActionlessCodelens(title, codelensRange)}
+	}
+
+	title := fmt.Sprintf(
+		"%s Send with %s signed by %s",
+		prefixOK,
+		pragmaArguments,
+		common.EnumerateWords(signerNames, "and"),
+	)
+	if len(argumentList) == 0 {
+		title = fmt.Sprintf(
+			"%s Send signed by %s",
+			prefixOK,
+			common.EnumerateWords(signerNames, "and"),
+		)
+	}
+
+	argsJSON, _ := json.Marshal(argumentList)
+	arguments, _ := encodeJSONArguments(e.uri, string(argsJSON), accounts)
+
+	return []*protocol.CodeLens{makeCodeLens(CommandSendTransaction, title, codelensRange, arguments)}
 }
 
 // helpers
@@ -248,15 +237,15 @@ func (e *entryPointInfo) transactionCodelens(index int, argumentList []Argument,
 const prefixOK = "💡"
 const prefixError = "🚫"
 
-func resolveAccounts(client flowClient, signers []string) ([]flow.Address, []string) {
+func resolveAccounts(client flowClient, signers []string) ([]string, []string) {
 	var absentAccounts []string
-	var resolvedAccounts []flow.Address
+	var resolvedAccounts []string
 	for _, signer := range signers {
 		account := client.GetClientAccount(signer)
 		if account == nil {
 			absentAccounts = append(absentAccounts, signer)
 		} else {
-			resolvedAccounts = append(resolvedAccounts, account.Address)
+			resolvedAccounts = append(resolvedAccounts, account.Name)
 		}
 	}
 	return resolvedAccounts, absentAccounts
