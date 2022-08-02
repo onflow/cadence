@@ -123,6 +123,8 @@ func (i *FlowIntegration) codeLenses(
 ) {
 	var actions []*protocol.CodeLens
 
+	// todo refactor - define codelens provider interface and merge both into one
+
 	// Add code lenses for contracts and contract interfaces
 	contract := i.contractInfo[uri]
 	if contract == nil {
