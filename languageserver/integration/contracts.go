@@ -118,34 +118,30 @@ func (c *contractInfo) codelens(client flowClient) []*protocol.CodeLens {
 	if c.kind == contractTypeUnknown || c.startPos == nil {
 		return nil
 	}
-
-	if len(c.pragmaSignersNames) == 0 { // default to active client account
-		c.pragmaSignersNames = []string{client.GetActiveClientAccount().Name}
-	}
-
 	codelensRange := conversion.ASTToProtocolRange(*c.startPos, *c.startPos)
-	var codeLenses []*protocol.CodeLens
 
-	for _, signer := range c.pragmaSignersNames {
-		var title string
-
-		account := client.GetClientAccount(signer)
-		if account == nil {
-			title = fmt.Sprintf("%s Specified account %s does not exist", prefixError, signer)
-			codeLenses = append(codeLenses, makeActionlessCodelens(title, codelensRange))
-			// todo should we continue in this case
-		}
-
-		titleBody := "Deploy contract"
-		if c.kind == contractTypeInterface {
-			titleBody = "Deploy contract interface"
-		}
-
-		title = fmt.Sprintf("%s %s %s to %s", prefixOK, titleBody, c.name, signer)
-		arguments, _ := encodeJSONArguments(c.uri, c.name, account.Address)
-		codelens := makeCodeLens(CommandDeployContract, title, codelensRange, arguments)
-		codeLenses = append(codeLenses, codelens)
+	var signer string
+	if len(c.pragmaSignersNames) == 0 {
+		signer = client.GetActiveClientAccount().Name // default to active client account
+	} else if len(c.pragmaSignersNames) == 1 {
+		signer = c.pragmaSignersNames[0]
+	} else {
+		title := fmt.Sprintf("%s Only possible to deploy to a single account", prefixError)
+		return []*protocol.CodeLens{makeActionlessCodelens(title, codelensRange)}
 	}
 
-	return codeLenses
+	account := client.GetClientAccount(signer)
+	if account == nil {
+		title := fmt.Sprintf("%s Specified account %s does not exist", prefixError, signer)
+		return []*protocol.CodeLens{makeActionlessCodelens(title, codelensRange)}
+	}
+
+	titleBody := "Deploy contract"
+	if c.kind == contractTypeInterface {
+		titleBody = "Deploy contract interface"
+	}
+
+	title := fmt.Sprintf("%s %s %s to %s", prefixOK, titleBody, c.name, signer)
+	arguments, _ := encodeJSONArguments(c.uri, c.name, signer)
+	return []*protocol.CodeLens{makeCodeLens(CommandDeployContract, title, codelensRange, arguments)}
 }

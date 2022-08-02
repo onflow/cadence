@@ -471,7 +471,7 @@ describe("codelensses", () => {
       let c = codelens[0].command
       expect(c.command).toEqual("cadence.server.flow.deployContract")
       expect(c.title).toEqual("💡 Deploy contract Foo to Alice")
-      expect(c.arguments).toEqual(["file:///Users/dapper/Dev/cadence/languageserver/test/foo.cdc", "Foo", "01cf0e2f2f715450"])
+      expect(c.arguments).toEqual(["file:///Users/dapper/Dev/cadence/languageserver/test/foo.cdc", "Foo", "Alice"])
     }, true)
 
   })
@@ -496,7 +496,7 @@ describe("codelensses", () => {
       expect(c.arguments).toEqual([
         "file:///Users/dapper/Dev/cadence/languageserver/test/transaction.cdc",
         "[]",
-        ["01cf0e2f2f715450"]
+        ["Alice"]
       ])
     }, true)
 
