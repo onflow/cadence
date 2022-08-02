@@ -1644,8 +1644,12 @@ func (s *Server) ExecuteCommand(conn protocol.Conn, params *protocol.ExecuteComm
 	res, err := commandHandler(params.Arguments...)
 	if err != nil {
 		conn.ShowMessage(&protocol.ShowMessageParams{
-			Type:    protocol.Error,
-			Message: fmt.Sprintf("executing command: %s failed with error: %s", params.Command, err.Error()),
+			Type: protocol.Error,
+			Message: fmt.Sprintf(
+				"executing command: %s failed with error: %s",
+				strings.TrimPrefix("cadence.server.flow", params.Command),
+				err.Error(),
+			),
 		})
 		return nil, err
 	}
