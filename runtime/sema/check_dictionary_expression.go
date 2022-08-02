@@ -73,7 +73,7 @@ func (checker *Checker) VisitDictionaryExpression(expression *ast.DictionaryExpr
 			valueType == InvalidType {
 			checker.report(
 				&TypeAnnotationRequiredError{
-					Cause: "cannot infer type from dictionary literal:",
+					Cause: "cannot infer type from dictionary literal: ",
 					Pos:   expression.StartPos,
 				},
 			)

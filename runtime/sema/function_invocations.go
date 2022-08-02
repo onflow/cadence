@@ -31,12 +31,12 @@ type FunctionInvocation struct {
 }
 
 type FunctionInvocations struct {
-	tree *intervalst.IntervalST
+	tree *intervalst.IntervalST[FunctionInvocation]
 }
 
 func NewFunctionInvocations() *FunctionInvocations {
 	return &FunctionInvocations{
-		tree: &intervalst.IntervalST{},
+		tree: &intervalst.IntervalST[FunctionInvocation]{},
 	}
 }
 
@@ -59,12 +59,8 @@ func (f *FunctionInvocations) Put(
 }
 
 func (f *FunctionInvocations) Find(pos Position) *FunctionInvocation {
-	interval, value := f.tree.Search(pos)
-	if interval == nil {
-		return nil
-	}
-	invocation, ok := value.(FunctionInvocation)
-	if !ok {
+	_, invocation, present := f.tree.Search(pos)
+	if !present {
 		return nil
 	}
 	return &invocation

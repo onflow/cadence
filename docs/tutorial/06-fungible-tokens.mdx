@@ -10,10 +10,10 @@ In this tutorial, we're going to deploy, store, and transfer fungible tokens.
   Open the starter code for this tutorial in the Flow Playground:
   <br />
   <a
-    href="https://play.onflow.org/50745fb6-77d5-4510-adfc-cf448fb043e1"
+    href="https://play.onflow.org/adc24257-ccc6-4de8-aba4-e1bc33f5f029"
     target="_blank"
   >
-    https://play.onflow.org/50745fb6-77d5-4510-adfc-cf448fb043e1
+    https://play.onflow.org/adc24257-ccc6-4de8-aba4-e1bc33f5f029
   </a>
   <br />
   The tutorial will ask you to take various actions to interact with this code.
@@ -93,10 +93,10 @@ and [Hello, World!](02-hello-world) to learn the basics of the language and the 
   First, you'll need to follow this link to open a playground session with the
   Fungible Token contracts, transactions, and scripts pre-loaded:{" "}
   <a
-    href="https://play.onflow.org/50745fb6-77d5-4510-adfc-cf448fb043e1"
+    href="https://play.onflow.org/adc24257-ccc6-4de8-aba4-e1bc33f5f029"
     target="_blank"
   >
-    https://play.onflow.org/50745fb6-77d5-4510-adfc-cf448fb043e1
+    https://play.onflow.org/adc24257-ccc6-4de8-aba4-e1bc33f5f029
   </a>
 </Callout>
 <Callout type="info">
@@ -415,7 +415,7 @@ Click the `Deploy` button at the top right of the editor to deploy the code.
 
 </Callout>
 
-<img src="https://storage.googleapis.com/flow-resources/documentation-assets/cadence-tuts/playground-deploy" />
+<img src="https://storage.googleapis.com/flow-resources/documentation-assets/cadence-tuts/playground-deploy.png" />
 
 This deployment stores the contract for the basic fungible token
 in your active account (account `0x01`) so that it can be imported into transactions.
@@ -602,7 +602,7 @@ fields private unless it is explicitly needed to be public.
 <Callout type="warning">
   This is especially important for array and dictionary types,
   which can have their contents maliciously mutated if they are made public.
-  This is one of THE MOST COMMON security mistake that Cadence developers make,
+  This is one of THE MOST COMMON security mistakes that Cadence developers make,
   so it is vitally important to be aware of this.
 
   See the [Cadence Best Practices document](/cadence/anti-patterns#array-or-dictionary-fields-should-be-private) for more details.
@@ -1111,8 +1111,8 @@ From here, you could try to extend the functionality of fungible tokens by makin
 - An escrow that can be deposited to (but only withdrawn when the balance reaches a certain point)
 - A function to the resource that mints new tokens!
 
-## Non-Fungible Tokens on Flow
+## Create a Flow Marketplace
 
 ---
-
-Now that you have an understanding of how fungible tokens work on Flow, you're ready to play with non-fungible tokens!
+Now that you have an understanding of how fungible tokens work on Flow and have a working NFT, you can learn how to create 
+a marketplace that uses both fungible tokens and NFTs. Move on to the next tutorial to learn about Marketplaces in Cadence!
