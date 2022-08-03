@@ -5,7 +5,7 @@
 pub contract Test {
 
     /// Convenient function to fail a test.
-    /// Is equivalent to calling `assert(false)`
+    /// Is equivalent to calling `assert(false)`.
     ///
     pub fun fail() {
         assert(false)
@@ -13,7 +13,7 @@ pub contract Test {
 
     pub struct interface Matcher {
 
-        pub let test: ((Any): Bool)
+        pub fun test(_ value: Any): Bool
 
         pub fun and(_ other: AnyStruct{Matcher}): AnyStruct{Matcher}
 
@@ -24,20 +24,22 @@ pub contract Test {
     ///
     pub struct StructMatcher: Matcher {
 
-        pub let test: ((Any): Bool)
+        priv let condition: ((AnyStruct): Bool)
 
         pub init(_ test: ((AnyStruct): Bool)) {
-            self.test = fun (_ value: Any): Bool {
-                if !value.getType().isSubtype(of: Type<AnyStruct>()) {
-                    return false
-                }
+            self.condition = test
+        }
 
-                return test(value as! AnyStruct)
+        pub fun test(_ value: Any): Bool {
+            if !value.getType().isSubtype(of: Type<AnyStruct>()) {
+                return false
             }
+
+            return self.condition(value as! AnyStruct)
         }
 
         /// Combine this matcher with the given matcher.
-        /// Returns a new matcher that succeeds if this and the given matcher succeed
+        /// Returns a new matcher that succeeds if this and the given matcher succeed.
         ///
         pub fun and(_ other: AnyStruct{Matcher}): AnyStruct{Matcher} {
             return StructMatcher(fun (_ value: AnyStruct): Bool {
@@ -46,7 +48,7 @@ pub contract Test {
         }
 
         /// Combine this matcher with the given matcher.
-        /// Returns a new matcher that succeeds if this and the given matcher succeed
+        /// Returns a new matcher that succeeds if this and the given matcher succeed.
         ///
         pub fun or(_ other: AnyStruct{Matcher}): AnyStruct{Matcher} {
             return StructMatcher(fun (_ value: AnyStruct): Bool {

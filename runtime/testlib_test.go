@@ -142,15 +142,14 @@ func TestEqualMatcher(t *testing.T) {
 	t.Parallel()
 
 	t.Run("equal matcher with primitive", func(t *testing.T) {
+		t.Parallel()
+
 		script := `
             import Test
 
             pub fun main() {
-                let f = Foo()
-                Test.equal(1)
+                let matcher = Test.equal(1)
             }
-
-            pub struct Foo {}
         `
 
 		storage := newTestLedger(nil, nil)
@@ -164,12 +163,14 @@ func TestEqualMatcher(t *testing.T) {
 	})
 
 	t.Run("equal matcher with struct", func(t *testing.T) {
+		t.Parallel()
+
 		script := `
             import Test
 
             pub fun main() {
                 let f = Foo()
-                Test.equal(f)
+                let matcher = Test.equal(f)
             }
 
             pub struct Foo {}
@@ -186,12 +187,14 @@ func TestEqualMatcher(t *testing.T) {
 	})
 
 	t.Run("equal matcher with resource", func(t *testing.T) {
+		t.Parallel()
+
 		script := `
             import Test
 
             pub fun main() {
                 let f <- create Foo()
-                Test.equal(<-f)
+                let matcher = Test.equal(<-f)
             }
 
             pub resource Foo {}
@@ -208,6 +211,8 @@ func TestEqualMatcher(t *testing.T) {
 	})
 
 	t.Run("success", func(t *testing.T) {
+		t.Parallel()
+
 		script := `
             import Test
 
@@ -227,6 +232,8 @@ func TestEqualMatcher(t *testing.T) {
 	})
 
 	t.Run("fail", func(t *testing.T) {
+		t.Parallel()
+
 		script := `
             import Test
 
@@ -247,6 +254,8 @@ func TestEqualMatcher(t *testing.T) {
 	})
 
 	t.Run("different types", func(t *testing.T) {
+		t.Parallel()
+
 		script := `
             import Test
 
@@ -267,6 +276,8 @@ func TestEqualMatcher(t *testing.T) {
 	})
 
 	t.Run("resources", func(t *testing.T) {
+		t.Parallel()
+
 		script := `
             import Test
 
@@ -290,6 +301,8 @@ func TestEqualMatcher(t *testing.T) {
 	})
 
 	t.Run("different resources", func(t *testing.T) {
+		t.Parallel()
+
 		script := `
             import Test
 
@@ -315,6 +328,8 @@ func TestEqualMatcher(t *testing.T) {
 	})
 
 	t.Run("expect struct with (resource, struct matcher)", func(t *testing.T) {
+		t.Parallel()
+
 		script := `
             import Test
 
@@ -340,6 +355,8 @@ func TestEqualMatcher(t *testing.T) {
 	})
 
 	t.Run("expect struct with (struct, resource matcher)", func(t *testing.T) {
+		t.Parallel()
+
 		script := `
             import Test
 
@@ -365,6 +382,8 @@ func TestEqualMatcher(t *testing.T) {
 	})
 
 	t.Run("expect resource with (struct, resource matcher)", func(t *testing.T) {
+		t.Parallel()
+
 		script := `
             import Test
 
@@ -390,6 +409,8 @@ func TestEqualMatcher(t *testing.T) {
 	})
 
 	t.Run("expect resource with (resource, struct matcher)", func(t *testing.T) {
+		t.Parallel()
+
 		script := `
             import Test
 
@@ -401,6 +422,180 @@ func TestEqualMatcher(t *testing.T) {
 
             pub resource Foo {}
             pub struct Bar {}
+        `
+
+		storage := newTestLedger(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+		}
+
+		_, err := executeScript(script, runtimeInterface)
+		require.Error(t, err)
+		assert.ErrorAs(t, err, &stdlib.AssertionError{})
+	})
+
+	t.Run("matcher or", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun main() {
+                let one = Test.equal(1)
+                let two = Test.equal(2)
+
+                let oneOrTwo = one.or(two)
+
+                Test.expect(1, oneOrTwo)
+                Test.expect(2, oneOrTwo)
+            }
+        `
+
+		storage := newTestLedger(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+		}
+
+		_, err := executeScript(script, runtimeInterface)
+		require.NoError(t, err)
+	})
+
+	t.Run("matcher or fail", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun main() {
+                let one = Test.equal(1)
+                let two = Test.equal(2)
+
+                let oneOrTwo = one.or(two)
+
+                Test.expect(3, oneOrTwo)
+            }
+        `
+
+		storage := newTestLedger(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+		}
+
+		_, err := executeScript(script, runtimeInterface)
+		require.Error(t, err)
+		assert.ErrorAs(t, err, &stdlib.AssertionError{})
+	})
+
+	t.Run("matcher and", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun main() {
+                let one = Test.equal(1)
+                let two = Test.equal(2)
+
+                let oneAndTwo = one.and(two)
+
+                Test.expect(1, oneAndTwo)
+            }
+        `
+
+		storage := newTestLedger(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+		}
+
+		_, err := executeScript(script, runtimeInterface)
+		require.Error(t, err)
+		assert.ErrorAs(t, err, &stdlib.AssertionError{})
+	})
+
+	t.Run("chained matchers", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun main() {
+                let one = Test.equal(1)
+                let two = Test.equal(2)
+                let three = Test.equal(3)
+
+                let oneOrTwoOrThree = one.or(two).or(three)
+
+                Test.expect(3, oneOrTwoOrThree)
+            }
+        `
+
+		storage := newTestLedger(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+		}
+
+		_, err := executeScript(script, runtimeInterface)
+		require.NoError(t, err)
+	})
+
+	t.Run("resource matcher or", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun main() {
+                let foo <- create Foo()
+                let bar <- create Bar()
+
+                let fooMatcher = Test.equal(<-foo)
+                let barMatcher = Test.equal(<-bar)
+
+                let matcher = fooMatcher.or(barMatcher)
+
+                Test.expect(<-create Foo(), matcher)
+                Test.expect(<-create Bar(), matcher)
+            }
+
+            pub resource Foo {}
+            pub resource Bar {}
+        `
+
+		storage := newTestLedger(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+		}
+
+		_, err := executeScript(script, runtimeInterface)
+		require.NoError(t, err)
+	})
+
+	t.Run("resource matcher and", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun main() {
+                let foo <- create Foo()
+                let bar <- create Bar()
+
+                let fooMatcher = Test.equal(<-foo)
+                let barMatcher = Test.equal(<-bar)
+
+                let matcher = fooMatcher.and(barMatcher)
+
+                Test.expect(<-create Foo(), matcher)
+            }
+
+            pub resource Foo {}
+            pub resource Bar {}
         `
 
 		storage := newTestLedger(nil, nil)
