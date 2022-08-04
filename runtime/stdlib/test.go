@@ -121,7 +121,7 @@ func NewTestContract(
 	compositeValue.Functions[testNewEmulatorBlockchainFunctionName] = testNewEmulatorBlockchainFunction
 
 	// Inject natively implemented matchers
-	compositeValue.Functions[anyStructMatcherTypeName] = anyStructMatcherConstructor
+	compositeValue.Functions[newMatcherFunctionName] = newMatcherFunction
 	compositeValue.Functions[equalMatcherFunctionName] = equalMatcherFunction
 
 	return compositeValue, nil
@@ -188,12 +188,12 @@ func init() {
 		),
 	)
 	testContractType.Members.Set(
-		anyStructMatcherTypeName,
+		newMatcherFunctionName,
 		sema.NewUnmeteredPublicFunctionMember(
 			testContractType,
-			anyStructMatcherTypeName,
-			anyStructMatcherConstructorType,
-			anyStructMatcherConstructorDocString,
+			newMatcherFunctionName,
+			newMatcherFunctionType,
+			newMatcherFunctionDocString,
 		),
 	)
 
@@ -211,7 +211,7 @@ func init() {
 	// Enrich 'Test' contract elaboration with natively implemented composite types.
 	// e.g: 'EmulatorBackend' type.
 	TestContractChecker.Elaboration.CompositeTypes[EmulatorBackendType.ID()] = EmulatorBackendType
-	TestContractChecker.Elaboration.CompositeTypes[anyStructMatcherType.ID()] = anyStructMatcherType
+	TestContractChecker.Elaboration.CompositeTypes[defaultMatcherType.ID()] = defaultMatcherType
 }
 
 var blockchainType = func() sema.Type {
@@ -440,6 +440,80 @@ var testNewEmulatorBlockchainFunction = interpreter.NewUnmeteredHostFunctionValu
 		return blockchain
 	},
 	testNewEmulatorBlockchainFunctionType,
+)
+
+// 'Test.NewMatcher' function.
+// Constructs a matcher that test only 'AnyStruct'.
+// Accepts test function that accepts subtype of 'AnyStruct'.
+//
+// Signature:
+//    Test.NewMatcher<T>(test: ((T): Bool)): AnyStruct<Test.Matcher>
+// where T is bound to 'AnyStruct'.
+//
+// Sample usage: TestNewMatcher(fun (_value: Int: Bool) { return true})
+
+const newMatcherFunctionDocString = `NewMatcher function`
+
+const newMatcherFunctionName = "NewMatcher"
+
+var newMatcherFunctionType = &sema.FunctionType{
+	IsConstructor: true,
+	Parameters: []*sema.Parameter{
+		{
+			Label:      sema.ArgumentLabelNotRequired,
+			Identifier: "test",
+			TypeAnnotation: sema.NewTypeAnnotation(
+				// Type of the 'test' function: ((T): Bool)
+				&sema.FunctionType{
+					Parameters: []*sema.Parameter{
+						{
+							Label:      sema.ArgumentLabelNotRequired,
+							Identifier: "value",
+							TypeAnnotation: sema.NewTypeAnnotation(
+								&sema.GenericType{
+									TypeParameter: newMatcherFunctionTypeParameter,
+								},
+							),
+						},
+					},
+					ReturnTypeAnnotation: sema.NewTypeAnnotation(
+						sema.BoolType,
+					),
+				},
+			),
+		},
+	},
+	ReturnTypeAnnotation: sema.NewTypeAnnotation(
+		&sema.RestrictedType{
+			Type: sema.AnyStructType,
+			Restrictions: []*sema.InterfaceType{
+				matcherType,
+			},
+		},
+	),
+	TypeParameters: []*sema.TypeParameter{
+		newMatcherFunctionTypeParameter,
+	},
+}
+
+var newMatcherFunctionTypeParameter = &sema.TypeParameter{
+	TypeBound: sema.AnyStructType,
+	Name:      "T",
+	Optional:  true,
+}
+
+var newMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
+	func(invocation interpreter.Invocation) interpreter.Value {
+		test, ok := invocation.Arguments[0].(interpreter.FunctionValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		inter := invocation.Interpreter
+
+		return newDefaultMatcher(inter, test)
+	},
+	equalMatcherFunctionType,
 )
 
 // 'EmulatorBackend' struct.
@@ -1278,7 +1352,7 @@ var equalMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
 			matcherTestType,
 		)
 
-		return newAnyStructMatcher(inter, equalTestFunc)
+		return newDefaultMatcher(inter, equalTestFunc)
 	},
 	equalMatcherFunctionType,
 )
@@ -1301,15 +1375,23 @@ func (e TestFailedError) Error() string {
 	return fmt.Sprintf("test failed: %s", e.Err.Error())
 }
 
-// 'AnyStructMatcher' struct.
+// 'DefaultMatcher' struct.
+// This is the default implementation of 'Test.Matcher' interface.
+// It accepts 'Any' for the test function. Hence, can be used with both structs and resources.
+// But the usage is limited by the constructor.
+// i.e: the constructor is hidden from users, to avoid misuses (see below).
+// Instead use 'Test.NewMatcher()' to construct a matcher that test only 'AnyStruct'.
+//
+// e.g: Custom matchers that test resources. Handling resource inside matchers is
+// not supported yet, only exception being the built-in matchers.
 //
 
-const anyStructMatcherTypeName = "AnyStructMatcher"
+const defaultMatcherTypeName = "DefaultMatcher"
 
-var anyStructMatcherType = func() *sema.CompositeType {
+var defaultMatcherType = func() *sema.CompositeType {
 
 	ty := &sema.CompositeType{
-		Identifier: anyStructMatcherTypeName,
+		Identifier: defaultMatcherTypeName,
 		Kind:       common.CompositeKindStructure,
 		Location:   TestContractLocation,
 		ExplicitInterfaceConformances: []*sema.InterfaceType{
@@ -1320,21 +1402,21 @@ var anyStructMatcherType = func() *sema.CompositeType {
 	var members = []*sema.Member{
 		sema.NewUnmeteredPublicFunctionMember(
 			ty,
-			anyStructMatcherTestFunctionName,
-			anyStructMatcherTestFunctionType,
-			anyStructMatcherTestFunctionDocString,
+			defaultMatcherTestFunctionName,
+			defaultMatcherTestFunctionType,
+			defaultMatcherTestFunctionDocString,
 		),
 		sema.NewUnmeteredPublicFunctionMember(
 			ty,
-			anyStructMatcherOrFunctionName,
-			anyStructMatcherOrFunctionType,
-			anyStructMatcherOrFunctionDocString,
+			defaultMatcherOrFunctionName,
+			defaultMatcherOrFunctionType,
+			defaultMatcherOrFunctionDocString,
 		),
 		sema.NewUnmeteredPublicFunctionMember(
 			ty,
-			anyStructMatcherAndFunctionName,
-			anyStructMatcherAndFunctionType,
-			anyStructMatcherAndFunctionDocString,
+			defaultMatcherAndFunctionName,
+			defaultMatcherAndFunctionType,
+			defaultMatcherAndFunctionDocString,
 		),
 	}
 
@@ -1344,72 +1426,7 @@ var anyStructMatcherType = func() *sema.CompositeType {
 	return ty
 }()
 
-// 'AnyStructMatcher' constructor.
-//
-
-const anyStructMatcherConstructorDocString = `AnyStructMatcher constructor`
-
-var anyStructMatcherConstructorType = &sema.FunctionType{
-	IsConstructor: true,
-	Parameters: []*sema.Parameter{
-		{
-			Label:      sema.ArgumentLabelNotRequired,
-			Identifier: "test",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				// Type of the 'test' function: ((T): Bool)
-				&sema.FunctionType{
-					Parameters: []*sema.Parameter{
-						{
-							Label:      sema.ArgumentLabelNotRequired,
-							Identifier: "value",
-							TypeAnnotation: sema.NewTypeAnnotation(
-								&sema.GenericType{
-									TypeParameter: anyStructMatcherConstructorTypeParameter,
-								},
-							),
-						},
-					},
-					ReturnTypeAnnotation: sema.NewTypeAnnotation(
-						sema.BoolType,
-					),
-				},
-			),
-		},
-	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		&sema.RestrictedType{
-			Type: sema.AnyStructType,
-			Restrictions: []*sema.InterfaceType{
-				matcherType,
-			},
-		},
-	),
-	TypeParameters: []*sema.TypeParameter{
-		anyStructMatcherConstructorTypeParameter,
-	},
-}
-
-var anyStructMatcherConstructorTypeParameter = &sema.TypeParameter{
-	TypeBound: sema.AnyStructType,
-	Name:      "T",
-	Optional:  true,
-}
-
-var anyStructMatcherConstructor = interpreter.NewUnmeteredHostFunctionValue(
-	func(invocation interpreter.Invocation) interpreter.Value {
-		test, ok := invocation.Arguments[0].(interpreter.FunctionValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-
-		inter := invocation.Interpreter
-
-		return newAnyStructMatcher(inter, test)
-	},
-	equalMatcherFunctionType,
-)
-
-func newAnyStructMatcher(
+func newDefaultMatcher(
 	inter *interpreter.Interpreter,
 	testFunc interpreter.FunctionValue,
 ) *interpreter.CompositeValue {
@@ -1417,37 +1434,37 @@ func newAnyStructMatcher(
 	matcher := interpreter.NewCompositeValue(
 		inter,
 		interpreter.ReturnEmptyLocationRange,
-		anyStructMatcherType.Location,
-		anyStructMatcherTypeName,
+		defaultMatcherType.Location,
+		defaultMatcherTypeName,
 		common.CompositeKindStructure,
 		nil,
 		common.Address{},
 	)
 
 	matcher.Functions = map[string]interpreter.FunctionValue{
-		anyStructMatcherTestFunctionName: testFunc,
-		anyStructMatcherOrFunctionName:   anyStructMatcherOrFunction,
-		anyStructMatcherAndFunctionName:  anyStructMatcherAndFunction,
+		defaultMatcherTestFunctionName: testFunc,
+		defaultMatcherOrFunctionName:   defaultMatcherOrFunction,
+		defaultMatcherAndFunctionName:  defaultMatcherAndFunction,
 	}
 
 	return matcher
 }
 
-// 'AnyStructMatcher.test' function
+// 'DefaultMatcher.test' function
 
-const anyStructMatcherTestFunctionName = "test"
+const defaultMatcherTestFunctionName = "test"
 
-const anyStructMatcherTestFunctionDocString = `test function`
+const defaultMatcherTestFunctionDocString = `test function`
 
-var anyStructMatcherTestFunctionType = func() *sema.FunctionType {
-	// The type of the 'test' function of 'AnyStructMatcher' (interface-implementation)
+var defaultMatcherTestFunctionType = func() *sema.FunctionType {
+	// The type of the 'test' function of 'defaultMatcher' (interface-implementation)
 	// is same as that of 'Matcher' interface.
-	typ, ok := matcherType.Members.Get(anyStructMatcherTestFunctionName)
+	typ, ok := matcherType.Members.Get(defaultMatcherTestFunctionName)
 	if !ok {
 		panic(errors.NewUnexpectedError(
 			"cannot find type %s.%s",
 			matcherTypeName,
-			anyStructMatcherTestFunctionName,
+			defaultMatcherTestFunctionName,
 		))
 	}
 
@@ -1455,28 +1472,28 @@ var anyStructMatcherTestFunctionType = func() *sema.FunctionType {
 	if !ok {
 		panic(errors.NewUnexpectedError(
 			"invalid type for %s. expected function",
-			anyStructMatcherTestFunctionName,
+			defaultMatcherTestFunctionName,
 		))
 	}
 
 	return functionType
 }()
 
-// 'AnyStructMatcher.or' function
+// 'DefaultMatcher.or' function
 
-const anyStructMatcherOrFunctionName = "or"
+const defaultMatcherOrFunctionName = "or"
 
-const anyStructMatcherOrFunctionDocString = `or function`
+const defaultMatcherOrFunctionDocString = `or function`
 
-var anyStructMatcherOrFunctionType = func() *sema.FunctionType {
-	// The type of the 'or' function of 'AnyStructMatcher' (interface-implementation)
+var defaultMatcherOrFunctionType = func() *sema.FunctionType {
+	// The type of the 'or' function of 'defaultMatcher' (interface-implementation)
 	// is same as that of 'Matcher' interface.
-	typ, ok := matcherType.Members.Get(anyStructMatcherOrFunctionName)
+	typ, ok := matcherType.Members.Get(defaultMatcherOrFunctionName)
 	if !ok {
 		panic(errors.NewUnexpectedError(
 			"cannot find type %s.%s",
 			matcherTypeName,
-			anyStructMatcherOrFunctionName,
+			defaultMatcherOrFunctionName,
 		))
 	}
 
@@ -1484,28 +1501,28 @@ var anyStructMatcherOrFunctionType = func() *sema.FunctionType {
 	if !ok {
 		panic(errors.NewUnexpectedError(
 			"invalid type for %s. expected function",
-			anyStructMatcherOrFunctionName,
+			defaultMatcherOrFunctionName,
 		))
 	}
 
 	return functionType
 }()
 
-// 'AnyStructMatcher.and' function
+// 'DefaultMatcher.and' function
 
-const anyStructMatcherAndFunctionName = "and"
+const defaultMatcherAndFunctionName = "and"
 
-const anyStructMatcherAndFunctionDocString = `or function`
+const defaultMatcherAndFunctionDocString = `or function`
 
-var anyStructMatcherAndFunctionType = func() *sema.FunctionType {
-	// The type of the 'and' function of 'AnyStructMatcher' (interface-implementation)
+var defaultMatcherAndFunctionType = func() *sema.FunctionType {
+	// The type of the 'and' function of 'defaultMatcher' (interface-implementation)
 	// is same as that of 'Matcher' interface.
-	typ, ok := matcherType.Members.Get(anyStructMatcherAndFunctionName)
+	typ, ok := matcherType.Members.Get(defaultMatcherAndFunctionName)
 	if !ok {
 		panic(errors.NewUnexpectedError(
 			"cannot find type %s.%s",
 			matcherTypeName,
-			anyStructMatcherAndFunctionName,
+			defaultMatcherAndFunctionName,
 		))
 	}
 
@@ -1513,21 +1530,21 @@ var anyStructMatcherAndFunctionType = func() *sema.FunctionType {
 	if !ok {
 		panic(errors.NewUnexpectedError(
 			"invalid type for %s. expected function",
-			anyStructMatcherAndFunctionName,
+			defaultMatcherAndFunctionName,
 		))
 	}
 
 	return functionType
 }()
 
-var anyStructMatcherOrFunction interpreter.FunctionValue
+var defaultMatcherOrFunction interpreter.FunctionValue
 
-var anyStructMatcherAndFunction interpreter.FunctionValue
+var defaultMatcherAndFunction interpreter.FunctionValue
 
 func init() {
 	// initialize this inside 'init' to break the initialization loop.
 
-	anyStructMatcherOrFunction = interpreter.NewUnmeteredHostFunctionValue(
+	defaultMatcherOrFunction = interpreter.NewUnmeteredHostFunctionValue(
 		func(orFuncInvocation interpreter.Invocation) interpreter.Value {
 			inter := orFuncInvocation.Interpreter
 
@@ -1558,12 +1575,12 @@ func init() {
 				matcherTestType,
 			)
 
-			return newAnyStructMatcher(inter, testFunc)
+			return newDefaultMatcher(inter, testFunc)
 		},
-		anyStructMatcherOrFunctionType,
+		defaultMatcherOrFunctionType,
 	)
 
-	anyStructMatcherAndFunction = interpreter.NewUnmeteredHostFunctionValue(
+	defaultMatcherAndFunction = interpreter.NewUnmeteredHostFunctionValue(
 		func(orFuncInvocation interpreter.Invocation) interpreter.Value {
 			inter := orFuncInvocation.Interpreter
 
@@ -1594,8 +1611,8 @@ func init() {
 				matcherTestType,
 			)
 
-			return newAnyStructMatcher(inter, testFunc)
+			return newDefaultMatcher(inter, testFunc)
 		},
-		anyStructMatcherOrFunctionType,
+		defaultMatcherOrFunctionType,
 	)
 }

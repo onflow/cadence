@@ -150,7 +150,7 @@ func TestInterpretMatcher(t *testing.T) {
 
             pub fun main() {
 
-                let matcher = Test.AnyStructMatcher(fun (_ value: AnyStruct): Bool {
+                let matcher = Test.NewMatcher(fun (_ value: AnyStruct): Bool {
                      if !value.getType().isSubtype(of: Type<Int>()) {
                         return false
                     }
@@ -180,7 +180,7 @@ func TestInterpretMatcher(t *testing.T) {
 
             pub fun main() {
 
-                let matcher = Test.AnyStructMatcher(fun (_ value: Int): Bool {
+                let matcher = Test.NewMatcher(fun (_ value: Int): Bool {
                      return value == 7
                 })
 
@@ -206,7 +206,7 @@ func TestInterpretMatcher(t *testing.T) {
 
             pub fun main() {
 
-                let matcher = Test.AnyStructMatcher(fun (_ value: &Foo): Bool {
+                let matcher = Test.NewMatcher(fun (_ value: &Foo): Bool {
                     return value.a == 4
                 })
 
@@ -244,7 +244,7 @@ func TestInterpretMatcher(t *testing.T) {
 
             pub fun main() {
 
-                let matcher = Test.AnyStructMatcher(fun (_ value: @Foo): Bool {
+                let matcher = Test.NewMatcher(fun (_ value: @Foo): Bool {
                      destroy value
                      return true
                 })
