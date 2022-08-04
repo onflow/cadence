@@ -265,6 +265,57 @@ func TestInterpretMatcher(t *testing.T) {
 		assert.IsType(t, &sema.TypeMismatchError{}, errors[0])
 	})
 
+	t.Run("custom matcher with explicit type", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun main() {
+
+                let matcher = Test.NewMatcher<Int>(fun (_ value: Int): Bool {
+                     return value == 7
+                })
+
+                assert(matcher.test(7))
+            }
+        `
+
+		storage := newTestLedger(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+		}
+
+		_, err := executeScript(script, runtimeInterface)
+		require.NoError(t, err)
+	})
+
+	t.Run("custom matcher with mismatching types", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun main() {
+
+                let matcher = Test.NewMatcher<String>(fun (_ value: Int): Bool {
+                     return value == 7
+                })
+            }
+        `
+
+		storage := newTestLedger(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+		}
+
+		_, err := executeScript(script, runtimeInterface)
+		errors := checker.ExpectCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.TypeParameterTypeMismatchError{}, errors[0])
+		assert.IsType(t, &sema.TypeMismatchError{}, errors[1])
+	})
 }
 
 func TestInterpretEqualMatcher(t *testing.T) {
@@ -341,6 +392,50 @@ func TestInterpretEqualMatcher(t *testing.T) {
 
 		_, err := executeScript(script, runtimeInterface)
 		require.NoError(t, err)
+	})
+
+	t.Run("with explicit types", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun main() {
+                let matcher = Test.equal<String>("hello")
+            }
+        `
+
+		storage := newTestLedger(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+		}
+
+		_, err := executeScript(script, runtimeInterface)
+		require.NoError(t, err)
+	})
+
+	t.Run("with incorrect types", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun main() {
+                let matcher = Test.equal<String>(1)
+            }
+        `
+
+		storage := newTestLedger(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+		}
+
+		_, err := executeScript(script, runtimeInterface)
+		errors := checker.ExpectCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.TypeParameterTypeMismatchError{}, errors[0])
+		assert.IsType(t, &sema.TypeMismatchError{}, errors[1])
 	})
 
 	t.Run("matcher or", func(t *testing.T) {
@@ -585,6 +680,50 @@ func TestInterpretExpectFunction(t *testing.T) {
 		_, err := executeScript(script, runtimeInterface)
 		require.Error(t, err)
 		assert.ErrorAs(t, err, &stdlib.AssertionError{})
+	})
+
+	t.Run("with explicit types", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun main() {
+                Test.expect<String>("hello", Test.equal("hello"))
+            }
+        `
+
+		storage := newTestLedger(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+		}
+
+		_, err := executeScript(script, runtimeInterface)
+		require.NoError(t, err)
+	})
+
+	t.Run("mismatching types", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun main() {
+                Test.expect<Int>("string", Test.equal(1))
+            }
+        `
+
+		storage := newTestLedger(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+		}
+
+		_, err := executeScript(script, runtimeInterface)
+		errors := checker.ExpectCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.TypeParameterTypeMismatchError{}, errors[0])
+		assert.IsType(t, &sema.TypeMismatchError{}, errors[1])
 	})
 
 	t.Run("resource with resource matcher", func(t *testing.T) {
