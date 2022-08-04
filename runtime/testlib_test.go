@@ -26,7 +26,9 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
+	"github.com/onflow/cadence/runtime/tests/checker"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -135,6 +137,134 @@ func TestExecuteScript(t *testing.T) {
 
 	require.Error(t, err)
 	assert.ErrorAs(t, err, &interpreter.TestFrameworkNotProvidedError{})
+}
+
+func TestMatcher(t *testing.T) {
+	t.Parallel()
+
+	t.Run("custom matcher", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun main() {
+
+                let matcher = Test.AnyStructMatcher(fun (_ value: AnyStruct): Bool {
+                     if !value.getType().isSubtype(of: Type<Int>()) {
+                        return false
+                    }
+
+                    return (value as! Int) > 5
+                })
+
+                Test.expect(8, matcher)
+            }
+        `
+
+		storage := newTestLedger(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+		}
+
+		_, err := executeScript(script, runtimeInterface)
+		require.NoError(t, err)
+	})
+
+	t.Run("custom matcher primitive type", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun main() {
+
+                let matcher = Test.AnyStructMatcher(fun (_ value: Int): Bool {
+                     return value == 7
+                })
+
+                Test.expect(7, matcher)
+            }
+        `
+
+		storage := newTestLedger(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+		}
+
+		_, err := executeScript(script, runtimeInterface)
+		require.NoError(t, err)
+	})
+
+	t.Run("custom resource matcher", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun main() {
+
+                let matcher = Test.AnyStructMatcher(fun (_ value: &Foo): Bool {
+                    return value.a == 4
+                })
+
+                let f <-create Foo(4)
+
+                Test.expect(&f as &Foo, matcher)
+
+                destroy f
+            }
+
+            pub resource Foo {
+                pub let a: Int
+
+                init(_ a: Int) {
+                    self.a = a
+                }
+            }
+        `
+
+		storage := newTestLedger(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+		}
+
+		_, err := executeScript(script, runtimeInterface)
+		require.NoError(t, err)
+	})
+
+	t.Run("custom resource matcher invalid type", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun main() {
+
+                let matcher = Test.AnyStructMatcher(fun (_ value: @Foo): Bool {
+                     destroy value
+                     return true
+                })
+            }
+
+            pub resource Foo {}
+        `
+
+		storage := newTestLedger(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+		}
+
+		_, err := executeScript(script, runtimeInterface)
+		require.Error(t, err)
+		errors := checker.ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errors[0])
+	})
+
 }
 
 func TestEqualMatcher(t *testing.T) {

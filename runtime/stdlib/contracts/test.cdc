@@ -20,43 +20,6 @@ pub contract Test {
         pub fun or(_ other: AnyStruct{Matcher}): AnyStruct{Matcher}
     }
 
-    /// Matcher is a wrapper object that consists of a test function.
-    ///
-    pub struct StructMatcher: Matcher {
-
-        priv let condition: ((AnyStruct): Bool)
-
-        pub init(_ test: ((AnyStruct): Bool)) {
-            self.condition = test
-        }
-
-        pub fun test(_ value: Any): Bool {
-            if !value.getType().isSubtype(of: Type<AnyStruct>()) {
-                return false
-            }
-
-            return self.condition(value as! AnyStruct)
-        }
-
-        /// Combine this matcher with the given matcher.
-        /// Returns a new matcher that succeeds if this and the given matcher succeed.
-        ///
-        pub fun and(_ other: AnyStruct{Matcher}): AnyStruct{Matcher} {
-            return StructMatcher(fun (_ value: AnyStruct): Bool {
-                return self.test(value) && other.test(value)
-            })
-        }
-
-        /// Combine this matcher with the given matcher.
-        /// Returns a new matcher that succeeds if this and the given matcher succeed.
-        ///
-        pub fun or(_ other: AnyStruct{Matcher}): AnyStruct{Matcher} {
-            return StructMatcher(fun (_ value: AnyStruct): Bool {
-                return self.test(value) || other.test(value)
-            })
-        }
-    }
-
     /// Blockchain emulates a real network.
     ///
     pub struct Blockchain {
