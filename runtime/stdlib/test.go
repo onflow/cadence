@@ -448,9 +448,9 @@ var testNewEmulatorBlockchainFunction = interpreter.NewUnmeteredHostFunctionValu
 //
 // Signature:
 //    Test.NewMatcher<T>(test: ((T): Bool)): AnyStruct<Test.Matcher>
-// where T is bound to 'AnyStruct'.
+// where T is optional, and bound to 'AnyStruct'.
 //
-// Sample usage: TestNewMatcher(fun (_value: Int: Bool) { return true})
+// Sample usage: Test.NewMatcher(fun (_value: Int: Bool) { return true})
 
 const newMatcherFunctionDocString = `NewMatcher function`
 
@@ -1251,7 +1251,7 @@ var emulatorBackendCommitBlockFunction = interpreter.NewUnmeteredHostFunctionVal
 	emulatorBackendCommitBlockFunctionType,
 )
 
-// Matcher type
+// 'Test.Matcher' interface type
 
 var matcherType = func() *sema.InterfaceType {
 	typeName := matcherTypeName
@@ -1375,15 +1375,21 @@ func (e TestFailedError) Error() string {
 	return fmt.Sprintf("test failed: %s", e.Err.Error())
 }
 
-// 'DefaultMatcher' struct.
+// 'Test.DefaultMatcher' struct.
+//
 // This is the default implementation of 'Test.Matcher' interface.
 // It accepts 'Any' for the test function. Hence, can be used with both structs and resources.
 // But the usage is limited by the constructor.
 // i.e: the constructor is hidden from users, to avoid misuses (see below).
-// Instead use 'Test.NewMatcher()' to construct a matcher that test only 'AnyStruct'.
+// Instead, use 'Test.NewMatcher()' to construct a matcher that test only 'AnyStruct'.
 //
-// e.g: Custom matchers that test resources. Handling resource inside matchers is
-// not supported yet, only exception being the built-in matchers.
+// Limitations:
+// Handling resource inside matchers is not supported yet, only exception being the built-in matchers.
+// Reason being matchers can be chained, but resources must be moved/destroyed within a matcher.
+// Hence, resource semantics doesn't align with the way matchers work.
+//
+// However, alternative is to create a reference to the resource that is needed to be tested,
+// and construct a matcher that works with the resource.
 //
 
 const defaultMatcherTypeName = "DefaultMatcher"
@@ -1486,7 +1492,7 @@ const defaultMatcherOrFunctionName = "or"
 const defaultMatcherOrFunctionDocString = `or function`
 
 var defaultMatcherOrFunctionType = func() *sema.FunctionType {
-	// The type of the 'or' function of 'defaultMatcher' (interface-implementation)
+	// The type of the 'or' function of 'DefaultMatcher' (interface-implementation)
 	// is same as that of 'Matcher' interface.
 	typ, ok := matcherType.Members.Get(defaultMatcherOrFunctionName)
 	if !ok {
@@ -1515,7 +1521,7 @@ const defaultMatcherAndFunctionName = "and"
 const defaultMatcherAndFunctionDocString = `or function`
 
 var defaultMatcherAndFunctionType = func() *sema.FunctionType {
-	// The type of the 'and' function of 'defaultMatcher' (interface-implementation)
+	// The type of the 'and' function of 'DefaultMatcher' (interface-implementation)
 	// is same as that of 'Matcher' interface.
 	typ, ok := matcherType.Members.Get(defaultMatcherAndFunctionName)
 	if !ok {

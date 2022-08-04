@@ -279,6 +279,7 @@ func TestInterpretEqualMatcher(t *testing.T) {
 
             pub fun main() {
                 let matcher = Test.equal(1)
+                assert(matcher.test(1))
             }
         `
 
@@ -301,6 +302,7 @@ func TestInterpretEqualMatcher(t *testing.T) {
             pub fun main() {
                 let f = Foo()
                 let matcher = Test.equal(f)
+                assert(matcher.test(f))
             }
 
             pub struct Foo {}
@@ -325,6 +327,7 @@ func TestInterpretEqualMatcher(t *testing.T) {
             pub fun main() {
                 let f <- create Foo()
                 let matcher = Test.equal(<-f)
+                assert(matcher.test(<- create Foo()))
             }
 
             pub resource Foo {}
