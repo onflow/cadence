@@ -790,3 +790,98 @@ func TestExecutingTransactions(t *testing.T) {
 		assert.Contains(t, result.Error(), "is currently being executed")
 	})
 }
+
+func TestSetupAndTearDown(t *testing.T) {
+	t.Parallel()
+
+	t.Run("setup", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            pub(set) var setupRan = false
+
+            pub fun setup() {
+                assert(!setupRan)
+                setupRan = true
+            }
+
+            pub fun testFunc() {
+                assert(setupRan)
+            }
+        `
+
+		runner := NewTestRunner()
+		results, err := runner.RunTests(code)
+		require.NoError(t, err)
+
+		require.Len(t, results, 1)
+		assert.NoError(t, results["testFunc"])
+	})
+
+	t.Run("setup failed", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            pub fun setup() {
+                panic("error occurred")
+            }
+
+            pub fun testFunc() {
+                assert(true)
+            }
+        `
+
+		runner := NewTestRunner()
+		results, err := runner.RunTests(code)
+		require.Error(t, err)
+		require.Empty(t, results)
+	})
+
+	t.Run("teardown", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            pub(set) var tearDownRan = false
+
+            pub fun testFunc() {
+                assert(!tearDownRan)
+            }
+
+            pub fun tearDown() {
+                assert(true)
+            }
+        `
+
+		runner := NewTestRunner()
+		results, err := runner.RunTests(code)
+		require.NoError(t, err)
+		require.Len(t, results, 1)
+		assert.NoError(t, results["testFunc"])
+	})
+
+	t.Run("teardown failed", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            pub(set) var tearDownRan = false
+
+            pub fun testFunc() {
+                assert(!tearDownRan)
+            }
+
+            pub fun tearDown() {
+                assert(false)
+            }
+        `
+
+		runner := NewTestRunner()
+		results, err := runner.RunTests(code)
+
+		// Running tests will return an error since the tear down failed.
+		require.Error(t, err)
+
+		// However, test cases should have been passed.
+		require.Len(t, results, 1)
+		assert.NoError(t, results["testFunc"])
+	})
+}
