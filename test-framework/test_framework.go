@@ -56,7 +56,12 @@ const tearDownFunctionName = "tearDown"
 
 var testScriptLocation = common.NewScriptLocation(nil, []byte("test"))
 
-type Results map[string]error
+type Results []Result
+
+type Result struct {
+	testName string
+	err      error
+}
 
 // ImportResolver is used to resolve and get the source code for imports.
 // Must be provided by the user of the TestRunner.
@@ -83,7 +88,7 @@ func (r *TestRunner) WithImportResolver(importResolver ImportResolver) *TestRunn
 
 // RunTest runs a single test in the provided test script.
 //
-func (r *TestRunner) RunTest(script string, funcName string) (result, err error) {
+func (r *TestRunner) RunTest(script string, funcName string) (result *Result, err error) {
 	defer func() {
 		recoverPanics(func(internalErr error) {
 			err = internalErr
@@ -101,12 +106,15 @@ func (r *TestRunner) RunTest(script string, funcName string) (result, err error)
 		return nil, err
 	}
 
-	_, result = inter.Invoke(funcName)
+	_, testResult := inter.Invoke(funcName)
 
 	// Run test `tearDown()` once running all test functions are completed.
 	err = r.runTestTearDown(inter)
 
-	return result, err
+	return &Result{
+		testName: funcName,
+		err:      testResult,
+	}, err
 }
 
 // RunTests runs all the tests in the provided test script.
@@ -123,7 +131,7 @@ func (r *TestRunner) RunTests(script string) (results Results, err error) {
 		return nil, err
 	}
 
-	results = make(Results)
+	results = make(Results, 0)
 
 	// Run test `setup()` before test functions
 	err = r.runTestSetup(inter)
@@ -139,7 +147,11 @@ func (r *TestRunner) RunTests(script string) (results Results, err error) {
 		}
 
 		err := r.invokeTestFunction(inter, funcName)
-		results[funcName] = err
+
+		results = append(results, Result{
+			testName: funcName,
+			err:      err,
+		})
 	}
 
 	// Run test `tearDown()` once running all test functions are completed.
@@ -445,8 +457,8 @@ func (r *TestRunner) parseAndCheckImport(location common.Location, startCtx runt
 func PrettyPrintResults(results Results) string {
 	var sb strings.Builder
 	sb.WriteString("Test Results\n")
-	for funcName, err := range results {
-		sb.WriteString(PrettyPrintResult(funcName, err))
+	for _, result := range results {
+		sb.WriteString(PrettyPrintResult(result.testName, result.err))
 	}
 	return sb.String()
 }
