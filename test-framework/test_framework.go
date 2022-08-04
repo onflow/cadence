@@ -50,6 +50,10 @@ import (
 
 const testFunctionPrefix = "test"
 
+const setupFunctionName = "setup"
+
+const tearDownFunctionName = "tearDown"
+
 var testScriptLocation = common.NewScriptLocation(nil, []byte("test"))
 
 type Results map[string]error
@@ -79,7 +83,7 @@ func (r *TestRunner) WithImportResolver(importResolver ImportResolver) *TestRunn
 
 // RunTest runs a single test in the provided test script.
 //
-func (r *TestRunner) RunTest(script string, funcName string) (err error) {
+func (r *TestRunner) RunTest(script string, funcName string) (result, err error) {
 	defer func() {
 		recoverPanics(func(internalErr error) {
 			err = internalErr
@@ -88,11 +92,21 @@ func (r *TestRunner) RunTest(script string, funcName string) (err error) {
 
 	_, inter, err := r.parseCheckAndInterpret(script)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	_, err = inter.Invoke(funcName)
-	return err
+	// Run test `setup()` before running the test function.
+	err = r.runTestSetup(inter)
+	if err != nil {
+		return nil, err
+	}
+
+	_, result = inter.Invoke(funcName)
+
+	// Run test `tearDown()` once running all test functions are completed.
+	err = r.runTestTearDown(inter)
+
+	return result, err
 }
 
 // RunTests runs all the tests in the provided test script.
@@ -111,6 +125,12 @@ func (r *TestRunner) RunTests(script string) (results Results, err error) {
 
 	results = make(Results)
 
+	// Run test `setup()` before test functions
+	err = r.runTestSetup(inter)
+	if err != nil {
+		return nil, err
+	}
+
 	for _, funcDecl := range program.Program.FunctionDeclarations() {
 		funcName := funcDecl.Identifier.Identifier
 
@@ -122,7 +142,36 @@ func (r *TestRunner) RunTests(script string) (results Results, err error) {
 		results[funcName] = err
 	}
 
-	return results, nil
+	// Run test `tearDown()` once running all test functions are completed.
+	err = r.runTestTearDown(inter)
+
+	return results, err
+}
+
+func (r *TestRunner) runTestSetup(inter *interpreter.Interpreter) error {
+	if !hasSetup(inter) {
+		return nil
+	}
+
+	return r.invokeTestFunction(inter, setupFunctionName)
+}
+
+func hasSetup(inter *interpreter.Interpreter) bool {
+	_, ok := inter.Globals.Get(setupFunctionName)
+	return ok
+}
+
+func (r *TestRunner) runTestTearDown(inter *interpreter.Interpreter) error {
+	if !hasTearDown(inter) {
+		return nil
+	}
+
+	return r.invokeTestFunction(inter, tearDownFunctionName)
+}
+
+func hasTearDown(inter *interpreter.Interpreter) bool {
+	_, ok := inter.Globals.Get(tearDownFunctionName)
+	return ok
 }
 
 func (r *TestRunner) invokeTestFunction(inter *interpreter.Interpreter, funcName string) (err error) {

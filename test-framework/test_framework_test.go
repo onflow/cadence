@@ -47,7 +47,7 @@ func TestRunningMultipleTests(t *testing.T) {
 
 	runner := NewTestRunner()
 	results, err := runner.RunTests(code)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	require.Len(t, results, 2)
 	assert.Error(t, results["testFunc1"])
@@ -69,11 +69,13 @@ func TestRunningSingleTest(t *testing.T) {
 
 	runner := NewTestRunner()
 
-	err := runner.RunTest(code, "testFunc1")
-	assert.Error(t, err)
-
-	err = runner.RunTest(code, "testFunc2")
+	result, err := runner.RunTest(code, "testFunc1")
 	assert.NoError(t, err)
+	assert.Error(t, result)
+
+	result, err = runner.RunTest(code, "testFunc2")
+	assert.NoError(t, err)
+	assert.NoError(t, result)
 }
 
 func TestExecuteScript(t *testing.T) {
@@ -93,8 +95,9 @@ func TestExecuteScript(t *testing.T) {
         }
     `
 	runner := NewTestRunner()
-	err := runner.RunTest(code, "test")
+	result, err := runner.RunTest(code, "test")
 	assert.NoError(t, err)
+	assert.NoError(t, result)
 }
 
 func TestImportContract(t *testing.T) {
@@ -129,8 +132,9 @@ func TestImportContract(t *testing.T) {
 
 		runner := NewTestRunner().WithImportResolver(importResolver)
 
-		err := runner.RunTest(code, "test")
+		result, err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
+		assert.NoError(t, result)
 	})
 
 	t.Run("init with params", func(t *testing.T) {
@@ -167,8 +171,9 @@ func TestImportContract(t *testing.T) {
 
 		runner := NewTestRunner().WithImportResolver(importResolver)
 
-		err := runner.RunTest(code, "test")
+		result, err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
+		assert.NoError(t, result)
 	})
 
 	t.Run("invalid import", func(t *testing.T) {
@@ -188,8 +193,8 @@ func TestImportContract(t *testing.T) {
 
 		runner := NewTestRunner().WithImportResolver(importResolver)
 
-		err := runner.RunTest(code, "test")
-		assert.Error(t, err)
+		_, err := runner.RunTest(code, "test")
+		require.Error(t, err)
 
 		errs := checker.ExpectCheckerErrors(t, err, 2)
 
@@ -212,13 +217,13 @@ func TestImportContract(t *testing.T) {
         `
 
 		runner := NewTestRunner()
-		err := runner.RunTest(code, "test")
-		assert.Error(t, err)
+		_, err := runner.RunTest(code, "test")
+		require.Error(t, err)
 
 		errs := checker.ExpectCheckerErrors(t, err, 2)
 
 		importedProgramError := &sema.ImportedProgramError{}
-		assert.ErrorAs(t, errs[0], &importedProgramError)
+		require.ErrorAs(t, errs[0], &importedProgramError)
 		assert.IsType(t, ImportResolverNotProvidedError{}, importedProgramError.Err)
 
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[1])
@@ -263,7 +268,7 @@ func TestImportContract(t *testing.T) {
 
 		runner := NewTestRunner().WithImportResolver(importResolver)
 
-		err := runner.RunTest(code, "test")
+		_, err := runner.RunTest(code, "test")
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "nested imports are not supported")
 	})
@@ -285,10 +290,13 @@ func TestUsingEnv(t *testing.T) {
         `
 
 		runner := NewTestRunner()
-		err := runner.RunTest(code, "test")
-		assert.Error(t, err)
+
+		result, err := runner.RunTest(code, "test")
+		require.NoError(t, err)
+
+		require.Error(t, result)
 		publicKeyError := interpreter.InvalidPublicKeyError{}
-		assert.ErrorAs(t, err, &publicKeyError)
+		assert.ErrorAs(t, result, &publicKeyError)
 	})
 
 	t.Run("public account", func(t *testing.T) {
@@ -303,8 +311,9 @@ func TestUsingEnv(t *testing.T) {
         `
 
 		runner := NewTestRunner()
-		err := runner.RunTest(code, "test")
+		result, err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
+		assert.NoError(t, result)
 	})
 
 	t.Run("auth account", func(t *testing.T) {
@@ -319,8 +328,9 @@ func TestUsingEnv(t *testing.T) {
         `
 
 		runner := NewTestRunner()
-		err := runner.RunTest(code, "test")
+		result, err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
+		assert.NoError(t, result)
 	})
 
 	// Imported programs also should have the access to the env.
@@ -354,8 +364,9 @@ func TestUsingEnv(t *testing.T) {
 
 		runner := NewTestRunner().WithImportResolver(importResolver)
 
-		err := runner.RunTest(code, "test")
+		result, err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
+		assert.NoError(t, result)
 	})
 }
 
@@ -372,8 +383,9 @@ func TestCreateAccount(t *testing.T) {
     `
 
 	runner := NewTestRunner()
-	err := runner.RunTest(code, "test")
+	result, err := runner.RunTest(code, "test")
 	assert.NoError(t, err)
+	assert.NoError(t, result)
 }
 
 func TestExecutingTransactions(t *testing.T) {
@@ -400,8 +412,9 @@ func TestExecutingTransactions(t *testing.T) {
         `
 
 		runner := NewTestRunner()
-		err := runner.RunTest(code, "test")
+		result, err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
+		assert.NoError(t, result)
 	})
 
 	t.Run("run next transaction", func(t *testing.T) {
@@ -428,8 +441,9 @@ func TestExecutingTransactions(t *testing.T) {
         `
 
 		runner := NewTestRunner()
-		err := runner.RunTest(code, "test")
+		result, err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
+		assert.NoError(t, result)
 	})
 
 	t.Run("run next transaction with authorizer", func(t *testing.T) {
@@ -456,8 +470,9 @@ func TestExecutingTransactions(t *testing.T) {
         `
 
 		runner := NewTestRunner()
-		err := runner.RunTest(code, "test")
+		result, err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
+		assert.NoError(t, result)
 	})
 
 	t.Run("transaction failure", func(t *testing.T) {
@@ -484,8 +499,9 @@ func TestExecutingTransactions(t *testing.T) {
         `
 
 		runner := NewTestRunner()
-		err := runner.RunTest(code, "test")
+		result, err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
+		assert.NoError(t, result)
 	})
 
 	t.Run("run non existing transaction", func(t *testing.T) {
@@ -502,8 +518,9 @@ func TestExecutingTransactions(t *testing.T) {
         `
 
 		runner := NewTestRunner()
-		err := runner.RunTest(code, "test")
+		result, err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
+		assert.NoError(t, result)
 	})
 
 	t.Run("commit block", func(t *testing.T) {
@@ -519,8 +536,9 @@ func TestExecutingTransactions(t *testing.T) {
         `
 
 		runner := NewTestRunner()
-		err := runner.RunTest(code, "test")
+		result, err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
+		assert.NoError(t, result)
 	})
 
 	t.Run("commit un-executed block", func(t *testing.T) {
@@ -546,9 +564,11 @@ func TestExecutingTransactions(t *testing.T) {
         `
 
 		runner := NewTestRunner()
-		err := runner.RunTest(code, "test")
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "cannot be committed before execution")
+		result, err := runner.RunTest(code, "test")
+		require.NoError(t, err)
+
+		require.Error(t, result)
+		assert.Contains(t, result.Error(), "cannot be committed before execution")
 	})
 
 	t.Run("commit partially executed block", func(t *testing.T) {
@@ -580,9 +600,11 @@ func TestExecutingTransactions(t *testing.T) {
         `
 
 		runner := NewTestRunner()
-		err := runner.RunTest(code, "test")
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "is currently being executed")
+		result, err := runner.RunTest(code, "test")
+		require.NoError(t, err)
+
+		require.Error(t, result)
+		assert.Contains(t, result.Error(), "is currently being executed")
 	})
 
 	t.Run("multiple commit block", func(t *testing.T) {
@@ -599,8 +621,9 @@ func TestExecutingTransactions(t *testing.T) {
         `
 
 		runner := NewTestRunner()
-		err := runner.RunTest(code, "test")
+		result, err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
+		assert.NoError(t, result)
 	})
 
 	t.Run("run given transaction", func(t *testing.T) {
@@ -625,8 +648,9 @@ func TestExecutingTransactions(t *testing.T) {
         `
 
 		runner := NewTestRunner()
-		err := runner.RunTest(code, "test")
+		result, err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
+		assert.NoError(t, result)
 	})
 
 	t.Run("run given transaction unsuccessful", func(t *testing.T) {
@@ -651,8 +675,9 @@ func TestExecutingTransactions(t *testing.T) {
         `
 
 		runner := NewTestRunner()
-		err := runner.RunTest(code, "test")
+		result, err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
+		assert.NoError(t, result)
 	})
 
 	t.Run("run multiple transactions", func(t *testing.T) {
@@ -702,8 +727,9 @@ func TestExecutingTransactions(t *testing.T) {
         `
 
 		runner := NewTestRunner()
-		err := runner.RunTest(code, "test")
+		result, err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
+		assert.NoError(t, result)
 	})
 
 	t.Run("run empty transactions", func(t *testing.T) {
@@ -722,8 +748,9 @@ func TestExecutingTransactions(t *testing.T) {
         `
 
 		runner := NewTestRunner()
-		err := runner.RunTest(code, "test")
+		result, err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
+		assert.NoError(t, result)
 	})
 
 	t.Run("run transaction with pending transactions", func(t *testing.T) {
@@ -756,8 +783,10 @@ func TestExecutingTransactions(t *testing.T) {
         `
 
 		runner := NewTestRunner()
-		err := runner.RunTest(code, "test")
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "is currently being executed")
+		result, err := runner.RunTest(code, "test")
+		require.NoError(t, err)
+
+		require.Error(t, result)
+		assert.Contains(t, result.Error(), "is currently being executed")
 	})
 }
