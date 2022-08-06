@@ -79,22 +79,51 @@ func TestRunningSingleTest(t *testing.T) {
 func TestExecuteScript(t *testing.T) {
 	t.Parallel()
 
-	code := `
-        import Test
+	t.Run("no args", func(t *testing.T) {
+		t.Parallel()
 
-        pub fun test() {
-            var blockchain = Test.newEmulatorBlockchain()
-            var result = blockchain.executeScript("pub fun main(): Int {  return 2 + 3 }")
+		code := `
+            import Test
 
-            assert(result.status == Test.ResultStatus.succeeded)
-            assert((result.returnValue! as! Int) == 5)
+            pub fun test() {
+                var blockchain = Test.newEmulatorBlockchain()
+                var result = blockchain.executeScript("pub fun main(): Int {  return 2 + 3 }", [])
+
+                assert(result.status == Test.ResultStatus.succeeded)
+                assert((result.returnValue! as! Int) == 5)
+
+                log(result.returnValue)
+            }
+        `
+
+		runner := NewTestRunner()
+		err := runner.RunTest(code, "test")
+		assert.NoError(t, err)
+	})
+
+	t.Run("with args", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import Test
+
+            pub fun test() {
+                var blockchain = Test.newEmulatorBlockchain()
+                var result = blockchain.executeScript(
+                    "pub fun main(a: Int, b: Int): Int {  return a + b }",
+                    [2, 3]
+                )
+
+                assert(result.status == Test.ResultStatus.succeeded)
+                assert((result.returnValue! as! Int) == 5)
 
             log(result.returnValue)
         }
     `
-	runner := NewTestRunner()
-	err := runner.RunTest(code, "test")
-	assert.NoError(t, err)
+		runner := NewTestRunner()
+		err := runner.RunTest(code, "test")
+		assert.NoError(t, err)
+	})
 }
 
 func TestImportContract(t *testing.T) {

@@ -32,7 +32,7 @@ import (
 // This is used as a way to inject test provider dependencies dynamically.
 //
 type TestFramework interface {
-	RunScript(code string) *ScriptResult
+	RunScript(code string, args []Value) *ScriptResult
 
 	CreateAccount() (*Account, error)
 

@@ -424,7 +424,12 @@ var emulatorBackendExecuteScriptFunction = interpreter.NewUnmeteredHostFunctionV
 			panic(errors.NewUnexpectedErrorFromCause(err))
 		}
 
-		result := testFramework.RunScript(script)
+		args, err := arrayValueToSlice(invocation.Arguments[1])
+		if err != nil {
+			panic(errors.NewUnexpectedErrorFromCause(err))
+		}
+
+		result := testFramework.RunScript(script, args)
 
 		succeeded := result.Error == nil
 
@@ -432,6 +437,22 @@ var emulatorBackendExecuteScriptFunction = interpreter.NewUnmeteredHostFunctionV
 	},
 	emulatorBackendExecuteScriptFunctionType,
 )
+
+func arrayValueToSlice(value interpreter.Value) ([]interpreter.Value, error) {
+	array, ok := value.(*interpreter.ArrayValue)
+	if !ok {
+		return nil, errors.NewDefaultUserError("value is not an array")
+	}
+
+	result := make([]interpreter.Value, 0, array.Count())
+
+	array.Iterate(nil, func(element interpreter.Value) (resume bool) {
+		result = append(result, element)
+		return true
+	})
+
+	return result, nil
+}
 
 // createScriptResult Creates a "ScriptResult" using the return value of the executed script.
 //
