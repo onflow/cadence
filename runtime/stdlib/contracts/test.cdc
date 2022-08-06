@@ -15,8 +15,8 @@ pub contract Test {
         // Executes a script and returns the script return value and the status.
         // `returnValue` field of the result will be `nil` if the script failed.
         //
-        pub fun executeScript(_ script: String): ScriptResult {
-            return self.backend.executeScript(script)
+        pub fun executeScript(_ script: String, _ args: [AnyStruct]): ScriptResult {
+            return self.backend.executeScript(script, args)
         }
 
         // Creates a signer account by submitting an account creation transaction.
@@ -135,7 +135,7 @@ pub contract Test {
     //
     pub struct interface BlockchainBackend {
 
-        pub fun executeScript(_ script: String): ScriptResult
+        pub fun executeScript(_ script: String, _ args: [AnyStruct]): ScriptResult
 
         pub fun createAccount(): Account
 
