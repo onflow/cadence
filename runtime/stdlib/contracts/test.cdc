@@ -12,8 +12,8 @@ pub contract Test {
             self.backend = backend
         }
 
-        pub fun executeScript(_ script: String): ScriptResult {
-            return self.backend.executeScript(script)
+        pub fun executeScript(_ script: String, _ args: [AnyStruct]): ScriptResult {
+            return self.backend.executeScript(script, args)
         }
 
         //pub fun addTransaction(_ transaction: Transaction) {
@@ -87,6 +87,6 @@ pub contract Test {
 
         // fun commitBlock()
 
-        pub fun executeScript(_ script: String): ScriptResult
+        pub fun executeScript(_ script: String, _ args: [AnyStruct]): ScriptResult
     }
 }

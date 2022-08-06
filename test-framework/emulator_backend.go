@@ -24,6 +24,7 @@ package test
 import (
 	emulator "github.com/onflow/flow-emulator"
 
+	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
@@ -46,8 +47,36 @@ func NewEmulatorBackend() *EmulatorBackend {
 	}
 }
 
-func (e *EmulatorBackend) RunScript(code string) interpreter.ScriptResult {
-	result, err := e.blockchain.ExecuteScript([]byte(code), [][]byte{})
+func (e *EmulatorBackend) RunScript(code string, args []interpreter.Value) interpreter.ScriptResult {
+	// TODO: maybe re-use interpreter? Only needed for value conversion
+	// TODO: Deal with imported/composite types
+	inter, err := newInterpreter()
+	if err != nil {
+		return interpreter.ScriptResult{
+			Error: err,
+		}
+	}
+
+	arguments := make([][]byte, 0, len(args))
+	for _, arg := range args {
+		exportedValue, err := runtime.ExportValue(arg, inter, interpreter.ReturnEmptyLocationRange)
+		if err != nil {
+			return interpreter.ScriptResult{
+				Error: err,
+			}
+		}
+
+		encodedArg, err := json.Encode(exportedValue)
+		if err != nil {
+			return interpreter.ScriptResult{
+				Error: err,
+			}
+		}
+
+		arguments = append(arguments, encodedArg)
+	}
+
+	result, err := e.blockchain.ExecuteScript([]byte(code), arguments)
 	if err != nil {
 		return interpreter.ScriptResult{
 			Error: err,
@@ -57,14 +86,6 @@ func (e *EmulatorBackend) RunScript(code string) interpreter.ScriptResult {
 	if result.Error != nil {
 		return interpreter.ScriptResult{
 			Error: result.Error,
-		}
-	}
-
-	// TODO: maybe re-use interpreter? Only needed for value conversion
-	inter, err := newInterpreter()
-	if err != nil {
-		return interpreter.ScriptResult{
-			Error: err,
 		}
 	}
 
