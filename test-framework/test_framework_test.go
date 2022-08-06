@@ -830,3 +830,73 @@ func TestExecutingTransactions(t *testing.T) {
 		assert.Contains(t, err.Error(), "is currently being executed")
 	})
 }
+
+func TestDeployingContracts(t *testing.T) {
+	t.Parallel()
+
+	t.Run("no args", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import Test
+
+            pub fun test() {
+                var blockchain = Test.newEmulatorBlockchain()
+                var account = blockchain.createAccount()
+
+                blockchain.deployContract(
+                    "Foo",
+                    "pub contract Foo{ init(){}  pub fun sayHello(): String { return \"hello from Foo\"} }",
+                    account.address,
+                    [account],
+                    [],
+                )
+
+                var script = "import Foo from ".concat(account.address.toString()).concat("\n")
+                script = script.concat("pub fun main(): String {  return Foo.sayHello() }")
+
+                var result = blockchain.executeScript(script, [])
+
+                assert(result.status == Test.ResultStatus.succeeded)
+                assert((result.returnValue! as! String) == "hello from Foo")
+            }
+        `
+
+		runner := NewTestRunner()
+		err := runner.RunTest(code, "test")
+		assert.NoError(t, err)
+	})
+
+	t.Run("no args", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import Test
+
+            pub fun test() {
+                var blockchain = Test.newEmulatorBlockchain()
+                var account = blockchain.createAccount()
+
+                blockchain.deployContract(
+                    "Foo",
+                    "pub contract Foo{ init(){}  pub fun sayHello(): String { return \"hello from Foo\"} }",
+                    account.address,
+                    [account],
+                    [],
+                )
+
+                var script = "import Foo from ".concat(account.address.toString()).concat("\n")
+                script = script.concat("pub fun main(): String {  return Foo.sayHello() }")
+
+                var result = blockchain.executeScript(script, [])
+
+                assert(result.status == Test.ResultStatus.succeeded)
+                assert((result.returnValue! as! String) == "hello from Foo")
+            }
+        `
+
+		runner := NewTestRunner()
+		err := runner.RunTest(code, "test")
+		assert.NoError(t, err)
+	})
+}

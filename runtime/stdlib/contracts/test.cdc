@@ -72,6 +72,43 @@ pub contract Test {
             self.commitBlock()
             return results
         }
+
+        /// Deploys a given contract, and initilizes it with the arguments.
+        ///
+        pub fun deployContract(
+            _ name: String,
+            _ code: String,
+            _ authorizer: Address,
+            _ signers: [Account],
+            _ args: [AnyStruct]
+        ) {
+
+            var argsStr = ""
+            var i = 0
+            for arg in args {
+                argsStr = argsStr.concat(", args[").concat(i.toString()).concat("]")
+                i = i + 1
+            }
+
+            var deployTxCode =
+                "transaction(args: [AnyStruct]) { prepare(signer: AuthAccount) { signer.contracts.add("
+
+            let hexEncodeContractCode = String.encodeHex(code.utf8)
+
+            deployTxCode = deployTxCode.concat("name: \"").concat(name).concat("\", ")
+            deployTxCode = deployTxCode.concat("code: \"").concat(hexEncodeContractCode).concat("\".decodeHex()")
+            deployTxCode = deployTxCode.concat(argsStr).concat(")}}")
+
+            let deployTx = Transaction(
+                deployTxCode,
+                authorizer,
+                signers,
+                [args],
+            )
+
+            var txResult = self.executeTransaction(deployTx)
+            assert(txResult.status == ResultStatus.succeeded, message: "failed to deploy contract")
+        }
     }
 
     // ResultStatus indicates status of a transaction or script execution.
@@ -146,5 +183,7 @@ pub contract Test {
         pub fun executeNextTransaction(): TransactionResult?
 
         pub fun commitBlock()
+
+        pub fun deployContract(_ name: String, _ code: String, _ args: [AnyStruct])
     }
 }
