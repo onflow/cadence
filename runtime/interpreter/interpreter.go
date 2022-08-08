@@ -3668,7 +3668,7 @@ func (interpreter *Interpreter) allAccountPaths(addressValue AddressValue, getLo
 		interpreter,
 		getLocationRange,
 		NewVariableSizedStaticType(interpreter, PrimitiveStaticTypePath),
-		address,
+		common.Address{},
 		append(append(publicValues, privateValues...), storageValues...)...,
 	)
 }
