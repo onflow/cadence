@@ -421,7 +421,8 @@ func TestExecutingTransactions(t *testing.T) {
                 let tx = Test.Transaction(
                     "transaction { execute{ assert(false) } }",
                     account.address,
-                    [account]
+                    [account],
+                    [],
                 )
 
                 blockchain.addTransaction(tx)
@@ -446,7 +447,8 @@ func TestExecutingTransactions(t *testing.T) {
                 let tx = Test.Transaction(
                     "transaction { execute{ assert(true) } }",
                     nil,
-                    [account]
+                    [account],
+                    [],
                 )
 
                 blockchain.addTransaction(tx)
@@ -474,7 +476,8 @@ func TestExecutingTransactions(t *testing.T) {
                 let tx = Test.Transaction(
                     "transaction { prepare(acct: AuthAccount) {} execute{ assert(true) } }",
                     account.address,
-                    [account]
+                    [account],
+                    [],
                 )
 
                 blockchain.addTransaction(tx)
@@ -502,7 +505,8 @@ func TestExecutingTransactions(t *testing.T) {
                 let tx = Test.Transaction(
                     "transaction { execute{ assert(false) } }",
                     nil,
-                    [account]
+                    [account],
+                    [],
                 )
 
                 blockchain.addTransaction(tx)
@@ -565,7 +569,8 @@ func TestExecutingTransactions(t *testing.T) {
                 let tx = Test.Transaction(
                     "transaction { execute{ assert(false) } }",
                     nil,
-                    [account]
+                    [account],
+                    [],
                 )
 
                 blockchain.addTransaction(tx)
@@ -593,7 +598,8 @@ func TestExecutingTransactions(t *testing.T) {
                 let tx = Test.Transaction(
                     "transaction { execute{ assert(false) } }",
                     nil,
-                    [account]
+                    [account],
+                    [],
                 )
 
                 // Add two transactions
@@ -645,7 +651,35 @@ func TestExecutingTransactions(t *testing.T) {
                 let tx = Test.Transaction(
                     "transaction { execute{ assert(true) } }",
                     nil,
-                    [account]
+                    [account],
+                    [],
+                )
+
+                let result = blockchain.executeTransaction(tx)!
+                assert(result.status == Test.ResultStatus.succeeded)
+            }
+        `
+
+		runner := NewTestRunner()
+		err := runner.RunTest(code, "test")
+		assert.NoError(t, err)
+	})
+
+	t.Run("run transaction with args", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import Test
+
+            pub fun test() {
+                var blockchain = Test.newEmulatorBlockchain()
+                var account = blockchain.createAccount()
+
+                let tx = Test.Transaction(
+                    "transaction(a: Int, b: Int) { execute{ assert(a == b) } }",
+                    nil,
+                    [account],
+                    [4, 4],
                 )
 
                 let result = blockchain.executeTransaction(tx)!
@@ -671,7 +705,8 @@ func TestExecutingTransactions(t *testing.T) {
                 let tx = Test.Transaction(
                     "transaction { execute{ assert(fail) } }",
                     nil,
-                    [account]
+                    [account],
+                    [],
                 )
 
                 let result = blockchain.executeTransaction(tx)!
@@ -697,19 +732,22 @@ func TestExecutingTransactions(t *testing.T) {
                 let tx1 = Test.Transaction(
                     "transaction { execute{ assert(true) } }",
                     nil,
-                    [account]
+                    [account],
+                    [],
                 )
 
                 let tx2 = Test.Transaction(
                     "transaction { prepare(acct: AuthAccount) {} execute{ assert(true) } }",
                     account.address,
-                    [account]
+                    [account],
+                    [],
                 )
 
                 let tx3 = Test.Transaction(
                     "transaction { execute{ assert(false) } }",
                     nil,
-                    [account]
+                    [account],
+                    [],
                 )
 
                 let firstResults = blockchain.executeTransactions([tx1, tx2, tx3])!
@@ -768,7 +806,8 @@ func TestExecutingTransactions(t *testing.T) {
                 let tx1 = Test.Transaction(
                     "transaction { execute{ assert(true) } }",
                     nil,
-                    [account]
+                    [account],
+                    [],
                 )
 
                 blockchain.addTransaction(tx1)
@@ -776,7 +815,8 @@ func TestExecutingTransactions(t *testing.T) {
                 let tx2 = Test.Transaction(
                     "transaction { execute{ assert(true) } }",
                     nil,
-                    [account]
+                    [account],
+                    [],
                 )
                 let result = blockchain.executeTransaction(tx2)!
 

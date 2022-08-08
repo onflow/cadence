@@ -123,11 +123,13 @@ pub contract Test {
         pub let code:       String
         pub let authorizer: Address?
         pub let signers:    [Account]
+        pub let args:       [AnyStruct]
 
-        init(_ code: String, _ authorizer: Address?, _ signers: [Account]) {
+        init(_ code: String, _ authorizer: Address?, _ signers: [Account], _ args: [AnyStruct]) {
             self.code = code
             self.authorizer = authorizer
             self.signers = signers
+            self.args = args
         }
     }
 

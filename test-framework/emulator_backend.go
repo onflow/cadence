@@ -56,8 +56,6 @@ func NewEmulatorBackend() *EmulatorBackend {
 }
 
 func (e *EmulatorBackend) RunScript(code string, args []interpreter.Value) *interpreter.ScriptResult {
-	// TODO: maybe re-use interpreter? Only needed for value conversion
-	// TODO: Deal with imported/composite types
 	inter, err := newInterpreter()
 	if err != nil {
 		return &interpreter.ScriptResult{
@@ -142,11 +140,29 @@ func (e *EmulatorBackend) AddTransaction(
 	code string,
 	authorizer *common.Address,
 	signers []*interpreter.Account,
+	args []interpreter.Value,
 ) error {
 
 	tx := e.newTransaction(code, authorizer)
 
-	err := e.signTransaction(tx, signers)
+	inter, err := newInterpreter()
+	if err != nil {
+		return err
+	}
+
+	for _, arg := range args {
+		exportedValue, err := runtime.ExportValue(arg, inter, interpreter.ReturnEmptyLocationRange)
+		if err != nil {
+			return err
+		}
+
+		err = tx.AddArgument(exportedValue)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = e.signTransaction(tx, signers)
 	if err != nil {
 		return err
 	}
@@ -275,6 +291,9 @@ func newBlockchain(opts ...emulator.Option) *emulator.Blockchain {
 // newInterpreter creates an interpreter instance needed for the value conversion.
 //
 func newInterpreter() (*interpreter.Interpreter, error) {
+	// TODO: maybe re-use interpreter? Only needed for value conversion
+	// TODO: Deal with imported/composite types
+
 	predeclaredInterpreterValues := stdlib.BuiltinFunctions.ToInterpreterValueDeclarations()
 	predeclaredInterpreterValues = append(predeclaredInterpreterValues, stdlib.BuiltinValues.ToInterpreterValueDeclarations()...)
 

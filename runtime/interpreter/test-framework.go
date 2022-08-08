@@ -36,7 +36,12 @@ type TestFramework interface {
 
 	CreateAccount() (*Account, error)
 
-	AddTransaction(code string, authorizer *common.Address, signers []*Account) error
+	AddTransaction(
+		code string,
+		authorizer *common.Address,
+		signers []*Account,
+		args []Value,
+	) error
 
 	ExecuteNextTransaction() *TransactionResult
 

@@ -49,6 +49,7 @@ const failedCaseName = "failed"
 const transactionCodeFieldName = "code"
 const transactionAuthorizerFieldName = "authorizer"
 const transactionSignersFieldName = "signers"
+const transactionArgsFieldName = "args"
 
 const accountAddressFieldName = "address"
 const accountKeyFieldName = "accountKey"
@@ -704,7 +705,18 @@ var emulatorBackendAddTransactionFunction = interpreter.NewUnmeteredHostFunction
 
 		signerAccounts := accountsFromValue(inter, signersValue)
 
-		err = testFramework.AddTransaction(code, authorizer, signerAccounts)
+		// Get arguments
+		argsValue := transactionValue.GetMember(
+			inter,
+			interpreter.ReturnEmptyLocationRange,
+			transactionArgsFieldName,
+		)
+		args, err := arrayValueToSlice(argsValue)
+		if err != nil {
+			panic(errors.NewUnexpectedErrorFromCause(err))
+		}
+
+		err = testFramework.AddTransaction(code, authorizer, signerAccounts, args)
 		if err != nil {
 			panic(err)
 		}
