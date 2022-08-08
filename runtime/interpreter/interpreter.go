@@ -3640,7 +3640,7 @@ func (interpreter *Interpreter) domainIterator(address common.Address, domain co
 		return []Value{}
 	}
 	iterator := storageMap.Iterator(interpreter)
-	values := make([]Value, 0, iterator.storage.Count())
+	values := make([]Value, 0, storageMap.Count())
 	for key := iterator.NextKey(); key != ""; key = iterator.NextKey() {
 		values = append(values, NewPathValue(interpreter, domain, key))
 	}
