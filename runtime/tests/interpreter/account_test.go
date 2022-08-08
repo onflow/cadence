@@ -2331,6 +2331,65 @@ func TestInterpretAccount_iteration(t *testing.T) {
 		)
 	})
 
+	t.Run("forEachStored after empty", func(t *testing.T) {
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(
+			t,
+			address,
+			true,
+			`
+			struct S {
+				let value: Int
+				init(value: Int) {
+					self.value = value
+				}
+			}
+
+			fun before(): Int {
+				var total = 0
+				account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+					total = total + 1
+					return true
+				})
+				
+				account.save(S(value: 1), to: /storage/foo1)
+				account.save(S(value: 2), to: /storage/foo2)
+				account.save(S(value: 5), to: /storage/foo3)
+
+				return total
+			}
+
+			fun after(): Int {
+				var total = 0
+				account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+					total = total + 1
+					return true
+				})
+				return total
+			}
+            `,
+		)
+
+		value, err := inter.Invoke("before")
+		require.NoError(t, err)
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewIntValueFromInt64(nil, 0),
+			value,
+		)
+
+		value, err = inter.Invoke("after")
+		require.NoError(t, err)
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewIntValueFromInt64(nil, 3),
+			value,
+		)
+	})
+
 	t.Run("forEachStored with update", func(t *testing.T) {
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 

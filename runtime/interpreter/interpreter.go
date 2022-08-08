@@ -3675,8 +3675,6 @@ func (interpreter *Interpreter) allAccountPaths(addressValue AddressValue, getLo
 
 func (interpreter *Interpreter) iterOverStorageDomain(addressValue AddressValue, domain common.PathDomain, pathType sema.Type) *HostFunctionValue {
 	address := addressValue.ToAddress()
-	storageMap := interpreter.Storage.GetStorageMap(address, domain.Identifier(), false)
-	storageIterator := storageMap.Iterator(interpreter)
 
 	return NewHostFunctionValue(
 		interpreter,
@@ -3688,6 +3686,12 @@ func (interpreter *Interpreter) iterOverStorageDomain(addressValue AddressValue,
 
 			getLocationRange := invocation.GetLocationRange
 			inter := invocation.Interpreter
+			storageMap := interpreter.Storage.GetStorageMap(address, domain.Identifier(), false)
+			if storageMap == nil {
+				// if nothing is stored, no iteration is required
+				return NewVoidValue(inter)
+			}
+			storageIterator := storageMap.Iterator(interpreter)
 
 			invocationTypeParams := []sema.Type{pathType, sema.MetaType}
 
