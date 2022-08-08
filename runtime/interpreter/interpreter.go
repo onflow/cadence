@@ -3640,37 +3640,35 @@ func (interpreter *Interpreter) domainIterator(address common.Address, domain co
 		return []Value{}
 	}
 	iterator := storageMap.Iterator(interpreter)
-	values := make([]Value, 0, iterator.storage.Count())
+	values := make([]Value, 0, storageMap.Count())
 	for key := iterator.NextKey(); key != ""; key = iterator.NextKey() {
 		values = append(values, NewPathValue(interpreter, domain, key))
 	}
 	return values
 }
 
-func (interpreter *Interpreter) publicAccountPaths(addressValue AddressValue, getLocationRange func() LocationRange) *ArrayValue {
+func (interpreter *Interpreter) accountPaths(addressValue AddressValue, getLocationRange func() LocationRange, domain common.PathDomain, pathType StaticType) *ArrayValue {
 	address := addressValue.ToAddress()
-	values := interpreter.domainIterator(address, common.PathDomainPublic)
+	values := interpreter.domainIterator(address, domain)
 	return NewArrayValue(
 		interpreter,
 		getLocationRange,
-		NewVariableSizedStaticType(interpreter, PrimitiveStaticTypePublicPath),
-		address,
+		NewVariableSizedStaticType(interpreter, pathType),
+		common.Address{},
 		values...,
 	)
 }
 
-func (interpreter *Interpreter) allAccountPaths(addressValue AddressValue, getLocationRange func() LocationRange) *ArrayValue {
-	address := addressValue.ToAddress()
-	publicValues := interpreter.domainIterator(address, common.PathDomainPublic)
-	privateValues := interpreter.domainIterator(address, common.PathDomainPrivate)
-	storageValues := interpreter.domainIterator(address, common.PathDomainStorage)
-	return NewArrayValue(
-		interpreter,
-		getLocationRange,
-		NewVariableSizedStaticType(interpreter, PrimitiveStaticTypePath),
-		address,
-		append(append(publicValues, privateValues...), storageValues...)...,
-	)
+func (interpreter *Interpreter) publicAccountPaths(addressValue AddressValue, getLocationRange func() LocationRange) *ArrayValue {
+	return interpreter.accountPaths(addressValue, getLocationRange, common.PathDomainPublic, PrimitiveStaticTypePublicPath)
+}
+
+func (interpreter *Interpreter) privateAccountPaths(addressValue AddressValue, getLocationRange func() LocationRange) *ArrayValue {
+	return interpreter.accountPaths(addressValue, getLocationRange, common.PathDomainPrivate, PrimitiveStaticTypePrivatePath)
+}
+
+func (interpreter *Interpreter) storageAccountPaths(addressValue AddressValue, getLocationRange func() LocationRange) *ArrayValue {
+	return interpreter.accountPaths(addressValue, getLocationRange, common.PathDomainStorage, PrimitiveStaticTypeStoragePath)
 }
 
 func (interpreter *Interpreter) iterOverStorageDomain(addressValue AddressValue, domain common.PathDomain, pathType sema.Type) *HostFunctionValue {

@@ -44,7 +44,9 @@ const AuthAccountForEachPrivateField = "forEachPrivate"
 const AuthAccountForEachStoredField = "forEachStored"
 const AuthAccountContractsField = "contracts"
 const AuthAccountKeysField = "keys"
-const AuthAccountPathsField = "paths"
+const AuthAccountPublicPathsField = "publicPaths"
+const AuthAccountPrivatePathsField = "privatePaths"
+const AuthAccountStoragePathsField = "storagePaths"
 
 // AuthAccountType represents the authorized access to an account.
 // Access to an AuthAccount means having full access to its storage, public keys, and code.
@@ -176,9 +178,21 @@ var AuthAccountType = func() *CompositeType {
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			authAccountType,
-			AuthAccountPathsField,
-			AuthAccountPathsType,
-			authAccountTypePathsFieldDocString,
+			AuthAccountPublicPathsField,
+			AuthAccountPublicPathsType,
+			authAccountTypePublicPathsFieldDocString,
+		),
+		NewUnmeteredPublicConstantFieldMember(
+			authAccountType,
+			AuthAccountPrivatePathsField,
+			AuthAccountPrivatePathsType,
+			authAccountTypePrivatePathsFieldDocString,
+		),
+		NewUnmeteredPublicConstantFieldMember(
+			authAccountType,
+			AuthAccountStoragePathsField,
+			AuthAccountStoragePathsType,
+			authAccountTypeStoragePathsFieldDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			authAccountType,
@@ -205,12 +219,28 @@ var AuthAccountType = func() *CompositeType {
 	return authAccountType
 }()
 
-var AuthAccountPathsType = &VariableSizedType{
-	Type: PathType,
+var AuthAccountPublicPathsType = &VariableSizedType{
+	Type: PublicPathType,
 }
 
-const authAccountTypePathsFieldDocString = `
+var AuthAccountPrivatePathsType = &VariableSizedType{
+	Type: PrivatePathType,
+}
+
+var AuthAccountStoragePathsType = &VariableSizedType{
+	Type: StoragePathType,
+}
+
+const authAccountTypeStoragePathsFieldDocString = `
 All the storage paths of an account
+`
+
+const authAccountTypePublicPathsFieldDocString = `
+All the public paths of an account
+`
+
+const authAccountTypePrivatePathsFieldDocString = `
+All the private paths of an account
 `
 
 const authAccountForEachPublicDocString = `

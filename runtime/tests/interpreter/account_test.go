@@ -1938,20 +1938,29 @@ func TestInterpretAccount_iteration(t *testing.T) {
 			fun unlinkPrivate() {
 				account.unlink(/private/foo)
 			}
-			fun getPaths(): [Path] {
-				return account.paths
+			fun getStoragePaths(): [StoragePath] {
+				return account.storagePaths
+			}
+			fun getPrivatePaths(): [PrivatePath] {
+				return account.privatePaths
 			}
 			fun getPublicPaths(): [PublicPath] {
-				return pubAccount.paths
+				return pubAccount.publicPaths
 			}
             `,
 		)
 
 		t.Run("before any save", func(t *testing.T) {
-			value, err := inter.Invoke("getPaths")
+			value, err := inter.Invoke("getStoragePaths")
 			require.NoError(t, err)
 			require.IsType(t, &interpreter.ArrayValue{}, value)
 			paths := arrayElements(inter, value.(*interpreter.ArrayValue))
+			require.Equal(t, 0, len(paths))
+
+			value, err = inter.Invoke("getPrivatePaths")
+			require.NoError(t, err)
+			require.IsType(t, &interpreter.ArrayValue{}, value)
+			paths = arrayElements(inter, value.(*interpreter.ArrayValue))
 			require.Equal(t, 0, len(paths))
 
 			value, err = inter.Invoke("getPublicPaths")
@@ -1965,12 +1974,18 @@ func TestInterpretAccount_iteration(t *testing.T) {
 			_, err := inter.Invoke("saveStorage")
 			require.NoError(t, err)
 
-			value, err := inter.Invoke("getPaths")
+			value, err := inter.Invoke("getStoragePaths")
 			require.NoError(t, err)
 			require.IsType(t, &interpreter.ArrayValue{}, value)
 			paths := arrayElements(inter, value.(*interpreter.ArrayValue))
 			require.Equal(t, 1, len(paths))
 			require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainStorage, "foo"), paths[0])
+
+			value, err = inter.Invoke("getPrivatePaths")
+			require.NoError(t, err)
+			require.IsType(t, &interpreter.ArrayValue{}, value)
+			paths = arrayElements(inter, value.(*interpreter.ArrayValue))
+			require.Equal(t, 0, len(paths))
 
 			value, err = inter.Invoke("getPublicPaths")
 			require.NoError(t, err)
@@ -1983,13 +1998,18 @@ func TestInterpretAccount_iteration(t *testing.T) {
 			_, err := inter.Invoke("linkPublic")
 			require.NoError(t, err)
 
-			value, err := inter.Invoke("getPaths")
+			value, err := inter.Invoke("getStoragePaths")
 			require.NoError(t, err)
 			require.IsType(t, &interpreter.ArrayValue{}, value)
 			paths := arrayElements(inter, value.(*interpreter.ArrayValue))
-			require.Equal(t, 2, len(paths))
-			require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainPublic, "foo"), paths[0])
-			require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainStorage, "foo"), paths[1])
+			require.Equal(t, 1, len(paths))
+			require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainStorage, "foo"), paths[0])
+
+			value, err = inter.Invoke("getPrivatePaths")
+			require.NoError(t, err)
+			require.IsType(t, &interpreter.ArrayValue{}, value)
+			paths = arrayElements(inter, value.(*interpreter.ArrayValue))
+			require.Equal(t, 0, len(paths))
 
 			value, err = inter.Invoke("getPublicPaths")
 			require.NoError(t, err)
@@ -2003,14 +2023,19 @@ func TestInterpretAccount_iteration(t *testing.T) {
 			_, err := inter.Invoke("linkPrivate")
 			require.NoError(t, err)
 
-			value, err := inter.Invoke("getPaths")
+			value, err := inter.Invoke("getStoragePaths")
 			require.NoError(t, err)
 			require.IsType(t, &interpreter.ArrayValue{}, value)
 			paths := arrayElements(inter, value.(*interpreter.ArrayValue))
-			require.Equal(t, 3, len(paths))
-			require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainPublic, "foo"), paths[0])
-			require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainPrivate, "foo"), paths[1])
-			require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainStorage, "foo"), paths[2])
+			require.Equal(t, 1, len(paths))
+			require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainStorage, "foo"), paths[0])
+
+			value, err = inter.Invoke("getPrivatePaths")
+			require.NoError(t, err)
+			require.IsType(t, &interpreter.ArrayValue{}, value)
+			paths = arrayElements(inter, value.(*interpreter.ArrayValue))
+			require.Equal(t, 1, len(paths))
+			require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainPrivate, "foo"), paths[0])
 
 			value, err = inter.Invoke("getPublicPaths")
 			require.NoError(t, err)
@@ -2024,13 +2049,18 @@ func TestInterpretAccount_iteration(t *testing.T) {
 			_, err := inter.Invoke("unlinkPrivate")
 			require.NoError(t, err)
 
-			value, err := inter.Invoke("getPaths")
+			value, err := inter.Invoke("getStoragePaths")
 			require.NoError(t, err)
 			require.IsType(t, &interpreter.ArrayValue{}, value)
 			paths := arrayElements(inter, value.(*interpreter.ArrayValue))
-			require.Equal(t, 2, len(paths))
-			require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainPublic, "foo"), paths[0])
-			require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainStorage, "foo"), paths[1])
+			require.Equal(t, 1, len(paths))
+			require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainStorage, "foo"), paths[0])
+
+			value, err = inter.Invoke("getPrivatePaths")
+			require.NoError(t, err)
+			require.IsType(t, &interpreter.ArrayValue{}, value)
+			paths = arrayElements(inter, value.(*interpreter.ArrayValue))
+			require.Equal(t, 0, len(paths))
 
 			value, err = inter.Invoke("getPublicPaths")
 			require.NoError(t, err)
@@ -2044,14 +2074,19 @@ func TestInterpretAccount_iteration(t *testing.T) {
 			_, err := inter.Invoke("saveOtherStorage")
 			require.NoError(t, err)
 
-			value, err := inter.Invoke("getPaths")
+			value, err := inter.Invoke("getStoragePaths")
 			require.NoError(t, err)
 			require.IsType(t, &interpreter.ArrayValue{}, value)
 			paths := arrayElements(inter, value.(*interpreter.ArrayValue))
-			require.Equal(t, 3, len(paths))
-			require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainPublic, "foo"), paths[0])
+			require.Equal(t, 2, len(paths))
+			require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainStorage, "bar"), paths[0])
 			require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainStorage, "foo"), paths[1])
-			require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainStorage, "bar"), paths[2])
+
+			value, err = inter.Invoke("getPrivatePaths")
+			require.NoError(t, err)
+			require.IsType(t, &interpreter.ArrayValue{}, value)
+			paths = arrayElements(inter, value.(*interpreter.ArrayValue))
+			require.Equal(t, 0, len(paths))
 
 			value, err = inter.Invoke("getPublicPaths")
 			require.NoError(t, err)
@@ -2065,13 +2100,18 @@ func TestInterpretAccount_iteration(t *testing.T) {
 			_, err := inter.Invoke("loadStorage")
 			require.NoError(t, err)
 
-			value, err := inter.Invoke("getPaths")
+			value, err := inter.Invoke("getStoragePaths")
 			require.NoError(t, err)
 			require.IsType(t, &interpreter.ArrayValue{}, value)
 			paths := arrayElements(inter, value.(*interpreter.ArrayValue))
-			require.Equal(t, 2, len(paths))
-			require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainPublic, "foo"), paths[0])
-			require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainStorage, "bar"), paths[1])
+			require.Equal(t, 1, len(paths))
+			require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainStorage, "bar"), paths[0])
+
+			value, err = inter.Invoke("getPrivatePaths")
+			require.NoError(t, err)
+			require.IsType(t, &interpreter.ArrayValue{}, value)
+			paths = arrayElements(inter, value.(*interpreter.ArrayValue))
+			require.Equal(t, 0, len(paths))
 
 			value, err = inter.Invoke("getPublicPaths")
 			require.NoError(t, err)
@@ -2085,12 +2125,18 @@ func TestInterpretAccount_iteration(t *testing.T) {
 			_, err := inter.Invoke("unlinkPublic")
 			require.NoError(t, err)
 
-			value, err := inter.Invoke("getPaths")
+			value, err := inter.Invoke("getStoragePaths")
 			require.NoError(t, err)
 			require.IsType(t, &interpreter.ArrayValue{}, value)
 			paths := arrayElements(inter, value.(*interpreter.ArrayValue))
 			require.Equal(t, 1, len(paths))
 			require.Equal(t, interpreter.NewPathValue(nil, common.PathDomainStorage, "bar"), paths[0])
+
+			value, err = inter.Invoke("getPrivatePaths")
+			require.NoError(t, err)
+			require.IsType(t, &interpreter.ArrayValue{}, value)
+			paths = arrayElements(inter, value.(*interpreter.ArrayValue))
+			require.Equal(t, 0, len(paths))
 
 			value, err = inter.Invoke("getPublicPaths")
 			require.NoError(t, err)
