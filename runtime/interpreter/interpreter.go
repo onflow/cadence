@@ -3654,7 +3654,7 @@ func (interpreter *Interpreter) publicAccountPaths(addressValue AddressValue, ge
 		interpreter,
 		getLocationRange,
 		NewVariableSizedStaticType(interpreter, PrimitiveStaticTypePublicPath),
-		address,
+		common.Address{},
 		values...,
 	)
 }
