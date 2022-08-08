@@ -77,8 +77,14 @@ func NewAuthAccountValue(
 			}
 			return keys
 		},
-		sema.AuthAccountPathsField: func(inter *Interpreter, getLocationRange func() LocationRange) Value {
-			return inter.allAccountPaths(address, getLocationRange)
+		sema.AuthAccountPublicPathsField: func(inter *Interpreter, getLocationRange func() LocationRange) Value {
+			return inter.publicAccountPaths(address, getLocationRange)
+		},
+		sema.AuthAccountPrivatePathsField: func(inter *Interpreter, getLocationRange func() LocationRange) Value {
+			return inter.privateAccountPaths(address, getLocationRange)
+		},
+		sema.AuthAccountStoragePathsField: func(inter *Interpreter, getLocationRange func() LocationRange) Value {
+			return inter.storageAccountPaths(address, getLocationRange)
 		},
 		sema.AuthAccountBalanceField: func(_ *Interpreter, _ func() LocationRange) Value {
 			return accountBalanceGet()

@@ -29,7 +29,7 @@ which represents the publicly available portion of an account.
       let keys: PublicAccount.Keys
 
       // The public paths associated with this account
-      let paths: [PublicPath]
+      let publicPaths: [PublicPath]
 
       // Storage operations
 
@@ -92,7 +92,9 @@ to the `prepare` phase of the transaction.
       let keys: AuthAccount.Keys
 
       // All the paths associated with this account
-      let paths: [Path]
+      let publicPaths: [PublicPath]
+      let privatePaths: [PrivatePath]
+      let storagePaths: [StoragePath]
 
       // Key management
 

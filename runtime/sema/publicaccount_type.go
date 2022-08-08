@@ -32,7 +32,7 @@ const PublicAccountGetCapabilityField = "getCapability"
 const PublicAccountGetTargetLinkField = "getLinkTarget"
 const PublicAccountKeysField = "keys"
 const PublicAccountContractsField = "contracts"
-const PublicAccountPathsField = "paths"
+const PublicAccountPathsField = "publicPaths"
 
 // PublicAccountType represents the publicly accessible portion of an account.
 //

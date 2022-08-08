@@ -1516,7 +1516,7 @@ func TestCheckAccountPaths(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheckAccount(t,
 			`
-			let paths = authAccount.Paths
+			let paths = authAccount.StoragePaths
 		`,
 		)
 
@@ -1524,14 +1524,29 @@ func TestCheckAccountPaths(t *testing.T) {
 		errors := ExpectCheckerErrors(t, err, 1)
 		require.IsType(t, &sema.NotDeclaredMemberError{}, errors[0])
 		notDeclaredError := errors[0].(*sema.NotDeclaredMemberError)
-		assert.Equal(t, "Paths", notDeclaredError.Name)
+		assert.Equal(t, "StoragePaths", notDeclaredError.Name)
 	})
 
 	t.Run("annotation", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheckAccount(t,
 			`
-			let paths: [Path] = authAccount.paths
+			let publicPaths: [PublicPath] = authAccount.publicPaths
+			let privatePaths: [PrivatePath] = authAccount.privatePaths
+			let storagePaths: [StoragePath] = authAccount.storagePaths
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("supertype annotation", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t,
+			`
+			let publicPaths: [Path] = authAccount.publicPaths
+			let privatePaths: [CapabilityPath] = authAccount.privatePaths
+			let storagePaths: [Path] = authAccount.storagePaths
 		`,
 		)
 
@@ -1542,7 +1557,7 @@ func TestCheckAccountPaths(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheckAccount(t,
 			`
-			let paths: [PublicPath] = authAccount.paths
+			let paths: [PublicPath] = authAccount.privatePaths
 		`,
 		)
 
@@ -1555,7 +1570,7 @@ func TestCheckAccountPaths(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheckAccount(t,
 			`
-			let paths: [PublicPath] = publicAccount.paths
+			let paths: [PublicPath] = publicAccount.publicPaths
 		`,
 		)
 
@@ -1566,7 +1581,7 @@ func TestCheckAccountPaths(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheckAccount(t,
 			`
-			let paths: [Path] = publicAccount.paths
+			let paths: [Path] = publicAccount.publicPaths
 		`,
 		)
 
@@ -1578,7 +1593,7 @@ func TestCheckAccountPaths(t *testing.T) {
 		_, err := ParseAndCheckAccount(t,
 			`
 			fun test() {
-				let paths = publicAccount.paths
+				let paths = publicAccount.publicPaths
 				for path in paths {
 					let cap = publicAccount.getCapability(path)
 				}
@@ -1594,7 +1609,7 @@ func TestCheckAccountPaths(t *testing.T) {
 		_, err := ParseAndCheckAccount(t,
 			`
 			fun test() {
-				let paths = authAccount.paths
+				let paths = authAccount.publicPaths
 				for path in paths {
 					let t = authAccount.type(at: path)
 				}
@@ -1605,7 +1620,7 @@ func TestCheckAccountPaths(t *testing.T) {
 		require.Error(t, err)
 		errors := ExpectCheckerErrors(t, err, 1)
 
-		// `type` expects a `StoragePath`, not a general `Path`
+		// `type` expects a `StoragePath`, not a `PublicPath`
 		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
 		mismatchError := errors[0].(*sema.TypeMismatchError)
 		assert.Equal(t, "StoragePath", mismatchError.ExpectedType.QualifiedString())
@@ -1616,14 +1631,10 @@ func TestCheckAccountPaths(t *testing.T) {
 		_, err := ParseAndCheckAccount(t,
 			`
 			fun test() {
-				let paths = authAccount.paths
-				for path in paths {
-					let storagePath = path as! StoragePath
+				let paths = authAccount.storagePaths
+				for storagePath in paths {
 					if storagePath != nil {
 						let t = authAccount.type(at: storagePath)
-					} else {
-						let capabilityPath = path as! CapabilityPath
-						let cap = authAccount.getCapability(capabilityPath)
 					}
 				}
 			}
