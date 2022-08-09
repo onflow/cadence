@@ -19,6 +19,9 @@
 package test
 
 import (
+	"encoding/hex"
+	"fmt"
+	"github.com/onflow/cadence"
 	sdk "github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/crypto"
 	"github.com/onflow/flow-go-sdk/test"
@@ -269,6 +272,86 @@ func (e *EmulatorBackend) CommitBlock() error {
 
 	_, err := e.blockchain.CommitBlock()
 	return err
+}
+
+func (e *EmulatorBackend) DeployContract(
+	name string,
+	code string,
+	args []interpreter.Value,
+	authorizer common.Address,
+	signers []*interpreter.Account,
+) error {
+
+	const deployContractTransactionTemplate = `
+	    transaction(%s) {
+		    prepare(signer: AuthAccount) {
+			    signer.contracts.add(name: "%s", code: "%s".decodeHex()%s)
+		    }
+	    }`
+
+	hexEncodedCode := hex.EncodeToString([]byte(code))
+
+	inter, err := newInterpreter()
+	if err != nil {
+		return err
+	}
+
+	cadenceArgs := make([]cadence.Value, 0, len(args))
+
+	txArgs, addArgs := "", ""
+
+	for i, arg := range args {
+		cadenceArg, err := runtime.ExportValue(arg, inter, interpreter.ReturnEmptyLocationRange)
+		if err != nil {
+			return err
+		}
+
+		if i > 0 {
+			txArgs += ", "
+		}
+
+		txArgs += fmt.Sprintf("arg%d: %s", i, cadenceArg.Type().ID())
+		addArgs += fmt.Sprintf(", arg%d", i)
+
+		cadenceArgs = append(cadenceArgs, cadenceArg)
+	}
+
+	script := fmt.Sprintf(
+		deployContractTransactionTemplate,
+		txArgs,
+		name,
+		hexEncodedCode,
+		addArgs,
+	)
+
+	tx := e.newTransaction(script, &authorizer)
+
+	for _, arg := range cadenceArgs {
+		err = tx.AddArgument(arg)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = e.signTransaction(tx, signers)
+	if err != nil {
+		return err
+	}
+
+	err = e.blockchain.AddTransaction(*tx)
+	if err != nil {
+		return err
+	}
+
+	// Increment the transaction sequence number offset for the current block.
+	e.blockOffset++
+
+	result := e.ExecuteNextTransaction()
+	if result.Error != nil {
+		return result.Error
+	}
+
+	return e.CommitBlock()
 }
 
 // newBlockchain returns an emulator blockchain for testing.

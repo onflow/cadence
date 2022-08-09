@@ -841,24 +841,34 @@ func TestDeployingContracts(t *testing.T) {
             import Test
 
             pub fun test() {
-                var blockchain = Test.newEmulatorBlockchain()
-                var account = blockchain.createAccount()
+                let blockchain = Test.newEmulatorBlockchain()
+                let account = blockchain.createAccount()
 
-                blockchain.deployContract(
+                let contractCode = "pub contract Foo{ init(){}  pub fun sayHello(): String { return \"hello from Foo\"} }"
+
+                let err = blockchain.deployContract(
                     "Foo",
-                    "pub contract Foo{ init(){}  pub fun sayHello(): String { return \"hello from Foo\"} }",
+                    contractCode,
                     account.address,
                     [account],
                     [],
                 )
 
+                if err != nil {
+                    panic(err!.message)
+                }
+
                 var script = "import Foo from ".concat(account.address.toString()).concat("\n")
                 script = script.concat("pub fun main(): String {  return Foo.sayHello() }")
 
-                var result = blockchain.executeScript(script, [])
+                let result = blockchain.executeScript(script, [])
 
-                assert(result.status == Test.ResultStatus.succeeded)
-                assert((result.returnValue! as! String) == "hello from Foo")
+                if result.status != Test.ResultStatus.succeeded {
+                    panic(result.error!.message)
+                }
+
+                let returnedStr = result.returnValue! as! String
+                assert(returnedStr == "hello from Foo", message: "found: ".concat(returnedStr))
             }
         `
 
@@ -867,31 +877,41 @@ func TestDeployingContracts(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("no args", func(t *testing.T) {
+	t.Run("with args", func(t *testing.T) {
 		t.Parallel()
 
 		code := `
             import Test
 
             pub fun test() {
-                var blockchain = Test.newEmulatorBlockchain()
-                var account = blockchain.createAccount()
+                let blockchain = Test.newEmulatorBlockchain()
+                let account = blockchain.createAccount()
 
-                blockchain.deployContract(
+                let contractCode = "pub contract Foo{ pub let msg: String;   init(_ msg: String){ self.msg = msg }   pub fun sayHello(): String { return self.msg } }" 
+
+                let err = blockchain.deployContract(
                     "Foo",
-                    "pub contract Foo{ init(){}  pub fun sayHello(): String { return \"hello from Foo\"} }",
+                    contractCode,
                     account.address,
                     [account],
-                    [],
+                    ["hello from args"],
                 )
+
+                if err != nil {
+                    panic(err!.message)
+                }
 
                 var script = "import Foo from ".concat(account.address.toString()).concat("\n")
                 script = script.concat("pub fun main(): String {  return Foo.sayHello() }")
 
-                var result = blockchain.executeScript(script, [])
+                let result = blockchain.executeScript(script, [])
 
-                assert(result.status == Test.ResultStatus.succeeded)
-                assert((result.returnValue! as! String) == "hello from Foo")
+                if result.status != Test.ResultStatus.succeeded {
+                    panic(result.error!.message)
+                }
+
+                let returnedStr = result.returnValue! as! String
+                assert(returnedStr == "hello from args", message: "found: ".concat(returnedStr))
             }
         `
 

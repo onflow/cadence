@@ -81,33 +81,8 @@ pub contract Test {
             _ authorizer: Address,
             _ signers: [Account],
             _ args: [AnyStruct]
-        ) {
-
-            var argsStr = ""
-            var i = 0
-            for arg in args {
-                argsStr = argsStr.concat(", args[").concat(i.toString()).concat("]")
-                i = i + 1
-            }
-
-            var deployTxCode =
-                "transaction(args: [AnyStruct]) { prepare(signer: AuthAccount) { signer.contracts.add("
-
-            let hexEncodeContractCode = String.encodeHex(code.utf8)
-
-            deployTxCode = deployTxCode.concat("name: \"").concat(name).concat("\", ")
-            deployTxCode = deployTxCode.concat("code: \"").concat(hexEncodeContractCode).concat("\".decodeHex()")
-            deployTxCode = deployTxCode.concat(argsStr).concat(")}}")
-
-            let deployTx = Transaction(
-                deployTxCode,
-                authorizer,
-                signers,
-                [args],
-            )
-
-            var txResult = self.executeTransaction(deployTx)
-            assert(txResult.status == ResultStatus.succeeded, message: "failed to deploy contract")
+        ): Error? {
+            return self.backend.deployContract(name, code, authorizer, signers, args)
         }
     }
 
@@ -122,9 +97,11 @@ pub contract Test {
     //
     pub struct TransactionResult {
         pub let status: ResultStatus
+        pub let error:  Error?
 
-        init(_ status: ResultStatus) {
+        init(_ status: ResultStatus, _ error: Error) {
             self.status = status
+            self.error = error
         }
     }
 
@@ -133,10 +110,22 @@ pub contract Test {
     pub struct ScriptResult {
         pub let status:      ResultStatus
         pub let returnValue: AnyStruct?
+        pub let error:       Error?
 
-        init(_ status: ResultStatus, _ returnValue: AnyStruct?) {
+        init(_ status: ResultStatus, _ returnValue: AnyStruct?, _ error: Error?) {
             self.status = status
             self.returnValue = returnValue
+            self.error = error
+        }
+    }
+
+    // Error is returned if something has gone wrong.
+    //
+    pub struct Error {
+        pub let message: String
+
+        init(_ message: String) {
+            self.message = message
         }
     }
 
@@ -184,6 +173,12 @@ pub contract Test {
 
         pub fun commitBlock()
 
-        pub fun deployContract(_ name: String, _ code: String, _ args: [AnyStruct])
+        pub fun deployContract(
+            _ name: String,
+            _ code: String,
+            _ authorizer: Address,
+            _ signers: [Account],
+            _ args: [AnyStruct]
+        ): Error?
     }
 }

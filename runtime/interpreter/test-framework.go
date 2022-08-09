@@ -46,6 +46,14 @@ type TestFramework interface {
 	ExecuteNextTransaction() *TransactionResult
 
 	CommitBlock() error
+
+	DeployContract(
+		name string,
+		code string,
+		args []Value,
+		authorizer common.Address,
+		signers []*Account,
+	) error
 }
 
 type ScriptResult struct {
