@@ -665,14 +665,9 @@ var emulatorBackendAddTransactionFunction = interpreter.NewUnmeteredHostFunction
 			interpreter.ReturnEmptyLocationRange,
 			transactionCodeFieldName,
 		)
-		codeString, ok := codeValue.(*interpreter.StringValue)
+		code, ok := codeValue.(*interpreter.StringValue)
 		if !ok {
 			panic(errors.NewUnreachableError())
-		}
-
-		code, err := strconv.Unquote(codeString.String())
-		if err != nil {
-			panic(errors.NewUnexpectedErrorFromCause(err))
 		}
 
 		// Get authorizer
@@ -716,7 +711,7 @@ var emulatorBackendAddTransactionFunction = interpreter.NewUnmeteredHostFunction
 			panic(errors.NewUnexpectedErrorFromCause(err))
 		}
 
-		err = testFramework.AddTransaction(code, authorizer, signerAccounts, args)
+		err = testFramework.AddTransaction(code.Str, authorizer, signerAccounts, args)
 		if err != nil {
 			panic(err)
 		}
