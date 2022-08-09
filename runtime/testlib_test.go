@@ -48,23 +48,49 @@ func TestAssertFunction(t *testing.T) {
 
 	t.Parallel()
 
-	script := `
-        import Test
+	t.Run("with message", func(t *testing.T) {
+		t.Parallel()
 
-        pub fun main() {
-          Test.assert(false, "condition not satisfied")
-        }
-    `
+		script := `
+            import Test
 
-	storage := newTestLedger(nil, nil)
+            pub fun main() {
+              Test.assert(false, "condition not satisfied")
+            }
+        `
 
-	runtimeInterface := &testRuntimeInterface{
-		storage: storage,
-	}
+		storage := newTestLedger(nil, nil)
 
-	_, err := executeScript(script, runtimeInterface)
-	require.Error(t, err)
-	assert.ErrorAs(t, err, &stdlib.AssertionError{})
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+		}
+
+		_, err := executeScript(script, runtimeInterface)
+		require.Error(t, err)
+		assert.ErrorAs(t, err, &stdlib.AssertionError{})
+	})
+
+	t.Run("without message", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun main() {
+              Test.assert(false)
+            }
+        `
+
+		storage := newTestLedger(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+		}
+
+		_, err := executeScript(script, runtimeInterface)
+		require.Error(t, err)
+		assert.ErrorAs(t, err, &stdlib.AssertionError{})
+	})
 }
 
 func TestBlockchain(t *testing.T) {
@@ -99,7 +125,7 @@ func TestExecuteScript(t *testing.T) {
 
         pub fun main() {
             var bc = Test.newEmulatorBlockchain()
-            bc.executeScript("pub fun foo() {}")
+            bc.executeScript("pub fun foo() {}", [])
         }
     `
 

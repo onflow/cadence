@@ -198,6 +198,7 @@ var testAssertFunctionType = &sema.FunctionType{
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(
 		sema.VoidType,
 	),
+	RequiredArgumentCount: sema.RequiredArgumentCount(1),
 }
 
 var testAssertFunction = interpreter.NewUnmeteredHostFunctionValue(
@@ -207,14 +208,19 @@ var testAssertFunction = interpreter.NewUnmeteredHostFunctionValue(
 			panic(errors.NewUnreachableError())
 		}
 
-		message, ok := invocation.Arguments[1].(*interpreter.StringValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
+		var message string
+		if len(invocation.Arguments) > 1 {
+			messageValue, ok := invocation.Arguments[1].(*interpreter.StringValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+			message = messageValue.Str
 		}
 
 		if !condition {
 			panic(AssertionError{
-				Message: message.String(),
+				Message:       message,
+				LocationRange: invocation.GetLocationRange(),
 			})
 		}
 
@@ -239,8 +245,10 @@ var testNewEmulatorBlockchainFunctionType = &sema.FunctionType{
 var testNewEmulatorBlockchainFunction = interpreter.NewUnmeteredHostFunctionValue(
 	func(invocation interpreter.Invocation) interpreter.Value {
 
+		inter := invocation.Interpreter
+
 		// Create an `EmulatorBackend`
-		emulatorBackend := newEmulatorBackend(invocation.Interpreter)
+		emulatorBackend := newEmulatorBackend(inter, invocation.GetLocationRange)
 
 		// Create a 'Blockchain' struct value, that wraps the emulator backend,
 		// by calling the constructor of 'Blockchain'.
@@ -252,7 +260,7 @@ var testNewEmulatorBlockchainFunction = interpreter.NewUnmeteredHostFunctionValu
 			panic(errors.NewUnexpectedError("invalid type for constructor"))
 		}
 
-		blockchain, err := invocation.Interpreter.InvokeExternally(
+		blockchain, err := inter.InvokeExternally(
 			blockchainConstructor,
 			blockchainConstructor.Type,
 			[]interpreter.Value{
@@ -302,7 +310,11 @@ var EmulatorBackendType = func() *sema.CompositeType {
 	return ty
 }()
 
-func newEmulatorBackend(inter *interpreter.Interpreter) *interpreter.CompositeValue {
+func newEmulatorBackend(
+	inter *interpreter.Interpreter,
+	getLocationRange func() interpreter.LocationRange,
+) *interpreter.CompositeValue {
+
 	var fields = []interpreter.CompositeField{
 		{
 			Name:  emulatorBackendExecuteScriptFunctionName,
@@ -312,7 +324,7 @@ func newEmulatorBackend(inter *interpreter.Interpreter) *interpreter.CompositeVa
 
 	return interpreter.NewCompositeValue(
 		inter,
-		interpreter.ReturnEmptyLocationRange,
+		getLocationRange,
 		EmulatorBackendType.Location,
 		emulatorBackendTypeName,
 		common.CompositeKindStructure,
