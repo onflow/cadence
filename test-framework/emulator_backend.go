@@ -21,14 +21,15 @@ package test
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/onflow/cadence"
+
 	sdk "github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/crypto"
-	"github.com/onflow/flow-go-sdk/test"
-	fvmCrypto "github.com/onflow/flow-go/fvm/crypto"
+	sdkTest "github.com/onflow/flow-go-sdk/test"
 
 	emulator "github.com/onflow/flow-emulator"
+	fvmCrypto "github.com/onflow/flow-go/fvm/crypto"
 
+	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
@@ -111,7 +112,7 @@ func (e *EmulatorBackend) RunScript(code string, args []interpreter.Value) *inte
 }
 
 func (e EmulatorBackend) CreateAccount() (*interpreter.Account, error) {
-	keyGen := test.AccountKeyGenerator()
+	keyGen := sdkTest.AccountKeyGenerator()
 	accountKey, signer := keyGen.NewWithSigner()
 
 	// This relies on flow-go-sdk/test returning an `InMemorySigner`.
