@@ -20,8 +20,6 @@ package stdlib
 
 import (
 	"fmt"
-	"strconv"
-
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
@@ -364,20 +362,9 @@ var emulatorBackendExecuteScriptFunctionType = func() *sema.FunctionType {
 
 var emulatorBackendExecuteScriptFunction = interpreter.NewUnmeteredHostFunctionValue(
 	func(invocation interpreter.Invocation) interpreter.Value {
-		scriptString, ok := invocation.Arguments[0].(*interpreter.StringValue)
+		script, ok := invocation.Arguments[0].(*interpreter.StringValue)
 		if !ok {
 			panic(errors.NewUnreachableError())
-		}
-
-		// String conversion of the value gives the quoted string.
-		// Unquote the script-string to remove starting/ending quotes
-		// and to unescape the string literals in the code.
-		//
-		// TODO: Is the reverse conversion loss-less?
-
-		script, err := strconv.Unquote(scriptString.String())
-		if err != nil {
-			panic(errors.NewUnexpectedErrorFromCause(err))
 		}
 
 		args, err := arrayValueToSlice(invocation.Arguments[1])
@@ -389,7 +376,7 @@ var emulatorBackendExecuteScriptFunction = interpreter.NewUnmeteredHostFunctionV
 
 		testFramework := invocation.Interpreter.TestFramework
 		if testFramework != nil {
-			result = testFramework.RunScript(script, args)
+			result = testFramework.RunScript(script.Str, args)
 		} else {
 			panic(interpreter.TestFrameworkNotProvidedError{})
 		}

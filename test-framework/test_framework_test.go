@@ -79,8 +79,6 @@ func TestExecuteScript(t *testing.T) {
 
                 assert(result.status == Test.ResultStatus.succeeded)
                 assert((result.returnValue! as! Int) == 5)
-
-                log(result.returnValue)
             }
         `
 
@@ -103,8 +101,6 @@ func TestExecuteScript(t *testing.T) {
 
                 assert(result.status == Test.ResultStatus.succeeded)
                 assert((result.returnValue! as! Int) == 5)
-
-                log(result.returnValue)
             }
         `
 
