@@ -9,7 +9,7 @@ import {
   StreamMessageWriter,
   TextDocumentItem,
   PublishDiagnosticsNotification,
-  PublishDiagnosticsParams
+  PublishDiagnosticsParams, ShowMessageNotification, NotificationMessage, ShowMessageParams
 } from "vscode-languageserver-protocol"
 
 import {execSync, spawn} from 'child_process'
@@ -20,11 +20,12 @@ beforeAll(() => {
   execSync("go build ../cmd/languageserver", {cwd: __dirname})
 })
 
-async function withConnection(f: (connection: ProtocolConnection) => Promise<void>): Promise<void> {
+async function withConnection(f: (connection: ProtocolConnection) => Promise<void>, enableFlowClient = false): Promise<void> {
 
+  let opts = [`-enableFlowClient=${enableFlowClient}`]
   const child = spawn(
     path.resolve(__dirname, './languageserver'),
-    ['-enableFlowClient=false']
+    opts
   )
 
   let stderr = ""
@@ -48,12 +49,24 @@ async function withConnection(f: (connection: ProtocolConnection) => Promise<voi
 
   connection.listen()
 
+  let initOpts = null
+  if (enableFlowClient) {
+    // flow client initialization options where we pass the location of flow.json
+    // and service account name and its address
+    initOpts = {
+      configPath: "./flow.json",
+      activeAccountName: "service-account", // default service account name
+      activeAccountAddress: "0xf8d6e0586b0a20c7" // default service address for emulator network
+    }
+  }
+
   await connection.sendRequest(InitializeRequest.type,
     {
       capabilities: {},
       processId: process.pid,
       rootUri: '/',
       workspaceFolders: null,
+      initializationOptions: initOpts
     }
   )
 
@@ -300,6 +313,26 @@ describe("diagnostics", () => {
     expect(script.uri).toEqual(`file://${scriptName}.cdc`)
     expect(script.diagnostics).toHaveLength(1)
     expect(script.diagnostics[0].message).toEqual("value of type `Foo` has no member `zoo`. unknown member")
+  })
+
+})
+
+describe("script execution", () => {
+
+  test("script executes and result is returned", async() => {
+    await withConnection(async (connection) => {
+      const resultPromise = new Promise<ShowMessageParams>(res =>
+          connection.onNotification(ShowMessageNotification.type, res)
+      )
+
+      await connection.sendRequest(ExecuteCommandRequest.type, {
+        command: "cadence.server.flow.executeScript",
+        arguments: [`file://${__dirname}/script.cdc`, "[]"]
+      })
+
+      const result = await resultPromise
+      expect(result.message).toEqual(`Result: "HELLO WORLD"`)
+    }, true)
   })
 
 })

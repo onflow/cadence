@@ -22,11 +22,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/onflow/cadence"
 	"io/ioutil"
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/onflow/cadence"
 
 	"github.com/onflow/flow-cli/pkg/flowkit"
 	"github.com/onflow/flow-go-sdk"
@@ -43,10 +44,7 @@ const (
 	CommandCreateAccount         = "cadence.server.flow.createAccount"
 	CommandCreateDefaultAccounts = "cadence.server.flow.createDefaultAccounts"
 	CommandSwitchActiveAccount   = "cadence.server.flow.switchActiveAccount"
-	CommandChangeEmulatorState   = "cadence.server.flow.changeEmulatorState"
 	CommandInitAccountManager    = "cadence.server.flow.initAccountManager"
-
-	ClientStartEmulator = "cadence.runEmulator"
 
 	ErrorMessageEmulator          = "emulator error"
 	ErrorMessageServiceAccount    = "service account error"
@@ -75,10 +73,6 @@ func (i *FlowIntegration) commands() []server.Command {
 		{
 			Name:    CommandDeployContract,
 			Handler: i.deployContract,
-		},
-		{
-			Name:    CommandChangeEmulatorState,
-			Handler: i.changeEmulatorState,
 		},
 		{
 			Name:    CommandSwitchActiveAccount,
@@ -146,6 +140,7 @@ func (i *FlowIntegration) initAccountManager(conn protocol.Conn, args ...json.Ra
 		name,
 		code,
 		update,
+		nil,
 	)
 
 	if deployError != nil {
@@ -365,31 +360,6 @@ func (i *FlowIntegration) executeScript(conn protocol.Conn, args ...json.RawMess
 	return nil, nil
 }
 
-// changeEmulatorState sets current state of the emulator as reported by LSP
-// used to update Code Lenses with proper title
-//
-// There should be exactly 1 argument:
-// * current state of the emulator represented as byte
-func (i *FlowIntegration) changeEmulatorState(conn protocol.Conn, args ...json.RawMessage) (interface{}, error) {
-	err := server.CheckCommandArgumentCount(args, 1)
-	if err != nil {
-		return nil, errorWithMessage(conn, ErrorMessageArguments, err)
-	}
-
-	var emulatorState float64
-	err = json.Unmarshal(args[0], &emulatorState)
-	if err != nil {
-		return nil, errorWithMessage(
-			conn,
-			ErrorMessageArguments,
-			fmt.Errorf("invalid emulator state argument: %#+v: %w", args[0], err),
-		)
-	}
-
-	i.emulatorState = EmulatorState(emulatorState)
-	return nil, nil
-}
-
 // switchActiveAccount sets the account that is currently active and could be used
 // when submitting transactions.
 //
@@ -567,7 +537,7 @@ func (i *FlowIntegration) deployContract(conn protocol.Conn, args ...json.RawMes
 		return nil, errorWithMessage(conn, fmt.Sprintf("failed to load contract code: %s", path.Path), err)
 	}
 
-	_, deployError := i.sharedServices.Accounts.AddContract(signer, name, code, update)
+	_, deployError := i.sharedServices.Accounts.AddContract(signer, name, code, update, nil)
 	if deployError != nil {
 		return nil, errorWithMessage(conn, ErrorMessageDeploy, deployError)
 	}
@@ -647,7 +617,7 @@ func (i *FlowIntegration) storeAccountHelper(conn protocol.Conn, address flow.Ad
 	}
 
 	events := flowkit.EventsFromTransaction(txResult)
-	name := strings.ReplaceAll(events[0].Values["name"], `"`, "")
+	name := strings.ReplaceAll(events[0].Values["name"].String(), `"`, "")
 
 	newAccount = ClientAccount{
 		Name:    name,

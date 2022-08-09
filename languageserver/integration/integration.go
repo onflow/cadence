@@ -26,14 +26,6 @@ import (
 	"github.com/onflow/cadence/languageserver/server"
 )
 
-type EmulatorState int
-
-const (
-	EmulatorOffline EmulatorState = iota
-	EmulatorStarting
-	EmulatorStarted
-)
-
 type FlowIntegration struct {
 	server *server.Server
 	config Config
@@ -42,7 +34,6 @@ type FlowIntegration struct {
 	contractInfo   map[protocol.DocumentURI]contractInfo
 
 	activeAccount ClientAccount
-	emulatorState EmulatorState
 
 	sharedServices *services.Services
 	state          *flowkit.State

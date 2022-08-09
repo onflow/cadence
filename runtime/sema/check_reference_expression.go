@@ -22,24 +22,15 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 )
 
-// VisitReferenceExpression checks a reference expression
+// VisitReferenceExpression checks a reference expression `&t as T`,
+// where `t` is the referenced expression, and `T` is the result type.
 //
 func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.ReferenceExpression) ast.Repr {
 
-	resultType := checker.expectedType
-
-	if resultType == nil {
-		checker.report(
-			&TypeAnnotationRequiredError{
-				Cause: "cannot infer type from reference expression:",
-				Pos:   referenceExpression.Expression.StartPosition(),
-			},
-		)
-
-		return InvalidType
-	}
-
 	// Check the result type and ensure it is a reference type
+
+	resultType := checker.ConvertType(referenceExpression.Type)
+	checker.checkInvalidInterfaceAsType(resultType, referenceExpression.Type)
 
 	var referenceType *ReferenceType
 	var targetType, returnType Type
@@ -64,7 +55,7 @@ func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.Refere
 			checker.report(
 				&NonReferenceTypeReferenceError{
 					ActualType: resultType,
-					Range:      ast.NewRangeFromPositioned(checker.memoryGauge, referenceExpression),
+					Range:      ast.NewRangeFromPositioned(checker.memoryGauge, referenceExpression.Type),
 				},
 			)
 		} else {

@@ -32,12 +32,12 @@ type Range struct {
 }
 
 type Ranges struct {
-	tree *intervalst.IntervalST
+	tree *intervalst.IntervalST[Range]
 }
 
 func NewRanges() *Ranges {
 	return &Ranges{
-		tree: &intervalst.IntervalST{},
+		tree: &intervalst.IntervalST[Range]{},
 	}
 }
 
@@ -50,27 +50,14 @@ func (r *Ranges) Put(startPos, endPos ast.Position, ra Range) {
 }
 
 func (r *Ranges) All() []Range {
-	values := r.tree.Values()
-	ranges := make([]Range, len(values))
-	for i, value := range values {
-		r, ok := value.(Range)
-		if !ok {
-			return nil
-		}
-		ranges[i] = r
-	}
-	return ranges
+	return r.tree.Values()
 }
 
 func (r *Ranges) FindAll(pos Position) []Range {
 	entries := r.tree.SearchAll(pos)
 	ranges := make([]Range, len(entries))
 	for i, entry := range entries {
-		r, ok := entry.Value.(Range)
-		if !ok {
-			return nil
-		}
-		ranges[i] = r
+		ranges[i] = entry.Value
 	}
 	return ranges
 }

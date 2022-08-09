@@ -33,10 +33,8 @@ import (
 
 const (
 	// Codelens message prefixes
-	prefixOK       = "💡"
-	prefixStarting = "⏲"
-	prefixOffline  = "⚠️"
-	prefixError    = "🚫"
+	prefixOK    = "💡"
+	prefixError = "🚫"
 )
 
 func (i *FlowIntegration) codeLenses(
@@ -93,12 +91,6 @@ func (i *FlowIntegration) showDeployContractAction(
 	codelensRange := conversion.ASTToProtocolRange(position, position)
 	var codeLenses []*protocol.CodeLens
 
-	// Check emulator state
-	emulatorStateLens := i.checkEmulatorState(codelensRange)
-	if emulatorStateLens != nil {
-		return []*protocol.CodeLens{emulatorStateLens}, nil
-	}
-
 	if len(signersList) == 0 {
 		signersList = append(signersList, []string{i.activeAccount.Name})
 	}
@@ -137,13 +129,6 @@ func (i *FlowIntegration) entryPointActions(
 
 	codelensRange := conversion.ASTToProtocolRange(position, position)
 	var codeLenses []*protocol.CodeLens
-
-	// Check emulator state
-	emulatorStateLens := i.checkEmulatorState(codelensRange)
-	if emulatorStateLens != nil {
-		codeLenses = append(codeLenses, emulatorStateLens)
-		return codeLenses, nil
-	}
 
 	noParameters := len(entryPointInfo.parameters) == 0
 
@@ -248,29 +233,6 @@ func (i *FlowIntegration) showAbsentAccounts(accounts []string, codelensRange pr
 		common.EnumerateWords(accounts, "and"),
 	)
 	return makeActionlessCodelens(title, codelensRange)
-}
-
-func (i *FlowIntegration) checkEmulatorState(codelensRange protocol.Range) *protocol.CodeLens {
-	var title string
-	var codeLens *protocol.CodeLens
-
-	if i.emulatorState == EmulatorOffline {
-		title = fmt.Sprintf(
-			"%s Emulator is Offline. Click here to start it",
-			prefixOffline,
-		)
-		codeLens = makeCodeLens(ClientStartEmulator, title, codelensRange, nil)
-	}
-
-	if i.emulatorState == EmulatorStarting {
-		title = fmt.Sprintf(
-			"%s Emulator is starting up. Please wait \u2026",
-			prefixStarting,
-		)
-		codeLens = makeActionlessCodelens(title, codelensRange)
-	}
-
-	return codeLens
 }
 
 func (i *FlowIntegration) scriptCodeLenses(

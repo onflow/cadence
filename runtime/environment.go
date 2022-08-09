@@ -19,9 +19,8 @@
 package runtime
 
 import (
+	"go.opentelemetry.io/otel/attribute"
 	"time"
-
-	"github.com/opentracing/opentracing-go"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -571,10 +570,10 @@ func (e *interpreterEnvironment) newOnRecordTraceHandler() interpreter.OnRecordT
 		interpreter *interpreter.Interpreter,
 		functionName string,
 		duration time.Duration,
-		logs []opentracing.LogRecord,
+		attrs []attribute.KeyValue,
 	) {
 		wrapPanic(func() {
-			e.runtimeInterface.RecordTrace(functionName, interpreter.Location, duration, logs)
+			e.runtimeInterface.RecordTrace(functionName, interpreter.Location, duration, attrs)
 		})
 	}
 }
