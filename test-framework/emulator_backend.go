@@ -46,12 +46,15 @@ type EmulatorBackend struct {
 	// This is equal to the number of transactions in the current block.
 	// Must be rest once the block is committed.
 	blockOffset uint64
+
+	importResolver ImportResolver
 }
 
-func NewEmulatorBackend() *EmulatorBackend {
+func NewEmulatorBackend(importResolver ImportResolver) *EmulatorBackend {
 	return &EmulatorBackend{
-		blockchain:  newBlockchain(),
-		blockOffset: 0,
+		blockchain:     newBlockchain(),
+		blockOffset:    0,
+		importResolver: importResolver,
 	}
 }
 
@@ -269,6 +272,14 @@ func (e *EmulatorBackend) CommitBlock() error {
 
 	_, err := e.blockchain.CommitBlock()
 	return err
+}
+
+func (e *EmulatorBackend) ReadFile(path string) (string, error) {
+	if e.importResolver == nil {
+		return "", ImportResolverNotProvidedError{}
+	}
+
+	return e.importResolver(common.StringLocation(path))
 }
 
 // newBlockchain returns an emulator blockchain for testing.
