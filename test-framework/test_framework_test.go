@@ -919,4 +919,128 @@ func TestDeployingContracts(t *testing.T) {
 		err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
 	})
+
+	t.Run("without signers", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import Test
+
+            pub fun test() {
+                let blockchain = Test.newEmulatorBlockchain()
+                let account = blockchain.createAccount()
+
+                let contractCode = "pub contract Foo{ init(){} }"
+
+                let err = blockchain.deployContract(
+                    "Foo",
+                    contractCode,
+                    account.address,
+                    [],
+                    [],
+                )
+
+                if err != nil {
+                    panic(err!.message)
+                }
+            }
+        `
+
+		runner := NewTestRunner()
+		err := runner.RunTest(code, "test")
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "authorization failed for account")
+	})
+}
+
+func TestErrors(t *testing.T) {
+	t.Parallel()
+
+	t.Run("contract deployment error", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import Test
+
+            pub fun test() {
+                let blockchain = Test.newEmulatorBlockchain()
+                let account = blockchain.createAccount()
+
+                let contractCode = "pub contract Foo{ init(){}  pub fun sayHello() { return 0 } }"
+
+                let err = blockchain.deployContract(
+                    "Foo",
+                    contractCode,
+                    account.address,
+                    [account],
+                    [],
+                )
+
+                if err != nil {
+                    panic(err!.message)
+                }
+            }
+        `
+
+		runner := NewTestRunner()
+		err := runner.RunTest(code, "test")
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "cannot deploy invalid contract")
+	})
+
+	t.Run("script error", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import Test
+
+            pub fun test() {
+                let blockchain = Test.newEmulatorBlockchain()
+                let account = blockchain.createAccount()
+
+                let script = "import Foo from 0x01; pub fun main() {}"
+                let result = blockchain.executeScript(script, [])
+
+                if result.status == Test.ResultStatus.failed {
+                    panic(result.error!.message)
+                }
+            }
+        `
+
+		runner := NewTestRunner()
+		err := runner.RunTest(code, "test")
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "cannot find declaration `Foo`")
+	})
+
+	t.Run("transaction error", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import Test
+
+            pub fun test() {
+                let blockchain = Test.newEmulatorBlockchain()
+                let account = blockchain.createAccount()
+
+                let tx2 = Test.Transaction(
+                    "transaction { execute{ panic(\"some error\") } }",
+                    nil,
+                    [account],
+                    [],
+                )
+
+                let result = blockchain.executeTransaction(tx2)!
+
+                if result.status == Test.ResultStatus.failed {
+                    panic(result.error!.message)
+                }
+            }
+        `
+
+		runner := NewTestRunner()
+		err := runner.RunTest(code, "test")
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "panic: some error")
+	})
 }

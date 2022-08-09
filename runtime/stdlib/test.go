@@ -443,7 +443,7 @@ var emulatorBackendExecuteScriptFunction = interpreter.NewUnmeteredHostFunctionV
 
 		result := testFramework.RunScript(script, args)
 
-		return createScriptResult(invocation.Interpreter, result.Value, result)
+		return newScriptResult(invocation.Interpreter, result.Value, result)
 	},
 	emulatorBackendExecuteScriptFunctionType,
 )
@@ -464,9 +464,9 @@ func arrayValueToSlice(value interpreter.Value) ([]interpreter.Value, error) {
 	return result, nil
 }
 
-// createScriptResult Creates a "ScriptResult" using the return value of the executed script.
+// newScriptResult Creates a "ScriptResult" using the return value of the executed script.
 //
-func createScriptResult(
+func newScriptResult(
 	inter *interpreter.Interpreter,
 	returnValue interpreter.Value,
 	result *interpreter.ScriptResult,
@@ -488,11 +488,11 @@ func createScriptResult(
 		succeededVar := resultStatusConstructor.NestedVariables[succeededCaseName]
 		status = succeededVar.GetValue()
 	} else {
-		succeededVar := resultStatusConstructor.NestedVariables[failedCaseName]
-		status = succeededVar.GetValue()
+		failedVar := resultStatusConstructor.NestedVariables[failedCaseName]
+		status = failedVar.GetValue()
 	}
 
-	errValue := createError(inter, result.Error)
+	errValue := newErrorValue(inter, result.Error)
 
 	// Create a 'ScriptResult' by calling its constructor.
 
@@ -975,14 +975,14 @@ var emulatorBackendExecuteNextTransactionFunction = interpreter.NewUnmeteredHost
 			return interpreter.NilValue{}
 		}
 
-		return createTransactionResult(invocation.Interpreter, result)
+		return newTransactionResult(invocation.Interpreter, result)
 	},
 	emulatorBackendExecuteNextTransactionFunctionType,
 )
 
-// createTransactionResult Creates a "TransactionResult" indicating the status of the transaction execution.
+// newTransactionResult Creates a "TransactionResult" indicating the status of the transaction execution.
 //
-func createTransactionResult(inter *interpreter.Interpreter, result *interpreter.TransactionResult) interpreter.Value {
+func newTransactionResult(inter *interpreter.Interpreter, result *interpreter.TransactionResult) interpreter.Value {
 	// Lookup and get 'ResultStatus' enum value.
 	resultStatusConstructorVar := inter.Activations.Find(resultStatusTypeName)
 	resultStatusConstructor, ok := resultStatusConstructorVar.GetValue().(*interpreter.HostFunctionValue)
@@ -995,8 +995,8 @@ func createTransactionResult(inter *interpreter.Interpreter, result *interpreter
 		succeededVar := resultStatusConstructor.NestedVariables[succeededCaseName]
 		status = succeededVar.GetValue()
 	} else {
-		succeededVar := resultStatusConstructor.NestedVariables[failedCaseName]
-		status = succeededVar.GetValue()
+		failedVar := resultStatusConstructor.NestedVariables[failedCaseName]
+		status = failedVar.GetValue()
 	}
 
 	// Create a 'TransactionResult' by calling its constructor.
@@ -1006,7 +1006,7 @@ func createTransactionResult(inter *interpreter.Interpreter, result *interpreter
 		panic(errors.NewUnexpectedError("invalid type for constructor"))
 	}
 
-	errValue := createError(inter, result.Error)
+	errValue := newErrorValue(inter, result.Error)
 
 	transactionResult, err := inter.InvokeExternally(
 		transactionResultConstructor,
@@ -1024,7 +1024,7 @@ func createTransactionResult(inter *interpreter.Interpreter, result *interpreter
 	return transactionResult
 }
 
-func createError(inter *interpreter.Interpreter, err error) interpreter.Value {
+func newErrorValue(inter *interpreter.Interpreter, err error) interpreter.Value {
 	if err == nil {
 		return interpreter.NilValue{}
 	}
@@ -1180,7 +1180,7 @@ var emulatorBackendDeployContractFunction = interpreter.NewUnmeteredHostFunction
 			signers,
 		)
 
-		return createError(inter, err)
+		return newErrorValue(inter, err)
 	},
 	emulatorBackendDeployContractFunctionType,
 )
