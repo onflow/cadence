@@ -919,9 +919,6 @@ func (r *interpreterRuntime) check(
 						case stdlib.CryptoChecker.Location:
 							elaboration = stdlib.CryptoChecker.Elaboration
 
-						case stdlib.TestContractLocation:
-							elaboration = stdlib.TestContractChecker.Elaboration
-
 						default:
 							context := startContext.WithLocation(importedLocation)
 
@@ -1207,16 +1204,6 @@ func (r *interpreterRuntime) importLocationHandler(
 				Interpreter: subInterpreter,
 			}
 
-		case stdlib.TestContractLocation:
-			program := interpreter.ProgramFromChecker(stdlib.TestContractChecker)
-			subInterpreter, err := inter.NewSubInterpreter(program, location)
-			if err != nil {
-				panic(err)
-			}
-			return interpreter.InterpreterImport{
-				Interpreter: subInterpreter,
-			}
-
 		default:
 			context := startContext.WithLocation(location)
 
@@ -1299,9 +1286,6 @@ func (r *interpreterRuntime) injectedCompositeFieldsHandler(
 
 		switch location {
 		case stdlib.CryptoChecker.Location:
-			return nil
-
-		case stdlib.TestContractChecker.Location:
 			return nil
 
 		default:
@@ -1843,17 +1827,6 @@ func (r *interpreterRuntime) loadContract(
 	switch compositeType.Location {
 	case stdlib.CryptoChecker.Location:
 		contract, err := stdlib.NewCryptoContract(
-			inter,
-			constructorGenerator(common.Address{}),
-			invocationRange,
-		)
-		if err != nil {
-			panic(err)
-		}
-		return contract
-
-	case stdlib.TestContractLocation:
-		contract, err := stdlib.NewTestContract(
 			inter,
 			constructorGenerator(common.Address{}),
 			invocationRange,
