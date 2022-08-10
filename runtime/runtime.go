@@ -122,7 +122,7 @@ type Runtime interface {
 	NewContractFunctionExecutor(
 		contractLocation common.AddressLocation,
 		functionName string,
-		arguments []interpreter.Value,
+		arguments []cadence.Value,
 		argumentTypes []sema.Type,
 		context Context,
 	) Executor
@@ -135,7 +135,7 @@ type Runtime interface {
 	InvokeContractFunction(
 		contractLocation common.AddressLocation,
 		functionName string,
-		arguments []interpreter.Value,
+		arguments []cadence.Value,
 		argumentTypes []sema.Type,
 		context Context,
 	) (cadence.Value, error)
@@ -495,7 +495,7 @@ func (r *interpreterRuntime) newAuthAccountValue(
 func (r *interpreterRuntime) NewContractFunctionExecutor(
 	contractLocation common.AddressLocation,
 	functionName string,
-	arguments []interpreter.Value,
+	arguments []cadence.Value,
 	argumentTypes []sema.Type,
 	context Context,
 ) Executor {
@@ -511,7 +511,7 @@ func (r *interpreterRuntime) NewContractFunctionExecutor(
 func (r *interpreterRuntime) InvokeContractFunction(
 	contractLocation common.AddressLocation,
 	functionName string,
-	arguments []interpreter.Value,
+	arguments []cadence.Value,
 	argumentTypes []sema.Type,
 	context Context,
 ) (cadence.Value, error) {
