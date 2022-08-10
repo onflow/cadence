@@ -403,6 +403,12 @@ func (checker *Checker) PopPurityScope() PurityCheckScope {
 	return scope
 }
 
+func (checker *Checker) EnforcePurity(operation ast.Element, purity FunctionPurity) {
+	if purity == ImpureFunction {
+		checker.ObserveImpureOperation(operation)
+	}
+}
+
 func (checker *Checker) ObserveImpureOperation(operation ast.Element) {
 	scope := checker.CurrentPurityScope()
 	// purity is monotonic, if we already know this scope is impure, there's no need to continue

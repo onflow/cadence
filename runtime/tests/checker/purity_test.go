@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -193,5 +194,71 @@ func TestCheckPuritySubtyping(t *testing.T) {
 		`)
 
 		require.NoError(t, err)
+	})
+}
+
+func TestCheckPurityEnforcement(t *testing.T) {
+	t.Run("pure function call", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		pure fun bar() {}
+		pure fun foo() {
+			bar()
+		}
+		`)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("impure function call error", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		fun bar() {}
+		pure fun foo() {
+			bar()
+		}
+		`)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
+			StartPos: ast.Position{Offset: 38, Line: 4, Column: 3},
+			EndPos:   ast.Position{Offset: 42, Line: 4, Column: 7},
+		})
+	})
+
+	t.Run("pure function call nested", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		fun bar() {}
+		pure fun foo() {
+			let f = fun() {
+				bar()
+			}
+		}
+		`)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("impure function call nested", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		fun bar() {}
+		fun foo() {
+			let f = pure fun() {
+				bar()
+			}
+		}
+		`)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
+			StartPos: ast.Position{Offset: 38, Line: 5, Column: 4},
+			EndPos:   ast.Position{Offset: 42, Line: 5, Column: 8},
+		})
 	})
 }
