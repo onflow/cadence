@@ -228,6 +228,26 @@ func TestCheckPurityEnforcement(t *testing.T) {
 		})
 	})
 
+	t.Run("impure method call error", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		struct S {
+			fun bar() {}
+		}
+		pure fun foo(_ s: S) {
+			s.bar()
+		}
+		`)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
+			StartPos: ast.Position{Offset: 62, Line: 6, Column: 3},
+			EndPos:   ast.Position{Offset: 68, Line: 6, Column: 9},
+		})
+	})
+
 	t.Run("pure function call nested", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
@@ -428,5 +448,166 @@ func TestCheckPurityEnforcement(t *testing.T) {
 			StartPos: ast.Position{Offset: 23, Line: 3, Column: 3},
 			EndPos:   ast.Position{Offset: 58, Line: 3, Column: 38},
 		})
+	})
+
+	t.Run("external write", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		var a = 3
+		pure fun foo() {
+			a = 4
+		}
+		`)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
+			StartPos: ast.Position{Offset: 35, Line: 4, Column: 3},
+			EndPos:   ast.Position{Offset: 39, Line: 4, Column: 7},
+		})
+	})
+
+	t.Run("external array write", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		var a = [3]
+		pure fun foo() {
+			a[0] = 4
+		}
+		`)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
+			StartPos: ast.Position{Offset: 38, Line: 4, Column: 4},
+			EndPos:   ast.Position{Offset: 44, Line: 4, Column: 10},
+		})
+	})
+
+	t.Run("internal write", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		pure fun foo() {
+			var a = 3
+			a = 4
+		}
+		`)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("internal array write", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		pure fun foo() {
+			var a = [3]
+			a[0] = 4
+		}
+		`)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("internal param write", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		pure fun foo(_ a: [Int]) {
+			a[0] = 4
+		}
+		`)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("indeterminate write", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		let a: [Int] = []
+		pure fun foo() {
+			let b: [Int] = []
+        	let c = [a, b]
+       		c[0][0] = 4
+		}
+		`)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
+			StartPos: ast.Position{Offset: 98, Line: 6, Column: 13},
+			EndPos:   ast.Position{Offset: 104, Line: 6, Column: 19},
+		})
+	})
+
+	t.Run("indeterminate append", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		let a: [Int] = []
+		pure fun foo() {
+			let b: [Int] = []
+        	let c = [a, b]
+       		c[0].append(4)
+		}
+		`)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
+			StartPos: ast.Position{Offset: 95, Line: 6, Column: 10},
+			EndPos:   ast.Position{Offset: 107, Line: 6, Column: 22},
+		})
+	})
+
+	t.Run("nested write", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		fun foo() {
+			var a = 3
+			let b = pure fun() {
+				while true {
+					a = 4
+				}
+			}
+		}
+		`)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
+			StartPos: ast.Position{Offset: 74, Line: 6, Column: 5},
+			EndPos:   ast.Position{Offset: 78, Line: 6, Column: 9},
+		})
+	})
+
+	t.Run("nested write success", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		var a = 3
+		pure fun foo() {
+			let b = fun() {
+				a = 4
+			}
+		}
+		`)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("nested scope legal write", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		pure fun foo() {
+			var a = 3
+			while true {
+				a = 4
+			}
+		}
+		`)
+
+		require.NoError(t, err)
 	})
 }

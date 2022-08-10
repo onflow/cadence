@@ -26,6 +26,7 @@ import (
 
 func (checker *Checker) VisitAssignmentStatement(assignment *ast.AssignmentStatement) ast.Repr {
 	targetType, valueType := checker.checkAssignment(
+		assignment,
 		assignment.Target,
 		assignment.Value,
 		assignment.Transfer,
@@ -39,6 +40,7 @@ func (checker *Checker) VisitAssignmentStatement(assignment *ast.AssignmentState
 }
 
 func (checker *Checker) checkAssignment(
+	assignment ast.Statement,
 	target, value ast.Expression,
 	transfer *ast.Transfer,
 	isSecondaryAssignment bool,
@@ -96,6 +98,7 @@ func (checker *Checker) checkAssignment(
 		}
 	}
 
+	checker.enforcePureAssignment(assignment, target)
 	checker.checkVariableMove(value)
 
 	checker.recordResourceInvalidation(
@@ -105,6 +108,31 @@ func (checker *Checker) checkAssignment(
 	)
 
 	return
+}
+
+func (checker *Checker) enforcePureAssignment(assignment ast.Statement, target ast.Expression) {
+	if !checker.CurrentPurityScope().EnforcePurity {
+		return
+	}
+
+	var variable *Variable
+
+	// an assignment operation is pure if and only if the variable it is assigning to (or
+	// modifying, in the case of a dictionary or array) was declared in the current function's
+	// scope.
+	switch targetExp := target.(type) {
+	case *ast.IdentifierExpression:
+		variable = checker.valueActivations.Find(targetExp.Identifier.Identifier)
+	case *ast.IndexExpression:
+		if indexIdentifier, ok := targetExp.TargetExpression.(*ast.IdentifierExpression); ok {
+			variable = checker.valueActivations.Find(indexIdentifier.Identifier.Identifier)
+
+		}
+	}
+
+	if variable == nil || checker.CurrentPurityScope().ActivationDepth > variable.ActivationDepth {
+		checker.ObserveImpureOperation(assignment)
+	}
 }
 
 func (checker *Checker) accessedSelfMember(expression ast.Expression) *Member {

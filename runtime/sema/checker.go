@@ -80,8 +80,8 @@ type ImportHandlerFunc func(checker *Checker, importedLocation common.Location, 
 type MemberAccountAccessHandlerFunc func(checker *Checker, memberLocation common.Location) bool
 
 type PurityCheckScope struct {
-	EnforcePurity bool
-	CurrentPurity bool
+	EnforcePurity   bool
+	ActivationDepth int
 }
 
 // Checker
@@ -393,8 +393,8 @@ func (checker *Checker) CurrentPurityScope() PurityCheckScope {
 	return checker.purityCheckScopes[len(checker.purityCheckScopes)-1]
 }
 
-func (checker *Checker) PushNewPurityScope(enforce bool) {
-	checker.purityCheckScopes = append(checker.purityCheckScopes, PurityCheckScope{EnforcePurity: enforce, CurrentPurity: true})
+func (checker *Checker) PushNewPurityScope(enforce bool, depth int) {
+	checker.purityCheckScopes = append(checker.purityCheckScopes, PurityCheckScope{EnforcePurity: enforce, ActivationDepth: depth})
 }
 
 func (checker *Checker) PopPurityScope() PurityCheckScope {
@@ -411,11 +411,6 @@ func (checker *Checker) EnforcePurity(operation ast.Element, purity FunctionPuri
 
 func (checker *Checker) ObserveImpureOperation(operation ast.Element) {
 	scope := checker.CurrentPurityScope()
-	// purity is monotonic, if we already know this scope is impure, there's no need to continue
-	if !scope.CurrentPurity {
-		return
-	}
-	scope.CurrentPurity = false
 	if scope.EnforcePurity {
 		checker.report(
 			&PurityError{Range: ast.NewRangeFromPositioned(checker.memoryGauge, operation)},
@@ -424,7 +419,7 @@ func (checker *Checker) ObserveImpureOperation(operation ast.Element) {
 }
 
 func (checker *Checker) InNewPurityScope(enforce bool, f func()) {
-	checker.PushNewPurityScope(enforce)
+	checker.PushNewPurityScope(enforce, checker.ValueActivationDepth())
 	f()
 	checker.PopPurityScope()
 }

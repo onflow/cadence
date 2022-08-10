@@ -159,6 +159,7 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 			// NOTE: already performs resource invalidation
 
 			_, secondValueType := checker.checkAssignment(
+				declaration,
 				declaration.Value,
 				declaration.SecondValue,
 				declaration.SecondTransfer,
