@@ -2564,6 +2564,46 @@ func TestParseFunctionExpression(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("with purity", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseExpression("pure fun (): X { }", nil)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.FunctionExpression{
+				Purity: 1,
+				ParameterList: &ast.ParameterList{
+					Parameters: nil,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
+						EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
+					},
+				},
+				ReturnTypeAnnotation: &ast.TypeAnnotation{
+					Type: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "X",
+							Pos:        ast.Position{Line: 1, Column: 13, Offset: 13},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 13, Offset: 13},
+				},
+				FunctionBlock: &ast.FunctionBlock{
+					Block: &ast.Block{
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 15, Offset: 15},
+							EndPos:   ast.Position{Line: 1, Column: 17, Offset: 17},
+						},
+					},
+				},
+				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+			},
+			result,
+		)
+	})
 }
 
 func TestParseIntegerLiterals(t *testing.T) {

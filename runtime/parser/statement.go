@@ -94,7 +94,7 @@ func parseStatement(p *parser) (ast.Statement, error) {
 			return parseForStatement(p)
 		case keywordEmit:
 			return parseEmitStatement(p)
-		case keywordFun:
+		case keywordFun, keywordPure:
 			// The `fun` keyword is ambiguous: it either introduces a function expression
 			// or a function declaration, depending on if an identifier follows, or not.
 			return parseFunctionDeclarationOrFunctionExpressionStatement(p)
@@ -156,6 +156,10 @@ func parseFunctionDeclarationOrFunctionExpressionStatement(p *parser) (ast.State
 	startPos := p.current.StartPos
 
 	purity := parsePurityAnnotation(p)
+
+	if secondPurity := parsePurityAnnotation(p); secondPurity != ast.UnspecifiedPurity {
+		return nil, p.syntaxError("invalid second purity modifier")
+	}
 
 	// Skip the `fun` keyword
 	p.next()

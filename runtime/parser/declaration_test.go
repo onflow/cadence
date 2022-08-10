@@ -259,6 +259,21 @@ func TestParseVariableDeclaration(t *testing.T) {
 		)
 	})
 
+	t.Run("with purity", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseDeclarations("pure var x = 1", nil)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid purity modifier for variable",
+					Pos:     ast.Position{Offset: 5, Line: 1, Column: 5},
+				},
+			},
+			errs,
+		)
+	})
 }
 
 func TestParseParameterList(t *testing.T) {
@@ -2177,7 +2192,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseDeclarations(`struct S { 
+		_, errs := ParseDeclarations(`resource S { 
 			pure destroy() {}
 		}`, nil)
 
@@ -2185,7 +2200,26 @@ func TestParseCompositeDeclaration(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message: "invalid pure annotation on destructor",
-					Pos:     ast.Position{Offset: 15, Line: 2, Column: 3},
+					Pos:     ast.Position{Offset: 17, Line: 2, Column: 3},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("resource with pure field", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseDeclarations(`struct S { 
+			pure foo: Int
+		}`, nil)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid purity modifier for variable",
+					Pos:     ast.Position{Offset: 23, Line: 2, Column: 11},
 				},
 			},
 			errs,
