@@ -417,10 +417,10 @@ func (checker *Checker) ObserveImpureOperation(operation ast.Element) {
 	}
 }
 
-func (checker *Checker) InNewPurityScope(enforce bool, f func()) bool {
+func (checker *Checker) InNewPurityScope(enforce bool, f func()) {
 	checker.PushNewPurityScope(enforce)
 	f()
-	return checker.PopPurityScope().CurrentPurity
+	checker.PopPurityScope()
 }
 
 type stopChecking struct{}
@@ -1302,11 +1302,7 @@ func (checker *Checker) convertFunctionType(t *ast.FunctionType) Type {
 
 	returnTypeAnnotation := checker.ConvertTypeAnnotation(t.ReturnTypeAnnotation)
 
-	// function type annotations default to impure (TODO: is this ideal behavior)
 	purity := PurityFromAnnotation(t.PurityAnnotation)
-	if purity == UnknownPurity {
-		purity = ImpureFunction
-	}
 
 	return &FunctionType{
 		Purity:               purity,

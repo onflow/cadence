@@ -850,10 +850,6 @@ func (checker *Checker) initializerPurity(initializers []*ast.SpecialFunctionDec
 	if initializerCount > 0 {
 		firstInitializer := initializers[0]
 		purity := PurityFromAnnotation(firstInitializer.FunctionDeclaration.Purity)
-		// all initializers are public, but because they typically have no side-effects they default to pure
-		if purity == UnknownPurity {
-			return PureFunction
-		}
 		return purity
 	}
 	// a composite with no initializer is pure because it runs no code
@@ -1154,11 +1150,8 @@ func (checker *Checker) memberSatisfied(compositeMember, interfaceMember *Member
 			}
 
 			// Functions are covariant in their purity
-			// TODO: Remove first check, we should never encounter unknownpurity
-			if compositeMemberFunctionType.Purity != UnknownPurity && interfaceMemberFunctionType.Purity != UnknownPurity {
-				if compositeMemberFunctionType.Purity != interfaceMemberFunctionType.Purity && compositeMemberFunctionType.Purity != PureFunction {
-					return false
-				}
+			if compositeMemberFunctionType.Purity != interfaceMemberFunctionType.Purity && compositeMemberFunctionType.Purity != PureFunction {
+				return false
 			}
 
 			// Functions are invariant in their parameter types

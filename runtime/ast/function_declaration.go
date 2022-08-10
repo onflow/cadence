@@ -31,7 +31,6 @@ type FunctionPurity int
 const (
 	UnspecifiedPurity FunctionPurity = iota
 	PureFunction      FunctionPurity = 1
-	ImpureFunction    FunctionPurity = 2
 )
 
 type FunctionDeclaration struct {

@@ -27,10 +27,9 @@ import (
 func PurityFromAnnotation(purity ast.FunctionPurity) FunctionPurity {
 	if purity == ast.PureFunction {
 		return PureFunction
-	} else if purity == ast.ImpureFunction {
-		return ImpureFunction
 	}
-	return UnknownPurity
+	return ImpureFunction
+
 }
 
 func (checker *Checker) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration) ast.Repr {
@@ -182,17 +181,13 @@ func (checker *Checker) checkFunction(
 			functionActivation.InitializationInfo = initializationInfo
 
 			if functionBlock != nil {
-				isPure := checker.InNewPurityScope(functionType.Purity == PureFunction, func() {
+				checker.InNewPurityScope(functionType.Purity == PureFunction, func() {
 					checker.visitFunctionBlock(
 						functionBlock,
 						functionType.ReturnTypeAnnotation,
 						checkResourceLoss,
 					)
 				})
-
-				if functionType.Purity == UnknownPurity {
-					functionType.Purity = Purity(isPure)
-				}
 
 				if mustExit {
 					returnType := functionType.ReturnTypeAnnotation.Type

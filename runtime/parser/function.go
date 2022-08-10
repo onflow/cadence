@@ -30,10 +30,6 @@ func parsePurityAnnotation(p *parser) (purity ast.FunctionPurity) {
 		purity = ast.PureFunction
 		p.next()
 		p.skipSpaceAndComments(true)
-	case keywordImpure:
-		purity = ast.ImpureFunction
-		p.next()
-		p.skipSpaceAndComments(true)
 	}
 	return
 }

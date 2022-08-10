@@ -173,7 +173,7 @@ func TestCheckOptionalChainingFunctionRead(t *testing.T) {
 
 	expectedType := &sema.OptionalType{
 		Type: &sema.FunctionType{
-			Purity: sema.PureFunction,
+			Purity: sema.ImpureFunction,
 			ReturnTypeAnnotation: &sema.TypeAnnotation{
 				Type: sema.IntType,
 			},
@@ -273,7 +273,7 @@ func TestCheckFunctionTypeReceiverType(t *testing.T) {
 
 		assert.Equal(t,
 			&sema.FunctionType{
-				Purity:     sema.PureFunction,
+				Purity:     sema.ImpureFunction,
 				Parameters: []*sema.Parameter{},
 				ReturnTypeAnnotation: sema.NewTypeAnnotation(
 					sema.VoidType,

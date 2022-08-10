@@ -2518,7 +2518,6 @@ func formatFunctionType(
 type FunctionPurity int
 
 const (
-	UnknownPurity  = -1
 	ImpureFunction = 0
 	PureFunction   = 1
 )
@@ -2533,11 +2532,8 @@ func Purity(b bool) FunctionPurity {
 func (p FunctionPurity) String() string {
 	if p == ImpureFunction {
 		return ""
-	} else if p == PureFunction {
-		return "pure"
-	} else {
-		return "<error>"
 	}
+	return "pure"
 }
 
 type FunctionType struct {
@@ -5324,11 +5320,8 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		}
 
 		// pure functions are subtypes of impure functions
-		// TODO: Remove first check, we should never encounter unknownpurity
-		if typedSubType.Purity != UnknownPurity && typedSuperType.Purity != UnknownPurity {
-			if typedSubType.Purity != typedSuperType.Purity && typedSubType.Purity != PureFunction {
-				return false
-			}
+		if typedSubType.Purity != typedSuperType.Purity && typedSubType.Purity != PureFunction {
+			return false
 		}
 
 		if len(typedSubType.Parameters) != len(typedSuperType.Parameters) {

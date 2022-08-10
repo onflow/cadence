@@ -54,8 +54,8 @@ func TestCheckPuritySubtyping(t *testing.T) {
 	t.Run("impure <: impure", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
-		impure fun foo() {}
-		let x: (impure (): Void) = foo
+		fun foo() {}
+		let x: ((): Void) = foo
 		`)
 
 		require.NoError(t, err)
@@ -64,7 +64,7 @@ func TestCheckPuritySubtyping(t *testing.T) {
 	t.Run("impure <: pure", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
-		impure fun foo() {}
+		fun foo() {}
 		let x: (pure (): Void) = foo
 		`)
 
@@ -76,7 +76,7 @@ func TestCheckPuritySubtyping(t *testing.T) {
 	t.Run("contravariant ok", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
-		pure fun foo(x:(impure (): Void)) {}
+		pure fun foo(x:((): Void)) {}
 		let x: (pure ((pure (): Void)): Void) = foo
 		`)
 
@@ -87,7 +87,7 @@ func TestCheckPuritySubtyping(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
 		pure fun foo(f:(pure (): Void)) {}
-		let x: (pure ((impure (): Void)): Void) = foo
+		let x: (pure (((): Void)): Void) = foo
 		`)
 
 		errs := ExpectCheckerErrors(t, err, 1)
@@ -100,7 +100,7 @@ func TestCheckPuritySubtyping(t *testing.T) {
 		_, err := ParseAndCheck(t, `
 		struct interface I {
 			pure fun foo()
-			impure fun bar()
+			fun bar()
 		}
 
 		struct S: I {
@@ -117,12 +117,12 @@ func TestCheckPuritySubtyping(t *testing.T) {
 		_, err := ParseAndCheck(t, `
 		struct interface I {
 			pure fun foo()
-			impure fun bar() 
+			fun bar() 
 		}
 
 		struct S: I {
-			impure fun foo() {}
-			impure fun bar() {}
+			fun foo() {}
+			fun bar() {}
 		}
 		`)
 
@@ -146,7 +146,7 @@ func TestCheckPuritySubtyping(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("interface implementation initializer explicit failure", func(t *testing.T) {
+	t.Run("interface implementation initializer explicit success", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
 		struct interface I {
@@ -154,7 +154,7 @@ func TestCheckPuritySubtyping(t *testing.T) {
 		}
 
 		struct S: I {
-			impure init() {}
+			init() {}
 		}
 		`)
 
@@ -175,7 +175,9 @@ func TestCheckPuritySubtyping(t *testing.T) {
 		}
 		`)
 
-		require.NoError(t, err)
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ConformanceError{}, errs[0])
 	})
 
 	t.Run("interface implementation initializer success", func(t *testing.T) {
@@ -186,12 +188,10 @@ func TestCheckPuritySubtyping(t *testing.T) {
 		}
 
 		struct S: I {
-			impure init() {}
+			init() {}
 		}
 		`)
 
-		errs := ExpectCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.ConformanceError{}, errs[0])
+		require.NoError(t, err)
 	})
 }

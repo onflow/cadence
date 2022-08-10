@@ -1067,36 +1067,6 @@ func TestParseFunctionType(t *testing.T) {
 		)
 	})
 
-	t.Run("impure function type", func(t *testing.T) {
-
-		t.Parallel()
-
-		result, errs := ParseType("(impure ():Void)", nil)
-		require.Empty(t, errs)
-
-		utils.AssertEqualWithDiff(t,
-			&ast.FunctionType{
-				PurityAnnotation:         ast.ImpureFunction,
-				ParameterTypeAnnotations: nil,
-				ReturnTypeAnnotation: &ast.TypeAnnotation{
-					IsResource: false,
-					Type: &ast.NominalType{
-						Identifier: ast.Identifier{
-							Identifier: "Void",
-							Pos:        ast.Position{Line: 1, Column: 11, Offset: 11},
-						},
-					},
-					StartPos: ast.Position{Line: 1, Column: 11, Offset: 11},
-				},
-				Range: ast.Range{
-					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-					EndPos:   ast.Position{Line: 1, Column: 15, Offset: 15},
-				},
-			},
-			result,
-		)
-	})
-
 	t.Run("three parameters, Int return type", func(t *testing.T) {
 
 		t.Parallel()
