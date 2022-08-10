@@ -63,5 +63,4 @@ const (
 	keywordDefault     = "default"
 	keywordEnum        = "enum"
 	keywordPure        = "pure"
-	keywordImpure      = "impure"
 )

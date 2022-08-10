@@ -101,7 +101,7 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 				}
 				return parseTransactionDeclaration(p, docString)
 
-			case keywordPure, keywordImpure:
+			case keywordPure:
 				if purity != ast.UnspecifiedPurity {
 					return nil, p.syntaxError("invalid second purity modifier")
 				}
@@ -1081,7 +1081,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 			case keywordStruct, keywordResource, keywordContract, keywordEnum:
 				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, docString)
 
-			case keywordPure, keywordImpure:
+			case keywordPure:
 				if purity != ast.UnspecifiedPurity {
 					return nil, p.syntaxError("invalid second purity modifier")
 				}
