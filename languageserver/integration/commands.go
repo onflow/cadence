@@ -140,6 +140,7 @@ func (i *FlowIntegration) initAccountManager(conn protocol.Conn, args ...json.Ra
 		name,
 		code,
 		update,
+		nil,
 	)
 
 	if deployError != nil {
@@ -536,7 +537,7 @@ func (i *FlowIntegration) deployContract(conn protocol.Conn, args ...json.RawMes
 		return nil, errorWithMessage(conn, fmt.Sprintf("failed to load contract code: %s", path.Path), err)
 	}
 
-	_, deployError := i.sharedServices.Accounts.AddContract(signer, name, code, update)
+	_, deployError := i.sharedServices.Accounts.AddContract(signer, name, code, update, nil)
 	if deployError != nil {
 		return nil, errorWithMessage(conn, ErrorMessageDeploy, deployError)
 	}
@@ -616,7 +617,7 @@ func (i *FlowIntegration) storeAccountHelper(conn protocol.Conn, address flow.Ad
 	}
 
 	events := flowkit.EventsFromTransaction(txResult)
-	name := strings.ReplaceAll(events[0].Values["name"], `"`, "")
+	name := strings.ReplaceAll(events[0].Values["name"].String(), `"`, "")
 
 	newAccount = ClientAccount{
 		Name:    name,

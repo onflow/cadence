@@ -32,7 +32,7 @@ import (
 	"time"
 
 	"github.com/onflow/atree"
-	"github.com/opentracing/opentracing-go"
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -186,7 +186,7 @@ type testRuntimeInterface struct {
 	blsAggregateSignatures     func(sigs [][]byte) ([]byte, error)
 	blsAggregatePublicKeys     func(keys []*PublicKey) (*PublicKey, error)
 	getAccountContractNames    func(address Address) ([]string, error)
-	recordTrace                func(operation string, location common.Location, duration time.Duration, logs []opentracing.LogRecord)
+	recordTrace                func(operation string, location common.Location, duration time.Duration, attrs []attribute.KeyValue)
 	meterMemory                func(usage common.MemoryUsage) error
 }
 
@@ -539,11 +539,11 @@ func (i *testRuntimeInterface) GetAccountContractNames(address Address) ([]strin
 	return i.getAccountContractNames(address)
 }
 
-func (i *testRuntimeInterface) RecordTrace(operation string, location common.Location, duration time.Duration, logs []opentracing.LogRecord) {
+func (i *testRuntimeInterface) RecordTrace(operation string, location common.Location, duration time.Duration, attrs []attribute.KeyValue) {
 	if i.recordTrace == nil {
 		return
 	}
-	i.recordTrace(operation, location, duration, logs)
+	i.recordTrace(operation, location, duration, attrs)
 }
 
 func (i *testRuntimeInterface) MeterMemory(usage common.MemoryUsage) error {
@@ -3293,8 +3293,8 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 				Name:    "Test",
 			},
 			"helloArg",
-			[]interpreter.Value{
-				interpreter.NewUnmeteredStringValue("there!"),
+			[]cadence.Value{
+				cadence.String("there!"),
 			},
 			[]sema.Type{
 				sema.StringType,
@@ -3315,8 +3315,8 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 				Name:    "Test",
 			},
 			"helloReturn",
-			[]interpreter.Value{
-				interpreter.NewUnmeteredStringValue("there!"),
+			[]cadence.Value{
+				cadence.String("there!"),
 			},
 			[]sema.Type{
 				sema.StringType,
@@ -3338,10 +3338,10 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 				Name:    "Test",
 			},
 			"helloMultiArg",
-			[]interpreter.Value{
-				interpreter.NewUnmeteredStringValue("number"),
-				interpreter.NewUnmeteredIntValueFromInt64(42),
-				interpreter.AddressValue(addressValue),
+			[]cadence.Value{
+				cadence.String("number"),
+				cadence.NewInt(42),
+				cadence.BytesToAddress(addressValue.Bytes()),
 			},
 			[]sema.Type{
 				sema.StringType,
@@ -3365,9 +3365,9 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 				Name:    "Test",
 			},
 			"helloMultiArg",
-			[]interpreter.Value{
-				interpreter.NewUnmeteredStringValue("number"),
-				interpreter.NewUnmeteredIntValueFromInt64(42),
+			[]cadence.Value{
+				cadence.String("number"),
+				cadence.NewInt(42),
 			},
 			[]sema.Type{
 				sema.StringType,
@@ -3382,7 +3382,6 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 		require.Error(tt, err)
 		assert.ErrorAs(tt, err, &Error{})
 	})
-
 	t.Run("function with incorrect argument type errors", func(tt *testing.T) {
 		_, err = runtime.InvokeContractFunction(
 			common.AddressLocation{
@@ -3390,8 +3389,8 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 				Name:    "Test",
 			},
 			"helloArg",
-			[]interpreter.Value{
-				interpreter.NewUnmeteredIntValueFromInt64(42),
+			[]cadence.Value{
+				cadence.NewInt(42),
 			},
 			[]sema.Type{
 				sema.IntType,
@@ -3403,7 +3402,28 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 		)
 		require.ErrorAs(tt, err, &interpreter.ValueTransferTypeError{})
 	})
-
+	t.Run("function with un-importable argument errors and error propagates", func(tt *testing.T) {
+		_, err = runtime.InvokeContractFunction(
+			common.AddressLocation{
+				Address: addressValue,
+				Name:    "Test",
+			},
+			"helloArg",
+			[]cadence.Value{
+				cadence.Capability{
+					BorrowType: cadence.AddressType{}, // this will error during `importValue`
+				},
+			},
+			[]sema.Type{
+				&sema.CapabilityType{},
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.ErrorContains(tt, err, "cannot import capability")
+	})
 	t.Run("function with auth account works", func(tt *testing.T) {
 		_, err = runtime.InvokeContractFunction(
 			common.AddressLocation{
@@ -3411,8 +3431,8 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 				Name:    "Test",
 			},
 			"helloAuthAcc",
-			[]interpreter.Value{
-				interpreter.AddressValue(addressValue),
+			[]cadence.Value{
+				cadence.BytesToAddress(addressValue.Bytes()),
 			},
 			[]sema.Type{
 				sema.AuthAccountType,
@@ -3433,8 +3453,8 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 				Name:    "Test",
 			},
 			"helloPublicAcc",
-			[]interpreter.Value{
-				interpreter.AddressValue(addressValue),
+			[]cadence.Value{
+				cadence.BytesToAddress(addressValue.Bytes()),
 			},
 			[]sema.Type{
 				sema.PublicAccountType,
