@@ -257,8 +257,29 @@ func TestCheckPurityEnforcement(t *testing.T) {
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
-			StartPos: ast.Position{Offset: 38, Line: 5, Column: 4},
-			EndPos:   ast.Position{Offset: 42, Line: 5, Column: 8},
+			StartPos: ast.Position{Offset: 58, Line: 5, Column: 4},
+			EndPos:   ast.Position{Offset: 62, Line: 5, Column: 8},
+		})
+	})
+
+	t.Run("pure function call nested failure", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		fun bar() {}
+		pure fun foo() {
+			let f = fun() {
+				bar()
+			}
+			f()
+		}
+		`)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
+			StartPos: ast.Position{Offset: 72, Line: 7, Column: 3},
+			EndPos:   ast.Position{Offset: 74, Line: 7, Column: 5},
 		})
 	})
 }
