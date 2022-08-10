@@ -50,9 +50,8 @@ type TestFramework interface {
 	DeployContract(
 		name string,
 		code string,
+		account *Account,
 		args []Value,
-		authorizer common.Address,
-		signers []*Account,
 	) error
 }
 

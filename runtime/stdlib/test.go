@@ -760,47 +760,53 @@ func accountsFromValue(inter *interpreter.Interpreter, accountsValue interpreter
 			panic(errors.NewUnreachableError())
 		}
 
-		// Get address
-		addressValue := accountValue.GetMember(
-			inter,
-			interpreter.ReturnEmptyLocationRange,
-			accountAddressFieldName,
-		)
-		address, ok := addressValue.(interpreter.AddressValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
+		account := accountFromValue(inter, accountValue)
 
-		// Get account key
-		accountKeyValue := accountValue.GetMember(
-			inter,
-			interpreter.ReturnEmptyLocationRange,
-			accountKeyFieldName,
-		)
-		accountKey := accountKeyFromValue(inter, accountKeyValue)
-
-		// Get private key
-		privateKeyValue := accountValue.GetMember(
-			inter,
-			interpreter.ReturnEmptyLocationRange,
-			accountPrivateKeyFieldName,
-		)
-
-		privateKey, err := interpreter.ByteArrayValueToByteSlice(nil, privateKeyValue)
-		if err != nil {
-			panic(errors.NewUnreachableError())
-		}
-
-		accounts = append(accounts, &interpreter.Account{
-			Address:    common.Address(address),
-			AccountKey: accountKey,
-			PrivateKey: privateKey,
-		})
+		accounts = append(accounts, account)
 
 		return true
 	})
 
 	return accounts
+}
+
+func accountFromValue(inter *interpreter.Interpreter, accountValue interpreter.MemberAccessibleValue) *interpreter.Account {
+	// Get address
+	addressValue := accountValue.GetMember(
+		inter,
+		interpreter.ReturnEmptyLocationRange,
+		accountAddressFieldName,
+	)
+	address, ok := addressValue.(interpreter.AddressValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	// Get account key
+	accountKeyValue := accountValue.GetMember(
+		inter,
+		interpreter.ReturnEmptyLocationRange,
+		accountKeyFieldName,
+	)
+	accountKey := accountKeyFromValue(inter, accountKeyValue)
+
+	// Get private key
+	privateKeyValue := accountValue.GetMember(
+		inter,
+		interpreter.ReturnEmptyLocationRange,
+		accountPrivateKeyFieldName,
+	)
+
+	privateKey, err := interpreter.ByteArrayValueToByteSlice(nil, privateKeyValue)
+	if err != nil {
+		panic(errors.NewUnreachableError())
+	}
+
+	return &interpreter.Account{
+		Address:    common.Address(address),
+		AccountKey: accountKey,
+		PrivateKey: privateKey,
+	}
 }
 
 func accountKeyFromValue(inter *interpreter.Interpreter, value interpreter.Value) *interpreter.AccountKey {
@@ -1158,16 +1164,15 @@ var emulatorBackendDeployContractFunction = interpreter.NewUnmeteredHostFunction
 		}
 
 		// authorizer
-		authorizer, ok := invocation.Arguments[2].(interpreter.AddressValue)
+		accountValue, ok := invocation.Arguments[2].(interpreter.MemberAccessibleValue)
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
 
-		// Signers
-		signers := accountsFromValue(inter, invocation.Arguments[3])
+		account := accountFromValue(inter, accountValue)
 
 		// Contract init arguments
-		args, err := arrayValueToSlice(invocation.Arguments[4])
+		args, err := arrayValueToSlice(invocation.Arguments[3])
 		if err != nil {
 			panic(err)
 		}
@@ -1175,9 +1180,8 @@ var emulatorBackendDeployContractFunction = interpreter.NewUnmeteredHostFunction
 		err = testFramework.DeployContract(
 			name,
 			code,
+			account,
 			args,
-			common.Address(authorizer),
-			signers,
 		)
 
 		return newErrorValue(inter, err)

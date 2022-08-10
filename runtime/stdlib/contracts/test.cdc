@@ -78,11 +78,10 @@ pub contract Test {
         pub fun deployContract(
             _ name: String,
             _ code: String,
-            _ authorizer: Address,
-            _ signers: [Account],
+            _ account: Account,
             _ args: [AnyStruct]
         ): Error? {
-            return self.backend.deployContract(name, code, authorizer, signers, args)
+            return self.backend.deployContract(name, code, account, args)
         }
     }
 
@@ -176,8 +175,7 @@ pub contract Test {
         pub fun deployContract(
             _ name: String,
             _ code: String,
-            _ authorizer: Address,
-            _ signers: [Account],
+            _ account: Account,
             _ args: [AnyStruct]
         ): Error?
     }

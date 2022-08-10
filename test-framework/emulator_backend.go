@@ -278,9 +278,8 @@ func (e *EmulatorBackend) CommitBlock() error {
 func (e *EmulatorBackend) DeployContract(
 	name string,
 	code string,
+	account *interpreter.Account,
 	args []interpreter.Value,
-	authorizer common.Address,
-	signers []*interpreter.Account,
 ) error {
 
 	const deployContractTransactionTemplate = `
@@ -325,7 +324,7 @@ func (e *EmulatorBackend) DeployContract(
 		addArgs,
 	)
 
-	tx := e.newTransaction(script, &authorizer)
+	tx := e.newTransaction(script, &account.Address)
 
 	for _, arg := range cadenceArgs {
 		err = tx.AddArgument(arg)
@@ -334,7 +333,7 @@ func (e *EmulatorBackend) DeployContract(
 		}
 	}
 
-	err = e.signTransaction(tx, signers)
+	err = e.signTransaction(tx, []*interpreter.Account{account})
 	if err != nil {
 		return err
 	}
