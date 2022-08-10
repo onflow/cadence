@@ -81,27 +81,43 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 		case lexer.TokenIdentifier:
 			switch p.current.Value {
 			case keywordLet, keywordVar:
+				if purity != ast.UnspecifiedPurity {
+					return nil, p.syntaxError("invalid purity modifier for variable")
+				}
 				return parseVariableDeclaration(p, access, accessPos, docString)
 
 			case keywordFun:
 				return parseFunctionDeclaration(p, false, access, accessPos, purity, purityPos, docString)
 
 			case keywordImport:
+				if purity != ast.UnspecifiedPurity {
+					return nil, p.syntaxError("invalid purity modifier for import")
+				}
 				return parseImportDeclaration(p)
 
 			case keywordEvent:
+				if purity != ast.UnspecifiedPurity {
+					return nil, p.syntaxError("invalid purity modifier for event")
+				}
 				return parseEventDeclaration(p, access, accessPos, docString)
 
 			case keywordStruct, keywordResource, keywordContract, keywordEnum:
+				if purity != ast.UnspecifiedPurity {
+					return nil, p.syntaxError("invalid purity modifier for composite")
+				}
 				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, docString)
 
 			case KeywordTransaction:
 				if access != ast.AccessNotSpecified {
 					return nil, p.syntaxError("invalid access modifier for transaction")
 				}
+				if purity != ast.UnspecifiedPurity {
+					return nil, p.syntaxError("invalid purity modifier for transaction")
+				}
+
 				return parseTransactionDeclaration(p, docString)
 
-			case keywordPure, keywordImpure:
+			case keywordPure:
 				if purity != ast.UnspecifiedPurity {
 					return nil, p.syntaxError("invalid second purity modifier")
 				}
@@ -1067,21 +1083,33 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 		case lexer.TokenIdentifier:
 			switch p.current.Value {
 			case keywordLet, keywordVar:
+				if purity != ast.UnspecifiedPurity {
+					return nil, p.syntaxError("invalid purity modifier for variable")
+				}
 				return parseFieldWithVariableKind(p, access, accessPos, docString)
 
 			case keywordCase:
+				if purity != ast.UnspecifiedPurity {
+					return nil, p.syntaxError("invalid purity modifier for case")
+				}
 				return parseEnumCase(p, access, accessPos, docString)
 
 			case keywordFun:
 				return parseFunctionDeclaration(p, functionBlockIsOptional, access, accessPos, purity, purityPos, docString)
 
 			case keywordEvent:
+				if purity != ast.UnspecifiedPurity {
+					return nil, p.syntaxError("invalid purity modifier for event")
+				}
 				return parseEventDeclaration(p, access, accessPos, docString)
 
 			case keywordStruct, keywordResource, keywordContract, keywordEnum:
+				if purity != ast.UnspecifiedPurity {
+					return nil, p.syntaxError("invalid purity modifier for composite")
+				}
 				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, docString)
 
-			case keywordPure, keywordImpure:
+			case keywordPure:
 				if purity != ast.UnspecifiedPurity {
 					return nil, p.syntaxError("invalid second purity modifier")
 				}
@@ -1120,7 +1148,9 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 			if previousIdentifierToken == nil {
 				return nil, p.syntaxError("unexpected %s", p.current.Type)
 			}
-
+			if purity != ast.UnspecifiedPurity {
+				return nil, p.syntaxError("invalid purity modifier for variable")
+			}
 			identifier := p.tokenToIdentifier(*previousIdentifierToken)
 			return parseFieldDeclarationWithoutVariableKind(p, access, accessPos, identifier, docString)
 

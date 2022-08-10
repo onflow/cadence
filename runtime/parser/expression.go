@@ -847,8 +847,11 @@ func defineIdentifierExpression() {
 					token.Range.StartPos,
 				), nil
 
+			case keywordPure:
+				p.next()
+				return parseFunctionExpression(p, token, ast.PureFunction)
 			case keywordFun:
-				return parseFunctionExpression(p, token)
+				return parseFunctionExpression(p, token, ast.UnspecifiedPurity)
 
 			default:
 				return ast.NewIdentifierExpression(
@@ -860,10 +863,7 @@ func defineIdentifierExpression() {
 	})
 }
 
-func parseFunctionExpression(p *parser, token lexer.Token) (*ast.FunctionExpression, error) {
-
-	purity := parsePurityAnnotation(p)
-
+func parseFunctionExpression(p *parser, token lexer.Token, purity ast.FunctionPurity) (*ast.FunctionExpression, error) {
 	parameterList, returnTypeAnnotation, functionBlock, err :=
 		parseFunctionParameterListAndRest(p, false)
 	if err != nil {
