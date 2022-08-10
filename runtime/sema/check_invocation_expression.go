@@ -85,7 +85,6 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 	}()
 
 	functionType, ok := expressionType.(*FunctionType)
-	checker.EnforcePurity(invocationExpression, functionType.Purity)
 	if !ok {
 		if !expressionType.IsInvalidType() {
 			checker.report(
@@ -107,6 +106,7 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 
 		return InvalidType
 	}
+	checker.EnforcePurity(invocationExpression, functionType.Purity)
 
 	// The invoked expression has a function type,
 	// check the invocation including all arguments.

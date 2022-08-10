@@ -282,4 +282,83 @@ func TestCheckPurityEnforcement(t *testing.T) {
 			EndPos:   ast.Position{Offset: 74, Line: 7, Column: 5},
 		})
 	})
+
+	t.Run("save", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t, `
+		pure fun foo() {
+			authAccount.save(3, to: /storage/foo)
+		}
+		`)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
+			StartPos: ast.Position{Offset: 23, Line: 3, Column: 3},
+			EndPos:   ast.Position{Offset: 59, Line: 3, Column: 39},
+		})
+	})
+
+	t.Run("load", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t, `
+		pure fun foo() {
+			authAccount.load<Int>(from: /storage/foo)
+		}
+		`)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
+			StartPos: ast.Position{Offset: 23, Line: 3, Column: 3},
+			EndPos:   ast.Position{Offset: 63, Line: 3, Column: 43},
+		})
+	})
+
+	t.Run("type", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t, `
+		pure fun foo() {
+			authAccount.type(at: /storage/foo)
+		}
+		`)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("link", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t, `
+		pure fun foo() {
+			authAccount.link<&Int>(/private/foo, target: /storage/foo)
+		}
+		`)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
+			StartPos: ast.Position{Offset: 23, Line: 3, Column: 3},
+			EndPos:   ast.Position{Offset: 80, Line: 3, Column: 60},
+		})
+	})
+
+	t.Run("unlink", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t, `
+		pure fun foo() {
+			authAccount.unlink(/private/foo)
+		}
+		`)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
+			StartPos: ast.Position{Offset: 23, Line: 3, Column: 3},
+			EndPos:   ast.Position{Offset: 54, Line: 3, Column: 34},
+		})
+	})
 }
