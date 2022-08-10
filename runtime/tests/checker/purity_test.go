@@ -361,4 +361,72 @@ func TestCheckPurityEnforcement(t *testing.T) {
 			EndPos:   ast.Position{Offset: 54, Line: 3, Column: 34},
 		})
 	})
+
+	t.Run("add contract", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t, `
+		pure fun foo() {
+			authAccount.contracts.add(name: "", code: [])
+		}
+		`)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
+			StartPos: ast.Position{Offset: 23, Line: 3, Column: 3},
+			EndPos:   ast.Position{Offset: 67, Line: 3, Column: 47},
+		})
+	})
+
+	t.Run("update contract", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t, `
+		pure fun foo() {
+			authAccount.contracts.update__experimental(name: "", code: [])
+		}
+		`)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
+			StartPos: ast.Position{Offset: 23, Line: 3, Column: 3},
+			EndPos:   ast.Position{Offset: 84, Line: 3, Column: 64},
+		})
+	})
+
+	t.Run("remove contract", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t, `
+		pure fun foo() {
+			authAccount.contracts.remove(name: "")
+		}
+		`)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
+			StartPos: ast.Position{Offset: 23, Line: 3, Column: 3},
+			EndPos:   ast.Position{Offset: 60, Line: 3, Column: 40},
+		})
+	})
+
+	t.Run("revoke key", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t, `
+		pure fun foo() {
+			authAccount.keys.revoke(keyIndex: 0)
+		}
+		`)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
+			StartPos: ast.Position{Offset: 23, Line: 3, Column: 3},
+			EndPos:   ast.Position{Offset: 58, Line: 3, Column: 38},
+		})
+	})
 }
