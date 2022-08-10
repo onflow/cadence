@@ -88,19 +88,6 @@ to the `prepare` phase of the transaction.
 
       let keys: AuthAccount.Keys
 
-      // Key management
-
-      // Adds a public key to the account.
-      // The public key must be encoded together with their signature algorithm, hashing algorithm and weight.
-      // This method is currently deprecated and is available only for the backward compatibility.
-      // `keys.add` method can be use instead.
-      fun addPublicKey(_ publicKey: [UInt8])
-
-      // Revokes the key at the given index.
-      // This method is currently deprecated and is available only for the backward compatibility.
-      // `keys.revoke` method can be use instead.
-      fun removePublicKey(_ index: Int)
-
       // Account storage API (see the section below for documentation)
 
       fun save<T>(_ value: T, to: StoragePath)
@@ -248,23 +235,6 @@ transaction(publicKey: [UInt8]) {
 }
 ```
 
-<Callout type="info">
-⚠️  Note: Keys can also be added using the `addPublicKey` function.
-However, this method is currently deprecated and is available only for the backward compatibility.
-The `addPublicKey` method accepts the public key encoded together with their signature algorithm,
-hashing algorithm and weight.
-
-```cadence
-transaction(key: [UInt8]) {
-    prepare(signer: AuthAccount) {
-        let account = AuthAccount(payer: signer)
-        account.addPublicKey(key)
-    }
-}
-```
-</Callout>
-
-
 #### Get Account Keys
 
 Keys that are added to an account can be retrieved using `get()` function, using the index of the key.
@@ -299,11 +269,6 @@ transaction() {
     }
 }
 ```
-
-<Callout type="info">
-⚠️  Note: Keys can also be removed using the `removePublicKey` function.
-However, this method is deprecated and is available only for the backward compatibility.
-</Callout>
 
 ## Account Storage
 
