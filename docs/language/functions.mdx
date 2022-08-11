@@ -223,6 +223,80 @@ let double =
     }
 ```
 
+## Function Purity
+
+Functions can be annotated as `pure` to indicate that they do not modify any external state
+or any account state. A `pure` annotation can be added to the beginning of a function declaration
+or expression like so: 
+
+```cadence
+pure pub fun foo(): Void {}
+let x = pure fun(): Void {}
+pub struct S {
+    pure pub fun foo(): Void {}
+    pure init()
+}
+```
+
+All functions that do not have a `pure` annotation are considered "impure", and cannot be called
+inside of `pure` contexts, like inside of a `pure` function or in a precondition or postcondition. 
+
+Function types can also have `pure` annotations, to be placed after the opening parenthesis but 
+before the parameter list. So, for example, these are valid types:
+
+```cadence
+    let f: (pure (Int): Int) = ...
+    let h: (pure (): (pure (): Void)) = ...
+```
+
+Any function types without a `pure` annotation will be considered "impure". 
+
+Functions are covariant in their purity, so a `pure` function is a subtype of an "impure" function
+with the same parameters and return types. So, the following declarations would typecheck:
+
+```cadence
+    let a: (pure (): Void) = pure fun() {}
+    let b: ((): Void) = pure fun() {}
+    let c: ((): Void) = fun() {}
+    let d: (((pure (): Void)): Void) = fun foo(x:((): Void)) {} // contravariance
+```
+
+while these would not: 
+
+
+```cadence
+    let x: (pure (): Void) = fun() {}
+    let y: ((((): Void)): Void) = fun foo(f:(pure (): Void)) {} // contravariance
+```
+
+The operations that are not permitted in `pure` contexts are: 
+
+* Calling an impure function (including any functions that modify account state or storage like `save` or `load`)
+* Writing to or modifying any resources
+* Writing to or modifying any references
+* Indexed assignment or writes to any variables not statically knowable to have been defined in the current function's scope
+
+So, for example, this code would be allowed:
+
+    ```cadence
+    pure fun foo(): Int {
+        let a: [Int] = []
+        a[0] = 3
+        return a.length
+    }
+    ```
+
+    while this would not:
+
+    ```cadence
+    let a: [Int] = []
+    pure fun foo(): Int {
+        a[0] = 3
+        return a.length
+    }
+    ```
+
+
 ## Function Calls
 
 Functions can be called (invoked). Function calls
@@ -478,6 +552,11 @@ fun incrementN() {
     n = n + 1
 }
 ```
+
+Both preconditions and postconditions are considered `pure` contexts; so any operations
+that are not legal in functions with `pure` annotations are also not allowed
+in conditions. In particular, this means that if you wish to call a function
+in a condition, that function must be `pure`. 
 
 ## Functions are Values
 
