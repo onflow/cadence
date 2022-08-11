@@ -64,6 +64,44 @@ func TestRunningSingleTest(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestAssertFunction(t *testing.T) {
+	t.Parallel()
+
+	code := `
+        import Test
+
+        pub fun testAssertWithNoArgs() {
+            Test.assert(true)
+        }
+
+        pub fun testAssertWithNoArgsFail() {
+            Test.assert(false)
+        }
+
+        pub fun testAssertWithMessage() {
+            Test.assert(true, "some reason")
+        }
+
+        pub fun testAssertWithMessageFail() {
+            Test.assert(false, "some reason")
+        }
+    `
+
+	err := RunTest(code, "testAssertWithNoArgs")
+	assert.NoError(t, err)
+
+	err = RunTest(code, "testAssertWithNoArgsFail")
+	require.Error(t, err)
+	assert.Equal(t, err.Error(), "assertion failed")
+
+	err = RunTest(code, "testAssertWithMessage")
+	assert.NoError(t, err)
+
+	err = RunTest(code, "testAssertWithMessageFail")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "assertion failed: some reason")
+}
+
 func TestExecuteScript(t *testing.T) {
 	t.Parallel()
 
