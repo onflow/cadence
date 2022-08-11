@@ -521,6 +521,73 @@ func TestCheckPurityEnforcement(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("struct external write", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		pub struct R {
+			pub(set) var x: Int
+			init(x: Int) {
+				self.x = x
+			}
+		}
+		
+		let r = R(x: 0)
+		pure fun foo(){
+			r.x = 3
+		}
+		`)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
+			StartPos: ast.Position{Offset: 125, Line: 11, Column: 3},
+			EndPos:   ast.Position{Offset: 131, Line: 11, Column: 9},
+		})
+	})
+
+	t.Run("struct param write", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		pub struct R {
+			pub(set) var x: Int
+			init(x: Int) {
+				self.x = x
+			}
+		}
+		
+		pure fun foo(_ r: R): R {
+			r.x = 3
+			return r
+		}
+		`)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("struct param nested write", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		pub struct R {
+			pub(set) var x: Int
+			init(x: Int) {
+				self.x = x
+			}
+		}
+		
+		pure fun foo(_ r: R): R {
+			if true {
+				while true {
+					r.x = 3
+				}
+			}
+			return r
+		}
+		`)
+
+		require.NoError(t, err)
+	})
+
 	t.Run("indeterminate write", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
@@ -604,6 +671,176 @@ func TestCheckPurityEnforcement(t *testing.T) {
 			var a = 3
 			while true {
 				a = 4
+			}
+		}
+		`)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("reference write", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		struct S {
+			pub(set) var x: Int
+			init(x: Int) {
+				self.x = x
+			}
+		}
+		
+		pure fun foo(_ s: &S) {
+			s.x = 3
+		}
+		`)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
+			StartPos: ast.Position{Offset: 111, Line: 10, Column: 3},
+			EndPos:   ast.Position{Offset: 117, Line: 10, Column: 9},
+		})
+	})
+
+	t.Run("missing variable write", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		struct S {
+			pub(set) var x: Int
+			init(x: Int) {
+				self.x = x
+			}
+		}
+
+		pure fun foo() {
+			z.x = 3
+		}
+		`)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+		assert.IsType(t, &sema.PurityError{}, errs[1])
+		assert.Equal(t, errs[1].(*sema.PurityError).Range, ast.Range{
+			StartPos: ast.Position{Offset: 102, Line: 10, Column: 3},
+			EndPos:   ast.Position{Offset: 108, Line: 10, Column: 9},
+		})
+	})
+}
+
+func TestCheckResourceWritePurity(t *testing.T) {
+	t.Run("resource param write", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		pub resource R {
+			pub(set) var x: Int
+			init(x: Int) {
+				self.x = x
+			}
+		}
+		
+		pure fun foo(_ r: @R): @R {
+			r.x = 3
+			return <-r
+		}
+		`)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
+			StartPos: ast.Position{Offset: 121, Line: 10, Column: 3},
+			EndPos:   ast.Position{Offset: 127, Line: 10, Column: 9},
+		})
+	})
+
+	t.Run("destroy", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		pub resource R {}
+		
+		pure fun foo(_ r: @R){
+			destroy r
+		}
+		`)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
+			StartPos: ast.Position{Offset: 52, Line: 5, Column: 3},
+			EndPos:   ast.Position{Offset: 60, Line: 5, Column: 11},
+		})
+	})
+
+	t.Run("resource param nested write", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		pub resource R {
+			pub(set) var x: Int
+			init(x: Int) {
+				self.x = x
+			}
+		}
+		
+		pure fun foo(_ r: @R): @R {
+			if true {
+				while true {
+					r.x = 3
+				}
+			}
+			return <-r
+		}
+		`)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
+			StartPos: ast.Position{Offset: 153, Line: 12, Column: 5},
+			EndPos:   ast.Position{Offset: 159, Line: 12, Column: 11},
+		})
+	})
+}
+
+func TestCheckCompositeWritePurity(t *testing.T) {
+	t.Run("self struct modification", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		struct S {
+			var b: Int 
+
+			init(b: Int) {
+				self.b = b
+			}
+
+			pure fun foo() {
+				self.b = 3
+			}
+		}
+		`)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
+			StartPos: ast.Position{Offset: 93, Line: 10, Column: 4},
+			EndPos:   ast.Position{Offset: 102, Line: 10, Column: 13},
+		})
+	})
+
+	t.Run("safe struct modification", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		struct S {
+			var b: Int 
+
+			init(b: Int) {
+				self.b = b
+			}
+
+			pure fun foo(_ s: S) {
+				s.b = 3
 			}
 		}
 		`)

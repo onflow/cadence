@@ -117,24 +117,54 @@ func (checker *Checker) enforcePureAssignment(assignment ast.Statement, target a
 
 	var variable *Variable
 
-	// an assignment operation is pure if and only if the variable it is assigning to (or
-	// modifying, in the case of a dictionary or array) was declared in the current function's
-	// scope.
 	switch targetExp := target.(type) {
 	case *ast.IdentifierExpression:
 		variable = checker.valueActivations.Find(targetExp.Identifier.Identifier)
 	case *ast.IndexExpression:
 		if indexIdentifier, ok := targetExp.TargetExpression.(*ast.IdentifierExpression); ok {
 			variable = checker.valueActivations.Find(indexIdentifier.Identifier.Identifier)
-
+		}
+	case *ast.MemberExpression:
+		if indexIdentifier, ok := targetExp.Expression.(*ast.IdentifierExpression); ok {
+			variable = checker.valueActivations.Find(indexIdentifier.Identifier.Identifier)
 		}
 	}
 
-	if variable == nil || checker.CurrentPurityScope().ActivationDepth > variable.ActivationDepth {
+	// if the target is not a variable (e.g. a nested index expression x[0][0], or a nested
+	// member expression x.y.z), the analysis cannot know for sure where the value being
+	// assigned to originated, so we must default to impure. Consider:
+	// -----------------------------------------------------------------------------
+	// let a: &[Int] = &[0]
+	// pure fun foo(_ x: Int) {
+	//     let b: &[Int] = [0]
+	//     let c = [a, b]
+	//     c[x][0] = 4 // we cannot know statically whether a or b receives the write here
+	// }
+	if variable == nil {
+		checker.ObserveImpureOperation(assignment)
+		return
+	}
+
+	// an assignment operation is pure if and only if the variable it is assigning to (or
+	// modifying, in the case of a dictionary or array) was declared in the current function's
+	// scope. However, resource params are moved, while other params are copied. We cannot allow
+	// writes to parameters when they are resources, but they are permissible in other cases.
+	// So, if the target's type is a resource, shift the highest perimissing write scope
+	// down by 1
+	paramWritesAllowed := 0
+	if variable.Type.IsResourceType() {
+		paramWritesAllowed = 1
+	}
+
+	// we also have to prevent any writes to references, since we cannot know where the value
+	// pointed to by the reference may have come from
+	if _, ok := variable.Type.(*ReferenceType); ok ||
+		checker.CurrentPurityScope().ActivationDepth+paramWritesAllowed > variable.ActivationDepth ||
+		// `self` technically exists in param scope, but should still not be writeable in a pure context
+		variable.DeclarationKind == common.DeclarationKindSelf {
 		checker.ObserveImpureOperation(assignment)
 	}
 }
-
 func (checker *Checker) accessedSelfMember(expression ast.Expression) *Member {
 	memberExpression, isMemberExpression := expression.(*ast.MemberExpression)
 	if !isMemberExpression {
