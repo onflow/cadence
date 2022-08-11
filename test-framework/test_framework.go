@@ -134,7 +134,7 @@ func newInterpreterFromChecker(checker *sema.Checker) (*interpreter.Interpreter,
 				}
 
 			default:
-				panic(errors.NewUnexpectedError("importing programs not implemented"))
+				panic(errors.NewUnexpectedError("importing of programs not implemented"))
 			}
 		}),
 		interpreter.WithContractValueHandler(
@@ -197,7 +197,7 @@ func newChecker(program *ast.Program) (*sema.Checker, error) {
 					elaboration = stdlib.TestContractChecker.Elaboration
 
 				default:
-					return nil, errors.NewUnexpectedError("importing programs not implemented")
+					return nil, errors.NewUnexpectedError("importing of programs not implemented")
 				}
 
 				return sema.ElaborationImport{
