@@ -1068,6 +1068,7 @@ func TestInterpretFunctionWithPostConditionAndResourceResult(t *testing.T) {
 	// and not a resource (composite value)
 
 	checkFunctionType := &sema.FunctionType{
+		Purity: sema.PureFunction,
 		Parameters: []*sema.Parameter{
 			{
 				Label:      sema.ArgumentLabelNotRequired,
@@ -1125,7 +1126,7 @@ func TestInterpretFunctionWithPostConditionAndResourceResult(t *testing.T) {
                   return <- self.resources.remove(key: "original")!
               }
 
-              fun use(_ r: &R): Bool {
+              pure fun use(_ r: &R): Bool {
                   check(r)
                   return true
               }
