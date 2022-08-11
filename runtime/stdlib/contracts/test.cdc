@@ -120,14 +120,14 @@ pub contract Test {
     // Transaction that can be submitted and executed on the blockchain.
     //
     pub struct Transaction {
-        pub let code:       String
-        pub let authorizer: Address?
-        pub let signers:    [Account]
-        pub let args:       [AnyStruct]
+        pub let code:        String
+        pub let authorizers: [Address]
+        pub let signers:     [Account]
+        pub let args:        [AnyStruct]
 
-        init(_ code: String, _ authorizer: Address?, _ signers: [Account], _ args: [AnyStruct]) {
+        init(_ code: String, _ authorizers: [Address], _ signers: [Account], _ args: [AnyStruct]) {
             self.code = code
-            self.authorizer = authorizer
+            self.authorizers = authorizers
             self.signers = signers
             self.args = args
         }

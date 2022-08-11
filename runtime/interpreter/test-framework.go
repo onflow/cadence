@@ -38,7 +38,7 @@ type TestFramework interface {
 
 	AddTransaction(
 		code string,
-		authorizer *common.Address,
+		authorizers []common.Address,
 		signers []*Account,
 		args []Value,
 	) error

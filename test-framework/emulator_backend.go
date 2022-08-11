@@ -138,12 +138,12 @@ func (e EmulatorBackend) CreateAccount() (*interpreter.Account, error) {
 
 func (e *EmulatorBackend) AddTransaction(
 	code string,
-	authorizer *common.Address,
+	authorizers []common.Address,
 	signers []*interpreter.Account,
 	args []interpreter.Value,
 ) error {
 
-	tx := e.newTransaction(code, authorizer)
+	tx := e.newTransaction(code, authorizers)
 
 	inter, err := newInterpreter()
 	if err != nil {
@@ -178,7 +178,7 @@ func (e *EmulatorBackend) AddTransaction(
 	return nil
 }
 
-func (e *EmulatorBackend) newTransaction(code string, authorizer *common.Address) *sdk.Transaction {
+func (e *EmulatorBackend) newTransaction(code string, authorizers []common.Address) *sdk.Transaction {
 	serviceKey := e.blockchain.ServiceKey()
 
 	sequenceNumber := serviceKey.SequenceNumber + e.blockOffset
@@ -188,8 +188,8 @@ func (e *EmulatorBackend) newTransaction(code string, authorizer *common.Address
 		SetProposalKey(serviceKey.Address, serviceKey.Index, sequenceNumber).
 		SetPayer(serviceKey.Address)
 
-	if authorizer != nil {
-		tx = tx.AddAuthorizer(sdk.Address(*authorizer))
+	for _, authorizer := range authorizers {
+		tx = tx.AddAuthorizer(sdk.Address(authorizer))
 	}
 
 	return tx

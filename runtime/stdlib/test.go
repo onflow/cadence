@@ -47,7 +47,7 @@ const succeededCaseName = "succeeded"
 const failedCaseName = "failed"
 
 const transactionCodeFieldName = "code"
-const transactionAuthorizerFieldName = "authorizer"
+const transactionAuthorizerFieldName = "authorizers"
 const transactionSignersFieldName = "signers"
 const transactionArgsFieldName = "args"
 
@@ -670,26 +670,14 @@ var emulatorBackendAddTransactionFunction = interpreter.NewUnmeteredHostFunction
 			panic(errors.NewUnreachableError())
 		}
 
-		// Get authorizer
+		// Get authorizers
 		authorizerValue := transactionValue.GetMember(
 			inter,
 			interpreter.ReturnEmptyLocationRange,
 			transactionAuthorizerFieldName,
 		)
 
-		var authorizer *common.Address
-		switch authorizerValue := authorizerValue.(type) {
-		case interpreter.NilValue:
-			authorizer = nil
-		case *interpreter.SomeValue:
-			authorizerAddress, ok := authorizerValue.InnerValue(inter,
-				interpreter.ReturnEmptyLocationRange).(interpreter.AddressValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			authorizer = (*common.Address)(&authorizerAddress)
-		}
+		authorizers := addressesFromValue(authorizerValue)
 
 		// Get signers
 		signersValue := transactionValue.GetMember(
@@ -711,7 +699,7 @@ var emulatorBackendAddTransactionFunction = interpreter.NewUnmeteredHostFunction
 			panic(errors.NewUnexpectedErrorFromCause(err))
 		}
 
-		err = testFramework.AddTransaction(code.Str, authorizer, signerAccounts, args)
+		err = testFramework.AddTransaction(code.Str, authorizers, signerAccounts, args)
 		if err != nil {
 			panic(err)
 		}
@@ -720,6 +708,28 @@ var emulatorBackendAddTransactionFunction = interpreter.NewUnmeteredHostFunction
 	},
 	emulatorBackendAddTransactionFunctionType,
 )
+
+func addressesFromValue(accountsValue interpreter.Value) []common.Address {
+	accountsArray, ok := accountsValue.(*interpreter.ArrayValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	addresses := make([]common.Address, 0)
+
+	accountsArray.Iterate(nil, func(element interpreter.Value) (resume bool) {
+		address, ok := element.(interpreter.AddressValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		addresses = append(addresses, common.Address(address))
+
+		return true
+	})
+
+	return addresses
+}
 
 func accountsFromValue(inter *interpreter.Interpreter, accountsValue interpreter.Value) []*interpreter.Account {
 	accountsArray, ok := accountsValue.(*interpreter.ArrayValue)
