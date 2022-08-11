@@ -611,3 +611,177 @@ func TestCheckPurityEnforcement(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestCheckContainerMethodPurity(t *testing.T) {
+	t.Run("array contains", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		let a = [3]
+		pure fun foo() {
+			a.contains(0)
+		}
+		`)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("array concat", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		let a = [3]
+		pure fun foo() {
+			a.concat([0])
+		}
+		`)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("array firstIndex", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		let a = [3]
+		pure fun foo() {
+			a.firstIndex(of: 0)
+		}
+		`)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("array slice", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		let a = [3]
+		pure fun foo() {
+			a.slice(from: 0, upTo: 1)
+		}
+		`)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("array append", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		let a = [3]
+		pure fun foo() {
+			a.append(0)
+		}
+		`)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+	})
+
+	t.Run("array appendAll", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		let a = [3]
+		pure fun foo() {
+			a.appendAll([0])
+		}
+		`)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+	})
+
+	t.Run("array insert", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		let a = [3]
+		pure fun foo() {
+			a.insert(at:0, 0)
+		}
+		`)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+	})
+
+	t.Run("array remove", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		let a = [3]
+		pure fun foo() {
+			a.remove(at:0)
+		}
+		`)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+	})
+
+	t.Run("array removeFirst", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		let a = [3]
+		pure fun foo() {
+			a.removeFirst()
+		}
+		`)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+	})
+
+	t.Run("array removeLast", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		let a = [3]
+		pure fun foo() {
+			a.removeLast()
+		}
+		`)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+	})
+
+	t.Run("dict insert", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		let a = {0:0}
+		pure fun foo() {
+			a.insert(key: 0, 0)
+		}
+		`)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+	})
+
+	t.Run("dict remove", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		let a = {0:0}
+		pure fun foo() {
+			a.remove(key: 0)
+		}
+		`)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+	})
+
+	t.Run("dict containsKey", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		let a = {0:0}
+		pure fun foo() {
+			a.containsKey(0)
+		}
+		`)
+
+		require.NoError(t, err)
+	})
+}
