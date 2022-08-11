@@ -817,10 +817,41 @@ func TestCheckResourceWritePurity(t *testing.T) {
 			r.x = 1
 			return <-r 
 		}
-		
 		`)
 
-		require.NoError(t, err)
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
+			StartPos: ast.Position{Offset: 146, Line: 11, Column: 3},
+			EndPos:   ast.Position{Offset: 152, Line: 11, Column: 9},
+		})
+	})
+
+	t.Run("external resource move", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		pub resource R {
+			pub(set) var x: Int
+			init(x: Int) {
+				self.x = x
+			}
+		}
+		
+		pure fun foo(_ f: @R): @R {
+			let b <- f 
+			b.x = 3
+			return <-b
+		}
+		`)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
+			StartPos: ast.Position{Offset: 136, Line: 11, Column: 3},
+			EndPos:   ast.Position{Offset: 142, Line: 11, Column: 9},
+		})
 	})
 
 	t.Run("resource moves", func(t *testing.T) {

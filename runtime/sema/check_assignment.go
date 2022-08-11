@@ -154,21 +154,29 @@ func (checker *Checker) enforcePureAssignment(assignment ast.Statement, target a
 		return
 	}
 
-	// an assignment operation is pure if and only if the variable it is assigning to (or
-	// modifying, in the case of a dictionary or array) was declared in the current function's
-	// scope. However, resource params are moved, while other params are copied. We cannot allow
-	// writes to parameters when they are resources, but they are permissible in other cases.
-	// So, if the target's type is a resource, shift the highest perimissing write scope
-	// down by 1
-	paramWritesAllowed := 0
-	if variable.Type.IsResourceType() {
-		paramWritesAllowed = 1
-	}
-
-	// we also have to prevent any writes to references, since we cannot know where the value
-	// pointed to by the reference may have come from
-	if _, ok := variable.Type.(*ReferenceType); ok ||
-		checker.CurrentPurityScope().ActivationDepth+paramWritesAllowed > variable.ActivationDepth {
+	// We have to prevent any writes to references, since we cannot know where the value
+	// pointed to by the reference may have come from. Similarly, we can never safely assign
+	// to a resource; because resources are moved instead of copied, we cannot currently
+	// track the origin of a write target when it is a resource. Consider:
+	// -----------------------------------------------------------------------------
+	// pub resource R {
+	//   pub(set) var x: Int
+	//   init(x: Int) {
+	//     self.x = x
+	//   }
+	//  }
+	//
+	// pure fun foo(_ f: @R): @R {
+	//   let b <- f
+	//   b.x = 3 // b was created in the current scope but modifies the resource value
+	//   return <-b
+	// }
+	if _, ok := variable.Type.(*ReferenceType); ok || variable.Type.IsResourceType() ||
+		// when the variable is neither a resource nor a reference, we can write to if its
+		// activation depth is greater than or equal to the depth at which the current purity
+		// scope was created; i.e. if it is a parameter to the current function or was created
+		// within it
+		checker.CurrentPurityScope().ActivationDepth > variable.ActivationDepth {
 		checker.ObserveImpureOperation(assignment)
 	}
 }
