@@ -145,6 +145,15 @@ func (checker *Checker) enforcePureAssignment(assignment ast.Statement, target a
 		return
 	}
 
+	// `self` technically exists in param scope, but should still not be writeable
+	// outside of an initializer
+	if variable.DeclarationKind == common.DeclarationKindSelf {
+		if checker.functionActivations.Current().InitializationInfo == nil {
+			checker.ObserveImpureOperation(assignment)
+		}
+		return
+	}
+
 	// an assignment operation is pure if and only if the variable it is assigning to (or
 	// modifying, in the case of a dictionary or array) was declared in the current function's
 	// scope. However, resource params are moved, while other params are copied. We cannot allow
@@ -159,9 +168,7 @@ func (checker *Checker) enforcePureAssignment(assignment ast.Statement, target a
 	// we also have to prevent any writes to references, since we cannot know where the value
 	// pointed to by the reference may have come from
 	if _, ok := variable.Type.(*ReferenceType); ok ||
-		checker.CurrentPurityScope().ActivationDepth+paramWritesAllowed > variable.ActivationDepth ||
-		// `self` technically exists in param scope, but should still not be writeable in a pure context
-		variable.DeclarationKind == common.DeclarationKindSelf {
+		checker.CurrentPurityScope().ActivationDepth+paramWritesAllowed > variable.ActivationDepth {
 		checker.ObserveImpureOperation(assignment)
 	}
 }

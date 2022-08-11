@@ -801,6 +801,46 @@ func TestCheckResourceWritePurity(t *testing.T) {
 			EndPos:   ast.Position{Offset: 159, Line: 12, Column: 11},
 		})
 	})
+
+	t.Run("internal resource write", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		pub resource R {
+			pub(set) var x: Int
+			pure init(x: Int) {
+				self.x = x
+			}
+		}
+		
+		pure fun foo(): @R {
+			let r <- create R(x: 0)
+			r.x = 1
+			return <-r 
+		}
+		
+		`)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("resource moves", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		pub resource R {
+			pub(set) var x: Int
+			init(x: Int) {
+				self.x = x
+			}
+		}
+		
+		pure fun foo(_ r1: @R, _ r2: @R): @[R] {
+			return <-[<-r1, <-r2]
+		}
+		
+		`)
+
+		require.NoError(t, err)
+	})
 }
 
 func TestCheckCompositeWritePurity(t *testing.T) {
@@ -808,7 +848,7 @@ func TestCheckCompositeWritePurity(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
 		struct S {
-			var b: Int 
+			var b: Int
 
 			init(b: Int) {
 				self.b = b
@@ -824,8 +864,8 @@ func TestCheckCompositeWritePurity(t *testing.T) {
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
-			StartPos: ast.Position{Offset: 93, Line: 10, Column: 4},
-			EndPos:   ast.Position{Offset: 102, Line: 10, Column: 13},
+			StartPos: ast.Position{Offset: 92, Line: 10, Column: 4},
+			EndPos:   ast.Position{Offset: 101, Line: 10, Column: 13},
 		})
 	})
 
@@ -833,7 +873,7 @@ func TestCheckCompositeWritePurity(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
 		struct S {
-			var b: Int 
+			var b: Int
 
 			init(b: Int) {
 				self.b = b
@@ -846,6 +886,98 @@ func TestCheckCompositeWritePurity(t *testing.T) {
 		`)
 
 		require.NoError(t, err)
+	})
+
+	t.Run("struct init", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		struct S {
+			var b: Int
+
+			pure init(b: Int) {
+				self.b = b
+			}
+		}
+
+		pure fun foo() {
+			let s = S(b: 3)
+		}
+		`)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("resource init", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		resource R {
+			var b: Int 
+
+			pure init(b: Int) {
+				self.b = b
+			}
+		}
+
+		pure fun foo(): @R {
+			return <-create R(b: 3)
+		}
+		`)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("impure struct init", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		let a = [0]
+		struct S {
+			var b: Int
+
+			pure init(b: Int) {
+				a[1] = 4
+				self.b = b
+			}
+		}
+
+		pure fun foo() {
+			let s = S(b: 3)
+		}
+		`)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
+			StartPos: ast.Position{Offset: 71, Line: 7, Column: 5},
+			EndPos:   ast.Position{Offset: 77, Line: 7, Column: 11},
+		})
+	})
+
+	t.Run("impure resource init", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		let a = [0]
+		resource R {
+			var b: Int 
+
+			pure init(b: Int) {
+				a[1] = 4
+				self.b = b
+			}
+		}
+
+		pure fun foo(): @R {
+			return <-create R(b: 3)
+		}
+		`)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
+			StartPos: ast.Position{Offset: 74, Line: 7, Column: 5},
+			EndPos:   ast.Position{Offset: 80, Line: 7, Column: 11},
+		})
 	})
 }
 
