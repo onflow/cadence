@@ -22,6 +22,7 @@ import (
 	sdk "github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/crypto"
 	"github.com/onflow/flow-go-sdk/test"
+
 	fvmCrypto "github.com/onflow/flow-go/fvm/crypto"
 
 	emulator "github.com/onflow/flow-emulator"
@@ -46,12 +47,21 @@ type EmulatorBackend struct {
 	// This is equal to the number of transactions in the current block.
 	// Must be rest once the block is committed.
 	blockOffset uint64
+
+	// accountKeys is a mapping of account address with their keys.
+	accountKeys map[common.Address]map[string]keyInfo
+}
+
+type keyInfo struct {
+	accountKey *sdk.AccountKey
+	signer     crypto.Signer
 }
 
 func NewEmulatorBackend() *EmulatorBackend {
 	return &EmulatorBackend{
 		blockchain:  newBlockchain(),
 		blockOffset: 0,
+		accountKeys: map[common.Address]map[string]keyInfo{},
 	}
 }
 
@@ -108,31 +118,35 @@ func (e *EmulatorBackend) RunScript(code string, args []interpreter.Value) *inte
 }
 
 func (e EmulatorBackend) CreateAccount() (*interpreter.Account, error) {
+	// Also generate the keys. So that users don't have to do this in two steps.
+	// Store the generated keys, so that it could be looked-up, given the address.
+
 	keyGen := test.AccountKeyGenerator()
 	accountKey, signer := keyGen.NewWithSigner()
-
-	// This relies on flow-go-sdk/test returning an `InMemorySigner`.
-	// TODO: Maybe copy over the code for `AccountKeyGenerator`.
-	inMemSigner := signer.(crypto.InMemorySigner)
 
 	address, err := e.blockchain.CreateAccount([]*sdk.AccountKey{accountKey}, nil)
 	if err != nil {
 		return nil, err
 	}
 
+	publicKey := accountKey.PublicKey.Encode()
+	encodedPublicKey := string(publicKey)
+
+	// Store the generated key and signer info.
+	// This info is used to sign transactions.
+	e.accountKeys[common.Address(address)] = map[string]keyInfo{
+		encodedPublicKey: {
+			accountKey: accountKey,
+			signer:     signer,
+		},
+	}
+
 	return &interpreter.Account{
 		Address: common.Address(address),
-		AccountKey: &interpreter.AccountKey{
-			KeyIndex: accountKey.Index,
-			PublicKey: &interpreter.PublicKey{
-				PublicKey: accountKey.PublicKey.Encode(),
-				SignAlgo:  fvmCrypto.CryptoToRuntimeSigningAlgorithm(accountKey.PublicKey.Algorithm()),
-			},
-			HashAlgo:  fvmCrypto.CryptoToRuntimeHashingAlgorithm(accountKey.HashAlgo),
-			Weight:    accountKey.Weight,
-			IsRevoked: accountKey.Revoked,
+		PublicKey: &interpreter.PublicKey{
+			PublicKey: publicKey,
+			SignAlgo:  fvmCrypto.CryptoToRuntimeSigningAlgorithm(accountKey.PublicKey.Algorithm()),
 		},
-		PrivateKey: inMemSigner.PrivateKey.Encode(),
 	}, nil
 }
 
@@ -206,19 +220,11 @@ func (e *EmulatorBackend) signTransaction(
 	for i := len(signerAccounts) - 1; i >= 0; i-- {
 		signerAccount := signerAccounts[i]
 
-		signAlgo := fvmCrypto.RuntimeToCryptoSigningAlgorithm(signerAccount.AccountKey.PublicKey.SignAlgo)
-		privateKey, err := crypto.DecodePrivateKey(signAlgo, signerAccount.PrivateKey)
-		if err != nil {
-			return err
-		}
+		publicKey := string(signerAccount.PublicKey.PublicKey)
+		accountKeys := e.accountKeys[signerAccount.Address]
+		keyInfo := accountKeys[publicKey]
 
-		hashAlgo := fvmCrypto.RuntimeToCryptoHashingAlgorithm(signerAccount.AccountKey.HashAlgo)
-		signer, err := crypto.NewInMemorySigner(privateKey, hashAlgo)
-		if err != nil {
-			return err
-		}
-
-		err = tx.SignPayload(sdk.Address(signerAccount.Address), 0, signer)
+		err := tx.SignPayload(sdk.Address(signerAccount.Address), 0, keyInfo.signer)
 		if err != nil {
 			return err
 		}

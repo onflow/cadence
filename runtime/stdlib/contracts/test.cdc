@@ -103,17 +103,15 @@ pub contract Test {
         }
     }
 
-    // Account represents a user account in the blockchain.
+    // Account represents a info about the account created on the blockchain.
     //
     pub struct Account {
-        pub let address:    Address
-        pub let accountKey: AccountKey
-        pub let privateKey: [UInt8]
+        pub let address:   Address
+        pub let publicKey: PublicKey
 
-        init(_ address: Address, _ accountKey: AccountKey, _ privateKey: [UInt8]) {
+        init(_ address: Address, _ publicKey: PublicKey) {
             self.address = address
-            self.accountKey = accountKey
-            self.privateKey = privateKey
+            self.publicKey = publicKey
         }
     }
 

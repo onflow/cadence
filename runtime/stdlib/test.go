@@ -52,8 +52,6 @@ const transactionSignersFieldName = "signers"
 const transactionArgsFieldName = "args"
 
 const accountAddressFieldName = "address"
-const accountKeyFieldName = "accountKey"
-const accountPrivateKeyFieldName = "privateKey"
 
 var TestContractLocation = common.IdentifierLocation(testContractTypeName)
 
@@ -550,11 +548,20 @@ func newAccountValue(inter *interpreter.Interpreter, account *interpreter.Accoun
 	// Create address value
 	address := interpreter.NewAddressValue(nil, account.Address)
 
-	// Create account key
-	accountKey := newAccountKeyValue(inter, account.AccountKey)
-
-	// Create private key
-	privateKey := interpreter.ByteSliceToByteArrayValue(inter, account.PrivateKey)
+	// Create public key
+	publicKey := interpreter.NewPublicKeyValue(
+		inter,
+		interpreter.ReturnEmptyLocationRange,
+		interpreter.ByteSliceToByteArrayValue(
+			inter,
+			account.PublicKey.PublicKey,
+		),
+		NewSignatureAlgorithmCase(
+			inter,
+			account.PublicKey.SignAlgo.RawValue(),
+		),
+		inter.PublicKeyValidationHandler,
+	)
 
 	// Create an 'Account' by calling its constructor.
 	accountConstructorVar := inter.Activations.Find(accountTypeName)
@@ -568,8 +575,7 @@ func newAccountValue(inter *interpreter.Interpreter, account *interpreter.Accoun
 		accountConstructor.Type,
 		[]interpreter.Value{
 			address,
-			accountKey,
-			privateKey,
+			publicKey,
 		},
 	)
 
@@ -578,42 +584,6 @@ func newAccountValue(inter *interpreter.Interpreter, account *interpreter.Accoun
 	}
 
 	return accountValue
-}
-
-func newAccountKeyValue(inter *interpreter.Interpreter, accountKey *interpreter.AccountKey) interpreter.Value {
-	index := interpreter.NewIntValueFromInt64(nil, int64(accountKey.KeyIndex))
-
-	publicKey := interpreter.NewPublicKeyValue(
-		inter,
-		interpreter.ReturnEmptyLocationRange,
-		interpreter.ByteSliceToByteArrayValue(
-			inter,
-			accountKey.PublicKey.PublicKey,
-		),
-		NewSignatureAlgorithmCase(
-			inter,
-			accountKey.PublicKey.SignAlgo.RawValue(),
-		),
-		inter.PublicKeyValidationHandler,
-	)
-
-	hashAlgorithm := NewHashAlgorithmCase(
-		inter,
-		accountKey.HashAlgo.RawValue(),
-	)
-
-	weight := interpreter.NewUnmeteredUFix64ValueWithInteger(uint64(accountKey.Weight))
-
-	revoked := interpreter.BoolValue(accountKey.IsRevoked)
-
-	return interpreter.NewAccountKeyValue(
-		inter,
-		index,
-		publicKey,
-		hashAlgorithm,
-		weight,
-		revoked,
-	)
 }
 
 // 'EmulatorBackend.addTransaction' function
@@ -756,101 +726,23 @@ func accountsFromValue(inter *interpreter.Interpreter, accountsValue interpreter
 			panic(errors.NewUnreachableError())
 		}
 
-		// Get account key
-		accountKeyValue := accountValue.GetMember(
+		// Get public key
+		publicKeyVal := accountValue.GetMember(
 			inter,
 			interpreter.ReturnEmptyLocationRange,
-			accountKeyFieldName,
+			sema.AccountKeyPublicKeyField,
 		)
-		accountKey := accountKeyFromValue(inter, accountKeyValue)
-
-		// Get private key
-		privateKeyValue := accountValue.GetMember(
-			inter,
-			interpreter.ReturnEmptyLocationRange,
-			accountPrivateKeyFieldName,
-		)
-
-		privateKey, err := interpreter.ByteArrayValueToByteSlice(nil, privateKeyValue)
-		if err != nil {
-			panic(errors.NewUnreachableError())
-		}
+		publicKey := publicKeyFromValue(inter, interpreter.ReturnEmptyLocationRange, publicKeyVal)
 
 		accounts = append(accounts, &interpreter.Account{
-			Address:    common.Address(address),
-			AccountKey: accountKey,
-			PrivateKey: privateKey,
+			Address:   common.Address(address),
+			PublicKey: publicKey,
 		})
 
 		return true
 	})
 
 	return accounts
-}
-
-func accountKeyFromValue(inter *interpreter.Interpreter, value interpreter.Value) *interpreter.AccountKey {
-	accountKeyValue, ok := value.(interpreter.MemberAccessibleValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	// Key index field
-	keyIndexVal := accountKeyValue.GetMember(
-		inter,
-		interpreter.ReturnEmptyLocationRange,
-		sema.AccountKeyKeyIndexField,
-	)
-	keyIndex, ok := keyIndexVal.(interpreter.IntValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	// Public key field
-	publicKeyVal := accountKeyValue.GetMember(
-		inter,
-		interpreter.ReturnEmptyLocationRange,
-		sema.AccountKeyPublicKeyField,
-	)
-	publicKey := publicKeyFromValue(inter, interpreter.ReturnEmptyLocationRange, publicKeyVal)
-
-	// Hash algo field
-	hashAlgoField := accountKeyValue.GetMember(inter, interpreter.ReturnEmptyLocationRange, sema.AccountKeyHashAlgoField)
-	if hashAlgoField == nil {
-		panic(errors.NewUnreachableError())
-	}
-	hashAlgo := hashAlgoFromValue(inter, hashAlgoField)
-
-	// Weight field
-	weightVal := accountKeyValue.GetMember(
-		inter,
-		interpreter.ReturnEmptyLocationRange,
-		sema.AccountKeyWeightField,
-	)
-	weight, ok := weightVal.(interpreter.UFix64Value)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	// isRevoked field
-	isRevokedVal := accountKeyValue.GetMember(
-		inter,
-		interpreter.ReturnEmptyLocationRange,
-		sema.AccountKeyIsRevokedField,
-	)
-	isRevoked, ok := isRevokedVal.(interpreter.BoolValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	accountKey := &interpreter.AccountKey{
-		KeyIndex:  keyIndex.ToInt(),
-		PublicKey: publicKey,
-		HashAlgo:  hashAlgo,
-		Weight:    weight.ToInt(),
-		IsRevoked: bool(isRevoked),
-	}
-
-	return accountKey
 }
 
 func hashAlgoFromValue(inter *interpreter.Interpreter, hashAlgoField interpreter.Value) sema.HashAlgorithm {
