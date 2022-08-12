@@ -5,11 +5,13 @@ import {
   ExitNotification,
   InitializeRequest,
   ProtocolConnection,
+  PublishDiagnosticsNotification,
+  PublishDiagnosticsParams,
+  RegistrationRequest,
   StreamMessageReader,
   StreamMessageWriter,
   TextDocumentItem,
-  PublishDiagnosticsNotification,
-  PublishDiagnosticsParams, ShowMessageNotification, NotificationMessage, ShowMessageParams
+  Trace, Tracer
 } from "vscode-languageserver-protocol"
 
 import {execSync, spawn} from 'child_process'
@@ -20,7 +22,15 @@ beforeAll(() => {
   execSync("go build ../cmd/languageserver", {cwd: __dirname})
 })
 
-async function withConnection(f: (connection: ProtocolConnection) => Promise<void>, enableFlowClient = false): Promise<void> {
+class ConsoleTracer implements Tracer {
+  log(dataObject: any): void;
+  log(message: string, data?: string): void;
+  log(dataObject: any, data?: string): void {
+    console.log("tracer >", dataObject, data)
+  }
+}
+
+async function withConnection(f: (connection: ProtocolConnection) => Promise<void>, enableFlowClient = false, debug = false): Promise<void> {
 
   let opts = [`-enableFlowClient=${enableFlowClient}`]
   const child = spawn(
@@ -55,9 +65,10 @@ async function withConnection(f: (connection: ProtocolConnection) => Promise<voi
     // and service account name and its address
     initOpts = {
       configPath: "./flow.json",
-      activeAccountName: "service-account", // default service account name
-      activeAccountAddress: "0xf8d6e0586b0a20c7" // default service address for emulator network
+      numberOfAccounts: "5",
     }
+
+    connection.onRequest(RegistrationRequest.type, () => {})
   }
 
   await connection.sendRequest(InitializeRequest.type,
@@ -69,6 +80,13 @@ async function withConnection(f: (connection: ProtocolConnection) => Promise<voi
       initializationOptions: initOpts
     }
   )
+
+  // debug option when testing
+  if (debug) {
+    connection.trace(Trace.Verbose, new ConsoleTracer(), true)
+    connection.onUnhandledNotification((e) => console.log("unhandled >", e))
+    connection.onError(e => console.log("err >", e))
+  }
 
   await f(connection)
 
@@ -321,18 +339,166 @@ describe("script execution", () => {
 
   test("script executes and result is returned", async() => {
     await withConnection(async (connection) => {
-      const resultPromise = new Promise<ShowMessageParams>(res =>
-          connection.onNotification(ShowMessageNotification.type, res)
-      )
-
-      await connection.sendRequest(ExecuteCommandRequest.type, {
+      let result = await connection.sendRequest(ExecuteCommandRequest.type, {
         command: "cadence.server.flow.executeScript",
         arguments: [`file://${__dirname}/script.cdc`, "[]"]
       })
 
-      const result = await resultPromise
-      expect(result.message).toEqual(`Result: "HELLO WORLD"`)
+      expect(result).toEqual(`Result: "HELLO WORLD"`)
     }, true)
   })
+
+})
+
+async function getAccounts(connection: ProtocolConnection) {
+  return connection.sendRequest(ExecuteCommandRequest.type, {
+    command: "cadence.server.flow.getAccounts",
+    arguments: []
+  })
+}
+
+async function switchAccount(connection: ProtocolConnection, name: string) {
+  return connection.sendRequest(ExecuteCommandRequest.type, {
+    command: "cadence.server.flow.switchActiveAccount",
+    arguments: [name]
+  })
+}
+
+describe("accounts", () => {
+
+  test("get account list", async() => {
+    await withConnection(async (connection) => {
+      let result = await getAccounts(connection)
+
+      expect(result.map(r => r.Name)).toEqual(["Alice", "Bob", "Charlie", "Dave", "Eve"])
+      expect(result.map(r => r.Address)).toEqual(["01cf0e2f2f715450", "179b6b1cb6755e31", "f3fcd2c1a78f5eee", "e03daebed8ca0615", "045a1763c93006ca"])
+      expect(result.map(r => r.Active)).toEqual([true, false, false, false, false])
+    }, true)
+  })
+
+  test("switch active account", async() => {
+    await withConnection(async connection => {
+      let result = await switchAccount(connection, "Bob")
+      expect(result).toEqual("Account switched to Bob")
+
+      let active = await getAccounts(connection)
+
+      expect(active.filter(a => a.Active).pop().Name).toEqual("Bob")
+    }, true)
+  })
+
+  test("create an account", async() => {
+    await withConnection(async connection => {
+      let result = await connection.sendRequest(ExecuteCommandRequest.type, {
+        command: "cadence.server.flow.createAccount",
+        arguments: []
+      })
+
+      expect(result.Active).toBeFalsy()
+      expect(result.Name).toBeDefined()
+
+      let accounts = await getAccounts(connection)
+
+      expect(accounts.filter(a => a.Name == result.Name)).toHaveLength(1)
+    }, true)
+  })
+})
+
+describe("transactions", () => {
+
+  test("send a transaction with single signer", async() => {
+    await withConnection(async connection => {
+      let result = await connection.sendRequest(ExecuteCommandRequest.type, {
+        command: "cadence.server.flow.sendTransaction",
+        arguments: [`file://${__dirname}/transaction.cdc`, "[]", ["Alice"]]
+      })
+
+      expect(result).toEqual("Transaction status: SEALED")
+    }, true)
+  })
+
+  test("send a transaction with multiple signers", async() => {
+    await withConnection(async connection => {
+      let result = await connection.sendRequest(ExecuteCommandRequest.type, {
+        command: "cadence.server.flow.sendTransaction",
+        arguments: [`file://${__dirname}/transaction-multiple.cdc`, "[]", ["Alice", "Bob"]]
+      })
+
+      expect(result).toEqual("Transaction status: SEALED")
+    }, true)
+  })
+
+})
+
+describe("contracts", () => {
+
+  async function deploy(connection: ProtocolConnection, signer: string) {
+    return connection.sendRequest(ExecuteCommandRequest.type, {
+      command: "cadence.server.flow.deployContract",
+      arguments: [`file://${__dirname}/foo.cdc`, "Foo", signer]
+    })
+  }
+
+  test("deploy a contract", async() => {
+    await withConnection(async connection => {
+      let result = await deploy(connection, "")
+      expect(result).toEqual("Contract Foo has been deployed to account Alice")
+
+      result = await deploy(connection, "Bob")
+      expect(result).toEqual("Contract Foo has been deployed to account Bob")
+    }, true)
+  })
+
+})
+
+describe("codelensses", () => {
+  const codelensRequest = "textDocument/codeLens"
+
+  test("contract codelensses", async() => {
+    await withConnection(async connection => {
+      let code = fs.readFileSync("./foo.cdc")
+      let path = `file://${__dirname}/foo.cdc`
+      let document = TextDocumentItem.create(path, "cadence", 1, code.toString())
+
+      await connection.sendNotification(DidOpenTextDocumentNotification.type, {
+        textDocument: document
+      })
+
+      let codelens = await connection.sendRequest(codelensRequest, {
+        textDocument: document,
+      })
+
+      expect(codelens).toHaveLength(1)
+      let c = codelens[0].command
+      expect(c.command).toEqual("cadence.server.flow.deployContract")
+      expect(c.title).toEqual("💡 Deploy contract Foo to Alice")
+      expect(c.arguments).toEqual([path, "Foo", "Alice"])
+    }, true)
+
+  })
+
+  test("transactions codelensses", async() => {
+    await withConnection(async connection => {
+      let code = fs.readFileSync("./transaction.cdc")
+      let path = `file://${__dirname}/transaction.cdc`
+      let document = TextDocumentItem.create(path, "cadence", 1, code.toString())
+
+      await connection.sendNotification(DidOpenTextDocumentNotification.type, {
+        textDocument: document
+      })
+
+      let codelens = await connection.sendRequest(codelensRequest, {
+        textDocument: document,
+      })
+
+      expect(codelens).toHaveLength(1)
+      let c = codelens[0].command
+      expect(c.command).toEqual("cadence.server.flow.sendTransaction")
+      expect(c.title).toEqual("💡 Send signed by Alice")
+      expect(c.arguments).toEqual([path, "[]", ["Alice"]])
+    }, true)
+
+  })
+
 
 })
