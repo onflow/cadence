@@ -171,22 +171,57 @@ func Test_DeployContract(t *testing.T) {
 			{args: []json.RawMessage{[]byte("1")}, err: "arguments error: expected 3 arguments, got 1"},
 			{args: []json.RawMessage{[]byte("1"), []byte("2"), []byte("3")}, err: "invalid URI argument: 1"},
 			{args: []json.RawMessage{locationURL, []byte("2"), []byte("3")}, err: "invalid name argument: 2"},
-			{args: []json.RawMessage{locationURL, name, []byte("3")}, err: "invalid address argument: 3"},
-			{args: []json.RawMessage{locationURL, name, []byte("3")}, err: "invalid address argument: 3"},
+			{args: []json.RawMessage{locationURL, name, []byte("3")}, err: "invalid signer name: 3"},
 		})
 
 	t.Run("successful deploy contract", func(t *testing.T) {
 		t.Parallel()
 		address := "0x1"
+		signerName := "alice"
 		location, _ := url.Parse(locationString)
-		addressArg, _ := json.Marshal(address)
+		signerNameArg, _ := json.Marshal(signerName)
 
 		mock.
-			On("DeployContract", flow.HexToAddress(address), "NFT", location, nil).
+			On("GetClientAccount", signerName).
+			Return(&clientAccount{
+				Account: &flow.Account{
+					Address: flow.HexToAddress(address),
+				},
+				Name:   "alice",
+				Active: true,
+			})
+
+		mock.
+			On("DeployContract", flow.HexToAddress(address), "NFT", location).
 			Return(nil, nil) // return nil as account since we don't need to check it
 
-		res, err := cmds.deployContract(locationURL, name, addressArg)
+		res, err := cmds.deployContract(locationURL, name, signerNameArg)
 		assert.NoError(t, err)
-		assert.Equal(t, "Contract NFT has been deployed to 0x1", res)
+		assert.Equal(t, "Contract NFT has been deployed to account alice", res)
+	})
+
+	t.Run("successful deploy contract without signer", func(t *testing.T) {
+		t.Parallel()
+		address := "0x1"
+		location, _ := url.Parse(locationString)
+		signerArg, _ := json.Marshal("")
+
+		mock.
+			On("GetActiveClientAccount").
+			Return(&clientAccount{
+				Account: &flow.Account{
+					Address: flow.HexToAddress(address),
+				},
+				Name:   "bob",
+				Active: true,
+			})
+
+		mock.
+			On("DeployContract", flow.HexToAddress(address), "NFT", location).
+			Return(nil, nil) // return nil as account since we don't need to check it
+
+		res, err := cmds.deployContract(locationURL, name, signerArg)
+		assert.NoError(t, err)
+		assert.Equal(t, "Contract NFT has been deployed to account bob", res)
 	})
 }

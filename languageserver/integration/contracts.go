@@ -72,10 +72,6 @@ func (c *contractInfo) update(uri protocol.DocumentURI, version int32, checker *
 		c.kind = contractTypeInterface
 	}
 
-	var pragmaSigners []string
-	var pragmaArgumentStrings []string
-	var pragmaArguments [][]Argument
-
 	if c.startPos != nil {
 		parameterTypes := make([]sema.Type, len(c.parameters))
 
@@ -96,22 +92,19 @@ func (c *contractInfo) update(uri protocol.DocumentURI, version int32, checker *
 					convertedArguments[i] = Argument{arg}
 				}
 
-				pragmaArgumentStrings = append(pragmaArgumentStrings, pragmaArgumentString)
-				pragmaArguments = append(pragmaArguments, convertedArguments)
+				c.pragmaArgumentStrings = append(c.pragmaArgumentStrings, pragmaArgumentString)
+				c.pragmaArguments = append(c.pragmaArguments, convertedArguments)
 			}
 		}
 
 		for _, pragmaSignerString := range parser.ParseDocstringPragmaSigners(docString) {
 			signers := SignersRegexp.FindAllString(pragmaSignerString, -1)
-			pragmaSigners = append(pragmaSigners, signers...)
+			c.pragmaSignersNames = append(c.pragmaSignersNames, signers...)
 		}
 	}
 
 	c.uri = uri
 	c.documentVersion = version
-	c.pragmaSignersNames = pragmaSigners
-	c.pragmaArguments = pragmaArguments
-	c.pragmaArgumentStrings = pragmaArgumentStrings
 }
 
 func (c *contractInfo) codelens(client flowClient) []*protocol.CodeLens {

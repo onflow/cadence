@@ -43,8 +43,8 @@ func Test_ContractUpdate(t *testing.T) {
 				return self.greeting
 			}
 
-			init() {
-				self.greeting = "hello"
+			init(a: String) {
+				self.greeting = a
 			}
      }
         `
@@ -66,8 +66,8 @@ func Test_ContractUpdate(t *testing.T) {
 		assert.Equal(t, protocol.DocumentURI("Hello"), contract.uri)
 		assert.Equal(t, "HelloWorld", contract.name)
 		assert.Equal(t, contractTypeDeclaration, contract.kind)
-		assert.Equal(t, nil, contract.pragmaArguments)
-		assert.Equal(t, nil, contract.pragmaArgumentStrings)
+		assert.Equal(t, [][]Argument(nil), contract.pragmaArguments)
+		assert.Equal(t, []string(nil), contract.pragmaArgumentStrings)
 		assert.Equal(t, []string{"Alice"}, contract.pragmaSignersNames)
 
 		assert.Len(t, contract.parameters, 1)
