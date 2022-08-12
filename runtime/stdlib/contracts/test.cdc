@@ -128,31 +128,29 @@ pub contract Test {
         }
     }
 
-    // Account represents a user account in the blockchain.
+    // Account represents a info about the account created on the blockchain.
     //
     pub struct Account {
-        pub let address:    Address
-        pub let accountKey: AccountKey
-        pub let privateKey: [UInt8]
+        pub let address:   Address
+        pub let publicKey: PublicKey
 
-        init(_ address: Address, _ accountKey: AccountKey, _ privateKey: [UInt8]) {
+        init(_ address: Address, _ publicKey: PublicKey) {
             self.address = address
-            self.accountKey = accountKey
-            self.privateKey = privateKey
+            self.publicKey = publicKey
         }
     }
 
     // Transaction that can be submitted and executed on the blockchain.
     //
     pub struct Transaction {
-        pub let code:       String
-        pub let authorizer: Address?
-        pub let signers:    [Account]
-        pub let args:       [AnyStruct]
+        pub let code:        String
+        pub let authorizers: [Address]
+        pub let signers:     [Account]
+        pub let args:        [AnyStruct]
 
-        init(_ code: String, _ authorizer: Address?, _ signers: [Account], _ args: [AnyStruct]) {
+        init(_ code: String, _ authorizers: [Address], _ signers: [Account], _ args: [AnyStruct]) {
             self.code = code
-            self.authorizer = authorizer
+            self.authorizers = authorizers
             self.signers = signers
             self.args = args
         }

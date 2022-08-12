@@ -38,7 +38,7 @@ type TestFramework interface {
 
 	AddTransaction(
 		code string,
-		authorizer *common.Address,
+		authorizers []common.Address,
 		signers []*Account,
 		args []Value,
 	) error
@@ -65,17 +65,8 @@ type TransactionResult struct {
 }
 
 type Account struct {
-	Address    common.Address
-	AccountKey *AccountKey
-	PrivateKey []byte
-}
-
-type AccountKey struct {
-	KeyIndex  int
+	Address   common.Address
 	PublicKey *PublicKey
-	HashAlgo  sema.HashAlgorithm
-	Weight    int
-	IsRevoked bool
 }
 
 type PublicKey struct {
