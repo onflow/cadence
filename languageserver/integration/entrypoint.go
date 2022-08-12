@@ -49,7 +49,7 @@ type entryPointInfo struct {
 	kind                  entryPointKind
 	parameters            []*sema.Parameter
 	pragmaArgumentStrings []string
-	pragmaArguments       [][]Argument
+	pragmaArguments       [][]Argument // todo can we refactor into a 1D list
 	pragmaSignerNames     []string
 	numberOfSigners       int
 }
@@ -79,10 +79,6 @@ func (e *entryPointInfo) update(uri protocol.DocumentURI, version int32, checker
 		e.numberOfSigners = 0
 	}
 
-	var pragmaSigners []string
-	var pragmaArgumentStrings []string
-	var pragmaArguments [][]Argument
-
 	if e.startPos != nil {
 		parameterTypes := make([]sema.Type, len(e.parameters))
 
@@ -103,22 +99,19 @@ func (e *entryPointInfo) update(uri protocol.DocumentURI, version int32, checker
 					convertedArguments[i] = Argument{arg}
 				}
 
-				pragmaArgumentStrings = append(pragmaArgumentStrings, pragmaArgumentString)
-				pragmaArguments = append(pragmaArguments, convertedArguments)
+				e.pragmaArgumentStrings = append(e.pragmaArgumentStrings, pragmaArgumentString)
+				e.pragmaArguments = append(e.pragmaArguments, convertedArguments)
 			}
 		}
 
 		for _, pragmaSignerString := range parser.ParseDocstringPragmaSigners(docString) {
 			signers := SignersRegexp.FindAllString(pragmaSignerString, -1)
-			pragmaSigners = append(pragmaSigners, signers...)
+			e.pragmaSignerNames = append(e.pragmaSignerNames, signers...)
 		}
 	}
 
 	e.uri = uri
 	e.documentVersion = version
-	e.pragmaArgumentStrings = pragmaArgumentStrings
-	e.pragmaArguments = pragmaArguments
-	e.pragmaSignerNames = pragmaSigners
 }
 
 // codelens shows an execute button when there is exactly one valid entry point
