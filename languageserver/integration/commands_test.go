@@ -182,7 +182,7 @@ func Test_DeployContract(t *testing.T) {
 		addressArg, _ := json.Marshal(address)
 
 		mock.
-			On("DeployContract", flow.HexToAddress(address), "NFT", location).
+			On("DeployContract", flow.HexToAddress(address), "NFT", location, nil).
 			Return(nil, nil) // return nil as account since we don't need to check it
 
 		res, err := cmds.deployContract(locationURL, name, addressArg)

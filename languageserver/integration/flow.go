@@ -191,7 +191,7 @@ func (f *flowkitClient) DeployContract(
 	updateExisting := slices.Contains(maps.Keys(flowAccount.Contracts), name)
 
 	account := createSigner(address, service)
-	return f.services.Accounts.AddContract(account, name, code, updateExisting)
+	return f.services.Accounts.AddContract(account, name, code, updateExisting, nil)
 }
 
 func (f *flowkitClient) SendTransaction(
