@@ -457,7 +457,8 @@ describe("codelensses", () => {
   test("contract codelensses", async() => {
     await withConnection(async connection => {
       let code = fs.readFileSync("./foo.cdc")
-      let document = TextDocumentItem.create(`file://${__dirname}/foo.cdc`, "cadence", 1, code.toString())
+      let path = `file://${__dirname}/foo.cdc`
+      let document = TextDocumentItem.create(path, "cadence", 1, code.toString())
 
       await connection.sendNotification(DidOpenTextDocumentNotification.type, {
         textDocument: document
@@ -471,7 +472,7 @@ describe("codelensses", () => {
       let c = codelens[0].command
       expect(c.command).toEqual("cadence.server.flow.deployContract")
       expect(c.title).toEqual("💡 Deploy contract Foo to Alice")
-      expect(c.arguments).toEqual(["file:///Users/dapper/Dev/cadence/languageserver/test/foo.cdc", "Foo", "Alice"])
+      expect(c.arguments).toEqual([path, "Foo", "Alice"])
     }, true)
 
   })
@@ -479,7 +480,8 @@ describe("codelensses", () => {
   test("transactions codelensses", async() => {
     await withConnection(async connection => {
       let code = fs.readFileSync("./transaction.cdc")
-      let document = TextDocumentItem.create(`file://${__dirname}/transaction.cdc`, "cadence", 1, code.toString())
+      let path = `file://${__dirname}/transaction.cdc`
+      let document = TextDocumentItem.create(path, "cadence", 1, code.toString())
 
       await connection.sendNotification(DidOpenTextDocumentNotification.type, {
         textDocument: document
@@ -493,11 +495,7 @@ describe("codelensses", () => {
       let c = codelens[0].command
       expect(c.command).toEqual("cadence.server.flow.sendTransaction")
       expect(c.title).toEqual("💡 Send signed by Alice")
-      expect(c.arguments).toEqual([
-        "file:///Users/dapper/Dev/cadence/languageserver/test/transaction.cdc",
-        "[]",
-        ["Alice"]
-      ])
+      expect(c.arguments).toEqual([path, "[]", ["Alice"]])
     }, true)
 
   })
