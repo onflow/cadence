@@ -83,8 +83,8 @@ It is the same hasher used by the internal Flow protocol, and can be used to ver
 To define the MAC instance, `KMAC128(customizer, key, data, length)` is instanciated with the following parameters 
 (as referred to by the NIST [SHA-3 Derived Functions](https://nvlpubs.nist.gov/nistpubs/specialpublications/nist.sp.800-185.pdf)):
   - `customizer` is the UTF-8 encoding of `"H2C"`.
-  - `key` is the UTF-8 encoding of `"APP_BLS_SIG_BLS12381G1_XOF:KMAC128_SSWU_RO_POP_"` when `hash` is used. It includes the input `tag`
-  when `hashWithTag` is used and key becomes the UTF-8 encoding of `"APP_" || tag || "BLS_SIG_BLS12381G1_XOF:KMAC128_SSWU_RO_POP_"`.
+  - `key` is the UTF-8 encoding of `"FLOW--V00-CS00-with-BLS_SIG_BLS12381G1_XOF:KMAC128_SSWU_RO_POP_"` when `hash` is used. It includes the input `tag`
+  when `hashWithTag` is used and key becomes the UTF-8 encoding of `"FLOW-" || tag || "-V00-CS00-with-BLS_SIG_BLS12381G1_XOF:KMAC128_SSWU_RO_POP_"`.
   - `data` is the input data to hash.
   - `length` is 1024 bytes.
 
@@ -218,7 +218,7 @@ The inputs to `verify` depend on the signature scheme used:
   - `domainSeparationTag` is the expected domain tag. Multiple valid tag values can be used (check [`hashWithTag`](#hashing) for more details).
   - `hashAlgorithm` is either `SHA2_256`, `SHA3_256` or `KECCAK_256`. It is the algorithm used to hash the message along with the given tag (check the `hashWithTag`[function](#hashing) for more details).
 
-As noted in [`hashWithTag`](#hashing) for `SHA2_256`, `SHA3_256` and `KECCAK_256, using an empty `tag` results in hashing the input data only. If a signature verification
+As noted in [`hashWithTag`](#hashing) for `SHA2_256`, `SHA3_256` and `KECCAK_256`, using an empty `tag` results in hashing the input data only. If a signature verification
 needs to be done against data without any domain tag, this can be done by using an empty domain tag `""`.
 
 ECDSA verification is implemented as defined in ANS X9.62 (also referred by [FIPS 186-4](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-4.pdf) and [SEC 1, Version 2.0](https://www.secg.org/sec1-v2.pdf)).
@@ -255,7 +255,7 @@ Multi-signature verification in BLS requires a defense against rogue public-key 
 available to protect BLS verification. The language provides the proof of possession of private key as a defense tool. 
 The proof of possession of private key is a BLS signature over the public key itself. 
 The PoP signature follows the same requirements of a BLS signature (detailed in [Signature verification](#Signature-verification)),
-except it uses a special domain separation tag. The key expected to be used in KMAC128 is the UTF-8 encoding of `"POP_BLS_SIG_BLS12381G1_XOF:KMAC128_SSWU_RO_POP_"`.
+except it uses a special domain separation tag. The key expected to be used in KMAC128 is the UTF-8 encoding of `"BLS_POP_BLS12381G1_XOF:KMAC128_SSWU_RO_POP_"`.
 The expected message to be signed by the PoP is the serialization of the BLS public key corresponding to the signing private key ([serialization details](#PublicKey)).
 The PoP can only be verified using the `PublicKey` method `verifyPoP`. 
 
