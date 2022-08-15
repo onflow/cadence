@@ -188,7 +188,7 @@ func (r *TestRunner) newInterpreterFromChecker(checker *sema.Checker) (*interpre
 			compositeType *sema.CompositeType,
 			constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
 			invocationRange ast.Range,
-		) interpreter.Value {
+		) interpreter.ContractValue {
 
 			switch compositeType.Location {
 			case stdlib.CryptoChecker.Location:
