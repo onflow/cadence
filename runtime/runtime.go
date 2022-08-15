@@ -23,7 +23,7 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/opentracing/opentracing-go"
+	"go.opentelemetry.io/otel/attribute"
 	"golang.org/x/crypto/sha3"
 
 	"github.com/onflow/cadence"
@@ -122,7 +122,7 @@ type Runtime interface {
 	NewContractFunctionExecutor(
 		contractLocation common.AddressLocation,
 		functionName string,
-		arguments []interpreter.Value,
+		arguments []cadence.Value,
 		argumentTypes []sema.Type,
 		context Context,
 	) Executor
@@ -135,7 +135,7 @@ type Runtime interface {
 	InvokeContractFunction(
 		contractLocation common.AddressLocation,
 		functionName string,
-		arguments []interpreter.Value,
+		arguments []cadence.Value,
 		argumentTypes []sema.Type,
 		context Context,
 	) (cadence.Value, error)
@@ -497,7 +497,7 @@ func (r *interpreterRuntime) newAuthAccountValue(
 func (r *interpreterRuntime) NewContractFunctionExecutor(
 	contractLocation common.AddressLocation,
 	functionName string,
-	arguments []interpreter.Value,
+	arguments []cadence.Value,
 	argumentTypes []sema.Type,
 	context Context,
 ) Executor {
@@ -513,7 +513,7 @@ func (r *interpreterRuntime) NewContractFunctionExecutor(
 func (r *interpreterRuntime) InvokeContractFunction(
 	contractLocation common.AddressLocation,
 	functionName string,
-	arguments []interpreter.Value,
+	arguments []cadence.Value,
 	argumentTypes []sema.Type,
 	context Context,
 ) (cadence.Value, error) {
@@ -919,9 +919,6 @@ func (r *interpreterRuntime) check(
 						case stdlib.CryptoChecker.Location:
 							elaboration = stdlib.CryptoChecker.Elaboration
 
-						case stdlib.TestContractLocation:
-							elaboration = stdlib.TestContractChecker.Elaboration
-
 						default:
 							context := startContext.WithLocation(importedLocation)
 
@@ -1157,9 +1154,9 @@ func (r *interpreterRuntime) newInterpreter(
 				interpreter *interpreter.Interpreter,
 				functionName string,
 				duration time.Duration,
-				logs []opentracing.LogRecord,
+				attrs []attribute.KeyValue,
 			) {
-				context.Interface.RecordTrace(functionName, interpreter.Location, duration, logs)
+				context.Interface.RecordTrace(functionName, interpreter.Location, duration, attrs)
 			},
 		),
 		interpreter.WithTracingEnabled(r.tracingEnabled),
@@ -1199,16 +1196,6 @@ func (r *interpreterRuntime) importLocationHandler(
 		switch location {
 		case stdlib.CryptoChecker.Location:
 			program := interpreter.ProgramFromChecker(stdlib.CryptoChecker)
-			subInterpreter, err := inter.NewSubInterpreter(program, location)
-			if err != nil {
-				panic(err)
-			}
-			return interpreter.InterpreterImport{
-				Interpreter: subInterpreter,
-			}
-
-		case stdlib.TestContractLocation:
-			program := interpreter.ProgramFromChecker(stdlib.TestContractChecker)
 			subInterpreter, err := inter.NewSubInterpreter(program, location)
 			if err != nil {
 				panic(err)
@@ -1299,9 +1286,6 @@ func (r *interpreterRuntime) injectedCompositeFieldsHandler(
 
 		switch location {
 		case stdlib.CryptoChecker.Location:
-			return nil
-
-		case stdlib.TestContractChecker.Location:
 			return nil
 
 		default:
@@ -1843,17 +1827,6 @@ func (r *interpreterRuntime) loadContract(
 	switch compositeType.Location {
 	case stdlib.CryptoChecker.Location:
 		contract, err := stdlib.NewCryptoContract(
-			inter,
-			constructorGenerator(common.Address{}),
-			invocationRange,
-		)
-		if err != nil {
-			panic(err)
-		}
-		return contract
-
-	case stdlib.TestContractLocation:
-		contract, err := stdlib.NewTestContract(
 			inter,
 			constructorGenerator(common.Address{}),
 			invocationRange,

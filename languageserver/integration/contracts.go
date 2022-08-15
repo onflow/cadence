@@ -19,12 +19,14 @@
 package integration
 
 import (
+	"fmt"
+
+	"github.com/onflow/cadence/languageserver/conversion"
+	"github.com/onflow/cadence/languageserver/protocol"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
-
-	"github.com/onflow/cadence/languageserver/protocol"
 )
 
 type contractKind uint8
@@ -36,6 +38,7 @@ const (
 )
 
 type contractInfo struct {
+	uri                   protocol.DocumentURI
 	documentVersion       int32
 	startPos              *ast.Position
 	kind                  contractKind
@@ -43,54 +46,40 @@ type contractInfo struct {
 	parameters            []*sema.Parameter
 	pragmaArgumentStrings []string
 	pragmaArguments       [][]Argument
-	pragmaSignersStrings  [][]string
+	pragmaSignersNames    []string
 }
 
-func (i FlowIntegration) updateContractInfoIfNeeded(
-	uri protocol.DocumentURI,
-	version int32,
-	checker *sema.Checker,
-) {
-	if i.contractInfo[uri].documentVersion == version {
-		return
+func (c *contractInfo) update(uri protocol.DocumentURI, version int32, checker *sema.Checker) {
+	if c.documentVersion == version {
+		return // if no change in version do nothing
 	}
 
-	var name string
-	var startPos *ast.Position
-	var kind contractKind
 	var docString string
-	var parameters []*sema.Parameter
-
 	contractDeclaration := checker.Program.SoleContractDeclaration()
 	contractInterfaceDeclaration := checker.Program.SoleContractInterfaceDeclaration()
 
 	if contractDeclaration != nil {
-		name = contractDeclaration.Identifier.Identifier
-		startPos = &contractDeclaration.StartPos
-		kind = contractTypeDeclaration
 		docString = contractDeclaration.DocString
+		c.name = contractDeclaration.Identifier.String()
+		c.startPos = &contractDeclaration.StartPos
+		c.kind = contractTypeDeclaration
 		contractType := checker.Elaboration.CompositeDeclarationTypes[contractDeclaration]
-		parameters = contractType.ConstructorParameters
+		c.parameters = contractType.ConstructorParameters
 	} else if contractInterfaceDeclaration != nil {
-		name = contractInterfaceDeclaration.Identifier.Identifier
-		startPos = &contractInterfaceDeclaration.StartPos
-		kind = contractTypeInterface
 		docString = contractInterfaceDeclaration.DocString
+		c.name = contractInterfaceDeclaration.Identifier.String()
+		c.startPos = &contractInterfaceDeclaration.StartPos
+		c.kind = contractTypeInterface
 	}
 
-	var pragmaSigners [][]string
-	var pragmaArgumentStrings []string
-	var pragmaArguments [][]Argument
+	if c.startPos != nil {
+		parameterTypes := make([]sema.Type, len(c.parameters))
 
-	if startPos != nil {
-
-		parameterTypes := make([]sema.Type, len(parameters))
-
-		for i, parameter := range parameters {
+		for i, parameter := range c.parameters {
 			parameterTypes[i] = parameter.TypeAnnotation.Type
 		}
 
-		if len(parameters) > 0 {
+		if len(c.parameters) > 0 {
 			for _, pragmaArgumentString := range parser.ParseDocstringPragmaArguments(docString) {
 				arguments, err := runtime.ParseLiteralArgumentList(pragmaArgumentString, parameterTypes, nil)
 				// TODO: record error and show diagnostic
@@ -103,25 +92,49 @@ func (i FlowIntegration) updateContractInfoIfNeeded(
 					convertedArguments[i] = Argument{arg}
 				}
 
-				pragmaArgumentStrings = append(pragmaArgumentStrings, pragmaArgumentString)
-				pragmaArguments = append(pragmaArguments, convertedArguments)
+				c.pragmaArgumentStrings = append(c.pragmaArgumentStrings, pragmaArgumentString)
+				c.pragmaArguments = append(c.pragmaArguments, convertedArguments)
 			}
 		}
 
 		for _, pragmaSignerString := range parser.ParseDocstringPragmaSigners(docString) {
 			signers := SignersRegexp.FindAllString(pragmaSignerString, -1)
-			pragmaSigners = append(pragmaSigners, signers)
+			c.pragmaSignersNames = append(c.pragmaSignersNames, signers...)
 		}
 	}
 
-	i.contractInfo[uri] = contractInfo{
-		documentVersion:       version,
-		startPos:              startPos,
-		kind:                  kind,
-		name:                  name,
-		parameters:            parameters,
-		pragmaArgumentStrings: pragmaArgumentStrings,
-		pragmaArguments:       pragmaArguments,
-		pragmaSignersStrings:  pragmaSigners,
+	c.uri = uri
+	c.documentVersion = version
+}
+
+func (c *contractInfo) codelens(client flowClient) []*protocol.CodeLens {
+	if c.kind == contractTypeUnknown || c.startPos == nil {
+		return nil
 	}
+	codelensRange := conversion.ASTToProtocolRange(*c.startPos, *c.startPos)
+
+	var signer string
+	if len(c.pragmaSignersNames) == 0 {
+		signer = client.GetActiveClientAccount().Name // default to active client account
+	} else if len(c.pragmaSignersNames) == 1 {
+		signer = c.pragmaSignersNames[0]
+	} else {
+		title := fmt.Sprintf("%s Only possible to deploy to a single account", prefixError)
+		return []*protocol.CodeLens{makeActionlessCodelens(title, codelensRange)}
+	}
+
+	account := client.GetClientAccount(signer)
+	if account == nil {
+		title := fmt.Sprintf("%s Specified account %s does not exist", prefixError, signer)
+		return []*protocol.CodeLens{makeActionlessCodelens(title, codelensRange)}
+	}
+
+	titleBody := "Deploy contract"
+	if c.kind == contractTypeInterface {
+		titleBody = "Deploy contract interface"
+	}
+
+	title := fmt.Sprintf("%s %s %s to %s", prefixOK, titleBody, c.name, signer)
+	arguments, _ := encodeJSONArguments(c.uri, c.name, signer)
+	return []*protocol.CodeLens{makeCodeLens(CommandDeployContract, title, codelensRange, arguments)}
 }

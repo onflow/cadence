@@ -74,6 +74,46 @@ func TestRunningSingleTest(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestAssertFunction(t *testing.T) {
+	t.Parallel()
+
+	code := `
+        import Test
+
+        pub fun testAssertWithNoArgs() {
+            Test.assert(true)
+        }
+
+        pub fun testAssertWithNoArgsFail() {
+            Test.assert(false)
+        }
+
+        pub fun testAssertWithMessage() {
+            Test.assert(true, "some reason")
+        }
+
+        pub fun testAssertWithMessageFail() {
+            Test.assert(false, "some reason")
+        }
+    `
+
+	runner := NewTestRunner()
+
+	err := runner.RunTest(code, "testAssertWithNoArgs")
+	assert.NoError(t, err)
+
+	err = runner.RunTest(code, "testAssertWithNoArgsFail")
+	require.Error(t, err)
+	assert.Equal(t, err.Error(), "assertion failed")
+
+	err = runner.RunTest(code, "testAssertWithMessage")
+	assert.NoError(t, err)
+
+	err = runner.RunTest(code, "testAssertWithMessageFail")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "assertion failed: some reason")
+}
+
 func TestExecuteScript(t *testing.T) {
 	t.Parallel()
 
@@ -89,8 +129,6 @@ func TestExecuteScript(t *testing.T) {
 
                 assert(result.status == Test.ResultStatus.succeeded)
                 assert((result.returnValue! as! Int) == 5)
-
-                log(result.returnValue)
             }
         `
 
@@ -114,8 +152,6 @@ func TestExecuteScript(t *testing.T) {
 
                 assert(result.status == Test.ResultStatus.succeeded)
                 assert((result.returnValue! as! Int) == 5)
-
-            log(result.returnValue)
         }
     `
 		runner := NewTestRunner()

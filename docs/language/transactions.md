@@ -201,7 +201,7 @@ transaction {
         //
         // Avoid logic that does not need access to signing accounts.
         //
-        // Signing accounts can't be accesed anywhere else in the transaction.
+        // Signing accounts can't be accessed anywhere else in the transaction.
     }
 
     pre {
