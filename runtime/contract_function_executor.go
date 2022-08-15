@@ -261,7 +261,7 @@ func (executor *interpreterContractFunctionExecutor) convertArgument(
 			), nil
 		}
 	}
-	return importValue(
+	return ImportValue(
 		inter,
 		getLocationRange,
 		argument,

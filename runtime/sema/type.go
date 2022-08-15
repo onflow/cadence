@@ -3461,7 +3461,7 @@ type CompositeType struct {
 	Fields                              []string
 	// TODO: add support for overloaded initializers
 	ConstructorParameters []*Parameter
-	nestedTypes           *StringTypeOrderedMap
+	NestedTypes           *StringTypeOrderedMap
 	containerType         Type
 	EnumRawType           Type
 	hasComputedMembers    bool
@@ -3529,8 +3529,8 @@ func (t *CompositeType) checkIdentifiersCached() {
 		panic(errors.NewUnreachableError())
 	}
 
-	if t.nestedTypes != nil {
-		t.nestedTypes.Foreach(checkIdentifiersCached)
+	if t.NestedTypes != nil {
+		t.NestedTypes.Foreach(checkIdentifiersCached)
 	}
 }
 
@@ -3717,7 +3717,7 @@ func (t *CompositeType) InterfaceType() *InterfaceType {
 		Fields:                t.Fields,
 		InitializerParameters: t.ConstructorParameters,
 		containerType:         t.containerType,
-		nestedTypes:           t.nestedTypes,
+		NestedTypes:           t.NestedTypes,
 	}
 }
 
@@ -3727,7 +3727,7 @@ func (t *CompositeType) TypeRequirements() []*CompositeType {
 
 	if containerComposite, ok := t.containerType.(*CompositeType); ok {
 		for _, conformance := range containerComposite.ExplicitInterfaceConformances {
-			ty, ok := conformance.nestedTypes.Get(t.Identifier)
+			ty, ok := conformance.NestedTypes.Get(t.Identifier)
 			if !ok {
 				continue
 			}
@@ -3754,11 +3754,11 @@ func (t *CompositeType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 }
 
 func (t *CompositeType) IsContainerType() bool {
-	return t.nestedTypes != nil
+	return t.NestedTypes != nil
 }
 
 func (t *CompositeType) GetNestedTypes() *StringTypeOrderedMap {
-	return t.nestedTypes
+	return t.NestedTypes
 }
 
 func (t *CompositeType) initializeMemberResolvers() {
@@ -3989,7 +3989,7 @@ type InterfaceType struct {
 	// TODO: add support for overloaded initializers
 	InitializerParameters []*Parameter
 	containerType         Type
-	nestedTypes           *StringTypeOrderedMap
+	NestedTypes           *StringTypeOrderedMap
 	cachedIdentifiers     *struct {
 		TypeID              TypeID
 		QualifiedIdentifier string
@@ -4028,8 +4028,8 @@ func (t *InterfaceType) checkIdentifiersCached() {
 		panic(errors.NewUnreachableError())
 	}
 
-	if t.nestedTypes != nil {
-		t.nestedTypes.Foreach(checkIdentifiersCached)
+	if t.NestedTypes != nil {
+		t.NestedTypes.Foreach(checkIdentifiersCached)
 	}
 }
 
@@ -4205,11 +4205,11 @@ func (t *InterfaceType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 }
 
 func (t *InterfaceType) IsContainerType() bool {
-	return t.nestedTypes != nil
+	return t.NestedTypes != nil
 }
 
 func (t *InterfaceType) GetNestedTypes() *StringTypeOrderedMap {
-	return t.nestedTypes
+	return t.NestedTypes
 }
 
 func (t *InterfaceType) FieldPosition(name string, declaration *ast.InterfaceDeclaration) ast.Position {
@@ -6269,7 +6269,7 @@ var AccountKeyType = func() *CompositeType {
 	}
 
 	accountKeyType.Members = GetMembersAsMap(members)
-	accountKeyType.Fields = getFieldNames(members)
+	accountKeyType.Fields = GetFieldNames(members)
 	return accountKeyType
 }()
 
@@ -6337,7 +6337,7 @@ var PublicKeyType = func() *CompositeType {
 	}
 
 	publicKeyType.Members = GetMembersAsMap(members)
-	publicKeyType.Fields = getFieldNames(members)
+	publicKeyType.Fields = GetFieldNames(members)
 
 	return publicKeyType
 }()
@@ -6407,7 +6407,7 @@ func GetMembersAsMap(members []*Member) *StringMemberOrderedMap {
 	return membersMap
 }
 
-func getFieldNames(members []*Member) []string {
+func GetFieldNames(members []*Member) []string {
 	fields := make([]string, 0)
 	for _, member := range members {
 		if member.DeclarationKind == common.DeclarationKindField {

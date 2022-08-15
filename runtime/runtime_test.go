@@ -7425,3 +7425,35 @@ func assertRuntimeErrorIsExternalError(t *testing.T, err error) {
 	innerError := runtimeError.Unwrap()
 	require.ErrorAs(t, innerError, &runtimeErrors.ExternalError{})
 }
+
+func TestImportingTestStdlib(t *testing.T) {
+
+	t.Parallel()
+
+	rt := newTestInterpreterRuntime()
+
+	runtimeInterface := &testRuntimeInterface{}
+
+	_, err := rt.ExecuteScript(
+		Script{
+			Source: []byte(`
+			    import Test
+
+			    pub fun main() {
+			        Test.assert(true)
+			    }
+			`),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  utils.TestLocation,
+		},
+	)
+
+	require.Error(t, err)
+	errs := checker.ExpectCheckerErrors(t, err, 1)
+
+	notDeclaredErr := &sema.NotDeclaredError{}
+	require.ErrorAs(t, errs[0], &notDeclaredErr)
+	assert.Equal(t, "Test", notDeclaredErr.Name)
+}

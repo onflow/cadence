@@ -363,6 +363,7 @@ type Interpreter struct {
 	resourceVariables                    map[ResourceKindedValue]*Variable
 	memoryGauge                          common.MemoryGauge
 	CallStack                            *CallStack
+	TestFramework                        TestFramework
 }
 
 var _ common.MemoryGauge = &Interpreter{}
@@ -685,6 +686,15 @@ func WithDebugger(debugger *Debugger) Option {
 	}
 }
 
+// WithTestFramework returns an interpreter option which sets the given test framework
+//
+func WithTestFramework(testFramework TestFramework) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetTestFramework(testFramework)
+		return nil
+	}
+}
+
 // Create a base-activation so that it can be reused across all interpreters.
 //
 var baseActivation = func() *VariableActivation {
@@ -913,6 +923,12 @@ func (interpreter *Interpreter) SetDebugger(debugger *Debugger) {
 	interpreter.debugger = debugger
 }
 
+// SetTestFramework sets the test framework to be used for running tests.
+//
+func (interpreter *Interpreter) SetTestFramework(testFramework TestFramework) {
+	interpreter.TestFramework = testFramework
+}
+
 // locationRangeGetter returns a function that returns the location range
 // for the given location and positioned element.
 //
@@ -929,12 +945,12 @@ func locationRangeGetter(
 	}
 }
 
-func (interpreter *Interpreter) findVariable(name string) *Variable {
+func (interpreter *Interpreter) FindVariable(name string) *Variable {
 	return interpreter.activations.Find(name)
 }
 
 func (interpreter *Interpreter) findOrDeclareVariable(name string) *Variable {
-	variable := interpreter.findVariable(name)
+	variable := interpreter.FindVariable(name)
 	if variable == nil {
 		variable = interpreter.declareVariable(name, nil)
 	}
@@ -979,7 +995,7 @@ func (interpreter *Interpreter) declareGlobal(declaration ast.Declaration) {
 	}
 	name := identifier.Identifier
 	// NOTE: semantic analysis already checked possible invalid redeclaration
-	interpreter.Globals.Set(name, interpreter.findVariable(name))
+	interpreter.Globals.Set(name, interpreter.FindVariable(name))
 }
 
 // invokeVariable looks up the function by the given name from global variables,
@@ -1026,10 +1042,10 @@ func (interpreter *Interpreter) invokeVariable(
 		}
 	}
 
-	return interpreter.invokeExternally(functionValue, functionType, arguments)
+	return interpreter.InvokeExternally(functionValue, functionType, arguments)
 }
 
-func (interpreter *Interpreter) invokeExternally(
+func (interpreter *Interpreter) InvokeExternally(
 	functionValue FunctionValue,
 	functionType *sema.FunctionType,
 	arguments []Value,
@@ -1121,7 +1137,7 @@ func (interpreter *Interpreter) InvokeTransaction(index int, arguments ...Value)
 	transactionType := interpreter.Program.Elaboration.TransactionTypes[index]
 	functionType := transactionType.EntryPointFunctionType()
 
-	_, err = interpreter.invokeExternally(functionValue, functionType, arguments)
+	_, err = interpreter.InvokeExternally(functionValue, functionType, arguments)
 	return err
 }
 
@@ -2725,6 +2741,7 @@ func (interpreter *Interpreter) NewSubInterpreter(
 		WithOnResourceOwnerChangeHandler(interpreter.onResourceOwnerChange),
 		WithOnMeterComputationFuncHandler(interpreter.onMeterComputation),
 		WithMemoryGauge(interpreter.memoryGauge),
+		WithTestFramework(interpreter.TestFramework),
 	}
 
 	return NewInterpreter(
