@@ -2532,6 +2532,77 @@ func TestCheckInvalidInterfaceDefaultImplementationConcreteTypeUsage(t *testing.
 	})
 }
 
+func TestCheckInvalidInterfaceDefaultImplementationConcreteTypeUsage2(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          struct interface IA {
+              x: Int
+
+              fun test() {
+                  self.x = 1
+              }
+          }
+
+          struct Test: IA {
+              let x: Int
+
+              init() {
+                  self.x = 0
+              }
+          }
+
+          fun test() {
+              Test().test()
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.AssignmentToConstantMemberError{}, errs[0])
+	})
+
+	t.Run("type requirement", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          contract interface IA {
+
+              struct X {
+                  x: Int
+
+                  fun test() {
+                      self.x = 1
+                  }
+              }
+          }
+
+          contract Test: IA {
+
+              struct X {
+                  let x: Int
+
+                  init() {
+                      self.x = 0
+                  }
+              }
+          }
+
+          fun test() {
+              Test.X()
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.AssignmentToConstantMemberError{}, errs[0])
+	})
 }
 
 func TestCheckInterfaceDefaultImplementationConcreteTypeUsage(t *testing.T) {
