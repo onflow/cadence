@@ -1312,6 +1312,7 @@ type ArrayValue struct {
 
 func NewArrayValue(
 	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
 	arrayType ArrayStaticType,
 	address common.Address,
 	values ...Value,
@@ -1336,8 +1337,7 @@ func NewArrayValue(
 
 			value = value.Transfer(
 				interpreter,
-				// TODO: provide proper location range
-				ReturnEmptyLocationRange,
+				getLocationRange,
 				atree.Address(address),
 				true,
 				nil,
@@ -1390,7 +1390,7 @@ func NewArrayValueWithIterator(
 			},
 		)
 		if err != nil {
-			panic(ExternalError{err})
+			panic(errors.NewExternalError(err))
 		}
 		return array
 	}
@@ -1460,7 +1460,7 @@ func (v *ArrayValue) Iterate(gauge common.MemoryGauge, f func(element Value) (re
 		return resume, nil
 	})
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 }
 
@@ -1508,6 +1508,8 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, getLocationRange func() L
 		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
 	}
 
+	storageID := v.StorageID()
+
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
 
@@ -1528,9 +1530,27 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, getLocationRange func() L
 	})
 
 	v.isDestroyed = true
+
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.array = nil
 	}
+
+	interpreter.updateReferencedResource(
+		storageID,
+		storageID,
+		func(value ReferenceTrackedResourceKindedValue) {
+			arrayValue, ok := value.(*ArrayValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			arrayValue.isDestroyed = true
+
+			if interpreter.invalidatedResourceValidationEnabled {
+				arrayValue.array = nil
+			}
+		},
+	)
 }
 
 func (v *ArrayValue) IsDestroyed() bool {
@@ -1543,12 +1563,12 @@ func (v *ArrayValue) Concat(interpreter *Interpreter, getLocationRange func() Lo
 
 	firstIterator, err := v.array.Iterator()
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 
 	secondIterator, err := other.array.Iterator()
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 
 	elementType := v.Type.ElementType()
@@ -1565,7 +1585,7 @@ func (v *ArrayValue) Concat(interpreter *Interpreter, getLocationRange func() Lo
 			if first {
 				atreeValue, err := firstIterator.Next()
 				if err != nil {
-					panic(ExternalError{err})
+					panic(errors.NewExternalError(err))
 				}
 
 				if atreeValue == nil {
@@ -1578,7 +1598,7 @@ func (v *ArrayValue) Concat(interpreter *Interpreter, getLocationRange func() Lo
 			if !first {
 				atreeValue, err := secondIterator.Next()
 				if err != nil {
-					panic(ExternalError{err})
+					panic(errors.NewExternalError(err))
 				}
 
 				if atreeValue != nil {
@@ -1640,7 +1660,7 @@ func (v *ArrayValue) Get(interpreter *Interpreter, getLocationRange func() Locat
 	if err != nil {
 		v.handleIndexOutOfBoundsError(err, index, getLocationRange)
 
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 
 	return StoredValue(interpreter, storable, interpreter.Storage)
@@ -1685,7 +1705,7 @@ func (v *ArrayValue) Set(interpreter *Interpreter, getLocationRange func() Locat
 	if err != nil {
 		v.handleIndexOutOfBoundsError(err, index, getLocationRange)
 
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 	interpreter.maybeValidateAtreeValue(v.array)
 
@@ -1752,7 +1772,7 @@ func (v *ArrayValue) Append(interpreter *Interpreter, getLocationRange func() Lo
 
 	err := v.array.Append(element)
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 	interpreter.maybeValidateAtreeValue(v.array)
 }
@@ -1810,7 +1830,7 @@ func (v *ArrayValue) Insert(interpreter *Interpreter, getLocationRange func() Lo
 	if err != nil {
 		v.handleIndexOutOfBoundsError(err, index, getLocationRange)
 
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 	interpreter.maybeValidateAtreeValue(v.array)
 }
@@ -1842,7 +1862,7 @@ func (v *ArrayValue) Remove(interpreter *Interpreter, getLocationRange func() Lo
 	if err != nil {
 		v.handleIndexOutOfBoundsError(err, index, getLocationRange)
 
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 	interpreter.maybeValidateAtreeValue(v.array)
 
@@ -2292,7 +2312,7 @@ func (v *ArrayValue) Transfer(
 
 		iterator, err := v.array.Iterator()
 		if err != nil {
-			panic(ExternalError{err})
+			panic(errors.NewExternalError(err))
 		}
 
 		array, err = atree.NewArrayFromBatchData(
@@ -2315,7 +2335,7 @@ func (v *ArrayValue) Transfer(
 			},
 		)
 		if err != nil {
-			panic(ExternalError{err})
+			panic(errors.NewExternalError(err))
 		}
 
 		if remove {
@@ -2323,7 +2343,7 @@ func (v *ArrayValue) Transfer(
 				interpreter.RemoveReferencedSlab(storable)
 			})
 			if err != nil {
-				panic(ExternalError{err})
+				panic(errors.NewExternalError(err))
 			}
 			interpreter.maybeValidateAtreeValue(v.array)
 
@@ -2380,7 +2400,7 @@ func (v *ArrayValue) Clone(interpreter *Interpreter) Value {
 
 	iterator, err := v.array.Iterator()
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 
 	baseUsage, elementUsage, dataSlabs, metaDataSlabs := common.NewArrayMemoryUsages(v.array.Count(), v.elementSize)
@@ -2409,7 +2429,7 @@ func (v *ArrayValue) Clone(interpreter *Interpreter) Value {
 		},
 	)
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 	return &ArrayValue{
 		Type:             v.Type,
@@ -2447,7 +2467,7 @@ func (v *ArrayValue) DeepRemove(interpreter *Interpreter) {
 		interpreter.RemoveReferencedSlab(storable)
 	})
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 	interpreter.maybeValidateAtreeValue(v.array)
 }
@@ -2521,7 +2541,7 @@ func (v *ArrayValue) Slice(
 			})
 		}
 
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 
 	return NewArrayValueWithIterator(
@@ -2535,7 +2555,7 @@ func (v *ArrayValue) Slice(
 
 			atreeValue, err := iterator.Next()
 			if err != nil {
-				panic(ExternalError{err})
+				panic(errors.NewExternalError(err))
 			}
 
 			if atreeValue != nil {
@@ -2851,8 +2871,8 @@ func (v IntValue) Plus(interpreter *Interpreter, other NumberValue) NumberValue 
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -2872,8 +2892,8 @@ func (v IntValue) SaturatingPlus(interpreter *Interpreter, other NumberValue) Nu
 		if _, ok := r.(InvalidOperandsError); ok {
 			panic(InvalidOperandsError{
 				FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-				LeftType:     v.StaticType(nil),
-				RightType:    other.StaticType(nil),
+				LeftType:     v.StaticType(interpreter),
+				RightType:    other.StaticType(interpreter),
 			})
 		}
 	}()
@@ -2886,8 +2906,8 @@ func (v IntValue) Minus(interpreter *Interpreter, other NumberValue) NumberValue
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -2907,8 +2927,8 @@ func (v IntValue) SaturatingMinus(interpreter *Interpreter, other NumberValue) N
 		if _, ok := r.(InvalidOperandsError); ok {
 			panic(InvalidOperandsError{
 				FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
-				LeftType:     v.StaticType(nil),
-				RightType:    other.StaticType(nil),
+				LeftType:     v.StaticType(interpreter),
+				RightType:    other.StaticType(interpreter),
 			})
 		}
 	}()
@@ -2921,8 +2941,8 @@ func (v IntValue) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -2945,8 +2965,8 @@ func (v IntValue) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMul,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -2966,8 +2986,8 @@ func (v IntValue) SaturatingMul(interpreter *Interpreter, other NumberValue) Num
 		if _, ok := r.(InvalidOperandsError); ok {
 			panic(InvalidOperandsError{
 				FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-				LeftType:     v.StaticType(nil),
-				RightType:    other.StaticType(nil),
+				LeftType:     v.StaticType(interpreter),
+				RightType:    other.StaticType(interpreter),
 			})
 		}
 	}()
@@ -2980,8 +3000,8 @@ func (v IntValue) Div(interpreter *Interpreter, other NumberValue) NumberValue {
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -3005,8 +3025,8 @@ func (v IntValue) SaturatingDiv(interpreter *Interpreter, other NumberValue) Num
 		if _, ok := r.(InvalidOperandsError); ok {
 			panic(InvalidOperandsError{
 				FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
-				LeftType:     v.StaticType(nil),
-				RightType:    other.StaticType(nil),
+				LeftType:     v.StaticType(interpreter),
+				RightType:    other.StaticType(interpreter),
 			})
 		}
 	}()
@@ -3019,8 +3039,8 @@ func (v IntValue) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -3039,8 +3059,8 @@ func (v IntValue) LessEqual(interpreter *Interpreter, other NumberValue) BoolVal
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -3058,8 +3078,8 @@ func (v IntValue) Greater(interpreter *Interpreter, other NumberValue) BoolValue
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -3077,8 +3097,8 @@ func (v IntValue) GreaterEqual(interpreter *Interpreter, other NumberValue) Bool
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -3124,8 +3144,8 @@ func (v IntValue) BitwiseOr(interpreter *Interpreter, other IntegerValue) Intege
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -3144,8 +3164,8 @@ func (v IntValue) BitwiseXor(interpreter *Interpreter, other IntegerValue) Integ
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -3164,8 +3184,8 @@ func (v IntValue) BitwiseAnd(interpreter *Interpreter, other IntegerValue) Integ
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -3184,8 +3204,8 @@ func (v IntValue) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -3212,8 +3232,8 @@ func (v IntValue) BitwiseRightShift(interpreter *Interpreter, other IntegerValue
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -3389,8 +3409,8 @@ func (v Int8Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -3413,8 +3433,8 @@ func (v Int8Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) N
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -3436,8 +3456,8 @@ func (v Int8Value) Minus(interpreter *Interpreter, other NumberValue) NumberValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -3460,8 +3480,8 @@ func (v Int8Value) SaturatingMinus(interpreter *Interpreter, other NumberValue) 
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -3483,8 +3503,8 @@ func (v Int8Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue 
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -3505,8 +3525,8 @@ func (v Int8Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue 
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMul,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -3549,8 +3569,8 @@ func (v Int8Value) SaturatingMul(interpreter *Interpreter, other NumberValue) Nu
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -3593,8 +3613,8 @@ func (v Int8Value) Div(interpreter *Interpreter, other NumberValue) NumberValue 
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -3618,8 +3638,8 @@ func (v Int8Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) Nu
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -3642,8 +3662,8 @@ func (v Int8Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -3660,8 +3680,8 @@ func (v Int8Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolVa
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -3678,8 +3698,8 @@ func (v Int8Value) Greater(interpreter *Interpreter, other NumberValue) BoolValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -3696,8 +3716,8 @@ func (v Int8Value) GreaterEqual(interpreter *Interpreter, other NumberValue) Boo
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -3761,8 +3781,8 @@ func (v Int8Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) Integ
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -3778,8 +3798,8 @@ func (v Int8Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) Inte
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -3795,8 +3815,8 @@ func (v Int8Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) Inte
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -3812,8 +3832,8 @@ func (v Int8Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -3829,8 +3849,8 @@ func (v Int8Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -3996,8 +4016,8 @@ func (v Int16Value) Plus(interpreter *Interpreter, other NumberValue) NumberValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -4020,8 +4040,8 @@ func (v Int16Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) 
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -4043,8 +4063,8 @@ func (v Int16Value) Minus(interpreter *Interpreter, other NumberValue) NumberVal
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -4067,8 +4087,8 @@ func (v Int16Value) SaturatingMinus(interpreter *Interpreter, other NumberValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -4090,8 +4110,8 @@ func (v Int16Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -4112,8 +4132,8 @@ func (v Int16Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMul,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -4156,8 +4176,8 @@ func (v Int16Value) SaturatingMul(interpreter *Interpreter, other NumberValue) N
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -4199,8 +4219,8 @@ func (v Int16Value) Div(interpreter *Interpreter, other NumberValue) NumberValue
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -4224,8 +4244,8 @@ func (v Int16Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) N
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -4248,8 +4268,8 @@ func (v Int16Value) Less(interpreter *Interpreter, other NumberValue) BoolValue 
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -4266,8 +4286,8 @@ func (v Int16Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolV
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -4284,8 +4304,8 @@ func (v Int16Value) Greater(interpreter *Interpreter, other NumberValue) BoolVal
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -4302,8 +4322,8 @@ func (v Int16Value) GreaterEqual(interpreter *Interpreter, other NumberValue) Bo
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -4367,8 +4387,8 @@ func (v Int16Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) Inte
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -4384,8 +4404,8 @@ func (v Int16Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) Int
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -4401,8 +4421,8 @@ func (v Int16Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) Int
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -4418,8 +4438,8 @@ func (v Int16Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -4435,8 +4455,8 @@ func (v Int16Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVal
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -4604,8 +4624,8 @@ func (v Int32Value) Plus(interpreter *Interpreter, other NumberValue) NumberValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -4628,8 +4648,8 @@ func (v Int32Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) 
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -4651,8 +4671,8 @@ func (v Int32Value) Minus(interpreter *Interpreter, other NumberValue) NumberVal
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -4675,8 +4695,8 @@ func (v Int32Value) SaturatingMinus(interpreter *Interpreter, other NumberValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -4698,8 +4718,8 @@ func (v Int32Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -4720,8 +4740,8 @@ func (v Int32Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMul,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -4764,8 +4784,8 @@ func (v Int32Value) SaturatingMul(interpreter *Interpreter, other NumberValue) N
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -4807,8 +4827,8 @@ func (v Int32Value) Div(interpreter *Interpreter, other NumberValue) NumberValue
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -4832,8 +4852,8 @@ func (v Int32Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) N
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -4857,8 +4877,8 @@ func (v Int32Value) Less(interpreter *Interpreter, other NumberValue) BoolValue 
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -4875,8 +4895,8 @@ func (v Int32Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolV
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -4893,8 +4913,8 @@ func (v Int32Value) Greater(interpreter *Interpreter, other NumberValue) BoolVal
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -4911,8 +4931,8 @@ func (v Int32Value) GreaterEqual(interpreter *Interpreter, other NumberValue) Bo
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -4975,8 +4995,8 @@ func (v Int32Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) Inte
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -4992,8 +5012,8 @@ func (v Int32Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) Int
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -5009,8 +5029,8 @@ func (v Int32Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) Int
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -5026,8 +5046,8 @@ func (v Int32Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -5043,8 +5063,8 @@ func (v Int32Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVal
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -5220,8 +5240,8 @@ func (v Int64Value) Plus(interpreter *Interpreter, other NumberValue) NumberValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -5237,8 +5257,8 @@ func (v Int64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) 
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -5260,8 +5280,8 @@ func (v Int64Value) Minus(interpreter *Interpreter, other NumberValue) NumberVal
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -5284,8 +5304,8 @@ func (v Int64Value) SaturatingMinus(interpreter *Interpreter, other NumberValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -5307,8 +5327,8 @@ func (v Int64Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -5329,8 +5349,8 @@ func (v Int64Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMul,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -5373,8 +5393,8 @@ func (v Int64Value) SaturatingMul(interpreter *Interpreter, other NumberValue) N
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -5416,8 +5436,8 @@ func (v Int64Value) Div(interpreter *Interpreter, other NumberValue) NumberValue
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -5441,8 +5461,8 @@ func (v Int64Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) N
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -5465,8 +5485,8 @@ func (v Int64Value) Less(interpreter *Interpreter, other NumberValue) BoolValue 
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -5483,8 +5503,8 @@ func (v Int64Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolV
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -5501,8 +5521,8 @@ func (v Int64Value) Greater(interpreter *Interpreter, other NumberValue) BoolVal
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -5519,8 +5539,8 @@ func (v Int64Value) GreaterEqual(interpreter *Interpreter, other NumberValue) Bo
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -5578,8 +5598,8 @@ func (v Int64Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) Inte
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -5595,8 +5615,8 @@ func (v Int64Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) Int
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -5612,8 +5632,8 @@ func (v Int64Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) Int
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -5629,8 +5649,8 @@ func (v Int64Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -5646,8 +5666,8 @@ func (v Int64Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVal
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -5845,8 +5865,8 @@ func (v Int128Value) Plus(interpreter *Interpreter, other NumberValue) NumberVal
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -5882,8 +5902,8 @@ func (v Int128Value) SaturatingPlus(interpreter *Interpreter, other NumberValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -5919,8 +5939,8 @@ func (v Int128Value) Minus(interpreter *Interpreter, other NumberValue) NumberVa
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -5956,8 +5976,8 @@ func (v Int128Value) SaturatingMinus(interpreter *Interpreter, other NumberValue
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -5993,8 +6013,8 @@ func (v Int128Value) Mod(interpreter *Interpreter, other NumberValue) NumberValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -6017,8 +6037,8 @@ func (v Int128Value) Mul(interpreter *Interpreter, other NumberValue) NumberValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMul,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -6042,8 +6062,8 @@ func (v Int128Value) SaturatingMul(interpreter *Interpreter, other NumberValue) 
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -6067,8 +6087,8 @@ func (v Int128Value) Div(interpreter *Interpreter, other NumberValue) NumberValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -6100,8 +6120,8 @@ func (v Int128Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) 
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -6133,8 +6153,8 @@ func (v Int128Value) Less(interpreter *Interpreter, other NumberValue) BoolValue
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -6152,8 +6172,8 @@ func (v Int128Value) LessEqual(interpreter *Interpreter, other NumberValue) Bool
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -6171,8 +6191,8 @@ func (v Int128Value) Greater(interpreter *Interpreter, other NumberValue) BoolVa
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -6190,8 +6210,8 @@ func (v Int128Value) GreaterEqual(interpreter *Interpreter, other NumberValue) B
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -6264,8 +6284,8 @@ func (v Int128Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) Int
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -6283,8 +6303,8 @@ func (v Int128Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) In
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -6302,8 +6322,8 @@ func (v Int128Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) In
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -6321,8 +6341,8 @@ func (v Int128Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVal
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -6347,8 +6367,8 @@ func (v Int128Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVa
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -6553,8 +6573,8 @@ func (v Int256Value) Plus(interpreter *Interpreter, other NumberValue) NumberVal
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -6590,8 +6610,8 @@ func (v Int256Value) SaturatingPlus(interpreter *Interpreter, other NumberValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -6627,8 +6647,8 @@ func (v Int256Value) Minus(interpreter *Interpreter, other NumberValue) NumberVa
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -6664,8 +6684,8 @@ func (v Int256Value) SaturatingMinus(interpreter *Interpreter, other NumberValue
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -6701,8 +6721,8 @@ func (v Int256Value) Mod(interpreter *Interpreter, other NumberValue) NumberValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -6725,8 +6745,8 @@ func (v Int256Value) Mul(interpreter *Interpreter, other NumberValue) NumberValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMul,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -6750,8 +6770,8 @@ func (v Int256Value) SaturatingMul(interpreter *Interpreter, other NumberValue) 
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -6775,8 +6795,8 @@ func (v Int256Value) Div(interpreter *Interpreter, other NumberValue) NumberValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -6807,8 +6827,8 @@ func (v Int256Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) 
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -6839,8 +6859,8 @@ func (v Int256Value) Less(interpreter *Interpreter, other NumberValue) BoolValue
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -6858,8 +6878,8 @@ func (v Int256Value) LessEqual(interpreter *Interpreter, other NumberValue) Bool
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -6877,8 +6897,8 @@ func (v Int256Value) Greater(interpreter *Interpreter, other NumberValue) BoolVa
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -6896,8 +6916,8 @@ func (v Int256Value) GreaterEqual(interpreter *Interpreter, other NumberValue) B
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -6970,8 +6990,8 @@ func (v Int256Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) Int
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -6989,8 +7009,8 @@ func (v Int256Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) In
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -7008,8 +7028,8 @@ func (v Int256Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) In
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -7027,8 +7047,8 @@ func (v Int256Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVal
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -7053,8 +7073,8 @@ func (v Int256Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVa
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -7283,8 +7303,8 @@ func (v UIntValue) Plus(interpreter *Interpreter, other NumberValue) NumberValue
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -7304,8 +7324,8 @@ func (v UIntValue) SaturatingPlus(interpreter *Interpreter, other NumberValue) N
 		if _, ok := r.(InvalidOperandsError); ok {
 			panic(InvalidOperandsError{
 				FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-				LeftType:     v.StaticType(nil),
-				RightType:    other.StaticType(nil),
+				LeftType:     v.StaticType(interpreter),
+				RightType:    other.StaticType(interpreter),
 			})
 		}
 	}()
@@ -7318,8 +7338,8 @@ func (v UIntValue) Minus(interpreter *Interpreter, other NumberValue) NumberValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -7343,8 +7363,8 @@ func (v UIntValue) SaturatingMinus(interpreter *Interpreter, other NumberValue) 
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -7368,8 +7388,8 @@ func (v UIntValue) Mod(interpreter *Interpreter, other NumberValue) NumberValue 
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -7393,8 +7413,8 @@ func (v UIntValue) Mul(interpreter *Interpreter, other NumberValue) NumberValue 
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMul,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -7414,8 +7434,8 @@ func (v UIntValue) SaturatingMul(interpreter *Interpreter, other NumberValue) Nu
 		if _, ok := r.(InvalidOperandsError); ok {
 			panic(InvalidOperandsError{
 				FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-				LeftType:     v.StaticType(nil),
-				RightType:    other.StaticType(nil),
+				LeftType:     v.StaticType(interpreter),
+				RightType:    other.StaticType(interpreter),
 			})
 		}
 	}()
@@ -7428,8 +7448,8 @@ func (v UIntValue) Div(interpreter *Interpreter, other NumberValue) NumberValue 
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -7453,8 +7473,8 @@ func (v UIntValue) SaturatingDiv(interpreter *Interpreter, other NumberValue) Nu
 		if _, ok := r.(InvalidOperandsError); ok {
 			panic(InvalidOperandsError{
 				FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
-				LeftType:     v.StaticType(nil),
-				RightType:    other.StaticType(nil),
+				LeftType:     v.StaticType(interpreter),
+				RightType:    other.StaticType(interpreter),
 			})
 		}
 	}()
@@ -7467,8 +7487,8 @@ func (v UIntValue) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -7486,8 +7506,8 @@ func (v UIntValue) LessEqual(interpreter *Interpreter, other NumberValue) BoolVa
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -7505,8 +7525,8 @@ func (v UIntValue) Greater(interpreter *Interpreter, other NumberValue) BoolValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -7524,8 +7544,8 @@ func (v UIntValue) GreaterEqual(interpreter *Interpreter, other NumberValue) Boo
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -7571,8 +7591,8 @@ func (v UIntValue) BitwiseOr(interpreter *Interpreter, other IntegerValue) Integ
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -7591,8 +7611,8 @@ func (v UIntValue) BitwiseXor(interpreter *Interpreter, other IntegerValue) Inte
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -7611,8 +7631,8 @@ func (v UIntValue) BitwiseAnd(interpreter *Interpreter, other IntegerValue) Inte
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -7631,8 +7651,8 @@ func (v UIntValue) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -7660,8 +7680,8 @@ func (v UIntValue) BitwiseRightShift(interpreter *Interpreter, other IntegerValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -7826,8 +7846,8 @@ func (v UInt8Value) Plus(interpreter *Interpreter, other NumberValue) NumberValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -7846,8 +7866,8 @@ func (v UInt8Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) 
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -7866,8 +7886,8 @@ func (v UInt8Value) Minus(interpreter *Interpreter, other NumberValue) NumberVal
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -7889,8 +7909,8 @@ func (v UInt8Value) SaturatingMinus(interpreter *Interpreter, other NumberValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -7912,8 +7932,8 @@ func (v UInt8Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -7933,8 +7953,8 @@ func (v UInt8Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMul,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -7955,8 +7975,8 @@ func (v UInt8Value) SaturatingMul(interpreter *Interpreter, other NumberValue) N
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -7977,8 +7997,8 @@ func (v UInt8Value) Div(interpreter *Interpreter, other NumberValue) NumberValue
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -7999,8 +8019,8 @@ func (v UInt8Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) N
 		if _, ok := r.(InvalidOperandsError); ok {
 			panic(InvalidOperandsError{
 				FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
-				LeftType:     v.StaticType(nil),
-				RightType:    other.StaticType(nil),
+				LeftType:     v.StaticType(interpreter),
+				RightType:    other.StaticType(interpreter),
 			})
 		}
 	}()
@@ -8013,8 +8033,8 @@ func (v UInt8Value) Less(interpreter *Interpreter, other NumberValue) BoolValue 
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -8031,8 +8051,8 @@ func (v UInt8Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolV
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -8049,8 +8069,8 @@ func (v UInt8Value) Greater(interpreter *Interpreter, other NumberValue) BoolVal
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -8067,8 +8087,8 @@ func (v UInt8Value) GreaterEqual(interpreter *Interpreter, other NumberValue) Bo
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -8162,8 +8182,8 @@ func (v UInt8Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) Inte
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -8180,8 +8200,8 @@ func (v UInt8Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) Int
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -8198,8 +8218,8 @@ func (v UInt8Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) Int
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -8216,8 +8236,8 @@ func (v UInt8Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -8234,8 +8254,8 @@ func (v UInt8Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVal
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -8390,8 +8410,8 @@ func (v UInt16Value) Plus(interpreter *Interpreter, other NumberValue) NumberVal
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -8413,8 +8433,8 @@ func (v UInt16Value) SaturatingPlus(interpreter *Interpreter, other NumberValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -8436,8 +8456,8 @@ func (v UInt16Value) Minus(interpreter *Interpreter, other NumberValue) NumberVa
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -8459,8 +8479,8 @@ func (v UInt16Value) SaturatingMinus(interpreter *Interpreter, other NumberValue
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -8482,8 +8502,8 @@ func (v UInt16Value) Mod(interpreter *Interpreter, other NumberValue) NumberValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -8503,8 +8523,8 @@ func (v UInt16Value) Mul(interpreter *Interpreter, other NumberValue) NumberValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMul,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -8525,8 +8545,8 @@ func (v UInt16Value) SaturatingMul(interpreter *Interpreter, other NumberValue) 
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -8547,8 +8567,8 @@ func (v UInt16Value) Div(interpreter *Interpreter, other NumberValue) NumberValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -8569,8 +8589,8 @@ func (v UInt16Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) 
 		if _, ok := r.(InvalidOperandsError); ok {
 			panic(InvalidOperandsError{
 				FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
-				LeftType:     v.StaticType(nil),
-				RightType:    other.StaticType(nil),
+				LeftType:     v.StaticType(interpreter),
+				RightType:    other.StaticType(interpreter),
 			})
 		}
 	}()
@@ -8583,8 +8603,8 @@ func (v UInt16Value) Less(interpreter *Interpreter, other NumberValue) BoolValue
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -8601,8 +8621,8 @@ func (v UInt16Value) LessEqual(interpreter *Interpreter, other NumberValue) Bool
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -8619,8 +8639,8 @@ func (v UInt16Value) Greater(interpreter *Interpreter, other NumberValue) BoolVa
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -8637,8 +8657,8 @@ func (v UInt16Value) GreaterEqual(interpreter *Interpreter, other NumberValue) B
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -8686,8 +8706,8 @@ func (v UInt16Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) Int
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -8704,8 +8724,8 @@ func (v UInt16Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) In
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -8722,8 +8742,8 @@ func (v UInt16Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) In
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -8740,8 +8760,8 @@ func (v UInt16Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVal
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -8758,8 +8778,8 @@ func (v UInt16Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVa
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -8921,8 +8941,8 @@ func (v UInt32Value) Plus(interpreter *Interpreter, other NumberValue) NumberVal
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -8944,8 +8964,8 @@ func (v UInt32Value) SaturatingPlus(interpreter *Interpreter, other NumberValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -8967,8 +8987,8 @@ func (v UInt32Value) Minus(interpreter *Interpreter, other NumberValue) NumberVa
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -8990,8 +9010,8 @@ func (v UInt32Value) SaturatingMinus(interpreter *Interpreter, other NumberValue
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -9013,8 +9033,8 @@ func (v UInt32Value) Mod(interpreter *Interpreter, other NumberValue) NumberValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -9034,8 +9054,8 @@ func (v UInt32Value) Mul(interpreter *Interpreter, other NumberValue) NumberValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMul,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -9055,8 +9075,8 @@ func (v UInt32Value) SaturatingMul(interpreter *Interpreter, other NumberValue) 
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -9078,8 +9098,8 @@ func (v UInt32Value) Div(interpreter *Interpreter, other NumberValue) NumberValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -9100,8 +9120,8 @@ func (v UInt32Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) 
 		if _, ok := r.(InvalidOperandsError); ok {
 			panic(InvalidOperandsError{
 				FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
-				LeftType:     v.StaticType(nil),
-				RightType:    other.StaticType(nil),
+				LeftType:     v.StaticType(interpreter),
+				RightType:    other.StaticType(interpreter),
 			})
 		}
 	}()
@@ -9114,8 +9134,8 @@ func (v UInt32Value) Less(interpreter *Interpreter, other NumberValue) BoolValue
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -9132,8 +9152,8 @@ func (v UInt32Value) LessEqual(interpreter *Interpreter, other NumberValue) Bool
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -9150,8 +9170,8 @@ func (v UInt32Value) Greater(interpreter *Interpreter, other NumberValue) BoolVa
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -9168,8 +9188,8 @@ func (v UInt32Value) GreaterEqual(interpreter *Interpreter, other NumberValue) B
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -9217,8 +9237,8 @@ func (v UInt32Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) Int
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -9235,8 +9255,8 @@ func (v UInt32Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) In
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -9253,8 +9273,8 @@ func (v UInt32Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) In
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -9271,8 +9291,8 @@ func (v UInt32Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVal
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -9289,8 +9309,8 @@ func (v UInt32Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVa
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -9487,8 +9507,8 @@ func (v UInt64Value) Plus(interpreter *Interpreter, other NumberValue) NumberVal
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -9505,8 +9525,8 @@ func (v UInt64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -9528,8 +9548,8 @@ func (v UInt64Value) Minus(interpreter *Interpreter, other NumberValue) NumberVa
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -9551,8 +9571,8 @@ func (v UInt64Value) SaturatingMinus(interpreter *Interpreter, other NumberValue
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -9574,8 +9594,8 @@ func (v UInt64Value) Mod(interpreter *Interpreter, other NumberValue) NumberValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -9595,8 +9615,8 @@ func (v UInt64Value) Mul(interpreter *Interpreter, other NumberValue) NumberValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMul,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -9616,8 +9636,8 @@ func (v UInt64Value) SaturatingMul(interpreter *Interpreter, other NumberValue) 
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -9638,8 +9658,8 @@ func (v UInt64Value) Div(interpreter *Interpreter, other NumberValue) NumberValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -9660,8 +9680,8 @@ func (v UInt64Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) 
 		if _, ok := r.(InvalidOperandsError); ok {
 			panic(InvalidOperandsError{
 				FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
-				LeftType:     v.StaticType(nil),
-				RightType:    other.StaticType(nil),
+				LeftType:     v.StaticType(interpreter),
+				RightType:    other.StaticType(interpreter),
 			})
 		}
 	}()
@@ -9674,8 +9694,8 @@ func (v UInt64Value) Less(interpreter *Interpreter, other NumberValue) BoolValue
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -9692,8 +9712,8 @@ func (v UInt64Value) LessEqual(interpreter *Interpreter, other NumberValue) Bool
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -9710,8 +9730,8 @@ func (v UInt64Value) Greater(interpreter *Interpreter, other NumberValue) BoolVa
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -9728,8 +9748,8 @@ func (v UInt64Value) GreaterEqual(interpreter *Interpreter, other NumberValue) B
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -9777,8 +9797,8 @@ func (v UInt64Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) Int
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -9795,8 +9815,8 @@ func (v UInt64Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) In
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -9813,8 +9833,8 @@ func (v UInt64Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) In
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -9831,8 +9851,8 @@ func (v UInt64Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVal
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -9849,8 +9869,8 @@ func (v UInt64Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVa
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -10041,8 +10061,8 @@ func (v UInt128Value) Plus(interpreter *Interpreter, other NumberValue) NumberVa
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -10074,8 +10094,8 @@ func (v UInt128Value) SaturatingPlus(interpreter *Interpreter, other NumberValue
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -10107,8 +10127,8 @@ func (v UInt128Value) Minus(interpreter *Interpreter, other NumberValue) NumberV
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -10140,8 +10160,8 @@ func (v UInt128Value) SaturatingMinus(interpreter *Interpreter, other NumberValu
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -10173,8 +10193,8 @@ func (v UInt128Value) Mod(interpreter *Interpreter, other NumberValue) NumberVal
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -10195,8 +10215,8 @@ func (v UInt128Value) Mul(interpreter *Interpreter, other NumberValue) NumberVal
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMul,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -10218,8 +10238,8 @@ func (v UInt128Value) SaturatingMul(interpreter *Interpreter, other NumberValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -10241,8 +10261,8 @@ func (v UInt128Value) Div(interpreter *Interpreter, other NumberValue) NumberVal
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -10265,8 +10285,8 @@ func (v UInt128Value) SaturatingDiv(interpreter *Interpreter, other NumberValue)
 		if _, ok := r.(InvalidOperandsError); ok {
 			panic(InvalidOperandsError{
 				FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
-				LeftType:     v.StaticType(nil),
-				RightType:    other.StaticType(nil),
+				LeftType:     v.StaticType(interpreter),
+				RightType:    other.StaticType(interpreter),
 			})
 		}
 	}()
@@ -10279,8 +10299,8 @@ func (v UInt128Value) Less(interpreter *Interpreter, other NumberValue) BoolValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -10298,8 +10318,8 @@ func (v UInt128Value) LessEqual(interpreter *Interpreter, other NumberValue) Boo
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -10317,8 +10337,8 @@ func (v UInt128Value) Greater(interpreter *Interpreter, other NumberValue) BoolV
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -10336,8 +10356,8 @@ func (v UInt128Value) GreaterEqual(interpreter *Interpreter, other NumberValue) 
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -10412,8 +10432,8 @@ func (v UInt128Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) In
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -10431,8 +10451,8 @@ func (v UInt128Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) I
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -10450,8 +10470,8 @@ func (v UInt128Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) I
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -10470,8 +10490,8 @@ func (v UInt128Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVa
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -10495,8 +10515,8 @@ func (v UInt128Value) BitwiseRightShift(interpreter *Interpreter, other IntegerV
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -10693,8 +10713,8 @@ func (v UInt256Value) Plus(interpreter *Interpreter, other NumberValue) NumberVa
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -10727,8 +10747,8 @@ func (v UInt256Value) SaturatingPlus(interpreter *Interpreter, other NumberValue
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -10760,8 +10780,8 @@ func (v UInt256Value) Minus(interpreter *Interpreter, other NumberValue) NumberV
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -10793,8 +10813,8 @@ func (v UInt256Value) SaturatingMinus(interpreter *Interpreter, other NumberValu
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -10827,8 +10847,8 @@ func (v UInt256Value) Mod(interpreter *Interpreter, other NumberValue) NumberVal
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -10849,8 +10869,8 @@ func (v UInt256Value) Mul(interpreter *Interpreter, other NumberValue) NumberVal
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMul,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -10872,8 +10892,8 @@ func (v UInt256Value) SaturatingMul(interpreter *Interpreter, other NumberValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -10895,8 +10915,8 @@ func (v UInt256Value) Div(interpreter *Interpreter, other NumberValue) NumberVal
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -10918,8 +10938,8 @@ func (v UInt256Value) SaturatingDiv(interpreter *Interpreter, other NumberValue)
 		if _, ok := r.(InvalidOperandsError); ok {
 			panic(InvalidOperandsError{
 				FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
-				LeftType:     v.StaticType(nil),
-				RightType:    other.StaticType(nil),
+				LeftType:     v.StaticType(interpreter),
+				RightType:    other.StaticType(interpreter),
 			})
 		}
 	}()
@@ -10932,8 +10952,8 @@ func (v UInt256Value) Less(interpreter *Interpreter, other NumberValue) BoolValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -10951,8 +10971,8 @@ func (v UInt256Value) LessEqual(interpreter *Interpreter, other NumberValue) Boo
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -10970,8 +10990,8 @@ func (v UInt256Value) Greater(interpreter *Interpreter, other NumberValue) BoolV
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -10989,8 +11009,8 @@ func (v UInt256Value) GreaterEqual(interpreter *Interpreter, other NumberValue) 
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -11064,8 +11084,8 @@ func (v UInt256Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) In
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -11083,8 +11103,8 @@ func (v UInt256Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) I
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -11102,8 +11122,8 @@ func (v UInt256Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) I
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -11121,8 +11141,8 @@ func (v UInt256Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVa
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -11146,8 +11166,8 @@ func (v UInt256Value) BitwiseRightShift(interpreter *Interpreter, other IntegerV
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -11315,8 +11335,8 @@ func (v Word8Value) Plus(interpreter *Interpreter, other NumberValue) NumberValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -11328,7 +11348,7 @@ func (v Word8Value) Plus(interpreter *Interpreter, other NumberValue) NumberValu
 }
 
 func (v Word8Value) SaturatingPlus(*Interpreter, NumberValue) NumberValue {
-	panic(errors.UnreachableError{})
+	panic(errors.NewUnreachableError())
 }
 
 func (v Word8Value) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -11336,8 +11356,8 @@ func (v Word8Value) Minus(interpreter *Interpreter, other NumberValue) NumberVal
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -11349,7 +11369,7 @@ func (v Word8Value) Minus(interpreter *Interpreter, other NumberValue) NumberVal
 }
 
 func (v Word8Value) SaturatingMinus(*Interpreter, NumberValue) NumberValue {
-	panic(errors.UnreachableError{})
+	panic(errors.NewUnreachableError())
 }
 
 func (v Word8Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -11357,8 +11377,8 @@ func (v Word8Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -11378,8 +11398,8 @@ func (v Word8Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMul,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -11391,7 +11411,7 @@ func (v Word8Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue
 }
 
 func (v Word8Value) SaturatingMul(*Interpreter, NumberValue) NumberValue {
-	panic(errors.UnreachableError{})
+	panic(errors.NewUnreachableError())
 }
 
 func (v Word8Value) Div(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -11399,8 +11419,8 @@ func (v Word8Value) Div(interpreter *Interpreter, other NumberValue) NumberValue
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -11416,7 +11436,7 @@ func (v Word8Value) Div(interpreter *Interpreter, other NumberValue) NumberValue
 }
 
 func (v Word8Value) SaturatingDiv(*Interpreter, NumberValue) NumberValue {
-	panic(errors.UnreachableError{})
+	panic(errors.NewUnreachableError())
 }
 
 func (v Word8Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -11424,8 +11444,8 @@ func (v Word8Value) Less(interpreter *Interpreter, other NumberValue) BoolValue 
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -11442,8 +11462,8 @@ func (v Word8Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolV
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -11460,8 +11480,8 @@ func (v Word8Value) Greater(interpreter *Interpreter, other NumberValue) BoolVal
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -11478,8 +11498,8 @@ func (v Word8Value) GreaterEqual(interpreter *Interpreter, other NumberValue) Bo
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -11522,8 +11542,8 @@ func (v Word8Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) Inte
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -11539,8 +11559,8 @@ func (v Word8Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) Int
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -11556,8 +11576,8 @@ func (v Word8Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) Int
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -11573,8 +11593,8 @@ func (v Word8Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -11590,8 +11610,8 @@ func (v Word8Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVal
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -11751,8 +11771,8 @@ func (v Word16Value) Plus(interpreter *Interpreter, other NumberValue) NumberVal
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -11764,7 +11784,7 @@ func (v Word16Value) Plus(interpreter *Interpreter, other NumberValue) NumberVal
 }
 
 func (v Word16Value) SaturatingPlus(*Interpreter, NumberValue) NumberValue {
-	panic(errors.UnreachableError{})
+	panic(errors.NewUnreachableError())
 }
 
 func (v Word16Value) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -11772,8 +11792,8 @@ func (v Word16Value) Minus(interpreter *Interpreter, other NumberValue) NumberVa
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -11785,7 +11805,7 @@ func (v Word16Value) Minus(interpreter *Interpreter, other NumberValue) NumberVa
 }
 
 func (v Word16Value) SaturatingMinus(*Interpreter, NumberValue) NumberValue {
-	panic(errors.UnreachableError{})
+	panic(errors.NewUnreachableError())
 }
 
 func (v Word16Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -11793,8 +11813,8 @@ func (v Word16Value) Mod(interpreter *Interpreter, other NumberValue) NumberValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -11814,8 +11834,8 @@ func (v Word16Value) Mul(interpreter *Interpreter, other NumberValue) NumberValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMul,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -11827,7 +11847,7 @@ func (v Word16Value) Mul(interpreter *Interpreter, other NumberValue) NumberValu
 }
 
 func (v Word16Value) SaturatingMul(*Interpreter, NumberValue) NumberValue {
-	panic(errors.UnreachableError{})
+	panic(errors.NewUnreachableError())
 }
 
 func (v Word16Value) Div(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -11835,8 +11855,8 @@ func (v Word16Value) Div(interpreter *Interpreter, other NumberValue) NumberValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -11852,7 +11872,7 @@ func (v Word16Value) Div(interpreter *Interpreter, other NumberValue) NumberValu
 }
 
 func (v Word16Value) SaturatingDiv(*Interpreter, NumberValue) NumberValue {
-	panic(errors.UnreachableError{})
+	panic(errors.NewUnreachableError())
 }
 
 func (v Word16Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -11860,8 +11880,8 @@ func (v Word16Value) Less(interpreter *Interpreter, other NumberValue) BoolValue
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -11878,8 +11898,8 @@ func (v Word16Value) LessEqual(interpreter *Interpreter, other NumberValue) Bool
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -11896,8 +11916,8 @@ func (v Word16Value) Greater(interpreter *Interpreter, other NumberValue) BoolVa
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -11914,8 +11934,8 @@ func (v Word16Value) GreaterEqual(interpreter *Interpreter, other NumberValue) B
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -11958,8 +11978,8 @@ func (v Word16Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) Int
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -11975,8 +11995,8 @@ func (v Word16Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) In
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -11992,8 +12012,8 @@ func (v Word16Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) In
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -12009,8 +12029,8 @@ func (v Word16Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVal
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -12026,8 +12046,8 @@ func (v Word16Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVa
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -12190,8 +12210,8 @@ func (v Word32Value) Plus(interpreter *Interpreter, other NumberValue) NumberVal
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -12203,7 +12223,7 @@ func (v Word32Value) Plus(interpreter *Interpreter, other NumberValue) NumberVal
 }
 
 func (v Word32Value) SaturatingPlus(*Interpreter, NumberValue) NumberValue {
-	panic(errors.UnreachableError{})
+	panic(errors.NewUnreachableError())
 }
 
 func (v Word32Value) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -12211,8 +12231,8 @@ func (v Word32Value) Minus(interpreter *Interpreter, other NumberValue) NumberVa
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -12224,7 +12244,7 @@ func (v Word32Value) Minus(interpreter *Interpreter, other NumberValue) NumberVa
 }
 
 func (v Word32Value) SaturatingMinus(*Interpreter, NumberValue) NumberValue {
-	panic(errors.UnreachableError{})
+	panic(errors.NewUnreachableError())
 }
 
 func (v Word32Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -12232,8 +12252,8 @@ func (v Word32Value) Mod(interpreter *Interpreter, other NumberValue) NumberValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -12253,8 +12273,8 @@ func (v Word32Value) Mul(interpreter *Interpreter, other NumberValue) NumberValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMul,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -12266,7 +12286,7 @@ func (v Word32Value) Mul(interpreter *Interpreter, other NumberValue) NumberValu
 }
 
 func (v Word32Value) SaturatingMul(*Interpreter, NumberValue) NumberValue {
-	panic(errors.UnreachableError{})
+	panic(errors.NewUnreachableError())
 }
 
 func (v Word32Value) Div(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -12274,8 +12294,8 @@ func (v Word32Value) Div(interpreter *Interpreter, other NumberValue) NumberValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -12291,7 +12311,7 @@ func (v Word32Value) Div(interpreter *Interpreter, other NumberValue) NumberValu
 }
 
 func (v Word32Value) SaturatingDiv(*Interpreter, NumberValue) NumberValue {
-	panic(errors.UnreachableError{})
+	panic(errors.NewUnreachableError())
 }
 
 func (v Word32Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -12299,8 +12319,8 @@ func (v Word32Value) Less(interpreter *Interpreter, other NumberValue) BoolValue
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -12317,8 +12337,8 @@ func (v Word32Value) LessEqual(interpreter *Interpreter, other NumberValue) Bool
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -12335,8 +12355,8 @@ func (v Word32Value) Greater(interpreter *Interpreter, other NumberValue) BoolVa
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -12353,8 +12373,8 @@ func (v Word32Value) GreaterEqual(interpreter *Interpreter, other NumberValue) B
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -12397,8 +12417,8 @@ func (v Word32Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) Int
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -12414,8 +12434,8 @@ func (v Word32Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) In
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -12431,8 +12451,8 @@ func (v Word32Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) In
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -12448,8 +12468,8 @@ func (v Word32Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVal
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -12465,8 +12485,8 @@ func (v Word32Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVa
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -12655,8 +12675,8 @@ func (v Word64Value) Plus(interpreter *Interpreter, other NumberValue) NumberVal
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -12668,7 +12688,7 @@ func (v Word64Value) Plus(interpreter *Interpreter, other NumberValue) NumberVal
 }
 
 func (v Word64Value) SaturatingPlus(*Interpreter, NumberValue) NumberValue {
-	panic(errors.UnreachableError{})
+	panic(errors.NewUnreachableError())
 }
 
 func (v Word64Value) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -12676,8 +12696,8 @@ func (v Word64Value) Minus(interpreter *Interpreter, other NumberValue) NumberVa
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -12689,7 +12709,7 @@ func (v Word64Value) Minus(interpreter *Interpreter, other NumberValue) NumberVa
 }
 
 func (v Word64Value) SaturatingMinus(*Interpreter, NumberValue) NumberValue {
-	panic(errors.UnreachableError{})
+	panic(errors.NewUnreachableError())
 }
 
 func (v Word64Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -12697,8 +12717,8 @@ func (v Word64Value) Mod(interpreter *Interpreter, other NumberValue) NumberValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -12718,8 +12738,8 @@ func (v Word64Value) Mul(interpreter *Interpreter, other NumberValue) NumberValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMul,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -12731,7 +12751,7 @@ func (v Word64Value) Mul(interpreter *Interpreter, other NumberValue) NumberValu
 }
 
 func (v Word64Value) SaturatingMul(*Interpreter, NumberValue) NumberValue {
-	panic(errors.UnreachableError{})
+	panic(errors.NewUnreachableError())
 }
 
 func (v Word64Value) Div(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -12739,8 +12759,8 @@ func (v Word64Value) Div(interpreter *Interpreter, other NumberValue) NumberValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -12756,7 +12776,7 @@ func (v Word64Value) Div(interpreter *Interpreter, other NumberValue) NumberValu
 }
 
 func (v Word64Value) SaturatingDiv(*Interpreter, NumberValue) NumberValue {
-	panic(errors.UnreachableError{})
+	panic(errors.NewUnreachableError())
 }
 
 func (v Word64Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -12764,8 +12784,8 @@ func (v Word64Value) Less(interpreter *Interpreter, other NumberValue) BoolValue
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -12782,8 +12802,8 @@ func (v Word64Value) LessEqual(interpreter *Interpreter, other NumberValue) Bool
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -12800,8 +12820,8 @@ func (v Word64Value) Greater(interpreter *Interpreter, other NumberValue) BoolVa
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -12818,8 +12838,8 @@ func (v Word64Value) GreaterEqual(interpreter *Interpreter, other NumberValue) B
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -12862,8 +12882,8 @@ func (v Word64Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) Int
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -12879,8 +12899,8 @@ func (v Word64Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) In
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -12896,8 +12916,8 @@ func (v Word64Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) In
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -12913,8 +12933,8 @@ func (v Word64Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVal
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -12930,8 +12950,8 @@ func (v Word64Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVa
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -13130,8 +13150,8 @@ func (v Fix64Value) Plus(interpreter *Interpreter, other NumberValue) NumberValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -13147,8 +13167,8 @@ func (v Fix64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) 
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -13170,8 +13190,8 @@ func (v Fix64Value) Minus(interpreter *Interpreter, other NumberValue) NumberVal
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -13194,8 +13214,8 @@ func (v Fix64Value) SaturatingMinus(interpreter *Interpreter, other NumberValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -13220,8 +13240,8 @@ func (v Fix64Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMul,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -13249,8 +13269,8 @@ func (v Fix64Value) SaturatingMul(interpreter *Interpreter, other NumberValue) N
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -13278,8 +13298,8 @@ func (v Fix64Value) Div(interpreter *Interpreter, other NumberValue) NumberValue
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -13307,8 +13327,8 @@ func (v Fix64Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) N
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -13336,8 +13356,8 @@ func (v Fix64Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -13346,8 +13366,8 @@ func (v Fix64Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -13369,8 +13389,8 @@ func (v Fix64Value) Less(interpreter *Interpreter, other NumberValue) BoolValue 
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -13387,8 +13407,8 @@ func (v Fix64Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolV
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -13405,8 +13425,8 @@ func (v Fix64Value) Greater(interpreter *Interpreter, other NumberValue) BoolVal
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -13423,8 +13443,8 @@ func (v Fix64Value) GreaterEqual(interpreter *Interpreter, other NumberValue) Bo
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -13675,8 +13695,8 @@ func (v UFix64Value) Plus(interpreter *Interpreter, other NumberValue) NumberVal
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -13692,8 +13712,8 @@ func (v UFix64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -13714,8 +13734,8 @@ func (v UFix64Value) Minus(interpreter *Interpreter, other NumberValue) NumberVa
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -13737,8 +13757,8 @@ func (v UFix64Value) SaturatingMinus(interpreter *Interpreter, other NumberValue
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -13760,8 +13780,8 @@ func (v UFix64Value) Mul(interpreter *Interpreter, other NumberValue) NumberValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMul,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -13787,8 +13807,8 @@ func (v UFix64Value) SaturatingMul(interpreter *Interpreter, other NumberValue) 
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:     v.StaticType(nil),
-			RightType:    other.StaticType(nil),
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
 		})
 	}
 
@@ -13814,8 +13834,8 @@ func (v UFix64Value) Div(interpreter *Interpreter, other NumberValue) NumberValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -13838,8 +13858,8 @@ func (v UFix64Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) 
 		if _, ok := r.(InvalidOperandsError); ok {
 			panic(InvalidOperandsError{
 				FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
-				LeftType:     v.StaticType(nil),
-				RightType:    other.StaticType(nil),
+				LeftType:     v.StaticType(interpreter),
+				RightType:    other.StaticType(interpreter),
 			})
 		}
 	}()
@@ -13852,8 +13872,8 @@ func (v UFix64Value) Mod(interpreter *Interpreter, other NumberValue) NumberValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -13862,8 +13882,8 @@ func (v UFix64Value) Mod(interpreter *Interpreter, other NumberValue) NumberValu
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -13885,8 +13905,8 @@ func (v UFix64Value) Less(interpreter *Interpreter, other NumberValue) BoolValue
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -13903,8 +13923,8 @@ func (v UFix64Value) LessEqual(interpreter *Interpreter, other NumberValue) Bool
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -13921,8 +13941,8 @@ func (v UFix64Value) Greater(interpreter *Interpreter, other NumberValue) BoolVa
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -13939,8 +13959,8 @@ func (v UFix64Value) GreaterEqual(interpreter *Interpreter, other NumberValue) B
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(nil),
-			RightType: other.StaticType(nil),
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
 		})
 	}
 
@@ -14149,6 +14169,7 @@ func NewUnmeteredCompositeField(name string, value Value) CompositeField {
 
 func NewCompositeValue(
 	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
 	location common.Location,
 	qualifiedIdentifier string,
 	kind common.CompositeKind,
@@ -14195,7 +14216,7 @@ func NewCompositeValue(
 			),
 		)
 		if err != nil {
-			panic(ExternalError{err})
+			panic(errors.NewExternalError(err))
 		}
 		return dictionary
 	}
@@ -14212,8 +14233,7 @@ func NewCompositeValue(
 	for _, field := range fields {
 		v.SetMember(
 			interpreter,
-			// TODO: provide proper location range
-			ReturnEmptyLocationRange,
+			getLocationRange,
 			field.Name,
 			field.Value,
 		)
@@ -14311,6 +14331,8 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func
 		v.checkInvalidatedResourceUse(getLocationRange)
 	}
 
+	storageID := v.StorageID()
+
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
 
@@ -14352,9 +14374,27 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func
 	}
 
 	v.isDestroyed = true
+
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.dictionary = nil
 	}
+
+	interpreter.updateReferencedResource(
+		storageID,
+		storageID,
+		func(value ReferenceTrackedResourceKindedValue) {
+			compositeValue, ok := value.(*CompositeValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			compositeValue.isDestroyed = true
+
+			if interpreter.invalidatedResourceValidationEnabled {
+				compositeValue.dictionary = nil
+			}
+		},
+	)
 }
 
 func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
@@ -14394,7 +14434,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange fu
 	)
 	if err != nil {
 		if _, ok := err.(*atree.KeyNotFoundError); !ok {
-			panic(ExternalError{err})
+			panic(errors.NewExternalError(err))
 		}
 	}
 	if storable != nil {
@@ -14460,7 +14500,7 @@ func (v *CompositeValue) getInterpreter(interpreter *Interpreter) *Interpreter {
 
 	location := v.Location
 
-	if location == nil || common.LocationsMatch(interpreter.Location, location) {
+	if location == nil || interpreter.Location == location {
 		return interpreter
 	}
 
@@ -14529,7 +14569,7 @@ func (v *CompositeValue) RemoveMember(
 		if _, ok := err.(*atree.KeyNotFoundError); ok {
 			return nil
 		}
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 	interpreter.maybeValidateAtreeValue(v.dictionary)
 
@@ -14596,7 +14636,7 @@ func (v *CompositeValue) SetMember(
 		value,
 	)
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 	interpreter.maybeValidateAtreeValue(v.dictionary)
 
@@ -14699,7 +14739,7 @@ func (v *CompositeValue) GetField(interpreter *Interpreter, getLocationRange fun
 		if _, ok := err.(*atree.KeyNotFoundError); ok {
 			return nil
 		}
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 
 	return StoredValue(interpreter, storable, v.dictionary.Storage)
@@ -14720,13 +14760,13 @@ func (v *CompositeValue) Equal(interpreter *Interpreter, getLocationRange func()
 
 	iterator, err := v.dictionary.Iterator()
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 
 	for {
 		key, value, err := iterator.Next()
 		if err != nil {
-			panic(ExternalError{err})
+			panic(errors.NewExternalError(err))
 		}
 		if key == nil {
 			return true
@@ -14958,10 +14998,16 @@ func (v *CompositeValue) Transfer(
 	needsStoreTo := address != currentAddress
 	isResourceKinded := v.IsResourceKinded(interpreter)
 
+	if needsStoreTo && v.Kind == common.CompositeKindContract {
+		panic(NonTransferableValueError{
+			Value: v,
+		})
+	}
+
 	if needsStoreTo || !isResourceKinded {
 		iterator, err := v.dictionary.Iterator()
 		if err != nil {
-			panic(ExternalError{err})
+			panic(errors.NewExternalError(err))
 		}
 
 		elementMemoryUse := common.NewAtreeMapPreAllocatedElementsMemoryUsage(v.dictionary.Count(), 0)
@@ -14995,7 +15041,7 @@ func (v *CompositeValue) Transfer(
 			},
 		)
 		if err != nil {
-			panic(ExternalError{err})
+			panic(errors.NewExternalError(err))
 		}
 
 		if remove {
@@ -15004,7 +15050,7 @@ func (v *CompositeValue) Transfer(
 				interpreter.RemoveReferencedSlab(valueStorable)
 			})
 			if err != nil {
-				panic(ExternalError{err})
+				panic(errors.NewExternalError(err))
 			}
 			interpreter.maybeValidateAtreeValue(v.dictionary)
 
@@ -15093,7 +15139,7 @@ func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
 
 	iterator, err := v.dictionary.Iterator()
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 
 	elementMemoryUse := common.NewAtreeMapPreAllocatedElementsMemoryUsage(v.dictionary.Count(), 0)
@@ -15124,7 +15170,7 @@ func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
 		},
 	)
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 
 	return &CompositeValue{
@@ -15177,7 +15223,7 @@ func (v *CompositeValue) DeepRemove(interpreter *Interpreter) {
 		interpreter.RemoveReferencedSlab(valueStorable)
 	})
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 	interpreter.maybeValidateAtreeValue(v.dictionary)
 }
@@ -15199,7 +15245,7 @@ func (v *CompositeValue) ForEachField(gauge common.MemoryGauge, f func(fieldName
 		return true, nil
 	})
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 }
 
@@ -15222,7 +15268,7 @@ func (v *CompositeValue) RemoveField(
 		if _, ok := err.(*atree.KeyNotFoundError); ok {
 			return
 		}
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 	interpreter.maybeValidateAtreeValue(v.dictionary)
 
@@ -15243,6 +15289,7 @@ func (v *CompositeValue) RemoveField(
 
 func NewEnumCaseValue(
 	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
 	enumType *sema.CompositeType,
 	rawValue NumberValue,
 	functions map[string]FunctionValue,
@@ -15257,6 +15304,7 @@ func NewEnumCaseValue(
 
 	v := NewCompositeValue(
 		interpreter,
+		getLocationRange,
 		enumType.Location,
 		enumType.QualifiedIdentifier(),
 		enumType.Kind,
@@ -15282,11 +15330,13 @@ type DictionaryValue struct {
 
 func NewDictionaryValue(
 	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
 	dictionaryType DictionaryStaticType,
 	keysAndValues ...Value,
 ) *DictionaryValue {
 	return NewDictionaryValueWithAddress(
 		interpreter,
+		getLocationRange,
 		dictionaryType,
 		common.Address{},
 		keysAndValues...,
@@ -15295,6 +15345,7 @@ func NewDictionaryValue(
 
 func NewDictionaryValueWithAddress(
 	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
 	dictionaryType DictionaryStaticType,
 	address common.Address,
 	keysAndValues ...Value,
@@ -15338,7 +15389,7 @@ func NewDictionaryValueWithAddress(
 			dictionaryType,
 		)
 		if err != nil {
-			panic(ExternalError{err})
+			panic(errors.NewExternalError(err))
 		}
 		return dictionary
 	}
@@ -15346,12 +15397,28 @@ func NewDictionaryValueWithAddress(
 	// values are added to the dictionary after creation, not here
 	v = newDictionaryValueFromConstructor(interpreter, dictionaryType, 0, constructor)
 
+	// NOTE: lazily initialized when needed for performance reasons
+	var lazyIsResourceTyped *bool
+
 	for i := 0; i < keysAndValuesCount; i += 2 {
 		key := keysAndValues[i]
 		value := keysAndValues[i+1]
-		// TODO: handle existing value
-		// TODO: provide proper location range
-		_ = v.Insert(interpreter, ReturnEmptyLocationRange, key, value)
+		existingValue := v.Insert(interpreter, getLocationRange, key, value)
+		// If the dictionary already contained a value for the key,
+		// and the dictionary is resource-typed,
+		// then we need to prevent a resource loss
+		if _, ok := existingValue.(*SomeValue); ok {
+			// Lazily determine if the dictionary is resource-typed, once
+			if lazyIsResourceTyped == nil {
+				isResourceTyped := v.SemaType(interpreter).IsResourceType()
+				lazyIsResourceTyped = &isResourceTyped
+			}
+			if *lazyIsResourceTyped {
+				panic(DuplicateKeyInResourceDictionaryError{
+					LocationRange: getLocationRange(),
+				})
+			}
+		}
 	}
 
 	return v
@@ -15424,7 +15491,7 @@ func (v *DictionaryValue) Iterate(gauge common.MemoryGauge, f func(key, value Va
 		return resume, nil
 	})
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 }
 
@@ -15472,9 +15539,12 @@ func (v *DictionaryValue) checkInvalidatedResourceUse(interpreter *Interpreter, 
 func (v *DictionaryValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
 
 	interpreter.ReportComputation(common.ComputationKindDestroyDictionaryValue, 1)
+
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
 	}
+
+	storageID := v.StorageID()
 
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
@@ -15499,9 +15569,27 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, getLocationRange fun
 	})
 
 	v.isDestroyed = true
+
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.dictionary = nil
 	}
+
+	interpreter.updateReferencedResource(
+		storageID,
+		storageID,
+		func(value ReferenceTrackedResourceKindedValue) {
+			dictionaryValue, ok := value.(*DictionaryValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			dictionaryValue.isDestroyed = true
+
+			if interpreter.invalidatedResourceValidationEnabled {
+				dictionaryValue.dictionary = nil
+			}
+		},
+	)
 }
 
 func (v *DictionaryValue) ContainsKey(
@@ -15524,7 +15612,7 @@ func (v *DictionaryValue) ContainsKey(
 			if _, ok := err.(*atree.KeyNotFoundError); ok {
 				return false
 			}
-			panic(ExternalError{err})
+			panic(errors.NewExternalError(err))
 		}
 		return true
 	}
@@ -15550,7 +15638,7 @@ func (v *DictionaryValue) Get(
 		if _, ok := err.(*atree.KeyNotFoundError); ok {
 			return nil, false
 		}
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 
 	storage := v.dictionary.Storage
@@ -15685,7 +15773,7 @@ func (v *DictionaryValue) GetMember(
 
 		iterator, err := v.dictionary.Iterator()
 		if err != nil {
-			panic(ExternalError{err})
+			panic(errors.NewExternalError(err))
 		}
 
 		return NewArrayValueWithIterator(
@@ -15697,7 +15785,7 @@ func (v *DictionaryValue) GetMember(
 
 				key, err := iterator.NextKey()
 				if err != nil {
-					panic(ExternalError{err})
+					panic(errors.NewExternalError(err))
 				}
 				if key == nil {
 					return nil
@@ -15712,7 +15800,7 @@ func (v *DictionaryValue) GetMember(
 
 		iterator, err := v.dictionary.Iterator()
 		if err != nil {
-			panic(ExternalError{err})
+			panic(errors.NewExternalError(err))
 		}
 
 		return NewArrayValueWithIterator(
@@ -15724,7 +15812,7 @@ func (v *DictionaryValue) GetMember(
 
 				value, err := iterator.NextValue()
 				if err != nil {
-					panic(ExternalError{err})
+					panic(errors.NewExternalError(err))
 				}
 				if value == nil {
 					return nil
@@ -15847,7 +15935,7 @@ func (v *DictionaryValue) Remove(
 		if _, ok := err.(*atree.KeyNotFoundError); ok {
 			return NewNilValue(interpreter)
 		}
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 	interpreter.maybeValidateAtreeValue(v.dictionary)
 
@@ -15926,7 +16014,7 @@ func (v *DictionaryValue) Insert(
 		value,
 	)
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 	interpreter.maybeValidateAtreeValue(v.dictionary)
 
@@ -15983,13 +16071,13 @@ func (v *DictionaryValue) ConformsToStaticType(
 
 	iterator, err := v.dictionary.Iterator()
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 
 	for {
 		key, value, err := iterator.Next()
 		if err != nil {
-			panic(ExternalError{err})
+			panic(errors.NewExternalError(err))
 		}
 		if key == nil {
 			return true
@@ -16050,13 +16138,13 @@ func (v *DictionaryValue) Equal(interpreter *Interpreter, getLocationRange func(
 
 	iterator, err := v.dictionary.Iterator()
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 
 	for {
 		key, value, err := iterator.Next()
 		if err != nil {
-			panic(ExternalError{err})
+			panic(errors.NewExternalError(err))
 		}
 		if key == nil {
 			return true
@@ -16140,7 +16228,7 @@ func (v *DictionaryValue) Transfer(
 
 		iterator, err := v.dictionary.Iterator()
 		if err != nil {
-			panic(ExternalError{err})
+			panic(errors.NewExternalError(err))
 		}
 
 		elementMemoryUse := common.NewAtreeMapPreAllocatedElementsMemoryUsage(v.dictionary.Count(), v.elementSize)
@@ -16174,7 +16262,7 @@ func (v *DictionaryValue) Transfer(
 			},
 		)
 		if err != nil {
-			panic(ExternalError{err})
+			panic(errors.NewExternalError(err))
 		}
 
 		if remove {
@@ -16183,7 +16271,7 @@ func (v *DictionaryValue) Transfer(
 				interpreter.RemoveReferencedSlab(valueStorable)
 			})
 			if err != nil {
-				panic(ExternalError{err})
+				panic(errors.NewExternalError(err))
 			}
 			interpreter.maybeValidateAtreeValue(v.dictionary)
 
@@ -16243,7 +16331,7 @@ func (v *DictionaryValue) Clone(interpreter *Interpreter) Value {
 
 	iterator, err := v.dictionary.Iterator()
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 
 	elementMemoryUse := common.NewAtreeMapPreAllocatedElementsMemoryUsage(v.dictionary.Count(), v.elementSize)
@@ -16277,7 +16365,7 @@ func (v *DictionaryValue) Clone(interpreter *Interpreter) Value {
 		},
 	)
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 
 	return &DictionaryValue{
@@ -16321,7 +16409,7 @@ func (v *DictionaryValue) DeepRemove(interpreter *Interpreter) {
 		interpreter.RemoveReferencedSlab(valueStorable)
 	})
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 	interpreter.maybeValidateAtreeValue(v.dictionary)
 }
@@ -18141,7 +18229,7 @@ func (v *CapabilityValue) MeteredString(memoryGauge common.MemoryGauge, seenRefe
 
 func (v *CapabilityValue) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
-	case "borrow":
+	case sema.CapabilityTypeBorrowField:
 		var borrowType *sema.ReferenceType
 		if v.BorrowType != nil {
 			// this function will panic already if this conversion fails
@@ -18149,7 +18237,7 @@ func (v *CapabilityValue) GetMember(interpreter *Interpreter, _ func() LocationR
 		}
 		return interpreter.capabilityBorrowFunction(v.Address, v.Path, borrowType)
 
-	case "check":
+	case sema.CapabilityTypeCheckField:
 		var borrowType *sema.ReferenceType
 		if v.BorrowType != nil {
 			// this function will panic already if this conversion fails
@@ -18157,7 +18245,7 @@ func (v *CapabilityValue) GetMember(interpreter *Interpreter, _ func() LocationR
 		}
 		return interpreter.capabilityCheckFunction(v.Address, v.Path, borrowType)
 
-	case "address":
+	case sema.CapabilityTypeAddressField:
 		return v.Address
 	}
 
@@ -18420,6 +18508,7 @@ func NewPublicKeyValue(
 
 	publicKeyValue := NewCompositeValue(
 		interpreter,
+		getLocationRange,
 		sema.PublicKeyType.Location,
 		sema.PublicKeyType.QualifiedIdentifier(),
 		sema.PublicKeyType.Kind,

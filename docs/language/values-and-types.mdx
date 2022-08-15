@@ -73,12 +73,12 @@ or _unsigned_ (positive or zero).
 Signed integer types which check for overflow and underflow have an `Int` prefix
 and can represent values in the following ranges:
 
-- **`Int8`**: −2^7 through 2^7 − 1 (-128 through 127)
-- **`Int16`**: −2^15 through 2^15 − 1 (-32768 through 32767)
-- **`Int32`**: −2^31 through 2^31 − 1 (-2147483648 through 2147483647)
-- **`Int64`**: −2^63 through 2^63 − 1 (-9223372036854775808 through 9223372036854775807)
-- **`Int128`**: −2^127 through 2^127 − 1
-- **`Int256`**: −2^255 through 2^255 − 1
+- **`Int8`**: -2^7 through 2^7 − 1 (-128 through 127)
+- **`Int16`**: -2^15 through 2^15 − 1 (-32768 through 32767)
+- **`Int32`**: -2^31 through 2^31 − 1 (-2147483648 through 2147483647)
+- **`Int64`**: -2^63 through 2^63 − 1 (-9223372036854775808 through 9223372036854775807)
+- **`Int128`**: -2^127 through 2^127 − 1
+- **`Int256`**: -2^255 through 2^255 − 1
 
 Unsigned integer types which check for overflow and underflow have a `UInt` prefix
 and can represent values in the following ranges:
@@ -101,7 +101,7 @@ and can represent values in the following ranges:
 
 The types are independent types, i.e. not subtypes of each other.
 
-See the section about [arithmetic operators](operators#arithmetic) for further
+See the section about [arithmetic operators](operators#arithmetic-operators) for further
 information about the behavior of the different integer types.
 
 ```cadence
@@ -148,8 +148,8 @@ let a = Int16(x) + y
 
 // `a` has type `Int16`
 
-// Invalid: The integer literal is expected to be of type `UInt8`,
-// but the large integer literal does not fit in the range of `UInt8`.
+// Invalid: The integer literal is expected to be of type `Int8`,
+// but the large integer literal does not fit in the range of `Int8`.
 //
 let b = x + 1000000000000000000000000
 ```
@@ -446,7 +446,7 @@ let maybeInt: Int? = 1
 let anything: AnyStruct = maybeInt
 ```
 
-[Conditional downcasting](#conditional-downcasting-operator) allows coercing
+[Conditional downcasting](operators#conditional-downcasting-operator-as) allows coercing
 a value which has the type `AnyStruct` or `AnyResource` back to its original type.
 
 ## Optionals
@@ -521,176 +521,8 @@ let xs: [Int?] = [1, nil, 2, nil]
 let doubleOptional: Int?? = nil
 ```
 
-### Nil-Coalescing Operator
-
-The nil-coalescing operator `??` returns
-the value inside an optional if it contains a value,
-or returns an alternative value if the optional has no value,
-i.e., the optional value is `nil`.
-
-If the left-hand side is non-nil, the right-hand side is not evaluated.
-
-```cadence
-// Declare a constant which has an optional integer type
-//
-let a: Int? = nil
-
-// Declare a constant with a non-optional integer type,
-// which is initialized to `a` if it is non-nil, or 42 otherwise.
-//
-let b: Int = a ?? 42
-// `b` is 42, as `a` is nil
-```
-
-The nil-coalescing operator can only be applied
-to values which have an optional type.
-
-```cadence
-// Declare a constant with a non-optional integer type.
-//
-let a = 1
-
-// Invalid: nil-coalescing operator is applied to a value which has a non-optional type
-// (a has the non-optional type `Int`).
-//
-let b = a ?? 2
-```
-
-```cadence
-// Invalid: nil-coalescing operator is applied to a value which has a non-optional type
-// (the integer literal is of type `Int`).
-//
-let c = 1 ?? 2
-```
-
-The type of the right-hand side of the operator (the alternative value) must be a subtype
-of the type of left-hand side, i.e. the right-hand side of the operator must
-be the non-optional or optional type matching the type of the left-hand side.
-
-```cadence
-// Declare a constant with an optional integer type.
-//
-let a: Int? = nil
-let b: Int? = 1
-let c = a ?? b
-// `c` is `1` and has type `Int?`
-
-// Invalid: nil-coalescing operator is applied to a value of type `Int?`,
-// but the alternative has type `Bool`.
-//
-let d = a ?? false
-```
-
-### Force Unwrap (`!`)
-
-The force-unwrap operator (`!`) returns
-the value inside an optional if it contains a value,
-or panics and aborts the execution if the optional has no value,
-i.e., the optional value is `nil`.
-
-```cadence
-// Declare a constant which has an optional integer type
-//
-let a: Int? = nil
-
-// Declare a constant with a non-optional integer type,
-// which is initialized to `a` if `a` is non-nil.
-// If `a` is nil, the program aborts.
-//
-let b: Int = a!
-// The program aborts because `a` is nil.
-
-// Declare another optional integer constant
-let c: Int? = 3
-
-// Declare a non-optional integer
-// which is initialized to `c` if `c` is non-nil.
-// If `c` is nil, the program aborts.
-let d: Int = c!
-// `d` is initialized to 3 because c isn't nil.
-
-```
-
-The force-unwrap operator can only be applied
-to values which have an optional type.
-
-```cadence
-// Declare a constant with a non-optional integer type.
-//
-let a = 1
-
-// Invalid: force-unwrap operator is applied to a value which has a
-// non-optional type (`a` has the non-optional type `Int`).
-//
-let b = a!
-```
-
-```cadence
-// Invalid: The force-unwrap operator is applied
-// to a value which has a non-optional type
-// (the integer literal is of type `Int`).
-//
-let c = 1!
-```
-
-### Force-assignment operator (`<-!`)
-
-The force-assignment operator (`<-!`) assigns a resource-typed value to an
-optional-typed variable if the variable is nil.
-If the variable being assigned to is non-nil,
-the execution of the program aborts.
-
-The force-assignment operator is only used for
-[resource types](resources) and the move operator (`<-`),
-which are covered in the resources section of this document.
-
-### Conditional Downcasting Operator
-
-The conditional downcasting operator `as?` can be used to type cast a value to a type.
-The operator returns an optional.
-If the value has a type that is a subtype of the given type that should be casted to,
-the operator returns the value as the given type,
-otherwise the result is `nil`.
-
-The cast and check is performed at run-time, i.e. when the program is executed,
-not statically, i.e. when the program is checked.
-
-```cadence
-// Declare a constant named `something` which has type `AnyStruct`,
-// with an initial value which has type `Int`.
-//
-let something: AnyStruct = 1
-
-// Conditionally downcast the value of `something` to `Int`.
-// The cast succeeds, because the value has type `Int`.
-//
-let number = something as? Int
-// `number` is `1` and has type `Int?`
-
-// Conditionally downcast the value of `something` to `Bool`.
-// The cast fails, because the value has type `Int`,
-// and `Bool` is not a subtype of `Int`.
-//
-let boolean = something as? Bool
-// `boolean` is `nil` and has type `Bool?`
-```
-
-Downcasting works for nested types (e.g. arrays),
-interfaces (if a [resource](resources) interface not to a concrete resource),
-and optionals.
-
-```cadence
-// Declare a constant named `values` which has type `[AnyStruct]`,
-// i.e. an array of arbitrarily typed values.
-//
-let values: [AnyStruct] = [1, true]
-
-let first = values[0] as? Int
-// `first` is `1` and has type `Int?`
-
-let second = values[1] as? Bool
-// `second` is `true` and has type `Bool?`
-```
+See the [optional operators](operators#optional-operators) section for information
+on how to work with optionals.
 
 ## Never
 
@@ -1159,7 +991,7 @@ It is invalid to use one of these functions on a fixed-sized array.
 
   The new element must be the same type as all the other elements in the array.
 
-  This function [mutates](../access-control) the array.
+  This function [mutates](access-control) the array.
 
   ```cadence
   // Declare an array of integers.
@@ -1180,7 +1012,7 @@ It is invalid to use one of these functions on a fixed-sized array.
 
   Both arrays must be the same type `T`.
 
-  This function [mutates](../access-control) the array.
+  This function [mutates](access-control) the array.
 
   ```cadence
   // Declare an array of integers.
@@ -1209,7 +1041,7 @@ It is invalid to use one of these functions on a fixed-sized array.
   All the elements after the new inserted element
   are shifted to the right by one.
 
-  This function [mutates](../access-control) the array.
+  This function [mutates](access-control) the array.
 
   ```cadence
   // Declare an array of integers.
@@ -1230,7 +1062,7 @@ It is invalid to use one of these functions on a fixed-sized array.
   The `index` must be within the bounds of the array.
   If the index is outside the bounds, the program aborts.
 
-  This function [mutates](../access-control) the array.
+  This function [mutates](access-control) the array.
 
   ```cadence
   // Declare an array of integers.
@@ -1252,7 +1084,7 @@ It is invalid to use one of these functions on a fixed-sized array.
   The array must not be empty.
   If the array is empty, the program aborts.
 
-  This function [mutates](../access-control) the array.
+  This function [mutates](access-control) the array.
 
   ```cadence
   // Declare an array of integers.
@@ -1279,7 +1111,7 @@ It is invalid to use one of these functions on a fixed-sized array.
   The array must not be empty.
   If the array is empty, the program aborts.
 
-  This function [mutates](../access-control) the array.
+  This function [mutates](access-control) the array.
 
   ```cadence
   // Declare an array of integers.
@@ -1450,12 +1282,16 @@ booleans[0] = true
 - `cadence•fun insert(key: K, _ value: V): V?`
 
   Inserts the given value of type `V` into the dictionary under the given `key` of type `K`.
+  
+  The inserted key must have the same type as the dictionary's key type, and the inserted value must have the same type as the dictionary's value type.
 
   Returns the previous value as an optional
   if the dictionary contained the key,
   otherwise `nil`.
+  
+  Updates the value if the dictionary already contained the key.
 
-  This function [mutates](../access-control) the dictionary.
+  This function [mutates](access-control) the dictionary.
 
   ```cadence
   // Declare a dictionary mapping strings to integers.
@@ -1479,7 +1315,7 @@ booleans[0] = true
   if the dictionary contained the key,
   otherwise `nil`.
 
-  This function [mutates](../access-control) the dictionary.
+  This function [mutates](access-control) the dictionary.
 
   ```cadence
   // Declare a dictionary mapping strings to integers.
@@ -1561,9 +1397,7 @@ booleans[0] = true
 
 ### Dictionary Keys
 
-Dictionary keys must be hashable and equatable,
-i.e., must implement the [`Hashable`](interfaces#hashable-interface)
-and [`Equatable`](interfaces#equatable-interface) [interfaces](interfaces).
+Dictionary keys must be hashable and equatable.
 
 Most of the built-in types, like booleans and integers,
 are hashable and equatable, so can be used as keys in dictionaries.

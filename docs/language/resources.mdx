@@ -439,7 +439,12 @@ resources["r1"] <- create R()
 // in a resource dictionary, use a swap statement with a variable to replace
 // the accessed element.
 //
-var res <- create R()
+// The result of a dictionary read is optional, as the given key might not
+// exist in the dictionary.
+// The types on both sides of the swap operator must be the same,
+// so also declare the variable as an optional.
+//
+var res: @R? <- create R()
 resources["r1"] <-> res
 // `resources["r1"]` now contains the new resource.
 // `res` now contains the old resource.
@@ -624,5 +629,4 @@ In addition, abstract types may declare functions,
 but omit the implementation of them
 and instead require subtypes to implement them.
 
-Instead, consider using [interfaces](./interfaces).
-
+Instead, consider using [interfaces](interfaces).

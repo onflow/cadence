@@ -2704,9 +2704,9 @@ func (*FunctionType) IsEquatable() bool {
 func (t *FunctionType) TypeAnnotationState() TypeAnnotationState {
 
 	for _, typeParameter := range t.TypeParameters {
-		typeParameterTypeAnnotationState := typeParameter.TypeBound.TypeAnnotationState()
-		if typeParameterTypeAnnotationState != TypeAnnotationStateValid {
-			return typeParameterTypeAnnotationState
+		TypeParameterTypeAnnotationState := typeParameter.TypeBound.TypeAnnotationState()
+		if TypeParameterTypeAnnotationState != TypeAnnotationStateValid {
+			return TypeParameterTypeAnnotationState
 		}
 	}
 
@@ -3110,7 +3110,7 @@ func init() {
 
 			addMember := func(member *Member) {
 				if functionType.Members == nil {
-					functionType.Members = NewStringMemberOrderedMap()
+					functionType.Members = &StringMemberOrderedMap{}
 				}
 				name := member.Identifier.Identifier
 				_, exists := functionType.Members.Get(name)
@@ -3275,15 +3275,21 @@ func numberFunctionArgumentExpressionsChecker(targetType Type) ArgumentExpressio
 		switch argument := argument.(type) {
 		case *ast.IntegerExpression:
 			if CheckIntegerLiteral(nil, argument, targetType, checker.report) {
-				if checker.lintingEnabled {
-					suggestIntegerLiteralConversionReplacement(checker, argument, targetType, invocationRange)
+				if checker.extendedElaboration {
+					checker.Elaboration.NumberConversionArgumentTypes[argument] = struct {
+						Type  Type
+						Range ast.Range
+					}{Type: targetType, Range: invocationRange}
 				}
 			}
 
 		case *ast.FixedPointExpression:
 			if CheckFixedPointLiteral(nil, argument, targetType, checker.report) {
-				if checker.lintingEnabled {
-					suggestFixedPointLiteralConversionReplacement(checker, targetType, argument, invocationRange)
+				if checker.extendedElaboration {
+					checker.Elaboration.NumberConversionArgumentTypes[argument] = struct {
+						Type  Type
+						Range ast.Range
+					}{Type: targetType, Range: invocationRange}
 				}
 			}
 		}
@@ -3309,7 +3315,7 @@ func init() {
 
 	addMember := func(member *Member) {
 		if functionType.Members == nil {
-			functionType.Members = NewStringMemberOrderedMap()
+			functionType.Members = &StringMemberOrderedMap{}
 		}
 		name := member.Identifier.Identifier
 		_, exists := functionType.Members.Get(name)
@@ -3349,135 +3355,6 @@ var StringTypeEncodeHexFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		StringType,
 	),
-}
-
-func suggestIntegerLiteralConversionReplacement(
-	checker *Checker,
-	argument *ast.IntegerExpression,
-	targetType Type,
-	invocationRange ast.Range,
-) {
-	negative := argument.Value.Sign() < 0
-
-	if IsSameTypeKind(targetType, FixedPointType) {
-
-		// If the integer literal is converted to a fixed-point type,
-		// suggest replacing it with a fixed-point literal
-
-		signed := IsSameTypeKind(targetType, SignedFixedPointType)
-
-		var hintExpression ast.Expression = ast.NewFixedPointExpression(
-			checker.memoryGauge,
-			"",
-			negative,
-			common.NewBigIntFromAbsoluteValue(checker.memoryGauge, argument.Value),
-			common.NewBigInt(checker.memoryGauge),
-			1,
-			argument.Range,
-		)
-
-		// If the fixed-point literal is positive
-		// and the target fixed-point type is signed,
-		// then a static cast is required
-
-		if !negative && signed {
-			hintExpression = ast.NewCastingExpression(
-				checker.memoryGauge,
-				hintExpression,
-				ast.OperationCast,
-				ast.NewTypeAnnotation(
-					checker.memoryGauge,
-					false,
-					ast.NewNominalType(
-						checker.memoryGauge,
-						ast.NewIdentifier(
-							checker.memoryGauge,
-							targetType.String(),
-							ast.EmptyPosition,
-						),
-						nil,
-					),
-					ast.EmptyPosition,
-				),
-				nil,
-			)
-		}
-
-		checker.hint(
-			&ReplacementHint{
-				Expression: hintExpression,
-				Range:      invocationRange,
-			},
-		)
-
-	} else if IsSameTypeKind(targetType, IntegerType) {
-
-		// If the integer literal is converted to an integer type,
-		// suggest replacing it with a fixed-point literal
-
-		var hintExpression ast.Expression = argument
-
-		// If the target type is not `Int`,
-		// then a static cast is required,
-		// as all integer literals (positive and negative)
-		// are inferred to be of type `Int`
-
-		if !IsSameTypeKind(targetType, IntType) {
-			hintExpression = ast.NewCastingExpression(
-				checker.memoryGauge,
-				hintExpression,
-				ast.OperationCast,
-				ast.NewTypeAnnotation(
-					checker.memoryGauge,
-					false,
-					ast.NewNominalType(
-						checker.memoryGauge,
-						ast.NewIdentifier(
-							checker.memoryGauge,
-							targetType.String(),
-							ast.EmptyPosition,
-						),
-						nil,
-					),
-					ast.EmptyPosition,
-				),
-				nil,
-			)
-		}
-
-		checker.hint(
-			&ReplacementHint{
-				Expression: hintExpression,
-				Range:      invocationRange,
-			},
-		)
-	}
-}
-
-func suggestFixedPointLiteralConversionReplacement(
-	checker *Checker,
-	targetType Type,
-	argument *ast.FixedPointExpression,
-	invocationRange ast.Range,
-) {
-	// If the fixed-point literal is converted to a fixed-point type,
-	// suggest replacing it with a fixed-point literal
-
-	if !IsSameTypeKind(targetType, FixedPointType) {
-		return
-	}
-
-	negative := argument.Negative
-	signed := IsSameTypeKind(targetType, SignedFixedPointType)
-
-	if (!negative && !signed) || (negative && signed) {
-		checker.hint(
-			&ReplacementHint{
-				Expression: argument,
-				Range:      invocationRange,
-			},
-		)
-	}
 }
 
 func pathConversionFunctionType(pathType Type) *FunctionType {
@@ -6269,10 +6146,14 @@ func (t *CapabilityType) GetMembers() map[string]MemberResolver {
 	return t.memberResolvers
 }
 
+const CapabilityTypeBorrowField = "borrow"
+const CapabilityTypeCheckField = "check"
+const CapabilityTypeAddressField = "address"
+
 func (t *CapabilityType) initializeMemberResolvers() {
 	t.memberResolversOnce.Do(func() {
 		t.memberResolvers = withBuiltinMembers(t, map[string]MemberResolver{
-			"borrow": {
+			CapabilityTypeBorrowField: {
 				Kind: common.DeclarationKindFunction,
 				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicFunctionMember(
@@ -6284,7 +6165,7 @@ func (t *CapabilityType) initializeMemberResolvers() {
 					)
 				},
 			},
-			"check": {
+			CapabilityTypeCheckField: {
 				Kind: common.DeclarationKindFunction,
 				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicFunctionMember(
@@ -6296,7 +6177,7 @@ func (t *CapabilityType) initializeMemberResolvers() {
 					)
 				},
 			},
-			"address": {
+			CapabilityTypeAddressField: {
 				Kind: common.DeclarationKindField,
 				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicConstantFieldMember(
@@ -6514,12 +6395,12 @@ type CryptoAlgorithm interface {
 }
 
 func GetMembersAsMap(members []*Member) *StringMemberOrderedMap {
-	membersMap := NewStringMemberOrderedMap()
+	membersMap := &StringMemberOrderedMap{}
 	for _, member := range members {
 		name := member.Identifier.Identifier
 		_, ok := membersMap.Get(name)
 		if ok {
-			panic(fmt.Errorf("invalid duplicate member: %s", name))
+			panic(errors.NewUnexpectedError("invalid duplicate member: %s", name))
 		}
 		membersMap.Set(name, member)
 	}

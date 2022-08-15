@@ -756,7 +756,7 @@ func exportFromScript(t *testing.T, code string) cadence.Value {
 	result, err := inter.Invoke("main")
 	require.NoError(t, err)
 
-	exported, err := runtime.ExportValue(result, inter)
+	exported, err := runtime.ExportValue(result, inter, interpreter.ReturnEmptyLocationRange)
 	require.NoError(t, err)
 
 	return exported
@@ -2053,4 +2053,91 @@ func TestDecodeBackwardsCompatibilityTypeID(t *testing.T) {
 		_, err := json.Decode(nil, []byte(encoded))
 		require.Error(t, err)
 	})
+
+}
+
+func TestEncodeBuiltinComposites(t *testing.T) {
+	t.Parallel()
+
+	type staticType struct {
+		typ  cadence.Type
+		kind string
+	}
+
+	types := []staticType{
+		{
+			typ: &cadence.StructType{
+				Location:            nil,
+				QualifiedIdentifier: "Foo",
+			},
+			kind: "Struct",
+		},
+		{
+			typ: &cadence.StructInterfaceType{
+				Location:            nil,
+				QualifiedIdentifier: "Foo",
+			},
+			kind: "StructInterface",
+		},
+		{
+			typ: &cadence.ResourceType{
+				Location:            nil,
+				QualifiedIdentifier: "Foo",
+			},
+			kind: "Resource",
+		},
+		{
+			typ: &cadence.ResourceInterfaceType{
+				Location:            nil,
+				QualifiedIdentifier: "Foo",
+			},
+			kind: "ResourceInterface",
+		},
+		{
+			typ: &cadence.ContractType{
+				Location:            nil,
+				QualifiedIdentifier: "Foo",
+			},
+			kind: "Contract",
+		},
+		{
+			typ: &cadence.ContractInterfaceType{
+				Location:            nil,
+				QualifiedIdentifier: "Foo",
+			},
+			kind: "ContractInterface",
+		},
+		{
+			typ: &cadence.EnumType{
+				Location:            nil,
+				QualifiedIdentifier: "Foo",
+			},
+			kind: "Enum",
+		},
+		{
+			typ: &cadence.EventType{
+				Location:            nil,
+				QualifiedIdentifier: "Foo",
+			},
+			kind: "Event",
+		},
+	}
+
+	const compositeJson = `{"type":"Type","value":{"staticType":{"kind":"%s","typeID":"Foo","fields":[],"initializers":[],"type":""}}}`
+
+	const eventJson = `{"type":"Type","value":{"staticType":{"kind":"Event","typeID":"Foo","fields":[],"initializers":[[]],"type":""}}}`
+
+	for _, typ := range types {
+		typeValue := cadence.NewTypeValue(typ.typ)
+		var expectedJson string
+
+		switch typ.typ.(type) {
+		case *cadence.EventType:
+			expectedJson = eventJson
+		default:
+			expectedJson = fmt.Sprintf(compositeJson, typ.kind)
+		}
+
+		testEncode(t, typeValue, expectedJson)
+	}
 }

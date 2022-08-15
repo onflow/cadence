@@ -82,7 +82,7 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 		// The initializer must initialize all members that are fields,
 		// e.g. not composite functions (which are by definition constant and "initialized")
 
-		fieldMembers := NewMemberAstFieldDeclarationOrderedMap()
+		fieldMembers := &MemberFieldDeclarationOrderedMap{}
 
 		for _, field := range declaration.Members.Fields() {
 			fieldName := field.Identifier.Identifier
@@ -425,8 +425,8 @@ func (checker *Checker) declareCompositeType(declaration *ast.CompositeDeclarati
 		Location:    checker.Location,
 		Kind:        declaration.CompositeKind,
 		Identifier:  identifier.Identifier,
-		nestedTypes: NewStringTypeOrderedMap(),
-		Members:     NewStringMemberOrderedMap(),
+		nestedTypes: &StringTypeOrderedMap{},
+		Members:     &StringMemberOrderedMap{},
 	}
 
 	variable, err := checker.typeActivations.DeclareType(typeDeclaration{
@@ -509,7 +509,7 @@ func (checker *Checker) declareCompositeMembersAndValue(
 		panic(errors.NewUnreachableError())
 	}
 
-	declarationMembers := NewStringMemberOrderedMap()
+	declarationMembers := &StringMemberOrderedMap{}
 
 	(func() {
 		// Activate new scopes for nested types
@@ -567,7 +567,6 @@ func (checker *Checker) declareCompositeMembersAndValue(
 					TypeAnnotation:        NewTypeAnnotation(nestedCompositeDeclarationVariable.Type),
 					DeclarationKind:       nestedCompositeDeclarationVariable.DeclarationKind,
 					VariableKind:          ast.VariableKindConstant,
-					ArgumentLabels:        nestedCompositeDeclarationVariable.ArgumentLabels,
 					IgnoreInSerialization: true,
 					DocString:             nestedCompositeDeclaration.DocString,
 				})
@@ -870,7 +869,7 @@ func EnumConstructorType(compositeType *CompositeType) *FunctionType {
 				Type: compositeType,
 			},
 		),
-		Members: NewStringMemberOrderedMap(),
+		Members: &StringMemberOrderedMap{},
 	}
 }
 
@@ -1488,7 +1487,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 	requireNonPrivateMemberAccess := containerKind == ContainerKindInterface
 
 	memberCount := len(fields) + len(functions)
-	members = NewStringMemberOrderedMap()
+	members = &StringMemberOrderedMap{}
 	if checker.positionInfoEnabled {
 		origins = make(map[string]*Origin, memberCount)
 	}
@@ -1653,7 +1652,7 @@ func (checker *Checker) eventMembersAndOrigins(
 ) {
 	parameters := initializer.FunctionDeclaration.ParameterList.Parameters
 
-	members = NewStringMemberOrderedMap()
+	members = &StringMemberOrderedMap{}
 	if checker.positionInfoEnabled {
 		origins = make(map[string]*Origin, len(parameters))
 	}
@@ -1736,7 +1735,7 @@ func (checker *Checker) enumMembersAndOrigins(
 	// Each individual enum case is an instance of the enum type,
 	// so only has a single member, the raw value field
 
-	members = NewStringMemberOrderedMap()
+	members = &StringMemberOrderedMap{}
 	members.Set(
 		EnumRawValueFieldName,
 		&Member{
@@ -2192,7 +2191,10 @@ func (checker *Checker) checkCompositeResourceInvalidated(containerType Type) {
 // checkResourceFieldsInvalidated checks that all resource fields for a container
 // type are invalidated.
 //
-func (checker *Checker) checkResourceFieldsInvalidated(containerType Type, members *StringMemberOrderedMap) {
+func (checker *Checker) checkResourceFieldsInvalidated(
+	containerType Type,
+	members *StringMemberOrderedMap,
+) {
 	members.Foreach(func(_ string, member *Member) {
 
 		// NOTE: check the of the type annotation, not the type annotation's
@@ -2203,7 +2205,7 @@ func (checker *Checker) checkResourceFieldsInvalidated(containerType Type, membe
 			return
 		}
 
-		info := checker.resources.Get(member)
+		info := checker.resources.Get(Resource{Member: member})
 		if !info.DefinitivelyInvalidated {
 			checker.report(
 				&ResourceFieldNotInvalidatedError{
@@ -2219,7 +2221,7 @@ func (checker *Checker) checkResourceFieldsInvalidated(containerType Type, membe
 // checkResourceUseAfterInvalidation checks if a resource (variable or composite member)
 // is used after it was previously invalidated (moved or destroyed)
 //
-func (checker *Checker) checkResourceUseAfterInvalidation(resource any, usePosition ast.HasPosition) {
+func (checker *Checker) checkResourceUseAfterInvalidation(resource Resource, usePosition ast.HasPosition) {
 	resourceInfo := checker.resources.Get(resource)
 	if resourceInfo.Invalidations.Size() == 0 {
 		return

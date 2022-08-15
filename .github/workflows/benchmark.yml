@@ -83,7 +83,14 @@ jobs:
             This branch with compared with the base branch ${{  github.event.pull_request.base.label }} commit ${{ github.event.pull_request.base.sha }}
             The command `for i in {1..N}; do go test ./... -run=XXX -bench=. -benchmem -shuffle=on; done` was used.
             Bench tests were run a total of ${{ steps.settings.outputs.benchmark_repetitions }} times on each branch.
-            ## Results
+            
+            <details>
+            <summary>Collapsed results for better readability</summary>
+            <p>
+
             ${{ env.BENCHSTAT }}
+            
+            </p>
+            </details>  
             
           edit-mode: replace

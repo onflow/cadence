@@ -18,18 +18,18 @@
 
 package intervalst
 
-type node struct {
+type node[T any] struct {
 	interval    Interval
-	value       any
-	left, right *node
+	value       T
+	left, right *node[T]
 	// size of subtree rooted at this node
 	n int
 	// max endpoint in subtree rooted at this node
 	max Position
 }
 
-func newNode(interval Interval, value any) *node {
-	return &node{
+func newNode[T any](interval Interval, value T) *node[T] {
+	return &node[T]{
 		interval: interval,
 		value:    value,
 		n:        1,
@@ -37,7 +37,7 @@ func newNode(interval Interval, value any) *node {
 	}
 }
 
-func (n *node) size() int {
+func (n *node[T]) size() int {
 	if n == nil {
 		return 0
 	}
@@ -56,7 +56,7 @@ func (MinPosition) Compare(other Position) int {
 
 var minPosition = MinPosition{}
 
-func (n *node) Max() Position {
+func (n *node[T]) Max() Position {
 	if n == nil {
 		return minPosition
 	}
@@ -64,7 +64,7 @@ func (n *node) Max() Position {
 	return n.max
 }
 
-func (n *node) fix() {
+func (n *node[T]) fix() {
 	if n == nil {
 		return
 	}
@@ -83,7 +83,7 @@ func max3(a, b, c Position) Position {
 	return a
 }
 
-func (n *node) rotR() *node {
+func (n *node[T]) rotR() *node[T] {
 	x := n.left
 	n.left = x.right
 	x.right = n
@@ -92,7 +92,7 @@ func (n *node) rotR() *node {
 	return x
 }
 
-func (n *node) rotL() *node {
+func (n *node[T]) rotL() *node[T] {
 	x := n.right
 	n.right = x.left
 	x.left = n
@@ -101,7 +101,7 @@ func (n *node) rotL() *node {
 	return x
 }
 
-func (n *node) Values() []any {
+func (n *node[T]) Values() []T {
 	if n == nil {
 		return nil
 	}
@@ -112,13 +112,13 @@ func (n *node) Values() []any {
 	)
 }
 
-func (n *node) checkCount() bool {
+func (n *node[T]) checkCount() bool {
 	return n == nil ||
 		(n.left.checkCount() && n.right.checkCount() &&
 			(n.n == 1+n.left.size()+n.right.size()))
 }
 
-func (n *node) checkMax() bool {
+func (n *node[T]) checkMax() bool {
 	if n == nil {
 		return true
 	}

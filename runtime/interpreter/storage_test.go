@@ -47,6 +47,7 @@ func TestCompositeStorage(t *testing.T) {
 
 	value := NewCompositeValue(
 		inter,
+		ReturnEmptyLocationRange,
 		TestLocation,
 		"TestStruct",
 		common.CompositeKindStructure,
@@ -90,7 +91,7 @@ func TestArrayStorage(t *testing.T) {
 	t.Parallel()
 
 	importLocationHandlerFunc := func(inter *Interpreter, location common.Location) Import {
-		elaboration := sema.NewElaboration(nil)
+		elaboration := sema.NewElaboration(nil, false)
 		elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
 		return VirtualImport{Elaboration: elaboration}
 	}
@@ -115,6 +116,7 @@ func TestArrayStorage(t *testing.T) {
 
 		value := NewArrayValue(
 			inter,
+			ReturnEmptyLocationRange,
 			VariableSizedStaticType{
 				Type: element.StaticType(inter),
 			},
@@ -178,6 +180,7 @@ func TestArrayStorage(t *testing.T) {
 
 		value := NewArrayValue(
 			inter,
+			ReturnEmptyLocationRange,
 			VariableSizedStaticType{
 				Type: element.StaticType(inter),
 			},
@@ -236,6 +239,7 @@ func TestDictionaryStorage(t *testing.T) {
 
 		value := NewDictionaryValue(
 			inter,
+			ReturnEmptyLocationRange,
 			DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeString,
 				ValueType: PrimitiveStaticTypeAnyStruct,
@@ -292,6 +296,7 @@ func TestDictionaryStorage(t *testing.T) {
 
 		value := NewDictionaryValue(
 			inter,
+			ReturnEmptyLocationRange,
 			DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeString,
 				ValueType: PrimitiveStaticTypeAnyStruct,
@@ -341,6 +346,7 @@ func TestDictionaryStorage(t *testing.T) {
 
 		value := NewDictionaryValue(
 			inter,
+			ReturnEmptyLocationRange,
 			DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeString,
 				ValueType: PrimitiveStaticTypeAnyStruct,
@@ -389,6 +395,7 @@ func TestDictionaryStorage(t *testing.T) {
 
 		value := NewDictionaryValue(
 			inter,
+			ReturnEmptyLocationRange,
 			DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeString,
 				ValueType: PrimitiveStaticTypeAnyStruct,
@@ -422,7 +429,7 @@ func TestDictionaryStorage(t *testing.T) {
 	})
 }
 
-func TestStorageOverwriteAndRemove(t *testing.T) {
+func TestInterpretStorageOverwriteAndRemove(t *testing.T) {
 
 	t.Parallel()
 
@@ -439,6 +446,7 @@ func TestStorageOverwriteAndRemove(t *testing.T) {
 
 	array1 := NewArrayValue(
 		inter,
+		ReturnEmptyLocationRange,
 		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
@@ -455,6 +463,7 @@ func TestStorageOverwriteAndRemove(t *testing.T) {
 
 	array2 := NewArrayValue(
 		inter,
+		ReturnEmptyLocationRange,
 		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},

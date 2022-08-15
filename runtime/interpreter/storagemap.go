@@ -22,6 +22,7 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 )
 
 // StorageMap is an ordered map which stores values in an account.
@@ -40,7 +41,7 @@ func NewStorageMap(memoryGauge common.MemoryGauge, storage atree.SlabStorage, ad
 		emptyTypeInfo,
 	)
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 
 	return &StorageMap{
@@ -55,7 +56,7 @@ func NewStorageMapWithRootID(storage atree.SlabStorage, storageID atree.StorageI
 		atree.NewDefaultDigesterBuilder(),
 	)
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 
 	return &StorageMap{
@@ -75,7 +76,7 @@ func (s StorageMap) ValueExists(key string) bool {
 		if _, ok := err.(*atree.KeyNotFoundError); ok {
 			return false
 		}
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 
 	return true
@@ -84,7 +85,7 @@ func (s StorageMap) ValueExists(key string) bool {
 // ReadValue returns the value for the given key.
 // Returns nil if the key does not exist.
 //
-func (s StorageMap) ReadValue(interpreter *Interpreter, key string) Value {
+func (s StorageMap) ReadValue(gauge common.MemoryGauge, key string) Value {
 	storable, err := s.orderedMap.Get(
 		StringAtreeComparator,
 		StringAtreeHashInput,
@@ -94,10 +95,10 @@ func (s StorageMap) ReadValue(interpreter *Interpreter, key string) Value {
 		if _, ok := err.(*atree.KeyNotFoundError); ok {
 			return nil
 		}
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 
-	return StoredValue(interpreter, storable, s.orderedMap.Storage)
+	return StoredValue(gauge, storable, s.orderedMap.Storage)
 }
 
 // WriteValue sets or removes a value in the storage map.
@@ -106,7 +107,7 @@ func (s StorageMap) ReadValue(interpreter *Interpreter, key string) Value {
 //
 func (s StorageMap) WriteValue(interpreter *Interpreter, key string, value atree.Value) {
 	if value == nil {
-		s.removeValue(interpreter, key)
+		s.RemoveValue(interpreter, key)
 	} else {
 		s.SetValue(interpreter, key, value)
 	}
@@ -123,7 +124,7 @@ func (s StorageMap) SetValue(interpreter *Interpreter, key string, value atree.V
 		value,
 	)
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 	interpreter.maybeValidateAtreeValue(s.orderedMap)
 
@@ -134,9 +135,9 @@ func (s StorageMap) SetValue(interpreter *Interpreter, key string, value atree.V
 	}
 }
 
-// removeValue removes a value in the storage map, if it exists.
+// RemoveValue removes a value in the storage map, if it exists.
 //
-func (s StorageMap) removeValue(interpreter *Interpreter, key string) {
+func (s StorageMap) RemoveValue(interpreter *Interpreter, key string) {
 	existingKeyStorable, existingValueStorable, err := s.orderedMap.Remove(
 		StringAtreeComparator,
 		StringAtreeHashInput,
@@ -146,7 +147,7 @@ func (s StorageMap) removeValue(interpreter *Interpreter, key string) {
 		if _, ok := err.(*atree.KeyNotFoundError); ok {
 			return
 		}
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 	interpreter.maybeValidateAtreeValue(s.orderedMap)
 
@@ -171,7 +172,7 @@ func (s StorageMap) removeValue(interpreter *Interpreter, key string) {
 func (s StorageMap) Iterator(gauge common.MemoryGauge) StorageMapIterator {
 	mapIterator, err := s.orderedMap.Iterator()
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 
 	return StorageMapIterator{
@@ -199,7 +200,7 @@ type StorageMapIterator struct {
 func (i StorageMapIterator) Next() (string, Value) {
 	k, v, err := i.mapIterator.Next()
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 
 	if k == nil || v == nil {
@@ -218,7 +219,7 @@ func (i StorageMapIterator) Next() (string, Value) {
 func (i StorageMapIterator) NextKey() string {
 	k, err := i.mapIterator.NextKey()
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 
 	if k == nil {
@@ -234,7 +235,7 @@ func (i StorageMapIterator) NextKey() string {
 func (i StorageMapIterator) NextValue() Value {
 	v, err := i.mapIterator.NextValue()
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 
 	if v == nil {

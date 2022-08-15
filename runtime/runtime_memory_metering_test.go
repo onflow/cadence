@@ -23,14 +23,14 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/onflow/cadence/encoding/json"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/encoding/json"
 	jsoncdc "github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -97,7 +97,7 @@ func TestInterpreterAddressLocationMetering(t *testing.T) {
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindAddressLocation))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindElaboration))
-		assert.Equal(t, uint64(136), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, uint64(92), meter.getMemory(common.MemoryKindRawString))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 }
@@ -134,11 +134,11 @@ func TestInterpreterElaborationImportMetering(t *testing.T) {
 
 			meter := newTestMemoryGauge()
 
-			accountCodes := map[common.LocationID][]byte{}
+			accountCodes := map[common.Location][]byte{}
 
 			runtimeInterface := &testRuntimeInterface{
 				getCode: func(location Location) (bytes []byte, err error) {
-					return accountCodes[location.ID()], nil
+					return accountCodes[location], nil
 				},
 				storage: newTestLedger(nil, nil),
 				getSigningAccounts: func() ([]Address, error) {
@@ -150,7 +150,7 @@ func TestInterpreterElaborationImportMetering(t *testing.T) {
 						Address: address,
 						Name:    name,
 					}
-					accountCodes[location.ID()] = code
+					accountCodes[location] = code
 					return nil
 				},
 				getAccountContractCode: func(address Address, name string) (code []byte, err error) {
@@ -158,7 +158,7 @@ func TestInterpreterElaborationImportMetering(t *testing.T) {
 						Address: address,
 						Name:    name,
 					}
-					code = accountCodes[location.ID()]
+					code = accountCodes[location]
 					return code, nil
 				},
 				meterMemory: func(usage common.MemoryUsage) error {
@@ -1053,8 +1053,8 @@ func TestMemoryMeteringErrors(t *testing.T) {
 		require.IsType(t, Error{}, err)
 		runtimeError := err.(Error)
 
-		require.IsType(t, common.FatalError{}, runtimeError.Err)
-		fatalError := runtimeError.Err.(common.FatalError)
+		require.IsType(t, errors.MemoryError{}, runtimeError.Err)
+		fatalError := runtimeError.Err.(errors.MemoryError)
 
 		assert.Contains(t, fatalError.Error(), "memory limit exceeded")
 	})

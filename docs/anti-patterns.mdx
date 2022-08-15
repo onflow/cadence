@@ -37,7 +37,7 @@ pub fun transferNFT(id: UInt64, owner: AuthAccount) {
 
 // But they could upgrade the function to have the same signature
 // so it looks like it is doing the same thing, but they could also drain a little bit
-// of FLOW from the user's vault, a totally separate piece of the account that 
+// of FLOW from the user's vault, a totally separate piece of the account that
 // should not be accessible in this function
 // BAD
 
@@ -54,7 +54,7 @@ pub fun transferNFT(id: UInt64, owner: AuthAccount) {
 
     // deposit the stolen funds in the contract owners vault
     // BAD
-    contractVault.deposit(<-stolenTokens)
+    contractVault.deposit(from: <-stolenTokens)
 }
 ...
 ```
@@ -72,7 +72,7 @@ but those cases are extremely rare and `AuthAccount` usage should still be avoid
 
 ### Problem
 
-[Authorized references](/language/references) allow downcasting restricted
+[Authorized references](language/references) allow downcasting restricted
 types to their unrestricted type and should be avoided unless necessary.
 The type that is being restricted could expose functionality that was not intended to be exposed.
 If the `auth` keyword is used on local variables they will be references.
@@ -129,14 +129,14 @@ let balanceRef = getAccount(account)
 let fullVaultRef = balanceRef as! &FlowToken.Vault
 
 // Withdraw the newly exposed funds
-let solenFunds <- fullVaultRef.withdraw(amount: 1000000)
+let stolenFunds <- fullVaultRef.withdraw(amount: 1000000)
 ```
 
 ## Events from resources may not be unique
 
 ### Problem
 
-Public functions in a contract can be called by anyone, e.g. any other contract or any transaction. 
+Public functions in a contract can be called by anyone, e.g. any other contract or any transaction.
 If that function creates a resource, and that resource has functions that emit events,
 that means any account can create an instance of that resource and emit those events.
 If those events are meant to indicate actions taken using a single instance of that resource
@@ -200,7 +200,7 @@ Ex:
 
 ```cadence
 pub contract Array {
-    // array is inteded to be initialized to something constant
+    // array is intended to be initialized to something constant
     pub let shouldBeConstantArray: [Int]
 }
 ```
@@ -378,4 +378,3 @@ pub contract TopShot {
     }
 }
 ```
-

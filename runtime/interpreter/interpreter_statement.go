@@ -311,7 +311,7 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) a
 
 	iterator, err := transferredValue.(*ArrayValue).array.Iterator()
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 
 	var indexVariable *Variable
@@ -326,7 +326,7 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) a
 		var atreeValue atree.Value
 		atreeValue, err = iterator.Next()
 		if err != nil {
-			panic(ExternalError{err})
+			panic(errors.NewExternalError(err))
 		}
 
 		if atreeValue == nil {

@@ -20,7 +20,6 @@ package interpreter
 
 import (
 	"bytes"
-	"fmt"
 	"math"
 	"math/big"
 
@@ -28,6 +27,7 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 )
 
 const cborTagSize = 2
@@ -850,7 +850,7 @@ func encodeLocation(e *cbor.StreamEncoder, l common.Location) error {
 			return err
 		}
 
-		return e.EncodeBytes(l)
+		return e.EncodeBytes(l[:])
 
 	case common.ScriptLocation:
 		// common.ScriptLocation is encoded as
@@ -867,10 +867,10 @@ func encodeLocation(e *cbor.StreamEncoder, l common.Location) error {
 			return err
 		}
 
-		return e.EncodeBytes(l)
+		return e.EncodeBytes(l[:])
 
 	default:
-		return fmt.Errorf("unsupported location: %T", l)
+		return errors.NewUnexpectedError("unsupported location: %T", l)
 	}
 }
 
@@ -1357,7 +1357,7 @@ func (c compositeTypeInfo) Encode(e *cbor.StreamEncoder) error {
 func (c compositeTypeInfo) Equal(o atree.TypeInfo) bool {
 	other, ok := o.(compositeTypeInfo)
 	return ok &&
-		common.LocationsMatch(c.location, other.location) &&
+		c.location == other.location &&
 		c.qualifiedIdentifier == other.qualifiedIdentifier &&
 		c.kind == other.kind
 }

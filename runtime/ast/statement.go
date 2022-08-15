@@ -327,6 +327,7 @@ type WhileStatement struct {
 	StartPos Position `json:"-"`
 }
 
+var _ Element = &WhileStatement{}
 var _ Statement = &WhileStatement{}
 
 func NewWhileStatement(
@@ -342,9 +343,6 @@ func NewWhileStatement(
 		StartPos: startPos,
 	}
 }
-
-var _ Element = &WhileStatement{}
-var _ Statement = &WhileStatement{}
 
 func (*WhileStatement) ElementType() ElementType {
 	return ElementTypeWhileStatement
@@ -821,8 +819,9 @@ func (s *SwitchStatement) Walk(walkChild func(Element)) {
 	walkChild(s.Expression)
 	for _, switchCase := range s.Cases {
 		// The default case has no expression
-		if switchCase.Expression != nil {
-			walkChild(switchCase.Expression)
+		expression := switchCase.Expression
+		if expression != nil {
+			walkChild(expression)
 		}
 		walkStatements(walkChild, switchCase.Statements)
 	}

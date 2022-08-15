@@ -72,7 +72,12 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 
 		inter := newTestInterpreter(t)
 
-		codeHash, err := importValue(inter, codeHashValue, sema.ByteArrayType)
+		codeHash, err := importValue(
+			inter,
+			interpreter.ReturnEmptyLocationRange,
+			codeHashValue,
+			sema.ByteArrayType,
+		)
 		require.NoError(t, err)
 
 		actualCodeHash, err := interpreter.ByteArrayValueToByteSlice(inter, codeHash)
@@ -219,7 +224,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			check: expectFailure(
 				"Execution failed:\n" +
 					"error: invalid argument 0: expected type `Int`, got `Bool`\n" +
-					" --> 00:5:22\n" +
+					" --> 0000000000000000000000000000000000000000000000000000000000000000:5:22\n" +
 					"  |\n" +
 					"5 |                       signer.contracts.add(name: \"Test\", code: \"0a202020202020202020202020202070756220636f6e74726163742054657374207b0a202020202020202020202020202020202020696e6974285f20783a20496e7429207b7d0a20202020202020202020202020207d0a202020202020202020202020\".decodeHex(), true)\n" +
 					"  |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n",
@@ -238,7 +243,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			check: expectFailure(
 				"Execution failed:\n" +
 					"error: invalid argument count, too many arguments: expected 0, got 1\n" +
-					" --> 00:5:22\n" +
+					" --> 0000000000000000000000000000000000000000000000000000000000000000:5:22\n" +
 					"  |\n" +
 					"5 |                       signer.contracts.add(name: \"Test\", code: \"0a202020202020202020202020202070756220636f6e74726163742054657374207b7d0a202020202020202020202020\".decodeHex(), 1)\n" +
 					"  |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n",
@@ -257,7 +262,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			check: expectFailure(
 				"Execution failed:\n" +
 					"error: cannot deploy invalid contract\n" +
-					" --> 00:5:22\n" +
+					" --> 0000000000000000000000000000000000000000000000000000000000000000:5:22\n" +
 					"  |\n" +
 					"5 |                       signer.contracts.add(name: \"Test\", code: \"0a202020202020202020202020202070756220636f6e74726163742054657374207b7d0a0a202020202020202020202020202066756e2074657374436173652829207b7d0a202020202020202020202020\".decodeHex())\n" +
 					"  |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n" +
@@ -286,7 +291,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			check: expectFailure(
 				"Execution failed:\n" +
 					"error: cannot deploy invalid contract\n" +
-					" --> 00:5:22\n" +
+					" --> 0000000000000000000000000000000000000000000000000000000000000000:5:22\n" +
 					"  |\n" +
 					"5 |                       signer.contracts.add(name: \"Test\", code: \"0a2020202020202020202020202020580a202020202020202020202020\".decodeHex())\n" +
 					"  |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n" +
@@ -311,7 +316,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			check: expectFailure(
 				"Execution failed:\n" +
 					"error: cannot deploy invalid contract\n" +
-					" --> 00:5:22\n" +
+					" --> 0000000000000000000000000000000000000000000000000000000000000000:5:22\n" +
 					"  |\n" +
 					"5 |                       signer.contracts.add(name: \"Test\", code: \"0a202020202020202020202020202070756220636f6e74726163742054657374207b0a2020202020202020202020202020202020207075622066756e20746573742829207b2058207d0a20202020202020202020202020207d0a202020202020202020202020\".decodeHex())\n" +
 					"  |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n" +

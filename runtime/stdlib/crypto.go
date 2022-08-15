@@ -23,14 +23,14 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	errors2 "github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/parser2"
+	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib/contracts"
 )
 
 var CryptoChecker = func() *sema.Checker {
 
-	program, err := parser2.ParseProgram(contracts.Crypto, nil)
+	program, err := parser.ParseProgram(contracts.Crypto, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -42,6 +42,7 @@ var CryptoChecker = func() *sema.Checker {
 		program,
 		location,
 		nil,
+		false,
 		sema.WithPredeclaredValues(BuiltinFunctions.ToSemaValueDeclarations()),
 		sema.WithPredeclaredTypes(BuiltinTypes.ToTypeDeclarations()),
 	)
@@ -131,12 +132,16 @@ func cryptoAlgorithmEnumConstructorType(
 	return constructorType
 }
 
+type enumCaseConstructor func(
+	inter *interpreter.Interpreter,
+	rawValue uint8,
+) *interpreter.CompositeValue
+
 func cryptoAlgorithmEnumValue(
 	inter *interpreter.Interpreter,
-	getLocationRange func() interpreter.LocationRange,
 	enumType *sema.CompositeType,
 	enumCases []sema.CryptoAlgorithm,
-	caseConstructor func(inter *interpreter.Interpreter, rawValue uint8) *interpreter.CompositeValue,
+	caseConstructor enumCaseConstructor,
 ) interpreter.Value {
 
 	caseCount := len(enumCases)
@@ -153,7 +158,7 @@ func cryptoAlgorithmEnumValue(
 
 	return interpreter.EnumConstructorFunction(
 		inter,
-		getLocationRange,
+		interpreter.ReturnEmptyLocationRange,
 		enumType,
 		caseValues,
 		constructorNestedVariables,

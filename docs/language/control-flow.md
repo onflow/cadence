@@ -306,10 +306,10 @@ for element in array {
 // "Bar"
 ```
 
-Optionally, developers may include an additional variable preceding the element name, 
-separated by a comma. 
+Optionally, developers may include an additional variable preceding the element name,
+separated by a comma.
 When present, this variable contains the current
-index of the array being iterated through 
+index of the array being iterated through
 during each repeated execution (starting from 0).
 
 ```cadence
@@ -326,7 +326,7 @@ for index, element in array {
 // 3
 ```
 
-To iterate over a dictionary's entries (keys and values), 
+To iterate over a dictionary's entries (keys and values),
 use a for-in loop over the dictionary's keys and get the value for each key:
 
 ```cadence
@@ -407,11 +407,3 @@ The return-statement causes a function to return immediately,
 i.e., any code after the return-statement is not executed.
 The return-statement starts with the `return` keyword
 and is followed by an optional expression that should be the return value of the function call.
-
-<!--
-TODO: examples
-
-- in function
-- in while
-- in if
--->

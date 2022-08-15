@@ -158,7 +158,9 @@ func TestRLPDecodeString(t *testing.T) {
 				assert.Equal(t,
 					cadence.Array{
 						Values: test.output,
-					},
+					}.WithType(cadence.VariableSizedArrayType{
+						ElementType: cadence.UInt8Type{},
+					}),
 					result,
 				)
 			}
@@ -314,13 +316,21 @@ func TestRLPDecodeList(t *testing.T) {
 
 				arrays := make([]cadence.Value, 0, len(test.output))
 				for _, values := range test.output {
-					arrays = append(arrays, cadence.Array{Values: values})
+					arrays = append(arrays,
+						cadence.Array{Values: values}.
+							WithType(cadence.VariableSizedArrayType{
+								ElementType: cadence.UInt8Type{},
+							}))
 				}
 
 				assert.Equal(t,
 					cadence.Array{
 						Values: arrays,
-					},
+					}.WithType(cadence.VariableSizedArrayType{
+						ElementType: cadence.VariableSizedArrayType{
+							ElementType: cadence.UInt8Type{},
+						},
+					}),
 					result,
 				)
 			}
