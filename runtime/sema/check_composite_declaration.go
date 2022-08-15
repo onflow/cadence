@@ -588,7 +588,7 @@ func (checker *Checker) declareCompositeMembersAndValue(
 				return
 			}
 
-			inheritedMembers := NewStringMemberOrderedMap()
+			var inheritedMembers StringMemberOrderedMap
 
 			for _, compositeTypeConformance := range compositeType.ExplicitInterfaceConformances {
 				conformanceNestedTypes := compositeTypeConformance.GetNestedTypes()
