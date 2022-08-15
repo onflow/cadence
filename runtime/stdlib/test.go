@@ -419,24 +419,12 @@ func arrayValueToSlice(value interpreter.Value) ([]interpreter.Value, error) {
 //
 func createScriptResult(inter *interpreter.Interpreter, returnValue interpreter.Value) interpreter.Value {
 	// Lookup and get 'ResultStatus.succeeded' value.
-
-	resultStatusConstructorVar := inter.Activations.Find(resultStatusTypeName)
-	resultStatusConstructor, ok := resultStatusConstructorVar.GetValue().(*interpreter.HostFunctionValue)
-	if !ok {
-		panic(errors.NewUnexpectedError("invalid type for constructor"))
-	}
-
+	resultStatusConstructor := getConstructor(inter, resultStatusTypeName)
 	succeededVar := resultStatusConstructor.NestedVariables[succeededCaseName]
 	succeeded := succeededVar.GetValue()
 
 	// Create a 'ScriptResult' by calling its constructor.
-
-	scriptResultConstructorVar := inter.Activations.Find(scriptResultTypeName)
-	scriptResultConstructor, ok := scriptResultConstructorVar.GetValue().(*interpreter.HostFunctionValue)
-	if !ok {
-		panic(errors.NewUnexpectedError("invalid type for constructor"))
-	}
-
+	scriptResultConstructor := getConstructor(inter, scriptResultTypeName)
 	scriptResult, err := inter.InvokeExternally(
 		scriptResultConstructor,
 		scriptResultConstructor.Type,
@@ -451,6 +439,16 @@ func createScriptResult(inter *interpreter.Interpreter, returnValue interpreter.
 	}
 
 	return scriptResult
+}
+
+func getConstructor(inter *interpreter.Interpreter, typeName string) *interpreter.HostFunctionValue {
+	resultStatusConstructorVar := inter.FindVariable(typeName)
+	resultStatusConstructor, ok := resultStatusConstructorVar.GetValue().(*interpreter.HostFunctionValue)
+	if !ok {
+		panic(errors.NewUnexpectedError("invalid type for constructor of '%s'", typeName))
+	}
+
+	return resultStatusConstructor
 }
 
 // TestFailedError
