@@ -39,11 +39,19 @@ This ensures that there is little noise and variance in the results.
 
 - Disable using:
 
-  ```sh
-  echo 1|sudo tee /sys/devices/system/cpu/intel_pstate/no_turbo
-  ```
+  - On Intel:
 
-  (If it has no effect, disable via BIOS)
+    ```sh
+    echo 1 | sudo tee /sys/devices/system/cpu/intel_pstate/no_turbo
+    ```
+
+    (If it has no effect, disable via BIOS)
+
+  - On AMD:
+
+    ```sh
+    echo 0 | sudo tee /sys/devices/system/cpu/cpufreq/boost
+    ```
 
 - Check with:
 
@@ -64,7 +72,7 @@ This ensures that there is little noise and variance in the results.
 - Disable using:
 
   ```sh
-  echo off > /sys/devices/system/cpu/smt/control
+  echo off | sudo tee /sys/devices/system/cpu/smt/control
   ```
 
 - Check with:
@@ -95,7 +103,7 @@ systemctl stop polkit.service
 - Disable using:
 
   ```sh
-  echo 0 > /proc/sys/kernel/randomize_va_space
+  echo 0 | sudo tee /proc/sys/kernel/randomize_va_space
   ```
 
 - Check with:

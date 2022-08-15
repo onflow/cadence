@@ -23,7 +23,7 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/opentracing/opentracing-go"
+	"go.opentelemetry.io/otel/attribute"
 	"golang.org/x/crypto/sha3"
 
 	"github.com/onflow/cadence"
@@ -98,6 +98,9 @@ type Executor interface {
 
 // Runtime is a runtime capable of executing Cadence.
 type Runtime interface {
+	// NewScriptExecutor returns an executor which executes the given script.
+	NewScriptExecutor(Script, Context) Executor
+
 	// ExecuteScript executes the given script.
 	//
 	// This function returns an error if the program has errors (e.g syntax errors, type errors),
@@ -119,7 +122,7 @@ type Runtime interface {
 	NewContractFunctionExecutor(
 		contractLocation common.AddressLocation,
 		functionName string,
-		arguments []interpreter.Value,
+		arguments []cadence.Value,
 		argumentTypes []sema.Type,
 		context Context,
 	) Executor
@@ -132,7 +135,7 @@ type Runtime interface {
 	InvokeContractFunction(
 		contractLocation common.AddressLocation,
 		functionName string,
-		arguments []interpreter.Value,
+		arguments []cadence.Value,
 		argumentTypes []sema.Type,
 		context Context,
 	) (cadence.Value, error)
@@ -365,107 +368,15 @@ func (r *interpreterRuntime) SetDebugger(debugger *interpreter.Debugger) {
 	r.debugger = debugger
 }
 
+func (r *interpreterRuntime) NewScriptExecutor(
+	script Script,
+	context Context,
+) Executor {
+	return newInterpreterScriptExecutor(r, script, context)
+}
+
 func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val cadence.Value, err error) {
-	defer r.Recover(
-		func(internalErr Error) {
-			err = internalErr
-		},
-		context,
-	)
-
-	context.InitializeCodesAndPrograms()
-
-	memoryGauge, _ := context.Interface.(common.MemoryGauge)
-
-	storage := NewStorage(context.Interface, memoryGauge)
-
-	var checkerOptions []sema.Option
-	var interpreterOptions []interpreter.Option
-
-	functions := r.standardLibraryFunctions(
-		context,
-		storage,
-		interpreterOptions,
-		checkerOptions,
-	)
-
-	program, err := r.parseAndCheckProgram(
-		script.Source,
-		context,
-		functions,
-		stdlib.BuiltinValues,
-		checkerOptions,
-		true,
-		importResolutionResults{},
-	)
-	if err != nil {
-		return nil, newError(err, context)
-	}
-
-	functionEntryPointType, err := program.Elaboration.FunctionEntryPointType()
-	if err != nil {
-		return nil, newError(err, context)
-	}
-
-	// Ensure the entry point's parameter types are importable
-	if len(functionEntryPointType.Parameters) > 0 {
-		for _, param := range functionEntryPointType.Parameters {
-			if !param.TypeAnnotation.Type.IsImportable(map[*sema.Member]bool{}) {
-				err = &ScriptParameterTypeNotImportableError{
-					Type: param.TypeAnnotation.Type,
-				}
-				return nil, newError(err, context)
-			}
-		}
-	}
-
-	// Ensure the entry point's return type is valid
-	if !functionEntryPointType.ReturnTypeAnnotation.Type.IsExternallyReturnable(map[*sema.Member]bool{}) {
-		err = &InvalidScriptReturnTypeError{
-			Type: functionEntryPointType.ReturnTypeAnnotation.Type,
-		}
-		return nil, newError(err, context)
-	}
-
-	interpret := scriptExecutionFunction(
-		functionEntryPointType.Parameters,
-		script.Arguments,
-		context.Interface,
-		interpreter.ReturnEmptyLocationRange,
-	)
-
-	value, inter, err := r.interpret(
-		program,
-		context,
-		storage,
-		functions,
-		stdlib.BuiltinValues,
-		interpreterOptions,
-		checkerOptions,
-		interpret,
-	)
-	if err != nil {
-		return nil, newError(err, context)
-	}
-
-	// Export before committing storage
-
-	result, err := exportValue(value, interpreter.ReturnEmptyLocationRange)
-	if err != nil {
-		return nil, newError(err, context)
-	}
-
-	// Write back all stored values, which were actually just cached, back into storage.
-
-	// Even though this function is `ExecuteScript`, that doesn't imply the changes
-	// to storage will be actually persisted
-
-	err = r.commitStorage(storage, inter)
-	if err != nil {
-		return nil, newError(err, context)
-	}
-
-	return result, nil
+	return r.NewScriptExecutor(script, context).Result()
 }
 
 func (r *interpreterRuntime) commitStorage(storage *Storage, inter *interpreter.Interpreter) error {
@@ -486,36 +397,6 @@ func (r *interpreterRuntime) commitStorage(storage *Storage, inter *interpreter.
 }
 
 type interpretFunc func(inter *interpreter.Interpreter) (interpreter.Value, error)
-
-func scriptExecutionFunction(
-	parameters []*sema.Parameter,
-	arguments [][]byte,
-	runtimeInterface Interface,
-	getLocationRange func() interpreter.LocationRange,
-) interpretFunc {
-	return func(inter *interpreter.Interpreter) (value interpreter.Value, err error) {
-
-		// Recover internal panics and return them as an error.
-		// For example, the argument validation might attempt to
-		// load contract code for non-existing types
-
-		defer inter.RecoverErrors(func(internalErr error) {
-			err = internalErr
-		})
-
-		values, err := validateArgumentParams(
-			inter,
-			runtimeInterface,
-			interpreter.ReturnEmptyLocationRange,
-			arguments,
-			parameters,
-		)
-		if err != nil {
-			return nil, err
-		}
-		return inter.Invoke("main", values...)
-	}
-}
 
 func (r *interpreterRuntime) interpret(
 	program *interpreter.Program,
@@ -616,7 +497,7 @@ func (r *interpreterRuntime) newAuthAccountValue(
 func (r *interpreterRuntime) NewContractFunctionExecutor(
 	contractLocation common.AddressLocation,
 	functionName string,
-	arguments []interpreter.Value,
+	arguments []cadence.Value,
 	argumentTypes []sema.Type,
 	context Context,
 ) Executor {
@@ -632,7 +513,7 @@ func (r *interpreterRuntime) NewContractFunctionExecutor(
 func (r *interpreterRuntime) InvokeContractFunction(
 	contractLocation common.AddressLocation,
 	functionName string,
-	arguments []interpreter.Value,
+	arguments []cadence.Value,
 	argumentTypes []sema.Type,
 	context Context,
 ) (cadence.Value, error) {
@@ -1273,9 +1154,9 @@ func (r *interpreterRuntime) newInterpreter(
 				interpreter *interpreter.Interpreter,
 				functionName string,
 				duration time.Duration,
-				logs []opentracing.LogRecord,
+				attrs []attribute.KeyValue,
 			) {
-				context.Interface.RecordTrace(functionName, interpreter.Location, duration, logs)
+				context.Interface.RecordTrace(functionName, interpreter.Location, duration, attrs)
 			},
 		),
 		interpreter.WithTracingEnabled(r.tracingEnabled),

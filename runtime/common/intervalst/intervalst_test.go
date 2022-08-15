@@ -59,7 +59,7 @@ func TestIntervalST_Search(t *testing.T) {
 
 	t.Parallel()
 
-	st := &IntervalST{}
+	st := &IntervalST[int]{}
 
 	st.Put(
 		NewInterval(
@@ -69,38 +69,44 @@ func TestIntervalST_Search(t *testing.T) {
 		100,
 	)
 
-	interval, value := st.Search(lineAndColumn{1, 3})
+	interval, value, present := st.Search(lineAndColumn{1, 3})
 	assert.Nil(t, interval)
-	assert.Nil(t, value)
+	assert.Zero(t, value)
+	assert.False(t, present)
 
-	interval, value = st.Search(lineAndColumn{2, 1})
+	interval, value, present = st.Search(lineAndColumn{2, 1})
 	assert.Nil(t, interval)
-	assert.Nil(t, value)
+	assert.Zero(t, value)
+	assert.False(t, present)
 
-	interval, value = st.Search(lineAndColumn{2, 2})
+	interval, value, present = st.Search(lineAndColumn{2, 2})
 	assert.Equal(t, interval, &Interval{
 		lineAndColumn{2, 2},
 		lineAndColumn{2, 4},
 	})
 	assert.Equal(t, value, 100)
+	assert.True(t, present)
 
-	interval, value = st.Search(lineAndColumn{2, 3})
+	interval, value, present = st.Search(lineAndColumn{2, 3})
 	assert.Equal(t, interval, &Interval{
 		lineAndColumn{2, 2},
 		lineAndColumn{2, 4},
 	})
 	assert.Equal(t, value, 100)
+	assert.True(t, present)
 
-	interval, value = st.Search(lineAndColumn{2, 4})
+	interval, value, present = st.Search(lineAndColumn{2, 4})
 	assert.Equal(t, interval, &Interval{
 		lineAndColumn{2, 2},
 		lineAndColumn{2, 4},
 	})
 	assert.Equal(t, value, 100)
+	assert.True(t, present)
 
-	interval, value = st.Search(lineAndColumn{2, 5})
+	interval, value, present = st.Search(lineAndColumn{2, 5})
 	assert.Nil(t, interval)
-	assert.Nil(t, value)
+	assert.Zero(t, value)
+	assert.False(t, present)
 
 	st.Put(
 		NewInterval(
@@ -110,28 +116,33 @@ func TestIntervalST_Search(t *testing.T) {
 		200,
 	)
 
-	interval, value = st.Search(lineAndColumn{2, 8})
+	interval, value, present = st.Search(lineAndColumn{2, 8})
 	assert.Nil(t, interval)
-	assert.Nil(t, value)
+	assert.Zero(t, value)
+	assert.False(t, present)
 
-	interval, value = st.Search(lineAndColumn{4, 8})
+	interval, value, present = st.Search(lineAndColumn{4, 8})
 	assert.Nil(t, interval)
-	assert.Nil(t, value)
+	assert.Zero(t, value)
+	assert.False(t, present)
 
-	interval, value = st.Search(lineAndColumn{3, 7})
+	interval, value, present = st.Search(lineAndColumn{3, 7})
 	assert.Nil(t, interval)
-	assert.Nil(t, value)
+	assert.Zero(t, value)
+	assert.False(t, present)
 
-	interval, value = st.Search(lineAndColumn{3, 8})
+	interval, value, present = st.Search(lineAndColumn{3, 8})
 	assert.Equal(t, interval, &Interval{
 		lineAndColumn{3, 8},
 		lineAndColumn{3, 8},
 	})
 	assert.Equal(t, value, 200)
+	assert.True(t, present)
 
-	interval, value = st.Search(lineAndColumn{3, 9})
+	interval, value, present = st.Search(lineAndColumn{3, 9})
 	assert.Nil(t, interval)
-	assert.Nil(t, value)
+	assert.Zero(t, value)
+	assert.False(t, present)
 
 	if !st.check() {
 		t.Fail()
@@ -213,7 +224,7 @@ func TestIntervalST_check(t *testing.T) {
 		},
 	}
 
-	st := &IntervalST{}
+	st := &IntervalST[Interval]{}
 
 	rand.Shuffle(len(intervals), func(i, j int) {
 		intervals[i], intervals[j] = intervals[j], intervals[i]
@@ -228,17 +239,16 @@ func TestIntervalST_check(t *testing.T) {
 	}
 
 	for _, interval := range intervals {
-		res, _ := st.Search(interval.Min)
+		res, _, _ := st.Search(interval.Min)
 		assert.NotNil(t, res)
-		res, _ = st.Search(interval.Max)
+		res, _, _ = st.Search(interval.Max)
 		assert.NotNil(t, res)
 	}
 
-	for _, value := range st.Values() {
-		interval := value.(Interval)
-		res, _ := st.Search(interval.Min)
+	for _, interval := range st.Values() {
+		res, _, _ := st.Search(interval.Min)
 		assert.NotNil(t, res)
-		res, _ = st.Search(interval.Max)
+		res, _, _ = st.Search(interval.Max)
 		assert.NotNil(t, res)
 	}
 }
@@ -247,7 +257,7 @@ func TestIntervalST_SearchAll(t *testing.T) {
 
 	t.Parallel()
 
-	st := &IntervalST{}
+	st := &IntervalST[int]{}
 
 	st.Put(
 		NewInterval(
@@ -291,7 +301,7 @@ func TestIntervalST_SearchAll(t *testing.T) {
 	for i := 4; i <= 5; i++ {
 		entries := st.SearchAll(lineAndColumn{2, i})
 		assert.Equal(t,
-			[]Entry{
+			[]Entry[int]{
 				{
 					Interval: NewInterval(
 						lineAndColumn{2, 4},
@@ -318,7 +328,7 @@ func TestIntervalST_SearchAll(t *testing.T) {
 
 	entries := st.SearchAll(lineAndColumn{3, 7})
 	assert.Equal(t,
-		[]Entry{
+		[]Entry[int]{
 			{
 				Interval: NewInterval(
 					lineAndColumn{3, 7},
@@ -333,7 +343,7 @@ func TestIntervalST_SearchAll(t *testing.T) {
 	for i := 8; i <= 9; i++ {
 		entries = st.SearchAll(lineAndColumn{3, i})
 		assert.ElementsMatch(t,
-			[]Entry{
+			[]Entry[int]{
 				{
 					Interval: NewInterval(
 						lineAndColumn{3, 8},
@@ -355,7 +365,7 @@ func TestIntervalST_SearchAll(t *testing.T) {
 
 	entries = st.SearchAll(lineAndColumn{3, 10})
 	assert.Equal(t,
-		[]Entry{
+		[]Entry[int]{
 			{
 				Interval: NewInterval(
 					lineAndColumn{3, 7},
