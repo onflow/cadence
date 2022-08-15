@@ -129,7 +129,7 @@ let balanceRef = getAccount(account)
 let fullVaultRef = balanceRef as! &FlowToken.Vault
 
 // Withdraw the newly exposed funds
-let solenFunds <- fullVaultRef.withdraw(amount: 1000000)
+let stolenFunds <- fullVaultRef.withdraw(amount: 1000000)
 ```
 
 ## Events from resources may not be unique

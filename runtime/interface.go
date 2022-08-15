@@ -21,9 +21,8 @@ package runtime
 import (
 	"time"
 
-	opentracing "github.com/opentracing/opentracing-go"
-
 	"github.com/onflow/atree"
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
@@ -137,8 +136,8 @@ type Interface interface {
 	ValidatePublicKey(key *PublicKey) error
 	// GetAccountContractNames returns the names of all contracts deployed in an account.
 	GetAccountContractNames(address Address) ([]string, error)
-	// RecordTrace records a opentracing trace
-	RecordTrace(operation string, location common.Location, duration time.Duration, logs []opentracing.LogRecord)
+	// RecordTrace records a opentelemetry trace.
+	RecordTrace(operation string, location common.Location, duration time.Duration, attrs []attribute.KeyValue)
 	// BLSVerifyPOP verifies a proof of possession (PoP) for the receiver public key.
 	BLSVerifyPOP(pk *PublicKey, s []byte) (bool, error)
 	// BLSAggregateSignatures aggregate multiple BLS signatures into one.

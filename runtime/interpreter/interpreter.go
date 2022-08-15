@@ -27,7 +27,7 @@ import (
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
-	"github.com/opentracing/opentracing-go"
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -121,7 +121,7 @@ type OnRecordTraceFunc func(
 	inter *Interpreter,
 	operationName string,
 	duration time.Duration,
-	logs []opentracing.LogRecord,
+	attrs []attribute.KeyValue,
 )
 
 // OnResourceOwnerChangeFunc is a function that is triggered when a resource's owner changes.
