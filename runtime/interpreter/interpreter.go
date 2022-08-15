@@ -237,7 +237,7 @@ type SignatureVerificationHandlerFunc func(
 	signature *ArrayValue,
 	signedData *ArrayValue,
 	domainSeparationTag *StringValue,
-	hashAlgorithm *CompositeValue,
+	hashAlgorithm *SimpleCompositeValue,
 	publicKey MemberAccessibleValue,
 ) BoolValue
 
@@ -1850,7 +1850,10 @@ func (interpreter *Interpreter) declareEnumConstructor(
 	intType := sema.IntType
 
 	enumCases := declaration.Members.EnumCases()
-	caseValues := make([]*CompositeValue, len(enumCases))
+	caseValues := make([]struct {
+		Value    MemberAccessibleValue
+		RawValue IntegerValue
+	}, len(enumCases))
 
 	constructorNestedVariables := map[string]*Variable{}
 
@@ -1861,7 +1864,7 @@ func (interpreter *Interpreter) declareEnumConstructor(
 			NewIntValueFromInt64(interpreter, int64(i)),
 			intType,
 			compositeType.EnumRawType,
-		)
+		).(IntegerValue)
 
 		caseValueFields := []CompositeField{
 			{
@@ -1881,7 +1884,13 @@ func (interpreter *Interpreter) declareEnumConstructor(
 			caseValueFields,
 			common.Address{},
 		)
-		caseValues[i] = caseValue
+		caseValues[i] = struct {
+			Value    MemberAccessibleValue
+			RawValue IntegerValue
+		}{
+			Value:    caseValue,
+			RawValue: rawValue,
+		}
 
 		constructorNestedVariables[enumCase.Identifier.Identifier] =
 			NewVariableWithValue(interpreter, caseValue)
@@ -1902,27 +1911,29 @@ func (interpreter *Interpreter) declareEnumConstructor(
 }
 
 func EnumConstructorFunction(
-	inter *Interpreter,
+	gauge common.MemoryGauge,
 	getLocationRange func() LocationRange,
 	enumType *sema.CompositeType,
-	caseValues []*CompositeValue,
+	cases []struct {
+		Value    MemberAccessibleValue
+		RawValue IntegerValue
+	},
 	nestedVariables map[string]*Variable,
 ) *HostFunctionValue {
 
 	// Prepare a lookup table based on the big-endian byte representation
 
-	lookupTable := make(map[string]*CompositeValue)
+	lookupTable := make(map[string]Value, len(cases))
 
-	for _, caseValue := range caseValues {
-		rawValue := caseValue.GetField(inter, getLocationRange, sema.EnumRawValueFieldName)
-		rawValueBigEndianBytes := rawValue.(IntegerValue).ToBigEndianBytes()
-		lookupTable[string(rawValueBigEndianBytes)] = caseValue
+	for _, c := range cases {
+		rawValueBigEndianBytes := c.RawValue.ToBigEndianBytes()
+		lookupTable[string(rawValueBigEndianBytes)] = c.Value
 	}
 
 	// Prepare the constructor function which performs a lookup in the lookup table
 
 	constructor := NewHostFunctionValue(
-		inter,
+		gauge,
 		func(invocation Invocation) Value {
 			rawValue, ok := invocation.Arguments[0].(IntegerValue)
 			if !ok {
@@ -1933,7 +1944,7 @@ func EnumConstructorFunction(
 
 			caseValue, ok := lookupTable[string(rawValueArgumentBigEndianBytes)]
 			if !ok {
-				return NewNilValue(inter)
+				return NewNilValue(gauge)
 			}
 
 			return NewSomeValueNonCopying(invocation.Interpreter, caseValue)
