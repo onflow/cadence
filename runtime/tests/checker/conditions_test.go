@@ -110,8 +110,7 @@ func TestCheckFunctionPostConditionWithBefore(t *testing.T) {
 
 	require.NoError(t, err)
 
-	assert.Len(t, checker.Elaboration.VariableDeclarationValueTypes, 1)
-	assert.Len(t, checker.Elaboration.VariableDeclarationTargetTypes, 1)
+	assert.Len(t, checker.Elaboration.VariableDeclarationTypes, 1)
 }
 
 func TestCheckFunctionPostConditionWithBeforeNotDeclaredUse(t *testing.T) {
