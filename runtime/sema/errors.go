@@ -1280,8 +1280,9 @@ func (e *MultipleInterfaceDefaultImplementationsError) EndPosition(memoryGauge c
 // SpecialFunctionDefaultImplementationError
 //
 type SpecialFunctionDefaultImplementationError struct {
-	Container  *ast.InterfaceDeclaration
+	Container  ast.Declaration
 	Identifier *ast.Identifier
+	KindName   string
 }
 
 var _ SemanticError = &SpecialFunctionDefaultImplementationError{}
@@ -1293,9 +1294,10 @@ func (*SpecialFunctionDefaultImplementationError) IsUserError() {}
 
 func (e *SpecialFunctionDefaultImplementationError) Error() string {
 	return fmt.Sprintf(
-		"%s may not be defined as a default function on interface %s",
+		"%s may not be defined as a default function on %s %s",
 		e.Identifier.Identifier,
-		e.Container.Identifier.Identifier,
+		e.KindName,
+		e.Container.DeclarationIdentifier().Identifier,
 	)
 }
 

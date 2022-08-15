@@ -1950,7 +1950,6 @@ func TestCheckContractInterfaceFungibleTokenUse(t *testing.T) {
 
 // TestCheckInvalidInterfaceUseAsTypeSuggestion tests that an interface
 // can not be used as a type, and the suggestion to fix it is correct
-//
 func TestCheckInvalidInterfaceUseAsTypeSuggestion(t *testing.T) {
 
 	t.Parallel()
@@ -2399,15 +2398,16 @@ func TestSpecialFunctionDefaultImplementationUsage(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("special", func(t *testing.T) {
+	t.Run("interface", func(t *testing.T) {
 
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
           struct interface IA {
               var x: Int
-              init(){
-                self.x = 1
+
+              init() {
+                  self.x = 1
               }
           }
 
@@ -2418,8 +2418,6 @@ func TestSpecialFunctionDefaultImplementationUsage(t *testing.T) {
                   self.x = 0
               }
           }
-
-         
         `)
 
 		errs := ExpectCheckerErrors(t, err, 1)
@@ -2427,6 +2425,42 @@ func TestSpecialFunctionDefaultImplementationUsage(t *testing.T) {
 		require.IsType(t, &sema.SpecialFunctionDefaultImplementationError{}, errs[0])
 	})
 
+	t.Run("type requirement", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          contract interface IA {
+
+              struct X {
+                  var x: Int
+
+                  init() {
+                      self.x = 1
+                  }
+              }
+          }
+
+          contract Test: IA {
+
+              struct X {
+                  var x: Int
+
+                  init() {
+                      self.x = 0
+                  }
+              }
+          }
+
+          fun test() {
+              Test.X()
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.SpecialFunctionDefaultImplementationError{}, errs[0])
+	})
 }
 
 func TestCheckInvalidInterfaceDefaultImplementationConcreteTypeUsage(t *testing.T) {
@@ -2461,6 +2495,42 @@ func TestCheckInvalidInterfaceDefaultImplementationConcreteTypeUsage(t *testing.
 
 		require.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
 	})
+
+	t.Run("type requirement", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          contract interface IA {
+
+              struct X {
+                  fun test(): Int {
+                      return self.x
+                  }
+              }
+          }
+
+          contract Test: IA {
+
+              struct X {
+                  let x: Int
+
+                  init() {
+                      self.x = 0
+                  }
+              }
+          }
+
+          fun test() {
+              Test.X()
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+	})
+}
 
 }
 

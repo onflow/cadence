@@ -78,17 +78,10 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 	)
 
 	checker.checkUnknownSpecialFunctions(declaration.Members.SpecialFunctions())
-
-	for _, specialFunction := range declaration.Members.SpecialFunctions() {
-		if specialFunction.FunctionDeclaration.FunctionBlock.HasStatements() {
-			checker.report(
-				&SpecialFunctionDefaultImplementationError{
-					Identifier: specialFunction.DeclarationIdentifier(),
-					Container:  declaration,
-				},
-			)
-		}
-	}
+	checker.checkSpecialFunctionDefaultImplementation(
+		declaration,
+		declaration.DeclarationKind().Name(),
+	)
 
 	checker.checkInterfaceFunctions(
 		declaration.Members.Functions(),

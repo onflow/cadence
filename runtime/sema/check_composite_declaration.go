@@ -119,6 +119,8 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 		)
 
 	case ContainerKindInterface:
+		checker.checkSpecialFunctionDefaultImplementation(declaration, "type requirement")
+
 		checker.checkInterfaceFunctions(
 			declaration.Members.Functions(),
 			compositeType,
@@ -2049,6 +2051,22 @@ func (checker *Checker) checkUnknownSpecialFunctions(functions []*ast.SpecialFun
 				},
 			)
 		}
+	}
+}
+
+func (checker *Checker) checkSpecialFunctionDefaultImplementation(declaration ast.Declaration, kindName string) {
+	for _, specialFunction := range declaration.DeclarationMembers().SpecialFunctions() {
+		if !specialFunction.FunctionDeclaration.FunctionBlock.HasStatements() {
+			continue
+		}
+
+		checker.report(
+			&SpecialFunctionDefaultImplementationError{
+				Identifier: specialFunction.DeclarationIdentifier(),
+				Container:  declaration,
+				KindName:   kindName,
+			},
+		)
 	}
 }
 
