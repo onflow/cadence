@@ -2405,10 +2405,10 @@ func TestSpecialFunctionDefaultImplementationUsage(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
           struct interface IA {
-			  var x: Int
+              var x: Int
               init(){
-				self.x = 1
-			  }
+                self.x = 1
+              }
           }
 
           struct Test: IA {
