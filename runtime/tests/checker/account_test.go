@@ -1771,8 +1771,11 @@ func TestCheckAuthAccountIteration(t *testing.T) {
 			{name: "forEachStored", correctType: "StoragePath"},
 		}
 
-		for _, pair := range nameTypePairs {
-			t.Run("basic", func(t *testing.T) {
+		test := func(pair struct {
+			name        string
+			correctType string
+		}) {
+			t.Run(fmt.Sprintf("basic %s", pair.correctType), func(t *testing.T) {
 				t.Parallel()
 				_, err := ParseAndCheckAccount(t,
 					fmt.Sprintf(`
@@ -1787,7 +1790,7 @@ func TestCheckAuthAccountIteration(t *testing.T) {
 				require.NoError(t, err)
 			})
 
-			t.Run("labels irrelevant", func(t *testing.T) {
+			t.Run(fmt.Sprintf("labels irrelevant %s", pair.correctType), func(t *testing.T) {
 				t.Parallel()
 				_, err := ParseAndCheckAccount(t,
 					fmt.Sprintf(`
@@ -1802,7 +1805,7 @@ func TestCheckAuthAccountIteration(t *testing.T) {
 				require.NoError(t, err)
 			})
 
-			t.Run("incompatible return", func(t *testing.T) {
+			t.Run(fmt.Sprintf("incompatible return %s", pair.correctType), func(t *testing.T) {
 				t.Parallel()
 				_, err := ParseAndCheckAccount(t,
 					fmt.Sprintf(`
@@ -1819,7 +1822,7 @@ func TestCheckAuthAccountIteration(t *testing.T) {
 				require.IsType(t, &sema.TypeMismatchError{}, errors[0])
 			})
 
-			t.Run("incompatible return annot", func(t *testing.T) {
+			t.Run(fmt.Sprintf("incompatible return annot %s", pair.correctType), func(t *testing.T) {
 				t.Parallel()
 				_, err := ParseAndCheckAccount(t,
 					fmt.Sprintf(`
@@ -1834,7 +1837,7 @@ func TestCheckAuthAccountIteration(t *testing.T) {
 				require.IsType(t, &sema.TypeMismatchError{}, errors[0])
 			})
 
-			t.Run("incompatible arg 1", func(t *testing.T) {
+			t.Run(fmt.Sprintf("incompatible arg 1 %s", pair.correctType), func(t *testing.T) {
 				t.Parallel()
 				_, err := ParseAndCheckAccount(t,
 					fmt.Sprintf(`
@@ -1849,7 +1852,7 @@ func TestCheckAuthAccountIteration(t *testing.T) {
 				require.IsType(t, &sema.TypeMismatchError{}, errors[0])
 			})
 
-			t.Run("incompatible arg 2", func(t *testing.T) {
+			t.Run(fmt.Sprintf("incompatible arg 2 %s", pair.correctType), func(t *testing.T) {
 				t.Parallel()
 				_, err := ParseAndCheckAccount(t,
 					fmt.Sprintf(`
@@ -1864,7 +1867,7 @@ func TestCheckAuthAccountIteration(t *testing.T) {
 				require.IsType(t, &sema.TypeMismatchError{}, errors[0])
 			})
 
-			t.Run("supertype", func(t *testing.T) {
+			t.Run(fmt.Sprintf("supertype %s", pair.correctType), func(t *testing.T) {
 				t.Parallel()
 				_, err := ParseAndCheckAccount(t,
 					fmt.Sprintf(`
@@ -1878,6 +1881,10 @@ func TestCheckAuthAccountIteration(t *testing.T) {
 				errors := ExpectCheckerErrors(t, err, 1)
 				require.IsType(t, &sema.TypeMismatchError{}, errors[0])
 			})
+		}
+
+		for _, pair := range nameTypePairs {
+			test(pair)
 		}
 	})
 }

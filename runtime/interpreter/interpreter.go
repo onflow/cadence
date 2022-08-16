@@ -3682,7 +3682,7 @@ func (interpreter *Interpreter) storageAccountPaths(addressValue AddressValue, g
 	return interpreter.accountPaths(addressValue, getLocationRange, common.PathDomainStorage, PrimitiveStaticTypeStoragePath)
 }
 
-func (interpreter *Interpreter) iterOverStorageDomain(addressValue AddressValue, domain common.PathDomain, pathType sema.Type) *HostFunctionValue {
+func (interpreter *Interpreter) newStorageIterationFunction(addressValue AddressValue, domain common.PathDomain, pathType sema.Type) *HostFunctionValue {
 	address := addressValue.ToAddress()
 
 	return NewHostFunctionValue(
