@@ -415,7 +415,7 @@ func newInterpreter() (*interpreter.Interpreter, error) {
 				}
 
 			default:
-				panic(errors.NewUnexpectedError("importing programs not implemented"))
+				panic(errors.NewUnexpectedError("importing of programs not implemented"))
 			}
 		}),
 	)
