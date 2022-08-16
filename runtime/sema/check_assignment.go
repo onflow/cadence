@@ -171,12 +171,13 @@ func (checker *Checker) enforcePureAssignment(assignment ast.Statement, target a
 	//   b.x = 3 // b was created in the current scope but modifies the resource value
 	//   return <-b
 	// }
-	if _, ok := variable.Type.(*ReferenceType); ok || variable.Type.IsResourceType() ||
+	if _, ok := variable.Type.(*ReferenceType); ok ||
+		variable.Type.IsResourceType() ||
+		checker.CurrentPurityScope().ActivationDepth > variable.ActivationDepth {
 		// when the variable is neither a resource nor a reference, we can write to if its
 		// activation depth is greater than or equal to the depth at which the current purity
 		// scope was created; i.e. if it is a parameter to the current function or was created
 		// within it
-		checker.CurrentPurityScope().ActivationDepth > variable.ActivationDepth {
 		checker.ObserveImpureOperation(assignment)
 	}
 }
