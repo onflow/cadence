@@ -5,6 +5,8 @@ go 1.18
 require (
 	github.com/onflow/cadence v0.25.1-0.20220810221345-07a8b0d9a444
 	github.com/onflow/flow-emulator v0.33.5-0.20220810222614-bf662ef643bd
+	github.com/onflow/flow-go v0.27.2-0.20220810222325-02e60585a74a
+	github.com/rs/zerolog v1.26.1
 	github.com/stretchr/testify v1.8.0
 )
 
@@ -26,16 +28,25 @@ require (
 	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-test/deep v1.0.8 // indirect
+	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/golang/snappy v0.0.3 // indirect
+	github.com/google/uuid v1.3.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.7.0 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
+	github.com/ipfs/go-block-format v0.0.3 // indirect
 	github.com/ipfs/go-cid v0.1.0 // indirect
+	github.com/ipfs/go-datastore v0.5.1 // indirect
+	github.com/ipfs/go-ipfs-util v0.0.2 // indirect
+	github.com/jbenet/goprocess v0.1.4 // indirect
 	github.com/kevinburke/go-bindata v3.23.0+incompatible // indirect
 	github.com/klauspost/compress v1.15.1 // indirect
 	github.com/klauspost/cpuid/v2 v2.1.0 // indirect
+	github.com/libp2p/go-buffer-pool v0.0.2 // indirect
+	github.com/libp2p/go-libp2p-core v0.15.1 // indirect
+	github.com/libp2p/go-openssl v0.0.7 // indirect
 	github.com/logrusorgru/aurora v2.0.3+incompatible // indirect
 	github.com/magiconair/properties v1.8.6 // indirect
 	github.com/minio/blake2b-simd v0.0.0-20160723061019-3f5f724cb5b1 // indirect
@@ -44,14 +55,15 @@ require (
 	github.com/mr-tron/base58 v1.2.0 // indirect
 	github.com/multiformats/go-base32 v0.0.4 // indirect
 	github.com/multiformats/go-base36 v0.1.0 // indirect
+	github.com/multiformats/go-multiaddr v0.5.0 // indirect
 	github.com/multiformats/go-multibase v0.0.3 // indirect
+	github.com/multiformats/go-multicodec v0.4.1 // indirect
 	github.com/multiformats/go-multihash v0.1.0 // indirect
 	github.com/multiformats/go-varint v0.0.6 // indirect
 	github.com/onflow/atree v0.4.0 // indirect
 	github.com/onflow/flow-core-contracts/lib/go/contracts v0.11.2-0.20220720151516-797b149ceaaa // indirect
 	github.com/onflow/flow-core-contracts/lib/go/templates v0.11.2-0.20220720151516-797b149ceaaa // indirect
 	github.com/onflow/flow-ft/lib/go/contracts v0.5.0 // indirect
-	github.com/onflow/flow-go v0.27.2-0.20220810222325-02e60585a74a // indirect
 	github.com/onflow/flow-go-sdk v0.26.6-0.20220810222132-624cecf4dd40 // indirect
 	github.com/onflow/flow-go/crypto v0.24.4 // indirect
 	github.com/onflow/flow/protobuf/go/flow v0.3.1 // indirect
@@ -62,8 +74,8 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/psiemens/sconfig v0.1.0 // indirect
 	github.com/rivo/uniseg v0.2.1-0.20211004051800-57c86be7915a // indirect
-	github.com/rs/zerolog v1.26.1 // indirect
 	github.com/sethvargo/go-retry v0.2.3 // indirect
+	github.com/spacemonkeygo/spacelog v0.0.0-20180420211403-2296661a0572 // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
 	github.com/spf13/afero v1.9.0 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
@@ -71,6 +83,7 @@ require (
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/spf13/viper v1.12.0 // indirect
+	github.com/stretchr/objx v0.4.0 // indirect
 	github.com/subosito/gotenv v1.4.0 // indirect
 	github.com/turbolent/prettier v0.0.0-20220320183459-661cc755135d // indirect
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect

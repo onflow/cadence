@@ -261,7 +261,7 @@ func (checker *Checker) declareCompositeNestedTypes(
 				// Always determine composite constructor type
 
 				nestedConstructorType, nestedConstructorArgumentLabels :=
-					checker.CompositeConstructorType(nestedCompositeDeclaration, nestedCompositeType)
+					CompositeConstructorType(checker.Elaboration, nestedCompositeDeclaration, nestedCompositeType)
 
 				switch nestedCompositeType.Kind {
 				case common.CompositeKindContract:
@@ -644,7 +644,7 @@ func (checker *Checker) declareCompositeMembersAndValue(
 
 	// Always determine composite constructor type
 
-	constructorType, constructorArgumentLabels := checker.CompositeConstructorType(declaration, compositeType)
+	constructorType, constructorArgumentLabels := CompositeConstructorType(checker.Elaboration, declaration, compositeType)
 	constructorType.Members = declarationMembers
 
 	// If the composite is a contract,
@@ -1312,7 +1312,8 @@ func (checker *Checker) checkTypeRequirement(
 	)
 }
 
-func (checker *Checker) CompositeConstructorType(
+func CompositeConstructorType(
+	elaboration *Elaboration,
 	compositeDeclaration *ast.CompositeDeclaration,
 	compositeType *CompositeType,
 ) (
@@ -1341,7 +1342,7 @@ func (checker *Checker) CompositeConstructorType(
 		// NOTE: Don't use `constructorFunctionType`, as it has a return type.
 		//   The initializer itself has a `Void` return type.
 
-		checker.Elaboration.ConstructorFunctionTypes[firstInitializer] =
+		elaboration.ConstructorFunctionTypes[firstInitializer] =
 			&FunctionType{
 				IsConstructor:        true,
 				Parameters:           constructorFunctionType.Parameters,
