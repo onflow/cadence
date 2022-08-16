@@ -3741,7 +3741,5 @@ type PurityError struct {
 }
 
 func (e *PurityError) Error() string {
-	return fmt.Sprintf(
-		"Impure operation performed in pure context",
-	)
+	return "Impure operation performed in pure context"
 }

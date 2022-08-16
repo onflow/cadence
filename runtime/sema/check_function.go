@@ -404,11 +404,10 @@ func (checker *Checker) visitFunctionBlock(
 		func() {
 			// NOTE: not checking block as it enters a new scope
 			// and post-conditions need to be able to refer to block's declarations
+
 			checker.visitStatements(functionBlock.Block.Statements)
 		},
 	)
-
-	return
 }
 
 func (checker *Checker) declareResult(ty Type) {

@@ -60,7 +60,7 @@ type ExpressionStatementResult struct {
 //
 
 var emptyFunctionType = &sema.FunctionType{
-	Purity: sema.PureFunction,
+	Purity: sema.ImpureFunction,
 	ReturnTypeAnnotation: &sema.TypeAnnotation{
 		Type: sema.VoidType,
 	},
@@ -3136,7 +3136,6 @@ func init() {
 		),
 	)
 
-	// TODO: Add an option to this for a pure function
 	defineBaseValue(
 		baseActivation,
 		"FunctionType",

@@ -367,7 +367,7 @@ var AuthAccountTypeLinkFunctionType = func() *FunctionType {
 	}
 
 	return &FunctionType{
-		Purity: PureFunction,
+		Purity: ImpureFunction,
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
