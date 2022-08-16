@@ -1633,9 +1633,7 @@ func TestCheckAccountPaths(t *testing.T) {
 			fun test() {
 				let paths = authAccount.storagePaths
 				for storagePath in paths {
-					if storagePath != nil {
-						let t = authAccount.type(at: storagePath)
-					}
+					let t = authAccount.type(at: storagePath)
 				}
 			}
 		`,

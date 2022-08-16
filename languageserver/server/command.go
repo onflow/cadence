@@ -19,11 +19,11 @@
 package server
 
 import (
-	json2 "encoding/json"
+	"encoding/json"
 	"fmt"
 )
 
-func CheckCommandArgumentCount(args []json2.RawMessage, expectedCount int) error {
+func CheckCommandArgumentCount(args []json.RawMessage, expectedCount int) error {
 	if len(args) != expectedCount {
 		return fmt.Errorf("expected %d arguments, got %d", expectedCount, len(args))
 	}

@@ -1373,7 +1373,7 @@ func importCompositeValue(
 	fieldTypes []cadence.Field,
 	fieldValues []cadence.Value,
 ) (
-	*interpreter.CompositeValue,
+	interpreter.Value,
 	error,
 ) {
 	var fields []interpreter.CompositeField
@@ -1424,12 +1424,12 @@ func importCompositeValue(
 		case sema.HashAlgorithmType:
 			// HashAlgorithmType has a dedicated constructor
 			// (e.g. it has host functions)
-			return importHashAlgorithm(inter, fields)
+			return importHashAlgorithm(fields)
 
 		case sema.SignatureAlgorithmType:
 			// SignatureAlgorithmType has a dedicated constructor
 			// (e.g. it has host functions)
-			return importSignatureAlgorithm(inter, fields)
+			return importSignatureAlgorithm(fields)
 
 		default:
 			return nil, errors.NewDefaultUserError(
@@ -1460,7 +1460,7 @@ func importPublicKey(
 ) {
 
 	var publicKeyValue *interpreter.ArrayValue
-	var signAlgoValue *interpreter.CompositeValue
+	var signAlgoValue *interpreter.SimpleCompositeValue
 
 	ty := sema.PublicKeyType
 
@@ -1480,7 +1480,7 @@ func importPublicKey(
 			publicKeyValue = arrayValue
 
 		case sema.PublicKeySignAlgoField:
-			compositeValue, ok := field.Value.(*interpreter.CompositeValue)
+			compositeValue, ok := field.Value.(*interpreter.SimpleCompositeValue)
 			if !ok {
 				return nil, errors.NewDefaultUserError(
 					"cannot import value of type '%s'. invalid value for field '%s': %v",
@@ -1528,10 +1528,9 @@ func importPublicKey(
 }
 
 func importHashAlgorithm(
-	inter *interpreter.Interpreter,
 	fields []interpreter.CompositeField,
 ) (
-	*interpreter.CompositeValue,
+	interpreter.MemberAccessibleValue,
 	error,
 ) {
 
@@ -1570,14 +1569,14 @@ func importHashAlgorithm(
 		)
 	}
 
-	return stdlib.NewHashAlgorithmCase(inter, uint8(rawValue)), nil
+	// TODO: return existing
+	return stdlib.NewHashAlgorithmCase(rawValue), nil
 }
 
 func importSignatureAlgorithm(
-	inter *interpreter.Interpreter,
 	fields []interpreter.CompositeField,
 ) (
-	*interpreter.CompositeValue,
+	interpreter.MemberAccessibleValue,
 	error,
 ) {
 
@@ -1616,5 +1615,6 @@ func importSignatureAlgorithm(
 		)
 	}
 
-	return stdlib.NewSignatureAlgorithmCase(inter, uint8(rawValue)), nil
+	// TODO: return existing
+	return stdlib.NewSignatureAlgorithmCase(rawValue), nil
 }

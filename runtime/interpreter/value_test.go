@@ -3272,8 +3272,7 @@ func TestPublicKeyValue(t *testing.T) {
 		)
 
 		sigAlgo := stdlib.NewSignatureAlgorithmCase(
-			inter,
-			sema.SignatureAlgorithmECDSA_secp256k1.RawValue(),
+			UInt8Value(sema.SignatureAlgorithmECDSA_secp256k1.RawValue()),
 		)
 
 		key := NewPublicKeyValue(
@@ -3325,8 +3324,7 @@ func TestPublicKeyValue(t *testing.T) {
 		)
 
 		sigAlgo := stdlib.NewSignatureAlgorithmCase(
-			inter,
-			sema.SignatureAlgorithmECDSA_secp256k1.RawValue(),
+			UInt8Value(sema.SignatureAlgorithmECDSA_secp256k1.RawValue()),
 		)
 
 		assert.PanicsWithError(t,

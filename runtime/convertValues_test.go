@@ -407,7 +407,7 @@ func TestExportValue(t *testing.T) {
 							return nil
 						},
 					),
-					stdlib.NewHashAlgorithmCase(inter, 1),
+					stdlib.NewHashAlgorithmCase(1),
 					interpreter.NewUnmeteredUFix64ValueWithInteger(10),
 					false,
 				)

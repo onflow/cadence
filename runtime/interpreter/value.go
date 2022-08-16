@@ -18499,7 +18499,7 @@ func NewPublicKeyValue(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
 	publicKey *ArrayValue,
-	signAlgo *CompositeValue,
+	signAlgo Value,
 	validatePublicKey PublicKeyValidationHandlerFunc,
 ) *CompositeValue {
 
@@ -18588,7 +18588,7 @@ var publicKeyVerifyFunction = NewUnmeteredHostFunctionValue(
 			panic(errors.NewUnreachableError())
 		}
 
-		hashAlgo, ok := invocation.Arguments[3].(*CompositeValue)
+		hashAlgo, ok := invocation.Arguments[3].(*SimpleCompositeValue)
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
