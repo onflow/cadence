@@ -198,6 +198,34 @@ func TestInterpretMatcher(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("custom matcher invalid type usage", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun main() {
+
+                let matcher = Test.NewMatcher(fun (_ value: Int): Bool {
+                     return (value + 7) == 4
+                })
+
+                // Invoke with an incorrect type
+                assert(matcher.test("Hello"))
+            }
+        `
+
+		storage := newTestLedger(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+		}
+
+		_, err := executeScript(script, runtimeInterface)
+		require.Error(t, err)
+		assert.ErrorAs(t, err, &interpreter.TypeMismatchError{})
+	})
+
 	t.Run("custom resource matcher", func(t *testing.T) {
 		t.Parallel()
 
@@ -316,6 +344,41 @@ func TestInterpretMatcher(t *testing.T) {
 		assert.IsType(t, &sema.TypeParameterTypeMismatchError{}, errors[0])
 		assert.IsType(t, &sema.TypeMismatchError{}, errors[1])
 	})
+
+	t.Run("combined matcher mismatching types", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun main() {
+
+                let matcher1 = Test.NewMatcher(fun (_ value: Int): Bool {
+                     return (value + 5) == 10
+                })
+
+                let matcher2 = Test.NewMatcher(fun (_ value: String): Bool {
+                     return value.length == 10
+                })
+
+                let matcher3 = matcher1.and(matcher2)
+
+                // Invoke with a type that matches to only one matcher
+                assert(matcher3.test(5))
+            }
+        `
+
+		storage := newTestLedger(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+		}
+
+		_, err := executeScript(script, runtimeInterface)
+		require.Error(t, err)
+		assert.ErrorAs(t, err, &interpreter.TypeMismatchError{})
+	})
+
 }
 
 func TestInterpretEqualMatcher(t *testing.T) {

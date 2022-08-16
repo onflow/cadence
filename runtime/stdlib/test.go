@@ -1342,8 +1342,43 @@ func newDefaultMatcher(
 		common.Address{},
 	)
 
+	staticType, ok := testFunc.StaticType(inter).(interpreter.FunctionStaticType)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	parameters := staticType.Type.Parameters
+
+	// Wrap the user provided test function with a function that validates the argument types.
+	typeCheckedTestFunc := interpreter.NewUnmeteredHostFunctionValue(
+		func(invocation interpreter.Invocation) interpreter.Value {
+			inter := invocation.Interpreter
+
+			for i, argument := range invocation.Arguments {
+				paramType := parameters[i].TypeAnnotation.Type
+				argumentType := argument.StaticType(inter)
+				argTypeMatch := inter.IsSubTypeOfSemaType(argumentType, paramType)
+
+				if !argTypeMatch {
+					panic(interpreter.TypeMismatchError{
+						ExpectedType:  paramType,
+						LocationRange: invocation.GetLocationRange(),
+					})
+				}
+			}
+
+			value, err := inter.InvokeFunction(testFunc, invocation)
+			if err != nil {
+				panic(err)
+			}
+
+			return value
+		},
+		staticType.Type,
+	)
+
 	matcher.Functions = map[string]interpreter.FunctionValue{
-		defaultMatcherTestFunctionName: testFunc,
+		defaultMatcherTestFunctionName: typeCheckedTestFunc,
 		defaultMatcherOrFunctionName:   defaultMatcherOrFunction,
 		defaultMatcherAndFunctionName:  defaultMatcherAndFunction,
 	}
