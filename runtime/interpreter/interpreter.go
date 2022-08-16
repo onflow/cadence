@@ -157,7 +157,7 @@ type ContractValueHandlerFunc func(
 	compositeType *sema.CompositeType,
 	constructorGenerator func(common.Address) *HostFunctionValue,
 	invocationRange ast.Range,
-) *CompositeValue
+) ContractValue
 
 // ImportLocationHandlerFunc is a function that handles imports of locations.
 //
@@ -1827,14 +1827,15 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	if declaration.CompositeKind == common.CompositeKindContract {
 		variable.getter = func() Value {
 			positioned := ast.NewRangeFromPositioned(interpreter, declaration.Identifier)
-			contract := interpreter.contractValueHandler(
+			contractValue := interpreter.contractValueHandler(
 				interpreter,
 				compositeType,
 				constructorGenerator,
 				positioned,
 			)
-			contract.NestedVariables = nestedVariables
-			return contract
+
+			contractValue.SetNestedVariables(nestedVariables)
+			return contractValue
 		}
 	} else {
 		constructor := constructorGenerator(common.Address{})

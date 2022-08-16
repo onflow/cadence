@@ -23,16 +23,15 @@ package test
 
 import (
 	"fmt"
+	"github.com/onflow/cadence/runtime/tests/utils"
 	"strings"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
-	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 // This Provides utility methods to easily run test-scripts.
@@ -48,14 +47,45 @@ const testFunctionPrefix = "test"
 
 type Results map[string]error
 
-func RunTest(script string, funcName string) error {
-	_, inter := parseCheckAndInterpret(script)
-	_, err := inter.Invoke(funcName)
+// ImportResolver is used to resolve and get the source code for imports.
+// Must be provided by the user of the TestRunner.
+//
+type ImportResolver func(location common.Location) (string, error)
+
+// TestRunner runs tests.
+//
+type TestRunner struct {
+	importResolver ImportResolver
+}
+
+func NewTestRunner() *TestRunner {
+	return &TestRunner{}
+}
+
+func (r *TestRunner) WithImportResolver(importResolver ImportResolver) *TestRunner {
+	r.importResolver = importResolver
+	return r
+}
+
+// RunTest runs a single test in the provided test script.
+//
+func (r *TestRunner) RunTest(script string, funcName string) error {
+	_, inter, err := r.parseCheckAndInterpret(script)
+	if err != nil {
+		return err
+	}
+
+	_, err = inter.Invoke(funcName)
 	return err
 }
 
-func RunTests(script string) Results {
-	program, inter := parseCheckAndInterpret(script)
+// RunTests runs all the tests in the provided test script.
+//
+func (r *TestRunner) RunTests(script string) (Results, error) {
+	program, inter, err := r.parseCheckAndInterpret(script)
+	if err != nil {
+		return nil, err
+	}
 
 	results := make(Results)
 
@@ -68,39 +98,42 @@ func RunTests(script string) Results {
 		}
 	}
 
-	return results
+	return results, nil
 }
 
-func parseCheckAndInterpret(script string) (*ast.Program, *interpreter.Interpreter) {
+func (r *TestRunner) parseCheckAndInterpret(script string) (*ast.Program, *interpreter.Interpreter, error) {
 	program, err := parser.ParseProgram(script, nil)
-
-	checker, err := newChecker(program)
 	if err != nil {
-		panic(err)
+		return nil, nil, err
+	}
+
+	checker, err := r.newChecker(program, utils.TestLocation)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	err = checker.Check()
 	if err != nil {
-		panic(err)
+		return nil, nil, err
 	}
 
 	// TODO: validate test function signature
 	//   e.g: no return values, no arguments, etc.
 
-	inter, err := newInterpreterFromChecker(checker)
+	inter, err := r.newInterpreterFromChecker(checker)
 	if err != nil {
-		panic(err)
+		return nil, nil, err
 	}
 
 	err = inter.Interpret()
 	if err != nil {
-		panic(err)
+		return nil, nil, err
 	}
 
-	return program, inter
+	return program, inter, nil
 }
 
-func newInterpreterFromChecker(checker *sema.Checker) (*interpreter.Interpreter, error) {
+func (r *TestRunner) newInterpreterFromChecker(checker *sema.Checker) (*interpreter.Interpreter, error) {
 	predeclaredInterpreterValues := stdlib.BuiltinFunctions.ToInterpreterValueDeclarations()
 	predeclaredInterpreterValues = append(predeclaredInterpreterValues, stdlib.BuiltinValues.ToInterpreterValueDeclarations()...)
 	predeclaredInterpreterValues = append(predeclaredInterpreterValues, stdlib.HelperFunctions.ToInterpreterValueDeclarations()...)
@@ -134,58 +167,95 @@ func newInterpreterFromChecker(checker *sema.Checker) (*interpreter.Interpreter,
 				}
 
 			default:
-				panic(errors.NewUnexpectedError("importing of programs not implemented"))
+				importedChecker, err := r.parseAndCheckImport(location)
+				if err != nil {
+					panic(err)
+				}
+
+				program := interpreter.ProgramFromChecker(importedChecker)
+				subInterpreter, err := inter.NewSubInterpreter(program, location)
+				if err != nil {
+					panic(err)
+				}
+
+				return interpreter.InterpreterImport{
+					Interpreter: subInterpreter,
+				}
 			}
 		}),
-		interpreter.WithContractValueHandler(
-			func(inter *interpreter.Interpreter,
-				compositeType *sema.CompositeType,
-				constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
-				invocationRange ast.Range) *interpreter.CompositeValue {
+		interpreter.WithContractValueHandler(func(
+			inter *interpreter.Interpreter,
+			compositeType *sema.CompositeType,
+			constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
+			invocationRange ast.Range,
+		) interpreter.ContractValue {
 
-				switch compositeType.Location {
-				case stdlib.CryptoChecker.Location:
-					contract, err := stdlib.NewCryptoContract(
-						inter,
-						constructorGenerator(common.Address{}),
-						invocationRange,
-					)
-					if err != nil {
-						panic(err)
-					}
-					return contract
-
-				case stdlib.TestContractLocation:
-					contract, err := stdlib.NewTestContract(
-						inter,
-						constructorGenerator(common.Address{}),
-						invocationRange,
-					)
-					if err != nil {
-						panic(err)
-					}
-					return contract
-
-				default:
-					panic("importing other contracts not supported yet")
+			switch compositeType.Location {
+			case stdlib.CryptoChecker.Location:
+				contract, err := stdlib.NewCryptoContract(
+					inter,
+					constructorGenerator(common.Address{}),
+					invocationRange,
+				)
+				if err != nil {
+					panic(err)
 				}
-			},
+				return contract
+
+			case stdlib.TestContractLocation:
+				contract, err := stdlib.NewTestContract(
+					inter,
+					constructorGenerator(common.Address{}),
+					invocationRange,
+				)
+				if err != nil {
+					panic(err)
+				}
+				return contract
+
+			default:
+				// During tests, imported contracts can be constructed using the constructor,
+				// similar to structs. Therefore, generate a constructor function.
+				return constructorGenerator(common.Address{})
+			}
+		},
 		),
 	)
 }
 
-func newChecker(program *ast.Program) (*sema.Checker, error) {
+func (r *TestRunner) newChecker(program *ast.Program, location common.Location) (*sema.Checker, error) {
 	predeclaredSemaValues := stdlib.BuiltinFunctions.ToSemaValueDeclarations()
 	predeclaredSemaValues = append(predeclaredSemaValues, stdlib.BuiltinValues.ToSemaValueDeclarations()...)
 	predeclaredSemaValues = append(predeclaredSemaValues, stdlib.HelperFunctions.ToSemaValueDeclarations()...)
 
 	return sema.NewChecker(
 		program,
-		utils.TestLocation,
+		location,
 		nil,
 		true,
 		sema.WithPredeclaredValues(predeclaredSemaValues),
 		sema.WithPredeclaredTypes(stdlib.FlowDefaultPredeclaredTypes),
+		sema.WithContractVariableHandler(func(
+			checker *sema.Checker,
+			declaration *ast.CompositeDeclaration,
+			compositeType *sema.CompositeType,
+		) sema.VariableDeclaration {
+
+			constructorType, constructorArgumentLabels := checker.CompositeConstructorType(declaration, compositeType)
+
+			return sema.VariableDeclaration{
+				Identifier:               declaration.Identifier.Identifier,
+				Type:                     constructorType,
+				DocString:                declaration.DocString,
+				Access:                   declaration.Access,
+				Kind:                     declaration.DeclarationKind(),
+				Pos:                      declaration.Identifier.Pos,
+				IsConstant:               true,
+				ArgumentLabels:           constructorArgumentLabels,
+				AllowOuterScopeShadowing: false,
+			}
+		}),
+
 		sema.WithImportHandler(
 			func(checker *sema.Checker, importedLocation common.Location, importRange ast.Range) (sema.Import, error) {
 				var elaboration *sema.Elaboration
@@ -197,7 +267,12 @@ func newChecker(program *ast.Program) (*sema.Checker, error) {
 					elaboration = stdlib.TestContractChecker.Elaboration
 
 				default:
-					return nil, errors.NewUnexpectedError("importing of programs not implemented")
+					importedChecker, err := r.parseAndCheckImport(importedLocation)
+					if err != nil {
+						return nil, err
+					}
+
+					elaboration = importedChecker.Elaboration
 				}
 
 				return sema.ElaborationImport{
@@ -208,6 +283,36 @@ func newChecker(program *ast.Program) (*sema.Checker, error) {
 	)
 }
 
+func (r *TestRunner) parseAndCheckImport(location common.Location) (*sema.Checker, error) {
+	if r.importResolver == nil {
+		return nil, ImportResolverNotProvidedError{}
+	}
+
+	code, err := r.importResolver(location)
+	if err != nil {
+		return nil, err
+	}
+
+	program, err := parser.ParseProgram(code, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	checker, err := r.newChecker(program, location)
+	if err != nil {
+		return nil, err
+	}
+
+	err = checker.Check()
+	if err != nil {
+		return nil, err
+	}
+
+	return checker, nil
+}
+
+// PrettyPrintResults is a utility function to pretty print the test results.
+//
 func PrettyPrintResults(results Results) string {
 	var sb strings.Builder
 	sb.WriteString("Test Results\n")

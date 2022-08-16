@@ -261,7 +261,7 @@ func (checker *Checker) declareCompositeNestedTypes(
 				// Always determine composite constructor type
 
 				nestedConstructorType, nestedConstructorArgumentLabels :=
-					checker.compositeConstructorType(nestedCompositeDeclaration, nestedCompositeType)
+					checker.CompositeConstructorType(nestedCompositeDeclaration, nestedCompositeType)
 
 				switch nestedCompositeType.Kind {
 				case common.CompositeKindContract:
@@ -644,7 +644,7 @@ func (checker *Checker) declareCompositeMembersAndValue(
 
 	// Always determine composite constructor type
 
-	constructorType, constructorArgumentLabels := checker.compositeConstructorType(declaration, compositeType)
+	constructorType, constructorArgumentLabels := checker.CompositeConstructorType(declaration, compositeType)
 	constructorType.Members = declarationMembers
 
 	// If the composite is a contract,
@@ -698,16 +698,16 @@ func (checker *Checker) declareCompositeConstructor(
 	// If the access would be enforced as private, an import of the composite
 	// would fail with an "not declared" error.
 
-	_, err := checker.valueActivations.Declare(variableDeclaration{
-		identifier:               declaration.Identifier.Identifier,
-		ty:                       constructorType,
-		docString:                declaration.DocString,
-		access:                   declaration.Access,
-		kind:                     declaration.DeclarationKind(),
-		pos:                      declaration.Identifier.Pos,
-		isConstant:               true,
-		argumentLabels:           constructorArgumentLabels,
-		allowOuterScopeShadowing: false,
+	_, err := checker.valueActivations.Declare(VariableDeclaration{
+		Identifier:               declaration.Identifier.Identifier,
+		Type:                     constructorType,
+		DocString:                declaration.DocString,
+		Access:                   declaration.Access,
+		Kind:                     declaration.DeclarationKind(),
+		Pos:                      declaration.Identifier.Pos,
+		IsConstant:               true,
+		ArgumentLabels:           constructorArgumentLabels,
+		AllowOuterScopeShadowing: false,
 	})
 	checker.report(err)
 }
@@ -717,16 +717,24 @@ func (checker *Checker) declareContractValue(
 	compositeType *CompositeType,
 	declarationMembers *StringMemberOrderedMap,
 ) {
-	_, err := checker.valueActivations.Declare(variableDeclaration{
-		identifier: declaration.Identifier.Identifier,
-		ty:         compositeType,
-		docString:  declaration.DocString,
-		// NOTE: contracts are always public
-		access:     ast.AccessPublic,
-		kind:       common.DeclarationKindContract,
-		pos:        declaration.Identifier.Pos,
-		isConstant: true,
-	})
+	var variableDeclaration VariableDeclaration
+
+	if checker.contractVariableHandler != nil {
+		variableDeclaration = checker.contractVariableHandler(checker, declaration, compositeType)
+	} else {
+		variableDeclaration = VariableDeclaration{
+			Identifier: declaration.Identifier.Identifier,
+			Type:       compositeType,
+			DocString:  declaration.DocString,
+			// NOTE: contracts are always public
+			Access:     ast.AccessPublic,
+			Kind:       common.DeclarationKindContract,
+			Pos:        declaration.Identifier.Pos,
+			IsConstant: true,
+		}
+	}
+
+	_, err := checker.valueActivations.Declare(variableDeclaration)
 	checker.report(err)
 
 	declarationMembers.Foreach(func(name string, declarationMember *Member) {
@@ -787,16 +795,16 @@ func (checker *Checker) declareEnumConstructor(
 		checker.memberOrigins[constructorType] = constructorOrigins
 	}
 
-	_, err := checker.valueActivations.Declare(variableDeclaration{
-		identifier: declaration.Identifier.Identifier,
-		ty:         constructorType,
-		docString:  declaration.DocString,
+	_, err := checker.valueActivations.Declare(VariableDeclaration{
+		Identifier: declaration.Identifier.Identifier,
+		Type:       constructorType,
+		DocString:  declaration.DocString,
 		// NOTE: enums are always public
-		access:         ast.AccessPublic,
-		kind:           common.DeclarationKindEnum,
-		pos:            declaration.Identifier.Pos,
-		isConstant:     true,
-		argumentLabels: []string{EnumRawValueFieldName},
+		Access:         ast.AccessPublic,
+		Kind:           common.DeclarationKindEnum,
+		Pos:            declaration.Identifier.Pos,
+		IsConstant:     true,
+		ArgumentLabels: []string{EnumRawValueFieldName},
 	})
 	checker.report(err)
 }
@@ -1304,7 +1312,7 @@ func (checker *Checker) checkTypeRequirement(
 	)
 }
 
-func (checker *Checker) compositeConstructorType(
+func (checker *Checker) CompositeConstructorType(
 	compositeDeclaration *ast.CompositeDeclaration,
 	compositeType *CompositeType,
 ) (

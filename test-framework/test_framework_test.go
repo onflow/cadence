@@ -19,10 +19,15 @@
 package test
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/tests/checker"
 )
 
 func TestRunningMultipleTests(t *testing.T) {
@@ -38,7 +43,10 @@ func TestRunningMultipleTests(t *testing.T) {
         }
     `
 
-	results := RunTests(code)
+	runner := NewTestRunner()
+	results, err := runner.RunTests(code)
+	assert.NoError(t, err)
+
 	require.Len(t, results, 2)
 	assert.Error(t, results["testFunc1"])
 	assert.NoError(t, results["testFunc2"])
@@ -57,10 +65,12 @@ func TestRunningSingleTest(t *testing.T) {
         }
     `
 
-	err := RunTest(code, "testFunc1")
+	runner := NewTestRunner()
+
+	err := runner.RunTest(code, "testFunc1")
 	assert.Error(t, err)
 
-	err = RunTest(code, "testFunc2")
+	err = runner.RunTest(code, "testFunc2")
 	assert.NoError(t, err)
 }
 
@@ -87,17 +97,19 @@ func TestAssertFunction(t *testing.T) {
         }
     `
 
-	err := RunTest(code, "testAssertWithNoArgs")
+	runner := NewTestRunner()
+
+	err := runner.RunTest(code, "testAssertWithNoArgs")
 	assert.NoError(t, err)
 
-	err = RunTest(code, "testAssertWithNoArgsFail")
+	err = runner.RunTest(code, "testAssertWithNoArgsFail")
 	require.Error(t, err)
 	assert.Equal(t, err.Error(), "assertion failed")
 
-	err = RunTest(code, "testAssertWithMessage")
+	err = runner.RunTest(code, "testAssertWithMessage")
 	assert.NoError(t, err)
 
-	err = RunTest(code, "testAssertWithMessageFail")
+	err = runner.RunTest(code, "testAssertWithMessageFail")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "assertion failed: some reason")
 }
@@ -120,7 +132,8 @@ func TestExecuteScript(t *testing.T) {
             }
         `
 
-		err := RunTest(code, "test")
+		runner := NewTestRunner()
+		err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
 	})
 
@@ -139,10 +152,138 @@ func TestExecuteScript(t *testing.T) {
 
                 assert(result.status == Test.ResultStatus.succeeded)
                 assert((result.returnValue! as! Int) == 5)
+        }
+    `
+		runner := NewTestRunner()
+		err := runner.RunTest(code, "test")
+		assert.NoError(t, err)
+	})
+}
+
+func TestImportContract(t *testing.T) {
+	t.Parallel()
+
+	t.Run("init no params", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import FooContract from "./FooContract"
+
+            pub fun test() {
+                var foo = FooContract()
+                var result = foo.sayHello()
+                assert(result == "hello from Foo")
             }
         `
 
-		err := RunTest(code, "test")
+		fooContract := `
+            pub contract FooContract {
+                init() {}
+
+                pub fun sayHello(): String {
+                    return "hello from Foo"
+                }
+            }
+        `
+
+		importResolver := func(location common.Location) (string, error) {
+			return fooContract, nil
+		}
+
+		runner := NewTestRunner().WithImportResolver(importResolver)
+
+		err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
+	})
+
+	t.Run("init with params", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import FooContract from "./FooContract"
+
+            pub fun test() {
+                var foo = FooContract(greeting: "hello from Foo")
+                var result = foo.sayHello()
+                assert(result == "hello from Foo")
+            }
+        `
+
+		fooContract := `
+            pub contract FooContract {
+
+                pub var greeting: String
+
+                init(greeting: String) {
+                    self.greeting = greeting
+                }
+
+                pub fun sayHello(): String {
+                    return self.greeting
+                }
+            }
+        `
+
+		importResolver := func(location common.Location) (string, error) {
+			return fooContract, nil
+		}
+
+		runner := NewTestRunner().WithImportResolver(importResolver)
+
+		err := runner.RunTest(code, "test")
+		assert.NoError(t, err)
+	})
+
+	t.Run("invalid import", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import FooContract from "./FooContract"
+
+            pub fun test() {
+                var foo = FooContract()
+            }
+        `
+
+		importResolver := func(location common.Location) (string, error) {
+			return "", errors.New("cannot load file")
+		}
+
+		runner := NewTestRunner().WithImportResolver(importResolver)
+
+		err := runner.RunTest(code, "test")
+		assert.Error(t, err)
+
+		errs := checker.ExpectCheckerErrors(t, err, 2)
+
+		importedProgramError := &sema.ImportedProgramError{}
+		assert.ErrorAs(t, errs[0], &importedProgramError)
+		assert.Contains(t, importedProgramError.Err.Error(), "cannot load file")
+
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[1])
+	})
+
+	t.Run("import resolver not provided", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import FooContract from "./FooContract"
+
+            pub fun test() {
+                var foo = FooContract()
+            }
+        `
+
+		runner := NewTestRunner()
+		err := runner.RunTest(code, "test")
+		assert.Error(t, err)
+
+		errs := checker.ExpectCheckerErrors(t, err, 2)
+
+		importedProgramError := &sema.ImportedProgramError{}
+		assert.ErrorAs(t, errs[0], &importedProgramError)
+		assert.IsType(t, ImportResolverNotProvidedError{}, importedProgramError.Err)
+
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[1])
 	})
 }

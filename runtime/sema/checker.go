@@ -78,6 +78,12 @@ type ImportHandlerFunc func(checker *Checker, importedLocation common.Location, 
 
 type MemberAccountAccessHandlerFunc func(checker *Checker, memberLocation common.Location) bool
 
+type ContractVariableHandlerFunc func(
+	checker *Checker,
+	declaration *ast.CompositeDeclaration,
+	compositeType *CompositeType,
+) VariableDeclaration
+
 // Checker
 
 type Checker struct {
@@ -112,6 +118,7 @@ type Checker struct {
 	locationHandler                    LocationHandlerFunc
 	importHandler                      ImportHandlerFunc
 	checkHandler                       CheckHandlerFunc
+	contractVariableHandler            ContractVariableHandlerFunc
 	expectedType                       Type
 	memberAccountAccessHandler         MemberAccountAccessHandlerFunc
 	extendedElaboration                bool
@@ -250,6 +257,13 @@ func WithErrorShortCircuitingEnabled(enabled bool) Option {
 	}
 }
 
+func WithContractVariableHandler(contractVariableHandler ContractVariableHandlerFunc) Option {
+	return func(checker *Checker) error {
+		checker.contractVariableHandler = contractVariableHandler
+		return nil
+	}
+}
+
 func NewChecker(program *ast.Program, location common.Location, memoryGauge common.MemoryGauge, extendedElaboration bool, options ...Option) (*Checker, error) {
 
 	if location == nil {
@@ -324,17 +338,17 @@ func (checker *Checker) declareValue(declaration ValueDeclaration) *Variable {
 	}
 
 	name := declaration.ValueDeclarationName()
-	variable, err := checker.valueActivations.Declare(variableDeclaration{
-		identifier: name,
-		ty:         declaration.ValueDeclarationType(),
-		docString:  declaration.ValueDeclarationDocString(),
+	variable, err := checker.valueActivations.Declare(VariableDeclaration{
+		Identifier: name,
+		Type:       declaration.ValueDeclarationType(),
+		DocString:  declaration.ValueDeclarationDocString(),
 		// TODO: add access to ValueDeclaration and use declaration's access instead here
-		access:                   ast.AccessPublic,
-		kind:                     declaration.ValueDeclarationKind(),
-		pos:                      declaration.ValueDeclarationPosition(),
-		isConstant:               declaration.ValueDeclarationIsConstant(),
-		argumentLabels:           declaration.ValueDeclarationArgumentLabels(),
-		allowOuterScopeShadowing: false,
+		Access:                   ast.AccessPublic,
+		Kind:                     declaration.ValueDeclarationKind(),
+		Pos:                      declaration.ValueDeclarationPosition(),
+		IsConstant:               declaration.ValueDeclarationIsConstant(),
+		ArgumentLabels:           declaration.ValueDeclarationArgumentLabels(),
+		AllowOuterScopeShadowing: false,
 	})
 	checker.report(err)
 	if checker.positionInfoEnabled {

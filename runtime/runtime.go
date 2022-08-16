@@ -1041,7 +1041,7 @@ func (r *interpreterRuntime) newInterpreter(
 				compositeType *sema.CompositeType,
 				constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
 				invocationRange ast.Range,
-			) *interpreter.CompositeValue {
+			) interpreter.ContractValue {
 
 				return r.loadContract(
 					inter,
@@ -1939,7 +1939,7 @@ func (r *interpreterRuntime) instantiateContract(
 				compositeType *sema.CompositeType,
 				constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
 				invocationRange ast.Range,
-			) *interpreter.CompositeValue {
+			) interpreter.ContractValue {
 
 				constructor := constructorGenerator(address)
 

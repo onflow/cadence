@@ -97,16 +97,16 @@ func (checker *Checker) declareFunctionDeclaration(
 ) {
 	argumentLabels := declaration.ParameterList.EffectiveArgumentLabels()
 
-	_, err := checker.valueActivations.Declare(variableDeclaration{
-		identifier:               declaration.Identifier.Identifier,
-		ty:                       functionType,
-		docString:                declaration.DocString,
-		access:                   declaration.Access,
-		kind:                     common.DeclarationKindFunction,
-		pos:                      declaration.Identifier.Pos,
-		isConstant:               true,
-		argumentLabels:           argumentLabels,
-		allowOuterScopeShadowing: false,
+	_, err := checker.valueActivations.Declare(VariableDeclaration{
+		Identifier:               declaration.Identifier.Identifier,
+		Type:                     functionType,
+		DocString:                declaration.DocString,
+		Access:                   declaration.Access,
+		Kind:                     common.DeclarationKindFunction,
+		Pos:                      declaration.Identifier.Pos,
+		IsConstant:               true,
+		ArgumentLabels:           argumentLabels,
+		AllowOuterScopeShadowing: false,
 	})
 	checker.report(err)
 

@@ -73,14 +73,14 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) ast.Repr 
 
 	identifier := statement.Identifier.Identifier
 
-	variable, err := checker.valueActivations.Declare(variableDeclaration{
-		identifier:               identifier,
-		ty:                       elementType,
-		kind:                     common.DeclarationKindConstant,
-		pos:                      statement.Identifier.Pos,
-		isConstant:               true,
-		argumentLabels:           nil,
-		allowOuterScopeShadowing: false,
+	variable, err := checker.valueActivations.Declare(VariableDeclaration{
+		Identifier:               identifier,
+		Type:                     elementType,
+		Kind:                     common.DeclarationKindConstant,
+		Pos:                      statement.Identifier.Pos,
+		IsConstant:               true,
+		ArgumentLabels:           nil,
+		AllowOuterScopeShadowing: false,
 	})
 	checker.report(err)
 	if checker.positionInfoEnabled {
@@ -89,14 +89,14 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) ast.Repr 
 
 	if statement.Index != nil {
 		index := statement.Index.Identifier
-		indexVariable, err := checker.valueActivations.Declare(variableDeclaration{
-			identifier:               index,
-			ty:                       IntType,
-			kind:                     common.DeclarationKindConstant,
-			pos:                      statement.Index.Pos,
-			isConstant:               true,
-			argumentLabels:           nil,
-			allowOuterScopeShadowing: false,
+		indexVariable, err := checker.valueActivations.Declare(VariableDeclaration{
+			Identifier:               index,
+			Type:                     IntType,
+			Kind:                     common.DeclarationKindConstant,
+			Pos:                      statement.Index.Pos,
+			IsConstant:               true,
+			ArgumentLabels:           nil,
+			AllowOuterScopeShadowing: false,
 		})
 		checker.report(err)
 		if checker.positionInfoEnabled {
