@@ -500,5 +500,27 @@ describe("codelensses", () => {
 
   })
 
+  test("script codelenss", async() => {
+    await withConnection(async connection => {
+      let code = fs.readFileSync("./script.cdc")
+      let path = `file://${__dirname}/script.cdc`
+      let document = TextDocumentItem.create(path, "cadence", 1, code.toString())
+
+      await connection.sendNotification(DidOpenTextDocumentNotification.type, {
+        textDocument: document
+      })
+
+      let codelens = await connection.sendRequest(codelensRequest, {
+        textDocument: document,
+      })
+
+      expect(codelens).toHaveLength(1)
+      let c = codelens[0].command
+      expect(c.command).toEqual("cadence.server.flow.executeScript")
+      expect(c.title).toEqual("💡 Execute script")
+      expect(c.arguments).toEqual(['file:///Users/dapper/Dev/cadence/languageserver/test/script.cdc', '[]'])
+    }, true)
+
+  })
 
 })
