@@ -73,8 +73,9 @@ func (interpreter *Interpreter) VisitReturnStatement(statement *ast.ReturnStatem
 	} else {
 		value = interpreter.evalExpression(statement.Expression)
 
-		valueType := interpreter.Program.Elaboration.ReturnStatementValueTypes[statement]
-		returnType := interpreter.Program.Elaboration.ReturnStatementReturnTypes[statement]
+		returnStatementTypes := interpreter.Program.Elaboration.ReturnStatementTypes[statement]
+		valueType := returnStatementTypes.ValueType
+		returnType := returnStatementTypes.ReturnType
 
 		getLocationRange := locationRangeGetter(interpreter, interpreter.Location, statement.Expression)
 
@@ -149,10 +150,11 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 		panic(errors.NewUnreachableError())
 	}
 
-	valueType := interpreter.Program.Elaboration.VariableDeclarationValueTypes[declaration]
+	variableDeclarationTypes := interpreter.Program.Elaboration.VariableDeclarationTypes[declaration]
+	valueType := variableDeclarationTypes.ValueType
 
 	if declaration.SecondValue != nil {
-		secondValueType := interpreter.Program.Elaboration.VariableDeclarationSecondValueTypes[declaration]
+		secondValueType := variableDeclarationTypes.SecondValueType
 
 		interpreter.visitAssignment(
 			declaration.Transfer.Operation,
@@ -167,7 +169,7 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 	var result any
 	if someValue, ok := value.(*SomeValue); ok {
 
-		targetType := interpreter.Program.Elaboration.VariableDeclarationTargetTypes[declaration]
+		targetType := variableDeclarationTypes.TargetType
 		getLocationRange := locationRangeGetter(interpreter, interpreter.Location, declaration.Value)
 		innerValue := someValue.InnerValue(interpreter, getLocationRange)
 		transferredUnwrappedValue := interpreter.transferAndConvert(
@@ -416,9 +418,10 @@ func (interpreter *Interpreter) visitVariableDeclaration(
 	valueCallback func(identifier string, value Value),
 ) {
 
-	targetType := interpreter.Program.Elaboration.VariableDeclarationTargetTypes[declaration]
-	valueType := interpreter.Program.Elaboration.VariableDeclarationValueTypes[declaration]
-	secondValueType := interpreter.Program.Elaboration.VariableDeclarationSecondValueTypes[declaration]
+	variableDeclarationTypes := interpreter.Program.Elaboration.VariableDeclarationTypes[declaration]
+	targetType := variableDeclarationTypes.TargetType
+	valueType := variableDeclarationTypes.ValueType
+	secondValueType := variableDeclarationTypes.SecondValueType
 
 	// NOTE: It is *REQUIRED* that the getter for the value is used
 	// instead of just evaluating value expression,
@@ -465,8 +468,9 @@ func (interpreter *Interpreter) visitVariableDeclaration(
 }
 
 func (interpreter *Interpreter) VisitAssignmentStatement(assignment *ast.AssignmentStatement) ast.Repr {
-	targetType := interpreter.Program.Elaboration.AssignmentStatementTargetTypes[assignment]
-	valueType := interpreter.Program.Elaboration.AssignmentStatementValueTypes[assignment]
+	assignmentStatementTypes := interpreter.Program.Elaboration.AssignmentStatementTypes[assignment]
+	targetType := assignmentStatementTypes.TargetType
+	valueType := assignmentStatementTypes.ValueType
 
 	target := assignment.Target
 	value := assignment.Value
@@ -482,9 +486,9 @@ func (interpreter *Interpreter) VisitAssignmentStatement(assignment *ast.Assignm
 }
 
 func (interpreter *Interpreter) VisitSwapStatement(swap *ast.SwapStatement) ast.Repr {
-
-	leftType := interpreter.Program.Elaboration.SwapStatementLeftTypes[swap]
-	rightType := interpreter.Program.Elaboration.SwapStatementRightTypes[swap]
+	swapStatementTypes := interpreter.Program.Elaboration.SwapStatementTypes[swap]
+	leftType := swapStatementTypes.LeftType
+	rightType := swapStatementTypes.RightType
 
 	const allowMissing = false
 

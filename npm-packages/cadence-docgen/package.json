@@ -1,6 +1,6 @@
 {
   "name": "@onflow/cadence-docgen",
-  "version": "0.24.1",
+  "version": "0.25.0",
   "description": "The Cadence Dcoument Generator",
   "homepage": "https://github.com/onflow/cadence",
   "repository": {
