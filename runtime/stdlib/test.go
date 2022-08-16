@@ -727,12 +727,20 @@ func accountsFromValue(inter *interpreter.Interpreter, accountsValue interpreter
 		}
 
 		// Get public key
-		publicKeyVal := accountValue.GetMember(
+		publicKeyVal, ok := accountValue.GetMember(
 			inter,
 			interpreter.ReturnEmptyLocationRange,
 			sema.AccountKeyPublicKeyField,
-		)
-		publicKey := publicKeyFromValue(inter, interpreter.ReturnEmptyLocationRange, publicKeyVal)
+		).(interpreter.MemberAccessibleValue)
+
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		publicKey, err := NewPublicKeyFromValue(inter, interpreter.ReturnEmptyLocationRange, publicKeyVal)
+		if err != nil {
+			panic(err)
+		}
 
 		accounts = append(accounts, &interpreter.Account{
 			Address:   common.Address(address),
@@ -743,70 +751,6 @@ func accountsFromValue(inter *interpreter.Interpreter, accountsValue interpreter
 	})
 
 	return accounts
-}
-
-func hashAlgoFromValue(inter *interpreter.Interpreter, hashAlgoField interpreter.Value) sema.HashAlgorithm {
-	hashAlgoValue, ok := hashAlgoField.(interpreter.MemberAccessibleValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	rawValue := hashAlgoValue.GetMember(inter, interpreter.ReturnEmptyLocationRange, sema.EnumRawValueFieldName)
-	if rawValue == nil {
-		panic(errors.NewUnreachableError())
-	}
-
-	hashAlgoRawValue, ok := rawValue.(interpreter.UInt8Value)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-	return sema.HashAlgorithm(hashAlgoRawValue)
-}
-
-func publicKeyFromValue(
-	inter *interpreter.Interpreter,
-	getLocationRange func() interpreter.LocationRange,
-	value interpreter.Value,
-) *interpreter.PublicKey {
-
-	publicKey, ok := value.(interpreter.MemberAccessibleValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	// Public key field
-	key := publicKey.GetMember(inter, getLocationRange, sema.PublicKeyPublicKeyField)
-
-	byteArray, err := interpreter.ByteArrayValueToByteSlice(inter, key)
-	if err != nil {
-		panic(err)
-	}
-
-	// sign algo field
-	signAlgoField := publicKey.GetMember(inter, getLocationRange, sema.PublicKeySignAlgoField)
-	if signAlgoField == nil {
-		panic(errors.NewUnexpectedError("sign algorithm is not set"))
-	}
-
-	signAlgoValue, ok := signAlgoField.(*interpreter.CompositeValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	rawValue := signAlgoValue.GetField(inter, getLocationRange, sema.EnumRawValueFieldName)
-	if rawValue == nil {
-		panic(errors.NewUnreachableError())
-	}
-
-	signAlgoRawValue, ok := rawValue.(interpreter.UInt8Value)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	return &interpreter.PublicKey{
-		PublicKey: byteArray,
-		SignAlgo:  sema.SignatureAlgorithm(signAlgoRawValue.ToInt()),
-	}
 }
 
 // 'EmulatorBackend.executeNextTransaction' function

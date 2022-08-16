@@ -48,7 +48,7 @@ type EmulatorBackend struct {
 	// Must be reset once the block is committed.
 	blockOffset uint64
 
-	// accountKeys is a mapping of account address with their keys.
+	// accountKeys is a mapping of account addresses with their keys.
 	accountKeys map[common.Address]map[string]keyInfo
 }
 
