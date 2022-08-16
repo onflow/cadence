@@ -180,6 +180,31 @@ func (r *TestRunner) checkerOptions(ctx runtime.Context) []sema.Option {
 				}, nil
 			},
 		),
+		sema.WithContractVariableHandler(contractVariableHandler),
+	}
+}
+
+func contractVariableHandler(
+	checker *sema.Checker,
+	declaration *ast.CompositeDeclaration,
+	compositeType *sema.CompositeType,
+) sema.VariableDeclaration {
+	constructorType, constructorArgumentLabels := sema.CompositeConstructorType(
+		checker.Elaboration,
+		declaration,
+		compositeType,
+	)
+
+	return sema.VariableDeclaration{
+		Identifier:               declaration.Identifier.Identifier,
+		Type:                     constructorType,
+		DocString:                declaration.DocString,
+		Access:                   declaration.Access,
+		Kind:                     declaration.DeclarationKind(),
+		Pos:                      declaration.Identifier.Pos,
+		IsConstant:               true,
+		ArgumentLabels:           constructorArgumentLabels,
+		AllowOuterScopeShadowing: false,
 	}
 }
 
@@ -324,6 +349,7 @@ func (r *TestRunner) parseAndCheckImport(location common.Location, startCtx runt
 				return nil, fmt.Errorf("nested imports are not supported")
 			},
 		),
+		sema.WithContractVariableHandler(contractVariableHandler),
 	}
 
 	var interpreterOptions = []interpreter.Option{
