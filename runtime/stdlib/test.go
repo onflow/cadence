@@ -49,7 +49,7 @@ const failedCaseName = "failed"
 const transactionCodeFieldName = "code"
 const transactionAuthorizerFieldName = "authorizers"
 const transactionSignersFieldName = "signers"
-const transactionArgsFieldName = "args"
+const transactionArgsFieldName = "arguments"
 
 const accountAddressFieldName = "address"
 
