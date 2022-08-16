@@ -53,7 +53,7 @@ build:
 
 .PHONY: lint-github-actions
 lint-github-actions: build-linter
-	tools/golangci-lint/golangci-lint run --out-format=github-actions -v ./...
+	tools/golangci-lint/golangci-lint run --out-format=github-actions --timeout=5m  -v ./...
 
 .PHONY: lint
 lint: build-linter
@@ -62,7 +62,7 @@ lint: build-linter
 
 .PHONY: fix-lint
 fix-lint: build-linter
-	tools/golangci-lint/golangci-lint run -v --fix $(LINTERS) ./...
+	tools/golangci-lint/golangci-lint run -v --fix --timeout=5m  $(LINTERS) ./...
 
 .PHONY: build-linter
 build-linter: tools/golangci-lint/golangci-lint tools/maprangecheck/maprangecheck.so tools/constructorcheck/constructorcheck.so

@@ -146,7 +146,7 @@ func (checker *Checker) importResolvedLocation(resolvedLocation ResolvedLocation
 
 	allValueElements := imp.AllValueElements()
 	foundValues, invalidAccessedValues := checker.importElements(
-		checker.ValueActivations,
+		checker.valueActivations,
 		resolvedLocation.Identifiers,
 		allValueElements,
 		imp.IsImportableValue,
@@ -252,7 +252,7 @@ func (checker *Checker) handleMissingImports(missing []ast.Identifier, available
 		// NOTE: declare constant variable with invalid type to silence rest of program
 		const access = ast.AccessPrivate
 
-		_, err := checker.ValueActivations.Declare(VariableDeclaration{
+		_, err := checker.valueActivations.Declare(VariableDeclaration{
 			Identifier:               identifier.Identifier,
 			Type:                     InvalidType,
 			Access:                   access,

@@ -1878,6 +1878,7 @@ func (*DestroyExpression) precedence() precedence {
 
 type ReferenceExpression struct {
 	Expression Expression
+	Type       Type     `json:"TargetType"`
 	StartPos   Position `json:"-"`
 }
 
@@ -1887,12 +1888,14 @@ var _ Expression = &ReferenceExpression{}
 func NewReferenceExpression(
 	gauge common.MemoryGauge,
 	expression Expression,
+	targetType Type,
 	startPos Position,
 ) *ReferenceExpression {
 	common.UseMemory(gauge, common.ReferenceExpressionMemoryUsage)
 
 	return &ReferenceExpression{
 		Expression: expression,
+		Type:       targetType,
 		StartPos:   startPos,
 	}
 }
@@ -1911,6 +1914,7 @@ func (e *ReferenceExpression) Accept(visitor Visitor) Repr {
 
 func (e *ReferenceExpression) Walk(walkChild func(Element)) {
 	walkChild(e.Expression)
+	// TODO: walk type
 }
 
 func (e *ReferenceExpression) AcceptExp(visitor ExpressionVisitor) Repr {
@@ -1922,6 +1926,7 @@ func (e *ReferenceExpression) String() string {
 }
 
 var referenceExpressionRefOperatorDoc prettier.Doc = prettier.Text("&")
+var referenceExpressionAsOperatorDoc prettier.Doc = prettier.Text("as")
 
 func (e *ReferenceExpression) Doc() prettier.Doc {
 	doc := parenthesizedExpressionDoc(
@@ -1935,6 +1940,10 @@ func (e *ReferenceExpression) Doc() prettier.Doc {
 			prettier.Group{
 				Doc: doc,
 			},
+			prettier.Line{},
+			referenceExpressionAsOperatorDoc,
+			prettier.Line{},
+			e.Type.Doc(),
 		},
 	}
 }
@@ -1944,7 +1953,7 @@ func (e *ReferenceExpression) StartPosition() Position {
 }
 
 func (e *ReferenceExpression) EndPosition(memoryGauge common.MemoryGauge) Position {
-	return e.Expression.EndPosition(memoryGauge)
+	return e.Type.EndPosition(memoryGauge)
 }
 
 func (e *ReferenceExpression) MarshalJSON() ([]byte, error) {

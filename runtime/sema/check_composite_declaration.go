@@ -551,7 +551,7 @@ func (checker *Checker) declareCompositeMembersAndValue(
 
 			// Find the value declaration
 			nestedCompositeDeclarationVariable :=
-				checker.ValueActivations.Find(identifier.Identifier)
+				checker.valueActivations.Find(identifier.Identifier)
 
 			declarationMembers.Set(
 				nestedCompositeDeclarationVariable.Identifier,
@@ -562,7 +562,6 @@ func (checker *Checker) declareCompositeMembersAndValue(
 					TypeAnnotation:        NewTypeAnnotation(nestedCompositeDeclarationVariable.Type),
 					DeclarationKind:       nestedCompositeDeclarationVariable.DeclarationKind,
 					VariableKind:          ast.VariableKindConstant,
-					ArgumentLabels:        nestedCompositeDeclarationVariable.ArgumentLabels,
 					IgnoreInSerialization: true,
 					DocString:             nestedCompositeDeclaration.DocString,
 				})
@@ -699,7 +698,7 @@ func (checker *Checker) declareCompositeConstructor(
 	// If the access would be enforced as private, an import of the composite
 	// would fail with an "not declared" error.
 
-	_, err := checker.ValueActivations.Declare(VariableDeclaration{
+	_, err := checker.valueActivations.Declare(VariableDeclaration{
 		Identifier:               declaration.Identifier.Identifier,
 		Type:                     constructorType,
 		DocString:                declaration.DocString,
@@ -718,16 +717,24 @@ func (checker *Checker) declareContractValue(
 	compositeType *CompositeType,
 	declarationMembers *StringMemberOrderedMap,
 ) {
-	_, err := checker.ValueActivations.Declare(VariableDeclaration{
-		Identifier: declaration.Identifier.Identifier,
-		Type:       compositeType,
-		DocString:  declaration.DocString,
-		// NOTE: contracts are always public
-		Access:     ast.AccessPublic,
-		Kind:       common.DeclarationKindContract,
-		Pos:        declaration.Identifier.Pos,
-		IsConstant: true,
-	})
+	var variableDeclaration VariableDeclaration
+
+	if checker.contractVariableHandler != nil {
+		variableDeclaration = checker.contractVariableHandler(checker, declaration, compositeType)
+	} else {
+		variableDeclaration = VariableDeclaration{
+			Identifier: declaration.Identifier.Identifier,
+			Type:       compositeType,
+			DocString:  declaration.DocString,
+			// NOTE: contracts are always public
+			Access:     ast.AccessPublic,
+			Kind:       common.DeclarationKindContract,
+			Pos:        declaration.Identifier.Pos,
+			IsConstant: true,
+		}
+	}
+
+	_, err := checker.valueActivations.Declare(variableDeclaration)
 	checker.report(err)
 
 	declarationMembers.Foreach(func(name string, declarationMember *Member) {
@@ -788,7 +795,7 @@ func (checker *Checker) declareEnumConstructor(
 		checker.memberOrigins[constructorType] = constructorOrigins
 	}
 
-	_, err := checker.ValueActivations.Declare(VariableDeclaration{
+	_, err := checker.valueActivations.Declare(VariableDeclaration{
 		Identifier: declaration.Identifier.Identifier,
 		Type:       constructorType,
 		DocString:  declaration.DocString,
@@ -1832,7 +1839,7 @@ func (checker *Checker) declareSelfValue(selfType Type, selfDocString string) {
 	// NOTE: declare `self` one depth lower ("inside" function),
 	// so it can't be re-declared by the function's parameters
 
-	depth := checker.ValueActivations.Depth() + 1
+	depth := checker.valueActivations.Depth() + 1
 
 	self := &Variable{
 		Identifier:      SelfIdentifier,
@@ -1844,7 +1851,7 @@ func (checker *Checker) declareSelfValue(selfType Type, selfDocString string) {
 		Pos:             nil,
 		DocString:       selfDocString,
 	}
-	checker.ValueActivations.Set(SelfIdentifier, self)
+	checker.valueActivations.Set(SelfIdentifier, self)
 	if checker.positionInfoEnabled {
 		checker.recordVariableDeclarationOccurrence(SelfIdentifier, self)
 	}

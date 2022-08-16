@@ -52,7 +52,6 @@ func TestParseReplInput(t *testing.T) {
 	assert.IsType(t, &ast.VariableDeclaration{}, actual[1])
 	assert.IsType(t, &ast.ExpressionStatement{}, actual[2])
 }
-
 func TestParseReturnStatement(t *testing.T) {
 
 	t.Parallel()
@@ -2416,81 +2415,5 @@ func TestParseSwapStatementInFunctionDeclaration(t *testing.T) {
 			},
 		},
 		result.Declarations(),
-	)
-}
-
-func TestParseReferenceExpressionStatement(t *testing.T) {
-
-	t.Parallel()
-
-	result, errs := ParseStatements(
-		`
-           let x = &1 as &Int
-           (x!)
-	     `,
-		nil,
-	)
-	require.Empty(t, errs)
-
-	castingExpression := &ast.CastingExpression{
-		Expression: &ast.ReferenceExpression{
-			Expression: &ast.IntegerExpression{
-				PositiveLiteral: "1",
-				Value:           big.NewInt(1),
-				Base:            10,
-				Range: ast.Range{
-					StartPos: ast.Position{Offset: 21, Line: 2, Column: 20},
-					EndPos:   ast.Position{Offset: 21, Line: 2, Column: 20},
-				},
-			},
-			StartPos: ast.Position{Offset: 20, Line: 2, Column: 19},
-		},
-		Operation: ast.OperationCast,
-		TypeAnnotation: &ast.TypeAnnotation{
-			Type: &ast.ReferenceType{
-				Type: &ast.NominalType{
-					Identifier: ast.Identifier{
-						Identifier: "Int",
-						Pos:        ast.Position{Offset: 27, Line: 2, Column: 26},
-					},
-				},
-				StartPos: ast.Position{Offset: 26, Line: 2, Column: 25},
-			},
-			StartPos: ast.Position{Offset: 26, Line: 2, Column: 25},
-		},
-	}
-
-	expectedVariableDeclaration := &ast.VariableDeclaration{
-		IsConstant: true,
-		Identifier: ast.Identifier{
-			Identifier: "x",
-			Pos:        ast.Position{Offset: 16, Line: 2, Column: 15},
-		},
-		StartPos: ast.Position{Offset: 12, Line: 2, Column: 11},
-		Value:    castingExpression,
-		Transfer: &ast.Transfer{
-			Operation: ast.TransferOperationCopy,
-			Pos:       ast.Position{Offset: 18, Line: 2, Column: 17},
-		},
-	}
-
-	castingExpression.ParentVariableDeclaration = expectedVariableDeclaration
-
-	utils.AssertEqualWithDiff(t,
-		[]ast.Statement{
-			expectedVariableDeclaration,
-			&ast.ExpressionStatement{
-				Expression: &ast.ForceExpression{
-					Expression: &ast.IdentifierExpression{
-						Identifier: ast.Identifier{
-							Identifier: "x",
-							Pos:        ast.Position{Offset: 43, Line: 3, Column: 12},
-						},
-					},
-					EndPos: ast.Position{Offset: 44, Line: 3, Column: 13},
-				},
-			},
-		},
-		result,
 	)
 }

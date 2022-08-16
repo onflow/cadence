@@ -8945,7 +8945,7 @@ func TestInterpretASTMetering(t *testing.T) {
 						compositeType *sema.CompositeType,
 						constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
 						invocationRange ast.Range,
-					) *interpreter.CompositeValue {
+					) interpreter.ContractValue {
 						// Just return a dummy value
 						return &interpreter.CompositeValue{}
 					}),

@@ -78,6 +78,12 @@ type ImportHandlerFunc func(checker *Checker, importedLocation common.Location, 
 
 type MemberAccountAccessHandlerFunc func(checker *Checker, memberLocation common.Location) bool
 
+type ContractVariableHandlerFunc func(
+	checker *Checker,
+	declaration *ast.CompositeDeclaration,
+	compositeType *CompositeType,
+) VariableDeclaration
+
 // Checker
 
 type Checker struct {
@@ -87,7 +93,7 @@ type Checker struct {
 	PredeclaredTypes                   []TypeDeclaration
 	accessCheckMode                    AccessCheckMode
 	errors                             []error
-	ValueActivations                   *VariableActivations
+	valueActivations                   *VariableActivations
 	resources                          *Resources
 	typeActivations                    *VariableActivations
 	containerTypes                     map[Type]bool
@@ -112,6 +118,7 @@ type Checker struct {
 	locationHandler                    LocationHandlerFunc
 	importHandler                      ImportHandlerFunc
 	checkHandler                       CheckHandlerFunc
+	contractVariableHandler            ContractVariableHandlerFunc
 	expectedType                       Type
 	memberAccountAccessHandler         MemberAccountAccessHandlerFunc
 	extendedElaboration                bool
@@ -250,6 +257,13 @@ func WithErrorShortCircuitingEnabled(enabled bool) Option {
 	}
 }
 
+func WithContractVariableHandler(contractVariableHandler ContractVariableHandlerFunc) Option {
+	return func(checker *Checker) error {
+		checker.contractVariableHandler = contractVariableHandler
+		return nil
+	}
+}
+
 func NewChecker(program *ast.Program, location common.Location, memoryGauge common.MemoryGauge, extendedElaboration bool, options ...Option) (*Checker, error) {
 
 	if location == nil {
@@ -267,7 +281,7 @@ func NewChecker(program *ast.Program, location common.Location, memoryGauge comm
 	checker := &Checker{
 		Program:             program,
 		Location:            location,
-		ValueActivations:    valueActivations,
+		valueActivations:    valueActivations,
 		resources:           NewResources(),
 		typeActivations:     typeActivations,
 		functionActivations: functionActivations,
@@ -324,7 +338,7 @@ func (checker *Checker) declareValue(declaration ValueDeclaration) *Variable {
 	}
 
 	name := declaration.ValueDeclarationName()
-	variable, err := checker.ValueActivations.Declare(VariableDeclaration{
+	variable, err := checker.valueActivations.Declare(VariableDeclaration{
 		Identifier: name,
 		Type:       declaration.ValueDeclarationType(),
 		DocString:  declaration.ValueDeclarationDocString(),
@@ -866,7 +880,7 @@ func (checker *Checker) declareGlobalDeclaration(declaration ast.Declaration) {
 }
 
 func (checker *Checker) declareGlobalValue(name string) {
-	variable := checker.ValueActivations.Find(name)
+	variable := checker.valueActivations.Find(name)
 	if variable == nil {
 		return
 	}
@@ -913,7 +927,7 @@ func (checker *Checker) inSwitch() bool {
 
 func (checker *Checker) findAndCheckValueVariable(identifierExpression *ast.IdentifierExpression, recordOccurrence bool) *Variable {
 	identifier := identifierExpression.Identifier
-	variable := checker.ValueActivations.Find(identifier.Identifier)
+	variable := checker.valueActivations.Find(identifier.Identifier)
 	if variable == nil {
 		checker.report(
 			&NotDeclaredError{
@@ -1538,15 +1552,15 @@ func (checker *Checker) recordFunctionDeclarationOrigin(
 
 func (checker *Checker) enterValueScope() {
 	//fmt.Printf("ENTER: %d\n", checker.valueActivations.Depth())
-	checker.ValueActivations.Enter()
+	checker.valueActivations.Enter()
 }
 
 func (checker *Checker) leaveValueScope(getEndPosition EndPositionGetter, checkResourceLoss bool) {
 	if checkResourceLoss {
-		checker.checkResourceLoss(checker.ValueActivations.Depth())
+		checker.checkResourceLoss(checker.valueActivations.Depth())
 	}
 
-	checker.ValueActivations.Leave(getEndPosition)
+	checker.valueActivations.Leave(getEndPosition)
 }
 
 // TODO: prune resource variables declared in function's scope
@@ -1558,7 +1572,7 @@ func (checker *Checker) leaveValueScope(getEndPosition EndPositionGetter, checkR
 //
 func (checker *Checker) checkResourceLoss(depth int) {
 
-	checker.ValueActivations.ForEachVariableDeclaredInAndBelow(depth, func(name string, variable *Variable) {
+	checker.valueActivations.ForEachVariableDeclaredInAndBelow(depth, func(name string, variable *Variable) {
 
 		if variable.Type.IsResourceType() &&
 			variable.DeclarationKind != common.DeclarationKindSelf &&
@@ -2164,7 +2178,7 @@ func (checker *Checker) checkVariableMove(expression ast.Expression) {
 		return
 	}
 
-	variable := checker.ValueActivations.Find(identifierExpression.Identifier.Identifier)
+	variable := checker.valueActivations.Find(identifierExpression.Identifier.Identifier)
 	if variable == nil {
 		return
 	}
@@ -2284,7 +2298,7 @@ func (checker *Checker) checkInvalidInterfaceAsType(ty Type, pos ast.HasPosition
 }
 
 func (checker *Checker) ValueActivationDepth() int {
-	return checker.ValueActivations.Depth()
+	return checker.valueActivations.Depth()
 }
 
 func (checker *Checker) TypeActivationDepth() int {

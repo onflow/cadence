@@ -177,7 +177,7 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 
 	identifier := declaration.Identifier.Identifier
 
-	variable, err := checker.ValueActivations.Declare(VariableDeclaration{
+	variable, err := checker.valueActivations.Declare(VariableDeclaration{
 		Identifier:               identifier,
 		Type:                     declarationType,
 		DocString:                declaration.DocString,
@@ -201,7 +201,7 @@ func (checker *Checker) recordVariableDeclarationRange(
 	identifier string,
 	declarationType Type,
 ) {
-	activation := checker.ValueActivations.Current()
+	activation := checker.valueActivations.Current()
 	activation.LeaveCallbacks = append(
 		activation.LeaveCallbacks,
 		func(getEndPosition EndPositionGetter) {

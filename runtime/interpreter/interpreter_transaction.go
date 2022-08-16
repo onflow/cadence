@@ -32,7 +32,7 @@ func (interpreter *Interpreter) VisitTransactionDeclaration(declaration *ast.Tra
 func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.TransactionDeclaration) {
 	transactionType := interpreter.Program.Elaboration.TransactionDeclarationTypes[declaration]
 
-	lexicalScope := interpreter.Activations.CurrentOrNew()
+	lexicalScope := interpreter.activations.CurrentOrNew()
 
 	var prepareFunction *ast.FunctionDeclaration
 	var prepareFunctionType *sema.FunctionType
@@ -73,7 +73,7 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 
 	transactionFunction := &HostFunctionValue{
 		Function: func(invocation Invocation) Value {
-			interpreter.Activations.PushNewWithParent(lexicalScope)
+			interpreter.activations.PushNewWithParent(lexicalScope)
 
 			invocation.Self = self
 			interpreter.declareVariable(sema.SelfIdentifier, self)
@@ -94,7 +94,7 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 
 			// NOTE: get current scope instead of using `lexicalScope`,
 			// because current scope has `self` declared
-			transactionScope := interpreter.Activations.CurrentOrNew()
+			transactionScope := interpreter.activations.CurrentOrNew()
 
 			if prepareFunction != nil {
 				prepare := interpreter.functionDeclarationValue(
