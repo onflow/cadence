@@ -177,8 +177,8 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 			getLocationRange,
 		)
 
-		interpreter.Activations.PushNewWithCurrent()
-		defer interpreter.Activations.Pop()
+		interpreter.activations.PushNewWithCurrent()
+		defer interpreter.activations.Pop()
 
 		// Assignment can also be a resource move.
 		interpreter.invalidateResource(innerValue)
@@ -290,8 +290,8 @@ var intOne = NewUnmeteredIntValueFromInt64(1)
 
 func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) ast.Repr {
 
-	interpreter.Activations.PushNewWithCurrent()
-	defer interpreter.Activations.Pop()
+	interpreter.activations.PushNewWithCurrent()
+	defer interpreter.activations.Pop()
 
 	variable := interpreter.declareVariable(
 		statement.Identifier.Identifier,

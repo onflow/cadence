@@ -21,6 +21,7 @@ package test
 import (
 	"context"
 	"fmt"
+	"github.com/onflow/flow-go/fvm/meter"
 	"math"
 	"strings"
 
@@ -50,9 +51,18 @@ import (
 
 const testFunctionPrefix = "test"
 
+const setupFunctionName = "setup"
+
+const tearDownFunctionName = "tearDown"
+
 var testScriptLocation = common.NewScriptLocation(nil, []byte("test"))
 
-type Results map[string]error
+type Results []Result
+
+type Result struct {
+	testName string
+	err      error
+}
 
 // ImportResolver is used to resolve and get the source code for imports.
 // Must be provided by the user of the TestRunner.
@@ -79,7 +89,7 @@ func (r *TestRunner) WithImportResolver(importResolver ImportResolver) *TestRunn
 
 // RunTest runs a single test in the provided test script.
 //
-func (r *TestRunner) RunTest(script string, funcName string) (err error) {
+func (r *TestRunner) RunTest(script string, funcName string) (result *Result, err error) {
 	defer func() {
 		recoverPanics(func(internalErr error) {
 			err = internalErr
@@ -88,11 +98,24 @@ func (r *TestRunner) RunTest(script string, funcName string) (err error) {
 
 	_, inter, err := r.parseCheckAndInterpret(script)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	_, err = inter.Invoke(funcName)
-	return err
+	// Run test `setup()` before running the test function.
+	err = r.runTestSetup(inter)
+	if err != nil {
+		return nil, err
+	}
+
+	_, testResult := inter.Invoke(funcName)
+
+	// Run test `tearDown()` once running all test functions are completed.
+	err = r.runTestTearDown(inter)
+
+	return &Result{
+		testName: funcName,
+		err:      testResult,
+	}, err
 }
 
 // RunTests runs all the tests in the provided test script.
@@ -109,7 +132,13 @@ func (r *TestRunner) RunTests(script string) (results Results, err error) {
 		return nil, err
 	}
 
-	results = make(Results)
+	results = make(Results, 0)
+
+	// Run test `setup()` before test functions
+	err = r.runTestSetup(inter)
+	if err != nil {
+		return nil, err
+	}
 
 	for _, funcDecl := range program.Program.FunctionDeclarations() {
 		funcName := funcDecl.Identifier.Identifier
@@ -119,10 +148,43 @@ func (r *TestRunner) RunTests(script string) (results Results, err error) {
 		}
 
 		err := r.invokeTestFunction(inter, funcName)
-		results[funcName] = err
+
+		results = append(results, Result{
+			testName: funcName,
+			err:      err,
+		})
 	}
 
-	return results, nil
+	// Run test `tearDown()` once running all test functions are completed.
+	err = r.runTestTearDown(inter)
+
+	return results, err
+}
+
+func (r *TestRunner) runTestSetup(inter *interpreter.Interpreter) error {
+	if !hasSetup(inter) {
+		return nil
+	}
+
+	return r.invokeTestFunction(inter, setupFunctionName)
+}
+
+func hasSetup(inter *interpreter.Interpreter) bool {
+	_, ok := inter.Globals.Get(setupFunctionName)
+	return ok
+}
+
+func (r *TestRunner) runTestTearDown(inter *interpreter.Interpreter) error {
+	if !hasTearDown(inter) {
+		return nil
+	}
+
+	return r.invokeTestFunction(inter, tearDownFunctionName)
+}
+
+func hasTearDown(inter *interpreter.Interpreter) bool {
+	_, ok := inter.Globals.Get(tearDownFunctionName)
+	return ok
 }
 
 func (r *TestRunner) invokeTestFunction(inter *interpreter.Interpreter, funcName string) (err error) {
@@ -201,38 +263,12 @@ func (r *TestRunner) checkerOptions(ctx runtime.Context) []sema.Option {
 					elaboration = stdlib.TestContractChecker.Elaboration
 
 				default:
-					importedProgram, importedElaboration, err := r.parseAndCheckImport(importedLocation, ctx)
+					_, importedElaboration, err := r.parseAndCheckImport(importedLocation, ctx)
 					if err != nil {
 						return nil, err
 					}
 
 					elaboration = importedElaboration
-
-					contractDecl := importedProgram.SoleContractDeclaration()
-					compositeType := elaboration.CompositeDeclarationTypes[contractDecl]
-
-					constructorType, constructorArgumentLabels :=
-						sema.CompositeConstructorType(importedElaboration, contractDecl, compositeType)
-
-					// Remove the contract variable, and instead declare a constructor.
-					elaboration.GlobalValues.Delete(compositeType.Identifier)
-
-					// Declare a constructor
-					_, err = checker.ValueActivations.Declare(sema.VariableDeclaration{
-						Identifier:               contractDecl.Identifier.Identifier,
-						Type:                     constructorType,
-						DocString:                contractDecl.DocString,
-						Access:                   contractDecl.Access,
-						Kind:                     contractDecl.DeclarationKind(),
-						Pos:                      contractDecl.Identifier.Pos,
-						IsConstant:               true,
-						ArgumentLabels:           constructorArgumentLabels,
-						AllowOuterScopeShadowing: false,
-					})
-
-					if err != nil {
-						return nil, err
-					}
 				}
 
 				return sema.ElaborationImport{
@@ -240,6 +276,31 @@ func (r *TestRunner) checkerOptions(ctx runtime.Context) []sema.Option {
 				}, nil
 			},
 		),
+		sema.WithContractVariableHandler(contractVariableHandler),
+	}
+}
+
+func contractVariableHandler(
+	checker *sema.Checker,
+	declaration *ast.CompositeDeclaration,
+	compositeType *sema.CompositeType,
+) sema.VariableDeclaration {
+	constructorType, constructorArgumentLabels := sema.CompositeConstructorType(
+		checker.Elaboration,
+		declaration,
+		compositeType,
+	)
+
+	return sema.VariableDeclaration{
+		Identifier:               declaration.Identifier.Identifier,
+		Type:                     constructorType,
+		DocString:                declaration.DocString,
+		Access:                   declaration.Access,
+		Kind:                     declaration.DeclarationKind(),
+		Pos:                      declaration.Identifier.Pos,
+		IsConstant:               true,
+		ArgumentLabels:           constructorArgumentLabels,
+		AllowOuterScopeShadowing: false,
 	}
 }
 
@@ -301,7 +362,7 @@ func (r *TestRunner) interpreterOptions(ctx runtime.Context) []interpreter.Optio
 			compositeType *sema.CompositeType,
 			constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
 			invocationRange ast.Range,
-		) interpreter.Value {
+		) interpreter.ContractValue {
 
 			switch compositeType.Location {
 			case stdlib.CryptoChecker.Location:
@@ -346,10 +407,22 @@ func newScriptEnvironment() *fvm.ScriptEnv {
 	view := testutil.RootBootstrappedLedger(vm, ctx)
 	v := view.NewChild()
 
-	st := state.NewState(v, state.WithMaxInteractionSizeAllowed(math.MaxUint64))
+	st := state.NewState(
+		v,
+		meter.NewMeter(math.MaxUint64, math.MaxUint64),
+		state.WithMaxKeySizeAllowed(ctx.MaxStateKeySize),
+		state.WithMaxValueSizeAllowed(ctx.MaxStateValueSize),
+		state.WithMaxInteractionSizeAllowed(ctx.MaxStateInteractionSize),
+	)
+
 	sth := state.NewStateHolder(st)
 
-	return fvm.NewScriptEnvironment(context.Background(), ctx, vm, sth, emptyPrograms)
+	env, err := fvm.NewScriptEnvironment(context.Background(), ctx, vm, sth, emptyPrograms)
+	if err != nil {
+		panic(err)
+	}
+
+	return env
 }
 
 func (r *TestRunner) parseAndCheckImport(location common.Location, startCtx runtime.Context) (*ast.Program, *sema.Elaboration, error) {
@@ -372,6 +445,7 @@ func (r *TestRunner) parseAndCheckImport(location common.Location, startCtx runt
 				return nil, fmt.Errorf("nested imports are not supported")
 			},
 		),
+		sema.WithContractVariableHandler(contractVariableHandler),
 	}
 
 	var interpreterOptions = []interpreter.Option{
@@ -396,8 +470,8 @@ func (r *TestRunner) parseAndCheckImport(location common.Location, startCtx runt
 func PrettyPrintResults(results Results) string {
 	var sb strings.Builder
 	sb.WriteString("Test Results\n")
-	for funcName, err := range results {
-		sb.WriteString(PrettyPrintResult(funcName, err))
+	for _, result := range results {
+		sb.WriteString(PrettyPrintResult(result.testName, result.err))
 	}
 	return sb.String()
 }

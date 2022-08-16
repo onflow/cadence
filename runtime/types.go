@@ -21,6 +21,7 @@ package runtime
 import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -76,7 +77,4 @@ type AccountKey struct {
 	IsRevoked bool
 }
 
-type PublicKey struct {
-	PublicKey []byte
-	SignAlgo  SignatureAlgorithm
-}
+type PublicKey = interpreter.PublicKey

@@ -16,16 +16,25 @@
  * limitations under the License.
  */
 
-package server
+package integration
 
 import (
-	"encoding/json"
-	"fmt"
+	"testing"
+
+	jsoncdc "github.com/onflow/cadence/encoding/json"
+
+	"github.com/onflow/cadence"
+	"github.com/stretchr/testify/assert"
 )
 
-func CheckCommandArgumentCount(args []json.RawMessage, expectedCount int) error {
-	if len(args) != expectedCount {
-		return fmt.Errorf("expected %d arguments, got %d", expectedCount, len(args))
-	}
-	return nil
+func Test_Argument(t *testing.T) {
+
+	cadenceVal, _ := cadence.NewString("test")
+	val := Argument{cadenceVal}
+
+	out, err := val.MarshalJSON()
+	compare, _ := jsoncdc.Encode(cadenceVal)
+
+	assert.NoError(t, err)
+	assert.Equal(t, compare, out)
 }

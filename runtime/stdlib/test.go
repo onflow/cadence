@@ -20,7 +20,6 @@ package stdlib
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -47,13 +46,11 @@ const succeededCaseName = "succeeded"
 const failedCaseName = "failed"
 
 const transactionCodeFieldName = "code"
-const transactionAuthorizerFieldName = "authorizer"
+const transactionAuthorizerFieldName = "authorizers"
 const transactionSignersFieldName = "signers"
-const transactionArgsFieldName = "args"
+const transactionArgsFieldName = "arguments"
 
 const accountAddressFieldName = "address"
-const accountKeyFieldName = "accountKey"
-const accountPrivateKeyFieldName = "privateKey"
 
 var TestContractLocation = common.IdentifierLocation(testContractTypeName)
 
@@ -227,6 +224,7 @@ var testAssertFunctionType = &sema.FunctionType{
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(
 		sema.VoidType,
 	),
+	RequiredArgumentCount: sema.RequiredArgumentCount(1),
 }
 
 var testAssertFunction = interpreter.NewUnmeteredHostFunctionValue(
@@ -236,14 +234,19 @@ var testAssertFunction = interpreter.NewUnmeteredHostFunctionValue(
 			panic(errors.NewUnreachableError())
 		}
 
-		message, ok := invocation.Arguments[1].(*interpreter.StringValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
+		var message string
+		if len(invocation.Arguments) > 1 {
+			messageValue, ok := invocation.Arguments[1].(*interpreter.StringValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+			message = messageValue.Str
 		}
 
 		if !condition {
 			panic(AssertionError{
-				Message: message.String(),
+				Message:       message,
+				LocationRange: invocation.GetLocationRange(),
 			})
 		}
 
@@ -310,9 +313,10 @@ var testNewEmulatorBlockchainFunctionType = &sema.FunctionType{
 
 var testNewEmulatorBlockchainFunction = interpreter.NewUnmeteredHostFunctionValue(
 	func(invocation interpreter.Invocation) interpreter.Value {
+		inter := invocation.Interpreter
 
 		// Create an `EmulatorBackend`
-		emulatorBackend := newEmulatorBackend(invocation.Interpreter)
+		emulatorBackend := newEmulatorBackend(inter, invocation.GetLocationRange)
 
 		// Create a 'Blockchain' struct value, that wraps the emulator backend,
 		// by calling the constructor of 'Blockchain'.
@@ -324,7 +328,7 @@ var testNewEmulatorBlockchainFunction = interpreter.NewUnmeteredHostFunctionValu
 			panic(errors.NewUnexpectedError("invalid type for constructor"))
 		}
 
-		blockchain, err := invocation.Interpreter.InvokeExternally(
+		blockchain, err := inter.InvokeExternally(
 			blockchainConstructor,
 			blockchainConstructor.Type,
 			[]interpreter.Value{
@@ -398,7 +402,11 @@ var EmulatorBackendType = func() *sema.CompositeType {
 	return ty
 }()
 
-func newEmulatorBackend(inter *interpreter.Interpreter) *interpreter.CompositeValue {
+func newEmulatorBackend(
+	inter *interpreter.Interpreter,
+	getLocationRange func() interpreter.LocationRange,
+) *interpreter.CompositeValue {
+
 	var fields = []interpreter.CompositeField{
 		{
 			Name:  emulatorBackendExecuteScriptFunctionName,
@@ -423,7 +431,7 @@ func newEmulatorBackend(inter *interpreter.Interpreter) *interpreter.CompositeVa
 
 	return interpreter.NewCompositeValue(
 		inter,
-		interpreter.ReturnEmptyLocationRange,
+		getLocationRange,
 		EmulatorBackendType.Location,
 		emulatorBackendTypeName,
 		common.CompositeKindStructure,
@@ -468,20 +476,9 @@ var emulatorBackendExecuteScriptFunction = interpreter.NewUnmeteredHostFunctionV
 			panic(interpreter.TestFrameworkNotProvidedError{})
 		}
 
-		scriptString, ok := invocation.Arguments[0].(*interpreter.StringValue)
+		script, ok := invocation.Arguments[0].(*interpreter.StringValue)
 		if !ok {
 			panic(errors.NewUnreachableError())
-		}
-
-		// String conversion of the value gives the quoted string.
-		// Unquote the script-string to remove starting/ending quotes
-		// and to unescape the string literals in the code.
-		//
-		// TODO: Is the reverse conversion loss-less?
-
-		script, err := strconv.Unquote(scriptString.String())
-		if err != nil {
-			panic(errors.NewUnexpectedErrorFromCause(err))
 		}
 
 		args, err := arrayValueToSlice(invocation.Arguments[1])
@@ -489,7 +486,7 @@ var emulatorBackendExecuteScriptFunction = interpreter.NewUnmeteredHostFunctionV
 			panic(errors.NewUnexpectedErrorFromCause(err))
 		}
 
-		result := testFramework.RunScript(script, args)
+		result := testFramework.RunScript(script.Str, args)
 
 		succeeded := result.Error == nil
 
@@ -518,13 +515,7 @@ func arrayValueToSlice(value interpreter.Value) ([]interpreter.Value, error) {
 //
 func createScriptResult(inter *interpreter.Interpreter, returnValue interpreter.Value, succeeded bool) interpreter.Value {
 	// Lookup and get 'ResultStatus' enum value.
-
-	resultStatusConstructorVar := inter.Activations.Find(resultStatusTypeName)
-	resultStatusConstructor, ok := resultStatusConstructorVar.GetValue().(*interpreter.HostFunctionValue)
-	if !ok {
-		panic(errors.NewUnexpectedError("invalid type for constructor"))
-	}
-
+	resultStatusConstructor := getConstructor(inter, resultStatusTypeName)
 	var status interpreter.Value
 	if succeeded {
 		succeededVar := resultStatusConstructor.NestedVariables[succeededCaseName]
@@ -535,13 +526,7 @@ func createScriptResult(inter *interpreter.Interpreter, returnValue interpreter.
 	}
 
 	// Create a 'ScriptResult' by calling its constructor.
-
-	scriptResultConstructorVar := inter.Activations.Find(scriptResultTypeName)
-	scriptResultConstructor, ok := scriptResultConstructorVar.GetValue().(*interpreter.HostFunctionValue)
-	if !ok {
-		panic(errors.NewUnexpectedError("invalid type for constructor"))
-	}
-
+	scriptResultConstructor := getConstructor(inter, scriptResultTypeName)
 	scriptResult, err := inter.InvokeExternally(
 		scriptResultConstructor,
 		scriptResultConstructor.Type,
@@ -556,6 +541,16 @@ func createScriptResult(inter *interpreter.Interpreter, returnValue interpreter.
 	}
 
 	return scriptResult
+}
+
+func getConstructor(inter *interpreter.Interpreter, typeName string) *interpreter.HostFunctionValue {
+	resultStatusConstructorVar := inter.FindVariable(typeName)
+	resultStatusConstructor, ok := resultStatusConstructorVar.GetValue().(*interpreter.HostFunctionValue)
+	if !ok {
+		panic(errors.NewUnexpectedError("invalid type for constructor of '%s'", typeName))
+	}
+
+	return resultStatusConstructor
 }
 
 // 'EmulatorBackend.createAccount' function
@@ -609,26 +604,29 @@ func newAccountValue(inter *interpreter.Interpreter, account *interpreter.Accoun
 	// Create address value
 	address := interpreter.NewAddressValue(nil, account.Address)
 
-	// Create account key
-	accountKey := newAccountKeyValue(inter, account.AccountKey)
-
-	// Create private key
-	privateKey := interpreter.ByteSliceToByteArrayValue(inter, account.PrivateKey)
+	// Create public key
+	publicKey := interpreter.NewPublicKeyValue(
+		inter,
+		interpreter.ReturnEmptyLocationRange,
+		interpreter.ByteSliceToByteArrayValue(
+			inter,
+			account.PublicKey.PublicKey,
+		),
+		NewSignatureAlgorithmCase(
+			inter,
+			account.PublicKey.SignAlgo.RawValue(),
+		),
+		inter.PublicKeyValidationHandler,
+	)
 
 	// Create an 'Account' by calling its constructor.
-	accountConstructorVar := inter.Activations.Find(accountTypeName)
-	accountConstructor, ok := accountConstructorVar.GetValue().(*interpreter.HostFunctionValue)
-	if !ok {
-		panic(errors.NewUnexpectedError("invalid type for constructor"))
-	}
-
+	accountConstructor := getConstructor(inter, accountTypeName)
 	accountValue, err := inter.InvokeExternally(
 		accountConstructor,
 		accountConstructor.Type,
 		[]interpreter.Value{
 			address,
-			accountKey,
-			privateKey,
+			publicKey,
 		},
 	)
 
@@ -637,42 +635,6 @@ func newAccountValue(inter *interpreter.Interpreter, account *interpreter.Accoun
 	}
 
 	return accountValue
-}
-
-func newAccountKeyValue(inter *interpreter.Interpreter, accountKey *interpreter.AccountKey) interpreter.Value {
-	index := interpreter.NewIntValueFromInt64(nil, int64(accountKey.KeyIndex))
-
-	publicKey := interpreter.NewPublicKeyValue(
-		inter,
-		interpreter.ReturnEmptyLocationRange,
-		interpreter.ByteSliceToByteArrayValue(
-			inter,
-			accountKey.PublicKey.PublicKey,
-		),
-		NewSignatureAlgorithmCase(
-			inter,
-			accountKey.PublicKey.SignAlgo.RawValue(),
-		),
-		inter.PublicKeyValidationHandler,
-	)
-
-	hashAlgorithm := NewHashAlgorithmCase(
-		inter,
-		accountKey.HashAlgo.RawValue(),
-	)
-
-	weight := interpreter.NewUnmeteredUFix64ValueWithInteger(uint64(accountKey.Weight))
-
-	revoked := interpreter.BoolValue(accountKey.IsRevoked)
-
-	return interpreter.NewAccountKeyValue(
-		inter,
-		index,
-		publicKey,
-		hashAlgorithm,
-		weight,
-		revoked,
-	)
 }
 
 // 'EmulatorBackend.addTransaction' function
@@ -724,36 +686,19 @@ var emulatorBackendAddTransactionFunction = interpreter.NewUnmeteredHostFunction
 			interpreter.ReturnEmptyLocationRange,
 			transactionCodeFieldName,
 		)
-		codeString, ok := codeValue.(*interpreter.StringValue)
+		code, ok := codeValue.(*interpreter.StringValue)
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
 
-		code, err := strconv.Unquote(codeString.String())
-		if err != nil {
-			panic(errors.NewUnexpectedErrorFromCause(err))
-		}
-
-		// Get authorizer
+		// Get authorizers
 		authorizerValue := transactionValue.GetMember(
 			inter,
 			interpreter.ReturnEmptyLocationRange,
 			transactionAuthorizerFieldName,
 		)
 
-		var authorizer *common.Address
-		switch authorizerValue := authorizerValue.(type) {
-		case interpreter.NilValue:
-			authorizer = nil
-		case *interpreter.SomeValue:
-			authorizerAddress, ok := authorizerValue.InnerValue(inter,
-				interpreter.ReturnEmptyLocationRange).(interpreter.AddressValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			authorizer = (*common.Address)(&authorizerAddress)
-		}
+		authorizers := addressesFromValue(authorizerValue)
 
 		// Get signers
 		signersValue := transactionValue.GetMember(
@@ -775,7 +720,7 @@ var emulatorBackendAddTransactionFunction = interpreter.NewUnmeteredHostFunction
 			panic(errors.NewUnexpectedErrorFromCause(err))
 		}
 
-		err = testFramework.AddTransaction(code, authorizer, signerAccounts, args)
+		err = testFramework.AddTransaction(code.Str, authorizers, signerAccounts, args)
 		if err != nil {
 			panic(err)
 		}
@@ -784,6 +729,28 @@ var emulatorBackendAddTransactionFunction = interpreter.NewUnmeteredHostFunction
 	},
 	emulatorBackendAddTransactionFunctionType,
 )
+
+func addressesFromValue(accountsValue interpreter.Value) []common.Address {
+	accountsArray, ok := accountsValue.(*interpreter.ArrayValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	addresses := make([]common.Address, 0)
+
+	accountsArray.Iterate(nil, func(element interpreter.Value) (resume bool) {
+		address, ok := element.(interpreter.AddressValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		addresses = append(addresses, common.Address(address))
+
+		return true
+	})
+
+	return addresses
+}
 
 func accountsFromValue(inter *interpreter.Interpreter, accountsValue interpreter.Value) []*interpreter.Account {
 	accountsArray, ok := accountsValue.(*interpreter.ArrayValue)
@@ -810,165 +777,31 @@ func accountsFromValue(inter *interpreter.Interpreter, accountsValue interpreter
 			panic(errors.NewUnreachableError())
 		}
 
-		// Get account key
-		accountKeyValue := accountValue.GetMember(
+		// Get public key
+		publicKeyVal, ok := accountValue.GetMember(
 			inter,
 			interpreter.ReturnEmptyLocationRange,
-			accountKeyFieldName,
-		)
-		accountKey := accountKeyFromValue(inter, accountKeyValue)
+			sema.AccountKeyPublicKeyField,
+		).(interpreter.MemberAccessibleValue)
 
-		// Get private key
-		privateKeyValue := accountValue.GetMember(
-			inter,
-			interpreter.ReturnEmptyLocationRange,
-			accountPrivateKeyFieldName,
-		)
-
-		privateKey, err := interpreter.ByteArrayValueToByteSlice(nil, privateKeyValue)
-		if err != nil {
+		if !ok {
 			panic(errors.NewUnreachableError())
 		}
 
+		publicKey, err := NewPublicKeyFromValue(inter, interpreter.ReturnEmptyLocationRange, publicKeyVal)
+		if err != nil {
+			panic(err)
+		}
+
 		accounts = append(accounts, &interpreter.Account{
-			Address:    common.Address(address),
-			AccountKey: accountKey,
-			PrivateKey: privateKey,
+			Address:   common.Address(address),
+			PublicKey: publicKey,
 		})
 
 		return true
 	})
 
 	return accounts
-}
-
-func accountKeyFromValue(inter *interpreter.Interpreter, value interpreter.Value) *interpreter.AccountKey {
-	accountKeyValue, ok := value.(interpreter.MemberAccessibleValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	// Key index field
-	keyIndexVal := accountKeyValue.GetMember(
-		inter,
-		interpreter.ReturnEmptyLocationRange,
-		sema.AccountKeyKeyIndexField,
-	)
-	keyIndex, ok := keyIndexVal.(interpreter.IntValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	// Public key field
-	publicKeyVal := accountKeyValue.GetMember(
-		inter,
-		interpreter.ReturnEmptyLocationRange,
-		sema.AccountKeyPublicKeyField,
-	)
-	publicKey := publicKeyFromValue(inter, interpreter.ReturnEmptyLocationRange, publicKeyVal)
-
-	// Hash algo field
-	hashAlgoField := accountKeyValue.GetMember(inter, interpreter.ReturnEmptyLocationRange, sema.AccountKeyHashAlgoField)
-	if hashAlgoField == nil {
-		panic(errors.NewUnreachableError())
-	}
-	hashAlgo := hashAlgoFromValue(inter, hashAlgoField)
-
-	// Weight field
-	weightVal := accountKeyValue.GetMember(
-		inter,
-		interpreter.ReturnEmptyLocationRange,
-		sema.AccountKeyWeightField,
-	)
-	weight, ok := weightVal.(interpreter.UFix64Value)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	// isRevoked field
-	isRevokedVal := accountKeyValue.GetMember(
-		inter,
-		interpreter.ReturnEmptyLocationRange,
-		sema.AccountKeyIsRevokedField,
-	)
-	isRevoked, ok := isRevokedVal.(interpreter.BoolValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	accountKey := &interpreter.AccountKey{
-		KeyIndex:  keyIndex.ToInt(),
-		PublicKey: publicKey,
-		HashAlgo:  hashAlgo,
-		Weight:    weight.ToInt(),
-		IsRevoked: bool(isRevoked),
-	}
-
-	return accountKey
-}
-
-func hashAlgoFromValue(inter *interpreter.Interpreter, hashAlgoField interpreter.Value) sema.HashAlgorithm {
-	hashAlgoValue, ok := hashAlgoField.(interpreter.MemberAccessibleValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	rawValue := hashAlgoValue.GetMember(inter, interpreter.ReturnEmptyLocationRange, sema.EnumRawValueFieldName)
-	if rawValue == nil {
-		panic(errors.NewUnreachableError())
-	}
-
-	hashAlgoRawValue, ok := rawValue.(interpreter.UInt8Value)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-	return sema.HashAlgorithm(hashAlgoRawValue)
-}
-
-func publicKeyFromValue(
-	inter *interpreter.Interpreter,
-	getLocationRange func() interpreter.LocationRange,
-	value interpreter.Value,
-) *interpreter.PublicKey {
-
-	publicKey, ok := value.(interpreter.MemberAccessibleValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	// Public key field
-	key := publicKey.GetMember(inter, getLocationRange, sema.PublicKeyPublicKeyField)
-
-	byteArray, err := interpreter.ByteArrayValueToByteSlice(inter, key)
-	if err != nil {
-		panic(err)
-	}
-
-	// sign algo field
-	signAlgoField := publicKey.GetMember(inter, getLocationRange, sema.PublicKeySignAlgoField)
-	if signAlgoField == nil {
-		panic(errors.NewUnexpectedError("sign algorithm is not set"))
-	}
-
-	signAlgoValue, ok := signAlgoField.(*interpreter.CompositeValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	rawValue := signAlgoValue.GetField(inter, getLocationRange, sema.EnumRawValueFieldName)
-	if rawValue == nil {
-		panic(errors.NewUnreachableError())
-	}
-
-	signAlgoRawValue, ok := rawValue.(interpreter.UInt8Value)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	return &interpreter.PublicKey{
-		PublicKey: byteArray,
-		SignAlgo:  sema.SignatureAlgorithm(signAlgoRawValue.ToInt()),
-	}
 }
 
 // 'EmulatorBackend.executeNextTransaction' function
@@ -1025,12 +858,7 @@ var emulatorBackendExecuteNextTransactionFunction = interpreter.NewUnmeteredHost
 //
 func createTransactionResult(inter *interpreter.Interpreter, succeeded bool) interpreter.Value {
 	// Lookup and get 'ResultStatus' enum value.
-	resultStatusConstructorVar := inter.Activations.Find(resultStatusTypeName)
-	resultStatusConstructor, ok := resultStatusConstructorVar.GetValue().(*interpreter.HostFunctionValue)
-	if !ok {
-		panic(errors.NewUnexpectedError("invalid type for constructor"))
-	}
-
+	resultStatusConstructor := getConstructor(inter, resultStatusTypeName)
 	var status interpreter.Value
 	if succeeded {
 		succeededVar := resultStatusConstructor.NestedVariables[succeededCaseName]
@@ -1041,12 +869,7 @@ func createTransactionResult(inter *interpreter.Interpreter, succeeded bool) int
 	}
 
 	// Create a 'TransactionResult' by calling its constructor.
-	transactionResultConstructorVar := inter.Activations.Find(transactionResultTypeName)
-	transactionResultConstructor, ok := transactionResultConstructorVar.GetValue().(*interpreter.HostFunctionValue)
-	if !ok {
-		panic(errors.NewUnexpectedError("invalid type for constructor"))
-	}
-
+	transactionResultConstructor := getConstructor(inter, transactionResultTypeName)
 	transactionResult, err := inter.InvokeExternally(
 		transactionResultConstructor,
 		transactionResultConstructor.Type,

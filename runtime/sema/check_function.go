@@ -97,7 +97,7 @@ func (checker *Checker) declareFunctionDeclaration(
 ) {
 	argumentLabels := declaration.ParameterList.EffectiveArgumentLabels()
 
-	_, err := checker.ValueActivations.Declare(VariableDeclaration{
+	_, err := checker.valueActivations.Declare(VariableDeclaration{
 		Identifier:               declaration.Identifier.Identifier,
 		Type:                     functionType,
 		DocString:                declaration.DocString,
@@ -150,7 +150,7 @@ func (checker *Checker) checkFunction(
 
 	checker.functionActivations.WithFunction(
 		functionType,
-		checker.ValueActivations.Depth(),
+		checker.valueActivations.Depth(),
 		func(functionActivation *FunctionActivation) {
 			// NOTE: important to begin scope in function activation, so that
 			//   variable declarations will have proper function activation
@@ -283,13 +283,13 @@ func (checker *Checker) declareParameters(
 	parameterList *ast.ParameterList,
 	parameters []*Parameter,
 ) {
-	depth := checker.ValueActivations.Depth()
+	depth := checker.valueActivations.Depth()
 
 	for i, parameter := range parameterList.Parameters {
 		identifier := parameter.Identifier
 
 		// check if variable with this identifier is already declared in the current scope
-		existingVariable := checker.ValueActivations.Find(identifier.Identifier)
+		existingVariable := checker.valueActivations.Find(identifier.Identifier)
 		if existingVariable != nil && existingVariable.ActivationDepth == depth {
 			checker.report(
 				&RedeclarationError{
@@ -314,7 +314,7 @@ func (checker *Checker) declareParameters(
 			ActivationDepth: depth,
 			Pos:             &identifier.Pos,
 		}
-		checker.ValueActivations.Set(identifier.Identifier, variable)
+		checker.valueActivations.Set(identifier.Identifier, variable)
 		if checker.positionInfoEnabled {
 			checker.recordVariableDeclarationOccurrence(identifier.Identifier, variable)
 		}
@@ -401,7 +401,7 @@ func (checker *Checker) visitFunctionBlock(
 }
 
 func (checker *Checker) declareResult(ty Type) {
-	_, err := checker.ValueActivations.DeclareImplicitConstant(
+	_, err := checker.valueActivations.DeclareImplicitConstant(
 		ResultIdentifier,
 		ty,
 		common.DeclarationKindConstant,
@@ -411,7 +411,7 @@ func (checker *Checker) declareResult(ty Type) {
 }
 
 func (checker *Checker) declareBefore() {
-	_, err := checker.ValueActivations.DeclareImplicitConstant(
+	_, err := checker.valueActivations.DeclareImplicitConstant(
 		BeforeIdentifier,
 		beforeType,
 		common.DeclarationKindFunction,

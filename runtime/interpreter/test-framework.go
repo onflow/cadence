@@ -32,15 +32,15 @@ import (
 // This is used as a way to inject test provider dependencies dynamically.
 //
 type TestFramework interface {
-	RunScript(code string, args []Value) *ScriptResult
+	RunScript(code string, arguments []Value) *ScriptResult
 
 	CreateAccount() (*Account, error)
 
 	AddTransaction(
 		code string,
-		authorizer *common.Address,
+		authorizers []common.Address,
 		signers []*Account,
-		args []Value,
+		arguments []Value,
 	) error
 
 	ExecuteNextTransaction() *TransactionResult
@@ -60,17 +60,8 @@ type TransactionResult struct {
 }
 
 type Account struct {
-	Address    common.Address
-	AccountKey *AccountKey
-	PrivateKey []byte
-}
-
-type AccountKey struct {
-	KeyIndex  int
+	Address   common.Address
 	PublicKey *PublicKey
-	HashAlgo  sema.HashAlgorithm
-	Weight    int
-	IsRevoked bool
 }
 
 type PublicKey struct {
