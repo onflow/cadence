@@ -38,7 +38,6 @@ func (handler *handler) Handle(ctx context.Context, conn *jsonrpc2.Conn, req *js
 	defer sentry.Recover()
 
 	method, ok := handler.server.Methods[req.Method]
-
 	if !ok {
 		if req.Notif {
 			return
@@ -57,7 +56,6 @@ func (handler *handler) Handle(ctx context.Context, conn *jsonrpc2.Conn, req *js
 	}
 
 	result, err := method(req.Params)
-
 	if req.Notif {
 		return
 	}

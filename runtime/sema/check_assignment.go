@@ -118,7 +118,7 @@ func (checker *Checker) accessedSelfMember(expression ast.Expression) *Member {
 		return nil
 	}
 
-	variable := checker.ValueActivations.Find(identifierExpression.Identifier.Identifier)
+	variable := checker.valueActivations.Find(identifierExpression.Identifier.Identifier)
 	if variable == nil ||
 		variable.DeclarationKind != common.DeclarationKindSelf {
 

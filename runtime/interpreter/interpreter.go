@@ -27,7 +27,7 @@ import (
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
-	"github.com/opentracing/opentracing-go"
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -121,7 +121,7 @@ type OnRecordTraceFunc func(
 	inter *Interpreter,
 	operationName string,
 	duration time.Duration,
-	logs []opentracing.LogRecord,
+	attrs []attribute.KeyValue,
 )
 
 // OnResourceOwnerChangeFunc is a function that is triggered when a resource's owner changes.
@@ -157,7 +157,7 @@ type ContractValueHandlerFunc func(
 	compositeType *sema.CompositeType,
 	constructorGenerator func(common.Address) *HostFunctionValue,
 	invocationRange ast.Range,
-) Value
+) ContractValue
 
 // ImportLocationHandlerFunc is a function that handles imports of locations.
 //
@@ -325,7 +325,7 @@ type Interpreter struct {
 	Location                       common.Location
 	PredeclaredValues              []ValueDeclaration
 	effectivePredeclaredValues     map[string]ValueDeclaration
-	Activations                    *VariableActivations
+	activations                    *VariableActivations
 	Globals                        GlobalVariables
 	allInterpreters                map[common.Location]*Interpreter
 	typeCodes                      TypeCodes
@@ -715,11 +715,11 @@ func NewInterpreter(program *Program, location common.Location, options ...Optio
 		resourceVariables:          map[ResourceKindedValue]*Variable{},
 	}
 
-	interpreter.Activations = NewVariableActivations(interpreter)
+	interpreter.activations = NewVariableActivations(interpreter)
 
 	// Start a new activation/scope for the current program.
 	// Use the base activation as the parent.
-	interpreter.Activations.PushNewWithParent(baseActivation)
+	interpreter.activations.PushNewWithParent(baseActivation)
 
 	defaultOptions := []Option{
 		WithAllInterpreters(map[common.Location]*Interpreter{}),
@@ -945,12 +945,12 @@ func locationRangeGetter(
 	}
 }
 
-func (interpreter *Interpreter) findVariable(name string) *Variable {
-	return interpreter.Activations.Find(name)
+func (interpreter *Interpreter) FindVariable(name string) *Variable {
+	return interpreter.activations.Find(name)
 }
 
 func (interpreter *Interpreter) findOrDeclareVariable(name string) *Variable {
-	variable := interpreter.findVariable(name)
+	variable := interpreter.FindVariable(name)
 	if variable == nil {
 		variable = interpreter.declareVariable(name, nil)
 	}
@@ -958,7 +958,7 @@ func (interpreter *Interpreter) findOrDeclareVariable(name string) *Variable {
 }
 
 func (interpreter *Interpreter) setVariable(name string, variable *Variable) {
-	interpreter.Activations.Set(name, variable)
+	interpreter.activations.Set(name, variable)
 }
 
 func (interpreter *Interpreter) Interpret() (err error) {
@@ -995,7 +995,7 @@ func (interpreter *Interpreter) declareGlobal(declaration ast.Declaration) {
 	}
 	name := identifier.Identifier
 	// NOTE: semantic analysis already checked possible invalid redeclaration
-	interpreter.Globals.Set(name, interpreter.findVariable(name))
+	interpreter.Globals.Set(name, interpreter.FindVariable(name))
 }
 
 // invokeVariable looks up the function by the given name from global variables,
@@ -1300,7 +1300,7 @@ func (interpreter *Interpreter) VisitFunctionDeclaration(declaration *ast.Functi
 	variable := interpreter.findOrDeclareVariable(identifier)
 
 	// lexical scope: variables in functions are bound to what is visible at declaration time
-	lexicalScope := interpreter.Activations.CurrentOrNew()
+	lexicalScope := interpreter.activations.CurrentOrNew()
 
 	// make the function itself available inside the function
 	lexicalScope.Set(identifier, variable)
@@ -1352,8 +1352,8 @@ func (interpreter *Interpreter) functionDeclarationValue(
 
 func (interpreter *Interpreter) VisitBlock(block *ast.Block) ast.Repr {
 	// block scope: each block gets an activation record
-	interpreter.Activations.PushNewWithCurrent()
-	defer interpreter.Activations.Pop()
+	interpreter.activations.PushNewWithCurrent()
+	defer interpreter.activations.Pop()
 
 	return interpreter.visitStatements(block.Statements)
 }
@@ -1372,8 +1372,8 @@ func (interpreter *Interpreter) visitFunctionBody(
 ) Value {
 
 	// block scope: each function block gets an activation record
-	interpreter.Activations.PushNewWithCurrent()
-	defer interpreter.Activations.Pop()
+	interpreter.activations.PushNewWithCurrent()
+	defer interpreter.activations.Pop()
 
 	result := interpreter.visitStatements(beforeStatements)
 	if ret, ok := result.(functionReturn); ok {
@@ -1519,7 +1519,7 @@ func (interpreter *Interpreter) visitAssignment(
 func (interpreter *Interpreter) VisitCompositeDeclaration(declaration *ast.CompositeDeclaration) ast.Repr {
 
 	// lexical scope: variables in functions are bound to what is visible at declaration time
-	lexicalScope := interpreter.Activations.CurrentOrNew()
+	lexicalScope := interpreter.activations.CurrentOrNew()
 
 	_, _ = interpreter.declareCompositeValue(declaration, lexicalScope)
 
@@ -1577,8 +1577,8 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	nestedVariables := map[string]*Variable{}
 
 	(func() {
-		interpreter.Activations.PushNewWithCurrent()
-		defer interpreter.Activations.Pop()
+		interpreter.activations.PushNewWithCurrent()
+		defer interpreter.activations.Pop()
 
 		// Pre-declare empty variables for all interfaces, composites, and function declarations
 		predeclare := func(identifier ast.Identifier) {
@@ -1827,26 +1827,15 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	if declaration.CompositeKind == common.CompositeKindContract {
 		variable.getter = func() Value {
 			positioned := ast.NewRangeFromPositioned(interpreter, declaration.Identifier)
-			valueHandler := interpreter.contractValueHandler(
+			contractValue := interpreter.contractValueHandler(
 				interpreter,
 				compositeType,
 				constructorGenerator,
 				positioned,
 			)
 
-			// Under normal circumstances, a contract value is always a CompositeValue.
-			// However, in the test framework, an imported contract is constructed via a constructor function.
-			// Hence, during tests, the value is a HostFunctionValue.
-			switch valueHandler := valueHandler.(type) {
-			case *CompositeValue:
-				valueHandler.NestedVariables = nestedVariables
-			case *HostFunctionValue:
-				valueHandler.NestedVariables = nestedVariables
-			default:
-				panic(errors.NewUnreachableError())
-			}
-
-			return valueHandler
+			contractValue.SetNestedVariables(nestedVariables)
+			return contractValue
 		}
 	} else {
 		constructor := constructorGenerator(common.Address{})
@@ -2384,7 +2373,7 @@ func (interpreter *Interpreter) Unbox(getLocationRange func() LocationRange, val
 func (interpreter *Interpreter) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaration) ast.Repr {
 
 	// lexical scope: variables in functions are bound to what is visible at declaration time
-	lexicalScope := interpreter.Activations.CurrentOrNew()
+	lexicalScope := interpreter.activations.CurrentOrNew()
 
 	interpreter.declareInterface(declaration, lexicalScope)
 
@@ -2399,8 +2388,8 @@ func (interpreter *Interpreter) declareInterface(
 	// of nested declarations won't be visible after the containing declaration
 
 	(func() {
-		interpreter.Activations.PushNewWithCurrent()
-		defer interpreter.Activations.Pop()
+		interpreter.activations.PushNewWithCurrent()
+		defer interpreter.activations.Pop()
 
 		for _, nestedInterfaceDeclaration := range declaration.Members.Interfaces() {
 			interpreter.declareInterface(nestedInterfaceDeclaration, lexicalScope)
@@ -2433,8 +2422,8 @@ func (interpreter *Interpreter) declareTypeRequirement(
 	// of nested declarations won't be visible after the containing declaration
 
 	(func() {
-		interpreter.Activations.PushNewWithCurrent()
-		defer interpreter.Activations.Pop()
+		interpreter.activations.PushNewWithCurrent()
+		defer interpreter.activations.Pop()
 
 		for _, nestedInterfaceDeclaration := range declaration.Members.Interfaces() {
 			interpreter.declareInterface(nestedInterfaceDeclaration, lexicalScope)
@@ -2540,8 +2529,8 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 				// Start a new activation record.
 				// Lexical scope: use the function declaration's activation record,
 				// not the current one (which would be dynamic scope)
-				interpreter.Activations.PushNewWithParent(lexicalScope)
-				defer interpreter.Activations.Pop()
+				interpreter.activations.PushNewWithParent(lexicalScope)
+				defer interpreter.activations.Pop()
 
 				if declaration.ParameterList != nil {
 					interpreter.bindParameterArguments(

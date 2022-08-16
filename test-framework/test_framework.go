@@ -21,6 +21,7 @@ package test
 import (
 	"context"
 	"fmt"
+	"github.com/onflow/flow-go/fvm/meter"
 	"math"
 	"strings"
 
@@ -201,38 +202,12 @@ func (r *TestRunner) checkerOptions(ctx runtime.Context) []sema.Option {
 					elaboration = stdlib.TestContractChecker.Elaboration
 
 				default:
-					importedProgram, importedElaboration, err := r.parseAndCheckImport(importedLocation, ctx)
+					_, importedElaboration, err := r.parseAndCheckImport(importedLocation, ctx)
 					if err != nil {
 						return nil, err
 					}
 
 					elaboration = importedElaboration
-
-					contractDecl := importedProgram.SoleContractDeclaration()
-					compositeType := elaboration.CompositeDeclarationTypes[contractDecl]
-
-					constructorType, constructorArgumentLabels :=
-						sema.CompositeConstructorType(importedElaboration, contractDecl, compositeType)
-
-					// Remove the contract variable, and instead declare a constructor.
-					elaboration.GlobalValues.Delete(compositeType.Identifier)
-
-					// Declare a constructor
-					_, err = checker.ValueActivations.Declare(sema.VariableDeclaration{
-						Identifier:               contractDecl.Identifier.Identifier,
-						Type:                     constructorType,
-						DocString:                contractDecl.DocString,
-						Access:                   contractDecl.Access,
-						Kind:                     contractDecl.DeclarationKind(),
-						Pos:                      contractDecl.Identifier.Pos,
-						IsConstant:               true,
-						ArgumentLabels:           constructorArgumentLabels,
-						AllowOuterScopeShadowing: false,
-					})
-
-					if err != nil {
-						return nil, err
-					}
 				}
 
 				return sema.ElaborationImport{
@@ -240,6 +215,31 @@ func (r *TestRunner) checkerOptions(ctx runtime.Context) []sema.Option {
 				}, nil
 			},
 		),
+		sema.WithContractVariableHandler(contractVariableHandler),
+	}
+}
+
+func contractVariableHandler(
+	checker *sema.Checker,
+	declaration *ast.CompositeDeclaration,
+	compositeType *sema.CompositeType,
+) sema.VariableDeclaration {
+	constructorType, constructorArgumentLabels := sema.CompositeConstructorType(
+		checker.Elaboration,
+		declaration,
+		compositeType,
+	)
+
+	return sema.VariableDeclaration{
+		Identifier:               declaration.Identifier.Identifier,
+		Type:                     constructorType,
+		DocString:                declaration.DocString,
+		Access:                   declaration.Access,
+		Kind:                     declaration.DeclarationKind(),
+		Pos:                      declaration.Identifier.Pos,
+		IsConstant:               true,
+		ArgumentLabels:           constructorArgumentLabels,
+		AllowOuterScopeShadowing: false,
 	}
 }
 
@@ -301,7 +301,7 @@ func (r *TestRunner) interpreterOptions(ctx runtime.Context) []interpreter.Optio
 			compositeType *sema.CompositeType,
 			constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
 			invocationRange ast.Range,
-		) interpreter.Value {
+		) interpreter.ContractValue {
 
 			switch compositeType.Location {
 			case stdlib.CryptoChecker.Location:
@@ -346,10 +346,22 @@ func newScriptEnvironment() *fvm.ScriptEnv {
 	view := testutil.RootBootstrappedLedger(vm, ctx)
 	v := view.NewChild()
 
-	st := state.NewState(v, state.WithMaxInteractionSizeAllowed(math.MaxUint64))
+	st := state.NewState(
+		v,
+		meter.NewMeter(math.MaxUint64, math.MaxUint64),
+		state.WithMaxKeySizeAllowed(ctx.MaxStateKeySize),
+		state.WithMaxValueSizeAllowed(ctx.MaxStateValueSize),
+		state.WithMaxInteractionSizeAllowed(ctx.MaxStateInteractionSize),
+	)
+
 	sth := state.NewStateHolder(st)
 
-	return fvm.NewScriptEnvironment(context.Background(), ctx, vm, sth, emptyPrograms)
+	env, err := fvm.NewScriptEnvironment(context.Background(), ctx, vm, sth, emptyPrograms)
+	if err != nil {
+		panic(err)
+	}
+
+	return env
 }
 
 func (r *TestRunner) parseAndCheckImport(location common.Location, startCtx runtime.Context) (*ast.Program, *sema.Elaboration, error) {
@@ -372,6 +384,7 @@ func (r *TestRunner) parseAndCheckImport(location common.Location, startCtx runt
 				return nil, fmt.Errorf("nested imports are not supported")
 			},
 		),
+		sema.WithContractVariableHandler(contractVariableHandler),
 	}
 
 	var interpreterOptions = []interpreter.Option{

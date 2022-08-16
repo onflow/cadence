@@ -20,7 +20,6 @@ package stdlib
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -209,6 +208,7 @@ var testAssertFunctionType = &sema.FunctionType{
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(
 		sema.VoidType,
 	),
+	RequiredArgumentCount: sema.RequiredArgumentCount(1),
 }
 
 var testAssertFunction = interpreter.NewUnmeteredHostFunctionValue(
@@ -218,14 +218,19 @@ var testAssertFunction = interpreter.NewUnmeteredHostFunctionValue(
 			panic(errors.NewUnreachableError())
 		}
 
-		message, ok := invocation.Arguments[1].(*interpreter.StringValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
+		var message string
+		if len(invocation.Arguments) > 1 {
+			messageValue, ok := invocation.Arguments[1].(*interpreter.StringValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+			message = messageValue.Str
 		}
 
 		if !condition {
 			panic(AssertionError{
-				Message: message.String(),
+				Message:       message,
+				LocationRange: invocation.GetLocationRange(),
 			})
 		}
 
@@ -249,9 +254,10 @@ var testNewEmulatorBlockchainFunctionType = &sema.FunctionType{
 
 var testNewEmulatorBlockchainFunction = interpreter.NewUnmeteredHostFunctionValue(
 	func(invocation interpreter.Invocation) interpreter.Value {
+		inter := invocation.Interpreter
 
 		// Create an `EmulatorBackend`
-		emulatorBackend := newEmulatorBackend(invocation.Interpreter)
+		emulatorBackend := newEmulatorBackend(inter, invocation.GetLocationRange)
 
 		// Create a 'Blockchain' struct value, that wraps the emulator backend,
 		// by calling the constructor of 'Blockchain'.
@@ -263,7 +269,7 @@ var testNewEmulatorBlockchainFunction = interpreter.NewUnmeteredHostFunctionValu
 			panic(errors.NewUnexpectedError("invalid type for constructor"))
 		}
 
-		blockchain, err := invocation.Interpreter.InvokeExternally(
+		blockchain, err := inter.InvokeExternally(
 			blockchainConstructor,
 			blockchainConstructor.Type,
 			[]interpreter.Value{
@@ -337,7 +343,11 @@ var EmulatorBackendType = func() *sema.CompositeType {
 	return ty
 }()
 
-func newEmulatorBackend(inter *interpreter.Interpreter) *interpreter.CompositeValue {
+func newEmulatorBackend(
+	inter *interpreter.Interpreter,
+	getLocationRange func() interpreter.LocationRange,
+) *interpreter.CompositeValue {
+
 	var fields = []interpreter.CompositeField{
 		{
 			Name:  emulatorBackendExecuteScriptFunctionName,
@@ -362,7 +372,7 @@ func newEmulatorBackend(inter *interpreter.Interpreter) *interpreter.CompositeVa
 
 	return interpreter.NewCompositeValue(
 		inter,
-		interpreter.ReturnEmptyLocationRange,
+		getLocationRange,
 		EmulatorBackendType.Location,
 		emulatorBackendTypeName,
 		common.CompositeKindStructure,
@@ -407,20 +417,9 @@ var emulatorBackendExecuteScriptFunction = interpreter.NewUnmeteredHostFunctionV
 			panic(interpreter.TestFrameworkNotProvidedError{})
 		}
 
-		scriptString, ok := invocation.Arguments[0].(*interpreter.StringValue)
+		script, ok := invocation.Arguments[0].(*interpreter.StringValue)
 		if !ok {
 			panic(errors.NewUnreachableError())
-		}
-
-		// String conversion of the value gives the quoted string.
-		// Unquote the script-string to remove starting/ending quotes
-		// and to unescape the string literals in the code.
-		//
-		// TODO: Is the reverse conversion loss-less?
-
-		script, err := strconv.Unquote(scriptString.String())
-		if err != nil {
-			panic(errors.NewUnexpectedErrorFromCause(err))
 		}
 
 		args, err := arrayValueToSlice(invocation.Arguments[1])
@@ -428,7 +427,7 @@ var emulatorBackendExecuteScriptFunction = interpreter.NewUnmeteredHostFunctionV
 			panic(errors.NewUnexpectedErrorFromCause(err))
 		}
 
-		result := testFramework.RunScript(script, args)
+		result := testFramework.RunScript(script.Str, args)
 
 		succeeded := result.Error == nil
 
@@ -457,13 +456,7 @@ func arrayValueToSlice(value interpreter.Value) ([]interpreter.Value, error) {
 //
 func createScriptResult(inter *interpreter.Interpreter, returnValue interpreter.Value, succeeded bool) interpreter.Value {
 	// Lookup and get 'ResultStatus' enum value.
-
-	resultStatusConstructorVar := inter.Activations.Find(resultStatusTypeName)
-	resultStatusConstructor, ok := resultStatusConstructorVar.GetValue().(*interpreter.HostFunctionValue)
-	if !ok {
-		panic(errors.NewUnexpectedError("invalid type for constructor"))
-	}
-
+	resultStatusConstructor := getConstructor(inter, resultStatusTypeName)
 	var status interpreter.Value
 	if succeeded {
 		succeededVar := resultStatusConstructor.NestedVariables[succeededCaseName]
@@ -474,13 +467,7 @@ func createScriptResult(inter *interpreter.Interpreter, returnValue interpreter.
 	}
 
 	// Create a 'ScriptResult' by calling its constructor.
-
-	scriptResultConstructorVar := inter.Activations.Find(scriptResultTypeName)
-	scriptResultConstructor, ok := scriptResultConstructorVar.GetValue().(*interpreter.HostFunctionValue)
-	if !ok {
-		panic(errors.NewUnexpectedError("invalid type for constructor"))
-	}
-
+	scriptResultConstructor := getConstructor(inter, scriptResultTypeName)
 	scriptResult, err := inter.InvokeExternally(
 		scriptResultConstructor,
 		scriptResultConstructor.Type,
@@ -495,6 +482,16 @@ func createScriptResult(inter *interpreter.Interpreter, returnValue interpreter.
 	}
 
 	return scriptResult
+}
+
+func getConstructor(inter *interpreter.Interpreter, typeName string) *interpreter.HostFunctionValue {
+	resultStatusConstructorVar := inter.FindVariable(typeName)
+	resultStatusConstructor, ok := resultStatusConstructorVar.GetValue().(*interpreter.HostFunctionValue)
+	if !ok {
+		panic(errors.NewUnexpectedError("invalid type for constructor of '%s'", typeName))
+	}
+
+	return resultStatusConstructor
 }
 
 // 'EmulatorBackend.createAccount' function
@@ -564,12 +561,7 @@ func newAccountValue(inter *interpreter.Interpreter, account *interpreter.Accoun
 	)
 
 	// Create an 'Account' by calling its constructor.
-	accountConstructorVar := inter.Activations.Find(accountTypeName)
-	accountConstructor, ok := accountConstructorVar.GetValue().(*interpreter.HostFunctionValue)
-	if !ok {
-		panic(errors.NewUnexpectedError("invalid type for constructor"))
-	}
-
+	accountConstructor := getConstructor(inter, accountTypeName)
 	accountValue, err := inter.InvokeExternally(
 		accountConstructor,
 		accountConstructor.Type,
@@ -807,12 +799,7 @@ var emulatorBackendExecuteNextTransactionFunction = interpreter.NewUnmeteredHost
 //
 func createTransactionResult(inter *interpreter.Interpreter, succeeded bool) interpreter.Value {
 	// Lookup and get 'ResultStatus' enum value.
-	resultStatusConstructorVar := inter.Activations.Find(resultStatusTypeName)
-	resultStatusConstructor, ok := resultStatusConstructorVar.GetValue().(*interpreter.HostFunctionValue)
-	if !ok {
-		panic(errors.NewUnexpectedError("invalid type for constructor"))
-	}
-
+	resultStatusConstructor := getConstructor(inter, resultStatusTypeName)
 	var status interpreter.Value
 	if succeeded {
 		succeededVar := resultStatusConstructor.NestedVariables[succeededCaseName]
@@ -823,12 +810,7 @@ func createTransactionResult(inter *interpreter.Interpreter, succeeded bool) int
 	}
 
 	// Create a 'TransactionResult' by calling its constructor.
-	transactionResultConstructorVar := inter.Activations.Find(transactionResultTypeName)
-	transactionResultConstructor, ok := transactionResultConstructorVar.GetValue().(*interpreter.HostFunctionValue)
-	if !ok {
-		panic(errors.NewUnexpectedError("invalid type for constructor"))
-	}
-
+	transactionResultConstructor := getConstructor(inter, transactionResultTypeName)
 	transactionResult, err := inter.InvokeExternally(
 		transactionResultConstructor,
 		transactionResultConstructor.Type,

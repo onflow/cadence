@@ -73,7 +73,7 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) ast.Repr 
 
 	identifier := statement.Identifier.Identifier
 
-	variable, err := checker.ValueActivations.Declare(VariableDeclaration{
+	variable, err := checker.valueActivations.Declare(VariableDeclaration{
 		Identifier:               identifier,
 		Type:                     elementType,
 		Kind:                     common.DeclarationKindConstant,
@@ -89,7 +89,7 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) ast.Repr 
 
 	if statement.Index != nil {
 		index := statement.Index.Identifier
-		indexVariable, err := checker.ValueActivations.Declare(VariableDeclaration{
+		indexVariable, err := checker.valueActivations.Declare(VariableDeclaration{
 			Identifier:               index,
 			Type:                     IntType,
 			Kind:                     common.DeclarationKindConstant,
