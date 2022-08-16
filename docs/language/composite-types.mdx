@@ -228,6 +228,23 @@ token.id = 23
 
 Initializers do not support overloading.
 
+Initializers can also be declared with the `pure` keyword, to indicate that they do not perform any impure operations, and
+to allow them to be called from within other `pure` functions. In an initializer, writes to `self` are not considered impure
+like they are within other composite functions; as the value being constructed here is by definition local to the context 
+calling the initializer. 
+
+```cadence
+pub struct Token {
+    pub let id: Int
+    pub var balance: Int
+
+    pure init(id: Int, balance: Int) {
+        self.id = id
+        self.balance = balance
+    }
+}
+```
+
 ## Composite Type Functions
 
 Composite types may contain functions.
