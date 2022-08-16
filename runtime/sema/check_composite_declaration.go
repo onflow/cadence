@@ -1878,16 +1878,14 @@ func (checker *Checker) checkSpecialFunction(
 		checkResourceLoss,
 	)
 
-	switch containerKind {
-
-	case ContainerKindComposite:
-		// Event declarations have an empty initializer as it is synthesized
-
+	if containerKind == ContainerKindComposite {
 		compositeType, ok := containerType.(*CompositeType)
 		if !ok {
 			// we just checked that the container was a composite
 			panic(errors.NewUnreachableError())
 		}
+
+		// Event declarations have an empty initializer as it is synthesized
 		if compositeType.Kind != common.CompositeKindEvent &&
 			specialFunction.FunctionDeclaration.FunctionBlock == nil {
 
