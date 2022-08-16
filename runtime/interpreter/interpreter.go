@@ -3645,7 +3645,7 @@ func (interpreter *Interpreter) IsSubTypeOfSemaType(subType StaticType, superTyp
 	return sema.IsSubType(semaType, superType)
 }
 
-func (interpreter *Interpreter) domainIterator(address common.Address, domain common.PathDomain) []Value {
+func (interpreter *Interpreter) domainPaths(address common.Address, domain common.PathDomain) []Value {
 	storageMap := interpreter.Storage.GetStorageMap(address, domain.Identifier(), false)
 	if storageMap == nil {
 		return []Value{}
@@ -3660,7 +3660,7 @@ func (interpreter *Interpreter) domainIterator(address common.Address, domain co
 
 func (interpreter *Interpreter) accountPaths(addressValue AddressValue, getLocationRange func() LocationRange, domain common.PathDomain, pathType StaticType) *ArrayValue {
 	address := addressValue.ToAddress()
-	values := interpreter.domainIterator(address, domain)
+	values := interpreter.domainPaths(address, domain)
 	return NewArrayValue(
 		interpreter,
 		getLocationRange,
