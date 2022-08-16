@@ -15,8 +15,8 @@ pub contract Test {
         // Executes a script and returns the script return value and the status.
         // `returnValue` field of the result will be `nil` if the script failed.
         //
-        pub fun executeScript(_ script: String, _ args: [AnyStruct]): ScriptResult {
-            return self.backend.executeScript(script, args)
+        pub fun executeScript(_ script: String, _ arguments: [AnyStruct]): ScriptResult {
+            return self.backend.executeScript(script, arguments)
         }
 
         // Creates a signer account by submitting an account creation transaction.
@@ -98,7 +98,7 @@ pub contract Test {
         pub let status: ResultStatus
         pub let error:  Error?
 
-        init(_ status: ResultStatus, _ error: Error) {
+        init(status: ResultStatus, error: Error) {
             self.status = status
             self.error = error
         }
@@ -107,11 +107,11 @@ pub contract Test {
     // The result of a script execution.
     //
     pub struct ScriptResult {
-        pub let status:      ResultStatus
+        pub let status: ResultStatus
         pub let returnValue: AnyStruct?
         pub let error:       Error?
 
-        init(_ status: ResultStatus, _ returnValue: AnyStruct?, _ error: Error?) {
+        init(status: ResultStatus, returnValue: AnyStruct?, error: Error?) {
             self.status = status
             self.returnValue = returnValue
             self.error = error
@@ -128,13 +128,13 @@ pub contract Test {
         }
     }
 
-    // Account represents a info about the account created on the blockchain.
+    // Account represents info about the account created on the blockchain.
     //
     pub struct Account {
-        pub let address:   Address
+        pub let address: Address
         pub let publicKey: PublicKey
 
-        init(_ address: Address, _ publicKey: PublicKey) {
+        init(address: Address, publicKey: PublicKey) {
             self.address = address
             self.publicKey = publicKey
         }
@@ -143,16 +143,16 @@ pub contract Test {
     // Transaction that can be submitted and executed on the blockchain.
     //
     pub struct Transaction {
-        pub let code:        String
+        pub let code: String
         pub let authorizers: [Address]
-        pub let signers:     [Account]
-        pub let args:        [AnyStruct]
+        pub let signers: [Account]
+        pub let arguments: [AnyStruct]
 
-        init(_ code: String, _ authorizers: [Address], _ signers: [Account], _ args: [AnyStruct]) {
+        init(code: String, authorizers: [Address], signers: [Account], arguments: [AnyStruct]) {
             self.code = code
             self.authorizers = authorizers
             self.signers = signers
-            self.args = args
+            self.arguments = arguments
         }
     }
 
@@ -160,7 +160,7 @@ pub contract Test {
     //
     pub struct interface BlockchainBackend {
 
-        pub fun executeScript(_ script: String, _ args: [AnyStruct]): ScriptResult
+        pub fun executeScript(_ script: String, _ arguments: [AnyStruct]): ScriptResult
 
         pub fun createAccount(): Account
 
