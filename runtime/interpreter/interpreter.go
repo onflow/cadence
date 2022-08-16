@@ -1827,15 +1827,15 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	if declaration.CompositeKind == common.CompositeKindContract {
 		variable.getter = func() Value {
 			positioned := ast.NewRangeFromPositioned(interpreter, declaration.Identifier)
-			valueHandler := interpreter.contractValueHandler(
+			contractValue := interpreter.contractValueHandler(
 				interpreter,
 				compositeType,
 				constructorGenerator,
 				positioned,
 			)
 
-			valueHandler.SetNestedVariables(nestedVariables)
-			return valueHandler
+			contractValue.SetNestedVariables(nestedVariables)
+			return contractValue
 		}
 	} else {
 		constructor := constructorGenerator(common.Address{})
