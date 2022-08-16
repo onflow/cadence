@@ -21,6 +21,7 @@ package test
 import (
 	"encoding/hex"
 	"fmt"
+	"strings"
 
 	sdk "github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/crypto"
@@ -304,7 +305,7 @@ func (e *EmulatorBackend) DeployContract(
 
 	cadenceArgs := make([]cadence.Value, 0, len(args))
 
-	txArgs, addArgs := "", ""
+	var txArgsBuilder, addArgsBuilder strings.Builder
 
 	for i, arg := range args {
 		cadenceArg, err := runtime.ExportValue(arg, inter, interpreter.ReturnEmptyLocationRange)
@@ -313,21 +314,21 @@ func (e *EmulatorBackend) DeployContract(
 		}
 
 		if i > 0 {
-			txArgs += ", "
+			txArgsBuilder.WriteString(", ")
 		}
 
-		txArgs += fmt.Sprintf("arg%d: %s", i, cadenceArg.Type().ID())
-		addArgs += fmt.Sprintf(", arg%d", i)
+		txArgsBuilder.WriteString(fmt.Sprintf("arg%d: %s", i, cadenceArg.Type().ID()))
+		addArgsBuilder.WriteString(fmt.Sprintf(", arg%d", i))
 
 		cadenceArgs = append(cadenceArgs, cadenceArg)
 	}
 
 	script := fmt.Sprintf(
 		deployContractTransactionTemplate,
-		txArgs,
+		txArgsBuilder.String(),
 		name,
 		hexEncodedCode,
-		addArgs,
+		addArgsBuilder.String(),
 	)
 
 	tx := e.newTransaction(script, []common.Address{account.Address})
