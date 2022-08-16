@@ -76,12 +76,17 @@ pub contract Test {
         /// Deploys a given contract, and initilizes it with the arguments.
         ///
         pub fun deployContract(
-            _ name: String,
-            _ code: String,
-            _ account: Account,
-            _ args: [AnyStruct]
+            name: String,
+            code: String,
+            account: Account,
+            arguments: [AnyStruct]
         ): Error? {
-            return self.backend.deployContract(name, code, account, args)
+            return self.backend.deployContract(
+                name: name,
+                code: code,
+                account: account,
+                arguments: arguments
+            )
         }
     }
 
@@ -171,10 +176,10 @@ pub contract Test {
         pub fun commitBlock()
 
         pub fun deployContract(
-            _ name: String,
-            _ code: String,
-            _ account: Account,
-            _ args: [AnyStruct]
+            name: String,
+            code: String,
+            account: Account,
+            arguments: [AnyStruct]
         ): Error?
     }
 }

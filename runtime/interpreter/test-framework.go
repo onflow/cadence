@@ -51,7 +51,7 @@ type TestFramework interface {
 		name string,
 		code string,
 		account *Account,
-		args []Value,
+		arguments []Value,
 	) error
 }
 

@@ -875,10 +875,10 @@ func TestDeployingContracts(t *testing.T) {
                 let contractCode = "pub contract Foo{ init(){}  pub fun sayHello(): String { return \"hello from Foo\"} }"
 
                 let err = blockchain.deployContract(
-                    "Foo",
-                    contractCode,
-                    account,
-                    [],
+                    name: "Foo",
+                    code: contractCode,
+                    account: account,
+                    arguments: [],
                 )
 
                 if err != nil {
@@ -917,10 +917,10 @@ func TestDeployingContracts(t *testing.T) {
                 let contractCode = "pub contract Foo{ pub let msg: String;   init(_ msg: String){ self.msg = msg }   pub fun sayHello(): String { return self.msg } }" 
 
                 let err = blockchain.deployContract(
-                    "Foo",
-                    contractCode,
-                    account,
-                    ["hello from args"],
+                    name: "Foo",
+                    code: contractCode,
+                    account: account,
+                    arguments: ["hello from args"],
                 )
 
                 if err != nil {
@@ -963,10 +963,10 @@ func TestErrors(t *testing.T) {
                 let contractCode = "pub contract Foo{ init(){}  pub fun sayHello() { return 0 } }"
 
                 let err = blockchain.deployContract(
-                    "Foo",
-                    contractCode,
-                    account,
-                    [],
+                    name: "Foo",
+                    code: contractCode,
+                    account: account,
+                    arguments: [],
                 )
 
                 if err != nil {
