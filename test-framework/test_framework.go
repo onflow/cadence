@@ -235,6 +235,27 @@ func (r *TestRunner) newChecker(program *ast.Program, location common.Location) 
 		true,
 		sema.WithPredeclaredValues(predeclaredSemaValues),
 		sema.WithPredeclaredTypes(stdlib.FlowDefaultPredeclaredTypes),
+		sema.WithContractVariableHandler(func(
+			checker *sema.Checker,
+			declaration *ast.CompositeDeclaration,
+			compositeType *sema.CompositeType,
+		) sema.VariableDeclaration {
+
+			constructorType, constructorArgumentLabels := checker.CompositeConstructorType(declaration, compositeType)
+
+			return sema.VariableDeclaration{
+				Identifier:               declaration.Identifier.Identifier,
+				Type:                     constructorType,
+				DocString:                declaration.DocString,
+				Access:                   declaration.Access,
+				Kind:                     declaration.DeclarationKind(),
+				Pos:                      declaration.Identifier.Pos,
+				IsConstant:               true,
+				ArgumentLabels:           constructorArgumentLabels,
+				AllowOuterScopeShadowing: false,
+			}
+		}),
+
 		sema.WithImportHandler(
 			func(checker *sema.Checker, importedLocation common.Location, importRange ast.Range) (sema.Import, error) {
 				var elaboration *sema.Elaboration
@@ -252,31 +273,6 @@ func (r *TestRunner) newChecker(program *ast.Program, location common.Location) 
 					}
 
 					elaboration = importedChecker.Elaboration
-
-					contractDecl := importedChecker.Program.SoleContractDeclaration()
-					compositeType := elaboration.CompositeDeclarationTypes[contractDecl]
-
-					constructorType, constructorArgumentLabels := importedChecker.CompositeConstructorType(contractDecl, compositeType)
-
-					// Remove the contract variable, and instead declare a constructor.
-					elaboration.GlobalValues.Delete(compositeType.Identifier)
-
-					// Declare a constructor
-					_, err = checker.ValueActivations.Declare(sema.VariableDeclaration{
-						Identifier:               contractDecl.Identifier.Identifier,
-						Type:                     constructorType,
-						DocString:                contractDecl.DocString,
-						Access:                   contractDecl.Access,
-						Kind:                     contractDecl.DeclarationKind(),
-						Pos:                      contractDecl.Identifier.Pos,
-						IsConstant:               true,
-						ArgumentLabels:           constructorArgumentLabels,
-						AllowOuterScopeShadowing: false,
-					})
-
-					if err != nil {
-						return nil, err
-					}
 				}
 
 				return sema.ElaborationImport{
