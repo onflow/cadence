@@ -450,6 +450,24 @@ func TestCheckPurityEnforcement(t *testing.T) {
 		})
 	})
 
+	t.Run("alias", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t, `
+		pure fun foo() {
+			let f = authAccount.contracts.remove
+			f(name: "")
+		}
+		`)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
+			StartPos: ast.Position{Offset: 63, Line: 4, Column: 3},
+			EndPos:   ast.Position{Offset: 73, Line: 4, Column: 13},
+		})
+	})
+
 	t.Run("external write", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
