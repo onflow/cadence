@@ -23,7 +23,7 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/opentracing/opentracing-go"
+	"go.opentelemetry.io/otel/attribute"
 	"golang.org/x/crypto/sha3"
 
 	"github.com/onflow/cadence"
@@ -122,7 +122,7 @@ type Runtime interface {
 	NewContractFunctionExecutor(
 		contractLocation common.AddressLocation,
 		functionName string,
-		arguments []interpreter.Value,
+		arguments []cadence.Value,
 		argumentTypes []sema.Type,
 		context Context,
 	) Executor
@@ -135,7 +135,7 @@ type Runtime interface {
 	InvokeContractFunction(
 		contractLocation common.AddressLocation,
 		functionName string,
-		arguments []interpreter.Value,
+		arguments []cadence.Value,
 		argumentTypes []sema.Type,
 		context Context,
 	) (cadence.Value, error)
@@ -497,7 +497,7 @@ func (r *interpreterRuntime) newAuthAccountValue(
 func (r *interpreterRuntime) NewContractFunctionExecutor(
 	contractLocation common.AddressLocation,
 	functionName string,
-	arguments []interpreter.Value,
+	arguments []cadence.Value,
 	argumentTypes []sema.Type,
 	context Context,
 ) Executor {
@@ -513,7 +513,7 @@ func (r *interpreterRuntime) NewContractFunctionExecutor(
 func (r *interpreterRuntime) InvokeContractFunction(
 	contractLocation common.AddressLocation,
 	functionName string,
-	arguments []interpreter.Value,
+	arguments []cadence.Value,
 	argumentTypes []sema.Type,
 	context Context,
 ) (cadence.Value, error) {
@@ -919,9 +919,6 @@ func (r *interpreterRuntime) check(
 						case stdlib.CryptoChecker.Location:
 							elaboration = stdlib.CryptoChecker.Elaboration
 
-						case stdlib.TestContractLocation:
-							elaboration = stdlib.TestContractChecker.Elaboration
-
 						default:
 							context := startContext.WithLocation(importedLocation)
 
@@ -1044,7 +1041,7 @@ func (r *interpreterRuntime) newInterpreter(
 				compositeType *sema.CompositeType,
 				constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
 				invocationRange ast.Range,
-			) interpreter.Value {
+			) interpreter.ContractValue {
 
 				return r.loadContract(
 					inter,
@@ -1157,9 +1154,9 @@ func (r *interpreterRuntime) newInterpreter(
 				interpreter *interpreter.Interpreter,
 				functionName string,
 				duration time.Duration,
-				logs []opentracing.LogRecord,
+				attrs []attribute.KeyValue,
 			) {
-				context.Interface.RecordTrace(functionName, interpreter.Location, duration, logs)
+				context.Interface.RecordTrace(functionName, interpreter.Location, duration, attrs)
 			},
 		),
 		interpreter.WithTracingEnabled(r.tracingEnabled),
@@ -1199,16 +1196,6 @@ func (r *interpreterRuntime) importLocationHandler(
 		switch location {
 		case stdlib.CryptoChecker.Location:
 			program := interpreter.ProgramFromChecker(stdlib.CryptoChecker)
-			subInterpreter, err := inter.NewSubInterpreter(program, location)
-			if err != nil {
-				panic(err)
-			}
-			return interpreter.InterpreterImport{
-				Interpreter: subInterpreter,
-			}
-
-		case stdlib.TestContractLocation:
-			program := interpreter.ProgramFromChecker(stdlib.TestContractChecker)
 			subInterpreter, err := inter.NewSubInterpreter(program, location)
 			if err != nil {
 				panic(err)
@@ -1299,9 +1286,6 @@ func (r *interpreterRuntime) injectedCompositeFieldsHandler(
 
 		switch location {
 		case stdlib.CryptoChecker.Location:
-			return nil
-
-		case stdlib.TestContractChecker.Location:
 			return nil
 
 		default:
@@ -1852,17 +1836,6 @@ func (r *interpreterRuntime) loadContract(
 		}
 		return contract
 
-	case stdlib.TestContractLocation:
-		contract, err := stdlib.NewTestContract(
-			inter,
-			constructorGenerator(common.Address{}),
-			invocationRange,
-		)
-		if err != nil {
-			panic(err)
-		}
-		return contract
-
 	default:
 
 		var storedValue interpreter.Value
@@ -1966,7 +1939,7 @@ func (r *interpreterRuntime) instantiateContract(
 				compositeType *sema.CompositeType,
 				constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
 				invocationRange ast.Range,
-			) interpreter.Value {
+			) interpreter.ContractValue {
 
 				constructor := constructorGenerator(address)
 
@@ -3121,7 +3094,7 @@ func (r *interpreterRuntime) newAccountKeysAddFunction(
 			inter := invocation.Interpreter
 			getLocationRange := invocation.GetLocationRange
 
-			publicKey, err := NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
+			publicKey, err := stdlib.NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
 			if err != nil {
 				panic(err)
 			}
@@ -3334,56 +3307,6 @@ func (r *interpreterRuntime) resourceOwnerChangedHandler(
 	}
 }
 
-func NewPublicKeyFromValue(
-	inter *interpreter.Interpreter,
-	getLocationRange func() interpreter.LocationRange,
-	publicKey interpreter.MemberAccessibleValue,
-) (
-	*PublicKey,
-	error,
-) {
-
-	// publicKey field
-	key := publicKey.GetMember(inter, getLocationRange, sema.PublicKeyPublicKeyField)
-
-	byteArray, err := interpreter.ByteArrayValueToByteSlice(inter, key)
-	if err != nil {
-		return nil, runtimeErrors.NewUnexpectedError("public key needs to be a byte array. %w", err)
-	}
-
-	// sign algo field
-	signAlgoField := publicKey.GetMember(inter, getLocationRange, sema.PublicKeySignAlgoField)
-	if signAlgoField == nil {
-		return nil, runtimeErrors.NewUnexpectedError("sign algorithm is not set")
-	}
-
-	signAlgoValue, ok := signAlgoField.(*interpreter.CompositeValue)
-	if !ok {
-		return nil, runtimeErrors.NewUnexpectedError(
-			"sign algorithm does not belong to type: %s",
-			sema.SignatureAlgorithmType.QualifiedString(),
-		)
-	}
-
-	rawValue := signAlgoValue.GetField(inter, getLocationRange, sema.EnumRawValueFieldName)
-	if rawValue == nil {
-		return nil, runtimeErrors.NewDefaultUserError("sign algorithm raw value is not set")
-	}
-
-	signAlgoRawValue, ok := rawValue.(interpreter.UInt8Value)
-	if !ok {
-		return nil, runtimeErrors.NewUnexpectedError(
-			"sign algorithm raw-value does not belong to type: %s",
-			sema.UInt8Type.QualifiedString(),
-		)
-	}
-
-	return &PublicKey{
-		PublicKey: byteArray,
-		SignAlgo:  SignatureAlgorithm(signAlgoRawValue.ToInt()),
-	}, nil
-}
-
 func NewPublicKeyValue(
 	inter *interpreter.Interpreter,
 	getLocationRange func() interpreter.LocationRange,
@@ -3459,7 +3382,7 @@ func validatePublicKey(
 	publicKeyValue *interpreter.CompositeValue,
 	runtimeInterface Interface,
 ) error {
-	publicKey, err := NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
+	publicKey, err := stdlib.NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
 	if err != nil {
 		return err
 	}
@@ -3479,7 +3402,7 @@ func blsVerifyPoP(
 	runtimeInterface Interface,
 ) interpreter.BoolValue {
 
-	publicKey, err := NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
+	publicKey, err := stdlib.NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
 	if err != nil {
 		panic(err)
 	}
@@ -3558,7 +3481,7 @@ func blsAggregatePublicKeys(
 			panic(runtimeErrors.NewUnreachableError())
 		}
 
-		publicKey, err := NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
+		publicKey, err := stdlib.NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
 		if err != nil {
 			panic(err)
 		}
@@ -3618,7 +3541,7 @@ func verifySignature(
 
 	hashAlgorithm := NewHashAlgorithmFromValue(inter, getLocationRange, hashAlgorithmValue)
 
-	publicKey, err := NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
+	publicKey, err := stdlib.NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
 	if err != nil {
 		return false
 	}

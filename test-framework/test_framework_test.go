@@ -84,6 +84,46 @@ func TestRunningSingleTest(t *testing.T) {
 	assert.NoError(t, result.err)
 }
 
+func TestAssertFunction(t *testing.T) {
+	t.Parallel()
+
+	code := `
+        import Test
+
+        pub fun testAssertWithNoArgs() {
+            Test.assert(true)
+        }
+
+        pub fun testAssertWithNoArgsFail() {
+            Test.assert(false)
+        }
+
+        pub fun testAssertWithMessage() {
+            Test.assert(true, "some reason")
+        }
+
+        pub fun testAssertWithMessageFail() {
+            Test.assert(false, "some reason")
+        }
+    `
+
+	runner := NewTestRunner()
+
+	err := runner.RunTest(code, "testAssertWithNoArgs")
+	assert.NoError(t, err)
+
+	err = runner.RunTest(code, "testAssertWithNoArgsFail")
+	require.Error(t, err)
+	assert.Equal(t, err.Error(), "assertion failed")
+
+	err = runner.RunTest(code, "testAssertWithMessage")
+	assert.NoError(t, err)
+
+	err = runner.RunTest(code, "testAssertWithMessageFail")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "assertion failed: some reason")
+}
+
 func TestExecuteScript(t *testing.T) {
 	t.Parallel()
 
@@ -99,8 +139,6 @@ func TestExecuteScript(t *testing.T) {
 
                 assert(result.status == Test.ResultStatus.succeeded)
                 assert((result.returnValue! as! Int) == 5)
-
-                log(result.returnValue)
             }
         `
 
@@ -125,8 +163,6 @@ func TestExecuteScript(t *testing.T) {
 
                 assert(result.status == Test.ResultStatus.succeeded)
                 assert((result.returnValue! as! Int) == 5)
-
-            log(result.returnValue)
         }
     `
 		runner := NewTestRunner()
@@ -438,9 +474,10 @@ func TestExecutingTransactions(t *testing.T) {
                 var account = blockchain.createAccount()
 
                 let tx = Test.Transaction(
-                    "transaction { execute{ assert(false) } }",
-                    account.address,
-                    [account]
+                    code: "transaction { execute{ assert(false) } }",
+                    authorizers: [account.address],
+                    signers: [account],
+                    arguments: [],
                 )
 
                 blockchain.addTransaction(tx)
@@ -464,9 +501,10 @@ func TestExecutingTransactions(t *testing.T) {
                 var account = blockchain.createAccount()
 
                 let tx = Test.Transaction(
-                    "transaction { execute{ assert(true) } }",
-                    nil,
-                    [account]
+                    code: "transaction { execute{ assert(true) } }",
+                    authorizers: [],
+                    signers: [account],
+                    arguments: [],
                 )
 
                 blockchain.addTransaction(tx)
@@ -493,9 +531,10 @@ func TestExecutingTransactions(t *testing.T) {
                 let account = blockchain.createAccount()
 
                 let tx = Test.Transaction(
-                    "transaction { prepare(acct: AuthAccount) {} execute{ assert(true) } }",
-                    account.address,
-                    [account]
+                    code: "transaction { prepare(acct: AuthAccount) {} execute{ assert(true) } }",
+                    authorizers: [account.address],
+                    signers: [account],
+                    arguments: [],
                 )
 
                 blockchain.addTransaction(tx)
@@ -522,9 +561,10 @@ func TestExecutingTransactions(t *testing.T) {
                 let account = blockchain.createAccount()
 
                 let tx = Test.Transaction(
-                    "transaction { execute{ assert(false) } }",
-                    nil,
-                    [account]
+                    code: "transaction { execute{ assert(false) } }",
+                    authorizers: [],
+                    signers: [account],
+                    arguments: [],
                 )
 
                 blockchain.addTransaction(tx)
@@ -588,9 +628,10 @@ func TestExecutingTransactions(t *testing.T) {
                 let account = blockchain.createAccount()
 
                 let tx = Test.Transaction(
-                    "transaction { execute{ assert(false) } }",
-                    nil,
-                    [account]
+                    code: "transaction { execute{ assert(false) } }",
+                    authorizers: [],
+                    signers: [account],
+                    arguments: [],
                 )
 
                 blockchain.addTransaction(tx)
@@ -618,9 +659,10 @@ func TestExecutingTransactions(t *testing.T) {
                 let account = blockchain.createAccount()
 
                 let tx = Test.Transaction(
-                    "transaction { execute{ assert(false) } }",
-                    nil,
-                    [account]
+                    code: "transaction { execute{ assert(false) } }",
+                    authorizers: [],
+                    signers: [account],
+                    arguments: [],
                 )
 
                 // Add two transactions
@@ -673,12 +715,68 @@ func TestExecutingTransactions(t *testing.T) {
                 var account = blockchain.createAccount()
 
                 let tx = Test.Transaction(
-                    "transaction { execute{ assert(true) } }",
-                    nil,
-                    [account]
+                    code: "transaction { execute{ assert(true) } }",
+                    authorizers: [],
+                    signers: [account],
+                    arguments: [],
                 )
 
-                let result = blockchain.executeTransaction(tx)!
+                let result = blockchain.executeTransaction(tx)
+                assert(result.status == Test.ResultStatus.succeeded)
+            }
+        `
+
+		runner := NewTestRunner()
+		err := runner.RunTest(code, "test")
+		assert.NoError(t, err)
+	})
+
+	t.Run("run transaction with args", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import Test
+
+            pub fun test() {
+                var blockchain = Test.newEmulatorBlockchain()
+                var account = blockchain.createAccount()
+
+                let tx = Test.Transaction(
+                    code: "transaction(a: Int, b: Int) { execute{ assert(a == b) } }",
+                    authorizers: [],
+                    signers: [account],
+                    arguments: [4, 4],
+                )
+
+                let result = blockchain.executeTransaction(tx)
+                assert(result.status == Test.ResultStatus.succeeded)
+            }
+        `
+
+		runner := NewTestRunner()
+		err := runner.RunTest(code, "test")
+		assert.NoError(t, err)
+	})
+
+	t.Run("run transaction with multiple authorizers", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import Test
+
+            pub fun test() {
+                var blockchain = Test.newEmulatorBlockchain()
+                var account1 = blockchain.createAccount()
+                var account2 = blockchain.createAccount()
+
+                let tx = Test.Transaction(
+                    code: "transaction() { prepare(acct1: AuthAccount, acct2: AuthAccount) {}  }",
+                    authorizers: [account1.address, account2.address],
+                    signers: [account1, account2],
+                    arguments: [],
+                )
+
+                let result = blockchain.executeTransaction(tx)
                 assert(result.status == Test.ResultStatus.succeeded)
             }
         `
@@ -700,12 +798,13 @@ func TestExecutingTransactions(t *testing.T) {
                 var account = blockchain.createAccount()
 
                 let tx = Test.Transaction(
-                    "transaction { execute{ assert(fail) } }",
-                    nil,
-                    [account]
+                    code: "transaction { execute{ assert(fail) } }",
+                    authorizers: [],
+                    signers: [account],
+                    arguments: [],
                 )
 
-                let result = blockchain.executeTransaction(tx)!
+                let result = blockchain.executeTransaction(tx)
                 assert(result.status == Test.ResultStatus.failed)
             }
         `
@@ -727,24 +826,27 @@ func TestExecutingTransactions(t *testing.T) {
                 var account = blockchain.createAccount()
 
                 let tx1 = Test.Transaction(
-                    "transaction { execute{ assert(true) } }",
-                    nil,
-                    [account]
+                    code: "transaction { execute{ assert(true) } }",
+                    authorizers: [],
+                    signers: [account],
+                    arguments: [],
                 )
 
                 let tx2 = Test.Transaction(
-                    "transaction { prepare(acct: AuthAccount) {} execute{ assert(true) } }",
-                    account.address,
-                    [account]
+                    code: "transaction { prepare(acct: AuthAccount) {} execute{ assert(true) } }",
+                    authorizers: [account.address],
+                    signers: [account],
+                    arguments: [],
                 )
 
                 let tx3 = Test.Transaction(
-                    "transaction { execute{ assert(false) } }",
-                    nil,
-                    [account]
+                    code: "transaction { execute{ assert(false) } }",
+                    authorizers: [],
+                    signers: [account],
+                    arguments: [],
                 )
 
-                let firstResults = blockchain.executeTransactions([tx1, tx2, tx3])!
+                let firstResults = blockchain.executeTransactions([tx1, tx2, tx3])
 
                 assert(firstResults.length == 3)
                 assert(firstResults[0].status == Test.ResultStatus.succeeded)
@@ -753,7 +855,7 @@ func TestExecutingTransactions(t *testing.T) {
 
 
                 // Execute them again: To verify the proper increment/reset of sequence numbers.
-                let secondResults = blockchain.executeTransactions([tx1, tx2, tx3])!
+                let secondResults = blockchain.executeTransactions([tx1, tx2, tx3])
 
                 assert(secondResults.length == 3)
                 assert(secondResults[0].status == Test.ResultStatus.succeeded)
@@ -778,7 +880,7 @@ func TestExecutingTransactions(t *testing.T) {
                 var blockchain = Test.newEmulatorBlockchain()
                 var account = blockchain.createAccount()
 
-                let result = blockchain.executeTransactions([])!
+                let result = blockchain.executeTransactions([])
                 assert(result.length == 0)
             }
         `
@@ -800,19 +902,21 @@ func TestExecutingTransactions(t *testing.T) {
                 var account = blockchain.createAccount()
 
                 let tx1 = Test.Transaction(
-                    "transaction { execute{ assert(true) } }",
-                    nil,
-                    [account]
+                    code: "transaction { execute{ assert(true) } }",
+                    authorizers: [],
+                    signers: [account],
+                    arguments: [],
                 )
 
                 blockchain.addTransaction(tx1)
 
                 let tx2 = Test.Transaction(
-                    "transaction { execute{ assert(true) } }",
-                    nil,
-                    [account]
+                    code: "transaction { execute{ assert(true) } }",
+                    authorizers: [],
+                    signers: [account],
+                    arguments: [],
                 )
-                let result = blockchain.executeTransaction(tx2)!
+                let result = blockchain.executeTransaction(tx2)
 
                 assert(result.status == Test.ResultStatus.succeeded)
             }

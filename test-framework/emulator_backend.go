@@ -22,6 +22,7 @@ import (
 	sdk "github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/crypto"
 	"github.com/onflow/flow-go-sdk/test"
+
 	fvmCrypto "github.com/onflow/flow-go/fvm/crypto"
 
 	emulator "github.com/onflow/flow-emulator"
@@ -44,20 +45,27 @@ type EmulatorBackend struct {
 
 	// blockOffset is the offset for the sequence number of the next transaction.
 	// This is equal to the number of transactions in the current block.
-	// Must be rest once the block is committed.
+	// Must be reset once the block is committed.
 	blockOffset uint64
+
+	// accountKeys is a mapping of account addresses with their keys.
+	accountKeys map[common.Address]map[string]keyInfo
+}
+
+type keyInfo struct {
+	accountKey *sdk.AccountKey
+	signer     crypto.Signer
 }
 
 func NewEmulatorBackend() *EmulatorBackend {
 	return &EmulatorBackend{
 		blockchain:  newBlockchain(),
 		blockOffset: 0,
+		accountKeys: map[common.Address]map[string]keyInfo{},
 	}
 }
 
 func (e *EmulatorBackend) RunScript(code string, args []interpreter.Value) *interpreter.ScriptResult {
-	// TODO: maybe re-use interpreter? Only needed for value conversion
-	// TODO: Deal with imported/composite types
 	inter, err := newInterpreter()
 	if err != nil {
 		return &interpreter.ScriptResult{
@@ -110,43 +118,65 @@ func (e *EmulatorBackend) RunScript(code string, args []interpreter.Value) *inte
 }
 
 func (e EmulatorBackend) CreateAccount() (*interpreter.Account, error) {
+	// Also generate the keys. So that users don't have to do this in two steps.
+	// Store the generated keys, so that it could be looked-up, given the address.
+
 	keyGen := test.AccountKeyGenerator()
 	accountKey, signer := keyGen.NewWithSigner()
-
-	// This relies on flow-go-sdk/test returning an `InMemorySigner`.
-	// TODO: Maybe copy over the code for `AccountKeyGenerator`.
-	inMemSigner := signer.(crypto.InMemorySigner)
 
 	address, err := e.blockchain.CreateAccount([]*sdk.AccountKey{accountKey}, nil)
 	if err != nil {
 		return nil, err
 	}
 
+	publicKey := accountKey.PublicKey.Encode()
+	encodedPublicKey := string(publicKey)
+
+	// Store the generated key and signer info.
+	// This info is used to sign transactions.
+	e.accountKeys[common.Address(address)] = map[string]keyInfo{
+		encodedPublicKey: {
+			accountKey: accountKey,
+			signer:     signer,
+		},
+	}
+
 	return &interpreter.Account{
 		Address: common.Address(address),
-		AccountKey: &interpreter.AccountKey{
-			KeyIndex: accountKey.Index,
-			PublicKey: &interpreter.PublicKey{
-				PublicKey: accountKey.PublicKey.Encode(),
-				SignAlgo:  fvmCrypto.CryptoToRuntimeSigningAlgorithm(accountKey.PublicKey.Algorithm()),
-			},
-			HashAlgo:  fvmCrypto.CryptoToRuntimeHashingAlgorithm(accountKey.HashAlgo),
-			Weight:    accountKey.Weight,
-			IsRevoked: accountKey.Revoked,
+		PublicKey: &interpreter.PublicKey{
+			PublicKey: publicKey,
+			SignAlgo:  fvmCrypto.CryptoToRuntimeSigningAlgorithm(accountKey.PublicKey.Algorithm()),
 		},
-		PrivateKey: inMemSigner.PrivateKey.Encode(),
 	}, nil
 }
 
 func (e *EmulatorBackend) AddTransaction(
 	code string,
-	authorizer *common.Address,
+	authorizers []common.Address,
 	signers []*interpreter.Account,
+	args []interpreter.Value,
 ) error {
 
-	tx := e.newTransaction(code, authorizer)
+	tx := e.newTransaction(code, authorizers)
 
-	err := e.signTransaction(tx, signers)
+	inter, err := newInterpreter()
+	if err != nil {
+		return err
+	}
+
+	for _, arg := range args {
+		exportedValue, err := runtime.ExportValue(arg, inter, interpreter.ReturnEmptyLocationRange)
+		if err != nil {
+			return err
+		}
+
+		err = tx.AddArgument(exportedValue)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = e.signTransaction(tx, signers)
 	if err != nil {
 		return err
 	}
@@ -162,7 +192,7 @@ func (e *EmulatorBackend) AddTransaction(
 	return nil
 }
 
-func (e *EmulatorBackend) newTransaction(code string, authorizer *common.Address) *sdk.Transaction {
+func (e *EmulatorBackend) newTransaction(code string, authorizers []common.Address) *sdk.Transaction {
 	serviceKey := e.blockchain.ServiceKey()
 
 	sequenceNumber := serviceKey.SequenceNumber + e.blockOffset
@@ -172,8 +202,8 @@ func (e *EmulatorBackend) newTransaction(code string, authorizer *common.Address
 		SetProposalKey(serviceKey.Address, serviceKey.Index, sequenceNumber).
 		SetPayer(serviceKey.Address)
 
-	if authorizer != nil {
-		tx = tx.AddAuthorizer(sdk.Address(*authorizer))
+	for _, authorizer := range authorizers {
+		tx = tx.AddAuthorizer(sdk.Address(authorizer))
 	}
 
 	return tx
@@ -190,19 +220,11 @@ func (e *EmulatorBackend) signTransaction(
 	for i := len(signerAccounts) - 1; i >= 0; i-- {
 		signerAccount := signerAccounts[i]
 
-		signAlgo := fvmCrypto.RuntimeToCryptoSigningAlgorithm(signerAccount.AccountKey.PublicKey.SignAlgo)
-		privateKey, err := crypto.DecodePrivateKey(signAlgo, signerAccount.PrivateKey)
-		if err != nil {
-			return err
-		}
+		publicKey := string(signerAccount.PublicKey.PublicKey)
+		accountKeys := e.accountKeys[signerAccount.Address]
+		keyInfo := accountKeys[publicKey]
 
-		hashAlgo := fvmCrypto.RuntimeToCryptoHashingAlgorithm(signerAccount.AccountKey.HashAlgo)
-		signer, err := crypto.NewInMemorySigner(privateKey, hashAlgo)
-		if err != nil {
-			return err
-		}
-
-		err = tx.SignPayload(sdk.Address(signerAccount.Address), 0, signer)
+		err := tx.SignPayload(sdk.Address(signerAccount.Address), 0, keyInfo.signer)
 		if err != nil {
 			return err
 		}
@@ -275,6 +297,9 @@ func newBlockchain(opts ...emulator.Option) *emulator.Blockchain {
 // newInterpreter creates an interpreter instance needed for the value conversion.
 //
 func newInterpreter() (*interpreter.Interpreter, error) {
+	// TODO: maybe re-use interpreter? Only needed for value conversion
+	// TODO: Deal with imported/composite types
+
 	predeclaredInterpreterValues := stdlib.BuiltinFunctions.ToInterpreterValueDeclarations()
 	predeclaredInterpreterValues = append(predeclaredInterpreterValues, stdlib.BuiltinValues.ToInterpreterValueDeclarations()...)
 
@@ -306,7 +331,7 @@ func newInterpreter() (*interpreter.Interpreter, error) {
 				}
 
 			default:
-				panic(errors.NewUnexpectedError("importing programs not implemented"))
+				panic(errors.NewUnexpectedError("importing of programs not implemented"))
 			}
 		}),
 	)
