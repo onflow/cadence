@@ -326,7 +326,12 @@ var testExpectFunction = interpreter.NewUnmeteredHostFunctionValue(
 			panic(errors.NewUnreachableError())
 		}
 
-		result := invokeMatcherTest(invocation.Interpreter, matcher, value)
+		result := invokeMatcherTest(
+			invocation.Interpreter,
+			matcher,
+			value,
+			invocation.GetLocationRange,
+		)
 
 		if !result {
 			panic(AssertionError{})
@@ -341,10 +346,11 @@ func invokeMatcherTest(
 	inter *interpreter.Interpreter,
 	matcher interpreter.MemberAccessibleValue,
 	value interpreter.Value,
+	locationRangeGetter func() interpreter.LocationRange,
 ) bool {
 	testFunc := matcher.GetMember(
 		inter,
-		interpreter.ReturnEmptyLocationRange,
+		locationRangeGetter,
 		matcherTestFunctionName,
 	)
 
@@ -408,7 +414,7 @@ var testNewEmulatorBlockchainFunction = interpreter.NewUnmeteredHostFunctionValu
 	func(invocation interpreter.Invocation) interpreter.Value {
 
 		// Create an `EmulatorBackend`
-		emulatorBackend := newEmulatorBackend(invocation.Interpreter)
+		emulatorBackend := newEmulatorBackend(invocation.Interpreter, invocation.GetLocationRange)
 
 		// Create a 'Blockchain' struct value, that wraps the emulator backend,
 		// by calling the constructor of 'Blockchain'.
@@ -446,10 +452,11 @@ var testNewEmulatorBlockchainFunction = interpreter.NewUnmeteredHostFunctionValu
 // Accepts test function that accepts subtype of 'AnyStruct'.
 //
 // Signature:
-//    Test.NewMatcher<T>(test: ((T): Bool)): AnyStruct<Test.Matcher>
-// where T is optional, and bound to 'AnyStruct'.
+//    fun NewMatcher<T: AnyStruct>(test: ((T): Bool)): AnyStruct{Test.Matcher}
 //
-// Sample usage: Test.NewMatcher(fun (_value: Int: Bool) { return true})
+// where `T` is optional, and bound to `AnyStruct`.
+//
+// Sample usage: `Test.NewMatcher(fun (_ value: Int: Bool) { return true })`
 
 const newMatcherFunctionDocString = `NewMatcher function`
 
@@ -510,7 +517,7 @@ var newMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
 
 		inter := invocation.Interpreter
 
-		return newDefaultMatcher(inter, test)
+		return newDefaultMatcher(inter, test, invocation.GetLocationRange)
 	},
 	equalMatcherFunctionType,
 )
@@ -572,7 +579,10 @@ var EmulatorBackendType = func() *sema.CompositeType {
 	return ty
 }()
 
-func newEmulatorBackend(inter *interpreter.Interpreter) *interpreter.CompositeValue {
+func newEmulatorBackend(
+	inter *interpreter.Interpreter,
+	locationRangeGetter func() interpreter.LocationRange,
+) *interpreter.CompositeValue {
 	var fields = []interpreter.CompositeField{
 		{
 			Name:  emulatorBackendExecuteScriptFunctionName,
@@ -597,7 +607,7 @@ func newEmulatorBackend(inter *interpreter.Interpreter) *interpreter.CompositeVa
 
 	return interpreter.NewCompositeValue(
 		inter,
-		interpreter.ReturnEmptyLocationRange,
+		locationRangeGetter,
 		EmulatorBackendType.Location,
 		emulatorBackendTypeName,
 		common.CompositeKindStructure,
@@ -773,12 +783,16 @@ var emulatorBackendCreateAccountFunction = interpreter.NewUnmeteredHostFunctionV
 			panic(err)
 		}
 
-		return newAccountValue(invocation.Interpreter, account)
+		return newAccountValue(invocation.Interpreter, account, invocation.GetLocationRange)
 	},
 	emulatorBackendCreateAccountFunctionType,
 )
 
-func newAccountValue(inter *interpreter.Interpreter, account *interpreter.Account) interpreter.Value {
+func newAccountValue(
+	inter *interpreter.Interpreter,
+	account *interpreter.Account,
+	locationRangeGetter func() interpreter.LocationRange,
+) interpreter.Value {
 
 	// Create address value
 	address := interpreter.NewAddressValue(nil, account.Address)
@@ -786,7 +800,7 @@ func newAccountValue(inter *interpreter.Interpreter, account *interpreter.Accoun
 	// Create public key
 	publicKey := interpreter.NewPublicKeyValue(
 		inter,
-		interpreter.ReturnEmptyLocationRange,
+		locationRangeGetter,
 		interpreter.ByteSliceToByteArrayValue(
 			inter,
 			account.PublicKey.PublicKey,
@@ -858,6 +872,7 @@ var emulatorBackendAddTransactionFunction = interpreter.NewUnmeteredHostFunction
 		}
 
 		inter := invocation.Interpreter
+		locationRangeGetter := invocation.GetLocationRange
 
 		transactionValue, ok := invocation.Arguments[0].(interpreter.MemberAccessibleValue)
 		if !ok {
@@ -867,7 +882,7 @@ var emulatorBackendAddTransactionFunction = interpreter.NewUnmeteredHostFunction
 		// Get transaction code
 		codeValue := transactionValue.GetMember(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			locationRangeGetter,
 			transactionCodeFieldName,
 		)
 		code, ok := codeValue.(*interpreter.StringValue)
@@ -878,7 +893,7 @@ var emulatorBackendAddTransactionFunction = interpreter.NewUnmeteredHostFunction
 		// Get authorizers
 		authorizerValue := transactionValue.GetMember(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			locationRangeGetter,
 			transactionAuthorizerFieldName,
 		)
 
@@ -887,16 +902,16 @@ var emulatorBackendAddTransactionFunction = interpreter.NewUnmeteredHostFunction
 		// Get signers
 		signersValue := transactionValue.GetMember(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			locationRangeGetter,
 			transactionSignersFieldName,
 		)
 
-		signerAccounts := accountsFromValue(inter, signersValue)
+		signerAccounts := accountsFromValue(inter, signersValue, invocation.GetLocationRange)
 
 		// Get arguments
 		argsValue := transactionValue.GetMember(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			locationRangeGetter,
 			transactionArgsFieldName,
 		)
 		args, err := arrayValueToSlice(argsValue)
@@ -936,7 +951,12 @@ func addressesFromValue(accountsValue interpreter.Value) []common.Address {
 	return addresses
 }
 
-func accountsFromValue(inter *interpreter.Interpreter, accountsValue interpreter.Value) []*interpreter.Account {
+func accountsFromValue(
+	inter *interpreter.Interpreter,
+	accountsValue interpreter.Value,
+	locationRangeGetter func() interpreter.LocationRange,
+) []*interpreter.Account {
+
 	accountsArray, ok := accountsValue.(*interpreter.ArrayValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -953,7 +973,7 @@ func accountsFromValue(inter *interpreter.Interpreter, accountsValue interpreter
 		// Get address
 		addressValue := accountValue.GetMember(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			locationRangeGetter,
 			accountAddressFieldName,
 		)
 		address, ok := addressValue.(interpreter.AddressValue)
@@ -964,7 +984,7 @@ func accountsFromValue(inter *interpreter.Interpreter, accountsValue interpreter
 		// Get public key
 		publicKeyVal, ok := accountValue.GetMember(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			locationRangeGetter,
 			sema.AccountKeyPublicKeyField,
 		).(interpreter.MemberAccessibleValue)
 
@@ -972,7 +992,7 @@ func accountsFromValue(inter *interpreter.Interpreter, accountsValue interpreter
 			panic(errors.NewUnreachableError())
 		}
 
-		publicKey, err := NewPublicKeyFromValue(inter, interpreter.ReturnEmptyLocationRange, publicKeyVal)
+		publicKey, err := NewPublicKeyFromValue(inter, locationRangeGetter, publicKeyVal)
 		if err != nil {
 			panic(err)
 		}
@@ -1217,7 +1237,7 @@ var equalMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
 
 				equal := thisValue.Equal(
 					inter,
-					interpreter.ReturnEmptyLocationRange,
+					invocation.GetLocationRange,
 					otherValue,
 				)
 
@@ -1226,7 +1246,7 @@ var equalMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
 			matcherTestType,
 		)
 
-		return newDefaultMatcher(inter, equalTestFunc)
+		return newDefaultMatcher(inter, equalTestFunc, invocation.GetLocationRange)
 	},
 	equalMatcherFunctionType,
 )
@@ -1309,11 +1329,12 @@ var defaultMatcherType = func() *sema.CompositeType {
 func newDefaultMatcher(
 	inter *interpreter.Interpreter,
 	testFunc interpreter.FunctionValue,
+	locationRangeGetter func() interpreter.LocationRange,
 ) *interpreter.CompositeValue {
 
 	matcher := interpreter.NewCompositeValue(
 		inter,
-		interpreter.ReturnEmptyLocationRange,
+		locationRangeGetter,
 		defaultMatcherType.Location,
 		defaultMatcherTypeName,
 		common.CompositeKindStructure,
@@ -1426,8 +1447,6 @@ func init() {
 
 	defaultMatcherOrFunction = interpreter.NewUnmeteredHostFunctionValue(
 		func(orFuncInvocation interpreter.Invocation) interpreter.Value {
-			inter := orFuncInvocation.Interpreter
-
 			thisMatcher := orFuncInvocation.Self
 
 			otherMatcher, ok := orFuncInvocation.Arguments[0].(*interpreter.CompositeValue)
@@ -1438,35 +1457,51 @@ func init() {
 			testFunc := interpreter.NewHostFunctionValue(
 				nil,
 				func(invocation interpreter.Invocation) interpreter.Value {
+					inter := invocation.Interpreter
+					locationRangeGetter := invocation.GetLocationRange
 
 					value, ok := invocation.Arguments[0].(interpreter.EquatableValue)
 					if !ok {
 						panic(errors.NewUnreachableError())
 					}
 
-					thisMatcherTestResult := invokeMatcherTest(invocation.Interpreter, thisMatcher, value)
+					thisMatcherTestResult := invokeMatcherTest(
+						inter,
+						thisMatcher,
+						value,
+						locationRangeGetter,
+					)
+
 					if thisMatcherTestResult {
 						return interpreter.BoolValue(true)
 					}
 
-					otherMatcherTestResult := invokeMatcherTest(invocation.Interpreter, otherMatcher, value)
+					otherMatcherTestResult := invokeMatcherTest(
+						inter,
+						otherMatcher,
+						value,
+						locationRangeGetter,
+					)
+
 					return interpreter.BoolValue(otherMatcherTestResult)
 				},
 				matcherTestType,
 			)
 
-			return newDefaultMatcher(inter, testFunc)
+			return newDefaultMatcher(
+				orFuncInvocation.Interpreter,
+				testFunc,
+				orFuncInvocation.GetLocationRange,
+			)
 		},
 		defaultMatcherOrFunctionType,
 	)
 
 	defaultMatcherAndFunction = interpreter.NewUnmeteredHostFunctionValue(
-		func(orFuncInvocation interpreter.Invocation) interpreter.Value {
-			inter := orFuncInvocation.Interpreter
+		func(andFuncInvocation interpreter.Invocation) interpreter.Value {
+			thisMatcher := andFuncInvocation.Self
 
-			thisMatcher := orFuncInvocation.Self
-
-			otherMatcher, ok := orFuncInvocation.Arguments[0].(*interpreter.CompositeValue)
+			otherMatcher, ok := andFuncInvocation.Arguments[0].(*interpreter.CompositeValue)
 			if !ok {
 				panic(errors.NewUnexpectedError("invalid type for matcher"))
 			}
@@ -1474,24 +1509,40 @@ func init() {
 			testFunc := interpreter.NewHostFunctionValue(
 				nil,
 				func(invocation interpreter.Invocation) interpreter.Value {
+					inter := invocation.Interpreter
+					locationRangeGetter := invocation.GetLocationRange
 
 					value, ok := invocation.Arguments[0].(interpreter.EquatableValue)
 					if !ok {
 						panic(errors.NewUnreachableError())
 					}
 
-					thisMatcherTestResult := invokeMatcherTest(invocation.Interpreter, thisMatcher, value)
+					thisMatcherTestResult := invokeMatcherTest(
+						inter,
+						thisMatcher,
+						value,
+						locationRangeGetter,
+					)
 					if !thisMatcherTestResult {
 						return interpreter.BoolValue(false)
 					}
 
-					otherMatcherTestResult := invokeMatcherTest(invocation.Interpreter, otherMatcher, value)
+					otherMatcherTestResult := invokeMatcherTest(
+						inter,
+						otherMatcher,
+						value,
+						locationRangeGetter,
+					)
 					return interpreter.BoolValue(otherMatcherTestResult)
 				},
 				matcherTestType,
 			)
 
-			return newDefaultMatcher(inter, testFunc)
+			return newDefaultMatcher(
+				andFuncInvocation.Interpreter,
+				testFunc,
+				andFuncInvocation.GetLocationRange,
+			)
 		},
 		defaultMatcherOrFunctionType,
 	)
