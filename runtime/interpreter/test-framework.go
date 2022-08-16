@@ -22,7 +22,9 @@
 package interpreter
 
 import (
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 // TestFramework is the interface to be implemented by the test providers.
@@ -30,12 +32,39 @@ import (
 // This is used as a way to inject test provider dependencies dynamically.
 //
 type TestFramework interface {
-	RunScript(code string, args []Value) ScriptResult
+	RunScript(code string, arguments []Value) *ScriptResult
+
+	CreateAccount() (*Account, error)
+
+	AddTransaction(
+		code string,
+		authorizers []common.Address,
+		signers []*Account,
+		arguments []Value,
+	) error
+
+	ExecuteNextTransaction() *TransactionResult
+
+	CommitBlock() error
 }
 
 type ScriptResult struct {
 	Value Value
 	Error error
+}
+
+type TransactionResult struct {
+	Error error
+}
+
+type Account struct {
+	Address   common.Address
+	PublicKey *PublicKey
+}
+
+type PublicKey struct {
+	PublicKey []byte
+	SignAlgo  sema.SignatureAlgorithm
 }
 
 // TestFrameworkNotProvidedError is the error thrown if test-stdlib functionality is

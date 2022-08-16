@@ -3094,7 +3094,7 @@ func (r *interpreterRuntime) newAccountKeysAddFunction(
 			inter := invocation.Interpreter
 			getLocationRange := invocation.GetLocationRange
 
-			publicKey, err := NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
+			publicKey, err := stdlib.NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
 			if err != nil {
 				panic(err)
 			}
@@ -3307,56 +3307,6 @@ func (r *interpreterRuntime) resourceOwnerChangedHandler(
 	}
 }
 
-func NewPublicKeyFromValue(
-	inter *interpreter.Interpreter,
-	getLocationRange func() interpreter.LocationRange,
-	publicKey interpreter.MemberAccessibleValue,
-) (
-	*PublicKey,
-	error,
-) {
-
-	// publicKey field
-	key := publicKey.GetMember(inter, getLocationRange, sema.PublicKeyPublicKeyField)
-
-	byteArray, err := interpreter.ByteArrayValueToByteSlice(inter, key)
-	if err != nil {
-		return nil, runtimeErrors.NewUnexpectedError("public key needs to be a byte array. %w", err)
-	}
-
-	// sign algo field
-	signAlgoField := publicKey.GetMember(inter, getLocationRange, sema.PublicKeySignAlgoField)
-	if signAlgoField == nil {
-		return nil, runtimeErrors.NewUnexpectedError("sign algorithm is not set")
-	}
-
-	signAlgoValue, ok := signAlgoField.(*interpreter.CompositeValue)
-	if !ok {
-		return nil, runtimeErrors.NewUnexpectedError(
-			"sign algorithm does not belong to type: %s",
-			sema.SignatureAlgorithmType.QualifiedString(),
-		)
-	}
-
-	rawValue := signAlgoValue.GetField(inter, getLocationRange, sema.EnumRawValueFieldName)
-	if rawValue == nil {
-		return nil, runtimeErrors.NewDefaultUserError("sign algorithm raw value is not set")
-	}
-
-	signAlgoRawValue, ok := rawValue.(interpreter.UInt8Value)
-	if !ok {
-		return nil, runtimeErrors.NewUnexpectedError(
-			"sign algorithm raw-value does not belong to type: %s",
-			sema.UInt8Type.QualifiedString(),
-		)
-	}
-
-	return &PublicKey{
-		PublicKey: byteArray,
-		SignAlgo:  SignatureAlgorithm(signAlgoRawValue.ToInt()),
-	}, nil
-}
-
 func NewPublicKeyValue(
 	inter *interpreter.Interpreter,
 	getLocationRange func() interpreter.LocationRange,
@@ -3432,7 +3382,7 @@ func validatePublicKey(
 	publicKeyValue *interpreter.CompositeValue,
 	runtimeInterface Interface,
 ) error {
-	publicKey, err := NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
+	publicKey, err := stdlib.NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
 	if err != nil {
 		return err
 	}
@@ -3452,7 +3402,7 @@ func blsVerifyPoP(
 	runtimeInterface Interface,
 ) interpreter.BoolValue {
 
-	publicKey, err := NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
+	publicKey, err := stdlib.NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
 	if err != nil {
 		panic(err)
 	}
@@ -3531,7 +3481,7 @@ func blsAggregatePublicKeys(
 			panic(runtimeErrors.NewUnreachableError())
 		}
 
-		publicKey, err := NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
+		publicKey, err := stdlib.NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
 		if err != nil {
 			panic(err)
 		}
@@ -3591,7 +3541,7 @@ func verifySignature(
 
 	hashAlgorithm := NewHashAlgorithmFromValue(inter, getLocationRange, hashAlgorithmValue)
 
-	publicKey, err := NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
+	publicKey, err := stdlib.NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
 	if err != nil {
 		return false
 	}

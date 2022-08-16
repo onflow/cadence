@@ -38,8 +38,19 @@ const testContractTypeName = "Test"
 const blockchainTypeName = "Blockchain"
 const blockchainBackendTypeName = "BlockchainBackend"
 const scriptResultTypeName = "ScriptResult"
+const transactionResultTypeName = "TransactionResult"
 const resultStatusTypeName = "ResultStatus"
+const accountTypeName = "Account"
+
 const succeededCaseName = "succeeded"
+const failedCaseName = "failed"
+
+const transactionCodeFieldName = "code"
+const transactionAuthorizerFieldName = "authorizers"
+const transactionSignersFieldName = "signers"
+const transactionArgsFieldName = "arguments"
+
+const accountAddressFieldName = "address"
 
 var TestContractLocation = common.IdentifierLocation(testContractTypeName)
 
@@ -243,7 +254,6 @@ var testNewEmulatorBlockchainFunctionType = &sema.FunctionType{
 
 var testNewEmulatorBlockchainFunction = interpreter.NewUnmeteredHostFunctionValue(
 	func(invocation interpreter.Invocation) interpreter.Value {
-
 		inter := invocation.Interpreter
 
 		// Create an `EmulatorBackend`
@@ -301,6 +311,30 @@ var EmulatorBackendType = func() *sema.CompositeType {
 			emulatorBackendExecuteScriptFunctionType,
 			emulatorBackendExecuteScriptFunctionDocString,
 		),
+		sema.NewUnmeteredPublicFunctionMember(
+			ty,
+			emulatorBackendCreateAccountFunctionName,
+			emulatorBackendCreateAccountFunctionType,
+			emulatorBackendCreateAccountFunctionDocString,
+		),
+		sema.NewUnmeteredPublicFunctionMember(
+			ty,
+			emulatorBackendAddTransactionFunctionName,
+			emulatorBackendAddTransactionFunctionType,
+			emulatorBackendAddTransactionFunctionDocString,
+		),
+		sema.NewUnmeteredPublicFunctionMember(
+			ty,
+			emulatorBackendExecuteNextTransactionFunctionName,
+			emulatorBackendExecuteNextTransactionFunctionType,
+			emulatorBackendExecuteNextTransactionFunctionDocString,
+		),
+		sema.NewUnmeteredPublicFunctionMember(
+			ty,
+			emulatorBackendCommitBlockFunctionName,
+			emulatorBackendCommitBlockFunctionType,
+			emulatorBackendCommitBlockFunctionDocString,
+		),
 	}
 
 	ty.Members = sema.GetMembersAsMap(members)
@@ -318,6 +352,21 @@ func newEmulatorBackend(
 		{
 			Name:  emulatorBackendExecuteScriptFunctionName,
 			Value: emulatorBackendExecuteScriptFunction,
+		},
+		{
+			Name:  emulatorBackendCreateAccountFunctionName,
+			Value: emulatorBackendCreateAccountFunction,
+		}, {
+			Name:  emulatorBackendAddTransactionFunctionName,
+			Value: emulatorBackendAddTransactionFunction,
+		},
+		{
+			Name:  emulatorBackendExecuteNextTransactionFunctionName,
+			Value: emulatorBackendExecuteNextTransactionFunction,
+		},
+		{
+			Name:  emulatorBackendCommitBlockFunctionName,
+			Value: emulatorBackendCommitBlockFunction,
 		},
 	}
 
@@ -363,6 +412,11 @@ var emulatorBackendExecuteScriptFunctionType = func() *sema.FunctionType {
 
 var emulatorBackendExecuteScriptFunction = interpreter.NewUnmeteredHostFunctionValue(
 	func(invocation interpreter.Invocation) interpreter.Value {
+		testFramework := invocation.Interpreter.TestFramework
+		if testFramework == nil {
+			panic(interpreter.TestFrameworkNotProvidedError{})
+		}
+
 		script, ok := invocation.Arguments[0].(*interpreter.StringValue)
 		if !ok {
 			panic(errors.NewUnreachableError())
@@ -373,28 +427,11 @@ var emulatorBackendExecuteScriptFunction = interpreter.NewUnmeteredHostFunctionV
 			panic(errors.NewUnexpectedErrorFromCause(err))
 		}
 
-		var result interpreter.ScriptResult
+		result := testFramework.RunScript(script.Str, args)
 
-		testFramework := invocation.Interpreter.TestFramework
-		if testFramework != nil {
-			result = testFramework.RunScript(script.Str, args)
-		} else {
-			panic(interpreter.TestFrameworkNotProvidedError{})
-		}
+		succeeded := result.Error == nil
 
-		err = result.Error
-		if err != nil {
-			// TODO: Revisit this logic
-			if errors.IsUserError(err) {
-				panic(TestFailedError{
-					Err: err,
-				})
-			} else {
-				panic(err)
-			}
-		}
-
-		return createScriptResult(invocation.Interpreter, result.Value)
+		return createScriptResult(invocation.Interpreter, result.Value, succeeded)
 	},
 	emulatorBackendExecuteScriptFunctionType,
 )
@@ -417,11 +454,17 @@ func arrayValueToSlice(value interpreter.Value) ([]interpreter.Value, error) {
 
 // createScriptResult Creates a "ScriptResult" using the return value of the executed script.
 //
-func createScriptResult(inter *interpreter.Interpreter, returnValue interpreter.Value) interpreter.Value {
-	// Lookup and get 'ResultStatus.succeeded' value.
+func createScriptResult(inter *interpreter.Interpreter, returnValue interpreter.Value, succeeded bool) interpreter.Value {
+	// Lookup and get 'ResultStatus' enum value.
 	resultStatusConstructor := getConstructor(inter, resultStatusTypeName)
-	succeededVar := resultStatusConstructor.NestedVariables[succeededCaseName]
-	succeeded := succeededVar.GetValue()
+	var status interpreter.Value
+	if succeeded {
+		succeededVar := resultStatusConstructor.NestedVariables[succeededCaseName]
+		status = succeededVar.GetValue()
+	} else {
+		succeededVar := resultStatusConstructor.NestedVariables[failedCaseName]
+		status = succeededVar.GetValue()
+	}
 
 	// Create a 'ScriptResult' by calling its constructor.
 	scriptResultConstructor := getConstructor(inter, scriptResultTypeName)
@@ -429,7 +472,7 @@ func createScriptResult(inter *interpreter.Interpreter, returnValue interpreter.
 		scriptResultConstructor,
 		scriptResultConstructor.Type,
 		[]interpreter.Value{
-			succeeded,
+			status,
 			returnValue,
 		},
 	)
@@ -450,6 +493,384 @@ func getConstructor(inter *interpreter.Interpreter, typeName string) *interprete
 
 	return resultStatusConstructor
 }
+
+// 'EmulatorBackend.createAccount' function
+
+const emulatorBackendCreateAccountFunctionName = "createAccount"
+
+const emulatorBackendCreateAccountFunctionDocString = `create account function`
+
+var emulatorBackendCreateAccountFunctionType = func() *sema.FunctionType {
+	// The type of the 'createAccount' function of 'EmulatorBackend' (interface-implementation)
+	// is same as that of 'BlockchainBackend' interface.
+	typ, ok := blockchainBackendInterfaceType.Members.Get(emulatorBackendCreateAccountFunctionName)
+	if !ok {
+		panic(errors.NewUnexpectedError(
+			"cannot find type %s.%s",
+			blockchainBackendTypeName,
+			emulatorBackendCreateAccountFunctionName,
+		))
+	}
+
+	functionType, ok := typ.TypeAnnotation.Type.(*sema.FunctionType)
+	if !ok {
+		panic(errors.NewUnexpectedError(
+			"invalid type for %s. expected function",
+			emulatorBackendCreateAccountFunctionName,
+		))
+	}
+
+	return functionType
+}()
+
+var emulatorBackendCreateAccountFunction = interpreter.NewUnmeteredHostFunctionValue(
+	func(invocation interpreter.Invocation) interpreter.Value {
+		testFramework := invocation.Interpreter.TestFramework
+		if testFramework == nil {
+			panic(interpreter.TestFrameworkNotProvidedError{})
+		}
+
+		account, err := testFramework.CreateAccount()
+		if err != nil {
+			panic(err)
+		}
+
+		return newAccountValue(invocation.Interpreter, account)
+	},
+	emulatorBackendCreateAccountFunctionType,
+)
+
+func newAccountValue(inter *interpreter.Interpreter, account *interpreter.Account) interpreter.Value {
+
+	// Create address value
+	address := interpreter.NewAddressValue(nil, account.Address)
+
+	// Create public key
+	publicKey := interpreter.NewPublicKeyValue(
+		inter,
+		interpreter.ReturnEmptyLocationRange,
+		interpreter.ByteSliceToByteArrayValue(
+			inter,
+			account.PublicKey.PublicKey,
+		),
+		NewSignatureAlgorithmCase(
+			inter,
+			account.PublicKey.SignAlgo.RawValue(),
+		),
+		inter.PublicKeyValidationHandler,
+	)
+
+	// Create an 'Account' by calling its constructor.
+	accountConstructor := getConstructor(inter, accountTypeName)
+	accountValue, err := inter.InvokeExternally(
+		accountConstructor,
+		accountConstructor.Type,
+		[]interpreter.Value{
+			address,
+			publicKey,
+		},
+	)
+
+	if err != nil {
+		panic(err)
+	}
+
+	return accountValue
+}
+
+// 'EmulatorBackend.addTransaction' function
+
+const emulatorBackendAddTransactionFunctionName = "addTransaction"
+
+const emulatorBackendAddTransactionFunctionDocString = `add transaction function`
+
+var emulatorBackendAddTransactionFunctionType = func() *sema.FunctionType {
+	// The type of the 'addTransaction' function of 'EmulatorBackend' (interface-implementation)
+	// is same as that of 'BlockchainBackend' interface.
+	typ, ok := blockchainBackendInterfaceType.Members.Get(emulatorBackendAddTransactionFunctionName)
+	if !ok {
+		panic(errors.NewUnexpectedError(
+			"cannot find type %s.%s",
+			blockchainBackendTypeName,
+			emulatorBackendAddTransactionFunctionName,
+		))
+	}
+
+	functionType, ok := typ.TypeAnnotation.Type.(*sema.FunctionType)
+	if !ok {
+		panic(errors.NewUnexpectedError(
+			"invalid type for %s. expected function",
+			emulatorBackendAddTransactionFunctionName,
+		))
+	}
+
+	return functionType
+}()
+
+var emulatorBackendAddTransactionFunction = interpreter.NewUnmeteredHostFunctionValue(
+	func(invocation interpreter.Invocation) interpreter.Value {
+		testFramework := invocation.Interpreter.TestFramework
+		if testFramework == nil {
+			panic(interpreter.TestFrameworkNotProvidedError{})
+		}
+
+		inter := invocation.Interpreter
+
+		transactionValue, ok := invocation.Arguments[0].(interpreter.MemberAccessibleValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		// Get transaction code
+		codeValue := transactionValue.GetMember(
+			inter,
+			interpreter.ReturnEmptyLocationRange,
+			transactionCodeFieldName,
+		)
+		code, ok := codeValue.(*interpreter.StringValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		// Get authorizers
+		authorizerValue := transactionValue.GetMember(
+			inter,
+			interpreter.ReturnEmptyLocationRange,
+			transactionAuthorizerFieldName,
+		)
+
+		authorizers := addressesFromValue(authorizerValue)
+
+		// Get signers
+		signersValue := transactionValue.GetMember(
+			inter,
+			interpreter.ReturnEmptyLocationRange,
+			transactionSignersFieldName,
+		)
+
+		signerAccounts := accountsFromValue(inter, signersValue)
+
+		// Get arguments
+		argsValue := transactionValue.GetMember(
+			inter,
+			interpreter.ReturnEmptyLocationRange,
+			transactionArgsFieldName,
+		)
+		args, err := arrayValueToSlice(argsValue)
+		if err != nil {
+			panic(errors.NewUnexpectedErrorFromCause(err))
+		}
+
+		err = testFramework.AddTransaction(code.Str, authorizers, signerAccounts, args)
+		if err != nil {
+			panic(err)
+		}
+
+		return interpreter.VoidValue{}
+	},
+	emulatorBackendAddTransactionFunctionType,
+)
+
+func addressesFromValue(accountsValue interpreter.Value) []common.Address {
+	accountsArray, ok := accountsValue.(*interpreter.ArrayValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	addresses := make([]common.Address, 0)
+
+	accountsArray.Iterate(nil, func(element interpreter.Value) (resume bool) {
+		address, ok := element.(interpreter.AddressValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		addresses = append(addresses, common.Address(address))
+
+		return true
+	})
+
+	return addresses
+}
+
+func accountsFromValue(inter *interpreter.Interpreter, accountsValue interpreter.Value) []*interpreter.Account {
+	accountsArray, ok := accountsValue.(*interpreter.ArrayValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	accounts := make([]*interpreter.Account, 0)
+
+	accountsArray.Iterate(nil, func(element interpreter.Value) (resume bool) {
+		accountValue, ok := element.(interpreter.MemberAccessibleValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		// Get address
+		addressValue := accountValue.GetMember(
+			inter,
+			interpreter.ReturnEmptyLocationRange,
+			accountAddressFieldName,
+		)
+		address, ok := addressValue.(interpreter.AddressValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		// Get public key
+		publicKeyVal, ok := accountValue.GetMember(
+			inter,
+			interpreter.ReturnEmptyLocationRange,
+			sema.AccountKeyPublicKeyField,
+		).(interpreter.MemberAccessibleValue)
+
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		publicKey, err := NewPublicKeyFromValue(inter, interpreter.ReturnEmptyLocationRange, publicKeyVal)
+		if err != nil {
+			panic(err)
+		}
+
+		accounts = append(accounts, &interpreter.Account{
+			Address:   common.Address(address),
+			PublicKey: publicKey,
+		})
+
+		return true
+	})
+
+	return accounts
+}
+
+// 'EmulatorBackend.executeNextTransaction' function
+
+const emulatorBackendExecuteNextTransactionFunctionName = "executeNextTransaction"
+
+const emulatorBackendExecuteNextTransactionFunctionDocString = `execute next transaction function`
+
+var emulatorBackendExecuteNextTransactionFunctionType = func() *sema.FunctionType {
+	// The type of the 'executeNextTransaction' function of 'EmulatorBackend' (interface-implementation)
+	// is same as that of 'BlockchainBackend' interface.
+	typ, ok := blockchainBackendInterfaceType.Members.Get(emulatorBackendExecuteNextTransactionFunctionName)
+	if !ok {
+		panic(errors.NewUnexpectedError(
+			"cannot find type %s.%s",
+			blockchainBackendTypeName,
+			emulatorBackendExecuteNextTransactionFunctionName,
+		))
+	}
+
+	functionType, ok := typ.TypeAnnotation.Type.(*sema.FunctionType)
+	if !ok {
+		panic(errors.NewUnexpectedError(
+			"invalid type for %s. expected function",
+			emulatorBackendExecuteNextTransactionFunctionName,
+		))
+	}
+
+	return functionType
+}()
+
+var emulatorBackendExecuteNextTransactionFunction = interpreter.NewUnmeteredHostFunctionValue(
+	func(invocation interpreter.Invocation) interpreter.Value {
+		testFramework := invocation.Interpreter.TestFramework
+		if testFramework == nil {
+			panic(interpreter.TestFrameworkNotProvidedError{})
+		}
+
+		result := testFramework.ExecuteNextTransaction()
+
+		// If there are no transactions to run, then return `nil`.
+		if result == nil {
+			return interpreter.NilValue{}
+		}
+
+		succeeded := result.Error == nil
+
+		return createTransactionResult(invocation.Interpreter, succeeded)
+	},
+	emulatorBackendExecuteNextTransactionFunctionType,
+)
+
+// createTransactionResult Creates a "TransactionResult" indicating the status of the transaction execution.
+//
+func createTransactionResult(inter *interpreter.Interpreter, succeeded bool) interpreter.Value {
+	// Lookup and get 'ResultStatus' enum value.
+	resultStatusConstructor := getConstructor(inter, resultStatusTypeName)
+	var status interpreter.Value
+	if succeeded {
+		succeededVar := resultStatusConstructor.NestedVariables[succeededCaseName]
+		status = succeededVar.GetValue()
+	} else {
+		succeededVar := resultStatusConstructor.NestedVariables[failedCaseName]
+		status = succeededVar.GetValue()
+	}
+
+	// Create a 'TransactionResult' by calling its constructor.
+	transactionResultConstructor := getConstructor(inter, transactionResultTypeName)
+	transactionResult, err := inter.InvokeExternally(
+		transactionResultConstructor,
+		transactionResultConstructor.Type,
+		[]interpreter.Value{
+			status,
+		},
+	)
+
+	if err != nil {
+		panic(err)
+	}
+
+	return transactionResult
+}
+
+// 'EmulatorBackend.commitBlock' function
+
+const emulatorBackendCommitBlockFunctionName = "commitBlock"
+
+const emulatorBackendCommitBlockFunctionDocString = `commit block function`
+
+var emulatorBackendCommitBlockFunctionType = func() *sema.FunctionType {
+	// The type of the 'commitBlock' function of 'EmulatorBackend' (interface-implementation)
+	// is same as that of 'BlockchainBackend' interface.
+	typ, ok := blockchainBackendInterfaceType.Members.Get(emulatorBackendCommitBlockFunctionName)
+	if !ok {
+		panic(errors.NewUnexpectedError(
+			"cannot find type %s.%s",
+			blockchainBackendTypeName,
+			emulatorBackendCommitBlockFunctionName,
+		))
+	}
+
+	functionType, ok := typ.TypeAnnotation.Type.(*sema.FunctionType)
+	if !ok {
+		panic(errors.NewUnexpectedError(
+			"invalid type for %s. expected function",
+			emulatorBackendCommitBlockFunctionName,
+		))
+	}
+
+	return functionType
+}()
+
+var emulatorBackendCommitBlockFunction = interpreter.NewUnmeteredHostFunctionValue(
+	func(invocation interpreter.Invocation) interpreter.Value {
+		testFramework := invocation.Interpreter.TestFramework
+		if testFramework == nil {
+			panic(interpreter.TestFrameworkNotProvidedError{})
+		}
+
+		err := testFramework.CommitBlock()
+		if err != nil {
+			panic(err)
+		}
+
+		return interpreter.VoidValue{}
+	},
+	emulatorBackendCommitBlockFunctionType,
+)
 
 // TestFailedError
 

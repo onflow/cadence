@@ -14,14 +14,17 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
- * Based on https://github.com/wk8/go-ordered-map, Copyright Jean Rougé
- *
  */
 
 package test
 
 import (
+	sdk "github.com/onflow/flow-go-sdk"
+	"github.com/onflow/flow-go-sdk/crypto"
+	"github.com/onflow/flow-go-sdk/test"
+
+	fvmCrypto "github.com/onflow/flow-go/fvm/crypto"
+
 	emulator "github.com/onflow/flow-emulator"
 
 	"github.com/onflow/cadence/encoding/json"
@@ -39,20 +42,33 @@ var _ interpreter.TestFramework = &EmulatorBackend{}
 //
 type EmulatorBackend struct {
 	blockchain *emulator.Blockchain
+
+	// blockOffset is the offset for the sequence number of the next transaction.
+	// This is equal to the number of transactions in the current block.
+	// Must be reset once the block is committed.
+	blockOffset uint64
+
+	// accountKeys is a mapping of account addresses with their keys.
+	accountKeys map[common.Address]map[string]keyInfo
+}
+
+type keyInfo struct {
+	accountKey *sdk.AccountKey
+	signer     crypto.Signer
 }
 
 func NewEmulatorBackend() *EmulatorBackend {
 	return &EmulatorBackend{
-		blockchain: newBlockchain(),
+		blockchain:  newBlockchain(),
+		blockOffset: 0,
+		accountKeys: map[common.Address]map[string]keyInfo{},
 	}
 }
 
-func (e *EmulatorBackend) RunScript(code string, args []interpreter.Value) interpreter.ScriptResult {
-	// TODO: maybe re-use interpreter? Only needed for value conversion
-	// TODO: Deal with imported/composite types
+func (e *EmulatorBackend) RunScript(code string, args []interpreter.Value) *interpreter.ScriptResult {
 	inter, err := newInterpreter()
 	if err != nil {
-		return interpreter.ScriptResult{
+		return &interpreter.ScriptResult{
 			Error: err,
 		}
 	}
@@ -61,14 +77,14 @@ func (e *EmulatorBackend) RunScript(code string, args []interpreter.Value) inter
 	for _, arg := range args {
 		exportedValue, err := runtime.ExportValue(arg, inter, interpreter.ReturnEmptyLocationRange)
 		if err != nil {
-			return interpreter.ScriptResult{
+			return &interpreter.ScriptResult{
 				Error: err,
 			}
 		}
 
 		encodedArg, err := json.Encode(exportedValue)
 		if err != nil {
-			return interpreter.ScriptResult{
+			return &interpreter.ScriptResult{
 				Error: err,
 			}
 		}
@@ -78,27 +94,187 @@ func (e *EmulatorBackend) RunScript(code string, args []interpreter.Value) inter
 
 	result, err := e.blockchain.ExecuteScript([]byte(code), arguments)
 	if err != nil {
-		return interpreter.ScriptResult{
+		return &interpreter.ScriptResult{
 			Error: err,
 		}
 	}
 
 	if result.Error != nil {
-		return interpreter.ScriptResult{
+		return &interpreter.ScriptResult{
 			Error: result.Error,
 		}
 	}
 
 	value, err := runtime.ImportValue(inter, interpreter.ReturnEmptyLocationRange, result.Value, nil)
 	if err != nil {
-		return interpreter.ScriptResult{
+		return &interpreter.ScriptResult{
 			Error: err,
 		}
 	}
 
-	return interpreter.ScriptResult{
+	return &interpreter.ScriptResult{
 		Value: value,
 	}
+}
+
+func (e EmulatorBackend) CreateAccount() (*interpreter.Account, error) {
+	// Also generate the keys. So that users don't have to do this in two steps.
+	// Store the generated keys, so that it could be looked-up, given the address.
+
+	keyGen := test.AccountKeyGenerator()
+	accountKey, signer := keyGen.NewWithSigner()
+
+	address, err := e.blockchain.CreateAccount([]*sdk.AccountKey{accountKey}, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	publicKey := accountKey.PublicKey.Encode()
+	encodedPublicKey := string(publicKey)
+
+	// Store the generated key and signer info.
+	// This info is used to sign transactions.
+	e.accountKeys[common.Address(address)] = map[string]keyInfo{
+		encodedPublicKey: {
+			accountKey: accountKey,
+			signer:     signer,
+		},
+	}
+
+	return &interpreter.Account{
+		Address: common.Address(address),
+		PublicKey: &interpreter.PublicKey{
+			PublicKey: publicKey,
+			SignAlgo:  fvmCrypto.CryptoToRuntimeSigningAlgorithm(accountKey.PublicKey.Algorithm()),
+		},
+	}, nil
+}
+
+func (e *EmulatorBackend) AddTransaction(
+	code string,
+	authorizers []common.Address,
+	signers []*interpreter.Account,
+	args []interpreter.Value,
+) error {
+
+	tx := e.newTransaction(code, authorizers)
+
+	inter, err := newInterpreter()
+	if err != nil {
+		return err
+	}
+
+	for _, arg := range args {
+		exportedValue, err := runtime.ExportValue(arg, inter, interpreter.ReturnEmptyLocationRange)
+		if err != nil {
+			return err
+		}
+
+		err = tx.AddArgument(exportedValue)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = e.signTransaction(tx, signers)
+	if err != nil {
+		return err
+	}
+
+	err = e.blockchain.AddTransaction(*tx)
+	if err != nil {
+		return err
+	}
+
+	// Increment the transaction sequence number offset for the current block.
+	e.blockOffset++
+
+	return nil
+}
+
+func (e *EmulatorBackend) newTransaction(code string, authorizers []common.Address) *sdk.Transaction {
+	serviceKey := e.blockchain.ServiceKey()
+
+	sequenceNumber := serviceKey.SequenceNumber + e.blockOffset
+
+	tx := sdk.NewTransaction().
+		SetScript([]byte(code)).
+		SetProposalKey(serviceKey.Address, serviceKey.Index, sequenceNumber).
+		SetPayer(serviceKey.Address)
+
+	for _, authorizer := range authorizers {
+		tx = tx.AddAuthorizer(sdk.Address(authorizer))
+	}
+
+	return tx
+}
+
+func (e *EmulatorBackend) signTransaction(
+	tx *sdk.Transaction,
+	signerAccounts []*interpreter.Account,
+) error {
+
+	// Sign transaction with each signer
+	// Note: Following logic is borrowed from the flow-ft.
+
+	for i := len(signerAccounts) - 1; i >= 0; i-- {
+		signerAccount := signerAccounts[i]
+
+		publicKey := string(signerAccount.PublicKey.PublicKey)
+		accountKeys := e.accountKeys[signerAccount.Address]
+		keyInfo := accountKeys[publicKey]
+
+		err := tx.SignPayload(sdk.Address(signerAccount.Address), 0, keyInfo.signer)
+		if err != nil {
+			return err
+		}
+	}
+
+	serviceKey := e.blockchain.ServiceKey()
+	serviceSigner, err := serviceKey.Signer()
+	if err != nil {
+		return err
+	}
+
+	err = tx.SignEnvelope(serviceKey.Address, 0, serviceSigner)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (e *EmulatorBackend) ExecuteNextTransaction() *interpreter.TransactionResult {
+	result, err := e.blockchain.ExecuteNextTransaction()
+
+	if err != nil {
+		// If the returned error is `emulator.PendingBlockTransactionsExhaustedError`,
+		// that means there are no transactions to execute.
+		// Hence, return a nil result.
+		if _, ok := err.(*emulator.PendingBlockTransactionsExhaustedError); ok {
+			return nil
+		}
+
+		return &interpreter.TransactionResult{
+			Error: err,
+		}
+	}
+
+	if result.Error != nil {
+		return &interpreter.TransactionResult{
+			Error: result.Error,
+		}
+	}
+
+	return &interpreter.TransactionResult{}
+}
+
+func (e *EmulatorBackend) CommitBlock() error {
+	// Reset the transaction offset for the current block.
+	e.blockOffset = 0
+
+	_, err := e.blockchain.CommitBlock()
+	return err
 }
 
 // newBlockchain returns an emulator blockchain for testing.
@@ -121,6 +297,9 @@ func newBlockchain(opts ...emulator.Option) *emulator.Blockchain {
 // newInterpreter creates an interpreter instance needed for the value conversion.
 //
 func newInterpreter() (*interpreter.Interpreter, error) {
+	// TODO: maybe re-use interpreter? Only needed for value conversion
+	// TODO: Deal with imported/composite types
+
 	predeclaredInterpreterValues := stdlib.BuiltinFunctions.ToInterpreterValueDeclarations()
 	predeclaredInterpreterValues = append(predeclaredInterpreterValues, stdlib.BuiltinValues.ToInterpreterValueDeclarations()...)
 
