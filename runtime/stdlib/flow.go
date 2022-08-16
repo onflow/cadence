@@ -70,8 +70,7 @@ var getAccountFunctionType = &sema.FunctionType{
 }
 
 var LogFunctionType = &sema.FunctionType{
-	// TODO: is this pure? it does technically have a side effect, but not likely one we care about for this analysis
-	Purity: sema.PureFunction,
+	Purity: sema.ImpureFunction,
 	Parameters: []*sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,

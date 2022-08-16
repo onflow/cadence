@@ -627,8 +627,6 @@ func OptionalTypeMapFunctionType(typ Type) *FunctionType {
 	}
 
 	return &FunctionType{
-		// TODO: if we want `transform` to be a pure function, it can only accept pure functions;
-		// is this something we want?
 		Purity: ImpureFunction,
 		TypeParameters: []*TypeParameter{
 			typeParameter,

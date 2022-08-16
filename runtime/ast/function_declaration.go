@@ -33,6 +33,13 @@ const (
 	PureFunction      FunctionPurity = 1
 )
 
+func (p FunctionPurity) MarshalJSON() ([]byte, error) {
+	if p == UnspecifiedPurity {
+		return json.Marshal("Unspecified")
+	}
+	return json.Marshal("Pure")
+}
+
 type FunctionDeclaration struct {
 	Access               Access
 	Purity               FunctionPurity
