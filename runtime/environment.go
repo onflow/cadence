@@ -533,7 +533,7 @@ func (e *interpreterEnvironment) newInterpreter(
 		interpreter.WithAtreeStorageValidationEnabled(false),
 		interpreter.WithInvalidatedResourceValidationEnabled(e.config.InvalidatedResourceValidationEnabled),
 		interpreter.WithDebugger(e.config.Debugger),
-		interpreter.WithOnStatementHandler(e.onStatementHandler()),
+		interpreter.WithOnStatementHandler(e.newOnStatementHandler()),
 	}
 
 	options = append(
@@ -548,7 +548,7 @@ func (e *interpreterEnvironment) newInterpreter(
 	)
 }
 
-func (e *interpreterEnvironment) onStatementHandler() interpreter.OnStatementFunc {
+func (e *interpreterEnvironment) newOnStatementHandler() interpreter.OnStatementFunc {
 	if !e.config.CoverageReportingEnabled {
 		return nil
 	}
