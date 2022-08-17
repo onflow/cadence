@@ -107,6 +107,7 @@ func NewTestContract(
 	// Inject natively implemented function values
 	compositeValue.Functions[testAssertFunctionName] = testAssertFunction
 	compositeValue.Functions[testNewEmulatorBlockchainFunctionName] = testNewEmulatorBlockchainFunction
+	compositeValue.Functions[testReadFileFunctionName] = testReadFileFunction
 
 	return compositeValue, nil
 }
@@ -144,6 +145,8 @@ var blockchainBackendInterfaceType = func() *sema.InterfaceType {
 func init() {
 
 	// Enrich 'Test' contract with natively implemented functions
+
+	// Test.assert()
 	testContractType.Members.Set(
 		testAssertFunctionName,
 		sema.NewUnmeteredPublicFunctionMember(
@@ -153,6 +156,8 @@ func init() {
 			testAssertFunctionDocString,
 		),
 	)
+
+	// Test.newEmulatorBlockchain()
 	testContractType.Members.Set(
 		testNewEmulatorBlockchainFunctionName,
 		sema.NewUnmeteredPublicFunctionMember(
@@ -160,6 +165,17 @@ func init() {
 			testNewEmulatorBlockchainFunctionName,
 			testNewEmulatorBlockchainFunctionType,
 			testNewEmulatorBlockchainFunctionDocString,
+		),
+	)
+
+	// Test.readFile()
+	testContractType.Members.Set(
+		testReadFileFunctionName,
+		sema.NewUnmeteredPublicFunctionMember(
+			testContractType,
+			testReadFileFunctionName,
+			testReadFileFunctionType,
+			testReadFileFunctionDocString,
 		),
 	)
 
@@ -238,6 +254,49 @@ var testAssertFunction = interpreter.NewUnmeteredHostFunctionValue(
 		return interpreter.VoidValue{}
 	},
 	testAssertFunctionType,
+)
+
+// 'Test.readFile' function
+
+const testReadFileFunctionDocString = `read file function of Test contract`
+
+const testReadFileFunctionName = "readFile"
+
+var testReadFileFunctionType = &sema.FunctionType{
+	Parameters: []*sema.Parameter{
+		{
+			Label:      sema.ArgumentLabelNotRequired,
+			Identifier: "path",
+			TypeAnnotation: sema.NewTypeAnnotation(
+				sema.StringType,
+			),
+		},
+	},
+	ReturnTypeAnnotation: sema.NewTypeAnnotation(
+		sema.StringType,
+	),
+}
+
+var testReadFileFunction = interpreter.NewUnmeteredHostFunctionValue(
+	func(invocation interpreter.Invocation) interpreter.Value {
+		testFramework := invocation.Interpreter.TestFramework
+		if testFramework == nil {
+			panic(interpreter.TestFrameworkNotProvidedError{})
+		}
+
+		pathString, ok := invocation.Arguments[0].(*interpreter.StringValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		content, err := testFramework.ReadFile(pathString.Str)
+		if err != nil {
+			panic(err)
+		}
+
+		return interpreter.NewUnmeteredStringValue(content)
+	},
+	testReadFileFunctionType,
 )
 
 // 'Test.newEmulatorBlockchain' function

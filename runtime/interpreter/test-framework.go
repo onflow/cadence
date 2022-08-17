@@ -53,6 +53,8 @@ type TestFramework interface {
 		account *Account,
 		arguments []Value,
 	) error
+
+	ReadFile(string) (string, error)
 }
 
 type ScriptResult struct {

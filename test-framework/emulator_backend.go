@@ -55,6 +55,8 @@ type EmulatorBackend struct {
 
 	// accountKeys is a mapping of account addresses with their keys.
 	accountKeys map[common.Address]map[string]keyInfo
+
+	importResolver ImportResolver
 }
 
 type keyInfo struct {
@@ -62,11 +64,12 @@ type keyInfo struct {
 	signer     crypto.Signer
 }
 
-func NewEmulatorBackend() *EmulatorBackend {
+func NewEmulatorBackend(importResolver ImportResolver) *EmulatorBackend {
 	return &EmulatorBackend{
-		blockchain:  newBlockchain(),
-		blockOffset: 0,
-		accountKeys: map[common.Address]map[string]keyInfo{},
+		blockchain:     newBlockchain(),
+		blockOffset:    0,
+		accountKeys:    map[common.Address]map[string]keyInfo{},
+		importResolver: importResolver,
 	}
 }
 
@@ -359,6 +362,14 @@ func (e *EmulatorBackend) DeployContract(
 	}
 
 	return e.CommitBlock()
+}
+
+func (e *EmulatorBackend) ReadFile(path string) (string, error) {
+	if e.importResolver == nil {
+		return "", ImportResolverNotProvidedError{}
+	}
+
+	return e.importResolver(common.StringLocation(path))
 }
 
 // newBlockchain returns an emulator blockchain for testing.
