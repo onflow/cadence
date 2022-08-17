@@ -136,7 +136,7 @@ func (checker *Checker) enforcePureAssignment(assignment ast.Statement, target a
 	// -----------------------------------------------------------------------------
 	// let a: &[Int] = &[0]
 	// pure fun foo(_ x: Int) {
-	//     let b: &[Int] = [0]
+	//     let b: &[Int] = &[0]
 	//     let c = [a, b]
 	//     c[x][0] = 4 // we cannot know statically whether a or b receives the write here
 	// }
@@ -146,7 +146,13 @@ func (checker *Checker) enforcePureAssignment(assignment ast.Statement, target a
 	}
 
 	// `self` technically exists in param scope, but should still not be writeable
-	// outside of an initializer
+	// outside of an initializer. Within an initializer, writing to `self` is considered
+	// pure: whenever we call a constructor from inside a pure scope, the value being
+	// constructed (i.e. the one referred to by self in the constructor) is local to that
+	// scope, so it is safe to create a new value from within a pure scope. This means that
+	// functions that just construct new values can technically be pure (in the same way that
+	// they are in a functional programming sense), as long as they don't modify anything else
+	// while constructing those values. They will still need a pure annotation though (e.g. pure init(...)).
 	if variable.DeclarationKind == common.DeclarationKindSelf {
 		if checker.functionActivations.Current().InitializationInfo == nil {
 			checker.ObserveImpureOperation(assignment)
