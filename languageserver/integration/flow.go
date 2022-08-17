@@ -222,10 +222,6 @@ func (f *flowkitClient) SendTransaction(
 	if err != nil {
 		return nil, err
 	}
-	// if no authorizers defined use the service as default
-	if authorizers == nil {
-		authorizers = []flow.Address{service.Address()}
-	}
 
 	codeFilename, err := resolveFilename(f.configPath, location.Path)
 	if err != nil {
