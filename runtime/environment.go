@@ -21,7 +21,7 @@ package runtime
 import (
 	"time"
 
-	"github.com/opentracing/opentracing-go"
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -129,7 +129,7 @@ func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
 		// see interpreterEnvironment.CommitStorage
 		AtreeStorageValidationEnabled: false,
 		Debugger:                      e.config.Debugger,
-		OnStatement:                   e.onStatementHandler(),
+		OnStatement:                   e.newOnStatementHandler(),
 		OnMeterComputation:            e.newOnMeterComputation(),
 		OnFunctionInvocation:          e.newOnFunctionInvocationHandler(),
 		OnInvokedFunctionReturn:       e.newOnInvokedFunctionReturnHandler(),
@@ -488,7 +488,6 @@ func (e *interpreterEnvironment) GetProgram(location Location) (*interpreter.Pro
 
 // getProgram returns the existing program at the given location, if available.
 // If it is not available, it loads the code, and then parses and checks it.
-//
 func (e *interpreterEnvironment) getProgram(
 	location Location,
 	checkedImports importResolutionResults,
@@ -546,7 +545,6 @@ func (e *interpreterEnvironment) newInterpreter(
 	location common.Location,
 	program *interpreter.Program,
 ) (*interpreter.Interpreter, error) {
-
 	return interpreter.NewInterpreter(
 		program,
 		location,
@@ -554,7 +552,7 @@ func (e *interpreterEnvironment) newInterpreter(
 	)
 }
 
-func (e *interpreterEnvironment) onStatementHandler() interpreter.OnStatementFunc {
+func (e *interpreterEnvironment) newOnStatementHandler() interpreter.OnStatementFunc {
 	if !e.config.CoverageReportingEnabled {
 		return nil
 	}
@@ -571,10 +569,10 @@ func (e *interpreterEnvironment) newOnRecordTraceHandler() interpreter.OnRecordT
 		interpreter *interpreter.Interpreter,
 		functionName string,
 		duration time.Duration,
-		logs []opentracing.LogRecord,
+		attrs []attribute.KeyValue,
 	) {
 		wrapPanic(func() {
-			e.runtimeInterface.RecordTrace(functionName, interpreter.Location, duration, logs)
+			e.runtimeInterface.RecordTrace(functionName, interpreter.Location, duration, attrs)
 		})
 	}
 }

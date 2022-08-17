@@ -27,7 +27,7 @@ import (
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
-	"github.com/opentracing/opentracing-go"
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -115,7 +115,7 @@ type OnRecordTraceFunc func(
 	inter *Interpreter,
 	operationName string,
 	duration time.Duration,
-	logs []opentracing.LogRecord,
+	attrs []attribute.KeyValue,
 )
 
 // OnResourceOwnerChangeFunc is a function that is triggered when a resource's owner changes.
@@ -1289,6 +1289,11 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	return lexicalScope, variable
 }
 
+type EnumCase struct {
+	RawValue IntegerValue
+	Value    MemberAccessibleValue
+}
+
 func (interpreter *Interpreter) declareEnumConstructor(
 	declaration *ast.CompositeDeclaration,
 	lexicalScope *VariableActivation,
@@ -1310,10 +1315,7 @@ func (interpreter *Interpreter) declareEnumConstructor(
 	intType := sema.IntType
 
 	enumCases := declaration.Members.EnumCases()
-	caseValues := make([]struct {
-		Value    MemberAccessibleValue
-		RawValue IntegerValue
-	}, len(enumCases))
+	caseValues := make([]EnumCase, len(enumCases))
 
 	constructorNestedVariables := map[string]*Variable{}
 
@@ -1344,10 +1346,7 @@ func (interpreter *Interpreter) declareEnumConstructor(
 			caseValueFields,
 			common.Address{},
 		)
-		caseValues[i] = struct {
-			Value    MemberAccessibleValue
-			RawValue IntegerValue
-		}{
+		caseValues[i] = EnumCase{
 			Value:    caseValue,
 			RawValue: rawValue,
 		}
@@ -1374,10 +1373,7 @@ func EnumConstructorFunction(
 	gauge common.MemoryGauge,
 	getLocationRange func() LocationRange,
 	enumType *sema.CompositeType,
-	cases []struct {
-		Value    MemberAccessibleValue
-		RawValue IntegerValue
-	},
+	cases []EnumCase,
 	nestedVariables map[string]*Variable,
 ) *HostFunctionValue {
 

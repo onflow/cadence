@@ -26,9 +26,6 @@ import (
 	"testing"
 
 	"github.com/onflow/atree"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
@@ -40,6 +37,8 @@ import (
 	"github.com/onflow/cadence/runtime/tests/checker"
 	"github.com/onflow/cadence/runtime/tests/examples"
 	. "github.com/onflow/cadence/runtime/tests/utils"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type ParseCheckAndInterpretOptions struct {
@@ -195,7 +194,6 @@ func constructorArguments(compositeKind common.CompositeKind, arguments string) 
 // makeContractValueHandler creates an interpreter option which
 // sets the ContractValueHandler.
 // The handler immediately invokes the constructor with the given arguments.
-//
 func makeContractValueHandler(
 	arguments []interpreter.Value,
 	argumentTypes []sema.Type,
@@ -6074,7 +6072,6 @@ func TestInterpretClosure(t *testing.T) {
 // TestInterpretCompositeFunctionInvocationFromImportingProgram checks
 // that member functions of imported composites can be invoked from an importing program.
 // See https://github.com/dapperlabs/flow-go/issues/838
-//
 func TestInterpretCompositeFunctionInvocationFromImportingProgram(t *testing.T) {
 
 	t.Parallel()
@@ -6505,7 +6502,6 @@ func TestInterpretResourceDestroyOptionalNil(t *testing.T) {
 // TestInterpretResourceDestroyExpressionResourceInterfaceCondition tests that
 // the resource interface's destructor is called, even if the conforming resource
 // does not have an destructor
-//
 func TestInterpretResourceDestroyExpressionResourceInterfaceCondition(t *testing.T) {
 
 	t.Parallel()
@@ -6540,7 +6536,6 @@ func TestInterpretResourceDestroyExpressionResourceInterfaceCondition(t *testing
 
 // TestInterpretInterfaceInitializer tests that the interface's initializer
 // is called, even if the conforming composite does not have an initializer
-//
 func TestInterpretInterfaceInitializer(t *testing.T) {
 
 	t.Parallel()
@@ -9418,7 +9413,6 @@ func TestInterpretNestedDestroy(t *testing.T) {
 
 // TestInterpretInternalAssignment ensures that a modification of an "internal" value
 // is not possible, because the value that is assigned into is a copy
-//
 func TestInterpretInternalAssignment(t *testing.T) {
 
 	t.Parallel()

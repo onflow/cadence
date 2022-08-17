@@ -49,20 +49,28 @@ build:
 	GOARCH=wasm GOOS=js go build -o ./runtime/cmd/parse/parse.wasm ./runtime/cmd/parse
 	go build -o ./runtime/cmd/check/check ./runtime/cmd/check
 	go build -o ./runtime/cmd/main/main ./runtime/cmd/main
-	cd ./languageserver && make build
+	(cd ./languageserver && make build && cd -)
+	make build-tools
+
+.PHONY: build-tools
+build-tools:
+	(cd ./tools/analysis && go build . && cd -)
+	(cd ./tools/batch-script && go build . && cd -)
+	(cd ./tools/constructorcheck && make plugin && cd -)
+	(cd ./tools/docgen && make build && cd -)
 
 .PHONY: lint-github-actions
 lint-github-actions: build-linter
-	tools/golangci-lint/golangci-lint run --out-format=github-actions -v ./...
+	tools/golangci-lint/golangci-lint run --out-format=github-actions --timeout=5m  -v ./...
 
 .PHONY: lint
 lint: build-linter
-	tools/golangci-lint/golangci-lint run $(LINTERS) -v ./...
+	tools/golangci-lint/golangci-lint run $(LINTERS) --timeout=5m -v ./...
 
 
 .PHONY: fix-lint
 fix-lint: build-linter
-	tools/golangci-lint/golangci-lint run -v --fix $(LINTERS) ./...
+	tools/golangci-lint/golangci-lint run -v --fix --timeout=5m  $(LINTERS) ./...
 
 .PHONY: build-linter
 build-linter: tools/golangci-lint/golangci-lint tools/maprangecheck/maprangecheck.so tools/constructorcheck/constructorcheck.so

@@ -75,9 +75,6 @@ func DefaultCheckerOptions(
 	checkers map[common.Location]*sema.Checker,
 	codes map[common.Location]string,
 ) []sema.Option {
-
-	// TODO: checker and interpreter base activations
-
 	return []sema.Option{
 		sema.WithImportHandler(
 			func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {

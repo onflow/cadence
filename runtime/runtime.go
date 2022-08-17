@@ -37,19 +37,89 @@ type Script struct {
 
 type importResolutionResults map[Location]bool
 
+// Executor is a continuation which represents a full unit of transaction/script
+// execution.
+//
+// The full unit of execution is divided into stages:
+//  1. Preprocess() initializes the executor in preparation for the actual
+//     transaction execution (e.g., parse / type check the input).  Note that
+//     the work done by Preprocess() should be embrassingly parallel.
+//  2. Execute() performs the actual transaction execution (e.g., run the
+//     interpreter to produce the transaction result).
+//  3. Result() returns the result of the full unit of execution.
+//
+// TODO: maybe add Cleanup/Postprocess in the future
+type Executor interface {
+	// Preprocess prepares the transaction/script for execution.
+	//
+	// This function returns an error if the program has errors (e.g., syntax
+	// errors, type errors).
+	//
+	// This method may be called multiple times.  Only the first call will
+	// trigger meaningful work; subsequent calls will return the cached return
+	// value from the original call (i.e., an Executor implementation must
+	// guard this method with sync.Once).
+	Preprocess() error
+
+	// Execute executes the transaction/script.
+	//
+	// This function returns an error if Preprocess failed or if the execution
+	// fails.
+	//
+	// This method may be called multiple times.  Only the first call will
+	// trigger meaningful work; subsequent calls will return the cached return
+	// value from the original call (i.e., an Executor implementation must
+	// guard this method with sync.Once).
+	//
+	// Note: Execute will invoke Preprocess to ensure Preprocess was called at
+	// least once.
+	Execute() error
+
+	// Result returns the transaction/scipt's execution result.
+	//
+	// This function returns an error if Preproces or Execute fails.  The
+	// cadence.Value is always nil for transaction.
+	//
+	// This method may be called multiple times.  Only the first call will
+	// trigger meaningful work; subsequent calls will return the cached return
+	// value from the original call (i.e., an Executor implementation must
+	// guard this method with sync.Once).
+	//
+	// Note: Result will invoke Execute to ensure Execute was called at least
+	// once.
+	Result() (cadence.Value, error)
+}
+
 // Runtime is a runtime capable of executing Cadence.
 type Runtime interface {
+	// NewScriptExecutor returns an executor which executes the given script.
+	NewScriptExecutor(Script, Context) Executor
+
 	// ExecuteScript executes the given script.
 	//
 	// This function returns an error if the program has errors (e.g syntax errors, type errors),
 	// or if the execution fails.
 	ExecuteScript(Script, Context) (cadence.Value, error)
 
+	// NewTransactionExecutor returns an executor which executes the given
+	// transaction.
+	NewTransactionExecutor(Script, Context) Executor
+
 	// ExecuteTransaction executes the given transaction.
 	//
 	// This function returns an error if the program has errors (e.g syntax errors, type errors),
 	// or if the execution fails.
 	ExecuteTransaction(Script, Context) error
+
+	// NewContractFunctionExecutor returns an executor which invokes a contract
+	// function with the given arguments.
+	NewContractFunctionExecutor(
+		contractLocation common.AddressLocation,
+		functionName string,
+		arguments []cadence.Value,
+		argumentTypes []sema.Type,
+		context Context,
+	) Executor
 
 	// InvokeContractFunction invokes a contract function with the given arguments.
 	//
@@ -59,7 +129,7 @@ type Runtime interface {
 	InvokeContractFunction(
 		contractLocation common.AddressLocation,
 		functionName string,
-		arguments []interpreter.Value,
+		arguments []cadence.Value,
 		argumentTypes []sema.Type,
 		context Context,
 	) (cadence.Value, error)
@@ -76,6 +146,15 @@ type Runtime interface {
 	// ReadLinked dereferences the path and returns the value stored at the target
 	//
 	ReadLinked(address common.Address, path cadence.Path, context Context) (cadence.Value, error)
+
+	// Storage returns the storage system and an interpreter which can be used for
+	// accessing values in storage.
+	//
+	// NOTE: only use the interpreter for storage operations,
+	// do *NOT* use the interpreter for any other purposes,
+	// such as executing a program.
+	//
+	Storage(context Context) (*Storage, *interpreter.Interpreter, error)
 }
 
 type ImportResolver = func(location Location) (program *ast.Program, e error)
@@ -173,381 +252,57 @@ func getWrappedError(recovered any, location Location, codesAndPrograms codesAnd
 		return newError(err, location, codesAndPrograms)
 	}
 }
-
-func (r interpreterRuntime) ExecuteScript(script Script, context Context) (val cadence.Value, err error) {
-
-	location := context.Location
-
-	codesAndPrograms := newCodesAndPrograms()
-
-	defer r.Recover(
-		func(internalErr Error) {
-			err = internalErr
-		},
-		location,
-		codesAndPrograms,
-	)
-
-	storage := NewStorage(context.Interface, context.Interface)
-
-	environment := context.Environment
-	if environment == nil {
-		environment = NewScriptInterpreterEnvironment(r.defaultConfig)
-	}
-	environment.Configure(
-		context.Interface,
-		codesAndPrograms,
-		storage,
-		context.CoverageReport,
-	)
-
-	program, err := environment.ParseAndCheckProgram(
-		script.Source,
-		location,
-		true,
-	)
-	if err != nil {
-		return nil, newError(err, location, codesAndPrograms)
-	}
-
-	functionEntryPointType, err := program.Elaboration.FunctionEntryPointType()
-	if err != nil {
-		return nil, newError(err, location, codesAndPrograms)
-	}
-
-	// Ensure the entry point's parameter types are importable
-	if len(functionEntryPointType.Parameters) > 0 {
-		for _, param := range functionEntryPointType.Parameters {
-			if !param.TypeAnnotation.Type.IsImportable(map[*sema.Member]bool{}) {
-				err = &ScriptParameterTypeNotImportableError{
-					Type: param.TypeAnnotation.Type,
-				}
-				return nil, newError(err, location, codesAndPrograms)
-			}
-		}
-	}
-
-	// Ensure the entry point's return type is valid
-	if !functionEntryPointType.ReturnTypeAnnotation.Type.IsExternallyReturnable(map[*sema.Member]bool{}) {
-		err = &InvalidScriptReturnTypeError{
-			Type: functionEntryPointType.ReturnTypeAnnotation.Type,
-		}
-		return nil, newError(err, location, codesAndPrograms)
-	}
-
-	interpret := scriptExecutionFunction(
-		functionEntryPointType.Parameters,
-		script.Arguments,
-		context.Interface,
-	)
-
-	value, inter, err := environment.Interpret(
-		location,
-		program,
-		interpret,
-	)
-	if err != nil {
-		return nil, newError(err, location, codesAndPrograms)
-	}
-
-	// Export before committing storage
-	exportableValue := newExportableValue(value, inter)
-	result, err := exportValue(
-		exportableValue,
-		interpreter.ReturnEmptyLocationRange,
-	)
-	if err != nil {
-		return nil, newError(err, location, codesAndPrograms)
-	}
-
-	// Write back all stored values, which were actually just cached, back into storage.
-
-	// Even though this function is `ExecuteScript`, that doesn't imply the changes
-	// to storage will be actually persisted
-
-	err = environment.CommitStorage(inter)
-	if err != nil {
-		return nil, newError(err, location, codesAndPrograms)
-	}
-
-	return result, nil
+func (r interpreterRuntime) NewScriptExecutor(
+	script Script,
+	context Context,
+) Executor {
+	return newInterpreterScriptExecutor(r, script, context)
 }
 
-type InterpretFunc func(inter *interpreter.Interpreter) (interpreter.Value, error)
+func (r interpreterRuntime) ExecuteScript(script Script, context Context) (val cadence.Value, err error) {
+	return r.NewScriptExecutor(script, context).Result()
+}
 
-func scriptExecutionFunction(
-	parameters []*sema.Parameter,
-	arguments [][]byte,
-	runtimeInterface Interface,
-) InterpretFunc {
-	return func(inter *interpreter.Interpreter) (value interpreter.Value, err error) {
-
-		// Recover internal panics and return them as an error.
-		// For example, the argument validation might attempt to
-		// load contract code for non-existing types
-
-		defer inter.RecoverErrors(func(internalErr error) {
-			err = internalErr
-		})
-
-		values, err := validateArgumentParams(
-			inter,
-			runtimeInterface,
-			interpreter.ReturnEmptyLocationRange,
-			arguments,
-			parameters,
-		)
-		if err != nil {
-			return nil, err
-		}
-		return inter.Invoke("main", values...)
-	}
+func (r interpreterRuntime) NewContractFunctionExecutor(
+	contractLocation common.AddressLocation,
+	functionName string,
+	arguments []cadence.Value,
+	argumentTypes []sema.Type,
+	context Context,
+) Executor {
+	return newInterpreterContractFunctionExecutor(
+		r,
+		contractLocation,
+		functionName,
+		arguments,
+		argumentTypes,
+		context,
+	)
 }
 
 func (r interpreterRuntime) InvokeContractFunction(
 	contractLocation common.AddressLocation,
 	functionName string,
-	arguments []interpreter.Value,
+	arguments []cadence.Value,
 	argumentTypes []sema.Type,
 	context Context,
-) (val cadence.Value, err error) {
-
-	location := context.Location
-
-	codesAndPrograms := newCodesAndPrograms()
-
-	defer r.Recover(
-		func(internalErr Error) {
-			err = internalErr
-		},
-		location,
-		codesAndPrograms,
-	)
-
-	storage := NewStorage(context.Interface, context.Interface)
-
-	environment := context.Environment
-	if environment == nil {
-		environment = NewBaseInterpreterEnvironment(r.defaultConfig)
-	}
-	environment.Configure(
-		context.Interface,
-		codesAndPrograms,
-		storage,
-		context.CoverageReport,
-	)
-
-	// create interpreter
-	_, inter, err := environment.Interpret(
-		location,
-		nil,
-		nil,
-	)
-	if err != nil {
-		return nil, newError(err, location, codesAndPrograms)
-	}
-
-	// ensure the contract is loaded
-	inter = inter.EnsureLoaded(contractLocation)
-
-	for i, argumentType := range argumentTypes {
-		arguments[i] = r.convertArgument(
-			inter,
-			arguments[i],
-			argumentType,
-			environment,
-		)
-	}
-
-	contractValue, err := inter.GetContractComposite(contractLocation)
-	if err != nil {
-		return nil, newError(err, location, codesAndPrograms)
-	}
-
-	// prepare invocation
-	invocation := interpreter.NewInvocation(
-		inter,
-		contractValue,
+) (cadence.Value, error) {
+	return r.NewContractFunctionExecutor(
+		contractLocation,
+		functionName,
 		arguments,
 		argumentTypes,
-		nil,
-		func() interpreter.LocationRange {
-			return interpreter.LocationRange{
-				Location: context.Location,
-			}
-		},
-	)
-
-	contractMember := contractValue.GetMember(inter, invocation.GetLocationRange, functionName)
-
-	contractFunction, ok := contractMember.(interpreter.FunctionValue)
-	if !ok {
-		err := interpreter.NotInvokableError{
-			Value: contractFunction,
-		}
-		return nil, newError(err, location, codesAndPrograms)
-	}
-
-	value, err := inter.InvokeFunction(contractFunction, invocation)
-	if err != nil {
-		return nil, newError(err, location, codesAndPrograms)
-	}
-
-	// Write back all stored values, which were actually just cached, back into storage
-	err = environment.CommitStorage(inter)
-	if err != nil {
-		return nil, newError(err, location, codesAndPrograms)
-	}
-
-	var exportedValue cadence.Value
-	exportedValue, err = ExportValue(value, inter, interpreter.ReturnEmptyLocationRange)
-	if err != nil {
-		return nil, newError(err, location, codesAndPrograms)
-	}
-
-	return exportedValue, nil
+		context,
+	).Result()
 }
 
-func (r interpreterRuntime) convertArgument(
-	gauge common.MemoryGauge,
-	argument interpreter.Value,
-	argumentType sema.Type,
-	environment Environment,
-) interpreter.Value {
-	switch argumentType {
-	case sema.AuthAccountType:
-		// convert addresses to auth accounts so there is no need to construct an auth account value for the caller
-		if addressValue, ok := argument.(interpreter.AddressValue); ok {
-			address := interpreter.NewAddressValueFromConstructor(gauge, addressValue.ToAddress)
-			return environment.NewAuthAccountValue(address)
-		}
-	case sema.PublicAccountType:
-		// convert addresses to public accounts so there is no need to construct a public account value for the caller
-		if addressValue, ok := argument.(interpreter.AddressValue); ok {
-			address := interpreter.NewAddressValueFromConstructor(gauge, addressValue.ToAddress)
-			return environment.NewPublicAccountValue(address)
-		}
-	}
-	return argument
+func (r interpreterRuntime) NewTransactionExecutor(script Script, context Context) Executor {
+	return newInterpreterTransactionExecutor(r, script, context)
 }
 
 func (r interpreterRuntime) ExecuteTransaction(script Script, context Context) (err error) {
-
-	location := context.Location
-
-	codesAndPrograms := newCodesAndPrograms()
-
-	defer r.Recover(
-		func(internalErr Error) {
-			err = internalErr
-		},
-		location,
-		codesAndPrograms,
-	)
-
-	storage := NewStorage(context.Interface, context.Interface)
-
-	environment := context.Environment
-	if environment == nil {
-		environment = NewBaseInterpreterEnvironment(r.defaultConfig)
-	}
-	environment.Configure(
-		context.Interface,
-		codesAndPrograms,
-		storage,
-		context.CoverageReport,
-	)
-
-	program, err := environment.ParseAndCheckProgram(
-		script.Source,
-		location,
-		true,
-	)
-	if err != nil {
-		return newError(err, location, codesAndPrograms)
-	}
-
-	transactions := program.Elaboration.TransactionTypes
-	transactionCount := len(transactions)
-	if transactionCount != 1 {
-		err = InvalidTransactionCountError{
-			Count: transactionCount,
-		}
-		return newError(err, location, codesAndPrograms)
-	}
-
-	transactionType := transactions[0]
-
-	var authorizers []Address
-	wrapPanic(func() {
-		authorizers, err = context.Interface.GetSigningAccounts()
-	})
-	if err != nil {
-		return newError(err, location, codesAndPrograms)
-	}
-	// check parameter count
-
-	argumentCount := len(script.Arguments)
-	authorizerCount := len(authorizers)
-
-	transactionParameterCount := len(transactionType.Parameters)
-	if argumentCount != transactionParameterCount {
-		err = InvalidEntryPointParameterCountError{
-			Expected: transactionParameterCount,
-			Actual:   argumentCount,
-		}
-		return newError(err, location, codesAndPrograms)
-	}
-
-	transactionAuthorizerCount := len(transactionType.PrepareParameters)
-	if authorizerCount != transactionAuthorizerCount {
-		err = InvalidTransactionAuthorizerCountError{
-			Expected: transactionAuthorizerCount,
-			Actual:   authorizerCount,
-		}
-		return newError(err, location, codesAndPrograms)
-	}
-
-	// gather authorizers
-
-	authorizerValues := func(inter *interpreter.Interpreter) []interpreter.Value {
-
-		authorizerValues := make([]interpreter.Value, 0, authorizerCount)
-
-		for _, address := range authorizers {
-			addressValue := interpreter.NewAddressValue(inter, address)
-			authorizerValues = append(
-				authorizerValues,
-				environment.NewAuthAccountValue(addressValue),
-			)
-		}
-
-		return authorizerValues
-	}
-
-	interpretFunc := r.transactionExecutionFunction(
-		transactionType.Parameters,
-		script.Arguments,
-		context.Interface,
-		authorizerValues,
-	)
-
-	_, inter, err := environment.Interpret(
-		location,
-		program,
-		interpretFunc,
-	)
-	if err != nil {
-		return newError(err, location, codesAndPrograms)
-	}
-
-	// Write back all stored values, which were actually just cached, back into storage
-	err = environment.CommitStorage(inter)
-	if err != nil {
-		return newError(err, location, codesAndPrograms)
-	}
-
-	return nil
+	_, err = r.NewTransactionExecutor(script, context).Result()
+	return err
 }
 
 func wrapPanic(f func()) {
@@ -570,7 +325,6 @@ func wrapPanic(f func()) {
 
 // userPanicToError Executes `f` and gracefully handle `UserError` panics.
 // All on-user panics (including `InternalError` and `ExternalError`) are propagated up.
-//
 func userPanicToError(f func()) (returnedError error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -593,39 +347,6 @@ func userPanicToError(f func()) (returnedError error) {
 
 	f()
 	return nil
-}
-
-func (r interpreterRuntime) transactionExecutionFunction(
-	parameters []*sema.Parameter,
-	arguments [][]byte,
-	runtimeInterface Interface,
-	authorizerValues func(*interpreter.Interpreter) []interpreter.Value,
-) InterpretFunc {
-	return func(inter *interpreter.Interpreter) (value interpreter.Value, err error) {
-
-		// Recover internal panics and return them as an error.
-		// For example, the argument validation might attempt to
-		// load contract code for non-existing types
-
-		defer inter.RecoverErrors(func(internalErr error) {
-			err = internalErr
-		})
-
-		values, err := validateArgumentParams(
-			inter,
-			runtimeInterface,
-			interpreter.ReturnEmptyLocationRange,
-			arguments,
-			parameters,
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		values = append(values, authorizerValues(inter)...)
-		err = inter.InvokeTransaction(0, values...)
-		return nil, err
-	}
 }
 
 func validateArgumentParams(
@@ -766,7 +487,6 @@ func hasValidStaticType(inter *interpreter.Interpreter, value interpreter.Value)
 
 // ParseAndCheckProgram parses the given code and checks it.
 // Returns a program that can be interpreted (AST + elaboration).
-//
 func (r interpreterRuntime) ParseAndCheckProgram(
 	code []byte,
 	context Context,
@@ -809,10 +529,9 @@ func (r interpreterRuntime) ParseAndCheckProgram(
 	return program, nil
 }
 
-func (r interpreterRuntime) executeNonProgram(
-	interpret InterpretFunc,
-	context Context,
-) (cadence.Value, error) {
+type InterpretFunc func(inter *interpreter.Interpreter) (interpreter.Value, error)
+
+func (r interpreterRuntime) Storage(context Context) (*Storage, *interpreter.Interpreter, error) {
 
 	location := context.Location
 
@@ -831,25 +550,16 @@ func (r interpreterRuntime) executeNonProgram(
 		context.CoverageReport,
 	)
 
-	value, inter, err := environment.Interpret(
+	_, inter, err := environment.Interpret(
 		location,
 		nil,
-		interpret,
+		nil,
 	)
 	if err != nil {
-		return nil, newError(err, location, codesAndPrograms)
+		return nil, nil, newError(err, location, codesAndPrograms)
 	}
 
-	if value == nil {
-		return nil, nil
-	}
-
-	exportedValue := newExportableValue(value, inter)
-
-	return exportValue(
-		exportedValue,
-		interpreter.ReturnEmptyLocationRange,
-	)
+	return storage, inter, nil
 }
 
 func (r interpreterRuntime) ReadStored(
@@ -862,7 +572,7 @@ func (r interpreterRuntime) ReadStored(
 ) {
 	location := context.Location
 
-	codesAndPrograms := newCodesAndPrograms()
+	var codesAndPrograms codesAndPrograms
 
 	defer r.Recover(
 		func(internalErr Error) {
@@ -872,19 +582,28 @@ func (r interpreterRuntime) ReadStored(
 		codesAndPrograms,
 	)
 
-	return r.executeNonProgram(
-		func(inter *interpreter.Interpreter) (interpreter.Value, error) {
-			pathValue := importPathValue(inter, path)
+	_, inter, err := r.Storage(context)
+	if err != nil {
+		// error is already wrapped as Error in Storage
+		return nil, err
+	}
 
-			domain := pathValue.Domain.Identifier()
-			identifier := pathValue.Identifier
+	pathValue := importPathValue(inter, path)
 
-			value := inter.ReadStored(address, domain, identifier)
+	domain := pathValue.Domain.Identifier()
+	identifier := pathValue.Identifier
 
-			return value, nil
-		},
-		context,
-	)
+	value := inter.ReadStored(address, domain, identifier)
+
+	var exportedValue cadence.Value
+	if value != nil {
+		exportedValue, err = ExportValue(value, inter, interpreter.ReturnEmptyLocationRange)
+		if err != nil {
+			return nil, newError(err, location, codesAndPrograms)
+		}
+	}
+
+	return exportedValue, nil
 }
 
 func (r interpreterRuntime) ReadLinked(
@@ -897,7 +616,7 @@ func (r interpreterRuntime) ReadLinked(
 ) {
 	location := context.Location
 
-	codesAndPrograms := newCodesAndPrograms()
+	var codesAndPrograms codesAndPrograms
 
 	defer r.Recover(
 		func(internalErr Error) {
@@ -907,31 +626,41 @@ func (r interpreterRuntime) ReadLinked(
 		codesAndPrograms,
 	)
 
-	return r.executeNonProgram(
-		func(inter *interpreter.Interpreter) (interpreter.Value, error) {
-			targetPath, _, err := inter.GetCapabilityFinalTargetPath(
-				address,
-				importPathValue(inter, path),
-				&sema.ReferenceType{
-					Type: sema.AnyType,
-				},
-				interpreter.ReturnEmptyLocationRange,
-			)
-			if err != nil {
-				return nil, err
-			}
+	_, inter, err := r.Storage(context)
+	if err != nil {
+		// error is already wrapped as Error in Storage
+		return nil, err
+	}
 
-			if targetPath == interpreter.EmptyPathValue {
-				return nil, nil
-			}
-
-			value := inter.ReadStored(
-				address,
-				targetPath.Domain.Identifier(),
-				targetPath.Identifier,
-			)
-			return value, nil
+	targetPath, _, err := inter.GetCapabilityFinalTargetPath(
+		address,
+		importPathValue(inter, path),
+		&sema.ReferenceType{
+			Type: sema.AnyType,
 		},
-		context,
+		interpreter.ReturnEmptyLocationRange,
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	if targetPath == interpreter.EmptyPathValue {
+		return nil, nil
+	}
+
+	value := inter.ReadStored(
+		address,
+		targetPath.Domain.Identifier(),
+		targetPath.Identifier,
+	)
+
+	var exportedValue cadence.Value
+	if value != nil {
+		exportedValue, err = ExportValue(value, inter, interpreter.ReturnEmptyLocationRange)
+		if err != nil {
+			return nil, newError(err, location, codesAndPrograms)
+		}
+	}
+
+	return exportedValue, nil
 }
