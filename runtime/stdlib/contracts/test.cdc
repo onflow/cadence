@@ -13,7 +13,7 @@ pub contract Test {
 
     pub struct interface Matcher {
 
-        pub fun test(_ value: Any): Bool
+        pub fun test(_ value: AnyStruct): Bool
 
         pub fun and(_ other: AnyStruct{Matcher}): AnyStruct{Matcher}
 

@@ -1525,10 +1525,9 @@ func TestInterpretMatcher(t *testing.T) {
         `
 
 		runner := NewTestRunner()
-		result, err := runner.RunTest(script, "test")
-		require.NoError(t, err)
-		require.Error(t, result.err)
-		errs := checker.ExpectCheckerErrors(t, result.err, 1)
+		_, err := runner.RunTest(script, "test")
+		require.Error(t, err)
+		errs := checker.ExpectCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
@@ -1569,10 +1568,9 @@ func TestInterpretMatcher(t *testing.T) {
         `
 
 		runner := NewTestRunner()
-		result, err := runner.RunTest(script, "test")
-		require.NoError(t, err)
-		require.Error(t, result.err)
-		errs := checker.ExpectCheckerErrors(t, result.err, 2)
+		_, err := runner.RunTest(script, "test")
+		require.Error(t, err)
+		errs := checker.ExpectCheckerErrors(t, err, 2)
 		assert.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 	})
@@ -1606,7 +1604,6 @@ func TestInterpretMatcher(t *testing.T) {
 		require.Error(t, result.err)
 		assert.ErrorAs(t, result.err, &interpreter.TypeMismatchError{})
 	})
-
 }
 
 func TestInterpretEqualMatcher(t *testing.T) {
@@ -1668,9 +1665,12 @@ func TestInterpretEqualMatcher(t *testing.T) {
         `
 
 		runner := NewTestRunner()
-		result, err := runner.RunTest(script, "test")
-		require.NoError(t, err)
-		require.NoError(t, result.err)
+		_, err := runner.RunTest(script, "test")
+		require.Error(t, err)
+
+		errs := checker.ExpectCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 	})
 
 	t.Run("with explicit types", func(t *testing.T) {
@@ -1826,9 +1826,14 @@ func TestInterpretEqualMatcher(t *testing.T) {
         `
 
 		runner := NewTestRunner()
-		result, err := runner.RunTest(script, "test")
-		require.NoError(t, err)
-		require.NoError(t, result.err)
+		_, err := runner.RunTest(script, "test")
+		require.Error(t, err)
+
+		errs := checker.ExpectCheckerErrors(t, err, 4)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[3])
 	})
 
 	t.Run("resource matcher and", func(t *testing.T) {
@@ -1854,10 +1859,13 @@ func TestInterpretEqualMatcher(t *testing.T) {
         `
 
 		runner := NewTestRunner()
-		result, err := runner.RunTest(script, "test")
-		require.NoError(t, err)
-		require.Error(t, result.err)
-		assert.ErrorAs(t, result.err, &stdlib.AssertionError{})
+		_, err := runner.RunTest(script, "test")
+		require.Error(t, err)
+
+		errs := checker.ExpectCheckerErrors(t, err, 3)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
 	})
 }
 
@@ -1947,10 +1955,9 @@ func TestInterpretExpectFunction(t *testing.T) {
         `
 
 		runner := NewTestRunner()
-		result, err := runner.RunTest(script, "test")
-		require.NoError(t, err)
-		require.Error(t, result.err)
-		errs := checker.ExpectCheckerErrors(t, result.err, 2)
+		_, err := runner.RunTest(script, "test")
+		require.Error(t, err)
+		errs := checker.ExpectCheckerErrors(t, err, 2)
 		assert.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 	})
@@ -1971,32 +1978,12 @@ func TestInterpretExpectFunction(t *testing.T) {
         `
 
 		runner := NewTestRunner()
-		result, err := runner.RunTest(script, "test")
-		require.NoError(t, err)
-		require.NoError(t, result.err)
-	})
+		_, err := runner.RunTest(script, "test")
+		require.Error(t, err)
 
-	t.Run("resource with a different resource matcher", func(t *testing.T) {
-		t.Parallel()
-
-		script := `
-            import Test
-
-            pub fun test() {
-                let foo <- create Foo()
-                let bar <- create Bar()
-                Test.expect(<-foo, Test.equal(<-bar))
-            }
-
-            pub resource Foo {}
-            pub resource Bar {}
-        `
-
-		runner := NewTestRunner()
-		result, err := runner.RunTest(script, "test")
-		require.NoError(t, err)
-		require.Error(t, result.err)
-		assert.ErrorAs(t, result.err, &stdlib.AssertionError{})
+		errs := checker.ExpectCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 	})
 
 	t.Run("resource with struct matcher", func(t *testing.T) {
@@ -2016,10 +2003,11 @@ func TestInterpretExpectFunction(t *testing.T) {
         `
 
 		runner := NewTestRunner()
-		result, err := runner.RunTest(script, "test")
-		require.NoError(t, err)
-		require.Error(t, result.err)
-		assert.ErrorAs(t, result.err, &stdlib.AssertionError{})
+		_, err := runner.RunTest(script, "test")
+		require.Error(t, err)
+
+		errs := checker.ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
 	t.Run("struct with resource matcher", func(t *testing.T) {
@@ -2039,9 +2027,10 @@ func TestInterpretExpectFunction(t *testing.T) {
         `
 
 		runner := NewTestRunner()
-		result, err := runner.RunTest(script, "test")
-		require.NoError(t, err)
-		require.Error(t, result.err)
-		assert.ErrorAs(t, result.err, &stdlib.AssertionError{})
+		_, err := runner.RunTest(script, "test")
+		require.Error(t, err)
+
+		errs := checker.ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 }

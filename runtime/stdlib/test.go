@@ -65,13 +65,6 @@ var TestContractChecker = func() *sema.Checker {
 		panic(err)
 	}
 
-	builtinTypes := BuiltinTypes
-	builtinTypes = append(builtinTypes, StandardLibraryType{
-		Name: sema.AnyType.Name,
-		Type: sema.AnyType,
-		Kind: common.DeclarationKindType,
-	})
-
 	var checker *sema.Checker
 	checker, err = sema.NewChecker(
 		program,
@@ -79,7 +72,7 @@ var TestContractChecker = func() *sema.Checker {
 		nil,
 		false,
 		sema.WithPredeclaredValues(BuiltinFunctions.ToSemaValueDeclarations()),
-		sema.WithPredeclaredTypes(builtinTypes.ToTypeDeclarations()),
+		sema.WithPredeclaredTypes(BuiltinTypes.ToTypeDeclarations()),
 	)
 	if err != nil {
 		panic(err)
@@ -1282,7 +1275,7 @@ Returns a matcher that succeeds if the tested value is equal to the given value
 `
 
 var typeParameter = &sema.TypeParameter{
-	TypeBound: sema.AnyType,
+	TypeBound: sema.AnyStructType,
 	Name:      "T",
 	Optional:  true,
 }
