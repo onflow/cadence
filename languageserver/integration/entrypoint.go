@@ -79,6 +79,10 @@ func (e *entryPointInfo) update(uri protocol.DocumentURI, version int32, checker
 		e.numberOfSigners = 0
 	}
 
+	e.pragmaArguments = nil
+	e.pragmaArgumentStrings = nil
+	e.pragmaSignerNames = nil
+
 	if e.startPos != nil {
 		parameterTypes := make([]sema.Type, len(e.parameters))
 
@@ -98,7 +102,7 @@ func (e *entryPointInfo) update(uri protocol.DocumentURI, version int32, checker
 				for i, arg := range arguments {
 					convertedArguments[i] = Argument{arg}
 				}
-
+				// todo reset to 0
 				e.pragmaArgumentStrings = append(e.pragmaArgumentStrings, pragmaArgumentString)
 				e.pragmaArguments = append(e.pragmaArguments, convertedArguments)
 			}
