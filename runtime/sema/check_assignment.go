@@ -277,7 +277,7 @@ func (checker *Checker) visitMemberExpressionAssignment(
 		)
 	}
 
-	targetIsConstant := member.VariableKind == ast.VariableKindConstant
+	targetIsConstant := member.VariableKind != ast.VariableKindVariable
 
 	// If this is an assignment to a `self` field, it needs special handling
 	// depending on if the assignment is in an initializer or not

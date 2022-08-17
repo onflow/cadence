@@ -3821,7 +3821,8 @@ type Member struct {
 	VariableKind    ast.VariableKind
 	ArgumentLabels  []string
 	// Predeclared fields can be considered initialized
-	Predeclared bool
+	Predeclared       bool
+	HasImplementation bool
 	// IgnoreInSerialization fields are ignored in serialization
 	IgnoreInSerialization bool
 	DocString             string
