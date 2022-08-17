@@ -56,7 +56,7 @@ type TestFramework interface {
 
 	ReadFile(string) (string, error)
 
-	UseConfigs(configurations *Configurations)
+	UseConfiguration(configurations *Configurations)
 }
 
 type ScriptResult struct {
@@ -79,7 +79,7 @@ type PublicKey struct {
 }
 
 type Configurations struct {
-	AddressMapping map[string]common.Address
+	Addresses map[string]common.Address
 }
 
 // TestFrameworkNotProvidedError is the error thrown if test-stdlib functionality is

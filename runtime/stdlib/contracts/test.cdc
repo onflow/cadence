@@ -99,7 +99,7 @@ pub contract Test {
         }
 
         pub fun useConfiguration(_ confgiurations: Configurations) {
-            self.backend.useConfig(confgiurations)
+            self.backend.useConfiguration(confgiurations)
         }
     }
 
@@ -160,7 +160,7 @@ pub contract Test {
 
     /// Configurations to be used by the blockchain.
     /// Can be used to set the address mappings.
-    //'
+    ///
     pub struct Configurations {
         pub let addresses: { String: Address }
 
@@ -206,6 +206,6 @@ pub contract Test {
             arguments: [AnyStruct]
         ): Error?
 
-        pub fun useConfig(_ confgiurations: Configurations)
+        pub fun useConfiguration(_ confgiurations: Configurations)
     }
 }

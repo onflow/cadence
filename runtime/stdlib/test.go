@@ -1369,14 +1369,14 @@ func emulatorBackendDeployContractFunction(testFramework interpreter.TestFramewo
 	)
 }
 
-// 'EmulatorBackend.useConfig' function
+// 'EmulatorBackend.useConfiguration' function
 
-const emulatorBackendUseConfigsFunctionName = "useConfig"
+const emulatorBackendUseConfigsFunctionName = "useConfiguration"
 
 const emulatorBackendUseConfigsFunctionDocString = `Use configurations function`
 
 var emulatorBackendUseConfigsFunctionType = func() *sema.FunctionType {
-	// The type of the 'UseConfigs' function of 'EmulatorBackend' (interface-implementation)
+	// The type of the 'useConfiguration' function of 'EmulatorBackend' (interface-implementation)
 	// is same as that of 'BlockchainBackend' interface.
 	typ, ok := blockchainBackendInterfaceType.Members.Get(emulatorBackendUseConfigsFunctionName)
 	if !ok {
@@ -1436,8 +1436,8 @@ func emulatorBackendUseConfigsFunction(testFramework interpreter.TestFramework) 
 				return true
 			})
 
-			testFramework.UseConfigs(&interpreter.Configurations{
-				AddressMapping: mapping,
+			testFramework.UseConfiguration(&interpreter.Configurations{
+				Addresses: mapping,
 			})
 
 			return interpreter.VoidValue{}

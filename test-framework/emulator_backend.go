@@ -21,7 +21,6 @@ package test
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/onflow/cadence/runtime/parser"
 	"strings"
 
 	sdk "github.com/onflow/flow-go-sdk"
@@ -38,6 +37,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -58,11 +58,14 @@ type EmulatorBackend struct {
 	accountKeys map[common.Address]map[string]keyInfo
 
 	// Import resolver is used to resolve imports of the *test script*.
-	// Note: This doesn't resolve the imports for the codes that is being tested
+	//
+	// Note: This doesn't resolve the imports for the codes that is being tested.
 	// i.e: the code that is submitted to the blockchain.
 	// Use the configurations to set the import mapping to for the testing code.
 	importResolver ImportResolver
 
+	// A property bag to pass various configurations to the backend.
+	// Currently, supports passing address mapping for contracts.
 	configurations *interpreter.Configurations
 }
 
@@ -402,7 +405,7 @@ func newBlockchain(opts ...emulator.Option) *emulator.Blockchain {
 	return b
 }
 
-func (e *EmulatorBackend) UseConfigs(configurations *interpreter.Configurations) {
+func (e *EmulatorBackend) UseConfiguration(configurations *interpreter.Configurations) {
 	e.configurations = configurations
 }
 
@@ -465,7 +468,7 @@ func (e *EmulatorBackend) replaceImports(code string) string {
 			continue
 		}
 
-		address := e.configurations.AddressMapping[location.String()]
+		address := e.configurations.Addresses[location.String()]
 
 		locationStr := fmt.Sprintf(`"%s"`, location)
 		addressStr := fmt.Sprintf("0x%s", address)

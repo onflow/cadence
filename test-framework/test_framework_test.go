@@ -2044,6 +2044,7 @@ func TestReplacingImports(t *testing.T) {
             pub var account = blockchain.createAccount()
 
             pub fun setup() {
+                // Deploy the contract
                 var contractCode = Test.readFile("./sample/contract.cdc")
 
                 let err = blockchain.deployContract(
@@ -2057,7 +2058,7 @@ func TestReplacingImports(t *testing.T) {
                     panic(err!.message)
                 }
 
-                // The update the configurations to use address of the deployed contract.
+                // Set the configurations to use the address of the deployed contract.
 
                 blockchain.useConfiguration(Test.Configurations({
                     "./FooContract": account.address
@@ -2136,7 +2137,7 @@ func TestReplacingImports(t *testing.T) {
                     panic(err!.message)
                 }
 
-                // Address locations are not replacable!
+                // Address locations are not replaceable!
 
                 blockchain.useConfiguration(Test.Configurations({
                     "0x01": account.address
@@ -2269,6 +2270,7 @@ func TestReplacingImports(t *testing.T) {
 		assert.Contains(
 			t,
 			result.err.Error(),
-			"expecting an AddressLocation, but other location types are passed")
+			"expecting an AddressLocation, but other location types are passed",
+		)
 	})
 }
