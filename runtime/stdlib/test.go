@@ -20,7 +20,6 @@ package stdlib
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -42,6 +41,7 @@ const scriptResultTypeName = "ScriptResult"
 const transactionResultTypeName = "TransactionResult"
 const resultStatusTypeName = "ResultStatus"
 const accountTypeName = "Account"
+const errorTypeName = "Error"
 const matcherTypeName = "Matcher"
 
 const succeededCaseName = "succeeded"
@@ -118,6 +118,7 @@ func NewTestContract(
 	compositeValue.Functions[testAssertFunctionName] = testAssertFunction
 	compositeValue.Functions[testExpectFunctionName] = testExpectFunction
 	compositeValue.Functions[testNewEmulatorBlockchainFunctionName] = testNewEmulatorBlockchainFunction
+	compositeValue.Functions[testReadFileFunctionName] = testReadFileFunction
 
 	// Inject natively implemented matchers
 	compositeValue.Functions[newMatcherFunctionName] = newMatcherFunction
@@ -159,6 +160,8 @@ var blockchainBackendInterfaceType = func() *sema.InterfaceType {
 func init() {
 
 	// Enrich 'Test' contract with natively implemented functions
+
+	// Test.assert()
 	testContractType.Members.Set(
 		testAssertFunctionName,
 		sema.NewUnmeteredPublicFunctionMember(
@@ -168,6 +171,8 @@ func init() {
 			testAssertFunctionDocString,
 		),
 	)
+
+	// Test.expect()
 	testContractType.Members.Set(
 		testExpectFunctionName,
 		sema.NewUnmeteredPublicFunctionMember(
@@ -177,6 +182,8 @@ func init() {
 			testExpectFunctionDocString,
 		),
 	)
+
+	// Test.newEmulatorBlockchain()
 	testContractType.Members.Set(
 		testNewEmulatorBlockchainFunctionName,
 		sema.NewUnmeteredPublicFunctionMember(
@@ -204,6 +211,17 @@ func init() {
 			equalMatcherFunctionName,
 			equalMatcherFunctionType,
 			equalMatcherFunctionDocString,
+		),
+	)
+
+	// Test.readFile()
+	testContractType.Members.Set(
+		testReadFileFunctionName,
+		sema.NewUnmeteredPublicFunctionMember(
+			testContractType,
+			testReadFileFunctionName,
+			testReadFileFunctionType,
+			testReadFileFunctionDocString,
 		),
 	)
 
@@ -254,6 +272,7 @@ var testAssertFunctionType = &sema.FunctionType{
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(
 		sema.VoidType,
 	),
+	RequiredArgumentCount: sema.RequiredArgumentCount(1),
 }
 
 var testAssertFunction = interpreter.NewUnmeteredHostFunctionValue(
@@ -263,14 +282,19 @@ var testAssertFunction = interpreter.NewUnmeteredHostFunctionValue(
 			panic(errors.NewUnreachableError())
 		}
 
-		message, ok := invocation.Arguments[1].(*interpreter.StringValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
+		var message string
+		if len(invocation.Arguments) > 1 {
+			messageValue, ok := invocation.Arguments[1].(*interpreter.StringValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+			message = messageValue.Str
 		}
 
 		if !condition {
 			panic(AssertionError{
-				Message: message.String(),
+				Message:       message,
+				LocationRange: invocation.GetLocationRange(),
 			})
 		}
 
@@ -397,6 +421,49 @@ func getFunctionType(value interpreter.FunctionValue) *sema.FunctionType {
 	}
 }
 
+// 'Test.readFile' function
+
+const testReadFileFunctionDocString = `read file function of Test contract`
+
+const testReadFileFunctionName = "readFile"
+
+var testReadFileFunctionType = &sema.FunctionType{
+	Parameters: []*sema.Parameter{
+		{
+			Label:      sema.ArgumentLabelNotRequired,
+			Identifier: "path",
+			TypeAnnotation: sema.NewTypeAnnotation(
+				sema.StringType,
+			),
+		},
+	},
+	ReturnTypeAnnotation: sema.NewTypeAnnotation(
+		sema.StringType,
+	),
+}
+
+var testReadFileFunction = interpreter.NewUnmeteredHostFunctionValue(
+	func(invocation interpreter.Invocation) interpreter.Value {
+		testFramework := invocation.Interpreter.TestFramework
+		if testFramework == nil {
+			panic(interpreter.TestFrameworkNotProvidedError{})
+		}
+
+		pathString, ok := invocation.Arguments[0].(*interpreter.StringValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		content, err := testFramework.ReadFile(pathString.Str)
+		if err != nil {
+			panic(err)
+		}
+
+		return interpreter.NewUnmeteredStringValue(content)
+	},
+	testReadFileFunctionType,
+)
+
 // 'Test.newEmulatorBlockchain' function
 
 const testNewEmulatorBlockchainFunctionDocString = `newEmulatorBlockchain function of Test contract`
@@ -412,9 +479,10 @@ var testNewEmulatorBlockchainFunctionType = &sema.FunctionType{
 
 var testNewEmulatorBlockchainFunction = interpreter.NewUnmeteredHostFunctionValue(
 	func(invocation interpreter.Invocation) interpreter.Value {
+		inter := invocation.Interpreter
 
 		// Create an `EmulatorBackend`
-		emulatorBackend := newEmulatorBackend(invocation.Interpreter, invocation.GetLocationRange)
+		emulatorBackend := newEmulatorBackend(inter, invocation.GetLocationRange)
 
 		// Create a 'Blockchain' struct value, that wraps the emulator backend,
 		// by calling the constructor of 'Blockchain'.
@@ -430,7 +498,7 @@ var testNewEmulatorBlockchainFunction = interpreter.NewUnmeteredHostFunctionValu
 			panic(errors.NewUnexpectedError("invalid type for constructor"))
 		}
 
-		blockchain, err := invocation.Interpreter.InvokeExternally(
+		blockchain, err := inter.InvokeExternally(
 			blockchainConstructor,
 			blockchainConstructor.Type,
 			[]interpreter.Value{
@@ -571,6 +639,12 @@ var EmulatorBackendType = func() *sema.CompositeType {
 			emulatorBackendCommitBlockFunctionType,
 			emulatorBackendCommitBlockFunctionDocString,
 		),
+		sema.NewUnmeteredPublicFunctionMember(
+			ty,
+			emulatorBackendDeployContractFunctionName,
+			emulatorBackendDeployContractFunctionType,
+			emulatorBackendDeployContractFunctionDocString,
+		),
 	}
 
 	ty.Members = sema.GetMembersAsMap(members)
@@ -602,6 +676,10 @@ func newEmulatorBackend(
 		{
 			Name:  emulatorBackendCommitBlockFunctionName,
 			Value: emulatorBackendCommitBlockFunction,
+		},
+		{
+			Name:  emulatorBackendDeployContractFunctionName,
+			Value: emulatorBackendDeployContractFunction,
 		},
 	}
 
@@ -652,20 +730,9 @@ var emulatorBackendExecuteScriptFunction = interpreter.NewUnmeteredHostFunctionV
 			panic(interpreter.TestFrameworkNotProvidedError{})
 		}
 
-		scriptString, ok := invocation.Arguments[0].(*interpreter.StringValue)
+		script, ok := invocation.Arguments[0].(*interpreter.StringValue)
 		if !ok {
 			panic(errors.NewUnreachableError())
-		}
-
-		// String conversion of the value gives the quoted string.
-		// Unquote the script-string to remove starting/ending quotes
-		// and to unescape the string literals in the code.
-		//
-		// TODO: Is the reverse conversion loss-less?
-
-		script, err := strconv.Unquote(scriptString.String())
-		if err != nil {
-			panic(errors.NewUnexpectedErrorFromCause(err))
 		}
 
 		args, err := arrayValueToSlice(invocation.Arguments[1])
@@ -673,11 +740,9 @@ var emulatorBackendExecuteScriptFunction = interpreter.NewUnmeteredHostFunctionV
 			panic(errors.NewUnexpectedErrorFromCause(err))
 		}
 
-		result := testFramework.RunScript(script, args)
+		result := testFramework.RunScript(script.Str, args)
 
-		succeeded := result.Error == nil
-
-		return createScriptResult(invocation.Interpreter, result.Value, succeeded)
+		return newScriptResult(invocation.Interpreter, result.Value, result)
 	},
 	emulatorBackendExecuteScriptFunctionType,
 )
@@ -698,40 +763,40 @@ func arrayValueToSlice(value interpreter.Value) ([]interpreter.Value, error) {
 	return result, nil
 }
 
-// createScriptResult Creates a "ScriptResult" using the return value of the executed script.
+// newScriptResult Creates a "ScriptResult" using the return value of the executed script.
 //
-func createScriptResult(inter *interpreter.Interpreter, returnValue interpreter.Value, succeeded bool) interpreter.Value {
-	// Lookup and get 'ResultStatus' enum value.
+func newScriptResult(
+	inter *interpreter.Interpreter,
+	returnValue interpreter.Value,
+	result *interpreter.ScriptResult,
+) interpreter.Value {
 
-	resultStatusConstructorVar := inter.Activations.Find(resultStatusTypeName)
-	resultStatusConstructor, ok := resultStatusConstructorVar.GetValue().(*interpreter.HostFunctionValue)
-	if !ok {
-		panic(errors.NewUnexpectedError("invalid type for constructor"))
+	if returnValue == nil {
+		returnValue = interpreter.NilValue{}
 	}
 
+	// Lookup and get 'ResultStatus' enum value.
+	resultStatusConstructor := getConstructor(inter, resultStatusTypeName)
 	var status interpreter.Value
-	if succeeded {
+	if result.Error == nil {
 		succeededVar := resultStatusConstructor.NestedVariables[succeededCaseName]
 		status = succeededVar.GetValue()
 	} else {
-		succeededVar := resultStatusConstructor.NestedVariables[failedCaseName]
-		status = succeededVar.GetValue()
+		failedVar := resultStatusConstructor.NestedVariables[failedCaseName]
+		status = failedVar.GetValue()
 	}
+
+	errValue := newErrorValue(inter, result.Error)
 
 	// Create a 'ScriptResult' by calling its constructor.
-
-	scriptResultConstructorVar := inter.Activations.Find(scriptResultTypeName)
-	scriptResultConstructor, ok := scriptResultConstructorVar.GetValue().(*interpreter.HostFunctionValue)
-	if !ok {
-		panic(errors.NewUnexpectedError("invalid type for constructor"))
-	}
-
+	scriptResultConstructor := getConstructor(inter, scriptResultTypeName)
 	scriptResult, err := inter.InvokeExternally(
 		scriptResultConstructor,
 		scriptResultConstructor.Type,
 		[]interpreter.Value{
 			status,
 			returnValue,
+			errValue,
 		},
 	)
 
@@ -740,6 +805,16 @@ func createScriptResult(inter *interpreter.Interpreter, returnValue interpreter.
 	}
 
 	return scriptResult
+}
+
+func getConstructor(inter *interpreter.Interpreter, typeName string) *interpreter.HostFunctionValue {
+	resultStatusConstructorVar := inter.FindVariable(typeName)
+	resultStatusConstructor, ok := resultStatusConstructorVar.GetValue().(*interpreter.HostFunctionValue)
+	if !ok {
+		panic(errors.NewUnexpectedError("invalid type for constructor of '%s'", typeName))
+	}
+
+	return resultStatusConstructor
 }
 
 // 'EmulatorBackend.createAccount' function
@@ -813,12 +888,7 @@ func newAccountValue(
 	)
 
 	// Create an 'Account' by calling its constructor.
-	accountConstructorVar := inter.Activations.Find(accountTypeName)
-	accountConstructor, ok := accountConstructorVar.GetValue().(*interpreter.HostFunctionValue)
-	if !ok {
-		panic(errors.NewUnexpectedError("invalid type for constructor"))
-	}
-
+	accountConstructor := getConstructor(inter, accountTypeName)
 	accountValue, err := inter.InvokeExternally(
 		accountConstructor,
 		accountConstructor.Type,
@@ -970,42 +1040,53 @@ func accountsFromValue(
 			panic(errors.NewUnreachableError())
 		}
 
-		// Get address
-		addressValue := accountValue.GetMember(
-			inter,
-			locationRangeGetter,
-			accountAddressFieldName,
-		)
-		address, ok := addressValue.(interpreter.AddressValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
+		account := accountFromValue(inter, accountValue, locationRangeGetter)
 
-		// Get public key
-		publicKeyVal, ok := accountValue.GetMember(
-			inter,
-			locationRangeGetter,
-			sema.AccountKeyPublicKeyField,
-		).(interpreter.MemberAccessibleValue)
-
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-
-		publicKey, err := NewPublicKeyFromValue(inter, locationRangeGetter, publicKeyVal)
-		if err != nil {
-			panic(err)
-		}
-
-		accounts = append(accounts, &interpreter.Account{
-			Address:   common.Address(address),
-			PublicKey: publicKey,
-		})
+		accounts = append(accounts, account)
 
 		return true
 	})
 
 	return accounts
+}
+
+func accountFromValue(
+	inter *interpreter.Interpreter,
+	accountValue interpreter.MemberAccessibleValue,
+	locationRangeGetter func() interpreter.LocationRange,
+) *interpreter.Account {
+
+	// Get address
+	addressValue := accountValue.GetMember(
+		inter,
+		locationRangeGetter,
+		accountAddressFieldName,
+	)
+	address, ok := addressValue.(interpreter.AddressValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	// Get public key
+	publicKeyVal, ok := accountValue.GetMember(
+		inter,
+		locationRangeGetter,
+		sema.AccountKeyPublicKeyField,
+	).(interpreter.MemberAccessibleValue)
+
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	publicKey, err := NewPublicKeyFromValue(inter, locationRangeGetter, publicKeyVal)
+	if err != nil {
+		panic(err)
+	}
+
+	return &interpreter.Account{
+		Address:   common.Address(address),
+		PublicKey: publicKey,
+	}
 }
 
 // 'EmulatorBackend.executeNextTransaction' function
@@ -1051,44 +1132,36 @@ var emulatorBackendExecuteNextTransactionFunction = interpreter.NewUnmeteredHost
 			return interpreter.NilValue{}
 		}
 
-		succeeded := result.Error == nil
-
-		return createTransactionResult(invocation.Interpreter, succeeded)
+		return newTransactionResult(invocation.Interpreter, result)
 	},
 	emulatorBackendExecuteNextTransactionFunctionType,
 )
 
-// createTransactionResult Creates a "TransactionResult" indicating the status of the transaction execution.
+// newTransactionResult Creates a "TransactionResult" indicating the status of the transaction execution.
 //
-func createTransactionResult(inter *interpreter.Interpreter, succeeded bool) interpreter.Value {
+func newTransactionResult(inter *interpreter.Interpreter, result *interpreter.TransactionResult) interpreter.Value {
 	// Lookup and get 'ResultStatus' enum value.
-	resultStatusConstructorVar := inter.Activations.Find(resultStatusTypeName)
-	resultStatusConstructor, ok := resultStatusConstructorVar.GetValue().(*interpreter.HostFunctionValue)
-	if !ok {
-		panic(errors.NewUnexpectedError("invalid type for constructor"))
-	}
-
+	resultStatusConstructor := getConstructor(inter, resultStatusTypeName)
 	var status interpreter.Value
-	if succeeded {
+	if result.Error == nil {
 		succeededVar := resultStatusConstructor.NestedVariables[succeededCaseName]
 		status = succeededVar.GetValue()
 	} else {
-		succeededVar := resultStatusConstructor.NestedVariables[failedCaseName]
-		status = succeededVar.GetValue()
+		failedVar := resultStatusConstructor.NestedVariables[failedCaseName]
+		status = failedVar.GetValue()
 	}
 
 	// Create a 'TransactionResult' by calling its constructor.
-	transactionResultConstructorVar := inter.Activations.Find(transactionResultTypeName)
-	transactionResultConstructor, ok := transactionResultConstructorVar.GetValue().(*interpreter.HostFunctionValue)
-	if !ok {
-		panic(errors.NewUnexpectedError("invalid type for constructor"))
-	}
+	transactionResultConstructor := getConstructor(inter, transactionResultTypeName)
+
+	errValue := newErrorValue(inter, result.Error)
 
 	transactionResult, err := inter.InvokeExternally(
 		transactionResultConstructor,
 		transactionResultConstructor.Type,
 		[]interpreter.Value{
 			status,
+			errValue,
 		},
 	)
 
@@ -1097,6 +1170,29 @@ func createTransactionResult(inter *interpreter.Interpreter, succeeded bool) int
 	}
 
 	return transactionResult
+}
+
+func newErrorValue(inter *interpreter.Interpreter, err error) interpreter.Value {
+	if err == nil {
+		return interpreter.NilValue{}
+	}
+
+	// Create a 'Error' by calling its constructor.
+	errorConstructor := getConstructor(inter, errorTypeName)
+
+	errorValue, invocationErr := inter.InvokeExternally(
+		errorConstructor,
+		errorConstructor.Type,
+		[]interpreter.Value{
+			interpreter.NewUnmeteredStringValue(err.Error()),
+		},
+	)
+
+	if invocationErr != nil {
+		panic(invocationErr)
+	}
+
+	return errorValue
 }
 
 // 'EmulatorBackend.commitBlock' function
@@ -1249,6 +1345,82 @@ var equalMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
 		return newDefaultMatcher(inter, equalTestFunc, invocation.GetLocationRange)
 	},
 	equalMatcherFunctionType,
+)
+
+// 'EmulatorBackend.deployContract' function
+
+const emulatorBackendDeployContractFunctionName = "deployContract"
+
+const emulatorBackendDeployContractFunctionDocString = `deploy contract function`
+
+var emulatorBackendDeployContractFunctionType = func() *sema.FunctionType {
+	// The type of the 'deployContract' function of 'EmulatorBackend' (interface-implementation)
+	// is same as that of 'BlockchainBackend' interface.
+	typ, ok := blockchainBackendInterfaceType.Members.Get(emulatorBackendDeployContractFunctionName)
+	if !ok {
+		panic(errors.NewUnexpectedError(
+			"cannot find type %s.%s",
+			blockchainBackendTypeName,
+			emulatorBackendDeployContractFunctionName,
+		))
+	}
+
+	functionType, ok := typ.TypeAnnotation.Type.(*sema.FunctionType)
+	if !ok {
+		panic(errors.NewUnexpectedError(
+			"invalid type for %s. expected function",
+			emulatorBackendDeployContractFunctionName,
+		))
+	}
+
+	return functionType
+}()
+
+var emulatorBackendDeployContractFunction = interpreter.NewUnmeteredHostFunctionValue(
+	func(invocation interpreter.Invocation) interpreter.Value {
+		testFramework := invocation.Interpreter.TestFramework
+		if testFramework == nil {
+			panic(interpreter.TestFrameworkNotProvidedError{})
+		}
+
+		inter := invocation.Interpreter
+
+		// Contract name
+		name, ok := invocation.Arguments[0].(*interpreter.StringValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		// Contract code
+		code, ok := invocation.Arguments[1].(*interpreter.StringValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		// authorizer
+		accountValue, ok := invocation.Arguments[2].(interpreter.MemberAccessibleValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		account := accountFromValue(inter, accountValue, invocation.GetLocationRange)
+
+		// Contract init arguments
+		args, err := arrayValueToSlice(invocation.Arguments[3])
+		if err != nil {
+			panic(err)
+		}
+
+		err = testFramework.DeployContract(
+			name.Str,
+			code.Str,
+			account,
+			args,
+		)
+
+		return newErrorValue(inter, err)
+	},
+	emulatorBackendDeployContractFunctionType,
 )
 
 // TestFailedError

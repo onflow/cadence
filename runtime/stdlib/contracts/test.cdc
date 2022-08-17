@@ -90,6 +90,22 @@ pub contract Test {
             self.commitBlock()
             return results
         }
+
+        /// Deploys a given contract, and initilizes it with the arguments.
+        ///
+        pub fun deployContract(
+            name: String,
+            code: String,
+            account: Account,
+            arguments: [AnyStruct]
+        ): Error? {
+            return self.backend.deployContract(
+                name: name,
+                code: code,
+                account: account,
+                arguments: arguments
+            )
+        }
     }
 
     /// ResultStatus indicates status of a transaction or script execution.
@@ -103,9 +119,11 @@ pub contract Test {
     ///
     pub struct TransactionResult {
         pub let status: ResultStatus
+        pub let error:  Error?
 
-        init(status: ResultStatus) {
+        init(status: ResultStatus, error: Error) {
             self.status = status
+            self.error = error
         }
     }
 
@@ -114,10 +132,22 @@ pub contract Test {
     pub struct ScriptResult {
         pub let status: ResultStatus
         pub let returnValue: AnyStruct?
+        pub let error:       Error?
 
-        init(status: ResultStatus, returnValue: AnyStruct?) {
+        init(status: ResultStatus, returnValue: AnyStruct?, error: Error?) {
             self.status = status
             self.returnValue = returnValue
+            self.error = error
+        }
+    }
+
+    // Error is returned if something has gone wrong.
+    //
+    pub struct Error {
+        pub let message: String
+
+        init(_ message: String) {
+            self.message = message
         }
     }
 
@@ -162,5 +192,12 @@ pub contract Test {
         pub fun executeNextTransaction(): TransactionResult?
 
         pub fun commitBlock()
+
+        pub fun deployContract(
+            name: String,
+            code: String,
+            account: Account,
+            arguments: [AnyStruct]
+        ): Error?
     }
 }

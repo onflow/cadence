@@ -83,7 +83,7 @@ func (checker *Checker) VisitArrayExpression(expression *ast.ArrayExpression) as
 		if elementType == InvalidType {
 			checker.report(
 				&TypeAnnotationRequiredError{
-					Cause: "cannot infer type from array literal:",
+					Cause: "cannot infer type from array literal: ",
 					Pos:   expression.StartPos,
 				},
 			)

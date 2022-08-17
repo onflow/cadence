@@ -12,11 +12,11 @@ require (
 	github.com/leanovate/gopter v0.2.9
 	github.com/logrusorgru/aurora v0.0.0-20200102142835-e9ef32dff381
 	github.com/onflow/atree v0.4.0
-	github.com/opentracing/opentracing-go v1.2.0
 	github.com/rivo/uniseg v0.2.1-0.20211004051800-57c86be7915a
 	github.com/schollz/progressbar/v3 v3.8.3
 	github.com/stretchr/testify v1.7.3
 	github.com/turbolent/prettier v0.0.0-20220320183459-661cc755135d
+	go.opentelemetry.io/otel v1.8.0
 	go.uber.org/goleak v1.1.10
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
 	golang.org/x/text v0.3.7
