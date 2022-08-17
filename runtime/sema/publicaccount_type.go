@@ -32,6 +32,7 @@ const PublicAccountGetCapabilityField = "getCapability"
 const PublicAccountGetTargetLinkField = "getLinkTarget"
 const PublicAccountKeysField = "keys"
 const PublicAccountContractsField = "contracts"
+const PublicAccountPathsField = "publicPaths"
 
 // PublicAccountType represents the publicly accessible portion of an account.
 //
@@ -105,12 +106,26 @@ var PublicAccountType = func() *CompositeType {
 			PublicAccountContractsType,
 			accountTypeContractsFieldDocString,
 		),
+		NewUnmeteredPublicConstantFieldMember(
+			publicAccountType,
+			PublicAccountPathsField,
+			PublicAccountPathsType,
+			publicAccountTypePathsFieldDocString,
+		),
 	}
 
 	publicAccountType.Members = GetMembersAsMap(members)
 	publicAccountType.Fields = getFieldNames(members)
 	return publicAccountType
 }()
+
+var PublicAccountPathsType = &VariableSizedType{
+	Type: PublicPathType,
+}
+
+const publicAccountTypePathsFieldDocString = `
+All the public paths of an account
+`
 
 // PublicAccountKeysType represents the keys associated with a public account.
 var PublicAccountKeysType = func() *CompositeType {

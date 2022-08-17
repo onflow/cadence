@@ -25,85 +25,89 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-var hashAlgorithmFunctions = map[string]interpreter.FunctionValue{
-	sema.HashAlgorithmTypeHashFunctionName:        hashAlgorithmHashFunction,
-	sema.HashAlgorithmTypeHashWithTagFunctionName: hashAlgorithmHashWithTagFunction,
+var hashAlgorithmTypeID = sema.HashAlgorithmType.ID()
+var hashAlgorithmStaticType interpreter.StaticType = interpreter.CompositeStaticType{
+	QualifiedIdentifier: sema.HashAlgorithmType.Identifier,
+	TypeID:              hashAlgorithmTypeID,
 }
 
-func NewHashAlgorithmCase(inter *interpreter.Interpreter, rawValue uint8) *interpreter.CompositeValue {
-	return interpreter.NewEnumCaseValue(
-		inter,
-		interpreter.ReturnEmptyLocationRange,
-		sema.HashAlgorithmType,
-		interpreter.NewUInt8Value(inter, func() uint8 {
-			return rawValue
-		}),
-		hashAlgorithmFunctions,
+func NewHashAlgorithmCase(rawValue interpreter.UInt8Value) interpreter.MemberAccessibleValue {
+
+	value := interpreter.NewSimpleCompositeValue(
+		nil,
+		sema.HashAlgorithmType.ID(),
+		hashAlgorithmStaticType,
+		[]string{sema.EnumRawValueFieldName},
+		nil,
+		nil,
+		nil,
+		nil,
+	)
+	value.Fields = map[string]interpreter.Value{
+		sema.EnumRawValueFieldName:                    rawValue,
+		sema.HashAlgorithmTypeHashFunctionName:        hashAlgorithmHashFunction(value),
+		sema.HashAlgorithmTypeHashWithTagFunctionName: hashAlgorithmHashWithTagFunction(value),
+	}
+	return value
+}
+
+func hashAlgorithmHashFunction(hashAlgoValue interpreter.MemberAccessibleValue) *interpreter.HostFunctionValue {
+	return interpreter.NewUnmeteredHostFunctionValue(
+		func(invocation interpreter.Invocation) interpreter.Value {
+			dataValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			inter := invocation.Interpreter
+
+			getLocationRange := invocation.GetLocationRange
+
+			return inter.HashHandler(
+				inter,
+				getLocationRange,
+				dataValue,
+				nil,
+				hashAlgoValue,
+			)
+		},
+		sema.HashAlgorithmTypeHashFunctionType,
 	)
 }
 
-var hashAlgorithmHashFunction = interpreter.NewUnmeteredHostFunctionValue(
-	func(invocation interpreter.Invocation) interpreter.Value {
-		dataValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-		hashAlgoValue := invocation.Self
+func hashAlgorithmHashWithTagFunction(hashAlgoValue interpreter.MemberAccessibleValue) *interpreter.HostFunctionValue {
+	return interpreter.NewUnmeteredHostFunctionValue(
+		func(invocation interpreter.Invocation) interpreter.Value {
+			dataValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
 
-		inter := invocation.Interpreter
+			tagValue, ok := invocation.Arguments[1].(*interpreter.StringValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
 
-		getLocationRange := invocation.GetLocationRange
+			inter := invocation.Interpreter
 
-		inter.ExpectType(
-			hashAlgoValue,
-			sema.HashAlgorithmType,
-			getLocationRange,
-		)
+			getLocationRange := invocation.GetLocationRange
 
-		return inter.HashHandler(
-			inter,
-			getLocationRange,
-			dataValue,
-			nil,
-			hashAlgoValue,
-		)
-	},
-	sema.HashAlgorithmTypeHashFunctionType,
-)
+			return inter.HashHandler(
+				inter,
+				getLocationRange,
+				dataValue,
+				tagValue,
+				hashAlgoValue,
+			)
+		},
+		sema.HashAlgorithmTypeHashWithTagFunctionType,
+	)
+}
 
-var hashAlgorithmHashWithTagFunction = interpreter.NewUnmeteredHostFunctionValue(
-	func(invocation interpreter.Invocation) interpreter.Value {
-		dataValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-
-		tagValue, ok := invocation.Arguments[1].(*interpreter.StringValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-
-		hashAlgoValue := invocation.Self
-
-		inter := invocation.Interpreter
-
-		getLocationRange := invocation.GetLocationRange
-
-		inter.ExpectType(
-			hashAlgoValue,
-			sema.HashAlgorithmType,
-			getLocationRange,
-		)
-
-		return inter.HashHandler(
-			inter,
-			getLocationRange,
-			dataValue,
-			tagValue,
-			hashAlgoValue,
-		)
-	},
-	sema.HashAlgorithmTypeHashWithTagFunctionType,
+var hashAlgorithmConstructorValue = cryptoAlgorithmEnumValue(
+	sema.HashAlgorithmType,
+	sema.HashAlgorithms,
+	NewHashAlgorithmCase,
 )
 
 var hashAlgorithmConstructor = StandardLibraryValue{
@@ -112,13 +116,8 @@ var hashAlgorithmConstructor = StandardLibraryValue{
 		sema.HashAlgorithmType,
 		sema.HashAlgorithms,
 	),
-	ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
-		return cryptoAlgorithmEnumValue(
-			inter,
-			sema.HashAlgorithmType,
-			sema.HashAlgorithms,
-			NewHashAlgorithmCase,
-		)
+	ValueFactory: func(_ *interpreter.Interpreter) interpreter.Value {
+		return hashAlgorithmConstructorValue
 	},
 	Kind: common.DeclarationKindEnum,
 }

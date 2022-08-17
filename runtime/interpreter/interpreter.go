@@ -237,7 +237,7 @@ type SignatureVerificationHandlerFunc func(
 	signature *ArrayValue,
 	signedData *ArrayValue,
 	domainSeparationTag *StringValue,
-	hashAlgorithm *CompositeValue,
+	hashAlgorithm *SimpleCompositeValue,
 	publicKey MemberAccessibleValue,
 ) BoolValue
 
@@ -283,6 +283,7 @@ type WrapperCode struct {
 	InitializerFunctionWrapper FunctionWrapper
 	DestructorFunctionWrapper  FunctionWrapper
 	FunctionWrappers           map[string]FunctionWrapper
+	Functions                  map[string]FunctionValue
 }
 
 // TypeCodes is the value which stores the "prepared" / "callable" "code"
@@ -1667,6 +1668,22 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 			destructorFunction = destructorFunctionWrapper(destructorFunction)
 		}
 
+		// Apply default functions, if conforming type does not provide the function
+
+		// Iterating over the map in a non-deterministic way is OK,
+		// we only apply the function wrapper to each function,
+		// the order does not matter.
+
+		for name, function := range code.Functions { //nolint:maprangecheck
+			if functions[name] != nil {
+				continue
+			}
+			if functions == nil {
+				functions = map[string]FunctionValue{}
+			}
+			functions[name] = function
+		}
+
 		// Wrap functions
 
 		// Iterating over the map in a non-deterministic way is OK,
@@ -1695,7 +1712,6 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 	for i := len(typeRequirements) - 1; i >= 0; i-- {
 		typeRequirement := typeRequirements[i]
-
 		wrapFunctions(interpreter.typeCodes.TypeRequirementCodes[typeRequirement.ID()])
 	}
 
@@ -1850,7 +1866,10 @@ func (interpreter *Interpreter) declareEnumConstructor(
 	intType := sema.IntType
 
 	enumCases := declaration.Members.EnumCases()
-	caseValues := make([]*CompositeValue, len(enumCases))
+	caseValues := make([]struct {
+		Value    MemberAccessibleValue
+		RawValue IntegerValue
+	}, len(enumCases))
 
 	constructorNestedVariables := map[string]*Variable{}
 
@@ -1861,7 +1880,7 @@ func (interpreter *Interpreter) declareEnumConstructor(
 			NewIntValueFromInt64(interpreter, int64(i)),
 			intType,
 			compositeType.EnumRawType,
-		)
+		).(IntegerValue)
 
 		caseValueFields := []CompositeField{
 			{
@@ -1881,7 +1900,13 @@ func (interpreter *Interpreter) declareEnumConstructor(
 			caseValueFields,
 			common.Address{},
 		)
-		caseValues[i] = caseValue
+		caseValues[i] = struct {
+			Value    MemberAccessibleValue
+			RawValue IntegerValue
+		}{
+			Value:    caseValue,
+			RawValue: rawValue,
+		}
 
 		constructorNestedVariables[enumCase.Identifier.Identifier] =
 			NewVariableWithValue(interpreter, caseValue)
@@ -1902,27 +1927,29 @@ func (interpreter *Interpreter) declareEnumConstructor(
 }
 
 func EnumConstructorFunction(
-	inter *Interpreter,
+	gauge common.MemoryGauge,
 	getLocationRange func() LocationRange,
 	enumType *sema.CompositeType,
-	caseValues []*CompositeValue,
+	cases []struct {
+		Value    MemberAccessibleValue
+		RawValue IntegerValue
+	},
 	nestedVariables map[string]*Variable,
 ) *HostFunctionValue {
 
 	// Prepare a lookup table based on the big-endian byte representation
 
-	lookupTable := make(map[string]*CompositeValue)
+	lookupTable := make(map[string]Value, len(cases))
 
-	for _, caseValue := range caseValues {
-		rawValue := caseValue.GetField(inter, getLocationRange, sema.EnumRawValueFieldName)
-		rawValueBigEndianBytes := rawValue.(IntegerValue).ToBigEndianBytes()
-		lookupTable[string(rawValueBigEndianBytes)] = caseValue
+	for _, c := range cases {
+		rawValueBigEndianBytes := c.RawValue.ToBigEndianBytes()
+		lookupTable[string(rawValueBigEndianBytes)] = c.Value
 	}
 
 	// Prepare the constructor function which performs a lookup in the lookup table
 
 	constructor := NewHostFunctionValue(
-		inter,
+		gauge,
 		func(invocation Invocation) Value {
 			rawValue, ok := invocation.Arguments[0].(IntegerValue)
 			if !ok {
@@ -1933,7 +1960,7 @@ func EnumConstructorFunction(
 
 			caseValue, ok := lookupTable[string(rawValueArgumentBigEndianBytes)]
 			if !ok {
-				return NewNilValue(inter)
+				return NewNilValue(gauge)
 			}
 
 			return NewSomeValueNonCopying(invocation.Interpreter, caseValue)
@@ -2036,6 +2063,35 @@ func (interpreter *Interpreter) compositeDestructorFunction(
 		statements,
 		rewrittenPostConditions,
 	)
+}
+
+func (interpreter *Interpreter) defaultFunctions(
+	members *ast.Members,
+	lexicalScope *VariableActivation,
+) map[string]FunctionValue {
+
+	functionDeclarations := members.Functions()
+	functionCount := len(functionDeclarations)
+
+	if functionCount == 0 {
+		return nil
+	}
+
+	functions := make(map[string]FunctionValue, functionCount)
+
+	for _, functionDeclaration := range functionDeclarations {
+		name := functionDeclaration.Identifier.Identifier
+		if !functionDeclaration.FunctionBlock.HasStatements() {
+			continue
+		}
+
+		functions[name] = interpreter.compositeFunction(
+			functionDeclaration,
+			lexicalScope,
+		)
+	}
+
+	return functions
 }
 
 func (interpreter *Interpreter) compositeFunctions(
@@ -2389,11 +2445,13 @@ func (interpreter *Interpreter) declareInterface(
 	initializerFunctionWrapper := interpreter.initializerFunctionWrapper(declaration.Members, lexicalScope)
 	destructorFunctionWrapper := interpreter.destructorFunctionWrapper(declaration.Members, lexicalScope)
 	functionWrappers := interpreter.functionWrappers(declaration.Members, lexicalScope)
+	defaultFunctions := interpreter.defaultFunctions(declaration.Members, lexicalScope)
 
 	interpreter.typeCodes.InterfaceCodes[typeID] = WrapperCode{
 		InitializerFunctionWrapper: initializerFunctionWrapper,
 		DestructorFunctionWrapper:  destructorFunctionWrapper,
 		FunctionWrappers:           functionWrappers,
+		Functions:                  defaultFunctions,
 	}
 }
 
@@ -2423,11 +2481,13 @@ func (interpreter *Interpreter) declareTypeRequirement(
 	initializerFunctionWrapper := interpreter.initializerFunctionWrapper(declaration.Members, lexicalScope)
 	destructorFunctionWrapper := interpreter.destructorFunctionWrapper(declaration.Members, lexicalScope)
 	functionWrappers := interpreter.functionWrappers(declaration.Members, lexicalScope)
+	defaultFunctions := interpreter.defaultFunctions(declaration.Members, lexicalScope)
 
 	interpreter.typeCodes.TypeRequirementCodes[typeID] = WrapperCode{
 		InitializerFunctionWrapper: initializerFunctionWrapper,
 		DestructorFunctionWrapper:  destructorFunctionWrapper,
 		FunctionWrappers:           functionWrappers,
+		Functions:                  defaultFunctions,
 	}
 }
 
@@ -3632,6 +3692,43 @@ func (interpreter *Interpreter) IsSubTypeOfSemaType(subType StaticType, superTyp
 	semaType := interpreter.MustConvertStaticToSemaType(subType)
 
 	return sema.IsSubType(semaType, superType)
+}
+
+func (interpreter *Interpreter) domainPaths(address common.Address, domain common.PathDomain) []Value {
+	storageMap := interpreter.Storage.GetStorageMap(address, domain.Identifier(), false)
+	if storageMap == nil {
+		return []Value{}
+	}
+	iterator := storageMap.Iterator(interpreter)
+	values := make([]Value, 0, storageMap.Count())
+	for key := iterator.NextKey(); key != ""; key = iterator.NextKey() {
+		values = append(values, NewPathValue(interpreter, domain, key))
+	}
+	return values
+}
+
+func (interpreter *Interpreter) accountPaths(addressValue AddressValue, getLocationRange func() LocationRange, domain common.PathDomain, pathType StaticType) *ArrayValue {
+	address := addressValue.ToAddress()
+	values := interpreter.domainPaths(address, domain)
+	return NewArrayValue(
+		interpreter,
+		getLocationRange,
+		NewVariableSizedStaticType(interpreter, pathType),
+		common.Address{},
+		values...,
+	)
+}
+
+func (interpreter *Interpreter) publicAccountPaths(addressValue AddressValue, getLocationRange func() LocationRange) *ArrayValue {
+	return interpreter.accountPaths(addressValue, getLocationRange, common.PathDomainPublic, PrimitiveStaticTypePublicPath)
+}
+
+func (interpreter *Interpreter) privateAccountPaths(addressValue AddressValue, getLocationRange func() LocationRange) *ArrayValue {
+	return interpreter.accountPaths(addressValue, getLocationRange, common.PathDomainPrivate, PrimitiveStaticTypePrivatePath)
+}
+
+func (interpreter *Interpreter) storageAccountPaths(addressValue AddressValue, getLocationRange func() LocationRange) *ArrayValue {
+	return interpreter.accountPaths(addressValue, getLocationRange, common.PathDomainStorage, PrimitiveStaticTypeStoragePath)
 }
 
 func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValue) *HostFunctionValue {

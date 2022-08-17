@@ -31,49 +31,91 @@ type MemberInfo struct {
 	AccessedType Type
 }
 
-type CastType struct {
+type CastTypes struct {
 	ExprActualType Type
 	TargetType     Type
 	ExpectedType   Type
 }
 
+type RuntimeCastTypes struct {
+	Left  Type
+	Right Type
+}
+
+type ReturnStatementTypes struct {
+	ValueType  Type
+	ReturnType Type
+}
+
+type BinaryExpressionTypes struct {
+	ResultType Type
+	LeftType   Type
+	RightType  Type
+}
+
+type VariableDeclarationTypes struct {
+	ValueType       Type
+	SecondValueType Type
+	TargetType      Type
+}
+
+type AssignmentStatementTypes struct {
+	ValueType  Type
+	TargetType Type
+}
+
+type InvocationExpressionTypes struct {
+	ArgumentTypes      []Type
+	TypeParameterTypes []Type
+	ReturnType         Type
+	TypeArguments      *TypeParameterTypeOrderedMap
+}
+
+type ArrayExpressionTypes struct {
+	ArgumentTypes []Type
+	ArrayType     ArrayType
+}
+
+type DictionaryExpressionTypes struct {
+	DictionaryType *DictionaryType
+	EntryTypes     []DictionaryEntryType
+}
+
+type SwapStatementTypes struct {
+	LeftType  Type
+	RightType Type
+}
+
+type IndexExpressionTypes struct {
+	IndexedType  ValueIndexableType
+	IndexingType Type
+}
+
 type Elaboration struct {
-	lock                                *sync.RWMutex
-	FunctionDeclarationFunctionTypes    map[*ast.FunctionDeclaration]*FunctionType
-	VariableDeclarationValueTypes       map[*ast.VariableDeclaration]Type
-	VariableDeclarationSecondValueTypes map[*ast.VariableDeclaration]Type
-	VariableDeclarationTargetTypes      map[*ast.VariableDeclaration]Type
-	AssignmentStatementValueTypes       map[*ast.AssignmentStatement]Type
-	AssignmentStatementTargetTypes      map[*ast.AssignmentStatement]Type
-	CompositeDeclarationTypes           map[*ast.CompositeDeclaration]*CompositeType
-	CompositeTypeDeclarations           map[*CompositeType]*ast.CompositeDeclaration
-	InterfaceDeclarationTypes           map[*ast.InterfaceDeclaration]*InterfaceType
-	InterfaceTypeDeclarations           map[*InterfaceType]*ast.InterfaceDeclaration
-	ConstructorFunctionTypes            map[*ast.SpecialFunctionDeclaration]*FunctionType
-	FunctionExpressionFunctionType      map[*ast.FunctionExpression]*FunctionType
-	InvocationExpressionArgumentTypes   map[*ast.InvocationExpression][]Type
-	InvocationExpressionParameterTypes  map[*ast.InvocationExpression][]Type
-	InvocationExpressionReturnTypes     map[*ast.InvocationExpression]Type
-	InvocationExpressionTypeArguments   map[*ast.InvocationExpression]*TypeParameterTypeOrderedMap
-	CastingStaticValueTypes             map[*ast.CastingExpression]Type
-	CastingTargetTypes                  map[*ast.CastingExpression]Type
-	ReturnStatementValueTypes           map[*ast.ReturnStatement]Type
-	ReturnStatementReturnTypes          map[*ast.ReturnStatement]Type
-	BinaryExpressionResultTypes         map[*ast.BinaryExpression]Type
-	BinaryExpressionLeftTypes           map[*ast.BinaryExpression]Type
-	BinaryExpressionRightTypes          map[*ast.BinaryExpression]Type
-	MemberExpressionMemberInfos         map[*ast.MemberExpression]MemberInfo
-	MemberExpressionExpectedTypes       map[*ast.MemberExpression]Type
-	ArrayExpressionArgumentTypes        map[*ast.ArrayExpression][]Type
-	ArrayExpressionArrayType            map[*ast.ArrayExpression]ArrayType
-	DictionaryExpressionType            map[*ast.DictionaryExpression]*DictionaryType
-	DictionaryExpressionEntryTypes      map[*ast.DictionaryExpression][]DictionaryEntryType
-	IntegerExpressionType               map[*ast.IntegerExpression]Type
-	StringExpressionType                map[*ast.StringExpression]Type
-	FixedPointExpression                map[*ast.FixedPointExpression]Type
-	TransactionDeclarationTypes         map[*ast.TransactionDeclaration]*TransactionType
-	SwapStatementLeftTypes              map[*ast.SwapStatement]Type
-	SwapStatementRightTypes             map[*ast.SwapStatement]Type
+	lock                             *sync.RWMutex
+	FunctionDeclarationFunctionTypes map[*ast.FunctionDeclaration]*FunctionType
+	VariableDeclarationTypes         map[*ast.VariableDeclaration]VariableDeclarationTypes
+	AssignmentStatementTypes         map[*ast.AssignmentStatement]AssignmentStatementTypes
+	CompositeDeclarationTypes        map[*ast.CompositeDeclaration]*CompositeType
+	CompositeTypeDeclarations        map[*CompositeType]*ast.CompositeDeclaration
+	InterfaceDeclarationTypes        map[*ast.InterfaceDeclaration]*InterfaceType
+	InterfaceTypeDeclarations        map[*InterfaceType]*ast.InterfaceDeclaration
+	ConstructorFunctionTypes         map[*ast.SpecialFunctionDeclaration]*FunctionType
+	FunctionExpressionFunctionType   map[*ast.FunctionExpression]*FunctionType
+	InvocationExpressionTypes        map[*ast.InvocationExpression]InvocationExpressionTypes
+	CastingStaticValueTypes          map[*ast.CastingExpression]Type
+	CastingTargetTypes               map[*ast.CastingExpression]Type
+	ReturnStatementTypes             map[*ast.ReturnStatement]ReturnStatementTypes
+	BinaryExpressionTypes            map[*ast.BinaryExpression]BinaryExpressionTypes
+	MemberExpressionMemberInfos      map[*ast.MemberExpression]MemberInfo
+	MemberExpressionExpectedTypes    map[*ast.MemberExpression]Type
+	ArrayExpressionTypes             map[*ast.ArrayExpression]ArrayExpressionTypes
+	DictionaryExpressionTypes        map[*ast.DictionaryExpression]DictionaryExpressionTypes
+	IntegerExpressionType            map[*ast.IntegerExpression]Type
+	StringExpressionType             map[*ast.StringExpression]Type
+	FixedPointExpression             map[*ast.FixedPointExpression]Type
+	TransactionDeclarationTypes      map[*ast.TransactionDeclaration]*TransactionType
+	SwapStatementTypes               map[*ast.SwapStatement]SwapStatementTypes
 	// IsNestedResourceMoveExpression indicates if the access the index or member expression
 	// is implicitly moving a resource out of the container, e.g. in a shift or swap statement.
 	IsNestedResourceMoveExpression      map[ast.Expression]struct{}
@@ -92,18 +134,14 @@ type Elaboration struct {
 	EffectivePredeclaredTypes           map[string]TypeDeclaration
 	isChecking                          bool
 	ReferenceExpressionBorrowTypes      map[*ast.ReferenceExpression]Type
-	IndexExpressionIndexedTypes         map[*ast.IndexExpression]ValueIndexableType
-	IndexExpressionIndexingTypes        map[*ast.IndexExpression]Type
+	IndexExpressionTypes                map[*ast.IndexExpression]IndexExpressionTypes
 	ForceExpressionTypes                map[*ast.ForceExpression]Type
-	StaticCastTypes                     map[*ast.CastingExpression]CastType
+	StaticCastTypes                     map[*ast.CastingExpression]CastTypes
 	NumberConversionArgumentTypes       map[ast.Expression]struct {
 		Type  Type
 		Range ast.Range
 	}
-	RuntimeCastTypes map[*ast.CastingExpression]struct {
-		Left  Type
-		Right Type
-	}
+	RuntimeCastTypes map[*ast.CastingExpression]RuntimeCastTypes
 }
 
 func NewElaboration(gauge common.MemoryGauge, extendedElaboration bool) *Elaboration {
@@ -111,40 +149,28 @@ func NewElaboration(gauge common.MemoryGauge, extendedElaboration bool) *Elabora
 	elaboration := &Elaboration{
 		lock:                                new(sync.RWMutex),
 		FunctionDeclarationFunctionTypes:    map[*ast.FunctionDeclaration]*FunctionType{},
-		VariableDeclarationValueTypes:       map[*ast.VariableDeclaration]Type{},
-		VariableDeclarationSecondValueTypes: map[*ast.VariableDeclaration]Type{},
-		VariableDeclarationTargetTypes:      map[*ast.VariableDeclaration]Type{},
-		AssignmentStatementValueTypes:       map[*ast.AssignmentStatement]Type{},
-		AssignmentStatementTargetTypes:      map[*ast.AssignmentStatement]Type{},
+		VariableDeclarationTypes:            map[*ast.VariableDeclaration]VariableDeclarationTypes{},
+		AssignmentStatementTypes:            map[*ast.AssignmentStatement]AssignmentStatementTypes{},
 		CompositeDeclarationTypes:           map[*ast.CompositeDeclaration]*CompositeType{},
 		CompositeTypeDeclarations:           map[*CompositeType]*ast.CompositeDeclaration{},
 		InterfaceDeclarationTypes:           map[*ast.InterfaceDeclaration]*InterfaceType{},
 		InterfaceTypeDeclarations:           map[*InterfaceType]*ast.InterfaceDeclaration{},
 		ConstructorFunctionTypes:            map[*ast.SpecialFunctionDeclaration]*FunctionType{},
 		FunctionExpressionFunctionType:      map[*ast.FunctionExpression]*FunctionType{},
-		InvocationExpressionArgumentTypes:   map[*ast.InvocationExpression][]Type{},
-		InvocationExpressionParameterTypes:  map[*ast.InvocationExpression][]Type{},
-		InvocationExpressionReturnTypes:     map[*ast.InvocationExpression]Type{},
-		InvocationExpressionTypeArguments:   map[*ast.InvocationExpression]*TypeParameterTypeOrderedMap{},
+		InvocationExpressionTypes:           map[*ast.InvocationExpression]InvocationExpressionTypes{},
 		CastingStaticValueTypes:             map[*ast.CastingExpression]Type{},
 		CastingTargetTypes:                  map[*ast.CastingExpression]Type{},
-		ReturnStatementValueTypes:           map[*ast.ReturnStatement]Type{},
-		ReturnStatementReturnTypes:          map[*ast.ReturnStatement]Type{},
-		BinaryExpressionResultTypes:         map[*ast.BinaryExpression]Type{},
-		BinaryExpressionLeftTypes:           map[*ast.BinaryExpression]Type{},
-		BinaryExpressionRightTypes:          map[*ast.BinaryExpression]Type{},
+		ReturnStatementTypes:                map[*ast.ReturnStatement]ReturnStatementTypes{},
+		BinaryExpressionTypes:               map[*ast.BinaryExpression]BinaryExpressionTypes{},
 		MemberExpressionMemberInfos:         map[*ast.MemberExpression]MemberInfo{},
 		MemberExpressionExpectedTypes:       map[*ast.MemberExpression]Type{},
-		ArrayExpressionArgumentTypes:        map[*ast.ArrayExpression][]Type{},
-		ArrayExpressionArrayType:            map[*ast.ArrayExpression]ArrayType{},
-		DictionaryExpressionType:            map[*ast.DictionaryExpression]*DictionaryType{},
-		DictionaryExpressionEntryTypes:      map[*ast.DictionaryExpression][]DictionaryEntryType{},
+		ArrayExpressionTypes:                map[*ast.ArrayExpression]ArrayExpressionTypes{},
+		DictionaryExpressionTypes:           map[*ast.DictionaryExpression]DictionaryExpressionTypes{},
 		IntegerExpressionType:               map[*ast.IntegerExpression]Type{},
 		StringExpressionType:                map[*ast.StringExpression]Type{},
 		FixedPointExpression:                map[*ast.FixedPointExpression]Type{},
 		TransactionDeclarationTypes:         map[*ast.TransactionDeclaration]*TransactionType{},
-		SwapStatementLeftTypes:              map[*ast.SwapStatement]Type{},
-		SwapStatementRightTypes:             map[*ast.SwapStatement]Type{},
+		SwapStatementTypes:                  map[*ast.SwapStatement]SwapStatementTypes{},
 		IsNestedResourceMoveExpression:      map[ast.Expression]struct{}{},
 		CompositeNestedDeclarations:         map[*ast.CompositeDeclaration]map[string]ast.Declaration{},
 		InterfaceNestedDeclarations:         map[*ast.InterfaceDeclaration]map[string]ast.Declaration{},
@@ -159,16 +185,12 @@ func NewElaboration(gauge common.MemoryGauge, extendedElaboration bool) *Elabora
 		EffectivePredeclaredValues:          map[string]ValueDeclaration{},
 		EffectivePredeclaredTypes:           map[string]TypeDeclaration{},
 		ReferenceExpressionBorrowTypes:      map[*ast.ReferenceExpression]Type{},
-		IndexExpressionIndexedTypes:         map[*ast.IndexExpression]ValueIndexableType{},
-		IndexExpressionIndexingTypes:        map[*ast.IndexExpression]Type{},
+		IndexExpressionTypes:                map[*ast.IndexExpression]IndexExpressionTypes{},
 	}
 	if extendedElaboration {
 		elaboration.ForceExpressionTypes = map[*ast.ForceExpression]Type{}
-		elaboration.StaticCastTypes = map[*ast.CastingExpression]CastType{}
-		elaboration.RuntimeCastTypes = map[*ast.CastingExpression]struct {
-			Left  Type
-			Right Type
-		}{}
+		elaboration.StaticCastTypes = map[*ast.CastingExpression]CastTypes{}
+		elaboration.RuntimeCastTypes = map[*ast.CastingExpression]RuntimeCastTypes{}
 		elaboration.NumberConversionArgumentTypes = map[ast.Expression]struct {
 			Type  Type
 			Range ast.Range
