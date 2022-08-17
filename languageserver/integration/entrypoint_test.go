@@ -100,7 +100,7 @@ func Test_TransactionEntrypoint(t *testing.T) {
 
 }
 
-func Test_ScriptEntrypoin(t *testing.T) {
+func Test_ScriptEntrypoint(t *testing.T) {
 	const code = `
 		/// pragma arguments (hello: "hi")
 		pub fun main(hello: String): String {
