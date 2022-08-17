@@ -3731,6 +3731,57 @@ func (interpreter *Interpreter) storageAccountPaths(addressValue AddressValue, g
 	return interpreter.accountPaths(addressValue, getLocationRange, common.PathDomainStorage, PrimitiveStaticTypeStoragePath)
 }
 
+func (interpreter *Interpreter) newStorageIterationFunction(addressValue AddressValue, domain common.PathDomain, pathType sema.Type) *HostFunctionValue {
+	address := addressValue.ToAddress()
+
+	return NewHostFunctionValue(
+		interpreter,
+		func(invocation Invocation) Value {
+			fn, ok := invocation.Arguments[0].(*InterpretedFunctionValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			getLocationRange := invocation.GetLocationRange
+			inter := invocation.Interpreter
+			storageMap := interpreter.Storage.GetStorageMap(address, domain.Identifier(), false)
+			if storageMap == nil {
+				// if nothing is stored, no iteration is required
+				return NewVoidValue(inter)
+			}
+			storageIterator := storageMap.Iterator(interpreter)
+
+			invocationTypeParams := []sema.Type{pathType, sema.MetaType}
+
+			for key, value := storageIterator.Next(); key != "" && value != nil; key, value = storageIterator.Next() {
+				pathValue := NewPathValue(inter, domain, key)
+				runtimeType := NewTypeValue(inter, value.StaticType(inter))
+
+				subInvocation := NewInvocation(
+					inter,
+					nil,
+					[]Value{pathValue, runtimeType},
+					invocationTypeParams,
+					nil,
+					getLocationRange,
+				)
+
+				shouldContinue, ok := fn.invoke(subInvocation).(BoolValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				if !shouldContinue {
+					break
+				}
+			}
+
+			return NewVoidValue(inter)
+		},
+		sema.AccountForEachFunctionType(pathType),
+	)
+}
+
 func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValue) *HostFunctionValue {
 
 	// Converted addresses can be cached and don't have to be recomputed on each function invocation

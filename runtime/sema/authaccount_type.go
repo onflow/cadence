@@ -39,6 +39,9 @@ const AuthAccountLinkField = "link"
 const AuthAccountUnlinkField = "unlink"
 const AuthAccountGetCapabilityField = "getCapability"
 const AuthAccountGetLinkTargetField = "getLinkTarget"
+const AuthAccountForEachPublicField = "forEachPublic"
+const AuthAccountForEachPrivateField = "forEachPrivate"
+const AuthAccountForEachStoredField = "forEachStored"
 const AuthAccountContractsField = "contracts"
 const AuthAccountKeysField = "keys"
 const AuthAccountPublicPathsField = "publicPaths"
@@ -191,6 +194,24 @@ var AuthAccountType = func() *CompositeType {
 			AuthAccountStoragePathsType,
 			authAccountTypeStoragePathsFieldDocString,
 		),
+		NewUnmeteredPublicConstantFieldMember(
+			authAccountType,
+			AuthAccountForEachPublicField,
+			AuthAccountForEachPublicFunctionType,
+			authAccountForEachPublicDocString,
+		),
+		NewUnmeteredPublicConstantFieldMember(
+			authAccountType,
+			AuthAccountForEachPrivateField,
+			AuthAccountForEachPrivateFunctionType,
+			authAccountForEachPrivateDocString,
+		),
+		NewUnmeteredPublicConstantFieldMember(
+			authAccountType,
+			AuthAccountForEachStoredField,
+			AuthAccountForEachStoredFunctionType,
+			authAccountForEachStoredDocString,
+		),
 	}
 
 	authAccountType.Members = GetMembersAsMap(members)
@@ -221,6 +242,45 @@ All the public paths of an account
 const authAccountTypePrivatePathsFieldDocString = `
 All the private paths of an account
 `
+
+const authAccountForEachPublicDocString = `
+Iterate over all the public paths of an account. Takes one argument: the function to be applied to each public path. 
+
+This function parameter takes two arguments: the first is the path (/domain/key) of the stored object, and the second is the runtime type of that object.
+
+The function parameter returns a bool indicating whether the iteration should continue; true will continue iterating onto the next element in storage, 
+false will abort iteration.
+
+The order of iteration, as well as the behavior of adding or removing keys from storage during iteration, is undefined. 
+`
+
+const authAccountForEachPrivateDocString = `
+Iterate over all the private paths of an account. Takes one argument: the function to be applied to each private path. 
+
+This function parameter takes two arguments: the first is the path (/domain/key) of the stored object, and the second is the runtime type of that object.
+
+The function parameter returns a bool indicating whether the iteration should continue; true will continue iterating onto the next element in storage, 
+false will abort iteration.
+
+The order of iteration, as well as the behavior of adding or removing keys from storage during iteration, is undefined. 
+`
+
+const authAccountForEachStoredDocString = `
+Iterate over all the storage paths of an account. Takes one argument: the function to be applied to each storage path. 
+
+This function parameter takes two arguments: the first is the path (/domain/key) of the stored object, and the second is the runtime type of that object.
+
+The function parameter returns a bool indicating whether the iteration should continue; true will continue iterating onto the next element in storage, 
+false will abort iteration.
+
+The order of iteration, as well as the behavior of adding or removing keys from storage during iteration, is undefined. 
+`
+
+var AuthAccountForEachPublicFunctionType = AccountForEachFunctionType(PublicPathType)
+
+var AuthAccountForEachPrivateFunctionType = AccountForEachFunctionType(PrivatePathType)
+
+var AuthAccountForEachStoredFunctionType = AccountForEachFunctionType(StoragePathType)
 
 var AuthAccountTypeAddPublicKeyFunctionType = &FunctionType{
 	Parameters: []*Parameter{

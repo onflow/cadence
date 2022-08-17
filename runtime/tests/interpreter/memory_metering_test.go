@@ -703,8 +703,8 @@ func TestInterpretSimpleCompositeMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindSimpleCompositeValueBase))
-		// AuthAccount has 20 fields
-		assert.Equal(t, uint64(21), meter.getMemory(common.MemoryKindSimpleCompositeValue))
+		// AuthAccount has 23 fields
+		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindSimpleCompositeValue))
 	})
 
 	t.Run("public account", func(t *testing.T) {
@@ -723,8 +723,8 @@ func TestInterpretSimpleCompositeMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindSimpleCompositeValueBase))
-		// PublicAccount has 9 fields
-		assert.Equal(t, uint64(10), meter.getMemory(common.MemoryKindSimpleCompositeValue))
+		// PublicAccount has 10 fields
+		assert.Equal(t, uint64(11), meter.getMemory(common.MemoryKindSimpleCompositeValue))
 	})
 }
 

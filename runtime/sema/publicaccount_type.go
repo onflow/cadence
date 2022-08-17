@@ -30,6 +30,7 @@ const PublicAccountStorageUsedField = "storageUsed"
 const PublicAccountStorageCapacityField = "storageCapacity"
 const PublicAccountGetCapabilityField = "getCapability"
 const PublicAccountGetTargetLinkField = "getLinkTarget"
+const PublicAccountForEachPublicField = "forEachPublic"
 const PublicAccountKeysField = "keys"
 const PublicAccountContractsField = "contracts"
 const PublicAccountPathsField = "publicPaths"
@@ -112,6 +113,12 @@ var PublicAccountType = func() *CompositeType {
 			PublicAccountPathsType,
 			publicAccountTypePathsFieldDocString,
 		),
+		NewUnmeteredPublicConstantFieldMember(
+			publicAccountType,
+			PublicAccountForEachPublicField,
+			PublicAccountForEachPublicFunctionType,
+			publicAccountForEachPublicDocString,
+		),
 	}
 
 	publicAccountType.Members = GetMembersAsMap(members)
@@ -126,6 +133,45 @@ var PublicAccountPathsType = &VariableSizedType{
 const publicAccountTypePathsFieldDocString = `
 All the public paths of an account
 `
+
+func AccountForEachFunctionType(pathType Type) *FunctionType {
+	iterFunctionType := &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "path",
+				TypeAnnotation: NewTypeAnnotation(pathType),
+			},
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "type",
+				TypeAnnotation: NewTypeAnnotation(MetaType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(BoolType),
+	}
+	return &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "function",
+				TypeAnnotation: NewTypeAnnotation(iterFunctionType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
+	}
+}
+
+const publicAccountForEachPublicDocString = `
+Iterate over all the public paths in an account.
+
+Takes two arguments: the first is the path (/domain/key) of the stored object, and the second is the runtime type of that object
+
+Returns a bool indicating whether the iteration should continue; true will continue iterating onto the next element in storage, 
+false will abort iteration
+`
+
+var PublicAccountForEachPublicFunctionType = AccountForEachFunctionType(PublicPathType)
 
 // PublicAccountKeysType represents the keys associated with a public account.
 var PublicAccountKeysType = func() *CompositeType {
