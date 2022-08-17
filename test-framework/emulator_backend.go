@@ -19,14 +19,19 @@
 package test
 
 import (
+	"encoding/hex"
+	"fmt"
+	"strings"
+
 	sdk "github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/crypto"
-	"github.com/onflow/flow-go-sdk/test"
+	sdkTest "github.com/onflow/flow-go-sdk/test"
 
 	fvmCrypto "github.com/onflow/flow-go/fvm/crypto"
 
 	emulator "github.com/onflow/flow-emulator"
 
+	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
@@ -124,7 +129,7 @@ func (e EmulatorBackend) CreateAccount() (*interpreter.Account, error) {
 	// Also generate the keys. So that users don't have to do this in two steps.
 	// Store the generated keys, so that it could be looked-up, given the address.
 
-	keyGen := test.AccountKeyGenerator()
+	keyGen := sdkTest.AccountKeyGenerator()
 	accountKey, signer := keyGen.NewWithSigner()
 
 	address, err := e.blockchain.CreateAccount([]*sdk.AccountKey{accountKey}, nil)
@@ -278,6 +283,85 @@ func (e *EmulatorBackend) CommitBlock() error {
 
 	_, err := e.blockchain.CommitBlock()
 	return err
+}
+
+func (e *EmulatorBackend) DeployContract(
+	name string,
+	code string,
+	account *interpreter.Account,
+	args []interpreter.Value,
+) error {
+
+	const deployContractTransactionTemplate = `
+	    transaction(%s) {
+		    prepare(signer: AuthAccount) {
+			    signer.contracts.add(name: "%s", code: "%s".decodeHex()%s)
+		    }
+	    }`
+
+	hexEncodedCode := hex.EncodeToString([]byte(code))
+
+	inter, err := newInterpreter()
+	if err != nil {
+		return err
+	}
+
+	cadenceArgs := make([]cadence.Value, 0, len(args))
+
+	var txArgsBuilder, addArgsBuilder strings.Builder
+
+	for i, arg := range args {
+		cadenceArg, err := runtime.ExportValue(arg, inter, interpreter.ReturnEmptyLocationRange)
+		if err != nil {
+			return err
+		}
+
+		if i > 0 {
+			txArgsBuilder.WriteString(", ")
+		}
+
+		txArgsBuilder.WriteString(fmt.Sprintf("arg%d: %s", i, cadenceArg.Type().ID()))
+		addArgsBuilder.WriteString(fmt.Sprintf(", arg%d", i))
+
+		cadenceArgs = append(cadenceArgs, cadenceArg)
+	}
+
+	script := fmt.Sprintf(
+		deployContractTransactionTemplate,
+		txArgsBuilder.String(),
+		name,
+		hexEncodedCode,
+		addArgsBuilder.String(),
+	)
+
+	tx := e.newTransaction(script, []common.Address{account.Address})
+
+	for _, arg := range cadenceArgs {
+		err = tx.AddArgument(arg)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = e.signTransaction(tx, []*interpreter.Account{account})
+	if err != nil {
+		return err
+	}
+
+	err = e.blockchain.AddTransaction(*tx)
+	if err != nil {
+		return err
+	}
+
+	// Increment the transaction sequence number offset for the current block.
+	e.blockOffset++
+
+	result := e.ExecuteNextTransaction()
+	if result.Error != nil {
+		return result.Error
+	}
+
+	return e.CommitBlock()
 }
 
 func (e *EmulatorBackend) ReadFile(path string) (string, error) {

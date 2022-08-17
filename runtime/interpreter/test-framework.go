@@ -47,6 +47,13 @@ type TestFramework interface {
 
 	CommitBlock() error
 
+	DeployContract(
+		name string,
+		code string,
+		account *Account,
+		arguments []Value,
+	) error
+
 	ReadFile(string) (string, error)
 }
 

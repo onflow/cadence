@@ -1071,7 +1071,7 @@ func TestPrettyPrintTestResults(t *testing.T) {
 	expected := `Test Results
 - PASS: testFunc1
 - FAIL: testFunc2
-		assertion failed: "unexpected error occurred"
+		assertion failed: unexpected error occurred
 - PASS: testFunc3
 - FAIL: testFunc4
 		panic: runtime error
@@ -1192,5 +1192,189 @@ func TestLoadingProgramsFromLocalFile(t *testing.T) {
 		require.NoError(t, err)
 		require.Error(t, result.err)
 		assert.ErrorAs(t, result.err, &ImportResolverNotProvidedError{})
+	})
+}
+
+func TestDeployingContracts(t *testing.T) {
+	t.Parallel()
+
+	t.Run("no args", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import Test
+
+            pub fun test() {
+                let blockchain = Test.newEmulatorBlockchain()
+                let account = blockchain.createAccount()
+
+                let contractCode = "pub contract Foo{ init(){}  pub fun sayHello(): String { return \"hello from Foo\"} }"
+
+                let err = blockchain.deployContract(
+                    name: "Foo",
+                    code: contractCode,
+                    account: account,
+                    arguments: [],
+                )
+
+                if err != nil {
+                    panic(err!.message)
+                }
+
+                var script = "import Foo from ".concat(account.address.toString()).concat("\n")
+                script = script.concat("pub fun main(): String {  return Foo.sayHello() }")
+
+                let result = blockchain.executeScript(script, [])
+
+                if result.status != Test.ResultStatus.succeeded {
+                    panic(result.error!.message)
+                }
+
+                let returnedStr = result.returnValue! as! String
+                assert(returnedStr == "hello from Foo", message: "found: ".concat(returnedStr))
+            }
+        `
+
+		runner := NewTestRunner()
+		result, err := runner.RunTest(code, "test")
+		assert.NoError(t, err)
+		assert.NoError(t, result.err)
+	})
+
+	t.Run("with args", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import Test
+
+            pub fun test() {
+                let blockchain = Test.newEmulatorBlockchain()
+                let account = blockchain.createAccount()
+
+                let contractCode = "pub contract Foo{ pub let msg: String;   init(_ msg: String){ self.msg = msg }   pub fun sayHello(): String { return self.msg } }" 
+
+                let err = blockchain.deployContract(
+                    name: "Foo",
+                    code: contractCode,
+                    account: account,
+                    arguments: ["hello from args"],
+                )
+
+                if err != nil {
+                    panic(err!.message)
+                }
+
+                var script = "import Foo from ".concat(account.address.toString()).concat("\n")
+                script = script.concat("pub fun main(): String {  return Foo.sayHello() }")
+
+                let result = blockchain.executeScript(script, [])
+
+                if result.status != Test.ResultStatus.succeeded {
+                    panic(result.error!.message)
+                }
+
+                let returnedStr = result.returnValue! as! String
+                assert(returnedStr == "hello from args", message: "found: ".concat(returnedStr))
+            }
+        `
+
+		runner := NewTestRunner()
+		result, err := runner.RunTest(code, "test")
+		assert.NoError(t, err)
+		assert.NoError(t, result.err)
+	})
+}
+
+func TestErrors(t *testing.T) {
+	t.Parallel()
+
+	t.Run("contract deployment error", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import Test
+
+            pub fun test() {
+                let blockchain = Test.newEmulatorBlockchain()
+                let account = blockchain.createAccount()
+
+                let contractCode = "pub contract Foo{ init(){}  pub fun sayHello() { return 0 } }"
+
+                let err = blockchain.deployContract(
+                    name: "Foo",
+                    code: contractCode,
+                    account: account,
+                    arguments: [],
+                )
+
+                if err != nil {
+                    panic(err!.message)
+                }
+            }
+        `
+
+		runner := NewTestRunner()
+		result, err := runner.RunTest(code, "test")
+		require.NoError(t, err)
+		require.Error(t, result.err)
+		assert.Contains(t, result.err.Error(), "cannot deploy invalid contract")
+	})
+
+	t.Run("script error", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import Test
+
+            pub fun test() {
+                let blockchain = Test.newEmulatorBlockchain()
+                let account = blockchain.createAccount()
+
+                let script = "import Foo from 0x01; pub fun main() {}"
+                let result = blockchain.executeScript(script, [])
+
+                if result.status == Test.ResultStatus.failed {
+                    panic(result.error!.message)
+                }
+            }
+        `
+
+		runner := NewTestRunner()
+		result, err := runner.RunTest(code, "test")
+		require.NoError(t, err)
+		require.Error(t, result.err)
+		assert.Contains(t, result.err.Error(), "account not found for address")
+	})
+
+	t.Run("transaction error", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import Test
+
+            pub fun test() {
+                let blockchain = Test.newEmulatorBlockchain()
+                let account = blockchain.createAccount()
+
+                let tx2 = Test.Transaction(
+                    code: "transaction { execute{ panic(\"some error\") } }",
+                    authorizers: [],
+                    signers: [account],
+                    arguments: [],
+                )
+
+                let result = blockchain.executeTransaction(tx2)!
+
+                if result.status == Test.ResultStatus.failed {
+                    panic(result.error!.message)
+                }
+            }
+        `
+
+		runner := NewTestRunner()
+		result, err := runner.RunTest(code, "test")
+		require.NoError(t, err)
+		require.Error(t, result.err)
+		assert.Contains(t, result.err.Error(), "panic: some error")
 	})
 }
