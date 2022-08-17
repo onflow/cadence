@@ -1569,8 +1569,15 @@ func importHashAlgorithm(
 		)
 	}
 
-	// TODO: return existing
-	return stdlib.NewHashAlgorithmCase(rawValue), nil
+	caseValue, ok := stdlib.HashAlgorithmCaseValues[rawValue]
+	if !ok {
+		return nil, errors.NewDefaultUserError(
+			"unknown HashAlgorithm with rawValue %d",
+			rawValue,
+		)
+	}
+
+	return caseValue, nil
 }
 
 func importSignatureAlgorithm(
@@ -1615,6 +1622,13 @@ func importSignatureAlgorithm(
 		)
 	}
 
-	// TODO: return existing
-	return stdlib.NewSignatureAlgorithmCase(rawValue), nil
+	caseValue, ok := stdlib.SignatureAlgorithmCaseValues[rawValue]
+	if !ok {
+		return nil, errors.NewDefaultUserError(
+			"unknown SignatureAlgorithm with rawValue %d",
+			rawValue,
+		)
+	}
+
+	return caseValue, nil
 }
