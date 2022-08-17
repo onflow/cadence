@@ -52,7 +52,7 @@ var publicKeyConstructor = NewStandardLibraryFunction(
 			panic(errors.NewUnreachableError())
 		}
 
-		signAlgo, ok := invocation.Arguments[1].(*interpreter.CompositeValue)
+		signAlgo, ok := invocation.Arguments[1].(*interpreter.SimpleCompositeValue)
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}

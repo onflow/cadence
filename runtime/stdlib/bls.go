@@ -166,20 +166,22 @@ var blsContractFields = map[string]interpreter.Value{
 	blsAggregateSignaturesFunctionName: blsAggregateSignaturesFunction,
 }
 
+var blsContractValue = interpreter.NewSimpleCompositeValue(
+	nil,
+	blsContractType.ID(),
+	blsContractStaticType,
+	nil,
+	blsContractFields,
+	nil,
+	nil,
+	nil,
+)
+
 var blsContract = StandardLibraryValue{
 	Name: "BLS",
 	Type: blsContractType,
-	ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
-		return interpreter.NewSimpleCompositeValue(
-			inter,
-			blsContractType.ID(),
-			blsContractStaticType,
-			nil,
-			blsContractFields,
-			nil,
-			nil,
-			nil,
-		)
+	ValueFactory: func(_ *interpreter.Interpreter) interpreter.Value {
+		return blsContractValue
 	},
 	Kind: common.DeclarationKindContract,
 }
