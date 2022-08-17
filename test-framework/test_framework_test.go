@@ -1100,8 +1100,6 @@ func TestLoadingProgramsFromLocalFile(t *testing.T) {
 
                 assert(result.status == Test.ResultStatus.succeeded)
                 assert((result.returnValue! as! Int) == 5)
-
-                log(result.returnValue)
             }
         `
 
@@ -1147,8 +1145,6 @@ func TestLoadingProgramsFromLocalFile(t *testing.T) {
 
                 assert(result.status == Test.ResultStatus.succeeded)
                 assert((result.returnValue! as! Int) == 5)
-
-                log(result.returnValue)
             }
         `
 
@@ -2032,5 +2028,247 @@ func TestInterpretExpectFunction(t *testing.T) {
 
 		errs := checker.ExpectCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+}
+
+func TestReplacingImports(t *testing.T) {
+	t.Parallel()
+
+	t.Run("file location", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import Test
+
+            pub var blockchain = Test.newEmulatorBlockchain()
+            pub var account = blockchain.createAccount()
+
+            pub fun setup() {
+                var contractCode = Test.readFile("./sample/contract.cdc")
+
+                let err = blockchain.deployContract(
+                    name: "Foo",
+                    code: contractCode,
+                    account: account,
+                    arguments: [],
+                )
+
+                if err != nil {
+                    panic(err!.message)
+                }
+
+                // The update the configurations to use address of the deployed contract.
+
+                blockchain.useConfiguration(Test.Configurations({
+                    "./FooContract": account.address
+                }))
+            }
+
+            pub fun test() {
+                var script = Test.readFile("./sample/script.cdc")
+                var result = blockchain.executeScript(script, [])
+
+                if result.status != Test.ResultStatus.succeeded {
+                    panic(result.error!.message)
+                }
+                assert((result.returnValue! as! String) == "hello from Foo")
+            }
+        `
+
+		const contractCode = `
+            pub contract Foo{ 
+                init(){}
+
+                pub fun sayHello(): String {
+                    return "hello from Foo" 
+                }
+            }
+        `
+
+		const scriptCode = `
+            import Foo from "./FooContract"
+
+            pub fun main(): String {
+                return Foo.sayHello()
+            }
+        `
+
+		importResolver := func(location common.Location) (string, error) {
+			stringLocation := location.(common.StringLocation)
+
+			switch stringLocation.String() {
+			case "./sample/script.cdc":
+				return scriptCode, nil
+			case "./sample/contract.cdc":
+				return contractCode, nil
+			default:
+				return "", fmt.Errorf("cannot find import location: %s", location)
+			}
+		}
+
+		runner := NewTestRunner().WithImportResolver(importResolver)
+
+		result, err := runner.RunTest(code, "test")
+		assert.NoError(t, err)
+		assert.NoError(t, result.err)
+	})
+
+	t.Run("address location", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import Test
+
+            pub var blockchain = Test.newEmulatorBlockchain()
+            pub var account = blockchain.createAccount()
+
+            pub fun setup() {
+                var contractCode = Test.readFile("./sample/contract.cdc")
+
+                let err = blockchain.deployContract(
+                    name: "Foo",
+                    code: contractCode,
+                    account: account,
+                    arguments: [],
+                )
+
+                if err != nil {
+                    panic(err!.message)
+                }
+
+                // Address locations are not replacable!
+
+                blockchain.useConfiguration(Test.Configurations({
+                    "0x01": account.address
+                }))
+            }
+
+            pub fun test() {
+                var script = Test.readFile("./sample/script.cdc")
+                var result = blockchain.executeScript(script, [])
+
+                if result.status != Test.ResultStatus.succeeded {
+                    panic(result.error!.message)
+                }
+                assert((result.returnValue! as! String) == "hello from Foo")
+            }
+        `
+
+		const contractCode = `
+            pub contract Foo{ 
+                init(){}
+
+                pub fun sayHello(): String {
+                    return "hello from Foo" 
+                }
+            }
+        `
+
+		const scriptCode = `
+            import Foo from 0x01
+
+            pub fun main(): String {
+                return Foo.sayHello()
+            }
+        `
+
+		importResolver := func(location common.Location) (string, error) {
+			stringLocation := location.(common.StringLocation)
+
+			switch stringLocation.String() {
+			case "./sample/script.cdc":
+				return scriptCode, nil
+			case "./sample/contract.cdc":
+				return contractCode, nil
+			default:
+				return "", fmt.Errorf("cannot find import location: %s", location)
+			}
+		}
+
+		runner := NewTestRunner().WithImportResolver(importResolver)
+
+		result, err := runner.RunTest(code, "test")
+		require.NoError(t, err)
+		require.Error(t, result.err)
+		assert.Contains(t, result.err.Error(), "account not found for address 0000000000000001")
+	})
+
+	t.Run("config not provided", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import Test
+
+            pub var blockchain = Test.newEmulatorBlockchain()
+            pub var account = blockchain.createAccount()
+
+            pub fun setup() {
+                var contractCode = Test.readFile("./sample/contract.cdc")
+
+                let err = blockchain.deployContract(
+                    name: "Foo",
+                    code: contractCode,
+                    account: account,
+                    arguments: [],
+                )
+
+                if err != nil {
+                    panic(err!.message)
+                }
+
+                // Configurations are not provided.
+            }
+
+            pub fun test() {
+                var script = Test.readFile("./sample/script.cdc")
+                var result = blockchain.executeScript(script, [])
+
+                if result.status != Test.ResultStatus.succeeded {
+                    panic(result.error!.message)
+                }
+                assert((result.returnValue! as! String) == "hello from Foo")
+            }
+        `
+
+		const contractCode = `
+            pub contract Foo{ 
+                init(){}
+
+                pub fun sayHello(): String {
+                    return "hello from Foo" 
+                }
+            }
+        `
+
+		const scriptCode = `
+            import Foo from "./FooContract"
+
+            pub fun main(): String {
+                return Foo.sayHello()
+            }
+        `
+
+		importResolver := func(location common.Location) (string, error) {
+			stringLocation := location.(common.StringLocation)
+
+			switch stringLocation.String() {
+			case "./sample/script.cdc":
+				return scriptCode, nil
+			case "./sample/contract.cdc":
+				return contractCode, nil
+			default:
+				return "", fmt.Errorf("cannot find import location: %s", location)
+			}
+		}
+
+		runner := NewTestRunner().WithImportResolver(importResolver)
+
+		result, err := runner.RunTest(code, "test")
+		require.NoError(t, err)
+		require.Error(t, result.err)
+		assert.Contains(
+			t,
+			result.err.Error(),
+			"expecting an AddressLocation, but other location types are passed")
 	})
 }

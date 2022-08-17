@@ -4,15 +4,6 @@
 ///
 pub contract Test {
 
-    /// Convenient function to fail a test.
-    /// Is equivalent to calling `assert(false)`.
-    ///
-    pub fun fail() {
-        assert(false)
-    }
-
-    /// Blockchain emulates a real network.
-    ///
     pub struct Blockchain {
 
         pub let backend: AnyStruct{BlockchainBackend}
@@ -97,6 +88,10 @@ pub contract Test {
                 arguments: arguments
             )
         }
+
+        pub fun useConfiguration(_ confgiurations: Configurations) {
+            self.backend.useConfig(confgiurations)
+        }
     }
 
     /// ResultStatus indicates status of a transaction or script execution.
@@ -154,6 +149,17 @@ pub contract Test {
         }
     }
 
+    /// Configurations to be used by the blockchain.
+    /// Can be used to set the address mappings.
+    //'
+    pub struct Configurations {
+        pub let addresses: { String: Address }
+
+        init(addresses: { String: Address }) {
+            self.addresses = addresses
+        }
+    }
+
     /// Transaction that can be submitted and executed on the blockchain.
     ///
     pub struct Transaction {
@@ -190,5 +196,7 @@ pub contract Test {
             account: Account,
             arguments: [AnyStruct]
         ): Error?
+
+        pub fun useConfig(_ confgiurations: Configurations)
     }
 }

@@ -58,6 +58,8 @@ const matcherTestFunctionName = "test"
 const matcherAndFunctionName = "and"
 const matcherOrFunctionName = "or"
 
+const addressesFieldName = "addresses"
+
 var TestContractLocation = common.IdentifierLocation(testContractTypeName)
 
 var TestContractChecker = func() *sema.Checker {
@@ -630,6 +632,12 @@ var EmulatorBackendType = func() *sema.CompositeType {
 			emulatorBackendDeployContractFunctionType,
 			emulatorBackendDeployContractFunctionDocString,
 		),
+		sema.NewUnmeteredPublicFunctionMember(
+			ty,
+			emulatorBackendUseConfigsFunctionName,
+			emulatorBackendUseConfigsFunctionType,
+			emulatorBackendUseConfigsFunctionDocString,
+		),
 	}
 
 	ty.Members = sema.GetMembersAsMap(members)
@@ -666,6 +674,10 @@ func newEmulatorBackend(
 		{
 			Name:  emulatorBackendDeployContractFunctionName,
 			Value: emulatorBackendDeployContractFunction(testFramework),
+		},
+		{
+			Name:  emulatorBackendUseConfigsFunctionName,
+			Value: emulatorBackendUseConfigsFunction(testFramework),
 		},
 	}
 
@@ -1354,6 +1366,83 @@ func emulatorBackendDeployContractFunction(testFramework interpreter.TestFramewo
 			return newErrorValue(inter, err)
 		},
 		emulatorBackendDeployContractFunctionType,
+	)
+}
+
+// 'EmulatorBackend.useConfig' function
+
+const emulatorBackendUseConfigsFunctionName = "useConfig"
+
+const emulatorBackendUseConfigsFunctionDocString = `Use configurations function`
+
+var emulatorBackendUseConfigsFunctionType = func() *sema.FunctionType {
+	// The type of the 'UseConfigs' function of 'EmulatorBackend' (interface-implementation)
+	// is same as that of 'BlockchainBackend' interface.
+	typ, ok := blockchainBackendInterfaceType.Members.Get(emulatorBackendUseConfigsFunctionName)
+	if !ok {
+		panic(errors.NewUnexpectedError(
+			"cannot find type %s.%s",
+			blockchainBackendTypeName,
+			emulatorBackendUseConfigsFunctionName,
+		))
+	}
+
+	functionType, ok := typ.TypeAnnotation.Type.(*sema.FunctionType)
+	if !ok {
+		panic(errors.NewUnexpectedError(
+			"invalid type for %s. expected function",
+			emulatorBackendUseConfigsFunctionName,
+		))
+	}
+
+	return functionType
+}()
+
+func emulatorBackendUseConfigsFunction(testFramework interpreter.TestFramework) *interpreter.HostFunctionValue {
+	return interpreter.NewUnmeteredHostFunctionValue(
+		func(invocation interpreter.Invocation) interpreter.Value {
+			inter := invocation.Interpreter
+
+			// configurations
+			configsValue, ok := invocation.Arguments[0].(*interpreter.CompositeValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			addresses, ok := configsValue.GetMember(
+				inter,
+				invocation.GetLocationRange,
+				addressesFieldName,
+			).(*interpreter.DictionaryValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			mapping := make(map[string]common.Address)
+
+			addresses.Iterate(nil, func(locationValue, addressValue interpreter.Value) bool {
+				location, ok := locationValue.(*interpreter.StringValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				address, ok := addressValue.(interpreter.AddressValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				mapping[location.Str] = common.Address(address)
+
+				return true
+			})
+
+			testFramework.UseConfigs(&interpreter.Configurations{
+				AddressMapping: mapping,
+			})
+
+			return interpreter.VoidValue{}
+		},
+		emulatorBackendUseConfigsFunctionType,
 	)
 }
 

@@ -21,6 +21,7 @@ package test
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/onflow/cadence/runtime/parser"
 	"strings"
 
 	sdk "github.com/onflow/flow-go-sdk"
@@ -56,7 +57,13 @@ type EmulatorBackend struct {
 	// accountKeys is a mapping of account addresses with their keys.
 	accountKeys map[common.Address]map[string]keyInfo
 
+	// Import resolver is used to resolve imports of the *test script*.
+	// Note: This doesn't resolve the imports for the codes that is being tested
+	// i.e: the code that is submitted to the blockchain.
+	// Use the configurations to set the import mapping to for the testing code.
 	importResolver ImportResolver
+
+	configurations *interpreter.Configurations
 }
 
 type keyInfo struct {
@@ -99,6 +106,8 @@ func (e *EmulatorBackend) RunScript(code string, args []interpreter.Value) *inte
 
 		arguments = append(arguments, encodedArg)
 	}
+
+	code = e.replaceImports(code)
 
 	result, err := e.blockchain.ExecuteScript([]byte(code), arguments)
 	if err != nil {
@@ -164,6 +173,8 @@ func (e *EmulatorBackend) AddTransaction(
 	signers []*interpreter.Account,
 	args []interpreter.Value,
 ) error {
+
+	code = e.replaceImports(code)
 
 	tx := e.newTransaction(code, authorizers)
 
@@ -299,6 +310,8 @@ func (e *EmulatorBackend) DeployContract(
 		    }
 	    }`
 
+	code = e.replaceImports(code)
+
 	hexEncodedCode := hex.EncodeToString([]byte(code))
 
 	inter, err := newInterpreter()
@@ -389,6 +402,10 @@ func newBlockchain(opts ...emulator.Option) *emulator.Blockchain {
 	return b
 }
 
+func (e *EmulatorBackend) UseConfigs(configurations *interpreter.Configurations) {
+	e.configurations = configurations
+}
+
 // newInterpreter creates an interpreter instance needed for the value conversion.
 //
 func newInterpreter() (*interpreter.Interpreter, error) {
@@ -430,4 +447,31 @@ func newInterpreter() (*interpreter.Interpreter, error) {
 			}
 		}),
 	)
+}
+
+func (e *EmulatorBackend) replaceImports(code string) string {
+	if e.configurations == nil {
+		return code
+	}
+
+	program, err := parser.ParseProgram(code, nil)
+	if err != nil {
+		panic(err)
+	}
+
+	for _, importDeclaration := range program.ImportDeclarations() {
+		location, ok := importDeclaration.Location.(common.StringLocation)
+		if !ok {
+			continue
+		}
+
+		address := e.configurations.AddressMapping[location.String()]
+
+		locationStr := fmt.Sprintf(`"%s"`, location)
+		addressStr := fmt.Sprintf("0x%s", address)
+
+		code = strings.Replace(code, locationStr, addressStr, 1)
+	}
+
+	return code
 }

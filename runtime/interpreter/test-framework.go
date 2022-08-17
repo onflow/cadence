@@ -55,6 +55,8 @@ type TestFramework interface {
 	) error
 
 	ReadFile(string) (string, error)
+
+	UseConfigs(configurations *Configurations)
 }
 
 type ScriptResult struct {
@@ -74,6 +76,10 @@ type Account struct {
 type PublicKey struct {
 	PublicKey []byte
 	SignAlgo  sema.SignatureAlgorithm
+}
+
+type Configurations struct {
+	AddressMapping map[string]common.Address
 }
 
 // TestFrameworkNotProvidedError is the error thrown if test-stdlib functionality is
