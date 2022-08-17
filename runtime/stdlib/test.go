@@ -1255,12 +1255,20 @@ var matcherType = func() *sema.InterfaceType {
 var matcherTestType = func() *sema.FunctionType {
 	member, ok := matcherType.Members.Get(matcherTestFunctionName)
 	if !ok {
-		panic(errors.NewUnexpectedError("cannot find field %s in ", matcherTestFunctionName, matcherTypeName))
+		panic(errors.NewUnexpectedError(
+			"cannot find '%s' in '%s'",
+			matcherTestFunctionName,
+			matcherTypeName,
+		))
 	}
 
 	testFieldType, ok := member.TypeAnnotation.Type.(*sema.FunctionType)
 	if !ok {
-		panic(errors.NewUnexpectedError("invalid type for field %s in ", matcherTestFunctionName, matcherTypeName))
+		panic(errors.NewUnexpectedError(
+			"invalid type for '%s' in '%s'",
+			matcherTestFunctionName,
+			matcherTypeName,
+		))
 	}
 
 	return testFieldType
