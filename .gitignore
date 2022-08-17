@@ -29,6 +29,7 @@ language/tools/vscode-extension/out/*
 
 # Go mod ignores
 .history
+go.work
 
 # go-fuzz
 crashers
