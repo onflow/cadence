@@ -283,6 +283,7 @@ type WrapperCode struct {
 	InitializerFunctionWrapper FunctionWrapper
 	DestructorFunctionWrapper  FunctionWrapper
 	FunctionWrappers           map[string]FunctionWrapper
+	Functions                  map[string]FunctionValue
 }
 
 // TypeCodes is the value which stores the "prepared" / "callable" "code"
@@ -1667,6 +1668,22 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 			destructorFunction = destructorFunctionWrapper(destructorFunction)
 		}
 
+		// Apply default functions, if conforming type does not provide the function
+
+		// Iterating over the map in a non-deterministic way is OK,
+		// we only apply the function wrapper to each function,
+		// the order does not matter.
+
+		for name, function := range code.Functions { //nolint:maprangecheck
+			if functions[name] != nil {
+				continue
+			}
+			if functions == nil {
+				functions = map[string]FunctionValue{}
+			}
+			functions[name] = function
+		}
+
 		// Wrap functions
 
 		// Iterating over the map in a non-deterministic way is OK,
@@ -1695,7 +1712,6 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 	for i := len(typeRequirements) - 1; i >= 0; i-- {
 		typeRequirement := typeRequirements[i]
-
 		wrapFunctions(interpreter.typeCodes.TypeRequirementCodes[typeRequirement.ID()])
 	}
 
@@ -2049,6 +2065,35 @@ func (interpreter *Interpreter) compositeDestructorFunction(
 	)
 }
 
+func (interpreter *Interpreter) defaultFunctions(
+	members *ast.Members,
+	lexicalScope *VariableActivation,
+) map[string]FunctionValue {
+
+	functionDeclarations := members.Functions()
+	functionCount := len(functionDeclarations)
+
+	if functionCount == 0 {
+		return nil
+	}
+
+	functions := make(map[string]FunctionValue, functionCount)
+
+	for _, functionDeclaration := range functionDeclarations {
+		name := functionDeclaration.Identifier.Identifier
+		if !functionDeclaration.FunctionBlock.HasStatements() {
+			continue
+		}
+
+		functions[name] = interpreter.compositeFunction(
+			functionDeclaration,
+			lexicalScope,
+		)
+	}
+
+	return functions
+}
+
 func (interpreter *Interpreter) compositeFunctions(
 	compositeDeclaration *ast.CompositeDeclaration,
 	lexicalScope *VariableActivation,
@@ -2400,11 +2445,13 @@ func (interpreter *Interpreter) declareInterface(
 	initializerFunctionWrapper := interpreter.initializerFunctionWrapper(declaration.Members, lexicalScope)
 	destructorFunctionWrapper := interpreter.destructorFunctionWrapper(declaration.Members, lexicalScope)
 	functionWrappers := interpreter.functionWrappers(declaration.Members, lexicalScope)
+	defaultFunctions := interpreter.defaultFunctions(declaration.Members, lexicalScope)
 
 	interpreter.typeCodes.InterfaceCodes[typeID] = WrapperCode{
 		InitializerFunctionWrapper: initializerFunctionWrapper,
 		DestructorFunctionWrapper:  destructorFunctionWrapper,
 		FunctionWrappers:           functionWrappers,
+		Functions:                  defaultFunctions,
 	}
 }
 
@@ -2434,11 +2481,13 @@ func (interpreter *Interpreter) declareTypeRequirement(
 	initializerFunctionWrapper := interpreter.initializerFunctionWrapper(declaration.Members, lexicalScope)
 	destructorFunctionWrapper := interpreter.destructorFunctionWrapper(declaration.Members, lexicalScope)
 	functionWrappers := interpreter.functionWrappers(declaration.Members, lexicalScope)
+	defaultFunctions := interpreter.defaultFunctions(declaration.Members, lexicalScope)
 
 	interpreter.typeCodes.TypeRequirementCodes[typeID] = WrapperCode{
 		InitializerFunctionWrapper: initializerFunctionWrapper,
 		DestructorFunctionWrapper:  destructorFunctionWrapper,
 		FunctionWrappers:           functionWrappers,
+		Functions:                  defaultFunctions,
 	}
 }
 
