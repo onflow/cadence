@@ -80,7 +80,7 @@ func TestInterpretArrayMetering(t *testing.T) {
 		assert.Equal(t, uint64(25), meter.getMemory(common.MemoryKindAtreeArrayDataSlab))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeArrayMetaDataSlab))
 		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindAtreeArrayElementOverhead))
-		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindVariable))
+		assert.Equal(t, uint64(5), meter.getMemory(common.MemoryKindVariable))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindElaboration))
 		// 1 Int8 for type
 		// 2 String: 1 for type, 1 for value
@@ -114,7 +114,7 @@ func TestInterpretArrayMetering(t *testing.T) {
 		assert.Equal(t, uint64(33), meter.getMemory(common.MemoryKindAtreeArrayDataSlab))
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindAtreeArrayMetaDataSlab))
 		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindAtreeArrayElementOverhead))
-		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindVariable))
+		assert.Equal(t, uint64(7), meter.getMemory(common.MemoryKindVariable))
 
 		// 4 Int8: 1 for type, 3 for values
 		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindPrimitiveStaticType))
@@ -407,7 +407,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
 		assert.Equal(t, uint64(159), meter.getMemory(common.MemoryKindAtreeMapPreAllocatedElement))
-		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindVariable))
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindVariable))
 		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 		// 1 for `x`
 		// 7 for `y`: 2 for type, 5 for value
@@ -436,7 +436,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(27), meter.getMemory(common.MemoryKindDictionaryValueBase))
-		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindVariable))
+		assert.Equal(t, uint64(7), meter.getMemory(common.MemoryKindVariable))
 
 		// 4 Int8: 1 for type, 3 for values
 		// 4 String: 1 for type, 3 for values
@@ -644,7 +644,7 @@ func TestInterpretCompositeMetering(t *testing.T) {
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
 		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindAtreeMapElementOverhead))
 		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindAtreeMapPreAllocatedElement))
-		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindVariable))
+		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindVariable))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCompositeStaticType))
 		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindCompositeTypeInfo))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCompositeField))
@@ -675,7 +675,7 @@ func TestInterpretCompositeMetering(t *testing.T) {
 		assert.Equal(t, uint64(27), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeMapElementOverhead))
 		assert.Equal(t, uint64(480), meter.getMemory(common.MemoryKindAtreeMapPreAllocatedElement))
-		assert.Equal(t, uint64(7), meter.getMemory(common.MemoryKindVariable))
+		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindVariable))
 
 		assert.Equal(t, uint64(7), meter.getMemory(common.MemoryKindCompositeStaticType))
 		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindCompositeTypeInfo))
@@ -7701,7 +7701,7 @@ func TestInterpretVariableMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindVariable))
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindVariable))
 	})
 
 	t.Run("params", func(t *testing.T) {
@@ -7718,7 +7718,7 @@ func TestInterpretVariableMetering(t *testing.T) {
 		_, err := inter.Invoke("main", interpreter.NewUnmeteredStringValue(""), interpreter.NewUnmeteredBoolValue(false))
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindVariable))
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindVariable))
 	})
 
 	t.Run("nested params", func(t *testing.T) {
@@ -7735,7 +7735,7 @@ func TestInterpretVariableMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindVariable))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindVariable))
 	})
 
 	t.Run("applied nested params", func(t *testing.T) {
@@ -7753,7 +7753,7 @@ func TestInterpretVariableMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindVariable))
+		assert.Equal(t, uint64(5), meter.getMemory(common.MemoryKindVariable))
 	})
 }
 
@@ -9190,7 +9190,7 @@ func TestInterpretVariableActivationMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindActivation))
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindActivationEntries))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindActivationEntries))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindInvocation))
 	})
 
@@ -9213,7 +9213,7 @@ func TestInterpretVariableActivationMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindActivation))
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindActivationEntries))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindActivationEntries))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindInvocation))
 	})
 
@@ -9235,7 +9235,7 @@ func TestInterpretVariableActivationMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindActivation))
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindActivationEntries))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindActivationEntries))
 	})
 }
 

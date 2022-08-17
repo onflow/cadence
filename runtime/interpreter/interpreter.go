@@ -1085,10 +1085,15 @@ func (interpreter *Interpreter) InvokeExternally(
 		preparedArguments[i] = interpreter.ConvertAndBox(getLocationRange, argument, nil, parameterType)
 	}
 
+	var self *CompositeValue
+	if boundFunc, ok := functionValue.(BoundFunctionValue); ok {
+		self = boundFunc.Self
+	}
+
 	// NOTE: can't fill argument types, as they are unknown
 	invocation := NewInvocation(
 		interpreter,
-		nil,
+		self,
 		preparedArguments,
 		nil,
 		nil,

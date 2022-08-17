@@ -21,6 +21,7 @@ package test
 import (
 	"errors"
 	"fmt"
+	"github.com/onflow/cadence/runtime/stdlib"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -1376,5 +1377,660 @@ func TestErrors(t *testing.T) {
 		require.NoError(t, err)
 		require.Error(t, result.err)
 		assert.Contains(t, result.err.Error(), "panic: some error")
+	})
+}
+
+func TestInterpretFailFunction(t *testing.T) {
+	t.Parallel()
+
+	script := `
+        import Test
+
+        pub fun test() {
+            Test.fail()
+        }
+    `
+
+	runner := NewTestRunner()
+	result, err := runner.RunTest(script, "test")
+	require.NoError(t, err)
+	require.Error(t, result.err)
+	assert.ErrorAs(t, result.err, &stdlib.AssertionError{})
+}
+
+func TestInterpretMatcher(t *testing.T) {
+	t.Parallel()
+
+	t.Run("custom matcher", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun test() {
+
+                let matcher = Test.NewMatcher(fun (_ value: AnyStruct): Bool {
+                     if !value.getType().isSubtype(of: Type<Int>()) {
+                        return false
+                    }
+
+                    return (value as! Int) > 5
+                })
+
+                assert(matcher.test(8))
+            }
+        `
+
+		runner := NewTestRunner()
+		result, err := runner.RunTest(script, "test")
+		require.NoError(t, err)
+		require.NoError(t, result.err)
+	})
+
+	t.Run("custom matcher primitive type", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun test() {
+
+                let matcher = Test.NewMatcher(fun (_ value: Int): Bool {
+                     return value == 7
+                })
+
+                assert(matcher.test(7))
+            }
+        `
+
+		runner := NewTestRunner()
+		result, err := runner.RunTest(script, "test")
+		require.NoError(t, err)
+		require.NoError(t, result.err)
+	})
+
+	t.Run("custom matcher invalid type usage", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun test() {
+
+                let matcher = Test.NewMatcher(fun (_ value: Int): Bool {
+                     return (value + 7) == 4
+                })
+
+                // Invoke with an incorrect type
+                assert(matcher.test("Hello"))
+            }
+        `
+
+		runner := NewTestRunner()
+		result, err := runner.RunTest(script, "test")
+		require.NoError(t, err)
+		require.Error(t, result.err)
+		assert.ErrorAs(t, result.err, &interpreter.TypeMismatchError{})
+	})
+
+	t.Run("custom resource matcher", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun test() {
+
+                let matcher = Test.NewMatcher(fun (_ value: &Foo): Bool {
+                    return value.a == 4
+                })
+
+                let f <-create Foo(4)
+
+                assert(matcher.test(&f as &Foo))
+
+                destroy f
+            }
+
+            pub resource Foo {
+                pub let a: Int
+
+                init(_ a: Int) {
+                    self.a = a
+                }
+            }
+        `
+
+		runner := NewTestRunner()
+		result, err := runner.RunTest(script, "test")
+		require.NoError(t, err)
+		require.NoError(t, result.err)
+	})
+
+	t.Run("custom resource matcher invalid type", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun test() {
+
+                let matcher = Test.NewMatcher(fun (_ value: @Foo): Bool {
+                     destroy value
+                     return true
+                })
+            }
+
+            pub resource Foo {}
+        `
+
+		runner := NewTestRunner()
+		_, err := runner.RunTest(script, "test")
+		require.Error(t, err)
+		errs := checker.ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("custom matcher with explicit type", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun test() {
+
+                let matcher = Test.NewMatcher<Int>(fun (_ value: Int): Bool {
+                     return value == 7
+                })
+
+                assert(matcher.test(7))
+            }
+        `
+
+		runner := NewTestRunner()
+		result, err := runner.RunTest(script, "test")
+		require.NoError(t, err)
+		require.NoError(t, result.err)
+	})
+
+	t.Run("custom matcher with mismatching types", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun test() {
+
+                let matcher = Test.NewMatcher<String>(fun (_ value: Int): Bool {
+                     return value == 7
+                })
+            }
+        `
+
+		runner := NewTestRunner()
+		_, err := runner.RunTest(script, "test")
+		require.Error(t, err)
+		errs := checker.ExpectCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+	})
+
+	t.Run("combined matcher mismatching types", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun test() {
+
+                let matcher1 = Test.NewMatcher(fun (_ value: Int): Bool {
+                     return (value + 5) == 10
+                })
+
+                let matcher2 = Test.NewMatcher(fun (_ value: String): Bool {
+                     return value.length == 10
+                })
+
+                let matcher3 = matcher1.and(matcher2)
+
+                // Invoke with a type that matches to only one matcher
+                assert(matcher3.test(5))
+            }
+        `
+
+		runner := NewTestRunner()
+		result, err := runner.RunTest(script, "test")
+		require.NoError(t, err)
+		require.Error(t, result.err)
+		assert.ErrorAs(t, result.err, &interpreter.TypeMismatchError{})
+	})
+}
+
+func TestInterpretEqualMatcher(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("equal matcher with primitive", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun test() {
+                let matcher = Test.equal(1)
+                assert(matcher.test(1))
+            }
+        `
+
+		runner := NewTestRunner()
+		result, err := runner.RunTest(script, "test")
+		require.NoError(t, err)
+		require.NoError(t, result.err)
+	})
+
+	t.Run("equal matcher with struct", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun test() {
+                let f = Foo()
+                let matcher = Test.equal(f)
+                assert(matcher.test(f))
+            }
+
+            pub struct Foo {}
+        `
+
+		runner := NewTestRunner()
+		result, err := runner.RunTest(script, "test")
+		require.NoError(t, err)
+		require.NoError(t, result.err)
+	})
+
+	t.Run("equal matcher with resource", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun test() {
+                let f <- create Foo()
+                let matcher = Test.equal(<-f)
+                assert(matcher.test(<- create Foo()))
+            }
+
+            pub resource Foo {}
+        `
+
+		runner := NewTestRunner()
+		_, err := runner.RunTest(script, "test")
+		require.Error(t, err)
+
+		errs := checker.ExpectCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+	})
+
+	t.Run("with explicit types", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun test() {
+                let matcher = Test.equal<String>("hello")
+            }
+        `
+
+		runner := NewTestRunner()
+		result, err := runner.RunTest(script, "test")
+		require.NoError(t, err)
+		require.NoError(t, result.err)
+	})
+
+	t.Run("with incorrect types", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun test() {
+                let matcher = Test.equal<String>(1)
+            }
+        `
+
+		runner := NewTestRunner()
+		_, err := runner.RunTest(script, "test")
+		require.Error(t, err)
+
+		errs := checker.ExpectCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+	})
+
+	t.Run("matcher or", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun test() {
+                let one = Test.equal(1)
+                let two = Test.equal(2)
+
+                let oneOrTwo = one.or(two)
+
+                assert(oneOrTwo.test(1))
+                assert(oneOrTwo.test(2))
+            }
+        `
+
+		runner := NewTestRunner()
+		result, err := runner.RunTest(script, "test")
+		require.NoError(t, err)
+		require.NoError(t, result.err)
+	})
+
+	t.Run("matcher or fail", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun test() {
+                let one = Test.equal(1)
+                let two = Test.equal(2)
+
+                let oneOrTwo = one.or(two)
+
+                assert(oneOrTwo.test(3))
+            }
+        `
+
+		runner := NewTestRunner()
+		result, err := runner.RunTest(script, "test")
+		require.NoError(t, err)
+		require.Error(t, result.err)
+		assert.ErrorAs(t, result.err, &stdlib.AssertionError{})
+	})
+
+	t.Run("matcher and", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun test() {
+                let one = Test.equal(1)
+                let two = Test.equal(2)
+
+                let oneAndTwo = one.and(two)
+
+                assert(oneAndTwo.test(1))
+            }
+        `
+
+		runner := NewTestRunner()
+		result, err := runner.RunTest(script, "test")
+		require.NoError(t, err)
+		require.Error(t, result.err)
+		assert.ErrorAs(t, result.err, &stdlib.AssertionError{})
+	})
+
+	t.Run("chained matchers", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun test() {
+                let one = Test.equal(1)
+                let two = Test.equal(2)
+                let three = Test.equal(3)
+
+                let oneOrTwoOrThree = one.or(two).or(three)
+
+                assert(oneOrTwoOrThree.test(3))
+            }
+        `
+
+		runner := NewTestRunner()
+		result, err := runner.RunTest(script, "test")
+		require.NoError(t, err)
+		require.NoError(t, result.err)
+	})
+
+	t.Run("resource matcher or", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun test() {
+                let foo <- create Foo()
+                let bar <- create Bar()
+
+                let fooMatcher = Test.equal(<-foo)
+                let barMatcher = Test.equal(<-bar)
+
+                let matcher = fooMatcher.or(barMatcher)
+
+                assert(matcher.test(<-create Foo()))
+                assert(matcher.test(<-create Bar()))
+            }
+
+            pub resource Foo {}
+            pub resource Bar {}
+        `
+
+		runner := NewTestRunner()
+		_, err := runner.RunTest(script, "test")
+		require.Error(t, err)
+
+		errs := checker.ExpectCheckerErrors(t, err, 4)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[3])
+	})
+
+	t.Run("resource matcher and", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun test() {
+                let foo <- create Foo()
+                let bar <- create Bar()
+
+                let fooMatcher = Test.equal(<-foo)
+                let barMatcher = Test.equal(<-bar)
+
+                let matcher = fooMatcher.and(barMatcher)
+
+                assert(matcher.test(<-create Foo()))
+            }
+
+            pub resource Foo {}
+            pub resource Bar {}
+        `
+
+		runner := NewTestRunner()
+		_, err := runner.RunTest(script, "test")
+		require.Error(t, err)
+
+		errs := checker.ExpectCheckerErrors(t, err, 3)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
+	})
+}
+
+func TestInterpretExpectFunction(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("success", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun test() {
+                Test.expect("this string", Test.equal("this string"))
+            }
+        `
+
+		runner := NewTestRunner()
+		result, err := runner.RunTest(script, "test")
+		require.NoError(t, err)
+		require.NoError(t, result.err)
+	})
+
+	t.Run("fail", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun test() {
+                Test.expect("this string", Test.equal("other string"))
+            }
+        `
+
+		runner := NewTestRunner()
+		result, err := runner.RunTest(script, "test")
+		require.NoError(t, err)
+		require.Error(t, result.err)
+		assert.ErrorAs(t, result.err, &stdlib.AssertionError{})
+	})
+
+	t.Run("different types", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun test() {
+                Test.expect("string", Test.equal(1))
+            }
+        `
+
+		runner := NewTestRunner()
+		result, err := runner.RunTest(script, "test")
+		require.NoError(t, err)
+		require.Error(t, result.err)
+		assert.ErrorAs(t, result.err, &stdlib.AssertionError{})
+	})
+
+	t.Run("with explicit types", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun test() {
+                Test.expect<String>("hello", Test.equal("hello"))
+            }
+        `
+
+		runner := NewTestRunner()
+		result, err := runner.RunTest(script, "test")
+		require.NoError(t, err)
+		require.NoError(t, result.err)
+	})
+
+	t.Run("mismatching types", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun test() {
+                Test.expect<Int>("string", Test.equal(1))
+            }
+        `
+
+		runner := NewTestRunner()
+		_, err := runner.RunTest(script, "test")
+		require.Error(t, err)
+		errs := checker.ExpectCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+	})
+
+	t.Run("resource with resource matcher", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun test() {
+                let f1 <- create Foo()
+                let f2 <- create Foo()
+                Test.expect(<-f1, Test.equal(<-f2))
+            }
+
+            pub resource Foo {}
+        `
+
+		runner := NewTestRunner()
+		_, err := runner.RunTest(script, "test")
+		require.Error(t, err)
+
+		errs := checker.ExpectCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+	})
+
+	t.Run("resource with struct matcher", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun test() {
+                let foo <- create Foo()
+                let bar = Bar()
+                Test.expect(<-foo, Test.equal(bar))
+            }
+
+            pub resource Foo {}
+            pub struct Bar {}
+        `
+
+		runner := NewTestRunner()
+		_, err := runner.RunTest(script, "test")
+		require.Error(t, err)
+
+		errs := checker.ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("struct with resource matcher", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            pub fun test() {
+                let foo = Foo()
+                let bar <- create Bar()
+                Test.expect(foo, Test.equal(<-bar))
+            }
+
+            pub struct Foo {}
+            pub resource Bar {}
+        `
+
+		runner := NewTestRunner()
+		_, err := runner.RunTest(script, "test")
+		require.Error(t, err)
+
+		errs := checker.ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 }
