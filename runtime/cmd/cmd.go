@@ -78,9 +78,6 @@ func DefaultCheckerInterpreterOptions(
 	[]sema.Option,
 	[]interpreter.Option,
 ) {
-
-	// TODO: checker and interpreter base activations
-
 	return []sema.Option{
 			sema.WithImportHandler(
 				func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {

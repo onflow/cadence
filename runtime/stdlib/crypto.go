@@ -43,7 +43,6 @@ var CryptoChecker = func() *sema.Checker {
 		location,
 		nil,
 		false,
-		// TODO: base values and types
 	)
 	if err != nil {
 		panic(err)
