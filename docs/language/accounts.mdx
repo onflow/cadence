@@ -620,18 +620,30 @@ let otherRef = authAccount.borrow<&{Other}>(from: /storage/counter)
 let nonExistentRef = authAccount.borrow<&{HasCount}>(from: /storage/nonExistent)
 ```
 
-- `cadence•fun forEachPublic(_ function: ((PublicPath, Type): Bool))`
+## Storage Iteration
 
-This function (along with `forEachPrivate` and `forEachStored`) is used to iterate over paths in the specified
-storage domain. Each of these iterates over every element in the specified domain, applying the function argument 
-to each. The first argument of the function is the path of the element, and the second is its runtime type. 
-The `Bool` return value determines whether iteration continues; `true` will proceed to the next stored element, 
-while `false` will terminate iteration. The specific order in which the objects are iterated over is undefined, 
+It is possible to iterate over an account's storage using the following iteration functions:
+
+```cadence
+fun forEachPublic(_ function: ((PublicPath, Type): Bool))
+fun forEachPrivate(_ function: ((PrivatePath, Type): Bool))
+fun forEachStored(_ function: ((StoragePath, Type): Bool))
+```
+
+Each of these iterates over every element in the specified domain (public, private, and storage), 
+applying the function argument to each. 
+The first argument of the function is the path of the element, and the second is its runtime type. 
+The `Bool` return value determines whether iteration continues; 
+`true` will proceed to the next stored element, 
+while `false` will terminate iteration. 
+The specific order in which the objects are iterated over is undefined, 
 as is the behavior when a path is added or removed from storage. 
 
-It is important to note that because the order of iteration is undefined, if values are saved to or removed from storage, 
-this can cause the order in which values are stored to change arbitrarily. Continuing to iterate after such an operation
-may cause iteration to repeat some elements or skip others. 
+<Callout type="warning">
+The order of iteration is undefined. Do not rely on any particular behaviour.
+Saving to or removing from storage during iteration can cause the order in which values are stored to change arbitrarily. 
+Continuing to iterate after such an operation may cause iteration to repeat some elements or skip others. 
+</Callout>
 
 ## Storage limit
 
