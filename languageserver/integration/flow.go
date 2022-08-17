@@ -105,12 +105,8 @@ func (f *flowkitClient) Initialize(configPath string, numberOfAccounts int) erro
 
 	f.services = services.NewServices(hostedEmulator, state, logger)
 
-	if numberOfAccounts > len(names) {
-		return fmt.Errorf(fmt.Sprintf("can only use up to %d accounts", len(names)))
-	}
-
-	if numberOfAccounts == 0 {
-		return fmt.Errorf("can not have 0 accounts")
+	if numberOfAccounts > len(names) || numberOfAccounts <= 0 {
+		return fmt.Errorf(fmt.Sprintf("only possible to create between 1 and %d accounts", len(names)))
 	}
 
 	f.accounts = make([]*clientAccount, 0)
