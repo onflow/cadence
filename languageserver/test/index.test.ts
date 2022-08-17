@@ -406,6 +406,18 @@ describe("accounts", () => {
 
 describe("transactions", () => {
 
+  test("send a transaction with no signer", async() => {
+    await withConnection(async connection => {
+      let result = await connection.sendRequest(ExecuteCommandRequest.type, {
+        command: "cadence.server.flow.sendTransaction",
+        arguments: [`file://${__dirname}/transaction-none.cdc`, "[]", []]
+      })
+
+      expect(result).toEqual("Transaction status: SEALED")
+    }, true)
+  })
+
+
   test("send a transaction with single signer", async() => {
     await withConnection(async connection => {
       let result = await connection.sendRequest(ExecuteCommandRequest.type, {
