@@ -191,8 +191,21 @@ func (f *flowkitClient) DeployContract(
 	// check if account already has a contract with this name deployed then update
 	updateExisting := slices.Contains(maps.Keys(flowAccount.Contracts), name)
 
+	codeFilename, err := resolveFilename(f.configPath, location.Path)
+	if err != nil {
+		return nil, err
+	}
+
 	account := createSigner(address, service)
-	return f.services.Accounts.AddContract(account, name, code, updateExisting, nil)
+	return f.services.Accounts.AddContract(
+		account,
+		name,
+		code,
+		nil,
+		codeFilename,
+		config.DefaultEmulatorNetwork().Name,
+		updateExisting,
+	)
 }
 
 func (f *flowkitClient) SendTransaction(
@@ -214,10 +227,7 @@ func (f *flowkitClient) SendTransaction(
 		authorizers = []flow.Address{service.Address()}
 	}
 
-	// this converts the transaction file to a relative location to config file
-	// we will be replacing this logic once the FLIP is implemented
-	// https://github.com/onflow/flow/blob/master/flips/2022-03-23-contract-imports-syntax.md
-	codeFilename, err := filepath.Rel(filepath.Dir(f.configPath), location.Path)
+	codeFilename, err := resolveFilename(f.configPath, location.Path)
 	if err != nil {
 		return nil, err
 	}
@@ -320,4 +330,18 @@ func sign(signer *flowkit.Account, tx *flowkit.Transaction) (*flowkit.Transactio
 	}
 
 	return tx, nil
+}
+
+// resolveFilename helper converts the transaction file to a relative location to config file
+// we will be replacing this logic once the FLIP is implemented
+// https://github.com/onflow/flow/blob/master/flips/2022-03-23-contract-imports-syntax.md
+func resolveFilename(configPath string, path string) (filename string, err error) {
+	if filepath.Dir(configPath) != "." {
+		filename, err = filepath.Rel(filepath.Dir(configPath), path)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	return filename, nil
 }
