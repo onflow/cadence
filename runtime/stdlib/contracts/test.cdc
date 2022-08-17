@@ -11,15 +11,6 @@ pub contract Test {
         assert(false)
     }
 
-    pub struct interface Matcher {
-
-        pub fun test(_ value: AnyStruct): Bool
-
-        pub fun and(_ other: AnyStruct{Matcher}): AnyStruct{Matcher}
-
-        pub fun or(_ other: AnyStruct{Matcher}): AnyStruct{Matcher}
-    }
-
     /// Blockchain emulates a real network.
     ///
     pub struct Blockchain {
