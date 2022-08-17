@@ -46,6 +46,8 @@ type TestFramework interface {
 	ExecuteNextTransaction() *TransactionResult
 
 	CommitBlock() error
+
+	ReadFile(string) (string, error)
 }
 
 type ScriptResult struct {

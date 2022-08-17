@@ -311,7 +311,7 @@ func (r *TestRunner) interpreterOptions(ctx runtime.Context) []interpreter.Optio
 		//   Thus, need to properly handle them. Make this nil for now.
 		interpreter.WithInjectedCompositeFieldsHandler(nil),
 
-		interpreter.WithTestFramework(NewEmulatorBackend()),
+		interpreter.WithTestFramework(NewEmulatorBackend(r.importResolver)),
 		interpreter.WithImportLocationHandler(
 			func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 				switch location {

@@ -109,19 +109,23 @@ func TestAssertFunction(t *testing.T) {
 
 	runner := NewTestRunner()
 
-	err := runner.RunTest(code, "testAssertWithNoArgs")
+	result, err := runner.RunTest(code, "testAssertWithNoArgs")
 	assert.NoError(t, err)
+	assert.NoError(t, result.err)
 
-	err = runner.RunTest(code, "testAssertWithNoArgsFail")
-	require.Error(t, err)
-	assert.Equal(t, err.Error(), "assertion failed")
-
-	err = runner.RunTest(code, "testAssertWithMessage")
+	result, err = runner.RunTest(code, "testAssertWithNoArgsFail")
 	assert.NoError(t, err)
+	require.Error(t, result.err)
+	assert.Equal(t, result.err.Error(), "assertion failed")
 
-	err = runner.RunTest(code, "testAssertWithMessageFail")
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "assertion failed: some reason")
+	result, err = runner.RunTest(code, "testAssertWithMessage")
+	assert.NoError(t, err)
+	assert.NoError(t, result.err)
+
+	result, err = runner.RunTest(code, "testAssertWithMessageFail")
+	assert.NoError(t, err)
+	require.Error(t, result.err)
+	assert.Contains(t, result.err.Error(), "assertion failed: some reason")
 }
 
 func TestExecuteScript(t *testing.T) {
@@ -727,8 +731,9 @@ func TestExecutingTransactions(t *testing.T) {
         `
 
 		runner := NewTestRunner()
-		err := runner.RunTest(code, "test")
+		result, err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
+		assert.NoError(t, result.err)
 	})
 
 	t.Run("run transaction with args", func(t *testing.T) {
@@ -754,8 +759,9 @@ func TestExecutingTransactions(t *testing.T) {
         `
 
 		runner := NewTestRunner()
-		err := runner.RunTest(code, "test")
+		result, err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
+		assert.NoError(t, result.err)
 	})
 
 	t.Run("run transaction with multiple authorizers", func(t *testing.T) {
@@ -1072,4 +1078,119 @@ func TestPrettyPrintTestResults(t *testing.T) {
 `
 
 	assert.Equal(t, expected, resultsStr)
+}
+
+func TestLoadingProgramsFromLocalFile(t *testing.T) {
+	t.Parallel()
+
+	t.Run("read script", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import Test
+
+            pub fun test() {
+                var blockchain = Test.newEmulatorBlockchain()
+                var account = blockchain.createAccount()
+
+                var script = Test.readFile("./sample/script.cdc")
+
+                var result = blockchain.executeScript(script, [])
+
+                assert(result.status == Test.ResultStatus.succeeded)
+                assert((result.returnValue! as! Int) == 5)
+
+                log(result.returnValue)
+            }
+        `
+
+		const scriptCode = `
+            pub fun main(): Int {
+                return 2 + 3
+            }
+        `
+
+		resolverInvoked := false
+		importResolver := func(location common.Location) (string, error) {
+			resolverInvoked = true
+
+			stringLocation, ok := location.(common.StringLocation)
+			assert.True(t, ok)
+			assert.Equal(t, stringLocation.String(), "./sample/script.cdc")
+
+			return scriptCode, nil
+		}
+
+		runner := NewTestRunner().WithImportResolver(importResolver)
+
+		result, err := runner.RunTest(code, "test")
+		assert.NoError(t, err)
+		assert.NoError(t, result.err)
+
+		assert.True(t, resolverInvoked)
+	})
+
+	t.Run("read invalid", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import Test
+
+            pub fun test() {
+                var blockchain = Test.newEmulatorBlockchain()
+                var account = blockchain.createAccount()
+
+                var script = Test.readFile("./sample/script.cdc")
+
+                var result = blockchain.executeScript(script, [])
+
+                assert(result.status == Test.ResultStatus.succeeded)
+                assert((result.returnValue! as! Int) == 5)
+
+                log(result.returnValue)
+            }
+        `
+
+		resolverInvoked := false
+		importResolver := func(location common.Location) (string, error) {
+			resolverInvoked = true
+
+			stringLocation, ok := location.(common.StringLocation)
+			assert.True(t, ok)
+			assert.Equal(t, stringLocation.String(), "./sample/script.cdc")
+
+			return "", fmt.Errorf("cannot find file %s", location.String())
+		}
+
+		runner := NewTestRunner().WithImportResolver(importResolver)
+
+		result, err := runner.RunTest(code, "test")
+		require.NoError(t, err)
+		require.Error(t, result.err)
+		assert.Contains(t, result.err.Error(), "cannot find file ./sample/script.cdc")
+
+		assert.True(t, resolverInvoked)
+	})
+
+	t.Run("no resolver set", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import Test
+
+            pub fun test() {
+                var blockchain = Test.newEmulatorBlockchain()
+                var account = blockchain.createAccount()
+
+                var script = Test.readFile("./sample/script.cdc")
+            }
+        `
+
+		runner := NewTestRunner()
+
+		result, err := runner.RunTest(code, "test")
+		require.NoError(t, err)
+		require.Error(t, result.err)
+		assert.ErrorAs(t, result.err, &ImportResolverNotProvidedError{})
+	})
 }
