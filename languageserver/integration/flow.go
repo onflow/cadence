@@ -21,6 +21,9 @@ package integration
 import (
 	"fmt"
 	"net/url"
+	"path/filepath"
+
+	"github.com/onflow/flow-cli/pkg/flowkit/config"
 
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
@@ -74,6 +77,7 @@ type flowkitClient struct {
 	state         *flowkit.State
 	accounts      []*clientAccount
 	activeAccount *clientAccount
+	configPath    string
 }
 
 func newFlowkitClient(loader flowkit.ReaderWriter) *flowkitClient {
@@ -83,6 +87,7 @@ func newFlowkitClient(loader flowkit.ReaderWriter) *flowkitClient {
 }
 
 func (f *flowkitClient) Initialize(configPath string, numberOfAccounts int) error {
+	f.configPath = configPath
 	state, err := flowkit.Load([]string{configPath}, f.loader)
 	if err != nil {
 		return err
@@ -213,16 +218,24 @@ func (f *flowkitClient) SendTransaction(
 		authorizers = []flow.Address{service.Address()}
 	}
 
+	// this converts the transaction file to a relative location to config file
+	// we will be replacing this logic once the FLIP is implemented
+	// https://github.com/onflow/flow/blob/master/flips/2022-03-23-contract-imports-syntax.md
+	codeFilename, err := filepath.Rel(filepath.Dir(f.configPath), location.Path)
+	if err != nil {
+		return nil, err
+	}
+
 	tx, err := f.services.Transactions.Build(
 		service.Address(),
 		authorizers,
 		service.Address(),
 		service.Key().Index(),
 		code,
-		"",
+		codeFilename,
 		flow.DefaultTransactionGasLimit,
 		args,
-		"",
+		config.DefaultEmulatorNetwork().Name,
 		true,
 	)
 	if err != nil {
