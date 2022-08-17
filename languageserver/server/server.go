@@ -1630,7 +1630,6 @@ func (s *Server) maybeResolveRange(uri protocol.DocumentURI, id string, result *
 // We register all the commands we support in registerCommands and populate
 // their corresponding handler at server initialization.
 func (s *Server) ExecuteCommand(conn protocol.Conn, params *protocol.ExecuteCommandParams) (any, error) {
-
 	conn.LogMessage(&protocol.LogMessageParams{
 		Type:    protocol.Log,
 		Message: fmt.Sprintf("called execute command: %s", params.Command),
@@ -1643,14 +1642,6 @@ func (s *Server) ExecuteCommand(conn protocol.Conn, params *protocol.ExecuteComm
 
 	res, err := commandHandler(params.Arguments...)
 	if err != nil {
-		conn.ShowMessage(&protocol.ShowMessageParams{
-			Type: protocol.Error,
-			Message: fmt.Sprintf(
-				"executing command: %s failed with error: %s",
-				strings.TrimPrefix("cadence.server.flow", params.Command),
-				err.Error(),
-			),
-		})
 		return nil, err
 	}
 
