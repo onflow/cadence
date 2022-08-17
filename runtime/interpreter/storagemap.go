@@ -85,7 +85,7 @@ func (s StorageMap) ValueExists(key string) bool {
 // ReadValue returns the value for the given key.
 // Returns nil if the key does not exist.
 //
-func (s StorageMap) ReadValue(interpreter *Interpreter, key string) Value {
+func (s StorageMap) ReadValue(gauge common.MemoryGauge, key string) Value {
 	storable, err := s.orderedMap.Get(
 		StringAtreeComparator,
 		StringAtreeHashInput,
@@ -98,7 +98,7 @@ func (s StorageMap) ReadValue(interpreter *Interpreter, key string) Value {
 		panic(errors.NewExternalError(err))
 	}
 
-	return StoredValue(interpreter, storable, s.orderedMap.Storage)
+	return StoredValue(gauge, storable, s.orderedMap.Storage)
 }
 
 // WriteValue sets or removes a value in the storage map.
@@ -107,7 +107,7 @@ func (s StorageMap) ReadValue(interpreter *Interpreter, key string) Value {
 //
 func (s StorageMap) WriteValue(interpreter *Interpreter, key string, value atree.Value) {
 	if value == nil {
-		s.removeValue(interpreter, key)
+		s.RemoveValue(interpreter, key)
 	} else {
 		s.SetValue(interpreter, key, value)
 	}
@@ -135,9 +135,9 @@ func (s StorageMap) SetValue(interpreter *Interpreter, key string, value atree.V
 	}
 }
 
-// removeValue removes a value in the storage map, if it exists.
+// RemoveValue removes a value in the storage map, if it exists.
 //
-func (s StorageMap) removeValue(interpreter *Interpreter, key string) {
+func (s StorageMap) RemoveValue(interpreter *Interpreter, key string) {
 	existingKeyStorable, existingValueStorable, err := s.orderedMap.Remove(
 		StringAtreeComparator,
 		StringAtreeHashInput,

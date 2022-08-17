@@ -118,7 +118,7 @@ A field may belong to a contract, struct, resource, or interface.
   // Updated contract
 
   pub contract Foo {
-      priv var a: Int   // access modifier changed to 'priv'
+      priv var a: String   // access modifier changed to 'priv'
   }
   ```
 

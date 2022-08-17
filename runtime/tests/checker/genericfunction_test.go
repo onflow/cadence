@@ -164,7 +164,7 @@ func TestCheckGenericFunction(t *testing.T) {
 		require.IsType(t, &ast.InvocationExpression{}, variableDeclaration.Value)
 		invocationExpression := variableDeclaration.Value.(*ast.InvocationExpression)
 
-		typeArguments := checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
+		typeArguments := checker.Elaboration.InvocationExpressionTypes[invocationExpression].TypeArguments
 
 		ty, present := typeArguments.Get(typeParameter)
 		require.True(t, present, "could not find type argument for parameter %#+v", typeParameter)
@@ -214,7 +214,7 @@ func TestCheckGenericFunction(t *testing.T) {
 		require.IsType(t, &ast.InvocationExpression{}, variableDeclaration.Value)
 		invocationExpression := variableDeclaration.Value.(*ast.InvocationExpression)
 
-		typeArguments := checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
+		typeArguments := checker.Elaboration.InvocationExpressionTypes[invocationExpression].TypeArguments
 
 		ty, present := typeArguments.Get(typeParameter)
 		require.True(t, present, "could not find type argument for type parameter %#+v", typeParameter)
@@ -387,7 +387,7 @@ func TestCheckGenericFunction(t *testing.T) {
 		require.IsType(t, &ast.InvocationExpression{}, variableDeclaration.Value)
 		invocationExpression := variableDeclaration.Value.(*ast.InvocationExpression)
 
-		typeParameterTypes := checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
+		typeParameterTypes := checker.Elaboration.InvocationExpressionTypes[invocationExpression].TypeArguments
 
 		ty, present := typeParameterTypes.Get(typeParameter)
 		require.True(t, present, "could not find type argument for type parameter %#+v", typeParameter)
@@ -511,7 +511,7 @@ func TestCheckGenericFunction(t *testing.T) {
 		require.IsType(t, &ast.InvocationExpression{}, variableDeclaration.Value)
 		invocationExpression := variableDeclaration.Value.(*ast.InvocationExpression)
 
-		typeArguments := checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
+		typeArguments := checker.Elaboration.InvocationExpressionTypes[invocationExpression].TypeArguments
 
 		ty, present := typeArguments.Get(typeParameter)
 		require.True(t, present, "could not find type argument for type parameter %#+v", typeParameter)
@@ -570,7 +570,7 @@ func TestCheckGenericFunction(t *testing.T) {
 		require.IsType(t, &ast.InvocationExpression{}, variableDeclaration.Value)
 		invocationExpression := variableDeclaration.Value.(*ast.InvocationExpression)
 
-		typeArguments := checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
+		typeArguments := checker.Elaboration.InvocationExpressionTypes[invocationExpression].TypeArguments
 
 		ty, present := typeArguments.Get(typeParameter)
 		require.True(t, present, "could not find type argument for type parameter %#+v", typeParameter)
@@ -615,7 +615,7 @@ func TestCheckGenericFunction(t *testing.T) {
 		require.IsType(t, &ast.InvocationExpression{}, variableDeclaration.Value)
 		invocationExpression := variableDeclaration.Value.(*ast.InvocationExpression)
 
-		typeArguments := checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
+		typeArguments := checker.Elaboration.InvocationExpressionTypes[invocationExpression].TypeArguments
 
 		ty, present := typeArguments.Get(typeParameter)
 		require.True(t, present, "could not find type argument for type parameter %#+v", typeParameter)

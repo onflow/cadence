@@ -27,9 +27,9 @@ import (
 	"time"
 
 	"github.com/onflow/atree"
-	"github.com/opentracing/opentracing-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -138,7 +138,7 @@ func parseCheckAndInterpretWithOptionsAndMemoryMetering(
 					_ *interpreter.Interpreter,
 					_ string,
 					_ time.Duration,
-					_ []opentracing.LogRecord,
+					_ []attribute.KeyValue,
 				) {
 					// NO-OP
 				},

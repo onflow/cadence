@@ -32,8 +32,11 @@ func (checker *Checker) VisitAssignmentStatement(assignment *ast.AssignmentState
 		false,
 	)
 
-	checker.Elaboration.AssignmentStatementValueTypes[assignment] = valueType
-	checker.Elaboration.AssignmentStatementTargetTypes[assignment] = targetType
+	checker.Elaboration.AssignmentStatementTypes[assignment] =
+		AssignmentStatementTypes{
+			ValueType:  valueType,
+			TargetType: targetType,
+		}
 
 	return nil
 }

@@ -106,7 +106,7 @@ This contract expands on the `BasicNFT` we looked at by adding:
 2. An `NFTReceiver` interface that exposes three functions for the collection
 3. Declares a resource called `Collection` that implements the `NFTReceiver` interface
 4. The `Collection` will declare fields and functions to interact with it,
-including `ownedNFTs`,`init()`, `withdraw()`,`destroy()`, and other important functions
+including `ownedNFTs`, `init()`, `withdraw()`, `destroy()`, and other important functions
 5. Next, the contract declares functions that create a new NFT (`mintNFT()`) and an empty collection (`createEmptyCollection()`)
 7. Finally, the contract declares an `init()` function that initializes the path fields,
 creates an empty collection as well as a reference to it,
@@ -517,10 +517,10 @@ pub fun main() {
 
 ```
 
-You should see that account `0x01` owns the NFT with `id=1`
+You should see that account `0x01` owns the NFT with `id = 1`
 
 ```
-"Account 2 NFTs"
+"Account 1 NFTs"
 [1]
 ```
 
@@ -673,10 +673,9 @@ for information about the official Flow NFT standard and an example implementati
 
 Also check out the [Kitty Items Repo](https://github.com/onflow/kitty-items) for a production ready version!
 
-## Create a Flow Marketplace
+## Fungible Tokens
 
 ---
 
-Now that you have a working NFT, you can attempt to extend its functionality on your own,
-or you can learn how to create a marketplace that uses both fungible tokens and NFTs.
-Move on to the next tutorial to learn about Marketplaces in Cadence!
+Now that you have a working NFT, you will probably want to be able to trade it. For that you are going to need to
+understand how fungible tokens work on Flow, so go ahead and move to the next tutorial!
