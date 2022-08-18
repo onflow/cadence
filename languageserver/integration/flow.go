@@ -169,7 +169,17 @@ func (f *flowkitClient) ExecuteScript(
 		return nil, err
 	}
 
-	return f.services.Scripts.Execute(code, args, location.Path, "") // todo check if it's ok that path is empty for resolving imports
+	codeFilename, err := resolveFilename(f.configPath, location.Path)
+	if err != nil {
+		return nil, err
+	}
+
+	return f.services.Scripts.Execute(
+		code,
+		args,
+		codeFilename,
+		config.DefaultEmulatorNetwork().Name,
+	)
 }
 
 func (f *flowkitClient) DeployContract(
