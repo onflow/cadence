@@ -57,8 +57,6 @@ type flowClient interface {
 
 var _ flowClient = &flowkitClient{}
 
-// todo: check if we need this struct at all, could we just use the flow.Account returned from the flowkit
-
 type clientAccount struct {
 	*flow.Account
 	Name   string
@@ -274,7 +272,7 @@ func (f *flowkitClient) SendTransaction(
 	transaction, res, err := f.services.Transactions.SendSigned(
 		[]byte(fmt.Sprintf("%x", signed.FlowTransaction().Encode())),
 		true,
-	) // todo refactor after implementing accounts on state
+	)
 
 	return transaction, res, err
 }

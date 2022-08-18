@@ -102,7 +102,7 @@ func (e *entryPointInfo) update(uri protocol.DocumentURI, version int32, checker
 				for i, arg := range arguments {
 					convertedArguments[i] = Argument{arg}
 				}
-				// todo reset to 0
+
 				e.pragmaArgumentStrings = append(e.pragmaArgumentStrings, pragmaArgumentString)
 				e.pragmaArguments = append(e.pragmaArguments, convertedArguments)
 			}
@@ -276,7 +276,6 @@ func makeCodeLens(
 	}
 }
 
-// todo: test this and refactor / remove if not needed
 func encodeJSONArguments(args ...interface{}) ([]json.RawMessage, error) {
 	result := make([]json.RawMessage, 0, len(args))
 	for _, arg := range args {
