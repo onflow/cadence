@@ -82,6 +82,10 @@ func setupMockClient() *mockFlowClient {
 	}
 
 	client.
+		On("GetClientAccount", "Invalid").
+		Return(nil)
+
+	client.
 		On("GetActiveClientAccount").
 		Return(accounts[0])
 
@@ -196,6 +200,15 @@ func Test_Codelensses(t *testing.T) {
 				prepare(s1: AuthAccount, s2: AuthAccount) {} 
 			}`,
 		title:   "🚫 Not enough signers. Required: 2, passed: 1",
+		command: "",
+		ranges:  protocol.Range{Start: protocol.Position{Line: 0x2, Character: 0x3}, End: protocol.Position{Line: 0x2, Character: 0x4}},
+	}, {
+		code: `
+			/// pragma signers Invalid
+			transaction {
+				prepare(s1: AuthAccount) {} 
+			}`,
+		title:   "🚫 Specified account Invalid does not exist",
 		command: "",
 		ranges:  protocol.Range{Start: protocol.Position{Line: 0x2, Character: 0x3}, End: protocol.Position{Line: 0x2, Character: 0x4}},
 	}}
