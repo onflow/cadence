@@ -174,7 +174,7 @@ func (e *entryPointInfo) transactionCodelens(index int, argumentList []Argument,
 	}
 
 	signerNames := e.pragmaSignerNames[:]
-	if len(signerNames) == 0 {
+	if len(signerNames) == 0 && e.numberOfSigners != 0 {
 		activeAccount := client.GetActiveClientAccount()
 		signerNames = []string{activeAccount.Name}
 	}
@@ -219,6 +219,9 @@ func (e *entryPointInfo) transactionCodelens(index int, argumentList []Argument,
 			prefixOK,
 			common.EnumerateWords(signerNames, "and"),
 		)
+	}
+	if e.numberOfSigners == 0 {
+		title = fmt.Sprintf("%s Send signed by service account", prefixOK)
 	}
 
 	argsJSON, _ := json.Marshal(argumentList)
