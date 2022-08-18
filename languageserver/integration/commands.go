@@ -115,12 +115,12 @@ func (c *commands) sendTransaction(args ...json.RawMessage) (any, error) {
 		signerAddresses = append(signerAddresses, account.Address)
 	}
 
-	txResult, err := c.client.SendTransaction(signerAddresses, location, txArgs)
+	tx, txResult, err := c.client.SendTransaction(signerAddresses, location, txArgs)
 	if err != nil {
 		return nil, fmt.Errorf("transaction error: %w", err)
 	}
 
-	return fmt.Sprintf("Transaction status: %s", txResult.Status.String()), err
+	return fmt.Sprintf("Transaction %s with ID %s", txResult.Status, tx.ID()), err
 }
 
 // executeScript handles executing a script defined in the source document.

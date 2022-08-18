@@ -1645,6 +1645,14 @@ func (s *Server) ExecuteCommand(conn protocol.Conn, params *protocol.ExecuteComm
 		return nil, err
 	}
 
+	// only show messages from commands that return strings intended for users to see
+	if resultString, ok := res.(string); ok {
+		conn.ShowMessage(&protocol.ShowMessageParams{
+			Type:    protocol.Info,
+			Message: fmt.Sprintf("%v", resultString),
+		})
+	}
+
 	return res, nil
 }
 
