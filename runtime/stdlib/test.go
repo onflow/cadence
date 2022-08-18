@@ -90,6 +90,7 @@ var TestContractChecker = func() *sema.Checker {
 
 func NewTestContract(
 	inter *interpreter.Interpreter,
+	testFramework interpreter.TestFramework,
 	constructor interpreter.FunctionValue,
 	invocationRange ast.Range,
 ) (
@@ -112,8 +113,8 @@ func NewTestContract(
 	// Inject natively implemented function values
 	compositeValue.Functions[testAssertFunctionName] = testAssertFunction
 	compositeValue.Functions[testExpectFunctionName] = testExpectFunction
-	compositeValue.Functions[testNewEmulatorBlockchainFunctionName] = testNewEmulatorBlockchainFunction
-	compositeValue.Functions[testReadFileFunctionName] = testReadFileFunction
+	compositeValue.Functions[testNewEmulatorBlockchainFunctionName] = testNewEmulatorBlockchainFunction(testFramework)
+	compositeValue.Functions[testReadFileFunctionName] = testReadFileFunction(testFramework)
 
 	// Inject natively implemented matchers
 	compositeValue.Functions[newMatcherFunctionName] = newMatcherFunction
@@ -430,27 +431,24 @@ var testReadFileFunctionType = &sema.FunctionType{
 	),
 }
 
-var testReadFileFunction = interpreter.NewUnmeteredHostFunctionValue(
-	func(invocation interpreter.Invocation) interpreter.Value {
-		testFramework := invocation.Interpreter.TestFramework
-		if testFramework == nil {
-			panic(interpreter.TestFrameworkNotProvidedError{})
-		}
+func testReadFileFunction(testFramework interpreter.TestFramework) *interpreter.HostFunctionValue {
+	return interpreter.NewUnmeteredHostFunctionValue(
+		func(invocation interpreter.Invocation) interpreter.Value {
+			pathString, ok := invocation.Arguments[0].(*interpreter.StringValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
 
-		pathString, ok := invocation.Arguments[0].(*interpreter.StringValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
+			content, err := testFramework.ReadFile(pathString.Str)
+			if err != nil {
+				panic(err)
+			}
 
-		content, err := testFramework.ReadFile(pathString.Str)
-		if err != nil {
-			panic(err)
-		}
-
-		return interpreter.NewUnmeteredStringValue(content)
-	},
-	testReadFileFunctionType,
-)
+			return interpreter.NewUnmeteredStringValue(content)
+		},
+		testReadFileFunctionType,
+	)
+}
 
 // 'Test.newEmulatorBlockchain' function
 
@@ -465,43 +463,49 @@ var testNewEmulatorBlockchainFunctionType = &sema.FunctionType{
 	),
 }
 
-var testNewEmulatorBlockchainFunction = interpreter.NewUnmeteredHostFunctionValue(
-	func(invocation interpreter.Invocation) interpreter.Value {
-		inter := invocation.Interpreter
+func testNewEmulatorBlockchainFunction(testFramework interpreter.TestFramework) *interpreter.HostFunctionValue {
+	return interpreter.NewUnmeteredHostFunctionValue(
+		func(invocation interpreter.Invocation) interpreter.Value {
+			inter := invocation.Interpreter
 
-		// Create an `EmulatorBackend`
-		emulatorBackend := newEmulatorBackend(inter, invocation.GetLocationRange)
+			// Create an `EmulatorBackend`
+			emulatorBackend := newEmulatorBackend(
+				inter,
+				testFramework,
+				invocation.GetLocationRange,
+			)
 
-		// Create a 'Blockchain' struct value, that wraps the emulator backend,
-		// by calling the constructor of 'Blockchain'.
+			// Create a 'Blockchain' struct value, that wraps the emulator backend,
+			// by calling the constructor of 'Blockchain'.
 
-		testContract, ok := invocation.Self.(*interpreter.CompositeValue)
-		if !ok {
-			panic(errors.NewUnexpectedError("invalid type for %s contract", testContractTypeName))
-		}
+			testContract, ok := invocation.Self.(*interpreter.CompositeValue)
+			if !ok {
+				panic(errors.NewUnexpectedError("invalid type for %s contract", testContractTypeName))
+			}
 
-		blockchainConstructorVar := testContract.NestedVariables[blockchainTypeName]
-		blockchainConstructor, ok := blockchainConstructorVar.GetValue().(*interpreter.HostFunctionValue)
-		if !ok {
-			panic(errors.NewUnexpectedError("invalid type for constructor"))
-		}
+			blockchainConstructorVar := testContract.NestedVariables[blockchainTypeName]
+			blockchainConstructor, ok := blockchainConstructorVar.GetValue().(*interpreter.HostFunctionValue)
+			if !ok {
+				panic(errors.NewUnexpectedError("invalid type for constructor"))
+			}
 
-		blockchain, err := inter.InvokeExternally(
-			blockchainConstructor,
-			blockchainConstructor.Type,
-			[]interpreter.Value{
-				emulatorBackend,
-			},
-		)
+			blockchain, err := inter.InvokeExternally(
+				blockchainConstructor,
+				blockchainConstructor.Type,
+				[]interpreter.Value{
+					emulatorBackend,
+				},
+			)
 
-		if err != nil {
-			panic(err)
-		}
+			if err != nil {
+				panic(err)
+			}
 
-		return blockchain
-	},
-	testNewEmulatorBlockchainFunctionType,
-)
+			return blockchain
+		},
+		testNewEmulatorBlockchainFunctionType,
+	)
+}
 
 // 'Test.NewMatcher' function.
 // Constructs a matcher that test only 'AnyStruct'.
@@ -636,31 +640,32 @@ var EmulatorBackendType = func() *sema.CompositeType {
 
 func newEmulatorBackend(
 	inter *interpreter.Interpreter,
+	testFramework interpreter.TestFramework,
 	locationRangeGetter func() interpreter.LocationRange,
 ) *interpreter.CompositeValue {
 	var fields = []interpreter.CompositeField{
 		{
 			Name:  emulatorBackendExecuteScriptFunctionName,
-			Value: emulatorBackendExecuteScriptFunction,
+			Value: emulatorBackendExecuteScriptFunction(testFramework),
 		},
 		{
 			Name:  emulatorBackendCreateAccountFunctionName,
-			Value: emulatorBackendCreateAccountFunction,
+			Value: emulatorBackendCreateAccountFunction(testFramework),
 		}, {
 			Name:  emulatorBackendAddTransactionFunctionName,
-			Value: emulatorBackendAddTransactionFunction,
+			Value: emulatorBackendAddTransactionFunction(testFramework),
 		},
 		{
 			Name:  emulatorBackendExecuteNextTransactionFunctionName,
-			Value: emulatorBackendExecuteNextTransactionFunction,
+			Value: emulatorBackendExecuteNextTransactionFunction(testFramework),
 		},
 		{
 			Name:  emulatorBackendCommitBlockFunctionName,
-			Value: emulatorBackendCommitBlockFunction,
+			Value: emulatorBackendCommitBlockFunction(testFramework),
 		},
 		{
 			Name:  emulatorBackendDeployContractFunctionName,
-			Value: emulatorBackendDeployContractFunction,
+			Value: emulatorBackendDeployContractFunction(testFramework),
 		},
 	}
 
@@ -704,29 +709,26 @@ var emulatorBackendExecuteScriptFunctionType = func() *sema.FunctionType {
 	return functionType
 }()
 
-var emulatorBackendExecuteScriptFunction = interpreter.NewUnmeteredHostFunctionValue(
-	func(invocation interpreter.Invocation) interpreter.Value {
-		testFramework := invocation.Interpreter.TestFramework
-		if testFramework == nil {
-			panic(interpreter.TestFrameworkNotProvidedError{})
-		}
+func emulatorBackendExecuteScriptFunction(testFramework interpreter.TestFramework) *interpreter.HostFunctionValue {
+	return interpreter.NewUnmeteredHostFunctionValue(
+		func(invocation interpreter.Invocation) interpreter.Value {
+			script, ok := invocation.Arguments[0].(*interpreter.StringValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
 
-		script, ok := invocation.Arguments[0].(*interpreter.StringValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
+			args, err := arrayValueToSlice(invocation.Arguments[1])
+			if err != nil {
+				panic(errors.NewUnexpectedErrorFromCause(err))
+			}
 
-		args, err := arrayValueToSlice(invocation.Arguments[1])
-		if err != nil {
-			panic(errors.NewUnexpectedErrorFromCause(err))
-		}
+			result := testFramework.RunScript(script.Str, args)
 
-		result := testFramework.RunScript(script.Str, args)
-
-		return newScriptResult(invocation.Interpreter, result.Value, result)
-	},
-	emulatorBackendExecuteScriptFunctionType,
-)
+			return newScriptResult(invocation.Interpreter, result.Value, result)
+		},
+		emulatorBackendExecuteScriptFunctionType,
+	)
+}
 
 func arrayValueToSlice(value interpreter.Value) ([]interpreter.Value, error) {
 	array, ok := value.(*interpreter.ArrayValue)
@@ -827,22 +829,19 @@ var emulatorBackendCreateAccountFunctionType = func() *sema.FunctionType {
 	return functionType
 }()
 
-var emulatorBackendCreateAccountFunction = interpreter.NewUnmeteredHostFunctionValue(
-	func(invocation interpreter.Invocation) interpreter.Value {
-		testFramework := invocation.Interpreter.TestFramework
-		if testFramework == nil {
-			panic(interpreter.TestFrameworkNotProvidedError{})
-		}
+func emulatorBackendCreateAccountFunction(testFramework interpreter.TestFramework) *interpreter.HostFunctionValue {
+	return interpreter.NewUnmeteredHostFunctionValue(
+		func(invocation interpreter.Invocation) interpreter.Value {
+			account, err := testFramework.CreateAccount()
+			if err != nil {
+				panic(err)
+			}
 
-		account, err := testFramework.CreateAccount()
-		if err != nil {
-			panic(err)
-		}
-
-		return newAccountValue(invocation.Interpreter, account, invocation.GetLocationRange)
-	},
-	emulatorBackendCreateAccountFunctionType,
-)
+			return newAccountValue(invocation.Interpreter, account, invocation.GetLocationRange)
+		},
+		emulatorBackendCreateAccountFunctionType,
+	)
+}
 
 func newAccountValue(
 	inter *interpreter.Interpreter,
@@ -915,70 +914,67 @@ var emulatorBackendAddTransactionFunctionType = func() *sema.FunctionType {
 	return functionType
 }()
 
-var emulatorBackendAddTransactionFunction = interpreter.NewUnmeteredHostFunctionValue(
-	func(invocation interpreter.Invocation) interpreter.Value {
-		testFramework := invocation.Interpreter.TestFramework
-		if testFramework == nil {
-			panic(interpreter.TestFrameworkNotProvidedError{})
-		}
+func emulatorBackendAddTransactionFunction(testFramework interpreter.TestFramework) *interpreter.HostFunctionValue {
+	return interpreter.NewUnmeteredHostFunctionValue(
+		func(invocation interpreter.Invocation) interpreter.Value {
+			inter := invocation.Interpreter
+			locationRangeGetter := invocation.GetLocationRange
 
-		inter := invocation.Interpreter
-		locationRangeGetter := invocation.GetLocationRange
+			transactionValue, ok := invocation.Arguments[0].(interpreter.MemberAccessibleValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
 
-		transactionValue, ok := invocation.Arguments[0].(interpreter.MemberAccessibleValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
+			// Get transaction code
+			codeValue := transactionValue.GetMember(
+				inter,
+				locationRangeGetter,
+				transactionCodeFieldName,
+			)
+			code, ok := codeValue.(*interpreter.StringValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
 
-		// Get transaction code
-		codeValue := transactionValue.GetMember(
-			inter,
-			locationRangeGetter,
-			transactionCodeFieldName,
-		)
-		code, ok := codeValue.(*interpreter.StringValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
+			// Get authorizers
+			authorizerValue := transactionValue.GetMember(
+				inter,
+				locationRangeGetter,
+				transactionAuthorizerFieldName,
+			)
 
-		// Get authorizers
-		authorizerValue := transactionValue.GetMember(
-			inter,
-			locationRangeGetter,
-			transactionAuthorizerFieldName,
-		)
+			authorizers := addressesFromValue(authorizerValue)
 
-		authorizers := addressesFromValue(authorizerValue)
+			// Get signers
+			signersValue := transactionValue.GetMember(
+				inter,
+				locationRangeGetter,
+				transactionSignersFieldName,
+			)
 
-		// Get signers
-		signersValue := transactionValue.GetMember(
-			inter,
-			locationRangeGetter,
-			transactionSignersFieldName,
-		)
+			signerAccounts := accountsFromValue(inter, signersValue, invocation.GetLocationRange)
 
-		signerAccounts := accountsFromValue(inter, signersValue, invocation.GetLocationRange)
+			// Get arguments
+			argsValue := transactionValue.GetMember(
+				inter,
+				locationRangeGetter,
+				transactionArgsFieldName,
+			)
+			args, err := arrayValueToSlice(argsValue)
+			if err != nil {
+				panic(errors.NewUnexpectedErrorFromCause(err))
+			}
 
-		// Get arguments
-		argsValue := transactionValue.GetMember(
-			inter,
-			locationRangeGetter,
-			transactionArgsFieldName,
-		)
-		args, err := arrayValueToSlice(argsValue)
-		if err != nil {
-			panic(errors.NewUnexpectedErrorFromCause(err))
-		}
+			err = testFramework.AddTransaction(code.Str, authorizers, signerAccounts, args)
+			if err != nil {
+				panic(err)
+			}
 
-		err = testFramework.AddTransaction(code.Str, authorizers, signerAccounts, args)
-		if err != nil {
-			panic(err)
-		}
-
-		return interpreter.VoidValue{}
-	},
-	emulatorBackendAddTransactionFunctionType,
-)
+			return interpreter.VoidValue{}
+		},
+		emulatorBackendAddTransactionFunctionType,
+	)
+}
 
 func addressesFromValue(accountsValue interpreter.Value) []common.Address {
 	accountsArray, ok := accountsValue.(*interpreter.ArrayValue)
@@ -1099,24 +1095,21 @@ var emulatorBackendExecuteNextTransactionFunctionType = func() *sema.FunctionTyp
 	return functionType
 }()
 
-var emulatorBackendExecuteNextTransactionFunction = interpreter.NewUnmeteredHostFunctionValue(
-	func(invocation interpreter.Invocation) interpreter.Value {
-		testFramework := invocation.Interpreter.TestFramework
-		if testFramework == nil {
-			panic(interpreter.TestFrameworkNotProvidedError{})
-		}
+func emulatorBackendExecuteNextTransactionFunction(testFramework interpreter.TestFramework) *interpreter.HostFunctionValue {
+	return interpreter.NewUnmeteredHostFunctionValue(
+		func(invocation interpreter.Invocation) interpreter.Value {
+			result := testFramework.ExecuteNextTransaction()
 
-		result := testFramework.ExecuteNextTransaction()
+			// If there are no transactions to run, then return `nil`.
+			if result == nil {
+				return interpreter.NilValue{}
+			}
 
-		// If there are no transactions to run, then return `nil`.
-		if result == nil {
-			return interpreter.NilValue{}
-		}
-
-		return newTransactionResult(invocation.Interpreter, result)
-	},
-	emulatorBackendExecuteNextTransactionFunctionType,
-)
+			return newTransactionResult(invocation.Interpreter, result)
+		},
+		emulatorBackendExecuteNextTransactionFunctionType,
+	)
+}
 
 // newTransactionResult Creates a "TransactionResult" indicating the status of the transaction execution.
 //
@@ -1205,22 +1198,19 @@ var emulatorBackendCommitBlockFunctionType = func() *sema.FunctionType {
 	return functionType
 }()
 
-var emulatorBackendCommitBlockFunction = interpreter.NewUnmeteredHostFunctionValue(
-	func(invocation interpreter.Invocation) interpreter.Value {
-		testFramework := invocation.Interpreter.TestFramework
-		if testFramework == nil {
-			panic(interpreter.TestFrameworkNotProvidedError{})
-		}
+func emulatorBackendCommitBlockFunction(testFramework interpreter.TestFramework) *interpreter.HostFunctionValue {
+	return interpreter.NewUnmeteredHostFunctionValue(
+		func(invocation interpreter.Invocation) interpreter.Value {
+			err := testFramework.CommitBlock()
+			if err != nil {
+				panic(err)
+			}
 
-		err := testFramework.CommitBlock()
-		if err != nil {
-			panic(err)
-		}
-
-		return interpreter.VoidValue{}
-	},
-	emulatorBackendCommitBlockFunctionType,
-)
+			return interpreter.VoidValue{}
+		},
+		emulatorBackendCommitBlockFunctionType,
+	)
+}
 
 // Built-in matchers
 
@@ -1323,52 +1313,49 @@ var emulatorBackendDeployContractFunctionType = func() *sema.FunctionType {
 	return functionType
 }()
 
-var emulatorBackendDeployContractFunction = interpreter.NewUnmeteredHostFunctionValue(
-	func(invocation interpreter.Invocation) interpreter.Value {
-		testFramework := invocation.Interpreter.TestFramework
-		if testFramework == nil {
-			panic(interpreter.TestFrameworkNotProvidedError{})
-		}
+func emulatorBackendDeployContractFunction(testFramework interpreter.TestFramework) *interpreter.HostFunctionValue {
+	return interpreter.NewUnmeteredHostFunctionValue(
+		func(invocation interpreter.Invocation) interpreter.Value {
+			inter := invocation.Interpreter
 
-		inter := invocation.Interpreter
+			// Contract name
+			name, ok := invocation.Arguments[0].(*interpreter.StringValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
 
-		// Contract name
-		name, ok := invocation.Arguments[0].(*interpreter.StringValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
+			// Contract code
+			code, ok := invocation.Arguments[1].(*interpreter.StringValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
 
-		// Contract code
-		code, ok := invocation.Arguments[1].(*interpreter.StringValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
+			// authorizer
+			accountValue, ok := invocation.Arguments[2].(interpreter.MemberAccessibleValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
 
-		// authorizer
-		accountValue, ok := invocation.Arguments[2].(interpreter.MemberAccessibleValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
+			account := accountFromValue(inter, accountValue, invocation.GetLocationRange)
 
-		account := accountFromValue(inter, accountValue, invocation.GetLocationRange)
+			// Contract init arguments
+			args, err := arrayValueToSlice(invocation.Arguments[3])
+			if err != nil {
+				panic(err)
+			}
 
-		// Contract init arguments
-		args, err := arrayValueToSlice(invocation.Arguments[3])
-		if err != nil {
-			panic(err)
-		}
+			err = testFramework.DeployContract(
+				name.Str,
+				code.Str,
+				account,
+				args,
+			)
 
-		err = testFramework.DeployContract(
-			name.Str,
-			code.Str,
-			account,
-			args,
-		)
-
-		return newErrorValue(inter, err)
-	},
-	emulatorBackendDeployContractFunctionType,
-)
+			return newErrorValue(inter, err)
+		},
+		emulatorBackendDeployContractFunctionType,
+	)
+}
 
 // TestFailedError
 
