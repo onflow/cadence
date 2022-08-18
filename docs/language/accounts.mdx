@@ -641,8 +641,28 @@ as is the behavior when a path is added or removed from storage.
 
 <Callout type="warning">
 The order of iteration is undefined. Do not rely on any particular behaviour.
+
 Saving to or removing from storage during iteration can cause the order in which values are stored to change arbitrarily. 
-Continuing to iterate after such an operation may cause iteration to repeat some elements or skip others. 
+
+Continuing to iterate after such an operation will cause Cadence to panic and abort execution. In order to avoid such errors,
+we recommend not modifying storage during iteration. If you do, return `false` from the iteration callback to cause iteration 
+to end after the mutation like so:
+
+```cadence
+account.save(1, to: /storage/foo1)
+account.save(2, to: /storage/foo2)
+account.save(3, to: /storage/foo3)
+account.save("qux", to: /storage/foo4)
+
+account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+    if type == Type<String>() {
+        account.save("bar", to: /storage/foo5)
+        // returning false here ends iteration after storage is modified, preventing a panic
+        return false
+    }
+    return true
+})
+```
 </Callout>
 
 ## Storage limit

@@ -358,6 +358,8 @@ type Interpreter struct {
 	atreeValueValidationEnabled    bool
 	atreeStorageValidationEnabled  bool
 	tracingEnabled                 bool
+	inStorageIteration             bool
+	storageMutatedDuringIteration  bool
 	// TODO: ideally this would be a weak map, but Go has no weak references
 	referencedResourceKindedValues       ReferencedResourceKindedValues
 	invalidatedResourceValidationEnabled bool
@@ -699,11 +701,13 @@ var baseActivation = func() *VariableActivation {
 func NewInterpreter(program *Program, location common.Location, options ...Option) (*Interpreter, error) {
 
 	interpreter := &Interpreter{
-		Program:                    program,
-		Location:                   location,
-		Globals:                    map[string]*Variable{},
-		effectivePredeclaredValues: map[string]ValueDeclaration{},
-		resourceVariables:          map[ResourceKindedValue]*Variable{},
+		Program:                       program,
+		Location:                      location,
+		Globals:                       map[string]*Variable{},
+		effectivePredeclaredValues:    map[string]ValueDeclaration{},
+		resourceVariables:             map[ResourceKindedValue]*Variable{},
+		inStorageIteration:            false,
+		storageMutatedDuringIteration: false,
 	}
 
 	interpreter.activations = NewVariableActivations(interpreter)
@@ -2787,7 +2791,7 @@ func (interpreter *Interpreter) NewSubInterpreter(
 		WithMemoryGauge(interpreter.memoryGauge),
 	}
 
-	return NewInterpreter(
+	subInterp, err := NewInterpreter(
 		program,
 		location,
 		append(
@@ -2795,6 +2799,10 @@ func (interpreter *Interpreter) NewSubInterpreter(
 			options...,
 		)...,
 	)
+	subInterp.inStorageIteration = interpreter.inStorageIteration
+	subInterp.storageMutatedDuringIteration = interpreter.storageMutatedDuringIteration
+
+	return subInterp, err
 }
 
 func (interpreter *Interpreter) storedValueExists(
@@ -2829,6 +2837,7 @@ func (interpreter *Interpreter) writeStored(
 ) {
 	accountStorage := interpreter.Storage.GetStorageMap(storageAddress, domain, true)
 	accountStorage.WriteValue(interpreter, identifier, value)
+	interpreter.recordStorageMutation()
 }
 
 type ValueConverterDeclaration struct {
@@ -3731,6 +3740,12 @@ func (interpreter *Interpreter) storageAccountPaths(addressValue AddressValue, g
 	return interpreter.accountPaths(addressValue, getLocationRange, common.PathDomainStorage, PrimitiveStaticTypeStoragePath)
 }
 
+func (interpreter *Interpreter) recordStorageMutation() {
+	if interpreter.inStorageIteration {
+		interpreter.storageMutatedDuringIteration = true
+	}
+}
+
 func (interpreter *Interpreter) newStorageIterationFunction(addressValue AddressValue, domain common.PathDomain, pathType sema.Type) *HostFunctionValue {
 	address := addressValue.ToAddress()
 
@@ -3753,6 +3768,12 @@ func (interpreter *Interpreter) newStorageIterationFunction(addressValue Address
 
 			invocationTypeParams := []sema.Type{pathType, sema.MetaType}
 
+			inIteration := inter.inStorageIteration
+			inter.inStorageIteration = true
+			defer func() {
+				inter.inStorageIteration = inIteration
+			}()
+
 			for key, value := storageIterator.Next(); key != "" && value != nil; key, value = storageIterator.Next() {
 				pathValue := NewPathValue(inter, domain, key)
 				runtimeType := NewTypeValue(inter, value.StaticType(inter))
@@ -3774,6 +3795,18 @@ func (interpreter *Interpreter) newStorageIterationFunction(addressValue Address
 				if !shouldContinue {
 					break
 				}
+
+				// it is not safe to check this at the beginning of the loop (i.e. on the next invocation of the callback)
+				// because if the mutation performed in the callback reorganized storage such that the iteration pointer is now
+				// at the end, we will not invoke the callback again but will still silently skip elements of storage. In order
+				// to be safe, we perform this check here to effectively enforce that users return `false` from their callback
+				// in all cases where storage is mutated
+				if inter.storageMutatedDuringIteration {
+					panic(StorageMutatedDuringIterationError{
+						LocationRange: getLocationRange(),
+					})
+				}
+
 			}
 
 			return NewVoidValue(inter)
