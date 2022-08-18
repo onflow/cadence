@@ -15,11 +15,11 @@ Please let us know if your use-case demands it by request this feature in an iss
 
 To get information about a block, the functions `getCurrentBlock` and `getBlock` can be used:
 
-- `cadence•fun getCurrentBlock(): Block`
+- `fun getCurrentBlock(): Block`
 
   Returns the current block, i.e. the block which contains the currently executed transaction.
 
-- `cadence•fun getBlock(at height: UInt64): Block?`
+- `fun getBlock(at height: UInt64): Block?`
 
   Returns the block at the given height.
   If the given block does not exist the function returns `nil`.

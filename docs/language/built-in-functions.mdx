@@ -3,7 +3,7 @@ title: Built-in Functions
 ---
 
 ## panic
-`cadence•fun panic(_ message: String): Never`
+`fun panic(_ message: String): Never`
 
   Terminates the program unconditionally
   and reports a message which explains why the unrecoverable error occurred.
@@ -15,7 +15,7 @@ title: Built-in Functions
 
 ## assert
 
-`cadence•fun assert(_ condition: Bool, message: String)`
+`fun assert(_ condition: Bool, message: String)`
 
   Terminates the program if the given condition is false,
   and reports a message which explains how the condition is false.
@@ -25,7 +25,7 @@ title: Built-in Functions
 
 ## unsafeRandom
 
-`cadence•fun unsafeRandom(): UInt64`
+`fun unsafeRandom(): UInt64`
 
   Returns a pseudo-random number.
 
@@ -40,14 +40,14 @@ RLP (Recursive Length Prefix) serialization allows the encoding of arbitrarily n
 
 Cadence provides RLP decoding functions in the built-in `RLP` contract, which does not need to be imported.
 
-- `cadence•fun decodeString(_ input: [UInt8]): [UInt8]`
+- `fun decodeString(_ input: [UInt8]): [UInt8]`
 
   Decodes an RLP-encoded byte array (called string in the context of RLP).
   The byte array should only contain of a single encoded value for a string; if the encoded value type does not match, or it has trailing unnecessary bytes, the program aborts.
   If any error is encountered while decoding, the program aborts.
 
 
-- `cadence•fun decodeList(_ input: [UInt8]): [[UInt8]]`
+- `fun decodeList(_ input: [UInt8]): [[UInt8]]`
 
   Decodes an RLP-encoded list into an array of RLP-encoded items.
   Note that this function does not recursively decode, so each element of the resulting array is RLP-encoded data.

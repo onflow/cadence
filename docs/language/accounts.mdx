@@ -363,7 +363,7 @@ Both `StoragePath` and `CapabilityPath` are subtypes of `Path`.
 
 #### Path Functions
 
-- `cadence•fun toString(): String`
+- `fun toString(): String`
 
   Returns the string representation of the path.
 
@@ -394,7 +394,7 @@ Account storage is accessed through the following functions of `AuthAccount`.
 This means that any code that has access to the authorized account has access
 to all its stored objects.
 
-- `cadence•fun save<T>(_ value: T, to: StoragePath)`
+- `fun save<T>(_ value: T, to: StoragePath)`
 
   Saves an object to account storage.
   Resources are moved into storage, and structures are copied.
@@ -406,7 +406,7 @@ to all its stored objects.
 
   The path must be a storage path, i.e., only the domain `storage` is allowed.
 
-- `cadence•fun type(at path: StoragePath): Type?`
+- `fun type(at path: StoragePath): Type?`
 
   Reads the type of an object from the account's storage which is stored under the given path, or nil if no object is stored under the given path.
 
@@ -414,7 +414,7 @@ to all its stored objects.
 
   The path must be a storage path, i.e., only the domain `storage` is allowed
 
-- `cadence•fun load<T>(from: StoragePath): T?`
+- `fun load<T>(from: StoragePath): T?`
 
   Loads an object from account storage.
   If no object is stored under the given path, the function returns `nil`.
@@ -432,7 +432,7 @@ to all its stored objects.
 
   The path must be a storage path, i.e., only the domain `storage` is allowed.
 
-- `cadence•fun copy<T: AnyStruct>(from: StoragePath): T?`
+- `fun copy<T: AnyStruct>(from: StoragePath): T?`
 
   Returns a copy of a structure stored in account storage, without removing it from storage.
 
@@ -539,7 +539,7 @@ as it is necessary for resources,
 it is also possible to create references to objects in storage:
 This is possible using the `borrow` function of an `AuthAccount`:
 
-- `cadence•fun borrow<T: &Any>(from: StoragePath): T?`
+- `fun borrow<T: &Any>(from: StoragePath): T?`
 
   Returns a reference to an object in storage without removing it from storage.
   If no object is stored under the given path, the function returns `nil`.

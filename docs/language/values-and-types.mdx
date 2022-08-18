@@ -158,7 +158,7 @@ let b = x + 1000000000000000000000000
 
 Integers have multiple built-in functions you can use.
 
-- `cadence•fun toString(): String`
+- `fun toString(): String`
 
   Returns the string representation of the integer.
 
@@ -168,7 +168,7 @@ Integers have multiple built-in functions you can use.
   answer.toString()  // is "42"
   ```
 
-- `cadence•fun toBigEndianBytes(): [UInt8]`
+- `fun toBigEndianBytes(): [UInt8]`
 
   Returns the byte array representation (`[UInt8]`) in big-endian order of the integer.
 
@@ -212,7 +212,7 @@ have the following factors, and can represent values in the following ranges:
 
 Fixed-Point numbers have multiple built-in functions you can use.
 
-- `cadence•fun toString(): String`
+- `fun toString(): String`
 
   Returns the string representation of the fixed-point number.
 
@@ -222,7 +222,7 @@ Fixed-Point numbers have multiple built-in functions you can use.
   fix.toString()  // is "1.23000000"
   ```
 
-- `cadence•fun toBigEndianBytes(): [UInt8]`
+- `fun toBigEndianBytes(): [UInt8]`
 
   Returns the byte array representation (`[UInt8]`) in big-endian order of the fixed-point number.
 
@@ -331,7 +331,7 @@ let aNumber = 0x436164656E636521
 
 Addresses have multiple built-in functions you can use.
 
-- `cadence•fun toString(): String`
+- `fun toString(): String`
 
   Returns the string representation of the address.
   The result has a `0x` prefix and is zero-padded.
@@ -344,7 +344,7 @@ Addresses have multiple built-in functions you can use.
   shortAddress.toString()  // is "0x0000000000000001"
   ```
 
-- `cadence•fun toBytes(): [UInt8]`
+- `fun toBytes(): [UInt8]`
 
   Returns the byte array representation (`[UInt8]`) of the address.
 
@@ -629,7 +629,7 @@ let canadianFlag: Character = "\u{1F1E8}\u{1F1E6}"
 
 Strings have multiple built-in functions you can use:
 
-- `cadence•let length: Int`
+- `let length: Int`
 
   Returns the number of characters in the string as an integer.
 
@@ -641,7 +641,7 @@ Strings have multiple built-in functions you can use:
   // `length` is `5`
   ```
 
-- `cadence•let utf8: [UInt8]`
+- `let utf8: [UInt8]`
 
   The byte array of the UTF-8 encoding
 
@@ -651,7 +651,7 @@ Strings have multiple built-in functions you can use:
   // `bytes` is `[70, 108, 111, 119, 101, 114, 115, 32, 240, 159, 146, 144]`
   ```
 
-- `cadence•fun concat(_ other: String): String`
+- `fun concat(_ other: String): String`
 
   Concatenates the string `other` to the end of the original string,
   but does not modify the original string.
@@ -667,7 +667,7 @@ Strings have multiple built-in functions you can use:
   // `helloWorld` is now `"helloworld"`
   ```
 
-- `cadence•fun slice(from: Int, upTo: Int): String`
+- `fun slice(from: Int, upTo: Int): String`
 
   Returns a string slice of the characters
   in the given string from start index `from` up to,
@@ -691,7 +691,7 @@ Strings have multiple built-in functions you can use:
   let invalidIndices = example.slice(from: 2, upTo: 1)
   ```
 
-- `cadence•fun decodeHex(): [UInt8]`
+- `fun decodeHex(): [UInt8]`
 
   Returns an array containing the bytes represented by the given hexadecimal string.
 
@@ -704,7 +704,7 @@ Strings have multiple built-in functions you can use:
   example.decodeHex()  // is `[67, 97, 100, 101, 110, 99, 101, 33]`
   ```
 
-- `cadence•fun toLower(): String`
+- `fun toLower(): String`
   Returns a string where all upper case letters are replaced with lowercase characters
 
   ```cadence
@@ -715,7 +715,7 @@ Strings have multiple built-in functions you can use:
 
 The `String` type also provides the following functions:
 
-- `cadence•fun String.encodeHex(_ data: [UInt8]): String`
+- `fun String.encodeHex(_ data: [UInt8]): String`
 
   Returns a hexadecimal string for the given byte array
 
@@ -736,7 +736,7 @@ let c = str[0] // is the Character "a"
 
 `Character` values can be converted into `String` values using the `toString` function:
 
-- `cadence•fun toString(): String`
+- `fun toString(): String`
 
   Returns the string representation of the character.
 
@@ -877,7 +877,7 @@ that can be used to get information about and manipulate the contents of the arr
 The field `length`, and the functions `concat`, and `contains`
 are available for both variable-sized and fixed-sized or variable-sized arrays.
 
-- `cadence•let length: Int`
+- `let length: Int`
 
   The number of elements in the array.
 
@@ -891,7 +891,7 @@ are available for both variable-sized and fixed-sized or variable-sized arrays.
   // `length` is `4`
   ```
 
-- `cadence•fun concat(_ array: T): T`
+- `fun concat(_ array: T): T`
 
   Concatenates the parameter `array` to the end
   of the array the function is called on,
@@ -917,7 +917,7 @@ are available for both variable-sized and fixed-sized or variable-sized arrays.
   // `moreNumbers` is still `[11, 27]`
   ```
 
-- `cadence•fun contains(_ element: T): Bool`
+- `fun contains(_ element: T): Bool`
 
   Returns true if the given element of type `T` is in the array.
 
@@ -939,7 +939,7 @@ are available for both variable-sized and fixed-sized or variable-sized arrays.
   let containsKitty = numbers.contains("Kitty")
   ```
 
-- `cadence•fun firstIndex(of: T): Int?`
+- `fun firstIndex(of: T): Int?`
   Returns the index of the first element matching the given object in the array, nil if no match.
   Available if `T` is not resource-kinded and equatable.
 
@@ -956,7 +956,7 @@ are available for both variable-sized and fixed-sized or variable-sized arrays.
  // `index` is nil
 ```
 
-- `cadence•fun slice(from: Int, upTo: Int): [T]`
+- `fun slice(from: Int, upTo: Int): [T]`
 
   Returns an array slice of the elements
   in the given array from start index `from` up to,
@@ -985,7 +985,7 @@ are available for both variable-sized and fixed-sized or variable-sized arrays.
 The following functions can only be used on variable-sized arrays.
 It is invalid to use one of these functions on a fixed-sized array.
 
-- `cadence•fun append(_ element: T): Void`
+- `fun append(_ element: T): Void`
 
   Adds the new element `element` of type `T` to the end of the array.
 
@@ -1005,7 +1005,7 @@ It is invalid to use one of these functions on a fixed-sized array.
   numbers.append("SneakyString")
   ```
 
-- `cadence•fun appendAll(_ array: T): Void`
+- `fun appendAll(_ array: T): Void`
 
   Adds all the elements from `array` to the end of the array
   the function is called on.
@@ -1026,7 +1026,7 @@ It is invalid to use one of these functions on a fixed-sized array.
   numbers.appendAll(["Sneaky", "String"])
   ```
 
-- `cadence•fun insert(at index: Int, _ element: T): Void`
+- `fun insert(at index: Int, _ element: T): Void`
 
   Inserts the new element `element` of type `T`
   at the given `index` of the array.
@@ -1055,7 +1055,7 @@ It is invalid to use one of these functions on a fixed-sized array.
   numbers.insert(at: 12, 39)
   ```
 
-- `cadence•fun remove(at index: Int): T`
+- `fun remove(at index: Int): T`
 
   Removes the element at the given `index` from the array and returns it.
 
@@ -1077,7 +1077,7 @@ It is invalid to use one of these functions on a fixed-sized array.
   numbers.remove(at: 19)
   ```
 
-- `cadence•fun removeFirst(): T`
+- `fun removeFirst(): T`
 
   Removes the first element from the array and returns it.
 
@@ -1104,7 +1104,7 @@ It is invalid to use one of these functions on a fixed-sized array.
   numbers.removeFirst()
   ```
 
-- `cadence•fun removeLast(): T`
+- `fun removeLast(): T`
 
   Removes the last element from the array and returns it.
 
@@ -1265,7 +1265,7 @@ booleans[0] = true
 
 ### Dictionary Fields and Functions
 
-- `cadence•let length: Int`
+- `let length: Int`
 
   The number of entries in the dictionary.
 
@@ -1279,7 +1279,7 @@ booleans[0] = true
   // `length` is `2`
   ```
 
-- `cadence•fun insert(key: K, _ value: V): V?`
+- `fun insert(key: K, _ value: V): V?`
 
   Inserts the given value of type `V` into the dictionary under the given `key` of type `K`.
   
@@ -1307,7 +1307,7 @@ booleans[0] = true
   // `numbers` is `{"twentyThree": 23, "fortyTwo": 42}`
   ```
 
-- `cadence•fun remove(key: K): V?`
+- `fun remove(key: K): V?`
 
   Removes the value for the given `key` of type `K` from the dictionary.
 
@@ -1339,7 +1339,7 @@ booleans[0] = true
   // `numbers` is `{"twentyThree": 23}`
   ```
 
-- `cadence•let keys: [K]`
+- `let keys: [K]`
 
   Returns an array of the keys of type `K` in the dictionary. This does not
   modify the dictionary, just returns a copy of the keys as an array.
@@ -1355,7 +1355,7 @@ booleans[0] = true
   // `keys` has type `[String]` and is `["fortyTwo","twentyThree"]`
   ```
 
-- `cadence•let values: [V]`
+- `let values: [V]`
 
   Returns an array of the values of type `V` in the dictionary. This does not
   modify the dictionary, just returns a copy of the values as an array.
@@ -1373,7 +1373,7 @@ booleans[0] = true
   // `values` has type [Int] and is `[42, 23]`
   ```
 
-- `cadence•fun containsKey(key: K): Bool`
+- `fun containsKey(key: K): Bool`
 
   Returns true if the given key of type `K` is in the dictionary.
 

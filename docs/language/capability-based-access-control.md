@@ -31,7 +31,7 @@ This allows exposing and hiding certain functionality of a stored object.
 
 Capabilities are created using the `link` function of an authorized account (`AuthAccount`):
 
-- `cadence•fun link<T: &Any>(_ newCapabilityPath: CapabilityPath, target: Path): Capability<T>?`
+- `fun link<T: &Any>(_ newCapabilityPath: CapabilityPath, target: Path): Capability<T>?`
 
   `newCapabilityPath` is the public or private path identifying the new capability.
 
@@ -60,14 +60,14 @@ Capabilities are created using the `link` function of an authorized account (`Au
 
 Capabilities can be removed using the `unlink` function of an authorized account (`AuthAccount`):
 
-- `cadence•fun unlink(_ path: CapabilityPath)`
+- `fun unlink(_ path: CapabilityPath)`
 
   `path` is the public or private path identifying the capability that should be removed.
 
 To get the target path for a capability, the `getLinkTarget` function
 of an authorized account (`AuthAccount`) or public account (`PublicAccount`) can be used:
 
-- `cadence•fun getLinkTarget(_ path: CapabilityPath): Path?`
+- `fun getLinkTarget(_ path: CapabilityPath): Path?`
 
   `path` is the public or private path identifying the capability.
   The function returns the link target path,
@@ -77,7 +77,7 @@ of an authorized account (`AuthAccount`) or public account (`PublicAccount`) can
 Existing capabilities can be obtained by using the `getCapability` function
 of authorized accounts (`AuthAccount`) and public accounts (`PublicAccount`):
 
-- `cadence•fun getCapability<T>(_ at: CapabilityPath): Capability<T>`
+- `fun getCapability<T>(_ at: CapabilityPath): Capability<T>`
 
   For public accounts, the function returns a capability
   if the given path is public.
@@ -95,7 +95,7 @@ The `getCapability` function does **not** check if the target exists.
 The link is latent.
 The `check` function of the capability can be used to check if the target currently exists and could be borrowed,
 
-- `cadence•fun check<T: &Any>(): Bool`
+- `fun check<T: &Any>(): Bool`
 
   `T` is the type parameter for the reference type.
   A type argument for the parameter must be provided explicitly.
@@ -106,7 +106,7 @@ The `check` function of the capability can be used to check if the target curren
 Finally, the capability can be borrowed to get a reference to the stored object.
 This can be done using the `borrow` function of the capability:
 
-- `cadence•fun borrow<T: &Any>(): T?`
+- `fun borrow<T: &Any>(): T?`
 
   The function returns a reference to the object targeted by the capability,
   provided it can be borrowed using the given type.
@@ -229,6 +229,6 @@ let counterRef2 = publicAccount.borrow<&Counter>(from: /storage/counter)
 
 The address of a capability can be obtained from the `address` field of the capability:
 
-- `cadence•let address: Address`
+- `let address: Address`
 
   The address of the capability.
