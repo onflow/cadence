@@ -238,7 +238,7 @@ func (c *commands) deployContract(args ...json.RawMessage) (any, error) {
 		}
 	}
 
-	_, deployError := c.client.DeployContract(account.Address, name, location)
+	deployError := c.client.DeployContract(account.Address, name, location)
 	if deployError != nil {
 		return nil, fmt.Errorf("error deploying contract: %w", deployError)
 	}
