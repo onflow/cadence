@@ -405,6 +405,7 @@ describe("accounts", () => {
 })
 
 describe("transactions", () => {
+  const resultRegex = /^Transaction SEALED with ID [a-f0-9]{64}\. Events: \[\]$/
 
   test("send a transaction with no signer", async() => {
     await withConnection(async connection => {
@@ -413,7 +414,7 @@ describe("transactions", () => {
         arguments: [`file://${__dirname}/transaction-none.cdc`, "[]", []]
       })
 
-      expect(result).toEqual("Transaction status: SEALED")
+      expect(resultRegex.test(result)).toBeTruthy()
     }, true)
   })
 
@@ -425,7 +426,7 @@ describe("transactions", () => {
         arguments: [`file://${__dirname}/transaction.cdc`, "[]", ["Alice"]]
       })
 
-      expect(result).toEqual("Transaction status: SEALED")
+      expect(resultRegex.test(result)).toBeTruthy()
     }, true)
   })
 
@@ -436,7 +437,7 @@ describe("transactions", () => {
         arguments: [`file://${__dirname}/transaction-multiple.cdc`, "[]", ["Alice", "Bob"]]
       })
 
-      expect(result).toEqual("Transaction status: SEALED")
+      expect(resultRegex.test(result)).toBeTruthy()
     }, true)
   })
 
