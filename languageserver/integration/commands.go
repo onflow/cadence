@@ -120,7 +120,12 @@ func (c *commands) sendTransaction(args ...json.RawMessage) (any, error) {
 		return nil, fmt.Errorf("transaction error: %w", err)
 	}
 
-	return fmt.Sprintf("Transaction %s with ID %s", txResult.Status, tx.ID()), err
+	return fmt.Sprintf(
+		"Transaction %s with ID %s. Events: %s",
+		txResult.Status,
+		tx.ID(),
+		txResult.Events,
+	), err
 }
 
 // executeScript handles executing a script defined in the source document.
