@@ -19,6 +19,7 @@
 package integration
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/onflow/flow-go-sdk"
@@ -169,19 +170,49 @@ func Test_Codelensses(t *testing.T) {
 		command: "cadence.server.flow.executeScript",
 		ranges:  protocol.Range{Start: protocol.Position{Line: 0x2, Character: 0x3}, End: protocol.Position{Line: 0x2, Character: 0x4}},
 		args:    `"[{\"type\":\"String\",\"value\":\"hi\"}]"`,
+	}, {
+		code: `
+			transaction {
+				prepare(s: AuthAccount) {} 
+			}`,
+		title:   "💡 Send signed by Alice",
+		command: "cadence.server.flow.sendTransaction",
+		ranges:  protocol.Range{Start: protocol.Position{Line: 0x1, Character: 0x3}, End: protocol.Position{Line: 0x1, Character: 0x4}},
+		args:    `"[]"`,
+	}, {
+		code: `
+			/// pragma signers Alice,Bob
+			transaction {
+				prepare(s1: AuthAccount, s2: AuthAccount) {} 
+			}`,
+		title:   "💡 Send signed by Alice and Bob",
+		command: "cadence.server.flow.sendTransaction",
+		ranges:  protocol.Range{Start: protocol.Position{Line: 0x2, Character: 0x3}, End: protocol.Position{Line: 0x2, Character: 0x4}},
+		args:    `"[]"`,
+	}, {
+		code: `
+			/// pragma signers Alice
+			transaction {
+				prepare(s1: AuthAccount, s2: AuthAccount) {} 
+			}`,
+		title:   "🚫 Not enough signers. Required: 2, passed: 1",
+		command: "",
+		ranges:  protocol.Range{Start: protocol.Position{Line: 0x2, Character: 0x3}, End: protocol.Position{Line: 0x2, Character: 0x4}},
 	}}
 
-	for _, test := range tests {
+	for i, test := range tests {
 		entrypoint := buildEntrypoint(t, test.code)
 		codelensses := entrypoint.codelens(setupMockClient())
 
-		require.Len(t, codelensses, 1)
+		require.Len(t, codelensses, 1, fmt.Sprintf("test %d", i))
 		lens := codelensses[0]
 		assert.Equal(t, test.title, lens.Command.Title)
 		assert.Equal(t, test.command, lens.Command.Command)
 		assert.Equal(t, nil, lens.Data)
 		assert.Equal(t, test.ranges, lens.Range)
-		assert.Equal(t, test.args, string(lens.Command.Arguments[1]))
+		if test.args != "" {
+			assert.Equal(t, test.args, string(lens.Command.Arguments[1]))
+		}
 	}
 
 }
