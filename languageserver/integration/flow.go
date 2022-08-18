@@ -46,7 +46,11 @@ type flowClient interface {
 	SetActiveClientAccount(name string) error
 	ExecuteScript(location *url.URL, args []cadence.Value) (cadence.Value, error)
 	DeployContract(address flow.Address, name string, location *url.URL) (*flow.Account, error)
-	SendTransaction(authorizers []flow.Address, location *url.URL, args []cadence.Value) (*flow.TransactionResult, error)
+	SendTransaction(
+		authorizers []flow.Address,
+		location *url.URL,
+		args []cadence.Value,
+	) (*flow.Transaction, *flow.TransactionResult, error)
 	GetAccount(address flow.Address) (*flow.Account, error)
 	CreateAccount() (*clientAccount, error)
 }
@@ -212,20 +216,20 @@ func (f *flowkitClient) SendTransaction(
 	authorizers []flow.Address,
 	location *url.URL,
 	args []cadence.Value,
-) (*flow.TransactionResult, error) {
+) (*flow.Transaction, *flow.TransactionResult, error) {
 	code, err := f.loader.ReadFile(location.Path)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	service, err := f.state.EmulatorServiceAccount()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	codeFilename, err := resolveFilename(f.configPath, location.Path)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	tx, err := f.services.Transactions.Build(
@@ -241,25 +245,28 @@ func (f *flowkitClient) SendTransaction(
 		true,
 	)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// sign with all authorizers
 	for _, auth := range authorizers {
 		tx, err = sign(createSigner(auth, service), tx)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 	// sign with service as payer
 	signed, err := sign(service, tx)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	_, res, err := f.services.Transactions.SendSigned([]byte(fmt.Sprintf("%x", signed.FlowTransaction().Encode())), true) // todo refactor after implementing accounts on state
+	transaction, res, err := f.services.Transactions.SendSigned(
+		[]byte(fmt.Sprintf("%x", signed.FlowTransaction().Encode())),
+		true,
+	) // todo refactor after implementing accounts on state
 
-	return res, err
+	return transaction, res, err
 }
 
 func (f *flowkitClient) GetAccount(address flow.Address) (*flow.Account, error) {
