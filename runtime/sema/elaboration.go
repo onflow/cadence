@@ -130,8 +130,6 @@ type Elaboration struct {
 	GlobalValues                        *StringVariableOrderedMap
 	GlobalTypes                         *StringVariableOrderedMap
 	TransactionTypes                    []*TransactionType
-	EffectivePredeclaredValues          map[string]ValueDeclaration
-	EffectivePredeclaredTypes           map[string]TypeDeclaration
 	isChecking                          bool
 	ReferenceExpressionBorrowTypes      map[*ast.ReferenceExpression]Type
 	IndexExpressionTypes                map[*ast.IndexExpression]IndexExpressionTypes
@@ -182,8 +180,6 @@ func NewElaboration(gauge common.MemoryGauge, extendedElaboration bool) *Elabora
 		ImportDeclarationsResolvedLocations: map[*ast.ImportDeclaration][]ResolvedLocation{},
 		GlobalValues:                        &StringVariableOrderedMap{},
 		GlobalTypes:                         &StringVariableOrderedMap{},
-		EffectivePredeclaredValues:          map[string]ValueDeclaration{},
-		EffectivePredeclaredTypes:           map[string]TypeDeclaration{},
 		ReferenceExpressionBorrowTypes:      map[*ast.ReferenceExpression]Type{},
 		IndexExpressionTypes:                map[*ast.IndexExpression]IndexExpressionTypes{},
 	}

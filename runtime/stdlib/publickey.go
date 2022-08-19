@@ -42,7 +42,7 @@ var publicKeyConstructorFunctionType = &sema.FunctionType{
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.PublicKeyType),
 }
 
-var publicKeyConstructor = NewStandardLibraryFunction(
+var PublicKeyConstructor = NewStandardLibraryFunction(
 	sema.PublicKeyTypeName,
 	publicKeyConstructorFunctionType,
 	publicKeyConstructorFunctionDocString,

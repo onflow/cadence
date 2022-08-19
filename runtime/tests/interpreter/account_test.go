@@ -51,29 +51,25 @@ func testAccount(
 	func() map[storageKey]interpreter.Value,
 ) {
 
-	var valueDeclarations stdlib.StandardLibraryValues
+	var valueDeclarations []stdlib.StandardLibraryValue
 
 	// `authAccount`
 
 	authAccountValueDeclaration := stdlib.StandardLibraryValue{
-		Name: "authAccount",
-		Type: sema.AuthAccountType,
-		ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
-			return newTestAuthAccountValue(inter, address)
-		},
-		Kind: common.DeclarationKindConstant,
+		Name:  "authAccount",
+		Type:  sema.AuthAccountType,
+		Value: newTestAuthAccountValue(nil, address),
+		Kind:  common.DeclarationKindConstant,
 	}
 	valueDeclarations = append(valueDeclarations, authAccountValueDeclaration)
 
 	// `pubAccount`
 
 	pubAccountValueDeclaration := stdlib.StandardLibraryValue{
-		Name: "pubAccount",
-		Type: sema.PublicAccountType,
-		ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
-			return newTestPublicAccountValue(inter, address)
-		},
-		Kind: common.DeclarationKindConstant,
+		Name:  "pubAccount",
+		Type:  sema.PublicAccountType,
+		Value: newTestPublicAccountValue(nil, address),
+		Kind:  common.DeclarationKindConstant,
 	}
 	valueDeclarations = append(valueDeclarations, pubAccountValueDeclaration)
 
@@ -89,14 +85,25 @@ func testAccount(
 	accountValueDeclaration.Name = "account"
 	valueDeclarations = append(valueDeclarations, accountValueDeclaration)
 
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	for _, valueDeclaration := range valueDeclarations {
+		baseValueActivation.DeclareValue(valueDeclaration)
+	}
+
+	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+
+	for _, valueDeclaration := range valueDeclarations {
+		baseActivation.Declare(valueDeclaration)
+	}
+
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		code,
 		ParseCheckAndInterpretOptions{
 			CheckerOptions: []sema.Option{
-				sema.WithPredeclaredValues(valueDeclarations.ToSemaValueDeclarations()),
+				sema.WithBaseValueActivation(baseValueActivation),
 			},
 			Options: []interpreter.Option{
-				interpreter.WithPredeclaredValues(valueDeclarations.ToInterpreterValueDeclarations()),
+				interpreter.WithBaseActivation(baseActivation),
 				makeContractValueHandler(nil, nil, nil),
 			},
 		},

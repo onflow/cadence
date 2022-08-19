@@ -94,58 +94,65 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 		"This is the color",
 	))
 
-	valueDeclarations := stdlib.StandardLibraryValues{
-		{
-			Name: "fruit",
-			Type: fruitType,
-			ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
-				fields := []interpreter.CompositeField{
-					{
-						Name:  "name",
-						Value: interpreter.NewUnmeteredStringValue("Apple"),
-					},
-				}
+	fruitStaticType := interpreter.NewCompositeStaticTypeComputeTypeID(
+		nil,
+		TestLocation,
+		fruitType.Identifier,
+	)
 
-				value := interpreter.NewCompositeValue(
-					inter,
-					interpreter.ReturnEmptyLocationRange,
-					TestLocation,
-					fruitType.Identifier,
-					common.CompositeKindStructure,
-					fields,
-					common.Address{},
-				)
-
-				value.ComputedFields = map[string]interpreter.ComputedField{
-					"color": func(_ *interpreter.Interpreter, _ func() interpreter.LocationRange) interpreter.Value {
-						return interpreter.NewUnmeteredStringValue("Red")
-					},
-				}
-
-				return value
+	fruitValue := interpreter.NewSimpleCompositeValue(
+		nil,
+		fruitType.ID(),
+		fruitStaticType,
+		[]string{"name", "color"},
+		map[string]interpreter.Value{
+			"name": interpreter.NewUnmeteredStringValue("Apple"),
+		},
+		map[string]interpreter.ComputedField{
+			"color": func(_ *interpreter.Interpreter, _ func() interpreter.LocationRange) interpreter.Value {
+				return interpreter.NewUnmeteredStringValue("Red")
 			},
-			Kind: common.DeclarationKindConstant,
 		},
+		nil,
+		nil,
+	)
+
+	valueDeclaration := stdlib.StandardLibraryValue{
+		Name:  "fruit",
+		Type:  fruitType,
+		Value: fruitValue,
+		Kind:  common.DeclarationKindConstant,
 	}
 
-	typeDeclarations := []sema.TypeDeclaration{
-		stdlib.StandardLibraryType{
-			Name: fruitType.Identifier,
-			Type: fruitType,
-			Kind: common.DeclarationKindStructure,
-		},
-	}
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(valueDeclaration)
+
+	baseTypeActivation := sema.NewVariableActivation(sema.BaseTypeActivation)
+	baseTypeActivation.DeclareType(stdlib.StandardLibraryType{
+		Name: fruitType.Identifier,
+		Type: fruitType,
+		Kind: common.DeclarationKindStructure,
+	})
+
+	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+	baseActivation.Declare(valueDeclaration)
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		code,
 		ParseCheckAndInterpretOptions{
 			CheckerOptions: []sema.Option{
-				sema.WithPredeclaredValues(valueDeclarations.ToSemaValueDeclarations()),
-				sema.WithPredeclaredTypes(typeDeclarations),
+				sema.WithBaseValueActivation(baseValueActivation),
+				sema.WithBaseTypeActivation(baseTypeActivation),
+				sema.WithCheckHandler(func(checker *sema.Checker, check func()) {
+					if checker.Location == TestLocation {
+						checker.Elaboration.CompositeTypes[fruitType.ID()] = fruitType
+					}
+					check()
+				}),
 			},
 			Options: []interpreter.Option{
 				interpreter.WithStorage(storage),
-				interpreter.WithPredeclaredValues(valueDeclarations.ToInterpreterValueDeclarations()),
+				interpreter.WithBaseActivation(baseActivation),
 			},
 		},
 	)

@@ -32,17 +32,19 @@ import (
 )
 
 func parseAndCheckWithTestValue(t *testing.T, code string, ty sema.Type) (*sema.Checker, error) {
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.StandardLibraryValue{
+		Name: "test",
+		Type: ty,
+		Kind: common.DeclarationKindConstant,
+	})
+
 	return ParseAndCheckWithOptions(t,
 		code,
 		ParseAndCheckOptions{
 			Options: []sema.Option{
-				sema.WithPredeclaredValues([]sema.ValueDeclaration{
-					stdlib.StandardLibraryValue{
-						Name: "test",
-						Type: ty,
-						Kind: common.DeclarationKindConstant,
-					},
-				}),
+				sema.WithBaseValueActivation(baseValueActivation),
 			},
 		},
 	)

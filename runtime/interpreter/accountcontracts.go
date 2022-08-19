@@ -34,7 +34,7 @@ var authAccountContractsFieldNames []string = nil
 type ContractNamesGetter func(interpreter *Interpreter, getLocationRange func() LocationRange) *ArrayValue
 
 func NewAuthAccountContractsValue(
-	inter *Interpreter,
+	gauge common.MemoryGauge,
 	address AddressValue,
 	addFunction FunctionValue,
 	updateFunction FunctionValue,
@@ -70,7 +70,7 @@ func NewAuthAccountContractsValue(
 	}
 
 	return NewSimpleCompositeValue(
-		inter,
+		gauge,
 		authAccountContractsTypeID,
 		authAccountContractsStaticType,
 		authAccountContractsFieldNames,
@@ -87,7 +87,7 @@ var publicAccountContractsTypeID = sema.PublicAccountContractsType.ID()
 var publicAccountContractsStaticType StaticType = PrimitiveStaticTypePublicAccountContracts
 
 func NewPublicAccountContractsValue(
-	inter *Interpreter,
+	gauge common.MemoryGauge,
 	address AddressValue,
 	getFunction FunctionValue,
 	namesGetter ContractNamesGetter,
@@ -117,7 +117,7 @@ func NewPublicAccountContractsValue(
 	}
 
 	return NewSimpleCompositeValue(
-		inter,
+		gauge,
 		publicAccountContractsTypeID,
 		publicAccountContractsStaticType,
 		nil,

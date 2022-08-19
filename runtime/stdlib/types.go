@@ -42,22 +42,6 @@ func (t StandardLibraryType) TypeDeclarationKind() common.DeclarationKind {
 	return t.Kind
 }
 
-func (StandardLibraryType) TypeDeclarationPosition() ast.Position {
-	return ast.EmptyPosition
+func (StandardLibraryType) TypeDeclarationPosition() *ast.Position {
+	return nil
 }
-
-// StandardLibraryTypes
-
-type StandardLibraryTypes []StandardLibraryType
-
-func (types StandardLibraryTypes) ToTypeDeclarations() []sema.TypeDeclaration {
-	valueDeclarations := make([]sema.TypeDeclaration, len(types))
-	for i, ty := range types {
-		valueDeclarations[i] = ty
-	}
-	return valueDeclarations
-}
-
-// BuiltinTypes
-
-var BuiltinTypes StandardLibraryTypes

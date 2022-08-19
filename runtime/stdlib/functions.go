@@ -19,71 +19,17 @@
 package stdlib
 
 import (
-	"fmt"
-
-	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
-
-// StandardLibraryFunction
-
-type StandardLibraryFunction struct {
-	Name           string
-	Type           *sema.FunctionType
-	DocString      string
-	Function       *interpreter.HostFunctionValue
-	ArgumentLabels []string
-	Available      func(common.Location) bool
-}
-
-func (f StandardLibraryFunction) ValueDeclarationName() string {
-	return f.Name
-}
-
-func (f StandardLibraryFunction) ValueDeclarationValue(_ *interpreter.Interpreter) interpreter.Value {
-	return f.Function
-}
-
-func (f StandardLibraryFunction) ValueDeclarationType() sema.Type {
-	return f.Type
-}
-
-func (f StandardLibraryFunction) ValueDeclarationDocString() string {
-	return f.DocString
-}
-
-func (StandardLibraryFunction) ValueDeclarationKind() common.DeclarationKind {
-	return common.DeclarationKindFunction
-}
-
-func (StandardLibraryFunction) ValueDeclarationPosition() ast.Position {
-	return ast.EmptyPosition
-}
-
-func (StandardLibraryFunction) ValueDeclarationIsConstant() bool {
-	return true
-}
-
-func (f StandardLibraryFunction) ValueDeclarationAvailable(location common.Location) bool {
-	if f.Available == nil {
-		return true
-	}
-	return f.Available(location)
-}
-
-func (f StandardLibraryFunction) ValueDeclarationArgumentLabels() []string {
-	return f.ArgumentLabels
-}
 
 func NewStandardLibraryFunction(
 	name string,
 	functionType *sema.FunctionType,
 	docString string,
 	function interpreter.HostFunction,
-) StandardLibraryFunction {
+) StandardLibraryValue {
 
 	parameters := functionType.Parameters
 
@@ -95,50 +41,12 @@ func NewStandardLibraryFunction(
 
 	functionValue := interpreter.NewUnmeteredHostFunctionValue(function, functionType)
 
-	return StandardLibraryFunction{
+	return StandardLibraryValue{
 		Name:           name,
 		Type:           functionType,
 		DocString:      docString,
-		Function:       functionValue,
+		Value:          functionValue,
 		ArgumentLabels: argumentLabels,
+		Kind:           common.DeclarationKindFunction,
 	}
-}
-
-// StandardLibraryFunctions
-
-type StandardLibraryFunctions []StandardLibraryFunction
-
-func (functions StandardLibraryFunctions) ToSemaValueDeclarations() []sema.ValueDeclaration {
-	valueDeclarations := make([]sema.ValueDeclaration, len(functions))
-	for i, function := range functions {
-		valueDeclarations[i] = function
-	}
-	return valueDeclarations
-}
-
-func (functions StandardLibraryFunctions) ToInterpreterValueDeclarations() []interpreter.ValueDeclaration {
-	valueDeclarations := make([]interpreter.ValueDeclaration, len(functions))
-	for i, function := range functions {
-		valueDeclarations[i] = function
-	}
-	return valueDeclarations
-}
-
-// AssertionError
-
-type AssertionError struct {
-	Message string
-	interpreter.LocationRange
-}
-
-var _ errors.UserError = AssertionError{}
-
-func (AssertionError) IsUserError() {}
-
-func (e AssertionError) Error() string {
-	const message = "assertion failed"
-	if e.Message == "" {
-		return message
-	}
-	return fmt.Sprintf("%s: %s", message, e.Message)
 }

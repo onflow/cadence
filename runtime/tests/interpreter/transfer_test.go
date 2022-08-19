@@ -44,25 +44,27 @@ func TestInterpretTransferCheck(t *testing.T) {
 			Kind:       common.CompositeKindStructure,
 		}
 
-		valueDeclarations := stdlib.StandardLibraryValues{
-			{
-				Name: "fruit",
-				Type: ty,
-				// NOTE: not an instance of the type
-				ValueFactory: func(_ *interpreter.Interpreter) interpreter.Value {
-					return interpreter.NewUnmeteredStringValue("fruit")
-				},
-				Kind: common.DeclarationKindConstant,
-			},
+		valueDeclaration := stdlib.StandardLibraryValue{
+			Name: "fruit",
+			Type: ty,
+			// NOTE: not an instance of the type
+			Value: interpreter.NewUnmeteredStringValue("fruit"),
+			Kind:  common.DeclarationKindConstant,
 		}
 
-		typeDeclarations := stdlib.StandardLibraryTypes{
-			{
-				Name: ty.Identifier,
-				Type: ty,
-				Kind: common.DeclarationKindStructure,
-			},
-		}
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+
+		baseValueActivation.DeclareValue(valueDeclaration)
+
+		baseTypeActivation := sema.NewVariableActivation(sema.BaseTypeActivation)
+		baseTypeActivation.DeclareType(stdlib.StandardLibraryType{
+			Name: ty.Identifier,
+			Type: ty,
+			Kind: common.DeclarationKindStructure,
+		})
+
+		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+		baseActivation.Declare(valueDeclaration)
 
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
@@ -72,11 +74,11 @@ func TestInterpretTransferCheck(t *testing.T) {
             `,
 			ParseCheckAndInterpretOptions{
 				CheckerOptions: []sema.Option{
-					sema.WithPredeclaredValues(valueDeclarations.ToSemaValueDeclarations()),
-					sema.WithPredeclaredTypes(typeDeclarations.ToTypeDeclarations()),
+					sema.WithBaseTypeActivation(baseTypeActivation),
+					sema.WithBaseValueActivation(baseValueActivation),
 				},
 				Options: []interpreter.Option{
-					interpreter.WithPredeclaredValues(valueDeclarations.ToInterpreterValueDeclarations()),
+					interpreter.WithBaseActivation(baseActivation),
 				},
 			},
 		)

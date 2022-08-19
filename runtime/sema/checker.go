@@ -65,7 +65,7 @@ var beforeType = func() *FunctionType {
 
 type ValidTopLevelDeclarationsHandlerFunc = func(common.Location) []common.DeclarationKind
 
-type CheckHandlerFunc func(location common.Location, check func())
+type CheckHandlerFunc func(checker *Checker, check func())
 
 type ResolvedLocation struct {
 	Location    common.Location
@@ -83,8 +83,8 @@ type MemberAccountAccessHandlerFunc func(checker *Checker, memberLocation common
 type Checker struct {
 	Program                            *ast.Program
 	Location                           common.Location
-	PredeclaredValues                  []ValueDeclaration
-	PredeclaredTypes                   []TypeDeclaration
+	baseTypeActivation                 *VariableActivation
+	baseValueActivation                *VariableActivation
 	accessCheckMode                    AccessCheckMode
 	errors                             []error
 	valueActivations                   *VariableActivations
@@ -122,34 +122,16 @@ type Checker struct {
 
 type Option func(*Checker) error
 
-func WithPredeclaredValues(predeclaredValues []ValueDeclaration) Option {
+func WithBaseValueActivation(baseValueActivation *VariableActivation) Option {
 	return func(checker *Checker) error {
-		checker.PredeclaredValues = predeclaredValues
-
-		for _, declaration := range predeclaredValues {
-			variable := checker.declareValue(declaration)
-			if variable == nil {
-				continue
-			}
-			checker.Elaboration.GlobalValues.Set(variable.Identifier, variable)
-			checker.Elaboration.EffectivePredeclaredValues[variable.Identifier] = declaration
-		}
-
+		checker.baseValueActivation = baseValueActivation
 		return nil
 	}
 }
 
-func WithPredeclaredTypes(predeclaredTypes []TypeDeclaration) Option {
+func WithBaseTypeActivation(baseTypeActivation *VariableActivation) Option {
 	return func(checker *Checker) error {
-		checker.PredeclaredTypes = predeclaredTypes
-
-		for _, declaration := range predeclaredTypes {
-			checker.declareTypeDeclaration(declaration)
-
-			name := declaration.TypeDeclarationName()
-			checker.Elaboration.EffectivePredeclaredTypes[name] = declaration
-		}
-
+		checker.baseTypeActivation = baseTypeActivation
 		return nil
 	}
 }
@@ -250,14 +232,18 @@ func WithErrorShortCircuitingEnabled(enabled bool) Option {
 	}
 }
 
-func NewChecker(program *ast.Program, location common.Location, memoryGauge common.MemoryGauge, extendedElaboration bool, options ...Option) (*Checker, error) {
+func NewChecker(
+	program *ast.Program,
+	location common.Location,
+	memoryGauge common.MemoryGauge,
+	extendedElaboration bool,
+	options ...Option,
+) (*Checker, error) {
 
 	if location == nil {
 		return nil, &MissingLocationError{}
 	}
 
-	valueActivations := NewVariableActivations(BaseValueActivation)
-	typeActivations := NewVariableActivations(BaseTypeActivation)
 	functionActivations := &FunctionActivations{}
 	functionActivations.EnterFunction(&FunctionType{
 		ReturnTypeAnnotation: NewTypeAnnotation(VoidType)},
@@ -267,9 +253,9 @@ func NewChecker(program *ast.Program, location common.Location, memoryGauge comm
 	checker := &Checker{
 		Program:             program,
 		Location:            location,
-		valueActivations:    valueActivations,
+		baseValueActivation: BaseValueActivation,
+		baseTypeActivation:  BaseTypeActivation,
 		resources:           NewResources(),
-		typeActivations:     typeActivations,
 		functionActivations: functionActivations,
 		containerTypes:      map[Type]bool{},
 		Elaboration:         NewElaboration(memoryGauge, extendedElaboration),
@@ -284,7 +270,11 @@ func NewChecker(program *ast.Program, location common.Location, memoryGauge comm
 		}
 	}
 
-	// Should be done after setting checker-options, since memory-gauge is set via options.
+	// Should be done after setting checker options, since base activations might get set in options.
+	checker.valueActivations = NewVariableActivations(checker.baseValueActivation)
+	checker.typeActivations = NewVariableActivations(checker.baseTypeActivation)
+
+	// Should be done after setting checker options, since memory-gauge is set via options.
 	checker.beforeExtractor = NewBeforeExtractor(checker.memoryGauge, checker.report)
 
 	err := checker.CheckerError()
@@ -301,8 +291,8 @@ func (checker *Checker) SubChecker(program *ast.Program, location common.Locatio
 		location,
 		checker.memoryGauge,
 		checker.extendedElaboration,
-		WithPredeclaredValues(checker.PredeclaredValues),
-		WithPredeclaredTypes(checker.PredeclaredTypes),
+		WithBaseValueActivation(checker.baseValueActivation),
+		WithBaseTypeActivation(checker.baseTypeActivation),
 		WithAccessCheckMode(checker.accessCheckMode),
 		WithValidTopLevelDeclarationsHandler(checker.validTopLevelDeclarationsHandler),
 		WithCheckHandler(checker.checkHandler),
@@ -315,66 +305,6 @@ func (checker *Checker) SubChecker(program *ast.Program, location common.Locatio
 
 func (checker *Checker) SetMemoryGauge(gauge common.MemoryGauge) {
 	checker.memoryGauge = gauge
-}
-
-func (checker *Checker) declareValue(declaration ValueDeclaration) *Variable {
-
-	if !declaration.ValueDeclarationAvailable(checker.Location) {
-		return nil
-	}
-
-	name := declaration.ValueDeclarationName()
-	variable, err := checker.valueActivations.Declare(variableDeclaration{
-		identifier: name,
-		ty:         declaration.ValueDeclarationType(),
-		docString:  declaration.ValueDeclarationDocString(),
-		// TODO: add access to ValueDeclaration and use declaration's access instead here
-		access:                   ast.AccessPublic,
-		kind:                     declaration.ValueDeclarationKind(),
-		pos:                      declaration.ValueDeclarationPosition(),
-		isConstant:               declaration.ValueDeclarationIsConstant(),
-		argumentLabels:           declaration.ValueDeclarationArgumentLabels(),
-		allowOuterScopeShadowing: false,
-	})
-	checker.report(err)
-	if checker.positionInfoEnabled {
-		checker.recordVariableDeclarationOccurrence(name, variable)
-	}
-	return variable
-}
-
-func (checker *Checker) declareTypeDeclaration(declaration TypeDeclaration) {
-	identifier := ast.NewIdentifier(
-		checker.memoryGauge,
-		declaration.TypeDeclarationName(),
-		declaration.TypeDeclarationPosition(),
-	)
-
-	ty := declaration.TypeDeclarationType()
-	// TODO: add access to TypeDeclaration and use declaration's access instead here
-	const access = ast.AccessPublic
-
-	variable, err := checker.typeActivations.DeclareType(
-		typeDeclaration{
-			identifier:               identifier,
-			ty:                       ty,
-			declarationKind:          declaration.TypeDeclarationKind(),
-			access:                   access,
-			allowOuterScopeShadowing: false,
-		},
-	)
-	checker.report(err)
-
-	switch ty := ty.(type) {
-	case *CompositeType:
-		checker.Elaboration.CompositeTypes[ty.ID()] = ty
-	case *InterfaceType:
-		checker.Elaboration.InterfaceTypes[ty.ID()] = ty
-	}
-
-	if checker.positionInfoEnabled {
-		checker.recordVariableDeclarationOccurrence(identifier.Identifier, variable)
-	}
 }
 
 func (checker *Checker) IsChecked() bool {
@@ -407,7 +337,7 @@ func (checker *Checker) Check() error {
 			checker.Program.Accept(checker)
 		}
 		if checker.checkHandler != nil {
-			checker.checkHandler(checker.Location, check)
+			checker.checkHandler(checker, check)
 		} else {
 			check()
 		}
@@ -442,34 +372,6 @@ func (checker *Checker) report(err error) {
 	if checker.errorShortCircuitingEnabled {
 		panic(stopChecking{})
 	}
-}
-
-func (checker *Checker) UserDefinedValues() map[string]*Variable {
-	variables := map[string]*Variable{}
-
-	checker.Elaboration.GlobalValues.Foreach(func(key string, value *Variable) {
-
-		if value.IsBaseValue {
-			return
-		}
-
-		if _, ok := checker.Elaboration.EffectivePredeclaredValues[key]; ok {
-			return
-		}
-
-		if _, ok := checker.Elaboration.EffectivePredeclaredTypes[key]; ok {
-			return
-		}
-
-		if typeValue, ok := checker.Elaboration.GlobalTypes.Get(key); ok {
-			variables[key] = typeValue
-			return
-		}
-
-		variables[key] = value
-	})
-
-	return variables
 }
 
 func (checker *Checker) VisitProgram(program *ast.Program) ast.Repr {

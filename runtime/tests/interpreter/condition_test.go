@@ -1081,30 +1081,30 @@ func TestInterpretFunctionWithPostConditionAndResourceResult(t *testing.T) {
 			sema.VoidType,
 		),
 	}
-	valueDeclarations := stdlib.StandardLibraryValues{
-		{
-			Name: "check",
-			Type: checkFunctionType,
-			ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
-				return interpreter.NewHostFunctionValue(
-					inter,
-					func(invocation interpreter.Invocation) interpreter.Value {
-						checkCalled = true
 
-						argument := invocation.Arguments[0]
-						require.IsType(t, &interpreter.EphemeralReferenceValue{}, argument)
+	valueDeclaration := stdlib.StandardLibraryValue{
+		Name: "check",
+		Type: checkFunctionType,
+		Value: interpreter.NewHostFunctionValue(
+			nil,
+			func(invocation interpreter.Invocation) interpreter.Value {
+				checkCalled = true
 
-						return interpreter.VoidValue{}
-					},
-					checkFunctionType,
-				)
+				argument := invocation.Arguments[0]
+				require.IsType(t, &interpreter.EphemeralReferenceValue{}, argument)
+
+				return interpreter.VoidValue{}
 			},
-			Kind: common.DeclarationKindConstant,
-		},
+			checkFunctionType,
+		),
+		Kind: common.DeclarationKindConstant,
 	}
 
-	semaValueDeclarations := valueDeclarations.ToSemaValueDeclarations()
-	interpreterValueDeclarations := valueDeclarations.ToInterpreterValueDeclarations()
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(valueDeclaration)
+
+	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+	baseActivation.Declare(valueDeclaration)
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
@@ -1152,10 +1152,10 @@ func TestInterpretFunctionWithPostConditionAndResourceResult(t *testing.T) {
         `,
 		ParseCheckAndInterpretOptions{
 			CheckerOptions: []sema.Option{
-				sema.WithPredeclaredValues(semaValueDeclarations),
+				sema.WithBaseValueActivation(baseValueActivation),
 			},
 			Options: []interpreter.Option{
-				interpreter.WithPredeclaredValues(interpreterValueDeclarations),
+				interpreter.WithBaseActivation(baseActivation),
 			},
 		},
 	)

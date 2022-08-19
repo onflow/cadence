@@ -37,7 +37,7 @@ var authAccountFieldNames = []string{
 
 // NewAuthAccountValue constructs an auth account value.
 func NewAuthAccountValue(
-	inter *Interpreter,
+	gauge common.MemoryGauge,
 	address AddressValue,
 	accountBalanceGet func() UFix64Value,
 	accountAvailableBalanceGet func() UFix64Value,
@@ -54,7 +54,7 @@ func NewAuthAccountValue(
 		sema.AuthAccountAddPublicKeyField:    addPublicKeyFunction,
 		sema.AuthAccountRemovePublicKeyField: removePublicKeyFunction,
 		sema.AuthAccountGetCapabilityField: accountGetCapabilityFunction(
-			inter,
+			gauge,
 			address,
 			sema.CapabilityPathType,
 			sema.AuthAccountTypeGetCapabilityFunctionType,
@@ -144,7 +144,7 @@ func NewAuthAccountValue(
 	}
 
 	return NewSimpleCompositeValue(
-		inter,
+		gauge,
 		authAccountTypeID,
 		authAccountStaticType,
 		authAccountFieldNames,
@@ -167,7 +167,7 @@ var publicAccountFieldNames = []string{
 
 // NewPublicAccountValue constructs a public account value.
 func NewPublicAccountValue(
-	inter *Interpreter,
+	gauge common.MemoryGauge,
 	address AddressValue,
 	accountBalanceGet func() UFix64Value,
 	accountAvailableBalanceGet func() UFix64Value,
@@ -180,7 +180,7 @@ func NewPublicAccountValue(
 	fields := map[string]Value{
 		sema.PublicAccountAddressField: address,
 		sema.PublicAccountGetCapabilityField: accountGetCapabilityFunction(
-			inter,
+			gauge,
 			address,
 			sema.PublicPathType,
 			sema.PublicAccountTypeGetCapabilityFunctionType,
@@ -237,7 +237,7 @@ func NewPublicAccountValue(
 	}
 
 	return NewSimpleCompositeValue(
-		inter,
+		gauge,
 		publicAccountTypeID,
 		publicAccountStaticType,
 		publicAccountFieldNames,

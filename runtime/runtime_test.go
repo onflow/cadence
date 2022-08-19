@@ -128,24 +128,29 @@ func newTestLedger(
 	return storage
 }
 
-func newTestInterpreterRuntime(options ...Option) Runtime {
-	rt := NewInterpreterRuntime(options...)
-	rt.SetAtreeValidationEnabled(true)
-	return rt
+func newTestInterpreterRuntime() Runtime {
+	return NewInterpreterRuntime(Config{
+		AtreeValidationEnabled: true,
+	})
 }
 
 type testRuntimeInterface struct {
-	resolveLocation           func(identifiers []Identifier, location Location) ([]ResolvedLocation, error)
-	getCode                   func(_ Location) ([]byte, error)
-	getProgram                func(Location) (*interpreter.Program, error)
-	setProgram                func(Location, *interpreter.Program) error
-	storage                   testLedger
-	createAccount             func(payer Address) (address Address, err error)
-	addEncodedAccountKey      func(address Address, publicKey []byte) error
-	removeEncodedAccountKey   func(address Address, index int) (publicKey []byte, err error)
-	addAccountKey             func(address Address, publicKey *PublicKey, hashAlgo HashAlgorithm, weight int) (*AccountKey, error)
-	getAccountKey             func(address Address, index int) (*AccountKey, error)
-	removeAccountKey          func(address Address, index int) (*AccountKey, error)
+	resolveLocation         func(identifiers []Identifier, location Location) ([]ResolvedLocation, error)
+	getCode                 func(_ Location) ([]byte, error)
+	getProgram              func(Location) (*interpreter.Program, error)
+	setProgram              func(Location, *interpreter.Program) error
+	storage                 testLedger
+	createAccount           func(payer Address) (address Address, err error)
+	addEncodedAccountKey    func(address Address, publicKey []byte) error
+	removeEncodedAccountKey func(address Address, index int) (publicKey []byte, err error)
+	addAccountKey           func(
+		address Address,
+		publicKey *stdlib.PublicKey,
+		hashAlgo HashAlgorithm,
+		weight int,
+	) (*stdlib.AccountKey, error)
+	getAccountKey             func(address Address, index int) (*stdlib.AccountKey, error)
+	removeAccountKey          func(address Address, index int) (*stdlib.AccountKey, error)
 	updateAccountContractCode func(address Address, name string, code []byte) error
 	getAccountContractCode    func(address Address, name string) (code []byte, err error)
 	removeAccountContractCode func(address Address, name string) (err error)
@@ -161,9 +166,9 @@ type testRuntimeInterface struct {
 	generateUUID       func() (uint64, error)
 	meterComputation   func(compKind common.ComputationKind, intensity uint) error
 	decodeArgument     func(b []byte, t cadence.Type) (cadence.Value, error)
-	programParsed      func(location common.Location, duration time.Duration)
-	programChecked     func(location common.Location, duration time.Duration)
-	programInterpreted func(location common.Location, duration time.Duration)
+	programParsed      func(location Location, duration time.Duration)
+	programChecked     func(location Location, duration time.Duration)
+	programInterpreted func(location Location, duration time.Duration)
 	unsafeRandom       func() (uint64, error)
 	verifySignature    func(
 		signature []byte,
@@ -179,14 +184,14 @@ type testRuntimeInterface struct {
 	getAccountAvailableBalance func(_ Address) (uint64, error)
 	getStorageUsed             func(_ Address) (uint64, error)
 	getStorageCapacity         func(_ Address) (uint64, error)
-	programs                   map[common.Location]*interpreter.Program
+	programs                   map[Location]*interpreter.Program
 	implementationDebugLog     func(message string) error
-	validatePublicKey          func(publicKey *PublicKey) error
-	bLSVerifyPOP               func(pk *PublicKey, s []byte) (bool, error)
+	validatePublicKey          func(publicKey *stdlib.PublicKey) error
+	bLSVerifyPOP               func(pk *stdlib.PublicKey, s []byte) (bool, error)
 	blsAggregateSignatures     func(sigs [][]byte) ([]byte, error)
-	blsAggregatePublicKeys     func(keys []*PublicKey) (*PublicKey, error)
+	blsAggregatePublicKeys     func(keys []*stdlib.PublicKey) (*stdlib.PublicKey, error)
 	getAccountContractNames    func(address Address) ([]string, error)
-	recordTrace                func(operation string, location common.Location, duration time.Duration, attrs []attribute.KeyValue)
+	recordTrace                func(operation string, location Location, duration time.Duration, attrs []attribute.KeyValue)
 	meterMemory                func(usage common.MemoryUsage) error
 }
 
@@ -215,7 +220,7 @@ func (i *testRuntimeInterface) GetCode(location Location) ([]byte, error) {
 func (i *testRuntimeInterface) GetProgram(location Location) (*interpreter.Program, error) {
 	if i.getProgram == nil {
 		if i.programs == nil {
-			i.programs = map[common.Location]*interpreter.Program{}
+			i.programs = map[Location]*interpreter.Program{}
 		}
 		return i.programs[location], nil
 	}
@@ -226,7 +231,7 @@ func (i *testRuntimeInterface) GetProgram(location Location) (*interpreter.Progr
 func (i *testRuntimeInterface) SetProgram(location Location, program *interpreter.Program) error {
 	if i.setProgram == nil {
 		if i.programs == nil {
-			i.programs = map[common.Location]*interpreter.Program{}
+			i.programs = map[Location]*interpreter.Program{}
 		}
 		i.programs[location] = program
 		return nil
@@ -284,21 +289,26 @@ func (i *testRuntimeInterface) RevokeEncodedAccountKey(address Address, index in
 	return i.removeEncodedAccountKey(address, index)
 }
 
-func (i *testRuntimeInterface) AddAccountKey(address Address, publicKey *PublicKey, hashAlgo HashAlgorithm, weight int) (*AccountKey, error) {
+func (i *testRuntimeInterface) AddAccountKey(
+	address Address,
+	publicKey *stdlib.PublicKey,
+	hashAlgo HashAlgorithm,
+	weight int,
+) (*stdlib.AccountKey, error) {
 	if i.addAccountKey == nil {
 		panic("must specify testRuntimeInterface.addAccountKey")
 	}
 	return i.addAccountKey(address, publicKey, hashAlgo, weight)
 }
 
-func (i *testRuntimeInterface) GetAccountKey(address Address, index int) (*AccountKey, error) {
+func (i *testRuntimeInterface) GetAccountKey(address Address, index int) (*stdlib.AccountKey, error) {
 	if i.getAccountKey == nil {
 		panic("must specify testRuntimeInterface.getAccountKey")
 	}
 	return i.getAccountKey(address, index)
 }
 
-func (i *testRuntimeInterface) RevokeAccountKey(address Address, index int) (*AccountKey, error) {
+func (i *testRuntimeInterface) RevokeAccountKey(address Address, index int) (*stdlib.AccountKey, error) {
 	if i.removeAccountKey == nil {
 		panic("must specify testRuntimeInterface.removeAccountKey")
 	}
@@ -376,21 +386,21 @@ func (i *testRuntimeInterface) DecodeArgument(b []byte, t cadence.Type) (cadence
 	return i.decodeArgument(b, t)
 }
 
-func (i *testRuntimeInterface) ProgramParsed(location common.Location, duration time.Duration) {
+func (i *testRuntimeInterface) ProgramParsed(location Location, duration time.Duration) {
 	if i.programParsed == nil {
 		return
 	}
 	i.programParsed(location, duration)
 }
 
-func (i *testRuntimeInterface) ProgramChecked(location common.Location, duration time.Duration) {
+func (i *testRuntimeInterface) ProgramChecked(location Location, duration time.Duration) {
 	if i.programChecked == nil {
 		return
 	}
 	i.programChecked(location, duration)
 }
 
-func (i *testRuntimeInterface) ProgramInterpreted(location common.Location, duration time.Duration) {
+func (i *testRuntimeInterface) ProgramInterpreted(location Location, duration time.Duration) {
 	if i.programInterpreted == nil {
 		return
 	}
@@ -401,7 +411,7 @@ func (i *testRuntimeInterface) GetCurrentBlockHeight() (uint64, error) {
 	return 1, nil
 }
 
-func (i *testRuntimeInterface) GetBlockAtHeight(height uint64) (block Block, exists bool, err error) {
+func (i *testRuntimeInterface) GetBlockAtHeight(height uint64) (block stdlib.Block, exists bool, err error) {
 
 	buf := new(bytes.Buffer)
 	err = binary.Write(buf, binary.BigEndian, height)
@@ -410,10 +420,10 @@ func (i *testRuntimeInterface) GetBlockAtHeight(height uint64) (block Block, exi
 	}
 
 	encoded := buf.Bytes()
-	var hash BlockHash
+	var hash stdlib.BlockHash
 	copy(hash[sema.BlockIDSize-len(encoded):], encoded)
 
-	block = Block{
+	block = stdlib.Block{
 		Height:    height,
 		View:      height,
 		Hash:      hash,
@@ -499,7 +509,7 @@ func (i *testRuntimeInterface) ImplementationDebugLog(message string) error {
 	return i.implementationDebugLog(message)
 }
 
-func (i *testRuntimeInterface) ValidatePublicKey(key *PublicKey) error {
+func (i *testRuntimeInterface) ValidatePublicKey(key *stdlib.PublicKey) error {
 	if i.validatePublicKey == nil {
 		return errors.New("mock defaults to public key validation failure")
 	}
@@ -507,7 +517,7 @@ func (i *testRuntimeInterface) ValidatePublicKey(key *PublicKey) error {
 	return i.validatePublicKey(key)
 }
 
-func (i *testRuntimeInterface) BLSVerifyPOP(key *PublicKey, s []byte) (bool, error) {
+func (i *testRuntimeInterface) BLSVerifyPOP(key *stdlib.PublicKey, s []byte) (bool, error) {
 	if i.bLSVerifyPOP == nil {
 		return false, nil
 	}
@@ -523,7 +533,7 @@ func (i *testRuntimeInterface) BLSAggregateSignatures(sigs [][]byte) ([]byte, er
 	return i.blsAggregateSignatures(sigs)
 }
 
-func (i *testRuntimeInterface) BLSAggregatePublicKeys(keys []*PublicKey) (*PublicKey, error) {
+func (i *testRuntimeInterface) BLSAggregatePublicKeys(keys []*stdlib.PublicKey) (*stdlib.PublicKey, error) {
 	if i.blsAggregatePublicKeys == nil {
 		return nil, nil
 	}
@@ -539,7 +549,7 @@ func (i *testRuntimeInterface) GetAccountContractNames(address Address) ([]strin
 	return i.getAccountContractNames(address)
 }
 
-func (i *testRuntimeInterface) RecordTrace(operation string, location common.Location, duration time.Duration, attrs []attribute.KeyValue) {
+func (i *testRuntimeInterface) RecordTrace(operation string, location Location, duration time.Duration, attrs []attribute.KeyValue) {
 	if i.recordTrace == nil {
 		return
 	}
@@ -589,7 +599,7 @@ func TestRuntimeImport(t *testing.T) {
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
 		},
-		programChecked: func(location common.Location, duration time.Duration) {
+		programChecked: func(location Location, duration time.Duration) {
 			checkCount += 1
 		},
 	}
@@ -641,7 +651,7 @@ func TestRuntimeConcurrentImport(t *testing.T) {
 
 	var checkCount uint64
 	var programsLock sync.RWMutex
-	programs := map[common.Location]*interpreter.Program{}
+	programs := map[Location]*interpreter.Program{}
 
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
@@ -652,7 +662,7 @@ func TestRuntimeConcurrentImport(t *testing.T) {
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
 		},
-		programChecked: func(location common.Location, duration time.Duration) {
+		programChecked: func(location Location, duration time.Duration) {
 			atomic.AddUint64(&checkCount, 1)
 		},
 		setProgram: func(location Location, program *interpreter.Program) error {
@@ -714,8 +724,8 @@ func TestRuntimeProgramSetAndGet(t *testing.T) {
 
 	t.Parallel()
 
-	programs := map[common.Location]*interpreter.Program{}
-	programsHits := make(map[common.Location]bool)
+	programs := map[Location]*interpreter.Program{}
+	programsHits := make(map[Location]bool)
 
 	importedScript := []byte(`
       transaction {
@@ -727,7 +737,7 @@ func TestRuntimeProgramSetAndGet(t *testing.T) {
 
 	runtime := newTestInterpreterRuntime()
 	runtimeInterface := &testRuntimeInterface{
-		getProgram: func(location common.Location) (*interpreter.Program, error) {
+		getProgram: func(location Location) (*interpreter.Program, error) {
 			program, found := programs[location]
 			programsHits[location] = found
 			if !found {
@@ -735,7 +745,7 @@ func TestRuntimeProgramSetAndGet(t *testing.T) {
 			}
 			return program, nil
 		},
-		setProgram: func(location common.Location, program *interpreter.Program) error {
+		setProgram: func(location Location, program *interpreter.Program) error {
 			programs[location] = program
 			return nil
 		},
@@ -1882,7 +1892,6 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
 
 // TestRuntimeStorageMultipleTransactionsResourceFunction tests a function call
 // of a stored resource declared in an imported program
-//
 func TestRuntimeStorageMultipleTransactionsResourceFunction(t *testing.T) {
 
 	t.Parallel()
@@ -1975,7 +1984,6 @@ func TestRuntimeStorageMultipleTransactionsResourceFunction(t *testing.T) {
 
 // TestRuntimeStorageMultipleTransactionsResourceField tests reading a field
 // of a stored resource declared in an imported program
-//
 func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 
 	t.Parallel()
@@ -2068,7 +2076,6 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 // TestRuntimeCompositeFunctionInvocationFromImportingProgram checks
 // that member functions of imported composites can be invoked from an importing program.
 // See https://github.com/dapperlabs/flow-go/issues/838
-//
 func TestRuntimeCompositeFunctionInvocationFromImportingProgram(t *testing.T) {
 
 	t.Parallel()
@@ -4034,7 +4041,7 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
       }
     `)
 
-	accountCodes := map[common.Location][]byte{}
+	accountCodes := map[Location][]byte{}
 	var events []cadence.Event
 
 	signerAccount := address1Value
@@ -4176,7 +4183,7 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
       }
     `)
 
-	accountCodes := map[common.Location][]byte{}
+	accountCodes := map[Location][]byte{}
 	var events []cadence.Event
 
 	signerAccount := address1Value
@@ -4337,7 +4344,7 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 		)
 	}
 
-	accountCodes := map[common.Location][]byte{}
+	accountCodes := map[Location][]byte{}
 	var events []cadence.Event
 
 	var nextAccount byte = 0x2
@@ -4786,7 +4793,7 @@ func TestRuntimeResourceOwnerFieldUseComposite(t *testing.T) {
       }
     `)
 
-	accountCodes := map[common.Location][]byte{}
+	accountCodes := map[Location][]byte{}
 	var events []cadence.Event
 	var loggedMessages []string
 
@@ -4993,7 +5000,7 @@ func TestRuntimeResourceOwnerFieldUseArray(t *testing.T) {
       }
     `)
 
-	accountCodes := map[common.Location][]byte{}
+	accountCodes := map[Location][]byte{}
 	var events []cadence.Event
 	var loggedMessages []string
 
@@ -5174,7 +5181,7 @@ func TestRuntimeResourceOwnerFieldUseDictionary(t *testing.T) {
       }
     `)
 
-	accountCodes := map[common.Location][]byte{}
+	accountCodes := map[Location][]byte{}
 	var events []cadence.Event
 	var loggedMessages []string
 
@@ -5317,9 +5324,9 @@ func TestRuntimeMetrics(t *testing.T) {
 	storage := newTestLedger(nil, nil)
 
 	type reports struct {
-		programParsed      map[common.Location]int
-		programChecked     map[common.Location]int
-		programInterpreted map[common.Location]int
+		programParsed      map[Location]int
+		programChecked     map[Location]int
+		programInterpreted map[Location]int
 	}
 
 	newRuntimeInterface := func() (runtimeInterface Interface, r *reports) {
@@ -7389,7 +7396,6 @@ func TestRuntimeImportAnyStruct(t *testing.T) {
 }
 
 // Error needs to be `runtime.Error`, and the inner error should be `errors.UserError`.
-//
 func assertRuntimeErrorIsUserError(t *testing.T, err error) {
 	var runtimeError Error
 	require.ErrorAs(t, err, &runtimeError)
@@ -7403,7 +7409,6 @@ func assertRuntimeErrorIsUserError(t *testing.T, err error) {
 }
 
 // Error needs to be `runtime.Error`, and the inner error should be `errors.InternalError`.
-//
 func assertRuntimeErrorIsInternalError(t *testing.T, err error) {
 	var runtimeError Error
 	require.ErrorAs(t, err, &runtimeError)
@@ -7417,11 +7422,40 @@ func assertRuntimeErrorIsInternalError(t *testing.T, err error) {
 }
 
 // Error needs to be `runtime.Error`, and the inner error should be `interpreter.ExternalError`.
-//
 func assertRuntimeErrorIsExternalError(t *testing.T, err error) {
 	var runtimeError Error
 	require.ErrorAs(t, err, &runtimeError)
 
 	innerError := runtimeError.Unwrap()
 	require.ErrorAs(t, innerError, &runtimeErrors.ExternalError{})
+}
+
+func BenchmarkRuntimeScriptNoop(b *testing.B) {
+
+	runtimeInterface := &testRuntimeInterface{
+		storage: newTestLedger(nil, nil),
+	}
+
+	script := Script{
+		Source: []byte("pub fun main() {}"),
+	}
+
+	environment := NewScriptInterpreterEnvironment(Config{})
+
+	context := Context{
+		Interface:   runtimeInterface,
+		Location:    common.ScriptLocation{},
+		Environment: environment,
+	}
+
+	require.NotNil(b, stdlib.CryptoChecker)
+
+	runtime := newTestInterpreterRuntime()
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		_, _ = runtime.ExecuteScript(script, context)
+	}
 }

@@ -727,7 +727,9 @@ func TestInterpretReferenceUseAfterShiftStatementMove(t *testing.T) {
 			ParseCheckAndInterpretOptions{
 				Options: []interpreter.Option{
 					interpreter.WithPublicAccountHandler(
-						newTestPublicAccountValue,
+						func(address interpreter.AddressValue) interpreter.Value {
+							return newTestPublicAccountValue(nil, address)
+						},
 					),
 				},
 			},
