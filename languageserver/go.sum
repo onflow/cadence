@@ -509,10 +509,6 @@ github.com/onflow/cadence v0.24.2-0.20220627202951-5a06fec82b4a h1:Wr7+zfFj7ehr3
 github.com/onflow/cadence v0.24.2-0.20220627202951-5a06fec82b4a/go.mod h1:g19FlFrcQsiegiZDe6wYtUCBO8O1hM1x/+l68aVO07k=
 github.com/onflow/cadence-lint v0.0.0-20220711153841-433de417d437 h1:7cqXdAuz92m3LHoisfczNMizczX2vlTDdpwc6ceOrhI=
 github.com/onflow/cadence-lint v0.0.0-20220711153841-433de417d437/go.mod h1:DRpaOnB/oTu7FqmDvGq7Xl4q8WO4GvsugD9AOqIGIp4=
-github.com/onflow/flow-cli/pkg/flowkit v0.0.0-20220817103314-255dfff1c022 h1:b2pamC4vr/n4n9q/67Ue4JM6g91A8dhmLw4/iPvX7OY=
-github.com/onflow/flow-cli/pkg/flowkit v0.0.0-20220817103314-255dfff1c022/go.mod h1:ijfJZqyJZEWVu5pBh9jN3MK8eZNVc9w4v0MwQrBb320=
-github.com/onflow/flow-cli/pkg/flowkit v0.0.0-20220819151535-f737943b29b9 h1:TVOrQiEAqIAkWuWofm4VjAZ3IWL5SHge288eZQtcdBY=
-github.com/onflow/flow-cli/pkg/flowkit v0.0.0-20220819151535-f737943b29b9/go.mod h1:ijfJZqyJZEWVu5pBh9jN3MK8eZNVc9w4v0MwQrBb320=
 github.com/onflow/flow-cli/pkg/flowkit v0.0.0-20220819152715-414ca9c1d221 h1:ES4Aw0AS77xsMKTqh0ndJ9xP2i1S4xsJPQcvxkQE4zk=
 github.com/onflow/flow-cli/pkg/flowkit v0.0.0-20220819152715-414ca9c1d221/go.mod h1:ijfJZqyJZEWVu5pBh9jN3MK8eZNVc9w4v0MwQrBb320=
 github.com/onflow/flow-core-contracts/lib/go/contracts v0.11.2-0.20220620142725-49b5accb2a84 h1:VKIZufzFyxfeMbKeDIyttN2CmFYCzHOimr4xNFimVpA=
