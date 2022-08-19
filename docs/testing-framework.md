@@ -46,7 +46,7 @@ pub struct Matcher {
     pub let test: ((AnyStruct): Bool)
 
     pub init(test: ((AnyStruct): Bool)) {
-    self.test = test
+        self.test = test
     }
 
     /// Combine this matcher with the given matcher.
@@ -77,16 +77,16 @@ multiple testing criteria.
 The `and` method returns a new matcher that succeeds if both this and the given matcher are succeeded.
 The `or` method returns a new matcher that succeeds if at-least this or the given matcher is succeeded.
 
-A matcher that accepts a generic-typed test function can be constructed using the `NewMatcher` function.
+A matcher that accepts a generic-typed test function can be constructed using the `newMatcher` function.
 ```cadence
-fun NewMatcher<T>(_ testFunction: ((T): Bool)): Test.Matcher
+fun newMatcher<T: AnyStruct>(_ test: ((T): Bool)): Test.Matcher
 ```
 The type parameter `T` is bound to `AnyStruct` type. It is also optional.
 
 #### Example:
 A matcher that checks whether the given integer value is a negative value.
 ```cadence
-let isNegative = Test.NewMatcher(fun (_ value: Int): Bool {
+let isNegative = Test.newMatcher(fun (_ value: Int): Bool {
     return value < 0
 })
 
@@ -223,7 +223,7 @@ pub struct interface BlockchainBackend {
 
 ### Creating a blockchain
 A new blockchain instance can be created using the `newEmulatorBlockchain` method.
-It returns a blockchain which is backed by a new emulator instance.
+It returns a `Blockchain` which is backed by a new emulator instance.
 ```cadence
 let blockchain = Test.newEmulatorBlockchain()
 ```
@@ -249,13 +249,13 @@ pub struct Account {
 ```
 
 ### Executing scripts
-Execute script with `executeScript` function, which returns a `ScriptResult`.
-The function takes script arguments as an array.
+Execute scripts with `executeScript` function, which returns a `ScriptResult`.
+The function takes script-code as the first argument, and the script-arguments as an array as the second argument.
 
 ```cadence
 let result = blockchain.executeScript("pub fun main(a: String) {}", ["hello"])
 ```
-The script result indicates the `status` of the script execution, and a `returnValue` if the script execution was
+The script result consists of the `status` of the script execution, and a `returnValue` if the script execution was
 successful, or an `error` otherwise (see [errors](#errors) section for more details on errors).
 
 ```cadence
@@ -296,6 +296,15 @@ pub struct Transaction {
 ```
 The number of authorizers must match the number of `AuthAccount` arguments in the `prepare` block of the transaction.
 
+```cadence
+let tx = Test.Transaction(
+    code: "transaction { prepare(acct: AuthAccount) {} execute{} }",
+    authorizers: [account.address],
+    signers: [account],
+    arguments: [],
+)
+```
+
 There are two ways to execute the created transaction.
 - Executing the transaction immediately
   ```cadence
@@ -313,13 +322,13 @@ There are two ways to execute the created transaction.
   let result = blockchain.executeNextTransaction()
   ```
 
-A Transaction result indicates the status of the execution, and an `error` if the transaction failed.
+The result of a transaction consists of the status of the execution, and an `Error` if the transaction failed.
 ```cadence
 /// The result of a transaction execution.
 ///
 pub struct TransactionResult {
     pub let status: ResultStatus
-    pub let error:  Error?
+    pub let error: Error?
 
     init(status: ResultStatus, error: Error) {
         self.status = status
@@ -398,7 +407,7 @@ pub struct Error {
 ```
 An `Error` may typically be handled by failing the test case or by panicking (which will result in failing the test).
 ```cadence
-let err = ...
+let err: Error? = ...
 
 if err != nil {
     panic(err!.message)
