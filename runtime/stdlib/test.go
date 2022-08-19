@@ -137,15 +137,22 @@ var testContractInitializerTypes = func() (result []sema.Type) {
 	return result
 }()
 
+func typeNotFoundError(parentType, nestedType string) error {
+	return errors.NewUnexpectedError("cannot find type '%s.%s'", parentType, nestedType)
+}
+
 var blockchainBackendInterfaceType = func() *sema.InterfaceType {
 	typ, ok := testContractType.NestedTypes.Get(blockchainBackendTypeName)
 	if !ok {
-		panic(errors.NewUnexpectedError("cannot find type %s.%s", testContractTypeName, blockchainBackendTypeName))
+		panic(typeNotFoundError(testContractTypeName, blockchainBackendTypeName))
 	}
 
 	interfaceType, ok := typ.(*sema.InterfaceType)
 	if !ok {
-		panic(errors.NewUnexpectedError("invalid type for %s. expected interface", blockchainBackendTypeName))
+		panic(errors.NewUnexpectedError(
+			"invalid type for '%s'. expected interface",
+			blockchainBackendTypeName,
+		))
 	}
 
 	return interfaceType
@@ -154,30 +161,51 @@ var blockchainBackendInterfaceType = func() *sema.InterfaceType {
 var matcherType = func() *sema.CompositeType {
 	typ, ok := testContractType.NestedTypes.Get(matcherTypeName)
 	if !ok {
-		panic(errors.NewUnexpectedError("cannot find type %s.%s", testContractTypeName, matcherTypeName))
+		panic(typeNotFoundError(testContractTypeName, matcherTypeName))
 	}
 
-	interfaceType, ok := typ.(*sema.CompositeType)
+	compositeType, ok := typ.(*sema.CompositeType)
 	if !ok {
-		panic(errors.NewUnexpectedError("invalid type for %s. expected interface", matcherTypeName))
+		panic(errors.NewUnexpectedError(
+			"invalid type for '%s'. expected struct type",
+			matcherTypeName,
+		))
 	}
 
-	return interfaceType
+	return compositeType
 }()
 
-var matcherTestFunctionType = func() *sema.FunctionType {
-	testFunc, ok := matcherType.Members.Get(matcherTestFunctionName)
+var matcherTestFunctionType = compositeFunctionType(matcherType, matcherTestFunctionName)
+
+func compositeFunctionType(parent *sema.CompositeType, funcName string) *sema.FunctionType {
+	testFunc, ok := parent.Members.Get(funcName)
 	if !ok {
-		panic(errors.NewUnexpectedError("cannot find type %s.%s", matcherTypeName, matcherTestFunctionName))
+		panic(typeNotFoundError(parent.Identifier, funcName))
 	}
 
-	interfaceType, ok := testFunc.TypeAnnotation.Type.(*sema.FunctionType)
+	return getFunctionTypeFromMember(testFunc, funcName)
+}
+
+func interfaceFunctionType(parent *sema.InterfaceType, funcName string) *sema.FunctionType {
+	testFunc, ok := parent.Members.Get(funcName)
 	if !ok {
-		panic(errors.NewUnexpectedError("invalid type for %s. expected interface", matcherTestFunctionName))
+		panic(typeNotFoundError(parent.Identifier, funcName))
 	}
 
-	return interfaceType
-}()
+	return getFunctionTypeFromMember(testFunc, funcName)
+}
+
+func getFunctionTypeFromMember(funcMember *sema.Member, funcName string) *sema.FunctionType {
+	functionType, ok := funcMember.TypeAnnotation.Type.(*sema.FunctionType)
+	if !ok {
+		panic(errors.NewUnexpectedError(
+			"invalid type for '%s'. expected function type",
+			funcName,
+		))
+	}
+
+	return functionType
+}
 
 func init() {
 
@@ -215,6 +243,8 @@ func init() {
 			testNewEmulatorBlockchainFunctionDocString,
 		),
 	)
+
+	// Test.newMatcher()
 	testContractType.Members.Set(
 		newMatcherFunctionName,
 		sema.NewUnmeteredPublicFunctionMember(
@@ -255,11 +285,7 @@ func init() {
 var blockchainType = func() sema.Type {
 	typ, ok := testContractType.NestedTypes.Get(blockchainTypeName)
 	if !ok {
-		panic(errors.NewUnexpectedError(
-			"cannot find type %s.%s",
-			testContractTypeName,
-			blockchainTypeName,
-		))
+		panic(typeNotFoundError(testContractTypeName, blockchainTypeName))
 	}
 
 	return typ
@@ -269,7 +295,9 @@ var blockchainType = func() sema.Type {
 
 // 'Test.assert' function
 
-const testAssertFunctionDocString = `assert function of Test contract`
+const testAssertFunctionDocString = `
+Fails the test-case if the given condition is false, and reports a message which explains how the condition is false.
+`
 
 const testAssertFunctionName = "assert"
 
@@ -326,7 +354,9 @@ var testAssertFunction = interpreter.NewUnmeteredHostFunctionValue(
 
 // 'Test.expect' function
 
-const testExpectFunctionDocString = `expect function of Test contract`
+const testExpectFunctionDocString = `
+Expect function tests a value against a matcher, and fails the test if it's not a match.
+`
 
 const testExpectFunctionName = "expect"
 
@@ -395,7 +425,7 @@ func invokeMatcherTest(
 	funcValue, ok := testFunc.(interpreter.FunctionValue)
 	if !ok {
 		panic(errors.NewUnexpectedError(
-			"invalid type for %s. expected function",
+			"invalid type for '%s'. expected function",
 			matcherTestFunctionName,
 		))
 	}
@@ -437,7 +467,9 @@ func getFunctionType(value interpreter.FunctionValue) *sema.FunctionType {
 
 // 'Test.readFile' function
 
-const testReadFileFunctionDocString = `read file function of Test contract`
+const testReadFileFunctionDocString = `
+Read a local file, and return the content as a string.
+`
 
 const testReadFileFunctionName = "readFile"
 
@@ -477,7 +509,9 @@ func testReadFileFunction(testFramework interpreter.TestFramework) *interpreter.
 
 // 'Test.newEmulatorBlockchain' function
 
-const testNewEmulatorBlockchainFunctionDocString = `newEmulatorBlockchain function of Test contract`
+const testNewEmulatorBlockchainFunctionDocString = `
+Creates a blockchain which is backed by a new emulator instance.
+`
 
 const testNewEmulatorBlockchainFunctionName = "newEmulatorBlockchain"
 
@@ -548,9 +582,12 @@ func getNestedTypeConstructorValue(parent interpreter.Value, typeName string) *i
 //
 // Sample usage: `Test.newMatcher(fun (_ value: Int: Bool) { return true })`
 
-const newMatcherFunctionDocString = `NewMatcher function`
+const newMatcherFunctionDocString = `
+Creates a matcher with a test function.
+The test function is of type '((T): Bool)', where 'T' is bound to 'AnyStruct'.
+`
 
-const newMatcherFunctionName = "NewMatcher"
+const newMatcherFunctionName = "newMatcher"
 
 var newMatcherFunctionType = &sema.FunctionType{
 	IsConstructor: true,
@@ -712,30 +749,15 @@ func newEmulatorBackend(
 
 const emulatorBackendExecuteScriptFunctionName = "executeScript"
 
-const emulatorBackendExecuteScriptFunctionDocString = `execute script function`
+const emulatorBackendExecuteScriptFunctionDocString = `
+Executes a script and returns the script return value and the status.
+The 'returnValue' field of the result will be nil if the script failed.
+`
 
-var emulatorBackendExecuteScriptFunctionType = func() *sema.FunctionType {
-	// The type of the 'executeScript' function of 'EmulatorBackend' (interface-implementation)
-	// is same as that of 'BlockchainBackend' interface.
-	typ, ok := blockchainBackendInterfaceType.Members.Get(emulatorBackendExecuteScriptFunctionName)
-	if !ok {
-		panic(errors.NewUnexpectedError(
-			"cannot find type %s.%s",
-			blockchainBackendTypeName,
-			emulatorBackendExecuteScriptFunctionName,
-		))
-	}
-
-	functionType, ok := typ.TypeAnnotation.Type.(*sema.FunctionType)
-	if !ok {
-		panic(errors.NewUnexpectedError(
-			"invalid type for %s. expected function",
-			emulatorBackendExecuteScriptFunctionName,
-		))
-	}
-
-	return functionType
-}()
+var emulatorBackendExecuteScriptFunctionType = interfaceFunctionType(
+	blockchainBackendInterfaceType,
+	emulatorBackendExecuteScriptFunctionName,
+)
 
 func emulatorBackendExecuteScriptFunction(testFramework interpreter.TestFramework) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
@@ -832,30 +854,16 @@ func getConstructor(inter *interpreter.Interpreter, typeName string) *interprete
 
 const emulatorBackendCreateAccountFunctionName = "createAccount"
 
-const emulatorBackendCreateAccountFunctionDocString = `create account function`
+const emulatorBackendCreateAccountFunctionDocString = `
+Creates an account by submitting an account creation transaction.
+The transaction is paid by the service account.
+The returned account can be used to sign and authorize transactions.
+`
 
-var emulatorBackendCreateAccountFunctionType = func() *sema.FunctionType {
-	// The type of the 'createAccount' function of 'EmulatorBackend' (interface-implementation)
-	// is same as that of 'BlockchainBackend' interface.
-	typ, ok := blockchainBackendInterfaceType.Members.Get(emulatorBackendCreateAccountFunctionName)
-	if !ok {
-		panic(errors.NewUnexpectedError(
-			"cannot find type %s.%s",
-			blockchainBackendTypeName,
-			emulatorBackendCreateAccountFunctionName,
-		))
-	}
-
-	functionType, ok := typ.TypeAnnotation.Type.(*sema.FunctionType)
-	if !ok {
-		panic(errors.NewUnexpectedError(
-			"invalid type for %s. expected function",
-			emulatorBackendCreateAccountFunctionName,
-		))
-	}
-
-	return functionType
-}()
+var emulatorBackendCreateAccountFunctionType = interfaceFunctionType(
+	blockchainBackendInterfaceType,
+	emulatorBackendCreateAccountFunctionName,
+)
 
 func emulatorBackendCreateAccountFunction(testFramework interpreter.TestFramework) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
@@ -917,30 +925,14 @@ func newAccountValue(
 
 const emulatorBackendAddTransactionFunctionName = "addTransaction"
 
-const emulatorBackendAddTransactionFunctionDocString = `add transaction function`
+const emulatorBackendAddTransactionFunctionDocString = `
+Add a transaction to the current block.
+`
 
-var emulatorBackendAddTransactionFunctionType = func() *sema.FunctionType {
-	// The type of the 'addTransaction' function of 'EmulatorBackend' (interface-implementation)
-	// is same as that of 'BlockchainBackend' interface.
-	typ, ok := blockchainBackendInterfaceType.Members.Get(emulatorBackendAddTransactionFunctionName)
-	if !ok {
-		panic(errors.NewUnexpectedError(
-			"cannot find type %s.%s",
-			blockchainBackendTypeName,
-			emulatorBackendAddTransactionFunctionName,
-		))
-	}
-
-	functionType, ok := typ.TypeAnnotation.Type.(*sema.FunctionType)
-	if !ok {
-		panic(errors.NewUnexpectedError(
-			"invalid type for %s. expected function",
-			emulatorBackendAddTransactionFunctionName,
-		))
-	}
-
-	return functionType
-}()
+var emulatorBackendAddTransactionFunctionType = interfaceFunctionType(
+	blockchainBackendInterfaceType,
+	emulatorBackendAddTransactionFunctionName,
+)
 
 func emulatorBackendAddTransactionFunction(testFramework interpreter.TestFramework) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
@@ -1098,30 +1090,15 @@ func accountFromValue(
 
 const emulatorBackendExecuteNextTransactionFunctionName = "executeNextTransaction"
 
-const emulatorBackendExecuteNextTransactionFunctionDocString = `execute next transaction function`
+const emulatorBackendExecuteNextTransactionFunctionDocString = `
+Executes the next transaction in the block, if any.
+Returns the result of the transaction, or nil if no transaction was scheduled.
+`
 
-var emulatorBackendExecuteNextTransactionFunctionType = func() *sema.FunctionType {
-	// The type of the 'executeNextTransaction' function of 'EmulatorBackend' (interface-implementation)
-	// is same as that of 'BlockchainBackend' interface.
-	typ, ok := blockchainBackendInterfaceType.Members.Get(emulatorBackendExecuteNextTransactionFunctionName)
-	if !ok {
-		panic(errors.NewUnexpectedError(
-			"cannot find type %s.%s",
-			blockchainBackendTypeName,
-			emulatorBackendExecuteNextTransactionFunctionName,
-		))
-	}
-
-	functionType, ok := typ.TypeAnnotation.Type.(*sema.FunctionType)
-	if !ok {
-		panic(errors.NewUnexpectedError(
-			"invalid type for %s. expected function",
-			emulatorBackendExecuteNextTransactionFunctionName,
-		))
-	}
-
-	return functionType
-}()
+var emulatorBackendExecuteNextTransactionFunctionType = interfaceFunctionType(
+	blockchainBackendInterfaceType,
+	emulatorBackendExecuteNextTransactionFunctionName,
+)
 
 func emulatorBackendExecuteNextTransactionFunction(testFramework interpreter.TestFramework) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
@@ -1201,30 +1178,14 @@ func newErrorValue(inter *interpreter.Interpreter, err error) interpreter.Value 
 
 const emulatorBackendCommitBlockFunctionName = "commitBlock"
 
-const emulatorBackendCommitBlockFunctionDocString = `commit block function`
+const emulatorBackendCommitBlockFunctionDocString = `
+Commit the current block. Committing will fail if there are un-executed transactions in the block.
+`
 
-var emulatorBackendCommitBlockFunctionType = func() *sema.FunctionType {
-	// The type of the 'commitBlock' function of 'EmulatorBackend' (interface-implementation)
-	// is same as that of 'BlockchainBackend' interface.
-	typ, ok := blockchainBackendInterfaceType.Members.Get(emulatorBackendCommitBlockFunctionName)
-	if !ok {
-		panic(errors.NewUnexpectedError(
-			"cannot find type %s.%s",
-			blockchainBackendTypeName,
-			emulatorBackendCommitBlockFunctionName,
-		))
-	}
-
-	functionType, ok := typ.TypeAnnotation.Type.(*sema.FunctionType)
-	if !ok {
-		panic(errors.NewUnexpectedError(
-			"invalid type for %s. expected function",
-			emulatorBackendCommitBlockFunctionName,
-		))
-	}
-
-	return functionType
-}()
+var emulatorBackendCommitBlockFunctionType = interfaceFunctionType(
+	blockchainBackendInterfaceType,
+	emulatorBackendCommitBlockFunctionName,
+)
 
 func emulatorBackendCommitBlockFunction(testFramework interpreter.TestFramework) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
@@ -1245,7 +1206,7 @@ func emulatorBackendCommitBlockFunction(testFramework interpreter.TestFramework)
 const equalMatcherFunctionName = "equal"
 
 const equalMatcherFunctionDocString = `
-Returns a matcher that succeeds if the tested value is equal to the given value
+Returns a matcher that succeeds if the tested value is equal to the given value.
 `
 
 var typeParameter = &sema.TypeParameter{
@@ -1311,30 +1272,14 @@ var equalMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
 
 const emulatorBackendDeployContractFunctionName = "deployContract"
 
-const emulatorBackendDeployContractFunctionDocString = `deploy contract function`
+const emulatorBackendDeployContractFunctionDocString = `
+Deploys a given contract, and initializes it with the provided arguments.
+`
 
-var emulatorBackendDeployContractFunctionType = func() *sema.FunctionType {
-	// The type of the 'deployContract' function of 'EmulatorBackend' (interface-implementation)
-	// is same as that of 'BlockchainBackend' interface.
-	typ, ok := blockchainBackendInterfaceType.Members.Get(emulatorBackendDeployContractFunctionName)
-	if !ok {
-		panic(errors.NewUnexpectedError(
-			"cannot find type %s.%s",
-			blockchainBackendTypeName,
-			emulatorBackendDeployContractFunctionName,
-		))
-	}
-
-	functionType, ok := typ.TypeAnnotation.Type.(*sema.FunctionType)
-	if !ok {
-		panic(errors.NewUnexpectedError(
-			"invalid type for %s. expected function",
-			emulatorBackendDeployContractFunctionName,
-		))
-	}
-
-	return functionType
-}()
+var emulatorBackendDeployContractFunctionType = interfaceFunctionType(
+	blockchainBackendInterfaceType,
+	emulatorBackendDeployContractFunctionName,
+)
 
 func emulatorBackendDeployContractFunction(testFramework interpreter.TestFramework) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
