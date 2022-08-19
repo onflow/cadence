@@ -35,7 +35,7 @@ type SimpleCompositeValue struct {
 	// FieldNames are the names of the field members (i.e. not functions, and not computed fields), in order
 	FieldNames      []string
 	Fields          map[string]Value
-	ComputedFields  map[string]ComputedField
+	ComputeField    func(name string, interpreter *Interpreter, getLocationRange func() LocationRange) Value
 	fieldFormatters map[string]func(common.MemoryGauge, Value, SeenReferences) string
 	// stringer is an optional function that is used to produce the string representation of the value.
 	// If nil, the FieldNames are used.
@@ -51,20 +51,20 @@ func NewSimpleCompositeValue(
 	staticType StaticType,
 	fieldNames []string,
 	fields map[string]Value,
-	computedFields map[string]ComputedField,
+	computeField func(name string, interpreter *Interpreter, getLocationRange func() LocationRange) Value,
 	fieldFormatters map[string]func(common.MemoryGauge, Value, SeenReferences) string,
 	stringer func(common.MemoryGauge, SeenReferences) string,
 ) *SimpleCompositeValue {
 
 	common.UseMemory(gauge, common.SimpleCompositeValueBaseMemoryUsage)
-	common.UseMemory(gauge, common.NewSimpleCompositeMemoryUsage(len(fields)+len(computedFields)))
+	common.UseMemory(gauge, common.NewSimpleCompositeMemoryUsage(len(fields)))
 
 	return &SimpleCompositeValue{
 		TypeID:          typeID,
 		staticType:      staticType,
 		FieldNames:      fieldNames,
 		Fields:          fields,
-		ComputedFields:  computedFields,
+		ComputeField:    computeField,
 		fieldFormatters: fieldFormatters,
 		stringer:        stringer,
 	}
@@ -78,7 +78,6 @@ func (v *SimpleCompositeValue) Accept(interpreter *Interpreter, visitor Visitor)
 
 // ForEachField iterates over all field-name field-value pairs of the composite value.
 // It does NOT iterate over computed fields and functions!
-//
 func (v *SimpleCompositeValue) ForEachField(_ *Interpreter, f func(fieldName string, fieldValue Value)) {
 	for _, fieldName := range v.FieldNames {
 		fieldValue := v.Fields[fieldName]
@@ -88,7 +87,6 @@ func (v *SimpleCompositeValue) ForEachField(_ *Interpreter, f func(fieldName str
 
 // Walk iterates over all field values of the composite value.
 // It does NOT walk the computed fields and functions!
-//
 func (v *SimpleCompositeValue) Walk(interpreter *Interpreter, walkChild func(Value)) {
 	v.ForEachField(interpreter, func(_ string, fieldValue Value) {
 		walkChild(fieldValue)
@@ -119,11 +117,9 @@ func (v *SimpleCompositeValue) GetMember(
 		return value
 	}
 
-	if v.ComputedFields != nil {
-		computedField, ok := v.ComputedFields[name]
-		if ok {
-			return computedField(interpreter, getLocationRange)
-		}
+	computeField := v.ComputeField
+	if computeField != nil {
+		return computeField(name, interpreter, getLocationRange)
 	}
 
 	return nil
@@ -264,7 +260,7 @@ func (v *SimpleCompositeValue) Clone(interpreter *Interpreter) Value {
 		staticType:      v.staticType,
 		FieldNames:      v.FieldNames,
 		Fields:          clonedFields,
-		ComputedFields:  v.ComputedFields,
+		ComputeField:    v.ComputeField,
 		fieldFormatters: v.fieldFormatters,
 		stringer:        v.stringer,
 	}
