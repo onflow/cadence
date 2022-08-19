@@ -555,7 +555,7 @@ func TestLiteralValue(t *testing.T) {
 				unsignedIntegerType.String(),
 			),
 			func(t *testing.T) {
-				value, err := ParseLiteral(`-1`, unsignedIntegerType, nil)
+				value, err := ParseLiteral(`-1`, unsignedIntegerType, newTestInterpreter(t))
 				require.Error(t, err)
 				require.Nil(t, value)
 			},
@@ -567,7 +567,7 @@ func TestLiteralValue(t *testing.T) {
 				unsignedIntegerType.String(),
 			),
 			func(t *testing.T) {
-				value, err := ParseLiteral(`true`, unsignedIntegerType, nil)
+				value, err := ParseLiteral(`true`, unsignedIntegerType, newTestInterpreter(t))
 				require.Error(t, err)
 				require.Nil(t, value)
 			},
@@ -621,12 +621,12 @@ func TestLiteralValue(t *testing.T) {
 func TestParseLiteralArgumentList(t *testing.T) {
 
 	t.Run("invalid", func(t *testing.T) {
-		_, err := ParseLiteralArgumentList("", nil, nil)
+		_, err := ParseLiteralArgumentList("", nil, newTestInterpreter(t))
 		require.Error(t, err)
 	})
 
 	t.Run("empty", func(t *testing.T) {
-		arguments, err := ParseLiteralArgumentList(`()`, nil, nil)
+		arguments, err := ParseLiteralArgumentList(`()`, nil, newTestInterpreter(t))
 		require.NoError(t, err)
 		require.Equal(t, []cadence.Value{}, arguments)
 	})
@@ -637,7 +637,7 @@ func TestParseLiteralArgumentList(t *testing.T) {
 			[]sema.Type{
 				sema.IntType,
 			},
-			nil,
+			newTestInterpreter(t),
 		)
 		require.NoError(t, err)
 		require.Equal(t,
@@ -655,7 +655,7 @@ func TestParseLiteralArgumentList(t *testing.T) {
 				sema.IntType,
 				sema.IntType,
 			},
-			nil,
+			newTestInterpreter(t),
 		)
 		require.NoError(t, err)
 		require.Equal(t,
@@ -674,7 +674,7 @@ func TestParseLiteralArgumentList(t *testing.T) {
 				sema.IntType,
 				sema.BoolType,
 			},
-			nil,
+			newTestInterpreter(t),
 		)
 		require.Error(t, err)
 	})
@@ -685,7 +685,7 @@ func TestParseLiteralArgumentList(t *testing.T) {
 			[]sema.Type{
 				sema.IntType,
 			},
-			nil,
+			newTestInterpreter(t),
 		)
 		require.Error(t, err)
 	})
@@ -697,7 +697,7 @@ func TestParseLiteralArgumentList(t *testing.T) {
 				sema.IntType,
 				sema.IntType,
 			},
-			nil,
+			newTestInterpreter(t),
 		)
 		require.Error(t, err)
 	})
@@ -708,7 +708,7 @@ func TestParseLiteralArgumentList(t *testing.T) {
 			[]sema.Type{
 				sema.IntType,
 			},
-			nil,
+			newTestInterpreter(t),
 		)
 		require.Error(t, err)
 	})

@@ -37,16 +37,19 @@ func (interpreter *Interpreter) evalStatement(statement ast.Statement) any {
 
 	interpreter.statement = statement
 
-	if interpreter.onMeterComputation != nil {
-		interpreter.onMeterComputation(common.ComputationKindStatement, 1)
+	onMeterComputation := interpreter.Config.OnMeterComputation
+	if onMeterComputation != nil {
+		onMeterComputation(common.ComputationKindStatement, 1)
 	}
 
-	if interpreter.debugger != nil {
-		interpreter.debugger.onStatement(interpreter, statement)
+	debugger := interpreter.Config.Debugger
+	if debugger != nil {
+		debugger.onStatement(interpreter, statement)
 	}
 
-	if interpreter.onStatement != nil {
-		interpreter.onStatement(interpreter, statement)
+	onStatement := interpreter.Config.OnStatement
+	if onStatement != nil {
+		onStatement(interpreter, statement)
 	}
 
 	return statement.Accept(interpreter)
@@ -374,13 +377,14 @@ func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement)
 
 	getLocationRange := locationRangeGetter(interpreter, interpreter.Location, statement)
 
-	if interpreter.onEventEmitted == nil {
+	onEventEmitted := interpreter.Config.OnEventEmitted
+	if onEventEmitted == nil {
 		panic(EventEmissionUnavailableError{
 			LocationRange: getLocationRange(),
 		})
 	}
 
-	err := interpreter.onEventEmitted(interpreter, getLocationRange, event, eventType)
+	err := onEventEmitted(interpreter, getLocationRange, event, eventType)
 	if err != nil {
 		panic(err)
 	}

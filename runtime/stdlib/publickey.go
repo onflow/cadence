@@ -64,7 +64,7 @@ var PublicKeyConstructor = NewStandardLibraryFunction(
 			invocation.GetLocationRange,
 			publicKey,
 			signAlgo,
-			inter.PublicKeyValidationHandler,
+			inter.Config.PublicKeyValidationHandler,
 		)
 	},
 )

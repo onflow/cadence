@@ -252,7 +252,9 @@ func load() {
 	inter, err := interpreter.NewInterpreter(
 		nil,
 		nil,
-		interpreter.WithStorage(interpreterStorage),
+		&interpreter.Config{
+			Storage: interpreterStorage,
+		},
 	)
 	if err != nil {
 		log.Fatalf("Failed to create interpreter: %s", err)

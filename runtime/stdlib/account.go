@@ -590,7 +590,7 @@ func newAccountKeysAddFunction(
 				inter,
 				getLocationRange,
 				accountKey,
-				inter.PublicKeyValidationHandler,
+				inter.Config.PublicKeyValidationHandler,
 			)
 		},
 		sema.AuthAccountKeysTypeAddFunctionType,

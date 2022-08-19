@@ -92,7 +92,7 @@ func TestOwnerNewArray(t *testing.T) {
 			Elaboration: elaboration,
 		},
 		utils.TestLocation,
-		WithStorage(storage),
+		&Config{Storage: storage},
 	)
 	require.NoError(t, err)
 
@@ -132,9 +132,9 @@ func TestOwnerArrayDeepCopy(t *testing.T) {
 			Elaboration: elaboration,
 		},
 		utils.TestLocation,
-		WithStorage(storage),
-		WithOnMeterComputationFuncHandler(
-			getMeterCompFuncWithExpectedKinds(t,
+		&Config{
+			Storage: storage,
+			OnMeterComputation: getMeterCompFuncWithExpectedKinds(t,
 				[]common.ComputationKind{
 					common.ComputationKindCreateCompositeValue,
 					common.ComputationKindCreateArrayValue,
@@ -144,7 +144,7 @@ func TestOwnerArrayDeepCopy(t *testing.T) {
 				},
 				[]uint{1, 1, 1, 1, 1},
 			),
-		),
+		},
 	)
 	require.NoError(t, err)
 
@@ -196,7 +196,7 @@ func TestOwnerArrayElement(t *testing.T) {
 			Elaboration: elaboration,
 		},
 		utils.TestLocation,
-		WithStorage(storage),
+		&Config{Storage: storage},
 	)
 	require.NoError(t, err)
 
@@ -235,7 +235,7 @@ func TestOwnerArraySetIndex(t *testing.T) {
 			Elaboration: elaboration,
 		},
 		utils.TestLocation,
-		WithStorage(storage),
+		&Config{Storage: storage},
 	)
 	require.NoError(t, err)
 
@@ -284,7 +284,7 @@ func TestOwnerArrayAppend(t *testing.T) {
 			Elaboration: elaboration,
 		},
 		utils.TestLocation,
-		WithStorage(storage),
+		&Config{Storage: storage},
 	)
 	require.NoError(t, err)
 
@@ -327,7 +327,7 @@ func TestOwnerArrayInsert(t *testing.T) {
 			Elaboration: elaboration,
 		},
 		utils.TestLocation,
-		WithStorage(storage),
+		&Config{Storage: storage},
 	)
 	require.NoError(t, err)
 
@@ -370,7 +370,7 @@ func TestOwnerArrayRemove(t *testing.T) {
 			Elaboration: elaboration,
 		},
 		utils.TestLocation,
-		WithStorage(storage),
+		&Config{Storage: storage},
 	)
 	require.NoError(t, err)
 
@@ -411,7 +411,7 @@ func TestOwnerNewDictionary(t *testing.T) {
 			Elaboration: elaboration,
 		},
 		utils.TestLocation,
-		WithStorage(storage),
+		&Config{Storage: storage},
 	)
 	require.NoError(t, err)
 
@@ -455,7 +455,7 @@ func TestOwnerDictionary(t *testing.T) {
 			Elaboration: elaboration,
 		},
 		utils.TestLocation,
-		WithStorage(storage),
+		&Config{Storage: storage},
 	)
 	require.NoError(t, err)
 
@@ -499,9 +499,9 @@ func TestOwnerDictionaryCopy(t *testing.T) {
 			Elaboration: elaboration,
 		},
 		utils.TestLocation,
-		WithStorage(storage),
-		WithOnMeterComputationFuncHandler(
-			getMeterCompFuncWithExpectedKinds(t,
+		&Config{
+			Storage: storage,
+			OnMeterComputation: getMeterCompFuncWithExpectedKinds(t,
 				[]common.ComputationKind{
 					common.ComputationKindCreateCompositeValue,
 					common.ComputationKindCreateDictionaryValue,
@@ -511,7 +511,7 @@ func TestOwnerDictionaryCopy(t *testing.T) {
 				},
 				[]uint{1, 1, 1, 1, 1},
 			),
-		),
+		},
 	)
 	require.NoError(t, err)
 
@@ -567,7 +567,7 @@ func TestOwnerDictionarySetSome(t *testing.T) {
 			Elaboration: elaboration,
 		},
 		utils.TestLocation,
-		WithStorage(storage),
+		&Config{Storage: storage},
 	)
 	require.NoError(t, err)
 
@@ -618,7 +618,7 @@ func TestOwnerDictionaryInsertNonExisting(t *testing.T) {
 			Elaboration: elaboration,
 		},
 		utils.TestLocation,
-		WithStorage(storage),
+		&Config{Storage: storage},
 	)
 	require.NoError(t, err)
 
@@ -670,7 +670,7 @@ func TestOwnerDictionaryRemove(t *testing.T) {
 			Elaboration: elaboration,
 		},
 		utils.TestLocation,
-		WithStorage(storage),
+		&Config{Storage: storage},
 	)
 	require.NoError(t, err)
 
@@ -728,7 +728,7 @@ func TestOwnerDictionaryInsertExisting(t *testing.T) {
 			Elaboration: elaboration,
 		},
 		utils.TestLocation,
-		WithStorage(storage),
+		&Config{Storage: storage},
 	)
 	require.NoError(t, err)
 
@@ -1631,7 +1631,7 @@ func TestEphemeralReferenceTypeConformance(t *testing.T) {
 	inter, err := NewInterpreter(
 		ProgramFromChecker(checker),
 		checker.Location,
-		WithStorage(storage),
+		&Config{Storage: storage},
 	)
 
 	require.NoError(t, err)
@@ -3253,12 +3253,12 @@ func TestPublicKeyValue(t *testing.T) {
 		inter, err := NewInterpreter(
 			nil,
 			utils.TestLocation,
-			WithStorage(storage),
-			WithPublicKeyValidationHandler(
-				func(_ *Interpreter, _ func() LocationRange, _ *CompositeValue) error {
+			&Config{
+				Storage: storage,
+				PublicKeyValidationHandler: func(_ *Interpreter, _ func() LocationRange, _ *CompositeValue) error {
 					return nil
 				},
-			),
+			},
 		)
 		require.NoError(t, err)
 
@@ -3283,7 +3283,7 @@ func TestPublicKeyValue(t *testing.T) {
 			ReturnEmptyLocationRange,
 			publicKey,
 			sigAlgo,
-			inter.PublicKeyValidationHandler,
+			inter.Config.PublicKeyValidationHandler,
 		)
 
 		require.Equal(t,
@@ -3303,12 +3303,12 @@ func TestPublicKeyValue(t *testing.T) {
 		inter, err := NewInterpreter(
 			nil,
 			utils.TestLocation,
-			WithStorage(storage),
-			WithPublicKeyValidationHandler(
-				func(_ *Interpreter, _ func() LocationRange, _ *CompositeValue) error {
+			&Config{
+				Storage: storage,
+				PublicKeyValidationHandler: func(_ *Interpreter, _ func() LocationRange, _ *CompositeValue) error {
 					return fakeError
 				},
-			),
+			},
 		)
 		require.NoError(t, err)
 
@@ -3338,7 +3338,7 @@ func TestPublicKeyValue(t *testing.T) {
 					ReturnEmptyLocationRange,
 					publicKey,
 					sigAlgo,
-					inter.PublicKeyValidationHandler,
+					inter.Config.PublicKeyValidationHandler,
 				)
 			})
 	})
@@ -3459,9 +3459,11 @@ func newTestInterpreter(tb testing.TB) *Interpreter {
 	inter, err := NewInterpreter(
 		nil,
 		utils.TestLocation,
-		WithStorage(storage),
-		WithAtreeValueValidationEnabled(true),
-		WithAtreeStorageValidationEnabled(true),
+		&Config{
+			Storage:                       storage,
+			AtreeValueValidationEnabled:   true,
+			AtreeStorageValidationEnabled: true,
+		},
 	)
 	require.NoError(tb, err)
 
@@ -3499,7 +3501,7 @@ func TestNonStorable(t *testing.T) {
 	inter, err := NewInterpreter(
 		ProgramFromChecker(checker),
 		checker.Location,
-		WithStorage(storage),
+		&Config{Storage: storage},
 	)
 
 	require.NoError(t, err)
@@ -3664,7 +3666,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 				Elaboration: elaboration,
 			},
 			utils.TestLocation,
-			WithStorage(storage),
+			&Config{Storage: storage},
 		)
 		require.NoError(t, err)
 

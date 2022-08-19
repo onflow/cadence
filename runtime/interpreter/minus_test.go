@@ -126,7 +126,7 @@ func TestMinusUInt8(t *testing.T) {
 		{0xff, 0xff, true},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, test := range tests {
@@ -240,7 +240,7 @@ func TestMinusUInt16(t *testing.T) {
 		{0xffff, 0xffff, true},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, test := range tests {
@@ -354,7 +354,7 @@ func TestMinusUInt32(t *testing.T) {
 		{0xffffffff, 0xffffffff, true},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, test := range tests {
@@ -684,7 +684,7 @@ func TestMinusUInt64(t *testing.T) {
 		{0xffffffffffffffff, 0xffffffffffffffff, true},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, test := range tests {
@@ -800,7 +800,7 @@ func TestMinusUInt128(t *testing.T) {
 		{uint128("0xffffffffffffffffffffffffffffffff"), uint128("0xffffffffffffffffffffffffffffffff"), true},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, test := range tests {
@@ -1258,7 +1258,7 @@ func TestMinusUInt256(t *testing.T) {
 		},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, test := range tests {
@@ -1372,7 +1372,7 @@ func TestMinusInt8(t *testing.T) {
 		{-1, -1, true},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, test := range tests {
@@ -1487,7 +1487,7 @@ func TestMinusInt16(t *testing.T) {
 		{-1, -1, true},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, test := range tests {
@@ -1601,7 +1601,7 @@ func TestMinusInt32(t *testing.T) {
 		{-1, -1, true},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, test := range tests {
@@ -1931,7 +1931,7 @@ func TestMinusInt64(t *testing.T) {
 		{-1, -1, true},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, test := range tests {
@@ -2047,7 +2047,7 @@ func TestMinusInt128(t *testing.T) {
 		{int128("-0x00000000000000000000000000000001"), int128("-0x00000000000000000000000000000001"), true},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, test := range tests {
@@ -2505,7 +2505,7 @@ func TestMinusInt256(t *testing.T) {
 		},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, test := range tests {

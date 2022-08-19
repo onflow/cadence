@@ -104,19 +104,13 @@ type OnLoopIterationFunc func(
 
 // OnFunctionInvocationFunc is a function that is triggered when a function is about to be invoked.
 //
-type OnFunctionInvocationFunc func(
-	inter *Interpreter,
-	line int,
-)
+type OnFunctionInvocationFunc func(inter *Interpreter)
 
 // OnInvokedFunctionReturnFunc is a function that is triggered when an invoked function returned.
 //
-type OnInvokedFunctionReturnFunc func(
-	inter *Interpreter,
-	line int,
-)
+type OnInvokedFunctionReturnFunc func(inter *Interpreter)
 
-// OnRecordTraceFunc is a function thats records a trace.
+// OnRecordTraceFunc is a function that records a trace.
 type OnRecordTraceFunc func(
 	inter *Interpreter,
 	operationName string,
@@ -255,9 +249,6 @@ type HashHandlerFunc func(
 	hashAlgorithm MemberAccessibleValue,
 ) *ArrayValue
 
-// ExitHandlerFunc is a function that is called at the end of execution
-type ExitHandlerFunc func() error
-
 // CompositeTypeCode contains the "prepared" / "callable" "code"
 // for the functions and the destructor of a composite
 // (contract, struct, resource, event).
@@ -321,358 +312,19 @@ type Storage interface {
 type ReferencedResourceKindedValues map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}
 
 type Interpreter struct {
-	Program                        *Program
-	Location                       common.Location
-	activations                    *VariableActivations
-	Globals                        GlobalVariables
-	allInterpreters                map[common.Location]*Interpreter
-	typeCodes                      TypeCodes
-	Transactions                   []*HostFunctionValue
-	Storage                        Storage
-	onEventEmitted                 OnEventEmittedFunc
-	onStatement                    OnStatementFunc
-	onLoopIteration                OnLoopIterationFunc
-	onFunctionInvocation           OnFunctionInvocationFunc
-	onInvokedFunctionReturn        OnInvokedFunctionReturnFunc
-	onRecordTrace                  OnRecordTraceFunc
-	onResourceOwnerChange          OnResourceOwnerChangeFunc
-	onMeterComputation             OnMeterComputationFunc
-	injectedCompositeFieldsHandler InjectedCompositeFieldsHandlerFunc
-	contractValueHandler           ContractValueHandlerFunc
-	importLocationHandler          ImportLocationHandlerFunc
-	publicAccountHandler           PublicAccountHandlerFunc
-	uuidHandler                    UUIDHandlerFunc
-	PublicKeyValidationHandler     PublicKeyValidationHandlerFunc
-	SignatureVerificationHandler   SignatureVerificationHandlerFunc
-	BLSVerifyPoPHandler            BLSVerifyPoPHandlerFunc
-	BLSAggregateSignaturesHandler  BLSAggregateSignaturesHandlerFunc
-	BLSAggregatePublicKeysHandler  BLSAggregatePublicKeysHandlerFunc
-	HashHandler                    HashHandlerFunc
-	ExitHandler                    ExitHandlerFunc
-	interpreted                    bool
-	statement                      ast.Statement
-	debugger                       *Debugger
-	atreeValueValidationEnabled    bool
-	atreeStorageValidationEnabled  bool
-	tracingEnabled                 bool
-	// TODO: ideally this would be a weak map, but Go has no weak references
-	referencedResourceKindedValues       ReferencedResourceKindedValues
-	invalidatedResourceValidationEnabled bool
-	resourceVariables                    map[ResourceKindedValue]*Variable
-	memoryGauge                          common.MemoryGauge
-	CallStack                            *CallStack
-	baseActivation                       *VariableActivation
+	Program           *Program
+	Location          common.Location
+	sharedState       *sharedState
+	activations       *VariableActivations
+	Globals           GlobalVariables
+	Transactions      []*HostFunctionValue
+	Config            *Config
+	interpreted       bool
+	statement         ast.Statement
+	resourceVariables map[ResourceKindedValue]*Variable
 }
 
 var _ common.MemoryGauge = &Interpreter{}
-
-type Option func(*Interpreter) error
-
-// WithOnEventEmittedHandler returns an interpreter option which sets
-// the given function as the event handler.
-//
-func WithOnEventEmittedHandler(handler OnEventEmittedFunc) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetOnEventEmittedHandler(handler)
-		return nil
-	}
-}
-
-// WithOnStatementHandler returns an interpreter option which sets
-// the given function as the statement handler.
-//
-func WithOnStatementHandler(handler OnStatementFunc) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetOnStatementHandler(handler)
-		return nil
-	}
-}
-
-// WithOnLoopIterationHandler returns an interpreter option which sets
-// the given function as the loop iteration handler.
-//
-func WithOnLoopIterationHandler(handler OnLoopIterationFunc) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetOnLoopIterationHandler(handler)
-		return nil
-	}
-}
-
-// WithOnFunctionInvocationHandler returns an interpreter option which sets
-// the given function as the function invocation handler.
-//
-func WithOnFunctionInvocationHandler(handler OnFunctionInvocationFunc) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetOnFunctionInvocationHandler(handler)
-		return nil
-	}
-}
-
-// WithOnInvokedFunctionReturnHandler returns an interpreter option which sets
-// the given function as the invoked function return handler.
-//
-func WithOnInvokedFunctionReturnHandler(handler OnInvokedFunctionReturnFunc) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetOnInvokedFunctionReturnHandler(handler)
-		return nil
-	}
-}
-
-// WithMemoryGauge returns an interpreter option which sets
-// the given object as the memory gauge.
-//
-func WithMemoryGauge(memoryGauge common.MemoryGauge) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetMemoryGauge(memoryGauge)
-		return nil
-	}
-}
-
-// WithOnRecordTraceHandler returns an interpreter option which sets
-// the given function as the record trace handler.
-//
-func WithOnRecordTraceHandler(handler OnRecordTraceFunc) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetOnRecordTraceHandler(handler)
-		return nil
-	}
-}
-
-// WithOnResourceOwnerChangeHandler returns an interpreter option which sets
-// the given function as the resource owner change handler.
-//
-func WithOnResourceOwnerChangeHandler(handler OnResourceOwnerChangeFunc) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetOnResourceOwnerChangeHandler(handler)
-		return nil
-	}
-}
-
-// WithOnMeterComputationFuncHandler returns an interpreter option which sets
-// the given function as the meter computation handler.
-//
-func WithOnMeterComputationFuncHandler(handler OnMeterComputationFunc) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetOnMeterComputationHandler(handler)
-		return nil
-	}
-}
-
-// WithBaseActivation returns an interpreter option which sets the given activation
-// as the base activation. The default is the base activation BaseActivation.
-// The given activation should likely have BaseActivation as its parent.
-//
-func WithBaseActivation(baseActivation *VariableActivation) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.baseActivation = baseActivation
-		return nil
-	}
-}
-
-// WithStorage returns an interpreter option which sets the given value
-// as the function that is used for storage operations.
-//
-func WithStorage(storage Storage) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetStorage(storage)
-		return nil
-	}
-}
-
-// WithInjectedCompositeFieldsHandler returns an interpreter option which sets the given function
-// as the function that is used to initialize new composite values' fields
-//
-func WithInjectedCompositeFieldsHandler(handler InjectedCompositeFieldsHandlerFunc) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetInjectedCompositeFieldsHandler(handler)
-		return nil
-	}
-}
-
-// WithContractValueHandler returns an interpreter option which sets the given function
-// as the function that is used to handle imports of values.
-//
-func WithContractValueHandler(handler ContractValueHandlerFunc) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetContractValueHandler(handler)
-		return nil
-	}
-}
-
-// WithImportLocationHandler returns an interpreter option which sets the given function
-// as the function that is used to handle the imports of locations.
-//
-func WithImportLocationHandler(handler ImportLocationHandlerFunc) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetImportLocationHandler(handler)
-		return nil
-	}
-}
-
-// WithPublicAccountHandler returns an interpreter option which sets the given function
-// as the function that is used to handle public accounts.
-//
-func WithPublicAccountHandler(handler PublicAccountHandlerFunc) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetPublicAccountHandler(handler)
-		return nil
-	}
-}
-
-// WithUUIDHandler returns an interpreter option which sets the given function
-// as the function that is used to generate UUIDs.
-//
-func WithUUIDHandler(handler UUIDHandlerFunc) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetUUIDHandler(handler)
-		return nil
-	}
-}
-
-// WithPublicKeyValidationHandler returns an interpreter option which sets the given
-// function as the function that is used to handle public key validation.
-//
-func WithPublicKeyValidationHandler(handler PublicKeyValidationHandlerFunc) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetPublicKeyValidationHandler(handler)
-		return nil
-	}
-}
-
-// WithBLSCryptoFunctions returns an interpreter option which sets the given
-// functions as the functions used to handle certain BLS-specific crypto functions.
-//
-func WithBLSCryptoFunctions(
-	verifyPoP BLSVerifyPoPHandlerFunc,
-	aggregateSignatures BLSAggregateSignaturesHandlerFunc,
-	aggregatePublicKeys BLSAggregatePublicKeysHandlerFunc,
-) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetBLSCryptoFunctions(
-			verifyPoP,
-			aggregateSignatures,
-			aggregatePublicKeys,
-		)
-		return nil
-	}
-}
-
-// WithSignatureVerificationHandler returns an interpreter option which sets the given
-// function as the function that is used to handle signature validation.
-//
-func WithSignatureVerificationHandler(handler SignatureVerificationHandlerFunc) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetSignatureVerificationHandler(handler)
-		return nil
-	}
-}
-
-// WithHashHandler returns an interpreter option which sets the given
-// function as the function that is used to hash.
-//
-func WithHashHandler(handler HashHandlerFunc) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetHashHandler(handler)
-		return nil
-	}
-}
-
-// WithExitHandler returns an interpreter option which sets the given
-// function as the function that is used when execution is complete.
-//
-func WithExitHandler(handler ExitHandlerFunc) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetExitHandler(handler)
-		return nil
-	}
-}
-
-// WithAllInterpreters returns an interpreter option which sets
-// the given map of interpreters as the map of all interpreters.
-//
-func WithAllInterpreters(allInterpreters map[common.Location]*Interpreter) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetAllInterpreters(allInterpreters)
-		return nil
-	}
-}
-
-// WithCallStack returns an interpreter option which sets
-// the given slice of invocations as the slice of all invocations.
-//
-func WithCallStack(callStack *CallStack) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.CallStack = callStack
-		return nil
-	}
-}
-
-// WithAtreeValueValidationEnabled returns an interpreter option which sets
-// the atree validation option.
-//
-func WithAtreeValueValidationEnabled(enabled bool) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetAtreeValueValidationEnabled(enabled)
-		return nil
-	}
-}
-
-// WithAtreeStorageValidationEnabled returns an interpreter option which sets
-// the atree validation option.
-//
-func WithAtreeStorageValidationEnabled(enabled bool) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetAtreeStorageValidationEnabled(enabled)
-		return nil
-	}
-}
-
-// WithTracingEnabled returns an interpreter option which sets
-// the tracing option.
-//
-func WithTracingEnabled(enabled bool) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetTracingEnabled(enabled)
-		return nil
-	}
-}
-
-// WithInvalidatedResourceValidationEnabled returns an interpreter option which sets
-// the resource validation option.
-//
-func WithInvalidatedResourceValidationEnabled(enabled bool) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetInvalidatedResourceValidationEnabled(enabled)
-		return nil
-	}
-}
-
-// withTypeCodes returns an interpreter option which sets the type codes.
-//
-func withTypeCodes(typeCodes TypeCodes) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.setTypeCodes(typeCodes)
-		return nil
-	}
-}
-
-// withReferencedResourceKindedValues returns an interpreter option which sets the referenced values.
-//
-func withReferencedResourceKindedValues(referencedResourceKindedValues ReferencedResourceKindedValues) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.referencedResourceKindedValues = referencedResourceKindedValues
-		return nil
-	}
-}
-
-// WithDebugger returns an interpreter option which sets the given debugger
-//
-func WithDebugger(debugger *Debugger) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetDebugger(debugger)
-		return nil
-	}
-}
 
 // BaseActivation is the activation which contains all base declarations.
 // It is reused across all interpreters.
@@ -685,229 +337,50 @@ var BaseActivation = func() *VariableActivation {
 	return activation
 }()
 
-func NewInterpreter(program *Program, location common.Location, options ...Option) (*Interpreter, error) {
+func NewInterpreter(
+	program *Program,
+	location common.Location,
+	config *Config,
+) (*Interpreter, error) {
+	return newInterpreter(
+		program,
+		location,
+		newSharedState(),
+		config,
+	)
+}
+
+func newInterpreter(
+	program *Program,
+	location common.Location,
+	sharedState *sharedState,
+	config *Config,
+) (*Interpreter, error) {
 
 	interpreter := &Interpreter{
 		Program:           program,
 		Location:          location,
+		sharedState:       sharedState,
+		Config:            config,
 		Globals:           map[string]*Variable{},
 		resourceVariables: map[ResourceKindedValue]*Variable{},
-		baseActivation:    BaseActivation,
+	}
+
+	// Register self
+	if location != nil {
+		sharedState.allInterpreters[location] = interpreter
 	}
 
 	interpreter.activations = NewVariableActivations(interpreter)
 
-	err := interpreter.configure(options)
-	if err != nil {
-		return nil, err
+	baseActivation := config.BaseActivation
+	if baseActivation == nil {
+		baseActivation = BaseActivation
 	}
 
-	interpreter.activations.PushNewWithParent(interpreter.baseActivation)
+	interpreter.activations.PushNewWithParent(baseActivation)
 
 	return interpreter, nil
-}
-
-func (interpreter *Interpreter) configure(options []Option) error {
-	defaultOptions := []Option{
-		WithAllInterpreters(map[common.Location]*Interpreter{}),
-		WithCallStack(&CallStack{}),
-		withTypeCodes(TypeCodes{
-			CompositeCodes:       map[sema.TypeID]CompositeTypeCode{},
-			InterfaceCodes:       map[sema.TypeID]WrapperCode{},
-			TypeRequirementCodes: map[sema.TypeID]WrapperCode{},
-		}),
-		withReferencedResourceKindedValues(map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}{}),
-		WithInvalidatedResourceValidationEnabled(true),
-	}
-
-	for _, option := range defaultOptions {
-		err := option(interpreter)
-		if err != nil {
-			return err
-		}
-	}
-
-	for _, option := range options {
-		err := option(interpreter)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// SetOnEventEmittedHandler sets the function that is triggered when an event is emitted by the program.
-//
-func (interpreter *Interpreter) SetOnEventEmittedHandler(function OnEventEmittedFunc) {
-	interpreter.onEventEmitted = function
-}
-
-// SetOnStatementHandler sets the function that is triggered when a statement is about to be executed.
-//
-func (interpreter *Interpreter) SetOnStatementHandler(function OnStatementFunc) {
-	interpreter.onStatement = function
-}
-
-// SetOnLoopIterationHandler sets the function that is triggered when a loop iteration is about to be executed.
-//
-func (interpreter *Interpreter) SetOnLoopIterationHandler(function OnLoopIterationFunc) {
-	interpreter.onLoopIteration = function
-}
-
-// SetOnFunctionInvocationHandler sets the function that is triggered when a function invocation is about to be executed.
-//
-func (interpreter *Interpreter) SetOnFunctionInvocationHandler(function OnFunctionInvocationFunc) {
-	interpreter.onFunctionInvocation = function
-}
-
-// SetOnInvokedFunctionReturnHandler sets the function that is triggered when an invoked function returned.
-//
-func (interpreter *Interpreter) SetOnInvokedFunctionReturnHandler(function OnInvokedFunctionReturnFunc) {
-	interpreter.onInvokedFunctionReturn = function
-}
-
-// SetMemoryGauge sets the object as the memory gauge.
-//
-func (interpreter *Interpreter) SetMemoryGauge(memoryGauge common.MemoryGauge) {
-	interpreter.memoryGauge = memoryGauge
-}
-
-// SetOnRecordTraceHandler sets the function that is triggered when a trace is recorded.
-//
-func (interpreter *Interpreter) SetOnRecordTraceHandler(function OnRecordTraceFunc) {
-	interpreter.onRecordTrace = function
-}
-
-// SetOnResourceOwnerChangeHandler sets the function that is triggered when the owner of a resource changes.
-//
-func (interpreter *Interpreter) SetOnResourceOwnerChangeHandler(function OnResourceOwnerChangeFunc) {
-	interpreter.onResourceOwnerChange = function
-}
-
-// SetOnMeterComputationFuncHandler sets the function that is triggered when a computation is about to happen.
-//
-func (interpreter *Interpreter) SetOnMeterComputationHandler(function OnMeterComputationFunc) {
-	interpreter.onMeterComputation = function
-}
-
-// SetStorage sets the value that is used for storage operations.
-func (interpreter *Interpreter) SetStorage(storage Storage) {
-	interpreter.Storage = storage
-}
-
-// SetInjectedCompositeFieldsHandler sets the function that is used to initialize
-// new composite values' fields
-//
-func (interpreter *Interpreter) SetInjectedCompositeFieldsHandler(function InjectedCompositeFieldsHandlerFunc) {
-	interpreter.injectedCompositeFieldsHandler = function
-}
-
-// SetContractValueHandler sets the function that is used to handle imports of values
-//
-func (interpreter *Interpreter) SetContractValueHandler(function ContractValueHandlerFunc) {
-	interpreter.contractValueHandler = function
-}
-
-// SetImportLocationHandler sets the function that is used to handle imports of locations.
-//
-func (interpreter *Interpreter) SetImportLocationHandler(function ImportLocationHandlerFunc) {
-	interpreter.importLocationHandler = function
-}
-
-// SetPublicAccountHandler sets the function that is used to handle accounts.
-//
-func (interpreter *Interpreter) SetPublicAccountHandler(function PublicAccountHandlerFunc) {
-	interpreter.publicAccountHandler = function
-}
-
-// SetUUIDHandler sets the function that is used to handle the generation of UUIDs.
-//
-func (interpreter *Interpreter) SetUUIDHandler(function UUIDHandlerFunc) {
-	interpreter.uuidHandler = function
-}
-
-// SetPublicKeyValidationHandler sets the function that is used to handle public key validation.
-//
-func (interpreter *Interpreter) SetPublicKeyValidationHandler(function PublicKeyValidationHandlerFunc) {
-	interpreter.PublicKeyValidationHandler = function
-}
-
-// SetBLSCryptoFunctions sets the functions that are used to handle certain BLS specific crypt functions.
-//
-func (interpreter *Interpreter) SetBLSCryptoFunctions(
-	verifyPoP BLSVerifyPoPHandlerFunc,
-	aggregateSignatures BLSAggregateSignaturesHandlerFunc,
-	aggregatePublicKeys BLSAggregatePublicKeysHandlerFunc,
-) {
-	interpreter.BLSVerifyPoPHandler = verifyPoP
-	interpreter.BLSAggregateSignaturesHandler = aggregateSignatures
-	interpreter.BLSAggregatePublicKeysHandler = aggregatePublicKeys
-}
-
-// SetSignatureVerificationHandler sets the function that is used to handle signature validation.
-//
-func (interpreter *Interpreter) SetSignatureVerificationHandler(function SignatureVerificationHandlerFunc) {
-	interpreter.SignatureVerificationHandler = function
-}
-
-// SetHashHandler sets the function that is used to hash.
-//
-func (interpreter *Interpreter) SetHashHandler(function HashHandlerFunc) {
-	interpreter.HashHandler = function
-}
-
-// SetExitHandler sets the function that is used to handle end of execution.
-//
-func (interpreter *Interpreter) SetExitHandler(function ExitHandlerFunc) {
-	interpreter.ExitHandler = function
-}
-
-// SetAllInterpreters sets the given map of interpreters as the map of all interpreters.
-//
-func (interpreter *Interpreter) SetAllInterpreters(allInterpreters map[common.Location]*Interpreter) {
-	interpreter.allInterpreters = allInterpreters
-
-	// Register self
-	if interpreter.Location != nil {
-		interpreter.allInterpreters[interpreter.Location] = interpreter
-	}
-}
-
-// SetAtreeValueValidationEnabled sets the atree value validation option.
-//
-func (interpreter *Interpreter) SetAtreeValueValidationEnabled(enabled bool) {
-	interpreter.atreeValueValidationEnabled = enabled
-}
-
-// SetAtreeStorageValidationEnabled sets the atree storage validation option.
-//
-func (interpreter *Interpreter) SetAtreeStorageValidationEnabled(enabled bool) {
-	interpreter.atreeStorageValidationEnabled = enabled
-}
-
-// SetTracingEnabled sets the tracing option.
-//
-func (interpreter *Interpreter) SetTracingEnabled(enabled bool) {
-	interpreter.tracingEnabled = enabled
-}
-
-// SetInvalidatedResourceValidationEnabled sets the invalidated resource validation option.
-//
-func (interpreter *Interpreter) SetInvalidatedResourceValidationEnabled(enabled bool) {
-	interpreter.invalidatedResourceValidationEnabled = enabled
-}
-
-// setTypeCodes sets the type codes.
-//
-func (interpreter *Interpreter) setTypeCodes(typeCodes TypeCodes) {
-	interpreter.typeCodes = typeCodes
-}
-
-// SetDebugger sets the debugger.
-//
-func (interpreter *Interpreter) SetDebugger(debugger *Debugger) {
-	interpreter.debugger = debugger
 }
 
 // locationRangeGetter returns a function that returns the location range
@@ -1160,7 +633,7 @@ func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 		}
 
 		interpreterErr := err.(Error)
-		interpreterErr.StackTrace = interpreter.CallStack.Invocations[:]
+		interpreterErr.StackTrace = interpreter.sharedState.callStack.Invocations[:]
 
 		onError(interpreterErr)
 	}
@@ -1688,17 +1161,17 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	for i := len(compositeType.ExplicitInterfaceConformances) - 1; i >= 0; i-- {
 		conformance := compositeType.ExplicitInterfaceConformances[i]
 
-		wrapFunctions(interpreter.typeCodes.InterfaceCodes[conformance.ID()])
+		wrapFunctions(interpreter.sharedState.typeCodes.InterfaceCodes[conformance.ID()])
 	}
 
 	typeRequirements := compositeType.TypeRequirements()
 
 	for i := len(typeRequirements) - 1; i >= 0; i-- {
 		typeRequirement := typeRequirements[i]
-		wrapFunctions(interpreter.typeCodes.TypeRequirementCodes[typeRequirement.ID()])
+		wrapFunctions(interpreter.sharedState.typeCodes.TypeRequirementCodes[typeRequirement.ID()])
 	}
 
-	interpreter.typeCodes.CompositeCodes[compositeType.ID()] = CompositeTypeCode{
+	interpreter.sharedState.typeCodes.CompositeCodes[compositeType.ID()] = CompositeTypeCode{
 		DestructorFunction: destructorFunction,
 		CompositeFunctions: functions,
 	}
@@ -1726,8 +1199,10 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 				// Load injected fields
 				var injectedFields map[string]Value
-				if interpreter.injectedCompositeFieldsHandler != nil {
-					injectedFields = interpreter.injectedCompositeFieldsHandler(
+				injectedCompositeFieldsHandler :=
+					interpreter.Config.InjectedCompositeFieldsHandler
+				if injectedCompositeFieldsHandler != nil {
+					injectedFields = injectedCompositeFieldsHandler(
 						interpreter,
 						location,
 						qualifiedIdentifier,
@@ -1739,13 +1214,14 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 				if declaration.CompositeKind == common.CompositeKindResource {
 
-					if interpreter.uuidHandler == nil {
+					uuidHandler := interpreter.Config.UUIDHandler
+					if uuidHandler == nil {
 						panic(UUIDUnavailableError{
 							LocationRange: invocation.GetLocationRange(),
 						})
 					}
 
-					uuid, err := interpreter.uuidHandler()
+					uuid, err := uuidHandler()
 					if err != nil {
 						panic(err)
 					}
@@ -1810,7 +1286,8 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	if declaration.CompositeKind == common.CompositeKindContract {
 		variable.getter = func() Value {
 			positioned := ast.NewRangeFromPositioned(interpreter, declaration.Identifier)
-			contract := interpreter.contractValueHandler(
+
+			contract := interpreter.Config.ContractValueHandler(
 				interpreter,
 				compositeType,
 				constructorGenerator,
@@ -2426,7 +1903,7 @@ func (interpreter *Interpreter) declareInterface(
 	functionWrappers := interpreter.functionWrappers(declaration.Members, lexicalScope)
 	defaultFunctions := interpreter.defaultFunctions(declaration.Members, lexicalScope)
 
-	interpreter.typeCodes.InterfaceCodes[typeID] = WrapperCode{
+	interpreter.sharedState.typeCodes.InterfaceCodes[typeID] = WrapperCode{
 		InitializerFunctionWrapper: initializerFunctionWrapper,
 		DestructorFunctionWrapper:  destructorFunctionWrapper,
 		FunctionWrappers:           functionWrappers,
@@ -2462,7 +1939,7 @@ func (interpreter *Interpreter) declareTypeRequirement(
 	functionWrappers := interpreter.functionWrappers(declaration.Members, lexicalScope)
 	defaultFunctions := interpreter.defaultFunctions(declaration.Members, lexicalScope)
 
-	interpreter.typeCodes.TypeRequirementCodes[typeID] = WrapperCode{
+	interpreter.sharedState.typeCodes.TypeRequirementCodes[typeID] = WrapperCode{
 		InitializerFunctionWrapper: initializerFunctionWrapper,
 		DestructorFunctionWrapper:  destructorFunctionWrapper,
 		FunctionWrappers:           functionWrappers,
@@ -2651,7 +2128,7 @@ func (interpreter *Interpreter) EnsureLoaded(
 	return interpreter.ensureLoadedWithLocationHandler(
 		location,
 		func() Import {
-			return interpreter.importLocationHandler(interpreter, location)
+			return interpreter.Config.ImportLocationHandler(interpreter, location)
 		},
 	)
 }
@@ -2663,7 +2140,7 @@ func (interpreter *Interpreter) ensureLoadedWithLocationHandler(
 
 	// If a sub-interpreter already exists, return it
 
-	subInterpreter := interpreter.allInterpreters[location]
+	subInterpreter := interpreter.sharedState.allInterpreters[location]
 	if subInterpreter != nil {
 		return subInterpreter
 	}
@@ -2703,12 +2180,12 @@ func (interpreter *Interpreter) ensureLoadedWithLocationHandler(
 			subInterpreter.Globals.Set(global.Name, variable)
 		}
 
-		subInterpreter.typeCodes.
+		subInterpreter.sharedState.typeCodes.
 			Merge(virtualImport.TypeCodes)
 
 		// Virtual import does not register interpreter itself,
 		// unlike InterpreterImport
-		interpreter.allInterpreters[location] = subInterpreter
+		interpreter.sharedState.allInterpreters[location] = subInterpreter
 
 		subInterpreter.Program = &Program{
 			Elaboration: virtualImport.Elaboration,
@@ -2724,55 +2201,15 @@ func (interpreter *Interpreter) ensureLoadedWithLocationHandler(
 func (interpreter *Interpreter) NewSubInterpreter(
 	program *Program,
 	location common.Location,
-	options ...Option,
 ) (
 	*Interpreter,
 	error,
 ) {
-
-	defaultOptions := []Option{
-		WithStorage(interpreter.Storage),
-		WithBaseActivation(interpreter.baseActivation),
-		WithOnEventEmittedHandler(interpreter.onEventEmitted),
-		WithOnStatementHandler(interpreter.onStatement),
-		WithOnLoopIterationHandler(interpreter.onLoopIteration),
-		WithOnFunctionInvocationHandler(interpreter.onFunctionInvocation),
-		WithOnInvokedFunctionReturnHandler(interpreter.onInvokedFunctionReturn),
-		WithInjectedCompositeFieldsHandler(interpreter.injectedCompositeFieldsHandler),
-		WithContractValueHandler(interpreter.contractValueHandler),
-		WithImportLocationHandler(interpreter.importLocationHandler),
-		WithUUIDHandler(interpreter.uuidHandler),
-		WithAllInterpreters(interpreter.allInterpreters),
-		WithCallStack(interpreter.CallStack),
-		WithAtreeValueValidationEnabled(interpreter.atreeValueValidationEnabled),
-		WithAtreeStorageValidationEnabled(interpreter.atreeStorageValidationEnabled),
-		withTypeCodes(interpreter.typeCodes),
-		withReferencedResourceKindedValues(interpreter.referencedResourceKindedValues),
-		WithPublicAccountHandler(interpreter.publicAccountHandler),
-		WithPublicKeyValidationHandler(interpreter.PublicKeyValidationHandler),
-		WithSignatureVerificationHandler(interpreter.SignatureVerificationHandler),
-		WithHashHandler(interpreter.HashHandler),
-		WithBLSCryptoFunctions(
-			interpreter.BLSVerifyPoPHandler,
-			interpreter.BLSAggregateSignaturesHandler,
-			interpreter.BLSAggregatePublicKeysHandler,
-		),
-		WithDebugger(interpreter.debugger),
-		WithExitHandler(interpreter.ExitHandler),
-		WithTracingEnabled(interpreter.tracingEnabled),
-		WithOnRecordTraceHandler(interpreter.onRecordTrace),
-		WithOnResourceOwnerChangeHandler(interpreter.onResourceOwnerChange),
-		WithOnMeterComputationFuncHandler(interpreter.onMeterComputation),
-		WithMemoryGauge(interpreter.memoryGauge),
-	}
-
-	return NewInterpreter(
+	return newInterpreter(
 		program,
 		location,
-		append(
-			defaultOptions,
-			options...,
-		)...,
+		interpreter.sharedState,
+		interpreter.Config,
 	)
 }
 
@@ -2781,7 +2218,7 @@ func (interpreter *Interpreter) storedValueExists(
 	domain string,
 	identifier string,
 ) bool {
-	accountStorage := interpreter.Storage.GetStorageMap(storageAddress, domain, false)
+	accountStorage := interpreter.Config.Storage.GetStorageMap(storageAddress, domain, false)
 	if accountStorage == nil {
 		return false
 	}
@@ -2793,7 +2230,7 @@ func (interpreter *Interpreter) ReadStored(
 	domain string,
 	identifier string,
 ) Value {
-	accountStorage := interpreter.Storage.GetStorageMap(storageAddress, domain, false)
+	accountStorage := interpreter.Config.Storage.GetStorageMap(storageAddress, domain, false)
 	if accountStorage == nil {
 		return nil
 	}
@@ -2806,7 +2243,7 @@ func (interpreter *Interpreter) writeStored(
 	identifier string,
 	value Value,
 ) {
-	accountStorage := interpreter.Storage.GetStorageMap(storageAddress, domain, true)
+	accountStorage := interpreter.Config.Storage.GetStorageMap(storageAddress, domain, true)
 	accountStorage.WriteValue(interpreter, identifier, value)
 }
 
@@ -3674,7 +3111,7 @@ func (interpreter *Interpreter) IsSubTypeOfSemaType(subType StaticType, superTyp
 }
 
 func (interpreter *Interpreter) domainPaths(address common.Address, domain common.PathDomain) []Value {
-	storageMap := interpreter.Storage.GetStorageMap(address, domain.Identifier(), false)
+	storageMap := interpreter.Config.Storage.GetStorageMap(address, domain.Identifier(), false)
 	if storageMap == nil {
 		return []Value{}
 	}
@@ -3723,7 +3160,7 @@ func (interpreter *Interpreter) newStorageIterationFunction(addressValue Address
 
 			getLocationRange := invocation.GetLocationRange
 			inter := invocation.Interpreter
-			storageMap := interpreter.Storage.GetStorageMap(address, domain.Identifier(), false)
+			storageMap := interpreter.Config.Storage.GetStorageMap(address, domain.Identifier(), false)
 			if storageMap == nil {
 				// if nothing is stored, no iteration is required
 				return NewVoidValue(inter)
@@ -4302,7 +3739,7 @@ func (interpreter *Interpreter) GetCapabilityFinalTargetPath(
 
 func (interpreter *Interpreter) ConvertStaticToSemaType(staticType StaticType) (sema.Type, error) {
 	return ConvertStaticToSemaType(
-		interpreter.memoryGauge,
+		interpreter.Config.MemoryGauge,
 		staticType,
 		func(location common.Location, qualifiedIdentifier string) (*sema.InterfaceType, error) {
 			return interpreter.getInterfaceType(location, qualifiedIdentifier)
@@ -4328,7 +3765,7 @@ func (interpreter *Interpreter) getElaboration(location common.Location) *sema.E
 
 	inter := interpreter.EnsureLoaded(location)
 
-	subInterpreter := inter.allInterpreters[location]
+	subInterpreter := inter.sharedState.allInterpreters[location]
 	if subInterpreter == nil || subInterpreter.Program == nil {
 		return nil
 	}
@@ -4424,36 +3861,43 @@ func (interpreter *Interpreter) getInterfaceType(location common.Location, quali
 }
 
 func (interpreter *Interpreter) reportLoopIteration(pos ast.HasPosition) {
-	if interpreter.onMeterComputation != nil {
-		interpreter.onMeterComputation(common.ComputationKindLoop, 1)
+	onMeterComputation := interpreter.Config.OnMeterComputation
+	if onMeterComputation != nil {
+		onMeterComputation(common.ComputationKindLoop, 1)
 	}
 
-	if interpreter.onLoopIteration != nil {
+	onLoopIteration := interpreter.Config.OnLoopIteration
+	if onLoopIteration != nil {
 		line := pos.StartPosition().Line
-		interpreter.onLoopIteration(interpreter, line)
+		onLoopIteration(interpreter, line)
 	}
 }
 
-func (interpreter *Interpreter) reportFunctionInvocation(line int) {
-	if interpreter.onMeterComputation != nil {
-		interpreter.onMeterComputation(common.ComputationKindFunctionInvocation, 1)
+func (interpreter *Interpreter) reportFunctionInvocation() {
+	onMeterComputation := interpreter.Config.OnMeterComputation
+	if onMeterComputation != nil {
+		onMeterComputation(common.ComputationKindFunctionInvocation, 1)
 	}
-	if interpreter.onFunctionInvocation != nil {
-		interpreter.onFunctionInvocation(interpreter, line)
+
+	onFunctionInvocation := interpreter.Config.OnFunctionInvocation
+	if onFunctionInvocation != nil {
+		onFunctionInvocation(interpreter)
 	}
 }
 
-func (interpreter *Interpreter) reportInvokedFunctionReturn(line int) {
-	if interpreter.onInvokedFunctionReturn == nil {
+func (interpreter *Interpreter) reportInvokedFunctionReturn() {
+	onInvokedFunctionReturn := interpreter.Config.OnInvokedFunctionReturn
+	if onInvokedFunctionReturn == nil {
 		return
 	}
 
-	interpreter.onInvokedFunctionReturn(interpreter, line)
+	onInvokedFunctionReturn(interpreter)
 }
 
 func (interpreter *Interpreter) ReportComputation(compKind common.ComputationKind, intensity uint) {
-	if interpreter.onMeterComputation != nil {
-		interpreter.onMeterComputation(compKind, intensity)
+	onMeterComputation := interpreter.Config.OnMeterComputation
+	if onMeterComputation != nil {
+		onMeterComputation(compKind, intensity)
 	}
 }
 
@@ -4579,18 +4023,19 @@ func (interpreter *Interpreter) RemoveReferencedSlab(storable atree.Storable) {
 	}
 
 	storageID := atree.StorageID(storageIDStorable)
-	err := interpreter.Storage.Remove(storageID)
+	err := interpreter.Config.Storage.Remove(storageID)
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
 }
 
 func (interpreter *Interpreter) maybeValidateAtreeValue(v atree.Value) {
-	if interpreter.atreeValueValidationEnabled {
+	if interpreter.Config.AtreeValueValidationEnabled {
 		interpreter.ValidateAtreeValue(v)
 	}
-	if interpreter.atreeStorageValidationEnabled {
-		err := interpreter.Storage.CheckHealth()
+
+	if interpreter.Config.AtreeStorageValidationEnabled {
+		err := interpreter.Config.Storage.CheckHealth()
 		if err != nil {
 			panic(errors.NewExternalError(err))
 		}
@@ -4626,13 +4071,17 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 	}
 
 	compare := func(storable, otherStorable atree.Storable) bool {
-		value, err := storable.StoredValue(interpreter.Storage)
+		value, err := storable.StoredValue(interpreter.Config.Storage)
 		if err != nil {
 			panic(err)
 		}
 
 		if _, ok := value.(StringAtreeValue); ok {
-			equal, err := StringAtreeComparator(interpreter.Storage, value, otherStorable)
+			equal, err := StringAtreeComparator(
+				interpreter.Config.Storage,
+				value,
+				otherStorable,
+			)
 			if err != nil {
 				panic(err)
 			}
@@ -4641,7 +4090,7 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 		}
 
 		if equatableValue, ok := value.(EquatableValue); ok {
-			otherValue := StoredValue(interpreter, otherStorable, interpreter.Storage)
+			otherValue := StoredValue(interpreter, otherStorable, interpreter.Config.Storage)
 			return equatableValue.Equal(interpreter, ReturnEmptyLocationRange, otherValue)
 		}
 
@@ -4708,10 +4157,10 @@ func (interpreter *Interpreter) trackReferencedResourceKindedValue(
 	id atree.StorageID,
 	value ReferenceTrackedResourceKindedValue,
 ) {
-	values := interpreter.referencedResourceKindedValues[id]
+	values := interpreter.sharedState.referencedResourceKindedValues[id]
 	if values == nil {
 		values = map[ReferenceTrackedResourceKindedValue]struct{}{}
-		interpreter.referencedResourceKindedValues[id] = values
+		interpreter.sharedState.referencedResourceKindedValues[id] = values
 	}
 	values[value] = struct{}{}
 }
@@ -4721,7 +4170,7 @@ func (interpreter *Interpreter) updateReferencedResource(
 	newStorageID atree.StorageID,
 	updateFunc func(value ReferenceTrackedResourceKindedValue),
 ) {
-	values := interpreter.referencedResourceKindedValues[currentStorageID]
+	values := interpreter.sharedState.referencedResourceKindedValues[currentStorageID]
 	if values == nil {
 		return
 	}
@@ -4729,8 +4178,8 @@ func (interpreter *Interpreter) updateReferencedResource(
 		updateFunc(value)
 	}
 	if newStorageID != currentStorageID {
-		interpreter.referencedResourceKindedValues[newStorageID] = values
-		interpreter.referencedResourceKindedValues[currentStorageID] = nil
+		interpreter.sharedState.referencedResourceKindedValues[newStorageID] = values
+		interpreter.sharedState.referencedResourceKindedValues[currentStorageID] = nil
 	}
 }
 
@@ -4743,7 +4192,7 @@ func (interpreter *Interpreter) startResourceTracking(
 	hasPosition ast.HasPosition,
 ) {
 
-	if !interpreter.invalidatedResourceValidationEnabled ||
+	if !interpreter.Config.InvalidatedResourceValidationEnabled ||
 		identifier == sema.SelfIdentifier {
 		return
 	}
@@ -4782,7 +4231,7 @@ func (interpreter *Interpreter) checkInvalidatedResourceUse(
 	hasPosition ast.HasPosition,
 ) {
 
-	if !interpreter.invalidatedResourceValidationEnabled ||
+	if !interpreter.Config.InvalidatedResourceValidationEnabled ||
 		identifier == sema.SelfIdentifier {
 		return
 	}
@@ -4826,7 +4275,7 @@ func (interpreter *Interpreter) resourceForValidation(value Value) ResourceKinde
 }
 
 func (interpreter *Interpreter) invalidateResource(value Value) {
-	if !interpreter.invalidatedResourceValidationEnabled {
+	if !interpreter.Config.InvalidatedResourceValidationEnabled {
 		return
 	}
 
@@ -4846,9 +4295,7 @@ func (interpreter *Interpreter) invalidateResource(value Value) {
 // MeterMemory delegates the memory usage to the interpreter's memory gauge, if any.
 //
 func (interpreter *Interpreter) MeterMemory(usage common.MemoryUsage) error {
-	if interpreter != nil {
-		common.UseMemory(interpreter.memoryGauge, usage)
-	}
+	common.UseMemory(interpreter.Config.MemoryGauge, usage)
 	return nil
 }
 

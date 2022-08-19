@@ -40,7 +40,7 @@ func (interpreter *Interpreter) VisitImportDeclaration(declaration *ast.ImportDe
 func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.ResolvedLocation) {
 
 	// tracing
-	if interpreter.tracingEnabled {
+	if interpreter.Config.TracingEnabled {
 		startTime := time.Now()
 		defer func() {
 			interpreter.reportImportTrace(

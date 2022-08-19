@@ -77,8 +77,8 @@ func TestInterpretTransferCheck(t *testing.T) {
 					sema.WithBaseTypeActivation(baseTypeActivation),
 					sema.WithBaseValueActivation(baseValueActivation),
 				},
-				Options: []interpreter.Option{
-					interpreter.WithBaseActivation(baseActivation),
+				Config: &interpreter.Config{
+					BaseActivation: baseActivation,
 				},
 			},
 		)
@@ -120,8 +120,8 @@ func TestInterpretTransferCheck(t *testing.T) {
               }
             `,
 			ParseCheckAndInterpretOptions{
-				Options: []interpreter.Option{
-					makeContractValueHandler(nil, nil, nil),
+				Config: &interpreter.Config{
+					ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 				},
 			},
 		)
@@ -161,8 +161,8 @@ func TestInterpretTransferCheck(t *testing.T) {
               }
             `,
 			ParseCheckAndInterpretOptions{
-				Options: []interpreter.Option{
-					makeContractValueHandler(nil, nil, nil),
+				Config: &interpreter.Config{
+					ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 				},
 			},
 		)

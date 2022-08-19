@@ -69,8 +69,8 @@ func TestInterpretEquality(t *testing.T) {
               let res2 = maybeCapNil == nil
 		    `,
 			ParseCheckAndInterpretOptions{
-				Options: []interpreter.Option{
-					interpreter.WithBaseActivation(baseActivation),
+				Config: &interpreter.Config{
+					BaseActivation: baseActivation,
 				},
 				CheckerOptions: []sema.Option{
 					sema.WithBaseValueActivation(baseValueActivation),

@@ -65,8 +65,10 @@ func testInterpreter(t *testing.T, code string, valueDeclaration StandardLibrary
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
 		checker.Location,
-		interpreter.WithStorage(storage),
-		interpreter.WithBaseActivation(baseActivation),
+		&interpreter.Config{
+			Storage:        storage,
+			BaseActivation: baseActivation,
+		},
 	)
 	require.NoError(t, err)
 
