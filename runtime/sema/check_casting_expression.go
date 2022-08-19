@@ -124,7 +124,7 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 						Range:        ast.NewRangeFromPositioned(checker.memoryGauge, leftHandExpression),
 					},
 				)
-			} else if checker.extendedElaboration {
+			} else if checker.Config.ExtendedElaborationEnabled {
 				checker.Elaboration.RuntimeCastTypes[expression] =
 					RuntimeCastTypes{
 						Left:  leftHandType,
@@ -144,7 +144,7 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 		// the inferred-type of the expression. i.e: exprActualType == rightHandType
 		// Then, it is not possible to determine whether the target type is redundant.
 		// Therefore, don't check for redundant casts, if there are errors.
-		if checker.extendedElaboration && !hasErrors {
+		if checker.Config.ExtendedElaborationEnabled && !hasErrors {
 			checker.Elaboration.StaticCastTypes[expression] =
 				CastTypes{
 					ExprActualType: exprActualType,

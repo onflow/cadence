@@ -43,8 +43,8 @@ func parseAndCheckWithTestValue(t *testing.T, code string, ty sema.Type) (*sema.
 	return ParseAndCheckWithOptions(t,
 		code,
 		ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithBaseValueActivation(baseValueActivation),
+			Config: &sema.Config{
+				BaseValueActivation: baseValueActivation,
 			},
 		},
 	)

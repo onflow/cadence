@@ -139,8 +139,8 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
               let result = Type<Int>() == unknownType
             `,
 			ParseCheckAndInterpretOptions{
-				CheckerOptions: []sema.Option{
-					sema.WithBaseValueActivation(baseValueActivation),
+				CheckerConfig: &sema.Config{
+					BaseValueActivation: baseValueActivation,
 				},
 				Config: &interpreter.Config{
 					BaseActivation: baseActivation,
@@ -195,8 +195,8 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
               let result = unknownType1 == unknownType2
             `,
 			ParseCheckAndInterpretOptions{
-				CheckerOptions: []sema.Option{
-					sema.WithBaseValueActivation(baseValueActivation),
+				CheckerConfig: &sema.Config{
+					BaseValueActivation: baseValueActivation,
 				},
 				Config: &interpreter.Config{
 					BaseActivation: baseActivation,
@@ -284,8 +284,8 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
               let identifier = unknownType.identifier
             `,
 			ParseCheckAndInterpretOptions{
-				CheckerOptions: []sema.Option{
-					sema.WithBaseValueActivation(baseValueActivation),
+				CheckerConfig: &sema.Config{
+					BaseValueActivation: baseValueActivation,
 				},
 				Config: &interpreter.Config{
 					BaseActivation: baseActivation,
@@ -410,8 +410,8 @@ func TestInterpretIsInstance(t *testing.T) {
 	for _, testCase := range cases {
 		t.Run(testCase.name, func(t *testing.T) {
 			inter, err := parseCheckAndInterpretWithOptions(t, testCase.code, ParseCheckAndInterpretOptions{
-				CheckerOptions: []sema.Option{
-					sema.WithBaseValueActivation(baseValueActivation),
+				CheckerConfig: &sema.Config{
+					BaseValueActivation: baseValueActivation,
 				},
 				Config: &interpreter.Config{
 					BaseActivation: baseActivation,
@@ -550,8 +550,8 @@ func TestInterpretIsSubtype(t *testing.T) {
 	for _, testCase := range cases {
 		t.Run(testCase.name, func(t *testing.T) {
 			inter, err := parseCheckAndInterpretWithOptions(t, testCase.code, ParseCheckAndInterpretOptions{
-				CheckerOptions: []sema.Option{
-					sema.WithBaseValueActivation(baseValueActivation),
+				CheckerConfig: &sema.Config{
+					BaseValueActivation: baseValueActivation,
 				},
 				Config: &interpreter.Config{
 					BaseActivation: baseActivation,
@@ -718,8 +718,8 @@ func TestInterpretGetType(t *testing.T) {
 			inter, err := parseCheckAndInterpretWithOptions(t,
 				testCase.code,
 				ParseCheckAndInterpretOptions{
-					CheckerOptions: []sema.Option{
-						sema.WithBaseValueActivation(baseValueActivation),
+					CheckerConfig: &sema.Config{
+						BaseValueActivation: baseValueActivation,
 					},
 					Config: &interpreter.Config{
 						Storage:        storage,

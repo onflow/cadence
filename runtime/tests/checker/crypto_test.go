@@ -47,8 +47,8 @@ func TestCheckHashAlgorithmCases(t *testing.T) {
 				algorithm.Name(),
 			),
 			ParseAndCheckOptions{
-				Options: []sema.Option{
-					sema.WithBaseValueActivation(baseValueActivation),
+				Config: &sema.Config{
+					BaseValueActivation: baseValueActivation,
 				},
 			},
 		)
@@ -73,8 +73,8 @@ func TestCheckHashAlgorithmConstructor(t *testing.T) {
            let algo = HashAlgorithm(rawValue: 0)
         `,
 		ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithBaseValueActivation(baseValueActivation),
+			Config: &sema.Config{
+				BaseValueActivation: baseValueActivation,
 			},
 		},
 	)
@@ -96,8 +96,8 @@ func TestCheckHashAlgorithmHashFunctions(t *testing.T) {
            let result2: [UInt8] = HashAlgorithm.SHA2_256.hashWithTag(data, tag: "tag")
         `,
 		ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithBaseValueActivation(baseValueActivation),
+			Config: &sema.Config{
+				BaseValueActivation: baseValueActivation,
 			},
 		},
 	)
@@ -122,8 +122,8 @@ func TestCheckSignatureAlgorithmCases(t *testing.T) {
 				algorithm.Name(),
 			),
 			ParseAndCheckOptions{
-				Options: []sema.Option{
-					sema.WithBaseValueActivation(baseValueActivation),
+				Config: &sema.Config{
+					BaseValueActivation: baseValueActivation,
 				},
 			},
 		)
@@ -148,8 +148,8 @@ func TestCheckSignatureAlgorithmConstructor(t *testing.T) {
            let algo = SignatureAlgorithm(rawValue: 0)
         `,
 		ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithBaseValueActivation(baseValueActivation),
+			Config: &sema.Config{
+				BaseValueActivation: baseValueActivation,
 			},
 		},
 	)
@@ -175,8 +175,8 @@ func TestCheckVerifyPoP(t *testing.T) {
            let x: Bool = key.verifyPoP([1, 2, 3])
         `,
 		ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithBaseValueActivation(baseValueActivation),
+			Config: &sema.Config{
+				BaseValueActivation: baseValueActivation,
 			},
 		},
 	)
@@ -202,8 +202,8 @@ func TestCheckVerifyPoPInvalidArgument(t *testing.T) {
            let x: Int = key.verifyPoP([1 as Int32, 2, 3])
         `,
 		ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithBaseValueActivation(baseValueActivation),
+			Config: &sema.Config{
+				BaseValueActivation: baseValueActivation,
 			},
 		},
 	)
@@ -226,8 +226,8 @@ func TestCheckBLSAggregateSignatures(t *testing.T) {
            let r: [UInt8] = BLS.aggregateSignatures([[1 as UInt8, 2, 3], []])!
         `,
 		ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithBaseValueActivation(baseValueActivation),
+			Config: &sema.Config{
+				BaseValueActivation: baseValueActivation,
 			},
 		},
 	)
@@ -247,8 +247,8 @@ func TestCheckInvalidBLSAggregateSignatures(t *testing.T) {
            let r: [UInt16] = BLS.aggregateSignatures([[1 as UInt32, 2, 3], []])!
         `,
 		ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithBaseValueActivation(baseValueActivation),
+			Config: &sema.Config{
+				BaseValueActivation: baseValueActivation,
 			},
 		},
 	)
@@ -278,8 +278,8 @@ func TestCheckBLSAggregatePublicKeys(t *testing.T) {
            ])!
         `,
 		ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithBaseValueActivation(baseValueActivation),
+			Config: &sema.Config{
+				BaseValueActivation: baseValueActivation,
 			},
 		},
 	)
@@ -301,8 +301,8 @@ func TestCheckInvalidBLSAggregatePublicKeys(t *testing.T) {
            let r: [PublicKey] = BLS.aggregatePublicKeys([1])!
         `,
 		ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithBaseValueActivation(baseValueActivation),
+			Config: &sema.Config{
+				BaseValueActivation: baseValueActivation,
 			},
 		},
 	)

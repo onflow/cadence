@@ -41,30 +41,19 @@ type REPL struct {
 func NewREPL(
 	onError func(err error, location Location, codes map[Location]string),
 	onResult func(interpreter.Value),
-	checkerOptions []sema.Option,
 ) (*REPL, error) {
 
 	checkers := map[Location]*sema.Checker{}
 	codes := map[Location]string{}
 
-	defaultCheckerOptions := cmd.DefaultCheckerOptions(checkers, codes)
-
-	defaultCheckerOptions = append(
-		defaultCheckerOptions,
-		sema.WithAccessCheckMode(sema.AccessCheckModeNotSpecifiedUnrestricted),
-	)
-
-	checkerOptions = append(
-		defaultCheckerOptions,
-		checkerOptions...,
-	)
+	checkerConfig := cmd.DefaultCheckerConfig(checkers, codes)
+	checkerConfig.AccessCheckMode = sema.AccessCheckModeNotSpecifiedUnrestricted
 
 	checker, err := sema.NewChecker(
 		nil,
 		common.REPLLocation{},
 		nil,
-		false,
-		checkerOptions...,
+		checkerConfig,
 	)
 	if err != nil {
 		return nil, err
@@ -77,7 +66,7 @@ func NewREPL(
 	// NOTE: storage option must be provided *before* the predeclared values option,
 	// as predeclared values may rely on storage
 
-	config := &interpreter.Config{
+	interpreterConfig := &interpreter.Config{
 		Storage: storage,
 		UUIDHandler: func() (uint64, error) {
 			defer func() { uuid++ }()
@@ -88,7 +77,7 @@ func NewREPL(
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
 		checker.Location,
-		config,
+		interpreterConfig,
 	)
 	if err != nil {
 		return nil, err

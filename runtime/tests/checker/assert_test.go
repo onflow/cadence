@@ -41,8 +41,8 @@ func TestCheckAssertWithoutMessage(t *testing.T) {
             }
         `,
 		ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithBaseValueActivation(baseValueActivation),
+			Config: &sema.Config{
+				BaseValueActivation: baseValueActivation,
 			},
 		},
 	)
@@ -64,8 +64,8 @@ func TestCheckAssertWithMessage(t *testing.T) {
             }
         `,
 		ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithBaseValueActivation(baseValueActivation),
+			Config: &sema.Config{
+				BaseValueActivation: baseValueActivation,
 			},
 		},
 	)

@@ -70,19 +70,17 @@ func TestInterpretStatementHandler(t *testing.T) {
           }
         `,
 		checker.ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithImportHandler(
-					func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
-						assert.Equal(t,
-							utils.ImportedLocation,
-							importedLocation,
-						)
+			Config: &sema.Config{
+				ImportHandler: func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
+					assert.Equal(t,
+						utils.ImportedLocation,
+						importedLocation,
+					)
 
-						return sema.ElaborationImport{
-							Elaboration: importedChecker.Elaboration,
-						}, nil
-					},
-				),
+					return sema.ElaborationImport{
+						Elaboration: importedChecker.Elaboration,
+					}, nil
+				},
 			},
 		},
 	)
@@ -196,19 +194,17 @@ func TestInterpretLoopIterationHandler(t *testing.T) {
           }
         `,
 		checker.ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithImportHandler(
-					func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
-						assert.Equal(t,
-							utils.ImportedLocation,
-							importedLocation,
-						)
+			Config: &sema.Config{
+				ImportHandler: func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
+					assert.Equal(t,
+						utils.ImportedLocation,
+						importedLocation,
+					)
 
-						return sema.ElaborationImport{
-							Elaboration: importedChecker.Elaboration,
-						}, nil
-					},
-				),
+					return sema.ElaborationImport{
+						Elaboration: importedChecker.Elaboration,
+					}, nil
+				},
 			},
 		},
 	)
@@ -333,28 +329,21 @@ func TestInterpretFunctionInvocationHandler(t *testing.T) {
           }
         `,
 		checker.ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithImportHandler(
-					func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
-						assert.Equal(t,
-							utils.ImportedLocation,
-							importedLocation,
-						)
+			Config: &sema.Config{
+				ImportHandler: func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
+					assert.Equal(t,
+						utils.ImportedLocation,
+						importedLocation,
+					)
 
-						return sema.ElaborationImport{
-							Elaboration: importedChecker.Elaboration,
-						}, nil
-					},
-				),
+					return sema.ElaborationImport{
+						Elaboration: importedChecker.Elaboration,
+					}, nil
+				},
 			},
 		},
 	)
 	require.NoError(t, err)
-
-	type occurrence struct {
-		interpreterID int
-		line          int
-	}
 
 	var occurrences []int
 	var nextInterpreterID int

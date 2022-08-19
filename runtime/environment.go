@@ -72,7 +72,9 @@ type interpreterEnvironment struct {
 	codesAndPrograms                      codesAndPrograms
 	deployedContractConstructorInvocation *stdlib.DeployedContractConstructorInvocation
 	interpreterConfig                     *interpreter.Config
+	checkerConfig                         *sema.Config
 	stackDepthLimiter                     *stackDepthLimiter
+	checkedImports                        importResolutionResults
 }
 
 var _ Environment = &interpreterEnvironment{}
@@ -97,6 +99,7 @@ func newInterpreterEnvironment(config Config) *interpreterEnvironment {
 		stackDepthLimiter:   newStackDepthLimiter(config.StackDepthLimit),
 	}
 	env.interpreterConfig = env.newInterpreterConfig()
+	env.checkerConfig = env.newCheckerConfig()
 	return env
 }
 
@@ -133,6 +136,17 @@ func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
 		OnMeterComputation:            e.newOnMeterComputation(),
 		OnFunctionInvocation:          e.newOnFunctionInvocationHandler(),
 		OnInvokedFunctionReturn:       e.newOnInvokedFunctionReturnHandler(),
+	}
+}
+
+func (e *interpreterEnvironment) newCheckerConfig() *sema.Config {
+	return &sema.Config{
+		AccessCheckMode:                  sema.AccessCheckModeStrict,
+		BaseValueActivation:              e.baseValueActivation,
+		ValidTopLevelDeclarationsHandler: validTopLevelDeclarations,
+		LocationHandler:                  e.newLocationHandler(),
+		ImportHandler:                    e.resolveImport,
+		CheckHandler:                     e.newCheckHandler(),
 	}
 }
 
@@ -396,17 +410,13 @@ func (e *interpreterEnvironment) check(
 	elaboration *sema.Elaboration,
 	err error,
 ) {
+	e.checkedImports = checkedImports
+
 	checker, err := sema.NewChecker(
 		program,
 		location,
 		e,
-		false,
-		sema.WithBaseValueActivation(e.baseValueActivation),
-		sema.WithValidTopLevelDeclarationsHandler(validTopLevelDeclarations),
-		sema.WithLocationHandler(e.newLocationHandler()),
-		// TODO: should only depend on environment, so configuration can be reused
-		sema.WithImportHandler(e.newImportHandler(checkedImports)),
-		sema.WithCheckHandler(e.newCheckHandler()),
+		e.checkerConfig,
 	)
 	if err != nil {
 		return nil, err
@@ -443,43 +453,41 @@ func (e *interpreterEnvironment) newCheckHandler() sema.CheckHandlerFunc {
 	}
 }
 
-func (e *interpreterEnvironment) newImportHandler(checkedImports importResolutionResults) sema.ImportHandlerFunc {
-	return func(
-		checker *sema.Checker,
-		importedLocation common.Location,
-		importRange ast.Range,
-	) (sema.Import, error) {
+func (e *interpreterEnvironment) resolveImport(
+	_ *sema.Checker,
+	importedLocation common.Location,
+	importRange ast.Range,
+) (sema.Import, error) {
 
-		var elaboration *sema.Elaboration
-		switch importedLocation {
-		case stdlib.CryptoChecker.Location:
-			elaboration = stdlib.CryptoChecker.Elaboration
+	var elaboration *sema.Elaboration
+	switch importedLocation {
+	case stdlib.CryptoChecker.Location:
+		elaboration = stdlib.CryptoChecker.Elaboration
 
-		default:
+	default:
 
-			// Check for cyclic imports
-			if checkedImports[importedLocation] {
-				return nil, &sema.CyclicImportsError{
-					Location: importedLocation,
-					Range:    importRange,
-				}
-			} else {
-				checkedImports[importedLocation] = true
-				defer delete(checkedImports, importedLocation)
+		// Check for cyclic imports
+		if e.checkedImports[importedLocation] {
+			return nil, &sema.CyclicImportsError{
+				Location: importedLocation,
+				Range:    importRange,
 			}
-
-			program, err := e.getProgram(importedLocation, checkedImports)
-			if err != nil {
-				return nil, err
-			}
-
-			elaboration = program.Elaboration
+		} else {
+			e.checkedImports[importedLocation] = true
+			defer delete(e.checkedImports, importedLocation)
 		}
 
-		return sema.ElaborationImport{
-			Elaboration: elaboration,
-		}, nil
+		program, err := e.getProgram(importedLocation, e.checkedImports)
+		if err != nil {
+			return nil, err
+		}
+
+		elaboration = program.Elaboration
 	}
+
+	return sema.ElaborationImport{
+		Elaboration: elaboration,
+	}, nil
 }
 
 func (e *interpreterEnvironment) GetProgram(location Location) (*interpreter.Program, error) {

@@ -140,15 +140,15 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		code,
 		ParseCheckAndInterpretOptions{
-			CheckerOptions: []sema.Option{
-				sema.WithBaseValueActivation(baseValueActivation),
-				sema.WithBaseTypeActivation(baseTypeActivation),
-				sema.WithCheckHandler(func(checker *sema.Checker, check func()) {
+			CheckerConfig: &sema.Config{
+				BaseValueActivation: baseValueActivation,
+				BaseTypeActivation:  baseTypeActivation,
+				CheckHandler: func(checker *sema.Checker, check func()) {
 					if checker.Location == TestLocation {
 						checker.Elaboration.CompositeTypes[fruitType.ID()] = fruitType
 					}
 					check()
-				}),
+				},
 			},
 			Config: &interpreter.Config{
 				Storage:        storage,

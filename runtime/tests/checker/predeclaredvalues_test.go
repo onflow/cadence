@@ -52,8 +52,8 @@ func TestCheckPredeclaredValues(t *testing.T) {
             }
         `,
 		ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithBaseValueActivation(baseValueActivation),
+			Config: &sema.Config{
+				BaseValueActivation: baseValueActivation,
 			},
 		},
 	)

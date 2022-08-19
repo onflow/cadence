@@ -47,7 +47,7 @@ func ParseAndCheck(t *testing.T, code string) (*sema.Checker, error) {
 type ParseAndCheckOptions struct {
 	Location         common.Location
 	IgnoreParseError bool
-	Options          []sema.Option
+	Config           *sema.Config
 }
 
 var checkConcurrently = flag.Int(
@@ -90,19 +90,21 @@ func ParseAndCheckWithOptionsAndMemoryMetering(
 
 	check := func() (*sema.Checker, error) {
 
-		checkerOptions := append(
-			[]sema.Option{
-				sema.WithAccessCheckMode(sema.AccessCheckModeNotSpecifiedUnrestricted),
-			},
-			options.Options...,
-		)
+		config := options.Config
+		if config == nil {
+			config = &sema.Config{}
+		}
+
+		if config.AccessCheckMode == sema.AccessCheckModeDefault {
+			config.AccessCheckMode = sema.AccessCheckModeNotSpecifiedUnrestricted
+		}
+		config.ExtendedElaborationEnabled = true
 
 		checker, err := sema.NewChecker(
 			program,
 			options.Location,
 			memoryGauge,
-			true,
-			checkerOptions...,
+			config,
 		)
 		if err != nil {
 			return checker, err

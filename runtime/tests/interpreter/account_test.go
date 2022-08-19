@@ -99,8 +99,8 @@ func testAccount(
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		code,
 		ParseCheckAndInterpretOptions{
-			CheckerOptions: []sema.Option{
-				sema.WithBaseValueActivation(baseValueActivation),
+			CheckerConfig: &sema.Config{
+				BaseValueActivation: baseValueActivation,
 			},
 			Config: &interpreter.Config{
 				BaseActivation:       baseActivation,

@@ -3273,7 +3273,7 @@ func numberFunctionArgumentExpressionsChecker(targetType Type) ArgumentExpressio
 		switch argument := argument.(type) {
 		case *ast.IntegerExpression:
 			if CheckIntegerLiteral(nil, argument, targetType, checker.report) {
-				if checker.extendedElaboration {
+				if checker.Config.ExtendedElaborationEnabled {
 					checker.Elaboration.NumberConversionArgumentTypes[argument] = struct {
 						Type  Type
 						Range ast.Range
@@ -3283,7 +3283,7 @@ func numberFunctionArgumentExpressionsChecker(targetType Type) ArgumentExpressio
 
 		case *ast.FixedPointExpression:
 			if CheckFixedPointLiteral(nil, argument, targetType, checker.report) {
-				if checker.extendedElaboration {
+				if checker.Config.ExtendedElaborationEnabled {
 					checker.Elaboration.NumberConversionArgumentTypes[argument] = struct {
 						Type  Type
 						Range ast.Range
@@ -3297,7 +3297,7 @@ func numberFunctionArgumentExpressionsChecker(targetType Type) ArgumentExpressio
 func init() {
 
 	// Declare a function for the string type.
-	// For now it has no parameters and creates an empty string
+	// For now, it has no parameters and creates an empty string
 
 	typeName := StringType.String()
 

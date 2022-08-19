@@ -134,22 +134,10 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 
 	arguments := invocationExpression.Arguments
 
-	if checker.positionInfoEnabled && len(arguments) > 0 {
-
-		trailingSeparatorPositions := make([]ast.Position, 0, len(arguments))
-
-		for _, argument := range arguments {
-			trailingSeparatorPositions = append(
-				trailingSeparatorPositions,
-				argument.TrailingSeparatorPos,
-			)
-		}
-
-		checker.FunctionInvocations.Put(
-			invocationExpression.ArgumentsStartPos,
-			invocationExpression.EndPos,
+	if checker.PositionInfo != nil && len(arguments) > 0 {
+		checker.PositionInfo.recordFunctionInvocation(
+			invocationExpression,
 			functionType,
-			trailingSeparatorPositions,
 		)
 	}
 
