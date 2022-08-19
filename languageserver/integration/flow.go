@@ -211,11 +211,12 @@ func (f *flowkitClient) DeployContract(
 	account := createSigner(address, service)
 	return f.services.Accounts.AddContract(
 		account,
-		name,
-		code,
-		nil,
-		codeFilename,
-		config.DefaultEmulatorNetwork().Name,
+		&services.Contract{
+			Name:     name,
+			Source:   code,
+			Filename: codeFilename,
+			Network:  config.DefaultEmulatorNetwork().Name,
+		},
 		updateExisting,
 	)
 }
