@@ -3111,7 +3111,7 @@ func (interpreter *Interpreter) IsSubTypeOfSemaType(subType StaticType, superTyp
 }
 
 func (interpreter *Interpreter) domainPaths(address common.Address, domain common.PathDomain) []Value {
-	storageMap := interpreter.Storage.GetStorageMap(address, domain.Identifier(), false)
+	storageMap := interpreter.Config.Storage.GetStorageMap(address, domain.Identifier(), false)
 	if storageMap == nil {
 		return []Value{}
 	}
@@ -3160,7 +3160,7 @@ func (interpreter *Interpreter) newStorageIterationFunction(addressValue Address
 
 			getLocationRange := invocation.GetLocationRange
 			inter := invocation.Interpreter
-			storageMap := interpreter.Storage.GetStorageMap(address, domain.Identifier(), false)
+			storageMap := interpreter.Config.Storage.GetStorageMap(address, domain.Identifier(), false)
 			if storageMap == nil {
 				// if nothing is stored, no iteration is required
 				return NewVoidValue(inter)
