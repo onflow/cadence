@@ -54,14 +54,12 @@ var signatureAlgorithmConstructorValue = cryptoAlgorithmEnumValue(
 	NewSignatureAlgorithmCase,
 )
 
-var signatureAlgorithmConstructor = StandardLibraryValue{
+var SignatureAlgorithmConstructor = StandardLibraryValue{
 	Name: sema.SignatureAlgorithmTypeName,
 	Type: cryptoAlgorithmEnumConstructorType(
 		sema.SignatureAlgorithmType,
 		sema.SignatureAlgorithms,
 	),
-	ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
-		return signatureAlgorithmConstructorValue
-	},
-	Kind: common.DeclarationKindEnum,
+	Value: signatureAlgorithmConstructorValue,
+	Kind:  common.DeclarationKindEnum,
 }

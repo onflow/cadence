@@ -23,50 +23,46 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-var LogFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{
-		{
-			Label:      sema.ArgumentLabelNotRequired,
-			Identifier: "value",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.AnyStructType,
-			),
-		},
-	},
+const unsafeRandomFunctionDocString = `
+Returns a pseudo-random number.
+
+NOTE: The use of this function is unsafe if not used correctly.
+
+Follow best practices to prevent security issues when using this function
+`
+
+var unsafeRandomFunctionType = &sema.FunctionType{
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		sema.VoidType,
+		sema.UInt64Type,
 	),
 }
 
-const logFunctionDocString = `
-Logs a string representation of the given value
-`
-
-type Logger interface {
-	// ProgramLog logs program logs.
-	ProgramLog(message string) error
+type UnsafeRandomGenerator interface {
+	// UnsafeRandom returns a random uint64,
+	// where the process of random number derivation is not cryptographically secure.
+	UnsafeRandom() (uint64, error)
 }
 
-func NewLogFunction(logger Logger) StandardLibraryValue {
+func NewUnsafeRandomFunction(generator UnsafeRandomGenerator) StandardLibraryValue {
 	return NewStandardLibraryFunction(
-		"log",
-		LogFunctionType,
-		logFunctionDocString,
+		"unsafeRandom",
+		unsafeRandomFunctionType,
+		unsafeRandomFunctionDocString,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			value := invocation.Arguments[0]
-
-			memoryGauge := invocation.Interpreter
-			message := value.MeteredString(memoryGauge, interpreter.SeenReferences{})
-
-			var err error
-			wrapPanic(func() {
-				err = logger.ProgramLog(message)
-			})
-			if err != nil {
-				panic(err)
-			}
-
-			return interpreter.NewVoidValue(memoryGauge)
+			return interpreter.NewUInt64Value(
+				invocation.Interpreter,
+				func() uint64 {
+					var rand uint64
+					var err error
+					wrapPanic(func() {
+						rand, err = generator.UnsafeRandom()
+					})
+					if err != nil {
+						panic(err)
+					}
+					return rand
+				},
+			)
 		},
 	)
 }

@@ -3488,6 +3488,7 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 			},
 		),
 	}
+
 	capabilityValueDeclaration := stdlib.StandardLibraryValue{
 		Name: "cap",
 		Type: &sema.CapabilityType{
@@ -3495,22 +3496,22 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 				Type: structType,
 			},
 		},
-		ValueFactory: func(_ *interpreter.Interpreter) interpreter.Value {
-			return capabilityValue
-		},
-		Kind: common.DeclarationKindConstant,
+		Value: capabilityValue,
+		Kind:  common.DeclarationKindConstant,
 	}
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(capabilityValueDeclaration)
+
+	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+	baseActivation.Declare(capabilityValueDeclaration)
 
 	options := ParseCheckAndInterpretOptions{
 		CheckerOptions: []sema.Option{
-			sema.WithPredeclaredValues([]sema.ValueDeclaration{
-				capabilityValueDeclaration,
-			}),
+			sema.WithBaseValueActivation(baseValueActivation),
 		},
 		Options: []interpreter.Option{
-			interpreter.WithPredeclaredValues([]interpreter.ValueDeclaration{
-				capabilityValueDeclaration,
-			}),
+			interpreter.WithBaseActivation(baseActivation),
 		},
 	}
 

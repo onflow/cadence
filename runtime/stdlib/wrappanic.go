@@ -16,35 +16,28 @@
  * limitations under the License.
  */
 
-package runtime
+package stdlib
 
 import (
-	"github.com/onflow/cadence/runtime/ast"
+	goRuntime "runtime"
+
+	"github.com/onflow/cadence/runtime/errors"
 )
 
-type Context struct {
-	Interface      Interface
-	Location       Location
-	Environment    Environment
-	CoverageReport *CoverageReport
-}
+func wrapPanic(f func()) {
+	defer func() {
+		if r := recover(); r != nil {
+			// don't wrap Go errors and internal errors
+			switch r := r.(type) {
+			case goRuntime.Error, errors.InternalError:
+				panic(r)
+			default:
+				panic(errors.ExternalError{
+					Recovered: r,
+				})
+			}
 
-type codesAndPrograms struct {
-	codes    map[Location][]byte
-	programs map[Location]*ast.Program
-}
-
-func (c codesAndPrograms) setCode(location Location, code []byte) {
-	c.codes[location] = code
-}
-
-func (c codesAndPrograms) setProgram(location Location, program *ast.Program) {
-	c.programs[location] = program
-}
-
-func newCodesAndPrograms() codesAndPrograms {
-	return codesAndPrograms{
-		codes:    map[Location][]byte{},
-		programs: map[Location]*ast.Program{},
-	}
+		}
+	}()
+	f()
 }

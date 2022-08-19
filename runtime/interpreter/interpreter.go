@@ -170,7 +170,6 @@ type ImportLocationHandlerFunc func(
 // The account returned must be of type `PublicAccount`.
 //
 type PublicAccountHandlerFunc func(
-	inter *Interpreter,
 	address AddressValue,
 ) Value
 
@@ -324,8 +323,6 @@ type ReferencedResourceKindedValues map[atree.StorageID]map[ReferenceTrackedReso
 type Interpreter struct {
 	Program                        *Program
 	Location                       common.Location
-	PredeclaredValues              []ValueDeclaration
-	effectivePredeclaredValues     map[string]ValueDeclaration
 	activations                    *VariableActivations
 	Globals                        GlobalVariables
 	allInterpreters                map[common.Location]*Interpreter
@@ -364,6 +361,7 @@ type Interpreter struct {
 	resourceVariables                    map[ResourceKindedValue]*Variable
 	memoryGauge                          common.MemoryGauge
 	CallStack                            *CallStack
+	baseActivation                       *VariableActivation
 }
 
 var _ common.MemoryGauge = &Interpreter{}
@@ -460,23 +458,13 @@ func WithOnMeterComputationFuncHandler(handler OnMeterComputationFunc) Option {
 	}
 }
 
-// WithPredeclaredValues returns an interpreter option which declares
-// the given the predeclared values.
+// WithBaseActivation returns an interpreter option which sets the given activation
+// as the base activation. The default is the base activation BaseActivation.
+// The given activation should likely have BaseActivation as its parent.
 //
-func WithPredeclaredValues(predeclaredValues []ValueDeclaration) Option {
+func WithBaseActivation(baseActivation *VariableActivation) Option {
 	return func(interpreter *Interpreter) error {
-		interpreter.PredeclaredValues = predeclaredValues
-
-		for _, declaration := range predeclaredValues {
-			variable := interpreter.declareValue(declaration)
-			if variable == nil {
-				continue
-			}
-			name := declaration.ValueDeclarationName()
-			interpreter.Globals.Set(name, variable)
-			interpreter.effectivePredeclaredValues[name] = declaration
-		}
-
+		interpreter.baseActivation = baseActivation
 		return nil
 	}
 }
@@ -686,9 +674,10 @@ func WithDebugger(debugger *Debugger) Option {
 	}
 }
 
-// Create a base-activation so that it can be reused across all interpreters.
+// BaseActivation is the activation which contains all base declarations.
+// It is reused across all interpreters.
 //
-var baseActivation = func() *VariableActivation {
+var BaseActivation = func() *VariableActivation {
 	// No need to meter since this is only created once
 	activation := NewVariableActivation(nil, nil)
 
@@ -699,19 +688,26 @@ var baseActivation = func() *VariableActivation {
 func NewInterpreter(program *Program, location common.Location, options ...Option) (*Interpreter, error) {
 
 	interpreter := &Interpreter{
-		Program:                    program,
-		Location:                   location,
-		Globals:                    map[string]*Variable{},
-		effectivePredeclaredValues: map[string]ValueDeclaration{},
-		resourceVariables:          map[ResourceKindedValue]*Variable{},
+		Program:           program,
+		Location:          location,
+		Globals:           map[string]*Variable{},
+		resourceVariables: map[ResourceKindedValue]*Variable{},
+		baseActivation:    BaseActivation,
 	}
 
 	interpreter.activations = NewVariableActivations(interpreter)
 
-	// Start a new activation/scope for the current program.
-	// Use the base activation as the parent.
-	interpreter.activations.PushNewWithParent(baseActivation)
+	err := interpreter.configure(options)
+	if err != nil {
+		return nil, err
+	}
 
+	interpreter.activations.PushNewWithParent(interpreter.baseActivation)
+
+	return interpreter, nil
+}
+
+func (interpreter *Interpreter) configure(options []Option) error {
 	defaultOptions := []Option{
 		WithAllInterpreters(map[common.Location]*Interpreter{}),
 		WithCallStack(&CallStack{}),
@@ -727,18 +723,18 @@ func NewInterpreter(program *Program, location common.Location, options ...Optio
 	for _, option := range defaultOptions {
 		err := option(interpreter)
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 
 	for _, option := range options {
 		err := option(interpreter)
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 
-	return interpreter, nil
+	return nil
 }
 
 // SetOnEventEmittedHandler sets the function that is triggered when an event is emitted by the program.
@@ -1020,7 +1016,6 @@ func (interpreter *Interpreter) invokeVariable(
 
 	// function must be invokable
 	functionType, ok := ty.(*sema.FunctionType)
-
 	if !ok {
 		return nil, NotInvokableError{
 			Value: variableValue,
@@ -1435,18 +1430,6 @@ func (interpreter *Interpreter) visitCondition(condition *ast.Condition) {
 	})
 }
 
-func (interpreter *Interpreter) declareValue(declaration ValueDeclaration) *Variable {
-
-	if !declaration.ValueDeclarationAvailable(interpreter.Location) {
-		return nil
-	}
-
-	return interpreter.declareVariable(
-		declaration.ValueDeclarationName(),
-		declaration.ValueDeclarationValue(interpreter),
-	)
-}
-
 // declareVariable declares a variable in the latest scope
 func (interpreter *Interpreter) declareVariable(identifier string, value Value) *Variable {
 	// NOTE: semantic analysis already checked possible invalid redeclaration
@@ -1845,6 +1828,11 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	return lexicalScope, variable
 }
 
+type EnumCase struct {
+	RawValue IntegerValue
+	Value    MemberAccessibleValue
+}
+
 func (interpreter *Interpreter) declareEnumConstructor(
 	declaration *ast.CompositeDeclaration,
 	lexicalScope *VariableActivation,
@@ -1866,10 +1854,7 @@ func (interpreter *Interpreter) declareEnumConstructor(
 	intType := sema.IntType
 
 	enumCases := declaration.Members.EnumCases()
-	caseValues := make([]struct {
-		Value    MemberAccessibleValue
-		RawValue IntegerValue
-	}, len(enumCases))
+	caseValues := make([]EnumCase, len(enumCases))
 
 	constructorNestedVariables := map[string]*Variable{}
 
@@ -1900,10 +1885,7 @@ func (interpreter *Interpreter) declareEnumConstructor(
 			caseValueFields,
 			common.Address{},
 		)
-		caseValues[i] = struct {
-			Value    MemberAccessibleValue
-			RawValue IntegerValue
-		}{
+		caseValues[i] = EnumCase{
 			Value:    caseValue,
 			RawValue: rawValue,
 		}
@@ -1930,10 +1912,7 @@ func EnumConstructorFunction(
 	gauge common.MemoryGauge,
 	getLocationRange func() LocationRange,
 	enumType *sema.CompositeType,
-	cases []struct {
-		Value    MemberAccessibleValue
-		RawValue IntegerValue
-	},
+	cases []EnumCase,
 	nestedVariables map[string]*Variable,
 ) *HostFunctionValue {
 
@@ -2753,7 +2732,7 @@ func (interpreter *Interpreter) NewSubInterpreter(
 
 	defaultOptions := []Option{
 		WithStorage(interpreter.Storage),
-		WithPredeclaredValues(interpreter.PredeclaredValues),
+		WithBaseActivation(interpreter.baseActivation),
 		WithOnEventEmittedHandler(interpreter.onEventEmitted),
 		WithOnStatementHandler(interpreter.onStatement),
 		WithOnLoopIterationHandler(interpreter.onLoopIteration),
@@ -3100,7 +3079,7 @@ func init() {
 
 	// We assign this here because it depends on the interpreter, so this breaks the initialization cycle
 	defineBaseValue(
-		baseActivation,
+		BaseActivation,
 		"DictionaryType",
 		NewUnmeteredHostFunctionValue(
 			func(invocation Invocation) Value {
@@ -3139,7 +3118,7 @@ func init() {
 		))
 
 	defineBaseValue(
-		baseActivation,
+		BaseActivation,
 		"CompositeType",
 		NewUnmeteredHostFunctionValue(
 			func(invocation Invocation) Value {
@@ -3167,7 +3146,7 @@ func init() {
 	)
 
 	defineBaseValue(
-		baseActivation,
+		BaseActivation,
 		"InterfaceType",
 		NewUnmeteredHostFunctionValue(
 			func(invocation Invocation) Value {
@@ -3195,7 +3174,7 @@ func init() {
 	)
 
 	defineBaseValue(
-		baseActivation,
+		BaseActivation,
 		"FunctionType",
 		NewUnmeteredHostFunctionValue(
 			func(invocation Invocation) Value {
@@ -3237,7 +3216,7 @@ func init() {
 	)
 
 	defineBaseValue(
-		baseActivation,
+		BaseActivation,
 		"RestrictedType",
 		NewUnmeteredHostFunctionValue(
 			RestrictedTypeFunction,

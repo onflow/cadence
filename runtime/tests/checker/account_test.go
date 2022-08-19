@@ -39,15 +39,15 @@ func ParseAndCheckAccount(t *testing.T, code string) (*sema.Checker, error) {
 			Kind: common.DeclarationKindConstant,
 		}
 	}
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(constantDeclaration("authAccount", sema.AuthAccountType))
+	baseValueActivation.DeclareValue(constantDeclaration("publicAccount", sema.PublicAccountType))
 
 	return ParseAndCheckWithOptions(t,
 		code,
 		ParseAndCheckOptions{
 			Options: []sema.Option{
-				sema.WithPredeclaredValues([]sema.ValueDeclaration{
-					constantDeclaration("authAccount", sema.AuthAccountType),
-					constantDeclaration("publicAccount", sema.PublicAccountType),
-				}),
+				sema.WithBaseValueActivation(baseValueActivation),
 			},
 		},
 	)

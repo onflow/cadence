@@ -16,35 +16,15 @@
  * limitations under the License.
  */
 
-package runtime
+package interpreter
 
-import (
-	"github.com/onflow/cadence/runtime/ast"
-)
+func (a *VariableActivation) Declare(declaration ValueDeclaration) {
 
-type Context struct {
-	Interface      Interface
-	Location       Location
-	Environment    Environment
-	CoverageReport *CoverageReport
-}
+	value := declaration.ValueDeclarationValue()
+	variable := NewVariableWithValue(a.memoryGauge, value)
 
-type codesAndPrograms struct {
-	codes    map[Location][]byte
-	programs map[Location]*ast.Program
-}
-
-func (c codesAndPrograms) setCode(location Location, code []byte) {
-	c.codes[location] = code
-}
-
-func (c codesAndPrograms) setProgram(location Location, program *ast.Program) {
-	c.programs[location] = program
-}
-
-func newCodesAndPrograms() codesAndPrograms {
-	return codesAndPrograms{
-		codes:    map[Location][]byte{},
-		programs: map[Location]*ast.Program{},
-	}
+	a.Set(
+		declaration.ValueDeclarationName(),
+		variable,
+	)
 }
