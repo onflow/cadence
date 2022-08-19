@@ -1,6 +1,8 @@
-# Cadence Testing Framework
+---
+title: Cadence Testing Framework
+---
 
-Cadence testing framework provides a way to write tests for Cadence programs in Cadence.
+Cadence testing framework provides a convenient way to write tests for Cadence programs in Cadence.
 This functionality is provided by the Test standard-library.
 
 Note: Test standard-library can only be used off-chain. e.g: In CLI
@@ -88,7 +90,7 @@ let isNegative = Test.NewMatcher(fun (_ value: Int): Bool {
     return value < 0
 })
 
-// Use `expect` function to test a value agains tthe matcher.
+// Use `expect` function to test a value against the matcher.
 Test.expect(-15, isNegative)
 ```
 
@@ -306,11 +308,11 @@ There are two ways to execute the created transaction.
   ```cadence
   // Add to the current block
   blockchain.addTransaction(tx)
-  
+
   // Execute the next transaction in the block
   let result = blockchain.executeNextTransaction()
-  ``` 
-  
+  ```
+
 A Transaction result indicates the status of the execution, and an `error` if the transaction failed.
 ```cadence
 /// The result of a transaction execution.
@@ -332,4 +334,82 @@ pub struct TransactionResult {
 blockchain.commitBlock()
 ```
 
+### Deploying contracts
+A contract can be deployed using the `deployContract` function of the `Blockchain`.
+```cadence
+let contractCode = "pub contract Foo{ pub let msg: String;   init(_ msg: String){ self.msg = msg }   pub fun sayHello(): String { return self.msg } }"
+
+let err = blockchain.deployContract(
+    name: "Foo",
+    code: contractCode,
+    account: account,
+    arguments: ["hello from args"],
+)
+```
+An `Error` is returned if the contract deployment fails. Otherwise, a `nil` is returned.
+
+### Configuring import addresses
+A common pattern in Cadence projects is to define the imports as file locations and specify the addresses
+corresponding to each network in the [config](https://developers.flow.com/tools/flow-cli/configuration#contracts) file.
+When writing tests for a such project, it may also require to specify the addresses to be used during the tests as well.
+However, during tests, since accounts are created dynamically and the addresses are also generated dynamically,
+specifying the addresses statically in a configuration file is not an option.
+
+Hence, the test framework provides a way to specify the addresses using the
+`useConfiguration(_ configs: Test.Configurations)` function in `Blockchain`.
+
+```cadence
+pub var blockchain = Test.newEmulatorBlockchain()
+pub var accounts: [Test.Account] = []
+
+pub fun setup() {
+    // Create accounts in the blockchain.
+
+    let acct1 = blockchain.createAccount()
+    accounts.append(acct1)
+
+    let acct2 = blockchain.createAccount()
+    accounts.append(acct2)
+
+    // Set the configurations with the addresses
+
+    blockchain.useConfiguration(Test.Configurations({
+        "./contracts/FooContract": acct1.address,
+        "./contracts/BarContract": acct2.address
+    }))
+}
+```
+The subsequent operations on the blockchain (e.g: Contract deployment, script/transaction execution) will resolve the
+file import locations to the provided addresses.
+
 ### Errors
+An `Error` maybe returned when an operation (such as executing a script, executing a transaction, etc.) is failed.
+Contains a message indicating why the operation failed.
+```cadence
+// Error is returned if something has gone wrong.
+//
+pub struct Error {
+    pub let message: String
+
+    init(_ message: String) {
+        self.message = message
+    }
+}
+```
+An `Error` may typically be handled by failing the test case or by panicking (which will result in failing the test).
+```cadence
+let err = ...
+
+if err != nil {
+    panic(err!.message)
+}
+```
+
+## Reading from files
+Writing tests often require constructing source-code of contracts/transactions/scripts in the test script.
+Testing framework provides a convenient way to load programs from a local file, without having to manually construct
+them within the test script.
+```cadence
+let contractCode = Test.readFile("./sample/contracts/FooContract.cdc")
+```
+`readFile` returns the content of the file as a string.
