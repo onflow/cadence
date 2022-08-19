@@ -186,6 +186,10 @@ func (s StorageMap) StorageID() atree.StorageID {
 	return s.orderedMap.StorageID()
 }
 
+func (s StorageMap) Count() uint64 {
+	return s.orderedMap.Count()
+}
+
 // StorageMapIterator is an iterator over StorageMap
 //
 type StorageMapIterator struct {

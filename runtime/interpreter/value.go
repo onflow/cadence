@@ -18397,8 +18397,12 @@ func (v LinkValue) Walk(_ *Interpreter, walkChild func(Value)) {
 	walkChild(v.TargetPath)
 }
 
-func (LinkValue) StaticType(_ *Interpreter) StaticType {
-	return nil
+func (v LinkValue) StaticType(interpreter *Interpreter) StaticType {
+	// when iterating over public/private paths, the values at these
+	// paths are LinkValues, placed there by the `link` function. These
+	// are loaded as capabilities, however, so for the purposes of
+	// checking their runtime, we treat them as capabilities
+	return NewCapabilityStaticType(interpreter, v.Type)
 }
 
 func (LinkValue) IsImportable(_ *Interpreter) bool {

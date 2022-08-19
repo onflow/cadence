@@ -27,7 +27,6 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 type Interface interface {
@@ -80,11 +79,11 @@ type Interface interface {
 	// RevokeEncodedAccountKey removes a key from an account by index, add returns the encoded key.
 	RevokeEncodedAccountKey(address Address, index int) (publicKey []byte, err error)
 	// AddAccountKey appends a key to an account.
-	AddAccountKey(address Address, publicKey *stdlib.PublicKey, hashAlgo HashAlgorithm, weight int) (*stdlib.AccountKey, error)
+	AddAccountKey(address Address, publicKey *PublicKey, hashAlgo HashAlgorithm, weight int) (*AccountKey, error)
 	// GetAccountKey retrieves a key from an account by index.
-	GetAccountKey(address Address, index int) (*stdlib.AccountKey, error)
+	GetAccountKey(address Address, index int) (*AccountKey, error)
 	// RevokeAccountKey removes a key from an account by index.
-	RevokeAccountKey(address Address, index int) (*stdlib.AccountKey, error)
+	RevokeAccountKey(address Address, index int) (*AccountKey, error)
 	// UpdateAccountContractCode updates the code associated with an account contract.
 	UpdateAccountContractCode(address Address, name string, code []byte) (err error)
 	// GetAccountContractCode returns the code associated with an account contract.
@@ -107,7 +106,7 @@ type Interface interface {
 	// GetCurrentBlockHeight returns the current block height.
 	GetCurrentBlockHeight() (uint64, error)
 	// GetBlockAtHeight returns the block at the given height.
-	GetBlockAtHeight(height uint64) (block stdlib.Block, exists bool, err error)
+	GetBlockAtHeight(height uint64) (block Block, exists bool, err error)
 	// UnsafeRandom returns a random uint64, where the process of random number derivation is not cryptographically
 	// secure.
 	UnsafeRandom() (uint64, error)
@@ -134,17 +133,17 @@ type Interface interface {
 	// ImplementationDebugLog logs implementation log statements on a debug-level
 	ImplementationDebugLog(message string) error
 	// ValidatePublicKey verifies the validity of a public key.
-	ValidatePublicKey(key *stdlib.PublicKey) error
+	ValidatePublicKey(key *PublicKey) error
 	// GetAccountContractNames returns the names of all contracts deployed in an account.
 	GetAccountContractNames(address Address) ([]string, error)
 	// RecordTrace records an opentelemetry trace.
 	RecordTrace(operation string, location Location, duration time.Duration, attrs []attribute.KeyValue)
 	// BLSVerifyPOP verifies a proof of possession (PoP) for the receiver public key.
-	BLSVerifyPOP(pk *stdlib.PublicKey, s []byte) (bool, error)
+	BLSVerifyPOP(pk *PublicKey, s []byte) (bool, error)
 	// BLSAggregateSignatures aggregate multiple BLS signatures into one.
 	BLSAggregateSignatures(sigs [][]byte) ([]byte, error)
 	// BLSAggregatePublicKeys aggregate multiple BLS public keys into one.
-	BLSAggregatePublicKeys(keys []*stdlib.PublicKey) (*stdlib.PublicKey, error)
+	BLSAggregatePublicKeys(keys []*PublicKey) (*PublicKey, error)
 	// ResourceOwnerChanged gets called when a resource's owner changed (if enabled)
 	ResourceOwnerChanged(
 		interpreter *interpreter.Interpreter,

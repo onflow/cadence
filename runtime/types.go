@@ -22,6 +22,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 type ResolvedLocation = sema.ResolvedLocation
@@ -56,3 +57,7 @@ const (
 	HashAlgorithmKMAC128_BLS_BLS12_381 = sema.HashAlgorithmKMAC128_BLS_BLS12_381
 	HashAlgorithmKECCAK_256            = sema.HashAlgorithmKECCAK_256
 )
+
+type PublicKey = stdlib.PublicKey
+type AccountKey = stdlib.AccountKey
+type Block = stdlib.Block

@@ -4961,8 +4961,8 @@ func TestInterpretArrayAppendAll(t *testing.T) {
 	inter := parseCheckAndInterpret(t, `
       fun test(): [Int] {
           let a = [1, 2]
-		  a.appendAll([3, 4])
-		  return a
+          a.appendAll([3, 4])
+          return a
       }
     `)
 
@@ -4992,8 +4992,8 @@ func TestInterpretArrayAppendAllBound(t *testing.T) {
       fun test(): [Int] {
           let a = [1, 2]
           let b = a.appendAll
-		  b([3, 4])
-		  return a
+          b([3, 4])
+          return a
       }
     `)
 
@@ -5081,8 +5081,8 @@ func TestInterpretArrayConcatDoesNotModifyOriginalArray(t *testing.T) {
 	inter := parseCheckAndInterpret(t, `
       fun test(): [Int] {
           let a = [1, 2]
-		  a.concat([3, 4])
-		  return a
+          a.concat([3, 4])
+          return a
       }
     `)
 
@@ -5564,18 +5564,18 @@ func TestInterpretDictionaryContainsKey(t *testing.T) {
 
 	inter := parseCheckAndInterpret(t, `
       fun doesContainKey(): Bool {
-		  let x = {
-			  1: "one",
-			  2: "two"
-		  }
+          let x = {
+              1: "one",
+              2: "two"
+          }
           return x.containsKey(1)
       }
 
       fun doesNotContainKey(): Bool {
-		  let x = {
-			  1: "one",
-			  2: "two"
-		  }
+          let x = {
+              1: "one",
+              2: "two"
+          }
           return x.containsKey(3)
       }
     `)
@@ -8055,7 +8055,7 @@ func TestInterpretConformToImportedInterface(t *testing.T) {
                   }
               }
           }
-	    `,
+        `,
 		checker.ParseAndCheckOptions{
 			Location: ImportedLocation,
 		},
@@ -8924,14 +8924,14 @@ func TestInterpretResourceAssignmentForceTransfer(t *testing.T) {
 	t.Run("new to non-nil", func(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
-	     resource X {}
+         resource X {}
 
-	     fun test() {
-	         var x: @X? <- create X()
-	         x <-! create X()
-	         destroy x
-	     }
-	   `)
+         fun test() {
+             var x: @X? <- create X()
+             x <-! create X()
+             destroy x
+         }
+       `)
 
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
@@ -8942,15 +8942,15 @@ func TestInterpretResourceAssignmentForceTransfer(t *testing.T) {
 	t.Run("existing to nil", func(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
-	     resource X {}
+         resource X {}
 
-	     fun test() {
-	         let x <- create X()
-	         var x2: @X? <- nil
-	         x2 <-! x
-	         destroy x2
-	     }
-	   `)
+         fun test() {
+             let x <- create X()
+             var x2: @X? <- nil
+             x2 <-! x
+             destroy x2
+         }
+       `)
 
 		_, err := inter.Invoke("test")
 		require.NoError(t, err)
@@ -8959,15 +8959,15 @@ func TestInterpretResourceAssignmentForceTransfer(t *testing.T) {
 	t.Run("existing to non-nil", func(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
-	     resource X {}
+         resource X {}
 
-	     fun test() {
-	         let x <- create X()
-	         var x2: @X? <- create X()
-	         x2 <-! x
-	         destroy x2
-	     }
-	   `)
+         fun test() {
+             let x <- create X()
+             var x2: @X? <- create X()
+             x2 <-! x
+             destroy x2
+         }
+       `)
 
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
@@ -8978,9 +8978,9 @@ func TestInterpretResourceAssignmentForceTransfer(t *testing.T) {
 	t.Run("force-assignment initialization", func(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
-	     resource X {}
+         resource X {}
 
-	     resource Y {
+         resource Y {
 
              var x: @X?
 
@@ -8993,11 +8993,11 @@ func TestInterpretResourceAssignmentForceTransfer(t *testing.T) {
              }
          }
 
-	     fun test() {
-	         let y <- create Y()
-	         destroy y
-	     }
-	   `)
+         fun test() {
+             let y <- create Y()
+             destroy y
+         }
+       `)
 
 		_, err := inter.Invoke("test")
 		require.NoError(t, err)

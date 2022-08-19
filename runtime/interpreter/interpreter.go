@@ -273,6 +273,7 @@ type WrapperCode struct {
 	InitializerFunctionWrapper FunctionWrapper
 	DestructorFunctionWrapper  FunctionWrapper
 	FunctionWrappers           map[string]FunctionWrapper
+	Functions                  map[string]FunctionValue
 }
 
 // TypeCodes is the value which stores the "prepared" / "callable" "code"
@@ -1123,6 +1124,22 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 			destructorFunction = destructorFunctionWrapper(destructorFunction)
 		}
 
+		// Apply default functions, if conforming type does not provide the function
+
+		// Iterating over the map in a non-deterministic way is OK,
+		// we only apply the function wrapper to each function,
+		// the order does not matter.
+
+		for name, function := range code.Functions { //nolint:maprangecheck
+			if functions[name] != nil {
+				continue
+			}
+			if functions == nil {
+				functions = map[string]FunctionValue{}
+			}
+			functions[name] = function
+		}
+
 		// Wrap functions
 
 		// Iterating over the map in a non-deterministic way is OK,
@@ -1151,7 +1168,6 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 	for i := len(typeRequirements) - 1; i >= 0; i-- {
 		typeRequirement := typeRequirements[i]
-
 		wrapFunctions(interpreter.sharedState.typeCodes.TypeRequirementCodes[typeRequirement.ID()])
 	}
 
@@ -1505,6 +1521,35 @@ func (interpreter *Interpreter) compositeDestructorFunction(
 	)
 }
 
+func (interpreter *Interpreter) defaultFunctions(
+	members *ast.Members,
+	lexicalScope *VariableActivation,
+) map[string]FunctionValue {
+
+	functionDeclarations := members.Functions()
+	functionCount := len(functionDeclarations)
+
+	if functionCount == 0 {
+		return nil
+	}
+
+	functions := make(map[string]FunctionValue, functionCount)
+
+	for _, functionDeclaration := range functionDeclarations {
+		name := functionDeclaration.Identifier.Identifier
+		if !functionDeclaration.FunctionBlock.HasStatements() {
+			continue
+		}
+
+		functions[name] = interpreter.compositeFunction(
+			functionDeclaration,
+			lexicalScope,
+		)
+	}
+
+	return functions
+}
+
 func (interpreter *Interpreter) compositeFunctions(
 	compositeDeclaration *ast.CompositeDeclaration,
 	lexicalScope *VariableActivation,
@@ -1856,11 +1901,13 @@ func (interpreter *Interpreter) declareInterface(
 	initializerFunctionWrapper := interpreter.initializerFunctionWrapper(declaration.Members, lexicalScope)
 	destructorFunctionWrapper := interpreter.destructorFunctionWrapper(declaration.Members, lexicalScope)
 	functionWrappers := interpreter.functionWrappers(declaration.Members, lexicalScope)
+	defaultFunctions := interpreter.defaultFunctions(declaration.Members, lexicalScope)
 
 	interpreter.sharedState.typeCodes.InterfaceCodes[typeID] = WrapperCode{
 		InitializerFunctionWrapper: initializerFunctionWrapper,
 		DestructorFunctionWrapper:  destructorFunctionWrapper,
 		FunctionWrappers:           functionWrappers,
+		Functions:                  defaultFunctions,
 	}
 }
 
@@ -1890,11 +1937,13 @@ func (interpreter *Interpreter) declareTypeRequirement(
 	initializerFunctionWrapper := interpreter.initializerFunctionWrapper(declaration.Members, lexicalScope)
 	destructorFunctionWrapper := interpreter.destructorFunctionWrapper(declaration.Members, lexicalScope)
 	functionWrappers := interpreter.functionWrappers(declaration.Members, lexicalScope)
+	defaultFunctions := interpreter.defaultFunctions(declaration.Members, lexicalScope)
 
 	interpreter.sharedState.typeCodes.TypeRequirementCodes[typeID] = WrapperCode{
 		InitializerFunctionWrapper: initializerFunctionWrapper,
 		DestructorFunctionWrapper:  destructorFunctionWrapper,
 		FunctionWrappers:           functionWrappers,
+		Functions:                  defaultFunctions,
 	}
 }
 
@@ -3059,6 +3108,94 @@ func (interpreter *Interpreter) IsSubTypeOfSemaType(subType StaticType, superTyp
 	semaType := interpreter.MustConvertStaticToSemaType(subType)
 
 	return sema.IsSubType(semaType, superType)
+}
+
+func (interpreter *Interpreter) domainPaths(address common.Address, domain common.PathDomain) []Value {
+	storageMap := interpreter.Storage.GetStorageMap(address, domain.Identifier(), false)
+	if storageMap == nil {
+		return []Value{}
+	}
+	iterator := storageMap.Iterator(interpreter)
+	values := make([]Value, 0, storageMap.Count())
+	for key := iterator.NextKey(); key != ""; key = iterator.NextKey() {
+		values = append(values, NewPathValue(interpreter, domain, key))
+	}
+	return values
+}
+
+func (interpreter *Interpreter) accountPaths(addressValue AddressValue, getLocationRange func() LocationRange, domain common.PathDomain, pathType StaticType) *ArrayValue {
+	address := addressValue.ToAddress()
+	values := interpreter.domainPaths(address, domain)
+	return NewArrayValue(
+		interpreter,
+		getLocationRange,
+		NewVariableSizedStaticType(interpreter, pathType),
+		common.Address{},
+		values...,
+	)
+}
+
+func (interpreter *Interpreter) publicAccountPaths(addressValue AddressValue, getLocationRange func() LocationRange) *ArrayValue {
+	return interpreter.accountPaths(addressValue, getLocationRange, common.PathDomainPublic, PrimitiveStaticTypePublicPath)
+}
+
+func (interpreter *Interpreter) privateAccountPaths(addressValue AddressValue, getLocationRange func() LocationRange) *ArrayValue {
+	return interpreter.accountPaths(addressValue, getLocationRange, common.PathDomainPrivate, PrimitiveStaticTypePrivatePath)
+}
+
+func (interpreter *Interpreter) storageAccountPaths(addressValue AddressValue, getLocationRange func() LocationRange) *ArrayValue {
+	return interpreter.accountPaths(addressValue, getLocationRange, common.PathDomainStorage, PrimitiveStaticTypeStoragePath)
+}
+
+func (interpreter *Interpreter) newStorageIterationFunction(addressValue AddressValue, domain common.PathDomain, pathType sema.Type) *HostFunctionValue {
+	address := addressValue.ToAddress()
+
+	return NewHostFunctionValue(
+		interpreter,
+		func(invocation Invocation) Value {
+			fn, ok := invocation.Arguments[0].(*InterpretedFunctionValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			getLocationRange := invocation.GetLocationRange
+			inter := invocation.Interpreter
+			storageMap := interpreter.Storage.GetStorageMap(address, domain.Identifier(), false)
+			if storageMap == nil {
+				// if nothing is stored, no iteration is required
+				return NewVoidValue(inter)
+			}
+			storageIterator := storageMap.Iterator(interpreter)
+
+			invocationTypeParams := []sema.Type{pathType, sema.MetaType}
+
+			for key, value := storageIterator.Next(); key != "" && value != nil; key, value = storageIterator.Next() {
+				pathValue := NewPathValue(inter, domain, key)
+				runtimeType := NewTypeValue(inter, value.StaticType(inter))
+
+				subInvocation := NewInvocation(
+					inter,
+					nil,
+					[]Value{pathValue, runtimeType},
+					invocationTypeParams,
+					nil,
+					getLocationRange,
+				)
+
+				shouldContinue, ok := fn.invoke(subInvocation).(BoolValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				if !shouldContinue {
+					break
+				}
+			}
+
+			return NewVoidValue(inter)
+		},
+		sema.AccountForEachFunctionType(pathType),
+	)
 }
 
 func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValue) *HostFunctionValue {
