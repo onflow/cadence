@@ -48,7 +48,7 @@ func NewSignatureAlgorithmCase(rawValue interpreter.UInt8Value) interpreter.Memb
 	)
 }
 
-var signatureAlgorithmConstructorValue = cryptoAlgorithmEnumValue(
+var signatureAlgorithmConstructorValue, SignatureAlgorithmCaseValues = cryptoAlgorithmEnumValueAndCaseValues(
 	sema.SignatureAlgorithmType,
 	sema.SignatureAlgorithms,
 	NewSignatureAlgorithmCase,

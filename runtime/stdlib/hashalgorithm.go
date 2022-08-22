@@ -104,7 +104,7 @@ func hashAlgorithmHashWithTagFunction(hashAlgoValue interpreter.MemberAccessible
 	)
 }
 
-var hashAlgorithmConstructorValue = cryptoAlgorithmEnumValue(
+var hashAlgorithmConstructorValue, HashAlgorithmCaseValues = cryptoAlgorithmEnumValueAndCaseValues(
 	sema.HashAlgorithmType,
 	sema.HashAlgorithms,
 	NewHashAlgorithmCase,

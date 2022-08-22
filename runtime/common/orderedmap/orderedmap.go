@@ -32,6 +32,14 @@ type OrderedMap[K comparable, V any] struct {
 	list  *list.List[*Pair[K, V]]
 }
 
+// New returns a new OrderedMap of the given size
+func New[T OrderedMap[K, V], K comparable, V any](size int) *T {
+	return &T{
+		pairs: make(map[K]*Pair[K, V], size),
+		list:  list.New[*Pair[K, V]](),
+	}
+}
+
 func (om *OrderedMap[K, V]) ensureInitialized() {
 	if om.pairs != nil {
 		return

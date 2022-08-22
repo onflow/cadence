@@ -21,6 +21,7 @@ package sema
 import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -82,9 +83,10 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 		// The initializer must initialize all members that are fields,
 		// e.g. not composite functions (which are by definition constant and "initialized")
 
-		fieldMembers := &MemberFieldDeclarationOrderedMap{}
+		fields := declaration.Members.Fields()
+		fieldMembers := orderedmap.New[MemberFieldDeclarationOrderedMap](len(fields))
 
-		for _, field := range declaration.Members.Fields() {
+		for _, field := range fields {
 			fieldName := field.Identifier.Identifier
 			member, ok := compositeType.Members.Get(fieldName)
 			if !ok {
@@ -511,7 +513,8 @@ func (checker *Checker) declareCompositeMembersAndValue(
 		panic(errors.NewUnreachableError())
 	}
 
-	declarationMembers := &StringMemberOrderedMap{}
+	nestedComposites := declaration.Members.Composites()
+	declarationMembers := orderedmap.New[StringMemberOrderedMap](len(nestedComposites))
 
 	(func() {
 		// Activate new scopes for nested types
@@ -549,7 +552,7 @@ func (checker *Checker) declareCompositeMembersAndValue(
 		//   }
 		// }
 		// ```
-		for _, nestedCompositeDeclaration := range declaration.Members.Composites() {
+		for _, nestedCompositeDeclaration := range nestedComposites {
 			checker.declareCompositeMembersAndValue(nestedCompositeDeclaration, kind)
 
 			// Declare nested composites' values (constructor/instance) as members of the containing composite

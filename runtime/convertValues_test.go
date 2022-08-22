@@ -4100,7 +4100,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 							// Sign algorithm
 							cadence.NewEnum(
 								[]cadence.Value{
-									cadence.NewUInt8(0),
+									cadence.NewUInt8(1),
 								},
 							).WithType(SignAlgoType),
 						},
@@ -4171,7 +4171,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 				// Sign algorithm
 				cadence.NewEnum(
 					[]cadence.Value{
-						cadence.NewUInt8(0),
+						cadence.NewUInt8(1),
 					},
 				).WithType(SignAlgoType),
 			},
@@ -4547,7 +4547,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
                                             "name":"rawValue",
                                             "value":{
                                                 "type":"UInt8",
-                                                "value":"0"
+                                                "value":"1"
                                             }
                                         }
                                     ]
