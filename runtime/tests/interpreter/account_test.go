@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/tests/utils"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 
@@ -2858,6 +2859,126 @@ func TestInterpretAccountIterationMutation(t *testing.T) {
 			)
 
 			_, err := inter.Invoke("test")
+			if continueAfterMutation {
+				require.Error(t, err)
+				require.ErrorAs(t, err, &interpreter.StorageMutatedDuringIterationError{})
+			} else {
+				require.NoError(t, err)
+			}
+		})
+
+		t.Run(fmt.Sprintf("with imported function call, continue: %t", continueAfterMutation), func(t *testing.T) {
+			t.Parallel()
+			address := common.MustBytesToAddress([]byte{1})
+			addressValue := interpreter.AddressValue(address)
+
+			authAccountValueDeclaration := stdlib.StandardLibraryValue{
+				Name:  "account",
+				Type:  sema.AuthAccountType,
+				Value: newTestAuthAccountValue(nil, addressValue),
+				Kind:  common.DeclarationKindConstant,
+			}
+			baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+			baseValueActivation.DeclareValue(authAccountValueDeclaration)
+			baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+			baseActivation.Declare(authAccountValueDeclaration)
+
+			importedChecker, err := checker.ParseAndCheckWithOptions(t,
+				`
+				  pub fun foo() {
+					account.save("bar", to: /storage/foo5)
+				  }
+				`,
+				checker.ParseAndCheckOptions{
+					Location: common.AddressLocation{
+						Address: address,
+						Name:    "foo",
+					},
+					Options: []sema.Option{
+						sema.WithBaseValueActivation(baseValueActivation),
+					},
+				},
+			)
+			require.NoError(t, err)
+
+			inter, _ := parseCheckAndInterpretWithOptions(t,
+				fmt.Sprintf(`
+				import foo from 0x1
+				
+				fun test() {
+					account.save(1, to: /storage/foo1)
+					account.save(2, to: /storage/foo2)
+					account.save(3, to: /storage/foo3)
+					account.save("qux", to: /storage/foo4)
+	
+					account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+						if type == Type<String>() {
+							foo()
+							return %t
+						}
+						return true
+					})
+				}`, continueAfterMutation),
+				ParseCheckAndInterpretOptions{
+					CheckerOptions: []sema.Option{
+						sema.WithBaseValueActivation(baseValueActivation),
+						sema.WithLocationHandler(
+							func(identifiers []ast.Identifier, location common.Location) (result []sema.ResolvedLocation, err error) {
+
+								require.Equal(t,
+									common.AddressLocation{
+										Address: address,
+										Name:    "",
+									},
+									location,
+								)
+
+								for _, identifier := range identifiers {
+									result = append(result, sema.ResolvedLocation{
+										Location: common.AddressLocation{
+											Address: location.(common.AddressLocation).Address,
+											Name:    identifier.Identifier,
+										},
+										Identifiers: []ast.Identifier{
+											identifier,
+										},
+									})
+								}
+								return
+							},
+						),
+						sema.WithImportHandler(
+							func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
+								return sema.ElaborationImport{
+									Elaboration: importedChecker.Elaboration,
+								}, nil
+							},
+						),
+					},
+					Config: &interpreter.Config{
+						BaseActivation:       baseActivation,
+						ContractValueHandler: makeContractValueHandler(nil, nil, nil),
+						ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+							require.IsType(t, common.AddressLocation{}, location)
+							addressLocation := location.(common.AddressLocation)
+
+							assert.Equal(t, address, addressLocation.Address)
+
+							program := interpreter.ProgramFromChecker(importedChecker)
+							subInterpreter, err := inter.NewSubInterpreter(program, location)
+							if err != nil {
+								panic(err)
+							}
+
+							return interpreter.InterpreterImport{
+								Interpreter: subInterpreter,
+							}
+						},
+					},
+				},
+			)
+
+			_, err = inter.Invoke("test")
 			if continueAfterMutation {
 				require.Error(t, err)
 				require.ErrorAs(t, err, &interpreter.StorageMutatedDuringIterationError{})
