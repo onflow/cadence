@@ -4923,9 +4923,11 @@ func newTestInterpreter(tb testing.TB) *interpreter.Interpreter {
 	inter, err := interpreter.NewInterpreter(
 		nil,
 		TestLocation,
-		interpreter.WithStorage(storage),
-		interpreter.WithAtreeValueValidationEnabled(true),
-		interpreter.WithAtreeStorageValidationEnabled(true),
+		&interpreter.Config{
+			Storage:                       storage,
+			AtreeValueValidationEnabled:   true,
+			AtreeStorageValidationEnabled: true,
+		},
 	)
 	require.NoError(tb, err)
 

@@ -674,7 +674,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 	sum := interpreter.NewUnmeteredUFix64ValueWithInteger(0)
 
-	inter := &interpreter.Interpreter{}
+	inter := newTestInterpreter(b)
 
 	for _, address := range []common.Address{
 		senderAddress,

@@ -1065,8 +1065,8 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 				CheckerOptions: []sema.Option{
 					sema.WithBaseValueActivation(baseValueActivation),
 				},
-				Options: []interpreter.Option{
-					interpreter.WithBaseActivation(baseActivation),
+				Config: &interpreter.Config{
+					BaseActivation: baseActivation,
 				},
 			},
 			meter,
@@ -1110,13 +1110,11 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 				CheckerOptions: []sema.Option{
 					sema.WithBaseValueActivation(baseValueActivation),
 				},
-				Options: []interpreter.Option{
-					interpreter.WithBaseActivation(baseActivation),
-					interpreter.WithPublicKeyValidationHandler(
-						func(_ *interpreter.Interpreter, _ func() interpreter.LocationRange, _ *interpreter.CompositeValue) error {
-							return nil
-						},
-					),
+				Config: &interpreter.Config{
+					BaseActivation: baseActivation,
+					PublicKeyValidationHandler: func(_ *interpreter.Interpreter, _ func() interpreter.LocationRange, _ *interpreter.CompositeValue) error {
+						return nil
+					},
 				},
 			},
 			meter,
@@ -1166,13 +1164,11 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 				CheckerOptions: []sema.Option{
 					sema.WithBaseValueActivation(baseValueActivation),
 				},
-				Options: []interpreter.Option{
-					interpreter.WithBaseActivation(baseActivation),
-					interpreter.WithPublicKeyValidationHandler(
-						func(_ *interpreter.Interpreter, _ func() interpreter.LocationRange, _ *interpreter.CompositeValue) error {
-							return nil
-						},
-					),
+				Config: &interpreter.Config{
+					BaseActivation: baseActivation,
+					PublicKeyValidationHandler: func(_ *interpreter.Interpreter, _ func() interpreter.LocationRange, _ *interpreter.CompositeValue) error {
+						return nil
+					},
 				},
 			},
 			meter,
@@ -8848,21 +8844,19 @@ func TestInterpretASTMetering(t *testing.T) {
 						},
 					),
 				},
-				Options: []interpreter.Option{
-					interpreter.WithImportLocationHandler(
-						func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
-							require.IsType(t, common.AddressLocation{}, location)
-							program := interpreter.ProgramFromChecker(importedChecker)
-							subInterpreter, err := inter.NewSubInterpreter(program, location)
-							if err != nil {
-								panic(err)
-							}
+				Config: &interpreter.Config{
+					ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+						require.IsType(t, common.AddressLocation{}, location)
+						program := interpreter.ProgramFromChecker(importedChecker)
+						subInterpreter, err := inter.NewSubInterpreter(program, location)
+						if err != nil {
+							panic(err)
+						}
 
-							return interpreter.InterpreterImport{
-								Interpreter: subInterpreter,
-							}
-						},
-					),
+						return interpreter.InterpreterImport{
+							Interpreter: subInterpreter,
+						}
+					},
 				},
 			},
 			meter,
@@ -8942,8 +8936,8 @@ func TestInterpretASTMetering(t *testing.T) {
 			t,
 			script,
 			ParseCheckAndInterpretOptions{
-				Options: []interpreter.Option{
-					interpreter.WithContractValueHandler(func(
+				Config: &interpreter.Config{
+					ContractValueHandler: func(
 						inter *interpreter.Interpreter,
 						compositeType *sema.CompositeType,
 						constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
@@ -8951,7 +8945,7 @@ func TestInterpretASTMetering(t *testing.T) {
 					) *interpreter.CompositeValue {
 						// Just return a dummy value
 						return &interpreter.CompositeValue{}
-					}),
+					},
 				},
 			},
 			meter,
@@ -9150,20 +9144,18 @@ func TestInterpretASTMetering(t *testing.T) {
 						},
 					),
 				},
-				Options: []interpreter.Option{
-					interpreter.WithImportLocationHandler(
-						func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
-							program := interpreter.ProgramFromChecker(importedChecker)
-							subInterpreter, err := inter.NewSubInterpreter(program, location)
-							if err != nil {
-								panic(err)
-							}
+				Config: &interpreter.Config{
+					ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+						program := interpreter.ProgramFromChecker(importedChecker)
+						subInterpreter, err := inter.NewSubInterpreter(program, location)
+						if err != nil {
+							panic(err)
+						}
 
-							return interpreter.InterpreterImport{
-								Interpreter: subInterpreter,
-							}
-						},
-					),
+						return interpreter.InterpreterImport{
+							Interpreter: subInterpreter,
+						}
+					},
 				},
 			},
 			meter,
@@ -9342,8 +9334,8 @@ func TestInterpretValueStringConversion(t *testing.T) {
 
 		inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(t, script,
 			ParseCheckAndInterpretOptions{
-				Options: []interpreter.Option{
-					interpreter.WithBaseActivation(baseActivation),
+				Config: &interpreter.Config{
+					BaseActivation: baseActivation,
 				},
 				CheckerOptions: []sema.Option{
 					sema.WithBaseValueActivation(baseValueActivation),
@@ -9686,8 +9678,8 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 
 		inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(t, script,
 			ParseCheckAndInterpretOptions{
-				Options: []interpreter.Option{
-					interpreter.WithBaseActivation(baseActivation),
+				Config: &interpreter.Config{
+					BaseActivation: baseActivation,
 				},
 				CheckerOptions: []sema.Option{
 					sema.WithBaseValueActivation(baseValueActivation),
