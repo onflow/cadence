@@ -31,6 +31,7 @@ type sharedState struct {
 	typeCodes       TypeCodes
 	// TODO: ideally this would be a weak map, but Go has no weak references
 	referencedResourceKindedValues ReferencedResourceKindedValues
+	resourceVariables              map[ResourceKindedValue]*Variable
 }
 
 func newSharedState() *sharedState {
@@ -43,5 +44,6 @@ func newSharedState() *sharedState {
 			TypeRequirementCodes: map[sema.TypeID]WrapperCode{},
 		},
 		referencedResourceKindedValues: map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}{},
+		resourceVariables:              map[ResourceKindedValue]*Variable{},
 	}
 }
