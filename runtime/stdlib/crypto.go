@@ -132,19 +132,24 @@ func cryptoAlgorithmEnumConstructorType(
 
 type enumCaseConstructor func(rawValue interpreter.UInt8Value) interpreter.MemberAccessibleValue
 
-func cryptoAlgorithmEnumValue(
+func cryptoAlgorithmEnumValueAndCaseValues(
 	enumType *sema.CompositeType,
 	enumCases []sema.CryptoAlgorithm,
 	caseConstructor enumCaseConstructor,
-) interpreter.Value {
+) (
+	value interpreter.Value,
+	cases map[interpreter.UInt8Value]interpreter.MemberAccessibleValue,
+) {
 
 	caseCount := len(enumCases)
 	caseValues := make([]interpreter.EnumCase, caseCount)
-	constructorNestedVariables := map[string]*interpreter.Variable{}
+	constructorNestedVariables := make(map[string]*interpreter.Variable, caseCount)
+	cases = make(map[interpreter.UInt8Value]interpreter.MemberAccessibleValue, caseCount)
 
 	for i, enumCase := range enumCases {
 		rawValue := interpreter.UInt8Value(enumCase.RawValue())
 		caseValue := caseConstructor(rawValue)
+		cases[rawValue] = caseValue
 		caseValues[i] = interpreter.EnumCase{
 			Value:    caseValue,
 			RawValue: rawValue,
@@ -153,11 +158,13 @@ func cryptoAlgorithmEnumValue(
 			interpreter.NewVariableWithValue(nil, caseValue)
 	}
 
-	return interpreter.EnumConstructorFunction(
+	value = interpreter.EnumConstructorFunction(
 		nil,
 		interpreter.ReturnEmptyLocationRange,
 		enumType,
 		caseValues,
 		constructorNestedVariables,
 	)
+
+	return
 }
