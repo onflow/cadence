@@ -835,6 +835,33 @@ var _ errors.UserError = StorageMutatedDuringIterationError{}
 
 func (StorageMutatedDuringIterationError) IsUserError() {}
 
-func (e StorageMutatedDuringIterationError) Error() string {
+func (StorageMutatedDuringIterationError) Error() string {
 	return "storage iteration continued after modifying storage"
+}
+
+// InvalidHexByteError
+type InvalidHexByteError struct {
+	Byte byte
+	LocationRange
+}
+
+var _ errors.UserError = InvalidHexByteError{}
+
+func (InvalidHexByteError) IsUserError() {}
+
+func (e InvalidHexByteError) Error() string {
+	return fmt.Sprintf("invalid byte in hex string: %x", e.Byte)
+}
+
+// InvalidHexLengthError
+type InvalidHexLengthError struct {
+	LocationRange
+}
+
+var _ errors.UserError = InvalidHexLengthError{}
+
+func (InvalidHexLengthError) IsUserError() {}
+
+func (InvalidHexLengthError) Error() string {
+	return "hex string has non-even length"
 }
