@@ -43,8 +43,6 @@ var CryptoChecker = func() *sema.Checker {
 		location,
 		nil,
 		false,
-		sema.WithPredeclaredValues(BuiltinFunctions.ToSemaValueDeclarations()),
-		sema.WithPredeclaredTypes(BuiltinTypes.ToTypeDeclarations()),
 	)
 	if err != nil {
 		panic(err)
@@ -144,10 +142,7 @@ func cryptoAlgorithmEnumValueAndCaseValues(
 ) {
 
 	caseCount := len(enumCases)
-	caseValues := make([]struct {
-		Value    interpreter.MemberAccessibleValue
-		RawValue interpreter.IntegerValue
-	}, caseCount)
+	caseValues := make([]interpreter.EnumCase, caseCount)
 	constructorNestedVariables := make(map[string]*interpreter.Variable, caseCount)
 	cases = make(map[interpreter.UInt8Value]interpreter.MemberAccessibleValue, caseCount)
 
@@ -155,10 +150,7 @@ func cryptoAlgorithmEnumValueAndCaseValues(
 		rawValue := interpreter.UInt8Value(enumCase.RawValue())
 		caseValue := caseConstructor(rawValue)
 		cases[rawValue] = caseValue
-		caseValues[i] = struct {
-			Value    interpreter.MemberAccessibleValue
-			RawValue interpreter.IntegerValue
-		}{
+		caseValues[i] = interpreter.EnumCase{
 			Value:    caseValue,
 			RawValue: rawValue,
 		}

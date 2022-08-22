@@ -41,7 +41,7 @@ func TestCompositeStorage(t *testing.T) {
 	inter, err := NewInterpreter(
 		nil,
 		common.AddressLocation{},
-		WithStorage(storage),
+		&Config{Storage: storage},
 	)
 	require.NoError(t, err)
 
@@ -105,8 +105,10 @@ func TestArrayStorage(t *testing.T) {
 		inter, err := NewInterpreter(
 			nil,
 			common.AddressLocation{},
-			WithStorage(storage),
-			WithImportLocationHandler(importLocationHandlerFunc),
+			&Config{
+				Storage:               storage,
+				ImportLocationHandler: importLocationHandlerFunc,
+			},
 		)
 		require.NoError(t, err)
 
@@ -169,8 +171,10 @@ func TestArrayStorage(t *testing.T) {
 		inter, err := NewInterpreter(
 			nil,
 			common.AddressLocation{},
-			WithStorage(storage),
-			WithImportLocationHandler(importLocationHandlerFunc),
+			&Config{
+				Storage:               storage,
+				ImportLocationHandler: importLocationHandlerFunc,
+			},
 		)
 		require.NoError(t, err)
 
@@ -233,7 +237,7 @@ func TestDictionaryStorage(t *testing.T) {
 		inter, err := NewInterpreter(
 			nil,
 			common.AddressLocation{},
-			WithStorage(storage),
+			&Config{Storage: storage},
 		)
 		require.NoError(t, err)
 
@@ -290,7 +294,7 @@ func TestDictionaryStorage(t *testing.T) {
 		inter, err := NewInterpreter(
 			nil,
 			common.AddressLocation{},
-			WithStorage(storage),
+			&Config{Storage: storage},
 		)
 		require.NoError(t, err)
 
@@ -340,7 +344,7 @@ func TestDictionaryStorage(t *testing.T) {
 		inter, err := NewInterpreter(
 			nil,
 			common.AddressLocation{},
-			WithStorage(storage),
+			&Config{Storage: storage},
 		)
 		require.NoError(t, err)
 
@@ -389,7 +393,7 @@ func TestDictionaryStorage(t *testing.T) {
 		inter, err := NewInterpreter(
 			nil,
 			common.AddressLocation{},
-			WithStorage(storage),
+			&Config{Storage: storage},
 		)
 		require.NoError(t, err)
 
@@ -438,7 +442,7 @@ func TestInterpretStorageOverwriteAndRemove(t *testing.T) {
 	inter, err := NewInterpreter(
 		nil,
 		common.AddressLocation{},
-		WithStorage(storage),
+		&Config{Storage: storage},
 	)
 	require.NoError(t, err)
 

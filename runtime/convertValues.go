@@ -1523,7 +1523,7 @@ func importPublicKey(
 		getLocationRange,
 		publicKeyValue,
 		signAlgoValue,
-		inter.PublicKeyValidationHandler,
+		inter.Config.PublicKeyValidationHandler,
 	), nil
 }
 

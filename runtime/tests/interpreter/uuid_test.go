@@ -89,15 +89,13 @@ func TestInterpretResourceUUID(t *testing.T) {
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(importingChecker),
 		importingChecker.Location,
-		interpreter.WithStorage(storage),
-		interpreter.WithUUIDHandler(
-			func() (uint64, error) {
+		&interpreter.Config{
+			Storage: storage,
+			UUIDHandler: func() (uint64, error) {
 				defer func() { uuid++ }()
 				return uuid, nil
 			},
-		),
-		interpreter.WithImportLocationHandler(
-			func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 				assert.Equal(t,
 					ImportedLocation,
 					location,
@@ -113,7 +111,7 @@ func TestInterpretResourceUUID(t *testing.T) {
 					Interpreter: subInterpreter,
 				}
 			},
-		),
+		},
 	)
 	require.NoError(t, err)
 

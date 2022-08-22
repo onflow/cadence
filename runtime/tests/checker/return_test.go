@@ -196,271 +196,268 @@ type exitTest struct {
 	errors            []error
 }
 
-func testExits(t *testing.T, tests []exitTest) {
-	for _, test := range tests {
-		t.Run("", func(t *testing.T) {
-			code := fmt.Sprintf("fun test(): AnyStruct {\n%s\n}", test.body)
-			_, err := ParseAndCheckWithOptions(
-				t,
-				code,
-				ParseAndCheckOptions{
-					Options: []sema.Option{
-						sema.WithPredeclaredValues(test.valueDeclarations),
-					},
-				},
-			)
+func testExits(t *testing.T, test exitTest) {
 
-			if test.errors != nil {
-				errs := ExpectCheckerErrors(t, err, len(test.errors))
-				for i, err := range errs {
-					assert.IsType(t, test.errors[i], err)
-				}
-			} else if test.exits {
-				require.NoError(t, err)
-			} else {
-				errs := ExpectCheckerErrors(t, err, 1)
-
-				assert.IsType(t, &sema.MissingReturnStatementError{}, errs[0])
-			}
-		})
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	for _, valueDeclaration := range test.valueDeclarations {
+		baseValueActivation.DeclareValue(valueDeclaration)
 	}
+
+	code := fmt.Sprintf("fun test(): AnyStruct {\n%s\n}", test.body)
+	_, err := ParseAndCheckWithOptions(
+		t,
+		code,
+		ParseAndCheckOptions{
+			Options: []sema.Option{
+				sema.WithBaseValueActivation(baseValueActivation),
+			},
+		},
+	)
+
+	if test.errors != nil {
+		errs := ExpectCheckerErrors(t, err, len(test.errors))
+		for i, err := range errs {
+			assert.IsType(t, test.errors[i], err)
+		}
+	} else if test.exits {
+		require.NoError(t, err)
+	} else {
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.MissingReturnStatementError{}, errs[0])
+	}
+
 }
 
 func TestCheckReturnStatementExits(t *testing.T) {
 
 	t.Parallel()
 
-	testExits(
-		t, []exitTest{
-			{
-				body:  "return 1",
-				exits: true,
+	t.Run("with value", func(t *testing.T) {
+
+		t.Parallel()
+
+		testExits(t, exitTest{
+			body:  "return 1",
+			exits: true,
+		})
+	})
+
+	t.Run("without value", func(t *testing.T) {
+
+		t.Parallel()
+
+		testExits(t, exitTest{
+			body:  "return",
+			exits: true,
+			errors: []error{
+				&sema.MissingReturnValueError{},
 			},
-			{
-				body:  "return",
-				exits: true,
-				errors: []error{
-					&sema.MissingReturnValueError{},
-				},
-			},
-		},
-	)
+		})
+	})
 }
 
 func TestCheckIfStatementExits(t *testing.T) {
 
 	t.Parallel()
 
-	testExits(
-		t,
-		[]exitTest{
-			{
-				body: `
-                  if true {
-                      return 1
-                  }
-                `,
-				exits: false,
-			},
-			{
-				body: `
-                  var x = 1
-                  if true {
-                      x = 2
-                  } else {
-                      return 2
-                  }
-                `,
-				exits: false,
-			},
-			{
-				body: `
-                  var x = 1
-                  if false {
-                      x = 2
-                  } else {
-                      return 2
-                  }
-                `,
-				exits: false,
-			},
-			{
-				body: `
-                  if true {
-                      if true {
-                          return 1
-                      }
-                  }
-                `,
-				exits: false,
-			},
-			{
-				body: `
-                  if 2 > 1 {
-                      return 1
-                  }
-                `,
-				exits: false,
-			},
-			{
-				body: `
-                  if 2 > 1 {
-                      return 1
-                  } else {
-                      return 2
-                  }
-                `,
-				exits: true,
-			},
-			{
-				body: `
-                  if 2 > 1 {
-                      return 1
-                  }
+	t.Run("only in then branch", func(t *testing.T) {
+
+		t.Parallel()
+
+		testExits(t, exitTest{
+			body: `
+              if true {
+                  return 1
+              }
+            `,
+			exits: false,
+		})
+	})
+
+	t.Run("only in else branch", func(t *testing.T) {
+
+		t.Parallel()
+
+		testExits(t, exitTest{
+			body: `
+              var x = 1
+              if true {
+                  x = 2
+              } else {
                   return 2
-                `,
-				exits: true,
-			},
-		},
-	)
+              }
+            `,
+			exits: false,
+		})
+	})
+
+	t.Run("in nested then branch", func(t *testing.T) {
+
+		t.Parallel()
+
+		testExits(t, exitTest{
+			body: `
+              if true {
+                  if true {
+                      return 1
+                  }
+              }
+            `,
+			exits: false,
+		})
+	})
+
+	t.Run("return in both branches", func(t *testing.T) {
+
+		t.Parallel()
+
+		testExits(t, exitTest{
+			body: `
+              if 2 > 1 {
+                  return 1
+              } else {
+                  return 2
+              }
+            `,
+			exits: true,
+		})
+	})
+
+	t.Run("return after then branch", func(t *testing.T) {
+
+		t.Parallel()
+
+		testExits(t, exitTest{
+			body: `
+              if 2 > 1 {
+                  return 1
+              }
+              return 2
+            `,
+			exits: true,
+		})
+	})
 }
 
 func TestCheckWhileStatementExits(t *testing.T) {
 
 	t.Parallel()
 
-	testExits(
-		t,
-		[]exitTest{
-			{
-				body: `
-                  var x = 1
-                  var y = 2
-                  while true {
-                      x = y
-                  }
-                `,
-				exits: false,
+	t.Run("none", func(t *testing.T) {
+
+		t.Parallel()
+
+		testExits(t, exitTest{
+			body: `
+              var x = 1
+              var y = 2
+              while true {
+                  x = y
+              }
+            `,
+			exits: false,
+		})
+	})
+
+	t.Run("break", func(t *testing.T) {
+
+		t.Parallel()
+
+		testExits(t, exitTest{
+			body: `
+              var x = 1
+              var y = 2
+              while true {
+                  x = y
+                  break
+              }
+            `,
+			exits: false,
+		})
+	})
+
+	t.Run("in body, missing value", func(t *testing.T) {
+
+		t.Parallel()
+
+		testExits(t, exitTest{
+			body: `
+              while 2 > 1 {
+                  return
+              }
+            `,
+			exits: false,
+			errors: []error{
+				&sema.MissingReturnValueError{},
+				&sema.MissingReturnStatementError{},
 			},
-			{
-				body: `
-                  var x = 1
-                  var y = 2
-                  while true {
-                      x = y
-                      break
-                  }
-                `,
-				exits: false,
-			},
-			{
-				body: `
-                  var x = 1
-                  var y = 2
-                  while 1 > 2 {
-                      x = y
-                  }
-                `,
-				exits: false,
-			},
-			{
-				body: `
-                  var x = 1
-                  var y = 2
-                  while 1 > 2 {
-                      x = y
-                      break
-                  }
-                `,
-				exits: false,
-			},
-			{
-				body: `
-                  while 2 > 1 {
-                      return
-                  }
-                `,
-				exits: false,
-				errors: []error{
-					&sema.MissingReturnValueError{},
-					&sema.MissingReturnStatementError{},
-				},
-			},
-			{
-				body: `
-                  var x = 0
-                  while x < 10 {
-                      return x
-                  }
-                `,
-				exits: false,
-			},
-			{
-				body: `
-                  while true {
-                      return
-                  }
-                `,
-				exits: false,
-				errors: []error{
-					&sema.MissingReturnValueError{},
-					&sema.MissingReturnStatementError{},
-				},
-			},
-			{
-				body: `
-                  while true {
-                      break
-                  }
-                `,
-				exits: false,
-			},
-		},
-	)
+		})
+	})
+
+	t.Run("in body", func(t *testing.T) {
+
+		t.Parallel()
+
+		testExits(t, exitTest{
+			body: `
+              var x = 0
+              while x < 10 {
+                  return x
+              }
+            `,
+			exits: false,
+		})
+	})
 }
 
 func TestCheckNeverInvocationExits(t *testing.T) {
 
 	t.Parallel()
 
-	valueDeclarations := stdlib.StandardLibraryFunctions{
+	valueDeclarations := []sema.ValueDeclaration{
 		stdlib.PanicFunction,
-	}.ToSemaValueDeclarations()
+	}
 
-	testExits(
-		t,
-		[]exitTest{
-			{
-				body: `
-                  panic("")
-                `,
-				exits:             true,
-				valueDeclarations: valueDeclarations,
-			},
-			{
-				body: `
-                  if panic("") {}
-                `,
-				exits:             true,
-				valueDeclarations: valueDeclarations,
-			},
-			{
-				body: `
-                  while panic("") {}
-                `,
-				exits:             true,
-				valueDeclarations: valueDeclarations,
-			},
-			{
-				body: `
-                  let x: Int? = 1
-                  let y = x ?? panic("")
-                `,
-				exits:             false,
-				valueDeclarations: valueDeclarations,
-			},
-		},
-	)
+	t.Run("expression statement", func(t *testing.T) {
+
+		t.Parallel()
+
+		testExits(t, exitTest{
+			body: `
+              panic("")
+            `,
+			exits:             true,
+			valueDeclarations: valueDeclarations,
+		})
+	})
+
+	t.Run("expression, definitely evaluated", func(t *testing.T) {
+
+		t.Parallel()
+
+		testExits(t, exitTest{
+			body: `
+              if panic("") {}
+            `,
+			exits:             true,
+			valueDeclarations: valueDeclarations,
+		})
+	})
+
+	t.Run("expression, potentially evaluated", func(t *testing.T) {
+
+		t.Parallel()
+
+		testExits(t, exitTest{
+			body: `
+              let x: Int? = 1
+              let y = x ?? panic("")
+            `,
+			exits:             false,
+			valueDeclarations: valueDeclarations,
+		})
+	})
 }
 
 // TestCheckNestedFunctionExits tests if a function with a return statement
@@ -470,18 +467,13 @@ func TestCheckNestedFunctionExits(t *testing.T) {
 
 	t.Parallel()
 
-	testExits(
-		t,
-		[]exitTest{
-			{
-				body: `
-                  fun (): Int {
-                      return 1
-                  }
-                `,
-				// NOTE: inner function returns, but outer does not
-				exits: false,
-			},
-		},
-	)
+	testExits(t, exitTest{
+		body: `
+          fun (): Int {
+              return 1
+          }
+        `,
+		// NOTE: inner function returns, but outer does not
+		exits: false,
+	})
 }

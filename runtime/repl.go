@@ -28,32 +28,26 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 type REPL struct {
 	checker  *sema.Checker
 	inter    *interpreter.Interpreter
-	onError  func(err error, location common.Location, codes map[common.Location]string)
+	onError  func(err error, location Location, codes map[Location]string)
 	onResult func(interpreter.Value)
-	codes    map[common.Location]string
+	codes    map[Location]string
 }
 
 func NewREPL(
-	onError func(err error, location common.Location, codes map[common.Location]string),
+	onError func(err error, location Location, codes map[Location]string),
 	onResult func(interpreter.Value),
 	checkerOptions []sema.Option,
 ) (*REPL, error) {
 
-	checkers := map[common.Location]*sema.Checker{}
-	codes := map[common.Location]string{}
+	checkers := map[Location]*sema.Checker{}
+	codes := map[Location]string{}
 
-	defaultCheckerOptions, defaultInterpreterOptions :=
-		cmd.DefaultCheckerInterpreterOptions(
-			checkers,
-			codes,
-			stdlib.DefaultFlowBuiltinImpls(),
-		)
+	defaultCheckerOptions := cmd.DefaultCheckerOptions(checkers, codes)
 
 	defaultCheckerOptions = append(
 		defaultCheckerOptions,
@@ -83,23 +77,18 @@ func NewREPL(
 	// NOTE: storage option must be provided *before* the predeclared values option,
 	// as predeclared values may rely on storage
 
-	interpreterOptions := []interpreter.Option{
-		interpreter.WithStorage(storage),
-		interpreter.WithUUIDHandler(func() (uint64, error) {
+	config := &interpreter.Config{
+		Storage: storage,
+		UUIDHandler: func() (uint64, error) {
 			defer func() { uuid++ }()
 			return uuid, nil
-		}),
+		},
 	}
-
-	interpreterOptions = append(
-		interpreterOptions,
-		defaultInterpreterOptions...,
-	)
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
 		checker.Location,
-		interpreterOptions...,
+		config,
 	)
 	if err != nil {
 		return nil, err

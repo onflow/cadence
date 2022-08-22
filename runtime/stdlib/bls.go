@@ -127,7 +127,7 @@ var blsAggregatePublicKeysFunction = interpreter.NewUnmeteredHostFunctionValue(
 			getLocationRange,
 		)
 
-		return invocation.Interpreter.BLSAggregatePublicKeysHandler(
+		return inter.Config.BLSAggregatePublicKeysHandler(
 			inter,
 			getLocationRange,
 			publicKeys,
@@ -152,7 +152,7 @@ var blsAggregateSignaturesFunction = interpreter.NewUnmeteredHostFunctionValue(
 			getLocationRange,
 		)
 
-		return inter.BLSAggregateSignaturesHandler(
+		return inter.Config.BLSAggregateSignaturesHandler(
 			inter,
 			getLocationRange,
 			signatures,
@@ -177,11 +177,9 @@ var blsContractValue = interpreter.NewSimpleCompositeValue(
 	nil,
 )
 
-var blsContract = StandardLibraryValue{
-	Name: "BLS",
-	Type: blsContractType,
-	ValueFactory: func(_ *interpreter.Interpreter) interpreter.Value {
-		return blsContractValue
-	},
-	Kind: common.DeclarationKindContract,
+var BLSContract = StandardLibraryValue{
+	Name:  "BLS",
+	Type:  blsContractType,
+	Value: blsContractValue,
+	Kind:  common.DeclarationKindContract,
 }

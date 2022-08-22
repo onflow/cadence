@@ -71,57 +71,43 @@ func PrepareProgram(code string, location common.Location, codes map[common.Loca
 
 var checkers = map[common.Location]*sema.Checker{}
 
-func DefaultCheckerInterpreterOptions(
+func DefaultCheckerOptions(
 	checkers map[common.Location]*sema.Checker,
 	codes map[common.Location]string,
-	impls stdlib.FlowBuiltinImpls,
-) (
-	[]sema.Option,
-	[]interpreter.Option,
-) {
-
-	semaPredeclaredValues, interpreterPredeclaredValues :=
-		stdlib.FlowDefaultPredeclaredValues(impls)
-
+) []sema.Option {
 	return []sema.Option{
-			sema.WithPredeclaredValues(semaPredeclaredValues),
-			sema.WithPredeclaredTypes(stdlib.FlowDefaultPredeclaredTypes),
-			sema.WithImportHandler(
-				func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
-					if importedLocation == stdlib.CryptoChecker.Location {
-						return sema.ElaborationImport{
-							Elaboration: stdlib.CryptoChecker.Elaboration,
-						}, nil
-					}
-
-					stringLocation, ok := importedLocation.(common.StringLocation)
-
-					if !ok {
-						return nil, &sema.CheckerError{
-							Location: checker.Location,
-							Codes:    codes,
-							Errors: []error{
-								fmt.Errorf("cannot import `%s`. only files are supported", importedLocation),
-							},
-						}
-					}
-
-					importedChecker, ok := checkers[importedLocation]
-					if !ok {
-						importedProgram, _ := PrepareProgramFromFile(stringLocation, codes)
-						importedChecker, _ = checker.SubChecker(importedProgram, importedLocation)
-						checkers[importedLocation] = importedChecker
-					}
-
+		sema.WithImportHandler(
+			func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
+				if importedLocation == stdlib.CryptoChecker.Location {
 					return sema.ElaborationImport{
-						Elaboration: importedChecker.Elaboration,
+						Elaboration: stdlib.CryptoChecker.Elaboration,
 					}, nil
-				},
-			),
-		},
-		[]interpreter.Option{
-			interpreter.WithPredeclaredValues(interpreterPredeclaredValues),
-		}
+				}
+
+				stringLocation, ok := importedLocation.(common.StringLocation)
+				if !ok {
+					return nil, &sema.CheckerError{
+						Location: checker.Location,
+						Codes:    codes,
+						Errors: []error{
+							fmt.Errorf("cannot import `%s`. only files are supported", importedLocation),
+						},
+					}
+				}
+
+				importedChecker, ok := checkers[importedLocation]
+				if !ok {
+					importedProgram, _ := PrepareProgramFromFile(stringLocation, codes)
+					importedChecker, _ = checker.SubChecker(importedProgram, importedLocation)
+					checkers[importedLocation] = importedChecker
+				}
+
+				return sema.ElaborationImport{
+					Elaboration: importedChecker.Elaboration,
+				}, nil
+			},
+		),
+	}
 }
 
 // PrepareChecker prepares and initializes a checker with a given code as a string,
@@ -134,12 +120,7 @@ func PrepareChecker(
 	must func(error),
 ) (*sema.Checker, func(error)) {
 
-	defaultCheckerOptions, _ :=
-		DefaultCheckerInterpreterOptions(
-			checkers,
-			codes,
-			stdlib.FlowBuiltinImpls{},
-		)
+	defaultCheckerOptions := DefaultCheckerOptions(checkers, codes)
 
 	defaultCheckerOptions = append(
 		defaultCheckerOptions,
@@ -187,39 +168,25 @@ func PrepareInterpreter(filename string, debugger *interpreter.Debugger) (*inter
 
 	storage := interpreter.NewInMemoryStorage(nil)
 
-	_, defaultInterpreterOptions :=
-		DefaultCheckerInterpreterOptions(
-			checkers,
-			codes,
-			stdlib.DefaultFlowBuiltinImpls(),
-		)
-
 	// NOTE: storage option must be provided *before* the predeclared values option,
 	// as predeclared values may rely on storage
 
-	interpreterOptions := []interpreter.Option{
-		interpreter.WithStorage(storage),
-		interpreter.WithUUIDHandler(func() (uint64, error) {
+	config := &interpreter.Config{
+		Storage: storage,
+		UUIDHandler: func() (uint64, error) {
 			defer func() { uuid++ }()
 			return uuid, nil
-		}),
-		interpreter.WithDebugger(debugger),
-		interpreter.WithImportLocationHandler(
-			func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
-				panic("Importing programs is not supported yet")
-			},
-		),
+		},
+		Debugger: debugger,
+		ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+			panic("Importing programs is not supported yet")
+		},
 	}
-
-	interpreterOptions = append(
-		interpreterOptions,
-		defaultInterpreterOptions...,
-	)
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
 		checker.Location,
-		interpreterOptions...,
+		config,
 	)
 	must(err)
 

@@ -987,6 +987,9 @@ func TestCheckTopShotContract(t *testing.T) {
 	)
 	require.NoError(t, err)
 
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.PanicFunction)
+
 	_, err = ParseAndCheckWithOptions(t,
 		topShotContract,
 		ParseAndCheckOptions{
@@ -1002,11 +1005,7 @@ func TestCheckTopShotContract(t *testing.T) {
 						}, nil
 					},
 				),
-				sema.WithPredeclaredValues(
-					stdlib.StandardLibraryFunctions{
-						stdlib.PanicFunction,
-					}.ToSemaValueDeclarations(),
-				),
+				sema.WithBaseValueActivation(baseValueActivation),
 			},
 		},
 	)

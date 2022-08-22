@@ -3001,7 +3001,6 @@ func baseTypeVariable(name string, ty Type) *Variable {
 		Type:            ty,
 		DeclarationKind: common.DeclarationKindType,
 		IsConstant:      true,
-		IsBaseValue:     true,
 		Access:          ast.AccessPublic,
 	}
 }
@@ -3212,7 +3211,6 @@ func baseFunctionVariable(name string, ty *FunctionType, docString string) *Vari
 		DeclarationKind: common.DeclarationKindFunction,
 		ArgumentLabels:  ty.ArgumentLabels(),
 		IsConstant:      true,
-		IsBaseValue:     true,
 		Type:            ty,
 		Access:          ast.AccessPublic,
 		DocString:       docString,
@@ -3821,7 +3819,8 @@ type Member struct {
 	VariableKind    ast.VariableKind
 	ArgumentLabels  []string
 	// Predeclared fields can be considered initialized
-	Predeclared bool
+	Predeclared       bool
+	HasImplementation bool
 	// IgnoreInSerialization fields are ignored in serialization
 	IgnoreInSerialization bool
 	DocString             string

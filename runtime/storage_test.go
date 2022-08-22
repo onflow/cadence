@@ -512,7 +512,7 @@ func TestRuntimePublicCapabilityBorrowTypeConfusion(t *testing.T) {
 
 	deployTestContractTx := utils.DeploymentTransaction("TestContract", []byte(testContract))
 
-	accountCodes := map[common.Location][]byte{}
+	accountCodes := map[Location][]byte{}
 	var events []cadence.Event
 	var loggedMessages []string
 
@@ -1126,7 +1126,7 @@ func TestRuntimeBatchMintAndTransfer(t *testing.T) {
 
 	var signerAddress common.Address
 
-	accountCodes := map[common.Location]string{}
+	accountCodes := map[Location]string{}
 
 	var uuid uint64
 
@@ -1496,7 +1496,7 @@ func TestRuntimeStorageReferenceCast(t *testing.T) {
       }
     `))
 
-	accountCodes := map[common.Location][]byte{}
+	accountCodes := map[Location][]byte{}
 	var events []cadence.Event
 	var loggedMessages []string
 
@@ -1771,8 +1771,9 @@ func TestRuntimeResourceOwnerChange(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
-	runtime.SetResourceOwnerChangeHandlerEnabled(true)
+	runtime := NewInterpreterRuntime(Config{
+		ResourceOwnerChangeHandlerEnabled: true,
+	})
 
 	address1 := common.MustBytesToAddress([]byte{0x1})
 	address2 := common.MustBytesToAddress([]byte{0x2})
@@ -1799,7 +1800,7 @@ func TestRuntimeResourceOwnerChange(t *testing.T) {
 		newAddress common.Address
 	}
 
-	accountCodes := map[common.Location][]byte{}
+	accountCodes := map[Location][]byte{}
 	var events []cadence.Event
 	var loggedMessages []string
 	var resourceOwnerChanges []resourceOwnerChange
@@ -2209,7 +2210,7 @@ transaction {
 
 	testAddress := common.MustBytesToAddress([]byte{0x1})
 
-	accountCodes := map[common.Location][]byte{}
+	accountCodes := map[Location][]byte{}
 
 	var events []cadence.Event
 
@@ -2338,7 +2339,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		runtime := newTestInterpreterRuntime()
 
-		accountCodes := map[common.Location][]byte{}
+		accountCodes := map[Location][]byte{}
 
 		var events []cadence.Event
 
@@ -2475,7 +2476,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		testAddress := common.MustBytesToAddress([]byte{0x1})
 
-		accountCodes := map[common.Location][]byte{}
+		accountCodes := map[Location][]byte{}
 
 		var events []cadence.Event
 
@@ -2616,7 +2617,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		testAddress := common.MustBytesToAddress([]byte{0x1})
 
-		accountCodes := map[common.Location][]byte{}
+		accountCodes := map[Location][]byte{}
 
 		var events []cadence.Event
 
@@ -2744,7 +2745,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		testAddress := common.MustBytesToAddress([]byte{0x1})
 
-		accountCodes := map[common.Location][]byte{}
+		accountCodes := map[Location][]byte{}
 
 		var events []cadence.Event
 
@@ -2870,7 +2871,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		testAddress := common.MustBytesToAddress([]byte{0x1})
 
-		accountCodes := map[common.Location][]byte{}
+		accountCodes := map[Location][]byte{}
 
 		var events []cadence.Event
 
@@ -3007,7 +3008,6 @@ func TestRuntimeNoAtreeSendOnClosedChannelDuringCommit(t *testing.T) {
 
 // TestRuntimeStorageEnumCase tests the writing an enum case to storage,
 // reading it back from storage, as well as using it to index into a dictionary.
-//
 func TestRuntimeStorageEnumCase(t *testing.T) {
 
 	t.Parallel()
@@ -3016,7 +3016,7 @@ func TestRuntimeStorageEnumCase(t *testing.T) {
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
-	accountCodes := map[common.Location][]byte{}
+	accountCodes := map[Location][]byte{}
 	var events []cadence.Event
 	var loggedMessages []string
 
@@ -3227,17 +3227,17 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 	address := common.MustBytesToAddress([]byte{0x1})
 
 	deployTx := utils.DeploymentTransaction("Test", []byte(`
-      pub contract Test {
+     pub contract Test {
 
-          pub resource interface RI {}
+         pub resource interface RI {}
 
-          pub resource R: RI {}
+         pub resource R: RI {}
 
-          pub fun createR(): @R {
-              return <-create R()
-          }
-      }
-    `))
+         pub fun createR(): @R {
+             return <-create R()
+         }
+     }
+   `))
 
 	accountCodes := map[common.LocationID][]byte{}
 	var events []cadence.Event
@@ -3302,16 +3302,16 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 	err = runtime.ExecuteTransaction(
 		Script{
 			Source: []byte(`
-              import Test from 0x1
+             import Test from 0x1
 
-              transaction {
-                  prepare(signer: AuthAccount) {
-                      signer.save("Hello, World!", to: /storage/first)
-                      signer.save(["one", "two", "three"], to: /storage/second)
-                      signer.save(<-Test.createR(), to: /storage/r)
-                  }
-               }
-            `),
+             transaction {
+                 prepare(signer: AuthAccount) {
+                     signer.save("Hello, World!", to: /storage/first)
+                     signer.save(["one", "two", "three"], to: /storage/second)
+                     signer.save(<-Test.createR(), to: /storage/r)
+                 }
+              }
+           `),
 		},
 		Context{
 			Interface: runtimeInterface,

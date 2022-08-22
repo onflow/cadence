@@ -63,7 +63,7 @@ func hashAlgorithmHashFunction(hashAlgoValue interpreter.MemberAccessibleValue) 
 
 			getLocationRange := invocation.GetLocationRange
 
-			return inter.HashHandler(
+			return inter.Config.HashHandler(
 				inter,
 				getLocationRange,
 				dataValue,
@@ -92,7 +92,7 @@ func hashAlgorithmHashWithTagFunction(hashAlgoValue interpreter.MemberAccessible
 
 			getLocationRange := invocation.GetLocationRange
 
-			return inter.HashHandler(
+			return inter.Config.HashHandler(
 				inter,
 				getLocationRange,
 				dataValue,
@@ -110,14 +110,12 @@ var hashAlgorithmConstructorValue, HashAlgorithmCaseValues = cryptoAlgorithmEnum
 	NewHashAlgorithmCase,
 )
 
-var hashAlgorithmConstructor = StandardLibraryValue{
+var HashAlgorithmConstructor = StandardLibraryValue{
 	Name: sema.HashAlgorithmTypeName,
 	Type: cryptoAlgorithmEnumConstructorType(
 		sema.HashAlgorithmType,
 		sema.HashAlgorithms,
 	),
-	ValueFactory: func(_ *interpreter.Interpreter) interpreter.Value {
-		return hashAlgorithmConstructorValue
-	},
-	Kind: common.DeclarationKindEnum,
+	Value: hashAlgorithmConstructorValue,
+	Kind:  common.DeclarationKindEnum,
 }
