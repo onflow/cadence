@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/tests/utils"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 
@@ -2539,18 +2540,9 @@ func TestInterpretAccount_iteration(t *testing.T) {
             `,
 		)
 
-		value, err := inter.Invoke("test")
-
-		// while we make no guarantees about the behavior of iteration with mutation, the behavior
-		// does still need to be deterministic, so we assert that the undefined behavior is the same every time
-		require.NoError(t, err)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.NewIntValueFromInt64(nil, 6),
-			value,
-		)
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+		require.ErrorAs(t, err, &interpreter.StorageMutatedDuringIterationError{})
 	})
 
 	t.Run("forEachStored with early termination", func(t *testing.T) {
@@ -2595,5 +2587,440 @@ func TestInterpretAccount_iteration(t *testing.T) {
 			value,
 		)
 
+	})
+}
+
+func TestInterpretAccountIterationMutation(t *testing.T) {
+	test := func(continueAfterMutation bool) {
+		t.Run(fmt.Sprintf("forEachStored, continue: %t", continueAfterMutation), func(t *testing.T) {
+			t.Parallel()
+			address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+			inter, _ := testAccount(
+				t,
+				address,
+				true,
+				fmt.Sprintf(`fun test() {
+					account.save(1, to: /storage/foo1)
+					account.save(2, to: /storage/foo2)
+					account.save(3, to: /storage/foo3)
+					account.save("qux", to: /storage/foo4)
+
+					account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+						if type == Type<String>() {
+							account.save("bar", to: /storage/foo5)
+							return %t
+						}
+						return true
+					})
+				}`, continueAfterMutation),
+			)
+
+			_, err := inter.Invoke("test")
+			if continueAfterMutation {
+				require.Error(t, err)
+				require.ErrorAs(t, err, &interpreter.StorageMutatedDuringIterationError{})
+			} else {
+				require.NoError(t, err)
+			}
+		})
+
+		t.Run(fmt.Sprintf("forEachPublic, continue: %t", continueAfterMutation), func(t *testing.T) {
+			t.Parallel()
+			address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+			inter, _ := testAccount(
+				t,
+				address,
+				true,
+				fmt.Sprintf(`fun test() {
+					account.save(1, to: /storage/foo1)
+					account.save("", to: /storage/foo2)
+					account.link<&Int>(/public/foo1, target: /storage/foo1)
+					account.link<&String>(/public/foo2, target: /storage/foo2)
+
+					account.forEachPublic(fun (path: PublicPath, type: Type): Bool {
+						if type == Type<Capability<&String>>() {
+							account.save("bar", to: /storage/foo3)
+							return %t
+						}
+						return true
+					})
+				}`, continueAfterMutation),
+			)
+
+			_, err := inter.Invoke("test")
+			if continueAfterMutation {
+				require.Error(t, err)
+				require.ErrorAs(t, err, &interpreter.StorageMutatedDuringIterationError{})
+			} else {
+				require.NoError(t, err)
+			}
+		})
+
+		t.Run(fmt.Sprintf("forEachPrivate, continue: %t", continueAfterMutation), func(t *testing.T) {
+			t.Parallel()
+			address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+			inter, _ := testAccount(
+				t,
+				address,
+				true,
+				fmt.Sprintf(`fun test() {
+					account.save(1, to: /storage/foo1)
+					account.save("", to: /storage/foo2)
+					account.link<&Int>(/private/foo1, target: /storage/foo1)
+					account.link<&String>(/private/foo2, target: /storage/foo2)
+
+					account.forEachPrivate(fun (path: PrivatePath, type: Type): Bool {
+						if type == Type<Capability<&String>>() {
+							account.save("bar", to: /storage/foo3)
+							return %t
+						}
+						return true
+					})
+				}`, continueAfterMutation),
+			)
+
+			_, err := inter.Invoke("test")
+			if continueAfterMutation {
+				require.Error(t, err)
+				require.ErrorAs(t, err, &interpreter.StorageMutatedDuringIterationError{})
+			} else {
+				require.NoError(t, err)
+			}
+		})
+
+		t.Run(fmt.Sprintf("with function call, continue: %t", continueAfterMutation), func(t *testing.T) {
+			t.Parallel()
+			address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+			inter, _ := testAccount(
+				t,
+				address,
+				true,
+				fmt.Sprintf(`fun foo() {
+					account.save("bar", to: /storage/foo5)
+				}
+				
+				fun test() {
+					account.save(1, to: /storage/foo1)
+					account.save(2, to: /storage/foo2)
+					account.save(3, to: /storage/foo3)
+					account.save("qux", to: /storage/foo4)
+
+					account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+						if type == Type<String>() {
+							foo()
+							return %t
+						}
+						return true
+					})
+				}`, continueAfterMutation),
+			)
+
+			_, err := inter.Invoke("test")
+			if continueAfterMutation {
+				require.Error(t, err)
+				require.ErrorAs(t, err, &interpreter.StorageMutatedDuringIterationError{})
+			} else {
+				require.NoError(t, err)
+			}
+		})
+
+		t.Run(fmt.Sprintf("with function call and nested iteration, continue: %t", continueAfterMutation), func(t *testing.T) {
+			t.Parallel()
+			address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+			inter, _ := testAccount(
+				t,
+				address,
+				true,
+				fmt.Sprintf(`fun foo() {
+					account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+						return true
+					})
+					account.save("bar", to: /storage/foo5)
+				}
+				
+				fun test() {
+					account.save(1, to: /storage/foo1)
+					account.save(2, to: /storage/foo2)
+					account.save(3, to: /storage/foo3)
+					account.save("qux", to: /storage/foo4)
+
+					account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+						if type == Type<String>() {
+							foo()
+							return %t
+						}
+						return true
+					})
+				}`, continueAfterMutation),
+			)
+
+			_, err := inter.Invoke("test")
+			if continueAfterMutation {
+				require.Error(t, err)
+				require.ErrorAs(t, err, &interpreter.StorageMutatedDuringIterationError{})
+			} else {
+				require.NoError(t, err)
+			}
+		})
+
+		t.Run(fmt.Sprintf("load, continue: %t", continueAfterMutation), func(t *testing.T) {
+			t.Parallel()
+			address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+			inter, _ := testAccount(
+				t,
+				address,
+				true,
+				fmt.Sprintf(`fun test() {
+					account.save(1, to: /storage/foo1)
+					account.save(2, to: /storage/foo2)
+					account.save(3, to: /storage/foo3)
+					account.save("qux", to: /storage/foo4)
+
+					account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+						if type == Type<String>() {
+							account.load<Int>(from: /storage/foo1)
+							return %t
+						}
+						return true
+					})
+				}`, continueAfterMutation),
+			)
+
+			_, err := inter.Invoke("test")
+			if continueAfterMutation {
+				require.Error(t, err)
+				require.ErrorAs(t, err, &interpreter.StorageMutatedDuringIterationError{})
+			} else {
+				require.NoError(t, err)
+			}
+		})
+
+		t.Run(fmt.Sprintf("link, continue: %t", continueAfterMutation), func(t *testing.T) {
+			t.Parallel()
+			address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+			inter, _ := testAccount(
+				t,
+				address,
+				true,
+				fmt.Sprintf(`fun test() {
+					account.save(1, to: /storage/foo1)
+					account.save("", to: /storage/foo2)
+					account.link<&Int>(/public/foo1, target: /storage/foo1)
+					account.link<&String>(/public/foo2, target: /storage/foo2)
+
+					account.forEachPublic(fun (path: PublicPath, type: Type): Bool {
+						if type == Type<Capability<&String>>() {
+							account.link<&Int>(/public/foo3, target: /storage/foo1)
+							return %t
+						}
+						return true
+					})
+				}`, continueAfterMutation),
+			)
+
+			_, err := inter.Invoke("test")
+			if continueAfterMutation {
+				require.Error(t, err)
+				require.ErrorAs(t, err, &interpreter.StorageMutatedDuringIterationError{})
+			} else {
+				require.NoError(t, err)
+			}
+		})
+
+		t.Run(fmt.Sprintf("unlink, continue: %t", continueAfterMutation), func(t *testing.T) {
+			t.Parallel()
+			address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+			inter, _ := testAccount(
+				t,
+				address,
+				true,
+				fmt.Sprintf(`fun test() {
+					account.save(1, to: /storage/foo1)
+					account.save("", to: /storage/foo2)
+					account.link<&Int>(/public/foo1, target: /storage/foo1)
+					account.link<&String>(/public/foo2, target: /storage/foo2)
+
+					account.forEachPublic(fun (path: PublicPath, type: Type): Bool {
+						if type == Type<Capability<&String>>() {
+							account.unlink(/public/foo1)
+							return %t
+						}
+						return true
+					})
+				}`, continueAfterMutation),
+			)
+
+			_, err := inter.Invoke("test")
+			if continueAfterMutation {
+				require.Error(t, err)
+				require.ErrorAs(t, err, &interpreter.StorageMutatedDuringIterationError{})
+			} else {
+				require.NoError(t, err)
+			}
+		})
+
+		t.Run(fmt.Sprintf("with imported function call, continue: %t", continueAfterMutation), func(t *testing.T) {
+			t.Parallel()
+			address := common.MustBytesToAddress([]byte{1})
+			addressValue := interpreter.AddressValue(address)
+
+			authAccountValueDeclaration := stdlib.StandardLibraryValue{
+				Name:  "account",
+				Type:  sema.AuthAccountType,
+				Value: newTestAuthAccountValue(nil, addressValue),
+				Kind:  common.DeclarationKindConstant,
+			}
+			baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+			baseValueActivation.DeclareValue(authAccountValueDeclaration)
+			baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+			baseActivation.Declare(authAccountValueDeclaration)
+
+			importedChecker, err := checker.ParseAndCheckWithOptions(t,
+				`
+				  pub fun foo() {
+					account.save("bar", to: /storage/foo5)
+				  }
+				`,
+				checker.ParseAndCheckOptions{
+					Location: common.AddressLocation{
+						Address: address,
+						Name:    "foo",
+					},
+					Options: []sema.Option{
+						sema.WithBaseValueActivation(baseValueActivation),
+					},
+				},
+			)
+			require.NoError(t, err)
+
+			inter, _ := parseCheckAndInterpretWithOptions(t,
+				fmt.Sprintf(`
+				import foo from 0x1
+				
+				fun test() {
+					account.save(1, to: /storage/foo1)
+					account.save(2, to: /storage/foo2)
+					account.save(3, to: /storage/foo3)
+					account.save("qux", to: /storage/foo4)
+	
+					account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+						if type == Type<String>() {
+							foo()
+							return %t
+						}
+						return true
+					})
+				}`, continueAfterMutation),
+				ParseCheckAndInterpretOptions{
+					CheckerOptions: []sema.Option{
+						sema.WithBaseValueActivation(baseValueActivation),
+						sema.WithLocationHandler(
+							func(identifiers []ast.Identifier, location common.Location) (result []sema.ResolvedLocation, err error) {
+
+								require.Equal(t,
+									common.AddressLocation{
+										Address: address,
+										Name:    "",
+									},
+									location,
+								)
+
+								for _, identifier := range identifiers {
+									result = append(result, sema.ResolvedLocation{
+										Location: common.AddressLocation{
+											Address: location.(common.AddressLocation).Address,
+											Name:    identifier.Identifier,
+										},
+										Identifiers: []ast.Identifier{
+											identifier,
+										},
+									})
+								}
+								return
+							},
+						),
+						sema.WithImportHandler(
+							func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
+								return sema.ElaborationImport{
+									Elaboration: importedChecker.Elaboration,
+								}, nil
+							},
+						),
+					},
+					Config: &interpreter.Config{
+						BaseActivation:       baseActivation,
+						ContractValueHandler: makeContractValueHandler(nil, nil, nil),
+						ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+							require.IsType(t, common.AddressLocation{}, location)
+							addressLocation := location.(common.AddressLocation)
+
+							assert.Equal(t, address, addressLocation.Address)
+
+							program := interpreter.ProgramFromChecker(importedChecker)
+							subInterpreter, err := inter.NewSubInterpreter(program, location)
+							if err != nil {
+								panic(err)
+							}
+
+							return interpreter.InterpreterImport{
+								Interpreter: subInterpreter,
+							}
+						},
+					},
+				},
+			)
+
+			_, err = inter.Invoke("test")
+			if continueAfterMutation {
+				require.Error(t, err)
+				require.ErrorAs(t, err, &interpreter.StorageMutatedDuringIterationError{})
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+
+	test(true)
+	test(false)
+
+	t.Run("state properly cleared on iteration end", func(t *testing.T) {
+		t.Parallel()
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(
+			t,
+			address,
+			true,
+			`fun test() {
+				account.save(1, to: /storage/foo1)
+				account.save(2, to: /storage/foo2)
+				account.save(3, to: /storage/foo3)
+				account.save("qux", to: /storage/foo4)
+
+				account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+					return true
+				})
+				account.save("bar", to: /storage/foo5)
+
+				account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+					account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+						return true
+					})
+					return true
+				})
+				account.save("baz", to: /storage/foo6)
+			}`,
+		)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
 	})
 }

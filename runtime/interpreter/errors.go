@@ -825,3 +825,16 @@ func (DuplicateKeyInResourceDictionaryError) IsUserError() {}
 func (e DuplicateKeyInResourceDictionaryError) Error() string {
 	return "duplicate key in resource dictionary"
 }
+
+// StorageMutatedDuringIterationError
+type StorageMutatedDuringIterationError struct {
+	LocationRange
+}
+
+var _ errors.UserError = StorageMutatedDuringIterationError{}
+
+func (StorageMutatedDuringIterationError) IsUserError() {}
+
+func (e StorageMutatedDuringIterationError) Error() string {
+	return "storage iteration continued after modifying storage"
+}

@@ -2206,6 +2206,7 @@ func (interpreter *Interpreter) NewSubInterpreter(
 	error,
 ) {
 	return newInterpreter(
+
 		program,
 		location,
 		interpreter.sharedState,
@@ -2245,6 +2246,7 @@ func (interpreter *Interpreter) writeStored(
 ) {
 	accountStorage := interpreter.Config.Storage.GetStorageMap(storageAddress, domain, true)
 	accountStorage.WriteValue(interpreter, identifier, value)
+	interpreter.recordStorageMutation()
 }
 
 type ValueConverterDeclaration struct {
@@ -3147,6 +3149,12 @@ func (interpreter *Interpreter) storageAccountPaths(addressValue AddressValue, g
 	return interpreter.accountPaths(addressValue, getLocationRange, common.PathDomainStorage, PrimitiveStaticTypeStoragePath)
 }
 
+func (interpreter *Interpreter) recordStorageMutation() {
+	if interpreter.sharedState.inStorageIteration {
+		interpreter.sharedState.storageMutatedDuringIteration = true
+	}
+}
+
 func (interpreter *Interpreter) newStorageIterationFunction(addressValue AddressValue, domain common.PathDomain, pathType sema.Type) *HostFunctionValue {
 	address := addressValue.ToAddress()
 
@@ -3169,6 +3177,12 @@ func (interpreter *Interpreter) newStorageIterationFunction(addressValue Address
 
 			invocationTypeParams := []sema.Type{pathType, sema.MetaType}
 
+			inIteration := inter.sharedState.inStorageIteration
+			inter.sharedState.inStorageIteration = true
+			defer func() {
+				inter.sharedState.inStorageIteration = inIteration
+			}()
+
 			for key, value := storageIterator.Next(); key != "" && value != nil; key, value = storageIterator.Next() {
 				pathValue := NewPathValue(inter, domain, key)
 				runtimeType := NewTypeValue(inter, value.StaticType(inter))
@@ -3190,6 +3204,18 @@ func (interpreter *Interpreter) newStorageIterationFunction(addressValue Address
 				if !shouldContinue {
 					break
 				}
+
+				// it is not safe to check this at the beginning of the loop (i.e. on the next invocation of the callback)
+				// because if the mutation performed in the callback reorganized storage such that the iteration pointer is now
+				// at the end, we will not invoke the callback again but will still silently skip elements of storage. In order
+				// to be safe, we perform this check here to effectively enforce that users return `false` from their callback
+				// in all cases where storage is mutated
+				if inter.sharedState.storageMutatedDuringIteration {
+					panic(StorageMutatedDuringIterationError{
+						LocationRange: getLocationRange(),
+					})
+				}
+
 			}
 
 			return NewVoidValue(inter)
