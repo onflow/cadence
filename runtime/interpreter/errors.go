@@ -42,7 +42,7 @@ func (*unsupportedOperation) IsInternalError() {}
 
 func (e *unsupportedOperation) Error() string {
 	return fmt.Sprintf(
-		"cannot evaluate unsupported %s operation: %s",
+		"internal error: cannot evaluate unsupported %s operation: %s",
 		e.kind.Name(),
 		e.operation.Symbol(),
 	)
