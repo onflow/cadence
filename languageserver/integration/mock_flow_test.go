@@ -40,26 +40,17 @@ func (_m *mockFlowClient) CreateAccount() (*clientAccount, error) {
 }
 
 // DeployContract provides a mock function with given fields: address, name, location
-func (_m *mockFlowClient) DeployContract(address flow.Address, name string, location *url.URL) (*flow.Account, error) {
+func (_m *mockFlowClient) DeployContract(address flow.Address, name string, location *url.URL) error {
 	ret := _m.Called(address, name, location)
 
-	var r0 *flow.Account
-	if rf, ok := ret.Get(0).(func(flow.Address, string, *url.URL) *flow.Account); ok {
+	var r0 error
+	if rf, ok := ret.Get(0).(func(flow.Address, string, *url.URL) error); ok {
 		r0 = rf(address, name, location)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*flow.Account)
-		}
+		r0 = ret.Error(0)
 	}
 
-	var r1 error
-	if rf, ok := ret.Get(1).(func(flow.Address, string, *url.URL) error); ok {
-		r1 = rf(address, name, location)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
+	return r0
 }
 
 // ExecuteScript provides a mock function with given fields: location, args

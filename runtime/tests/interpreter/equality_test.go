@@ -45,17 +45,21 @@ func TestInterpretEquality(t *testing.T) {
 		capabilityValueDeclaration := stdlib.StandardLibraryValue{
 			Name: "cap",
 			Type: &sema.CapabilityType{},
-			ValueFactory: func(_ *interpreter.Interpreter) interpreter.Value {
-				return &interpreter.CapabilityValue{
-					Address: interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
-					Path: interpreter.PathValue{
-						Domain:     common.PathDomainStorage,
-						Identifier: "something",
-					},
-				}
+			Value: &interpreter.CapabilityValue{
+				Address: interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+				Path: interpreter.PathValue{
+					Domain:     common.PathDomainStorage,
+					Identifier: "something",
+				},
 			},
 			Kind: common.DeclarationKindConstant,
 		}
+
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(capabilityValueDeclaration)
+
+		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+		baseActivation.Declare(capabilityValueDeclaration)
 
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
@@ -65,15 +69,11 @@ func TestInterpretEquality(t *testing.T) {
               let res2 = maybeCapNil == nil
 		    `,
 			ParseCheckAndInterpretOptions{
-				Options: []interpreter.Option{
-					interpreter.WithPredeclaredValues([]interpreter.ValueDeclaration{
-						capabilityValueDeclaration,
-					}),
+				Config: &interpreter.Config{
+					BaseActivation: baseActivation,
 				},
 				CheckerOptions: []sema.Option{
-					sema.WithPredeclaredValues([]sema.ValueDeclaration{
-						capabilityValueDeclaration,
-					}),
+					sema.WithBaseValueActivation(baseValueActivation),
 				},
 			},
 		)

@@ -42,7 +42,7 @@ func (*unsupportedOperation) IsInternalError() {}
 
 func (e *unsupportedOperation) Error() string {
 	return fmt.Sprintf(
-		"cannot evaluate unsupported %s operation: %s",
+		"internal error: cannot evaluate unsupported %s operation: %s",
 		e.kind.Name(),
 		e.operation.Symbol(),
 	)
@@ -824,4 +824,17 @@ func (DuplicateKeyInResourceDictionaryError) IsUserError() {}
 
 func (e DuplicateKeyInResourceDictionaryError) Error() string {
 	return "duplicate key in resource dictionary"
+}
+
+// StorageMutatedDuringIterationError
+type StorageMutatedDuringIterationError struct {
+	LocationRange
+}
+
+var _ errors.UserError = StorageMutatedDuringIterationError{}
+
+func (StorageMutatedDuringIterationError) IsUserError() {}
+
+func (e StorageMutatedDuringIterationError) Error() string {
+	return "storage iteration continued after modifying storage"
 }

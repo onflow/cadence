@@ -28,15 +28,14 @@ type ValueDeclaration interface {
 	ValueDeclarationType() Type
 	ValueDeclarationDocString() string
 	ValueDeclarationKind() common.DeclarationKind
-	ValueDeclarationPosition() ast.Position
+	ValueDeclarationPosition() *ast.Position
 	ValueDeclarationIsConstant() bool
 	ValueDeclarationArgumentLabels() []string
-	ValueDeclarationAvailable(common.Location) bool
 }
 
 type TypeDeclaration interface {
 	TypeDeclarationName() string
 	TypeDeclarationType() Type
 	TypeDeclarationKind() common.DeclarationKind
-	TypeDeclarationPosition() ast.Position
+	TypeDeclarationPosition() *ast.Position
 }

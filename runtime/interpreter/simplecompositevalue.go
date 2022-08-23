@@ -46,7 +46,7 @@ var _ Value = &SimpleCompositeValue{}
 var _ MemberAccessibleValue = &SimpleCompositeValue{}
 
 func NewSimpleCompositeValue(
-	inter *Interpreter,
+	gauge common.MemoryGauge,
 	typeID sema.TypeID,
 	staticType StaticType,
 	fieldNames []string,
@@ -56,8 +56,8 @@ func NewSimpleCompositeValue(
 	stringer func(common.MemoryGauge, SeenReferences) string,
 ) *SimpleCompositeValue {
 
-	common.UseMemory(inter, common.SimpleCompositeValueBaseMemoryUsage)
-	common.UseMemory(inter, common.NewSimpleCompositeMemoryUsage(len(fields)+len(computedFields)))
+	common.UseMemory(gauge, common.SimpleCompositeValueBaseMemoryUsage)
+	common.UseMemory(gauge, common.NewSimpleCompositeMemoryUsage(len(fields)+len(computedFields)))
 
 	return &SimpleCompositeValue{
 		TypeID:          typeID,

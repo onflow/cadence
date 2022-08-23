@@ -45,7 +45,7 @@ type flowClient interface {
 	GetClientAccounts() []*clientAccount
 	SetActiveClientAccount(name string) error
 	ExecuteScript(location *url.URL, args []cadence.Value) (cadence.Value, error)
-	DeployContract(address flow.Address, name string, location *url.URL) (*flow.Account, error)
+	DeployContract(address flow.Address, name string, location *url.URL) error
 	SendTransaction(
 		authorizers []flow.Address,
 		location *url.URL,
@@ -184,20 +184,20 @@ func (f *flowkitClient) DeployContract(
 	address flow.Address,
 	name string,
 	location *url.URL,
-) (*flow.Account, error) {
+) error {
 	code, err := f.loader.ReadFile(location.Path)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	service, err := f.state.EmulatorServiceAccount()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	flowAccount, err := f.services.Accounts.Get(address)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// check if account already has a contract with this name deployed then update
@@ -209,7 +209,7 @@ func (f *flowkitClient) DeployContract(
 	}
 
 	account := createSigner(address, service)
-	return f.services.Accounts.AddContract(
+	_, err = f.services.Accounts.AddContract(
 		account,
 		&services.Contract{
 			Name:     name,
@@ -219,6 +219,7 @@ func (f *flowkitClient) DeployContract(
 		},
 		updateExisting,
 	)
+	return err
 }
 
 func (f *flowkitClient) SendTransaction(

@@ -32,8 +32,11 @@ func (checker *Checker) VisitAssignmentStatement(assignment *ast.AssignmentState
 		false,
 	)
 
-	checker.Elaboration.AssignmentStatementValueTypes[assignment] = valueType
-	checker.Elaboration.AssignmentStatementTargetTypes[assignment] = targetType
+	checker.Elaboration.AssignmentStatementTypes[assignment] =
+		AssignmentStatementTypes{
+			ValueType:  valueType,
+			TargetType: targetType,
+		}
 
 	return nil
 }
@@ -274,7 +277,7 @@ func (checker *Checker) visitMemberExpressionAssignment(
 		)
 	}
 
-	targetIsConstant := member.VariableKind == ast.VariableKindConstant
+	targetIsConstant := member.VariableKind != ast.VariableKindVariable
 
 	// If this is an assignment to a `self` field, it needs special handling
 	// depending on if the assignment is in an initializer or not

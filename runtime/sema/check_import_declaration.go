@@ -149,7 +149,6 @@ func (checker *Checker) importResolvedLocation(resolvedLocation ResolvedLocation
 		checker.valueActivations,
 		resolvedLocation.Identifiers,
 		allValueElements,
-		imp.IsImportableValue,
 	)
 
 	// Attempt to import the requested type declarations
@@ -159,7 +158,6 @@ func (checker *Checker) importResolvedLocation(resolvedLocation ResolvedLocation
 		checker.typeActivations,
 		resolvedLocation.Identifiers,
 		allTypeElements,
-		imp.IsImportableType,
 	)
 
 	// For each identifier, report if the import is invalid due to
@@ -216,18 +214,12 @@ func (checker *Checker) importResolvedLocation(resolvedLocation ResolvedLocation
 			if _, ok := availableSet[identifier]; ok {
 				return
 			}
-			if !imp.IsImportableValue(identifier) {
-				return
-			}
 			availableSet[identifier] = struct{}{}
 			available = append(available, identifier)
 		})
 
 		allTypeElements.Foreach(func(identifier string, _ ImportElement) {
 			if _, ok := availableSet[identifier]; ok {
-				return
-			}
-			if !imp.IsImportableType(identifier) {
 				return
 			}
 			availableSet[identifier] = struct{}{}
@@ -279,7 +271,6 @@ func (checker *Checker) importElements(
 	valueActivations *VariableActivations,
 	requestedIdentifiers []ast.Identifier,
 	availableElements *StringImportElementOrderedMap,
-	filter func(name string) bool,
 ) (
 	found map[ast.Identifier]bool,
 	invalidAccessed map[ast.Identifier]ImportElement,
@@ -313,10 +304,6 @@ func (checker *Checker) importElements(
 
 	if elements != nil {
 		elements.Foreach(func(name string, element ImportElement) {
-
-			if !filter(name) {
-				return
-			}
 
 			// If the variable can't be imported due to restricted access,
 			// report an error, but still import the variable

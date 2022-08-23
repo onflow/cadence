@@ -509,7 +509,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 	senderAddress := common.MustBytesToAddress([]byte{0x2})
 	receiverAddress := common.MustBytesToAddress([]byte{0x3})
 
-	accountCodes := map[common.Location][]byte{}
+	accountCodes := map[Location][]byte{}
 
 	var events []cadence.Event
 
@@ -644,6 +644,8 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 	signerAccount = senderAddress
 
+	environment := NewBaseInterpreterEnvironment(Config{})
+
 	b.ReportAllocs()
 	b.ResetTimer()
 
@@ -658,8 +660,9 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 				}),
 			},
 			Context{
-				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
+				Interface:   runtimeInterface,
+				Location:    nextTransactionLocation(),
+				Environment: environment,
 			},
 		)
 		require.NoError(b, err)
@@ -671,7 +674,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 	sum := interpreter.NewUnmeteredUFix64ValueWithInteger(0)
 
-	inter := &interpreter.Interpreter{}
+	inter := newTestInterpreter(b)
 
 	for _, address := range []common.Address{
 		senderAddress,

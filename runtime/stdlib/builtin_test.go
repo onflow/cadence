@@ -24,8 +24,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -34,35 +34,61 @@ func newUnmeteredInMemoryStorage() interpreter.InMemoryStorage {
 	return interpreter.NewInMemoryStorage(nil)
 }
 
-func TestAssert(t *testing.T) {
+func testInterpreter(t *testing.T, code string, valueDeclaration StandardLibraryValue) *interpreter.Interpreter {
+	program, err := parser.ParseProgram(
+		code,
+		nil,
+	)
+	require.NoError(t, err)
 
-	t.Parallel()
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 
-	program := &ast.Program{}
+	baseValueActivation.DeclareValue(valueDeclaration)
 
 	checker, err := sema.NewChecker(
 		program,
 		utils.TestLocation,
 		nil,
 		false,
-		sema.WithPredeclaredValues(BuiltinFunctions.ToSemaValueDeclarations()),
+		sema.WithBaseValueActivation(baseValueActivation),
 	)
-	require.Nil(t, err)
+	require.NoError(t, err)
+
+	err = checker.Check()
+	require.NoError(t, err)
 
 	storage := newUnmeteredInMemoryStorage()
+
+	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+	baseActivation.Declare(valueDeclaration)
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
 		checker.Location,
-		interpreter.WithStorage(storage),
-		interpreter.WithPredeclaredValues(
-			BuiltinFunctions.ToInterpreterValueDeclarations(),
-		),
+		&interpreter.Config{
+			Storage:        storage,
+			BaseActivation: baseActivation,
+		},
 	)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
-	_, err = inter.Invoke(
-		"assert",
+	err = inter.Interpret()
+	require.NoError(t, err)
+
+	return inter
+}
+
+func TestAssert(t *testing.T) {
+
+	t.Parallel()
+
+	inter := testInterpreter(t,
+		`pub let test = assert`,
+		AssertFunction,
+	)
+
+	_, err := inter.Invoke(
+		"test",
 		interpreter.BoolValue(false),
 		interpreter.NewUnmeteredStringValue("oops"),
 	)
@@ -76,7 +102,7 @@ func TestAssert(t *testing.T) {
 		err,
 	)
 
-	_, err = inter.Invoke("assert", interpreter.BoolValue(false))
+	_, err = inter.Invoke("test", interpreter.BoolValue(false))
 	assert.Equal(t,
 		interpreter.Error{
 			Err: AssertionError{
@@ -87,13 +113,13 @@ func TestAssert(t *testing.T) {
 		err)
 
 	_, err = inter.Invoke(
-		"assert",
+		"test",
 		interpreter.BoolValue(true),
 		interpreter.NewUnmeteredStringValue("oops"),
 	)
 	assert.NoError(t, err)
 
-	_, err = inter.Invoke("assert", interpreter.BoolValue(true))
+	_, err = inter.Invoke("test", interpreter.BoolValue(true))
 	assert.NoError(t, err)
 }
 
@@ -101,26 +127,12 @@ func TestPanic(t *testing.T) {
 
 	t.Parallel()
 
-	checker, err := sema.NewChecker(
-		&ast.Program{},
-		utils.TestLocation,
-		nil,
-		false,
-		sema.WithPredeclaredValues(BuiltinFunctions.ToSemaValueDeclarations()),
+	inter := testInterpreter(t,
+		`pub let test = panic`,
+		PanicFunction,
 	)
-	require.Nil(t, err)
 
-	storage := newUnmeteredInMemoryStorage()
-
-	inter, err := interpreter.NewInterpreter(
-		interpreter.ProgramFromChecker(checker),
-		checker.Location,
-		interpreter.WithStorage(storage),
-		interpreter.WithPredeclaredValues(BuiltinFunctions.ToInterpreterValueDeclarations()),
-	)
-	require.Nil(t, err)
-
-	_, err = inter.Invoke("panic", interpreter.NewUnmeteredStringValue("oops"))
+	_, err := inter.Invoke("test", interpreter.NewUnmeteredStringValue("oops"))
 	assert.Equal(t,
 		interpreter.Error{
 			Err: PanicError{

@@ -1220,9 +1220,9 @@ func (n MemberMismatchNote) Message() string {
 }
 
 // DuplicateConformanceError
-
+//
 // TODO: just make this a warning?
-
+//
 type DuplicateConformanceError struct {
 	CompositeType *CompositeType
 	InterfaceType *InterfaceType
@@ -1246,8 +1246,102 @@ func (e *DuplicateConformanceError) Error() string {
 	)
 }
 
-// MissingConformanceError
+// MultipleInterfaceDefaultImplementationsError
+//
+type MultipleInterfaceDefaultImplementationsError struct {
+	CompositeType *CompositeType
+	Member        *Member
+}
 
+var _ SemanticError = &MultipleInterfaceDefaultImplementationsError{}
+var _ errors.UserError = &MultipleInterfaceDefaultImplementationsError{}
+
+func (*MultipleInterfaceDefaultImplementationsError) isSemanticError() {}
+
+func (*MultipleInterfaceDefaultImplementationsError) IsUserError() {}
+
+func (e *MultipleInterfaceDefaultImplementationsError) Error() string {
+	return fmt.Sprintf(
+		"%s `%s` has multiple interface default implementations for function `%s`",
+		e.CompositeType.Kind.Name(),
+		e.CompositeType.QualifiedString(),
+		e.Member.Identifier.Identifier,
+	)
+}
+
+func (e *MultipleInterfaceDefaultImplementationsError) StartPosition() ast.Position {
+	return e.Member.Identifier.StartPosition()
+}
+
+func (e *MultipleInterfaceDefaultImplementationsError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
+	return e.Member.Identifier.EndPosition(memoryGauge)
+}
+
+// SpecialFunctionDefaultImplementationError
+//
+type SpecialFunctionDefaultImplementationError struct {
+	Container  ast.Declaration
+	Identifier *ast.Identifier
+	KindName   string
+}
+
+var _ SemanticError = &SpecialFunctionDefaultImplementationError{}
+var _ errors.UserError = &SpecialFunctionDefaultImplementationError{}
+
+func (*SpecialFunctionDefaultImplementationError) isSemanticError() {}
+
+func (*SpecialFunctionDefaultImplementationError) IsUserError() {}
+
+func (e *SpecialFunctionDefaultImplementationError) Error() string {
+	return fmt.Sprintf(
+		"%s may not be defined as a default function on %s %s",
+		e.Identifier.Identifier,
+		e.KindName,
+		e.Container.DeclarationIdentifier().Identifier,
+	)
+}
+
+func (e *SpecialFunctionDefaultImplementationError) StartPosition() ast.Position {
+	return e.Identifier.StartPosition()
+}
+
+func (e *SpecialFunctionDefaultImplementationError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
+	return e.Identifier.EndPosition(memoryGauge)
+}
+
+// DefaultFunctionConflictError
+//
+type DefaultFunctionConflictError struct {
+	CompositeType *CompositeType
+	Member        *Member
+}
+
+var _ SemanticError = &DefaultFunctionConflictError{}
+var _ errors.UserError = &DefaultFunctionConflictError{}
+
+func (*DefaultFunctionConflictError) isSemanticError() {}
+
+func (*DefaultFunctionConflictError) IsUserError() {}
+
+func (e *DefaultFunctionConflictError) Error() string {
+	return fmt.Sprintf(
+		"%s `%s` has conflicting requirements for function `%s`",
+		e.CompositeType.Kind.Name(),
+		e.CompositeType.QualifiedString(),
+		e.Member.Identifier.Identifier,
+	)
+}
+
+func (e *DefaultFunctionConflictError) StartPosition() ast.Position {
+	return e.Member.Identifier.StartPosition()
+}
+
+func (e *DefaultFunctionConflictError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
+	return e.Member.Identifier.EndPosition(memoryGauge)
+}
+
+// MissingConformanceError
+//
 type MissingConformanceError struct {
 	CompositeType *CompositeType
 	InterfaceType *InterfaceType

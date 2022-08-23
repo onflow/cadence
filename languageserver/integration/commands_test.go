@@ -193,7 +193,7 @@ func Test_DeployContract(t *testing.T) {
 
 		mock.
 			On("DeployContract", flow.HexToAddress(address), "NFT", location).
-			Return(nil, nil) // return nil as account since we don't need to check it
+			Return(nil)
 
 		res, err := cmds.deployContract(locationURL, name, signerNameArg)
 		assert.NoError(t, err)
@@ -218,7 +218,7 @@ func Test_DeployContract(t *testing.T) {
 
 		mock.
 			On("DeployContract", flow.HexToAddress(address), "NFT", location).
-			Return(nil, nil) // return nil as account since we don't need to check it
+			Return(nil)
 
 		res, err := cmds.deployContract(locationURL, name, signerArg)
 		assert.NoError(t, err)

@@ -32,17 +32,19 @@ import (
 )
 
 func parseAndCheckWithTestValue(t *testing.T, code string, ty sema.Type) (*sema.Checker, error) {
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.StandardLibraryValue{
+		Name: "test",
+		Type: ty,
+		Kind: common.DeclarationKindConstant,
+	})
+
 	return ParseAndCheckWithOptions(t,
 		code,
 		ParseAndCheckOptions{
 			Options: []sema.Option{
-				sema.WithPredeclaredValues([]sema.ValueDeclaration{
-					stdlib.StandardLibraryValue{
-						Name: "test",
-						Type: ty,
-						Kind: common.DeclarationKindConstant,
-					},
-				}),
+				sema.WithBaseValueActivation(baseValueActivation),
 			},
 		},
 	)
@@ -162,7 +164,7 @@ func TestCheckGenericFunction(t *testing.T) {
 		require.IsType(t, &ast.InvocationExpression{}, variableDeclaration.Value)
 		invocationExpression := variableDeclaration.Value.(*ast.InvocationExpression)
 
-		typeArguments := checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
+		typeArguments := checker.Elaboration.InvocationExpressionTypes[invocationExpression].TypeArguments
 
 		ty, present := typeArguments.Get(typeParameter)
 		require.True(t, present, "could not find type argument for parameter %#+v", typeParameter)
@@ -212,7 +214,7 @@ func TestCheckGenericFunction(t *testing.T) {
 		require.IsType(t, &ast.InvocationExpression{}, variableDeclaration.Value)
 		invocationExpression := variableDeclaration.Value.(*ast.InvocationExpression)
 
-		typeArguments := checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
+		typeArguments := checker.Elaboration.InvocationExpressionTypes[invocationExpression].TypeArguments
 
 		ty, present := typeArguments.Get(typeParameter)
 		require.True(t, present, "could not find type argument for type parameter %#+v", typeParameter)
@@ -385,7 +387,7 @@ func TestCheckGenericFunction(t *testing.T) {
 		require.IsType(t, &ast.InvocationExpression{}, variableDeclaration.Value)
 		invocationExpression := variableDeclaration.Value.(*ast.InvocationExpression)
 
-		typeParameterTypes := checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
+		typeParameterTypes := checker.Elaboration.InvocationExpressionTypes[invocationExpression].TypeArguments
 
 		ty, present := typeParameterTypes.Get(typeParameter)
 		require.True(t, present, "could not find type argument for type parameter %#+v", typeParameter)
@@ -509,7 +511,7 @@ func TestCheckGenericFunction(t *testing.T) {
 		require.IsType(t, &ast.InvocationExpression{}, variableDeclaration.Value)
 		invocationExpression := variableDeclaration.Value.(*ast.InvocationExpression)
 
-		typeArguments := checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
+		typeArguments := checker.Elaboration.InvocationExpressionTypes[invocationExpression].TypeArguments
 
 		ty, present := typeArguments.Get(typeParameter)
 		require.True(t, present, "could not find type argument for type parameter %#+v", typeParameter)
@@ -568,7 +570,7 @@ func TestCheckGenericFunction(t *testing.T) {
 		require.IsType(t, &ast.InvocationExpression{}, variableDeclaration.Value)
 		invocationExpression := variableDeclaration.Value.(*ast.InvocationExpression)
 
-		typeArguments := checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
+		typeArguments := checker.Elaboration.InvocationExpressionTypes[invocationExpression].TypeArguments
 
 		ty, present := typeArguments.Get(typeParameter)
 		require.True(t, present, "could not find type argument for type parameter %#+v", typeParameter)
@@ -613,7 +615,7 @@ func TestCheckGenericFunction(t *testing.T) {
 		require.IsType(t, &ast.InvocationExpression{}, variableDeclaration.Value)
 		invocationExpression := variableDeclaration.Value.(*ast.InvocationExpression)
 
-		typeArguments := checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
+		typeArguments := checker.Elaboration.InvocationExpressionTypes[invocationExpression].TypeArguments
 
 		ty, present := typeArguments.Get(typeParameter)
 		require.True(t, present, "could not find type argument for type parameter %#+v", typeParameter)

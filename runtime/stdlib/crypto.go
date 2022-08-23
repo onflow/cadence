@@ -43,8 +43,6 @@ var CryptoChecker = func() *sema.Checker {
 		location,
 		nil,
 		false,
-		sema.WithPredeclaredValues(BuiltinFunctions.ToSemaValueDeclarations()),
-		sema.WithPredeclaredTypes(BuiltinTypes.ToTypeDeclarations()),
 	)
 	if err != nil {
 		panic(err)
@@ -132,35 +130,41 @@ func cryptoAlgorithmEnumConstructorType(
 	return constructorType
 }
 
-type enumCaseConstructor func(
-	inter *interpreter.Interpreter,
-	rawValue uint8,
-) *interpreter.CompositeValue
+type enumCaseConstructor func(rawValue interpreter.UInt8Value) interpreter.MemberAccessibleValue
 
-func cryptoAlgorithmEnumValue(
-	inter *interpreter.Interpreter,
+func cryptoAlgorithmEnumValueAndCaseValues(
 	enumType *sema.CompositeType,
 	enumCases []sema.CryptoAlgorithm,
 	caseConstructor enumCaseConstructor,
-) interpreter.Value {
+) (
+	value interpreter.Value,
+	cases map[interpreter.UInt8Value]interpreter.MemberAccessibleValue,
+) {
 
 	caseCount := len(enumCases)
-	caseValues := make([]*interpreter.CompositeValue, caseCount)
-	constructorNestedVariables := map[string]*interpreter.Variable{}
+	caseValues := make([]interpreter.EnumCase, caseCount)
+	constructorNestedVariables := make(map[string]*interpreter.Variable, caseCount)
+	cases = make(map[interpreter.UInt8Value]interpreter.MemberAccessibleValue, caseCount)
 
 	for i, enumCase := range enumCases {
-		rawValue := enumCase.RawValue()
-		caseValue := caseConstructor(inter, rawValue)
-		caseValues[i] = caseValue
+		rawValue := interpreter.UInt8Value(enumCase.RawValue())
+		caseValue := caseConstructor(rawValue)
+		cases[rawValue] = caseValue
+		caseValues[i] = interpreter.EnumCase{
+			Value:    caseValue,
+			RawValue: rawValue,
+		}
 		constructorNestedVariables[enumCase.Name()] =
-			interpreter.NewVariableWithValue(inter, caseValue)
+			interpreter.NewVariableWithValue(nil, caseValue)
 	}
 
-	return interpreter.EnumConstructorFunction(
-		inter,
+	value = interpreter.EnumConstructorFunction(
+		nil,
 		interpreter.ReturnEmptyLocationRange,
 		enumType,
 		caseValues,
 		constructorNestedVariables,
 	)
+
+	return
 }
