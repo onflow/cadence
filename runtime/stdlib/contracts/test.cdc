@@ -103,6 +103,33 @@ pub contract Test {
         }
     }
 
+    pub struct Matcher {
+
+        pub let test: ((AnyStruct): Bool)
+
+        pub init(test: ((AnyStruct): Bool)) {
+            self.test = test
+        }
+
+        /// Combine this matcher with the given matcher.
+        /// Returns a new matcher that succeeds if this and the given matcher succeed
+        ///
+        pub fun and(_ other: Matcher): Matcher {
+            return Matcher(test: fun (value: AnyStruct): Bool {
+                return self.test(value) && other.test(value)
+            })
+        }
+
+        /// Combine this matcher with the given matcher.
+        /// Returns a new matcher that succeeds if this and the given matcher succeed
+        ///
+        pub fun or(_ other: Matcher): Matcher {
+            return Matcher(test: fun (value: AnyStruct): Bool {
+                return self.test(value) || other.test(value)
+            })
+        }
+    }
+
     /// ResultStatus indicates status of a transaction or script execution.
     ///
     pub enum ResultStatus: UInt8 {
