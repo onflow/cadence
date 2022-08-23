@@ -1,7 +1,5 @@
 /// Test contract is the standard library that provides testing functionality in Cadence.
 ///
-/// TODO: Name is yet to be finalized
-///
 pub contract Test {
 
     /// Convenient function to fail a test.
@@ -112,7 +110,7 @@ pub contract Test {
         }
 
         /// Combine this matcher with the given matcher.
-        /// Returns a new matcher that succeeds if this and the given matcher succeed
+        /// Returns a new matcher that succeeds if this and the given matcher succeed.
         ///
         pub fun and(_ other: Matcher): Matcher {
             return Matcher(test: fun (value: AnyStruct): Bool {
@@ -121,7 +119,7 @@ pub contract Test {
         }
 
         /// Combine this matcher with the given matcher.
-        /// Returns a new matcher that succeeds if this and the given matcher succeed
+        /// Returns a new matcher that succeeds if this and the given matcher succeed.
         ///
         pub fun or(_ other: Matcher): Matcher {
             return Matcher(test: fun (value: AnyStruct): Bool {
@@ -141,7 +139,7 @@ pub contract Test {
     ///
     pub struct TransactionResult {
         pub let status: ResultStatus
-        pub let error:  Error?
+        pub let error: Error?
 
         init(status: ResultStatus, error: Error) {
             self.status = status
@@ -154,7 +152,7 @@ pub contract Test {
     pub struct ScriptResult {
         pub let status: ResultStatus
         pub let returnValue: AnyStruct?
-        pub let error:       Error?
+        pub let error: Error?
 
         init(status: ResultStatus, returnValue: AnyStruct?, error: Error?) {
             self.status = status

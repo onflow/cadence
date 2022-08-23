@@ -1405,7 +1405,7 @@ func TestInterpretMatcher(t *testing.T) {
 
             pub fun test() {
 
-                let matcher = Test.NewMatcher(fun (_ value: AnyStruct): Bool {
+                let matcher = Test.newMatcher(fun (_ value: AnyStruct): Bool {
                      if !value.getType().isSubtype(of: Type<Int>()) {
                         return false
                     }
@@ -1431,7 +1431,7 @@ func TestInterpretMatcher(t *testing.T) {
 
             pub fun test() {
 
-                let matcher = Test.NewMatcher(fun (_ value: Int): Bool {
+                let matcher = Test.newMatcher(fun (_ value: Int): Bool {
                      return value == 7
                 })
 
@@ -1453,7 +1453,7 @@ func TestInterpretMatcher(t *testing.T) {
 
             pub fun test() {
 
-                let matcher = Test.NewMatcher(fun (_ value: Int): Bool {
+                let matcher = Test.newMatcher(fun (_ value: Int): Bool {
                      return (value + 7) == 4
                 })
 
@@ -1477,7 +1477,7 @@ func TestInterpretMatcher(t *testing.T) {
 
             pub fun test() {
 
-                let matcher = Test.NewMatcher(fun (_ value: &Foo): Bool {
+                let matcher = Test.newMatcher(fun (_ value: &Foo): Bool {
                     return value.a == 4
                 })
 
@@ -1511,7 +1511,7 @@ func TestInterpretMatcher(t *testing.T) {
 
             pub fun test() {
 
-                let matcher = Test.NewMatcher(fun (_ value: @Foo): Bool {
+                let matcher = Test.newMatcher(fun (_ value: @Foo): Bool {
                      destroy value
                      return true
                 })
@@ -1535,7 +1535,7 @@ func TestInterpretMatcher(t *testing.T) {
 
             pub fun test() {
 
-                let matcher = Test.NewMatcher<Int>(fun (_ value: Int): Bool {
+                let matcher = Test.newMatcher<Int>(fun (_ value: Int): Bool {
                      return value == 7
                 })
 
@@ -1557,7 +1557,7 @@ func TestInterpretMatcher(t *testing.T) {
 
             pub fun test() {
 
-                let matcher = Test.NewMatcher<String>(fun (_ value: Int): Bool {
+                let matcher = Test.newMatcher<String>(fun (_ value: Int): Bool {
                      return value == 7
                 })
             }
@@ -1579,11 +1579,11 @@ func TestInterpretMatcher(t *testing.T) {
 
             pub fun test() {
 
-                let matcher1 = Test.NewMatcher(fun (_ value: Int): Bool {
+                let matcher1 = Test.newMatcher(fun (_ value: Int): Bool {
                      return (value + 5) == 10
                 })
 
-                let matcher2 = Test.NewMatcher(fun (_ value: String): Bool {
+                let matcher2 = Test.newMatcher(fun (_ value: String): Bool {
                      return value.length == 10
                 })
 
