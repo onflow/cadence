@@ -634,9 +634,9 @@ var EmulatorBackendType = func() *sema.CompositeType {
 		),
 		sema.NewUnmeteredPublicFunctionMember(
 			ty,
-			emulatorBackendUseConfigsFunctionName,
-			emulatorBackendUseConfigsFunctionType,
-			emulatorBackendUseConfigsFunctionDocString,
+			emulatorBackendUseConfigFunctionName,
+			emulatorBackendUseConfigFunctionType,
+			emulatorBackendUseConfigFunctionDocString,
 		),
 	}
 
@@ -676,8 +676,8 @@ func newEmulatorBackend(
 			Value: emulatorBackendDeployContractFunction(testFramework),
 		},
 		{
-			Name:  emulatorBackendUseConfigsFunctionName,
-			Value: emulatorBackendUseConfigsFunction(testFramework),
+			Name:  emulatorBackendUseConfigFunctionName,
+			Value: emulatorBackendUseConfigFunction(testFramework),
 		},
 	}
 
@@ -1371,19 +1371,19 @@ func emulatorBackendDeployContractFunction(testFramework interpreter.TestFramewo
 
 // 'EmulatorBackend.useConfiguration' function
 
-const emulatorBackendUseConfigsFunctionName = "useConfiguration"
+const emulatorBackendUseConfigFunctionName = "useConfiguration"
 
-const emulatorBackendUseConfigsFunctionDocString = `Use configurations function`
+const emulatorBackendUseConfigFunctionDocString = `Use configurations function`
 
-var emulatorBackendUseConfigsFunctionType = func() *sema.FunctionType {
+var emulatorBackendUseConfigFunctionType = func() *sema.FunctionType {
 	// The type of the 'useConfiguration' function of 'EmulatorBackend' (interface-implementation)
 	// is same as that of 'BlockchainBackend' interface.
-	typ, ok := blockchainBackendInterfaceType.Members.Get(emulatorBackendUseConfigsFunctionName)
+	typ, ok := blockchainBackendInterfaceType.Members.Get(emulatorBackendUseConfigFunctionName)
 	if !ok {
 		panic(errors.NewUnexpectedError(
 			"cannot find member %s.%s",
 			blockchainBackendTypeName,
-			emulatorBackendUseConfigsFunctionName,
+			emulatorBackendUseConfigFunctionName,
 		))
 	}
 
@@ -1391,14 +1391,14 @@ var emulatorBackendUseConfigsFunctionType = func() *sema.FunctionType {
 	if !ok {
 		panic(errors.NewUnexpectedError(
 			"invalid type for %s. expected function",
-			emulatorBackendUseConfigsFunctionName,
+			emulatorBackendUseConfigFunctionName,
 		))
 	}
 
 	return functionType
 }()
 
-func emulatorBackendUseConfigsFunction(testFramework interpreter.TestFramework) *interpreter.HostFunctionValue {
+func emulatorBackendUseConfigFunction(testFramework interpreter.TestFramework) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
 			inter := invocation.Interpreter
@@ -1436,13 +1436,13 @@ func emulatorBackendUseConfigsFunction(testFramework interpreter.TestFramework) 
 				return true
 			})
 
-			testFramework.UseConfiguration(&interpreter.Configurations{
+			testFramework.UseConfiguration(&interpreter.Configuration{
 				Addresses: mapping,
 			})
 
 			return interpreter.VoidValue{}
 		},
-		emulatorBackendUseConfigsFunctionType,
+		emulatorBackendUseConfigFunctionType,
 	)
 }
 

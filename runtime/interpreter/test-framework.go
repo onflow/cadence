@@ -56,7 +56,7 @@ type TestFramework interface {
 
 	ReadFile(string) (string, error)
 
-	UseConfiguration(configurations *Configurations)
+	UseConfiguration(configuration *Configuration)
 }
 
 type ScriptResult struct {
@@ -78,7 +78,7 @@ type PublicKey struct {
 	SignAlgo  sema.SignatureAlgorithm
 }
 
-type Configurations struct {
+type Configuration struct {
 	Addresses map[string]common.Address
 }
 

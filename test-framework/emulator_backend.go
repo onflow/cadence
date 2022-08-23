@@ -66,7 +66,7 @@ type EmulatorBackend struct {
 
 	// A property bag to pass various configurations to the backend.
 	// Currently, supports passing address mapping for contracts.
-	configurations *interpreter.Configurations
+	configuration *interpreter.Configuration
 }
 
 type keyInfo struct {
@@ -405,8 +405,8 @@ func newBlockchain(opts ...emulator.Option) *emulator.Blockchain {
 	return b
 }
 
-func (e *EmulatorBackend) UseConfiguration(configurations *interpreter.Configurations) {
-	e.configurations = configurations
+func (e *EmulatorBackend) UseConfiguration(configuration *interpreter.Configuration) {
+	e.configuration = configuration
 }
 
 // newInterpreter creates an interpreter instance needed for the value conversion.
@@ -453,7 +453,7 @@ func newInterpreter() (*interpreter.Interpreter, error) {
 }
 
 func (e *EmulatorBackend) replaceImports(code string) string {
-	if e.configurations == nil {
+	if e.configuration == nil {
 		return code
 	}
 
@@ -471,7 +471,7 @@ func (e *EmulatorBackend) replaceImports(code string) string {
 			continue
 		}
 
-		address := e.configurations.Addresses[location.String()]
+		address := e.configuration.Addresses[location.String()]
 		addressStr := fmt.Sprintf("0x%s", address)
 
 		locationStart := importDeclaration.LocationPos.Offset

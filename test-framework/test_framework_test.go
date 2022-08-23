@@ -2279,7 +2279,7 @@ func TestReplaceImports(t *testing.T) {
 	t.Parallel()
 
 	emulatorBackend := NewEmulatorBackend(nil)
-	emulatorBackend.UseConfiguration(&interpreter.Configurations{
+	emulatorBackend.UseConfiguration(&interpreter.Configuration{
 		Addresses: map[string]common.Address{
 			"./sample/contract1.cdc": {0x1},
 			"./sample/contract2.cdc": {0x2},
