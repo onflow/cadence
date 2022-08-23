@@ -143,6 +143,10 @@ func typeNotFoundError(parentType, nestedType string) error {
 	return errors.NewUnexpectedError("cannot find type '%s.%s'", parentType, nestedType)
 }
 
+func memberNotFoundError(parentType, member string) error {
+	return errors.NewUnexpectedError("cannot find member '%s.%s'", parentType, member)
+}
+
 var blockchainBackendInterfaceType = func() *sema.InterfaceType {
 	typ, ok := testContractType.NestedTypes.Get(blockchainBackendTypeName)
 	if !ok {
@@ -182,7 +186,7 @@ var matcherTestFunctionType = compositeFunctionType(matcherType, matcherTestFunc
 func compositeFunctionType(parent *sema.CompositeType, funcName string) *sema.FunctionType {
 	testFunc, ok := parent.Members.Get(funcName)
 	if !ok {
-		panic(typeNotFoundError(parent.Identifier, funcName))
+		panic(memberNotFoundError(parent.Identifier, funcName))
 	}
 
 	return getFunctionTypeFromMember(testFunc, funcName)
@@ -191,7 +195,7 @@ func compositeFunctionType(parent *sema.CompositeType, funcName string) *sema.Fu
 func interfaceFunctionType(parent *sema.InterfaceType, funcName string) *sema.FunctionType {
 	testFunc, ok := parent.Members.Get(funcName)
 	if !ok {
-		panic(typeNotFoundError(parent.Identifier, funcName))
+		panic(memberNotFoundError(parent.Identifier, funcName))
 	}
 
 	return getFunctionTypeFromMember(testFunc, funcName)
@@ -1343,28 +1347,10 @@ const emulatorBackendUseConfigFunctionName = "useConfiguration"
 
 const emulatorBackendUseConfigFunctionDocString = `Use configurations function`
 
-var emulatorBackendUseConfigFunctionType = func() *sema.FunctionType {
-	// The type of the 'useConfiguration' function of 'EmulatorBackend' (interface-implementation)
-	// is same as that of 'BlockchainBackend' interface.
-	typ, ok := blockchainBackendInterfaceType.Members.Get(emulatorBackendUseConfigFunctionName)
-	if !ok {
-		panic(errors.NewUnexpectedError(
-			"cannot find member %s.%s",
-			blockchainBackendTypeName,
-			emulatorBackendUseConfigFunctionName,
-		))
-	}
-
-	functionType, ok := typ.TypeAnnotation.Type.(*sema.FunctionType)
-	if !ok {
-		panic(errors.NewUnexpectedError(
-			"invalid type for %s. expected function",
-			emulatorBackendUseConfigFunctionName,
-		))
-	}
-
-	return functionType
-}()
+var emulatorBackendUseConfigFunctionType = interfaceFunctionType(
+	blockchainBackendInterfaceType,
+	emulatorBackendUseConfigFunctionName,
+)
 
 func emulatorBackendUseConfigFunction(testFramework interpreter.TestFramework) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
