@@ -1100,8 +1100,6 @@ func TestLoadingProgramsFromLocalFile(t *testing.T) {
 
                 assert(result.status == Test.ResultStatus.succeeded)
                 assert((result.returnValue! as! Int) == 5)
-
-                log(result.returnValue)
             }
         `
 
@@ -1147,8 +1145,6 @@ func TestLoadingProgramsFromLocalFile(t *testing.T) {
 
                 assert(result.status == Test.ResultStatus.succeeded)
                 assert((result.returnValue! as! Int) == 5)
-
-                log(result.returnValue)
             }
         `
 
@@ -2033,4 +2029,280 @@ func TestInterpretExpectFunction(t *testing.T) {
 		errs := checker.ExpectCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
+}
+
+func TestReplacingImports(t *testing.T) {
+	t.Parallel()
+
+	t.Run("file location", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import Test
+
+            pub var blockchain = Test.newEmulatorBlockchain()
+            pub var account = blockchain.createAccount()
+
+            pub fun setup() {
+                // Deploy the contract
+                var contractCode = Test.readFile("./sample/contract.cdc")
+
+                let err = blockchain.deployContract(
+                    name: "Foo",
+                    code: contractCode,
+                    account: account,
+                    arguments: [],
+                )
+
+                if err != nil {
+                    panic(err!.message)
+                }
+
+                // Set the configurations to use the address of the deployed contract.
+
+                blockchain.useConfiguration(Test.Configuration({
+                    "./FooContract": account.address
+                }))
+            }
+
+            pub fun test() {
+                var script = Test.readFile("./sample/script.cdc")
+                var result = blockchain.executeScript(script, [])
+
+                if result.status != Test.ResultStatus.succeeded {
+                    panic(result.error!.message)
+                }
+                assert((result.returnValue! as! String) == "hello from Foo")
+            }
+        `
+
+		const contractCode = `
+            pub contract Foo{ 
+                init(){}
+
+                pub fun sayHello(): String {
+                    return "hello from Foo" 
+                }
+            }
+        `
+
+		const scriptCode = `
+            import Foo from "./FooContract"
+
+            pub fun main(): String {
+                return Foo.sayHello()
+            }
+        `
+
+		importResolver := func(location common.Location) (string, error) {
+			stringLocation := location.(common.StringLocation)
+
+			switch stringLocation.String() {
+			case "./sample/script.cdc":
+				return scriptCode, nil
+			case "./sample/contract.cdc":
+				return contractCode, nil
+			default:
+				return "", fmt.Errorf("cannot find import location: %s", location)
+			}
+		}
+
+		runner := NewTestRunner().WithImportResolver(importResolver)
+
+		result, err := runner.RunTest(code, "test")
+		assert.NoError(t, err)
+		assert.NoError(t, result.err)
+	})
+
+	t.Run("address location", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import Test
+
+            pub var blockchain = Test.newEmulatorBlockchain()
+            pub var account = blockchain.createAccount()
+
+            pub fun setup() {
+                var contractCode = Test.readFile("./sample/contract.cdc")
+
+                let err = blockchain.deployContract(
+                    name: "Foo",
+                    code: contractCode,
+                    account: account,
+                    arguments: [],
+                )
+
+                if err != nil {
+                    panic(err!.message)
+                }
+
+                // Address locations are not replaceable!
+
+                blockchain.useConfiguration(Test.Configuration({
+                    "0x01": account.address
+                }))
+            }
+
+            pub fun test() {
+                var script = Test.readFile("./sample/script.cdc")
+                var result = blockchain.executeScript(script, [])
+
+                if result.status != Test.ResultStatus.succeeded {
+                    panic(result.error!.message)
+                }
+                assert((result.returnValue! as! String) == "hello from Foo")
+            }
+        `
+
+		const contractCode = `
+            pub contract Foo{ 
+                init(){}
+
+                pub fun sayHello(): String {
+                    return "hello from Foo" 
+                }
+            }
+        `
+
+		const scriptCode = `
+            import Foo from 0x01
+
+            pub fun main(): String {
+                return Foo.sayHello()
+            }
+        `
+
+		importResolver := func(location common.Location) (string, error) {
+			stringLocation := location.(common.StringLocation)
+
+			switch stringLocation.String() {
+			case "./sample/script.cdc":
+				return scriptCode, nil
+			case "./sample/contract.cdc":
+				return contractCode, nil
+			default:
+				return "", fmt.Errorf("cannot find import location: %s", location)
+			}
+		}
+
+		runner := NewTestRunner().WithImportResolver(importResolver)
+
+		result, err := runner.RunTest(code, "test")
+		require.NoError(t, err)
+		require.Error(t, result.err)
+		assert.Contains(t, result.err.Error(), "account not found for address 0000000000000001")
+	})
+
+	t.Run("config not provided", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import Test
+
+            pub var blockchain = Test.newEmulatorBlockchain()
+            pub var account = blockchain.createAccount()
+
+            pub fun setup() {
+                var contractCode = Test.readFile("./sample/contract.cdc")
+
+                let err = blockchain.deployContract(
+                    name: "Foo",
+                    code: contractCode,
+                    account: account,
+                    arguments: [],
+                )
+
+                if err != nil {
+                    panic(err!.message)
+                }
+
+                // Configurations are not provided.
+            }
+
+            pub fun test() {
+                var script = Test.readFile("./sample/script.cdc")
+                var result = blockchain.executeScript(script, [])
+
+                if result.status != Test.ResultStatus.succeeded {
+                    panic(result.error!.message)
+                }
+                assert((result.returnValue! as! String) == "hello from Foo")
+            }
+        `
+
+		const contractCode = `
+            pub contract Foo{ 
+                init(){}
+
+                pub fun sayHello(): String {
+                    return "hello from Foo" 
+                }
+            }
+        `
+
+		const scriptCode = `
+            import Foo from "./FooContract"
+
+            pub fun main(): String {
+                return Foo.sayHello()
+            }
+        `
+
+		importResolver := func(location common.Location) (string, error) {
+			stringLocation := location.(common.StringLocation)
+
+			switch stringLocation.String() {
+			case "./sample/script.cdc":
+				return scriptCode, nil
+			case "./sample/contract.cdc":
+				return contractCode, nil
+			default:
+				return "", fmt.Errorf("cannot find import location: %s", location)
+			}
+		}
+
+		runner := NewTestRunner().WithImportResolver(importResolver)
+
+		result, err := runner.RunTest(code, "test")
+		require.NoError(t, err)
+		require.Error(t, result.err)
+		assert.Contains(
+			t,
+			result.err.Error(),
+			"expecting an AddressLocation, but other location types are passed",
+		)
+	})
+}
+
+func TestReplaceImports(t *testing.T) {
+	t.Parallel()
+
+	emulatorBackend := NewEmulatorBackend(nil)
+	emulatorBackend.UseConfiguration(&interpreter.Configuration{
+		Addresses: map[string]common.Address{
+			"./sample/contract1.cdc": {0x1},
+			"./sample/contract2.cdc": {0x2},
+			"./sample/contract3.cdc": {0x3},
+		},
+	})
+
+	code := `
+        import C1 from "./sample/contract1.cdc"
+        import C2 from "./sample/contract2.cdc"
+        import C3 from "./sample/contract3.cdc"
+
+        pub fun main() {}
+    `
+	expected := `
+        import C1 from 0x0100000000000000
+        import C2 from 0x0200000000000000
+        import C3 from 0x0300000000000000
+
+        pub fun main() {}
+    `
+
+	replacedCode := emulatorBackend.replaceImports(code)
+
+	assert.Equal(t, expected, replacedCode)
 }
