@@ -19,9 +19,10 @@
 package sema
 
 import (
+	"math"
+
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"math"
 )
 
 type PositionInfo struct {
