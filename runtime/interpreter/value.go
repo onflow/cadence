@@ -945,7 +945,7 @@ func (v *StringValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v StringValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+func (v *StringValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
 	l := format.FormattedStringLength(v.Str)
 	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(l))
 	return v.String()
@@ -1141,7 +1141,10 @@ func (v *StringValue) GetMember(interpreter *Interpreter, _ func() LocationRange
 		return NewHostFunctionValue(
 			interpreter,
 			func(invocation Invocation) Value {
-				return v.DecodeHex(invocation.Interpreter)
+				return v.DecodeHex(
+					invocation.Interpreter,
+					invocation.GetLocationRange,
+				)
 			},
 			sema.StringTypeDecodeHexFunctionType,
 		)
@@ -1259,9 +1262,22 @@ var ByteArrayStaticType = ConvertSemaArrayTypeToStaticArrayType(nil, sema.ByteAr
 
 // DecodeHex hex-decodes this string and returns an array of UInt8 values
 //
-func (v *StringValue) DecodeHex(interpreter *Interpreter) *ArrayValue {
+func (v *StringValue) DecodeHex(interpreter *Interpreter, getLocationRange func() LocationRange) *ArrayValue {
 	bs, err := hex.DecodeString(v.Str)
 	if err != nil {
+		if err, ok := err.(hex.InvalidByteError); ok {
+			panic(InvalidHexByteError{
+				LocationRange: getLocationRange(),
+				Byte:          byte(err),
+			})
+		}
+
+		if err == hex.ErrLength {
+			panic(InvalidHexLengthError{
+				LocationRange: getLocationRange(),
+			})
+		}
+
 		panic(err)
 	}
 
