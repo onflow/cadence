@@ -50,13 +50,16 @@ func NewAuthAccountContractsValue(
 		sema.AuthAccountContractsTypeUpdateExperimentalFunctionName: updateFunction,
 	}
 
-	computedFields := map[string]ComputedField{
-		sema.AuthAccountContractsTypeNamesField: func(
-			interpreter *Interpreter,
-			getLocationRange func() LocationRange,
-		) Value {
+	computeField := func(
+		name string,
+		interpreter *Interpreter,
+		getLocationRange func() LocationRange,
+	) Value {
+		switch name {
+		case sema.AuthAccountContractsTypeNamesField:
 			return namesGetter(interpreter, getLocationRange)
-		},
+		}
+		return nil
 	}
 
 	var str string
@@ -75,7 +78,7 @@ func NewAuthAccountContractsValue(
 		authAccountContractsStaticType,
 		authAccountContractsFieldNames,
 		fields,
-		computedFields,
+		computeField,
 		nil,
 		stringer,
 	)
@@ -97,13 +100,16 @@ func NewPublicAccountContractsValue(
 		sema.PublicAccountContractsTypeGetFunctionName: getFunction,
 	}
 
-	computedFields := map[string]ComputedField{
-		sema.PublicAccountContractsTypeNamesField: func(
-			interpreter *Interpreter,
-			getLocationRange func() LocationRange,
-		) Value {
+	computeField := func(
+		name string,
+		interpreter *Interpreter,
+		getLocationRange func() LocationRange,
+	) Value {
+		switch name {
+		case sema.PublicAccountContractsTypeNamesField:
 			return namesGetter(interpreter, getLocationRange)
-		},
+		}
+		return nil
 	}
 
 	var str string
@@ -122,7 +128,7 @@ func NewPublicAccountContractsValue(
 		publicAccountContractsStaticType,
 		nil,
 		fields,
-		computedFields,
+		computeField,
 		nil,
 		stringer,
 	)
