@@ -36,7 +36,7 @@ type SemaDecoder struct {
 	memoryGauge common.MemoryGauge
 }
 
-// Decode returns a Cadence value decoded from its custom-encoded representation.
+// DecodeType returns a Cadence value decoded from its custom-encoded representation.
 //
 // This function returns an error if the bytes represent a custom encoding that
 // is malformed, does not conform to the custom Cadence specification, or contains
@@ -45,7 +45,7 @@ func DecodeSema(gauge common.MemoryGauge, b []byte) (sema.Type, error) {
 	r := bytes.NewReader(b)
 	dec := NewSemaDecoder(gauge, r)
 
-	v, err := dec.Decode()
+	v, err := dec.DecodeType()
 	if err != nil {
 		return nil, err
 	}
@@ -63,17 +63,6 @@ func NewSemaDecoder(memoryGauge common.MemoryGauge, r io.Reader) *SemaDecoder {
 	}
 }
 
-// Decode reads custom-encoded bytes from the io.Reader and decodes them to a
-// Sema type. There is no assumption about the top-level Sema type so the first
-// byte must specify the top-level type. Usually this will be a CompositeType.
-//
-// This function returns an error if the bytes represent a custom encoding that
-// is malformed, does not conform to the custom specification, or contains
-// an unknown composite type.
-func (d *SemaDecoder) Decode() (t sema.Type, err error) {
-	return d.DecodeType()
-}
-
 func (d *SemaDecoder) DecodeElaboration() (el *sema.Elaboration, err error) {
 	el = sema.NewElaboration(d.memoryGauge, false)
 
@@ -86,6 +75,13 @@ func (d *SemaDecoder) DecodeElaboration() (el *sema.Elaboration, err error) {
 	return
 }
 
+// DecodeType reads custom-encoded bytes from the io.Reader and decodes them to a
+// Sema type. There is no assumption about the top-level Sema type so the first
+// byte must specify the top-level type. Usually this will be a CompositeType.
+//
+// This function returns an error if the bytes represent a custom encoding that
+// is malformed, does not conform to the custom specification, or contains
+// an unknown composite type.
 func (d *SemaDecoder) DecodeType() (t sema.Type, err error) {
 	typeIdentifier, err := d.DecodeTypeIdentifier()
 	if err != nil {
@@ -131,7 +127,7 @@ func (d *SemaDecoder) DecodeType() (t sema.Type, err error) {
 			t, err = d.DecodeConstantSizedType()
 
 		case EncodedSemaPointerType:
-			t, err = d.EncodePointer()
+			t, err = d.DecodePointer()
 
 		default:
 			err = fmt.Errorf("unknown type identifier: %d", typeIdentifier)
@@ -141,7 +137,7 @@ func (d *SemaDecoder) DecodeType() (t sema.Type, err error) {
 	return
 }
 
-func (d *SemaDecoder) EncodePointer() (t sema.Type, err error) {
+func (d *SemaDecoder) DecodePointer() (t sema.Type, err error) {
 	bufferOffset, err := common_codec.DecodeLength(&d.r)
 	if err != nil {
 		return

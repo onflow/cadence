@@ -9,7 +9,7 @@ import (
 type ValueCodec struct{}
 
 func (v ValueCodec) Encode(value cadence.Value) ([]byte, error) {
-	return Encode(value)
+	return EncodeValue(value)
 }
 
 func (v ValueCodec) MustEncode(value cadence.Value) []byte {
@@ -17,7 +17,7 @@ func (v ValueCodec) MustEncode(value cadence.Value) []byte {
 }
 
 func (v ValueCodec) Decode(gauge common.MemoryGauge, bytes []byte) (cadence.Value, error) {
-	return Decode(gauge, bytes)
+	return DecodeValue(gauge, bytes)
 }
 
 func (v ValueCodec) MustDecode(gauge common.MemoryGauge, bytes []byte) cadence.Value {

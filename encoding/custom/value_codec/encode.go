@@ -32,20 +32,6 @@ type Encoder struct {
 	w common_codec.LengthyWriter
 }
 
-func Encode(value cadence.Value) ([]byte, error) {
-	return EncodeValue(value)
-}
-
-// MustEncode returns the custom-encoded representation of the given value, or panics
-// if the value cannot be represented in the custom format.
-func MustEncode(value cadence.Value) []byte {
-	b, err := Encode(value)
-	if err != nil {
-		panic(err)
-	}
-	return b
-}
-
 // EncodeValue returns the custom-encoded representation of the given value.
 //
 // This function returns an error if the Cadence value cannot be represented in the custom format.
@@ -59,6 +45,16 @@ func EncodeValue(value cadence.Value) ([]byte, error) {
 	}
 
 	return w.Bytes(), nil
+}
+
+// MustEncode returns the custom-encoded representation of the given value, or panics
+// if the value cannot be represented in the custom format.
+func MustEncode(value cadence.Value) []byte {
+	b, err := EncodeValue(value)
+	if err != nil {
+		panic(err)
+	}
+	return b
 }
 
 // NewEncoder initializes an Encoder that will write custom-encoded bytes to the
@@ -328,7 +324,7 @@ func (e *Encoder) EncodeValue(value cadence.Value) (err error) {
 }
 
 func (e *Encoder) EncodeValueIdentifier(id EncodedValue) (err error) {
-	return e.write([]byte{byte(id)})
+	return e.writeByte(byte(id))
 }
 
 func (e *Encoder) EncodeOptional(value cadence.Optional) (err error) {
@@ -629,7 +625,7 @@ func (e *Encoder) EncodeType(t cadence.Type) (err error) {
 }
 
 func (e *Encoder) EncodeTypeIdentifier(id EncodedType) (err error) {
-	return e.write([]byte{byte(id)})
+	return e.writeByte(byte(id))
 }
 
 func (e *Encoder) EncodeVariableArrayType(t cadence.VariableSizedArrayType) (err error) {
@@ -795,6 +791,11 @@ func (e *Encoder) EncodeParameter(parameter cadence.Parameter) (err error) {
 
 func (e *Encoder) write(b []byte) (err error) {
 	_, err = e.w.Write(b)
+	return
+}
+
+func (e *Encoder) writeByte(b byte) (err error) {
+	_, err = e.w.Write([]byte{b})
 	return
 }
 

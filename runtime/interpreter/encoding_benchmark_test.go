@@ -148,7 +148,7 @@ package interpreter_test
 //		// Construct encodingBenchmark name
 //		name += fmt.Sprintf("_%dbytes", fileSize)
 //
-//		// Decode test data to value
+//		// DecodeType test data to value
 //		owner := common.MustBytesToAddress([]byte{})
 //
 //		value, err := DecodeValue(buf.Bytes(), &owner, nil, version, nil)

@@ -371,7 +371,7 @@ func validateArgumentParams(
 
 	argumentValues := make([]interpreter.Value, len(arguments))
 
-	// Decode arguments against parameter types
+	// DecodeType arguments against parameter types
 	for i, parameter := range parameters {
 		parameterType := parameter.TypeAnnotation.Type
 		argument := arguments[i]

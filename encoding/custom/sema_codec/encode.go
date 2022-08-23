@@ -43,7 +43,7 @@ func EncodeSema(t sema.Type) ([]byte, error) {
 	var w bytes.Buffer
 	enc := NewSemaEncoder(&w)
 
-	err := enc.Encode(t)
+	err := enc.EncodeType(t)
 	if err != nil {
 		return nil, err
 	}
@@ -73,14 +73,6 @@ func NewSemaEncoder(w io.Writer) *SemaEncoder {
 // TODO include leading byte with version information
 //      maybe include other metadata too, like the size the decoder's typeDefs map will be
 
-// Encode writes the custom-encoded representation of the given sema type to this
-// encoder's io.Writer.
-//
-// This function returns an error if the given sema type is not supported by this encoder.
-func (e *SemaEncoder) Encode(t sema.Type) (err error) {
-	return e.EncodeType(t)
-}
-
 // EncodeElaboration serializes the CompositeType and InterfaceType values in the Elaboration.
 // The rest of the Elaboration is NOT serialized because they are not needed for encoding external values.
 func (e *SemaEncoder) EncodeElaboration(el *sema.Elaboration) (err error) {
@@ -95,6 +87,7 @@ func (e *SemaEncoder) EncodeElaboration(el *sema.Elaboration) (err error) {
 // EncodeType encodes any supported sema.Type.
 // Includes concrete type identifier because "Type" is an abstract type
 // ergo it can't be instantiated on decode.
+// This function returns an error if the given sema type is not supported by this encoder.
 func (e *SemaEncoder) EncodeType(t sema.Type) (err error) {
 	// Non-recursable types
 	switch concreteType := t.(type) {
@@ -253,7 +246,7 @@ func (e *SemaEncoder) EncodeSimpleType(t *sema.SimpleType) (err error) {
 		return fmt.Errorf("unknown simple type: %s", t)
 	}
 
-	return e.write([]byte{byte(subType)})
+	return e.writeByte(byte(subType))
 }
 
 func (e *SemaEncoder) EncodeFunctionType(t *sema.FunctionType) (err error) {
@@ -446,7 +439,7 @@ func (e *SemaEncoder) EncodeFixedPointNumericType(t *sema.FixedPointNumericType)
 		return fmt.Errorf("unexpected fixed point numeric type: %s", t)
 	}
 
-	return e.write([]byte{byte(fixedPointNumericType)})
+	return e.writeByte(byte(fixedPointNumericType))
 }
 
 func (e *SemaEncoder) EncodeBigInt(bi *big.Int) (err error) {
@@ -461,16 +454,16 @@ func (e *SemaEncoder) EncodeBigInt(bi *big.Int) (err error) {
 }
 
 func (e *SemaEncoder) EncodeTypeIdentifier(id EncodedSema) (err error) {
-	return e.write([]byte{byte(id)})
+	return e.writeByte(byte(id))
 }
 
 // EncodeCompositeKind expects the CompositeKind to fit within a single byte.
 func (e *SemaEncoder) EncodeCompositeKind(kind common.CompositeKind) (err error) {
-	return e.write([]byte{byte(kind)})
+	return e.writeByte(byte(kind))
 }
 
 func (e *SemaEncoder) EncodePointer(bufferOffset int) (err error) {
-	err = e.write([]byte{byte(EncodedSemaPointerType)})
+	err = e.writeByte(byte(EncodedSemaPointerType))
 	if err != nil {
 		return
 	}
@@ -796,6 +789,11 @@ func (e *SemaEncoder) EncodeInterfaceType(interfaceType *sema.InterfaceType) (er
 
 func (e *SemaEncoder) write(b []byte) (err error) {
 	_, err = e.w.Write(b)
+	return
+}
+
+func (e *SemaEncoder) writeByte(b byte) (err error) {
+	_, err = e.w.Write([]byte{b})
 	return
 }
 

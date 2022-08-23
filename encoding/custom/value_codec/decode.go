@@ -38,16 +38,16 @@ type Decoder struct {
 	// TODO abi for cutting down on what needs to be transferred
 }
 
-// Decode returns a Cadence value decoded from its custom-encoded representation.
+// DecodeValue returns a Cadence value decoded from its custom-encoded representation.
 //
 // This function returns an error if the bytes represent a custom encoding that
 // is malformed, does not conform to the custom Cadence specification, or contains
 // an unknown composite type.
-func Decode(gauge common.MemoryGauge, b []byte) (cadence.Value, error) {
+func DecodeValue(gauge common.MemoryGauge, b []byte) (cadence.Value, error) {
 	r := bytes.NewReader(b)
 	dec := NewDecoder(gauge, r)
 
-	v, err := dec.Decode()
+	v, err := dec.DecodeValue()
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +56,7 @@ func Decode(gauge common.MemoryGauge, b []byte) (cadence.Value, error) {
 }
 
 func MustDecode(gauge common.MemoryGauge, b []byte) cadence.Value {
-	v, err := Decode(gauge, b)
+	v, err := DecodeValue(gauge, b)
 	if err != nil {
 		panic(err)
 	}
@@ -72,18 +72,16 @@ func NewDecoder(memoryGauge common.MemoryGauge, r io.Reader) *Decoder {
 	}
 }
 
-// Decode reads custom-encoded bytes from the io.Reader and decodes them to a
+// TODO need a way to decode values with known type vs values with unknown type
+//      if type is known then no identifier is needed, such as for elements in constant sized array
+
+// DecodeValue reads custom-encoded bytes from the io.Reader and decodes them to a
 // Cadence value.
 //
 // This function returns an error if the bytes represent a custom encoding that
 // is malformed, does not conform to the custom Cadence specification, or contains
 // an unknown composite type.
-func (d *Decoder) Decode() (value cadence.Value, err error) {
-	return d.DecodeValue()
-}
 
-// TODO need a way to decode values with known type vs values with unknown type
-//      if type is known then no identifier is needed, such as for elements in constant sized array
 func (d *Decoder) DecodeValue() (value cadence.Value, err error) {
 	identifier, err := d.DecodeIdentifier()
 	if err != nil {

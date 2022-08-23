@@ -684,7 +684,7 @@ const (
 //			},
 // }
 func (v PathValue) Encode(e *atree.Encoder) error {
-	// Encode tag number and array head
+	// EncodeType tag number and array head
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
 		0xd8, CBORTagPathValue,
@@ -695,13 +695,13 @@ func (v PathValue) Encode(e *atree.Encoder) error {
 		return err
 	}
 
-	// Encode domain at array index encodedPathValueDomainFieldKey
+	// EncodeType domain at array index encodedPathValueDomainFieldKey
 	err = e.CBOR.EncodeUint(uint(v.Domain))
 	if err != nil {
 		return err
 	}
 
-	// Encode identifier at array index encodedPathValueIdentifierFieldKey
+	// EncodeType identifier at array index encodedPathValueIdentifierFieldKey
 	return e.CBOR.EncodeString(v.Identifier)
 }
 
@@ -728,7 +728,7 @@ const (
 // 				},
 // }
 func (v *CapabilityValue) Encode(e *atree.Encoder) error {
-	// Encode tag number and array head
+	// EncodeType tag number and array head
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
 		0xd8, CBORTagCapabilityValue,
@@ -739,19 +739,19 @@ func (v *CapabilityValue) Encode(e *atree.Encoder) error {
 		return err
 	}
 
-	// Encode address at array index encodedCapabilityValueAddressFieldKey
+	// EncodeType address at array index encodedCapabilityValueAddressFieldKey
 	err = v.Address.Encode(e)
 	if err != nil {
 		return err
 	}
 
-	// Encode path at array index encodedCapabilityValuePathFieldKey
+	// EncodeType path at array index encodedCapabilityValuePathFieldKey
 	err = v.Path.Encode(e)
 	if err != nil {
 		return err
 	}
 
-	// Encode borrow type at array index encodedCapabilityValueBorrowTypeFieldKey
+	// EncodeType borrow type at array index encodedCapabilityValueBorrowTypeFieldKey
 	return EncodeStaticType(e.CBOR, v.BorrowType)
 }
 
@@ -815,7 +815,7 @@ func encodeLocation(e *cbor.StreamEncoder, l common.Location) error {
 		//			encodedAddressLocationNameFieldKey:    string(l.Name),
 		//		},
 		// }
-		// Encode tag number and array head
+		// EncodeType tag number and array head
 		err := e.EncodeRawBytes([]byte{
 			// tag number
 			0xd8, CBORTagAddressLocation,
@@ -826,13 +826,13 @@ func encodeLocation(e *cbor.StreamEncoder, l common.Location) error {
 			return err
 		}
 
-		// Encode address at array index encodedAddressLocationAddressFieldKey
+		// EncodeType address at array index encodedAddressLocationAddressFieldKey
 		err = e.EncodeBytes(l.Address.Bytes())
 		if err != nil {
 			return err
 		}
 
-		// Encode name at array index encodedAddressLocationNameFieldKey
+		// EncodeType name at array index encodedAddressLocationNameFieldKey
 		return e.EncodeString(l.Name)
 
 	case common.TransactionLocation:
@@ -841,7 +841,7 @@ func encodeLocation(e *cbor.StreamEncoder, l common.Location) error {
 		//		Number: CBORTagTransactionLocation,
 		//		Content: []byte(l),
 		// }
-		// Encode tag number and array head
+		// EncodeType tag number and array head
 		err := e.EncodeRawBytes([]byte{
 			// tag number
 			0xd8, CBORTagTransactionLocation,
@@ -858,7 +858,7 @@ func encodeLocation(e *cbor.StreamEncoder, l common.Location) error {
 		//		Number: CBORTagScriptLocation,
 		//		Content: []byte(l),
 		// }
-		// Encode tag number and array head
+		// EncodeType tag number and array head
 		err := e.EncodeRawBytes([]byte{
 			// tag number
 			0xd8, CBORTagScriptLocation,
@@ -895,7 +895,7 @@ const (
 //			},
 // }
 func (v LinkValue) Encode(e *atree.Encoder) error {
-	// Encode tag number and array head
+	// EncodeType tag number and array head
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
 		0xd8, CBORTagLinkValue,
@@ -905,12 +905,12 @@ func (v LinkValue) Encode(e *atree.Encoder) error {
 	if err != nil {
 		return err
 	}
-	// Encode path at array index encodedLinkValueTargetPathFieldKey
+	// EncodeType path at array index encodedLinkValueTargetPathFieldKey
 	err = v.TargetPath.Encode(e)
 	if err != nil {
 		return err
 	}
-	// Encode type at array index encodedLinkValueTypeFieldKey
+	// EncodeType type at array index encodedLinkValueTypeFieldKey
 	return EncodeStaticType(e.CBOR, v.Type)
 }
 
@@ -933,7 +933,7 @@ const (
 //			},
 //	}
 func (v TypeValue) Encode(e *atree.Encoder) error {
-	// Encode tag number and array head
+	// EncodeType tag number and array head
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
 		0xd8, CBORTagTypeValue,
@@ -944,7 +944,7 @@ func (v TypeValue) Encode(e *atree.Encoder) error {
 		return err
 	}
 
-	// Encode type at array index encodedTypeValueTypeFieldKey
+	// EncodeType type at array index encodedTypeValueTypeFieldKey
 	return EncodeStaticType(e.CBOR, v.Type)
 }
 
@@ -1026,7 +1026,7 @@ const (
 //		},
 // }
 func (t CompositeStaticType) Encode(e *cbor.StreamEncoder) error {
-	// Encode tag number and array head
+	// EncodeType tag number and array head
 	err := e.EncodeRawBytes([]byte{
 		// tag number
 		0xd8, CBORTagCompositeStaticType,
@@ -1037,13 +1037,13 @@ func (t CompositeStaticType) Encode(e *cbor.StreamEncoder) error {
 		return err
 	}
 
-	// Encode location at array index encodedCompositeStaticTypeLocationFieldKey
+	// EncodeType location at array index encodedCompositeStaticTypeLocationFieldKey
 	err = encodeLocation(e, t.Location)
 	if err != nil {
 		return err
 	}
 
-	// Encode qualified identifier at array index encodedCompositeStaticTypeQualifiedIdentifierFieldKey
+	// EncodeType qualified identifier at array index encodedCompositeStaticTypeQualifiedIdentifierFieldKey
 	return e.EncodeString(t.QualifiedIdentifier)
 }
 
@@ -1068,7 +1068,7 @@ const (
 //		},
 // }
 func (t InterfaceStaticType) Encode(e *cbor.StreamEncoder) error {
-	// Encode tag number and array head
+	// EncodeType tag number and array head
 	err := e.EncodeRawBytes([]byte{
 		// tag number
 		0xd8, CBORTagInterfaceStaticType,
@@ -1079,13 +1079,13 @@ func (t InterfaceStaticType) Encode(e *cbor.StreamEncoder) error {
 		return err
 	}
 
-	// Encode location at array index encodedInterfaceStaticTypeLocationFieldKey
+	// EncodeType location at array index encodedInterfaceStaticTypeLocationFieldKey
 	err = encodeLocation(e, t.Location)
 	if err != nil {
 		return err
 	}
 
-	// Encode qualified identifier at array index encodedInterfaceStaticTypeQualifiedIdentifierFieldKey
+	// EncodeType qualified identifier at array index encodedInterfaceStaticTypeQualifiedIdentifierFieldKey
 	return e.EncodeString(t.QualifiedIdentifier)
 }
 
@@ -1126,7 +1126,7 @@ const (
 //		},
 // }
 func (t ConstantSizedStaticType) Encode(e *cbor.StreamEncoder) error {
-	// Encode tag number and array head
+	// EncodeType tag number and array head
 	err := e.EncodeRawBytes([]byte{
 		// tag number
 		0xd8, CBORTagConstantSizedStaticType,
@@ -1136,12 +1136,12 @@ func (t ConstantSizedStaticType) Encode(e *cbor.StreamEncoder) error {
 	if err != nil {
 		return err
 	}
-	// Encode size at array index encodedConstantSizedStaticTypeSizeFieldKey
+	// EncodeType size at array index encodedConstantSizedStaticTypeSizeFieldKey
 	err = e.EncodeInt64(t.Size)
 	if err != nil {
 		return err
 	}
-	// Encode type at array index encodedConstantSizedStaticTypeTypeFieldKey
+	// EncodeType type at array index encodedConstantSizedStaticTypeTypeFieldKey
 	return EncodeStaticType(e, t.Type)
 }
 
@@ -1166,7 +1166,7 @@ const (
 //		},
 //	}
 func (t ReferenceStaticType) Encode(e *cbor.StreamEncoder) error {
-	// Encode tag number and array head
+	// EncodeType tag number and array head
 	err := e.EncodeRawBytes([]byte{
 		// tag number
 		0xd8, CBORTagReferenceStaticType,
@@ -1176,12 +1176,12 @@ func (t ReferenceStaticType) Encode(e *cbor.StreamEncoder) error {
 	if err != nil {
 		return err
 	}
-	// Encode authorized at array index encodedReferenceStaticTypeAuthorizedFieldKey
+	// EncodeType authorized at array index encodedReferenceStaticTypeAuthorizedFieldKey
 	err = e.EncodeBool(t.Authorized)
 	if err != nil {
 		return err
 	}
-	// Encode type at array index encodedReferenceStaticTypeTypeFieldKey
+	// EncodeType type at array index encodedReferenceStaticTypeTypeFieldKey
 	return EncodeStaticType(e, t.BorrowedType)
 }
 
@@ -1206,7 +1206,7 @@ const (
 //		},
 // }
 func (t DictionaryStaticType) Encode(e *cbor.StreamEncoder) error {
-	// Encode tag number and array head
+	// EncodeType tag number and array head
 	err := e.EncodeRawBytes([]byte{
 		// tag number
 		0xd8, CBORTagDictionaryStaticType,
@@ -1216,12 +1216,12 @@ func (t DictionaryStaticType) Encode(e *cbor.StreamEncoder) error {
 	if err != nil {
 		return err
 	}
-	// Encode key type at array index encodedDictionaryStaticTypeKeyTypeFieldKey
+	// EncodeType key type at array index encodedDictionaryStaticTypeKeyTypeFieldKey
 	err = EncodeStaticType(e, t.KeyType)
 	if err != nil {
 		return err
 	}
-	// Encode value type at array index encodedDictionaryStaticTypeValueTypeFieldKey
+	// EncodeType value type at array index encodedDictionaryStaticTypeValueTypeFieldKey
 	return EncodeStaticType(e, t.ValueType)
 }
 
@@ -1246,7 +1246,7 @@ const (
 //		},
 // }
 func (t *RestrictedStaticType) Encode(e *cbor.StreamEncoder) error {
-	// Encode tag number and array head
+	// EncodeType tag number and array head
 	err := e.EncodeRawBytes([]byte{
 		// tag number
 		0xd8, CBORTagRestrictedStaticType,
@@ -1256,18 +1256,18 @@ func (t *RestrictedStaticType) Encode(e *cbor.StreamEncoder) error {
 	if err != nil {
 		return err
 	}
-	// Encode type at array index encodedRestrictedStaticTypeTypeFieldKey
+	// EncodeType type at array index encodedRestrictedStaticTypeTypeFieldKey
 	err = EncodeStaticType(e, t.Type)
 	if err != nil {
 		return err
 	}
-	// Encode restrictions (as array) at array index encodedRestrictedStaticTypeRestrictionsFieldKey
+	// EncodeType restrictions (as array) at array index encodedRestrictedStaticTypeRestrictionsFieldKey
 	err = e.EncodeArrayHead(uint64(len(t.Restrictions)))
 	if err != nil {
 		return err
 	}
 	for _, restriction := range t.Restrictions {
-		// Encode restriction as array restrictions element
+		// EncodeType restriction as array restrictions element
 		err = restriction.Encode(e)
 		if err != nil {
 			return err

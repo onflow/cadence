@@ -262,21 +262,23 @@ func TestCodecLocations(t *testing.T) {
 		common.REPLLocationPrefix,
 		common_codec.NilLocationPrefix,
 	} {
-		t.Run(fmt.Sprintf("prefix: %s", prefix), func(t *testing.T) {
-			t.Parallel()
+		func(prefix string) {
+			t.Run(fmt.Sprintf("prefix: %s", prefix), func(t *testing.T) {
+				t.Parallel()
 
-			var w bytes.Buffer
+				var w bytes.Buffer
 
-			err := common_codec.EncodeLocationPrefix(&w, prefix)
-			require.NoError(t, err, "encoding error")
+				err := common_codec.EncodeLocationPrefix(&w, prefix)
+				require.NoError(t, err, "encoding error")
 
-			assert.Equal(t, w.Bytes(), []byte{prefix[0]}, "encoded bytes differ")
+				assert.Equal(t, w.Bytes(), []byte{prefix[0]}, "encoded bytes differ")
 
-			output, err := common_codec.DecodeLocationPrefix(&w)
-			require.NoError(t, err, "decoding error")
+				output, err := common_codec.DecodeLocationPrefix(&w)
+				require.NoError(t, err, "decoding error")
 
-			assert.Equal(t, prefix, output, "bad decoding")
-		})
+				assert.Equal(t, prefix, output, "bad decoding")
+			})
+		}(prefix)
 	}
 
 	t.Run("EncodeLocation(nil)", func(t *testing.T) {

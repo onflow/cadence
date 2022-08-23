@@ -28,7 +28,7 @@ func SignedBigIntToBigEndianBytes(bigInt *big.Int) []byte {
 
 	switch bigInt.Sign() {
 	case -1:
-		// Encode as two's complement
+		// EncodeType as two's complement
 		twosComplement := new(big.Int).Neg(bigInt)
 		twosComplement.Sub(twosComplement, big.NewInt(1))
 		bytes := twosComplement.Bytes()

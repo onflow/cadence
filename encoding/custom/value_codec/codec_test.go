@@ -49,7 +49,7 @@ func TestValueCodecVoid(t *testing.T) {
 			"encoded bytes differ",
 		)
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -100,7 +100,7 @@ func TestValueCodecBool(t *testing.T) {
 			},
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -124,7 +124,7 @@ func TestValueCodecBool(t *testing.T) {
 			},
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -177,7 +177,7 @@ func TestValueCodecOptional(t *testing.T) {
 			},
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -204,7 +204,7 @@ func TestValueCodecOptional(t *testing.T) {
 			},
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -228,7 +228,7 @@ func TestValueCodecOptional(t *testing.T) {
 			},
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -285,7 +285,7 @@ func TestValueCodecString(t *testing.T) {
 			},
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -311,7 +311,7 @@ func TestValueCodecString(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -363,7 +363,7 @@ func TestValueCodecBytes(t *testing.T) {
 			},
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -389,7 +389,7 @@ func TestValueCodecBytes(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -444,7 +444,7 @@ func TestValueCodecCharacter(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -472,7 +472,7 @@ func TestValueCodecCharacter(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -523,7 +523,7 @@ func TestValueCodecAddress(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -547,7 +547,7 @@ func TestValueCodecAddress(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -601,7 +601,7 @@ func TestValueCodecInt(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -629,7 +629,7 @@ func TestValueCodecInt(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -656,7 +656,7 @@ func TestValueCodecInt(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -710,7 +710,7 @@ func TestValueCodecInt128(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -738,7 +738,7 @@ func TestValueCodecInt128(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -765,7 +765,7 @@ func TestValueCodecInt128(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -819,7 +819,7 @@ func TestValueCodecInt256(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -847,7 +847,7 @@ func TestValueCodecInt256(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -874,7 +874,7 @@ func TestValueCodecInt256(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -928,7 +928,7 @@ func TestValueCodecUInt128(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -956,7 +956,7 @@ func TestValueCodecUInt128(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -1010,7 +1010,7 @@ func TestValueCodecUInt256(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -1038,7 +1038,7 @@ func TestValueCodecUInt256(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -1092,7 +1092,7 @@ func TestValueCodecUInt(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -1120,7 +1120,7 @@ func TestValueCodecUInt(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -1172,7 +1172,7 @@ func TestValueCodecNumber(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -1218,7 +1218,7 @@ func TestValueCodecNumber(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -1264,7 +1264,7 @@ func TestValueCodecNumber(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -1310,7 +1310,7 @@ func TestValueCodecNumber(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -1356,7 +1356,7 @@ func TestValueCodecNumber(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -1402,7 +1402,7 @@ func TestValueCodecNumber(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -1448,7 +1448,7 @@ func TestValueCodecNumber(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -1494,7 +1494,7 @@ func TestValueCodecNumber(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -1548,7 +1548,7 @@ func TestValueCodecArray(t *testing.T) {
 			},
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -1584,7 +1584,7 @@ func TestValueCodecArray(t *testing.T) {
 			},
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -1639,7 +1639,7 @@ func TestValueCodecArray(t *testing.T) {
 			},
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -1675,7 +1675,7 @@ func TestValueCodecArray(t *testing.T) {
 			},
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -1737,7 +1737,7 @@ func TestValueCodecDictionary(t *testing.T) {
 			},
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -1784,7 +1784,7 @@ func TestValueCodecDictionary(t *testing.T) {
 			},
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -1884,7 +1884,7 @@ func TestValueCodecStruct(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -2018,7 +2018,7 @@ func TestValueCodecResource(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -2149,7 +2149,7 @@ func TestValueCodecEvent(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -2280,7 +2280,7 @@ func TestValueCodecContract(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -2376,7 +2376,7 @@ func TestValueCodecLink(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -2407,7 +2407,7 @@ func TestValueCodecPath(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -2544,7 +2544,7 @@ func TestValueCodecCapability(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -2646,7 +2646,7 @@ func TestValueCodecEnum(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.Decode()
+		output, err := decoder.DecodeValue()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")

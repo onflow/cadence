@@ -549,7 +549,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 		},
 	}
 	runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-		//return value_codec.Decode(nil, b)
+		//return value_codec.DecodeType(nil, b)
 		return json.Decode(runtimeInterface, b)
 	}
 

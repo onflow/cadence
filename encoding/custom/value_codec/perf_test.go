@@ -108,7 +108,7 @@ func measureValueCodec(value cadence.Value) (
 	size = buffer.Len()
 
 	t2 := time.Now()
-	_, err = decoder.Decode()
+	_, err = decoder.DecodeValue()
 	t3 := time.Now()
 	if err != nil {
 		return
