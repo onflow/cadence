@@ -501,10 +501,10 @@ func exportSimpleCompositeValue(
 			fieldName := field.Identifier
 
 			fieldValue := v.Fields[fieldName]
-			if fieldValue == nil && v.ComputedFields != nil {
-				if computedField, ok := v.ComputedFields[fieldName]; ok {
-					fieldValue = computedField(inter, getLocationRange)
-				}
+
+			computeField := v.ComputeField
+			if fieldValue == nil && computeField != nil {
+				fieldValue = computeField(fieldName, inter, getLocationRange)
 			}
 
 			exportedFieldValue, err := exportValueWithInterpreter(

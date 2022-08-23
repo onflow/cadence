@@ -312,16 +312,15 @@ type Storage interface {
 type ReferencedResourceKindedValues map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}
 
 type Interpreter struct {
-	Program           *Program
-	Location          common.Location
-	sharedState       *sharedState
-	activations       *VariableActivations
-	Globals           GlobalVariables
-	Transactions      []*HostFunctionValue
-	Config            *Config
-	interpreted       bool
-	statement         ast.Statement
-	resourceVariables map[ResourceKindedValue]*Variable
+	Program      *Program
+	Location     common.Location
+	sharedState  *sharedState
+	activations  *VariableActivations
+	Globals      GlobalVariables
+	Transactions []*HostFunctionValue
+	Config       *Config
+	interpreted  bool
+	statement    ast.Statement
 }
 
 var _ common.MemoryGauge = &Interpreter{}
@@ -358,12 +357,11 @@ func newInterpreter(
 ) (*Interpreter, error) {
 
 	interpreter := &Interpreter{
-		Program:           program,
-		Location:          location,
-		sharedState:       sharedState,
-		Config:            config,
-		Globals:           map[string]*Variable{},
-		resourceVariables: map[ResourceKindedValue]*Variable{},
+		Program:     program,
+		Location:    location,
+		sharedState: sharedState,
+		Config:      config,
+		Globals:     map[string]*Variable{},
 	}
 
 	// Register self
@@ -2085,7 +2083,7 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 							argumentVariables = append(
 								argumentVariables,
 								argumentVariable{
-									variable: interpreter.resourceVariables[resourceKindedValue],
+									variable: interpreter.sharedState.resourceVariables[resourceKindedValue],
 									value:    resourceKindedValue,
 								},
 							)
@@ -2104,7 +2102,7 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 						for _, argumentVariable := range argumentVariables {
 							value := argumentVariable.value
 							interpreter.invalidateResource(value)
-							interpreter.resourceVariables[value] = argumentVariable.variable
+							interpreter.sharedState.resourceVariables[value] = argumentVariable.variable
 						}
 						return functionReturn{returnValue}
 					}
@@ -2206,6 +2204,7 @@ func (interpreter *Interpreter) NewSubInterpreter(
 	error,
 ) {
 	return newInterpreter(
+
 		program,
 		location,
 		interpreter.sharedState,
@@ -2245,6 +2244,7 @@ func (interpreter *Interpreter) writeStored(
 ) {
 	accountStorage := interpreter.Config.Storage.GetStorageMap(storageAddress, domain, true)
 	accountStorage.WriteValue(interpreter, identifier, value)
+	interpreter.recordStorageMutation()
 }
 
 type ValueConverterDeclaration struct {
@@ -3147,6 +3147,12 @@ func (interpreter *Interpreter) storageAccountPaths(addressValue AddressValue, g
 	return interpreter.accountPaths(addressValue, getLocationRange, common.PathDomainStorage, PrimitiveStaticTypeStoragePath)
 }
 
+func (interpreter *Interpreter) recordStorageMutation() {
+	if interpreter.sharedState.inStorageIteration {
+		interpreter.sharedState.storageMutatedDuringIteration = true
+	}
+}
+
 func (interpreter *Interpreter) newStorageIterationFunction(addressValue AddressValue, domain common.PathDomain, pathType sema.Type) *HostFunctionValue {
 	address := addressValue.ToAddress()
 
@@ -3169,6 +3175,12 @@ func (interpreter *Interpreter) newStorageIterationFunction(addressValue Address
 
 			invocationTypeParams := []sema.Type{pathType, sema.MetaType}
 
+			inIteration := inter.sharedState.inStorageIteration
+			inter.sharedState.inStorageIteration = true
+			defer func() {
+				inter.sharedState.inStorageIteration = inIteration
+			}()
+
 			for key, value := storageIterator.Next(); key != "" && value != nil; key, value = storageIterator.Next() {
 				pathValue := NewPathValue(inter, domain, key)
 				runtimeType := NewTypeValue(inter, value.StaticType(inter))
@@ -3190,6 +3202,18 @@ func (interpreter *Interpreter) newStorageIterationFunction(addressValue Address
 				if !shouldContinue {
 					break
 				}
+
+				// it is not safe to check this at the beginning of the loop (i.e. on the next invocation of the callback)
+				// because if the mutation performed in the callback reorganized storage such that the iteration pointer is now
+				// at the end, we will not invoke the callback again but will still silently skip elements of storage. In order
+				// to be safe, we perform this check here to effectively enforce that users return `false` from their callback
+				// in all cases where storage is mutated
+				if inter.sharedState.storageMutatedDuringIteration {
+					panic(StorageMutatedDuringIterationError{
+						LocationRange: getLocationRange(),
+					})
+				}
+
 			}
 
 			return NewVoidValue(inter)
@@ -4206,7 +4230,7 @@ func (interpreter *Interpreter) startResourceTracking(
 	// If the resource already has a variable-association, that means there is a
 	// resource variable that has not been invalidated properly.
 	// This should not be allowed, and must have been caught by the checker ideally.
-	if _, exists := interpreter.resourceVariables[resourceKindedValue]; exists {
+	if _, exists := interpreter.sharedState.resourceVariables[resourceKindedValue]; exists {
 		var astRange ast.Range
 		if hasPosition != nil {
 			astRange = ast.NewUnmeteredRangeFromPositioned(hasPosition)
@@ -4220,7 +4244,7 @@ func (interpreter *Interpreter) startResourceTracking(
 		})
 	}
 
-	interpreter.resourceVariables[resourceKindedValue] = variable
+	interpreter.sharedState.resourceVariables[resourceKindedValue] = variable
 }
 
 // checkInvalidatedResourceUse checks whether a resource variable is used after invalidation.
@@ -4247,7 +4271,7 @@ func (interpreter *Interpreter) checkInvalidatedResourceUse(
 	// This should not be allowed, and must have been caught by the checker ideally.
 	//
 	// Note: if the `resourceVariables` doesn't have a mapping, that implies an invalidated resource.
-	if existingVar, exists := interpreter.resourceVariables[resourceKindedValue]; !exists || existingVar != variable {
+	if existingVar, exists := interpreter.sharedState.resourceVariables[resourceKindedValue]; !exists || existingVar != variable {
 		panic(InvalidatedResourceError{
 			LocationRange: LocationRange{
 				Location: interpreter.Location,
@@ -4289,7 +4313,7 @@ func (interpreter *Interpreter) invalidateResource(value Value) {
 	}
 
 	// Remove the resource-to-variable mapping.
-	delete(interpreter.resourceVariables, resourceKindedValue)
+	delete(interpreter.sharedState.resourceVariables, resourceKindedValue)
 }
 
 // MeterMemory delegates the memory usage to the interpreter's memory gauge, if any.
