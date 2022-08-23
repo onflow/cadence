@@ -52,17 +52,17 @@ func (i *PositionInfo) recordVariableReferenceOccurrence(
 ) {
 	origin, ok := i.VariableOrigins[variable]
 	if !ok {
-		startPos2 := variable.Pos
-		var endPos2 *ast.Position
-		if startPos2 != nil {
-			pos := startPos2.Shifted(memoryGauge, len(variable.Identifier)-1)
-			endPos2 = &pos
+		originStartPos := variable.Pos
+		var originEndPos *ast.Position
+		if originStartPos != nil {
+			pos := originStartPos.Shifted(memoryGauge, len(variable.Identifier)-1)
+			originEndPos = &pos
 		}
 		origin = &Origin{
 			Type:            variable.Type,
 			DeclarationKind: variable.DeclarationKind,
-			StartPos:        startPos2,
-			EndPos:          endPos2,
+			StartPos:        originStartPos,
+			EndPos:          originEndPos,
 			DocString:       variable.DocString,
 		}
 		i.VariableOrigins[variable] = origin
