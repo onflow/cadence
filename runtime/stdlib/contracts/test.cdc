@@ -97,6 +97,10 @@ pub contract Test {
                 arguments: arguments
             )
         }
+
+        pub fun useConfiguration(_ confgiuration: Configuration) {
+            self.backend.useConfiguration(confgiuration)
+        }
     }
 
     /// ResultStatus indicates status of a transaction or script execution.
@@ -154,6 +158,17 @@ pub contract Test {
         }
     }
 
+    /// Configuration to be used by the blockchain.
+    /// Can be used to set the address mappings.
+    ///
+    pub struct Configuration {
+        pub let addresses: {String: Address}
+
+        init(addresses: {String: Address}) {
+            self.addresses = addresses
+        }
+    }
+
     /// Transaction that can be submitted and executed on the blockchain.
     ///
     pub struct Transaction {
@@ -190,5 +205,7 @@ pub contract Test {
             account: Account,
             arguments: [AnyStruct]
         ): Error?
+
+        pub fun useConfiguration(_ confgiuration: Configuration)
     }
 }
