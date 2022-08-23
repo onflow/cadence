@@ -351,14 +351,14 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 			case sema.HashAlgorithmType:
 				value = cadence.NewEnum(
 					[]cadence.Value{
-						cadence.NewUInt8(0),
+						cadence.NewUInt8(1),
 					},
 				).WithType(HashAlgoType)
 
 			case sema.SignatureAlgorithmType:
 				value = cadence.NewEnum(
 					[]cadence.Value{
-						cadence.NewUInt8(0),
+						cadence.NewUInt8(1),
 					},
 				).WithType(SignAlgoType)
 
@@ -371,7 +371,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 						// Sign algorithm
 						cadence.NewEnum(
 							[]cadence.Value{
-								cadence.NewUInt8(0),
+								cadence.NewUInt8(1),
 							},
 						).WithType(SignAlgoType),
 					},
@@ -489,6 +489,38 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "cannot import value of type PublicAccount.Keys")
+	})
+
+	t.Run("invalid HashAlgorithm", func(t *testing.T) {
+
+		err := executeScript(t,
+			`pub fun main(arg: HashAlgorithm) {}`,
+			cadence.NewEnum(
+				[]cadence.Value{
+					cadence.NewUInt8(0),
+				},
+			).WithType(HashAlgoType),
+		)
+		require.Error(t, err)
+
+		var entryPointErr *InvalidEntryPointArgumentError
+		require.ErrorAs(t, err, &entryPointErr)
+	})
+
+	t.Run("invalid SignatureAlgorithm", func(t *testing.T) {
+
+		err := executeScript(t,
+			`pub fun main(arg: SignatureAlgorithm) {}`,
+			cadence.NewEnum(
+				[]cadence.Value{
+					cadence.NewUInt8(0),
+				},
+			).WithType(SignAlgoType),
+		)
+		require.Error(t, err)
+
+		var entryPointErr *InvalidEntryPointArgumentError
+		require.ErrorAs(t, err, &entryPointErr)
 	})
 }
 
@@ -831,14 +863,14 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 			case sema.HashAlgorithmType:
 				value = cadence.NewEnum(
 					[]cadence.Value{
-						cadence.NewUInt8(0),
+						cadence.NewUInt8(1),
 					},
 				).WithType(HashAlgoType)
 
 			case sema.SignatureAlgorithmType:
 				value = cadence.NewEnum(
 					[]cadence.Value{
-						cadence.NewUInt8(0),
+						cadence.NewUInt8(1),
 					},
 				).WithType(SignAlgoType)
 
@@ -851,7 +883,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 						// Sign algorithm
 						cadence.NewEnum(
 							[]cadence.Value{
-								cadence.NewUInt8(0),
+								cadence.NewUInt8(1),
 							},
 						).WithType(SignAlgoType),
 					},
@@ -972,5 +1004,37 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 		)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "cannot import value of type PublicAccount.Keys")
+	})
+
+	t.Run("invalid HashAlgorithm", func(t *testing.T) {
+
+		err := executeTransaction(t,
+			`transaction(arg: HashAlgorithm) {}`,
+			cadence.NewEnum(
+				[]cadence.Value{
+					cadence.NewUInt8(0),
+				},
+			).WithType(HashAlgoType),
+		)
+		require.Error(t, err)
+
+		var entryPointErr *InvalidEntryPointArgumentError
+		require.ErrorAs(t, err, &entryPointErr)
+	})
+
+	t.Run("invalid SignatureAlgorithm", func(t *testing.T) {
+
+		err := executeTransaction(t,
+			`transaction(arg: SignatureAlgorithm) {}`,
+			cadence.NewEnum(
+				[]cadence.Value{
+					cadence.NewUInt8(0),
+				},
+			).WithType(SignAlgoType),
+		)
+		require.Error(t, err)
+
+		var entryPointErr *InvalidEntryPointArgumentError
+		require.ErrorAs(t, err, &entryPointErr)
 	})
 }

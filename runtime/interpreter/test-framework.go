@@ -24,7 +24,6 @@ package interpreter
 import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/sema"
 )
 
 // TestFramework is the interface to be implemented by the test providers.
@@ -71,11 +70,6 @@ type TransactionResult struct {
 type Account struct {
 	Address   common.Address
 	PublicKey *PublicKey
-}
-
-type PublicKey struct {
-	PublicKey []byte
-	SignAlgo  sema.SignatureAlgorithm
 }
 
 type Configuration struct {

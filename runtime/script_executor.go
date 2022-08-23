@@ -22,37 +22,33 @@ import (
 	"sync"
 
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 type interpreterScriptExecutor struct {
-	runtime *interpreterRuntime
-
+	runtime interpreterRuntime
 	script  Script
 	context Context
 
-	preprocessOnce sync.Once
-	preprocessErr  error
-
-	storage            *Storage
-	checkerOptions     []sema.Option
-	interpreterOptions []interpreter.Option
-
-	functions stdlib.StandardLibraryFunctions
-
+	// preprocess
+	preprocessOnce         sync.Once
+	preprocessErr          error
+	codesAndPrograms       codesAndPrograms
+	storage                *Storage
 	program                *interpreter.Program
+	environment            Environment
 	functionEntryPointType *sema.FunctionType
+	interpret              InterpretFunc
 
+	// execute
 	executeOnce sync.Once
 	executeErr  error
 	result      cadence.Value
 }
 
 func newInterpreterScriptExecutor(
-	runtime *interpreterRuntime,
+	runtime interpreterRuntime,
 	script Script,
 	context Context,
 ) *interpreterScriptExecutor {
@@ -88,63 +84,83 @@ func (executor *interpreterScriptExecutor) Result() (cadence.Value, error) {
 }
 
 func (executor *interpreterScriptExecutor) preprocess() (err error) {
-	defer executor.runtime.Recover(
+	context := executor.context
+	location := context.Location
+	script := executor.script
+
+	codesAndPrograms := newCodesAndPrograms()
+	executor.codesAndPrograms = codesAndPrograms
+
+	interpreterRuntime := executor.runtime
+
+	defer interpreterRuntime.Recover(
 		func(internalErr Error) {
 			err = internalErr
 		},
-		executor.context,
+		location,
+		codesAndPrograms,
 	)
 
-	executor.context.InitializeCodesAndPrograms()
+	runtimeInterface := context.Interface
 
-	memoryGauge, _ := executor.context.Interface.(common.MemoryGauge)
+	storage := NewStorage(runtimeInterface, runtimeInterface)
+	executor.storage = storage
 
-	executor.storage = NewStorage(executor.context.Interface, memoryGauge)
-
-	executor.functions = executor.runtime.standardLibraryFunctions(
-		executor.context,
-		executor.storage,
-		executor.interpreterOptions,
-		executor.checkerOptions,
+	environment := context.Environment
+	if environment == nil {
+		environment = NewScriptInterpreterEnvironment(interpreterRuntime.defaultConfig)
+	}
+	environment.Configure(
+		runtimeInterface,
+		codesAndPrograms,
+		storage,
+		context.CoverageReport,
 	)
+	executor.environment = environment
 
-	executor.program, err = executor.runtime.parseAndCheckProgram(
-		executor.script.Source,
-		executor.context,
-		executor.functions,
-		stdlib.BuiltinValues,
-		executor.checkerOptions,
+	program, err := environment.ParseAndCheckProgram(
+		script.Source,
+		location,
 		true,
-		importResolutionResults{},
 	)
 	if err != nil {
-		return newError(err, executor.context)
+		return newError(err, location, codesAndPrograms)
 	}
+	executor.program = program
 
-	executor.functionEntryPointType, err = executor.program.Elaboration.FunctionEntryPointType()
+	functionEntryPointType, err := program.Elaboration.FunctionEntryPointType()
 	if err != nil {
-		return newError(err, executor.context)
+		return newError(err, location, codesAndPrograms)
 	}
+	executor.functionEntryPointType = functionEntryPointType
 
 	// Ensure the entry point's parameter types are importable
-	if len(executor.functionEntryPointType.Parameters) > 0 {
-		for _, param := range executor.functionEntryPointType.Parameters {
+	parameters := functionEntryPointType.Parameters
+	if len(parameters) > 0 {
+		for _, param := range parameters {
 			if !param.TypeAnnotation.Type.IsImportable(map[*sema.Member]bool{}) {
 				err = &ScriptParameterTypeNotImportableError{
 					Type: param.TypeAnnotation.Type,
 				}
-				return newError(err, executor.context)
+				return newError(err, location, codesAndPrograms)
 			}
 		}
 	}
 
 	// Ensure the entry point's return type is valid
-	if !executor.functionEntryPointType.ReturnTypeAnnotation.Type.IsExternallyReturnable(map[*sema.Member]bool{}) {
+	returnType := functionEntryPointType.ReturnTypeAnnotation.Type
+	if !returnType.IsExternallyReturnable(map[*sema.Member]bool{}) {
 		err = &InvalidScriptReturnTypeError{
-			Type: executor.functionEntryPointType.ReturnTypeAnnotation.Type,
+			Type: returnType,
 		}
-		return newError(err, executor.context)
+		return newError(err, location, codesAndPrograms)
 	}
+
+	executor.interpret = scriptExecutionFunction(
+		parameters,
+		script.Arguments,
+		runtimeInterface,
+	)
 
 	return nil
 }
@@ -155,37 +171,37 @@ func (executor *interpreterScriptExecutor) execute() (val cadence.Value, err err
 		return nil, err
 	}
 
-	defer executor.runtime.Recover(
+	environment := executor.environment
+	context := executor.context
+	location := context.Location
+	codesAndPrograms := executor.codesAndPrograms
+	interpreterRuntime := executor.runtime
+
+	defer interpreterRuntime.Recover(
 		func(internalErr Error) {
 			err = internalErr
 		},
-		executor.context,
+		location,
+		codesAndPrograms,
 	)
 
-	value, inter, err := executor.runtime.interpret(
+	value, inter, err := environment.Interpret(
+		location,
 		executor.program,
-		executor.context,
-		executor.storage,
-		executor.functions,
-		stdlib.BuiltinValues,
-		executor.interpreterOptions,
-		executor.checkerOptions,
-		scriptExecutionFunction(
-			executor.functionEntryPointType.Parameters,
-			executor.script.Arguments,
-			executor.context.Interface,
-			interpreter.ReturnEmptyLocationRange,
-		),
+		executor.interpret,
 	)
 	if err != nil {
-		return nil, newError(err, executor.context)
+		return nil, newError(err, location, codesAndPrograms)
 	}
 
 	// Export before committing storage
-
-	result, err := exportValue(value, interpreter.ReturnEmptyLocationRange)
+	exportableValue := newExportableValue(value, inter)
+	result, err := exportValue(
+		exportableValue,
+		interpreter.ReturnEmptyLocationRange,
+	)
 	if err != nil {
-		return nil, newError(err, executor.context)
+		return nil, newError(err, location, codesAndPrograms)
 	}
 
 	// Write back all stored values, which were actually just cached, back into storage.
@@ -193,9 +209,9 @@ func (executor *interpreterScriptExecutor) execute() (val cadence.Value, err err
 	// Even though this function is `ExecuteScript`, that doesn't imply the changes
 	// to storage will be actually persisted
 
-	err = executor.runtime.commitStorage(executor.storage, inter)
+	err = environment.CommitStorage(inter)
 	if err != nil {
-		return nil, newError(err, executor.context)
+		return nil, newError(err, location, codesAndPrograms)
 	}
 
 	return result, nil
@@ -205,8 +221,7 @@ func scriptExecutionFunction(
 	parameters []*sema.Parameter,
 	arguments [][]byte,
 	runtimeInterface Interface,
-	getLocationRange func() interpreter.LocationRange,
-) interpretFunc {
+) InterpretFunc {
 	return func(inter *interpreter.Interpreter) (value interpreter.Value, err error) {
 
 		// Recover internal panics and return them as an error.

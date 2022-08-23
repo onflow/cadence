@@ -19,10 +19,8 @@
 package runtime
 
 import (
-	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 var _ Runtime = &TestFrameworkRuntime{}
@@ -35,57 +33,54 @@ type TestFrameworkRuntime struct {
 	interpreterRuntime
 }
 
-func NewTestFrameworkRuntime(options ...Option) *TestFrameworkRuntime {
-	runtime := &TestFrameworkRuntime{}
-	for _, option := range options {
-		option(runtime)
-	}
-	return runtime
+func NewTestFrameworkRuntime() *TestFrameworkRuntime {
+	return &TestFrameworkRuntime{}
 }
 
 // ParseAndCheck is a modified version of 'ParseAndCheckProgram' of 'interpreterRuntime'.
-// This method allows passing checker-options and interpreter-options.
+// This method allows passing configs.
 //
 func (r *TestFrameworkRuntime) ParseAndCheck(
 	code []byte,
 	context Context,
-	checkerOptions []sema.Option,
-	interpreterOptions []interpreter.Option,
+	checkerConfig *sema.Config,
 ) (
 	program *interpreter.Program,
 	err error,
 ) {
+
+	// TODO: use `checkerConfig`
+
+	location := context.Location
+
+	codesAndPrograms := newCodesAndPrograms()
+
 	defer r.Recover(
 		func(internalErr Error) {
 			err = internalErr
 		},
-		context,
+		location,
+		codesAndPrograms,
 	)
 
-	context.InitializeCodesAndPrograms()
-
-	memoryGauge, _ := context.Interface.(common.MemoryGauge)
-
-	storage := NewStorage(context.Interface, memoryGauge)
-
-	functions := r.standardLibraryFunctions(
-		context,
-		storage,
-		interpreterOptions,
-		checkerOptions,
+	environment := context.Environment
+	if environment == nil {
+		environment = NewBaseInterpreterEnvironment(r.defaultConfig)
+	}
+	environment.Configure(
+		context.Interface,
+		codesAndPrograms,
+		nil,
+		context.CoverageReport,
 	)
 
-	program, err = r.parseAndCheckProgram(
+	program, err = environment.ParseAndCheckProgram(
 		code,
-		context,
-		functions,
-		stdlib.BuiltinValues,
-		checkerOptions,
-		false,
-		importResolutionResults{},
+		location,
+		true,
 	)
 	if err != nil {
-		return nil, newError(err, context)
+		return nil, newError(err, location, codesAndPrograms)
 	}
 
 	return program, nil
@@ -94,33 +89,35 @@ func (r *TestFrameworkRuntime) ParseAndCheck(
 // Interpret interprets the given program.
 //
 func (r TestFrameworkRuntime) Interpret(
-	program *interpreter.Program,
-	storage *Storage,
 	context Context,
-	checkerOptions []sema.Option,
-	interpreterOptions []interpreter.Option,
+	interpreterConfig *interpreter.Config,
 ) (*interpreter.Interpreter, error) {
-	context.InitializeCodesAndPrograms()
 
-	functions := r.standardLibraryFunctions(
-		context,
-		storage,
-		interpreterOptions,
-		checkerOptions,
+	// TODO: use `interpreterConfig`
+
+	codesAndPrograms := newCodesAndPrograms()
+
+	environment := context.Environment
+	if environment == nil {
+		environment = NewBaseInterpreterEnvironment(r.defaultConfig)
+	}
+	environment.Configure(
+		context.Interface,
+		codesAndPrograms,
+		nil,
+		context.CoverageReport,
 	)
 
-	_, inter, err := r.interpret(
-		program,
-		context,
-		storage,
-		functions,
-		stdlib.BuiltinValues,
-		interpreterOptions,
-		checkerOptions,
+	location := context.Location
+
+	_, inter, err := environment.Interpret(
+		location,
+		nil,
 		nil,
 	)
+
 	if err != nil {
-		return nil, newError(err, context)
+		return nil, newError(err, location, codesAndPrograms)
 	}
 
 	return inter, nil

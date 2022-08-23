@@ -72,9 +72,9 @@ var TestContractChecker = func() *sema.Checker {
 		program,
 		TestContractLocation,
 		nil,
-		false,
-		sema.WithPredeclaredValues(BuiltinFunctions.ToSemaValueDeclarations()),
-		sema.WithPredeclaredTypes(BuiltinTypes.ToTypeDeclarations()),
+		&sema.Config{
+			AccessCheckMode: sema.AccessCheckModeStrict,
+		},
 	)
 	if err != nil {
 		panic(err)
@@ -913,10 +913,9 @@ func newAccountValue(
 			account.PublicKey.PublicKey,
 		),
 		NewSignatureAlgorithmCase(
-			inter,
-			account.PublicKey.SignAlgo.RawValue(),
+			interpreter.UInt8Value(account.PublicKey.SignAlgo.RawValue()),
 		),
-		inter.PublicKeyValidationHandler,
+		inter.Config.PublicKeyValidationHandler,
 	)
 
 	// Create an 'Account' by calling its constructor.

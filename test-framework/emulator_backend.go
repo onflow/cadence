@@ -21,6 +21,8 @@ package test
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/stdlib"
 	"strings"
 
 	sdk "github.com/onflow/flow-go-sdk"
@@ -35,10 +37,8 @@ import (
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/parser"
-	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -415,40 +415,40 @@ func newInterpreter() (*interpreter.Interpreter, error) {
 	// TODO: maybe re-use interpreter? Only needed for value conversion
 	// TODO: Deal with imported/composite types
 
-	predeclaredInterpreterValues := stdlib.BuiltinFunctions.ToInterpreterValueDeclarations()
-	predeclaredInterpreterValues = append(predeclaredInterpreterValues, stdlib.BuiltinValues.ToInterpreterValueDeclarations()...)
+	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
 
 	return interpreter.NewInterpreter(
 		nil,
 		utils.TestLocation,
-		interpreter.WithStorage(interpreter.NewInMemoryStorage(nil)),
-		interpreter.WithPredeclaredValues(predeclaredInterpreterValues),
-		interpreter.WithImportLocationHandler(func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
-			switch location {
-			case stdlib.CryptoChecker.Location:
-				program := interpreter.ProgramFromChecker(stdlib.CryptoChecker)
-				subInterpreter, err := inter.NewSubInterpreter(program, location)
-				if err != nil {
-					panic(err)
-				}
-				return interpreter.InterpreterImport{
-					Interpreter: subInterpreter,
-				}
+		&interpreter.Config{
+			BaseActivation: baseActivation,
+			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+				switch location {
+				case stdlib.CryptoChecker.Location:
+					program := interpreter.ProgramFromChecker(stdlib.CryptoChecker)
+					subInterpreter, err := inter.NewSubInterpreter(program, location)
+					if err != nil {
+						panic(err)
+					}
+					return interpreter.InterpreterImport{
+						Interpreter: subInterpreter,
+					}
 
-			case stdlib.TestContractLocation:
-				program := interpreter.ProgramFromChecker(stdlib.TestContractChecker)
-				subInterpreter, err := inter.NewSubInterpreter(program, location)
-				if err != nil {
-					panic(err)
-				}
-				return interpreter.InterpreterImport{
-					Interpreter: subInterpreter,
-				}
+				case stdlib.TestContractLocation:
+					program := interpreter.ProgramFromChecker(stdlib.TestContractChecker)
+					subInterpreter, err := inter.NewSubInterpreter(program, location)
+					if err != nil {
+						panic(err)
+					}
+					return interpreter.InterpreterImport{
+						Interpreter: subInterpreter,
+					}
 
-			default:
-				panic(errors.NewUnexpectedError("importing of programs not implemented"))
-			}
-		}),
+				default:
+					panic(errors.NewUnexpectedError("importing of programs not implemented"))
+				}
+			},
+		},
 	)
 }
 

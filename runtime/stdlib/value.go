@@ -26,20 +26,20 @@ import (
 )
 
 type StandardLibraryValue struct {
-	Name         string
-	Type         sema.Type
-	DocString    string
-	ValueFactory func(*interpreter.Interpreter) interpreter.Value
-	Kind         common.DeclarationKind
-	Available    func(common.Location) bool
+	Name           string
+	Type           sema.Type
+	DocString      string
+	Value          interpreter.Value
+	Kind           common.DeclarationKind
+	ArgumentLabels []string
 }
 
 func (v StandardLibraryValue) ValueDeclarationName() string {
 	return v.Name
 }
 
-func (v StandardLibraryValue) ValueDeclarationValue(interpreter *interpreter.Interpreter) interpreter.Value {
-	return v.ValueFactory(interpreter)
+func (v StandardLibraryValue) ValueDeclarationValue() interpreter.Value {
+	return v.Value
 }
 
 func (v StandardLibraryValue) ValueDeclarationType() sema.Type {
@@ -54,41 +54,14 @@ func (v StandardLibraryValue) ValueDeclarationKind() common.DeclarationKind {
 	return v.Kind
 }
 
-func (StandardLibraryValue) ValueDeclarationPosition() ast.Position {
-	return ast.EmptyPosition
+func (StandardLibraryValue) ValueDeclarationPosition() *ast.Position {
+	return nil
 }
 
 func (v StandardLibraryValue) ValueDeclarationIsConstant() bool {
 	return v.Kind != common.DeclarationKindVariable
 }
 
-func (v StandardLibraryValue) ValueDeclarationAvailable(location common.Location) bool {
-	if v.Available == nil {
-		return true
-	}
-	return v.Available(location)
-}
-
-func (StandardLibraryValue) ValueDeclarationArgumentLabels() []string {
-	return nil
-}
-
-// StandardLibraryValues
-
-type StandardLibraryValues []StandardLibraryValue
-
-func (values StandardLibraryValues) ToSemaValueDeclarations() []sema.ValueDeclaration {
-	valueDeclarations := make([]sema.ValueDeclaration, len(values))
-	for i, value := range values {
-		valueDeclarations[i] = value
-	}
-	return valueDeclarations
-}
-
-func (values StandardLibraryValues) ToInterpreterValueDeclarations() []interpreter.ValueDeclaration {
-	valueDeclarations := make([]interpreter.ValueDeclaration, len(values))
-	for i, value := range values {
-		valueDeclarations[i] = value
-	}
-	return valueDeclarations
+func (v StandardLibraryValue) ValueDeclarationArgumentLabels() []string {
+	return v.ArgumentLabels
 }

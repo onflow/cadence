@@ -83,31 +83,72 @@ func TestInterpretStringDecodeHex(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
-      fun test(): [UInt8] {
-          return "01CADE".decodeHex()
-      }
-    `)
+	t.Run("valid", func(t *testing.T) {
 
-	result, err := inter.Invoke("test")
-	require.NoError(t, err)
+		t.Parallel()
 
-	RequireValuesEqual(
-		t,
-		inter,
-		interpreter.NewArrayValue(
+		inter := parseCheckAndInterpret(t, `
+          fun test(): [UInt8] {
+              return "01CADE".decodeHex()
+          }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		RequireValuesEqual(
+			t,
 			inter,
-			interpreter.ReturnEmptyLocationRange,
-			interpreter.VariableSizedStaticType{
-				Type: interpreter.PrimitiveStaticTypeUInt8,
-			},
-			common.Address{},
-			interpreter.NewUnmeteredUInt8Value(1),
-			interpreter.NewUnmeteredUInt8Value(0xCA),
-			interpreter.NewUnmeteredUInt8Value(0xDE),
-		),
-		result,
-	)
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.ReturnEmptyLocationRange,
+				interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeUInt8,
+				},
+				common.Address{},
+				interpreter.NewUnmeteredUInt8Value(1),
+				interpreter.NewUnmeteredUInt8Value(0xCA),
+				interpreter.NewUnmeteredUInt8Value(0xDE),
+			),
+			result,
+		)
+
+	})
+
+	t.Run("invalid: invalid byte", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          fun test(): [UInt8] {
+              return "0x".decodeHex()
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		var typedErr interpreter.InvalidHexByteError
+		require.ErrorAs(t, err, &typedErr)
+		require.Equal(t, byte('x'), typedErr.Byte)
+	})
+
+	t.Run("invalid: invalid length", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          fun test(): [UInt8] {
+              return "0".decodeHex()
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		var typedErr interpreter.InvalidHexLengthError
+		require.ErrorAs(t, err, &typedErr)
+	})
 }
 
 func TestInterpretStringEncodeHex(t *testing.T) {

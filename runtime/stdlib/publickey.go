@@ -42,7 +42,7 @@ var publicKeyConstructorFunctionType = &sema.FunctionType{
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.PublicKeyType),
 }
 
-var publicKeyConstructor = NewStandardLibraryFunction(
+var PublicKeyConstructor = NewStandardLibraryFunction(
 	sema.PublicKeyTypeName,
 	publicKeyConstructorFunctionType,
 	publicKeyConstructorFunctionDocString,
@@ -52,7 +52,7 @@ var publicKeyConstructor = NewStandardLibraryFunction(
 			panic(errors.NewUnreachableError())
 		}
 
-		signAlgo, ok := invocation.Arguments[1].(*interpreter.CompositeValue)
+		signAlgo, ok := invocation.Arguments[1].(*interpreter.SimpleCompositeValue)
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
@@ -64,57 +64,7 @@ var publicKeyConstructor = NewStandardLibraryFunction(
 			invocation.GetLocationRange,
 			publicKey,
 			signAlgo,
-			inter.PublicKeyValidationHandler,
+			inter.Config.PublicKeyValidationHandler,
 		)
 	},
 )
-
-func NewPublicKeyFromValue(
-	inter *interpreter.Interpreter,
-	getLocationRange func() interpreter.LocationRange,
-	publicKey interpreter.MemberAccessibleValue,
-) (
-	*interpreter.PublicKey,
-	error,
-) {
-
-	// publicKey field
-	key := publicKey.GetMember(inter, getLocationRange, sema.PublicKeyPublicKeyField)
-
-	byteArray, err := interpreter.ByteArrayValueToByteSlice(inter, key)
-	if err != nil {
-		return nil, errors.NewUnexpectedError("public key needs to be a byte array. %w", err)
-	}
-
-	// sign algo field
-	signAlgoField := publicKey.GetMember(inter, getLocationRange, sema.PublicKeySignAlgoField)
-	if signAlgoField == nil {
-		return nil, errors.NewUnexpectedError("sign algorithm is not set")
-	}
-
-	signAlgoValue, ok := signAlgoField.(*interpreter.CompositeValue)
-	if !ok {
-		return nil, errors.NewUnexpectedError(
-			"sign algorithm does not belong to type: %s",
-			sema.SignatureAlgorithmType.QualifiedString(),
-		)
-	}
-
-	rawValue := signAlgoValue.GetField(inter, getLocationRange, sema.EnumRawValueFieldName)
-	if rawValue == nil {
-		return nil, errors.NewDefaultUserError("sign algorithm raw value is not set")
-	}
-
-	signAlgoRawValue, ok := rawValue.(interpreter.UInt8Value)
-	if !ok {
-		return nil, errors.NewUnexpectedError(
-			"sign algorithm raw-value does not belong to type: %s",
-			sema.UInt8Type.QualifiedString(),
-		)
-	}
-
-	return &interpreter.PublicKey{
-		PublicKey: byteArray,
-		SignAlgo:  sema.SignatureAlgorithm(signAlgoRawValue.ToInt()),
-	}, nil
-}

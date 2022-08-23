@@ -368,8 +368,8 @@ func TestCheckTransactionExecuteScope(t *testing.T) {
           }
         `,
 		ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithAccessCheckMode(sema.AccessCheckModeStrict),
+			Config: &sema.Config{
+				AccessCheckMode: sema.AccessCheckModeStrict,
 			},
 		},
 	)

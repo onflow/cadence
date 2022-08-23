@@ -51,7 +51,6 @@ func RunREPL() {
 		func(value interpreter.Value) {
 			fmt.Println(formatValue(value))
 		},
-		nil,
 	)
 
 	if err != nil {

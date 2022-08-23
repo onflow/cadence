@@ -21,6 +21,7 @@ package test
 import (
 	"context"
 	"fmt"
+	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/flow-go/fvm/meter"
 	"math"
 	"strings"
@@ -37,7 +38,6 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 // This Provides utility methods to easily run test-scripts.
@@ -217,10 +217,9 @@ func (r *TestRunner) parseCheckAndInterpret(script string) (*interpreter.Program
 		Location:  testScriptLocation,
 	}
 
-	var checkerOptions = r.checkerOptions(ctx)
-	var interpreterOptions = r.interpreterOptions(ctx)
+	checkerConfig := r.checkerConfig(ctx)
 
-	program, err := r.testRuntime.ParseAndCheck([]byte(script), ctx, checkerOptions, interpreterOptions)
+	program, err := r.testRuntime.ParseAndCheck([]byte(script), ctx, checkerConfig)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -228,21 +227,13 @@ func (r *TestRunner) parseCheckAndInterpret(script string) (*interpreter.Program
 	// TODO: validate test function signature
 	//   e.g: no return values, no arguments, etc.
 
-	memoryGauge, _ := ctx.Interface.(common.MemoryGauge)
-	storage := runtime.NewStorage(ctx.Interface, memoryGauge)
+	interpreterConfig := r.interpreterConfig(ctx)
 
 	inter, err := r.testRuntime.Interpret(
-		program,
-		storage,
 		ctx,
-		checkerOptions,
-		interpreterOptions,
+		interpreterConfig,
 	)
-	if err != nil {
-		return nil, nil, err
-	}
 
-	err = inter.Interpret()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -250,33 +241,36 @@ func (r *TestRunner) parseCheckAndInterpret(script string) (*interpreter.Program
 	return program, inter, nil
 }
 
-func (r *TestRunner) checkerOptions(ctx runtime.Context) []sema.Option {
-	return []sema.Option{
-		sema.WithImportHandler(
-			func(checker *sema.Checker, importedLocation common.Location, importRange ast.Range) (sema.Import, error) {
-				var elaboration *sema.Elaboration
-				switch importedLocation {
-				case stdlib.CryptoChecker.Location:
-					elaboration = stdlib.CryptoChecker.Elaboration
+func (r *TestRunner) checkerConfig(ctx runtime.Context) *sema.Config {
+	return &sema.Config{
+		ImportHandler: func(
+			checker *sema.Checker,
+			importedLocation common.Location,
+			importRange ast.Range,
+		) (sema.Import, error) {
+			var elaboration *sema.Elaboration
+			switch importedLocation {
+			case stdlib.CryptoChecker.Location:
+				elaboration = stdlib.CryptoChecker.Elaboration
 
-				case stdlib.TestContractLocation:
-					elaboration = stdlib.TestContractChecker.Elaboration
+			case stdlib.TestContractLocation:
+				elaboration = stdlib.TestContractChecker.Elaboration
 
-				default:
-					_, importedElaboration, err := r.parseAndCheckImport(importedLocation, ctx)
-					if err != nil {
-						return nil, err
-					}
-
-					elaboration = importedElaboration
+			default:
+				_, importedElaboration, err := r.parseAndCheckImport(importedLocation, ctx)
+				if err != nil {
+					return nil, err
 				}
 
-				return sema.ElaborationImport{
-					Elaboration: elaboration,
-				}, nil
-			},
-		),
-		sema.WithContractVariableHandler(contractVariableHandler),
+				elaboration = importedElaboration
+			}
+
+			return sema.ElaborationImport{
+				Elaboration: elaboration,
+			}, nil
+		},
+
+		ContractVariableHandler: contractVariableHandler,
 	}
 }
 
@@ -304,60 +298,58 @@ func contractVariableHandler(
 	}
 }
 
-func (r *TestRunner) interpreterOptions(ctx runtime.Context) []interpreter.Option {
-
-	return []interpreter.Option{
+func (r *TestRunner) interpreterConfig(ctx runtime.Context) *interpreter.Config {
+	return &interpreter.Config{
 		// TODO: The default injected fields handler only supports 'address' locations.
 		//   However, during tests, it is possible to get non-address locations. e.g: file paths.
 		//   Thus, need to properly handle them. Make this nil for now.
-		interpreter.WithInjectedCompositeFieldsHandler(nil),
+		InjectedCompositeFieldsHandler: nil,
 
-		interpreter.WithImportLocationHandler(
-			func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
-				switch location {
-				case stdlib.CryptoChecker.Location:
-					program := interpreter.ProgramFromChecker(stdlib.CryptoChecker)
-					subInterpreter, err := inter.NewSubInterpreter(program, location)
-					if err != nil {
-						panic(err)
-					}
-					return interpreter.InterpreterImport{
-						Interpreter: subInterpreter,
-					}
-
-				case stdlib.TestContractLocation:
-					program := interpreter.ProgramFromChecker(stdlib.TestContractChecker)
-					subInterpreter, err := inter.NewSubInterpreter(program, location)
-					if err != nil {
-						panic(err)
-					}
-					return interpreter.InterpreterImport{
-						Interpreter: subInterpreter,
-					}
-
-				default:
-					importedProgram, importedElaboration, err := r.parseAndCheckImport(location, ctx)
-					if err != nil {
-						panic(err)
-					}
-
-					program := &interpreter.Program{
-						Program:     importedProgram,
-						Elaboration: importedElaboration,
-					}
-
-					subInterpreter, err := inter.NewSubInterpreter(program, location)
-					if err != nil {
-						panic(err)
-					}
-
-					return interpreter.InterpreterImport{
-						Interpreter: subInterpreter,
-					}
+		ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+			switch location {
+			case stdlib.CryptoChecker.Location:
+				program := interpreter.ProgramFromChecker(stdlib.CryptoChecker)
+				subInterpreter, err := inter.NewSubInterpreter(program, location)
+				if err != nil {
+					panic(err)
 				}
-			},
-		),
-		interpreter.WithContractValueHandler(func(
+				return interpreter.InterpreterImport{
+					Interpreter: subInterpreter,
+				}
+
+			case stdlib.TestContractLocation:
+				program := interpreter.ProgramFromChecker(stdlib.TestContractChecker)
+				subInterpreter, err := inter.NewSubInterpreter(program, location)
+				if err != nil {
+					panic(err)
+				}
+				return interpreter.InterpreterImport{
+					Interpreter: subInterpreter,
+				}
+
+			default:
+				importedProgram, importedElaboration, err := r.parseAndCheckImport(location, ctx)
+				if err != nil {
+					panic(err)
+				}
+
+				program := &interpreter.Program{
+					Program:     importedProgram,
+					Elaboration: importedElaboration,
+				}
+
+				subInterpreter, err := inter.NewSubInterpreter(program, location)
+				if err != nil {
+					panic(err)
+				}
+
+				return interpreter.InterpreterImport{
+					Interpreter: subInterpreter,
+				}
+			}
+		},
+
+		ContractValueHandler: func(
 			inter *interpreter.Interpreter,
 			compositeType *sema.CompositeType,
 			constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
@@ -394,7 +386,7 @@ func (r *TestRunner) interpreterOptions(ctx runtime.Context) []interpreter.Optio
 				// similar to structs. Therefore, generate a constructor function.
 				return constructorGenerator(common.Address{})
 			}
-		}),
+		},
 	}
 }
 
@@ -437,29 +429,19 @@ func (r *TestRunner) parseAndCheckImport(location common.Location, startCtx runt
 		return nil, nil, err
 	}
 
-	ctx := startCtx.WithLocation(location)
-
-	// Use separate checker-options and interpreter-options for the imports.
-	// For e.g: imports are not supported for imported programs (i.e: nested imports are not supported).
-	var checkerOptions = []sema.Option{
-		sema.WithImportHandler(
-			func(checker *sema.Checker, importedLocation common.Location, importRange ast.Range) (sema.Import, error) {
-				return nil, fmt.Errorf("nested imports are not supported")
-			},
-		),
-		sema.WithContractVariableHandler(contractVariableHandler),
+	checkerConfigs := &sema.Config{
+		ImportHandler: func(checker *sema.Checker, importedLocation common.Location, importRange ast.Range) (sema.Import, error) {
+			return nil, fmt.Errorf("nested imports are not supported")
+		},
+		ContractVariableHandler: contractVariableHandler,
 	}
 
-	var interpreterOptions = []interpreter.Option{
-		interpreter.WithInjectedCompositeFieldsHandler(nil),
-		interpreter.WithImportLocationHandler(
-			func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
-				panic(fmt.Errorf("nested imports are not supported"))
-			},
-		),
-	}
+	program, err := r.testRuntime.ParseAndCheck(
+		[]byte(code),
+		startCtx,
+		checkerConfigs,
+	)
 
-	program, err := r.testRuntime.ParseAndCheck([]byte(code), ctx, checkerOptions, interpreterOptions)
 	if err != nil {
 		return nil, nil, err
 	}
