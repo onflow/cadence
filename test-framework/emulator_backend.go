@@ -42,7 +42,7 @@ import (
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
-var _ interpreter.TestFramework = &EmulatorBackend{}
+var _ stdlib.TestFramework = &EmulatorBackend{}
 
 // EmulatorBackend is the emulator-backed implementation of the interpreter.TestFramework.
 //
@@ -66,7 +66,7 @@ type EmulatorBackend struct {
 
 	// A property bag to pass various configurations to the backend.
 	// Currently, supports passing address mapping for contracts.
-	configuration *interpreter.Configuration
+	configuration *stdlib.Configuration
 }
 
 type keyInfo struct {
@@ -83,10 +83,10 @@ func NewEmulatorBackend(importResolver ImportResolver) *EmulatorBackend {
 	}
 }
 
-func (e *EmulatorBackend) RunScript(code string, args []interpreter.Value) *interpreter.ScriptResult {
+func (e *EmulatorBackend) RunScript(code string, args []interpreter.Value) *stdlib.ScriptResult {
 	inter, err := newInterpreter()
 	if err != nil {
-		return &interpreter.ScriptResult{
+		return &stdlib.ScriptResult{
 			Error: err,
 		}
 	}
@@ -95,14 +95,14 @@ func (e *EmulatorBackend) RunScript(code string, args []interpreter.Value) *inte
 	for _, arg := range args {
 		exportedValue, err := runtime.ExportValue(arg, inter, interpreter.ReturnEmptyLocationRange)
 		if err != nil {
-			return &interpreter.ScriptResult{
+			return &stdlib.ScriptResult{
 				Error: err,
 			}
 		}
 
 		encodedArg, err := json.Encode(exportedValue)
 		if err != nil {
-			return &interpreter.ScriptResult{
+			return &stdlib.ScriptResult{
 				Error: err,
 			}
 		}
@@ -114,30 +114,30 @@ func (e *EmulatorBackend) RunScript(code string, args []interpreter.Value) *inte
 
 	result, err := e.blockchain.ExecuteScript([]byte(code), arguments)
 	if err != nil {
-		return &interpreter.ScriptResult{
+		return &stdlib.ScriptResult{
 			Error: err,
 		}
 	}
 
 	if result.Error != nil {
-		return &interpreter.ScriptResult{
+		return &stdlib.ScriptResult{
 			Error: result.Error,
 		}
 	}
 
 	value, err := runtime.ImportValue(inter, interpreter.ReturnEmptyLocationRange, result.Value, nil)
 	if err != nil {
-		return &interpreter.ScriptResult{
+		return &stdlib.ScriptResult{
 			Error: err,
 		}
 	}
 
-	return &interpreter.ScriptResult{
+	return &stdlib.ScriptResult{
 		Value: value,
 	}
 }
 
-func (e EmulatorBackend) CreateAccount() (*interpreter.Account, error) {
+func (e EmulatorBackend) CreateAccount() (*stdlib.Account, error) {
 	// Also generate the keys. So that users don't have to do this in two steps.
 	// Store the generated keys, so that it could be looked-up, given the address.
 
@@ -161,7 +161,7 @@ func (e EmulatorBackend) CreateAccount() (*interpreter.Account, error) {
 		},
 	}
 
-	return &interpreter.Account{
+	return &stdlib.Account{
 		Address: common.Address(address),
 		PublicKey: &interpreter.PublicKey{
 			PublicKey: publicKey,
@@ -173,7 +173,7 @@ func (e EmulatorBackend) CreateAccount() (*interpreter.Account, error) {
 func (e *EmulatorBackend) AddTransaction(
 	code string,
 	authorizers []common.Address,
-	signers []*interpreter.Account,
+	signers []*stdlib.Account,
 	args []interpreter.Value,
 ) error {
 
@@ -233,7 +233,7 @@ func (e *EmulatorBackend) newTransaction(code string, authorizers []common.Addre
 
 func (e *EmulatorBackend) signTransaction(
 	tx *sdk.Transaction,
-	signerAccounts []*interpreter.Account,
+	signerAccounts []*stdlib.Account,
 ) error {
 
 	// Sign transaction with each signer
@@ -266,7 +266,7 @@ func (e *EmulatorBackend) signTransaction(
 	return nil
 }
 
-func (e *EmulatorBackend) ExecuteNextTransaction() *interpreter.TransactionResult {
+func (e *EmulatorBackend) ExecuteNextTransaction() *stdlib.TransactionResult {
 	result, err := e.blockchain.ExecuteNextTransaction()
 
 	if err != nil {
@@ -277,18 +277,18 @@ func (e *EmulatorBackend) ExecuteNextTransaction() *interpreter.TransactionResul
 			return nil
 		}
 
-		return &interpreter.TransactionResult{
+		return &stdlib.TransactionResult{
 			Error: err,
 		}
 	}
 
 	if result.Error != nil {
-		return &interpreter.TransactionResult{
+		return &stdlib.TransactionResult{
 			Error: result.Error,
 		}
 	}
 
-	return &interpreter.TransactionResult{}
+	return &stdlib.TransactionResult{}
 }
 
 func (e *EmulatorBackend) CommitBlock() error {
@@ -302,7 +302,7 @@ func (e *EmulatorBackend) CommitBlock() error {
 func (e *EmulatorBackend) DeployContract(
 	name string,
 	code string,
-	account *interpreter.Account,
+	account *stdlib.Account,
 	args []interpreter.Value,
 ) error {
 
@@ -359,7 +359,7 @@ func (e *EmulatorBackend) DeployContract(
 		}
 	}
 
-	err = e.signTransaction(tx, []*interpreter.Account{account})
+	err = e.signTransaction(tx, []*stdlib.Account{account})
 	if err != nil {
 		return err
 	}
@@ -405,7 +405,7 @@ func newBlockchain(opts ...emulator.Option) *emulator.Blockchain {
 	return b
 }
 
-func (e *EmulatorBackend) UseConfiguration(configuration *interpreter.Configuration) {
+func (e *EmulatorBackend) UseConfiguration(configuration *stdlib.Configuration) {
 	e.configuration = configuration
 }
 

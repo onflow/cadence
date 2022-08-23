@@ -19,11 +19,12 @@
  *
  */
 
-package interpreter
+package stdlib
 
 import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/interpreter"
 )
 
 // TestFramework is the interface to be implemented by the test providers.
@@ -31,7 +32,7 @@ import (
 // This is used as a way to inject test provider dependencies dynamically.
 //
 type TestFramework interface {
-	RunScript(code string, arguments []Value) *ScriptResult
+	RunScript(code string, arguments []interpreter.Value) *ScriptResult
 
 	CreateAccount() (*Account, error)
 
@@ -39,7 +40,7 @@ type TestFramework interface {
 		code string,
 		authorizers []common.Address,
 		signers []*Account,
-		arguments []Value,
+		arguments []interpreter.Value,
 	) error
 
 	ExecuteNextTransaction() *TransactionResult
@@ -50,7 +51,7 @@ type TestFramework interface {
 		name string,
 		code string,
 		account *Account,
-		arguments []Value,
+		arguments []interpreter.Value,
 	) error
 
 	ReadFile(string) (string, error)
@@ -59,7 +60,7 @@ type TestFramework interface {
 }
 
 type ScriptResult struct {
-	Value Value
+	Value interpreter.Value
 	Error error
 }
 

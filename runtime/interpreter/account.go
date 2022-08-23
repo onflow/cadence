@@ -226,8 +226,3 @@ func NewPublicAccountValue(
 		stringer,
 	)
 }
-
-type PublicKey struct {
-	PublicKey []byte
-	SignAlgo  sema.SignatureAlgorithm
-}

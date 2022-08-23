@@ -605,7 +605,10 @@ type AccountKey struct {
 	IsRevoked bool
 }
 
-type PublicKey = interpreter.PublicKey
+type PublicKey struct {
+	PublicKey []byte
+	SignAlgo  sema.SignatureAlgorithm
+}
 
 type AccountKeyProvider interface {
 	// GetAccountKey retrieves a key from an account by index.
