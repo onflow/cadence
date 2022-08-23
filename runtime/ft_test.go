@@ -25,8 +25,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
+
+	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/tests/utils"
@@ -548,6 +549,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 		},
 	}
 	runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+		//return value_codec.Decode(nil, b)
 		return json.Decode(runtimeInterface, b)
 	}
 

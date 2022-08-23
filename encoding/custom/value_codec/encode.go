@@ -32,6 +32,20 @@ type Encoder struct {
 	w common_codec.LengthyWriter
 }
 
+func Encode(value cadence.Value) ([]byte, error) {
+	return EncodeValue(value)
+}
+
+// MustEncode returns the custom-encoded representation of the given value, or panics
+// if the value cannot be represented in the custom format.
+func MustEncode(value cadence.Value) []byte {
+	b, err := Encode(value)
+	if err != nil {
+		panic(err)
+	}
+	return b
+}
+
 // EncodeValue returns the custom-encoded representation of the given value.
 //
 // This function returns an error if the Cadence value cannot be represented in the custom format.
@@ -45,16 +59,6 @@ func EncodeValue(value cadence.Value) ([]byte, error) {
 	}
 
 	return w.Bytes(), nil
-}
-
-// MustEncode returns the custom-encoded representation of the given value, or panics
-// if the value cannot be represented in the custom format.
-func MustEncodeValue(value cadence.Value) []byte {
-	b, err := EncodeValue(value)
-	if err != nil {
-		panic(err)
-	}
-	return b
 }
 
 // NewEncoder initializes an Encoder that will write custom-encoded bytes to the
@@ -255,6 +259,10 @@ func (e *Encoder) EncodeValue(value cadence.Value) (err error) {
 				return
 			}
 			err = e.EncodeConstantArrayType(arrayType)
+		case nil:
+			err = e.EncodeValueIdentifier(EncodedValueUntypedArray)
+		default:
+			err = fmt.Errorf("unknown array type: %s", arrayType)
 		}
 		if err != nil {
 			return
@@ -314,10 +322,9 @@ func (e *Encoder) EncodeValue(value cadence.Value) (err error) {
 			return
 		}
 		return e.EncodeEnum(v)
-
 	}
 
-	return fmt.Errorf("unexpected value: ${value}")
+	return fmt.Errorf("unexpected value: %s (type=%s)", value, value.Type())
 }
 
 func (e *Encoder) EncodeValueIdentifier(id EncodedValue) (err error) {
@@ -336,7 +343,7 @@ func (e *Encoder) EncodeOptional(value cadence.Optional) (err error) {
 
 func (e *Encoder) EncodeArray(value cadence.Array) (err error) {
 	switch v := value.ArrayType.(type) {
-	case cadence.VariableSizedArrayType:
+	case cadence.VariableSizedArrayType, nil: // unknown type still needs length
 		err = common_codec.EncodeLength(&e.w, len(value.Values))
 		if err != nil {
 			return

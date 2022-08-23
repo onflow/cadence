@@ -74,6 +74,14 @@ func Decode(gauge common.MemoryGauge, b []byte, options ...Option) (cadence.Valu
 	return v, nil
 }
 
+func MustDecode(gauge common.MemoryGauge, b []byte, options ...Option) cadence.Value {
+	v, err := Decode(gauge, b, options...)
+	if err != nil {
+		panic(err)
+	}
+	return v
+}
+
 // NewDecoder initializes a Decoder that will decode JSON-encoded bytes from the
 // given io.Reader.
 func NewDecoder(gauge common.MemoryGauge, r io.Reader) *Decoder {

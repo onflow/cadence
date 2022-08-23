@@ -32,6 +32,7 @@ const (
 	EncodedValueWord64
 	EncodedValueFix64
 	EncodedValueUFix64
+	EncodedValueUntypedArray
 	EncodedValueVariableArray
 	EncodedValueConstantArray
 	EncodedValueDictionary
@@ -43,6 +44,9 @@ const (
 	EncodedValuePath
 	EncodedValueCapability
 	EncodedValueEnum
+
+	// TODO dont do this here. goes as first byte of custom codec
+	EncodedValueReservedForJsonCodec = byte('{')
 )
 
 type EncodedType byte
@@ -129,4 +133,7 @@ const (
 	// TODO - classify
 
 	EncodedTypeMetaType
+
+	// TODO dont do this here. goes as first byte of custom codec
+	EncodedTypeReservedForJsonCodec = byte('{')
 )

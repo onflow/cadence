@@ -55,6 +55,14 @@ func Decode(gauge common.MemoryGauge, b []byte) (cadence.Value, error) {
 	return v, nil
 }
 
+func MustDecode(gauge common.MemoryGauge, b []byte) cadence.Value {
+	v, err := Decode(gauge, b)
+	if err != nil {
+		panic(err)
+	}
+	return v
+}
+
 // NewDecoder initializes a Decoder that will decode custom-encoded bytes from the
 // given io.Reader.
 func NewDecoder(memoryGauge common.MemoryGauge, r io.Reader) *Decoder {
@@ -137,6 +145,8 @@ func (d *Decoder) DecodeValue() (value cadence.Value, err error) {
 		value, err = d.DecodeFix64()
 	case EncodedValueUFix64:
 		value, err = d.DecodeUFix64()
+	case EncodedValueUntypedArray:
+		value, err = d.DecodeUntypedArray()
 	case EncodedValueVariableArray:
 		var t cadence.VariableSizedArrayType
 		t, err = d.DecodeVariableArrayType()
@@ -458,33 +468,28 @@ func (d *Decoder) DecodeBytes() (value cadence.Bytes, err error) {
 	return
 }
 
+func (d *Decoder) DecodeUntypedArray() (array cadence.Array, err error) {
+	size, err := d.DecodeLength()
+	if err != nil {
+		return
+	}
+	return d.decodeArray(nil, size)
+}
+
 func (d *Decoder) DecodeVariableArray(arrayType cadence.VariableSizedArrayType) (array cadence.Array, err error) {
 	size, err := d.DecodeLength()
 	if err != nil {
 		return
 	}
-	array, err = cadence.NewMeteredArray(d.memoryGauge, size, func() (elements []cadence.Value, err error) {
-		elements = make([]cadence.Value, 0, size)
-		for i := 0; i < size; i++ {
-			// TODO if `elementType` is concrete then each element needn't encode its type
-			var elementValue cadence.Value
-			elementValue, err = d.DecodeValue()
-			if err != nil {
-				return
-			}
-			elements = append(elements, elementValue)
-		}
-
-		return elements, nil
-	})
-
-	array = array.WithType(arrayType)
-
-	return
+	return d.decodeArray(arrayType, size)
 }
 
 func (d *Decoder) DecodeConstantArray(arrayType cadence.ConstantSizedArrayType) (array cadence.Array, err error) {
 	size := int(arrayType.Size)
+	return d.decodeArray(arrayType, size)
+}
+
+func (d *Decoder) decodeArray(arrayType cadence.ArrayType, size int) (array cadence.Array, err error) {
 	array, err = cadence.NewMeteredArray(d.memoryGauge, size, func() (elements []cadence.Value, err error) {
 		elements = make([]cadence.Value, 0, size)
 		for i := 0; i < size; i++ {

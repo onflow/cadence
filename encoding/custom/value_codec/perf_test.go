@@ -24,6 +24,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/onflow/cadence/encoding/cadence_codec"
+	"github.com/onflow/cadence/encoding/custom/value_codec"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
@@ -34,7 +36,6 @@ import (
 //
 // Benchmark
 //
-
 
 func BenchmarkCodec(b *testing.B) {
 	tests := []cadence.Value{
@@ -57,24 +58,25 @@ func BenchmarkCodec(b *testing.B) {
 		)),
 	}
 
+	jsonCodec := cadence_codec.CadenceCodec{Encoder: json.JsonCodec{}}
+	valueCodec := cadence_codec.CadenceCodec{Encoder: value_codec.ValueCodec{}}
+
 	for _, value := range tests {
 		b.Run(fmt.Sprintf("json_%s", value.Type().ID()), func(b *testing.B) {
 			for n := 0; n < b.N; n++ {
-				blob, err := json.Encode(value)
+				blob, err := jsonCodec.Encode(value)
 				require.NoError(b, err, "encoding error")
 
-				_, err = json.Decode(nil, blob)
+				_, err = jsonCodec.Decode(nil, blob)
 				require.NoError(b, err, "decoding error")
 			}
 		})
 		b.Run(fmt.Sprintf("value_%s", value.Type().ID()), func(b *testing.B) {
 			for n := 0; n < b.N; n++ {
-				encoder, decoder, _ := NewTestCodec()
-
-				err := encoder.EncodeValue(value)
+				blob, err := valueCodec.Encode(value)
 				require.NoError(b, err, "encoding error")
 
-				_, err = decoder.Decode()
+				_, err = valueCodec.Decode(nil, blob)
 				require.NoError(b, err, "decoding error")
 			}
 
