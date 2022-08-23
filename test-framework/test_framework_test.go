@@ -2274,3 +2274,35 @@ func TestReplacingImports(t *testing.T) {
 		)
 	})
 }
+
+func TestReplaceImports(t *testing.T) {
+	t.Parallel()
+
+	emulatorBackend := NewEmulatorBackend(nil)
+	emulatorBackend.UseConfiguration(&interpreter.Configurations{
+		Addresses: map[string]common.Address{
+			"./sample/contract1.cdc": {0x1},
+			"./sample/contract2.cdc": {0x2},
+			"./sample/contract3.cdc": {0x3},
+		},
+	})
+
+	code := `
+        import C1 from "./sample/contract1.cdc"
+        import C2 from "./sample/contract2.cdc"
+        import C3 from "./sample/contract3.cdc"
+
+        pub fun main() {}
+    `
+	expected := `
+        import C1 from 0x0100000000000000
+        import C2 from 0x0200000000000000
+        import C3 from 0x0300000000000000
+
+        pub fun main() {}
+    `
+
+	replacedCode := emulatorBackend.replaceImports(code)
+
+	assert.Equal(t, expected, replacedCode)
+}

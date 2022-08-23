@@ -462,6 +462,9 @@ func (e *EmulatorBackend) replaceImports(code string) string {
 		panic(err)
 	}
 
+	sb := strings.Builder{}
+	prevLocationEnd := 0
+
 	for _, importDeclaration := range program.ImportDeclarations() {
 		location, ok := importDeclaration.Location.(common.StringLocation)
 		if !ok {
@@ -469,12 +472,17 @@ func (e *EmulatorBackend) replaceImports(code string) string {
 		}
 
 		address := e.configurations.Addresses[location.String()]
-
-		locationStr := fmt.Sprintf(`"%s"`, location)
 		addressStr := fmt.Sprintf("0x%s", address)
 
-		code = strings.Replace(code, locationStr, addressStr, 1)
+		locationStart := importDeclaration.LocationPos.Offset
+
+		sb.WriteString(code[prevLocationEnd:locationStart])
+		sb.WriteString(addressStr)
+
+		prevLocationEnd = importDeclaration.EndPos.Offset + 1
 	}
 
-	return code
+	sb.WriteString(code[prevLocationEnd:])
+
+	return sb.String()
 }
