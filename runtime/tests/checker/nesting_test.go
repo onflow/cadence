@@ -301,8 +301,8 @@ func TestCheckNestedTypeInvalidChildType(t *testing.T) {
 			_, err := ParseAndCheckWithOptions(t,
 				`let u: T.U = nil`,
 				ParseAndCheckOptions{
-					Options: []sema.Option{
-						sema.WithBaseTypeActivation(baseTypeActivation),
+					Config: &sema.Config{
+						BaseTypeActivation: baseTypeActivation,
 					},
 				},
 			)

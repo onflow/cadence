@@ -72,8 +72,8 @@ func TestInterpretEquality(t *testing.T) {
 				Config: &interpreter.Config{
 					BaseActivation: baseActivation,
 				},
-				CheckerOptions: []sema.Option{
-					sema.WithBaseValueActivation(baseValueActivation),
+				CheckerConfig: &sema.Config{
+					BaseValueActivation: baseValueActivation,
 				},
 			},
 		)

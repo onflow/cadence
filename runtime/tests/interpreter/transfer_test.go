@@ -73,9 +73,9 @@ func TestInterpretTransferCheck(t *testing.T) {
               }
             `,
 			ParseCheckAndInterpretOptions{
-				CheckerOptions: []sema.Option{
-					sema.WithBaseTypeActivation(baseTypeActivation),
-					sema.WithBaseValueActivation(baseValueActivation),
+				CheckerConfig: &sema.Config{
+					BaseTypeActivation:  baseTypeActivation,
+					BaseValueActivation: baseValueActivation,
 				},
 				Config: &interpreter.Config{
 					BaseActivation: baseActivation,

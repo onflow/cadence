@@ -244,10 +244,12 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 		allowOuterScopeShadowing: false,
 	})
 	checker.report(err)
-	checker.recordVariableDeclarationOccurrence(
-		identifier.Identifier,
-		variable,
-	)
+	if checker.PositionInfo != nil {
+		checker.recordVariableDeclarationOccurrence(
+			identifier.Identifier,
+			variable,
+		)
+	}
 
 	checker.Elaboration.InterfaceDeclarationTypes[declaration] = interfaceType
 	checker.Elaboration.InterfaceTypeDeclarations[interfaceType] = declaration
@@ -335,8 +337,8 @@ func (checker *Checker) declareInterfaceMembers(declaration *ast.InterfaceDeclar
 
 	interfaceType.Members = members
 	interfaceType.Fields = fields
-	if checker.positionInfoEnabled {
-		checker.memberOrigins[interfaceType] = origins
+	if checker.PositionInfo != nil {
+		checker.PositionInfo.recordMemberOrigins(interfaceType, origins)
 	}
 
 	// NOTE: determine initializer parameter types while nested types are in scope,

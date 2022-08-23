@@ -100,8 +100,8 @@ func testAccount(
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		code,
 		ParseCheckAndInterpretOptions{
-			CheckerOptions: []sema.Option{
-				sema.WithBaseValueActivation(baseValueActivation),
+			CheckerConfig: &sema.Config{
+				BaseValueActivation: baseValueActivation,
 			},
 			Config: &interpreter.Config{
 				BaseActivation:       baseActivation,
@@ -2894,8 +2894,8 @@ func TestInterpretAccountIterationMutation(t *testing.T) {
 						Address: address,
 						Name:    "foo",
 					},
-					Options: []sema.Option{
-						sema.WithBaseValueActivation(baseValueActivation),
+					Config: &sema.Config{
+						BaseValueActivation: baseValueActivation,
 					},
 				},
 			)
@@ -2920,40 +2920,42 @@ func TestInterpretAccountIterationMutation(t *testing.T) {
 					})
 				}`, continueAfterMutation),
 				ParseCheckAndInterpretOptions{
-					CheckerOptions: []sema.Option{
-						sema.WithBaseValueActivation(baseValueActivation),
-						sema.WithLocationHandler(
-							func(identifiers []ast.Identifier, location common.Location) (result []sema.ResolvedLocation, err error) {
+					CheckerConfig: &sema.Config{
+						BaseValueActivation: baseValueActivation,
+						LocationHandler: func(
+							identifiers []ast.Identifier,
+							location common.Location,
+						) (result []sema.ResolvedLocation, err error) {
+							require.Equal(t,
+								common.AddressLocation{
+									Address: address,
+									Name:    "",
+								},
+								location,
+							)
 
-								require.Equal(t,
-									common.AddressLocation{
-										Address: address,
-										Name:    "",
+							for _, identifier := range identifiers {
+								result = append(result, sema.ResolvedLocation{
+									Location: common.AddressLocation{
+										Address: location.(common.AddressLocation).Address,
+										Name:    identifier.Identifier,
 									},
-									location,
-								)
-
-								for _, identifier := range identifiers {
-									result = append(result, sema.ResolvedLocation{
-										Location: common.AddressLocation{
-											Address: location.(common.AddressLocation).Address,
-											Name:    identifier.Identifier,
-										},
-										Identifiers: []ast.Identifier{
-											identifier,
-										},
-									})
-								}
-								return
-							},
-						),
-						sema.WithImportHandler(
-							func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
-								return sema.ElaborationImport{
-									Elaboration: importedChecker.Elaboration,
-								}, nil
-							},
-						),
+									Identifiers: []ast.Identifier{
+										identifier,
+									},
+								})
+							}
+							return
+						},
+						ImportHandler: func(
+							checker *sema.Checker,
+							importedLocation common.Location,
+							_ ast.Range,
+						) (sema.Import, error) {
+							return sema.ElaborationImport{
+								Elaboration: importedChecker.Elaboration,
+							}, nil
+						},
 					},
 					Config: &interpreter.Config{
 						BaseActivation:       baseActivation,

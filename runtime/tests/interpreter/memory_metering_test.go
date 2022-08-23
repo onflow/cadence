@@ -1060,8 +1060,8 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 			t,
 			script,
 			ParseCheckAndInterpretOptions{
-				CheckerOptions: []sema.Option{
-					sema.WithBaseValueActivation(baseValueActivation),
+				CheckerConfig: &sema.Config{
+					BaseValueActivation: baseValueActivation,
 				},
 				Config: &interpreter.Config{
 					BaseActivation: baseActivation,
@@ -1105,12 +1105,16 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 			t,
 			script,
 			ParseCheckAndInterpretOptions{
-				CheckerOptions: []sema.Option{
-					sema.WithBaseValueActivation(baseValueActivation),
+				CheckerConfig: &sema.Config{
+					BaseValueActivation: baseValueActivation,
 				},
 				Config: &interpreter.Config{
 					BaseActivation: baseActivation,
-					PublicKeyValidationHandler: func(_ *interpreter.Interpreter, _ func() interpreter.LocationRange, _ *interpreter.CompositeValue) error {
+					PublicKeyValidationHandler: func(
+						_ *interpreter.Interpreter,
+						_ func() interpreter.LocationRange,
+						_ *interpreter.CompositeValue,
+					) error {
 						return nil
 					},
 				},
@@ -1159,12 +1163,16 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 			t,
 			script,
 			ParseCheckAndInterpretOptions{
-				CheckerOptions: []sema.Option{
-					sema.WithBaseValueActivation(baseValueActivation),
+				CheckerConfig: &sema.Config{
+					BaseValueActivation: baseValueActivation,
 				},
 				Config: &interpreter.Config{
 					BaseActivation: baseActivation,
-					PublicKeyValidationHandler: func(_ *interpreter.Interpreter, _ func() interpreter.LocationRange, _ *interpreter.CompositeValue) error {
+					PublicKeyValidationHandler: func(
+						_ *interpreter.Interpreter,
+						_ func() interpreter.LocationRange,
+						_ *interpreter.CompositeValue,
+					) error {
 						return nil
 					},
 				},
@@ -8833,14 +8841,12 @@ func TestInterpretASTMetering(t *testing.T) {
 			t,
 			script,
 			ParseCheckAndInterpretOptions{
-				CheckerOptions: []sema.Option{
-					sema.WithImportHandler(
-						func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
-							return sema.ElaborationImport{
-								Elaboration: importedChecker.Elaboration,
-							}, nil
-						},
-					),
+				CheckerConfig: &sema.Config{
+					ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
+						}, nil
+					},
 				},
 				Config: &interpreter.Config{
 					ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
@@ -9107,7 +9113,7 @@ func TestInterpretASTMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(232), meter.getMemory(common.MemoryKindPosition))
+		assert.Equal(t, uint64(231), meter.getMemory(common.MemoryKindPosition))
 		assert.Equal(t, uint64(126), meter.getMemory(common.MemoryKindRange))
 	})
 
@@ -9133,14 +9139,12 @@ func TestInterpretASTMetering(t *testing.T) {
 			t,
 			script,
 			ParseCheckAndInterpretOptions{
-				CheckerOptions: []sema.Option{
-					sema.WithImportHandler(
-						func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
-							return sema.ElaborationImport{
-								Elaboration: importedChecker.Elaboration,
-							}, nil
-						},
-					),
+				CheckerConfig: &sema.Config{
+					ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
+						}, nil
+					},
 				},
 				Config: &interpreter.Config{
 					ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
@@ -9335,8 +9339,8 @@ func TestInterpretValueStringConversion(t *testing.T) {
 				Config: &interpreter.Config{
 					BaseActivation: baseActivation,
 				},
-				CheckerOptions: []sema.Option{
-					sema.WithBaseValueActivation(baseValueActivation),
+				CheckerConfig: &sema.Config{
+					BaseValueActivation: baseValueActivation,
 				},
 			},
 			meter,
@@ -9679,8 +9683,8 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 				Config: &interpreter.Config{
 					BaseActivation: baseActivation,
 				},
-				CheckerOptions: []sema.Option{
-					sema.WithBaseValueActivation(baseValueActivation),
+				CheckerConfig: &sema.Config{
+					BaseValueActivation: baseValueActivation,
 				},
 			},
 			meter,

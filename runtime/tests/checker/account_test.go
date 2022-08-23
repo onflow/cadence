@@ -46,8 +46,8 @@ func ParseAndCheckAccount(t *testing.T, code string) (*sema.Checker, error) {
 	return ParseAndCheckWithOptions(t,
 		code,
 		ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithBaseValueActivation(baseValueActivation),
+			Config: &sema.Config{
+				BaseValueActivation: baseValueActivation,
 			},
 		},
 	)

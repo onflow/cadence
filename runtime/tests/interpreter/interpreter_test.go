@@ -44,7 +44,7 @@ import (
 
 type ParseCheckAndInterpretOptions struct {
 	Config             *interpreter.Config
-	CheckerOptions     []sema.Option
+	CheckerConfig      *sema.Config
 	HandleCheckerError func(error)
 }
 
@@ -78,8 +78,8 @@ func parseCheckAndInterpretWithMemoryMetering(
 		t,
 		code,
 		ParseCheckAndInterpretOptions{
-			CheckerOptions: []sema.Option{
-				sema.WithBaseValueActivation(baseValueActivation),
+			CheckerConfig: &sema.Config{
+				BaseValueActivation: baseValueActivation,
 			},
 		},
 		memoryGauge,
@@ -101,7 +101,7 @@ func parseCheckAndInterpretWithOptionsAndMemoryMetering(
 	checker, err := checker.ParseAndCheckWithOptionsAndMemoryMetering(t,
 		code,
 		checker.ParseAndCheckOptions{
-			Options: options.CheckerOptions,
+			Config: options.CheckerConfig,
 		},
 		memoryGauge,
 	)
@@ -1798,8 +1798,10 @@ func TestInterpretHostFunction(t *testing.T) {
 		program,
 		TestLocation,
 		nil,
-		false,
-		sema.WithBaseValueActivation(baseValueActivation),
+		&sema.Config{
+			BaseValueActivation: baseValueActivation,
+			AccessCheckMode:     sema.AccessCheckModeStrict,
+		},
 	)
 	require.NoError(t, err)
 
@@ -1905,8 +1907,10 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 		program,
 		TestLocation,
 		nil,
-		false,
-		sema.WithBaseValueActivation(baseValueActivation),
+		&sema.Config{
+			BaseValueActivation: baseValueActivation,
+			AccessCheckMode:     sema.AccessCheckModeStrict,
+		},
 	)
 	require.NoError(t, err)
 
@@ -3831,19 +3835,17 @@ func TestInterpretImport(t *testing.T) {
           }
         `,
 		checker.ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithImportHandler(
-					func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
-						assert.Equal(t,
-							ImportedLocation,
-							importedLocation,
-						)
+			Config: &sema.Config{
+				ImportHandler: func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
+					assert.Equal(t,
+						ImportedLocation,
+						importedLocation,
+					)
 
-						return sema.ElaborationImport{
-							Elaboration: importedChecker.Elaboration,
-						}, nil
-					},
-				),
+					return sema.ElaborationImport{
+						Elaboration: importedChecker.Elaboration,
+					}, nil
+				},
 			},
 		},
 	)
@@ -3907,25 +3909,23 @@ func TestInterpretImportError(t *testing.T) {
 			code,
 			checker.ParseAndCheckOptions{
 				Location: location,
-				Options: []sema.Option{
-					sema.WithBaseValueActivation(baseValueActivation),
-					sema.WithImportHandler(
-						func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
-							switch importedLocation {
-							case importedLocation1:
-								return sema.ElaborationImport{
-									Elaboration: importedChecker1.Elaboration,
-								}, nil
-							case importedLocation2:
-								return sema.ElaborationImport{
-									Elaboration: importedChecker2.Elaboration,
-								}, nil
-							default:
-								assert.FailNow(t, "invalid location")
-								return nil, nil
-							}
-						},
-					),
+				Config: &sema.Config{
+					BaseValueActivation: baseValueActivation,
+					ImportHandler: func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
+						switch importedLocation {
+						case importedLocation1:
+							return sema.ElaborationImport{
+								Elaboration: importedChecker1.Elaboration,
+							}, nil
+						case importedLocation2:
+							return sema.ElaborationImport{
+								Elaboration: importedChecker2.Elaboration,
+							}, nil
+						default:
+							assert.FailNow(t, "invalid location")
+							return nil, nil
+						}
+					},
 				},
 			},
 		)
@@ -4725,8 +4725,8 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
               }
             `,
 			ParseCheckAndInterpretOptions{
-				CheckerOptions: []sema.Option{
-					sema.WithBaseValueActivation(baseValueActivation),
+				CheckerConfig: &sema.Config{
+					BaseValueActivation: baseValueActivation,
 				},
 				Config: &interpreter.Config{
 					Storage:        storage,
@@ -6106,19 +6106,17 @@ func TestInterpretCompositeFunctionInvocationFromImportingProgram(t *testing.T) 
           }
         `,
 		checker.ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithImportHandler(
-					func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
-						assert.Equal(t,
-							ImportedLocation,
-							importedLocation,
-						)
+			Config: &sema.Config{
+				ImportHandler: func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
+					assert.Equal(t,
+						ImportedLocation,
+						importedLocation,
+					)
 
-						return sema.ElaborationImport{
-							Elaboration: importedChecker.Elaboration,
-						}, nil
-					},
-				),
+					return sema.ElaborationImport{
+						Elaboration: importedChecker.Elaboration,
+					}, nil
+				},
 			},
 		},
 	)
@@ -6965,9 +6963,9 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 
 			inter, err := parseCheckAndInterpretWithOptions(
 				t, code, ParseCheckAndInterpretOptions{
-					CheckerOptions: []sema.Option{
-						sema.WithBaseValueActivation(baseValueActivation),
-						sema.WithBaseTypeActivation(baseTypeActivation),
+					CheckerConfig: &sema.Config{
+						BaseValueActivation: baseValueActivation,
+						BaseTypeActivation:  baseTypeActivation,
 					},
 					Config: &interpreter.Config{
 						Storage: storage,
@@ -7765,8 +7763,8 @@ func TestInterpretOptionalChainingFieldReadAndNilCoalescing(t *testing.T) {
           let x = test?.x ?? panic("nil")
         `,
 		ParseCheckAndInterpretOptions{
-			CheckerOptions: []sema.Option{
-				sema.WithBaseValueActivation(baseValueActivation),
+			CheckerConfig: &sema.Config{
+				BaseValueActivation: baseValueActivation,
 			},
 			Config: &interpreter.Config{
 				BaseActivation: baseActivation,
@@ -7805,8 +7803,8 @@ func TestInterpretOptionalChainingFunctionCallAndNilCoalescing(t *testing.T) {
           let x = test?.x() ?? panic("nil")
         `,
 		ParseCheckAndInterpretOptions{
-			CheckerOptions: []sema.Option{
-				sema.WithBaseValueActivation(baseValueActivation),
+			CheckerConfig: &sema.Config{
+				BaseValueActivation: baseValueActivation,
 			},
 			Config: &interpreter.Config{
 				BaseActivation: baseActivation,
@@ -7955,8 +7953,8 @@ func TestInterpretFungibleTokenContract(t *testing.T) {
 				BaseActivation:       baseActivation,
 				ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 			},
-			CheckerOptions: []sema.Option{
-				sema.WithBaseValueActivation(baseValueActivation),
+			CheckerConfig: &sema.Config{
+				BaseValueActivation: baseValueActivation,
 			},
 		},
 	)
@@ -8077,19 +8075,17 @@ func TestInterpretConformToImportedInterface(t *testing.T) {
           }
         `,
 		checker.ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithImportHandler(
-					func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
-						assert.Equal(t,
-							ImportedLocation,
-							importedLocation,
-						)
+			Config: &sema.Config{
+				ImportHandler: func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
+					assert.Equal(t,
+						ImportedLocation,
+						importedLocation,
+					)
 
-						return sema.ElaborationImport{
-							Elaboration: importedChecker.Elaboration,
-						}, nil
-					},
-				),
+					return sema.ElaborationImport{
+						Elaboration: importedChecker.Elaboration,
+					}, nil
+				},
 			},
 		},
 	)
@@ -8428,8 +8424,8 @@ func TestInterpretHexDecode(t *testing.T) {
               }
             `,
 			ParseCheckAndInterpretOptions{
-				CheckerOptions: []sema.Option{
-					sema.WithBaseValueActivation(baseValueActivation),
+				CheckerConfig: &sema.Config{
+					BaseValueActivation: baseValueActivation,
 				},
 				Config: &interpreter.Config{
 					BaseActivation: baseActivation,
@@ -8774,8 +8770,8 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		code,
 		ParseCheckAndInterpretOptions{
-			CheckerOptions: []sema.Option{
-				sema.WithBaseValueActivation(baseValueActivation),
+			CheckerConfig: &sema.Config{
+				BaseValueActivation: baseValueActivation,
 			},
 			Config: &interpreter.Config{
 				BaseActivation: baseActivation,
@@ -9379,8 +9375,8 @@ func TestInterpretNestedDestroy(t *testing.T) {
 			Config: &interpreter.Config{
 				BaseActivation: baseActivation,
 			},
-			CheckerOptions: []sema.Option{
-				sema.WithBaseValueActivation(baseValueActivation),
+			CheckerConfig: &sema.Config{
+				BaseValueActivation: baseValueActivation,
 			},
 			HandleCheckerError: nil,
 		},
@@ -9915,8 +9911,8 @@ func TestInterpretNilCoalesceReference(t *testing.T) {
           let ref = &xs["a"] as &Int? ?? panic("no a")
         `,
 		ParseCheckAndInterpretOptions{
-			CheckerOptions: []sema.Option{
-				sema.WithBaseValueActivation(baseValueActivation),
+			CheckerConfig: &sema.Config{
+				BaseValueActivation: baseValueActivation,
 			},
 			Config: &interpreter.Config{
 				BaseActivation: baseActivation,

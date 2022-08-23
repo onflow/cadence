@@ -42,7 +42,9 @@ var CryptoChecker = func() *sema.Checker {
 		program,
 		location,
 		nil,
-		false,
+		&sema.Config{
+			AccessCheckMode: sema.AccessCheckModeStrict,
+		},
 	)
 	if err != nil {
 		panic(err)

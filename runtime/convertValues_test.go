@@ -1862,7 +1862,14 @@ func TestExportTypeValue(t *testing.T) {
 		program, err := parser.ParseProgram(code, nil)
 		require.NoError(t, err)
 
-		checker, err := sema.NewChecker(program, TestLocation, nil, false)
+		checker, err := sema.NewChecker(
+			program,
+			TestLocation,
+			nil,
+			&sema.Config{
+				AccessCheckMode: sema.AccessCheckModeStrict,
+			},
+		)
 		require.NoError(t, err)
 
 		err = checker.Check()
@@ -1948,12 +1955,19 @@ func TestExportCapabilityValue(t *testing.T) {
 	t.Run("Struct", func(t *testing.T) {
 
 		const code = `
-          pub struct S {}
+          struct S {}
         `
 		program, err := parser.ParseProgram(code, nil)
 		require.NoError(t, err)
 
-		checker, err := sema.NewChecker(program, TestLocation, nil, false)
+		checker, err := sema.NewChecker(
+			program,
+			TestLocation,
+			nil,
+			&sema.Config{
+				AccessCheckMode: sema.AccessCheckModeNotSpecifiedUnrestricted,
+			},
+		)
 		require.NoError(t, err)
 
 		err = checker.Check()
@@ -2061,12 +2075,19 @@ func TestExportLinkValue(t *testing.T) {
 	t.Run("Struct", func(t *testing.T) {
 
 		const code = `
-          pub struct S {}
+          struct S {}
         `
 		program, err := parser.ParseProgram(code, nil)
 		require.NoError(t, err)
 
-		checker, err := sema.NewChecker(program, TestLocation, nil, false)
+		checker, err := sema.NewChecker(
+			program,
+			TestLocation,
+			nil,
+			&sema.Config{
+				AccessCheckMode: sema.AccessCheckModeNotSpecifiedUnrestricted,
+			},
+		)
 		require.NoError(t, err)
 
 		err = checker.Check()

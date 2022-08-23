@@ -1869,8 +1869,9 @@ func BenchmarkContractInterfaceFungibleToken(b *testing.B) {
 			program,
 			TestLocation,
 			nil,
-			false,
-			sema.WithAccessCheckMode(sema.AccessCheckModeNotSpecifiedUnrestricted),
+			&sema.Config{
+				AccessCheckMode: sema.AccessCheckModeNotSpecifiedUnrestricted,
+			},
 		)
 		if err != nil {
 			b.Fatal(err)
@@ -1902,9 +1903,10 @@ func BenchmarkCheckContractInterfaceFungibleTokenConformance(b *testing.B) {
 			program,
 			TestLocation,
 			nil,
-			false,
-			sema.WithAccessCheckMode(sema.AccessCheckModeNotSpecifiedUnrestricted),
-			sema.WithBaseValueActivation(baseValueActivation),
+			&sema.Config{
+				AccessCheckMode:     sema.AccessCheckModeNotSpecifiedUnrestricted,
+				BaseValueActivation: baseValueActivation,
+			},
 		)
 		if err != nil {
 			b.Fatal(err)

@@ -71,7 +71,8 @@ func (checker *Checker) resolveLocation(identifiers []ast.Identifier, location c
 	// If no location handler is available,
 	// default to resolving to a single location that declares all identifiers
 
-	if checker.locationHandler == nil {
+	locationHandler := checker.Config.LocationHandler
+	if locationHandler == nil {
 		return []ResolvedLocation{
 			{
 				Location:    location,
@@ -82,7 +83,7 @@ func (checker *Checker) resolveLocation(identifiers []ast.Identifier, location c
 
 	// A location handler is available,
 	// use it to resolve the location / identifiers
-	return checker.locationHandler(identifiers, location)
+	return locationHandler(identifiers, location)
 }
 
 func (checker *Checker) importResolvedLocation(resolvedLocation ResolvedLocation, locationRange ast.Range) {
@@ -93,9 +94,10 @@ func (checker *Checker) importResolvedLocation(resolvedLocation ResolvedLocation
 
 	var imp Import
 
-	if checker.importHandler != nil {
+	importHandler := checker.Config.ImportHandler
+	if importHandler != nil {
 		var err error
-		imp, err = checker.importHandler(checker, location, locationRange)
+		imp, err = importHandler(checker, location, locationRange)
 		if err != nil {
 
 			// The import handler may return CyclicImportsError specifically

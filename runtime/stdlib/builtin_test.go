@@ -49,8 +49,10 @@ func testInterpreter(t *testing.T, code string, valueDeclaration StandardLibrary
 		program,
 		utils.TestLocation,
 		nil,
-		false,
-		sema.WithBaseValueActivation(baseValueActivation),
+		&sema.Config{
+			BaseValueActivation: baseValueActivation,
+			AccessCheckMode:     sema.AccessCheckModeStrict,
+		},
 	)
 	require.NoError(t, err)
 

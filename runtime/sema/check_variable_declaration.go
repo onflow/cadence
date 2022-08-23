@@ -193,7 +193,7 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 	})
 	checker.report(err)
 
-	if checker.positionInfoEnabled {
+	if checker.PositionInfo != nil {
 		checker.recordVariableDeclarationOccurrence(identifier, variable)
 		checker.recordVariableDeclarationRange(declaration, identifier, declarationType)
 	}
@@ -208,29 +208,20 @@ func (checker *Checker) recordVariableDeclarationRange(
 	activation.LeaveCallbacks = append(
 		activation.LeaveCallbacks,
 		func(getEndPosition EndPositionGetter) {
-			if getEndPosition == nil {
+			if getEndPosition == nil || checker.PositionInfo == nil {
 				return
 			}
 
-			// TODO: use the start position of the next statement
-			//   after this variable declaration instead
+			memoryGauge := checker.memoryGauge
 
-			var startPosition ast.Position
-			if declaration.SecondValue != nil {
-				startPosition = declaration.SecondValue.EndPosition(checker.memoryGauge)
-			} else {
-				startPosition = declaration.Value.EndPosition(checker.memoryGauge)
-			}
+			endPosition := getEndPosition(memoryGauge)
 
-			checker.Ranges.Put(
-				startPosition,
-				getEndPosition(checker.memoryGauge),
-				Range{
-					Identifier:      identifier,
-					DeclarationKind: declaration.DeclarationKind(),
-					Type:            declarationType,
-					DocString:       declaration.DocString,
-				},
+			checker.PositionInfo.recordVariableDeclarationRange(
+				memoryGauge,
+				declaration,
+				endPosition,
+				identifier,
+				declarationType,
 			)
 		},
 	)

@@ -34,8 +34,8 @@ func ParseAndCheckWithPanic(t *testing.T, code string) (*sema.Checker, error) {
 	return ParseAndCheckWithOptions(t,
 		code,
 		ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithBaseValueActivation(baseValueActivation),
+			Config: &sema.Config{
+				BaseValueActivation: baseValueActivation,
 			},
 		},
 	)
@@ -53,8 +53,8 @@ func ParseAndCheckWithAny(t *testing.T, code string) (*sema.Checker, error) {
 	return ParseAndCheckWithOptions(t,
 		code,
 		ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithBaseTypeActivation(baseTypeActivation),
+			Config: &sema.Config{
+				BaseTypeActivation: baseTypeActivation,
 			},
 		},
 	)

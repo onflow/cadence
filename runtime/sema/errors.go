@@ -73,14 +73,6 @@ func (e *InvalidPragmaError) Error() string {
 	return fmt.Sprintf("invalid pragma %s", e.Message)
 }
 
-// MissingLocationError
-
-type MissingLocationError struct{}
-
-func (e *MissingLocationError) Error() string {
-	return "missing location"
-}
-
 // CheckerError
 
 type CheckerError struct {

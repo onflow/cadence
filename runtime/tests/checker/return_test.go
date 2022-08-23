@@ -208,8 +208,8 @@ func testExits(t *testing.T, test exitTest) {
 		t,
 		code,
 		ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithBaseValueActivation(baseValueActivation),
+			Config: &sema.Config{
+				BaseValueActivation: baseValueActivation,
 			},
 		},
 	)
@@ -462,7 +462,6 @@ func TestCheckNeverInvocationExits(t *testing.T) {
 
 // TestCheckNestedFunctionExits tests if a function with a return statement
 // nested inside another function does not influence the containing function
-//
 func TestCheckNestedFunctionExits(t *testing.T) {
 
 	t.Parallel()

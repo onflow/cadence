@@ -1155,8 +1155,8 @@ func TestInterpretFunctionWithPostConditionAndResourceResult(t *testing.T) {
           }
         `,
 		ParseCheckAndInterpretOptions{
-			CheckerOptions: []sema.Option{
-				sema.WithBaseValueActivation(baseValueActivation),
+			CheckerConfig: &sema.Config{
+				BaseValueActivation: baseValueActivation,
 			},
 			Config: &interpreter.Config{
 				BaseActivation: baseActivation,

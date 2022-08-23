@@ -443,7 +443,7 @@ func (checker *Checker) declareCompositeType(declaration *ast.CompositeDeclarati
 	})
 	checker.report(err)
 
-	if checker.positionInfoEnabled {
+	if checker.PositionInfo != nil {
 		checker.recordVariableDeclarationOccurrence(
 			identifier.Identifier,
 			variable,
@@ -696,8 +696,8 @@ func (checker *Checker) declareCompositeMembersAndValue(
 
 		compositeType.Members = members
 		compositeType.Fields = fields
-		if checker.positionInfoEnabled {
-			checker.memberOrigins[compositeType] = origins
+		if checker.PositionInfo != nil {
+			checker.PositionInfo.recordMemberOrigins(compositeType, origins)
 		}
 	})()
 
@@ -804,7 +804,8 @@ func (checker *Checker) declareEnumConstructor(
 	enumCases := declaration.Members.EnumCases()
 
 	var constructorOrigins map[string]*Origin
-	if checker.positionInfoEnabled {
+
+	if checker.PositionInfo != nil {
 		constructorOrigins = make(map[string]*Origin, len(enumCases))
 	}
 
@@ -832,7 +833,7 @@ func (checker *Checker) declareEnumConstructor(
 				DocString:       enumCase.DocString,
 			})
 
-		if checker.positionInfoEnabled && constructorOrigins != nil {
+		if checker.PositionInfo != nil && constructorOrigins != nil {
 			constructorOrigins[caseName] =
 				checker.recordFieldDeclarationOrigin(
 					enumCase.Identifier,
@@ -842,8 +843,8 @@ func (checker *Checker) declareEnumConstructor(
 		}
 	}
 
-	if checker.positionInfoEnabled {
-		checker.memberOrigins[constructorType] = constructorOrigins
+	if checker.PositionInfo != nil {
+		checker.PositionInfo.recordMemberOrigins(constructorType, constructorOrigins)
 	}
 
 	_, err := checker.valueActivations.Declare(variableDeclaration{
@@ -1493,7 +1494,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 
 	memberCount := len(fields) + len(functions)
 	members = &StringMemberOrderedMap{}
-	if checker.positionInfoEnabled {
+	if checker.PositionInfo != nil {
 		origins = make(map[string]*Origin, memberCount)
 	}
 
@@ -1570,7 +1571,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 				DocString:       field.DocString,
 			})
 
-		if checker.positionInfoEnabled && origins != nil {
+		if checker.PositionInfo != nil && origins != nil {
 			origins[identifier] =
 				checker.recordFieldDeclarationOrigin(
 					field.Identifier,
@@ -1638,9 +1639,8 @@ func (checker *Checker) defaultMembersAndOrigins(
 				HasImplementation: hasImplementation,
 			})
 
-		if checker.positionInfoEnabled && origins != nil {
-			origins[identifier] =
-				checker.recordFunctionDeclarationOrigin(function, functionType)
+		if checker.PositionInfo != nil && origins != nil {
+			origins[identifier] = checker.recordFunctionDeclarationOrigin(function, functionType)
 		}
 	}
 
@@ -1658,7 +1658,8 @@ func (checker *Checker) eventMembersAndOrigins(
 	parameters := initializer.FunctionDeclaration.ParameterList.Parameters
 
 	members = &StringMemberOrderedMap{}
-	if checker.positionInfoEnabled {
+
+	if checker.PositionInfo != nil {
 		origins = make(map[string]*Origin, len(parameters))
 	}
 
@@ -1680,7 +1681,7 @@ func (checker *Checker) eventMembersAndOrigins(
 				VariableKind:    ast.VariableKindConstant,
 			})
 
-		if checker.positionInfoEnabled && origins != nil {
+		if checker.PositionInfo != nil && origins != nil {
 			origins[identifier.Identifier] =
 				checker.recordFieldDeclarationOrigin(
 					identifier,
@@ -1955,7 +1956,7 @@ func (checker *Checker) declareSelfValue(selfType Type, selfDocString string) {
 		DocString:       selfDocString,
 	}
 	checker.valueActivations.Set(SelfIdentifier, self)
-	if checker.positionInfoEnabled {
+	if checker.PositionInfo != nil {
 		checker.recordVariableDeclarationOccurrence(SelfIdentifier, self)
 	}
 }

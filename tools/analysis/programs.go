@@ -91,15 +91,18 @@ func (programs Programs) check(
 		program,
 		location,
 		nil,
-		true,
-		sema.WithLocationHandler(
-			sema.AddressLocationHandlerFunc(
+		&sema.Config{
+			AccessCheckMode: sema.AccessCheckModeStrict,
+			LocationHandler: sema.AddressLocationHandlerFunc(
 				config.ResolveAddressContractNames,
 			),
-		),
-		sema.WithPositionInfoEnabled(config.Mode&NeedPositionInfo != 0),
-		sema.WithImportHandler(
-			func(checker *sema.Checker, importedLocation common.Location, importRange ast.Range) (sema.Import, error) {
+			PositionInfoEnabled:        config.Mode&NeedPositionInfo != 0,
+			ExtendedElaborationEnabled: config.Mode&NeedExtendedElaboration != 0,
+			ImportHandler: func(
+				checker *sema.Checker,
+				importedLocation common.Location,
+				importRange ast.Range,
+			) (sema.Import, error) {
 
 				var elaboration *sema.Elaboration
 				switch importedLocation {
@@ -119,7 +122,7 @@ func (programs Programs) check(
 					Elaboration: elaboration,
 				}, nil
 			},
-		),
+		},
 	)
 	if err != nil {
 		return nil, err

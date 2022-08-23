@@ -268,8 +268,8 @@ func (checker *Checker) declareTransactionDeclaration(declaration *ast.Transacti
 
 	transactionType.Members = members
 	transactionType.Fields = fields
-	if checker.positionInfoEnabled {
-		checker.memberOrigins[transactionType] = origins
+	if checker.PositionInfo != nil {
+		checker.PositionInfo.recordMemberOrigins(transactionType, origins)
 	}
 
 	if declaration.Prepare != nil {

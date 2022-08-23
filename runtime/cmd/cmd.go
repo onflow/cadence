@@ -20,7 +20,6 @@ package cmd
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -51,7 +50,7 @@ func mustClosure(location common.Location, codes map[common.Location]string) fun
 }
 
 func PrepareProgramFromFile(location common.StringLocation, codes map[common.Location]string) (*ast.Program, func(error)) {
-	codeBytes, err := ioutil.ReadFile(string(location))
+	codeBytes, err := os.ReadFile(string(location))
 
 	program, must := PrepareProgram(string(codeBytes), location, codes)
 	must(err)
@@ -71,42 +70,44 @@ func PrepareProgram(code string, location common.Location, codes map[common.Loca
 
 var checkers = map[common.Location]*sema.Checker{}
 
-func DefaultCheckerOptions(
+func DefaultCheckerConfig(
 	checkers map[common.Location]*sema.Checker,
 	codes map[common.Location]string,
-) []sema.Option {
-	return []sema.Option{
-		sema.WithImportHandler(
-			func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
-				if importedLocation == stdlib.CryptoChecker.Location {
-					return sema.ElaborationImport{
-						Elaboration: stdlib.CryptoChecker.Elaboration,
-					}, nil
-				}
-
-				stringLocation, ok := importedLocation.(common.StringLocation)
-				if !ok {
-					return nil, &sema.CheckerError{
-						Location: checker.Location,
-						Codes:    codes,
-						Errors: []error{
-							fmt.Errorf("cannot import `%s`. only files are supported", importedLocation),
-						},
-					}
-				}
-
-				importedChecker, ok := checkers[importedLocation]
-				if !ok {
-					importedProgram, _ := PrepareProgramFromFile(stringLocation, codes)
-					importedChecker, _ = checker.SubChecker(importedProgram, importedLocation)
-					checkers[importedLocation] = importedChecker
-				}
-
+) *sema.Config {
+	return &sema.Config{
+		ImportHandler: func(
+			checker *sema.Checker,
+			importedLocation common.Location,
+			_ ast.Range,
+		) (sema.Import, error) {
+			if importedLocation == stdlib.CryptoChecker.Location {
 				return sema.ElaborationImport{
-					Elaboration: importedChecker.Elaboration,
+					Elaboration: stdlib.CryptoChecker.Elaboration,
 				}, nil
-			},
-		),
+			}
+
+			stringLocation, ok := importedLocation.(common.StringLocation)
+			if !ok {
+				return nil, &sema.CheckerError{
+					Location: checker.Location,
+					Codes:    codes,
+					Errors: []error{
+						fmt.Errorf("cannot import `%s`. only files are supported", importedLocation),
+					},
+				}
+			}
+
+			importedChecker, ok := checkers[importedLocation]
+			if !ok {
+				importedProgram, _ := PrepareProgramFromFile(stringLocation, codes)
+				importedChecker, _ = checker.SubChecker(importedProgram, importedLocation)
+				checkers[importedLocation] = importedChecker
+			}
+
+			return sema.ElaborationImport{
+				Elaboration: importedChecker.Elaboration,
+			}, nil
+		},
 	}
 }
 
@@ -120,31 +121,27 @@ func PrepareChecker(
 	must func(error),
 ) (*sema.Checker, func(error)) {
 
-	defaultCheckerOptions := DefaultCheckerOptions(checkers, codes)
+	config := DefaultCheckerConfig(checkers, codes)
 
-	defaultCheckerOptions = append(
-		defaultCheckerOptions,
-		sema.WithMemberAccountAccessHandler(func(checker *sema.Checker, memberLocation common.Location) bool {
-			if memberAccountAccess == nil {
-				return false
-			}
+	config.MemberAccountAccessHandler = func(checker *sema.Checker, memberLocation common.Location) bool {
+		if memberAccountAccess == nil {
+			return false
+		}
 
-			targets, ok := memberAccountAccess[checker.Location.ID()]
-			if !ok {
-				return false
-			}
+		targets, ok := memberAccountAccess[checker.Location.ID()]
+		if !ok {
+			return false
+		}
 
-			_, ok = targets[memberLocation.ID()]
-			return ok
-		}),
-	)
+		_, ok = targets[memberLocation.ID()]
+		return ok
+	}
 
 	checker, err := sema.NewChecker(
 		program,
 		location,
 		nil,
-		false,
-		defaultCheckerOptions...,
+		config,
 	)
 	must(err)
 
