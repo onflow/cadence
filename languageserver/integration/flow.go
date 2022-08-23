@@ -205,7 +205,7 @@ func (f *flowkitClient) DeployContract(
 
 	codeFilename, err := resolveFilename(f.configPath, location.Path)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	account := createSigner(address, service)
