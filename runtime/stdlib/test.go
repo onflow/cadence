@@ -1381,7 +1381,7 @@ var emulatorBackendUseConfigsFunctionType = func() *sema.FunctionType {
 	typ, ok := blockchainBackendInterfaceType.Members.Get(emulatorBackendUseConfigsFunctionName)
 	if !ok {
 		panic(errors.NewUnexpectedError(
-			"cannot find type %s.%s",
+			"cannot find member %s.%s",
 			blockchainBackendTypeName,
 			emulatorBackendUseConfigsFunctionName,
 		))
@@ -1418,7 +1418,7 @@ func emulatorBackendUseConfigsFunction(testFramework interpreter.TestFramework) 
 				panic(errors.NewUnreachableError())
 			}
 
-			mapping := make(map[string]common.Address)
+			mapping := make(map[string]common.Address, addresses.Count())
 
 			addresses.Iterate(nil, func(locationValue, addressValue interpreter.Value) bool {
 				location, ok := locationValue.(*interpreter.StringValue)

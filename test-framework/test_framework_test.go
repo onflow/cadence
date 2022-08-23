@@ -2060,7 +2060,7 @@ func TestReplacingImports(t *testing.T) {
 
                 // Set the configurations to use the address of the deployed contract.
 
-                blockchain.useConfiguration(Test.Configurations({
+                blockchain.useConfiguration(Test.Configuration({
                     "./FooContract": account.address
                 }))
             }
@@ -2139,7 +2139,7 @@ func TestReplacingImports(t *testing.T) {
 
                 // Address locations are not replaceable!
 
-                blockchain.useConfiguration(Test.Configurations({
+                blockchain.useConfiguration(Test.Configuration({
                     "0x01": account.address
                 }))
             }
