@@ -97,10 +97,10 @@ Test.expect(-15, isNegative)
 ### Built-in matcher functions
 Cadence test standard library provides some built-in matcher functions for convenience.
 
-- `fun equal(_ value: Any): Matcher`
+- `fun equal(_ value: AnyStruct): Matcher`
 
   Returns a matcher that succeeds if the tested value is equal to the given value.
-  Accepts `AnyStruct` or `AnyResource` value.
+  Accepts an `AnyStruct` value.
 
 
 ## Blockchain
@@ -367,6 +367,20 @@ specifying the addresses statically in a configuration file is not an option.
 Hence, the test framework provides a way to specify the addresses using the
 `useConfiguration(_ configs: Test.Configurations)` function in `Blockchain`.
 
+The `Configurations` struct consists of a mapping of import locations to their addresses.
+```cadence
+/// Configurations to be used by the blockchain.
+/// Can be used to set the address mapping.
+///
+pub struct Configurations {
+    pub let addresses: { String: Address }
+
+    init(addresses: { String: Address }) {
+        self.addresses = addresses
+    }
+}
+```
+The configurations can be specified during the test setup as a best-practice.
 ```cadence
 pub var blockchain = Test.newEmulatorBlockchain()
 pub var accounts: [Test.Account] = []
@@ -388,7 +402,7 @@ pub fun setup() {
     }))
 }
 ```
-The subsequent operations on the blockchain (e.g: Contract deployment, script/transaction execution) will resolve the
+The subsequent operations on the blockchain (e.g: contract deployment, script/transaction execution) will resolve the
 file import locations to the provided addresses.
 
 ### Errors
