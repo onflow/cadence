@@ -36,7 +36,7 @@ When linking a capability the link might be already present. In that case, Caden
 
 It is a good practice to check if the link already exists with `getLinkTarget` before creating it. This function will return `nil` if the link does not exist.
 
-If it is necessary to handle the case where borrowing a capability might fail, the check function can be used to verify that the target exists and has a valid type.
+If it is necessary to handle the case where borrowing a capability might fail, the `account.check` function can be used to verify that the target exists and has a valid type.
 
 Ensure capabilities cannot be accessed by unauthorized parties. For example, capabilities should not be accessible through a public field, including public dictionaries or arrays. Exposing a capability in such a way allows anyone to borrow it and perform all actions that the capability allows.
 
