@@ -30,7 +30,7 @@ It is preferable to use capabilities over direct `AuthAccount` storage when expo
 
 ## Capabilities
 
-Don’t store anything under the [public capability storage](/cadence/language/capability-based-access-control) unless strictly required. Anyone can access your public capability using `getCapability`. If something needs to be stored under public make sure only read functionality is provided by restricting its type using either a resource interface or struct interface.
+Don’t store anything under the [public capability storage](/cadence/language/capability-based-access-control) unless strictly required. Anyone can access your public capability using `AuthAccount.getCapability`. If something needs to be stored under `/public/`, make sure only read functionality is provided by restricting its type using either a resource interface or struct interface.
 
 When linking a capability the link might be already present. In that case, Cadence will not panic with a runtime error but the link function will return nil.
 
