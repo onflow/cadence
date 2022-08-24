@@ -10,7 +10,7 @@ Some practices listed below might overlap with advice in the [Cadence Anti-Patte
 
 [References](/cadence/language/references) are ephemeral values and cannot be stored. If persistence is required, store a capability and borrow it when needed.
 
-Authorized references (references with the auth keyword) allow downcasting, e.g. a restricted type to its unrestricted type and should only be used in some specific cases.
+Authorized references (references with the `auth` keyword) allow downcasting, e.g. a restricted type to its unrestricted type and should only be used in some specific cases.
 
 When exposing functionality, provide the least access necessary. Do not use authorized references, as they can be downcasted, potentially allowing a user to gain access to supposedly restricted functionality. For example, the fungible token standard provides an interface to get the balance of a vault, without exposing the withdrawal functionality.
 
