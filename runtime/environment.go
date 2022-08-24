@@ -71,8 +71,8 @@ type interpreterEnvironment struct {
 	coverageReport                        *CoverageReport
 	codesAndPrograms                      codesAndPrograms
 	deployedContractConstructorInvocation *stdlib.DeployedContractConstructorInvocation
-	interpreterConfig                     *interpreter.Config
-	checkerConfig                         *sema.Config
+	InterpreterConfig                     *interpreter.Config
+	CheckerConfig                         *sema.Config
 	stackDepthLimiter                     *stackDepthLimiter
 	checkedImports                        importResolutionResults
 }
@@ -98,8 +98,8 @@ func newInterpreterEnvironment(config Config) *interpreterEnvironment {
 		baseValueActivation: baseValueActivation,
 		stackDepthLimiter:   newStackDepthLimiter(config.StackDepthLimit),
 	}
-	env.interpreterConfig = env.newInterpreterConfig()
-	env.checkerConfig = env.newCheckerConfig()
+	env.InterpreterConfig = env.newInterpreterConfig()
+	env.CheckerConfig = env.newCheckerConfig()
 	return env
 }
 
@@ -179,7 +179,7 @@ func (e *interpreterEnvironment) Configure(
 	e.runtimeInterface = runtimeInterface
 	e.codesAndPrograms = codesAndPrograms
 	e.storage = storage
-	e.interpreterConfig.Storage = storage
+	e.InterpreterConfig.Storage = storage
 	e.coverageReport = coverageReport
 	e.stackDepthLimiter.depth = 0
 }
@@ -416,7 +416,7 @@ func (e *interpreterEnvironment) check(
 		program,
 		location,
 		e,
-		e.checkerConfig,
+		e.CheckerConfig,
 	)
 	if err != nil {
 		return nil, err
@@ -556,7 +556,7 @@ func (e *interpreterEnvironment) newInterpreter(
 	return interpreter.NewInterpreter(
 		program,
 		location,
-		e.interpreterConfig,
+		e.InterpreterConfig,
 	)
 }
 
