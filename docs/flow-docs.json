@@ -68,6 +68,10 @@
           {
             "title": "JSON-Cadence Data Interchange Format",
             "href": "json-cadence-spec"
+          },
+          {
+            "title": "Security Best Practices",
+            "href": "security-best-practices"
           }
         ]
       },
