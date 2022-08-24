@@ -23,7 +23,7 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-func (interpreter *Interpreter) VisitTransactionDeclaration(declaration *ast.TransactionDeclaration) ast.Repr {
+func (interpreter *Interpreter) VisitTransactionDeclaration(declaration *ast.TransactionDeclaration) any {
 	interpreter.declareTransactionEntryPoint(declaration)
 
 	return nil

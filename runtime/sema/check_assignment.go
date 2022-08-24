@@ -24,7 +24,7 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
-func (checker *Checker) VisitAssignmentStatement(assignment *ast.AssignmentStatement) ast.Repr {
+func (checker *Checker) VisitAssignmentStatement(assignment *ast.AssignmentStatement) Type {
 	targetType, valueType := checker.checkAssignment(
 		assignment.Target,
 		assignment.Value,

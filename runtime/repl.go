@@ -105,7 +105,7 @@ func (r *REPL) handleCheckerError() bool {
 }
 
 func (r *REPL) execute(element ast.Element) {
-	result := element.Accept(r.inter)
+	result := ast.Accept[any](element, r.inter)
 	expStatementRes, ok := result.(interpreter.ExpressionStatementResult)
 	if !ok {
 		return
@@ -117,7 +117,7 @@ func (r *REPL) execute(element ast.Element) {
 }
 
 func (r *REPL) check(element ast.Element, code string) bool {
-	element.Accept(r.checker)
+	ast.Accept[sema.Type](element, r.checker)
 	r.codes[r.checker.Location] = code
 	return r.handleCheckerError()
 }

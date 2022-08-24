@@ -25,7 +25,7 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
-func (checker *Checker) VisitTransactionDeclaration(declaration *ast.TransactionDeclaration) ast.Repr {
+func (checker *Checker) VisitTransactionDeclaration(declaration *ast.TransactionDeclaration) Type {
 	transactionType := checker.Elaboration.TransactionDeclarationTypes[declaration]
 	if transactionType == nil {
 		panic(errors.NewUnreachableError())

@@ -20,7 +20,7 @@ package sema
 
 import "github.com/onflow/cadence/runtime/ast"
 
-func (checker *Checker) VisitBlock(block *ast.Block) ast.Repr {
+func (checker *Checker) VisitBlock(block *ast.Block) Type {
 	checker.enterValueScope()
 	defer checker.leaveValueScope(block.EndPosition, true)
 
@@ -62,7 +62,7 @@ func (checker *Checker) visitStatements(statements []ast.Statement) {
 
 		// check statement
 
-		statement.Accept(checker)
+		ast.Accept[Type](statement, checker)
 	}
 }
 

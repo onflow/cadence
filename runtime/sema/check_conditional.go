@@ -23,7 +23,7 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
-func (checker *Checker) VisitIfStatement(statement *ast.IfStatement) ast.Repr {
+func (checker *Checker) VisitIfStatement(statement *ast.IfStatement) Type {
 
 	thenElement := statement.Then
 
@@ -43,12 +43,12 @@ func (checker *Checker) VisitIfStatement(statement *ast.IfStatement) ast.Repr {
 				defer checker.leaveValueScope(thenElement.EndPosition, true)
 
 				checker.visitVariableDeclaration(test, true)
-				thenElement.Accept(checker)
+				ast.Accept[Type](thenElement, checker)
 
 				return nil
 			},
 			func() Type {
-				elseElement.Accept(checker)
+				ast.Accept[Type](elseElement, checker)
 				return nil
 			},
 		)
@@ -60,7 +60,7 @@ func (checker *Checker) VisitIfStatement(statement *ast.IfStatement) ast.Repr {
 	return nil
 }
 
-func (checker *Checker) VisitConditionalExpression(expression *ast.ConditionalExpression) ast.Repr {
+func (checker *Checker) VisitConditionalExpression(expression *ast.ConditionalExpression) Type {
 
 	expectedType := checker.expectedType
 
@@ -121,18 +121,10 @@ func (checker *Checker) visitConditional(
 
 	return checker.checkConditionalBranches(
 		func() Type {
-			thenResult, ok := thenElement.Accept(checker).(Type)
-			if !ok || thenResult == nil {
-				return nil
-			}
-			return thenResult
+			return ast.Accept[Type](thenElement, checker)
 		},
 		func() Type {
-			elseResult, ok := elseElement.Accept(checker).(Type)
-			if !ok || elseResult == nil {
-				return nil
-			}
-			return elseResult
+			return ast.Accept[Type](elseElement, checker)
 		},
 	)
 }
