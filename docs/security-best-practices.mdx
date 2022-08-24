@@ -18,7 +18,7 @@ Be aware that the subtype or unrestricted type could expose functionality that w
 
 ## Account Storage
 
-Don't trust the users’ [account storage](/cadence/language/accounts#account-storage). Users have full control over their data and may reorganize it as they see fit. Users may store values in any path, so paths may store values of “unexpected” types. These values may be instances of types in contracts that the user deployed.
+Don't trust a users’ [account storage](/cadence/language/accounts#account-storage). Users have full control over their data and may reorganize it as they see fit. Users may store values in any path, so paths may store values of “unexpected” types. These values may be instances of types in contracts that the user deployed.
 
 Always [borrow](/cadence/language/capability-based-access-control) with the specific type that is expected. Or, check if the value is an instance of the expected type.
 
