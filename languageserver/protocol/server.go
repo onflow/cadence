@@ -32,8 +32,6 @@ type Server struct {
 	jsonrpc2Server *jsonrpc2.Server
 }
 
-//go:generate go run github.com/vektra/mockery/cmd/mockery --name Conn --filename mock_conn_test.go --inpkg
-
 // Conn represents the connection to the language server client. It allows
 // the language server to push various types of messages to the client.
 // https://microsoft.github.io/language-server-protocol/specifications/specification-3-14

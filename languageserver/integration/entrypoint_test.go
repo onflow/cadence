@@ -19,6 +19,7 @@
 package integration
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/onflow/flow-go-sdk"
@@ -35,14 +36,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_TransactionEntrypoint(t *testing.T) {
-	const code = `
-	/// pragma signers Alice
-	/// pragma arguments (hello: 10.0)
-	transaction(hello: UFix64) {
-		prepare(signer: AuthAccount) {} 
-	}`
-
+func buildEntrypoint(t *testing.T, code string) entryPointInfo {
 	program, err := parser.ParseProgram(code, nil)
 	require.NoError(t, err)
 
@@ -52,11 +46,62 @@ func Test_TransactionEntrypoint(t *testing.T) {
 	err = checker.Check()
 	require.NoError(t, err)
 
+	entrypoint := entryPointInfo{}
+	entrypoint.update("Test", 1, checker)
+
+	return entrypoint
+}
+
+func setupMockClient() *mockFlowClient {
 	client := &mockFlowClient{}
 
+	accounts := []*clientAccount{{
+		Account: &flow.Account{
+			Address: flow.HexToAddress("0x1"),
+		},
+		Name:   "Alice",
+		Active: true,
+	}, {
+		Account: &flow.Account{
+			Address: flow.HexToAddress("0x2"),
+		},
+		Name:   "Bob",
+		Active: false,
+	}, {
+		Account: &flow.Account{
+			Address: flow.HexToAddress("0x3"),
+		},
+		Name:   "Charlie",
+		Active: false,
+	}}
+
+	for _, account := range accounts {
+		client.
+			On("GetClientAccount", account.Name).
+			Return(account)
+	}
+
+	client.
+		On("GetClientAccount", "Invalid").
+		Return(nil)
+
+	client.
+		On("GetActiveClientAccount").
+		Return(accounts[0])
+
+	return client
+}
+
+func Test_EntrypointUpdate(t *testing.T) {
 	t.Run("update entrypoint information", func(t *testing.T) {
-		entrypoint := entryPointInfo{}
-		entrypoint.update("Test", 1, checker)
+		entrypoint := buildEntrypoint(t, `
+			/// pragma signers Alice
+			/// pragma arguments (hello: 10.0)
+			transaction(hello: UFix64) {
+				prepare(signer: AuthAccount) {} 
+			}`,
+		)
+
 		val, _ := cadence.NewUFix64("10.0")
 
 		assert.Len(t, entrypoint.pragmaSignerNames, 1)
@@ -71,57 +116,13 @@ func Test_TransactionEntrypoint(t *testing.T) {
 		assert.Len(t, entrypoint.pragmaArguments, 1)
 	})
 
-	t.Run("get codelensses", func(t *testing.T) {
-		entrypoint := entryPointInfo{}
-		entrypoint.update("Test", 1, checker)
-
-		alice := &clientAccount{
-			Account: &flow.Account{
-				Address: flow.HexToAddress("0x1"),
-			},
-			Name:   "Alice",
-			Active: true,
-		}
-
-		client.
-			On("GetClientAccount", "Alice").
-			Return(alice)
-
-		codelensses := entrypoint.codelens(client)
-
-		require.Len(t, codelensses, 1)
-		assert.Equal(t, "💡 Send with (hello: 10.0) signed by Alice", codelensses[0].Command.Title)
-		assert.Equal(t, "cadence.server.flow.sendTransaction", codelensses[0].Command.Command)
-		assert.Equal(t, nil, codelensses[0].Data)
-		assert.Equal(t, codelensses[0].Range, protocol.Range{Start: protocol.Position{Line: 0x3, Character: 0x1}, End: protocol.Position{Line: 0x3, Character: 0x2}})
-
-		assert.Equal(t, `"[{\"type\":\"UFix64\",\"value\":\"10.00000000\"}]"`, string(codelensses[0].Command.Arguments[1]))
-	})
-
-}
-
-func Test_ScriptEntrypoin(t *testing.T) {
-	const code = `
-		/// pragma arguments (hello: "hi")
-		pub fun main(hello: String): String {
-			return hello.concat(" world")
-		}
-	`
-
-	program, err := parser.ParseProgram(code, nil)
-	require.NoError(t, err)
-
-	checker, err := sema.NewChecker(program, common.StringLocation("foo"), nil, false)
-	require.NoError(t, err)
-
-	err = checker.Check()
-	require.NoError(t, err)
-
-	client := &mockFlowClient{}
-
-	t.Run("update entrypoint information", func(t *testing.T) {
-		entrypoint := entryPointInfo{}
-		entrypoint.update("Test", 1, checker)
+	t.Run("update script entrypoint information", func(t *testing.T) {
+		entrypoint := buildEntrypoint(t, `
+			/// pragma arguments (hello: "hi")
+			pub fun main(hello: String): String {
+				return hello.concat(" world")
+			}
+		`)
 
 		val, _ := cadence.NewString("hi")
 
@@ -135,19 +136,96 @@ func Test_ScriptEntrypoin(t *testing.T) {
 		assert.Equal(t, entrypoint.kind, entryPointKindScript)
 		assert.Len(t, entrypoint.pragmaArguments, 1)
 	})
+}
 
-	t.Run("get codelensses", func(t *testing.T) {
-		entrypoint := entryPointInfo{}
-		entrypoint.update("Test", 1, checker)
+func Test_Codelensses(t *testing.T) {
 
-		codelensses := entrypoint.codelens(client)
+	tests := []struct {
+		code    string
+		title   string
+		command string
+		ranges  protocol.Range
+		args    string
+	}{{
+		code: `
+			/// pragma signers Alice
+			/// pragma arguments (hello: 10.0)
+			transaction(hello: UFix64) {
+				prepare(signer: AuthAccount) {} 
+			}`,
+		title:   "💡 Send with (hello: 10.0) signed by Alice",
+		command: "cadence.server.flow.sendTransaction",
+		ranges:  protocol.Range{Start: protocol.Position{Line: 0x3, Character: 0x3}, End: protocol.Position{Line: 0x3, Character: 0x4}},
+		args:    `"[{\"type\":\"UFix64\",\"value\":\"10.00000000\"}]"`,
+	}, {
+		code:    `transaction {}`,
+		title:   "💡 Send signed by service account",
+		command: "cadence.server.flow.sendTransaction",
+		ranges:  protocol.Range{Start: protocol.Position{Line: 0x0, Character: 0x0}, End: protocol.Position{Line: 0x0, Character: 0x1}},
+		args:    `"[]"`,
+	}, {
+		code: `
+			/// pragma arguments (hello: "hi")
+			pub fun main(hello: String): String {
+				return hello.concat(" world")
+			}
+		`,
+		title:   `💡 Execute script with (hello: "hi")`,
+		command: "cadence.server.flow.executeScript",
+		ranges:  protocol.Range{Start: protocol.Position{Line: 0x2, Character: 0x3}, End: protocol.Position{Line: 0x2, Character: 0x4}},
+		args:    `"[{\"type\":\"String\",\"value\":\"hi\"}]"`,
+	}, {
+		code: `
+			transaction {
+				prepare(s: AuthAccount) {} 
+			}`,
+		title:   "💡 Send signed by Alice",
+		command: "cadence.server.flow.sendTransaction",
+		ranges:  protocol.Range{Start: protocol.Position{Line: 0x1, Character: 0x3}, End: protocol.Position{Line: 0x1, Character: 0x4}},
+		args:    `"[]"`,
+	}, {
+		code: `
+			/// pragma signers Alice,Bob
+			transaction {
+				prepare(s1: AuthAccount, s2: AuthAccount) {} 
+			}`,
+		title:   "💡 Send signed by Alice and Bob",
+		command: "cadence.server.flow.sendTransaction",
+		ranges:  protocol.Range{Start: protocol.Position{Line: 0x2, Character: 0x3}, End: protocol.Position{Line: 0x2, Character: 0x4}},
+		args:    `"[]"`,
+	}, {
+		code: `
+			/// pragma signers Alice
+			transaction {
+				prepare(s1: AuthAccount, s2: AuthAccount) {} 
+			}`,
+		title:   "🚫 Not enough signers. Required: 2, passed: 1",
+		command: "",
+		ranges:  protocol.Range{Start: protocol.Position{Line: 0x2, Character: 0x3}, End: protocol.Position{Line: 0x2, Character: 0x4}},
+	}, {
+		code: `
+			/// pragma signers Invalid
+			transaction {
+				prepare(s1: AuthAccount) {} 
+			}`,
+		title:   "🚫 Specified account Invalid does not exist",
+		command: "",
+		ranges:  protocol.Range{Start: protocol.Position{Line: 0x2, Character: 0x3}, End: protocol.Position{Line: 0x2, Character: 0x4}},
+	}}
 
-		require.Len(t, codelensses, 1)
-		assert.Equal(t, `💡 Execute script with (hello: "hi")`, codelensses[0].Command.Title)
-		assert.Equal(t, "cadence.server.flow.executeScript", codelensses[0].Command.Command)
-		assert.Equal(t, nil, codelensses[0].Data)
-		assert.Equal(t, protocol.Range{Start: protocol.Position{Line: 0x2, Character: 0x2}, End: protocol.Position{Line: 0x2, Character: 0x3}}, codelensses[0].Range)
+	for i, test := range tests {
+		entrypoint := buildEntrypoint(t, test.code)
+		codelensses := entrypoint.codelens(setupMockClient())
 
-		assert.Equal(t, `"[{\"type\":\"String\",\"value\":\"hi\"}]"`, string(codelensses[0].Command.Arguments[1]))
-	})
+		require.Len(t, codelensses, 1, fmt.Sprintf("test %d", i))
+		lens := codelensses[0]
+		assert.Equal(t, test.title, lens.Command.Title)
+		assert.Equal(t, test.command, lens.Command.Command)
+		assert.Equal(t, nil, lens.Data)
+		assert.Equal(t, test.ranges, lens.Range)
+		if test.args != "" {
+			assert.Equal(t, test.args, string(lens.Command.Arguments[1]))
+		}
+	}
+
 }

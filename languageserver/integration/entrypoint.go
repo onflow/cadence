@@ -79,6 +79,10 @@ func (e *entryPointInfo) update(uri protocol.DocumentURI, version int32, checker
 		e.numberOfSigners = 0
 	}
 
+	e.pragmaArguments = nil
+	e.pragmaArgumentStrings = nil
+	e.pragmaSignerNames = nil
+
 	if e.startPos != nil {
 		parameterTypes := make([]sema.Type, len(e.parameters))
 
@@ -170,7 +174,7 @@ func (e *entryPointInfo) transactionCodelens(index int, argumentList []Argument,
 	}
 
 	signerNames := e.pragmaSignerNames[:]
-	if len(signerNames) == 0 {
+	if len(signerNames) == 0 && e.numberOfSigners != 0 {
 		activeAccount := client.GetActiveClientAccount()
 		signerNames = []string{activeAccount.Name}
 	}
@@ -215,6 +219,9 @@ func (e *entryPointInfo) transactionCodelens(index int, argumentList []Argument,
 			prefixOK,
 			common.EnumerateWords(signerNames, "and"),
 		)
+	}
+	if e.numberOfSigners == 0 {
+		title = fmt.Sprintf("%s Send signed by service account", prefixOK)
 	}
 
 	argsJSON, _ := json.Marshal(argumentList)
@@ -269,7 +276,6 @@ func makeCodeLens(
 	}
 }
 
-// todo: test this and refactor / remove if not needed
 func encodeJSONArguments(args ...interface{}) ([]json.RawMessage, error) {
 	result := make([]json.RawMessage, 0, len(args))
 	for _, arg := range args {

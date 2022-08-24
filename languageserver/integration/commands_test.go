@@ -119,11 +119,11 @@ func Test_ExecuteTransaction(t *testing.T) {
 
 		mock.
 			On("SendTransaction", list, location, []cadence.Value{cadenceVal}).
-			Return(&flow.TransactionResult{Status: flow.TransactionStatusSealed}, nil)
+			Return(&flow.Transaction{}, &flow.TransactionResult{Status: flow.TransactionStatusSealed}, nil)
 
 		res, err := cmds.sendTransaction(locationURL, validCadenceArg, signers)
 		assert.NoError(t, err)
-		assert.Equal(t, "Transaction status: SEALED", res)
+		assert.Contains(t, res, "SEALED")
 	})
 }
 

@@ -162,26 +162,35 @@ func (_m *mockFlowClient) Initialize(configPath string, numberOfAccounts int) er
 }
 
 // SendTransaction provides a mock function with given fields: authorizers, location, args
-func (_m *mockFlowClient) SendTransaction(authorizers []flow.Address, location *url.URL, args []cadence.Value) (*flow.TransactionResult, error) {
+func (_m *mockFlowClient) SendTransaction(authorizers []flow.Address, location *url.URL, args []cadence.Value) (*flow.Transaction, *flow.TransactionResult, error) {
 	ret := _m.Called(authorizers, location, args)
 
-	var r0 *flow.TransactionResult
-	if rf, ok := ret.Get(0).(func([]flow.Address, *url.URL, []cadence.Value) *flow.TransactionResult); ok {
+	var r0 *flow.Transaction
+	if rf, ok := ret.Get(0).(func([]flow.Address, *url.URL, []cadence.Value) *flow.Transaction); ok {
 		r0 = rf(authorizers, location, args)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*flow.TransactionResult)
+			r0 = ret.Get(0).(*flow.Transaction)
 		}
 	}
 
-	var r1 error
-	if rf, ok := ret.Get(1).(func([]flow.Address, *url.URL, []cadence.Value) error); ok {
+	var r1 *flow.TransactionResult
+	if rf, ok := ret.Get(1).(func([]flow.Address, *url.URL, []cadence.Value) *flow.TransactionResult); ok {
 		r1 = rf(authorizers, location, args)
 	} else {
-		r1 = ret.Error(1)
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*flow.TransactionResult)
+		}
 	}
 
-	return r0, r1
+	var r2 error
+	if rf, ok := ret.Get(2).(func([]flow.Address, *url.URL, []cadence.Value) error); ok {
+		r2 = rf(authorizers, location, args)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
 }
 
 // SetActiveClientAccount provides a mock function with given fields: name
