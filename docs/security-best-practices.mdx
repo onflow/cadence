@@ -60,4 +60,4 @@ Declaring a field as [`pub/access(all)`](/cadence/language/access-control) only 
 
 Prefer non-public access to a mutable state. That state may also be nested. For example, a child may still be mutated even if its parent exposes it through a field with non-settable access.
 
-Do not use the pub/access(all) modifier on fields and functions unless necessary. Prefer priv/access(self), or access(contract) and access(account) when other types in the contract or account need to have access.
+Do not use the `pub/access(all)` modifier on fields and functions unless necessary. Prefer `priv/access(self)`, or `access(contract)` and `access(account)` when other types in the contract or account need to have access.
