@@ -44,7 +44,7 @@ Ensure capabilities cannot be accessed by unauthorized parties. For example, cap
 
 Audits of Cadence code should also include [transactions](/cadence/language/transactions), as they may contain arbitrary code, just, like in contracts. In addition, they are given full access to the accounts of the transaction’s signers, i.e. the transaction is allowed to manipulate the signers’ account storage, contracts, and keys.
 
-Signing a transaction gives access to the AuthAccount, i.e. full access to the account’s storage, keys, and contracts.
+Signing a transaction gives access to the `AuthAccount`, i.e. full access to the account’s storage, keys, and contracts.
 
 Do not blindly sign a transaction. The transaction could for example change deployed contracts by upgrading them with malicious statements, revoking or adding keys, transferring resources from storage, etc.
 
