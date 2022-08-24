@@ -394,7 +394,13 @@ func (checker *Checker) CurrentPurityScope() PurityCheckScope {
 }
 
 func (checker *Checker) PushNewPurityScope(enforce bool) {
-	checker.purityCheckScopes = append(checker.purityCheckScopes, PurityCheckScope{EnforcePurity: enforce, CurrentPurity: true})
+	checker.purityCheckScopes = append(
+		checker.purityCheckScopes,
+		PurityCheckScope{
+			EnforcePurity: enforce,
+			CurrentPurity: true,
+		},
+	)
 }
 
 func (checker *Checker) PopPurityScope() PurityCheckScope {
@@ -637,7 +643,11 @@ func (checker *Checker) checkTopLevelDeclarationValidity(declarations []ast.Decl
 }
 
 func (checker *Checker) declareGlobalFunctionDeclaration(declaration *ast.FunctionDeclaration) {
-	functionType := checker.functionType(declaration.Purity, declaration.ParameterList, declaration.ReturnTypeAnnotation)
+	functionType := checker.functionType(
+		declaration.Purity,
+		declaration.ParameterList,
+		declaration.ReturnTypeAnnotation,
+	)
 	checker.Elaboration.FunctionDeclarationFunctionTypes[declaration] = functionType
 	checker.declareFunctionDeclaration(declaration, functionType)
 }
