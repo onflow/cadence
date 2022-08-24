@@ -115,69 +115,87 @@ func (checker *Checker) enforcePureAssignment(assignment ast.Statement, target a
 		return
 	}
 
-	var variable *Variable
+	isWriteableInPureContext := func(t Type) bool {
+		// We have to prevent any writes to references, since we cannot know where the value
+		// pointed to by the reference may have come from. Similarly, we can never safely assign
+		// to a resource; because resources are moved instead of copied, we cannot currently
+		// track the origin of a write target when it is a resource. Consider:
+		// -----------------------------------------------------------------------------
+		// pub resource R {
+		//   pub(set) var x: Int
+		//   init(x: Int) {
+		//     self.x = x
+		//   }
+		//  }
+		//
+		// pure fun foo(_ f: @R): @R {
+		//   let b <- f
+		//   b.x = 3 // b was created in the current scope but modifies the resource value
+		//   return <-b
+		// }
+		_, isReference := t.(*ReferenceType)
+		return !isReference && !t.IsResourceType()
+	}
 
-	switch targetExp := target.(type) {
-	case *ast.IdentifierExpression:
-		variable = checker.valueActivations.Find(targetExp.Identifier.Identifier)
-	case *ast.IndexExpression:
-		if indexIdentifier, ok := targetExp.TargetExpression.(*ast.IdentifierExpression); ok {
-			variable = checker.valueActivations.Find(indexIdentifier.Identifier.Identifier)
-		}
-	case *ast.MemberExpression:
-		if indexIdentifier, ok := targetExp.Expression.(*ast.IdentifierExpression); ok {
-			variable = checker.valueActivations.Find(indexIdentifier.Identifier.Identifier)
+	var baseVariable *Variable
+	var accessChain []Type = make([]Type, 0)
+	var inAccessChain = true
+
+	// seek the variable expression (if it exists) at the base of the access chain
+	for inAccessChain {
+		switch targetExp := target.(type) {
+		case *ast.IdentifierExpression:
+			baseVariable = checker.valueActivations.Find(targetExp.Identifier.Identifier)
+			if baseVariable != nil {
+				accessChain = append(accessChain, baseVariable.Type)
+			}
+			inAccessChain = false
+		case *ast.IndexExpression:
+			target = targetExp.TargetExpression
+			elementType := checker.visitIndexExpression(targetExp, true)
+			accessChain = append(accessChain, elementType)
+		case *ast.MemberExpression:
+			target = targetExp.Expression
+			memberType, _, _ := checker.visitMember(targetExp)
+			accessChain = append(accessChain, memberType)
+		default:
+			inAccessChain = false
 		}
 	}
 
-	// if the target is not a variable (e.g. a nested index expression x[0][0], or a nested
-	// member expression x.y.z), the analysis cannot know for sure where the value being
-	// assigned to originated, so we must default to impure. Consider:
-	// -----------------------------------------------------------------------------
-	// let a: &[Int] = &[0]
-	// pure fun foo(_ x: Int) {
-	//     let b: &[Int] = [0]
-	//     let c = [a, b]
-	//     c[x][0] = 4 // we cannot know statically whether a or b receives the write here
-	// }
-	if variable == nil {
+	if baseVariable == nil {
 		checker.ObserveImpureOperation(assignment)
 		return
 	}
 
 	// `self` technically exists in param scope, but should still not be writeable
-	// outside of an initializer
-	if variable.DeclarationKind == common.DeclarationKindSelf {
+	// outside of an initializer. Within an initializer, writing to `self` is considered
+	// pure: whenever we call a constructor from inside a pure scope, the value being
+	// constructed (i.e. the one referred to by self in the constructor) is local to that
+	// scope, so it is safe to create a new value from within a pure scope. This means that
+	// functions that just construct new values can technically be pure (in the same way that
+	// they are in a functional programming sense), as long as they don't modify anything else
+	// while constructing those values. They will still need a pure annotation though (e.g. pure init(...)).
+	if baseVariable.DeclarationKind == common.DeclarationKindSelf {
 		if checker.functionActivations.Current().InitializationInfo == nil {
 			checker.ObserveImpureOperation(assignment)
 		}
 		return
 	}
 
-	// We have to prevent any writes to references, since we cannot know where the value
-	// pointed to by the reference may have come from. Similarly, we can never safely assign
-	// to a resource; because resources are moved instead of copied, we cannot currently
-	// track the origin of a write target when it is a resource. Consider:
-	// -----------------------------------------------------------------------------
-	// pub resource R {
-	//   pub(set) var x: Int
-	//   init(x: Int) {
-	//     self.x = x
-	//   }
-	//  }
-	//
-	// pure fun foo(_ f: @R): @R {
-	//   let b <- f
-	//   b.x = 3 // b was created in the current scope but modifies the resource value
-	//   return <-b
-	// }
-	if _, ok := variable.Type.(*ReferenceType); ok ||
-		variable.Type.IsResourceType() ||
-		checker.CurrentPurityScope().ActivationDepth > variable.ActivationDepth {
-		// when the variable is neither a resource nor a reference, we can write to if its
-		// activation depth is greater than or equal to the depth at which the current purity
-		// scope was created; i.e. if it is a parameter to the current function or was created
-		// within it
+	// Check that all the types in the access chain are not resources or references
+	for _, t := range accessChain {
+		if !isWriteableInPureContext(t) {
+			checker.ObserveImpureOperation(assignment)
+			return
+		}
+	}
+
+	// when the variable is neither a resource nor a reference, we can write to if its
+	// activation depth is greater than or equal to the depth at which the current purity
+	// scope was created; i.e. if it is a parameter to the current function or was created
+	// within it
+	if checker.CurrentPurityScope().ActivationDepth > baseVariable.ActivationDepth {
 		checker.ObserveImpureOperation(assignment)
 	}
 }
