@@ -913,11 +913,8 @@ func (d *Decoder) decodePurity(purity any) cadence.FunctionPurity {
 	functionPurity := toString(purity)
 	if functionPurity == "pure" {
 		return cadence.PureFunction
-	} else if functionPurity == "impure" {
-		return cadence.ImpureFunction
-	} else {
-		panic(ErrInvalidJSONCadence)
 	}
+	return cadence.ImpureFunction
 }
 
 func (d *Decoder) decodeFunctionType(returnValue, parametersValue, id any, purity any, results typeDecodingResults) cadence.Type {

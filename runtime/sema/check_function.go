@@ -433,7 +433,11 @@ func (checker *Checker) declareBefore() {
 func (checker *Checker) VisitFunctionExpression(expression *ast.FunctionExpression) ast.Repr {
 
 	// TODO: infer
-	functionType := checker.functionType(expression.Purity, expression.ParameterList, expression.ReturnTypeAnnotation)
+	functionType := checker.functionType(
+		expression.Purity,
+		expression.ParameterList,
+		expression.ReturnTypeAnnotation,
+	)
 
 	checker.Elaboration.FunctionExpressionFunctionType[expression] = functionType
 
