@@ -531,7 +531,7 @@ describe("codelensses", () => {
       let c = codelens[0].command
       expect(c.command).toEqual("cadence.server.flow.executeScript")
       expect(c.title).toEqual("💡 Execute script")
-      expect(c.arguments).toEqual(['file:///Users/dapper/Dev/cadence/languageserver/test/script.cdc', '[]'])
+      expect(c.arguments).toEqual([path, '[]'])
     }, true)
 
   })
