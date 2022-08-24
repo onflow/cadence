@@ -34,7 +34,7 @@ Don’t store anything under the [public capability storage](/cadence/language/c
 
 When linking a capability the link might be already present. In that case, Cadence will not panic with a runtime error but the link function will return nil.
 
-It is a good practice to check if the link does already exist before creating it with `getLinkTarget`. This function will return nil if the link does not exist.
+It is a good practice to check if the link already exists with `getLinkTarget` before creating it. This function will return `nil` if the link does not exist.
 
 If it is necessary to handle the case where borrowing a capability might fail, the check function can be used to verify that the target exists and has a valid type.
 
