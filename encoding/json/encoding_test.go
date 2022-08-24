@@ -1500,6 +1500,61 @@ func TestEncodeType(t *testing.T) {
 
 	})
 
+	t.Run("with pure static function", func(t *testing.T) {
+
+		testEncodeAndDecode(
+			t,
+			cadence.TypeValue{
+				StaticType: (&cadence.FunctionType{
+					Purity: cadence.PureFunction,
+					Parameters: []cadence.Parameter{
+						{Label: "qux", Identifier: "baz", Type: cadence.StringType{}},
+					},
+					ReturnType: cadence.IntType{},
+				}).WithID("Foo"),
+			},
+			`{"type":"Type","value":{"staticType":
+				{	
+					"kind" : "Function",
+					"typeID":"Foo", 
+					"purity": "pure",
+					"return" : {"kind" : "Int"}, 
+					"parameters" : [
+						{"label" : "qux", "id" : "baz", "type": {"kind" : "String"}}
+					]}
+				}
+			}`,
+		)
+
+	})
+
+	t.Run("with implicit purity", func(t *testing.T) {
+
+		encodedValue := `{"type":"Type","value":{"staticType":
+			{	
+				"kind" : "Function",
+				"typeID":"Foo", 
+				"return" : {"kind" : "Int"}, 
+				"parameters" : [
+					{"label" : "qux", "id" : "baz", "type": {"kind" : "String"}}
+				]}
+			}
+		}`
+
+		value := cadence.TypeValue{
+			StaticType: (&cadence.FunctionType{
+				Parameters: []cadence.Parameter{
+					{Label: "qux", Identifier: "baz", Type: cadence.StringType{}},
+				},
+				ReturnType: cadence.IntType{},
+			}).WithID("Foo"),
+		}
+
+		decodedValue, err := json.Decode(nil, []byte(encodedValue))
+		require.NoError(t, err)
+		require.Equal(t, value, decodedValue)
+	})
+
 	t.Run("with static Capability<Int>", func(t *testing.T) {
 
 		testEncodeAndDecode(
