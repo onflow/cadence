@@ -23,7 +23,6 @@ package stdlib
 
 import (
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 )
 
@@ -75,17 +74,4 @@ type Account struct {
 
 type Configuration struct {
 	Addresses map[string]common.Address
-}
-
-// TestFrameworkNotProvidedError is the error thrown if test-stdlib functionality is
-// used without providing a test-framework implementation.
-//
-type TestFrameworkNotProvidedError struct{}
-
-var _ errors.InternalError = TestFrameworkNotProvidedError{}
-
-func (TestFrameworkNotProvidedError) IsInternalError() {}
-
-func (e TestFrameworkNotProvidedError) Error() string {
-	return "test framework not provided"
 }
