@@ -1293,6 +1293,8 @@ func TestCheckContainerMethodPurity(t *testing.T) {
 }
 
 func TestCheckConditionPurity(t *testing.T) {
+	t.Parallel()
+
 	t.Run("pure pre", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
