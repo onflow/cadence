@@ -2,14 +2,16 @@
 title: Cadence Testing Framework
 ---
 
-Cadence testing framework provides a convenient way to write tests for Cadence programs in Cadence.
-This functionality is provided by the Test standard-library.
+The Cadence testing framework provides a convenient way to write tests for Cadence programs in Cadence.
+This functionality is provided by the built-in `Test` contract.
 
-Note: Test standard-library can only be used off-chain. e.g: In CLI
+<Callout type="info">
+The testing framework can only be used off-chain, e.g. by using the [Flow CLI](https://developers.flow.com/tools/flow-cli).
+</Callout>
 
 ## Test Standard Library
 
-Testing standard library can be imported directly into the test script.
+The testing framework can be used by importing the built-in `Test` contract:
 ```cadence
 import Test
 ```
@@ -83,8 +85,8 @@ fun newMatcher<T: AnyStruct>(_ test: ((T): Bool)): Test.Matcher
 ```
 The type parameter `T` is bound to `AnyStruct` type. It is also optional.
 
-#### Example:
-A matcher that checks whether the given integer value is a negative value.
+For example, a matcher that checks whether a given integer value is negative can be defined as follows:
+
 ```cadence
 let isNegative = Test.newMatcher(fun (_ value: Int): Bool {
     return value < 0
@@ -95,7 +97,7 @@ Test.expect(-15, isNegative)
 ```
 
 ### Built-in matcher functions
-Cadence test standard library provides some built-in matcher functions for convenience.
+The `Test` contract provides some built-in matcher functions for convenience.
 
 - `fun equal(_ value: AnyStruct): Matcher`
 
@@ -106,6 +108,7 @@ Cadence test standard library provides some built-in matcher functions for conve
 ## Blockchain
 A blockchain is an environment to which transactions can be submitted to, and against which scripts can be run.
 It imitates the behavior of a real network, for testing.
+
 ```cadence
 /// Blockchain emulates a real network.
 ///
@@ -168,7 +171,7 @@ pub struct Blockchain {
             self.addTransaction(tx)
         }
 
-        var results: [TransactionResult] = []
+        let results: [TransactionResult] = []
         for tx in transactions {
             let txResult = self.executeNextTransaction()!
             results.append(txResult)
@@ -223,12 +226,13 @@ pub struct interface BlockchainBackend {
 
 ### Creating a blockchain
 A new blockchain instance can be created using the `newEmulatorBlockchain` method.
-It returns a `Blockchain` which is backed by a new emulator instance.
+It returns a `Blockchain` which is backed by a new [Flow Emulator](https://developers.flow.com/tools/emulator) instance.
+
 ```cadence
 let blockchain = Test.newEmulatorBlockchain()
 ```
 ### Creating accounts
-It may require to create accounts during tests for various reasons such as deploying contracts, signing transactions, etc.
+It may be necessary to create accounts during tests for various reasons, such as for deploying contracts, signing transactions, etc.
 An account can be created using the `createAccount` function.
 ```cadence
 let acct = blockchain.createAccount()
@@ -249,7 +253,7 @@ pub struct Account {
 ```
 
 ### Executing scripts
-Execute scripts with `executeScript` function, which returns a `ScriptResult`.
+Scripts can be run with the `executeScript` function, which returns a `ScriptResult`.
 The function takes script-code as the first argument, and the script-arguments as an array as the second argument.
 
 ```cadence
@@ -359,7 +363,7 @@ An `Error` is returned if the contract deployment fails. Otherwise, a `nil` is r
 
 ### Configuring import addresses
 A common pattern in Cadence projects is to define the imports as file locations and specify the addresses
-corresponding to each network in the [config](https://developers.flow.com/tools/flow-cli/configuration#contracts) file.
+corresponding to each network in the [Flow CLI configuration file](https://developers.flow.com/tools/flow-cli/configuration#contracts).
 When writing tests for a such project, it may also require to specify the addresses to be used during the tests as well.
 However, during tests, since accounts are created dynamically and the addresses are also generated dynamically,
 specifying the addresses statically in a configuration file is not an option.
@@ -373,9 +377,9 @@ The `Configurations` struct consists of a mapping of import locations to their a
 /// Can be used to set the address mapping.
 ///
 pub struct Configurations {
-    pub let addresses: { String: Address }
+    pub let addresses: {String: Address}
 
-    init(addresses: { String: Address }) {
+    init(addresses: {String: Address}) {
         self.addresses = addresses
     }
 }
@@ -423,8 +427,8 @@ An `Error` may typically be handled by failing the test case or by panicking (wh
 ```cadence
 let err: Error? = ...
 
-if err != nil {
-    panic(err!.message)
+if let err = err {
+    panic(err.message)
 }
 ```
 
