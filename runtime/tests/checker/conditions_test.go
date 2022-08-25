@@ -370,7 +370,7 @@ func TestCheckInvalidFunctionPostConditionWithFunction(t *testing.T) {
 	_, err := ParseAndCheck(t, `
       fun test() {
           post {
-              (pure fun (): Int { return 2 })() == 2
+              (view fun (): Int { return 2 })() == 2
           }
       }
     `)

@@ -1295,10 +1295,10 @@ func TestCheckContainerMethodPurity(t *testing.T) {
 func TestCheckConditionPurity(t *testing.T) {
 	t.Parallel()
 
-	t.Run("pure pre", func(t *testing.T) {
+	t.Run("view pre", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
-		pure fun foo(): Int { return 0 }
+		view fun foo(): Int { return 0 }
 		fun bar() {
 			pre {
 				foo() > 3: "bar"
@@ -1309,10 +1309,10 @@ func TestCheckConditionPurity(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("pure post", func(t *testing.T) {
+	t.Run("view post", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
-		pure fun foo(): Int { return 0 }
+		view fun foo(): Int { return 0 }
 		fun bar() {
 			post {
 				foo() > 3: "bar"
