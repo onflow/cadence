@@ -70,11 +70,25 @@ func PrepareProgram(code string, location common.Location, codes map[common.Loca
 
 var checkers = map[common.Location]*sema.Checker{}
 
+type StandardOutputLogger struct{}
+
+func (s StandardOutputLogger) ProgramLog(message string) error {
+	fmt.Println(message)
+	return nil
+}
+
+var _ stdlib.Logger = StandardOutputLogger{}
+
 func DefaultCheckerConfig(
 	checkers map[common.Location]*sema.Checker,
 	codes map[common.Location]string,
 ) *sema.Config {
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.NewLogFunction(StandardOutputLogger{}))
+
 	return &sema.Config{
+		BaseValueActivation: baseValueActivation,
+		AccessCheckMode:     sema.AccessCheckModeStrict,
 		ImportHandler: func(
 			checker *sema.Checker,
 			importedLocation common.Location,
@@ -168,8 +182,12 @@ func PrepareInterpreter(filename string, debugger *interpreter.Debugger) (*inter
 	// NOTE: storage option must be provided *before* the predeclared values option,
 	// as predeclared values may rely on storage
 
+	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+	baseActivation.Declare(stdlib.NewLogFunction(StandardOutputLogger{}))
+
 	config := &interpreter.Config{
-		Storage: storage,
+		BaseActivation: baseActivation,
+		Storage:        storage,
 		UUIDHandler: func() (uint64, error) {
 			defer func() { uuid++ }()
 			return uuid, nil
