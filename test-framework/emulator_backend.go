@@ -21,8 +21,6 @@ package test
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/stdlib"
 	"strings"
 
 	sdk "github.com/onflow/flow-go-sdk"
@@ -37,8 +35,10 @@ import (
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/parser"
+	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -163,7 +163,7 @@ func (e EmulatorBackend) CreateAccount() (*stdlib.Account, error) {
 
 	return &stdlib.Account{
 		Address: common.Address(address),
-		PublicKey: &interpreter.PublicKey{
+		PublicKey: &stdlib.PublicKey{
 			PublicKey: publicKey,
 			SignAlgo:  fvmCrypto.CryptoToRuntimeSigningAlgorithm(accountKey.PublicKey.Algorithm()),
 		},
