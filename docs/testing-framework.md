@@ -12,20 +12,25 @@ The testing framework can only be used off-chain, e.g. by using the [Flow CLI](h
 ## Test Standard Library
 
 The testing framework can be used by importing the built-in `Test` contract:
+
 ```cadence
 import Test
 ```
 
 ## Assertion
+
 ### assert
+
 ```cadence
 fun assert(_ condition: Bool, _ message: String)
 ```
+
 Fails a test-case if the given condition is false, and reports a message which explains how the condition is false.
 
 The message argument is optional.
 
 ### fail
+
 ```cadence
 fun fail(_ message: string)
 ```
@@ -34,6 +39,7 @@ Immediately fails a test-case, with a message explaining the reason to fail the 
 The message argument is optional.
 
 ### expect
+
 The `expect` function tests a value against a matcher (see [matchers](#matchers) section), and fails the test if it's not a match.
 
 ```cadence
@@ -41,7 +47,9 @@ fun expect(_ value: AnyStruct, _ matcher: Matcher)
 ```
 
 ## Matchers
+
 A matcher is an object that consists of a test function and associated utility functionality.
+
 ```cadence
 pub struct Matcher {
 
@@ -80,9 +88,11 @@ The `and` method returns a new matcher that succeeds if both this and the given 
 The `or` method returns a new matcher that succeeds if at-least this or the given matcher is succeeded.
 
 A matcher that accepts a generic-typed test function can be constructed using the `newMatcher` function.
+
 ```cadence
 fun newMatcher<T: AnyStruct>(_ test: ((T): Bool)): Test.Matcher
 ```
+
 The type parameter `T` is bound to `AnyStruct` type. It is also optional.
 
 For example, a matcher that checks whether a given integer value is negative can be defined as follows:
@@ -97,6 +107,7 @@ Test.expect(-15, isNegative)
 ```
 
 ### Built-in matcher functions
+
 The `Test` contract provides some built-in matcher functions for convenience.
 
 - `fun equal(_ value: AnyStruct): Matcher`
@@ -106,6 +117,7 @@ The `Test` contract provides some built-in matcher functions for convenience.
 
 
 ## Blockchain
+
 A blockchain is an environment to which transactions can be submitted to, and against which scripts can be run.
 It imitates the behavior of a real network, for testing.
 
@@ -198,6 +210,7 @@ pub struct Blockchain {
     }
 }
 ```
+
 The `BlockchainBackend` provides the actual functionality of the blockchain.
 
 ```cadence
@@ -225,19 +238,25 @@ pub struct interface BlockchainBackend {
 ```
 
 ### Creating a blockchain
+
 A new blockchain instance can be created using the `newEmulatorBlockchain` method.
 It returns a `Blockchain` which is backed by a new [Flow Emulator](https://developers.flow.com/tools/emulator) instance.
 
 ```cadence
 let blockchain = Test.newEmulatorBlockchain()
 ```
+
 ### Creating accounts
+
 It may be necessary to create accounts during tests for various reasons, such as for deploying contracts, signing transactions, etc.
 An account can be created using the `createAccount` function.
+
 ```cadence
 let acct = blockchain.createAccount()
 ```
+
 The returned account consist of the `address` of the account, and a `publicKey` associated with it.
+
 ```cadence
 /// Account represents info about the account created on the blockchain.
 ///
@@ -253,12 +272,14 @@ pub struct Account {
 ```
 
 ### Executing scripts
+
 Scripts can be run with the `executeScript` function, which returns a `ScriptResult`.
 The function takes script-code as the first argument, and the script-arguments as an array as the second argument.
 
 ```cadence
 let result = blockchain.executeScript("pub fun main(a: String) {}", ["hello"])
 ```
+
 The script result consists of the `status` of the script execution, and a `returnValue` if the script execution was
 successful, or an `error` otherwise (see [errors](#errors) section for more details on errors).
 
@@ -279,8 +300,10 @@ pub struct ScriptResult {
 ```
 
 ### Executing transactions
+
 A transaction must be created with the transaction code, a list of authorizes,
 a list of signers that would sign the transaction, and the transaction arguments.
+
 ```cadence
 /// Transaction that can be submitted and executed on the blockchain.
 ///
@@ -298,6 +321,7 @@ pub struct Transaction {
     }
 }
 ```
+
 The number of authorizers must match the number of `AuthAccount` arguments in the `prepare` block of the transaction.
 
 ```cadence
@@ -327,6 +351,7 @@ There are two ways to execute the created transaction.
   ```
 
 The result of a transaction consists of the status of the execution, and an `Error` if the transaction failed.
+
 ```cadence
 /// The result of a transaction execution.
 ///
@@ -342,13 +367,17 @@ pub struct TransactionResult {
 ```
 
 ### Commit block
+
 `commitBlock` block will commit the current block, and will fail if there are any un-executed transactions in the block.
+
 ```cadence
 blockchain.commitBlock()
 ```
 
 ### Deploying contracts
+
 A contract can be deployed using the `deployContract` function of the `Blockchain`.
+
 ```cadence
 let contractCode = "pub contract Foo{ pub let msg: String;   init(_ msg: String){ self.msg = msg }   pub fun sayHello(): String { return self.msg } }"
 
@@ -359,9 +388,11 @@ let err = blockchain.deployContract(
     arguments: ["hello from args"],
 )
 ```
+
 An `Error` is returned if the contract deployment fails. Otherwise, a `nil` is returned.
 
 ### Configuring import addresses
+
 A common pattern in Cadence projects is to define the imports as file locations and specify the addresses
 corresponding to each network in the [Flow CLI configuration file](https://developers.flow.com/tools/flow-cli/configuration#contracts).
 When writing tests for a such project, it may also require to specify the addresses to be used during the tests as well.
@@ -372,6 +403,7 @@ Hence, the test framework provides a way to specify the addresses using the
 `useConfiguration(_ configs: Test.Configurations)` function in `Blockchain`.
 
 The `Configurations` struct consists of a mapping of import locations to their addresses.
+
 ```cadence
 /// Configurations to be used by the blockchain.
 /// Can be used to set the address mapping.
@@ -384,7 +416,9 @@ pub struct Configurations {
     }
 }
 ```
+
 The configurations can be specified during the test setup as a best-practice.
+
 ```cadence
 pub var blockchain = Test.newEmulatorBlockchain()
 pub var accounts: [Test.Account] = []
@@ -406,12 +440,15 @@ pub fun setup() {
     }))
 }
 ```
+
 The subsequent operations on the blockchain (e.g: contract deployment, script/transaction execution) will resolve the
 file import locations to the provided addresses.
 
 ### Errors
+
 An `Error` maybe returned when an operation (such as executing a script, executing a transaction, etc.) is failed.
 Contains a message indicating why the operation failed.
+
 ```cadence
 // Error is returned if something has gone wrong.
 //
@@ -423,7 +460,9 @@ pub struct Error {
     }
 }
 ```
+
 An `Error` may typically be handled by failing the test case or by panicking (which will result in failing the test).
+
 ```cadence
 let err: Error? = ...
 
@@ -433,10 +472,13 @@ if let err = err {
 ```
 
 ## Reading from files
+
 Writing tests often require constructing source-code of contracts/transactions/scripts in the test script.
 Testing framework provides a convenient way to load programs from a local file, without having to manually construct
 them within the test script.
+
 ```cadence
 let contractCode = Test.readFile("./sample/contracts/FooContract.cdc")
 ```
+
 `readFile` returns the content of the file as a string.
