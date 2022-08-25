@@ -2569,7 +2569,7 @@ func TestParseFunctionExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("pure fun (): X { }", nil)
+		result, errs := ParseExpression("view fun (): X { }", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,

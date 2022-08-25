@@ -1500,13 +1500,13 @@ func TestEncodeType(t *testing.T) {
 
 	})
 
-	t.Run("with pure static function", func(t *testing.T) {
+	t.Run("with view static function", func(t *testing.T) {
 
 		testEncodeAndDecode(
 			t,
 			cadence.TypeValue{
 				StaticType: (&cadence.FunctionType{
-					Purity: cadence.PureFunction,
+					Purity: cadence.ViewFunction,
 					Parameters: []cadence.Parameter{
 						{Label: "qux", Identifier: "baz", Type: cadence.StringType{}},
 					},
@@ -1517,7 +1517,7 @@ func TestEncodeType(t *testing.T) {
 				{	
 					"kind" : "Function",
 					"typeID":"Foo", 
-					"purity": "pure",
+					"purity": "view",
 					"return" : {"kind" : "Int"}, 
 					"parameters" : [
 						{"label" : "qux", "id" : "baz", "type": {"kind" : "String"}}

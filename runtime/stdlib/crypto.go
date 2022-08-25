@@ -114,7 +114,7 @@ func cryptoAlgorithmEnumConstructorType(
 	}
 
 	constructorType := &sema.FunctionType{
-		Purity:        sema.PureFunction,
+		Purity:        sema.ViewFunction,
 		IsConstructor: true,
 		Parameters: []*sema.Parameter{
 			{

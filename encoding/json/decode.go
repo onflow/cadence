@@ -911,8 +911,8 @@ func (d *Decoder) decodeFieldType(valueJSON any, results typeDecodingResults) ca
 
 func (d *Decoder) decodePurity(purity any) cadence.FunctionPurity {
 	functionPurity := toString(purity)
-	if functionPurity == "pure" {
-		return cadence.PureFunction
+	if functionPurity == "view" {
+		return cadence.ViewFunction
 	}
 	return cadence.ImpureFunction
 }

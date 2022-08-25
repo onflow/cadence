@@ -30,14 +30,14 @@ type FunctionPurity int
 
 const (
 	UnspecifiedPurity FunctionPurity = iota
-	PureFunction      FunctionPurity = 1
+	ViewFunction      FunctionPurity = 1
 )
 
 func (p FunctionPurity) MarshalJSON() ([]byte, error) {
 	if p == UnspecifiedPurity {
 		return json.Marshal("Unspecified")
 	}
-	return json.Marshal("Pure")
+	return json.Marshal("View")
 }
 
 type FunctionDeclaration struct {
