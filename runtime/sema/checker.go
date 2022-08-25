@@ -49,7 +49,7 @@ var beforeType = func() *FunctionType {
 	)
 
 	return &FunctionType{
-		Purity: PureFunction,
+		Purity: ViewFunction,
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},

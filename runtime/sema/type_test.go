@@ -70,13 +70,13 @@ func TestConstantSizedType_String_OfFunctionType(t *testing.T) {
 	)
 }
 
-func TestConstantSizedType_String_OfPureFunctionType(t *testing.T) {
+func TestConstantSizedType_String_OfViewFunctionType(t *testing.T) {
 
 	t.Parallel()
 
 	ty := &ConstantSizedType{
 		Type: &FunctionType{
-			Purity: PureFunction,
+			Purity: ViewFunction,
 			Parameters: []*Parameter{
 				{
 					TypeAnnotation: NewTypeAnnotation(Int8Type),
@@ -90,7 +90,7 @@ func TestConstantSizedType_String_OfPureFunctionType(t *testing.T) {
 	}
 
 	assert.Equal(t,
-		"[(pure (Int8): Int16); 2]",
+		"[(view (Int8): Int16); 2]",
 		ty.String(),
 	)
 }
@@ -550,7 +550,7 @@ func TestBeforeType_Strings(t *testing.T) {
 
 	t.Parallel()
 
-	expected := "(pure <T: AnyStruct>(_ value: T): T)"
+	expected := "(view <T: AnyStruct>(_ value: T): T)"
 
 	assert.Equal(t,
 		expected,

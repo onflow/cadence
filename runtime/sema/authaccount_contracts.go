@@ -169,7 +169,7 @@ Returns nil if no contract/contract interface with the given name exists in the 
 `
 
 var AuthAccountContractsTypeGetFunctionType = &FunctionType{
-	Purity: PureFunction,
+	Purity: ViewFunction,
 	Parameters: []*Parameter{
 		{
 			Identifier: "name",

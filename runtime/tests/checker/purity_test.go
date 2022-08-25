@@ -32,21 +32,21 @@ func TestCheckPuritySubtyping(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("pure <: impure", func(t *testing.T) {
+	t.Run("view <: impure", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
-        pure fun foo() {}
+        view fun foo() {}
         let x: ((): Void) = foo
         `)
 
 		require.NoError(t, err)
 	})
 
-	t.Run("pure <: pure", func(t *testing.T) {
+	t.Run("view <: view", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
-        pure fun foo() {}
-        let x: (pure (): Void) = foo
+        view fun foo() {}
+        let x: (view (): Void) = foo
         `)
 
 		require.NoError(t, err)
@@ -62,11 +62,11 @@ func TestCheckPuritySubtyping(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("impure <: pure", func(t *testing.T) {
+	t.Run("impure <: view", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         fun foo() {}
-        let x: (pure (): Void) = foo
+        let x: (view (): Void) = foo
         `)
 
 		errs := ExpectCheckerErrors(t, err, 1)
@@ -77,8 +77,8 @@ func TestCheckPuritySubtyping(t *testing.T) {
 	t.Run("contravariant ok", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
-        pure fun foo(x:((): Void)) {}
-        let x: (pure ((pure (): Void)): Void) = foo
+        view fun foo(x:((): Void)) {}
+        let x: (view ((view (): Void)): Void) = foo
         `)
 
 		require.NoError(t, err)
@@ -87,8 +87,8 @@ func TestCheckPuritySubtyping(t *testing.T) {
 	t.Run("contravariant error", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
-        pure fun foo(f:(pure (): Void)) {}
-        let x: (pure (((): Void)): Void) = foo
+        view fun foo(f:(view (): Void)) {}
+        let x: (view (((): Void)): Void) = foo
         `)
 
 		errs := ExpectCheckerErrors(t, err, 1)
@@ -100,13 +100,13 @@ func TestCheckPuritySubtyping(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         struct interface I {
-            pure fun foo()
+            view fun foo()
             fun bar()
         }
 
         struct S: I {
-            pure fun foo() {}
-            pure fun bar() {}
+            view fun foo() {}
+            view fun bar() {}
         }
         `)
 
@@ -117,7 +117,7 @@ func TestCheckPuritySubtyping(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         struct interface I {
-            pure fun foo()
+            view fun foo()
             fun bar() 
         }
 
@@ -136,11 +136,11 @@ func TestCheckPuritySubtyping(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         struct interface I {
-            pure init()
+            view init()
         }
 
         struct S: I {
-            pure init() {}
+            view init() {}
         }
         `)
 
@@ -151,7 +151,7 @@ func TestCheckPuritySubtyping(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         struct interface I {
-            pure init()
+            view init()
         }
 
         struct S: I {
@@ -172,7 +172,7 @@ func TestCheckPuritySubtyping(t *testing.T) {
         }
 
         struct S: I {
-            pure init() {}
+            view init() {}
         }
         `)
 
@@ -198,11 +198,11 @@ func TestCheckPuritySubtyping(t *testing.T) {
 }
 
 func TestCheckPurityEnforcement(t *testing.T) {
-	t.Run("pure function call", func(t *testing.T) {
+	t.Run("view function call", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
-        pure fun bar() {}
-        pure fun foo() {
+        view fun bar() {}
+        view fun foo() {
             bar()
         }
         `)
@@ -214,7 +214,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         fun bar() {}
-        pure fun foo() {
+        view fun foo() {
             bar()
         }
         `)
@@ -234,7 +234,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
         struct S {
             fun bar() {}
         }
-        pure fun foo(_ s: S) {
+        view fun foo(_ s: S) {
             s.bar()
         }
         `)
@@ -248,11 +248,11 @@ func TestCheckPurityEnforcement(t *testing.T) {
 		})
 	})
 
-	t.Run("pure function call nested", func(t *testing.T) {
+	t.Run("view function call nested", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         fun bar() {}
-        pure fun foo() {
+        view fun foo() {
             let f = fun() {
                 bar()
             }
@@ -267,7 +267,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 		_, err := ParseAndCheck(t, `
         fun bar() {}
         fun foo() {
-            let f = pure fun() {
+            let f = view fun() {
                 bar()
             }
         }
@@ -282,11 +282,11 @@ func TestCheckPurityEnforcement(t *testing.T) {
 		})
 	})
 
-	t.Run("pure function call nested failure", func(t *testing.T) {
+	t.Run("view function call nested failure", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         fun bar() {}
-        pure fun foo() {
+        view fun foo() {
             let f = fun() {
                 bar()
             }
@@ -306,7 +306,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 	t.Run("save", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
-        pure fun foo() {
+        view fun foo() {
             authAccount.save(3, to: /storage/foo)
         }
         `)
@@ -323,7 +323,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 	t.Run("load", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
-        pure fun foo() {
+        view fun foo() {
             authAccount.load<Int>(from: /storage/foo)
         }
         `)
@@ -340,7 +340,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 	t.Run("type", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
-        pure fun foo() {
+        view fun foo() {
             authAccount.type(at: /storage/foo)
         }
         `)
@@ -351,7 +351,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 	t.Run("link", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
-        pure fun foo() {
+        view fun foo() {
             authAccount.link<&Int>(/private/foo, target: /storage/foo)
         }
         `)
@@ -368,7 +368,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 	t.Run("unlink", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
-        pure fun foo() {
+        view fun foo() {
             authAccount.unlink(/private/foo)
         }
         `)
@@ -385,7 +385,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 	t.Run("add contract", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
-        pure fun foo() {
+        view fun foo() {
             authAccount.contracts.add(name: "", code: [])
         }
         `)
@@ -402,7 +402,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 	t.Run("update contract", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
-        pure fun foo() {
+        view fun foo() {
             authAccount.contracts.update__experimental(name: "", code: [])
         }
         `)
@@ -419,7 +419,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 	t.Run("remove contract", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
-        pure fun foo() {
+        view fun foo() {
             authAccount.contracts.remove(name: "")
         }
         `)
@@ -436,7 +436,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 	t.Run("revoke key", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
-        pure fun foo() {
+        view fun foo() {
             authAccount.keys.revoke(keyIndex: 0)
         }
         `)
@@ -453,7 +453,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 	t.Run("alias", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
-        pure fun foo() {
+        view fun foo() {
             let f = authAccount.contracts.remove
             f(name: "")
         }
@@ -472,7 +472,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
         event FooEvent()
-        pure fun foo() {
+        view fun foo() {
             emit FooEvent()
         }
         `)
@@ -490,7 +490,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         var a = 3
-        pure fun foo() {
+        view fun foo() {
             a = 4
         }
         `)
@@ -508,7 +508,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         var a = [3]
-        pure fun foo() {
+        view fun foo() {
             a[0] = 4
         }
         `)
@@ -525,7 +525,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 	t.Run("internal write", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
-        pure fun foo() {
+        view fun foo() {
             var a = 3
             a = 4
         }
@@ -537,7 +537,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 	t.Run("internal array write", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
-        pure fun foo() {
+        view fun foo() {
             var a = [3]
             a[0] = 4
         }
@@ -549,7 +549,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 	t.Run("internal param write", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
-        pure fun foo(_ a: [Int]) {
+        view fun foo(_ a: [Int]) {
             a[0] = 4
         }
         `)
@@ -568,7 +568,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
         }
         
         let r = R(x: 0)
-        pure fun foo(){
+        view fun foo(){
             r.x = 3
         }
         `)
@@ -592,7 +592,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
             }
         }
         
-        pure fun foo(_ r: R): R {
+        view fun foo(_ r: R): R {
             r.x = 3
             return r
         }
@@ -611,7 +611,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
             }
         }
         
-        pure fun foo(_ r: R): R {
+        view fun foo(_ r: R): R {
             if true {
                 while true {
                     r.x = 3
@@ -628,7 +628,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         let a: [Int] = []
-        pure fun foo() {
+        view fun foo() {
             let b: [Int] = []
             let c = [a, b]
             c[0][0] = 4
@@ -642,7 +642,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         let a: [Int] = []
-        pure fun foo() {
+        view fun foo() {
             let b: [Int] = []
             let c = [a, b]
                c[0].append(4)
@@ -663,7 +663,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 		_, err := ParseAndCheck(t, `
         fun foo() {
             var a = 3
-            let b = pure fun() {
+            let b = view fun() {
                 while true {
                     a = 4
                 }
@@ -684,7 +684,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         var a = 3
-        pure fun foo() {
+        view fun foo() {
             let b = fun() {
                 a = 4
             }
@@ -697,7 +697,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 	t.Run("nested scope legal write", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
-        pure fun foo() {
+        view fun foo() {
             var a = 3
             while true {
                 a = 4
@@ -718,7 +718,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
             }
         }
         
-        pure fun foo(_ s: &S) {
+        view fun foo(_ s: &S) {
             s.x = 3
         }
         `)
@@ -744,7 +744,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 
 		let s = [&S(0) as &S]
         
-        pure fun foo() {
+        view fun foo() {
             s[0].x = 3
         }
         `)
@@ -768,7 +768,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
             }
         }
 
-        pure fun foo() {
+        view fun foo() {
             z.x = 3
         }
         `)
@@ -795,7 +795,7 @@ func TestCheckResourceWritePurity(t *testing.T) {
                 }
             }
 
-            pure fun foo(_ r: @R): @R {
+            view fun foo(_ r: @R): @R {
                 r.x = 3
                 return <-r
             }
@@ -815,7 +815,7 @@ func TestCheckResourceWritePurity(t *testing.T) {
 		_, err := ParseAndCheck(t, `
             pub resource R {}
 
-            pure fun foo(_ r: @R){
+            view fun foo(_ r: @R){
                 destroy r
             }
             `)
@@ -839,7 +839,7 @@ func TestCheckResourceWritePurity(t *testing.T) {
                 }
             }
 
-            pure fun foo(_ r: @R): @R {
+            view fun foo(_ r: @R): @R {
                 if true {
                     while true {
                         r.x = 3
@@ -863,12 +863,12 @@ func TestCheckResourceWritePurity(t *testing.T) {
 		_, err := ParseAndCheck(t, `
             pub resource R {
                 pub(set) var x: Int
-                pure init(x: Int) {
+                view init(x: Int) {
                     self.x = x
                 }
             }
 
-            pure fun foo(): @R {
+            view fun foo(): @R {
                 let r <- create R(x: 0)
                 r.x = 1
                 return <-r
@@ -894,7 +894,7 @@ func TestCheckResourceWritePurity(t *testing.T) {
                 }
             }
 
-            pure fun foo(_ f: @R): @R {
+            view fun foo(_ f: @R): @R {
                 let b <- f
                 b.x = 3
                 return <-b
@@ -920,7 +920,7 @@ func TestCheckResourceWritePurity(t *testing.T) {
             }
         }
         
-        pure fun foo(_ a: @[R], _ x: Int): @[R] {
+        view fun foo(_ a: @[R], _ x: Int): @[R] {
             a[x].x = 4
             return <-a
         }
@@ -945,7 +945,7 @@ func TestCheckResourceWritePurity(t *testing.T) {
             }
         }
         
-        pure fun foo(_ a: @[[R]], _ x: Int): @[[R]] {
+        view fun foo(_ a: @[[R]], _ x: Int): @[[R]] {
             a[x][x].x = 4
             return <-a
         }
@@ -970,7 +970,7 @@ func TestCheckResourceWritePurity(t *testing.T) {
                 }
             }
 
-            pure fun foo(_ r1: @R, _ r2: @R): @[R] {
+            view fun foo(_ r1: @R, _ r2: @R): @[R] {
                 return <-[<-r1, <-r2]
             }
 
@@ -991,7 +991,7 @@ func TestCheckCompositeWritePurity(t *testing.T) {
                 self.b = b
             }
 
-            pure fun foo() {
+            view fun foo() {
                 self.b = 3
             }
         }
@@ -1016,7 +1016,7 @@ func TestCheckCompositeWritePurity(t *testing.T) {
                 self.b = b
             }
 
-            pure fun foo(_ s: S) {
+            view fun foo(_ s: S) {
                 s.b = 3
             }
         }
@@ -1031,12 +1031,12 @@ func TestCheckCompositeWritePurity(t *testing.T) {
         struct S {
             var b: Int
 
-            pure init(b: Int) {
+            view init(b: Int) {
                 self.b = b
             }
         }
 
-        pure fun foo() {
+        view fun foo() {
             let s = S(b: 3)
         }
         `)
@@ -1050,12 +1050,12 @@ func TestCheckCompositeWritePurity(t *testing.T) {
         resource R {
             var b: Int 
 
-            pure init(b: Int) {
+            view init(b: Int) {
                 self.b = b
             }
         }
 
-        pure fun foo(): @R {
+        view fun foo(): @R {
             return <-create R(b: 3)
         }
         `)
@@ -1070,13 +1070,13 @@ func TestCheckCompositeWritePurity(t *testing.T) {
         struct S {
             var b: Int
 
-            pure init(b: Int) {
+            view init(b: Int) {
                 a[1] = 4
                 self.b = b
             }
         }
 
-        pure fun foo() {
+        view fun foo() {
             let s = S(b: 3)
         }
         `)
@@ -1097,13 +1097,13 @@ func TestCheckCompositeWritePurity(t *testing.T) {
         resource R {
             var b: Int 
 
-            pure init(b: Int) {
+            view init(b: Int) {
                 a[1] = 4
                 self.b = b
             }
         }
 
-        pure fun foo(): @R {
+        view fun foo(): @R {
             return <-create R(b: 3)
         }
         `)
@@ -1123,7 +1123,7 @@ func TestCheckContainerMethodPurity(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         let a = [3]
-        pure fun foo() {
+        view fun foo() {
             a.contains(0)
         }
         `)
@@ -1135,7 +1135,7 @@ func TestCheckContainerMethodPurity(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         let a = [3]
-        pure fun foo() {
+        view fun foo() {
             a.concat([0])
         }
         `)
@@ -1147,7 +1147,7 @@ func TestCheckContainerMethodPurity(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         let a = [3]
-        pure fun foo() {
+        view fun foo() {
             a.firstIndex(of: 0)
         }
         `)
@@ -1159,7 +1159,7 @@ func TestCheckContainerMethodPurity(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         let a = [3]
-        pure fun foo() {
+        view fun foo() {
             a.slice(from: 0, upTo: 1)
         }
         `)
@@ -1171,7 +1171,7 @@ func TestCheckContainerMethodPurity(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         let a = [3]
-        pure fun foo() {
+        view fun foo() {
             a.append(0)
         }
         `)
@@ -1185,7 +1185,7 @@ func TestCheckContainerMethodPurity(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         let a = [3]
-        pure fun foo() {
+        view fun foo() {
             a.appendAll([0])
         }
         `)
@@ -1199,7 +1199,7 @@ func TestCheckContainerMethodPurity(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         let a = [3]
-        pure fun foo() {
+        view fun foo() {
             a.insert(at:0, 0)
         }
         `)
@@ -1213,7 +1213,7 @@ func TestCheckContainerMethodPurity(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         let a = [3]
-        pure fun foo() {
+        view fun foo() {
             a.remove(at:0)
         }
         `)
@@ -1227,7 +1227,7 @@ func TestCheckContainerMethodPurity(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         let a = [3]
-        pure fun foo() {
+        view fun foo() {
             a.removeFirst()
         }
         `)
@@ -1241,7 +1241,7 @@ func TestCheckContainerMethodPurity(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         let a = [3]
-        pure fun foo() {
+        view fun foo() {
             a.removeLast()
         }
         `)
@@ -1255,7 +1255,7 @@ func TestCheckContainerMethodPurity(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         let a = {0:0}
-        pure fun foo() {
+        view fun foo() {
             a.insert(key: 0, 0)
         }
         `)
@@ -1269,7 +1269,7 @@ func TestCheckContainerMethodPurity(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         let a = {0:0}
-        pure fun foo() {
+        view fun foo() {
             a.remove(key: 0)
         }
         `)
@@ -1283,7 +1283,7 @@ func TestCheckContainerMethodPurity(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         let a = {0:0}
-        pure fun foo() {
+        view fun foo() {
             a.containsKey(0)
         }
         `)

@@ -25,8 +25,8 @@ import (
 )
 
 func PurityFromAnnotation(purity ast.FunctionPurity) FunctionPurity {
-	if purity == ast.PureFunction {
-		return PureFunction
+	if purity == ast.ViewFunction {
+		return ViewFunction
 	}
 	return ImpureFunction
 
@@ -181,7 +181,7 @@ func (checker *Checker) checkFunction(
 			functionActivation.InitializationInfo = initializationInfo
 
 			if functionBlock != nil {
-				checker.InNewPurityScope(functionType.Purity == PureFunction, func() {
+				checker.InNewPurityScope(functionType.Purity == ViewFunction, func() {
 					checker.visitFunctionBlock(
 						functionBlock,
 						functionType.ReturnTypeAnnotation,

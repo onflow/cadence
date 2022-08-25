@@ -994,14 +994,14 @@ func TestParseFunctionStatementOrExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseStatements("pure fun () {}", nil)
+		result, errs := ParseStatements("view fun () {}", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
 			[]ast.Statement{
 				&ast.ExpressionStatement{
 					Expression: &ast.FunctionExpression{
-						Purity: ast.PureFunction,
+						Purity: ast.ViewFunction,
 						ParameterList: &ast.ParameterList{
 							Range: ast.Range{
 								StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
@@ -1038,13 +1038,13 @@ func TestParseFunctionStatementOrExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseStatements("pure fun foo() {}", nil)
+		result, errs := ParseStatements("view fun foo() {}", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
 			[]ast.Statement{
 				&ast.FunctionDeclaration{
-					Purity: ast.PureFunction,
+					Purity: ast.ViewFunction,
 					Access: ast.AccessNotSpecified,
 					Identifier: ast.Identifier{
 						Identifier: "foo",

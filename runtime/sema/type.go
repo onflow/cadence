@@ -321,7 +321,7 @@ func NewTypeAnnotation(ty Type) *TypeAnnotation {
 const IsInstanceFunctionName = "isInstance"
 
 var IsInstanceFunctionType = &FunctionType{
-	Purity: PureFunction,
+	Purity: ViewFunction,
 	Parameters: []*Parameter{
 		{
 			Label:      ArgumentLabelNotRequired,
@@ -345,7 +345,7 @@ Returns true if the object conforms to the given type at runtime
 const GetTypeFunctionName = "getType"
 
 var GetTypeFunctionType = &FunctionType{
-	Purity: PureFunction,
+	Purity: ViewFunction,
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		MetaType,
 	),
@@ -360,7 +360,7 @@ Returns the type of the value
 const ToStringFunctionName = "toString"
 
 var ToStringFunctionType = &FunctionType{
-	Purity: PureFunction,
+	Purity: ViewFunction,
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		StringType,
 	),
@@ -375,7 +375,7 @@ A textual representation of this object
 const ToBigEndianBytesFunctionName = "toBigEndianBytes"
 
 var toBigEndianBytesFunctionType = &FunctionType{
-	Purity: PureFunction,
+	Purity: ViewFunction,
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		ByteArrayType,
 	),
@@ -825,7 +825,7 @@ self / other, saturating at the numeric bounds instead of overflowing.
 func addSaturatingArithmeticFunctions(t SaturatingArithmeticType, members map[string]MemberResolver) {
 
 	arithmeticFunctionType := &FunctionType{
-		Purity: PureFunction,
+		Purity: ViewFunction,
 		Parameters: []*Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
@@ -1957,7 +1957,7 @@ func ArrayInsertFunctionType(elementType Type) *FunctionType {
 func ArrayConcatFunctionType(arrayType Type) *FunctionType {
 	typeAnnotation := NewTypeAnnotation(arrayType)
 	return &FunctionType{
-		Purity: PureFunction,
+		Purity: ViewFunction,
 		Parameters: []*Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
@@ -1971,7 +1971,7 @@ func ArrayConcatFunctionType(arrayType Type) *FunctionType {
 
 func ArrayFirstIndexFunctionType(elementType Type) *FunctionType {
 	return &FunctionType{
-		Purity: PureFunction,
+		Purity: ViewFunction,
 		Parameters: []*Parameter{
 			{
 				Identifier:     "of",
@@ -1985,7 +1985,7 @@ func ArrayFirstIndexFunctionType(elementType Type) *FunctionType {
 }
 func ArrayContainsFunctionType(elementType Type) *FunctionType {
 	return &FunctionType{
-		Purity: PureFunction,
+		Purity: ViewFunction,
 		Parameters: []*Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
@@ -2031,7 +2031,7 @@ func ArrayAppendFunctionType(elementType Type) *FunctionType {
 
 func ArraySliceFunctionType(elementType Type) *FunctionType {
 	return &FunctionType{
-		Purity: PureFunction,
+		Purity: ViewFunction,
 		Parameters: []*Parameter{
 			{
 				Identifier:     "from",
@@ -2517,12 +2517,12 @@ type FunctionPurity int
 
 const (
 	ImpureFunction = 0
-	PureFunction   = 1
+	ViewFunction   = 1
 )
 
 func Purity(b bool) FunctionPurity {
 	if b {
-		return PureFunction
+		return ViewFunction
 	}
 	return ImpureFunction
 }
@@ -2531,7 +2531,7 @@ func (p FunctionPurity) String() string {
 	if p == ImpureFunction {
 		return ""
 	}
-	return "pure"
+	return "view"
 }
 
 type FunctionType struct {
@@ -3254,7 +3254,7 @@ func init() {
 
 func NumberConversionFunctionType(numberType Type) *FunctionType {
 	return &FunctionType{
-		Purity: PureFunction,
+		Purity: ViewFunction,
 		Parameters: []*Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
@@ -3289,7 +3289,7 @@ func baseFunctionVariable(name string, ty *FunctionType, docString string) *Vari
 }
 
 var AddressConversionFunctionType = &FunctionType{
-	Purity: PureFunction,
+	Purity: ViewFunction,
 	Parameters: []*Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
@@ -3380,7 +3380,7 @@ func init() {
 	}
 
 	functionType := &FunctionType{
-		Purity:               PureFunction,
+		Purity:               ViewFunction,
 		ReturnTypeAnnotation: NewTypeAnnotation(StringType),
 	}
 
@@ -3414,7 +3414,7 @@ func init() {
 }
 
 var StringTypeEncodeHexFunctionType = &FunctionType{
-	Purity: PureFunction,
+	Purity: ViewFunction,
 	Parameters: []*Parameter{
 		{
 			Label:      ArgumentLabelNotRequired,
@@ -3431,7 +3431,7 @@ var StringTypeEncodeHexFunctionType = &FunctionType{
 
 func pathConversionFunctionType(pathType Type) *FunctionType {
 	return &FunctionType{
-		Purity: PureFunction,
+		Purity: ViewFunction,
 		Parameters: []*Parameter{
 			{
 				Identifier:     "identifier",
@@ -3467,7 +3467,7 @@ func init() {
 		baseFunctionVariable(
 			typeName,
 			&FunctionType{
-				Purity:               PureFunction,
+				Purity:               ViewFunction,
 				TypeParameters:       []*TypeParameter{{Name: "T"}},
 				ReturnTypeAnnotation: NewTypeAnnotation(MetaType),
 			},
@@ -4561,7 +4561,7 @@ func (t *DictionaryType) initializeMemberResolvers() {
 
 func DictionaryContainsKeyFunctionType(t *DictionaryType) *FunctionType {
 	return &FunctionType{
-		Purity: PureFunction,
+		Purity: ViewFunction,
 		Parameters: []*Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
@@ -4909,7 +4909,7 @@ func (t *AddressType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 const AddressTypeToBytesFunctionName = `toBytes`
 
 var AddressTypeToBytesFunctionType = &FunctionType{
-	Purity: PureFunction,
+	Purity: ViewFunction,
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		ByteArrayType,
 	),
@@ -5317,8 +5317,8 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 			return false
 		}
 
-		// pure functions are subtypes of impure functions
-		if typedSubType.Purity != typedSuperType.Purity && typedSubType.Purity != PureFunction {
+		// view functions are subtypes of impure functions
+		if typedSubType.Purity != typedSuperType.Purity && typedSubType.Purity != ViewFunction {
 			return false
 		}
 
@@ -6200,7 +6200,7 @@ func CapabilityTypeBorrowFunctionType(borrowType Type) *FunctionType {
 	}
 
 	return &FunctionType{
-		Purity:         PureFunction,
+		Purity:         ViewFunction,
 		TypeParameters: typeParameters,
 		ReturnTypeAnnotation: NewTypeAnnotation(
 			&OptionalType{
@@ -6221,7 +6221,7 @@ func CapabilityTypeCheckFunctionType(borrowType Type) *FunctionType {
 	}
 
 	return &FunctionType{
-		Purity:               PureFunction,
+		Purity:               ViewFunction,
 		TypeParameters:       typeParameters,
 		ReturnTypeAnnotation: NewTypeAnnotation(BoolType),
 	}
@@ -6446,7 +6446,7 @@ var PublicKeyArrayType = &VariableSizedType{
 }
 
 var PublicKeyVerifyFunctionType = &FunctionType{
-	Purity:         PureFunction,
+	Purity:         ViewFunction,
 	TypeParameters: []*TypeParameter{},
 	Parameters: []*Parameter{
 		{
@@ -6474,7 +6474,7 @@ var PublicKeyVerifyFunctionType = &FunctionType{
 }
 
 var PublicKeyVerifyPoPFunctionType = &FunctionType{
-	Purity:         PureFunction,
+	Purity:         ViewFunction,
 	TypeParameters: []*TypeParameter{},
 	Parameters: []*Parameter{
 		{

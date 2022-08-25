@@ -646,8 +646,8 @@ func prepareFields(fieldTypes []cadence.Field, results typePreparationResults) [
 }
 
 func preparePurity(purity cadence.FunctionPurity) string {
-	if purity == cadence.PureFunction {
-		return "pure"
+	if purity == cadence.ViewFunction {
+		return "view"
 	}
 	return "impure"
 }

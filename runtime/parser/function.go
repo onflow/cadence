@@ -26,10 +26,10 @@ import (
 func parsePurityAnnotation(p *parser) ast.FunctionPurity {
 	// get the purity annotation (if one exists) and skip it
 	switch p.current.Value {
-	case keywordPure:
+	case keywordView:
 		p.next()
 		p.skipSpaceAndComments(true)
-		return ast.PureFunction
+		return ast.ViewFunction
 	}
 	return ast.UnspecifiedPurity
 }

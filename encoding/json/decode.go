@@ -911,8 +911,8 @@ func (d *Decoder) decodeFieldType(valueJSON any, results typeDecodingResults) ca
 
 func (d *Decoder) decodePurity(purity any) cadence.FunctionPurity {
 	functionPurity := toString(purity)
-	if functionPurity == "pure" {
-		return cadence.PureFunction
+	if functionPurity == "view" {
+		return cadence.ViewFunction
 	}
 	return cadence.ImpureFunction
 }
@@ -1095,7 +1095,10 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 		returnValue := obj.Get(returnKey)
 		parametersValue := obj.Get(parametersKey)
 		idValue := obj.Get(typeIDKey)
-		purity := obj.Get(purityKey)
+		purity, hasPurity := obj[purityKey]
+		if !hasPurity {
+			purity = "impure"
+		}
 		return d.decodeFunctionType(returnValue, parametersValue, idValue, purity, results)
 	case "Restriction":
 		restrictionsValue := obj.Get(restrictionsKey)

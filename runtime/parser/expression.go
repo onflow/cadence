@@ -847,9 +847,9 @@ func defineIdentifierExpression() {
 					token.Range.StartPos,
 				), nil
 
-			case keywordPure:
+			case keywordView:
 				p.next()
-				return parseFunctionExpression(p, token, ast.PureFunction)
+				return parseFunctionExpression(p, token, ast.ViewFunction)
 			case keywordFun:
 				return parseFunctionExpression(p, token, ast.UnspecifiedPurity)
 

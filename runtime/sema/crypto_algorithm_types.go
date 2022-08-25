@@ -111,7 +111,7 @@ func (algo SignatureAlgorithm) DocString() string {
 const HashAlgorithmTypeHashFunctionName = "hash"
 
 var HashAlgorithmTypeHashFunctionType = &FunctionType{
-	Purity: PureFunction,
+	Purity: ViewFunction,
 	Parameters: []*Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
@@ -131,7 +131,7 @@ Returns the hash of the given data
 const HashAlgorithmTypeHashWithTagFunctionName = "hashWithTag"
 
 var HashAlgorithmTypeHashWithTagFunctionType = &FunctionType{
-	Purity: PureFunction,
+	Purity: ViewFunction,
 	Parameters: []*Parameter{
 		{
 			Label:      ArgumentLabelNotRequired,

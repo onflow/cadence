@@ -263,7 +263,7 @@ func TestParseVariableDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseDeclarations("pure var x = 1", nil)
+		_, errs := ParseDeclarations("view var x = 1", nil)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -973,11 +973,11 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		)
 	})
 
-	t.Run("pure function", func(t *testing.T) {
+	t.Run("view function", func(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseDeclarations("pure fun foo (): X { }", nil)
+		result, errs := ParseDeclarations("view fun foo (): X { }", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -994,7 +994,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 							EndPos:   ast.Position{Line: 1, Column: 14, Offset: 14},
 						},
 					},
-					Purity: ast.PureFunction,
+					Purity: ast.ViewFunction,
 					ReturnTypeAnnotation: &ast.TypeAnnotation{
 						Type: &ast.NominalType{
 							Identifier: ast.Identifier{
@@ -1023,7 +1023,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseDeclarations("pure pure fun foo (): X { }", nil)
+		_, errs := ParseDeclarations("view view fun foo (): X { }", nil)
 		require.Equal(t, 1, len(errs))
 		require.Equal(t, errs[0], &SyntaxError{
 			Message: "invalid second purity modifier",
@@ -2070,12 +2070,12 @@ func TestParseCompositeDeclaration(t *testing.T) {
 		)
 	})
 
-	t.Run("struct with pure member", func(t *testing.T) {
+	t.Run("struct with view member", func(t *testing.T) {
 
 		t.Parallel()
 
 		result, errs := ParseDeclarations(`struct S { 
-			pure fun foo() {}
+			view fun foo() {}
 		}`, nil)
 		require.Empty(t, errs)
 
@@ -2090,7 +2090,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 					},
 					Members: ast.NewUnmeteredMembers(
 						[]ast.Declaration{&ast.FunctionDeclaration{
-							Purity: ast.PureFunction,
+							Purity: ast.ViewFunction,
 							Access: ast.AccessNotSpecified,
 							ParameterList: &ast.ParameterList{
 								Range: ast.Range{
@@ -2133,12 +2133,12 @@ func TestParseCompositeDeclaration(t *testing.T) {
 		)
 	})
 
-	t.Run("struct with pure initializer", func(t *testing.T) {
+	t.Run("struct with view initializer", func(t *testing.T) {
 
 		t.Parallel()
 
 		result, errs := ParseDeclarations(`struct S { 
-			pure init() {}
+			view init() {}
 		}`, nil)
 		require.Empty(t, errs)
 
@@ -2155,7 +2155,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 						[]ast.Declaration{&ast.SpecialFunctionDeclaration{
 							Kind: common.DeclarationKindInitializer,
 							FunctionDeclaration: &ast.FunctionDeclaration{
-								Purity: ast.PureFunction,
+								Purity: ast.ViewFunction,
 								Identifier: ast.Identifier{
 									Identifier: "init",
 									Pos:        ast.Position{Offset: 20, Line: 2, Column: 8},
@@ -2188,18 +2188,18 @@ func TestParseCompositeDeclaration(t *testing.T) {
 		)
 	})
 
-	t.Run("resource with pure destructor", func(t *testing.T) {
+	t.Run("resource with view destructor", func(t *testing.T) {
 
 		t.Parallel()
 
 		_, errs := ParseDeclarations(`resource S { 
-			pure destroy() {}
+			view destroy() {}
 		}`, nil)
 
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid pure annotation on destructor",
+					Message: "invalid view annotation on destructor",
 					Pos:     ast.Position{Offset: 17, Line: 2, Column: 3},
 				},
 			},
@@ -2207,12 +2207,12 @@ func TestParseCompositeDeclaration(t *testing.T) {
 		)
 	})
 
-	t.Run("resource with pure field", func(t *testing.T) {
+	t.Run("resource with view field", func(t *testing.T) {
 
 		t.Parallel()
 
 		_, errs := ParseDeclarations(`struct S { 
-			pure foo: Int
+			view foo: Int
 		}`, nil)
 
 		utils.AssertEqualWithDiff(t,
@@ -2510,12 +2510,12 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 		)
 	})
 
-	t.Run("struct with pure member", func(t *testing.T) {
+	t.Run("struct with view member", func(t *testing.T) {
 
 		t.Parallel()
 
 		result, errs := ParseDeclarations(`struct interface S { 
-			pure fun foo() {}
+			view fun foo() {}
 		}`, nil)
 		require.Empty(t, errs)
 
@@ -2530,7 +2530,7 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 					},
 					Members: ast.NewUnmeteredMembers(
 						[]ast.Declaration{&ast.FunctionDeclaration{
-							Purity: ast.PureFunction,
+							Purity: ast.ViewFunction,
 							Access: ast.AccessNotSpecified,
 							ParameterList: &ast.ParameterList{
 								Range: ast.Range{

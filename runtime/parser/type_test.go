@@ -1037,16 +1037,16 @@ func TestParseFunctionType(t *testing.T) {
 		)
 	})
 
-	t.Run("pure function type", func(t *testing.T) {
+	t.Run("view function type", func(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseType("(pure ():Void)", nil)
+		result, errs := ParseType("(view ():Void)", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
 			&ast.FunctionType{
-				PurityAnnotation:         ast.PureFunction,
+				PurityAnnotation:         ast.ViewFunction,
 				ParameterTypeAnnotations: nil,
 				ReturnTypeAnnotation: &ast.TypeAnnotation{
 					IsResource: false,
