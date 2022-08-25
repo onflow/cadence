@@ -805,7 +805,7 @@ func (checker *Checker) declareEnumConstructor(
 
 func EnumConstructorType(compositeType *CompositeType) *FunctionType {
 	return &FunctionType{
-		Purity:        PureFunction,
+		Purity:        ViewFunction,
 		IsConstructor: true,
 		Parameters: []*Parameter{
 			{
@@ -852,8 +852,8 @@ func (checker *Checker) initializerPurity(initializers []*ast.SpecialFunctionDec
 		purity := PurityFromAnnotation(firstInitializer.FunctionDeclaration.Purity)
 		return purity
 	}
-	// a composite with no initializer is pure because it runs no code
-	return PureFunction
+	// a composite with no initializer is view because it runs no code
+	return ViewFunction
 }
 
 func (checker *Checker) initializerParameters(initializers []*ast.SpecialFunctionDeclaration) []*Parameter {
@@ -1150,7 +1150,7 @@ func (checker *Checker) memberSatisfied(compositeMember, interfaceMember *Member
 			}
 
 			// Functions are covariant in their purity
-			if compositeMemberFunctionType.Purity != interfaceMemberFunctionType.Purity && compositeMemberFunctionType.Purity != PureFunction {
+			if compositeMemberFunctionType.Purity != interfaceMemberFunctionType.Purity && compositeMemberFunctionType.Purity != ViewFunction {
 				return false
 			}
 

@@ -32,20 +32,20 @@ func TestCheckPuritySubtyping(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("pure <: impure", func(t *testing.T) {
+	t.Run("view <: impure", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
-        pure fun foo() {}
+        view fun foo() {}
         let x: ((): Void) = foo
         `)
 
 		require.NoError(t, err)
 	})
 
-	t.Run("pure <: pure", func(t *testing.T) {
+	t.Run("view <: view", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
-        pure fun foo() {}
+        view fun foo() {}
         let x: (pure (): Void) = foo
         `)
 
@@ -62,11 +62,11 @@ func TestCheckPuritySubtyping(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("impure <: pure", func(t *testing.T) {
+	t.Run("impure <: view", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         fun foo() {}
-        let x: (pure (): Void) = foo
+        let x: (view (): Void) = foo
         `)
 
 		errs := ExpectCheckerErrors(t, err, 1)
@@ -77,8 +77,8 @@ func TestCheckPuritySubtyping(t *testing.T) {
 	t.Run("contravariant ok", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
-        pure fun foo(x:((): Void)) {}
-        let x: (pure ((pure (): Void)): Void) = foo
+        view fun foo(x:((): Void)) {}
+        let x: (view ((view (): Void)): Void) = foo
         `)
 
 		require.NoError(t, err)
@@ -87,8 +87,8 @@ func TestCheckPuritySubtyping(t *testing.T) {
 	t.Run("contravariant error", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
-        pure fun foo(f:(pure (): Void)) {}
-        let x: (pure (((): Void)): Void) = foo
+        view fun foo(f:(view (): Void)) {}
+        let x: (view (((): Void)): Void) = foo
         `)
 
 		errs := ExpectCheckerErrors(t, err, 1)
@@ -100,13 +100,13 @@ func TestCheckPuritySubtyping(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         struct interface I {
-            pure fun foo()
+            view fun foo()
             fun bar()
         }
 
         struct S: I {
-            pure fun foo() {}
-            pure fun bar() {}
+            view fun foo() {}
+            view fun bar() {}
         }
         `)
 
@@ -117,7 +117,7 @@ func TestCheckPuritySubtyping(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         struct interface I {
-            pure fun foo()
+            view fun foo()
             fun bar() 
         }
 
@@ -136,11 +136,11 @@ func TestCheckPuritySubtyping(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         struct interface I {
-            pure init()
+            view init()
         }
 
         struct S: I {
-            pure init() {}
+            view init() {}
         }
         `)
 
@@ -151,7 +151,7 @@ func TestCheckPuritySubtyping(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         struct interface I {
-            pure init()
+            view init()
         }
 
         struct S: I {
@@ -172,7 +172,7 @@ func TestCheckPuritySubtyping(t *testing.T) {
         }
 
         struct S: I {
-            pure init() {}
+            view init() {}
         }
         `)
 

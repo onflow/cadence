@@ -3486,7 +3486,7 @@ var typeFunction = NewUnmeteredHostFunctionValue(
 		return NewTypeValue(invocation.Interpreter, staticType)
 	},
 	&sema.FunctionType{
-		Purity:               sema.PureFunction,
+		Purity:               sema.ViewFunction,
 		ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.MetaType),
 	},
 )
@@ -3512,7 +3512,7 @@ var stringFunction = func() Value {
 			return emptyString
 		},
 		&sema.FunctionType{
-			Purity: sema.PureFunction,
+			Purity: sema.ViewFunction,
 			ReturnTypeAnnotation: sema.NewTypeAnnotation(
 				sema.StringType,
 			),

@@ -1401,7 +1401,7 @@ type FunctionPurity int
 
 const (
 	ImpureFunction = iota
-	PureFunction   = 1
+	ViewFunction   = 1
 )
 
 type FunctionType struct {

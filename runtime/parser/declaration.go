@@ -117,7 +117,7 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 
 				return parseTransactionDeclaration(p, docString)
 
-			case keywordPure:
+			case keywordView:
 				if purity != ast.UnspecifiedPurity {
 					return nil, p.syntaxError("invalid second purity modifier")
 				}
@@ -1109,7 +1109,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				}
 				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, docString)
 
-			case keywordPure:
+			case keywordView:
 				if purity != ast.UnspecifiedPurity {
 					return nil, p.syntaxError("invalid second purity modifier")
 				}
@@ -1253,8 +1253,8 @@ func parseSpecialFunctionDeclaration(
 		declarationKind = common.DeclarationKindInitializer
 
 	case keywordDestroy:
-		if purity == ast.PureFunction {
-			return nil, NewSyntaxError(*purityPos, "invalid pure annotation on destructor")
+		if purity == ast.ViewFunction {
+			return nil, NewSyntaxError(*purityPos, "invalid view annotation on destructor")
 		}
 		declarationKind = common.DeclarationKindDestructor
 

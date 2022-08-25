@@ -54,7 +54,7 @@ Returns the public account for the given address
 `
 
 var getAccountFunctionType = &sema.FunctionType{
-	Purity: sema.PureFunction,
+	Purity: sema.ViewFunction,
 	Parameters: []*sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
@@ -100,7 +100,7 @@ Returns the block at the given height. If the given block does not exist the fun
 `
 
 var getBlockFunctionType = &sema.FunctionType{
-	Purity: sema.PureFunction,
+	Purity: sema.ViewFunction,
 	Parameters: []*sema.Parameter{
 		{
 			Label:      "at",

@@ -9683,7 +9683,7 @@ func TestHostFunctionStaticType(t *testing.T) {
 			interpreter.ConvertSemaToStaticType(
 				nil,
 				&sema.FunctionType{
-					Purity:               sema.PureFunction,
+					Purity:               sema.ViewFunction,
 					ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.MetaType),
 				},
 			),

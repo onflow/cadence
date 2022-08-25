@@ -69,7 +69,7 @@ If any error is encountered while decoding, the program aborts.
 const rlpDecodeStringFunctionName = "decodeString"
 
 var rlpDecodeStringFunctionType = &sema.FunctionType{
-	Purity: sema.PureFunction,
+	Purity: sema.ViewFunction,
 	Parameters: []*sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
@@ -144,7 +144,7 @@ If any error is encountered while decoding, the program aborts.
 const rlpDecodeListFunctionName = "decodeList"
 
 var rlpDecodeListFunctionType = &sema.FunctionType{
-	Purity: sema.PureFunction,
+	Purity: sema.ViewFunction,
 	Parameters: []*sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
