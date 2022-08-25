@@ -1055,6 +1055,25 @@ func TestInterpretEqualOperator(t *testing.T) {
       fun testUnicodeStrings(): Bool {
           return "caf\u{E9}" == "cafe\u{301}"
       }
+
+	  fun testEqualPaths(): Bool {
+		// different domains
+		return /public/foo == /public/foo &&
+			  /private/bar == /private/bar &&
+			  /storage/baz == /storage/baz
+	  }
+
+	  fun testUnequalPaths(): Bool {
+		return /public/foo == /public/foofoo ||
+			  /private/bar == /private/barbar ||
+			  /storage/baz == /storage/bazbaz
+	  }
+
+	  fun testCastedPaths(): Bool {
+		let foo: StoragePath = /storage/foo
+		let bar: PublicPath = /public/foo
+		return (foo as Path) == (bar as Path)
+	  }
     `)
 
 	for name, expected := range map[string]bool{
@@ -1067,6 +1086,9 @@ func TestInterpretEqualOperator(t *testing.T) {
 		"testEqualStrings":    true,
 		"testUnequalStrings":  false,
 		"testUnicodeStrings":  true,
+		"testEqualPaths":      true,
+		"testUnequalPaths":    false,
+		"testCastedPaths":     false,
 	} {
 		t.Run(name, func(t *testing.T) {
 			value, err := inter.Invoke(name)
