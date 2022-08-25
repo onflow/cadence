@@ -1056,24 +1056,24 @@ func TestInterpretEqualOperator(t *testing.T) {
           return "caf\u{E9}" == "cafe\u{301}"
       }
 
-	  fun testEqualPaths(): Bool {
-		// different domains
-		return /public/foo == /public/foo &&
-			  /private/bar == /private/bar &&
-			  /storage/baz == /storage/baz
-	  }
+      fun testEqualPaths(): Bool {
+          // different domains
+          return /public/foo == /public/foo &&
+                 /private/bar == /private/bar &&
+                 /storage/baz == /storage/baz
+       }
 
-	  fun testUnequalPaths(): Bool {
-		return /public/foo == /public/foofoo ||
-			  /private/bar == /private/barbar ||
-			  /storage/baz == /storage/bazbaz
-	  }
+       fun testUnequalPaths(): Bool {
+          return /public/foo == /public/foofoo ||
+                 /private/bar == /private/barbar ||
+                 /storage/baz == /storage/bazbaz
+       }
 
-	  fun testCastedPaths(): Bool {
-		let foo: StoragePath = /storage/foo
-		let bar: PublicPath = /public/foo
-		return (foo as Path) == (bar as Path)
-	  }
+       fun testCastedPaths(): Bool {
+          let foo: StoragePath = /storage/foo
+          let bar: PublicPath = /public/foo
+          return (foo as Path) == (bar as Path)
+       }
     `)
 
 	for name, expected := range map[string]bool{
@@ -3964,7 +3964,7 @@ func TestInterpretImportError(t *testing.T) {
 	importedChecker1 = parseAndCheck(importedCode1, importedLocation1)
 
 	const importedCode2 = `
-	  import realAnswer from "imported1"
+       import realAnswer from "imported1"
 
       pub fun answer(): Int {
           return realAnswer()
@@ -4847,9 +4847,9 @@ func TestInterpretStructureFunctionBindingInside(t *testing.T) {
 	//   and test case once bound function types are supported:
 	//
 	//   fun test(): X {
-	//   	let x = X()
-	//   	let bar = x.foo()
-	//   	return bar()
+	//        let x = X()
+	//        let bar = x.foo()
+	//        return bar()
 	//   }
 
 	inter := parseCheckAndInterpret(t, `
@@ -5876,9 +5876,9 @@ func TestInterpretPathToString(t *testing.T) {
 			inter := parseCheckAndInterpret(t,
 				fmt.Sprintf(
 					`
-					  let x: %s = %s
-					  let y: String = x.toString()
-					`,
+                           let x: %s = %s
+                           let y: String = x.toString()
+                         `,
 					ty,
 					val,
 				))
@@ -6860,9 +6860,9 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 		// TODO:
 		//// Struct
 		//"S": {
-		//	literal:            `s`,
-		//	ty:                 sType,
-		//	notAsDictionaryKey: true,
+		//     literal:            `s`,
+		//     ty:                 sType,
+		//     notAsDictionaryKey: true,
 		//},
 	}
 
