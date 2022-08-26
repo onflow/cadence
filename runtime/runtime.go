@@ -203,13 +203,13 @@ func reportMetric(
 
 // interpreterRuntime is an interpreter-based version of the Flow runtime.
 type interpreterRuntime struct {
-	defaultConfig Config
+	DefaultConfig Config
 }
 
 // NewInterpreterRuntime returns a interpreter-based version of the Flow runtime.
 func NewInterpreterRuntime(defaultConfig Config) Runtime {
 	return interpreterRuntime{
-		defaultConfig: defaultConfig,
+		DefaultConfig: defaultConfig,
 	}
 }
 
@@ -508,7 +508,7 @@ func (r interpreterRuntime) ParseAndCheckProgram(
 
 	environment := context.Environment
 	if environment == nil {
-		environment = NewBaseInterpreterEnvironment(r.defaultConfig)
+		environment = NewBaseInterpreterEnvironment(r.DefaultConfig)
 	}
 	environment.Configure(
 		context.Interface,
@@ -541,7 +541,7 @@ func (r interpreterRuntime) Storage(context Context) (*Storage, *interpreter.Int
 
 	environment := context.Environment
 	if environment == nil {
-		environment = NewBaseInterpreterEnvironment(r.defaultConfig)
+		environment = NewBaseInterpreterEnvironment(r.DefaultConfig)
 	}
 	environment.Configure(
 		context.Interface,

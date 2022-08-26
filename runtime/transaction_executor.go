@@ -107,7 +107,7 @@ func (executor *interpreterTransactionExecutor) preprocess() (err error) {
 
 	environment := context.Environment
 	if environment == nil {
-		environment = NewBaseInterpreterEnvironment(interpreterRuntime.defaultConfig)
+		environment = NewBaseInterpreterEnvironment(interpreterRuntime.DefaultConfig)
 	}
 	environment.Configure(
 		runtimeInterface,

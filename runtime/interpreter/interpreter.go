@@ -631,10 +631,14 @@ func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 		}
 
 		interpreterErr := err.(Error)
-		interpreterErr.StackTrace = interpreter.sharedState.callStack.Invocations[:]
+		interpreterErr.StackTrace = interpreter.CallStack()
 
 		onError(interpreterErr)
 	}
+}
+
+func (interpreter *Interpreter) CallStack() []Invocation {
+	return interpreter.sharedState.callStack.Invocations[:]
 }
 
 func (interpreter *Interpreter) VisitProgram(program *ast.Program) ast.Repr {

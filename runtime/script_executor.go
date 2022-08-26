@@ -108,7 +108,7 @@ func (executor *interpreterScriptExecutor) preprocess() (err error) {
 
 	environment := context.Environment
 	if environment == nil {
-		environment = NewScriptInterpreterEnvironment(interpreterRuntime.defaultConfig)
+		environment = NewScriptInterpreterEnvironment(interpreterRuntime.DefaultConfig)
 	}
 	environment.Configure(
 		runtimeInterface,
