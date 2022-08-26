@@ -35,6 +35,9 @@ func TestInterpretTransactions(t *testing.T) {
 	t.Parallel()
 
 	t.Run("NoPrepareFunction", func(t *testing.T) {
+
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
           transaction {
             execute {
@@ -48,6 +51,9 @@ func TestInterpretTransactions(t *testing.T) {
 	})
 
 	t.Run("SetTransactionField", func(t *testing.T) {
+
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
           transaction {
 
@@ -68,6 +74,9 @@ func TestInterpretTransactions(t *testing.T) {
 	})
 
 	t.Run("PreConditions", func(t *testing.T) {
+
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
           transaction {
 
@@ -88,6 +97,9 @@ func TestInterpretTransactions(t *testing.T) {
 	})
 
 	t.Run("FailingPreConditions", func(t *testing.T) {
+
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
           transaction {
 
@@ -115,6 +127,9 @@ func TestInterpretTransactions(t *testing.T) {
 	})
 
 	t.Run("PostConditions", func(t *testing.T) {
+
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
           transaction {
 
@@ -139,6 +154,9 @@ func TestInterpretTransactions(t *testing.T) {
 	})
 
 	t.Run("FailingPostConditions", func(t *testing.T) {
+
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
           transaction {
 
@@ -170,6 +188,9 @@ func TestInterpretTransactions(t *testing.T) {
 	})
 
 	t.Run("MultipleTransactions", func(t *testing.T) {
+
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
           transaction {
             execute {
@@ -198,6 +219,9 @@ func TestInterpretTransactions(t *testing.T) {
 	})
 
 	t.Run("TooFewArguments", func(t *testing.T) {
+
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
           transaction {
             prepare(signer: AuthAccount) {}
@@ -209,6 +233,9 @@ func TestInterpretTransactions(t *testing.T) {
 	})
 
 	t.Run("TooManyArguments", func(t *testing.T) {
+
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
           transaction {
             execute {}
@@ -222,11 +249,11 @@ func TestInterpretTransactions(t *testing.T) {
         `)
 
 		signer1 := newTestAuthAccountValue(
-			inter,
+			nil,
 			interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 1},
 		)
 		signer2 := newTestAuthAccountValue(
-			inter,
+			nil,
 			interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 2},
 		)
 
@@ -240,6 +267,8 @@ func TestInterpretTransactions(t *testing.T) {
 	})
 
 	t.Run("Parameters", func(t *testing.T) {
+
+		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
           let values: [AnyStruct] = []
@@ -261,7 +290,7 @@ func TestInterpretTransactions(t *testing.T) {
 
 		prepareArguments := []interpreter.Value{
 			newTestAuthAccountValue(
-				inter,
+				nil,
 				interpreter.AddressValue{},
 			),
 		}
@@ -286,5 +315,4 @@ func TestInterpretTransactions(t *testing.T) {
 			arrayElements(inter, values.(*interpreter.ArrayValue)),
 		)
 	})
-
 }

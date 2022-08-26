@@ -201,8 +201,8 @@ func TestCheckAccessModifierInterfaceFunctionDeclaration(t *testing.T) {
 							access.Keyword(),
 						),
 						ParseAndCheckOptions{
-							Options: []sema.Option{
-								sema.WithAccessCheckMode(checkMode),
+							Config: &sema.Config{
+								AccessCheckMode: checkMode,
 							},
 						},
 					)
@@ -614,8 +614,8 @@ func TestCheckAccessModifierGlobalCompositeDeclaration(t *testing.T) {
 								body,
 							),
 							ParseAndCheckOptions{
-								Options: []sema.Option{
-									sema.WithAccessCheckMode(checkMode),
+								Config: &sema.Config{
+									AccessCheckMode: checkMode,
 								},
 							},
 						)
@@ -722,8 +722,8 @@ func TestCheckAccessCompositeFunction(t *testing.T) {
 							tearDownCode,
 						),
 						ParseAndCheckOptions{
-							Options: []sema.Option{
-								sema.WithAccessCheckMode(checkMode),
+							Config: &sema.Config{
+								AccessCheckMode: checkMode,
 							},
 						},
 					)
@@ -837,8 +837,8 @@ func TestCheckAccessInterfaceFunction(t *testing.T) {
 							tearDownCode,
 						),
 						ParseAndCheckOptions{
-							Options: []sema.Option{
-								sema.WithAccessCheckMode(checkMode),
+							Config: &sema.Config{
+								AccessCheckMode: checkMode,
 							},
 						},
 					)
@@ -948,8 +948,8 @@ func TestCheckAccessCompositeFieldRead(t *testing.T) {
 							tearDownCode,
 						),
 						ParseAndCheckOptions{
-							Options: []sema.Option{
-								sema.WithAccessCheckMode(checkMode),
+							Config: &sema.Config{
+								AccessCheckMode: checkMode,
 							},
 						},
 					)
@@ -1067,8 +1067,8 @@ func TestCheckAccessInterfaceFieldRead(t *testing.T) {
 							tearDownCode,
 						),
 						ParseAndCheckOptions{
-							Options: []sema.Option{
-								sema.WithAccessCheckMode(checkMode),
+							Config: &sema.Config{
+								AccessCheckMode: checkMode,
 							},
 						},
 					)
@@ -1183,8 +1183,8 @@ func TestCheckAccessCompositeFieldAssignmentAndSwap(t *testing.T) {
 							tearDownCode,
 						),
 						ParseAndCheckOptions{
-							Options: []sema.Option{
-								sema.WithAccessCheckMode(checkMode),
+							Config: &sema.Config{
+								AccessCheckMode: checkMode,
 							},
 						},
 					)
@@ -1326,8 +1326,8 @@ func TestCheckAccessInterfaceFieldWrite(t *testing.T) {
 							tearDownCode,
 						),
 						ParseAndCheckOptions{
-							Options: []sema.Option{
-								sema.WithAccessCheckMode(checkMode),
+							Config: &sema.Config{
+								AccessCheckMode: checkMode,
 							},
 						},
 					)
@@ -1421,8 +1421,8 @@ func TestCheckAccessCompositeFieldVariableDeclarationWithSecondValue(t *testing.
 						access.Keyword(),
 					),
 					ParseAndCheckOptions{
-						Options: []sema.Option{
-							sema.WithAccessCheckMode(checkMode),
+						Config: &sema.Config{
+							AccessCheckMode: checkMode,
 						},
 					},
 				)
@@ -1533,8 +1533,8 @@ func TestCheckAccessInterfaceFieldVariableDeclarationWithSecondValue(t *testing.
 						access.Keyword(),
 					),
 					ParseAndCheckOptions{
-						Options: []sema.Option{
-							sema.WithAccessCheckMode(checkMode),
+						Config: &sema.Config{
+							AccessCheckMode: checkMode,
 						},
 					},
 				)
@@ -1639,15 +1639,14 @@ func TestCheckAccessImportGlobalValue(t *testing.T) {
                        import a, b, c from "imported"
                     `,
 					ParseAndCheckOptions{
-						Options: []sema.Option{
-							sema.WithAccessCheckMode(checkMode),
-							sema.WithImportHandler(
-								func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
-									return sema.ElaborationImport{
-										Elaboration: importedChecker.Elaboration,
-									}, nil
-								},
-							),
+
+						Config: &sema.Config{
+							AccessCheckMode: checkMode,
+							ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+								return sema.ElaborationImport{
+									Elaboration: importedChecker.Elaboration,
+								}, nil
+							},
 						},
 					},
 				)
@@ -1846,15 +1845,13 @@ func TestCheckAccessImportGlobalValueAssignmentAndSwap(t *testing.T) {
                   }
                 `,
 				ParseAndCheckOptions{
-					Options: []sema.Option{
-						sema.WithAccessCheckMode(checkMode),
-						sema.WithImportHandler(
-							func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
-								return sema.ElaborationImport{
-									Elaboration: imported.Elaboration,
-								}, nil
-							},
-						),
+					Config: &sema.Config{
+						AccessCheckMode: checkMode,
+						ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+							return sema.ElaborationImport{
+								Elaboration: imported.Elaboration,
+							}, nil
+						},
 					},
 				},
 			)
@@ -1893,14 +1890,12 @@ func TestCheckAccessImportGlobalValueVariableDeclarationWithSecondValue(t *testi
            }
         `,
 		ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithImportHandler(
-					func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
-						return sema.ElaborationImport{
-							Elaboration: imported.Elaboration,
-						}, nil
-					},
-				),
+			Config: &sema.Config{
+				ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+					return sema.ElaborationImport{
+						Elaboration: imported.Elaboration,
+					}, nil
+				},
 			},
 		},
 	)
@@ -2379,15 +2374,13 @@ func TestCheckAccountAccess(t *testing.T) {
 								importingCode,
 								ParseAndCheckOptions{
 									Location: test.location,
-									Options: []sema.Option{
-										sema.WithAccessCheckMode(checkMode),
-										sema.WithImportHandler(
-											func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
-												return sema.ElaborationImport{
-													Elaboration: importedChecker.Elaboration,
-												}, nil
-											},
-										),
+									Config: &sema.Config{
+										AccessCheckMode: checkMode,
+										ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+											return sema.ElaborationImport{
+												Elaboration: importedChecker.Elaboration,
+											}, nil
+										},
 									},
 								},
 							)

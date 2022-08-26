@@ -43,8 +43,8 @@ func TestCheckErrorShortCircuiting(t *testing.T) {
               let x: Type<X<X<X>>>? = nil
             `,
 			ParseAndCheckOptions{
-				Options: []sema.Option{
-					sema.WithErrorShortCircuitingEnabled(true),
+				Config: &sema.Config{
+					ErrorShortCircuitingEnabled: true,
 				},
 			},
 		)
@@ -71,28 +71,26 @@ func TestCheckErrorShortCircuiting(t *testing.T) {
                let b = B
             `,
 			ParseAndCheckOptions{
-				Options: []sema.Option{
-					sema.WithErrorShortCircuitingEnabled(true),
-					sema.WithImportHandler(
-						func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+				Config: &sema.Config{
+					ErrorShortCircuitingEnabled: true,
+					ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
 
-							_, err := ParseAndCheckWithOptions(t,
-								`
-                                  pub let x = X
-                                  pub let y = Y
-                                `,
-								ParseAndCheckOptions{
-									Location: utils.ImportedLocation,
-									Options: []sema.Option{
-										sema.WithErrorShortCircuitingEnabled(true),
-									},
+						_, err := ParseAndCheckWithOptions(t,
+							`
+                              pub let x = X
+                              pub let y = Y
+                            `,
+							ParseAndCheckOptions{
+								Location: utils.ImportedLocation,
+								Config: &sema.Config{
+									ErrorShortCircuitingEnabled: true,
 								},
-							)
-							require.Error(t, err)
+							},
+						)
+						require.Error(t, err)
 
-							return nil, err
-						},
-					),
+						return nil, err
+					},
 				},
 			},
 		)

@@ -19,6 +19,8 @@
 package stdlib
 
 import (
+	"fmt"
+
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
@@ -78,3 +80,22 @@ var AssertFunction = NewStandardLibraryFunction(
 		return interpreter.VoidValue{}
 	},
 )
+
+// AssertionError
+
+type AssertionError struct {
+	Message string
+	interpreter.LocationRange
+}
+
+var _ errors.UserError = AssertionError{}
+
+func (AssertionError) IsUserError() {}
+
+func (e AssertionError) Error() string {
+	const message = "assertion failed"
+	if e.Message == "" {
+		return message
+	}
+	return fmt.Sprintf("%s: %s", message, e.Message)
+}

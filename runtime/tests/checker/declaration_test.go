@@ -472,15 +472,13 @@ func TestCheckTopLevelContractRestriction(t *testing.T) {
           contract C {}
         `,
 		ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithValidTopLevelDeclarationsHandler(
-					func(_ common.Location) []common.DeclarationKind {
-						return []common.DeclarationKind{
-							common.DeclarationKindContract,
-							common.DeclarationKindImport,
-						}
-					},
-				),
+			Config: &sema.Config{
+				ValidTopLevelDeclarationsHandler: func(_ common.Location) []common.DeclarationKind {
+					return []common.DeclarationKind{
+						common.DeclarationKindContract,
+						common.DeclarationKindImport,
+					}
+				},
 			},
 		},
 	)
@@ -509,16 +507,14 @@ func TestCheckInvalidTopLevelContractRestriction(t *testing.T) {
 			_, err := ParseAndCheckWithOptions(t,
 				code,
 				ParseAndCheckOptions{
-					Options: []sema.Option{
-						sema.WithValidTopLevelDeclarationsHandler(
-							func(_ common.Location) []common.DeclarationKind {
-								return []common.DeclarationKind{
-									common.DeclarationKindContractInterface,
-									common.DeclarationKindContract,
-									common.DeclarationKindImport,
-								}
-							},
-						),
+					Config: &sema.Config{
+						ValidTopLevelDeclarationsHandler: func(_ common.Location) []common.DeclarationKind {
+							return []common.DeclarationKind{
+								common.DeclarationKindContractInterface,
+								common.DeclarationKindContract,
+								common.DeclarationKindImport,
+							}
+						},
 					},
 				},
 			)

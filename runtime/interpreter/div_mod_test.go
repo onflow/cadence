@@ -80,7 +80,7 @@ func TestDivModUInt8(t *testing.T) {
 		{0xff, 0xff, true},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, test := range tests {
@@ -155,7 +155,7 @@ func TestDivModUInt16(t *testing.T) {
 		{0xfff, 0xffff, true},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, test := range tests {
@@ -230,7 +230,7 @@ func TestDivModUInt32(t *testing.T) {
 		{0xffffffff, 0xffffffff, true},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, test := range tests {
@@ -395,7 +395,7 @@ func TestDivModUInt64(t *testing.T) {
 		{0xffffffffffffffff, 0xffffffffffffffff, true},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, test := range tests {
@@ -562,7 +562,7 @@ func TestDivModUInt128(t *testing.T) {
 		{uint128("0xffffffffffffffffffffffffffffffff"), uint128("0xffffffffffffffffffffffffffffffff"), true},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, test := range tests {
@@ -1235,7 +1235,7 @@ func TestDivModUInt256(t *testing.T) {
 		},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, test := range tests {
@@ -1311,7 +1311,7 @@ func TestDivInt8(t *testing.T) {
 		{-1, -1, true},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, test := range tests {
@@ -1377,7 +1377,7 @@ func TestModInt8(t *testing.T) {
 		{-1, -1, true},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, test := range tests {
@@ -1444,7 +1444,7 @@ func TestDivInt16(t *testing.T) {
 		{-1, -1, true},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, test := range tests {
@@ -1510,7 +1510,7 @@ func TestModInt16(t *testing.T) {
 		{-1, -1, true},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, test := range tests {
@@ -1577,7 +1577,7 @@ func TestDivInt32(t *testing.T) {
 		{-1, -1, true},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, test := range tests {
@@ -1643,7 +1643,7 @@ func TestModInt32(t *testing.T) {
 		{-1, -1, true},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, test := range tests {
@@ -1800,7 +1800,7 @@ func TestDivInt64(t *testing.T) {
 		{-1, -1, true},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, test := range tests {
@@ -1956,7 +1956,7 @@ func TestModInt64(t *testing.T) {
 		{-1, -1, true},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, test := range tests {
@@ -1975,7 +1975,7 @@ func TestDivModInt(t *testing.T) {
 
 	t.Parallel()
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, f := range []func(a, b IntValue){
@@ -2092,7 +2092,7 @@ func TestDivInt128(t *testing.T) {
 		{int128("-0x00000000000000000000000000000001"), int128("-0x00000000000000000000000000000001"), true},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, test := range tests {
@@ -2206,7 +2206,7 @@ func TestModInt128(t *testing.T) {
 		{int128("-0x00000000000000000000000000000001"), int128("-0x00000000000000000000000000000001"), true},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, test := range tests {
@@ -2663,7 +2663,7 @@ func TestDivInt256(t *testing.T) {
 		},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, test := range tests {
@@ -3119,7 +3119,7 @@ func TestModInt256(t *testing.T) {
 		},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, test := range tests {
@@ -3173,7 +3173,7 @@ func TestDivFix64(t *testing.T) {
 		{-1, -1, true},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, test := range tests {
@@ -3245,7 +3245,7 @@ func TestModFix64(t *testing.T) {
 		{-1, -1, true},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, test := range tests {
@@ -3289,7 +3289,7 @@ func TestDivModUFix64(t *testing.T) {
 		{ufix64MaxIntDividend + 1, 2, false},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, test := range tests {
@@ -3421,7 +3421,7 @@ func TestNegativeMod(t *testing.T) {
 			}
 		}
 
-		inter, err := NewInterpreter(nil, nil)
+		inter, err := NewInterpreter(nil, nil, &Config{})
 		require.NoError(t, err)
 
 		for _, test := range tests {

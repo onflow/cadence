@@ -28,6 +28,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/encoding/json"
+	"github.com/onflow/cadence/runtime/stdlib"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
@@ -491,12 +492,12 @@ func TestBLSVerifyPoP(t *testing.T) {
 	runtimeInterface := &testRuntimeInterface{
 		storage: storage,
 		validatePublicKey: func(
-			pk *PublicKey,
+			pk *stdlib.PublicKey,
 		) error {
 			return nil
 		},
 		bLSVerifyPOP: func(
-			pk *PublicKey,
+			pk *stdlib.PublicKey,
 			proof []byte,
 		) (bool, error) {
 			assert.Equal(t, pk.PublicKey, []byte{1, 2})
@@ -618,20 +619,23 @@ func TestBLSAggregatePublicKeys(t *testing.T) {
 	runtimeInterface := &testRuntimeInterface{
 		storage: storage,
 		validatePublicKey: func(
-			pk *PublicKey,
+			pk *stdlib.PublicKey,
 		) error {
 			return nil
 		},
 		blsAggregatePublicKeys: func(
-			keys []*PublicKey,
-		) (*PublicKey, error) {
+			keys []*stdlib.PublicKey,
+		) (*stdlib.PublicKey, error) {
 			assert.Equal(t, len(keys), 2)
 			ret := make([]byte, 0, len(keys))
 			for _, key := range keys {
 				ret = append(ret, key.PublicKey...)
 			}
 			called = true
-			return &PublicKey{PublicKey: ret, SignAlgo: SignatureAlgorithmBLS_BLS12_381}, nil
+			return &stdlib.PublicKey{
+				PublicKey: ret,
+				SignAlgo:  SignatureAlgorithmBLS_BLS12_381,
+			}, nil
 		},
 	}
 	addPublicKeyValidation(runtimeInterface, nil)

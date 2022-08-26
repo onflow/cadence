@@ -105,7 +105,7 @@ func (compiler *Compiler) VisitVariableDeclaration(declaration *ast.VariableDecl
 	// TODO: second value
 
 	identifier := declaration.Identifier.Identifier
-	targetType := compiler.Checker.Elaboration.VariableDeclarationTargetTypes[declaration]
+	targetType := compiler.Checker.Elaboration.VariableDeclarationTypes[declaration].TargetType
 	valType := compileValueType(targetType)
 	local := compiler.declareLocal(identifier, valType)
 	exp := declaration.Value.Accept(compiler).(ir.Expr)

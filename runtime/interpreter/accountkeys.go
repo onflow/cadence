@@ -32,7 +32,7 @@ var authAccountKeysStaticType StaticType = PrimitiveStaticTypeAuthAccountKeys
 
 // NewAuthAccountKeysValue constructs a AuthAccount.Keys value.
 func NewAuthAccountKeysValue(
-	inter *Interpreter,
+	gauge common.MemoryGauge,
 	address AddressValue,
 	addFunction FunctionValue,
 	getFunction FunctionValue,
@@ -56,7 +56,7 @@ func NewAuthAccountKeysValue(
 	}
 
 	return NewSimpleCompositeValue(
-		inter,
+		gauge,
 		authAccountKeysTypeID,
 		authAccountKeysStaticType,
 		nil,
@@ -74,7 +74,7 @@ var publicAccountKeysStaticType StaticType = PrimitiveStaticTypePublicAccountKey
 
 // NewPublicAccountKeysValue constructs a PublicAccount.Keys value.
 func NewPublicAccountKeysValue(
-	inter *Interpreter,
+	gauge common.MemoryGauge,
 	address AddressValue,
 	getFunction FunctionValue,
 ) Value {
@@ -94,7 +94,7 @@ func NewPublicAccountKeysValue(
 	}
 
 	return NewSimpleCompositeValue(
-		inter,
+		gauge,
 		publicAccountKeysTypeID,
 		publicAccountKeysStaticType,
 		nil,

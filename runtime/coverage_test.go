@@ -34,29 +34,31 @@ func TestRuntimeCoverage(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewInterpreterRuntime(Config{
+		CoverageReportingEnabled: true,
+	})
 
 	importedScript := []byte(`
-      pub fun answer(): Int {
-        var i = 0
-        while i < 42 {
-          i = i + 1
-        }
-        return i
-      }
-    `)
+     pub fun answer(): Int {
+       var i = 0
+       while i < 42 {
+         i = i + 1
+       }
+       return i
+     }
+   `)
 
 	script := []byte(`
-      import "imported"
+     import "imported"
 
-      pub fun main(): Int {
-          let answer = answer()
-          if answer != 42 {
-            panic("?!")
-          }
-          return answer
-        }
-    `)
+     pub fun main(): Int {
+         let answer = answer()
+         if answer != 42 {
+           panic("?!")
+         }
+         return answer
+       }
+   `)
 
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
@@ -73,15 +75,14 @@ func TestRuntimeCoverage(t *testing.T) {
 
 	coverageReport := NewCoverageReport()
 
-	runtime.SetCoverageReport(coverageReport)
-
 	value, err := runtime.ExecuteScript(
 		Script{
 			Source: script,
 		},
 		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
+			Interface:      runtimeInterface,
+			Location:       nextTransactionLocation(),
+			CoverageReport: coverageReport,
 		},
 	)
 	require.NoError(t, err)
@@ -93,26 +94,26 @@ func TestRuntimeCoverage(t *testing.T) {
 
 	require.JSONEq(t,
 		`
-        {
-          "coverage": {
-            "S.imported": {
-              "line_hits": {
-                "3": 1,
-                "4": 1,
-                "5": 42,
-                "7": 1
-              }
-            },
-            "t.0000000000000000000000000000000000000000000000000000000000000000": {
-              "line_hits": {
-                "5": 1,
-                "6": 1,
-                "9": 1
-              }
-            }
-          }
-        }
-        `,
+       {
+         "coverage": {
+           "S.imported": {
+             "line_hits": {
+               "3": 1,
+               "4": 1,
+               "5": 42,
+               "7": 1
+             }
+           },
+           "t.0000000000000000000000000000000000000000000000000000000000000000": {
+             "line_hits": {
+               "5": 1,
+               "6": 1,
+               "9": 1
+             }
+           }
+         }
+       }
+       `,
 		string(actual),
 	)
 }

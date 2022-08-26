@@ -1946,27 +1946,76 @@ func TestParseReference(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseExpression("& t as T", nil)
-	require.Empty(t, errs)
+	t.Run("valid", func(t *testing.T) {
 
-	utils.AssertEqualWithDiff(t,
-		&ast.ReferenceExpression{
-			Expression: &ast.IdentifierExpression{
-				Identifier: ast.Identifier{
-					Identifier: "t",
-					Pos:        ast.Position{Line: 1, Column: 2, Offset: 2},
+		t.Parallel()
+
+		result, errs := ParseExpression("& t as T", nil)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.ReferenceExpression{
+				Expression: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "t",
+						Pos:        ast.Position{Line: 1, Column: 2, Offset: 2},
+					},
+				},
+				Type: &ast.NominalType{
+					Identifier: ast.Identifier{
+						Identifier: "T",
+						Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+					},
+				},
+				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+			},
+			result,
+		)
+	})
+
+	t.Run("invalid: missing casting expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = `&y[z]`
+
+		_, errs := ParseExpression(code, nil)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected casting expression",
+					Pos: ast.Position{
+						Offset: 5,
+						Line:   1,
+						Column: 5,
+					},
 				},
 			},
-			Type: &ast.NominalType{
-				Identifier: ast.Identifier{
-					Identifier: "T",
-					Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+			errs,
+		)
+	})
+
+	t.Run("invalid: optional referenced value", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = `&x[y]? as &Z?`
+
+		_, errs := ParseExpression(code, nil)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected casting expression",
+					Pos: ast.Position{
+						Offset: 5,
+						Line:   1,
+						Column: 5,
+					},
 				},
 			},
-			StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-		},
-		result,
-	)
+			errs,
+		)
+	})
 }
 
 func TestParseNilCoelesceReference(t *testing.T) {
@@ -2167,7 +2216,6 @@ func TestParseCasts(t *testing.T) {
 			},
 			result,
 		)
-
 	})
 }
 
