@@ -89,8 +89,16 @@ func (NonStorable) ChildStorables() []atree.Storable {
 	return nil
 }
 
-// Value
-
+// Value is the Cadence value hierarchy which is heavily tied to the interpreter and persistent storage,
+// and has lots of implementation details.
+//
+// We do not want to expose those details to users
+// (for example, Cadence is used as a library in flow-go (FVM), in the Flow Go SDK, etc.),
+// because we want to be able to change the API and implementation details;
+// nor do we want to require users to Cadence (the library) to write lots of low-level/boilerplate code (e.g. setting up storage).
+//
+// To accomplish this, cadence.Value is the "user-facing" hierarchy that is easy to work with:
+// simple Go types that can be used without an interpreter or storage.
 type Value interface {
 	atree.Value
 	// Stringer provides `func String() string`
