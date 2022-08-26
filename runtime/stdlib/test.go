@@ -321,7 +321,6 @@ var testAssertFunctionType = &sema.FunctionType{
 			),
 		},
 		{
-			Label:      sema.ArgumentLabelNotRequired,
 			Identifier: "message",
 			TypeAnnotation: sema.NewTypeAnnotation(
 				sema.StringType,

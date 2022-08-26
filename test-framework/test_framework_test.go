@@ -100,11 +100,11 @@ func TestAssertFunction(t *testing.T) {
         }
 
         pub fun testAssertWithMessage() {
-            Test.assert(true, "some reason")
+            Test.assert(true, message: "some reason")
         }
 
         pub fun testAssertWithMessageFail() {
-            Test.assert(false, "some reason")
+            Test.assert(false, message: "some reason")
         }
     `
 
@@ -1048,15 +1048,15 @@ func TestPrettyPrintTestResults(t *testing.T) {
         import Test
 
         pub fun testFunc1() {
-            Test.assert(true, "should pass")
+            Test.assert(true, message: "should pass")
         }
 
         pub fun testFunc2() {
-            Test.assert(false, "unexpected error occurred")
+            Test.assert(false, message: "unexpected error occurred")
         }
 
         pub fun testFunc3() {
-            Test.assert(true, "should pass")
+            Test.assert(true, message: "should pass")
         }
 
         pub fun testFunc4() {
