@@ -15,8 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Based on https://github.com/wk8/go-ordered-map, Copyright Jean Rougé
- *
  */
 
 package stdlib
@@ -27,7 +25,7 @@ import (
 )
 
 // TestFramework is the interface to be implemented by the test providers.
-// Cadence standard library talk to the test providers via this interface.
+// Cadence standard library talks to test providers via this interface.
 // This is used as a way to inject test provider dependencies dynamically.
 //
 type TestFramework interface {

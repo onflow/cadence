@@ -21,7 +21,6 @@ package test
 import (
 	"context"
 	"fmt"
-	"github.com/onflow/cadence/runtime/stdlib"
 	"strings"
 
 	"github.com/rs/zerolog"
@@ -36,6 +35,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 // This Provides utility methods to easily run test-scripts.
