@@ -23,16 +23,18 @@ package sema
 type AccessCheckMode uint
 
 const (
+	// AccessCheckModeDefault indicates the default access check mode should be used.
+	AccessCheckModeDefault AccessCheckMode = iota
 	// AccessCheckModeStrict indicates that access modifiers are required
-	// and access checks are always enforced
-	AccessCheckModeStrict AccessCheckMode = iota
+	// and access checks are always enforced.
+	AccessCheckModeStrict
 	// AccessCheckModeNotSpecifiedRestricted indicates modifiers are optional.
 	// Access is assumed private if not specified
 	AccessCheckModeNotSpecifiedRestricted
 	// AccessCheckModeNotSpecifiedUnrestricted indicates access modifiers are optional.
 	// Access is assumed public if not specified
 	AccessCheckModeNotSpecifiedUnrestricted
-	// AccessCheckModeNone indicates access modifiers are optional and ignored
+	// AccessCheckModeNone indicates access modifiers are optional and ignored.
 	AccessCheckModeNone
 )
 

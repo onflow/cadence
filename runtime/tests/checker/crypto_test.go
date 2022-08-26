@@ -32,6 +32,11 @@ func TestCheckHashAlgorithmCases(t *testing.T) {
 
 	t.Parallel()
 
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	for _, value := range stdlib.BuiltinValues {
+		baseValueActivation.DeclareValue(value)
+	}
+
 	test := func(algorithm sema.CryptoAlgorithm) {
 
 		_, err := ParseAndCheckWithOptions(t,
@@ -42,10 +47,8 @@ func TestCheckHashAlgorithmCases(t *testing.T) {
 				algorithm.Name(),
 			),
 			ParseAndCheckOptions{
-				Options: []sema.Option{
-					sema.WithPredeclaredValues(
-						stdlib.BuiltinValues.ToSemaValueDeclarations(),
-					),
+				Config: &sema.Config{
+					BaseValueActivation: baseValueActivation,
 				},
 			},
 		)
@@ -62,15 +65,16 @@ func TestCheckHashAlgorithmConstructor(t *testing.T) {
 
 	t.Parallel()
 
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.HashAlgorithmConstructor)
+
 	_, err := ParseAndCheckWithOptions(t,
 		`
            let algo = HashAlgorithm(rawValue: 0)
         `,
 		ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithPredeclaredValues(
-					stdlib.BuiltinValues.ToSemaValueDeclarations(),
-				),
+			Config: &sema.Config{
+				BaseValueActivation: baseValueActivation,
 			},
 		},
 	)
@@ -82,6 +86,9 @@ func TestCheckHashAlgorithmHashFunctions(t *testing.T) {
 
 	t.Parallel()
 
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.HashAlgorithmConstructor)
+
 	_, err := ParseAndCheckWithOptions(t,
 		`
            let data: [UInt8] = [1, 2, 3]
@@ -89,10 +96,8 @@ func TestCheckHashAlgorithmHashFunctions(t *testing.T) {
            let result2: [UInt8] = HashAlgorithm.SHA2_256.hashWithTag(data, tag: "tag")
         `,
 		ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithPredeclaredValues(
-					stdlib.BuiltinValues.ToSemaValueDeclarations(),
-				),
+			Config: &sema.Config{
+				BaseValueActivation: baseValueActivation,
 			},
 		},
 	)
@@ -104,6 +109,9 @@ func TestCheckSignatureAlgorithmCases(t *testing.T) {
 
 	t.Parallel()
 
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.SignatureAlgorithmConstructor)
+
 	test := func(algorithm sema.CryptoAlgorithm) {
 
 		_, err := ParseAndCheckWithOptions(t,
@@ -114,10 +122,8 @@ func TestCheckSignatureAlgorithmCases(t *testing.T) {
 				algorithm.Name(),
 			),
 			ParseAndCheckOptions{
-				Options: []sema.Option{
-					sema.WithPredeclaredValues(
-						stdlib.BuiltinValues.ToSemaValueDeclarations(),
-					),
+				Config: &sema.Config{
+					BaseValueActivation: baseValueActivation,
 				},
 			},
 		)
@@ -134,15 +140,16 @@ func TestCheckSignatureAlgorithmConstructor(t *testing.T) {
 
 	t.Parallel()
 
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.SignatureAlgorithmConstructor)
+
 	_, err := ParseAndCheckWithOptions(t,
 		`
            let algo = SignatureAlgorithm(rawValue: 0)
         `,
 		ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithPredeclaredValues(
-					stdlib.BuiltinValues.ToSemaValueDeclarations(),
-				),
+			Config: &sema.Config{
+				BaseValueActivation: baseValueActivation,
 			},
 		},
 	)
@@ -154,6 +161,11 @@ func TestCheckVerifyPoP(t *testing.T) {
 
 	t.Parallel()
 
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	for _, valueDeclaration := range stdlib.BuiltinValues {
+		baseValueActivation.DeclareValue(valueDeclaration)
+	}
+
 	_, err := ParseAndCheckWithOptions(t,
 		`
            let key = PublicKey(
@@ -163,9 +175,8 @@ func TestCheckVerifyPoP(t *testing.T) {
            let x: Bool = key.verifyPoP([1, 2, 3])
         `,
 		ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithPredeclaredValues(stdlib.BuiltinFunctions.ToSemaValueDeclarations()),
-				sema.WithPredeclaredValues(stdlib.BuiltinValues.ToSemaValueDeclarations()),
+			Config: &sema.Config{
+				BaseValueActivation: baseValueActivation,
 			},
 		},
 	)
@@ -177,6 +188,11 @@ func TestCheckVerifyPoPInvalidArgument(t *testing.T) {
 
 	t.Parallel()
 
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	for _, valueDeclaration := range stdlib.BuiltinValues {
+		baseValueActivation.DeclareValue(valueDeclaration)
+	}
+
 	_, err := ParseAndCheckWithOptions(t,
 		`
            let key = PublicKey(
@@ -186,9 +202,8 @@ func TestCheckVerifyPoPInvalidArgument(t *testing.T) {
            let x: Int = key.verifyPoP([1 as Int32, 2, 3])
         `,
 		ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithPredeclaredValues(stdlib.BuiltinFunctions.ToSemaValueDeclarations()),
-				sema.WithPredeclaredValues(stdlib.BuiltinValues.ToSemaValueDeclarations()),
+			Config: &sema.Config{
+				BaseValueActivation: baseValueActivation,
 			},
 		},
 	)
@@ -203,13 +218,16 @@ func TestCheckBLSAggregateSignatures(t *testing.T) {
 
 	t.Parallel()
 
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.BLSContract)
+
 	_, err := ParseAndCheckWithOptions(t,
 		`
            let r: [UInt8] = BLS.aggregateSignatures([[1 as UInt8, 2, 3], []])!
         `,
 		ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithPredeclaredValues(stdlib.BuiltinValues.ToSemaValueDeclarations()),
+			Config: &sema.Config{
+				BaseValueActivation: baseValueActivation,
 			},
 		},
 	)
@@ -221,13 +239,16 @@ func TestCheckInvalidBLSAggregateSignatures(t *testing.T) {
 
 	t.Parallel()
 
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.BLSContract)
+
 	_, err := ParseAndCheckWithOptions(t,
 		`
            let r: [UInt16] = BLS.aggregateSignatures([[1 as UInt32, 2, 3], []])!
         `,
 		ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithPredeclaredValues(stdlib.BuiltinValues.ToSemaValueDeclarations()),
+			Config: &sema.Config{
+				BaseValueActivation: baseValueActivation,
 			},
 		},
 	)
@@ -242,6 +263,11 @@ func TestCheckBLSAggregatePublicKeys(t *testing.T) {
 
 	t.Parallel()
 
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	for _, valueDeclaration := range stdlib.BuiltinValues {
+		baseValueActivation.DeclareValue(valueDeclaration)
+	}
+
 	_, err := ParseAndCheckWithOptions(t,
 		`
            let r: PublicKey = BLS.aggregatePublicKeys([
@@ -252,9 +278,8 @@ func TestCheckBLSAggregatePublicKeys(t *testing.T) {
            ])!
         `,
 		ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithPredeclaredValues(stdlib.BuiltinFunctions.ToSemaValueDeclarations()),
-				sema.WithPredeclaredValues(stdlib.BuiltinValues.ToSemaValueDeclarations()),
+			Config: &sema.Config{
+				BaseValueActivation: baseValueActivation,
 			},
 		},
 	)
@@ -266,13 +291,18 @@ func TestCheckInvalidBLSAggregatePublicKeys(t *testing.T) {
 
 	t.Parallel()
 
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	for _, valueDeclaration := range stdlib.BuiltinValues {
+		baseValueActivation.DeclareValue(valueDeclaration)
+	}
+
 	_, err := ParseAndCheckWithOptions(t,
 		`
            let r: [PublicKey] = BLS.aggregatePublicKeys([1])!
         `,
 		ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithPredeclaredValues(stdlib.BuiltinValues.ToSemaValueDeclarations()),
+			Config: &sema.Config{
+				BaseValueActivation: baseValueActivation,
 			},
 		},
 	)

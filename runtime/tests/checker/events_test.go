@@ -265,14 +265,12 @@ func TestCheckEmitEvent(t *testing.T) {
               }
             `,
 			ParseAndCheckOptions{
-				Options: []sema.Option{
-					sema.WithImportHandler(
-						func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
-							return sema.ElaborationImport{
-								Elaboration: importedChecker.Elaboration,
-							}, nil
-						},
-					),
+				Config: &sema.Config{
+					ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
+						}, nil
+					},
 				},
 			},
 		)

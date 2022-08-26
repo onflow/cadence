@@ -32,4 +32,7 @@ const (
 
 	// NeedPositionInfo provides position information (e.g. occurrences).
 	NeedPositionInfo
+
+	// NeedExtendedElaboration provides an extended elaboration.
+	NeedExtendedElaboration
 )

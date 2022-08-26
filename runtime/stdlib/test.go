@@ -67,14 +67,18 @@ var TestContractChecker = func() *sema.Checker {
 		panic(err)
 	}
 
+	activation := sema.NewVariableActivation(sema.BaseValueActivation)
+	activation.DeclareValue(AssertFunction)
+
 	var checker *sema.Checker
 	checker, err = sema.NewChecker(
 		program,
 		TestContractLocation,
 		nil,
-		false,
-		sema.WithPredeclaredValues(BuiltinFunctions.ToSemaValueDeclarations()),
-		sema.WithPredeclaredTypes(BuiltinTypes.ToTypeDeclarations()),
+		&sema.Config{
+			BaseValueActivation: activation,
+			AccessCheckMode:     sema.AccessCheckModeStrict,
+		},
 	)
 	if err != nil {
 		panic(err)
@@ -90,7 +94,7 @@ var TestContractChecker = func() *sema.Checker {
 
 func NewTestContract(
 	inter *interpreter.Interpreter,
-	testFramework interpreter.TestFramework,
+	testFramework TestFramework,
 	constructor interpreter.FunctionValue,
 	invocationRange ast.Range,
 ) (
@@ -317,7 +321,6 @@ var testAssertFunctionType = &sema.FunctionType{
 			),
 		},
 		{
-			Label:      sema.ArgumentLabelNotRequired,
 			Identifier: "message",
 			TypeAnnotation: sema.NewTypeAnnotation(
 				sema.StringType,
@@ -494,7 +497,7 @@ var testReadFileFunctionType = &sema.FunctionType{
 	),
 }
 
-func testReadFileFunction(testFramework interpreter.TestFramework) *interpreter.HostFunctionValue {
+func testReadFileFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
 			pathString, ok := invocation.Arguments[0].(*interpreter.StringValue)
@@ -528,7 +531,7 @@ var testNewEmulatorBlockchainFunctionType = &sema.FunctionType{
 	),
 }
 
-func testNewEmulatorBlockchainFunction(testFramework interpreter.TestFramework) *interpreter.HostFunctionValue {
+func testNewEmulatorBlockchainFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
 			inter := invocation.Interpreter
@@ -717,7 +720,7 @@ var EmulatorBackendType = func() *sema.CompositeType {
 
 func newEmulatorBackend(
 	inter *interpreter.Interpreter,
-	testFramework interpreter.TestFramework,
+	testFramework TestFramework,
 	locationRangeGetter func() interpreter.LocationRange,
 ) *interpreter.CompositeValue {
 	var fields = []interpreter.CompositeField{
@@ -775,7 +778,7 @@ var emulatorBackendExecuteScriptFunctionType = interfaceFunctionType(
 	emulatorBackendExecuteScriptFunctionName,
 )
 
-func emulatorBackendExecuteScriptFunction(testFramework interpreter.TestFramework) *interpreter.HostFunctionValue {
+func emulatorBackendExecuteScriptFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
 			script, ok := invocation.Arguments[0].(*interpreter.StringValue)
@@ -817,7 +820,7 @@ func arrayValueToSlice(value interpreter.Value) ([]interpreter.Value, error) {
 func newScriptResult(
 	inter *interpreter.Interpreter,
 	returnValue interpreter.Value,
-	result *interpreter.ScriptResult,
+	result *ScriptResult,
 ) interpreter.Value {
 
 	if returnValue == nil {
@@ -881,7 +884,7 @@ var emulatorBackendCreateAccountFunctionType = interfaceFunctionType(
 	emulatorBackendCreateAccountFunctionName,
 )
 
-func emulatorBackendCreateAccountFunction(testFramework interpreter.TestFramework) *interpreter.HostFunctionValue {
+func emulatorBackendCreateAccountFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
 			account, err := testFramework.CreateAccount()
@@ -897,7 +900,7 @@ func emulatorBackendCreateAccountFunction(testFramework interpreter.TestFramewor
 
 func newAccountValue(
 	inter *interpreter.Interpreter,
-	account *interpreter.Account,
+	account *Account,
 	locationRangeGetter func() interpreter.LocationRange,
 ) interpreter.Value {
 
@@ -913,10 +916,9 @@ func newAccountValue(
 			account.PublicKey.PublicKey,
 		),
 		NewSignatureAlgorithmCase(
-			inter,
-			account.PublicKey.SignAlgo.RawValue(),
+			interpreter.UInt8Value(account.PublicKey.SignAlgo.RawValue()),
 		),
-		inter.PublicKeyValidationHandler,
+		inter.Config.PublicKeyValidationHandler,
 	)
 
 	// Create an 'Account' by calling its constructor.
@@ -950,7 +952,7 @@ var emulatorBackendAddTransactionFunctionType = interfaceFunctionType(
 	emulatorBackendAddTransactionFunctionName,
 )
 
-func emulatorBackendAddTransactionFunction(testFramework interpreter.TestFramework) *interpreter.HostFunctionValue {
+func emulatorBackendAddTransactionFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
 			inter := invocation.Interpreter
@@ -1038,14 +1040,14 @@ func accountsFromValue(
 	inter *interpreter.Interpreter,
 	accountsValue interpreter.Value,
 	locationRangeGetter func() interpreter.LocationRange,
-) []*interpreter.Account {
+) []*Account {
 
 	accountsArray, ok := accountsValue.(*interpreter.ArrayValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
-	accounts := make([]*interpreter.Account, 0)
+	accounts := make([]*Account, 0)
 
 	accountsArray.Iterate(nil, func(element interpreter.Value) (resume bool) {
 		accountValue, ok := element.(interpreter.MemberAccessibleValue)
@@ -1067,7 +1069,7 @@ func accountFromValue(
 	inter *interpreter.Interpreter,
 	accountValue interpreter.MemberAccessibleValue,
 	locationRangeGetter func() interpreter.LocationRange,
-) *interpreter.Account {
+) *Account {
 
 	// Get address
 	addressValue := accountValue.GetMember(
@@ -1096,7 +1098,7 @@ func accountFromValue(
 		panic(err)
 	}
 
-	return &interpreter.Account{
+	return &Account{
 		Address:   common.Address(address),
 		PublicKey: publicKey,
 	}
@@ -1116,7 +1118,7 @@ var emulatorBackendExecuteNextTransactionFunctionType = interfaceFunctionType(
 	emulatorBackendExecuteNextTransactionFunctionName,
 )
 
-func emulatorBackendExecuteNextTransactionFunction(testFramework interpreter.TestFramework) *interpreter.HostFunctionValue {
+func emulatorBackendExecuteNextTransactionFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
 			result := testFramework.ExecuteNextTransaction()
@@ -1134,7 +1136,7 @@ func emulatorBackendExecuteNextTransactionFunction(testFramework interpreter.Tes
 
 // newTransactionResult Creates a "TransactionResult" indicating the status of the transaction execution.
 //
-func newTransactionResult(inter *interpreter.Interpreter, result *interpreter.TransactionResult) interpreter.Value {
+func newTransactionResult(inter *interpreter.Interpreter, result *TransactionResult) interpreter.Value {
 	// Lookup and get 'ResultStatus' enum value.
 	resultStatusConstructor := getConstructor(inter, resultStatusTypeName)
 	var status interpreter.Value
@@ -1203,7 +1205,7 @@ var emulatorBackendCommitBlockFunctionType = interfaceFunctionType(
 	emulatorBackendCommitBlockFunctionName,
 )
 
-func emulatorBackendCommitBlockFunction(testFramework interpreter.TestFramework) *interpreter.HostFunctionValue {
+func emulatorBackendCommitBlockFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
 			err := testFramework.CommitBlock()
@@ -1297,7 +1299,7 @@ var emulatorBackendDeployContractFunctionType = interfaceFunctionType(
 	emulatorBackendDeployContractFunctionName,
 )
 
-func emulatorBackendDeployContractFunction(testFramework interpreter.TestFramework) *interpreter.HostFunctionValue {
+func emulatorBackendDeployContractFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
 			inter := invocation.Interpreter
@@ -1352,7 +1354,7 @@ var emulatorBackendUseConfigFunctionType = interfaceFunctionType(
 	emulatorBackendUseConfigFunctionName,
 )
 
-func emulatorBackendUseConfigFunction(testFramework interpreter.TestFramework) *interpreter.HostFunctionValue {
+func emulatorBackendUseConfigFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
 			inter := invocation.Interpreter
@@ -1390,7 +1392,7 @@ func emulatorBackendUseConfigFunction(testFramework interpreter.TestFramework) *
 				return true
 			})
 
-			testFramework.UseConfiguration(&interpreter.Configuration{
+			testFramework.UseConfiguration(&Configuration{
 				Addresses: mapping,
 			})
 

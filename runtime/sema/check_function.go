@@ -110,7 +110,7 @@ func (checker *Checker) declareFunctionDeclaration(
 	})
 	checker.report(err)
 
-	if checker.positionInfoEnabled {
+	if checker.PositionInfo != nil {
 		checker.recordFunctionDeclarationOrigin(declaration, functionType)
 	}
 }
@@ -191,20 +191,12 @@ func (checker *Checker) checkFunction(
 		},
 	)
 
-	if checker.positionInfoEnabled && functionBlock != nil {
+	if checker.PositionInfo != nil && functionBlock != nil {
 		startPos := functionBlock.StartPosition()
 		endPos := functionBlock.EndPosition(checker.memoryGauge)
 
 		for _, parameter := range functionType.Parameters {
-			checker.Ranges.Put(
-				startPos,
-				endPos,
-				Range{
-					Identifier:      parameter.Identifier,
-					Type:            parameter.TypeAnnotation.Type,
-					DeclarationKind: common.DeclarationKindParameter,
-				},
-			)
+			checker.PositionInfo.recordParameterRange(startPos, endPos, parameter)
 		}
 	}
 }
@@ -315,7 +307,7 @@ func (checker *Checker) declareParameters(
 			Pos:             &identifier.Pos,
 		}
 		checker.valueActivations.Set(identifier.Identifier, variable)
-		if checker.positionInfoEnabled {
+		if checker.PositionInfo != nil {
 			checker.recordVariableDeclarationOccurrence(identifier.Identifier, variable)
 		}
 	}

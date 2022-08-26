@@ -234,9 +234,9 @@ func TestRuntimeStoreAccountAPITypes(t *testing.T) {
 	}
 }
 
-var accountKeyA = &AccountKey{
+var accountKeyA = &stdlib.AccountKey{
 	KeyIndex: 0,
-	PublicKey: &PublicKey{
+	PublicKey: &stdlib.PublicKey{
 		PublicKey: []byte{1, 2, 3},
 		SignAlgo:  sema.SignatureAlgorithmECDSA_P256,
 	},
@@ -245,9 +245,9 @@ var accountKeyA = &AccountKey{
 	IsRevoked: false,
 }
 
-var accountKeyB = &AccountKey{
+var accountKeyB = &stdlib.AccountKey{
 	KeyIndex: 1,
-	PublicKey: &PublicKey{
+	PublicKey: &stdlib.PublicKey{
 		PublicKey: []byte{4, 5, 6},
 		SignAlgo:  sema.SignatureAlgorithmECDSA_secp256k1,
 	},
@@ -256,7 +256,7 @@ var accountKeyB = &AccountKey{
 	IsRevoked: false,
 }
 
-var revokedAccountKeyA = func() *AccountKey {
+var revokedAccountKeyA = func() *stdlib.AccountKey {
 	revokedKey := *accountKeyA
 	revokedKey.IsRevoked = true
 	return &revokedKey
@@ -276,7 +276,7 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		addPublicKeyValidation(runtimeInterface, nil)
 		addAuthAccountKey(t, rt, runtimeInterface)
 
-		assert.Equal(t, []*AccountKey{accountKeyA}, storage.keys)
+		assert.Equal(t, []*stdlib.AccountKey{accountKeyA}, storage.keys)
 		assert.Equal(t, accountKeyA, storage.returnedKey)
 	})
 
@@ -306,7 +306,7 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		err := test.executeTransaction(rt, runtimeInterface)
 		require.NoError(t, err)
 
-		assert.Equal(t, []*AccountKey{accountKeyA}, storage.keys)
+		assert.Equal(t, []*stdlib.AccountKey{accountKeyA}, storage.keys)
 		assert.Equal(t, accountKeyA, storage.returnedKey)
 		assert.Equal(
 			t,
@@ -369,7 +369,7 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		err := test.executeTransaction(rt, runtimeInterface)
 		require.NoError(t, err)
 
-		assert.Equal(t, []*AccountKey{revokedAccountKeyA}, storage.keys)
+		assert.Equal(t, []*stdlib.AccountKey{revokedAccountKeyA}, storage.keys)
 		assert.Equal(t, revokedAccountKeyA, storage.returnedKey)
 	})
 
@@ -846,9 +846,9 @@ func getAccountKeyTestRuntimeInterface(storage *testAccountKeyStorage) *testRunt
 		createAccount: func(payer Address) (address Address, err error) {
 			return Address{42}, nil
 		},
-		addAccountKey: func(address Address, publicKey *PublicKey, hashAlgo HashAlgorithm, weight int) (*AccountKey, error) {
+		addAccountKey: func(address Address, publicKey *stdlib.PublicKey, hashAlgo HashAlgorithm, weight int) (*stdlib.AccountKey, error) {
 			index := len(storage.keys)
-			accountKey := &AccountKey{
+			accountKey := &stdlib.AccountKey{
 				KeyIndex:  index,
 				PublicKey: publicKey,
 				HashAlgo:  hashAlgo,
@@ -860,7 +860,7 @@ func getAccountKeyTestRuntimeInterface(storage *testAccountKeyStorage) *testRunt
 			storage.returnedKey = accountKey
 			return accountKey, nil
 		},
-		getAccountKey: func(address Address, index int) (*AccountKey, error) {
+		getAccountKey: func(address Address, index int) (*stdlib.AccountKey, error) {
 			if index >= len(storage.keys) {
 				storage.returnedKey = nil
 				return nil, nil
@@ -870,7 +870,7 @@ func getAccountKeyTestRuntimeInterface(storage *testAccountKeyStorage) *testRunt
 			storage.returnedKey = accountKey
 			return accountKey, nil
 		},
-		removeAccountKey: func(address Address, index int) (*AccountKey, error) {
+		removeAccountKey: func(address Address, index int) (*stdlib.AccountKey, error) {
 			if index >= len(storage.keys) {
 				storage.returnedKey = nil
 				return nil, nil
@@ -927,7 +927,7 @@ func addAuthAccountKey(t *testing.T, runtime Runtime, runtimeInterface *testRunt
 }
 
 func addPublicKeyValidation(runtimeInterface *testRuntimeInterface, returnError error) {
-	runtimeInterface.validatePublicKey = func(_ *PublicKey) error {
+	runtimeInterface.validatePublicKey = func(_ *stdlib.PublicKey) error {
 		return returnError
 	}
 }
@@ -992,14 +992,14 @@ func (test accountKeyTestCase) executeScript(
 func newTestAccountKeyStorage() *testAccountKeyStorage {
 	return &testAccountKeyStorage{
 		events: make([]cadence.Event, 0),
-		keys:   make([]*AccountKey, 0),
+		keys:   make([]*stdlib.AccountKey, 0),
 	}
 }
 
 type testAccountKeyStorage struct {
 	events      []cadence.Event
-	keys        []*AccountKey
-	returnedKey *AccountKey
+	keys        []*stdlib.AccountKey
+	returnedKey *stdlib.AccountKey
 	logs        []string
 }
 
@@ -1096,7 +1096,7 @@ func TestRuntimePublicKey(t *testing.T) {
 
 			runtimeInterface := &testRuntimeInterface{
 				storage: storage,
-				validatePublicKey: func(publicKey *PublicKey) error {
+				validatePublicKey: func(publicKey *stdlib.PublicKey) error {
 					invoked = true
 					return errorToReturn
 				},
@@ -1135,7 +1135,7 @@ func TestRuntimePublicKey(t *testing.T) {
 			invoked := false
 
 			runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
-			runtimeInterface.validatePublicKey = func(publicKey *PublicKey) error {
+			runtimeInterface.validatePublicKey = func(publicKey *stdlib.PublicKey) error {
 				invoked = true
 				return nil
 			}
@@ -1717,7 +1717,7 @@ func TestGetAuthAccount(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("script location", func(t *testing.T) {
+	t.Run("script", func(t *testing.T) {
 		t.Parallel()
 
 		rt := newTestInterpreterRuntime()
@@ -1848,15 +1848,17 @@ func TestGetAuthAccount(t *testing.T) {
 		assert.IsType(t, &sema.ArgumentCountError{}, errs[0])
 	})
 
-	t.Run("transaction location", func(t *testing.T) {
+	t.Run("transaction", func(t *testing.T) {
 		t.Parallel()
 
 		rt := newTestInterpreterRuntime()
 
 		script := []byte(`
-            pub fun main(): UInt64 {
-                let acc = getAuthAccount(0x02)
-                return acc.storageUsed
+            transaction {
+		        prepare() {
+                    let acc = getAuthAccount(0x02)
+                    log(acc.storageUsed)
+		        }
             }
         `)
 
@@ -1866,7 +1868,7 @@ func TestGetAuthAccount(t *testing.T) {
 			},
 		}
 
-		_, err := rt.ExecuteScript(
+		err := rt.ExecuteTransaction(
 			Script{
 				Source: script,
 			},

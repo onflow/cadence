@@ -24,31 +24,42 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-func NewSignatureAlgorithmCase(inter *interpreter.Interpreter, rawValue uint8) *interpreter.CompositeValue {
-	return interpreter.NewEnumCaseValue(
-		inter,
-		interpreter.ReturnEmptyLocationRange,
-		sema.SignatureAlgorithmType,
-		interpreter.NewUInt8Value(inter, func() uint8 {
-			return rawValue
-		}),
+var signatureAlgorithmTypeID = sema.SignatureAlgorithmType.ID()
+var signatureAlgorithmStaticType interpreter.StaticType = interpreter.CompositeStaticType{
+	QualifiedIdentifier: sema.SignatureAlgorithmType.Identifier,
+	TypeID:              signatureAlgorithmTypeID,
+}
+
+func NewSignatureAlgorithmCase(rawValue interpreter.UInt8Value) interpreter.MemberAccessibleValue {
+
+	fields := map[string]interpreter.Value{
+		sema.EnumRawValueFieldName: rawValue,
+	}
+
+	return interpreter.NewSimpleCompositeValue(
+		nil,
+		sema.SignatureAlgorithmType.ID(),
+		signatureAlgorithmStaticType,
+		[]string{sema.EnumRawValueFieldName},
+		fields,
+		nil,
+		nil,
 		nil,
 	)
 }
 
-var signatureAlgorithmConstructor = StandardLibraryValue{
+var signatureAlgorithmConstructorValue, SignatureAlgorithmCaseValues = cryptoAlgorithmEnumValueAndCaseValues(
+	sema.SignatureAlgorithmType,
+	sema.SignatureAlgorithms,
+	NewSignatureAlgorithmCase,
+)
+
+var SignatureAlgorithmConstructor = StandardLibraryValue{
 	Name: sema.SignatureAlgorithmTypeName,
 	Type: cryptoAlgorithmEnumConstructorType(
 		sema.SignatureAlgorithmType,
 		sema.SignatureAlgorithms,
 	),
-	ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
-		return cryptoAlgorithmEnumValue(
-			inter,
-			sema.SignatureAlgorithmType,
-			sema.SignatureAlgorithms,
-			NewSignatureAlgorithmCase,
-		)
-	},
-	Kind: common.DeclarationKindEnum,
+	Value: signatureAlgorithmConstructorValue,
+	Kind:  common.DeclarationKindEnum,
 }

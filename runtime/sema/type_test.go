@@ -539,7 +539,11 @@ func TestBeforeType_Strings(t *testing.T) {
 
 func TestQualifiedIdentifierCreation(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("with containers", func(t *testing.T) {
+
+		t.Parallel()
 
 		a := &CompositeType{
 			Kind:       common.CompositeKindStructure,
@@ -572,11 +576,15 @@ func TestQualifiedIdentifierCreation(t *testing.T) {
 	})
 
 	t.Run("without containers", func(t *testing.T) {
+		t.Parallel()
+
 		identifier := qualifiedIdentifier("foo", nil)
 		assert.Equal(t, "foo", identifier)
 	})
 
 	t.Run("public account container", func(t *testing.T) {
+		t.Parallel()
+
 		identifier := qualifiedIdentifier("foo", PublicAccountType)
 		assert.Equal(t, "PublicAccount.foo", identifier)
 	})
@@ -620,6 +628,8 @@ func BenchmarkQualifiedIdentifierCreation(b *testing.B) {
 
 func TestIdentifierCacheUpdate(t *testing.T) {
 
+	t.Parallel()
+
 	code := `
           pub contract interface Test {
 
@@ -647,7 +657,9 @@ func TestIdentifierCacheUpdate(t *testing.T) {
 		program,
 		common.StringLocation("test"),
 		nil,
-		false,
+		&Config{
+			AccessCheckMode: AccessCheckModeStrict,
+		},
 	)
 	require.NoError(t, err)
 
@@ -1660,7 +1672,6 @@ func TestTypeInclusions(t *testing.T) {
 
 		for _, typ := range AllNumberTypes {
 			t.Run(typ.String(), func(t *testing.T) {
-				t.Parallel()
 				assert.True(t, NumberTypeTag.ContainsAny(typ.Tag()))
 			})
 		}
@@ -1671,7 +1682,6 @@ func TestTypeInclusions(t *testing.T) {
 
 		for _, typ := range AllIntegerTypes {
 			t.Run(typ.String(), func(t *testing.T) {
-				t.Parallel()
 				assert.True(t, IntegerTypeTag.ContainsAny(typ.Tag()))
 			})
 		}
@@ -1682,7 +1692,6 @@ func TestTypeInclusions(t *testing.T) {
 
 		for _, typ := range AllSignedIntegerTypes {
 			t.Run(typ.String(), func(t *testing.T) {
-				t.Parallel()
 				assert.True(t, SignedIntegerTypeTag.ContainsAny(typ.Tag()))
 			})
 		}
@@ -1693,7 +1702,6 @@ func TestTypeInclusions(t *testing.T) {
 
 		for _, typ := range AllUnsignedIntegerTypes {
 			t.Run(typ.String(), func(t *testing.T) {
-				t.Parallel()
 				assert.True(t, UnsignedIntegerTypeTag.ContainsAny(typ.Tag()))
 			})
 		}
@@ -1704,7 +1712,6 @@ func TestTypeInclusions(t *testing.T) {
 
 		for _, typ := range AllFixedPointTypes {
 			t.Run(typ.String(), func(t *testing.T) {
-				t.Parallel()
 				assert.True(t, FixedPointTypeTag.ContainsAny(typ.Tag()))
 			})
 		}
@@ -1715,16 +1722,16 @@ func TestTypeInclusions(t *testing.T) {
 
 		for _, typ := range AllSignedFixedPointTypes {
 			t.Run(typ.String(), func(t *testing.T) {
-				t.Parallel()
 				assert.True(t, SignedFixedPointTypeTag.ContainsAny(typ.Tag()))
 			})
 		}
 	})
 
 	t.Run("UnsignedFixedPoint", func(t *testing.T) {
+		t.Parallel()
+
 		for _, typ := range AllUnsignedFixedPointTypes {
 			t.Run(typ.String(), func(t *testing.T) {
-				t.Parallel()
 				assert.True(t, UnsignedFixedPointTypeTag.ContainsAny(typ.Tag()))
 			})
 		}
@@ -1736,7 +1743,6 @@ func TestTypeInclusions(t *testing.T) {
 
 		err := BaseTypeActivation.ForEach(func(name string, variable *Variable) error {
 			t.Run(name, func(t *testing.T) {
-				t.Parallel()
 
 				typ := variable.Type
 				if _, ok := typ.(*CompositeType); ok {
@@ -1757,7 +1763,6 @@ func TestTypeInclusions(t *testing.T) {
 
 		err := BaseTypeActivation.ForEach(func(name string, variable *Variable) error {
 			t.Run(name, func(t *testing.T) {
-				t.Parallel()
 
 				typ := variable.Type
 

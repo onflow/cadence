@@ -227,6 +227,10 @@ func (b *FunctionBlock) String() string {
 	return Prettier(b)
 }
 
+func (b *FunctionBlock) HasStatements() bool {
+	return b != nil && len(b.Block.Statements) > 0
+}
+
 // Condition
 
 type Condition struct {

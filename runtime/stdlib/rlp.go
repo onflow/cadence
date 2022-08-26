@@ -229,20 +229,20 @@ var rlpContractFields = map[string]interpreter.Value{
 	rlpDecodeStringFunctionName: rlpDecodeStringFunction,
 }
 
-var rlpContract = StandardLibraryValue{
-	Name: "RLP",
-	Type: rlpContractType,
-	ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
-		return interpreter.NewSimpleCompositeValue(
-			inter,
-			rlpContractType.ID(),
-			rlpContractStaticType,
-			nil,
-			rlpContractFields,
-			nil,
-			nil,
-			nil,
-		)
-	},
-	Kind: common.DeclarationKindContract,
+var rlpContractValue = interpreter.NewSimpleCompositeValue(
+	nil,
+	rlpContractType.ID(),
+	rlpContractStaticType,
+	nil,
+	rlpContractFields,
+	nil,
+	nil,
+	nil,
+)
+
+var RLPContract = StandardLibraryValue{
+	Name:  "RLP",
+	Type:  rlpContractType,
+	Value: rlpContractValue,
+	Kind:  common.DeclarationKindContract,
 }
