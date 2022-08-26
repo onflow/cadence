@@ -255,7 +255,6 @@ func (v Bytes) String() string {
 // Character represents a Cadence character, which is a Unicode extended grapheme cluster.
 // Hence, use a Go string to be able to hold multiple Unicode code points (Go runes).
 // It should consist of exactly one grapheme cluster
-//
 type Character string
 
 var _ Value = Character("")
@@ -623,7 +622,7 @@ func (v Int128) Big() *big.Int {
 }
 
 func (v Int128) ToBigEndianBytes() []byte {
-	return interpreter.SignedBigIntToBigEndianBytes(v.Value)
+	return interpreter.SignedBigIntToSizedBigEndianBytes(v.Value, 128/8)
 }
 
 func (v Int128) String() string {
@@ -686,7 +685,7 @@ func (v Int256) Big() *big.Int {
 }
 
 func (v Int256) ToBigEndianBytes() []byte {
-	return interpreter.SignedBigIntToBigEndianBytes(v.Value)
+	return interpreter.SignedBigIntToSizedBigEndianBytes(v.Value, 256/8)
 }
 
 func (v Int256) String() string {
@@ -970,7 +969,7 @@ func (v UInt128) Big() *big.Int {
 }
 
 func (v UInt128) ToBigEndianBytes() []byte {
-	return interpreter.UnsignedBigIntToBigEndianBytes(v.Value)
+	return interpreter.UnsignedBigIntToSizedBigEndianBytes(v.Value, 128/8)
 }
 
 func (v UInt128) String() string {
@@ -1033,7 +1032,7 @@ func (v UInt256) Big() *big.Int {
 }
 
 func (v UInt256) ToBigEndianBytes() []byte {
-	return interpreter.UnsignedBigIntToBigEndianBytes(v.Value)
+	return interpreter.UnsignedBigIntToSizedBigEndianBytes(v.Value, 256/8)
 }
 
 func (v UInt256) String() string {
