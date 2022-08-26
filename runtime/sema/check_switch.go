@@ -22,7 +22,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 )
 
-func (checker *Checker) VisitSwitchStatement(statement *ast.SwitchStatement) Type {
+func (checker *Checker) VisitSwitchStatement(statement *ast.SwitchStatement) (_ struct{}) {
 
 	testType := checker.VisitExpression(statement.Expression, nil)
 
@@ -53,7 +53,7 @@ func (checker *Checker) VisitSwitchStatement(statement *ast.SwitchStatement) Typ
 		checker.checkSwitchCasesStatements(statement.Cases)
 	})
 
-	return nil
+	return
 }
 
 func (checker *Checker) visitSwitchCase(
@@ -180,5 +180,5 @@ func (checker *Checker) checkSwitchCaseStatements(switchCase *ast.SwitchCase) {
 			switchCase.EndPos,
 		),
 	)
-	ast.Accept[Type](block, checker)
+	checker.checkBlock(block)
 }

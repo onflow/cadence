@@ -52,7 +52,7 @@ func (interpreter *Interpreter) evalStatement(statement ast.Statement) any {
 		onStatement(interpreter, statement)
 	}
 
-	return ast.Accept[any](statement, interpreter)
+	return ast.AcceptStatement[any](statement, interpreter)
 }
 
 func (interpreter *Interpreter) visitStatements(statements []ast.Statement) controlReturn {
@@ -119,9 +119,9 @@ func (interpreter *Interpreter) visitIfStatementWithTestExpression(
 	}
 	var result any
 	if value {
-		result = ast.Accept[any](thenBlock, interpreter)
+		result = interpreter.visitBlock(thenBlock)
 	} else if elseBlock != nil {
-		result = ast.Accept[any](elseBlock, interpreter)
+		result = interpreter.visitBlock(elseBlock)
 	}
 
 	if ret, ok := result.(controlReturn); ok {
@@ -193,9 +193,9 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 			transferredUnwrappedValue,
 		)
 
-		result = ast.Accept[any](thenBlock, interpreter)
+		result = interpreter.visitBlock(thenBlock)
 	} else if elseBlock != nil {
-		result = ast.Accept[any](elseBlock, interpreter)
+		result = interpreter.visitBlock(elseBlock)
 	}
 
 	if ret, ok := result.(controlReturn); ok {
@@ -222,7 +222,7 @@ func (interpreter *Interpreter) VisitSwitchStatement(switchStatement *ast.Switch
 				ReturnEmptyRange(),
 			)
 
-			result := ast.Accept[any](block, interpreter)
+			result := interpreter.visitBlock(block)
 
 			if _, ok := result.(controlBreak); ok {
 				return nil
@@ -276,7 +276,7 @@ func (interpreter *Interpreter) VisitWhileStatement(statement *ast.WhileStatemen
 
 		interpreter.reportLoopIteration(statement)
 
-		result := ast.Accept[any](statement.Block, interpreter)
+		result := interpreter.visitBlock(statement.Block)
 
 		switch result.(type) {
 		case controlBreak:
@@ -346,7 +346,7 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) a
 
 		variable.SetValue(value)
 
-		result := ast.Accept[any](statement.Block, interpreter)
+		result := interpreter.visitBlock(statement.Block)
 
 		switch result.(type) {
 		case controlBreak:

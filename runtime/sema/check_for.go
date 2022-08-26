@@ -23,7 +23,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
-func (checker *Checker) VisitForStatement(statement *ast.ForStatement) Type {
+func (checker *Checker) VisitForStatement(statement *ast.ForStatement) (_ struct{}) {
 
 	checker.enterValueScope()
 	defer checker.leaveValueScope(statement.EndPosition, true)
@@ -110,7 +110,7 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) Type {
 
 	_ = checker.checkPotentiallyUnevaluated(func() Type {
 		checker.functionActivations.WithLoop(func() {
-			ast.Accept[Type](statement.Block, checker)
+			checker.checkBlock(statement.Block)
 		})
 
 		// ignored
@@ -119,5 +119,5 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) Type {
 
 	checker.reportResourceUsesInLoop(statement.StartPos, statement.EndPosition(checker.memoryGauge))
 
-	return nil
+	return
 }

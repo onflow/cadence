@@ -424,7 +424,7 @@ func (interpreter *Interpreter) Interpret() (err error) {
 	})
 
 	if interpreter.Program != nil {
-		ast.Accept[any](interpreter.Program.Program, interpreter)
+		interpreter.visitProgram(interpreter.Program.Program)
 	}
 
 	interpreter.interpreted = true
@@ -436,7 +436,7 @@ func (interpreter *Interpreter) Interpret() (err error) {
 // then finds the declaration and adds it to the globals
 //
 func (interpreter *Interpreter) visitGlobalDeclaration(declaration ast.Declaration) {
-	ast.Accept[any](declaration, interpreter)
+	ast.AcceptDeclaration[any](declaration, interpreter)
 	interpreter.declareGlobal(declaration)
 }
 
@@ -637,7 +637,7 @@ func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 	}
 }
 
-func (interpreter *Interpreter) VisitProgram(program *ast.Program) any {
+func (interpreter *Interpreter) visitProgram(program *ast.Program) {
 
 	for _, declaration := range program.ImportDeclarations() {
 		interpreter.visitGlobalDeclaration(declaration)
@@ -734,7 +734,7 @@ func (interpreter *Interpreter) VisitProgram(program *ast.Program) any {
 		_ = variable.GetValue()
 	}
 
-	return nil
+	return
 }
 
 func (interpreter *Interpreter) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunctionDeclaration) any {
@@ -801,17 +801,12 @@ func (interpreter *Interpreter) functionDeclarationValue(
 	)
 }
 
-func (interpreter *Interpreter) VisitBlock(block *ast.Block) any {
+func (interpreter *Interpreter) visitBlock(block *ast.Block) any {
 	// block scope: each block gets an activation record
 	interpreter.activations.PushNewWithCurrent()
 	defer interpreter.activations.Pop()
 
 	return interpreter.visitStatements(block.Statements)
-}
-
-func (interpreter *Interpreter) VisitFunctionBlock(_ *ast.FunctionBlock) any {
-	// NOTE: see visitBlock
-	panic(errors.NewUnreachableError())
 }
 
 func (interpreter *Interpreter) visitFunctionBody(

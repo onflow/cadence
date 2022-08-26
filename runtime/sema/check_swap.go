@@ -23,7 +23,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
-func (checker *Checker) VisitSwapStatement(swap *ast.SwapStatement) Type {
+func (checker *Checker) VisitSwapStatement(swap *ast.SwapStatement) (_ struct{}) {
 
 	leftType := checker.VisitExpression(swap.Left, nil)
 	rightType := checker.VisitExpression(swap.Right, nil)
@@ -58,7 +58,7 @@ func (checker *Checker) VisitSwapStatement(swap *ast.SwapStatement) Type {
 		checker.elaborateNestedResourceMoveExpression(swap.Right)
 	}
 
-	return nil
+	return
 }
 
 func (checker *Checker) checkSwapStatementExpression(

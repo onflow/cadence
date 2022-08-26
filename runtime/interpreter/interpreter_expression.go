@@ -239,7 +239,7 @@ func (interpreter *Interpreter) VisitIdentifierExpression(expression *ast.Identi
 }
 
 func (interpreter *Interpreter) evalExpression(expression ast.Expression) Value {
-	return ast.Accept[any](expression, interpreter).(Value)
+	return ast.AcceptExpression[any](expression, interpreter).(Value)
 }
 
 func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpression) any {
