@@ -393,24 +393,6 @@ func TestUsingEnv(t *testing.T) {
 		require.NoError(t, result.Error)
 	})
 
-	t.Run("auth account", func(t *testing.T) {
-		t.Parallel()
-		t.SkipNow()
-
-		code := `
-            pub fun test() {
-                var acc = getAuthAccount(0x01)
-                var bal = acc.balance
-                assert(acc.balance == 0.0)
-            }
-        `
-
-		runner := NewTestRunner()
-		result, err := runner.RunTest(code, "test")
-		require.NoError(t, err)
-		require.NoError(t, result.Error)
-	})
-
 	// Imported programs also should have the access to the env.
 	t.Run("account access in imported program", func(t *testing.T) {
 		t.Parallel()

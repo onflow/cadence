@@ -3,10 +3,10 @@ module github.com/onflow/cadence/test-framework
 go 1.18
 
 require (
-	github.com/onflow/cadence v0.25.1-0.20220825234243-2b7c73eb3a31
-	github.com/onflow/flow-emulator v0.35.1-0.20220826153018-8052e4b4e187
-	github.com/onflow/flow-go v0.26.14-test-synchronization.0.20220826152759-151a805afa45
-	github.com/onflow/flow-go-sdk v0.27.1-0.20220826152244-41221e340194
+	github.com/onflow/cadence v0.25.1-0.20220826214217-4cbb639788bf
+	github.com/onflow/flow-emulator v0.35.1-0.20220826215327-49d7d4833873
+	github.com/onflow/flow-go v0.26.14-test-synchronization.0.20220826214949-34ce2747b7be
+	github.com/onflow/flow-go-sdk v0.27.1-0.20220826214515-3abcaea89a15
 	github.com/rs/zerolog v1.26.1
 	github.com/stretchr/testify v1.8.0
 )
@@ -125,5 +125,3 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	lukechampine.com/blake3 v1.1.7 // indirect
 )
-
-replace github.com/onflow/cadence => ../../cadence
