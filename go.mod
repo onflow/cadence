@@ -16,6 +16,7 @@ require (
 	github.com/schollz/progressbar/v3 v3.8.3
 	github.com/stretchr/testify v1.7.3
 	github.com/turbolent/prettier v0.0.0-20220320183459-661cc755135d
+	github.com/ElrondNetwork/big-int-util v0.1.0
 	go.opentelemetry.io/otel v1.8.0
 	go.uber.org/goleak v1.1.10
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
