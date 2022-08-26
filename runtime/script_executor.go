@@ -27,7 +27,7 @@ import (
 )
 
 type interpreterScriptExecutor struct {
-	runtime interpreterRuntime
+	runtime *interpreterRuntime
 	script  Script
 	context Context
 
@@ -48,7 +48,7 @@ type interpreterScriptExecutor struct {
 }
 
 func newInterpreterScriptExecutor(
-	runtime interpreterRuntime,
+	runtime *interpreterRuntime,
 	script Script,
 	context Context,
 ) *interpreterScriptExecutor {
