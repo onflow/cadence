@@ -21,32 +21,71 @@ package interpreter
 import (
 	"math/big"
 
-	twoscomplement "github.com/ElrondNetwork/big-int-util/twos-complement"
-
 	"github.com/onflow/cadence/runtime/errors"
 )
 
 func SignedBigIntToBigEndianBytes(bigInt *big.Int) []byte {
-	bytes := twoscomplement.ToBytes(bigInt)
-	if bigInt.Sign() == 0 {
-		bytes = []byte{0}
+
+	switch bigInt.Sign() {
+	case -1:
+		// Encode as two's complement
+		twosComplement := new(big.Int).Neg(bigInt)
+		twosComplement.Sub(twosComplement, bigOne)
+		bytes := twosComplement.Bytes()
+		for i := range bytes {
+			bytes[i] ^= 0xff
+		}
+		// Pad with 0xFF to prevent misinterpretation as positive
+		if len(bytes) == 0 || bytes[0]&0x80 == 0 {
+			return append([]byte{0xff}, bytes...)
+		}
+		return bytes
+
+	case 0:
+		return []byte{0}
+
+	case 1:
+		bytes := bigInt.Bytes()
+		// Pad with 0x0 to prevent misinterpretation as negative
+		if len(bytes) > 0 && bytes[0]&0x80 != 0 {
+			return append([]byte{0x0}, bytes...)
+		}
+		return bytes
+
+	default:
+		panic(errors.NewUnreachableError())
 	}
-	return bytes
 }
 
-// Return the BigInt encoded as a big-endian byte array of size `sizeInBytes`.
-// The value inside `bigInt` must fit inside 8^sizeInBytes bits.
-func SignedBigIntToSizedBigEndianBytes(bigInt *big.Int, sizeInBytes int) []byte {
-	res, _ := twoscomplement.ToBytesOfLength(bigInt, sizeInBytes)
-	return res
+func SignedBigIntToSizedBigEndianBytes(bigInt *big.Int, sizeInBytes uint) []byte {
+	// todo use uint64 for fewer iterations?
+	buf := make([]byte, sizeInBytes)
+
+	switch bigInt.Sign() {
+	case -1:
+		increm := big.NewInt(0)
+		increm = increm.Add(bigInt, bigOne)
+		bytes := increm.Bytes()
+		offset := len(buf) - len(bytes)
+		for i := 0; i < offset; i++ {
+			buf[i] = 255 // sign extend
+		}
+		for i := 0; i < len(buf)-offset; i++ {
+			buf[i+offset] = ^bytes[i]
+		}
+	case 0:
+		break
+	case 1:
+		bigInt.FillBytes(buf)
+	default:
+		panic(errors.NewUnreachableError())
+	}
+	return buf
 }
 
 func UnsignedBigIntToBigEndianBytes(bigInt *big.Int) []byte {
 
 	switch bigInt.Sign() {
-	case -1:
-		panic(errors.NewUnreachableError())
-
 	case 0:
 		return []byte{0}
 
@@ -54,24 +93,19 @@ func UnsignedBigIntToBigEndianBytes(bigInt *big.Int) []byte {
 		return bigInt.Bytes()
 
 	default:
-		panic(errors.NewUnreachableError())
+		panic(errors.NewUnexpectedError("Negative sign on big.Int with unsigned constraint"))
 	}
 }
 
-func UnsignedBigIntToSizedBigEndianBytes(bigInt *big.Int, sizeInBytes int) []byte {
+func UnsignedBigIntToSizedBigEndianBytes(bigInt *big.Int, sizeInBytes uint) []byte {
 	buf := make([]byte, sizeInBytes)
-
 	switch bigInt.Sign() {
-	case -1:
-		panic(errors.NewUnreachableError())
-
 	case 0:
 		return buf
-
 	case 1:
-		return bigInt.FillBytes(buf)
-
+		bigInt.FillBytes(buf)
+		return buf
 	default:
-		panic(errors.NewUnreachableError())
+		panic(errors.NewUnexpectedError("Negative sign on big.Int with unsigned constraint"))
 	}
 }
