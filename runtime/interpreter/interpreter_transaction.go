@@ -23,7 +23,7 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-func (interpreter *Interpreter) VisitTransactionDeclaration(declaration *ast.TransactionDeclaration) any {
+func (interpreter *Interpreter) VisitTransactionDeclaration(declaration *ast.TransactionDeclaration) StatementResult {
 	interpreter.declareTransactionEntryPoint(declaration)
 
 	return nil
@@ -106,7 +106,7 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 				prepare.invoke(invocation)
 			}
 
-			var body func() controlReturn
+			var body func() StatementResult
 			if executeFunction != nil {
 				execute := interpreter.functionDeclarationValue(
 					executeFunction,
@@ -117,9 +117,9 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 				invocationWithoutArguments := invocation
 				invocationWithoutArguments.Arguments = nil
 
-				body = func() controlReturn {
+				body = func() StatementResult {
 					value := execute.invoke(invocationWithoutArguments)
-					return functionReturn{
+					return ReturnResult{
 						Value: value,
 					}
 				}

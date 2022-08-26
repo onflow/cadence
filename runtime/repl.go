@@ -104,13 +104,6 @@ func (r *REPL) handleCheckerError() bool {
 	return false
 }
 
-func (r *REPL) handleResult(value interpreter.Value) {
-	if r.onResult == nil {
-		return
-	}
-	r.onResult(value)
-}
-
 func (r *REPL) Accept(code string) (inputIsComplete bool) {
 
 	r.codes[r.checker.Location] = code
@@ -149,8 +142,7 @@ func (r *REPL) Accept(code string) (inputIsComplete bool) {
 				return
 			}
 
-			// TODO:
-			//r.inter.visitProgram(program)
+			r.inter.VisitProgram(program)
 
 		case ast.Statement:
 			r.checker.Program = nil
@@ -161,11 +153,12 @@ func (r *REPL) Accept(code string) (inputIsComplete bool) {
 				return
 			}
 
-			// TODO:
-			//result := ast.AcceptStatement[interpreter.Value](element, r.inter)
-			//if result, ok := result.(interpreter.ExpressionStatementResult); ok {
-			//	r.handleResult(result.Value)
-			//}
+			result := ast.AcceptStatement[interpreter.StatementResult](element, r.inter)
+
+			onResult := r.onResult
+			if result, ok := result.(interpreter.ExpressionResult); ok && onResult != nil {
+				onResult(result)
+			}
 
 		default:
 			panic(errors.NewUnreachableError())
