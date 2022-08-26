@@ -56,11 +56,9 @@ type typeConformanceResultEntry struct {
 //
 // NOTE: Do not generalize to map[interpreter.Value],
 // as not all values are Go hashable, i.e. this might lead to run-time panics
-//
 type SeenReferences map[*EphemeralReferenceValue]struct{}
 
 // NonStorable represents a value that cannot be stored
-//
 type NonStorable struct {
 	Value Value
 }
@@ -187,7 +185,6 @@ func maybeDestroy(interpreter *Interpreter, getLocationRange func() LocationRang
 
 // ReferenceTrackedResourceKindedValue is a resource-kinded value
 // that must be tracked when a reference of it is taken.
-//
 type ReferenceTrackedResourceKindedValue interface {
 	ResourceKindedValue
 	IsReferenceTrackedResourceKindedValue()
@@ -705,7 +702,6 @@ func (BoolValue) ChildStorables() []atree.Storable {
 // CharacterValue represents a Cadence character, which is a Unicode extended grapheme cluster.
 // Hence, use a Go string to be able to hold multiple Unicode code points (Go runes).
 // It should consist of exactly one grapheme cluster
-//
 type CharacterValue string
 
 func NewUnmeteredCharacterValue(r string) CharacterValue {
@@ -1173,7 +1169,6 @@ func (*StringValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, 
 }
 
 // Length returns the number of characters (grapheme clusters)
-//
 func (v *StringValue) Length() int {
 	if v.length < 0 {
 		var length int
@@ -1261,7 +1256,6 @@ func (*StringValue) ChildStorables() []atree.Storable {
 var ByteArrayStaticType = ConvertSemaArrayTypeToStaticArrayType(nil, sema.ByteArrayType)
 
 // DecodeHex hex-decodes this string and returns an array of UInt8 values
-//
 func (v *StringValue) DecodeHex(interpreter *Interpreter, getLocationRange func() LocationRange) *ArrayValue {
 	bs, err := hex.DecodeString(v.Str)
 	if err != nil {
@@ -2594,7 +2588,6 @@ func (v *ArrayValue) Slice(
 }
 
 // NumberValue
-//
 type NumberValue interface {
 	EquatableValue
 	ToInt() int
@@ -2747,7 +2740,6 @@ type IntegerValue interface {
 }
 
 // BigNumberValue is a number value with an integer value outside the range of int64
-//
 type BigNumberValue interface {
 	NumberValue
 	ByteLength() int
@@ -6419,7 +6411,7 @@ func (Int128Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _
 }
 
 func (v Int128Value) ToBigEndianBytes() []byte {
-	return SignedBigIntToBigEndianBytes(v.BigInt)
+	return SignedBigIntToSizedBigEndianBytes(v.BigInt, 128/8)
 }
 
 func (v Int128Value) ConformsToStaticType(
@@ -7124,7 +7116,7 @@ func (Int256Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _
 }
 
 func (v Int256Value) ToBigEndianBytes() []byte {
-	return SignedBigIntToBigEndianBytes(v.BigInt)
+	return SignedBigIntToSizedBigEndianBytes(v.BigInt, 256/8)
 }
 
 func (v Int256Value) ConformsToStaticType(
@@ -9431,7 +9423,6 @@ var _ MemberAccessibleValue = UInt64Value(0)
 // UInt64 values > math.MaxInt64 overflow int.
 // Implementing BigNumberValue ensures conversion functions
 // call ToBigInt instead of ToInt.
-//
 var _ BigNumberValue = UInt64Value(0)
 
 var UInt64MemoryUsage = common.NewNumberMemoryUsage(int(unsafe.Sizeof(UInt64Value(0))))
@@ -9499,7 +9490,6 @@ func (v UInt64Value) ByteLength() int {
 // UInt64 values > math.MaxInt64 overflow int.
 // Implementing BigNumberValue ensures conversion functions
 // call ToBigInt instead of ToInt.
-//
 func (v UInt64Value) ToBigInt(memoryGauge common.MemoryGauge) *big.Int {
 	common.UseMemory(memoryGauge, common.NewBigIntMemoryUsage(v.ByteLength()))
 	return new(big.Int).SetUint64(uint64(v))
@@ -10566,7 +10556,7 @@ func (UInt128Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, 
 }
 
 func (v UInt128Value) ToBigEndianBytes() []byte {
-	return UnsignedBigIntToBigEndianBytes(v.BigInt)
+	return UnsignedBigIntToSizedBigEndianBytes(v.BigInt, 128/8)
 }
 
 func (v UInt128Value) ConformsToStaticType(
@@ -11217,7 +11207,7 @@ func (UInt256Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, 
 }
 
 func (v UInt256Value) ToBigEndianBytes() []byte {
-	return UnsignedBigIntToBigEndianBytes(v.BigInt)
+	return UnsignedBigIntToSizedBigEndianBytes(v.BigInt, 256/8)
 }
 
 func (v UInt256Value) ConformsToStaticType(
@@ -12620,7 +12610,6 @@ func NewUnmeteredWord64Value(value uint64) Word64Value {
 // Word64 values > math.MaxInt64 overflow int.
 // Implementing BigNumberValue ensures conversion functions
 // call ToBigInt instead of ToInt.
-//
 var _ BigNumberValue = Word64Value(0)
 
 func (Word64Value) IsValue() {}
@@ -12676,7 +12665,6 @@ func (v Word64Value) ByteLength() int {
 // Word64 values > math.MaxInt64 overflow int.
 // Implementing BigNumberValue ensures conversion functions
 // call ToBigInt instead of ToInt.
-//
 func (v Word64Value) ToBigInt(memoryGauge common.MemoryGauge) *big.Int {
 	common.UseMemory(memoryGauge, common.NewBigIntMemoryUsage(v.ByteLength()))
 	return new(big.Int).SetUint64(uint64(v))
@@ -13056,7 +13044,6 @@ func (Word64Value) ChildStorables() []atree.Storable {
 }
 
 // FixedPointValue is a fixed-point number value
-//
 type FixedPointValue interface {
 	NumberValue
 	IntegerPart() NumberValue
@@ -13064,7 +13051,6 @@ type FixedPointValue interface {
 }
 
 // Fix64Value
-//
 type Fix64Value int64
 
 const Fix64MaxValue = math.MaxInt64
@@ -13623,7 +13609,6 @@ func (Fix64Value) Scale() int {
 }
 
 // UFix64Value
-//
 type UFix64Value uint64
 
 const UFix64MaxValue = math.MaxUint64
@@ -14305,7 +14290,6 @@ func (v *CompositeValue) Accept(interpreter *Interpreter, visitor Visitor) {
 
 // Walk iterates over all field values of the composite value.
 // It does NOT walk the computed fields and functions!
-//
 func (v *CompositeValue) Walk(interpreter *Interpreter, walkChild func(Value)) {
 	v.ForEachField(interpreter, func(_ string, value Value) {
 		walkChild(value)
@@ -15253,7 +15237,6 @@ func (v *CompositeValue) GetOwner() common.Address {
 
 // ForEachField iterates over all field-name field-value pairs of the composite value.
 // It does NOT iterate over computed fields and functions!
-//
 func (v *CompositeValue) ForEachField(gauge common.MemoryGauge, f func(fieldName string, fieldValue Value)) {
 
 	err := v.dictionary.Iterate(func(key atree.Value, value atree.Value) (resume bool, err error) {
@@ -17644,7 +17627,6 @@ func (*EphemeralReferenceValue) DeepRemove(_ *Interpreter) {
 }
 
 // AddressValue
-//
 type AddressValue common.Address
 
 func NewAddressValueFromBytes(memoryGauge common.MemoryGauge, constructor func() []byte) AddressValue {
@@ -17664,7 +17646,6 @@ func NewUnmeteredAddressValueFromBytes(b []byte) AddressValue {
 // This method must only be used if the `address` value is already constructed,
 // and/or already loaded onto memory. This is a convenient method for better performance.
 // If the `address` needs to be constructed, the `NewAddressValueFromConstructor` must be used.
-//
 func NewAddressValue(
 	memoryGauge common.MemoryGauge,
 	address common.Address,
