@@ -67,13 +67,17 @@ var TestContractChecker = func() *sema.Checker {
 		panic(err)
 	}
 
+	activation := sema.NewVariableActivation(sema.BaseValueActivation)
+	activation.DeclareValue(AssertFunction)
+
 	var checker *sema.Checker
 	checker, err = sema.NewChecker(
 		program,
 		TestContractLocation,
 		nil,
 		&sema.Config{
-			AccessCheckMode: sema.AccessCheckModeStrict,
+			BaseValueActivation: activation,
+			AccessCheckMode:     sema.AccessCheckModeStrict,
 		},
 	)
 	if err != nil {

@@ -22,8 +22,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/onflow/cadence/runtime/stdlib"
-	"github.com/onflow/flow-go/fvm/meter"
-	"math"
 	"strings"
 
 	"github.com/rs/zerolog"
@@ -73,12 +71,12 @@ type ImportResolver func(location common.Location) (string, error)
 //
 type TestRunner struct {
 	importResolver ImportResolver
-	testRuntime    *runtime.TestFrameworkRuntime
+	testRuntime    runtime.Runtime
 }
 
 func NewTestRunner() *TestRunner {
 	return &TestRunner{
-		testRuntime: runtime.NewTestFrameworkRuntime(),
+		testRuntime: runtime.NewInterpreterRuntime(runtime.Config{}),
 	}
 }
 
@@ -220,10 +218,17 @@ func (r *TestRunner) parseCheckAndInterpret(script string) (*interpreter.Program
 		Environment: env,
 	}
 
+	// Checker configs
 	env.CheckerConfig.ImportHandler = r.checkerImportHandler(ctx)
 	env.CheckerConfig.ContractVariableHandler = contractVariableHandler
 
+	// Interpreter configs
 	env.InterpreterConfig.ImportLocationHandler = r.interpreterImportHandler(ctx)
+	env.InterpreterConfig.ContractValueHandler = r.interpreterContractValueHandler
+	// TODO: The default injected fields handler only supports 'address' locations.
+	//   However, during tests, it is possible to get non-address locations. e.g: file paths.
+	//   Thus, need to properly handle them. Make this nil for now.
+	env.InterpreterConfig.InjectedCompositeFieldsHandler = nil
 
 	program, err := r.testRuntime.ParseAndCheckProgram([]byte(script), ctx)
 	if err != nil {
@@ -233,7 +238,14 @@ func (r *TestRunner) parseCheckAndInterpret(script string) (*interpreter.Program
 	// TODO: validate test function signature
 	//   e.g: no return values, no arguments, etc.
 
-	inter, err := r.testRuntime.Interpret(ctx)
+	// Set the storage after checking, because `ParseAndCheckProgram` clears the storage.
+	env.InterpreterConfig.Storage = runtime.NewStorage(ctx.Interface, nil)
+
+	_, inter, err := env.Interpret(
+		ctx.Location,
+		program,
+		nil,
+	)
 
 	if err != nil {
 		return nil, nil, err
@@ -292,19 +304,6 @@ func contractVariableHandler(
 		IsConstant:               true,
 		ArgumentLabels:           constructorArgumentLabels,
 		AllowOuterScopeShadowing: false,
-	}
-}
-
-func (r *TestRunner) interpreterConfig(ctx runtime.Context) *interpreter.Config {
-	return &interpreter.Config{
-		// TODO: The default injected fields handler only supports 'address' locations.
-		//   However, during tests, it is possible to get non-address locations. e.g: file paths.
-		//   Thus, need to properly handle them. Make this nil for now.
-		InjectedCompositeFieldsHandler: nil,
-
-		ImportLocationHandler: r.interpreterImportHandler(ctx),
-
-		ContractValueHandler: r.interpreterContractValueHandler,
 	}
 }
 
@@ -397,29 +396,19 @@ func (r *TestRunner) interpreterImportHandler(ctx runtime.Context) func(inter *i
 // Leverages the functionality of FVM.
 //
 func newScriptEnvironment() *fvm.ScriptEnv {
-	vm := fvm.NewVirtualMachine(runtime.NewTestFrameworkRuntime())
+	vm := fvm.NewVirtualMachine(runtime.NewInterpreterRuntime(runtime.Config{}))
 	ctx := fvm.NewContext(zerolog.Nop())
 	emptyPrograms := programs.NewEmptyPrograms()
 
 	view := testutil.RootBootstrappedLedger(vm, ctx)
 	v := view.NewChild()
 
-	st := state.NewState(
+	sth := state.NewStateTransaction(
 		v,
-		meter.NewMeter(math.MaxUint64, math.MaxUint64),
-		state.WithMaxKeySizeAllowed(ctx.MaxStateKeySize),
-		state.WithMaxValueSizeAllowed(ctx.MaxStateValueSize),
-		state.WithMaxInteractionSizeAllowed(ctx.MaxStateInteractionSize),
+		state.DefaultParameters(),
 	)
 
-	sth := state.NewStateHolder(st)
-
-	env, err := fvm.NewScriptEnvironment(context.Background(), ctx, vm, sth, emptyPrograms)
-	if err != nil {
-		panic(err)
-	}
-
-	return env
+	return fvm.NewScriptEnvironment(context.Background(), ctx, vm, sth, emptyPrograms)
 }
 
 func (r *TestRunner) parseAndCheckImport(location common.Location, startCtx runtime.Context) (*ast.Program, *sema.Elaboration, error) {
@@ -438,7 +427,7 @@ func (r *TestRunner) parseAndCheckImport(location common.Location, startCtx runt
 
 	ctx := runtime.Context{
 		Interface:   startCtx.Interface,
-		Location:    startCtx.Location,
+		Location:    location,
 		Environment: env,
 	}
 
