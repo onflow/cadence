@@ -28,8 +28,12 @@ const StringTypeEncodeHexFunctionDocString = `
 Returns a hexadecimal string for the given byte array
 `
 
+const StringTypeFromUtf8FunctionName = "fromUTF8"
+const StringTypeFromUtf8FunctionDocString = `
+Attempt to decode the input as a UTF-8 encoded string. Returns nil if the input bytes are malformed UTF-8.
+`
+
 // StringType represents the string type
-//
 var StringType = &SimpleType{
 	Name:                 "String",
 	QualifiedName:        "String",

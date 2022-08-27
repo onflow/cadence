@@ -80,7 +80,6 @@ type getterSetter struct {
 // are treated like they are returning a value.
 
 // OnEventEmittedFunc is a function that is triggered when an event is emitted by the program.
-//
 type OnEventEmittedFunc func(
 	inter *Interpreter,
 	getLocationRange func() LocationRange,
@@ -89,25 +88,21 @@ type OnEventEmittedFunc func(
 ) error
 
 // OnStatementFunc is a function that is triggered when a statement is about to be executed.
-//
 type OnStatementFunc func(
 	inter *Interpreter,
 	statement ast.Statement,
 )
 
 // OnLoopIterationFunc is a function that is triggered when a loop iteration is about to be executed.
-//
 type OnLoopIterationFunc func(
 	inter *Interpreter,
 	line int,
 )
 
 // OnFunctionInvocationFunc is a function that is triggered when a function is about to be invoked.
-//
 type OnFunctionInvocationFunc func(inter *Interpreter)
 
 // OnInvokedFunctionReturnFunc is a function that is triggered when an invoked function returned.
-//
 type OnInvokedFunctionReturnFunc func(inter *Interpreter)
 
 // OnRecordTraceFunc is a function that records a trace.
@@ -136,7 +131,6 @@ type OnMeterComputationFunc func(
 )
 
 // InjectedCompositeFieldsHandlerFunc is a function that handles storage reads.
-//
 type InjectedCompositeFieldsHandlerFunc func(
 	inter *Interpreter,
 	location common.Location,
@@ -145,7 +139,6 @@ type InjectedCompositeFieldsHandlerFunc func(
 ) map[string]Value
 
 // ContractValueHandlerFunc is a function that handles contract values.
-//
 type ContractValueHandlerFunc func(
 	inter *Interpreter,
 	compositeType *sema.CompositeType,
@@ -154,7 +147,6 @@ type ContractValueHandlerFunc func(
 ) *CompositeValue
 
 // ImportLocationHandlerFunc is a function that handles imports of locations.
-//
 type ImportLocationHandlerFunc func(
 	inter *Interpreter,
 	location common.Location,
@@ -162,7 +154,6 @@ type ImportLocationHandlerFunc func(
 
 // PublicAccountHandlerFunc is a function that handles retrieving a public account at a given address.
 // The account returned must be of type `PublicAccount`.
-//
 type PublicAccountHandlerFunc func(
 	address AddressValue,
 ) Value
@@ -173,7 +164,6 @@ type UUIDHandlerFunc func() (uint64, error)
 // PublicKeyValidationHandlerFunc is a function that validates a given public key.
 // Parameter types:
 // - publicKey: PublicKey
-//
 type PublicKeyValidationHandlerFunc func(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
@@ -185,7 +175,6 @@ type PublicKeyValidationHandlerFunc func(
 // - publicKey: PublicKey
 // - signature: [UInt8]
 // Expected result type: Bool
-//
 type BLSVerifyPoPHandlerFunc func(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
@@ -197,7 +186,6 @@ type BLSVerifyPoPHandlerFunc func(
 // Parameter types:
 // - signatures: [[UInt8]]
 // Expected result type: [UInt8]?
-//
 type BLSAggregateSignaturesHandlerFunc func(
 	inter *Interpreter,
 	getLocationRange func() LocationRange,
@@ -208,7 +196,6 @@ type BLSAggregateSignaturesHandlerFunc func(
 // Parameter types:
 // - publicKeys: [PublicKey]
 // Expected result type: PublicKey?
-//
 type BLSAggregatePublicKeysHandlerFunc func(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
@@ -223,7 +210,6 @@ type BLSAggregatePublicKeysHandlerFunc func(
 // - hashAlgorithm: HashAlgorithm
 // - publicKey: PublicKey
 // Expected result type: Bool
-//
 type SignatureVerificationHandlerFunc func(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
@@ -240,7 +226,6 @@ type SignatureVerificationHandlerFunc func(
 // - domainSeparationTag: [UInt8]
 // - hashAlgorithm: HashAlgorithm
 // Expected result type: [UInt8]
-//
 type HashHandlerFunc func(
 	inter *Interpreter,
 	getLocationRange func() LocationRange,
@@ -255,7 +240,6 @@ type HashHandlerFunc func(
 //
 // As there is no support for inheritance of concrete types,
 // these are the "leaf" nodes in the call chain, and are functions.
-//
 type CompositeTypeCode struct {
 	CompositeFunctions map[string]FunctionValue
 	DestructorFunction FunctionValue
@@ -268,7 +252,6 @@ type FunctionWrapper = func(inner FunctionValue) FunctionValue
 //
 // These are "branch" nodes in the call chain, and are function wrappers,
 // i.e. they wrap the functions / function wrappers that inherit them.
-//
 type WrapperCode struct {
 	InitializerFunctionWrapper FunctionWrapper
 	DestructorFunctionWrapper  FunctionWrapper
@@ -278,7 +261,6 @@ type WrapperCode struct {
 
 // TypeCodes is the value which stores the "prepared" / "callable" "code"
 // of all composite types, interface types, and type requirements.
-//
 type TypeCodes struct {
 	CompositeCodes       map[sema.TypeID]CompositeTypeCode
 	InterfaceCodes       map[sema.TypeID]WrapperCode
@@ -327,7 +309,6 @@ var _ common.MemoryGauge = &Interpreter{}
 
 // BaseActivation is the activation which contains all base declarations.
 // It is reused across all interpreters.
-//
 var BaseActivation = func() *VariableActivation {
 	// No need to meter since this is only created once
 	activation := NewVariableActivation(nil, nil)
@@ -383,7 +364,6 @@ func newInterpreter(
 
 // locationRangeGetter returns a function that returns the location range
 // for the given location and positioned element.
-//
 func locationRangeGetter(
 	memoryGauge common.MemoryGauge,
 	location common.Location,
@@ -434,7 +414,6 @@ func (interpreter *Interpreter) Interpret() (err error) {
 
 // visitGlobalDeclaration firsts interprets the global declaration,
 // then finds the declaration and adds it to the globals
-//
 func (interpreter *Interpreter) visitGlobalDeclaration(declaration ast.Declaration) {
 	declaration.Accept(interpreter)
 	interpreter.declareGlobal(declaration)
@@ -981,7 +960,6 @@ func (interpreter *Interpreter) VisitCompositeDeclaration(declaration *ast.Compo
 // a contract value / instance (singleton).
 //
 // For all other composite kinds the constructor function is declared.
-//
 func (interpreter *Interpreter) declareCompositeValue(
 	declaration *ast.CompositeDeclaration,
 	lexicalScope *VariableActivation,
@@ -2256,7 +2234,6 @@ type ValueConverterDeclaration struct {
 }
 
 // It would be nice if return types in Go's function types would be covariant
-//
 var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.IntTypeName,
@@ -2758,7 +2735,6 @@ type converterFunction struct {
 }
 
 // Converter functions are stateless functions. Hence they can be re-used across interpreters.
-//
 var converterFunctionValues = func() []converterFunction {
 
 	converterFuncValues := make([]converterFunction, len(ConverterDeclarations))
@@ -2811,7 +2787,6 @@ type runtimeTypeConstructor struct {
 }
 
 // Constructor functions are stateless functions. Hence they can be re-used across interpreters.
-//
 var runtimeTypeConstructors = []runtimeTypeConstructor{
 	{
 		name: "OptionalType",
@@ -2946,7 +2921,6 @@ func defineRuntimeTypeConstructorFunctions(activation *VariableActivation) {
 }
 
 // typeFunction is the `Type` function. It is stateless, hence it can be re-used across interpreters.
-//
 var typeFunction = NewUnmeteredHostFunctionValue(
 	func(invocation Invocation) Value {
 		typeParameterPair := invocation.TypeParameterTypes.Oldest()
@@ -2978,7 +2952,6 @@ func defineBaseValue(activation *VariableActivation, name string, value Value) {
 }
 
 // stringFunction is the `String` function. It is stateless, hence it can be re-used across interpreters.
-//
 var stringFunction = func() Value {
 	functionValue := NewUnmeteredHostFunctionValue(
 		func(invocation Invocation) Value {
@@ -3026,6 +2999,32 @@ var stringFunction = func() Value {
 		),
 	)
 
+	addMember(
+		sema.StringTypeFromUtf8FunctionName,
+		NewUnmeteredHostFunctionValue(
+			func(invocation Invocation) Value {
+				argument, ok := invocation.Arguments[0].(*ArrayValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				inter := invocation.Interpreter
+				memoryUsage := common.NewArrayExpressionMemoryUsage(
+					argument.Count(),
+				)
+
+				// convert to UTF-8 here
+				return NewStringValue(
+					inter,
+					memoryUsage,
+					func() string {
+						return "TODO UNIMPLEMENTED!! >:("
+					},
+				)
+			},
+			sema.StringTypeEncodeHexFunctionType,
+		),
+	)
 	return functionValue
 }()
 
@@ -4317,7 +4316,6 @@ func (interpreter *Interpreter) invalidateResource(value Value) {
 }
 
 // MeterMemory delegates the memory usage to the interpreter's memory gauge, if any.
-//
 func (interpreter *Interpreter) MeterMemory(usage common.MemoryUsage) error {
 	common.UseMemory(interpreter.Config.MemoryGauge, usage)
 	return nil
