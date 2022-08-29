@@ -127,6 +127,7 @@ func (e *ExtensionDeclaration) Doc() prettier.Doc {
 		prettier.Space,
 		extensionStatementForDoc,
 		prettier.Space,
+		prettier.Text(e.BaseType.Identifier),
 	)
 	if len(e.Conformances) > 0 {
 
@@ -185,7 +186,7 @@ func (d *ExtensionDeclaration) MarshalJSON() ([]byte, error) {
 		Type string
 		*Alias
 	}{
-		Type:  "CompositeDeclaration",
+		Type:  "ExtensionDeclaration",
 		Alias: (*Alias)(d),
 	})
 }
@@ -382,7 +383,7 @@ func (s *RemoveStatement) Doc() prettier.Doc {
 		prettier.Space,
 		removeStatementRemoveKeywordDoc,
 		prettier.Space,
-		s.ExtensionTarget.Doc(),
+		prettier.Text(s.Extension.Identifier),
 		prettier.Space,
 		removeStatementFromKeywordDoc,
 		prettier.Space,
