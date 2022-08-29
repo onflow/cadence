@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"math"
 	"time"
+	"unicode/utf8"
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
@@ -3009,18 +3010,44 @@ var stringFunction = func() Value {
 				}
 
 				inter := invocation.Interpreter
+
+				// meter byte count, not utf-8 codepoints
 				memoryUsage := common.NewArrayExpressionMemoryUsage(
 					argument.Count(),
 				)
 
-				// convert to UTF-8 here
-				return NewStringValue(
-					inter,
-					memoryUsage,
-					func() string {
-						return "TODO UNIMPLEMENTED!! >:("
-					},
-				)
+				iter, err := argument.array.Iterator()
+
+				if err != nil {
+					panic(errors.NewExternalError(err))
+				}
+
+				buf := make([]byte, argument.array.Count())
+
+				idx := 0
+				// naively read the entire byte stream into a byte array
+				for {
+					val, err := iter.Next()
+					if err != nil {
+						panic(errors.NewExternalError(err))
+					}
+
+					if val == nil {
+						break
+					}
+
+					byte := uint8(val.(UInt8Value))
+					buf[idx] = byte
+					idx += 1
+				}
+
+				if utf8.Valid(buf) {
+					return NewSomeValueNonCopying(inter, NewStringValue(inter, memoryUsage, func() string {
+						return string(buf)
+					}))
+				} else {
+					return NewNilValue(inter)
+				}
 			},
 			sema.StringTypeEncodeHexFunctionType,
 		),

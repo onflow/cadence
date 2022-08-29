@@ -3349,7 +3349,7 @@ var StringTypeEncodeHexFunctionType = &FunctionType{
 }
 
 var StringTypeFromUtf8FunctionType = &FunctionType{
-	Paramters: []*Parameter{
+	Parameters: []*Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "bytes",
