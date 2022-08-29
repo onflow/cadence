@@ -99,6 +99,9 @@ func (NonStorable) ChildStorables() []atree.Storable {
 //
 // To accomplish this, cadence.Value is the "user-facing" hierarchy that is easy to work with:
 // simple Go types that can be used without an interpreter or storage.
+//
+// cadence.Value can be converted to an interpreter.Value by "importing" it with importValue,
+// and interpreter.Value can be "exported" to a cadence.Value with ExportValue.
 type Value interface {
 	atree.Value
 	// Stringer provides `func String() string`
