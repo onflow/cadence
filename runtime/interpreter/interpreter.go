@@ -424,7 +424,7 @@ func (interpreter *Interpreter) Interpret() (err error) {
 	})
 
 	if interpreter.Program != nil {
-		interpreter.Program.Program.Accept(interpreter)
+		ast.Accept[any](interpreter.Program.Program, interpreter)
 	}
 
 	interpreter.interpreted = true
@@ -436,7 +436,7 @@ func (interpreter *Interpreter) Interpret() (err error) {
 // then finds the declaration and adds it to the globals
 //
 func (interpreter *Interpreter) visitGlobalDeclaration(declaration ast.Declaration) {
-	declaration.Accept(interpreter)
+	ast.Accept[any](declaration, interpreter)
 	interpreter.declareGlobal(declaration)
 }
 
@@ -637,7 +637,7 @@ func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 	}
 }
 
-func (interpreter *Interpreter) VisitProgram(program *ast.Program) ast.Repr {
+func (interpreter *Interpreter) VisitProgram(program *ast.Program) any {
 
 	for _, declaration := range program.ImportDeclarations() {
 		interpreter.visitGlobalDeclaration(declaration)
@@ -737,11 +737,11 @@ func (interpreter *Interpreter) VisitProgram(program *ast.Program) ast.Repr {
 	return nil
 }
 
-func (interpreter *Interpreter) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunctionDeclaration) ast.Repr {
+func (interpreter *Interpreter) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunctionDeclaration) any {
 	return interpreter.VisitFunctionDeclaration(declaration.FunctionDeclaration)
 }
 
-func (interpreter *Interpreter) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration) ast.Repr {
+func (interpreter *Interpreter) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration) any {
 
 	identifier := declaration.Identifier.Identifier
 
@@ -801,7 +801,7 @@ func (interpreter *Interpreter) functionDeclarationValue(
 	)
 }
 
-func (interpreter *Interpreter) VisitBlock(block *ast.Block) ast.Repr {
+func (interpreter *Interpreter) VisitBlock(block *ast.Block) any {
 	// block scope: each block gets an activation record
 	interpreter.activations.PushNewWithCurrent()
 	defer interpreter.activations.Pop()
@@ -809,7 +809,7 @@ func (interpreter *Interpreter) VisitBlock(block *ast.Block) ast.Repr {
 	return interpreter.visitStatements(block.Statements)
 }
 
-func (interpreter *Interpreter) VisitFunctionBlock(_ *ast.FunctionBlock) ast.Repr {
+func (interpreter *Interpreter) VisitFunctionBlock(_ *ast.FunctionBlock) any {
 	// NOTE: see visitBlock
 	panic(errors.NewUnreachableError())
 }
@@ -955,7 +955,7 @@ func (interpreter *Interpreter) visitAssignment(
 }
 
 // NOTE: only called for top-level composite declarations
-func (interpreter *Interpreter) VisitCompositeDeclaration(declaration *ast.CompositeDeclaration) ast.Repr {
+func (interpreter *Interpreter) VisitCompositeDeclaration(declaration *ast.CompositeDeclaration) any {
 
 	// lexical scope: variables in functions are bound to what is visible at declaration time
 	lexicalScope := interpreter.activations.CurrentOrNew()
@@ -1633,12 +1633,12 @@ func (interpreter *Interpreter) compositeFunction(
 	)
 }
 
-func (interpreter *Interpreter) VisitFieldDeclaration(_ *ast.FieldDeclaration) ast.Repr {
+func (interpreter *Interpreter) VisitFieldDeclaration(_ *ast.FieldDeclaration) any {
 	// fields aren't interpreted
 	panic(errors.NewUnreachableError())
 }
 
-func (interpreter *Interpreter) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclaration) ast.Repr {
+func (interpreter *Interpreter) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclaration) any {
 	// enum cases aren't interpreted
 	panic(errors.NewUnreachableError())
 }
@@ -1863,7 +1863,7 @@ func (interpreter *Interpreter) Unbox(getLocationRange func() LocationRange, val
 }
 
 // NOTE: only called for top-level interface declarations
-func (interpreter *Interpreter) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaration) ast.Repr {
+func (interpreter *Interpreter) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaration) any {
 
 	// lexical scope: variables in functions are bound to what is visible at declaration time
 	lexicalScope := interpreter.activations.CurrentOrNew()

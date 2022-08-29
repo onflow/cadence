@@ -23,7 +23,7 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
-func (checker *Checker) VisitVariableDeclaration(declaration *ast.VariableDeclaration) ast.Repr {
+func (checker *Checker) VisitVariableDeclaration(declaration *ast.VariableDeclaration) Type {
 	checker.visitVariableDeclaration(declaration, false)
 	return nil
 }

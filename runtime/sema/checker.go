@@ -209,7 +209,7 @@ func (checker *Checker) Check() error {
 				}()
 			}
 
-			checker.Program.Accept(checker)
+			ast.Accept[Type](checker.Program, checker)
 		}
 		if checker.Config.CheckHandler != nil {
 			checker.Config.CheckHandler(checker, check)
@@ -251,7 +251,7 @@ func (checker *Checker) report(err error) {
 	}
 }
 
-func (checker *Checker) VisitProgram(program *ast.Program) ast.Repr {
+func (checker *Checker) VisitProgram(program *ast.Program) Type {
 
 	for _, declaration := range program.ImportDeclarations() {
 		checker.declareImportDeclaration(declaration)
@@ -321,7 +321,7 @@ func (checker *Checker) VisitProgram(program *ast.Program) ast.Repr {
 			continue
 		}
 
-		declaration.Accept(checker)
+		ast.Accept[Type](declaration, checker)
 		checker.declareGlobalDeclaration(declaration)
 	}
 
@@ -2189,11 +2189,7 @@ func (checker *Checker) visitExpressionWithForceType(
 		checker.expectedType = prevExpectedType
 	}()
 
-	actualType, ok := expr.Accept(checker).(Type)
-	if !ok {
-		// visiter must always return a Type
-		panic(errors.NewUnreachableError())
-	}
+	actualType = ast.Accept[Type](expr, checker)
 
 	if forceType &&
 		expectedType != nil &&

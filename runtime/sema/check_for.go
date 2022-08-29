@@ -23,7 +23,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
-func (checker *Checker) VisitForStatement(statement *ast.ForStatement) ast.Repr {
+func (checker *Checker) VisitForStatement(statement *ast.ForStatement) Type {
 
 	checker.enterValueScope()
 	defer checker.leaveValueScope(statement.EndPosition, true)
@@ -110,7 +110,7 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) ast.Repr 
 
 	_ = checker.checkPotentiallyUnevaluated(func() Type {
 		checker.functionActivations.WithLoop(func() {
-			statement.Block.Accept(checker)
+			ast.Accept[Type](statement.Block, checker)
 		})
 
 		// ignored

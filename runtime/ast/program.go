@@ -66,10 +66,6 @@ func (p *Program) EndPosition(memoryGauge common.MemoryGauge) Position {
 	return lastDeclaration.EndPosition(memoryGauge)
 }
 
-func (p *Program) Accept(visitor Visitor) Repr {
-	return visitor.VisitProgram(p)
-}
-
 func (p *Program) Walk(walkChild func(Element)) {
 	walkDeclarations(walkChild, p.declarations)
 }

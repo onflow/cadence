@@ -24,7 +24,7 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
-func (checker *Checker) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration) ast.Repr {
+func (checker *Checker) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration) Type {
 	return checker.visitFunctionDeclaration(
 		declaration,
 		functionDeclarationOptions{
@@ -35,7 +35,7 @@ func (checker *Checker) VisitFunctionDeclaration(declaration *ast.FunctionDeclar
 	)
 }
 
-func (checker *Checker) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunctionDeclaration) ast.Repr {
+func (checker *Checker) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunctionDeclaration) Type {
 	return checker.VisitFunctionDeclaration(declaration.FunctionDeclaration)
 }
 
@@ -56,7 +56,7 @@ type functionDeclarationOptions struct {
 func (checker *Checker) visitFunctionDeclaration(
 	declaration *ast.FunctionDeclaration,
 	options functionDeclarationOptions,
-) ast.Repr {
+) Type {
 
 	checker.checkDeclarationAccessModifier(
 		declaration.Access,
@@ -313,7 +313,7 @@ func (checker *Checker) declareParameters(
 	}
 }
 
-func (checker *Checker) VisitFunctionBlock(functionBlock *ast.FunctionBlock) ast.Repr {
+func (checker *Checker) VisitFunctionBlock(functionBlock *ast.FunctionBlock) Type {
 	// NOTE: see visitFunctionBlock
 	panic(errors.NewUnreachableError())
 }
@@ -412,7 +412,7 @@ func (checker *Checker) declareBefore() {
 	// TODO: record occurrence – but what position?
 }
 
-func (checker *Checker) VisitFunctionExpression(expression *ast.FunctionExpression) ast.Repr {
+func (checker *Checker) VisitFunctionExpression(expression *ast.FunctionExpression) Type {
 
 	// TODO: infer
 	functionType := checker.functionType(expression.ParameterList, expression.ReturnTypeAnnotation)

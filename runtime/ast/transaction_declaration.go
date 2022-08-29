@@ -70,10 +70,6 @@ func (*TransactionDeclaration) ElementType() ElementType {
 	return ElementTypeTransactionDeclaration
 }
 
-func (d *TransactionDeclaration) Accept(visitor Visitor) Repr {
-	return visitor.VisitTransactionDeclaration(d)
-}
-
 func (d *TransactionDeclaration) Walk(walkChild func(Element)) {
 	// TODO: walk parameters
 	for _, declaration := range d.Fields {

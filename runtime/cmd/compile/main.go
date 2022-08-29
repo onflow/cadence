@@ -57,7 +57,7 @@ func main() {
 	funcs := make([]*ir.Func, len(functionDeclarations))
 
 	for i, functionDeclaration := range functionDeclarations {
-		funcs[i] = functionDeclaration.Accept(comp).(*ir.Func)
+		funcs[i] = ast.Accept[ir.Repr](functionDeclaration, comp).(*ir.Func)
 	}
 
 	// Generate a WebAssembly module for the functions

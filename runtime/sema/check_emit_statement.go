@@ -23,7 +23,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
-func (checker *Checker) VisitEmitStatement(statement *ast.EmitStatement) ast.Repr {
+func (checker *Checker) VisitEmitStatement(statement *ast.EmitStatement) Type {
 	invocation := statement.InvocationExpression
 
 	ty := checker.checkInvocationExpression(invocation)

@@ -20,7 +20,7 @@ package sema
 
 import "github.com/onflow/cadence/runtime/ast"
 
-func (checker *Checker) VisitPragmaDeclaration(p *ast.PragmaDeclaration) ast.Repr {
+func (checker *Checker) VisitPragmaDeclaration(p *ast.PragmaDeclaration) Type {
 
 	invocPragma, isInvocPragma := p.Expression.(*ast.InvocationExpression)
 	var isIdentPragma bool

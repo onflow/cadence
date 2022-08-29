@@ -52,7 +52,7 @@ func (interpreter *Interpreter) evalStatement(statement ast.Statement) any {
 		onStatement(interpreter, statement)
 	}
 
-	return statement.Accept(interpreter)
+	return ast.Accept[any](statement, interpreter)
 }
 
 func (interpreter *Interpreter) visitStatements(statements []ast.Statement) controlReturn {
@@ -67,7 +67,7 @@ func (interpreter *Interpreter) visitStatements(statements []ast.Statement) cont
 	return nil
 }
 
-func (interpreter *Interpreter) VisitReturnStatement(statement *ast.ReturnStatement) ast.Repr {
+func (interpreter *Interpreter) VisitReturnStatement(statement *ast.ReturnStatement) any {
 	// NOTE: returning result
 
 	var value Value
@@ -89,15 +89,15 @@ func (interpreter *Interpreter) VisitReturnStatement(statement *ast.ReturnStatem
 	return functionReturn{value}
 }
 
-func (interpreter *Interpreter) VisitBreakStatement(_ *ast.BreakStatement) ast.Repr {
+func (interpreter *Interpreter) VisitBreakStatement(_ *ast.BreakStatement) any {
 	return controlBreak{}
 }
 
-func (interpreter *Interpreter) VisitContinueStatement(_ *ast.ContinueStatement) ast.Repr {
+func (interpreter *Interpreter) VisitContinueStatement(_ *ast.ContinueStatement) any {
 	return controlContinue{}
 }
 
-func (interpreter *Interpreter) VisitIfStatement(statement *ast.IfStatement) ast.Repr {
+func (interpreter *Interpreter) VisitIfStatement(statement *ast.IfStatement) any {
 	switch test := statement.Test.(type) {
 	case ast.Expression:
 		return interpreter.visitIfStatementWithTestExpression(test, statement.Then, statement.Else)
@@ -119,9 +119,9 @@ func (interpreter *Interpreter) visitIfStatementWithTestExpression(
 	}
 	var result any
 	if value {
-		result = thenBlock.Accept(interpreter)
+		result = ast.Accept[any](thenBlock, interpreter)
 	} else if elseBlock != nil {
-		result = elseBlock.Accept(interpreter)
+		result = ast.Accept[any](elseBlock, interpreter)
 	}
 
 	if ret, ok := result.(controlReturn); ok {
@@ -193,9 +193,9 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 			transferredUnwrappedValue,
 		)
 
-		result = thenBlock.Accept(interpreter)
+		result = ast.Accept[any](thenBlock, interpreter)
 	} else if elseBlock != nil {
-		result = elseBlock.Accept(interpreter)
+		result = ast.Accept[any](elseBlock, interpreter)
 	}
 
 	if ret, ok := result.(controlReturn); ok {
@@ -204,7 +204,7 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 	return nil
 }
 
-func (interpreter *Interpreter) VisitSwitchStatement(switchStatement *ast.SwitchStatement) ast.Repr {
+func (interpreter *Interpreter) VisitSwitchStatement(switchStatement *ast.SwitchStatement) any {
 
 	testValue, ok := interpreter.evalExpression(switchStatement.Expression).(EquatableValue)
 	if !ok {
@@ -213,7 +213,7 @@ func (interpreter *Interpreter) VisitSwitchStatement(switchStatement *ast.Switch
 
 	for _, switchCase := range switchStatement.Cases {
 
-		runStatements := func() ast.Repr {
+		runStatements := func() any {
 			// NOTE: the new block ensures that a new scope is introduced
 
 			block := ast.NewBlock(
@@ -222,7 +222,7 @@ func (interpreter *Interpreter) VisitSwitchStatement(switchStatement *ast.Switch
 				ReturnEmptyRange(),
 			)
 
-			result := block.Accept(interpreter)
+			result := ast.Accept[any](block, interpreter)
 
 			if _, ok := result.(controlBreak); ok {
 				return nil
@@ -265,7 +265,7 @@ func (interpreter *Interpreter) VisitSwitchStatement(switchStatement *ast.Switch
 	return nil
 }
 
-func (interpreter *Interpreter) VisitWhileStatement(statement *ast.WhileStatement) ast.Repr {
+func (interpreter *Interpreter) VisitWhileStatement(statement *ast.WhileStatement) any {
 
 	for {
 
@@ -276,7 +276,7 @@ func (interpreter *Interpreter) VisitWhileStatement(statement *ast.WhileStatemen
 
 		interpreter.reportLoopIteration(statement)
 
-		result := statement.Block.Accept(interpreter)
+		result := ast.Accept[any](statement.Block, interpreter)
 
 		switch result.(type) {
 		case controlBreak:
@@ -293,7 +293,7 @@ func (interpreter *Interpreter) VisitWhileStatement(statement *ast.WhileStatemen
 
 var intOne = NewUnmeteredIntValueFromInt64(1)
 
-func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) ast.Repr {
+func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) any {
 
 	interpreter.activations.PushNewWithCurrent()
 	defer interpreter.activations.Pop()
@@ -346,7 +346,7 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) a
 
 		variable.SetValue(value)
 
-		result := statement.Block.Accept(interpreter)
+		result := ast.Accept[any](statement.Block, interpreter)
 
 		switch result.(type) {
 		case controlBreak:
@@ -367,7 +367,7 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) a
 	}
 }
 
-func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement) ast.Repr {
+func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement) any {
 	event, ok := interpreter.evalExpression(statement.InvocationExpression).(*CompositeValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -392,13 +392,13 @@ func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement)
 	return nil
 }
 
-func (interpreter *Interpreter) VisitPragmaDeclaration(_ *ast.PragmaDeclaration) ast.Repr {
+func (interpreter *Interpreter) VisitPragmaDeclaration(_ *ast.PragmaDeclaration) any {
 	return nil
 }
 
 // VisitVariableDeclaration first visits the declaration's value,
 // then declares the variable with the name bound to the value
-func (interpreter *Interpreter) VisitVariableDeclaration(declaration *ast.VariableDeclaration) ast.Repr {
+func (interpreter *Interpreter) VisitVariableDeclaration(declaration *ast.VariableDeclaration) any {
 
 	interpreter.visitVariableDeclaration(
 		declaration,
@@ -471,7 +471,7 @@ func (interpreter *Interpreter) visitVariableDeclaration(
 	)
 }
 
-func (interpreter *Interpreter) VisitAssignmentStatement(assignment *ast.AssignmentStatement) ast.Repr {
+func (interpreter *Interpreter) VisitAssignmentStatement(assignment *ast.AssignmentStatement) any {
 	assignmentStatementTypes := interpreter.Program.Elaboration.AssignmentStatementTypes[assignment]
 	targetType := assignmentStatementTypes.TargetType
 	valueType := assignmentStatementTypes.ValueType
@@ -489,7 +489,7 @@ func (interpreter *Interpreter) VisitAssignmentStatement(assignment *ast.Assignm
 	return nil
 }
 
-func (interpreter *Interpreter) VisitSwapStatement(swap *ast.SwapStatement) ast.Repr {
+func (interpreter *Interpreter) VisitSwapStatement(swap *ast.SwapStatement) any {
 	swapStatementTypes := interpreter.Program.Elaboration.SwapStatementTypes[swap]
 	leftType := swapStatementTypes.LeftType
 	rightType := swapStatementTypes.RightType
@@ -536,7 +536,7 @@ func (interpreter *Interpreter) checkSwapValue(value Value, expression ast.Expre
 	panic(errors.NewUnreachableError())
 }
 
-func (interpreter *Interpreter) VisitExpressionStatement(statement *ast.ExpressionStatement) ast.Repr {
+func (interpreter *Interpreter) VisitExpressionStatement(statement *ast.ExpressionStatement) any {
 	result := interpreter.evalExpression(statement.Expression)
 	return ExpressionStatementResult{result}
 }

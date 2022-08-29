@@ -23,7 +23,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
-func (checker *Checker) VisitWhileStatement(statement *ast.WhileStatement) ast.Repr {
+func (checker *Checker) VisitWhileStatement(statement *ast.WhileStatement) Type {
 
 	checker.VisitExpression(statement.Test, BoolType)
 
@@ -33,7 +33,7 @@ func (checker *Checker) VisitWhileStatement(statement *ast.WhileStatement) ast.R
 
 	_ = checker.checkPotentiallyUnevaluated(func() Type {
 		checker.functionActivations.WithLoop(func() {
-			statement.Block.Accept(checker)
+			ast.Accept[Type](statement.Block, checker)
 		})
 
 		// ignored
@@ -99,7 +99,7 @@ func (checker *Checker) reportResourceUsesInLoop(startPos, endPos ast.Position) 
 	})
 }
 
-func (checker *Checker) VisitBreakStatement(statement *ast.BreakStatement) ast.Repr {
+func (checker *Checker) VisitBreakStatement(statement *ast.BreakStatement) Type {
 
 	// Ensure that the `break` statement is inside a loop or switch statement
 
@@ -120,7 +120,7 @@ func (checker *Checker) VisitBreakStatement(statement *ast.BreakStatement) ast.R
 	return nil
 }
 
-func (checker *Checker) VisitContinueStatement(statement *ast.ContinueStatement) ast.Repr {
+func (checker *Checker) VisitContinueStatement(statement *ast.ContinueStatement) Type {
 
 	// Ensure that the `continue` statement is inside a loop statement
 

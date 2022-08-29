@@ -23,7 +23,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
-func (checker *Checker) VisitCreateExpression(expression *ast.CreateExpression) ast.Repr {
+func (checker *Checker) VisitCreateExpression(expression *ast.CreateExpression) Type {
 	inCreate := checker.inCreate
 	checker.inCreate = true
 	defer func() {

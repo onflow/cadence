@@ -23,7 +23,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
-func (checker *Checker) VisitUnaryExpression(expression *ast.UnaryExpression) ast.Repr {
+func (checker *Checker) VisitUnaryExpression(expression *ast.UnaryExpression) Type {
 
 	var expectedType Type
 	if expression.Operation == ast.OperationMove {

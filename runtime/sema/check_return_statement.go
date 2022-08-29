@@ -20,7 +20,7 @@ package sema
 
 import "github.com/onflow/cadence/runtime/ast"
 
-func (checker *Checker) VisitReturnStatement(statement *ast.ReturnStatement) ast.Repr {
+func (checker *Checker) VisitReturnStatement(statement *ast.ReturnStatement) Type {
 	functionActivation := checker.functionActivations.Current()
 
 	defer func() {

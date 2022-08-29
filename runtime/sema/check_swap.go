@@ -23,7 +23,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
-func (checker *Checker) VisitSwapStatement(swap *ast.SwapStatement) ast.Repr {
+func (checker *Checker) VisitSwapStatement(swap *ast.SwapStatement) Type {
 
 	leftType := checker.VisitExpression(swap.Left, nil)
 	rightType := checker.VisitExpression(swap.Right, nil)

@@ -23,7 +23,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
-func (checker *Checker) VisitIdentifierExpression(expression *ast.IdentifierExpression) ast.Repr {
+func (checker *Checker) VisitIdentifierExpression(expression *ast.IdentifierExpression) Type {
 	identifier := expression.Identifier
 	variable := checker.findAndCheckValueVariable(expression, true)
 	if variable == nil {
@@ -136,7 +136,7 @@ func (checker *Checker) checkResourceVariableCapturingInFunction(variable *Varia
 	)
 }
 
-func (checker *Checker) VisitExpressionStatement(statement *ast.ExpressionStatement) ast.Repr {
+func (checker *Checker) VisitExpressionStatement(statement *ast.ExpressionStatement) Type {
 	expression := statement.Expression
 
 	ty := checker.VisitExpression(expression, nil)
@@ -152,7 +152,7 @@ func (checker *Checker) VisitExpressionStatement(statement *ast.ExpressionStatem
 	return nil
 }
 
-func (checker *Checker) VisitBoolExpression(_ *ast.BoolExpression) ast.Repr {
+func (checker *Checker) VisitBoolExpression(_ *ast.BoolExpression) Type {
 	return BoolType
 }
 
@@ -160,11 +160,11 @@ var NilType = &OptionalType{
 	Type: NeverType,
 }
 
-func (checker *Checker) VisitNilExpression(_ *ast.NilExpression) ast.Repr {
+func (checker *Checker) VisitNilExpression(_ *ast.NilExpression) Type {
 	return NilType
 }
 
-func (checker *Checker) VisitIntegerExpression(expression *ast.IntegerExpression) ast.Repr {
+func (checker *Checker) VisitIntegerExpression(expression *ast.IntegerExpression) Type {
 	expectedType := UnwrapOptionalType(checker.expectedType)
 
 	var actualType Type
@@ -191,7 +191,7 @@ func (checker *Checker) VisitIntegerExpression(expression *ast.IntegerExpression
 	return actualType
 }
 
-func (checker *Checker) VisitFixedPointExpression(expression *ast.FixedPointExpression) ast.Repr {
+func (checker *Checker) VisitFixedPointExpression(expression *ast.FixedPointExpression) Type {
 	// TODO: adjust once/if we support more fixed point types
 
 	// If the contextually expected type is a subtype of FixedPoint, then take that.
@@ -216,7 +216,7 @@ func (checker *Checker) VisitFixedPointExpression(expression *ast.FixedPointExpr
 	return actualType
 }
 
-func (checker *Checker) VisitStringExpression(expression *ast.StringExpression) ast.Repr {
+func (checker *Checker) VisitStringExpression(expression *ast.StringExpression) Type {
 	expectedType := UnwrapOptionalType(checker.expectedType)
 
 	var actualType Type = StringType
@@ -231,7 +231,7 @@ func (checker *Checker) VisitStringExpression(expression *ast.StringExpression) 
 	return actualType
 }
 
-func (checker *Checker) VisitIndexExpression(expression *ast.IndexExpression) ast.Repr {
+func (checker *Checker) VisitIndexExpression(expression *ast.IndexExpression) Type {
 	return checker.visitIndexExpression(expression, false)
 }
 

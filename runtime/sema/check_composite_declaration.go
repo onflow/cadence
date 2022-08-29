@@ -25,7 +25,7 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
-func (checker *Checker) VisitCompositeDeclaration(declaration *ast.CompositeDeclaration) ast.Repr {
+func (checker *Checker) VisitCompositeDeclaration(declaration *ast.CompositeDeclaration) Type {
 	checker.visitCompositeDeclaration(declaration, ContainerKindComposite)
 
 	return nil
@@ -200,11 +200,11 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 	// DON'T use `nestedDeclarations`, because of non-deterministic order
 
 	for _, nestedInterface := range declaration.Members.Interfaces() {
-		nestedInterface.Accept(checker)
+		ast.Accept[Type](nestedInterface, checker)
 	}
 
 	for _, nestedComposite := range declaration.Members.Composites() {
-		nestedComposite.Accept(checker)
+		ast.Accept[Type](nestedComposite, checker)
 	}
 }
 
@@ -2025,13 +2025,13 @@ func (checker *Checker) checkNestedIdentifier(
 	}
 }
 
-func (checker *Checker) VisitFieldDeclaration(_ *ast.FieldDeclaration) ast.Repr {
+func (checker *Checker) VisitFieldDeclaration(_ *ast.FieldDeclaration) Type {
 	// NOTE: field type is already checked when determining composite function in `compositeType`
 
 	panic(errors.NewUnreachableError())
 }
 
-func (checker *Checker) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclaration) ast.Repr {
+func (checker *Checker) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclaration) Type {
 	// NOTE: already checked when checking the composite
 
 	panic(errors.NewUnreachableError())
