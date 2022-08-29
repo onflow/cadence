@@ -1323,6 +1323,7 @@ func TestSemaCodecElaboration(t *testing.T) {
 				[]byte{0, 0, 0, 1},                 // length of CompositeTypes map
 				[]byte{0, 0, 0, byte(len(typeId))}, // TypeID aka map key
 				[]byte(typeId),
+				[]byte{byte(sema_codec.EncodedSemaCompositeType)},
 				[]byte{common.ScriptLocationPrefix[0]}, // location
 				location[:],
 				[]byte{0, 0, 0, byte(len(identifier))}, // identifier
@@ -1334,7 +1335,7 @@ func TestSemaCodecElaboration(t *testing.T) {
 				[]byte{byte(common_codec.EncodedBoolTrue)},  // nil Fields
 				[]byte{byte(common_codec.EncodedBoolTrue)},  // nil ConstructorParameters
 				[]byte{byte(common_codec.EncodedBoolTrue)},  // nil nestedTypes
-				[]byte{byte(sema_codec.EncodedSemaPointerType), 0, 0, 0, 14},
+				[]byte{byte(sema_codec.EncodedSemaPointerType), 0, 0, 0, 15},
 				[]byte{byte(sema_codec.EncodedSemaNilType)}, // nil EnumRawType
 				[]byte{byte(common_codec.EncodedBoolFalse)}, // hasComputedMembers
 				[]byte{byte(common_codec.EncodedBoolFalse)}, // ImportableWithoutLocation
@@ -1342,6 +1343,7 @@ func TestSemaCodecElaboration(t *testing.T) {
 				[]byte{0, 0, 0, 1},                 // length of InterfaceTypes map
 				[]byte{0, 0, 0, byte(len(typeId))}, // TypeID aka map key
 				[]byte(typeId),
+				[]byte{byte(sema_codec.EncodedSemaCompositeType)},
 				[]byte{common.ScriptLocationPrefix[0]}, // location
 				location[:],
 				[]byte{0, 0, 0, byte(len(identifier))}, // identifier
@@ -1350,7 +1352,7 @@ func TestSemaCodecElaboration(t *testing.T) {
 				[]byte{byte(common_codec.EncodedBoolTrue)},  // nil Members
 				[]byte{byte(common_codec.EncodedBoolTrue)},  // nil Fields
 				[]byte{byte(common_codec.EncodedBoolTrue)},  // nil InitializerParameters
-				[]byte{byte(sema_codec.EncodedSemaPointerType), 0, 0, 0, 14},
+				[]byte{byte(sema_codec.EncodedSemaPointerType), 0, 0, 0, 15},
 				[]byte{byte(common_codec.EncodedBoolTrue)}, // nil nestedTypes
 
 			),
@@ -1377,7 +1379,8 @@ func TestSemaCodecElaboration(t *testing.T) {
 			[]byte{0, 0, 0, 2},
 			[]byte{0, 0, 0, byte(len("Parent"))},
 			[]byte("Parent"),
-			// parent here at byte #14
+			[]byte{byte(sema_codec.EncodedSemaCompositeType)},
+			// parent here at byte #15
 			[]byte{common_codec.NilLocationPrefix[0]},
 			[]byte{0, 0, 0, 0},
 			[]byte{byte(common.CompositeKindUnknown)},
@@ -1393,6 +1396,7 @@ func TestSemaCodecElaboration(t *testing.T) {
 			[]byte{byte(common_codec.EncodedBoolFalse)},
 			[]byte{0, 0, 0, byte(len("child"))},
 			[]byte("child"),
+			[]byte{byte(sema_codec.EncodedSemaCompositeType)},
 			[]byte{common_codec.NilLocationPrefix[0]},
 			[]byte{0, 0, 0, 0},
 			[]byte{byte(common.CompositeKindUnknown)},
@@ -1402,7 +1406,7 @@ func TestSemaCodecElaboration(t *testing.T) {
 			[]byte{byte(common_codec.EncodedBoolTrue)},
 			[]byte{byte(common_codec.EncodedBoolTrue)},
 			[]byte{byte(common_codec.EncodedBoolTrue)},
-			[]byte{byte(sema_codec.EncodedSemaPointerType), 0, 0, 0, 14},
+			[]byte{byte(sema_codec.EncodedSemaPointerType), 0, 0, 0, 15},
 			[]byte{byte(sema_codec.EncodedSemaNilType)},
 			[]byte{byte(common_codec.EncodedBoolFalse)},
 			[]byte{byte(common_codec.EncodedBoolFalse)},
@@ -1436,7 +1440,8 @@ func TestSemaCodecElaboration(t *testing.T) {
 			[]byte{0, 0, 0, 2},
 			[]byte{0, 0, 0, byte(len("first"))},
 			[]byte("first"),
-			// parent here at byte #13
+			[]byte{byte(sema_codec.EncodedSemaCompositeType)},
+			// first here at byte #14
 			[]byte{common_codec.NilLocationPrefix[0]},
 			[]byte{0, 0, 0, 0},
 			[]byte{byte(common.CompositeKindUnknown)},
@@ -1452,7 +1457,7 @@ func TestSemaCodecElaboration(t *testing.T) {
 			[]byte{byte(common_codec.EncodedBoolFalse)},
 			[]byte{0, 0, 0, byte(len("second"))},
 			[]byte("second"),
-			[]byte{byte(sema_codec.EncodedSemaPointerType), 0, 0, 0, 13},
+			[]byte{byte(sema_codec.EncodedSemaPointerType), 0, 0, 0, 14},
 
 			[]byte{0, 0, 0, 0}, // empty InterfaceTypes
 		)
@@ -3722,11 +3727,10 @@ func TestSemaCodecDecodeErrors(t *testing.T) {
 		_, decoder, buffer := NewTestCodec()
 
 		buffer.Write([]byte{
-			byte(common_codec.EncodedBoolFalse),
 			0, 0, 0, 1,
 		})
 
-		err := sema_codec.DecodeMap(decoder, make(map[common.TypeID]sema.Type, 0), func() (sema.Type, error) {
+		err := sema_codec.DecodeMap(decoder, make(map[common.TypeID]*sema.CompositeType, 0), func() (*sema.CompositeType, error) {
 			return nil, nil
 		})
 		assert.ErrorContains(t, err, "EOF")
@@ -3738,17 +3742,17 @@ func TestSemaCodecDecodeErrors(t *testing.T) {
 		_, decoder, buffer := NewTestCodec()
 
 		buffer.Write([]byte{
-			byte(common_codec.EncodedBoolFalse),
 			0, 0, 0, 1,
 			0, 0, 0, 0,
+			byte(sema_codec.EncodedSemaCompositeType),
 		})
 
 		testError := fmt.Errorf("")
 
-		err := sema_codec.DecodeMap(decoder, make(map[common.TypeID]sema.Type, 0), func() (sema.Type, error) {
+		err := sema_codec.DecodeMap(decoder, make(map[common.TypeID]*sema.InterfaceType, 0), func() (*sema.InterfaceType, error) {
 			return nil, testError
 		})
-		assert.Equal(t, err, testError)
+		assert.Equal(t, testError, err)
 	})
 }
 

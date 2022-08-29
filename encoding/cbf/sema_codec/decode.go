@@ -876,7 +876,11 @@ func DecodeArray[T any](d *SemaDecoder, decodeFn func() (T, error)) (arr []T, er
 	return
 }
 
-func DecodeMap[V sema.Type](d *SemaDecoder, mapToPopulate map[common.TypeID]V, decodeFn func() (V, error)) (err error) {
+func DecodeMap[V *sema.CompositeType | *sema.InterfaceType](
+	d *SemaDecoder,
+	mapToPopulate map[common.TypeID]V,
+	decodeFn func() (V, error),
+) (err error) {
 	length, err := common_codec.DecodeLength(&d.r)
 	if err != nil {
 		return
@@ -884,8 +888,10 @@ func DecodeMap[V sema.Type](d *SemaDecoder, mapToPopulate map[common.TypeID]V, d
 
 	for i := 0; i < length; i++ {
 		var (
-			k string
-			v V
+			k             string
+			v             V
+			value         sema.Type
+			typeIndicator EncodedSema
 		)
 
 		k, err = common_codec.DecodeString(&d.r)
@@ -893,12 +899,23 @@ func DecodeMap[V sema.Type](d *SemaDecoder, mapToPopulate map[common.TypeID]V, d
 			return
 		}
 
-		// TODO need to support pointers here if Elaboration.CompositeTypes
-		//      can have two identical CompositeTypes at the top-level
-		//      (also InterfaceTypes)
-		v, err = decodeFn()
+		typeIndicator, err = d.DecodeTypeIdentifier()
 		if err != nil {
 			return
+		}
+
+		switch typeIndicator {
+		case EncodedSemaCompositeType:
+			v, err = decodeFn()
+			if err != nil {
+				return
+			}
+		case EncodedSemaPointerType:
+			value, err = d.DecodePointer()
+			if err != nil {
+				return
+			}
+			v = value.(V)
 		}
 
 		mapToPopulate[common.TypeID(k)] = v

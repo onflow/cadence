@@ -825,9 +825,8 @@ func EncodeMap[V sema.Type](e *SemaEncoder, m map[common.TypeID]V, encodeFn func
 			return
 		}
 
-		// TODO only support pointers here if Elaboration.CompositeTypes
-		//      can have two identical CompositeTypes at the top-level
-		//      (also InterfaceTypes)
+		// TODO can save one byte by using one byte for both the pointer indicator
+		// and the first byte of the CompositeType: location prefix.
 
 		if bufferOffset, usePointer := e.typeDefs[v]; usePointer {
 			err = e.EncodePointer(bufferOffset)
@@ -836,6 +835,15 @@ func EncodeMap[V sema.Type](e *SemaEncoder, m map[common.TypeID]V, encodeFn func
 			}
 			continue
 		}
+
+		// NOTE: EncodedSemaCompositeType is used despite this also working with InterfaceType
+		//       This works because this byte just has to NOT be EncodedSemaPointerType.
+		err = e.EncodeTypeIdentifier(EncodedSemaCompositeType)
+		if err != nil {
+			return
+		}
+
+		//e.typeDefs[v] = e.w.Len() + 1 // point to the encoded type, not its type identifier
 		e.typeDefs[v] = e.w.Len()
 
 		err = encodeFn(v)
