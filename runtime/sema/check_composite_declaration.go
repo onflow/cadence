@@ -25,10 +25,9 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
-func (checker *Checker) VisitCompositeDeclaration(declaration *ast.CompositeDeclaration) Type {
+func (checker *Checker) VisitCompositeDeclaration(declaration *ast.CompositeDeclaration) (_ struct{}) {
 	checker.visitCompositeDeclaration(declaration, ContainerKindComposite)
-
-	return nil
+	return
 }
 
 // visitCompositeDeclaration checks a previously declared composite declaration.
@@ -200,11 +199,11 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 	// DON'T use `nestedDeclarations`, because of non-deterministic order
 
 	for _, nestedInterface := range declaration.Members.Interfaces() {
-		ast.Accept[Type](nestedInterface, checker)
+		ast.AcceptDeclaration[struct{}](nestedInterface, checker)
 	}
 
 	for _, nestedComposite := range declaration.Members.Composites() {
-		ast.Accept[Type](nestedComposite, checker)
+		ast.AcceptDeclaration[struct{}](nestedComposite, checker)
 	}
 }
 
@@ -2025,13 +2024,13 @@ func (checker *Checker) checkNestedIdentifier(
 	}
 }
 
-func (checker *Checker) VisitFieldDeclaration(_ *ast.FieldDeclaration) Type {
+func (checker *Checker) VisitFieldDeclaration(_ *ast.FieldDeclaration) struct{} {
 	// NOTE: field type is already checked when determining composite function in `compositeType`
 
 	panic(errors.NewUnreachableError())
 }
 
-func (checker *Checker) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclaration) Type {
+func (checker *Checker) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclaration) struct{} {
 	// NOTE: already checked when checking the composite
 
 	panic(errors.NewUnreachableError())

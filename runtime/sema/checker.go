@@ -108,6 +108,10 @@ type Checker struct {
 	PositionInfo *PositionInfo
 }
 
+var _ ast.DeclarationVisitor[struct{}] = &Checker{}
+var _ ast.StatementVisitor[struct{}] = &Checker{}
+var _ ast.ExpressionVisitor[Type] = &Checker{}
+
 func NewChecker(
 	program *ast.Program,
 	location common.Location,
@@ -209,7 +213,7 @@ func (checker *Checker) Check() error {
 				}()
 			}
 
-			ast.Accept[Type](checker.Program, checker)
+			checker.CheckProgram(checker.Program)
 		}
 		if checker.Config.CheckHandler != nil {
 			checker.Config.CheckHandler(checker, check)
@@ -251,7 +255,7 @@ func (checker *Checker) report(err error) {
 	}
 }
 
-func (checker *Checker) VisitProgram(program *ast.Program) Type {
+func (checker *Checker) CheckProgram(program *ast.Program) {
 
 	for _, declaration := range program.ImportDeclarations() {
 		checker.declareImportDeclaration(declaration)
@@ -321,11 +325,9 @@ func (checker *Checker) VisitProgram(program *ast.Program) Type {
 			continue
 		}
 
-		ast.Accept[Type](declaration, checker)
+		ast.AcceptDeclaration[struct{}](declaration, checker)
 		checker.declareGlobalDeclaration(declaration)
 	}
-
-	return nil
 }
 
 func (checker *Checker) checkTopLevelDeclarationValidity(declarations []ast.Declaration) {
@@ -2189,7 +2191,7 @@ func (checker *Checker) visitExpressionWithForceType(
 		checker.expectedType = prevExpectedType
 	}()
 
-	actualType = ast.Accept[Type](expr, checker)
+	actualType = ast.AcceptExpression[Type](expr, checker)
 
 	if forceType &&
 		expectedType != nil &&
@@ -2273,4 +2275,8 @@ func wrapWithOptionalIfNotNil(typ Type) Type {
 	return &OptionalType{
 		Type: typ,
 	}
+}
+
+func (checker *Checker) CheckStatement(element ast.Statement) {
+	ast.AcceptStatement[struct{}](element, checker)
 }

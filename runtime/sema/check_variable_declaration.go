@@ -23,9 +23,9 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
-func (checker *Checker) VisitVariableDeclaration(declaration *ast.VariableDeclaration) Type {
+func (checker *Checker) VisitVariableDeclaration(declaration *ast.VariableDeclaration) (_ struct{}) {
 	checker.visitVariableDeclaration(declaration, false)
-	return nil
+	return
 }
 
 func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclaration, isOptionalBinding bool) {

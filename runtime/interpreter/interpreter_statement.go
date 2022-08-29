@@ -26,7 +26,7 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
-func (interpreter *Interpreter) evalStatement(statement ast.Statement) any {
+func (interpreter *Interpreter) evalStatement(statement ast.Statement) StatementResult {
 
 	// Recover and re-throw a panic, so that this interpreter's location and statement are used,
 	// instead of a potentially calling interpreter's location and statement
@@ -52,22 +52,22 @@ func (interpreter *Interpreter) evalStatement(statement ast.Statement) any {
 		onStatement(interpreter, statement)
 	}
 
-	return ast.Accept[any](statement, interpreter)
+	return ast.AcceptStatement[StatementResult](statement, interpreter)
 }
 
-func (interpreter *Interpreter) visitStatements(statements []ast.Statement) controlReturn {
+func (interpreter *Interpreter) visitStatements(statements []ast.Statement) StatementResult {
 
 	for _, statement := range statements {
 		result := interpreter.evalStatement(statement)
-		if ret, ok := result.(controlReturn); ok {
-			return ret
+		if result, ok := result.(controlResult); ok {
+			return result
 		}
 	}
 
 	return nil
 }
 
-func (interpreter *Interpreter) VisitReturnStatement(statement *ast.ReturnStatement) any {
+func (interpreter *Interpreter) VisitReturnStatement(statement *ast.ReturnStatement) StatementResult {
 	// NOTE: returning result
 
 	var value Value
@@ -86,18 +86,22 @@ func (interpreter *Interpreter) VisitReturnStatement(statement *ast.ReturnStatem
 		value = interpreter.transferAndConvert(value, valueType, returnType, getLocationRange)
 	}
 
-	return functionReturn{value}
+	return ReturnResult{value}
 }
 
-func (interpreter *Interpreter) VisitBreakStatement(_ *ast.BreakStatement) any {
-	return controlBreak{}
+var theBreakResult StatementResult = BreakResult{}
+
+func (interpreter *Interpreter) VisitBreakStatement(_ *ast.BreakStatement) StatementResult {
+	return theBreakResult
 }
 
-func (interpreter *Interpreter) VisitContinueStatement(_ *ast.ContinueStatement) any {
-	return controlContinue{}
+var theContinueResult StatementResult = ContinueResult{}
+
+func (interpreter *Interpreter) VisitContinueStatement(_ *ast.ContinueStatement) StatementResult {
+	return theContinueResult
 }
 
-func (interpreter *Interpreter) VisitIfStatement(statement *ast.IfStatement) any {
+func (interpreter *Interpreter) VisitIfStatement(statement *ast.IfStatement) StatementResult {
 	switch test := statement.Test.(type) {
 	case ast.Expression:
 		return interpreter.visitIfStatementWithTestExpression(test, statement.Then, statement.Else)
@@ -111,29 +115,26 @@ func (interpreter *Interpreter) VisitIfStatement(statement *ast.IfStatement) any
 func (interpreter *Interpreter) visitIfStatementWithTestExpression(
 	test ast.Expression,
 	thenBlock, elseBlock *ast.Block,
-) controlReturn {
+) StatementResult {
 
 	value, ok := interpreter.evalExpression(test).(BoolValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
-	var result any
+
 	if value {
-		result = ast.Accept[any](thenBlock, interpreter)
+		return interpreter.visitBlock(thenBlock)
 	} else if elseBlock != nil {
-		result = ast.Accept[any](elseBlock, interpreter)
+		return interpreter.visitBlock(elseBlock)
 	}
 
-	if ret, ok := result.(controlReturn); ok {
-		return ret
-	}
 	return nil
 }
 
 func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 	declaration *ast.VariableDeclaration,
 	thenBlock, elseBlock *ast.Block,
-) controlReturn {
+) StatementResult {
 
 	// NOTE: It is *REQUIRED* that the getter for the value is used
 	// instead of just evaluating value expression,
@@ -169,7 +170,6 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 		)
 	}
 
-	var result any
 	if someValue, ok := value.(*SomeValue); ok {
 
 		targetType := variableDeclarationTypes.TargetType
@@ -193,18 +193,15 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 			transferredUnwrappedValue,
 		)
 
-		result = ast.Accept[any](thenBlock, interpreter)
+		return interpreter.visitBlock(thenBlock)
 	} else if elseBlock != nil {
-		result = ast.Accept[any](elseBlock, interpreter)
+		return interpreter.visitBlock(elseBlock)
 	}
 
-	if ret, ok := result.(controlReturn); ok {
-		return ret
-	}
 	return nil
 }
 
-func (interpreter *Interpreter) VisitSwitchStatement(switchStatement *ast.SwitchStatement) any {
+func (interpreter *Interpreter) VisitSwitchStatement(switchStatement *ast.SwitchStatement) StatementResult {
 
 	testValue, ok := interpreter.evalExpression(switchStatement.Expression).(EquatableValue)
 	if !ok {
@@ -213,7 +210,7 @@ func (interpreter *Interpreter) VisitSwitchStatement(switchStatement *ast.Switch
 
 	for _, switchCase := range switchStatement.Cases {
 
-		runStatements := func() any {
+		runStatements := func() StatementResult {
 			// NOTE: the new block ensures that a new scope is introduced
 
 			block := ast.NewBlock(
@@ -222,9 +219,9 @@ func (interpreter *Interpreter) VisitSwitchStatement(switchStatement *ast.Switch
 				ReturnEmptyRange(),
 			)
 
-			result := ast.Accept[any](block, interpreter)
+			result := interpreter.visitBlock(block)
 
-			if _, ok := result.(controlBreak); ok {
+			if _, ok := result.(BreakResult); ok {
 				return nil
 			}
 
@@ -265,7 +262,7 @@ func (interpreter *Interpreter) VisitSwitchStatement(switchStatement *ast.Switch
 	return nil
 }
 
-func (interpreter *Interpreter) VisitWhileStatement(statement *ast.WhileStatement) any {
+func (interpreter *Interpreter) VisitWhileStatement(statement *ast.WhileStatement) StatementResult {
 
 	for {
 
@@ -276,16 +273,16 @@ func (interpreter *Interpreter) VisitWhileStatement(statement *ast.WhileStatemen
 
 		interpreter.reportLoopIteration(statement)
 
-		result := ast.Accept[any](statement.Block, interpreter)
+		result := interpreter.visitBlock(statement.Block)
 
 		switch result.(type) {
-		case controlBreak:
+		case BreakResult:
 			return nil
 
-		case controlContinue:
+		case ContinueResult:
 			// NO-OP
 
-		case functionReturn:
+		case ReturnResult:
 			return result
 		}
 	}
@@ -293,7 +290,7 @@ func (interpreter *Interpreter) VisitWhileStatement(statement *ast.WhileStatemen
 
 var intOne = NewUnmeteredIntValueFromInt64(1)
 
-func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) any {
+func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) StatementResult {
 
 	interpreter.activations.PushNewWithCurrent()
 	defer interpreter.activations.Pop()
@@ -346,16 +343,16 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) a
 
 		variable.SetValue(value)
 
-		result := ast.Accept[any](statement.Block, interpreter)
+		result := interpreter.visitBlock(statement.Block)
 
 		switch result.(type) {
-		case controlBreak:
+		case BreakResult:
 			return nil
 
-		case controlContinue:
+		case ContinueResult:
 			// NO-OP
 
-		case functionReturn:
+		case ReturnResult:
 			return result
 		}
 
@@ -367,7 +364,7 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) a
 	}
 }
 
-func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement) any {
+func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement) StatementResult {
 	event, ok := interpreter.evalExpression(statement.InvocationExpression).(*CompositeValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -392,13 +389,13 @@ func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement)
 	return nil
 }
 
-func (interpreter *Interpreter) VisitPragmaDeclaration(_ *ast.PragmaDeclaration) any {
+func (interpreter *Interpreter) VisitPragmaDeclaration(_ *ast.PragmaDeclaration) StatementResult {
 	return nil
 }
 
 // VisitVariableDeclaration first visits the declaration's value,
 // then declares the variable with the name bound to the value
-func (interpreter *Interpreter) VisitVariableDeclaration(declaration *ast.VariableDeclaration) any {
+func (interpreter *Interpreter) VisitVariableDeclaration(declaration *ast.VariableDeclaration) StatementResult {
 
 	interpreter.visitVariableDeclaration(
 		declaration,
@@ -471,7 +468,7 @@ func (interpreter *Interpreter) visitVariableDeclaration(
 	)
 }
 
-func (interpreter *Interpreter) VisitAssignmentStatement(assignment *ast.AssignmentStatement) any {
+func (interpreter *Interpreter) VisitAssignmentStatement(assignment *ast.AssignmentStatement) StatementResult {
 	assignmentStatementTypes := interpreter.Program.Elaboration.AssignmentStatementTypes[assignment]
 	targetType := assignmentStatementTypes.TargetType
 	valueType := assignmentStatementTypes.ValueType
@@ -489,7 +486,7 @@ func (interpreter *Interpreter) VisitAssignmentStatement(assignment *ast.Assignm
 	return nil
 }
 
-func (interpreter *Interpreter) VisitSwapStatement(swap *ast.SwapStatement) any {
+func (interpreter *Interpreter) VisitSwapStatement(swap *ast.SwapStatement) StatementResult {
 	swapStatementTypes := interpreter.Program.Elaboration.SwapStatementTypes[swap]
 	leftType := swapStatementTypes.LeftType
 	rightType := swapStatementTypes.RightType
@@ -536,7 +533,7 @@ func (interpreter *Interpreter) checkSwapValue(value Value, expression ast.Expre
 	panic(errors.NewUnreachableError())
 }
 
-func (interpreter *Interpreter) VisitExpressionStatement(statement *ast.ExpressionStatement) any {
+func (interpreter *Interpreter) VisitExpressionStatement(statement *ast.ExpressionStatement) StatementResult {
 	result := interpreter.evalExpression(statement.Expression)
-	return ExpressionStatementResult{result}
+	return ExpressionResult{result}
 }

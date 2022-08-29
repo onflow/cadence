@@ -20,41 +20,38 @@ package sema
 
 import "github.com/onflow/cadence/runtime/ast"
 
-func (checker *Checker) VisitPragmaDeclaration(p *ast.PragmaDeclaration) Type {
+func (checker *Checker) VisitPragmaDeclaration(p *ast.PragmaDeclaration) (_ struct{}) {
 
-	invocPragma, isInvocPragma := p.Expression.(*ast.InvocationExpression)
-	var isIdentPragma bool
-	if !isInvocPragma {
-		_, isIdentPragma = p.Expression.(*ast.IdentifierExpression)
-	}
+	switch e := p.Expression.(type) {
+	case *ast.InvocationExpression:
+		// Type arguments are not supported for pragmas
+		if len(e.TypeArguments) > 0 {
+			checker.report(&InvalidPragmaError{
+				Message: "type arguments not supported",
+				Range:   ast.NewRangeFromPositioned(checker.memoryGauge, e),
+			})
+		}
 
-	// Pragma can be either an invocation expression or an identfier expression
-	if !(isInvocPragma || isIdentPragma) {
+		// Ensure arguments are string expressions
+		for _, arg := range e.Arguments {
+			_, ok := arg.Expression.(*ast.StringExpression)
+			if !ok {
+				checker.report(&InvalidPragmaError{
+					Message: "invalid non-string argument",
+					Range:   ast.NewRangeFromPositioned(checker.memoryGauge, e),
+				})
+			}
+		}
+
+	case *ast.IdentifierExpression:
+		// valid, NO-OP
+
+	default:
 		checker.report(&InvalidPragmaError{
-			Message: "must be identifier or invocation expression",
+			Message: "pragma must be identifier or invocation expression",
 			Range:   ast.NewRangeFromPositioned(checker.memoryGauge, p.Expression),
 		})
 	}
 
-	if isInvocPragma {
-		// Type arguments are not supported for pragmas
-		if len(invocPragma.TypeArguments) > 0 {
-			checker.report(&InvalidPragmaError{
-				Message: "type arguments not supported",
-				Range:   ast.NewRangeFromPositioned(checker.memoryGauge, invocPragma),
-			})
-		}
-		// Ensure arguments are string expressions
-		for _, arg := range invocPragma.Arguments {
-			_, ok := arg.Expression.(*ast.StringExpression)
-			if !ok {
-				checker.report(&InvalidPragmaError{
-					Message: "invalid argument",
-					Range:   ast.NewRangeFromPositioned(checker.memoryGauge, invocPragma),
-				})
-			}
-		}
-	}
-
-	return nil
+	return
 }

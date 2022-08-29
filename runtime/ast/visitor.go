@@ -19,7 +19,6 @@
 package ast
 
 import (
-	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -27,26 +26,6 @@ type Element interface {
 	HasPosition
 	ElementType() ElementType
 	Walk(walkChild func(Element))
-}
-
-type NotAnElement struct{}
-
-var _ Element = NotAnElement{}
-
-func (NotAnElement) ElementType() ElementType {
-	return ElementTypeUnknown
-}
-
-func (NotAnElement) StartPosition() Position {
-	return EmptyPosition
-}
-
-func (NotAnElement) EndPosition(common.MemoryGauge) Position {
-	return EmptyPosition
-}
-
-func (NotAnElement) Walk(_ func(Element)) {
-	// NO-OP
 }
 
 type StatementDeclarationVisitor[T any] interface {
@@ -66,199 +45,139 @@ type DeclarationVisitor[T any] interface {
 	VisitImportDeclaration(*ImportDeclaration) T
 }
 
-type StatementVisitor[T any] interface {
-	StatementDeclarationVisitor[T]
-	VisitReturnStatement(*ReturnStatement) T
-	VisitBreakStatement(*BreakStatement) T
-	VisitContinueStatement(*ContinueStatement) T
-	VisitIfStatement(*IfStatement) T
-	VisitSwitchStatement(*SwitchStatement) T
-	VisitWhileStatement(*WhileStatement) T
-	VisitForStatement(*ForStatement) T
-	VisitEmitStatement(*EmitStatement) T
-	VisitAssignmentStatement(*AssignmentStatement) T
-	VisitSwapStatement(*SwapStatement) T
-	VisitExpressionStatement(*ExpressionStatement) T
-}
+func AcceptDeclaration[T any](declaration Declaration, visitor DeclarationVisitor[T]) (_ T) {
 
-type ExpressionVisitor[T any] interface {
-	VisitBoolExpression(*BoolExpression) T
-	VisitNilExpression(*NilExpression) T
-	VisitIntegerExpression(*IntegerExpression) T
-	VisitFixedPointExpression(*FixedPointExpression) T
-	VisitArrayExpression(*ArrayExpression) T
-	VisitDictionaryExpression(*DictionaryExpression) T
-	VisitIdentifierExpression(*IdentifierExpression) T
-	VisitInvocationExpression(*InvocationExpression) T
-	VisitMemberExpression(*MemberExpression) T
-	VisitIndexExpression(*IndexExpression) T
-	VisitConditionalExpression(*ConditionalExpression) T
-	VisitUnaryExpression(*UnaryExpression) T
-	VisitBinaryExpression(*BinaryExpression) T
-	VisitFunctionExpression(*FunctionExpression) T
-	VisitStringExpression(*StringExpression) T
-	VisitCastingExpression(*CastingExpression) T
-	VisitCreateExpression(*CreateExpression) T
-	VisitDestroyExpression(*DestroyExpression) T
-	VisitReferenceExpression(*ReferenceExpression) T
-	VisitForceExpression(*ForceExpression) T
-	VisitPathExpression(*PathExpression) T
-}
-
-type Visitor[T any] interface {
-	StatementVisitor[T]
-	ExpressionVisitor[T]
-	DeclarationVisitor[T]
-	VisitProgram(*Program) T
-	VisitBlock(*Block) T
-	VisitFunctionBlock(*FunctionBlock) T
-}
-
-func Accept[T any](element Element, visitor Visitor[T]) (_ T) {
-
-	switch element.ElementType() {
-	case ElementTypePragmaDeclaration:
-		return visitor.VisitPragmaDeclaration(element.(*PragmaDeclaration))
-
-	case ElementTypeUnknown:
-		// NO-OP
-		return
-
-	case ElementTypeBlock:
-		return visitor.VisitBlock(element.(*Block))
-
-	case ElementTypeFunctionBlock:
-		return visitor.VisitFunctionBlock(element.(*FunctionBlock))
-
-	case ElementTypeCompositeDeclaration:
-		return visitor.VisitCompositeDeclaration(element.(*CompositeDeclaration))
-
-	case ElementTypeInterfaceDeclaration:
-		return visitor.VisitInterfaceDeclaration(element.(*InterfaceDeclaration))
+	switch declaration.ElementType() {
 
 	case ElementTypeFieldDeclaration:
-		return visitor.VisitFieldDeclaration(element.(*FieldDeclaration))
-
-	case ElementTypeReturnStatement:
-		return visitor.VisitReturnStatement(element.(*ReturnStatement))
+		return visitor.VisitFieldDeclaration(declaration.(*FieldDeclaration))
 
 	case ElementTypeEnumCaseDeclaration:
-		return visitor.VisitEnumCaseDeclaration(element.(*EnumCaseDeclaration))
+		return visitor.VisitEnumCaseDeclaration(declaration.(*EnumCaseDeclaration))
 
-	case ElementTypeFunctionDeclaration:
-		return visitor.VisitFunctionDeclaration(element.(*FunctionDeclaration))
-
-	case ElementTypeSpecialFunctionDeclaration:
-		return visitor.VisitSpecialFunctionDeclaration(element.(*SpecialFunctionDeclaration))
-
-	case ElementTypeVariableDeclaration:
-		return visitor.VisitVariableDeclaration(element.(*VariableDeclaration))
-
-	case ElementTypeTransactionDeclaration:
-		return visitor.VisitTransactionDeclaration(element.(*TransactionDeclaration))
+	case ElementTypePragmaDeclaration:
+		return visitor.VisitPragmaDeclaration(declaration.(*PragmaDeclaration))
 
 	case ElementTypeImportDeclaration:
-		return visitor.VisitImportDeclaration(element.(*ImportDeclaration))
+		return visitor.VisitImportDeclaration(declaration.(*ImportDeclaration))
 
-	case ElementTypeProgram:
-		return visitor.VisitProgram(element.(*Program))
+	case ElementTypeVariableDeclaration:
+		return visitor.VisitVariableDeclaration(declaration.(*VariableDeclaration))
 
-	case ElementTypeContinueStatement:
-		return visitor.VisitContinueStatement(element.(*ContinueStatement))
+	case ElementTypeFunctionDeclaration:
+		return visitor.VisitFunctionDeclaration(declaration.(*FunctionDeclaration))
 
-	case ElementTypeBreakStatement:
-		return visitor.VisitBreakStatement(element.(*BreakStatement))
+	case ElementTypeSpecialFunctionDeclaration:
+		return visitor.VisitSpecialFunctionDeclaration(declaration.(*SpecialFunctionDeclaration))
 
-	case ElementTypeIfStatement:
-		return visitor.VisitIfStatement(element.(*IfStatement))
+	case ElementTypeCompositeDeclaration:
+		return visitor.VisitCompositeDeclaration(declaration.(*CompositeDeclaration))
 
-	case ElementTypeForStatement:
-		return visitor.VisitForStatement(element.(*ForStatement))
+	case ElementTypeInterfaceDeclaration:
+		return visitor.VisitInterfaceDeclaration(declaration.(*InterfaceDeclaration))
 
-	case ElementTypeAssignmentStatement:
-		return visitor.VisitAssignmentStatement(element.(*AssignmentStatement))
-
-	case ElementTypeWhileStatement:
-		return visitor.VisitWhileStatement(element.(*WhileStatement))
-
-	case ElementTypeSwapStatement:
-		return visitor.VisitSwapStatement(element.(*SwapStatement))
-
-	case ElementTypeSwitchStatement:
-		return visitor.VisitSwitchStatement(element.(*SwitchStatement))
-
-	case ElementTypeEmitStatement:
-		return visitor.VisitEmitStatement(element.(*EmitStatement))
-
-	case ElementTypeExpressionStatement:
-		return visitor.VisitExpressionStatement(element.(*ExpressionStatement))
-
-	case ElementTypeNilExpression:
-		return visitor.VisitNilExpression(element.(*NilExpression))
-
-	case ElementTypeBoolExpression:
-		return visitor.VisitBoolExpression(element.(*BoolExpression))
-
-	case ElementTypeStringExpression:
-		return visitor.VisitStringExpression(element.(*StringExpression))
-
-	case ElementTypeIntegerExpression:
-		return visitor.VisitIntegerExpression(element.(*IntegerExpression))
-
-	case ElementTypeFixedPointExpression:
-		return visitor.VisitFixedPointExpression(element.(*FixedPointExpression))
-
-	case ElementTypeDictionaryExpression:
-		return visitor.VisitDictionaryExpression(element.(*DictionaryExpression))
-
-	case ElementTypePathExpression:
-		return visitor.VisitPathExpression(element.(*PathExpression))
-
-	case ElementTypeForceExpression:
-		return visitor.VisitForceExpression(element.(*ForceExpression))
-
-	case ElementTypeArrayExpression:
-		return visitor.VisitArrayExpression(element.(*ArrayExpression))
-
-	case ElementTypeInvocationExpression:
-		return visitor.VisitInvocationExpression(element.(*InvocationExpression))
-
-	case ElementTypeIdentifierExpression:
-		return visitor.VisitIdentifierExpression(element.(*IdentifierExpression))
-
-	case ElementTypeIndexExpression:
-		return visitor.VisitIndexExpression(element.(*IndexExpression))
-
-	case ElementTypeUnaryExpression:
-		return visitor.VisitUnaryExpression(element.(*UnaryExpression))
-
-	case ElementTypeFunctionExpression:
-		return visitor.VisitFunctionExpression(element.(*FunctionExpression))
-
-	case ElementTypeCreateExpression:
-		return visitor.VisitCreateExpression(element.(*CreateExpression))
-
-	case ElementTypeMemberExpression:
-		return visitor.VisitMemberExpression(element.(*MemberExpression))
-
-	case ElementTypeReferenceExpression:
-		return visitor.VisitReferenceExpression(element.(*ReferenceExpression))
-
-	case ElementTypeDestroyExpression:
-		return visitor.VisitDestroyExpression(element.(*DestroyExpression))
-
-	case ElementTypeCastingExpression:
-		return visitor.VisitCastingExpression(element.(*CastingExpression))
-
-	case ElementTypeBinaryExpression:
-		return visitor.VisitBinaryExpression(element.(*BinaryExpression))
-
-	case ElementTypeConditionalExpression:
-		return visitor.VisitConditionalExpression(element.(*ConditionalExpression))
-
+	case ElementTypeTransactionDeclaration:
+		return visitor.VisitTransactionDeclaration(declaration.(*TransactionDeclaration))
 	}
 
 	panic(errors.NewUnreachableError())
+}
+
+type StatementVisitor[T any] interface {
+	StatementDeclarationVisitor[T]
+	VisitReturnStatement(*ReturnStatement) T
+	VisitContinueStatement(*ContinueStatement) T
+	VisitBreakStatement(*BreakStatement) T
+	VisitIfStatement(*IfStatement) T
+	VisitForStatement(*ForStatement) T
+	VisitAssignmentStatement(*AssignmentStatement) T
+	VisitWhileStatement(*WhileStatement) T
+	VisitSwapStatement(*SwapStatement) T
+	VisitSwitchStatement(*SwitchStatement) T
+	VisitEmitStatement(*EmitStatement) T
+	VisitExpressionStatement(*ExpressionStatement) T
+}
+
+func AcceptStatement[T any](statement Statement, visitor StatementVisitor[T]) (_ T) {
+
+	switch statement.ElementType() {
+	case ElementTypeReturnStatement:
+		return visitor.VisitReturnStatement(statement.(*ReturnStatement))
+
+	case ElementTypeContinueStatement:
+		return visitor.VisitContinueStatement(statement.(*ContinueStatement))
+
+	case ElementTypeBreakStatement:
+		return visitor.VisitBreakStatement(statement.(*BreakStatement))
+
+	case ElementTypeIfStatement:
+		return visitor.VisitIfStatement(statement.(*IfStatement))
+
+	case ElementTypeForStatement:
+		return visitor.VisitForStatement(statement.(*ForStatement))
+
+	case ElementTypeAssignmentStatement:
+		return visitor.VisitAssignmentStatement(statement.(*AssignmentStatement))
+
+	case ElementTypeWhileStatement:
+		return visitor.VisitWhileStatement(statement.(*WhileStatement))
+
+	case ElementTypeSwapStatement:
+		return visitor.VisitSwapStatement(statement.(*SwapStatement))
+
+	case ElementTypeSwitchStatement:
+		return visitor.VisitSwitchStatement(statement.(*SwitchStatement))
+
+	case ElementTypeEmitStatement:
+		return visitor.VisitEmitStatement(statement.(*EmitStatement))
+
+	case ElementTypeExpressionStatement:
+		return visitor.VisitExpressionStatement(statement.(*ExpressionStatement))
+
+	case ElementTypeVariableDeclaration:
+		return visitor.VisitVariableDeclaration(statement.(*VariableDeclaration))
+
+	case ElementTypeFunctionDeclaration:
+		return visitor.VisitFunctionDeclaration(statement.(*FunctionDeclaration))
+
+	case ElementTypeSpecialFunctionDeclaration:
+		return visitor.VisitSpecialFunctionDeclaration(statement.(*SpecialFunctionDeclaration))
+
+	case ElementTypeCompositeDeclaration:
+		return visitor.VisitCompositeDeclaration(statement.(*CompositeDeclaration))
+
+	case ElementTypeInterfaceDeclaration:
+		return visitor.VisitInterfaceDeclaration(statement.(*InterfaceDeclaration))
+
+	case ElementTypeTransactionDeclaration:
+		return visitor.VisitTransactionDeclaration(statement.(*TransactionDeclaration))
+	}
+
+	panic(errors.NewUnreachableError())
+}
+
+type ExpressionVisitor[T any] interface {
+	VisitNilExpression(*NilExpression) T
+	VisitBoolExpression(*BoolExpression) T
+	VisitStringExpression(*StringExpression) T
+	VisitIntegerExpression(*IntegerExpression) T
+	VisitFixedPointExpression(*FixedPointExpression) T
+	VisitDictionaryExpression(*DictionaryExpression) T
+	VisitPathExpression(*PathExpression) T
+	VisitForceExpression(*ForceExpression) T
+	VisitArrayExpression(*ArrayExpression) T
+	VisitInvocationExpression(*InvocationExpression) T
+	VisitIdentifierExpression(*IdentifierExpression) T
+	VisitIndexExpression(*IndexExpression) T
+	VisitUnaryExpression(*UnaryExpression) T
+	VisitFunctionExpression(*FunctionExpression) T
+	VisitCreateExpression(*CreateExpression) T
+	VisitMemberExpression(*MemberExpression) T
+	VisitReferenceExpression(*ReferenceExpression) T
+	VisitDestroyExpression(*DestroyExpression) T
+	VisitCastingExpression(*CastingExpression) T
+	VisitBinaryExpression(*BinaryExpression) T
+	VisitConditionalExpression(*ConditionalExpression) T
 }
 
 func AcceptExpression[T any](expression Expression, visitor ExpressionVisitor[T]) (_ T) {
@@ -327,7 +246,6 @@ func AcceptExpression[T any](expression Expression, visitor ExpressionVisitor[T]
 
 	case ElementTypeConditionalExpression:
 		return visitor.VisitConditionalExpression(expression.(*ConditionalExpression))
-
 	}
 
 	panic(errors.NewUnreachableError())

@@ -136,7 +136,7 @@ func (checker *Checker) checkResourceVariableCapturingInFunction(variable *Varia
 	)
 }
 
-func (checker *Checker) VisitExpressionStatement(statement *ast.ExpressionStatement) Type {
+func (checker *Checker) VisitExpressionStatement(statement *ast.ExpressionStatement) (_ struct{}) {
 	expression := statement.Expression
 
 	ty := checker.VisitExpression(expression, nil)
@@ -149,7 +149,7 @@ func (checker *Checker) VisitExpressionStatement(statement *ast.ExpressionStatem
 		)
 	}
 
-	return nil
+	return
 }
 
 func (checker *Checker) VisitBoolExpression(_ *ast.BoolExpression) Type {

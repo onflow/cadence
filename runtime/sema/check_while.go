@@ -23,7 +23,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
-func (checker *Checker) VisitWhileStatement(statement *ast.WhileStatement) Type {
+func (checker *Checker) VisitWhileStatement(statement *ast.WhileStatement) (_ struct{}) {
 
 	checker.VisitExpression(statement.Test, BoolType)
 
@@ -33,7 +33,7 @@ func (checker *Checker) VisitWhileStatement(statement *ast.WhileStatement) Type 
 
 	_ = checker.checkPotentiallyUnevaluated(func() Type {
 		checker.functionActivations.WithLoop(func() {
-			ast.Accept[Type](statement.Block, checker)
+			checker.checkBlock(statement.Block)
 		})
 
 		// ignored
@@ -42,7 +42,7 @@ func (checker *Checker) VisitWhileStatement(statement *ast.WhileStatement) Type 
 
 	checker.reportResourceUsesInLoop(statement.StartPos, statement.EndPosition(checker.memoryGauge))
 
-	return nil
+	return
 }
 
 func (checker *Checker) reportResourceUsesInLoop(startPos, endPos ast.Position) {
@@ -99,7 +99,7 @@ func (checker *Checker) reportResourceUsesInLoop(startPos, endPos ast.Position) 
 	})
 }
 
-func (checker *Checker) VisitBreakStatement(statement *ast.BreakStatement) Type {
+func (checker *Checker) VisitBreakStatement(statement *ast.BreakStatement) (_ struct{}) {
 
 	// Ensure that the `break` statement is inside a loop or switch statement
 
@@ -110,17 +110,17 @@ func (checker *Checker) VisitBreakStatement(statement *ast.BreakStatement) Type 
 				Range:            ast.NewRangeFromPositioned(checker.memoryGauge, statement),
 			},
 		)
-		return nil
+		return
 	}
 
 	functionActivation := checker.functionActivations.Current()
 	checker.resources.JumpsOrReturns = true
 	functionActivation.ReturnInfo.DefinitelyJumped = true
 
-	return nil
+	return
 }
 
-func (checker *Checker) VisitContinueStatement(statement *ast.ContinueStatement) Type {
+func (checker *Checker) VisitContinueStatement(statement *ast.ContinueStatement) (_ struct{}) {
 
 	// Ensure that the `continue` statement is inside a loop statement
 
@@ -131,12 +131,12 @@ func (checker *Checker) VisitContinueStatement(statement *ast.ContinueStatement)
 				Range:            ast.NewRangeFromPositioned(checker.memoryGauge, statement),
 			},
 		)
-		return nil
+		return
 	}
 
 	functionActivation := checker.functionActivations.Current()
 	checker.resources.JumpsOrReturns = true
 	functionActivation.ReturnInfo.DefinitelyJumped = true
 
-	return nil
+	return
 }
