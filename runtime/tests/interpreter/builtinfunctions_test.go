@@ -26,6 +26,7 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	. "github.com/onflow/cadence/runtime/tests/utils"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestInterpretToString(t *testing.T) {
@@ -332,6 +333,26 @@ func TestInterpretToBigEndianBytes(t *testing.T) {
 		},
 	}
 
+	sizes := map[string]uint{
+		"Int8":    sema.Int8TypeSize,
+		"UInt8":   sema.UInt8TypeSize,
+		"Word8":   sema.Word8TypeSize,
+		"Int16":   sema.Int16TypeSize,
+		"UInt16":  sema.UInt16TypeSize,
+		"Word16":  sema.Word16TypeSize,
+		"Int32":   sema.Int32TypeSize,
+		"UInt32":  sema.UInt32TypeSize,
+		"Word32":  sema.Word32TypeSize,
+		"Int64":   sema.Int64TypeSize,
+		"UInt64":  sema.UInt64TypeSize,
+		"Fix64":   sema.Fix64TypeSize,
+		"UFix64":  sema.UFix64TypeSize,
+		"Word64":  sema.Word64TypeSize,
+		"Int128":  sema.Int128TypeSize,
+		"UInt128": sema.UInt128TypeSize,
+		"Int256":  sema.Int256TypeSize,
+		"UInt256": sema.UInt256TypeSize,
+	}
 	// Ensure the test cases are complete
 
 	for _, integerType := range sema.AllNumberTypes {
@@ -349,6 +370,8 @@ func TestInterpretToBigEndianBytes(t *testing.T) {
 
 	for ty, tests := range typeTests {
 
+		size, hasSize := sizes[ty]
+
 		for value, expected := range tests {
 
 			t.Run(fmt.Sprintf("%s: %s", ty, value), func(t *testing.T) {
@@ -364,12 +387,21 @@ func TestInterpretToBigEndianBytes(t *testing.T) {
 					),
 				)
 
+				result := inter.Globals["result"].GetValue()
+
 				AssertValuesEqual(
 					t,
 					inter,
 					interpreter.ByteSliceToByteArrayValue(inter, expected),
-					inter.Globals["result"].GetValue(),
+					result,
 				)
+
+				// ensure that .toBigEndianBytes() is the same size as the source type, if it's fixed-width
+				if hasSize {
+					arrayVal := result.(*interpreter.ArrayValue)
+					arraySize := uint(arrayVal.Count())
+					assert.Equalf(t, size, arraySize, "Expected %s.toBigEndianBytes() to return %d bytes, got %d", ty, size, arraySize)
+				}
 			})
 		}
 	}
