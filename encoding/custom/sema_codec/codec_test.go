@@ -20,13 +20,14 @@ package sema_codec_test
 
 import (
 	"bytes"
+	"fmt"
+	"io"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/encoding/custom/common_codec"
-
 	"github.com/onflow/cadence/encoding/custom/sema_codec"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -1354,6 +1355,2400 @@ func TestSemaCodecElaboration(t *testing.T) {
 
 			),
 		)
+	})
+
+	t.Run("deep pointer", func(t *testing.T) {
+		t.Parallel()
+
+		encoder, decoder, buffer := NewTestCodec()
+
+		parent := &sema.CompositeType{}
+		child := &sema.CompositeType{}
+		child.SetContainerType(parent)
+
+		elaboration := sema.NewElaboration(nil, false)
+		elaboration.CompositeTypes["Parent"] = parent
+		elaboration.CompositeTypes["child"] = child
+
+		err := encoder.EncodeElaboration(elaboration)
+		require.NoError(t, err, "encoding error")
+
+		expected := common_codec.Concat(
+			[]byte{0, 0, 0, 2},
+			[]byte{0, 0, 0, byte(len("Parent"))},
+			[]byte("Parent"),
+			// parent here at byte #14
+			[]byte{common_codec.NilLocationPrefix[0]},
+			[]byte{0, 0, 0, 0},
+			[]byte{byte(common.CompositeKindUnknown)},
+			[]byte{byte(common_codec.EncodedBoolTrue)},
+			[]byte{byte(common_codec.EncodedBoolTrue)},
+			[]byte{byte(common_codec.EncodedBoolTrue)},
+			[]byte{byte(common_codec.EncodedBoolTrue)},
+			[]byte{byte(common_codec.EncodedBoolTrue)},
+			[]byte{byte(common_codec.EncodedBoolTrue)},
+			[]byte{byte(sema_codec.EncodedSemaNilType)},
+			[]byte{byte(sema_codec.EncodedSemaNilType)},
+			[]byte{byte(common_codec.EncodedBoolFalse)},
+			[]byte{byte(common_codec.EncodedBoolFalse)},
+			[]byte{0, 0, 0, byte(len("child"))},
+			[]byte("child"),
+			[]byte{common_codec.NilLocationPrefix[0]},
+			[]byte{0, 0, 0, 0},
+			[]byte{byte(common.CompositeKindUnknown)},
+			[]byte{byte(common_codec.EncodedBoolTrue)},
+			[]byte{byte(common_codec.EncodedBoolTrue)},
+			[]byte{byte(common_codec.EncodedBoolTrue)},
+			[]byte{byte(common_codec.EncodedBoolTrue)},
+			[]byte{byte(common_codec.EncodedBoolTrue)},
+			[]byte{byte(common_codec.EncodedBoolTrue)},
+			[]byte{byte(sema_codec.EncodedSemaPointerType), 0, 0, 0, 14},
+			[]byte{byte(sema_codec.EncodedSemaNilType)},
+			[]byte{byte(common_codec.EncodedBoolFalse)},
+			[]byte{byte(common_codec.EncodedBoolFalse)},
+
+			[]byte{0, 0, 0, 0}, // empty InterfaceTypes
+		)
+
+		assert.Equal(t, expected, buffer.Bytes(), "encoded bytes differ")
+
+		decoded, err := decoder.DecodeElaboration()
+		require.NoError(t, err, "decoding error")
+
+		assert.Equal(t, elaboration, decoded, "decoded data structure differs from expectation")
+	})
+
+	t.Run("CompositeType twice", func(t *testing.T) {
+		t.Parallel()
+
+		encoder, decoder, buffer := NewTestCodec()
+
+		ditto := &sema.CompositeType{}
+
+		elaboration := sema.NewElaboration(nil, false)
+		elaboration.CompositeTypes["first"] = ditto
+		elaboration.CompositeTypes["second"] = ditto
+
+		err := encoder.EncodeElaboration(elaboration)
+		require.NoError(t, err, "encoding error")
+
+		expected := common_codec.Concat(
+			[]byte{0, 0, 0, 2},
+			[]byte{0, 0, 0, byte(len("first"))},
+			[]byte("first"),
+			// parent here at byte #13
+			[]byte{common_codec.NilLocationPrefix[0]},
+			[]byte{0, 0, 0, 0},
+			[]byte{byte(common.CompositeKindUnknown)},
+			[]byte{byte(common_codec.EncodedBoolTrue)},
+			[]byte{byte(common_codec.EncodedBoolTrue)},
+			[]byte{byte(common_codec.EncodedBoolTrue)},
+			[]byte{byte(common_codec.EncodedBoolTrue)},
+			[]byte{byte(common_codec.EncodedBoolTrue)},
+			[]byte{byte(common_codec.EncodedBoolTrue)},
+			[]byte{byte(sema_codec.EncodedSemaNilType)},
+			[]byte{byte(sema_codec.EncodedSemaNilType)},
+			[]byte{byte(common_codec.EncodedBoolFalse)},
+			[]byte{byte(common_codec.EncodedBoolFalse)},
+			[]byte{0, 0, 0, byte(len("second"))},
+			[]byte("second"),
+			[]byte{byte(sema_codec.EncodedSemaPointerType), 0, 0, 0, 13},
+
+			[]byte{0, 0, 0, 0}, // empty InterfaceTypes
+		)
+
+		assert.Equal(t, expected, buffer.Bytes(), "encoded bytes differ")
+
+		decoded, err := decoder.DecodeElaboration()
+		require.NoError(t, err, "decoding error")
+
+		assert.Equal(t, elaboration, decoded, "decoded data structure differs from expectation")
+	})
+
+	t.Run("decode error: EOF at CompositeTypes map", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, _ := NewTestCodec()
+
+		_, err := decoder.DecodeElaboration()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("decode error: EOF at InterfaceTypes map", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			0, 0, 0, 0, // CompositeTypes map is empty
+		})
+
+		_, err := decoder.DecodeElaboration()
+		assert.ErrorContains(t, err, "EOF")
+	})
+}
+
+func TestSemaCodecMustEncodeSema(t *testing.T) {
+	t.Parallel()
+
+	b := sema_codec.MustEncodeSema(sema.NeverType)
+	assert.Equal(t, []byte{byte(sema_codec.EncodedSemaSimpleTypeNeverType)}, b)
+}
+
+type MockSemaType struct {
+	MockID                     sema.TypeID
+	MockTag                    sema.TypeTag
+	MockString                 string
+	MockQualifiedString        string
+	MockEqual                  bool
+	MockIsResourceType         bool
+	MockIsInvalidType          bool
+	MockIsStorable             bool
+	MockIsExternallyReturnable bool
+	MockIsImportable           bool
+}
+
+var _ sema.Type = &MockSemaType{}
+
+func NewMockSemaType() *MockSemaType {
+	return &MockSemaType{
+		MockID:                     "MockID",
+		MockTag:                    sema.TypeTag{},
+		MockString:                 "MockString",
+		MockQualifiedString:        "MockQualifiedString",
+		MockEqual:                  false,
+		MockIsResourceType:         false,
+		MockIsInvalidType:          false,
+		MockIsStorable:             false,
+		MockIsExternallyReturnable: false,
+		MockIsImportable:           false,
+	}
+}
+
+func (f *MockSemaType) IsType() {}
+
+func (f *MockSemaType) ID() sema.TypeID {
+	return f.MockID
+}
+
+func (f *MockSemaType) Tag() sema.TypeTag {
+	return f.MockTag
+}
+
+func (f *MockSemaType) String() string {
+	return f.MockString
+}
+
+func (f *MockSemaType) QualifiedString() string {
+	return f.MockString
+}
+
+func (f *MockSemaType) Equal(other sema.Type) bool {
+	return f.MockEqual
+}
+
+func (f *MockSemaType) IsResourceType() bool {
+	return f.MockIsResourceType
+}
+
+func (f *MockSemaType) IsInvalidType() bool {
+	return f.MockIsInvalidType
+}
+
+func (f *MockSemaType) IsStorable(results map[*sema.Member]bool) bool {
+	return f.MockIsStorable
+}
+
+func (f *MockSemaType) IsExternallyReturnable(results map[*sema.Member]bool) bool {
+	return f.MockIsExternallyReturnable
+}
+
+func (f *MockSemaType) IsImportable(results map[*sema.Member]bool) bool {
+	return f.MockIsImportable
+}
+
+func (f *MockSemaType) IsEquatable() bool {
+	panic("implement me")
+}
+
+func (f *MockSemaType) TypeAnnotationState() sema.TypeAnnotationState {
+	panic("implement me")
+}
+
+func (f *MockSemaType) RewriteWithRestrictedTypes() (result sema.Type, rewritten bool) {
+	panic("implement me")
+}
+
+func (f *MockSemaType) Unify(other sema.Type, typeParameters *sema.TypeParameterTypeOrderedMap, report func(err error), outerRange ast.Range) bool {
+	panic("implement me")
+}
+
+func (f *MockSemaType) Resolve(typeArguments *sema.TypeParameterTypeOrderedMap) sema.Type {
+	panic("implement me")
+}
+
+func (f *MockSemaType) GetMembers() map[string]sema.MemberResolver {
+	panic("implement me")
+}
+
+type MockWriter struct {
+	ByteToErrorOn int
+	ErrorToReturn error
+	CurrentByte   int
+}
+
+var _ io.Writer = &MockWriter{}
+
+func (m *MockWriter) Write(p []byte) (n int, err error) {
+	currentByte := m.CurrentByte
+	m.CurrentByte += len(p)
+
+	if m.ByteToErrorOn < 0 || // erroring disabled
+		m.ErrorToReturn == nil || // no erroring
+		currentByte > m.ByteToErrorOn || // already errored
+		m.CurrentByte <= m.ByteToErrorOn { // not yet erroring
+		return len(p), nil
+	}
+
+	return 0, m.ErrorToReturn
+}
+
+func TestSemaCodecEncodeErrors(t *testing.T) {
+	t.Parallel()
+
+	t.Run("EncodeSema", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := sema_codec.EncodeSema(NewMockSemaType())
+		assert.ErrorContains(t, err, "unexpected type: MockString")
+	})
+
+	t.Run("MustEncodeSema", func(t *testing.T) {
+		t.Parallel()
+
+		assert.PanicsWithError(t, "unexpected type: MockString", func() {
+			sema_codec.MustEncodeSema(NewMockSemaType())
+
+		})
+	})
+
+	t.Run("EncodeElaboration: io error at CompositeTypes", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 0,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeElaboration(&sema.Elaboration{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeType: io error at CompositeType", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 0,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeType(&sema.CompositeType{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeType: io error at InterfaceType", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 0,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeType(&sema.InterfaceType{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeType: io error at GenericType", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 0,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeType(&sema.GenericType{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeType: io error at FunctionType", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 0,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeType(&sema.FunctionType{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeType: io error at DictionaryType", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 0,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeType(&sema.DictionaryType{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeType: io error at TransactionType", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 0,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeType(&sema.TransactionType{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeType: io error at RestrictedType", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 0,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeType(&sema.RestrictedType{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeType: io error at VariableSizedType", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 0,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeType(&sema.VariableSizedType{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeType: io error at ConstantSizedType", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 0,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeType(&sema.ConstantSizedType{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeType: io error at OptionalType", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 0,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeType(&sema.OptionalType{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeType: io error at ReferenceType", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 0,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeType(&sema.ReferenceType{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeType: io error at CapabilityType", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 0,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeType(&sema.CapabilityType{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeFunctionType: io error at IsConstructor", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 0,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeFunctionType(&sema.FunctionType{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeFunctionType: io error at TypeParameters", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 1,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeFunctionType(&sema.FunctionType{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeFunctionType: io error at Parameters", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 2,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeFunctionType(&sema.FunctionType{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeFunctionType: io error at ReturnTypeAnnotation", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 3,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeFunctionType(&sema.FunctionType{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeFunctionType: io error at RequiredArgumentCount", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 4,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeFunctionType(&sema.FunctionType{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeFunctionType: io error at Members", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 5,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeFunctionType(&sema.FunctionType{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeDictionaryType: io error at KeyType", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 0,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeDictionaryType(&sema.DictionaryType{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeReferenceType: io error at Authorized", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 0,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeReferenceType(&sema.ReferenceType{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeTransactionType: io error at Members", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 0,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeTransactionType(&sema.TransactionType{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeTransactionType: io error at Fields", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 1,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeTransactionType(&sema.TransactionType{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeTransactionType: io error at PrepareParameters", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 2,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeTransactionType(&sema.TransactionType{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeRestrictedType: io error at Type", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 0,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeRestrictedType(&sema.RestrictedType{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeConstantSizedType: io error at Type", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 0,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeConstantSizedType(&sema.ConstantSizedType{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodePointer: io error at encoding type", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 0,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodePointer(0)
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeCompositeType: io error at Location", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 0,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeCompositeType(&sema.CompositeType{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeCompositeType: io error at Identifier", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 1,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeCompositeType(&sema.CompositeType{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeCompositeType: io error at Kind", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 5,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeCompositeType(&sema.CompositeType{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeCompositeType: io error at ExplicitInterfaceConformances", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 6,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeCompositeType(&sema.CompositeType{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeCompositeType: io error at ImplicitTypeRequirementConformances", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 7,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeCompositeType(&sema.CompositeType{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeCompositeType: io error at Members", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 8,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeCompositeType(&sema.CompositeType{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeCompositeType: io error at Fields", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 9,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeCompositeType(&sema.CompositeType{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeCompositeType: io error at ConstructorParameters", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 10,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeCompositeType(&sema.CompositeType{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeCompositeType: io error at nestedTypes", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 11,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeCompositeType(&sema.CompositeType{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeCompositeType: io error at containerType", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 12,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeCompositeType(&sema.CompositeType{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeCompositeType: io error at EnumRawType", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 13,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeCompositeType(&sema.CompositeType{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeCompositeType: io error at hasComputedMembers", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 14,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeCompositeType(&sema.CompositeType{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeTypeParameter: io error at Name", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 0,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeTypeParameter(&sema.TypeParameter{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeTypeParameter: io error at TypeBound", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 4,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeTypeParameter(&sema.TypeParameter{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeParameter: io error at Label", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 0,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeParameter(&sema.Parameter{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeParameter: io error at Identifier", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 4,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeParameter(&sema.Parameter{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeStringMemberOrderedMap: io error at length", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 1,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeStringMemberOrderedMap(&sema.StringMemberOrderedMap{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeStringMemberOrderedMap: io error at String", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 5,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		oMap := &sema.StringMemberOrderedMap{}
+		oMap.Set("", &sema.Member{Predeclared: true})
+
+		err := encoder.EncodeStringMemberOrderedMap(oMap)
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeStringMemberOrderedMap: io error at Member", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 9,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		oMap := &sema.StringMemberOrderedMap{}
+		oMap.Set("", &sema.Member{Predeclared: true})
+
+		err := encoder.EncodeStringMemberOrderedMap(oMap)
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeStringTypeOrderedMap: io error at length", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 1,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeStringTypeOrderedMap(&sema.StringTypeOrderedMap{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeStringTypeOrderedMap: io error at String", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 5,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		oMap := &sema.StringTypeOrderedMap{}
+		mockType := NewMockSemaType()
+		mockType.MockIsStorable = true
+		oMap.Set("", mockType)
+
+		err := encoder.EncodeStringTypeOrderedMap(oMap)
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeStringTypeOrderedMap: io error at Member", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 9,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		oMap := &sema.StringTypeOrderedMap{}
+		oMap.Set("", sema.Word8Type)
+
+		err := encoder.EncodeStringTypeOrderedMap(oMap)
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeMember: io error at Identifier", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 8,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeMember(&sema.Member{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeMember: io error at TypeAnnotation", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 8 + 28,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeMember(&sema.Member{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeMember: io error at DeclarationKind", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 8 + 28 + 1,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeMember(&sema.Member{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeMember: io error at VariableKind", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 8 + 28 + 1 + 8,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeMember(&sema.Member{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeMember: io error at ArgumentLabels", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 8 + 28 + 1 + 8 + 8,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeMember(&sema.Member{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeMember: io error at Predeclared", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 8 + 28 + 1 + 8 + 8 + 1,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeMember(&sema.Member{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeTypeAnnotation: io error at IsResource", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 1,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeTypeAnnotation(&sema.TypeAnnotation{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeAstPosition: io error at Offset", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 0,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeAstPosition(ast.Position{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeAstPosition: io error at Line", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 8,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeAstPosition(ast.Position{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeInterfaceType: io error at Location", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 0,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeInterfaceType(&sema.InterfaceType{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeInterfaceType: io error at Identifier", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 1,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeInterfaceType(&sema.InterfaceType{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeInterfaceType: io error at CompositeKind", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 1 + 4,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeInterfaceType(&sema.InterfaceType{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeInterfaceType: io error at Members", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 1 + 4 + 1,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeInterfaceType(&sema.InterfaceType{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeInterfaceType: io error at Fields", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 1 + 4 + 1 + 1,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeInterfaceType(&sema.InterfaceType{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeInterfaceType: io error at InitializerParameters", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 1 + 4 + 1 + 1 + 1,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeInterfaceType(&sema.InterfaceType{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeInterfaceType: io error at GetContainerType", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 1 + 4 + 1 + 1 + 1 + 1,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := encoder.EncodeInterfaceType(&sema.InterfaceType{})
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeArray: io error at length", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 1,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		err := sema_codec.EncodeArray(encoder, []sema.Type{}, func(_ sema.Type) error { return nil })
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeArray: error at encodeFn", func(t *testing.T) {
+		t.Parallel()
+
+		mockError := fmt.Errorf("MockError")
+		encoder, _, _ := NewTestCodec()
+
+		err := sema_codec.EncodeArray(
+			encoder,
+			[]sema.Type{NewMockSemaType()},
+			func(_ sema.Type) error {
+				return mockError
+			},
+		)
+		assert.Equal(t, mockError, err)
+	})
+
+	t.Run("EncodeMap: io error at length", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 0,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		m := map[common.TypeID]sema.Type{}
+
+		err := sema_codec.EncodeMap(encoder, m, func(_ sema.Type) error { return nil })
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeMap: io error at key", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{
+			ByteToErrorOn: 4,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		m := map[common.TypeID]sema.Type{
+			"": sema.Word8Type,
+		}
+
+		err := sema_codec.EncodeMap(encoder, m, func(_ sema.Type) error { return nil })
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeMap: io error at pointer", func(t *testing.T) {
+		t.Parallel()
+
+		writer := MockWriter{}
+		encoder := sema_codec.NewSemaEncoder(&writer)
+
+		pointedToType := &sema.CompositeType{}
+
+		_ = encoder.EncodeType(pointedToType)
+
+		writer.CurrentByte = 0
+		writer.ByteToErrorOn = 8
+		writer.ErrorToReturn = fmt.Errorf("MockError")
+
+		m := map[common.TypeID]sema.Type{
+			"": pointedToType,
+		}
+
+		err := sema_codec.EncodeMap(encoder, m, func(_ sema.Type) error { return nil })
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeMap: error at encodeFn", func(t *testing.T) {
+		t.Parallel()
+
+		mockError := fmt.Errorf("MockError")
+		encoder, _, _ := NewTestCodec()
+
+		err := sema_codec.EncodeMap(
+			encoder,
+			map[common.TypeID]sema.Type{
+				"": NewMockSemaType(),
+			},
+			func(_ sema.Type) error {
+				return mockError
+			},
+		)
+		assert.Equal(t, mockError, err)
+	})
+}
+
+func TestSemaCodecDecodeErrors(t *testing.T) {
+	t.Parallel()
+
+	t.Run("DecodeSema: EOF", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := sema_codec.DecodeSema(nil, []byte{})
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeType: EOF", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, _ := NewTestCodec()
+
+		_, err := decoder.DecodeType()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodePointer: EOF at length", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, _ := NewTestCodec()
+
+		_, err := decoder.DecodePointer()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodePointer: unknown type", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			0, 0, 0, 0,
+		})
+
+		_, err := decoder.DecodePointer()
+		assert.ErrorContains(t, err, "pointer to unknown type: 0")
+	})
+
+	t.Run("DecodeRestrictedType: EOF at Type", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, _ := NewTestCodec()
+
+		_, err := decoder.DecodeRestrictedType()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeRestrictedType: unknown type identifier (0) at Type", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			0,
+		})
+
+		_, err := decoder.DecodeRestrictedType()
+		assert.ErrorContains(t, err, "unknown type identifier: 0")
+	})
+
+	t.Run("DecodeRestrictedType: EOF at Restrictions", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			byte(sema_codec.EncodedSemaNilType),
+		})
+
+		_, err := decoder.DecodeRestrictedType()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeTransactionType: EOF at Members", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, _ := NewTestCodec()
+
+		_, err := decoder.DecodeTransactionType()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeTransactionType: EOF at Fields", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			byte(common_codec.EncodedBoolTrue),
+		})
+
+		_, err := decoder.DecodeTransactionType()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeTransactionType: EOF at PrepareParameters", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+		})
+
+		_, err := decoder.DecodeTransactionType()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeTransactionType: EOF at Parameters", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+		})
+
+		_, err := decoder.DecodeTransactionType()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeReferenceType: EOF at Authorized", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, _ := NewTestCodec()
+
+		_, err := decoder.DecodeReferenceType()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeReferenceType: EOF at Type", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			byte(common_codec.EncodedBoolTrue),
+		})
+
+		_, err := decoder.DecodeReferenceType()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeDictionaryType: EOF at KeyType", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, _ := NewTestCodec()
+
+		_, err := decoder.DecodeDictionaryType()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeDictionaryType: EOF at ValueType", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			byte(sema_codec.EncodedSemaNilType),
+		})
+
+		_, err := decoder.DecodeDictionaryType()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeFunctionType: EOF at IsConstructor", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, _ := NewTestCodec()
+
+		_, err := decoder.DecodeFunctionType()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeDictionaryType: EOF at TypeParameters", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			byte(common_codec.EncodedBoolTrue),
+		})
+
+		_, err := decoder.DecodeFunctionType()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeDictionaryType: EOF at Parameters", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+		})
+
+		_, err := decoder.DecodeFunctionType()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeDictionaryType: EOF at ReturnTypeAnnotation", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+		})
+
+		_, err := decoder.DecodeFunctionType()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeDictionaryType: EOF at RequiredArgumentCount", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+		})
+
+		_, err := decoder.DecodeFunctionType()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeDictionaryType: EOF at Members", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+		})
+
+		_, err := decoder.DecodeFunctionType()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeIntPointer: EOF at DecodeNumber", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			byte(common_codec.EncodedBoolFalse),
+		})
+
+		_, err := decoder.DecodeIntPointer()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeVariableSizedType: EOF", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, _ := NewTestCodec()
+
+		_, err := decoder.DecodeVariableSizedType()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeConstantSizedType: EOF at Type", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, _ := NewTestCodec()
+
+		_, err := decoder.DecodeConstantSizedType()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeConstantSizedType: EOF at Size", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			byte(sema_codec.EncodedSemaNilType),
+		})
+
+		_, err := decoder.DecodeConstantSizedType()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("EncodingToNumericType: unknown numeric type", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := sema_codec.EncodingToNumericType(sema_codec.EncodedSemaUnknown)
+		assert.ErrorContains(t, err, "unknown numeric type: 0")
+	})
+
+	t.Run("EncodingToFixedPointNumericType: unknown fixed point numeric type", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := sema_codec.EncodingToFixedPointNumericType(sema_codec.EncodedSemaUnknown)
+		assert.ErrorContains(t, err, "unknown fixed point numeric type: 0")
+	})
+
+	t.Run("DecodeGenericType: EOF", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, _ := NewTestCodec()
+
+		_, err := decoder.DecodeGenericType()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeOptionalType: EOF", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, _ := NewTestCodec()
+
+		_, err := decoder.DecodeOptionalType()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeCompositeKind: EOF", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, _ := NewTestCodec()
+
+		_, err := decoder.DecodeCompositeKind()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("EncodingToSimpleType: unknown simple subtype", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := sema_codec.EncodingToSimpleType(sema_codec.EncodedSemaUnknown)
+		assert.ErrorContains(t, err, "unknown simple subtype: 0")
+	})
+
+	t.Run("DecodeCompositeType: EOF at Location", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, _ := NewTestCodec()
+
+		_, err := decoder.DecodeCompositeType()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeCompositeType: EOF at Identifier", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			common_codec.NilLocationPrefix[0],
+		})
+
+		_, err := decoder.DecodeCompositeType()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeCompositeType: EOF at Kind", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			common_codec.NilLocationPrefix[0],
+			0, 0, 0, 0,
+		})
+
+		_, err := decoder.DecodeCompositeType()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeCompositeType: EOF at ExplicitInterfaceConformances", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			common_codec.NilLocationPrefix[0],
+			0, 0, 0, 0,
+			byte(common.CompositeKindUnknown),
+		})
+
+		_, err := decoder.DecodeCompositeType()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeCompositeType: EOF at ImplicitTypeRequirementConformances", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			common_codec.NilLocationPrefix[0],
+			0, 0, 0, 0,
+			byte(common.CompositeKindUnknown),
+			byte(common_codec.EncodedBoolTrue),
+		})
+
+		_, err := decoder.DecodeCompositeType()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeCompositeType: EOF at Members", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			common_codec.NilLocationPrefix[0],
+			0, 0, 0, 0,
+			byte(common.CompositeKindUnknown),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+		})
+
+		_, err := decoder.DecodeCompositeType()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeCompositeType: EOF at Fields", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			common_codec.NilLocationPrefix[0],
+			0, 0, 0, 0,
+			byte(common.CompositeKindUnknown),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+		})
+
+		_, err := decoder.DecodeCompositeType()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeCompositeType: EOF at ConstructorParameters", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			common_codec.NilLocationPrefix[0],
+			0, 0, 0, 0,
+			byte(common.CompositeKindUnknown),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+		})
+
+		_, err := decoder.DecodeCompositeType()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeCompositeType: EOF at nestedTypes", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			common_codec.NilLocationPrefix[0],
+			0, 0, 0, 0,
+			byte(common.CompositeKindUnknown),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+		})
+
+		_, err := decoder.DecodeCompositeType()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeCompositeType: EOF at containerType", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			common_codec.NilLocationPrefix[0],
+			0, 0, 0, 0,
+			byte(common.CompositeKindUnknown),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+		})
+
+		_, err := decoder.DecodeCompositeType()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeCompositeType: EOF at EnumRawType", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			common_codec.NilLocationPrefix[0],
+			0, 0, 0, 0,
+			byte(common.CompositeKindUnknown),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+			byte(sema_codec.EncodedSemaNilType),
+		})
+
+		_, err := decoder.DecodeCompositeType()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeCompositeType: EOF at hasComputedMembers", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			common_codec.NilLocationPrefix[0],
+			0, 0, 0, 0,
+			byte(common.CompositeKindUnknown),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+			byte(sema_codec.EncodedSemaNilType),
+			byte(sema_codec.EncodedSemaNilType),
+		})
+
+		_, err := decoder.DecodeCompositeType()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeCompositeType: EOF at ImportableWithoutLocation", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			common_codec.NilLocationPrefix[0],
+			0, 0, 0, 0,
+			byte(common.CompositeKindUnknown),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+			byte(sema_codec.EncodedSemaNilType),
+			byte(sema_codec.EncodedSemaNilType),
+			byte(common_codec.EncodedBoolTrue),
+		})
+
+		_, err := decoder.DecodeCompositeType()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeInterfaceType: EOF at Location", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, _ := NewTestCodec()
+
+		_, err := decoder.DecodeInterfaceType()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeInterfaceType: EOF at Identifier", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			common_codec.NilLocationPrefix[0],
+		})
+
+		_, err := decoder.DecodeInterfaceType()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeInterfaceType: EOF at Kind", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			common_codec.NilLocationPrefix[0],
+			0, 0, 0, 0,
+		})
+
+		_, err := decoder.DecodeInterfaceType()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeInterfaceType: EOF at ExplicitInterfaceConformances", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			common_codec.NilLocationPrefix[0],
+			0, 0, 0, 0,
+			byte(common.CompositeKindUnknown),
+		})
+
+		_, err := decoder.DecodeInterfaceType()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeInterfaceType: EOF at ImplicitTypeRequirementConformances", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			common_codec.NilLocationPrefix[0],
+			0, 0, 0, 0,
+			byte(common.CompositeKindUnknown),
+			byte(common_codec.EncodedBoolTrue),
+		})
+
+		_, err := decoder.DecodeInterfaceType()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeInterfaceType: EOF at Members", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			common_codec.NilLocationPrefix[0],
+			0, 0, 0, 0,
+			byte(common.CompositeKindUnknown),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+		})
+
+		_, err := decoder.DecodeInterfaceType()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeInterfaceType: EOF at Fields", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			common_codec.NilLocationPrefix[0],
+			0, 0, 0, 0,
+			byte(common.CompositeKindUnknown),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+		})
+
+		_, err := decoder.DecodeInterfaceType()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeInterfaceType: EOF at InitializerParameters", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			common_codec.NilLocationPrefix[0],
+			0, 0, 0, 0,
+			byte(common.CompositeKindUnknown),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+		})
+
+		_, err := decoder.DecodeInterfaceType()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeInterfaceType: EOF at containerType", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			common_codec.NilLocationPrefix[0],
+			0, 0, 0, 0,
+			byte(common.CompositeKindUnknown),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+		})
+
+		_, err := decoder.DecodeInterfaceType()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeInterfaceType: EOF at nestedTypes", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			common_codec.NilLocationPrefix[0],
+			0, 0, 0, 0,
+			byte(common.CompositeKindUnknown),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+			byte(sema_codec.EncodedSemaNilType),
+		})
+
+		_, err := decoder.DecodeInterfaceType()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeTypeParameter: EOF at Name", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, _ := NewTestCodec()
+
+		_, err := decoder.DecodeTypeParameter()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeTypeParameter: EOF at TypeBound", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			0, 0, 0, 0,
+		})
+
+		_, err := decoder.DecodeTypeParameter()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeTypeParameter: EOF at Optional", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			0, 0, 0, 0,
+			byte(sema_codec.EncodedSemaNilType),
+		})
+
+		_, err := decoder.DecodeTypeParameter()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeParameter: EOF at Label", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, _ := NewTestCodec()
+
+		_, err := decoder.DecodeParameter()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeParameter: EOF at Identifier", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			0, 0, 0, 0,
+		})
+
+		_, err := decoder.DecodeParameter()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeParameter: EOF at TypeAnnotation", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			0, 0, 0, 0,
+			0, 0, 0, 0,
+		})
+
+		_, err := decoder.DecodeParameter()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeStringMemberOrderedMap: EOF at Length", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			byte(common_codec.EncodedBoolFalse),
+		})
+
+		_, err := decoder.DecodeStringMemberOrderedMap(nil)
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeStringMemberOrderedMap: EOF at key", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			byte(common_codec.EncodedBoolFalse),
+			0, 0, 0, 1,
+		})
+
+		_, err := decoder.DecodeStringMemberOrderedMap(nil)
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeStringMemberOrderedMap: EOF at member", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			byte(common_codec.EncodedBoolFalse),
+			0, 0, 0, 1,
+			0, 0, 0, 0,
+			0, 0, 0, 1,
+		})
+
+		_, err := decoder.DecodeStringMemberOrderedMap(nil)
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeStringTypeOrderedMap: EOF at Length", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			byte(common_codec.EncodedBoolFalse),
+		})
+
+		_, err := decoder.DecodeStringTypeOrderedMap()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeStringTypeOrderedMap: EOF at key", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			byte(common_codec.EncodedBoolFalse),
+			0, 0, 0, 1,
+		})
+
+		_, err := decoder.DecodeStringTypeOrderedMap()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeStringTypeOrderedMap: EOF at type", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			byte(common_codec.EncodedBoolFalse),
+			0, 0, 0, 1,
+			0, 0, 0, 0,
+		})
+
+		_, err := decoder.DecodeStringTypeOrderedMap()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeMember: EOF at Access", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, _ := NewTestCodec()
+
+		_, err := decoder.DecodeMember(nil)
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeMember: EOF at Identifier", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			0, 0, 0, 0, 0, 0, 0, 0,
+		})
+
+		_, err := decoder.DecodeMember(nil)
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeMember: EOF at TypeAnnotation", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		})
+
+		_, err := decoder.DecodeMember(nil)
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeMember: EOF at DeclarationKind", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			byte(common_codec.EncodedBoolTrue),
+		})
+
+		_, err := decoder.DecodeMember(nil)
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeMember: EOF at VariableKind", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			byte(common_codec.EncodedBoolTrue),
+			0, 0, 0, 0, 0, 0, 0, 0,
+		})
+
+		_, err := decoder.DecodeMember(nil)
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeMember: EOF at ArgumentLabels", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			byte(common_codec.EncodedBoolTrue),
+			0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0,
+		})
+
+		_, err := decoder.DecodeMember(nil)
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeMember: EOF at Predeclared", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			byte(common_codec.EncodedBoolTrue),
+			0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0,
+			byte(common_codec.EncodedBoolTrue),
+		})
+
+		_, err := decoder.DecodeMember(nil)
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeMember: EOF at DOcString", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			byte(common_codec.EncodedBoolTrue),
+			0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0,
+			byte(common_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
+		})
+
+		_, err := decoder.DecodeMember(nil)
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeAstIdentifier: EOF at Pos", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			0, 0, 0, 0,
+		})
+
+		_, err := decoder.DecodeAstIdentifier()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeAstPosition: EOF at Offset", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, _ := NewTestCodec()
+
+		_, err := decoder.DecodeAstPosition()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeAstPosition: EOF at Line", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			0, 0, 0, 0, 0, 0, 0, 0,
+		})
+
+		_, err := decoder.DecodeAstPosition()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeAstPosition: EOF at Column", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0,
+		})
+
+		_, err := decoder.DecodeAstPosition()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeTypeAnnotation: EOF at IsResource", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			byte(common_codec.EncodedBoolFalse),
+		})
+
+		_, err := decoder.DecodeTypeAnnotation()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeTypeAnnotation: EOF at Type", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			byte(common_codec.EncodedBoolFalse),
+			byte(common_codec.EncodedBoolFalse),
+		})
+
+		_, err := decoder.DecodeTypeAnnotation()
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeArray: EOF at Length", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			byte(common_codec.EncodedBoolFalse),
+		})
+
+		_, err := sema_codec.DecodeArray(decoder, func() (any, error) {
+			return nil, nil
+		})
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeArray: decodeFn error", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			byte(common_codec.EncodedBoolFalse),
+			0, 0, 0, 1,
+		})
+
+		testError := fmt.Errorf("")
+
+		_, err := sema_codec.DecodeArray(decoder, func() (any, error) {
+			return nil, testError
+		})
+		assert.Equal(t, err, testError)
+	})
+
+	t.Run("DecodeMap: EOF at key", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			byte(common_codec.EncodedBoolFalse),
+			0, 0, 0, 1,
+		})
+
+		err := sema_codec.DecodeMap(decoder, make(map[common.TypeID]sema.Type, 0), func() (sema.Type, error) {
+			return nil, nil
+		})
+		assert.ErrorContains(t, err, "EOF")
+	})
+
+	t.Run("DecodeMap: decodeFn error", func(t *testing.T) {
+		t.Parallel()
+
+		_, decoder, buffer := NewTestCodec()
+
+		buffer.Write([]byte{
+			byte(common_codec.EncodedBoolFalse),
+			0, 0, 0, 1,
+			0, 0, 0, 0,
+		})
+
+		testError := fmt.Errorf("")
+
+		err := sema_codec.DecodeMap(decoder, make(map[common.TypeID]sema.Type, 0), func() (sema.Type, error) {
+			return nil, testError
+		})
+		assert.Equal(t, err, testError)
 	})
 }
 

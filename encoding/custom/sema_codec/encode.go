@@ -22,7 +22,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"math/big"
+	"sort"
 
 	"github.com/onflow/cadence/encoding/custom/common_codec"
 	"github.com/onflow/cadence/runtime/ast"
@@ -184,7 +184,7 @@ func (e *SemaEncoder) EncodeType(t sema.Type) (err error) {
 		return e.EncodeCapabilityType(concreteType)
 	}
 
-	return fmt.Errorf("unexpected type: ${t}")
+	return fmt.Errorf("unexpected type: %s", t)
 }
 
 func isSimpleType(encodedSema EncodedSema) bool {
@@ -283,12 +283,9 @@ func (e *SemaEncoder) EncodeFunctionType(t *sema.FunctionType) (err error) {
 }
 
 func (e *SemaEncoder) EncodeIntPointer(ptr *int) (err error) {
-	if ptr == nil {
-		return common_codec.EncodeBool(&e.w, true)
-	}
-
-	err = common_codec.EncodeBool(&e.w, false)
-	if err != nil {
+	isNil := ptr == nil
+	err = common_codec.EncodeBool(&e.w, isNil)
+	if err != nil || isNil {
 		return
 	}
 
@@ -442,17 +439,6 @@ func (e *SemaEncoder) EncodeFixedPointNumericType(t *sema.FixedPointNumericType)
 	return e.writeByte(byte(fixedPointNumericType))
 }
 
-func (e *SemaEncoder) EncodeBigInt(bi *big.Int) (err error) {
-	sign := bi.Sign()
-	neg := sign == -1
-	err = common_codec.EncodeBool(&e.w, neg)
-	if err != nil {
-		return
-	}
-
-	return common_codec.EncodeBytes(&e.w, bi.Bytes())
-}
-
 func (e *SemaEncoder) EncodeTypeIdentifier(id EncodedSema) (err error) {
 	return e.writeByte(byte(id))
 }
@@ -550,6 +536,7 @@ func (e *SemaEncoder) EncodeCompositeType(compositeType *sema.CompositeType) (er
 	if err != nil {
 		return
 	}
+
 	// ImportableWithoutLocation -> bool
 	return common_codec.EncodeBool(&e.w, compositeType.ImportableWithoutLocation)
 
@@ -787,11 +774,6 @@ func (e *SemaEncoder) EncodeInterfaceType(interfaceType *sema.InterfaceType) (er
 	return e.EncodeStringTypeOrderedMap(interfaceType.GetNestedTypes())
 }
 
-func (e *SemaEncoder) write(b []byte) (err error) {
-	_, err = e.w.Write(b)
-	return
-}
-
 func (e *SemaEncoder) writeByte(b byte) (err error) {
 	_, err = e.w.Write([]byte{b})
 	return
@@ -829,12 +811,23 @@ func EncodeMap[V sema.Type](e *SemaEncoder, m map[common.TypeID]V, encodeFn func
 		return
 	}
 
-	// The order of encoded key-value pairs does not matter so long as we don't rely on hashing encoded Elaborations.
-	for k, v := range m { //nolint:maprangecheck
-		err = common_codec.EncodeString(&e.w, string(k))
+	keys := make([]string, 0, len(m))
+	for k, _ := range m {
+		keys = append(keys, string(k))
+	}
+	sort.Strings(keys)
+
+	for _, k := range keys {
+		v := m[common.TypeID(k)]
+
+		err = common_codec.EncodeString(&e.w, k)
 		if err != nil {
 			return
 		}
+
+		// TODO only support pointers here if Elaboration.CompositeTypes
+		//      can have two identical CompositeTypes at the top-level
+		//      (also InterfaceTypes)
 
 		if bufferOffset, usePointer := e.typeDefs[v]; usePointer {
 			err = e.EncodePointer(bufferOffset)

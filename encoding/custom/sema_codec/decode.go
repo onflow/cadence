@@ -893,6 +893,9 @@ func DecodeMap[V sema.Type](d *SemaDecoder, mapToPopulate map[common.TypeID]V, d
 			return
 		}
 
+		// TODO need to support pointers here if Elaboration.CompositeTypes
+		//      can have two identical CompositeTypes at the top-level
+		//      (also InterfaceTypes)
 		v, err = decodeFn()
 		if err != nil {
 			return

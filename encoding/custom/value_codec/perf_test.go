@@ -24,9 +24,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/onflow/cadence/encoding/cadence_codec"
 	"github.com/onflow/cadence/encoding/custom/value_codec"
-	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
