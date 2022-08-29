@@ -1,0 +1,233 @@
+{
+  "$schema": "https://developers.flow.com/schemas/flow-docs.json",
+  "displayName": "Cadence",
+  "headers": {
+    "": {
+      "icon": "cadence",
+      "title": "Cadence",
+      "description": "Cadence is a resource-oriented programming language that introduces new features to smart contract programming that help developers ensure that their code is safe, secure, clear, and approachable. Some of these features are:",
+      "headerCards": [
+        {
+          "title": "Hello World!",
+          "tags": ["tutorial", "playground"],
+          "description": "Write and deploy your first smart contract within minutes on our Playground.",
+          "href": "/cadence/tutorial/02-hello-world"
+        },
+        {
+          "title": "Cadence Language",
+          "tags": ["reference", "syntax"],
+          "description": "Learn the functionality, terminology and syntax of the Cadence language.",
+          "href": "/cadence/language"
+        },
+        {
+          "title": "Solidity to Cadence Intro",
+          "tags": ["guide", "patterns"],
+          "description": "Learn the key differences in the account models between Solidity and Cadence.",
+          "href": "/cadence/msg-sender"
+        }
+      ]
+    }
+  },
+  "redirects": {
+    "language": "language/syntax",
+    "tutorial": "tutorial/01-first-steps"
+  },
+  "sidebars": {
+    "": [
+      {
+        "title": "Developer Guides",
+        "items": [
+          {
+            "title": "Introduction to Cadence",
+            "href": ""
+          },
+          {
+            "title": "Cadence Design Patterns",
+            "href": "design-patterns"
+          },
+          {
+            "title": "Contract Upgrades with Incompatible Changes",
+            "href": "contract-upgrades"
+          },
+          {
+            "title": "Cadence Anti-Patterns",
+            "href": "anti-patterns"
+          },
+          {
+            "title": "msg․sender Considered Harmful",
+            "href": "msg-sender"
+          },
+          {
+            "title": "Measuring Time in Cadence",
+            "href": "measuring-time"
+          },
+          {
+            "title": "Migration Guide",
+            "href": "migration-guide"
+          },
+          {
+            "title": "JSON-Cadence Data Interchange Format",
+            "href": "json-cadence-spec"
+          },
+          {
+            "title": "Security Best Practices",
+            "href": "security-best-practices"
+          }
+        ]
+      },
+      {
+        "title": "Cadence",
+        "items": [
+          {
+            "title": "Language Reference",
+            "href": "language"
+          },
+          {
+            "title": "Tutorial",
+            "href": "tutorial/02-hello-world"
+          }
+        ]
+      }
+    ],
+    "language": [
+      {
+        "title": "Cadence Language",
+        "items": [
+          {
+            "href": "syntax",
+            "title": "Syntax"
+          },
+          {
+            "href": "constants-and-variables"
+          },
+          {
+            "href": "type-annotations"
+          },
+          {
+            "href": "values-and-types"
+          },
+          {
+            "href": "operators"
+          },
+          {
+            "href": "functions"
+          },
+          {
+            "href": "control-flow"
+          },
+          {
+            "href": "scope"
+          },
+          {
+            "href": "type-safety"
+          },
+          {
+            "href": "type-inference"
+          },
+          {
+            "href": "composite-types"
+          },
+          {
+            "href": "resources"
+          },
+          {
+            "href": "access-control"
+          },
+          {
+            "href": "interfaces"
+          },
+          {
+            "href": "enumerations"
+          },
+          {
+            "href": "restricted-types"
+          },
+          {
+            "href": "references"
+          },
+          {
+            "href": "imports"
+          },
+          {
+            "href": "accounts"
+          },
+          {
+            "href": "capability-based-access-control"
+          },
+          {
+            "href": "contracts"
+          },
+          {
+            "href": "contract-updatability"
+          },
+          {
+            "href": "events"
+          },
+          {
+            "href": "core-events"
+          },
+          {
+            "href": "transactions"
+          },
+          {
+            "href": "run-time-types",
+            "title": "Run-time Types"
+          },
+          {
+            "href": "built-in-functions",
+            "title": "Built-in Functions"
+          },
+          {
+            "href": "environment-information"
+          },
+          {
+            "href": "crypto"
+          },
+          {
+            "href": "glossary"
+          }
+        ]
+      }
+    ],
+    "tutorial": [
+      {
+        "title": "Cadence Language",
+        "items": [
+          {
+            "href": "01-first-steps"
+          },
+          {
+            "href": "02-hello-world"
+          },
+          {
+            "href": "03-resources"
+          },
+          {
+            "href": "04-capabilities"
+          },
+          {
+            "href": "05-non-fungible-tokens-1"
+          },
+          {
+            "href": "05-non-fungible-tokens-2"
+          },
+          {
+            "href": "06-fungible-tokens"
+          },
+          {
+            "href": "07-marketplace-setup"
+          },
+          {
+            "href": "08-marketplace-compose"
+          },
+          {
+            "href": "09-voting"
+          },
+          {
+            "href": "10-resources-compose"
+          }
+        ]
+      }
+    ]
+  }
+}
