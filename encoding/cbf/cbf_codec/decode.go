@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package value_codec
+package cbf_codec
 
 import (
 	"bytes"
@@ -26,7 +26,7 @@ import (
 	"math/big"
 
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/encoding/custom/common_codec"
+	"github.com/onflow/cadence/encoding/cbf/common_codec"
 	"github.com/onflow/cadence/runtime/common"
 )
 

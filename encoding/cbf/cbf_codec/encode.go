@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package value_codec
+package cbf_codec
 
 import (
 	"bytes"
@@ -24,7 +24,7 @@ import (
 	"io"
 
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/encoding/custom/common_codec"
+	"github.com/onflow/cadence/encoding/cbf/common_codec"
 )
 
 // An Encoder converts Cadence values into custom-encoded bytes.

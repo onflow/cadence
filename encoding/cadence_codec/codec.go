@@ -5,7 +5,7 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding"
-	customCodec "github.com/onflow/cadence/encoding/custom/value_codec"
+	customCodec "github.com/onflow/cadence/encoding/cbf/cbf_codec"
 	jsoncdc "github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime/common"
 )
@@ -47,7 +47,7 @@ func (c CadenceCodec) chooseCodec(bytes []byte) (codec encoding.Codec, err error
 	if bytes[0] == '{' {
 		codec = jsoncdc.JsonCodec{}
 	} else {
-		codec = customCodec.ValueCodec{}
+		codec = customCodec.CadenceBinaryFormatCodec{}
 	}
 	return
 }

@@ -936,7 +936,7 @@ func encodeArgs(argValues []cadence.Value) [][]byte {
 	args := make([][]byte, len(argValues))
 	for i, arg := range argValues {
 		var err error
-		//args[i], err = value_codec.EncodeValue(arg)
+		//args[i], err = cbf_codec.EncodeValue(arg)
 		args[i], err = json.Encode(arg)
 		if err != nil {
 			panic(fmt.Errorf("broken test: invalid argument: %w", err))

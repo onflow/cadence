@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package value_codec_test
+package cbf_codec_test
 
 import (
 	"fmt"
@@ -27,7 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/encoding/cadence_codec"
-	"github.com/onflow/cadence/encoding/custom/value_codec"
+	"github.com/onflow/cadence/encoding/cbf/cbf_codec"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
@@ -60,7 +60,7 @@ func BenchmarkCodec(b *testing.B) {
 	}
 
 	jsonCodec := cadence_codec.CadenceCodec{Encoder: json.JsonCodec{}}
-	valueCodec := cadence_codec.CadenceCodec{Encoder: value_codec.ValueCodec{}}
+	valueCodec := cadence_codec.CadenceCodec{Encoder: cbf_codec.CadenceBinaryFormatCodec{}}
 
 	for _, value := range tests {
 		b.Run(fmt.Sprintf("json_%s", value.Type().ID()), func(b *testing.B) {
@@ -91,7 +91,7 @@ func BenchmarkCodec(b *testing.B) {
 
 type MeasureCodec = func(p cadence.Value) (time.Duration, time.Duration, int, error)
 
-func measureValueCodec(value cadence.Value) (
+func measureCadenceBinaryFormatCodec(value cadence.Value) (
 	encodingDuration time.Duration,
 	decodingDuration time.Duration,
 	size int,
@@ -262,7 +262,7 @@ func TestCodecPerformance(t *testing.T) {
 		jsonMeasurements, err := measure(value, iterations, measureJsonCodec)
 		require.NoError(t, err, "json codec error")
 
-		valueMeasurements, err := measure(value, iterations, measureValueCodec)
+		valueMeasurements, err := measure(value, iterations, measureCadenceBinaryFormatCodec)
 		require.NoError(t, err, "value codec error")
 
 		encodingSpeedup := float64(jsonMeasurements.Encoding.Average) / float64(valueMeasurements.Encoding.Average)

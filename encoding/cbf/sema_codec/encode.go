@@ -24,7 +24,7 @@ import (
 	"io"
 	"sort"
 
-	"github.com/onflow/cadence/encoding/custom/common_codec"
+	"github.com/onflow/cadence/encoding/cbf/common_codec"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"

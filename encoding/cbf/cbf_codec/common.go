@@ -1,4 +1,4 @@
-package value_codec
+package cbf_codec
 
 type EncodedValue byte
 
