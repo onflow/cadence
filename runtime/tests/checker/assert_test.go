@@ -31,6 +31,9 @@ func TestCheckAssertWithoutMessage(t *testing.T) {
 
 	t.Parallel()
 
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.AssertFunction)
+
 	_, err := ParseAndCheckWithOptions(t,
 		`
             pub fun test() {
@@ -38,12 +41,8 @@ func TestCheckAssertWithoutMessage(t *testing.T) {
             }
         `,
 		ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithPredeclaredValues(
-					stdlib.StandardLibraryFunctions{
-						stdlib.AssertFunction,
-					}.ToSemaValueDeclarations(),
-				),
+			Config: &sema.Config{
+				BaseValueActivation: baseValueActivation,
 			},
 		},
 	)
@@ -55,6 +54,9 @@ func TestCheckAssertWithMessage(t *testing.T) {
 
 	t.Parallel()
 
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.AssertFunction)
+
 	_, err := ParseAndCheckWithOptions(t,
 		`
             pub fun test() {
@@ -62,12 +64,8 @@ func TestCheckAssertWithMessage(t *testing.T) {
             }
         `,
 		ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithPredeclaredValues(
-					stdlib.StandardLibraryFunctions{
-						stdlib.AssertFunction,
-					}.ToSemaValueDeclarations(),
-				),
+			Config: &sema.Config{
+				BaseValueActivation: baseValueActivation,
 			},
 		},
 	)

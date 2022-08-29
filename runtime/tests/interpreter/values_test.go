@@ -65,16 +65,16 @@ func TestRandomMapOperations(t *testing.T) {
 			Elaboration: sema.NewElaboration(nil, false),
 		},
 		utils.TestLocation,
-		interpreter.WithStorage(storage),
-		interpreter.WithImportLocationHandler(
-			func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+		&interpreter.Config{
+			Storage: storage,
+			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 				return interpreter.VirtualImport{
 					Elaboration: inter.Program.Elaboration,
 				}
 			},
-		),
-		interpreter.WithAtreeStorageValidationEnabled(*validateAtree),
-		interpreter.WithAtreeValueValidationEnabled(*validateAtree),
+			AtreeStorageValidationEnabled: *validateAtree,
+			AtreeValueValidationEnabled:   *validateAtree,
+		},
 	)
 	require.NoError(t, err)
 
@@ -510,14 +510,14 @@ func TestRandomArrayOperations(t *testing.T) {
 			Elaboration: sema.NewElaboration(nil, false),
 		},
 		utils.TestLocation,
-		interpreter.WithStorage(storage),
-		interpreter.WithImportLocationHandler(
-			func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+		&interpreter.Config{
+			Storage: storage,
+			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 				return interpreter.VirtualImport{
 					Elaboration: inter.Program.Elaboration,
 				}
 			},
-		),
+		},
 	)
 	require.NoError(t, err)
 
@@ -874,14 +874,14 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 			Elaboration: sema.NewElaboration(nil, false),
 		},
 		utils.TestLocation,
-		interpreter.WithStorage(storage),
-		interpreter.WithImportLocationHandler(
-			func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+		&interpreter.Config{
+			Storage: storage,
+			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 				return interpreter.VirtualImport{
 					Elaboration: inter.Program.Elaboration,
 				}
 			},
-		),
+		},
 	)
 	require.NoError(t, err)
 

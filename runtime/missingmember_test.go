@@ -2020,7 +2020,7 @@ pub contract ItemNFT: NonFungibleToken {
 }
 `
 
-	accountCodes := map[common.Location][]byte{
+	accountCodes := map[Location][]byte{
 		common.AddressLocation{
 			Address: ftAddress,
 			Name:    "FungibleToken",
@@ -3839,7 +3839,7 @@ pub contract AuctionDutch {
 	}
 }
 `
-	accountCodes := map[common.Location][]byte{
+	accountCodes := map[Location][]byte{
 		common.AddressLocation{
 			Address: ftAddress,
 			Name:    "FungibleToken",
@@ -4685,7 +4685,7 @@ pub contract ExampleMarketplace {
 
 	`
 
-	accountCodes := map[common.Location][]byte{}
+	accountCodes := map[Location][]byte{}
 	var events []cadence.Event
 	var logs []string
 	var signerAddress common.Address

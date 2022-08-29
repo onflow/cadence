@@ -161,7 +161,7 @@ func TestMulUInt8(t *testing.T) {
 		{0xff, 0xff, false},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, test := range tests {
@@ -310,7 +310,7 @@ func TestMulUInt16(t *testing.T) {
 		{0xffff, 0xffff, false},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, test := range tests {
@@ -459,7 +459,7 @@ func TestMulUInt32(t *testing.T) {
 		{0xffffffff, 0xffffffff, false},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, test := range tests {
@@ -619,7 +619,7 @@ func TestMulUInt64(t *testing.T) {
 		{0xffffffff, 0x100000002, false},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, test := range tests {
@@ -781,7 +781,7 @@ func TestMulUInt128(t *testing.T) {
 		{uint128("0xffffffffffffffffffffffffffffffff"), uint128("0x10000000000000000000000000000002"), false},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, test := range tests {
@@ -1452,7 +1452,7 @@ func TestMulUInt256(t *testing.T) {
 		},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, test := range tests {
@@ -1634,7 +1634,7 @@ func TestMulInt8(t *testing.T) {
 		{-1, -1, true},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, test := range tests {
@@ -1825,7 +1825,7 @@ func TestMulInt16(t *testing.T) {
 		{-1, -1, true},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, test := range tests {
@@ -1999,7 +1999,7 @@ func TestMulInt32(t *testing.T) {
 		{-1, -1, true},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, test := range tests {
@@ -2158,7 +2158,7 @@ func TestMulInt64(t *testing.T) {
 		{0xffffffff, 0x100000002, false},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, test := range tests {
@@ -2319,7 +2319,7 @@ func TestMulInt128(t *testing.T) {
 		{int128("-0x00000000000000000000000000000001"), int128("-0x00000000000000000000000000000001"), true},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, test := range tests {
@@ -2993,7 +2993,7 @@ func TestMulInt256(t *testing.T) {
 		},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
+	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
 	for _, test := range tests {

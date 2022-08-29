@@ -18,19 +18,19 @@
 
 package stdlib
 
-var BuiltinFunctions = StandardLibraryFunctions{
+var BuiltinValues = []StandardLibraryValue{
 	AssertFunction,
 	PanicFunction,
-	publicKeyConstructor,
-}
-
-var HelperFunctions = StandardLibraryFunctions{
-	LogFunction,
-}
-
-var BuiltinValues = StandardLibraryValues{
-	signatureAlgorithmConstructor,
-	hashAlgorithmConstructor,
-	blsContract,
-	rlpContract,
+	SignatureAlgorithmConstructor,
+	RLPContract,
+	// TODO: refactor. should be function accepting handler,
+	//   instead of relying on callback on interpreter (PublicKeyValidationHandler, SignatureVerificationHandler)
+	PublicKeyConstructor,
+	// TODO: refactor. should be function accepting handler,
+	//   instead of relying on callback on interpreter (HashHandler)
+	HashAlgorithmConstructor,
+	// TODO: refactor. should be function accepting handler,
+	//   instead of relying on callback on interpreter
+	//   (BLSVerifyPoPHandler, BLSAggregateSignaturesHandler, BLSAggregatePublicKeysHandler)
+	BLSContract,
 }

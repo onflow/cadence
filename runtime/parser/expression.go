@@ -19,7 +19,6 @@
 package parser
 
 import (
-	"fmt"
 	"math/big"
 	"strings"
 	"unicode/utf8"
@@ -1297,12 +1296,12 @@ func defineReferenceExpression() {
 				return nil, err
 			}
 
-			p.skipSpaceAndComments(true)
-
 			castingExpression, ok := expression.(*ast.CastingExpression)
 			if !ok {
-				panic(fmt.Errorf("expected casting expression"))
+				return nil, p.syntaxError("expected casting expression")
 			}
+
+			p.skipSpaceAndComments(true)
 
 			return ast.NewReferenceExpression(
 				p.memoryGauge,
