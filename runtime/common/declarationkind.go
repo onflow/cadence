@@ -56,6 +56,7 @@ const (
 	DeclarationKindPragma
 	DeclarationKindEnum
 	DeclarationKindEnumCase
+	DeclarationKindExtension
 )
 
 func DeclarationKindCount() int {

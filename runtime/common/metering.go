@@ -59,6 +59,7 @@ var (
 
 	FunctionDeclarationMemoryUsage        = NewConstantMemoryUsage(MemoryKindFunctionDeclaration)
 	CompositeDeclarationMemoryUsage       = NewConstantMemoryUsage(MemoryKindCompositeDeclaration)
+	ExtensionDeclarationMemoryUsage       = NewConstantMemoryUsage(MemoryKindExtensionDeclaration)
 	InterfaceDeclarationMemoryUsage       = NewConstantMemoryUsage(MemoryKindInterfaceDeclaration)
 	ImportDeclarationMemoryUsage          = NewConstantMemoryUsage(MemoryKindImportDeclaration)
 	TransactionDeclarationMemoryUsage     = NewConstantMemoryUsage(MemoryKindTransactionDeclaration)
@@ -81,6 +82,7 @@ var (
 	SwapStatementMemoryUsage       = NewConstantMemoryUsage(MemoryKindSwapStatement)
 	SwitchStatementMemoryUsage     = NewConstantMemoryUsage(MemoryKindSwitchStatement)
 	WhileStatementMemoryUsage      = NewConstantMemoryUsage(MemoryKindWhileStatement)
+	RemoveStatementMemoryUsage     = NewConstantMemoryUsage(MemoryKindRemoveStatement)
 
 	// AST Expressions
 
@@ -103,6 +105,7 @@ var (
 	ReferenceExpressionMemoryUsage   = NewConstantMemoryUsage(MemoryKindReferenceExpression)
 	ForceExpressionMemoryUsage       = NewConstantMemoryUsage(MemoryKindForceExpression)
 	PathExpressionMemoryUsage        = NewConstantMemoryUsage(MemoryKindPathExpression)
+	ExtendExpressionMemoryUsage      = NewConstantMemoryUsage(MemoryKindExtendExpression)
 
 	// AST Types
 

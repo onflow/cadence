@@ -92,4 +92,7 @@ const (
 	// - FunctionExpression
 	// - PathExpression
 	precedenceLiteral
+	// precedenceExtend is the precedence of
+	// - ExtendExpression
+	precendenceExtend
 )

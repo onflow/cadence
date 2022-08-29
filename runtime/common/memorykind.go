@@ -159,6 +159,7 @@ const (
 
 	MemoryKindFunctionDeclaration
 	MemoryKindCompositeDeclaration
+	MemoryKindExtensionDeclaration
 	MemoryKindInterfaceDeclaration
 	MemoryKindEnumCaseDeclaration
 	MemoryKindFieldDeclaration
@@ -179,6 +180,7 @@ const (
 	MemoryKindSwapStatement
 	MemoryKindSwitchStatement
 	MemoryKindWhileStatement
+	MemoryKindRemoveStatement
 
 	MemoryKindBooleanExpression
 	MemoryKindNilExpression
@@ -201,6 +203,7 @@ const (
 	MemoryKindReferenceExpression
 	MemoryKindForceExpression
 	MemoryKindPathExpression
+	MemoryKindExtendExpression
 
 	MemoryKindConstantSizedType
 	MemoryKindDictionaryType
