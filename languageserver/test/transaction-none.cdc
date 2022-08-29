@@ -1,0 +1,4 @@
+transaction {
+    prepare() {}
+    execute {}
+}
