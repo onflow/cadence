@@ -201,6 +201,7 @@ type ContainedType interface {
 }
 
 // ContainerType is a type which might have nested types
+//
 type ContainerType interface {
 	Type
 	IsContainerType() bool
@@ -4883,6 +4884,7 @@ func (t *AddressType) GetMembers() map[string]MemberResolver {
 //                        should the check still pass?". A common code-smell for potential incorrect
 //                        usage is, using IsSubType() method with a constant/pre-defined superType.
 //                        e.g: IsSubType(<<someType>>, FixedPointType)
+//
 func IsSubType(subType Type, superType Type) bool {
 
 	if subType == nil {
