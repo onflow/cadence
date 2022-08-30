@@ -3037,46 +3037,27 @@ var stringFunction = func() Value {
 				}
 
 				inter := invocation.Interpreter
-
-				// meter byte count, not utf-8 codepoints
-				memoryUsage := common.NewArrayExpressionMemoryUsage(
-					argument.Count(),
-				)
-
-				iter, err := argument.array.Iterator()
+				// naively read the entire byte array before validating
+				buf, err := ByteArrayValueToByteSlice(inter, argument)
 
 				if err != nil {
 					panic(errors.NewExternalError(err))
 				}
 
-				buf := make([]byte, argument.array.Count())
-
-				idx := 0
-				// naively read the entire byte stream into a byte array
-				for {
-					val, err := iter.Next()
-					if err != nil {
-						panic(errors.NewExternalError(err))
-					}
-
-					if val == nil {
-						break
-					}
-
-					byte := uint8(val.(UInt8Value))
-					buf[idx] = byte
-					idx += 1
-				}
-
-				if utf8.Valid(buf) {
-					return NewSomeValueNonCopying(inter, NewStringValue(inter, memoryUsage, func() string {
-						return string(buf)
-					}))
-				} else {
+				if !utf8.Valid(buf) {
 					return NewNilValue(inter)
 				}
+
+				memoryUsage := common.NewStringMemoryUsage(len(buf))
+
+				return NewSomeValueNonCopying(
+					inter, 
+					NewStringValue(inter, memoryUsage, func() string {
+						return string(buf)
+					}),
+				)
 			},
-			sema.StringTypeEncodeHexFunctionType,
+			sema.StringTypeFromUtf8FunctionType,
 		),
 	)
 	return functionValue
