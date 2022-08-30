@@ -4877,13 +4877,14 @@ func (t *AddressType) GetMembers() map[string]MemberResolver {
 // using `IsSameTypeKind` method. e.g: "Is type `T` an Integer type?". Using this method
 // for the later use-case may produce incorrect results.
 //   * IsSubType()      - To check the assignability. e.g: Is argument type T is a sub-type
-// .                      of parameter type R. This is the more frequent use-case.
+//                        of parameter type R. This is the more frequent use-case.
 //   * IsSameTypeKind() - To check if a type strictly belongs to a certain category. e.g: Is the
 //                        expression type T is any of the integer types, but nothing else.
 //                        Another way to check is, asking the question of "if the subType is Never,
 //                        should the check still pass?". A common code-smell for potential incorrect
 //                        usage is, using IsSubType() method with a constant/pre-defined superType.
 //                        e.g: IsSubType(<<someType>>, FixedPointType)
+//
 func IsSubType(subType Type, superType Type) bool {
 
 	if subType == nil {
