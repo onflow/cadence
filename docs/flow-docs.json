@@ -29,7 +29,6 @@
     }
   },
   "redirects": {
-    "language": "language/syntax",
     "tutorial": "tutorial/01-first-steps"
   },
   "sidebars": {
