@@ -44,6 +44,8 @@ const (
 	DeclarationKindField
 	DeclarationKindInitializer
 	DeclarationKindDestructor
+	DeclarationKindAttach
+	DeclarationKindRemove
 	DeclarationKindStructureInterface
 	DeclarationKindResourceInterface
 	DeclarationKindContractInterface
@@ -112,6 +114,10 @@ func (k DeclarationKind) Name() string {
 		return "initializer"
 	case DeclarationKindDestructor:
 		return "destructor"
+	case DeclarationKindAttach:
+		return "attach"
+	case DeclarationKindRemove:
+		return "remove"
 	case DeclarationKindStructureInterface:
 		return "structure interface"
 	case DeclarationKindResourceInterface:
@@ -163,6 +169,10 @@ func (k DeclarationKind) Keywords() string {
 		return "init"
 	case DeclarationKindDestructor:
 		return "destroy"
+	case DeclarationKindAttach:
+		return "attach"
+	case DeclarationKindRemove:
+		return "remove"
 	case DeclarationKindStructureInterface:
 		return "struct interface"
 	case DeclarationKindResourceInterface:

@@ -92,6 +92,9 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 			case keywordStruct, keywordResource, keywordContract, keywordEnum:
 				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, docString)
 
+			case keywordExtension:
+				return parseExtensionDeclaration(p, access, accessPos, docString)
+
 			case KeywordTransaction:
 				if access != ast.AccessNotSpecified {
 					return nil, p.syntaxError("invalid access modifier for transaction")
@@ -847,6 +850,31 @@ func parseFieldWithVariableKind(
 	), nil
 }
 
+func parseConformances(p *parser) ([]*ast.NominalType, error) {
+	var conformances []*ast.NominalType
+	var err error
+
+	if p.current.Is(lexer.TokenColon) {
+		// Skip the colon
+		p.next()
+
+		conformances, _, err = parseNominalTypes(p, lexer.TokenBraceOpen)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(conformances) < 1 {
+			return nil, p.syntaxError(
+				"expected at least one conformance after %s",
+				lexer.TokenColon,
+			)
+		}
+	}
+
+	p.skipSpaceAndComments(true)
+	return conformances, nil
+}
+
 // parseCompositeOrInterfaceDeclaration parses an event declaration.
 //
 //     conformances : ':' nominalType ( ',' nominalType )*
@@ -910,34 +938,17 @@ func parseCompositeOrInterfaceDeclaration(
 
 	p.skipSpaceAndComments(true)
 
-	var conformances []*ast.NominalType
-	var err error
-
-	if p.current.Is(lexer.TokenColon) {
-		// Skip the colon
-		p.next()
-
-		conformances, _, err = parseNominalTypes(p, lexer.TokenBraceOpen)
-		if err != nil {
-			return nil, err
-		}
-
-		if len(conformances) < 1 {
-			return nil, p.syntaxError(
-				"expected at least one conformance after %s",
-				lexer.TokenColon,
-			)
-		}
+	conformances, err := parseConformances(p)
+	if err != nil {
+		return nil, err
 	}
-
-	p.skipSpaceAndComments(true)
 
 	_, err = p.mustOne(lexer.TokenBraceOpen)
 	if err != nil {
 		return nil, err
 	}
 
-	members, err := parseMembersAndNestedDeclarations(p, lexer.TokenBraceClose)
+	members, err := parseMembersAndNestedDeclarations(p, false, lexer.TokenBraceClose)
 	if err != nil {
 		return nil, err
 	}
@@ -985,12 +996,109 @@ func parseCompositeOrInterfaceDeclaration(
 	}
 }
 
+func parseExtensionDeclaration(
+	p *parser,
+	access ast.Access,
+	accessPos *ast.Position,
+	docString string,
+) (ast.Declaration, error) {
+	startPos := p.current.StartPos
+	if accessPos != nil {
+		startPos = *accessPos
+	}
+
+	// Skip the extension keyword
+	p.next()
+
+	p.skipSpaceAndComments(true)
+	if !p.current.Is(lexer.TokenIdentifier) {
+		return nil, p.syntaxError(
+			"expected %s, got %s",
+			lexer.TokenIdentifier,
+			p.current.Type,
+		)
+	}
+	identifier, err := p.mustIdentifier()
+	if err != nil {
+		return nil, err
+	}
+
+	p.skipSpaceAndComments(true)
+
+	if p.current.Value != keywordFor {
+		return nil, p.syntaxError(
+			"expected 'for', got %s",
+			p.current.Type,
+		)
+	}
+
+	// skip the for keyword
+	p.next()
+	p.skipSpaceAndComments(true)
+
+	if !p.current.Is(lexer.TokenIdentifier) {
+		return nil, p.syntaxError(
+			"expected %s, got %s",
+			lexer.TokenIdentifier,
+			p.current.Type,
+		)
+	}
+
+	baseType, err := p.mustIdentifier()
+	if err != nil {
+		return nil, err
+	}
+
+	conformances, err := parseConformances(p)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = p.mustOne(lexer.TokenBraceOpen)
+	if err != nil {
+		return nil, err
+	}
+
+	members, err := parseMembersAndNestedDeclarations(p, true, lexer.TokenBraceClose)
+	if err != nil {
+		return nil, err
+	}
+
+	p.skipSpaceAndComments(true)
+
+	endToken, err := p.mustOne(lexer.TokenBraceClose)
+	if err != nil {
+		return nil, err
+	}
+
+	declarationRange := ast.NewRange(
+		p.memoryGauge,
+		startPos,
+		endToken.EndPos,
+	)
+
+	return ast.NewExtensionDeclaration(
+		p.memoryGauge,
+		access,
+		identifier,
+		baseType,
+		conformances,
+		members,
+		docString,
+		declarationRange,
+	), nil
+}
+
 // parseMembersAndNestedDeclarations parses composite or interface members,
 // and nested declarations.
 //
 //     membersAndNestedDeclarations : ( memberOrNestedDeclaration ';'* )*
 //
-func parseMembersAndNestedDeclarations(p *parser, endTokenType lexer.TokenType) (*ast.Members, error) {
+func parseMembersAndNestedDeclarations(
+	p *parser,
+	isExtension bool,
+	endTokenType lexer.TokenType,
+) (*ast.Members, error) {
 
 	var declarations []ast.Declaration
 
@@ -1010,7 +1118,7 @@ func parseMembersAndNestedDeclarations(p *parser, endTokenType lexer.TokenType) 
 			return ast.NewMembers(p.memoryGauge, declarations), nil
 
 		default:
-			memberOrNestedDeclaration, err := parseMemberOrNestedDeclaration(p, docString)
+			memberOrNestedDeclaration, err := parseMemberOrNestedDeclaration(p, isExtension, docString)
 			if err != nil {
 				return nil, err
 			}
@@ -1035,7 +1143,7 @@ func parseMembersAndNestedDeclarations(p *parser, endTokenType lexer.TokenType) 
 //                               | eventDeclaration
 //                               | enumCase
 //
-func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaration, error) {
+func parseMemberOrNestedDeclaration(p *parser, isExtension bool, docString string) (ast.Declaration, error) {
 
 	const functionBlockIsOptional = true
 
@@ -1105,7 +1213,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 			}
 
 			identifier := p.tokenToIdentifier(*previousIdentifierToken)
-			return parseSpecialFunctionDeclaration(p, functionBlockIsOptional, access, accessPos, identifier)
+			return parseSpecialFunctionDeclaration(p, functionBlockIsOptional, access, accessPos, isExtension, identifier)
 		}
 
 		return nil, nil
@@ -1157,6 +1265,7 @@ func parseSpecialFunctionDeclaration(
 	functionBlockIsOptional bool,
 	access ast.Access,
 	accessPos *ast.Position,
+	isExtension bool,
 	identifier ast.Identifier,
 ) (*ast.SpecialFunctionDeclaration, error) {
 
@@ -1196,6 +1305,24 @@ func parseSpecialFunctionDeclaration(
 
 	case keywordPrepare:
 		declarationKind = common.DeclarationKindPrepare
+
+	case keywordAttach:
+		if !isExtension {
+			return nil, p.syntaxError(
+				"%s is only allowed in an extension",
+				identifier.Identifier,
+			)
+		}
+		declarationKind = common.DeclarationKindAttach
+
+	case keywordRemove:
+		if !isExtension {
+			return nil, p.syntaxError(
+				"%s is only allowed in an extension",
+				identifier.Identifier,
+			)
+		}
+		declarationKind = common.DeclarationKindRemove
 	}
 
 	return ast.NewSpecialFunctionDeclaration(
