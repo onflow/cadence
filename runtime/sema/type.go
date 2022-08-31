@@ -1535,6 +1535,28 @@ var (
 	UFix64TypeMaxFractionalBig = fixedpoint.UFix64TypeMaxFractionalBig
 )
 
+// size constants (in bytes) for fixed-width numeric types
+const (
+	Int8TypeSize    uint = 1
+	UInt8TypeSize   uint = 1
+	Word8TypeSize   uint = 1
+	Int16TypeSize   uint = 2
+	UInt16TypeSize  uint = 2
+	Word16TypeSize  uint = 2
+	Int32TypeSize   uint = 4
+	UInt32TypeSize  uint = 4
+	Word32TypeSize  uint = 4
+	Int64TypeSize   uint = 8
+	UInt64TypeSize  uint = 8
+	Word64TypeSize  uint = 8
+	Fix64TypeSize   uint = 8
+	UFix64TypeSize  uint = 8
+	Int128TypeSize  uint = 16
+	UInt128TypeSize uint = 16
+	Int256TypeSize  uint = 32
+	UInt256TypeSize uint = 32
+)
+
 const Fix64Scale = fixedpoint.Fix64Scale
 const Fix64Factor = fixedpoint.Fix64Factor
 

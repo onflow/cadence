@@ -6419,7 +6419,7 @@ func (Int128Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _
 }
 
 func (v Int128Value) ToBigEndianBytes() []byte {
-	return SignedBigIntToBigEndianBytes(v.BigInt)
+	return SignedBigIntToSizedBigEndianBytes(v.BigInt, sema.Int128TypeSize)
 }
 
 func (v Int128Value) ConformsToStaticType(
@@ -7124,7 +7124,7 @@ func (Int256Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _
 }
 
 func (v Int256Value) ToBigEndianBytes() []byte {
-	return SignedBigIntToBigEndianBytes(v.BigInt)
+	return SignedBigIntToSizedBigEndianBytes(v.BigInt, sema.Int256TypeSize)
 }
 
 func (v Int256Value) ConformsToStaticType(
@@ -10566,7 +10566,7 @@ func (UInt128Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, 
 }
 
 func (v UInt128Value) ToBigEndianBytes() []byte {
-	return UnsignedBigIntToBigEndianBytes(v.BigInt)
+	return UnsignedBigIntToSizedBigEndianBytes(v.BigInt, sema.UInt128TypeSize)
 }
 
 func (v UInt128Value) ConformsToStaticType(
@@ -11217,7 +11217,7 @@ func (UInt256Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, 
 }
 
 func (v UInt256Value) ToBigEndianBytes() []byte {
-	return UnsignedBigIntToBigEndianBytes(v.BigInt)
+	return UnsignedBigIntToSizedBigEndianBytes(v.BigInt, sema.UInt256TypeSize)
 }
 
 func (v UInt256Value) ConformsToStaticType(
