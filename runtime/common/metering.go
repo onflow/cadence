@@ -117,6 +117,7 @@ var (
 	OptionalTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindOptionalType)
 	ReferenceTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindReferenceType)
 	RestrictedTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindRestrictedType)
+	ExtendedTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindExtendedType)
 	VariableSizedTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindVariableSizedType)
 
 	PositionMemoryUsage = NewConstantMemoryUsage(MemoryKindPosition)

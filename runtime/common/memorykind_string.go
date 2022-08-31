@@ -172,28 +172,29 @@ func _() {
 	_ = x[MemoryKindOptionalType-161]
 	_ = x[MemoryKindReferenceType-162]
 	_ = x[MemoryKindRestrictedType-163]
-	_ = x[MemoryKindVariableSizedType-164]
-	_ = x[MemoryKindPosition-165]
-	_ = x[MemoryKindRange-166]
-	_ = x[MemoryKindElaboration-167]
-	_ = x[MemoryKindActivation-168]
-	_ = x[MemoryKindActivationEntries-169]
-	_ = x[MemoryKindVariableSizedSemaType-170]
-	_ = x[MemoryKindConstantSizedSemaType-171]
-	_ = x[MemoryKindDictionarySemaType-172]
-	_ = x[MemoryKindOptionalSemaType-173]
-	_ = x[MemoryKindRestrictedSemaType-174]
-	_ = x[MemoryKindReferenceSemaType-175]
-	_ = x[MemoryKindCapabilitySemaType-176]
-	_ = x[MemoryKindOrderedMap-177]
-	_ = x[MemoryKindOrderedMapEntryList-178]
-	_ = x[MemoryKindOrderedMapEntry-179]
-	_ = x[MemoryKindLast-180]
+	_ = x[MemoryKindExtendedType-164]
+	_ = x[MemoryKindVariableSizedType-165]
+	_ = x[MemoryKindPosition-166]
+	_ = x[MemoryKindRange-167]
+	_ = x[MemoryKindElaboration-168]
+	_ = x[MemoryKindActivation-169]
+	_ = x[MemoryKindActivationEntries-170]
+	_ = x[MemoryKindVariableSizedSemaType-171]
+	_ = x[MemoryKindConstantSizedSemaType-172]
+	_ = x[MemoryKindDictionarySemaType-173]
+	_ = x[MemoryKindOptionalSemaType-174]
+	_ = x[MemoryKindRestrictedSemaType-175]
+	_ = x[MemoryKindReferenceSemaType-176]
+	_ = x[MemoryKindCapabilitySemaType-177]
+	_ = x[MemoryKindOrderedMap-178]
+	_ = x[MemoryKindOrderedMapEntryList-179]
+	_ = x[MemoryKindOrderedMapEntry-180]
+	_ = x[MemoryKindLast-181]
 }
 
-const _MemoryKind_name = "UnknownBoolValueAddressValueStringValueCharacterValueNumberValueArrayValueBaseDictionaryValueBaseCompositeValueBaseSimpleCompositeValueBaseOptionalValueNilValueVoidValueTypeValuePathValueCapabilityValueLinkValueStorageReferenceValueEphemeralReferenceValueInterpretedFunctionValueHostFunctionValueBoundFunctionValueBigIntSimpleCompositeValueAtreeArrayDataSlabAtreeArrayMetaDataSlabAtreeArrayElementOverheadAtreeMapDataSlabAtreeMapMetaDataSlabAtreeMapElementOverheadAtreeMapPreAllocatedElementAtreeEncodedSlabPrimitiveStaticTypeCompositeStaticTypeInterfaceStaticTypeVariableSizedStaticTypeConstantSizedStaticTypeDictionaryStaticTypeOptionalStaticTypeRestrictedStaticTypeReferenceStaticTypeCapabilityStaticTypeFunctionStaticTypeCadenceVoidValueCadenceOptionalValueCadenceBoolValueCadenceStringValueCadenceCharacterValueCadenceAddressValueCadenceIntValueCadenceNumberValueCadenceArrayValueBaseCadenceArrayValueLengthCadenceDictionaryValueCadenceKeyValuePairCadenceStructValueBaseCadenceStructValueSizeCadenceResourceValueBaseCadenceResourceValueSizeCadenceEventValueBaseCadenceEventValueSizeCadenceContractValueBaseCadenceContractValueSizeCadenceEnumValueBaseCadenceEnumValueSizeCadenceLinkValueCadencePathValueCadenceTypeValueCadenceCapabilityValueCadenceSimpleTypeCadenceOptionalTypeCadenceVariableSizedArrayTypeCadenceConstantSizedArrayTypeCadenceDictionaryTypeCadenceFieldCadenceParameterCadenceStructTypeCadenceResourceTypeCadenceEventTypeCadenceContractTypeCadenceStructInterfaceTypeCadenceResourceInterfaceTypeCadenceContractInterfaceTypeCadenceFunctionTypeCadenceReferenceTypeCadenceRestrictedTypeCadenceCapabilityTypeCadenceEnumTypeRawStringAddressLocationBytesVariableCompositeTypeInfoCompositeFieldInvocationStorageMapStorageKeyValueTokenSyntaxTokenSpaceTokenProgramIdentifierArgumentBlockFunctionBlockParameterParameterListTransferMembersTypeAnnotationDictionaryEntryFunctionDeclarationCompositeDeclarationExtensionDeclarationInterfaceDeclarationEnumCaseDeclarationFieldDeclarationTransactionDeclarationImportDeclarationVariableDeclarationSpecialFunctionDeclarationPragmaDeclarationAssignmentStatementBreakStatementContinueStatementEmitStatementExpressionStatementForStatementIfStatementReturnStatementSwapStatementSwitchStatementWhileStatementRemoveStatementBooleanExpressionNilExpressionStringExpressionIntegerExpressionFixedPointExpressionArrayExpressionDictionaryExpressionIdentifierExpressionInvocationExpressionMemberExpressionIndexExpressionConditionalExpressionUnaryExpressionBinaryExpressionFunctionExpressionCastingExpressionCreateExpressionDestroyExpressionReferenceExpressionForceExpressionPathExpressionExtendExpressionConstantSizedTypeDictionaryTypeFunctionTypeInstantiationTypeNominalTypeOptionalTypeReferenceTypeRestrictedTypeVariableSizedTypePositionRangeElaborationActivationActivationEntriesVariableSizedSemaTypeConstantSizedSemaTypeDictionarySemaTypeOptionalSemaTypeRestrictedSemaTypeReferenceSemaTypeCapabilitySemaTypeOrderedMapOrderedMapEntryListOrderedMapEntryLast"
+const _MemoryKind_name = "UnknownBoolValueAddressValueStringValueCharacterValueNumberValueArrayValueBaseDictionaryValueBaseCompositeValueBaseSimpleCompositeValueBaseOptionalValueNilValueVoidValueTypeValuePathValueCapabilityValueLinkValueStorageReferenceValueEphemeralReferenceValueInterpretedFunctionValueHostFunctionValueBoundFunctionValueBigIntSimpleCompositeValueAtreeArrayDataSlabAtreeArrayMetaDataSlabAtreeArrayElementOverheadAtreeMapDataSlabAtreeMapMetaDataSlabAtreeMapElementOverheadAtreeMapPreAllocatedElementAtreeEncodedSlabPrimitiveStaticTypeCompositeStaticTypeInterfaceStaticTypeVariableSizedStaticTypeConstantSizedStaticTypeDictionaryStaticTypeOptionalStaticTypeRestrictedStaticTypeReferenceStaticTypeCapabilityStaticTypeFunctionStaticTypeCadenceVoidValueCadenceOptionalValueCadenceBoolValueCadenceStringValueCadenceCharacterValueCadenceAddressValueCadenceIntValueCadenceNumberValueCadenceArrayValueBaseCadenceArrayValueLengthCadenceDictionaryValueCadenceKeyValuePairCadenceStructValueBaseCadenceStructValueSizeCadenceResourceValueBaseCadenceResourceValueSizeCadenceEventValueBaseCadenceEventValueSizeCadenceContractValueBaseCadenceContractValueSizeCadenceEnumValueBaseCadenceEnumValueSizeCadenceLinkValueCadencePathValueCadenceTypeValueCadenceCapabilityValueCadenceSimpleTypeCadenceOptionalTypeCadenceVariableSizedArrayTypeCadenceConstantSizedArrayTypeCadenceDictionaryTypeCadenceFieldCadenceParameterCadenceStructTypeCadenceResourceTypeCadenceEventTypeCadenceContractTypeCadenceStructInterfaceTypeCadenceResourceInterfaceTypeCadenceContractInterfaceTypeCadenceFunctionTypeCadenceReferenceTypeCadenceRestrictedTypeCadenceCapabilityTypeCadenceEnumTypeRawStringAddressLocationBytesVariableCompositeTypeInfoCompositeFieldInvocationStorageMapStorageKeyValueTokenSyntaxTokenSpaceTokenProgramIdentifierArgumentBlockFunctionBlockParameterParameterListTransferMembersTypeAnnotationDictionaryEntryFunctionDeclarationCompositeDeclarationExtensionDeclarationInterfaceDeclarationEnumCaseDeclarationFieldDeclarationTransactionDeclarationImportDeclarationVariableDeclarationSpecialFunctionDeclarationPragmaDeclarationAssignmentStatementBreakStatementContinueStatementEmitStatementExpressionStatementForStatementIfStatementReturnStatementSwapStatementSwitchStatementWhileStatementRemoveStatementBooleanExpressionNilExpressionStringExpressionIntegerExpressionFixedPointExpressionArrayExpressionDictionaryExpressionIdentifierExpressionInvocationExpressionMemberExpressionIndexExpressionConditionalExpressionUnaryExpressionBinaryExpressionFunctionExpressionCastingExpressionCreateExpressionDestroyExpressionReferenceExpressionForceExpressionPathExpressionExtendExpressionConstantSizedTypeDictionaryTypeFunctionTypeInstantiationTypeNominalTypeOptionalTypeReferenceTypeRestrictedTypeExtendedTypeVariableSizedTypePositionRangeElaborationActivationActivationEntriesVariableSizedSemaTypeConstantSizedSemaTypeDictionarySemaTypeOptionalSemaTypeRestrictedSemaTypeReferenceSemaTypeCapabilitySemaTypeOrderedMapOrderedMapEntryListOrderedMapEntryLast"
 
-var _MemoryKind_index = [...]uint16{0, 7, 16, 28, 39, 53, 64, 78, 97, 115, 139, 152, 160, 169, 178, 187, 202, 211, 232, 255, 279, 296, 314, 320, 340, 358, 380, 405, 421, 441, 464, 491, 507, 526, 545, 564, 587, 610, 630, 648, 668, 687, 707, 725, 741, 761, 777, 795, 816, 835, 850, 868, 889, 912, 934, 953, 975, 997, 1021, 1045, 1066, 1087, 1111, 1135, 1155, 1175, 1191, 1207, 1223, 1245, 1262, 1281, 1310, 1339, 1360, 1372, 1388, 1405, 1424, 1440, 1459, 1485, 1513, 1541, 1560, 1580, 1601, 1622, 1637, 1646, 1661, 1666, 1674, 1691, 1705, 1715, 1725, 1735, 1745, 1756, 1766, 1773, 1783, 1791, 1796, 1809, 1818, 1831, 1839, 1846, 1860, 1875, 1894, 1914, 1934, 1954, 1973, 1989, 2011, 2028, 2047, 2073, 2090, 2109, 2123, 2140, 2153, 2172, 2184, 2195, 2210, 2223, 2238, 2252, 2267, 2284, 2297, 2313, 2330, 2350, 2365, 2385, 2405, 2425, 2441, 2456, 2477, 2492, 2508, 2526, 2543, 2559, 2576, 2595, 2610, 2624, 2640, 2657, 2671, 2683, 2700, 2711, 2723, 2736, 2750, 2767, 2775, 2780, 2791, 2801, 2818, 2839, 2860, 2878, 2894, 2912, 2929, 2947, 2957, 2976, 2991, 2995}
+var _MemoryKind_index = [...]uint16{0, 7, 16, 28, 39, 53, 64, 78, 97, 115, 139, 152, 160, 169, 178, 187, 202, 211, 232, 255, 279, 296, 314, 320, 340, 358, 380, 405, 421, 441, 464, 491, 507, 526, 545, 564, 587, 610, 630, 648, 668, 687, 707, 725, 741, 761, 777, 795, 816, 835, 850, 868, 889, 912, 934, 953, 975, 997, 1021, 1045, 1066, 1087, 1111, 1135, 1155, 1175, 1191, 1207, 1223, 1245, 1262, 1281, 1310, 1339, 1360, 1372, 1388, 1405, 1424, 1440, 1459, 1485, 1513, 1541, 1560, 1580, 1601, 1622, 1637, 1646, 1661, 1666, 1674, 1691, 1705, 1715, 1725, 1735, 1745, 1756, 1766, 1773, 1783, 1791, 1796, 1809, 1818, 1831, 1839, 1846, 1860, 1875, 1894, 1914, 1934, 1954, 1973, 1989, 2011, 2028, 2047, 2073, 2090, 2109, 2123, 2140, 2153, 2172, 2184, 2195, 2210, 2223, 2238, 2252, 2267, 2284, 2297, 2313, 2330, 2350, 2365, 2385, 2405, 2425, 2441, 2456, 2477, 2492, 2508, 2526, 2543, 2559, 2576, 2595, 2610, 2624, 2640, 2657, 2671, 2683, 2700, 2711, 2723, 2736, 2750, 2762, 2779, 2787, 2792, 2803, 2813, 2830, 2851, 2872, 2890, 2906, 2924, 2941, 2959, 2969, 2988, 3003, 3007}
 
 func (i MemoryKind) String() string {
 	if i >= MemoryKind(len(_MemoryKind_index)-1) {

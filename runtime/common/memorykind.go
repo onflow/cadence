@@ -213,6 +213,7 @@ const (
 	MemoryKindOptionalType
 	MemoryKindReferenceType
 	MemoryKindRestrictedType
+	MemoryKindExtendedType
 	MemoryKindVariableSizedType
 
 	MemoryKindPosition
