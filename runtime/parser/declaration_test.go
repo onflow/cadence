@@ -2034,6 +2034,9 @@ func TestParseCompositeDeclaration(t *testing.T) {
 }
 
 func TestParseExtensionDeclaration(t *testing.T) {
+
+	t.Parallel()
+
 	t.Run("no conformances", func(t *testing.T) {
 
 		t.Parallel()

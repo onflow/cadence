@@ -846,6 +846,9 @@ func defineIdentifierExpression() {
 					token.Range.StartPos,
 				), nil
 
+			case keywordExtend:
+				return parseExtendExpressionRemainder(p, token)
+
 			case keywordFun:
 				return parseFunctionExpression(p, token)
 
@@ -954,6 +957,50 @@ func parseCreateExpressionRemainder(p *parser, token lexer.Token) (*ast.CreateEx
 		invocation,
 		token.StartPos,
 	), nil
+}
+
+func parseExtendExpressionRemainder(p *parser, token lexer.Token) (*ast.ExtendExpression, error) {
+	base, err := parseExpression(p, lowestBindingPower)
+
+	if err != nil {
+		return nil, err
+	}
+
+	p.skipSpaceAndComments(true)
+
+	if p.current.Value != keywordWith {
+		return nil, p.syntaxError(
+			"expected 'with', got %s",
+			p.current.Type,
+		)
+	}
+
+	// consume the with token
+	p.next()
+	p.skipSpaceAndComments(true)
+
+	extensions := []ast.Expression{}
+
+	for {
+		extension, err := parseExpression(p, lowestBindingPower)
+
+		if err != nil {
+			return nil, err
+		}
+
+		extensions = append(extensions, extension)
+
+		p.skipSpaceAndComments(true)
+		if p.current.Value != keywordAnd {
+			break
+		}
+
+		// consume the and token
+		p.next()
+		p.skipSpaceAndComments(true)
+	}
+
+	return ast.NewExtendExpression(p.memoryGauge, base, extensions, token.StartPos), nil
 }
 
 // Invocation Expression Grammar:

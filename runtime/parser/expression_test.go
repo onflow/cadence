@@ -2497,6 +2497,210 @@ func TestParseDestroy(t *testing.T) {
 	})
 }
 
+func TestParseExtend(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("simple", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseExpression("extend r with e", nil)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.ExtendExpression{
+				Base: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "r",
+						Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+					},
+				},
+				Extensions: []ast.Expression{
+					&ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "e",
+							Pos:        ast.Position{Line: 1, Column: 14, Offset: 14},
+						},
+					},
+				},
+				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+			},
+			result,
+		)
+	})
+
+	t.Run("two extension", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseExpression("extend r with e1 and e2", nil)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.ExtendExpression{
+				Base: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "r",
+						Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+					},
+				},
+				Extensions: []ast.Expression{
+					&ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "e1",
+							Pos:        ast.Position{Line: 1, Column: 14, Offset: 14},
+						},
+					},
+					&ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "e2",
+							Pos:        ast.Position{Line: 1, Column: 21, Offset: 21},
+						},
+					},
+				},
+				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+			},
+			result,
+		)
+	})
+
+	t.Run("nested", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseExpression("extend extend r with e1 with foo(4) as E and e2", nil)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.ExtendExpression{
+				Base: &ast.ExtendExpression{
+					Base: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "r",
+							Pos:        ast.Position{Line: 1, Column: 14, Offset: 14},
+						},
+					},
+					Extensions: []ast.Expression{
+						&ast.IdentifierExpression{
+							Identifier: ast.Identifier{
+								Identifier: "e1",
+								Pos:        ast.Position{Line: 1, Column: 21, Offset: 21},
+							},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
+				},
+				Extensions: []ast.Expression{
+					&ast.CastingExpression{
+						Expression: &ast.InvocationExpression{
+							InvokedExpression: &ast.IdentifierExpression{
+								Identifier: ast.Identifier{
+									Identifier: "foo",
+									Pos:        ast.Position{Line: 1, Column: 29, Offset: 29},
+								},
+							},
+							ArgumentsStartPos: ast.Position{Line: 1, Column: 32, Offset: 32},
+							Arguments: []*ast.Argument{
+								{
+									Label:                "",
+									TrailingSeparatorPos: ast.Position{Line: 1, Column: 34, Offset: 34},
+									Expression: &ast.IntegerExpression{
+										PositiveLiteral: "4",
+										Value:           big.NewInt(4),
+										Base:            10,
+										Range: ast.Range{
+											StartPos: ast.Position{Line: 1, Column: 33, Offset: 33},
+											EndPos:   ast.Position{Line: 1, Column: 33, Offset: 33},
+										},
+									},
+								},
+							},
+							EndPos: ast.Position{Line: 1, Column: 34, Offset: 34},
+						},
+						Operation: ast.OperationCast,
+						TypeAnnotation: &ast.TypeAnnotation{
+							IsResource: false,
+							Type: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "E",
+									Pos:        ast.Position{Line: 1, Column: 39, Offset: 39},
+								},
+							},
+							StartPos: ast.Position{Line: 1, Column: 39, Offset: 39},
+						},
+					},
+					&ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "e2",
+							Pos:        ast.Position{Line: 1, Column: 45, Offset: 45},
+						},
+					},
+				},
+				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+			},
+			result,
+		)
+	})
+
+	t.Run("three extension", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseExpression("extend r with e1 and e2 and e3", nil)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.ExtendExpression{
+				Base: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "r",
+						Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+					},
+				},
+				Extensions: []ast.Expression{
+					&ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "e1",
+							Pos:        ast.Position{Line: 1, Column: 14, Offset: 14},
+						},
+					},
+					&ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "e2",
+							Pos:        ast.Position{Line: 1, Column: 21, Offset: 21},
+						},
+					},
+					&ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "e3",
+							Pos:        ast.Position{Line: 1, Column: 28, Offset: 28},
+						},
+					},
+				},
+				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+			},
+			result,
+		)
+	})
+
+	t.Run("missing with", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseExpression("extend r", nil)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected 'with', got EOF",
+					Pos:     ast.Position{Offset: 8, Line: 1, Column: 8},
+				},
+			},
+			errs,
+		)
+	})
+}
+
 func TestParseLineComment(t *testing.T) {
 
 	t.Parallel()
