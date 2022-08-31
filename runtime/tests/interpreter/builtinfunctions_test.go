@@ -22,11 +22,12 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	. "github.com/onflow/cadence/runtime/tests/utils"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestInterpretToString(t *testing.T) {
