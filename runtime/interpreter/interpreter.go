@@ -3051,7 +3051,7 @@ var stringFunction = func() Value {
 				memoryUsage := common.NewStringMemoryUsage(len(buf))
 
 				return NewSomeValueNonCopying(
-					inter, 
+					inter,
 					NewStringValue(inter, memoryUsage, func() string {
 						return string(buf)
 					}),
