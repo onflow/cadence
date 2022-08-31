@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"math"
 	"time"
+	"unicode/utf8"
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
@@ -3002,6 +3003,39 @@ var stringFunction = func() Value {
 		),
 	)
 
+	addMember(
+		sema.StringTypeFromUtf8FunctionName,
+		NewUnmeteredHostFunctionValue(
+			func(invocation Invocation) Value {
+				argument, ok := invocation.Arguments[0].(*ArrayValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				inter := invocation.Interpreter
+				// naively read the entire byte array before validating
+				buf, err := ByteArrayValueToByteSlice(inter, argument)
+
+				if err != nil {
+					panic(errors.NewExternalError(err))
+				}
+
+				if !utf8.Valid(buf) {
+					return NewNilValue(inter)
+				}
+
+				memoryUsage := common.NewStringMemoryUsage(len(buf))
+
+				return NewSomeValueNonCopying(
+					inter,
+					NewStringValue(inter, memoryUsage, func() string {
+						return string(buf)
+					}),
+				)
+			},
+			sema.StringTypeFromUtf8FunctionType,
+		),
+	)
 	return functionValue
 }()
 
