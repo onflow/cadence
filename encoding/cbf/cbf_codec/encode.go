@@ -576,6 +576,58 @@ func (e *Encoder) EncodeType(t cadence.Type) (err error) {
 			return
 		}
 		return e.EncodeContractType(actualType)
+	case *cadence.StructInterfaceType:
+		err = e.EncodeTypeIdentifier(EncodedTypeStructInterface)
+		if err != nil {
+			return
+		}
+		return e.EncodeInterfaceType(actualType)
+	case *cadence.ResourceInterfaceType:
+		err = e.EncodeTypeIdentifier(EncodedTypeResourceInterface)
+		if err != nil {
+			return
+		}
+		return e.EncodeInterfaceType(actualType)
+	case *cadence.ContractInterfaceType:
+		err = e.EncodeTypeIdentifier(EncodedTypeContractInterface)
+		if err != nil {
+			return
+		}
+		return e.EncodeInterfaceType(actualType)
+	case *cadence.FunctionType:
+		err = e.EncodeTypeIdentifier(EncodedTypeFunction)
+		if err != nil {
+			return
+		}
+		return e.EncodeFunctionType(actualType)
+	case cadence.ReferenceType:
+		err = e.EncodeTypeIdentifier(EncodedTypeReference)
+		if err != nil {
+			return
+		}
+		return e.EncodeReferenceType(actualType)
+	case *cadence.RestrictedType:
+		err = e.EncodeTypeIdentifier(EncodedTypeRestricted)
+		if err != nil {
+			return
+		}
+		return e.EncodeRestrictedType(actualType)
+	case cadence.BlockType:
+		return e.EncodeTypeIdentifier(EncodedTypeBlock)
+	case cadence.AuthAccountType:
+		return e.EncodeTypeIdentifier(EncodedTypeAuthAccount)
+	case cadence.PublicAccountType:
+		return e.EncodeTypeIdentifier(EncodedTypePublicAccount)
+	case cadence.DeployedContractType:
+		return e.EncodeTypeIdentifier(EncodedTypeDeployedContract)
+	case cadence.AuthAccountContractsType:
+		return e.EncodeTypeIdentifier(EncodedTypeAuthAccountContracts)
+	case cadence.PublicAccountContractsType:
+		return e.EncodeTypeIdentifier(EncodedTypePublicAccountContracts)
+	case cadence.AuthAccountKeysType:
+		return e.EncodeTypeIdentifier(EncodedTypeAuthAccountKeys)
+	case cadence.PublicAccountKeysType:
+		return e.EncodeTypeIdentifier(EncodedTypePublicAccountKeys)
 	case cadence.CapabilityPathType:
 		return e.EncodeTypeIdentifier(EncodedTypeCapabilityPath)
 	case cadence.StoragePathType:
@@ -619,9 +671,48 @@ func (e *Encoder) EncodeType(t cadence.Type) (err error) {
 		return e.EncodeTypeIdentifier(EncodedTypeAnyResourceType)
 	case cadence.PathType:
 		return e.EncodeTypeIdentifier(EncodedTypePath)
+	case cadence.MetaType:
+		return e.EncodeTypeIdentifier(EncodedTypeMetaType)
 	}
 
 	return fmt.Errorf("unknown type: %s", t)
+}
+
+func (e *Encoder) EncodeFunctionType(t *cadence.FunctionType) (err error) {
+	err = common_codec.EncodeString(&e.w, t.ID())
+	if err != nil {
+		return
+	}
+
+	err = EncodeArray(e, t.Parameters, e.EncodeParameter)
+	if err != nil {
+		return
+	}
+
+	return e.EncodeType(t.ReturnType)
+}
+
+func (e *Encoder) EncodeReferenceType(t cadence.ReferenceType) (err error) {
+	err = common_codec.EncodeBool(&e.w, t.Authorized)
+	if err != nil {
+		return
+	}
+
+	return e.EncodeType(t.Type)
+}
+
+func (e *Encoder) EncodeRestrictedType(t *cadence.RestrictedType) (err error) {
+	err = common_codec.EncodeString(&e.w, t.ID())
+	if err != nil {
+		return
+	}
+
+	err = e.EncodeType(t.Type)
+	if err != nil {
+		return
+	}
+
+	return EncodeArray(e, t.Restrictions, e.EncodeType)
 }
 
 func (e *Encoder) EncodeTypeIdentifier(id EncodedType) (err error) {
@@ -729,6 +820,28 @@ func (e *Encoder) EncodeContractType(t *cadence.ContractType) (err error) {
 	})
 
 	return EncodeArray(e, t.Initializers, func(parameters []cadence.Parameter) (err error) {
+		return EncodeArray(e, parameters, func(parameter cadence.Parameter) (err error) {
+			return e.EncodeParameter(parameter)
+		})
+	})
+}
+
+func (e *Encoder) EncodeInterfaceType(t cadence.InterfaceType) (err error) {
+	err = common_codec.EncodeLocation(&e.w, t.InterfaceTypeLocation())
+	if err != nil {
+		return
+	}
+
+	err = common_codec.EncodeString(&e.w, t.InterfaceTypeQualifiedIdentifier())
+	if err != nil {
+		return
+	}
+
+	err = EncodeArray(e, t.InterfaceFields(), func(field cadence.Field) (err error) {
+		return e.EncodeField(field)
+	})
+
+	return EncodeArray(e, t.InterfaceInitializers(), func(parameters []cadence.Parameter) (err error) {
 		return EncodeArray(e, parameters, func(parameter cadence.Parameter) (err error) {
 			return e.EncodeParameter(parameter)
 		})

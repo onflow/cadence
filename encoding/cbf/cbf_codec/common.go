@@ -126,12 +126,6 @@ const (
 	EncodedTypeAnyStructType
 	EncodedTypeAnyResourceType
 	EncodedTypePath
-
-	EncodedTypeComposite // TODO is this necessary?
-	EncodedTypeInterface // TODO is this necessary?
-
-	// TODO - classify
-
 	EncodedTypeMetaType
 
 	// TODO dont do this here. goes as first byte of custom codec

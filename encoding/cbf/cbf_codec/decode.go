@@ -821,6 +821,34 @@ func (d *Decoder) DecodeType() (t cadence.Type, err error) {
 		t, err = d.DecodeEventType()
 	case EncodedTypeContract:
 		t, err = d.DecodeContractType()
+	case EncodedTypeStructInterface:
+		t, err = d.DecodeStructInterfaceType()
+	case EncodedTypeResourceInterface:
+		t, err = d.DecodeResourceInterfaceType()
+	case EncodedTypeContractInterface:
+		t, err = d.DecodeContractInterfaceType()
+	case EncodedTypeFunction:
+		t, err = d.DecodeFunctionType()
+	case EncodedTypeReference:
+		t, err = d.DecodeReferenceType()
+	case EncodedTypeRestricted:
+		t, err = d.DecodeRestrictedType()
+	case EncodedTypeBlock:
+		t = cadence.NewMeteredBlockType(d.memoryGauge)
+	case EncodedTypeAuthAccount:
+		t = cadence.NewMeteredAuthAccountType(d.memoryGauge)
+	case EncodedTypePublicAccount:
+		t = cadence.NewMeteredPublicAccountType(d.memoryGauge)
+	case EncodedTypeDeployedContract:
+		t = cadence.NewMeteredDeployedContractType(d.memoryGauge)
+	case EncodedTypeAuthAccountContracts:
+		t = cadence.NewMeteredAuthAccountContractsType(d.memoryGauge)
+	case EncodedTypePublicAccountContracts:
+		t = cadence.NewMeteredPublicAccountContractsType(d.memoryGauge)
+	case EncodedTypeAuthAccountKeys:
+		t = cadence.NewMeteredAuthAccountKeysType(d.memoryGauge)
+	case EncodedTypePublicAccountKeys:
+		t = cadence.NewMeteredPublicAccountKeysType(d.memoryGauge)
 	case EncodedTypeCapabilityPath:
 		t = cadence.NewMeteredCapabilityPathType(d.memoryGauge)
 	case EncodedTypeStoragePath:
@@ -847,6 +875,8 @@ func (d *Decoder) DecodeType() (t cadence.Type, err error) {
 		t = cadence.NewMeteredAnyResourceType(d.memoryGauge)
 	case EncodedTypePath:
 		t = cadence.NewMeteredPathType(d.memoryGauge)
+	case EncodedTypeMetaType:
+		t = cadence.NewMeteredMetaType(d.memoryGauge)
 	default:
 		err = fmt.Errorf("unknown type identifier: %d", typeIdentifer)
 	}
@@ -1018,6 +1048,125 @@ func (d *Decoder) DecodeContractType() (t *cadence.ContractType, err error) {
 	})
 
 	t = cadence.NewMeteredContractType(d.memoryGauge, location, qualifiedIdentifier, fields, initializers)
+	return
+}
+
+func (d *Decoder) DecodeStructInterfaceType() (t *cadence.StructInterfaceType, err error) {
+	location, qualifiedIdentifier, fields, initializers, err := d.decodeInterfaceType()
+	if err != nil {
+		return
+	}
+
+	t = cadence.NewMeteredStructInterfaceType(d.memoryGauge, location, qualifiedIdentifier, fields, initializers)
+	return
+}
+
+func (d *Decoder) DecodeResourceInterfaceType() (t *cadence.ResourceInterfaceType, err error) {
+	location, qualifiedIdentifier, fields, initializers, err := d.decodeInterfaceType()
+	if err != nil {
+		return
+	}
+
+	t = cadence.NewMeteredResourceInterfaceType(d.memoryGauge, location, qualifiedIdentifier, fields, initializers)
+	return
+}
+
+func (d *Decoder) DecodeContractInterfaceType() (t *cadence.ContractInterfaceType, err error) {
+	location, qualifiedIdentifier, fields, initializers, err := d.decodeInterfaceType()
+	if err != nil {
+		return
+	}
+
+	t = cadence.NewMeteredContractInterfaceType(d.memoryGauge, location, qualifiedIdentifier, fields, initializers)
+	return
+}
+
+func (d *Decoder) decodeInterfaceType() (
+	location common.Location,
+	qualifiedIdentifier string,
+	fields []cadence.Field,
+	initializers [][]cadence.Parameter,
+	err error,
+) {
+	location, err = common_codec.DecodeLocation(&d.r, d.memoryGauge)
+	if err != nil {
+		return
+	}
+
+	qualifiedIdentifier, err = common_codec.DecodeString(&d.r)
+	if err != nil {
+		return
+	}
+
+	fields, err = DecodeArray(d, func() (field cadence.Field, err error) {
+		return d.DecodeField()
+	})
+	if err != nil {
+		return
+	}
+
+	initializers, err = DecodeArray(d, func() ([]cadence.Parameter, error) {
+		return DecodeArray(d, func() (cadence.Parameter, error) {
+			return d.DecodeParameter()
+		})
+	})
+
+	return
+}
+
+func (d *Decoder) DecodeFunctionType() (t *cadence.FunctionType, err error) {
+	id, err := common_codec.DecodeString(&d.r)
+	if err != nil {
+		return
+	}
+
+	parameters, err := DecodeArray(d, d.DecodeParameter)
+	if err != nil {
+		return
+	}
+
+	returnType, err := d.DecodeType()
+
+	if err != nil {
+		return
+	}
+
+	t = cadence.NewMeteredFunctionType(d.memoryGauge, id, parameters, returnType)
+	return
+}
+
+func (d *Decoder) DecodeReferenceType() (t cadence.ReferenceType, err error) {
+	authorized, err := common_codec.DecodeBool(&d.r)
+	if err != nil {
+		return
+	}
+
+	innerType, err := d.DecodeType()
+	if err != nil {
+		return
+	}
+
+	t = cadence.NewMeteredReferenceType(d.memoryGauge, authorized, innerType)
+	return
+}
+
+func (d *Decoder) DecodeRestrictedType() (t *cadence.RestrictedType, err error) {
+	id, err := common_codec.DecodeString(&d.r)
+	if err != nil {
+		return
+	}
+
+	innerType, err := d.DecodeType()
+	if err != nil {
+		return
+	}
+
+	restrictions, err := DecodeArray(d, d.DecodeType)
+	if err != nil {
+		return
+	}
+
+	t = cadence.NewMeteredRestrictedType(d.memoryGauge, id, innerType, restrictions)
 	return
 }
 
