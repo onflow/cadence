@@ -92,7 +92,7 @@ func setTypeMetaLeftDenotation(tokenType lexer.TokenType, metaLeftDenotation typ
 }
 
 type prefixTypeFunc func(parser *parser, right ast.Type, tokenRange ast.Range) ast.Type
-type postfixTypeFunc func(parser *parser, left ast.Type, tokenRange ast.Range) ast.Type
+type postfixTypeFunc func(parser *parser, left ast.Type, tokenRange ast.Range) (ast.Type, error)
 
 type literalType struct {
 	tokenType      lexer.TokenType
@@ -132,7 +132,7 @@ func defineType(def any) {
 		setTypeLeftDenotation(
 			tokenType,
 			func(p *parser, token lexer.Token, left ast.Type) (ast.Type, error) {
-				return def.leftDenotation(p, left, token.Range), nil
+				return def.leftDenotation(p, left, token.Range)
 			},
 		)
 	case literalType:
@@ -146,6 +146,7 @@ func defineType(def any) {
 func init() {
 	defineArrayType()
 	defineOptionalType()
+	defineExtendedType()
 	defineReferenceType()
 	defineRestrictedOrDictionaryType()
 	defineFunctionType()
@@ -295,19 +296,19 @@ func defineOptionalType() {
 	defineType(postfixType{
 		tokenType:    lexer.TokenQuestionMark,
 		bindingPower: typeLeftBindingPowerOptional,
-		leftDenotation: func(p *parser, left ast.Type, tokenRange ast.Range) ast.Type {
+		leftDenotation: func(p *parser, left ast.Type, tokenRange ast.Range) (ast.Type, error) {
 			return ast.NewOptionalType(
 				p.memoryGauge,
 				left,
 				tokenRange.EndPos,
-			)
+			), nil
 		},
 	})
 
 	defineType(postfixType{
 		tokenType:    lexer.TokenDoubleQuestionMark,
 		bindingPower: typeLeftBindingPowerOptional,
-		leftDenotation: func(p *parser, left ast.Type, tokenRange ast.Range) ast.Type {
+		leftDenotation: func(p *parser, left ast.Type, tokenRange ast.Range) (ast.Type, error) {
 			return ast.NewOptionalType(
 				p.memoryGauge,
 				ast.NewOptionalType(
@@ -316,7 +317,55 @@ func defineOptionalType() {
 					tokenRange.StartPos,
 				),
 				tokenRange.EndPos,
-			)
+			), nil
+		},
+	})
+}
+
+func defineExtendedType() {
+	defineType(postfixType{
+		tokenType:    lexer.TokenIdentifier,
+		bindingPower: lowestBindingPower,
+		leftDenotation: func(p *parser, left ast.Type, tokenRange ast.Range) (ast.Type, error) {
+			p.skipSpaceAndComments(true)
+			var extensions []*ast.NominalType
+			var endPos ast.Position
+			switch p.current.Value {
+			case keywordWith:
+				p.next()
+				p.skipSpaceAndComments(true)
+
+				for {
+					ty, err := parseType(p, lowestBindingPower)
+					if err != nil {
+						return nil, err
+					}
+					nominalType, ok := ty.(*ast.NominalType)
+					if !ok {
+						return nil, p.syntaxError("unexpected non-nominal type: %s", ty)
+					}
+					extensions = append(extensions, nominalType)
+
+					p.skipSpaceAndComments(true)
+					if p.current.Type != lexer.TokenComma {
+						endPos = nominalType.EndPosition(p.memoryGauge)
+						break
+					}
+					p.next()
+					p.skipSpaceAndComments(true)
+				}
+			default:
+				return nil, p.syntaxError(
+					"expected 'with', got %s",
+					p.current.Type,
+				)
+			}
+			return ast.NewExtendedType(
+				p.memoryGauge,
+				left,
+				extensions,
+				ast.NewRange(p.memoryGauge, left.StartPosition(), endPos),
+			), nil
 		},
 	})
 }

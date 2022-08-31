@@ -2640,6 +2640,43 @@ func TestParseOptionalRestrictedType(t *testing.T) {
 	)
 }
 
+func TestParseExtendedType(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("one extension", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseType("T with E", nil)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.ExtendedType{
+				Type: &ast.NominalType{
+					Identifier: ast.Identifier{
+						Identifier: "T",
+						Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
+					},
+				},
+				Extensions: []*ast.NominalType{
+					{
+						Identifier: ast.Identifier{
+							Identifier: "E",
+							Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
+						},
+					},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 11, Offset: 11},
+					EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
+				},
+			},
+			result,
+		)
+	})
+}
+
 func TestParseOptionalRestrictedTypeOnlyRestrictions(t *testing.T) {
 
 	t.Parallel()
