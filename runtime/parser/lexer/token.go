@@ -33,10 +33,7 @@ func (t Token) Is(ty TokenType) bool {
 }
 
 func (t Token) Source(input []byte) []byte {
+	startOffset := t.StartPos.Offset
 	endOffset := t.EndPos.Offset + 1
-	inputLength := len(input)
-	if endOffset > inputLength {
-		endOffset = inputLength
-	}
-	return input[t.StartPos.Offset:endOffset]
+	return input[startOffset:endOffset]
 }

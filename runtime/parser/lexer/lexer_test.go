@@ -69,6 +69,9 @@ func testLex(t *testing.T, input string, expected []token) {
 		require.Len(t, actualTokens, len(expectedTokens))
 		for i, expectedToken := range expected {
 			actualToken := actualTokens[i]
+			if actualToken.Type == TokenEOF {
+				continue
+			}
 			assert.Equal(t,
 				expectedToken.Source,
 				string(actualToken.Source(bytes)),
