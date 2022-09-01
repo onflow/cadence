@@ -26,6 +26,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
+	. "github.com/onflow/cadence/runtime/parser/constants"
 	"github.com/onflow/cadence/runtime/parser/lexer"
 )
 
@@ -214,12 +215,12 @@ func setExprLeftBindingPower(tokenType lexer.TokenType, power int) {
 	exprLeftBindingPowers[tokenType] = power
 }
 
-func setExprIdentifierLeftBindingPower(keyword string, power int) {
-	current := exprIdentifierLeftBindingPowers[keyword]
+func setExprIdentifierLeftBindingPower(Keyword string, power int) {
+	current := exprIdentifierLeftBindingPowers[Keyword]
 	if current > power {
 		return
 	}
-	exprIdentifierLeftBindingPowers[keyword] = power
+	exprIdentifierLeftBindingPowers[Keyword] = power
 }
 
 func setExprLeftDenotation(tokenType lexer.TokenType, leftDenotation exprLeftDenotationFunc) {
@@ -822,19 +823,19 @@ func defineIdentifierExpression() {
 		tokenType: lexer.TokenIdentifier,
 		nullDenotation: func(p *parser, token lexer.Token) (ast.Expression, error) {
 			switch token.Value {
-			case keywordTrue:
+			case KeywordTrue:
 				return ast.NewBoolExpression(p.memoryGauge, true, token.Range), nil
 
-			case keywordFalse:
+			case KeywordFalse:
 				return ast.NewBoolExpression(p.memoryGauge, false, token.Range), nil
 
-			case keywordNil:
+			case KeywordNil:
 				return ast.NewNilExpression(p.memoryGauge, token.Range.StartPos), nil
 
-			case keywordCreate:
+			case KeywordCreate:
 				return parseCreateExpressionRemainder(p, token)
 
-			case keywordDestroy:
+			case KeywordDestroy:
 				expression, err := parseExpression(p, lowestBindingPower)
 				if err != nil {
 					return nil, err
@@ -846,7 +847,7 @@ func defineIdentifierExpression() {
 					token.Range.StartPos,
 				), nil
 
-			case keywordFun:
+			case KeywordFun:
 				return parseFunctionExpression(p, token)
 
 			default:
@@ -878,12 +879,12 @@ func parseFunctionExpression(p *parser, token lexer.Token) (*ast.FunctionExpress
 
 func defineCastingExpression() {
 
-	setExprIdentifierLeftBindingPower(keywordAs, exprLeftBindingPowerCasting)
+	setExprIdentifierLeftBindingPower(KeywordAs, exprLeftBindingPowerCasting)
 	setExprLeftDenotation(
 		lexer.TokenIdentifier,
 		func(parser *parser, t lexer.Token, left ast.Expression) (ast.Expression, error) {
 			switch t.Value.(string) {
-			case keywordAs:
+			case KeywordAs:
 				right, err := parseTypeAnnotation(parser)
 				if err != nil {
 					return nil, err

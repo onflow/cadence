@@ -21,6 +21,7 @@ package parser
 import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/parser/constants"
 	"github.com/onflow/cadence/runtime/parser/lexer"
 )
 
@@ -156,7 +157,7 @@ func init() {
 		func(p *parser, token lexer.Token) (ast.Type, error) {
 
 			switch token.Value {
-			case keywordAuth:
+			case constants.KeywordAuth:
 				p.skipSpaceAndComments(true)
 
 				_, err := p.mustOne(lexer.TokenAmpersand)

@@ -21,6 +21,7 @@ package parser
 import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/errors"
+	. "github.com/onflow/cadence/runtime/parser/constants"
 	"github.com/onflow/cadence/runtime/parser/lexer"
 )
 
@@ -73,36 +74,36 @@ func parseStatements(p *parser, isEndToken func(token lexer.Token) bool) (statem
 func parseStatement(p *parser) (ast.Statement, error) {
 	p.skipSpaceAndComments(true)
 
-	// It might start with a keyword for a statement
+	// It might start with a Keyword for a statement
 
 	switch p.current.Type {
 	case lexer.TokenIdentifier:
 		switch p.current.Value {
-		case keywordReturn:
+		case KeywordReturn:
 			return parseReturnStatement(p)
-		case keywordBreak:
+		case KeywordBreak:
 			return parseBreakStatement(p), nil
-		case keywordContinue:
+		case KeywordContinue:
 			return parseContinueStatement(p), nil
-		case keywordIf:
+		case KeywordIf:
 			return parseIfStatement(p)
-		case keywordSwitch:
+		case KeywordSwitch:
 			return parseSwitchStatement(p)
-		case keywordWhile:
+		case KeywordWhile:
 			return parseWhileStatement(p)
-		case keywordFor:
+		case KeywordFor:
 			return parseForStatement(p)
-		case keywordEmit:
+		case KeywordEmit:
 			return parseEmitStatement(p)
-		case keywordFun:
-			// The `fun` keyword is ambiguous: it either introduces a function expression
+		case KeywordFun:
+			// The `fun` Keyword is ambiguous: it either introduces a function expression
 			// or a function declaration, depending on if an identifier follows, or not.
 			return parseFunctionDeclarationOrFunctionExpressionStatement(p)
 		}
 	}
 
-	// If it is not a keyword for a statement,
-	// it might start with a keyword for a declaration
+	// If it is not a Keyword for a statement,
+	// it might start with a Keyword for a declaration
 
 	declaration, err := parseDeclaration(p, "")
 	if err != nil {
@@ -155,7 +156,7 @@ func parseFunctionDeclarationOrFunctionExpressionStatement(p *parser) (ast.State
 
 	startPos := p.current.StartPos
 
-	// Skip the `fun` keyword
+	// Skip the `fun` Keyword
 	p.next()
 
 	p.skipSpaceAndComments(true)
@@ -265,7 +266,7 @@ func parseIfStatement(p *parser) (*ast.IfStatement, error) {
 
 		if p.current.Type == lexer.TokenIdentifier {
 			switch p.current.Value {
-			case keywordLet, keywordVar:
+			case KeywordLet, KeywordVar:
 				variableDeclaration, err =
 					parseVariableDeclaration(p, ast.AccessNotSpecified, nil, "")
 				if err != nil {
@@ -293,11 +294,11 @@ func parseIfStatement(p *parser) (*ast.IfStatement, error) {
 		parseNested := false
 
 		p.skipSpaceAndComments(true)
-		if p.current.IsString(lexer.TokenIdentifier, keywordElse) {
+		if p.current.IsString(lexer.TokenIdentifier, KeywordElse) {
 			p.next()
 
 			p.skipSpaceAndComments(true)
-			if p.current.IsString(lexer.TokenIdentifier, keywordIf) {
+			if p.current.IsString(lexer.TokenIdentifier, KeywordIf) {
 				parseNested = true
 			} else {
 				elseBlock, err = parseBlock(p)
@@ -378,10 +379,10 @@ func parseForStatement(p *parser) (*ast.ForStatement, error) {
 
 	p.skipSpaceAndComments(true)
 
-	if p.current.IsString(lexer.TokenIdentifier, keywordIn) {
+	if p.current.IsString(lexer.TokenIdentifier, KeywordIn) {
 		p.reportSyntaxError(
-			"expected identifier, got keyword %q",
-			keywordIn,
+			"expected identifier, got Keyword %q",
+			KeywordIn,
 		)
 		p.next()
 	}
@@ -410,10 +411,10 @@ func parseForStatement(p *parser) (*ast.ForStatement, error) {
 		identifier = firstValue
 	}
 
-	if !p.current.IsString(lexer.TokenIdentifier, keywordIn) {
+	if !p.current.IsString(lexer.TokenIdentifier, KeywordIn) {
 		p.reportSyntaxError(
-			"expected keyword %q, got %s",
-			keywordIn,
+			"expected Keyword %q, got %s",
+			KeywordIn,
 			p.current.Type,
 		)
 	}
@@ -480,7 +481,7 @@ func parseFunctionBlock(p *parser) (*ast.FunctionBlock, error) {
 	p.skipSpaceAndComments(true)
 
 	var preConditions *ast.Conditions
-	if p.current.IsString(lexer.TokenIdentifier, keywordPre) {
+	if p.current.IsString(lexer.TokenIdentifier, KeywordPre) {
 		p.next()
 		conditions, err := parseConditions(p, ast.ConditionKindPre)
 		if err != nil {
@@ -493,7 +494,7 @@ func parseFunctionBlock(p *parser) (*ast.FunctionBlock, error) {
 	p.skipSpaceAndComments(true)
 
 	var postConditions *ast.Conditions
-	if p.current.IsString(lexer.TokenIdentifier, keywordPost) {
+	if p.current.IsString(lexer.TokenIdentifier, KeywordPost) {
 		p.next()
 		conditions, err := parseConditions(p, ast.ConditionKindPost)
 		if err != nil {
@@ -614,7 +615,7 @@ func parseSwitchStatement(p *parser) (*ast.SwitchStatement, error) {
 
 	startPos := p.current.StartPos
 
-	// Skip the `switch` keyword
+	// Skip the `switch` Keyword
 	p.next()
 
 	expression, err := parseExpression(p, lowestBindingPower)
@@ -659,8 +660,8 @@ func parseSwitchCases(p *parser) (cases []*ast.SwitchCase, err error) {
 		p.reportSyntaxError(
 			"unexpected token: got %s, expected %q or %q",
 			p.current.Type,
-			keywordCase,
-			keywordDefault,
+			KeywordCase,
+			KeywordDefault,
 		)
 		p.next()
 	}
@@ -673,10 +674,10 @@ func parseSwitchCases(p *parser) (cases []*ast.SwitchCase, err error) {
 
 			var switchCase *ast.SwitchCase
 			switch p.current.Value {
-			case keywordCase:
+			case KeywordCase:
 				switchCase, err = parseSwitchCase(p, true)
 
-			case keywordDefault:
+			case KeywordDefault:
 				switchCase, err = parseSwitchCase(p, false)
 
 			default:
@@ -709,7 +710,7 @@ func parseSwitchCase(p *parser, hasExpression bool) (*ast.SwitchCase, error) {
 
 	startPos := p.current.StartPos
 
-	// Skip the keyword
+	// Skip the Keyword
 	p.next()
 
 	var expression ast.Expression
@@ -743,7 +744,7 @@ func parseSwitchCase(p *parser, hasExpression bool) (*ast.SwitchCase, error) {
 
 		case lexer.TokenIdentifier:
 			switch p.current.Value {
-			case keywordCase, keywordDefault:
+			case KeywordCase, KeywordDefault:
 				return true
 			default:
 				return false
