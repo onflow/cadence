@@ -2680,7 +2680,7 @@ func TestParseExtendedType(t *testing.T) {
 		)
 	})
 
-	/*t.Run("two extensions", func(t *testing.T) {
+	t.Run("two extensions", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2924,7 +2924,7 @@ func TestParseExtendedType(t *testing.T) {
 			},
 			result,
 		)
-	})*/
+	})
 }
 
 func TestParseOptionalRestrictedTypeOnlyRestrictions(t *testing.T) {
