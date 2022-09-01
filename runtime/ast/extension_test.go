@@ -335,7 +335,7 @@ func TestRemoveStatement_MarshallJSON(t *testing.T) {
 		),
 		Transfer: NewTransfer(
 			nil,
-			TransferOperation(TransferOperationCopy),
+			TransferOperationCopy,
 			Position{Offset: 1, Line: 2, Column: 3},
 		),
 		Extension: NewNominalType(
@@ -430,7 +430,7 @@ func TestRemoveStatement_Doc(t *testing.T) {
 		),
 		Transfer: NewTransfer(
 			nil,
-			TransferOperation(TransferOperationCopy),
+			TransferOperationCopy,
 			Position{Offset: 1, Line: 2, Column: 3},
 		),
 		Extension: NewNominalType(
