@@ -24,6 +24,13 @@ import (
 
 func (checker *Checker) VisitSwitchStatement(statement *ast.SwitchStatement) ast.Repr {
 
+	functionActivation := checker.functionActivations.Current()
+	maybeJumped := functionActivation.ReturnInfo.MaybeJumped
+	functionActivation.ReturnInfo.MaybeJumped = false
+	defer func() {
+		functionActivation.ReturnInfo.MaybeJumped = maybeJumped
+	}()
+
 	testType := checker.VisitExpression(statement.Expression, nil)
 
 	testTypeIsValid := !testType.IsInvalidType()
