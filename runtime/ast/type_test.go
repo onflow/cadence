@@ -1312,36 +1312,6 @@ func TestInstantiationType_MarshalJSON(t *testing.T) {
 	)
 }
 
-func TestExtendedType_MarshalJSON(t *testing.T) {
-
-	t.Parallel()
-
-	ty := &ExtendedType{
-		Type: &NominalType{
-			Identifier: Identifier{
-				Identifier: "R",
-			},
-		},
-		Extensions: []*NominalType{
-			{
-				Identifier: Identifier{
-					Identifier: "E1",
-				},
-			},
-			{
-				Identifier: Identifier{
-					Identifier: "E2",
-				},
-			},
-		},
-	}
-
-	assert.Equal(t,
-		"R with E1, E2",
-		ty.String(),
-	)
-}
-
 func TestExtendedType_String(t *testing.T) {
 
 	t.Parallel()
@@ -1352,15 +1322,57 @@ func TestExtendedType_String(t *testing.T) {
 				Identifier: "R",
 			},
 		},
-		Extensions: []*NominalType{
+		Extensions: []*TypeAnnotation{
 			{
-				Identifier: Identifier{
-					Identifier: "E1",
+				IsResource: false,
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "E1",
+					},
 				},
 			},
 			{
-				Identifier: Identifier{
-					Identifier: "E2",
+				IsResource: true,
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "E2",
+					},
+				},
+			},
+		},
+	}
+
+	assert.Equal(t,
+		"R with E1, @E2",
+		ty.String(),
+	)
+}
+
+func TestExtendedType_MarshalJSON(t *testing.T) {
+
+	t.Parallel()
+
+	ty := &ExtendedType{
+		Type: &NominalType{
+			Identifier: Identifier{
+				Identifier: "R",
+			},
+		},
+		Extensions: []*TypeAnnotation{
+			{
+				IsResource: false,
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "E1",
+					},
+				},
+			},
+			{
+				IsResource: true,
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "E2",
+					},
 				},
 			},
 		},
@@ -1384,23 +1396,33 @@ func TestExtendedType_String(t *testing.T) {
                 "EndPos": {"Offset": 0, "Line": 0, "Column": 0}
             },
             "Extensions": [
-                {
-					"Type": "NominalType",
-					"Identifier": {
-						"Identifier": "E1",
+				{
+                    "IsResource": false,
+                    "AnnotatedType": {
+						"Type": "NominalType",
+						"Identifier": {
+							"Identifier": "E1",
+							"StartPos": {"Offset": 0, "Line": 0, "Column": 0},
+							"EndPos": {"Offset": 1, "Line": 0, "Column": 1}
+						},
 						"StartPos": {"Offset": 0, "Line": 0, "Column": 0},
 						"EndPos": {"Offset": 1, "Line": 0, "Column": 1}
 					},
 					"StartPos": {"Offset": 0, "Line": 0, "Column": 0},
-						"EndPos": {"Offset": 1, "Line": 0, "Column": 1}
+					"EndPos": {"Offset": 1, "Line": 0, "Column": 1}
 				},
 				{
-					"Type": "NominalType",
-					"Identifier": {
-						"Identifier": "E2",
+					"IsResource": true,
+                    "AnnotatedType": {
+						"Type": "NominalType",
+						"Identifier": {
+							"Identifier": "E2",
+							"StartPos": {"Offset": 0, "Line": 0, "Column": 0},
+							"EndPos": {"Offset": 1, "Line": 0, "Column": 1}
+						},
 						"StartPos": {"Offset": 0, "Line": 0, "Column": 0},
 						"EndPos": {"Offset": 1, "Line": 0, "Column": 1}
-					},
+					}, 
 					"StartPos": {"Offset": 0, "Line": 0, "Column": 0},
 					"EndPos": {"Offset": 1, "Line": 0, "Column": 1}
 				}

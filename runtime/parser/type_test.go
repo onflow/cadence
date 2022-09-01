@@ -2659,12 +2659,16 @@ func TestParseExtendedType(t *testing.T) {
 						Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
 					},
 				},
-				Extensions: []*ast.NominalType{
-					{
-						Identifier: ast.Identifier{
-							Identifier: "E",
-							Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
+				Extensions: []*ast.TypeAnnotation{
+					&ast.TypeAnnotation{
+						IsResource: false,
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "E",
+								Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
+							},
 						},
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					},
 				},
 				Range: ast.Range{

@@ -773,7 +773,7 @@ func (t *InstantiationType) CheckEqual(other Type, checker TypeEqualityChecker) 
 // ExtendedType represents an extended type
 type ExtendedType struct {
 	Type       Type `json:"ExtendedType"`
-	Extensions []*NominalType
+	Extensions []*TypeAnnotation
 	Range
 }
 
@@ -782,7 +782,7 @@ var _ Type = &ExtendedType{}
 func NewExtendedType(
 	memoryGauge common.MemoryGauge,
 	typ Type,
-	extensions []*NominalType,
+	extensions []*TypeAnnotation,
 	astRange Range,
 ) *ExtendedType {
 	common.UseMemory(memoryGauge, common.ExtendedTypeMemoryUsage)

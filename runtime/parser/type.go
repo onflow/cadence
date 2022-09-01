@@ -328,7 +328,7 @@ func defineExtendedType() {
 		bindingPower: lowestBindingPower,
 		leftDenotation: func(p *parser, left ast.Type, tokenRange ast.Range) (ast.Type, error) {
 			p.skipSpaceAndComments(true)
-			var extensions []*ast.NominalType
+			var extensions []*ast.TypeAnnotation
 			var endPos ast.Position
 			switch p.current.Value {
 			case keywordWith:
@@ -336,15 +336,15 @@ func defineExtendedType() {
 				p.skipSpaceAndComments(true)
 
 				for {
-					ty, err := parseType(p, lowestBindingPower)
+					ty, err := parseTypeAnnotation(p)
 					if err != nil {
 						return nil, err
 					}
-					nominalType, ok := ty.(*ast.NominalType)
+					nominalType, ok := ty.Type.(*ast.NominalType)
 					if !ok {
 						return nil, p.syntaxError("unexpected non-nominal type: %s", ty)
 					}
-					extensions = append(extensions, nominalType)
+					extensions = append(extensions, ty)
 
 					p.skipSpaceAndComments(true)
 					if p.current.Type != lexer.TokenComma {
