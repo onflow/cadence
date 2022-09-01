@@ -2660,25 +2660,271 @@ func TestParseExtendedType(t *testing.T) {
 					},
 				},
 				Extensions: []*ast.TypeAnnotation{
-					&ast.TypeAnnotation{
+					{
 						IsResource: false,
 						Type: &ast.NominalType{
 							Identifier: ast.Identifier{
 								Identifier: "E",
-								Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
+								Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
 							},
 						},
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
 					},
 				},
 				Range: ast.Range{
-					StartPos: ast.Position{Line: 1, Column: 11, Offset: 11},
-					EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
 				},
 			},
 			result,
 		)
 	})
+
+	/*t.Run("two extensions", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseType("T with E1, @E2", nil)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.ExtendedType{
+				Type: &ast.NominalType{
+					Identifier: ast.Identifier{
+						Identifier: "T",
+						Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
+					},
+				},
+				Extensions: []*ast.TypeAnnotation{
+					{
+						IsResource: false,
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "E1",
+								Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+							},
+						},
+						StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
+					},
+					{
+						IsResource: true,
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "E2",
+								Pos:        ast.Position{Line: 1, Column: 12, Offset: 12},
+							},
+						},
+						StartPos: ast.Position{Line: 1, Column: 11, Offset: 11},
+					},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 13, Offset: 13},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("non-nominal", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseType("T with [E1]", nil)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: `unexpected non-nominal type: [E1]`,
+					Pos:     ast.Position{Offset: 11, Line: 1, Column: 11},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseType("&T with E", nil)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.ExtendedType{
+				Type: &ast.ReferenceType{
+					Type: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "T",
+							Pos:        ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+				Extensions: []*ast.TypeAnnotation{
+					{
+						IsResource: false,
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "E",
+								Pos:        ast.Position{Line: 1, Column: 8, Offset: 8},
+							},
+						},
+						StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+					},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("instantiation", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseType("T<F> with E", nil)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.ExtendedType{
+				Type: &ast.InstantiationType{
+					Type: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "T",
+							Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
+						},
+					},
+					TypeArguments: []*ast.TypeAnnotation{
+						{
+							IsResource: false,
+							Type: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "F",
+									Pos:        ast.Position{Line: 1, Column: 2, Offset: 2},
+								},
+							},
+							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
+					},
+					TypeArgumentsStartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+					EndPos:                ast.Position{Line: 1, Column: 3, Offset: 3},
+				},
+				Extensions: []*ast.TypeAnnotation{
+					{
+						IsResource: false,
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "E",
+								Pos:        ast.Position{Line: 1, Column: 10, Offset: 10},
+							},
+						},
+						StartPos: ast.Position{Line: 1, Column: 10, Offset: 10},
+					},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("optional", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseType("T? with E", nil)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.ExtendedType{
+				Type: &ast.OptionalType{
+					Type: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "T",
+							Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
+						},
+					},
+					EndPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+				},
+				Extensions: []*ast.TypeAnnotation{
+					{
+						IsResource: false,
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "E",
+								Pos:        ast.Position{Line: 1, Column: 8, Offset: 8},
+							},
+						},
+						StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+					},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("nested", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseType("T with @E1 with E2", nil)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.ExtendedType{
+				Type: &ast.ExtendedType{
+					Type: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "T",
+							Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
+						},
+					},
+					Extensions: []*ast.TypeAnnotation{
+						{
+							IsResource: true,
+							Type: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "E1",
+									Pos:        ast.Position{Line: 1, Column: 8, Offset: 8},
+								},
+							},
+							StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
+					},
+				},
+				Extensions: []*ast.TypeAnnotation{
+					{
+						IsResource: false,
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "E2",
+								Pos:        ast.Position{Line: 1, Column: 16, Offset: 16},
+							},
+						},
+						StartPos: ast.Position{Line: 1, Column: 16, Offset: 16},
+					},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 17, Offset: 17},
+				},
+			},
+			result,
+		)
+	})*/
 }
 
 func TestParseOptionalRestrictedTypeOnlyRestrictions(t *testing.T) {

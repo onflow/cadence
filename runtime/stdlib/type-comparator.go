@@ -166,7 +166,7 @@ func (c *TypeComparator) CheckExtendedTypeEquality(expected *ast.ExtendedType, f
 
 	for index, extension := range expected.Extensions {
 		otherExtension := foundExtendedType.Extensions[index]
-		err := extension.CheckEqual(otherExtension, c)
+		err := extension.Type.CheckEqual(otherExtension.Type, c)
 		if err != nil {
 			return newTypeMismatchError(expected, found)
 		}

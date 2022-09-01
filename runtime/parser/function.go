@@ -165,7 +165,7 @@ func parseParameter(p *parser) (*ast.Parameter, error) {
 	p.next()
 	p.skipSpaceAndComments(true)
 
-	typeAnnotation, err := parseTypeAnnotation(p)
+	typeAnnotation, err := parseTypeAnnotation(p, lowestBindingPower)
 	if err != nil {
 		return nil, err
 	}
@@ -256,7 +256,7 @@ func parseFunctionParameterListAndRest(
 		// Skip the colon
 		p.next()
 		p.skipSpaceAndComments(true)
-		returnTypeAnnotation, err = parseTypeAnnotation(p)
+		returnTypeAnnotation, err = parseTypeAnnotation(p, lowestBindingPower)
 		if err != nil {
 			return
 		}

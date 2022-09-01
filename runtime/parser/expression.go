@@ -887,7 +887,7 @@ func defineCastingExpression() {
 		func(parser *parser, t lexer.Token, left ast.Expression) (ast.Expression, error) {
 			switch t.Value.(string) {
 			case keywordAs:
-				right, err := parseTypeAnnotation(parser)
+				right, err := parseTypeAnnotation(parser, lowestBindingPower)
 				if err != nil {
 					return nil, err
 				}
@@ -926,7 +926,7 @@ func defineCastingExpression() {
 
 		leftDenotation := (func(operation ast.Operation) exprLeftDenotationFunc {
 			return func(parser *parser, t lexer.Token, left ast.Expression) (ast.Expression, error) {
-				right, err := parseTypeAnnotation(parser)
+				right, err := parseTypeAnnotation(parser, lowestBindingPower)
 				if err != nil {
 					return nil, err
 				}

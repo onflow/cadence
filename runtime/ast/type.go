@@ -811,7 +811,7 @@ func (t *ExtendedType) Doc() prettier.Doc {
 		if i > 0 {
 			extensionsDoc = append(
 				extensionsDoc,
-				restrictedTypeSeparatorDoc,
+				extendedTypeSeparatorDoc,
 				prettier.Line{},
 			)
 		}

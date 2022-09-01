@@ -297,7 +297,7 @@ func parseVariableDeclaration(
 		p.next()
 		p.skipSpaceAndComments(true)
 
-		typeAnnotation, err = parseTypeAnnotation(p)
+		typeAnnotation, err = parseTypeAnnotation(p, lowestBindingPower)
 		if err != nil {
 			return nil, err
 		}
@@ -830,7 +830,7 @@ func parseFieldWithVariableKind(
 
 	p.skipSpaceAndComments(true)
 
-	typeAnnotation, err := parseTypeAnnotation(p)
+	typeAnnotation, err := parseTypeAnnotation(p, lowestBindingPower)
 	if err != nil {
 		return nil, err
 	}
@@ -1240,7 +1240,7 @@ func parseFieldDeclarationWithoutVariableKind(
 
 	p.skipSpaceAndComments(true)
 
-	typeAnnotation, err := parseTypeAnnotation(p)
+	typeAnnotation, err := parseTypeAnnotation(p, lowestBindingPower)
 	if err != nil {
 		return nil, err
 	}
