@@ -33,18 +33,18 @@ import (
 type REPL struct {
 	checker  *sema.Checker
 	inter    *interpreter.Interpreter
-	onError  func(err error, location Location, codes map[Location]string)
+	onError  func(err error, location Location, codes map[Location][]byte)
 	onResult func(interpreter.Value)
-	codes    map[Location]string
+	codes    map[Location][]byte
 }
 
 func NewREPL(
-	onError func(err error, location Location, codes map[Location]string),
+	onError func(err error, location Location, codes map[Location][]byte),
 	onResult func(interpreter.Value),
 ) (*REPL, error) {
 
 	checkers := map[Location]*sema.Checker{}
-	codes := map[Location]string{}
+	codes := map[Location][]byte{}
 
 	checkerConfig := cmd.DefaultCheckerConfig(checkers, codes)
 	checkerConfig.AccessCheckMode = sema.AccessCheckModeNotSpecifiedUnrestricted
@@ -104,7 +104,7 @@ func (r *REPL) handleCheckerError() bool {
 	return false
 }
 
-func (r *REPL) Accept(code string) (inputIsComplete bool) {
+func (r *REPL) Accept(code []byte) (inputIsComplete bool) {
 
 	r.codes[r.checker.Location] = code
 

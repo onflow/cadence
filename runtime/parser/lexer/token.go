@@ -23,8 +23,8 @@ import (
 )
 
 type Token struct {
-	Type  TokenType
-	Value any
+	Type         TokenType
+	SpaceOrError any
 	ast.Range
 }
 
@@ -32,13 +32,11 @@ func (t Token) Is(ty TokenType) bool {
 	return t.Type == ty
 }
 
-func (t Token) IsString(ty TokenType, s string) bool {
-	if !t.Is(ty) {
-		return false
+func (t Token) Source(input []byte) []byte {
+	endOffset := t.EndPos.Offset + 1
+	inputLength := len(input)
+	if endOffset > inputLength {
+		endOffset = inputLength
 	}
-	v, ok := t.Value.(string)
-	if !ok {
-		return false
-	}
-	return v == s
+	return input[t.StartPos.Offset:endOffset]
 }

@@ -361,7 +361,7 @@ func (e *interpreterEnvironment) parseAndCheckProgram(
 	var parse *ast.Program
 	reportMetric(
 		func() {
-			parse, err = parser.ParseProgram(string(code), e)
+			parse, err = parser.ParseProgram(code, e)
 		},
 		e.runtimeInterface,
 		func(metrics Metrics, duration time.Duration) {
