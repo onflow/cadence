@@ -249,7 +249,7 @@ func parseAccess(p *parser) (ast.Access, error) {
 	}
 }
 
-// parseVariableDeclaration parses a variable declaration.
+// parseVariableDeclaration parses a variable declaration or a remove declaration
 //
 //     variableKind : 'var' | 'let'
 //
@@ -258,12 +258,15 @@ func parseAccess(p *parser) (ast.Access, error) {
 //         transfer expression
 //         ( transfer expression )?
 //
+//     removeDeclaration :
+//         variableKind identifier, identifier transfer remove identifier from expression
+//
 func parseVariableDeclaration(
 	p *parser,
 	access ast.Access,
 	accessPos *ast.Position,
 	docString string,
-) (*ast.VariableDeclaration, error) {
+) (ast.Declaration, error) {
 
 	startPos := p.current.StartPos
 	if accessPos != nil {
@@ -276,6 +279,7 @@ func parseVariableDeclaration(
 	p.next()
 
 	p.skipSpaceAndComments(true)
+
 	if !p.current.Is(lexer.TokenIdentifier) {
 		return nil, p.syntaxError(
 			"expected identifier after start of variable declaration, got %s",
@@ -288,6 +292,11 @@ func parseVariableDeclaration(
 	// Skip the identifier
 	p.next()
 	p.skipSpaceAndComments(true)
+
+	// currently only remove expressions feature commas
+	if p.current.Is(lexer.TokenComma) {
+		return parseRemoveDeclaration(p, access, startPos, docString, isLet, identifier)
+	}
 
 	var typeAnnotation *ast.TypeAnnotation
 	var err error
@@ -304,6 +313,7 @@ func parseVariableDeclaration(
 	}
 
 	p.skipSpaceAndComments(true)
+
 	transfer := parseTransfer(p)
 	if transfer == nil {
 		return nil, p.syntaxError("expected transfer")
@@ -345,6 +355,85 @@ func parseVariableDeclaration(
 	}
 
 	return variableDeclaration, nil
+}
+
+func parseRemoveDeclaration(
+	p *parser,
+	access ast.Access,
+	startPos ast.Position,
+	docString string,
+	isLet bool,
+	valueTarget ast.Identifier,
+) (*ast.RemoveDeclaration, error) {
+
+	p.next()
+	p.skipSpaceAndComments(true)
+
+	if !p.current.Is(lexer.TokenIdentifier) {
+		return nil, p.syntaxError(
+			"expected identifier for extension removal target, got %s",
+			p.current.Type,
+		)
+	}
+	extensionTarget := p.tokenToIdentifier(p.current)
+
+	p.next()
+	p.skipSpaceAndComments(true)
+	transfer := parseTransfer(p)
+	p.skipSpaceAndComments(true)
+
+	// check and skip remove keyword
+	if p.current.Value != keywordRemove {
+		p.reportSyntaxError(
+			"expected remove keyword, got %s",
+			p.current.Type,
+		)
+	}
+	p.next()
+	p.skipSpaceAndComments(true)
+
+	extension, err := parseType(p, lowestBindingPower)
+	if err != nil {
+		return nil, err
+	}
+	extensionNominalType, ok := extension.(*ast.NominalType)
+
+	if !ok {
+		p.reportSyntaxError(
+			"expected extension nominal type, got %s",
+			extension,
+		)
+	}
+
+	p.skipSpaceAndComments(true)
+
+	// check and skip from keyword
+	if p.current.Value != keywordFrom {
+		p.reportSyntaxError(
+			"expected from keyword, got %s",
+			p.current.Type,
+		)
+	}
+	p.next()
+	p.skipSpaceAndComments(true)
+
+	extended, err := parseExpression(p, lowestBindingPower)
+	if err != nil {
+		return nil, err
+	}
+
+	return ast.NewRemoveDeclaration(
+		p.memoryGauge,
+		valueTarget,
+		extensionTarget,
+		transfer,
+		extensionNominalType,
+		extended,
+		access,
+		isLet,
+		docString,
+		startPos,
+	), nil
 }
 
 // parseTransfer parses a transfer.
@@ -1044,7 +1133,14 @@ func parseExtensionDeclaration(
 		)
 	}
 
-	baseType, err := p.mustIdentifier()
+	baseType, err := parseType(p, lowestBindingPower)
+	baseNominalType, ok := baseType.(*ast.NominalType)
+	if !ok {
+		p.reportSyntaxError(
+			"expected nominal type, got %s",
+			baseType,
+		)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -1081,7 +1177,7 @@ func parseExtensionDeclaration(
 		p.memoryGauge,
 		access,
 		identifier,
-		baseType,
+		baseNominalType,
 		conformances,
 		members,
 		docString,

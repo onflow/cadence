@@ -38,10 +38,14 @@ func TestExtendDeclaration_MarshallJSON(t *testing.T) {
 			"Foo",
 			Position{Offset: 1, Line: 2, Column: 3},
 		),
-		BaseType: NewIdentifier(
+		BaseType: NewNominalType(
 			nil,
-			"Bar",
-			Position{Offset: 1, Line: 2, Column: 3},
+			NewIdentifier(
+				nil,
+				"Bar",
+				Position{Offset: 1, Line: 2, Column: 3},
+			),
+			[]Identifier{},
 		),
 		Conformances: []*NominalType{
 			{
@@ -76,7 +80,12 @@ func TestExtendDeclaration_MarshallJSON(t *testing.T) {
 				"EndPos": {"Offset": 3, "Line": 2, "Column": 5}
             },
 			"BaseType": {
-                "Identifier": "Bar",
+				"Type": "NominalType",
+                "Identifier": {
+					"Identifier": "Bar",
+					"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+					"EndPos": {"Offset": 3, "Line": 2, "Column": 5}
+				},
 				"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
 				"EndPos": {"Offset": 3, "Line": 2, "Column": 5}
             },
@@ -113,10 +122,14 @@ func TestExtensionDeclaration_Doc(t *testing.T) {
 			"Foo",
 			Position{Offset: 1, Line: 2, Column: 3},
 		),
-		BaseType: NewIdentifier(
+		BaseType: NewNominalType(
 			nil,
-			"Bar",
-			Position{Offset: 1, Line: 2, Column: 3},
+			NewIdentifier(
+				nil,
+				"Bar",
+				Position{Offset: 1, Line: 2, Column: 3},
+			),
+			[]Identifier{},
 		),
 		Conformances: []*NominalType{
 			{
@@ -309,32 +322,30 @@ func TestRemoveStatement_MarshallJSON(t *testing.T) {
 
 	t.Parallel()
 
-	decl := &RemoveStatement{
-		ValueTarget: NewIdentifierExpression(
+	decl := &RemoveDeclaration{
+		ValueTarget: NewIdentifier(
 			nil,
-			NewIdentifier(
-				nil,
-				"foo",
-				Position{Offset: 1, Line: 2, Column: 3},
-			),
+			"foo",
+			Position{Offset: 1, Line: 2, Column: 3},
 		),
-		ExtensionTarget: NewIdentifierExpression(
+		ExtensionTarget: NewIdentifier(
 			nil,
-			NewIdentifier(
-				nil,
-				"bar",
-				Position{Offset: 1, Line: 2, Column: 3},
-			),
+			"bar",
+			Position{Offset: 1, Line: 2, Column: 3},
 		),
 		Transfer: NewTransfer(
 			nil,
 			TransferOperation(TransferOperationCopy),
 			Position{Offset: 1, Line: 2, Column: 3},
 		),
-		Extension: NewIdentifier(
+		Extension: NewNominalType(
 			nil,
-			"E",
-			Position{Offset: 1, Line: 2, Column: 3},
+			NewIdentifier(
+				nil,
+				"E",
+				Position{Offset: 1, Line: 2, Column: 3},
+			),
+			[]Identifier{},
 		),
 		Value: NewIdentifierExpression(
 			nil,
@@ -344,9 +355,8 @@ func TestRemoveStatement_MarshallJSON(t *testing.T) {
 				Position{Offset: 1, Line: 2, Column: 3},
 			),
 		),
-		IsDeclaration: true,
-		IsConstant:    false,
-		StartPos:      Position{Offset: 1, Line: 2, Column: 3},
+		IsConstant: false,
+		StartPos:   Position{Offset: 1, Line: 2, Column: 3},
 	}
 
 	actual, err := json.Marshal(decl)
@@ -355,26 +365,18 @@ func TestRemoveStatement_MarshallJSON(t *testing.T) {
 	assert.JSONEq(t,
 		`
         {
-            "Type": "RemoveStatement",
+            "Type": "RemoveDeclaration",
 			"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
 			"EndPos": {"Offset": 3, "Line": 2, "Column": 5},
-			"ValueTarget":  {
-				"Type": "IdentifierExpression",
-				"Identifier": { 
-					"Identifier": "foo",
-					"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
-					"EndPos": {"Offset": 3, "Line": 2, "Column": 5}
-				},
+			"Access": "AccessNotSpecified",
+			"DocString": "",
+			"ValueTarget": { 
+				"Identifier": "foo",
 				"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
 				"EndPos": {"Offset": 3, "Line": 2, "Column": 5}
 			},
-			"ExtensionTarget":  {
-				"Type": "IdentifierExpression",
-				"Identifier": { 
-					"Identifier": "bar",
-					"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
-					"EndPos": {"Offset": 3, "Line": 2, "Column": 5}
-				},
+			"ExtensionTarget": { 
+				"Identifier": "bar",
 				"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
 				"EndPos": {"Offset": 3, "Line": 2, "Column": 5}
 			},
@@ -388,8 +390,13 @@ func TestRemoveStatement_MarshallJSON(t *testing.T) {
 				"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
 				"EndPos": {"Offset": 3, "Line": 2, "Column": 5}
 			},
-			"Extension":  {
-				"Identifier": "E",
+			"Extension": {
+				"Type": "NominalType",
+				"Identifier": { 
+					"Identifier": "E",
+					"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+					"EndPos": {"Offset": 1, "Line": 2, "Column": 3}
+				},
 				"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
 				"EndPos": {"Offset": 1, "Line": 2, "Column": 3}
 			},
@@ -399,7 +406,6 @@ func TestRemoveStatement_MarshallJSON(t *testing.T) {
                 "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
                 "EndPos": {"Offset": 1, "Line": 2, "Column": 3}
             },
-			"IsDeclaration": true,
 			"IsConstant": false
         }
         `,
@@ -411,32 +417,30 @@ func TestRemoveStatement_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	decl := &RemoveStatement{
-		ValueTarget: NewIdentifierExpression(
+	decl := &RemoveDeclaration{
+		ValueTarget: NewIdentifier(
 			nil,
-			NewIdentifier(
-				nil,
-				"foo",
-				Position{Offset: 1, Line: 2, Column: 3},
-			),
+			"foo",
+			Position{Offset: 1, Line: 2, Column: 3},
 		),
-		ExtensionTarget: NewIdentifierExpression(
+		ExtensionTarget: NewIdentifier(
 			nil,
-			NewIdentifier(
-				nil,
-				"bar",
-				Position{Offset: 1, Line: 2, Column: 3},
-			),
+			"bar",
+			Position{Offset: 1, Line: 2, Column: 3},
 		),
 		Transfer: NewTransfer(
 			nil,
 			TransferOperation(TransferOperationCopy),
 			Position{Offset: 1, Line: 2, Column: 3},
 		),
-		Extension: NewIdentifier(
+		Extension: NewNominalType(
 			nil,
-			"E",
-			Position{Offset: 1, Line: 2, Column: 3},
+			NewIdentifier(
+				nil,
+				"E",
+				Position{Offset: 1, Line: 2, Column: 3},
+			),
+			[]Identifier{},
 		),
 		Value: NewIdentifierExpression(
 			nil,
@@ -446,9 +450,8 @@ func TestRemoveStatement_Doc(t *testing.T) {
 				Position{Offset: 1, Line: 2, Column: 3},
 			),
 		),
-		IsDeclaration: true,
-		IsConstant:    false,
-		StartPos:      Position{Offset: 1, Line: 2, Column: 3},
+		IsConstant: false,
+		StartPos:   Position{Offset: 1, Line: 2, Column: 3},
 	}
 
 	require.Equal(

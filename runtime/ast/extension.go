@@ -30,7 +30,7 @@ import (
 type ExtensionDeclaration struct {
 	Access       Access
 	Identifier   Identifier
-	BaseType     Identifier
+	BaseType     *NominalType
 	Conformances []*NominalType
 	Members      *Members
 	DocString    string
@@ -45,7 +45,7 @@ func NewExtensionDeclaration(
 	memoryGauge common.MemoryGauge,
 	access Access,
 	identifier Identifier,
-	baseType Identifier,
+	baseType *NominalType,
 	conformances []*NominalType,
 	members *Members,
 	docString string,
@@ -127,7 +127,7 @@ func (e *ExtensionDeclaration) Doc() prettier.Doc {
 		prettier.Space,
 		extensionStatementForDoc,
 		prettier.Space,
-		prettier.Text(e.BaseType.Identifier),
+		e.BaseType.Doc(),
 	)
 	if len(e.Conformances) > 0 {
 
@@ -297,63 +297,67 @@ func (e *ExtendExpression) MarshalJSON() ([]byte, error) {
 	})
 }
 
-// RemoveExpression
-type RemoveStatement struct {
-	ValueTarget     Expression
-	ExtensionTarget Expression
+// RemoveDeclaration
+type RemoveDeclaration struct {
+	ValueTarget     Identifier
+	ExtensionTarget Identifier
 	Transfer        *Transfer
-	Extension       Identifier
+	Extension       *NominalType
 	Value           Expression
-	IsDeclaration   bool
+	Access          Access
+	DocString       string
 	IsConstant      bool
 	StartPos        Position `json:"-"`
 }
 
-var _ Element = &RemoveStatement{}
-var _ Statement = &RemoveStatement{}
+var _ Element = &RemoveDeclaration{}
+var _ Statement = &RemoveDeclaration{}
+var _ Declaration = &RemoveDeclaration{}
 
-func NewRemoveStatement(
+func NewRemoveDeclaration(
 	gauge common.MemoryGauge,
-	valueTarget Expression,
-	extensionTarget Expression,
+	valueTarget Identifier,
+	extensionTarget Identifier,
 	transfer *Transfer,
-	extension Identifier,
+	extension *NominalType,
 	value Expression,
-	isDeclaration bool,
+	access Access,
 	isConstant bool,
+	docString string,
 	startPos Position,
-) *RemoveStatement {
+) *RemoveDeclaration {
 	common.UseMemory(gauge, common.RemoveStatementMemoryUsage)
 
-	return &RemoveStatement{
+	return &RemoveDeclaration{
 		ValueTarget:     valueTarget,
 		ExtensionTarget: extensionTarget,
 		Transfer:        transfer,
 		Extension:       extension,
 		Value:           value,
-		IsDeclaration:   isDeclaration,
+		Access:          access,
+		DocString:       docString,
 		IsConstant:      isConstant,
 		StartPos:        startPos,
 	}
 }
 
-func (*RemoveStatement) ElementType() ElementType {
+func (*RemoveDeclaration) ElementType() ElementType {
 	return ElementTypeRemoveStatement
 }
 
-func (*RemoveStatement) isStatement() {}
+func (*RemoveDeclaration) isStatement() {}
 
-func (s *RemoveStatement) Walk(walkChild func(Element)) {
-	walkChild(s.ValueTarget)
-	walkChild(s.ExtensionTarget)
+func (*RemoveDeclaration) isDeclaration() {}
+
+func (s *RemoveDeclaration) Walk(walkChild func(Element)) {
 	walkChild(s.Value)
 }
 
-func (s *RemoveStatement) StartPosition() Position {
+func (s *RemoveDeclaration) StartPosition() Position {
 	return s.StartPos
 }
 
-func (s *RemoveStatement) EndPosition(memoryGauge common.MemoryGauge) Position {
+func (s *RemoveDeclaration) EndPosition(memoryGauge common.MemoryGauge) Position {
 	return s.Value.EndPosition(memoryGauge)
 }
 
@@ -361,29 +365,27 @@ const removeStatementRemoveKeywordDoc = prettier.Text("remove")
 const removeStatementFromKeywordDoc = prettier.Text("from")
 const removeStatementSeparatorDoc = prettier.Text(",")
 
-func (s *RemoveStatement) Doc() prettier.Doc {
+func (s *RemoveDeclaration) Doc() prettier.Doc {
 	var doc prettier.Concat
 
-	if s.IsDeclaration {
-		if s.IsConstant {
-			doc = append(doc, letKeywordDoc, prettier.Space)
-		} else {
-			doc = append(doc, varKeywordDoc, prettier.Space)
-		}
+	if s.IsConstant {
+		doc = append(doc, letKeywordDoc, prettier.Space)
+	} else {
+		doc = append(doc, varKeywordDoc, prettier.Space)
 	}
 
 	return append(
 		doc,
-		s.ValueTarget.Doc(),
+		prettier.Text(s.ValueTarget.Identifier),
 		removeStatementSeparatorDoc,
 		prettier.Space,
-		s.ExtensionTarget.Doc(),
+		prettier.Text(s.ExtensionTarget.Identifier),
 		prettier.Space,
 		s.Transfer.Doc(),
 		prettier.Space,
 		removeStatementRemoveKeywordDoc,
 		prettier.Space,
-		prettier.Text(s.Extension.Identifier),
+		s.Extension.Doc(),
 		prettier.Space,
 		removeStatementFromKeywordDoc,
 		prettier.Space,
@@ -391,19 +393,42 @@ func (s *RemoveStatement) Doc() prettier.Doc {
 	)
 }
 
-func (s *RemoveStatement) String() string {
+func (s *RemoveDeclaration) String() string {
 	return Prettier(s)
 }
 
-func (s *RemoveStatement) MarshalJSON() ([]byte, error) {
-	type Alias RemoveStatement
+func (s *RemoveDeclaration) MarshalJSON() ([]byte, error) {
+	type Alias RemoveDeclaration
 	return json.Marshal(&struct {
 		Type string
 		Range
 		*Alias
 	}{
-		Type:  "RemoveStatement",
+		Type:  "RemoveDeclaration",
 		Range: NewUnmeteredRangeFromPositioned(s),
 		Alias: (*Alias)(s),
 	})
+}
+
+func (d *RemoveDeclaration) DeclarationKind() common.DeclarationKind {
+	if d.IsConstant {
+		return common.DeclarationKindConstant
+	}
+	return common.DeclarationKindVariable
+}
+
+func (d *RemoveDeclaration) DeclarationAccess() Access {
+	return d.Access
+}
+
+func (d *RemoveDeclaration) DeclarationIdentifier() *Identifier {
+	return nil
+}
+
+func (d *RemoveDeclaration) DeclarationMembers() *Members {
+	return nil
+}
+
+func (d *RemoveDeclaration) DeclarationDocString() string {
+	return d.DocString
 }

@@ -262,12 +262,16 @@ func parseIfStatement(p *parser) (*ast.IfStatement, error) {
 
 		var variableDeclaration *ast.VariableDeclaration
 		var err error
+		var ok bool
 
 		if p.current.Type == lexer.TokenIdentifier {
 			switch p.current.Value {
 			case keywordLet, keywordVar:
-				variableDeclaration, err =
-					parseVariableDeclaration(p, ast.AccessNotSpecified, nil, "")
+				declaration, err := parseVariableDeclaration(p, ast.AccessNotSpecified, nil, "")
+				variableDeclaration, ok = declaration.(*ast.VariableDeclaration)
+				if !ok {
+					p.reportSyntaxError("expected variable declaration")
+				}
 				if err != nil {
 					return nil, err
 				}
