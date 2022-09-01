@@ -50,7 +50,7 @@ func TestParseVariableDeclaration(t *testing.T) {
 						Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
 					},
 					Value: &ast.IntegerExpression{
-						PositiveLiteral: []byte([]byte("1")),
+						PositiveLiteral: []byte("1"),
 						Value:           big.NewInt(1),
 						Base:            10,
 						Range: ast.Range{
@@ -86,7 +86,7 @@ func TestParseVariableDeclaration(t *testing.T) {
 						Pos:        ast.Position{Line: 1, Column: 9, Offset: 9},
 					},
 					Value: &ast.IntegerExpression{
-						PositiveLiteral: []byte([]byte("1")),
+						PositiveLiteral: []byte("1"),
 						Value:           big.NewInt(1),
 						Base:            10,
 						Range: ast.Range{
@@ -121,7 +121,7 @@ func TestParseVariableDeclaration(t *testing.T) {
 						Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
 					},
 					Value: &ast.IntegerExpression{
-						PositiveLiteral: []byte([]byte("1")),
+						PositiveLiteral: []byte("1"),
 						Value:           big.NewInt(1),
 						Base:            10,
 						Range: ast.Range{
@@ -156,7 +156,7 @@ func TestParseVariableDeclaration(t *testing.T) {
 						Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
 					},
 					Value: &ast.IntegerExpression{
-						PositiveLiteral: []byte([]byte("1")),
+						PositiveLiteral: []byte("1"),
 						Value:           big.NewInt(1),
 						Base:            10,
 						Range: ast.Range{
@@ -681,7 +681,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 								Test: &ast.BinaryExpression{
 									Operation: ast.OperationGreater,
 									Left: &ast.IntegerExpression{
-										PositiveLiteral: []byte([]byte("2")),
+										PositiveLiteral: []byte("2"),
 										Value:           big.NewInt(2),
 										Base:            10,
 										Range: ast.Range{
@@ -690,7 +690,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 										},
 									},
 									Right: &ast.IntegerExpression{
-										PositiveLiteral: []byte([]byte("1")),
+										PositiveLiteral: []byte("1"),
 										Value:           big.NewInt(1),
 										Base:            10,
 										Range: ast.Range{
@@ -930,7 +930,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 							Statements: []ast.Statement{
 								&ast.ReturnStatement{
 									Expression: &ast.IntegerExpression{
-										PositiveLiteral: []byte([]byte("1")),
+										PositiveLiteral: []byte("1"),
 										Value:           big.NewInt(1),
 										Base:            10,
 										Range: ast.Range{
@@ -2448,7 +2448,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 												Pos:       ast.Position{Offset: 88, Line: 7, Column: 13},
 											},
 											Value: &ast.IntegerExpression{
-												PositiveLiteral: []byte([]byte("0")),
+												PositiveLiteral: []byte("0"),
 												Value:           new(big.Int),
 												Base:            10,
 												Range: ast.Range{
@@ -2497,7 +2497,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 											Value: &ast.BinaryExpression{
 												Operation: ast.OperationPlus,
 												Left: &ast.IntegerExpression{
-													PositiveLiteral: []byte([]byte("1")),
+													PositiveLiteral: []byte("1"),
 													Value:           big.NewInt(1),
 													Base:            10,
 													Range: ast.Range{
@@ -2506,7 +2506,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 													},
 												},
 												Right: &ast.IntegerExpression{
-													PositiveLiteral: []byte([]byte("1")),
+													PositiveLiteral: []byte("1"),
 													Value:           big.NewInt(1),
 													Base:            10,
 													Range: ast.Range{
@@ -2644,7 +2644,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 												Pos:       ast.Position{Offset: 88, Line: 7, Column: 13},
 											},
 											Value: &ast.IntegerExpression{
-												PositiveLiteral: []byte([]byte("0")),
+												PositiveLiteral: []byte("0"),
 												Value:           new(big.Int),
 												Base:            10,
 												Range: ast.Range{
@@ -2677,7 +2677,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 									},
 								},
 								Right: &ast.IntegerExpression{
-									PositiveLiteral: []byte([]byte("0")),
+									PositiveLiteral: []byte("0"),
 									Value:           new(big.Int),
 									Base:            10,
 									Range: ast.Range{
@@ -2700,7 +2700,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 									},
 								},
 								Right: &ast.IntegerExpression{
-									PositiveLiteral: []byte([]byte("2")),
+									PositiveLiteral: []byte("2"),
 									Value:           big.NewInt(2),
 									Base:            10,
 									Range: ast.Range{
@@ -2737,7 +2737,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 											Value: &ast.BinaryExpression{
 												Operation: ast.OperationPlus,
 												Left: &ast.IntegerExpression{
-													PositiveLiteral: []byte([]byte("1")),
+													PositiveLiteral: []byte("1"),
 													Value:           big.NewInt(1),
 													Base:            10,
 													Range: ast.Range{
@@ -2746,7 +2746,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 													},
 												},
 												Right: &ast.IntegerExpression{
-													PositiveLiteral: []byte([]byte("1")),
+													PositiveLiteral: []byte("1"),
 													Value:           big.NewInt(1),
 													Base:            10,
 													Range: ast.Range{
@@ -2884,7 +2884,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 												Pos:       ast.Position{Offset: 88, Line: 7, Column: 13},
 											},
 											Value: &ast.IntegerExpression{
-												PositiveLiteral: []byte([]byte("0")),
+												PositiveLiteral: []byte("0"),
 												Value:           new(big.Int),
 												Base:            10,
 												Range: ast.Range{
@@ -2917,7 +2917,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 									},
 								},
 								Right: &ast.IntegerExpression{
-									PositiveLiteral: []byte([]byte("0")),
+									PositiveLiteral: []byte("0"),
 									Value:           new(big.Int),
 									Base:            10,
 									Range: ast.Range{
@@ -2940,7 +2940,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 									},
 								},
 								Right: &ast.IntegerExpression{
-									PositiveLiteral: []byte([]byte("2")),
+									PositiveLiteral: []byte("2"),
 									Value:           big.NewInt(2),
 									Base:            10,
 									Range: ast.Range{
@@ -2977,7 +2977,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 											Value: &ast.BinaryExpression{
 												Operation: ast.OperationPlus,
 												Left: &ast.IntegerExpression{
-													PositiveLiteral: []byte([]byte("1")),
+													PositiveLiteral: []byte("1"),
 													Value:           big.NewInt(1),
 													Base:            10,
 													Range: ast.Range{
@@ -2986,7 +2986,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 													},
 												},
 												Right: &ast.IntegerExpression{
-													PositiveLiteral: []byte([]byte("1")),
+													PositiveLiteral: []byte("1"),
 													Value:           big.NewInt(1),
 													Base:            10,
 													Range: ast.Range{
@@ -3519,7 +3519,7 @@ func TestParsePreAndPostConditions(t *testing.T) {
 						Statements: []ast.Statement{
 							&ast.ReturnStatement{
 								Expression: &ast.IntegerExpression{
-									PositiveLiteral: []byte([]byte("0")),
+									PositiveLiteral: []byte("0"),
 									Value:           new(big.Int),
 									Base:            10,
 									Range: ast.Range{
@@ -3550,7 +3550,7 @@ func TestParsePreAndPostConditions(t *testing.T) {
 									},
 								},
 								Right: &ast.IntegerExpression{
-									PositiveLiteral: []byte([]byte("0")),
+									PositiveLiteral: []byte("0"),
 									Value:           new(big.Int),
 									Base:            10,
 									Range: ast.Range{
@@ -3571,7 +3571,7 @@ func TestParsePreAndPostConditions(t *testing.T) {
 									},
 								},
 								Right: &ast.IntegerExpression{
-									PositiveLiteral: []byte([]byte("0")),
+									PositiveLiteral: []byte("0"),
 									Value:           new(big.Int),
 									Base:            10,
 									Range: ast.Range{
@@ -3594,7 +3594,7 @@ func TestParsePreAndPostConditions(t *testing.T) {
 									},
 								},
 								Right: &ast.IntegerExpression{
-									PositiveLiteral: []byte([]byte("0")),
+									PositiveLiteral: []byte("0"),
 									Value:           new(big.Int),
 									Base:            10,
 									Range: ast.Range{
@@ -3707,7 +3707,7 @@ func TestParseConditionMessage(t *testing.T) {
 									},
 								},
 								Right: &ast.IntegerExpression{
-									PositiveLiteral: []byte([]byte("0")),
+									PositiveLiteral: []byte("0"),
 									Value:           new(big.Int),
 									Base:            10,
 									Range: ast.Range{
@@ -4311,7 +4311,7 @@ func TestParseEventEmitStatement(t *testing.T) {
 											LabelStartPos: &ast.Position{Offset: 42, Line: 3, Column: 22},
 											LabelEndPos:   &ast.Position{Offset: 43, Line: 3, Column: 23},
 											Expression: &ast.IntegerExpression{
-												PositiveLiteral: []byte([]byte("1")),
+												PositiveLiteral: []byte("1"),
 												Value:           big.NewInt(1),
 												Base:            10,
 												Range: ast.Range{
@@ -4326,7 +4326,7 @@ func TestParseEventEmitStatement(t *testing.T) {
 											LabelStartPos: &ast.Position{Offset: 49, Line: 3, Column: 29},
 											LabelEndPos:   &ast.Position{Offset: 52, Line: 3, Column: 32},
 											Expression: &ast.IntegerExpression{
-												PositiveLiteral: []byte([]byte("2")),
+												PositiveLiteral: []byte("2"),
 												Value:           big.NewInt(2),
 												Base:            10,
 												Range: ast.Range{

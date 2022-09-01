@@ -140,7 +140,7 @@ func NewSimpleConfig(
 					)
 				}
 
-				return []byte(code), nil
+				return code, nil
 			}
 		},
 	}

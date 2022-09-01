@@ -2294,7 +2294,7 @@ func TestBinaryExpression_String(t *testing.T) {
 			Left: &BinaryExpression{
 				Operation: OperationOr,
 				Left: &IntegerExpression{
-					PositiveLiteral: []byte([]byte("42")),
+					PositiveLiteral: []byte("42"),
 					Value:           big.NewInt(42),
 					Base:            10,
 				},
