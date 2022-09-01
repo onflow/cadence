@@ -1838,11 +1838,7 @@ func (checker *Checker) checkPotentiallyUnevaluated(check TypeCheckFunc) Type {
 		temporaryResources,
 	)
 
-	functionActivation.ReturnInfo.MaybeReturned =
-		functionActivation.ReturnInfo.MaybeReturned ||
-			temporaryReturnInfo.MaybeReturned
-
-	// NOTE: the definitive return state does not change
+	functionActivation.ReturnInfo.MergePotentiallyUnevaluated(temporaryReturnInfo)
 
 	checker.resources.MergeBranches(temporaryResources, nil)
 
@@ -2532,7 +2528,12 @@ func (checker *Checker) declareGlobalRanges() {
 func (checker *Checker) maybeAddResourceInvalidation(resource Resource, invalidation ResourceInvalidation) {
 	functionActivation := checker.functionActivations.Current()
 
-	if functionActivation.ReturnInfo.IsUnreachable() {
+	// Resource invalidations are only definite
+	// if the invalidation can be definitely reached.
+
+	if functionActivation.ReturnInfo.IsUnreachable() ||
+		functionActivation.ReturnInfo.MaybeJumped {
+
 		return
 	}
 
