@@ -25,6 +25,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/parser/constants"
 	"github.com/onflow/cadence/runtime/parser/lexer"
 )
 
@@ -446,6 +447,27 @@ func (p *parser) mustIdentifier() (ast.Identifier, error) {
 	}
 
 	return p.tokenToIdentifier(identifier), err
+}
+
+func (p *parser) assertNotKeyword(errMsgContext string, token lexer.Token) (ast.Identifier, error) {
+	if len(errMsgContext) > 0 {
+		errMsgContext = " " + errMsgContext
+	}
+
+	if token.Type != lexer.TokenIdentifier {
+		return ast.Identifier{}, p.syntaxError("expected identifier%s, got %v", errMsgContext, token.Type)
+	}
+
+	ident := p.tokenToIdentifier(token)
+
+	if constants.Keywords.Contains(ident.Identifier) {
+		return ast.Identifier{}, p.syntaxError("expected identifier%s, got keyword %s", errMsgContext, ident.Identifier)
+	}
+	return ident, nil
+}
+
+func (p *parser) nonReservedIdentifier(errMsgContext string) (ast.Identifier, error) {
+	return p.assertNotKeyword(errMsgContext, p.current)
 }
 
 func (p *parser) tokenToIdentifier(identifier lexer.Token) ast.Identifier {

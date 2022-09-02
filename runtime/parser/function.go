@@ -115,16 +115,17 @@ func parseParameter(p *parser) (*ast.Parameter, error) {
 	p.skipSpaceAndComments(true)
 
 	startPos := p.current.StartPos
-	parameterPos := startPos
+	var parameter lexer.Token = p.current
 
-	if !p.current.Is(lexer.TokenIdentifier) {
+	if !parameter.Is(lexer.TokenIdentifier) {
 		return nil, p.syntaxError(
 			"expected argument label or parameter name, got %s",
-			p.current.Type,
+			parameter.Type,
 		)
 	}
-	argumentLabel := ""
-	parameterName, ok := p.current.Value.(string)
+
+	parameterName, ok := parameter.Value.(string)
+
 	if !ok {
 		return nil, p.syntaxError(
 			"expected parameter %s to be a string",
@@ -133,26 +134,28 @@ func parseParameter(p *parser) (*ast.Parameter, error) {
 	}
 	// Skip the identifier
 	p.next()
+	p.skipSpaceAndComments(true)
 
+	argumentLabel := ""
 	// If another identifier is provided, then the previous identifier
 	// is the argument label, and this identifier is the parameter name
 
-	p.skipSpaceAndComments(true)
 	if p.current.Is(lexer.TokenIdentifier) {
 		argumentLabel = parameterName
-		parameterName, ok = p.current.Value.(string)
+		parameter = p.current
+		_, ok = parameter.Value.(string)
 		if !ok {
 			return nil, p.syntaxError(
 				"expected parameter %s to be a string",
 				p.current,
 			)
 		}
-		parameterPos = p.current.StartPos
 		// Skip the identifier
 		p.next()
 		p.skipSpaceAndComments(true)
 	}
 
+	identifier, err := p.assertNotKeyword("after argument label", parameter)
 	if !p.current.Is(lexer.TokenColon) {
 		return nil, p.syntaxError(
 			"expected %s after argument label/parameter name, got %s",
@@ -175,11 +178,7 @@ func parseParameter(p *parser) (*ast.Parameter, error) {
 	return ast.NewParameter(
 		p.memoryGauge,
 		argumentLabel,
-		ast.NewIdentifier(
-			p.memoryGauge,
-			parameterName,
-			parameterPos,
-		),
+		identifier,
 		typeAnnotation,
 		ast.NewRange(
 			p.memoryGauge,
@@ -206,14 +205,12 @@ func parseFunctionDeclaration(
 	p.next()
 
 	p.skipSpaceAndComments(true)
-	if !p.current.Is(lexer.TokenIdentifier) {
-		return nil, p.syntaxError(
-			"expected identifier after start of function declaration, got %s",
-			p.current.Type,
-		)
-	}
 
-	identifier := p.tokenToIdentifier(p.current)
+	identifier, err := p.nonReservedIdentifier("after start of function declaration")
+	
+	if err != nil {
+		return nil, err
+	}
 
 	// Skip the identifier
 	p.next()

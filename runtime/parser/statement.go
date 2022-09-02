@@ -381,7 +381,7 @@ func parseForStatement(p *parser) (*ast.ForStatement, error) {
 
 	if p.current.IsString(lexer.TokenIdentifier, KeywordIn) {
 		p.reportSyntaxError(
-			"expected identifier, got Keyword %q",
+			"expected identifier, got keyword %q",
 			KeywordIn,
 		)
 		p.next()
