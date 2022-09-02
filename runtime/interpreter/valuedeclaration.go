@@ -18,10 +18,7 @@
 
 package interpreter
 
-import "github.com/onflow/cadence/runtime/common"
-
 type ValueDeclaration interface {
 	ValueDeclarationName() string
-	ValueDeclarationValue(interpreter *Interpreter) Value
-	ValueDeclarationAvailable(common.Location) bool
+	ValueDeclarationValue() Value
 }

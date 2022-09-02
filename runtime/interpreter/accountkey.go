@@ -37,7 +37,7 @@ func NewAccountKeyValue(
 	inter *Interpreter,
 	keyIndex IntValue,
 	publicKey *CompositeValue,
-	hashAlgo *CompositeValue,
+	hashAlgo Value,
 	weight UFix64Value,
 	isRevoked BoolValue,
 ) *SimpleCompositeValue {

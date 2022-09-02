@@ -27,8 +27,21 @@ build:
 	go build -o ./cmd/languageserver/languageserver ./cmd/languageserver
 	GOARCH=wasm GOOS=js go build -o ./cmd/languageserver/languageserver.wasm ./cmd/languageserver
 
+.PHONY: generate
+generate:
+	go get -d github.com/vektra/mockery/cmd/mockery
+	go generate ./...
+	go mod tidy
+
 .PHONY: test
-test:
+test: e2e-test generate unit-test
+
+.PHONY: unit-test
+unit-test:
+	go test ./...
+
+.PHONY: e2e-test
+e2e-test:
 	cd test && npm install && npm t
 	GO111MODULE=on go test -parallel 8 ./...
 

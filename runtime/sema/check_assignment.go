@@ -33,8 +33,11 @@ func (checker *Checker) VisitAssignmentStatement(assignment *ast.AssignmentState
 		false,
 	)
 
-	checker.Elaboration.AssignmentStatementValueTypes[assignment] = valueType
-	checker.Elaboration.AssignmentStatementTargetTypes[assignment] = targetType
+	checker.Elaboration.AssignmentStatementTypes[assignment] =
+		AssignmentStatementTypes{
+			ValueType:  valueType,
+			TargetType: targetType,
+		}
 
 	return nil
 }
@@ -98,7 +101,7 @@ func (checker *Checker) checkAssignment(
 		}
 	}
 
-	checker.enforcePureAssignment(assignment, target)
+	checker.enforceViewAssignment(assignment, target)
 	checker.checkVariableMove(value)
 
 	checker.recordResourceInvalidation(
@@ -110,12 +113,12 @@ func (checker *Checker) checkAssignment(
 	return
 }
 
-func (checker *Checker) enforcePureAssignment(assignment ast.Statement, target ast.Expression) {
+func (checker *Checker) enforceViewAssignment(assignment ast.Statement, target ast.Expression) {
 	if !checker.CurrentPurityScope().EnforcePurity {
 		return
 	}
 
-	isWriteableInPureContext := func(t Type) bool {
+	isWriteableInViewContext := func(t Type) bool {
 		// We have to prevent any writes to references, since we cannot know where the value
 		// pointed to by the reference may have come from. Similarly, we can never safely assign
 		// to a resource; because resources are moved instead of copied, we cannot currently
@@ -128,7 +131,7 @@ func (checker *Checker) enforcePureAssignment(assignment ast.Statement, target a
 		//   }
 		//  }
 		//
-		// pure fun foo(_ f: @R): @R {
+		// view fun foo(_ f: @R): @R {
 		//   let b <- f
 		//   b.x = 3 // b was created in the current scope but modifies the resource value
 		//   return <-b
@@ -170,12 +173,12 @@ func (checker *Checker) enforcePureAssignment(assignment ast.Statement, target a
 
 	// `self` technically exists in param scope, but should still not be writeable
 	// outside of an initializer. Within an initializer, writing to `self` is considered
-	// pure: whenever we call a constructor from inside a pure scope, the value being
+	// view: whenever we call a constructor from inside a view scope, the value being
 	// constructed (i.e. the one referred to by self in the constructor) is local to that
-	// scope, so it is safe to create a new value from within a pure scope. This means that
-	// functions that just construct new values can technically be pure (in the same way that
+	// scope, so it is safe to create a new value from within a view scope. This means that
+	// functions that just construct new values can technically be view (in the same way that
 	// they are in a functional programming sense), as long as they don't modify anything else
-	// while constructing those values. They will still need a pure annotation though (e.g. pure init(...)).
+	// while constructing those values. They will still need a view annotation though (e.g. view init(...)).
 	if baseVariable.DeclarationKind == common.DeclarationKindSelf {
 		if checker.functionActivations.Current().InitializationInfo == nil {
 			checker.ObserveImpureOperation(assignment)
@@ -185,7 +188,7 @@ func (checker *Checker) enforcePureAssignment(assignment ast.Statement, target a
 
 	// Check that all the types in the access chain are not resources or references
 	for _, t := range accessChain {
-		if !isWriteableInPureContext(t) {
+		if !isWriteableInViewContext(t) {
 			checker.ObserveImpureOperation(assignment)
 			return
 		}
@@ -366,7 +369,7 @@ func (checker *Checker) visitMemberExpressionAssignment(
 		)
 	}
 
-	targetIsConstant := member.VariableKind == ast.VariableKindConstant
+	targetIsConstant := member.VariableKind != ast.VariableKindVariable
 
 	// If this is an assignment to a `self` field, it needs special handling
 	// depending on if the assignment is in an initializer or not

@@ -1466,14 +1466,12 @@ func TestCheckInvalidCreateImportedResource(t *testing.T) {
           }
         `,
 		ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithImportHandler(
-					func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
-						return sema.ElaborationImport{
-							Elaboration: importedChecker.Elaboration,
-						}, nil
-					},
-				),
+			Config: &sema.Config{
+				ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+					return sema.ElaborationImport{
+						Elaboration: importedChecker.Elaboration,
+					}, nil
+				},
 			},
 		},
 	)
@@ -3114,7 +3112,6 @@ func TestCheckInvalidEnumResourceField(t *testing.T) {
 
 // TestCheckResourceInterfaceConformance tests the check
 // of conformance of resources to resource interfaces.
-//
 func TestCheckResourceInterfaceConformance(t *testing.T) {
 
 	t.Parallel()
@@ -3134,7 +3131,6 @@ func TestCheckResourceInterfaceConformance(t *testing.T) {
 
 // TestCheckInvalidResourceInterfaceConformance tests the check
 // of conformance of resources to resource interfaces.
-//
 func TestCheckInvalidResourceInterfaceConformance(t *testing.T) {
 
 	t.Parallel()
@@ -3154,7 +3150,6 @@ func TestCheckInvalidResourceInterfaceConformance(t *testing.T) {
 
 // TestCheckInvalidResourceInterfaceUseAsType tests that a resource interface
 // can not be used as a type
-//
 func TestCheckInvalidResourceInterfaceUseAsType(t *testing.T) {
 
 	t.Parallel()
@@ -3174,7 +3169,6 @@ func TestCheckInvalidResourceInterfaceUseAsType(t *testing.T) {
 
 // TestCheckResourceInterfaceUseAsType test if a resource
 // is a subtype of a restricted AnyResource type.
-//
 func TestCheckResourceInterfaceUseAsType(t *testing.T) {
 
 	t.Parallel()
@@ -3292,7 +3286,6 @@ func TestCheckInvalidResourceLossThroughFunctionResultAccess(t *testing.T) {
 // TestCheckAnyResourceDestruction tests if resources
 // can be passed to restricted AnyResources parameters,
 // and if the argument can be destroyed.
-//
 func TestCheckAnyResourceDestruction(t *testing.T) {
 
 	t.Parallel()
@@ -3317,7 +3310,6 @@ func TestCheckAnyResourceDestruction(t *testing.T) {
 // TestCheckInvalidResourceFieldMoveThroughVariableDeclaration tests if resources nested
 // as a field in another resource cannot be moved out of the containing resource through
 // a variable declaration. This would partially invalidate the containing resource
-//
 func TestCheckInvalidResourceFieldMoveThroughVariableDeclaration(t *testing.T) {
 
 	t.Parallel()
@@ -3357,7 +3349,6 @@ func TestCheckInvalidResourceFieldMoveThroughVariableDeclaration(t *testing.T) {
 // as a field in another resource cannot be moved out of the containing resource
 // by passing the field as an argument to a function. This would partially invalidate
 // the containing resource
-//
 func TestCheckInvalidResourceFieldMoveThroughParameter(t *testing.T) {
 
 	t.Parallel()
@@ -4773,7 +4764,6 @@ func TestCheckInvalidOptionalResourceCoalescingRightSide(t *testing.T) {
 //
 // Check that an function's return information
 // does not influence another function's return information.
-//
 func TestCheckInvalidResourceLossInNestedContractResource(t *testing.T) {
 
 	t.Parallel()
@@ -4803,7 +4793,6 @@ func TestCheckInvalidResourceLossInNestedContractResource(t *testing.T) {
 }
 
 // https://github.com/onflow/cadence/issues/73
-//
 func TestCheckResourceMoveMemberInvocation(t *testing.T) {
 
 	t.Parallel()

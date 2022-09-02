@@ -20,218 +20,12 @@ package stdlib
 
 import (
 	"encoding/json"
-	"math/rand"
 	"strings"
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
-
-// This file defines functions built in to the Flow runtime.
-
-const authAccountFunctionDocString = `
-Creates a new account, paid by the given existing account
-`
-
-var authAccountFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{
-		{
-			Identifier: "payer",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.AuthAccountType,
-			),
-		},
-	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		sema.AuthAccountType,
-	),
-}
-
-const getAccountFunctionDocString = `
-Returns the public account for the given address
-`
-
-var getAccountFunctionType = &sema.FunctionType{
-	Purity: sema.ViewFunction,
-	Parameters: []*sema.Parameter{
-		{
-			Label:      sema.ArgumentLabelNotRequired,
-			Identifier: "address",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				&sema.AddressType{},
-			),
-		},
-	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		sema.PublicAccountType,
-	),
-}
-
-var LogFunctionType = &sema.FunctionType{
-	Purity: sema.ImpureFunction,
-	Parameters: []*sema.Parameter{
-		{
-			Label:      sema.ArgumentLabelNotRequired,
-			Identifier: "value",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.AnyStructType,
-			),
-		},
-	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		sema.VoidType,
-	),
-}
-
-const getCurrentBlockFunctionDocString = `
-Returns the current block, i.e. the block which contains the currently executed transaction
-`
-
-var getCurrentBlockFunctionType = &sema.FunctionType{
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		sema.BlockType,
-	),
-}
-
-const getBlockFunctionDocString = `
-Returns the block at the given height. If the given block does not exist the function returns nil
-`
-
-var getBlockFunctionType = &sema.FunctionType{
-	Purity: sema.ViewFunction,
-	Parameters: []*sema.Parameter{
-		{
-			Label:      "at",
-			Identifier: "height",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.UInt64Type,
-			),
-		},
-	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		&sema.OptionalType{
-			Type: sema.BlockType,
-		},
-	),
-}
-
-const unsafeRandomFunctionDocString = `
-Returns a pseudo-random number.
-
-NOTE: The use of this function is unsafe if not used correctly.
-
-Follow best practices to prevent security issues when using this function
-`
-
-var unsafeRandomFunctionType = &sema.FunctionType{
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		sema.UInt64Type,
-	),
-}
-
-// FlowBuiltinImpls defines the set of functions needed to implement the Flow
-// built-in functions.
-type FlowBuiltinImpls struct {
-	CreateAccount   interpreter.HostFunction
-	GetAccount      interpreter.HostFunction
-	Log             interpreter.HostFunction
-	GetCurrentBlock interpreter.HostFunction
-	GetBlock        interpreter.HostFunction
-	UnsafeRandom    interpreter.HostFunction
-}
-
-// FlowBuiltInFunctions returns a list of standard library functions, bound to
-// the provided implementation.
-func FlowBuiltInFunctions(impls FlowBuiltinImpls) StandardLibraryFunctions {
-	return StandardLibraryFunctions{
-		NewStandardLibraryFunction(
-			"AuthAccount",
-			authAccountFunctionType,
-			authAccountFunctionDocString,
-			impls.CreateAccount,
-		),
-		NewStandardLibraryFunction(
-			"getAccount",
-			getAccountFunctionType,
-			getAccountFunctionDocString,
-			impls.GetAccount,
-		),
-		NewStandardLibraryFunction(
-			"log",
-			LogFunctionType,
-			logFunctionDocString,
-			impls.Log,
-		),
-		NewStandardLibraryFunction(
-			"getCurrentBlock",
-			getCurrentBlockFunctionType,
-			getCurrentBlockFunctionDocString,
-			impls.GetCurrentBlock,
-		),
-		NewStandardLibraryFunction(
-			"getBlock",
-			getBlockFunctionType,
-			getBlockFunctionDocString,
-			impls.GetBlock,
-		),
-		NewStandardLibraryFunction(
-			"unsafeRandom",
-			unsafeRandomFunctionType,
-			unsafeRandomFunctionDocString,
-			impls.UnsafeRandom,
-		),
-	}
-}
-
-func DefaultFlowBuiltinImpls() FlowBuiltinImpls {
-	return FlowBuiltinImpls{
-		CreateAccount: func(invocation interpreter.Invocation) interpreter.Value {
-			panic(errors.NewUnexpectedError("cannot create accounts"))
-		},
-		GetAccount: func(invocation interpreter.Invocation) interpreter.Value {
-			panic(errors.NewUnexpectedError("cannot get accounts"))
-		},
-		Log: LogFunction.Function.Function,
-		GetCurrentBlock: func(invocation interpreter.Invocation) interpreter.Value {
-			panic(errors.NewUnexpectedError("cannot get blocks"))
-		},
-		GetBlock: func(invocation interpreter.Invocation) interpreter.Value {
-			panic(errors.NewUnexpectedError("cannot get blocks"))
-		},
-		UnsafeRandom: func(invocation interpreter.Invocation) interpreter.Value {
-			return interpreter.NewUInt64Value(
-				invocation.Interpreter,
-				rand.Uint64,
-			)
-		},
-	}
-}
-
-var FlowDefaultPredeclaredTypes = append(
-	FlowBuiltInTypes,
-	BuiltinTypes...,
-).ToTypeDeclarations()
-
-func FlowDefaultPredeclaredValues(impls FlowBuiltinImpls) (
-	[]sema.ValueDeclaration,
-	[]interpreter.ValueDeclaration,
-) {
-	functionDeclarations := append(
-		FlowBuiltInFunctions(impls),
-		BuiltinFunctions...,
-	)
-
-	return append(
-			functionDeclarations.ToSemaValueDeclarations(),
-			BuiltinValues.ToSemaValueDeclarations()...,
-		),
-		append(
-			functionDeclarations.ToInterpreterValueDeclarations(),
-			BuiltinValues.ToInterpreterValueDeclarations()...,
-		)
-}
 
 // Flow location
 
@@ -341,7 +135,8 @@ func newFlowEventType(identifier string, parameters ...*sema.Parameter) *sema.Co
 
 	for _, parameter := range parameters {
 
-		eventType.Fields = append(eventType.Fields,
+		eventType.Fields = append(
+			eventType.Fields,
 			parameter.Identifier,
 		)
 
@@ -371,10 +166,6 @@ var HashType = &sema.ConstantSizedType{
 	Type: sema.UInt8Type,
 }
 
-var TypeIDsType = &sema.VariableSizedType{
-	Type: sema.StringType,
-}
-
 var AccountEventAddressParameter = &sema.Parameter{
 	Identifier:     "address",
 	TypeAnnotation: sema.NewTypeAnnotation(&sema.AddressType{}),
@@ -390,11 +181,6 @@ var AccountEventPublicKeyParameter = &sema.Parameter{
 	TypeAnnotation: sema.NewTypeAnnotation(
 		sema.ByteArrayType,
 	),
-}
-
-var AccountEventContractsParameter = &sema.Parameter{
-	Identifier:     "contracts",
-	TypeAnnotation: sema.NewTypeAnnotation(TypeIDsType),
 }
 
 var AccountEventContractParameter = &sema.Parameter{
@@ -439,5 +225,3 @@ var AccountContractRemovedEventType = newFlowEventType(
 	AccountEventCodeHashParameter,
 	AccountEventContractParameter,
 )
-
-var FlowBuiltInTypes StandardLibraryTypes

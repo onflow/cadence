@@ -63,7 +63,7 @@ func TestRuntimeCyclicImport(t *testing.T) {
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
 		},
-		programChecked: func(location common.Location, duration time.Duration) {
+		programChecked: func(location Location, duration time.Duration) {
 			checkCount += 1
 		},
 	}

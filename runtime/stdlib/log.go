@@ -19,21 +19,55 @@
 package stdlib
 
 import (
-	"fmt"
-
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
 )
+
+var LogFunctionType = &sema.FunctionType{
+	Purity: sema.ImpureFunction,
+	Parameters: []*sema.Parameter{
+		{
+			Label:      sema.ArgumentLabelNotRequired,
+			Identifier: "value",
+			TypeAnnotation: sema.NewTypeAnnotation(
+				sema.AnyStructType,
+			),
+		},
+	},
+	ReturnTypeAnnotation: sema.NewTypeAnnotation(
+		sema.VoidType,
+	),
+}
 
 const logFunctionDocString = `
 Logs a string representation of the given value
 `
 
-var LogFunction = NewStandardLibraryFunction(
-	"log",
-	LogFunctionType,
-	logFunctionDocString,
-	func(invocation interpreter.Invocation) interpreter.Value {
-		fmt.Println(invocation.Arguments[0].MeteredString(invocation.Interpreter, interpreter.SeenReferences{}))
-		return interpreter.VoidValue{}
-	},
-)
+type Logger interface {
+	// ProgramLog logs program logs.
+	ProgramLog(message string) error
+}
+
+func NewLogFunction(logger Logger) StandardLibraryValue {
+	return NewStandardLibraryFunction(
+		"log",
+		LogFunctionType,
+		logFunctionDocString,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			value := invocation.Arguments[0]
+
+			memoryGauge := invocation.Interpreter
+			message := value.MeteredString(memoryGauge, interpreter.SeenReferences{})
+
+			var err error
+			wrapPanic(func() {
+				err = logger.ProgramLog(message)
+			})
+			if err != nil {
+				panic(err)
+			}
+
+			return interpreter.NewVoidValue(memoryGauge)
+		},
+	)
+}

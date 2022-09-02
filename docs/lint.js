@@ -38,6 +38,7 @@ function parseDocument(path) {
 
 const slugger = new Slugger()
 
+let warningCount = 0
 const targets = {}
 
 function basename(path) {
@@ -80,6 +81,7 @@ function check(document, path) {
         const { line, column } = node.position.start
         suggestion = suggestion ? `. ${suggestion}` : ''
         console.warn(`${path}:${line}:${column}: ${message}: ${href}${suggestion}`)
+        warningCount++
     }
 
     const checkedTarget = basename(path)
@@ -163,3 +165,5 @@ const documents = new Map(paths.map(path =>
 documents.forEach(index)
 
 documents.forEach(check)
+
+process.exit(warningCount === 0 ? 0 : 1)

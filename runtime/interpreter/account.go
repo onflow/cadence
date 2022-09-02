@@ -37,7 +37,7 @@ var authAccountFieldNames = []string{
 
 // NewAuthAccountValue constructs an auth account value.
 func NewAuthAccountValue(
-	inter *Interpreter,
+	gauge common.MemoryGauge,
 	address AddressValue,
 	accountBalanceGet func() UFix64Value,
 	accountAvailableBalanceGet func() UFix64Value,
@@ -50,7 +50,7 @@ func NewAuthAccountValue(
 	fields := map[string]Value{
 		sema.AuthAccountAddressField: address,
 		sema.AuthAccountGetCapabilityField: accountGetCapabilityFunction(
-			inter,
+			gauge,
 			address,
 			sema.CapabilityPathType,
 			sema.AuthAccountTypeGetCapabilityFunctionType,
@@ -60,55 +60,57 @@ func NewAuthAccountValue(
 	var contracts Value
 	var keys Value
 
-	computedFields := map[string]ComputedField{
-		sema.AuthAccountContractsField: func(_ *Interpreter, _ func() LocationRange) Value {
+	computeField := func(name string, inter *Interpreter, getLocationRange func() LocationRange) Value {
+		switch name {
+		case sema.AuthAccountContractsField:
 			if contracts == nil {
 				contracts = contractsConstructor()
 			}
 			return contracts
-		},
-		sema.AuthAccountKeysField: func(_ *Interpreter, _ func() LocationRange) Value {
+		case sema.AuthAccountKeysField:
 			if keys == nil {
 				keys = keysConstructor()
 			}
 			return keys
-		},
-		sema.AuthAccountBalanceField: func(_ *Interpreter, _ func() LocationRange) Value {
+		case sema.AuthAccountPublicPathsField:
+			return inter.publicAccountPaths(address, getLocationRange)
+		case sema.AuthAccountPrivatePathsField:
+			return inter.privateAccountPaths(address, getLocationRange)
+		case sema.AuthAccountStoragePathsField:
+			return inter.storageAccountPaths(address, getLocationRange)
+		case sema.AuthAccountForEachPublicField:
+			return inter.newStorageIterationFunction(address, common.PathDomainPublic, sema.PublicPathType)
+		case sema.AuthAccountForEachPrivateField:
+			return inter.newStorageIterationFunction(address, common.PathDomainPrivate, sema.PrivatePathType)
+		case sema.AuthAccountForEachStoredField:
+			return inter.newStorageIterationFunction(address, common.PathDomainStorage, sema.StoragePathType)
+		case sema.AuthAccountBalanceField:
 			return accountBalanceGet()
-		},
-		sema.AuthAccountAvailableBalanceField: func(_ *Interpreter, _ func() LocationRange) Value {
+		case sema.AuthAccountAvailableBalanceField:
 			return accountAvailableBalanceGet()
-		},
-		sema.AuthAccountStorageUsedField: func(inter *Interpreter, _ func() LocationRange) Value {
+		case sema.AuthAccountStorageUsedField:
 			return storageUsedGet(inter)
-		},
-		sema.AuthAccountStorageCapacityField: func(inter *Interpreter, _ func() LocationRange) Value {
+		case sema.AuthAccountStorageCapacityField:
 			return storageCapacityGet(inter)
-		},
-		sema.AuthAccountTypeField: func(inter *Interpreter, _ func() LocationRange) Value {
+		case sema.AuthAccountTypeField:
 			return inter.authAccountTypeFunction(address)
-		},
-		sema.AuthAccountLoadField: func(inter *Interpreter, _ func() LocationRange) Value {
+		case sema.AuthAccountLoadField:
 			return inter.authAccountLoadFunction(address)
-		},
-		sema.AuthAccountCopyField: func(inter *Interpreter, _ func() LocationRange) Value {
+		case sema.AuthAccountCopyField:
 			return inter.authAccountCopyFunction(address)
-		},
-		sema.AuthAccountSaveField: func(inter *Interpreter, _ func() LocationRange) Value {
+		case sema.AuthAccountSaveField:
 			return inter.authAccountSaveFunction(address)
-		},
-		sema.AuthAccountBorrowField: func(inter *Interpreter, _ func() LocationRange) Value {
+		case sema.AuthAccountBorrowField:
 			return inter.authAccountBorrowFunction(address)
-		},
-		sema.AuthAccountLinkField: func(inter *Interpreter, _ func() LocationRange) Value {
+		case sema.AuthAccountLinkField:
 			return inter.authAccountLinkFunction(address)
-		},
-		sema.AuthAccountUnlinkField: func(inter *Interpreter, _ func() LocationRange) Value {
+		case sema.AuthAccountUnlinkField:
 			return inter.authAccountUnlinkFunction(address)
-		},
-		sema.AuthAccountGetLinkTargetField: func(inter *Interpreter, _ func() LocationRange) Value {
+		case sema.AuthAccountGetLinkTargetField:
 			return inter.accountGetLinkTargetFunction(address)
-		},
+		}
+
+		return nil
 	}
 
 	var str string
@@ -122,12 +124,12 @@ func NewAuthAccountValue(
 	}
 
 	return NewSimpleCompositeValue(
-		inter,
+		gauge,
 		authAccountTypeID,
 		authAccountStaticType,
 		authAccountFieldNames,
 		fields,
-		computedFields,
+		computeField,
 		nil,
 		stringer,
 	)
@@ -145,7 +147,7 @@ var publicAccountFieldNames = []string{
 
 // NewPublicAccountValue constructs a public account value.
 func NewPublicAccountValue(
-	inter *Interpreter,
+	gauge common.MemoryGauge,
 	address AddressValue,
 	accountBalanceGet func() UFix64Value,
 	accountAvailableBalanceGet func() UFix64Value,
@@ -158,7 +160,7 @@ func NewPublicAccountValue(
 	fields := map[string]Value{
 		sema.PublicAccountAddressField: address,
 		sema.PublicAccountGetCapabilityField: accountGetCapabilityFunction(
-			inter,
+			gauge,
 			address,
 			sema.PublicPathType,
 			sema.PublicAccountTypeGetCapabilityFunctionType,
@@ -168,34 +170,35 @@ func NewPublicAccountValue(
 	var keys Value
 	var contracts Value
 
-	computedFields := map[string]ComputedField{
-		sema.PublicAccountKeysField: func(_ *Interpreter, _ func() LocationRange) Value {
+	computeField := func(name string, inter *Interpreter, getLocationRange func() LocationRange) Value {
+		switch name {
+		case sema.PublicAccountKeysField:
 			if keys == nil {
 				keys = keysConstructor()
 			}
 			return keys
-		},
-		sema.PublicAccountContractsField: func(_ *Interpreter, _ func() LocationRange) Value {
+		case sema.PublicAccountContractsField:
 			if contracts == nil {
 				contracts = contractsConstructor()
 			}
 			return contracts
-		},
-		sema.PublicAccountBalanceField: func(_ *Interpreter, _ func() LocationRange) Value {
+		case sema.PublicAccountPathsField:
+			return inter.publicAccountPaths(address, getLocationRange)
+		case sema.PublicAccountForEachPublicField:
+			return inter.newStorageIterationFunction(address, common.PathDomainPublic, sema.PublicPathType)
+		case sema.PublicAccountBalanceField:
 			return accountBalanceGet()
-		},
-		sema.PublicAccountAvailableBalanceField: func(_ *Interpreter, _ func() LocationRange) Value {
+		case sema.PublicAccountAvailableBalanceField:
 			return accountAvailableBalanceGet()
-		},
-		sema.PublicAccountStorageUsedField: func(inter *Interpreter, _ func() LocationRange) Value {
+		case sema.PublicAccountStorageUsedField:
 			return storageUsedGet(inter)
-		},
-		sema.PublicAccountStorageCapacityField: func(inter *Interpreter, _ func() LocationRange) Value {
+		case sema.PublicAccountStorageCapacityField:
 			return storageCapacityGet(inter)
-		},
-		sema.PublicAccountGetTargetLinkField: func(inter *Interpreter, _ func() LocationRange) Value {
+		case sema.PublicAccountGetTargetLinkField:
 			return inter.accountGetLinkTargetFunction(address)
-		},
+		}
+
+		return nil
 	}
 
 	var str string
@@ -209,12 +212,12 @@ func NewPublicAccountValue(
 	}
 
 	return NewSimpleCompositeValue(
-		inter,
+		gauge,
 		publicAccountTypeID,
 		publicAccountStaticType,
 		publicAccountFieldNames,
 		fields,
-		computedFields,
+		computeField,
 		nil,
 		stringer,
 	)

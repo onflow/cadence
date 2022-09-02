@@ -1548,6 +1548,28 @@ var (
 	UFix64TypeMaxFractionalBig = fixedpoint.UFix64TypeMaxFractionalBig
 )
 
+// size constants (in bytes) for fixed-width numeric types
+const (
+	Int8TypeSize    uint = 1
+	UInt8TypeSize   uint = 1
+	Word8TypeSize   uint = 1
+	Int16TypeSize   uint = 2
+	UInt16TypeSize  uint = 2
+	Word16TypeSize  uint = 2
+	Int32TypeSize   uint = 4
+	UInt32TypeSize  uint = 4
+	Word32TypeSize  uint = 4
+	Int64TypeSize   uint = 8
+	UInt64TypeSize  uint = 8
+	Word64TypeSize  uint = 8
+	Fix64TypeSize   uint = 8
+	UFix64TypeSize  uint = 8
+	Int128TypeSize  uint = 16
+	UInt128TypeSize uint = 16
+	Int256TypeSize  uint = 32
+	UInt256TypeSize uint = 32
+)
+
 const Fix64Scale = fixedpoint.Fix64Scale
 const Fix64Factor = fixedpoint.Fix64Factor
 
@@ -3069,7 +3091,6 @@ func baseTypeVariable(name string, ty Type) *Variable {
 		Type:            ty,
 		DeclarationKind: common.DeclarationKindType,
 		IsConstant:      true,
-		IsBaseValue:     true,
 		Access:          ast.AccessPublic,
 	}
 }
@@ -3281,7 +3302,6 @@ func baseFunctionVariable(name string, ty *FunctionType, docString string) *Vari
 		DeclarationKind: common.DeclarationKindFunction,
 		ArgumentLabels:  ty.ArgumentLabels(),
 		IsConstant:      true,
-		IsBaseValue:     true,
 		Type:            ty,
 		Access:          ast.AccessPublic,
 		DocString:       docString,
@@ -3345,7 +3365,7 @@ func numberFunctionArgumentExpressionsChecker(targetType Type) ArgumentExpressio
 		switch argument := argument.(type) {
 		case *ast.IntegerExpression:
 			if CheckIntegerLiteral(nil, argument, targetType, checker.report) {
-				if checker.extendedElaboration {
+				if checker.Config.ExtendedElaborationEnabled {
 					checker.Elaboration.NumberConversionArgumentTypes[argument] = struct {
 						Type  Type
 						Range ast.Range
@@ -3355,7 +3375,7 @@ func numberFunctionArgumentExpressionsChecker(targetType Type) ArgumentExpressio
 
 		case *ast.FixedPointExpression:
 			if CheckFixedPointLiteral(nil, argument, targetType, checker.report) {
-				if checker.extendedElaboration {
+				if checker.Config.ExtendedElaborationEnabled {
 					checker.Elaboration.NumberConversionArgumentTypes[argument] = struct {
 						Type  Type
 						Range ast.Range
@@ -3369,7 +3389,7 @@ func numberFunctionArgumentExpressionsChecker(targetType Type) ArgumentExpressio
 func init() {
 
 	// Declare a function for the string type.
-	// For now it has no parameters and creates an empty string
+	// For now, it has no parameters and creates an empty string
 
 	typeName := StringType.String()
 
@@ -3901,7 +3921,8 @@ type Member struct {
 	VariableKind    ast.VariableKind
 	ArgumentLabels  []string
 	// Predeclared fields can be considered initialized
-	Predeclared bool
+	Predeclared       bool
+	HasImplementation bool
 	// IgnoreInSerialization fields are ignored in serialization
 	IgnoreInSerialization bool
 	DocString             string

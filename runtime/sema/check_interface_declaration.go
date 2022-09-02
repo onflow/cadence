@@ -79,6 +79,10 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 	)
 
 	checker.checkUnknownSpecialFunctions(declaration.Members.SpecialFunctions())
+	checker.checkSpecialFunctionDefaultImplementation(
+		declaration,
+		declaration.DeclarationKind().Name(),
+	)
 
 	checker.checkInterfaceFunctions(
 		declaration.Members.Functions(),
@@ -178,24 +182,36 @@ func (checker *Checker) checkInterfaceFunctions(
 
 			checker.declareSelfValue(selfType, selfDocString)
 
+			mustExit := false
+			checkResourceLoss := false
+
+			if function.FunctionBlock != nil {
+				if function.FunctionBlock.HasStatements() {
+					mustExit = true
+					checkResourceLoss = true
+				} else if function.FunctionBlock.PreConditions.IsEmpty() &&
+					function.FunctionBlock.PostConditions.IsEmpty() {
+
+					checker.report(
+						&InvalidImplementationError{
+							Pos:             function.FunctionBlock.StartPosition(),
+							ContainerKind:   declarationKind,
+							ImplementedKind: common.DeclarationKindFunction,
+						},
+					)
+				}
+			}
+
 			checker.visitFunctionDeclaration(
 				function,
 				functionDeclarationOptions{
-					mustExit:          false,
+					mustExit:          mustExit,
 					declareFunction:   false,
-					checkResourceLoss: false,
+					checkResourceLoss: checkResourceLoss,
 				},
 			)
 
 			checker.updateMemberPurity(function, selfType)
-
-			if function.FunctionBlock != nil {
-				checker.checkInterfaceSpecialFunctionBlock(
-					function.FunctionBlock,
-					declarationKind,
-					common.DeclarationKindFunction,
-				)
-			}
 		}()
 	}
 }
@@ -230,10 +246,12 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 		allowOuterScopeShadowing: false,
 	})
 	checker.report(err)
-	checker.recordVariableDeclarationOccurrence(
-		identifier.Identifier,
-		variable,
-	)
+	if checker.PositionInfo != nil {
+		checker.recordVariableDeclarationOccurrence(
+			identifier.Identifier,
+			variable,
+		)
+	}
 
 	checker.Elaboration.InterfaceDeclarationTypes[declaration] = interfaceType
 	checker.Elaboration.InterfaceTypeDeclarations[interfaceType] = declaration
@@ -321,8 +339,8 @@ func (checker *Checker) declareInterfaceMembers(declaration *ast.InterfaceDeclar
 
 	interfaceType.Members = members
 	interfaceType.Fields = fields
-	if checker.positionInfoEnabled {
-		checker.memberOrigins[interfaceType] = origins
+	if checker.PositionInfo != nil {
+		checker.PositionInfo.recordMemberOrigins(interfaceType, origins)
 	}
 
 	// NOTE: determine initializer parameter types while nested types are in scope,
@@ -341,33 +359,5 @@ func (checker *Checker) declareInterfaceMembers(declaration *ast.InterfaceDeclar
 
 	for _, nestedCompositeDeclaration := range declaration.Members.Composites() {
 		checker.declareCompositeMembersAndValue(nestedCompositeDeclaration, ContainerKindInterface)
-	}
-}
-
-func (checker *Checker) checkInterfaceSpecialFunctionBlock(
-	functionBlock *ast.FunctionBlock,
-	containerKind common.DeclarationKind,
-	implementedKind common.DeclarationKind,
-) {
-
-	statements := functionBlock.Block.Statements
-	if len(statements) > 0 {
-		checker.report(
-			&InvalidImplementationError{
-				Pos:             statements[0].StartPosition(),
-				ContainerKind:   containerKind,
-				ImplementedKind: implementedKind,
-			},
-		)
-	} else if (functionBlock.PreConditions == nil || len(*functionBlock.PreConditions) == 0) &&
-		(functionBlock.PostConditions == nil || len(*functionBlock.PostConditions) == 0) {
-
-		checker.report(
-			&InvalidImplementationError{
-				Pos:             functionBlock.StartPosition(),
-				ContainerKind:   containerKind,
-				ImplementedKind: implementedKind,
-			},
-		)
 	}
 }

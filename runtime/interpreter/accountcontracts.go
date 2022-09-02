@@ -34,7 +34,7 @@ var authAccountContractsFieldNames []string = nil
 type ContractNamesGetter func(interpreter *Interpreter, getLocationRange func() LocationRange) *ArrayValue
 
 func NewAuthAccountContractsValue(
-	inter *Interpreter,
+	gauge common.MemoryGauge,
 	address AddressValue,
 	addFunction FunctionValue,
 	updateFunction FunctionValue,
@@ -50,13 +50,16 @@ func NewAuthAccountContractsValue(
 		sema.AuthAccountContractsTypeUpdateExperimentalFunctionName: updateFunction,
 	}
 
-	computedFields := map[string]ComputedField{
-		sema.AuthAccountContractsTypeNamesField: func(
-			interpreter *Interpreter,
-			getLocationRange func() LocationRange,
-		) Value {
+	computeField := func(
+		name string,
+		interpreter *Interpreter,
+		getLocationRange func() LocationRange,
+	) Value {
+		switch name {
+		case sema.AuthAccountContractsTypeNamesField:
 			return namesGetter(interpreter, getLocationRange)
-		},
+		}
+		return nil
 	}
 
 	var str string
@@ -70,12 +73,12 @@ func NewAuthAccountContractsValue(
 	}
 
 	return NewSimpleCompositeValue(
-		inter,
+		gauge,
 		authAccountContractsTypeID,
 		authAccountContractsStaticType,
 		authAccountContractsFieldNames,
 		fields,
-		computedFields,
+		computeField,
 		nil,
 		stringer,
 	)
@@ -87,7 +90,7 @@ var publicAccountContractsTypeID = sema.PublicAccountContractsType.ID()
 var publicAccountContractsStaticType StaticType = PrimitiveStaticTypePublicAccountContracts
 
 func NewPublicAccountContractsValue(
-	inter *Interpreter,
+	gauge common.MemoryGauge,
 	address AddressValue,
 	getFunction FunctionValue,
 	namesGetter ContractNamesGetter,
@@ -97,13 +100,16 @@ func NewPublicAccountContractsValue(
 		sema.PublicAccountContractsTypeGetFunctionName: getFunction,
 	}
 
-	computedFields := map[string]ComputedField{
-		sema.PublicAccountContractsTypeNamesField: func(
-			interpreter *Interpreter,
-			getLocationRange func() LocationRange,
-		) Value {
+	computeField := func(
+		name string,
+		interpreter *Interpreter,
+		getLocationRange func() LocationRange,
+	) Value {
+		switch name {
+		case sema.PublicAccountContractsTypeNamesField:
 			return namesGetter(interpreter, getLocationRange)
-		},
+		}
+		return nil
 	}
 
 	var str string
@@ -117,12 +123,12 @@ func NewPublicAccountContractsValue(
 	}
 
 	return NewSimpleCompositeValue(
-		inter,
+		gauge,
 		publicAccountContractsTypeID,
 		publicAccountContractsStaticType,
 		nil,
 		fields,
-		computedFields,
+		computeField,
 		nil,
 		stringer,
 	)

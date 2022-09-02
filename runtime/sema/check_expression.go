@@ -291,8 +291,10 @@ func (checker *Checker) visitIndexExpression(
 
 	checker.checkUnusedExpressionResourceLoss(elementType, targetExpression)
 
-	checker.Elaboration.IndexExpressionIndexedTypes[indexExpression] = indexedType
-	checker.Elaboration.IndexExpressionIndexingTypes[indexExpression] = indexingType
+	checker.Elaboration.IndexExpressionTypes[indexExpression] = IndexExpressionTypes{
+		IndexedType:  indexedType,
+		IndexingType: indexingType,
+	}
 
 	return elementType
 }
