@@ -149,14 +149,14 @@ func parseAccess(p *parser) (ast.Access, error) {
 
 		if !p.current.Is(lexer.TokenIdentifier) {
 			return ast.AccessNotSpecified, p.syntaxError(
-				"expected Keyword %q, got %s",
+				"expected keyword %q, got %s",
 				KeywordSet,
 				p.current.Type,
 			)
 		}
 		if p.current.Value != KeywordSet {
 			return ast.AccessNotSpecified, p.syntaxError(
-				"expected Keyword %q, got %q",
+				"expected keyword %q, got %q",
 				KeywordSet,
 				p.current.Value,
 			)
@@ -187,7 +187,7 @@ func parseAccess(p *parser) (ast.Access, error) {
 
 		if !p.current.Is(lexer.TokenIdentifier) {
 			return ast.AccessNotSpecified, p.syntaxError(
-				"expected Keyword %s, got %s",
+				"expected keyword %s, got %s",
 				common.EnumerateWords(
 					[]string{
 						strconv.Quote(KeywordAll),
@@ -218,7 +218,7 @@ func parseAccess(p *parser) (ast.Access, error) {
 
 		default:
 			return ast.AccessNotSpecified, p.syntaxError(
-				"expected Keyword %s, got %q",
+				"expected keyword %s, got %q",
 				common.EnumerateWords(
 					[]string{
 						strconv.Quote(KeywordAll),
@@ -528,7 +528,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 
 			default:
 				return p.syntaxError(
-					"unexpected token in import declaration: got %s, expected Keyword %q or %s",
+					"unexpected token in import declaration: got %s, expected keyword %q or %s",
 					p.current.Type,
 					KeywordFrom,
 					lexer.TokenComma,
@@ -598,7 +598,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 
 		default:
 			return nil, p.syntaxError(
-				"unexpected token in import declaration: got %s, expected Keyword %q or %s",
+				"unexpected token in import declaration: got %s, expected keyword %q or %s",
 				p.current.Type,
 				KeywordFrom,
 				lexer.TokenComma,

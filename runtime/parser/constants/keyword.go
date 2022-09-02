@@ -21,6 +21,7 @@ package constants
 import (
 	mapset "github.com/deckarep/golang-set/v2"
 )
+
 const (
 	KeywordIf          = "if"
 	KeywordElse        = "else"
@@ -67,7 +68,7 @@ const (
 	KeywordEnum        = "enum"
 )
 
-var Keywords mapset.Set[string] = mapset.NewSet(
+var AllKeywords mapset.Set[string] = mapset.NewSet(
 	KeywordIf,
 	KeywordElse,
 	KeywordWhile,
@@ -112,3 +113,12 @@ var Keywords mapset.Set[string] = mapset.NewSet(
 	KeywordDefault,
 	KeywordEnum,
 )
+
+var SoftKeywords mapset.Set[string] = mapset.NewSet(
+	KeywordFrom,
+	KeywordAccount,
+	KeywordSet,
+	KeywordAll,
+)
+
+var HardKeywords mapset.Set[string] = AllKeywords.Difference(SoftKeywords)

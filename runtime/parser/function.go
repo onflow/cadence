@@ -115,60 +115,63 @@ func parseParameter(p *parser) (*ast.Parameter, error) {
 	p.skipSpaceAndComments(true)
 
 	startPos := p.current.StartPos
-	var parameter lexer.Token = p.current
 
-	if !parameter.Is(lexer.TokenIdentifier) {
-		return nil, p.syntaxError(
-			"expected argument label or parameter name, got %s",
-			parameter.Type,
-		)
+	argumentLabel := ""
+	identifier, err := p.nonReservedIdentifier("for argument label or parameter name")
+
+	if err != nil {
+		return nil, err
 	}
 
-	parameterName, ok := parameter.Value.(string)
-
-	if !ok {
-		return nil, p.syntaxError(
-			"expected parameter %s to be a string",
-			p.current,
-		)
-	}
 	// Skip the identifier
 	p.next()
 	p.skipSpaceAndComments(true)
 
-	argumentLabel := ""
-	// If another identifier is provided, then the previous identifier
-	// is the argument label, and this identifier is the parameter name
+	identifierCt := 1
 
-	if p.current.Is(lexer.TokenIdentifier) {
-		argumentLabel = parameterName
-		parameter = p.current
-		_, ok = parameter.Value.(string)
-		if !ok {
+	collectIdents:
+	for identifierCt < 3 {
+		switch p.current.Type {
+		// label arg: type
+		case lexer.TokenIdentifier:
+			// previous param was actually a label
+			argumentLabel = identifier.Identifier
+			newIdentifier, err := p.assertNotKeyword("for argument label or parameter name", p.current)
+
+			if err != nil {
+				return nil, err
+			}
+
+			identifier = newIdentifier
+			identifierCt += 1
+			// next token
+			p.next()
+			p.skipSpaceAndComments(true)
+			continue
+		// arg: type
+		case lexer.TokenColon:
+			break collectIdents
+
+		default:
 			return nil, p.syntaxError(
-				"expected parameter %s to be a string",
-				p.current,
+				"expected identifier after argument label or parameter name, got %s",
+				p.current.Type,
 			)
 		}
-		// Skip the identifier
-		p.next()
-		p.skipSpaceAndComments(true)
 	}
 
-	identifier, err := p.assertNotKeyword("after argument label", parameter)
-	if !p.current.Is(lexer.TokenColon) {
+	if identifierCt >= 3 {
 		return nil, p.syntaxError(
-			"expected %s after argument label/parameter name, got %s",
-			lexer.TokenColon,
+			"expected keyword : after argument label or parameter name, got %s",
 			p.current.Type,
 		)
 	}
-
-	// Skip the colon
+	// skip the colon
 	p.next()
 	p.skipSpaceAndComments(true)
 
 	typeAnnotation, err := parseTypeAnnotation(p)
+
 	if err != nil {
 		return nil, err
 	}
@@ -180,11 +183,7 @@ func parseParameter(p *parser) (*ast.Parameter, error) {
 		argumentLabel,
 		identifier,
 		typeAnnotation,
-		ast.NewRange(
-			p.memoryGauge,
-			startPos,
-			endPos,
-		),
+		ast.NewRange(p.memoryGauge, startPos, endPos),
 	), nil
 }
 

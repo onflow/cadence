@@ -413,7 +413,7 @@ func parseForStatement(p *parser) (*ast.ForStatement, error) {
 
 	if !p.current.IsString(lexer.TokenIdentifier, KeywordIn) {
 		p.reportSyntaxError(
-			"expected Keyword %q, got %s",
+			"expected keyword %q, got %s",
 			KeywordIn,
 			p.current.Type,
 		)
