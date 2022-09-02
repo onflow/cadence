@@ -6632,7 +6632,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 func TestCastResourceAsEnumAsEmptyDict(t *testing.T) {
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, "resource as { enum x : as { } }")
+	_, err := ParseAndCheck(t, "resource foo { enum x : foo { } }")
 
 	errs := ExpectCheckerErrors(t, err, 2)
 
