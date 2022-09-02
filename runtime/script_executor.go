@@ -58,9 +58,10 @@ func newInterpreterScriptExecutor(
 ) *interpreterScriptExecutor {
 
 	return &interpreterScriptExecutor{
-		runtime: runtime,
-		script:  script,
-		context: context,
+		runtime:        runtime,
+		script:         script,
+		context:        context,
+		checkerOptions: context.CheckerOptions,
 	}
 }
 
