@@ -20,6 +20,7 @@ package parser
 
 import (
 	"encoding/hex"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -274,21 +275,18 @@ func parseVariableDeclaration(
 	p.next()
 
 	p.skipSpaceAndComments(true)
-	if !p.current.Is(lexer.TokenIdentifier) {
-		return nil, p.syntaxError(
-			"expected identifier after start of variable declaration, got %s",
-			p.current.Type,
-		)
-	}
 
-	identifier := p.tokenToIdentifier(p.current)
+	identifier, err := p.nonReservedIdentifier("after start of variable declaration")
+
+	if err != nil {
+		return nil, err
+	}
 
 	// Skip the identifier
 	p.next()
 	p.skipSpaceAndComments(true)
 
 	var typeAnnotation *ast.TypeAnnotation
-	var err error
 
 	if p.current.Is(lexer.TokenColon) {
 		// Skip the colon
@@ -506,7 +504,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 
 					if !isCommaOrFrom {
 						return p.syntaxError(
-							"expected %s, got Keyword %q",
+							"expected %s, got keyword %q",
 							lexer.TokenIdentifier,
 							p.current.Value,
 						)
@@ -699,14 +697,13 @@ func parseEventDeclaration(
 	p.next()
 
 	p.skipSpaceAndComments(true)
-	if !p.current.Is(lexer.TokenIdentifier) {
-		return nil, p.syntaxError(
-			"expected identifier after start of event declaration, got %s",
-			p.current.Type,
-		)
+
+	identifier, err := p.nonReservedIdentifier("after start of event declaration")
+
+	if err != nil {
+		return nil, err
 	}
 
-	identifier := p.tokenToIdentifier(p.current)
 	// Skip the identifier
 	p.next()
 
@@ -894,7 +891,7 @@ func parseCompositeOrInterfaceDeclaration(
 			isInterface = true
 			if wasInterface {
 				return nil, p.syntaxError(
-					"expected interface name, got Keyword %q",
+					"expected interface name, got keyword %q",
 					KeywordInterface,
 				)
 			}
@@ -902,7 +899,13 @@ func parseCompositeOrInterfaceDeclaration(
 			p.next()
 			continue
 		} else {
-			identifier = p.tokenToIdentifier(p.current)
+			ctx := fmt.Sprintf("following %s declaration", compositeKind.Keyword())
+			nonReserved, err := p.nonReservedIdentifier(ctx)
+			if err != nil {
+				return nil, err
+			}
+
+			identifier = nonReserved
 			// Skip the identifier
 			p.next()
 			break
