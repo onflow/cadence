@@ -223,11 +223,10 @@ let double =
     }
 ```
 
-## Function Purity
+## View Functions
 
-Functions can be annotated as `view` to indicate that they do not modify any external state
-or any account state. A `view` annotation can be added to the beginning of a function declaration
-or expression like so: 
+Functions can be annotated as `view` to indicate that they do not modify any external state or any account state. 
+A `view` annotation can be added to the beginning of a function declaration or expression like so: 
 
 ```cadence
 view pub fun foo(): Void {}
@@ -238,21 +237,24 @@ pub struct S {
 }
 ```
 
-All functions that do not have a `view` annotation are considered "impure", and cannot be called
-inside of `view` contexts, like inside of a `view` function or in a precondition or postcondition. 
+All functions that do not have a `view` annotation are considered non-view, 
+and cannot be called inside of `view` contexts, 
+like inside of a `view` function or in a precondition or postcondition. 
 
-Function types can also have `view` annotations, to be placed after the opening parenthesis but 
-before the parameter list. So, for example, these are valid types:
+Function types can also have `view` annotations, 
+to be placed after the opening parenthesis but before the parameter list. 
+So, for example, these are valid types:
 
 ```cadence
     let f: (view (Int): Int) = ...
     let h: (view (): (view (): Void)) = ...
 ```
 
-Any function types without a `view` annotation will be considered "impure". 
+Any function types without a `view` annotation will be considered non-view. 
 
-Functions are covariant in their purity, so a `view` function is a subtype of an "impure" function
-with the same parameters and return types. So, the following declarations would typecheck:
+Functions are covariant with respect to `view` annotations, 
+so a `view` function is a subtype of an non-view function with the same parameters and return types. 
+So, the following declarations would typecheck:
 
 ```cadence
     let a: (view (): Void) = view fun() {}
@@ -271,7 +273,7 @@ while these would not:
 
 The operations that are not permitted in `view` contexts are: 
 
-* Calling an impure function (including any functions that modify account state or storage like `save` or `load`)
+* Calling a non-view function (including any functions that modify account state or storage like `save` or `load`)
 * Writing to or modifying any resources
 * Writing to or modifying any references
 * Indexed assignment or writes to any variables not statically knowable to have been defined in the current function's scope, 
@@ -554,10 +556,9 @@ fun incrementN() {
 }
 ```
 
-Both preconditions and postconditions are considered `view` contexts; so any operations
-that are not legal in functions with `view` annotations are also not allowed
-in conditions. In particular, this means that if you wish to call a function
-in a condition, that function must be `view`. 
+Both preconditions and postconditions are considered `view` contexts; 
+any operations that are not legal in functions with `view` annotations are also not allowed in conditions. 
+In particular, this means that if you wish to call a function in a condition, that function must be `view`. 
 
 ## Functions are Values
 

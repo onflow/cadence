@@ -228,10 +228,10 @@ token.id = 23
 
 Initializers do not support overloading.
 
-Initializers can also be declared with the `view` keyword, to indicate that they do not perform any impure operations, and
-to allow them to be called from within other `view` functions. In an initializer, writes to `self` are not considered impure
-like they are within other composite functions; as the value being constructed here is by definition local to the context 
-calling the initializer. 
+Initializers can also be declared with the `view` keyword, to indicate that they do not perform any mutating operations, 
+and to allow them to be called from within other `view` functions. 
+In an initializer, writes to `self` are not considered non-view like they are within other composite functions,
+as the value being constructed here is by definition local to the context calling the initializer. 
 
 ```cadence
 pub struct Token {
