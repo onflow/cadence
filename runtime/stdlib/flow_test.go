@@ -20,9 +20,10 @@ package stdlib
 
 import (
 	"encoding/json"
-	"github.com/onflow/cadence/runtime/common"
 	"strings"
 	"testing"
+
+	"github.com/onflow/cadence/runtime/common"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
