@@ -2144,13 +2144,13 @@ pub contract Test {
     }
 
     pub resource interface Receiver {
-        pub fun receive(as: Role, capability: Capability)
+        pub fun receive(asRole: Role, capability: Capability)
     }
 
     pub resource Holder: Receiver {
         access(self) let roles: { Role: Capability }
-        pub fun receive(as: Role, capability: Capability) {
-            self.roles[as] = capability
+        pub fun receive(asRole: Role, capability: Capability) {
+            self.roles[asRole] = capability
         }
 
         pub fun borrowA(): &AAA {
@@ -2174,11 +2174,11 @@ pub contract Test {
         return <- create Holder()
     }
 
-    pub fun attach(as: Role, receiver: &AnyResource{Receiver}) {
+    pub fun attach(asRole: Role, receiver: &AnyResource{Receiver}) {
         // TODO: Now verify that the owner is valid.
 
-        let capability = self.capabilities[as]!
-        receiver.receive(as: as, capability: capability)
+        let capability = self.capabilities[asRole]!
+        receiver.receive(asRole: asRole, capability: capability)
     }
 
     init() {
@@ -2200,7 +2200,7 @@ transaction {
     prepare(acct: AuthAccount) {}
     execute {
         let holder <- Test.createHolder()
-        Test.attach(as: Test.Role.aaa, receiver: &holder as &AnyResource{Test.Receiver})
+        Test.attach(asRole: Test.Role.aaa, receiver: &holder as &AnyResource{Test.Receiver})
         destroy holder
     }
 }

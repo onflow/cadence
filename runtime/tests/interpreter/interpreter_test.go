@@ -8432,10 +8432,10 @@ func TestInterpretHexDecode(t *testing.T) {
                   var res: [UInt8] = []
                   while i < length {
                       let c = s.slice(from: i * 2, upTo: i * 2 + 1)
-                      let in = table[c] ?? panic("Invalid character ".concat(c))
+                      let in1 = table[c] ?? panic("Invalid character ".concat(c))
                       let c2 = s.slice(from: i * 2 + 1, upTo: i * 2 + 2)
                       let in2 = table[c2] ?? panic("Invalid character ".concat(c2))
-                      res.append((16 as UInt8) * in + in2)
+                      res.append((16 as UInt8) * in1 + in2)
                       i = i + 1
                   }
                   return res
