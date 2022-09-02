@@ -21,8 +21,10 @@ package parser
 import (
 	"fmt"
 	"math/big"
+	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -1997,6 +1999,37 @@ func TestParseCompositeDeclaration(t *testing.T) {
 	})
 }
 
+func TestParseInvalidCompositeFunctionWithSelfParameter(t *testing.T) {
+
+	t.Parallel()
+
+	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+		t.Run(kind.Keyword(), func(t *testing.T) {
+
+			code := fmt.Sprintf(`%s Foo { fun test(_ self: Int) {} }`, kind.Keyword())
+
+			selfKeywordPos := strings.Index(code, "self")
+
+			errPos := ast.Position {Line: 1, Column: selfKeywordPos, Offset: selfKeywordPos}
+
+			_, err := ParseDeclarations(
+				code,
+				nil,
+			)
+
+			utils.AssertEqualWithDiff(
+				t,
+				[]error {
+					&SyntaxError{
+						Pos: errPos,
+						Message: "expected identifier for argument label or parameter name, got keyword self",
+					},
+				},
+				err,
+			)
+		})
+	}
+}
 func TestParseInterfaceDeclaration(t *testing.T) {
 
 	t.Parallel()
@@ -4791,6 +4824,57 @@ func TestParseCompositeDeclarationWithSemicolonSeparatedMembers(t *testing.T) {
 	)
 }
 
+func TestParseInvalidCompositeFunctionNames(t *testing.T) {
+
+	t.Parallel()
+
+	interfacePossibilities := []bool{true, false}
+
+	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+		for _, isInterface := range interfacePossibilities {
+
+			interfaceKeyword := ""
+			if isInterface {
+				interfaceKeyword = "interface"
+			}
+
+			body := "{}"
+			if isInterface {
+				body = ""
+			}
+
+			testName := fmt.Sprintf("%s_%s", kind.Keyword(), interfaceKeyword)
+
+			t.Run(testName, func(t *testing.T) {
+
+				_, err := ParseProgram(
+					fmt.Sprintf(
+						`
+                          %[1]s %[2]s Test {
+                              fun init() %[3]s
+                              fun destroy() %[3]s
+                          }
+                        `,
+						kind.Keyword(),
+						interfaceKeyword,
+						body,
+					),
+					nil,
+				)
+
+				errs, ok := err.(Error)
+				assert.True(t, ok, "Parser error does not conform to parser.Error")
+				syntaxErr := errs.Errors[0].(*SyntaxError)
+
+				utils.AssertEqualWithDiff(
+					t, 
+					"expected identifier after start of function declaration, got keyword init",
+					 syntaxErr.Message,
+				)
+			})
+		}
+	}
+}
 // TODO:
 //func TestParseAccessModifiers(t *testing.T) {
 //

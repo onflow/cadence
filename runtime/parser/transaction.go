@@ -100,7 +100,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 
 		default:
 			return nil, p.syntaxError(
-				"unexpected identifier, expected Keyword %q or %q, got %q",
+				"unexpected identifier, expected keyword %q or %q, got %q",
 				KeywordPrepare,
 				KeywordExecute,
 				p.current.Value,
@@ -166,7 +166,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 
 			default:
 				return nil, p.syntaxError(
-					"unexpected identifier, expected Keyword %q or %q, got %q",
+					"unexpected identifier, expected keyword %q or %q, got %q",
 					KeywordExecute,
 					KeywordPost,
 					p.current.Value,
