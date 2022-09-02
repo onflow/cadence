@@ -29,9 +29,11 @@ import (
 
 const ScriptLocationPrefix = "s"
 
+const ScriptIDLength = 32
+
 // ScriptLocation
 //
-type ScriptLocation [32]byte
+type ScriptLocation [ScriptIDLength]byte
 
 var _ Location = ScriptLocation{}
 
@@ -54,12 +56,30 @@ func (l ScriptLocation) MeteredID(memoryGauge MemoryGauge) LocationID {
 }
 
 func (l ScriptLocation) TypeID(memoryGauge MemoryGauge, qualifiedIdentifier string) TypeID {
-	return NewMeteredTypeID(
-		memoryGauge,
-		ScriptLocationPrefix,
-		l.String(),
-		qualifiedIdentifier,
-	)
+	var i int
+
+	// ScriptLocationPrefix '.' hex-encoded ID '.' qualifiedIdentifier
+	length := len(ScriptLocationPrefix) + 1 + hex.EncodedLen(ScriptIDLength) + 1 + len(qualifiedIdentifier)
+
+	UseMemory(memoryGauge, NewRawStringMemoryUsage(length))
+
+	b := make([]byte, length)
+
+	copy(b, ScriptLocationPrefix)
+	i += len(ScriptLocationPrefix)
+
+	b[i] = '.'
+	i += 1
+
+	hex.Encode(b[i:], l[:])
+	i += ScriptIDLength * 2
+
+	b[i] = '.'
+	i += 1
+
+	copy(b[i:], qualifiedIdentifier)
+
+	return TypeID(b)
 }
 
 func (l ScriptLocation) QualifiedIdentifier(typeID TypeID) string {
