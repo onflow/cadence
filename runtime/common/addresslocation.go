@@ -83,7 +83,7 @@ func (l AddressLocation) TypeID(memoryGauge MemoryGauge, qualifiedIdentifier str
 	var i int
 
 	// AddressLocationPrefix '.' hex-encoded address '.' qualifiedIdentifier
-	length := len(AddressLocationPrefix) + 1 + AddressLength*2 + 1 + len(qualifiedIdentifier)
+	length := len(AddressLocationPrefix) + 1 + hex.EncodedLen(AddressLength) + 1 + len(qualifiedIdentifier)
 
 	UseMemory(memoryGauge, NewRawStringMemoryUsage(length))
 

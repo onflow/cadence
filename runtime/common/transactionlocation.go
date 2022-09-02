@@ -29,9 +29,11 @@ import (
 
 const TransactionLocationPrefix = "t"
 
+const TransactionIDLength = 32
+
 // TransactionLocation
 //
-type TransactionLocation [32]byte
+type TransactionLocation [TransactionIDLength]byte
 
 var _ Location = TransactionLocation{}
 
@@ -54,12 +56,30 @@ func (l TransactionLocation) MeteredID(memoryGauge MemoryGauge) LocationID {
 }
 
 func (l TransactionLocation) TypeID(memoryGauge MemoryGauge, qualifiedIdentifier string) TypeID {
-	return NewMeteredTypeID(
-		memoryGauge,
-		TransactionLocationPrefix,
-		l.String(),
-		qualifiedIdentifier,
-	)
+	var i int
+
+	// TransactionLocationPrefix '.' hex-encoded ID '.' qualifiedIdentifier
+	length := len(TransactionLocationPrefix) + 1 + hex.EncodedLen(TransactionIDLength) + 1 + len(qualifiedIdentifier)
+
+	UseMemory(memoryGauge, NewRawStringMemoryUsage(length))
+
+	b := make([]byte, length)
+
+	copy(b, TransactionLocationPrefix)
+	i += len(TransactionLocationPrefix)
+
+	b[i] = '.'
+	i += 1
+
+	hex.Encode(b[i:], l[:])
+	i += TransactionIDLength * 2
+
+	b[i] = '.'
+	i += 1
+
+	copy(b[i:], qualifiedIdentifier)
+
+	return TypeID(b)
 }
 
 func (l TransactionLocation) QualifiedIdentifier(typeID TypeID) string {
