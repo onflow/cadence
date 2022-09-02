@@ -33,6 +33,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/parser/constants"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -5653,12 +5654,42 @@ func TestParseIdentifiers(t *testing.T) {
 
 	t.Parallel()
 
-	for _, name := range []string{"foo", "from", "create", "destroy", "for", "in"} {
+	names := []string {
+		"foo",
+		"_foo",
+		"foo123",
+		"foo________",
+		"FOO_______",
+		"Fo123__21341278AAAAAAAAAAAAA",
+	}
+	for _, name := range names {
 		t.Run(name, func(t *testing.T) {
+
 			code := fmt.Sprintf(`let %s = 1`, name)
 			_, errs := ParseProgram(code, nil)
 			require.Empty(t, errs)
 		})
+	}
+}
+
+func TestParseReservedIdent(t *testing.T) {
+	t.Parallel()
+
+	for keyword := range constants.Keywords.Iter() {
+		code := fmt.Sprintf(`let %s = 0`, keyword)
+		_, err := ParseProgram(code, nil)
+		upcast, _ := err.(Error)
+		errs := upcast.Errors
+
+		utils.AssertEqualWithDiff(t, 
+			[]error {
+				&SyntaxError{
+					Pos: ast.Position{Line: 1, Column: 4, Offset: 4, },
+					Message: "expected identifier after start of variable declaration, got keyword " + keyword,
+				},
+			},
+			errs,
+		)
 	}
 }
 
