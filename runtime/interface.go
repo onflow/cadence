@@ -74,10 +74,6 @@ type Interface interface {
 	AllocateStorageIndex(owner []byte) (atree.StorageIndex, error)
 	// CreateAccount creates a new account.
 	CreateAccount(payer Address) (address Address, err error)
-	// AddEncodedAccountKey appends an encoded key to an account.
-	AddEncodedAccountKey(address Address, publicKey []byte) error
-	// RevokeEncodedAccountKey removes a key from an account by index, add returns the encoded key.
-	RevokeEncodedAccountKey(address Address, index int) (publicKey []byte, err error)
 	// AddAccountKey appends a key to an account.
 	AddAccountKey(address Address, publicKey *PublicKey, hashAlgo HashAlgorithm, weight int) (*AccountKey, error)
 	// GetAccountKey retrieves a key from an account by index.
@@ -136,8 +132,8 @@ type Interface interface {
 	ValidatePublicKey(key *PublicKey) error
 	// GetAccountContractNames returns the names of all contracts deployed in an account.
 	GetAccountContractNames(address Address) ([]string, error)
-	// RecordTrace records a opentelemetry trace.
-	RecordTrace(operation string, location common.Location, duration time.Duration, attrs []attribute.KeyValue)
+	// RecordTrace records an opentelemetry trace.
+	RecordTrace(operation string, location Location, duration time.Duration, attrs []attribute.KeyValue)
 	// BLSVerifyPOP verifies a proof of possession (PoP) for the receiver public key.
 	BLSVerifyPOP(pk *PublicKey, s []byte) (bool, error)
 	// BLSAggregateSignatures aggregate multiple BLS signatures into one.
@@ -156,7 +152,7 @@ type Interface interface {
 }
 
 type Metrics interface {
-	ProgramParsed(location common.Location, duration time.Duration)
-	ProgramChecked(location common.Location, duration time.Duration)
-	ProgramInterpreted(location common.Location, duration time.Duration)
+	ProgramParsed(location Location, duration time.Duration)
+	ProgramChecked(location Location, duration time.Duration)
+	ProgramInterpreted(location Location, duration time.Duration)
 }

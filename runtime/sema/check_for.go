@@ -83,7 +83,7 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) ast.Repr 
 		allowOuterScopeShadowing: false,
 	})
 	checker.report(err)
-	if checker.positionInfoEnabled {
+	if checker.PositionInfo != nil {
 		checker.recordVariableDeclarationOccurrence(identifier, variable)
 	}
 
@@ -99,7 +99,7 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) ast.Repr 
 			allowOuterScopeShadowing: false,
 		})
 		checker.report(err)
-		if checker.positionInfoEnabled {
+		if checker.PositionInfo != nil {
 			checker.recordVariableDeclarationOccurrence(index, indexVariable)
 		}
 	}

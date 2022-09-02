@@ -417,7 +417,6 @@ func TestCheckContractNestedDeclarationOrderInsideOutside(t *testing.T) {
 // - Using inner types in functions outside (both type in parameter and constructor)
 // - Using outer functions in inner types' functions
 // - Mutually using sibling types
-//
 func TestCheckContractNestedDeclarationsComplex(t *testing.T) {
 
 	t.Parallel()
@@ -737,8 +736,8 @@ func TestCheckContractEnumAccessRestricted(t *testing.T) {
 
 	_, err := ParseAndCheckWithOptions(t, "contract enum{}let x = enum!",
 		ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithAccessCheckMode(sema.AccessCheckModeStrict),
+			Config: &sema.Config{
+				AccessCheckMode: sema.AccessCheckModeStrict,
 			},
 		},
 	)

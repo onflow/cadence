@@ -392,10 +392,10 @@ func TestExportValue(t *testing.T) {
 				return interpreter.NewAccountKeyValue(
 					inter,
 					interpreter.NewUnmeteredIntValueFromInt64(1),
-					NewPublicKeyValue(
+					stdlib.NewPublicKeyValue(
 						inter,
 						interpreter.ReturnEmptyLocationRange,
-						&PublicKey{
+						&stdlib.PublicKey{
 							PublicKey: []byte{1, 2, 3},
 							SignAlgo:  2,
 						},
@@ -407,7 +407,7 @@ func TestExportValue(t *testing.T) {
 							return nil
 						},
 					),
-					stdlib.NewHashAlgorithmCase(inter, 1),
+					stdlib.NewHashAlgorithmCase(1),
 					interpreter.NewUnmeteredUFix64ValueWithInteger(10),
 					false,
 				)
@@ -1862,7 +1862,14 @@ func TestExportTypeValue(t *testing.T) {
 		program, err := parser.ParseProgram(code, nil)
 		require.NoError(t, err)
 
-		checker, err := sema.NewChecker(program, TestLocation, nil, false)
+		checker, err := sema.NewChecker(
+			program,
+			TestLocation,
+			nil,
+			&sema.Config{
+				AccessCheckMode: sema.AccessCheckModeStrict,
+			},
+		)
 		require.NoError(t, err)
 
 		err = checker.Check()
@@ -1948,12 +1955,19 @@ func TestExportCapabilityValue(t *testing.T) {
 	t.Run("Struct", func(t *testing.T) {
 
 		const code = `
-          pub struct S {}
+          struct S {}
         `
 		program, err := parser.ParseProgram(code, nil)
 		require.NoError(t, err)
 
-		checker, err := sema.NewChecker(program, TestLocation, nil, false)
+		checker, err := sema.NewChecker(
+			program,
+			TestLocation,
+			nil,
+			&sema.Config{
+				AccessCheckMode: sema.AccessCheckModeNotSpecifiedUnrestricted,
+			},
+		)
 		require.NoError(t, err)
 
 		err = checker.Check()
@@ -2061,12 +2075,19 @@ func TestExportLinkValue(t *testing.T) {
 	t.Run("Struct", func(t *testing.T) {
 
 		const code = `
-          pub struct S {}
+          struct S {}
         `
 		program, err := parser.ParseProgram(code, nil)
 		require.NoError(t, err)
 
-		checker, err := sema.NewChecker(program, TestLocation, nil, false)
+		checker, err := sema.NewChecker(
+			program,
+			TestLocation,
+			nil,
+			&sema.Config{
+				AccessCheckMode: sema.AccessCheckModeNotSpecifiedUnrestricted,
+			},
+		)
 		require.NoError(t, err)
 
 		err = checker.Check()
@@ -3686,7 +3707,7 @@ func TestTypeValueImport(t *testing.T) {
 		encodedArg, err := json.Encode(typeValue)
 		require.NoError(t, err)
 
-		rt := NewInterpreterRuntime()
+		rt := newTestInterpreterRuntime()
 
 		var ok bool
 
@@ -3737,7 +3758,7 @@ func TestTypeValueImport(t *testing.T) {
 		encodedArg, err := json.Encode(typeValue)
 		require.NoError(t, err)
 
-		rt := NewInterpreterRuntime()
+		rt := newTestInterpreterRuntime()
 
 		runtimeInterface := &testRuntimeInterface{
 			meterMemory: func(_ common.MemoryUsage) error {
@@ -3791,7 +3812,7 @@ func TestCapabilityValueImport(t *testing.T) {
 		encodedArg, err := json.Encode(capabilityValue)
 		require.NoError(t, err)
 
-		rt := NewInterpreterRuntime()
+		rt := newTestInterpreterRuntime()
 
 		var ok bool
 
@@ -3844,7 +3865,7 @@ func TestCapabilityValueImport(t *testing.T) {
 		encodedArg, err := json.Encode(capabilityValue)
 		require.NoError(t, err)
 
-		rt := NewInterpreterRuntime()
+		rt := newTestInterpreterRuntime()
 
 		runtimeInterface := &testRuntimeInterface{
 			meterMemory: func(_ common.MemoryUsage) error {
@@ -3891,7 +3912,7 @@ func TestCapabilityValueImport(t *testing.T) {
 		encodedArg, err := json.Encode(capabilityValue)
 		require.NoError(t, err)
 
-		rt := NewInterpreterRuntime()
+		rt := newTestInterpreterRuntime()
 
 		runtimeInterface := &testRuntimeInterface{
 			meterMemory: func(_ common.MemoryUsage) error {
@@ -3938,7 +3959,7 @@ func TestCapabilityValueImport(t *testing.T) {
 		encodedArg, err := json.Encode(capabilityValue)
 		require.NoError(t, err)
 
-		rt := NewInterpreterRuntime()
+		rt := newTestInterpreterRuntime()
 
 		runtimeInterface := &testRuntimeInterface{
 			log: func(s string) {
@@ -3994,7 +4015,7 @@ func TestCapabilityValueImport(t *testing.T) {
 		encodedArg, err := json.Encode(capabilityValue)
 		require.NoError(t, err)
 
-		rt := NewInterpreterRuntime()
+		rt := newTestInterpreterRuntime()
 
 		runtimeInterface := &testRuntimeInterface{
 			log: func(s string) {
@@ -4079,7 +4100,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 							// Sign algorithm
 							cadence.NewEnum(
 								[]cadence.Value{
-									cadence.NewUInt8(0),
+									cadence.NewUInt8(1),
 								},
 							).WithType(SignAlgoType),
 						},
@@ -4091,7 +4112,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 					runtimeInterface := &testRuntimeInterface{
 						storage: storage,
-						validatePublicKey: func(publicKey *PublicKey) error {
+						validatePublicKey: func(publicKey *stdlib.PublicKey) error {
 							publicKeyValidated = true
 							return publicKeyActualError
 						},
@@ -4150,7 +4171,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 				// Sign algorithm
 				cadence.NewEnum(
 					[]cadence.Value{
-						cadence.NewUInt8(0),
+						cadence.NewUInt8(1),
 					},
 				).WithType(SignAlgoType),
 			},
@@ -4526,7 +4547,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
                                             "name":"rawValue",
                                             "value":{
                                                 "type":"UInt8",
-                                                "value":"0"
+                                                "value":"1"
                                             }
                                         }
                                     ]
@@ -4546,7 +4567,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,
-			validatePublicKey: func(publicKey *PublicKey) error {
+			validatePublicKey: func(publicKey *stdlib.PublicKey) error {
 				publicKeyValidated = true
 				return nil
 			},
@@ -4619,7 +4640,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,
-			validatePublicKey: func(publicKey *PublicKey) error {
+			validatePublicKey: func(publicKey *stdlib.PublicKey) error {
 				publicKeyValidated = true
 				return nil
 			},
@@ -4923,9 +4944,11 @@ func newTestInterpreter(tb testing.TB) *interpreter.Interpreter {
 	inter, err := interpreter.NewInterpreter(
 		nil,
 		TestLocation,
-		interpreter.WithStorage(storage),
-		interpreter.WithAtreeValueValidationEnabled(true),
-		interpreter.WithAtreeStorageValidationEnabled(true),
+		&interpreter.Config{
+			Storage:                       storage,
+			AtreeValueValidationEnabled:   true,
+			AtreeStorageValidationEnabled: true,
+		},
 	)
 	require.NoError(tb, err)
 

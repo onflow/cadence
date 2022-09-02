@@ -455,7 +455,7 @@ resource interface OuterInterface {
     struct interface InnerInterface {}
 }
 
-// Declare a resource named `SomeOuter` that implements the interface `OuterInterface`
+// Declare a resource named `SomeOuter` that implements the interface `OuterInterface`.
 //
 // The resource is not required to implement `OuterInterface.InnerInterface`.
 //
@@ -467,3 +467,44 @@ resource SomeOuter: OuterInterface {}
 struct SomeInner: OuterInterface.InnerInterface {}
 
 ```
+
+## Interface Default Functions
+
+Interfaces can provide default functions:
+If the concrete type implementing the interface does not provide an implementation
+for the function required by the interface,
+then the interface's default function is used in the implementation.
+
+```cadence
+// Declare a struct interface `Container`,
+// which declares a default function `getCount`.
+//
+struct interface Container {
+
+    let items: [AnyStruct]
+
+    fun getCount(): Int {
+        return self.items.length
+    }
+}
+
+// Declare a concrete struct named `Numbers` that implements the interface `Container`.
+//
+// The struct does not implement the function `getCount` of the interface `Container`,
+// so the default function for `getCount` is used.
+//
+struct Numbers: Container {
+    let items: [AnyStruct]
+
+    init() {
+        self.items = []
+    }
+}
+
+let numbers = Numbers()
+numbers.getCount()  // is 0
+```
+
+Interfaces cannot provide default initializers or default destructors.
+
+Only one conformance may provide a default function.

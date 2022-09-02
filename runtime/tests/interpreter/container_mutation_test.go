@@ -306,22 +306,22 @@ func TestArrayMutation(t *testing.T) {
 
 		invoked := false
 
-		standardLibraryFunctions :=
-			stdlib.StandardLibraryFunctions{
-				stdlib.NewStandardLibraryFunction(
-					"log",
-					stdlib.LogFunctionType,
-					"",
-					func(invocation interpreter.Invocation) interpreter.Value {
-						invoked = true
-						assert.Equal(t, "\"hello\"", invocation.Arguments[0].String())
-						return interpreter.VoidValue{}
-					},
-				),
-			}
+		valueDeclaration := stdlib.NewStandardLibraryFunction(
+			"log",
+			stdlib.LogFunctionType,
+			"",
+			func(invocation interpreter.Invocation) interpreter.Value {
+				invoked = true
+				assert.Equal(t, "\"hello\"", invocation.Arguments[0].String())
+				return interpreter.VoidValue{}
+			},
+		)
 
-		valueDeclarations := standardLibraryFunctions.ToSemaValueDeclarations()
-		values := standardLibraryFunctions.ToInterpreterValueDeclarations()
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(valueDeclaration)
+
+		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+		baseActivation.Declare(valueDeclaration)
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
             fun test() {
@@ -333,11 +333,11 @@ func TestArrayMutation(t *testing.T) {
                 logger("hello")
             }`,
 			ParseCheckAndInterpretOptions{
-				CheckerOptions: []sema.Option{
-					sema.WithPredeclaredValues(valueDeclarations),
+				CheckerConfig: &sema.Config{
+					BaseValueActivation: baseValueActivation,
 				},
-				Options: []interpreter.Option{
-					interpreter.WithPredeclaredValues(values),
+				Config: &interpreter.Config{
+					BaseActivation: baseActivation,
 				},
 			},
 		)
@@ -445,15 +445,24 @@ func TestArrayMutation(t *testing.T) {
 	})
 
 	t.Run("invalid function mutation", func(t *testing.T) {
+
 		t.Parallel()
 
-		standardLibraryFunctions :=
-			stdlib.StandardLibraryFunctions{
-				stdlib.LogFunction,
-			}
+		valueDeclaration := stdlib.NewStandardLibraryFunction(
+			"log",
+			stdlib.LogFunctionType,
+			"",
+			func(invocation interpreter.Invocation) interpreter.Value {
+				assert.Fail(t, "unexpected call of log")
+				return interpreter.VoidValue{}
+			},
+		)
 
-		valueDeclarations := standardLibraryFunctions.ToSemaValueDeclarations()
-		values := standardLibraryFunctions.ToInterpreterValueDeclarations()
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(valueDeclaration)
+
+		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+		baseActivation.Declare(valueDeclaration)
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
                 fun test() {
@@ -463,11 +472,11 @@ func TestArrayMutation(t *testing.T) {
                 }
             `,
 			ParseCheckAndInterpretOptions{
-				CheckerOptions: []sema.Option{
-					sema.WithPredeclaredValues(valueDeclarations),
+				CheckerConfig: &sema.Config{
+					BaseValueActivation: baseValueActivation,
 				},
-				Options: []interpreter.Option{
-					interpreter.WithPredeclaredValues(values),
+				Config: &interpreter.Config{
+					BaseActivation: baseActivation,
 				},
 			},
 		)
@@ -687,22 +696,22 @@ func TestDictionaryMutation(t *testing.T) {
 
 		invoked := false
 
-		standardLibraryFunctions :=
-			stdlib.StandardLibraryFunctions{
-				stdlib.NewStandardLibraryFunction(
-					"log",
-					stdlib.LogFunctionType,
-					"",
-					func(invocation interpreter.Invocation) interpreter.Value {
-						invoked = true
-						assert.Equal(t, "\"hello\"", invocation.Arguments[0].String())
-						return interpreter.VoidValue{}
-					},
-				),
-			}
+		valueDeclaration := stdlib.NewStandardLibraryFunction(
+			"log",
+			stdlib.LogFunctionType,
+			"",
+			func(invocation interpreter.Invocation) interpreter.Value {
+				invoked = true
+				assert.Equal(t, "\"hello\"", invocation.Arguments[0].String())
+				return interpreter.VoidValue{}
+			},
+		)
 
-		valueDeclarations := standardLibraryFunctions.ToSemaValueDeclarations()
-		values := standardLibraryFunctions.ToInterpreterValueDeclarations()
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(valueDeclaration)
+
+		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+		baseActivation.Declare(valueDeclaration)
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
             fun test() {
@@ -714,11 +723,11 @@ func TestDictionaryMutation(t *testing.T) {
                 logger("hello")
             }`,
 			ParseCheckAndInterpretOptions{
-				CheckerOptions: []sema.Option{
-					sema.WithPredeclaredValues(valueDeclarations),
+				CheckerConfig: &sema.Config{
+					BaseValueActivation: baseValueActivation,
 				},
-				Options: []interpreter.Option{
-					interpreter.WithPredeclaredValues(values),
+				Config: &interpreter.Config{
+					BaseActivation: baseActivation,
 				},
 			},
 		)
@@ -826,15 +835,24 @@ func TestDictionaryMutation(t *testing.T) {
 	})
 
 	t.Run("invalid function mutation", func(t *testing.T) {
+
 		t.Parallel()
 
-		standardLibraryFunctions :=
-			stdlib.StandardLibraryFunctions{
-				stdlib.LogFunction,
-			}
+		valueDeclaration := stdlib.NewStandardLibraryFunction(
+			"log",
+			stdlib.LogFunctionType,
+			"",
+			func(invocation interpreter.Invocation) interpreter.Value {
+				assert.Fail(t, "unexpected call of log")
+				return interpreter.VoidValue{}
+			},
+		)
 
-		valueDeclarations := standardLibraryFunctions.ToSemaValueDeclarations()
-		values := standardLibraryFunctions.ToInterpreterValueDeclarations()
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(valueDeclaration)
+
+		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+		baseActivation.Declare(valueDeclaration)
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
                fun test() {
@@ -844,11 +862,11 @@ func TestDictionaryMutation(t *testing.T) {
                }
            `,
 			ParseCheckAndInterpretOptions{
-				CheckerOptions: []sema.Option{
-					sema.WithPredeclaredValues(valueDeclarations),
+				CheckerConfig: &sema.Config{
+					BaseValueActivation: baseValueActivation,
 				},
-				Options: []interpreter.Option{
-					interpreter.WithPredeclaredValues(values),
+				Config: &interpreter.Config{
+					BaseActivation: baseActivation,
 				},
 			},
 		)
@@ -883,6 +901,7 @@ func TestDictionaryMutation(t *testing.T) {
 	})
 
 	t.Run("valid function mutation", func(t *testing.T) {
+
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `

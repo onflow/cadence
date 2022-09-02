@@ -42,8 +42,9 @@ func Fuzz(data []byte) int {
 		program,
 		utils.TestLocation,
 		nil,
-		false,
-		sema.WithAccessCheckMode(sema.AccessCheckModeNotSpecifiedUnrestricted),
+		&sema.Config{
+			AccessCheckMode: sema.AccessCheckModeNotSpecifiedUnrestricted,
+		},
 	)
 	if err != nil {
 		return 0

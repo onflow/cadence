@@ -22,38 +22,33 @@ import (
 	"sync"
 
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 type interpreterTransactionExecutor struct {
-	runtime *interpreterRuntime
-
+	runtime interpreterRuntime
 	script  Script
 	context Context
 
-	preprocessOnce sync.Once
-	preprocessErr  error
+	// prepare
+	preprocessOnce   sync.Once
+	preprocessErr    error
+	codesAndPrograms codesAndPrograms
+	storage          *Storage
+	program          *interpreter.Program
+	environment      Environment
+	transactionType  *sema.TransactionType
+	authorizers      []Address
 
-	storage            *Storage
-	interpreterOptions []interpreter.Option
-	checkerOptions     []sema.Option
-
-	functions stdlib.StandardLibraryFunctions
-
-	program         *interpreter.Program
-	transactionType *sema.TransactionType
-
-	authorizers []Address
-
+	// execute
 	executeOnce sync.Once
 	executeErr  error
+	interpret   InterpretFunc
 }
 
 func newInterpreterTransactionExecutor(
-	runtime *interpreterRuntime,
+	runtime interpreterRuntime,
 	script Script,
 	context Context,
 ) Executor {
@@ -88,78 +83,102 @@ func (executor *interpreterTransactionExecutor) Result() (cadence.Value, error) 
 }
 
 func (executor *interpreterTransactionExecutor) preprocess() (err error) {
-	defer executor.runtime.Recover(
+	context := executor.context
+	location := context.Location
+	script := executor.script
+
+	codesAndPrograms := newCodesAndPrograms()
+	executor.codesAndPrograms = codesAndPrograms
+
+	interpreterRuntime := executor.runtime
+
+	defer interpreterRuntime.Recover(
 		func(internalErr Error) {
 			err = internalErr
 		},
-		executor.context,
+		location,
+		codesAndPrograms,
 	)
 
-	executor.context.InitializeCodesAndPrograms()
+	runtimeInterface := context.Interface
 
-	memoryGauge, _ := executor.context.Interface.(common.MemoryGauge)
+	storage := NewStorage(runtimeInterface, runtimeInterface)
+	executor.storage = storage
 
-	executor.storage = NewStorage(executor.context.Interface, memoryGauge)
-
-	executor.functions = executor.runtime.standardLibraryFunctions(
-		executor.context,
-		executor.storage,
-		executor.interpreterOptions,
-		executor.checkerOptions,
+	environment := context.Environment
+	if environment == nil {
+		environment = NewBaseInterpreterEnvironment(interpreterRuntime.defaultConfig)
+	}
+	environment.Configure(
+		runtimeInterface,
+		codesAndPrograms,
+		storage,
+		context.CoverageReport,
 	)
+	executor.environment = environment
 
-	executor.program, err = executor.runtime.parseAndCheckProgram(
-		executor.script.Source,
-		executor.context,
-		executor.functions,
-		stdlib.BuiltinValues,
-		executor.checkerOptions,
+	program, err := environment.ParseAndCheckProgram(
+		script.Source,
+		location,
 		true,
-		importResolutionResults{},
 	)
 	if err != nil {
-		return newError(err, executor.context)
+		return newError(err, location, codesAndPrograms)
 	}
+	executor.program = program
 
-	transactions := executor.program.Elaboration.TransactionTypes
+	transactions := program.Elaboration.TransactionTypes
 	transactionCount := len(transactions)
 	if transactionCount != 1 {
 		err = InvalidTransactionCountError{
 			Count: transactionCount,
 		}
-		return newError(err, executor.context)
+		return newError(err, location, codesAndPrograms)
 	}
 
-	executor.transactionType = transactions[0]
+	transactionType := transactions[0]
+	executor.transactionType = transactionType
 
+	var authorizers []Address
 	wrapPanic(func() {
-		executor.authorizers, err = executor.context.Interface.GetSigningAccounts()
+		authorizers, err = runtimeInterface.GetSigningAccounts()
 	})
 	if err != nil {
-		return newError(err, executor.context)
+		return newError(err, location, codesAndPrograms)
 	}
+	executor.authorizers = authorizers
+
 	// check parameter count
 
-	argumentCount := len(executor.script.Arguments)
-	authorizerCount := len(executor.authorizers)
+	argumentCount := len(script.Arguments)
+	authorizerCount := len(authorizers)
 
-	transactionParameterCount := len(executor.transactionType.Parameters)
+	transactionParameterCount := len(transactionType.Parameters)
 	if argumentCount != transactionParameterCount {
 		err = InvalidEntryPointParameterCountError{
 			Expected: transactionParameterCount,
 			Actual:   argumentCount,
 		}
-		return newError(err, executor.context)
+		return newError(err, location, codesAndPrograms)
 	}
 
-	transactionAuthorizerCount := len(executor.transactionType.PrepareParameters)
+	transactionAuthorizerCount := len(transactionType.PrepareParameters)
 	if authorizerCount != transactionAuthorizerCount {
 		err = InvalidTransactionAuthorizerCountError{
 			Expected: transactionAuthorizerCount,
 			Actual:   authorizerCount,
 		}
-		return newError(err, executor.context)
+		return newError(err, location, codesAndPrograms)
 	}
+
+	// gather authorizers
+
+	executor.interpret = transactionExecutionFunction(
+		transactionType.Parameters,
+		script.Arguments,
+		context.Interface,
+		executor.authorizerValues,
+	)
 
 	return nil
 }
@@ -168,19 +187,13 @@ func (executor *interpreterTransactionExecutor) authorizerValues(inter *interpre
 
 	// gather authorizers
 
-	authorizerValues := make([]interpreter.Value, len(executor.authorizers))
+	authorizerValues := make([]interpreter.Value, 0, len(executor.authorizers))
 
-	for i, address := range executor.authorizers {
-		authorizerValues[i] = executor.runtime.newAuthAccountValue(
-			inter,
-			interpreter.NewAddressValue(
-				inter,
-				address,
-			),
-			executor.context,
-			executor.storage,
-			executor.interpreterOptions,
-			executor.checkerOptions,
+	for _, address := range executor.authorizers {
+		addressValue := interpreter.NewAddressValue(inter, address)
+		authorizerValues = append(
+			authorizerValues,
+			executor.environment.NewAuthAccountValue(addressValue),
 		)
 	}
 
@@ -193,37 +206,67 @@ func (executor *interpreterTransactionExecutor) execute() (err error) {
 		return err
 	}
 
-	defer executor.runtime.Recover(
+	environment := executor.environment
+	context := executor.context
+	location := context.Location
+	codesAndPrograms := executor.codesAndPrograms
+	interpreterRuntime := executor.runtime
+
+	defer interpreterRuntime.Recover(
 		func(internalErr Error) {
 			err = internalErr
 		},
-		executor.context,
+		location,
+		codesAndPrograms,
 	)
 
-	_, inter, err := executor.runtime.interpret(
+	_, inter, err := environment.Interpret(
+		location,
 		executor.program,
-		executor.context,
-		executor.storage,
-		executor.functions,
-		stdlib.BuiltinValues,
-		executor.interpreterOptions,
-		executor.checkerOptions,
-		executor.runtime.transactionExecutionFunction(
-			executor.transactionType.Parameters,
-			executor.script.Arguments,
-			executor.context.Interface,
-			executor.authorizerValues,
-		),
+		executor.interpret,
 	)
 	if err != nil {
-		return newError(err, executor.context)
+		return newError(err, location, codesAndPrograms)
 	}
 
 	// Write back all stored values, which were actually just cached, back into storage
-	err = executor.runtime.commitStorage(executor.storage, inter)
+	err = environment.CommitStorage(inter)
 	if err != nil {
-		return newError(err, executor.context)
+		return newError(err, location, codesAndPrograms)
 	}
 
 	return nil
+}
+
+func transactionExecutionFunction(
+	parameters []*sema.Parameter,
+	arguments [][]byte,
+	runtimeInterface Interface,
+	authorizerValues func(*interpreter.Interpreter) []interpreter.Value,
+) InterpretFunc {
+	return func(inter *interpreter.Interpreter) (value interpreter.Value, err error) {
+
+		// Recover internal panics and return them as an error.
+		// For example, the argument validation might attempt to
+		// load contract code for non-existing types
+
+		defer inter.RecoverErrors(func(internalErr error) {
+			err = internalErr
+		})
+
+		values, err := validateArgumentParams(
+			inter,
+			runtimeInterface,
+			interpreter.ReturnEmptyLocationRange,
+			arguments,
+			parameters,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		values = append(values, authorizerValues(inter)...)
+		err = inter.InvokeTransaction(0, values...)
+		return nil, err
+	}
 }
