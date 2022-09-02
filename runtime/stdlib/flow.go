@@ -44,11 +44,24 @@ func (l FlowLocation) MeteredID(_ common.MemoryGauge) common.LocationID {
 }
 
 func (l FlowLocation) TypeID(memoryGauge common.MemoryGauge, qualifiedIdentifier string) common.TypeID {
-	return common.NewMeteredTypeID(
-		memoryGauge,
-		FlowLocationPrefix,
-		qualifiedIdentifier,
-	)
+	var i int
+
+	// FlowLocationPrefix '.' qualifiedIdentifier
+	length := len(FlowLocationPrefix) + 1 + len(qualifiedIdentifier)
+
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(length))
+
+	b := make([]byte, length)
+
+	copy(b, FlowLocationPrefix)
+	i += len(FlowLocationPrefix)
+
+	b[i] = '.'
+	i += 1
+
+	copy(b[i:], qualifiedIdentifier)
+
+	return common.TypeID(b)
 }
 
 func (l FlowLocation) QualifiedIdentifier(typeID common.TypeID) string {

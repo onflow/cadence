@@ -20,6 +20,7 @@ package stdlib
 
 import (
 	"encoding/json"
+	"github.com/onflow/cadence/runtime/common"
 	"strings"
 	"testing"
 
@@ -58,6 +59,18 @@ func TestFlowLocation_MarshalJSON(t *testing.T) {
         }
         `,
 		string(actual),
+	)
+}
+
+func TestFlowLocationTypeID(t *testing.T) {
+
+	t.Parallel()
+
+	var location FlowLocation
+
+	assert.Equal(t,
+		common.TypeID("flow.Bar.Baz"),
+		location.TypeID(nil, "Bar.Baz"),
 	)
 }
 
