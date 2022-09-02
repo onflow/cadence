@@ -70,19 +70,17 @@ func TestInterpretStatementHandler(t *testing.T) {
           }
         `,
 		checker.ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithImportHandler(
-					func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
-						assert.Equal(t,
-							utils.ImportedLocation,
-							importedLocation,
-						)
+			Config: &sema.Config{
+				ImportHandler: func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
+					assert.Equal(t,
+						utils.ImportedLocation,
+						importedLocation,
+					)
 
-						return sema.ElaborationImport{
-							Elaboration: importedChecker.Elaboration,
-						}, nil
-					},
-				),
+					return sema.ElaborationImport{
+						Elaboration: importedChecker.Elaboration,
+					}, nil
+				},
 			},
 		},
 	)
@@ -101,9 +99,9 @@ func TestInterpretStatementHandler(t *testing.T) {
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(importingChecker),
 		importingChecker.Location,
-		interpreter.WithStorage(storage),
-		interpreter.WithOnStatementHandler(
-			func(interpreter *interpreter.Interpreter, statement ast.Statement) {
+		&interpreter.Config{
+			Storage: storage,
+			OnStatement: func(interpreter *interpreter.Interpreter, statement ast.Statement) {
 				id, ok := interpreterIDs[interpreter]
 				if !ok {
 					id = nextInterpreterID
@@ -116,9 +114,7 @@ func TestInterpretStatementHandler(t *testing.T) {
 					line:          statement.StartPosition().Line,
 				})
 			},
-		),
-		interpreter.WithImportLocationHandler(
-			func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 				assert.Equal(t,
 					utils.ImportedLocation,
 					location,
@@ -134,7 +130,7 @@ func TestInterpretStatementHandler(t *testing.T) {
 					Interpreter: subInterpreter,
 				}
 			},
-		),
+		},
 	)
 	require.NoError(t, err)
 
@@ -198,19 +194,17 @@ func TestInterpretLoopIterationHandler(t *testing.T) {
           }
         `,
 		checker.ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithImportHandler(
-					func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
-						assert.Equal(t,
-							utils.ImportedLocation,
-							importedLocation,
-						)
+			Config: &sema.Config{
+				ImportHandler: func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
+					assert.Equal(t,
+						utils.ImportedLocation,
+						importedLocation,
+					)
 
-						return sema.ElaborationImport{
-							Elaboration: importedChecker.Elaboration,
-						}, nil
-					},
-				),
+					return sema.ElaborationImport{
+						Elaboration: importedChecker.Elaboration,
+					}, nil
+				},
 			},
 		},
 	)
@@ -230,10 +224,9 @@ func TestInterpretLoopIterationHandler(t *testing.T) {
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(importingChecker),
 		importingChecker.Location,
-		interpreter.WithStorage(storage),
-		interpreter.WithOnLoopIterationHandler(
-			func(inter *interpreter.Interpreter, line int) {
-
+		&interpreter.Config{
+			Storage: storage,
+			OnLoopIteration: func(inter *interpreter.Interpreter, line int) {
 				id, ok := interpreterIDs[inter]
 				if !ok {
 					id = nextInterpreterID
@@ -246,9 +239,7 @@ func TestInterpretLoopIterationHandler(t *testing.T) {
 					line:          line,
 				})
 			},
-		),
-		interpreter.WithImportLocationHandler(
-			func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 				assert.Equal(t,
 					utils.ImportedLocation,
 					location,
@@ -264,7 +255,7 @@ func TestInterpretLoopIterationHandler(t *testing.T) {
 					Interpreter: subInterpreter,
 				}
 			},
-		),
+		},
 	)
 	require.NoError(t, err)
 
@@ -338,30 +329,23 @@ func TestInterpretFunctionInvocationHandler(t *testing.T) {
           }
         `,
 		checker.ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithImportHandler(
-					func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
-						assert.Equal(t,
-							utils.ImportedLocation,
-							importedLocation,
-						)
+			Config: &sema.Config{
+				ImportHandler: func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
+					assert.Equal(t,
+						utils.ImportedLocation,
+						importedLocation,
+					)
 
-						return sema.ElaborationImport{
-							Elaboration: importedChecker.Elaboration,
-						}, nil
-					},
-				),
+					return sema.ElaborationImport{
+						Elaboration: importedChecker.Elaboration,
+					}, nil
+				},
 			},
 		},
 	)
 	require.NoError(t, err)
 
-	type occurrence struct {
-		interpreterID int
-		line          int
-	}
-
-	var occurrences []occurrence
+	var occurrences []int
 	var nextInterpreterID int
 	interpreterIDs := map[*interpreter.Interpreter]int{}
 
@@ -369,9 +353,9 @@ func TestInterpretFunctionInvocationHandler(t *testing.T) {
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(importingChecker),
 		importingChecker.Location,
-		interpreter.WithStorage(storage),
-		interpreter.WithOnFunctionInvocationHandler(
-			func(inter *interpreter.Interpreter, line int) {
+		&interpreter.Config{
+			Storage: storage,
+			OnFunctionInvocation: func(inter *interpreter.Interpreter) {
 
 				id, ok := interpreterIDs[inter]
 				if !ok {
@@ -380,14 +364,9 @@ func TestInterpretFunctionInvocationHandler(t *testing.T) {
 					interpreterIDs[inter] = id
 				}
 
-				occurrences = append(occurrences, occurrence{
-					interpreterID: id,
-					line:          line,
-				})
+				occurrences = append(occurrences, id)
 			},
-		),
-		interpreter.WithImportLocationHandler(
-			func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 				assert.Equal(t,
 					utils.ImportedLocation,
 					location,
@@ -403,7 +382,7 @@ func TestInterpretFunctionInvocationHandler(t *testing.T) {
 					Interpreter: subInterpreter,
 				}
 			},
-		),
+		},
 	)
 	require.NoError(t, err)
 
@@ -414,11 +393,7 @@ func TestInterpretFunctionInvocationHandler(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t,
-		[]occurrence{
-			{0, 15},
-			{0, 7},
-			{1, 7},
-		},
+		[]int{0, 0, 1},
 		occurrences,
 	)
 }

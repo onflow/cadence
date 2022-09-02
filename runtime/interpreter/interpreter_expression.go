@@ -91,8 +91,9 @@ func (interpreter *Interpreter) indexExpressionGetterSetter(indexExpression *ast
 
 	elaboration := interpreter.Program.Elaboration
 
-	indexedType := elaboration.IndexExpressionIndexedTypes[indexExpression]
-	indexingType := elaboration.IndexExpressionIndexingTypes[indexExpression]
+	indexExpressionTypes := elaboration.IndexExpressionTypes[indexExpression]
+	indexedType := indexExpressionTypes.IndexedType
+	indexingType := indexExpressionTypes.IndexingType
 
 	transferredIndexingValue := interpreter.transferAndConvert(
 		interpreter.evalExpression(indexExpression.IndexingExpression),
@@ -428,8 +429,9 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 
 		value := rightValue()
 
-		rightType := interpreter.Program.Elaboration.BinaryExpressionRightTypes[expression]
-		resultType := interpreter.Program.Elaboration.BinaryExpressionResultTypes[expression]
+		binaryExpressionTypes := interpreter.Program.Elaboration.BinaryExpressionTypes[expression]
+		rightType := binaryExpressionTypes.RightType
+		resultType := binaryExpressionTypes.ResultType
 
 		// NOTE: important to convert both any and optional
 		return interpreter.ConvertAndBox(getLocationRange, value, rightType, resultType)
@@ -526,7 +528,7 @@ func (interpreter *Interpreter) VisitIntegerExpression(expression *ast.IntegerEx
 // This method assumes the range validations are done prior to calling this method. (i.e: at semantic level)
 //
 func (interpreter *Interpreter) NewIntegerValueFromBigInt(value *big.Int, integerSubType sema.Type) Value {
-	memoryGauge := interpreter.memoryGauge
+	memoryGauge := interpreter.Config.MemoryGauge
 
 	// NOTE: cases meter manually and call the unmetered constructors to avoid allocating closures
 
@@ -650,8 +652,9 @@ func (interpreter *Interpreter) VisitStringExpression(expression *ast.StringExpr
 func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpression) ast.Repr {
 	values := interpreter.visitExpressionsNonCopying(expression.Values)
 
-	argumentTypes := interpreter.Program.Elaboration.ArrayExpressionArgumentTypes[expression]
-	arrayType := interpreter.Program.Elaboration.ArrayExpressionArrayType[expression]
+	arrayExpressionTypes := interpreter.Program.Elaboration.ArrayExpressionTypes[expression]
+	argumentTypes := arrayExpressionTypes.ArgumentTypes
+	arrayType := arrayExpressionTypes.ArrayType
 	elementType := arrayType.ElementType(false)
 
 	copies := make([]Value, len(values))
@@ -679,8 +682,9 @@ func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpres
 func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.DictionaryExpression) ast.Repr {
 	values := interpreter.visitEntries(expression.Entries)
 
-	entryTypes := interpreter.Program.Elaboration.DictionaryExpressionEntryTypes[expression]
-	dictionaryType := interpreter.Program.Elaboration.DictionaryExpressionType[expression]
+	dictionaryExpressionTypes := interpreter.Program.Elaboration.DictionaryExpressionTypes[expression]
+	entryTypes := dictionaryExpressionTypes.EntryTypes
+	dictionaryType := dictionaryExpressionTypes.DictionaryType
 
 	var keyValuePairs []Value
 
@@ -751,7 +755,7 @@ func (interpreter *Interpreter) VisitConditionalExpression(expression *ast.Condi
 func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *ast.InvocationExpression) ast.Repr {
 
 	// tracing
-	if interpreter.tracingEnabled {
+	if interpreter.Config.TracingEnabled {
 		startTime := time.Now()
 		invokedExpression := invocationExpression.InvokedExpression.String()
 		defer func() {
@@ -806,13 +810,13 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 
 	elaboration := interpreter.Program.Elaboration
 
-	typeParameterTypes := elaboration.InvocationExpressionTypeArguments[invocationExpression]
-	argumentTypes := elaboration.InvocationExpressionArgumentTypes[invocationExpression]
-	parameterTypes := elaboration.InvocationExpressionParameterTypes[invocationExpression]
+	invocationExpressionTypes := elaboration.InvocationExpressionTypes[invocationExpression]
 
-	line := invocationExpression.StartPosition().Line
+	typeParameterTypes := invocationExpressionTypes.TypeArguments
+	argumentTypes := invocationExpressionTypes.ArgumentTypes
+	parameterTypes := invocationExpressionTypes.TypeParameterTypes
 
-	interpreter.reportFunctionInvocation(line)
+	interpreter.reportFunctionInvocation()
 
 	resultValue := interpreter.invokeFunctionValue(
 		function,
@@ -824,7 +828,7 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 		invocationExpression,
 	)
 
-	interpreter.reportInvokedFunctionReturn(line)
+	interpreter.reportInvokedFunctionReturn()
 
 	// If this is invocation is optional chaining, wrap the result
 	// as an optional, as the result is expected to be an optional

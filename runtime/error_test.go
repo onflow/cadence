@@ -303,7 +303,7 @@ func TestRuntimeError(t *testing.T) {
 		var location common.TransactionLocation
 		copy(location[:], id)
 
-		codes := map[common.Location]string{
+		codes := map[Location]string{
 			location: `
               // import program that has errors
               import A from 0x1
@@ -336,7 +336,7 @@ func TestRuntimeError(t *testing.T) {
 		}
 
 		runtimeInterface := &testRuntimeInterface{
-			resolveLocation: func(identifiers []ast.Identifier, location common.Location) (result []sema.ResolvedLocation, err error) {
+			resolveLocation: func(identifiers []ast.Identifier, location Location) (result []sema.ResolvedLocation, err error) {
 				for _, identifier := range identifiers {
 					result = append(result, sema.ResolvedLocation{
 						Location: common.AddressLocation{

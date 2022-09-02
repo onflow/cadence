@@ -868,7 +868,7 @@ func TestParseLocalReplayLimit(t *testing.T) {
 	builder.WriteString(">()")
 
 	code := builder.String()
-	_, errs := ParseProgram(code, nil)
+	_, err := ParseProgram(code, nil)
 	utils.AssertEqualWithDiff(t,
 		Error{
 			Code: code,
@@ -886,7 +886,7 @@ func TestParseLocalReplayLimit(t *testing.T) {
 				},
 			},
 		},
-		errs,
+		err,
 	)
 }
 
@@ -903,7 +903,7 @@ func TestParseGlobalReplayLimit(t *testing.T) {
 	}
 
 	code := builder.String()
-	_, errs := ParseProgram(code, nil)
+	_, err := ParseProgram(code, nil)
 	utils.AssertEqualWithDiff(t,
 		Error{
 			Code: code,
@@ -921,6 +921,6 @@ func TestParseGlobalReplayLimit(t *testing.T) {
 				},
 			},
 		},
-		errs,
+		err,
 	)
 }

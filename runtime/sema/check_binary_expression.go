@@ -29,9 +29,11 @@ func (checker *Checker) VisitBinaryExpression(expression *ast.BinaryExpression) 
 	var leftType, rightType, resultType Type
 	defer func() {
 		elaboration := checker.Elaboration
-		elaboration.BinaryExpressionLeftTypes[expression] = leftType
-		elaboration.BinaryExpressionRightTypes[expression] = rightType
-		elaboration.BinaryExpressionResultTypes[expression] = resultType
+		elaboration.BinaryExpressionTypes[expression] = BinaryExpressionTypes{
+			LeftType:   leftType,
+			RightType:  rightType,
+			ResultType: resultType,
+		}
 	}()
 
 	// The left-hand side is always evaluated.

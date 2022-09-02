@@ -53,8 +53,8 @@ func TestInterpretContractUseBeforeInitializationComplete(t *testing.T) {
               }
 	        `,
 			ParseCheckAndInterpretOptions{
-				Options: []interpreter.Option{
-					makeContractValueHandler(nil, nil, nil),
+				Config: &interpreter.Config{
+					ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 				},
 			},
 		)
@@ -84,8 +84,8 @@ func TestInterpretContractUseBeforeInitializationComplete(t *testing.T) {
               }
 	        `,
 			ParseCheckAndInterpretOptions{
-				Options: []interpreter.Option{
-					makeContractValueHandler(nil, nil, nil),
+				Config: &interpreter.Config{
+					ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 				},
 			},
 		)
@@ -115,8 +115,8 @@ func TestInterpretContractUseBeforeInitializationComplete(t *testing.T) {
               }
 	        `,
 			ParseCheckAndInterpretOptions{
-				Options: []interpreter.Option{
-					makeContractValueHandler(nil, nil, nil),
+				Config: &interpreter.Config{
+					ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 				},
 			},
 		)
@@ -148,8 +148,8 @@ func TestInterpretContractUseBeforeInitializationComplete(t *testing.T) {
               }
 	        `,
 			ParseCheckAndInterpretOptions{
-				Options: []interpreter.Option{
-					makeContractValueHandler(nil, nil, nil),
+				Config: &interpreter.Config{
+					ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 				},
 			},
 		)

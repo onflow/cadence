@@ -66,7 +66,7 @@ var beforeType = func() *FunctionType {
 
 type ValidTopLevelDeclarationsHandlerFunc = func(common.Location) []common.DeclarationKind
 
-type CheckHandlerFunc func(location common.Location, check func())
+type CheckHandlerFunc func(checker *Checker, check func())
 
 type ResolvedLocation struct {
 	Location    common.Location
@@ -87,11 +87,11 @@ type PurityCheckScope struct {
 // Checker
 
 type Checker struct {
-	Program                            *ast.Program
-	Location                           common.Location
-	PredeclaredValues                  []ValueDeclaration
-	PredeclaredTypes                   []TypeDeclaration
-	accessCheckMode                    AccessCheckMode
+	Program     *ast.Program
+	Location    common.Location
+	Elaboration *Elaboration
+	Config      *Config
+
 	errors                             []error
 	valueActivations                   *VariableActivations
 	resources                          *Resources
@@ -99,205 +99,80 @@ type Checker struct {
 	containerTypes                     map[Type]bool
 	functionActivations                *FunctionActivations
 	inCondition                        bool
-	positionInfoEnabled                bool
-	Occurrences                        *Occurrences
-	variableOrigins                    map[*Variable]*Origin
-	memberOrigins                      map[Type]map[string]*Origin
-	MemberAccesses                     *MemberAccesses
-	Ranges                             *Ranges
-	FunctionInvocations                *FunctionInvocations
 	isChecked                          bool
 	inCreate                           bool
 	inInvocation                       bool
 	inAssignment                       bool
 	allowSelfResourceFieldInvalidation bool
-	Elaboration                        *Elaboration
 	currentMemberExpression            *ast.MemberExpression
-	validTopLevelDeclarationsHandler   ValidTopLevelDeclarationsHandlerFunc
-	beforeExtractor                    *BeforeExtractor
-	locationHandler                    LocationHandlerFunc
-	importHandler                      ImportHandlerFunc
-	checkHandler                       CheckHandlerFunc
-	expectedType                       Type
-	memberAccountAccessHandler         MemberAccountAccessHandlerFunc
-	extendedElaboration                bool
-	errorShortCircuitingEnabled        bool
 	purityCheckScopes                  []PurityCheckScope
+
+	// initialized lazily. use beforeExtractor()
+	_beforeExtractor *BeforeExtractor
+	expectedType     Type
+
 	// memoryGauge is used for metering memory usage
-	memoryGauge common.MemoryGauge
+	memoryGauge  common.MemoryGauge
+	PositionInfo *PositionInfo
 }
 
-type Option func(*Checker) error
-
-func WithPredeclaredValues(predeclaredValues []ValueDeclaration) Option {
-	return func(checker *Checker) error {
-		checker.PredeclaredValues = predeclaredValues
-
-		for _, declaration := range predeclaredValues {
-			variable := checker.declareValue(declaration)
-			if variable == nil {
-				continue
-			}
-			checker.Elaboration.GlobalValues.Set(variable.Identifier, variable)
-			checker.Elaboration.EffectivePredeclaredValues[variable.Identifier] = declaration
-		}
-
-		return nil
-	}
-}
-
-func WithPredeclaredTypes(predeclaredTypes []TypeDeclaration) Option {
-	return func(checker *Checker) error {
-		checker.PredeclaredTypes = predeclaredTypes
-
-		for _, declaration := range predeclaredTypes {
-			checker.declareTypeDeclaration(declaration)
-
-			name := declaration.TypeDeclarationName()
-			checker.Elaboration.EffectivePredeclaredTypes[name] = declaration
-		}
-
-		return nil
-	}
-}
-
-// WithAccessCheckMode returns a checker option which sets
-// the given mode for access control checks.
-//
-func WithAccessCheckMode(mode AccessCheckMode) Option {
-	return func(checker *Checker) error {
-		checker.accessCheckMode = mode
-		return nil
-	}
-}
-
-// WithValidTopLevelDeclarationsHandler returns a checker option which sets
-// the given handler as function which is used to determine
-// the slice of declaration kinds which are valid at the top-level
-// for a given location.
-//
-func WithValidTopLevelDeclarationsHandler(handler ValidTopLevelDeclarationsHandlerFunc) Option {
-	return func(checker *Checker) error {
-		checker.validTopLevelDeclarationsHandler = handler
-		return nil
-	}
-}
-
-// WithCheckHandler returns a checker option which sets
-// the given function as the handler for the checking of the program.
-//
-func WithCheckHandler(handler CheckHandlerFunc) Option {
-	return func(checker *Checker) error {
-		checker.checkHandler = handler
-		return nil
-	}
-}
-
-// WithLocationHandler returns a checker option which sets
-// the given handler as function which is used to resolve locations.
-//
-func WithLocationHandler(handler LocationHandlerFunc) Option {
-	return func(checker *Checker) error {
-		checker.locationHandler = handler
-		return nil
-	}
-}
-
-// WithImportHandler returns a checker option which sets
-// the given handler as function which is used to resolve unresolved imports.
-//
-func WithImportHandler(handler ImportHandlerFunc) Option {
-	return func(checker *Checker) error {
-		checker.importHandler = handler
-		return nil
-	}
-}
-
-// WithMemberAccountAccessHandler returns a checker option which sets
-// the given handler as function which is used to determine
-// if the access of a member with account access modifier is valid.
-//
-func WithMemberAccountAccessHandler(handler MemberAccountAccessHandlerFunc) Option {
-	return func(checker *Checker) error {
-		checker.memberAccountAccessHandler = handler
-		return nil
-	}
-}
-
-// WithPositionInfoEnabled returns a checker option which enables/disables
-// if position info recoding is enabled.
-//
-// Position info includes origins, occurrences, member accesses, and ranges.
-//
-func WithPositionInfoEnabled(enabled bool) Option {
-	return func(checker *Checker) error {
-		checker.positionInfoEnabled = enabled
-		if enabled {
-			checker.memberOrigins = map[Type]map[string]*Origin{}
-			checker.variableOrigins = map[*Variable]*Origin{}
-			checker.Occurrences = NewOccurrences()
-			checker.MemberAccesses = NewMemberAccesses()
-			checker.Ranges = NewRanges()
-			checker.FunctionInvocations = NewFunctionInvocations()
-		}
-
-		return nil
-	}
-}
-
-// WithErrorShortCircuitingEnabled returns a checker option which enables/disables
-// error short-circuiting in the checker.
-// When enabled, the checker will stop running once it encounters an error.
-// When disabled (the default), the checker reports the error then continues checking.
-//
-func WithErrorShortCircuitingEnabled(enabled bool) Option {
-	return func(checker *Checker) error {
-		checker.errorShortCircuitingEnabled = enabled
-		return nil
-	}
-}
-
-func NewChecker(program *ast.Program, location common.Location, memoryGauge common.MemoryGauge, extendedElaboration bool, options ...Option) (*Checker, error) {
+func NewChecker(
+	program *ast.Program,
+	location common.Location,
+	memoryGauge common.MemoryGauge,
+	config *Config,
+) (*Checker, error) {
 
 	if location == nil {
-		return nil, &MissingLocationError{}
+		return nil, errors.NewDefaultUserError("missing location")
 	}
 
-	valueActivations := NewVariableActivations(BaseValueActivation)
-	typeActivations := NewVariableActivations(BaseTypeActivation)
+	if config.AccessCheckMode == AccessCheckModeDefault {
+		return nil, errors.NewDefaultUserError("invalid default access check mode")
+	}
+
 	functionActivations := &FunctionActivations{}
 	functionActivations.EnterFunction(&FunctionType{
 		ReturnTypeAnnotation: NewTypeAnnotation(VoidType)},
 		0,
 	)
 
+	elaboration := NewElaboration(
+		memoryGauge,
+		config.ExtendedElaborationEnabled,
+	)
+
 	checker := &Checker{
 		Program:             program,
 		Location:            location,
-		valueActivations:    valueActivations,
+		Config:              config,
+		Elaboration:         elaboration,
 		resources:           NewResources(),
-		typeActivations:     typeActivations,
 		functionActivations: functionActivations,
 		containerTypes:      map[Type]bool{},
-		Elaboration:         NewElaboration(memoryGauge, extendedElaboration),
 		purityCheckScopes:   []PurityCheckScope{{}},
-		extendedElaboration: extendedElaboration,
 		memoryGauge:         memoryGauge,
 	}
 
-	for _, option := range options {
-		err := option(checker)
-		if err != nil {
-			return nil, err
-		}
+	// Initialize value activations
+
+	baseValueActivation := config.BaseValueActivation
+	if baseValueActivation == nil {
+		baseValueActivation = BaseValueActivation
 	}
+	checker.valueActivations = NewVariableActivations(baseValueActivation)
 
-	// Should be done after setting checker-options, since memory-gauge is set via options.
-	checker.beforeExtractor = NewBeforeExtractor(checker.memoryGauge, checker.report)
+	// Initialize type activations
 
-	err := checker.CheckerError()
-	if err != nil {
-		return nil, err
+	baseTypeActivation := config.BaseTypeActivation
+	if baseTypeActivation == nil {
+		baseTypeActivation = BaseTypeActivation
+	}
+	checker.typeActivations = NewVariableActivations(baseTypeActivation)
+
+	// Initialize position info, if enabled
+	if checker.Config.PositionInfoEnabled {
+		checker.PositionInfo = NewPositionInfo()
 	}
 
 	return checker, nil
@@ -308,81 +183,12 @@ func (checker *Checker) SubChecker(program *ast.Program, location common.Locatio
 		program,
 		location,
 		checker.memoryGauge,
-		checker.extendedElaboration,
-		WithPredeclaredValues(checker.PredeclaredValues),
-		WithPredeclaredTypes(checker.PredeclaredTypes),
-		WithAccessCheckMode(checker.accessCheckMode),
-		WithValidTopLevelDeclarationsHandler(checker.validTopLevelDeclarationsHandler),
-		WithCheckHandler(checker.checkHandler),
-		WithLocationHandler(checker.locationHandler),
-		WithImportHandler(checker.importHandler),
-		WithPositionInfoEnabled(checker.positionInfoEnabled),
-		WithErrorShortCircuitingEnabled(checker.errorShortCircuitingEnabled),
+		checker.Config,
 	)
 }
 
 func (checker *Checker) SetMemoryGauge(gauge common.MemoryGauge) {
 	checker.memoryGauge = gauge
-}
-
-func (checker *Checker) declareValue(declaration ValueDeclaration) *Variable {
-
-	if !declaration.ValueDeclarationAvailable(checker.Location) {
-		return nil
-	}
-
-	name := declaration.ValueDeclarationName()
-	variable, err := checker.valueActivations.Declare(variableDeclaration{
-		identifier: name,
-		ty:         declaration.ValueDeclarationType(),
-		docString:  declaration.ValueDeclarationDocString(),
-		// TODO: add access to ValueDeclaration and use declaration's access instead here
-		access:                   ast.AccessPublic,
-		kind:                     declaration.ValueDeclarationKind(),
-		pos:                      declaration.ValueDeclarationPosition(),
-		isConstant:               declaration.ValueDeclarationIsConstant(),
-		argumentLabels:           declaration.ValueDeclarationArgumentLabels(),
-		allowOuterScopeShadowing: false,
-	})
-	checker.report(err)
-	if checker.positionInfoEnabled {
-		checker.recordVariableDeclarationOccurrence(name, variable)
-	}
-	return variable
-}
-
-func (checker *Checker) declareTypeDeclaration(declaration TypeDeclaration) {
-	identifier := ast.NewIdentifier(
-		checker.memoryGauge,
-		declaration.TypeDeclarationName(),
-		declaration.TypeDeclarationPosition(),
-	)
-
-	ty := declaration.TypeDeclarationType()
-	// TODO: add access to TypeDeclaration and use declaration's access instead here
-	const access = ast.AccessPublic
-
-	variable, err := checker.typeActivations.DeclareType(
-		typeDeclaration{
-			identifier:               identifier,
-			ty:                       ty,
-			declarationKind:          declaration.TypeDeclarationKind(),
-			access:                   access,
-			allowOuterScopeShadowing: false,
-		},
-	)
-	checker.report(err)
-
-	switch ty := ty.(type) {
-	case *CompositeType:
-		checker.Elaboration.CompositeTypes[ty.ID()] = ty
-	case *InterfaceType:
-		checker.Elaboration.InterfaceTypes[ty.ID()] = ty
-	}
-
-	if checker.positionInfoEnabled {
-		checker.recordVariableDeclarationOccurrence(identifier.Identifier, variable)
-	}
 }
 
 func (checker *Checker) IsChecked() bool {
@@ -436,7 +242,7 @@ func (checker *Checker) Check() error {
 		checker.Elaboration.setIsChecking(true)
 		checker.errors = nil
 		check := func() {
-			if checker.errorShortCircuitingEnabled {
+			if checker.Config.ErrorShortCircuitingEnabled {
 				defer func() {
 					switch recovered := recover().(type) {
 					case stopChecking:
@@ -454,13 +260,15 @@ func (checker *Checker) Check() error {
 
 			checker.Program.Accept(checker)
 		}
-		if checker.checkHandler != nil {
-			checker.checkHandler(checker.Location, check)
+		if checker.Config.CheckHandler != nil {
+			checker.Config.CheckHandler(checker, check)
 		} else {
 			check()
 		}
 
-		checker.declareGlobalRanges()
+		if checker.PositionInfo != nil {
+			checker.declareGlobalRanges()
+		}
 
 		checker.Elaboration.setIsChecking(false)
 		checker.isChecked = true
@@ -487,37 +295,9 @@ func (checker *Checker) report(err error) {
 		return
 	}
 	checker.errors = append(checker.errors, err)
-	if checker.errorShortCircuitingEnabled {
+	if checker.Config.ErrorShortCircuitingEnabled {
 		panic(stopChecking{})
 	}
-}
-
-func (checker *Checker) UserDefinedValues() map[string]*Variable {
-	variables := map[string]*Variable{}
-
-	checker.Elaboration.GlobalValues.Foreach(func(key string, value *Variable) {
-
-		if value.IsBaseValue {
-			return
-		}
-
-		if _, ok := checker.Elaboration.EffectivePredeclaredValues[key]; ok {
-			return
-		}
-
-		if _, ok := checker.Elaboration.EffectivePredeclaredTypes[key]; ok {
-			return
-		}
-
-		if typeValue, ok := checker.Elaboration.GlobalTypes.Get(key); ok {
-			variables[key] = typeValue
-			return
-		}
-
-		variables[key] = value
-	})
-
-	return variables
 }
 
 func (checker *Checker) VisitProgram(program *ast.Program) ast.Repr {
@@ -598,13 +378,15 @@ func (checker *Checker) VisitProgram(program *ast.Program) ast.Repr {
 }
 
 func (checker *Checker) checkTopLevelDeclarationValidity(declarations []ast.Declaration) {
-	if checker.validTopLevelDeclarationsHandler == nil {
+	validTopLevelDeclarationsHandler := checker.Config.ValidTopLevelDeclarationsHandler
+
+	if validTopLevelDeclarationsHandler == nil {
 		return
 	}
 
 	validDeclarationKinds := map[common.DeclarationKind]bool{}
 
-	validTopLevelDeclarations := checker.validTopLevelDeclarationsHandler(checker.Location)
+	validTopLevelDeclarations := validTopLevelDeclarationsHandler(checker.Location)
 	if validTopLevelDeclarations == nil {
 		return
 	}
@@ -978,7 +760,7 @@ func (checker *Checker) findAndCheckValueVariable(identifierExpression *ast.Iden
 		return nil
 	}
 
-	if checker.positionInfoEnabled && recordOccurrence && identifier.Identifier != "" {
+	if checker.PositionInfo != nil && recordOccurrence && identifier.Identifier != "" {
 		checker.recordVariableReferenceOccurrence(
 			identifier.StartPosition(),
 			identifier.EndPosition(checker.memoryGauge),
@@ -1388,7 +1170,7 @@ func (checker *Checker) findAndCheckTypeVariable(identifier ast.Identifier, reco
 		return nil
 	}
 
-	if checker.positionInfoEnabled && recordOccurrence && identifier.Identifier != "" {
+	if checker.PositionInfo != nil && recordOccurrence && identifier.Identifier != "" {
 		checker.recordVariableReferenceOccurrence(
 			identifier.StartPosition(),
 			identifier.EndPosition(checker.memoryGauge),
@@ -1504,37 +1286,20 @@ func (checker *Checker) parameters(parameterList *ast.ParameterList) []*Paramete
 }
 
 func (checker *Checker) recordVariableReferenceOccurrence(startPos, endPos ast.Position, variable *Variable) {
-	if !checker.positionInfoEnabled {
-		return
-	}
-
-	origin, ok := checker.variableOrigins[variable]
-	if !ok {
-		startPos2 := variable.Pos
-		var endPos2 *ast.Position
-		if startPos2 != nil {
-			pos := startPos2.Shifted(checker.memoryGauge, len(variable.Identifier)-1)
-			endPos2 = &pos
-		}
-		origin = &Origin{
-			Type:            variable.Type,
-			DeclarationKind: variable.DeclarationKind,
-			StartPos:        startPos2,
-			EndPos:          endPos2,
-			DocString:       variable.DocString,
-		}
-		checker.variableOrigins[variable] = origin
-	}
-	checker.Occurrences.Put(startPos, endPos, origin)
+	checker.PositionInfo.recordVariableReferenceOccurrence(
+		checker.memoryGauge,
+		startPos,
+		endPos,
+		variable,
+	)
 }
 
 func (checker *Checker) recordVariableDeclarationOccurrence(name string, variable *Variable) {
-	if variable.Pos == nil {
-		return
-	}
-	startPos := *variable.Pos
-	endPos := variable.Pos.Shifted(checker.memoryGauge, len(name)-1)
-	checker.recordVariableReferenceOccurrence(startPos, endPos, variable)
+	checker.PositionInfo.recordVariableDeclarationOccurrence(
+		checker.memoryGauge,
+		name,
+		variable,
+	)
 }
 
 func (checker *Checker) recordFieldDeclarationOrigin(
@@ -1542,55 +1307,23 @@ func (checker *Checker) recordFieldDeclarationOrigin(
 	fieldType Type,
 	docString string,
 ) *Origin {
-	if !checker.positionInfoEnabled {
-		return nil
-	}
-
-	startPosition := identifier.StartPosition()
-	endPosition := identifier.EndPosition(checker.memoryGauge)
-
-	origin := &Origin{
-		Type:            fieldType,
-		DeclarationKind: common.DeclarationKindField,
-		StartPos:        &startPosition,
-		EndPos:          &endPosition,
-		DocString:       docString,
-	}
-
-	checker.Occurrences.Put(
-		startPosition,
-		endPosition,
-		origin,
+	return checker.PositionInfo.recordFieldDeclarationOrigin(
+		checker.memoryGauge,
+		identifier,
+		fieldType,
+		docString,
 	)
-
-	return origin
 }
 
 func (checker *Checker) recordFunctionDeclarationOrigin(
 	function *ast.FunctionDeclaration,
 	functionType *FunctionType,
 ) *Origin {
-	if !checker.positionInfoEnabled {
-		return nil
-	}
-
-	startPosition := function.Identifier.StartPosition()
-	endPosition := function.Identifier.EndPosition(checker.memoryGauge)
-
-	origin := &Origin{
-		Type:            functionType,
-		DeclarationKind: common.DeclarationKindFunction,
-		StartPos:        &startPosition,
-		EndPos:          &endPosition,
-		DocString:       function.DocString,
-	}
-
-	checker.Occurrences.Put(
-		startPosition,
-		endPosition,
-		origin,
+	return checker.PositionInfo.recordFunctionDeclarationOrigin(
+		checker.memoryGauge,
+		function,
+		functionType,
 	)
-	return origin
 }
 
 func (checker *Checker) enterValueScope() {
@@ -1994,7 +1727,7 @@ func (checker *Checker) checkDeclarationAccessModifier(
 			// Type declarations cannot be effectively private for now
 
 			if isTypeDeclaration &&
-				checker.accessCheckMode == AccessCheckModeNotSpecifiedRestricted {
+				checker.Config.AccessCheckMode == AccessCheckModeNotSpecifiedRestricted {
 
 				checker.report(
 					&MissingAccessModifierError{
@@ -2007,7 +1740,7 @@ func (checker *Checker) checkDeclarationAccessModifier(
 
 			// In strict mode, access modifiers must be given
 
-			if checker.accessCheckMode == AccessCheckModeStrict {
+			if checker.Config.AccessCheckMode == AccessCheckModeStrict {
 				checker.report(
 					&MissingAccessModifierError{
 						DeclarationKind: declarationKind,
@@ -2049,7 +1782,7 @@ func (checker *Checker) checkCharacterLiteral(expression *ast.StringExpression) 
 }
 
 func (checker *Checker) isReadableAccess(access ast.Access) bool {
-	switch checker.accessCheckMode {
+	switch checker.Config.AccessCheckMode {
 	case AccessCheckModeStrict,
 		AccessCheckModeNotSpecifiedRestricted:
 
@@ -2071,7 +1804,7 @@ func (checker *Checker) isReadableAccess(access ast.Access) bool {
 }
 
 func (checker *Checker) isWriteableAccess(access ast.Access) bool {
-	switch checker.accessCheckMode {
+	switch checker.Config.AccessCheckMode {
 	case AccessCheckModeStrict,
 		AccessCheckModeNotSpecifiedRestricted:
 
@@ -2253,19 +1986,21 @@ func (checker *Checker) rewritePostConditions(postConditions []*ast.Condition) P
 	var beforeStatements []ast.Statement
 	rewrittenPostConditions := make([]*ast.Condition, len(postConditions))
 
+	beforeExtractor := checker.beforeExtractor()
+
 	for i, postCondition := range postConditions {
 
 		// copy condition and set expression to rewritten one
 		newPostCondition := *postCondition
 
-		testExtraction := checker.beforeExtractor.ExtractBefore(postCondition.Test)
+		testExtraction := beforeExtractor.ExtractBefore(postCondition.Test)
 
 		extractedExpressions := testExtraction.ExtractedExpressions
 
 		newPostCondition.Test = testExtraction.RewrittenExpression
 
 		if postCondition.Message != nil {
-			messageExtraction := checker.beforeExtractor.ExtractBefore(postCondition.Message)
+			messageExtraction := beforeExtractor.ExtractBefore(postCondition.Message)
 
 			newPostCondition.Message = messageExtraction.RewrittenExpression
 
@@ -2372,7 +2107,7 @@ func (checker *Checker) effectiveCompositeMemberAccess(access ast.Access) ast.Ac
 		return access
 	}
 
-	switch checker.accessCheckMode {
+	switch checker.Config.AccessCheckMode {
 	case AccessCheckModeStrict, AccessCheckModeNotSpecifiedRestricted:
 		return ast.AccessPrivate
 
@@ -2554,36 +2289,25 @@ func (checker *Checker) expressionRange(expression ast.Expression) ast.Range {
 }
 
 func (checker *Checker) declareGlobalRanges() {
-	if !checker.positionInfoEnabled {
-		return
-	}
-
-	addRange := func(name string, variable *Variable) {
-		checker.Ranges.Put(
-			ast.NewPosition(checker.memoryGauge, 0, 1, 0),
-			ast.NewPosition(checker.memoryGauge, 0, math.MaxInt32, 0),
-			Range{
-				Identifier:      name,
-				Type:            variable.Type,
-				DeclarationKind: variable.DeclarationKind,
-				DocString:       variable.DocString,
-			},
-		)
-	}
+	memoryGauge := checker.memoryGauge
 
 	_ = BaseTypeActivation.ForEach(func(name string, variable *Variable) error {
-		addRange(name, variable)
+		checker.PositionInfo.recordGlobalRange(memoryGauge, name, variable)
 		return nil
 	})
 
 	_ = BaseValueActivation.ForEach(func(name string, variable *Variable) error {
-		addRange(name, variable)
+		checker.PositionInfo.recordGlobalRange(memoryGauge, name, variable)
 		return nil
 	})
 
-	checker.Elaboration.GlobalTypes.Foreach(addRange)
+	checker.Elaboration.GlobalTypes.Foreach(func(name string, variable *Variable) {
+		checker.PositionInfo.recordGlobalRange(memoryGauge, name, variable)
+	})
 
-	checker.Elaboration.GlobalValues.Foreach(addRange)
+	checker.Elaboration.GlobalValues.Foreach(func(name string, variable *Variable) {
+		checker.PositionInfo.recordGlobalRange(memoryGauge, name, variable)
+	})
 }
 
 func (checker *Checker) maybeAddResourceInvalidation(resource Resource, invalidation ResourceInvalidation) {
@@ -2594,6 +2318,13 @@ func (checker *Checker) maybeAddResourceInvalidation(resource Resource, invalida
 	}
 
 	checker.resources.AddInvalidation(resource, invalidation)
+}
+
+func (checker *Checker) beforeExtractor() *BeforeExtractor {
+	if checker._beforeExtractor == nil {
+		checker._beforeExtractor = NewBeforeExtractor(checker.memoryGauge, checker.report)
+	}
+	return checker._beforeExtractor
 }
 
 func wrapWithOptionalIfNotNil(typ Type) Type {

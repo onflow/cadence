@@ -31,13 +31,16 @@ func TestCheckRLPDecodeString(t *testing.T) {
 
 	t.Parallel()
 
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.RLPContract)
+
 	_, err := ParseAndCheckWithOptions(t,
 		`
            let l: [UInt8] = RLP.decodeString([0, 1, 2])
         `,
 		ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithPredeclaredValues(stdlib.BuiltinValues.ToSemaValueDeclarations()),
+			Config: &sema.Config{
+				BaseValueActivation: baseValueActivation,
 			},
 		},
 	)
@@ -48,13 +51,16 @@ func TestCheckInvalidRLPDecodeString(t *testing.T) {
 
 	t.Parallel()
 
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.RLPContract)
+
 	_, err := ParseAndCheckWithOptions(t,
 		`
            let l: String = RLP.decodeString("string")
         `,
 		ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithPredeclaredValues(stdlib.BuiltinValues.ToSemaValueDeclarations()),
+			Config: &sema.Config{
+				BaseValueActivation: baseValueActivation,
 			},
 		},
 	)
@@ -69,13 +75,16 @@ func TestCheckRLPDecodeList(t *testing.T) {
 
 	t.Parallel()
 
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.RLPContract)
+
 	_, err := ParseAndCheckWithOptions(t,
 		`
            let l: [[UInt8]] = RLP.decodeList([0, 1, 2])
         `,
 		ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithPredeclaredValues(stdlib.BuiltinValues.ToSemaValueDeclarations()),
+			Config: &sema.Config{
+				BaseValueActivation: baseValueActivation,
 			},
 		},
 	)
@@ -86,13 +95,16 @@ func TestCheckInvalidRLPDecodeList(t *testing.T) {
 
 	t.Parallel()
 
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.RLPContract)
+
 	_, err := ParseAndCheckWithOptions(t,
 		`
            let l: String = RLP.decodeList("string")
         `,
 		ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithPredeclaredValues(stdlib.BuiltinValues.ToSemaValueDeclarations()),
+			Config: &sema.Config{
+				BaseValueActivation: baseValueActivation,
 			},
 		},
 	)

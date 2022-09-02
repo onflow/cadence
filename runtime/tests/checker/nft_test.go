@@ -987,6 +987,9 @@ func TestCheckTopShotContract(t *testing.T) {
 	)
 	require.NoError(t, err)
 
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.PanicFunction)
+
 	_, err = ParseAndCheckWithOptions(t,
 		topShotContract,
 		ParseAndCheckOptions{
@@ -994,19 +997,13 @@ func TestCheckTopShotContract(t *testing.T) {
 				Address: common.MustBytesToAddress([]byte{0x2}),
 				Name:    "TopShot",
 			},
-			Options: []sema.Option{
-				sema.WithImportHandler(
-					func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
-						return sema.ElaborationImport{
-							Elaboration: nftChecker.Elaboration,
-						}, nil
-					},
-				),
-				sema.WithPredeclaredValues(
-					stdlib.StandardLibraryFunctions{
-						stdlib.PanicFunction,
-					}.ToSemaValueDeclarations(),
-				),
+			Config: &sema.Config{
+				ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+					return sema.ElaborationImport{
+						Elaboration: nftChecker.Elaboration,
+					}, nil
+				},
+				BaseValueActivation: baseValueActivation,
 			},
 		},
 	)

@@ -19,17 +19,15 @@
 package sema
 
 // PathType
-//
 var PathType = &SimpleType{
-	Name:          "Path",
-	QualifiedName: "Path",
-	TypeID:        "Path",
-	tag:           PathTypeTag,
-	IsInvalid:     false,
-	IsResource:    false,
-	Storable:      true,
-	// TODO: implement support for equating paths in the future
-	Equatable:            false,
+	Name:                 "Path",
+	QualifiedName:        "Path",
+	TypeID:               "Path",
+	tag:                  PathTypeTag,
+	IsInvalid:            false,
+	IsResource:           false,
+	Storable:             true,
+	Equatable:            true,
 	ExternallyReturnable: true,
 	Importable:           true,
 	IsSuperTypeOf: func(subType Type) bool {
@@ -39,31 +37,27 @@ var PathType = &SimpleType{
 }
 
 // StoragePathType
-//
 var StoragePathType = &SimpleType{
-	Name:          "StoragePath",
-	QualifiedName: "StoragePath",
-	TypeID:        "StoragePath",
-	tag:           StoragePathTypeTag,
-	IsResource:    false,
-	Storable:      true,
-	// TODO: implement support for equating paths in the future
-	Equatable:            false,
+	Name:                 "StoragePath",
+	QualifiedName:        "StoragePath",
+	TypeID:               "StoragePath",
+	tag:                  StoragePathTypeTag,
+	IsResource:           false,
+	Storable:             true,
+	Equatable:            true,
 	ExternallyReturnable: true,
 	Importable:           true,
 }
 
 // CapabilityPathType
-//
 var CapabilityPathType = &SimpleType{
-	Name:          "CapabilityPath",
-	QualifiedName: "CapabilityPath",
-	TypeID:        "CapabilityPath",
-	tag:           CapabilityPathTypeTag,
-	IsResource:    false,
-	Storable:      true,
-	// TODO: implement support for equating paths in the future
-	Equatable:            false,
+	Name:                 "CapabilityPath",
+	QualifiedName:        "CapabilityPath",
+	TypeID:               "CapabilityPath",
+	tag:                  CapabilityPathTypeTag,
+	IsResource:           false,
+	Storable:             true,
+	Equatable:            true,
 	ExternallyReturnable: true,
 	Importable:           true,
 	IsSuperTypeOf: func(subType Type) bool {
@@ -73,31 +67,27 @@ var CapabilityPathType = &SimpleType{
 }
 
 // PublicPathType
-//
 var PublicPathType = &SimpleType{
-	Name:          "PublicPath",
-	QualifiedName: "PublicPath",
-	TypeID:        "PublicPath",
-	tag:           PublicPathTypeTag,
-	IsResource:    false,
-	Storable:      true,
-	// TODO: implement support for equating paths in the future
-	Equatable:            false,
+	Name:                 "PublicPath",
+	QualifiedName:        "PublicPath",
+	TypeID:               "PublicPath",
+	tag:                  PublicPathTypeTag,
+	IsResource:           false,
+	Storable:             true,
+	Equatable:            true,
 	ExternallyReturnable: true,
 	Importable:           true,
 }
 
 // PrivatePathType
-//
 var PrivatePathType = &SimpleType{
-	Name:          "PrivatePath",
-	QualifiedName: "PrivatePath",
-	TypeID:        "PrivatePath",
-	tag:           PrivatePathTypeTag,
-	IsResource:    false,
-	Storable:      true,
-	// TODO: implement support for equating paths in the future
-	Equatable:            false,
+	Name:                 "PrivatePath",
+	QualifiedName:        "PrivatePath",
+	TypeID:               "PrivatePath",
+	tag:                  PrivatePathTypeTag,
+	IsResource:           false,
+	Storable:             true,
+	Equatable:            true,
 	ExternallyReturnable: true,
 	Importable:           true,
 }

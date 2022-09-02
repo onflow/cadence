@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package runtime
+package stdlib
 
 import (
 	"github.com/onflow/cadence/runtime/ast"
@@ -26,19 +26,19 @@ import (
 var _ ast.TypeEqualityChecker = &TypeComparator{}
 
 type TypeComparator struct {
-	RootDeclIdentifier *Identifier
+	RootDeclIdentifier *ast.Identifier
 }
 
 func (c *TypeComparator) CheckNominalTypeEquality(expected *ast.NominalType, found ast.Type) error {
 	foundNominalType, ok := found.(*ast.NominalType)
 	if !ok {
-		return getTypeMismatchError(expected, found)
+		return newTypeMismatchError(expected, found)
 	}
 
 	// First check whether the names are equal.
 	ok = c.checkNameEquality(expected, foundNominalType)
 	if !ok {
-		return getTypeMismatchError(expected, found)
+		return newTypeMismatchError(expected, found)
 	}
 
 	return nil
@@ -47,7 +47,7 @@ func (c *TypeComparator) CheckNominalTypeEquality(expected *ast.NominalType, fou
 func (c *TypeComparator) CheckOptionalTypeEquality(expected *ast.OptionalType, found ast.Type) error {
 	foundOptionalType, ok := found.(*ast.OptionalType)
 	if !ok {
-		return getTypeMismatchError(expected, found)
+		return newTypeMismatchError(expected, found)
 	}
 
 	return expected.Type.CheckEqual(foundOptionalType.Type, c)
@@ -56,7 +56,7 @@ func (c *TypeComparator) CheckOptionalTypeEquality(expected *ast.OptionalType, f
 func (c *TypeComparator) CheckVariableSizedTypeEquality(expected *ast.VariableSizedType, found ast.Type) error {
 	foundVarSizedType, ok := found.(*ast.VariableSizedType)
 	if !ok {
-		return getTypeMismatchError(expected, found)
+		return newTypeMismatchError(expected, found)
 	}
 
 	return expected.Type.CheckEqual(foundVarSizedType.Type, c)
@@ -65,13 +65,13 @@ func (c *TypeComparator) CheckVariableSizedTypeEquality(expected *ast.VariableSi
 func (c *TypeComparator) CheckConstantSizedTypeEquality(expected *ast.ConstantSizedType, found ast.Type) error {
 	foundConstSizedType, ok := found.(*ast.ConstantSizedType)
 	if !ok {
-		return getTypeMismatchError(expected, found)
+		return newTypeMismatchError(expected, found)
 	}
 
 	// Check size
 	if foundConstSizedType.Size.Value.Cmp(expected.Size.Value) != 0 ||
 		foundConstSizedType.Size.Base != expected.Size.Base {
-		return getTypeMismatchError(expected, found)
+		return newTypeMismatchError(expected, found)
 	}
 
 	// Check type
@@ -81,7 +81,7 @@ func (c *TypeComparator) CheckConstantSizedTypeEquality(expected *ast.ConstantSi
 func (c *TypeComparator) CheckDictionaryTypeEquality(expected *ast.DictionaryType, found ast.Type) error {
 	foundDictionaryType, ok := found.(*ast.DictionaryType)
 	if !ok {
-		return getTypeMismatchError(expected, found)
+		return newTypeMismatchError(expected, found)
 	}
 
 	err := expected.KeyType.CheckEqual(foundDictionaryType.KeyType, c)
@@ -95,36 +95,36 @@ func (c *TypeComparator) CheckDictionaryTypeEquality(expected *ast.DictionaryTyp
 func (c *TypeComparator) CheckRestrictedTypeEquality(expected *ast.RestrictedType, found ast.Type) error {
 	foundRestrictedType, ok := found.(*ast.RestrictedType)
 	if !ok {
-		return getTypeMismatchError(expected, found)
+		return newTypeMismatchError(expected, found)
 	}
 
 	if expected.Type == nil {
 		if !isAnyStructOrAnyResourceType(foundRestrictedType.Type) {
-			return getTypeMismatchError(expected, found)
+			return newTypeMismatchError(expected, found)
 		}
 		// else go on to check type restrictions
 	} else if foundRestrictedType.Type == nil {
 		if !isAnyStructOrAnyResourceType(expected.Type) {
-			return getTypeMismatchError(expected, found)
+			return newTypeMismatchError(expected, found)
 		}
 		// else go on to check type restrictions
 	} else {
 		// both are not nil
 		err := expected.Type.CheckEqual(foundRestrictedType.Type, c)
 		if err != nil {
-			return getTypeMismatchError(expected, found)
+			return newTypeMismatchError(expected, found)
 		}
 	}
 
 	if len(expected.Restrictions) != len(foundRestrictedType.Restrictions) {
-		return getTypeMismatchError(expected, found)
+		return newTypeMismatchError(expected, found)
 	}
 
 	for index, expectedRestriction := range expected.Restrictions {
 		foundRestriction := foundRestrictedType.Restrictions[index]
 		err := expectedRestriction.CheckEqual(foundRestriction, c)
 		if err != nil {
-			return getTypeMismatchError(expected, found)
+			return newTypeMismatchError(expected, found)
 		}
 	}
 
@@ -134,19 +134,19 @@ func (c *TypeComparator) CheckRestrictedTypeEquality(expected *ast.RestrictedTyp
 func (c *TypeComparator) CheckInstantiationTypeEquality(expected *ast.InstantiationType, found ast.Type) error {
 	foundInstType, ok := found.(*ast.InstantiationType)
 	if !ok {
-		return getTypeMismatchError(expected, found)
+		return newTypeMismatchError(expected, found)
 	}
 
 	err := expected.Type.CheckEqual(foundInstType.Type, c)
 	if err != nil || len(expected.TypeArguments) != len(foundInstType.TypeArguments) {
-		return getTypeMismatchError(expected, found)
+		return newTypeMismatchError(expected, found)
 	}
 
 	for index, typeArgs := range expected.TypeArguments {
 		otherTypeArgs := foundInstType.TypeArguments[index]
 		err := typeArgs.Type.CheckEqual(otherTypeArgs.Type, c)
 		if err != nil {
-			return getTypeMismatchError(expected, found)
+			return newTypeMismatchError(expected, found)
 		}
 	}
 
@@ -156,14 +156,14 @@ func (c *TypeComparator) CheckInstantiationTypeEquality(expected *ast.Instantiat
 func (c *TypeComparator) CheckFunctionTypeEquality(expected *ast.FunctionType, found ast.Type) error {
 	foundFuncType, ok := found.(*ast.FunctionType)
 	if !ok || len(expected.ParameterTypeAnnotations) != len(foundFuncType.ParameterTypeAnnotations) {
-		return getTypeMismatchError(expected, found)
+		return newTypeMismatchError(expected, found)
 	}
 
 	for index, expectedParamType := range expected.ParameterTypeAnnotations {
 		foundParamType := foundFuncType.ParameterTypeAnnotations[index]
 		err := expectedParamType.Type.CheckEqual(foundParamType.Type, c)
 		if err != nil {
-			return getTypeMismatchError(expected, found)
+			return newTypeMismatchError(expected, found)
 		}
 	}
 
@@ -173,7 +173,7 @@ func (c *TypeComparator) CheckFunctionTypeEquality(expected *ast.FunctionType, f
 func (c *TypeComparator) CheckReferenceTypeEquality(expected *ast.ReferenceType, found ast.Type) error {
 	refType, ok := found.(*ast.ReferenceType)
 	if !ok {
-		return getTypeMismatchError(expected, found)
+		return newTypeMismatchError(expected, found)
 	}
 
 	return expected.Type.CheckEqual(refType.Type, c)
@@ -259,7 +259,7 @@ func isAnyStructOrAnyResourceType(astType ast.Type) bool {
 	}
 }
 
-func getTypeMismatchError(expectedType ast.Type, foundType ast.Type) *TypeMismatchError {
+func newTypeMismatchError(expectedType ast.Type, foundType ast.Type) *TypeMismatchError {
 	return &TypeMismatchError{
 		ExpectedType: expectedType,
 		FoundType:    foundType,
