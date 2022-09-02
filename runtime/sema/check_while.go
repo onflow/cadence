@@ -27,13 +27,6 @@ func (checker *Checker) VisitWhileStatement(statement *ast.WhileStatement) ast.R
 
 	checker.VisitExpression(statement.Test, BoolType)
 
-	functionActivation := checker.functionActivations.Current()
-	maybeJumped := functionActivation.ReturnInfo.MaybeJumped
-	functionActivation.ReturnInfo.MaybeJumped = false
-	defer func() {
-		functionActivation.ReturnInfo.MaybeJumped = maybeJumped
-	}()
-
 	// The body of the loop will maybe be evaluated.
 	// That means that resource invalidations and
 	// returns are not definite, but only potential.
