@@ -24,6 +24,7 @@ import (
 
 const PublicAccountContractsTypeName = "Contracts"
 const PublicAccountContractsTypeGetFunctionName = "get"
+const PublicAccountContractsTypeBorrowFunctionName = "borrow"
 const PublicAccountContractsTypeNamesField = "names"
 
 // PublicAccountContractsType represents the type `PublicAccount.Contracts`
@@ -42,6 +43,12 @@ var PublicAccountContractsType = func() *CompositeType {
 			PublicAccountContractsTypeGetFunctionName,
 			publicAccountContractsTypeGetFunctionType,
 			publicAccountContractsTypeGetFunctionDocString,
+		),
+		NewUnmeteredPublicFunctionMember(
+			publicAccountContractsType,
+			PublicAccountContractsTypeBorrowFunctionName,
+			publicAccountContractsTypeBorrowFunctionType,
+			publicAccountContractsTypeBorrowFunctionDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			publicAccountContractsType,
@@ -84,6 +91,42 @@ var publicAccountContractsTypeGetFunctionType = &FunctionType{
 		},
 	),
 }
+
+const publicAccountContractsTypeBorrowFunctionDocString = `
+Returns a reference in the given type to the contract with the given name in the account, if any.
+
+Returns nil if no contract with the given name exists in the account or not conforming to given type.
+`
+
+var publicAccountContractsTypeBorrowFunctionType = func() *FunctionType {
+
+	typeParameter := &TypeParameter{
+		TypeBound: &ReferenceType{
+			Type: AnyType,
+		},
+		Name: "T",
+	}
+
+	return &FunctionType{
+		TypeParameters: []*TypeParameter{
+			typeParameter,
+		},
+		Parameters: []*Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "name",
+				TypeAnnotation: NewTypeAnnotation(StringType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{
+				Type: &GenericType{
+					TypeParameter: typeParameter,
+				},
+			},
+		),
+	}
+}()
 
 const publicAccountContractsTypeNamesDocString = `
 Names of all contracts deployed in the account.

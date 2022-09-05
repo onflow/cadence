@@ -39,6 +39,7 @@ func NewAuthAccountContractsValue(
 	addFunction FunctionValue,
 	updateFunction FunctionValue,
 	getFunction FunctionValue,
+	borrowFunction FunctionValue,
 	removeFunction FunctionValue,
 	namesGetter ContractNamesGetter,
 ) Value {
@@ -46,6 +47,7 @@ func NewAuthAccountContractsValue(
 	fields := map[string]Value{
 		sema.AuthAccountContractsTypeAddFunctionName:                addFunction,
 		sema.AuthAccountContractsTypeGetFunctionName:                getFunction,
+		sema.AuthAccountContractsTypeBorrowFunctionName:             borrowFunction,
 		sema.AuthAccountContractsTypeRemoveFunctionName:             removeFunction,
 		sema.AuthAccountContractsTypeUpdateExperimentalFunctionName: updateFunction,
 	}
@@ -93,11 +95,13 @@ func NewPublicAccountContractsValue(
 	gauge common.MemoryGauge,
 	address AddressValue,
 	getFunction FunctionValue,
+	borrowFunction FunctionValue,
 	namesGetter ContractNamesGetter,
 ) Value {
 
 	fields := map[string]Value{
-		sema.PublicAccountContractsTypeGetFunctionName: getFunction,
+		sema.PublicAccountContractsTypeGetFunctionName:    getFunction,
+		sema.PublicAccountContractsTypeBorrowFunctionName: borrowFunction,
 	}
 
 	computeField := func(

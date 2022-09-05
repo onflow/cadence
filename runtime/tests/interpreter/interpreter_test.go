@@ -8824,6 +8824,7 @@ func newTestAuthAccountValue(gauge common.MemoryGauge, addressValue interpreter.
 				panicFunction,
 				panicFunction,
 				panicFunction,
+				panicFunction,
 				func(
 					inter *interpreter.Interpreter,
 					getLocationRange func() interpreter.LocationRange,
@@ -8879,6 +8880,7 @@ func newTestPublicAccountValue(gauge common.MemoryGauge, addressValue interprete
 			return interpreter.NewPublicAccountContractsValue(
 				gauge,
 				addressValue,
+				panicFunction,
 				panicFunction,
 				func(
 					inter *interpreter.Interpreter,

@@ -241,6 +241,10 @@ func newAuthAccountContractsValue(
 			handler,
 			addressValue,
 		),
+		newAccountContractsBorrowFunction(
+			gauge,
+			addressValue,
+		),
 		newAuthAccountContractsRemoveFunction(
 			gauge,
 			handler,
@@ -784,6 +788,10 @@ func newPublicAccountContractsValue(
 			handler,
 			addressValue,
 		),
+		newAccountContractsBorrowFunction(
+			gauge,
+			addressValue,
+		),
 		newAccountContractsGetNamesFunction(
 			handler,
 			addressValue,
@@ -900,6 +908,71 @@ func newAccountContractsGetFunction(
 			}
 		},
 		sema.AuthAccountContractsTypeGetFunctionType,
+	)
+}
+
+func newAccountContractsBorrowFunction(
+	gauge common.MemoryGauge,
+	addressValue interpreter.AddressValue,
+) *interpreter.HostFunctionValue {
+
+	// Converted addresses can be cached and don't have to be recomputed on each function invocation
+	address := addressValue.ToAddress()
+
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		func(invocation interpreter.Invocation) interpreter.Value {
+
+			inter := invocation.Interpreter
+
+			nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+			name := nameValue.Str
+
+			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			if typeParameterPair == nil {
+				panic(errors.NewUnreachableError())
+			}
+			ty := typeParameterPair.Value
+
+			referenceType, ok := ty.(*sema.ReferenceType)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			var err error
+			var contractValue *interpreter.CompositeValue
+
+			wrapPanic(func() {
+				contractLocation := common.NewAddressLocation(gauge, address, name)
+				subInterpreter := inter.EnsureLoaded(contractLocation)
+				contractValue, err = subInterpreter.GetContractComposite(contractLocation)
+			})
+
+			if err != nil {
+				return interpreter.NewNilValue(inter)
+			}
+
+			staticType := contractValue.StaticType(inter)
+			if !inter.IsSubTypeOfSemaType(staticType, referenceType.Type) {
+				return interpreter.NewNilValue(inter)
+			}
+
+			reference := interpreter.NewEphemeralReferenceValue(
+				inter,
+				false,
+				contractValue,
+				referenceType.Type)
+
+			return interpreter.NewSomeValueNonCopying(
+				inter,
+				reference,
+			)
+
+		},
+		sema.AuthAccountContractsTypeBorrowFunctionType,
 	)
 }
 

@@ -25,6 +25,7 @@ import (
 const AuthAccountContractsTypeName = "Contracts"
 const AuthAccountContractsTypeAddFunctionName = "add"
 const AuthAccountContractsTypeGetFunctionName = "get"
+const AuthAccountContractsTypeBorrowFunctionName = "borrow"
 const AuthAccountContractsTypeRemoveFunctionName = "remove"
 const AuthAccountContractsTypeUpdateExperimentalFunctionName = "update__experimental"
 const AuthAccountContractsTypeNamesField = "names"
@@ -57,6 +58,12 @@ var AuthAccountContractsType = func() *CompositeType {
 			AuthAccountContractsTypeGetFunctionName,
 			AuthAccountContractsTypeGetFunctionType,
 			authAccountContractsTypeGetFunctionDocString,
+		),
+		NewUnmeteredPublicFunctionMember(
+			authAccountContractsType,
+			AuthAccountContractsTypeBorrowFunctionName,
+			AuthAccountContractsTypeBorrowFunctionType,
+			authAccountContractsTypeBorrowFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			authAccountContractsType,
@@ -183,6 +190,42 @@ var AuthAccountContractsTypeGetFunctionType = &FunctionType{
 		},
 	),
 }
+
+const authAccountContractsTypeBorrowFunctionDocString = `
+Returns a reference in the given type to the contract with the given name in the account, if any.
+
+Returns nil if no contract with the given name exists in the account or not conforming to given type.
+`
+
+var AuthAccountContractsTypeBorrowFunctionType = func() *FunctionType {
+
+	typeParameter := &TypeParameter{
+		TypeBound: &ReferenceType{
+			Type: AnyType,
+		},
+		Name: "T",
+	}
+
+	return &FunctionType{
+		TypeParameters: []*TypeParameter{
+			typeParameter,
+		},
+		Parameters: []*Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "name",
+				TypeAnnotation: NewTypeAnnotation(StringType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{
+				Type: &GenericType{
+					TypeParameter: typeParameter,
+				},
+			},
+		),
+	}
+}()
 
 const authAccountContractsTypeRemoveFunctionDocString = `
 Removes the contract/contract interface from the account which has the given name, if any.
