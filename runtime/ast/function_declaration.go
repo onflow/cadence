@@ -29,8 +29,8 @@ import (
 type FunctionPurity int
 
 const (
-	UnspecifiedPurity FunctionPurity = iota
-	ViewFunction      FunctionPurity = 1
+	FunctionPurityUnspecified FunctionPurity = iota
+	FunctionPurityView
 )
 
 func (p FunctionPurity) MarshalJSON() ([]byte, error) {
