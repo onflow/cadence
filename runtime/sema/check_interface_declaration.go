@@ -210,8 +210,6 @@ func (checker *Checker) checkInterfaceFunctions(
 					checkResourceLoss: checkResourceLoss,
 				},
 			)
-
-			checker.updateMemberPurity(function, selfType)
 		}()
 	}
 }

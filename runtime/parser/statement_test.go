@@ -1001,7 +1001,7 @@ func TestParseFunctionStatementOrExpression(t *testing.T) {
 			[]ast.Statement{
 				&ast.ExpressionStatement{
 					Expression: &ast.FunctionExpression{
-						Purity: ast.ViewFunction,
+						Purity: ast.FunctionPurityView,
 						ParameterList: &ast.ParameterList{
 							Range: ast.Range{
 								StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
@@ -1044,7 +1044,7 @@ func TestParseFunctionStatementOrExpression(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Statement{
 				&ast.FunctionDeclaration{
-					Purity: ast.ViewFunction,
+					Purity: ast.FunctionPurityView,
 					Access: ast.AccessNotSpecified,
 					Identifier: ast.Identifier{
 						Identifier: "foo",
@@ -1123,6 +1123,21 @@ func TestParseFunctionStatementOrExpression(t *testing.T) {
 			result,
 		)
 	})
+}
+
+func TestParseViewNonFunction(t *testing.T) {
+	t.Parallel()
+
+	_, errs := ParseStatements("view return 3", nil)
+	utils.AssertEqualWithDiff(t,
+		[]error{
+			&SyntaxError{
+				Message: "expected fun keyword, but got return",
+				Pos:     ast.Position{Offset: 5, Line: 1, Column: 5},
+			},
+		},
+		errs,
+	)
 }
 
 func TestParseStatements(t *testing.T) {

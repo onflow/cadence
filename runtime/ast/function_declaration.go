@@ -29,12 +29,12 @@ import (
 type FunctionPurity int
 
 const (
-	UnspecifiedPurity FunctionPurity = iota
-	ViewFunction      FunctionPurity = 1
+	FunctionPurityUnspecified FunctionPurity = iota
+	FunctionPurityView
 )
 
 func (p FunctionPurity) MarshalJSON() ([]byte, error) {
-	if p == UnspecifiedPurity {
+	if p == FunctionPurityUnspecified {
 		return json.Marshal("Unspecified")
 	}
 	return json.Marshal("View")

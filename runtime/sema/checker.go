@@ -80,6 +80,7 @@ type ImportHandlerFunc func(checker *Checker, importedLocation common.Location, 
 type MemberAccountAccessHandlerFunc func(checker *Checker, memberLocation common.Location) bool
 
 type PurityCheckScope struct {
+	// whether encountering an impure operation should cause an error
 	EnforcePurity   bool
 	ActivationDepth int
 }

@@ -86,7 +86,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 			identifier := p.tokenToIdentifier(p.current)
 			// Skip the `prepare` keyword
 			p.next()
-			prepare, err = parseSpecialFunctionDeclaration(p, false, ast.AccessNotSpecified, nil, ast.UnspecifiedPurity, nil, identifier)
+			prepare, err = parseSpecialFunctionDeclaration(p, false, ast.AccessNotSpecified, nil, ast.FunctionPurityUnspecified, nil, identifier)
 			if err != nil {
 				return nil, err
 			}
@@ -255,7 +255,7 @@ func parseTransactionExecute(p *parser) (*ast.SpecialFunctionDeclaration, error)
 		ast.NewFunctionDeclaration(
 			p.memoryGauge,
 			ast.AccessNotSpecified,
-			ast.UnspecifiedPurity,
+			ast.FunctionPurityUnspecified,
 			identifier,
 			nil,
 			nil,
