@@ -44,7 +44,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 
 	startPos := p.current.StartPos
 
-	// Skip the `transaction` Keyword
+	// Skip the `transaction` keyword
 	p.next()
 	p.skipSpaceAndComments(true)
 
@@ -84,7 +84,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 		switch p.current.Value {
 		case KeywordPrepare:
 			identifier := p.tokenToIdentifier(p.current)
-			// Skip the `prepare` Keyword
+			// Skip the `prepare` keyword
 			p.next()
 			prepare, err = parseSpecialFunctionDeclaration(p, false, ast.AccessNotSpecified, nil, identifier)
 			if err != nil {
@@ -114,7 +114,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 	if execute == nil {
 		p.skipSpaceAndComments(true)
 		if p.current.IsString(lexer.TokenIdentifier, KeywordPre) {
-			// Skip the `pre` Keyword
+			// Skip the `pre` keyword
 			p.next()
 			conditions, err := parseConditions(p, ast.ConditionKindPre)
 			if err != nil {
@@ -153,7 +153,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 				if sawPost {
 					return nil, p.syntaxError("unexpected second post-conditions")
 				}
-				// Skip the `post` Keyword
+				// Skip the `post` keyword
 				p.next()
 				conditions, err := parseConditions(p, ast.ConditionKindPost)
 				if err != nil {
@@ -240,7 +240,7 @@ func parseTransactionFields(p *parser) (fields []*ast.FieldDeclaration, err erro
 func parseTransactionExecute(p *parser) (*ast.SpecialFunctionDeclaration, error) {
 	identifier := p.tokenToIdentifier(p.current)
 
-	// Skip the `execute` Keyword
+	// Skip the `execute` keyword
 	p.next()
 	p.skipSpaceAndComments(true)
 

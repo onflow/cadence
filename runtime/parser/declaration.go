@@ -130,12 +130,12 @@ func parseAccess(p *parser) (ast.Access, error) {
 
 	switch p.current.Value {
 	case KeywordPriv:
-		// Skip the `priv` Keyword
+		// Skip the `priv` keyword
 		p.next()
 		return ast.AccessPrivate, nil
 
 	case KeywordPub:
-		// Skip the `pub` Keyword
+		// Skip the `pub` keyword
 		p.next()
 		p.skipSpaceAndComments(true)
 		if !p.current.Is(lexer.TokenParenOpen) {
@@ -161,7 +161,7 @@ func parseAccess(p *parser) (ast.Access, error) {
 			)
 		}
 
-		// Skip the `set` Keyword
+		// Skip the `set` keyword
 		p.next()
 		p.skipSpaceAndComments(true)
 
@@ -173,7 +173,7 @@ func parseAccess(p *parser) (ast.Access, error) {
 		return ast.AccessPublicSettable, nil
 
 	case KeywordAccess:
-		// Skip the `access` Keyword
+		// Skip the `access` keyword
 		p.next()
 		p.skipSpaceAndComments(true)
 
@@ -231,7 +231,7 @@ func parseAccess(p *parser) (ast.Access, error) {
 			)
 		}
 
-		// Skip the Keyword
+		// Skip the keyword
 		p.next()
 		p.skipSpaceAndComments(true)
 
@@ -270,7 +270,7 @@ func parseVariableDeclaration(
 
 	isLet := p.current.Value == KeywordLet
 
-	// Skip the `let` or `var` Keyword
+	// Skip the `let` or `var` keyword
 	p.next()
 
 	p.skipSpaceAndComments(true)
@@ -484,7 +484,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 					if expectCommaOrFrom {
 						atEnd = true
 
-						// Skip the `from` Keyword
+						// Skip the `from` keyword
 						p.next()
 						p.skipSpaceAndComments(true)
 
@@ -539,16 +539,16 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 	}
 
 	maybeParseFromIdentifier := func(identifier ast.Identifier) error {
-		// The current identifier is maybe the `from` Keyword,
+		// The current identifier is maybe the `from` keyword,
 		// in which case the given (previous) identifier was
 		// an imported identifier and not the import location.
 		//
-		// If it is not the `from` Keyword,
+		// If it is not the `from` keyword,
 		// the given (previous) identifier is the import location.
 
 		if p.current.Value == KeywordFrom {
 			identifiers = append(identifiers, identifier)
-			// Skip the `from` Keyword
+			// Skip the `from` keyword
 			p.next()
 			p.skipSpaceAndComments(true)
 
@@ -563,7 +563,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 		return nil
 	}
 
-	// Skip the `import` Keyword
+	// Skip the `import` keyword
 	p.next()
 	p.skipSpaceAndComments(true)
 
@@ -692,7 +692,7 @@ func parseEventDeclaration(
 		startPos = *accessPos
 	}
 
-	// Skip the `event` Keyword
+	// Skip the `event` keyword
 	p.next()
 
 	p.skipSpaceAndComments(true)
@@ -801,7 +801,7 @@ func parseFieldWithVariableKind(
 		variableKind = ast.VariableKindVariable
 	}
 
-	// Skip the `let` or `var` Keyword
+	// Skip the `let` or `var` keyword
 	p.next()
 
 	p.skipSpaceAndComments(true)
@@ -868,7 +868,7 @@ func parseCompositeOrInterfaceDeclaration(
 
 	compositeKind := parseCompositeKind(p)
 
-	// Skip the composite kind Keyword
+	// Skip the composite kind keyword
 	p.next()
 
 	var isInterface bool
@@ -894,7 +894,7 @@ func parseCompositeOrInterfaceDeclaration(
 					KeywordInterface,
 				)
 			}
-			// Skip the `interface` Keyword
+			// Skip the `interface` keyword
 			p.next()
 			continue
 		} else {
@@ -1233,7 +1233,7 @@ func parseEnumCase(
 		startPos = *accessPos
 	}
 
-	// Skip the `enum` Keyword
+	// Skip the `enum` keyword
 	p.next()
 
 	p.skipSpaceAndComments(true)

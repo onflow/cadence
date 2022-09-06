@@ -73,7 +73,7 @@ func parseStatements(p *parser, isEndToken func(token lexer.Token) bool) (statem
 func parseStatement(p *parser) (ast.Statement, error) {
 	p.skipSpaceAndComments(true)
 
-	// It might start with a Keyword for a statement
+	// It might start with a keyword for a statement
 
 	switch p.current.Type {
 	case lexer.TokenIdentifier:
@@ -95,14 +95,14 @@ func parseStatement(p *parser) (ast.Statement, error) {
 		case KeywordEmit:
 			return parseEmitStatement(p)
 		case KeywordFun:
-			// The `fun` Keyword is ambiguous: it either introduces a function expression
+			// The `fun` keyword is ambiguous: it either introduces a function expression
 			// or a function declaration, depending on if an identifier follows, or not.
 			return parseFunctionDeclarationOrFunctionExpressionStatement(p)
 		}
 	}
 
-	// If it is not a Keyword for a statement,
-	// it might start with a Keyword for a declaration
+	// If it is not a keyword for a statement,
+	// it might start with a keyword for a declaration
 
 	declaration, err := parseDeclaration(p, "")
 	if err != nil {
@@ -155,7 +155,7 @@ func parseFunctionDeclarationOrFunctionExpressionStatement(p *parser) (ast.State
 
 	startPos := p.current.StartPos
 
-	// Skip the `fun` Keyword
+	// Skip the `fun` keyword
 	p.next()
 
 	p.skipSpaceAndComments(true)
@@ -614,7 +614,7 @@ func parseSwitchStatement(p *parser) (*ast.SwitchStatement, error) {
 
 	startPos := p.current.StartPos
 
-	// Skip the `switch` Keyword
+	// Skip the `switch` keyword
 	p.next()
 
 	expression, err := parseExpression(p, lowestBindingPower)
@@ -709,7 +709,7 @@ func parseSwitchCase(p *parser, hasExpression bool) (*ast.SwitchCase, error) {
 
 	startPos := p.current.StartPos
 
-	// Skip the Keyword
+	// Skip the keyword
 	p.next()
 
 	var expression ast.Expression
