@@ -29,9 +29,9 @@ func parsePurityAnnotation(p *parser) ast.FunctionPurity {
 	case keywordView:
 		p.next()
 		p.skipSpaceAndComments(true)
-		return ast.ViewFunction
+		return ast.FunctionPurityView
 	}
-	return ast.UnspecifiedPurity
+	return ast.FunctionPurityUnspecified
 }
 
 func parseParameterList(p *parser) (parameterList *ast.ParameterList, err error) {
@@ -210,15 +210,7 @@ func parseFunctionDeclaration(
 	docString string,
 ) (*ast.FunctionDeclaration, error) {
 
-	startPos := p.current.StartPos
-	// access modifier will precede purity if both exist
-	if purityPos != nil {
-		startPos = *purityPos
-	}
-	if accessPos != nil {
-		startPos = *accessPos
-	}
-
+	startPos := *ast.EarlierPosition(ast.EarlierPosition(purityPos, accessPos), &p.current.StartPos)
 	// Skip the `fun` keyword
 	p.next()
 

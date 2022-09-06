@@ -2652,6 +2652,22 @@ func TestParseFunctionExpression(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("view with wrong keyword", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseExpression("view for (): X { }", nil)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected fun keyword, but got for",
+					Pos:     ast.Position{Offset: 5, Line: 1, Column: 5},
+				},
+			},
+			errs,
+		)
+	})
 }
 
 func TestParseIntegerLiterals(t *testing.T) {

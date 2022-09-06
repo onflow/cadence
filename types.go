@@ -1400,8 +1400,8 @@ func (t *ContractInterfaceType) InterfaceInitializers() [][]Parameter {
 type FunctionPurity int
 
 const (
-	ImpureFunction = iota
-	ViewFunction   = 1
+	FunctionPurityUnspecified = iota
+	FunctionPurityView
 )
 
 type FunctionType struct {
