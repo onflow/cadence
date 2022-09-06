@@ -194,7 +194,7 @@ var AuthAccountContractsTypeGetFunctionType = &FunctionType{
 const authAccountContractsTypeBorrowFunctionDocString = `
 Returns a reference of the given type to the contract with the given name in the account, if any.
 
-Returns nil if no contract with the given name exists in the account or not conforming to given type.
+Returns nil if no contract with the given name exists in the account, or if the contract does not conform to the given type.
 `
 
 var AuthAccountContractsTypeBorrowFunctionType = func() *FunctionType {
