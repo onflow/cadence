@@ -469,7 +469,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 			case lexer.TokenComma:
 				if !expectCommaOrFrom {
 					return p.syntaxError(
-						"expected %s or Keyword %q, got %s",
+						"expected %s or keyword %q, got %s",
 						lexer.TokenIdentifier,
 						KeywordFrom,
 						p.current.Type,

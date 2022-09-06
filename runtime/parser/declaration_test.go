@@ -1440,6 +1440,24 @@ func TestParseImportDeclaration(t *testing.T) {
 		)
 	})
 
+	t.Run("two identifiers, address location, repeated commas", func(t *testing.T) {
+		t.Parallel()
+
+		result, errs := ParseDeclarations(`import foo, , bar from 0xaaaa`, nil)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Pos:     ast.Position{Line: 1, Column: 12, Offset: 12},
+					Message: `expected identifier or keyword "from", got ','`,
+				},
+			},
+			errs,
+		)
+		var expected []ast.Declaration
+
+		utils.AssertEqualWithDiff(t, expected, result)
+	})
+
 	t.Run("no identifiers, identifier location", func(t *testing.T) {
 
 		t.Parallel()
@@ -1463,6 +1481,19 @@ func TestParseImportDeclaration(t *testing.T) {
 		)
 	})
 
+	t.Run("unexpected token as identifier", func(t *testing.T) {
+		t.Parallel()
+
+		_, errs := ParseDeclarations(`import foo, bar, baz, @ from 0x42`, nil)
+
+		utils.AssertEqualWithDiff(t, []error{
+			&SyntaxError{
+				Pos:     ast.Position{Line: 1, Column: 22, Offset: 22},
+				Message: `unexpected token in import declaration: got '@', expected keyword "from" or ','`,
+			},
+		}, errs)
+
+	})
 	t.Run("from keyword as second identifier", func(t *testing.T) {
 
 		t.Parallel()
@@ -1655,6 +1686,17 @@ func TestParseEvent(t *testing.T) {
 			},
 			result,
 		)
+	})
+
+	t.Run("invalid event name", func(t *testing.T) {
+		_, errs := ParseDeclarations(`event continue {}`, nil)
+
+		utils.AssertEqualWithDiff(t, []error{
+			&SyntaxError{
+				Pos:     ast.Position{Line: 1, Column: 6, Offset: 6},
+				Message: "expected identifier after start of event declaration, got keyword continue",
+			},
+		}, errs)
 	})
 }
 
@@ -2265,6 +2307,17 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 			},
 			result,
 		)
+	})
+
+	t.Run("invalid interface name", func(t *testing.T) {
+		_, errs := ParseDeclarations(`pub struct interface continue {}`, nil)
+
+		utils.AssertEqualWithDiff(t, []error{
+			&SyntaxError{
+				Pos:     ast.Position{Line: 1, Column: 21, Offset: 21},
+				Message: "expected identifier following struct declaration, got keyword continue",
+			},
+		}, errs)
 	})
 
 	t.Run("enum, two cases one one line", func(t *testing.T) {
