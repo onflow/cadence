@@ -124,7 +124,8 @@ var HardKeywords map[string]struct{} = mapDiff(AllKeywords, SoftKeywords)
 // take the boolean difference of two maps
 func mapDiff[T comparable, U any](minuend map[T]U, subtrahend map[T]U) map[T]U {
 	diff := make(map[T]U, len(minuend))
-	for k, v := range minuend {
+	// iteration order is not important here
+	for k, v := range minuend { // nolint:mapchangecheck
 		if _, exists := subtrahend[k]; !exists {
 			diff[k] = v
 		}
