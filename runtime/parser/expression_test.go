@@ -5654,7 +5654,7 @@ func TestParseIdentifiers(t *testing.T) {
 
 	t.Parallel()
 
-	names := []string {
+	names := []string{
 		"foo",
 		"_foo",
 		"foo123",
@@ -5681,10 +5681,10 @@ func TestParseReservedIdent(t *testing.T) {
 		upcast, _ := err.(Error)
 		errs := upcast.Errors
 
-		utils.AssertEqualWithDiff(t, 
-			[]error {
+		utils.AssertEqualWithDiff(t,
+			[]error{
 				&SyntaxError{
-					Pos: ast.Position{Line: 1, Column: 4, Offset: 4, },
+					Pos:     ast.Position{Line: 1, Column: 4, Offset: 4},
 					Message: "expected identifier after start of variable declaration, got keyword " + keyword,
 				},
 			},

@@ -129,7 +129,7 @@ func parseParameter(p *parser) (*ast.Parameter, error) {
 
 	identifierCt := 1
 
-	collectIdents:
+collectIdents:
 	for identifierCt < 3 {
 		switch p.current.Type {
 		// label arg: type
@@ -206,7 +206,7 @@ func parseFunctionDeclaration(
 	p.skipSpaceAndComments(true)
 
 	identifier, err := p.nonReservedIdentifier("after start of function declaration")
-	
+
 	if err != nil {
 		return nil, err
 	}

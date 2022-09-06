@@ -2010,7 +2010,7 @@ func TestParseInvalidCompositeFunctionWithSelfParameter(t *testing.T) {
 
 			selfKeywordPos := strings.Index(code, "self")
 
-			errPos := ast.Position {Line: 1, Column: selfKeywordPos, Offset: selfKeywordPos}
+			errPos := ast.Position{Line: 1, Column: selfKeywordPos, Offset: selfKeywordPos}
 
 			_, err := ParseDeclarations(
 				code,
@@ -2019,9 +2019,9 @@ func TestParseInvalidCompositeFunctionWithSelfParameter(t *testing.T) {
 
 			utils.AssertEqualWithDiff(
 				t,
-				[]error {
+				[]error{
 					&SyntaxError{
-						Pos: errPos,
+						Pos:     errPos,
 						Message: "expected identifier for argument label or parameter name, got keyword self",
 					},
 				},
@@ -4867,14 +4867,15 @@ func TestParseInvalidCompositeFunctionNames(t *testing.T) {
 				syntaxErr := errs.Errors[0].(*SyntaxError)
 
 				utils.AssertEqualWithDiff(
-					t, 
+					t,
 					"expected identifier after start of function declaration, got keyword init",
-					 syntaxErr.Message,
+					syntaxErr.Message,
 				)
 			})
 		}
 	}
 }
+
 // TODO:
 //func TestParseAccessModifiers(t *testing.T) {
 //
