@@ -32,7 +32,7 @@ The message argument is optional.
 ### fail
 
 ```cadence
-fun fail(_ message: string)
+fun fail(_ message: String)
 ```
 Immediately fails a test-case, with a message explaining the reason to fail the test.
 
@@ -69,7 +69,7 @@ pub struct Matcher {
     }
 
     /// Combine this matcher with the given matcher.
-    /// Returns a new matcher that succeeds if this and the given matcher succeed
+    /// Returns a new matcher that succeeds if this or the given matcher succeed
     ///
     pub fun or(_ other: Matcher): Matcher {
         return Matcher(test: fun (value: AnyStruct): Bool {
