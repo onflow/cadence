@@ -1246,7 +1246,7 @@ func TestParseSwitchStatement(t *testing.T) {
 	t.Run("Invalid identifiers in switch cases", func(t *testing.T) {
 		code := "switch 1 {AAAAA: break; case 3: break; default: break}"
 		_, errs := ParseStatements(code, nil)
-		utils.AssertEqualWithDiff(t, 
+		utils.AssertEqualWithDiff(t,
 			`unexpected token: got identifier, expected "case" or "default"`,
 			errs[0].Error(),
 		)

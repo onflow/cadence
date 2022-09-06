@@ -3068,12 +3068,12 @@ func TestParseTransactionDeclaration(t *testing.T) {
 		}
 		`
 
-	   _, errs := ParseDeclarations(code, nil)
+		_, errs := ParseDeclarations(code, nil)
 
-	   utils.AssertEqualWithDiff(t, 
-		`unexpected identifier, expected keyword "prepare" or "execute", got "uwu"`,
-		errs[0].Error(),
-	   )
+		utils.AssertEqualWithDiff(t,
+			`unexpected identifier, expected keyword "prepare" or "execute", got "uwu"`,
+			errs[0].Error(),
+		)
 	})
 }
 
