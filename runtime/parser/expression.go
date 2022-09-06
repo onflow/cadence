@@ -215,12 +215,12 @@ func setExprLeftBindingPower(tokenType lexer.TokenType, power int) {
 	exprLeftBindingPowers[tokenType] = power
 }
 
-func setExprIdentifierLeftBindingPower(Keyword string, power int) {
-	current := exprIdentifierLeftBindingPowers[Keyword]
+func setExprIdentifierLeftBindingPower(keyword string, power int) {
+	current := exprIdentifierLeftBindingPowers[keyword]
 	if current > power {
 		return
 	}
-	exprIdentifierLeftBindingPowers[Keyword] = power
+	exprIdentifierLeftBindingPowers[keyword] = power
 }
 
 func setExprLeftDenotation(tokenType lexer.TokenType, leftDenotation exprLeftDenotationFunc) {
