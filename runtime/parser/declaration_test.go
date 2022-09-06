@@ -2010,7 +2010,7 @@ func TestParseInvalidCompositeFunctionWithSelfParameter(t *testing.T) {
 
 			selfKeywordPos := strings.Index(code, "self")
 
-			errPos := ast.Position{Line: 1, Column: selfKeywordPos, Offset: selfKeywordPos}
+			expectedErrPos := ast.Position{Line: 1, Column: selfKeywordPos, Offset: selfKeywordPos}
 
 			_, err := ParseDeclarations(
 				code,
@@ -2021,8 +2021,8 @@ func TestParseInvalidCompositeFunctionWithSelfParameter(t *testing.T) {
 				t,
 				[]error{
 					&SyntaxError{
-						Pos:     errPos,
-						Message: "expected identifier for argument label or parameter name, got keyword self",
+						Pos:     expectedErrPos,
+						Message: "expected identifier for parameter name, got keyword self",
 					},
 				},
 				err,
@@ -3049,6 +3049,31 @@ func TestParseTransactionDeclaration(t *testing.T) {
 			},
 			result.Declarations(),
 		)
+	})
+
+	t.Run("invalid identifiers instead of special function declarations", func(t *testing.T) {
+		code := `
+		transaction {
+			var x: Int
+
+			uwu(signer: AuthAccount) {}
+
+			pre {
+				x > 1
+			}
+			post {
+				x == 2
+			}
+
+		}
+		`
+
+	   _, errs := ParseDeclarations(code, nil)
+
+	   utils.AssertEqualWithDiff(t, 
+		`unexpected identifier, expected keyword "prepare" or "execute", got "uwu"`,
+		errs[0].Error(),
+	   )
 	})
 }
 

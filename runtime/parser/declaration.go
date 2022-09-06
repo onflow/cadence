@@ -276,7 +276,6 @@ func parseVariableDeclaration(
 	p.skipSpaceAndComments(true)
 
 	identifier, err := p.nonReservedIdentifier("after start of variable declaration")
-
 	if err != nil {
 		return nil, err
 	}
@@ -698,7 +697,6 @@ func parseEventDeclaration(
 	p.skipSpaceAndComments(true)
 
 	identifier, err := p.nonReservedIdentifier("after start of event declaration")
-
 	if err != nil {
 		return nil, err
 	}

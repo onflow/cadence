@@ -5677,7 +5677,7 @@ func TestParseReservedIdent(t *testing.T) {
 	for keyword := range HardKeywords {
 		code := fmt.Sprintf(`let %s = 0`, keyword)
 		_, err := ParseProgram(code, nil)
-		upcast, _ := err.(Error)
+		upcast := err.(Error)
 		errs := upcast.Errors
 
 		utils.AssertEqualWithDiff(t,
