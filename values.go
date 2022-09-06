@@ -36,7 +36,7 @@ import (
 // Value
 
 type Value interface {
-	isValue()
+	IsValue()
 	Type() Type
 	MeteredType(gauge common.MemoryGauge) Type
 	ToGoValue() any
@@ -65,7 +65,7 @@ func NewMeteredVoid(memoryGauge common.MemoryGauge) Void {
 	return NewVoid()
 }
 
-func (Void) isValue() {}
+func (Void) IsValue() {}
 
 func (Void) Type() Type {
 	return NewVoidType()
@@ -100,7 +100,7 @@ func NewMeteredOptional(memoryGauge common.MemoryGauge, value Value) Optional {
 	return NewOptional(value)
 }
 
-func (Optional) isValue() {}
+func (Optional) IsValue() {}
 
 func (o Optional) Type() Type {
 	var innerType Type
@@ -161,7 +161,7 @@ func NewMeteredBool(memoryGauge common.MemoryGauge, b bool) Bool {
 	return NewBool(b)
 }
 
-func (Bool) isValue() {}
+func (Bool) IsValue() {}
 
 func (Bool) Type() Type {
 	return NewBoolType()
@@ -203,7 +203,7 @@ func NewMeteredString(
 	return NewString(str)
 }
 
-func (String) isValue() {}
+func (String) IsValue() {}
 
 func (String) Type() Type {
 	return NewStringType()
@@ -232,7 +232,7 @@ func NewBytes(b []byte) Bytes {
 	return b
 }
 
-func (Bytes) isValue() {}
+func (Bytes) IsValue() {}
 
 func (Bytes) Type() Type {
 	return NewBytesType()
@@ -277,7 +277,7 @@ func NewMeteredCharacter(
 	return NewCharacter(str)
 }
 
-func (Character) isValue() {}
+func (Character) IsValue() {}
 
 func (Character) Type() Type {
 	return NewCharacterType()
@@ -323,7 +323,7 @@ func BytesToMeteredAddress(memoryGauge common.MemoryGauge, b []byte) Address {
 	return BytesToAddress(b)
 }
 
-func (Address) isValue() {}
+func (Address) IsValue() {}
 
 func (Address) Type() Type {
 	return NewAddressType()
@@ -375,7 +375,7 @@ func NewMeteredIntFromBig(
 	return NewIntFromBig(value)
 }
 
-func (Int) isValue() {}
+func (Int) IsValue() {}
 
 func (Int) Type() Type {
 	return NewIntType()
@@ -422,7 +422,7 @@ func NewMeteredInt8(memoryGauge common.MemoryGauge, v int8) Int8 {
 	return Int8(v)
 }
 
-func (Int8) isValue() {}
+func (Int8) IsValue() {}
 
 func (v Int8) ToGoValue() any {
 	return int8(v)
@@ -461,7 +461,7 @@ func NewMeteredInt16(memoryGauge common.MemoryGauge, v int16) Int16 {
 	return Int16(v)
 }
 
-func (Int16) isValue() {}
+func (Int16) IsValue() {}
 
 func (Int16) Type() Type {
 	return NewInt16Type()
@@ -502,7 +502,7 @@ func NewMeteredInt32(memoryGauge common.MemoryGauge, v int32) Int32 {
 	return Int32(v)
 }
 
-func (Int32) isValue() {}
+func (Int32) IsValue() {}
 
 func (Int32) Type() Type {
 	return NewInt32Type()
@@ -543,7 +543,7 @@ func NewMeteredInt64(memoryGauge common.MemoryGauge, v int64) Int64 {
 	return Int64(v)
 }
 
-func (Int64) isValue() {}
+func (Int64) IsValue() {}
 
 func (Int64) Type() Type {
 	return NewInt64Type()
@@ -600,7 +600,7 @@ func NewMeteredInt128FromBig(
 	return NewInt128FromBig(value)
 }
 
-func (Int128) isValue() {}
+func (Int128) IsValue() {}
 
 func (Int128) Type() Type {
 	return NewInt128Type()
@@ -663,7 +663,7 @@ func NewMeteredInt256FromBig(
 	return NewInt256FromBig(value)
 }
 
-func (Int256) isValue() {}
+func (Int256) IsValue() {}
 
 func (Int256) Type() Type {
 	return NewInt256Type()
@@ -722,7 +722,7 @@ func NewMeteredUIntFromBig(
 	return NewUIntFromBig(value)
 }
 
-func (UInt) isValue() {}
+func (UInt) IsValue() {}
 
 func (UInt) Type() Type {
 	return NewUIntType()
@@ -769,7 +769,7 @@ func NewMeteredUInt8(gauge common.MemoryGauge, v uint8) UInt8 {
 	return UInt8(v)
 }
 
-func (UInt8) isValue() {}
+func (UInt8) IsValue() {}
 
 func (UInt8) Type() Type {
 	return NewUInt8Type()
@@ -808,7 +808,7 @@ func NewMeteredUInt16(gauge common.MemoryGauge, v uint16) UInt16 {
 	return UInt16(v)
 }
 
-func (UInt16) isValue() {}
+func (UInt16) IsValue() {}
 
 func (UInt16) Type() Type {
 	return NewUInt16Type()
@@ -849,7 +849,7 @@ func NewMeteredUInt32(gauge common.MemoryGauge, v uint32) UInt32 {
 	return UInt32(v)
 }
 
-func (UInt32) isValue() {}
+func (UInt32) IsValue() {}
 
 func (UInt32) Type() Type {
 	return NewUInt32Type()
@@ -890,7 +890,7 @@ func NewMeteredUInt64(gauge common.MemoryGauge, v uint64) UInt64 {
 	return UInt64(v)
 }
 
-func (UInt64) isValue() {}
+func (UInt64) IsValue() {}
 
 func (UInt64) Type() Type {
 	return NewUInt64Type()
@@ -947,7 +947,7 @@ func NewMeteredUInt128FromBig(
 	return NewUInt128FromBig(value)
 }
 
-func (UInt128) isValue() {}
+func (UInt128) IsValue() {}
 
 func (UInt128) Type() Type {
 	return NewUInt128Type()
@@ -1010,7 +1010,7 @@ func NewMeteredUInt256FromBig(
 	return NewUInt256FromBig(value)
 }
 
-func (UInt256) isValue() {}
+func (UInt256) IsValue() {}
 
 func (UInt256) Type() Type {
 	return NewUInt256Type()
@@ -1057,7 +1057,7 @@ func NewMeteredWord8(gauge common.MemoryGauge, v uint8) Word8 {
 	return Word8(v)
 }
 
-func (Word8) isValue() {}
+func (Word8) IsValue() {}
 
 func (Word8) Type() Type {
 	return NewWord8Type()
@@ -1096,7 +1096,7 @@ func NewMeteredWord16(gauge common.MemoryGauge, v uint16) Word16 {
 	return Word16(v)
 }
 
-func (Word16) isValue() {}
+func (Word16) IsValue() {}
 
 func (Word16) Type() Type {
 	return NewWord16Type()
@@ -1137,7 +1137,7 @@ func NewMeteredWord32(gauge common.MemoryGauge, v uint32) Word32 {
 	return Word32(v)
 }
 
-func (Word32) isValue() {}
+func (Word32) IsValue() {}
 
 func (Word32) Type() Type {
 	return NewWord32Type()
@@ -1178,7 +1178,7 @@ func NewMeteredWord64(gauge common.MemoryGauge, v uint64) Word64 {
 	return Word64(v)
 }
 
-func (Word64) isValue() {}
+func (Word64) IsValue() {}
 
 func (Word64) Type() Type {
 	return NewWord64Type()
@@ -1240,7 +1240,7 @@ func NewMeteredFix64(gauge common.MemoryGauge, constructor func() (string, error
 	return NewFix64(value)
 }
 
-func (Fix64) isValue() {}
+func (Fix64) IsValue() {}
 
 func (Fix64) Type() Type {
 	return NewFix64Type()
@@ -1309,7 +1309,7 @@ func ParseUFix64(s string) (uint64, error) {
 	return v.Uint64(), nil
 }
 
-func (UFix64) isValue() {}
+func (UFix64) IsValue() {}
 
 func (UFix64) Type() Type {
 	return NewUFix64Type()
@@ -1363,7 +1363,7 @@ func NewMeteredArray(
 	return NewArray(values), nil
 }
 
-func (Array) isValue() {}
+func (Array) IsValue() {}
 
 func (v Array) Type() Type {
 	return v.ArrayType
@@ -1423,7 +1423,7 @@ func NewMeteredDictionary(
 	return NewDictionary(pairs), err
 }
 
-func (Dictionary) isValue() {}
+func (Dictionary) IsValue() {}
 
 func (v Dictionary) Type() Type {
 	return v.DictionaryType
@@ -1511,7 +1511,7 @@ func NewMeteredStruct(
 	return NewStruct(fields), nil
 }
 
-func (Struct) isValue() {}
+func (Struct) IsValue() {}
 
 func (v Struct) Type() Type {
 	return v.StructType
@@ -1589,7 +1589,7 @@ func NewMeteredResource(
 	return NewResource(fields), nil
 }
 
-func (Resource) isValue() {}
+func (Resource) IsValue() {}
 
 func (v Resource) Type() Type {
 	return v.ResourceType
@@ -1646,7 +1646,7 @@ func NewMeteredEvent(
 	return NewEvent(fields), nil
 }
 
-func (Event) isValue() {}
+func (Event) IsValue() {}
 
 func (v Event) Type() Type {
 	return v.EventType
@@ -1702,7 +1702,7 @@ func NewMeteredContract(
 	return NewContract(fields), nil
 }
 
-func (Contract) isValue() {}
+func (Contract) IsValue() {}
 
 func (v Contract) Type() Type {
 	return v.ContractType
@@ -1753,7 +1753,7 @@ func NewMeteredLink(gauge common.MemoryGauge, targetPath Path, borrowType string
 	return NewLink(targetPath, borrowType)
 }
 
-func (Link) isValue() {}
+func (Link) IsValue() {}
 
 func (v Link) Type() Type {
 	return nil
@@ -1795,7 +1795,7 @@ func NewMeteredPath(gauge common.MemoryGauge, domain, identifier string) Path {
 	return NewPath(domain, identifier)
 }
 
-func (Path) isValue() {}
+func (Path) IsValue() {}
 
 func (Path) Type() Type {
 	return NewPathType()
@@ -1835,7 +1835,7 @@ func NewMeteredTypeValue(gauge common.MemoryGauge, staticType Type) TypeValue {
 	return NewTypeValue(staticType)
 }
 
-func (TypeValue) isValue() {}
+func (TypeValue) IsValue() {}
 
 func (TypeValue) Type() Type {
 	return NewMetaType()
@@ -1876,7 +1876,7 @@ func NewMeteredCapability(gauge common.MemoryGauge, path Path, address Address, 
 	return NewCapability(path, address, borrowType)
 }
 
-func (Capability) isValue() {}
+func (Capability) IsValue() {}
 
 func (v Capability) Type() Type {
 	return NewCapabilityType(v.BorrowType)
@@ -1925,7 +1925,7 @@ func NewMeteredEnum(
 	return NewEnum(fields), nil
 }
 
-func (Enum) isValue() {}
+func (Enum) IsValue() {}
 
 func (v Enum) Type() Type {
 	return v.EnumType
