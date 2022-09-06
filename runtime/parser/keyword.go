@@ -16,11 +16,7 @@
  * limitations under the License.
  */
 
-package constants
-
-import (
-	mapset "github.com/deckarep/golang-set/v2"
-)
+package parser
 
 const (
 	KeywordIf          = "if"
@@ -68,57 +64,70 @@ const (
 	KeywordEnum        = "enum"
 )
 
-var AllKeywords mapset.Set[string] = mapset.NewSet(
-	KeywordIf,
-	KeywordElse,
-	KeywordWhile,
-	KeywordBreak,
-	KeywordContinue,
-	KeywordReturn,
-	KeywordTrue,
-	KeywordFalse,
-	KeywordNil,
-	KeywordLet,
-	KeywordVar,
-	KeywordFun,
-	KeywordAs,
-	KeywordCreate,
-	KeywordDestroy,
-	KeywordFor,
-	KeywordIn,
-	KeywordEmit,
-	KeywordAuth,
-	KeywordPriv,
-	KeywordPub,
-	KeywordAccess,
-	KeywordSet,
-	KeywordAll,
-	KeywordSelf,
-	KeywordInit,
-	KeywordContract,
-	KeywordAccount,
-	KeywordImport,
-	KeywordFrom,
-	KeywordPre,
-	KeywordPost,
-	KeywordEvent,
-	KeywordStruct,
-	KeywordResource,
-	KeywordInterface,
-	KeywordTransaction,
-	KeywordPrepare,
-	KeywordExecute,
-	KeywordCase,
-	KeywordSwitch,
-	KeywordDefault,
-	KeywordEnum,
-)
+var AllKeywords = map[string]struct{}{
+	KeywordIf:          {},
+	KeywordElse:        {},
+	KeywordWhile:       {},
+	KeywordBreak:       {},
+	KeywordContinue:    {},
+	KeywordReturn:      {},
+	KeywordTrue:        {},
+	KeywordFalse:       {},
+	KeywordNil:         {},
+	KeywordLet:         {},
+	KeywordVar:         {},
+	KeywordFun:         {},
+	KeywordAs:          {},
+	KeywordCreate:      {},
+	KeywordDestroy:     {},
+	KeywordFor:         {},
+	KeywordIn:          {},
+	KeywordEmit:        {},
+	KeywordAuth:        {},
+	KeywordPriv:        {},
+	KeywordPub:         {},
+	KeywordAccess:      {},
+	KeywordSet:         {},
+	KeywordAll:         {},
+	KeywordSelf:        {},
+	KeywordInit:        {},
+	KeywordContract:    {},
+	KeywordAccount:     {},
+	KeywordImport:      {},
+	KeywordFrom:        {},
+	KeywordPre:         {},
+	KeywordPost:        {},
+	KeywordEvent:       {},
+	KeywordStruct:      {},
+	KeywordResource:    {},
+	KeywordInterface:   {},
+	KeywordTransaction: {},
+	KeywordPrepare:     {},
+	KeywordExecute:     {},
+	KeywordCase:        {},
+	KeywordSwitch:      {},
+	KeywordDefault:     {},
+	KeywordEnum:        {},
+}
 
-var SoftKeywords mapset.Set[string] = mapset.NewSet(
-	KeywordFrom,
-	KeywordAccount,
-	KeywordSet,
-	KeywordAll,
-)
+// Keywords that can be used in identifier position without ambiguity.
+var SoftKeywords = map[string]struct{}{
+	KeywordFrom:    {},
+	KeywordAccount: {},
+	KeywordSet:     {},
+	KeywordAll:     {},
+}
 
-var HardKeywords mapset.Set[string] = AllKeywords.Difference(SoftKeywords)
+// Keywords that aren't allowed in identifier position.
+var HardKeywords map[string]struct{} = mapDiff(AllKeywords, SoftKeywords)
+
+// take the boolean difference of two maps
+func mapDiff[T comparable, U any](minuend map[T]U, subtrahend map[T]U) map[T]U {
+	diff := make(map[T]U, len(minuend))
+	for k, v := range minuend {
+		if _, exists := subtrahend[k]; !exists {
+			diff[k] = v
+		}
+	}
+	return diff
+}

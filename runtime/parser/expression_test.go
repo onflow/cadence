@@ -33,7 +33,6 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/parser/constants"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -5675,7 +5674,7 @@ func TestParseIdentifiers(t *testing.T) {
 func TestParseReservedIdent(t *testing.T) {
 	t.Parallel()
 
-	for keyword := range constants.HardKeywords.Iter() {
+	for keyword := range HardKeywords {
 		code := fmt.Sprintf(`let %s = 0`, keyword)
 		_, err := ParseProgram(code, nil)
 		upcast, _ := err.(Error)

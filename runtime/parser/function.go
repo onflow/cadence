@@ -136,7 +136,7 @@ collectIdents:
 		case lexer.TokenIdentifier:
 			// previous param was actually a label
 			argumentLabel = identifier.Identifier
-			newIdentifier, err := p.assertNotKeyword("for argument label or parameter name", p.current)
+			newIdentifier, err := p.mustNotKeyword("for argument label or parameter name", p.current)
 
 			if err != nil {
 				return nil, err

@@ -25,7 +25,6 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/parser/constants"
 	"github.com/onflow/cadence/runtime/parser/lexer"
 )
 
@@ -461,7 +460,7 @@ func (p *parser) assertNotKeyword(errMsgContext string, token lexer.Token) (ast.
 
 	ident := p.tokenToIdentifier(token)
 
-	if constants.HardKeywords.Contains(ident.Identifier) {
+	if _, exists := HardKeywords[ident.Identifier]; exists {
 		return ast.Identifier{}, p.syntaxError("expected identifier%s, got keyword %s", errMsgContext, ident.Identifier)
 	}
 	return ident, nil
