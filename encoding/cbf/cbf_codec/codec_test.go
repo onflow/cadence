@@ -31,6 +31,59 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
+func FuzzCadenceBinaryFormatDecodingNoPanic(f *testing.F) {
+	f.Add([]byte{byte(cbf_codec.EncodedValueVoid)})
+
+	f.Fuzz(func(t *testing.T, encodedBytes []byte) {
+		_, _ = cbf_codec.DecodeValue(nil, encodedBytes)
+	})
+}
+
+func TestFoo(t *testing.T) {
+	t.Skip()
+	// t.SetTimeout(1 * time.Second) // TODO when this lands: https://github.com/golang/go/issues/48157
+
+	rawFailingBytes := []byte("\x15\x01\x01\x01\x01\x01\x01\x01\xc7")
+	failingBytes := []byte{
+		byte(cbf_codec.EncodedValueUInt256),
+		byte(common_codec.EncodedBoolFalse), // not nil
+		1, 1, 1, 1,                          // length of bytes
+		1, 1, 0xc7, // some of the needed bytes
+	}
+
+	// ensure the test is written correctly
+	require.Equal(t, rawFailingBytes, failingBytes, "tested bytes differ from raw bytes")
+
+	// testing if this hangs
+	_, _ = cbf_codec.DecodeValue(nil, failingBytes)
+}
+
+func TestCadenceBinaryFormatCodecEntryPoints(t *testing.T) {
+	t.Parallel()
+
+	t.Run("EncodeValue", func(t *testing.T) {
+		v, err := cbf_codec.EncodeValue(cadence.Void{})
+		require.NoError(t, err, "encoding error")
+		assert.Equal(t, []byte{byte(cbf_codec.EncodedValueVoid)}, v, "decoded wrong")
+	})
+
+	t.Run("EncodeValue error", func(t *testing.T) {
+		_, err := cbf_codec.EncodeValue(NewMockCadenceValue())
+		assert.ErrorContains(t, err, "unexpected value")
+	})
+
+	t.Run("MustEncode", func(t *testing.T) {
+		v := cbf_codec.MustEncode(cadence.Void{})
+		assert.Equal(t, []byte{byte(cbf_codec.EncodedValueVoid)}, v, "decoded wrong")
+	})
+
+	t.Run("MustEncode error", func(t *testing.T) {
+		assert.PanicsWithError(t, "unexpected value: MockString (type=%!s(<nil>))", func() {
+			cbf_codec.MustEncode(NewMockCadenceValue())
+		})
+	})
+}
+
 func TestCadenceBinaryFormatCodecVoid(t *testing.T) {
 	t.Parallel()
 
@@ -3236,3 +3289,37 @@ func NewTestCodec() (encoder *cbf_codec.Encoder, decoder *cbf_codec.Decoder, buf
 	decoder = cbf_codec.NewDecoder(nil, buffer)
 	return
 }
+
+type MockCadenceValue struct {
+	MockType    cadence.Type
+	MockGoValue any
+	MockString  string
+}
+
+func NewMockCadenceValue() *MockCadenceValue {
+	return &MockCadenceValue{
+		MockType:    nil,
+		MockGoValue: nil,
+		MockString:  "MockString",
+	}
+}
+
+func (m *MockCadenceValue) IsValue() {}
+
+func (m *MockCadenceValue) Type() cadence.Type {
+	return m.MockType
+}
+
+func (m *MockCadenceValue) MeteredType(_ common.MemoryGauge) cadence.Type {
+	return m.Type()
+}
+
+func (m *MockCadenceValue) ToGoValue() any {
+	return m.MockGoValue
+}
+
+func (m *MockCadenceValue) String() string {
+	return m.MockString
+}
+
+var _ cadence.Value = &MockCadenceValue{}

@@ -231,6 +231,8 @@ func measure(value cadence.Value, iterations int, measureCodec MeasureCodec) (me
 }
 
 func TestCodecPerformance(t *testing.T) {
+	t.Skip()
+
 	// not parallel
 
 	const iterations = 100
