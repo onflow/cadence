@@ -1931,19 +1931,6 @@ func (checker *Checker) checkSpecialFunction(
 	}
 }
 
-func (checker *Checker) updateMemberPurity(function *ast.FunctionDeclaration, selfType NominalType) {
-	fnType := checker.Elaboration.FunctionDeclarationFunctionTypes[function]
-	member, present := selfType.MemberMap().Get(function.Identifier.Identifier)
-	if present {
-		// members resolvers are created before the purity analysis is performed, so we update
-		// unresolved purities with the correct values
-		fnMember, ok := member.TypeAnnotation.Type.(*FunctionType)
-		if ok {
-			fnMember.Purity = fnType.Purity
-		}
-	}
-}
-
 func (checker *Checker) checkCompositeFunctions(
 	functions []*ast.FunctionDeclaration,
 	selfType *CompositeType,
@@ -1968,8 +1955,6 @@ func (checker *Checker) checkCompositeFunctions(
 					checkResourceLoss: true,
 				},
 			)
-
-			checker.updateMemberPurity(function, selfType)
 		}()
 
 		if function.FunctionBlock == nil {

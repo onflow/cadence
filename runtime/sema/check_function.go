@@ -25,7 +25,7 @@ import (
 )
 
 func PurityFromAnnotation(purity ast.FunctionPurity) FunctionPurity {
-	if purity == ast.ViewFunction {
+	if purity == ast.FunctionPurityView {
 		return ViewFunction
 	}
 	return ImpureFunction

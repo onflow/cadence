@@ -1016,7 +1016,7 @@ func TestParseFunctionType(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.FunctionType{
-				PurityAnnotation:         ast.UnspecifiedPurity,
+				PurityAnnotation:         ast.FunctionPurityUnspecified,
 				ParameterTypeAnnotations: nil,
 				ReturnTypeAnnotation: &ast.TypeAnnotation{
 					IsResource: false,
@@ -1046,7 +1046,7 @@ func TestParseFunctionType(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.FunctionType{
-				PurityAnnotation:         ast.ViewFunction,
+				PurityAnnotation:         ast.FunctionPurityView,
 				ParameterTypeAnnotations: nil,
 				ReturnTypeAnnotation: &ast.TypeAnnotation{
 					IsResource: false,

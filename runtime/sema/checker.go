@@ -80,8 +80,9 @@ type ImportHandlerFunc func(checker *Checker, importedLocation common.Location, 
 type MemberAccountAccessHandlerFunc func(checker *Checker, memberLocation common.Location) bool
 
 type PurityCheckScope struct {
+	// whether encountering an impure operation should cause an error
 	EnforcePurity bool
-	CurrentPurity bool
+	CurrentPurity FunctionPurity
 }
 
 // Checker
@@ -204,7 +205,7 @@ func (checker *Checker) PushNewPurityScope(enforce bool) {
 		checker.purityCheckScopes,
 		PurityCheckScope{
 			EnforcePurity: enforce,
-			CurrentPurity: true,
+			CurrentPurity: ViewFunction,
 		},
 	)
 }
@@ -218,10 +219,10 @@ func (checker *Checker) PopPurityScope() PurityCheckScope {
 func (checker *Checker) ObserveImpureOperation(operation ast.Element) {
 	scope := checker.CurrentPurityScope()
 	// purity is monotonic, if we already know this scope is impure, there's no need to continue
-	if !scope.CurrentPurity {
+	if scope.CurrentPurity != ViewFunction {
 		return
 	}
-	scope.CurrentPurity = false
+	scope.CurrentPurity = ImpureFunction
 	if scope.EnforcePurity {
 		checker.report(
 			&PurityError{Range: ast.NewRangeFromPositioned(checker.memoryGauge, operation)},

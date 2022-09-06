@@ -847,10 +847,15 @@ func defineIdentifierExpression() {
 				), nil
 
 			case keywordView:
+				if p.current.Value != keywordFun {
+					return nil, p.syntaxError("expected fun keyword, but got %s", p.current.Value)
+				}
 				p.next()
-				return parseFunctionExpression(p, token, ast.ViewFunction)
+				p.skipSpaceAndComments(true)
+
+				return parseFunctionExpression(p, token, ast.FunctionPurityView)
 			case keywordFun:
-				return parseFunctionExpression(p, token, ast.UnspecifiedPurity)
+				return parseFunctionExpression(p, token, ast.FunctionPurityUnspecified)
 
 			default:
 				return ast.NewIdentifierExpression(

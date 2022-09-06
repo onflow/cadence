@@ -34,7 +34,7 @@ const (
 )
 
 func (p FunctionPurity) MarshalJSON() ([]byte, error) {
-	if p == UnspecifiedPurity {
+	if p == FunctionPurityUnspecified {
 		return json.Marshal("Unspecified")
 	}
 	return json.Marshal("View")

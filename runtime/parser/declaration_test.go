@@ -267,7 +267,7 @@ func TestParseVariableDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid purity modifier for variable",
+					Message: "invalid view modifier for variable",
 					Pos:     ast.Position{Offset: 5, Line: 1, Column: 5},
 				},
 			},
@@ -511,7 +511,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 							EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
 						},
 					},
-					Purity: ast.UnspecifiedPurity,
+					Purity: ast.FunctionPurityUnspecified,
 					ReturnTypeAnnotation: &ast.TypeAnnotation{
 						IsResource: false,
 						Type: &ast.NominalType{
@@ -994,7 +994,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 							EndPos:   ast.Position{Line: 1, Column: 14, Offset: 14},
 						},
 					},
-					Purity: ast.ViewFunction,
+					Purity: ast.FunctionPurityView,
 					ReturnTypeAnnotation: &ast.TypeAnnotation{
 						Type: &ast.NominalType{
 							Identifier: ast.Identifier{
@@ -1026,7 +1026,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		_, errs := ParseDeclarations("view view fun foo (): X { }", nil)
 		require.Equal(t, 1, len(errs))
 		require.Equal(t, errs[0], &SyntaxError{
-			Message: "invalid second purity modifier",
+			Message: "invalid second view modifier",
 			Pos:     ast.Position{Offset: 5, Line: 1, Column: 5},
 		})
 	})
@@ -2090,7 +2090,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 					},
 					Members: ast.NewUnmeteredMembers(
 						[]ast.Declaration{&ast.FunctionDeclaration{
-							Purity: ast.ViewFunction,
+							Purity: ast.FunctionPurityView,
 							Access: ast.AccessNotSpecified,
 							ParameterList: &ast.ParameterList{
 								Range: ast.Range{
@@ -2155,7 +2155,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 						[]ast.Declaration{&ast.SpecialFunctionDeclaration{
 							Kind: common.DeclarationKindInitializer,
 							FunctionDeclaration: &ast.FunctionDeclaration{
-								Purity: ast.ViewFunction,
+								Purity: ast.FunctionPurityView,
 								Identifier: ast.Identifier{
 									Identifier: "init",
 									Pos:        ast.Position{Offset: 20, Line: 2, Column: 8},
@@ -2218,7 +2218,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid purity modifier for variable",
+					Message: "invalid view modifier for variable",
 					Pos:     ast.Position{Offset: 23, Line: 2, Column: 11},
 				},
 			},
@@ -2530,7 +2530,7 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 					},
 					Members: ast.NewUnmeteredMembers(
 						[]ast.Declaration{&ast.FunctionDeclaration{
-							Purity: ast.ViewFunction,
+							Purity: ast.FunctionPurityView,
 							Access: ast.AccessNotSpecified,
 							ParameterList: &ast.ParameterList{
 								Range: ast.Range{
@@ -4419,6 +4419,86 @@ func TestParseImportWithFromIdentifier(t *testing.T) {
 			},
 		},
 		result.Declarations(),
+	)
+}
+
+func TestParseImportWithPurity(t *testing.T) {
+
+	t.Parallel()
+
+	const code = `
+        view import x from 0x1
+	`
+	_, errs := ParseDeclarations(code, nil)
+
+	utils.AssertEqualWithDiff(t,
+		[]error{
+			&SyntaxError{
+				Message: "invalid view modifier for import",
+				Pos:     ast.Position{Offset: 14, Line: 2, Column: 13},
+			},
+		},
+		errs,
+	)
+}
+
+func TestParseEventWithPurity(t *testing.T) {
+
+	t.Parallel()
+
+	const code = `
+        view event Foo()
+	`
+	_, errs := ParseDeclarations(code, nil)
+
+	utils.AssertEqualWithDiff(t,
+		[]error{
+			&SyntaxError{
+				Message: "invalid view modifier for event",
+				Pos:     ast.Position{Offset: 14, Line: 2, Column: 13},
+			},
+		},
+		errs,
+	)
+}
+
+func TestParseCompositeWithPurity(t *testing.T) {
+
+	t.Parallel()
+
+	const code = `
+        view struct S {}
+	`
+	_, errs := ParseDeclarations(code, nil)
+
+	utils.AssertEqualWithDiff(t,
+		[]error{
+			&SyntaxError{
+				Message: "invalid view modifier for composite",
+				Pos:     ast.Position{Offset: 14, Line: 2, Column: 13},
+			},
+		},
+		errs,
+	)
+}
+
+func TestParseTransactionWithPurity(t *testing.T) {
+
+	t.Parallel()
+
+	const code = `
+        view transaction {}
+	`
+	_, errs := ParseDeclarations(code, nil)
+
+	utils.AssertEqualWithDiff(t,
+		[]error{
+			&SyntaxError{
+				Message: "invalid view modifier for transaction",
+				Pos:     ast.Position{Offset: 14, Line: 2, Column: 13},
+			},
+		},
+		errs,
 	)
 }
 

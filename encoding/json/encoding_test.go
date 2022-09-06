@@ -1504,7 +1504,7 @@ func TestEncodeType(t *testing.T) {
 			t,
 			cadence.TypeValue{
 				StaticType: (&cadence.FunctionType{
-					Purity: cadence.ViewFunction,
+					Purity: cadence.FunctionPurityView,
 					Parameters: []cadence.Parameter{
 						{Label: "qux", Identifier: "baz", Type: cadence.StringType{}},
 					},

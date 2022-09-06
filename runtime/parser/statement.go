@@ -94,10 +94,18 @@ func parseStatement(p *parser) (ast.Statement, error) {
 			return parseForStatement(p)
 		case keywordEmit:
 			return parseEmitStatement(p)
-		case keywordFun, keywordView:
+		case keywordView:
+			purityPos := p.current.StartPos
+			p.next()
+			p.skipSpaceAndComments(true)
+			if p.current.Value != keywordFun {
+				return nil, p.syntaxError("expected fun keyword, but got %s", p.current.Value)
+			}
+			return parseFunctionDeclarationOrFunctionExpressionStatement(p, ast.FunctionPurityView, &purityPos)
+		case keywordFun:
 			// The `fun` keyword is ambiguous: it either introduces a function expression
 			// or a function declaration, depending on if an identifier follows, or not.
-			return parseFunctionDeclarationOrFunctionExpressionStatement(p)
+			return parseFunctionDeclarationOrFunctionExpressionStatement(p, ast.FunctionPurityUnspecified, nil)
 		}
 	}
 
@@ -151,15 +159,9 @@ func parseStatement(p *parser) (ast.Statement, error) {
 	}
 }
 
-func parseFunctionDeclarationOrFunctionExpressionStatement(p *parser) (ast.Statement, error) {
+func parseFunctionDeclarationOrFunctionExpressionStatement(p *parser, purity ast.FunctionPurity, purityPos *ast.Position) (ast.Statement, error) {
 
-	startPos := p.current.StartPos
-
-	purity := parsePurityAnnotation(p)
-
-	if secondPurity := parsePurityAnnotation(p); secondPurity != ast.UnspecifiedPurity {
-		return nil, p.syntaxError("invalid second purity modifier")
-	}
+	startPos := *ast.EarlierPosition(&p.current.StartPos, purityPos)
 
 	// Skip the `fun` keyword
 	p.next()
