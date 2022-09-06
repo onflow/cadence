@@ -93,7 +93,7 @@ var publicAccountContractsTypeGetFunctionType = &FunctionType{
 }
 
 const publicAccountContractsTypeBorrowFunctionDocString = `
-Returns a reference in the given type to the contract with the given name in the account, if any.
+Returns a reference of the given type to the contract with the given name in the account, if any.
 
 Returns nil if no contract with the given name exists in the account, or if the contract does not conform to the given type.
 `
