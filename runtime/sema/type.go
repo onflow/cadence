@@ -361,6 +361,28 @@ const toStringFunctionDocString = `
 A textual representation of this object
 `
 
+// fromString
+const FromStringFunctionName = "fromString"
+
+func FromStringMetadata(ty Type) (methodType *FunctionType, docString string) {
+	methodType = &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "input",
+				TypeAnnotation: NewTypeAnnotation(StringType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{ty},
+		),
+	}
+
+	docString = fmt.Sprintf("Attempts to parse %s from a string. Returns `nil` on overflow or invalid input.", ty.String())
+
+	return
+}
+
 // toBigEndianBytes
 
 const ToBigEndianBytesFunctionName = "toBigEndianBytes"
@@ -3169,6 +3191,15 @@ func init() {
 				}
 			}
 
+			// add .fromString() method
+			fromStringFnType, fromStringDocString := FromStringMetadata(numberType)
+			addMember(NewUnmeteredPublicFunctionMember(
+				functionType,
+				FromStringFunctionName,
+				fromStringFnType,
+				fromStringDocString,
+			))
+
 			BaseValueActivation.Set(
 				typeName,
 				baseFunctionVariable(
@@ -3832,6 +3863,7 @@ func (t *CompositeType) FieldPosition(name string, declaration *ast.CompositeDec
 // Member
 
 type Member struct {
+	// Parent type where this member can be resolved
 	ContainerType  Type
 	Access         ast.Access
 	Identifier     ast.Identifier

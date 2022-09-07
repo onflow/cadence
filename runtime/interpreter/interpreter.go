@@ -23,6 +23,8 @@ import (
 	goErrors "errors"
 	"fmt"
 	"math"
+	"math/big"
+	"strconv"
 	"time"
 	"unicode/utf8"
 
@@ -30,6 +32,7 @@ import (
 	"github.com/onflow/atree"
 	"go.opentelemetry.io/otel/attribute"
 
+	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
@@ -2222,6 +2225,144 @@ func (interpreter *Interpreter) writeStored(
 	accountStorage := interpreter.Config.Storage.GetStorageMap(storageAddress, domain, true)
 	accountStorage.WriteValue(interpreter, identifier, value)
 	interpreter.recordStorageMutation()
+}
+
+type ValueFromStringDeclaration struct {
+	functionType *sema.FunctionType
+	docString    string
+	impl         func(*Interpreter, string) Value
+}
+
+func fromStringDeclaration(ty sema.Type, impl func(*Interpreter, string) Value) ValueFromStringDeclaration {
+	functionType, docString := sema.FromStringMetadata(ty)
+	return ValueFromStringDeclaration{
+		functionType,
+		docString,
+		impl,
+	}
+}
+
+// default implementation for parsing a given unsigned numeric type from a string.
+// the size provided by sizeInBytes is passed to strconv.ParseUint, ensuring that the parsed value fits in the target type.
+// input strings must not begin with a '+' or '-'.
+func fromStringImplUnsigned(bitSize int, convert func(uint64) Value) func(*Interpreter, string) Value {
+	expectedUsage := common.NewNumberMemoryUsage(bitSize / 8)
+
+	return func(interpreter *Interpreter, input string) Value {
+		val, err := strconv.ParseUint(input, 10, bitSize)
+		if err != nil {
+			return NewNilValue(interpreter)
+		}
+
+		converted := convert(val)
+		common.UseMemory(interpreter, expectedUsage)
+		return NewSomeValueNonCopying(interpreter, converted)
+	}
+}
+
+// default implementation for parsing a given signed numeric type from a string.
+// the size provided by sizeInBytes is passed to strconv.ParseUint, ensuring that the parsed value fits in the target type.
+// input strings may begin with a '+' or '-'.
+func fromStringImplSigned(bitSize int, convert func(int64) Value) func(*Interpreter, string) Value {
+	expectedUsage := common.NewCadenceBigIntMemoryUsage(bitSize / 8)
+
+	return func(interpreter *Interpreter, input string) Value {
+		val, err := strconv.ParseInt(input, 10, bitSize)
+		if err != nil {
+			return NewNilValue(interpreter)
+		}
+
+		converted := convert(val)
+		common.UseMemory(interpreter, expectedUsage)
+		return NewSomeValueNonCopying(interpreter, converted)
+	}
+}
+
+func fromStringImplBig(convert func(*big.Int) (Value, bool)) func(*Interpreter, string) Value {
+	return func(interpreter *Interpreter, input string) Value {
+		val, ok := common.NewBigInt(interpreter).SetString(input, 10)
+		if !ok {
+			return NewNilValue(interpreter)
+		}
+		curSize := len(val.Bits())
+		common.UseMemory(interpreter, common.NewCadenceBigIntMemoryUsage(curSize))
+
+		converted, ok := convert(val)
+
+		if !ok {
+			return NewNilValue(interpreter)
+		}
+		return NewSomeValueNonCopying(interpreter, converted)
+	}
+}
+
+// check if val is in the inclusive interval [low, hi]
+func inRange(val *big.Int, low *big.Int, hi *big.Int) bool {
+	return -1 < val.Cmp(low) && val.Cmp(hi) < 1
+}
+func todoDefaultImpl(_ *Interpreter, v Value) Value { return v }
+
+var FromStringDeclarations = []ValueFromStringDeclaration{
+	fromStringDeclaration(sema.Int8Type, fromStringImplSigned(8, func(n int64) Value { return NewUnmeteredInt8Value(int8(n)) })),
+	fromStringDeclaration(sema.Int16Type, fromStringImplSigned(16, func(n int64) Value { return NewUnmeteredInt16Value(int16(n)) })),
+	fromStringDeclaration(sema.Int32Type, fromStringImplSigned(32, func(n int64) Value { return NewUnmeteredInt32Value(int32(n)) })),
+	fromStringDeclaration(sema.Int64Type, fromStringImplSigned(64, func(n int64) Value { return NewUnmeteredInt64Value(n) })),
+	fromStringDeclaration(sema.Int128Type, fromStringImplBig(func(b *big.Int) (Value, bool) {
+		ok := inRange(b, sema.Int128TypeMinIntBig, sema.Int128TypeMaxIntBig)
+		return Int128Value{b}, ok
+	})),
+	fromStringDeclaration(sema.Int256Type, fromStringImplBig(func(b *big.Int) (Value, bool) {
+		ok := inRange(b, sema.Int256TypeMinIntBig, sema.Int256TypeMaxIntBig)
+		return Int256Value{b}, ok
+	})),
+	fromStringDeclaration(sema.IntType, fromStringImplBig(func(b *big.Int) (Value, bool) {
+		return IntValue{b}, true
+	})),
+	fromStringDeclaration(sema.UInt8Type, fromStringImplUnsigned(8, func(n uint64) Value {
+		return NewUnmeteredUInt8Value(uint8(n))
+	})),
+	fromStringDeclaration(sema.UInt16Type, fromStringImplUnsigned(16, func(n uint64) Value {
+		return NewUnmeteredUInt16Value(uint16(n))
+	})),
+	fromStringDeclaration(sema.UInt32Type, fromStringImplUnsigned(32, func(n uint64) Value {
+		return NewUnmeteredUInt32Value(uint32(n))
+	})),
+	fromStringDeclaration(sema.UInt64Type, fromStringImplUnsigned(64, func(n uint64) Value {
+		return NewUnmeteredUInt64Value(n)
+	})),
+	fromStringDeclaration(sema.UInt128Type, fromStringImplBig(func(b *big.Int) (Value, bool) {
+		ok := inRange(b, sema.UInt128TypeMinIntBig, sema.UInt128TypeMaxIntBig)
+		return UInt128Value{b}, ok
+	})),
+	fromStringDeclaration(sema.UInt256Type, fromStringImplBig(func(b *big.Int) (Value, bool) {
+		ok := inRange(b, sema.UInt256TypeMinIntBig, sema.UInt256TypeMaxIntBig)
+		return UInt256Value{b}, ok
+	})),
+	fromStringDeclaration(sema.UIntType, fromStringImplBig(func(b *big.Int) (Value, bool) {
+		return UIntValue{b}, true
+	})),
+	fromStringDeclaration(sema.Word8Type, fromStringImplUnsigned(8, func(n uint64) Value { return NewUnmeteredWord8Value(uint8(n)) })),
+	fromStringDeclaration(sema.Word16Type, fromStringImplUnsigned(16, func(n uint64) Value { return NewUnmeteredWord16Value(uint16(n)) })),
+	fromStringDeclaration(sema.Word32Type, fromStringImplUnsigned(32, func(n uint64) Value { return NewUnmeteredWord32Value(uint32(n)) })),
+	fromStringDeclaration(sema.Word64Type, fromStringImplUnsigned(64, func(n uint64) Value { return NewUnmeteredWord64Value(n) })),
+	fromStringDeclaration(sema.Fix64Type, func(inter *Interpreter, input string) Value {
+		n, err := fixedpoint.ParseFix64(input)
+		if err != nil {
+			return NewNilValue(inter)
+		}
+
+		val := NewFix64ValueWithInteger(inter, n.Int64)
+		return NewSomeValueNonCopying(inter, val)
+
+	}),
+	fromStringDeclaration(sema.Fix64Type, func(inter *Interpreter, input string) Value {
+		n, err := fixedpoint.ParseFix64(input)
+		if err != nil {
+			return NewNilValue(inter)
+		}
+		val := NewUFix64ValueWithInteger(inter, n.Uint64)
+		return NewSomeValueNonCopying(inter, val)
+	}),
 }
 
 type ValueConverterDeclaration struct {
