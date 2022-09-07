@@ -400,15 +400,15 @@ However, during tests, since accounts are created dynamically and the addresses 
 specifying the addresses statically in a configuration file is not an option.
 
 Hence, the test framework provides a way to specify the addresses using the
-`useConfiguration(_ configs: Test.Configurations)` function in `Blockchain`.
+`useConfiguration(_ confgiuration: Test.Configuration)` function in `Blockchain`.
 
-The `Configurations` struct consists of a mapping of import locations to their addresses.
+The `Configuration` struct consists of a mapping of import locations to their addresses.
 
 ```cadence
-/// Configurations to be used by the blockchain.
+/// Configuration to be used by the blockchain.
 /// Can be used to set the address mapping.
 ///
-pub struct Configurations {
+pub struct Configuration {
     pub let addresses: {String: Address}
 
     init(addresses: {String: Address}) {
@@ -432,9 +432,9 @@ pub fun setup() {
     let acct2 = blockchain.createAccount()
     accounts.append(acct2)
 
-    // Set the configurations with the addresses
+    // Set the configuration with the addresses
 
-    blockchain.useConfiguration(Test.Configurations({
+    blockchain.useConfiguration(Test.Configuration({
         "./contracts/FooContract": acct1.address,
         "./contracts/BarContract": acct2.address
     }))
