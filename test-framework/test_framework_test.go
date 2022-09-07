@@ -2256,6 +2256,65 @@ func TestReplacingImports(t *testing.T) {
 			"expecting an AddressLocation, but other location types are passed",
 		)
 	})
+
+	t.Run("config with missing imports", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import Test
+
+            pub var blockchain = Test.newEmulatorBlockchain()
+            pub var account = blockchain.createAccount()
+
+            pub fun setup() {
+                // Configurations provided, but some imports are missing.
+                blockchain.useConfiguration(Test.Configuration({
+                    "./FooContract": account.address
+                }))
+            }
+
+            pub fun test() {
+                var script = Test.readFile("./sample/script.cdc")
+                var result = blockchain.executeScript(script, [])
+
+                if result.status != Test.ResultStatus.succeeded {
+                    panic(result.error!.message)
+                }
+                assert((result.returnValue! as! String) == "hello from Foo")
+            }
+        `
+
+		const scriptCode = `
+            import Foo from "./FooContract"
+            import Foo from "./BarContract"  // This is missing in configs
+
+            pub fun main(): String {
+                return Foo.sayHello()
+            }
+        `
+
+		importResolver := func(location common.Location) (string, error) {
+			stringLocation := location.(common.StringLocation)
+
+			switch stringLocation.String() {
+			case "./sample/script.cdc":
+				return scriptCode, nil
+			default:
+				return "", fmt.Errorf("cannot find import location: %s", location)
+			}
+		}
+
+		runner := NewTestRunner().WithImportResolver(importResolver)
+
+		result, err := runner.RunTest(code, "test")
+		require.NoError(t, err)
+		require.Error(t, result.Error)
+		assert.Contains(
+			t,
+			result.Error.Error(),
+			"expecting an AddressLocation, but other location types are passed",
+		)
+	})
 }
 
 func TestReplaceImports(t *testing.T) {
