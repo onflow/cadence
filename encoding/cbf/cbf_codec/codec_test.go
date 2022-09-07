@@ -90,12 +90,34 @@ func TestCadenceBinaryFormatCodecEntryPoints(t *testing.T) {
 
 	t.Run("MustEncode", func(t *testing.T) {
 		v := cbf_codec.MustEncode(cadence.Void{})
-		assert.Equal(t, []byte{byte(cbf_codec.EncodedValueVoid)}, v, "decoded wrong")
+		assert.Equal(t, []byte{byte(cbf_codec.EncodedValueVoid)}, v, "encoded wrong")
 	})
 
 	t.Run("MustEncode error", func(t *testing.T) {
 		assert.PanicsWithError(t, "unexpected value: MockString (type=%!s(<nil>))", func() {
 			cbf_codec.MustEncode(NewMockCadenceValue())
+		})
+	})
+
+	t.Run("DecodeValue", func(t *testing.T) {
+		v, err := cbf_codec.DecodeValue(nil, []byte{byte(cbf_codec.EncodedValueVoid)})
+		require.NoError(t, err, "decoding error")
+		assert.Equal(t, cadence.Void{}, v, "decoded wrong")
+	})
+
+	t.Run("DecodeValue error", func(t *testing.T) {
+		_, err := cbf_codec.DecodeValue(nil, []byte{byte(cbf_codec.EncodedValueUnknown)})
+		assert.ErrorContains(t, err, "unknown cadence.Value")
+	})
+
+	t.Run("MustDecode", func(t *testing.T) {
+		v := cbf_codec.MustDecode(nil, []byte{byte(cbf_codec.EncodedValueVoid)})
+		assert.Equal(t, cadence.Void{}, v, "decoded wrong")
+	})
+
+	t.Run("MustDecode error", func(t *testing.T) {
+		assert.PanicsWithError(t, "unknown cadence.Value: %!s(<nil>)", func() {
+			cbf_codec.MustDecode(nil, []byte{byte(cbf_codec.EncodedValueUnknown)})
 		})
 	})
 }
