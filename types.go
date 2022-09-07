@@ -25,7 +25,7 @@ import (
 )
 
 type Type interface {
-	isType()
+	IsType()
 	ID() string
 }
 
@@ -36,7 +36,7 @@ type Type interface {
 //
 type TypeID string
 
-func (TypeID) isType() {}
+func (TypeID) IsType() {}
 
 func (t TypeID) ID() string {
 	return string(t)
@@ -57,7 +57,7 @@ func NewMeteredAnyType(gauge common.MemoryGauge) AnyType {
 	return NewAnyType()
 }
 
-func (AnyType) isType() {}
+func (AnyType) IsType() {}
 
 func (AnyType) ID() string {
 	return "Any"
@@ -78,7 +78,7 @@ func NewMeteredAnyStructType(gauge common.MemoryGauge) AnyStructType {
 	return NewAnyStructType()
 }
 
-func (AnyStructType) isType() {}
+func (AnyStructType) IsType() {}
 
 func (AnyStructType) ID() string {
 	return "AnyStruct"
@@ -99,7 +99,7 @@ func NewMeteredAnyResourceType(gauge common.MemoryGauge) AnyResourceType {
 	return NewAnyResourceType()
 }
 
-func (AnyResourceType) isType() {}
+func (AnyResourceType) IsType() {}
 
 func (AnyResourceType) ID() string {
 	return "AnyResource"
@@ -122,7 +122,7 @@ func NewMeteredOptionalType(gauge common.MemoryGauge, typ Type) OptionalType {
 	return NewOptionalType(typ)
 }
 
-func (OptionalType) isType() {}
+func (OptionalType) IsType() {}
 
 func (t OptionalType) ID() string {
 	return fmt.Sprintf("%s?", t.Type.ID())
@@ -143,7 +143,7 @@ func NewMeteredMetaType(gauge common.MemoryGauge) MetaType {
 	return NewMetaType()
 }
 
-func (MetaType) isType() {}
+func (MetaType) IsType() {}
 
 func (MetaType) ID() string {
 	return "Type"
@@ -164,7 +164,7 @@ func NewMeteredVoidType(gauge common.MemoryGauge) VoidType {
 	return NewVoidType()
 }
 
-func (VoidType) isType() {}
+func (VoidType) IsType() {}
 
 func (VoidType) ID() string {
 	return "Void"
@@ -185,7 +185,7 @@ func NewMeteredNeverType(gauge common.MemoryGauge) NeverType {
 	return NewNeverType()
 }
 
-func (NeverType) isType() {}
+func (NeverType) IsType() {}
 
 func (NeverType) ID() string {
 	return "Never"
@@ -206,7 +206,7 @@ func NewMeteredBoolType(gauge common.MemoryGauge) BoolType {
 	return NewBoolType()
 }
 
-func (BoolType) isType() {}
+func (BoolType) IsType() {}
 
 func (BoolType) ID() string {
 	return "Bool"
@@ -227,7 +227,7 @@ func NewMeteredStringType(gauge common.MemoryGauge) StringType {
 	return NewStringType()
 }
 
-func (StringType) isType() {}
+func (StringType) IsType() {}
 
 func (StringType) ID() string {
 	return "String"
@@ -248,7 +248,7 @@ func NewMeteredCharacterType(gauge common.MemoryGauge) CharacterType {
 	return NewCharacterType()
 }
 
-func (CharacterType) isType() {}
+func (CharacterType) IsType() {}
 
 func (CharacterType) ID() string {
 	return "Character"
@@ -269,7 +269,7 @@ func NewMeteredBytesType(gauge common.MemoryGauge) BytesType {
 	return NewBytesType()
 }
 
-func (BytesType) isType() {}
+func (BytesType) IsType() {}
 
 func (BytesType) ID() string {
 	return "Bytes"
@@ -290,7 +290,7 @@ func NewMeteredAddressType(gauge common.MemoryGauge) AddressType {
 	return NewAddressType()
 }
 
-func (AddressType) isType() {}
+func (AddressType) IsType() {}
 
 func (AddressType) ID() string {
 	return "Address"
@@ -311,7 +311,7 @@ func NewMeteredNumberType(gauge common.MemoryGauge) NumberType {
 	return NewNumberType()
 }
 
-func (NumberType) isType() {}
+func (NumberType) IsType() {}
 
 func (NumberType) ID() string {
 	return "Number"
@@ -332,7 +332,7 @@ func NewMeteredSignedNumberType(gauge common.MemoryGauge) SignedNumberType {
 	return NewSignedNumberType()
 }
 
-func (SignedNumberType) isType() {}
+func (SignedNumberType) IsType() {}
 
 func (SignedNumberType) ID() string {
 	return "SignedNumber"
@@ -353,7 +353,7 @@ func NewMeteredIntegerType(gauge common.MemoryGauge) IntegerType {
 	return NewIntegerType()
 }
 
-func (IntegerType) isType() {}
+func (IntegerType) IsType() {}
 
 func (IntegerType) ID() string {
 	return "Integer"
@@ -374,7 +374,7 @@ func NewMeteredSignedIntegerType(gauge common.MemoryGauge) SignedIntegerType {
 	return NewSignedIntegerType()
 }
 
-func (SignedIntegerType) isType() {}
+func (SignedIntegerType) IsType() {}
 
 func (SignedIntegerType) ID() string {
 	return "SignedInteger"
@@ -395,7 +395,7 @@ func NewMeteredFixedPointType(gauge common.MemoryGauge) FixedPointType {
 	return NewFixedPointType()
 }
 
-func (FixedPointType) isType() {}
+func (FixedPointType) IsType() {}
 
 func (FixedPointType) ID() string {
 	return "FixedPoint"
@@ -416,7 +416,7 @@ func NewMeteredSignedFixedPointType(gauge common.MemoryGauge) SignedFixedPointTy
 	return NewSignedFixedPointType()
 }
 
-func (SignedFixedPointType) isType() {}
+func (SignedFixedPointType) IsType() {}
 
 func (SignedFixedPointType) ID() string {
 	return "SignedFixedPoint"
@@ -437,7 +437,7 @@ func NewMeteredIntType(gauge common.MemoryGauge) IntType {
 	return NewIntType()
 }
 
-func (IntType) isType() {}
+func (IntType) IsType() {}
 
 func (IntType) ID() string {
 	return "Int"
@@ -458,7 +458,7 @@ func NewMeteredInt8Type(gauge common.MemoryGauge) Int8Type {
 	return NewInt8Type()
 }
 
-func (Int8Type) isType() {}
+func (Int8Type) IsType() {}
 
 func (Int8Type) ID() string {
 	return "Int8"
@@ -479,7 +479,7 @@ func NewMeteredInt16Type(gauge common.MemoryGauge) Int16Type {
 	return NewInt16Type()
 }
 
-func (Int16Type) isType() {}
+func (Int16Type) IsType() {}
 
 func (Int16Type) ID() string {
 	return "Int16"
@@ -500,7 +500,7 @@ func NewMeteredInt32Type(gauge common.MemoryGauge) Int32Type {
 	return NewInt32Type()
 }
 
-func (Int32Type) isType() {}
+func (Int32Type) IsType() {}
 
 func (Int32Type) ID() string {
 	return "Int32"
@@ -521,7 +521,7 @@ func NewMeteredInt64Type(gauge common.MemoryGauge) Int64Type {
 	return NewInt64Type()
 }
 
-func (Int64Type) isType() {}
+func (Int64Type) IsType() {}
 
 func (Int64Type) ID() string {
 	return "Int64"
@@ -542,7 +542,7 @@ func NewMeteredInt128Type(gauge common.MemoryGauge) Int128Type {
 	return NewInt128Type()
 }
 
-func (Int128Type) isType() {}
+func (Int128Type) IsType() {}
 
 func (Int128Type) ID() string {
 	return "Int128"
@@ -563,7 +563,7 @@ func NewMeteredInt256Type(gauge common.MemoryGauge) Int256Type {
 	return NewInt256Type()
 }
 
-func (Int256Type) isType() {}
+func (Int256Type) IsType() {}
 
 func (Int256Type) ID() string {
 	return "Int256"
@@ -584,7 +584,7 @@ func NewMeteredUIntType(gauge common.MemoryGauge) UIntType {
 	return NewUIntType()
 }
 
-func (UIntType) isType() {}
+func (UIntType) IsType() {}
 
 func (UIntType) ID() string {
 	return "UInt"
@@ -605,7 +605,7 @@ func NewMeteredUInt8Type(gauge common.MemoryGauge) UInt8Type {
 	return NewUInt8Type()
 }
 
-func (UInt8Type) isType() {}
+func (UInt8Type) IsType() {}
 
 func (UInt8Type) ID() string {
 	return "UInt8"
@@ -626,7 +626,7 @@ func NewMeteredUInt16Type(gauge common.MemoryGauge) UInt16Type {
 	return NewUInt16Type()
 }
 
-func (UInt16Type) isType() {}
+func (UInt16Type) IsType() {}
 
 func (UInt16Type) ID() string {
 	return "UInt16"
@@ -647,7 +647,7 @@ func NewMeteredUInt32Type(gauge common.MemoryGauge) UInt32Type {
 	return NewUInt32Type()
 }
 
-func (UInt32Type) isType() {}
+func (UInt32Type) IsType() {}
 
 func (UInt32Type) ID() string {
 	return "UInt32"
@@ -668,7 +668,7 @@ func NewMeteredUInt64Type(gauge common.MemoryGauge) UInt64Type {
 	return NewUInt64Type()
 }
 
-func (UInt64Type) isType() {}
+func (UInt64Type) IsType() {}
 
 func (UInt64Type) ID() string {
 	return "UInt64"
@@ -689,7 +689,7 @@ func NewMeteredUInt128Type(gauge common.MemoryGauge) UInt128Type {
 	return NewUInt128Type()
 }
 
-func (UInt128Type) isType() {}
+func (UInt128Type) IsType() {}
 
 func (UInt128Type) ID() string {
 	return "UInt128"
@@ -710,7 +710,7 @@ func NewMeteredUInt256Type(gauge common.MemoryGauge) UInt256Type {
 	return NewUInt256Type()
 }
 
-func (UInt256Type) isType() {}
+func (UInt256Type) IsType() {}
 
 func (UInt256Type) ID() string {
 	return "UInt256"
@@ -731,7 +731,7 @@ func NewMeteredWord8Type(gauge common.MemoryGauge) Word8Type {
 	return NewWord8Type()
 }
 
-func (Word8Type) isType() {}
+func (Word8Type) IsType() {}
 
 func (Word8Type) ID() string {
 	return "Word8"
@@ -752,7 +752,7 @@ func NewMeteredWord16Type(gauge common.MemoryGauge) Word16Type {
 	return NewWord16Type()
 }
 
-func (Word16Type) isType() {}
+func (Word16Type) IsType() {}
 
 func (Word16Type) ID() string {
 	return "Word16"
@@ -773,7 +773,7 @@ func NewMeteredWord32Type(gauge common.MemoryGauge) Word32Type {
 	return NewWord32Type()
 }
 
-func (Word32Type) isType() {}
+func (Word32Type) IsType() {}
 
 func (Word32Type) ID() string {
 	return "Word32"
@@ -794,7 +794,7 @@ func NewMeteredWord64Type(gauge common.MemoryGauge) Word64Type {
 	return NewWord64Type()
 }
 
-func (Word64Type) isType() {}
+func (Word64Type) IsType() {}
 
 func (Word64Type) ID() string {
 	return "Word64"
@@ -815,7 +815,7 @@ func NewMeteredFix64Type(gauge common.MemoryGauge) Fix64Type {
 	return NewFix64Type()
 }
 
-func (Fix64Type) isType() {}
+func (Fix64Type) IsType() {}
 
 func (Fix64Type) ID() string {
 	return "Fix64"
@@ -836,7 +836,7 @@ func NewMeteredUFix64Type(gauge common.MemoryGauge) UFix64Type {
 	return NewUFix64Type()
 }
 
-func (UFix64Type) isType() {}
+func (UFix64Type) IsType() {}
 
 func (UFix64Type) ID() string {
 	return "UFix64"
@@ -869,7 +869,7 @@ func NewMeteredVariableSizedArrayType(
 	return NewVariableSizedArrayType(elementType)
 }
 
-func (VariableSizedArrayType) isType() {}
+func (VariableSizedArrayType) IsType() {}
 
 func (t VariableSizedArrayType) ID() string {
 	return fmt.Sprintf("[%s]", t.ElementType.ID())
@@ -907,7 +907,7 @@ func NewMeteredConstantSizedArrayType(
 	return NewConstantSizedArrayType(size, elementType)
 }
 
-func (ConstantSizedArrayType) isType() {}
+func (ConstantSizedArrayType) IsType() {}
 
 func (t ConstantSizedArrayType) ID() string {
 	return fmt.Sprintf("[%s;%d]", t.ElementType.ID(), t.Size)
@@ -945,7 +945,7 @@ func NewMeteredDictionaryType(
 	return NewDictionaryType(keyType, elementType)
 }
 
-func (DictionaryType) isType() {}
+func (DictionaryType) IsType() {}
 
 func (t DictionaryType) ID() string {
 	return fmt.Sprintf(
@@ -1039,7 +1039,7 @@ func NewMeteredStructType(
 	return NewStructType(location, qualifiedIdentifer, fields, initializers)
 }
 
-func (*StructType) isType() {}
+func (*StructType) IsType() {}
 
 func (t *StructType) ID() string {
 	if t.Location == nil {
@@ -1107,7 +1107,7 @@ func NewMeteredResourceType(
 	return NewResourceType(location, qualifiedIdentifer, fields, initializers)
 }
 
-func (*ResourceType) isType() {}
+func (*ResourceType) IsType() {}
 
 func (t *ResourceType) ID() string {
 	if t.Location == nil {
@@ -1175,7 +1175,7 @@ func NewMeteredEventType(
 	return NewEventType(location, qualifiedIdentifer, fields, initializer)
 }
 
-func (*EventType) isType() {}
+func (*EventType) IsType() {}
 
 func (t *EventType) ID() string {
 	if t.Location == nil {
@@ -1243,7 +1243,7 @@ func NewMeteredContractType(
 	return NewContractType(location, qualifiedIdentifier, fields, initializers)
 }
 
-func (*ContractType) isType() {}
+func (*ContractType) IsType() {}
 
 func (t *ContractType) ID() string {
 	if t.Location == nil {
@@ -1323,7 +1323,7 @@ func NewMeteredStructInterfaceType(
 	return NewStructInterfaceType(location, qualifiedIdentifier, fields, initializers)
 }
 
-func (*StructInterfaceType) isType() {}
+func (*StructInterfaceType) IsType() {}
 
 func (t *StructInterfaceType) ID() string {
 	if t.Location == nil {
@@ -1391,7 +1391,7 @@ func NewMeteredResourceInterfaceType(
 	return NewResourceInterfaceType(location, qualifiedIdentifier, fields, initializers)
 }
 
-func (*ResourceInterfaceType) isType() {}
+func (*ResourceInterfaceType) IsType() {}
 
 func (t *ResourceInterfaceType) ID() string {
 	if t.Location == nil {
@@ -1459,7 +1459,7 @@ func NewMeteredContractInterfaceType(
 	return NewContractInterfaceType(location, qualifiedIdentifier, fields, initializers)
 }
 
-func (*ContractInterfaceType) isType() {}
+func (*ContractInterfaceType) IsType() {}
 
 func (t *ContractInterfaceType) ID() string {
 	if t.Location == nil {
@@ -1523,7 +1523,7 @@ func NewMeteredFunctionType(
 	return NewFunctionType(typeID, parameters, returnType)
 }
 
-func (*FunctionType) isType() {}
+func (*FunctionType) IsType() {}
 
 func (t *FunctionType) ID() string {
 	return t.typeID
@@ -1562,7 +1562,7 @@ func NewMeteredReferenceType(
 	return NewReferenceType(authorized, typ)
 }
 
-func (ReferenceType) isType() {}
+func (ReferenceType) IsType() {}
 
 func (t ReferenceType) ID() string {
 	id := fmt.Sprintf("&%s", t.Type.ID())
@@ -1604,7 +1604,7 @@ func NewMeteredRestrictedType(
 	return NewRestrictedType(typeID, typ, restrictions)
 }
 
-func (*RestrictedType) isType() {}
+func (*RestrictedType) IsType() {}
 
 func (t *RestrictedType) ID() string {
 	return t.typeID
@@ -1632,7 +1632,7 @@ func NewMeteredBlockType(
 	return NewBlockType()
 }
 
-func (BlockType) isType() {}
+func (BlockType) IsType() {}
 
 func (BlockType) ID() string {
 	return "Block"
@@ -1655,7 +1655,7 @@ func NewMeteredPathType(
 	return NewPathType()
 }
 
-func (PathType) isType() {}
+func (PathType) IsType() {}
 
 func (PathType) ID() string {
 	return "Path"
@@ -1678,7 +1678,7 @@ func NewMeteredCapabilityPathType(
 	return NewCapabilityPathType()
 }
 
-func (CapabilityPathType) isType() {}
+func (CapabilityPathType) IsType() {}
 
 func (CapabilityPathType) ID() string {
 	return "CapabilityPath"
@@ -1701,7 +1701,7 @@ func NewMeteredStoragePathType(
 	return NewStoragePathType()
 }
 
-func (StoragePathType) isType() {}
+func (StoragePathType) IsType() {}
 
 func (StoragePathType) ID() string {
 	return "StoragePath"
@@ -1724,7 +1724,7 @@ func NewMeteredPublicPathType(
 	return NewPublicPathType()
 }
 
-func (PublicPathType) isType() {}
+func (PublicPathType) IsType() {}
 
 func (PublicPathType) ID() string {
 	return "PublicPath"
@@ -1747,7 +1747,7 @@ func NewMeteredPrivatePathType(
 	return NewPrivatePathType()
 }
 
-func (PrivatePathType) isType() {}
+func (PrivatePathType) IsType() {}
 
 func (PrivatePathType) ID() string {
 	return "PrivatePath"
@@ -1773,7 +1773,7 @@ func NewMeteredCapabilityType(
 	return NewCapabilityType(borrowType)
 }
 
-func (CapabilityType) isType() {}
+func (CapabilityType) IsType() {}
 
 func (t CapabilityType) ID() string {
 	if t.BorrowType != nil {
@@ -1821,7 +1821,7 @@ func NewMeteredEnumType(
 	return NewEnumType(location, qualifiedIdentifier, rawType, fields, initializers)
 }
 
-func (*EnumType) isType() {}
+func (*EnumType) IsType() {}
 
 func (t *EnumType) ID() string {
 	if t.Location == nil {
@@ -1869,7 +1869,7 @@ func NewMeteredAuthAccountType(
 	return NewAuthAccountType()
 }
 
-func (AuthAccountType) isType() {}
+func (AuthAccountType) IsType() {}
 
 func (AuthAccountType) ID() string {
 	return "AuthAccount"
@@ -1889,7 +1889,7 @@ func NewMeteredPublicAccountType(
 	return NewPublicAccountType()
 }
 
-func (PublicAccountType) isType() {}
+func (PublicAccountType) IsType() {}
 
 func (PublicAccountType) ID() string {
 	return "PublicAccount"
@@ -1911,7 +1911,7 @@ func NewMeteredDeployedContractType(
 	return NewDeployedContractType()
 }
 
-func (DeployedContractType) isType() {}
+func (DeployedContractType) IsType() {}
 
 func (DeployedContractType) ID() string {
 	return "DeployedContract"
@@ -1933,7 +1933,7 @@ func NewMeteredAuthAccountContractsType(
 	return NewAuthAccountContractsType()
 }
 
-func (AuthAccountContractsType) isType() {}
+func (AuthAccountContractsType) IsType() {}
 
 func (AuthAccountContractsType) ID() string {
 	return "AuthAccount.Contracts"
@@ -1955,7 +1955,7 @@ func NewMeteredPublicAccountContractsType(
 	return NewPublicAccountContractsType()
 }
 
-func (PublicAccountContractsType) isType() {}
+func (PublicAccountContractsType) IsType() {}
 
 func (PublicAccountContractsType) ID() string {
 	return "PublicAccount.Contracts"
@@ -1977,7 +1977,7 @@ func NewMeteredAuthAccountKeysType(
 	return NewAuthAccountKeysType()
 }
 
-func (AuthAccountKeysType) isType() {}
+func (AuthAccountKeysType) IsType() {}
 
 func (AuthAccountKeysType) ID() string {
 	return "AuthAccount.Keys"
@@ -1999,7 +1999,7 @@ func NewMeteredPublicAccountKeysType(
 	return NewPublicAccountKeysType()
 }
 
-func (PublicAccountKeysType) isType() {}
+func (PublicAccountKeysType) IsType() {}
 
 func (PublicAccountKeysType) ID() string {
 	return "PublicAccount.Keys"
@@ -2021,7 +2021,7 @@ func NewMeteredAccountKeyType(
 	return NewAccountKeyType()
 }
 
-func (AccountKeyType) isType() {}
+func (AccountKeyType) IsType() {}
 
 func (AccountKeyType) ID() string {
 	return "AccountKey"
