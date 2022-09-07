@@ -2072,6 +2072,32 @@ func TestParseInvalidCompositeFunctionWithSelfParameter(t *testing.T) {
 		})
 	}
 }
+
+func TestParseInvalidParameterWithoutLabel(t *testing.T) {
+	t.Parallel()
+
+	_, errs := ParseDeclarations(`pub fun foo(continue: Int) {}`, nil)
+
+	utils.AssertEqualWithDiff(t, []error{
+		&SyntaxError{
+			Pos:     ast.Position{Line: 1, Column: 12, Offset: 12},
+			Message: "expected identifier for argument label or parameter name, got keyword continue",
+		},
+	}, errs)
+}
+
+func TestParseParametersWithExtraLabels(t *testing.T) {
+	t.Parallel()
+
+	_, errs := ParseDeclarations(`pub fun foo(_ foo: String, label fable table: Int) {}`, nil)
+
+	utils.AssertEqualWithDiff(t, []error{
+		&SyntaxError{
+			Pos:     ast.Position{Line: 1, Column: 39, Offset: 39},
+			Message: "expected ':' after parameter name, got identifier",
+		},
+	}, errs)
+}
 func TestParseInterfaceDeclaration(t *testing.T) {
 
 	t.Parallel()
