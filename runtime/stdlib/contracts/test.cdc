@@ -96,8 +96,8 @@ pub contract Test {
             )
         }
 
-        pub fun useConfiguration(_ confgiuration: Configuration) {
-            self.backend.useConfiguration(confgiuration)
+        pub fun useConfiguration(_ configuration: Configuration) {
+            self.backend.useConfiguration(configuration)
         }
     }
 
@@ -231,6 +231,6 @@ pub contract Test {
             arguments: [AnyStruct]
         ): Error?
 
-        pub fun useConfiguration(_ confgiuration: Configuration)
+        pub fun useConfiguration(_ configuration: Configuration)
     }
 }
