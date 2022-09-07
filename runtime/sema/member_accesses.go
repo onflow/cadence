@@ -30,12 +30,12 @@ type MemberAccess struct {
 }
 
 type MemberAccesses struct {
-	tree *intervalst.IntervalST
+	tree *intervalst.IntervalST[MemberAccess]
 }
 
 func NewMemberAccesses() *MemberAccesses {
 	return &MemberAccesses{
-		tree: &intervalst.IntervalST{},
+		tree: &intervalst.IntervalST[MemberAccess]{},
 	}
 }
 
@@ -53,26 +53,13 @@ func (m *MemberAccesses) Put(startPos, endPos ast.Position, accessedType Type) {
 }
 
 func (m *MemberAccesses) Find(pos Position) *MemberAccess {
-	interval, value := m.tree.Search(pos)
-	if interval == nil {
-		return nil
-	}
-	access, ok := value.(MemberAccess)
-	if !ok {
+	_, access, present := m.tree.Search(pos)
+	if !present {
 		return nil
 	}
 	return &access
 }
 
 func (m *MemberAccesses) All() []MemberAccess {
-	values := m.tree.Values()
-	accesses := make([]MemberAccess, len(values))
-	for i, value := range values {
-		access, ok := value.(MemberAccess)
-		if !ok {
-			continue
-		}
-		accesses[i] = access
-	}
-	return accesses
+	return m.tree.Values()
 }

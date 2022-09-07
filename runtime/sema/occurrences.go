@@ -71,12 +71,12 @@ type Origin struct {
 }
 
 type Occurrences struct {
-	tree *intervalst.IntervalST
+	tree *intervalst.IntervalST[Occurrence]
 }
 
 func NewOccurrences() *Occurrences {
 	return &Occurrences{
-		tree: &intervalst.IntervalST{},
+		tree: &intervalst.IntervalST[Occurrence]{},
 	}
 }
 
@@ -116,25 +116,12 @@ type Occurrence struct {
 }
 
 func (o *Occurrences) All() []Occurrence {
-	values := o.tree.Values()
-	occurrences := make([]Occurrence, len(values))
-	for i, value := range values {
-		occurrence, ok := value.(Occurrence)
-		if !ok {
-			return nil
-		}
-		occurrences[i] = occurrence
-	}
-	return occurrences
+	return o.tree.Values()
 }
 
 func (o *Occurrences) Find(pos Position) *Occurrence {
-	interval, value := o.tree.Search(pos)
-	if interval == nil {
-		return nil
-	}
-	occurrence, ok := value.(Occurrence)
-	if !ok {
+	_, occurrence, present := o.tree.Search(pos)
+	if !present {
 		return nil
 	}
 	return &occurrence
@@ -144,11 +131,7 @@ func (o *Occurrences) FindAll(pos Position) []Occurrence {
 	entries := o.tree.SearchAll(pos)
 	occurrences := make([]Occurrence, len(entries))
 	for i, entry := range entries {
-		occurrence, ok := entry.Value.(Occurrence)
-		if !ok {
-			return nil
-		}
-		occurrences[i] = occurrence
+		occurrences[i] = entry.Value
 	}
 	return occurrences
 }

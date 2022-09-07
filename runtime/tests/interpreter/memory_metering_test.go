@@ -699,12 +699,11 @@ func TestInterpretSimpleCompositeMetering(t *testing.T) {
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 
-		_, err := inter.Invoke("main", newTestAuthAccountValue(inter, randomAddressValue()))
+		_, err := inter.Invoke("main", newTestAuthAccountValue(meter, randomAddressValue()))
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindSimpleCompositeValueBase))
-		// AuthAccount has 18 fields
-		assert.Equal(t, uint64(18), meter.getMemory(common.MemoryKindSimpleCompositeValue))
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindSimpleCompositeValue))
 	})
 
 	t.Run("public account", func(t *testing.T) {
@@ -719,12 +718,11 @@ func TestInterpretSimpleCompositeMetering(t *testing.T) {
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 
-		_, err := inter.Invoke("main", newTestPublicAccountValue(inter, randomAddressValue()))
+		_, err := inter.Invoke("main", newTestPublicAccountValue(meter, randomAddressValue()))
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindSimpleCompositeValueBase))
-		// PublicAccount has 9 fields
-		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindSimpleCompositeValue))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindSimpleCompositeValue))
 	})
 }
 
@@ -1047,15 +1045,26 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
         `
 
 		meter := newTestMemoryGauge()
+
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		for _, valueDeclaration := range stdlib.BuiltinValues {
+			baseValueActivation.DeclareValue(valueDeclaration)
+		}
+
+		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+		for _, valueDeclaration := range stdlib.BuiltinValues {
+			baseActivation.Declare(valueDeclaration)
+		}
+
 		inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(
 			t,
 			script,
 			ParseCheckAndInterpretOptions{
-				CheckerOptions: []sema.Option{
-					sema.WithPredeclaredValues(stdlib.BuiltinFunctions.ToSemaValueDeclarations()),
+				CheckerConfig: &sema.Config{
+					BaseValueActivation: baseValueActivation,
 				},
-				Options: []interpreter.Option{
-					interpreter.WithPredeclaredValues(stdlib.BuiltinFunctions.ToInterpreterValueDeclarations()),
+				Config: &interpreter.Config{
+					BaseActivation: baseActivation,
 				},
 			},
 			meter,
@@ -1081,35 +1090,33 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
             }
         `
 
-		var predeclaredSemaValues []sema.ValueDeclaration
-		predeclaredSemaValues = append(predeclaredSemaValues, stdlib.BuiltinFunctions.ToSemaValueDeclarations()...)
-		predeclaredSemaValues = append(predeclaredSemaValues, stdlib.BuiltinValues.ToSemaValueDeclarations()...)
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		for _, valueDeclaration := range stdlib.BuiltinValues {
+			baseValueActivation.DeclareValue(valueDeclaration)
+		}
 
-		var predeclaredInterpreterValues []interpreter.ValueDeclaration
-		predeclaredInterpreterValues = append(
-			predeclaredInterpreterValues,
-			stdlib.BuiltinFunctions.ToInterpreterValueDeclarations()...,
-		)
-		predeclaredInterpreterValues = append(
-			predeclaredInterpreterValues,
-			stdlib.BuiltinValues.ToInterpreterValueDeclarations()...,
-		)
+		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+		for _, valueDeclaration := range stdlib.BuiltinValues {
+			baseActivation.Declare(valueDeclaration)
+		}
 
 		meter := newTestMemoryGauge()
 		inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(
 			t,
 			script,
 			ParseCheckAndInterpretOptions{
-				CheckerOptions: []sema.Option{
-					sema.WithPredeclaredValues(predeclaredSemaValues),
+				CheckerConfig: &sema.Config{
+					BaseValueActivation: baseValueActivation,
 				},
-				Options: []interpreter.Option{
-					interpreter.WithPredeclaredValues(predeclaredInterpreterValues),
-					interpreter.WithPublicKeyValidationHandler(
-						func(_ *interpreter.Interpreter, _ func() interpreter.LocationRange, _ *interpreter.CompositeValue) error {
-							return nil
-						},
-					),
+				Config: &interpreter.Config{
+					BaseActivation: baseActivation,
+					PublicKeyValidationHandler: func(
+						_ *interpreter.Interpreter,
+						_ func() interpreter.LocationRange,
+						_ *interpreter.CompositeValue,
+					) error {
+						return nil
+					},
 				},
 			},
 			meter,
@@ -1141,35 +1148,33 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
             }
         `
 
-		var predeclaredSemaValues []sema.ValueDeclaration
-		predeclaredSemaValues = append(predeclaredSemaValues, stdlib.BuiltinFunctions.ToSemaValueDeclarations()...)
-		predeclaredSemaValues = append(predeclaredSemaValues, stdlib.BuiltinValues.ToSemaValueDeclarations()...)
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		for _, valueDeclaration := range stdlib.BuiltinValues {
+			baseValueActivation.DeclareValue(valueDeclaration)
+		}
 
-		var predeclaredInterpreterValues []interpreter.ValueDeclaration
-		predeclaredInterpreterValues = append(
-			predeclaredInterpreterValues,
-			stdlib.BuiltinFunctions.ToInterpreterValueDeclarations()...,
-		)
-		predeclaredInterpreterValues = append(
-			predeclaredInterpreterValues,
-			stdlib.BuiltinValues.ToInterpreterValueDeclarations()...,
-		)
+		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+		for _, valueDeclaration := range stdlib.BuiltinValues {
+			baseActivation.Declare(valueDeclaration)
+		}
 
 		meter := newTestMemoryGauge()
 		inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(
 			t,
 			script,
 			ParseCheckAndInterpretOptions{
-				CheckerOptions: []sema.Option{
-					sema.WithPredeclaredValues(predeclaredSemaValues),
+				CheckerConfig: &sema.Config{
+					BaseValueActivation: baseValueActivation,
 				},
-				Options: []interpreter.Option{
-					interpreter.WithPredeclaredValues(predeclaredInterpreterValues),
-					interpreter.WithPublicKeyValidationHandler(
-						func(_ *interpreter.Interpreter, _ func() interpreter.LocationRange, _ *interpreter.CompositeValue) error {
-							return nil
-						},
-					),
+				Config: &interpreter.Config{
+					BaseActivation: baseActivation,
+					PublicKeyValidationHandler: func(
+						_ *interpreter.Interpreter,
+						_ func() interpreter.LocationRange,
+						_ *interpreter.CompositeValue,
+					) error {
+						return nil
+					},
 				},
 			},
 			meter,
@@ -7248,7 +7253,7 @@ func TestInterpretStorageReferenceValueMetering(t *testing.T) {
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 
-		account := newTestAuthAccountValue(inter, interpreter.AddressValue{})
+		account := newTestAuthAccountValue(meter, interpreter.AddressValue{})
 		_, err := inter.Invoke("main", account)
 		require.NoError(t, err)
 
@@ -7564,7 +7569,7 @@ func TestInterpretCapabilityValueMetering(t *testing.T) {
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 
-		account := newTestAuthAccountValue(inter, interpreter.AddressValue{})
+		account := newTestAuthAccountValue(meter, interpreter.AddressValue{})
 		_, err := inter.Invoke("main", account)
 		require.NoError(t, err)
 
@@ -7590,7 +7595,7 @@ func TestInterpretCapabilityValueMetering(t *testing.T) {
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 
-		account := newTestAuthAccountValue(inter, interpreter.AddressValue{})
+		account := newTestAuthAccountValue(meter, interpreter.AddressValue{})
 		_, err := inter.Invoke("main", account)
 		require.NoError(t, err)
 
@@ -7614,7 +7619,7 @@ func TestInterpretLinkValueMetering(t *testing.T) {
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 
-		account := newTestAuthAccountValue(inter, interpreter.AddressValue{})
+		account := newTestAuthAccountValue(meter, interpreter.AddressValue{})
 		_, err := inter.Invoke("main", account)
 		require.NoError(t, err)
 
@@ -8473,7 +8478,7 @@ func TestInterpreterStringLocationMetering(t *testing.T) {
         `
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
-		account := newTestAuthAccountValue(inter, interpreter.AddressValue{})
+		account := newTestAuthAccountValue(meter, interpreter.AddressValue{})
 		_, err := inter.Invoke("main", account)
 		require.NoError(t, err)
 
@@ -8491,7 +8496,7 @@ func TestInterpreterStringLocationMetering(t *testing.T) {
 
 		meter = newTestMemoryGauge()
 		inter = parseCheckAndInterpretWithMemoryMetering(t, script, meter)
-		account = newTestAuthAccountValue(inter, interpreter.AddressValue{})
+		account = newTestAuthAccountValue(meter, interpreter.AddressValue{})
 		_, err = inter.Invoke("main", account)
 		require.NoError(t, err)
 
@@ -8836,30 +8841,26 @@ func TestInterpretASTMetering(t *testing.T) {
 			t,
 			script,
 			ParseCheckAndInterpretOptions{
-				CheckerOptions: []sema.Option{
-					sema.WithImportHandler(
-						func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
-							return sema.ElaborationImport{
-								Elaboration: importedChecker.Elaboration,
-							}, nil
-						},
-					),
+				CheckerConfig: &sema.Config{
+					ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
+						}, nil
+					},
 				},
-				Options: []interpreter.Option{
-					interpreter.WithImportLocationHandler(
-						func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
-							require.IsType(t, common.AddressLocation{}, location)
-							program := interpreter.ProgramFromChecker(importedChecker)
-							subInterpreter, err := inter.NewSubInterpreter(program, location)
-							if err != nil {
-								panic(err)
-							}
+				Config: &interpreter.Config{
+					ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+						require.IsType(t, common.AddressLocation{}, location)
+						program := interpreter.ProgramFromChecker(importedChecker)
+						subInterpreter, err := inter.NewSubInterpreter(program, location)
+						if err != nil {
+							panic(err)
+						}
 
-							return interpreter.InterpreterImport{
-								Interpreter: subInterpreter,
-							}
-						},
-					),
+						return interpreter.InterpreterImport{
+							Interpreter: subInterpreter,
+						}
+					},
 				},
 			},
 			meter,
@@ -8939,8 +8940,8 @@ func TestInterpretASTMetering(t *testing.T) {
 			t,
 			script,
 			ParseCheckAndInterpretOptions{
-				Options: []interpreter.Option{
-					interpreter.WithContractValueHandler(func(
+				Config: &interpreter.Config{
+					ContractValueHandler: func(
 						inter *interpreter.Interpreter,
 						compositeType *sema.CompositeType,
 						constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
@@ -8948,7 +8949,7 @@ func TestInterpretASTMetering(t *testing.T) {
 					) *interpreter.CompositeValue {
 						// Just return a dummy value
 						return &interpreter.CompositeValue{}
-					}),
+					},
 				},
 			},
 			meter,
@@ -9112,7 +9113,7 @@ func TestInterpretASTMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(232), meter.getMemory(common.MemoryKindPosition))
+		assert.Equal(t, uint64(231), meter.getMemory(common.MemoryKindPosition))
 		assert.Equal(t, uint64(126), meter.getMemory(common.MemoryKindRange))
 	})
 
@@ -9138,29 +9139,25 @@ func TestInterpretASTMetering(t *testing.T) {
 			t,
 			script,
 			ParseCheckAndInterpretOptions{
-				CheckerOptions: []sema.Option{
-					sema.WithImportHandler(
-						func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
-							return sema.ElaborationImport{
-								Elaboration: importedChecker.Elaboration,
-							}, nil
-						},
-					),
+				CheckerConfig: &sema.Config{
+					ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
+						}, nil
+					},
 				},
-				Options: []interpreter.Option{
-					interpreter.WithImportLocationHandler(
-						func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
-							program := interpreter.ProgramFromChecker(importedChecker)
-							subInterpreter, err := inter.NewSubInterpreter(program, location)
-							if err != nil {
-								panic(err)
-							}
+				Config: &interpreter.Config{
+					ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+						program := interpreter.ProgramFromChecker(importedChecker)
+						subInterpreter, err := inter.NewSubInterpreter(program, location)
+						if err != nil {
+							panic(err)
+						}
 
-							return interpreter.InterpreterImport{
-								Interpreter: subInterpreter,
-							}
-						},
-					),
+						return interpreter.InterpreterImport{
+							Interpreter: subInterpreter,
+						}
+					},
 				},
 			},
 			meter,
@@ -9189,7 +9186,7 @@ func TestInterpretVariableActivationMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindActivation))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindActivation))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindActivationEntries))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindInvocation))
 	})
@@ -9212,7 +9209,7 @@ func TestInterpretVariableActivationMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindActivation))
+		assert.Equal(t, uint64(5), meter.getMemory(common.MemoryKindActivation))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindActivationEntries))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindInvocation))
 	})
@@ -9234,7 +9231,7 @@ func TestInterpretVariableActivationMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindActivation))
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindActivation))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindActivationEntries))
 	})
 }
@@ -9291,7 +9288,7 @@ func TestInterpretStorageMapMetering(t *testing.T) {
 	meter := newTestMemoryGauge()
 	inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 
-	account := newTestAuthAccountValue(inter, interpreter.AddressValue{})
+	account := newTestAuthAccountValue(meter, interpreter.AddressValue{})
 	_, err := inter.Invoke("main", account)
 	require.NoError(t, err)
 
@@ -9331,22 +9328,19 @@ func TestInterpretValueStringConversion(t *testing.T) {
 			},
 		)
 
-		valueDeclarations :=
-			stdlib.StandardLibraryFunctions{
-				logFunction,
-			}.ToSemaValueDeclarations()
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(logFunction)
 
-		values := stdlib.StandardLibraryFunctions{
-			logFunction,
-		}.ToInterpreterValueDeclarations()
+		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+		baseActivation.Declare(logFunction)
 
 		inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(t, script,
 			ParseCheckAndInterpretOptions{
-				Options: []interpreter.Option{
-					interpreter.WithPredeclaredValues(values),
+				Config: &interpreter.Config{
+					BaseActivation: baseActivation,
 				},
-				CheckerOptions: []sema.Option{
-					sema.WithPredeclaredValues(valueDeclarations),
+				CheckerConfig: &sema.Config{
+					BaseValueActivation: baseValueActivation,
 				},
 			},
 			meter,
@@ -9678,22 +9672,19 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 			},
 		)
 
-		valueDeclarations :=
-			stdlib.StandardLibraryFunctions{
-				logFunction,
-			}.ToSemaValueDeclarations()
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(logFunction)
 
-		values := stdlib.StandardLibraryFunctions{
-			logFunction,
-		}.ToInterpreterValueDeclarations()
+		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+		baseActivation.Declare(logFunction)
 
 		inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(t, script,
 			ParseCheckAndInterpretOptions{
-				Options: []interpreter.Option{
-					interpreter.WithPredeclaredValues(values),
+				Config: &interpreter.Config{
+					BaseActivation: baseActivation,
 				},
-				CheckerOptions: []sema.Option{
-					sema.WithPredeclaredValues(valueDeclarations),
+				CheckerConfig: &sema.Config{
+					BaseValueActivation: baseValueActivation,
 				},
 			},
 			meter,

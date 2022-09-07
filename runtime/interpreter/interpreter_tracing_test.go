@@ -23,8 +23,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/opentracing/opentracing-go"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -37,18 +37,18 @@ func setupInterpreterWithTracingCallBack(
 ) *interpreter.Interpreter {
 	storage := newUnmeteredInMemoryStorage()
 	inter, err := interpreter.NewInterpreter(
-		&interpreter.Program{},
+		nil,
 		utils.TestLocation,
-		interpreter.WithOnRecordTraceHandler(
-			func(inter *interpreter.Interpreter,
+		&interpreter.Config{
+			OnRecordTrace: func(inter *interpreter.Interpreter,
 				operationName string,
 				duration time.Duration,
-				logs []opentracing.LogRecord) {
+				attrs []attribute.KeyValue) {
 				tracingCallback(operationName)
 			},
-		),
-		interpreter.WithStorage(storage),
-		interpreter.WithTracingEnabled(true),
+			Storage:        storage,
+			TracingEnabled: true,
+		},
 	)
 	require.NoError(t, err)
 	return inter

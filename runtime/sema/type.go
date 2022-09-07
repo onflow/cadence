@@ -3001,7 +3001,6 @@ func baseTypeVariable(name string, ty Type) *Variable {
 		Type:            ty,
 		DeclarationKind: common.DeclarationKindType,
 		IsConstant:      true,
-		IsBaseValue:     true,
 		Access:          ast.AccessPublic,
 	}
 }
@@ -3212,7 +3211,6 @@ func baseFunctionVariable(name string, ty *FunctionType, docString string) *Vari
 		DeclarationKind: common.DeclarationKindFunction,
 		ArgumentLabels:  ty.ArgumentLabels(),
 		IsConstant:      true,
-		IsBaseValue:     true,
 		Type:            ty,
 		Access:          ast.AccessPublic,
 		DocString:       docString,
@@ -3275,7 +3273,7 @@ func numberFunctionArgumentExpressionsChecker(targetType Type) ArgumentExpressio
 		switch argument := argument.(type) {
 		case *ast.IntegerExpression:
 			if CheckIntegerLiteral(nil, argument, targetType, checker.report) {
-				if checker.extendedElaboration {
+				if checker.Config.ExtendedElaborationEnabled {
 					checker.Elaboration.NumberConversionArgumentTypes[argument] = struct {
 						Type  Type
 						Range ast.Range
@@ -3285,7 +3283,7 @@ func numberFunctionArgumentExpressionsChecker(targetType Type) ArgumentExpressio
 
 		case *ast.FixedPointExpression:
 			if CheckFixedPointLiteral(nil, argument, targetType, checker.report) {
-				if checker.extendedElaboration {
+				if checker.Config.ExtendedElaborationEnabled {
 					checker.Elaboration.NumberConversionArgumentTypes[argument] = struct {
 						Type  Type
 						Range ast.Range
@@ -3299,7 +3297,7 @@ func numberFunctionArgumentExpressionsChecker(targetType Type) ArgumentExpressio
 func init() {
 
 	// Declare a function for the string type.
-	// For now it has no parameters and creates an empty string
+	// For now, it has no parameters and creates an empty string
 
 	typeName := StringType.String()
 
@@ -3332,6 +3330,13 @@ func init() {
 		StringTypeEncodeHexFunctionDocString,
 	))
 
+	addMember(NewUnmeteredPublicFunctionMember(
+		functionType,
+		StringTypeFromUtf8FunctionName,
+		StringTypeFromUtf8FunctionType,
+		StringTypeFromUtf8FunctionDocString,
+	))
+
 	BaseValueActivation.Set(
 		typeName,
 		baseFunctionVariable(
@@ -3354,6 +3359,21 @@ var StringTypeEncodeHexFunctionType = &FunctionType{
 	},
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		StringType,
+	),
+}
+
+var StringTypeFromUtf8FunctionType = &FunctionType{
+	Parameters: []*Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "bytes",
+			TypeAnnotation: NewTypeAnnotation(ByteArrayType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&OptionalType{
+			Type: StringType,
+		},
 	),
 }
 
@@ -3821,7 +3841,8 @@ type Member struct {
 	VariableKind    ast.VariableKind
 	ArgumentLabels  []string
 	// Predeclared fields can be considered initialized
-	Predeclared bool
+	Predeclared       bool
+	HasImplementation bool
 	// IgnoreInSerialization fields are ignored in serialization
 	IgnoreInSerialization bool
 	DocString             string

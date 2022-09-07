@@ -25,37 +25,35 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 type interpreterContractFunctionExecutor struct {
-	runtime *interpreterRuntime
+	runtime interpreterRuntime
 
 	contractLocation common.AddressLocation
 	functionName     string
-	arguments        []interpreter.Value
+	arguments        []cadence.Value
 	argumentTypes    []sema.Type
 	context          Context
 
-	storage            *Storage
-	checkerOptions     []sema.Option
-	interpreterOptions []interpreter.Option
+	// prepare
+	preprocessOnce   sync.Once
+	preprocessErr    error
+	codesAndPrograms codesAndPrograms
+	storage          *Storage
+	environment      Environment
 
-	functions stdlib.StandardLibraryFunctions
-
-	preprocessOnce sync.Once
-	preprocessErr  error
-
+	// execute
 	executeOnce sync.Once
 	executeErr  error
 	result      cadence.Value
 }
 
 func newInterpreterContractFunctionExecutor(
-	runtime *interpreterRuntime,
+	runtime interpreterRuntime,
 	contractLocation common.AddressLocation,
 	functionName string,
-	arguments []interpreter.Value,
+	arguments []cadence.Value,
 	argumentTypes []sema.Type,
 	context Context,
 ) *interpreterContractFunctionExecutor {
@@ -93,25 +91,38 @@ func (executor *interpreterContractFunctionExecutor) Result() (cadence.Value, er
 }
 
 func (executor *interpreterContractFunctionExecutor) preprocess() (err error) {
-	defer executor.runtime.Recover(
+	context := executor.context
+	location := context.Location
+
+	codesAndPrograms := newCodesAndPrograms()
+	executor.codesAndPrograms = codesAndPrograms
+
+	interpreterRuntime := executor.runtime
+
+	defer interpreterRuntime.Recover(
 		func(internalErr Error) {
 			err = internalErr
 		},
-		executor.context,
+		location,
+		codesAndPrograms,
 	)
 
-	executor.context.InitializeCodesAndPrograms()
+	runtimeInterface := context.Interface
 
-	memoryGauge, _ := executor.context.Interface.(common.MemoryGauge)
+	storage := NewStorage(runtimeInterface, runtimeInterface)
+	executor.storage = storage
 
-	executor.storage = NewStorage(executor.context.Interface, memoryGauge)
-
-	executor.functions = executor.runtime.standardLibraryFunctions(
-		executor.context,
-		executor.storage,
-		executor.interpreterOptions,
-		executor.checkerOptions,
+	environment := context.Environment
+	if environment == nil {
+		environment = NewBaseInterpreterEnvironment(interpreterRuntime.defaultConfig)
+	}
+	environment.Configure(
+		runtimeInterface,
+		codesAndPrograms,
+		storage,
+		context.CoverageReport,
 	)
+	executor.environment = environment
 
 	return nil
 }
@@ -122,54 +133,66 @@ func (executor *interpreterContractFunctionExecutor) execute() (val cadence.Valu
 		return nil, err
 	}
 
-	defer executor.runtime.Recover(
+	environment := executor.environment
+	context := executor.context
+	location := context.Location
+	codesAndPrograms := executor.codesAndPrograms
+	interpreterRuntime := executor.runtime
+
+	defer interpreterRuntime.Recover(
 		func(internalErr Error) {
 			err = internalErr
 		},
-		executor.context,
+		location,
+		codesAndPrograms,
 	)
 
 	// create interpreter
-	_, inter, err := executor.runtime.interpret(
+	_, inter, err := environment.Interpret(
+		location,
 		nil,
-		executor.context,
-		executor.storage,
-		executor.functions,
-		stdlib.BuiltinValues,
-		executor.interpreterOptions,
-		executor.checkerOptions,
 		nil,
 	)
 	if err != nil {
-		return nil, newError(err, executor.context)
+		return nil, newError(err, location, codesAndPrograms)
 	}
 
 	// ensure the contract is loaded
 	inter = inter.EnsureLoaded(executor.contractLocation)
 
+	interpreterArguments := make([]interpreter.Value, len(executor.arguments))
+
 	for i, argumentType := range executor.argumentTypes {
-		executor.arguments[i] = executor.convertArgument(
+		interpreterArguments[i], err = executor.convertArgument(
 			inter,
 			executor.arguments[i],
 			argumentType,
+			func() interpreter.LocationRange {
+				return interpreter.LocationRange{
+					Location: location,
+				}
+			},
 		)
+		if err != nil {
+			return nil, newError(err, location, codesAndPrograms)
+		}
 	}
 
 	contractValue, err := inter.GetContractComposite(executor.contractLocation)
 	if err != nil {
-		return nil, newError(err, executor.context)
+		return nil, newError(err, location, codesAndPrograms)
 	}
 
 	// prepare invocation
 	invocation := interpreter.NewInvocation(
 		inter,
 		contractValue,
-		executor.arguments,
+		interpreterArguments,
 		executor.argumentTypes,
 		nil,
 		func() interpreter.LocationRange {
 			return interpreter.LocationRange{
-				Location: executor.context.Location,
+				Location: context.Location,
 			}
 		},
 	)
@@ -182,29 +205,27 @@ func (executor *interpreterContractFunctionExecutor) execute() (val cadence.Valu
 
 	contractFunction, ok := contractMember.(interpreter.FunctionValue)
 	if !ok {
-		return nil, newError(
-			interpreter.NotInvokableError{
-				Value: contractFunction,
-			},
-			executor.context,
-		)
+		err := interpreter.NotInvokableError{
+			Value: contractFunction,
+		}
+		return nil, newError(err, location, codesAndPrograms)
 	}
 
 	value, err := inter.InvokeFunction(contractFunction, invocation)
 	if err != nil {
-		return nil, newError(err, executor.context)
+		return nil, newError(err, location, codesAndPrograms)
 	}
 
 	// Write back all stored values, which were actually just cached, back into storage
-	err = executor.runtime.commitStorage(executor.storage, inter)
+	err = environment.CommitStorage(inter)
 	if err != nil {
-		return nil, newError(err, executor.context)
+		return nil, newError(err, location, codesAndPrograms)
 	}
 
 	var exportedValue cadence.Value
 	exportedValue, err = ExportValue(value, inter, interpreter.ReturnEmptyLocationRange)
 	if err != nil {
-		return nil, newError(err, executor.context)
+		return nil, newError(err, location, codesAndPrograms)
 	}
 
 	return exportedValue, nil
@@ -212,38 +233,32 @@ func (executor *interpreterContractFunctionExecutor) execute() (val cadence.Valu
 
 func (executor *interpreterContractFunctionExecutor) convertArgument(
 	inter *interpreter.Interpreter,
-	argument interpreter.Value,
+	argument cadence.Value,
 	argumentType sema.Type,
-) interpreter.Value {
+	getLocationRange func() interpreter.LocationRange,
+) (interpreter.Value, error) {
+	environment := executor.environment
+
 	switch argumentType {
 	case sema.AuthAccountType:
 		// convert addresses to auth accounts so there is no need to construct an auth account value for the caller
-		if addressValue, ok := argument.(interpreter.AddressValue); ok {
-			return executor.runtime.newAuthAccountValue(
-				inter,
-				interpreter.NewAddressValueFromConstructor(
-					inter,
-					addressValue.ToAddress,
-				),
-				executor.context,
-				executor.storage,
-				executor.interpreterOptions,
-				executor.checkerOptions,
-			)
+		if addressValue, ok := argument.(cadence.Address); ok {
+			address := interpreter.NewAddressValue(inter, common.Address(addressValue))
+			return environment.NewAuthAccountValue(address), nil
 		}
+
 	case sema.PublicAccountType:
 		// convert addresses to public accounts so there is no need to construct a public account value for the caller
-		if addressValue, ok := argument.(interpreter.AddressValue); ok {
-			return executor.runtime.getPublicAccount(
-				inter,
-				interpreter.NewAddressValueFromConstructor(
-					inter,
-					addressValue.ToAddress,
-				),
-				executor.context.Interface,
-				executor.storage,
-			)
+		if addressValue, ok := argument.(cadence.Address); ok {
+			address := interpreter.NewAddressValue(inter, common.Address(addressValue))
+			return environment.NewPublicAccountValue(address), nil
 		}
 	}
-	return argument
+
+	return importValue(
+		inter,
+		getLocationRange,
+		argument,
+		argumentType,
+	)
 }

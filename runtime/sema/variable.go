@@ -32,9 +32,6 @@ type Variable struct {
 	Access ast.Access
 	// IsConstant indicates if the variable is read-only
 	IsConstant bool
-	// IsBaseValue indicates if the variable is a base value,
-	// i.e. it is defined by the checker and not the program
-	IsBaseValue bool
 	// ActivationDepth is the depth of scopes in which the variable was declared
 	ActivationDepth int
 	// ArgumentLabels are the argument labels that must be used in an invocation of the variable

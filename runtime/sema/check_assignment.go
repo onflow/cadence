@@ -24,7 +24,7 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
-func (checker *Checker) VisitAssignmentStatement(assignment *ast.AssignmentStatement) ast.Repr {
+func (checker *Checker) VisitAssignmentStatement(assignment *ast.AssignmentStatement) (_ struct{}) {
 	targetType, valueType := checker.checkAssignment(
 		assignment.Target,
 		assignment.Value,
@@ -32,10 +32,13 @@ func (checker *Checker) VisitAssignmentStatement(assignment *ast.AssignmentState
 		false,
 	)
 
-	checker.Elaboration.AssignmentStatementValueTypes[assignment] = valueType
-	checker.Elaboration.AssignmentStatementTargetTypes[assignment] = targetType
+	checker.Elaboration.AssignmentStatementTypes[assignment] =
+		AssignmentStatementTypes{
+			ValueType:  valueType,
+			TargetType: targetType,
+		}
 
-	return nil
+	return
 }
 
 func (checker *Checker) checkAssignment(
@@ -274,7 +277,7 @@ func (checker *Checker) visitMemberExpressionAssignment(
 		)
 	}
 
-	targetIsConstant := member.VariableKind == ast.VariableKindConstant
+	targetIsConstant := member.VariableKind != ast.VariableKindVariable
 
 	// If this is an assignment to a `self` field, it needs special handling
 	// depending on if the assignment is in an initializer or not

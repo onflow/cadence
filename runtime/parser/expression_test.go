@@ -1946,21 +1946,76 @@ func TestParseReference(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseExpression("& t", nil)
-	require.Empty(t, errs)
+	t.Run("valid", func(t *testing.T) {
 
-	utils.AssertEqualWithDiff(t,
-		&ast.ReferenceExpression{
-			Expression: &ast.IdentifierExpression{
-				Identifier: ast.Identifier{
-					Identifier: "t",
-					Pos:        ast.Position{Line: 1, Column: 2, Offset: 2},
+		t.Parallel()
+
+		result, errs := ParseExpression("& t as T", nil)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.ReferenceExpression{
+				Expression: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "t",
+						Pos:        ast.Position{Line: 1, Column: 2, Offset: 2},
+					},
+				},
+				Type: &ast.NominalType{
+					Identifier: ast.Identifier{
+						Identifier: "T",
+						Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+					},
+				},
+				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+			},
+			result,
+		)
+	})
+
+	t.Run("invalid: missing casting expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = `&y[z]`
+
+		_, errs := ParseExpression(code, nil)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected casting expression",
+					Pos: ast.Position{
+						Offset: 5,
+						Line:   1,
+						Column: 5,
+					},
 				},
 			},
-			StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-		},
-		result,
-	)
+			errs,
+		)
+	})
+
+	t.Run("invalid: optional referenced value", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = `&x[y]? as &Z?`
+
+		_, errs := ParseExpression(code, nil)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected casting expression",
+					Pos: ast.Position{
+						Offset: 5,
+						Line:   1,
+						Column: 5,
+					},
+				},
+			},
+			errs,
+		)
+	})
 }
 
 func TestParseNilCoelesceReference(t *testing.T) {
@@ -1975,85 +2030,75 @@ func TestParseNilCoelesceReference(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		&ast.BinaryExpression{
 			Operation: ast.OperationNilCoalesce,
-			Left: &ast.CastingExpression{
-				Expression: &ast.ReferenceExpression{
-					Expression: &ast.IndexExpression{
-						TargetExpression: &ast.IdentifierExpression{
-							Identifier: ast.Identifier{
-								Identifier: "xs",
-								Pos: ast.Position{
-									Offset: 12,
-									Line:   2,
-									Column: 11,
-								},
+			Left: &ast.ReferenceExpression{
+				Expression: &ast.IndexExpression{
+					TargetExpression: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "xs",
+							Pos: ast.Position{
+								Offset: 12,
+								Line:   2,
+								Column: 11,
 							},
 						},
-						IndexingExpression: &ast.StringExpression{
-							Value: "a",
-							Range: ast.Range{
-								StartPos: ast.Position{
-									Offset: 15,
-									Line:   2,
-									Column: 14,
-								},
-								EndPos: ast.Position{
-									Offset: 17,
-									Line:   2,
-									Column: 16,
-								},
-							},
-						},
+					},
+					IndexingExpression: &ast.StringExpression{
+						Value: "a",
 						Range: ast.Range{
 							StartPos: ast.Position{
-								Offset: 14,
+								Offset: 15,
 								Line:   2,
-								Column: 13,
+								Column: 14,
 							},
 							EndPos: ast.Position{
-								Offset: 18,
+								Offset: 17,
 								Line:   2,
-								Column: 17,
+								Column: 16,
 							},
 						},
 					},
-					StartPos: ast.Position{
-						Offset: 11,
-						Line:   2,
-						Column: 10,
-					},
-				},
-				Operation: ast.OperationCast,
-				TypeAnnotation: &ast.TypeAnnotation{
-					Type: &ast.OptionalType{
-						Type: &ast.ReferenceType{
-							Authorized: false,
-							Type: &ast.NominalType{
-								Identifier: ast.Identifier{
-									Identifier: "Int",
-									Pos: ast.Position{
-										Offset: 24,
-										Line:   2,
-										Column: 23,
-									},
-								},
-							},
-							StartPos: ast.Position{
-								Offset: 23,
-								Line:   2,
-								Column: 22,
-							},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 14,
+							Line:   2,
+							Column: 13,
 						},
 						EndPos: ast.Position{
-							Offset: 27,
+							Offset: 18,
 							Line:   2,
-							Column: 26,
+							Column: 17,
 						},
 					},
-					StartPos: ast.Position{
-						Offset: 23,
-						Line:   2,
-						Column: 22,
+				},
+				Type: &ast.OptionalType{
+					Type: &ast.ReferenceType{
+						Authorized: false,
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "Int",
+								Pos: ast.Position{
+									Offset: 24,
+									Line:   2,
+									Column: 23,
+								},
+							},
+						},
+						StartPos: ast.Position{
+							Offset: 23,
+							Line:   2,
+							Column: 22,
+						},
 					},
+					EndPos: ast.Position{
+						Offset: 27,
+						Line:   2,
+						Column: 26,
+					},
+				},
+				StartPos: ast.Position{
+					Offset: 11,
+					Line:   2,
+					Column: 10,
 				},
 			},
 			Right: &ast.IntegerExpression{
@@ -2171,7 +2216,6 @@ func TestParseCasts(t *testing.T) {
 			},
 			result,
 		)
-
 	})
 }
 
@@ -5628,67 +5672,57 @@ func TestParseReferenceInVariableDeclaration(t *testing.T) {
 	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
-	expected := &ast.VariableDeclaration{
-		IsConstant: true,
-		Identifier: ast.Identifier{
-			Identifier: "x",
-			Pos:        ast.Position{Offset: 12, Line: 2, Column: 11},
-		},
-		Value: &ast.CastingExpression{
-			Operation: ast.OperationCast,
-			Expression: &ast.ReferenceExpression{
-				Expression: &ast.IndexExpression{
-					TargetExpression: &ast.MemberExpression{
-						Expression: &ast.IdentifierExpression{
-							Identifier: ast.Identifier{
-								Identifier: "account",
-								Pos:        ast.Position{Offset: 17, Line: 2, Column: 16},
-							},
-						},
-						AccessPos: ast.Position{Offset: 24, Line: 2, Column: 23},
-						Identifier: ast.Identifier{
-							Identifier: "storage",
-							Pos:        ast.Position{Offset: 25, Line: 2, Column: 24},
-						},
-					},
-					IndexingExpression: &ast.IdentifierExpression{
-						Identifier: ast.Identifier{
-							Identifier: "R",
-							Pos:        ast.Position{Offset: 33, Line: 2, Column: 32},
-						},
-					},
-					Range: ast.Range{
-						StartPos: ast.Position{Offset: 32, Line: 2, Column: 31},
-						EndPos:   ast.Position{Offset: 34, Line: 2, Column: 33},
-					},
-				},
-				StartPos: ast.Position{Offset: 16, Line: 2, Column: 15},
-			},
-			TypeAnnotation: &ast.TypeAnnotation{
-				Type: &ast.ReferenceType{
-					Type: &ast.NominalType{
-						Identifier: ast.Identifier{
-							Identifier: "R",
-							Pos:        ast.Position{Offset: 40, Line: 2, Column: 39},
-						},
-					},
-					StartPos: ast.Position{Offset: 39, Line: 2, Column: 38},
-				},
-				StartPos: ast.Position{Offset: 39, Line: 2, Column: 38},
-			},
-		},
-		Transfer: &ast.Transfer{
-			Operation: ast.TransferOperationCopy,
-			Pos:       ast.Position{Offset: 14, Line: 2, Column: 13},
-		},
-		StartPos: ast.Position{Offset: 8, Line: 2, Column: 7},
-	}
-
-	expected.Value.(*ast.CastingExpression).ParentVariableDeclaration = expected
-
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
-			expected,
+			&ast.VariableDeclaration{
+				IsConstant: true,
+				Identifier: ast.Identifier{
+					Identifier: "x",
+					Pos:        ast.Position{Offset: 12, Line: 2, Column: 11},
+				},
+				Value: &ast.ReferenceExpression{
+					Expression: &ast.IndexExpression{
+						TargetExpression: &ast.MemberExpression{
+							Expression: &ast.IdentifierExpression{
+								Identifier: ast.Identifier{
+									Identifier: "account",
+									Pos:        ast.Position{Offset: 17, Line: 2, Column: 16},
+								},
+							},
+							AccessPos: ast.Position{Offset: 24, Line: 2, Column: 23},
+							Identifier: ast.Identifier{
+								Identifier: "storage",
+								Pos:        ast.Position{Offset: 25, Line: 2, Column: 24},
+							},
+						},
+						IndexingExpression: &ast.IdentifierExpression{
+							Identifier: ast.Identifier{
+								Identifier: "R",
+								Pos:        ast.Position{Offset: 33, Line: 2, Column: 32},
+							},
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 32, Line: 2, Column: 31},
+							EndPos:   ast.Position{Offset: 34, Line: 2, Column: 33},
+						},
+					},
+					Type: &ast.ReferenceType{
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "R",
+								Pos:        ast.Position{Offset: 40, Line: 2, Column: 39},
+							},
+						},
+						StartPos: ast.Position{Offset: 39, Line: 2, Column: 38},
+					},
+					StartPos: ast.Position{Offset: 16, Line: 2, Column: 15},
+				},
+				Transfer: &ast.Transfer{
+					Operation: ast.TransferOperationCopy,
+					Pos:       ast.Position{Offset: 14, Line: 2, Column: 13},
+				},
+				StartPos: ast.Position{Offset: 8, Line: 2, Column: 7},
+			},
 		},
 		result.Declarations(),
 	)

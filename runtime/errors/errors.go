@@ -145,7 +145,7 @@ func (e UnexpectedError) Unwrap() error {
 }
 
 func (e UnexpectedError) Error() string {
-	return fmt.Sprintf("%s\n%s", e.Err.Error(), e.Stack)
+	return fmt.Sprintf("internal error: %s\n%s", e.Err.Error(), e.Stack)
 }
 
 // DefaultUserError is the default implementation of UserError interface.

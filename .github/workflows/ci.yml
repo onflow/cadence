@@ -81,7 +81,7 @@ jobs:
         working-directory: ./docs
         run: |
           npm ci
-          stderr=$(node lint.js 2>&1 >/dev/null); [[ ${#stderr} == 0 ]]
+          node lint.js
 
   semgrep:
     name: Semgrep

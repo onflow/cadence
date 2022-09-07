@@ -8,15 +8,16 @@ func _() {
 	// An "invalid array index" compiler error signifies that the constant values have changed.
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
-	_ = x[AccessCheckModeStrict-0]
-	_ = x[AccessCheckModeNotSpecifiedRestricted-1]
-	_ = x[AccessCheckModeNotSpecifiedUnrestricted-2]
-	_ = x[AccessCheckModeNone-3]
+	_ = x[AccessCheckModeDefault-0]
+	_ = x[AccessCheckModeStrict-1]
+	_ = x[AccessCheckModeNotSpecifiedRestricted-2]
+	_ = x[AccessCheckModeNotSpecifiedUnrestricted-3]
+	_ = x[AccessCheckModeNone-4]
 }
 
-const _AccessCheckMode_name = "AccessCheckModeStrictAccessCheckModeNotSpecifiedRestrictedAccessCheckModeNotSpecifiedUnrestrictedAccessCheckModeNone"
+const _AccessCheckMode_name = "AccessCheckModeDefaultAccessCheckModeStrictAccessCheckModeNotSpecifiedRestrictedAccessCheckModeNotSpecifiedUnrestrictedAccessCheckModeNone"
 
-var _AccessCheckMode_index = [...]uint8{0, 21, 58, 97, 116}
+var _AccessCheckMode_index = [...]uint8{0, 22, 43, 80, 119, 138}
 
 func (i AccessCheckMode) String() string {
 	if i >= AccessCheckMode(len(_AccessCheckMode_index)-1) {

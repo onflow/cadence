@@ -1287,17 +1287,30 @@ func definePathExpression() {
 }
 
 func defineReferenceExpression() {
-	defineExpr(prefixExpr{
-		tokenType:    lexer.TokenAmpersand,
-		bindingPower: exprLeftBindingPowerUnaryPrefix,
-		nullDenotation: func(p *parser, right ast.Expression, tokenRange ast.Range) (ast.Expression, error) {
+	setExprNullDenotation(
+		lexer.TokenAmpersand,
+		func(p *parser, token lexer.Token) (ast.Expression, error) {
+			p.skipSpaceAndComments(true)
+			expression, err := parseExpression(p, exprLeftBindingPowerCasting-exprBindingPowerGap)
+			if err != nil {
+				return nil, err
+			}
+
+			castingExpression, ok := expression.(*ast.CastingExpression)
+			if !ok {
+				return nil, p.syntaxError("expected casting expression")
+			}
+
+			p.skipSpaceAndComments(true)
+
 			return ast.NewReferenceExpression(
 				p.memoryGauge,
-				right,
-				tokenRange.StartPos,
+				castingExpression.Expression,
+				castingExpression.TypeAnnotation.Type,
+				token.StartPos,
 			), nil
 		},
-	})
+	)
 }
 
 func defineMemberExpression() {

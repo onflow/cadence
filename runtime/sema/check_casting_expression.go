@@ -23,7 +23,7 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
-func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression) ast.Repr {
+func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression) Type {
 
 	// Visit type annotation
 
@@ -124,11 +124,12 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 						Range:        ast.NewRangeFromPositioned(checker.memoryGauge, leftHandExpression),
 					},
 				)
-			} else if checker.extendedElaboration {
-				checker.Elaboration.RuntimeCastTypes[expression] = struct {
-					Left  Type
-					Right Type
-				}{Left: leftHandType, Right: rightHandType}
+			} else if checker.Config.ExtendedElaborationEnabled {
+				checker.Elaboration.RuntimeCastTypes[expression] =
+					RuntimeCastTypes{
+						Left:  leftHandType,
+						Right: rightHandType,
+					}
 			}
 		}
 
@@ -143,12 +144,13 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 		// the inferred-type of the expression. i.e: exprActualType == rightHandType
 		// Then, it is not possible to determine whether the target type is redundant.
 		// Therefore, don't check for redundant casts, if there are errors.
-		if checker.extendedElaboration && !hasErrors {
-			checker.Elaboration.StaticCastTypes[expression] = CastType{
-				ExprActualType: exprActualType,
-				TargetType:     rightHandType,
-				ExpectedType:   checker.expectedType,
-			}
+		if checker.Config.ExtendedElaborationEnabled && !hasErrors {
+			checker.Elaboration.StaticCastTypes[expression] =
+				CastTypes{
+					ExprActualType: exprActualType,
+					TargetType:     rightHandType,
+					ExpectedType:   checker.expectedType,
+				}
 		}
 
 		return rightHandType

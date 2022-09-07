@@ -28,49 +28,32 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 type REPL struct {
 	checker  *sema.Checker
 	inter    *interpreter.Interpreter
-	onError  func(err error, location common.Location, codes map[common.Location]string)
+	onError  func(err error, location Location, codes map[Location]string)
 	onResult func(interpreter.Value)
-	codes    map[common.Location]string
+	codes    map[Location]string
 }
 
 func NewREPL(
-	onError func(err error, location common.Location, codes map[common.Location]string),
+	onError func(err error, location Location, codes map[Location]string),
 	onResult func(interpreter.Value),
-	checkerOptions []sema.Option,
 ) (*REPL, error) {
 
-	checkers := map[common.Location]*sema.Checker{}
-	codes := map[common.Location]string{}
+	checkers := map[Location]*sema.Checker{}
+	codes := map[Location]string{}
 
-	defaultCheckerOptions, defaultInterpreterOptions :=
-		cmd.DefaultCheckerInterpreterOptions(
-			checkers,
-			codes,
-			stdlib.DefaultFlowBuiltinImpls(),
-		)
-
-	defaultCheckerOptions = append(
-		defaultCheckerOptions,
-		sema.WithAccessCheckMode(sema.AccessCheckModeNotSpecifiedUnrestricted),
-	)
-
-	checkerOptions = append(
-		defaultCheckerOptions,
-		checkerOptions...,
-	)
+	checkerConfig := cmd.DefaultCheckerConfig(checkers, codes)
+	checkerConfig.AccessCheckMode = sema.AccessCheckModeNotSpecifiedUnrestricted
 
 	checker, err := sema.NewChecker(
 		nil,
 		common.REPLLocation{},
 		nil,
-		false,
-		checkerOptions...,
+		checkerConfig,
 	)
 	if err != nil {
 		return nil, err
@@ -83,23 +66,18 @@ func NewREPL(
 	// NOTE: storage option must be provided *before* the predeclared values option,
 	// as predeclared values may rely on storage
 
-	interpreterOptions := []interpreter.Option{
-		interpreter.WithStorage(storage),
-		interpreter.WithUUIDHandler(func() (uint64, error) {
+	interpreterConfig := &interpreter.Config{
+		Storage: storage,
+		UUIDHandler: func() (uint64, error) {
 			defer func() { uuid++ }()
 			return uuid, nil
-		}),
+		},
 	}
-
-	interpreterOptions = append(
-		interpreterOptions,
-		defaultInterpreterOptions...,
-	)
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
 		checker.Location,
-		interpreterOptions...,
+		interpreterConfig,
 	)
 	if err != nil {
 		return nil, err
@@ -126,25 +104,9 @@ func (r *REPL) handleCheckerError() bool {
 	return false
 }
 
-func (r *REPL) execute(element ast.Element) {
-	result := element.Accept(r.inter)
-	expStatementRes, ok := result.(interpreter.ExpressionStatementResult)
-	if !ok {
-		return
-	}
-	if r.onResult == nil {
-		return
-	}
-	r.onResult(expStatementRes.Value)
-}
-
-func (r *REPL) check(element ast.Element, code string) bool {
-	element.Accept(r.checker)
-	r.codes[r.checker.Location] = code
-	return r.handleCheckerError()
-}
-
 func (r *REPL) Accept(code string) (inputIsComplete bool) {
+
+	r.codes[r.checker.Location] = code
 
 	// TODO: detect if the input is complete
 	inputIsComplete = true
@@ -171,24 +133,32 @@ func (r *REPL) Accept(code string) (inputIsComplete bool) {
 
 	for _, element := range result {
 
-		switch typedElement := element.(type) {
+		switch element := element.(type) {
 		case ast.Declaration:
-			program := ast.NewProgram(nil, []ast.Declaration{typedElement})
+			program := ast.NewProgram(nil, []ast.Declaration{element})
 
-			if !r.check(program, code) {
+			r.checker.CheckProgram(program)
+			if !r.handleCheckerError() {
 				return
 			}
 
-			r.execute(typedElement)
+			r.inter.VisitProgram(program)
 
 		case ast.Statement:
 			r.checker.Program = nil
 
-			if !r.check(typedElement, code) {
+			r.checker.CheckStatement(element)
+
+			if !r.handleCheckerError() {
 				return
 			}
 
-			r.execute(typedElement)
+			result := ast.AcceptStatement[interpreter.StatementResult](element, r.inter)
+
+			onResult := r.onResult
+			if result, ok := result.(interpreter.ExpressionResult); ok && onResult != nil {
+				onResult(result)
+			}
 
 		default:
 			panic(errors.NewUnreachableError())

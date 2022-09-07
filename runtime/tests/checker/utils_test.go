@@ -27,32 +27,34 @@ import (
 )
 
 func ParseAndCheckWithPanic(t *testing.T, code string) (*sema.Checker, error) {
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.PanicFunction)
+
 	return ParseAndCheckWithOptions(t,
 		code,
 		ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithPredeclaredValues(
-					stdlib.StandardLibraryFunctions{
-						stdlib.PanicFunction,
-					}.ToSemaValueDeclarations(),
-				),
+			Config: &sema.Config{
+				BaseValueActivation: baseValueActivation,
 			},
 		},
 	)
 }
 
 func ParseAndCheckWithAny(t *testing.T, code string) (*sema.Checker, error) {
+
+	baseTypeActivation := sema.NewVariableActivation(sema.BaseTypeActivation)
+	baseTypeActivation.DeclareType(stdlib.StandardLibraryType{
+		Name: "Any",
+		Type: sema.AnyType,
+		Kind: common.DeclarationKindType,
+	})
+
 	return ParseAndCheckWithOptions(t,
 		code,
 		ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithPredeclaredTypes([]sema.TypeDeclaration{
-					stdlib.StandardLibraryType{
-						Name: "Any",
-						Type: sema.AnyType,
-						Kind: common.DeclarationKindType,
-					},
-				}),
+			Config: &sema.Config{
+				BaseTypeActivation: baseTypeActivation,
 			},
 		},
 	)
