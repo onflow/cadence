@@ -822,19 +822,19 @@ func defineIdentifierExpression() {
 		tokenType: lexer.TokenIdentifier,
 		nullDenotation: func(p *parser, token lexer.Token) (ast.Expression, error) {
 			switch token.Value {
-			case KeywordTrue:
+			case keywordTrue:
 				return ast.NewBoolExpression(p.memoryGauge, true, token.Range), nil
 
-			case KeywordFalse:
+			case keywordFalse:
 				return ast.NewBoolExpression(p.memoryGauge, false, token.Range), nil
 
-			case KeywordNil:
+			case keywordNil:
 				return ast.NewNilExpression(p.memoryGauge, token.Range.StartPos), nil
 
-			case KeywordCreate:
+			case keywordCreate:
 				return parseCreateExpressionRemainder(p, token)
 
-			case KeywordDestroy:
+			case keywordDestroy:
 				expression, err := parseExpression(p, lowestBindingPower)
 				if err != nil {
 					return nil, err
@@ -846,7 +846,7 @@ func defineIdentifierExpression() {
 					token.Range.StartPos,
 				), nil
 
-			case KeywordFun:
+			case keywordFun:
 				return parseFunctionExpression(p, token)
 
 			default:
@@ -878,12 +878,12 @@ func parseFunctionExpression(p *parser, token lexer.Token) (*ast.FunctionExpress
 
 func defineCastingExpression() {
 
-	setExprIdentifierLeftBindingPower(KeywordAs, exprLeftBindingPowerCasting)
+	setExprIdentifierLeftBindingPower(keywordAs, exprLeftBindingPowerCasting)
 	setExprLeftDenotation(
 		lexer.TokenIdentifier,
 		func(parser *parser, t lexer.Token, left ast.Expression) (ast.Expression, error) {
 			switch t.Value.(string) {
-			case KeywordAs:
+			case keywordAs:
 				right, err := parseTypeAnnotation(parser)
 				if err != nil {
 					return nil, err

@@ -19,107 +19,107 @@
 package parser
 
 const (
-	KeywordIf          = "if"
-	KeywordElse        = "else"
-	KeywordWhile       = "while"
-	KeywordBreak       = "break"
-	KeywordContinue    = "continue"
-	KeywordReturn      = "return"
-	KeywordTrue        = "true"
-	KeywordFalse       = "false"
-	KeywordNil         = "nil"
-	KeywordLet         = "let"
-	KeywordVar         = "var"
-	KeywordFun         = "fun"
-	KeywordAs          = "as"
-	KeywordCreate      = "create"
-	KeywordDestroy     = "destroy"
-	KeywordFor         = "for"
-	KeywordIn          = "in"
-	KeywordEmit        = "emit"
-	KeywordAuth        = "auth"
-	KeywordPriv        = "priv"
-	KeywordPub         = "pub"
-	KeywordAccess      = "access"
-	KeywordSet         = "set"
-	KeywordAll         = "all"
-	KeywordSelf        = "self"
-	KeywordInit        = "init"
-	KeywordContract    = "contract"
-	KeywordAccount     = "account"
-	KeywordImport      = "import"
-	KeywordFrom        = "from"
-	KeywordPre         = "pre"
-	KeywordPost        = "post"
-	KeywordEvent       = "event"
-	KeywordStruct      = "struct"
-	KeywordResource    = "resource"
-	KeywordInterface   = "interface"
-	KeywordTransaction = "transaction"
-	KeywordPrepare     = "prepare"
-	KeywordExecute     = "execute"
-	KeywordCase        = "case"
-	KeywordSwitch      = "switch"
-	KeywordDefault     = "default"
-	KeywordEnum        = "enum"
+	keywordIf          = "if"
+	keywordElse        = "else"
+	keywordWhile       = "while"
+	keywordBreak       = "break"
+	keywordContinue    = "continue"
+	keywordReturn      = "return"
+	keywordTrue        = "true"
+	keywordFalse       = "false"
+	keywordNil         = "nil"
+	keywordLet         = "let"
+	keywordVar         = "var"
+	keywordFun         = "fun"
+	keywordAs          = "as"
+	keywordCreate      = "create"
+	keywordDestroy     = "destroy"
+	keywordFor         = "for"
+	keywordIn          = "in"
+	keywordEmit        = "emit"
+	keywordAuth        = "auth"
+	keywordPriv        = "priv"
+	keywordPub         = "pub"
+	keywordAccess      = "access"
+	keywordSet         = "set"
+	keywordAll         = "all"
+	keywordSelf        = "self"
+	keywordInit        = "init"
+	keywordContract    = "contract"
+	keywordAccount     = "account"
+	keywordImport      = "import"
+	keywordFrom        = "from"
+	keywordPre         = "pre"
+	keywordPost        = "post"
+	keywordEvent       = "event"
+	keywordStruct      = "struct"
+	keywordResource    = "resource"
+	keywordInterface   = "interface"
+	keywordTransaction = "transaction"
+	keywordPrepare     = "prepare"
+	keywordExecute     = "execute"
+	keywordCase        = "case"
+	keywordSwitch      = "switch"
+	keywordDefault     = "default"
+	keywordEnum        = "enum"
 )
 
-var AllKeywords = map[string]struct{}{
-	KeywordIf:          {},
-	KeywordElse:        {},
-	KeywordWhile:       {},
-	KeywordBreak:       {},
-	KeywordContinue:    {},
-	KeywordReturn:      {},
-	KeywordTrue:        {},
-	KeywordFalse:       {},
-	KeywordNil:         {},
-	KeywordLet:         {},
-	KeywordVar:         {},
-	KeywordFun:         {},
-	KeywordAs:          {},
-	KeywordCreate:      {},
-	KeywordDestroy:     {},
-	KeywordFor:         {},
-	KeywordIn:          {},
-	KeywordEmit:        {},
-	KeywordAuth:        {},
-	KeywordPriv:        {},
-	KeywordPub:         {},
-	KeywordAccess:      {},
-	KeywordSet:         {},
-	KeywordAll:         {},
-	KeywordSelf:        {},
-	KeywordInit:        {},
-	KeywordContract:    {},
-	KeywordAccount:     {},
-	KeywordImport:      {},
-	KeywordFrom:        {},
-	KeywordPre:         {},
-	KeywordPost:        {},
-	KeywordEvent:       {},
-	KeywordStruct:      {},
-	KeywordResource:    {},
-	KeywordInterface:   {},
-	KeywordTransaction: {},
-	KeywordPrepare:     {},
-	KeywordExecute:     {},
-	KeywordCase:        {},
-	KeywordSwitch:      {},
-	KeywordDefault:     {},
-	KeywordEnum:        {},
+var allKeywords = map[string]struct{}{
+	keywordIf:          {},
+	keywordElse:        {},
+	keywordWhile:       {},
+	keywordBreak:       {},
+	keywordContinue:    {},
+	keywordReturn:      {},
+	keywordTrue:        {},
+	keywordFalse:       {},
+	keywordNil:         {},
+	keywordLet:         {},
+	keywordVar:         {},
+	keywordFun:         {},
+	keywordAs:          {},
+	keywordCreate:      {},
+	keywordDestroy:     {},
+	keywordFor:         {},
+	keywordIn:          {},
+	keywordEmit:        {},
+	keywordAuth:        {},
+	keywordPriv:        {},
+	keywordPub:         {},
+	keywordAccess:      {},
+	keywordSet:         {},
+	keywordAll:         {},
+	keywordSelf:        {},
+	keywordInit:        {},
+	keywordContract:    {},
+	keywordAccount:     {},
+	keywordImport:      {},
+	keywordFrom:        {},
+	keywordPre:         {},
+	keywordPost:        {},
+	keywordEvent:       {},
+	keywordStruct:      {},
+	keywordResource:    {},
+	keywordInterface:   {},
+	keywordTransaction: {},
+	keywordPrepare:     {},
+	keywordExecute:     {},
+	keywordCase:        {},
+	keywordSwitch:      {},
+	keywordDefault:     {},
+	keywordEnum:        {},
 }
 
 // Keywords that can be used in identifier position without ambiguity.
-var SoftKeywords = map[string]struct{}{
-	KeywordFrom:    {},
-	KeywordAccount: {},
-	KeywordSet:     {},
-	KeywordAll:     {},
+var softKeywords = map[string]struct{}{
+	keywordFrom:    {},
+	keywordAccount: {},
+	keywordSet:     {},
+	keywordAll:     {},
 }
 
 // Keywords that aren't allowed in identifier position.
-var HardKeywords map[string]struct{} = mapDiff(AllKeywords, SoftKeywords)
+var hardKeywords map[string]struct{} = mapDiff(allKeywords, softKeywords)
 
 // take the boolean difference of two maps
 func mapDiff[T comparable, U any](minuend map[T]U, subtrahend map[T]U) map[T]U {

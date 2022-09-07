@@ -78,28 +78,28 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 			return parsePragmaDeclaration(p)
 		case lexer.TokenIdentifier:
 			switch p.current.Value {
-			case KeywordLet, KeywordVar:
+			case keywordLet, keywordVar:
 				return parseVariableDeclaration(p, access, accessPos, docString)
 
-			case KeywordFun:
+			case keywordFun:
 				return parseFunctionDeclaration(p, false, access, accessPos, docString)
 
-			case KeywordImport:
+			case keywordImport:
 				return parseImportDeclaration(p)
 
-			case KeywordEvent:
+			case keywordEvent:
 				return parseEventDeclaration(p, access, accessPos, docString)
 
-			case KeywordStruct, KeywordResource, KeywordContract, KeywordEnum:
+			case keywordStruct, keywordResource, keywordContract, keywordEnum:
 				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, docString)
 
-			case KeywordTransaction:
+			case keywordTransaction:
 				if access != ast.AccessNotSpecified {
 					return nil, p.syntaxError("invalid access modifier for transaction")
 				}
 				return parseTransactionDeclaration(p, docString)
 
-			case KeywordPriv, KeywordPub, KeywordAccess:
+			case keywordPriv, keywordPub, keywordAccess:
 				if access != ast.AccessNotSpecified {
 					return nil, p.syntaxError("invalid second access modifier")
 				}
@@ -129,12 +129,12 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 func parseAccess(p *parser) (ast.Access, error) {
 
 	switch p.current.Value {
-	case KeywordPriv:
+	case keywordPriv:
 		// Skip the `priv` keyword
 		p.next()
 		return ast.AccessPrivate, nil
 
-	case KeywordPub:
+	case keywordPub:
 		// Skip the `pub` keyword
 		p.next()
 		p.skipSpaceAndComments(true)
@@ -149,14 +149,14 @@ func parseAccess(p *parser) (ast.Access, error) {
 		if !p.current.Is(lexer.TokenIdentifier) {
 			return ast.AccessNotSpecified, p.syntaxError(
 				"expected keyword %q, got %s",
-				KeywordSet,
+				keywordSet,
 				p.current.Type,
 			)
 		}
-		if p.current.Value != KeywordSet {
+		if p.current.Value != keywordSet {
 			return ast.AccessNotSpecified, p.syntaxError(
 				"expected keyword %q, got %q",
-				KeywordSet,
+				keywordSet,
 				p.current.Value,
 			)
 		}
@@ -172,7 +172,7 @@ func parseAccess(p *parser) (ast.Access, error) {
 
 		return ast.AccessPublicSettable, nil
 
-	case KeywordAccess:
+	case keywordAccess:
 		// Skip the `access` keyword
 		p.next()
 		p.skipSpaceAndComments(true)
@@ -189,10 +189,10 @@ func parseAccess(p *parser) (ast.Access, error) {
 				"expected keyword %s, got %s",
 				common.EnumerateWords(
 					[]string{
-						strconv.Quote(KeywordAll),
-						strconv.Quote(KeywordAccount),
-						strconv.Quote(KeywordContract),
-						strconv.Quote(KeywordSelf),
+						strconv.Quote(keywordAll),
+						strconv.Quote(keywordAccount),
+						strconv.Quote(keywordContract),
+						strconv.Quote(keywordSelf),
 					},
 					"or",
 				),
@@ -203,16 +203,16 @@ func parseAccess(p *parser) (ast.Access, error) {
 		var access ast.Access
 
 		switch p.current.Value {
-		case KeywordAll:
+		case keywordAll:
 			access = ast.AccessPublic
 
-		case KeywordAccount:
+		case keywordAccount:
 			access = ast.AccessAccount
 
-		case KeywordContract:
+		case keywordContract:
 			access = ast.AccessContract
 
-		case KeywordSelf:
+		case keywordSelf:
 			access = ast.AccessPrivate
 
 		default:
@@ -220,10 +220,10 @@ func parseAccess(p *parser) (ast.Access, error) {
 				"expected keyword %s, got %q",
 				common.EnumerateWords(
 					[]string{
-						strconv.Quote(KeywordAll),
-						strconv.Quote(KeywordAccount),
-						strconv.Quote(KeywordContract),
-						strconv.Quote(KeywordSelf),
+						strconv.Quote(keywordAll),
+						strconv.Quote(keywordAccount),
+						strconv.Quote(keywordContract),
+						strconv.Quote(keywordSelf),
 					},
 					"or",
 				),
@@ -268,7 +268,7 @@ func parseVariableDeclaration(
 		startPos = *accessPos
 	}
 
-	isLet := p.current.Value == KeywordLet
+	isLet := p.current.Value == keywordLet
 
 	// Skip the `let` or `var` keyword
 	p.next()
@@ -471,7 +471,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 					return p.syntaxError(
 						"expected %s or keyword %q, got %s",
 						lexer.TokenIdentifier,
-						KeywordFrom,
+						keywordFrom,
 						p.current.Type,
 					)
 				}
@@ -479,7 +479,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 
 			case lexer.TokenIdentifier:
 
-				if p.current.Value == KeywordFrom {
+				if p.current.Value == keywordFrom {
 					if expectCommaOrFrom {
 						atEnd = true
 
@@ -528,7 +528,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 				return p.syntaxError(
 					"unexpected token in import declaration: got %s, expected keyword %q or %s",
 					p.current.Type,
-					KeywordFrom,
+					keywordFrom,
 					lexer.TokenComma,
 				)
 			}
@@ -545,7 +545,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 		// If it is not the `from` keyword,
 		// the given (previous) identifier is the import location.
 
-		if p.current.Value == KeywordFrom {
+		if p.current.Value == keywordFrom {
 			identifiers = append(identifiers, identifier)
 			// Skip the `from` keyword
 			p.next()
@@ -598,7 +598,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 			return nil, p.syntaxError(
 				"unexpected token in import declaration: got %s, expected keyword %q or %s",
 				p.current.Type,
-				KeywordFrom,
+				keywordFrom,
 				lexer.TokenComma,
 			)
 		}
@@ -640,7 +640,7 @@ func isNextTokenCommaOrFrom(p *parser) (b bool, err error) {
 	// Lookahead the next token
 	switch p.current.Type {
 	case lexer.TokenIdentifier:
-		return p.current.Value == KeywordFrom, nil
+		return p.current.Value == keywordFrom, nil
 	case lexer.TokenComma:
 		return true, nil
 	default:
@@ -755,16 +755,16 @@ func parseCompositeKind(p *parser) common.CompositeKind {
 
 	if p.current.Is(lexer.TokenIdentifier) {
 		switch p.current.Value {
-		case KeywordStruct:
+		case keywordStruct:
 			return common.CompositeKindStructure
 
-		case KeywordResource:
+		case keywordResource:
 			return common.CompositeKindResource
 
-		case KeywordContract:
+		case keywordContract:
 			return common.CompositeKindContract
 
-		case KeywordEnum:
+		case keywordEnum:
 			return common.CompositeKindEnum
 		}
 	}
@@ -792,10 +792,10 @@ func parseFieldWithVariableKind(
 
 	var variableKind ast.VariableKind
 	switch p.current.Value {
-	case KeywordLet:
+	case keywordLet:
 		variableKind = ast.VariableKindConstant
 
-	case KeywordVar:
+	case keywordVar:
 		variableKind = ast.VariableKindVariable
 	}
 
@@ -884,12 +884,12 @@ func parseCompositeOrInterfaceDeclaration(
 
 		wasInterface := isInterface
 
-		if p.current.Value == KeywordInterface {
+		if p.current.Value == keywordInterface {
 			isInterface = true
 			if wasInterface {
 				return nil, p.syntaxError(
 					"expected interface name, got keyword %q",
-					KeywordInterface,
+					keywordInterface,
 				)
 			}
 			// Skip the `interface` keyword
@@ -1051,22 +1051,22 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 		switch p.current.Type {
 		case lexer.TokenIdentifier:
 			switch p.current.Value {
-			case KeywordLet, KeywordVar:
+			case keywordLet, keywordVar:
 				return parseFieldWithVariableKind(p, access, accessPos, docString)
 
-			case KeywordCase:
+			case keywordCase:
 				return parseEnumCase(p, access, accessPos, docString)
 
-			case KeywordFun:
+			case keywordFun:
 				return parseFunctionDeclaration(p, functionBlockIsOptional, access, accessPos, docString)
 
-			case KeywordEvent:
+			case keywordEvent:
 				return parseEventDeclaration(p, access, accessPos, docString)
 
-			case KeywordStruct, KeywordResource, KeywordContract, KeywordEnum:
+			case keywordStruct, keywordResource, keywordContract, keywordEnum:
 				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, docString)
 
-			case KeywordPriv, KeywordPub, KeywordAccess:
+			case keywordPriv, keywordPub, keywordAccess:
 				if access != ast.AccessNotSpecified {
 					return nil, p.syntaxError("unexpected access modifier")
 				}
@@ -1189,13 +1189,13 @@ func parseSpecialFunctionDeclaration(
 
 	declarationKind := common.DeclarationKindUnknown
 	switch identifier.Identifier {
-	case KeywordInit:
+	case keywordInit:
 		declarationKind = common.DeclarationKindInitializer
 
-	case KeywordDestroy:
+	case keywordDestroy:
 		declarationKind = common.DeclarationKindDestructor
 
-	case KeywordPrepare:
+	case keywordPrepare:
 		declarationKind = common.DeclarationKindPrepare
 	}
 

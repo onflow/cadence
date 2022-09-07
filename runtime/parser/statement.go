@@ -78,23 +78,23 @@ func parseStatement(p *parser) (ast.Statement, error) {
 	switch p.current.Type {
 	case lexer.TokenIdentifier:
 		switch p.current.Value {
-		case KeywordReturn:
+		case keywordReturn:
 			return parseReturnStatement(p)
-		case KeywordBreak:
+		case keywordBreak:
 			return parseBreakStatement(p), nil
-		case KeywordContinue:
+		case keywordContinue:
 			return parseContinueStatement(p), nil
-		case KeywordIf:
+		case keywordIf:
 			return parseIfStatement(p)
-		case KeywordSwitch:
+		case keywordSwitch:
 			return parseSwitchStatement(p)
-		case KeywordWhile:
+		case keywordWhile:
 			return parseWhileStatement(p)
-		case KeywordFor:
+		case keywordFor:
 			return parseForStatement(p)
-		case KeywordEmit:
+		case keywordEmit:
 			return parseEmitStatement(p)
-		case KeywordFun:
+		case keywordFun:
 			// The `fun` keyword is ambiguous: it either introduces a function expression
 			// or a function declaration, depending on if an identifier follows, or not.
 			return parseFunctionDeclarationOrFunctionExpressionStatement(p)
@@ -265,7 +265,7 @@ func parseIfStatement(p *parser) (*ast.IfStatement, error) {
 
 		if p.current.Type == lexer.TokenIdentifier {
 			switch p.current.Value {
-			case KeywordLet, KeywordVar:
+			case keywordLet, keywordVar:
 				variableDeclaration, err =
 					parseVariableDeclaration(p, ast.AccessNotSpecified, nil, "")
 				if err != nil {
@@ -293,11 +293,11 @@ func parseIfStatement(p *parser) (*ast.IfStatement, error) {
 		parseNested := false
 
 		p.skipSpaceAndComments(true)
-		if p.current.IsString(lexer.TokenIdentifier, KeywordElse) {
+		if p.current.IsString(lexer.TokenIdentifier, keywordElse) {
 			p.next()
 
 			p.skipSpaceAndComments(true)
-			if p.current.IsString(lexer.TokenIdentifier, KeywordIf) {
+			if p.current.IsString(lexer.TokenIdentifier, keywordIf) {
 				parseNested = true
 			} else {
 				elseBlock, err = parseBlock(p)
@@ -378,10 +378,10 @@ func parseForStatement(p *parser) (*ast.ForStatement, error) {
 
 	p.skipSpaceAndComments(true)
 
-	if p.current.IsString(lexer.TokenIdentifier, KeywordIn) {
+	if p.current.IsString(lexer.TokenIdentifier, keywordIn) {
 		p.reportSyntaxError(
 			"expected identifier, got keyword %q",
-			KeywordIn,
+			keywordIn,
 		)
 		p.next()
 	}
@@ -410,10 +410,10 @@ func parseForStatement(p *parser) (*ast.ForStatement, error) {
 		identifier = firstValue
 	}
 
-	if !p.current.IsString(lexer.TokenIdentifier, KeywordIn) {
+	if !p.current.IsString(lexer.TokenIdentifier, keywordIn) {
 		p.reportSyntaxError(
 			"expected keyword %q, got %s",
-			KeywordIn,
+			keywordIn,
 			p.current.Type,
 		)
 	}
@@ -480,7 +480,7 @@ func parseFunctionBlock(p *parser) (*ast.FunctionBlock, error) {
 	p.skipSpaceAndComments(true)
 
 	var preConditions *ast.Conditions
-	if p.current.IsString(lexer.TokenIdentifier, KeywordPre) {
+	if p.current.IsString(lexer.TokenIdentifier, keywordPre) {
 		p.next()
 		conditions, err := parseConditions(p, ast.ConditionKindPre)
 		if err != nil {
@@ -493,7 +493,7 @@ func parseFunctionBlock(p *parser) (*ast.FunctionBlock, error) {
 	p.skipSpaceAndComments(true)
 
 	var postConditions *ast.Conditions
-	if p.current.IsString(lexer.TokenIdentifier, KeywordPost) {
+	if p.current.IsString(lexer.TokenIdentifier, keywordPost) {
 		p.next()
 		conditions, err := parseConditions(p, ast.ConditionKindPost)
 		if err != nil {
@@ -659,8 +659,8 @@ func parseSwitchCases(p *parser) (cases []*ast.SwitchCase, err error) {
 		p.reportSyntaxError(
 			"unexpected token: got %s, expected %q or %q",
 			p.current.Type,
-			KeywordCase,
-			KeywordDefault,
+			keywordCase,
+			keywordDefault,
 		)
 		p.next()
 	}
@@ -673,10 +673,10 @@ func parseSwitchCases(p *parser) (cases []*ast.SwitchCase, err error) {
 
 			var switchCase *ast.SwitchCase
 			switch p.current.Value {
-			case KeywordCase:
+			case keywordCase:
 				switchCase, err = parseSwitchCase(p, true)
 
-			case KeywordDefault:
+			case keywordDefault:
 				switchCase, err = parseSwitchCase(p, false)
 
 			default:
@@ -743,7 +743,7 @@ func parseSwitchCase(p *parser, hasExpression bool) (*ast.SwitchCase, error) {
 
 		case lexer.TokenIdentifier:
 			switch p.current.Value {
-			case KeywordCase, KeywordDefault:
+			case keywordCase, keywordDefault:
 				return true
 			default:
 				return false

@@ -464,7 +464,7 @@ func (p *parser) mustNotKeyword(errMsgContext string, token lexer.Token) (ast.Id
 
 	ident := p.tokenToIdentifier(token)
 
-	if _, exists := HardKeywords[ident.Identifier]; exists {
+	if _, exists := hardKeywords[ident.Identifier]; exists {
 		return nonIdentifierErr("keyword " + ident.Identifier)
 	}
 	return ident, nil

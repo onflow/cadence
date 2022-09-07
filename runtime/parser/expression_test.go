@@ -5674,7 +5674,7 @@ func TestParseIdentifiers(t *testing.T) {
 func TestParseReservedIdent(t *testing.T) {
 	t.Parallel()
 
-	for keyword := range HardKeywords {
+	for keyword := range hardKeywords {
 		code := fmt.Sprintf(`let %s = 0`, keyword)
 		_, err := ParseProgram(code, nil)
 		upcast := err.(Error)

@@ -156,7 +156,7 @@ func init() {
 		func(p *parser, token lexer.Token) (ast.Type, error) {
 
 			switch token.Value {
-			case KeywordAuth:
+			case keywordAuth:
 				p.skipSpaceAndComments(true)
 
 				_, err := p.mustOne(lexer.TokenAmpersand)
