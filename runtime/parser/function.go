@@ -115,57 +115,47 @@ func parseParameter(p *parser) (*ast.Parameter, error) {
 	p.skipSpaceAndComments(true)
 
 	startPos := p.current.StartPos
-	parameterPos := startPos
 
-	if !p.current.Is(lexer.TokenIdentifier) {
-		return nil, p.syntaxError(
-			"expected argument label or parameter name, got %s",
-			p.current.Type,
-		)
-	}
 	argumentLabel := ""
-	parameterName, ok := p.current.Value.(string)
-	if !ok {
-		return nil, p.syntaxError(
-			"expected parameter %s to be a string",
-			p.current,
-		)
+	identifier, err := p.nonReservedIdentifier("for argument label or parameter name")
+
+	if err != nil {
+		return nil, err
 	}
+
 	// Skip the identifier
 	p.next()
-
-	// If another identifier is provided, then the previous identifier
-	// is the argument label, and this identifier is the parameter name
-
 	p.skipSpaceAndComments(true)
-	if p.current.Is(lexer.TokenIdentifier) {
-		argumentLabel = parameterName
-		parameterName, ok = p.current.Value.(string)
-		if !ok {
-			return nil, p.syntaxError(
-				"expected parameter %s to be a string",
-				p.current,
-			)
+
+	switch p.current.Type {
+	case lexer.TokenIdentifier:
+		argumentLabel = identifier.Identifier
+		newIdentifier, err := p.mustNotKeyword("for parameter name", p.current)
+		if err != nil {
+			return nil, err
 		}
-		parameterPos = p.current.StartPos
-		// Skip the identifier
+
+		identifier = newIdentifier
+
+		// skip the identifier, now known to be the argument name
 		p.next()
 		p.skipSpaceAndComments(true)
 	}
 
 	if !p.current.Is(lexer.TokenColon) {
 		return nil, p.syntaxError(
-			"expected %s after argument label/parameter name, got %s",
+			"expected %s after parameter name, got %s",
 			lexer.TokenColon,
 			p.current.Type,
 		)
 	}
 
-	// Skip the colon
+	// skip the colon
 	p.next()
 	p.skipSpaceAndComments(true)
 
 	typeAnnotation, err := parseTypeAnnotation(p)
+
 	if err != nil {
 		return nil, err
 	}
@@ -175,17 +165,9 @@ func parseParameter(p *parser) (*ast.Parameter, error) {
 	return ast.NewParameter(
 		p.memoryGauge,
 		argumentLabel,
-		ast.NewIdentifier(
-			p.memoryGauge,
-			parameterName,
-			parameterPos,
-		),
+		identifier,
 		typeAnnotation,
-		ast.NewRange(
-			p.memoryGauge,
-			startPos,
-			endPos,
-		),
+		ast.NewRange(p.memoryGauge, startPos, endPos),
 	), nil
 }
 
@@ -206,14 +188,12 @@ func parseFunctionDeclaration(
 	p.next()
 
 	p.skipSpaceAndComments(true)
-	if !p.current.Is(lexer.TokenIdentifier) {
-		return nil, p.syntaxError(
-			"expected identifier after start of function declaration, got %s",
-			p.current.Type,
-		)
-	}
 
-	identifier := p.tokenToIdentifier(p.current)
+	identifier, err := p.nonReservedIdentifier("after start of function declaration")
+
+	if err != nil {
+		return nil, err
+	}
 
 	// Skip the identifier
 	p.next()
