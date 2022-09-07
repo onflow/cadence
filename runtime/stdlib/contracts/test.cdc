@@ -96,6 +96,9 @@ pub contract Test {
             )
         }
 
+        /// Set the configuration to be used by the blockchain.
+        /// Overrides any existing configuration.
+        ///
         pub fun useConfiguration(_ configuration: Configuration) {
             self.backend.useConfiguration(configuration)
         }
@@ -119,7 +122,8 @@ pub contract Test {
         }
 
         /// Combine this matcher with the given matcher.
-        /// Returns a new matcher that succeeds if this and the given matcher succeed.
+        /// Returns a new matcher that succeeds if this or the given matcher succeed.
+        /// If this matcher succeeds, then the other matcher would not be tested.
         ///
         pub fun or(_ other: Matcher): Matcher {
             return Matcher(test: fun (value: AnyStruct): Bool {
@@ -214,16 +218,33 @@ pub contract Test {
     ///
     pub struct interface BlockchainBackend {
 
+        /// Executes a script and returns the script return value and the status.
+        /// `returnValue` field of the result will be `nil` if the script failed.
+        ///
         pub fun executeScript(_ script: String, _ arguments: [AnyStruct]): ScriptResult
 
+        /// Creates a signer account by submitting an account creation transaction.
+        /// The transaction is paid by the service account.
+        /// The returned account can be used to sign and authorize transactions.
+        ///
         pub fun createAccount(): Account
 
+        /// Add a transaction to the current block.
+        ///
         pub fun addTransaction(_ transaction: Transaction)
 
+        /// Executes the next transaction in the block, if any.
+        /// Returns the result of the transaction, or nil if no transaction was scheduled.
+        ///
         pub fun executeNextTransaction(): TransactionResult?
 
+        /// Commit the current block.
+        /// Committing will fail if there are un-executed transactions in the block.
+        ///
         pub fun commitBlock()
 
+        /// Deploys a given contract, and initilizes it with the arguments.
+        ///
         pub fun deployContract(
             name: String,
             code: String,
@@ -231,6 +252,9 @@ pub contract Test {
             arguments: [AnyStruct]
         ): Error?
 
+        /// Set the configuration to be used by the blockchain.
+        /// Overrides any existing configuration.
+        ///
         pub fun useConfiguration(_ configuration: Configuration)
     }
 }
