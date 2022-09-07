@@ -131,7 +131,7 @@ func TestCadenceBinaryFormatCodecEntryPoints(t *testing.T) {
 	})
 }
 
-func TestCadenceBinaryFormatCodecWriteErrors(t *testing.T) {
+func TestCadenceBinaryFormatCodecWriteErrorOnEncodeValueIdentifier(t *testing.T) {
 	t.Parallel()
 
 	values := []cadence.Value{
@@ -203,7 +203,7 @@ func TestCadenceBinaryFormatCodecWriteErrors(t *testing.T) {
 			} else {
 				name = value.Type().ID()
 			}
-			t.Run(fmt.Sprintf("%s EncodeValueIdentifier", name), func(t *testing.T) {
+			t.Run(name, func(t *testing.T) {
 				t.Parallel()
 
 				writer := common_codec.MockWriter{
@@ -216,8 +216,130 @@ func TestCadenceBinaryFormatCodecWriteErrors(t *testing.T) {
 			})
 		}(value)
 	}
+}
 
+func TestCadenceBinaryFormatCodecWriteErrorVarious(t *testing.T) {
+	t.Parallel()
 
+	t.Run("EncodeArray VariableSizedArrayType length", func(t *testing.T) {
+		t.Parallel()
+
+		writer := common_codec.MockWriter{
+			ByteToErrorOn: 2,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := cbf_codec.NewEncoder(&writer)
+
+		value := cadence.NewArray([]cadence.Value{}).
+			WithType(cadence.VariableSizedArrayType{
+			ElementType: cadence.NeverType{},
+		})
+
+		err := encoder.EncodeValue(value)
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeArray encode element value", func(t *testing.T) {
+		t.Parallel()
+
+		writer := common_codec.MockWriter{
+			ByteToErrorOn: 6,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := cbf_codec.NewEncoder(&writer)
+
+		value := cadence.NewArray([]cadence.Value{
+			cadence.Void{},
+		}).WithType(cadence.VariableSizedArrayType{
+				ElementType: cadence.VoidType{},
+			})
+
+		err := encoder.EncodeValue(value)
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeDictionary EncodeDictionaryType", func(t *testing.T) {
+		t.Parallel()
+
+		writer := common_codec.MockWriter{
+			ByteToErrorOn: 1,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := cbf_codec.NewEncoder(&writer)
+
+		value := cadence.NewDictionary([]cadence.KeyValuePair{}).
+			WithType(cadence.DictionaryType{KeyType: cadence.NeverType{}})
+
+		err := encoder.EncodeValue(value)
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeDictionary length of Pairs", func(t *testing.T) {
+		t.Parallel()
+
+		writer := common_codec.MockWriter{
+			ByteToErrorOn: 3,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := cbf_codec.NewEncoder(&writer)
+
+		value := cadence.NewDictionary([]cadence.KeyValuePair{}).
+			WithType(cadence.DictionaryType{
+				KeyType: cadence.NeverType{},
+				ElementType: cadence.NeverType{},
+			})
+
+		err := encoder.EncodeValue(value)
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeDictionary key", func(t *testing.T) {
+		t.Parallel()
+
+		writer := common_codec.MockWriter{
+			ByteToErrorOn: 7,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := cbf_codec.NewEncoder(&writer)
+
+		value := cadence.NewDictionary([]cadence.KeyValuePair{
+			{
+				Key:   cadence.Void{},
+				Value: cadence.Void{},
+			},
+		}).
+			WithType(cadence.DictionaryType{
+				KeyType: cadence.VoidType{},
+				ElementType: cadence.VoidType{},
+			})
+
+		err := encoder.EncodeValue(value)
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
+
+	t.Run("EncodeDictionary element", func(t *testing.T) {
+		t.Parallel()
+
+		writer := common_codec.MockWriter{
+			ByteToErrorOn: 8,
+			ErrorToReturn: fmt.Errorf("MockError"),
+		}
+		encoder := cbf_codec.NewEncoder(&writer)
+
+		value := cadence.NewDictionary([]cadence.KeyValuePair{
+			{
+				Key:   cadence.Void{},
+				Value: cadence.Void{},
+			},
+		}).
+			WithType(cadence.DictionaryType{
+				KeyType: cadence.VoidType{},
+				ElementType: cadence.VoidType{},
+			})
+
+		err := encoder.EncodeValue(value)
+		assert.Equal(t, writer.ErrorToReturn, err)
+	})
 }
 
 func TestCadenceBinaryFormatCodecVoid(t *testing.T) {
@@ -2054,6 +2176,35 @@ func TestCadenceBinaryFormatCodecArray(t *testing.T) {
 		assert.Equal(t, value, output, "decoded value differs")
 	})
 
+	t.Run("unknown type", func(t *testing.T) {
+		t.Parallel()
+
+		encoder, _, _ := NewTestCodec()
+
+		value := cadence.NewArray([]cadence.Value{}).
+			WithType(NewMockArrayType())
+
+		err := encoder.Encode(value)
+		assert.ErrorContains(t, err, "unknown array type")
+	})
+
+
+	t.Run("constant array length != size", func(t *testing.T) {
+		t.Parallel()
+
+		encoder, _, _ := NewTestCodec()
+
+		value := cadence.NewArray([]cadence.Value{}).
+			WithType(cadence.ConstantSizedArrayType{
+			Size:        1,
+			ElementType: cadence.NeverType{},
+		})
+
+		err := encoder.Encode(value)
+		assert.ErrorContains(t, err, "constant size array size=1 but has 0 elements")
+	})
+
+
 	t.Run("constant type", func(t *testing.T) {
 		t.Parallel()
 
@@ -3616,6 +3767,8 @@ type MockCadenceValue struct {
 	MockString  string
 }
 
+var _ cadence.Value = &MockCadenceValue{}
+
 func NewMockCadenceValue() *MockCadenceValue {
 	return &MockCadenceValue{
 		MockType:    nil,
@@ -3642,4 +3795,27 @@ func (m *MockCadenceValue) String() string {
 	return m.MockString
 }
 
-var _ cadence.Value = &MockCadenceValue{}
+type MockArrayType struct {
+	MockID string
+	MockElement cadence.Type
+}
+
+var _ cadence.ArrayType = &MockArrayType{}
+
+func NewMockArrayType() *MockArrayType {
+	return &MockArrayType{
+		MockID:      "MockID",
+		MockElement: nil,
+	}
+}
+
+func (m MockArrayType) IsType() {
+}
+
+func (m MockArrayType) ID() string {
+	return m.MockID
+}
+
+func (m MockArrayType) Element() cadence.Type {
+	return m.MockElement
+}
