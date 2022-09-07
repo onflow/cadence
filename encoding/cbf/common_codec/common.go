@@ -460,3 +460,30 @@ func Concat[T any](deep ...[]T) []T {
 
 	return flat
 }
+
+//
+// Testing
+//
+
+type MockWriter struct {
+	ByteToErrorOn int
+	ErrorToReturn error
+	CurrentByte   int
+}
+
+var _ io.Writer = &MockWriter{}
+
+func (m *MockWriter) Write(p []byte) (n int, err error) {
+	currentByte := m.CurrentByte
+	m.CurrentByte += len(p)
+
+	if m.ByteToErrorOn < 0 || // erroring disabled
+		m.ErrorToReturn == nil || // no erroring
+		currentByte > m.ByteToErrorOn || // already errored
+		m.CurrentByte <= m.ByteToErrorOn { // not yet erroring
+		return len(p), nil
+	}
+
+	return 0, m.ErrorToReturn
+}
+

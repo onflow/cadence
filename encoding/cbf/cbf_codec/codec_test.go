@@ -20,6 +20,7 @@ package cbf_codec_test
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -78,48 +79,145 @@ func TestCadenceBinaryFormatCodecEntryPoints(t *testing.T) {
 	t.Parallel()
 
 	t.Run("EncodeValue", func(t *testing.T) {
+		t.Parallel()
 		v, err := cbf_codec.EncodeValue(cadence.Void{})
 		require.NoError(t, err, "encoding error")
 		assert.Equal(t, []byte{byte(cbf_codec.EncodedValueVoid)}, v, "decoded wrong")
 	})
 
 	t.Run("EncodeValue error", func(t *testing.T) {
+		t.Parallel()
 		_, err := cbf_codec.EncodeValue(NewMockCadenceValue())
 		assert.ErrorContains(t, err, "unexpected value")
 	})
 
 	t.Run("MustEncode", func(t *testing.T) {
+		t.Parallel()
 		v := cbf_codec.MustEncode(cadence.Void{})
 		assert.Equal(t, []byte{byte(cbf_codec.EncodedValueVoid)}, v, "encoded wrong")
 	})
 
 	t.Run("MustEncode error", func(t *testing.T) {
+		t.Parallel()
 		assert.PanicsWithError(t, "unexpected value: MockString (type=%!s(<nil>))", func() {
 			cbf_codec.MustEncode(NewMockCadenceValue())
 		})
 	})
 
 	t.Run("DecodeValue", func(t *testing.T) {
+		t.Parallel()
 		v, err := cbf_codec.DecodeValue(nil, []byte{byte(cbf_codec.EncodedValueVoid)})
 		require.NoError(t, err, "decoding error")
 		assert.Equal(t, cadence.Void{}, v, "decoded wrong")
 	})
 
 	t.Run("DecodeValue error", func(t *testing.T) {
+		t.Parallel()
 		_, err := cbf_codec.DecodeValue(nil, []byte{byte(cbf_codec.EncodedValueUnknown)})
 		assert.ErrorContains(t, err, "unknown cadence.Value")
 	})
 
 	t.Run("MustDecode", func(t *testing.T) {
+		t.Parallel()
 		v := cbf_codec.MustDecode(nil, []byte{byte(cbf_codec.EncodedValueVoid)})
 		assert.Equal(t, cadence.Void{}, v, "decoded wrong")
 	})
 
 	t.Run("MustDecode error", func(t *testing.T) {
+		t.Parallel()
 		assert.PanicsWithError(t, "unknown cadence.Value: %!s(<nil>)", func() {
 			cbf_codec.MustDecode(nil, []byte{byte(cbf_codec.EncodedValueUnknown)})
 		})
 	})
+}
+
+func TestCadenceBinaryFormatCodecWriteErrors(t *testing.T) {
+	t.Parallel()
+
+	values := []cadence.Value{
+		cadence.Optional{},
+		cadence.Bool(false),
+		cadence.String(""),
+		cadence.Bytes{},
+		cadence.Character("A"),
+		cadence.Address{},
+		cadence.NewInt(0),
+		cadence.Int8(0),
+		cadence.Int16(0),
+		cadence.Int32(0),
+		cadence.Int64(0),
+		cadence.NewInt128(0),
+		cadence.NewInt256(0),
+		cadence.NewUInt(0),
+		cadence.UInt8(0),
+		cadence.UInt16(0),
+		cadence.UInt32(0),
+		cadence.UInt64(0),
+		cadence.NewUInt128(0),
+		cadence.NewUInt256(0),
+		cadence.Word8(0),
+		cadence.Word16(0),
+		cadence.Word32(0),
+		cadence.Word64(0),
+		cadence.Fix64(0),
+		cadence.UFix64(0),
+		cadence.Array{
+			ArrayType: cadence.VariableSizedArrayType{
+				ElementType: cadence.NeverType{},
+			},
+		},
+		cadence.Array{
+			ArrayType: cadence.ConstantSizedArrayType{
+				Size:        0,
+				ElementType: cadence.NeverType{},
+			},
+		},
+		cadence.Array{
+			ArrayType: nil, // unknown type array
+		},
+		cadence.NewDictionary([]cadence.KeyValuePair{}).WithType(cadence.DictionaryType{
+			KeyType:     cadence.NeverType{},
+			ElementType: cadence.NeverType{},
+		}),
+		cadence.Struct{
+			StructType: &cadence.StructType{},
+		},
+		cadence.Resource{
+			ResourceType: &cadence.ResourceType{},
+		},
+		cadence.Event{EventType: &cadence.EventType{}},
+		cadence.Contract{ContractType: &cadence.ContractType{}},
+		cadence.Link{},
+		cadence.Path{},
+		cadence.Capability{},
+		cadence.Enum{
+			EnumType: &cadence.EnumType{},
+		},
+	}
+
+	for _, value := range values {
+		func(value cadence.Value) {
+			var name string
+			if value.Type() == nil {
+				name = value.String()
+			} else {
+				name = value.Type().ID()
+			}
+			t.Run(fmt.Sprintf("%s EncodeValueIdentifier", name), func(t *testing.T) {
+				t.Parallel()
+
+				writer := common_codec.MockWriter{
+					ByteToErrorOn: 0, // first byte is EncodeValueIdentifier
+					ErrorToReturn: fmt.Errorf("MockError"),
+				}
+				encoder := cbf_codec.NewEncoder(&writer)
+				err := encoder.EncodeValue(value)
+				assert.Equal(t, writer.ErrorToReturn, err)
+			})
+		}(value)
+	}
+
+
 }
 
 func TestCadenceBinaryFormatCodecVoid(t *testing.T) {
@@ -1604,6 +1702,190 @@ func TestCadenceBinaryFormatCodecNumber(t *testing.T) {
 		assert.Equal(
 			t,
 			[]byte{byte(cbf_codec.EncodedTypeUInt64)},
+			buffer.Bytes(), "encoded bytes differ")
+
+		output, err := decoder.DecodeType()
+		require.NoError(t, err, "decoding error")
+
+		assert.Equal(t, typ, output, "decoded type differs")
+	})
+
+	t.Run("value word8", func(t *testing.T) {
+		t.Parallel()
+
+		encoder, decoder, buffer := NewTestCodec()
+
+		i := uint8(99)
+		value := cadence.Word8(i)
+
+		err := encoder.Encode(value)
+		require.NoError(t, err, "encoding error")
+
+		assert.Equal(
+			t,
+			common_codec.Concat(
+				[]byte{byte(cbf_codec.EncodedValueWord8)},
+				[]byte{i},
+			),
+			buffer.Bytes(), "encoded bytes differ")
+
+		output, err := decoder.DecodeValue()
+		require.NoError(t, err, "decoding error")
+
+		assert.Equal(t, value, output, "decoded value differs")
+	})
+
+	t.Run("type word8", func(t *testing.T) {
+		t.Parallel()
+
+		encoder, decoder, buffer := NewTestCodec()
+
+		typ := cadence.Word8Type{}
+
+		err := encoder.EncodeType(typ)
+		require.NoError(t, err, "encoding error")
+
+		assert.Equal(
+			t,
+			[]byte{byte(cbf_codec.EncodedTypeWord8)},
+			buffer.Bytes(), "encoded bytes differ")
+
+		output, err := decoder.DecodeType()
+		require.NoError(t, err, "decoding error")
+
+		assert.Equal(t, typ, output, "decoded type differs")
+	})
+
+	t.Run("value word16", func(t *testing.T) {
+		t.Parallel()
+
+		encoder, decoder, buffer := NewTestCodec()
+
+		i := uint8(99)
+		value := cadence.Word16(i)
+
+		err := encoder.Encode(value)
+		require.NoError(t, err, "encoding error")
+
+		assert.Equal(
+			t,
+			common_codec.Concat(
+				[]byte{byte(cbf_codec.EncodedValueWord16)},
+				[]byte{0, i},
+			),
+			buffer.Bytes(), "encoded bytes differ")
+
+		output, err := decoder.DecodeValue()
+		require.NoError(t, err, "decoding error")
+
+		assert.Equal(t, value, output, "decoded value differs")
+	})
+
+	t.Run("type word16", func(t *testing.T) {
+		t.Parallel()
+
+		encoder, decoder, buffer := NewTestCodec()
+
+		typ := cadence.Word16Type{}
+
+		err := encoder.EncodeType(typ)
+		require.NoError(t, err, "encoding error")
+
+		assert.Equal(
+			t,
+			[]byte{byte(cbf_codec.EncodedTypeWord16)},
+			buffer.Bytes(), "encoded bytes differ")
+
+		output, err := decoder.DecodeType()
+		require.NoError(t, err, "decoding error")
+
+		assert.Equal(t, typ, output, "decoded type differs")
+	})
+
+	t.Run("value word32", func(t *testing.T) {
+		t.Parallel()
+
+		encoder, decoder, buffer := NewTestCodec()
+
+		i := uint8(99)
+		value := cadence.Word32(i)
+
+		err := encoder.Encode(value)
+		require.NoError(t, err, "encoding error")
+
+		assert.Equal(
+			t,
+			common_codec.Concat(
+				[]byte{byte(cbf_codec.EncodedValueWord32)},
+				[]byte{0, 0, 0, i},
+			),
+			buffer.Bytes(), "encoded bytes differ")
+
+		output, err := decoder.DecodeValue()
+		require.NoError(t, err, "decoding error")
+
+		assert.Equal(t, value, output, "decoded value differs")
+	})
+
+	t.Run("type word32", func(t *testing.T) {
+		t.Parallel()
+
+		encoder, decoder, buffer := NewTestCodec()
+
+		typ := cadence.Word32Type{}
+
+		err := encoder.EncodeType(typ)
+		require.NoError(t, err, "encoding error")
+
+		assert.Equal(
+			t,
+			[]byte{byte(cbf_codec.EncodedTypeWord32)},
+			buffer.Bytes(), "encoded bytes differ")
+
+		output, err := decoder.DecodeType()
+		require.NoError(t, err, "decoding error")
+
+		assert.Equal(t, typ, output, "decoded type differs")
+	})
+
+	t.Run("value word64", func(t *testing.T) {
+		t.Parallel()
+
+		encoder, decoder, buffer := NewTestCodec()
+
+		i := uint8(99)
+		value := cadence.Word64(i)
+
+		err := encoder.Encode(value)
+		require.NoError(t, err, "encoding error")
+
+		assert.Equal(
+			t,
+			common_codec.Concat(
+				[]byte{byte(cbf_codec.EncodedValueWord64)},
+				[]byte{0, 0, 0, 0, 0, 0, 0, i},
+			),
+			buffer.Bytes(), "encoded bytes differ")
+
+		output, err := decoder.DecodeValue()
+		require.NoError(t, err, "decoding error")
+
+		assert.Equal(t, value, output, "decoded value differs")
+	})
+
+	t.Run("type word64", func(t *testing.T) {
+		t.Parallel()
+
+		encoder, decoder, buffer := NewTestCodec()
+
+		typ := cadence.Word64Type{}
+
+		err := encoder.EncodeType(typ)
+		require.NoError(t, err, "encoding error")
+
+		assert.Equal(
+			t,
+			[]byte{byte(cbf_codec.EncodedTypeWord64)},
 			buffer.Bytes(), "encoded bytes differ")
 
 		output, err := decoder.DecodeType()

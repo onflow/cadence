@@ -205,37 +205,37 @@ func (e *Encoder) EncodeValue(value cadence.Value) (err error) {
 			return
 		}
 		return common_codec.EncodeBigInt(&e.w, v.Big())
-	case cadence.Word8: // TODO add test
+	case cadence.Word8:
 		err = e.EncodeValueIdentifier(EncodedValueWord8)
 		if err != nil {
 			return
 		}
 		return common_codec.EncodeNumber(&e.w, uint8(v))
-	case cadence.Word16: // TODO add test
+	case cadence.Word16:
 		err = e.EncodeValueIdentifier(EncodedValueWord16)
 		if err != nil {
 			return
 		}
 		return common_codec.EncodeNumber(&e.w, uint16(v))
-	case cadence.Word32: // TODO add test
+	case cadence.Word32:
 		err = e.EncodeValueIdentifier(EncodedValueWord32)
 		if err != nil {
 			return
 		}
 		return common_codec.EncodeNumber(&e.w, uint32(v))
-	case cadence.Word64: // TODO add test
+	case cadence.Word64:
 		err = e.EncodeValueIdentifier(EncodedValueWord64)
 		if err != nil {
 			return
 		}
 		return common_codec.EncodeNumber(&e.w, uint64(v))
-	case cadence.Fix64: // TODO add test
+	case cadence.Fix64:
 		err = e.EncodeValueIdentifier(EncodedValueFix64)
 		if err != nil {
 			return
 		}
 		return common_codec.EncodeNumber(&e.w, int64(v))
-	case cadence.UFix64: // TODO add test
+	case cadence.UFix64:
 		err = e.EncodeValueIdentifier(EncodedValueUFix64)
 		if err != nil {
 			return

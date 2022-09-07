@@ -21,7 +21,6 @@ package sema_codec_test
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -1596,28 +1595,6 @@ func (f *MockSemaType) GetMembers() map[string]sema.MemberResolver {
 	panic("implement me")
 }
 
-type MockWriter struct {
-	ByteToErrorOn int
-	ErrorToReturn error
-	CurrentByte   int
-}
-
-var _ io.Writer = &MockWriter{}
-
-func (m *MockWriter) Write(p []byte) (n int, err error) {
-	currentByte := m.CurrentByte
-	m.CurrentByte += len(p)
-
-	if m.ByteToErrorOn < 0 || // erroring disabled
-		m.ErrorToReturn == nil || // no erroring
-		currentByte > m.ByteToErrorOn || // already errored
-		m.CurrentByte <= m.ByteToErrorOn { // not yet erroring
-		return len(p), nil
-	}
-
-	return 0, m.ErrorToReturn
-}
-
 func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Parallel()
 
@@ -1640,7 +1617,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeElaboration: io error at CompositeTypes", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 0,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -1653,7 +1630,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeType: io error at CompositeType", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 0,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -1666,7 +1643,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeType: io error at InterfaceType", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 0,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -1679,7 +1656,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeType: io error at GenericType", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 0,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -1692,7 +1669,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeType: io error at FunctionType", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 0,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -1705,7 +1682,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeType: io error at DictionaryType", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 0,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -1718,7 +1695,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeType: io error at TransactionType", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 0,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -1731,7 +1708,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeType: io error at RestrictedType", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 0,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -1744,7 +1721,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeType: io error at VariableSizedType", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 0,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -1757,7 +1734,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeType: io error at ConstantSizedType", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 0,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -1770,7 +1747,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeType: io error at OptionalType", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 0,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -1783,7 +1760,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeType: io error at ReferenceType", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 0,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -1796,7 +1773,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeType: io error at CapabilityType", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 0,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -1809,7 +1786,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeFunctionType: io error at IsConstructor", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 0,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -1822,7 +1799,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeFunctionType: io error at TypeParameters", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 1,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -1835,7 +1812,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeFunctionType: io error at Parameters", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 2,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -1848,7 +1825,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeFunctionType: io error at ReturnTypeAnnotation", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 3,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -1861,7 +1838,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeFunctionType: io error at RequiredArgumentCount", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 4,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -1874,7 +1851,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeFunctionType: io error at Members", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 5,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -1887,7 +1864,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeDictionaryType: io error at KeyType", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 0,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -1900,7 +1877,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeReferenceType: io error at Authorized", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 0,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -1913,7 +1890,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeTransactionType: io error at Members", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 0,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -1926,7 +1903,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeTransactionType: io error at Fields", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 1,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -1939,7 +1916,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeTransactionType: io error at PrepareParameters", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 2,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -1952,7 +1929,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeRestrictedType: io error at Type", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 0,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -1965,7 +1942,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeConstantSizedType: io error at Type", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 0,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -1978,7 +1955,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodePointer: io error at encoding type", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 0,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -1991,7 +1968,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeCompositeType: io error at Location", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 0,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -2004,7 +1981,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeCompositeType: io error at Identifier", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 1,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -2017,7 +1994,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeCompositeType: io error at Kind", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 5,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -2030,7 +2007,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeCompositeType: io error at ExplicitInterfaceConformances", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 6,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -2043,7 +2020,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeCompositeType: io error at ImplicitTypeRequirementConformances", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 7,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -2056,7 +2033,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeCompositeType: io error at Members", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 8,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -2069,7 +2046,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeCompositeType: io error at Fields", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 9,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -2082,7 +2059,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeCompositeType: io error at ConstructorParameters", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 10,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -2095,7 +2072,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeCompositeType: io error at nestedTypes", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 11,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -2108,7 +2085,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeCompositeType: io error at containerType", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 12,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -2121,7 +2098,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeCompositeType: io error at EnumRawType", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 13,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -2134,7 +2111,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeCompositeType: io error at hasComputedMembers", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 14,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -2147,7 +2124,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeTypeParameter: io error at Name", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 0,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -2160,7 +2137,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeTypeParameter: io error at TypeBound", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 4,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -2173,7 +2150,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeParameter: io error at Label", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 0,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -2186,7 +2163,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeParameter: io error at Identifier", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 4,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -2199,7 +2176,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeStringMemberOrderedMap: io error at length", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 1,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -2212,7 +2189,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeStringMemberOrderedMap: io error at String", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 5,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -2228,7 +2205,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeStringMemberOrderedMap: io error at Member", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 9,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -2244,7 +2221,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeStringTypeOrderedMap: io error at length", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 1,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -2257,7 +2234,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeStringTypeOrderedMap: io error at String", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 5,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -2275,7 +2252,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeStringTypeOrderedMap: io error at Member", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 9,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -2291,7 +2268,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeMember: io error at Identifier", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 8,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -2304,7 +2281,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeMember: io error at TypeAnnotation", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 8 + 28,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -2317,7 +2294,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeMember: io error at DeclarationKind", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 8 + 28 + 1,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -2330,7 +2307,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeMember: io error at VariableKind", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 8 + 28 + 1 + 8,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -2343,7 +2320,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeMember: io error at ArgumentLabels", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 8 + 28 + 1 + 8 + 8,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -2356,7 +2333,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeMember: io error at Predeclared", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 8 + 28 + 1 + 8 + 8 + 1,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -2369,7 +2346,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeTypeAnnotation: io error at IsResource", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 1,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -2382,7 +2359,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeAstPosition: io error at Offset", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 0,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -2395,7 +2372,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeAstPosition: io error at Line", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 8,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -2408,7 +2385,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeInterfaceType: io error at Location", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 0,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -2421,7 +2398,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeInterfaceType: io error at Identifier", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 1,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -2434,7 +2411,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeInterfaceType: io error at CompositeKind", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 1 + 4,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -2447,7 +2424,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeInterfaceType: io error at Members", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 1 + 4 + 1,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -2460,7 +2437,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeInterfaceType: io error at Fields", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 1 + 4 + 1 + 1,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -2473,7 +2450,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeInterfaceType: io error at InitializerParameters", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 1 + 4 + 1 + 1 + 1,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -2486,7 +2463,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeInterfaceType: io error at GetContainerType", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 1 + 4 + 1 + 1 + 1 + 1,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -2499,7 +2476,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeArray: io error at length", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 1,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -2528,7 +2505,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeMap: io error at length", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 0,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -2543,7 +2520,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeMap: io error at key", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{
+		writer := common_codec.MockWriter{
 			ByteToErrorOn: 4,
 			ErrorToReturn: fmt.Errorf("MockError"),
 		}
@@ -2560,7 +2537,7 @@ func TestSemaCodecEncodeErrors(t *testing.T) {
 	t.Run("EncodeMap: io error at pointer", func(t *testing.T) {
 		t.Parallel()
 
-		writer := MockWriter{}
+		writer := common_codec.MockWriter{}
 		encoder := sema_codec.NewSemaEncoder(&writer)
 
 		pointedToType := &sema.CompositeType{}
