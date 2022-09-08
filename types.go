@@ -777,6 +777,8 @@ type VariableSizedArrayType struct {
 	ElementType Type
 }
 
+var _ ArrayType = VariableSizedArrayType{}
+
 func NewVariableSizedArrayType(
 	elementType Type,
 ) VariableSizedArrayType {
@@ -807,6 +809,8 @@ type ConstantSizedArrayType struct {
 	Size        uint
 	ElementType Type
 }
+
+var _ ArrayType = ConstantSizedArrayType{}
 
 func NewConstantSizedArrayType(
 	size uint,
@@ -930,6 +934,8 @@ type StructType struct {
 	Initializers        [][]Parameter
 }
 
+var _ CompositeType = &StructType{}
+
 func NewStructType(
 	location common.Location,
 	qualifiedIdentifier string,
@@ -995,6 +1001,8 @@ type ResourceType struct {
 	Fields              []Field
 	Initializers        [][]Parameter
 }
+
+var _ CompositeType = &ResourceType{}
 
 func NewResourceType(
 	location common.Location,
@@ -1062,6 +1070,8 @@ type EventType struct {
 	Initializer         []Parameter
 }
 
+var _ CompositeType = &EventType{}
+
 func NewEventType(
 	location common.Location,
 	qualifiedIdentifer string,
@@ -1127,6 +1137,8 @@ type ContractType struct {
 	Fields              []Field
 	Initializers        [][]Parameter
 }
+
+var _ CompositeType = &ContractType{}
 
 func NewContractType(
 	location common.Location,
@@ -1206,6 +1218,8 @@ type StructInterfaceType struct {
 	Initializers        [][]Parameter
 }
 
+var _ InterfaceType = &StructInterfaceType{}
+
 func NewStructInterfaceType(
 	location common.Location,
 	qualifiedIdentifier string,
@@ -1272,6 +1286,8 @@ type ResourceInterfaceType struct {
 	Initializers        [][]Parameter
 }
 
+var _ InterfaceType = &ResourceInterfaceType{}
+
 func NewResourceInterfaceType(
 	location common.Location,
 	qualifiedIdentifier string,
@@ -1337,6 +1353,8 @@ type ContractInterfaceType struct {
 	Fields              []Field
 	Initializers        [][]Parameter
 }
+
+var _ InterfaceType = &ContractInterfaceType{}
 
 func NewContractInterfaceType(
 	location common.Location,
