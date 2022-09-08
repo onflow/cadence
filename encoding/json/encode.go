@@ -645,13 +645,6 @@ func prepareFields(fieldTypes []cadence.Field, results typePreparationResults) [
 	return fields
 }
 
-func preparePurity(purity cadence.FunctionPurity) string {
-	if purity == cadence.FunctionPurityView {
-		return "view"
-	}
-	return "impure"
-}
-
 func prepareParameters(parameterTypes []cadence.Parameter, results typePreparationResults) []jsonParameterType {
 	parameters := make([]jsonParameterType, 0)
 	for _, param := range parameterTypes {
@@ -822,13 +815,16 @@ func prepareType(typ cadence.Type, results typePreparationResults) jsonValue {
 			Initializers: prepareInitializers(typ.Initializers, results),
 		}
 	case *cadence.FunctionType:
-		return jsonFunctionType{
+		typeJson := jsonFunctionType{
 			Kind:       "Function",
 			TypeID:     typ.ID(),
-			Purity:     preparePurity(typ.Purity),
 			Return:     prepareType(typ.ReturnType, results),
 			Parameters: prepareParameters(typ.Parameters, results),
 		}
+		if typ.Purity == cadence.FunctionPurityView {
+			typeJson.Purity = "view"
+		}
+		return typeJson
 	case cadence.ReferenceType:
 		return jsonReferenceType{
 			Kind:       "Reference",

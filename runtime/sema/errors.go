@@ -3829,3 +3829,10 @@ type PurityError struct {
 func (e *PurityError) Error() string {
 	return "Impure operation performed in view context"
 }
+
+var _ SemanticError = &PurityError{}
+var _ errors.UserError = &PurityError{}
+
+func (*PurityError) IsUserError() {}
+
+func (*PurityError) isSemanticError() {}
