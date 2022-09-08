@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/onflow/cadence/encoding/custom/common_codec"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
@@ -31,7 +32,7 @@ import (
 
 // A SemaDecoder decodes custom-encoded representations of Cadence values.
 type SemaDecoder struct {
-	r           LocatedReader
+	r           common_codec.LocatedReader
 	typeDefs    map[int]sema.Type
 	memoryGauge common.MemoryGauge
 }
@@ -57,7 +58,7 @@ func DecodeSema(gauge common.MemoryGauge, b []byte) (sema.Type, error) {
 // given io.Reader.
 func NewSemaDecoder(memoryGauge common.MemoryGauge, r io.Reader) *SemaDecoder {
 	return &SemaDecoder{
-		r:           LocatedReader{r: r},
+		r:           common_codec.NewLocatedReader(r),
 		typeDefs:    map[int]sema.Type{},
 		memoryGauge: memoryGauge,
 	}
@@ -158,7 +159,7 @@ func (d *SemaDecoder) EncodePointer() (t sema.Type, err error) {
 func (d *SemaDecoder) DecodeCapabilityType() (ct *sema.CapabilityType, err error) {
 	ct = &sema.CapabilityType{}
 
-	d.typeDefs[d.r.location] = ct
+	d.typeDefs[d.r.Location()] = ct
 
 	ct.BorrowType, err = d.DecodeType()
 	return
@@ -167,7 +168,7 @@ func (d *SemaDecoder) DecodeCapabilityType() (ct *sema.CapabilityType, err error
 func (d *SemaDecoder) DecodeRestrictedType() (rt *sema.RestrictedType, err error) {
 	rt = &sema.RestrictedType{}
 
-	d.typeDefs[d.r.location] = rt
+	d.typeDefs[d.r.Location()] = rt
 
 	rt.Type, err = d.DecodeType()
 	if err != nil {
@@ -181,7 +182,7 @@ func (d *SemaDecoder) DecodeRestrictedType() (rt *sema.RestrictedType, err error
 func (d *SemaDecoder) DecodeTransactionType() (tx *sema.TransactionType, err error) {
 	tx = &sema.TransactionType{}
 
-	d.typeDefs[d.r.location] = tx
+	d.typeDefs[d.r.Location()] = tx
 
 	tx.Members, err = d.DecodeStringMemberOrderedMap(tx)
 	if err != nil {
@@ -205,9 +206,9 @@ func (d *SemaDecoder) DecodeTransactionType() (tx *sema.TransactionType, err err
 func (d *SemaDecoder) DecodeReferenceType() (ref *sema.ReferenceType, err error) {
 	ref = &sema.ReferenceType{}
 
-	d.typeDefs[d.r.location] = ref
+	d.typeDefs[d.r.Location()] = ref
 
-	ref.Authorized, err = d.DecodeBool()
+	ref.Authorized, err = common_codec.DecodeBool(&d.r)
 	if err != nil {
 		return
 	}
@@ -219,7 +220,7 @@ func (d *SemaDecoder) DecodeReferenceType() (ref *sema.ReferenceType, err error)
 func (d *SemaDecoder) DecodeDictionaryType() (dict *sema.DictionaryType, err error) {
 	dict = &sema.DictionaryType{}
 
-	d.typeDefs[d.r.location] = dict
+	d.typeDefs[d.r.Location()] = dict
 
 	dict.KeyType, err = d.DecodeType()
 	if err != nil {
@@ -233,9 +234,9 @@ func (d *SemaDecoder) DecodeDictionaryType() (dict *sema.DictionaryType, err err
 func (d *SemaDecoder) DecodeFunctionType() (ft *sema.FunctionType, err error) {
 	ft = &sema.FunctionType{}
 
-	d.typeDefs[d.r.location] = ft
+	d.typeDefs[d.r.Location()] = ft
 
-	ft.IsConstructor, err = d.DecodeBool()
+	ft.IsConstructor, err = common_codec.DecodeBool(&d.r)
 	if err != nil {
 		return
 	}
@@ -268,7 +269,7 @@ func (d *SemaDecoder) DecodeFunctionType() (ft *sema.FunctionType, err error) {
 
 // DecodeIntPointer always returns a new pointer.
 func (d *SemaDecoder) DecodeIntPointer() (ptr *int, err error) {
-	isNil, err := d.DecodeBool()
+	isNil, err := common_codec.DecodeBool(&d.r)
 	if isNil || err != nil {
 		return
 	}
@@ -287,7 +288,7 @@ func (d *SemaDecoder) DecodeIntPointer() (ptr *int, err error) {
 func (d *SemaDecoder) DecodeVariableSizedType() (a *sema.VariableSizedType, err error) {
 	a = &sema.VariableSizedType{}
 
-	d.typeDefs[d.r.location] = a
+	d.typeDefs[d.r.Location()] = a
 
 	t, err := d.DecodeType()
 	if err != nil {
@@ -301,7 +302,7 @@ func (d *SemaDecoder) DecodeVariableSizedType() (a *sema.VariableSizedType, err 
 func (d *SemaDecoder) DecodeConstantSizedType() (a *sema.ConstantSizedType, err error) {
 	a = &sema.ConstantSizedType{}
 
-	d.typeDefs[d.r.location] = a
+	d.typeDefs[d.r.Location()] = a
 
 	t, err := d.DecodeType()
 	if err != nil {
@@ -391,7 +392,7 @@ func EncodingToFixedPointNumericType(b EncodedSema) (t *sema.FixedPointNumericTy
 func (d *SemaDecoder) DecodeGenericType() (t *sema.GenericType, err error) {
 	t = &sema.GenericType{}
 
-	d.typeDefs[d.r.location] = t
+	d.typeDefs[d.r.Location()] = t
 
 	tp, err := d.DecodeTypeParameter()
 	if err != nil {
@@ -405,7 +406,7 @@ func (d *SemaDecoder) DecodeGenericType() (t *sema.GenericType, err error) {
 func (d *SemaDecoder) DecodeOptionalType() (opt *sema.OptionalType, err error) {
 	opt = &sema.OptionalType{}
 
-	d.typeDefs[d.r.location] = opt
+	d.typeDefs[d.r.Location()] = opt
 
 	t, err := d.DecodeType()
 	if err != nil {
@@ -484,7 +485,7 @@ func EncodingToSimpleType(b EncodedSema) (t *sema.SimpleType, err error) {
 func (d *SemaDecoder) DecodeCompositeType() (t *sema.CompositeType, err error) {
 	t = &sema.CompositeType{}
 
-	d.typeDefs[d.r.location] = t
+	d.typeDefs[d.r.Location()] = t
 
 	t.Location, err = d.DecodeLocation()
 	if err != nil {
@@ -543,13 +544,13 @@ func (d *SemaDecoder) DecodeCompositeType() (t *sema.CompositeType, err error) {
 		return
 	}
 
-	hasComputedMembers, err := d.DecodeBool()
+	hasComputedMembers, err := common_codec.DecodeBool(&d.r)
 	if err != nil {
 		return
 	}
 	t.SetHasComputedMembers(hasComputedMembers)
 
-	t.ImportableWithoutLocation, err = d.DecodeBool()
+	t.ImportableWithoutLocation, err = common_codec.DecodeBool(&d.r)
 	if err != nil {
 		return
 	}
@@ -560,7 +561,7 @@ func (d *SemaDecoder) DecodeCompositeType() (t *sema.CompositeType, err error) {
 func (d *SemaDecoder) DecodeInterfaceType() (t *sema.InterfaceType, err error) {
 	t = &sema.InterfaceType{}
 
-	d.typeDefs[d.r.location] = t
+	d.typeDefs[d.r.Location()] = t
 
 	t.Location, err = d.DecodeLocation()
 	if err != nil {
@@ -618,7 +619,7 @@ func (d *SemaDecoder) DecodeTypeParameter() (p *sema.TypeParameter, err error) {
 		return
 	}
 
-	optional, err := d.DecodeBool()
+	optional, err := common_codec.DecodeBool(&d.r)
 	if err != nil {
 		return
 	}
@@ -657,7 +658,7 @@ func (d *SemaDecoder) DecodeParameter() (parameter *sema.Parameter, err error) {
 }
 
 func (d *SemaDecoder) DecodeStringMemberOrderedMap(containerType sema.Type) (om *sema.StringMemberOrderedMap, err error) {
-	isNil, err := d.DecodeBool()
+	isNil, err := common_codec.DecodeBool(&d.r)
 	if isNil || err != nil {
 		return
 	}
@@ -689,7 +690,7 @@ func (d *SemaDecoder) DecodeStringMemberOrderedMap(containerType sema.Type) (om 
 }
 
 func (d *SemaDecoder) DecodeStringTypeOrderedMap() (om *sema.StringTypeOrderedMap, err error) {
-	isNil, err := d.DecodeBool()
+	isNil, err := common_codec.DecodeBool(&d.r)
 	if isNil || err != nil {
 		return
 	}
@@ -751,7 +752,7 @@ func (d *SemaDecoder) DecodeMember(containerType sema.Type) (member *sema.Member
 		return
 	}
 
-	predeclared, err := d.DecodeBool()
+	predeclared, err := common_codec.DecodeBool(&d.r)
 	if err != nil {
 		return
 	}
@@ -819,12 +820,12 @@ func (d *SemaDecoder) DecodeAstPosition() (pos ast.Position, err error) {
 }
 
 func (d *SemaDecoder) DecodeTypeAnnotation() (anno *sema.TypeAnnotation, err error) {
-	isNil, err := d.DecodeBool()
+	isNil, err := common_codec.DecodeBool(&d.r)
 	if isNil || err != nil {
 		return
 	}
 
-	isResource, err := d.DecodeBool()
+	isResource, err := common_codec.DecodeBool(&d.r)
 	if err != nil {
 		return
 	}
@@ -970,24 +971,6 @@ func (d *SemaDecoder) DecodeLength() (length int, err error) {
 	return
 }
 
-func (d *SemaDecoder) DecodeBool() (boolean bool, err error) {
-	b, err := d.read(1)
-	if err != nil {
-		return
-	}
-
-	switch EncodedBool(b[0]) {
-	case EncodedBoolFalse:
-		boolean = false
-	case EncodedBoolTrue:
-		boolean = true
-	default:
-		err = fmt.Errorf("invalid boolean value: %d", b[0])
-	}
-
-	return
-}
-
 func (d *SemaDecoder) DecodeUInt64() (u uint64, err error) {
 	err = binary.Read(&d.r, binary.BigEndian, &u)
 	return
@@ -1005,7 +988,7 @@ func (d *SemaDecoder) read(howManyBytes int) (b []byte, err error) {
 }
 
 func DecodeArray[T any](d *SemaDecoder, decodeFn func() (T, error)) (arr []T, err error) {
-	isNil, err := d.DecodeBool()
+	isNil, err := common_codec.DecodeBool(&d.r)
 	if isNil || err != nil {
 		return
 	}
@@ -1054,16 +1037,5 @@ func DecodeMap[V sema.Type](d *SemaDecoder, mapToPopulate map[common.TypeID]V, d
 		mapToPopulate[common.TypeID(k)] = v
 	}
 
-	return
-}
-
-type LocatedReader struct {
-	r        io.Reader
-	location int
-}
-
-func (l *LocatedReader) Read(p []byte) (n int, err error) {
-	n, err = l.r.Read(p)
-	l.location += n
 	return
 }

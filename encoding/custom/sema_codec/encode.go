@@ -25,6 +25,7 @@ import (
 	"io"
 	"math/big"
 
+	"github.com/onflow/cadence/encoding/custom/common_codec"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
@@ -32,7 +33,7 @@ import (
 
 // A SemaEncoder converts Sema types into custom-encoded bytes.
 type SemaEncoder struct {
-	w        LengthyWriter
+	w        common_codec.LengthyWriter
 	typeDefs map[sema.Type]int
 }
 
@@ -64,7 +65,10 @@ func MustEncodeSema(value sema.Type) []byte {
 // NewSemaEncoder initializes a SemaEncoder that will write custom-encoded bytes to the
 // given io.Writer.
 func NewSemaEncoder(w io.Writer) *SemaEncoder {
-	return &SemaEncoder{w: LengthyWriter{w: w}, typeDefs: map[sema.Type]int{}}
+	return &SemaEncoder{
+		w:        common_codec.NewLengthyWriter(w),
+		typeDefs: map[sema.Type]int{},
+	}
 }
 
 // TODO include leading byte with version information
@@ -111,7 +115,7 @@ func (e *SemaEncoder) EncodeType(t sema.Type) (err error) {
 	if bufferOffset, usePointer := e.typeDefs[t]; usePointer {
 		return e.EncodePointer(bufferOffset)
 	}
-	e.typeDefs[t] = e.w.length + 1 // point to the encoded type, not its type identifier
+	e.typeDefs[t] = e.w.Len() + 1 // point to the encoded type, not its type identifier
 
 	switch concreteType := t.(type) {
 	case *sema.CompositeType:
@@ -186,10 +190,9 @@ func (e *SemaEncoder) EncodeType(t sema.Type) (err error) {
 			return
 		}
 		return e.EncodeCapabilityType(concreteType)
-
-	default:
-		return fmt.Errorf("unexpected type: %s", concreteType)
 	}
+
+	return fmt.Errorf("unexpected type: ${t}")
 }
 
 // TODO add protections against regressions from changes to enum
@@ -340,7 +343,7 @@ func (e *SemaEncoder) EncodeSimpleType(t *sema.SimpleType) (err error) {
 }
 
 func (e *SemaEncoder) EncodeFunctionType(t *sema.FunctionType) (err error) {
-	err = e.EncodeBool(t.IsConstructor)
+	err = common_codec.EncodeBool(&e.w, t.IsConstructor)
 	if err != nil {
 		return
 	}
@@ -374,10 +377,10 @@ func (e *SemaEncoder) EncodeFunctionType(t *sema.FunctionType) (err error) {
 
 func (e *SemaEncoder) EncodeIntPointer(ptr *int) (err error) {
 	if ptr == nil {
-		return e.EncodeBool(true)
+		return common_codec.EncodeBool(&e.w, true)
 	}
 
-	err = e.EncodeBool(false)
+	err = common_codec.EncodeBool(&e.w, false)
 	if err != nil {
 		return
 	}
@@ -395,7 +398,7 @@ func (e *SemaEncoder) EncodeDictionaryType(t *sema.DictionaryType) (err error) {
 }
 
 func (e *SemaEncoder) EncodeReferenceType(t *sema.ReferenceType) (err error) {
-	err = e.EncodeBool(t.Authorized)
+	err = common_codec.EncodeBool(&e.w, t.Authorized)
 	if err != nil {
 		return
 	}
@@ -533,7 +536,7 @@ func (e *SemaEncoder) EncodeFixedPointNumericType(t *sema.FixedPointNumericType)
 func (e *SemaEncoder) EncodeBigInt(bi *big.Int) (err error) {
 	sign := bi.Sign()
 	neg := sign == -1
-	err = e.EncodeBool(neg)
+	err = common_codec.EncodeBool(&e.w, neg)
 	if err != nil {
 		return
 	}
@@ -639,13 +642,13 @@ func (e *SemaEncoder) EncodeCompositeType(compositeType *sema.CompositeType) (er
 	}
 
 	// hasComputedMembers -> bool
-	err = e.EncodeBool(compositeType.HasComputedMembers())
+	err = common_codec.EncodeBool(&e.w, compositeType.HasComputedMembers())
 	if err != nil {
 		return
 	}
-
 	// ImportableWithoutLocation -> bool
-	return e.EncodeBool(compositeType.ImportableWithoutLocation)
+	return common_codec.EncodeBool(&e.w, compositeType.ImportableWithoutLocation)
+
 }
 
 func (e *SemaEncoder) EncodeTypeParameter(p *sema.TypeParameter) (err error) {
@@ -659,7 +662,7 @@ func (e *SemaEncoder) EncodeTypeParameter(p *sema.TypeParameter) (err error) {
 		return
 	}
 
-	return e.EncodeBool(p.Optional)
+	return common_codec.EncodeBool(&e.w, p.Optional)
 }
 
 func (e *SemaEncoder) EncodeParameter(parameter *sema.Parameter) (err error) {
@@ -678,7 +681,7 @@ func (e *SemaEncoder) EncodeParameter(parameter *sema.Parameter) (err error) {
 
 func (e *SemaEncoder) EncodeStringMemberOrderedMap(om *sema.StringMemberOrderedMap) (err error) {
 	// TODO save a bit in the length for nil check?
-	err = e.EncodeBool(om == nil)
+	err = common_codec.EncodeBool(&e.w, om == nil)
 	if om == nil || err != nil {
 		return
 	}
@@ -720,7 +723,7 @@ func (e *SemaEncoder) EncodeStringMemberOrderedMap(om *sema.StringMemberOrderedM
 
 func (e *SemaEncoder) EncodeStringTypeOrderedMap(om *sema.StringTypeOrderedMap) (err error) {
 	// TODO save a bit in the length for nil check?
-	err = e.EncodeBool(om == nil)
+	err = common_codec.EncodeBool(&e.w, om == nil)
 	if om == nil || err != nil {
 		return
 	}
@@ -791,7 +794,7 @@ func (e *SemaEncoder) EncodeMember(member *sema.Member) (err error) {
 		return
 	}
 
-	err = e.EncodeBool(member.Predeclared)
+	err = common_codec.EncodeBool(&e.w, member.Predeclared)
 	if err != nil {
 		return
 	}
@@ -800,12 +803,12 @@ func (e *SemaEncoder) EncodeMember(member *sema.Member) (err error) {
 }
 
 func (e *SemaEncoder) EncodeTypeAnnotation(anno *sema.TypeAnnotation) (err error) {
-	err = e.EncodeBool(anno == nil)
+	err = common_codec.EncodeBool(&e.w, anno == nil)
 	if anno == nil || err != nil {
 		return
 	}
 
-	err = e.EncodeBool(anno.IsResource)
+	err = common_codec.EncodeBool(&e.w, anno.IsResource)
 	if err != nil {
 		return
 	}
@@ -874,23 +877,6 @@ func (e *SemaEncoder) EncodeInterfaceType(interfaceType *sema.InterfaceType) (er
 
 	// TODO can I drop nested types if I encode built-in composite types as enums?
 	return e.EncodeStringTypeOrderedMap(interfaceType.GetNestedTypes())
-}
-
-type EncodedBool byte
-
-const (
-	EncodedBoolUnknown EncodedBool = iota
-	EncodedBoolFalse
-	EncodedBoolTrue
-)
-
-func (e *SemaEncoder) EncodeBool(boolean bool) (err error) {
-	b := EncodedBoolFalse
-	if boolean {
-		b = EncodedBoolTrue
-	}
-
-	return e.write([]byte{byte(b)})
 }
 
 // TODO use a more efficient encoder than `binary` (they say to in their top source comment)
@@ -1034,7 +1020,7 @@ func (e *SemaEncoder) write(b []byte) (err error) {
 
 func EncodeArray[T any](e *SemaEncoder, arr []T, encodeFn func(T) error) (err error) {
 	// TODO save a bit in the array length for nil check?
-	err = e.EncodeBool(arr == nil)
+	err = common_codec.EncodeBool(&e.w, arr == nil)
 	if arr == nil || err != nil {
 		return
 	}
@@ -1078,7 +1064,7 @@ func EncodeMap[V sema.Type](e *SemaEncoder, m map[common.TypeID]V, encodeFn func
 			}
 			continue
 		}
-		e.typeDefs[v] = e.w.length
+		e.typeDefs[v] = e.w.Len()
 
 		err = encodeFn(v)
 		if err != nil {
@@ -1086,16 +1072,5 @@ func EncodeMap[V sema.Type](e *SemaEncoder, m map[common.TypeID]V, encodeFn func
 		}
 	}
 
-	return
-}
-
-type LengthyWriter struct {
-	w      io.Writer
-	length int
-}
-
-func (l *LengthyWriter) Write(p []byte) (n int, err error) {
-	n, err = l.w.Write(p)
-	l.length += n
 	return
 }

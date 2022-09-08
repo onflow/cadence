@@ -26,6 +26,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/encoding/custom/common_codec"
+
 	"github.com/onflow/cadence/encoding/custom/sema_codec"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -153,7 +155,7 @@ func TestSemaCodecMiscTypes(t *testing.T) {
 				Type:       sema.AnyType,
 			},
 			byte(sema_codec.EncodedSemaReferenceType),
-			byte(sema_codec.EncodedBoolFalse),
+			byte(common_codec.EncodedBoolFalse),
 			byte(sema_codec.EncodedSemaSimpleTypeAnyType),
 		)
 	})
@@ -181,12 +183,12 @@ func TestSemaCodecMiscTypes(t *testing.T) {
 				TypeBound: sema.Int32Type,
 				Optional:  true,
 			}},
-			Concat(
+			common_codec.Concat(
 				[]byte{byte(sema_codec.EncodedSemaGenericType)},
 				[]byte{0, 0, 0, byte(len(name))},
 				[]byte(name),
 				[]byte{byte(sema_codec.EncodedSemaNumericTypeInt32Type)},
-				[]byte{byte(sema_codec.EncodedBoolTrue)},
+				[]byte{byte(common_codec.EncodedBoolTrue)},
 			)...,
 		)
 	})
@@ -243,43 +245,43 @@ func TestSemaCodecMiscTypes(t *testing.T) {
 		err := encoder.Encode(functionType)
 		require.NoError(t, err, "encoding error")
 
-		expected := Concat(
+		expected := common_codec.Concat(
 			[]byte{byte(sema_codec.EncodedSemaFunctionType)},
 
-			[]byte{byte(sema_codec.EncodedBoolTrue)}, // isConstructor
+			[]byte{byte(common_codec.EncodedBoolTrue)}, // isConstructor
 
-			[]byte{byte(sema_codec.EncodedBoolFalse)}, // TypeParameters array is non-nil
+			[]byte{byte(common_codec.EncodedBoolFalse)}, // TypeParameters array is non-nil
 			[]byte{0, 0, 0, byte(len(typeParameters))},
 			[]byte{0, 0, 0, byte(len(typeParameters[0].Name))},
 			[]byte(typeParameters[0].Name),
 			[]byte{byte(sema_codec.EncodedSemaSimpleTypeVoidType)},
-			[]byte{byte(sema_codec.EncodedBoolFalse)},
+			[]byte{byte(common_codec.EncodedBoolFalse)},
 
-			[]byte{byte(sema_codec.EncodedBoolFalse)}, // Parameters array is non-nil
+			[]byte{byte(common_codec.EncodedBoolFalse)}, // Parameters array is non-nil
 			[]byte{0, 0, 0, byte(len(parameters))},
 			[]byte{0, 0, 0, byte(len(parameters[0].Label))},
 			[]byte(parameters[0].Label),
 			[]byte{0, 0, 0, byte(len(parameters[0].Identifier))},
 			[]byte(parameters[0].Identifier),
-			[]byte{byte(sema_codec.EncodedBoolFalse)},
-			[]byte{byte(sema_codec.EncodedBoolTrue)},
+			[]byte{byte(common_codec.EncodedBoolFalse)},
+			[]byte{byte(common_codec.EncodedBoolTrue)},
 			[]byte{byte(sema_codec.EncodedSemaSimpleTypeAnyResourceType)},
 			[]byte{0, 0, 0, byte(len(parameters[1].Label))},
 			[]byte(parameters[1].Label),
 			[]byte{0, 0, 0, byte(len(parameters[1].Identifier))},
 			[]byte(parameters[1].Identifier),
-			[]byte{byte(sema_codec.EncodedBoolFalse)},
-			[]byte{byte(sema_codec.EncodedBoolFalse)},
+			[]byte{byte(common_codec.EncodedBoolFalse)},
+			[]byte{byte(common_codec.EncodedBoolFalse)},
 			[]byte{byte(sema_codec.EncodedSemaSimpleTypeStringType)},
 
-			[]byte{byte(sema_codec.EncodedBoolFalse)}, // TypeAnnotation is not nil
-			[]byte{byte(sema_codec.EncodedBoolFalse)}, // TypeAnnotation: it is not a Resource
+			[]byte{byte(common_codec.EncodedBoolFalse)}, // TypeAnnotation is not nil
+			[]byte{byte(common_codec.EncodedBoolFalse)}, // TypeAnnotation: it is not a Resource
 			[]byte{byte(sema_codec.EncodedSemaSimpleTypePathType)},
 
-			[]byte{byte(sema_codec.EncodedBoolFalse)},
+			[]byte{byte(common_codec.EncodedBoolFalse)},
 			[]byte{0, 0, 0, 0, 0, 0, 0, byte(requiredArgumentCount)},
 
-			[]byte{byte(sema_codec.EncodedBoolFalse)},        // Members is not nil
+			[]byte{byte(common_codec.EncodedBoolFalse)},      // Members is not nil
 			[]byte{0, 0, 0, byte(members.Len())},             // Members length
 			[]byte{0, 0, 0, byte(len(members.Newest().Key))}, // Member key
 			[]byte(members.Newest().Key),
@@ -289,13 +291,13 @@ func TestSemaCodecMiscTypes(t *testing.T) {
 			[]byte{0, 0, 0, 0, 0, 0, 0, 0}, // Member AST identifier position
 			[]byte{0, 0, 0, 0, 0, 0, 0, 0},
 			[]byte{0, 0, 0, 0, 0, 0, 0, 0},
-			[]byte{byte(sema_codec.EncodedBoolFalse)}, // Member type annotation
-			[]byte{byte(sema_codec.EncodedBoolFalse)},
+			[]byte{byte(common_codec.EncodedBoolFalse)}, // Member type annotation
+			[]byte{byte(common_codec.EncodedBoolFalse)},
 			[]byte{byte(sema_codec.EncodedSemaNumericTypeInt8Type)},
 			[]byte{0, 0, 0, 0, 0, 0, 0, byte(common.DeclarationKindField)}, // Member declaration kind
 			[]byte{0, 0, 0, 0, 0, 0, 0, byte(ast.VariableKindConstant)},    // member variable kind
-			[]byte{byte(sema_codec.EncodedBoolTrue)},                       // Member has no argument labels
-			[]byte{byte(sema_codec.EncodedBoolFalse)},                      // Member is not predeclared
+			[]byte{byte(common_codec.EncodedBoolTrue)},                     // Member has no argument labels
+			[]byte{byte(common_codec.EncodedBoolFalse)},                    // Member is not predeclared
 			[]byte{0, 0, 0, byte(len(memberDocString))},                    // Member doc string
 			[]byte(memberDocString),
 		)
@@ -349,7 +351,7 @@ func TestSemaCodecMiscTypes(t *testing.T) {
 				KeyType:   sema.StringType,
 				ValueType: sema.AnyStructType,
 			},
-			Concat(
+			common_codec.Concat(
 				[]byte{byte(sema_codec.EncodedSemaDictionaryType)},
 				[]byte{byte(sema_codec.EncodedSemaSimpleTypeStringType)},
 				[]byte{byte(sema_codec.EncodedSemaSimpleTypeAnyStructType)},
@@ -406,10 +408,10 @@ func TestSemaCodecMiscTypes(t *testing.T) {
 		err := encoder.Encode(transactionType)
 		require.NoError(t, err, "encoding error")
 
-		expected := Concat(
+		expected := common_codec.Concat(
 			[]byte{byte(sema_codec.EncodedSemaTransactionType)},
 			// members
-			[]byte{byte(sema_codec.EncodedBoolFalse)},        // Members is not nil
+			[]byte{byte(common_codec.EncodedBoolFalse)},      // Members is not nil
 			[]byte{0, 0, 0, byte(members.Len())},             // Members length
 			[]byte{0, 0, 0, byte(len(members.Newest().Key))}, // Member key
 			[]byte(members.Newest().Key),
@@ -419,18 +421,18 @@ func TestSemaCodecMiscTypes(t *testing.T) {
 			[]byte{0, 0, 0, 0, 0, 0, 0, 0}, // Member AST identifier position
 			[]byte{0, 0, 0, 0, 0, 0, 0, 0},
 			[]byte{0, 0, 0, 0, 0, 0, 0, 0},
-			[]byte{byte(sema_codec.EncodedBoolFalse)}, // Member type annotation
-			[]byte{byte(sema_codec.EncodedBoolFalse)},
+			[]byte{byte(common_codec.EncodedBoolFalse)}, // Member type annotation
+			[]byte{byte(common_codec.EncodedBoolFalse)},
 			[]byte{byte(sema_codec.EncodedSemaNumericTypeInt8Type)},
 			[]byte{0, 0, 0, 0, 0, 0, 0, byte(common.DeclarationKindField)}, // Member declaration kind
 			[]byte{0, 0, 0, 0, 0, 0, 0, byte(ast.VariableKindConstant)},    // member variable kind
-			[]byte{byte(sema_codec.EncodedBoolTrue)},                       // Member has no argument labels
-			[]byte{byte(sema_codec.EncodedBoolFalse)},                      // Member is not predeclared
+			[]byte{byte(common_codec.EncodedBoolTrue)},                     // Member has no argument labels
+			[]byte{byte(common_codec.EncodedBoolFalse)},                    // Member is not predeclared
 			[]byte{0, 0, 0, byte(len(memberDocString))},                    // Member doc string
 			[]byte(memberDocString),
 
 			// array of strings for fields
-			[]byte{byte(sema_codec.EncodedBoolFalse)}, // array is not nil
+			[]byte{byte(common_codec.EncodedBoolFalse)}, // array is not nil
 			[]byte{0, 0, 0, byte(len(fields))},
 			[]byte{0, 0, 0, byte(len(fields[0]))},
 			[]byte(fields[0]),
@@ -442,25 +444,25 @@ func TestSemaCodecMiscTypes(t *testing.T) {
 			[]byte(fields[3]),
 
 			// array of parameters for prepareParameters
-			[]byte{byte(sema_codec.EncodedBoolFalse)}, // array is not nil
+			[]byte{byte(common_codec.EncodedBoolFalse)}, // array is not nil
 			[]byte{0, 0, 0, byte(len(prepareParameters))},
 			[]byte{0, 0, 0, byte(len(prepareParameters[0].Label))},
 			[]byte(prepareParameters[0].Label),
 			[]byte{0, 0, 0, byte(len(prepareParameters[0].Identifier))},
 			[]byte(prepareParameters[0].Identifier),
-			[]byte{byte(sema_codec.EncodedBoolFalse)},
-			[]byte{byte(sema_codec.EncodedBoolFalse)},
+			[]byte{byte(common_codec.EncodedBoolFalse)},
+			[]byte{byte(common_codec.EncodedBoolFalse)},
 			[]byte{byte(sema_codec.EncodedSemaNumericTypeUInt16Type)},
 
 			// array of parameters for parameters
-			[]byte{byte(sema_codec.EncodedBoolFalse)}, // array is not nil
+			[]byte{byte(common_codec.EncodedBoolFalse)}, // array is not nil
 			[]byte{0, 0, 0, byte(len(parameters))},
 			[]byte{0, 0, 0, byte(len(parameters[0].Label))},
 			[]byte(parameters[0].Label),
 			[]byte{0, 0, 0, byte(len(parameters[0].Identifier))},
 			[]byte(parameters[0].Identifier),
-			[]byte{byte(sema_codec.EncodedBoolFalse)},
-			[]byte{byte(sema_codec.EncodedBoolFalse)},
+			[]byte{byte(common_codec.EncodedBoolFalse)},
+			[]byte{byte(common_codec.EncodedBoolFalse)},
 			[]byte{byte(sema_codec.EncodedSemaNumericTypeSignedFixedPointType)},
 		)
 
@@ -513,19 +515,19 @@ func TestSemaCodecMiscTypes(t *testing.T) {
 		err := encoder.Encode(restrictedType)
 		require.NoError(t, err, "encoding error")
 
-		expected := Concat(
+		expected := common_codec.Concat(
 			[]byte{byte(sema_codec.EncodedSemaRestrictedType)},
 			[]byte{byte(sema_codec.EncodedSemaNumericTypeIntType)},
-			[]byte{byte(sema_codec.EncodedBoolFalse)}, // array is not nil
+			[]byte{byte(common_codec.EncodedBoolFalse)}, // array is not nil
 			[]byte{0, 0, 0, 1}, // array length
-			Concat([]byte{'s'}, location[:]),
+			common_codec.Concat([]byte{'s'}, location[:]),
 			[]byte{0, 0, 0, 6}, []byte("peaked"), // identifier
 			[]byte{byte(common.CompositeKindContract)},
-			[]byte{byte(sema_codec.EncodedBoolTrue)},                    // members is nil
-			[]byte{byte(sema_codec.EncodedBoolTrue)},                    // fields is nil
-			[]byte{byte(sema_codec.EncodedBoolTrue)},                    // initializer parameters is nil
+			[]byte{byte(common_codec.EncodedBoolTrue)},                  // members is nil
+			[]byte{byte(common_codec.EncodedBoolTrue)},                  // fields is nil
+			[]byte{byte(common_codec.EncodedBoolTrue)},                  // initializer parameters is nil
 			[]byte{byte(sema_codec.EncodedSemaPointerType), 0, 0, 0, 1}, // container type is root type
-			[]byte{byte(sema_codec.EncodedBoolTrue)},                    // nested types is nil
+			[]byte{byte(common_codec.EncodedBoolTrue)},                  // nested types is nil
 		)
 
 		assert.Equal(t, expected, buffer.Bytes(), "encoded bytes differ")
@@ -646,6 +648,7 @@ func TestSemaCodecArrayTypes(t *testing.T) {
 	})
 }
 
+// TODO move these tests to common_codec
 func TestSemaCodecMiscValues(t *testing.T) {
 	t.Parallel()
 
@@ -750,30 +753,38 @@ func TestSemaCodecMiscValues(t *testing.T) {
 	t.Run("bool true", func(t *testing.T) {
 		t.Parallel()
 
-		encoder, decoder, buffer := NewTestCodec()
+		_, _, buffer := NewTestCodec()
 
 		testEncodeDecode(
 			t,
 			true,
 			buffer,
-			encoder.EncodeBool,
-			decoder.DecodeBool,
-			[]byte{byte(sema_codec.EncodedBoolTrue)},
+			func(b bool) error {
+				return common_codec.EncodeBool(buffer, b)
+			},
+			func() (bool, error) {
+				return common_codec.DecodeBool(buffer)
+			},
+			[]byte{byte(common_codec.EncodedBoolTrue)},
 		)
 	})
 
 	t.Run("bool false", func(t *testing.T) {
 		t.Parallel()
 
-		encoder, decoder, buffer := NewTestCodec()
+		_, _, buffer := NewTestCodec()
 
 		testEncodeDecode(
 			t,
 			false,
 			buffer,
-			encoder.EncodeBool,
-			decoder.DecodeBool,
-			[]byte{byte(sema_codec.EncodedBoolFalse)},
+			func(b bool) error {
+				return common_codec.EncodeBool(buffer, b)
+			},
+			func() (bool, error) {
+				return common_codec.DecodeBool(buffer)
+			},
+			[]byte{byte(common_codec.EncodedBoolFalse)},
 		)
 	})
 
@@ -887,7 +898,7 @@ func TestSemaCodecLocations(t *testing.T) {
 			buffer,
 			encoder.EncodeLocation,
 			decoder.DecodeLocation,
-			Concat(
+			common_codec.Concat(
 				[]byte{common.AddressLocationPrefix[0]},
 				address.Address.Bytes(),
 				[]byte{0, 0, 0, byte(len(address.Name))},
@@ -908,7 +919,7 @@ func TestSemaCodecLocations(t *testing.T) {
 			buffer,
 			encoder.EncodeLocation,
 			decoder.DecodeLocation,
-			Concat(
+			common_codec.Concat(
 				[]byte{common.IdentifierLocationPrefix[0]},
 				[]byte{0, 0, 0, byte(len(identifier))},
 				[]byte(identifier),
@@ -928,7 +939,7 @@ func TestSemaCodecLocations(t *testing.T) {
 			buffer,
 			encoder.EncodeLocation,
 			decoder.DecodeLocation,
-			Concat(
+			common_codec.Concat(
 				[]byte{common.ScriptLocationPrefix[0]},
 				location[:],
 			),
@@ -947,7 +958,7 @@ func TestSemaCodecLocations(t *testing.T) {
 			buffer,
 			encoder.EncodeLocation,
 			decoder.DecodeLocation,
-			Concat(
+			common_codec.Concat(
 				[]byte{common.StringLocationPrefix[0]},
 				[]byte{0, 0, 0, byte(len(location))},
 				[]byte(location),
@@ -967,7 +978,7 @@ func TestSemaCodecLocations(t *testing.T) {
 			buffer,
 			encoder.EncodeLocation,
 			decoder.DecodeLocation,
-			Concat(
+			common_codec.Concat(
 				[]byte{common.TransactionLocationPrefix[0]},
 				location[:],
 			),
@@ -1044,7 +1055,7 @@ func TestSemaCodecInterfaceType(t *testing.T) {
 		err := encoder.Encode(interfaceType)
 		require.NoError(t, err, "encoding error")
 
-		expected := Concat(
+		expected := common_codec.Concat(
 			[]byte{byte(sema_codec.EncodedSemaInterfaceType)},
 
 			[]byte{common.TransactionLocationPrefix[0]},
@@ -1055,7 +1066,7 @@ func TestSemaCodecInterfaceType(t *testing.T) {
 
 			[]byte{byte(common.CompositeKindEnum)},
 
-			[]byte{byte(sema_codec.EncodedBoolFalse)},        // Members is not nil
+			[]byte{byte(common_codec.EncodedBoolFalse)},      // Members is not nil
 			[]byte{0, 0, 0, byte(members.Len())},             // Members length
 			[]byte{0, 0, 0, byte(len(members.Newest().Key))}, // Member key
 			[]byte(members.Newest().Key),
@@ -1065,41 +1076,41 @@ func TestSemaCodecInterfaceType(t *testing.T) {
 			[]byte{0, 0, 0, 0, 0, 0, 0, 0}, // Member AST identifier position
 			[]byte{0, 0, 0, 0, 0, 0, 0, 0},
 			[]byte{0, 0, 0, 0, 0, 0, 0, 0},
-			[]byte{byte(sema_codec.EncodedBoolFalse)}, // Member type annotation
-			[]byte{byte(sema_codec.EncodedBoolFalse)},
+			[]byte{byte(common_codec.EncodedBoolFalse)}, // Member type annotation
+			[]byte{byte(common_codec.EncodedBoolFalse)},
 			[]byte{byte(sema_codec.EncodedSemaNumericTypeInt8Type)},
 			[]byte{0, 0, 0, 0, 0, 0, 0, byte(common.DeclarationKindField)}, // Member declaration kind
 			[]byte{0, 0, 0, 0, 0, 0, 0, byte(ast.VariableKindConstant)},    // member variable kind
-			[]byte{byte(sema_codec.EncodedBoolTrue)},                       // Member has no argument labels
-			[]byte{byte(sema_codec.EncodedBoolFalse)},                      // Member is not predeclared
+			[]byte{byte(common_codec.EncodedBoolTrue)},                     // Member has no argument labels
+			[]byte{byte(common_codec.EncodedBoolFalse)},                    // Member is not predeclared
 			[]byte{0, 0, 0, byte(len(memberDocString))},                    // Member doc string
 			[]byte(memberDocString),
 
-			[]byte{byte(sema_codec.EncodedBoolFalse)}, // Fields array is not nil
+			[]byte{byte(common_codec.EncodedBoolFalse)}, // Fields array is not nil
 			[]byte{0, 0, 0, byte(len(fields))},
 			[]byte{0, 0, 0, byte(len(fields[0]))},
 			[]byte(fields[0]),
 
-			[]byte{byte(sema_codec.EncodedBoolFalse)}, // InitializerParameters array is not nil
+			[]byte{byte(common_codec.EncodedBoolFalse)}, // InitializerParameters array is not nil
 			[]byte{0, 0, 0, byte(len(parameters))},
 			[]byte{0, 0, 0, byte(len(parameters[0].Label))},
 			[]byte(parameters[0].Label),
 			[]byte{0, 0, 0, byte(len(parameters[0].Identifier))},
 			[]byte(parameters[0].Identifier),
-			[]byte{byte(sema_codec.EncodedBoolTrue)},
+			[]byte{byte(common_codec.EncodedBoolTrue)},
 
 			[]byte{byte(sema_codec.EncodedSemaInterfaceType)}, // container type is empty interface
 			[]byte{sema_codec.NilLocationPrefix[0]},
 			[]byte{0, 0, 0, 0},
 			[]byte{byte(common.CompositeKindUnknown)},
-			[]byte{byte(sema_codec.EncodedBoolFalse)},
+			[]byte{byte(common_codec.EncodedBoolFalse)},
 			[]byte{0, 0, 0, 0},
-			[]byte{byte(sema_codec.EncodedBoolTrue)},
-			[]byte{byte(sema_codec.EncodedBoolTrue)},
+			[]byte{byte(common_codec.EncodedBoolTrue)},
+			[]byte{byte(common_codec.EncodedBoolTrue)},
 			[]byte{byte(sema_codec.EncodedSemaNilType)},
-			[]byte{byte(sema_codec.EncodedBoolTrue)},
+			[]byte{byte(common_codec.EncodedBoolTrue)},
 
-			[]byte{byte(sema_codec.EncodedBoolFalse)}, // nested type
+			[]byte{byte(common_codec.EncodedBoolFalse)}, // nested type
 			[]byte{0, 0, 0, 1},
 			[]byte{0, 0, 0, 4},
 			[]byte("none"),
@@ -1201,10 +1212,10 @@ func TestSemaCodecCompositeType(t *testing.T) {
 			byte(common.CompositeKindStructure),
 
 			// ExplicitInterfaceConformances array is nil
-			byte(sema_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
 
 			// ImplicitTypeRequirementConformances array is nil
-			byte(sema_codec.EncodedBoolTrue),
+			byte(common_codec.EncodedBoolTrue),
 		}
 		assert.Equal(t, expected, buffer.Bytes()[:len(expected)], "encoded bytes")
 
@@ -1272,16 +1283,16 @@ func TestSemaCodecRecursiveType(t *testing.T) {
 			sema_codec.NilLocationPrefix[0],
 			0, 0, 0, 0, // identifier length
 			0,                                                   // composite kind
-			byte(sema_codec.EncodedBoolTrue),                    // ExplicitInterfaceConformances array is nil
-			byte(sema_codec.EncodedBoolTrue),                    // ImplicitTypeRequirementConformances array is nil
-			byte(sema_codec.EncodedBoolTrue),                    // no members
-			byte(sema_codec.EncodedBoolTrue),                    // Fields array is nil
-			byte(sema_codec.EncodedBoolTrue),                    // ConstructorParameters array is nil
-			byte(sema_codec.EncodedBoolTrue),                    // no nested types
+			byte(common_codec.EncodedBoolTrue),                  // ExplicitInterfaceConformances array is nil
+			byte(common_codec.EncodedBoolTrue),                  // ImplicitTypeRequirementConformances array is nil
+			byte(common_codec.EncodedBoolTrue),                  // no members
+			byte(common_codec.EncodedBoolTrue),                  // Fields array is nil
+			byte(common_codec.EncodedBoolTrue),                  // ConstructorParameters array is nil
+			byte(common_codec.EncodedBoolTrue),                  // no nested types
 			byte(sema_codec.EncodedSemaPointerType), 0, 0, 0, 1, // container type
 			byte(sema_codec.EncodedSemaNilType), // EnumRawType
-			byte(sema_codec.EncodedBoolFalse),   // hasComputedMembers
-			byte(sema_codec.EncodedBoolFalse),   // ImportableWithoutLocation
+			byte(common_codec.EncodedBoolFalse), // hasComputedMembers
+			byte(common_codec.EncodedBoolFalse), // ImportableWithoutLocation
 		}
 
 		assert.Equal(t, expected, buffer.Bytes(), "encoded bytes differ")
@@ -1312,11 +1323,11 @@ func TestSemaCodecRecursiveType(t *testing.T) {
 			sema_codec.NilLocationPrefix[0],
 			0, 0, 0, 0, // identifier length
 			0,                                                   // composite kind
-			byte(sema_codec.EncodedBoolTrue),                    // Members array is nil
-			byte(sema_codec.EncodedBoolTrue),                    // Fields array is nil
-			byte(sema_codec.EncodedBoolTrue),                    // InitializerParameters array is nil
+			byte(common_codec.EncodedBoolTrue),                  // Members array is nil
+			byte(common_codec.EncodedBoolTrue),                  // Fields array is nil
+			byte(common_codec.EncodedBoolTrue),                  // InitializerParameters array is nil
 			byte(sema_codec.EncodedSemaPointerType), 0, 0, 0, 1, // container type
-			byte(sema_codec.EncodedBoolTrue), // nestedTypes
+			byte(common_codec.EncodedBoolTrue), // nestedTypes
 		}
 
 		assert.Equal(t, expected, buffer.Bytes(), "encoded bytes differ")
@@ -1352,7 +1363,7 @@ func TestSemaCodecRecursiveType(t *testing.T) {
 		testRootEncodeDecode(
 			t,
 			parent,
-			Concat(
+			common_codec.Concat(
 				[]byte{byte(sema_codec.EncodedSemaGenericType)},
 				[]byte{0, 0, 0, byte(len(parent.TypeParameter.Name))},
 				[]byte(parent.TypeParameter.Name),
@@ -1360,8 +1371,8 @@ func TestSemaCodecRecursiveType(t *testing.T) {
 				[]byte{0, 0, 0, byte(len(g.TypeParameter.Name))},
 				[]byte(g.TypeParameter.Name),
 				[]byte{byte(sema_codec.EncodedSemaPointerType), 0, 0, 0, 12},
-				[]byte{byte(sema_codec.EncodedBoolTrue)},
-				[]byte{byte(sema_codec.EncodedBoolFalse)},
+				[]byte{byte(common_codec.EncodedBoolTrue)},
+				[]byte{byte(common_codec.EncodedBoolFalse)},
 			)...,
 		)
 	})
@@ -1385,19 +1396,19 @@ func TestSemaCodecRecursiveType(t *testing.T) {
 		testRootEncodeDecode(
 			t,
 			f,
-			Concat(
+			common_codec.Concat(
 				[]byte{byte(sema_codec.EncodedSemaFunctionType)},
-				[]byte{byte(sema_codec.EncodedBoolFalse)}, // isConstructor
-				[]byte{byte(sema_codec.EncodedBoolFalse)}, // TypeParameters is not nil
+				[]byte{byte(common_codec.EncodedBoolFalse)}, // isConstructor
+				[]byte{byte(common_codec.EncodedBoolFalse)}, // TypeParameters is not nil
 				[]byte{0, 0, 0, 1},
 				[]byte{0, 0, 0, byte(len(f.TypeParameters[0].Name))},
 				[]byte(f.TypeParameters[0].Name),
 				[]byte{byte(sema_codec.EncodedSemaPointerType), 0, 0, 0, 1}, // container type
-				[]byte{byte(sema_codec.EncodedBoolFalse)},
-				[]byte{byte(sema_codec.EncodedBoolTrue)}, // Parameters is nil
-				[]byte{byte(sema_codec.EncodedBoolTrue)}, // ReturnTypeAnnotation is nil
-				[]byte{byte(sema_codec.EncodedBoolTrue)}, // RequiredArgumentCount is nil
-				[]byte{byte(sema_codec.EncodedBoolTrue)}, // Members is nil
+				[]byte{byte(common_codec.EncodedBoolFalse)},
+				[]byte{byte(common_codec.EncodedBoolTrue)}, // Parameters is nil
+				[]byte{byte(common_codec.EncodedBoolTrue)}, // ReturnTypeAnnotation is nil
+				[]byte{byte(common_codec.EncodedBoolTrue)}, // RequiredArgumentCount is nil
+				[]byte{byte(common_codec.EncodedBoolTrue)}, // Members is nil
 			)...,
 		)
 	})
@@ -1410,7 +1421,7 @@ func TestSemaCodecRecursiveType(t *testing.T) {
 		testRootEncodeDecode(
 			t,
 			d,
-			Concat(
+			common_codec.Concat(
 				[]byte{byte(sema_codec.EncodedSemaDictionaryType)},
 				[]byte{byte(sema_codec.EncodedSemaPointerType), 0, 0, 0, 1},
 				[]byte{byte(sema_codec.EncodedSemaPointerType), 0, 0, 0, 1},
@@ -1434,19 +1445,19 @@ func TestSemaCodecRecursiveType(t *testing.T) {
 		testRootEncodeDecode(
 			t,
 			tx,
-			Concat(
+			common_codec.Concat(
 				[]byte{byte(sema_codec.EncodedSemaTransactionType)},
-				[]byte{byte(sema_codec.EncodedBoolTrue)},  // Members is nil
-				[]byte{byte(sema_codec.EncodedBoolTrue)},  // Fields is nil
-				[]byte{byte(sema_codec.EncodedBoolTrue)},  // PrepareParameters is nil
-				[]byte{byte(sema_codec.EncodedBoolFalse)}, // Parameters is not nil
-				[]byte{0, 0, 0, 1},                        // 1 Parameter
+				[]byte{byte(common_codec.EncodedBoolTrue)},  // Members is nil
+				[]byte{byte(common_codec.EncodedBoolTrue)},  // Fields is nil
+				[]byte{byte(common_codec.EncodedBoolTrue)},  // PrepareParameters is nil
+				[]byte{byte(common_codec.EncodedBoolFalse)}, // Parameters is not nil
+				[]byte{0, 0, 0, 1},                          // 1 Parameter
 				[]byte{0, 0, 0, byte(len(tx.Parameters[0].Label))},
 				[]byte(tx.Parameters[0].Label),
 				[]byte{0, 0, 0, byte(len(tx.Parameters[0].Identifier))},
 				[]byte(tx.Parameters[0].Identifier),
-				[]byte{byte(sema_codec.EncodedBoolFalse)},                   // TypeAnnotation is not nil
-				[]byte{byte(sema_codec.EncodedBoolFalse)},                   // TypeAnnotation is not a resource
+				[]byte{byte(common_codec.EncodedBoolFalse)},                 // TypeAnnotation is not nil
+				[]byte{byte(common_codec.EncodedBoolFalse)},                 // TypeAnnotation is not a resource
 				[]byte{byte(sema_codec.EncodedSemaPointerType), 0, 0, 0, 1}, // type is recursive
 			)...,
 		)
@@ -1459,10 +1470,10 @@ func TestSemaCodecRecursiveType(t *testing.T) {
 		testRootEncodeDecode(
 			t,
 			r,
-			Concat(
+			common_codec.Concat(
 				[]byte{byte(sema_codec.EncodedSemaRestrictedType)},
 				[]byte{byte(sema_codec.EncodedSemaPointerType), 0, 0, 0, 1}, // type is recursive
-				[]byte{byte(sema_codec.EncodedBoolTrue)},                    // Restrictions is nil
+				[]byte{byte(common_codec.EncodedBoolTrue)},                  // Restrictions is nil
 			)...,
 		)
 	})
@@ -1474,7 +1485,7 @@ func TestSemaCodecRecursiveType(t *testing.T) {
 		testRootEncodeDecode(
 			t,
 			c,
-			Concat(
+			common_codec.Concat(
 				[]byte{byte(sema_codec.EncodedSemaConstantSizedType)},
 				[]byte{byte(sema_codec.EncodedSemaPointerType), 0, 0, 0, 1}, // type is recursive
 				[]byte{0, 0, 0, 0, 0, 0, 0, 0},
@@ -1489,7 +1500,7 @@ func TestSemaCodecRecursiveType(t *testing.T) {
 		testRootEncodeDecode(
 			t,
 			v,
-			Concat(
+			common_codec.Concat(
 				[]byte{byte(sema_codec.EncodedSemaVariableSizedType)},
 				[]byte{byte(sema_codec.EncodedSemaPointerType), 0, 0, 0, 1}, // type is recursive
 			)...,
@@ -1503,7 +1514,7 @@ func TestSemaCodecRecursiveType(t *testing.T) {
 		testRootEncodeDecode(
 			t,
 			o,
-			Concat(
+			common_codec.Concat(
 				[]byte{byte(sema_codec.EncodedSemaOptionalType)},
 				[]byte{byte(sema_codec.EncodedSemaPointerType), 0, 0, 0, 1}, // type is recursive
 			)...,
@@ -1517,9 +1528,9 @@ func TestSemaCodecRecursiveType(t *testing.T) {
 		testRootEncodeDecode(
 			t,
 			r,
-			Concat(
+			common_codec.Concat(
 				[]byte{byte(sema_codec.EncodedSemaReferenceType)},
-				[]byte{byte(sema_codec.EncodedBoolFalse)},
+				[]byte{byte(common_codec.EncodedBoolFalse)},
 				[]byte{byte(sema_codec.EncodedSemaPointerType), 0, 0, 0, 1}, // type is recursive
 			)...,
 		)
@@ -1532,7 +1543,7 @@ func TestSemaCodecRecursiveType(t *testing.T) {
 		testRootEncodeDecode(
 			t,
 			v,
-			Concat(
+			common_codec.Concat(
 				[]byte{byte(sema_codec.EncodedSemaCapabilityType)},
 				[]byte{byte(sema_codec.EncodedSemaPointerType), 0, 0, 0, 1}, // type is recursive
 			)...,
@@ -1590,7 +1601,7 @@ func TestSemaCodecElaboration(t *testing.T) {
 			buffer,
 			encoder.EncodeElaboration,
 			decoder.DecodeElaboration,
-			Concat(
+			common_codec.Concat(
 				[]byte{0, 0, 0, 1},                 // length of CompositeTypes map
 				[]byte{0, 0, 0, byte(len(typeId))}, // TypeID aka map key
 				[]byte(typeId),
@@ -1599,16 +1610,16 @@ func TestSemaCodecElaboration(t *testing.T) {
 				[]byte{0, 0, 0, byte(len(identifier))}, // identifier
 				[]byte(identifier),
 				[]byte{byte(common.CompositeKindStructure)}, // composite kind
-				[]byte{byte(sema_codec.EncodedBoolTrue)},    // nil ExplicitInterfaceConformances
-				[]byte{byte(sema_codec.EncodedBoolTrue)},    // nil ImplicitTypeRequirementConformances
-				[]byte{byte(sema_codec.EncodedBoolTrue)},    // nil Members
-				[]byte{byte(sema_codec.EncodedBoolTrue)},    // nil Fields
-				[]byte{byte(sema_codec.EncodedBoolTrue)},    // nil ConstructorParameters
-				[]byte{byte(sema_codec.EncodedBoolTrue)},    // nil nestedTypes
+				[]byte{byte(common_codec.EncodedBoolTrue)},  // nil ExplicitInterfaceConformances
+				[]byte{byte(common_codec.EncodedBoolTrue)},  // nil ImplicitTypeRequirementConformances
+				[]byte{byte(common_codec.EncodedBoolTrue)},  // nil Members
+				[]byte{byte(common_codec.EncodedBoolTrue)},  // nil Fields
+				[]byte{byte(common_codec.EncodedBoolTrue)},  // nil ConstructorParameters
+				[]byte{byte(common_codec.EncodedBoolTrue)},  // nil nestedTypes
 				[]byte{byte(sema_codec.EncodedSemaPointerType), 0, 0, 0, 14},
 				[]byte{byte(sema_codec.EncodedSemaNilType)}, // nil EnumRawType
-				[]byte{byte(sema_codec.EncodedBoolFalse)},   // hasComputedMembers
-				[]byte{byte(sema_codec.EncodedBoolFalse)},   // ImportableWithoutLocation
+				[]byte{byte(common_codec.EncodedBoolFalse)}, // hasComputedMembers
+				[]byte{byte(common_codec.EncodedBoolFalse)}, // ImportableWithoutLocation
 
 				[]byte{0, 0, 0, 1},                 // length of InterfaceTypes map
 				[]byte{0, 0, 0, byte(len(typeId))}, // TypeID aka map key
@@ -1618,11 +1629,11 @@ func TestSemaCodecElaboration(t *testing.T) {
 				[]byte{0, 0, 0, byte(len(identifier))}, // identifier
 				[]byte(identifier),
 				[]byte{byte(common.CompositeKindStructure)}, // composite kind
-				[]byte{byte(sema_codec.EncodedBoolTrue)},    // nil Members
-				[]byte{byte(sema_codec.EncodedBoolTrue)},    // nil Fields
-				[]byte{byte(sema_codec.EncodedBoolTrue)},    // nil InitializerParameters
+				[]byte{byte(common_codec.EncodedBoolTrue)},  // nil Members
+				[]byte{byte(common_codec.EncodedBoolTrue)},  // nil Fields
+				[]byte{byte(common_codec.EncodedBoolTrue)},  // nil InitializerParameters
 				[]byte{byte(sema_codec.EncodedSemaPointerType), 0, 0, 0, 14},
-				[]byte{byte(sema_codec.EncodedBoolTrue)}, // nil nestedTypes
+				[]byte{byte(common_codec.EncodedBoolTrue)}, // nil nestedTypes
 
 			),
 		)
@@ -1686,20 +1697,6 @@ func NewTestCodec() (encoder *sema_codec.SemaEncoder, decoder *sema_codec.SemaDe
 	encoder = sema_codec.NewSemaEncoder(buffer)
 	decoder = sema_codec.NewSemaDecoder(nil, buffer)
 	return
-}
-
-func Concat(deep ...[]byte) []byte {
-	length := 0
-	for _, b := range deep {
-		length += len(b)
-	}
-
-	flat := make([]byte, 0, length)
-	for _, b := range deep {
-		flat = append(flat, b...)
-	}
-
-	return flat
 }
 
 // TODO test via fuzzing
