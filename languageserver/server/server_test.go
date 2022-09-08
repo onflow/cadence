@@ -17,10 +17,9 @@ func Test_ServerGetDiagnostics(t *testing.T) {
 	require.NoError(t, err)
 
 	code := `
-	import Bar from 0x01
 	pub contract Foo {
 		 init() {
-			Bar.xoo()
+		   self.bar()
 		 }
 	}
 	`
@@ -46,7 +45,6 @@ func Test_ServerGetDiagnostics(t *testing.T) {
 		func(*protocol.LogMessageParams) {},
 	)
 	assert.Equal(t, len(diagnostics), 1)
-	fmt.Println(diagnostics)
 
 	d := diagnostics[0]
 	params := &protocol.CodeActionParams{
@@ -61,7 +59,7 @@ func Test_ServerGetDiagnostics(t *testing.T) {
 				Message:            d.Message,
 				Tags:               d.Tags,
 				RelatedInformation: d.RelatedInformation,
-				Data:               fmt.Sprintf("%s", d.Data),
+				Data:               fmt.Sprintf("%s", d.Data), // for some reason I have to pass it as converted to string else the type check fails since it's uuid
 			}},
 		},
 	}
