@@ -77,7 +77,7 @@ func parseStatement(p *parser) (ast.Statement, error) {
 
 	switch p.current.Type {
 	case lexer.TokenIdentifier:
-		switch string(p.tokenSource(p.current)) {
+		switch string(p.currentTokenSource()) {
 		case keywordReturn:
 			return parseReturnStatement(p)
 		case keywordBreak:
@@ -264,7 +264,7 @@ func parseIfStatement(p *parser) (*ast.IfStatement, error) {
 		var err error
 
 		if p.current.Type == lexer.TokenIdentifier {
-			switch string(p.tokenSource(p.current)) {
+			switch string(p.currentTokenSource()) {
 			case keywordLet, keywordVar:
 				variableDeclaration, err =
 					parseVariableDeclaration(p, ast.AccessNotSpecified, nil, "")
@@ -672,7 +672,7 @@ func parseSwitchCases(p *parser) (cases []*ast.SwitchCase, err error) {
 		case lexer.TokenIdentifier:
 
 			var switchCase *ast.SwitchCase
-			switch string(p.tokenSource(p.current)) {
+			switch string(p.currentTokenSource()) {
 			case keywordCase:
 				switchCase, err = parseSwitchCase(p, true)
 
@@ -742,7 +742,7 @@ func parseSwitchCase(p *parser, hasExpression bool) (*ast.SwitchCase, error) {
 			return true
 
 		case lexer.TokenIdentifier:
-			switch string(p.tokenSource(p.current)) {
+			switch string(p.currentTokenSource()) {
 			case keywordCase, keywordDefault:
 				return true
 			default:

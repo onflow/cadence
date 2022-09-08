@@ -76,7 +76,7 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 			}
 			return parsePragmaDeclaration(p)
 		case lexer.TokenIdentifier:
-			switch string(p.tokenSource(p.current)) {
+			switch string(p.currentTokenSource()) {
 			case keywordLet, keywordVar:
 				return parseVariableDeclaration(p, access, accessPos, docString)
 
@@ -137,7 +137,7 @@ var enumeratedAccessModifierKeywords = common.EnumerateWords(
 //
 func parseAccess(p *parser) (ast.Access, error) {
 
-	switch string(p.tokenSource(p.current)) {
+	switch string(p.currentTokenSource()) {
 	case keywordPriv:
 		// Skip the `priv` keyword
 		p.next()
@@ -163,7 +163,7 @@ func parseAccess(p *parser) (ast.Access, error) {
 			)
 		}
 
-		keyword := p.tokenSource(p.current)
+		keyword := p.currentTokenSource()
 		if string(keyword) != keywordSet {
 			return ast.AccessNotSpecified, p.syntaxError(
 				"expected keyword %q, got %q",
@@ -205,7 +205,7 @@ func parseAccess(p *parser) (ast.Access, error) {
 
 		var access ast.Access
 
-		keyword := p.tokenSource(p.current)
+		keyword := p.currentTokenSource()
 		switch string(keyword) {
 		case keywordAll:
 			access = ast.AccessPublic
@@ -264,7 +264,7 @@ func parseVariableDeclaration(
 		startPos = *accessPos
 	}
 
-	isLet := string(p.tokenSource(p.current)) == keywordLet
+	isLet := string(p.currentTokenSource()) == keywordLet
 
 	// Skip the `let` or `var` keyword
 	p.next()
@@ -417,7 +417,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 
 		switch p.current.Type {
 		case lexer.TokenString:
-			literal := p.tokenSource(p.current)
+			literal := p.currentTokenSource()
 			parsedString := parseStringLiteral(p, literal)
 			location = common.NewStringLocation(p.memoryGauge, parsedString)
 
@@ -480,7 +480,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 
 			case lexer.TokenIdentifier:
 
-				keyword := p.tokenSource(p.current)
+				keyword := p.currentTokenSource()
 				if string(keyword) == keywordFrom {
 					if expectCommaOrFrom {
 						atEnd = true
@@ -547,7 +547,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 		// If it is not the `from` keyword,
 		// the given (previous) identifier is the import location.
 
-		if string(p.tokenSource(p.current)) == keywordFrom {
+		if string(p.currentTokenSource()) == keywordFrom {
 			identifiers = append(identifiers, identifier)
 			// Skip the `from` keyword
 			p.next()
@@ -642,7 +642,7 @@ func isNextTokenCommaOrFrom(p *parser) (b bool, err error) {
 	// Lookahead the next token
 	switch p.current.Type {
 	case lexer.TokenIdentifier:
-		isFrom := string(p.tokenSource(p.current)) == keywordFrom
+		isFrom := string(p.currentTokenSource()) == keywordFrom
 		return isFrom, nil
 	case lexer.TokenComma:
 		return true, nil
@@ -653,7 +653,7 @@ func isNextTokenCommaOrFrom(p *parser) (b bool, err error) {
 
 func parseHexadecimalLocation(p *parser) common.AddressLocation {
 	// TODO: improve
-	literal := string(p.tokenSource(p.current))
+	literal := string(p.currentTokenSource())
 
 	bytes := []byte(strings.ReplaceAll(literal[2:], "_", ""))
 
@@ -760,7 +760,7 @@ func parseEventDeclaration(
 func parseCompositeKind(p *parser) common.CompositeKind {
 
 	if p.current.Is(lexer.TokenIdentifier) {
-		switch string(p.tokenSource(p.current)) {
+		switch string(p.currentTokenSource()) {
 		case keywordStruct:
 			return common.CompositeKindStructure
 
@@ -797,7 +797,7 @@ func parseFieldWithVariableKind(
 	}
 
 	var variableKind ast.VariableKind
-	switch string(p.tokenSource(p.current)) {
+	switch string(p.currentTokenSource()) {
 	case keywordLet:
 		variableKind = ast.VariableKindConstant
 
@@ -890,7 +890,7 @@ func parseCompositeOrInterfaceDeclaration(
 
 		wasInterface := isInterface
 
-		if string(p.tokenSource(p.current)) == keywordInterface {
+		if string(p.currentTokenSource()) == keywordInterface {
 			isInterface = true
 			if wasInterface {
 				return nil, p.syntaxError(
@@ -1050,7 +1050,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 
 		switch p.current.Type {
 		case lexer.TokenIdentifier:
-			switch string(p.tokenSource(p.current)) {
+			switch string(p.currentTokenSource()) {
 			case keywordLet, keywordVar:
 				return parseFieldWithVariableKind(p, access, accessPos, docString)
 

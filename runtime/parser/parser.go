@@ -246,6 +246,10 @@ func (p *parser) tokenSource(token lexer.Token) []byte {
 	return token.Source(input)
 }
 
+func (p *parser) currentTokenSource() []byte {
+	return p.tokenSource(p.current)
+}
+
 func (p *parser) mustToken(token lexer.Token, tokenType lexer.TokenType, expected string) bool {
 	if !token.Is(tokenType) {
 		return false
@@ -431,7 +435,7 @@ func (p *parser) parseTrivia(options triviaOptions) (containsNewline bool, docSt
 
 		case lexer.TokenLineComment:
 			if options.parseDocStrings {
-				comment := p.tokenSource(p.current)
+				comment := p.currentTokenSource()
 				// TODO: improve
 				if strings.HasPrefix(string(comment), "///") {
 					if inLineDocString {

@@ -81,7 +81,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 	p.skipSpaceAndComments(true)
 	if p.current.Is(lexer.TokenIdentifier) {
 
-		keyword := p.tokenSource(p.current)
+		keyword := p.currentTokenSource()
 
 		switch string(keyword) {
 		case keywordPrepare:
@@ -141,7 +141,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 		switch p.current.Type {
 		case lexer.TokenIdentifier:
 
-			keyword := p.tokenSource(p.current)
+			keyword := p.currentTokenSource()
 			switch string(keyword) {
 			case keywordExecute:
 				if execute != nil {
@@ -221,7 +221,7 @@ func parseTransactionFields(p *parser) (fields []*ast.FieldDeclaration, err erro
 			return
 
 		case lexer.TokenIdentifier:
-			switch string(p.tokenSource(p.current)) {
+			switch string(p.currentTokenSource()) {
 			case keywordLet, keywordVar:
 				field, err := parseFieldWithVariableKind(p, ast.AccessNotSpecified, nil, docString)
 				if err != nil {

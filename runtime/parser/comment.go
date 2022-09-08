@@ -52,7 +52,7 @@ func (p *parser) parseCommentContent() (comment string) {
 					return nil
 
 				case lexer.TokenBlockCommentContent:
-					builder.Write(p.tokenSource(p.current))
+					builder.Write(p.currentTokenSource())
 
 				case lexer.TokenBlockCommentEnd:
 					builder.WriteString(blockCommentEnd)

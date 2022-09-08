@@ -125,7 +125,7 @@ func parseParameter(p *parser) (*ast.Parameter, error) {
 	}
 
 	var argumentLabel string
-	parameterName := string(p.tokenSource(p.current))
+	parameterName := string(p.currentTokenSource())
 
 	// Skip the identifier
 	p.next()
@@ -136,7 +136,7 @@ func parseParameter(p *parser) (*ast.Parameter, error) {
 	p.skipSpaceAndComments(true)
 	if p.current.Is(lexer.TokenIdentifier) {
 		argumentLabel = parameterName
-		parameterName = string(p.tokenSource(p.current))
+		parameterName = string(p.currentTokenSource())
 		parameterPos = p.current.StartPos
 		// Skip the identifier
 		p.next()
