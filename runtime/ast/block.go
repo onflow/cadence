@@ -50,10 +50,6 @@ func (b *Block) IsEmpty() bool {
 	return len(b.Statements) == 0
 }
 
-func (b *Block) Accept(visitor Visitor) Repr {
-	return visitor.VisitBlock(b)
-}
-
 func (b *Block) Walk(walkChild func(Element)) {
 	walkStatements(walkChild, b.Statements)
 }
@@ -141,10 +137,6 @@ func (*FunctionBlock) ElementType() ElementType {
 	return ElementTypeFunctionBlock
 }
 
-func (b *FunctionBlock) Accept(visitor Visitor) Repr {
-	return visitor.VisitFunctionBlock(b)
-}
-
 func (b *FunctionBlock) Walk(walkChild func(Element)) {
 	// TODO: pre-conditions
 	walkChild(b.Block)
@@ -225,6 +217,10 @@ func (b *FunctionBlock) Doc() prettier.Doc {
 
 func (b *FunctionBlock) String() string {
 	return Prettier(b)
+}
+
+func (b *FunctionBlock) HasStatements() bool {
+	return b != nil && len(b.Block.Statements) > 0
 }
 
 // Condition

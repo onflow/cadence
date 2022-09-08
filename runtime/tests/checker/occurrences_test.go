@@ -41,15 +41,15 @@ func TestCheckOccurrencesVariableDeclarations(t *testing.T) {
         var y = x
         `,
 		ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithPositionInfoEnabled(true),
+			Config: &sema.Config{
+				PositionInfoEnabled: true,
 			},
 		},
 	)
 
 	require.NoError(t, err)
 
-	occurrences := checker.Occurrences.All()
+	occurrences := checker.PositionInfo.Occurrences.All()
 
 	matchers := []*OccurrenceMatcher{
 		{
@@ -87,8 +87,8 @@ nextMatcher:
 	}
 
 	for _, matcher := range matchers {
-		assert.NotNil(t, checker.Occurrences.Find(matcher.StartPos))
-		assert.NotNil(t, checker.Occurrences.Find(matcher.EndPos))
+		assert.NotNil(t, checker.PositionInfo.Occurrences.Find(matcher.StartPos))
+		assert.NotNil(t, checker.PositionInfo.Occurrences.Find(matcher.EndPos))
 	}
 }
 
@@ -113,15 +113,15 @@ func TestCheckOccurrencesFunction(t *testing.T) {
         }
 		`,
 		ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithPositionInfoEnabled(true),
+			Config: &sema.Config{
+				PositionInfoEnabled: true,
 			},
 		},
 	)
 
 	require.NoError(t, err)
 
-	occurrences := checker.Occurrences.All()
+	occurrences := checker.PositionInfo.Occurrences.All()
 
 	matchers := []*OccurrenceMatcher{
 		{
@@ -227,8 +227,8 @@ nextMatcher:
 	}
 
 	for _, matcher := range matchers {
-		assert.NotNil(t, checker.Occurrences.Find(matcher.StartPos))
-		assert.NotNil(t, checker.Occurrences.Find(matcher.EndPos))
+		assert.NotNil(t, checker.PositionInfo.Occurrences.Find(matcher.StartPos))
+		assert.NotNil(t, checker.PositionInfo.Occurrences.Find(matcher.EndPos))
 	}
 }
 
@@ -254,15 +254,15 @@ func TestCheckOccurrencesStructAndInterface(t *testing.T) {
 	    }
 		`,
 		ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithPositionInfoEnabled(true),
+			Config: &sema.Config{
+				PositionInfoEnabled: true,
 			},
 		},
 	)
 
 	require.NoError(t, err)
 
-	occurrences := checker.Occurrences.All()
+	occurrences := checker.PositionInfo.Occurrences.All()
 
 	matchers := []*OccurrenceMatcher{
 		{
@@ -355,7 +355,7 @@ nextMatcher:
 	}
 
 	for _, matcher := range matchers {
-		assert.NotNil(t, checker.Occurrences.Find(matcher.StartPos))
-		assert.NotNil(t, checker.Occurrences.Find(matcher.EndPos))
+		assert.NotNil(t, checker.PositionInfo.Occurrences.Find(matcher.StartPos))
+		assert.NotNil(t, checker.PositionInfo.Occurrences.Find(matcher.EndPos))
 	}
 }

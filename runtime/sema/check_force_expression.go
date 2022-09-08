@@ -22,7 +22,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 )
 
-func (checker *Checker) VisitForceExpression(expression *ast.ForceExpression) ast.Repr {
+func (checker *Checker) VisitForceExpression(expression *ast.ForceExpression) Type {
 
 	// Expected type of the `expression.Expression` is the optional of expected type of current context.
 	// i.e: if `x!` is `String`, then `x` is expected to be `String?`.
@@ -40,7 +40,7 @@ func (checker *Checker) VisitForceExpression(expression *ast.ForceExpression) as
 		ResourceInvalidationKindMoveDefinite,
 	)
 
-	if checker.extendedElaboration {
+	if checker.Config.ExtendedElaborationEnabled {
 		checker.Elaboration.ForceExpressionTypes[expression] = valueType
 	}
 

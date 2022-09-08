@@ -42,7 +42,7 @@ var publicKeyConstructorFunctionType = &sema.FunctionType{
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.PublicKeyType),
 }
 
-var publicKeyConstructor = NewStandardLibraryFunction(
+var PublicKeyConstructor = NewStandardLibraryFunction(
 	sema.PublicKeyTypeName,
 	publicKeyConstructorFunctionType,
 	publicKeyConstructorFunctionDocString,
@@ -52,7 +52,7 @@ var publicKeyConstructor = NewStandardLibraryFunction(
 			panic(errors.NewUnreachableError())
 		}
 
-		signAlgo, ok := invocation.Arguments[1].(*interpreter.CompositeValue)
+		signAlgo, ok := invocation.Arguments[1].(*interpreter.SimpleCompositeValue)
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
@@ -64,7 +64,7 @@ var publicKeyConstructor = NewStandardLibraryFunction(
 			invocation.GetLocationRange,
 			publicKey,
 			signAlgo,
-			inter.PublicKeyValidationHandler,
+			inter.Config.PublicKeyValidationHandler,
 		)
 	},
 )

@@ -91,8 +91,9 @@ func (interpreter *Interpreter) indexExpressionGetterSetter(indexExpression *ast
 
 	elaboration := interpreter.Program.Elaboration
 
-	indexedType := elaboration.IndexExpressionIndexedTypes[indexExpression]
-	indexingType := elaboration.IndexExpressionIndexingTypes[indexExpression]
+	indexExpressionTypes := elaboration.IndexExpressionTypes[indexExpression]
+	indexedType := indexExpressionTypes.IndexedType
+	indexingType := indexExpressionTypes.IndexingType
 
 	transferredIndexingValue := interpreter.transferAndConvert(
 		interpreter.evalExpression(indexExpression.IndexingExpression),
@@ -227,7 +228,7 @@ func (interpreter *Interpreter) checkMemberAccess(
 	}
 }
 
-func (interpreter *Interpreter) VisitIdentifierExpression(expression *ast.IdentifierExpression) ast.Repr {
+func (interpreter *Interpreter) VisitIdentifierExpression(expression *ast.IdentifierExpression) Value {
 	name := expression.Identifier.Identifier
 	variable := interpreter.findVariable(name)
 	value := variable.GetValue()
@@ -238,10 +239,10 @@ func (interpreter *Interpreter) VisitIdentifierExpression(expression *ast.Identi
 }
 
 func (interpreter *Interpreter) evalExpression(expression ast.Expression) Value {
-	return expression.Accept(interpreter).(Value)
+	return ast.AcceptExpression[Value](expression, interpreter)
 }
 
-func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpression) ast.Repr {
+func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpression) Value {
 
 	leftValue := interpreter.evalExpression(expression.Left)
 
@@ -428,8 +429,9 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 
 		value := rightValue()
 
-		rightType := interpreter.Program.Elaboration.BinaryExpressionRightTypes[expression]
-		resultType := interpreter.Program.Elaboration.BinaryExpressionResultTypes[expression]
+		binaryExpressionTypes := interpreter.Program.Elaboration.BinaryExpressionTypes[expression]
+		rightType := binaryExpressionTypes.RightType
+		resultType := binaryExpressionTypes.ResultType
 
 		// NOTE: important to convert both any and optional
 		return interpreter.ConvertAndBox(getLocationRange, value, rightType, resultType)
@@ -469,7 +471,7 @@ func (interpreter *Interpreter) testEqual(left, right Value, expression *ast.Bin
 	return NewBoolValueFromConstructor(interpreter, valueGetter)
 }
 
-func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpression) ast.Repr {
+func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpression) Value {
 	value := interpreter.evalExpression(expression.Expression)
 
 	switch expression.Operation {
@@ -499,15 +501,15 @@ func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpres
 	})
 }
 
-func (interpreter *Interpreter) VisitBoolExpression(expression *ast.BoolExpression) ast.Repr {
+func (interpreter *Interpreter) VisitBoolExpression(expression *ast.BoolExpression) Value {
 	return NewBoolValue(interpreter, expression.Value)
 }
 
-func (interpreter *Interpreter) VisitNilExpression(_ *ast.NilExpression) ast.Repr {
+func (interpreter *Interpreter) VisitNilExpression(_ *ast.NilExpression) Value {
 	return NewNilValue(interpreter)
 }
 
-func (interpreter *Interpreter) VisitIntegerExpression(expression *ast.IntegerExpression) ast.Repr {
+func (interpreter *Interpreter) VisitIntegerExpression(expression *ast.IntegerExpression) Value {
 	typ := interpreter.Program.Elaboration.IntegerExpressionType[expression]
 
 	value := expression.Value
@@ -524,9 +526,8 @@ func (interpreter *Interpreter) VisitIntegerExpression(expression *ast.IntegerEx
 
 // NewIntegerValueFromBigInt creates a Cadence interpreter value of a given subtype.
 // This method assumes the range validations are done prior to calling this method. (i.e: at semantic level)
-//
 func (interpreter *Interpreter) NewIntegerValueFromBigInt(value *big.Int, integerSubType sema.Type) Value {
-	memoryGauge := interpreter.memoryGauge
+	memoryGauge := interpreter.Config.MemoryGauge
 
 	// NOTE: cases meter manually and call the unmetered constructors to avoid allocating closures
 
@@ -607,7 +608,7 @@ func (interpreter *Interpreter) NewIntegerValueFromBigInt(value *big.Int, intege
 	}
 }
 
-func (interpreter *Interpreter) VisitFixedPointExpression(expression *ast.FixedPointExpression) ast.Repr {
+func (interpreter *Interpreter) VisitFixedPointExpression(expression *ast.FixedPointExpression) Value {
 	// TODO: adjust once/if we support more fixed point types
 
 	fixedPointSubType := interpreter.Program.Elaboration.FixedPointExpression[expression]
@@ -635,7 +636,7 @@ func (interpreter *Interpreter) VisitFixedPointExpression(expression *ast.FixedP
 	}
 }
 
-func (interpreter *Interpreter) VisitStringExpression(expression *ast.StringExpression) ast.Repr {
+func (interpreter *Interpreter) VisitStringExpression(expression *ast.StringExpression) Value {
 	stringType := interpreter.Program.Elaboration.StringExpressionType[expression]
 
 	switch stringType {
@@ -647,11 +648,12 @@ func (interpreter *Interpreter) VisitStringExpression(expression *ast.StringExpr
 	return NewUnmeteredStringValue(expression.Value)
 }
 
-func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpression) ast.Repr {
+func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpression) Value {
 	values := interpreter.visitExpressionsNonCopying(expression.Values)
 
-	argumentTypes := interpreter.Program.Elaboration.ArrayExpressionArgumentTypes[expression]
-	arrayType := interpreter.Program.Elaboration.ArrayExpressionArrayType[expression]
+	arrayExpressionTypes := interpreter.Program.Elaboration.ArrayExpressionTypes[expression]
+	argumentTypes := arrayExpressionTypes.ArgumentTypes
+	arrayType := arrayExpressionTypes.ArrayType
 	elementType := arrayType.ElementType(false)
 
 	copies := make([]Value, len(values))
@@ -676,11 +678,12 @@ func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpres
 	)
 }
 
-func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.DictionaryExpression) ast.Repr {
+func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.DictionaryExpression) Value {
 	values := interpreter.visitEntries(expression.Entries)
 
-	entryTypes := interpreter.Program.Elaboration.DictionaryExpressionEntryTypes[expression]
-	dictionaryType := interpreter.Program.Elaboration.DictionaryExpressionType[expression]
+	dictionaryExpressionTypes := interpreter.Program.Elaboration.DictionaryExpressionTypes[expression]
+	entryTypes := dictionaryExpressionTypes.EntryTypes
+	dictionaryType := dictionaryExpressionTypes.DictionaryType
 
 	var keyValuePairs []Value
 
@@ -721,12 +724,12 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 	)
 }
 
-func (interpreter *Interpreter) VisitMemberExpression(expression *ast.MemberExpression) ast.Repr {
+func (interpreter *Interpreter) VisitMemberExpression(expression *ast.MemberExpression) Value {
 	const allowMissing = false
 	return interpreter.memberExpressionGetterSetter(expression).get(allowMissing)
 }
 
-func (interpreter *Interpreter) VisitIndexExpression(expression *ast.IndexExpression) ast.Repr {
+func (interpreter *Interpreter) VisitIndexExpression(expression *ast.IndexExpression) Value {
 	typedResult, ok := interpreter.evalExpression(expression.TargetExpression).(ValueIndexableValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -736,7 +739,7 @@ func (interpreter *Interpreter) VisitIndexExpression(expression *ast.IndexExpres
 	return typedResult.GetKey(interpreter, getLocationRange, indexingValue)
 }
 
-func (interpreter *Interpreter) VisitConditionalExpression(expression *ast.ConditionalExpression) ast.Repr {
+func (interpreter *Interpreter) VisitConditionalExpression(expression *ast.ConditionalExpression) Value {
 	value, ok := interpreter.evalExpression(expression.Test).(BoolValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -748,10 +751,10 @@ func (interpreter *Interpreter) VisitConditionalExpression(expression *ast.Condi
 	}
 }
 
-func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *ast.InvocationExpression) ast.Repr {
+func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *ast.InvocationExpression) Value {
 
 	// tracing
-	if interpreter.tracingEnabled {
+	if interpreter.Config.TracingEnabled {
 		startTime := time.Now()
 		invokedExpression := invocationExpression.InvokedExpression.String()
 		defer func() {
@@ -806,13 +809,13 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 
 	elaboration := interpreter.Program.Elaboration
 
-	typeParameterTypes := elaboration.InvocationExpressionTypeArguments[invocationExpression]
-	argumentTypes := elaboration.InvocationExpressionArgumentTypes[invocationExpression]
-	parameterTypes := elaboration.InvocationExpressionParameterTypes[invocationExpression]
+	invocationExpressionTypes := elaboration.InvocationExpressionTypes[invocationExpression]
 
-	line := invocationExpression.StartPosition().Line
+	typeParameterTypes := invocationExpressionTypes.TypeArguments
+	argumentTypes := invocationExpressionTypes.ArgumentTypes
+	parameterTypes := invocationExpressionTypes.TypeParameterTypes
 
-	interpreter.reportFunctionInvocation(line)
+	interpreter.reportFunctionInvocation()
 
 	resultValue := interpreter.invokeFunctionValue(
 		function,
@@ -824,7 +827,7 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 		invocationExpression,
 	)
 
-	interpreter.reportInvokedFunctionReturn(line)
+	interpreter.reportInvokedFunctionReturn()
 
 	// If this is invocation is optional chaining, wrap the result
 	// as an optional, as the result is expected to be an optional
@@ -865,7 +868,7 @@ func (interpreter *Interpreter) visitEntries(entries []ast.DictionaryEntry) []Di
 	return values
 }
 
-func (interpreter *Interpreter) VisitFunctionExpression(expression *ast.FunctionExpression) ast.Repr {
+func (interpreter *Interpreter) VisitFunctionExpression(expression *ast.FunctionExpression) Value {
 
 	// lexical scope: variables in functions are bound to what is visible at declaration time
 	lexicalScope := interpreter.activations.CurrentOrNew()
@@ -902,7 +905,7 @@ func (interpreter *Interpreter) VisitFunctionExpression(expression *ast.Function
 	)
 }
 
-func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingExpression) ast.Repr {
+func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingExpression) Value {
 	value := interpreter.evalExpression(expression.Expression)
 
 	getLocationRange := locationRangeGetter(interpreter, interpreter.Location, expression.Expression)
@@ -950,11 +953,11 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 	}
 }
 
-func (interpreter *Interpreter) VisitCreateExpression(expression *ast.CreateExpression) ast.Repr {
+func (interpreter *Interpreter) VisitCreateExpression(expression *ast.CreateExpression) Value {
 	return interpreter.evalExpression(expression.InvocationExpression)
 }
 
-func (interpreter *Interpreter) VisitDestroyExpression(expression *ast.DestroyExpression) ast.Repr {
+func (interpreter *Interpreter) VisitDestroyExpression(expression *ast.DestroyExpression) Value {
 	value := interpreter.evalExpression(expression.Expression)
 
 	interpreter.invalidateResource(value)
@@ -966,7 +969,7 @@ func (interpreter *Interpreter) VisitDestroyExpression(expression *ast.DestroyEx
 	return NewVoidValue(interpreter)
 }
 
-func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *ast.ReferenceExpression) ast.Repr {
+func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *ast.ReferenceExpression) Value {
 
 	borrowType := interpreter.Program.Elaboration.ReferenceExpressionBorrowTypes[referenceExpression]
 
@@ -1034,7 +1037,7 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 	panic(errors.NewUnreachableError())
 }
 
-func (interpreter *Interpreter) VisitForceExpression(expression *ast.ForceExpression) ast.Repr {
+func (interpreter *Interpreter) VisitForceExpression(expression *ast.ForceExpression) Value {
 	result := interpreter.evalExpression(expression.Expression)
 
 	switch result := result.(type) {
@@ -1060,7 +1063,7 @@ func (interpreter *Interpreter) VisitForceExpression(expression *ast.ForceExpres
 	}
 }
 
-func (interpreter *Interpreter) VisitPathExpression(expression *ast.PathExpression) ast.Repr {
+func (interpreter *Interpreter) VisitPathExpression(expression *ast.PathExpression) Value {
 	domain := common.PathDomainFromIdentifier(expression.Domain.Identifier)
 
 	// meter the Path's Identifier since path is just a container

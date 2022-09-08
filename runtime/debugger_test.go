@@ -52,7 +52,10 @@ func TestRuntimeDebugger(t *testing.T) {
 	go func() {
 		defer wg.Done()
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewInterpreterRuntime(Config{
+			AtreeValidationEnabled: true,
+			Debugger:               debugger,
+		})
 
 		address := common.MustBytesToAddress([]byte{0x1})
 
@@ -68,7 +71,6 @@ func TestRuntimeDebugger(t *testing.T) {
 		}
 
 		nextTransactionLocation := newTransactionLocationGenerator()
-		runtime.SetDebugger(debugger)
 
 		err := runtime.ExecuteTransaction(
 			Script{
@@ -144,7 +146,10 @@ func TestRuntimeDebuggerBreakpoints(t *testing.T) {
 	go func() {
 		defer wg.Done()
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewInterpreterRuntime(Config{
+			AtreeValidationEnabled: true,
+			Debugger:               debugger,
+		})
 
 		address := common.MustBytesToAddress([]byte{0x1})
 
@@ -158,8 +163,6 @@ func TestRuntimeDebuggerBreakpoints(t *testing.T) {
 				require.Equal(t, `"Hello, World!"`, message)
 			},
 		}
-
-		runtime.SetDebugger(debugger)
 
 		err := runtime.ExecuteTransaction(
 			Script{

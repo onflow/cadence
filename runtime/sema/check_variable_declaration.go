@@ -23,9 +23,9 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
-func (checker *Checker) VisitVariableDeclaration(declaration *ast.VariableDeclaration) ast.Repr {
+func (checker *Checker) VisitVariableDeclaration(declaration *ast.VariableDeclaration) (_ struct{}) {
 	checker.visitVariableDeclaration(declaration, false)
-	return nil
+	return
 }
 
 func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclaration, isOptionalBinding bool) {
@@ -61,8 +61,6 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 
 	valueType := checker.VisitExpression(declaration.Value, expectedValueType)
 
-	checker.Elaboration.VariableDeclarationValueTypes[declaration] = valueType
-
 	if isOptionalBinding {
 		optionalType, isOptional := valueType.(*OptionalType)
 
@@ -85,8 +83,6 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 		declarationType = valueType
 	}
 
-	checker.Elaboration.VariableDeclarationTargetTypes[declaration] = declarationType
-
 	checker.checkTransfer(declaration.Transfer, declarationType)
 
 	// The variable declaration might have a second transfer and second expression.
@@ -97,6 +93,8 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 	//
 	// This is only valid for resources, i.e. the declaration type, first value type,
 	// and the second value type must be resource types, and all transfers must be moves.
+
+	var secondValueType Type
 
 	if declaration.SecondTransfer == nil {
 		if declaration.SecondValue != nil {
@@ -158,20 +156,25 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 
 			// NOTE: already performs resource invalidation
 
-			_, secondValueType := checker.checkAssignment(
+			_, secondValueType = checker.checkAssignment(
 				declaration.Value,
 				declaration.SecondValue,
 				declaration.SecondTransfer,
 				true,
 			)
 
-			checker.Elaboration.VariableDeclarationSecondValueTypes[declaration] = secondValueType
-
 			if valueIsResource {
 				checker.elaborateNestedResourceMoveExpression(declaration.Value)
 			}
 		}
 	}
+
+	checker.Elaboration.VariableDeclarationTypes[declaration] =
+		VariableDeclarationTypes{
+			TargetType:      declarationType,
+			ValueType:       valueType,
+			SecondValueType: secondValueType,
+		}
 
 	// Finally, declare the variable in the current value activation
 
@@ -190,7 +193,7 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 	})
 	checker.report(err)
 
-	if checker.positionInfoEnabled {
+	if checker.PositionInfo != nil {
 		checker.recordVariableDeclarationOccurrence(identifier, variable)
 		checker.recordVariableDeclarationRange(declaration, identifier, declarationType)
 	}
@@ -205,29 +208,20 @@ func (checker *Checker) recordVariableDeclarationRange(
 	activation.LeaveCallbacks = append(
 		activation.LeaveCallbacks,
 		func(getEndPosition EndPositionGetter) {
-			if getEndPosition == nil {
+			if getEndPosition == nil || checker.PositionInfo == nil {
 				return
 			}
 
-			// TODO: use the start position of the next statement
-			//   after this variable declaration instead
+			memoryGauge := checker.memoryGauge
 
-			var startPosition ast.Position
-			if declaration.SecondValue != nil {
-				startPosition = declaration.SecondValue.EndPosition(checker.memoryGauge)
-			} else {
-				startPosition = declaration.Value.EndPosition(checker.memoryGauge)
-			}
+			endPosition := getEndPosition(memoryGauge)
 
-			checker.Ranges.Put(
-				startPosition,
-				getEndPosition(checker.memoryGauge),
-				Range{
-					Identifier:      identifier,
-					DeclarationKind: declaration.DeclarationKind(),
-					Type:            declarationType,
-					DocString:       declaration.DocString,
-				},
+			checker.PositionInfo.recordVariableDeclarationRange(
+				memoryGauge,
+				declaration,
+				endPosition,
+				identifier,
+				declarationType,
 			)
 		},
 	)

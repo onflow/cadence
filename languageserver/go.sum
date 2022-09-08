@@ -509,8 +509,8 @@ github.com/onflow/cadence v0.24.2-0.20220627202951-5a06fec82b4a h1:Wr7+zfFj7ehr3
 github.com/onflow/cadence v0.24.2-0.20220627202951-5a06fec82b4a/go.mod h1:g19FlFrcQsiegiZDe6wYtUCBO8O1hM1x/+l68aVO07k=
 github.com/onflow/cadence-lint v0.0.0-20220711153841-433de417d437 h1:7cqXdAuz92m3LHoisfczNMizczX2vlTDdpwc6ceOrhI=
 github.com/onflow/cadence-lint v0.0.0-20220711153841-433de417d437/go.mod h1:DRpaOnB/oTu7FqmDvGq7Xl4q8WO4GvsugD9AOqIGIp4=
-github.com/onflow/flow-cli/pkg/flowkit v0.0.0-20220720111814-01ff1795420a h1:AASPCYZu6TXYIzO3Goq2acRqkQ9EKsmoU9JJKvh3Kn0=
-github.com/onflow/flow-cli/pkg/flowkit v0.0.0-20220720111814-01ff1795420a/go.mod h1:2bJMmP5prrOuBRj/+oz/ErOY4n3t5Ec/9bpkflvIP8I=
+github.com/onflow/flow-cli/pkg/flowkit v0.0.0-20220819152715-414ca9c1d221 h1:ES4Aw0AS77xsMKTqh0ndJ9xP2i1S4xsJPQcvxkQE4zk=
+github.com/onflow/flow-cli/pkg/flowkit v0.0.0-20220819152715-414ca9c1d221/go.mod h1:ijfJZqyJZEWVu5pBh9jN3MK8eZNVc9w4v0MwQrBb320=
 github.com/onflow/flow-core-contracts/lib/go/contracts v0.11.2-0.20220620142725-49b5accb2a84 h1:VKIZufzFyxfeMbKeDIyttN2CmFYCzHOimr4xNFimVpA=
 github.com/onflow/flow-core-contracts/lib/go/contracts v0.11.2-0.20220620142725-49b5accb2a84/go.mod h1:T6yhM+kWrFxiP6F3hh8lh9DcocHfmv48P4ITnjLhKSk=
 github.com/onflow/flow-core-contracts/lib/go/templates v0.11.2-0.20220513155751-c4c1f8d59f83 h1:w4uXFTvjQmLtA/X50H4YXVlzbdsoL3vDI3Y86jtJOMM=
@@ -745,8 +745,8 @@ golang.org/x/exp v0.0.0-20191227195350-da58074b4299/go.mod h1:2RIsYlXP63K8oxa1u0
 golang.org/x/exp v0.0.0-20200119233911-0405dc783f0a/go.mod h1:2RIsYlXP63K8oxa1u096TMicItID8zy7Y6sNkU49FU4=
 golang.org/x/exp v0.0.0-20200207192155-f17229e696bd/go.mod h1:J/WKrq2StrnmMY6+EHIKF9dgMWnmCNThgcyBT1FY9mM=
 golang.org/x/exp v0.0.0-20200224162631-6cc2880d07d6/go.mod h1:3jZMyOhIsHpP37uCMkUooju7aAi5cS1Q23tOzKc+0MU=
-golang.org/x/exp v0.0.0-20220706164943-b4a6d9510983 h1:sUweFwmLOje8KNfXAVqGGAsmgJ/F8jJ6wBLJDt4BTKY=
-golang.org/x/exp v0.0.0-20220706164943-b4a6d9510983/go.mod h1:Kr81I6Kryrl9sr8s2FK3vxD90NdsKWRuOIl2O4CvYbA=
+golang.org/x/exp v0.0.0-20220713135740-79cabaa25d75 h1:x03zeu7B2B11ySp+daztnwM5oBJ/8wGUSqrwcw9L0RA=
+golang.org/x/exp v0.0.0-20220713135740-79cabaa25d75/go.mod h1:Kr81I6Kryrl9sr8s2FK3vxD90NdsKWRuOIl2O4CvYbA=
 golang.org/x/image v0.0.0-20180708004352-c73c2afc3b81/go.mod h1:ux5Hcp/YLpHSI86hEcLt0YII63i6oz57MZXIpbrjZUs=
 golang.org/x/image v0.0.0-20190227222117-0694c2d4d067/go.mod h1:kZ7UVZpmo3dzQBMxlp+ypCbDeSB+sBbTgSJuh5dn5js=
 golang.org/x/image v0.0.0-20190802002840-cff245a6509b/go.mod h1:FeLwcggjj3mMvU+oOTbSwawSJRM1uh48EjtB4UJZlP0=

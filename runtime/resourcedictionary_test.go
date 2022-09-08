@@ -967,9 +967,9 @@ func TestRuntimeSResourceDictionaryValues_Destruction(t *testing.T) {
 	assert.Equal(t,
 		[]string{
 			`"destroying R"`,
-			"1",
-			`"destroying R"`,
 			"2",
+			`"destroying R"`,
+			"1",
 		},
 		loggedMessages,
 	)

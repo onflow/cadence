@@ -24,14 +24,16 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
-func (checker *Checker) VisitBinaryExpression(expression *ast.BinaryExpression) ast.Repr {
+func (checker *Checker) VisitBinaryExpression(expression *ast.BinaryExpression) Type {
 
 	var leftType, rightType, resultType Type
 	defer func() {
 		elaboration := checker.Elaboration
-		elaboration.BinaryExpressionLeftTypes[expression] = leftType
-		elaboration.BinaryExpressionRightTypes[expression] = rightType
-		elaboration.BinaryExpressionResultTypes[expression] = resultType
+		elaboration.BinaryExpressionTypes[expression] = BinaryExpressionTypes{
+			LeftType:   leftType,
+			RightType:  rightType,
+			ResultType: resultType,
+		}
 	}()
 
 	// The left-hand side is always evaluated.

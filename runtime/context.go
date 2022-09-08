@@ -20,37 +20,31 @@ package runtime
 
 import (
 	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common"
 )
 
 type Context struct {
-	Interface         Interface
-	Location          Location
-	PredeclaredValues []ValueDeclaration
-	codes             map[common.Location][]byte
-	programs          map[common.Location]*ast.Program
+	Interface      Interface
+	Location       Location
+	Environment    Environment
+	CoverageReport *CoverageReport
 }
 
-func (c Context) SetCode(location common.Location, code []byte) {
+type codesAndPrograms struct {
+	codes    map[Location][]byte
+	programs map[Location]*ast.Program
+}
+
+func (c codesAndPrograms) setCode(location Location, code []byte) {
 	c.codes[location] = code
 }
 
-func (c Context) SetProgram(location common.Location, program *ast.Program) {
+func (c codesAndPrograms) setProgram(location Location, program *ast.Program) {
 	c.programs[location] = program
 }
 
-func (c Context) WithLocation(location common.Location) Context {
-	result := c
-	result.Location = location
-	return result
-}
-
-func (c *Context) InitializeCodesAndPrograms() {
-	if c.codes == nil {
-		c.codes = map[common.Location][]byte{}
-	}
-
-	if c.programs == nil {
-		c.programs = map[common.Location]*ast.Program{}
+func newCodesAndPrograms() codesAndPrograms {
+	return codesAndPrograms{
+		codes:    map[Location][]byte{},
+		programs: map[Location]*ast.Program{},
 	}
 }

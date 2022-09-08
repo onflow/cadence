@@ -63,10 +63,6 @@ func (*ImportDeclaration) isDeclaration() {}
 
 func (*ImportDeclaration) isStatement() {}
 
-func (d *ImportDeclaration) Accept(visitor Visitor) Repr {
-	return visitor.VisitImportDeclaration(d)
-}
-
 func (*ImportDeclaration) Walk(_ func(Element)) {
 	// NO-OP
 }

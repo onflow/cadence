@@ -23,7 +23,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
-func (checker *Checker) VisitForStatement(statement *ast.ForStatement) ast.Repr {
+func (checker *Checker) VisitForStatement(statement *ast.ForStatement) (_ struct{}) {
 
 	checker.enterValueScope()
 	defer checker.leaveValueScope(statement.EndPosition, true)
@@ -83,7 +83,7 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) ast.Repr 
 		allowOuterScopeShadowing: false,
 	})
 	checker.report(err)
-	if checker.positionInfoEnabled {
+	if checker.PositionInfo != nil {
 		checker.recordVariableDeclarationOccurrence(identifier, variable)
 	}
 
@@ -99,7 +99,7 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) ast.Repr 
 			allowOuterScopeShadowing: false,
 		})
 		checker.report(err)
-		if checker.positionInfoEnabled {
+		if checker.PositionInfo != nil {
 			checker.recordVariableDeclarationOccurrence(index, indexVariable)
 		}
 	}
@@ -110,7 +110,7 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) ast.Repr 
 
 	_ = checker.checkPotentiallyUnevaluated(func() Type {
 		checker.functionActivations.WithLoop(func() {
-			statement.Block.Accept(checker)
+			checker.checkBlock(statement.Block)
 		})
 
 		// ignored
@@ -119,5 +119,5 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) ast.Repr 
 
 	checker.reportResourceUsesInLoop(statement.StartPos, statement.EndPosition(checker.memoryGauge))
 
-	return nil
+	return
 }

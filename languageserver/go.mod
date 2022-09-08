@@ -9,12 +9,12 @@ require (
 	github.com/mitchellh/mapstructure v1.4.3
 	github.com/onflow/cadence v0.24.2-0.20220627202951-5a06fec82b4a
 	github.com/onflow/cadence-lint v0.0.0-20220711153841-433de417d437
-	github.com/onflow/flow-cli/pkg/flowkit v0.0.0-20220720111814-01ff1795420a
+	github.com/onflow/flow-cli/pkg/flowkit v0.0.0-20220819152715-414ca9c1d221
 	github.com/onflow/flow-go-sdk v0.26.5-0.20220629191626-900f9f91bffc
 	github.com/sourcegraph/jsonrpc2 v0.1.0
 	github.com/spf13/afero v1.8.2
 	github.com/stretchr/testify v1.7.5
-	golang.org/x/exp v0.0.0-20220706164943-b4a6d9510983
+	golang.org/x/exp v0.0.0-20220713135740-79cabaa25d75
 )
 
 require (
@@ -95,6 +95,7 @@ require (
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/spf13/viper v1.10.1 // indirect
+	github.com/stretchr/objx v0.4.0 // indirect
 	github.com/subosito/gotenv v1.2.0 // indirect
 	github.com/thoas/go-funk v0.9.2 // indirect
 	github.com/turbolent/prettier v0.0.0-20220320183459-661cc755135d // indirect

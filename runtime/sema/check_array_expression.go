@@ -20,7 +20,7 @@ package sema
 
 import "github.com/onflow/cadence/runtime/ast"
 
-func (checker *Checker) VisitArrayExpression(expression *ast.ArrayExpression) ast.Repr {
+func (checker *Checker) VisitArrayExpression(expression *ast.ArrayExpression) Type {
 
 	// visit all elements, ensure they are all the same type
 
@@ -73,8 +73,6 @@ func (checker *Checker) VisitArrayExpression(expression *ast.ArrayExpression) as
 		checker.checkResourceMoveOperation(value, valueType)
 	}
 
-	checker.Elaboration.ArrayExpressionArgumentTypes[expression] = argumentTypes
-
 	if elementType == nil {
 		// Contextually expected type is not available.
 		// Therefore, find the least common supertype of the elements.
@@ -96,7 +94,11 @@ func (checker *Checker) VisitArrayExpression(expression *ast.ArrayExpression) as
 		}
 	}
 
-	checker.Elaboration.ArrayExpressionArrayType[expression] = resultType
+	checker.Elaboration.ArrayExpressionTypes[expression] =
+		ArrayExpressionTypes{
+			ArgumentTypes: argumentTypes,
+			ArrayType:     resultType,
+		}
 
 	return resultType
 }

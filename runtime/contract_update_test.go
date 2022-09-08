@@ -95,8 +95,6 @@ func TestContractUpdateWithDependencies(t *testing.T) {
 		},
 	}
 
-	runtime.SetContractUpdateValidationEnabled(true)
-
 	nextTransactionLocation := newTransactionLocationGenerator()
 
 	const fooContractV1 = `

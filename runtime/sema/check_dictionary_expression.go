@@ -23,7 +23,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
-func (checker *Checker) VisitDictionaryExpression(expression *ast.DictionaryExpression) ast.Repr {
+func (checker *Checker) VisitDictionaryExpression(expression *ast.DictionaryExpression) Type {
 
 	// visit all entries, ensure key are all the same type,
 	// and values are all the same type
@@ -96,8 +96,11 @@ func (checker *Checker) VisitDictionaryExpression(expression *ast.DictionaryExpr
 		ValueType: valueType,
 	}
 
-	checker.Elaboration.DictionaryExpressionEntryTypes[expression] = entryTypes
-	checker.Elaboration.DictionaryExpressionType[expression] = dictionaryType
+	checker.Elaboration.DictionaryExpressionTypes[expression] =
+		DictionaryExpressionTypes{
+			EntryTypes:     entryTypes,
+			DictionaryType: dictionaryType,
+		}
 
 	return dictionaryType
 }

@@ -22,18 +22,8 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 )
-
-const BlockHashLength = 32
-
-type BlockHash [BlockHashLength]byte
-
-type Block struct {
-	Height    uint64
-	View      uint64
-	Hash      BlockHash
-	Timestamp int64
-}
 
 type ResolvedLocation = sema.ResolvedLocation
 type Identifier = ast.Identifier
@@ -68,15 +58,6 @@ const (
 	HashAlgorithmKECCAK_256            = sema.HashAlgorithmKECCAK_256
 )
 
-type AccountKey struct {
-	KeyIndex  int
-	PublicKey *PublicKey
-	HashAlgo  HashAlgorithm
-	Weight    int
-	IsRevoked bool
-}
-
-type PublicKey struct {
-	PublicKey []byte
-	SignAlgo  SignatureAlgorithm
-}
+type PublicKey = stdlib.PublicKey
+type AccountKey = stdlib.AccountKey
+type Block = stdlib.Block
