@@ -883,7 +883,7 @@ func (s *Server) Rename(
 }
 
 func (s *Server) CodeAction(
-	conn protocol.Conn,
+	_ protocol.Conn,
 	params *protocol.CodeActionParams,
 ) (
 	codeActions []*protocol.CodeAction,
@@ -903,7 +903,6 @@ func (s *Server) CodeAction(
 	codeActionsResolvers := s.codeActionsResolvers[uri]
 
 	for _, diagnostic := range params.Context.Diagnostics {
-
 		if data, ok := diagnostic.Data.(string); ok {
 			codeActionID, err := uuid.Parse(data)
 			if err != nil {
@@ -1730,6 +1729,10 @@ func (s *Server) InlayHint(
 
 	for _, variableDeclaration := range variableDeclarations {
 		targetType := checker.Elaboration.VariableDeclarationTargetTypes[variableDeclaration]
+		if targetType == nil { // bugfix getting nil targetType
+			continue
+		}
+
 		identifierEndPosition := variableDeclaration.Identifier.EndPosition(nil)
 		inlayHintPosition := conversion.ASTToProtocolPosition(identifierEndPosition.Shifted(nil, 1))
 		inlayHint := protocol.InlayHint{
@@ -2349,6 +2352,9 @@ func (s *Server) convertError(
 				err.Name,
 				func(checker *sema.Checker, isFunction bool) insertionPosition {
 					declaration := declarationGetter(checker.Elaboration)
+					if declaration == nil { // known bug for remote contracts
+						return insertionPosition{}
+					}
 
 					members := declaration.DeclarationMembers()
 					declarations := members.Declarations()
@@ -2641,9 +2647,7 @@ func (s *Server) maybeAddDeclarationActionsResolver(
 	name string,
 	memberInsertionPosGetter func(checker *sema.Checker, isFunction bool) insertionPosition,
 ) func() []*protocol.CodeAction {
-
 	return func() []*protocol.CodeAction {
-
 		document, ok := s.documents[uri]
 		if !ok {
 			return nil
