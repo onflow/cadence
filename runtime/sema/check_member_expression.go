@@ -25,7 +25,7 @@ import (
 
 // NOTE: only called if the member expression is *not* an assignment
 //
-func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) ast.Repr {
+func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) Type {
 	accessedType, member, isOptional := checker.visitMember(expression)
 
 	if !accessedType.IsInvalidType() {

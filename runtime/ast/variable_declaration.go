@@ -99,10 +99,6 @@ func (d *VariableDeclaration) EndPosition(memoryGauge common.MemoryGauge) Positi
 
 func (*VariableDeclaration) isIfStatementTest() {}
 
-func (d *VariableDeclaration) Accept(visitor Visitor) Repr {
-	return visitor.VisitVariableDeclaration(d)
-}
-
 func (d *VariableDeclaration) Walk(walkChild func(Element)) {
 	// TODO: walk type
 	walkChild(d.Value)
