@@ -2227,18 +2227,29 @@ func (interpreter *Interpreter) writeStored(
 	interpreter.recordStorageMutation()
 }
 
-type ValueFromStringDeclaration struct {
-	functionType *sema.FunctionType
-	docString    string
-	impl         func(*Interpreter, string) Value
+type FromStringFunctionValue struct {
+	parentType   sema.Type
+	hostFunction *HostFunctionValue
 }
 
-func fromStringDeclaration(ty sema.Type, impl func(*Interpreter, string) Value) ValueFromStringDeclaration {
-	functionType, docString := sema.FromStringMetadata(ty)
-	return ValueFromStringDeclaration{
+func fromStringDeclaration(ty sema.Type, impl func(*Interpreter, string) Value) FromStringFunctionValue {
+	functionType, _ := sema.FromStringMetadata(ty)
+
+	hostFunctionImpl := NewUnmeteredHostFunctionValue(
+		func(invocation Invocation) Value {
+			argument, ok := invocation.Arguments[0].(*StringValue)
+			if !ok {
+				// expect typechecker to catch a mismatch here
+				panic(errors.NewUnreachableError())
+			}
+			inter := invocation.Interpreter
+			return impl(inter, argument.Str)
+		},
 		functionType,
-		docString,
-		impl,
+	)
+	return FromStringFunctionValue{
+		parentType:   ty,
+		hostFunction: hostFunctionImpl,
 	}
 }
 
@@ -2296,92 +2307,102 @@ func fromStringImplBig(convert func(*big.Int) (Value, bool)) func(*Interpreter, 
 	}
 }
 
-// check if val is in the inclusive interval [low, hi]
-func inRange(val *big.Int, low *big.Int, hi *big.Int) bool {
-	return -1 < val.Cmp(low) && val.Cmp(hi) < 1
+// check if val is in the inclusive interval [low, high]
+func inRange(val *big.Int, low *big.Int, high *big.Int) bool {
+	return -1 < val.Cmp(low) && val.Cmp(high) < 1
 }
 
-var FromStringDeclarations = []ValueFromStringDeclaration{
-	fromStringDeclaration(sema.Int8Type, fromStringImplSigned(8, func(n int64) Value {
-		return NewUnmeteredInt8Value(int8(n))
-	})),
-	fromStringDeclaration(sema.Int16Type, fromStringImplSigned(16, func(n int64) Value {
-		return NewUnmeteredInt16Value(int16(n))
-	})),
-	fromStringDeclaration(sema.Int32Type, fromStringImplSigned(32, func(n int64) Value {
-		return NewUnmeteredInt32Value(int32(n))
-	})),
-	fromStringDeclaration(sema.Int64Type, fromStringImplSigned(64, func(n int64) Value {
-		return NewUnmeteredInt64Value(n)
-	})),
-	fromStringDeclaration(sema.Int128Type, fromStringImplBig(func(b *big.Int) (Value, bool) {
-		ok := inRange(b, sema.Int128TypeMinIntBig, sema.Int128TypeMaxIntBig)
-		return Int128Value{b}, ok
-	})),
-	fromStringDeclaration(sema.Int256Type, fromStringImplBig(func(b *big.Int) (Value, bool) {
-		ok := inRange(b, sema.Int256TypeMinIntBig, sema.Int256TypeMaxIntBig)
-		return Int256Value{b}, ok
-	})),
-	fromStringDeclaration(sema.IntType, fromStringImplBig(func(b *big.Int) (Value, bool) {
-		return IntValue{b}, true
-	})),
-	fromStringDeclaration(sema.UInt8Type, fromStringImplUnsigned(8, func(n uint64) Value {
-		return NewUnmeteredUInt8Value(uint8(n))
-	})),
-	fromStringDeclaration(sema.UInt16Type, fromStringImplUnsigned(16, func(n uint64) Value {
-		return NewUnmeteredUInt16Value(uint16(n))
-	})),
-	fromStringDeclaration(sema.UInt32Type, fromStringImplUnsigned(32, func(n uint64) Value {
-		return NewUnmeteredUInt32Value(uint32(n))
-	})),
-	fromStringDeclaration(sema.UInt64Type, fromStringImplUnsigned(64, func(n uint64) Value {
-		return NewUnmeteredUInt64Value(n)
-	})),
-	fromStringDeclaration(sema.UInt128Type, fromStringImplBig(func(b *big.Int) (Value, bool) {
-		ok := inRange(b, sema.UInt128TypeMinIntBig, sema.UInt128TypeMaxIntBig)
-		return UInt128Value{b}, ok
-	})),
-	fromStringDeclaration(sema.UInt256Type, fromStringImplBig(func(b *big.Int) (Value, bool) {
-		ok := inRange(b, sema.UInt256TypeMinIntBig, sema.UInt256TypeMaxIntBig)
-		return UInt256Value{b}, ok
-	})),
-	fromStringDeclaration(sema.UIntType, fromStringImplBig(func(b *big.Int) (Value, bool) {
-		return UIntValue{b}, true
-	})),
-	fromStringDeclaration(sema.Word8Type, fromStringImplUnsigned(8, func(n uint64) Value {
-		return NewUnmeteredWord8Value(uint8(n))
-	})),
-	fromStringDeclaration(sema.Word16Type, fromStringImplUnsigned(16, func(n uint64) Value {
-		return NewUnmeteredWord16Value(uint16(n))
-	})),
-	fromStringDeclaration(sema.Word32Type, fromStringImplUnsigned(32, func(n uint64) Value {
-		return NewUnmeteredWord32Value(uint32(n))
-	})),
-	fromStringDeclaration(sema.Word64Type, fromStringImplUnsigned(64, func(n uint64) Value {
-		return NewUnmeteredWord64Value(n)
-	})),
-	fromStringDeclaration(sema.Fix64Type, func(inter *Interpreter, input string) Value {
-		n, err := fixedpoint.ParseFix64(input)
-		if err != nil {
-			return NewNilValue(inter)
-		}
+var FromStringFunctionValues = func() map[string]FromStringFunctionValue {
+	declarations := []FromStringFunctionValue{
+		fromStringDeclaration(sema.Int8Type, fromStringImplSigned(8, func(n int64) Value {
+			return NewUnmeteredInt8Value(int8(n))
+		})),
+		fromStringDeclaration(sema.Int16Type, fromStringImplSigned(16, func(n int64) Value {
+			return NewUnmeteredInt16Value(int16(n))
+		})),
+		fromStringDeclaration(sema.Int32Type, fromStringImplSigned(32, func(n int64) Value {
+			return NewUnmeteredInt32Value(int32(n))
+		})),
+		fromStringDeclaration(sema.Int64Type, fromStringImplSigned(64, func(n int64) Value {
+			return NewUnmeteredInt64Value(n)
+		})),
+		fromStringDeclaration(sema.Int128Type, fromStringImplBig(func(b *big.Int) (Value, bool) {
+			ok := inRange(b, sema.Int128TypeMinIntBig, sema.Int128TypeMaxIntBig)
+			return Int128Value{b}, ok
+		})),
+		fromStringDeclaration(sema.Int256Type, fromStringImplBig(func(b *big.Int) (Value, bool) {
+			ok := inRange(b, sema.Int256TypeMinIntBig, sema.Int256TypeMaxIntBig)
+			return Int256Value{b}, ok
+		})),
+		fromStringDeclaration(sema.IntType, fromStringImplBig(func(b *big.Int) (Value, bool) {
+			return IntValue{b}, true
+		})),
+		fromStringDeclaration(sema.UInt8Type, fromStringImplUnsigned(8, func(n uint64) Value {
+			return NewUnmeteredUInt8Value(uint8(n))
+		})),
+		fromStringDeclaration(sema.UInt16Type, fromStringImplUnsigned(16, func(n uint64) Value {
+			return NewUnmeteredUInt16Value(uint16(n))
+		})),
+		fromStringDeclaration(sema.UInt32Type, fromStringImplUnsigned(32, func(n uint64) Value {
+			return NewUnmeteredUInt32Value(uint32(n))
+		})),
+		fromStringDeclaration(sema.UInt64Type, fromStringImplUnsigned(64, func(n uint64) Value {
+			return NewUnmeteredUInt64Value(n)
+		})),
+		fromStringDeclaration(sema.UInt128Type, fromStringImplBig(func(b *big.Int) (Value, bool) {
+			ok := inRange(b, sema.UInt128TypeMinIntBig, sema.UInt128TypeMaxIntBig)
+			return UInt128Value{b}, ok
+		})),
+		fromStringDeclaration(sema.UInt256Type, fromStringImplBig(func(b *big.Int) (Value, bool) {
+			ok := inRange(b, sema.UInt256TypeMinIntBig, sema.UInt256TypeMaxIntBig)
+			return UInt256Value{b}, ok
+		})),
+		fromStringDeclaration(sema.UIntType, fromStringImplBig(func(b *big.Int) (Value, bool) {
+			return UIntValue{b}, true
+		})),
+		fromStringDeclaration(sema.Word8Type, fromStringImplUnsigned(8, func(n uint64) Value {
+			return NewUnmeteredWord8Value(uint8(n))
+		})),
+		fromStringDeclaration(sema.Word16Type, fromStringImplUnsigned(16, func(n uint64) Value {
+			return NewUnmeteredWord16Value(uint16(n))
+		})),
+		fromStringDeclaration(sema.Word32Type, fromStringImplUnsigned(32, func(n uint64) Value {
+			return NewUnmeteredWord32Value(uint32(n))
+		})),
+		fromStringDeclaration(sema.Word64Type, fromStringImplUnsigned(64, func(n uint64) Value {
+			return NewUnmeteredWord64Value(n)
+		})),
+		fromStringDeclaration(sema.Fix64Type, func(inter *Interpreter, input string) Value {
+			n, err := fixedpoint.ParseFix64(input)
+			if err != nil {
+				return NewNilValue(inter)
+			}
 
-		val := NewFix64ValueWithInteger(inter, n.Int64)
-		return NewSomeValueNonCopying(inter, val)
+			val := NewFix64ValueWithInteger(inter, n.Int64)
+			return NewSomeValueNonCopying(inter, val)
 
-	}),
-	fromStringDeclaration(sema.Fix64Type, func(inter *Interpreter, input string) Value {
-		n, err := fixedpoint.ParseFix64(input)
-		if err != nil {
-			return NewNilValue(inter)
-		}
-		val := NewUFix64ValueWithInteger(inter, n.Uint64)
-		return NewSomeValueNonCopying(inter, val)
-	}),
-}
+		}),
+		fromStringDeclaration(sema.UFix64Type, func(inter *Interpreter, input string) Value {
+			n, err := fixedpoint.ParseUFix64(input)
+			if err != nil {
+				return NewNilValue(inter)
+			}
+			val := NewUFix64ValueWithInteger(inter, n.Uint64)
+			return NewSomeValueNonCopying(inter, val)
+		})}
+
+	values := make(map[string]FromStringFunctionValue, len(declarations))
+	for _, decl := range declarations {
+		// index declaration by type name
+		values[decl.parentType.String()] = decl
+	}
+
+	return values
+}()
 
 type ValueConverterDeclaration struct {
 	name         string
+	targetType   sema.TypeTag
 	convert      func(*Interpreter, Value) Value
 	min          Value
 	max          Value
@@ -2393,6 +2414,7 @@ type ValueConverterDeclaration struct {
 var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.IntTypeName,
+		targetType:   sema.IntType.Tag(),
 		functionType: sema.NumberConversionFunctionType(sema.IntType),
 		convert: func(interpreter *Interpreter, value Value) Value {
 			return ConvertInt(interpreter, value)
@@ -2400,6 +2422,7 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	},
 	{
 		name:         sema.UIntTypeName,
+		targetType:   sema.UIntType.Tag(),
 		functionType: sema.NumberConversionFunctionType(sema.UIntType),
 		convert: func(interpreter *Interpreter, value Value) Value {
 			return ConvertUInt(interpreter, value)
@@ -2642,8 +2665,15 @@ func init() {
 			continue
 		}
 
-		if _, ok := converterNames[numberType.String()]; !ok {
+		// todo use TypeID's here?
+		typeName := numberType.String()
+
+		if _, ok := converterNames[typeName]; !ok {
 			panic(fmt.Sprintf("missing converter for number type: %s", numberType))
+		}
+
+		if _, ok := FromStringFunctionValues[typeName]; !ok {
+			panic(fmt.Sprintf("missing fromString implementation for number type: %s", numberType))
 		}
 	}
 
@@ -2922,6 +2952,10 @@ var converterFunctionValues = func() []converterFunction {
 		if declaration.max != nil {
 			addMember(sema.NumberTypeMaxFieldName, declaration.max)
 		}
+
+		fromStringVal := FromStringFunctionValues[declaration.name]
+
+		addMember(sema.FromStringFunctionName, fromStringVal.hostFunction)
 
 		converterFuncValues[index] = converterFunction{
 			name:      declaration.name,
