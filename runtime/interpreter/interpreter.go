@@ -2300,13 +2300,20 @@ func fromStringImplBig(convert func(*big.Int) (Value, bool)) func(*Interpreter, 
 func inRange(val *big.Int, low *big.Int, hi *big.Int) bool {
 	return -1 < val.Cmp(low) && val.Cmp(hi) < 1
 }
-func todoDefaultImpl(_ *Interpreter, v Value) Value { return v }
 
 var FromStringDeclarations = []ValueFromStringDeclaration{
-	fromStringDeclaration(sema.Int8Type, fromStringImplSigned(8, func(n int64) Value { return NewUnmeteredInt8Value(int8(n)) })),
-	fromStringDeclaration(sema.Int16Type, fromStringImplSigned(16, func(n int64) Value { return NewUnmeteredInt16Value(int16(n)) })),
-	fromStringDeclaration(sema.Int32Type, fromStringImplSigned(32, func(n int64) Value { return NewUnmeteredInt32Value(int32(n)) })),
-	fromStringDeclaration(sema.Int64Type, fromStringImplSigned(64, func(n int64) Value { return NewUnmeteredInt64Value(n) })),
+	fromStringDeclaration(sema.Int8Type, fromStringImplSigned(8, func(n int64) Value {
+		return NewUnmeteredInt8Value(int8(n))
+	})),
+	fromStringDeclaration(sema.Int16Type, fromStringImplSigned(16, func(n int64) Value {
+		return NewUnmeteredInt16Value(int16(n))
+	})),
+	fromStringDeclaration(sema.Int32Type, fromStringImplSigned(32, func(n int64) Value {
+		return NewUnmeteredInt32Value(int32(n))
+	})),
+	fromStringDeclaration(sema.Int64Type, fromStringImplSigned(64, func(n int64) Value {
+		return NewUnmeteredInt64Value(n)
+	})),
 	fromStringDeclaration(sema.Int128Type, fromStringImplBig(func(b *big.Int) (Value, bool) {
 		ok := inRange(b, sema.Int128TypeMinIntBig, sema.Int128TypeMaxIntBig)
 		return Int128Value{b}, ok
@@ -2341,10 +2348,18 @@ var FromStringDeclarations = []ValueFromStringDeclaration{
 	fromStringDeclaration(sema.UIntType, fromStringImplBig(func(b *big.Int) (Value, bool) {
 		return UIntValue{b}, true
 	})),
-	fromStringDeclaration(sema.Word8Type, fromStringImplUnsigned(8, func(n uint64) Value { return NewUnmeteredWord8Value(uint8(n)) })),
-	fromStringDeclaration(sema.Word16Type, fromStringImplUnsigned(16, func(n uint64) Value { return NewUnmeteredWord16Value(uint16(n)) })),
-	fromStringDeclaration(sema.Word32Type, fromStringImplUnsigned(32, func(n uint64) Value { return NewUnmeteredWord32Value(uint32(n)) })),
-	fromStringDeclaration(sema.Word64Type, fromStringImplUnsigned(64, func(n uint64) Value { return NewUnmeteredWord64Value(n) })),
+	fromStringDeclaration(sema.Word8Type, fromStringImplUnsigned(8, func(n uint64) Value {
+		return NewUnmeteredWord8Value(uint8(n))
+	})),
+	fromStringDeclaration(sema.Word16Type, fromStringImplUnsigned(16, func(n uint64) Value {
+		return NewUnmeteredWord16Value(uint16(n))
+	})),
+	fromStringDeclaration(sema.Word32Type, fromStringImplUnsigned(32, func(n uint64) Value {
+		return NewUnmeteredWord32Value(uint32(n))
+	})),
+	fromStringDeclaration(sema.Word64Type, fromStringImplUnsigned(64, func(n uint64) Value {
+		return NewUnmeteredWord64Value(n)
+	})),
 	fromStringDeclaration(sema.Fix64Type, func(inter *Interpreter, input string) Value {
 		n, err := fixedpoint.ParseFix64(input)
 		if err != nil {
