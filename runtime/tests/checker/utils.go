@@ -76,7 +76,7 @@ func ParseAndCheckWithOptionsAndMemoryMetering(
 	}
 
 	program, err := parser.ParseProgram(code, memoryGauge)
-	if !options.IgnoreParseError && !assert.NoError(t, err) {
+	if !(options.IgnoreParseError || assert.NoError(t, err)) {
 		var sb strings.Builder
 		location := options.Location
 		printErr := pretty.NewErrorPrettyPrinter(&sb, true).

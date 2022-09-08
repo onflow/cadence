@@ -21,8 +21,10 @@ package parser
 import (
 	"fmt"
 	"math/big"
+	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -1512,6 +1514,24 @@ func TestParseImportDeclaration(t *testing.T) {
 		)
 	})
 
+	t.Run("two identifiers, address location, repeated commas", func(t *testing.T) {
+		t.Parallel()
+
+		result, errs := ParseDeclarations(`import foo, , bar from 0xaaaa`, nil)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Pos:     ast.Position{Line: 1, Column: 12, Offset: 12},
+					Message: `expected identifier or keyword "from", got ','`,
+				},
+			},
+			errs,
+		)
+		var expected []ast.Declaration
+
+		utils.AssertEqualWithDiff(t, expected, result)
+	})
+
 	t.Run("no identifiers, identifier location", func(t *testing.T) {
 
 		t.Parallel()
@@ -1535,6 +1555,19 @@ func TestParseImportDeclaration(t *testing.T) {
 		)
 	})
 
+	t.Run("unexpected token as identifier", func(t *testing.T) {
+		t.Parallel()
+
+		_, errs := ParseDeclarations(`import foo, bar, baz, @ from 0x42`, nil)
+
+		utils.AssertEqualWithDiff(t, []error{
+			&SyntaxError{
+				Pos:     ast.Position{Line: 1, Column: 22, Offset: 22},
+				Message: `unexpected token in import declaration: got '@', expected keyword "from" or ','`,
+			},
+		}, errs)
+
+	})
 	t.Run("from keyword as second identifier", func(t *testing.T) {
 
 		t.Parallel()
@@ -1727,6 +1760,17 @@ func TestParseEvent(t *testing.T) {
 			},
 			result,
 		)
+	})
+
+	t.Run("invalid event name", func(t *testing.T) {
+		_, errs := ParseDeclarations(`event continue {}`, nil)
+
+		utils.AssertEqualWithDiff(t, []error{
+			&SyntaxError{
+				Pos:     ast.Position{Line: 1, Column: 6, Offset: 6},
+				Message: "expected identifier after start of event declaration, got keyword continue",
+			},
+		}, errs)
 	})
 }
 
@@ -2227,6 +2271,63 @@ func TestParseCompositeDeclaration(t *testing.T) {
 	})
 }
 
+func TestParseInvalidCompositeFunctionWithSelfParameter(t *testing.T) {
+
+	t.Parallel()
+
+	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+		t.Run(kind.Keyword(), func(t *testing.T) {
+
+			code := fmt.Sprintf(`%s Foo { fun test(_ self: Int) {} }`, kind.Keyword())
+
+			selfKeywordPos := strings.Index(code, "self")
+
+			expectedErrPos := ast.Position{Line: 1, Column: selfKeywordPos, Offset: selfKeywordPos}
+
+			_, err := ParseDeclarations(
+				code,
+				nil,
+			)
+
+			utils.AssertEqualWithDiff(
+				t,
+				[]error{
+					&SyntaxError{
+						Pos:     expectedErrPos,
+						Message: "expected identifier for parameter name, got keyword self",
+					},
+				},
+				err,
+			)
+		})
+	}
+}
+
+func TestParseInvalidParameterWithoutLabel(t *testing.T) {
+	t.Parallel()
+
+	_, errs := ParseDeclarations(`pub fun foo(continue: Int) {}`, nil)
+
+	utils.AssertEqualWithDiff(t, []error{
+		&SyntaxError{
+			Pos:     ast.Position{Line: 1, Column: 12, Offset: 12},
+			Message: "expected identifier for argument label or parameter name, got keyword continue",
+		},
+	}, errs)
+}
+
+func TestParseParametersWithExtraLabels(t *testing.T) {
+	t.Parallel()
+
+	_, errs := ParseDeclarations(`pub fun foo(_ foo: String, label fable table: Int) {}`, nil)
+
+	utils.AssertEqualWithDiff(t, []error{
+		&SyntaxError{
+			Pos:     ast.Position{Line: 1, Column: 39, Offset: 39},
+			Message: "expected ':' after parameter name, got identifier",
+		},
+	}, errs)
+}
 func TestParseInterfaceDeclaration(t *testing.T) {
 
 	t.Parallel()
@@ -2462,6 +2563,17 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 			},
 			result,
 		)
+	})
+
+	t.Run("invalid interface name", func(t *testing.T) {
+		_, errs := ParseDeclarations(`pub struct interface continue {}`, nil)
+
+		utils.AssertEqualWithDiff(t, []error{
+			&SyntaxError{
+				Pos:     ast.Position{Line: 1, Column: 21, Offset: 21},
+				Message: "expected identifier following struct declaration, got keyword continue",
+			},
+		}, errs)
 	})
 
 	t.Run("enum, two cases one one line", func(t *testing.T) {
@@ -3308,6 +3420,31 @@ func TestParseTransactionDeclaration(t *testing.T) {
 				},
 			},
 			result.Declarations(),
+		)
+	})
+
+	t.Run("invalid identifiers instead of special function declarations", func(t *testing.T) {
+		code := `
+		transaction {
+			var x: Int
+
+			uwu(signer: AuthAccount) {}
+
+			pre {
+				x > 1
+			}
+			post {
+				x == 2
+			}
+
+		}
+		`
+
+		_, errs := ParseDeclarations(code, nil)
+
+		utils.AssertEqualWithDiff(t,
+			`unexpected identifier, expected keyword "prepare" or "execute", got "uwu"`,
+			errs[0].Error(),
 		)
 	})
 }
@@ -5162,6 +5299,58 @@ func TestParseCompositeDeclarationWithSemicolonSeparatedMembers(t *testing.T) {
 		},
 		result.Declarations(),
 	)
+}
+
+func TestParseInvalidCompositeFunctionNames(t *testing.T) {
+
+	t.Parallel()
+
+	interfacePossibilities := []bool{true, false}
+
+	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+		for _, isInterface := range interfacePossibilities {
+
+			interfaceKeyword := ""
+			if isInterface {
+				interfaceKeyword = "interface"
+			}
+
+			body := "{}"
+			if isInterface {
+				body = ""
+			}
+
+			testName := fmt.Sprintf("%s_%s", kind.Keyword(), interfaceKeyword)
+
+			t.Run(testName, func(t *testing.T) {
+
+				_, err := ParseProgram(
+					fmt.Sprintf(
+						`
+                          %[1]s %[2]s Test {
+                              fun init() %[3]s
+                              fun destroy() %[3]s
+                          }
+                        `,
+						kind.Keyword(),
+						interfaceKeyword,
+						body,
+					),
+					nil,
+				)
+
+				errs, ok := err.(Error)
+				assert.True(t, ok, "Parser error does not conform to parser.Error")
+				syntaxErr := errs.Errors[0].(*SyntaxError)
+
+				utils.AssertEqualWithDiff(
+					t,
+					"expected identifier after start of function declaration, got keyword init",
+					syntaxErr.Message,
+				)
+			})
+		}
+	}
 }
 
 // TODO:

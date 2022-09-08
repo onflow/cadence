@@ -263,52 +263,6 @@ func TestCheckInvalidCompositeFieldNames(t *testing.T) {
 	}
 }
 
-func TestCheckInvalidCompositeFunctionNames(t *testing.T) {
-
-	t.Parallel()
-
-	interfacePossibilities := []bool{true, false}
-
-	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
-		for _, isInterface := range interfacePossibilities {
-
-			interfaceKeyword := ""
-			if isInterface {
-				interfaceKeyword = "interface"
-			}
-
-			body := "{}"
-			if isInterface {
-				body = ""
-			}
-
-			testName := fmt.Sprintf("%s_%s", kind.Keyword(), interfaceKeyword)
-
-			t.Run(testName, func(t *testing.T) {
-
-				_, err := ParseAndCheck(t,
-					fmt.Sprintf(
-						`
-                          %[1]s %[2]s Test {
-                              fun init() %[3]s
-                              fun destroy() %[3]s
-                          }
-                        `,
-						kind.Keyword(),
-						interfaceKeyword,
-						body,
-					),
-				)
-
-				errs := ExpectCheckerErrors(t, err, 2)
-
-				assert.IsType(t, &sema.InvalidNameError{}, errs[0])
-				assert.IsType(t, &sema.InvalidNameError{}, errs[1])
-			})
-		}
-	}
-}
-
 func TestCheckInvalidCompositeRedeclaringFields(t *testing.T) {
 
 	t.Parallel()
@@ -1434,56 +1388,6 @@ func TestCheckInvalidIncompatibleSameCompositeTypes(t *testing.T) {
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			})
 		}
-	}
-}
-
-func TestCheckInvalidCompositeFunctionWithSelfParameter(t *testing.T) {
-
-	t.Parallel()
-
-	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
-		t.Run(kind.Keyword(), func(t *testing.T) {
-
-			_, err := ParseAndCheck(t,
-				fmt.Sprintf(
-					`
-                      %s Foo {
-                          fun test(self: Int) {}
-                      }
-                    `,
-					kind.Keyword(),
-				),
-			)
-
-			errs := ExpectCheckerErrors(t, err, 1)
-
-			assert.IsType(t, &sema.RedeclarationError{}, errs[0])
-		})
-	}
-}
-
-func TestCheckInvalidCompositeInitializerWithSelfParameter(t *testing.T) {
-
-	t.Parallel()
-
-	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
-		t.Run(kind.Keyword(), func(t *testing.T) {
-
-			_, err := ParseAndCheck(t,
-				fmt.Sprintf(
-					`
-                      %s Foo {
-                          init(self: Int) {}
-                      }
-                    `,
-					kind.Keyword(),
-				),
-			)
-
-			errs := ExpectCheckerErrors(t, err, 1)
-
-			assert.IsType(t, &sema.RedeclarationError{}, errs[0])
-		})
 	}
 }
 
