@@ -159,7 +159,11 @@ func parseStatement(p *parser) (ast.Statement, error) {
 	}
 }
 
-func parseFunctionDeclarationOrFunctionExpressionStatement(p *parser, purity ast.FunctionPurity, purityPos *ast.Position) (ast.Statement, error) {
+func parseFunctionDeclarationOrFunctionExpressionStatement(
+    p *parser,
+    purity ast.FunctionPurity,
+    purityPos *ast.Position,
+) (ast.Statement, error) {
 
 	startPos := *ast.EarlierPosition(&p.current.StartPos, purityPos)
 
