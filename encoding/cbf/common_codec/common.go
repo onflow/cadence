@@ -486,4 +486,3 @@ func (m *MockWriter) Write(p []byte) (n int, err error) {
 
 	return 0, m.ErrorToReturn
 }
-

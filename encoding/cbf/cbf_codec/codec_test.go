@@ -232,8 +232,8 @@ func TestCadenceBinaryFormatCodecWriteErrorVarious(t *testing.T) {
 
 		value := cadence.NewArray([]cadence.Value{}).
 			WithType(cadence.VariableSizedArrayType{
-			ElementType: cadence.NeverType{},
-		})
+				ElementType: cadence.NeverType{},
+			})
 
 		err := encoder.EncodeValue(value)
 		assert.Equal(t, writer.ErrorToReturn, err)
@@ -251,8 +251,8 @@ func TestCadenceBinaryFormatCodecWriteErrorVarious(t *testing.T) {
 		value := cadence.NewArray([]cadence.Value{
 			cadence.Void{},
 		}).WithType(cadence.VariableSizedArrayType{
-				ElementType: cadence.VoidType{},
-			})
+			ElementType: cadence.VoidType{},
+		})
 
 		err := encoder.EncodeValue(value)
 		assert.Equal(t, writer.ErrorToReturn, err)
@@ -285,7 +285,7 @@ func TestCadenceBinaryFormatCodecWriteErrorVarious(t *testing.T) {
 
 		value := cadence.NewDictionary([]cadence.KeyValuePair{}).
 			WithType(cadence.DictionaryType{
-				KeyType: cadence.NeverType{},
+				KeyType:     cadence.NeverType{},
 				ElementType: cadence.NeverType{},
 			})
 
@@ -309,7 +309,7 @@ func TestCadenceBinaryFormatCodecWriteErrorVarious(t *testing.T) {
 			},
 		}).
 			WithType(cadence.DictionaryType{
-				KeyType: cadence.VoidType{},
+				KeyType:     cadence.VoidType{},
 				ElementType: cadence.VoidType{},
 			})
 
@@ -333,7 +333,7 @@ func TestCadenceBinaryFormatCodecWriteErrorVarious(t *testing.T) {
 			},
 		}).
 			WithType(cadence.DictionaryType{
-				KeyType: cadence.VoidType{},
+				KeyType:     cadence.VoidType{},
 				ElementType: cadence.VoidType{},
 			})
 
@@ -2188,7 +2188,6 @@ func TestCadenceBinaryFormatCodecArray(t *testing.T) {
 		assert.ErrorContains(t, err, "unknown array type")
 	})
 
-
 	t.Run("constant array length != size", func(t *testing.T) {
 		t.Parallel()
 
@@ -2196,14 +2195,13 @@ func TestCadenceBinaryFormatCodecArray(t *testing.T) {
 
 		value := cadence.NewArray([]cadence.Value{}).
 			WithType(cadence.ConstantSizedArrayType{
-			Size:        1,
-			ElementType: cadence.NeverType{},
-		})
+				Size:        1,
+				ElementType: cadence.NeverType{},
+			})
 
 		err := encoder.Encode(value)
 		assert.ErrorContains(t, err, "constant size array size=1 but has 0 elements")
 	})
-
 
 	t.Run("constant type", func(t *testing.T) {
 		t.Parallel()
@@ -3796,7 +3794,7 @@ func (m *MockCadenceValue) String() string {
 }
 
 type MockArrayType struct {
-	MockID string
+	MockID      string
 	MockElement cadence.Type
 }
 

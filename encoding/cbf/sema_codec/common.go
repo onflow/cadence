@@ -2,8 +2,9 @@ package sema_codec
 
 // TODO add protections against regressions from changes to enum
 // TODO consider putting simple and numeric types in a specific ranges (128+, 64-127)
-//      that turns certain bits into flags for the presence of those types, which can be calculated very fast
-//      (check the leftmost bit first, then the next bit, in that order, or there's overlap)
+//
+//	that turns certain bits into flags for the presence of those types, which can be calculated very fast
+//	(check the leftmost bit first, then the next bit, in that order, or there's overlap)
 type EncodedSema byte
 
 const (
