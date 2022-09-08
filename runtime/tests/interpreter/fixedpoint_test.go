@@ -592,3 +592,10 @@ func TestInterpretFixedPointMinMax(t *testing.T) {
 		})
 	}
 }
+
+func TestStringFixedpointConversion(t *testing.T) {
+	testcases := []string{
+		"-1.23",
+		"4.20",
+	}
+}
