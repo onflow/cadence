@@ -47,7 +47,6 @@ type Option func(*Decoder)
 // WithAllowUnstructuredStaticTypes returns a new Decoder Option
 // which enables or disables if the decoding of a static type
 // as a type ID (cadence.TypeID) is allowed
-//
 func WithAllowUnstructuredStaticTypes(allow bool) Option {
 	return func(decoder *Decoder) {
 		decoder.allowUnstructuredStaticTypes = allow

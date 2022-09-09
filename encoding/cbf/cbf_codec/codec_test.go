@@ -1663,7 +1663,7 @@ func TestCadenceBinaryFormatCodecNumber(t *testing.T) {
 			t,
 			common_codec.Concat(
 				[]byte{byte(cbf_codec.EncodedValueUInt8)},
-				[]byte{byte(i)},
+				[]byte{i},
 			),
 			buffer.Bytes(), "encoded bytes differ")
 

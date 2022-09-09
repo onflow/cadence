@@ -811,7 +811,10 @@ func EncodeMap[V sema.Type](e *SemaEncoder, m map[common.TypeID]V, encodeFn func
 		return
 	}
 
+	// NOTE: Ignoring `maprangecheck` lint rule because map is only iterated over to collect its keys for sorting.
+	//       So the result is still deterministic.
 	keys := make([]string, 0, len(m))
+	//nolint:maprangecheck
 	for k := range m {
 		keys = append(keys, string(k))
 	}
