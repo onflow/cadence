@@ -16,39 +16,36 @@
  * limitations under the License.
  */
 
-package sema
+package interpreter
 
-import (
-	"github.com/onflow/cadence/runtime/ast"
-)
-
-func (checker *Checker) VisitDestroyExpression(expression *ast.DestroyExpression) (resultType Type) {
-	resultType = VoidType
-
-	valueType := checker.VisitExpression(expression.Expression, nil)
-
-	checker.recordResourceInvalidation(
-		expression.Expression,
-		valueType,
-		ResourceInvalidationKindDestroy,
-	)
-
-	// The destruction of any resource type (even compound resource types)
-
-	if valueType.IsInvalidType() {
-		return
-	}
-
-	if !valueType.IsResourceType() {
-
-		checker.report(
-			&InvalidDestructionError{
-				Range: ast.NewRangeFromPositioned(checker.memoryGauge, expression.Expression),
-			},
-		)
-
-		return
-	}
-
-	return
+type StatementResult interface {
+	isStatementResult()
 }
+
+type controlResult interface {
+	StatementResult
+	isControlResult()
+}
+
+type BreakResult struct{}
+
+func (BreakResult) isStatementResult() {}
+func (BreakResult) isControlResult()   {}
+
+type ContinueResult struct{}
+
+func (ContinueResult) isStatementResult() {}
+func (ContinueResult) isControlResult()   {}
+
+type ReturnResult struct {
+	Value
+}
+
+func (ReturnResult) isStatementResult() {}
+func (ReturnResult) isControlResult()   {}
+
+type ExpressionResult struct {
+	Value
+}
+
+func (ExpressionResult) isStatementResult() {}

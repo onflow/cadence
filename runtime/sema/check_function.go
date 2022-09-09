@@ -21,7 +21,6 @@ package sema
 import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
 )
 
 func PurityFromAnnotation(purity ast.FunctionPurity) FunctionPurity {
@@ -32,8 +31,8 @@ func PurityFromAnnotation(purity ast.FunctionPurity) FunctionPurity {
 
 }
 
-func (checker *Checker) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration) ast.Repr {
-	return checker.visitFunctionDeclaration(
+func (checker *Checker) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration) (_ struct{}) {
+	checker.visitFunctionDeclaration(
 		declaration,
 		functionDeclarationOptions{
 			mustExit:          true,
@@ -41,9 +40,11 @@ func (checker *Checker) VisitFunctionDeclaration(declaration *ast.FunctionDeclar
 			checkResourceLoss: true,
 		},
 	)
+
+	return
 }
 
-func (checker *Checker) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunctionDeclaration) ast.Repr {
+func (checker *Checker) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunctionDeclaration) struct{} {
 	return checker.VisitFunctionDeclaration(declaration.FunctionDeclaration)
 }
 
@@ -64,7 +65,7 @@ type functionDeclarationOptions struct {
 func (checker *Checker) visitFunctionDeclaration(
 	declaration *ast.FunctionDeclaration,
 	options functionDeclarationOptions,
-) ast.Repr {
+) {
 
 	checker.checkDeclarationAccessModifier(
 		declaration.Access,
@@ -95,8 +96,6 @@ func (checker *Checker) visitFunctionDeclaration(
 		nil,
 		options.checkResourceLoss,
 	)
-
-	return nil
 }
 
 func (checker *Checker) declareFunctionDeclaration(
@@ -323,11 +322,6 @@ func (checker *Checker) declareParameters(
 	}
 }
 
-func (checker *Checker) VisitFunctionBlock(functionBlock *ast.FunctionBlock) ast.Repr {
-	// NOTE: see visitFunctionBlock
-	panic(errors.NewUnreachableError())
-}
-
 func (checker *Checker) visitWithPostConditions(postConditions *ast.Conditions, returnType Type, body func()) {
 
 	var rewrittenPostConditions *PostConditionsRewrite
@@ -422,7 +416,7 @@ func (checker *Checker) declareBefore() {
 	// TODO: record occurrence – but what position?
 }
 
-func (checker *Checker) VisitFunctionExpression(expression *ast.FunctionExpression) ast.Repr {
+func (checker *Checker) VisitFunctionExpression(expression *ast.FunctionExpression) Type {
 
 	// TODO: infer
 	functionType := checker.functionType(
@@ -458,7 +452,6 @@ func (checker *Checker) VisitFunctionExpression(expression *ast.FunctionExpressi
 
 // checkFieldMembersInitialized checks that all fields that were required
 // to be initialized (as stated in the initialization info) have been initialized.
-//
 func (checker *Checker) checkFieldMembersInitialized(info *InitializationInfo) {
 	for pair := info.FieldMembers.Oldest(); pair != nil; pair = pair.Next() {
 		member := pair.Key

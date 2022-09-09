@@ -20,7 +20,7 @@ package sema
 
 import "github.com/onflow/cadence/runtime/ast"
 
-func (checker *Checker) VisitArrayExpression(expression *ast.ArrayExpression) ast.Repr {
+func (checker *Checker) VisitArrayExpression(expression *ast.ArrayExpression) Type {
 
 	// visit all elements, ensure they are all the same type
 

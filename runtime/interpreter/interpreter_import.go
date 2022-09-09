@@ -26,7 +26,7 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-func (interpreter *Interpreter) VisitImportDeclaration(declaration *ast.ImportDeclaration) ast.Repr {
+func (interpreter *Interpreter) VisitImportDeclaration(declaration *ast.ImportDeclaration) StatementResult {
 
 	resolvedLocations := interpreter.Program.Elaboration.ImportDeclarationsResolvedLocations[declaration]
 

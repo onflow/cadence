@@ -31,7 +31,7 @@ import (
 // and that the members and nested declarations for the interface type were declared
 // through `declareInterfaceMembers`.
 //
-func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaration) ast.Repr {
+func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaration) (_ struct{}) {
 
 	const kind = ContainerKindInterface
 
@@ -115,7 +115,7 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 	// DON'T use `nestedDeclarations`, because of non-deterministic order
 
 	for _, nestedInterface := range declaration.Members.Interfaces() {
-		nestedInterface.Accept(checker)
+		ast.AcceptDeclaration[struct{}](nestedInterface, checker)
 	}
 
 	for _, nestedComposite := range declaration.Members.Composites() {
@@ -125,7 +125,7 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 		checker.visitCompositeDeclaration(nestedComposite, kind)
 	}
 
-	return nil
+	return
 }
 
 // declareInterfaceNestedTypes declares the types nested in an interface.

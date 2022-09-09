@@ -153,7 +153,7 @@ func (interpreter *Interpreter) invokeInterpretedFunctionActivated(
 	return interpreter.visitFunctionBody(
 		function.BeforeStatements,
 		function.PreConditions,
-		func() controlReturn {
+		func() StatementResult {
 			return interpreter.visitStatements(function.Statements)
 		},
 		function.PostConditions,

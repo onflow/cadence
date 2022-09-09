@@ -192,6 +192,11 @@ type MemberResolver struct {
 	) *Member
 }
 
+// supertype of interfaces and composites
+type NominalType interface {
+	Type
+	MemberMap() *StringMemberOrderedMap
+}
 
 // ContainedType is a type which might have a container type
 //
@@ -3418,6 +3423,13 @@ func init() {
 		StringTypeEncodeHexFunctionDocString,
 	))
 
+	addMember(NewUnmeteredPublicFunctionMember(
+		functionType,
+		StringTypeFromUtf8FunctionName,
+		StringTypeFromUtf8FunctionType,
+		StringTypeFromUtf8FunctionDocString,
+	))
+
 	BaseValueActivation.Set(
 		typeName,
 		baseFunctionVariable(
@@ -3441,6 +3453,21 @@ var StringTypeEncodeHexFunctionType = &FunctionType{
 	},
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		StringType,
+	),
+}
+
+var StringTypeFromUtf8FunctionType = &FunctionType{
+	Parameters: []*Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "bytes",
+			TypeAnnotation: NewTypeAnnotation(ByteArrayType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&OptionalType{
+			Type: StringType,
+		},
 	),
 }
 
