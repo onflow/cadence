@@ -42,20 +42,6 @@ func FuzzCadenceBinaryFormatDecodingNoPanic(f *testing.F) {
 	})
 }
 
-func FuzzCadenceBinaryFormatEncodingNoError(f *testing.F) {
-	f.Add([]byte{byte(cbf_codec.EncodedValueVoid)})
-
-	f.Fuzz(func(t *testing.T, encodedBytes []byte) {
-		v, err := cbf_codec.DecodeValue(nil, encodedBytes)
-		if err != nil {
-			t.Skip()
-		}
-
-		_, err = cbf_codec.EncodeValue(v)
-		require.NoError(t, err, "encode error")
-	})
-}
-
 func TestFoo(t *testing.T) {
 	t.Skip()
 	// t.SetTimeout(1 * time.Second) // TODO when this lands: https://github.com/golang/go/issues/48157
