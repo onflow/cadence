@@ -41,7 +41,7 @@ func BenchmarkParseDeploy(b *testing.B) {
 			builder.WriteString(strconv.Itoa(rand.Intn(math.MaxUint8)))
 		}
 
-		transaction := fmt.Sprintf(`
+		transaction := []byte(fmt.Sprintf(`
               transaction {
                 execute {
                   AuthAccount(publicKeys: [], code: [%s])
@@ -49,7 +49,7 @@ func BenchmarkParseDeploy(b *testing.B) {
               }
             `,
 			builder.String(),
-		)
+		))
 
 		b.ResetTimer()
 
@@ -68,7 +68,7 @@ func BenchmarkParseDeploy(b *testing.B) {
 			builder.WriteString(fmt.Sprintf("%02x", i))
 		}
 
-		transaction := fmt.Sprintf(`
+		transaction := []byte(fmt.Sprintf(`
               transaction {
                 execute {
                   AuthAccount(publicKeys: [], code: "%s".decodeHex())
@@ -76,7 +76,7 @@ func BenchmarkParseDeploy(b *testing.B) {
               }
             `,
 			builder.String(),
-		)
+		))
 
 		b.ResetTimer()
 
@@ -198,12 +198,14 @@ func (g *testMemoryGauge) MeterMemory(usage common.MemoryUsage) error {
 
 func BenchmarkParseFungibleToken(b *testing.B) {
 
+	code := []byte(fungibleTokenContract)
+
 	b.Run("Without memory metering", func(b *testing.B) {
 		b.ReportAllocs()
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
-			_, err := ParseProgram(fungibleTokenContract, nil)
+			_, err := ParseProgram(code, nil)
 			if err != nil {
 				b.Fatal(err)
 			}
@@ -219,7 +221,7 @@ func BenchmarkParseFungibleToken(b *testing.B) {
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
-			_, err := ParseProgram(fungibleTokenContract, meter)
+			_, err := ParseProgram(code, meter)
 			if err != nil {
 				b.Fatal(err)
 			}

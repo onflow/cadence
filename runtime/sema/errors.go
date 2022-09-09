@@ -77,7 +77,7 @@ func (e *InvalidPragmaError) Error() string {
 
 type CheckerError struct {
 	Location common.Location
-	Codes    map[common.Location]string
+	Codes    map[common.Location][]byte
 	Errors   []error
 }
 
@@ -91,7 +91,7 @@ func (e CheckerError) Error() string {
 	sb.WriteString("Checking failed:\n")
 	codes := e.Codes
 	if codes == nil {
-		codes = map[common.Location]string{}
+		codes = map[common.Location][]byte{}
 	}
 	printErr := pretty.NewErrorPrettyPrinter(&sb, false).
 		PrettyPrintError(e, e.Location, codes)

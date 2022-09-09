@@ -36,7 +36,7 @@ func newUnmeteredInMemoryStorage() interpreter.InMemoryStorage {
 
 func testInterpreter(t *testing.T, code string, valueDeclaration StandardLibraryValue) *interpreter.Interpreter {
 	program, err := parser.ParseProgram(
-		code,
+		[]byte(code),
 		nil,
 	)
 	require.NoError(t, err)

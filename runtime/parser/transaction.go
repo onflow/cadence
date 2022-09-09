@@ -81,7 +81,9 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 	p.skipSpaceAndComments(true)
 	if p.current.Is(lexer.TokenIdentifier) {
 
-		switch p.current.Value {
+		keyword := p.currentTokenSource()
+
+		switch string(keyword) {
 		case keywordPrepare:
 			identifier := p.tokenToIdentifier(p.current)
 			// Skip the `prepare` keyword
@@ -102,7 +104,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 				"unexpected identifier, expected keyword %q or %q, got %q",
 				keywordPrepare,
 				keywordExecute,
-				p.current.Value,
+				keyword,
 			)
 		}
 	}
@@ -113,7 +115,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 
 	if execute == nil {
 		p.skipSpaceAndComments(true)
-		if p.current.IsString(lexer.TokenIdentifier, keywordPre) {
+		if p.mustToken(p.current, lexer.TokenIdentifier, keywordPre) {
 			// Skip the `pre` keyword
 			p.next()
 			conditions, err := parseConditions(p, ast.ConditionKindPre)
@@ -138,7 +140,9 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 
 		switch p.current.Type {
 		case lexer.TokenIdentifier:
-			switch p.current.Value {
+
+			keyword := p.currentTokenSource()
+			switch string(keyword) {
 			case keywordExecute:
 				if execute != nil {
 					return nil, p.syntaxError("unexpected second %q block", keywordExecute)
@@ -168,7 +172,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 					"unexpected identifier, expected keyword %q or %q, got %q",
 					keywordExecute,
 					keywordPost,
-					p.current.Value,
+					keyword,
 				)
 			}
 
@@ -217,7 +221,7 @@ func parseTransactionFields(p *parser) (fields []*ast.FieldDeclaration, err erro
 			return
 
 		case lexer.TokenIdentifier:
-			switch p.current.Value {
+			switch string(p.currentTokenSource()) {
 			case keywordLet, keywordVar:
 				field, err := parseFieldWithVariableKind(p, ast.AccessNotSpecified, nil, docString)
 				if err != nil {
