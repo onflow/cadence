@@ -31,6 +31,10 @@ type Compiler struct {
 	locals      []*Local
 }
 
+var _ ast.DeclarationVisitor[ir.Stmt] = &Compiler{}
+var _ ast.StatementVisitor[ir.Stmt] = &Compiler{}
+var _ ast.ExpressionVisitor[ir.Expr] = &Compiler{}
+
 func NewCompiler(checker *sema.Checker) *Compiler {
 	return &Compiler{
 		Checker:     checker,
@@ -56,49 +60,49 @@ func (compiler *Compiler) setLocal(name string, variable *Local) {
 	compiler.activations.Set(name, variable)
 }
 
-func (compiler *Compiler) VisitReturnStatement(statement *ast.ReturnStatement) ast.Repr {
-	exp := statement.Expression.Accept(compiler).(ir.Expr)
+func (compiler *Compiler) VisitReturnStatement(statement *ast.ReturnStatement) ir.Stmt {
+	exp := ast.AcceptExpression[ir.Expr](statement.Expression, compiler)
 	return &ir.Return{
 		Exp: exp,
 	}
 }
 
-func (compiler *Compiler) VisitBreakStatement(_ *ast.BreakStatement) ast.Repr {
+func (compiler *Compiler) VisitBreakStatement(_ *ast.BreakStatement) ir.Stmt {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (compiler *Compiler) VisitContinueStatement(_ *ast.ContinueStatement) ast.Repr {
+func (compiler *Compiler) VisitContinueStatement(_ *ast.ContinueStatement) ir.Stmt {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (compiler *Compiler) VisitIfStatement(_ *ast.IfStatement) ast.Repr {
+func (compiler *Compiler) VisitIfStatement(_ *ast.IfStatement) ir.Stmt {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (compiler *Compiler) VisitWhileStatement(_ *ast.WhileStatement) ast.Repr {
+func (compiler *Compiler) VisitWhileStatement(_ *ast.WhileStatement) ir.Stmt {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (compiler *Compiler) VisitForStatement(_ *ast.ForStatement) ast.Repr {
+func (compiler *Compiler) VisitForStatement(_ *ast.ForStatement) ir.Stmt {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (compiler *Compiler) VisitEmitStatement(_ *ast.EmitStatement) ast.Repr {
+func (compiler *Compiler) VisitEmitStatement(_ *ast.EmitStatement) ir.Stmt {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (compiler *Compiler) VisitSwitchStatement(_ *ast.SwitchStatement) ast.Repr {
+func (compiler *Compiler) VisitSwitchStatement(_ *ast.SwitchStatement) ir.Stmt {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (compiler *Compiler) VisitVariableDeclaration(declaration *ast.VariableDeclaration) ast.Repr {
+func (compiler *Compiler) VisitVariableDeclaration(declaration *ast.VariableDeclaration) ir.Stmt {
 
 	// TODO: potential storage removal
 	// TODO: copy and convert
@@ -108,7 +112,7 @@ func (compiler *Compiler) VisitVariableDeclaration(declaration *ast.VariableDecl
 	targetType := compiler.Checker.Elaboration.VariableDeclarationTypes[declaration].TargetType
 	valType := compileValueType(targetType)
 	local := compiler.declareLocal(identifier, valType)
-	exp := declaration.Value.Accept(compiler).(ir.Expr)
+	exp := ast.AcceptExpression[ir.Expr](declaration.Value, compiler)
 
 	return &ir.StoreLocal{
 		LocalIndex: local.Index,
@@ -116,32 +120,32 @@ func (compiler *Compiler) VisitVariableDeclaration(declaration *ast.VariableDecl
 	}
 }
 
-func (compiler *Compiler) VisitAssignmentStatement(_ *ast.AssignmentStatement) ast.Repr {
+func (compiler *Compiler) VisitAssignmentStatement(_ *ast.AssignmentStatement) ir.Stmt {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (compiler *Compiler) VisitSwapStatement(_ *ast.SwapStatement) ast.Repr {
+func (compiler *Compiler) VisitSwapStatement(_ *ast.SwapStatement) ir.Stmt {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (compiler *Compiler) VisitExpressionStatement(_ *ast.ExpressionStatement) ast.Repr {
+func (compiler *Compiler) VisitExpressionStatement(_ *ast.ExpressionStatement) ir.Stmt {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (compiler *Compiler) VisitBoolExpression(_ *ast.BoolExpression) ast.Repr {
+func (compiler *Compiler) VisitBoolExpression(_ *ast.BoolExpression) ir.Expr {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (compiler *Compiler) VisitNilExpression(_ *ast.NilExpression) ast.Repr {
+func (compiler *Compiler) VisitNilExpression(_ *ast.NilExpression) ir.Expr {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (compiler *Compiler) VisitIntegerExpression(expression *ast.IntegerExpression) ast.Repr {
+func (compiler *Compiler) VisitIntegerExpression(expression *ast.IntegerExpression) ir.Expr {
 	var value []byte
 
 	if expression.Value.Sign() < 0 {
@@ -161,22 +165,22 @@ func (compiler *Compiler) VisitIntegerExpression(expression *ast.IntegerExpressi
 	}
 }
 
-func (compiler *Compiler) VisitFixedPointExpression(_ *ast.FixedPointExpression) ast.Repr {
+func (compiler *Compiler) VisitFixedPointExpression(_ *ast.FixedPointExpression) ir.Expr {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (compiler *Compiler) VisitArrayExpression(_ *ast.ArrayExpression) ast.Repr {
+func (compiler *Compiler) VisitArrayExpression(_ *ast.ArrayExpression) ir.Expr {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (compiler *Compiler) VisitDictionaryExpression(_ *ast.DictionaryExpression) ast.Repr {
+func (compiler *Compiler) VisitDictionaryExpression(_ *ast.DictionaryExpression) ir.Expr {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (compiler *Compiler) VisitIdentifierExpression(expression *ast.IdentifierExpression) ast.Repr {
+func (compiler *Compiler) VisitIdentifierExpression(expression *ast.IdentifierExpression) ir.Expr {
 	// TODO
 	local := compiler.findLocal(expression.Identifier.Identifier)
 	// TODO: moves
@@ -185,35 +189,35 @@ func (compiler *Compiler) VisitIdentifierExpression(expression *ast.IdentifierEx
 	}
 }
 
-func (compiler *Compiler) VisitInvocationExpression(_ *ast.InvocationExpression) ast.Repr {
+func (compiler *Compiler) VisitInvocationExpression(_ *ast.InvocationExpression) ir.Expr {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (compiler *Compiler) VisitMemberExpression(_ *ast.MemberExpression) ast.Repr {
+func (compiler *Compiler) VisitMemberExpression(_ *ast.MemberExpression) ir.Expr {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (compiler *Compiler) VisitIndexExpression(_ *ast.IndexExpression) ast.Repr {
+func (compiler *Compiler) VisitIndexExpression(_ *ast.IndexExpression) ir.Expr {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (compiler *Compiler) VisitConditionalExpression(_ *ast.ConditionalExpression) ast.Repr {
+func (compiler *Compiler) VisitConditionalExpression(_ *ast.ConditionalExpression) ir.Expr {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (compiler *Compiler) VisitUnaryExpression(_ *ast.UnaryExpression) ast.Repr {
+func (compiler *Compiler) VisitUnaryExpression(_ *ast.UnaryExpression) ir.Expr {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (compiler *Compiler) VisitBinaryExpression(expression *ast.BinaryExpression) ast.Repr {
+func (compiler *Compiler) VisitBinaryExpression(expression *ast.BinaryExpression) ir.Expr {
 	op := compileBinaryOperation(expression.Operation)
-	left := expression.Left.Accept(compiler).(ir.Expr)
-	right := expression.Right.Accept(compiler).(ir.Expr)
+	left := ast.AcceptExpression[ir.Expr](expression.Left, compiler)
+	right := ast.AcceptExpression[ir.Expr](expression.Right, compiler)
 
 	return &ir.BinOpExpr{
 		Op:    op,
@@ -222,12 +226,12 @@ func (compiler *Compiler) VisitBinaryExpression(expression *ast.BinaryExpression
 	}
 }
 
-func (compiler *Compiler) VisitFunctionExpression(_ *ast.FunctionExpression) ast.Repr {
+func (compiler *Compiler) VisitFunctionExpression(_ *ast.FunctionExpression) ir.Expr {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (compiler *Compiler) VisitStringExpression(e *ast.StringExpression) ast.Repr {
+func (compiler *Compiler) VisitStringExpression(e *ast.StringExpression) ir.Expr {
 	return &ir.Const{
 		Constant: ir.String{
 			Value: e.Value,
@@ -235,46 +239,46 @@ func (compiler *Compiler) VisitStringExpression(e *ast.StringExpression) ast.Rep
 	}
 }
 
-func (compiler *Compiler) VisitCastingExpression(_ *ast.CastingExpression) ast.Repr {
+func (compiler *Compiler) VisitCastingExpression(_ *ast.CastingExpression) ir.Expr {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (compiler *Compiler) VisitCreateExpression(_ *ast.CreateExpression) ast.Repr {
+func (compiler *Compiler) VisitCreateExpression(_ *ast.CreateExpression) ir.Expr {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (compiler *Compiler) VisitDestroyExpression(_ *ast.DestroyExpression) ast.Repr {
+func (compiler *Compiler) VisitDestroyExpression(_ *ast.DestroyExpression) ir.Expr {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (compiler *Compiler) VisitReferenceExpression(_ *ast.ReferenceExpression) ast.Repr {
+func (compiler *Compiler) VisitReferenceExpression(_ *ast.ReferenceExpression) ir.Expr {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (compiler *Compiler) VisitForceExpression(_ *ast.ForceExpression) ast.Repr {
+func (compiler *Compiler) VisitForceExpression(_ *ast.ForceExpression) ir.Expr {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (compiler *Compiler) VisitPathExpression(_ *ast.PathExpression) ast.Repr {
+func (compiler *Compiler) VisitPathExpression(_ *ast.PathExpression) ir.Expr {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (compiler *Compiler) VisitProgram(_ *ast.Program) ast.Repr {
+func (compiler *Compiler) VisitProgram(_ *ast.Program) ir.Repr {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (compiler *Compiler) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunctionDeclaration) ast.Repr {
+func (compiler *Compiler) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunctionDeclaration) ir.Stmt {
 	return compiler.VisitFunctionDeclaration(declaration.FunctionDeclaration)
 }
 
-func (compiler *Compiler) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration) ast.Repr {
+func (compiler *Compiler) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration) ir.Stmt {
 
 	// TODO: declare function in current scope, use current scope in function
 	// TODO: conditions
@@ -298,7 +302,7 @@ func (compiler *Compiler) VisitFunctionDeclaration(declaration *ast.FunctionDecl
 
 	// Compile the function block
 
-	stmt := block.Accept(compiler).(ir.Stmt)
+	stmt := compiler.visitBlock(block)
 
 	// Important: compile locals after compiling function block,
 	// and don't include parameters in locals
@@ -315,7 +319,7 @@ func (compiler *Compiler) VisitFunctionDeclaration(declaration *ast.FunctionDecl
 	}
 }
 
-func (compiler *Compiler) VisitBlock(block *ast.Block) ast.Repr {
+func (compiler *Compiler) visitBlock(block *ast.Block) ir.Stmt {
 
 	// Block scope: each block gets an activation record
 
@@ -326,7 +330,7 @@ func (compiler *Compiler) VisitBlock(block *ast.Block) ast.Repr {
 
 	stmts := make([]ir.Stmt, len(block.Statements))
 	for i, statement := range block.Statements {
-		stmts[i] = statement.Accept(compiler).(ir.Stmt)
+		stmts[i] = ast.AcceptStatement[ir.Stmt](statement, compiler)
 	}
 
 	// NOTE: just return an IR statement sequence,
@@ -336,47 +340,37 @@ func (compiler *Compiler) VisitBlock(block *ast.Block) ast.Repr {
 	}
 }
 
-func (compiler *Compiler) VisitFunctionBlock(_ *ast.FunctionBlock) ast.Repr {
+func (compiler *Compiler) VisitCompositeDeclaration(_ *ast.CompositeDeclaration) ir.Stmt {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (compiler *Compiler) VisitCompositeDeclaration(_ *ast.CompositeDeclaration) ast.Repr {
+func (compiler *Compiler) VisitInterfaceDeclaration(_ *ast.InterfaceDeclaration) ir.Stmt {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (compiler *Compiler) VisitInterfaceDeclaration(_ *ast.InterfaceDeclaration) ast.Repr {
+func (compiler *Compiler) VisitFieldDeclaration(_ *ast.FieldDeclaration) ir.Stmt {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (compiler *Compiler) VisitFieldDeclaration(_ *ast.FieldDeclaration) ast.Repr {
+func (compiler *Compiler) VisitPragmaDeclaration(_ *ast.PragmaDeclaration) ir.Stmt {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (compiler *Compiler) VisitCondition(_ *ast.Condition) ast.Repr {
+func (compiler *Compiler) VisitImportDeclaration(_ *ast.ImportDeclaration) ir.Stmt {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (compiler *Compiler) VisitPragmaDeclaration(_ *ast.PragmaDeclaration) ast.Repr {
+func (compiler *Compiler) VisitTransactionDeclaration(_ *ast.TransactionDeclaration) ir.Stmt {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (compiler *Compiler) VisitImportDeclaration(_ *ast.ImportDeclaration) ast.Repr {
-	// TODO
-	panic(errors.NewUnreachableError())
-}
-
-func (compiler *Compiler) VisitTransactionDeclaration(_ *ast.TransactionDeclaration) ast.Repr {
-	// TODO
-	panic(errors.NewUnreachableError())
-}
-
-func (compiler *Compiler) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclaration) ast.Repr {
+func (compiler *Compiler) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclaration) ir.Stmt {
 	// TODO
 	panic(errors.NewUnreachableError())
 }

@@ -20,6 +20,7 @@ package parser
 
 import (
 	"encoding/hex"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -107,7 +108,7 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 				}
 				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, docString)
 
-			case KeywordTransaction:
+			case keywordTransaction:
 				if access != ast.AccessNotSpecified {
 					return nil, p.syntaxError("invalid access modifier for transaction")
 				}
@@ -301,21 +302,17 @@ func parseVariableDeclaration(
 	p.next()
 
 	p.skipSpaceAndComments(true)
-	if !p.current.Is(lexer.TokenIdentifier) {
-		return nil, p.syntaxError(
-			"expected identifier after start of variable declaration, got %s",
-			p.current.Type,
-		)
-	}
 
-	identifier := p.tokenToIdentifier(p.current)
+	identifier, err := p.nonReservedIdentifier("after start of variable declaration")
+	if err != nil {
+		return nil, err
+	}
 
 	// Skip the identifier
 	p.next()
 	p.skipSpaceAndComments(true)
 
 	var typeAnnotation *ast.TypeAnnotation
-	var err error
 
 	if p.current.Is(lexer.TokenColon) {
 		// Skip the colon
@@ -726,14 +723,12 @@ func parseEventDeclaration(
 	p.next()
 
 	p.skipSpaceAndComments(true)
-	if !p.current.Is(lexer.TokenIdentifier) {
-		return nil, p.syntaxError(
-			"expected identifier after start of event declaration, got %s",
-			p.current.Type,
-		)
+
+	identifier, err := p.nonReservedIdentifier("after start of event declaration")
+	if err != nil {
+		return nil, err
 	}
 
-	identifier := p.tokenToIdentifier(p.current)
 	// Skip the identifier
 	p.next()
 
@@ -930,7 +925,13 @@ func parseCompositeOrInterfaceDeclaration(
 			p.next()
 			continue
 		} else {
-			identifier = p.tokenToIdentifier(p.current)
+			ctx := fmt.Sprintf("following %s declaration", compositeKind.Keyword())
+			nonReserved, err := p.nonReservedIdentifier(ctx)
+			if err != nil {
+				return nil, err
+			}
+
+			identifier = nonReserved
 			// Skip the identifier
 			p.next()
 			break

@@ -23,7 +23,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
-func (checker *Checker) VisitInvocationExpression(invocationExpression *ast.InvocationExpression) ast.Repr {
+func (checker *Checker) VisitInvocationExpression(invocationExpression *ast.InvocationExpression) Type {
 	ty := checker.checkInvocationExpression(invocationExpression)
 
 	// Events cannot be invoked without an emit statement

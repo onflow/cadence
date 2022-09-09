@@ -8613,7 +8613,7 @@ func TestCheckBadResourceInterface(t *testing.T) {
 
 	t.Run("bad resource interface: shorter", func(t *testing.T) {
 
-		_, err := ParseAndCheck(t, "resource interface struct{struct d:struct{ struct d:struct{ }struct d:struct{ struct d:struct{ }}}}")
+		_, err := ParseAndCheck(t, "resource interface foo{struct d:foo{ struct d:foo{ }struct d:foo{ struct d:foo{ }}}}")
 
 		errs := ExpectCheckerErrors(t, err, 17)
 
@@ -8638,7 +8638,7 @@ func TestCheckBadResourceInterface(t *testing.T) {
 
 	t.Run("bad resource interface: longer", func(t *testing.T) {
 
-		_, err := ParseAndCheck(t, "resource interface struct{struct d:struct{ contract d:struct{ contract x:struct{ struct d{} contract d:struct{ contract d:struct {}}}}}}")
+		_, err := ParseAndCheck(t, "resource interface foo{struct d:foo{ contract d:foo{ contract x:foo{ struct d{} contract d:foo{ contract d:foo {}}}}}}")
 
 		errs := ExpectCheckerErrors(t, err, 24)
 

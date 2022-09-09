@@ -55,7 +55,7 @@ const (
 	keywordStruct      = "struct"
 	keywordResource    = "resource"
 	keywordInterface   = "interface"
-	KeywordTransaction = "transaction"
+	keywordTransaction = "transaction"
 	keywordPrepare     = "prepare"
 	keywordExecute     = "execute"
 	keywordCase        = "case"
@@ -64,3 +64,72 @@ const (
 	keywordEnum        = "enum"
 	keywordView        = "view"
 )
+
+var allKeywords = map[string]struct{}{
+	keywordIf:          {},
+	keywordElse:        {},
+	keywordWhile:       {},
+	keywordBreak:       {},
+	keywordContinue:    {},
+	keywordReturn:      {},
+	keywordTrue:        {},
+	keywordFalse:       {},
+	keywordNil:         {},
+	keywordLet:         {},
+	keywordVar:         {},
+	keywordFun:         {},
+	keywordAs:          {},
+	keywordCreate:      {},
+	keywordDestroy:     {},
+	keywordFor:         {},
+	keywordIn:          {},
+	keywordEmit:        {},
+	keywordAuth:        {},
+	keywordPriv:        {},
+	keywordPub:         {},
+	keywordAccess:      {},
+	keywordSet:         {},
+	keywordAll:         {},
+	keywordSelf:        {},
+	keywordInit:        {},
+	keywordContract:    {},
+	keywordAccount:     {},
+	keywordImport:      {},
+	keywordFrom:        {},
+	keywordPre:         {},
+	keywordPost:        {},
+	keywordEvent:       {},
+	keywordStruct:      {},
+	keywordResource:    {},
+	keywordInterface:   {},
+	keywordTransaction: {},
+	keywordPrepare:     {},
+	keywordExecute:     {},
+	keywordCase:        {},
+	keywordSwitch:      {},
+	keywordDefault:     {},
+	keywordEnum:        {},
+}
+
+// Keywords that can be used in identifier position without ambiguity.
+var softKeywords = map[string]struct{}{
+	keywordFrom:    {},
+	keywordAccount: {},
+	keywordSet:     {},
+	keywordAll:     {},
+}
+
+// Keywords that aren't allowed in identifier position.
+var hardKeywords map[string]struct{} = mapDiff(allKeywords, softKeywords)
+
+// take the boolean difference of two maps
+func mapDiff[T comparable, U any](minuend map[T]U, subtrahend map[T]U) map[T]U {
+	diff := make(map[T]U, len(minuend))
+	// iteration order is not important here
+	for k, v := range minuend { // nolint:maprangecheck
+		if _, exists := subtrahend[k]; !exists {
+			diff[k] = v
+		}
+	}
+	return diff
+}

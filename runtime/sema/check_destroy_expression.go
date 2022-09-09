@@ -22,7 +22,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 )
 
-func (checker *Checker) VisitDestroyExpression(expression *ast.DestroyExpression) (resultType ast.Repr) {
+func (checker *Checker) VisitDestroyExpression(expression *ast.DestroyExpression) (resultType Type) {
 	resultType = VoidType
 
 	valueType := checker.VisitExpression(expression.Expression, nil)

@@ -102,10 +102,6 @@ func (d *FunctionDeclaration) EndPosition(memoryGauge common.MemoryGauge) Positi
 	return d.ParameterList.EndPosition(memoryGauge)
 }
 
-func (d *FunctionDeclaration) Accept(visitor Visitor) Repr {
-	return visitor.VisitFunctionDeclaration(d)
-}
-
 func (d *FunctionDeclaration) Walk(walkChild func(Element)) {
 	// TODO: walk parameters
 	// TODO: walk return type
@@ -211,10 +207,6 @@ func (d *SpecialFunctionDeclaration) StartPosition() Position {
 
 func (d *SpecialFunctionDeclaration) EndPosition(memoryGauge common.MemoryGauge) Position {
 	return d.FunctionDeclaration.EndPosition(memoryGauge)
-}
-
-func (d *SpecialFunctionDeclaration) Accept(visitor Visitor) Repr {
-	return visitor.VisitSpecialFunctionDeclaration(d)
 }
 
 func (d *SpecialFunctionDeclaration) Walk(walkChild func(Element)) {
