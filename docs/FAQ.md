@@ -18,8 +18,8 @@ The handwritten parser also allows for better / great custom error reporting and
 The operator precedence parsing technique avoids constructing a CST and the associated overhead, where each grammar rule is translated to a CST node.
 For example, a simple integer literal would be "boxed" in several outer grammar rule nodes.
 
-## What is the algorithm efficiency of operations on arrays and dictionaries?
+## What is the algorithmic efficiency of operations on arrays and dictionaries?
 
 Arrays and dictionaries are implemented [as trees](https://github.com/onflow/atree). 
-This means that lookup operations are not constant time. 
+This means that lookup operations do not run in constant time. 
 In certain cases, a mutation operation may cause a rebalancing of the tree.
