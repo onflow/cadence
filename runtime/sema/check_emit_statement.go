@@ -23,13 +23,13 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
-func (checker *Checker) VisitEmitStatement(statement *ast.EmitStatement) ast.Repr {
+func (checker *Checker) VisitEmitStatement(statement *ast.EmitStatement) (_ struct{}) {
 	invocation := statement.InvocationExpression
 
 	ty := checker.checkInvocationExpression(invocation)
 
 	if ty.IsInvalidType() {
-		return nil
+		return
 	}
 
 	// Check that emitted expression is an event
@@ -42,7 +42,7 @@ func (checker *Checker) VisitEmitStatement(statement *ast.EmitStatement) ast.Rep
 				Range: ast.NewRangeFromPositioned(checker.memoryGauge, statement.InvocationExpression),
 			},
 		)
-		return nil
+		return
 	}
 
 	checker.Elaboration.EmitStatementEventTypes[statement] = compositeType
@@ -59,5 +59,5 @@ func (checker *Checker) VisitEmitStatement(statement *ast.EmitStatement) ast.Rep
 		)
 	}
 
-	return nil
+	return
 }

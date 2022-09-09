@@ -9,12 +9,12 @@ require (
 	github.com/mitchellh/mapstructure v1.4.3
 	github.com/onflow/cadence v0.24.2-0.20220627202951-5a06fec82b4a
 	github.com/onflow/cadence-lint v0.0.0-20220711153841-433de417d437
-	github.com/onflow/flow-cli/pkg/flowkit v0.0.0-20220801183630-5a1cf826dd08
+	github.com/onflow/flow-cli/pkg/flowkit v0.0.0-20220819152715-414ca9c1d221
 	github.com/onflow/flow-go-sdk v0.26.5-0.20220629191626-900f9f91bffc
 	github.com/sourcegraph/jsonrpc2 v0.1.0
 	github.com/spf13/afero v1.8.2
 	github.com/stretchr/testify v1.7.5
-	golang.org/x/exp v0.0.0-20220706164943-b4a6d9510983
+	golang.org/x/exp v0.0.0-20220713135740-79cabaa25d75
 )
 
 require (

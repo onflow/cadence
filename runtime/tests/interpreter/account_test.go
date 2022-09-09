@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/onflow/cadence/runtime/activations"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -91,10 +93,10 @@ func testAccount(
 		baseValueActivation.DeclareValue(valueDeclaration)
 	}
 
-	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
 
 	for _, valueDeclaration := range valueDeclarations {
-		baseActivation.Declare(valueDeclaration)
+		interpreter.Declare(baseActivation, valueDeclaration)
 	}
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
@@ -2880,8 +2882,8 @@ func TestInterpretAccountIterationMutation(t *testing.T) {
 			}
 			baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 			baseValueActivation.DeclareValue(authAccountValueDeclaration)
-			baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-			baseActivation.Declare(authAccountValueDeclaration)
+			baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+			interpreter.Declare(baseActivation, authAccountValueDeclaration)
 
 			importedChecker, err := checker.ParseAndCheckWithOptions(t,
 				`

@@ -33,18 +33,18 @@ import (
 type REPL struct {
 	checker  *sema.Checker
 	inter    *interpreter.Interpreter
-	onError  func(err error, location Location, codes map[Location]string)
+	onError  func(err error, location Location, codes map[Location][]byte)
 	onResult func(interpreter.Value)
-	codes    map[Location]string
+	codes    map[Location][]byte
 }
 
 func NewREPL(
-	onError func(err error, location Location, codes map[Location]string),
+	onError func(err error, location Location, codes map[Location][]byte),
 	onResult func(interpreter.Value),
 ) (*REPL, error) {
 
 	checkers := map[Location]*sema.Checker{}
-	codes := map[Location]string{}
+	codes := map[Location][]byte{}
 
 	checkerConfig := cmd.DefaultCheckerConfig(checkers, codes)
 	checkerConfig.AccessCheckMode = sema.AccessCheckModeNotSpecifiedUnrestricted
@@ -104,25 +104,9 @@ func (r *REPL) handleCheckerError() bool {
 	return false
 }
 
-func (r *REPL) execute(element ast.Element) {
-	result := element.Accept(r.inter)
-	expStatementRes, ok := result.(interpreter.ExpressionStatementResult)
-	if !ok {
-		return
-	}
-	if r.onResult == nil {
-		return
-	}
-	r.onResult(expStatementRes.Value)
-}
+func (r *REPL) Accept(code []byte) (inputIsComplete bool) {
 
-func (r *REPL) check(element ast.Element, code string) bool {
-	element.Accept(r.checker)
 	r.codes[r.checker.Location] = code
-	return r.handleCheckerError()
-}
-
-func (r *REPL) Accept(code string) (inputIsComplete bool) {
 
 	// TODO: detect if the input is complete
 	inputIsComplete = true
@@ -149,24 +133,32 @@ func (r *REPL) Accept(code string) (inputIsComplete bool) {
 
 	for _, element := range result {
 
-		switch typedElement := element.(type) {
+		switch element := element.(type) {
 		case ast.Declaration:
-			program := ast.NewProgram(nil, []ast.Declaration{typedElement})
+			program := ast.NewProgram(nil, []ast.Declaration{element})
 
-			if !r.check(program, code) {
+			r.checker.CheckProgram(program)
+			if !r.handleCheckerError() {
 				return
 			}
 
-			r.execute(typedElement)
+			r.inter.VisitProgram(program)
 
 		case ast.Statement:
 			r.checker.Program = nil
 
-			if !r.check(typedElement, code) {
+			r.checker.CheckStatement(element)
+
+			if !r.handleCheckerError() {
 				return
 			}
 
-			r.execute(typedElement)
+			result := ast.AcceptStatement[interpreter.StatementResult](element, r.inter)
+
+			onResult := r.onResult
+			if result, ok := result.(interpreter.ExpressionResult); ok && onResult != nil {
+				onResult(result)
+			}
 
 		default:
 			panic(errors.NewUnreachableError())

@@ -38,12 +38,14 @@ import (
 // 2. Acquiring the programs for the resolved imports. For each resolved import a separate program can be returned.
 //
 
-func (checker *Checker) VisitImportDeclaration(_ *ast.ImportDeclaration) ast.Repr {
+func (checker *Checker) VisitImportDeclaration(declaration *ast.ImportDeclaration) struct{} {
 	// Handled in `declareImportDeclaration`
-	panic(&UnreachableStatementError{})
+	panic(&UnreachableStatementError{
+		Range: ast.NewRangeFromPositioned(checker.memoryGauge, declaration),
+	})
 }
 
-func (checker *Checker) declareImportDeclaration(declaration *ast.ImportDeclaration) ast.Repr {
+func (checker *Checker) declareImportDeclaration(declaration *ast.ImportDeclaration) Type {
 	locationRange := ast.NewRange(
 		checker.memoryGauge,
 		declaration.LocationPos,

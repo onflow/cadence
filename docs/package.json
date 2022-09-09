@@ -11,5 +11,8 @@
     "unified": "^10.1.2",
     "unist-util-visit": "^4.1.0",
     "walk-sync": "^3.0.0"
+  },
+  "scripts": {
+    "lint": "node lint.js"
   }
 }
