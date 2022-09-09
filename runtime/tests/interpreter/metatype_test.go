@@ -19,8 +19,9 @@
 package interpreter_test
 
 import (
-	"github.com/onflow/cadence/runtime/activations"
 	"testing"
+
+	"github.com/onflow/cadence/runtime/activations"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

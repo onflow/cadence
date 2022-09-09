@@ -20,8 +20,9 @@ package interpreter_test
 
 import (
 	"fmt"
-	"github.com/onflow/cadence/runtime/activations"
 	"testing"
+
+	"github.com/onflow/cadence/runtime/activations"
 
 	"github.com/stretchr/testify/require"
 

@@ -19,8 +19,9 @@
 package runtime
 
 import (
-	"github.com/onflow/cadence/runtime/activations"
 	"time"
+
+	"github.com/onflow/cadence/runtime/activations"
 
 	"go.opentelemetry.io/otel/attribute"
 

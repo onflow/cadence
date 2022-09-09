@@ -20,10 +20,11 @@ package interpreter_test
 
 import (
 	"fmt"
-	"github.com/onflow/cadence/runtime/activations"
 	"math"
 	"math/big"
 	"testing"
+
+	"github.com/onflow/cadence/runtime/activations"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
