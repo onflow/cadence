@@ -43,7 +43,7 @@ func WASM2WAT(binary []byte) string {
 		panic(err)
 	}
 
-	cmd := exec.Command("wasm2wat", "--enable-reference-types", f.Name())
+	cmd := exec.Command("wasm2wat", f.Name())
 	out, err := cmd.Output()
 	if err != nil {
 		if ee, ok := err.(*exec.ExitError); ok {
