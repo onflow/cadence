@@ -78,7 +78,7 @@ type FileResolver func(path string) (string, error)
 type TestRunner struct {
 
 	// importResolver is used to resolve imports of the *test script*.
-	// Note: This doesn't resolve the imports for the codes that is being tested.
+	// Note: This doesn't resolve the imports for the code that is being tested.
 	// i.e: the code that is submitted to the blockchain.
 	// Users need to use configurations to set the import mapping for the testing code.
 	importResolver ImportResolver
