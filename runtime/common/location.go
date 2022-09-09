@@ -19,6 +19,7 @@
 package common
 
 import (
+	"encoding/hex"
 	"fmt"
 	"strings"
 
@@ -112,6 +113,41 @@ func NewTypeIDFromQualifiedName(memoryGauge MemoryGauge, location Location, qual
 	}
 
 	return location.TypeID(memoryGauge, qualifiedIdentifier)
+}
+
+// idLocationTypeID returns a type ID in the format
+// prefix '.' hex-encoded ID '.' qualifiedIdentifier
+func idLocationTypeID(
+	memoryGauge MemoryGauge,
+	prefix string,
+	idLength int,
+	id []byte,
+	qualifiedIdentifier string,
+) TypeID {
+	var i int
+
+	// prefix '.' hex-encoded ID '.' qualifiedIdentifier
+	length := len(prefix) + 1 + hex.EncodedLen(idLength) + 1 + len(qualifiedIdentifier)
+
+	UseMemory(memoryGauge, NewRawStringMemoryUsage(length))
+
+	b := make([]byte, length)
+
+	copy(b, prefix)
+	i += len(prefix)
+
+	b[i] = '.'
+	i += 1
+
+	hex.Encode(b[i:], id[:])
+	i += idLength * 2
+
+	b[i] = '.'
+	i += 1
+
+	copy(b[i:], qualifiedIdentifier)
+
+	return TypeID(b)
 }
 
 type TypeIDDecoder func(gauge MemoryGauge, typeID string) (location Location, qualifiedIdentifier string, err error)

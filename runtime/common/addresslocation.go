@@ -80,30 +80,13 @@ func (l AddressLocation) MeteredID(memoryGauge MemoryGauge) LocationID {
 }
 
 func (l AddressLocation) TypeID(memoryGauge MemoryGauge, qualifiedIdentifier string) TypeID {
-	var i int
-
-	// AddressLocationPrefix '.' hex-encoded address '.' qualifiedIdentifier
-	length := len(AddressLocationPrefix) + 1 + hex.EncodedLen(AddressLength) + 1 + len(qualifiedIdentifier)
-
-	UseMemory(memoryGauge, NewRawStringMemoryUsage(length))
-
-	b := make([]byte, length)
-
-	copy(b, AddressLocationPrefix)
-	i += len(AddressLocationPrefix)
-
-	b[i] = '.'
-	i += 1
-
-	l.Address.HexInto(b[i:])
-	i += AddressLength * 2
-
-	b[i] = '.'
-	i += 1
-
-	copy(b[i:], qualifiedIdentifier)
-
-	return TypeID(b)
+	return idLocationTypeID(
+		memoryGauge,
+		AddressLocationPrefix,
+		AddressLength,
+		l.Address[:],
+		qualifiedIdentifier,
+	)
 }
 
 func (l AddressLocation) QualifiedIdentifier(typeID TypeID) string {

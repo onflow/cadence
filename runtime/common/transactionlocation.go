@@ -56,30 +56,13 @@ func (l TransactionLocation) MeteredID(memoryGauge MemoryGauge) LocationID {
 }
 
 func (l TransactionLocation) TypeID(memoryGauge MemoryGauge, qualifiedIdentifier string) TypeID {
-	var i int
-
-	// TransactionLocationPrefix '.' hex-encoded ID '.' qualifiedIdentifier
-	length := len(TransactionLocationPrefix) + 1 + hex.EncodedLen(TransactionIDLength) + 1 + len(qualifiedIdentifier)
-
-	UseMemory(memoryGauge, NewRawStringMemoryUsage(length))
-
-	b := make([]byte, length)
-
-	copy(b, TransactionLocationPrefix)
-	i += len(TransactionLocationPrefix)
-
-	b[i] = '.'
-	i += 1
-
-	hex.Encode(b[i:], l[:])
-	i += TransactionIDLength * 2
-
-	b[i] = '.'
-	i += 1
-
-	copy(b[i:], qualifiedIdentifier)
-
-	return TypeID(b)
+	return idLocationTypeID(
+		memoryGauge,
+		TransactionLocationPrefix,
+		TransactionIDLength,
+		l[:],
+		qualifiedIdentifier,
+	)
 }
 
 func (l TransactionLocation) QualifiedIdentifier(typeID TypeID) string {
