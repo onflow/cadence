@@ -22,5 +22,5 @@ import (
 	_ "embed"
 )
 
-//go:embed crypto.cdc
-var Crypto []byte
+//go:embed test.cdc
+var TestContract []byte

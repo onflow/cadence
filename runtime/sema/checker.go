@@ -78,6 +78,12 @@ type ImportHandlerFunc func(checker *Checker, importedLocation common.Location, 
 
 type MemberAccountAccessHandlerFunc func(checker *Checker, memberLocation common.Location) bool
 
+type ContractValueHandlerFunc func(
+	checker *Checker,
+	declaration *ast.CompositeDeclaration,
+	compositeType *CompositeType,
+) ValueDeclaration
+
 // Checker
 
 type Checker struct {

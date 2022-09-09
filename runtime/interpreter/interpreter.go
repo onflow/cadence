@@ -125,7 +125,7 @@ type ContractValueHandlerFunc func(
 	compositeType *sema.CompositeType,
 	constructorGenerator func(common.Address) *HostFunctionValue,
 	invocationRange ast.Range,
-) *CompositeValue
+) ContractValue
 
 // ImportLocationHandlerFunc is a function that handles imports of locations.
 type ImportLocationHandlerFunc func(
@@ -361,12 +361,12 @@ func locationRangeGetter(
 	}
 }
 
-func (interpreter *Interpreter) findVariable(name string) *Variable {
+func (interpreter *Interpreter) FindVariable(name string) *Variable {
 	return interpreter.activations.Find(name)
 }
 
 func (interpreter *Interpreter) findOrDeclareVariable(name string) *Variable {
-	variable := interpreter.findVariable(name)
+	variable := interpreter.FindVariable(name)
 	if variable == nil {
 		variable = interpreter.declareVariable(name, nil)
 	}
@@ -410,7 +410,7 @@ func (interpreter *Interpreter) declareGlobal(declaration ast.Declaration) {
 	}
 	name := identifier.Identifier
 	// NOTE: semantic analysis already checked possible invalid redeclaration
-	interpreter.Globals.Set(name, interpreter.findVariable(name))
+	interpreter.Globals.Set(name, interpreter.FindVariable(name))
 }
 
 // invokeVariable looks up the function by the given name from global variables,
@@ -456,10 +456,10 @@ func (interpreter *Interpreter) invokeVariable(
 		}
 	}
 
-	return interpreter.invokeExternally(functionValue, functionType, arguments)
+	return interpreter.InvokeExternally(functionValue, functionType, arguments)
 }
 
-func (interpreter *Interpreter) invokeExternally(
+func (interpreter *Interpreter) InvokeExternally(
 	functionValue FunctionValue,
 	functionType *sema.FunctionType,
 	arguments []Value,
@@ -499,10 +499,15 @@ func (interpreter *Interpreter) invokeExternally(
 		preparedArguments[i] = interpreter.ConvertAndBox(getLocationRange, argument, nil, parameterType)
 	}
 
+	var self *CompositeValue
+	if boundFunc, ok := functionValue.(BoundFunctionValue); ok {
+		self = boundFunc.Self
+	}
+
 	// NOTE: can't fill argument types, as they are unknown
 	invocation := NewInvocation(
 		interpreter,
-		nil,
+		self,
 		preparedArguments,
 		nil,
 		nil,
@@ -551,7 +556,7 @@ func (interpreter *Interpreter) InvokeTransaction(index int, arguments ...Value)
 	transactionType := interpreter.Program.Elaboration.TransactionTypes[index]
 	functionType := transactionType.EntryPointFunctionType()
 
-	_, err = interpreter.invokeExternally(functionValue, functionType, arguments)
+	_, err = interpreter.InvokeExternally(functionValue, functionType, arguments)
 	return err
 }
 
@@ -1242,14 +1247,15 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 		variable.getter = func() Value {
 			positioned := ast.NewRangeFromPositioned(interpreter, declaration.Identifier)
 
-			contract := interpreter.Config.ContractValueHandler(
+			contractValue := interpreter.Config.ContractValueHandler(
 				interpreter,
 				compositeType,
 				constructorGenerator,
 				positioned,
 			)
-			contract.NestedVariables = nestedVariables
-			return contract
+
+			contractValue.SetNestedVariables(nestedVariables)
+			return contractValue
 		}
 	} else {
 		constructor := constructorGenerator(common.Address{})

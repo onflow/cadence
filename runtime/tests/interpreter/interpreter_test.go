@@ -207,7 +207,7 @@ func makeContractValueHandler(
 		compositeType *sema.CompositeType,
 		constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
 		invocationRange ast.Range,
-	) *interpreter.CompositeValue {
+	) interpreter.ContractValue {
 
 		constructor := constructorGenerator(common.Address{})
 

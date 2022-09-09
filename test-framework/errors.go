@@ -14,13 +14,24 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
-package contracts
+package test
 
-import (
-	_ "embed"
-)
+// ImportResolverNotProvidedError is thrown if the import resolver is not
+// set in the TestRunner, when running tests.
+//
+type ImportResolverNotProvidedError struct {
+	Err error
+}
 
-//go:embed crypto.cdc
-var Crypto []byte
+var _ error = ImportResolverNotProvidedError{}
+
+func (e ImportResolverNotProvidedError) Unwrap() error {
+	return e.Err
+}
+
+func (e ImportResolverNotProvidedError) Error() string {
+	return "import resolver not provided"
+}

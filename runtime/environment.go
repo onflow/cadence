@@ -705,7 +705,7 @@ func (e *interpreterEnvironment) newContractValueHandler() interpreter.ContractV
 		compositeType *sema.CompositeType,
 		constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
 		invocationRange ast.Range,
-	) *interpreter.CompositeValue {
+	) interpreter.ContractValue {
 
 		// If the contract is the deployed contract, instantiate it using
 		// the provided constructor and given arguments
