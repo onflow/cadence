@@ -44,6 +44,6 @@ type Config struct {
 	ErrorShortCircuitingEnabled bool
 	// MemberAccountAccessHandler is used to determine if the access of a member with account access modifier is valid.
 	MemberAccountAccessHandler MemberAccountAccessHandlerFunc
-	// ContractVariableHandler is used to construct the contract variable
-	ContractVariableHandler ContractVariableHandlerFunc
+	// ContractValueHandler is used to construct the contract variable
+	ContractValueHandler ContractValueHandlerFunc
 }

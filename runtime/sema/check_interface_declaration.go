@@ -152,7 +152,7 @@ func (checker *Checker) declareInterfaceNestedTypes(
 			panic(errors.NewUnreachableError())
 		}
 
-		_, err := checker.typeActivations.DeclareType(typeDeclaration{
+		_, err := checker.typeActivations.declareType(typeDeclaration{
 			identifier:               *identifier,
 			ty:                       nestedType,
 			declarationKind:          nestedDeclaration.DeclarationKind(),
@@ -235,7 +235,7 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 		Members:       &StringMemberOrderedMap{},
 	}
 
-	variable, err := checker.typeActivations.DeclareType(typeDeclaration{
+	variable, err := checker.typeActivations.declareType(typeDeclaration{
 		identifier:               identifier,
 		ty:                       interfaceType,
 		declarationKind:          declaration.DeclarationKind(),

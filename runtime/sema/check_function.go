@@ -96,16 +96,16 @@ func (checker *Checker) declareFunctionDeclaration(
 ) {
 	argumentLabels := declaration.ParameterList.EffectiveArgumentLabels()
 
-	_, err := checker.valueActivations.Declare(VariableDeclaration{
-		Identifier:               declaration.Identifier.Identifier,
-		Type:                     functionType,
-		DocString:                declaration.DocString,
-		Access:                   declaration.Access,
-		Kind:                     common.DeclarationKindFunction,
-		Pos:                      declaration.Identifier.Pos,
-		IsConstant:               true,
-		ArgumentLabels:           argumentLabels,
-		AllowOuterScopeShadowing: false,
+	_, err := checker.valueActivations.declare(variableDeclaration{
+		identifier:               declaration.Identifier.Identifier,
+		ty:                       functionType,
+		docString:                declaration.DocString,
+		access:                   declaration.Access,
+		kind:                     common.DeclarationKindFunction,
+		pos:                      declaration.Identifier.Pos,
+		isConstant:               true,
+		argumentLabels:           argumentLabels,
+		allowOuterScopeShadowing: false,
 	})
 	checker.report(err)
 
@@ -387,7 +387,7 @@ func (checker *Checker) visitFunctionBlock(
 }
 
 func (checker *Checker) declareResult(ty Type) {
-	_, err := checker.valueActivations.DeclareImplicitConstant(
+	_, err := checker.valueActivations.declareImplicitConstant(
 		ResultIdentifier,
 		ty,
 		common.DeclarationKindConstant,
@@ -397,7 +397,7 @@ func (checker *Checker) declareResult(ty Type) {
 }
 
 func (checker *Checker) declareBefore() {
-	_, err := checker.valueActivations.DeclareImplicitConstant(
+	_, err := checker.valueActivations.declareImplicitConstant(
 		BeforeIdentifier,
 		beforeType,
 		common.DeclarationKindFunction,
