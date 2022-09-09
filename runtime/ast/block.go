@@ -50,10 +50,6 @@ func (b *Block) IsEmpty() bool {
 	return len(b.Statements) == 0
 }
 
-func (b *Block) Accept(visitor Visitor) Repr {
-	return visitor.VisitBlock(b)
-}
-
 func (b *Block) Walk(walkChild func(Element)) {
 	walkStatements(walkChild, b.Statements)
 }
@@ -139,10 +135,6 @@ func (b *FunctionBlock) IsEmpty() bool {
 
 func (*FunctionBlock) ElementType() ElementType {
 	return ElementTypeFunctionBlock
-}
-
-func (b *FunctionBlock) Accept(visitor Visitor) Repr {
-	return visitor.VisitFunctionBlock(b)
 }
 
 func (b *FunctionBlock) Walk(walkChild func(Element)) {

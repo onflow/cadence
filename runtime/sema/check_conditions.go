@@ -40,7 +40,7 @@ func (checker *Checker) visitConditions(conditions []*ast.Condition) {
 	}
 }
 
-func (checker *Checker) checkCondition(condition *ast.Condition) ast.Repr {
+func (checker *Checker) checkCondition(condition *ast.Condition) Type {
 
 	// check test expression is boolean
 	checker.VisitExpression(condition.Test, BoolType)

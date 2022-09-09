@@ -3352,6 +3352,13 @@ func init() {
 		StringTypeEncodeHexFunctionDocString,
 	))
 
+	addMember(NewUnmeteredPublicFunctionMember(
+		functionType,
+		StringTypeFromUtf8FunctionName,
+		StringTypeFromUtf8FunctionType,
+		StringTypeFromUtf8FunctionDocString,
+	))
+
 	BaseValueActivation.Set(
 		typeName,
 		baseFunctionVariable(
@@ -3374,6 +3381,21 @@ var StringTypeEncodeHexFunctionType = &FunctionType{
 	},
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		StringType,
+	),
+}
+
+var StringTypeFromUtf8FunctionType = &FunctionType{
+	Parameters: []*Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "bytes",
+			TypeAnnotation: NewTypeAnnotation(ByteArrayType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&OptionalType{
+			Type: StringType,
+		},
 	),
 }
 

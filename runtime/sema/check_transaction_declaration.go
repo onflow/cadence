@@ -25,7 +25,7 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
-func (checker *Checker) VisitTransactionDeclaration(declaration *ast.TransactionDeclaration) ast.Repr {
+func (checker *Checker) VisitTransactionDeclaration(declaration *ast.TransactionDeclaration) (_ struct{}) {
 	transactionType := checker.Elaboration.TransactionDeclarationTypes[declaration]
 	if transactionType == nil {
 		panic(errors.NewUnreachableError())
@@ -81,7 +81,7 @@ func (checker *Checker) VisitTransactionDeclaration(declaration *ast.Transaction
 
 	checker.checkResourceFieldsInvalidated(transactionType, transactionType.Members)
 
-	return nil
+	return
 }
 
 func (checker *Checker) checkTransactionParameters(declaration *ast.TransactionDeclaration, parameters []*Parameter) {
