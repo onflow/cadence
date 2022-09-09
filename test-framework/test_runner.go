@@ -67,11 +67,27 @@ type Result struct {
 //
 type ImportResolver func(location common.Location) (string, error)
 
+// FileResolver is used to resolve and get local files.
+// Returns the content of the file as a string.
+// Must be provided by the user of the TestRunner.
+//
+type FileResolver func(path string) (string, error)
+
 // TestRunner runs tests.
 //
 type TestRunner struct {
+
+	// importResolver is used to resolve imports of the *test script*.
+	// Note: This doesn't resolve the imports for the codes that is being tested.
+	// i.e: the code that is submitted to the blockchain.
+	// Users need to use configurations to set the import mapping for the testing code.
 	importResolver ImportResolver
-	testRuntime    runtime.Runtime
+
+	// fileResolver is used to resolve local files.
+	//
+	fileResolver FileResolver
+
+	testRuntime runtime.Runtime
 }
 
 func NewTestRunner() *TestRunner {
@@ -82,6 +98,11 @@ func NewTestRunner() *TestRunner {
 
 func (r *TestRunner) WithImportResolver(importResolver ImportResolver) *TestRunner {
 	r.importResolver = importResolver
+	return r
+}
+
+func (r *TestRunner) WithFileResolver(fileResolver FileResolver) *TestRunner {
+	r.fileResolver = fileResolver
 	return r
 }
 
@@ -327,7 +348,7 @@ func (r *TestRunner) interpreterContractValueHandler(
 		return contract
 
 	case stdlib.TestContractLocation:
-		testFramework := NewEmulatorBackend(r.importResolver)
+		testFramework := NewEmulatorBackend(r.fileResolver)
 		contract, err := stdlib.NewTestContract(
 			inter,
 			testFramework,

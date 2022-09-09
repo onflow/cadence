@@ -1093,17 +1093,14 @@ func TestLoadingProgramsFromLocalFile(t *testing.T) {
         `
 
 		resolverInvoked := false
-		importResolver := func(location common.Location) (string, error) {
+		fileResolver := func(path string) (string, error) {
 			resolverInvoked = true
-
-			stringLocation, ok := location.(common.StringLocation)
-			assert.True(t, ok)
-			assert.Equal(t, stringLocation.String(), "./sample/script.cdc")
+			assert.Equal(t, path, "./sample/script.cdc")
 
 			return scriptCode, nil
 		}
 
-		runner := NewTestRunner().WithImportResolver(importResolver)
+		runner := NewTestRunner().WithFileResolver(fileResolver)
 
 		result, err := runner.RunTest(code, "test")
 		require.NoError(t, err)
@@ -1132,17 +1129,14 @@ func TestLoadingProgramsFromLocalFile(t *testing.T) {
         `
 
 		resolverInvoked := false
-		importResolver := func(location common.Location) (string, error) {
+		fileResolver := func(path string) (string, error) {
 			resolverInvoked = true
+			assert.Equal(t, path, "./sample/script.cdc")
 
-			stringLocation, ok := location.(common.StringLocation)
-			assert.True(t, ok)
-			assert.Equal(t, stringLocation.String(), "./sample/script.cdc")
-
-			return "", fmt.Errorf("cannot find file %s", location.String())
+			return "", fmt.Errorf("cannot find file %s", path)
 		}
 
-		runner := NewTestRunner().WithImportResolver(importResolver)
+		runner := NewTestRunner().WithFileResolver(fileResolver)
 
 		result, err := runner.RunTest(code, "test")
 		require.NoError(t, err)
@@ -1171,7 +1165,7 @@ func TestLoadingProgramsFromLocalFile(t *testing.T) {
 		result, err := runner.RunTest(code, "test")
 		require.NoError(t, err)
 		require.Error(t, result.Error)
-		assert.ErrorAs(t, result.Error, &ImportResolverNotProvidedError{})
+		assert.ErrorAs(t, result.Error, &FileResolverNotProvidedError{})
 	})
 }
 
@@ -2077,20 +2071,18 @@ func TestReplacingImports(t *testing.T) {
             }
         `
 
-		importResolver := func(location common.Location) (string, error) {
-			stringLocation := location.(common.StringLocation)
-
-			switch stringLocation.String() {
+		fileResolver := func(path string) (string, error) {
+			switch path {
 			case "./sample/script.cdc":
 				return scriptCode, nil
 			case "./sample/contract.cdc":
 				return contractCode, nil
 			default:
-				return "", fmt.Errorf("cannot find import location: %s", location)
+				return "", fmt.Errorf("cannot find import location: %s", path)
 			}
 		}
 
-		runner := NewTestRunner().WithImportResolver(importResolver)
+		runner := NewTestRunner().WithFileResolver(fileResolver)
 
 		result, err := runner.RunTest(code, "test")
 		require.NoError(t, err)
@@ -2156,20 +2148,18 @@ func TestReplacingImports(t *testing.T) {
             }
         `
 
-		importResolver := func(location common.Location) (string, error) {
-			stringLocation := location.(common.StringLocation)
-
-			switch stringLocation.String() {
+		fileResolver := func(path string) (string, error) {
+			switch path {
 			case "./sample/script.cdc":
 				return scriptCode, nil
 			case "./sample/contract.cdc":
 				return contractCode, nil
 			default:
-				return "", fmt.Errorf("cannot find import location: %s", location)
+				return "", fmt.Errorf("cannot find import location: %s", path)
 			}
 		}
 
-		runner := NewTestRunner().WithImportResolver(importResolver)
+		runner := NewTestRunner().WithFileResolver(fileResolver)
 
 		result, err := runner.RunTest(code, "test")
 		require.NoError(t, err)
@@ -2232,20 +2222,18 @@ func TestReplacingImports(t *testing.T) {
             }
         `
 
-		importResolver := func(location common.Location) (string, error) {
-			stringLocation := location.(common.StringLocation)
-
-			switch stringLocation.String() {
+		fileResolver := func(path string) (string, error) {
+			switch path {
 			case "./sample/script.cdc":
 				return scriptCode, nil
 			case "./sample/contract.cdc":
 				return contractCode, nil
 			default:
-				return "", fmt.Errorf("cannot find import location: %s", location)
+				return "", fmt.Errorf("cannot find import location: %s", path)
 			}
 		}
 
-		runner := NewTestRunner().WithImportResolver(importResolver)
+		runner := NewTestRunner().WithFileResolver(fileResolver)
 
 		result, err := runner.RunTest(code, "test")
 		require.NoError(t, err)
@@ -2293,18 +2281,16 @@ func TestReplacingImports(t *testing.T) {
             }
         `
 
-		importResolver := func(location common.Location) (string, error) {
-			stringLocation := location.(common.StringLocation)
-
-			switch stringLocation.String() {
+		fileResolver := func(path string) (string, error) {
+			switch path {
 			case "./sample/script.cdc":
 				return scriptCode, nil
 			default:
-				return "", fmt.Errorf("cannot find import location: %s", location)
+				return "", fmt.Errorf("cannot find import location: %s", path)
 			}
 		}
 
-		runner := NewTestRunner().WithImportResolver(importResolver)
+		runner := NewTestRunner().WithFileResolver(fileResolver)
 
 		result, err := runner.RunTest(code, "test")
 		require.NoError(t, err)

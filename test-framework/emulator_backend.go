@@ -57,12 +57,9 @@ type EmulatorBackend struct {
 	// accountKeys is a mapping of account addresses with their keys.
 	accountKeys map[common.Address]map[string]keyInfo
 
-	// Import resolver is used to resolve imports of the *test script*.
+	// fileResolver is used to resolve local files.
 	//
-	// Note: This doesn't resolve the imports for the codes that is being tested.
-	// i.e: the code that is submitted to the blockchain.
-	// Use the configurations to set the import mapping to for the testing code.
-	importResolver ImportResolver
+	fileResolver FileResolver
 
 	// A property bag to pass various configurations to the backend.
 	// Currently, supports passing address mapping for contracts.
@@ -74,12 +71,12 @@ type keyInfo struct {
 	signer     crypto.Signer
 }
 
-func NewEmulatorBackend(importResolver ImportResolver) *EmulatorBackend {
+func NewEmulatorBackend(fileResolver FileResolver) *EmulatorBackend {
 	return &EmulatorBackend{
-		blockchain:     newBlockchain(),
-		blockOffset:    0,
-		accountKeys:    map[common.Address]map[string]keyInfo{},
-		importResolver: importResolver,
+		blockchain:   newBlockchain(),
+		blockOffset:  0,
+		accountKeys:  map[common.Address]map[string]keyInfo{},
+		fileResolver: fileResolver,
 	}
 }
 
@@ -381,11 +378,11 @@ func (e *EmulatorBackend) DeployContract(
 }
 
 func (e *EmulatorBackend) ReadFile(path string) (string, error) {
-	if e.importResolver == nil {
-		return "", ImportResolverNotProvidedError{}
+	if e.fileResolver == nil {
+		return "", FileResolverNotProvidedError{}
 	}
 
-	return e.importResolver(common.StringLocation(path))
+	return e.fileResolver(path)
 }
 
 // newBlockchain returns an emulator blockchain for testing.
