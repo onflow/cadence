@@ -531,7 +531,6 @@ func (s *Server) DidChangeTextDocument(
 	conn protocol.Conn,
 	params *protocol.DidChangeTextDocumentParams,
 ) error {
-
 	uri := params.TextDocument.URI
 	text := params.ContentChanges[0].Text
 	version := params.TextDocument.Version
@@ -540,6 +539,10 @@ func (s *Server) DidChangeTextDocument(
 		Text:    text,
 		Version: version,
 	}
+
+	// todo implement smarter cache invalidation with dependency resolution using https://github.com/onflow/cadence/pull/1634
+	// we should build dependency tree upfront and then based on the changes only reset checkers contained in that tree
+	s.checkers = make(map[common.LocationID]*sema.Checker)
 
 	s.checkAndPublishDiagnostics(conn, uri, text, version)
 
