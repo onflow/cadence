@@ -66,10 +66,6 @@ func (*InterfaceDeclaration) ElementType() ElementType {
 	return ElementTypeInterfaceDeclaration
 }
 
-func (d *InterfaceDeclaration) Accept(visitor Visitor) Repr {
-	return visitor.VisitInterfaceDeclaration(d)
-}
-
 func (d *InterfaceDeclaration) Walk(walkChild func(Element)) {
 	walkDeclarations(walkChild, d.Members.declarations)
 }

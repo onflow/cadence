@@ -5709,12 +5709,42 @@ func TestParseIdentifiers(t *testing.T) {
 
 	t.Parallel()
 
-	for _, name := range []string{"foo", "from", "create", "destroy", "for", "in"} {
+	names := []string{
+		"foo",
+		"_foo",
+		"foo123",
+		"foo________",
+		"FOO_______",
+		"Fo123__21341278AAAAAAAAAAAAA",
+	}
+	for _, name := range names {
 		t.Run(name, func(t *testing.T) {
+
 			code := fmt.Sprintf(`let %s = 1`, name)
 			_, errs := ParseProgram(code, nil)
 			require.Empty(t, errs)
 		})
+	}
+}
+
+func TestParseReservedIdent(t *testing.T) {
+	t.Parallel()
+
+	for keyword := range hardKeywords {
+		code := fmt.Sprintf(`let %s = 0`, keyword)
+		_, err := ParseProgram(code, nil)
+		upcast := err.(Error)
+		errs := upcast.Errors
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Pos:     ast.Position{Line: 1, Column: 4, Offset: 4},
+					Message: "expected identifier after start of variable declaration, got keyword " + keyword,
+				},
+			},
+			errs,
+		)
 	}
 }
 

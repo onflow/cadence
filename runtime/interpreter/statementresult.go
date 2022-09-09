@@ -16,22 +16,36 @@
  * limitations under the License.
  */
 
-package ir
+package interpreter
 
-type Func struct {
-	Name      string
-	Type      FuncType
-	Locals    []Local
-	Statement Stmt
+type StatementResult interface {
+	isStatementResult()
 }
 
-func (*Func) isStmt() {}
-
-func (f *Func) Accept(v Visitor) Repr {
-	return v.VisitFunc(f)
+type controlResult interface {
+	StatementResult
+	isControlResult()
 }
 
-type FuncType struct {
-	Params  []ValType
-	Results []ValType
+type BreakResult struct{}
+
+func (BreakResult) isStatementResult() {}
+func (BreakResult) isControlResult()   {}
+
+type ContinueResult struct{}
+
+func (ContinueResult) isStatementResult() {}
+func (ContinueResult) isControlResult()   {}
+
+type ReturnResult struct {
+	Value
 }
+
+func (ReturnResult) isStatementResult() {}
+func (ReturnResult) isControlResult()   {}
+
+type ExpressionResult struct {
+	Value
+}
+
+func (ExpressionResult) isStatementResult() {}

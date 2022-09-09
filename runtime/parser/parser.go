@@ -445,7 +445,34 @@ func (p *parser) mustIdentifier() (ast.Identifier, error) {
 		return ast.Identifier{}, err
 	}
 
-	return p.tokenToIdentifier(identifier), err
+	return p.tokenToIdentifier(identifier), nil
+}
+
+// Attempt to downcast a Token into an identifier, erroring out if the identifier is a hard keyword. See keywords.HardKeywords.
+func (p *parser) mustNotKeyword(errMsgContext string, token lexer.Token) (ast.Identifier, error) {
+	nonIdentifierErr := func(invalidTokenMsg string) (ast.Identifier, error) {
+		if len(errMsgContext) > 0 {
+			errMsgContext = " " + errMsgContext
+		}
+
+		return ast.Identifier{}, p.syntaxError("expected identifier%s, got %s", errMsgContext, invalidTokenMsg)
+	}
+
+	if token.Type != lexer.TokenIdentifier {
+		return nonIdentifierErr(token.Type.String())
+	}
+
+	ident := p.tokenToIdentifier(token)
+
+	if _, exists := hardKeywords[ident.Identifier]; exists {
+		return nonIdentifierErr("keyword " + ident.Identifier)
+	}
+	return ident, nil
+}
+
+// Attempt to parse an identifier that's not a hard keyword.
+func (p *parser) nonReservedIdentifier(errMsgContext string) (ast.Identifier, error) {
+	return p.mustNotKeyword(errMsgContext, p.current)
 }
 
 func (p *parser) tokenToIdentifier(identifier lexer.Token) ast.Identifier {

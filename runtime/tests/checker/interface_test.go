@@ -2674,7 +2674,7 @@ func TestCheckInterfaceDefaultImplementationConcreteTypeUsage(t *testing.T) {
 func TestCheckBadStructInterface(t *testing.T) {
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, "struct interface var { contract h : var { contract h { } contract h { contract h { } } } }")
+	_, err := ParseAndCheck(t, "struct interface foo { contract h : foo { contract h { } contract h { contract h { } } } }")
 
 	errs := ExpectCheckerErrors(t, err, 12)
 

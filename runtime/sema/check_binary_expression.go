@@ -24,7 +24,7 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
-func (checker *Checker) VisitBinaryExpression(expression *ast.BinaryExpression) ast.Repr {
+func (checker *Checker) VisitBinaryExpression(expression *ast.BinaryExpression) Type {
 
 	var leftType, rightType, resultType Type
 	defer func() {
