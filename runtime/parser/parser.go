@@ -417,7 +417,7 @@ func (p *parser) parseTrivia(options triviaOptions) (containsNewline bool, docSt
 				}
 				if strings.HasPrefix(comment, "///") {
 					if inLineDocString {
-						docStringBuilder.WriteRune('\n')
+						docStringBuilder.WriteByte('\n')
 					} else {
 						inLineDocString = true
 						docStringBuilder.Reset()

@@ -352,13 +352,13 @@ func (e *FixedPointExpression) Doc() prettier.Doc {
 
 	var builder strings.Builder
 	if e.Negative {
-		builder.WriteRune('-')
+		builder.WriteByte('-')
 	}
 	builder.WriteString(e.UnsignedInteger.String())
 	builder.WriteRune('.')
 	fractional := e.Fractional.String()
 	for i := uint(0); i < (e.Scale - uint(len(fractional))); i++ {
-		builder.WriteRune('0')
+		builder.WriteByte('0')
 	}
 	builder.WriteString(fractional)
 	return prettier.Text(builder.String())

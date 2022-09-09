@@ -27,7 +27,7 @@ func Dictionary(pairs []struct {
 	Value string
 }) string {
 	var builder strings.Builder
-	builder.WriteRune('{')
+	builder.WriteByte('{')
 	for i, p := range pairs {
 		if i > 0 {
 			builder.WriteString(", ")
@@ -36,6 +36,6 @@ func Dictionary(pairs []struct {
 		builder.WriteString(": ")
 		builder.WriteString(p.Value)
 	}
-	builder.WriteRune('}')
+	builder.WriteByte('}')
 	return builder.String()
 }

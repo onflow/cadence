@@ -56,7 +56,7 @@ func qualifiedIdentifier(identifier string, containerType Type) string {
 	for i := len(identifiers) - 1; i >= 0; i-- {
 		sb.WriteString(identifiers[i])
 		if i != 0 {
-			sb.WriteRune('.')
+			sb.WriteByte('.')
 		}
 	}
 
