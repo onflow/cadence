@@ -25,6 +25,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/onflow/cadence/runtime/activations"
+
 	"github.com/onflow/atree"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -1832,8 +1834,8 @@ func TestInterpretHostFunction(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-	baseActivation.Declare(testFunction)
+	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, testFunction)
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
@@ -1941,8 +1943,8 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-	baseActivation.Declare(testFunction)
+	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, testFunction)
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
@@ -3983,8 +3985,8 @@ func TestInterpretImportError(t *testing.T) {
 
 	mainChecker := parseAndCheck(code, TestLocation)
 
-	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-	baseActivation.Declare(stdlib.PanicFunction)
+	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, stdlib.PanicFunction)
 
 	storage := newUnmeteredInMemoryStorage()
 
@@ -4715,8 +4717,8 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(valueDeclaration)
 
-		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-		baseActivation.Declare(valueDeclaration)
+		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, valueDeclaration)
 
 		storage := newUnmeteredInMemoryStorage()
 
@@ -7768,8 +7770,8 @@ func TestInterpretOptionalChainingFieldReadAndNilCoalescing(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(stdlib.PanicFunction)
 
-	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-	baseActivation.Declare(stdlib.PanicFunction)
+	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, stdlib.PanicFunction)
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
@@ -7810,8 +7812,8 @@ func TestInterpretOptionalChainingFunctionCallAndNilCoalescing(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(stdlib.PanicFunction)
 
-	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-	baseActivation.Declare(stdlib.PanicFunction)
+	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, stdlib.PanicFunction)
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
@@ -7965,8 +7967,8 @@ func TestInterpretFungibleTokenContract(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(stdlib.PanicFunction)
 
-	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-	baseActivation.Declare(stdlib.PanicFunction)
+	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, stdlib.PanicFunction)
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		code,
@@ -8394,8 +8396,8 @@ func TestInterpretHexDecode(t *testing.T) {
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(stdlib.PanicFunction)
 
-		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-		baseActivation.Declare(stdlib.PanicFunction)
+		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, stdlib.PanicFunction)
 
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
@@ -8786,8 +8788,8 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(valueDeclaration)
 
-	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-	baseActivation.Declare(valueDeclaration)
+	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, valueDeclaration)
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		code,
@@ -9346,8 +9348,8 @@ func TestInterpretNestedDestroy(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(logFunction)
 
-	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-	baseActivation.Declare(logFunction)
+	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, logFunction)
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
@@ -9924,8 +9926,8 @@ func TestInterpretNilCoalesceReference(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(stdlib.PanicFunction)
 
-	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-	baseActivation.Declare(stdlib.PanicFunction)
+	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, stdlib.PanicFunction)
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		`

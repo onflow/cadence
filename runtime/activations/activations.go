@@ -19,27 +19,22 @@
 package activations
 
 import (
-	"github.com/cheekybits/genny/generic"
-
 	"github.com/onflow/cadence/runtime/common"
 )
 
-type ValueType generic.Type
-
-// A ValueTypeActivation is a map of strings to values.
+// Activation is a map of strings to values.
 // It can be used to represent an active scope in a program,
 // i.e. it can be used as a symbol table during semantic analysis,
 // or as an activation record during interpretation or compilation.
-//
-type ValueTypeActivation struct {
-	entries     map[string]ValueType
+type Activation[T any] struct {
+	entries     map[string]T
 	Depth       int
-	Parent      *ValueTypeActivation
-	isFunction  bool
-	memoryGauge common.MemoryGauge
+	Parent      *Activation[T]
+	IsFunction  bool
+	MemoryGauge common.MemoryGauge
 }
 
-func NewValueTypeActivation(memoryGauge common.MemoryGauge, parent *ValueTypeActivation) *ValueTypeActivation {
+func NewActivation[T any](memoryGauge common.MemoryGauge, parent *Activation[T]) *Activation[T] {
 	var depth int
 	if parent != nil {
 		depth = parent.Depth + 1
@@ -47,17 +42,16 @@ func NewValueTypeActivation(memoryGauge common.MemoryGauge, parent *ValueTypeAct
 
 	common.UseMemory(memoryGauge, common.ActivationMemoryUsage)
 
-	return &ValueTypeActivation{
+	return &Activation[T]{
 		Depth:       depth,
 		Parent:      parent,
-		memoryGauge: memoryGauge,
+		MemoryGauge: memoryGauge,
 	}
 }
 
 // Find returns the value for a given name in the activation.
 // It returns nil if no value is found.
-//
-func (a *ValueTypeActivation) Find(name string) ValueType {
+func (a *Activation[T]) Find(name string) (_ T) {
 
 	current := a
 
@@ -73,14 +67,13 @@ func (a *ValueTypeActivation) Find(name string) ValueType {
 		current = current.Parent
 	}
 
-	return nil
+	return
 }
 
 // FunctionValues returns all values in the current function activation.
-//
-func (a *ValueTypeActivation) FunctionValues() map[string]ValueType {
+func (a *Activation[T]) FunctionValues() map[string]T {
 
-	values := make(map[string]ValueType)
+	values := make(map[string]T)
 
 	current := a
 
@@ -94,7 +87,7 @@ func (a *ValueTypeActivation) FunctionValues() map[string]ValueType {
 			}
 		}
 
-		if current.isFunction {
+		if current.IsFunction {
 			break
 		}
 
@@ -105,32 +98,30 @@ func (a *ValueTypeActivation) FunctionValues() map[string]ValueType {
 }
 
 // Set sets the given name-value pair in the activation.
-//
-func (a *ValueTypeActivation) Set(name string, value ValueType) {
+func (a *Activation[T]) Set(name string, value T) {
 	if a.entries == nil {
-		common.UseMemory(a.memoryGauge, common.ActivationEntriesMemoryUsage)
-		a.entries = make(map[string]ValueType)
+		common.UseMemory(a.MemoryGauge, common.ActivationEntriesMemoryUsage)
+		a.entries = make(map[string]T)
 	}
 
 	a.entries[name] = value
 }
 
-// ValueTypeActivations is a stack of activation records.
+// Activations is a stack of activation records.
 // Each entry represents a new activation record.
 //
 // The current / most nested activation record can be found
 // at the top of the stack (see function `Current`).
-//
-type ValueTypeActivations struct {
-	activations []*ValueTypeActivation
+type Activations[T any] struct {
+	activations []*Activation[T]
 	memoryGauge common.MemoryGauge
 }
 
-func NewValueTypeActivations(memoryGauge common.MemoryGauge) *ValueTypeActivations {
+func NewActivations[T any](memoryGauge common.MemoryGauge) *Activations[T] {
 	// No need to meter since activations list is created only once per execution.
 	// However, memory gauge is needed here for caching, and using it
 	// later to meter each activation and activation entries initialization.
-	return &ValueTypeActivations{
+	return &Activations[T]{
 		memoryGauge: memoryGauge,
 	}
 }
@@ -138,8 +129,7 @@ func NewValueTypeActivations(memoryGauge common.MemoryGauge) *ValueTypeActivatio
 // Current returns the current / most nested activation,
 // which can be found at the top of the stack.
 // It returns nil if there is no active activation.
-//
-func (a *ValueTypeActivations) Current() *ValueTypeActivation {
+func (a *Activations[T]) Current() *Activation[T] {
 	count := len(a.activations)
 	if count < 1 {
 		return nil
@@ -150,18 +140,16 @@ func (a *ValueTypeActivations) Current() *ValueTypeActivation {
 // Find returns the value for a given key in the current activation.
 // It returns nil if no value is found
 // or if there is no current activation.
-//
-func (a *ValueTypeActivations) Find(name string) ValueType {
+func (a *Activations[T]) Find(name string) (_ T) {
 	current := a.Current()
 	if current == nil {
-		return nil
+		return
 	}
 	return current.Find(name)
 }
 
 // Set sets the name-value pair in the current scope.
-//
-func (a *ValueTypeActivations) Set(name string, value ValueType) {
+func (a *Activations[T]) Set(name string, value T) {
 	current := a.Current()
 	// create the first scope if there is no scope
 	if current == nil {
@@ -174,9 +162,8 @@ func (a *ValueTypeActivations) Set(name string, value ValueType) {
 // PushNewWithParent pushes a new empty activation
 // to the top of the activation stack.
 // The new activation has the given parent as its parent.
-//
-func (a *ValueTypeActivations) PushNewWithParent(parent *ValueTypeActivation) *ValueTypeActivation {
-	activation := NewValueTypeActivation(a.memoryGauge, parent)
+func (a *Activations[T]) PushNewWithParent(parent *Activation[T]) *Activation[T] {
+	activation := NewActivation(a.memoryGauge, parent)
 	a.Push(activation)
 	return activation
 }
@@ -184,15 +171,13 @@ func (a *ValueTypeActivations) PushNewWithParent(parent *ValueTypeActivation) *V
 // PushNewWithCurrent pushes a new empty activation
 // to the top of the activation stack.
 // The new activation has the current activation as its parent.
-//
-func (a *ValueTypeActivations) PushNewWithCurrent() {
+func (a *Activations[T]) PushNewWithCurrent() {
 	a.PushNewWithParent(a.Current())
 }
 
 // Push pushes the given activation
 // onto the top of the activation stack.
-//
-func (a *ValueTypeActivations) Push(activation *ValueTypeActivation) {
+func (a *Activations[T]) Push(activation *Activation[T]) {
 	a.activations = append(
 		a.activations,
 		activation,
@@ -201,8 +186,7 @@ func (a *ValueTypeActivations) Push(activation *ValueTypeActivation) {
 
 // Pop pops the top-most (current) activation
 // from the top of the activation stack.
-//
-func (a *ValueTypeActivations) Pop() {
+func (a *Activations[T]) Pop() {
 	count := len(a.activations)
 	if count < 1 {
 		return
@@ -214,18 +198,16 @@ func (a *ValueTypeActivations) Pop() {
 
 // CurrentOrNew returns the current activation,
 // or if it does not exist, a new activation
-//
-func (a *ValueTypeActivations) CurrentOrNew() *ValueTypeActivation {
+func (a *Activations[T]) CurrentOrNew() *Activation[T] {
 	current := a.Current()
 	if current == nil {
-		return NewValueTypeActivation(a.memoryGauge, nil)
+		return NewActivation[T](a.memoryGauge, nil)
 	}
 
 	return current
 }
 
 // Depth returns the depth (size) of the activation stack.
-//
-func (a *ValueTypeActivations) Depth() int {
+func (a *Activations[T]) Depth() int {
 	return len(a.activations)
 }
