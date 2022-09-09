@@ -306,10 +306,14 @@ signer.contracts.add(
 
 ### Updating a Deployed Contract
 
-> 🚧 Status: Updating contracts is **experimental**.
->
-> Updating contracts is currently limited to maintain data consistency.
-> [Certain restrictions are imposed](contract-updatability).
+<Callout type="info">
+
+🚧 Status: Updating contracts is **experimental**.
+
+Updating contracts is currently limited to maintain data consistency.
+[Certain restrictions are imposed](contract-updatability).
+
+</Callout>
 
 A deployed contract can be updated using the `update__experimental` function:
 
@@ -360,6 +364,9 @@ let code = "70756220636f6e...".decodeHex()
 let signer: AuthAccount = ...
 signer.contracts.update__experimental(name: "Test", code: code)
 ```
+
+Updating a contract does currently **not** change any existing stored data.
+Only the code of the contract is updated.
 
 ### Getting a Deployed Contract
 
