@@ -2355,8 +2355,10 @@ func (s *Server) convertError(
 				err.Name,
 				func(checker *sema.Checker, isFunction bool) insertionPosition {
 					declaration := declarationGetter(checker.Elaboration)
-					if declaration == nil { // known bug for remote contracts
-						return insertionPosition{}
+					if declaration == nil {
+						return insertionPosition{
+							Position: ast.Position{},
+						}
 					}
 
 					members := declaration.DeclarationMembers()
