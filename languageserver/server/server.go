@@ -2076,7 +2076,7 @@ func parse(code, location string, log func(*protocol.LogMessageParams)) (*ast.Pr
 					Message: fmt.Sprintf("parsing error: %s", e.Error()),
 				})
 			default:
-				panic(fmt.Errorf("parser: %w", e))
+				panic(fmt.Errorf("parser: %v", e))
 			}
 		}
 	}()
