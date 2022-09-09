@@ -112,7 +112,7 @@ func parseCheckAndInterpretWithOptionsAndMemoryMetering(
 		var sb strings.Builder
 		location := checker.Location
 		printErr := pretty.NewErrorPrettyPrinter(&sb, true).
-			PrettyPrintError(err, location, map[common.Location]string{location: code})
+			PrettyPrintError(err, location, map[common.Location][]byte{location: []byte(code)})
 		if printErr != nil {
 			panic(printErr)
 		}
@@ -1781,7 +1781,7 @@ func TestInterpretHostFunction(t *testing.T) {
 	const code = `
       pub let a = test(1, 2)
     `
-	program, err := parser.ParseProgram(code, nil)
+	program, err := parser.ParseProgram([]byte(code), nil)
 
 	require.NoError(t, err)
 
@@ -1863,7 +1863,7 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 	const code = `
       pub let nothing = test(1, true, "test")
     `
-	program, err := parser.ParseProgram(code, nil)
+	program, err := parser.ParseProgram([]byte(code), nil)
 
 	require.NoError(t, err)
 
@@ -4029,10 +4029,10 @@ func TestInterpretImportError(t *testing.T) {
 		PrettyPrintError(
 			err,
 			mainChecker.Location,
-			map[common.Location]string{
-				TestLocation:      code,
-				importedLocation1: importedCode1,
-				importedLocation2: importedCode2,
+			map[common.Location][]byte{
+				TestLocation:      []byte(code),
+				importedLocation1: []byte(importedCode1),
+				importedLocation2: []byte(importedCode2),
 			},
 		)
 	require.NoError(t, printErr)

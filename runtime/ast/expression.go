@@ -223,7 +223,7 @@ func (*StringExpression) precedence() precedence {
 // IntegerExpression
 
 type IntegerExpression struct {
-	PositiveLiteral string
+	PositiveLiteral []byte
 	Value           *big.Int `json:"-"`
 	Base            int
 	Range
@@ -234,7 +234,7 @@ var _ Expression = &IntegerExpression{}
 
 func NewIntegerExpression(
 	gauge common.MemoryGauge,
-	literal string,
+	literal []byte,
 	value *big.Int,
 	base int,
 	tokenRange Range,
@@ -266,23 +266,26 @@ func (e *IntegerExpression) String() string {
 }
 
 func (e *IntegerExpression) Doc() prettier.Doc {
-	literal := e.PositiveLiteral
+	var b strings.Builder
 	if e.Value.Sign() < 0 {
-		literal = "-" + literal
+		b.WriteRune('-')
 	}
-	return prettier.Text(literal)
+	b.Write(e.PositiveLiteral)
+	return prettier.Text(b.String())
 }
 
 func (e *IntegerExpression) MarshalJSON() ([]byte, error) {
 	type Alias IntegerExpression
 	return json.Marshal(&struct {
-		Type  string
-		Value string
+		Type            string
+		PositiveLiteral string
+		Value           string
 		*Alias
 	}{
-		Type:  "IntegerExpression",
-		Value: e.Value.String(),
-		Alias: (*Alias)(e),
+		Type:            "IntegerExpression",
+		PositiveLiteral: string(e.PositiveLiteral),
+		Value:           e.Value.String(),
+		Alias:           (*Alias)(e),
 	})
 }
 
@@ -293,7 +296,7 @@ func (*IntegerExpression) precedence() precedence {
 // FixedPointExpression
 
 type FixedPointExpression struct {
-	PositiveLiteral string
+	PositiveLiteral []byte
 	Negative        bool
 	UnsignedInteger *big.Int `json:"-"`
 	Fractional      *big.Int `json:"-"`
@@ -306,7 +309,7 @@ var _ Expression = &FixedPointExpression{}
 
 func NewFixedPointExpression(
 	gauge common.MemoryGauge,
-	literal string,
+	literal []byte,
 	isNegative bool,
 	integer *big.Int,
 	fractional *big.Int,
@@ -342,25 +345,25 @@ func (e *FixedPointExpression) String() string {
 }
 
 func (e *FixedPointExpression) Doc() prettier.Doc {
-	literal := e.PositiveLiteral
-	if literal != "" {
-		if e.Negative {
-			literal = "-" + literal
-		}
-		return prettier.Text(literal)
-	}
-
 	var builder strings.Builder
+
 	if e.Negative {
 		builder.WriteRune('-')
 	}
-	builder.WriteString(e.UnsignedInteger.String())
-	builder.WriteRune('.')
-	fractional := e.Fractional.String()
-	for i := uint(0); i < (e.Scale - uint(len(fractional))); i++ {
-		builder.WriteRune('0')
+
+	literal := e.PositiveLiteral
+	if literal != nil {
+		builder.Write(literal)
+	} else {
+		builder.WriteString(e.UnsignedInteger.String())
+		builder.WriteRune('.')
+		fractional := e.Fractional.String()
+		for i := uint(0); i < (e.Scale - uint(len(fractional))); i++ {
+			builder.WriteRune('0')
+		}
+		builder.WriteString(fractional)
 	}
-	builder.WriteString(fractional)
+
 	return prettier.Text(builder.String())
 }
 
@@ -368,11 +371,13 @@ func (e *FixedPointExpression) MarshalJSON() ([]byte, error) {
 	type Alias FixedPointExpression
 	return json.Marshal(&struct {
 		Type            string
+		PositiveLiteral string
 		UnsignedInteger string
 		Fractional      string
 		*Alias
 	}{
 		Type:            "FixedPointExpression",
+		PositiveLiteral: string(e.PositiveLiteral),
 		UnsignedInteger: e.UnsignedInteger.String(),
 		Fractional:      e.Fractional.String(),
 		Alias:           (*Alias)(e),
