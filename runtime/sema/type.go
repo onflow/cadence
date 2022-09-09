@@ -192,11 +192,6 @@ type MemberResolver struct {
 	) *Member
 }
 
-// supertype of interfaces and composites
-type NominalType interface {
-	Type
-	MemberMap() *StringMemberOrderedMap
-}
 
 // ContainedType is a type which might have a container type
 //
