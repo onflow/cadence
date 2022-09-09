@@ -276,7 +276,7 @@ func TestCodecLocations(t *testing.T) {
 				output, err := common_codec.DecodeLocationPrefix(&w)
 				require.NoError(t, err, "decoding error")
 
-				assert.Equal(t, prefix, output, "bad decoding")
+				assert.Equal(t, prefix[0], output[0], "bad decoding")
 			})
 		}(prefix)
 	}
