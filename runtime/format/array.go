@@ -24,13 +24,13 @@ import (
 
 func Array(values []string) string {
 	var builder strings.Builder
-	builder.WriteRune('[')
+	builder.WriteByte('[')
 	for i, value := range values {
 		if i > 0 {
 			builder.WriteString(", ")
 		}
 		builder.WriteString(value)
 	}
-	builder.WriteRune(']')
+	builder.WriteByte(']')
 	return builder.String()
 }

@@ -348,7 +348,7 @@ func (e *FixedPointExpression) Doc() prettier.Doc {
 	var builder strings.Builder
 
 	if e.Negative {
-		builder.WriteRune('-')
+		builder.WriteByte('-')
 	}
 
 	literal := e.PositiveLiteral
@@ -356,7 +356,7 @@ func (e *FixedPointExpression) Doc() prettier.Doc {
 		builder.Write(literal)
 	} else {
 		builder.WriteString(e.UnsignedInteger.String())
-		builder.WriteRune('.')
+		builder.WriteByte('.')
 		fractional := e.Fractional.String()
 		for i := uint(0); i < (e.Scale - uint(len(fractional))); i++ {
 			builder.WriteRune('0')
