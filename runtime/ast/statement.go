@@ -58,10 +58,6 @@ func (*ReturnStatement) ElementType() ElementType {
 
 func (*ReturnStatement) isStatement() {}
 
-func (s *ReturnStatement) Accept(visitor Visitor) Repr {
-	return visitor.VisitReturnStatement(s)
-}
-
 func (s *ReturnStatement) Walk(walkChild func(Element)) {
 	if s.Expression != nil {
 		walkChild(s.Expression)
@@ -119,10 +115,6 @@ func (*BreakStatement) ElementType() ElementType {
 
 func (*BreakStatement) isStatement() {}
 
-func (s *BreakStatement) Accept(visitor Visitor) Repr {
-	return visitor.VisitBreakStatement(s)
-}
-
 func (*BreakStatement) Walk(_ func(Element)) {
 	// NO-OP
 }
@@ -169,10 +161,6 @@ func (*ContinueStatement) ElementType() ElementType {
 }
 
 func (*ContinueStatement) isStatement() {}
-
-func (s *ContinueStatement) Accept(visitor Visitor) Repr {
-	return visitor.VisitContinueStatement(s)
-}
 
 func (*ContinueStatement) Walk(_ func(Element)) {
 	// NO-OP
@@ -250,10 +238,6 @@ func (s *IfStatement) EndPosition(memoryGauge common.MemoryGauge) Position {
 		return s.Else.EndPosition(memoryGauge)
 	}
 	return s.Then.EndPosition(memoryGauge)
-}
-
-func (s *IfStatement) Accept(visitor Visitor) Repr {
-	return visitor.VisitIfStatement(s)
 }
 
 func (s *IfStatement) Walk(walkChild func(Element)) {
@@ -350,10 +334,6 @@ func (*WhileStatement) ElementType() ElementType {
 
 func (*WhileStatement) isStatement() {}
 
-func (s *WhileStatement) Accept(visitor Visitor) Repr {
-	return visitor.VisitWhileStatement(s)
-}
-
 func (s *WhileStatement) Walk(walkChild func(Element)) {
 	walkChild(s.Test)
 	walkChild(s.Block)
@@ -434,10 +414,6 @@ func (*ForStatement) ElementType() ElementType {
 }
 
 func (*ForStatement) isStatement() {}
-
-func (s *ForStatement) Accept(visitor Visitor) Repr {
-	return visitor.VisitForStatement(s)
-}
 
 func (s *ForStatement) Walk(walkChild func(Element)) {
 	walkChild(s.Value)
@@ -535,10 +511,6 @@ func (s *EmitStatement) EndPosition(memoryGauge common.MemoryGauge) Position {
 	return s.InvocationExpression.EndPosition(memoryGauge)
 }
 
-func (s *EmitStatement) Accept(visitor Visitor) Repr {
-	return visitor.VisitEmitStatement(s)
-}
-
 func (s *EmitStatement) Walk(walkChild func(Element)) {
 	walkChild(s.InvocationExpression)
 }
@@ -600,10 +572,6 @@ func (*AssignmentStatement) ElementType() ElementType {
 }
 
 func (*AssignmentStatement) isStatement() {}
-
-func (s *AssignmentStatement) Accept(visitor Visitor) Repr {
-	return visitor.VisitAssignmentStatement(s)
-}
 
 func (s *AssignmentStatement) StartPosition() Position {
 	return s.Target.StartPosition()
@@ -683,10 +651,6 @@ func (s *SwapStatement) EndPosition(memoryGauge common.MemoryGauge) Position {
 	return s.Right.EndPosition(memoryGauge)
 }
 
-func (s *SwapStatement) Accept(visitor Visitor) Repr {
-	return visitor.VisitSwapStatement(s)
-}
-
 func (s *SwapStatement) Walk(walkChild func(Element)) {
 	walkChild(s.Left)
 	walkChild(s.Right)
@@ -751,10 +715,6 @@ func (s *ExpressionStatement) EndPosition(memoryGauge common.MemoryGauge) Positi
 	return s.Expression.EndPosition(memoryGauge)
 }
 
-func (s *ExpressionStatement) Accept(visitor Visitor) Repr {
-	return visitor.VisitExpressionStatement(s)
-}
-
 func (s *ExpressionStatement) Walk(walkChild func(Element)) {
 	walkChild(s.Expression)
 }
@@ -810,10 +770,6 @@ func (*SwitchStatement) ElementType() ElementType {
 }
 
 func (*SwitchStatement) isStatement() {}
-
-func (s *SwitchStatement) Accept(visitor Visitor) Repr {
-	return visitor.VisitSwitchStatement(s)
-}
 
 func (s *SwitchStatement) Walk(walkChild func(Element)) {
 	walkChild(s.Expression)

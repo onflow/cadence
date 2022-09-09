@@ -16,24 +16,36 @@
  * limitations under the License.
  */
 
-package lexer
+package interpreter
 
-import (
-	"github.com/onflow/cadence/runtime/ast"
-)
-
-type Token struct {
-	Type         TokenType
-	SpaceOrError any
-	ast.Range
+type StatementResult interface {
+	isStatementResult()
 }
 
-func (t Token) Is(ty TokenType) bool {
-	return t.Type == ty
+type controlResult interface {
+	StatementResult
+	isControlResult()
 }
 
-func (t Token) Source(input []byte) []byte {
-	startOffset := t.StartPos.Offset
-	endOffset := t.EndPos.Offset + 1
-	return input[startOffset:endOffset]
+type BreakResult struct{}
+
+func (BreakResult) isStatementResult() {}
+func (BreakResult) isControlResult()   {}
+
+type ContinueResult struct{}
+
+func (ContinueResult) isStatementResult() {}
+func (ContinueResult) isControlResult()   {}
+
+type ReturnResult struct {
+	Value
 }
+
+func (ReturnResult) isStatementResult() {}
+func (ReturnResult) isControlResult()   {}
+
+type ExpressionResult struct {
+	Value
+}
+
+func (ExpressionResult) isStatementResult() {}

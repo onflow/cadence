@@ -23,18 +23,26 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
-func (checker *Checker) VisitIfStatement(statement *ast.IfStatement) ast.Repr {
+func (checker *Checker) VisitIfStatement(statement *ast.IfStatement) (_ struct{}) {
 
 	thenElement := statement.Then
 
-	var elseElement ast.Element = ast.NotAnElement{}
-	if statement.Else != nil {
-		elseElement = statement.Else
-	}
-
 	switch test := statement.Test.(type) {
 	case ast.Expression:
-		checker.visitConditional(test, thenElement, elseElement)
+		checker.VisitExpression(test, BoolType)
+
+		checker.checkConditionalBranches(
+			func() Type {
+				checker.checkBlock(statement.Then)
+				return nil
+			},
+			func() Type {
+				if statement.Else != nil {
+					checker.checkBlock(statement.Else)
+				}
+				return nil
+			},
+		)
 
 	case *ast.VariableDeclaration:
 		checker.checkConditionalBranches(
@@ -43,12 +51,14 @@ func (checker *Checker) VisitIfStatement(statement *ast.IfStatement) ast.Repr {
 				defer checker.leaveValueScope(thenElement.EndPosition, true)
 
 				checker.visitVariableDeclaration(test, true)
-				thenElement.Accept(checker)
 
+				checker.checkBlock(thenElement)
 				return nil
 			},
 			func() Type {
-				elseElement.Accept(checker)
+				if statement.Else != nil {
+					checker.checkBlock(statement.Else)
+				}
 				return nil
 			},
 		)
@@ -57,10 +67,10 @@ func (checker *Checker) VisitIfStatement(statement *ast.IfStatement) ast.Repr {
 		panic(errors.NewUnreachableError())
 	}
 
-	return nil
+	return
 }
 
-func (checker *Checker) VisitConditionalExpression(expression *ast.ConditionalExpression) ast.Repr {
+func (checker *Checker) VisitConditionalExpression(expression *ast.ConditionalExpression) Type {
 
 	expectedType := checker.expectedType
 
@@ -103,38 +113,6 @@ func (checker *Checker) VisitConditionalExpression(expression *ast.ConditionalEx
 	}
 
 	return LeastCommonSuperType(thenType, elseType)
-}
-
-// visitConditional checks a conditional.
-// The test expression must be a boolean.
-// The "then" and "else" elements may be expressions, in which case their types are returned.
-//
-func (checker *Checker) visitConditional(
-	test ast.Expression,
-	thenElement ast.Element,
-	elseElement ast.Element,
-) (
-	thenType, elseType Type,
-) {
-
-	checker.VisitExpression(test, BoolType)
-
-	return checker.checkConditionalBranches(
-		func() Type {
-			thenResult, ok := thenElement.Accept(checker).(Type)
-			if !ok || thenResult == nil {
-				return nil
-			}
-			return thenResult
-		},
-		func() Type {
-			elseResult, ok := elseElement.Accept(checker).(Type)
-			if !ok || elseResult == nil {
-				return nil
-			}
-			return elseResult
-		},
-	)
 }
 
 // checkConditionalBranches checks two conditional branches.

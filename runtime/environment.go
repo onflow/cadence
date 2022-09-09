@@ -63,18 +63,23 @@ type Environment interface {
 }
 
 type interpreterEnvironment struct {
-	config                                Config
-	baseActivation                        *interpreter.VariableActivation
-	baseValueActivation                   *sema.VariableActivation
-	runtimeInterface                      Interface
-	storage                               *Storage
-	coverageReport                        *CoverageReport
-	codesAndPrograms                      codesAndPrograms
+	config Config
+
+	baseActivation      *interpreter.VariableActivation
+	baseValueActivation *sema.VariableActivation
+
+	InterpreterConfig *interpreter.Config
+	CheckerConfig     *sema.Config
+
 	deployedContractConstructorInvocation *stdlib.DeployedContractConstructorInvocation
-	interpreterConfig                     *interpreter.Config
-	checkerConfig                         *sema.Config
 	stackDepthLimiter                     *stackDepthLimiter
 	checkedImports                        importResolutionResults
+
+	// the following fields are re-configurable, see Configure
+	runtimeInterface Interface
+	storage          *Storage
+	coverageReport   *CoverageReport
+	codesAndPrograms codesAndPrograms
 }
 
 var _ Environment = &interpreterEnvironment{}
@@ -98,8 +103,8 @@ func newInterpreterEnvironment(config Config) *interpreterEnvironment {
 		baseValueActivation: baseValueActivation,
 		stackDepthLimiter:   newStackDepthLimiter(config.StackDepthLimit),
 	}
-	env.interpreterConfig = env.newInterpreterConfig()
-	env.checkerConfig = env.newCheckerConfig()
+	env.InterpreterConfig = env.newInterpreterConfig()
+	env.CheckerConfig = env.newCheckerConfig()
 	return env
 }
 
@@ -179,7 +184,7 @@ func (e *interpreterEnvironment) Configure(
 	e.runtimeInterface = runtimeInterface
 	e.codesAndPrograms = codesAndPrograms
 	e.storage = storage
-	e.interpreterConfig.Storage = storage
+	e.InterpreterConfig.Storage = storage
 	e.coverageReport = coverageReport
 	e.stackDepthLimiter.depth = 0
 }
@@ -361,7 +366,7 @@ func (e *interpreterEnvironment) parseAndCheckProgram(
 	var parse *ast.Program
 	reportMetric(
 		func() {
-			parse, err = parser.ParseProgram(string(code), e)
+			parse, err = parser.ParseProgram(code, e)
 		},
 		e.runtimeInterface,
 		func(metrics Metrics, duration time.Duration) {
@@ -416,7 +421,7 @@ func (e *interpreterEnvironment) check(
 		program,
 		location,
 		e,
-		e.checkerConfig,
+		e.CheckerConfig,
 	)
 	if err != nil {
 		return nil, err
@@ -556,7 +561,7 @@ func (e *interpreterEnvironment) newInterpreter(
 	return interpreter.NewInterpreter(
 		program,
 		location,
-		e.interpreterConfig,
+		e.InterpreterConfig,
 	)
 }
 

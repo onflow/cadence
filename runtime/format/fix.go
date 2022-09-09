@@ -34,11 +34,11 @@ func Fix64(v int64) string {
 	if negative {
 		fraction = -fraction
 		if integer == 0 {
-			builder.WriteRune('-')
+			builder.WriteByte('-')
 		}
 	}
 	builder.WriteString(fmt.Sprint(integer))
-	builder.WriteRune('.')
+	builder.WriteByte('.')
 	builder.WriteString(PadLeft(strconv.Itoa(int(fraction)), '0', fixedpoint.Fix64Scale))
 	return builder.String()
 }

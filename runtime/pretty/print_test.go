@@ -62,8 +62,8 @@ func TestPrintBrokenCode(t *testing.T) {
 			},
 		},
 		location,
-		map[common.Location]string{
-			location: code,
+		map[common.Location][]byte{
+			location: []byte(code),
 		},
 	)
 	require.NoError(t, err)
@@ -98,8 +98,8 @@ func TestPrintTabs(t *testing.T) {
 			},
 		},
 		location,
-		map[common.Location]string{
-			location: code,
+		map[common.Location][]byte{
+			location: []byte(code),
 		},
 	)
 	require.NoError(t, err)
