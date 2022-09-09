@@ -2067,6 +2067,20 @@ func (s *Server) getDiagnosticsForParentError(
 
 // parse parses the given code and returns the resultant program.
 func parse(code, location string, log func(*protocol.LogMessageParams)) (*ast.Program, error) {
+	defer func() {
+		if e := recover(); e != nil {
+			switch e := e.(type) {
+			case error:
+				log(&protocol.LogMessageParams{
+					Type:    protocol.Warning,
+					Message: fmt.Sprintf("parsing error: %s", e.Error()),
+				})
+			default:
+				panic(fmt.Errorf("parser: %w", e))
+			}
+		}
+	}()
+
 	start := time.Now()
 	program, err := parser.ParseProgram(code, nil)
 	elapsed := time.Since(start)
