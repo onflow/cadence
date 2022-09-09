@@ -32,6 +32,10 @@ type CadenceCodec struct {
 	Encoder encoding.Codec
 }
 
+func NewCadenceCodec(defaultEncoder encoding.Codec) CadenceCodec {
+	return CadenceCodec{Encoder: defaultEncoder}
+}
+
 func (c CadenceCodec) Encode(value cadence.Value) ([]byte, error) {
 	return c.Encoder.Encode(value)
 }
@@ -56,16 +60,26 @@ func (c CadenceCodec) MustDecode(gauge common.MemoryGauge, bytes []byte) cadence
 	return codec.MustDecode(gauge, bytes)
 }
 
+type CodecVersion byte
+
+const (
+	CodecVersionV1   = 0x01
+	CodecVersionJson = '{'
+)
+
 func (c CadenceCodec) chooseCodec(bytes []byte) (codec encoding.Codec, err error) {
 	if len(bytes) == 0 {
 		err = fmt.Errorf("cannot decode empty bytes")
 		return
 	}
 
-	if bytes[0] == '{' {
-		codec = jsoncdc.JsonCodec{}
-	} else {
+	switch bytes[0] {
+	case CodecVersionV1:
 		codec = customCodec.CadenceBinaryFormatCodec{}
+	case CodecVersionJson:
+		codec = jsoncdc.JsonCodec{}
+	default:
+		err = fmt.Errorf("unknown codec version: %d", bytes[0])
 	}
 	return
 }
