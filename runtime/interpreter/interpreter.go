@@ -22,6 +22,7 @@ import (
 	"encoding/hex"
 	goErrors "errors"
 	"fmt"
+	"github.com/onflow/cadence/runtime/activations"
 	"math"
 	"time"
 	"unicode/utf8"
@@ -312,7 +313,7 @@ var _ ast.ExpressionVisitor[Value] = &Interpreter{}
 //
 var BaseActivation = func() *VariableActivation {
 	// No need to meter since this is only created once
-	activation := NewVariableActivation(nil, nil)
+	activation := activations.NewActivation[*Variable](nil, nil)
 
 	defineBaseFunctions(activation)
 	return activation
@@ -351,7 +352,7 @@ func newInterpreter(
 		sharedState.allInterpreters[location] = interpreter
 	}
 
-	interpreter.activations = NewVariableActivations(interpreter)
+	interpreter.activations = activations.NewActivations[*Variable](interpreter)
 
 	baseActivation := config.BaseActivation
 	if baseActivation == nil {

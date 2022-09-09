@@ -40,7 +40,7 @@ func init() {
 	deep.MaxDepth = 20
 }
 
-func ParseAndCheck(t *testing.T, code string) (*sema.Checker, error) {
+func ParseAndCheck(t testing.TB, code string) (*sema.Checker, error) {
 	return ParseAndCheckWithOptions(t, code, ParseAndCheckOptions{})
 }
 

@@ -19,6 +19,7 @@
 package stdlib
 
 import (
+	"github.com/onflow/cadence/runtime/activations"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -61,8 +62,8 @@ func testInterpreter(t *testing.T, code string, valueDeclaration StandardLibrary
 
 	storage := newUnmeteredInMemoryStorage()
 
-	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-	baseActivation.Declare(valueDeclaration)
+	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, valueDeclaration)
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),

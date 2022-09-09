@@ -20,6 +20,7 @@ package interpreter_test
 
 import (
 	"fmt"
+	"github.com/onflow/cadence/runtime/activations"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -136,8 +137,8 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 		Kind: common.DeclarationKindStructure,
 	})
 
-	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-	baseActivation.Declare(valueDeclaration)
+	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, valueDeclaration)
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		code,

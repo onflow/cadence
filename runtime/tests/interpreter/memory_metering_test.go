@@ -20,6 +20,7 @@ package interpreter_test
 
 import (
 	"fmt"
+	"github.com/onflow/cadence/runtime/activations"
 	"math"
 	"math/big"
 	"testing"
@@ -1051,9 +1052,9 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 			baseValueActivation.DeclareValue(valueDeclaration)
 		}
 
-		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
 		for _, valueDeclaration := range stdlib.BuiltinValues {
-			baseActivation.Declare(valueDeclaration)
+			interpreter.Declare(baseActivation, valueDeclaration)
 		}
 
 		inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(
@@ -1095,9 +1096,9 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 			baseValueActivation.DeclareValue(valueDeclaration)
 		}
 
-		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
 		for _, valueDeclaration := range stdlib.BuiltinValues {
-			baseActivation.Declare(valueDeclaration)
+			interpreter.Declare(baseActivation, valueDeclaration)
 		}
 
 		meter := newTestMemoryGauge()
@@ -1153,9 +1154,9 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 			baseValueActivation.DeclareValue(valueDeclaration)
 		}
 
-		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
 		for _, valueDeclaration := range stdlib.BuiltinValues {
-			baseActivation.Declare(valueDeclaration)
+			interpreter.Declare(baseActivation, valueDeclaration)
 		}
 
 		meter := newTestMemoryGauge()
@@ -9314,8 +9315,8 @@ func TestInterpretValueStringConversion(t *testing.T) {
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(logFunction)
 
-		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-		baseActivation.Declare(logFunction)
+		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, logFunction)
 
 		inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(t, script,
 			ParseCheckAndInterpretOptions{
@@ -9658,8 +9659,8 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(logFunction)
 
-		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-		baseActivation.Declare(logFunction)
+		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, logFunction)
 
 		inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(t, script,
 			ParseCheckAndInterpretOptions{

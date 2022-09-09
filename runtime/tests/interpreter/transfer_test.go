@@ -19,6 +19,7 @@
 package interpreter_test
 
 import (
+	"github.com/onflow/cadence/runtime/activations"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -63,8 +64,8 @@ func TestInterpretTransferCheck(t *testing.T) {
 			Kind: common.DeclarationKindStructure,
 		})
 
-		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-		baseActivation.Declare(valueDeclaration)
+		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, valueDeclaration)
 
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`

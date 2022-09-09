@@ -20,6 +20,7 @@ package interpreter_test
 
 import (
 	"fmt"
+	"github.com/onflow/cadence/runtime/activations"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -58,8 +59,8 @@ func TestInterpretEquality(t *testing.T) {
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(capabilityValueDeclaration)
 
-		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-		baseActivation.Declare(capabilityValueDeclaration)
+		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, capabilityValueDeclaration)
 
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`

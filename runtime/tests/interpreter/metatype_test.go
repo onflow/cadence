@@ -19,6 +19,7 @@
 package interpreter_test
 
 import (
+	"github.com/onflow/cadence/runtime/activations"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -131,8 +132,8 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(valueDeclaration)
 
-		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-		baseActivation.Declare(valueDeclaration)
+		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, valueDeclaration)
 
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
@@ -185,9 +186,9 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 			baseValueActivation.DeclareValue(valueDeclaration)
 		}
 
-		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
 		for _, valueDeclaration := range valueDeclarations {
-			baseActivation.Declare(valueDeclaration)
+			interpreter.Declare(baseActivation, valueDeclaration)
 		}
 
 		inter, err := parseCheckAndInterpretWithOptions(t,
@@ -274,9 +275,9 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 			baseValueActivation.DeclareValue(valueDeclaration)
 		}
 
-		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
 		for _, valueDeclaration := range valueDeclarations {
-			baseActivation.Declare(valueDeclaration)
+			interpreter.Declare(baseActivation, valueDeclaration)
 		}
 
 		inter, err := parseCheckAndInterpretWithOptions(t,
@@ -404,8 +405,8 @@ func TestInterpretIsInstance(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(valueDeclaration)
 
-	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-	baseActivation.Declare(valueDeclaration)
+	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, valueDeclaration)
 
 	for _, testCase := range cases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -544,8 +545,8 @@ func TestInterpretIsSubtype(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(valueDeclaration)
 
-	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-	baseActivation.Declare(valueDeclaration)
+	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, valueDeclaration)
 
 	for _, testCase := range cases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -710,8 +711,8 @@ func TestInterpretGetType(t *testing.T) {
 			baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 			baseValueActivation.DeclareValue(valueDeclaration)
 
-			baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-			baseActivation.Declare(valueDeclaration)
+			baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+			interpreter.Declare(baseActivation, valueDeclaration)
 
 			storage := newUnmeteredInMemoryStorage()
 

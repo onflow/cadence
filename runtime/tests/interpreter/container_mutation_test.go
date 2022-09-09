@@ -19,6 +19,7 @@
 package interpreter_test
 
 import (
+	"github.com/onflow/cadence/runtime/activations"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -320,8 +321,8 @@ func TestArrayMutation(t *testing.T) {
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(valueDeclaration)
 
-		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-		baseActivation.Declare(valueDeclaration)
+		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, valueDeclaration)
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
             fun test() {
@@ -461,8 +462,8 @@ func TestArrayMutation(t *testing.T) {
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(valueDeclaration)
 
-		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-		baseActivation.Declare(valueDeclaration)
+		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, valueDeclaration)
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
                 fun test() {
@@ -710,8 +711,8 @@ func TestDictionaryMutation(t *testing.T) {
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(valueDeclaration)
 
-		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-		baseActivation.Declare(valueDeclaration)
+		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, valueDeclaration)
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
             fun test() {
@@ -851,8 +852,8 @@ func TestDictionaryMutation(t *testing.T) {
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(valueDeclaration)
 
-		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-		baseActivation.Declare(valueDeclaration)
+		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, valueDeclaration)
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
                fun test() {

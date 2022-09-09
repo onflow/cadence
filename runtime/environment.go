@@ -19,6 +19,7 @@
 package runtime
 
 import (
+	"github.com/onflow/cadence/runtime/activations"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -90,7 +91,7 @@ var _ common.MemoryGauge = &interpreterEnvironment{}
 
 func newInterpreterEnvironment(config Config) *interpreterEnvironment {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
 
 	env := &interpreterEnvironment{
 		config:              config,
@@ -186,7 +187,7 @@ func (e *interpreterEnvironment) Configure(
 
 func (e *interpreterEnvironment) Declare(valueDeclaration stdlib.StandardLibraryValue) {
 	e.baseValueActivation.DeclareValue(valueDeclaration)
-	e.baseActivation.Declare(valueDeclaration)
+	interpreter.Declare(e.baseActivation, valueDeclaration)
 }
 
 func (e *interpreterEnvironment) NewAuthAccountValue(address interpreter.AddressValue) interpreter.Value {
