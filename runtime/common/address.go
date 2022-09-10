@@ -61,12 +61,6 @@ func (a Address) Hex() string {
 	return fmt.Sprintf("%x", a[:])
 }
 
-// HexInto encodes the address as a hex string representation of the address
-// into the given target byte slice.
-func (a Address) HexInto(target []byte) {
-	hex.Encode(target, a[:])
-}
-
 func (a Address) String() string {
 	return a.Hex()
 }
