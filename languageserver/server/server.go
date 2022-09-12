@@ -20,6 +20,7 @@ package server
 
 import (
 	"bufio"
+	"context"
 	json2 "encoding/json"
 	"fmt"
 	"io"
@@ -1732,8 +1733,8 @@ func (s *Server) InlayHint(
 
 	for _, variableDeclaration := range variableDeclarations {
 		targetType := checker.Elaboration.VariableDeclarationTargetTypes[variableDeclaration]
-		if targetType == nil { // bugfix getting nil targetType
-			continue
+		if targetType == nil { // bugfix getting nil target
+			continue // todo this should never occur
 		}
 
 		identifierEndPosition := variableDeclaration.Identifier.EndPosition(nil)
@@ -2065,21 +2066,11 @@ func (s *Server) getDiagnosticsForParentError(
 	return
 }
 
-// parse parses the given code and returns the resultant program.
+// parse the given code and returns the resultant program.
 func parse(code, location string, log func(*protocol.LogMessageParams)) (*ast.Program, error) {
-	defer func() {
-		if e := recover(); e != nil {
-			switch e := e.(type) {
-			case error:
-				log(&protocol.LogMessageParams{
-					Type:    protocol.Warning,
-					Message: fmt.Sprintf("parsing error: %s", e.Error()),
-				})
-			default:
-				panic(fmt.Errorf("parser: %v", e))
-			}
-		}
-	}()
+	ctx := context.WithValue(context.Background(), "code", code)
+	ctx = context.WithValue(ctx, "location", location)
+	defer sentry.RecoverWithContext(ctx)
 
 	start := time.Now()
 	program, err := parser.ParseProgram(code, nil)
