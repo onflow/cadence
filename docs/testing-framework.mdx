@@ -400,7 +400,7 @@ However, during tests, since accounts are created dynamically and the addresses 
 specifying the addresses statically in a configuration file is not an option.
 
 Hence, the test framework provides a way to specify the addresses using the
-`useConfiguration(_ confgiuration: Test.Configuration)` function in `Blockchain`.
+`useConfiguration(_ configuration: Test.Configuration)` function in `Blockchain`.
 
 The `Configuration` struct consists of a mapping of import locations to their addresses.
 
@@ -417,8 +417,26 @@ pub struct Configuration {
 }
 ```
 
+<Callout type="info">
+The `Blockchain.useConfiguration` is a run-time alternative for
+[statically defining contract addresses in the flow.json config file](https://developers.flow.com/tools/flow-cli/configuration#advanced-format).
+</Callout>
+
 The configurations can be specified during the test setup as a best-practice.
 
+e.g: Assume running a script that imports `FooContract` and `BarContract`.
+The import locations for the two contracts can be specified using the two placeholders `"FooContract"` and
+`"BarContract"`. These placeholders can be any unique strings.
+
+```cadence
+import FooContract from "FooContract"
+import BarContract from "BarContract"
+
+pub fun main() {
+    // do something
+}
+```
+Then, before executing the script, the address mapping can be specified as follows:
 ```cadence
 pub var blockchain = Test.newEmulatorBlockchain()
 pub var accounts: [Test.Account] = []
@@ -432,17 +450,18 @@ pub fun setup() {
     let acct2 = blockchain.createAccount()
     accounts.append(acct2)
 
-    // Set the configuration with the addresses
+    // Set the configuration with the addresses.
+    // They keys of the mapping should be the placeholders used in the imports.
 
     blockchain.useConfiguration(Test.Configuration({
-        "./contracts/FooContract": acct1.address,
-        "./contracts/BarContract": acct2.address
+        "FooContract": acct1.address,
+        "BarContract": acct2.address
     }))
 }
 ```
 
 The subsequent operations on the blockchain (e.g: contract deployment, script/transaction execution) will resolve the
-file import locations to the provided addresses.
+import locations to the provided addresses.
 
 ### Errors
 
