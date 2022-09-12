@@ -504,11 +504,11 @@ func TestCheckInvalidImportCycleSelf(t *testing.T) {
 
 	t.Parallel()
 
-	// NOTE: only parse, don't check imported program.
-	// will be checked by checker checking importing program
+	// NOTE: only parse, don't check the imported program.
+	// it will be checked by checker that is checking the importing program
 
 	const code = `import "test"`
-	importedProgram, err := parser.ParseProgram(code, nil)
+	importedProgram, err := parser.ParseProgram([]byte(code), nil)
 
 	require.NoError(t, err)
 
@@ -563,8 +563,8 @@ func TestCheckInvalidImportCycleTwoLocations(t *testing.T) {
 
 	t.Parallel()
 
-	// NOTE: only parse, don't check imported program.
-	// will be checked by checker checking importing program
+	// NOTE: only parse, don't check the imported program.
+	// it will be checked by checker that is checking the importing program
 
 	const codeEven = `
       import odd from "odd"
@@ -576,7 +576,7 @@ func TestCheckInvalidImportCycleTwoLocations(t *testing.T) {
           return odd(n - 1)
       }
     `
-	programEven, err := parser.ParseProgram(codeEven, nil)
+	programEven, err := parser.ParseProgram([]byte(codeEven), nil)
 	require.NoError(t, err)
 
 	const codeOdd = `
@@ -589,7 +589,7 @@ func TestCheckInvalidImportCycleTwoLocations(t *testing.T) {
           return even(n - 1)
       }
     `
-	programOdd, err := parser.ParseProgram(codeOdd, nil)
+	programOdd, err := parser.ParseProgram([]byte(codeOdd), nil)
 	require.NoError(t, err)
 
 	getProgram := func(location common.Location) *ast.Program {

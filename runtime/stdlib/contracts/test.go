@@ -16,15 +16,11 @@
  * limitations under the License.
  */
 
-package interpreter
+package contracts
 
-func (a *VariableActivation) Declare(declaration ValueDeclaration) {
+import (
+	_ "embed"
+)
 
-	value := declaration.ValueDeclarationValue()
-	variable := NewVariableWithValue(a.memoryGauge, value)
-
-	a.Set(
-		declaration.ValueDeclarationName(),
-		variable,
-	)
-}
+//go:embed test.cdc
+var TestContract []byte
