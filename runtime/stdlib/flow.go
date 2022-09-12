@@ -35,14 +35,6 @@ var _ common.Location = FlowLocation{}
 
 const FlowLocationPrefix = "flow"
 
-func (l FlowLocation) ID() common.LocationID {
-	return FlowLocationPrefix
-}
-
-func (l FlowLocation) MeteredID(_ common.MemoryGauge) common.LocationID {
-	return FlowLocationPrefix
-}
-
 func (l FlowLocation) TypeID(memoryGauge common.MemoryGauge, qualifiedIdentifier string) common.TypeID {
 	var i int
 

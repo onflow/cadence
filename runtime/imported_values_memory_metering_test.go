@@ -372,7 +372,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 
 		executeScript(script, meter, structValue)
 		assert.Equal(t, uint64(1), meter[common.MemoryKindCompositeValueBase])
-		assert.Equal(t, uint64(104), meter[common.MemoryKindRawString])
+		assert.Equal(t, uint64(103), meter[common.MemoryKindRawString])
 	})
 }
 
@@ -576,7 +576,7 @@ func TestScriptDecodedLocationMetering(t *testing.T) {
 		},
 		{
 			MemoryKind: common.MemoryKindRawString,
-			Weight:     119,
+			Weight:     118,
 			Name:       "string",
 			Location:   common.StringLocation("abc"),
 		},

@@ -58,21 +58,32 @@ func main() {
 	flag.Var(&memberAccountAccessFlag, "memberAccountAccess", "allow account access from:to")
 	flag.Parse()
 
-	memberAccountAccess := map[common.LocationID]map[common.LocationID]struct{}{}
+	memberAccountAccess := map[common.Location]map[common.Location]struct{}{}
 
 	for _, value := range memberAccountAccessFlag {
 		parts := strings.SplitN(value, ":", 2)
 		if len(parts) < 2 {
 			panic(fmt.Errorf("invalid member access flag: got '%s', expected 'from:to'", value))
 		}
-		sourceLocationID := common.LocationID(parts[0])
-		targetLocationID := common.LocationID(parts[1])
-		nested := memberAccountAccess[sourceLocationID]
-		if nested == nil {
-			nested = map[common.LocationID]struct{}{}
-			memberAccountAccess[sourceLocationID] = nested
+
+		source := parts[0]
+		sourceLocation, _, err := common.DecodeTypeID(nil, source)
+		if err != nil {
+			panic(fmt.Errorf("invalid member access source location: %s: %w", source, err))
 		}
-		nested[targetLocationID] = struct{}{}
+
+		target := parts[1]
+		targetLocation, _, err := common.DecodeTypeID(nil, target)
+		if err != nil {
+			panic(fmt.Errorf("invalid member access target location: %s: %w", target, err))
+		}
+
+		nested := memberAccountAccess[sourceLocation]
+		if nested == nil {
+			nested = map[common.Location]struct{}{}
+			memberAccountAccess[sourceLocation] = nested
+		}
+		nested[targetLocation] = struct{}{}
 	}
 
 	args := flag.Args()
@@ -169,7 +180,7 @@ func run(
 	paths []string,
 	bench bool,
 	json bool,
-	memberAccountAccess map[common.LocationID]map[common.LocationID]struct{},
+	memberAccountAccess map[common.Location]map[common.Location]struct{},
 ) {
 	if len(paths) == 0 {
 		paths = []string{""}
@@ -206,7 +217,7 @@ func runPath(
 	path string,
 	bench bool,
 	useColor bool,
-	memberAccountAccess map[common.LocationID]map[common.LocationID]struct{},
+	memberAccountAccess map[common.Location]map[common.Location]struct{},
 ) (res result, succeeded bool) {
 	res = result{
 		Path: path,

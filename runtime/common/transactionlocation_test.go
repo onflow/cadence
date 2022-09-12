@@ -46,7 +46,7 @@ func TestTransactionLocation_MarshalJSON(t *testing.T) {
 	)
 }
 
-func TestTransactionLocationTypeID(t *testing.T) {
+func TestTransactionLocation_TypeID(t *testing.T) {
 
 	t.Parallel()
 
