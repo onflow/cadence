@@ -2,13 +2,6 @@
 ///
 pub contract Test {
 
-    /// Convenient function to fail a test.
-    /// Is equivalent to calling `assert(false)`.
-    ///
-    pub fun fail() {
-        assert(false)
-    }
-
     /// Blockchain emulates a real network.
     ///
     pub struct Blockchain {

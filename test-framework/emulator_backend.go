@@ -34,6 +34,7 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime"
+	"github.com/onflow/cadence/runtime/activations"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -415,7 +416,7 @@ func newInterpreter() (*interpreter.Interpreter, error) {
 	// TODO: maybe re-use interpreter? Only needed for value conversion
 	// TODO: Deal with imported/composite types
 
-	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
 
 	return interpreter.NewInterpreter(
 		nil,
@@ -457,7 +458,7 @@ func (e *EmulatorBackend) replaceImports(code string) string {
 		return code
 	}
 
-	program, err := parser.ParseProgram(code, nil)
+	program, err := parser.ParseProgram([]byte(code), nil)
 	if err != nil {
 		panic(err)
 	}
