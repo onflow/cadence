@@ -23,6 +23,14 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
+func PurityFromAnnotation(purity ast.FunctionPurity) FunctionPurity {
+	if purity == ast.FunctionPurityView {
+		return FunctionPurityView
+	}
+	return FunctionPurityImpure
+
+}
+
 func (checker *Checker) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration) (_ struct{}) {
 	checker.visitFunctionDeclaration(
 		declaration,
@@ -70,7 +78,7 @@ func (checker *Checker) visitFunctionDeclaration(
 
 	functionType := checker.Elaboration.FunctionDeclarationFunctionTypes[declaration]
 	if functionType == nil {
-		functionType = checker.functionType(declaration.ParameterList, declaration.ReturnTypeAnnotation)
+		functionType = checker.functionType(declaration.Purity, declaration.ParameterList, declaration.ReturnTypeAnnotation)
 
 		if options.declareFunction {
 			checker.declareFunctionDeclaration(declaration, functionType)
@@ -172,11 +180,13 @@ func (checker *Checker) checkFunction(
 			functionActivation.InitializationInfo = initializationInfo
 
 			if functionBlock != nil {
-				checker.visitFunctionBlock(
-					functionBlock,
-					functionType.ReturnTypeAnnotation,
-					checkResourceLoss,
-				)
+				checker.InNewPurityScope(functionType.Purity == FunctionPurityView, func() {
+					checker.visitFunctionBlock(
+						functionBlock,
+						functionType.ReturnTypeAnnotation,
+						checkResourceLoss,
+					)
+				})
 
 				if mustExit {
 					returnType := functionType.ReturnTypeAnnotation.Type
@@ -409,7 +419,11 @@ func (checker *Checker) declareBefore() {
 func (checker *Checker) VisitFunctionExpression(expression *ast.FunctionExpression) Type {
 
 	// TODO: infer
-	functionType := checker.functionType(expression.ParameterList, expression.ReturnTypeAnnotation)
+	functionType := checker.functionType(
+		expression.Purity,
+		expression.ParameterList,
+		expression.ReturnTypeAnnotation,
+	)
 
 	checker.Elaboration.FunctionExpressionFunctionType[expression] = functionType
 

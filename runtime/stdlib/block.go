@@ -43,6 +43,7 @@ Returns the block at the given height. If the given block does not exist the fun
 `
 
 var getBlockFunctionType = &sema.FunctionType{
+	Purity: sema.FunctionPurityView,
 	Parameters: []*sema.Parameter{
 		{
 			Label:      "at",

@@ -990,6 +990,97 @@ func TestParseFunctionStatementOrExpression(t *testing.T) {
 		)
 	})
 
+	t.Run("function expression with purity and without name", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseStatements("view fun () {}", nil)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.ExpressionStatement{
+					Expression: &ast.FunctionExpression{
+						Purity: ast.FunctionPurityView,
+						ParameterList: &ast.ParameterList{
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
+								EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
+							},
+						},
+						ReturnTypeAnnotation: &ast.TypeAnnotation{
+							IsResource: false,
+							Type: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "",
+									Pos:        ast.Position{Line: 1, Column: 10, Offset: 10},
+								},
+							},
+							StartPos: ast.Position{Line: 1, Column: 10, Offset: 10},
+						},
+						FunctionBlock: &ast.FunctionBlock{
+							Block: &ast.Block{
+								Range: ast.Range{
+									StartPos: ast.Position{Line: 1, Column: 12, Offset: 12},
+									EndPos:   ast.Position{Line: 1, Column: 13, Offset: 13},
+								},
+							},
+						},
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("function declaration with purity and name", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseStatements("view fun foo() {}", nil)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.FunctionDeclaration{
+					Purity: ast.FunctionPurityView,
+					Access: ast.AccessNotSpecified,
+					Identifier: ast.Identifier{
+						Identifier: "foo",
+						Pos:        ast.Position{Line: 1, Column: 9, Offset: 9},
+					},
+					ParameterList: &ast.ParameterList{
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 12, Offset: 12},
+							EndPos:   ast.Position{Line: 1, Column: 13, Offset: 13},
+						},
+					},
+					ReturnTypeAnnotation: &ast.TypeAnnotation{
+						IsResource: false,
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "",
+								Pos:        ast.Position{Line: 1, Column: 13, Offset: 13},
+							},
+						},
+						StartPos: ast.Position{Line: 1, Column: 13, Offset: 13},
+					},
+					FunctionBlock: &ast.FunctionBlock{
+						Block: &ast.Block{
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 1, Column: 15, Offset: 15},
+								EndPos:   ast.Position{Line: 1, Column: 16, Offset: 16},
+							},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
+
 	t.Run("function expression without name", func(t *testing.T) {
 
 		t.Parallel()
@@ -1032,6 +1123,21 @@ func TestParseFunctionStatementOrExpression(t *testing.T) {
 			result,
 		)
 	})
+}
+
+func TestParseViewNonFunction(t *testing.T) {
+	t.Parallel()
+
+	_, errs := ParseStatements("view return 3", nil)
+	utils.AssertEqualWithDiff(t,
+		[]error{
+			&SyntaxError{
+				Message: "expected fun keyword, but got return",
+				Pos:     ast.Position{Offset: 5, Line: 1, Column: 5},
+			},
+		},
+		errs,
+	)
 }
 
 func TestParseStatements(t *testing.T) {

@@ -49,6 +49,7 @@ var MetaType = &SimpleType{
 }
 
 var MetaTypeIsSubtypeFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	Parameters: []*Parameter{
 		{
 			Label:          "of",

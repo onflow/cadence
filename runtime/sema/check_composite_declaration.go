@@ -104,6 +104,7 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 		compositeType,
 		declaration.DeclarationKind(),
 		declaration.DeclarationDocString(),
+		compositeType.ConstructorPurity,
 		compositeType.ConstructorParameters,
 		kind,
 		initializationInfo,
@@ -531,6 +532,7 @@ func (checker *Checker) declareCompositeMembersAndValue(
 
 		initializers := declaration.Members.Initializers()
 		compositeType.ConstructorParameters = checker.initializerParameters(initializers)
+		compositeType.ConstructorPurity = checker.initializerPurity(initializers)
 
 		// Declare nested declarations' members
 
@@ -862,6 +864,7 @@ func (checker *Checker) declareEnumConstructor(
 
 func EnumConstructorType(compositeType *CompositeType) *FunctionType {
 	return &FunctionType{
+		Purity:        FunctionPurityView,
 		IsConstructor: true,
 		Parameters: []*Parameter{
 			{
@@ -898,6 +901,18 @@ func (checker *Checker) checkMemberStorability(members *StringMemberOrderedMap) 
 			},
 		)
 	})
+}
+
+func (checker *Checker) initializerPurity(initializers []*ast.SpecialFunctionDeclaration) FunctionPurity {
+	// TODO: support multiple overloaded initializers
+	initializerCount := len(initializers)
+	if initializerCount > 0 {
+		firstInitializer := initializers[0]
+		purity := PurityFromAnnotation(firstInitializer.FunctionDeclaration.Purity)
+		return purity
+	}
+	// a composite with no initializer is view because it runs no code
+	return FunctionPurityView
 }
 
 func (checker *Checker) initializerParameters(initializers []*ast.SpecialFunctionDeclaration) []*Parameter {
@@ -1071,10 +1086,12 @@ func (checker *Checker) checkCompositeConformance(
 	if interfaceType.InitializerParameters != nil {
 
 		initializerType := &FunctionType{
+			Purity:               compositeType.ConstructorPurity,
 			Parameters:           compositeType.ConstructorParameters,
 			ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
 		}
 		interfaceInitializerType := &FunctionType{
+			Purity:               interfaceType.InitializerPurity,
 			Parameters:           interfaceType.InitializerParameters,
 			ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
 		}
@@ -1082,6 +1099,8 @@ func (checker *Checker) checkCompositeConformance(
 		// TODO: subtype?
 		if !initializerType.Equal(interfaceInitializerType) {
 			initializerMismatch = &InitializerMismatch{
+				CompositePurity:     compositeType.ConstructorPurity,
+				InterfacePurity:     interfaceType.InitializerPurity,
 				CompositeParameters: compositeType.ConstructorParameters,
 				InterfaceParameters: interfaceType.InitializerParameters,
 			}
@@ -1243,6 +1262,11 @@ func (checker *Checker) memberSatisfied(compositeMember, interfaceMember *Member
 			}
 
 			if !interfaceMemberFunctionType.HasSameArgumentLabels(compositeMemberFunctionType) {
+				return false
+			}
+
+			// Functions are covariant in their purity
+			if compositeMemberFunctionType.Purity != interfaceMemberFunctionType.Purity && compositeMemberFunctionType.Purity != FunctionPurityView {
 				return false
 			}
 
@@ -1433,6 +1457,7 @@ func (checker *Checker) compositeConstructorType(
 ) {
 
 	constructorFunctionType = &FunctionType{
+		Purity:               compositeType.ConstructorPurity,
 		IsConstructor:        true,
 		ReturnTypeAnnotation: NewTypeAnnotation(compositeType),
 	}
@@ -1599,7 +1624,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 
 		identifier := function.Identifier.Identifier
 
-		functionType := checker.functionType(function.ParameterList, function.ReturnTypeAnnotation)
+		functionType := checker.functionType(function.Purity, function.ParameterList, function.ReturnTypeAnnotation)
 
 		argumentLabels := function.ParameterList.EffectiveArgumentLabels()
 
@@ -1778,6 +1803,7 @@ func (checker *Checker) checkInitializers(
 	containerType Type,
 	containerDeclarationKind common.DeclarationKind,
 	containerDocString string,
+	initializerPurity FunctionPurity,
 	initializerParameters []*Parameter,
 	containerKind ContainerKind,
 	initializationInfo *InitializationInfo,
@@ -1798,6 +1824,7 @@ func (checker *Checker) checkInitializers(
 		containerType,
 		containerDeclarationKind,
 		containerDocString,
+		initializerPurity,
 		initializerParameters,
 		containerKind,
 		initializationInfo,
@@ -1852,6 +1879,7 @@ func (checker *Checker) checkSpecialFunction(
 	containerType Type,
 	containerDeclarationKind common.DeclarationKind,
 	containerDocString string,
+	purity FunctionPurity,
 	parameters []*Parameter,
 	containerKind ContainerKind,
 	initializationInfo *InitializationInfo,
@@ -1867,6 +1895,7 @@ func (checker *Checker) checkSpecialFunction(
 	checker.declareSelfValue(containerType, containerDocString)
 
 	functionType := &FunctionType{
+		Purity:               purity,
 		Parameters:           parameters,
 		ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
 	}
@@ -2187,6 +2216,7 @@ func (checker *Checker) checkDestructor(
 		containerType,
 		containerDeclarationKind,
 		containerDocString,
+		FunctionPurityImpure,
 		parameters,
 		containerKind,
 		nil,

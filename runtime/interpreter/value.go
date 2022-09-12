@@ -2658,6 +2658,7 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 				)
 			},
 			&sema.FunctionType{
+				Purity: sema.FunctionPurityView,
 				ReturnTypeAnnotation: sema.NewTypeAnnotation(
 					sema.ByteArrayType,
 				),
@@ -2678,6 +2679,7 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 				)
 			},
 			&sema.FunctionType{
+				Purity: sema.FunctionPurityView,
 				ReturnTypeAnnotation: sema.NewTypeAnnotation(
 					typ,
 				),
@@ -2698,6 +2700,7 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 				)
 			},
 			&sema.FunctionType{
+				Purity: sema.FunctionPurityView,
 				ReturnTypeAnnotation: sema.NewTypeAnnotation(
 					typ,
 				),
@@ -2718,6 +2721,7 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 				)
 			},
 			&sema.FunctionType{
+				Purity: sema.FunctionPurityView,
 				ReturnTypeAnnotation: sema.NewTypeAnnotation(
 					typ,
 				),
@@ -2738,6 +2742,7 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 				)
 			},
 			&sema.FunctionType{
+				Purity: sema.FunctionPurityView,
 				ReturnTypeAnnotation: sema.NewTypeAnnotation(
 					typ,
 				),
@@ -16552,6 +16557,7 @@ var nilValueMapFunction = NewUnmeteredHostFunctionValue(
 		return NewNilValue(invocation.Interpreter)
 	},
 	&sema.FunctionType{
+		Purity: sema.FunctionPurityView,
 		ReturnTypeAnnotation: sema.NewTypeAnnotation(
 			sema.NeverType,
 		),

@@ -23,6 +23,17 @@ import (
 	"github.com/onflow/cadence/runtime/parser/lexer"
 )
 
+func parsePurityAnnotation(p *parser) ast.FunctionPurity {
+	// get the purity annotation (if one exists) and skip it
+	switch p.current.Value {
+	case keywordView:
+		p.next()
+		p.skipSpaceAndComments(true)
+		return ast.FunctionPurityView
+	}
+	return ast.FunctionPurityUnspecified
+}
+
 func parseParameterList(p *parser) (parameterList *ast.ParameterList, err error) {
 	var parameters []*ast.Parameter
 
@@ -176,14 +187,12 @@ func parseFunctionDeclaration(
 	functionBlockIsOptional bool,
 	access ast.Access,
 	accessPos *ast.Position,
+	purity ast.FunctionPurity,
+	purityPos *ast.Position,
 	docString string,
 ) (*ast.FunctionDeclaration, error) {
 
-	startPos := p.current.StartPos
-	if accessPos != nil {
-		startPos = *accessPos
-	}
-
+	startPos := *ast.EarlierPosition(ast.EarlierPosition(purityPos, accessPos), &p.current.StartPos)
 	// Skip the `fun` keyword
 	p.next()
 
@@ -208,6 +217,7 @@ func parseFunctionDeclaration(
 	return ast.NewFunctionDeclaration(
 		p.memoryGauge,
 		access,
+		purity,
 		identifier,
 		parameterList,
 		returnTypeAnnotation,

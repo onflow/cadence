@@ -1135,6 +1135,8 @@ type MemberMismatch struct {
 }
 
 type InitializerMismatch struct {
+	CompositePurity     FunctionPurity
+	InterfacePurity     FunctionPurity
 	CompositeParameters []*Parameter
 	InterfaceParameters []*Parameter
 }
@@ -3787,7 +3789,7 @@ func (e *InvalidEntryPointTypeError) Error() string {
 	)
 }
 
-// ImportedProgramError
+// ExternalMutationError
 
 type ExternalMutationError struct {
 	Name            string
@@ -3819,3 +3821,18 @@ func (e *ExternalMutationError) SecondaryError() string {
 		e.ContainerType.QualifiedString(),
 	)
 }
+
+type PurityError struct {
+	ast.Range
+}
+
+func (e *PurityError) Error() string {
+	return "Impure operation performed in view context"
+}
+
+var _ SemanticError = &PurityError{}
+var _ errors.UserError = &PurityError{}
+
+func (*PurityError) IsUserError() {}
+
+func (*PurityError) isSemanticError() {}

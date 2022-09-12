@@ -846,8 +846,16 @@ func defineIdentifierExpression() {
 					token.Range.StartPos,
 				), nil
 
+			case keywordView:
+				if p.current.Value != keywordFun {
+					return nil, p.syntaxError("expected fun keyword, but got %s", p.current.Value)
+				}
+				p.next()
+				p.skipSpaceAndComments(true)
+
+				return parseFunctionExpression(p, token, ast.FunctionPurityView)
 			case keywordFun:
-				return parseFunctionExpression(p, token)
+				return parseFunctionExpression(p, token, ast.FunctionPurityUnspecified)
 
 			default:
 				return ast.NewIdentifierExpression(
@@ -859,8 +867,7 @@ func defineIdentifierExpression() {
 	})
 }
 
-func parseFunctionExpression(p *parser, token lexer.Token) (*ast.FunctionExpression, error) {
-
+func parseFunctionExpression(p *parser, token lexer.Token, purity ast.FunctionPurity) (*ast.FunctionExpression, error) {
 	parameterList, returnTypeAnnotation, functionBlock, err :=
 		parseFunctionParameterListAndRest(p, false)
 	if err != nil {
@@ -869,6 +876,7 @@ func parseFunctionExpression(p *parser, token lexer.Token) (*ast.FunctionExpress
 
 	return ast.NewFunctionExpression(
 		p.memoryGauge,
+		purity,
 		parameterList,
 		returnTypeAnnotation,
 		functionBlock,

@@ -1336,6 +1336,7 @@ func (e *BinaryExpression) IsLeftAssociative() bool {
 // FunctionExpression
 
 type FunctionExpression struct {
+	Purity               FunctionPurity
 	ParameterList        *ParameterList
 	ReturnTypeAnnotation *TypeAnnotation
 	FunctionBlock        *FunctionBlock
@@ -1347,6 +1348,7 @@ var _ Expression = &FunctionExpression{}
 
 func NewFunctionExpression(
 	gauge common.MemoryGauge,
+	purity FunctionPurity,
 	parameters *ParameterList,
 	returnType *TypeAnnotation,
 	functionBlock *FunctionBlock,
@@ -1355,6 +1357,7 @@ func NewFunctionExpression(
 	common.UseMemory(gauge, common.FunctionExpressionMemoryUsage)
 
 	return &FunctionExpression{
+		Purity:               purity,
 		ParameterList:        parameters,
 		ReturnTypeAnnotation: returnType,
 		FunctionBlock:        functionBlock,

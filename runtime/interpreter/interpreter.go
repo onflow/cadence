@@ -39,6 +39,7 @@ import (
 //
 
 var emptyFunctionType = &sema.FunctionType{
+	Purity: sema.FunctionPurityImpure,
 	ReturnTypeAnnotation: &sema.TypeAnnotation{
 		Type: sema.VoidType,
 	},
@@ -1039,6 +1040,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 	constructorType := &sema.FunctionType{
 		IsConstructor: true,
+		Purity:        compositeType.ConstructorPurity,
 		Parameters:    compositeType.ConstructorParameters,
 		ReturnTypeAnnotation: &sema.TypeAnnotation{
 			Type: compositeType,
@@ -2937,6 +2939,7 @@ var typeFunction = NewUnmeteredHostFunctionValue(
 		return NewTypeValue(invocation.Interpreter, staticType)
 	},
 	&sema.FunctionType{
+		Purity:               sema.FunctionPurityView,
 		ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.MetaType),
 	},
 )
@@ -2962,6 +2965,7 @@ var stringFunction = func() Value {
 			return emptyString
 		},
 		&sema.FunctionType{
+			Purity: sema.FunctionPurityView,
 			ReturnTypeAnnotation: sema.NewTypeAnnotation(
 				sema.StringType,
 			),

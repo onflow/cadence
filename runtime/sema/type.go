@@ -192,6 +192,12 @@ type MemberResolver struct {
 	) *Member
 }
 
+// supertype of interfaces and composites
+type NominalType interface {
+	Type
+	MemberMap() *StringMemberOrderedMap
+}
+
 // ContainedType is a type which might have a container type
 //
 type ContainedType interface {
@@ -315,6 +321,7 @@ func NewTypeAnnotation(ty Type) *TypeAnnotation {
 const IsInstanceFunctionName = "isInstance"
 
 var IsInstanceFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	Parameters: []*Parameter{
 		{
 			Label:      ArgumentLabelNotRequired,
@@ -338,6 +345,7 @@ Returns true if the object conforms to the given type at runtime
 const GetTypeFunctionName = "getType"
 
 var GetTypeFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		MetaType,
 	),
@@ -352,6 +360,7 @@ Returns the type of the value
 const ToStringFunctionName = "toString"
 
 var ToStringFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		StringType,
 	),
@@ -366,6 +375,7 @@ A textual representation of this object
 const ToBigEndianBytesFunctionName = "toBigEndianBytes"
 
 var toBigEndianBytesFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		ByteArrayType,
 	),
@@ -617,6 +627,7 @@ func OptionalTypeMapFunctionType(typ Type) *FunctionType {
 	}
 
 	return &FunctionType{
+		Purity: FunctionPurityImpure,
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
@@ -626,6 +637,7 @@ func OptionalTypeMapFunctionType(typ Type) *FunctionType {
 				Identifier: "transform",
 				TypeAnnotation: NewTypeAnnotation(
 					&FunctionType{
+						Purity: FunctionPurityImpure,
 						Parameters: []*Parameter{
 							{
 								Label:          ArgumentLabelNotRequired,
@@ -813,6 +825,7 @@ self / other, saturating at the numeric bounds instead of overflowing.
 func addSaturatingArithmeticFunctions(t SaturatingArithmeticType, members map[string]MemberResolver) {
 
 	arithmeticFunctionType := &FunctionType{
+		Purity: FunctionPurityView,
 		Parameters: []*Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
@@ -1912,6 +1925,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 
 func ArrayRemoveLastFunctionType(elementType Type) *FunctionType {
 	return &FunctionType{
+		Purity: FunctionPurityImpure,
 		ReturnTypeAnnotation: NewTypeAnnotation(
 			elementType,
 		),
@@ -1920,6 +1934,7 @@ func ArrayRemoveLastFunctionType(elementType Type) *FunctionType {
 
 func ArrayRemoveFirstFunctionType(elementType Type) *FunctionType {
 	return &FunctionType{
+		Purity: FunctionPurityImpure,
 		ReturnTypeAnnotation: NewTypeAnnotation(
 			elementType,
 		),
@@ -1928,6 +1943,7 @@ func ArrayRemoveFirstFunctionType(elementType Type) *FunctionType {
 
 func ArrayRemoveFunctionType(elementType Type) *FunctionType {
 	return &FunctionType{
+		Purity: FunctionPurityImpure,
 		Parameters: []*Parameter{
 			{
 				Identifier:     "at",
@@ -1942,6 +1958,7 @@ func ArrayRemoveFunctionType(elementType Type) *FunctionType {
 
 func ArrayInsertFunctionType(elementType Type) *FunctionType {
 	return &FunctionType{
+		Purity: FunctionPurityImpure,
 		Parameters: []*Parameter{
 			{
 				Identifier:     "at",
@@ -1962,6 +1979,7 @@ func ArrayInsertFunctionType(elementType Type) *FunctionType {
 func ArrayConcatFunctionType(arrayType Type) *FunctionType {
 	typeAnnotation := NewTypeAnnotation(arrayType)
 	return &FunctionType{
+		Purity: FunctionPurityView,
 		Parameters: []*Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
@@ -1975,6 +1993,7 @@ func ArrayConcatFunctionType(arrayType Type) *FunctionType {
 
 func ArrayFirstIndexFunctionType(elementType Type) *FunctionType {
 	return &FunctionType{
+		Purity: FunctionPurityView,
 		Parameters: []*Parameter{
 			{
 				Identifier:     "of",
@@ -1988,6 +2007,7 @@ func ArrayFirstIndexFunctionType(elementType Type) *FunctionType {
 }
 func ArrayContainsFunctionType(elementType Type) *FunctionType {
 	return &FunctionType{
+		Purity: FunctionPurityView,
 		Parameters: []*Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
@@ -2003,6 +2023,7 @@ func ArrayContainsFunctionType(elementType Type) *FunctionType {
 
 func ArrayAppendAllFunctionType(arrayType Type) *FunctionType {
 	return &FunctionType{
+		Purity: FunctionPurityImpure,
 		Parameters: []*Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
@@ -2016,6 +2037,7 @@ func ArrayAppendAllFunctionType(arrayType Type) *FunctionType {
 
 func ArrayAppendFunctionType(elementType Type) *FunctionType {
 	return &FunctionType{
+		Purity: FunctionPurityImpure,
 		Parameters: []*Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
@@ -2031,6 +2053,7 @@ func ArrayAppendFunctionType(elementType Type) *FunctionType {
 
 func ArraySliceFunctionType(elementType Type) *FunctionType {
 	return &FunctionType{
+		Purity: FunctionPurityView,
 		Parameters: []*Parameter{
 			{
 				Identifier:     "from",
@@ -2462,6 +2485,7 @@ func (p TypeParameter) checkTypeBound(ty Type, typeRange ast.Range) error {
 
 func formatFunctionType(
 	spaces bool,
+	purity string,
 	typeParameters []string,
 	parameters []string,
 	returnTypeAnnotation string,
@@ -2469,6 +2493,13 @@ func formatFunctionType(
 
 	var builder strings.Builder
 	builder.WriteRune('(')
+
+	if len(purity) > 0 {
+		builder.WriteString(purity)
+		if spaces {
+			builder.WriteByte(' ')
+		}
+	}
 
 	if len(typeParameters) > 0 {
 		builder.WriteRune('<')
@@ -2504,8 +2535,23 @@ func formatFunctionType(
 
 // FunctionType
 //
+type FunctionPurity int
+
+const (
+	FunctionPurityImpure = iota
+	FunctionPurityView
+)
+
+func (p FunctionPurity) String() string {
+	if p == FunctionPurityImpure {
+		return ""
+	}
+	return "view"
+}
+
 type FunctionType struct {
 	IsConstructor            bool
+	Purity                   FunctionPurity
 	TypeParameters           []*TypeParameter
 	Parameters               []*Parameter
 	ReturnTypeAnnotation     *TypeAnnotation
@@ -2537,6 +2583,8 @@ func (t *FunctionType) CheckArgumentExpressions(
 
 func (t *FunctionType) String() string {
 
+	purity := t.Purity.String()
+
 	typeParameters := make([]string, len(t.TypeParameters))
 
 	for i, typeParameter := range t.TypeParameters {
@@ -2553,6 +2601,7 @@ func (t *FunctionType) String() string {
 
 	return formatFunctionType(
 		true,
+		purity,
 		typeParameters,
 		parameters,
 		returnTypeAnnotation,
@@ -2560,6 +2609,8 @@ func (t *FunctionType) String() string {
 }
 
 func (t *FunctionType) QualifiedString() string {
+
+	purity := t.Purity.String()
 
 	typeParameters := make([]string, len(t.TypeParameters))
 
@@ -2577,6 +2628,7 @@ func (t *FunctionType) QualifiedString() string {
 
 	return formatFunctionType(
 		true,
+		purity,
 		typeParameters,
 		parameters,
 		returnTypeAnnotation,
@@ -2585,6 +2637,8 @@ func (t *FunctionType) QualifiedString() string {
 
 // NOTE: parameter names and argument labels are *not* part of the ID!
 func (t *FunctionType) ID() TypeID {
+
+	purity := t.Purity.String()
 
 	typeParameters := make([]string, len(t.TypeParameters))
 
@@ -2603,6 +2657,7 @@ func (t *FunctionType) ID() TypeID {
 	return TypeID(
 		formatFunctionType(
 			false,
+			purity,
 			typeParameters,
 			parameters,
 			returnTypeAnnotation,
@@ -2614,6 +2669,10 @@ func (t *FunctionType) ID() TypeID {
 func (t *FunctionType) Equal(other Type) bool {
 	otherFunction, ok := other.(*FunctionType)
 	if !ok {
+		return false
+	}
+
+	if t.Purity != otherFunction.Purity {
 		return false
 	}
 
@@ -2815,6 +2874,7 @@ func (t *FunctionType) RewriteWithRestrictedTypes() (Type, bool) {
 		}
 
 		return &FunctionType{
+			Purity:                t.Purity,
 			TypeParameters:        rewrittenTypeParameters,
 			Parameters:            rewrittenParameters,
 			ReturnTypeAnnotation:  NewTypeAnnotation(rewrittenReturnType),
@@ -2926,6 +2986,7 @@ func (t *FunctionType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type 
 	}
 
 	return &FunctionType{
+		Purity:                t.Purity,
 		Parameters:            newParameters,
 		ReturnTypeAnnotation:  NewTypeAnnotation(newReturnType),
 		RequiredArgumentCount: t.RequiredArgumentCount,
@@ -3207,6 +3268,7 @@ func init() {
 
 func NumberConversionFunctionType(numberType Type) *FunctionType {
 	return &FunctionType{
+		Purity: FunctionPurityView,
 		Parameters: []*Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
@@ -3240,6 +3302,7 @@ func baseFunctionVariable(name string, ty *FunctionType, docString string) *Vari
 }
 
 var AddressConversionFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	Parameters: []*Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
@@ -3330,6 +3393,7 @@ func init() {
 	}
 
 	functionType := &FunctionType{
+		Purity:               FunctionPurityView,
 		ReturnTypeAnnotation: NewTypeAnnotation(StringType),
 	}
 
@@ -3370,6 +3434,7 @@ func init() {
 }
 
 var StringTypeEncodeHexFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	Parameters: []*Parameter{
 		{
 			Label:      ArgumentLabelNotRequired,
@@ -3401,6 +3466,7 @@ var StringTypeFromUtf8FunctionType = &FunctionType{
 
 func pathConversionFunctionType(pathType Type) *FunctionType {
 	return &FunctionType{
+		Purity: FunctionPurityView,
 		Parameters: []*Parameter{
 			{
 				Identifier:     "identifier",
@@ -3436,6 +3502,7 @@ func init() {
 		baseFunctionVariable(
 			typeName,
 			&FunctionType{
+				Purity:               FunctionPurityView,
 				TypeParameters:       []*TypeParameter{{Name: "T"}},
 				ReturnTypeAnnotation: NewTypeAnnotation(MetaType),
 			},
@@ -3503,6 +3570,7 @@ type CompositeType struct {
 	Fields                              []string
 	// TODO: add support for overloaded initializers
 	ConstructorParameters []*Parameter
+	ConstructorPurity     FunctionPurity
 	nestedTypes           *StringTypeOrderedMap
 	containerType         Type
 	EnumRawType           Type
@@ -3639,6 +3707,10 @@ func (t *CompositeType) Equal(other Type) bool {
 		otherStructure.ID() == t.ID()
 }
 
+func (t *CompositeType) MemberMap() *StringMemberOrderedMap {
+	return t.Members
+}
+
 func (t *CompositeType) GetMembers() map[string]MemberResolver {
 	t.initializeMemberResolvers()
 	return t.memberResolvers
@@ -3758,6 +3830,7 @@ func (t *CompositeType) InterfaceType() *InterfaceType {
 		Members:               t.Members,
 		Fields:                t.Fields,
 		InitializerParameters: t.ConstructorParameters,
+		InitializerPurity:     t.ConstructorPurity,
 		containerType:         t.containerType,
 		nestedTypes:           t.nestedTypes,
 	}
@@ -4031,6 +4104,7 @@ type InterfaceType struct {
 	Fields              []string
 	// TODO: add support for overloaded initializers
 	InitializerParameters []*Parameter
+	InitializerPurity     FunctionPurity
 	containerType         Type
 	nestedTypes           *StringTypeOrderedMap
 	cachedIdentifiers     *struct {
@@ -4128,6 +4202,10 @@ func (t *InterfaceType) Equal(other Type) bool {
 
 	return otherInterface.CompositeKind == t.CompositeKind &&
 		otherInterface.ID() == t.ID()
+}
+
+func (t *InterfaceType) MemberMap() *StringMemberOrderedMap {
+	return t.Members
 }
 
 func (t *InterfaceType) GetMembers() map[string]MemberResolver {
@@ -4519,6 +4597,7 @@ func (t *DictionaryType) initializeMemberResolvers() {
 
 func DictionaryContainsKeyFunctionType(t *DictionaryType) *FunctionType {
 	return &FunctionType{
+		Purity: FunctionPurityView,
 		Parameters: []*Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
@@ -4534,6 +4613,7 @@ func DictionaryContainsKeyFunctionType(t *DictionaryType) *FunctionType {
 
 func DictionaryInsertFunctionType(t *DictionaryType) *FunctionType {
 	return &FunctionType{
+		Purity: FunctionPurityImpure,
 		Parameters: []*Parameter{
 			{
 				Identifier:     "key",
@@ -4555,6 +4635,7 @@ func DictionaryInsertFunctionType(t *DictionaryType) *FunctionType {
 
 func DictionaryRemoveFunctionType(t *DictionaryType) *FunctionType {
 	return &FunctionType{
+		Purity: FunctionPurityImpure,
 		Parameters: []*Parameter{
 			{
 				Identifier:     "key",
@@ -4864,6 +4945,7 @@ func (t *AddressType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 const AddressTypeToBytesFunctionName = `toBytes`
 
 var AddressTypeToBytesFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		ByteArrayType,
 	),
@@ -5271,6 +5353,11 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 			return false
 		}
 
+		// view functions are subtypes of impure functions
+		if typedSubType.Purity != typedSuperType.Purity && typedSubType.Purity != FunctionPurityView {
+			return false
+		}
+
 		if len(typedSubType.Parameters) != len(typedSuperType.Parameters) {
 			return false
 		}
@@ -5604,6 +5691,7 @@ type TransactionType struct {
 
 func (t *TransactionType) EntryPointFunctionType() *FunctionType {
 	return &FunctionType{
+		Purity:               FunctionPurityImpure,
 		Parameters:           append(t.Parameters, t.PrepareParameters...),
 		ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
 	}
@@ -5611,6 +5699,7 @@ func (t *TransactionType) EntryPointFunctionType() *FunctionType {
 
 func (t *TransactionType) PrepareFunctionType() *FunctionType {
 	return &FunctionType{
+		Purity:               FunctionPurityImpure,
 		IsConstructor:        true,
 		Parameters:           t.PrepareParameters,
 		ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
@@ -5619,6 +5708,7 @@ func (t *TransactionType) PrepareFunctionType() *FunctionType {
 
 func (*TransactionType) ExecuteFunctionType() *FunctionType {
 	return &FunctionType{
+		Purity:               FunctionPurityImpure,
 		IsConstructor:        true,
 		Parameters:           []*Parameter{},
 		ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
@@ -6146,6 +6236,7 @@ func CapabilityTypeBorrowFunctionType(borrowType Type) *FunctionType {
 	}
 
 	return &FunctionType{
+		Purity:         FunctionPurityView,
 		TypeParameters: typeParameters,
 		ReturnTypeAnnotation: NewTypeAnnotation(
 			&OptionalType{
@@ -6166,6 +6257,7 @@ func CapabilityTypeCheckFunctionType(borrowType Type) *FunctionType {
 	}
 
 	return &FunctionType{
+		Purity:               FunctionPurityView,
 		TypeParameters:       typeParameters,
 		ReturnTypeAnnotation: NewTypeAnnotation(BoolType),
 	}
@@ -6390,6 +6482,7 @@ var PublicKeyArrayType = &VariableSizedType{
 }
 
 var PublicKeyVerifyFunctionType = &FunctionType{
+	Purity:         FunctionPurityView,
 	TypeParameters: []*TypeParameter{},
 	Parameters: []*Parameter{
 		{
@@ -6417,6 +6510,7 @@ var PublicKeyVerifyFunctionType = &FunctionType{
 }
 
 var PublicKeyVerifyPoPFunctionType = &FunctionType{
+	Purity:         FunctionPurityView,
 	TypeParameters: []*TypeParameter{},
 	Parameters: []*Parameter{
 		{

@@ -1016,6 +1016,7 @@ func TestParseFunctionType(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.FunctionType{
+				PurityAnnotation:         ast.FunctionPurityUnspecified,
 				ParameterTypeAnnotations: nil,
 				ReturnTypeAnnotation: &ast.TypeAnnotation{
 					IsResource: false,
@@ -1030,6 +1031,36 @@ func TestParseFunctionType(t *testing.T) {
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("view function type", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseType("(view ():Void)", nil)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.FunctionType{
+				PurityAnnotation:         ast.FunctionPurityView,
+				ParameterTypeAnnotations: nil,
+				ReturnTypeAnnotation: &ast.TypeAnnotation{
+					IsResource: false,
+					Type: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "Void",
+							Pos:        ast.Position{Line: 1, Column: 9, Offset: 9},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 13, Offset: 13},
 				},
 			},
 			result,

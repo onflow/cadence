@@ -67,6 +67,9 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 	access := ast.AccessNotSpecified
 	var accessPos *ast.Position
 
+	purity := ast.FunctionPurityUnspecified
+	var purityPos *ast.Position
+
 	for {
 		p.skipSpaceAndComments(true)
 
@@ -79,25 +82,50 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 		case lexer.TokenIdentifier:
 			switch p.current.Value {
 			case keywordLet, keywordVar:
+				if purity != ast.FunctionPurityUnspecified {
+					return nil, p.syntaxError("invalid view modifier for variable")
+				}
 				return parseVariableDeclaration(p, access, accessPos, docString)
 
 			case keywordFun:
-				return parseFunctionDeclaration(p, false, access, accessPos, docString)
+				return parseFunctionDeclaration(p, false, access, accessPos, purity, purityPos, docString)
 
 			case keywordImport:
+				if purity != ast.FunctionPurityUnspecified {
+					return nil, p.syntaxError("invalid view modifier for import")
+				}
 				return parseImportDeclaration(p)
 
 			case keywordEvent:
+				if purity != ast.FunctionPurityUnspecified {
+					return nil, p.syntaxError("invalid view modifier for event")
+				}
 				return parseEventDeclaration(p, access, accessPos, docString)
 
 			case keywordStruct, keywordResource, keywordContract, keywordEnum:
+				if purity != ast.FunctionPurityUnspecified {
+					return nil, p.syntaxError("invalid view modifier for composite")
+				}
 				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, docString)
 
 			case keywordTransaction:
 				if access != ast.AccessNotSpecified {
 					return nil, p.syntaxError("invalid access modifier for transaction")
 				}
+				if purity != ast.FunctionPurityUnspecified {
+					return nil, p.syntaxError("invalid view modifier for transaction")
+				}
+
 				return parseTransactionDeclaration(p, docString)
+
+			case keywordView:
+				if purity != ast.FunctionPurityUnspecified {
+					return nil, p.syntaxError("invalid second view modifier")
+				}
+				pos := p.current.StartPos
+				purityPos = &pos
+				purity = parsePurityAnnotation(p)
+				continue
 
 			case keywordPriv, keywordPub, keywordAccess:
 				if access != ast.AccessNotSpecified {
@@ -715,6 +743,7 @@ func parseEventDeclaration(
 		ast.NewFunctionDeclaration(
 			p.memoryGauge,
 			ast.AccessNotSpecified,
+			ast.FunctionPurityUnspecified,
 			ast.NewEmptyIdentifier(p.memoryGauge, ast.EmptyPosition),
 			parameterList,
 			nil,
@@ -1043,6 +1072,9 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 	access := ast.AccessNotSpecified
 	var accessPos *ast.Position
 
+	purity := ast.FunctionPurityUnspecified
+	var purityPos *ast.Position
+
 	var previousIdentifierToken *lexer.Token
 
 	for {
@@ -1052,19 +1084,40 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 		case lexer.TokenIdentifier:
 			switch p.current.Value {
 			case keywordLet, keywordVar:
+				if purity != ast.FunctionPurityUnspecified {
+					return nil, p.syntaxError("invalid view modifier for variable")
+				}
 				return parseFieldWithVariableKind(p, access, accessPos, docString)
 
 			case keywordCase:
+				if purity != ast.FunctionPurityUnspecified {
+					return nil, p.syntaxError("invalid view modifier for case")
+				}
 				return parseEnumCase(p, access, accessPos, docString)
 
 			case keywordFun:
-				return parseFunctionDeclaration(p, functionBlockIsOptional, access, accessPos, docString)
+				return parseFunctionDeclaration(p, functionBlockIsOptional, access, accessPos, purity, purityPos, docString)
 
 			case keywordEvent:
+				if purity != ast.FunctionPurityUnspecified {
+					return nil, p.syntaxError("invalid view modifier for event")
+				}
 				return parseEventDeclaration(p, access, accessPos, docString)
 
 			case keywordStruct, keywordResource, keywordContract, keywordEnum:
+				if purity != ast.FunctionPurityUnspecified {
+					return nil, p.syntaxError("invalid view modifier for composite")
+				}
 				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, docString)
+
+			case keywordView:
+				if purity != ast.FunctionPurityUnspecified {
+					return nil, p.syntaxError("invalid second view modifier")
+				}
+				pos := p.current.StartPos
+				purityPos = &pos
+				purity = parsePurityAnnotation(p)
+				continue
 
 			case keywordPriv, keywordPub, keywordAccess:
 				if access != ast.AccessNotSpecified {
@@ -1096,7 +1149,9 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 			if previousIdentifierToken == nil {
 				return nil, p.syntaxError("unexpected %s", p.current.Type)
 			}
-
+			if purity != ast.FunctionPurityUnspecified {
+				return nil, p.syntaxError("invalid view modifier for variable")
+			}
 			identifier := p.tokenToIdentifier(*previousIdentifierToken)
 			return parseFieldDeclarationWithoutVariableKind(p, access, accessPos, identifier, docString)
 
@@ -1106,7 +1161,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 			}
 
 			identifier := p.tokenToIdentifier(*previousIdentifierToken)
-			return parseSpecialFunctionDeclaration(p, functionBlockIsOptional, access, accessPos, identifier)
+			return parseSpecialFunctionDeclaration(p, functionBlockIsOptional, access, accessPos, purity, purityPos, identifier)
 		}
 
 		return nil, nil
@@ -1158,13 +1213,12 @@ func parseSpecialFunctionDeclaration(
 	functionBlockIsOptional bool,
 	access ast.Access,
 	accessPos *ast.Position,
+	purity ast.FunctionPurity,
+	purityPos *ast.Position,
 	identifier ast.Identifier,
 ) (*ast.SpecialFunctionDeclaration, error) {
 
-	startPos := identifier.Pos
-	if accessPos != nil {
-		startPos = *accessPos
-	}
+	startPos := *ast.EarlierPosition(ast.EarlierPosition(purityPos, accessPos), &identifier.Pos)
 
 	// TODO: switch to parseFunctionParameterListAndRest once old parser is deprecated:
 	//   allow a return type annotation while parsing, but reject later.
@@ -1193,6 +1247,9 @@ func parseSpecialFunctionDeclaration(
 		declarationKind = common.DeclarationKindInitializer
 
 	case keywordDestroy:
+		if purity == ast.FunctionPurityView {
+			return nil, NewSyntaxError(*purityPos, "invalid view annotation on destructor")
+		}
 		declarationKind = common.DeclarationKindDestructor
 
 	case keywordPrepare:
@@ -1205,6 +1262,7 @@ func parseSpecialFunctionDeclaration(
 		ast.NewFunctionDeclaration(
 			p.memoryGauge,
 			access,
+			purity,
 			identifier,
 			parameterList,
 			nil,

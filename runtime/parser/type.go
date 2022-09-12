@@ -633,6 +633,8 @@ func defineFunctionType() {
 		lexer.TokenParenOpen,
 		func(p *parser, startToken lexer.Token) (ast.Type, error) {
 
+			purity := parsePurityAnnotation(p)
+
 			parameterTypeAnnotations, err := parseParameterTypeAnnotations(p)
 			if err != nil {
 				return nil, err
@@ -658,6 +660,7 @@ func defineFunctionType() {
 
 			return ast.NewFunctionType(
 				p.memoryGauge,
+				purity,
 				parameterTypeAnnotations,
 				returnTypeAnnotation,
 				ast.NewRange(

@@ -812,6 +812,7 @@ func TestFunctionType_MarshalJSON(t *testing.T) {
                     "EndPos": {"Offset": 2, "Line": 2, "Column": 4}
                 }
            ],
+		   "PurityAnnotation": "Unspecified",
            "ReturnTypeAnnotation": {
                "IsResource": true,
                "AnnotatedType": {

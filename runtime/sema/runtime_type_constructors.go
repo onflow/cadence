@@ -25,6 +25,7 @@ type RuntimeTypeConstructor struct {
 }
 
 var OptionalTypeFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	Parameters: []*Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
@@ -36,6 +37,7 @@ var OptionalTypeFunctionType = &FunctionType{
 }
 
 var VariableSizedArrayTypeFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	Parameters: []*Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
@@ -47,6 +49,7 @@ var VariableSizedArrayTypeFunctionType = &FunctionType{
 }
 
 var ConstantSizedArrayTypeFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	Parameters: []*Parameter{
 		{
 			Identifier:     "type",
@@ -61,6 +64,7 @@ var ConstantSizedArrayTypeFunctionType = &FunctionType{
 }
 
 var DictionaryTypeFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	Parameters: []*Parameter{
 		{
 			Identifier:     "key",
@@ -75,6 +79,7 @@ var DictionaryTypeFunctionType = &FunctionType{
 }
 
 var CompositeTypeFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	Parameters: []*Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
@@ -86,6 +91,7 @@ var CompositeTypeFunctionType = &FunctionType{
 }
 
 var InterfaceTypeFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	Parameters: []*Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
@@ -97,6 +103,7 @@ var InterfaceTypeFunctionType = &FunctionType{
 }
 
 var FunctionTypeFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	Parameters: []*Parameter{
 		{
 			Identifier:     "parameters",
@@ -111,6 +118,7 @@ var FunctionTypeFunctionType = &FunctionType{
 }
 
 var RestrictedTypeFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	Parameters: []*Parameter{
 		{
 			Identifier:     "identifier",
@@ -125,6 +133,7 @@ var RestrictedTypeFunctionType = &FunctionType{
 }
 
 var ReferenceTypeFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	Parameters: []*Parameter{
 		{
 			Identifier:     "authorized",
@@ -139,6 +148,7 @@ var ReferenceTypeFunctionType = &FunctionType{
 }
 
 var CapabilityTypeFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	Parameters: []*Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
