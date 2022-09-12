@@ -23,7 +23,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
-func (checker *Checker) VisitForStatement(statement *ast.ForStatement) ast.Repr {
+func (checker *Checker) VisitForStatement(statement *ast.ForStatement) (_ struct{}) {
 
 	checker.enterValueScope()
 	defer checker.leaveValueScope(statement.EndPosition, true)
@@ -73,14 +73,14 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) ast.Repr 
 
 	identifier := statement.Identifier.Identifier
 
-	variable, err := checker.valueActivations.Declare(VariableDeclaration{
-		Identifier:               identifier,
-		Type:                     elementType,
-		Kind:                     common.DeclarationKindConstant,
-		Pos:                      statement.Identifier.Pos,
-		IsConstant:               true,
-		ArgumentLabels:           nil,
-		AllowOuterScopeShadowing: false,
+	variable, err := checker.valueActivations.declare(variableDeclaration{
+		identifier:               identifier,
+		ty:                       elementType,
+		kind:                     common.DeclarationKindConstant,
+		pos:                      statement.Identifier.Pos,
+		isConstant:               true,
+		argumentLabels:           nil,
+		allowOuterScopeShadowing: false,
 	})
 	checker.report(err)
 	if checker.PositionInfo != nil {
@@ -89,14 +89,14 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) ast.Repr 
 
 	if statement.Index != nil {
 		index := statement.Index.Identifier
-		indexVariable, err := checker.valueActivations.Declare(VariableDeclaration{
-			Identifier:               index,
-			Type:                     IntType,
-			Kind:                     common.DeclarationKindConstant,
-			Pos:                      statement.Index.Pos,
-			IsConstant:               true,
-			ArgumentLabels:           nil,
-			AllowOuterScopeShadowing: false,
+		indexVariable, err := checker.valueActivations.declare(variableDeclaration{
+			identifier:               index,
+			ty:                       IntType,
+			kind:                     common.DeclarationKindConstant,
+			pos:                      statement.Index.Pos,
+			isConstant:               true,
+			argumentLabels:           nil,
+			allowOuterScopeShadowing: false,
 		})
 		checker.report(err)
 		if checker.PositionInfo != nil {
@@ -110,7 +110,7 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) ast.Repr 
 
 	_ = checker.checkPotentiallyUnevaluated(func() Type {
 		checker.functionActivations.WithLoop(func() {
-			statement.Block.Accept(checker)
+			checker.checkBlock(statement.Block)
 		})
 
 		// ignored
@@ -119,5 +119,5 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) ast.Repr 
 
 	checker.reportResourceUsesInLoop(statement.StartPos, statement.EndPosition(checker.memoryGauge))
 
-	return nil
+	return
 }

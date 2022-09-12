@@ -23,7 +23,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"runtime/debug"
 	"strings"
@@ -220,7 +220,7 @@ func runPath(
 	var program *ast.Program
 	var must func(error)
 
-	codes := map[common.Location]string{}
+	codes := map[common.Location][]byte{}
 
 	location := common.NewStringLocation(nil, path)
 
@@ -272,16 +272,16 @@ func runPath(
 	return res, succeeded
 }
 
-func read(path string) string {
+func read(path string) []byte {
 	var data []byte
 	var err error
 	if len(path) == 0 {
-		data, err = ioutil.ReadAll(bufio.NewReader(os.Stdin))
+		data, err = io.ReadAll(bufio.NewReader(os.Stdin))
 	} else {
-		data, err = ioutil.ReadFile(path)
+		data, err = os.ReadFile(path)
 	}
 	if err != nil {
 		panic(err)
 	}
-	return string(data)
+	return data
 }

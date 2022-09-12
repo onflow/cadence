@@ -72,6 +72,10 @@ func (c *contractInfo) update(uri protocol.DocumentURI, version int32, checker *
 		c.kind = contractTypeInterface
 	}
 
+	c.pragmaArguments = nil
+	c.pragmaArgumentStrings = nil
+	c.pragmaSignersNames = nil
+
 	if c.startPos != nil {
 		parameterTypes := make([]sema.Type, len(c.parameters))
 

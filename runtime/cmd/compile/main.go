@@ -40,7 +40,7 @@ func main() {
 
 	location := common.NewStringLocation(nil, path)
 
-	codes := map[common.Location]string{}
+	codes := map[common.Location][]byte{}
 
 	program, must := cmd.PrepareProgramFromFile(location, codes)
 
@@ -57,7 +57,7 @@ func main() {
 	funcs := make([]*ir.Func, len(functionDeclarations))
 
 	for i, functionDeclaration := range functionDeclarations {
-		funcs[i] = functionDeclaration.Accept(comp).(*ir.Func)
+		funcs[i] = ast.AcceptDeclaration[ir.Stmt](functionDeclaration, comp).(*ir.Func)
 	}
 
 	// Generate a WebAssembly module for the functions

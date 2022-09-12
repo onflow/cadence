@@ -271,19 +271,19 @@ func (a *VariableActivations) Depth() int {
 	return len(a.activations)
 }
 
-type VariableDeclaration struct {
-	Identifier               string
-	Type                     Type
-	DocString                string
-	Access                   ast.Access
-	Kind                     common.DeclarationKind
-	Pos                      ast.Position
-	IsConstant               bool
-	ArgumentLabels           []string
-	AllowOuterScopeShadowing bool
+type variableDeclaration struct {
+	identifier               string
+	ty                       Type
+	docString                string
+	access                   ast.Access
+	kind                     common.DeclarationKind
+	pos                      ast.Position
+	isConstant               bool
+	argumentLabels           []string
+	allowOuterScopeShadowing bool
 }
 
-func (a *VariableActivations) Declare(declaration VariableDeclaration) (variable *Variable, err error) {
+func (a *VariableActivations) declare(declaration variableDeclaration) (variable *Variable, err error) {
 
 	depth := a.Depth()
 
@@ -292,16 +292,16 @@ func (a *VariableActivations) Declare(declaration VariableDeclaration) (variable
 	// or the existing variable is declared in the current scope,
 	// or the existing variable is a built-in.
 
-	existingVariable := a.Find(declaration.Identifier)
+	existingVariable := a.Find(declaration.identifier)
 	if existingVariable != nil &&
-		(!declaration.AllowOuterScopeShadowing ||
+		(!declaration.allowOuterScopeShadowing ||
 			existingVariable.ActivationDepth == depth ||
 			existingVariable.ActivationDepth == 0) {
 
 		err = &RedeclarationError{
-			Kind:        declaration.Kind,
-			Name:        declaration.Identifier,
-			Pos:         declaration.Pos,
+			Kind:        declaration.kind,
+			Name:        declaration.identifier,
+			Pos:         declaration.pos,
 			PreviousPos: existingVariable.Pos,
 		}
 
@@ -313,18 +313,38 @@ func (a *VariableActivations) Declare(declaration VariableDeclaration) (variable
 	// declare it.
 
 	variable = &Variable{
-		Identifier:      declaration.Identifier,
-		Access:          declaration.Access,
-		DeclarationKind: declaration.Kind,
-		IsConstant:      declaration.IsConstant,
+		Identifier:      declaration.identifier,
+		Access:          declaration.access,
+		DeclarationKind: declaration.kind,
+		IsConstant:      declaration.isConstant,
 		ActivationDepth: depth,
-		Type:            declaration.Type,
-		Pos:             &declaration.Pos,
-		ArgumentLabels:  declaration.ArgumentLabels,
-		DocString:       declaration.DocString,
+		Type:            declaration.ty,
+		Pos:             &declaration.pos,
+		ArgumentLabels:  declaration.argumentLabels,
+		DocString:       declaration.docString,
 	}
-	a.Set(declaration.Identifier, variable)
+	a.Set(declaration.identifier, variable)
 	return variable, err
+}
+
+func (a *VariableActivations) DeclareValue(declaration ValueDeclaration) (*Variable, error) {
+	var variablePos ast.Position
+	declarationPos := declaration.ValueDeclarationPosition()
+	if declarationPos != nil {
+		variablePos = *declarationPos
+	}
+
+	return a.declare(variableDeclaration{
+		identifier: declaration.ValueDeclarationName(),
+		kind:       declaration.ValueDeclarationKind(),
+		ty:         declaration.ValueDeclarationType(),
+		// TODO: add access to ValueDeclaration and use declaration's access instead here
+		access:         ast.AccessPublic,
+		isConstant:     declaration.ValueDeclarationIsConstant(),
+		argumentLabels: declaration.ValueDeclarationArgumentLabels(),
+		pos:            variablePos,
+		docString:      declaration.ValueDeclarationDocString(),
+	})
 }
 
 type typeDeclaration struct {
@@ -336,35 +356,35 @@ type typeDeclaration struct {
 	docString                string
 }
 
-func (a *VariableActivations) DeclareType(declaration typeDeclaration) (*Variable, error) {
-	return a.Declare(
-		VariableDeclaration{
-			Identifier:               declaration.identifier.Identifier,
-			Type:                     declaration.ty,
-			Access:                   declaration.access,
-			Kind:                     declaration.declarationKind,
-			Pos:                      declaration.identifier.Pos,
-			IsConstant:               true,
-			ArgumentLabels:           nil,
-			AllowOuterScopeShadowing: declaration.allowOuterScopeShadowing,
-			DocString:                declaration.docString,
+func (a *VariableActivations) declareType(declaration typeDeclaration) (*Variable, error) {
+	return a.declare(
+		variableDeclaration{
+			identifier:               declaration.identifier.Identifier,
+			ty:                       declaration.ty,
+			access:                   declaration.access,
+			kind:                     declaration.declarationKind,
+			pos:                      declaration.identifier.Pos,
+			isConstant:               true,
+			argumentLabels:           nil,
+			allowOuterScopeShadowing: declaration.allowOuterScopeShadowing,
+			docString:                declaration.docString,
 		},
 	)
 }
 
-func (a *VariableActivations) DeclareImplicitConstant(
+func (a *VariableActivations) declareImplicitConstant(
 	identifier string,
 	ty Type,
 	kind common.DeclarationKind,
 ) (*Variable, error) {
-	return a.Declare(
-		VariableDeclaration{
-			Identifier:               identifier,
-			Type:                     ty,
-			Access:                   ast.AccessPublic,
-			Kind:                     kind,
-			IsConstant:               true,
-			AllowOuterScopeShadowing: false,
+	return a.declare(
+		variableDeclaration{
+			identifier:               identifier,
+			ty:                       ty,
+			access:                   ast.AccessPublic,
+			kind:                     kind,
+			isConstant:               true,
+			allowOuterScopeShadowing: false,
 		},
 	)
 }

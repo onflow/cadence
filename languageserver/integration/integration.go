@@ -34,7 +34,6 @@ func NewFlowIntegration(s *server.Server, enableFlowClient bool) (*FlowIntegrati
 	loader := &afero.Afero{Fs: afero.NewOsFs()}
 
 	integration := &FlowIntegration{
-		server:         s,
 		entryPointInfo: map[protocol.DocumentURI]*entryPointInfo{},
 		contractInfo:   map[protocol.DocumentURI]*contractInfo{},
 		loader:         loader,
@@ -76,8 +75,6 @@ func NewFlowIntegration(s *server.Server, enableFlowClient bool) (*FlowIntegrati
 }
 
 type FlowIntegration struct {
-	server *server.Server // todo remove since not used
-
 	entryPointInfo map[protocol.DocumentURI]*entryPointInfo
 	contractInfo   map[protocol.DocumentURI]*contractInfo
 

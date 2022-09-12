@@ -241,7 +241,7 @@ func (r *TestRunner) parseCheckAndInterpret(script string) (*interpreter.Program
 
 	// Checker configs
 	env.CheckerConfig.ImportHandler = r.checkerImportHandler(ctx)
-	env.CheckerConfig.ContractVariableHandler = contractVariableHandler
+	env.CheckerConfig.ContractValueHandler = contractValueHandler
 
 	// Interpreter configs
 	env.InterpreterConfig.ImportLocationHandler = r.interpreterImportHandler(ctx)
@@ -304,27 +304,24 @@ func (r *TestRunner) checkerImportHandler(ctx runtime.Context) sema.ImportHandle
 	}
 }
 
-func contractVariableHandler(
+func contractValueHandler(
 	checker *sema.Checker,
 	declaration *ast.CompositeDeclaration,
 	compositeType *sema.CompositeType,
-) sema.VariableDeclaration {
+) sema.ValueDeclaration {
 	constructorType, constructorArgumentLabels := sema.CompositeConstructorType(
 		checker.Elaboration,
 		declaration,
 		compositeType,
 	)
 
-	return sema.VariableDeclaration{
-		Identifier:               declaration.Identifier.Identifier,
-		Type:                     constructorType,
-		DocString:                declaration.DocString,
-		Access:                   declaration.Access,
-		Kind:                     declaration.DeclarationKind(),
-		Pos:                      declaration.Identifier.Pos,
-		IsConstant:               true,
-		ArgumentLabels:           constructorArgumentLabels,
-		AllowOuterScopeShadowing: false,
+	return stdlib.StandardLibraryValue{
+		Name:           declaration.Identifier.Identifier,
+		Type:           constructorType,
+		DocString:      declaration.DocString,
+		Kind:           declaration.DeclarationKind(),
+		Position:       &declaration.Identifier.Pos,
+		ArgumentLabels: constructorArgumentLabels,
 	}
 }
 
@@ -460,7 +457,7 @@ func (r *TestRunner) parseAndCheckImport(location common.Location, startCtx runt
 		return nil, fmt.Errorf("nested imports are not supported")
 	}
 
-	env.CheckerConfig.ContractVariableHandler = contractVariableHandler
+	env.CheckerConfig.ContractValueHandler = contractValueHandler
 
 	program, err := r.testRuntime.ParseAndCheckProgram([]byte(code), ctx)
 

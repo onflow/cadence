@@ -38,12 +38,14 @@ import (
 // 2. Acquiring the programs for the resolved imports. For each resolved import a separate program can be returned.
 //
 
-func (checker *Checker) VisitImportDeclaration(_ *ast.ImportDeclaration) ast.Repr {
+func (checker *Checker) VisitImportDeclaration(declaration *ast.ImportDeclaration) struct{} {
 	// Handled in `declareImportDeclaration`
-	panic(&UnreachableStatementError{})
+	panic(&UnreachableStatementError{
+		Range: ast.NewRangeFromPositioned(checker.memoryGauge, declaration),
+	})
 }
 
-func (checker *Checker) declareImportDeclaration(declaration *ast.ImportDeclaration) ast.Repr {
+func (checker *Checker) declareImportDeclaration(declaration *ast.ImportDeclaration) Type {
 	locationRange := ast.NewRange(
 		checker.memoryGauge,
 		declaration.LocationPos,
@@ -246,19 +248,19 @@ func (checker *Checker) handleMissingImports(missing []ast.Identifier, available
 		// NOTE: declare constant variable with invalid type to silence rest of program
 		const access = ast.AccessPrivate
 
-		_, err := checker.valueActivations.Declare(VariableDeclaration{
-			Identifier:               identifier.Identifier,
-			Type:                     InvalidType,
-			Access:                   access,
-			Kind:                     common.DeclarationKindValue,
-			Pos:                      identifier.Pos,
-			IsConstant:               true,
-			AllowOuterScopeShadowing: false,
+		_, err := checker.valueActivations.declare(variableDeclaration{
+			identifier:               identifier.Identifier,
+			ty:                       InvalidType,
+			access:                   access,
+			kind:                     common.DeclarationKindValue,
+			pos:                      identifier.Pos,
+			isConstant:               true,
+			allowOuterScopeShadowing: false,
 		})
 		checker.report(err)
 
 		// NOTE: declare type with invalid type to silence rest of program
-		_, err = checker.typeActivations.DeclareType(typeDeclaration{
+		_, err = checker.typeActivations.declareType(typeDeclaration{
 			identifier:               identifier,
 			ty:                       InvalidType,
 			declarationKind:          common.DeclarationKindType,
@@ -324,17 +326,17 @@ func (checker *Checker) importElements(
 				}
 			}
 
-			_, err := valueActivations.Declare(VariableDeclaration{
-				Identifier: name,
-				Type:       element.Type,
+			_, err := valueActivations.declare(variableDeclaration{
+				identifier: name,
+				ty:         element.Type,
 				// TODO: implies that type is "re-exported"
-				Access: access,
-				Kind:   element.DeclarationKind,
+				access: access,
+				kind:   element.DeclarationKind,
 				// TODO:
-				Pos:                      ast.EmptyPosition,
-				IsConstant:               true,
-				ArgumentLabels:           element.ArgumentLabels,
-				AllowOuterScopeShadowing: false,
+				pos:                      ast.EmptyPosition,
+				isConstant:               true,
+				argumentLabels:           element.ArgumentLabels,
+				allowOuterScopeShadowing: false,
 			})
 			checker.report(err)
 		})

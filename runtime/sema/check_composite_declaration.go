@@ -25,10 +25,9 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
-func (checker *Checker) VisitCompositeDeclaration(declaration *ast.CompositeDeclaration) ast.Repr {
+func (checker *Checker) VisitCompositeDeclaration(declaration *ast.CompositeDeclaration) (_ struct{}) {
 	checker.visitCompositeDeclaration(declaration, ContainerKindComposite)
-
-	return nil
+	return
 }
 
 // visitCompositeDeclaration checks a previously declared composite declaration.
@@ -200,11 +199,11 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 	// DON'T use `nestedDeclarations`, because of non-deterministic order
 
 	for _, nestedInterface := range declaration.Members.Interfaces() {
-		nestedInterface.Accept(checker)
+		ast.AcceptDeclaration[struct{}](nestedInterface, checker)
 	}
 
 	for _, nestedComposite := range declaration.Members.Composites() {
-		nestedComposite.Accept(checker)
+		ast.AcceptDeclaration[struct{}](nestedComposite, checker)
 	}
 }
 
@@ -241,7 +240,7 @@ func (checker *Checker) declareCompositeNestedTypes(
 		// NOTE: We allow the shadowing of types here, because the type was already previously
 		// declared without allowing shadowing before. This avoids a duplicate error message.
 
-		_, err := checker.typeActivations.DeclareType(typeDeclaration{
+		_, err := checker.typeActivations.declareType(typeDeclaration{
 			identifier:               *identifier,
 			ty:                       nestedType,
 			declarationKind:          nestedDeclaration.DeclarationKind(),
@@ -433,7 +432,7 @@ func (checker *Checker) declareCompositeType(declaration *ast.CompositeDeclarati
 		Members:     &StringMemberOrderedMap{},
 	}
 
-	variable, err := checker.typeActivations.DeclareType(typeDeclaration{
+	variable, err := checker.typeActivations.declareType(typeDeclaration{
 		identifier:               identifier,
 		ty:                       compositeType,
 		declarationKind:          declaration.DeclarationKind(),
@@ -757,16 +756,16 @@ func (checker *Checker) declareCompositeConstructor(
 	// If the access would be enforced as private, an import of the composite
 	// would fail with an "not declared" error.
 
-	_, err := checker.valueActivations.Declare(VariableDeclaration{
-		Identifier:               declaration.Identifier.Identifier,
-		Type:                     constructorType,
-		DocString:                declaration.DocString,
-		Access:                   declaration.Access,
-		Kind:                     declaration.DeclarationKind(),
-		Pos:                      declaration.Identifier.Pos,
-		IsConstant:               true,
-		ArgumentLabels:           constructorArgumentLabels,
-		AllowOuterScopeShadowing: false,
+	_, err := checker.valueActivations.declare(variableDeclaration{
+		identifier:               declaration.Identifier.Identifier,
+		ty:                       constructorType,
+		docString:                declaration.DocString,
+		access:                   declaration.Access,
+		kind:                     declaration.DeclarationKind(),
+		pos:                      declaration.Identifier.Pos,
+		isConstant:               true,
+		argumentLabels:           constructorArgumentLabels,
+		allowOuterScopeShadowing: false,
 	})
 	checker.report(err)
 }
@@ -776,27 +775,25 @@ func (checker *Checker) declareContractValue(
 	compositeType *CompositeType,
 	declarationMembers *StringMemberOrderedMap,
 ) {
-	var variableDeclaration VariableDeclaration
+	contractValueHandler := checker.Config.ContractValueHandler
 
-	contractVariableHandler := checker.Config.ContractVariableHandler
-
-	if contractVariableHandler != nil {
-		variableDeclaration = contractVariableHandler(checker, declaration, compositeType)
+	if contractValueHandler != nil {
+		valueDeclaration := contractValueHandler(checker, declaration, compositeType)
+		_, err := checker.valueActivations.DeclareValue(valueDeclaration)
+		checker.report(err)
 	} else {
-		variableDeclaration = VariableDeclaration{
-			Identifier: declaration.Identifier.Identifier,
-			Type:       compositeType,
-			DocString:  declaration.DocString,
+		_, err := checker.valueActivations.declare(variableDeclaration{
+			identifier: declaration.Identifier.Identifier,
+			ty:         compositeType,
+			docString:  declaration.DocString,
 			// NOTE: contracts are always public
-			Access:     ast.AccessPublic,
-			Kind:       common.DeclarationKindContract,
-			Pos:        declaration.Identifier.Pos,
-			IsConstant: true,
-		}
+			access:     ast.AccessPublic,
+			kind:       common.DeclarationKindContract,
+			pos:        declaration.Identifier.Pos,
+			isConstant: true,
+		})
+		checker.report(err)
 	}
-
-	_, err := checker.valueActivations.Declare(variableDeclaration)
-	checker.report(err)
 
 	declarationMembers.Foreach(func(name string, declarationMember *Member) {
 		if _, ok := compositeType.Members.Get(name); ok {
@@ -857,16 +854,16 @@ func (checker *Checker) declareEnumConstructor(
 		checker.PositionInfo.recordMemberOrigins(constructorType, constructorOrigins)
 	}
 
-	_, err := checker.valueActivations.Declare(VariableDeclaration{
-		Identifier: declaration.Identifier.Identifier,
-		Type:       constructorType,
-		DocString:  declaration.DocString,
+	_, err := checker.valueActivations.declare(variableDeclaration{
+		identifier: declaration.Identifier.Identifier,
+		ty:         constructorType,
+		docString:  declaration.DocString,
 		// NOTE: enums are always public
-		Access:         ast.AccessPublic,
-		Kind:           common.DeclarationKindEnum,
-		Pos:            declaration.Identifier.Pos,
-		IsConstant:     true,
-		ArgumentLabels: []string{EnumRawValueFieldName},
+		access:         ast.AccessPublic,
+		kind:           common.DeclarationKindEnum,
+		pos:            declaration.Identifier.Pos,
+		isConstant:     true,
+		argumentLabels: []string{EnumRawValueFieldName},
 	})
 	checker.report(err)
 }
@@ -2036,13 +2033,13 @@ func (checker *Checker) checkNestedIdentifier(
 	}
 }
 
-func (checker *Checker) VisitFieldDeclaration(_ *ast.FieldDeclaration) ast.Repr {
+func (checker *Checker) VisitFieldDeclaration(_ *ast.FieldDeclaration) struct{} {
 	// NOTE: field type is already checked when determining composite function in `compositeType`
 
 	panic(errors.NewUnreachableError())
 }
 
-func (checker *Checker) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclaration) ast.Repr {
+func (checker *Checker) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclaration) struct{} {
 	// NOTE: already checked when checking the composite
 
 	panic(errors.NewUnreachableError())

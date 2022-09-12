@@ -1356,7 +1356,8 @@ func TestErrors(t *testing.T) {
 func TestInterpretFailFunction(t *testing.T) {
 	t.Parallel()
 
-	script := `
+	t.Run("without message", func(t *testing.T) {
+		script := `
         import Test
 
         pub fun test() {
@@ -1364,11 +1365,30 @@ func TestInterpretFailFunction(t *testing.T) {
         }
     `
 
-	runner := NewTestRunner()
-	result, err := runner.RunTest(script, "test")
-	require.NoError(t, err)
-	require.Error(t, result.Error)
-	assert.ErrorAs(t, result.Error, &stdlib.AssertionError{})
+		runner := NewTestRunner()
+		result, err := runner.RunTest(script, "test")
+		require.NoError(t, err)
+		require.Error(t, result.Error)
+		assert.ErrorAs(t, result.Error, &stdlib.AssertionError{})
+	})
+
+	t.Run("with message", func(t *testing.T) {
+		script := `
+        import Test
+
+        pub fun test() {
+            Test.fail(message: "some error")
+        }
+    `
+
+		runner := NewTestRunner()
+		result, err := runner.RunTest(script, "test")
+		require.NoError(t, err)
+		require.Error(t, result.Error)
+		assertionErr := stdlib.AssertionError{}
+		require.ErrorAs(t, result.Error, &assertionErr)
+		assert.Contains(t, assertionErr.Message, "some error")
+	})
 }
 
 func TestInterpretMatcher(t *testing.T) {

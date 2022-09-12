@@ -18,4 +18,34 @@
 
 package interpreter
 
-//go:generate go run github.com/cheekybits/genny -pkg=interpreter -in=../activations/activations.go -out=variable_activations.go gen "ValueType=*Variable"
+type StatementResult interface {
+	isStatementResult()
+}
+
+type controlResult interface {
+	StatementResult
+	isControlResult()
+}
+
+type BreakResult struct{}
+
+func (BreakResult) isStatementResult() {}
+func (BreakResult) isControlResult()   {}
+
+type ContinueResult struct{}
+
+func (ContinueResult) isStatementResult() {}
+func (ContinueResult) isControlResult()   {}
+
+type ReturnResult struct {
+	Value
+}
+
+func (ReturnResult) isStatementResult() {}
+func (ReturnResult) isControlResult()   {}
+
+type ExpressionResult struct {
+	Value
+}
+
+func (ExpressionResult) isStatementResult() {}

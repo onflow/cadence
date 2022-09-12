@@ -73,19 +73,23 @@ type parser struct {
 // It can be composed with different parse functions to parse the input string into different results.
 // See "ParseExpression", "ParseStatements" as examples.
 //
-func Parse(input string, parse func(*parser) (any, error), memoryGauge common.MemoryGauge) (result any, errors []error) {
+func Parse[T any](
+	input []byte,
+	parse func(*parser) (T, error),
+	memoryGauge common.MemoryGauge,
+) (result T, errors []error) {
 	// create a lexer, which turns the input string into tokens
 	tokens := lexer.Lex(input, memoryGauge)
 	defer tokens.Reclaim()
 	return ParseTokenStream(memoryGauge, tokens, parse)
 }
 
-func ParseTokenStream(
+func ParseTokenStream[T any](
 	memoryGauge common.MemoryGauge,
 	tokens lexer.TokenStream,
-	parse func(*parser) (any, error),
+	parse func(*parser) (T, error),
 ) (
-	result any,
+	result T,
 	errs []error,
 ) {
 	p := &parser{
@@ -115,7 +119,8 @@ func ParseTokenStream(
 				panic(errors.NewUnexpectedError("parser: %v", r))
 			}
 
-			result = nil
+			var zero T
+			result = zero
 			errs = p.errors
 		}
 
@@ -146,7 +151,8 @@ func ParseTokenStream(
 	result, err := parse(p)
 	if err != nil {
 		p.report(err)
-		return nil, p.errors
+		var zero T
+		return zero, p.errors
 	}
 
 	if !p.current.Is(lexer.TokenEOF) {
@@ -204,7 +210,7 @@ func (p *parser) next() {
 
 		if token.Is(lexer.TokenError) {
 			// Report error token as error, skip.
-			err, ok := token.Value.(error)
+			err, ok := token.SpaceOrError.(error)
 			// we just checked that this is an error token
 			if !ok {
 				panic(errors.NewUnreachableError())
@@ -235,9 +241,28 @@ func (p *parser) mustOne(tokenType lexer.TokenType) (lexer.Token, error) {
 	return t, nil
 }
 
+func (p *parser) tokenSource(token lexer.Token) []byte {
+	input := p.tokens.Input()
+	return token.Source(input)
+}
+
+func (p *parser) currentTokenSource() []byte {
+	return p.tokenSource(p.current)
+}
+
+func (p *parser) mustToken(token lexer.Token, tokenType lexer.TokenType, expected string) bool {
+	if !token.Is(tokenType) {
+		return false
+	}
+
+	actual := p.tokenSource(token)
+	return string(actual) == expected
+}
+
 func (p *parser) mustOneString(tokenType lexer.TokenType, string string) (lexer.Token, error) {
 	t := p.current
-	if !t.IsString(tokenType, string) {
+	p.tokens.Input()
+	if !p.mustToken(t, tokenType, string) {
 		return lexer.Token{}, p.syntaxError("expected token %s with string value %s", tokenType, string)
 	}
 	p.next()
@@ -381,7 +406,7 @@ func (p *parser) parseTrivia(options triviaOptions) (containsNewline bool, docSt
 	for !atEnd {
 		switch p.current.Type {
 		case lexer.TokenSpace:
-			space, ok := p.current.Value.(lexer.Space)
+			space, ok := p.current.SpaceOrError.(lexer.Space)
 			// we just checked that this is a space
 			if !ok {
 				panic(errors.NewUnreachableError())
@@ -410,20 +435,17 @@ func (p *parser) parseTrivia(options triviaOptions) (containsNewline bool, docSt
 
 		case lexer.TokenLineComment:
 			if options.parseDocStrings {
-				comment, ok := p.current.Value.(string)
-				if !ok {
-					// we just checked that this is a comment
-					panic(errors.NewUnreachableError())
-				}
-				if strings.HasPrefix(comment, "///") {
+				comment := p.currentTokenSource()
+				// TODO: improve
+				if strings.HasPrefix(string(comment), "///") {
 					if inLineDocString {
-						docStringBuilder.WriteRune('\n')
+						docStringBuilder.WriteByte('\n')
 					} else {
 						inLineDocString = true
 						docStringBuilder.Reset()
 					}
 					// Strip prefix
-					docStringBuilder.WriteString(comment[3:])
+					docStringBuilder.Write(comment[3:])
 				} else {
 					inLineDocString = false
 					docStringBuilder.Reset()
@@ -448,11 +470,11 @@ func (p *parser) mustIdentifier() (ast.Identifier, error) {
 	return p.tokenToIdentifier(identifier), err
 }
 
-func (p *parser) tokenToIdentifier(identifier lexer.Token) ast.Identifier {
+func (p *parser) tokenToIdentifier(token lexer.Token) ast.Identifier {
 	return ast.NewIdentifier(
 		p.memoryGauge,
-		identifier.Value.(string),
-		identifier.StartPos,
+		string(p.tokenSource(token)),
+		token.StartPos,
 	)
 }
 
@@ -470,7 +492,7 @@ func (p *parser) endAmbiguity() {
 	}
 }
 
-func ParseExpression(input string, memoryGauge common.MemoryGauge) (expression ast.Expression, errs []error) {
+func ParseExpression(input []byte, memoryGauge common.MemoryGauge) (expression ast.Expression, errs []error) {
 	var res any
 	res, errs = Parse(
 		input,
@@ -490,7 +512,7 @@ func ParseExpression(input string, memoryGauge common.MemoryGauge) (expression a
 	return
 }
 
-func ParseStatements(input string, memoryGauge common.MemoryGauge) (statements []ast.Statement, errs []error) {
+func ParseStatements(input []byte, memoryGauge common.MemoryGauge) (statements []ast.Statement, errs []error) {
 	var res any
 	res, errs = Parse(
 		input,
@@ -511,7 +533,7 @@ func ParseStatements(input string, memoryGauge common.MemoryGauge) (statements [
 	return
 }
 
-func ParseType(input string, memoryGauge common.MemoryGauge) (ty ast.Type, errs []error) {
+func ParseType(input []byte, memoryGauge common.MemoryGauge) (ty ast.Type, errs []error) {
 	var res any
 	res, errs = Parse(
 		input,
@@ -532,7 +554,7 @@ func ParseType(input string, memoryGauge common.MemoryGauge) (ty ast.Type, errs 
 	return
 }
 
-func ParseDeclarations(input string, memoryGauge common.MemoryGauge) (declarations []ast.Declaration, errs []error) {
+func ParseDeclarations(input []byte, memoryGauge common.MemoryGauge) (declarations []ast.Declaration, errs []error) {
 	var res any
 	res, errs = Parse(
 		input,
@@ -553,7 +575,7 @@ func ParseDeclarations(input string, memoryGauge common.MemoryGauge) (declaratio
 	return
 }
 
-func ParseArgumentList(input string, memoryGauge common.MemoryGauge) (arguments ast.Arguments, errs []error) {
+func ParseArgumentList(input []byte, memoryGauge common.MemoryGauge) (arguments ast.Arguments, errs []error) {
 	var res any
 	res, errs = Parse(
 		input,
@@ -583,7 +605,7 @@ func ParseArgumentList(input string, memoryGauge common.MemoryGauge) (arguments 
 	return
 }
 
-func ParseProgram(code string, memoryGauge common.MemoryGauge) (program *ast.Program, err error) {
+func ParseProgram(code []byte, memoryGauge common.MemoryGauge) (program *ast.Program, err error) {
 	tokens := lexer.Lex(code, memoryGauge)
 	defer tokens.Reclaim()
 	return ParseProgramFromTokenStream(tokens, memoryGauge)
@@ -631,18 +653,16 @@ func ParseProgramFromFile(
 	memoryGauge common.MemoryGauge,
 ) (
 	program *ast.Program,
-	code string,
+	code []byte,
 	err error,
 ) {
 	var data []byte
 	data, err = ioutil.ReadFile(filename)
 	if err != nil {
-		return nil, "", err
+		return nil, nil, err
 	}
 
-	code = string(data)
-
-	program, err = ParseProgram(code, memoryGauge)
+	program, err = ParseProgram(data, memoryGauge)
 	if err != nil {
 		return nil, code, err
 	}

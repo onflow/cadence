@@ -21,6 +21,8 @@ package runtime
 import (
 	"time"
 
+	"github.com/onflow/cadence/runtime/activations"
+
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -63,18 +65,23 @@ type Environment interface {
 }
 
 type interpreterEnvironment struct {
-	config                                Config
-	baseActivation                        *interpreter.VariableActivation
-	baseValueActivation                   *sema.VariableActivation
-	runtimeInterface                      Interface
-	storage                               *Storage
-	coverageReport                        *CoverageReport
-	codesAndPrograms                      codesAndPrograms
+	config Config
+
+	baseActivation      *interpreter.VariableActivation
+	baseValueActivation *sema.VariableActivation
+
+	InterpreterConfig *interpreter.Config
+	CheckerConfig     *sema.Config
+
 	deployedContractConstructorInvocation *stdlib.DeployedContractConstructorInvocation
-	InterpreterConfig                     *interpreter.Config
-	CheckerConfig                         *sema.Config
 	stackDepthLimiter                     *stackDepthLimiter
 	checkedImports                        importResolutionResults
+
+	// the following fields are re-configurable, see Configure
+	runtimeInterface Interface
+	storage          *Storage
+	coverageReport   *CoverageReport
+	codesAndPrograms codesAndPrograms
 }
 
 var _ Environment = &interpreterEnvironment{}
@@ -90,7 +97,7 @@ var _ common.MemoryGauge = &interpreterEnvironment{}
 
 func newInterpreterEnvironment(config Config) *interpreterEnvironment {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
 
 	env := &interpreterEnvironment{
 		config:              config,
@@ -186,7 +193,7 @@ func (e *interpreterEnvironment) Configure(
 
 func (e *interpreterEnvironment) Declare(valueDeclaration stdlib.StandardLibraryValue) {
 	e.baseValueActivation.DeclareValue(valueDeclaration)
-	e.baseActivation.Declare(valueDeclaration)
+	interpreter.Declare(e.baseActivation, valueDeclaration)
 }
 
 func (e *interpreterEnvironment) NewAuthAccountValue(address interpreter.AddressValue) interpreter.Value {
@@ -361,7 +368,7 @@ func (e *interpreterEnvironment) parseAndCheckProgram(
 	var parse *ast.Program
 	reportMetric(
 		func() {
-			parse, err = parser.ParseProgram(string(code), e)
+			parse, err = parser.ParseProgram(code, e)
 		},
 		e.runtimeInterface,
 		func(metrics Metrics, duration time.Duration) {

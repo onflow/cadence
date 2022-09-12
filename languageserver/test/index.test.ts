@@ -405,6 +405,19 @@ describe("accounts", () => {
 })
 
 describe("transactions", () => {
+  const resultRegex = /^Transaction SEALED with ID [a-f0-9]{64}\. Events: \[\]$/
+
+  test("send a transaction with no signer", async() => {
+    await withConnection(async connection => {
+      let result = await connection.sendRequest(ExecuteCommandRequest.type, {
+        command: "cadence.server.flow.sendTransaction",
+        arguments: [`file://${__dirname}/transaction-none.cdc`, "[]", []]
+      })
+
+      expect(resultRegex.test(result)).toBeTruthy()
+    }, true)
+  })
+
 
   test("send a transaction with single signer", async() => {
     await withConnection(async connection => {
@@ -413,7 +426,7 @@ describe("transactions", () => {
         arguments: [`file://${__dirname}/transaction.cdc`, "[]", ["Alice"]]
       })
 
-      expect(result).toEqual("Transaction status: SEALED")
+      expect(resultRegex.test(result)).toBeTruthy()
     }, true)
   })
 
@@ -424,7 +437,7 @@ describe("transactions", () => {
         arguments: [`file://${__dirname}/transaction-multiple.cdc`, "[]", ["Alice", "Bob"]]
       })
 
-      expect(result).toEqual("Transaction status: SEALED")
+      expect(resultRegex.test(result)).toBeTruthy()
     }, true)
   })
 
@@ -500,5 +513,27 @@ describe("codelensses", () => {
 
   })
 
+  test("script codelenss", async() => {
+    await withConnection(async connection => {
+      let code = fs.readFileSync("./script.cdc")
+      let path = `file://${__dirname}/script.cdc`
+      let document = TextDocumentItem.create(path, "cadence", 1, code.toString())
+
+      await connection.sendNotification(DidOpenTextDocumentNotification.type, {
+        textDocument: document
+      })
+
+      let codelens = await connection.sendRequest(codelensRequest, {
+        textDocument: document,
+      })
+
+      expect(codelens).toHaveLength(1)
+      let c = codelens[0].command
+      expect(c.command).toEqual("cadence.server.flow.executeScript")
+      expect(c.title).toEqual("💡 Execute script")
+      expect(c.arguments).toEqual([path, '[]'])
+    }, true)
+
+  })
 
 })

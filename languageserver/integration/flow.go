@@ -21,6 +21,9 @@ package integration
 import (
 	"fmt"
 	"net/url"
+	"path/filepath"
+
+	"github.com/onflow/flow-cli/pkg/flowkit/config"
 
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
@@ -43,14 +46,16 @@ type flowClient interface {
 	SetActiveClientAccount(name string) error
 	ExecuteScript(location *url.URL, args []cadence.Value) (cadence.Value, error)
 	DeployContract(address flow.Address, name string, location *url.URL) error
-	SendTransaction(authorizers []flow.Address, location *url.URL, args []cadence.Value) (*flow.TransactionResult, error)
+	SendTransaction(
+		authorizers []flow.Address,
+		location *url.URL,
+		args []cadence.Value,
+	) (*flow.Transaction, *flow.TransactionResult, error)
 	GetAccount(address flow.Address) (*flow.Account, error)
 	CreateAccount() (*clientAccount, error)
 }
 
 var _ flowClient = &flowkitClient{}
-
-// todo: check if we need this struct at all, could we just use the flow.Account returned from the flowkit
 
 type clientAccount struct {
 	*flow.Account
@@ -74,6 +79,7 @@ type flowkitClient struct {
 	state         *flowkit.State
 	accounts      []*clientAccount
 	activeAccount *clientAccount
+	configPath    string
 }
 
 func newFlowkitClient(loader flowkit.ReaderWriter) *flowkitClient {
@@ -83,6 +89,7 @@ func newFlowkitClient(loader flowkit.ReaderWriter) *flowkitClient {
 }
 
 func (f *flowkitClient) Initialize(configPath string, numberOfAccounts int) error {
+	f.configPath = configPath
 	state, err := flowkit.Load([]string{configPath}, f.loader)
 	if err != nil {
 		return err
@@ -100,12 +107,8 @@ func (f *flowkitClient) Initialize(configPath string, numberOfAccounts int) erro
 
 	f.services = services.NewServices(hostedEmulator, state, logger)
 
-	if numberOfAccounts > len(names) {
-		return fmt.Errorf(fmt.Sprintf("can only use up to %d accounts", len(names)))
-	}
-
-	if numberOfAccounts == 0 {
-		return fmt.Errorf("can not have 0 accounts")
+	if numberOfAccounts > len(names) || numberOfAccounts <= 0 {
+		return fmt.Errorf(fmt.Sprintf("only possible to create between 1 and %d accounts", len(names)))
 	}
 
 	f.accounts = make([]*clientAccount, 0)
@@ -164,7 +167,17 @@ func (f *flowkitClient) ExecuteScript(
 		return nil, err
 	}
 
-	return f.services.Scripts.Execute(code, args, location.Path, "") // todo check if it's ok that path is empty for resolving imports
+	codeFilename, err := resolveFilename(f.configPath, location.Path)
+	if err != nil {
+		return nil, err
+	}
+
+	return f.services.Scripts.Execute(
+		code,
+		args,
+		codeFilename,
+		config.DefaultEmulatorNetwork().Name,
+	)
 }
 
 func (f *flowkitClient) DeployContract(
@@ -190,8 +203,22 @@ func (f *flowkitClient) DeployContract(
 	// check if account already has a contract with this name deployed then update
 	updateExisting := slices.Contains(maps.Keys(flowAccount.Contracts), name)
 
+	codeFilename, err := resolveFilename(f.configPath, location.Path)
+	if err != nil {
+		return err
+	}
+
 	account := createSigner(address, service)
-	_, err = f.services.Accounts.AddContract(account, name, code, updateExisting, nil)
+	_, err = f.services.Accounts.AddContract(
+		account,
+		&services.Contract{
+			Name:     name,
+			Source:   code,
+			Filename: codeFilename,
+			Network:  config.DefaultEmulatorNetwork().Name,
+		},
+		updateExisting,
+	)
 	return err
 }
 
@@ -199,19 +226,20 @@ func (f *flowkitClient) SendTransaction(
 	authorizers []flow.Address,
 	location *url.URL,
 	args []cadence.Value,
-) (*flow.TransactionResult, error) {
+) (*flow.Transaction, *flow.TransactionResult, error) {
 	code, err := f.loader.ReadFile(location.Path)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	service, err := f.state.EmulatorServiceAccount()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	// if no authorizers defined use the service as default
-	if authorizers == nil {
-		authorizers = []flow.Address{service.Address()}
+
+	codeFilename, err := resolveFilename(f.configPath, location.Path)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	tx, err := f.services.Transactions.Build(
@@ -220,32 +248,35 @@ func (f *flowkitClient) SendTransaction(
 		service.Address(),
 		service.Key().Index(),
 		code,
-		"",
+		codeFilename,
 		flow.DefaultTransactionGasLimit,
 		args,
-		"",
+		config.DefaultEmulatorNetwork().Name,
 		true,
 	)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// sign with all authorizers
 	for _, auth := range authorizers {
 		tx, err = sign(createSigner(auth, service), tx)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 	// sign with service as payer
 	signed, err := sign(service, tx)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	_, res, err := f.services.Transactions.SendSigned([]byte(fmt.Sprintf("%x", signed.FlowTransaction().Encode())), true) // todo refactor after implementing accounts on state
+	transaction, res, err := f.services.Transactions.SendSigned(
+		[]byte(fmt.Sprintf("%x", signed.FlowTransaction().Encode())),
+		true,
+	)
 
-	return res, err
+	return transaction, res, err
 }
 
 func (f *flowkitClient) GetAccount(address flow.Address) (*flow.Account, error) {
@@ -312,4 +343,18 @@ func sign(signer *flowkit.Account, tx *flowkit.Transaction) (*flowkit.Transactio
 	}
 
 	return tx, nil
+}
+
+// resolveFilename helper converts the transaction file to a relative location to config file
+// we will be replacing this logic once the FLIP is implemented
+// https://github.com/onflow/flow/blob/master/flips/2022-03-23-contract-imports-syntax.md
+func resolveFilename(configPath string, path string) (filename string, err error) {
+	if filepath.Dir(configPath) != "." {
+		filename, err = filepath.Rel(filepath.Dir(configPath), path)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	return filename, nil
 }

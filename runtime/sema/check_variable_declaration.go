@@ -23,9 +23,9 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
-func (checker *Checker) VisitVariableDeclaration(declaration *ast.VariableDeclaration) ast.Repr {
+func (checker *Checker) VisitVariableDeclaration(declaration *ast.VariableDeclaration) (_ struct{}) {
 	checker.visitVariableDeclaration(declaration, false)
-	return nil
+	return
 }
 
 func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclaration, isOptionalBinding bool) {
@@ -180,16 +180,16 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 
 	identifier := declaration.Identifier.Identifier
 
-	variable, err := checker.valueActivations.Declare(VariableDeclaration{
-		Identifier:               identifier,
-		Type:                     declarationType,
-		DocString:                declaration.DocString,
-		Access:                   declaration.Access,
-		Kind:                     declaration.DeclarationKind(),
-		Pos:                      declaration.Identifier.Pos,
-		IsConstant:               declaration.IsConstant,
-		ArgumentLabels:           nil,
-		AllowOuterScopeShadowing: true,
+	variable, err := checker.valueActivations.declare(variableDeclaration{
+		identifier:               identifier,
+		ty:                       declarationType,
+		docString:                declaration.DocString,
+		access:                   declaration.Access,
+		kind:                     declaration.DeclarationKind(),
+		pos:                      declaration.Identifier.Pos,
+		isConstant:               declaration.IsConstant,
+		argumentLabels:           nil,
+		allowOuterScopeShadowing: true,
 	})
 	checker.report(err)
 

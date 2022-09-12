@@ -116,6 +116,7 @@ func NewTestContract(
 
 	// Inject natively implemented function values
 	compositeValue.Functions[testAssertFunctionName] = testAssertFunction
+	compositeValue.Functions[testFailFunctionName] = testFailFunction
 	compositeValue.Functions[testExpectFunctionName] = testExpectFunction
 	compositeValue.Functions[testNewEmulatorBlockchainFunctionName] = testNewEmulatorBlockchainFunction(testFramework)
 	compositeValue.Functions[testReadFileFunctionName] = testReadFileFunction(testFramework)
@@ -229,6 +230,17 @@ func init() {
 			testAssertFunctionName,
 			testAssertFunctionType,
 			testAssertFunctionDocString,
+		),
+	)
+
+	// Test.fail()
+	testContractType.Members.Set(
+		testFailFunctionName,
+		sema.NewUnmeteredPublicFunctionMember(
+			testContractType,
+			testFailFunctionName,
+			testFailFunctionType,
+			testFailFunctionDocString,
 		),
 	)
 
@@ -359,6 +371,48 @@ var testAssertFunction = interpreter.NewUnmeteredHostFunctionValue(
 		return interpreter.VoidValue{}
 	},
 	testAssertFunctionType,
+)
+
+// 'Test.fail' function
+
+const testFailFunctionDocString = `
+Fails the test-case with a message.
+`
+
+const testFailFunctionName = "fail"
+
+var testFailFunctionType = &sema.FunctionType{
+	Parameters: []*sema.Parameter{
+		{
+			Identifier: "message",
+			TypeAnnotation: sema.NewTypeAnnotation(
+				sema.StringType,
+			),
+		},
+	},
+	ReturnTypeAnnotation: sema.NewTypeAnnotation(
+		sema.VoidType,
+	),
+	RequiredArgumentCount: sema.RequiredArgumentCount(0),
+}
+
+var testFailFunction = interpreter.NewUnmeteredHostFunctionValue(
+	func(invocation interpreter.Invocation) interpreter.Value {
+		var message string
+		if len(invocation.Arguments) > 0 {
+			messageValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+			message = messageValue.Str
+		}
+
+		panic(AssertionError{
+			Message:       message,
+			LocationRange: invocation.GetLocationRange(),
+		})
+	},
+	testFailFunctionType,
 )
 
 // 'Test.expect' function

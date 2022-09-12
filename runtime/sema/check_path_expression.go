@@ -25,7 +25,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
-func (checker *Checker) VisitPathExpression(expression *ast.PathExpression) ast.Repr {
+func (checker *Checker) VisitPathExpression(expression *ast.PathExpression) Type {
 
 	ty, err := CheckPathLiteral(
 		expression.Domain.Identifier,

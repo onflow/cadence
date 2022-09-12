@@ -25,6 +25,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/onflow/cadence/runtime/activations"
+
 	"github.com/onflow/atree"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -112,7 +114,7 @@ func parseCheckAndInterpretWithOptionsAndMemoryMetering(
 		var sb strings.Builder
 		location := checker.Location
 		printErr := pretty.NewErrorPrettyPrinter(&sb, true).
-			PrettyPrintError(err, location, map[common.Location]string{location: code})
+			PrettyPrintError(err, location, map[common.Location][]byte{location: []byte(code)})
 		if printErr != nil {
 			panic(printErr)
 		}
@@ -1055,6 +1057,25 @@ func TestInterpretEqualOperator(t *testing.T) {
       fun testUnicodeStrings(): Bool {
           return "caf\u{E9}" == "cafe\u{301}"
       }
+
+      fun testEqualPaths(): Bool {
+          // different domains
+          return /public/foo == /public/foo &&
+                 /private/bar == /private/bar &&
+                 /storage/baz == /storage/baz
+       }
+
+       fun testUnequalPaths(): Bool {
+          return /public/foo == /public/foofoo ||
+                 /private/bar == /private/barbar ||
+                 /storage/baz == /storage/bazbaz
+       }
+
+       fun testCastedPaths(): Bool {
+          let foo: StoragePath = /storage/foo
+          let bar: PublicPath = /public/foo
+          return (foo as Path) == (bar as Path)
+       }
     `)
 
 	for name, expected := range map[string]bool{
@@ -1067,6 +1088,9 @@ func TestInterpretEqualOperator(t *testing.T) {
 		"testEqualStrings":    true,
 		"testUnequalStrings":  false,
 		"testUnicodeStrings":  true,
+		"testEqualPaths":      true,
+		"testUnequalPaths":    false,
+		"testCastedPaths":     false,
 	} {
 		t.Run(name, func(t *testing.T) {
 			value, err := inter.Invoke(name)
@@ -1759,7 +1783,7 @@ func TestInterpretHostFunction(t *testing.T) {
 	const code = `
       pub let a = test(1, 2)
     `
-	program, err := parser.ParseProgram(code, nil)
+	program, err := parser.ParseProgram([]byte(code), nil)
 
 	require.NoError(t, err)
 
@@ -1810,8 +1834,8 @@ func TestInterpretHostFunction(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-	baseActivation.Declare(testFunction)
+	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, testFunction)
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
@@ -1841,7 +1865,7 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 	const code = `
       pub let nothing = test(1, true, "test")
     `
-	program, err := parser.ParseProgram(code, nil)
+	program, err := parser.ParseProgram([]byte(code), nil)
 
 	require.NoError(t, err)
 
@@ -1919,8 +1943,8 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-	baseActivation.Declare(testFunction)
+	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, testFunction)
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
@@ -3942,7 +3966,7 @@ func TestInterpretImportError(t *testing.T) {
 	importedChecker1 = parseAndCheck(importedCode1, importedLocation1)
 
 	const importedCode2 = `
-	  import realAnswer from "imported1"
+       import realAnswer from "imported1"
 
       pub fun answer(): Int {
           return realAnswer()
@@ -3961,8 +3985,8 @@ func TestInterpretImportError(t *testing.T) {
 
 	mainChecker := parseAndCheck(code, TestLocation)
 
-	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-	baseActivation.Declare(stdlib.PanicFunction)
+	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, stdlib.PanicFunction)
 
 	storage := newUnmeteredInMemoryStorage()
 
@@ -4007,10 +4031,10 @@ func TestInterpretImportError(t *testing.T) {
 		PrettyPrintError(
 			err,
 			mainChecker.Location,
-			map[common.Location]string{
-				TestLocation:      code,
-				importedLocation1: importedCode1,
-				importedLocation2: importedCode2,
+			map[common.Location][]byte{
+				TestLocation:      []byte(code),
+				importedLocation1: []byte(importedCode1),
+				importedLocation2: []byte(importedCode2),
 			},
 		)
 	require.NoError(t, printErr)
@@ -4693,8 +4717,8 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(valueDeclaration)
 
-		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-		baseActivation.Declare(valueDeclaration)
+		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, valueDeclaration)
 
 		storage := newUnmeteredInMemoryStorage()
 
@@ -4825,9 +4849,9 @@ func TestInterpretStructureFunctionBindingInside(t *testing.T) {
 	//   and test case once bound function types are supported:
 	//
 	//   fun test(): X {
-	//   	let x = X()
-	//   	let bar = x.foo()
-	//   	return bar()
+	//        let x = X()
+	//        let bar = x.foo()
+	//        return bar()
 	//   }
 
 	inter := parseCheckAndInterpret(t, `
@@ -5854,9 +5878,9 @@ func TestInterpretPathToString(t *testing.T) {
 			inter := parseCheckAndInterpret(t,
 				fmt.Sprintf(
 					`
-					  let x: %s = %s
-					  let y: String = x.toString()
-					`,
+                           let x: %s = %s
+                           let y: String = x.toString()
+                         `,
 					ty,
 					val,
 				))
@@ -6838,9 +6862,9 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 		// TODO:
 		//// Struct
 		//"S": {
-		//	literal:            `s`,
-		//	ty:                 sType,
-		//	notAsDictionaryKey: true,
+		//     literal:            `s`,
+		//     ty:                 sType,
+		//     notAsDictionaryKey: true,
 		//},
 	}
 
@@ -7746,8 +7770,8 @@ func TestInterpretOptionalChainingFieldReadAndNilCoalescing(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(stdlib.PanicFunction)
 
-	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-	baseActivation.Declare(stdlib.PanicFunction)
+	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, stdlib.PanicFunction)
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
@@ -7788,8 +7812,8 @@ func TestInterpretOptionalChainingFunctionCallAndNilCoalescing(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(stdlib.PanicFunction)
 
-	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-	baseActivation.Declare(stdlib.PanicFunction)
+	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, stdlib.PanicFunction)
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
@@ -7943,8 +7967,8 @@ func TestInterpretFungibleTokenContract(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(stdlib.PanicFunction)
 
-	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-	baseActivation.Declare(stdlib.PanicFunction)
+	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, stdlib.PanicFunction)
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		code,
@@ -8372,8 +8396,8 @@ func TestInterpretHexDecode(t *testing.T) {
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(stdlib.PanicFunction)
 
-		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-		baseActivation.Declare(stdlib.PanicFunction)
+		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, stdlib.PanicFunction)
 
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
@@ -8764,8 +8788,8 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(valueDeclaration)
 
-	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-	baseActivation.Declare(valueDeclaration)
+	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, valueDeclaration)
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		code,
@@ -9324,8 +9348,8 @@ func TestInterpretNestedDestroy(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(logFunction)
 
-	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-	baseActivation.Declare(logFunction)
+	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, logFunction)
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
@@ -9902,8 +9926,8 @@ func TestInterpretNilCoalesceReference(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(stdlib.PanicFunction)
 
-	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-	baseActivation.Declare(stdlib.PanicFunction)
+	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, stdlib.PanicFunction)
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		`

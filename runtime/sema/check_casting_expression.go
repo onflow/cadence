@@ -23,7 +23,7 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
-func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression) ast.Repr {
+func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression) Type {
 
 	// Visit type annotation
 

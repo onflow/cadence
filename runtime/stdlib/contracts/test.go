@@ -23,4 +23,4 @@ import (
 )
 
 //go:embed test.cdc
-var TestContract string
+var TestContract []byte

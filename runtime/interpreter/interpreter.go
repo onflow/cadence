@@ -24,6 +24,9 @@ import (
 	"fmt"
 	"math"
 	"time"
+	"unicode/utf8"
+
+	"github.com/onflow/cadence/runtime/activations"
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
@@ -34,28 +37,6 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
 )
-
-type controlReturn interface {
-	isControlReturn()
-}
-
-type controlBreak struct{}
-
-func (controlBreak) isControlReturn() {}
-
-type controlContinue struct{}
-
-func (controlContinue) isControlReturn() {}
-
-type functionReturn struct {
-	Value Value
-}
-
-func (functionReturn) isControlReturn() {}
-
-type ExpressionStatementResult struct {
-	Value Value
-}
 
 //
 
@@ -80,7 +61,6 @@ type getterSetter struct {
 // are treated like they are returning a value.
 
 // OnEventEmittedFunc is a function that is triggered when an event is emitted by the program.
-//
 type OnEventEmittedFunc func(
 	inter *Interpreter,
 	getLocationRange func() LocationRange,
@@ -89,25 +69,21 @@ type OnEventEmittedFunc func(
 ) error
 
 // OnStatementFunc is a function that is triggered when a statement is about to be executed.
-//
 type OnStatementFunc func(
 	inter *Interpreter,
 	statement ast.Statement,
 )
 
 // OnLoopIterationFunc is a function that is triggered when a loop iteration is about to be executed.
-//
 type OnLoopIterationFunc func(
 	inter *Interpreter,
 	line int,
 )
 
 // OnFunctionInvocationFunc is a function that is triggered when a function is about to be invoked.
-//
 type OnFunctionInvocationFunc func(inter *Interpreter)
 
 // OnInvokedFunctionReturnFunc is a function that is triggered when an invoked function returned.
-//
 type OnInvokedFunctionReturnFunc func(inter *Interpreter)
 
 // OnRecordTraceFunc is a function that records a trace.
@@ -136,7 +112,6 @@ type OnMeterComputationFunc func(
 )
 
 // InjectedCompositeFieldsHandlerFunc is a function that handles storage reads.
-//
 type InjectedCompositeFieldsHandlerFunc func(
 	inter *Interpreter,
 	location common.Location,
@@ -145,7 +120,6 @@ type InjectedCompositeFieldsHandlerFunc func(
 ) map[string]Value
 
 // ContractValueHandlerFunc is a function that handles contract values.
-//
 type ContractValueHandlerFunc func(
 	inter *Interpreter,
 	compositeType *sema.CompositeType,
@@ -154,7 +128,6 @@ type ContractValueHandlerFunc func(
 ) ContractValue
 
 // ImportLocationHandlerFunc is a function that handles imports of locations.
-//
 type ImportLocationHandlerFunc func(
 	inter *Interpreter,
 	location common.Location,
@@ -162,7 +135,6 @@ type ImportLocationHandlerFunc func(
 
 // PublicAccountHandlerFunc is a function that handles retrieving a public account at a given address.
 // The account returned must be of type `PublicAccount`.
-//
 type PublicAccountHandlerFunc func(
 	address AddressValue,
 ) Value
@@ -173,7 +145,6 @@ type UUIDHandlerFunc func() (uint64, error)
 // PublicKeyValidationHandlerFunc is a function that validates a given public key.
 // Parameter types:
 // - publicKey: PublicKey
-//
 type PublicKeyValidationHandlerFunc func(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
@@ -185,7 +156,6 @@ type PublicKeyValidationHandlerFunc func(
 // - publicKey: PublicKey
 // - signature: [UInt8]
 // Expected result type: Bool
-//
 type BLSVerifyPoPHandlerFunc func(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
@@ -197,7 +167,6 @@ type BLSVerifyPoPHandlerFunc func(
 // Parameter types:
 // - signatures: [[UInt8]]
 // Expected result type: [UInt8]?
-//
 type BLSAggregateSignaturesHandlerFunc func(
 	inter *Interpreter,
 	getLocationRange func() LocationRange,
@@ -208,7 +177,6 @@ type BLSAggregateSignaturesHandlerFunc func(
 // Parameter types:
 // - publicKeys: [PublicKey]
 // Expected result type: PublicKey?
-//
 type BLSAggregatePublicKeysHandlerFunc func(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
@@ -223,7 +191,6 @@ type BLSAggregatePublicKeysHandlerFunc func(
 // - hashAlgorithm: HashAlgorithm
 // - publicKey: PublicKey
 // Expected result type: Bool
-//
 type SignatureVerificationHandlerFunc func(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
@@ -240,7 +207,6 @@ type SignatureVerificationHandlerFunc func(
 // - domainSeparationTag: [UInt8]
 // - hashAlgorithm: HashAlgorithm
 // Expected result type: [UInt8]
-//
 type HashHandlerFunc func(
 	inter *Interpreter,
 	getLocationRange func() LocationRange,
@@ -255,7 +221,6 @@ type HashHandlerFunc func(
 //
 // As there is no support for inheritance of concrete types,
 // these are the "leaf" nodes in the call chain, and are functions.
-//
 type CompositeTypeCode struct {
 	CompositeFunctions map[string]FunctionValue
 	DestructorFunction FunctionValue
@@ -268,7 +233,6 @@ type FunctionWrapper = func(inner FunctionValue) FunctionValue
 //
 // These are "branch" nodes in the call chain, and are function wrappers,
 // i.e. they wrap the functions / function wrappers that inherit them.
-//
 type WrapperCode struct {
 	InitializerFunctionWrapper FunctionWrapper
 	DestructorFunctionWrapper  FunctionWrapper
@@ -278,7 +242,6 @@ type WrapperCode struct {
 
 // TypeCodes is the value which stores the "prepared" / "callable" "code"
 // of all composite types, interface types, and type requirements.
-//
 type TypeCodes struct {
 	CompositeCodes       map[sema.TypeID]CompositeTypeCode
 	InterfaceCodes       map[sema.TypeID]WrapperCode
@@ -324,13 +287,15 @@ type Interpreter struct {
 }
 
 var _ common.MemoryGauge = &Interpreter{}
+var _ ast.DeclarationVisitor[StatementResult] = &Interpreter{}
+var _ ast.StatementVisitor[StatementResult] = &Interpreter{}
+var _ ast.ExpressionVisitor[Value] = &Interpreter{}
 
 // BaseActivation is the activation which contains all base declarations.
 // It is reused across all interpreters.
-//
 var BaseActivation = func() *VariableActivation {
 	// No need to meter since this is only created once
-	activation := NewVariableActivation(nil, nil)
+	activation := activations.NewActivation[*Variable](nil, nil)
 
 	defineBaseFunctions(activation)
 	return activation
@@ -369,7 +334,7 @@ func newInterpreter(
 		sharedState.allInterpreters[location] = interpreter
 	}
 
-	interpreter.activations = NewVariableActivations(interpreter)
+	interpreter.activations = activations.NewActivations[*Variable](interpreter)
 
 	baseActivation := config.BaseActivation
 	if baseActivation == nil {
@@ -383,7 +348,6 @@ func newInterpreter(
 
 // locationRangeGetter returns a function that returns the location range
 // for the given location and positioned element.
-//
 func locationRangeGetter(
 	memoryGauge common.MemoryGauge,
 	location common.Location,
@@ -424,7 +388,7 @@ func (interpreter *Interpreter) Interpret() (err error) {
 	})
 
 	if interpreter.Program != nil {
-		interpreter.Program.Program.Accept(interpreter)
+		interpreter.VisitProgram(interpreter.Program.Program)
 	}
 
 	interpreter.interpreted = true
@@ -434,9 +398,8 @@ func (interpreter *Interpreter) Interpret() (err error) {
 
 // visitGlobalDeclaration firsts interprets the global declaration,
 // then finds the declaration and adds it to the globals
-//
 func (interpreter *Interpreter) visitGlobalDeclaration(declaration ast.Declaration) {
-	declaration.Accept(interpreter)
+	ast.AcceptDeclaration[StatementResult](declaration, interpreter)
 	interpreter.declareGlobal(declaration)
 }
 
@@ -642,7 +605,7 @@ func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 	}
 }
 
-func (interpreter *Interpreter) VisitProgram(program *ast.Program) ast.Repr {
+func (interpreter *Interpreter) VisitProgram(program *ast.Program) {
 
 	for _, declaration := range program.ImportDeclarations() {
 		interpreter.visitGlobalDeclaration(declaration)
@@ -739,14 +702,14 @@ func (interpreter *Interpreter) VisitProgram(program *ast.Program) ast.Repr {
 		_ = variable.GetValue()
 	}
 
-	return nil
+	return
 }
 
-func (interpreter *Interpreter) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunctionDeclaration) ast.Repr {
+func (interpreter *Interpreter) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunctionDeclaration) StatementResult {
 	return interpreter.VisitFunctionDeclaration(declaration.FunctionDeclaration)
 }
 
-func (interpreter *Interpreter) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration) ast.Repr {
+func (interpreter *Interpreter) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration) StatementResult {
 
 	identifier := declaration.Identifier.Identifier
 
@@ -806,7 +769,7 @@ func (interpreter *Interpreter) functionDeclarationValue(
 	)
 }
 
-func (interpreter *Interpreter) VisitBlock(block *ast.Block) ast.Repr {
+func (interpreter *Interpreter) visitBlock(block *ast.Block) StatementResult {
 	// block scope: each block gets an activation record
 	interpreter.activations.PushNewWithCurrent()
 	defer interpreter.activations.Pop()
@@ -814,15 +777,10 @@ func (interpreter *Interpreter) VisitBlock(block *ast.Block) ast.Repr {
 	return interpreter.visitStatements(block.Statements)
 }
 
-func (interpreter *Interpreter) VisitFunctionBlock(_ *ast.FunctionBlock) ast.Repr {
-	// NOTE: see visitBlock
-	panic(errors.NewUnreachableError())
-}
-
 func (interpreter *Interpreter) visitFunctionBody(
 	beforeStatements []ast.Statement,
 	preConditions ast.Conditions,
-	body func() controlReturn,
+	body func() StatementResult,
 	postConditions ast.Conditions,
 	returnType sema.Type,
 ) Value {
@@ -832,8 +790,8 @@ func (interpreter *Interpreter) visitFunctionBody(
 	defer interpreter.activations.Pop()
 
 	result := interpreter.visitStatements(beforeStatements)
-	if ret, ok := result.(functionReturn); ok {
-		return ret.Value
+	if result, ok := result.(ReturnResult); ok {
+		return result.Value
 	}
 
 	interpreter.visitConditions(preConditions)
@@ -842,8 +800,8 @@ func (interpreter *Interpreter) visitFunctionBody(
 
 	if body != nil {
 		result = body()
-		if ret, ok := result.(functionReturn); ok {
-			returnValue = ret.Value
+		if result, ok := result.(ReturnResult); ok {
+			returnValue = result.Value
 		} else {
 			returnValue = NewVoidValue(interpreter)
 		}
@@ -885,7 +843,7 @@ func (interpreter *Interpreter) visitCondition(condition *ast.Condition) {
 
 	statement := ast.NewExpressionStatement(interpreter, condition.Test)
 
-	result, ok := interpreter.evalStatement(statement).(ExpressionStatementResult)
+	result, ok := interpreter.evalStatement(statement).(ExpressionResult)
 
 	value, valueOk := result.Value.(BoolValue)
 
@@ -960,7 +918,7 @@ func (interpreter *Interpreter) visitAssignment(
 }
 
 // NOTE: only called for top-level composite declarations
-func (interpreter *Interpreter) VisitCompositeDeclaration(declaration *ast.CompositeDeclaration) ast.Repr {
+func (interpreter *Interpreter) VisitCompositeDeclaration(declaration *ast.CompositeDeclaration) StatementResult {
 
 	// lexical scope: variables in functions are bound to what is visible at declaration time
 	lexicalScope := interpreter.activations.CurrentOrNew()
@@ -986,7 +944,6 @@ func (interpreter *Interpreter) VisitCompositeDeclaration(declaration *ast.Compo
 // a contract value / instance (singleton).
 //
 // For all other composite kinds the constructor function is declared.
-//
 func (interpreter *Interpreter) declareCompositeValue(
 	declaration *ast.CompositeDeclaration,
 	lexicalScope *VariableActivation,
@@ -1639,12 +1596,12 @@ func (interpreter *Interpreter) compositeFunction(
 	)
 }
 
-func (interpreter *Interpreter) VisitFieldDeclaration(_ *ast.FieldDeclaration) ast.Repr {
+func (interpreter *Interpreter) VisitFieldDeclaration(_ *ast.FieldDeclaration) StatementResult {
 	// fields aren't interpreted
 	panic(errors.NewUnreachableError())
 }
 
-func (interpreter *Interpreter) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclaration) ast.Repr {
+func (interpreter *Interpreter) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclaration) StatementResult {
 	// enum cases aren't interpreted
 	panic(errors.NewUnreachableError())
 }
@@ -1869,7 +1826,7 @@ func (interpreter *Interpreter) Unbox(getLocationRange func() LocationRange, val
 }
 
 // NOTE: only called for top-level interface declarations
-func (interpreter *Interpreter) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaration) ast.Repr {
+func (interpreter *Interpreter) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaration) StatementResult {
 
 	// lexical scope: variables in functions are bound to what is visible at declaration time
 	lexicalScope := interpreter.activations.CurrentOrNew()
@@ -2049,12 +2006,12 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 				// NOTE: The `inner` function might be nil.
 				//   This is the case if the conforming type did not declare a function.
 
-				var body func() controlReturn
+				var body func() StatementResult
 				if inner != nil {
 					// NOTE: It is important to wrap the invocation in a function,
 					//  so the inner function isn't invoked here
 
-					body = func() controlReturn {
+					body = func() StatementResult {
 
 						// Pre- and post-condition wrappers "re-declare" the same
 						// parameters as are used in the actual body of the function,
@@ -2110,7 +2067,7 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 							interpreter.invalidateResource(value)
 							interpreter.sharedState.resourceVariables[value] = argumentVariable.variable
 						}
-						return functionReturn{returnValue}
+						return ReturnResult{returnValue}
 					}
 				}
 
@@ -2262,7 +2219,6 @@ type ValueConverterDeclaration struct {
 }
 
 // It would be nice if return types in Go's function types would be covariant
-//
 var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.IntTypeName,
@@ -2764,7 +2720,6 @@ type converterFunction struct {
 }
 
 // Converter functions are stateless functions. Hence they can be re-used across interpreters.
-//
 var converterFunctionValues = func() []converterFunction {
 
 	converterFuncValues := make([]converterFunction, len(ConverterDeclarations))
@@ -2817,7 +2772,6 @@ type runtimeTypeConstructor struct {
 }
 
 // Constructor functions are stateless functions. Hence they can be re-used across interpreters.
-//
 var runtimeTypeConstructors = []runtimeTypeConstructor{
 	{
 		name: "OptionalType",
@@ -2952,7 +2906,6 @@ func defineRuntimeTypeConstructorFunctions(activation *VariableActivation) {
 }
 
 // typeFunction is the `Type` function. It is stateless, hence it can be re-used across interpreters.
-//
 var typeFunction = NewUnmeteredHostFunctionValue(
 	func(invocation Invocation) Value {
 		typeParameterPair := invocation.TypeParameterTypes.Oldest()
@@ -2984,7 +2937,6 @@ func defineBaseValue(activation *VariableActivation, name string, value Value) {
 }
 
 // stringFunction is the `String` function. It is stateless, hence it can be re-used across interpreters.
-//
 var stringFunction = func() Value {
 	functionValue := NewUnmeteredHostFunctionValue(
 		func(invocation Invocation) Value {
@@ -3032,6 +2984,39 @@ var stringFunction = func() Value {
 		),
 	)
 
+	addMember(
+		sema.StringTypeFromUtf8FunctionName,
+		NewUnmeteredHostFunctionValue(
+			func(invocation Invocation) Value {
+				argument, ok := invocation.Arguments[0].(*ArrayValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				inter := invocation.Interpreter
+				// naively read the entire byte array before validating
+				buf, err := ByteArrayValueToByteSlice(inter, argument)
+
+				if err != nil {
+					panic(errors.NewExternalError(err))
+				}
+
+				if !utf8.Valid(buf) {
+					return NewNilValue(inter)
+				}
+
+				memoryUsage := common.NewStringMemoryUsage(len(buf))
+
+				return NewSomeValueNonCopying(
+					inter,
+					NewStringValue(inter, memoryUsage, func() string {
+						return string(buf)
+					}),
+				)
+			},
+			sema.StringTypeFromUtf8FunctionType,
+		),
+	)
 	return functionValue
 }()
 
@@ -4323,7 +4308,6 @@ func (interpreter *Interpreter) invalidateResource(value Value) {
 }
 
 // MeterMemory delegates the memory usage to the interpreter's memory gauge, if any.
-//
 func (interpreter *Interpreter) MeterMemory(usage common.MemoryUsage) error {
 	common.UseMemory(interpreter.Config.MemoryGauge, usage)
 	return nil
