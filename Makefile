@@ -36,7 +36,8 @@ test:
 	GO111MODULE=on go test -coverprofile=coverage.txt -covermode=atomic -parallel 8 -race -coverpkg $(COVERPKGS) ./...
 	# remove coverage of empty functions from report
 	sed -i -e 's/^.* 0 0$$//' coverage.txt
-	cd ./languageserver && make test
+	(cd ./test-framework && make test && cd -)
+	(cd ./languageserver && make test && cd -)
 
 .PHONY: fast-test
 fast-test:
@@ -49,6 +50,7 @@ build:
 	GOARCH=wasm GOOS=js go build -o ./runtime/cmd/parse/parse.wasm ./runtime/cmd/parse
 	go build -o ./runtime/cmd/check/check ./runtime/cmd/check
 	go build -o ./runtime/cmd/main/main ./runtime/cmd/main
+	(cd ./test-framework && make build && cd -)
 	(cd ./languageserver && make build && cd -)
 	make build-tools
 
