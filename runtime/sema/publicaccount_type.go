@@ -212,7 +212,7 @@ var PublicAccountTypeGetCapabilityFunctionType = func() *FunctionType {
 	}
 
 	return &FunctionType{
-		Purity: ViewFunction,
+		Purity: FunctionPurityView,
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},

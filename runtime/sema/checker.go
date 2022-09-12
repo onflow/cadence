@@ -49,7 +49,7 @@ var beforeType = func() *FunctionType {
 	)
 
 	return &FunctionType{
-		Purity: ViewFunction,
+		Purity: FunctionPurityView,
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
@@ -209,7 +209,7 @@ func (checker *Checker) PushNewPurityScope(enforce bool) {
 		checker.purityCheckScopes,
 		PurityCheckScope{
 			EnforcePurity: enforce,
-			CurrentPurity: ViewFunction,
+			CurrentPurity: FunctionPurityView,
 		},
 	)
 }
@@ -223,10 +223,10 @@ func (checker *Checker) PopPurityScope() PurityCheckScope {
 func (checker *Checker) ObserveImpureOperation(operation ast.Element) {
 	scope := checker.CurrentPurityScope()
 	// purity is monotonic, if we already know this scope is impure, there's no need to continue
-	if scope.CurrentPurity != ViewFunction {
+	if scope.CurrentPurity != FunctionPurityView {
 		return
 	}
-	scope.CurrentPurity = ImpureFunction
+	scope.CurrentPurity = FunctionPurityImpure
 	if scope.EnforcePurity {
 		checker.report(
 			&PurityError{Range: ast.NewRangeFromPositioned(checker.memoryGauge, operation)},
