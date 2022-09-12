@@ -543,7 +543,9 @@ func (s *Server) DidChangeTextDocument(
 
 	// todo implement smarter cache invalidation with dependency resolution using https://github.com/onflow/cadence/pull/1634
 	// we should build dependency tree upfront and then based on the changes only reset checkers contained in that tree
-	s.checkers = make(map[common.LocationID]*sema.Checker)
+	for locationID := range s.checkers {
+		delete(s.checkers, locationID)
+	}
 
 	s.checkAndPublishDiagnostics(conn, uri, text, version)
 
@@ -2360,7 +2362,7 @@ func (s *Server) convertError(
 				err.Name,
 				func(checker *sema.Checker, isFunction bool) insertionPosition {
 					declaration := declarationGetter(checker.Elaboration)
-					if declaration == nil {
+					if declaration == nil { // TODO look up the getter in the correct checker (it might be imported one)
 						return insertionPosition{
 							Position: ast.Position{},
 						}
