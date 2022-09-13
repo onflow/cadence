@@ -166,6 +166,9 @@ func (checker *Checker) enforceViewAssignment(assignment ast.Statement, target a
 		}
 	}
 
+	// if the base of the access chain is not a variable, then we cannot make any static guarantees about
+	// whether or not it is a local struct-kinded variable. E.g. in the case of `(b ? s1 : s2).x`, we can't
+	// know whether `s1` or `s2` is being accessed here
 	if baseVariable == nil {
 		checker.ObserveImpureOperation(assignment)
 		return
