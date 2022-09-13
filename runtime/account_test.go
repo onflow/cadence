@@ -20,6 +20,7 @@ package runtime
 
 import (
 	"fmt"
+	"math/big"
 	"testing"
 
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -398,6 +399,31 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		err := test.executeTransaction(rt, runtimeInterface)
 		require.NoError(t, err)
 		assert.Nil(t, storage.returnedKey)
+	})
+
+	t.Run("get key count", func(t *testing.T) {
+		t.Parallel()
+		storage := newTestAccountKeyStorage()
+		rt := newTestInterpreterRuntime()
+		runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
+		addPublicKeyValidation(runtimeInterface, nil)
+
+		addAuthAccountKey(t, rt, runtimeInterface)
+
+		test := accountKeyTestCase{
+			code: `
+				transaction {
+					prepare(signer: AuthAccount) {
+						let keyCount = signer.keys.count()
+						assert(keyCount == 1)
+					}
+				}
+			`,
+			args: []cadence.Value{},
+		}
+
+		err := test.executeTransaction(rt, runtimeInterface)
+		require.NoError(t, err)
 	})
 }
 
@@ -857,6 +883,7 @@ func getAccountKeyTestRuntimeInterface(storage *testAccountKeyStorage) *testRunt
 			}
 
 			storage.keys = append(storage.keys, accountKey)
+			storage.unrevokedKeyCount += 1
 			storage.returnedKey = accountKey
 			return accountKey, nil
 		},
@@ -877,12 +904,20 @@ func getAccountKeyTestRuntimeInterface(storage *testAccountKeyStorage) *testRunt
 			}
 
 			accountKey := storage.keys[index]
+
+			if !accountKey.IsRevoked {
+				storage.unrevokedKeyCount -= 1
+			}
+
 			accountKey.IsRevoked = true
 
 			storage.keys[index] = accountKey
 			storage.returnedKey = accountKey
 
 			return accountKey, nil
+		},
+		accountKeysCount: func(address Address) *big.Int {
+			return big.NewInt(int64(storage.unrevokedKeyCount))
 		},
 		log: func(message string) {
 			storage.logs = append(storage.logs, message)
@@ -991,16 +1026,18 @@ func (test accountKeyTestCase) executeScript(
 
 func newTestAccountKeyStorage() *testAccountKeyStorage {
 	return &testAccountKeyStorage{
-		events: make([]cadence.Event, 0),
-		keys:   make([]*stdlib.AccountKey, 0),
+		events:            make([]cadence.Event, 0),
+		keys:              make([]*stdlib.AccountKey, 0),
+		unrevokedKeyCount: 0,
 	}
 }
 
 type testAccountKeyStorage struct {
-	events      []cadence.Event
-	keys        []*stdlib.AccountKey
-	returnedKey *stdlib.AccountKey
-	logs        []string
+	events            []cadence.Event
+	keys              []*stdlib.AccountKey
+	unrevokedKeyCount int
+	returnedKey       *stdlib.AccountKey
+	logs              []string
 }
 
 func TestRuntimePublicKey(t *testing.T) {

@@ -284,8 +284,8 @@ func newAuthAccountKeysValue(
 			addressValue,
 		),
 		// todo foreachfunction
-		nil,
-		NewAccountKeysCountFunction(gauge, handler, addressValue),
+		newAccountKeysForEachFunction(gauge, handler, addressValue),
+		newAccountKeysCountFunction(gauge, handler, addressValue),
 	)
 }
 
@@ -678,7 +678,26 @@ func newAccountKeysGetFunction(
 	)
 }
 
-func NewAccountKeysCountFunction(
+func newAccountKeysForEachFunction(
+	gauge common.MemoryGauge,
+	provider AccountKeyProvider,
+	addressValue interpreter.AddressValue,
+) *interpreter.HostFunctionValue {
+	address := addressValue.ToAddress()
+
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			callback, ok := invocation.Arguments[0].(interpreter.FunctionValue)
+			if !ok {
+				panic(errors.NewUnexpectedError())
+			}
+
+		},
+		sema.AccountKeysTypeForEachFunctionType,
+	)
+}
+func newAccountKeysCountFunction(
 	gauge common.MemoryGauge,
 	provider AccountKeyProvider,
 	addressValue interpreter.AddressValue,
@@ -786,9 +805,12 @@ func newPublicAccountKeysValue(
 			handler,
 			addressValue,
 		),
-		// todo add foreach
-		nil,
-		NewAccountKeysCountFunction(
+		newAccountKeysForEachFunction(
+			gauge,
+			handler,
+			addressValue,
+		),
+		newAccountKeysCountFunction(
 			gauge,
 			handler,
 			addressValue,
