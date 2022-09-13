@@ -38,17 +38,18 @@ type VM interface {
 
 type vm struct {
 	instance *wasmtime.Instance
+	store    *wasmtime.Store
 }
 
 func (m *vm) Invoke(name string, arguments ...interpreter.Value) (interpreter.Value, error) {
-	f := m.instance.GetExport(name).Func()
+	f := m.instance.GetExport(m.store, name).Func()
 
 	rawArguments := make([]any, len(arguments))
 	for i, argument := range arguments {
 		rawArguments[i] = argument
 	}
 
-	res, err := f.Call(rawArguments...)
+	res, err := f.Call(m.store, rawArguments...)
 	if err != nil {
 		return nil, err
 	}
@@ -61,6 +62,11 @@ func (m *vm) Invoke(name string, arguments ...interpreter.Value) (interpreter.Va
 }
 
 func NewVM(wasm []byte) (VM, error) {
+
+	inter, err := interpreter.NewInterpreter(nil, nil, &interpreter.Config{})
+	if err != nil {
+		return nil, err
+	}
 
 	config := wasmtime.NewConfig()
 	config.SetWasmReferenceTypes(true)
@@ -78,55 +84,61 @@ func NewVM(wasm []byte) (VM, error) {
 		store,
 		func(caller *wasmtime.Caller, offset int32, length int32) (any, *wasmtime.Trap) {
 			if offset < 0 {
-				return nil, wasmtime.NewTrap(store, fmt.Sprintf("Int: invalid offset: %d", offset))
+				return nil, wasmtime.NewTrap(fmt.Sprintf("Int: invalid offset: %d", offset))
 			}
 
 			if length < 2 {
-				return nil, wasmtime.NewTrap(store, fmt.Sprintf("Int: invalid length: %d", length))
+				return nil, wasmtime.NewTrap(fmt.Sprintf("Int: invalid length: %d", length))
 			}
 
 			mem := caller.GetExport("mem").Memory()
 
-			bytes := C.GoBytes(mem.Data(), C.int(length))
+			bytes := C.GoBytes(mem.Data(store), C.int(length))
 
 			value := new(big.Int).SetBytes(bytes[1:])
 			if bytes[0] == 0 {
 				value = value.Neg(value)
 			}
 
-			return interpreter.NewIntValueFromBigInt(value), nil
+			return interpreter.NewUnmeteredIntValueFromBigInt(value), nil
 		},
 	)
 
-	stringFunc := wasmtime.WrapFunc(store, func(caller *wasmtime.Caller, offset int32, length int32) (any, *wasmtime.Trap) {
-		if offset < 0 {
-			return nil, wasmtime.NewTrap(store, fmt.Sprintf("String: invalid offset: %d", offset))
-		}
+	stringFunc := wasmtime.WrapFunc(
+		store,
+		func(caller *wasmtime.Caller, offset int32, length int32) (any, *wasmtime.Trap) {
+			if offset < 0 {
+				return nil, wasmtime.NewTrap(fmt.Sprintf("String: invalid offset: %d", offset))
+			}
 
-		if length < 0 {
-			return nil, wasmtime.NewTrap(store, fmt.Sprintf("String: invalid length: %d", length))
-		}
+			if length < 0 {
+				return nil, wasmtime.NewTrap(fmt.Sprintf("String: invalid length: %d", length))
+			}
 
-		mem := caller.GetExport("mem").Memory()
+			mem := caller.GetExport("mem").Memory()
 
-		bytes := C.GoBytes(mem.Data(), C.int(length))
+			bytes := C.GoBytes(mem.Data(store), C.int(length))
 
-		return interpreter.NewStringValue(string(bytes)), nil
-	})
+			return interpreter.NewUnmeteredStringValue(string(bytes)), nil
+		},
+	)
 
-	addFunc := wasmtime.WrapFunc(store, func(left, right any) (any, *wasmtime.Trap) {
-		leftNumber, ok := left.(interpreter.NumberValue)
-		if !ok {
-			return nil, wasmtime.NewTrap(store, fmt.Sprintf("add: invalid left: %#+v", left))
-		}
+	addFunc := wasmtime.WrapFunc(
+		store,
+		func(left, right any) (any, *wasmtime.Trap) {
+			leftNumber, ok := left.(interpreter.NumberValue)
+			if !ok {
+				return nil, wasmtime.NewTrap(fmt.Sprintf("add: invalid left: %#+v", left))
+			}
 
-		rightNumber, ok := right.(interpreter.NumberValue)
-		if !ok {
-			return nil, wasmtime.NewTrap(store, fmt.Sprintf("add: invalid right: %#+v", right))
-		}
+			rightNumber, ok := right.(interpreter.NumberValue)
+			if !ok {
+				return nil, wasmtime.NewTrap(fmt.Sprintf("add: invalid right: %#+v", right))
+			}
 
-		return leftNumber.Plus(nil, rightNumber), nil
-	})
+			return leftNumber.Plus(inter, rightNumber), nil
+		},
+	)
 
 	// NOTE: wasmtime currently does not support specifying imports by name,
 	// unlike other WebAssembly APIs like wasmer, JavaScript, etc.,
@@ -135,10 +147,10 @@ func NewVM(wasm []byte) (VM, error) {
 	instance, err := wasmtime.NewInstance(
 		store,
 		module,
-		[]*wasmtime.Extern{
-			intFunc.AsExtern(),
-			stringFunc.AsExtern(),
-			addFunc.AsExtern(),
+		[]wasmtime.AsExtern{
+			intFunc,
+			stringFunc,
+			addFunc,
 		},
 	)
 	if err != nil {
@@ -147,5 +159,6 @@ func NewVM(wasm []byte) (VM, error) {
 
 	return &vm{
 		instance: instance,
+		store:    store,
 	}, nil
 }
