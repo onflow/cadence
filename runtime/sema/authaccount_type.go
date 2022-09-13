@@ -344,7 +344,7 @@ The path must be a storage path, i.e., only the domain ` + "`storage`" + ` is al
 `
 
 var AuthAccountTypeTypeFunctionType = &FunctionType{
-	Purity: ViewFunction,
+	Purity: FunctionPurityView,
 	Parameters: []*Parameter{
 		{
 			Label:          "at",
@@ -381,7 +381,7 @@ var AuthAccountTypeCopyFunctionType = func() *FunctionType {
 	}
 
 	return &FunctionType{
-		Purity: ViewFunction,
+		Purity: FunctionPurityView,
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
@@ -425,7 +425,7 @@ var AuthAccountTypeBorrowFunctionType = func() *FunctionType {
 	}
 
 	return &FunctionType{
-		Purity: ViewFunction,
+		Purity: FunctionPurityView,
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
@@ -471,7 +471,7 @@ var AuthAccountTypeLinkFunctionType = func() *FunctionType {
 	}
 
 	return &FunctionType{
-		Purity: ImpureFunction,
+		Purity: FunctionPurityImpure,
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
@@ -537,7 +537,7 @@ var AuthAccountTypeGetCapabilityFunctionType = func() *FunctionType {
 	}
 
 	return &FunctionType{
-		Purity: ViewFunction,
+		Purity: FunctionPurityView,
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
@@ -563,7 +563,7 @@ Returns the capability at the given private or public path, or nil if it does no
 `
 
 var AccountTypeGetLinkTargetFunctionType = &FunctionType{
-	Purity: ViewFunction,
+	Purity: FunctionPurityView,
 	Parameters: []*Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
@@ -633,7 +633,7 @@ var AuthAccountKeysTypeAddFunctionType = &FunctionType{
 }
 
 var AccountKeysTypeGetFunctionType = &FunctionType{
-	Purity: ViewFunction,
+	Purity: FunctionPurityView,
 	Parameters: []*Parameter{
 		{
 			Identifier:     AccountKeyKeyIndexField,

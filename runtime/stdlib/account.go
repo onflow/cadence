@@ -146,7 +146,7 @@ Returns the AuthAccount for the given address. Only available in scripts
 `
 
 var getAuthAccountFunctionType = &sema.FunctionType{
-	Purity: sema.ViewFunction,
+	Purity: sema.FunctionPurityView,
 	Parameters: []*sema.Parameter{{
 		Label:          sema.ArgumentLabelNotRequired,
 		Identifier:     "address",

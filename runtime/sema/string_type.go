@@ -136,7 +136,7 @@ func init() {
 }
 
 var StringTypeConcatFunctionType = &FunctionType{
-	Purity: ViewFunction,
+	Purity: FunctionPurityView,
 	Parameters: []*Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
@@ -154,7 +154,7 @@ Returns a new string which contains the given string concatenated to the end of 
 `
 
 var StringTypeSliceFunctionType = &FunctionType{
-	Purity: ViewFunction,
+	Purity: FunctionPurityView,
 	Parameters: []*Parameter{
 		{
 			Identifier:     "from",
@@ -189,7 +189,7 @@ var ByteArrayArrayType = &VariableSizedType{
 }
 
 var StringTypeDecodeHexFunctionType = &FunctionType{
-	Purity:               ViewFunction,
+	Purity:               FunctionPurityView,
 	ReturnTypeAnnotation: NewTypeAnnotation(ByteArrayType),
 }
 
@@ -209,7 +209,7 @@ The byte array of the UTF-8 encoding
 `
 
 var StringTypeToLowerFunctionType = &FunctionType{
-	Purity:               ViewFunction,
+	Purity:               FunctionPurityView,
 	ReturnTypeAnnotation: NewTypeAnnotation(StringType),
 }
 

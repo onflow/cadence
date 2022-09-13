@@ -24,7 +24,7 @@ import (
 )
 
 var LogFunctionType = &sema.FunctionType{
-	Purity: sema.ImpureFunction,
+	Purity: sema.FunctionPurityImpure,
 	Parameters: []*sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,

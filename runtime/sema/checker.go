@@ -49,7 +49,7 @@ var beforeType = func() *FunctionType {
 	)
 
 	return &FunctionType{
-		Purity: ViewFunction,
+		Purity: FunctionPurityView,
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
@@ -221,7 +221,7 @@ func (checker *Checker) PopPurityScope() PurityCheckScope {
 }
 
 func (checker *Checker) EnforcePurity(operation ast.Element, purity FunctionPurity) {
-	if purity == ImpureFunction {
+	if purity == FunctionPurityImpure {
 		checker.ObserveImpureOperation(operation)
 	}
 }

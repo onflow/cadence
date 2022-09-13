@@ -25,9 +25,9 @@ import (
 
 func PurityFromAnnotation(purity ast.FunctionPurity) FunctionPurity {
 	if purity == ast.FunctionPurityView {
-		return ViewFunction
+		return FunctionPurityView
 	}
-	return ImpureFunction
+	return FunctionPurityImpure
 
 }
 
@@ -180,7 +180,7 @@ func (checker *Checker) checkFunction(
 			functionActivation.InitializationInfo = initializationInfo
 
 			if functionBlock != nil {
-				checker.InNewPurityScope(functionType.Purity == ViewFunction, func() {
+				checker.InNewPurityScope(functionType.Purity == FunctionPurityView, func() {
 					checker.visitFunctionBlock(
 						functionBlock,
 						functionType.ReturnTypeAnnotation,
