@@ -20,6 +20,7 @@ package server
 
 import (
 	"bufio"
+	"context"
 	json2 "encoding/json"
 	"fmt"
 	"io"
@@ -531,7 +532,6 @@ func (s *Server) DidChangeTextDocument(
 	conn protocol.Conn,
 	params *protocol.DidChangeTextDocumentParams,
 ) error {
-
 	uri := params.TextDocument.URI
 	text := params.ContentChanges[0].Text
 	version := params.TextDocument.Version
@@ -539,6 +539,12 @@ func (s *Server) DidChangeTextDocument(
 	s.documents[uri] = Document{
 		Text:    text,
 		Version: version,
+	}
+
+	// todo implement smarter cache invalidation with dependency resolution using https://github.com/onflow/cadence/pull/1634
+	// we should build dependency tree upfront and then based on the changes only reset checkers contained in that tree
+	for locationID := range s.checkers {
+		delete(s.checkers, locationID)
 	}
 
 	s.checkAndPublishDiagnostics(conn, uri, text, version)
@@ -883,7 +889,7 @@ func (s *Server) Rename(
 }
 
 func (s *Server) CodeAction(
-	conn protocol.Conn,
+	_ protocol.Conn,
 	params *protocol.CodeActionParams,
 ) (
 	codeActions []*protocol.CodeAction,
@@ -903,7 +909,6 @@ func (s *Server) CodeAction(
 	codeActionsResolvers := s.codeActionsResolvers[uri]
 
 	for _, diagnostic := range params.Context.Diagnostics {
-
 		if data, ok := diagnostic.Data.(string); ok {
 			codeActionID, err := uuid.Parse(data)
 			if err != nil {
@@ -1730,6 +1735,10 @@ func (s *Server) InlayHint(
 
 	for _, variableDeclaration := range variableDeclarations {
 		targetType := checker.Elaboration.VariableDeclarationTargetTypes[variableDeclaration]
+		if targetType == nil { // bugfix getting nil target
+			continue // todo this should never occur
+		}
+
 		identifierEndPosition := variableDeclaration.Identifier.EndPosition(nil)
 		inlayHintPosition := conversion.ASTToProtocolPosition(identifierEndPosition.Shifted(nil, 1))
 		inlayHint := protocol.InlayHint{
@@ -2059,8 +2068,12 @@ func (s *Server) getDiagnosticsForParentError(
 	return
 }
 
-// parse parses the given code and returns the resultant program.
+// parse the given code and returns the resultant program.
 func parse(code, location string, log func(*protocol.LogMessageParams)) (*ast.Program, error) {
+	ctx := context.WithValue(context.Background(), "code", code)
+	ctx = context.WithValue(ctx, "location", location)
+	defer sentry.RecoverWithContext(ctx)
+
 	start := time.Now()
 	program, err := parser.ParseProgram(code, nil)
 	elapsed := time.Since(start)
@@ -2349,6 +2362,11 @@ func (s *Server) convertError(
 				err.Name,
 				func(checker *sema.Checker, isFunction bool) insertionPosition {
 					declaration := declarationGetter(checker.Elaboration)
+					if declaration == nil { // TODO look up the getter in the correct checker (it might be imported one)
+						return insertionPosition{
+							Position: ast.Position{},
+						}
+					}
 
 					members := declaration.DeclarationMembers()
 					declarations := members.Declarations()
@@ -2641,9 +2659,7 @@ func (s *Server) maybeAddDeclarationActionsResolver(
 	name string,
 	memberInsertionPosGetter func(checker *sema.Checker, isFunction bool) insertionPosition,
 ) func() []*protocol.CodeAction {
-
 	return func() []*protocol.CodeAction {
-
 		document, ok := s.documents[uri]
 		if !ok {
 			return nil
