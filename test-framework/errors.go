@@ -35,3 +35,20 @@ func (e ImportResolverNotProvidedError) Unwrap() error {
 func (e ImportResolverNotProvidedError) Error() string {
 	return "import resolver not provided"
 }
+
+// FileResolverNotProvidedError is thrown if the file resolver is not
+// set in the TestRunner, when running tests.
+//
+type FileResolverNotProvidedError struct {
+	Err error
+}
+
+var _ error = FileResolverNotProvidedError{}
+
+func (e FileResolverNotProvidedError) Unwrap() error {
+	return e.Err
+}
+
+func (e FileResolverNotProvidedError) Error() string {
+	return "file resolver not provided"
+}
