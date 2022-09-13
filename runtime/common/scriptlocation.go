@@ -29,9 +29,11 @@ import (
 
 const ScriptLocationPrefix = "s"
 
+const ScriptIDLength = 32
+
 // ScriptLocation
 //
-type ScriptLocation [32]byte
+type ScriptLocation [ScriptIDLength]byte
 
 var _ Location = ScriptLocation{}
 
@@ -41,23 +43,12 @@ func NewScriptLocation(gauge MemoryGauge, identifier []byte) (location ScriptLoc
 	return
 }
 
-func (l ScriptLocation) ID() LocationID {
-	return l.MeteredID(nil)
-}
-
-func (l ScriptLocation) MeteredID(memoryGauge MemoryGauge) LocationID {
-	return NewMeteredLocationID(
-		memoryGauge,
-		ScriptLocationPrefix,
-		l.String(),
-	)
-}
-
 func (l ScriptLocation) TypeID(memoryGauge MemoryGauge, qualifiedIdentifier string) TypeID {
-	return NewMeteredTypeID(
+	return hexIDLocationTypeID(
 		memoryGauge,
 		ScriptLocationPrefix,
-		l.String(),
+		ScriptIDLength,
+		l[:],
 		qualifiedIdentifier,
 	)
 }

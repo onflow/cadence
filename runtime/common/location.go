@@ -19,6 +19,7 @@
 package common
 
 import (
+	"encoding/hex"
 	"fmt"
 	"strings"
 
@@ -30,10 +31,6 @@ import (
 //
 type Location interface {
 	fmt.Stringer
-	// ID returns the canonical ID for this import location.
-	ID() LocationID
-	// MeteredID returns the canonical ID for this import location, and the generated ID is memory metered.
-	MeteredID(memoryGauge MemoryGauge) LocationID
 	// TypeID returns a type ID for the given qualified identifier
 	TypeID(memoryGauge MemoryGauge, qualifiedIdentifier string) TypeID
 	// QualifiedIdentifier returns the qualified identifier for the given type ID
@@ -70,41 +67,8 @@ func LocationsInSameAccount(first, second Location) bool {
 	return first == second
 }
 
-// LocationID
-//
-type LocationID string
-
-func NewLocationID(parts ...string) LocationID {
-	return LocationID(strings.Join(parts, "."))
-}
-
-func NewMeteredLocationID(memoryGauge MemoryGauge, parts ...string) LocationID {
-	jointString := joinStrings(memoryGauge, parts)
-	return LocationID(jointString)
-}
-
-func joinStrings(memoryGauge MemoryGauge, parts []string) string {
-	l := 0
-	for _, part := range parts {
-		l += len(part) + 1
-	}
-	UseMemory(memoryGauge, NewRawStringMemoryUsage(l))
-
-	return strings.Join(parts, ".")
-}
-
 // TypeID
-//
 type TypeID string
-
-func NewTypeID(parts ...string) TypeID {
-	return TypeID(strings.Join(parts, "."))
-}
-
-func NewMeteredTypeID(memoryGauge MemoryGauge, parts ...string) TypeID {
-	jointString := joinStrings(memoryGauge, parts)
-	return TypeID(jointString)
-}
 
 func NewTypeIDFromQualifiedName(memoryGauge MemoryGauge, location Location, qualifiedIdentifier string) TypeID {
 	if location == nil {
@@ -112,6 +76,75 @@ func NewTypeIDFromQualifiedName(memoryGauge MemoryGauge, location Location, qual
 	}
 
 	return location.TypeID(memoryGauge, qualifiedIdentifier)
+}
+
+// hexIDLocationTypeID returns a type ID in the format
+// prefix '.' hex-encoded ID '.' qualifiedIdentifier
+func hexIDLocationTypeID(
+	memoryGauge MemoryGauge,
+	prefix string,
+	idLength int,
+	id []byte,
+	qualifiedIdentifier string,
+) TypeID {
+	var i int
+
+	// prefix '.' hex-encoded ID '.' qualifiedIdentifier
+	length := len(prefix) + 1 + hex.EncodedLen(idLength) + 1 + len(qualifiedIdentifier)
+
+	UseMemory(memoryGauge, NewRawStringMemoryUsage(length))
+
+	b := make([]byte, length)
+
+	copy(b, prefix)
+	i += len(prefix)
+
+	b[i] = '.'
+	i += 1
+
+	hex.Encode(b[i:], id)
+	i += idLength * 2
+
+	b[i] = '.'
+	i += 1
+
+	copy(b[i:], qualifiedIdentifier)
+
+	return TypeID(b)
+}
+
+// idLocationTypeID returns a type ID in the format
+// prefix '.' ID '.' qualifiedIdentifier
+func idLocationTypeID(
+	memoryGauge MemoryGauge,
+	prefix string,
+	id string,
+	qualifiedIdentifier string,
+) TypeID {
+	var i int
+
+	// prefix '.' ID '.' qualifiedIdentifier
+	length := len(prefix) + 1 + len(id) + 1 + len(qualifiedIdentifier)
+
+	UseMemory(memoryGauge, NewRawStringMemoryUsage(length))
+
+	b := make([]byte, length)
+
+	copy(b, prefix)
+	i += len(prefix)
+
+	b[i] = '.'
+	i += 1
+
+	copy(b[i:], id)
+	i += len(id)
+
+	b[i] = '.'
+	i += 1
+
+	copy(b[i:], qualifiedIdentifier)
+
+	return TypeID(b)
 }
 
 type TypeIDDecoder func(gauge MemoryGauge, typeID string) (location Location, qualifiedIdentifier string, err error)

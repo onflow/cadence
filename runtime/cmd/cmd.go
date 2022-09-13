@@ -117,7 +117,7 @@ func PrepareChecker(
 	program *ast.Program,
 	location common.Location,
 	codes map[common.Location][]byte,
-	memberAccountAccess map[common.LocationID]map[common.LocationID]struct{},
+	memberAccountAccess map[common.Location]map[common.Location]struct{},
 	must func(error),
 ) (*sema.Checker, func(error)) {
 
@@ -128,12 +128,12 @@ func PrepareChecker(
 			return false
 		}
 
-		targets, ok := memberAccountAccess[checker.Location.ID()]
+		targets, ok := memberAccountAccess[checker.Location]
 		if !ok {
 			return false
 		}
 
-		_, ok = targets[memberLocation.ID()]
+		_, ok = targets[memberLocation]
 		return ok
 	}
 

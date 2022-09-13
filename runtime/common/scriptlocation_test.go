@@ -46,6 +46,18 @@ func TestScriptLocation_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestScriptLocationTypeID(t *testing.T) {
+
+	t.Parallel()
+
+	location := ScriptLocation{0x1, 0x2}
+
+	assert.Equal(t,
+		TypeID("s.0102000000000000000000000000000000000000000000000000000000000000.Bar.Baz"),
+		location.TypeID(nil, "Bar.Baz"),
+	)
+}
+
 func TestDecodeScriptLocationTypeID(t *testing.T) {
 
 	t.Parallel()
