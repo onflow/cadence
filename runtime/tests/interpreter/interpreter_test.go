@@ -7845,6 +7845,57 @@ func TestInterpretOptionalChainingFunctionCallAndNilCoalescing(t *testing.T) {
 	)
 }
 
+func TestInterpretOptionalChainingArgumentEvaluation(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t,
+		`
+          var a = 1
+          var b = 1
+
+          fun incA(): Int {
+              a = a + 1
+              return a
+          }
+
+          fun incB(): Int {
+              b = b + 1
+              return b
+          }
+
+          struct Test {
+              fun test(_ int: Int) {}
+          }
+
+          fun test() {
+              let test1: Test? = Test()
+              test1?.test(incA())
+
+              let test2: Test? = nil
+              test2?.test(incB())
+          }
+        `,
+	)
+
+	_, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewIntValueFromInt64(nil, 2),
+		inter.Globals["a"].GetValue(),
+	)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewIntValueFromInt64(nil, 1),
+		inter.Globals["b"].GetValue(),
+	)
+}
+
 func TestInterpretCompositeDeclarationNestedTypeScopingOuterInner(t *testing.T) {
 
 	t.Parallel()
