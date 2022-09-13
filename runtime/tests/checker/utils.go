@@ -40,7 +40,7 @@ func init() {
 	deep.MaxDepth = 20
 }
 
-func ParseAndCheck(t *testing.T, code string) (*sema.Checker, error) {
+func ParseAndCheck(t testing.TB, code string) (*sema.Checker, error) {
 	return ParseAndCheckWithOptions(t, code, ParseAndCheckOptions{})
 }
 
@@ -75,12 +75,12 @@ func ParseAndCheckWithOptionsAndMemoryMetering(
 		options.Location = utils.TestLocation
 	}
 
-	program, err := parser.ParseProgram(code, memoryGauge)
+	program, err := parser.ParseProgram([]byte(code), memoryGauge)
 	if !options.IgnoreParseError && !assert.NoError(t, err) {
 		var sb strings.Builder
 		location := options.Location
 		printErr := pretty.NewErrorPrettyPrinter(&sb, true).
-			PrettyPrintError(err, location, map[common.Location]string{location: code})
+			PrettyPrintError(err, location, map[common.Location][]byte{location: []byte(code)})
 		if printErr != nil {
 			panic(printErr)
 		}

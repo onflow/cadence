@@ -31,7 +31,7 @@ import (
 	"github.com/onflow/cadence/runtime/stdlib"
 )
 
-func must(err error, location common.Location, codes map[common.Location]string) {
+func must(err error, location common.Location, codes map[common.Location][]byte) {
 	if err == nil {
 		return
 	}
@@ -43,22 +43,22 @@ func must(err error, location common.Location, codes map[common.Location]string)
 	os.Exit(1)
 }
 
-func mustClosure(location common.Location, codes map[common.Location]string) func(error) {
+func mustClosure(location common.Location, codes map[common.Location][]byte) func(error) {
 	return func(e error) {
 		must(e, location, codes)
 	}
 }
 
-func PrepareProgramFromFile(location common.StringLocation, codes map[common.Location]string) (*ast.Program, func(error)) {
-	codeBytes, err := os.ReadFile(string(location))
+func PrepareProgramFromFile(location common.StringLocation, codes map[common.Location][]byte) (*ast.Program, func(error)) {
+	code, err := os.ReadFile(string(location))
 
-	program, must := PrepareProgram(string(codeBytes), location, codes)
+	program, must := PrepareProgram(code, location, codes)
 	must(err)
 
 	return program, must
 }
 
-func PrepareProgram(code string, location common.Location, codes map[common.Location]string) (*ast.Program, func(error)) {
+func PrepareProgram(code []byte, location common.Location, codes map[common.Location][]byte) (*ast.Program, func(error)) {
 	must := mustClosure(location, codes)
 
 	program, err := parser.ParseProgram(code, nil)
@@ -72,7 +72,7 @@ var checkers = map[common.Location]*sema.Checker{}
 
 func DefaultCheckerConfig(
 	checkers map[common.Location]*sema.Checker,
-	codes map[common.Location]string,
+	codes map[common.Location][]byte,
 ) *sema.Config {
 	return &sema.Config{
 		ImportHandler: func(
@@ -116,7 +116,7 @@ func DefaultCheckerConfig(
 func PrepareChecker(
 	program *ast.Program,
 	location common.Location,
-	codes map[common.Location]string,
+	codes map[common.Location][]byte,
 	memberAccountAccess map[common.Location]map[common.Location]struct{},
 	must func(error),
 ) (*sema.Checker, func(error)) {
@@ -150,7 +150,7 @@ func PrepareChecker(
 
 func PrepareInterpreter(filename string, debugger *interpreter.Debugger) (*interpreter.Interpreter, *sema.Checker, func(error)) {
 
-	codes := map[common.Location]string{}
+	codes := map[common.Location][]byte{}
 
 	// do not need to meter this as it's a one-off overhead
 	location := common.NewStringLocation(nil, filename)

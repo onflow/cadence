@@ -28,7 +28,7 @@ func Composite(typeID string, fields []struct {
 }) string {
 	var builder strings.Builder
 	builder.WriteString(typeID)
-	builder.WriteRune('(')
+	builder.WriteByte('(')
 	for i, nameValuePair := range fields {
 		if i > 0 {
 			builder.WriteString(", ")
@@ -37,6 +37,6 @@ func Composite(typeID string, fields []struct {
 		builder.WriteString(": ")
 		builder.WriteString(nameValuePair.Value)
 	}
-	builder.WriteRune(')')
+	builder.WriteByte(')')
 	return builder.String()
 }

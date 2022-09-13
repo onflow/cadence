@@ -66,13 +66,13 @@ func TestNeedSyntaxAndImport(t *testing.T) {
 			location common.Location,
 			importingLocation common.Location,
 			importRange ast.Range,
-		) (string, error) {
+		) ([]byte, error) {
 			switch location {
 			case txLocation:
-				return txCode, nil
+				return []byte(txCode), nil
 
 			case contractLocation:
-				return contractCode, nil
+				return []byte(contractCode), nil
 
 			default:
 				require.FailNow(t,
@@ -80,7 +80,7 @@ func TestNeedSyntaxAndImport(t *testing.T) {
 					"location: %s",
 					location,
 				)
-				return "", nil
+				return nil, nil
 			}
 		},
 	}
@@ -188,10 +188,10 @@ func TestParseError(t *testing.T) {
 			location common.Location,
 			importingLocation common.Location,
 			importRange ast.Range,
-		) (string, error) {
+		) ([]byte, error) {
 			switch location {
 			case contractLocation:
-				return contractCode, nil
+				return []byte(contractCode), nil
 
 			default:
 				require.FailNow(t,
@@ -199,7 +199,7 @@ func TestParseError(t *testing.T) {
 					"location: %s",
 					location,
 				)
-				return "", nil
+				return nil, nil
 			}
 		},
 	}
@@ -234,10 +234,10 @@ func TestCheckError(t *testing.T) {
 			location common.Location,
 			importingLocation common.Location,
 			importRange ast.Range,
-		) (string, error) {
+		) ([]byte, error) {
 			switch location {
 			case contractLocation:
-				return contractCode, nil
+				return []byte(contractCode), nil
 
 			default:
 				require.FailNow(t,
@@ -245,7 +245,7 @@ func TestCheckError(t *testing.T) {
 					"location: %s",
 					location,
 				)
-				return "", nil
+				return nil, nil
 			}
 		},
 	}

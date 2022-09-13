@@ -759,8 +759,8 @@ func exportEvent(
 	return exported.WithType(eventType), nil
 }
 
-// importValue converts a Cadence value to a runtime value.
-func importValue(
+// ImportValue converts a Cadence value to a runtime value.
+func ImportValue(
 	inter *interpreter.Interpreter,
 	getLocationRange func() interpreter.LocationRange,
 	value cadence.Value,
@@ -1198,7 +1198,7 @@ func importOptionalValue(
 		innerType = optionalType.Type
 	}
 
-	innerValue, err := importValue(inter, getLocationRange, v.Value, innerType)
+	innerValue, err := ImportValue(inter, getLocationRange, v.Value, innerType)
 	if err != nil {
 		return nil, err
 	}
@@ -1224,7 +1224,7 @@ func importArrayValue(
 	}
 
 	for i, element := range v.Values {
-		value, err := importValue(
+		value, err := ImportValue(
 			inter,
 			getLocationRange,
 			element,
@@ -1291,7 +1291,7 @@ func importDictionaryValue(
 	}
 
 	for i, pair := range v.Pairs {
-		key, err := importValue(
+		key, err := ImportValue(
 			inter,
 			getLocationRange,
 			pair.Key,
@@ -1302,7 +1302,7 @@ func importDictionaryValue(
 		}
 		keysAndValues[i*2] = key
 
-		value, err := importValue(
+		value, err := ImportValue(
 			inter,
 			getLocationRange,
 			pair.Value,
@@ -1395,7 +1395,7 @@ func importCompositeValue(
 			expectedFieldType = member.TypeAnnotation.Type
 		}
 
-		importedFieldValue, err := importValue(
+		importedFieldValue, err := ImportValue(
 			inter,
 			getLocationRange,
 			fieldValue,

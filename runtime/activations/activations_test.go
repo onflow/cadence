@@ -28,12 +28,12 @@ func TestActivations(t *testing.T) {
 
 	t.Parallel()
 
-	activations := &ValueTypeActivations{}
+	activations := &Activations[int]{}
 
 	activations.Set("a", 1)
 
 	assert.Equal(t, activations.Find("a"), 1)
-	assert.Nil(t, activations.Find("b"))
+	assert.Zero(t, activations.Find("b"))
 
 	activations.PushNewWithCurrent()
 
@@ -42,7 +42,7 @@ func TestActivations(t *testing.T) {
 
 	assert.Equal(t, activations.Find("a"), 2)
 	assert.Equal(t, activations.Find("b"), 3)
-	assert.Nil(t, activations.Find("c"))
+	assert.Zero(t, activations.Find("c"))
 
 	activations.PushNewWithCurrent()
 
@@ -57,17 +57,17 @@ func TestActivations(t *testing.T) {
 
 	assert.Equal(t, activations.Find("a"), 2)
 	assert.Equal(t, activations.Find("b"), 3)
-	assert.Nil(t, activations.Find("c"))
+	assert.Zero(t, activations.Find("c"))
 
 	activations.Pop()
 
 	assert.Equal(t, activations.Find("a"), 1)
-	assert.Nil(t, activations.Find("b"))
-	assert.Nil(t, activations.Find("c"))
+	assert.Zero(t, activations.Find("b"))
+	assert.Zero(t, activations.Find("c"))
 
 	activations.Pop()
 
-	assert.Nil(t, activations.Find("a"))
-	assert.Nil(t, activations.Find("b"))
-	assert.Nil(t, activations.Find("c"))
+	assert.Zero(t, activations.Find("a"))
+	assert.Zero(t, activations.Find("b"))
+	assert.Zero(t, activations.Find("c"))
 }
