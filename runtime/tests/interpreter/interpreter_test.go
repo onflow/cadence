@@ -8868,6 +8868,8 @@ func newTestAuthAccountValue(gauge common.MemoryGauge, addressValue interpreter.
 				panicFunction,
 				panicFunction,
 				panicFunction,
+				panicFunction,
+				panicFunction,
 			)
 		},
 	)
@@ -8894,6 +8896,8 @@ func newTestPublicAccountValue(gauge common.MemoryGauge, addressValue interprete
 			return interpreter.NewPublicAccountKeysValue(
 				gauge,
 				addressValue,
+				panicFunction,
+				panicFunction,
 				panicFunction,
 			)
 		},

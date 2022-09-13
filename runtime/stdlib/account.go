@@ -20,6 +20,7 @@ package stdlib
 
 import (
 	"fmt"
+	"math/big"
 
 	"golang.org/x/crypto/sha3"
 
@@ -282,6 +283,9 @@ func newAuthAccountKeysValue(
 			handler,
 			addressValue,
 		),
+		// todo foreachfunction
+		nil,
+		NewAccountKeysCountFunction(gauge, handler, addressValue),
 	)
 }
 
@@ -613,6 +617,7 @@ type PublicKey struct {
 type AccountKeyProvider interface {
 	// GetAccountKey retrieves a key from an account by index.
 	GetAccountKey(address common.Address, index int) (*AccountKey, error)
+	AccountKeysCount(address common.Address) *big.Int
 }
 
 func newAccountKeysGetFunction(
@@ -670,6 +675,24 @@ func newAccountKeysGetFunction(
 			)
 		},
 		sema.AccountKeysTypeGetFunctionType,
+	)
+}
+
+func NewAccountKeysCountFunction(
+	gauge common.MemoryGauge,
+	provider AccountKeyProvider,
+	addressValue interpreter.AddressValue,
+) *interpreter.HostFunctionValue {
+	address := addressValue.ToAddress()
+
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			keyCount := provider.AccountKeysCount(address)
+			usage := common.NewBigIntMemoryUsage(len(keyCount.Bits()))
+			return interpreter.NewIntValueFromBigInt(gauge, usage, func() *big.Int { return keyCount })
+		},
+		sema.AccountKeysTypeCountFunctionType,
 	)
 }
 
@@ -759,6 +782,13 @@ func newPublicAccountKeysValue(
 		gauge,
 		addressValue,
 		newAccountKeysGetFunction(
+			gauge,
+			handler,
+			addressValue,
+		),
+		// todo add foreach
+		nil,
+		NewAccountKeysCountFunction(
 			gauge,
 			handler,
 			addressValue,

@@ -19,6 +19,7 @@
 package runtime
 
 import (
+	"math/big"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -242,6 +243,9 @@ func (e *interpreterEnvironment) GetAccountKey(address common.Address, index int
 	return e.runtimeInterface.GetAccountKey(address, index)
 }
 
+func (e *interpreterEnvironment) AccountKeysCount(address common.Address) *big.Int {
+	return e.runtimeInterface.AccountKeysCount(address)
+}
 func (e *interpreterEnvironment) GetAccountContractNames(address common.Address) ([]string, error) {
 	return e.runtimeInterface.GetAccountContractNames(address)
 }

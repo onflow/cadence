@@ -24,6 +24,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math/big"
 	"strconv"
 	"strings"
 	"sync"
@@ -151,6 +152,7 @@ type testRuntimeInterface struct {
 	) (*stdlib.AccountKey, error)
 	getAccountKey             func(address Address, index int) (*stdlib.AccountKey, error)
 	removeAccountKey          func(address Address, index int) (*stdlib.AccountKey, error)
+	accountKeysCount          func(address Address) *big.Int
 	updateAccountContractCode func(address Address, name string, code []byte) error
 	getAccountContractCode    func(address Address, name string) (code []byte, err error)
 	removeAccountContractCode func(address Address, name string) (err error)
@@ -306,6 +308,13 @@ func (i *testRuntimeInterface) GetAccountKey(address Address, index int) (*stdli
 		panic("must specify testRuntimeInterface.getAccountKey")
 	}
 	return i.getAccountKey(address, index)
+}
+
+func (i *testRuntimeInterface) AccountKeysCount(address Address) *big.Int {
+	if i.accountKeysCount == nil {
+		panic("must specify testRuntimeInterface.accountKeysCount")
+	}
+	return i.accountKeysCount(address)
 }
 
 func (i *testRuntimeInterface) RevokeAccountKey(address Address, index int) (*stdlib.AccountKey, error) {

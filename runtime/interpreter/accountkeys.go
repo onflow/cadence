@@ -37,12 +37,16 @@ func NewAuthAccountKeysValue(
 	addFunction FunctionValue,
 	getFunction FunctionValue,
 	revokeFunction FunctionValue,
+	forEachFunction FunctionValue,
+	countFunction FunctionValue,
 ) Value {
 
 	fields := map[string]Value{
-		sema.AccountKeysAddFunctionName:    addFunction,
-		sema.AccountKeysGetFunctionName:    getFunction,
-		sema.AccountKeysRevokeFunctionName: revokeFunction,
+		sema.AccountKeysAddFunctionName:     addFunction,
+		sema.AccountKeysGetFunctionName:     getFunction,
+		sema.AccountKeysRevokeFunctionName:  revokeFunction,
+		sema.AccountKeysForEachFunctionName: forEachFunction,
+		sema.AccountKeysCountFieldName:      countFunction,
 	}
 
 	var str string
@@ -77,10 +81,14 @@ func NewPublicAccountKeysValue(
 	gauge common.MemoryGauge,
 	address AddressValue,
 	getFunction FunctionValue,
+	forEachFunction FunctionValue,
+	countFunction FunctionValue,
 ) Value {
 
 	fields := map[string]Value{
-		sema.AccountKeysGetFunctionName: getFunction,
+		sema.AccountKeysGetFunctionName:     getFunction,
+		sema.AccountKeysForEachFunctionName: forEachFunction,
+		sema.AccountKeysCountFieldName:      countFunction,
 	}
 
 	var str string
