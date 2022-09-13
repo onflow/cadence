@@ -155,7 +155,7 @@ func (checker *Checker) enforceViewAssignment(assignment ast.Statement, target a
 			inAccessChain = false
 		case *ast.IndexExpression:
 			target = targetExp.TargetExpression
-			elementType := checker.visitIndexExpression(targetExp, true)
+			elementType := checker.Elaboration.IndexExpressionTypes[targetExp].IndexedType.ElementType(true)
 			accessChain = append(accessChain, elementType)
 		case *ast.MemberExpression:
 			target = targetExp.Expression
