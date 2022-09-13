@@ -20,6 +20,7 @@ package runtime
 
 import (
 	"encoding/json"
+
 	"github.com/onflow/cadence/runtime/common"
 )
 
@@ -64,7 +65,7 @@ func (r *CoverageReport) MarshalJSON() ([]byte, error) {
 	type Alias CoverageReport
 
 	coverage := make(map[string]*LocationCoverage, len(r.Coverage))
-	for location, locationCoverage := range r.Coverage {
+	for location, locationCoverage := range r.Coverage { // nolint:maprangecheck
 		typeID := location.TypeID(nil, "")
 		locationID := typeID[:len(typeID)-1]
 		coverage[string(locationID)] = locationCoverage
