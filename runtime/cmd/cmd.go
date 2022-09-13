@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/onflow/cadence/runtime/activations"
+
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -182,8 +184,8 @@ func PrepareInterpreter(filename string, debugger *interpreter.Debugger) (*inter
 	// NOTE: storage option must be provided *before* the predeclared values option,
 	// as predeclared values may rely on storage
 
-	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-	baseActivation.Declare(stdlib.NewLogFunction(StandardOutputLogger{}))
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, stdlib.NewLogFunction(StandardOutputLogger{}))
 
 	config := &interpreter.Config{
 		BaseActivation: baseActivation,

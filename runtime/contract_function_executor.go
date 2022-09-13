@@ -28,7 +28,7 @@ import (
 )
 
 type interpreterContractFunctionExecutor struct {
-	runtime interpreterRuntime
+	runtime *interpreterRuntime
 
 	contractLocation common.AddressLocation
 	functionName     string
@@ -50,7 +50,7 @@ type interpreterContractFunctionExecutor struct {
 }
 
 func newInterpreterContractFunctionExecutor(
-	runtime interpreterRuntime,
+	runtime *interpreterRuntime,
 	contractLocation common.AddressLocation,
 	functionName string,
 	arguments []cadence.Value,
