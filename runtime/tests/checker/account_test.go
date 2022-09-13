@@ -1888,3 +1888,202 @@ func TestCheckAuthAccountIteration(t *testing.T) {
 		}
 	})
 }
+
+func TestCheckAccountPublish(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("basic publish", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t,
+			`fun test() {
+				authAccount.publish(3, name: "foo", recipient: 0x1)
+			}`,
+		)
+		require.NoError(t, err)
+	})
+
+	t.Run("publish unlabeled name", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t,
+			`fun test() {
+				authAccount.publish(3, "foo", recipient: 0x1)
+			}`,
+		)
+		require.Error(t, err)
+		errors := ExpectCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.MissingArgumentLabelError{}, errors[0])
+	})
+
+	t.Run("publish unlabeled recipient", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t,
+			`fun test() {
+				authAccount.publish(3, name: "foo", 0x1)
+			}`,
+		)
+		require.Error(t, err)
+		errors := ExpectCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.MissingArgumentLabelError{}, errors[0])
+	})
+
+	t.Run("publish wrong argument types", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t,
+			`fun test() {
+				authAccount.publish(3, name: 3, recipient: "")
+			}`,
+		)
+		require.Error(t, err)
+		errors := ExpectCheckerErrors(t, err, 2)
+		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
+		require.IsType(t, &sema.TypeMismatchError{}, errors[1])
+	})
+
+	t.Run("publish non-storable", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t,
+			`fun test() {
+				authAccount.publish(fun () {}, name: "foo", recipient: 0x1)
+			}`,
+		)
+		require.Error(t, err)
+		errors := ExpectCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
+	})
+}
+
+func TestCheckAccountUnpublish(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("basic unpublish", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t,
+			`fun test() {
+				authAccount.unpublish<Int>("foo")
+			}`,
+		)
+		require.NoError(t, err)
+	})
+
+	t.Run("unpublish wrong argument types", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t,
+			`fun test() {
+				authAccount.unpublish<String>(4)
+			}`,
+		)
+		require.Error(t, err)
+		errors := ExpectCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
+	})
+
+	t.Run("unpublish resource", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t,
+			`
+			resource R {}
+			fun test() {
+				let x <- authAccount.unpublish<@R>("foo")
+				destroy x
+			}`,
+		)
+		require.NoError(t, err)
+	})
+
+	t.Run("unpublish non-storable", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t,
+			`
+			resource R {}
+			fun test() {
+				authAccount.unpublish<((): Void)>("foo")
+			}`,
+		)
+		require.Error(t, err)
+		errors := ExpectCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
+	})
+}
+
+func TestCheckAccountClaim(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("basic claim", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t,
+			`fun test() {
+				authAccount.claim<Int>("foo", provider: 0x1)
+			}`,
+		)
+		require.NoError(t, err)
+	})
+
+	t.Run("claim wrong argument types", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t,
+			`fun test() {
+				authAccount.claim<String>(4, provider: "foo")
+			}`,
+		)
+		require.Error(t, err)
+		errors := ExpectCheckerErrors(t, err, 2)
+		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
+		require.IsType(t, &sema.TypeMismatchError{}, errors[1])
+	})
+
+	t.Run("claim no provider label", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t,
+			`fun test() {
+				authAccount.claim<Int>("foo", 0x1)
+			}`,
+		)
+		require.Error(t, err)
+		errors := ExpectCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.MissingArgumentLabelError{}, errors[0])
+	})
+
+	t.Run("claim resource", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t,
+			`
+			resource R {}
+			fun test() {
+				let x <- authAccount.claim<@R>("foo", provider: 0x1)!
+				destroy x
+			}`,
+		)
+		require.NoError(t, err)
+	})
+
+	t.Run("claim non-storable", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t,
+			`
+			resource R {}
+			fun test() {
+				authAccount.claim<((): Void)>("foo", provider: 0x1)
+			}`,
+		)
+		require.Error(t, err)
+		errors := ExpectCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
+	})
+}

@@ -47,6 +47,9 @@ const AuthAccountKeysField = "keys"
 const AuthAccountPublicPathsField = "publicPaths"
 const AuthAccountPrivatePathsField = "privatePaths"
 const AuthAccountStoragePathsField = "storagePaths"
+const AuthAccountPublishField = "publish"
+const AuthAccountUnpublishField = "unpublish"
+const AuthAccountClaimField = "claim"
 
 // AuthAccountType represents the authorized access to an account.
 // Access to an AuthAccount means having full access to its storage, public keys, and code.
@@ -211,6 +214,24 @@ var AuthAccountType = func() *CompositeType {
 			AuthAccountForEachStoredField,
 			AuthAccountForEachStoredFunctionType,
 			authAccountForEachStoredDocString,
+		),
+		NewUnmeteredPublicFunctionMember(
+			authAccountType,
+			AuthAccountClaimField,
+			AuthAccountTypeClaimFunctionType,
+			authAccountTypeClaimFunctionDocString,
+		),
+		NewUnmeteredPublicFunctionMember(
+			authAccountType,
+			AuthAccountPublishField,
+			AuthAccountTypePublishFunctionType,
+			authAccountTypePublishFunctionDocString,
+		),
+		NewUnmeteredPublicFunctionMember(
+			authAccountType,
+			AuthAccountUnpublishField,
+			AuthAccountTypeUnpublishFunctionType,
+			authAccountTypeUnpublishFunctionDocString,
 		),
 	}
 
@@ -754,3 +775,96 @@ Retrieves the key at the given index of the account.
 const authAccountKeysTypeRevokeFunctionDocString = `
 Revokes the key at the given index of the account.
 `
+
+const authAccountTypePublishFunctionDocString = `
+Publishes the argument value under the given name, to be later claimed by the specified recipient
+`
+
+var AuthAccountTypePublishFunctionType = &FunctionType{
+
+	Parameters: []*Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "value",
+			TypeAnnotation: NewTypeAnnotation(StorableType),
+		},
+		{
+			Label:          "name",
+			Identifier:     "name",
+			TypeAnnotation: NewTypeAnnotation(StringType),
+		},
+		{
+			Label:          "recipient",
+			Identifier:     "recipient",
+			TypeAnnotation: NewTypeAnnotation(&AddressType{}),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		VoidType,
+	),
+}
+
+const authAccountTypeUnpublishFunctionDocString = `
+Unpublishes the value specified by the argument string
+`
+
+var AuthAccountTypeUnpublishFunctionType = func() *FunctionType {
+	typeParameter := &TypeParameter{
+		Name:      "T",
+		TypeBound: StorableType,
+	}
+	return &FunctionType{
+		TypeParameters: []*TypeParameter{
+			typeParameter,
+		},
+		Parameters: []*Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "name",
+				TypeAnnotation: NewTypeAnnotation(StringType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{
+				Type: &GenericType{
+					TypeParameter: typeParameter,
+				},
+			},
+		),
+	}
+}()
+
+const authAccountTypeClaimFunctionDocString = `
+Claims the value specified by the argument string from the account specified as the provider
+`
+
+var AuthAccountTypeClaimFunctionType = func() *FunctionType {
+	typeParameter := &TypeParameter{
+		Name:      "T",
+		TypeBound: StorableType,
+	}
+	return &FunctionType{
+		TypeParameters: []*TypeParameter{
+			typeParameter,
+		},
+		Parameters: []*Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "name",
+				TypeAnnotation: NewTypeAnnotation(StringType),
+			},
+			{
+				Label:          "provider",
+				Identifier:     "provider",
+				TypeAnnotation: NewTypeAnnotation(&AddressType{}),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{
+				Type: &GenericType{
+					TypeParameter: typeParameter,
+				},
+			},
+		),
+	}
+}()
