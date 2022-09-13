@@ -73,7 +73,7 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) (_ struct
 
 	identifier := statement.Identifier.Identifier
 
-	variable, err := checker.valueActivations.Declare(variableDeclaration{
+	variable, err := checker.valueActivations.declare(variableDeclaration{
 		identifier:               identifier,
 		ty:                       elementType,
 		kind:                     common.DeclarationKindConstant,
@@ -89,7 +89,7 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) (_ struct
 
 	if statement.Index != nil {
 		index := statement.Index.Identifier
-		indexVariable, err := checker.valueActivations.Declare(variableDeclaration{
+		indexVariable, err := checker.valueActivations.declare(variableDeclaration{
 			identifier:               index,
 			ty:                       IntType,
 			kind:                     common.DeclarationKindConstant,

@@ -16,6 +16,11 @@
  * limitations under the License.
  */
 
-package interpreter
+package contracts
 
-//go:generate go run github.com/cheekybits/genny -pkg=interpreter -in=../activations/activations.go -out=variable_activations.go gen "ValueType=*Variable"
+import (
+	_ "embed"
+)
+
+//go:embed test.cdc
+var TestContract []byte

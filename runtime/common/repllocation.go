@@ -33,20 +33,25 @@ type REPLLocation struct{}
 
 var _ Location = REPLLocation{}
 
-func (l REPLLocation) ID() LocationID {
-	return REPLLocationPrefix
-}
-
-func (l REPLLocation) MeteredID(memoryGauge MemoryGauge) LocationID {
-	return NewMeteredLocationID(memoryGauge, REPLLocationPrefix)
-}
-
 func (l REPLLocation) TypeID(memoryGauge MemoryGauge, qualifiedIdentifier string) TypeID {
-	return NewMeteredTypeID(
-		memoryGauge,
-		REPLLocationPrefix,
-		qualifiedIdentifier,
-	)
+	var i int
+
+	// REPLLocationPrefix '.' qualifiedIdentifier
+	length := len(REPLLocationPrefix) + 1 + len(qualifiedIdentifier)
+
+	UseMemory(memoryGauge, NewRawStringMemoryUsage(length))
+
+	b := make([]byte, length)
+
+	copy(b, REPLLocationPrefix)
+	i += len(REPLLocationPrefix)
+
+	b[i] = '.'
+	i += 1
+
+	copy(b[i:], qualifiedIdentifier)
+
+	return TypeID(b)
 }
 
 func (l REPLLocation) QualifiedIdentifier(typeID TypeID) string {

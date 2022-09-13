@@ -7,15 +7,7 @@ Yes, there is a [EBNF for Cadence](https://github.com/onflow/cadence/blob/master
 ## How can I inject additional values when executing a transaction or script?
 
 The runtime `Interface` functions `ExecuteTransaction` and `ExecuteScript` require a `Context` argument.
-The context has a `PredeclaredValues` field, which can be filled with `ValueDeclaration` values.
-
-Optionally, value declarations may have a predicate function `Available` of type `func(common.Location) bool`.
-The checker calls this function for every location that is checked,
-to determine if the value declaration should be available/declared in the given location.
-
-For example, this allows declaring a function that is only available in the service account.
-In this case, the availability function would need to check if the location is an `AddressLocation`,
-and that the address of the address location is the address of the service account.
+The context has an `Environment` field, in which `stdlib.StandardLibraryValue`s can be declared.
 
 ## How is Cadence parsed?
 
@@ -25,3 +17,9 @@ The handwritten parser also allows for better / great custom error reporting and
 
 The operator precedence parsing technique avoids constructing a CST and the associated overhead, where each grammar rule is translated to a CST node.
 For example, a simple integer literal would be "boxed" in several outer grammar rule nodes.
+
+## What is the algorithmic efficiency of operations on arrays and dictionaries?
+
+Arrays and dictionaries are implemented [as trees](https://github.com/onflow/atree). 
+This means that lookup operations do not run in constant time. 
+In certain cases, a mutation operation may cause a rebalancing of the tree.

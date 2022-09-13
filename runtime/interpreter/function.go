@@ -220,6 +220,7 @@ func NewHostFunctionValue(
 
 var _ Value = &HostFunctionValue{}
 var _ MemberAccessibleValue = &HostFunctionValue{}
+var _ ContractValue = &HostFunctionValue{}
 
 func (*HostFunctionValue) IsValue() {}
 
@@ -308,6 +309,10 @@ func (f *HostFunctionValue) Clone(_ *Interpreter) Value {
 
 func (*HostFunctionValue) DeepRemove(_ *Interpreter) {
 	// NO-OP
+}
+
+func (v *HostFunctionValue) SetNestedVariables(variables map[string]*Variable) {
+	v.NestedVariables = variables
 }
 
 // BoundFunctionValue

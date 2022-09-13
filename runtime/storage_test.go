@@ -743,8 +743,14 @@ func TestRuntimeTopShotContractDeployment(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	accountCodes := map[common.LocationID]string{
-		"A.1d7e57aa55817448.NonFungibleToken": realNonFungibleTokenInterface,
+	nftAddress, err := common.HexToAddress("0x1d7e57aa55817448")
+	require.NoError(t, err)
+
+	accountCodes := map[common.Location]string{
+		common.AddressLocation{
+			Address: nftAddress,
+			Name:    "NonFungibleToken",
+		}: realNonFungibleTokenInterface,
 	}
 
 	events := make([]cadence.Event, 0)
@@ -760,7 +766,7 @@ func TestRuntimeTopShotContractDeployment(t *testing.T) {
 				Address: address,
 				Name:    name,
 			}
-			accountCodes[location.ID()] = string(code)
+			accountCodes[location] = string(code)
 			return nil
 		},
 		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
@@ -768,7 +774,7 @@ func TestRuntimeTopShotContractDeployment(t *testing.T) {
 				Address: address,
 				Name:    name,
 			}
-			code = []byte(accountCodes[location.ID()])
+			code = []byte(accountCodes[location])
 			return code, nil
 		},
 		emitEvent: func(event cadence.Event) error {
@@ -832,8 +838,14 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
 
 	runtime := newTestInterpreterRuntime()
 
-	accountCodes := map[common.LocationID]string{
-		"A.1d7e57aa55817448.NonFungibleToken": realNonFungibleTokenInterface,
+	nftAddress, err := common.HexToAddress("0x1d7e57aa55817448")
+	require.NoError(t, err)
+
+	accountCodes := map[common.Location]string{
+		common.AddressLocation{
+			Address: nftAddress,
+			Name:    "NonFungibleToken",
+		}: realNonFungibleTokenInterface,
 	}
 
 	deployTx := utils.DeploymentTransaction("TopShot", []byte(realTopShotContract))
@@ -857,7 +869,7 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
 				Address: address,
 				Name:    name,
 			}
-			accountCodes[location.ID()] = string(code)
+			accountCodes[location] = string(code)
 			return nil
 		},
 		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
@@ -865,7 +877,7 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
 				Address: address,
 				Name:    name,
 			}
-			code = []byte(accountCodes[location.ID()])
+			code = []byte(accountCodes[location])
 			return code, nil
 		},
 		emitEvent: func(event cadence.Event) error {
@@ -3239,7 +3251,7 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
      }
    `))
 
-	accountCodes := map[common.LocationID][]byte{}
+	accountCodes := map[common.Location][]byte{}
 	var events []cadence.Event
 	var loggedMessages []string
 
@@ -3257,7 +3269,7 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 					Address: address,
 					Name:    name,
 				}
-				accountCodes[location.ID()] = code
+				accountCodes[location] = code
 				return nil
 			},
 			getAccountContractCode: func(address Address, name string) (code []byte, err error) {
@@ -3265,7 +3277,7 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 					Address: address,
 					Name:    name,
 				}
-				code = accountCodes[location.ID()]
+				code = accountCodes[location]
 				return code, nil
 			},
 			emitEvent: func(event cadence.Event) error {

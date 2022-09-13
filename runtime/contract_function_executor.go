@@ -255,7 +255,7 @@ func (executor *interpreterContractFunctionExecutor) convertArgument(
 		}
 	}
 
-	return importValue(
+	return ImportValue(
 		inter,
 		getLocationRange,
 		argument,

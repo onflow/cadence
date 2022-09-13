@@ -67,11 +67,11 @@ func TestNeedSyntaxAndImport(t *testing.T) {
 			importingLocation common.Location,
 			importRange ast.Range,
 		) ([]byte, error) {
-			switch location.ID() {
-			case txLocation.ID():
+			switch location {
+			case txLocation:
 				return []byte(txCode), nil
 
-			case contractLocation.ID():
+			case contractLocation:
 				return []byte(contractCode), nil
 
 			default:
@@ -139,7 +139,7 @@ func TestNeedSyntaxAndImport(t *testing.T) {
 		func(i, j int) bool {
 			a := locationRanges[i]
 			b := locationRanges[j]
-			return a.location.ID() < b.location.ID()
+			return a.location.TypeID(nil, "") < b.location.TypeID(nil, "")
 		},
 	)
 
@@ -189,8 +189,8 @@ func TestParseError(t *testing.T) {
 			importingLocation common.Location,
 			importRange ast.Range,
 		) ([]byte, error) {
-			switch location.ID() {
-			case contractLocation.ID():
+			switch location {
+			case contractLocation:
 				return []byte(contractCode), nil
 
 			default:
@@ -235,8 +235,8 @@ func TestCheckError(t *testing.T) {
 			importingLocation common.Location,
 			importRange ast.Range,
 		) ([]byte, error) {
-			switch location.ID() {
-			case contractLocation.ID():
+			switch location {
+			case contractLocation:
 				return []byte(contractCode), nil
 
 			default:

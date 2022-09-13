@@ -14300,6 +14300,7 @@ var _ EquatableValue = &CompositeValue{}
 var _ HashableValue = &CompositeValue{}
 var _ MemberAccessibleValue = &CompositeValue{}
 var _ ReferenceTrackedResourceKindedValue = &CompositeValue{}
+var _ ContractValue = &CompositeValue{}
 
 func (*CompositeValue) IsValue() {}
 
@@ -15315,6 +15316,10 @@ func (v *CompositeValue) RemoveField(
 	existingValue := StoredValue(interpreter, existingValueStorable, storage)
 	existingValue.DeepRemove(interpreter)
 	interpreter.RemoveReferencedSlab(existingValueStorable)
+}
+
+func (v *CompositeValue) SetNestedVariables(variables map[string]*Variable) {
+	v.NestedVariables = variables
 }
 
 func NewEnumCaseValue(
@@ -18682,3 +18687,13 @@ var publicKeyVerifyPoPFunction = NewUnmeteredHostFunctionValue(
 	},
 	sema.PublicKeyVerifyPoPFunctionType,
 )
+
+// ContractValue is the value of a contract.
+// Under normal circumstances, a contract value is always a CompositeValue.
+// However, in the test framework, an imported contract is constructed via a constructor function.
+// Hence, during tests, the value is a HostFunctionValue.
+//
+type ContractValue interface {
+	Value
+	SetNestedVariables(variables map[string]*Variable)
+}
