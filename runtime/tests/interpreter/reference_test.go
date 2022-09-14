@@ -472,23 +472,17 @@ func TestInterpretResourceReferenceAfterMove(t *testing.T) {
 			address,
 		)
 
-		arrayRef := &interpreter.EphemeralReferenceValue{
-			Authorized: false,
-			Value:      array,
-			BorrowedType: &sema.VariableSizedType{
+		arrayRef := interpreter.NewUnmeteredEphemeralReferenceValue(
+			false,
+			array,
+			&sema.VariableSizedType{
 				Type: rType,
 			},
-		}
-
-		value, err := inter.Invoke("test", arrayRef)
-		require.NoError(t, err)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.NewUnmeteredStringValue("testValue"),
-			value,
 		)
+
+		_, err := inter.Invoke("test", arrayRef)
+		require.Error(t, err)
+		require.ErrorAs(t, err, &interpreter.MovedResourceReferenceError{})
 	})
 
 	t.Run("array", func(t *testing.T) {
@@ -527,25 +521,19 @@ func TestInterpretResourceReferenceAfterMove(t *testing.T) {
 			address,
 		)
 
-		arrayRef := &interpreter.EphemeralReferenceValue{
-			Authorized: false,
-			Value:      array,
-			BorrowedType: &sema.VariableSizedType{
+		arrayRef := interpreter.NewUnmeteredEphemeralReferenceValue(
+			false,
+			array,
+			&sema.VariableSizedType{
 				Type: &sema.VariableSizedType{
 					Type: rType,
 				},
 			},
-		}
-
-		value, err := inter.Invoke("test", arrayRef)
-		require.NoError(t, err)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.NewUnmeteredStringValue("testValue"),
-			value,
 		)
+
+		_, err := inter.Invoke("test", arrayRef)
+		require.Error(t, err)
+		require.ErrorAs(t, err, &interpreter.MovedResourceReferenceError{})
 	})
 
 	t.Run("dictionary", func(t *testing.T) {
@@ -585,28 +573,20 @@ func TestInterpretResourceReferenceAfterMove(t *testing.T) {
 			address,
 		)
 
-		arrayRef := &interpreter.EphemeralReferenceValue{
-			Authorized: false,
-			Value:      array,
-			BorrowedType: &sema.VariableSizedType{
+		arrayRef := interpreter.NewUnmeteredEphemeralReferenceValue(
+			false,
+			array,
+			&sema.VariableSizedType{
 				Type: &sema.DictionaryType{
 					KeyType:   sema.IntType,
 					ValueType: rType,
 				},
 			},
-		}
-
-		value, err := inter.Invoke("test", arrayRef)
-		require.NoError(t, err)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.NewUnmeteredSomeValueNonCopying(
-				interpreter.NewUnmeteredStringValue("testValue"),
-			),
-			value,
 		)
+
+		_, err := inter.Invoke("test", arrayRef)
+		require.Error(t, err)
+		require.ErrorAs(t, err, &interpreter.MovedResourceReferenceError{})
 	})
 }
 
@@ -696,6 +676,120 @@ func TestInterpretReferenceUseAfterShiftStatementMove(t *testing.T) {
                   }
 
                   fun borrowR2(): &R2? {
+                      return &self.r2 as &R2?
+                  }
+              }
+
+              fun createR1(): @R1 {
+                  return <- create R1()
+              }
+
+              fun getOwnerR1(r1: &R1): Address? {
+                  return r1.owner?.address
+              }
+
+              fun getOwnerR2(r1: &R1): Address? {
+                  return r1.r2?.owner?.address
+              }
+
+              fun test(r1: &R1): String {
+                  let r2 <- create R2()
+                  r1.r2 <-! r2
+                  let optRef = r1.borrowR2()
+                  let value = optRef!.value
+                  return value
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					PublicAccountHandler: func(address interpreter.AddressValue) interpreter.Value {
+						return newTestPublicAccountValue(nil, address)
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		r1, err := inter.Invoke("createR1")
+		require.NoError(t, err)
+
+		r1 = r1.Transfer(inter, interpreter.ReturnEmptyLocationRange, atree.Address{1}, false, nil)
+
+		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")
+
+		ref := interpreter.NewUnmeteredEphemeralReferenceValue(
+			false,
+			r1,
+			r1Type,
+		)
+
+		// Test
+
+		value, err := inter.Invoke("test", ref)
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredStringValue("test"),
+			value,
+		)
+
+		// Check R1 owner
+
+		r1Address, err := inter.Invoke("getOwnerR1", ref)
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.AddressValue{1},
+			),
+			r1Address,
+		)
+
+		// Check R2 owner
+
+		r2Address, err := inter.Invoke("getOwnerR2", ref)
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.AddressValue{1},
+			),
+			r2Address,
+		)
+	})
+
+	t.Run("container in account, reference in stack", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+              resource R2 {
+                  let value: String
+
+                  init() {
+                      self.value = "test"
+                  }
+              }
+
+              resource R1 {
+                  var r2: @R2?
+
+                  init() {
+                      self.r2 <- nil
+                  }
+
+                  destroy() {
+                      destroy self.r2
+                  }
+
+                  fun borrowR2(): &R2? {
                       let optR2 <- self.r2 <- nil
                       let r2 <- optR2!
                       let ref = &r2 as &R2
@@ -741,50 +835,17 @@ func TestInterpretReferenceUseAfterShiftStatementMove(t *testing.T) {
 
 		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")
 
-		ref := &interpreter.EphemeralReferenceValue{
-			Value:        r1,
-			BorrowedType: r1Type,
-		}
+		ref := interpreter.NewUnmeteredEphemeralReferenceValue(
+			false,
+			r1,
+			r1Type,
+		)
 
 		// Test
 
-		value, err := inter.Invoke("test", ref)
-		require.NoError(t, err)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.NewUnmeteredStringValue("test"),
-			value,
-		)
-
-		// Check R1 owner
-
-		r1Address, err := inter.Invoke("getOwnerR1", ref)
-		require.NoError(t, err)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.NewUnmeteredSomeValueNonCopying(
-				interpreter.AddressValue{1},
-			),
-			r1Address,
-		)
-
-		// Check R2 owner
-
-		r2Address, err := inter.Invoke("getOwnerR2", ref)
-		require.NoError(t, err)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.NewUnmeteredSomeValueNonCopying(
-				interpreter.AddressValue{1},
-			),
-			r2Address,
-		)
+		_, err = inter.Invoke("test", ref)
+		require.Error(t, err)
+		require.ErrorAs(t, err, &interpreter.MovedResourceReferenceError{})
 	})
 }
 

@@ -2317,7 +2317,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
                   accountA.save(<-testResource, to: /storage/test)
 
-                  // At this point the resource is in storage A
+                  // At this point the resource is in storage A. Reference must be invalidated.
                   log(ref.owner?.address)
 
                   let testResource2 <- accountA.load<@TestContract.TestResource>(from: /storage/test)!
@@ -2422,19 +2422,8 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-		require.NoError(t, err)
-
-		require.Equal(t,
-			[]string{
-				"nil",
-				"0x0000000000000001",
-				"nil",
-				"nil",
-				"0x0000000000000002",
-				"0x0000000000000002",
-			},
-			loggedMessages,
-		)
+		require.Error(t, err)
+		require.ErrorAs(t, err, &interpreter.MovedResourceReferenceError{})
 	})
 
 	t.Run("resource (array element)", func(t *testing.T) {
@@ -2466,7 +2455,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
                   account.save(<-testResources, to: /storage/test)
 
-                  // At this point the resource is in storage
+                  // At this point the resource is in storage. Reference must be invalidated.
                   log(ref.owner?.address)
               }
           }
@@ -2552,15 +2541,8 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-		require.NoError(t, err)
-
-		require.Equal(t,
-			[]string{
-				"nil",
-				"0x0000000000000001",
-			},
-			loggedMessages,
-		)
+		require.Error(t, err)
+		require.ErrorAs(t, err, &interpreter.MovedResourceReferenceError{})
 	})
 
 	t.Run("resource (nested field, array element)", func(t *testing.T) {
@@ -2606,7 +2588,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
                   account.save(<-nestingResource, to: /storage/test)
 
-                  // At this point the nesting and nested resources are both in storage
+                  // At this point the nesting and nested resources are both in storage. References must be invalidated.
                   log(nestingResourceRef.owner?.address)
                   log(nestedElementResourceRef.owner?.address)
               }
@@ -2693,17 +2675,8 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-		require.NoError(t, err)
-
-		require.Equal(t,
-			[]string{
-				"nil",
-				"nil",
-				"0x0000000000000001",
-				"0x0000000000000001",
-			},
-			loggedMessages,
-		)
+		require.Error(t, err)
+		require.ErrorAs(t, err, &interpreter.MovedResourceReferenceError{})
 	})
 
 	t.Run("array", func(t *testing.T) {
@@ -2735,7 +2708,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
                   account.save(<-testResources, to: /storage/test)
 
-                  // At this point the resource is in storage
+                  // At this point the resource is in storage. Reference must be invalidated.
                   log(ref[0].owner?.address)
               }
           }
@@ -2821,15 +2794,8 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-		require.NoError(t, err)
-
-		require.Equal(t,
-			[]string{
-				"nil",
-				"0x0000000000000001",
-			},
-			loggedMessages,
-		)
+		require.Error(t, err)
+		require.ErrorAs(t, err, &interpreter.MovedResourceReferenceError{})
 	})
 
 	t.Run("dictionary", func(t *testing.T) {
@@ -2861,7 +2827,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
                   account.save(<-testResources, to: /storage/test)
 
-                  // At this point the resource is in storage
+                  // At this point the resource is in storage. Reference must be invalidated.
                   log(ref[0]?.owner?.address)
               }
           }
@@ -2947,15 +2913,8 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-		require.NoError(t, err)
-
-		require.Equal(t,
-			[]string{
-				"nil",
-				"0x0000000000000001",
-			},
-			loggedMessages,
-		)
+		require.Error(t, err)
+		require.ErrorAs(t, err, &interpreter.MovedResourceReferenceError{})
 	})
 }
 

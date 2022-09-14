@@ -194,10 +194,11 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 
 		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")
 
-		ref := &interpreter.EphemeralReferenceValue{
-			Value:        r1,
-			BorrowedType: r1Type,
-		}
+		ref := interpreter.NewUnmeteredEphemeralReferenceValue(
+			false,
+			r1,
+			r1Type,
+		)
 
 		value, err := inter.Invoke("test", ref)
 		require.NoError(t, err)
@@ -316,10 +317,11 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 
 		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")
 
-		ref := &interpreter.EphemeralReferenceValue{
-			Value:        r1,
-			BorrowedType: r1Type,
-		}
+		ref := interpreter.NewUnmeteredEphemeralReferenceValue(
+			false,
+			r1,
+			r1Type,
+		)
 
 		value, err := inter.Invoke("test", ref)
 		require.NoError(t, err)
@@ -433,11 +435,11 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 
 		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")
 
-		ref := &interpreter.EphemeralReferenceValue{
-			Value:        r1,
-			BorrowedType: r1Type,
-		}
-
+		ref := interpreter.NewUnmeteredEphemeralReferenceValue(
+			false,
+			r1,
+			r1Type,
+		)
 		value, err := inter.Invoke("test", ref)
 		require.NoError(t, err)
 
@@ -555,10 +557,11 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 
 		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")
 
-		ref := &interpreter.EphemeralReferenceValue{
-			Value:        r1,
-			BorrowedType: r1Type,
-		}
+		ref := interpreter.NewUnmeteredEphemeralReferenceValue(
+			false,
+			r1,
+			r1Type,
+		)
 
 		value, err := inter.Invoke("test", ref)
 		require.NoError(t, err)
@@ -2331,7 +2334,8 @@ func TestInterpretOptionalResourceReference(t *testing.T) {
 	)
 
 	_, err := inter.Invoke("test")
-	require.NoError(t, err)
+	require.Error(t, err)
+	require.ErrorAs(t, err, &interpreter.MovedResourceReferenceError{})
 }
 
 func TestInterpretArrayOptionalResourceReference(t *testing.T) {
@@ -2367,7 +2371,8 @@ func TestInterpretArrayOptionalResourceReference(t *testing.T) {
 	)
 
 	_, err := inter.Invoke("test")
-	require.NoError(t, err)
+	require.Error(t, err)
+	require.ErrorAs(t, err, &interpreter.MovedResourceReferenceError{})
 }
 
 func TestInterpretReferenceUseAfterTransferAndDestruction(t *testing.T) {

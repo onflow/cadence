@@ -21,7 +21,6 @@ package interpreter_test
 import (
 	"fmt"
 	"math/big"
-	"sort"
 	"strings"
 	"testing"
 
@@ -7480,7 +7479,7 @@ func TestInterpretResourceMovingAndBorrowing(t *testing.T) {
                 }
 
                 fun moveToStack_Borrow_AndMoveBack(): &R2 {
-                    // The second assignment should not lead to the resource being cleared
+                    // The second assignment should lead to the invalidation of the resource-ref
                     let optR2 <- self.r2 <- nil
                     let r2 <- optR2!
                     let ref = &r2 as &R2
@@ -7510,68 +7509,15 @@ func TestInterpretResourceMovingAndBorrowing(t *testing.T) {
 
 		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")
 
-		ref := &interpreter.EphemeralReferenceValue{
-			Value:        r1,
-			BorrowedType: r1Type,
-		}
-
-		value, err := inter.Invoke("test", ref)
-		require.NoError(t, err)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.NewArrayValue(
-				inter,
-				interpreter.ReturnEmptyLocationRange,
-				interpreter.VariableSizedStaticType{
-					Type: interpreter.OptionalStaticType{
-						Type: interpreter.PrimitiveStaticTypeString,
-					},
-				},
-				common.Address{},
-				interpreter.NewUnmeteredSomeValueNonCopying(
-					interpreter.NewUnmeteredStringValue("test"),
-				),
-				interpreter.NewUnmeteredSomeValueNonCopying(
-					interpreter.NewUnmeteredStringValue("test"),
-				),
-			),
-			value,
+		ref := interpreter.NewUnmeteredEphemeralReferenceValue(
+			false,
+			r1,
+			r1Type,
 		)
 
-		var permanentSlabs []atree.Slab
-
-		for _, slab := range inter.Config.Storage.(interpreter.InMemoryStorage).Slabs {
-			if slab.ID().Address == (atree.Address{}) {
-				continue
-			}
-
-			permanentSlabs = append(permanentSlabs, slab)
-		}
-
-		require.Equal(t, 2, len(permanentSlabs))
-
-		sort.Slice(permanentSlabs, func(i, j int) bool {
-			a := permanentSlabs[i].ID()
-			b := permanentSlabs[j].ID()
-			return a.Compare(b) < 0
-		})
-
-		var storedValues []string
-
-		for _, slab := range permanentSlabs {
-			storedValue := interpreter.StoredValue(inter, slab, inter.Config.Storage)
-			storedValues = append(storedValues, storedValue.String())
-		}
-
-		require.Equal(t,
-			[]string{
-				`S.test.R1(r2: S.test.R2(value: "test", uuid: 2), uuid: 1)`,
-				`S.test.R2(value: "test", uuid: 2)`,
-			},
-			storedValues,
-		)
+		_, err = inter.Invoke("test", ref)
+		require.Error(t, err)
+		require.ErrorAs(t, err, &interpreter.MovedResourceReferenceError{})
 	})
 }
 
