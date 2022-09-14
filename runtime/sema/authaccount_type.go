@@ -881,6 +881,24 @@ var AuthAccountInboxPermitFunctionType = &FunctionType{
 	),
 }
 
+var AuthAccountInboxUnpermitField = "unpermit"
+
+var authAccountInboxUnpermitFunctionDocString = "removes another account's permission to publish to this inbox"
+
+var AuthAccountInboxUnpermitFunctionType = &FunctionType{
+
+	Parameters: []*Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "provider",
+			TypeAnnotation: NewTypeAnnotation(&AddressType{}),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		VoidType,
+	),
+}
+
 // AuthAccountInboxType represents the account's inbox.
 var AuthAccountInboxType = func() *CompositeType {
 
@@ -902,6 +920,12 @@ var AuthAccountInboxType = func() *CompositeType {
 			AuthAccountInboxPermitField,
 			AuthAccountInboxPermitFunctionType,
 			authAccountInboxPermitFunctionDocString,
+		),
+		NewUnmeteredPublicFunctionMember(
+			accountInbox,
+			AuthAccountInboxUnpermitField,
+			AuthAccountInboxUnpermitFunctionType,
+			authAccountInboxUnpermitFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			accountInbox,
