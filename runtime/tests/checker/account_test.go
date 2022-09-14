@@ -1898,7 +1898,7 @@ func TestCheckAccountPublish(t *testing.T) {
 
 		_, err := ParseAndCheckAccount(t,
 			`fun test() {
-				authAccount.inbox.publish(3, name: "foo", recipient: 0x1)
+				let x: Bool = authAccount.inbox.publish(3, name: "foo", recipient: 0x1)
 			}`,
 		)
 		require.NoError(t, err)
@@ -1967,7 +1967,7 @@ func TestCheckAccountUnpublish(t *testing.T) {
 
 		_, err := ParseAndCheckAccount(t,
 			`fun test() {
-				authAccount.inbox.unpublish<Int>("foo")
+				let x: Int = authAccount.inbox.unpublish<Int>("foo")!
 			}`,
 		)
 		require.NoError(t, err)
@@ -2025,7 +2025,7 @@ func TestCheckAccountClaim(t *testing.T) {
 
 		_, err := ParseAndCheckAccount(t,
 			`fun test() {
-				authAccount.inbox.claim<Int>("foo", provider: 0x1)
+				let x: Int = authAccount.inbox.claim<Int>("foo", provider: 0x1)!
 			}`,
 		)
 		require.NoError(t, err)

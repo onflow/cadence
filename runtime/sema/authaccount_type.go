@@ -790,7 +790,7 @@ var AuthAccountTypePublishFunctionType = &FunctionType{
 		},
 	},
 	ReturnTypeAnnotation: NewTypeAnnotation(
-		VoidType,
+		BoolType,
 	),
 }
 
