@@ -2171,3 +2171,46 @@ func TestCheckAccountUnpermit(t *testing.T) {
 		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
 	})
 }
+
+func TestCheckAccountAllowlist(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("basic allowlist", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t,
+			`fun test() {
+				let x: [Address] = authAccount.inbox.allowlist
+			}`,
+		)
+		require.NoError(t, err)
+	})
+
+	t.Run("allowlist cannot be written", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t,
+			`fun test() {
+				authAccount.inbox.allowlist = []
+			}`,
+		)
+		require.Error(t, err)
+		errors := ExpectCheckerErrors(t, err, 2)
+		require.IsType(t, &sema.InvalidAssignmentAccessError{}, errors[0])
+		require.IsType(t, &sema.AssignmentToConstantMemberError{}, errors[1])
+	})
+
+	t.Run("allowlist cannot be written", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t,
+			`fun test() {
+				authAccount.inbox.allowlist.append(0x1)
+			}`,
+		)
+		require.Error(t, err)
+		errors := ExpectCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.ExternalMutationError{}, errors[0])
+	})
+}

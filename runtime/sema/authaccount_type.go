@@ -899,6 +899,14 @@ var AuthAccountInboxUnpermitFunctionType = &FunctionType{
 	),
 }
 
+var AuthAccountInboxAllowlistField = "allowlist"
+
+var AuthAccountInboxAllowlistType = &VariableSizedType{
+	Type: &AddressType{},
+}
+
+var accountInboxAllowlistDocString = "the list of accounts allowed to publish to this inbox"
+
 // AuthAccountInboxType represents the account's inbox.
 var AuthAccountInboxType = func() *CompositeType {
 
@@ -909,6 +917,12 @@ var AuthAccountInboxType = func() *CompositeType {
 	}
 
 	var members = []*Member{
+		NewUnmeteredPublicConstantFieldMember(
+			accountInbox,
+			AuthAccountInboxAllowlistField,
+			AuthAccountInboxAllowlistType,
+			accountInboxAllowlistDocString,
+		),
 		NewUnmeteredPublicFunctionMember(
 			accountInbox,
 			AuthAccountInboxClaimField,
