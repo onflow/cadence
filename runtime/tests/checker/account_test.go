@@ -1898,7 +1898,7 @@ func TestCheckAccountPublish(t *testing.T) {
 
 		_, err := ParseAndCheckAccount(t,
 			`fun test() {
-				authAccount.publish(3, name: "foo", recipient: 0x1)
+				authAccount.inbox.publish(3, name: "foo", recipient: 0x1)
 			}`,
 		)
 		require.NoError(t, err)
@@ -1909,7 +1909,7 @@ func TestCheckAccountPublish(t *testing.T) {
 
 		_, err := ParseAndCheckAccount(t,
 			`fun test() {
-				authAccount.publish(3, "foo", recipient: 0x1)
+				authAccount.inbox.publish(3, "foo", recipient: 0x1)
 			}`,
 		)
 		require.Error(t, err)
@@ -1922,7 +1922,7 @@ func TestCheckAccountPublish(t *testing.T) {
 
 		_, err := ParseAndCheckAccount(t,
 			`fun test() {
-				authAccount.publish(3, name: "foo", 0x1)
+				authAccount.inbox.publish(3, name: "foo", 0x1)
 			}`,
 		)
 		require.Error(t, err)
@@ -1935,7 +1935,7 @@ func TestCheckAccountPublish(t *testing.T) {
 
 		_, err := ParseAndCheckAccount(t,
 			`fun test() {
-				authAccount.publish(3, name: 3, recipient: "")
+				authAccount.inbox.publish(3, name: 3, recipient: "")
 			}`,
 		)
 		require.Error(t, err)
@@ -1949,7 +1949,7 @@ func TestCheckAccountPublish(t *testing.T) {
 
 		_, err := ParseAndCheckAccount(t,
 			`fun test() {
-				authAccount.publish(fun () {}, name: "foo", recipient: 0x1)
+				authAccount.inbox.publish(fun () {}, name: "foo", recipient: 0x1)
 			}`,
 		)
 		require.Error(t, err)
@@ -1967,7 +1967,7 @@ func TestCheckAccountUnpublish(t *testing.T) {
 
 		_, err := ParseAndCheckAccount(t,
 			`fun test() {
-				authAccount.unpublish<Int>("foo")
+				authAccount.inbox.unpublish<Int>("foo")
 			}`,
 		)
 		require.NoError(t, err)
@@ -1978,7 +1978,7 @@ func TestCheckAccountUnpublish(t *testing.T) {
 
 		_, err := ParseAndCheckAccount(t,
 			`fun test() {
-				authAccount.unpublish<String>(4)
+				authAccount.inbox.unpublish<String>(4)
 			}`,
 		)
 		require.Error(t, err)
@@ -1993,7 +1993,7 @@ func TestCheckAccountUnpublish(t *testing.T) {
 			`
 			resource R {}
 			fun test() {
-				let x <- authAccount.unpublish<@R>("foo")
+				let x <- authAccount.inbox.unpublish<@R>("foo")
 				destroy x
 			}`,
 		)
@@ -2007,7 +2007,7 @@ func TestCheckAccountUnpublish(t *testing.T) {
 			`
 			resource R {}
 			fun test() {
-				authAccount.unpublish<((): Void)>("foo")
+				authAccount.inbox.unpublish<((): Void)>("foo")
 			}`,
 		)
 		require.Error(t, err)
@@ -2025,7 +2025,7 @@ func TestCheckAccountClaim(t *testing.T) {
 
 		_, err := ParseAndCheckAccount(t,
 			`fun test() {
-				authAccount.claim<Int>("foo", provider: 0x1)
+				authAccount.inbox.claim<Int>("foo", provider: 0x1)
 			}`,
 		)
 		require.NoError(t, err)
@@ -2036,7 +2036,7 @@ func TestCheckAccountClaim(t *testing.T) {
 
 		_, err := ParseAndCheckAccount(t,
 			`fun test() {
-				authAccount.claim<String>(4, provider: "foo")
+				authAccount.inbox.claim<String>(4, provider: "foo")
 			}`,
 		)
 		require.Error(t, err)
@@ -2050,7 +2050,7 @@ func TestCheckAccountClaim(t *testing.T) {
 
 		_, err := ParseAndCheckAccount(t,
 			`fun test() {
-				authAccount.claim<Int>("foo", 0x1)
+				authAccount.inbox.claim<Int>("foo", 0x1)
 			}`,
 		)
 		require.Error(t, err)
@@ -2065,7 +2065,7 @@ func TestCheckAccountClaim(t *testing.T) {
 			`
 			resource R {}
 			fun test() {
-				let x <- authAccount.claim<@R>("foo", provider: 0x1)!
+				let x <- authAccount.inbox.claim<@R>("foo", provider: 0x1)!
 				destroy x
 			}`,
 		)
@@ -2079,7 +2079,7 @@ func TestCheckAccountClaim(t *testing.T) {
 			`
 			resource R {}
 			fun test() {
-				authAccount.claim<((): Void)>("foo", provider: 0x1)
+				authAccount.inbox.claim<((): Void)>("foo", provider: 0x1)
 			}`,
 		)
 		require.Error(t, err)

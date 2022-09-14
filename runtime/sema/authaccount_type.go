@@ -44,6 +44,7 @@ const AuthAccountForEachPrivateField = "forEachPrivate"
 const AuthAccountForEachStoredField = "forEachStored"
 const AuthAccountContractsField = "contracts"
 const AuthAccountKeysField = "keys"
+const AuthAccountInboxField = "inbox"
 const AuthAccountPublicPathsField = "publicPaths"
 const AuthAccountPrivatePathsField = "privatePaths"
 const AuthAccountStoragePathsField = "storagePaths"
@@ -66,6 +67,7 @@ var AuthAccountType = func() *CompositeType {
 			nestedTypes := &StringTypeOrderedMap{}
 			nestedTypes.Set(AuthAccountContractsTypeName, AuthAccountContractsType)
 			nestedTypes.Set(AccountKeysTypeName, AuthAccountKeysType)
+			nestedTypes.Set(AuthAccountInboxTypeName, AuthAccountInboxType)
 			return nestedTypes
 		}(),
 	}
@@ -181,6 +183,12 @@ var AuthAccountType = func() *CompositeType {
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			authAccountType,
+			AuthAccountInboxField,
+			AuthAccountInboxType,
+			accountInboxDocString,
+		),
+		NewUnmeteredPublicConstantFieldMember(
+			authAccountType,
 			AuthAccountPublicPathsField,
 			AuthAccountPublicPathsType,
 			authAccountTypePublicPathsFieldDocString,
@@ -214,24 +222,6 @@ var AuthAccountType = func() *CompositeType {
 			AuthAccountForEachStoredField,
 			AuthAccountForEachStoredFunctionType,
 			authAccountForEachStoredDocString,
-		),
-		NewUnmeteredPublicFunctionMember(
-			authAccountType,
-			AuthAccountClaimField,
-			AuthAccountTypeClaimFunctionType,
-			authAccountTypeClaimFunctionDocString,
-		),
-		NewUnmeteredPublicFunctionMember(
-			authAccountType,
-			AuthAccountPublishField,
-			AuthAccountTypePublishFunctionType,
-			authAccountTypePublishFunctionDocString,
-		),
-		NewUnmeteredPublicFunctionMember(
-			authAccountType,
-			AuthAccountUnpublishField,
-			AuthAccountTypeUnpublishFunctionType,
-			authAccountTypeUnpublishFunctionDocString,
 		),
 	}
 
@@ -867,4 +857,43 @@ var AuthAccountTypeClaimFunctionType = func() *FunctionType {
 			},
 		),
 	}
+}()
+
+var AuthAccountInboxTypeName = "Inbox"
+
+var accountInboxDocString = "an inbox for sending and recieving capabilities"
+
+// AuthAccountInboxType represents the account's inbox.
+var AuthAccountInboxType = func() *CompositeType {
+
+	accountInbox := &CompositeType{
+		Identifier: AuthAccountInboxTypeName,
+		Kind:       common.CompositeKindStructure,
+		importable: false,
+	}
+
+	var members = []*Member{
+		NewUnmeteredPublicFunctionMember(
+			accountInbox,
+			AuthAccountClaimField,
+			AuthAccountTypeClaimFunctionType,
+			authAccountTypeClaimFunctionDocString,
+		),
+		NewUnmeteredPublicFunctionMember(
+			accountInbox,
+			AuthAccountPublishField,
+			AuthAccountTypePublishFunctionType,
+			authAccountTypePublishFunctionDocString,
+		),
+		NewUnmeteredPublicFunctionMember(
+			accountInbox,
+			AuthAccountUnpublishField,
+			AuthAccountTypeUnpublishFunctionType,
+			authAccountTypeUnpublishFunctionDocString,
+		),
+	}
+
+	accountInbox.Members = GetMembersAsMap(members)
+	accountInbox.Fields = GetFieldNames(members)
+	return accountInbox
 }()
