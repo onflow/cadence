@@ -48,9 +48,9 @@ const AuthAccountInboxField = "inbox"
 const AuthAccountPublicPathsField = "publicPaths"
 const AuthAccountPrivatePathsField = "privatePaths"
 const AuthAccountStoragePathsField = "storagePaths"
-const AuthAccountPublishField = "publish"
-const AuthAccountUnpublishField = "unpublish"
-const AuthAccountClaimField = "claim"
+const AuthAccountInboxPublishField = "publish"
+const AuthAccountInboxUnpublishField = "unpublish"
+const AuthAccountInboxClaimField = "claim"
 
 // AuthAccountType represents the authorized access to an account.
 // Access to an AuthAccount means having full access to its storage, public keys, and code.
@@ -766,11 +766,11 @@ const authAccountKeysTypeRevokeFunctionDocString = `
 Revokes the key at the given index of the account.
 `
 
-const authAccountTypePublishFunctionDocString = `
+const authAccountTypeInboxPublishFunctionDocString = `
 Publishes the argument value under the given name, to be later claimed by the specified recipient
 `
 
-var AuthAccountTypePublishFunctionType = &FunctionType{
+var AuthAccountTypeInboxPublishFunctionType = &FunctionType{
 
 	Parameters: []*Parameter{
 		{
@@ -794,11 +794,11 @@ var AuthAccountTypePublishFunctionType = &FunctionType{
 	),
 }
 
-const authAccountTypeUnpublishFunctionDocString = `
+const authAccountTypeInboxUnpublishFunctionDocString = `
 Unpublishes the value specified by the argument string
 `
 
-var AuthAccountTypeUnpublishFunctionType = func() *FunctionType {
+var AuthAccountTypeInboxUnpublishFunctionType = func() *FunctionType {
 	typeParameter := &TypeParameter{
 		Name:      "T",
 		TypeBound: StorableType,
@@ -824,11 +824,11 @@ var AuthAccountTypeUnpublishFunctionType = func() *FunctionType {
 	}
 }()
 
-const authAccountTypeClaimFunctionDocString = `
+const authAccountTypeInboxClaimFunctionDocString = `
 Claims the value specified by the argument string from the account specified as the provider
 `
 
-var AuthAccountTypeClaimFunctionType = func() *FunctionType {
+var AuthAccountTypeInboxClaimFunctionType = func() *FunctionType {
 	typeParameter := &TypeParameter{
 		Name:      "T",
 		TypeBound: StorableType,
@@ -863,6 +863,24 @@ var AuthAccountInboxTypeName = "Inbox"
 
 var accountInboxDocString = "an inbox for sending and recieving capabilities"
 
+var AuthAccountInboxPermitField = "permit"
+
+var authAccountInboxPermitFunctionDocString = "permits another account to publish values to this inbox"
+
+var AuthAccountInboxPermitFunctionType = &FunctionType{
+
+	Parameters: []*Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "provider",
+			TypeAnnotation: NewTypeAnnotation(&AddressType{}),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		VoidType,
+	),
+}
+
 // AuthAccountInboxType represents the account's inbox.
 var AuthAccountInboxType = func() *CompositeType {
 
@@ -875,21 +893,27 @@ var AuthAccountInboxType = func() *CompositeType {
 	var members = []*Member{
 		NewUnmeteredPublicFunctionMember(
 			accountInbox,
-			AuthAccountClaimField,
-			AuthAccountTypeClaimFunctionType,
-			authAccountTypeClaimFunctionDocString,
+			AuthAccountInboxClaimField,
+			AuthAccountTypeInboxClaimFunctionType,
+			authAccountTypeInboxClaimFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			accountInbox,
-			AuthAccountPublishField,
-			AuthAccountTypePublishFunctionType,
-			authAccountTypePublishFunctionDocString,
+			AuthAccountInboxPermitField,
+			AuthAccountInboxPermitFunctionType,
+			authAccountInboxPermitFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			accountInbox,
-			AuthAccountUnpublishField,
-			AuthAccountTypeUnpublishFunctionType,
-			authAccountTypeUnpublishFunctionDocString,
+			AuthAccountInboxPublishField,
+			AuthAccountTypeInboxPublishFunctionType,
+			authAccountTypeInboxPublishFunctionDocString,
+		),
+		NewUnmeteredPublicFunctionMember(
+			accountInbox,
+			AuthAccountInboxUnpublishField,
+			AuthAccountTypeInboxUnpublishFunctionType,
+			authAccountTypeInboxUnpublishFunctionDocString,
 		),
 	}
 

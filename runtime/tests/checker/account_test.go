@@ -2087,3 +2087,45 @@ func TestCheckAccountClaim(t *testing.T) {
 		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
 	})
 }
+
+func TestCheckAccountPermit(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("basic permit", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t,
+			`fun test() {
+				authAccount.inbox.permit(0x1)
+			}`,
+		)
+		require.NoError(t, err)
+	})
+
+	t.Run("permit wrong argument type", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t,
+			`fun test() {
+				authAccount.inbox.permit("")
+			}`,
+		)
+		require.Error(t, err)
+		errors := ExpectCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
+	})
+
+	t.Run("permit wrong return type", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t,
+			`fun test() {
+				let x: Bool = authAccount.inbox.permit(0x1)
+			}`,
+		)
+		require.Error(t, err)
+		errors := ExpectCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
+	})
+}
