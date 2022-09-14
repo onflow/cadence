@@ -2209,9 +2209,10 @@ func TestCheckResourceUseAfterMoveInIfStatementThenBranch(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := ExpectCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+	assert.IsType(t, &sema.ResourceLossError{}, errs[1])
 }
 
 func TestCheckResourceUseInIfStatement(t *testing.T) {
@@ -2327,20 +2328,13 @@ func TestCheckInvalidResourceUseAfterIfStatement(t *testing.T) {
 
 	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 
-	assert.ElementsMatch(t,
-		errs[0].(*sema.ResourceUseAfterInvalidationError).Invalidations,
-		[]sema.ResourceInvalidation{
-			{
-				Kind:     sema.ResourceInvalidationKindMoveDefinite,
-				StartPos: ast.Position{Offset: 164, Line: 9, Column: 23},
-				EndPos:   ast.Position{Offset: 164, Line: 9, Column: 23},
-			},
-			{
-				Kind:     sema.ResourceInvalidationKindMoveDefinite,
-				StartPos: ast.Position{Offset: 119, Line: 7, Column: 23},
-				EndPos:   ast.Position{Offset: 119, Line: 7, Column: 23},
-			},
+	assert.Equal(t,
+		sema.ResourceInvalidation{
+			Kind:     sema.ResourceInvalidationKindMoveDefinite,
+			StartPos: ast.Position{Offset: 119, Line: 7, Column: 23},
+			EndPos:   ast.Position{Offset: 119, Line: 7, Column: 23},
 		},
+		errs[0].(*sema.ResourceUseAfterInvalidationError).Invalidation,
 	)
 }
 
@@ -2535,7 +2529,33 @@ func TestCheckInvalidUseAfterResourceMoveIntoDictionaryAsKey(t *testing.T) {
 	assert.IsType(t, &sema.InvalidDictionaryKeyTypeError{}, errs[1])
 }
 
-func TestCheckInvalidResourceUseAfterMoveInWhileStatement(t *testing.T) {
+func TestCheckInvalidResourceDestroyAfterMoveInWhileStatement(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      resource X {}
+
+      fun f(_ x: @X) {
+          destroy x
+      }
+
+      fun test() {
+          let x <- create X()
+          while true {
+              f(<-x)
+          }
+          destroy x
+      }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 2)
+
+	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+	assert.IsType(t, &sema.ResourceLossError{}, errs[1])
+}
+
+func TestCheckInvalidResourceDestroyAfterDestroyInWhileStatement(t *testing.T) {
 
 	t.Parallel()
 
@@ -2554,7 +2574,7 @@ func TestCheckInvalidResourceUseAfterMoveInWhileStatement(t *testing.T) {
 	errs := ExpectCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
-	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[1])
+	assert.IsType(t, &sema.ResourceLossError{}, errs[1])
 }
 
 func TestCheckResourceUseInWhileStatement(t *testing.T) {
@@ -2603,11 +2623,10 @@ func TestCheckInvalidResourceUseInWhileStatementAfterDestroy(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 3)
+	errs := ExpectCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
-	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[1])
-	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[2])
+	assert.IsType(t, &sema.ResourceLossError{}, errs[1])
 }
 
 func TestCheckInvalidResourceUseInWhileStatementAfterDestroyAndLoss(t *testing.T) {
@@ -2625,10 +2644,9 @@ func TestCheckInvalidResourceUseInWhileStatementAfterDestroyAndLoss(t *testing.T
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := ExpectCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
-	assert.IsType(t, &sema.ResourceLossError{}, errs[1])
+	assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 }
 
 func TestCheckInvalidResourceUseInNestedWhileStatementAfterDestroyAndLoss1(t *testing.T) {
@@ -2654,11 +2672,9 @@ func TestCheckInvalidResourceUseInNestedWhileStatementAfterDestroyAndLoss1(t *te
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 3)
+	errs := ExpectCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
-	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[1])
-	assert.IsType(t, &sema.ResourceLossError{}, errs[2])
+	assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 }
 
 func TestCheckInvalidResourceUseInNestedWhileStatementAfterDestroyAndLoss2(t *testing.T) {
@@ -2684,11 +2700,9 @@ func TestCheckInvalidResourceUseInNestedWhileStatementAfterDestroyAndLoss2(t *te
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 3)
+	errs := ExpectCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
-	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[1])
-	assert.IsType(t, &sema.ResourceLossError{}, errs[2])
+	assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 }
 
 func TestCheckResourceUseInNestedWhileStatement(t *testing.T) {
@@ -2754,9 +2768,10 @@ func TestCheckInvalidResourceLossThroughReturnInIfStatementThenBranch(t *testing
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := ExpectCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	assert.IsType(t, &sema.ResourceLossError{}, errs[1])
 }
 
 func TestCheckInvalidResourceLossThroughReturnInIfStatementBranches(t *testing.T) {
@@ -2834,6 +2849,31 @@ func TestCheckResourceWithMoveAndReturnInIfStatementThenBranch(t *testing.T) {
           destroy x
       }
     `)
+
+	require.NoError(t, err)
+}
+
+func TestCheckResourceWithMoveAndReturnInWhileStatement(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+
+          resource X {}
+
+          fun test() {
+              let x <- create X()
+              while true {
+                  absorb(<-x)
+                  return
+              }
+              destroy x
+          }
+
+          fun absorb(_ x: @X) {
+              destroy x
+          }
+        `)
 
 	require.NoError(t, err)
 }
@@ -4227,9 +4267,10 @@ func TestCheckInvalidResourceOptionalBindingFailableCastResourceUseAfterInvalida
          }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := ExpectCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+	assert.IsType(t, &sema.ResourceLossError{}, errs[1])
 }
 
 func TestCheckInvalidResourceOptionalBindingFailableCastResourceLossMissingElse(t *testing.T) {
@@ -4272,9 +4313,10 @@ func TestCheckInvalidResourceOptionalBindingFailableCastResourceUseAfterInvalida
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := ExpectCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+	assert.IsType(t, &sema.ResourceLossError{}, errs[1])
 }
 
 func TestCheckInvalidResourceOptionalBindingFailableCastMissingElse(t *testing.T) {
@@ -4554,8 +4596,14 @@ func TestCheckInvalidResourceCreationAndPotentialInvalidationInLoop(t *testing.T
 
 	t.Parallel()
 
-	test := func(loop, controlFlowStatement string) {
-		t.Run(fmt.Sprintf("%s, %s", loop, controlFlowStatement), func(t *testing.T) {
+	test := func(loop string, controlFlowStatement string) {
+		name := fmt.Sprintf(
+			"%s, %s",
+			loop,
+			controlFlowStatement,
+		)
+
+		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
 			_, err := ParseAndCheck(t,
@@ -4578,9 +4626,16 @@ func TestCheckInvalidResourceCreationAndPotentialInvalidationInLoop(t *testing.T
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			if controlFlowStatement == "return" {
+				errs := ExpectCheckerErrors(t, err, 2)
 
-			assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+				assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+				assert.IsType(t, &sema.ResourceLossError{}, errs[1])
+			} else {
+				errs := ExpectCheckerErrors(t, err, 1)
+
+				assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+			}
 		})
 	}
 
@@ -4626,6 +4681,69 @@ func TestCheckResourceCreationAndInvalidationAfterLoopWithJump(t *testing.T) {
 	for _, loop := range []string{"while true", "for e in []"} {
 		for _, controlFlowStatement := range []string{"continue", "break"} {
 			test(loop, controlFlowStatement)
+		}
+	}
+}
+
+func TestCheckInvalidResourceCreationAndPotentialInvalidationInLoopWithControlFlow(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(loop, controlFlowStatement, firstAction, secondAction string) {
+		name := fmt.Sprintf(
+			"%s, %s, %s, %s",
+			loop,
+			firstAction,
+			controlFlowStatement,
+			secondAction,
+		)
+
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				fmt.Sprintf(
+					`
+                      resource X {}
+
+                      fun drop(_ r: @AnyResource) {
+                          destroy r
+                      }
+
+                      fun loop() {
+                          let x <- create X()
+                          %s {
+                              if false {
+                                  %s
+                                  %s
+                              }
+                          }
+                          %s
+                      }
+                    `,
+					loop,
+					firstAction,
+					controlFlowStatement,
+					secondAction,
+				),
+			)
+
+			errs := ExpectCheckerErrors(t, err, 2)
+
+			assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+			assert.IsType(t, &sema.ResourceLossError{}, errs[1])
+		})
+	}
+
+	actions := []string{"destroy x", "drop(<-x)"}
+
+	for _, loop := range []string{"while true", "for e in []"} {
+		for _, controlFlowStatement := range []string{"continue", "break"} {
+			for _, firstAction := range actions {
+				for _, secondAction := range actions {
+					test(loop, controlFlowStatement, firstAction, secondAction)
+				}
+			}
 		}
 	}
 }
@@ -5046,6 +5164,73 @@ func TestCheckInvalidationInPreCondition(t *testing.T) {
 	errs := ExpectCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+}
+
+func TestCheckResourceRepeatedInvalidationWithBreak(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+
+          resource X {}
+
+          fun test() {
+              let x <- create X()
+              while true {
+                  if true {
+                      destroy x
+                      break
+                  }
+              }
+              destroy x
+          }
+        `)
+
+	errs := ExpectCheckerErrors(t, err, 2)
+
+	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+	assert.IsType(t, &sema.ResourceLossError{}, errs[1])
+}
+
+func TestCheckResourceCreationAndInvalidationAfterControlFlow(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(controlFlowStatement string) {
+		t.Run(controlFlowStatement, func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheckWithPanic(t,
+				fmt.Sprintf(
+					`
+                      resource X {}
+
+                      fun test() {
+                          var i = 0
+                          while true {
+                              if i > 5 {
+                                  %s
+                              }
+
+                              let x <- create X()
+                              destroy x
+
+                              i = i + 1
+                          }
+                      }
+                    `,
+					controlFlowStatement,
+				),
+			)
+
+			require.NoError(t, err)
+		})
+	}
+
+	for _, controlFlowStatement := range []string{"continue", "break", "return", `panic("")`} {
+		test(controlFlowStatement)
+	}
 }
 
 func TestCheckInvalidationInPostConditionBefore(t *testing.T) {
@@ -8481,11 +8666,14 @@ func TestCheckResourceInvalidationWithMove(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 4)
+		errs := ExpectCheckerErrors(t, err, 6)
+
 		assert.IsType(t, &sema.InvalidConditionalResourceOperandError{}, errs[0])
 		assert.IsType(t, &sema.InvalidConditionalResourceOperandError{}, errs[1])
 		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[2])
 		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[3])
+		assert.IsType(t, &sema.ResourceLossError{}, errs[4])
+		assert.IsType(t, &sema.ResourceLossError{}, errs[5])
 	})
 
 	t.Run("in reference expression", func(t *testing.T) {
@@ -8608,12 +8796,14 @@ func TestCheckResourceInvalidationWithMove(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 5)
+		errs := ExpectCheckerErrors(t, err, 6)
+
 		assert.IsType(t, &sema.InvalidNilCoalescingRightResourceOperandError{}, errs[0])
 		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[1])
 		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[2])
 		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[3])
 		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[4])
+		assert.IsType(t, &sema.ResourceLossError{}, errs[5])
 	})
 
 	t.Run("in destroy expression", func(t *testing.T) {

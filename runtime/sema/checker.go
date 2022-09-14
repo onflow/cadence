@@ -493,7 +493,6 @@ func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueT
 
 // CheckIntegerLiteral checks that the value of the integer literal
 // fits into range of the target integer type
-//
 func CheckIntegerLiteral(memoryGauge common.MemoryGauge, expression *ast.IntegerExpression, targetType Type, report func(error)) bool {
 	ranged, ok := targetType.(IntegerRangedType)
 
@@ -526,7 +525,6 @@ func CheckIntegerLiteral(memoryGauge common.MemoryGauge, expression *ast.Integer
 
 // CheckFixedPointLiteral checks that the value of the fixed-point literal
 // fits into range of the target fixed-point type
-//
 func CheckFixedPointLiteral(
 	memoryGauge common.MemoryGauge,
 	expression *ast.FixedPointExpression,
@@ -609,7 +607,6 @@ func CheckFixedPointLiteral(
 
 // CheckAddressLiteral checks that the value of the integer literal
 // fits into the range of an address (64 bits), and is hexadecimal
-//
 func CheckAddressLiteral(memoryGauge common.MemoryGauge, expression *ast.IntegerExpression, report func(error)) bool {
 	rangeMin := AddressTypeMinIntBig
 	rangeMax := AddressTypeMaxIntBig
@@ -1034,7 +1031,6 @@ func (checker *Checker) convertOptionalType(t *ast.OptionalType) Type {
 // convertFunctionType converts the given AST function type into a sema function type.
 //
 // NOTE: type annotations ar *NOT* checked!
-//
 func (checker *Checker) convertFunctionType(t *ast.FunctionType) Type {
 	var parameters []*Parameter
 
@@ -1188,7 +1184,6 @@ func (checker *Checker) convertNominalType(t *ast.NominalType) Type {
 // to a sema type annotation
 //
 // NOTE: type annotations ar *NOT* checked!
-//
 func (checker *Checker) ConvertTypeAnnotation(typeAnnotation *ast.TypeAnnotation) *TypeAnnotation {
 	convertedType := checker.ConvertType(typeAnnotation.Type)
 	return &TypeAnnotation{
@@ -1295,14 +1290,13 @@ func (checker *Checker) leaveValueScope(getEndPosition EndPositionGetter, checkR
 
 // checkResourceLoss reports an error if there is a variable in the current scope
 // that has a resource type and which was not moved or destroyed
-//
 func (checker *Checker) checkResourceLoss(depth int) {
 
 	checker.valueActivations.ForEachVariableDeclaredInAndBelow(depth, func(name string, variable *Variable) {
 
 		if variable.Type.IsResourceType() &&
 			variable.DeclarationKind != common.DeclarationKindSelf &&
-			!checker.resources.Get(Resource{Variable: variable}).DefinitivelyInvalidated {
+			!checker.resources.Get(Resource{Variable: variable}).DefinitivelyInvalidated() {
 
 			checker.report(
 				&ResourceLossError{
@@ -1328,6 +1322,12 @@ func (checker *Checker) recordResourceInvalidation(
 	invalidationKind ResourceInvalidationKind,
 ) *recordedResourceInvalidation {
 
+	if !(invalidationKind.IsDefinite() ||
+		invalidationKind == ResourceInvalidationKindMoveTemporary) {
+
+		panic(errors.NewUnexpectedError("invalidation should be recorded as definite or temporary"))
+	}
+
 	if !valueType.IsResourceType() {
 		return nil
 	}
@@ -1335,8 +1335,10 @@ func (checker *Checker) recordResourceInvalidation(
 	reportInvalidNestedMove := func() {
 		checker.report(
 			&InvalidNestedResourceMoveError{
-				StartPos: expression.StartPosition(),
-				EndPos:   expression.EndPosition(checker.memoryGauge),
+				Range: ast.NewRangeFromPositioned(
+					checker.memoryGauge,
+					expression,
+				),
 			},
 		)
 	}
@@ -1391,8 +1393,10 @@ func (checker *Checker) recordResourceInvalidation(
 		checker.report(
 			&InvalidSelfInvalidationError{
 				InvalidationKind: invalidationKind,
-				StartPos:         expression.StartPosition(),
-				EndPos:           expression.EndPosition(checker.memoryGauge),
+				Range: ast.NewRangeFromPositioned(
+					checker.memoryGauge,
+					expression,
+				),
 			},
 		)
 	}
@@ -1467,7 +1471,6 @@ func (checker *Checker) checkWithInitializedMembers(
 // Safe expressions are identifier expressions,
 // an indexing expression into a safe expression,
 // or a member access on a safe expression.
-//
 func (checker *Checker) checkUnusedExpressionResourceLoss(expressionType Type, expression ast.Expression) {
 	if !expressionType.IsResourceType() {
 		return
@@ -1503,7 +1506,6 @@ func (checker *Checker) checkUnusedExpressionResourceLoss(expressionType Type, e
 
 // checkResourceFieldNesting checks if any resource fields are nested
 // in non resource composites (concrete or interface)
-//
 func (checker *Checker) checkResourceFieldNesting(
 	members *StringMemberOrderedMap,
 	compositeKind common.CompositeKind,
@@ -1555,7 +1557,6 @@ func (checker *Checker) checkResourceFieldNesting(
 // under the assumption that the checked expression might not be evaluated.
 // That means that resource invalidation and returns are not definite,
 // but only potential
-//
 func (checker *Checker) checkPotentiallyUnevaluated(check TypeCheckFunc) Type {
 	functionActivation := checker.functionActivations.Current()
 
@@ -1580,7 +1581,12 @@ func (checker *Checker) checkPotentiallyUnevaluated(check TypeCheckFunc) Type {
 
 	functionActivation.ReturnInfo.MergePotentiallyUnevaluated(temporaryReturnInfo)
 
-	checker.resources.MergeBranches(temporaryResources, nil)
+	checker.resources.MergeBranches(
+		temporaryResources,
+		temporaryReturnInfo,
+		nil,
+		nil,
+	)
 
 	return result
 }
@@ -1713,7 +1719,6 @@ func (checker *Checker) checkFieldsAccessModifier(fields []*ast.FieldDeclaration
 
 // checkCharacterLiteral checks that the string literal is a valid character,
 // i.e. it has exactly one grapheme cluster.
-//
 func (checker *Checker) checkCharacterLiteral(expression *ast.StringExpression) {
 	if IsValidCharacter(expression.Value) {
 		return
@@ -2170,13 +2175,15 @@ func (checker *Checker) VisitExpressionWithForceType(expr ast.Expression, expect
 // expr         - Expression to check
 // expectedType - Contextually expected type of the expression
 // forceType    - Specifies whether to use the expected type as a hard requirement (forceType = true)
-//                or whether to use the expected type for type inferring only (forceType = false)
+//
+//	or whether to use the expected type for type inferring only (forceType = false)
 //
 // Return types:
 // visibleType - The type that others should 'see' as the type of this expression. This could be
-//               used as the type of the expression to avoid the type errors being delegated up.
-// actualType  - The actual type of the expression.
 //
+//	used as the type of the expression to avoid the type errors being delegated up.
+//
+// actualType  - The actual type of the expression.
 func (checker *Checker) visitExpressionWithForceType(
 	expr ast.Expression,
 	expectedType Type,
@@ -2255,16 +2262,25 @@ func (checker *Checker) declareGlobalRanges() {
 func (checker *Checker) maybeAddResourceInvalidation(resource Resource, invalidation ResourceInvalidation) {
 	functionActivation := checker.functionActivations.Current()
 
+	returnInfo := functionActivation.ReturnInfo
+
 	// Resource invalidations are only definite
 	// if the invalidation can be definitely reached.
 
-	if functionActivation.ReturnInfo.IsUnreachable() ||
-		functionActivation.ReturnInfo.MaybeJumped {
-
+	if returnInfo.IsUnreachable() {
 		return
 	}
 
-	checker.resources.AddInvalidation(resource, invalidation)
+	if returnInfo.MaybeReturned || returnInfo.MaybeJumped {
+		invalidation.Kind = invalidation.Kind.AsPotential()
+	}
+
+	// MaybeRecordInvalidation the invalidation.
+	// If there had already been an invalidation before, the new invalidation is ignored.
+	// However, the repeated invalidation is still reported as an error,
+	// but as a use-after invalidation error.
+
+	checker.resources.MaybeRecordInvalidation(resource, invalidation)
 }
 
 func (checker *Checker) beforeExtractor() *BeforeExtractor {

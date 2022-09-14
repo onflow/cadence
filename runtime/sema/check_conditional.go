@@ -174,7 +174,12 @@ func (checker *Checker) checkConditionalBranches(
 		}
 	}
 
-	checker.resources.MergeBranches(thenResources, elseResources)
+	checker.resources.MergeBranches(
+		thenResources,
+		thenReturnInfo,
+		elseResources,
+		elseReturnInfo,
+	)
 
 	return
 }

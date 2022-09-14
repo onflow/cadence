@@ -26,7 +26,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 )
 
-func TestResources_Add(t *testing.T) {
+func TestResources_MaybeRecordInvalidation(t *testing.T) {
 
 	t.Parallel()
 
@@ -47,91 +47,73 @@ func TestResources_Add(t *testing.T) {
 		Type:       IntType,
 	}}
 
-	assert.Empty(t, resources.Get(varX).Invalidations.All())
-	assert.Empty(t, resources.Get(varY).Invalidations.All())
-	assert.Empty(t, resources.Get(varZ).Invalidations.All())
+	assert.Nil(t, resources.Get(varX).Invalidation())
+	assert.Nil(t, resources.Get(varY).Invalidation())
+	assert.Nil(t, resources.Get(varZ).Invalidation())
 
-	// add invalidation for X
+	// record invalidation for X
 
-	resources.AddInvalidation(varX, ResourceInvalidation{
+	resources.MaybeRecordInvalidation(varX, ResourceInvalidation{
 		Kind:     ResourceInvalidationKindMoveDefinite,
 		StartPos: ast.Position{Line: 1, Column: 1},
 		EndPos:   ast.Position{Line: 1, Column: 1},
 	})
 
-	assert.ElementsMatch(t,
-		resources.Get(varX).Invalidations.All(),
-		[]ResourceInvalidation{
-			{
-				Kind:     ResourceInvalidationKindMoveDefinite,
-				StartPos: ast.Position{Line: 1, Column: 1},
-				EndPos:   ast.Position{Line: 1, Column: 1},
-			},
+	assert.Equal(t,
+		resources.Get(varX).Invalidation(),
+		&ResourceInvalidation{
+			Kind:     ResourceInvalidationKindMoveDefinite,
+			StartPos: ast.Position{Line: 1, Column: 1},
+			EndPos:   ast.Position{Line: 1, Column: 1},
 		},
 	)
-	assert.Empty(t, resources.Get(varY).Invalidations.All())
-	assert.Empty(t, resources.Get(varZ).Invalidations.All())
+	assert.Nil(t, resources.Get(varY).Invalidation())
+	assert.Nil(t, resources.Get(varZ).Invalidation())
 
-	// add invalidation for X
+	// record another invalidation for X
 
-	resources.AddInvalidation(varX, ResourceInvalidation{
+	resources.MaybeRecordInvalidation(varX, ResourceInvalidation{
 		Kind:     ResourceInvalidationKindMoveDefinite,
 		StartPos: ast.Position{Line: 2, Column: 2},
 		EndPos:   ast.Position{Line: 2, Column: 2},
 	})
 
-	assert.ElementsMatch(t,
-		resources.Get(varX).Invalidations.All(),
-		[]ResourceInvalidation{
-			{
-				Kind:     ResourceInvalidationKindMoveDefinite,
-				StartPos: ast.Position{Line: 1, Column: 1},
-				EndPos:   ast.Position{Line: 1, Column: 1},
-			},
-			{
-				Kind:     ResourceInvalidationKindMoveDefinite,
-				StartPos: ast.Position{Line: 2, Column: 2},
-				EndPos:   ast.Position{Line: 2, Column: 2},
-			},
+	assert.Equal(t,
+		resources.Get(varX).Invalidation(),
+		&ResourceInvalidation{
+			Kind:     ResourceInvalidationKindMoveDefinite,
+			StartPos: ast.Position{Line: 1, Column: 1},
+			EndPos:   ast.Position{Line: 1, Column: 1},
 		},
 	)
-	assert.Empty(t, resources.Get(varY).Invalidations.All())
-	assert.Empty(t, resources.Get(varZ).Invalidations.All())
+	assert.Nil(t, resources.Get(varY).Invalidation())
+	assert.Nil(t, resources.Get(varZ).Invalidation())
 
-	// add invalidation for Y
+	// record invalidation for Y
 
-	resources.AddInvalidation(varY, ResourceInvalidation{
+	resources.MaybeRecordInvalidation(varY, ResourceInvalidation{
 		Kind:     ResourceInvalidationKindMoveDefinite,
 		StartPos: ast.Position{Line: 3, Column: 3},
 		EndPos:   ast.Position{Line: 3, Column: 3},
 	})
 
-	assert.ElementsMatch(t,
-		resources.Get(varX).Invalidations.All(),
-		[]ResourceInvalidation{
-			{
-				Kind:     ResourceInvalidationKindMoveDefinite,
-				StartPos: ast.Position{Line: 1, Column: 1},
-				EndPos:   ast.Position{Line: 1, Column: 1},
-			},
-			{
-				Kind:     ResourceInvalidationKindMoveDefinite,
-				StartPos: ast.Position{Line: 2, Column: 2},
-				EndPos:   ast.Position{Line: 2, Column: 2},
-			},
+	assert.Equal(t,
+		resources.Get(varX).Invalidation(),
+		&ResourceInvalidation{
+			Kind:     ResourceInvalidationKindMoveDefinite,
+			StartPos: ast.Position{Line: 1, Column: 1},
+			EndPos:   ast.Position{Line: 1, Column: 1},
 		},
 	)
-	assert.ElementsMatch(t,
-		resources.Get(varY).Invalidations.All(),
-		[]ResourceInvalidation{
-			{
-				Kind:     ResourceInvalidationKindMoveDefinite,
-				StartPos: ast.Position{Line: 3, Column: 3},
-				EndPos:   ast.Position{Line: 3, Column: 3},
-			},
+	assert.Equal(t,
+		resources.Get(varY).Invalidation(),
+		&ResourceInvalidation{
+			Kind:     ResourceInvalidationKindMoveDefinite,
+			StartPos: ast.Position{Line: 3, Column: 3},
+			EndPos:   ast.Position{Line: 3, Column: 3},
 		},
 	)
-	assert.Empty(t, resources.Get(varZ).Invalidations.All())
+	assert.Nil(t, resources.Get(varZ).Invalidation())
 }
 
 func TestResourceResources_ForEach(t *testing.T) {
@@ -150,59 +132,44 @@ func TestResourceResources_ForEach(t *testing.T) {
 		Type:       IntType,
 	}}
 
-	// add resources for X and Y
+	// record invalidations for X and Y
 
-	resources.AddInvalidation(varX, ResourceInvalidation{
+	resources.MaybeRecordInvalidation(varX, ResourceInvalidation{
 		Kind:     ResourceInvalidationKindMoveDefinite,
 		StartPos: ast.Position{Line: 1, Column: 1},
 		EndPos:   ast.Position{Line: 1, Column: 1},
 	})
 
-	resources.AddInvalidation(varX, ResourceInvalidation{
-		Kind:     ResourceInvalidationKindMoveDefinite,
-		StartPos: ast.Position{Line: 2, Column: 2},
-		EndPos:   ast.Position{Line: 2, Column: 2},
-	})
-
-	resources.AddInvalidation(varY, ResourceInvalidation{
+	resources.MaybeRecordInvalidation(varY, ResourceInvalidation{
 		Kind:     ResourceInvalidationKindMoveDefinite,
 		StartPos: ast.Position{Line: 3, Column: 3},
 		EndPos:   ast.Position{Line: 3, Column: 3},
 	})
 
-	result := map[*Variable][]ResourceInvalidation{}
+	result := map[*Variable]*ResourceInvalidation{}
 
 	resources.ForEach(func(resource Resource, info ResourceInfo) {
 		variable := resource.Variable
-		result[variable] = info.Invalidations.All()
+		result[variable] = info.Invalidation()
 	})
 
 	assert.Len(t, result, 2)
 
-	assert.ElementsMatch(t,
+	assert.Equal(t,
 		result[varX.Variable],
-		[]ResourceInvalidation{
-			{
-				Kind:     ResourceInvalidationKindMoveDefinite,
-				StartPos: ast.Position{Line: 1, Column: 1},
-				EndPos:   ast.Position{Line: 1, Column: 1},
-			},
-			{
-				Kind:     ResourceInvalidationKindMoveDefinite,
-				StartPos: ast.Position{Line: 2, Column: 2},
-				EndPos:   ast.Position{Line: 2, Column: 2},
-			},
+		&ResourceInvalidation{
+			Kind:     ResourceInvalidationKindMoveDefinite,
+			StartPos: ast.Position{Line: 1, Column: 1},
+			EndPos:   ast.Position{Line: 1, Column: 1},
 		},
 	)
 
-	assert.ElementsMatch(t,
+	assert.Equal(t,
 		result[varY.Variable],
-		[]ResourceInvalidation{
-			{
-				Kind:     ResourceInvalidationKindMoveDefinite,
-				StartPos: ast.Position{Line: 3, Column: 3},
-				EndPos:   ast.Position{Line: 3, Column: 3},
-			},
+		&ResourceInvalidation{
+			Kind:     ResourceInvalidationKindMoveDefinite,
+			StartPos: ast.Position{Line: 3, Column: 3},
+			EndPos:   ast.Position{Line: 3, Column: 3},
 		},
 	)
 }
@@ -214,29 +181,35 @@ func TestResources_MergeBranches(t *testing.T) {
 	resourcesThen := NewResources()
 	resourcesElse := NewResources()
 
-	varX := Resource{Variable: &Variable{
-		Identifier: "x",
-		Type:       IntType,
-	}}
+	varX := Resource{
+		Variable: &Variable{
+			Identifier: "x",
+			Type:       IntType,
+		},
+	}
 
-	varY := Resource{Variable: &Variable{
-		Identifier: "y",
-		Type:       IntType,
-	}}
+	varY := Resource{
+		Variable: &Variable{
+			Identifier: "y",
+			Type:       IntType,
+		},
+	}
 
-	varZ := Resource{Variable: &Variable{
-		Identifier: "z",
-		Type:       IntType,
-	}}
+	varZ := Resource{
+		Variable: &Variable{
+			Identifier: "z",
+			Type:       IntType,
+		},
+	}
 
 	// invalidate X and Y in then branch
 
-	resourcesThen.AddInvalidation(varX, ResourceInvalidation{
+	resourcesThen.MaybeRecordInvalidation(varX, ResourceInvalidation{
 		Kind:     ResourceInvalidationKindMoveDefinite,
 		StartPos: ast.Position{Line: 1, Column: 1},
 		EndPos:   ast.Position{Line: 1, Column: 1},
 	})
-	resourcesThen.AddInvalidation(varY, ResourceInvalidation{
+	resourcesThen.MaybeRecordInvalidation(varY, ResourceInvalidation{
 		Kind:     ResourceInvalidationKindMoveDefinite,
 		StartPos: ast.Position{Line: 2, Column: 2},
 		EndPos:   ast.Position{Line: 2, Column: 2},
@@ -244,77 +217,56 @@ func TestResources_MergeBranches(t *testing.T) {
 
 	// invalidate Y and Z in else branch
 
-	resourcesElse.AddInvalidation(varX, ResourceInvalidation{
+	resourcesElse.MaybeRecordInvalidation(varY, ResourceInvalidation{
 		Kind:     ResourceInvalidationKindMoveDefinite,
 		StartPos: ast.Position{Line: 3, Column: 3},
 		EndPos:   ast.Position{Line: 3, Column: 3},
 	})
-	resourcesElse.AddInvalidation(varZ, ResourceInvalidation{
+	resourcesElse.MaybeRecordInvalidation(varZ, ResourceInvalidation{
 		Kind:     ResourceInvalidationKindMoveDefinite,
 		StartPos: ast.Position{Line: 4, Column: 4},
 		EndPos:   ast.Position{Line: 4, Column: 4},
 	})
 
-	// treat var Y already invalidated in main
 	resources := NewResources()
-	resources.AddInvalidation(varY, ResourceInvalidation{
-		Kind:     ResourceInvalidationKindMoveDefinite,
-		StartPos: ast.Position{Line: 0, Column: 0},
-		EndPos:   ast.Position{Line: 0, Column: 0},
-	})
-
 	resources.MergeBranches(
 		resourcesThen,
+		&ReturnInfo{},
 		resourcesElse,
+		&ReturnInfo{},
 	)
 
 	varXInfo := resources.Get(varX)
-	assert.True(t, varXInfo.DefinitivelyInvalidated)
-	assert.ElementsMatch(t,
-		varXInfo.Invalidations.All(),
-		[]ResourceInvalidation{
-			{
-				Kind:     ResourceInvalidationKindMoveDefinite,
-				StartPos: ast.Position{Line: 1, Column: 1},
-				EndPos:   ast.Position{Line: 1, Column: 1},
-			},
-			{
-				Kind:     ResourceInvalidationKindMoveDefinite,
-				StartPos: ast.Position{Line: 3, Column: 3},
-				EndPos:   ast.Position{Line: 3, Column: 3},
-			},
+	assert.False(t, varXInfo.DefinitivelyInvalidated())
+	assert.Equal(t,
+		&ResourceInvalidation{
+			Kind:     ResourceInvalidationKindMovePotential,
+			StartPos: ast.Position{Line: 1, Column: 1},
+			EndPos:   ast.Position{Line: 1, Column: 1},
 		},
+		varXInfo.Invalidation(),
 	)
 
 	varYInfo := resources.Get(varY)
-	assert.True(t, varYInfo.DefinitivelyInvalidated)
-	assert.ElementsMatch(t,
-		varYInfo.Invalidations.All(),
-		[]ResourceInvalidation{
-			{
-				Kind:     ResourceInvalidationKindMoveDefinite,
-				StartPos: ast.Position{Line: 0, Column: 0},
-				EndPos:   ast.Position{Line: 0, Column: 0},
-			},
-			{
-				Kind:     ResourceInvalidationKindMoveDefinite,
-				StartPos: ast.Position{Line: 2, Column: 2},
-				EndPos:   ast.Position{Line: 2, Column: 2},
-			},
+	assert.True(t, varYInfo.DefinitivelyInvalidated())
+	assert.Equal(t,
+		&ResourceInvalidation{
+			Kind:     ResourceInvalidationKindMoveDefinite,
+			StartPos: ast.Position{Line: 2, Column: 2},
+			EndPos:   ast.Position{Line: 2, Column: 2},
 		},
+		varYInfo.Invalidation(),
 	)
 
 	varZInfo := resources.Get(varZ)
-	assert.False(t, varZInfo.DefinitivelyInvalidated)
-	assert.ElementsMatch(t,
-		varZInfo.Invalidations.All(),
-		[]ResourceInvalidation{
-			{
-				Kind:     ResourceInvalidationKindMoveDefinite,
-				StartPos: ast.Position{Line: 4, Column: 4},
-				EndPos:   ast.Position{Line: 4, Column: 4},
-			},
+	assert.False(t, varZInfo.DefinitivelyInvalidated())
+	assert.Equal(t,
+		&ResourceInvalidation{
+			Kind:     ResourceInvalidationKindMovePotential,
+			StartPos: ast.Position{Line: 4, Column: 4},
+			EndPos:   ast.Position{Line: 4, Column: 4},
 		},
+		varZInfo.Invalidation(),
 	)
 }
 
@@ -334,7 +286,7 @@ func TestResources_Clone(t *testing.T) {
 
 	// add invalidation for X
 
-	resources.AddInvalidation(varX, ResourceInvalidation{
+	resources.MaybeRecordInvalidation(varX, ResourceInvalidation{
 		Kind:     ResourceInvalidationKindMoveDefinite,
 		StartPos: ast.Position{Line: 1, Column: 1},
 		EndPos:   ast.Position{Line: 1, Column: 1},
@@ -342,18 +294,16 @@ func TestResources_Clone(t *testing.T) {
 
 	// ... Assert state after
 
-	assert.ElementsMatch(t,
-		resources.Get(varX).Invalidations.All(),
-		[]ResourceInvalidation{
-			{
-				Kind:     ResourceInvalidationKindMoveDefinite,
-				StartPos: ast.Position{Line: 1, Column: 1},
-				EndPos:   ast.Position{Line: 1, Column: 1},
-			},
+	assert.Equal(t,
+		resources.Get(varX).Invalidation(),
+		&ResourceInvalidation{
+			Kind:     ResourceInvalidationKindMoveDefinite,
+			StartPos: ast.Position{Line: 1, Column: 1},
+			EndPos:   ast.Position{Line: 1, Column: 1},
 		},
 	)
-	assert.Empty(t, resources.Get(varY).Invalidations.All())
-	assert.Empty(t, resources.Get(varZ).Invalidations.All())
+	assert.Nil(t, resources.Get(varY).Invalidation())
+	assert.Nil(t, resources.Get(varZ).Invalidation())
 
 	// Child set with also invalidation for Y
 
@@ -361,41 +311,37 @@ func TestResources_Clone(t *testing.T) {
 
 	// ... Assert state before
 
-	assert.ElementsMatch(t,
-		resources.Get(varX).Invalidations.All(),
-		[]ResourceInvalidation{
-			{
-				Kind:     ResourceInvalidationKindMoveDefinite,
-				StartPos: ast.Position{Line: 1, Column: 1},
-				EndPos:   ast.Position{Line: 1, Column: 1},
-			},
+	assert.Equal(t,
+		resources.Get(varX).Invalidation(),
+		&ResourceInvalidation{
+			Kind:     ResourceInvalidationKindMoveDefinite,
+			StartPos: ast.Position{Line: 1, Column: 1},
+			EndPos:   ast.Position{Line: 1, Column: 1},
 		},
 	)
-	assert.Empty(t, resources.Get(varY).Invalidations.All())
-	assert.Empty(t, resources.Get(varZ).Invalidations.All())
+	assert.Nil(t, resources.Get(varY).Invalidation())
+	assert.Nil(t, resources.Get(varZ).Invalidation())
 
-	assert.ElementsMatch(t,
-		withXY.Get(varX).Invalidations.All(),
-		[]ResourceInvalidation{
-			{
-				Kind:     ResourceInvalidationKindMoveDefinite,
-				StartPos: ast.Position{Line: 1, Column: 1},
-				EndPos:   ast.Position{Line: 1, Column: 1},
-			},
+	assert.Equal(t,
+		withXY.Get(varX).Invalidation(),
+		&ResourceInvalidation{
+			Kind:     ResourceInvalidationKindMoveDefinite,
+			StartPos: ast.Position{Line: 1, Column: 1},
+			EndPos:   ast.Position{Line: 1, Column: 1},
 		},
 	)
-	assert.Empty(t, withXY.Get(varY).Invalidations.All())
-	assert.Empty(t, withXY.Get(varZ).Invalidations.All())
+	assert.Nil(t, withXY.Get(varY).Invalidation())
+	assert.Nil(t, withXY.Get(varZ).Invalidation())
 
 	// ... Add invalidation for Y and another for X
 
-	withXY.AddInvalidation(varY, ResourceInvalidation{
+	withXY.MaybeRecordInvalidation(varY, ResourceInvalidation{
 		Kind:     ResourceInvalidationKindMoveDefinite,
 		StartPos: ast.Position{Line: 2, Column: 2},
 		EndPos:   ast.Position{Line: 2, Column: 2},
 	})
 
-	withXY.AddInvalidation(varX, ResourceInvalidation{
+	withXY.MaybeRecordInvalidation(varX, ResourceInvalidation{
 		Kind:     ResourceInvalidationKindMoveDefinite,
 		StartPos: ast.Position{Line: 3, Column: 3},
 		EndPos:   ast.Position{Line: 3, Column: 3},
@@ -403,43 +349,32 @@ func TestResources_Clone(t *testing.T) {
 
 	// ... Assert state after
 
-	assert.ElementsMatch(t,
-		resources.Get(varX).Invalidations.All(),
-		[]ResourceInvalidation{
-			{
-				Kind:     ResourceInvalidationKindMoveDefinite,
-				StartPos: ast.Position{Line: 1, Column: 1},
-				EndPos:   ast.Position{Line: 1, Column: 1},
-			},
+	assert.Equal(t,
+		resources.Get(varX).Invalidation(),
+		&ResourceInvalidation{
+			Kind:     ResourceInvalidationKindMoveDefinite,
+			StartPos: ast.Position{Line: 1, Column: 1},
+			EndPos:   ast.Position{Line: 1, Column: 1},
 		},
 	)
-	assert.Empty(t, resources.Get(varY).Invalidations.All())
-	assert.Empty(t, resources.Get(varZ).Invalidations.All())
+	assert.Nil(t, resources.Get(varY).Invalidation())
+	assert.Nil(t, resources.Get(varZ).Invalidation())
 
-	assert.ElementsMatch(t,
-		withXY.Get(varX).Invalidations.All(),
-		[]ResourceInvalidation{
-			{
-				Kind:     ResourceInvalidationKindMoveDefinite,
-				StartPos: ast.Position{Line: 1, Column: 1},
-				EndPos:   ast.Position{Line: 1, Column: 1},
-			},
-			{
-				Kind:     ResourceInvalidationKindMoveDefinite,
-				StartPos: ast.Position{Line: 3, Column: 3},
-				EndPos:   ast.Position{Line: 3, Column: 3},
-			},
+	assert.Equal(t,
+		withXY.Get(varX).Invalidation(),
+		&ResourceInvalidation{
+			Kind:     ResourceInvalidationKindMoveDefinite,
+			StartPos: ast.Position{Line: 3, Column: 3},
+			EndPos:   ast.Position{Line: 3, Column: 3},
 		},
 	)
-	assert.ElementsMatch(t,
-		withXY.Get(varY).Invalidations.All(),
-		[]ResourceInvalidation{
-			{
-				Kind:     ResourceInvalidationKindMoveDefinite,
-				StartPos: ast.Position{Line: 2, Column: 2},
-				EndPos:   ast.Position{Line: 2, Column: 2},
-			},
+	assert.Equal(t,
+		withXY.Get(varY).Invalidation(),
+		&ResourceInvalidation{
+			Kind:     ResourceInvalidationKindMoveDefinite,
+			StartPos: ast.Position{Line: 2, Column: 2},
+			EndPos:   ast.Position{Line: 2, Column: 2},
 		},
 	)
-	assert.Empty(t, withXY.Get(varZ).Invalidations.All())
+	assert.Nil(t, withXY.Get(varZ).Invalidation())
 }

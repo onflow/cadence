@@ -117,7 +117,5 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) (_ struct
 		return nil
 	})
 
-	checker.reportResourceUsesInLoop(statement.StartPos, statement.EndPosition(checker.memoryGauge))
-
 	return
 }
