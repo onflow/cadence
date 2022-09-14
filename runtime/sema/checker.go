@@ -27,6 +27,7 @@ import (
 	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/persistent"
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -924,7 +925,7 @@ func CheckRestrictedType(
 			// The restriction must be an explicit or implicit conformance
 			// of the composite (restricted type)
 
-			if !conformances.Includes(restriction) {
+			if !conformances.Contains(restriction) {
 				report(func(t *ast.RestrictedType) error {
 					return &InvalidNonConformanceRestrictionError{
 						Type:  restriction,
@@ -1440,7 +1441,7 @@ func (checker *Checker) checkWithReturnInfo(
 
 func (checker *Checker) checkWithInitializedMembers(
 	check TypeCheckFunc,
-	temporaryInitializedMembers *MemberSet,
+	temporaryInitializedMembers *persistent.OrderedSet[*Member],
 ) Type {
 	if temporaryInitializedMembers != nil {
 		functionActivation := checker.functionActivations.Current()
@@ -1563,7 +1564,7 @@ func (checker *Checker) checkPotentiallyUnevaluated(check TypeCheckFunc) Type {
 	initialReturnInfo := functionActivation.ReturnInfo
 	temporaryReturnInfo := initialReturnInfo.Clone()
 
-	var temporaryInitializedMembers *MemberSet
+	var temporaryInitializedMembers *persistent.OrderedSet[*Member]
 	if functionActivation.InitializationInfo != nil {
 		initialInitializedMembers := functionActivation.InitializationInfo.InitializedFieldMembers
 		temporaryInitializedMembers = initialInitializedMembers.Clone()

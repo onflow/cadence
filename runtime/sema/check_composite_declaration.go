@@ -796,7 +796,7 @@ func (checker *Checker) declareContractValue(
 	}
 
 	declarationMembers.Foreach(func(name string, declarationMember *Member) {
-		if _, ok := compositeType.Members.Get(name); ok {
+		if compositeType.Members.Contains(name) {
 			return
 		}
 		compositeType.Members.Set(name, declarationMember)
@@ -823,7 +823,7 @@ func (checker *Checker) declareEnumConstructor(
 	for _, enumCase := range enumCases {
 		caseName := enumCase.Identifier.Identifier
 
-		if _, ok := constructorType.Members.Get(caseName); ok {
+		if constructorType.Members.Contains(caseName) {
 			continue
 		}
 

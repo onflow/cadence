@@ -3153,8 +3153,7 @@ func init() {
 					functionType.Members = &StringMemberOrderedMap{}
 				}
 				name := member.Identifier.Identifier
-				_, exists := functionType.Members.Get(name)
-				if exists {
+				if functionType.Members.Contains(name) {
 					panic(errors.NewUnreachableError())
 				}
 				functionType.Members.Set(name, member)
@@ -3367,8 +3366,7 @@ func init() {
 			functionType.Members = &StringMemberOrderedMap{}
 		}
 		name := member.Identifier.Identifier
-		_, exists := functionType.Members.Get(name)
-		if exists {
+		if functionType.Members.Contains(name) {
 			panic(errors.NewUnreachableError())
 		}
 		functionType.Members.Set(name, member)
@@ -5570,7 +5568,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 			// TODO: once interfaces can conform to interfaces, include
 			return typedSubType.ExplicitInterfaceConformanceSet().
-				Includes(typedSuperType)
+				Contains(typedSuperType)
 
 		case *InterfaceType:
 			// TODO: Once interfaces can conform to interfaces, check conformances here
@@ -6526,8 +6524,7 @@ func GetMembersAsMap(members []*Member) *StringMemberOrderedMap {
 	membersMap := &StringMemberOrderedMap{}
 	for _, member := range members {
 		name := member.Identifier.Identifier
-		_, ok := membersMap.Get(name)
-		if ok {
+		if membersMap.Contains(name) {
 			panic(errors.NewUnexpectedError("invalid duplicate member: %s", name))
 		}
 		membersMap.Set(name, member)
