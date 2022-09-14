@@ -193,7 +193,12 @@ func (ris *Resources) MergeBranches(
 		//         panic("")
 		//     }
 
-		info.invalidation = mergeResourceInfos(thenInfo, elseInfo)
+		info.invalidation = mergeResourceInfos(
+			thenInfo,
+			thenReturnInfo,
+			elseInfo,
+			elseReturnInfo,
+		)
 
 		ris.resources.Set(resource, info)
 	}
@@ -214,22 +219,52 @@ func (ris *Resources) MergeBranches(
 	}
 }
 
-func mergeResourceInfos(thenInfo, elseInfo ResourceInfo) (invalidation *ResourceInvalidation) {
+func mergeResourceInfos(
+	thenInfo ResourceInfo,
+	thenReturnInfo *ReturnInfo,
+	elseInfo ResourceInfo,
+	elseReturnInfo *ReturnInfo,
+) (invalidation *ResourceInvalidation) {
 	thenInvalidation := thenInfo.Invalidation()
 	elseInvalidation := elseInfo.Invalidation()
 
-	if thenInvalidation != nil {
-		invalidation = thenInvalidation
+	if thenInvalidation != nil && elseInvalidation != nil {
 
-		if !(elseInvalidation != nil &&
-			elseInvalidation.Kind.IsDefinite() &&
-			thenInvalidation.Kind.IsDefinite()) {
+		if thenReturnInfo.DefinitelyReturned && elseReturnInfo.DefinitelyReturned {
+			// NOOP
+		} else if thenReturnInfo.DefinitelyReturned {
+			invalidation = elseInvalidation
 
-			invalidation.Kind = invalidation.Kind.AsPotential()
+		} else if elseReturnInfo.DefinitelyReturned {
+			invalidation = thenInvalidation
+
+		} else {
+			invalidation = thenInvalidation
+
+			thenIsDefinite := thenReturnInfo.DefinitelyHalted ||
+				thenInvalidation.Kind.IsDefinite()
+			elseIsDefinite := elseReturnInfo.DefinitelyHalted ||
+				elseInvalidation.Kind.IsDefinite()
+
+			if !elseIsDefinite || !thenIsDefinite {
+				invalidation.Kind = invalidation.Kind.AsPotential()
+			}
+		}
+
+	} else if thenInvalidation != nil {
+		if !thenReturnInfo.DefinitelyReturned {
+			invalidation = thenInvalidation
+			if elseReturnInfo == nil || !elseReturnInfo.DefinitelyHalted {
+				invalidation.Kind = invalidation.Kind.AsPotential()
+			}
 		}
 	} else if elseInvalidation != nil {
-		invalidation = elseInvalidation
-		invalidation.Kind = invalidation.Kind.AsPotential()
+		if !elseReturnInfo.DefinitelyReturned {
+			invalidation = elseInvalidation
+			if !thenReturnInfo.DefinitelyHalted {
+				invalidation.Kind = invalidation.Kind.AsPotential()
+			}
+		}
 	}
 
 	return

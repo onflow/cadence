@@ -2768,10 +2768,9 @@ func TestCheckInvalidResourceLossThroughReturnInIfStatementThenBranch(t *testing
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := ExpectCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceLossError{}, errs[0])
-	assert.IsType(t, &sema.ResourceLossError{}, errs[1])
 }
 
 func TestCheckInvalidResourceLossThroughReturnInIfStatementBranches(t *testing.T) {
@@ -4626,16 +4625,9 @@ func TestCheckInvalidResourceCreationAndPotentialInvalidationInLoop(t *testing.T
 				),
 			)
 
-			if controlFlowStatement == "return" {
-				errs := ExpectCheckerErrors(t, err, 2)
+			errs := ExpectCheckerErrors(t, err, 1)
 
-				assert.IsType(t, &sema.ResourceLossError{}, errs[0])
-				assert.IsType(t, &sema.ResourceLossError{}, errs[1])
-			} else {
-				errs := ExpectCheckerErrors(t, err, 1)
-
-				assert.IsType(t, &sema.ResourceLossError{}, errs[0])
-			}
+			assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 		})
 	}
 

@@ -2271,7 +2271,7 @@ func (checker *Checker) maybeAddResourceInvalidation(resource Resource, invalida
 		return
 	}
 
-	if returnInfo.MaybeReturned || returnInfo.MaybeJumped {
+	if returnInfo.MaybeJumped {
 		invalidation.Kind = invalidation.Kind.AsPotential()
 	}
 
