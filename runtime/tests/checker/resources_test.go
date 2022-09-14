@@ -7163,7 +7163,9 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		require.NoError(t, err)
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
 	})
 
 	t.Run("switch-case: invalidation in all cases, mixed", func(t *testing.T) {
@@ -7969,9 +7971,10 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := ExpectCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
 	})
 
 	t.Run("switch-case: return in one case, mixed", func(t *testing.T) {
@@ -8079,9 +8082,10 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := ExpectCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
 	})
 
 	t.Run("switch-case: break in one case, mixed", func(t *testing.T) {
@@ -8158,10 +8162,11 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := ExpectCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
+		assert.IsType(t, &sema.ResourceLossError{}, errs[2])
 	})
 
 	t.Run("switch-case: invalidation missing in default case, transaction", func(t *testing.T) {
