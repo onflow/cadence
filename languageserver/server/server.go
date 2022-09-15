@@ -38,6 +38,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
@@ -2139,7 +2140,10 @@ func (s *Server) parseEntryPointArguments(args ...json2.RawMessage) (interface{}
 		if !ok {
 			return nil, fmt.Errorf("invalid argument at index %d: %#+v", i, argument)
 		}
-		value, err := runtime.ParseLiteral(argumentCode, parameterType, nil)
+
+		inter, _ := interpreter.NewInterpreter(nil, nil, &interpreter.Config{})
+
+		value, err := runtime.ParseLiteral(argumentCode, parameterType, inter)
 		if err != nil {
 			return nil, err
 		}
