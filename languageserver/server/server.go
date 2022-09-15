@@ -190,6 +190,8 @@ type Server struct {
 	accessCheckMode               sema.AccessCheckMode
 	// reportCrashes decides when the crash is detected should it be reported
 	reportCrashes bool
+	// baseValueActivation is the sema value activation used for type-checking all programs
+	baseValueActivation *sema.VariableActivation
 }
 
 type Option func(*Server) error
@@ -287,6 +289,7 @@ func NewServer() (*Server, error) {
 		codeActionsResolvers: make(map[protocol.DocumentURI]map[uuid.UUID]func() []*protocol.CodeAction),
 		commands:             make(map[string]CommandHandler),
 		accessCheckMode:      sema.AccessCheckModeStrict,
+		baseValueActivation:  newStandardLibrary().baseValueActivation,
 	}
 	server.protocolServer = protocol.NewServer(server)
 
@@ -1810,6 +1813,7 @@ func (s *Server) getDiagnostics(
 	}
 
 	config := &sema.Config{
+		BaseValueActivation:        s.baseValueActivation,
 		AccessCheckMode:            s.accessCheckMode,
 		PositionInfoEnabled:        true,
 		ExtendedElaborationEnabled: true,
