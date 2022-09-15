@@ -33,6 +33,7 @@ const PublicAccountGetTargetLinkField = "getLinkTarget"
 const PublicAccountForEachPublicField = "forEachPublic"
 const PublicAccountKeysField = "keys"
 const PublicAccountContractsField = "contracts"
+const PublicAccountInboxField = "inbox"
 const PublicAccountPathsField = "publicPaths"
 
 // PublicAccountType represents the publicly accessible portion of an account.
@@ -48,6 +49,7 @@ var PublicAccountType = func() *CompositeType {
 			nestedTypes := &StringTypeOrderedMap{}
 			nestedTypes.Set(AccountKeysTypeName, PublicAccountKeysType)
 			nestedTypes.Set(PublicAccountContractsTypeName, PublicAccountContractsType)
+			nestedTypes.Set(PublicAccountInboxTypeName, PublicAccountInboxType)
 			return nestedTypes
 		}(),
 	}
@@ -118,6 +120,12 @@ var PublicAccountType = func() *CompositeType {
 			PublicAccountForEachPublicField,
 			PublicAccountForEachPublicFunctionType,
 			publicAccountForEachPublicDocString,
+		),
+		NewUnmeteredPublicConstantFieldMember(
+			publicAccountType,
+			PublicAccountInboxField,
+			PublicAccountInboxType,
+			publicAccountInboxDocString,
 		),
 	}
 
@@ -235,3 +243,37 @@ var PublicAccountTypeGetCapabilityFunctionType = func() *FunctionType {
 const publicAccountTypeGetLinkTargetFunctionDocString = `
 Returns the capability at the given public path, or nil if it does not exist
 `
+
+var PublicAccountInboxTypeName = "Inbox"
+
+var publicAccountInboxDocString = "an inbox for sending and recieving capabilities"
+
+var PublicAccountInboxAllowlistField = "allowlist"
+
+var PublicAccountInboxAllowlistType = &VariableSizedType{
+	Type: &AddressType{},
+}
+
+var publicAccountInboxAllowlistDocString = "the list of accounts allowed to publish to this inbox"
+
+var PublicAccountInboxType = func() *CompositeType {
+
+	accountInbox := &CompositeType{
+		Identifier: PublicAccountInboxTypeName,
+		Kind:       common.CompositeKindStructure,
+		importable: false,
+	}
+
+	var members = []*Member{
+		NewUnmeteredPublicConstantFieldMember(
+			accountInbox,
+			PublicAccountInboxAllowlistField,
+			PublicAccountInboxAllowlistType,
+			publicAccountInboxAllowlistDocString,
+		),
+	}
+
+	accountInbox.Members = GetMembersAsMap(members)
+	accountInbox.Fields = GetFieldNames(members)
+	return accountInbox
+}()

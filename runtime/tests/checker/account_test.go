@@ -2214,3 +2214,84 @@ func TestCheckAccountAllowlist(t *testing.T) {
 		require.IsType(t, &sema.ExternalMutationError{}, errors[0])
 	})
 }
+
+func TestCheckPublicAccountInbox(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("basic allowlist", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t,
+			`fun test() {
+				let x: [Address] = publicAccount.inbox.allowlist
+			}`,
+		)
+		require.NoError(t, err)
+	})
+
+	t.Run("permit cannot be called", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t,
+			`fun test() {
+				publicAccount.inbox.permit(0x1)
+			}`,
+		)
+		require.Error(t, err)
+		errors := ExpectCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.NotDeclaredMemberError{}, errors[0])
+	})
+
+	t.Run("unpermit cannot be called", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t,
+			`fun test() {
+				publicAccount.inbox.unpermit(0x1)
+			}`,
+		)
+		require.Error(t, err)
+		errors := ExpectCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.NotDeclaredMemberError{}, errors[0])
+	})
+
+	t.Run("publish cannot be called", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t,
+			`fun test() {
+				publicAccount.inbox.publish(3, name:"", recipient:0x1)
+			}`,
+		)
+		require.Error(t, err)
+		errors := ExpectCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.NotDeclaredMemberError{}, errors[0])
+	})
+
+	t.Run("claim cannot be called", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t,
+			`fun test() {
+				publicAccount.inbox.claim("", provider: 0x1)
+			}`,
+		)
+		require.Error(t, err)
+		errors := ExpectCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.NotDeclaredMemberError{}, errors[0])
+	})
+
+	t.Run("unpublish cannot be called", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t,
+			`fun test() {
+				publicAccount.inbox.unpublish("")
+			}`,
+		)
+		require.Error(t, err)
+		errors := ExpectCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.NotDeclaredMemberError{}, errors[0])
+	})
+}
