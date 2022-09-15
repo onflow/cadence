@@ -1294,6 +1294,12 @@ func (checker *Checker) leaveValueScope(getEndPosition EndPositionGetter, checkR
 // that has a resource type and which was not moved or destroyed
 func (checker *Checker) checkResourceLoss(depth int) {
 
+	returnInfo := checker.functionActivations.Current().ReturnInfo
+	if returnInfo.DefinitelyReturned ||
+		returnInfo.DefinitelyHalted {
+		return
+	}
+
 	checker.valueActivations.ForEachVariableDeclaredInAndBelow(depth, func(name string, variable *Variable) {
 
 		if variable.Type.IsResourceType() &&

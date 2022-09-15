@@ -2745,11 +2745,10 @@ func TestCheckInvalidResourceLossThroughReturn(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 3)
+	errs := ExpectCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	assert.IsType(t, &sema.UnreachableStatementError{}, errs[1])
-	assert.IsType(t, &sema.ResourceLossError{}, errs[2])
 }
 
 func TestCheckInvalidResourceLossThroughReturnInIfStatementThenBranch(t *testing.T) {
@@ -2796,11 +2795,10 @@ func TestCheckInvalidResourceLossThroughReturnInIfStatementBranches(t *testing.T
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 3)
+	errs := ExpectCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	assert.IsType(t, &sema.UnreachableStatementError{}, errs[1])
-	assert.IsType(t, &sema.ResourceLossError{}, errs[2])
 }
 
 func TestCheckResourceWithMoveAndReturnInIfStatementThenAndDestroyInElse(t *testing.T) {
@@ -4208,12 +4206,13 @@ func TestCheckResourceOptionalBindingFailableCast(t *testing.T) {
 
          resource R: RI {}
 
-         fun test() {
+         fun test(): @R? {
              let ri: @{RI} <- create R()
              if let r <- ri as? @R {
-                 destroy r
+                 return <-r
              } else {
                  destroy ri
+                 return nil
              }
          }
     `)
@@ -4322,7 +4321,7 @@ func TestCheckInvalidResourceOptionalBindingFailableCastMissingElse(t *testing.T
 
 	t.Parallel()
 
-	t.Run("top-level resource interface to resource", func(t *testing.T) {
+	t.Run("top-level resource interface to resource, missing else", func(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
           resource interface RI {}
@@ -4967,11 +4966,10 @@ func TestCheckInvalidOptionalResourceCoalescingRightSide(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 3)
+	errs := ExpectCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.InvalidNilCoalescingRightResourceOperandError{}, errs[0])
 	assert.IsType(t, &sema.ResourceLossError{}, errs[1])
-	assert.IsType(t, &sema.ResourceLossError{}, errs[2])
 }
 
 // https://github.com/dapperlabs/flow-go/issues/3407
@@ -6286,11 +6284,10 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 3)
+		errs := ExpectCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[1])
-		assert.IsType(t, &sema.ResourceLossError{}, errs[2])
 	})
 
 	t.Run("switch-case: destroy missing in default case, transaction", func(t *testing.T) {
