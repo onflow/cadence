@@ -109,7 +109,7 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) (_ struct
 	// returns are not definite, but only potential.
 
 	_ = checker.checkPotentiallyUnevaluated(func() Type {
-		checker.functionActivations.WithLoop(func() {
+		checker.functionActivations.Current().WithLoop(func() {
 			checker.checkBlock(statement.Block)
 		})
 

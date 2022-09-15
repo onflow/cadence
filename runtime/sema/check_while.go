@@ -32,7 +32,7 @@ func (checker *Checker) VisitWhileStatement(statement *ast.WhileStatement) (_ st
 	// returns are not definite, but only potential.
 
 	_ = checker.checkPotentiallyUnevaluated(func() Type {
-		checker.functionActivations.WithLoop(func() {
+		checker.functionActivations.Current().WithLoop(func() {
 			checker.checkBlock(statement.Block)
 		})
 
@@ -58,7 +58,7 @@ func (checker *Checker) VisitBreakStatement(statement *ast.BreakStatement) (_ st
 	}
 
 	functionActivation := checker.functionActivations.Current()
-	functionActivation.ReturnInfo.MaybeJumped = true
+	functionActivation.ReturnInfo.AddJumpOffsets(statement.StartPos.Offset)
 	functionActivation.ReturnInfo.DefinitelyJumped = true
 
 	return
@@ -79,7 +79,7 @@ func (checker *Checker) VisitContinueStatement(statement *ast.ContinueStatement)
 	}
 
 	functionActivation := checker.functionActivations.Current()
-	functionActivation.ReturnInfo.MaybeJumped = true
+	functionActivation.ReturnInfo.AddJumpOffsets(statement.StartPos.Offset)
 	functionActivation.ReturnInfo.DefinitelyJumped = true
 
 	return

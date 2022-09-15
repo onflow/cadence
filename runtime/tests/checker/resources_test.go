@@ -5198,17 +5198,88 @@ func TestCheckResourceCreationAndInvalidationAfterControlFlow(t *testing.T) {
 					`
                       resource X {}
 
-                      fun test() {
-                          var i = 0
-                          while true {
-                              if i > 5 {
+                      fun test(exitEarly: Bool) {
+                          if exitEarly {
+                              %s
+                          }
+
+                          let x <- create X()
+                          destroy x
+                      }
+                    `,
+					controlFlowStatement,
+				),
+			)
+
+			require.NoError(t, err)
+		})
+	}
+
+	for _, controlFlowStatement := range []string{"return", `panic("")`} {
+		test(controlFlowStatement)
+	}
+}
+
+func TestCheckResourceCreationAndInvalidationAfterControlFlowInIf(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(controlFlowStatement string) {
+		t.Run(controlFlowStatement, func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheckWithPanic(t,
+				fmt.Sprintf(
+					`
+                      resource X {}
+
+                      fun test(exitEarly: Bool) {
+                          if true {
+                              if exitEarly {
                                   %s
                               }
 
                               let x <- create X()
                               destroy x
+                          }
+                      }
+                    `,
+					controlFlowStatement,
+				),
+			)
 
-                              i = i + 1
+			require.NoError(t, err)
+		})
+	}
+
+	for _, controlFlowStatement := range []string{"return", `panic("")`} {
+		test(controlFlowStatement)
+	}
+}
+
+func TestCheckResourceCreationAndInvalidationAfterControlFlowInLoop(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(controlFlowStatement string) {
+		t.Run(controlFlowStatement, func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheckWithPanic(t,
+				fmt.Sprintf(
+					`
+                      resource X {}
+
+                      fun test(exitEarly: Bool) {
+                          while true {
+                              if exitEarly {
+                                  %s
+                              }
+
+                              let x <- create X()
+                              destroy x
                           }
                       }
                     `,
@@ -8256,9 +8327,10 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := ExpectCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
 	})
 
 	t.Run("while loop: unreachable panic due to break", func(t *testing.T) {

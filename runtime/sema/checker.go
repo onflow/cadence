@@ -19,6 +19,7 @@
 package sema
 
 import (
+	goErrors "errors"
 	"math"
 	"math/big"
 
@@ -2260,6 +2261,8 @@ func (checker *Checker) declareGlobalRanges() {
 	})
 }
 
+var errFoundJump = goErrors.New("jump found")
+
 func (checker *Checker) maybeAddResourceInvalidation(resource Resource, invalidation ResourceInvalidation) {
 	functionActivation := checker.functionActivations.Current()
 
@@ -2272,11 +2275,32 @@ func (checker *Checker) maybeAddResourceInvalidation(resource Resource, invalida
 		return
 	}
 
-	if returnInfo.MaybeJumped {
+	var onlyPotential bool
+	switch {
+	case resource.Member != nil:
+		onlyPotential = returnInfo.MaybeReturned || returnInfo.MaybeJumped()
+
+	case resource.Variable != nil &&
+		resource.Variable.DeclarationKind != common.DeclarationKindSelf:
+
+		declarationOffset := resource.Variable.Pos.Offset
+		invalidationOffset := invalidation.StartPos.Offset
+
+		err := returnInfo.JumpOffsets.ForEach(func(jumpOffset int) error {
+			if declarationOffset < jumpOffset && jumpOffset < invalidationOffset {
+				return errFoundJump
+			}
+			return nil
+		})
+
+		onlyPotential = err == errFoundJump
+	}
+
+	if onlyPotential {
 		invalidation.Kind = invalidation.Kind.AsPotential()
 	}
 
-	// MaybeRecordInvalidation the invalidation.
+	// Maybe record the invalidation.
 	// If there had already been an invalidation before, the new invalidation is ignored.
 	// However, the repeated invalidation is still reported as an error,
 	// but as a use-after invalidation error.

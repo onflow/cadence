@@ -231,9 +231,9 @@ func TestResources_MergeBranches(t *testing.T) {
 	resources := NewResources()
 	resources.MergeBranches(
 		resourcesThen,
-		&ReturnInfo{},
+		NewReturnInfo(),
 		resourcesElse,
-		&ReturnInfo{},
+		NewReturnInfo(),
 	)
 
 	varXInfo := resources.Get(varX)

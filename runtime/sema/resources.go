@@ -58,8 +58,8 @@ import (
 
 // A Resource is a variable or a member
 type Resource struct {
-	*Variable
-	*Member
+	Variable *Variable
+	Member   *Member
 }
 
 // Resources is a map which contains invalidation info for resources.

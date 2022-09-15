@@ -104,6 +104,25 @@ func (s *OrderedSet[T]) AddIntersection(a, b *OrderedSet[T]) {
 	})
 }
 
+// IsEmpty returns true if the set is empty,
+// or false if it contains items.
+func (s *OrderedSet[T]) IsEmpty() bool {
+	currentS := s
+
+	for currentS != nil {
+
+		if currentS.items != nil {
+			if currentS.items.Oldest() != nil {
+				return false
+			}
+		}
+
+		currentS = currentS.Parent
+	}
+
+	return true
+}
+
 // Clone returns a new child set that contains all items of this parent set.
 // Changes to the returned set will only be applied in the returned set, not the parent.
 func (s *OrderedSet[T]) Clone() *OrderedSet[T] {
