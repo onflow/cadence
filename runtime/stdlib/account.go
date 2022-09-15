@@ -791,6 +791,19 @@ func newPublicAccountContractsValue(
 	)
 }
 
+func newPublicAccountInboxValue(
+	gauge common.MemoryGauge,
+	addressValue interpreter.AddressValue,
+) interpreter.Value {
+	return interpreter.NewPublicAccountInboxValue(
+		gauge,
+		addressValue,
+		func(inter *interpreter.Interpreter, getLocationRange func() interpreter.LocationRange) interpreter.Value {
+			return interpreter.GetAccountAllowlist(gauge, inter, getLocationRange, addressValue)
+		},
+	)
+}
+
 type AccountContractNamesProvider interface {
 	// GetAccountContractNames returns the names of all contracts deployed in an account.
 	GetAccountContractNames(address common.Address) ([]string, error)
@@ -1589,6 +1602,9 @@ func NewPublicAccountValue(
 		},
 		func() interpreter.Value {
 			return newPublicAccountContractsValue(gauge, handler, addressValue)
+		},
+		func() interpreter.Value {
+			return newPublicAccountInboxValue(gauge, addressValue)
 		},
 	)
 }

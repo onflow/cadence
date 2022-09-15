@@ -25,6 +25,8 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
+const inboxStorageDomain = "inbox"
+
 // AuthAccountInbox
 
 var authAccountInboxTypeID = sema.AuthAccountInboxType.ID()
@@ -34,7 +36,7 @@ var authAccountInboxStaticType StaticType = PrimitiveStaticTypeAuthAccountKeys
 func NewAuthAccountInboxValue(
 	gauge common.MemoryGauge,
 	address AddressValue,
-	allowlist Value,
+	getAllowlist func(*Interpreter) Value,
 	permitFunction FunctionValue,
 	unpermitFunction FunctionValue,
 	publishFunction FunctionValue,
@@ -43,12 +45,22 @@ func NewAuthAccountInboxValue(
 ) Value {
 
 	fields := map[string]Value{
-		sema.AuthAccountInboxAllowlistField: allowlist,
 		sema.AuthAccountInboxPermitField:    permitFunction,
 		sema.AuthAccountInboxUnpermitField:  unpermitFunction,
 		sema.AuthAccountInboxPublishField:   publishFunction,
 		sema.AuthAccountInboxUnpublishField: unpublishFunction,
 		sema.AuthAccountInboxClaimField:     claimFunction,
+	}
+
+	fieldNames := []string{
+		sema.AuthAccountInboxAllowlistField,
+	}
+	computeField := func(name string, inter *Interpreter, getLocationRange func() LocationRange) Value {
+		switch name {
+		case sema.AuthAccountInboxAllowlistField:
+			return getAllowlist(inter)
+		}
+		return nil
 	}
 
 	var str string
@@ -65,9 +77,9 @@ func NewAuthAccountInboxValue(
 		gauge,
 		authAccountInboxTypeID,
 		authAccountInboxStaticType,
-		nil,
+		fieldNames,
 		fields,
-		nil,
+		computeField,
 		nil,
 		stringer,
 	)
@@ -82,11 +94,19 @@ var publicAccountInboxStaticType StaticType = PrimitiveStaticTypePublicAccountKe
 func NewPublicAccountInboxValue(
 	gauge common.MemoryGauge,
 	address AddressValue,
-	allowlist Value,
+	getAllowlist func(*Interpreter, func() LocationRange) Value,
 ) Value {
 
-	fields := map[string]Value{
-		sema.PublicAccountInboxAllowlistField: allowlist,
+	fields := map[string]Value{}
+	fieldNames := []string{
+		sema.PublicAccountInboxAllowlistField,
+	}
+	computeField := func(name string, inter *Interpreter, getLocationRange func() LocationRange) Value {
+		switch name {
+		case sema.PublicAccountInboxAllowlistField:
+			return getAllowlist(inter, getLocationRange)
+		}
+		return nil
 	}
 
 	var str string
@@ -103,10 +123,30 @@ func NewPublicAccountInboxValue(
 		gauge,
 		publicAccountInboxTypeID,
 		publicAccountInboxStaticType,
-		nil,
+		fieldNames,
 		fields,
-		nil,
+		computeField,
 		nil,
 		stringer,
 	)
+}
+
+func GetAccountAllowlist(
+	gauge common.MemoryGauge,
+	inter *Interpreter,
+	getLocationRange func() LocationRange,
+	address AddressValue,
+) Value {
+	storageMap := inter.Config.Storage.GetStorageMap(address.ToAddress(), inboxStorageDomain, false)
+	if storageMap == nil {
+		return NewArrayValue(
+			inter,
+			getLocationRange,
+			VariableSizedStaticType{
+				Type: PrimitiveStaticTypeAddress,
+			},
+			address.ToAddress())
+	}
+	allowlist := storageMap.ReadValue(gauge, "allowlist")
+	return allowlist
 }
