@@ -51,21 +51,6 @@ import (
 	linter "github.com/onflow/cadence-lint/analyzers"
 )
 
-var functionDeclarations = append(
-	stdlib.FlowBuiltInFunctions(stdlib.FlowBuiltinImpls{}),
-	stdlib.BuiltinFunctions...,
-).ToSemaValueDeclarations()
-
-var valueDeclarations = append(
-	functionDeclarations,
-	stdlib.BuiltinValues.ToSemaValueDeclarations()...,
-)
-
-var typeDeclarations = append(
-	stdlib.FlowBuiltInTypes,
-	stdlib.BuiltinTypes...,
-).ToTypeDeclarations()
-
 // Document represents an open document on the client. It contains all cached
 // information about each document that is used to support CodeLens,
 // transaction submission, and script execution.
@@ -300,6 +285,7 @@ func NewServer() (*Server, error) {
 		ranges:               make(map[protocol.DocumentURI]map[string]sema.Range),
 		codeActionsResolvers: make(map[protocol.DocumentURI]map[uuid.UUID]func() []*protocol.CodeAction),
 		commands:             make(map[string]CommandHandler),
+		accessCheckMode:      sema.AccessCheckModeStrict,
 	}
 	server.protocolServer = protocol.NewServer(server)
 
@@ -1822,134 +1808,20 @@ func (s *Server) getDiagnostics(
 		return
 	}
 
+	config := &sema.Config{
+		AccessCheckMode:            s.accessCheckMode,
+		PositionInfoEnabled:        true,
+		ExtendedElaborationEnabled: true,
+		LocationHandler:            s.handleLocation,
+		ImportHandler:              s.handleImport,
+	}
+
 	var checker *sema.Checker
 	checker, diagnosticsErr = sema.NewChecker(
 		program,
 		location,
 		nil,
-		true,
-		sema.WithPredeclaredValues(valueDeclarations),
-		sema.WithPredeclaredTypes(typeDeclarations),
-		sema.WithLocationHandler(
-			func(identifiers []ast.Identifier, location common.Location) ([]sema.ResolvedLocation, error) {
-				addressLocation, isAddress := location.(common.AddressLocation)
-
-				// if the location is not an address location, e.g. an identifier location (`import Crypto`),
-				// then return a single resolved location which declares all identifiers.
-
-				if !isAddress {
-					return []runtime.ResolvedLocation{
-						{
-							Location:    location,
-							Identifiers: identifiers,
-						},
-					}, nil
-				}
-
-				// if the location is an address,
-				// and no specific identifiers where requested in the import statement,
-				// then fetch all identifiers at this address
-
-				if len(identifiers) == 0 {
-					// if there is no contract name resolver,
-					// then return no resolved locations
-
-					if s.resolveAddressContractNames == nil {
-						return nil, nil
-					}
-
-					contractNames, err := s.resolveAddressContractNames(addressLocation.Address)
-					if err != nil {
-						panic(err)
-					}
-
-					// if there are no contracts deployed,
-					// then return no resolved locations
-
-					if len(contractNames) == 0 {
-						return nil, nil
-					}
-
-					identifiers = make([]ast.Identifier, len(contractNames))
-
-					for i := range identifiers {
-						identifiers[i] = runtime.Identifier{
-							Identifier: contractNames[i],
-						}
-					}
-				}
-
-				// return one resolved location per identifier.
-				// each resolved location is an address contract location
-
-				resolvedLocations := make([]runtime.ResolvedLocation, len(identifiers))
-				for i := range resolvedLocations {
-					identifier := identifiers[i]
-					resolvedLocations[i] = runtime.ResolvedLocation{
-						Location: common.AddressLocation{
-							Address: addressLocation.Address,
-							Name:    identifier.Identifier,
-						},
-						Identifiers: []runtime.Identifier{identifier},
-					}
-				}
-
-				return resolvedLocations, nil
-			},
-		),
-		sema.WithPositionInfoEnabled(true),
-		sema.WithImportHandler(
-			func(checker *sema.Checker, importedLocation common.Location, importRange ast.Range) (sema.Import, error) {
-				switch importedLocation {
-				case stdlib.CryptoChecker.Location:
-					return sema.ElaborationImport{
-						Elaboration: stdlib.CryptoChecker.Elaboration,
-					}, nil
-
-				default:
-					if isPathLocation(importedLocation) {
-						// import may be a relative path and therefore should be normalized
-						// against the current location
-						importedLocation = normalizePathLocation(checker.Location, importedLocation)
-
-						if checker.Location == importedLocation {
-							return nil, &sema.CheckerError{
-								Errors: []error{fmt.Errorf("cannot import current file: %s", importedLocation)},
-							}
-						}
-					}
-
-					importedLocationID := importedLocation.ID()
-					importedChecker, ok := s.checkers[importedLocationID]
-					if !ok {
-						importedProgram, err := s.resolveImport(importedLocation)
-						if err != nil {
-							return nil, err
-						}
-						if importedProgram == nil {
-							return nil, &sema.CheckerError{
-								Errors: []error{fmt.Errorf("cannot import %s", importedLocation)},
-							}
-						}
-
-						importedChecker, err = checker.SubChecker(importedProgram, importedLocation)
-						if err != nil {
-							return nil, err
-						}
-						s.checkers[importedLocationID] = importedChecker
-						err = importedChecker.Check()
-						if err != nil {
-							return nil, err
-						}
-					}
-
-					return sema.ElaborationImport{
-						Elaboration: importedChecker.Elaboration,
-					}, nil
-				}
-			},
-		),
-		sema.WithAccessCheckMode(s.accessCheckMode),
+		config,
 	)
 	if diagnosticsErr != nil {
 		return
@@ -2840,6 +2712,135 @@ func (s *Server) maybeAddDeclarationActionsResolver(
 				)
 			}
 		}
+	}
+}
+
+func (s *Server) handleLocation(
+	identifiers []ast.Identifier,
+	location common.Location,
+) (
+	[]sema.ResolvedLocation,
+	error,
+) {
+	addressLocation, isAddress := location.(common.AddressLocation)
+
+	// if the location is not an address location, e.g. an identifier location (`import Crypto`),
+	// then return a single resolved location which declares all identifiers.
+
+	if !isAddress {
+		return []runtime.ResolvedLocation{
+			{
+				Location:    location,
+				Identifiers: identifiers,
+			},
+		}, nil
+	}
+
+	// if the location is an address,
+	// and no specific identifiers where requested in the import statement,
+	// then fetch all identifiers at this address
+
+	if len(identifiers) == 0 {
+		// if there is no contract name resolver,
+		// then return no resolved locations
+
+		if s.resolveAddressContractNames == nil {
+			return nil, nil
+		}
+
+		contractNames, err := s.resolveAddressContractNames(addressLocation.Address)
+		if err != nil {
+			panic(err)
+		}
+
+		// if there are no contracts deployed,
+		// then return no resolved locations
+
+		if len(contractNames) == 0 {
+			return nil, nil
+		}
+
+		identifiers = make([]ast.Identifier, len(contractNames))
+
+		for i := range identifiers {
+			identifiers[i] = runtime.Identifier{
+				Identifier: contractNames[i],
+			}
+		}
+	}
+
+	// return one resolved location per identifier.
+	// each resolved location is an address contract location
+
+	resolvedLocations := make([]runtime.ResolvedLocation, len(identifiers))
+	for i := range resolvedLocations {
+		identifier := identifiers[i]
+		resolvedLocations[i] = runtime.ResolvedLocation{
+			Location: common.AddressLocation{
+				Address: addressLocation.Address,
+				Name:    identifier.Identifier,
+			},
+			Identifiers: []runtime.Identifier{identifier},
+		}
+	}
+
+	return resolvedLocations, nil
+}
+
+func (s *Server) handleImport(
+	checker *sema.Checker,
+	importedLocation common.Location,
+	_ ast.Range,
+) (
+	sema.Import,
+	error,
+) {
+	switch importedLocation {
+	case stdlib.CryptoChecker.Location:
+		return sema.ElaborationImport{
+			Elaboration: stdlib.CryptoChecker.Elaboration,
+		}, nil
+
+	default:
+		if isPathLocation(importedLocation) {
+			// import may be a relative path and therefore should be normalized
+			// against the current location
+			importedLocation = normalizePathLocation(checker.Location, importedLocation)
+
+			if checker.Location == importedLocation {
+				return nil, &sema.CheckerError{
+					Errors: []error{fmt.Errorf("cannot import current file: %s", importedLocation)},
+				}
+			}
+		}
+
+		importedLocationID := importedLocation.ID()
+		importedChecker, ok := s.checkers[importedLocationID]
+		if !ok {
+			importedProgram, err := s.resolveImport(importedLocation)
+			if err != nil {
+				return nil, err
+			}
+			if importedProgram == nil {
+				return nil, &sema.CheckerError{
+					Errors: []error{fmt.Errorf("cannot import %s", importedLocation)},
+				}
+			}
+
+			importedChecker, err = checker.SubChecker(importedProgram, importedLocation)
+			if err != nil {
+				return nil, err
+			}
+			s.checkers[importedLocationID] = importedChecker
+			err = importedChecker.Check()
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		return sema.ElaborationImport{
+			Elaboration: importedChecker.Elaboration,
+		}, nil
 	}
 }
 
