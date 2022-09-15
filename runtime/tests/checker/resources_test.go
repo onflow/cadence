@@ -4200,24 +4200,51 @@ func TestCheckResourceOptionalBindingFailableCast(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t,
-		`
-         resource interface RI {}
+	t.Run("destroy", func(t *testing.T) {
 
-         resource R: RI {}
+		t.Parallel()
 
-         fun test(): @R? {
-             let ri: @{RI} <- create R()
-             if let r <- ri as? @R {
-                 return <-r
-             } else {
-                 destroy ri
-                 return nil
-             }
-         }
-    `)
+		_, err := ParseAndCheck(t, `
+          resource interface RI {}
 
-	require.NoError(t, err)
+          resource R: RI {}
+
+          fun test() {
+              let ri: @{RI} <- create R()
+              if let r <- ri as? @R {
+                  destroy r
+              } else {
+                  destroy ri
+              }
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("return", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          resource interface RI {}
+
+          resource R: RI {}
+
+          fun test(): @R? {
+              let ri: @{RI} <- create R()
+              if let r <- ri as? @R {
+                  return <-r
+              } else {
+                  destroy ri
+                  return nil
+              }
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
 }
 
 func TestCheckInvalidResourceOptionalBindingFailableCastResourceUseAfterInvalidationInThen(t *testing.T) {
