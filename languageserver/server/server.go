@@ -609,7 +609,7 @@ func (s *Server) Hover(
 	}
 
 	position := conversion.ProtocolToSemaPosition(params.Position)
-	occurrence := checker.Occurrences.Find(position)
+	occurrence := checker.PositionInfo.Occurrences.Find(position)
 
 	if occurrence == nil || occurrence.Origin == nil {
 		return nil, nil
@@ -691,7 +691,7 @@ func (s *Server) Definition(
 	}
 
 	position := conversion.ProtocolToSemaPosition(params.Position)
-	occurrence := checker.Occurrences.Find(position)
+	occurrence := checker.PositionInfo.Occurrences.Find(position)
 
 	if occurrence == nil {
 		return nil, nil
@@ -723,7 +723,7 @@ func (s *Server) SignatureHelp(
 	}
 
 	position := conversion.ProtocolToSemaPosition(params.Position)
-	invocation := checker.FunctionInvocations.Find(position)
+	invocation := checker.PositionInfo.FunctionInvocations.Find(position)
 
 	if invocation == nil {
 		return nil, nil
@@ -803,13 +803,13 @@ func (s *Server) DocumentHighlight(
 	}
 
 	position := conversion.ProtocolToSemaPosition(params.Position)
-	occurrences := checker.Occurrences.FindAll(position)
+	occurrences := checker.PositionInfo.Occurrences.FindAll(position)
 	// If there are no occurrences,
 	// then try the preceding position
 	if len(occurrences) == 0 && position.Column > 0 {
 		previousPosition := position
 		previousPosition.Column -= 1
-		occurrences = checker.Occurrences.FindAll(previousPosition)
+		occurrences = checker.PositionInfo.Occurrences.FindAll(previousPosition)
 	}
 
 	documentHighlights := make([]*protocol.DocumentHighlight, 0)
@@ -850,13 +850,13 @@ func (s *Server) Rename(
 	}
 
 	position := conversion.ProtocolToSemaPosition(params.Position)
-	occurrences := checker.Occurrences.FindAll(position)
+	occurrences := checker.PositionInfo.Occurrences.FindAll(position)
 	// If there are no occurrences,
 	// then try the preceding position
 	if len(occurrences) == 0 && position.Column > 0 {
 		previousPosition := position
 		previousPosition.Column -= 1
-		occurrences = checker.Occurrences.FindAll(previousPosition)
+		occurrences = checker.PositionInfo.Occurrences.FindAll(previousPosition)
 	}
 
 	textEdits := make([]protocol.TextEdit, 0)
@@ -1289,7 +1289,7 @@ func (s *Server) memberCompletions(
 	if position.Column > 0 {
 		position.Column -= 1
 	}
-	memberAccess := checker.MemberAccesses.Find(position)
+	memberAccess := checker.PositionInfo.MemberAccesses.Find(position)
 
 	delete(s.memberResolvers, uri)
 
@@ -1338,7 +1338,7 @@ func (s *Server) rangeCompletions(
 	uri protocol.DocumentURI,
 ) (items []*protocol.CompletionItem) {
 
-	ranges := checker.Ranges.FindAll(position)
+	ranges := checker.PositionInfo.Ranges.FindAll(position)
 
 	delete(s.ranges, uri)
 
@@ -1734,7 +1734,7 @@ func (s *Server) InlayHint(
 	})
 
 	for _, variableDeclaration := range variableDeclarations {
-		targetType := checker.Elaboration.VariableDeclarationTargetTypes[variableDeclaration]
+		targetType := checker.Elaboration.VariableDeclarationTypes[variableDeclaration].TargetType
 		if targetType == nil { // bugfix getting nil target
 			continue // todo this should never occur
 		}
@@ -2695,8 +2695,8 @@ func (s *Server) maybeAddDeclarationActionsResolver(
 				case *ast.InvocationExpression:
 					isInvoked = parent.InvokedExpression == errorExpression
 
-					invocationArgumentTypes = checker.Elaboration.InvocationExpressionArgumentTypes[parent]
-					invocationReturnType = checker.Elaboration.InvocationExpressionReturnTypes[parent]
+					invocationArgumentTypes = checker.Elaboration.InvocationExpressionTypes[parent].ArgumentTypes
+					invocationReturnType = checker.Elaboration.InvocationExpressionTypes[parent].ReturnType
 
 					invocationArgumentLabels = make([]string, 0, len(parent.Arguments))
 					for _, argument := range parent.Arguments {
