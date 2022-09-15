@@ -2905,5 +2905,101 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		require.ErrorAs(t, err, &interpreter.DereferenceError{})
 	})
 
-	// TODO: add tests for take ref1, move, take ref2, move take ref3, and use ref1, ref2, ref3.
+	t.Run("multiple references with moves", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource R {
+                pub(set) var id: Int
+
+                init() {
+                    self.id = 5
+                }
+            }
+
+            var ref1: &R? = nil
+            var ref2: &R? = nil
+            var ref3: &R? = nil
+
+            fun setup(collection: &[R]) {
+                collection.append(<- create R())
+
+                // Take reference while in the account
+                ref1 = &collection[0] as &R
+
+                // Move the resource out of the account onto the stack. This should invalidate ref1.
+                let movedR <- collection.remove(at: 0)
+
+                // Take a reference while on stack
+                ref2 = &movedR as &R
+
+                // Append an extra resource just to force an index change
+                collection.append(<- create R())
+
+                // Move the resource again into the account (now at a different index)
+                collection.append(<- movedR)
+
+                // Take another reference
+                ref3 = &collection[1] as &R
+            }
+
+            fun getRef1Id(): Int {
+                return ref1!.id
+            }
+
+            fun getRef2Id(): Int {
+                return ref2!.id
+            }
+
+            fun getRef3Id(): Int {
+                return ref3!.id
+            }
+        `)
+
+		address := common.Address{0x1}
+
+		rType := checker.RequireGlobalType(t, inter.Program.Elaboration, "R").(*sema.CompositeType)
+
+		array := interpreter.NewArrayValue(
+			inter,
+			interpreter.ReturnEmptyLocationRange,
+			interpreter.VariableSizedStaticType{
+				Type: interpreter.ConvertSemaToStaticType(nil, rType),
+			},
+			address,
+		)
+
+		arrayRef := interpreter.NewUnmeteredEphemeralReferenceValue(
+			inter,
+			false,
+			array,
+			&sema.VariableSizedType{
+				Type: rType,
+			},
+		)
+
+		_, err := inter.Invoke("setup", arrayRef)
+		require.NoError(t, err)
+
+		// First reference must be invalid
+		_, err = inter.Invoke("getRef1Id")
+		assert.Error(t, err)
+		assert.ErrorAs(t, err, &interpreter.MovedResourceReferenceError{})
+
+		// Second reference must be invalid
+		_, err = inter.Invoke("getRef2Id")
+		assert.Error(t, err)
+		assert.ErrorAs(t, err, &interpreter.MovedResourceReferenceError{})
+
+		// Third reference must be valid
+		result, err := inter.Invoke("getRef3Id")
+		assert.NoError(t, err)
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(5),
+			result,
+		)
+	})
 }

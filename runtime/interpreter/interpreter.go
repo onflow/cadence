@@ -4238,7 +4238,7 @@ func (interpreter *Interpreter) trackResourceMove(
 		ref.invalidated = true
 	}
 
-	// release the mapping for an GC.
+	// release the mapping for any GC.
 	delete(interpreter.sharedState.resourceReferences, currentStorageID)
 }
 
