@@ -289,6 +289,7 @@ type Storage interface {
 }
 
 type ReferencedResourceKindedValues map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}
+type ResourceReferences map[atree.StorageID]map[*EphemeralReferenceValue]struct{}
 
 type Interpreter struct {
 	Program      *Program
@@ -4215,6 +4216,40 @@ func (interpreter *Interpreter) updateReferencedResource(
 		interpreter.sharedState.referencedResourceKindedValues[newStorageID] = values
 		interpreter.sharedState.referencedResourceKindedValues[currentStorageID] = nil
 	}
+}
+
+func (interpreter *Interpreter) trackResourceMove(
+	currentStorageID atree.StorageID,
+	newStorageID atree.StorageID,
+) {
+	// Moving within same location should be OK.
+	// e.g: stack to stack.
+	if newStorageID == currentStorageID {
+		return
+	}
+
+	references, ok := interpreter.sharedState.resourceReferences[currentStorageID]
+	if !ok {
+		return
+	}
+
+	// mark all references as invalid
+	for ref, _ := range references {
+		ref.invalidated = true
+	}
+
+	// release the mapping for an GC.
+	delete(interpreter.sharedState.resourceReferences, currentStorageID)
+}
+
+func (interpreter *Interpreter) trackResourceReference(id atree.StorageID, reference *EphemeralReferenceValue) {
+	validReferences, ok := interpreter.sharedState.resourceReferences[id]
+	if !ok {
+		validReferences = map[*EphemeralReferenceValue]struct{}{}
+		interpreter.sharedState.resourceReferences[id] = validReferences
+	}
+
+	validReferences[reference] = struct{}{}
 }
 
 // startResourceTracking starts tracking the life-span of a resource.

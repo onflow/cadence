@@ -195,6 +195,7 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")
 
 		ref := interpreter.NewUnmeteredEphemeralReferenceValue(
+			inter,
 			false,
 			r1,
 			r1Type,
@@ -318,6 +319,7 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")
 
 		ref := interpreter.NewUnmeteredEphemeralReferenceValue(
+			inter,
 			false,
 			r1,
 			r1Type,
@@ -436,6 +438,7 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")
 
 		ref := interpreter.NewUnmeteredEphemeralReferenceValue(
+			inter,
 			false,
 			r1,
 			r1Type,
@@ -558,6 +561,7 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")
 
 		ref := interpreter.NewUnmeteredEphemeralReferenceValue(
+			inter,
 			false,
 			r1,
 			r1Type,
@@ -2677,6 +2681,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		)
 
 		arrayRef := interpreter.NewUnmeteredEphemeralReferenceValue(
+			inter,
 			false,
 			array,
 			&sema.VariableSizedType{
@@ -2712,7 +2717,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 let r1 <-create R()
                 let ref = &r1 as &R
 
-                // Move the resource into the account
+                // Move the resource onto the same stack
                 let r2 <- r1
 
                 // Update the reference
@@ -2767,6 +2772,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		)
 
 		arrayRef1 := interpreter.NewUnmeteredEphemeralReferenceValue(
+			inter,
 			false,
 			array1,
 			&sema.VariableSizedType{
@@ -2786,6 +2792,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		)
 
 		arrayRef2 := interpreter.NewUnmeteredEphemeralReferenceValue(
+			inter,
 			false,
 			array2,
 			&sema.VariableSizedType{
@@ -2817,13 +2824,14 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 // Take reference while in the account
                 let ref = &target[0] as &R
 
-                // Move the resource out of the account onto the stack
+                // Move the resource out of the account onto the stack. This should invalidate the reference.
                 let movedR <- target.remove(at: 0)
 
                 // Append an extra resource just to force an index change
                 target.append(<- create R())
 
                 // Move the resource back into the account (now at a different index)
+                // Despite the resource being back in its original account, reference is still invalid.
                 target.append(<- movedR)
 
                 // Update the reference
@@ -2847,6 +2855,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		)
 
 		arrayRef := interpreter.NewUnmeteredEphemeralReferenceValue(
+			inter,
 			false,
 			array,
 			&sema.VariableSizedType{
@@ -2854,9 +2863,9 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 			},
 		)
 
-		val, err := inter.Invoke("test", arrayRef)
-		require.NoError(t, err)
-		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(2), val)
+		_, err := inter.Invoke("test", arrayRef)
+		require.Error(t, err)
+		require.ErrorAs(t, err, &interpreter.MovedResourceReferenceError{})
 	})
 
 	t.Run("account to stack storage reference", func(t *testing.T) {
@@ -2895,4 +2904,6 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		require.Error(t, err)
 		require.ErrorAs(t, err, &interpreter.DereferenceError{})
 	})
+
+	// TODO: add tests for take ref1, move, take ref2, move take ref3, and use ref1, ref2, ref3.
 }

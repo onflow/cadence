@@ -1077,6 +1077,8 @@ func TestStringer(t *testing.T) {
 		},
 		"Recursive ephemeral reference (array)": {
 			value: func() Value {
+				inter := newTestInterpreter(t)
+
 				array := NewArrayValue(
 					newTestInterpreter(t),
 					ReturnEmptyLocationRange,
@@ -1085,8 +1087,16 @@ func TestStringer(t *testing.T) {
 					},
 					common.Address{},
 				)
-				arrayRef := &EphemeralReferenceValue{Value: array}
-				array.Insert(newTestInterpreter(t), ReturnEmptyLocationRange, 0, arrayRef)
+				arrayRef := NewUnmeteredEphemeralReferenceValue(
+					inter,
+					false,
+					array,
+					&sema.VariableSizedType{
+						Type: sema.AnyStructType,
+					},
+				)
+
+				array.Insert(inter, ReturnEmptyLocationRange, 0, arrayRef)
 				return array
 			}(),
 			expected: `[[...]]`,
@@ -3923,8 +3933,9 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		t.Parallel()
 
 		test(
-			func(_ *Interpreter) Value {
+			func(inter *Interpreter) Value {
 				return NewUnmeteredEphemeralReferenceValue(
+					inter,
 					false,
 					NewUnmeteredBoolValue(true),
 					sema.BoolType,
@@ -3934,8 +3945,9 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		)
 
 		test(
-			func(_ *Interpreter) Value {
+			func(inter *Interpreter) Value {
 				return NewUnmeteredEphemeralReferenceValue(
+					inter,
 					false,
 					NewUnmeteredBoolValue(true),
 					sema.StringType,

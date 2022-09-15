@@ -4650,10 +4650,6 @@ pub contract ExampleMarketplace {
             // deposit the NFT into the buyers collection
             receiverReference.deposit(token: <- self.ownerCollection.borrow()!.withdraw(withdrawID: tokenID))
 
-            log("NFT Reference after transfer:")
-            log(nftRef)
-            log(nftRef.id)
-
             emit TokenPurchased(id: tokenID, price: price, seller: self.owner?.address, buyer: receiverReference.owner?.address)
         }
 

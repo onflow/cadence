@@ -1562,6 +1562,8 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, getLocationRange func() L
 		v.array = nil
 	}
 
+	interpreter.trackResourceMove(storageID, storageID)
+
 	interpreter.updateReferencedResource(
 		storageID,
 		storageID,
@@ -2398,6 +2400,8 @@ func (v *ArrayValue) Transfer(
 		}
 
 		newStorageID := array.StorageID()
+
+		interpreter.trackResourceMove(currentStorageID, newStorageID)
 
 		interpreter.updateReferencedResource(
 			currentStorageID,
@@ -14406,6 +14410,8 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func
 		v.dictionary = nil
 	}
 
+	interpreter.trackResourceMove(storageID, storageID)
+
 	interpreter.updateReferencedResource(
 		storageID,
 		storageID,
@@ -15107,6 +15113,8 @@ func (v *CompositeValue) Transfer(
 
 		newStorageID := dictionary.StorageID()
 
+		interpreter.trackResourceMove(currentStorageID, newStorageID)
+
 		interpreter.updateReferencedResource(
 			currentStorageID,
 			newStorageID,
@@ -15603,6 +15611,8 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, getLocationRange fun
 	if interpreter.Config.InvalidatedResourceValidationEnabled {
 		v.dictionary = nil
 	}
+
+	interpreter.trackResourceMove(storageID, storageID)
 
 	interpreter.updateReferencedResource(
 		storageID,
@@ -16333,6 +16343,8 @@ func (v *DictionaryValue) Transfer(
 		}
 
 		newStorageID := dictionary.StorageID()
+
+		interpreter.trackResourceMove(currentStorageID, newStorageID)
 
 		interpreter.updateReferencedResource(
 			currentStorageID,
@@ -17321,11 +17333,7 @@ type EphemeralReferenceValue struct {
 	Authorized   bool
 	Value        Value
 	BorrowedType sema.Type
-
-	// originAddress is the address of the referenced resource value
-	// at the time of the reference creation.
-	// It is always empty if the referenced value is not a resource.
-	originAddress atree.Address
+	invalidated  bool
 }
 
 var _ Value = &EphemeralReferenceValue{}
@@ -17334,23 +17342,24 @@ var _ ValueIndexableValue = &EphemeralReferenceValue{}
 var _ MemberAccessibleValue = &EphemeralReferenceValue{}
 
 func NewUnmeteredEphemeralReferenceValue(
+	interpreter *Interpreter,
 	authorized bool,
 	value Value,
 	borrowedType sema.Type,
 ) *EphemeralReferenceValue {
 
-	var originAddress atree.Address
-	if resourceValue, ok := value.(ReferenceTrackedResourceKindedValue); ok {
-		currentStorageID := resourceValue.StorageID()
-		originAddress = currentStorageID.Address
+	ref := &EphemeralReferenceValue{
+		Authorized:   authorized,
+		Value:        value,
+		BorrowedType: borrowedType,
 	}
 
-	return &EphemeralReferenceValue{
-		Authorized:    authorized,
-		Value:         value,
-		BorrowedType:  borrowedType,
-		originAddress: originAddress,
+	if resourceValue, ok := value.(ReferenceTrackedResourceKindedValue); ok {
+		storageID := resourceValue.StorageID()
+		interpreter.trackResourceReference(storageID, ref)
 	}
+
+	return ref
 }
 
 func NewEphemeralReferenceValue(
@@ -17360,7 +17369,12 @@ func NewEphemeralReferenceValue(
 	borrowedType sema.Type,
 ) *EphemeralReferenceValue {
 	common.UseMemory(interpreter, common.EphemeralReferenceValueMemoryUsage)
-	return NewUnmeteredEphemeralReferenceValue(authorized, value, borrowedType)
+	return NewUnmeteredEphemeralReferenceValue(
+		interpreter,
+		authorized,
+		value,
+		borrowedType,
+	)
 }
 
 func (*EphemeralReferenceValue) IsValue() {}
@@ -17400,7 +17414,7 @@ func (v *EphemeralReferenceValue) StaticType(inter *Interpreter) StaticType {
 		panic(DereferenceError{})
 	}
 
-	v.checkReferencedResourceNotMoved(*referencedValue, ReturnEmptyLocationRange)
+	v.checkReferencedResourceNotMoved(ReturnEmptyLocationRange)
 
 	return NewReferenceStaticType(
 		inter,
@@ -17602,7 +17616,7 @@ func (v *EphemeralReferenceValue) ConformsToStaticType(
 		return false
 	}
 
-	v.checkReferencedResourceNotMoved(*referencedValue, getLocationRange)
+	v.checkReferencedResourceNotMoved(getLocationRange)
 
 	staticType := (*referencedValue).StaticType(interpreter)
 
@@ -17657,10 +17671,7 @@ func (v *EphemeralReferenceValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 ) Value {
-	referencedValue := v.ReferencedValue(interpreter, ReturnEmptyLocationRange)
-	if referencedValue != nil {
-		v.checkReferencedResourceNotMoved(*referencedValue, ReturnEmptyLocationRange)
-	}
+	v.checkReferencedResourceNotMoved(ReturnEmptyLocationRange)
 
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -17668,8 +17679,8 @@ func (v *EphemeralReferenceValue) Transfer(
 	return v
 }
 
-func (v *EphemeralReferenceValue) Clone(_ *Interpreter) Value {
-	return NewUnmeteredEphemeralReferenceValue(v.Authorized, v.Value, v.BorrowedType)
+func (v *EphemeralReferenceValue) Clone(inter *Interpreter) Value {
+	return NewUnmeteredEphemeralReferenceValue(inter, v.Authorized, v.Value, v.BorrowedType)
 }
 
 func (*EphemeralReferenceValue) DeepRemove(_ *Interpreter) {
@@ -17682,20 +17693,13 @@ func (v *EphemeralReferenceValue) checkReferencedResourceNotMovedOrDestroyed(
 	getLocationRange func() LocationRange,
 ) {
 	interpreter.checkReferencedResourceNotDestroyed(referencedValue, getLocationRange)
-	v.checkReferencedResourceNotMoved(referencedValue, getLocationRange)
+	v.checkReferencedResourceNotMoved(getLocationRange)
 }
 
 func (v *EphemeralReferenceValue) checkReferencedResourceNotMoved(
-	referencedValue Value,
 	getLocationRange func() LocationRange,
 ) {
-	referencedResource, ok := referencedValue.(ReferenceTrackedResourceKindedValue)
-	if !ok || referencedResource.IsDestroyed() {
-		return
-	}
-
-	currentAddress := referencedResource.StorageID().Address
-	if v.originAddress != currentAddress {
+	if v.invalidated {
 		panic(MovedResourceReferenceError{
 			LocationRange: getLocationRange(),
 		})
