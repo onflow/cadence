@@ -7,7 +7,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/mattn/go-isatty v0.0.14
 	github.com/mitchellh/mapstructure v1.4.3
-	github.com/onflow/cadence v0.24.2-0.20220627202951-5a06fec82b4a
+	github.com/onflow/cadence v0.26.0
 	github.com/onflow/cadence-lint v0.0.0-20220711153841-433de417d437
 	github.com/onflow/flow-cli/pkg/flowkit v0.0.0-20220819152715-414ca9c1d221
 	github.com/onflow/flow-go-sdk v0.26.5-0.20220629191626-900f9f91bffc
@@ -107,6 +107,7 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/zeebo/blake3 v0.2.3 // indirect
 	go.opencensus.io v0.23.0 // indirect
+	go.opentelemetry.io/otel v1.8.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	golang.org/x/crypto v0.0.0-20220411220226-7b82a4e95df4 // indirect
 	golang.org/x/net v0.0.0-20220418201149-a630d4f3e7a2 // indirect
