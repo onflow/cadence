@@ -236,6 +236,8 @@ var (
 	PublicAccountContractsStringMemoryUsage = NewRawStringMemoryUsage(len("PublicAccount.Contracts()"))
 	AuthAccountKeysStringMemoryUsage        = NewRawStringMemoryUsage(len("AuthAccount.Keys()"))
 	PublicAccountKeysStringMemoryUsage      = NewRawStringMemoryUsage(len("PublicAccount.Keys()"))
+	AuthAccountInboxStringMemoryUsage       = NewRawStringMemoryUsage(len("AuthAccount.Inbox()"))
+	PublicAccountInboxStringMemoryUsage     = NewRawStringMemoryUsage(len("PublicAccount.Inbox()"))
 	CapabilityValueStringMemoryUsage        = NewRawStringMemoryUsage(len("Capability<>(address: , path: )"))
 	LinkValueStringMemoryUsage              = NewRawStringMemoryUsage(len("Link<>()"))
 

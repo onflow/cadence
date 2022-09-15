@@ -189,8 +189,8 @@ const (
 	_
 	_
 	_
-	_
-	_
+	PrimitiveStaticTypePublicAccountInbox
+	PrimitiveStaticTypeAuthAccountInbox
 	PrimitiveStaticTypeAuthAccount
 	PrimitiveStaticTypePublicAccount
 	PrimitiveStaticTypeDeployedContract
@@ -276,6 +276,8 @@ func (t PrimitiveStaticType) elementSize() uint {
 		PrimitiveStaticTypeDeployedContract,
 		PrimitiveStaticTypeAuthAccountContracts,
 		PrimitiveStaticTypePublicAccountContracts,
+		PrimitiveStaticTypePublicAccountInbox,
+		PrimitiveStaticTypeAuthAccountInbox,
 		PrimitiveStaticTypeAuthAccountKeys,
 		PrimitiveStaticTypePublicAccountKeys,
 		PrimitiveStaticTypeAccountKey:
