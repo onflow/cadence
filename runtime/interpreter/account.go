@@ -47,6 +47,7 @@ func NewAuthAccountValue(
 	removePublicKeyFunction FunctionValue,
 	contractsConstructor func() Value,
 	keysConstructor func() Value,
+	inboxConstructor func() Value,
 ) Value {
 
 	fields := map[string]Value{
@@ -63,6 +64,7 @@ func NewAuthAccountValue(
 
 	var contracts Value
 	var keys Value
+	var inbox Value
 
 	computeField := func(name string, inter *Interpreter, getLocationRange func() LocationRange) Value {
 		switch name {
@@ -76,6 +78,11 @@ func NewAuthAccountValue(
 				keys = keysConstructor()
 			}
 			return keys
+		case sema.AuthAccountInboxField:
+			if inbox == nil {
+				inbox = inboxConstructor()
+			}
+			return inbox
 		case sema.AuthAccountPublicPathsField:
 			return inter.publicAccountPaths(address, getLocationRange)
 		case sema.AuthAccountPrivatePathsField:

@@ -8923,6 +8923,9 @@ func newTestAuthAccountValue(gauge common.MemoryGauge, addressValue interpreter.
 				panicFunction,
 			)
 		},
+		func() interpreter.Value {
+			return interpreter.NewAuthAccountInboxValue(gauge, addressValue)
+		},
 	)
 }
 
@@ -8969,6 +8972,9 @@ func newTestPublicAccountValue(gauge common.MemoryGauge, addressValue interprete
 					)
 				},
 			)
+		},
+		func() interpreter.Value {
+			return interpreter.NewPublicAccountInboxValue(gauge, addressValue)
 		},
 	)
 }

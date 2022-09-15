@@ -206,6 +206,12 @@ func NewAuthAccountValue(
 				addressValue,
 			)
 		},
+		func() interpreter.Value {
+			return newAuthAccountInboxValue(
+				gauge,
+				addressValue,
+			)
+		},
 	)
 }
 
@@ -798,9 +804,16 @@ func newPublicAccountInboxValue(
 	return interpreter.NewPublicAccountInboxValue(
 		gauge,
 		addressValue,
-		func(inter *interpreter.Interpreter, getLocationRange func() interpreter.LocationRange) interpreter.Value {
-			return interpreter.GetAccountAllowlist(gauge, inter, getLocationRange, addressValue)
-		},
+	)
+}
+
+func newAuthAccountInboxValue(
+	gauge common.MemoryGauge,
+	addressValue interpreter.AddressValue,
+) interpreter.Value {
+	return interpreter.NewAuthAccountInboxValue(
+		gauge,
+		addressValue,
 	)
 }
 
