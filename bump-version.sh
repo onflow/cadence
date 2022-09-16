@@ -1,6 +1,6 @@
 #!/bin/sh
 
-v=$(git describe --tags --abbrev=0 --exclude='languageserver/*' | sed -Ee 's/^v|-.*//')
+v=$(git describe --tags --abbrev=0 | sed -Ee 's/^v|-.*//')
 
 case "$1" in
   major)
