@@ -718,7 +718,7 @@ pub contract GarmentNFT: NonFungibleToken {
    pub resource interface GarmentCollectionPublic {
        pub fun deposit(token: @NonFungibleToken.NFT)
        pub fun batchDeposit(tokens: @NonFungibleToken.Collection)
-       view pub fun getIDs(): [UInt64]
+       pub fun getIDs(): [UInt64]
        pub fun borrowNFT(id: UInt64): &NonFungibleToken.NFT
        pub fun borrowGarment(id: UInt64): &GarmentNFT.NFT? {
            // If the result isn't nil, the id of the returned reference
@@ -820,7 +820,7 @@ pub contract GarmentNFT: NonFungibleToken {
        }
 
        // getIDs returns an array of the IDs that are in the Collection
-       view pub fun getIDs(): [UInt64] {
+       pub fun getIDs(): [UInt64] {
            return self.ownedNFTs.keys
        }
 
@@ -1180,7 +1180,7 @@ pub contract MaterialNFT: NonFungibleToken {
    pub resource interface MaterialCollectionPublic {
        pub fun deposit(token: @NonFungibleToken.NFT)
        pub fun batchDeposit(tokens: @NonFungibleToken.Collection)
-       view pub fun getIDs(): [UInt64]
+       pub fun getIDs(): [UInt64]
        pub fun borrowNFT(id: UInt64): &NonFungibleToken.NFT
        pub fun borrowMaterial(id: UInt64): &MaterialNFT.NFT? {
            // If the result isn't nil, the id of the returned reference
@@ -1282,7 +1282,7 @@ pub contract MaterialNFT: NonFungibleToken {
        }
 
        // getIDs returns an array of the IDs that are in the Collection
-       view pub fun getIDs(): [UInt64] {
+       pub fun getIDs(): [UInt64] {
            return self.ownedNFTs.keys
        }
 
@@ -1697,7 +1697,7 @@ pub contract ItemNFT: NonFungibleToken {
    pub resource interface ItemCollectionPublic {
        pub fun deposit(token: @NonFungibleToken.NFT)
        pub fun batchDeposit(tokens: @NonFungibleToken.Collection)
-       view pub fun getIDs(): [UInt64]
+       pub fun getIDs(): [UInt64]
        pub fun borrowNFT(id: UInt64): &NonFungibleToken.NFT
        pub fun borrowItem(id: UInt64): &ItemNFT.NFT? {
            // If the result isn't nil, the id of the returned reference
@@ -1800,7 +1800,7 @@ pub contract ItemNFT: NonFungibleToken {
        }
 
        // getIDs returns an array of the IDs that are in the Collection
-       view pub fun getIDs(): [UInt64] {
+       pub fun getIDs(): [UInt64] {
            return self.ownedNFTs.keys
        }
 
@@ -3537,7 +3537,7 @@ pub contract AuctionDutch {
 	}
 
 	pub resource interface Public {
-		view pub fun getIds() : [UInt64]
+		pub fun getIds() : [UInt64]
 		//TODO: can we just join these two?
 		pub fun getStatus(_ id: UInt64) : AuctionDutchStatus
 		pub fun getBids(_ id: UInt64) : Bids
@@ -3581,7 +3581,7 @@ pub contract AuctionDutch {
 			self.auctions <- {}
 		}
 
-		view pub fun getIds() : [UInt64] {
+		pub fun getIds() : [UInt64] {
 			return self.auctions.keys
 		}
 
@@ -3759,7 +3759,7 @@ pub contract AuctionDutch {
 
 	pub resource interface BidCollectionPublic {
 		pub fun bid(marketplace: Address, id: UInt64, vault: @FungibleToken.Vault, vaultCap: Capability<&{FungibleToken.Receiver}>, nftCap: Capability<&{NonFungibleToken.Receiver}>)
-		view pub fun getIds() :[UInt64]
+		pub fun getIds() :[UInt64]
 		pub fun getReport(_ id: UInt64) : ExcessFlowReport
 
 	}
@@ -3772,7 +3772,7 @@ pub contract AuctionDutch {
 			self.bids <- {}
 		}
 
-		view pub fun getIds() : [UInt64] {
+		pub fun getIds() : [UInt64] {
 			return self.bids.keys
 		}
 
@@ -4408,9 +4408,9 @@ pub contract ExampleNFT {
 
         pub fun deposit(token: @NFT)
 
-        view pub fun getIDs(): [UInt64]
+        pub fun getIDs(): [UInt64]
 
-        view pub fun idExists(id: UInt64): Bool
+        pub view fun idExists(id: UInt64): Bool
     }
 
     // The definition of the Collection resource that
@@ -4451,12 +4451,12 @@ pub contract ExampleNFT {
 
         // idExists checks to see if a NFT 
         // with the given ID exists in the collection
-        view pub fun idExists(id: UInt64): Bool {
+        pub view fun idExists(id: UInt64): Bool {
             return self.ownedNFTs[id] != nil
         }
 
         // getIDs returns an array of the IDs that are in the collection
-        view pub fun getIDs(): [UInt64] {
+        pub fun getIDs(): [UInt64] {
             return self.ownedNFTs.keys
         }
 
@@ -4559,7 +4559,7 @@ pub contract ExampleMarketplace {
     pub resource interface SalePublic {
         pub fun purchase(tokenID: UInt64, recipient: Capability<&AnyResource{ExampleNFT.NFTReceiver}>, buyTokens: @ExampleToken.Vault)
         pub fun idPrice(tokenID: UInt64): UFix64?
-        view pub fun getIDs(): [UInt64]
+        pub fun getIDs(): [UInt64]
     }
 
     // SaleCollection
@@ -4671,7 +4671,7 @@ pub contract ExampleMarketplace {
         }
 
         // getIDs returns an array of token IDs that are for sale
-        view pub fun getIDs(): [UInt64] {
+        pub fun getIDs(): [UInt64] {
             return self.prices.keys
         }
     }

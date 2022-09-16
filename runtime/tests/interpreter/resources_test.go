@@ -2520,16 +2520,20 @@ func TestInterpretResourceDestroyedInPreCondition(t *testing.T) {
                 }
             }
         }
+
         fun destroyResource(_ r: @Bar): Bool {
             destroy r
             return true
         }
+
         resource Foo: I {
              pub fun receiveResource(_ r: @Bar) {
                 destroy r
             }
         }
+
         resource Bar  {}
+		
         fun test() {
             let foo <- create Foo()
             let bar <- create Bar()

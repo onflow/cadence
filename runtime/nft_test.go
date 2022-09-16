@@ -77,7 +77,7 @@ pub contract interface NonFungibleToken {
     // publish for their collection
     pub resource interface CollectionPublic {
         pub fun deposit(token: @NFT)
-        view pub fun getIDs(): [UInt64]
+        pub fun getIDs(): [UInt64]
         pub fun borrowNFT(id: UInt64): &NFT
     }
 
@@ -97,7 +97,7 @@ pub contract interface NonFungibleToken {
         pub fun deposit(token: @NFT)
 
         // getIDs returns an array of the IDs that are in the collection
-        view pub fun getIDs(): [UInt64]
+        pub fun getIDs(): [UInt64]
 
         // Returns a borrowed reference to an NFT in the collection
         // so that the caller can read data and call methods from it
@@ -112,7 +112,7 @@ pub contract interface NonFungibleToken {
     // and returns it to the caller so that they can own NFTs
     pub fun createEmptyCollection(): @Collection {
         post {
-            result.getIDs().length == 0: "The created collection must be empty!"
+            result.ownedNFTs.length == 0: "The created collection must be empty!"
         }
     }
 }
@@ -595,7 +595,7 @@ pub contract TopShot: NonFungibleToken {
     pub resource interface MomentCollectionPublic {
         pub fun deposit(token: @NonFungibleToken.NFT)
         pub fun batchDeposit(tokens: @NonFungibleToken.Collection)
-        view pub fun getIDs(): [UInt64]
+        pub fun getIDs(): [UInt64]
         pub fun borrowNFT(id: UInt64): &NonFungibleToken.NFT
         pub fun borrowMoment(id: UInt64): &TopShot.NFT? {
             // If the result isn't nil, the id of the returned reference
@@ -668,7 +668,7 @@ pub contract TopShot: NonFungibleToken {
         }
 
         // getIDs returns an array of the IDs that are in the collection
-        view pub fun getIDs(): [UInt64] {
+        pub fun getIDs(): [UInt64] {
             return self.ownedNFTs.keys
         }
 
@@ -999,13 +999,13 @@ pub contract TopShotShardedCollection {
         }
 
         // getIDs returns an array of the IDs that are in the Collection
-        view pub fun getIDs(): [UInt64] {
+        pub fun getIDs(): [UInt64] {
 
             var ids: [UInt64] = []
             // Concatenate IDs in all the Collections
-            for i, key in self.collections.keys {
+            for key in self.collections.keys {
                 for id in self.collections[key]?.getIDs() ?? [] {
-                    ids[i] = id
+                    ids.append(id)
                 }
             }
             return ids

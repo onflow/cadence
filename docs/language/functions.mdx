@@ -556,7 +556,7 @@ fun incrementN() {
 }
 ```
 
-Both preconditions and postconditions are considered `view` contexts; 
+Both preconditions and postconditions are considered [`view` contexts](#view-functions); 
 any operations that are not legal in functions with `view` annotations are also not allowed in conditions. 
 In particular, this means that if you wish to call a function in a condition, that function must be `view`. 
 

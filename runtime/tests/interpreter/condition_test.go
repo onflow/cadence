@@ -1072,7 +1072,7 @@ func TestInterpretFunctionWithPostConditionAndResourceResult(t *testing.T) {
 	// and not a resource (composite value)
 
 	checkFunctionType := &sema.FunctionType{
-		Purity: sema.ViewFunction,
+		Purity: sema.FunctionPurityView,
 		Parameters: []*sema.Parameter{
 			{
 				Label:      sema.ArgumentLabelNotRequired,
