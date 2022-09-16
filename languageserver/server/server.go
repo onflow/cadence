@@ -38,6 +38,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
@@ -50,21 +51,6 @@ import (
 
 	linter "github.com/onflow/cadence-lint/analyzers"
 )
-
-var functionDeclarations = append(
-	stdlib.FlowBuiltInFunctions(stdlib.FlowBuiltinImpls{}),
-	stdlib.BuiltinFunctions...,
-).ToSemaValueDeclarations()
-
-var valueDeclarations = append(
-	functionDeclarations,
-	stdlib.BuiltinValues.ToSemaValueDeclarations()...,
-)
-
-var typeDeclarations = append(
-	stdlib.FlowBuiltInTypes,
-	stdlib.BuiltinTypes...,
-).ToTypeDeclarations()
 
 // Document represents an open document on the client. It contains all cached
 // information about each document that is used to support CodeLens,
@@ -204,6 +190,8 @@ type Server struct {
 	accessCheckMode               sema.AccessCheckMode
 	// reportCrashes decides when the crash is detected should it be reported
 	reportCrashes bool
+	// baseValueActivation is the sema value activation used for type-checking all programs
+	baseValueActivation *sema.VariableActivation
 }
 
 type Option func(*Server) error
@@ -300,6 +288,8 @@ func NewServer() (*Server, error) {
 		ranges:               make(map[protocol.DocumentURI]map[string]sema.Range),
 		codeActionsResolvers: make(map[protocol.DocumentURI]map[uuid.UUID]func() []*protocol.CodeAction),
 		commands:             make(map[string]CommandHandler),
+		accessCheckMode:      sema.AccessCheckModeStrict,
+		baseValueActivation:  newStandardLibrary().baseValueActivation,
 	}
 	server.protocolServer = protocol.NewServer(server)
 
@@ -609,7 +599,7 @@ func (s *Server) Hover(
 	}
 
 	position := conversion.ProtocolToSemaPosition(params.Position)
-	occurrence := checker.Occurrences.Find(position)
+	occurrence := checker.PositionInfo.Occurrences.Find(position)
 
 	if occurrence == nil || occurrence.Origin == nil {
 		return nil, nil
@@ -691,7 +681,7 @@ func (s *Server) Definition(
 	}
 
 	position := conversion.ProtocolToSemaPosition(params.Position)
-	occurrence := checker.Occurrences.Find(position)
+	occurrence := checker.PositionInfo.Occurrences.Find(position)
 
 	if occurrence == nil {
 		return nil, nil
@@ -723,7 +713,7 @@ func (s *Server) SignatureHelp(
 	}
 
 	position := conversion.ProtocolToSemaPosition(params.Position)
-	invocation := checker.FunctionInvocations.Find(position)
+	invocation := checker.PositionInfo.FunctionInvocations.Find(position)
 
 	if invocation == nil {
 		return nil, nil
@@ -803,13 +793,13 @@ func (s *Server) DocumentHighlight(
 	}
 
 	position := conversion.ProtocolToSemaPosition(params.Position)
-	occurrences := checker.Occurrences.FindAll(position)
+	occurrences := checker.PositionInfo.Occurrences.FindAll(position)
 	// If there are no occurrences,
 	// then try the preceding position
 	if len(occurrences) == 0 && position.Column > 0 {
 		previousPosition := position
 		previousPosition.Column -= 1
-		occurrences = checker.Occurrences.FindAll(previousPosition)
+		occurrences = checker.PositionInfo.Occurrences.FindAll(previousPosition)
 	}
 
 	documentHighlights := make([]*protocol.DocumentHighlight, 0)
@@ -850,13 +840,13 @@ func (s *Server) Rename(
 	}
 
 	position := conversion.ProtocolToSemaPosition(params.Position)
-	occurrences := checker.Occurrences.FindAll(position)
+	occurrences := checker.PositionInfo.Occurrences.FindAll(position)
 	// If there are no occurrences,
 	// then try the preceding position
 	if len(occurrences) == 0 && position.Column > 0 {
 		previousPosition := position
 		previousPosition.Column -= 1
-		occurrences = checker.Occurrences.FindAll(previousPosition)
+		occurrences = checker.PositionInfo.Occurrences.FindAll(previousPosition)
 	}
 
 	textEdits := make([]protocol.TextEdit, 0)
@@ -1289,7 +1279,7 @@ func (s *Server) memberCompletions(
 	if position.Column > 0 {
 		position.Column -= 1
 	}
-	memberAccess := checker.MemberAccesses.Find(position)
+	memberAccess := checker.PositionInfo.MemberAccesses.Find(position)
 
 	delete(s.memberResolvers, uri)
 
@@ -1338,7 +1328,7 @@ func (s *Server) rangeCompletions(
 	uri protocol.DocumentURI,
 ) (items []*protocol.CompletionItem) {
 
-	ranges := checker.Ranges.FindAll(position)
+	ranges := checker.PositionInfo.Ranges.FindAll(position)
 
 	delete(s.ranges, uri)
 
@@ -1734,7 +1724,7 @@ func (s *Server) InlayHint(
 	})
 
 	for _, variableDeclaration := range variableDeclarations {
-		targetType := checker.Elaboration.VariableDeclarationTargetTypes[variableDeclaration]
+		targetType := checker.Elaboration.VariableDeclarationTypes[variableDeclaration].TargetType
 		if targetType == nil { // bugfix getting nil target
 			continue // todo this should never occur
 		}
@@ -1822,134 +1812,21 @@ func (s *Server) getDiagnostics(
 		return
 	}
 
+	config := &sema.Config{
+		BaseValueActivation:        s.baseValueActivation,
+		AccessCheckMode:            s.accessCheckMode,
+		PositionInfoEnabled:        true,
+		ExtendedElaborationEnabled: true,
+		LocationHandler:            s.handleLocation,
+		ImportHandler:              s.handleImport,
+	}
+
 	var checker *sema.Checker
 	checker, diagnosticsErr = sema.NewChecker(
 		program,
 		location,
 		nil,
-		true,
-		sema.WithPredeclaredValues(valueDeclarations),
-		sema.WithPredeclaredTypes(typeDeclarations),
-		sema.WithLocationHandler(
-			func(identifiers []ast.Identifier, location common.Location) ([]sema.ResolvedLocation, error) {
-				addressLocation, isAddress := location.(common.AddressLocation)
-
-				// if the location is not an address location, e.g. an identifier location (`import Crypto`),
-				// then return a single resolved location which declares all identifiers.
-
-				if !isAddress {
-					return []runtime.ResolvedLocation{
-						{
-							Location:    location,
-							Identifiers: identifiers,
-						},
-					}, nil
-				}
-
-				// if the location is an address,
-				// and no specific identifiers where requested in the import statement,
-				// then fetch all identifiers at this address
-
-				if len(identifiers) == 0 {
-					// if there is no contract name resolver,
-					// then return no resolved locations
-
-					if s.resolveAddressContractNames == nil {
-						return nil, nil
-					}
-
-					contractNames, err := s.resolveAddressContractNames(addressLocation.Address)
-					if err != nil {
-						panic(err)
-					}
-
-					// if there are no contracts deployed,
-					// then return no resolved locations
-
-					if len(contractNames) == 0 {
-						return nil, nil
-					}
-
-					identifiers = make([]ast.Identifier, len(contractNames))
-
-					for i := range identifiers {
-						identifiers[i] = runtime.Identifier{
-							Identifier: contractNames[i],
-						}
-					}
-				}
-
-				// return one resolved location per identifier.
-				// each resolved location is an address contract location
-
-				resolvedLocations := make([]runtime.ResolvedLocation, len(identifiers))
-				for i := range resolvedLocations {
-					identifier := identifiers[i]
-					resolvedLocations[i] = runtime.ResolvedLocation{
-						Location: common.AddressLocation{
-							Address: addressLocation.Address,
-							Name:    identifier.Identifier,
-						},
-						Identifiers: []runtime.Identifier{identifier},
-					}
-				}
-
-				return resolvedLocations, nil
-			},
-		),
-		sema.WithPositionInfoEnabled(true),
-		sema.WithImportHandler(
-			func(checker *sema.Checker, importedLocation common.Location, importRange ast.Range) (sema.Import, error) {
-				switch importedLocation {
-				case stdlib.CryptoChecker.Location:
-					return sema.ElaborationImport{
-						Elaboration: stdlib.CryptoChecker.Elaboration,
-					}, nil
-
-				default:
-					if isPathLocation(importedLocation) {
-						// import may be a relative path and therefore should be normalized
-						// against the current location
-						importedLocation = normalizePathLocation(checker.Location, importedLocation)
-
-						if checker.Location == importedLocation {
-							return nil, &sema.CheckerError{
-								Errors: []error{fmt.Errorf("cannot import current file: %s", importedLocation)},
-							}
-						}
-					}
-
-					importedLocationID := importedLocation.ID()
-					importedChecker, ok := s.checkers[importedLocationID]
-					if !ok {
-						importedProgram, err := s.resolveImport(importedLocation)
-						if err != nil {
-							return nil, err
-						}
-						if importedProgram == nil {
-							return nil, &sema.CheckerError{
-								Errors: []error{fmt.Errorf("cannot import %s", importedLocation)},
-							}
-						}
-
-						importedChecker, err = checker.SubChecker(importedProgram, importedLocation)
-						if err != nil {
-							return nil, err
-						}
-						s.checkers[importedLocationID] = importedChecker
-						err = importedChecker.Check()
-						if err != nil {
-							return nil, err
-						}
-					}
-
-					return sema.ElaborationImport{
-						Elaboration: importedChecker.Elaboration,
-					}, nil
-				}
-			},
-		),
-		sema.WithAccessCheckMode(s.accessCheckMode),
+		config,
 	)
 	if diagnosticsErr != nil {
 		return
@@ -2267,7 +2144,10 @@ func (s *Server) parseEntryPointArguments(args ...json2.RawMessage) (interface{}
 		if !ok {
 			return nil, fmt.Errorf("invalid argument at index %d: %#+v", i, argument)
 		}
-		value, err := runtime.ParseLiteral(argumentCode, parameterType, nil)
+
+		inter, _ := interpreter.NewInterpreter(nil, nil, &interpreter.Config{})
+
+		value, err := runtime.ParseLiteral(argumentCode, parameterType, inter)
 		if err != nil {
 			return nil, err
 		}
@@ -2695,8 +2575,8 @@ func (s *Server) maybeAddDeclarationActionsResolver(
 				case *ast.InvocationExpression:
 					isInvoked = parent.InvokedExpression == errorExpression
 
-					invocationArgumentTypes = checker.Elaboration.InvocationExpressionArgumentTypes[parent]
-					invocationReturnType = checker.Elaboration.InvocationExpressionReturnTypes[parent]
+					invocationArgumentTypes = checker.Elaboration.InvocationExpressionTypes[parent].ArgumentTypes
+					invocationReturnType = checker.Elaboration.InvocationExpressionTypes[parent].ReturnType
 
 					invocationArgumentLabels = make([]string, 0, len(parent.Arguments))
 					for _, argument := range parent.Arguments {
@@ -2840,6 +2720,135 @@ func (s *Server) maybeAddDeclarationActionsResolver(
 				)
 			}
 		}
+	}
+}
+
+func (s *Server) handleLocation(
+	identifiers []ast.Identifier,
+	location common.Location,
+) (
+	[]sema.ResolvedLocation,
+	error,
+) {
+	addressLocation, isAddress := location.(common.AddressLocation)
+
+	// if the location is not an address location, e.g. an identifier location (`import Crypto`),
+	// then return a single resolved location which declares all identifiers.
+
+	if !isAddress {
+		return []runtime.ResolvedLocation{
+			{
+				Location:    location,
+				Identifiers: identifiers,
+			},
+		}, nil
+	}
+
+	// if the location is an address,
+	// and no specific identifiers where requested in the import statement,
+	// then fetch all identifiers at this address
+
+	if len(identifiers) == 0 {
+		// if there is no contract name resolver,
+		// then return no resolved locations
+
+		if s.resolveAddressContractNames == nil {
+			return nil, nil
+		}
+
+		contractNames, err := s.resolveAddressContractNames(addressLocation.Address)
+		if err != nil {
+			panic(err)
+		}
+
+		// if there are no contracts deployed,
+		// then return no resolved locations
+
+		if len(contractNames) == 0 {
+			return nil, nil
+		}
+
+		identifiers = make([]ast.Identifier, len(contractNames))
+
+		for i := range identifiers {
+			identifiers[i] = runtime.Identifier{
+				Identifier: contractNames[i],
+			}
+		}
+	}
+
+	// return one resolved location per identifier.
+	// each resolved location is an address contract location
+
+	resolvedLocations := make([]runtime.ResolvedLocation, len(identifiers))
+	for i := range resolvedLocations {
+		identifier := identifiers[i]
+		resolvedLocations[i] = runtime.ResolvedLocation{
+			Location: common.AddressLocation{
+				Address: addressLocation.Address,
+				Name:    identifier.Identifier,
+			},
+			Identifiers: []runtime.Identifier{identifier},
+		}
+	}
+
+	return resolvedLocations, nil
+}
+
+func (s *Server) handleImport(
+	checker *sema.Checker,
+	importedLocation common.Location,
+	_ ast.Range,
+) (
+	sema.Import,
+	error,
+) {
+	switch importedLocation {
+	case stdlib.CryptoChecker.Location:
+		return sema.ElaborationImport{
+			Elaboration: stdlib.CryptoChecker.Elaboration,
+		}, nil
+
+	default:
+		if isPathLocation(importedLocation) {
+			// import may be a relative path and therefore should be normalized
+			// against the current location
+			importedLocation = normalizePathLocation(checker.Location, importedLocation)
+
+			if checker.Location == importedLocation {
+				return nil, &sema.CheckerError{
+					Errors: []error{fmt.Errorf("cannot import current file: %s", importedLocation)},
+				}
+			}
+		}
+
+		importedLocationID := importedLocation.ID()
+		importedChecker, ok := s.checkers[importedLocationID]
+		if !ok {
+			importedProgram, err := s.resolveImport(importedLocation)
+			if err != nil {
+				return nil, err
+			}
+			if importedProgram == nil {
+				return nil, &sema.CheckerError{
+					Errors: []error{fmt.Errorf("cannot import %s", importedLocation)},
+				}
+			}
+
+			importedChecker, err = checker.SubChecker(importedProgram, importedLocation)
+			if err != nil {
+				return nil, err
+			}
+			s.checkers[importedLocationID] = importedChecker
+			err = importedChecker.Check()
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		return sema.ElaborationImport{
+			Elaboration: importedChecker.Elaboration,
+		}, nil
 	}
 }
 
