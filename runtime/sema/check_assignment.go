@@ -113,31 +113,31 @@ func (checker *Checker) checkAssignment(
 	return
 }
 
+// We have to prevent any writes to references, since we cannot know where the value
+// pointed to by the reference may have come from. Similarly, we can never safely assign
+// to a resource; because resources are moved instead of copied, we cannot currently
+// track the origin of a write target when it is a resource. Consider:
+// -----------------------------------------------------------------------------
+// pub resource R {
+//   pub(set) var x: Int
+//   init(x: Int) {
+//     self.x = x
+//   }
+//  }
+//
+// view fun foo(_ f: @R): @R {
+//   let b <- f
+//   b.x = 3 // b was created in the current scope but modifies the resource value
+//   return <-b
+// }
+func isWriteableInViewContext(t Type) bool {
+	_, isReference := t.(*ReferenceType)
+	return !isReference && !t.IsResourceType()
+}
+
 func (checker *Checker) enforceViewAssignment(assignment ast.Statement, target ast.Expression) {
 	if !checker.CurrentPurityScope().EnforcePurity {
 		return
-	}
-
-	isWriteableInViewContext := func(t Type) bool {
-		// We have to prevent any writes to references, since we cannot know where the value
-		// pointed to by the reference may have come from. Similarly, we can never safely assign
-		// to a resource; because resources are moved instead of copied, we cannot currently
-		// track the origin of a write target when it is a resource. Consider:
-		// -----------------------------------------------------------------------------
-		// pub resource R {
-		//   pub(set) var x: Int
-		//   init(x: Int) {
-		//     self.x = x
-		//   }
-		//  }
-		//
-		// view fun foo(_ f: @R): @R {
-		//   let b <- f
-		//   b.x = 3 // b was created in the current scope but modifies the resource value
-		//   return <-b
-		// }
-		_, isReference := t.(*ReferenceType)
-		return !isReference && !t.IsResourceType()
 	}
 
 	var baseVariable *Variable
@@ -174,14 +174,15 @@ func (checker *Checker) enforceViewAssignment(assignment ast.Statement, target a
 		return
 	}
 
-	// `self` technically exists in param scope, but should still not be writeable
-	// outside of an initializer. Within an initializer, writing to `self` is considered
-	// view: whenever we call a constructor from inside a view scope, the value being
-	// constructed (i.e. the one referred to by self in the constructor) is local to that
-	// scope, so it is safe to create a new value from within a view scope. This means that
-	// functions that just construct new values can technically be view (in the same way that
-	// they are in a functional programming sense), as long as they don't modify anything else
-	// while constructing those values. They will still need a view annotation though (e.g. view init(...)).
+	// `self` technically exists in param scope, but should still not be writeable outside of an initializer.
+	// Within an initializer, writing to `self` is considered view:
+	// whenever we call a constructor from inside a view scope, the value being constructed
+	// (i.e. the one referred to by self in the constructor) is local to that scope,
+	// so it is safe to create a new value from within a view scope.
+	// This means that functions that just construct new values can technically be view
+	// (in the same way that they pure are in a functional programming sense),
+	// as long as they don't modify anything else while constructing those values.
+	// They will still need a view annotation though (e.g. view init(...)).
 	if baseVariable.DeclarationKind == common.DeclarationKindSelf {
 		if checker.functionActivations.Current().InitializationInfo == nil {
 			checker.ObserveImpureOperation(assignment)
@@ -197,10 +198,10 @@ func (checker *Checker) enforceViewAssignment(assignment ast.Statement, target a
 		}
 	}
 
-	// when the variable is neither a resource nor a reference, we can write to if its
-	// activation depth is greater than or equal to the depth at which the current purity
-	// scope was created; i.e. if it is a parameter to the current function or was created
-	// within it
+	// when the variable is neither a resource nor a reference,
+	// we can write to if its activation depth is greater than or equal
+	// to the depth at which the current purity scope was created;
+	// i.e. if it is a parameter to the current function or was created within it
 	if checker.CurrentPurityScope().ActivationDepth > baseVariable.ActivationDepth {
 		checker.ObserveImpureOperation(assignment)
 	}
