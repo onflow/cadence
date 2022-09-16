@@ -378,7 +378,25 @@ func FromStringMetadata(ty Type) (methodType *FunctionType, docString string) {
 		),
 	}
 
-	docString = fmt.Sprintf("Attempts to parse %s from a string. Returns `nil` on overflow or invalid input.", ty.String())
+	builder := new(strings.Builder)
+	builder.WriteString(
+		fmt.Sprintf(
+			"Attempts to parse %s from a string. Returns `nil` on overflow or invalid input. Whitespace or invalid digits will return a nil value.\n",
+			ty.String(),
+		))
+
+	if IsSameTypeKind(ty, FixedPointType) {
+		builder.WriteString(
+			`Both decimal and fractional components must be supplied. For instance, both "0." and ".1" are invalid string representations, but "0.1" is accepted.\n`,
+		)
+	}
+	if IsSameTypeKind(ty, SignedIntegerType) || IsSameTypeKind(ty, SignedFixedPointType) {
+		builder.WriteString(
+			"The string may optionally begin with a sign prefix of '-' or '+'.\n",
+		)
+	}
+
+	docString = builder.String()
 
 	return
 }
