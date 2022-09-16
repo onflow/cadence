@@ -57,7 +57,7 @@ func NewAuthAccountInboxValue(
 		sema.AuthAccountInboxPermitField:    accountInboxPermitFunction(gauge, address),
 		sema.AuthAccountInboxUnpermitField:  accountInboxUnpermitFunction(gauge, address),
 		sema.AuthAccountInboxPublishField:   accountInboxPublishFunction(gauge, address, addressValue),
-		sema.AuthAccountInboxUnpublishField: nil,
+		sema.AuthAccountInboxUnpublishField: accountInboxUnpublishFunction(gauge, address, addressValue),
 		sema.AuthAccountInboxClaimField:     nil,
 	}
 
@@ -196,13 +196,13 @@ func accountInboxPermitFunction(
 			allowlist := getAccountAllowlist(inter, getLocationRange, address)
 
 			if allowlist.Contains(inter, getLocationRange, providerValue) {
-				return VoidValue{}
+				return NewVoidValue(gauge)
 			}
 
 			allowlist.Append(inter, getLocationRange, providerValue)
 			inter.writeStored(address, inboxStorageDomain, "allowlist", allowlist)
 
-			return VoidValue{}
+			return NewVoidValue(gauge)
 		},
 		sema.AuthAccountInboxPermitFunctionType,
 	)
@@ -232,7 +232,7 @@ func accountInboxUnpermitFunction(
 				inter.writeStored(address, inboxStorageDomain, "allowlist", allowlist)
 			})
 
-			return VoidValue{}
+			return NewVoidValue(gauge)
 		},
 		sema.AuthAccountInboxUnpermitFunctionType,
 	)
@@ -290,6 +290,36 @@ func accountInboxPublishFunction(
 			inter.writeStored(address, inboxStorageDomain, recipientPath(nameValue.Str), recipient)
 
 			return BoolValue(true)
+		},
+		sema.AuthAccountTypeInboxPublishFunctionType,
+	)
+}
+
+func accountInboxUnpublishFunction(
+	gauge common.MemoryGauge,
+	address common.Address,
+	providerValue AddressValue,
+) *HostFunctionValue {
+	return NewHostFunctionValue(
+		gauge,
+		func(invocation Invocation) Value {
+			nameValue, ok := invocation.Arguments[1].(*StringValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			inter := invocation.Interpreter
+
+			publishedValue := inter.ReadStored(address, inboxStorageDomain, valuePath(nameValue.Str))
+
+			if publishedValue == nil {
+				return NewNilValue(gauge)
+			}
+
+			inter.writeStored(address, inboxStorageDomain, valuePath(nameValue.Str), nil)
+			inter.writeStored(address, inboxStorageDomain, recipientPath(nameValue.Str), nil)
+
+			return NewSomeValueNonCopying(inter, publishedValue)
 		},
 		sema.AuthAccountTypeInboxPublishFunctionType,
 	)
