@@ -107,6 +107,7 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 
 		return InvalidType
 	}
+	checker.EnforcePurity(invocationExpression, functionType.Purity)
 
 	// The invoked expression has a function type,
 	// check the invocation including all arguments.
