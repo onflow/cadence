@@ -644,7 +644,9 @@ func TestStringFixedpointConversion(t *testing.T) {
 
 		for _, intPart := range intComponents {
 			for _, fracPart := range fracComponents {
-				testcases = append(testcases, testcase{intPart, fracPart})
+				clonedInt := new(big.Int).Set(intPart)
+				clonedFrac := new(big.Int).Set(fracPart)
+				testcases = append(testcases, testcase{clonedInt, clonedFrac})
 			}
 		}
 		return testcases
@@ -683,27 +685,19 @@ func TestStringFixedpointConversion(t *testing.T) {
 				isNegative := tc.decimal.Cmp(big.NewInt(0)) == -1
 				scale := getMagnitude(tc.fractional)
 
-				// expected, err := fixedpoint.NewFix64(isNegative, big.NewInt(abs64(tc.decimal)), big.NewInt(tc.fractional), scale)
 				absDecimal := new(big.Int)
 				tc.decimal.Abs(absDecimal)
-				expectedNumericVal, err := testsuite.toFixedValue(isNegative, absDecimal, tc.fractional, scale)
 
-				if err != nil {
-					panic(err)
-				}
+				expectedNumericVal, err := testsuite.toFixedValue(isNegative, absDecimal, tc.fractional, scale)
+				require.NoError(t, err)
 
 				expectedVal := interpreter.NewUnmeteredSomeValueNonCopying(expectedNumericVal)
-
-				utils.Breakpoint()
 
 				stringified := fmt.Sprintf("%d.%d", tc.decimal, tc.fractional)
 				res, err := inter.Invoke("fromStringTest", interpreter.NewUnmeteredStringValue(stringified))
 
 				require.NoError(t, err)
 
-				if testsuite.name == "UFix64" {
-					fmt.Println(tc)
-				}
 				utils.AssertEqualWithDiff(t, expectedVal, res)
 
 			}
