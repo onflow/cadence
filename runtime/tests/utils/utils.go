@@ -192,3 +192,6 @@ func AssertValueSlicesEqual(t testing.TB, inter *interpreter.Interpreter, expect
 
 	return true
 }
+
+// Noop statement for placing a breakpoint during debugging.
+func Breakpoint() {}

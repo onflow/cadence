@@ -2368,7 +2368,7 @@ var FromStringFunctionValues = func() map[string]FromStringFunctionValue {
 				return NewNilValue(inter)
 			}
 
-			val := NewFix64ValueWithInteger(inter, n.Int64)
+			val := NewFix64Value(inter, n.Int64)
 			return NewSomeValueNonCopying(inter, val)
 
 		}),
@@ -2377,7 +2377,7 @@ var FromStringFunctionValues = func() map[string]FromStringFunctionValue {
 			if err != nil {
 				return NewNilValue(inter)
 			}
-			val := NewUFix64ValueWithInteger(inter, n.Uint64)
+			val := NewUFix64Value(inter, n.Uint64)
 			return NewSomeValueNonCopying(inter, val)
 		})}
 

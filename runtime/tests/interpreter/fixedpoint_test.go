@@ -26,6 +26,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/fixedpoint"
+	"github.com/onflow/cadence/runtime/tests/utils"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -594,8 +596,119 @@ func TestInterpretFixedPointMinMax(t *testing.T) {
 }
 
 func TestStringFixedpointConversion(t *testing.T) {
-	testcases := []string{
-		"-1.23",
-		"4.20",
+	type testcase struct {
+		decimal    *big.Int
+		fractional *big.Int
 	}
+
+	type testsuite struct {
+		name         string
+		toFixedValue func(isNegative bool, decimal, fractional *big.Int, scale uint) (interpreter.Value, error)
+		intBounds    []*big.Int
+		fracBounds   []*big.Int
+	}
+
+	suites := []testsuite{
+		{
+			"Fix64",
+			func(isNeg bool, decimal, fractional *big.Int, scale uint) (interpreter.Value, error) {
+				fixedVal, err := fixedpoint.NewFix64(isNeg, decimal, fractional, scale)
+				if err != nil {
+					return nil, err
+				}
+				return interpreter.NewUnmeteredFix64Value(fixedVal.Int64()), nil
+			},
+			[]*big.Int{sema.Fix64TypeMinIntBig, sema.Fix64TypeMaxIntBig},
+			[]*big.Int{sema.UFix64TypeMinFractionalBig, sema.Fix64TypeMaxFractionalBig},
+		},
+		{
+			"UFix64",
+			func(_ bool, decimal, fractional *big.Int, scale uint) (interpreter.Value, error) {
+				fixedVal, err := fixedpoint.NewUFix64(decimal, fractional, scale)
+				if err != nil {
+					return nil, err
+				}
+				return interpreter.NewUnmeteredUFix64Value(fixedVal.Uint64()), nil
+			},
+			[]*big.Int{sema.Fix64TypeMinIntBig, sema.Fix64TypeMaxIntBig},
+			[]*big.Int{sema.UFix64TypeMinFractionalBig, sema.UFix64TypeMaxFractionalBig},
+		},
+	}
+
+	genCases := func(intComponents, fracComponents []*big.Int) []testcase {
+		testcases := []testcase{
+			{big.NewInt(10), big.NewInt(11)},
+			{big.NewInt(420), big.NewInt(840)},
+			{big.NewInt(123), big.NewInt(45)},
+		}
+
+		for _, intPart := range intComponents {
+			for _, fracPart := range fracComponents {
+				testcases = append(testcases, testcase{intPart, fracPart})
+			}
+		}
+		return testcases
+	}
+
+	bigZero := big.NewInt(0)
+
+	getMagnitude := func(n *big.Int) uint {
+		var m uint
+
+		cloned := new(big.Int).Set(n)
+		bigTen := big.NewInt(10)
+
+		for m = 0; cloned.Cmp(bigZero) != 0; m++ {
+			cloned.Div(cloned, bigTen)
+		}
+
+		return m
+	}
+
+	for _, testsuite := range suites {
+		t.Run(testsuite.name, func(t *testing.T) {
+			t.Parallel()
+
+			code := fmt.Sprintf(`
+				fun fromStringTest(s: String): %s? {
+					return %s.fromString(s)
+				}
+			`, testsuite.name, testsuite.name)
+
+			inter := parseCheckAndInterpret(t, code)
+
+			testcases := genCases(testsuite.intBounds, testsuite.fracBounds)
+
+			for _, tc := range testcases {
+				isNegative := tc.decimal.Cmp(big.NewInt(0)) == -1
+				scale := getMagnitude(tc.fractional)
+
+				// expected, err := fixedpoint.NewFix64(isNegative, big.NewInt(abs64(tc.decimal)), big.NewInt(tc.fractional), scale)
+				absDecimal := new(big.Int)
+				tc.decimal.Abs(absDecimal)
+				expectedNumericVal, err := testsuite.toFixedValue(isNegative, absDecimal, tc.fractional, scale)
+
+				if err != nil {
+					panic(err)
+				}
+
+				expectedVal := interpreter.NewUnmeteredSomeValueNonCopying(expectedNumericVal)
+
+				utils.Breakpoint()
+
+				stringified := fmt.Sprintf("%d.%d", tc.decimal, tc.fractional)
+				res, err := inter.Invoke("fromStringTest", interpreter.NewUnmeteredStringValue(stringified))
+
+				require.NoError(t, err)
+
+				if testsuite.name == "UFix64" {
+					fmt.Println(tc)
+				}
+				utils.AssertEqualWithDiff(t, expectedVal, res)
+
+			}
+
+		})
+	}
+
 }
