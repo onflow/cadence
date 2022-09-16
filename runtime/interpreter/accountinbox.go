@@ -28,6 +28,17 @@ import (
 )
 
 const inboxStorageDomain = "inbox"
+const inboxStorageSeparator = "$"
+const inboxStorageRecipientTag = "recipient"
+const inboxStorageValueTag = "value"
+
+func recipientPath(name string) string {
+	return name + inboxStorageSeparator + inboxStorageRecipientTag
+}
+
+func valuePath(name string) string {
+	return name + inboxStorageSeparator + inboxStorageValueTag
+}
 
 // AuthAccountInbox
 
@@ -45,7 +56,7 @@ func NewAuthAccountInboxValue(
 	fields := map[string]Value{
 		sema.AuthAccountInboxPermitField:    accountInboxPermitFunction(gauge, address),
 		sema.AuthAccountInboxUnpermitField:  accountInboxUnpermitFunction(gauge, address),
-		sema.AuthAccountInboxPublishField:   nil,
+		sema.AuthAccountInboxPublishField:   accountInboxPublishFunction(gauge, address, addressValue),
 		sema.AuthAccountInboxUnpublishField: nil,
 		sema.AuthAccountInboxClaimField:     nil,
 	}
@@ -224,5 +235,62 @@ func accountInboxUnpermitFunction(
 			return VoidValue{}
 		},
 		sema.AuthAccountInboxUnpermitFunctionType,
+	)
+}
+
+func accountInboxPublishFunction(
+	gauge common.MemoryGauge,
+	address common.Address,
+	providerValue AddressValue,
+) *HostFunctionValue {
+	return NewHostFunctionValue(
+		gauge,
+		func(invocation Invocation) Value {
+			publishedValue := invocation.Arguments[0]
+
+			nameValue, ok := invocation.Arguments[1].(*StringValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			recipientValue := invocation.Arguments[2].(*AddressValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			inter := invocation.Interpreter
+			getLocationRange := invocation.GetLocationRange
+
+			recipientAllowlist := getAccountAllowlist(inter, getLocationRange, recipientValue.ToAddress())
+
+			// if the recipient's allowlist does not contain the provider's address, return false
+			if !recipientAllowlist.Contains(inter, getLocationRange, providerValue) {
+				return BoolValue(false)
+			}
+
+			publishedValue = publishedValue.Transfer(
+				inter,
+				getLocationRange,
+				atree.Address(address),
+				true,
+				nil,
+			)
+
+			recipient := recipientValue.Transfer(
+				inter,
+				getLocationRange,
+				atree.Address(address),
+				true,
+				nil,
+			)
+
+			// we need to store both a value and an intended recipient for each name,
+			// so we do two writes to represent each published value.
+			inter.writeStored(address, inboxStorageDomain, valuePath(nameValue.Str), publishedValue)
+			inter.writeStored(address, inboxStorageDomain, recipientPath(nameValue.Str), recipient)
+
+			return BoolValue(true)
+		},
+		sema.AuthAccountTypeInboxPublishFunctionType,
 	)
 }
