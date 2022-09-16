@@ -771,12 +771,13 @@ Publishes the argument value under the given name, to be later claimed by the sp
 `
 
 var AuthAccountTypeInboxPublishFunctionType = &FunctionType{
-
 	Parameters: []*Parameter{
 		{
-			Label:          ArgumentLabelNotRequired,
-			Identifier:     "value",
-			TypeAnnotation: NewTypeAnnotation(StorableType),
+			Label:      ArgumentLabelNotRequired,
+			Identifier: "value",
+			TypeAnnotation: NewTypeAnnotation(&CapabilityType{
+				BorrowType: AnyType,
+			}),
 		},
 		{
 			Label:          "name",
@@ -800,8 +801,10 @@ Unpublishes the value specified by the argument string
 
 var AuthAccountTypeInboxUnpublishFunctionType = func() *FunctionType {
 	typeParameter := &TypeParameter{
-		Name:      "T",
-		TypeBound: StorableType,
+		Name: "T",
+		TypeBound: &ReferenceType{
+			Type: AnyType,
+		},
 	}
 	return &FunctionType{
 		TypeParameters: []*TypeParameter{
@@ -816,8 +819,10 @@ var AuthAccountTypeInboxUnpublishFunctionType = func() *FunctionType {
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(
 			&OptionalType{
-				Type: &GenericType{
-					TypeParameter: typeParameter,
+				Type: &CapabilityType{
+					BorrowType: &GenericType{
+						TypeParameter: typeParameter,
+					},
 				},
 			},
 		),
@@ -830,8 +835,10 @@ Claims the value specified by the argument string from the account specified as 
 
 var AuthAccountTypeInboxClaimFunctionType = func() *FunctionType {
 	typeParameter := &TypeParameter{
-		Name:      "T",
-		TypeBound: StorableType,
+		Name: "T",
+		TypeBound: &ReferenceType{
+			Type: AnyType,
+		},
 	}
 	return &FunctionType{
 		TypeParameters: []*TypeParameter{
@@ -851,8 +858,10 @@ var AuthAccountTypeInboxClaimFunctionType = func() *FunctionType {
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(
 			&OptionalType{
-				Type: &GenericType{
-					TypeParameter: typeParameter,
+				Type: &CapabilityType{
+					BorrowType: &GenericType{
+						TypeParameter: typeParameter,
+					},
 				},
 			},
 		),

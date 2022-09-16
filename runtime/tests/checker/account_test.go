@@ -1897,8 +1897,8 @@ func TestCheckAccountPublish(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheckAccount(t,
-			`fun test() {
-				let x: Bool = authAccount.inbox.publish(3, name: "foo", recipient: 0x1)
+			`fun test(_ cap: Capability<&Int>) {
+				let x: Bool = authAccount.inbox.publish(cap, name: "foo", recipient: 0x1)
 			}`,
 		)
 		require.NoError(t, err)
@@ -1908,8 +1908,8 @@ func TestCheckAccountPublish(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheckAccount(t,
-			`fun test() {
-				authAccount.inbox.publish(3, "foo", recipient: 0x1)
+			`fun test(_ cap: Capability<&Int>) {
+				authAccount.inbox.publish(cap, "foo", recipient: 0x1)
 			}`,
 		)
 		require.Error(t, err)
@@ -1921,8 +1921,8 @@ func TestCheckAccountPublish(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheckAccount(t,
-			`fun test() {
-				authAccount.inbox.publish(3, name: "foo", 0x1)
+			`fun test(_ cap: Capability<&Int>) {
+				authAccount.inbox.publish(cap, name: "foo", 0x1)
 			}`,
 		)
 		require.Error(t, err)
@@ -1939,12 +1939,13 @@ func TestCheckAccountPublish(t *testing.T) {
 			}`,
 		)
 		require.Error(t, err)
-		errors := ExpectCheckerErrors(t, err, 2)
+		errors := ExpectCheckerErrors(t, err, 3)
 		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
 		require.IsType(t, &sema.TypeMismatchError{}, errors[1])
+		require.IsType(t, &sema.TypeMismatchError{}, errors[2])
 	})
 
-	t.Run("publish non-storable", func(t *testing.T) {
+	t.Run("publish non-capability", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheckAccount(t,
@@ -1967,7 +1968,7 @@ func TestCheckAccountUnpublish(t *testing.T) {
 
 		_, err := ParseAndCheckAccount(t,
 			`fun test() {
-				let x: Int = authAccount.inbox.unpublish<Int>("foo")!
+				let x: Capability<&Int> = authAccount.inbox.unpublish<&Int>("foo")!
 			}`,
 		)
 		require.NoError(t, err)
@@ -1978,7 +1979,7 @@ func TestCheckAccountUnpublish(t *testing.T) {
 
 		_, err := ParseAndCheckAccount(t,
 			`fun test() {
-				authAccount.inbox.unpublish<String>(4)
+				authAccount.inbox.unpublish<&String>(4)
 			}`,
 		)
 		require.Error(t, err)
@@ -1986,33 +1987,34 @@ func TestCheckAccountUnpublish(t *testing.T) {
 		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
 	})
 
-	t.Run("unpublish resource", func(t *testing.T) {
+	t.Run("unpublish wrong return", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheckAccount(t,
 			`
 			resource R {}
 			fun test() {
-				let x <- authAccount.inbox.unpublish<@R>("foo")
-				destroy x
-			}`,
-		)
-		require.NoError(t, err)
-	})
-
-	t.Run("unpublish non-storable", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheckAccount(t,
-			`
-			resource R {}
-			fun test() {
-				authAccount.inbox.unpublish<((): Void)>("foo")
+				let x <- authAccount.inbox.unpublish<&R>("foo")
 			}`,
 		)
 		require.Error(t, err)
 		errors := ExpectCheckerErrors(t, err, 1)
-		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
+		require.IsType(t, &sema.IncorrectTransferOperationError{}, errors[0])
+	})
+
+	t.Run("missing type params", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t,
+			`
+			resource R {}
+			fun test() {
+				let x = authAccount.inbox.unpublish("foo")!
+			}`,
+		)
+		require.Error(t, err)
+		errors := ExpectCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errors[0])
 	})
 }
 
@@ -2025,7 +2027,7 @@ func TestCheckAccountClaim(t *testing.T) {
 
 		_, err := ParseAndCheckAccount(t,
 			`fun test() {
-				let x: Int = authAccount.inbox.claim<Int>("foo", provider: 0x1)!
+				let x: Capability<&Int> = authAccount.inbox.claim<&Int>("foo", provider: 0x1)!
 			}`,
 		)
 		require.NoError(t, err)
@@ -2036,7 +2038,7 @@ func TestCheckAccountClaim(t *testing.T) {
 
 		_, err := ParseAndCheckAccount(t,
 			`fun test() {
-				authAccount.inbox.claim<String>(4, provider: "foo")
+				authAccount.inbox.claim<&String>(4, provider: "foo")
 			}`,
 		)
 		require.Error(t, err)
@@ -2050,7 +2052,7 @@ func TestCheckAccountClaim(t *testing.T) {
 
 		_, err := ParseAndCheckAccount(t,
 			`fun test() {
-				authAccount.inbox.claim<Int>("foo", 0x1)
+				authAccount.inbox.claim<&Int>("foo", 0x1)
 			}`,
 		)
 		require.Error(t, err)
@@ -2058,33 +2060,34 @@ func TestCheckAccountClaim(t *testing.T) {
 		require.IsType(t, &sema.MissingArgumentLabelError{}, errors[0])
 	})
 
-	t.Run("claim resource", func(t *testing.T) {
+	t.Run("claim wrong return", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheckAccount(t,
 			`
 			resource R {}
 			fun test() {
-				let x <- authAccount.inbox.claim<@R>("foo", provider: 0x1)!
-				destroy x
-			}`,
-		)
-		require.NoError(t, err)
-	})
-
-	t.Run("claim non-storable", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheckAccount(t,
-			`
-			resource R {}
-			fun test() {
-				authAccount.inbox.claim<((): Void)>("foo", provider: 0x1)
+				let x <- authAccount.inbox.claim<&R>("foo", provider: 0x1)!
 			}`,
 		)
 		require.Error(t, err)
 		errors := ExpectCheckerErrors(t, err, 1)
-		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
+		require.IsType(t, &sema.IncorrectTransferOperationError{}, errors[0])
+	})
+
+	t.Run("claim no type argument", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t,
+			`
+			resource R {}
+			fun test() {
+				authAccount.inbox.claim("foo", provider: 0x1)
+			}`,
+		)
+		require.Error(t, err)
+		errors := ExpectCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errors[0])
 	})
 }
 
