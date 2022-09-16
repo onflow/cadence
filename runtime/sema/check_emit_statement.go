@@ -61,8 +61,8 @@ func (checker *Checker) VisitEmitStatement(statement *ast.EmitStatement) (_ stru
 
 	// emitting an event is an impure operation, but it is redundant to enforce that here:
 	// because the emit statement can only be used on events (as a result of the above checks),
-	// and because an event can only be invoked in an emit statement, every emit corresponds
-	// 1:1 to an event invocation, which is an impure function call. Thus we already report
-	// emits as impure by virtue of the necessity to create the event being emitted
+	// and because an event can only be invoked in an emit statement,
+	// every emit corresponds 1:1 to an event invocation, which is an impure function call.
+	// Thus we already report emits as impure by virtue of the necessity to create the event being emitted
 	return
 }
