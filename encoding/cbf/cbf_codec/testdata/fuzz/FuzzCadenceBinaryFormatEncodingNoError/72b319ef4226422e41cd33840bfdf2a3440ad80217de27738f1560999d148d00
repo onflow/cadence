@@ -1,2 +1,0 @@
-go test fuzz v1
-[]byte("\x04*i܂\xb4\xfd\xa7\t")

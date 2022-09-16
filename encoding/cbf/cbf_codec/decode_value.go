@@ -106,7 +106,7 @@ func (d *Decoder) DecodeValue() (value cadence.Value, err error) {
 		value, err = d.DecodeEnum()
 
 	default:
-		err = fmt.Errorf("unknown cadence.Value: %s", value)
+		err = common_codec.CodecError(fmt.Sprintf("unknown cadence.Value: %s", value))
 	}
 
 	return
@@ -394,7 +394,7 @@ func (d *Decoder) DecodeBytes() (value cadence.Bytes, err error) {
 }
 
 func (d *Decoder) DecodeUntypedArray() (array cadence.Array, err error) {
-	size, err := d.DecodeLength()
+	size, err := common_codec.DecodeLength(&d.r)
 	if err != nil {
 		return
 	}
@@ -402,7 +402,7 @@ func (d *Decoder) DecodeUntypedArray() (array cadence.Array, err error) {
 }
 
 func (d *Decoder) DecodeVariableArray(arrayType cadence.VariableSizedArrayType) (array cadence.Array, err error) {
-	size, err := d.DecodeLength()
+	size, err := common_codec.DecodeLength(&d.r)
 	if err != nil {
 		return
 	}
@@ -441,7 +441,7 @@ func (d *Decoder) DecodeDictionary() (dict cadence.Dictionary, err error) {
 		return
 	}
 
-	size, err := d.DecodeLength()
+	size, err := common_codec.DecodeLength(&d.r)
 	if err != nil {
 		return
 	}

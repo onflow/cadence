@@ -151,7 +151,7 @@ func (d *Decoder) DecodeType() (t cadence.Type, err error) {
 	case EncodedTypeMetaType:
 		t = cadence.NewMeteredMetaType(d.memoryGauge)
 	default:
-		err = fmt.Errorf("unknown type identifier: %d", typeIdentifer)
+		err = common_codec.CodecError(fmt.Sprintf("unknown type identifier: %d", typeIdentifer))
 	}
 	return
 }
@@ -193,7 +193,7 @@ func (d *Decoder) DecodeConstantArrayType() (t cadence.ConstantSizedArrayType, e
 		return
 	}
 
-	size, err := d.DecodeLength()
+	size, err := common_codec.DecodeLength(&d.r)
 	if err != nil {
 		return
 	}

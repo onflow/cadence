@@ -32,33 +32,38 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
-func FuzzCadenceBinaryFormatDecodingNoPanic(f *testing.F) {
-	f.Skip()
-
+func FuzzCadenceBinaryFormatCodec(f *testing.F) {
 	f.Add([]byte{cbf_codec.VERSION, byte(cbf_codec.EncodedValueVoid)})
 
 	f.Fuzz(func(t *testing.T, encodedBytes []byte) {
-		_, _ = cbf_codec.Decode(nil, encodedBytes)
+		v, err := cbf_codec.Decode(nil, encodedBytes)
+
+		if err != nil {
+			// only concerned if errors are from outside of the codec, so whitelist codec errors
+			switch err.(type) {
+			case common_codec.CodecError:
+				t.SkipNow()
+			}
+
+			// also whitelist the EOF io error because it just means the encoded bytes don't match anything
+			if err.Error() == "unexpected EOF" || err.Error() == "EOF" {
+				t.SkipNow()
+			}
+		}
+
+		require.NoError(t, err, "decoding error")
+
+		blob, err := cbf_codec.Encode(v)
+		require.NoError(t, err, "encoding error")
+
+		// codec ignores extra bytes at end so cut them off before comparing
+		expected := encodedBytes
+		if len(encodedBytes) > len(blob) {
+			expected = encodedBytes[:len(blob)]
+		}
+
+		assert.Equal(t, expected, blob, "encoded bytes differ")
 	})
-}
-
-func TestFoo(t *testing.T) {
-	t.Skip()
-	// t.SetTimeout(1 * time.Second) // TODO when this lands: https://github.com/golang/go/issues/48157
-
-	rawFailingBytes := []byte("\x15\x01\x01\x01\x01\x01\x01\x01\xc7")
-	failingBytes := []byte{
-		byte(cbf_codec.EncodedValueUInt256),
-		byte(common_codec.EncodedBoolFalse), // not nil
-		1, 1, 1, 1,                          // length of bytes
-		1, 1, 0xc7, // some of the needed bytes
-	}
-
-	// ensure the test is written correctly
-	require.Equal(t, rawFailingBytes, failingBytes, "tested bytes differ from raw bytes")
-
-	// testing if this hangs
-	_, _ = cbf_codec.Decode(nil, failingBytes)
 }
 
 func TestCadenceBinaryFormatCodecEntryPoints(t *testing.T) {
@@ -1577,7 +1582,7 @@ func TestCadenceBinaryFormatCodecNumber(t *testing.T) {
 
 		encoder, decoder, buffer := NewTestCodec()
 
-		i := int32(99)
+		i := int32(0xF_FF_FF_FF)
 		value := cadence.Int32(i)
 
 		err := encoder.Encode(value)
@@ -1588,7 +1593,7 @@ func TestCadenceBinaryFormatCodecNumber(t *testing.T) {
 			common_codec.Concat(
 				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueInt32)},
-				[]byte{0, 0, 0, byte(i)},
+				[]byte{0xF, 0xFF, 0xFF, 0xFF},
 			),
 			buffer.Bytes(), "encoded bytes differ")
 

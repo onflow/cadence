@@ -212,7 +212,7 @@ func (e *Encoder) EncodeType(t cadence.Type) (err error) {
 		return e.EncodeTypeIdentifier(EncodedTypeMetaType)
 	}
 
-	return fmt.Errorf("unknown type: %s", t)
+	return common_codec.CodecError(fmt.Sprintf("unknown type: %s", t))
 }
 
 func (e *Encoder) EncodeFunctionType(t *cadence.FunctionType) (err error) {

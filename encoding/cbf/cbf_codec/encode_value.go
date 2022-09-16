@@ -185,7 +185,7 @@ func (e *Encoder) EncodeValue(value cadence.Value) (err error) {
 		case nil:
 			err = e.EncodeValueIdentifier(EncodedValueUntypedArray)
 		default:
-			err = fmt.Errorf("unknown array type: %s", arrayType)
+			err = common_codec.CodecError(fmt.Sprintf("unknown array type: %s", arrayType))
 		}
 		if err != nil {
 			return
@@ -247,7 +247,7 @@ func (e *Encoder) EncodeValue(value cadence.Value) (err error) {
 		return e.EncodeEnum(v)
 	}
 
-	return fmt.Errorf("unexpected value: %s (type=%s)", value, value.Type())
+	return common_codec.CodecError(fmt.Sprintf("unexpected value: %s (type=%s)", value, value.Type()))
 }
 
 func (e *Encoder) EncodeValueIdentifier(id EncodedValue) (err error) {
@@ -273,7 +273,7 @@ func (e *Encoder) EncodeArray(value cadence.Array) (err error) {
 		}
 	case cadence.ConstantSizedArrayType:
 		if len(value.Values) != int(v.Size) {
-			return fmt.Errorf("constant size array size=%d but has %d elements", v.Size, len(value.Values))
+			return common_codec.CodecError(fmt.Sprintf("constant size array size=%d but has %d elements", v.Size, len(value.Values)))
 		}
 	}
 

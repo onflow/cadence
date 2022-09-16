@@ -109,7 +109,7 @@ func DecodeBool(r io.Reader) (boolean bool, err error) {
 	case EncodedBoolTrue:
 		boolean = true
 	default:
-		err = fmt.Errorf("invalid boolean value: %d", b[0])
+		err = CodecError(fmt.Sprintf("invalid boolean value: %d", b[0]))
 	}
 
 	return
@@ -127,7 +127,7 @@ func DecodeBool(r io.Reader) (boolean bool, err error) {
 // It uses 4 bytes.
 func EncodeLength(w io.Writer, length int) (err error) {
 	if length < 0 { // TODO is this safety check useful?
-		return fmt.Errorf("cannot encode length below zero: %d", length)
+		return CodecError(fmt.Sprintf("cannot encode length below zero: %d", length))
 	}
 
 	l := uint32(length)
@@ -137,8 +137,13 @@ func EncodeLength(w io.Writer, length int) (err error) {
 
 func DecodeLength(r io.Reader) (length int, err error) {
 	b := make([]byte, 4)
-	_, err = r.Read(b)
+
+	bytesRead, err := r.Read(b)
 	if err != nil {
+		return
+	}
+	if bytesRead != 4 {
+		err = CodecError("EOF when reading length")
 		return
 	}
 
@@ -168,7 +173,15 @@ func DecodeBytes(r io.Reader) (bytes []byte, err error) {
 
 	bytes = make([]byte, length)
 
-	_, err = r.Read(bytes)
+	bytesRead, err := r.Read(bytes)
+	if err != nil {
+		return
+	}
+	if bytesRead != length {
+		err = CodecError("EOF when reading bytes")
+		return
+	}
+
 	return
 }
 
@@ -201,8 +214,12 @@ func EncodeAddress[Address common.Address | cadence.Address](w io.Writer, a Addr
 func DecodeAddress(r io.Reader) (a common.Address, err error) {
 	bytes := make([]byte, common.AddressLength)
 
-	_, err = r.Read(bytes)
+	bytesRead, err := r.Read(bytes)
 	if err != nil {
+		return
+	}
+	if bytesRead != common.AddressLength {
+		err = CodecError("EOF when reading address")
 		return
 	}
 
@@ -276,7 +293,7 @@ func EncodeLocation(w io.Writer, location common.Location) (err error) {
 	case nil:
 		return EncodeNilLocation(w)
 	default:
-		return fmt.Errorf("unexpected location type: %s", concreteType)
+		return CodecError(fmt.Sprintf("unexpected location type: %s", concreteType))
 	}
 }
 
@@ -373,7 +390,7 @@ func DecodeLocation(r io.Reader, memoryGauge common.MemoryGauge) (location commo
 
 	// TODO more locations
 	default:
-		err = fmt.Errorf("unknown location prefix: %s", prefix)
+		err = CodecError(fmt.Sprintf("unknown location prefix: %s", prefix))
 	}
 	return
 }

@@ -20,7 +20,6 @@ package cbf_codec
 
 import (
 	"bytes"
-	"encoding/binary"
 	"fmt"
 	"io"
 
@@ -83,23 +82,11 @@ func (d *Decoder) Decode() (v cadence.Value, err error) {
 	}
 
 	if version[0] != VERSION {
-		err = fmt.Errorf("expected CBF version %d but got  %d", VERSION, version[0])
+		err = common_codec.CodecError(fmt.Sprintf("expected CBF version %d but got  %d", VERSION, version[0]))
 		return
 	}
 
 	return d.DecodeValue()
-}
-
-func (d *Decoder) DecodeLength() (length int, err error) {
-	b, err := d.read(4)
-	if err != nil {
-		return
-	}
-
-	asUint32 := binary.BigEndian.Uint32(b)
-
-	length = int(asUint32)
-	return
 }
 
 func (d *Decoder) read(howManyBytes int) (b []byte, err error) {
