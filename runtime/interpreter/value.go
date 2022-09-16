@@ -16486,6 +16486,8 @@ func (v *DictionaryValue) IsResourceKinded(interpreter *Interpreter) bool {
 type OptionalValue interface {
 	Value
 	isOptionalValue()
+	iter(f func(Value))
+	fmap(inter *Interpreter, f func(Value) Value) OptionalValue
 }
 
 // NilValue
@@ -16528,6 +16530,12 @@ func (NilValue) IsImportable(_ *Interpreter) bool {
 }
 
 func (NilValue) isOptionalValue() {}
+
+func (NilValue) iter(_ func(Value)) {}
+
+func (n NilValue) fmap(inter *Interpreter, f func(Value) Value) OptionalValue {
+	return n
+}
 
 func (NilValue) IsDestroyed() bool {
 	return false
@@ -16699,6 +16707,15 @@ func (v *SomeValue) IsImportable(inter *Interpreter) bool {
 }
 
 func (*SomeValue) isOptionalValue() {}
+
+func (v *SomeValue) iter(f func(Value)) {
+	f(v.value)
+}
+
+func (v *SomeValue) fmap(inter *Interpreter, f func(Value) Value) OptionalValue {
+	newValue := f(v.value)
+	return NewSomeValueNonCopying(inter, newValue)
+}
 
 func (v *SomeValue) IsDestroyed() bool {
 	return v.isDestroyed

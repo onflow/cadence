@@ -3247,4 +3247,190 @@ func TestInterpretAccountInboxAllowlist(t *testing.T) {
 			value,
 		)
 	})
+
+	t.Run("two permits one unpermit", func(t *testing.T) {
+		t.Parallel()
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(
+			t,
+			address,
+			true,
+			`
+				fun test(): [Address] {
+					account.inbox.permit(0x1)
+					account.inbox.permit(0x2)
+					account.inbox.unpermit(0x1)
+					return account.inbox.allowlist
+				}
+	            `,
+		)
+
+		value, err := inter.Invoke("test")
+
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.ReturnEmptyLocationRange,
+				interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeAddress,
+				},
+				address.ToAddress(),
+				interpreter.NewUnmeteredAddressValueFromBytes([]byte{2}),
+			),
+			value,
+		)
+	})
+
+	t.Run("two permits two unpermit", func(t *testing.T) {
+		t.Parallel()
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(
+			t,
+			address,
+			true,
+			`
+				fun test(): [Address] {
+					account.inbox.permit(0x1)
+					account.inbox.permit(0x2)
+					account.inbox.unpermit(0x1)
+					account.inbox.unpermit(0x2)
+					return account.inbox.allowlist
+				}
+	            `,
+		)
+
+		value, err := inter.Invoke("test")
+
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.ReturnEmptyLocationRange,
+				interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeAddress,
+				},
+				address.ToAddress(),
+			),
+			value,
+		)
+	})
+
+	t.Run("unpermit missing", func(t *testing.T) {
+		t.Parallel()
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(
+			t,
+			address,
+			true,
+			`
+				fun test(): [Address] {
+					account.inbox.permit(0x1)
+					account.inbox.permit(0x1)
+					account.inbox.unpermit(0x2)
+					return account.inbox.allowlist
+				}
+	            `,
+		)
+
+		value, err := inter.Invoke("test")
+
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.ReturnEmptyLocationRange,
+				interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeAddress,
+				},
+				address.ToAddress(),
+				interpreter.NewUnmeteredAddressValueFromBytes([]byte{1}),
+			),
+			value,
+		)
+	})
+
+	t.Run("unpermit empty", func(t *testing.T) {
+		t.Parallel()
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(
+			t,
+			address,
+			true,
+			`
+				fun test(): [Address] {
+					account.inbox.unpermit(0x2)
+					return account.inbox.allowlist
+				}
+	            `,
+		)
+
+		value, err := inter.Invoke("test")
+
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.ReturnEmptyLocationRange,
+				interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeAddress,
+				},
+				address.ToAddress(),
+			),
+			value,
+		)
+	})
+
+	t.Run("unpermit then permit", func(t *testing.T) {
+		t.Parallel()
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(
+			t,
+			address,
+			true,
+			`
+				fun test(): [Address] {
+					account.inbox.unpermit(0x2)
+					account.inbox.permit(0x2)
+					return account.inbox.allowlist
+				}
+	            `,
+		)
+
+		value, err := inter.Invoke("test")
+
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.ReturnEmptyLocationRange,
+				interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeAddress,
+				},
+				address.ToAddress(),
+				interpreter.NewUnmeteredAddressValueFromBytes([]byte{2}),
+			),
+			value,
+		)
+	})
 }

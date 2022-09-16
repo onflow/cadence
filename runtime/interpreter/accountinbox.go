@@ -44,7 +44,7 @@ func NewAuthAccountInboxValue(
 
 	fields := map[string]Value{
 		sema.AuthAccountInboxPermitField:    accountInboxPermitFunction(gauge, address),
-		sema.AuthAccountInboxUnpermitField:  nil,
+		sema.AuthAccountInboxUnpermitField:  accountInboxUnpermitFunction(gauge, address),
 		sema.AuthAccountInboxPublishField:   nil,
 		sema.AuthAccountInboxUnpublishField: nil,
 		sema.AuthAccountInboxClaimField:     nil,
@@ -61,7 +61,7 @@ func NewAuthAccountInboxValue(
 	computeField := func(name string, inter *Interpreter, getLocationRange func() LocationRange) Value {
 		switch name {
 		case sema.AuthAccountInboxAllowlistField:
-			return getAccountAllowlist(gauge, inter, getLocationRange, address)
+			return getAccountAllowlist(inter, getLocationRange, address)
 		}
 		return nil
 	}
@@ -108,7 +108,7 @@ func NewPublicAccountInboxValue(
 	computeField := func(name string, inter *Interpreter, getLocationRange func() LocationRange) Value {
 		switch name {
 		case sema.PublicAccountInboxAllowlistField:
-			return getAccountAllowlist(gauge, inter, getLocationRange, address)
+			return getAccountAllowlist(inter, getLocationRange, address)
 		}
 		return nil
 	}
@@ -135,6 +135,38 @@ func NewPublicAccountInboxValue(
 	)
 }
 
+func getAccountAllowlist(
+	inter *Interpreter,
+	getLocationRange func() LocationRange,
+	address common.Address,
+) *ArrayValue {
+	allowlist := inter.ReadStored(address, inboxStorageDomain, "allowlist")
+
+	if allowlist == nil {
+		allowlist = NewArrayValue(
+			inter,
+			getLocationRange,
+			VariableSizedStaticType{
+				Type: PrimitiveStaticTypeAddress,
+			},
+			address)
+	} else {
+		allowlist = allowlist.Transfer(
+			inter,
+			getLocationRange,
+			atree.Address(address),
+			false,
+			nil,
+		)
+	}
+
+	allowListArray, ok := allowlist.(*ArrayValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+	return allowListArray
+}
+
 func accountInboxPermitFunction(
 	gauge common.MemoryGauge,
 	address common.Address,
@@ -150,37 +182,14 @@ func accountInboxPermitFunction(
 			inter := invocation.Interpreter
 			getLocationRange := invocation.GetLocationRange
 
-			allowlist := inter.ReadStored(address, inboxStorageDomain, "allowlist")
+			allowlist := getAccountAllowlist(inter, getLocationRange, address)
 
-			if allowlist == nil {
-				allowlist = NewArrayValue(
-					inter,
-					getLocationRange,
-					VariableSizedStaticType{
-						Type: PrimitiveStaticTypeAddress,
-					},
-					address)
-			} else {
-				allowlist = allowlist.Transfer(
-					inter,
-					getLocationRange,
-					atree.Address(address),
-					false,
-					nil,
-				)
-			}
-
-			allowListArray, ok := allowlist.(*ArrayValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			if allowListArray.Contains(inter, getLocationRange, providerValue) {
+			if allowlist.Contains(inter, getLocationRange, providerValue) {
 				return VoidValue{}
 			}
 
-			allowListArray.Append(inter, getLocationRange, providerValue)
-			inter.writeStored(address, inboxStorageDomain, "allowlist", allowListArray)
+			allowlist.Append(inter, getLocationRange, providerValue)
+			inter.writeStored(address, inboxStorageDomain, "allowlist", allowlist)
 
 			return VoidValue{}
 		},
@@ -188,23 +197,32 @@ func accountInboxPermitFunction(
 	)
 }
 
-func getAccountAllowlist(
+func accountInboxUnpermitFunction(
 	gauge common.MemoryGauge,
-	inter *Interpreter,
-	getLocationRange func() LocationRange,
 	address common.Address,
-) Value {
-	allowlist := inter.ReadStored(address, inboxStorageDomain, "allowlist")
+) *HostFunctionValue {
+	return NewHostFunctionValue(
+		gauge,
+		func(invocation Invocation) Value {
+			providerValue, ok := invocation.Arguments[0].(AddressValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
 
-	if allowlist == nil {
-		allowlist = NewArrayValue(
-			inter,
-			getLocationRange,
-			VariableSizedStaticType{
-				Type: PrimitiveStaticTypeAddress,
-			},
-			address)
-		inter.writeStored(address, inboxStorageDomain, "allowlist", allowlist)
-	}
-	return allowlist
+			inter := invocation.Interpreter
+			getLocationRange := invocation.GetLocationRange
+
+			allowlist := getAccountAllowlist(inter, getLocationRange, address)
+
+			index := allowlist.FirstIndex(inter, getLocationRange, providerValue)
+
+			index.iter(func(index Value) {
+				allowlist.Remove(inter, getLocationRange, index.(IntValue).ToInt())
+				inter.writeStored(address, inboxStorageDomain, "allowlist", allowlist)
+			})
+
+			return VoidValue{}
+		},
+		sema.AuthAccountInboxUnpermitFunctionType,
+	)
 }
