@@ -316,6 +316,19 @@ func accountInboxUnpublishFunction(
 				return NewNilValue(gauge)
 			}
 
+			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			if typeParameterPair == nil {
+				panic(errors.NewUnreachableError())
+			}
+
+			ty := sema.NewCapabilityType(gauge, typeParameterPair.Value)
+			if !inter.IsSubTypeOfSemaType(publishedValue.StaticType(invocation.Interpreter), ty) {
+				panic(ForceCastTypeMismatchError{
+					ExpectedType:  ty,
+					LocationRange: invocation.GetLocationRange(),
+				})
+			}
+
 			inter.writeStored(address, inboxStorageDomain, valuePath(nameValue.Str), nil)
 			inter.writeStored(address, inboxStorageDomain, recipientPath(nameValue.Str), nil)
 
