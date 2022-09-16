@@ -27,7 +27,7 @@ import (
 type CadenceBinaryFormatCodec struct{}
 
 func (v CadenceBinaryFormatCodec) Encode(value cadence.Value) ([]byte, error) {
-	return EncodeValue(value)
+	return Encode(value)
 }
 
 func (v CadenceBinaryFormatCodec) MustEncode(value cadence.Value) []byte {
@@ -35,7 +35,7 @@ func (v CadenceBinaryFormatCodec) MustEncode(value cadence.Value) []byte {
 }
 
 func (v CadenceBinaryFormatCodec) Decode(gauge common.MemoryGauge, bytes []byte) (cadence.Value, error) {
-	return DecodeValue(gauge, bytes)
+	return Decode(gauge, bytes)
 }
 
 func (v CadenceBinaryFormatCodec) MustDecode(gauge common.MemoryGauge, bytes []byte) cadence.Value {

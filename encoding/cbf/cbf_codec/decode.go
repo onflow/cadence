@@ -21,6 +21,7 @@ package cbf_codec
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"io"
 
 	"github.com/onflow/cadence"
@@ -36,25 +37,20 @@ type Decoder struct {
 	// TODO abi for cutting down on what needs to be transferred
 }
 
-// DecodeValue returns a Cadence value decoded from its custom-encoded representation.
+// Decode returns a Cadence value decoded from its custom-encoded representation.
 //
 // This function returns an error if the bytes represent a custom encoding that
 // is malformed, does not conform to the custom Cadence specification, or contains
 // an unknown composite type.
-func DecodeValue(gauge common.MemoryGauge, b []byte) (cadence.Value, error) {
+func Decode(gauge common.MemoryGauge, b []byte) (v cadence.Value, err error) {
 	r := bytes.NewReader(b)
 	dec := NewDecoder(gauge, r)
 
-	v, err := dec.DecodeValue()
-	if err != nil {
-		return nil, err
-	}
-
-	return v, nil
+	return dec.Decode()
 }
 
 func MustDecode(gauge common.MemoryGauge, b []byte) cadence.Value {
-	v, err := DecodeValue(gauge, b)
+	v, err := Decode(gauge, b)
 	if err != nil {
 		panic(err)
 	}
@@ -80,9 +76,19 @@ func NewDecoder(memoryGauge common.MemoryGauge, r io.Reader) *Decoder {
 // is malformed, does not conform to the custom Cadence specification, or contains
 // an unknown composite type.
 
-//
-// Other
-//
+func (d *Decoder) Decode() (v cadence.Value, err error) {
+	version, err := d.read(1)
+	if err != nil {
+		return nil, err
+	}
+
+	if version[0] != VERSION {
+		err = fmt.Errorf("expected CBF version %d but got  %d", VERSION, version[0])
+		return
+	}
+
+	return d.DecodeValue()
+}
 
 func (d *Decoder) DecodeLength() (length int, err error) {
 	b, err := d.read(4)

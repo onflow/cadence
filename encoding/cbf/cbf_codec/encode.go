@@ -26,15 +26,17 @@ import (
 	"github.com/onflow/cadence/encoding/cbf/common_codec"
 )
 
+const VERSION = byte(0x01)
+
 // An Encoder converts Cadence values into custom-encoded bytes.
 type Encoder struct {
 	w common_codec.LengthyWriter
 }
 
-// EncodeValue returns the custom-encoded representation of the given value.
+// Encode returns the custom-encoded representation of the given value.
 //
 // This function returns an error if the Cadence value cannot be represented in the custom format.
-func EncodeValue(value cadence.Value) ([]byte, error) {
+func Encode(value cadence.Value) ([]byte, error) {
 	var w bytes.Buffer
 	enc := NewEncoder(&w)
 
@@ -49,7 +51,7 @@ func EncodeValue(value cadence.Value) ([]byte, error) {
 // MustEncode returns the custom-encoded representation of the given value, or panics
 // if the value cannot be represented in the custom format.
 func MustEncode(value cadence.Value) []byte {
-	b, err := EncodeValue(value)
+	b, err := Encode(value)
 	if err != nil {
 		panic(err)
 	}
@@ -70,6 +72,11 @@ func NewEncoder(w io.Writer) *Encoder {
 // This function returns an error if the given value's type is not supported
 // by this encoder.
 func (e *Encoder) Encode(value cadence.Value) (err error) {
+	err = e.writeByte(VERSION)
+	if err != nil {
+		return
+	}
+
 	return e.EncodeValue(value)
 }
 

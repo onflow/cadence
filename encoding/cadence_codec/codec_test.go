@@ -32,12 +32,20 @@ import (
 	"github.com/onflow/cadence/encoding/cbf/cbf_codec"
 )
 
+func TestCadenceCodecVersionStability(t *testing.T) {
+	t.Parallel()
+
+	assert.Equal(t, byte(0x01), cadence_codec.CodecVersionV1, "enum for first version of CBF has changed")
+}
+
 func TestCadenceCodecCBF(t *testing.T) {
 	t.Parallel()
 
 	codec := cadence_codec.NewCadenceCodec(cbf_codec.CadenceBinaryFormatCodec{})
 
-	expectedEncoding := []byte{byte(cbf_codec.EncodedValueVoid)}
+	expectedEncoding := []byte{
+		cadence_codec.CodecVersionV1,
+		byte(cbf_codec.EncodedValueVoid)}
 
 	t.Run("EncodeValue then DecodeValue", func(t *testing.T) {
 		t.Parallel()

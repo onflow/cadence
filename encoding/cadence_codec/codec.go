@@ -23,8 +23,8 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding"
-	customCodec "github.com/onflow/cadence/encoding/cbf/cbf_codec"
-	jsoncdc "github.com/onflow/cadence/encoding/json"
+	cbfCodec "github.com/onflow/cadence/encoding/cbf/cbf_codec"
+	jsonCodec "github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime/common"
 )
 
@@ -35,6 +35,9 @@ type CadenceCodec struct {
 func NewCadenceCodec(defaultEncoder encoding.Codec) CadenceCodec {
 	return CadenceCodec{Encoder: defaultEncoder}
 }
+
+// TODO Write functions for instantiating CadenceCodec with different Encoders.
+//      One for JSON and one or more for various CBF versions and capabilities.
 
 func (c CadenceCodec) Encode(value cadence.Value) ([]byte, error) {
 	return c.Encoder.Encode(value)
@@ -63,7 +66,7 @@ func (c CadenceCodec) MustDecode(gauge common.MemoryGauge, bytes []byte) cadence
 type CodecVersion byte
 
 const (
-	CodecVersionV1   = 0x01
+	CodecVersionV1   = cbfCodec.VERSION
 	CodecVersionJson = '{'
 )
 
@@ -75,9 +78,9 @@ func (c CadenceCodec) chooseCodec(bytes []byte) (codec encoding.Codec, err error
 
 	switch bytes[0] {
 	case CodecVersionV1:
-		codec = customCodec.CadenceBinaryFormatCodec{}
+		codec = cbfCodec.CadenceBinaryFormatCodec{}
 	case CodecVersionJson:
-		codec = jsoncdc.JsonCodec{}
+		codec = jsonCodec.JsonCodec{}
 	default:
 		err = fmt.Errorf("unknown codec version: %d", bytes[0])
 	}

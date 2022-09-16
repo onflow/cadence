@@ -35,10 +35,10 @@ import (
 func FuzzCadenceBinaryFormatDecodingNoPanic(f *testing.F) {
 	f.Skip()
 
-	f.Add([]byte{byte(cbf_codec.EncodedValueVoid)})
+	f.Add([]byte{cbf_codec.VERSION, byte(cbf_codec.EncodedValueVoid)})
 
 	f.Fuzz(func(t *testing.T, encodedBytes []byte) {
-		_, _ = cbf_codec.DecodeValue(nil, encodedBytes)
+		_, _ = cbf_codec.Decode(nil, encodedBytes)
 	})
 }
 
@@ -58,7 +58,7 @@ func TestFoo(t *testing.T) {
 	require.Equal(t, rawFailingBytes, failingBytes, "tested bytes differ from raw bytes")
 
 	// testing if this hangs
-	_, _ = cbf_codec.DecodeValue(nil, failingBytes)
+	_, _ = cbf_codec.Decode(nil, failingBytes)
 }
 
 func TestCadenceBinaryFormatCodecEntryPoints(t *testing.T) {
@@ -66,21 +66,21 @@ func TestCadenceBinaryFormatCodecEntryPoints(t *testing.T) {
 
 	t.Run("EncodeValue", func(t *testing.T) {
 		t.Parallel()
-		v, err := cbf_codec.EncodeValue(cadence.Void{})
+		v, err := cbf_codec.Encode(cadence.Void{})
 		require.NoError(t, err, "encoding error")
-		assert.Equal(t, []byte{byte(cbf_codec.EncodedValueVoid)}, v, "decoded wrong")
+		assert.Equal(t, []byte{cbf_codec.VERSION, byte(cbf_codec.EncodedValueVoid)}, v, "decoded wrong")
 	})
 
 	t.Run("EncodeValue error", func(t *testing.T) {
 		t.Parallel()
-		_, err := cbf_codec.EncodeValue(NewMockCadenceValue())
+		_, err := cbf_codec.Encode(NewMockCadenceValue())
 		assert.ErrorContains(t, err, "unexpected value")
 	})
 
 	t.Run("MustEncode", func(t *testing.T) {
 		t.Parallel()
 		v := cbf_codec.MustEncode(cadence.Void{})
-		assert.Equal(t, []byte{byte(cbf_codec.EncodedValueVoid)}, v, "encoded wrong")
+		assert.Equal(t, []byte{cbf_codec.VERSION, byte(cbf_codec.EncodedValueVoid)}, v, "encoded wrong")
 	})
 
 	t.Run("MustEncode error", func(t *testing.T) {
@@ -92,27 +92,27 @@ func TestCadenceBinaryFormatCodecEntryPoints(t *testing.T) {
 
 	t.Run("DecodeValue", func(t *testing.T) {
 		t.Parallel()
-		v, err := cbf_codec.DecodeValue(nil, []byte{byte(cbf_codec.EncodedValueVoid)})
+		v, err := cbf_codec.Decode(nil, []byte{cbf_codec.VERSION, byte(cbf_codec.EncodedValueVoid)})
 		require.NoError(t, err, "decoding error")
 		assert.Equal(t, cadence.Void{}, v, "decoded wrong")
 	})
 
 	t.Run("DecodeValue error", func(t *testing.T) {
 		t.Parallel()
-		_, err := cbf_codec.DecodeValue(nil, []byte{byte(cbf_codec.EncodedValueUnknown)})
+		_, err := cbf_codec.Decode(nil, []byte{cbf_codec.VERSION, byte(cbf_codec.EncodedValueUnknown)})
 		assert.ErrorContains(t, err, "unknown cadence.Value")
 	})
 
 	t.Run("MustDecode", func(t *testing.T) {
 		t.Parallel()
-		v := cbf_codec.MustDecode(nil, []byte{byte(cbf_codec.EncodedValueVoid)})
+		v := cbf_codec.MustDecode(nil, []byte{cbf_codec.VERSION, byte(cbf_codec.EncodedValueVoid)})
 		assert.Equal(t, cadence.Void{}, v, "decoded wrong")
 	})
 
 	t.Run("MustDecode error", func(t *testing.T) {
 		t.Parallel()
 		assert.PanicsWithError(t, "unknown cadence.Value: %!s(<nil>)", func() {
-			cbf_codec.MustDecode(nil, []byte{byte(cbf_codec.EncodedValueUnknown)})
+			cbf_codec.MustDecode(nil, []byte{cbf_codec.VERSION, byte(cbf_codec.EncodedValueUnknown)})
 		})
 	})
 }
@@ -341,12 +341,12 @@ func TestCadenceBinaryFormatCodecVoid(t *testing.T) {
 
 		assert.Equal(
 			t,
-			[]byte{byte(cbf_codec.EncodedValueVoid)},
+			[]byte{cbf_codec.VERSION, byte(cbf_codec.EncodedValueVoid)},
 			buffer.Bytes(),
 			"encoded bytes differ",
 		)
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -392,12 +392,13 @@ func TestCadenceBinaryFormatCodecBool(t *testing.T) {
 		assert.Equal(
 			t,
 			[]byte{
+				cbf_codec.VERSION,
 				byte(cbf_codec.EncodedValueBool),
 				byte(common_codec.EncodedBoolFalse),
 			},
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -416,12 +417,13 @@ func TestCadenceBinaryFormatCodecBool(t *testing.T) {
 		assert.Equal(
 			t,
 			[]byte{
+				cbf_codec.VERSION,
 				byte(cbf_codec.EncodedValueBool),
 				byte(common_codec.EncodedBoolTrue),
 			},
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -468,13 +470,14 @@ func TestCadenceBinaryFormatCodecOptional(t *testing.T) {
 		assert.Equal(
 			t,
 			[]byte{
+				cbf_codec.VERSION,
 				byte(cbf_codec.EncodedValueOptional),
 				byte(common_codec.EncodedBoolFalse),
 				byte(cbf_codec.EncodedValueVoid),
 			},
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -494,6 +497,7 @@ func TestCadenceBinaryFormatCodecOptional(t *testing.T) {
 		assert.Equal(
 			t,
 			[]byte{
+				cbf_codec.VERSION,
 				byte(cbf_codec.EncodedValueOptional),
 				byte(common_codec.EncodedBoolFalse),
 				byte(cbf_codec.EncodedValueBool),
@@ -501,7 +505,7 @@ func TestCadenceBinaryFormatCodecOptional(t *testing.T) {
 			},
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -520,12 +524,13 @@ func TestCadenceBinaryFormatCodecOptional(t *testing.T) {
 		assert.Equal(
 			t,
 			[]byte{
+				cbf_codec.VERSION,
 				byte(cbf_codec.EncodedValueOptional),
 				byte(common_codec.EncodedBoolTrue),
 			},
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -577,12 +582,13 @@ func TestCadenceBinaryFormatCodecString(t *testing.T) {
 		assert.Equal(
 			t,
 			[]byte{
+				cbf_codec.VERSION,
 				byte(cbf_codec.EncodedValueString),
 				0, 0, 0, 0,
 			},
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -602,13 +608,14 @@ func TestCadenceBinaryFormatCodecString(t *testing.T) {
 		assert.Equal(
 			t,
 			common_codec.Concat(
+				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueString)},
 				[]byte{0, 0, 0, byte(len(s))},
 				[]byte(s),
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -655,12 +662,13 @@ func TestCadenceBinaryFormatCodecBytes(t *testing.T) {
 		assert.Equal(
 			t,
 			[]byte{
+				cbf_codec.VERSION,
 				byte(cbf_codec.EncodedValueBytes),
 				0, 0, 0, 0,
 			},
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -680,13 +688,14 @@ func TestCadenceBinaryFormatCodecBytes(t *testing.T) {
 		assert.Equal(
 			t,
 			common_codec.Concat(
+				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueBytes)},
 				[]byte{0, 0, 0, byte(len(s))},
 				s,
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -735,13 +744,14 @@ func TestCadenceBinaryFormatCodecCharacter(t *testing.T) {
 		assert.Equal(
 			t,
 			common_codec.Concat(
+				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueCharacter)},
 				[]byte{0, 0, 0, byte(len(s))},
 				[]byte(s),
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -763,13 +773,14 @@ func TestCadenceBinaryFormatCodecCharacter(t *testing.T) {
 		assert.Equal(
 			t,
 			common_codec.Concat(
+				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueCharacter)},
 				[]byte{0, 0, 0, byte(len(s))},
 				[]byte(s),
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -815,12 +826,13 @@ func TestCadenceBinaryFormatCodecAddress(t *testing.T) {
 		assert.Equal(
 			t,
 			common_codec.Concat(
+				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueAddress)},
 				value.Bytes(),
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -839,12 +851,13 @@ func TestCadenceBinaryFormatCodecAddress(t *testing.T) {
 		assert.Equal(
 			t,
 			common_codec.Concat(
+				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueAddress)},
 				value.Bytes(),
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -891,6 +904,7 @@ func TestCadenceBinaryFormatCodecInt(t *testing.T) {
 		assert.Equal(
 			t,
 			common_codec.Concat(
+				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueInt)},
 				[]byte{byte(common_codec.EncodedBoolFalse)}, // not negative
 				[]byte{0, 0, 0, 1},
@@ -898,7 +912,7 @@ func TestCadenceBinaryFormatCodecInt(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -919,6 +933,7 @@ func TestCadenceBinaryFormatCodecInt(t *testing.T) {
 		assert.Equal(
 			t,
 			common_codec.Concat(
+				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueInt)},
 				[]byte{byte(common_codec.EncodedBoolFalse)}, // not negative
 				[]byte{0, 0, 0, 2},
@@ -926,7 +941,7 @@ func TestCadenceBinaryFormatCodecInt(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -946,6 +961,7 @@ func TestCadenceBinaryFormatCodecInt(t *testing.T) {
 		assert.Equal(
 			t,
 			common_codec.Concat(
+				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueInt)},
 				[]byte{byte(common_codec.EncodedBoolTrue)}, // negative
 				[]byte{0, 0, 0, 1},
@@ -953,7 +969,7 @@ func TestCadenceBinaryFormatCodecInt(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -1000,6 +1016,7 @@ func TestCadenceBinaryFormatCodecInt128(t *testing.T) {
 		assert.Equal(
 			t,
 			common_codec.Concat(
+				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueInt128)},
 				[]byte{byte(common_codec.EncodedBoolFalse)}, // not negative
 				[]byte{0, 0, 0, 1},
@@ -1007,7 +1024,7 @@ func TestCadenceBinaryFormatCodecInt128(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -1028,6 +1045,7 @@ func TestCadenceBinaryFormatCodecInt128(t *testing.T) {
 		assert.Equal(
 			t,
 			common_codec.Concat(
+				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueInt128)},
 				[]byte{byte(common_codec.EncodedBoolFalse)}, // not negative
 				[]byte{0, 0, 0, 2},
@@ -1035,7 +1053,7 @@ func TestCadenceBinaryFormatCodecInt128(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -1055,6 +1073,7 @@ func TestCadenceBinaryFormatCodecInt128(t *testing.T) {
 		assert.Equal(
 			t,
 			common_codec.Concat(
+				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueInt128)},
 				[]byte{byte(common_codec.EncodedBoolTrue)}, // negative
 				[]byte{0, 0, 0, 1},
@@ -1062,7 +1081,7 @@ func TestCadenceBinaryFormatCodecInt128(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -1109,6 +1128,7 @@ func TestCadenceBinaryFormatCodecInt256(t *testing.T) {
 		assert.Equal(
 			t,
 			common_codec.Concat(
+				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueInt256)},
 				[]byte{byte(common_codec.EncodedBoolFalse)}, // not negative
 				[]byte{0, 0, 0, 1},
@@ -1116,7 +1136,7 @@ func TestCadenceBinaryFormatCodecInt256(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -1137,6 +1157,7 @@ func TestCadenceBinaryFormatCodecInt256(t *testing.T) {
 		assert.Equal(
 			t,
 			common_codec.Concat(
+				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueInt256)},
 				[]byte{byte(common_codec.EncodedBoolFalse)}, // not negative
 				[]byte{0, 0, 0, 2},
@@ -1144,7 +1165,7 @@ func TestCadenceBinaryFormatCodecInt256(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -1164,6 +1185,7 @@ func TestCadenceBinaryFormatCodecInt256(t *testing.T) {
 		assert.Equal(
 			t,
 			common_codec.Concat(
+				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueInt256)},
 				[]byte{byte(common_codec.EncodedBoolTrue)}, // negative
 				[]byte{0, 0, 0, 1},
@@ -1171,7 +1193,7 @@ func TestCadenceBinaryFormatCodecInt256(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -1218,6 +1240,7 @@ func TestCadenceBinaryFormatCodecUInt128(t *testing.T) {
 		assert.Equal(
 			t,
 			common_codec.Concat(
+				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueUInt128)},
 				[]byte{byte(common_codec.EncodedBoolFalse)}, // not negative
 				[]byte{0, 0, 0, 1},
@@ -1225,7 +1248,7 @@ func TestCadenceBinaryFormatCodecUInt128(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -1246,6 +1269,7 @@ func TestCadenceBinaryFormatCodecUInt128(t *testing.T) {
 		assert.Equal(
 			t,
 			common_codec.Concat(
+				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueUInt128)},
 				[]byte{byte(common_codec.EncodedBoolFalse)}, // not negative
 				[]byte{0, 0, 0, 2},
@@ -1253,7 +1277,7 @@ func TestCadenceBinaryFormatCodecUInt128(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -1300,6 +1324,7 @@ func TestCadenceBinaryFormatCodecUInt256(t *testing.T) {
 		assert.Equal(
 			t,
 			common_codec.Concat(
+				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueUInt256)},
 				[]byte{byte(common_codec.EncodedBoolFalse)}, // not negative
 				[]byte{0, 0, 0, 1},
@@ -1307,7 +1332,7 @@ func TestCadenceBinaryFormatCodecUInt256(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -1328,6 +1353,7 @@ func TestCadenceBinaryFormatCodecUInt256(t *testing.T) {
 		assert.Equal(
 			t,
 			common_codec.Concat(
+				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueUInt256)},
 				[]byte{byte(common_codec.EncodedBoolFalse)}, // not negative
 				[]byte{0, 0, 0, 2},
@@ -1335,7 +1361,7 @@ func TestCadenceBinaryFormatCodecUInt256(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -1382,6 +1408,7 @@ func TestCadenceBinaryFormatCodecUInt(t *testing.T) {
 		assert.Equal(
 			t,
 			common_codec.Concat(
+				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueUInt)},
 				[]byte{byte(common_codec.EncodedBoolFalse)}, // not negative
 				[]byte{0, 0, 0, 1},
@@ -1389,7 +1416,7 @@ func TestCadenceBinaryFormatCodecUInt(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -1410,6 +1437,7 @@ func TestCadenceBinaryFormatCodecUInt(t *testing.T) {
 		assert.Equal(
 			t,
 			common_codec.Concat(
+				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueUInt)},
 				[]byte{byte(common_codec.EncodedBoolFalse)}, // not negative
 				[]byte{0, 0, 0, 2},
@@ -1417,7 +1445,7 @@ func TestCadenceBinaryFormatCodecUInt(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -1464,12 +1492,13 @@ func TestCadenceBinaryFormatCodecNumber(t *testing.T) {
 		assert.Equal(
 			t,
 			common_codec.Concat(
+				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueInt8)},
 				[]byte{byte(i)},
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -1510,12 +1539,13 @@ func TestCadenceBinaryFormatCodecNumber(t *testing.T) {
 		assert.Equal(
 			t,
 			common_codec.Concat(
+				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueInt16)},
 				[]byte{0, byte(i)},
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -1556,12 +1586,13 @@ func TestCadenceBinaryFormatCodecNumber(t *testing.T) {
 		assert.Equal(
 			t,
 			common_codec.Concat(
+				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueInt32)},
 				[]byte{0, 0, 0, byte(i)},
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -1602,12 +1633,13 @@ func TestCadenceBinaryFormatCodecNumber(t *testing.T) {
 		assert.Equal(
 			t,
 			common_codec.Concat(
+				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueInt64)},
 				[]byte{0, 0, 0, 0, 0, 0, 0, byte(i)},
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -1648,12 +1680,13 @@ func TestCadenceBinaryFormatCodecNumber(t *testing.T) {
 		assert.Equal(
 			t,
 			common_codec.Concat(
+				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueUInt8)},
 				[]byte{i},
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -1694,12 +1727,13 @@ func TestCadenceBinaryFormatCodecNumber(t *testing.T) {
 		assert.Equal(
 			t,
 			common_codec.Concat(
+				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueUInt16)},
 				[]byte{0, byte(i)},
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -1740,12 +1774,13 @@ func TestCadenceBinaryFormatCodecNumber(t *testing.T) {
 		assert.Equal(
 			t,
 			common_codec.Concat(
+				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueUInt32)},
 				[]byte{0, 0, 0, byte(i)},
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -1786,12 +1821,13 @@ func TestCadenceBinaryFormatCodecNumber(t *testing.T) {
 		assert.Equal(
 			t,
 			common_codec.Concat(
+				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueUInt64)},
 				[]byte{0, 0, 0, 0, 0, 0, 0, byte(i)},
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -1832,12 +1868,13 @@ func TestCadenceBinaryFormatCodecNumber(t *testing.T) {
 		assert.Equal(
 			t,
 			common_codec.Concat(
+				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueWord8)},
 				[]byte{i},
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -1878,12 +1915,13 @@ func TestCadenceBinaryFormatCodecNumber(t *testing.T) {
 		assert.Equal(
 			t,
 			common_codec.Concat(
+				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueWord16)},
 				[]byte{0, i},
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -1924,12 +1962,13 @@ func TestCadenceBinaryFormatCodecNumber(t *testing.T) {
 		assert.Equal(
 			t,
 			common_codec.Concat(
+				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueWord32)},
 				[]byte{0, 0, 0, i},
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -1970,12 +2009,13 @@ func TestCadenceBinaryFormatCodecNumber(t *testing.T) {
 		assert.Equal(
 			t,
 			common_codec.Concat(
+				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueWord64)},
 				[]byte{0, 0, 0, 0, 0, 0, 0, i},
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -2023,13 +2063,14 @@ func TestCadenceBinaryFormatCodecArray(t *testing.T) {
 		assert.Equal(
 			t,
 			[]byte{
+				cbf_codec.VERSION,
 				byte(cbf_codec.EncodedValueVariableArray),
 				byte(cbf_codec.EncodedTypeAnyType),
 				0, 0, 0, byte(len(elements)),
 			},
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -2054,6 +2095,7 @@ func TestCadenceBinaryFormatCodecArray(t *testing.T) {
 		assert.Equal(
 			t,
 			[]byte{
+				cbf_codec.VERSION,
 				byte(cbf_codec.EncodedValueVariableArray),
 				byte(cbf_codec.EncodedTypeAnyType),
 				0, 0, 0, byte(len(elements)),
@@ -2065,7 +2107,7 @@ func TestCadenceBinaryFormatCodecArray(t *testing.T) {
 			},
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -2114,13 +2156,14 @@ func TestCadenceBinaryFormatCodecArray(t *testing.T) {
 		assert.Equal(
 			t,
 			[]byte{
+				cbf_codec.VERSION,
 				byte(cbf_codec.EncodedValueConstantArray),
 				byte(cbf_codec.EncodedTypeAnyStructType),
 				0, 0, 0, byte(len(elements)),
 			},
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -2145,6 +2188,7 @@ func TestCadenceBinaryFormatCodecArray(t *testing.T) {
 		assert.Equal(
 			t,
 			[]byte{
+				cbf_codec.VERSION,
 				byte(cbf_codec.EncodedValueConstantArray),
 				byte(cbf_codec.EncodedTypeAnyStructType),
 				0, 0, 0, byte(len(elements)),
@@ -2156,7 +2200,7 @@ func TestCadenceBinaryFormatCodecArray(t *testing.T) {
 			},
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -2238,6 +2282,7 @@ func TestCadenceBinaryFormatCodecDictionary(t *testing.T) {
 		assert.Equal(
 			t,
 			[]byte{
+				cbf_codec.VERSION,
 				byte(cbf_codec.EncodedValueDictionary),
 				byte(cbf_codec.EncodedTypeFix64),
 				byte(cbf_codec.EncodedTypeFixedPoint),
@@ -2245,7 +2290,7 @@ func TestCadenceBinaryFormatCodecDictionary(t *testing.T) {
 			},
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -2277,6 +2322,7 @@ func TestCadenceBinaryFormatCodecDictionary(t *testing.T) {
 		assert.Equal(
 			t,
 			[]byte{
+				cbf_codec.VERSION,
 				byte(cbf_codec.EncodedValueDictionary),
 				byte(cbf_codec.EncodedTypeFix64),
 				byte(cbf_codec.EncodedTypeFixedPoint),
@@ -2292,7 +2338,7 @@ func TestCadenceBinaryFormatCodecDictionary(t *testing.T) {
 			},
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -2371,6 +2417,7 @@ func TestCadenceBinaryFormatCodecStruct(t *testing.T) {
 		assert.Equal(
 			t,
 			common_codec.Concat(
+				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueStruct)},
 				[]byte{common.REPLLocationPrefix[0]},
 				[]byte{0, 0, 0, byte(len(qualifiedIdentifier))},
@@ -2392,7 +2439,7 @@ func TestCadenceBinaryFormatCodecStruct(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -2505,6 +2552,7 @@ func TestCadenceBinaryFormatCodecResource(t *testing.T) {
 		assert.Equal(
 			t,
 			common_codec.Concat(
+				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueResource)},
 				[]byte{common.REPLLocationPrefix[0]},
 				[]byte{0, 0, 0, byte(len(qualifiedIdentifier))},
@@ -2526,7 +2574,7 @@ func TestCadenceBinaryFormatCodecResource(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -2637,6 +2685,7 @@ func TestCadenceBinaryFormatCodecEvent(t *testing.T) {
 		assert.Equal(
 			t,
 			common_codec.Concat(
+				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueEvent)},
 				[]byte{common.REPLLocationPrefix[0]},
 				[]byte{0, 0, 0, byte(len(qualifiedIdentifier))},
@@ -2657,7 +2706,7 @@ func TestCadenceBinaryFormatCodecEvent(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -2767,6 +2816,7 @@ func TestCadenceBinaryFormatCodecContract(t *testing.T) {
 		assert.Equal(
 			t,
 			common_codec.Concat(
+				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueContract)},
 				[]byte{common.REPLLocationPrefix[0]},
 				[]byte{0, 0, 0, byte(len(qualifiedIdentifier))},
@@ -2788,7 +2838,7 @@ func TestCadenceBinaryFormatCodecContract(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -2874,6 +2924,7 @@ func TestCadenceBinaryFormatCodecLink(t *testing.T) {
 		assert.Equal(
 			t,
 			common_codec.Concat(
+				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueLink)},
 				[]byte{0, 0, 0, byte(len(targetPath.Domain))},
 				[]byte(targetPath.Domain),
@@ -2884,7 +2935,7 @@ func TestCadenceBinaryFormatCodecLink(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -2907,6 +2958,7 @@ func TestCadenceBinaryFormatCodecPath(t *testing.T) {
 		assert.Equal(
 			t,
 			common_codec.Concat(
+				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValuePath)},
 				[]byte{0, 0, 0, byte(len(value.Domain))},
 				[]byte(value.Domain),
@@ -2915,7 +2967,7 @@ func TestCadenceBinaryFormatCodecPath(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -3042,6 +3094,7 @@ func TestCadenceBinaryFormatCodecCapability(t *testing.T) {
 		assert.Equal(
 			t,
 			common_codec.Concat(
+				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueCapability)},
 				[]byte{0, 0, 0, byte(len(path.Domain))},
 				[]byte(path.Domain),
@@ -3052,7 +3105,7 @@ func TestCadenceBinaryFormatCodecCapability(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
@@ -3132,6 +3185,7 @@ func TestCadenceBinaryFormatCodecEnum(t *testing.T) {
 		assert.Equal(
 			t,
 			common_codec.Concat(
+				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueEnum)},
 				[]byte{common.REPLLocationPrefix[0]},
 				[]byte{0, 0, 0, byte(len(qualifiedIdentifier))},
@@ -3154,7 +3208,7 @@ func TestCadenceBinaryFormatCodecEnum(t *testing.T) {
 			),
 			buffer.Bytes(), "encoded bytes differ")
 
-		output, err := decoder.DecodeValue()
+		output, err := decoder.Decode()
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, value, output, "decoded value differs")
