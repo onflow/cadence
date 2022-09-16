@@ -57,7 +57,6 @@ build-tools:
 	(cd ./tools/analysis && go build . && cd -)
 	(cd ./tools/batch-script && go build . && cd -)
 	(cd ./tools/constructorcheck && make plugin && cd -)
-	(cd ./tools/docgen && make build && cd -)
 
 .PHONY: lint-github-actions
 lint-github-actions: build-linter
