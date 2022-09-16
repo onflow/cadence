@@ -36,7 +36,7 @@ test:
 	GO111MODULE=on go test -coverprofile=coverage.txt -covermode=atomic -parallel 8 -race -coverpkg $(COVERPKGS) ./...
 	# remove coverage of empty functions from report
 	sed -i -e 's/^.* 0 0$$//' coverage.txt
-	cd ./languageserver && make test
+	(cd ./languageserver && make test && cd -)
 
 .PHONY: fast-test
 fast-test:

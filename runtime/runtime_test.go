@@ -6080,8 +6080,8 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 			return
 		}
 
-		for locationID := range runtimeInterface.programs {
-			delete(runtimeInterface.programs, locationID)
+		for location := range runtimeInterface.programs {
+			delete(runtimeInterface.programs, location)
 		}
 	}
 
@@ -6250,7 +6250,7 @@ func TestRuntimeNoProgramsHitForToplevelPrograms(t *testing.T) {
 
 	var signerAddresses []Address
 
-	var programsHits []string
+	var programsHits []Location
 
 	runtimeInterface := &testRuntimeInterface{
 		createAccount: func(payer Address) (address Address, err error) {
@@ -6265,7 +6265,7 @@ func TestRuntimeNoProgramsHitForToplevelPrograms(t *testing.T) {
 			return nil
 		},
 		getProgram: func(location Location) (*interpreter.Program, error) {
-			programsHits = append(programsHits, string(location.ID()))
+			programsHits = append(programsHits, location)
 			return programs[location], nil
 		},
 		storage: newTestLedger(nil, nil),
@@ -6344,7 +6344,13 @@ func TestRuntimeNoProgramsHitForToplevelPrograms(t *testing.T) {
 	require.GreaterOrEqual(t, len(programsHits), 1)
 
 	for _, cacheHit := range programsHits {
-		require.Equal(t, "A.0100000000000000.HelloWorld", cacheHit)
+		require.Equal(t,
+			common.AddressLocation{
+				Address: Address{1},
+				Name:    "HelloWorld",
+			},
+			cacheHit,
+		)
 	}
 }
 
@@ -6466,8 +6472,8 @@ func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
 			return
 		}
 
-		for locationID := range runtimeInterface.programs {
-			delete(runtimeInterface.programs, locationID)
+		for location := range runtimeInterface.programs {
+			delete(runtimeInterface.programs, location)
 		}
 	}
 
@@ -7458,4 +7464,36 @@ func BenchmarkRuntimeScriptNoop(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_, _ = runtime.ExecuteScript(script, context)
 	}
+}
+
+func TestImportingTestStdlib(t *testing.T) {
+
+	t.Parallel()
+
+	rt := newTestInterpreterRuntime()
+
+	runtimeInterface := &testRuntimeInterface{}
+
+	_, err := rt.ExecuteScript(
+		Script{
+			Source: []byte(`
+			    import Test
+
+			    pub fun main() {
+			        Test.assert(true)
+			    }
+			`),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  utils.TestLocation,
+		},
+	)
+
+	require.Error(t, err)
+	errs := checker.ExpectCheckerErrors(t, err, 1)
+
+	notDeclaredErr := &sema.NotDeclaredError{}
+	require.ErrorAs(t, errs[0], &notDeclaredErr)
+	assert.Equal(t, "Test", notDeclaredErr.Name)
 }

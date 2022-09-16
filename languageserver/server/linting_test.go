@@ -21,9 +21,10 @@ package server
 import (
 	"testing"
 
-	"github.com/onflow/cadence/languageserver/protocol"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/cadence/languageserver/protocol"
 )
 
 func checkProgram(t *testing.T, text string) []protocol.Diagnostic {

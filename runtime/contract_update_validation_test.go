@@ -2328,8 +2328,8 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 			programGets2,
 			programSets2,
 		} {
-			for locationID := range counts { //nolint:maprangecheck
-				delete(counts, locationID)
+			for location := range counts { //nolint:maprangecheck
+				delete(counts, location)
 			}
 		}
 	}

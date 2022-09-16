@@ -60,7 +60,7 @@ func (interpreter *Interpreter) assignmentGetterSetter(expression ast.Expression
 //
 func (interpreter *Interpreter) identifierExpressionGetterSetter(identifierExpression *ast.IdentifierExpression) getterSetter {
 	identifier := identifierExpression.Identifier.Identifier
-	variable := interpreter.findVariable(identifier)
+	variable := interpreter.FindVariable(identifier)
 
 	return getterSetter{
 		get: func(_ bool) Value {
@@ -230,7 +230,7 @@ func (interpreter *Interpreter) checkMemberAccess(
 
 func (interpreter *Interpreter) VisitIdentifierExpression(expression *ast.IdentifierExpression) Value {
 	name := expression.Identifier.Identifier
-	variable := interpreter.findVariable(name)
+	variable := interpreter.FindVariable(name)
 	value := variable.GetValue()
 
 	interpreter.checkInvalidatedResourceUse(value, variable, name, expression)

@@ -51,7 +51,11 @@ func Test_ContractUpdate(t *testing.T) {
 	program, err := parser.ParseProgram(code, nil)
 	require.NoError(t, err)
 
-	checker, err := sema.NewChecker(program, common.StringLocation("foo"), nil, false)
+	location := common.StringLocation("foo")
+	config := &sema.Config{
+		AccessCheckMode: sema.AccessCheckModeStrict,
+	}
+	checker, err := sema.NewChecker(program, location, nil, config)
 	require.NoError(t, err)
 
 	err = checker.Check()

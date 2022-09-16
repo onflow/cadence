@@ -286,7 +286,7 @@ func newNativeEnumType(
 	)
 
 	ty.Members = GetMembersAsMap(members)
-	ty.Fields = getFieldNames(members)
+	ty.Fields = GetFieldNames(members)
 	return ty
 }
 

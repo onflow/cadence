@@ -97,7 +97,7 @@ func TestInterpreterAddressLocationMetering(t *testing.T) {
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindAddressLocation))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindElaboration))
-		assert.Equal(t, uint64(92), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindRawString))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 }
@@ -985,7 +985,9 @@ func TestMemoryMeteringErrors(t *testing.T) {
 		intf := &testRuntimeInterface{
 			meterMemory: func(usage common.MemoryUsage) error {
 				if usage.Kind == common.MemoryKindStringValue ||
-					usage.Kind == common.MemoryKindArrayValueBase {
+					usage.Kind == common.MemoryKindArrayValueBase ||
+					usage.Kind == common.MemoryKindErrorToken {
+
 					return testMemoryError{}
 				}
 				return nil
@@ -1044,7 +1046,7 @@ func TestMemoryMeteringErrors(t *testing.T) {
 
 		script := []byte(`
             pub fun main() {
-                let x = "hello"
+                0b
             }
         `)
 

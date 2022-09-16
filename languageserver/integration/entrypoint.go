@@ -23,13 +23,15 @@ import (
 	"fmt"
 	"regexp"
 
-	"github.com/onflow/cadence/languageserver/conversion"
-	"github.com/onflow/cadence/languageserver/protocol"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
+
+	"github.com/onflow/cadence/languageserver/conversion"
+	"github.com/onflow/cadence/languageserver/protocol"
 )
 
 type entryPointKind uint8
@@ -91,8 +93,11 @@ func (e *entryPointInfo) update(uri protocol.DocumentURI, version int32, checker
 		}
 
 		if len(e.parameters) > 0 {
+
+			inter, _ := interpreter.NewInterpreter(nil, nil, &interpreter.Config{})
+
 			for _, pragmaArgumentString := range parser.ParseDocstringPragmaArguments(docString) {
-				arguments, err := runtime.ParseLiteralArgumentList(pragmaArgumentString, parameterTypes, nil)
+				arguments, err := runtime.ParseLiteralArgumentList(pragmaArgumentString, parameterTypes, inter)
 				// TODO: record error and show diagnostic
 				if err != nil {
 					continue
