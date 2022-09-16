@@ -1080,7 +1080,7 @@ func TestStringer(t *testing.T) {
 				inter := newTestInterpreter(t)
 
 				array := NewArrayValue(
-					newTestInterpreter(t),
+					inter,
 					ReturnEmptyLocationRange,
 					VariableSizedStaticType{
 						Type: PrimitiveStaticTypeAnyStruct,
@@ -1088,7 +1088,6 @@ func TestStringer(t *testing.T) {
 					common.Address{},
 				)
 				arrayRef := NewUnmeteredEphemeralReferenceValue(
-					inter,
 					false,
 					array,
 					&sema.VariableSizedType{
@@ -3933,9 +3932,8 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		t.Parallel()
 
 		test(
-			func(inter *Interpreter) Value {
+			func(*Interpreter) Value {
 				return NewUnmeteredEphemeralReferenceValue(
-					inter,
 					false,
 					NewUnmeteredBoolValue(true),
 					sema.BoolType,
@@ -3945,9 +3943,8 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		)
 
 		test(
-			func(inter *Interpreter) Value {
+			func(*Interpreter) Value {
 				return NewUnmeteredEphemeralReferenceValue(
-					inter,
 					false,
 					NewUnmeteredBoolValue(true),
 					sema.StringType,

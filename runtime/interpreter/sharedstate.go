@@ -34,7 +34,6 @@ type sharedState struct {
 	// TODO: ideally this would be a weak map, but Go has no weak references
 	referencedResourceKindedValues ReferencedResourceKindedValues
 	resourceVariables              map[ResourceKindedValue]*Variable
-	resourceReferences             ResourceReferences
 }
 
 func newSharedState() *sharedState {
@@ -50,6 +49,5 @@ func newSharedState() *sharedState {
 		storageMutatedDuringIteration:  false,
 		referencedResourceKindedValues: map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}{},
 		resourceVariables:              map[ResourceKindedValue]*Variable{},
-		resourceReferences:             ResourceReferences{},
 	}
 }

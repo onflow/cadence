@@ -407,7 +407,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				sType := checker.RequireGlobalType(t, inter.Program.Elaboration, "S")
 
-				ref := interpreter.NewUnmeteredEphemeralReferenceValue(inter, false, value, sType)
+				ref := interpreter.NewUnmeteredEphemeralReferenceValue(false, value, sType)
 
 				_, err = inter.Invoke("get", ref)
 				require.NoError(t, err)
@@ -454,7 +454,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				sType := checker.RequireGlobalType(t, inter.Program.Elaboration, "S")
 
-				ref := interpreter.NewUnmeteredEphemeralReferenceValue(inter, false, value, sType)
+				ref := interpreter.NewUnmeteredEphemeralReferenceValue(false, value, sType)
 
 				_, err = inter.Invoke("get", ref)
 				require.Error(t, err)
@@ -496,7 +496,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				sType := checker.RequireGlobalType(t, inter.Program.Elaboration, "S")
 
-				ref := interpreter.NewUnmeteredEphemeralReferenceValue(inter, false, value, sType)
+				ref := interpreter.NewUnmeteredEphemeralReferenceValue(false, value, sType)
 
 				_, err = inter.Invoke(
 					"get",
@@ -541,7 +541,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				sType := checker.RequireGlobalType(t, inter.Program.Elaboration, "S")
 
-				ref := interpreter.NewUnmeteredEphemeralReferenceValue(inter, false, value, sType)
+				ref := interpreter.NewUnmeteredEphemeralReferenceValue(false, value, sType)
 
 				_, err = inter.Invoke(
 					"get",

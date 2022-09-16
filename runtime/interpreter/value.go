@@ -203,6 +203,7 @@ type ReferenceTrackedResourceKindedValue interface {
 	ResourceKindedValue
 	IsReferenceTrackedResourceKindedValue()
 	StorageID() atree.StorageID
+	IsStaleResource(*Interpreter) bool
 }
 
 func safeAdd(a, b int) int {
@@ -1520,11 +1521,15 @@ func (v *ArrayValue) IsImportable(inter *Interpreter) bool {
 }
 
 func (v *ArrayValue) checkInvalidatedResourceUse(interpreter *Interpreter, getLocationRange func() LocationRange) {
-	if v.isDestroyed || (v.array == nil && v.IsResourceKinded(interpreter)) {
+	if v.isDestroyed || v.IsStaleResource(interpreter) {
 		panic(InvalidatedResourceError{
 			LocationRange: getLocationRange(),
 		})
 	}
+}
+
+func (v *ArrayValue) IsStaleResource(interpreter *Interpreter) bool {
+	return v.array == nil && v.IsResourceKinded(interpreter)
 }
 
 func (v *ArrayValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
@@ -1561,8 +1566,6 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, getLocationRange func() L
 	if interpreter.Config.InvalidatedResourceValidationEnabled {
 		v.array = nil
 	}
-
-	interpreter.trackResourceMove(storageID, storageID)
 
 	interpreter.updateReferencedResource(
 		storageID,
@@ -2401,8 +2404,6 @@ func (v *ArrayValue) Transfer(
 
 		newStorageID := array.StorageID()
 
-		interpreter.trackResourceMove(currentStorageID, newStorageID)
-
 		interpreter.updateReferencedResource(
 			currentStorageID,
 			newStorageID,
@@ -2411,7 +2412,14 @@ func (v *ArrayValue) Transfer(
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
-				arrayValue.array = array
+
+				// Moves within same location (e.g: stack to stack)
+				// do not invalidate the references.
+				if newStorageID == currentStorageID {
+					arrayValue.array = array
+				} else {
+					arrayValue.array = nil
+				}
 			},
 		)
 	}
@@ -14410,8 +14418,6 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func
 		v.dictionary = nil
 	}
 
-	interpreter.trackResourceMove(storageID, storageID)
-
 	interpreter.updateReferencedResource(
 		storageID,
 		storageID,
@@ -14520,11 +14526,15 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange fu
 }
 
 func (v *CompositeValue) checkInvalidatedResourceUse(getLocationRange func() LocationRange) {
-	if v.isDestroyed || (v.dictionary == nil && v.Kind == common.CompositeKindResource) {
+	if v.isDestroyed || v.IsStaleResource(nil) {
 		panic(InvalidatedResourceError{
 			LocationRange: getLocationRange(),
 		})
 	}
+}
+
+func (v *CompositeValue) IsStaleResource(*Interpreter) bool {
+	return v.dictionary == nil && v.Kind == common.CompositeKindResource
 }
 
 func (v *CompositeValue) getInterpreter(interpreter *Interpreter) *Interpreter {
@@ -15113,8 +15123,6 @@ func (v *CompositeValue) Transfer(
 
 		newStorageID := dictionary.StorageID()
 
-		interpreter.trackResourceMove(currentStorageID, newStorageID)
-
 		interpreter.updateReferencedResource(
 			currentStorageID,
 			newStorageID,
@@ -15123,7 +15131,14 @@ func (v *CompositeValue) Transfer(
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
-				compositeValue.dictionary = dictionary
+
+				// Moves within same location (e.g: stack to stack)
+				// do not invalidate the references.
+				if newStorageID == currentStorageID {
+					compositeValue.dictionary = dictionary
+				} else {
+					compositeValue.dictionary = nil
+				}
 			},
 		)
 	}
@@ -15567,11 +15582,15 @@ func (v *DictionaryValue) IsDestroyed() bool {
 }
 
 func (v *DictionaryValue) checkInvalidatedResourceUse(interpreter *Interpreter, getLocationRange func() LocationRange) {
-	if v.isDestroyed || (v.dictionary == nil && v.IsResourceKinded(interpreter)) {
+	if v.isDestroyed || v.IsStaleResource(interpreter) {
 		panic(InvalidatedResourceError{
 			LocationRange: getLocationRange(),
 		})
 	}
+}
+
+func (v *DictionaryValue) IsStaleResource(interpreter *Interpreter) bool {
+	return v.dictionary == nil && v.IsResourceKinded(interpreter)
 }
 
 func (v *DictionaryValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
@@ -15611,8 +15630,6 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, getLocationRange fun
 	if interpreter.Config.InvalidatedResourceValidationEnabled {
 		v.dictionary = nil
 	}
-
-	interpreter.trackResourceMove(storageID, storageID)
 
 	interpreter.updateReferencedResource(
 		storageID,
@@ -16344,8 +16361,6 @@ func (v *DictionaryValue) Transfer(
 
 		newStorageID := dictionary.StorageID()
 
-		interpreter.trackResourceMove(currentStorageID, newStorageID)
-
 		interpreter.updateReferencedResource(
 			currentStorageID,
 			newStorageID,
@@ -16354,7 +16369,14 @@ func (v *DictionaryValue) Transfer(
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
-				dictionaryValue.dictionary = dictionary
+
+				// Moves within same location (e.g: stack to stack)
+				// do not invalidate the references.
+				if newStorageID == currentStorageID {
+					dictionaryValue.dictionary = dictionary
+				} else {
+					dictionaryValue.dictionary = nil
+				}
 			},
 		)
 	}
@@ -17342,24 +17364,15 @@ var _ ValueIndexableValue = &EphemeralReferenceValue{}
 var _ MemberAccessibleValue = &EphemeralReferenceValue{}
 
 func NewUnmeteredEphemeralReferenceValue(
-	interpreter *Interpreter,
 	authorized bool,
 	value Value,
 	borrowedType sema.Type,
 ) *EphemeralReferenceValue {
-
-	ref := &EphemeralReferenceValue{
+	return &EphemeralReferenceValue{
 		Authorized:   authorized,
 		Value:        value,
 		BorrowedType: borrowedType,
 	}
-
-	if resourceValue, ok := value.(ReferenceTrackedResourceKindedValue); ok {
-		storageID := resourceValue.StorageID()
-		interpreter.trackResourceReference(storageID, ref)
-	}
-
-	return ref
 }
 
 func NewEphemeralReferenceValue(
@@ -17370,7 +17383,6 @@ func NewEphemeralReferenceValue(
 ) *EphemeralReferenceValue {
 	common.UseMemory(interpreter, common.EphemeralReferenceValueMemoryUsage)
 	return NewUnmeteredEphemeralReferenceValue(
-		interpreter,
 		authorized,
 		value,
 		borrowedType,
@@ -17413,8 +17425,6 @@ func (v *EphemeralReferenceValue) StaticType(inter *Interpreter) StaticType {
 	if referencedValue == nil {
 		panic(DereferenceError{})
 	}
-
-	v.checkReferencedResourceNotMoved(ReturnEmptyLocationRange)
 
 	return NewReferenceStaticType(
 		inter,
@@ -17460,7 +17470,7 @@ func (v *EphemeralReferenceValue) GetMember(
 
 	self := *referencedValue
 
-	v.checkReferencedResourceNotMovedOrDestroyed(interpreter, self, getLocationRange)
+	interpreter.checkReferencedResourceNotMovedOrDestroyed(self, getLocationRange)
 
 	return interpreter.getMember(self, getLocationRange, name)
 }
@@ -17479,7 +17489,7 @@ func (v *EphemeralReferenceValue) RemoveMember(
 
 	self := *referencedValue
 
-	v.checkReferencedResourceNotMovedOrDestroyed(interpreter, self, getLocationRange)
+	interpreter.checkReferencedResourceNotMovedOrDestroyed(self, getLocationRange)
 
 	if memberAccessibleValue, ok := self.(MemberAccessibleValue); ok {
 		return memberAccessibleValue.RemoveMember(interpreter, getLocationRange, identifier)
@@ -17503,7 +17513,7 @@ func (v *EphemeralReferenceValue) SetMember(
 
 	self := *referencedValue
 
-	v.checkReferencedResourceNotMovedOrDestroyed(interpreter, self, getLocationRange)
+	interpreter.checkReferencedResourceNotMovedOrDestroyed(self, getLocationRange)
 
 	interpreter.setMember(self, getLocationRange, name, value)
 }
@@ -17522,7 +17532,7 @@ func (v *EphemeralReferenceValue) GetKey(
 
 	self := *referencedValue
 
-	v.checkReferencedResourceNotMovedOrDestroyed(interpreter, self, getLocationRange)
+	interpreter.checkReferencedResourceNotMovedOrDestroyed(self, getLocationRange)
 
 	return self.(ValueIndexableValue).
 		GetKey(interpreter, getLocationRange, key)
@@ -17543,7 +17553,7 @@ func (v *EphemeralReferenceValue) SetKey(
 
 	self := *referencedValue
 
-	v.checkReferencedResourceNotMovedOrDestroyed(interpreter, self, getLocationRange)
+	interpreter.checkReferencedResourceNotMovedOrDestroyed(self, getLocationRange)
 
 	self.(ValueIndexableValue).
 		SetKey(interpreter, getLocationRange, key, value)
@@ -17564,7 +17574,7 @@ func (v *EphemeralReferenceValue) InsertKey(
 
 	self := *referencedValue
 
-	v.checkReferencedResourceNotMovedOrDestroyed(interpreter, self, getLocationRange)
+	interpreter.checkReferencedResourceNotMovedOrDestroyed(self, getLocationRange)
 
 	self.(ValueIndexableValue).
 		InsertKey(interpreter, getLocationRange, key, value)
@@ -17584,7 +17594,7 @@ func (v *EphemeralReferenceValue) RemoveKey(
 
 	self := *referencedValue
 
-	v.checkReferencedResourceNotMovedOrDestroyed(interpreter, self, getLocationRange)
+	interpreter.checkReferencedResourceNotMovedOrDestroyed(self, getLocationRange)
 
 	return self.(ValueIndexableValue).
 		RemoveKey(interpreter, getLocationRange, key)
@@ -17616,7 +17626,7 @@ func (v *EphemeralReferenceValue) ConformsToStaticType(
 		return false
 	}
 
-	v.checkReferencedResourceNotMoved(getLocationRange)
+	interpreter.checkReferencedResourceNotMovedOrDestroyed(*referencedValue, getLocationRange)
 
 	staticType := (*referencedValue).StaticType(interpreter)
 
@@ -17671,39 +17681,18 @@ func (v *EphemeralReferenceValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 ) Value {
-	v.checkReferencedResourceNotMoved(ReturnEmptyLocationRange)
-
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
 	}
 	return v
 }
 
-func (v *EphemeralReferenceValue) Clone(inter *Interpreter) Value {
-	return NewUnmeteredEphemeralReferenceValue(inter, v.Authorized, v.Value, v.BorrowedType)
+func (v *EphemeralReferenceValue) Clone(*Interpreter) Value {
+	return NewUnmeteredEphemeralReferenceValue(v.Authorized, v.Value, v.BorrowedType)
 }
 
 func (*EphemeralReferenceValue) DeepRemove(_ *Interpreter) {
 	// NO-OP
-}
-
-func (v *EphemeralReferenceValue) checkReferencedResourceNotMovedOrDestroyed(
-	interpreter *Interpreter,
-	referencedValue Value,
-	getLocationRange func() LocationRange,
-) {
-	interpreter.checkReferencedResourceNotDestroyed(referencedValue, getLocationRange)
-	v.checkReferencedResourceNotMoved(getLocationRange)
-}
-
-func (v *EphemeralReferenceValue) checkReferencedResourceNotMoved(
-	getLocationRange func() LocationRange,
-) {
-	if v.invalidated {
-		panic(MovedResourceReferenceError{
-			LocationRange: getLocationRange(),
-		})
-	}
 }
 
 // AddressValue

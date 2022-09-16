@@ -289,7 +289,6 @@ type Storage interface {
 }
 
 type ReferencedResourceKindedValues map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}
-type ResourceReferences map[atree.StorageID]map[*EphemeralReferenceValue]struct{}
 
 type Interpreter struct {
 	Program      *Program
@@ -4051,6 +4050,28 @@ func (interpreter *Interpreter) checkReferencedResourceNotDestroyed(value Value,
 	})
 }
 
+func (interpreter *Interpreter) checkReferencedResourceNotMovedOrDestroyed(
+	referencedValue Value,
+	getLocationRange func() LocationRange,
+) {
+	resourceKindedValue, ok := referencedValue.(ReferenceTrackedResourceKindedValue)
+	if !ok {
+		return
+	}
+
+	if resourceKindedValue.IsDestroyed() {
+		panic(DestroyedResourceError{
+			LocationRange: getLocationRange(),
+		})
+	}
+
+	if resourceKindedValue.IsStaleResource(interpreter) {
+		panic(MovedResourceReferenceError{
+			LocationRange: getLocationRange(),
+		})
+	}
+}
+
 func (interpreter *Interpreter) RemoveReferencedSlab(storable atree.Storable) {
 	storageIDStorable, ok := storable.(atree.StorageIDStorable)
 	if !ok {
@@ -4212,44 +4233,12 @@ func (interpreter *Interpreter) updateReferencedResource(
 	for value := range values { //nolint:maprangecheck
 		updateFunc(value)
 	}
+
+	// If the move is for a new location, then the resources are already cleared via the update function above.
+	// So no need to track those stale resources anymore.
 	if newStorageID != currentStorageID {
-		interpreter.sharedState.referencedResourceKindedValues[newStorageID] = values
 		interpreter.sharedState.referencedResourceKindedValues[currentStorageID] = nil
 	}
-}
-
-func (interpreter *Interpreter) trackResourceMove(
-	currentStorageID atree.StorageID,
-	newStorageID atree.StorageID,
-) {
-	// Moving within same location should be OK.
-	// e.g: stack to stack.
-	if newStorageID == currentStorageID {
-		return
-	}
-
-	references, ok := interpreter.sharedState.resourceReferences[currentStorageID]
-	if !ok {
-		return
-	}
-
-	// mark all references as invalid
-	for ref, _ := range references {
-		ref.invalidated = true
-	}
-
-	// release the mapping for any GC.
-	delete(interpreter.sharedState.resourceReferences, currentStorageID)
-}
-
-func (interpreter *Interpreter) trackResourceReference(id atree.StorageID, reference *EphemeralReferenceValue) {
-	validReferences, ok := interpreter.sharedState.resourceReferences[id]
-	if !ok {
-		validReferences = map[*EphemeralReferenceValue]struct{}{}
-		interpreter.sharedState.resourceReferences[id] = validReferences
-	}
-
-	validReferences[reference] = struct{}{}
 }
 
 // startResourceTracking starts tracking the life-span of a resource.

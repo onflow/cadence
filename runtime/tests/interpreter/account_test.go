@@ -104,8 +104,9 @@ func testAccount(
 				BaseValueActivation: baseValueActivation,
 			},
 			Config: &interpreter.Config{
-				BaseActivation:       baseActivation,
-				ContractValueHandler: makeContractValueHandler(nil, nil, nil),
+				BaseActivation:                       baseActivation,
+				ContractValueHandler:                 makeContractValueHandler(nil, nil, nil),
+				InvalidatedResourceValidationEnabled: true,
 			},
 		},
 	)

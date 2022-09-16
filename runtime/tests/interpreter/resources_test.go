@@ -195,7 +195,6 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")
 
 		ref := interpreter.NewUnmeteredEphemeralReferenceValue(
-			inter,
 			false,
 			r1,
 			r1Type,
@@ -319,7 +318,6 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")
 
 		ref := interpreter.NewUnmeteredEphemeralReferenceValue(
-			inter,
 			false,
 			r1,
 			r1Type,
@@ -438,7 +436,6 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")
 
 		ref := interpreter.NewUnmeteredEphemeralReferenceValue(
-			inter,
 			false,
 			r1,
 			r1Type,
@@ -561,7 +558,6 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")
 
 		ref := interpreter.NewUnmeteredEphemeralReferenceValue(
-			inter,
 			false,
 			r1,
 			r1Type,
@@ -2599,6 +2595,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
+		_ = err.Error()
 		require.ErrorAs(t, err, &interpreter.MovedResourceReferenceError{})
 	})
 
@@ -2628,13 +2625,14 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 // Move the resource into the account
                 account.save(<-r, to: /storage/r)
 
-                // 'Read'' a field from the reference
+                // 'Read' a field from the reference
                 let id = ref.id
             }`,
 		)
 
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
+		_ = err.Error()
 		require.ErrorAs(t, err, &interpreter.MovedResourceReferenceError{})
 	})
 
@@ -2681,7 +2679,6 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		)
 
 		arrayRef := interpreter.NewUnmeteredEphemeralReferenceValue(
-			inter,
 			false,
 			array,
 			&sema.VariableSizedType{
@@ -2691,6 +2688,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		_, err := inter.Invoke("test", arrayRef)
 		require.Error(t, err)
+		_ = err.Error()
 		require.ErrorAs(t, err, &interpreter.MovedResourceReferenceError{})
 	})
 
@@ -2772,7 +2770,6 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		)
 
 		arrayRef1 := interpreter.NewUnmeteredEphemeralReferenceValue(
-			inter,
 			false,
 			array1,
 			&sema.VariableSizedType{
@@ -2792,7 +2789,6 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		)
 
 		arrayRef2 := interpreter.NewUnmeteredEphemeralReferenceValue(
-			inter,
 			false,
 			array2,
 			&sema.VariableSizedType{
@@ -2802,6 +2798,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		_, err := inter.Invoke("test", arrayRef1, arrayRef2)
 		require.Error(t, err)
+		_ = err.Error()
 		require.ErrorAs(t, err, &interpreter.MovedResourceReferenceError{})
 	})
 
@@ -2855,7 +2852,6 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		)
 
 		arrayRef := interpreter.NewUnmeteredEphemeralReferenceValue(
-			inter,
 			false,
 			array,
 			&sema.VariableSizedType{
@@ -2865,6 +2861,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		_, err := inter.Invoke("test", arrayRef)
 		require.Error(t, err)
+		_ = err.Error()
 		require.ErrorAs(t, err, &interpreter.MovedResourceReferenceError{})
 	})
 
@@ -2971,7 +2968,6 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		)
 
 		arrayRef := interpreter.NewUnmeteredEphemeralReferenceValue(
-			inter,
 			false,
 			array,
 			&sema.VariableSizedType{
@@ -2985,11 +2981,13 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		// First reference must be invalid
 		_, err = inter.Invoke("getRef1Id")
 		assert.Error(t, err)
+		_ = err.Error()
 		assert.ErrorAs(t, err, &interpreter.MovedResourceReferenceError{})
 
 		// Second reference must be invalid
 		_, err = inter.Invoke("getRef2Id")
 		assert.Error(t, err)
+		_ = err.Error()
 		assert.ErrorAs(t, err, &interpreter.MovedResourceReferenceError{})
 
 		// Third reference must be valid

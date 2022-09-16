@@ -473,7 +473,6 @@ func TestInterpretResourceReferenceAfterMove(t *testing.T) {
 		)
 
 		arrayRef := interpreter.NewUnmeteredEphemeralReferenceValue(
-			inter,
 			false,
 			array,
 			&sema.VariableSizedType{
@@ -523,7 +522,6 @@ func TestInterpretResourceReferenceAfterMove(t *testing.T) {
 		)
 
 		arrayRef := interpreter.NewUnmeteredEphemeralReferenceValue(
-			inter,
 			false,
 			array,
 			&sema.VariableSizedType{
@@ -576,7 +574,6 @@ func TestInterpretResourceReferenceAfterMove(t *testing.T) {
 		)
 
 		arrayRef := interpreter.NewUnmeteredEphemeralReferenceValue(
-			inter,
 			false,
 			array,
 			&sema.VariableSizedType{
@@ -721,7 +718,6 @@ func TestInterpretReferenceUseAfterShiftStatementMove(t *testing.T) {
 		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")
 
 		ref := interpreter.NewUnmeteredEphemeralReferenceValue(
-			inter,
 			false,
 			r1,
 			r1Type,
@@ -840,7 +836,6 @@ func TestInterpretReferenceUseAfterShiftStatementMove(t *testing.T) {
 		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")
 
 		ref := interpreter.NewUnmeteredEphemeralReferenceValue(
-			inter,
 			false,
 			r1,
 			r1Type,

@@ -878,5 +878,5 @@ var _ errors.UserError = MovedResourceReferenceError{}
 func (MovedResourceReferenceError) IsUserError() {}
 
 func (e MovedResourceReferenceError) Error() string {
-	return "referenced resource has been moved after creating the reference"
+	return "referenced resource has been moved after taking the reference"
 }

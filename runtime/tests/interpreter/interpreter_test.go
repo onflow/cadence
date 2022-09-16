@@ -7510,7 +7510,6 @@ func TestInterpretResourceMovingAndBorrowing(t *testing.T) {
 		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")
 
 		ref := interpreter.NewUnmeteredEphemeralReferenceValue(
-			inter,
 			false,
 			r1,
 			r1Type,
