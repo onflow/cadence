@@ -253,7 +253,7 @@ func accountInboxPublishFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			recipientValue := invocation.Arguments[2].(*AddressValue)
+			recipientValue := invocation.Arguments[2].(AddressValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
@@ -261,10 +261,13 @@ func accountInboxPublishFunction(
 			inter := invocation.Interpreter
 			getLocationRange := invocation.GetLocationRange
 
-			recipientAllowlist := getAccountAllowlist(inter, getLocationRange, recipientValue.ToAddress())
+			recipientAddress := recipientValue.ToAddress()
+
+			recipientAllowlist := getAccountAllowlist(inter, getLocationRange, recipientAddress)
 
 			// if the recipient's allowlist does not contain the provider's address, return false
 			if !recipientAllowlist.Contains(inter, getLocationRange, providerValue) {
+				inter.writeStored(recipientAddress, inboxStorageDomain, "allowlist", recipientAllowlist)
 				return BoolValue(false)
 			}
 
@@ -283,6 +286,9 @@ func accountInboxPublishFunction(
 				true,
 				nil,
 			)
+
+			// resave the allowlist
+			inter.writeStored(recipientAddress, inboxStorageDomain, "allowlist", recipientAllowlist)
 
 			// we need to store both a value and an intended recipient for each name,
 			// so we do two writes to represent each published value.
@@ -303,7 +309,7 @@ func accountInboxUnpublishFunction(
 	return NewHostFunctionValue(
 		gauge,
 		func(invocation Invocation) Value {
-			nameValue, ok := invocation.Arguments[1].(*StringValue)
+			nameValue, ok := invocation.Arguments[0].(*StringValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}

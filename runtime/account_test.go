@@ -656,7 +656,7 @@ func TestRuntimeHashAlgorithm(t *testing.T) {
 
 	require.Len(t, array.Values, 3)
 
-	// Check key1
+	// `Check `key1
 	require.IsType(t, cadence.Optional{}, array.Values[0])
 	optionalValue := array.Values[0].(cadence.Optional)
 
