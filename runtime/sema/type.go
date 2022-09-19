@@ -4367,6 +4367,12 @@ const dictionaryTypeKeysFieldDocString = `
 An array containing all keys of the dictionary
 `
 
+const dictionaryTypeForEachKeyFunctionDocString = `
+Iterate over each key in this dictionary, exiting early if the passed function returns false.
+
+The order of iteration is undefined
+`
+
 const dictionaryTypeValuesFieldDocString = `
 An array containing all values of the dictionary
 `
@@ -4491,6 +4497,28 @@ func (t *DictionaryType) initializeMemberResolvers() {
 					)
 				},
 			},
+			"forEachKey": {
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
+					if t.KeyType.IsResourceType() {
+						report(
+							&InvalidResourceDictionaryMemberError{
+								Name:            identifier,
+								DeclarationKind: common.DeclarationKindField,
+								Range:           targetRange,
+							},
+						)
+					}
+
+					return NewPublicFunctionMember(
+						memoryGauge,
+						t,
+						identifier,
+						DictionaryForEachKeyFunctionType(t),
+						dictionaryTypeForEachKeyFunctionDocString,
+					)
+				},
+			},
 		})
 	})
 }
@@ -4544,6 +4572,32 @@ func DictionaryRemoveFunctionType(t *DictionaryType) *FunctionType {
 				Type: t.ValueType,
 			},
 		),
+	}
+}
+
+func DictionaryForEachKeyFunctionType(t *DictionaryType) *FunctionType {
+	// fun forEachKey(_ function: ((K): Bool)): Void
+
+	// funcType: K -> Bool
+	funcType := &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Identifier:     "key",
+				TypeAnnotation: NewTypeAnnotation(t.KeyType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(BoolType),
+	}
+
+	return &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "function",
+				TypeAnnotation: NewTypeAnnotation(funcType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
 	}
 }
 
