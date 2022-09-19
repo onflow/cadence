@@ -9696,6 +9696,8 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 				interpreter.PrimitiveStaticTypePublicAccountContracts,
 				interpreter.PrimitiveStaticTypeAuthAccountKeys,
 				interpreter.PrimitiveStaticTypePublicAccountKeys,
+				interpreter.PrimitiveStaticTypeAuthAccountInbox,
+				interpreter.PrimitiveStaticTypePublicAccountInbox,
 				interpreter.PrimitiveStaticTypeAccountKey,
 				interpreter.PrimitiveStaticType_Count:
 				continue

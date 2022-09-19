@@ -246,7 +246,7 @@ Returns the capability at the given public path, or nil if it does not exist
 
 var PublicAccountInboxTypeName = "Inbox"
 
-var publicAccountInboxDocString = "an inbox for sending and recieving capabilities"
+var publicAccountInboxDocString = "an inbox for sending and receiving capabilities"
 
 var PublicAccountInboxAllowlistField = "allowlist"
 

@@ -870,7 +870,7 @@ var AuthAccountTypeInboxClaimFunctionType = func() *FunctionType {
 
 var AuthAccountInboxTypeName = "Inbox"
 
-var accountInboxDocString = "an inbox for sending and recieving capabilities"
+var accountInboxDocString = "an inbox for sending and receiving capabilities"
 
 var AuthAccountInboxPermitField = "permit"
 
