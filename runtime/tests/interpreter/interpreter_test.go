@@ -5772,6 +5772,17 @@ func TestInterpretDictionaryKeys(t *testing.T) {
 	)
 }
 
+func TestInterpretDictionaryForEachKey(t *testing.T) {
+	t.Parallel()
+
+	// TODO write tests
+
+	t.Fail()
+	// inter := parseCheckAndInterpret(t, `
+	// 	fun test(): [String]
+	// `)
+}
+
 func TestInterpretDictionaryValues(t *testing.T) {
 
 	t.Parallel()
