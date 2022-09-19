@@ -361,7 +361,7 @@ func accountInboxClaimFunction(
 	return NewHostFunctionValue(
 		gauge,
 		func(invocation Invocation) Value {
-			nameValue, ok := invocation.Arguments[1].(*StringValue)
+			nameValue, ok := invocation.Arguments[0].(*StringValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
@@ -376,18 +376,18 @@ func accountInboxClaimFunction(
 
 			providerAddress := providerValue.ToAddress()
 
+			publishedValue := inter.ReadStored(providerAddress, inboxStorageDomain, valuePath(nameValue.Str))
+
+			if publishedValue == nil {
+				return NewNilValue(gauge)
+			}
+
 			// compare the intended recipient with the caller
 			intendedRecipient, ok := inter.ReadStored(providerAddress, inboxStorageDomain, recipientPath(nameValue.Str)).(AddressValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 			if intendedRecipient.ToAddress() != recipientValue.ToAddress() {
-				return NewNilValue(gauge)
-			}
-
-			publishedValue := inter.ReadStored(providerAddress, inboxStorageDomain, valuePath(nameValue.Str))
-
-			if publishedValue == nil {
 				return NewNilValue(gauge)
 			}
 
