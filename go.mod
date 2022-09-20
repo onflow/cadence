@@ -24,6 +24,8 @@ require (
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 )
 
+retract v0.25.1 // Corrupted.
+
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fxamacker/circlehash v0.3.0 // indirect
