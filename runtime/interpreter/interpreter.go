@@ -3154,7 +3154,7 @@ func (interpreter *Interpreter) newStorageIterationFunction(addressValue Address
 	return NewHostFunctionValue(
 		interpreter,
 		func(invocation Invocation) Value {
-			fn, ok := invocation.Arguments[0].(*InterpretedFunctionValue)
+			fn, ok := invocation.Arguments[0].(FunctionValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
