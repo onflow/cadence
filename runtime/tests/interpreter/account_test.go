@@ -3025,4 +3025,49 @@ func TestInterpretAccountIterationMutation(t *testing.T) {
 		_, err := inter.Invoke("test")
 		require.NoError(t, err)
 	})
+
+	t.Run("non-lambda", func(t *testing.T) {
+		t.Parallel()
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(
+			t,
+			address,
+			true,
+			`
+			fun foo  (path: StoragePath, type: Type): Bool {
+				return true
+			}
+			fun test() {
+				account.forEachStored(foo)
+			}`,
+		)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("method", func(t *testing.T) {
+		t.Parallel()
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(
+			t,
+			address,
+			true,
+			`
+			struct S {
+				fun foo(path: StoragePath, type: Type): Bool {
+					return true
+				}
+			}
+			fun test() {
+				let s = S()
+				account.forEachStored(s.foo)
+			}`,
+		)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
 }
