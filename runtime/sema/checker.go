@@ -118,6 +118,14 @@ type Checker struct {
 	errorShortCircuitingEnabled        bool
 	// memoryGauge is used for metering memory usage
 	memoryGauge common.MemoryGauge
+	// allowResourceInvalidationAfterPotentialJump determines
+	// if a resource invalidation after a potential jump should be allowed.
+	//
+	// It should always be disabled.
+	//
+	// It is a temporary configuration option to allow networks to opt into
+	// the new behaviour in a coordinated way which will not cause an execution fork.
+	allowResourceInvalidationAfterPotentialJump bool
 }
 
 type Option func(*Checker) error
@@ -250,6 +258,20 @@ func WithErrorShortCircuitingEnabled(enabled bool) Option {
 	}
 }
 
+// WithAllowResourceInvalidationAfterPotentialJump returns a checker option
+// which enables/disables if a resource invalidation after a potential jump should be allowed.
+//
+// It should always be disabled.
+//
+// However, it is a temporary configuration option to allow networks to opt into
+// the new behaviour in a coordinated way which will not cause an execution fork.
+func WithAllowResourceInvalidationAfterPotentialJump(allow bool) Option {
+	return func(checker *Checker) error {
+		checker.allowResourceInvalidationAfterPotentialJump = allow
+		return nil
+	}
+}
+
 func NewChecker(program *ast.Program, location common.Location, memoryGauge common.MemoryGauge, extendedElaboration bool, options ...Option) (*Checker, error) {
 
 	if location == nil {
@@ -310,6 +332,7 @@ func (checker *Checker) SubChecker(program *ast.Program, location common.Locatio
 		WithImportHandler(checker.importHandler),
 		WithPositionInfoEnabled(checker.positionInfoEnabled),
 		WithErrorShortCircuitingEnabled(checker.errorShortCircuitingEnabled),
+		WithAllowResourceInvalidationAfterPotentialJump(checker.allowResourceInvalidationAfterPotentialJump),
 	)
 }
 
@@ -1838,11 +1861,7 @@ func (checker *Checker) checkPotentiallyUnevaluated(check TypeCheckFunc) Type {
 		temporaryResources,
 	)
 
-	functionActivation.ReturnInfo.MaybeReturned =
-		functionActivation.ReturnInfo.MaybeReturned ||
-			temporaryReturnInfo.MaybeReturned
-
-	// NOTE: the definitive return state does not change
+	functionActivation.ReturnInfo.MergePotentiallyUnevaluated(temporaryReturnInfo)
 
 	checker.resources.MergeBranches(temporaryResources, nil)
 
@@ -2532,7 +2551,13 @@ func (checker *Checker) declareGlobalRanges() {
 func (checker *Checker) maybeAddResourceInvalidation(resource Resource, invalidation ResourceInvalidation) {
 	functionActivation := checker.functionActivations.Current()
 
-	if functionActivation.ReturnInfo.IsUnreachable() {
+	// Resource invalidations are only definite
+	// if the invalidation can be definitely reached.
+
+	if functionActivation.ReturnInfo.IsUnreachable() ||
+		(!checker.allowResourceInvalidationAfterPotentialJump &&
+			functionActivation.ReturnInfo.MaybeJumped) {
+
 		return
 	}
 

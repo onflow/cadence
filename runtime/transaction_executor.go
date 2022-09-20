@@ -59,9 +59,10 @@ func newInterpreterTransactionExecutor(
 ) Executor {
 
 	return &interpreterTransactionExecutor{
-		runtime: runtime,
-		script:  script,
-		context: context,
+		runtime:        runtime,
+		script:         script,
+		context:        context,
+		checkerOptions: context.CheckerOptions,
 	}
 }
 

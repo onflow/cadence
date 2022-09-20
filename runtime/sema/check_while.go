@@ -113,8 +113,10 @@ func (checker *Checker) VisitBreakStatement(statement *ast.BreakStatement) ast.R
 		return nil
 	}
 
-	functionActivation := checker.functionActivations.Current()
 	checker.resources.JumpsOrReturns = true
+
+	functionActivation := checker.functionActivations.Current()
+	functionActivation.ReturnInfo.MaybeJumped = true
 	functionActivation.ReturnInfo.DefinitelyJumped = true
 
 	return nil
@@ -134,8 +136,10 @@ func (checker *Checker) VisitContinueStatement(statement *ast.ContinueStatement)
 		return nil
 	}
 
-	functionActivation := checker.functionActivations.Current()
 	checker.resources.JumpsOrReturns = true
+
+	functionActivation := checker.functionActivations.Current()
+	functionActivation.ReturnInfo.MaybeJumped = true
 	functionActivation.ReturnInfo.DefinitelyJumped = true
 
 	return nil

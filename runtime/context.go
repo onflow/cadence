@@ -21,12 +21,14 @@ package runtime
 import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 type Context struct {
 	Interface         Interface
 	Location          Location
 	PredeclaredValues []ValueDeclaration
+	CheckerOptions    []sema.Option
 	codes             map[common.Location][]byte
 	programs          map[common.Location]*ast.Program
 }

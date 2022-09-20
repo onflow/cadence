@@ -7425,3 +7425,81 @@ func assertRuntimeErrorIsExternalError(t *testing.T, err error) {
 	innerError := runtimeError.Unwrap()
 	require.ErrorAs(t, innerError, &runtimeErrors.ExternalError{})
 }
+
+func TestRuntimeCheckerOptionIgnoreResourceInvalidationAfterPotentialJump(t *testing.T) {
+
+	t.Parallel()
+
+	for _, allowResourceInvalidationAfterPotentialJump := range []bool{true, false} {
+
+		name := fmt.Sprintf("allow? %v", allowResourceInvalidationAfterPotentialJump)
+
+		t.Run(name, func(t *testing.T) {
+
+			imported := []byte(`
+          pub resource R {}
+
+          pub fun createR(): @R {
+            return <-create R()
+          }
+        `)
+
+			rt := newTestInterpreterRuntime()
+
+			runtimeInterface := &testRuntimeInterface{
+				storage: newTestLedger(nil, nil),
+				getCode: func(location Location) ([]byte, error) {
+					switch location {
+					case common.StringLocation("imported"):
+						return imported, nil
+					default:
+						return nil, fmt.Errorf("unknown import location: %s", location)
+					}
+				},
+			}
+
+			err := rt.ExecuteTransaction(
+				Script{
+					Source: []byte(`
+                  import "imported"
+
+			      transaction {
+			        prepare() {
+                      while false {
+                        let r <- createR()
+                        if true {
+                          break
+                        }
+                        destroy r
+                      }
+                    }
+			      }
+			    `),
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  utils.TestLocation,
+					CheckerOptions: []sema.Option{
+						sema.WithAllowResourceInvalidationAfterPotentialJump(
+							allowResourceInvalidationAfterPotentialJump,
+						),
+					},
+				},
+			)
+
+			if allowResourceInvalidationAfterPotentialJump {
+				require.NoError(t, err)
+			} else {
+				require.Error(t, err)
+				assertRuntimeErrorIsUserError(t, err)
+
+				var checkerErr *sema.CheckerError
+				require.ErrorAs(t, err, &checkerErr)
+
+				errs := checker.ExpectCheckerErrors(t, checkerErr, 1)
+
+				assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+			}
+		})
+	}
+}

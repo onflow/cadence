@@ -96,10 +96,10 @@ type Resource struct {
 //
 type Resources struct {
 	resources *orderedmap.OrderedMap[Resource, ResourceInfo]
-	// JumpsOrReturns indicates that the (branch of) the function
+	// JumpsOrReturns indicates that (the branch of) the function
 	// contains a definite return, break, or continue statement
 	JumpsOrReturns bool
-	// Halts indicates that the (branch of) the function
+	// Halts indicates that (the branch of) the function
 	// contains a definite halt (a function call with a Never return type)
 	Halts bool
 }
