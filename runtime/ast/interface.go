@@ -32,6 +32,7 @@ type InterfaceDeclaration struct {
 	Access        Access
 	CompositeKind common.CompositeKind
 	Identifier    Identifier
+	Conformances  []*NominalType
 	Members       *Members
 	DocString     string
 	Range
@@ -46,6 +47,7 @@ func NewInterfaceDeclaration(
 	access Access,
 	compositeKind common.CompositeKind,
 	identifier Identifier,
+	conformances []*NominalType,
 	members *Members,
 	docString string,
 	declRange Range,
@@ -56,6 +58,7 @@ func NewInterfaceDeclaration(
 		Access:        access,
 		CompositeKind: compositeKind,
 		Identifier:    identifier,
+		Conformances:  conformances,
 		Members:       members,
 		DocString:     docString,
 		Range:         declRange,
@@ -114,7 +117,7 @@ func (d *InterfaceDeclaration) Doc() prettier.Doc {
 		d.CompositeKind,
 		true,
 		d.Identifier.Identifier,
-		nil,
+		d.Conformances,
 		d.Members,
 	)
 }

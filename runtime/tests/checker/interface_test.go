@@ -2691,3 +2691,24 @@ func TestCheckBadStructInterface(t *testing.T) {
 	assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[10])
 	assert.IsType(t, &sema.RedeclarationError{}, errs[11])
 }
+
+func TestCheckInterfaceImplementationRequirement(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("struct interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface Foo {
+                let x: Int
+
+                fun test(): Int
+            }
+
+            struct interface Bar: Foo {}
+        `)
+		require.NoError(t, err)
+	})
+}
