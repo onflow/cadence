@@ -493,7 +493,7 @@ func invokeMatcherTest(
 		))
 	}
 
-	functionType := getFunctionType(funcValue)
+	functionType := funcValue.FunctionType()
 
 	testResult, err := inter.InvokeExternally(
 		funcValue,
@@ -513,19 +513,6 @@ func invokeMatcherTest(
 	}
 
 	return bool(result)
-}
-
-func getFunctionType(value interpreter.FunctionValue) *sema.FunctionType {
-	switch funcValue := value.(type) {
-	case *interpreter.InterpretedFunctionValue:
-		return funcValue.Type
-	case *interpreter.HostFunctionValue:
-		return funcValue.Type
-	case interpreter.BoundFunctionValue:
-		return getFunctionType(funcValue.Function)
-	default:
-		panic(errors.NewUnreachableError())
-	}
 }
 
 // 'Test.readFile' function
