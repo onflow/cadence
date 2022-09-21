@@ -1291,3 +1291,67 @@ func TestCheckContainerMethodPurity(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestCheckConditionPurity(t *testing.T) {
+	t.Parallel()
+
+	t.Run("view pre", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		view fun foo(): Int { return 0 }
+		fun bar() {
+			pre {
+				foo() > 3: "bar"
+			}
+		}
+		`)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("view post", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		view fun foo(): Int { return 0 }
+		fun bar() {
+			post {
+				foo() > 3: "bar"
+			}
+		}
+		`)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("impure post", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		fun foo(): Int { return 0 }
+		fun bar() {
+			post {
+				foo() > 3: "bar"
+			}
+		}
+		`)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+	})
+
+	t.Run("impure pre", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		fun foo(): Int { return 0 }
+		fun bar() {
+			pre {
+				foo() > 3: "bar"
+			}
+		}
+		`)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+	})
+}

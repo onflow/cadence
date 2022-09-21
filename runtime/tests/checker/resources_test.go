@@ -4939,9 +4939,10 @@ func TestCheckInvalidationInPreCondition(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := ExpectCheckerErrors(t, err, 2)
 
-	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+	assert.IsType(t, &sema.PurityError{}, errs[0])
+	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[1])
 }
 
 func TestCheckInvalidationInPostConditionBefore(t *testing.T) {
@@ -4989,9 +4990,10 @@ func TestCheckInvalidationInPostCondition(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := ExpectCheckerErrors(t, err, 2)
 
-	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[1])
+	assert.IsType(t, &sema.PurityError{}, errs[0])
 }
 
 func TestCheckFunctionDefinitelyHaltedNoResourceLoss(t *testing.T) {
