@@ -4368,7 +4368,7 @@ An array containing all keys of the dictionary
 `
 
 const dictionaryTypeForEachKeyFunctionDocString = `
-Iterate over each key in this dictionary, exiting early if the passed function returns false.
+Iterate over each key in this dictionary, exiting early if the passed function returns false. This method is more performant than calling .keys and then iterating over the resulting array, since no intermediate storage is allocated.
 
 The order of iteration is undefined
 `
