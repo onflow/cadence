@@ -2533,7 +2533,6 @@ func TestInterpretResourceDestroyedInPreCondition(t *testing.T) {
         }
 
         resource Bar  {}
-		
         fun test() {
             let foo <- create Foo()
             let bar <- create Bar()
