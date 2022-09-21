@@ -432,13 +432,26 @@ func TestCheckNeverInvocationExits(t *testing.T) {
 		})
 	})
 
-	t.Run("expression, definitely evaluated", func(t *testing.T) {
+	t.Run("expression in if-statement, definitely evaluated", func(t *testing.T) {
 
 		t.Parallel()
 
 		testExits(t, exitTest{
 			body: `
               if panic("") {}
+            `,
+			exits:             true,
+			valueDeclarations: valueDeclarations,
+		})
+	})
+
+	t.Run("expression in while-statement, definitely evaluated", func(t *testing.T) {
+
+		t.Parallel()
+
+		testExits(t, exitTest{
+			body: `
+              while panic("") {}
             `,
 			exits:             true,
 			valueDeclarations: valueDeclarations,
@@ -458,6 +471,23 @@ func TestCheckNeverInvocationExits(t *testing.T) {
 			valueDeclarations: valueDeclarations,
 		})
 	})
+
+	t.Run("statement, potentially evaluated", func(t *testing.T) {
+
+		t.Parallel()
+
+		testExits(t, exitTest{
+			body:`
+              if true {
+                  return nil
+              }
+              panic("")
+            `,
+			exits:             true,
+			valueDeclarations: valueDeclarations,
+		})
+	})
+
 }
 
 // TestCheckNestedFunctionExits tests if a function with a return statement
