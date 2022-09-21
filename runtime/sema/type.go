@@ -364,19 +364,7 @@ A textual representation of this object
 // fromString
 const FromStringFunctionName = "fromString"
 
-func FromStringMetadata(ty Type) (methodType *FunctionType, docString string) {
-	methodType = &FunctionType{
-		Parameters: []*Parameter{
-			{
-				Label:          ArgumentLabelNotRequired,
-				Identifier:     "input",
-				TypeAnnotation: NewTypeAnnotation(StringType),
-			},
-		},
-		ReturnTypeAnnotation: NewTypeAnnotation(
-			&OptionalType{ty},
-		),
-	}
+func FromStringFunctionDocstring(ty Type) string {
 
 	builder := new(strings.Builder)
 	builder.WriteString(
@@ -396,9 +384,22 @@ func FromStringMetadata(ty Type) (methodType *FunctionType, docString string) {
 		)
 	}
 
-	docString = builder.String()
+	return builder.String()
+}
 
-	return
+func FromStringFunctionType(ty Type) *FunctionType {
+	return &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "input",
+				TypeAnnotation: NewTypeAnnotation(StringType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{ty},
+		),
+	}
 }
 
 // toBigEndianBytes
@@ -3210,12 +3211,13 @@ func init() {
 			}
 
 			// add .fromString() method
-			fromStringFnType, fromStringDocString := FromStringMetadata(numberType)
+			fromStringFnType := FromStringFunctionType(numberType)
+			fromStringDocstring := FromStringFunctionDocstring(numberType)
 			addMember(NewUnmeteredPublicFunctionMember(
 				functionType,
 				FromStringFunctionName,
 				fromStringFnType,
-				fromStringDocString,
+				fromStringDocstring,
 			))
 
 			BaseValueActivation.Set(
