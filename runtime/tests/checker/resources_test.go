@@ -4056,8 +4056,6 @@ func TestCheckResourceOptionalBinding(t *testing.T) {
           let maybeR: @R? <- create R()
           if let r <- maybeR {
               destroy r
-          } else {
-              destroy maybeR
           }
       }
     `)
@@ -4076,30 +4074,6 @@ func TestCheckInvalidResourceOptionalBindingResourceLossInThen(t *testing.T) {
           let maybeR: @R? <- create R()
           if let r <- maybeR {
               // resource loss of r
-          } else {
-              destroy maybeR
-          }
-      }
-    `)
-
-	errs := ExpectCheckerErrors(t, err, 1)
-
-	assert.IsType(t, &sema.ResourceLossError{}, errs[0])
-}
-
-func TestCheckInvalidResourceOptionalBindingResourceLossInElse(t *testing.T) {
-
-	t.Parallel()
-
-	_, err := ParseAndCheck(t, `
-      resource R {}
-
-      fun test() {
-          let maybeR: @R? <- create R()
-          if let r <- maybeR {
-              destroy r
-          } else {
-              // resource loss of maybeR
           }
       }
     `)
@@ -4121,8 +4095,6 @@ func TestCheckInvalidResourceOptionalBindingResourceUseAfterInvalidationInThen(t
           if let r <- maybeR {
               destroy r
               destroy maybeR
-          } else {
-              destroy maybeR
           }
       }
     `)
@@ -4143,8 +4115,6 @@ func TestCheckInvalidResourceOptionalBindingResourceUseAfterInvalidationAfterBra
           let maybeR: @R? <- create R()
           if let r <- maybeR {
               destroy r
-          } else {
-              destroy maybeR
           }
           f(<-maybeR)
       }
@@ -4157,6 +4127,82 @@ func TestCheckInvalidResourceOptionalBindingResourceUseAfterInvalidationAfterBra
 	errs := ExpectCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+}
+
+func TestCheckResourceOptionalBindingWithSecondValue(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      resource R {}
+
+      fun test() {
+          let r1 <- create R()
+          var r2: @R? <- create R()
+
+          if let r3 <- r2 <- r1 {
+              // r1 was definitely moved
+              // r2 contains r1
+              destroy r2
+              // only then branch defined r3
+              destroy r3
+          } else {
+              // r1 was definitely moved
+              // r2 contains r1
+              destroy r2
+          }
+      }
+    `)
+	require.NoError(t, err)
+}
+
+func TestCheckResourceOptionalBindingResourceInvalidation(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("separate", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          resource R {}
+
+          fun asOpt(_ r: @R): @R? {
+              return <-r
+          }
+
+          fun test() {
+              let r <- create R()
+              let optR <- asOpt(<-r)
+              if let r2 <- optR {
+                  destroy r2
+              }
+          }
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("inline", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          resource R {}
+
+          fun asOpt(_ r: @R): @R? {
+              return <-r
+          }
+
+          fun test() {
+              let r <- create R()
+              if let r2 <- asOpt(<-r) {
+                  destroy r2
+              }
+          }
+        `)
+
+		require.NoError(t, err)
+	})
 }
 
 func TestCheckResourceOptionalBindingFailableCast(t *testing.T) {
@@ -4340,9 +4386,10 @@ func TestCheckInvalidResourceFailableCastOutsideOptionalBinding(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := ExpectCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.InvalidFailableResourceDowncastOutsideOptionalBindingError{}, errs[0])
+	assert.IsType(t, &sema.ResourceLossError{}, errs[1])
 }
 
 func TestCheckInvalidResourceFailableCastNonIdentifier(t *testing.T) {
