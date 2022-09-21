@@ -299,6 +299,26 @@ So, for example, this code would be allowed:
     }
     ```
 
+A caveat to this is that in some cases a non-`view` function that only performs a mutation that would be allowed in a `view` context will be rejected as a limitation of the analysis. 
+In particular, users may encounter this with arrays or dictionaries, where a function like: 
+
+```cadence
+view fun foo(): Int {
+    let a: [Int] = [0]
+    a[0] = 1
+}
+```
+
+is acceptable, because `a` is local to this function, while 
+
+```cadence
+view fun foo(): Int {
+    let a: [Int] = [0]
+    a.append(1)
+}
+```
+
+will be rejected, because `append` is not `view`. 
 
 ## Function Calls
 
