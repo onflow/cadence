@@ -44,3 +44,43 @@ func dictionaryKeyValues(inter *interpreter.Interpreter, dict *interpreter.Dicti
 	})
 	return result
 }
+
+type entry[K, V any] struct {
+	key   K
+	value V
+}
+
+// similar to dictionaryKeyValues, attempting to map untyped Values to concrete values using the provided morphisms. if a conversion fails, then this function returns (nil, false).
+// useful in contexts when Cadence values need to be extracted into their go counterparts.
+func dictionaryEntries[K, V any](
+	inter *interpreter.Interpreter,
+	dict *interpreter.DictionaryValue,
+	fromKey func(interpreter.Value) (K, bool),
+	fromVal func(interpreter.Value) (V, bool),
+) ([]entry[K, V], bool) {
+
+	count := dict.Count()
+	res := make([]entry[K, V], count)
+
+	iterStatus := true
+	idx := 0
+	dict.Iterate(inter, func(rawKey, rawValue interpreter.Value) (resume bool) {
+		key, ok := fromKey(rawKey)
+
+		if !ok {
+			iterStatus = false
+			return iterStatus
+		}
+
+		value, ok := fromVal(rawValue)
+		if !ok {
+			iterStatus = false
+			return iterStatus
+		}
+
+		res[idx] = entry[K, V]{key, value}
+		return iterStatus
+	})
+
+	return res, iterStatus
+}

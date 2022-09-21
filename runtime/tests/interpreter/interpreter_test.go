@@ -5775,12 +5775,84 @@ func TestInterpretDictionaryKeys(t *testing.T) {
 func TestInterpretDictionaryForEachKey(t *testing.T) {
 	t.Parallel()
 
-	// TODO write tests
+	type testcase struct {
+		n        int64
+		endPoint int64
+	}
+	testcases := []testcase{
+		{10, 1},
+		{20, 5},
+		{100, 10},
+		{100, 0},
+	}
+	code := `
+	fun testForEachKey(n: Int, stopIter: Int): {Int: Int} {
+		var dict: {Int:Int} = {}
+		var counts: {Int:Int} = {}
+		var i = 0
+		while i < n {
+			dict[i] = i
+			counts[i] = 0
+			i = i + 1
+		}
+		dict.forEachKey(fun(k: Int): Bool {
+			if k == stopIter {
+				return false
+			}
+			let curVal = counts[k]!
+			counts[k] = curVal + 1
+			return true
+		})
 
-	t.Fail()
-	// inter := parseCheckAndInterpret(t, `
-	// 	fun test(): [String]
-	// `)
+		return counts
+	}`
+	inter := parseCheckAndInterpret(t, code)
+
+	for _, test := range testcases {
+		name := fmt.Sprintf("n = %d", test.n)
+		t.Run(name, func(t *testing.T) {
+			n := test.n
+			endPoint := test.endPoint
+			// t.Parallel()
+
+			nVal := interpreter.NewUnmeteredIntValueFromInt64(n)
+			stopIter := interpreter.NewUnmeteredIntValueFromInt64(endPoint)
+			res, err := inter.Invoke("testForEachKey", nVal, stopIter)
+
+			require.NoError(t, err)
+
+			dict, ok := res.(*interpreter.DictionaryValue)
+			assert.True(t, ok)
+
+			toInt := func(val interpreter.Value) (int, bool) {
+				intVal, ok := val.(interpreter.IntValue)
+				if !ok {
+					return 0, ok
+				}
+				return intVal.ToInt(), true
+			}
+
+			entries, ok := dictionaryEntries(inter, dict, toInt, toInt)
+
+			for _, entry := range entries {
+				// iteration order is undefined, so the only thing we can deterministically test is
+				// whether visited keys exist in the dict
+				// and whether iteration is affine
+
+				key := int64(entry.key)
+				require.True(t, 0 <= key && key < n, "Visited key not present in the original dictionary: %d", key)
+				// assert that we exited early
+				if int64(entry.key) == endPoint {
+					AssertEqualWithDiff(t, 0, entry.value)
+				} else {
+					// make sure no key was visited twice
+					require.LessOrEqual(t, entry.value, 1, "Dictionary entry visited twice during iteration")
+				}
+
+			}
+
+		})
+	}
 }
 
 func TestInterpretDictionaryValues(t *testing.T) {
