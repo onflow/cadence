@@ -94,7 +94,7 @@ func (ri *ReturnInfo) IsUnreachable() bool {
 		ri.DefinitelyJumped
 }
 
-func (ri *ReturnInfo) AddJumpOffsets(offset int) {
+func (ri *ReturnInfo) AddJumpOffset(offset int) {
 	ri.JumpOffsets.Add(offset)
 }
 

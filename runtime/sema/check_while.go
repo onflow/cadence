@@ -58,7 +58,7 @@ func (checker *Checker) VisitBreakStatement(statement *ast.BreakStatement) (_ st
 	}
 
 	functionActivation := checker.functionActivations.Current()
-	functionActivation.ReturnInfo.AddJumpOffsets(statement.StartPos.Offset)
+	functionActivation.ReturnInfo.AddJumpOffset(statement.StartPos.Offset)
 	functionActivation.ReturnInfo.DefinitelyJumped = true
 
 	return
@@ -79,7 +79,7 @@ func (checker *Checker) VisitContinueStatement(statement *ast.ContinueStatement)
 	}
 
 	functionActivation := checker.functionActivations.Current()
-	functionActivation.ReturnInfo.AddJumpOffsets(statement.StartPos.Offset)
+	functionActivation.ReturnInfo.AddJumpOffset(statement.StartPos.Offset)
 	functionActivation.ReturnInfo.DefinitelyJumped = true
 
 	return
