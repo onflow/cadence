@@ -596,6 +596,8 @@ func TestInterpretFixedPointMinMax(t *testing.T) {
 }
 
 func TestStringFixedpointConversion(t *testing.T) {
+	t.Parallel()
+
 	type testcase struct {
 		decimal    *big.Int
 		fractional *big.Int
@@ -608,6 +610,9 @@ func TestStringFixedpointConversion(t *testing.T) {
 		fracBounds   []*big.Int
 	}
 
+	bigZero := big.NewInt(0)
+	bigOne := big.NewInt(1)
+
 	suites := []testsuite{
 		{
 			"Fix64",
@@ -618,8 +623,8 @@ func TestStringFixedpointConversion(t *testing.T) {
 				}
 				return interpreter.NewUnmeteredFix64Value(fixedVal.Int64()), nil
 			},
-			[]*big.Int{sema.Fix64TypeMinIntBig, sema.Fix64TypeMaxIntBig},
-			[]*big.Int{sema.UFix64TypeMinFractionalBig, sema.Fix64TypeMaxFractionalBig},
+			[]*big.Int{sema.Fix64TypeMinIntBig, sema.Fix64TypeMaxIntBig, bigZero, bigOne},
+			[]*big.Int{sema.UFix64TypeMinFractionalBig, sema.Fix64TypeMaxFractionalBig, bigZero, bigOne},
 		},
 		{
 			"UFix64",
@@ -630,8 +635,8 @@ func TestStringFixedpointConversion(t *testing.T) {
 				}
 				return interpreter.NewUnmeteredUFix64Value(fixedVal.Uint64()), nil
 			},
-			[]*big.Int{sema.Fix64TypeMinIntBig, sema.Fix64TypeMaxIntBig},
-			[]*big.Int{sema.UFix64TypeMinFractionalBig, sema.UFix64TypeMaxFractionalBig},
+			[]*big.Int{sema.UFix64TypeMinIntBig, sema.UFix64TypeMaxIntBig, bigZero, bigOne},
+			[]*big.Int{sema.UFix64TypeMinFractionalBig, sema.UFix64TypeMaxFractionalBig, bigZero, bigOne},
 		},
 	}
 
@@ -652,8 +657,6 @@ func TestStringFixedpointConversion(t *testing.T) {
 		return testcases
 	}
 
-	bigZero := big.NewInt(0)
-
 	getMagnitude := func(n *big.Int) uint {
 		var m uint
 
@@ -667,19 +670,19 @@ func TestStringFixedpointConversion(t *testing.T) {
 		return m
 	}
 
-	for _, testsuite := range suites {
-		t.Run(testsuite.name, func(t *testing.T) {
+	test := func(suite testsuite) {
+		t.Run(suite.name, func(t *testing.T) {
 			t.Parallel()
 
 			code := fmt.Sprintf(`
 				fun fromStringTest(s: String): %s? {
 					return %s.fromString(s)
 				}
-			`, testsuite.name, testsuite.name)
+			`, suite.name, suite.name)
 
 			inter := parseCheckAndInterpret(t, code)
 
-			testcases := genCases(testsuite.intBounds, testsuite.fracBounds)
+			testcases := genCases(suite.intBounds, suite.fracBounds)
 
 			for _, tc := range testcases {
 				isNegative := tc.decimal.Cmp(big.NewInt(0)) == -1
@@ -687,22 +690,27 @@ func TestStringFixedpointConversion(t *testing.T) {
 
 				absDecimal := new(big.Int)
 				tc.decimal.Abs(absDecimal)
+				absFractional := new(big.Int)
+				tc.fractional.Abs(absFractional)
 
-				expectedNumericVal, err := testsuite.toFixedValue(isNegative, absDecimal, tc.fractional, scale)
+				expectedNumericVal, err := suite.toFixedValue(isNegative, absDecimal, absFractional, scale)
 				require.NoError(t, err)
 
 				expectedVal := interpreter.NewUnmeteredSomeValueNonCopying(expectedNumericVal)
 
-				stringified := fmt.Sprintf("%d.%d", tc.decimal, tc.fractional)
+				stringified := fmt.Sprintf("%d.%d", absDecimal, absFractional)
 				res, err := inter.Invoke("fromStringTest", interpreter.NewUnmeteredStringValue(stringified))
 
 				require.NoError(t, err)
 
 				utils.AssertEqualWithDiff(t, expectedVal, res)
-
 			}
 
 		})
+
+	}
+	for _, testsuite := range suites {
+		test(testsuite)
 	}
 
 }
