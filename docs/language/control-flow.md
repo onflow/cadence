@@ -344,6 +344,19 @@ for key in dictionary.keys {
 // 2
 ```
 
+Alternatively, dictionaries carry a method `forEachKey` that avoids allocating an intermediate array for keys:
+
+```cadence
+let dictionary = {"one": 1, "two": 2, "three": 3}
+dictionary.forEachKey(fun(key: String): Bool {
+    let value = dictionary[key]
+    log(key)
+    log(value)
+    
+    return key != "two" // stop iteration if this returns false
+})
+```
+
 ### `continue` and `break`
 
 In for-loops and while-loops, the `continue` statement can be used to stop

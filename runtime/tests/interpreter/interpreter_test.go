@@ -5834,6 +5834,8 @@ func TestInterpretDictionaryForEachKey(t *testing.T) {
 
 			entries, ok := dictionaryEntries(inter, dict, toInt, toInt)
 
+			assert.True(t, ok)
+
 			for _, entry := range entries {
 				// iteration order is undefined, so the only thing we can deterministically test is
 				// whether visited keys exist in the dict
