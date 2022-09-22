@@ -249,7 +249,7 @@ func (p ErrorPrettyPrinter) writeCodeExcerpts(
 ) {
 	var lastLineNumber int
 
-	lines := strings.Split(string(code), "\n")
+	codeLines := strings.Split(string(code), "\n")
 
 	for i, excerpt := range excerpts {
 
@@ -272,99 +272,119 @@ func (p ErrorPrettyPrinter) writeCodeExcerpts(
 			p.writeCodeExcerptLocation(location, lineNumberLength, excerpt.startPos)
 		}
 
-		// code, if position
-		if excerpt.startPos != nil &&
+		haveCode := excerpt.startPos != nil &&
 			excerpt.startPos.Line > 0 &&
-			excerpt.startPos.Line <= len(lines) &&
-			len(code) > 0 {
+			excerpt.startPos.Line <= len(codeLines) &&
+			len(code) > 0
 
-			if i > 0 && lastLineNumber != 0 && excerpt.startPos.Line-1 > lastLineNumber {
-				p.writeCodeExcerptContinuation(lineNumberLength)
+		// if we do not have code or code position skip further processing of this excerpt
+		if !haveCode {
+			lastLineNumber = 0
+			continue
+		}
+
+		if i > 0 && lastLineNumber != 0 && excerpt.startPos.Line-1 > lastLineNumber {
+			p.writeCodeExcerptContinuation(lineNumberLength)
+		}
+		lastLineNumber = excerpt.startPos.Line
+
+		// prepare empty line numbers
+		emptyLineNumbers := strings.Repeat(" ", lineNumberLength+1) + "|"
+		if p.useColor {
+			emptyLineNumbers = colorizeMeta(emptyLineNumbers)
+		}
+
+		// empty line
+		p.writeString(emptyLineNumbers)
+		p.writeString("\n")
+
+		// line number
+		p.writeString(lineNumberString)
+
+		// code line
+		codeLine := codeLines[excerpt.startPos.Line-1]
+		if len(codeLine) > maxLineLength {
+			p.writeString(codeLine[:maxLineLength])
+			p.writeString(excerptDots)
+		} else {
+			p.writeString(codeLine)
+		}
+
+		p.writeString("\n")
+
+		// indicator line
+		p.writeString(emptyLineNumbers)
+
+		indicatorLength := excerpt.startPos.Column
+		if indicatorLength >= maxLineLength {
+			indicatorLength = maxLineLength
+		}
+
+		p.writeString(" ")
+
+		// write the whitespace prefix to align the indicator
+		if codeLine != "" {
+
+			// determine how many characters to insert.
+			limit := indicatorLength
+			if len(codeLine) < limit {
+				limit = len(codeLine)
 			}
-			lastLineNumber = excerpt.startPos.Line
 
-			// prepare empty line numbers
-			emptyLineNumbers := strings.Repeat(" ", lineNumberLength+1) + "|"
-			if p.useColor {
-				emptyLineNumbers = colorizeMeta(emptyLineNumbers)
-			}
-
-			// empty line
-			p.writeString(emptyLineNumbers)
-			p.writeString("\n")
-
-			// line number
-			p.writeString(lineNumberString)
-
-			// code line
-			line := lines[excerpt.startPos.Line-1]
-			if len(line) > maxLineLength {
-				p.writeString(line[:maxLineLength])
-				p.writeString(excerptDots)
-			} else {
-				p.writeString(line)
-			}
-
-			p.writeString("\n")
-
-			// indicator line
-			p.writeString(emptyLineNumbers)
-
-			indicatorLength := excerpt.startPos.Column
-			if indicatorLength >= maxLineLength {
-				indicatorLength = maxLineLength
-			}
-
-			p.writeString(" ")
-			for i := 0; i < indicatorLength; i++ {
-				c := line[i]
+			for i := 0; i < limit; i++ {
+				c := codeLine[i]
 				if c != '\t' {
 					c = ' '
 				}
 				p.writeString(string(c))
 			}
 
-			columns := 1
-			if excerpt.endPos != nil && excerpt.endPos.Line == excerpt.startPos.Line {
-				endColumn := excerpt.endPos.Column
-				if endColumn >= maxLineLength {
-					endColumn = maxLineLength - 1
-				}
-				columns = endColumn - excerpt.startPos.Column + 1
-			}
+		} else {
+			s := strings.Repeat(" ", indicatorLength)
+			p.writeString(s)
+		}
 
-			indicator := "-"
+		// determine how many times we need to repeat the indicator character
+		width := 1
+		if excerpt.endPos != nil && excerpt.endPos.Line == excerpt.startPos.Line {
+			endColumn := excerpt.endPos.Column
+			if endColumn >= maxLineLength {
+				endColumn = maxLineLength - 1
+			}
+			width = endColumn - excerpt.startPos.Column + 1
+		}
+
+		// determine which indicator to use - if this is the erring line,
+		// use the upper arrow to point to the faulty code;
+		// if this is not the error indicator, don't repeat it
+		indicator := "-"
+		if excerpt.isError {
+			indicator = strings.Repeat("^", width)
+		}
+
+		if p.useColor {
 			if excerpt.isError {
-				indicator = "^"
+				indicator = colorizeError(indicator)
+			} else {
+				indicator = colorizeNote(indicator)
 			}
+		}
+		p.writeString(indicator)
 
-			indicators := strings.Repeat(indicator, columns)
+		if excerpt.message != "" {
+			message := excerpt.message
+			p.writeString(" ")
 			if p.useColor {
 				if excerpt.isError {
-					indicators = colorizeError(indicators)
+					message = colorizeError(message)
 				} else {
-					indicators = colorizeNote(indicators)
+					message = colorizeNote(message)
 				}
 			}
-			p.writeString(indicators)
-
-			if excerpt.message != "" {
-				message := excerpt.message
-				p.writeString(" ")
-				if p.useColor {
-					if excerpt.isError {
-						message = colorizeError(message)
-					} else {
-						message = colorizeNote(message)
-					}
-				}
-				p.writeString(message)
-			}
-
-			p.writeString("\n")
-		} else {
-			lastLineNumber = 0
+			p.writeString(message)
 		}
+
+		p.writeString("\n")
 	}
 }
 
@@ -392,10 +412,8 @@ func (p ErrorPrettyPrinter) writeCodeExcerptLocation(
 
 	// write position (line and column)
 	if startPosition != nil {
-		_, err := fmt.Fprintf(p.writer, ":%d:%d", startPosition.Line, startPosition.Column)
-		if err != nil {
-			panic(err)
-		}
+		s := fmt.Sprintf(":%d:%d", startPosition.Line, startPosition.Column)
+		p.writeString(s)
 	}
 	p.writeString("\n")
 }
