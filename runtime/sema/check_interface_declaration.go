@@ -52,16 +52,20 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 		true,
 	)
 
-	interfaceType.ExplicitInterfaceConformances.Foreach(func(conformanceChainRoot, conformance *InterfaceType) bool {
-		checker.checkInterfaceConformance(
-			declaration,
-			interfaceType,
-			conformance,
-			conformanceChainRoot,
-		)
+	inheritedMembers := map[string]*Member{}
 
-		return true
-	})
+	interfaceType.ExplicitInterfaceConformances.ForeachDistinct(
+		func(_, conformance *InterfaceType) bool {
+			checker.checkInterfaceConformance(
+				declaration,
+				interfaceType,
+				conformance,
+				inheritedMembers,
+			)
+
+			return true
+		},
+	)
 
 	// NOTE: functions are checked separately
 	checker.checkFieldsAccessModifier(declaration.Members.Fields())
@@ -377,12 +381,86 @@ func (checker *Checker) checkInterfaceConformance(
 	interfaceDeclaration *ast.InterfaceDeclaration,
 	interfaceType *InterfaceType,
 	conformance *InterfaceType,
-	conformanceChainRoot *InterfaceType,
+	inheritedMembers map[string]*Member,
 ) {
 
 	// Ensure the composite kinds match, e.g. a structure shouldn't be able
 	// to conform to a resource interface
 	checker.checkConformanceKindMatch(interfaceDeclaration, interfaceType, conformance)
 
-	// TODO: check conflicting names, default implementations.
+	conformance.Members.Foreach(func(name string, conformanceMember *Member) {
+
+		// Check if the members coming from other conformances have conflicts.
+		if conflictingMember, ok := inheritedMembers[name]; ok {
+			conflictingInterface := conflictingMember.ContainerType.(*InterfaceType)
+			checker.checkDuplicateInterfaceMembers(
+				conformance,
+				conformanceMember,
+				conflictingInterface,
+				conflictingMember,
+				func() ast.Range {
+					return ast.NewRangeFromPositioned(checker.memoryGauge, interfaceDeclaration.Identifier)
+				},
+			)
+		}
+
+		inheritedMembers[name] = conformanceMember
+
+		// Check if the members coming from other current declaration have conflicts.
+		declarationMember, ok := interfaceType.Members.Get(name)
+		if !ok {
+			return
+		}
+
+		checker.checkDuplicateInterfaceMembers(
+			interfaceType,
+			declarationMember,
+			conformance,
+			conformanceMember,
+			func() ast.Range {
+				return ast.NewRangeFromPositioned(checker.memoryGauge, declarationMember.Identifier)
+			},
+		)
+	})
+}
+
+func (checker *Checker) checkDuplicateInterfaceMembers(
+	interfaceType *InterfaceType,
+	interfaceMember *Member,
+	conflictingInterfaceType *InterfaceType,
+	conflictingMember *Member,
+	getRange func() ast.Range,
+) {
+
+	// Check if the two members have identical signatures.
+	// If yes, they are allowed, but subject to the conditions below.
+	// If not, report an error.
+	if !checker.memberSatisfied(interfaceMember, conflictingMember) {
+		checker.report(NewInterfaceMemberConflictError(
+			interfaceType,
+			interfaceMember,
+			conflictingInterfaceType,
+			conflictingMember,
+			getRange,
+		))
+		return
+	}
+
+	// If they are functions with same name, check whether any of them have
+	// default implementations or conditions. i.e: Anything more than just the signature.
+	// It is invalid to have default impl / conditions, because it creates ambiguity.
+
+	if interfaceMember.HasConditions ||
+		interfaceMember.HasImplementation ||
+		conflictingMember.HasConditions ||
+		conflictingMember.HasImplementation {
+
+		checker.report(NewInterfaceMemberConflictError(
+			interfaceType,
+			interfaceMember,
+			conflictingInterfaceType,
+			conflictingMember,
+			getRange,
+		))
+	}
 }

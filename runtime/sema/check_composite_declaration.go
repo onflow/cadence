@@ -164,34 +164,24 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 	inheritedMembers := map[string]struct{}{}
 	typeRequirementsInheritedMembers := map[string]map[string]struct{}{}
 
-	// It is required to visit the duplicate conformances (i.e: that are in different interface chains).
-	// Because the validity of the root conformance depends on the validity of a nested conformance.
-	// e.g: One common invalid interface in the chain may cause two conformances to be invalid.
-	//                 B, conforms to
-	// 	             /               \
-	//  A, conforms to                 D
-	//	             \               /
-	//                 C, conforms to
-	//
-	// If A doesn't conform to D, then both B and C also doesn't conform to D,
-	// and hence need to report errors for B and C as well.
-	//
-	compositeType.ExplicitInterfaceConformances.Foreach(func(conformanceChainRoot, conformance *InterfaceType) bool {
-		checker.checkCompositeConformance(
-			declaration,
-			compositeType,
-			conformance,
-			conformanceChainRoot,
-			compositeConformanceCheckOptions{
-				checkMissingMembers:            checkMissingMembers,
-				interfaceTypeIsTypeRequirement: false,
-			},
-			inheritedMembers,
-			typeRequirementsInheritedMembers,
-		)
+	compositeType.ExplicitInterfaceConformances.ForeachDistinct(
+		func(conformanceChainRoot, conformance *InterfaceType) bool {
+			checker.checkCompositeConformance(
+				declaration,
+				compositeType,
+				conformance,
+				conformanceChainRoot,
+				compositeConformanceCheckOptions{
+					checkMissingMembers:            checkMissingMembers,
+					interfaceTypeIsTypeRequirement: false,
+				},
+				inheritedMembers,
+				typeRequirementsInheritedMembers,
+			)
 
-		return true
-	})
+			return true
+		},
+	)
 
 	// NOTE: check destructors after initializer and functions
 
@@ -1689,7 +1679,10 @@ func (checker *Checker) defaultMembersAndOrigins(
 			)
 		}
 
-		hasImplementation := function.FunctionBlock.HasStatements()
+		functionBlock := function.FunctionBlock
+		hasImplementation := functionBlock.HasStatements()
+		hasConditions := functionBlock != nil &&
+			(functionBlock.PreConditions.IsEmpty() || functionBlock.PostConditions.IsEmpty())
 
 		members.Set(
 			identifier,
@@ -1703,6 +1696,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 				ArgumentLabels:    argumentLabels,
 				DocString:         function.DocString,
 				HasImplementation: hasImplementation,
+				HasConditions:     hasConditions,
 			})
 
 		if checker.PositionInfo != nil && origins != nil {

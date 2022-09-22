@@ -1247,7 +1247,7 @@ func (e *DuplicateConformanceError) Error() string {
 // MultipleInterfaceDefaultImplementationsError
 //
 type MultipleInterfaceDefaultImplementationsError struct {
-	CompositeType *CompositeType
+	CompositeType CompositeKindedType
 	Member        *Member
 }
 
@@ -1261,7 +1261,7 @@ func (*MultipleInterfaceDefaultImplementationsError) IsUserError() {}
 func (e *MultipleInterfaceDefaultImplementationsError) Error() string {
 	return fmt.Sprintf(
 		"%s `%s` has multiple interface default implementations for function `%s`",
-		e.CompositeType.Kind.Name(),
+		e.CompositeType.GetCompositeKind().Name(),
 		e.CompositeType.QualifiedString(),
 		e.Member.Identifier.Identifier,
 	)
@@ -1310,7 +1310,7 @@ func (e *SpecialFunctionDefaultImplementationError) EndPosition(memoryGauge comm
 // DefaultFunctionConflictError
 //
 type DefaultFunctionConflictError struct {
-	CompositeType *CompositeType
+	CompositeType CompositeKindedType
 	Member        *Member
 }
 
@@ -1324,7 +1324,7 @@ func (*DefaultFunctionConflictError) IsUserError() {}
 func (e *DefaultFunctionConflictError) Error() string {
 	return fmt.Sprintf(
 		"%s `%s` has conflicting requirements for function `%s`",
-		e.CompositeType.Kind.Name(),
+		e.CompositeType.GetCompositeKind().Name(),
 		e.CompositeType.QualifiedString(),
 		e.Member.Identifier.Identifier,
 	)
@@ -1336,6 +1336,52 @@ func (e *DefaultFunctionConflictError) StartPosition() ast.Position {
 
 func (e *DefaultFunctionConflictError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
 	return e.Member.Identifier.EndPosition(memoryGauge)
+}
+
+// InterfaceMemberConflictError
+//
+type InterfaceMemberConflictError struct {
+	InterfaceType            *InterfaceType
+	ConflictingInterfaceType *InterfaceType
+	MemberName               string
+	MemberKind               common.DeclarationKind
+	ConflictingMemberKind    common.DeclarationKind
+	ast.Range
+}
+
+func NewInterfaceMemberConflictError(
+	interfaceType *InterfaceType,
+	interfaceMember *Member,
+	conflictingInterfaceType *InterfaceType,
+	conflictingMember *Member,
+	getRange func() ast.Range,
+) *InterfaceMemberConflictError {
+	return &InterfaceMemberConflictError{
+		InterfaceType:            interfaceType,
+		ConflictingInterfaceType: conflictingInterfaceType,
+		MemberName:               interfaceMember.Identifier.Identifier,
+		MemberKind:               interfaceMember.DeclarationKind,
+		ConflictingMemberKind:    conflictingMember.DeclarationKind,
+		Range:                    getRange(),
+	}
+}
+
+var _ SemanticError = &InterfaceMemberConflictError{}
+var _ errors.UserError = &InterfaceMemberConflictError{}
+
+func (*InterfaceMemberConflictError) isSemanticError() {}
+
+func (*InterfaceMemberConflictError) IsUserError() {}
+
+func (e *InterfaceMemberConflictError) Error() string {
+	return fmt.Sprintf(
+		"`%s` %s of `%s` conflicts with a %s with the same name in `%s`",
+		e.MemberName,
+		e.MemberKind.Name(),
+		e.InterfaceType.Identifier,
+		e.ConflictingMemberKind.Name(),
+		e.ConflictingInterfaceType.Identifier,
+	)
 }
 
 // MissingConformanceError

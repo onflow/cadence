@@ -3855,6 +3855,21 @@ func (c InterfaceConformances) Foreach(f func(origin, conformance *InterfaceType
 	}
 }
 
+func (c InterfaceConformances) ForeachDistinct(f func(origin, conformance *InterfaceType) bool) {
+	seenConformances := map[*InterfaceType]struct{}{}
+
+	c.Foreach(func(origin, conformance *InterfaceType) bool {
+		if _, ok := seenConformances[conformance]; ok {
+			return true
+		}
+
+		seenConformances[conformance] = struct{}{}
+
+		return f(origin, conformance)
+	})
+
+}
+
 // Member
 
 type Member struct {
@@ -3869,6 +3884,7 @@ type Member struct {
 	// Predeclared fields can be considered initialized
 	Predeclared       bool
 	HasImplementation bool
+	HasConditions     bool
 	// IgnoreInSerialization fields are ignored in serialization
 	IgnoreInSerialization bool
 	DocString             string
