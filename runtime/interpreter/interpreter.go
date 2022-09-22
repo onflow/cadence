@@ -2225,7 +2225,7 @@ type fromStringFunctionValue struct {
 // a function that attempts to create a Cadence value from a string, e.g. parsing a number from a string
 type valueParser func(*Interpreter, string) OptionalValue
 
-func newFromStringFunction(ty sema.Type, impl valueParser) fromStringFunctionValue {
+func newFromStringFunction(ty sema.Type, parser valueParser) fromStringFunctionValue {
 	functionType := sema.FromStringFunctionType(ty)
 
 	hostFunctionImpl := NewUnmeteredHostFunctionValue(
@@ -2236,7 +2236,7 @@ func newFromStringFunction(ty sema.Type, impl valueParser) fromStringFunctionVal
 				panic(errors.NewUnreachableError())
 			}
 			inter := invocation.Interpreter
-			return impl(inter, argument.Str)
+			return parser(inter, argument.Str)
 		},
 		functionType,
 	)
@@ -2249,7 +2249,7 @@ func newFromStringFunction(ty sema.Type, impl valueParser) fromStringFunctionVal
 // default implementation for parsing a given unsigned numeric type from a string.
 // the size provided by sizeInBytes is passed to strconv.ParseUint, ensuring that the parsed value fits in the target type.
 // input strings must not begin with a '+' or '-'.
-func unsignedIntValueFromString(bitSize int, convert func(uint64) Value) valueParser {
+func unsignedIntValueParser(bitSize int, convert func(uint64) Value) valueParser {
 	expectedUsage := common.NewNumberMemoryUsage(bitSize / 8)
 
 	return func(interpreter *Interpreter, input string) OptionalValue {
@@ -2267,7 +2267,7 @@ func unsignedIntValueFromString(bitSize int, convert func(uint64) Value) valuePa
 // default implementation for parsing a given signed numeric type from a string.
 // the size provided by sizeInBytes is passed to strconv.ParseUint, ensuring that the parsed value fits in the target type.
 // input strings may begin with a '+' or '-'.
-func signedIntValueFromString(bitSize int, convert func(int64) Value) valueParser {
+func signedIntValueParser(bitSize int, convert func(int64) Value) valueParser {
 	expectedUsage := common.NewCadenceBigIntMemoryUsage(bitSize / 8)
 
 	return func(interpreter *Interpreter, input string) OptionalValue {
@@ -2282,14 +2282,22 @@ func signedIntValueFromString(bitSize int, convert func(int64) Value) valueParse
 	}
 }
 
-func bigIntValueFromString(convert func(*big.Int) (Value, bool)) valueParser {
+func bigIntValueParser(convert func(*big.Int) (Value, bool)) valueParser {
 	return func(interpreter *Interpreter, input string) OptionalValue {
-		val, ok := common.NewBigInt(interpreter).SetString(input, 10)
+		// maxVal =~ 10^|input|
+		// bytes = ceil(log256(maxVal))
+		// = ceil(log256(10 ^ |input|)) via substitution
+		// = ceil(|input| * log256(10)) via power rule
+		// = ceil(|input| * 0.415241011)
+		// there's gotta be a better way of estimating memory usage lol
+
+		estimatedSize := int(math.Ceil(float64(len(input)) * 0.415241011))
+		common.UseMemory(interpreter, common.NewCadenceBigIntMemoryUsage(estimatedSize))
+
+		val, ok := new(big.Int).SetString(input, 10)
 		if !ok {
 			return NewNilValue(interpreter)
 		}
-		curSize := len(val.Bits())
-		common.UseMemory(interpreter, common.NewCadenceBigIntMemoryUsage(curSize))
 
 		converted, ok := convert(val)
 
@@ -2307,62 +2315,62 @@ func inRange(val *big.Int, low *big.Int, high *big.Int) bool {
 
 var fromStringFunctionValues = func() map[string]fromStringFunctionValue {
 	declarations := []fromStringFunctionValue{
-		newFromStringFunction(sema.Int8Type, signedIntValueFromString(8, func(n int64) Value {
+		newFromStringFunction(sema.Int8Type, signedIntValueParser(8, func(n int64) Value {
 			return NewUnmeteredInt8Value(int8(n))
 		})),
-		newFromStringFunction(sema.Int16Type, signedIntValueFromString(16, func(n int64) Value {
+		newFromStringFunction(sema.Int16Type, signedIntValueParser(16, func(n int64) Value {
 			return NewUnmeteredInt16Value(int16(n))
 		})),
-		newFromStringFunction(sema.Int32Type, signedIntValueFromString(32, func(n int64) Value {
+		newFromStringFunction(sema.Int32Type, signedIntValueParser(32, func(n int64) Value {
 			return NewUnmeteredInt32Value(int32(n))
 		})),
-		newFromStringFunction(sema.Int64Type, signedIntValueFromString(64, func(n int64) Value {
+		newFromStringFunction(sema.Int64Type, signedIntValueParser(64, func(n int64) Value {
 			return NewUnmeteredInt64Value(n)
 		})),
-		newFromStringFunction(sema.Int128Type, bigIntValueFromString(func(b *big.Int) (Value, bool) {
+		newFromStringFunction(sema.Int128Type, bigIntValueParser(func(b *big.Int) (Value, bool) {
 			ok := inRange(b, sema.Int128TypeMinIntBig, sema.Int128TypeMaxIntBig)
 			return Int128Value{b}, ok
 		})),
-		newFromStringFunction(sema.Int256Type, bigIntValueFromString(func(b *big.Int) (Value, bool) {
+		newFromStringFunction(sema.Int256Type, bigIntValueParser(func(b *big.Int) (Value, bool) {
 			ok := inRange(b, sema.Int256TypeMinIntBig, sema.Int256TypeMaxIntBig)
 			return Int256Value{b}, ok
 		})),
-		newFromStringFunction(sema.IntType, bigIntValueFromString(func(b *big.Int) (Value, bool) {
+		newFromStringFunction(sema.IntType, bigIntValueParser(func(b *big.Int) (Value, bool) {
 			return IntValue{b}, true
 		})),
-		newFromStringFunction(sema.UInt8Type, unsignedIntValueFromString(8, func(n uint64) Value {
+		newFromStringFunction(sema.UInt8Type, unsignedIntValueParser(8, func(n uint64) Value {
 			return NewUnmeteredUInt8Value(uint8(n))
 		})),
-		newFromStringFunction(sema.UInt16Type, unsignedIntValueFromString(16, func(n uint64) Value {
+		newFromStringFunction(sema.UInt16Type, unsignedIntValueParser(16, func(n uint64) Value {
 			return NewUnmeteredUInt16Value(uint16(n))
 		})),
-		newFromStringFunction(sema.UInt32Type, unsignedIntValueFromString(32, func(n uint64) Value {
+		newFromStringFunction(sema.UInt32Type, unsignedIntValueParser(32, func(n uint64) Value {
 			return NewUnmeteredUInt32Value(uint32(n))
 		})),
-		newFromStringFunction(sema.UInt64Type, unsignedIntValueFromString(64, func(n uint64) Value {
+		newFromStringFunction(sema.UInt64Type, unsignedIntValueParser(64, func(n uint64) Value {
 			return NewUnmeteredUInt64Value(n)
 		})),
-		newFromStringFunction(sema.UInt128Type, bigIntValueFromString(func(b *big.Int) (Value, bool) {
+		newFromStringFunction(sema.UInt128Type, bigIntValueParser(func(b *big.Int) (Value, bool) {
 			ok := inRange(b, sema.UInt128TypeMinIntBig, sema.UInt128TypeMaxIntBig)
 			return UInt128Value{b}, ok
 		})),
-		newFromStringFunction(sema.UInt256Type, bigIntValueFromString(func(b *big.Int) (Value, bool) {
+		newFromStringFunction(sema.UInt256Type, bigIntValueParser(func(b *big.Int) (Value, bool) {
 			ok := inRange(b, sema.UInt256TypeMinIntBig, sema.UInt256TypeMaxIntBig)
 			return UInt256Value{b}, ok
 		})),
-		newFromStringFunction(sema.UIntType, bigIntValueFromString(func(b *big.Int) (Value, bool) {
+		newFromStringFunction(sema.UIntType, bigIntValueParser(func(b *big.Int) (Value, bool) {
 			return UIntValue{b}, true
 		})),
-		newFromStringFunction(sema.Word8Type, unsignedIntValueFromString(8, func(n uint64) Value {
+		newFromStringFunction(sema.Word8Type, unsignedIntValueParser(8, func(n uint64) Value {
 			return NewUnmeteredWord8Value(uint8(n))
 		})),
-		newFromStringFunction(sema.Word16Type, unsignedIntValueFromString(16, func(n uint64) Value {
+		newFromStringFunction(sema.Word16Type, unsignedIntValueParser(16, func(n uint64) Value {
 			return NewUnmeteredWord16Value(uint16(n))
 		})),
-		newFromStringFunction(sema.Word32Type, unsignedIntValueFromString(32, func(n uint64) Value {
+		newFromStringFunction(sema.Word32Type, unsignedIntValueParser(32, func(n uint64) Value {
 			return NewUnmeteredWord32Value(uint32(n))
 		})),
-		newFromStringFunction(sema.Word64Type, unsignedIntValueFromString(64, func(n uint64) Value {
+		newFromStringFunction(sema.Word64Type, unsignedIntValueParser(64, func(n uint64) Value {
 			return NewUnmeteredWord64Value(n)
 		})),
 		newFromStringFunction(sema.Fix64Type, func(inter *Interpreter, input string) OptionalValue {
