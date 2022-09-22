@@ -256,3 +256,42 @@ func TestCheckError(t *testing.T) {
 	var checkerError *sema.CheckerError
 	require.ErrorAs(t, err, &checkerError)
 }
+
+func TestStdlib(t *testing.T) {
+
+	t.Parallel()
+
+	location := common.ScriptLocation{}
+
+	const code = `
+	  pub fun main() {
+          panic("test")
+      }
+	`
+
+	config := &analysis.Config{
+		Mode: analysis.NeedTypes,
+		ResolveCode: func(
+			location common.Location,
+			importingLocation common.Location,
+			importRange ast.Range,
+		) ([]byte, error) {
+			switch location {
+			case location:
+				return []byte(code), nil
+
+			default:
+				require.FailNow(t,
+					"import of unknown location: %s",
+					"location: %s",
+					location,
+				)
+				return nil, nil
+			}
+		},
+	}
+
+	_, err := analysis.Load(config, location)
+	require.NoError(t, err)
+
+}
