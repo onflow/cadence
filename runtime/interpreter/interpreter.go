@@ -1636,11 +1636,16 @@ func (interpreter *Interpreter) transferAndConvert(
 	)
 
 	// Defensively check the value's type matches the target type
+	resultStaticType := result.StaticType(interpreter)
+
 	if targetType != nil &&
-		!interpreter.ValueIsSubtypeOfSemaType(result, targetType) {
+		!interpreter.IsSubTypeOfSemaType(resultStaticType, targetType) {
+
+		resultSemaType := interpreter.MustConvertStaticToSemaType(resultStaticType)
 
 		panic(ValueTransferTypeError{
-			TargetType:    targetType,
+			ExpectedType:  targetType,
+			ActualType:    resultSemaType,
 			LocationRange: getLocationRange(),
 		})
 	}
@@ -3039,10 +3044,7 @@ func (interpreter *Interpreter) IsSubType(subType StaticType, superType StaticTy
 		return true
 	}
 
-	semaType, err := interpreter.ConvertStaticToSemaType(superType)
-	if err != nil {
-		return false
-	}
+	semaType := interpreter.MustConvertStaticToSemaType(superType)
 
 	return interpreter.IsSubTypeOfSemaType(subType, semaType)
 }
@@ -3346,9 +3348,14 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 
 			ty := typeParameterPair.Value
 
-			if !interpreter.IsSubTypeOfSemaType(value.StaticType(invocation.Interpreter), ty) {
+			valueStaticType := value.StaticType(invocation.Interpreter)
+
+			if !interpreter.IsSubTypeOfSemaType(valueStaticType, ty) {
+				valueSemaType := interpreter.MustConvertStaticToSemaType(valueStaticType)
+
 				panic(ForceCastTypeMismatchError{
 					ExpectedType:  ty,
+					ActualType:    valueSemaType,
 					LocationRange: invocation.GetLocationRange(),
 				})
 			}
@@ -3998,13 +4005,19 @@ func (interpreter *Interpreter) ExpectType(
 	expectedType sema.Type,
 	getLocationRange func() LocationRange,
 ) {
-	if !interpreter.IsSubTypeOfSemaType(value.StaticType(interpreter), expectedType) {
+	valueStaticType := value.StaticType(interpreter)
+
+	if !interpreter.IsSubTypeOfSemaType(valueStaticType, expectedType) {
+		valueSemaType := interpreter.MustConvertStaticToSemaType(valueStaticType)
+
 		var locationRange LocationRange
 		if getLocationRange != nil {
 			locationRange = getLocationRange()
 		}
+
 		panic(TypeMismatchError{
 			ExpectedType:  expectedType,
+			ActualType:    valueSemaType,
 			LocationRange: locationRange,
 		})
 	}

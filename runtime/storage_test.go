@@ -1591,7 +1591,7 @@ func TestRuntimeStorageReferenceCast(t *testing.T) {
 
 	require.Error(t, err)
 
-	require.Contains(t, err.Error(), "unexpectedly found non-`&Test.R` while force-casting value")
+	require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 }
 
 func TestRuntimeStorageNonStorable(t *testing.T) {

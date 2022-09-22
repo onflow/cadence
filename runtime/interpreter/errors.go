@@ -340,6 +340,7 @@ func (e ForceNilError) Error() string {
 //
 type ForceCastTypeMismatchError struct {
 	ExpectedType sema.Type
+	ActualType   sema.Type
 	LocationRange
 }
 
@@ -349,8 +350,9 @@ func (ForceCastTypeMismatchError) IsUserError() {}
 
 func (e ForceCastTypeMismatchError) Error() string {
 	return fmt.Sprintf(
-		"unexpectedly found non-`%s` while force-casting value",
+		"failed to force-cast value: expected `%s`, got `%s`",
 		e.ExpectedType.QualifiedString(),
+		e.ActualType.QualifiedString(),
 	)
 }
 
@@ -358,6 +360,7 @@ func (e ForceCastTypeMismatchError) Error() string {
 //
 type TypeMismatchError struct {
 	ExpectedType sema.Type
+	ActualType   sema.Type
 	LocationRange
 }
 
@@ -367,8 +370,9 @@ func (TypeMismatchError) IsUserError() {}
 
 func (e TypeMismatchError) Error() string {
 	return fmt.Sprintf(
-		"type mismatch: expected %s",
+		"type mismatch: expected `%s`, got `%s`",
 		e.ExpectedType.QualifiedString(),
+		e.ActualType.QualifiedString(),
 	)
 }
 
@@ -620,7 +624,7 @@ func (InvocationArgumentTypeError) IsUserError() {}
 
 func (e InvocationArgumentTypeError) Error() string {
 	return fmt.Sprintf(
-		"invalid invocation with argument at index %d: expected %s",
+		"invalid invocation with argument at index %d: expected `%s`",
 		e.Index,
 		e.ParameterType.QualifiedString(),
 	)
@@ -630,6 +634,7 @@ func (e InvocationArgumentTypeError) Error() string {
 //
 type MemberAccessTypeError struct {
 	ExpectedType sema.Type
+	ActualType   sema.Type
 	LocationRange
 }
 
@@ -639,15 +644,17 @@ func (MemberAccessTypeError) IsUserError() {}
 
 func (e MemberAccessTypeError) Error() string {
 	return fmt.Sprintf(
-		"invalid member access: expected %s",
+		"invalid member access: expected `%s`, got `%s`",
 		e.ExpectedType.QualifiedString(),
+		e.ActualType.QualifiedString(),
 	)
 }
 
 // ValueTransferTypeError
 //
 type ValueTransferTypeError struct {
-	TargetType sema.Type
+	ExpectedType sema.Type
+	ActualType   sema.Type
 	LocationRange
 }
 
@@ -657,8 +664,9 @@ func (ValueTransferTypeError) IsUserError() {}
 
 func (e ValueTransferTypeError) Error() string {
 	return fmt.Sprintf(
-		"invalid transfer of value: expected %s",
-		e.TargetType.QualifiedString(),
+		"invalid transfer of value: expected `%s`, got `%s`",
+		e.ExpectedType.QualifiedString(),
+		e.ActualType.QualifiedString(),
 	)
 }
 
@@ -675,7 +683,7 @@ func (ResourceConstructionError) IsUserError() {}
 
 func (e ResourceConstructionError) Error() string {
 	return fmt.Sprintf(
-		"cannot create resource %s: outside of declaring location %s",
+		"cannot create resource `%s`: outside of declaring location %s",
 		e.CompositeType.QualifiedString(),
 		e.CompositeType.Location.String(),
 	)
@@ -695,7 +703,7 @@ func (ContainerMutationError) IsUserError() {}
 
 func (e ContainerMutationError) Error() string {
 	return fmt.Sprintf(
-		"invalid container update: expected a subtype of '%s', found '%s'",
+		"invalid container update: expected a subtype of `%s`, found `%s`",
 		e.ExpectedType.QualifiedString(),
 		e.ActualType.QualifiedString(),
 	)
@@ -718,7 +726,7 @@ func (e NonStorableValueError) Error() string {
 // NonStorableStaticTypeError
 //
 type NonStorableStaticTypeError struct {
-	Type StaticType
+	Type sema.Type
 }
 
 var _ errors.UserError = NonStorableStaticTypeError{}
@@ -727,8 +735,8 @@ func (NonStorableStaticTypeError) IsUserError() {}
 
 func (e NonStorableStaticTypeError) Error() string {
 	return fmt.Sprintf(
-		"cannot store non-storable static type: %s",
-		e.Type,
+		"cannot store non-storable type: `%s`",
+		e.Type.QualifiedString(),
 	)
 }
 
