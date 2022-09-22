@@ -639,6 +639,8 @@ func TestInterpretInvalidArrayIndexing(t *testing.T) {
 
 			indexValue := interpreter.NewUnmeteredIntValueFromInt64(int64(index))
 			_, err := inter.Invoke("test", indexValue)
+			require.Error(t, err)
+			_ = err.Error()
 
 			var indexErr interpreter.ArrayIndexOutOfBoundsError
 			require.ErrorAs(t, err, &indexErr)
@@ -717,6 +719,8 @@ func TestInterpretInvalidArrayIndexingAssignment(t *testing.T) {
 
 			indexValue := interpreter.NewUnmeteredIntValueFromInt64(int64(index))
 			_, err := inter.Invoke("test", indexValue)
+			require.Error(t, err)
+			_ = err.Error()
 
 			var indexErr interpreter.ArrayIndexOutOfBoundsError
 			require.ErrorAs(t, err, &indexErr)
@@ -790,6 +794,8 @@ func TestInterpretInvalidStringIndexing(t *testing.T) {
 
 			indexValue := interpreter.NewUnmeteredIntValueFromInt64(int64(index))
 			_, err := inter.Invoke("test", indexValue)
+			require.Error(t, err)
+			_ = err.Error()
 
 			var indexErr interpreter.StringIndexOutOfBoundsError
 			require.ErrorAs(t, err, &indexErr)
@@ -4056,6 +4062,8 @@ func TestInterpretImportError(t *testing.T) {
 			"  |                  ^^^^^^^^^^^\n",
 		sb.String(),
 	)
+	require.Error(t, err)
+	_ = err.Error()
 
 	var panicErr stdlib.PanicError
 	require.ErrorAs(t, err, &panicErr)
@@ -5219,6 +5227,8 @@ func TestInterpretInvalidArrayInsert(t *testing.T) {
 
 			indexValue := interpreter.NewUnmeteredIntValueFromInt64(int64(index))
 			_, err := inter.Invoke("test", indexValue)
+			require.Error(t, err)
+			_ = err.Error()
 
 			var indexErr interpreter.ArrayIndexOutOfBoundsError
 			require.ErrorAs(t, err, &indexErr)
@@ -5293,6 +5303,8 @@ func TestInterpretInvalidArrayRemove(t *testing.T) {
 
 			indexValue := interpreter.NewUnmeteredIntValueFromInt64(int64(index))
 			_, err := inter.Invoke("test", indexValue)
+			require.Error(t, err)
+			_ = err.Error()
 
 			var indexErr interpreter.ArrayIndexOutOfBoundsError
 			require.ErrorAs(t, err, &indexErr)
@@ -5359,6 +5371,8 @@ func TestInterpretInvalidArrayRemoveFirst(t *testing.T) {
     `)
 
 	_, err := inter.Invoke("test")
+	require.Error(t, err)
+	_ = err.Error()
 
 	var indexErr interpreter.ArrayIndexOutOfBoundsError
 	require.ErrorAs(t, err, &indexErr)
@@ -5424,6 +5438,8 @@ func TestInterpretInvalidArrayRemoveLast(t *testing.T) {
     `)
 
 	_, err := inter.Invoke("test")
+	require.Error(t, err)
+	_ = err.Error()
 
 	var indexErr interpreter.ArrayIndexOutOfBoundsError
 	require.ErrorAs(t, err, &indexErr)
@@ -7294,6 +7310,7 @@ func TestInterpretReferenceDereferenceFailure(t *testing.T) {
 
 	_, err := inter.Invoke("test")
 	require.Error(t, err)
+	_ = err.Error()
 
 	require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
 }
@@ -8316,6 +8333,7 @@ func TestInterpretNonStorageReferenceAfterDestruction(t *testing.T) {
 
 	_, err := inter.Invoke("test")
 	require.Error(t, err)
+	_ = err.Error()
 
 	require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
 }
@@ -8363,6 +8381,8 @@ func TestInterpretNonStorageReferenceToOptional(t *testing.T) {
 	t.Run("nil", func(t *testing.T) {
 		_, err := inter.Invoke("testNil")
 		require.Error(t, err)
+		_ = err.Error()
+
 		require.ErrorAs(t, err, &interpreter.ForceNilError{})
 	})
 }
@@ -9007,6 +9027,7 @@ func TestInterpretResourceAssignmentForceTransfer(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
+		_ = err.Error()
 
 		require.ErrorAs(t, err, &interpreter.ForceAssignmentToNonNilResourceError{})
 	})
@@ -9043,6 +9064,7 @@ func TestInterpretResourceAssignmentForceTransfer(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
+		_ = err.Error()
 
 		require.ErrorAs(t, err, &interpreter.ForceAssignmentToNonNilResourceError{})
 	})
@@ -9121,6 +9143,7 @@ func TestInterpretForce(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
+		_ = err.Error()
 
 		require.ErrorAs(t, err, &interpreter.ForceNilError{})
 	})
@@ -9642,6 +9665,7 @@ func TestInterpretMissingMember(t *testing.T) {
 
 	_, err := inter.Invoke("test")
 	require.Error(t, err)
+	_ = err.Error()
 
 	var missingMemberError interpreter.MissingMemberValueError
 	require.ErrorAs(t, err, &missingMemberError)
@@ -9895,6 +9919,9 @@ func TestInterpretOptionalReference(t *testing.T) {
 	)
 
 	_, err = inter.Invoke("absent")
+	require.Error(t, err)
+	_ = err.Error()
+
 	var forceNilError interpreter.ForceNilError
 	require.ErrorAs(t, err, &forceNilError)
 }
@@ -10050,6 +10077,7 @@ func TestInterpretDictionaryDuplicateKey(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
+		_ = err.Error()
 
 		require.ErrorAs(t, err, &interpreter.DuplicateKeyInResourceDictionaryError{})
 

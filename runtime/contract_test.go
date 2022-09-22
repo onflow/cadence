@@ -269,6 +269,8 @@ func TestRuntimeContract(t *testing.T) {
 
 			} else {
 				require.Error(t, err)
+				_ = err.Error()
+
 				require.Empty(t, deployedCode)
 				require.Empty(t, events)
 				require.Equal(t,
@@ -304,6 +306,7 @@ func TestRuntimeContract(t *testing.T) {
 				},
 			)
 			require.Error(t, err)
+			_ = err.Error()
 
 			// the deployed code should not have been updated,
 			// and no events should have been emitted,
@@ -445,6 +448,8 @@ func TestRuntimeContract(t *testing.T) {
 
 			} else {
 				require.Error(t, err)
+				_ = err.Error()
+
 				require.Empty(t, deployedCode)
 				require.Empty(t, events)
 				require.Empty(t, loggedMessages)

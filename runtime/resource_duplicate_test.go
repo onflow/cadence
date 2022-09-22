@@ -199,6 +199,7 @@ func TestRuntimeResourceDuplicationWithContractTransfer(t *testing.T) {
 		},
 	)
 	require.Error(t, err)
+	_ = err.Error()
 
 	var nonTransferableValueError interpreter.NonTransferableValueError
 	require.ErrorAs(t, err, &nonTransferableValueError)
