@@ -2708,7 +2708,67 @@ func TestCheckInterfaceImplementationRequirement(t *testing.T) {
             }
 
             struct interface Bar: Foo {}
+
+            struct Baz: Bar {}
         `)
-		require.NoError(t, err)
+
+		require.Error(t, err)
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		conformanceError := &sema.ConformanceError{}
+		require.ErrorAs(t, errs[0], &conformanceError)
+
+		assert.Equal(t, conformanceError.InterfaceType.Identifier, "Bar")
+		assert.Equal(t, conformanceError.NestedInterfaceType.Identifier, "Foo")
+	})
+
+	t.Run("resource interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource interface Foo {
+                let x: Int
+
+                fun test(): Int
+            }
+
+            resource interface Bar: Foo {}
+
+            resource Baz: Bar {}
+        `)
+
+		require.Error(t, err)
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		conformanceError := &sema.ConformanceError{}
+		require.ErrorAs(t, errs[0], &conformanceError)
+
+		assert.Equal(t, conformanceError.InterfaceType.Identifier, "Bar")
+		assert.Equal(t, conformanceError.NestedInterfaceType.Identifier, "Foo")
+	})
+
+	t.Run("mixed interfaces", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource interface Foo {
+                let x: Int
+
+                fun test(): Int
+            }
+
+            struct interface Bar: Foo {}
+        `)
+
+		require.Error(t, err)
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		conformanceError := &sema.CompositeKindMismatchError{}
+		require.ErrorAs(t, errs[0], &conformanceError)
+
+		assert.Equal(t, conformanceError.ExpectedKind, common.CompositeKindStructure)
+		assert.Equal(t, conformanceError.ActualKind, common.CompositeKindResource)
 	})
 }

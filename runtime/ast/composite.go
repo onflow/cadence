@@ -44,6 +44,7 @@ type CompositeDeclaration struct {
 var _ Element = &CompositeDeclaration{}
 var _ Declaration = &CompositeDeclaration{}
 var _ Statement = &CompositeDeclaration{}
+var _ HasConformance = &CompositeDeclaration{}
 
 func NewCompositeDeclaration(
 	memoryGauge common.MemoryGauge,
@@ -161,6 +162,10 @@ func (d *CompositeDeclaration) EventDoc() prettier.Doc {
 
 func (d *CompositeDeclaration) String() string {
 	return Prettier(d)
+}
+
+func (d *CompositeDeclaration) InterfaceConformances() []*NominalType {
+	return d.Conformances
 }
 
 var interfaceKeywordSpaceDoc = prettier.Text("interface ")

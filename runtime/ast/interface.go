@@ -41,6 +41,7 @@ type InterfaceDeclaration struct {
 var _ Element = &InterfaceDeclaration{}
 var _ Declaration = &InterfaceDeclaration{}
 var _ Statement = &InterfaceDeclaration{}
+var _ HasConformance = &CompositeDeclaration{}
 
 func NewInterfaceDeclaration(
 	gauge common.MemoryGauge,
@@ -124,4 +125,8 @@ func (d *InterfaceDeclaration) Doc() prettier.Doc {
 
 func (d *InterfaceDeclaration) String() string {
 	return Prettier(d)
+}
+
+func (d *InterfaceDeclaration) InterfaceConformances() []*NominalType {
+	return d.Conformances
 }

@@ -52,6 +52,17 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 		true,
 	)
 
+	interfaceType.ExplicitInterfaceConformances.Foreach(func(conformanceChainRoot, conformance *InterfaceType) bool {
+		checker.checkInterfaceConformance(
+			declaration,
+			interfaceType,
+			conformance,
+			conformanceChainRoot,
+		)
+
+		return true
+	})
+
 	// NOTE: functions are checked separately
 	checker.checkFieldsAccessModifier(declaration.Members.Fields())
 
@@ -251,6 +262,10 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 		)
 	}
 
+	// Resolve conformances
+	interfaceType.ExplicitInterfaceConformances =
+		checker.explicitInterfaceConformances(declaration, interfaceType)
+
 	checker.Elaboration.InterfaceDeclarationTypes[declaration] = interfaceType
 	checker.Elaboration.InterfaceTypeDeclarations[interfaceType] = declaration
 
@@ -356,4 +371,18 @@ func (checker *Checker) declareInterfaceMembers(declaration *ast.InterfaceDeclar
 	for _, nestedCompositeDeclaration := range declaration.Members.Composites() {
 		checker.declareCompositeMembersAndValue(nestedCompositeDeclaration, ContainerKindInterface)
 	}
+}
+
+func (checker *Checker) checkInterfaceConformance(
+	interfaceDeclaration *ast.InterfaceDeclaration,
+	interfaceType *InterfaceType,
+	conformance *InterfaceType,
+	conformanceChainRoot *InterfaceType,
+) {
+
+	// Ensure the composite kinds match, e.g. a structure shouldn't be able
+	// to conform to a resource interface
+	checker.checkConformanceKindMatch(interfaceDeclaration, interfaceType, conformance)
+
+	// TODO: check conflicting names, default implementations.
 }

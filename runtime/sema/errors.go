@@ -1146,6 +1146,7 @@ type ConformanceError struct {
 	CompositeDeclaration           *ast.CompositeDeclaration
 	CompositeType                  *CompositeType
 	InterfaceType                  *InterfaceType
+	NestedInterfaceType            *InterfaceType
 	InitializerMismatch            *InitializerMismatch
 	MissingMembers                 []*Member
 	MemberMismatches               []MemberMismatch
@@ -1156,6 +1157,7 @@ type ConformanceError struct {
 
 var _ SemanticError = &ConformanceError{}
 var _ errors.UserError = &ConformanceError{}
+var _ errors.SecondaryError = &ConformanceError{}
 
 func (*ConformanceError) isSemanticError() {}
 
@@ -1201,6 +1203,10 @@ func (e *ConformanceError) ErrorNotes() (notes []errors.ErrorNote) {
 	return
 }
 
+func (e *ConformanceError) SecondaryError() string {
+	return fmt.Sprintf("does not confirm to nested interface requirement `%s`", e.NestedInterfaceType)
+}
+
 // MemberMismatchNote
 
 type MemberMismatchNote struct {
@@ -1216,7 +1222,7 @@ func (n MemberMismatchNote) Message() string {
 // TODO: just make this a warning?
 //
 type DuplicateConformanceError struct {
-	CompositeType *CompositeType
+	CompositeType CompositeKindedType
 	InterfaceType *InterfaceType
 	ast.Range
 }
@@ -1231,7 +1237,7 @@ func (*DuplicateConformanceError) IsUserError() {}
 func (e *DuplicateConformanceError) Error() string {
 	return fmt.Sprintf(
 		"%s `%s` repeats conformance to %s `%s`",
-		e.CompositeType.Kind.Name(),
+		e.CompositeType.GetCompositeKind().Name(),
 		e.CompositeType.QualifiedString(),
 		e.InterfaceType.CompositeKind.DeclarationKind(true).Name(),
 		e.InterfaceType.QualifiedString(),

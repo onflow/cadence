@@ -180,6 +180,18 @@ func (om OrderedMap[K, V]) ForeachWithError(f func(key K, value V) error) error 
 	return nil
 }
 
+// ForeachReverse iterates over the entries of the map in the reverse insertion order (LIFO), and invokes
+// the provided function for each key-value pair.
+func (om OrderedMap[K, V]) ForeachReverse(f func(key K, value V)) {
+	if om.pairs == nil {
+		return
+	}
+
+	for pair := om.Newest(); pair != nil; pair = pair.Prev() {
+		f(pair.Key, pair.Value)
+	}
+}
+
 // Pair is an entry in an OrderedMap
 //
 type Pair[K any, V any] struct {

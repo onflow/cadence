@@ -61,6 +61,13 @@ func (s InterfaceSet) ForEach(f func(*InterfaceType)) {
 	})
 }
 
+func (s InterfaceSet) ForEachReverse(f func(*InterfaceType)) {
+	orderedMap := (orderedmap.OrderedMap[*InterfaceType, struct{}])(s)
+	orderedMap.ForeachReverse(func(interfaceType *InterfaceType, _ struct{}) {
+		f(interfaceType)
+	})
+}
+
 func (s InterfaceSet) Len() int {
 	orderedMap := (orderedmap.OrderedMap[*InterfaceType, struct{}])(s)
 	return orderedMap.Len()

@@ -3473,7 +3473,7 @@ type CompositeType struct {
 	// an internal set of field `ExplicitInterfaceConformances`
 	explicitInterfaceConformanceSet     *InterfaceSet
 	explicitInterfaceConformanceSetOnce sync.Once
-	ExplicitInterfaceConformances       []*InterfaceType
+	ExplicitInterfaceConformances       InterfaceConformances
 	ImplicitTypeRequirementConformances []*CompositeType
 	Members                             *StringMemberOrderedMap
 	memberResolvers                     map[string]MemberResolver
@@ -3507,13 +3507,14 @@ func (t *CompositeType) ExplicitInterfaceConformanceSet() *InterfaceSet {
 
 func (t *CompositeType) initializeExplicitInterfaceConformanceSet() {
 	t.explicitInterfaceConformanceSetOnce.Do(func() {
-		// TODO: also include conformances' conformances recursively
-		//   once interface can have conformances
-
 		t.explicitInterfaceConformanceSet = NewInterfaceSet()
-		for _, conformance := range t.ExplicitInterfaceConformances {
+
+		// Interfaces can also have conformances.
+		// So add conformances' conformance recursively.
+		t.ExplicitInterfaceConformances.Foreach(func(_, conformance *InterfaceType) bool {
 			t.explicitInterfaceConformanceSet.Add(conformance)
-		}
+			return true
+		})
 	})
 }
 
@@ -3746,6 +3747,7 @@ func (t *CompositeType) TypeRequirements() []*CompositeType {
 	var typeRequirements []*CompositeType
 
 	if containerComposite, ok := t.containerType.(*CompositeType); ok {
+		// TODO: get nested conformances. i.e: use 'explicitInterfaceConformanceSet' method
 		for _, conformance := range containerComposite.ExplicitInterfaceConformances {
 			ty, ok := conformance.NestedTypes.Get(t.Identifier)
 			if !ok {
@@ -3827,6 +3829,30 @@ func (t *CompositeType) FieldPosition(name string, declaration *ast.CompositeDec
 		pos = declaration.Members.FieldPosition(name, declaration.CompositeKind)
 	}
 	return pos
+}
+
+type InterfaceConformances []*InterfaceType
+
+// Foreach iterates over the conformances and its nested conformances in a breadth-first manner.
+// `conformance` refers to the currently visiting conformance.
+// `origin` refers to root of the current conformance chain.
+//
+func (c InterfaceConformances) Foreach(f func(origin, conformance *InterfaceType) bool) {
+	for _, conformance := range c {
+		if !f(conformance, conformance) {
+			break
+		}
+
+		cont := true
+		conformance.ExplicitInterfaceConformances.Foreach(func(_, nestedConformance *InterfaceType) bool {
+			cont = f(conformance, nestedConformance)
+			return cont
+		})
+
+		if cont {
+			continue
+		}
+	}
 }
 
 // Member
@@ -4016,6 +4042,10 @@ type InterfaceType struct {
 		QualifiedIdentifier string
 	}
 	cachedIdentifiersLock sync.RWMutex
+
+	explicitInterfaceConformanceSet     *InterfaceSet
+	explicitInterfaceConformanceSetOnce sync.Once
+	ExplicitInterfaceConformances       InterfaceConformances
 }
 
 func (*InterfaceType) IsType() {}
@@ -4235,6 +4265,24 @@ func (t *InterfaceType) GetNestedTypes() *StringTypeOrderedMap {
 
 func (t *InterfaceType) FieldPosition(name string, declaration *ast.InterfaceDeclaration) ast.Position {
 	return declaration.Members.FieldPosition(name, declaration.CompositeKind)
+}
+
+func (t *InterfaceType) ExplicitInterfaceConformanceSet() *InterfaceSet {
+	t.initializeExplicitInterfaceConformanceSet()
+	return t.explicitInterfaceConformanceSet
+}
+
+func (t *InterfaceType) initializeExplicitInterfaceConformanceSet() {
+	t.explicitInterfaceConformanceSetOnce.Do(func() {
+		t.explicitInterfaceConformanceSet = NewInterfaceSet()
+
+		// Interfaces can also have conformances.
+		// So add conformances' conformance recursively.
+		t.ExplicitInterfaceConformances.Foreach(func(_, conformance *InterfaceType) bool {
+			t.explicitInterfaceConformanceSet.Add(conformance)
+			return true
+		})
+	})
 }
 
 // DictionaryType consists of the key and value type

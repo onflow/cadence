@@ -37,3 +37,8 @@ type Declaration interface {
 	DeclarationDocString() string
 	Doc() prettier.Doc
 }
+
+type HasConformance interface {
+	Declaration
+	InterfaceConformances() []*NominalType
+}
