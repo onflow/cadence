@@ -172,8 +172,9 @@ import AContract from 0xAContract
 // Return the struct with a script
 pub fun main(account: Address): AContract.BReportStruct {
     // borrow the resource
-    let b: &AContract.BResource = getAccount(account).getCapability(AContract.BResourcePublicPath)
-      .borrow<&AContract.BResource>()
+    let b = getAccount(account)
+        .getCapability(AContract.BResourcePublicPath)
+        .borrow<&AContract.BResource>()
     // return the struct
     return b.generateReport()
 }
