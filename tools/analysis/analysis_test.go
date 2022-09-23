@@ -261,7 +261,7 @@ func TestStdlib(t *testing.T) {
 
 	t.Parallel()
 
-	location := common.ScriptLocation{}
+	scriptLocation := common.ScriptLocation{}
 
 	const code = `
 	  pub fun main() {
@@ -277,7 +277,7 @@ func TestStdlib(t *testing.T) {
 			importRange ast.Range,
 		) ([]byte, error) {
 			switch location {
-			case location:
+			case scriptLocation:
 				return []byte(code), nil
 
 			default:
@@ -291,7 +291,7 @@ func TestStdlib(t *testing.T) {
 		},
 	}
 
-	_, err := analysis.Load(config, location)
+	_, err := analysis.Load(config, scriptLocation)
 	require.NoError(t, err)
 
 }
