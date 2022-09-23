@@ -15631,7 +15631,7 @@ func (v *DictionaryValue) ForEachKey(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
 	procedure FunctionValue,
-) VoidValue {
+) {
 	keyType := v.SemaType(interpreter).KeyType
 
 	iterationInvocation := func(key Value) Invocation {
@@ -15661,9 +15661,8 @@ func (v *DictionaryValue) ForEachKey(
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
-
-	return NewVoidValue(interpreter)
 }
+
 func (v *DictionaryValue) ContainsKey(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
@@ -15953,11 +15952,13 @@ func (v *DictionaryValue) GetMember(
 					panic(errors.NewUnreachableError())
 				}
 
-				return v.ForEachKey(
+				v.ForEachKey(
 					invocation.Interpreter,
 					invocation.GetLocationRange,
 					funcArgument,
 				)
+
+				return NewVoidValue(interpreter)
 			},
 			sema.DictionaryForEachKeyFunctionType(
 				v.SemaType(interpreter),
