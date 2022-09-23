@@ -159,21 +159,17 @@ func (e *interpreterEnvironment) newCheckerConfig() *sema.Config {
 
 func NewBaseInterpreterEnvironment(config Config) *interpreterEnvironment {
 	env := newInterpreterEnvironment(config)
-	for _, valueDeclaration := range stdlib.BuiltinValues {
+	for _, valueDeclaration := range stdlib.DefaultStandardLibraryValues(env) {
 		env.Declare(valueDeclaration)
 	}
-	env.Declare(stdlib.NewLogFunction(env))
-	env.Declare(stdlib.NewUnsafeRandomFunction(env))
-	env.Declare(stdlib.NewGetBlockFunction(env))
-	env.Declare(stdlib.NewGetCurrentBlockFunction(env))
-	env.Declare(stdlib.NewGetAccountFunction(env))
-	env.Declare(stdlib.NewAuthAccountConstructor(env))
 	return env
 }
 
 func NewScriptInterpreterEnvironment(config Config) Environment {
-	env := NewBaseInterpreterEnvironment(config)
-	env.Declare(stdlib.NewGetAuthAccountFunction(env))
+	env := newInterpreterEnvironment(config)
+	for _, valueDeclaration := range stdlib.DefaultScriptStandardLibraryValues(env) {
+		env.Declare(valueDeclaration)
+	}
 	return env
 }
 
