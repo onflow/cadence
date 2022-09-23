@@ -15637,7 +15637,7 @@ func (v *DictionaryValue) ForEachKey(
 	iterationInvocation := func(key Value) Invocation {
 		return NewInvocation(
 			interpreter,
-			nil,
+			v,
 			[]Value{key},
 			[]sema.Type{keyType},
 			nil,
