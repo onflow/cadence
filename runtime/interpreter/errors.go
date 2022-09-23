@@ -350,7 +350,7 @@ func (ForceCastTypeMismatchError) IsUserError() {}
 
 func (e ForceCastTypeMismatchError) Error() string {
 	return fmt.Sprintf(
-		"failed to force-cast value: expected `%s`, got `%s`",
+		"failed to force-cast value: expected type `%s`, got `%s`",
 		e.ExpectedType.QualifiedString(),
 		e.ActualType.QualifiedString(),
 	)
