@@ -50,8 +50,9 @@ type entry[K, V any] struct {
 	value V
 }
 
-// similar to dictionaryKeyValues, attempting to map untyped Values to concrete values using the provided morphisms. if a conversion fails, then this function returns (nil, false).
-// useful in contexts when Cadence values need to be extracted into their go counterparts.
+// Similar to `dictionaryKeyValues`, attempting to map untyped Values to concrete values using the provided morphisms.
+// If a conversion fails, then this function returns (nil, false).
+// Useful in contexts when Cadence values need to be extracted into their go counterparts.
 func dictionaryEntries[K, V any](
 	inter *interpreter.Interpreter,
 	dict *interpreter.DictionaryValue,
