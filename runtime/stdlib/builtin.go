@@ -56,7 +56,6 @@ func DefaultStandardLibraryValues(handler StandardLibraryHandler) []StandardLibr
 	)
 }
 
-// TODO: use in language server
 func DefaultScriptStandardLibraryValues(handler StandardLibraryHandler) []StandardLibraryValue {
 	return append(
 		DefaultStandardLibraryValues(handler),
