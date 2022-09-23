@@ -2284,15 +2284,8 @@ func signedIntValueParser(bitSize int, convert func(int64) Value) valueParser {
 
 func bigIntValueParser(convert func(*big.Int) (Value, bool)) valueParser {
 	return func(interpreter *Interpreter, input string) OptionalValue {
-		// maxVal =~ 10^|input|
-		// bytes = ceil(log256(maxVal))
-		// = ceil(log256(10 ^ |input|)) via substitution
-		// = ceil(|input| * log256(10)) via power rule
-		// = ceil(|input| * 0.415241011)
-		// there's gotta be a better way of estimating memory usage lol
-
-		estimatedSize := int(math.Ceil(float64(len(input)) * 0.415241011))
-		common.UseMemory(interpreter, common.NewCadenceBigIntMemoryUsage(estimatedSize))
+		estimatedSize := common.OverEstimateBigIntFromString(input)
+		common.UseMemory(interpreter, common.NewBigIntMemoryUsage(estimatedSize))
 
 		val, ok := new(big.Int).SetString(input, 10)
 		if !ok {
