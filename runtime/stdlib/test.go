@@ -1493,12 +1493,14 @@ func newMatcherWithGenericTestFunction(
 
 			for i, argument := range invocation.Arguments {
 				paramType := parameters[i].TypeAnnotation.Type
-				argumentType := argument.StaticType(inter)
-				argTypeMatch := inter.IsSubTypeOfSemaType(argumentType, paramType)
+				argumentStaticType := argument.StaticType(inter)
 
-				if !argTypeMatch {
+				if !inter.IsSubTypeOfSemaType(argumentStaticType, paramType) {
+					argumentSemaType := inter.MustConvertStaticToSemaType(argumentStaticType)
+
 					panic(interpreter.TypeMismatchError{
 						ExpectedType:  paramType,
+						ActualType:    argumentSemaType,
 						LocationRange: invocation.GetLocationRange(),
 					})
 				}

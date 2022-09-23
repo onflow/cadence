@@ -116,6 +116,8 @@ func TestInterpretTransactions(t *testing.T) {
         `)
 
 		err := inter.InvokeTransaction(0)
+		require.Error(t, err)
+		_ = err.Error()
 
 		var conditionErr interpreter.ConditionError
 		require.ErrorAs(t, err, &conditionErr)
@@ -177,6 +179,8 @@ func TestInterpretTransactions(t *testing.T) {
         `)
 
 		err := inter.InvokeTransaction(0)
+		require.Error(t, err)
+		_ = err.Error()
 
 		var conditionErr interpreter.ConditionError
 		require.ErrorAs(t, err, &conditionErr)

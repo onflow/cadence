@@ -3290,7 +3290,7 @@ func (*InvalidRestrictedTypeError) IsUserError() {}
 
 func (e *InvalidRestrictedTypeError) Error() string {
 	return fmt.Sprintf(
-		"cannot restrict type: %s",
+		"cannot restrict type: `%s`",
 		e.Type.QualifiedString(),
 	)
 }
@@ -3311,7 +3311,7 @@ func (*InvalidRestrictionTypeError) IsUserError() {}
 
 func (e *InvalidRestrictionTypeError) Error() string {
 	return fmt.Sprintf(
-		"cannot restrict using non-resource/structure interface type: %s",
+		"cannot restrict using non-resource/structure interface type: `%s`",
 		e.Type.QualifiedString(),
 	)
 }
@@ -3355,7 +3355,7 @@ func (*InvalidRestrictionTypeDuplicateError) IsUserError() {}
 
 func (e *InvalidRestrictionTypeDuplicateError) Error() string {
 	return fmt.Sprintf(
-		"duplicate restriction: %s",
+		"duplicate restriction: `%s`",
 		e.Type.QualifiedString(),
 	)
 }
@@ -3376,7 +3376,7 @@ func (*InvalidNonConformanceRestrictionError) IsUserError() {}
 
 func (e *InvalidNonConformanceRestrictionError) Error() string {
 	return fmt.Sprintf(
-		"restricted type does not conform to restricting type: %s",
+		"restricted type does not conform to restricting type: `%s`",
 		e.Type.QualifiedString(),
 	)
 }
