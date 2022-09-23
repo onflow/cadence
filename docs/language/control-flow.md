@@ -348,7 +348,7 @@ Alternatively, dictionaries carry a method `forEachKey` that avoids allocating a
 
 ```cadence
 let dictionary = {"one": 1, "two": 2, "three": 3}
-dictionary.forEachKey(fun(key: String): Bool {
+dictionary.forEachKey(fun (key: String): Bool {
     let value = dictionary[key]
     log(key)
     log(value)

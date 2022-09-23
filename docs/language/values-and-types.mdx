@@ -1394,7 +1394,7 @@ booleans[0] = true
   //
   let containsKey42 = numbers.containsKey(42)
   ```
-- `cadence•fun forEachKey(function: ((K): Bool)): Void`
+- `cadence•fun forEachKey(_ function: ((K): Bool)): Void`
 
   Iterate through all the keys in the dictionary, exiting early if the passed function returns false.
   This is more efficient than calling `.keys` and iterating over the resulting array, since an intermediate allocation is avoided.
@@ -1407,12 +1407,13 @@ booleans[0] = true
     var found = false
 
     // At each step, `key` will be bound to another key from `dictionary`.
-    dictionary.forEachKey(fun(key: String): Bool {
+    dictionary.forEachKey(fun (key: String): Bool {
       found = key == targetKey
 
-      // The returned boolean value, signals whether to continue iterating. This allows for control flow during the iteration process:
-      // true = `continue`
-      // false = `break`
+      // The returned boolean value, signals whether to continue iterating. 
+      // This allows for control flow during the iteration process:
+      //  true = `continue`
+      //  false = `break`
       return !found
     })
 

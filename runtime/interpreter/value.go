@@ -15627,6 +15627,43 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, getLocationRange fun
 	)
 }
 
+func (v *DictionaryValue) ForEachKey(
+	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
+	procedure FunctionValue,
+) VoidValue {
+	keyType := v.SemaType(interpreter).KeyType
+
+	iterationInvocation := func(key Value) Invocation {
+		return NewInvocation(
+			interpreter,
+			nil,
+			[]Value{key},
+			[]sema.Type{keyType},
+			nil,
+			getLocationRange,
+		)
+	}
+
+	err := v.dictionary.IterateKeys(
+		func(item atree.Value) (bool, error) {
+			key := MustConvertStoredValue(interpreter, item)
+
+			shouldContinue, ok := procedure.invoke(iterationInvocation(key)).(BoolValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			return bool(shouldContinue), nil
+		},
+	)
+
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
+
+	return NewVoidValue(interpreter)
+}
 func (v *DictionaryValue) ContainsKey(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
@@ -15911,44 +15948,16 @@ func (v *DictionaryValue) GetMember(
 		return NewHostFunctionValue(
 			interpreter,
 			func(invocation Invocation) Value {
-				// todo foreachkey
-				procedure, ok := invocation.Arguments[0].(FunctionValue)
+				funcArgument, ok := invocation.Arguments[0].(FunctionValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
 
-				interpreter := invocation.Interpreter
-				keyType := v.SemaType(interpreter).KeyType
-
-				iterationInvocation := func(key Value) Invocation {
-					return NewInvocation(
-						interpreter,
-						nil,
-						[]Value{key},
-						[]sema.Type{keyType},
-						nil,
-						invocation.GetLocationRange,
-					)
-				}
-
-				err := v.dictionary.IterateKeys(
-					func(item atree.Value) (bool, error) {
-						key := MustConvertStoredValue(invocation.Interpreter, item)
-
-						shouldContinue, ok := procedure.invoke(iterationInvocation(key)).(BoolValue)
-						if !ok {
-							panic(errors.NewUnreachableError())
-						}
-
-						return bool(shouldContinue), nil
-					},
+				return v.ForEachKey(
+					invocation.Interpreter,
+					invocation.GetLocationRange,
+					funcArgument,
 				)
-
-				if err != nil {
-					panic(errors.NewExternalError(err))
-				}
-
-				return NewVoidValue(interpreter)
 			},
 			sema.DictionaryForEachKeyFunctionType(
 				v.SemaType(interpreter),
