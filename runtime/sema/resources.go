@@ -228,23 +228,47 @@ func mergeResourceInfos(
 	thenInvalidation := thenInfo.Invalidation()
 	elseInvalidation := elseInfo.Invalidation()
 
+	// First level: Existence of invalidation
+	// Second level: definite return status
+	// Third level: definite halt status
+
 	if thenInvalidation != nil && elseInvalidation != nil {
+		// First level: Both branches have an invalidation
 
 		if thenReturnInfo.DefinitelyReturned && elseReturnInfo.DefinitelyReturned {
-			// NOOP
+			// Second level: Both branches definitely returned,
+			// neither invalidation will be effective after the branches
+
+			// NO-OP
+
 		} else if thenReturnInfo.DefinitelyReturned {
+			// Second level: Only the then branch returned,
+			// only the invalidation in the else branch
+			// will be effective after the branches, as-is
+
 			invalidation = elseInvalidation
 
 		} else if elseReturnInfo.DefinitelyReturned {
+			// Second level: Only the else branch returned,
+			// only the invalidation in the then branch
+			// will be effective after the branches, as-is
+
 			invalidation = thenInvalidation
 
 		} else {
+			// Second level: Neither branch returned.
+			// Either one invalidation will be effective after the branches.
+			// We pick the invalidation in the then branch,
+			// but could also take the invalidation of the else branch.
+
 			invalidation = thenInvalidation
 
-			thenIsDefinite := thenReturnInfo.DefinitelyHalted ||
-				thenInvalidation.Kind.IsDefinite()
-			elseIsDefinite := elseReturnInfo.DefinitelyHalted ||
-				elseInvalidation.Kind.IsDefinite()
+			// The resulting invalidation after the branches is definite,
+			// if both the invalidations in the branches were definite;
+			// and potential otherwise
+
+			thenIsDefinite := thenInvalidation.Kind.IsDefinite()
+			elseIsDefinite := elseInvalidation.Kind.IsDefinite()
 
 			if !elseIsDefinite || !thenIsDefinite {
 				invalidation.Kind = invalidation.Kind.AsPotential()
@@ -252,15 +276,57 @@ func mergeResourceInfos(
 		}
 
 	} else if thenInvalidation != nil {
-		if !thenReturnInfo.DefinitelyReturned {
+		// First level: Only the then branch has an invalidation
+
+		if thenReturnInfo.DefinitelyReturned {
+			// Second level: the then branch definitely returned
+
+			if elseReturnInfo != nil && elseReturnInfo.DefinitelyHalted {
+				// Third level: the else branch definitely halted.
+				// The branches return/halt,
+				// so the resource can be considered definitely invalidated.
+
+				invalidation = &ResourceInvalidation{
+					Kind: ResourceInvalidationKindDestroyDefinite,
+				}
+			}
+		} else {
+			// Second level: the then branch did not return,
+			// the invalidation will be effective after the branches.
+
 			invalidation = thenInvalidation
+
+			// The invalidation can be considered definitive if the else branch halted;
+			// and potential otherwise
+
 			if elseReturnInfo == nil || !elseReturnInfo.DefinitelyHalted {
 				invalidation.Kind = invalidation.Kind.AsPotential()
 			}
 		}
 	} else if elseInvalidation != nil {
-		if !elseReturnInfo.DefinitelyReturned {
+		// First level: Only the else branch has an invalidation
+
+		if elseReturnInfo.DefinitelyReturned {
+			// Second level: the else branch definitely returned
+
+			if thenReturnInfo.DefinitelyHalted {
+				// Third level: the then branch definitely halted.
+				// The branches halt/return,
+				// so the resource can be considered definitely invalidated.
+
+				invalidation = &ResourceInvalidation{
+					Kind: ResourceInvalidationKindDestroyDefinite,
+				}
+			}
+		} else {
+			// Second level: the else branch did not return,
+			// the invalidation will be effective after the branches.
+
 			invalidation = elseInvalidation
+
+			// The invalidation can be considered definitive if the then branch halted;
+			// and potential otherwise
+
 			if !thenReturnInfo.DefinitelyHalted {
 				invalidation.Kind = invalidation.Kind.AsPotential()
 			}

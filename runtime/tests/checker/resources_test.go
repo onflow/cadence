@@ -6976,6 +6976,50 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
 	})
 
+	t.Run("if-else: invalidation and return in then branch, halt in else branch", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+           resource R {}
+
+           fun test() {
+               let r <- create R()
+
+               if true {
+                   destroy r
+                   return
+               } else {
+                   panic("halt")
+               }
+           }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("if-else: halt in then branch, invalidation and return in else branch", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+           resource R {}
+
+           fun test() {
+               let r <- create R()
+
+               if true {
+                   panic("halt")
+               } else {
+                   destroy r
+                   return
+               }
+           }
+        `)
+
+		require.NoError(t, err)
+	})
+
 	t.Run("switch-case: missing invalidation in one case", func(t *testing.T) {
 
 		t.Parallel()
