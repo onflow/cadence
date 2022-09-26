@@ -45,8 +45,6 @@ func (e *Encoder) EncodeType(t cadence.Type) (err error) {
 		return e.EncodeTypeIdentifier(EncodedTypeString)
 	case cadence.CharacterType:
 		return e.EncodeTypeIdentifier(EncodedTypeCharacter)
-	case cadence.BytesType:
-		return e.EncodeTypeIdentifier(EncodedTypeBytes)
 	case cadence.AddressType:
 		return e.EncodeTypeIdentifier(EncodedTypeAddress)
 	case cadence.IntType:

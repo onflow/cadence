@@ -46,8 +46,6 @@ func (d *Decoder) DecodeType() (t cadence.Type, err error) {
 		t = cadence.NewMeteredStringType(d.memoryGauge)
 	case EncodedTypeCharacter:
 		t = cadence.NewMeteredCharacterType(d.memoryGauge)
-	case EncodedTypeBytes:
-		t = cadence.NewMeteredBytesType(d.memoryGauge)
 	case EncodedTypeAddress:
 		t = cadence.NewMeteredAddressType(d.memoryGauge)
 	case EncodedTypeNumber:

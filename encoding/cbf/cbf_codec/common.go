@@ -75,7 +75,6 @@ const (
 	EncodedTypeOptional
 	EncodedTypeString
 	EncodedTypeCharacter
-	EncodedTypeBytes
 	EncodedTypeAddress
 	EncodedTypeInt
 	EncodedTypeInt8
