@@ -9572,6 +9572,50 @@ func TestInterpretInternalAssignment(t *testing.T) {
 	)
 }
 
+func TestInterpretVoidReturn(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+		// implicit void return
+		fun emptyFunction() {
+			return
+		}
+
+		// explicit void return
+		fun alsoEmptyFunction(): Void {
+			return ()
+		}
+
+		fun test(): [Void] {
+			return [ 
+				(),
+				(fun(){})(),
+			    emptyFunction(),
+				alsoEmptyFunction() 
+			]
+		}
+	`)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	arrayVal, ok := value.(*interpreter.ArrayValue)
+	require.True(t, ok)
+
+	voidVal := interpreter.VoidValue{}
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewArrayValue(
+			inter, interpreter.ReturnEmptyLocationRange,
+			interpreter.VariableSizedStaticType{Type: interpreter.PrimitiveStaticTypeVoid},
+			common.Address{},
+			voidVal, voidVal, voidVal, voidVal,
+		),
+		arrayVal,
+	)
+}
 func TestInterpretCopyOnReturn(t *testing.T) {
 
 	t.Parallel()
