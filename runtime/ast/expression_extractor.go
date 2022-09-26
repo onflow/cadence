@@ -114,7 +114,7 @@ type PathExtractor interface {
 
 type ExpressionExtractor struct {
 	nextIdentifier       int
-	VoidExtractor		VoidExtractor
+	VoidExtractor        VoidExtractor
 	BoolExtractor        BoolExtractor
 	NilExtractor         NilExtractor
 	IntExtractor         IntExtractor
@@ -173,8 +173,8 @@ type ExpressionExtraction struct {
 
 // utility for expressions whose rewritten form is identical, i.e. nothing to rewrite
 func RewriteAsIs(expression Expression) ExpressionExtraction {
-	return ExpressionExtraction {
-		RewrittenExpression: expression,
+	return ExpressionExtraction{
+		RewrittenExpression:  expression,
 		ExtractedExpressions: nil,
 	}
 }
@@ -190,7 +190,6 @@ func (extractor *ExpressionExtractor) VisitVoidExpression(expression *VoidExpres
 func (extractor *ExpressionExtractor) ExtractVoid(expression *VoidExpression) ExpressionExtraction {
 	return RewriteAsIs(expression)
 }
-
 
 func (extractor *ExpressionExtractor) VisitBoolExpression(expression *BoolExpression) ExpressionExtraction {
 

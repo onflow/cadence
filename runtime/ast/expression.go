@@ -2024,7 +2024,8 @@ func NewVoidExpression(
 	startPos Position,
 	endPos Position,
 ) *VoidExpression {
-	 return &VoidExpression{Range : Range {startPos, endPos}}
+	return &VoidExpression{Range: Range{startPos, endPos}}
 }
+
 var _ Element = &VoidExpression{}
 var _ Expression = &VoidExpression{}
