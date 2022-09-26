@@ -791,7 +791,7 @@ var AuthAccountTypeInboxPublishFunctionType = &FunctionType{
 		},
 	},
 	ReturnTypeAnnotation: NewTypeAnnotation(
-		BoolType,
+		VoidType,
 	),
 }
 
@@ -872,50 +872,6 @@ var AuthAccountInboxTypeName = "Inbox"
 
 var accountInboxDocString = "an inbox for sending and receiving capabilities"
 
-var AuthAccountInboxPermitField = "permit"
-
-var authAccountInboxPermitFunctionDocString = "permits another account to publish values to this inbox"
-
-var AuthAccountInboxPermitFunctionType = &FunctionType{
-
-	Parameters: []*Parameter{
-		{
-			Label:          ArgumentLabelNotRequired,
-			Identifier:     "provider",
-			TypeAnnotation: NewTypeAnnotation(&AddressType{}),
-		},
-	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		VoidType,
-	),
-}
-
-var AuthAccountInboxUnpermitField = "unpermit"
-
-var authAccountInboxUnpermitFunctionDocString = "removes another account's permission to publish to this inbox"
-
-var AuthAccountInboxUnpermitFunctionType = &FunctionType{
-
-	Parameters: []*Parameter{
-		{
-			Label:          ArgumentLabelNotRequired,
-			Identifier:     "provider",
-			TypeAnnotation: NewTypeAnnotation(&AddressType{}),
-		},
-	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		VoidType,
-	),
-}
-
-var AuthAccountInboxAllowlistField = "allowlist"
-
-var AuthAccountInboxAllowlistType = &VariableSizedType{
-	Type: &AddressType{},
-}
-
-var accountInboxAllowlistDocString = "the list of accounts allowed to publish to this inbox"
-
 // AuthAccountInboxType represents the account's inbox.
 var AuthAccountInboxType = func() *CompositeType {
 
@@ -926,29 +882,11 @@ var AuthAccountInboxType = func() *CompositeType {
 	}
 
 	var members = []*Member{
-		NewUnmeteredPublicConstantFieldMember(
-			accountInbox,
-			AuthAccountInboxAllowlistField,
-			AuthAccountInboxAllowlistType,
-			accountInboxAllowlistDocString,
-		),
 		NewUnmeteredPublicFunctionMember(
 			accountInbox,
 			AuthAccountInboxClaimField,
 			AuthAccountTypeInboxClaimFunctionType,
 			authAccountTypeInboxClaimFunctionDocString,
-		),
-		NewUnmeteredPublicFunctionMember(
-			accountInbox,
-			AuthAccountInboxPermitField,
-			AuthAccountInboxPermitFunctionType,
-			authAccountInboxPermitFunctionDocString,
-		),
-		NewUnmeteredPublicFunctionMember(
-			accountInbox,
-			AuthAccountInboxUnpermitField,
-			AuthAccountInboxUnpermitFunctionType,
-			authAccountInboxUnpermitFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			accountInbox,

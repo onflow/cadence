@@ -166,7 +166,6 @@ func NewPublicAccountValue(
 	storageCapacityGet func(interpreter *Interpreter) UInt64Value,
 	keysConstructor func() Value,
 	contractsConstructor func() Value,
-	inboxConstructor func() Value,
 ) Value {
 
 	fields := map[string]Value{
@@ -181,7 +180,6 @@ func NewPublicAccountValue(
 
 	var keys Value
 	var contracts Value
-	var inbox Value
 
 	computeField := func(name string, inter *Interpreter, getLocationRange func() LocationRange) Value {
 		switch name {
@@ -195,11 +193,6 @@ func NewPublicAccountValue(
 				contracts = contractsConstructor()
 			}
 			return contracts
-		case sema.PublicAccountInboxField:
-			if inbox == nil {
-				inbox = inboxConstructor()
-			}
-			return inbox
 		case sema.PublicAccountPathsField:
 			return inter.publicAccountPaths(address, getLocationRange)
 		case sema.PublicAccountForEachPublicField:

@@ -55,27 +55,15 @@ func NewAuthAccountInboxValue(
 	address := addressValue.ToAddress()
 
 	fields := map[string]Value{
-		sema.AuthAccountInboxPermitField:    accountInboxPermitFunction(gauge, address),
-		sema.AuthAccountInboxUnpermitField:  accountInboxUnpermitFunction(gauge, address),
 		sema.AuthAccountInboxPublishField:   accountInboxPublishFunction(gauge, address, addressValue),
 		sema.AuthAccountInboxUnpublishField: accountInboxUnpublishFunction(gauge, address, addressValue),
 		sema.AuthAccountInboxClaimField:     accountInboxClaimFunction(gauge, address, addressValue),
 	}
 
 	fieldNames := []string{
-		sema.AuthAccountInboxAllowlistField,
-		sema.AuthAccountInboxPermitField,
-		sema.AuthAccountInboxUnpermitField,
 		sema.AuthAccountInboxPublishField,
 		sema.AuthAccountInboxUnpublishField,
 		sema.AuthAccountInboxClaimField,
-	}
-	computeField := func(name string, inter *Interpreter, getLocationRange func() LocationRange) Value {
-		switch name {
-		case sema.AuthAccountInboxAllowlistField:
-			return getAccountAllowlist(inter, getLocationRange, address)
-		}
-		return nil
 	}
 
 	var str string
@@ -94,148 +82,9 @@ func NewAuthAccountInboxValue(
 		authAccountInboxStaticType,
 		fieldNames,
 		fields,
-		computeField,
+		nil,
 		nil,
 		stringer,
-	)
-}
-
-// PublicAccountInbox
-
-var publicAccountInboxTypeID = sema.PublicAccountInboxType.ID()
-var publicAccountInboxStaticType StaticType = PrimitiveStaticTypePublicAccountKeys
-
-// NewPublicAccountInboxValue constructs a PublicAccount.Inbox value.
-func NewPublicAccountInboxValue(
-	gauge common.MemoryGauge,
-	addressValue AddressValue,
-) Value {
-
-	address := addressValue.ToAddress()
-
-	fields := map[string]Value{}
-	fieldNames := []string{
-		sema.PublicAccountInboxAllowlistField,
-	}
-	computeField := func(name string, inter *Interpreter, getLocationRange func() LocationRange) Value {
-		switch name {
-		case sema.PublicAccountInboxAllowlistField:
-			return getAccountAllowlist(inter, getLocationRange, address)
-		}
-		return nil
-	}
-
-	var str string
-	stringer := func(memoryGauge common.MemoryGauge, _ SeenReferences) string {
-		if str == "" {
-			common.UseMemory(memoryGauge, common.PublicAccountInboxStringMemoryUsage)
-			addressStr := addressValue.MeteredString(memoryGauge, SeenReferences{})
-			str = fmt.Sprintf("PublicAccount.Inbox(%s)", addressStr)
-		}
-		return str
-	}
-
-	return NewSimpleCompositeValue(
-		gauge,
-		publicAccountInboxTypeID,
-		publicAccountInboxStaticType,
-		fieldNames,
-		fields,
-		computeField,
-		nil,
-		stringer,
-	)
-}
-
-func getAccountAllowlist(
-	inter *Interpreter,
-	getLocationRange func() LocationRange,
-	address common.Address,
-) *ArrayValue {
-	allowlist := inter.ReadStored(address, inboxStorageDomain, "allowlist")
-
-	if allowlist == nil {
-		allowlist = NewArrayValue(
-			inter,
-			getLocationRange,
-			VariableSizedStaticType{
-				Type: PrimitiveStaticTypeAddress,
-			},
-			address)
-	} else {
-		allowlist = allowlist.Transfer(
-			inter,
-			getLocationRange,
-			atree.Address(address),
-			false,
-			nil,
-		)
-	}
-
-	allowListArray, ok := allowlist.(*ArrayValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-	return allowListArray
-}
-
-func accountInboxPermitFunction(
-	gauge common.MemoryGauge,
-	address common.Address,
-) *HostFunctionValue {
-	return NewHostFunctionValue(
-		gauge,
-		func(invocation Invocation) Value {
-			providerValue, ok := invocation.Arguments[0].(AddressValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			inter := invocation.Interpreter
-			getLocationRange := invocation.GetLocationRange
-
-			allowlist := getAccountAllowlist(inter, getLocationRange, address)
-
-			if allowlist.Contains(inter, getLocationRange, providerValue) {
-				return NewVoidValue(gauge)
-			}
-
-			allowlist.Append(inter, getLocationRange, providerValue)
-			inter.writeStored(address, inboxStorageDomain, "allowlist", allowlist)
-
-			return NewVoidValue(gauge)
-		},
-		sema.AuthAccountInboxPermitFunctionType,
-	)
-}
-
-func accountInboxUnpermitFunction(
-	gauge common.MemoryGauge,
-	address common.Address,
-) *HostFunctionValue {
-	return NewHostFunctionValue(
-		gauge,
-		func(invocation Invocation) Value {
-			providerValue, ok := invocation.Arguments[0].(AddressValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			inter := invocation.Interpreter
-			getLocationRange := invocation.GetLocationRange
-
-			allowlist := getAccountAllowlist(inter, getLocationRange, address)
-
-			index := allowlist.FirstIndex(inter, getLocationRange, providerValue)
-
-			index.iter(func(index Value) {
-				allowlist.Remove(inter, getLocationRange, index.(IntValue).ToInt())
-				inter.writeStored(address, inboxStorageDomain, "allowlist", allowlist)
-			})
-
-			return NewVoidValue(gauge)
-		},
-		sema.AuthAccountInboxUnpermitFunctionType,
 	)
 }
 
@@ -262,16 +111,6 @@ func accountInboxPublishFunction(
 			inter := invocation.Interpreter
 			getLocationRange := invocation.GetLocationRange
 
-			recipientAddress := recipientValue.ToAddress()
-
-			recipientAllowlist := getAccountAllowlist(inter, getLocationRange, recipientAddress)
-
-			// if the recipient's allowlist does not contain the provider's address, return false
-			if !recipientAllowlist.Contains(inter, getLocationRange, providerValue) {
-				inter.writeStored(recipientAddress, inboxStorageDomain, "allowlist", recipientAllowlist)
-				return BoolValue(false)
-			}
-
 			publishedValue = publishedValue.Transfer(
 				inter,
 				getLocationRange,
@@ -288,15 +127,12 @@ func accountInboxPublishFunction(
 				nil,
 			)
 
-			// resave the allowlist
-			inter.writeStored(recipientAddress, inboxStorageDomain, "allowlist", recipientAllowlist)
-
 			// we need to store both a value and an intended recipient for each name,
 			// so we do two writes to represent each published value.
 			inter.writeStored(address, inboxStorageDomain, valuePath(nameValue.Str), publishedValue)
 			inter.writeStored(address, inboxStorageDomain, recipientPath(nameValue.Str), recipient)
 
-			return BoolValue(true)
+			return NewVoidValue(gauge)
 		},
 		sema.AuthAccountTypeInboxPublishFunctionType,
 	)
@@ -330,9 +166,11 @@ func accountInboxUnpublishFunction(
 			}
 
 			ty := sema.NewCapabilityType(gauge, typeParameterPair.Value)
-			if !inter.IsSubTypeOfSemaType(publishedValue.StaticType(invocation.Interpreter), ty) {
+			publishedType := publishedValue.StaticType(invocation.Interpreter)
+			if !inter.IsSubTypeOfSemaType(publishedType, ty) {
 				panic(ForceCastTypeMismatchError{
 					ExpectedType:  ty,
+					ActualType:    inter.MustConvertStaticToSemaType(publishedType),
 					LocationRange: getLocationRange(),
 				})
 			}
@@ -398,9 +236,11 @@ func accountInboxClaimFunction(
 			}
 
 			ty := sema.NewCapabilityType(gauge, typeParameterPair.Value)
-			if !inter.IsSubTypeOfSemaType(publishedValue.StaticType(invocation.Interpreter), ty) {
+			publishedType := publishedValue.StaticType(invocation.Interpreter)
+			if !inter.IsSubTypeOfSemaType(publishedType, ty) {
 				panic(ForceCastTypeMismatchError{
 					ExpectedType:  ty,
+					ActualType:    inter.MustConvertStaticToSemaType(publishedType),
 					LocationRange: getLocationRange(),
 				})
 			}

@@ -33,14 +33,6 @@ func TestAccountInboxPublishUnpublish(t *testing.T) {
 
 	logs := make([]string, 0)
 
-	transaction0 := []byte(`
-		transaction {
-			prepare(signer: AuthAccount) {
-				signer.inbox.permit(0x1)
-			}
-		}
-	`)
-
 	transaction1 := []byte(`
 		transaction {
 			prepare(signer: AuthAccount) {
@@ -70,30 +62,10 @@ func TestAccountInboxPublishUnpublish(t *testing.T) {
 		},
 	}
 
-	runtimeInterface2 := &testRuntimeInterface{
-		storage: storage,
-		getSigningAccounts: func() ([]Address, error) {
-			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 2}}, nil
-		},
-	}
-
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	// permit 1 to publish to 2
-	err := rt.ExecuteTransaction(
-		Script{
-			Source: transaction0,
-		},
-		Context{
-			Interface: runtimeInterface2,
-			Location:  nextTransactionLocation(),
-		},
-	)
-
-	require.NoError(t, err)
-
 	// publish from 1 to 2
-	err = rt.ExecuteTransaction(
+	err := rt.ExecuteTransaction(
 		Script{
 			Source: transaction1,
 		},
@@ -119,57 +91,10 @@ func TestAccountInboxPublishUnpublish(t *testing.T) {
 	require.NoError(t, err)
 
 	// successful publish
-	require.Equal(t, logs[0], "true")
+	require.Equal(t, logs[0], "()")
 
 	// correct value returned from unpublish
 	require.Equal(t, logs[1], "3")
-}
-
-func TestAccountInboxPublishWithoutPermission(t *testing.T) {
-	t.Parallel()
-
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntime()
-
-	logs := make([]string, 0)
-
-	transaction1 := []byte(`
-		transaction {
-			prepare(signer: AuthAccount) {
-				signer.save([3], to: /storage/foo)
-				let cap = signer.link<&[Int]>(/public/foo, target: /storage/foo)!
-				log(signer.inbox.publish(cap, name: "foo", recipient: 0x2))
-			}
-		}
-	`)
-
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
-			logs = append(logs, message)
-		},
-		getSigningAccounts: func() ([]Address, error) {
-			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
-		},
-	}
-
-	nextTransactionLocation := newTransactionLocationGenerator()
-
-	// publish from 1 to 2
-	err := rt.ExecuteTransaction(
-		Script{
-			Source: transaction1,
-		},
-		Context{
-			Interface: runtimeInterface1,
-			Location:  nextTransactionLocation(),
-		},
-	)
-
-	require.NoError(t, err)
-
-	// unsuccessful publish
-	require.Equal(t, logs[0], "false")
 }
 
 func TestAccountInboxUnpublishWrongType(t *testing.T) {
@@ -180,20 +105,12 @@ func TestAccountInboxUnpublishWrongType(t *testing.T) {
 
 	logs := make([]string, 0)
 
-	transaction0 := []byte(`
-		transaction {
-			prepare(signer: AuthAccount) {
-				signer.inbox.permit(0x1)
-			}
-		}
-	`)
-
 	transaction1 := []byte(`
 		transaction {
 			prepare(signer: AuthAccount) {
 				signer.save([3], to: /storage/foo)
 				let cap = signer.link<&[Int]>(/public/foo, target: /storage/foo)!
-				log(signer.inbox.publish(cap, name: "foo", recipient: 0x2))
+				signer.inbox.publish(cap, name: "foo", recipient: 0x2)
 			}
 		}
 	`)
@@ -217,30 +134,10 @@ func TestAccountInboxUnpublishWrongType(t *testing.T) {
 		},
 	}
 
-	runtimeInterface2 := &testRuntimeInterface{
-		storage: storage,
-		getSigningAccounts: func() ([]Address, error) {
-			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 2}}, nil
-		},
-	}
-
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	// permit 1 to publish to 2
-	err := rt.ExecuteTransaction(
-		Script{
-			Source: transaction0,
-		},
-		Context{
-			Interface: runtimeInterface2,
-			Location:  nextTransactionLocation(),
-		},
-	)
-
-	require.NoError(t, err)
-
 	// publish from 1 to 2
-	err = rt.ExecuteTransaction(
+	err := rt.ExecuteTransaction(
 		Script{
 			Source: transaction1,
 		},
@@ -264,10 +161,7 @@ func TestAccountInboxUnpublishWrongType(t *testing.T) {
 	)
 
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "unexpectedly found non-`Capability<&[String]>` while force-casting value")
-
-	// successful publish
-	require.Equal(t, logs[0], "true")
+	assert.Contains(t, err.Error(), "failed to force-cast value: expected type `Capability<&[String]>`, got `Capability<&[Int]>")
 }
 
 func TestAccountInboxUnpublishAbsent(t *testing.T) {
@@ -277,14 +171,6 @@ func TestAccountInboxUnpublishAbsent(t *testing.T) {
 	rt := newTestInterpreterRuntime()
 
 	logs := make([]string, 0)
-
-	transaction0 := []byte(`
-		transaction {
-			prepare(signer: AuthAccount) {
-				signer.inbox.permit(0x1)
-			}
-		}
-	`)
 
 	transaction1 := []byte(`
 		transaction {
@@ -315,30 +201,10 @@ func TestAccountInboxUnpublishAbsent(t *testing.T) {
 		},
 	}
 
-	runtimeInterface2 := &testRuntimeInterface{
-		storage: storage,
-		getSigningAccounts: func() ([]Address, error) {
-			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 2}}, nil
-		},
-	}
-
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	// permit 1 to publish to 2
-	err := rt.ExecuteTransaction(
-		Script{
-			Source: transaction0,
-		},
-		Context{
-			Interface: runtimeInterface2,
-			Location:  nextTransactionLocation(),
-		},
-	)
-
-	require.NoError(t, err)
-
 	// publish from 1 to 2
-	err = rt.ExecuteTransaction(
+	err := rt.ExecuteTransaction(
 		Script{
 			Source: transaction1,
 		},
@@ -364,7 +230,7 @@ func TestAccountInboxUnpublishAbsent(t *testing.T) {
 	require.NoError(t, err)
 
 	// successful publish
-	require.Equal(t, logs[0], "true")
+	require.Equal(t, logs[0], "()")
 
 	// correct value returned from unpublish
 	require.Equal(t, logs[1], "nil")
@@ -377,14 +243,6 @@ func TestAccountInboxUnpublishRemove(t *testing.T) {
 	rt := newTestInterpreterRuntime()
 
 	logs := make([]string, 0)
-
-	transaction0 := []byte(`
-		transaction {
-			prepare(signer: AuthAccount) {
-				signer.inbox.permit(0x1)
-			}
-		}
-	`)
 
 	transaction1 := []byte(`
 		transaction {
@@ -417,30 +275,9 @@ func TestAccountInboxUnpublishRemove(t *testing.T) {
 		},
 	}
 
-	runtimeInterface2 := &testRuntimeInterface{
-		storage: storage,
-		getSigningAccounts: func() ([]Address, error) {
-			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 2}}, nil
-		},
-	}
-
 	nextTransactionLocation := newTransactionLocationGenerator()
-
-	// permit 1 to publish to 2
-	err := rt.ExecuteTransaction(
-		Script{
-			Source: transaction0,
-		},
-		Context{
-			Interface: runtimeInterface2,
-			Location:  nextTransactionLocation(),
-		},
-	)
-
-	require.NoError(t, err)
-
 	// publish from 1 to 2
-	err = rt.ExecuteTransaction(
+	err := rt.ExecuteTransaction(
 		Script{
 			Source: transaction1,
 		},
@@ -466,7 +303,7 @@ func TestAccountInboxUnpublishRemove(t *testing.T) {
 	require.NoError(t, err)
 
 	// successful publish
-	require.Equal(t, logs[0], "true")
+	require.Equal(t, logs[0], "()")
 
 	// correct value returned from unpublish
 	require.Equal(t, logs[1], "3")
@@ -482,14 +319,6 @@ func TestAccountInboxUnpublishWrongAccount(t *testing.T) {
 	rt := newTestInterpreterRuntime()
 
 	logs := make([]string, 0)
-
-	transaction0 := []byte(`
-		transaction {
-			prepare(signer: AuthAccount) {
-				signer.inbox.permit(0x1)
-			}
-		}
-	`)
 
 	transaction1 := []byte(`
 		transaction {
@@ -541,21 +370,8 @@ func TestAccountInboxUnpublishWrongAccount(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	// permit 1 to publish to 2
-	err := rt.ExecuteTransaction(
-		Script{
-			Source: transaction0,
-		},
-		Context{
-			Interface: runtimeInterface2,
-			Location:  nextTransactionLocation(),
-		},
-	)
-
-	require.NoError(t, err)
-
 	// publish from 1 to 2
-	err = rt.ExecuteTransaction(
+	err := rt.ExecuteTransaction(
 		Script{
 			Source: transaction1,
 		},
@@ -594,7 +410,7 @@ func TestAccountInboxUnpublishWrongAccount(t *testing.T) {
 	require.NoError(t, err)
 
 	// successful publish
-	require.Equal(t, logs[0], "true")
+	require.Equal(t, logs[0], "()")
 
 	// unpublish not successful from wrong account
 	require.Equal(t, logs[1], "nil")
@@ -610,14 +426,6 @@ func TestAccountInboxPublishClaim(t *testing.T) {
 	rt := newTestInterpreterRuntime()
 
 	logs := make([]string, 0)
-
-	transaction0 := []byte(`
-		transaction {
-			prepare(signer: AuthAccount) {
-				signer.inbox.permit(0x1)
-			}
-		}
-	`)
 
 	transaction1 := []byte(`
 		transaction {
@@ -660,21 +468,8 @@ func TestAccountInboxPublishClaim(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	// permit 1 to publish to 2
-	err := rt.ExecuteTransaction(
-		Script{
-			Source: transaction0,
-		},
-		Context{
-			Interface: runtimeInterface2,
-			Location:  nextTransactionLocation(),
-		},
-	)
-
-	require.NoError(t, err)
-
 	// publish from 1 to 2
-	err = rt.ExecuteTransaction(
+	err := rt.ExecuteTransaction(
 		Script{
 			Source: transaction1,
 		},
@@ -700,7 +495,7 @@ func TestAccountInboxPublishClaim(t *testing.T) {
 	require.NoError(t, err)
 
 	// successful publish
-	require.Equal(t, logs[0], "true")
+	require.Equal(t, logs[0], "()")
 
 	// correct value returned from claim
 	require.Equal(t, logs[1], "3")
@@ -713,14 +508,6 @@ func TestAccountInboxPublishClaimWrongType(t *testing.T) {
 	rt := newTestInterpreterRuntime()
 
 	logs := make([]string, 0)
-
-	transaction0 := []byte(`
-		transaction {
-			prepare(signer: AuthAccount) {
-				signer.inbox.permit(0x1)
-			}
-		}
-	`)
 
 	transaction1 := []byte(`
 		transaction {
@@ -763,21 +550,8 @@ func TestAccountInboxPublishClaimWrongType(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	// permit 1 to publish to 2
-	err := rt.ExecuteTransaction(
-		Script{
-			Source: transaction0,
-		},
-		Context{
-			Interface: runtimeInterface2,
-			Location:  nextTransactionLocation(),
-		},
-	)
-
-	require.NoError(t, err)
-
 	// publish from 1 to 2
-	err = rt.ExecuteTransaction(
+	err := rt.ExecuteTransaction(
 		Script{
 			Source: transaction1,
 		},
@@ -801,10 +575,10 @@ func TestAccountInboxPublishClaimWrongType(t *testing.T) {
 	)
 
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "unexpectedly found non-`Capability<&[String]>` while force-casting value")
+	assert.Contains(t, err.Error(), "failed to force-cast value: expected type `Capability<&[String]>`, got `Capability<&[Int]>`")
 
 	// successful publish
-	require.Equal(t, logs[0], "true")
+	require.Equal(t, logs[0], "()")
 }
 
 func TestAccountInboxPublishClaimWrongPath(t *testing.T) {
@@ -814,14 +588,6 @@ func TestAccountInboxPublishClaimWrongPath(t *testing.T) {
 	rt := newTestInterpreterRuntime()
 
 	logs := make([]string, 0)
-
-	transaction0 := []byte(`
-		transaction {
-			prepare(signer: AuthAccount) {
-				signer.inbox.permit(0x1)
-			}
-		}
-	`)
 
 	transaction1 := []byte(`
 		transaction {
@@ -864,21 +630,8 @@ func TestAccountInboxPublishClaimWrongPath(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	// permit 1 to publish to 2
-	err := rt.ExecuteTransaction(
-		Script{
-			Source: transaction0,
-		},
-		Context{
-			Interface: runtimeInterface2,
-			Location:  nextTransactionLocation(),
-		},
-	)
-
-	require.NoError(t, err)
-
 	// publish from 1 to 2
-	err = rt.ExecuteTransaction(
+	err := rt.ExecuteTransaction(
 		Script{
 			Source: transaction1,
 		},
@@ -904,7 +657,7 @@ func TestAccountInboxPublishClaimWrongPath(t *testing.T) {
 	require.NoError(t, err)
 
 	// successful publish
-	require.Equal(t, logs[0], "true")
+	require.Equal(t, logs[0], "()")
 
 	// no value claimed
 	require.Equal(t, logs[1], "nil")
@@ -917,14 +670,6 @@ func TestAccountInboxPublishClaimRemove(t *testing.T) {
 	rt := newTestInterpreterRuntime()
 
 	logs := make([]string, 0)
-
-	transaction0 := []byte(`
-		transaction {
-			prepare(signer: AuthAccount) {
-				signer.inbox.permit(0x1)
-			}
-		}
-	`)
 
 	transaction1 := []byte(`
 		transaction {
@@ -976,21 +721,8 @@ func TestAccountInboxPublishClaimRemove(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	// permit 1 to publish to 2
-	err := rt.ExecuteTransaction(
-		Script{
-			Source: transaction0,
-		},
-		Context{
-			Interface: runtimeInterface2,
-			Location:  nextTransactionLocation(),
-		},
-	)
-
-	require.NoError(t, err)
-
 	// publish from 1 to 2
-	err = rt.ExecuteTransaction(
+	err := rt.ExecuteTransaction(
 		Script{
 			Source: transaction1,
 		},
@@ -1029,7 +761,7 @@ func TestAccountInboxPublishClaimRemove(t *testing.T) {
 	require.NoError(t, err)
 
 	// successful publish
-	require.Equal(t, logs[0], "true")
+	require.Equal(t, logs[0], "()")
 
 	// correct value returned from claim
 	require.Equal(t, logs[1], "3")
@@ -1045,14 +777,6 @@ func TestAccountInboxPublishClaimWrongAccount(t *testing.T) {
 	rt := newTestInterpreterRuntime()
 
 	logs := make([]string, 0)
-
-	transaction0 := []byte(`
-		transaction {
-			prepare(signer: AuthAccount) {
-				signer.inbox.permit(0x1)
-			}
-		}
-	`)
 
 	transaction1 := []byte(`
 		transaction {
@@ -1114,21 +838,8 @@ func TestAccountInboxPublishClaimWrongAccount(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	// permit 1 to publish to 2
-	err := rt.ExecuteTransaction(
-		Script{
-			Source: transaction0,
-		},
-		Context{
-			Interface: runtimeInterface2,
-			Location:  nextTransactionLocation(),
-		},
-	)
-
-	require.NoError(t, err)
-
 	// publish from 1 to 2
-	err = rt.ExecuteTransaction(
+	err := rt.ExecuteTransaction(
 		Script{
 			Source: transaction1,
 		},
@@ -1167,7 +878,7 @@ func TestAccountInboxPublishClaimWrongAccount(t *testing.T) {
 	require.NoError(t, err)
 
 	// successful publish
-	require.Equal(t, logs[0], "true")
+	require.Equal(t, logs[0], "()")
 
 	// value is not claimed by 3
 	require.Equal(t, logs[1], "nil")

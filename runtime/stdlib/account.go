@@ -797,16 +797,6 @@ func newPublicAccountContractsValue(
 	)
 }
 
-func newPublicAccountInboxValue(
-	gauge common.MemoryGauge,
-	addressValue interpreter.AddressValue,
-) interpreter.Value {
-	return interpreter.NewPublicAccountInboxValue(
-		gauge,
-		addressValue,
-	)
-}
-
 func newAuthAccountInboxValue(
 	gauge common.MemoryGauge,
 	addressValue interpreter.AddressValue,
@@ -1615,9 +1605,6 @@ func NewPublicAccountValue(
 		},
 		func() interpreter.Value {
 			return newPublicAccountContractsValue(gauge, handler, addressValue)
-		},
-		func() interpreter.Value {
-			return newPublicAccountInboxValue(gauge, addressValue)
 		},
 	)
 }

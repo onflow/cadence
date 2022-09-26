@@ -8993,9 +8993,6 @@ func newTestPublicAccountValue(gauge common.MemoryGauge, addressValue interprete
 				},
 			)
 		},
-		func() interpreter.Value {
-			return interpreter.NewPublicAccountInboxValue(gauge, addressValue)
-		},
 	)
 }
 
