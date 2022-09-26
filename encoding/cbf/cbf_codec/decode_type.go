@@ -29,6 +29,10 @@ import (
 func (d *Decoder) DecodeType() (t cadence.Type, err error) {
 	typeIdentifer, err := d.DecodeTypeIdentifier()
 
+	if err != nil {
+		return
+	}
+
 	switch typeIdentifer {
 	case EncodedTypeVoid:
 		t = cadence.NewMeteredVoidType(d.memoryGauge)
