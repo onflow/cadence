@@ -7,19 +7,21 @@ In this tutorial, we're going to walk through how resources can own other resour
 ---
 
 <Callout type="info">
-
-Open the starter code for this tutorial in the Flow Playground:
-<a href="https://play.onflow.org/cda4d057-5898-4a7f-be34-fd47ec75085f" target="_blank">https://play.onflow.org/cda4d057-5898-4a7f-be34-fd47ec75085f</a><br/>
-The tutorial will be asking you do take various actions to interact with this code.
-
+  Open the starter code for this tutorial in the Flow Playground:
+  <a 
+    href="https://play.onflow.org/01f812d7-799a-42fd-b9cb-9ffe556e02ad"
+    target="_blank"
+  >
+    https://play.onflow.org/01f812d7-799a-42fd-b9cb-9ffe556e02ad
+  </a>
+  <br/>
+  The tutorial will be asking you do take various actions to interact with this code.
 </Callout>
 
 <Callout type="info">
-
 Instructions that require you to take action are always included in a callout box like this one.
 These highlighted actions are all that you need to do to get your code running,
 but reading the rest is necessary to understand the language's design.
-
 </Callout>
 
 Resources owning other resources is a powerful feature in the world of blockchain and smart contracts.
@@ -32,7 +34,6 @@ To showcase how this feature works on Flow, this tutorial will take you through 
 **Before proceeding with this tutorial**, we recommend following the instructions in [Getting Started](01-first-steps)
 and [Hello, World!](02-hello-world) to learn about the Playground and Cadence.
 
-For additional support, see the [Playground Manual](/intro/playground-manual)
 
 ## Resources Owning Resources
 
@@ -70,6 +71,8 @@ Open the account `0x01` tab which has the contract named `KittyVerse.cdc`. Deplo
 </Callout>
 
 ```cadence:title=KittyVerse.cdc
+// KittyVerse.cdc
+//
 // The KittyVerse contract defines two types of NFTs.
 // One is a KittyHat, which represents a special hat, and
 // the second is the Kitty resource, which can own Kitty Hats.
@@ -80,6 +83,7 @@ Open the account `0x01` tab which has the contract named `KittyVerse.cdc`. Deplo
 // This is a simple example of how Cadence supports
 // extensibility for smart contracts, but the language will soon
 // support even more powerful versions of this.
+//
 
 pub contract KittyVerse {
 
@@ -115,11 +119,28 @@ pub contract KittyVerse {
         pub let id: Int
 
         // place where the Kitty hats are stored
-        pub let items: @{String: KittyHat}
+        pub var items: @{String: KittyHat}
 
         init(newID: Int) {
             self.id = newID
             self.items <- {}
+        }
+
+        pub fun getKittyItems(): @{String: KittyHat} {
+            var other: @{String:KittyHat} <- {}
+            self.items <-> other
+            return <- other
+        }
+
+        pub fun setKittyItems(items: @{String: KittyHat}) {
+            var other <- items
+            self.items <-> other
+            destroy other
+        }
+
+        pub fun removeKittyItem(key: String): @KittyHat? {
+            var removed <- self.items.remove(key: key)
+            return <- removed
         }
 
         destroy() {
@@ -130,7 +151,9 @@ pub contract KittyVerse {
     pub fun createKitty(): @Kitty {
         return <-create Kitty(newID: 1)
     }
+
 }
+
 ```
 
 These definitions show how a Kitty resource could own hats.
@@ -139,7 +162,7 @@ The hats are stored in a variable in the Kitty resource.
 
 ```cadence
     // place where the Kitty hats are stored
-    pub let items: <-{String: KittyHat}
+    pub var items: <-{String: KittyHat}
 ```
 
 A Kitty owner can take the hats off the Kitty and transfer them individually. Or the owner can transfer a Kitty that owns a hat, and the hat will go along with the Kitty.
@@ -161,26 +184,30 @@ import KittyVerse from 0x01
 // This transaction creates a new kitty, creates two new hats and
 // puts the hats on the cat. Then it stores the kitty in account storage.
 transaction {
-  prepare(acct: AuthAccount) {
+    prepare(acct: AuthAccount) {
 
-    // Create the Kitty object
-    let kitty <- KittyVerse.createKitty()
+        // Create the Kitty object
+        let kitty <- KittyVerse.createKitty()
 
-    // Create the KittyHat objects
-    let hat1 <- KittyVerse.createHat(id: 1, name: "Cowboy Hat")
-    let hat2 <- KittyVerse.createHat(id: 2, name: "Top Hat")
+        // Create the KittyHat objects
+        let hat1 <- KittyVerse.createHat(id: 1, name: "Cowboy Hat")
+        let hat2 <- KittyVerse.createHat(id: 2, name: "Top Hat")
 
-    // Put the hat on the cat!
-    let oldCowboyHat <- kitty.items["Cowboy Hat"] <- hat1
-    destroy oldCowboyHat
-    let oldTopHat <- kitty.items["Top Hat"] <- hat2
-    destroy oldTopHat
+        let kittyItems <- kitty.getKittyItems()
 
-    log("The cat has the hats")
+        // Put the hat on the cat!
+        let oldCowboyHat <- kittyItems["Cowboy Hat"] <- hat1
+        destroy oldCowboyHat
+        let oldTopHat <- kittyItems["Top Hat"] <- hat2
+        destroy oldTopHat
 
-    // Store the Kitty in storage
-    acct.save<@KittyVerse.Kitty>(<-kitty, to: /storage/Kitty)
-  }
+        kitty.setKittyItems(items: <-kittyItems)
+
+        log("The cat has the hats")
+
+        // Store the Kitty in storage
+        acct.save(<-kitty, to: /storage/kitty)
+    }
 }
 ```
 
@@ -204,29 +231,30 @@ Transaction2.cdc` should contain the following code:
 ```cadence:title=Transaction2.cdc
 import KittyVerse from 0x01
 
-// This transaction moves a kitty out of storage,
-// takes the cowboy hat off of the kitty,
+// This transaction moves a kitty out of storage, takes the cowboy hat off of the kitty,
 // calls its tip hat function, and then moves it back into storage.
 transaction {
-  prepare(acct: AuthAccount) {
+    prepare(acct: AuthAccount) {
 
-    // Move the Kitty out of storage, which also moves its hat along with it
-    let kitty <- acct.load<@KittyVerse.Kitty>(from: /storage/Kitty)!
+        // Move the Kitty out of storage, which also moves its hat along with it
+        let kitty <- acct.load<@KittyVerse.Kitty>(from: /storage/kitty)
+            ?? panic("Kitty doesn't exist!")
 
-    // Take the cowboy hat off the Kitty
-    let cowboyHat <- kitty.items.remove(key: "Cowboy Hat")!
+        // Take the cowboy hat off the Kitty
+        let cowboyHat <- kitty.removeKittyItem(key: "Cowboy Hat")
+            ?? panic("cowboy hat doesn't exist!")
 
-    // Tip the cowboy hat
-    log(cowboyHat.tipHat())
-    destroy cowboyHat
+        // Tip the cowboy hat
+        log(cowboyHat.tipHat())
+        destroy cowboyHat
 
-    // Tip the top hat that is on the Kitty
-    log(kitty.items["Top Hat"]?.tipHat())
+        // Tip the top hat that is on the Kitty
+        log(kitty.items["Top Hat"]?.tipHat())
 
-    // Move the Kitty to storage, which
-    // also moves its hat along with it.
-    acct.save<@KittyVerse.Kitty>(<-kitty, to: /storage/Kitty)
-  }
+        // Move the Kitty to storage, which
+        // also moves its hat along with it.
+        acct.save(<-kitty, to: /storage/kitty)
+    }
 }
 ```
 

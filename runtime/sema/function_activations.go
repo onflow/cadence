@@ -85,17 +85,33 @@ func (a *FunctionActivations) Current() *FunctionActivation {
 }
 
 func (a *FunctionActivations) WithLoop(f func()) {
-	a.Current().Loops++
+	current := a.Current()
+	current.Loops++
+
+	returnInfo := current.ReturnInfo
+	maybeJumped := returnInfo.MaybeJumped
+	returnInfo.MaybeJumped = false
+
 	defer func() {
-		a.Current().Loops--
+		current.Loops--
+		returnInfo.MaybeJumped = maybeJumped
 	}()
+
 	f()
 }
 
 func (a *FunctionActivations) WithSwitch(f func()) {
-	a.Current().Switches++
+	current := a.Current()
+	current.Switches++
+
+	returnInfo := current.ReturnInfo
+	maybeJumped := returnInfo.MaybeJumped
+	returnInfo.MaybeJumped = false
+
 	defer func() {
-		a.Current().Switches--
+		current.Switches--
+		returnInfo.MaybeJumped = maybeJumped
 	}()
+
 	f()
 }

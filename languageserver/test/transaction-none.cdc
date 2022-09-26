@@ -1,4 +1,0 @@
-transaction {
-    prepare() {}
-    execute {}
-}

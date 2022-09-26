@@ -493,7 +493,7 @@ func invokeMatcherTest(
 		))
 	}
 
-	functionType := getFunctionType(funcValue)
+	functionType := funcValue.FunctionType()
 
 	testResult, err := inter.InvokeExternally(
 		funcValue,
@@ -513,19 +513,6 @@ func invokeMatcherTest(
 	}
 
 	return bool(result)
-}
-
-func getFunctionType(value interpreter.FunctionValue) *sema.FunctionType {
-	switch funcValue := value.(type) {
-	case *interpreter.InterpretedFunctionValue:
-		return funcValue.Type
-	case *interpreter.HostFunctionValue:
-		return funcValue.Type
-	case interpreter.BoundFunctionValue:
-		return getFunctionType(funcValue.Function)
-	default:
-		panic(errors.NewUnreachableError())
-	}
 }
 
 // 'Test.readFile' function
@@ -1506,12 +1493,14 @@ func newMatcherWithGenericTestFunction(
 
 			for i, argument := range invocation.Arguments {
 				paramType := parameters[i].TypeAnnotation.Type
-				argumentType := argument.StaticType(inter)
-				argTypeMatch := inter.IsSubTypeOfSemaType(argumentType, paramType)
+				argumentStaticType := argument.StaticType(inter)
 
-				if !argTypeMatch {
+				if !inter.IsSubTypeOfSemaType(argumentStaticType, paramType) {
+					argumentSemaType := inter.MustConvertStaticToSemaType(argumentStaticType)
+
 					panic(interpreter.TypeMismatchError{
 						ExpectedType:  paramType,
+						ActualType:    argumentSemaType,
 						LocationRange: invocation.GetLocationRange(),
 					})
 				}

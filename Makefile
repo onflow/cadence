@@ -36,8 +36,6 @@ test:
 	GO111MODULE=on go test -coverprofile=coverage.txt -covermode=atomic -parallel 8 -race -coverpkg $(COVERPKGS) ./...
 	# remove coverage of empty functions from report
 	sed -i -e 's/^.* 0 0$$//' coverage.txt
-	(cd ./test-framework && make test && cd -)
-	(cd ./languageserver && make test && cd -)
 
 .PHONY: fast-test
 fast-test:
@@ -50,8 +48,6 @@ build:
 	GOARCH=wasm GOOS=js go build -o ./runtime/cmd/parse/parse.wasm ./runtime/cmd/parse
 	go build -o ./runtime/cmd/check/check ./runtime/cmd/check
 	go build -o ./runtime/cmd/main/main ./runtime/cmd/main
-	(cd ./test-framework && make build && cd -)
-	(cd ./languageserver && make build && cd -)
 	make build-tools
 
 .PHONY: build-tools
@@ -59,11 +55,10 @@ build-tools:
 	(cd ./tools/analysis && go build . && cd -)
 	(cd ./tools/batch-script && go build . && cd -)
 	(cd ./tools/constructorcheck && make plugin && cd -)
-	(cd ./tools/docgen && make build && cd -)
 
 .PHONY: lint-github-actions
 lint-github-actions: build-linter
-	tools/golangci-lint/golangci-lint run --out-format=github-actions --timeout=5m  -v ./...
+	tools/golangci-lint/golangci-lint run --out-format=colored-line-number,github-actions --timeout=5m  -v ./...
 
 .PHONY: lint
 lint: build-linter
@@ -97,14 +92,12 @@ generate:
 .PHONY: check-tidy
 check-tidy: generate
 	go mod tidy
-	cd languageserver; go mod tidy
 	git diff --exit-code
 
 .PHONY: release
 release:
 	@(VERSIONED_FILES="version.go \
-	npm-packages/cadence-parser/package.json \
-	npm-packages/cadence-docgen/package.json" \
+	npm-packages/cadence-parser/package.json" \
 	./bump-version.sh $(bump))
 
 .PHONY: check-capabilities

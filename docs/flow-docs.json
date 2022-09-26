@@ -71,6 +71,10 @@
           {
             "title": "Security Best Practices",
             "href": "security-best-practices"
+          },
+          {
+            "title": "Cadence Testing Framework",
+            "href": "testing-framework"
           }
         ]
       },

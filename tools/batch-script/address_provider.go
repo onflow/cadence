@@ -39,7 +39,7 @@ type AddressProvider struct {
 	currentIndex     uint
 }
 
-const endOfAccountsError = "storage used is not initialized or not initialized correctly"
+const endOfAccountsError = "get storage used failed"
 
 const accountStorageUsageScript = `
 pub fun main(address: Address): UInt64 {

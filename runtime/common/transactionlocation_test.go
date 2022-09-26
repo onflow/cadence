@@ -46,6 +46,18 @@ func TestTransactionLocation_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestTransactionLocation_TypeID(t *testing.T) {
+
+	t.Parallel()
+
+	location := TransactionLocation{0x1, 0x2}
+
+	assert.Equal(t,
+		TypeID("t.0102000000000000000000000000000000000000000000000000000000000000.Bar.Baz"),
+		location.TypeID(nil, "Bar.Baz"),
+	)
+}
+
 func TestDecodeTransactionLocationTypeID(t *testing.T) {
 
 	t.Parallel()

@@ -220,9 +220,14 @@ func (interpreter *Interpreter) checkMemberAccess(
 		return
 	}
 
-	if !interpreter.ValueIsSubtypeOfSemaType(target, expectedType) {
+	targetStaticType := target.StaticType(interpreter)
+
+	if !interpreter.IsSubTypeOfSemaType(targetStaticType, expectedType) {
+		targetSemaType := interpreter.MustConvertStaticToSemaType(targetStaticType)
+
 		panic(MemberAccessTypeError{
 			ExpectedType:  expectedType,
+			ActualType:    targetSemaType,
 			LocationRange: getLocationRange(),
 		})
 	}
@@ -914,7 +919,8 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 
 	switch expression.Operation {
 	case ast.OperationFailableCast, ast.OperationForceCast:
-		isSubType := interpreter.IsSubTypeOfSemaType(value.StaticType(interpreter), expectedType)
+		valueStaticType := value.StaticType(interpreter)
+		isSubType := interpreter.IsSubTypeOfSemaType(valueStaticType, expectedType)
 
 		switch expression.Operation {
 		case ast.OperationFailableCast:
@@ -929,9 +935,13 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 
 		case ast.OperationForceCast:
 			if !isSubType {
+				valueSemaType := interpreter.MustConvertStaticToSemaType(valueStaticType)
+
 				getLocationRange := locationRangeGetter(interpreter, interpreter.Location, expression.Expression)
+
 				panic(ForceCastTypeMismatchError{
 					ExpectedType:  expectedType,
+					ActualType:    valueSemaType,
 					LocationRange: getLocationRange(),
 				})
 			}

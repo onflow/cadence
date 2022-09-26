@@ -14340,10 +14340,7 @@ func (v *CompositeValue) StaticType(interpreter *Interpreter) StaticType {
 
 func (v *CompositeValue) IsImportable(inter *Interpreter) bool {
 	staticType := v.StaticType(inter)
-	semaType, err := inter.ConvertStaticToSemaType(staticType)
-	if err != nil {
-		panic(err)
-	}
+	semaType := inter.MustConvertStaticToSemaType(staticType)
 	return semaType.IsImportable(map[*sema.Member]bool{})
 }
 
@@ -14884,10 +14881,7 @@ func (v *CompositeValue) ConformsToStaticType(
 
 	staticType := v.StaticType(interpreter).(CompositeStaticType)
 
-	semaType, err := interpreter.ConvertStaticToSemaType(staticType)
-	if err != nil {
-		return false
-	}
+	semaType := interpreter.MustConvertStaticToSemaType(staticType)
 
 	compositeType, ok := semaType.(*sema.CompositeType)
 	if !ok ||
@@ -17096,9 +17090,13 @@ func (v *StorageReferenceValue) dereference(interpreter *Interpreter, getLocatio
 
 	if v.BorrowedType != nil {
 		staticType := referenced.StaticType(interpreter)
+
 		if !interpreter.IsSubTypeOfSemaType(staticType, v.BorrowedType) {
+			semaType := interpreter.MustConvertStaticToSemaType(staticType)
+
 			return nil, ForceCastTypeMismatchError{
 				ExpectedType:  v.BorrowedType,
+				ActualType:    semaType,
 				LocationRange: getLocationRange(),
 			}
 		}
@@ -17919,9 +17917,16 @@ func accountGetCapabilityFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			if !invocation.Interpreter.IsSubTypeOfSemaType(path.StaticType(invocation.Interpreter), pathType) {
+			interpreter := invocation.Interpreter
+
+			pathStaticType := path.StaticType(interpreter)
+
+			if !interpreter.IsSubTypeOfSemaType(pathStaticType, pathType) {
+				pathSemaType := interpreter.MustConvertStaticToSemaType(pathStaticType)
+
 				panic(TypeMismatchError{
 					ExpectedType:  pathType,
+					ActualType:    pathSemaType,
 					LocationRange: invocation.GetLocationRange(),
 				})
 			}
@@ -17938,7 +17943,7 @@ func accountGetCapabilityFunction(
 
 			var borrowStaticType StaticType
 			if borrowType != nil {
-				borrowStaticType = ConvertSemaToStaticType(invocation.Interpreter, borrowType)
+				borrowStaticType = ConvertSemaToStaticType(interpreter, borrowType)
 			}
 
 			return NewCapabilityValue(gauge, addressValue, path, borrowStaticType)

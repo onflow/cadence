@@ -883,7 +883,9 @@ func TestRuntimeInvalidTransactionArgumentAccount(t *testing.T) {
 			Location:  nextTransactionLocation(),
 		},
 	)
-	assert.Error(t, err)
+	require.Error(t, err)
+	_ = err.Error()
+
 }
 
 func TestRuntimeTransactionWithAccount(t *testing.T) {
@@ -1001,7 +1003,9 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 				{1, 2, 3, 4}, // not valid JSON-CDC
 			},
 			check: func(t *testing.T, err error) {
-				assert.Error(t, err)
+				require.Error(t, err)
+				_ = err.Error()
+
 				assert.IsType(t, &InvalidEntryPointArgumentError{}, errors.Unwrap(err))
 			},
 		},
@@ -1018,7 +1022,9 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 				jsoncdc.MustEncode(cadence.String("foo")),
 			},
 			check: func(t *testing.T, err error) {
-				assert.Error(t, err)
+				require.Error(t, err)
+				_ = err.Error()
+
 				assert.IsType(t, &InvalidEntryPointArgumentError{}, errors.Unwrap(err))
 				assert.IsType(t, &InvalidValueTypeError{}, errors.Unwrap(errors.Unwrap(err)))
 			},
@@ -1113,6 +1119,8 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 			},
 			check: func(t *testing.T, err error) {
 				require.Error(t, err)
+				_ = err.Error()
+
 				assertRuntimeErrorIsUserError(t, err)
 
 				var argErr interpreter.ContainerMutationError
@@ -1304,6 +1312,8 @@ func TestRuntimeScriptArguments(t *testing.T) {
 			},
 			check: func(t *testing.T, err error) {
 				require.Error(t, err)
+				_ = err.Error()
+
 				assertRuntimeErrorIsUserError(t, err)
 
 				assert.IsType(t, &InvalidEntryPointArgumentError{}, errors.Unwrap(err))
@@ -1321,6 +1331,8 @@ func TestRuntimeScriptArguments(t *testing.T) {
 			},
 			check: func(t *testing.T, err error) {
 				require.Error(t, err)
+				_ = err.Error()
+
 				assertRuntimeErrorIsUserError(t, err)
 
 				assert.IsType(t, &InvalidEntryPointArgumentError{}, errors.Unwrap(err))
@@ -1386,6 +1398,8 @@ func TestRuntimeScriptArguments(t *testing.T) {
 			},
 			check: func(t *testing.T, err error) {
 				require.Error(t, err)
+				_ = err.Error()
+
 				assertRuntimeErrorIsUserError(t, err)
 
 				var invalidEntryPointArgumentErr *InvalidEntryPointArgumentError
@@ -1410,6 +1424,8 @@ func TestRuntimeScriptArguments(t *testing.T) {
 			},
 			check: func(t *testing.T, err error) {
 				require.Error(t, err)
+				_ = err.Error()
+
 				assertRuntimeErrorIsUserError(t, err)
 
 				var invalidEntryPointArgumentErr *InvalidEntryPointArgumentError
@@ -1458,6 +1474,8 @@ func TestRuntimeScriptArguments(t *testing.T) {
 			},
 			check: func(t *testing.T, err error) {
 				require.Error(t, err)
+				_ = err.Error()
+
 				assertRuntimeErrorIsUserError(t, err)
 
 				var argErr interpreter.ContainerMutationError
@@ -1608,6 +1626,8 @@ func TestRuntimeProgramWithNoTransaction(t *testing.T) {
 			Location:  nextTransactionLocation(),
 		},
 	)
+	require.Error(t, err)
+	_ = err.Error()
 
 	require.ErrorAs(t, err, &InvalidTransactionCountError{})
 }
@@ -1640,6 +1660,8 @@ func TestRuntimeProgramWithMultipleTransaction(t *testing.T) {
 			Location:  nextTransactionLocation(),
 		},
 	)
+	require.Error(t, err)
+	_ = err.Error()
 
 	require.ErrorAs(t, err, &InvalidTransactionCountError{})
 }
@@ -2533,6 +2555,9 @@ func TestRuntimeScriptReturnTypeNotReturnableError(t *testing.T) {
 		)
 
 		if expected == nil {
+			require.Error(t, err)
+			_ = err.Error()
+
 			var subErr *InvalidScriptReturnTypeError
 			require.ErrorAs(t, err, &subErr)
 		} else {
@@ -2715,6 +2740,8 @@ func TestRuntimeScriptParameterTypeNotImportableError(t *testing.T) {
 			Location:  nextTransactionLocation(),
 		},
 	)
+	require.Error(t, err)
+	_ = err.Error()
 
 	var subErr *ScriptParameterTypeNotImportableError
 	require.ErrorAs(t, err, &subErr)
@@ -2749,7 +2776,9 @@ func TestRuntimeSyntaxError(t *testing.T) {
 			Location:  nextTransactionLocation(),
 		},
 	)
-	assert.Error(t, err)
+	require.Error(t, err)
+	_ = err.Error()
+
 }
 
 func TestRuntimeStorageChanges(t *testing.T) {
@@ -3274,7 +3303,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 
 	assert.NotNil(t, accountCode)
 
-	t.Run("simple function", func(tt *testing.T) {
+	t.Run("simple function", func(t *testing.T) {
 		_, err = runtime.InvokeContractFunction(
 			common.AddressLocation{
 				Address: addressValue,
@@ -3288,12 +3317,12 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-		require.NoError(tt, err)
+		require.NoError(t, err)
 
-		assert.Equal(tt, `"Hello World!"`, loggedMessage)
+		assert.Equal(t, `"Hello World!"`, loggedMessage)
 	})
 
-	t.Run("function with parameter", func(tt *testing.T) {
+	t.Run("function with parameter", func(t *testing.T) {
 		_, err = runtime.InvokeContractFunction(
 			common.AddressLocation{
 				Address: addressValue,
@@ -3311,11 +3340,11 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-		require.NoError(tt, err)
+		require.NoError(t, err)
 
-		assert.Equal(tt, `"Hello there!"`, loggedMessage)
+		assert.Equal(t, `"Hello there!"`, loggedMessage)
 	})
-	t.Run("function with return type", func(tt *testing.T) {
+	t.Run("function with return type", func(t *testing.T) {
 		_, err = runtime.InvokeContractFunction(
 			common.AddressLocation{
 				Address: addressValue,
@@ -3333,11 +3362,11 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-		require.NoError(tt, err)
+		require.NoError(t, err)
 
-		assert.Equal(tt, `"Hello return!"`, loggedMessage)
+		assert.Equal(t, `"Hello return!"`, loggedMessage)
 	})
-	t.Run("function with multiple arguments", func(tt *testing.T) {
+	t.Run("function with multiple arguments", func(t *testing.T) {
 
 		_, err = runtime.InvokeContractFunction(
 			common.AddressLocation{
@@ -3360,12 +3389,12 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-		require.NoError(tt, err)
+		require.NoError(t, err)
 
-		assert.Equal(tt, `"Hello number 42 from 0x0000000000000001"`, loggedMessage)
+		assert.Equal(t, `"Hello number 42 from 0x0000000000000001"`, loggedMessage)
 	})
 
-	t.Run("function with not enough arguments panics", func(tt *testing.T) {
+	t.Run("function with not enough arguments panics", func(t *testing.T) {
 		_, err = runtime.InvokeContractFunction(
 			common.AddressLocation{
 				Address: addressValue,
@@ -3386,10 +3415,12 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 			},
 		)
 
-		require.Error(tt, err)
-		assert.ErrorAs(tt, err, &Error{})
+		require.Error(t, err)
+		_ = err.Error()
+
+		assert.ErrorAs(t, err, &Error{})
 	})
-	t.Run("function with incorrect argument type errors", func(tt *testing.T) {
+	t.Run("function with incorrect argument type errors", func(t *testing.T) {
 		_, err = runtime.InvokeContractFunction(
 			common.AddressLocation{
 				Address: addressValue,
@@ -3407,9 +3438,12 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-		require.ErrorAs(tt, err, &interpreter.ValueTransferTypeError{})
+		require.Error(t, err)
+		_ = err.Error()
+
+		require.ErrorAs(t, err, &interpreter.ValueTransferTypeError{})
 	})
-	t.Run("function with un-importable argument errors and error propagates", func(tt *testing.T) {
+	t.Run("function with un-importable argument errors and error propagates", func(t *testing.T) {
 		_, err = runtime.InvokeContractFunction(
 			common.AddressLocation{
 				Address: addressValue,
@@ -3429,9 +3463,12 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-		require.ErrorContains(tt, err, "cannot import capability")
+		require.Error(t, err)
+		_ = err.Error()
+
+		require.ErrorContains(t, err, "cannot import capability")
 	})
-	t.Run("function with auth account works", func(tt *testing.T) {
+	t.Run("function with auth account works", func(t *testing.T) {
 		_, err = runtime.InvokeContractFunction(
 			common.AddressLocation{
 				Address: addressValue,
@@ -3449,11 +3486,11 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-		require.NoError(tt, err)
+		require.NoError(t, err)
 
-		assert.Equal(tt, `"Hello 0x0000000000000001"`, loggedMessage)
+		assert.Equal(t, `"Hello 0x0000000000000001"`, loggedMessage)
 	})
-	t.Run("function with public account works", func(tt *testing.T) {
+	t.Run("function with public account works", func(t *testing.T) {
 		_, err = runtime.InvokeContractFunction(
 			common.AddressLocation{
 				Address: addressValue,
@@ -3471,9 +3508,9 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-		require.NoError(tt, err)
+		require.NoError(t, err)
 
-		assert.Equal(tt, `"Hello pub 0x0000000000000001"`, loggedMessage)
+		assert.Equal(t, `"Hello pub 0x0000000000000001"`, loggedMessage)
 	})
 }
 
@@ -3876,6 +3913,8 @@ func TestRuntimeStorageLoadedDestructionAfterRemoval(t *testing.T) {
 			Location:  nextTransactionLocation(),
 		},
 	)
+	require.Error(t, err)
+	_ = err.Error()
 
 	var typeLoadingErr interpreter.TypeLoadingError
 	require.ErrorAs(t, err, &typeLoadingErr)
@@ -4440,6 +4479,8 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 					assert.NoError(t, err)
 				} else {
 					require.Error(t, err)
+					_ = err.Error()
+
 					assertRuntimeErrorIsUserError(t, err)
 
 					require.ErrorAs(t, err, &interpreter.ConditionError{})
@@ -4626,6 +4667,8 @@ func TestRuntimeTransactionTopLevelDeclarations(t *testing.T) {
 			},
 		)
 		require.Error(t, err)
+		_ = err.Error()
+
 		assertRuntimeErrorIsUserError(t, err)
 
 		var checkerErr *sema.CheckerError
@@ -5850,6 +5893,8 @@ func TestRuntimeExternalError(t *testing.T) {
 	)
 
 	require.Error(t, err)
+	_ = err.Error()
+
 	assertRuntimeErrorIsExternalError(t, err)
 }
 
@@ -6080,8 +6125,8 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 			return
 		}
 
-		for locationID := range runtimeInterface.programs {
-			delete(runtimeInterface.programs, locationID)
+		for location := range runtimeInterface.programs {
+			delete(runtimeInterface.programs, location)
 		}
 	}
 
@@ -6250,7 +6295,7 @@ func TestRuntimeNoProgramsHitForToplevelPrograms(t *testing.T) {
 
 	var signerAddresses []Address
 
-	var programsHits []string
+	var programsHits []Location
 
 	runtimeInterface := &testRuntimeInterface{
 		createAccount: func(payer Address) (address Address, err error) {
@@ -6265,7 +6310,7 @@ func TestRuntimeNoProgramsHitForToplevelPrograms(t *testing.T) {
 			return nil
 		},
 		getProgram: func(location Location) (*interpreter.Program, error) {
-			programsHits = append(programsHits, string(location.ID()))
+			programsHits = append(programsHits, location)
 			return programs[location], nil
 		},
 		storage: newTestLedger(nil, nil),
@@ -6344,7 +6389,13 @@ func TestRuntimeNoProgramsHitForToplevelPrograms(t *testing.T) {
 	require.GreaterOrEqual(t, len(programsHits), 1)
 
 	for _, cacheHit := range programsHits {
-		require.Equal(t, "A.0100000000000000.HelloWorld", cacheHit)
+		require.Equal(t,
+			common.AddressLocation{
+				Address: Address{1},
+				Name:    "HelloWorld",
+			},
+			cacheHit,
+		)
 	}
 }
 
@@ -6466,8 +6517,8 @@ func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
 			return
 		}
 
-		for locationID := range runtimeInterface.programs {
-			delete(runtimeInterface.programs, locationID)
+		for location := range runtimeInterface.programs {
+			delete(runtimeInterface.programs, location)
 		}
 	}
 
@@ -6642,6 +6693,8 @@ func TestRuntimeExecuteScriptArguments(t *testing.T) {
 				require.NoError(t, err)
 			} else {
 				require.Error(t, err)
+				_ = err.Error()
+
 				assertRuntimeErrorIsUserError(t, err)
 
 				require.ErrorAs(t, err, &InvalidEntryPointParameterCountError{})
@@ -6724,7 +6777,9 @@ func TestRuntimePanics(t *testing.T) {
 			Location:  nextTransactionLocation(),
 		},
 	)
-	assert.Error(t, err)
+	require.Error(t, err)
+	_ = err.Error()
+
 }
 
 func TestRuntimeGetCapability(t *testing.T) {
@@ -6761,6 +6816,8 @@ func TestRuntimeGetCapability(t *testing.T) {
 		)
 
 		require.Error(t, err)
+		_ = err.Error()
+
 		assertRuntimeErrorIsUserError(t, err)
 
 		var typeErr interpreter.ContainerMutationError
@@ -6797,6 +6854,8 @@ func TestRuntimeGetCapability(t *testing.T) {
 		)
 
 		require.Error(t, err)
+		_ = err.Error()
+
 		assertRuntimeErrorIsUserError(t, err)
 
 		var typeErr interpreter.ContainerMutationError
@@ -6928,6 +6987,8 @@ func TestRuntimeStackOverflow(t *testing.T) {
 		},
 	)
 	require.Error(t, err)
+	_ = err.Error()
+
 	assertRuntimeErrorIsUserError(t, err)
 
 	var callStackLimitExceededErr CallStackLimitExceededError
@@ -6971,6 +7032,8 @@ func TestRuntimeInternalErrors(t *testing.T) {
 		)
 
 		require.Error(t, err)
+		_ = err.Error()
+
 		assertRuntimeErrorIsInternalError(t, err)
 	})
 
@@ -7004,6 +7067,8 @@ func TestRuntimeInternalErrors(t *testing.T) {
 		)
 
 		require.Error(t, err)
+		_ = err.Error()
+
 		assertRuntimeErrorIsExternalError(t, err)
 	})
 
@@ -7041,6 +7106,8 @@ func TestRuntimeInternalErrors(t *testing.T) {
 		)
 
 		require.Error(t, err)
+		_ = err.Error()
+
 		assertRuntimeErrorIsInternalError(t, err)
 	})
 
@@ -7118,6 +7185,8 @@ func TestRuntimeInternalErrors(t *testing.T) {
 		)
 
 		require.Error(t, err)
+		_ = err.Error()
+
 		assertRuntimeErrorIsInternalError(t, err)
 	})
 
@@ -7143,6 +7212,8 @@ func TestRuntimeInternalErrors(t *testing.T) {
 		)
 
 		require.Error(t, err)
+		_ = err.Error()
+
 		assertRuntimeErrorIsExternalError(t, err)
 	})
 
@@ -7173,6 +7244,8 @@ func TestRuntimeInternalErrors(t *testing.T) {
 		)
 
 		require.Error(t, err)
+		_ = err.Error()
+
 		assertRuntimeErrorIsExternalError(t, err)
 	})
 
@@ -7203,6 +7276,8 @@ func TestRuntimeInternalErrors(t *testing.T) {
 		)
 
 		require.Error(t, err)
+		_ = err.Error()
+
 		assertRuntimeErrorIsExternalError(t, err)
 	})
 
@@ -7232,6 +7307,8 @@ func TestRuntimeInternalErrors(t *testing.T) {
 		)
 
 		require.Error(t, err)
+		_ = err.Error()
+
 		assertRuntimeErrorIsInternalError(t, err)
 	})
 
@@ -7338,6 +7415,9 @@ func TestRuntimeComputationMetring(t *testing.T) {
 			if test.ok {
 				require.NoError(t, err)
 			} else {
+				require.Error(t, err)
+				_ = err.Error()
+
 				var executionErr Error
 				require.ErrorAs(t, err, &executionErr)
 				require.ErrorAs(t, err.(Error).Unwrap(), &compErr)
@@ -7485,6 +7565,8 @@ func TestImportingTestStdlib(t *testing.T) {
 	)
 
 	require.Error(t, err)
+	_ = err.Error()
+
 	errs := checker.ExpectCheckerErrors(t, err, 1)
 
 	notDeclaredErr := &sema.NotDeclaredError{}

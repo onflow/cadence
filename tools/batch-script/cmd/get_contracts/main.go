@@ -37,6 +37,7 @@ import (
 
 var urlFlag = flag.String("u", "", "Flow Access Node URL")
 var pauseFlag = flag.String("p", "", "pause duration")
+var clientsFlag = flag.Int("c", 0, "number of clients")
 
 var csvHeader = []string{"location", "code"}
 
@@ -50,14 +51,20 @@ func main() {
 		config.FlowAccessNodeURL = url
 	}
 
-	if *pauseFlag != "" {
-		pause, err := time.ParseDuration(*pauseFlag)
+	pause := *pauseFlag
+	if pause != "" {
+		pause, err := time.ParseDuration(pause)
 		if err == nil {
 			config.Pause = pause
 		} else {
 			log.Error().Msg("invalid pause duration")
 			return
 		}
+	}
+
+	clients := *clientsFlag
+	if clients > 0 {
+		config.ConcurrentClients = clients
 	}
 
 	log.Logger = log.
@@ -90,12 +97,11 @@ func main() {
 			),
 		)
 
-		close(contracts)
-
 		if err != nil {
 			log.Err(err).Msg("batch script failed")
-			return
 		}
+
+		close(contracts)
 	}()
 
 	writer := csv.NewWriter(os.Stdout)
