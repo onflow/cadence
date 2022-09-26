@@ -1981,3 +1981,50 @@ func (e *PathExpression) MarshalJSON() ([]byte, error) {
 func (*PathExpression) precedence() precedence {
 	return precedenceLiteral
 }
+
+// ()
+type VoidExpression struct {
+	Range
+}
+
+func (v *VoidExpression) StartPosition() Position {
+	return v.StartPos
+}
+
+func (v *VoidExpression) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return v.EndPos
+}
+
+func (v *VoidExpression) ElementType() ElementType {
+	return ElementTypeVoidExpression
+}
+
+func (v *VoidExpression) Walk(walkChild func(Element)) {
+	// NO-OP
+}
+
+func (v *VoidExpression) String() string {
+	return "()"
+}
+
+func (v *VoidExpression) isIfStatementTest() {}
+
+func (v *VoidExpression) Doc() prettier.Doc {
+	return prettier.Text("()")
+}
+
+func (v *VoidExpression) isExpression() {}
+
+func (v *VoidExpression) precedence() precedence {
+	return precedenceLiteral
+}
+
+func NewVoidExpression(
+	gauge common.MemoryGauge,
+	startPos Position,
+	endPos Position,
+) *VoidExpression {
+	 return &VoidExpression{Range : Range {startPos, endPos}}
+}
+var _ Element = &VoidExpression{}
+var _ Expression = &VoidExpression{}

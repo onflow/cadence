@@ -152,6 +152,10 @@ func (checker *Checker) VisitExpressionStatement(statement *ast.ExpressionStatem
 	return
 }
 
+func (checker *Checker) VisitVoidExpression(_ *ast.VoidExpression) Type {
+	return VoidType
+}
+
 func (checker *Checker) VisitBoolExpression(_ *ast.BoolExpression) Type {
 	return BoolType
 }

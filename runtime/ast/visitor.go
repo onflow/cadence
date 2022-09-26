@@ -157,6 +157,7 @@ func AcceptStatement[T any](statement Statement, visitor StatementVisitor[T]) (_
 }
 
 type ExpressionVisitor[T any] interface {
+	VisitVoidExpression(*VoidExpression) T
 	VisitNilExpression(*NilExpression) T
 	VisitBoolExpression(*BoolExpression) T
 	VisitStringExpression(*StringExpression) T
@@ -184,6 +185,8 @@ func AcceptExpression[T any](expression Expression, visitor ExpressionVisitor[T]
 
 	switch expression.ElementType() {
 
+	case ElementTypeVoidExpression:
+		return visitor.VisitVoidExpression(expression.(*VoidExpression))
 	case ElementTypeNilExpression:
 		return visitor.VisitNilExpression(expression.(*NilExpression))
 
