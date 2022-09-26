@@ -23,6 +23,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/cadence"
 )
 
 func TestAccountInboxPublishUnpublish(t *testing.T) {
@@ -32,6 +34,7 @@ func TestAccountInboxPublishUnpublish(t *testing.T) {
 	rt := newTestInterpreterRuntime()
 
 	logs := make([]string, 0)
+	events := make([]string, 0)
 
 	transaction1 := []byte(`
 		transaction {
@@ -56,6 +59,10 @@ func TestAccountInboxPublishUnpublish(t *testing.T) {
 		storage: storage,
 		log: func(message string) {
 			logs = append(logs, message)
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event.String())
+			return nil
 		},
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
@@ -95,6 +102,9 @@ func TestAccountInboxPublishUnpublish(t *testing.T) {
 
 	// correct value returned from unpublish
 	require.Equal(t, logs[1], "3")
+
+	require.Equal(t, events[0], "flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\", type: Type<Capability<&[Int]>>())")
+	require.Equal(t, events[1], "flow.InboxValueRemove(provider: 0x0000000000000001, remover: 0x0000000000000001, name: \"foo\")")
 }
 
 func TestAccountInboxUnpublishWrongType(t *testing.T) {
@@ -104,6 +114,7 @@ func TestAccountInboxUnpublishWrongType(t *testing.T) {
 	rt := newTestInterpreterRuntime()
 
 	logs := make([]string, 0)
+	events := make([]string, 0)
 
 	transaction1 := []byte(`
 		transaction {
@@ -128,6 +139,10 @@ func TestAccountInboxUnpublishWrongType(t *testing.T) {
 		storage: storage,
 		log: func(message string) {
 			logs = append(logs, message)
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event.String())
+			return nil
 		},
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
@@ -162,6 +177,11 @@ func TestAccountInboxUnpublishWrongType(t *testing.T) {
 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to force-cast value: expected type `Capability<&[String]>`, got `Capability<&[Int]>")
+
+	require.Equal(t, events[0], "flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\", type: Type<Capability<&[Int]>>())")
+
+	// no event emitted on unsuccessful unpublish
+	require.Len(t, events, 1)
 }
 
 func TestAccountInboxUnpublishAbsent(t *testing.T) {
@@ -171,6 +191,7 @@ func TestAccountInboxUnpublishAbsent(t *testing.T) {
 	rt := newTestInterpreterRuntime()
 
 	logs := make([]string, 0)
+	events := make([]string, 0)
 
 	transaction1 := []byte(`
 		transaction {
@@ -195,6 +216,10 @@ func TestAccountInboxUnpublishAbsent(t *testing.T) {
 		storage: storage,
 		log: func(message string) {
 			logs = append(logs, message)
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event.String())
+			return nil
 		},
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
@@ -234,6 +259,11 @@ func TestAccountInboxUnpublishAbsent(t *testing.T) {
 
 	// correct value returned from unpublish
 	require.Equal(t, logs[1], "nil")
+
+	require.Equal(t, events[0], "flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\", type: Type<Capability<&[Int]>>())")
+
+	// no event emitted on unsuccessful unpublish
+	require.Len(t, events, 1)
 }
 
 func TestAccountInboxUnpublishRemove(t *testing.T) {
@@ -243,6 +273,7 @@ func TestAccountInboxUnpublishRemove(t *testing.T) {
 	rt := newTestInterpreterRuntime()
 
 	logs := make([]string, 0)
+	events := make([]string, 0)
 
 	transaction1 := []byte(`
 		transaction {
@@ -269,6 +300,10 @@ func TestAccountInboxUnpublishRemove(t *testing.T) {
 		storage: storage,
 		log: func(message string) {
 			logs = append(logs, message)
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event.String())
+			return nil
 		},
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
@@ -310,6 +345,12 @@ func TestAccountInboxUnpublishRemove(t *testing.T) {
 
 	// unpublish successfully removes the value
 	require.Equal(t, logs[2], "nil")
+
+	require.Equal(t, events[0], "flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\", type: Type<Capability<&[Int]>>())")
+	require.Equal(t, events[1], "flow.InboxValueRemove(provider: 0x0000000000000001, remover: 0x0000000000000001, name: \"foo\")")
+
+	// no event emitted on unsuccessful unpublish
+	require.Len(t, events, 2)
 }
 
 func TestAccountInboxUnpublishWrongAccount(t *testing.T) {
@@ -319,6 +360,7 @@ func TestAccountInboxUnpublishWrongAccount(t *testing.T) {
 	rt := newTestInterpreterRuntime()
 
 	logs := make([]string, 0)
+	events := make([]string, 0)
 
 	transaction1 := []byte(`
 		transaction {
@@ -353,6 +395,10 @@ func TestAccountInboxUnpublishWrongAccount(t *testing.T) {
 		log: func(message string) {
 			logs = append(logs, message)
 		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event.String())
+			return nil
+		},
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
@@ -362,6 +408,10 @@ func TestAccountInboxUnpublishWrongAccount(t *testing.T) {
 		storage: storage,
 		log: func(message string) {
 			logs = append(logs, message)
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event.String())
+			return nil
 		},
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 2}}, nil
@@ -417,6 +467,12 @@ func TestAccountInboxUnpublishWrongAccount(t *testing.T) {
 
 	// correct value returned from unpublish
 	require.Equal(t, logs[2], "3")
+
+	require.Equal(t, events[0], "flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\", type: Type<Capability<&[Int]>>())")
+	require.Equal(t, events[1], "flow.InboxValueRemove(provider: 0x0000000000000001, remover: 0x0000000000000001, name: \"foo\")")
+
+	// no event emitted on unsuccessful unpublish
+	require.Len(t, events, 2)
 }
 
 func TestAccountInboxPublishClaim(t *testing.T) {
@@ -426,6 +482,7 @@ func TestAccountInboxPublishClaim(t *testing.T) {
 	rt := newTestInterpreterRuntime()
 
 	logs := make([]string, 0)
+	events := make([]string, 0)
 
 	transaction1 := []byte(`
 		transaction {
@@ -451,6 +508,10 @@ func TestAccountInboxPublishClaim(t *testing.T) {
 		log: func(message string) {
 			logs = append(logs, message)
 		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event.String())
+			return nil
+		},
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
@@ -460,6 +521,10 @@ func TestAccountInboxPublishClaim(t *testing.T) {
 		storage: storage,
 		log: func(message string) {
 			logs = append(logs, message)
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event.String())
+			return nil
 		},
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 2}}, nil
@@ -499,6 +564,9 @@ func TestAccountInboxPublishClaim(t *testing.T) {
 
 	// correct value returned from claim
 	require.Equal(t, logs[1], "3")
+
+	require.Equal(t, events[0], "flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\", type: Type<Capability<&[Int]>>())")
+	require.Equal(t, events[1], "flow.InboxValueRemove(provider: 0x0000000000000001, remover: 0x0000000000000002, name: \"foo\")")
 }
 
 func TestAccountInboxPublishClaimWrongType(t *testing.T) {
@@ -508,6 +576,7 @@ func TestAccountInboxPublishClaimWrongType(t *testing.T) {
 	rt := newTestInterpreterRuntime()
 
 	logs := make([]string, 0)
+	events := make([]string, 0)
 
 	transaction1 := []byte(`
 		transaction {
@@ -533,6 +602,10 @@ func TestAccountInboxPublishClaimWrongType(t *testing.T) {
 		log: func(message string) {
 			logs = append(logs, message)
 		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event.String())
+			return nil
+		},
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
@@ -542,6 +615,10 @@ func TestAccountInboxPublishClaimWrongType(t *testing.T) {
 		storage: storage,
 		log: func(message string) {
 			logs = append(logs, message)
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event.String())
+			return nil
 		},
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 2}}, nil
@@ -579,6 +656,11 @@ func TestAccountInboxPublishClaimWrongType(t *testing.T) {
 
 	// successful publish
 	require.Equal(t, logs[0], "()")
+
+	require.Equal(t, events[0], "flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\", type: Type<Capability<&[Int]>>())")
+
+	// no event emitted on unsuccessful claim
+	require.Len(t, events, 1)
 }
 
 func TestAccountInboxPublishClaimWrongPath(t *testing.T) {
@@ -588,6 +670,7 @@ func TestAccountInboxPublishClaimWrongPath(t *testing.T) {
 	rt := newTestInterpreterRuntime()
 
 	logs := make([]string, 0)
+	events := make([]string, 0)
 
 	transaction1 := []byte(`
 		transaction {
@@ -613,6 +696,10 @@ func TestAccountInboxPublishClaimWrongPath(t *testing.T) {
 		log: func(message string) {
 			logs = append(logs, message)
 		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event.String())
+			return nil
+		},
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
@@ -622,6 +709,10 @@ func TestAccountInboxPublishClaimWrongPath(t *testing.T) {
 		storage: storage,
 		log: func(message string) {
 			logs = append(logs, message)
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event.String())
+			return nil
 		},
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 2}}, nil
@@ -661,6 +752,11 @@ func TestAccountInboxPublishClaimWrongPath(t *testing.T) {
 
 	// no value claimed
 	require.Equal(t, logs[1], "nil")
+
+	require.Equal(t, events[0], "flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\", type: Type<Capability<&[Int]>>())")
+
+	// no event emitted on unsuccessful claim
+	require.Len(t, events, 1)
 }
 
 func TestAccountInboxPublishClaimRemove(t *testing.T) {
@@ -670,6 +766,7 @@ func TestAccountInboxPublishClaimRemove(t *testing.T) {
 	rt := newTestInterpreterRuntime()
 
 	logs := make([]string, 0)
+	events := make([]string, 0)
 
 	transaction1 := []byte(`
 		transaction {
@@ -704,6 +801,10 @@ func TestAccountInboxPublishClaimRemove(t *testing.T) {
 		log: func(message string) {
 			logs = append(logs, message)
 		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event.String())
+			return nil
+		},
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
@@ -713,6 +814,10 @@ func TestAccountInboxPublishClaimRemove(t *testing.T) {
 		storage: storage,
 		log: func(message string) {
 			logs = append(logs, message)
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event.String())
+			return nil
 		},
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 2}}, nil
@@ -768,6 +873,12 @@ func TestAccountInboxPublishClaimRemove(t *testing.T) {
 
 	// claimed value properly removed
 	require.Equal(t, logs[2], "nil")
+
+	require.Equal(t, events[0], "flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\", type: Type<Capability<&[Int]>>())")
+	require.Equal(t, events[1], "flow.InboxValueRemove(provider: 0x0000000000000001, remover: 0x0000000000000002, name: \"foo\")")
+
+	// no event emitted on unsuccessful claim
+	require.Len(t, events, 2)
 }
 
 func TestAccountInboxPublishClaimWrongAccount(t *testing.T) {
@@ -777,6 +888,7 @@ func TestAccountInboxPublishClaimWrongAccount(t *testing.T) {
 	rt := newTestInterpreterRuntime()
 
 	logs := make([]string, 0)
+	events := make([]string, 0)
 
 	transaction1 := []byte(`
 		transaction {
@@ -811,6 +923,10 @@ func TestAccountInboxPublishClaimWrongAccount(t *testing.T) {
 		log: func(message string) {
 			logs = append(logs, message)
 		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event.String())
+			return nil
+		},
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
@@ -821,6 +937,10 @@ func TestAccountInboxPublishClaimWrongAccount(t *testing.T) {
 		log: func(message string) {
 			logs = append(logs, message)
 		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event.String())
+			return nil
+		},
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 2}}, nil
 		},
@@ -830,6 +950,10 @@ func TestAccountInboxPublishClaimWrongAccount(t *testing.T) {
 		storage: storage,
 		log: func(message string) {
 			logs = append(logs, message)
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event.String())
+			return nil
 		},
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 3}}, nil
@@ -885,4 +1009,10 @@ func TestAccountInboxPublishClaimWrongAccount(t *testing.T) {
 
 	// value is claimed by 2
 	require.Equal(t, logs[2], "3")
+
+	require.Equal(t, events[0], "flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\", type: Type<Capability<&[Int]>>())")
+	require.Equal(t, events[1], "flow.InboxValueRemove(provider: 0x0000000000000001, remover: 0x0000000000000002, name: \"foo\")")
+
+	// no event emitted on unsuccessful claim
+	require.Len(t, events, 2)
 }

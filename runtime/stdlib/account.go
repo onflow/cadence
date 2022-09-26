@@ -23,6 +23,8 @@ import (
 
 	"golang.org/x/crypto/sha3"
 
+	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -209,6 +211,7 @@ func NewAuthAccountValue(
 		func() interpreter.Value {
 			return newAuthAccountInboxValue(
 				gauge,
+				handler,
 				addressValue,
 			)
 		},
@@ -797,13 +800,242 @@ func newPublicAccountContractsValue(
 	)
 }
 
+const inboxStorageDomain = "inbox"
+const inboxStorageSeparator = "$"
+const inboxStorageRecipientTag = "recipient"
+const inboxStorageValueTag = "value"
+
+func recipientPath(name string) string {
+	return name + inboxStorageSeparator + inboxStorageRecipientTag
+}
+
+func valuePath(name string) string {
+	return name + inboxStorageSeparator + inboxStorageValueTag
+}
+
+func accountInboxPublishFunction(
+	gauge common.MemoryGauge,
+	handler EventEmitter,
+	address common.Address,
+	providerValue interpreter.AddressValue,
+) *interpreter.HostFunctionValue {
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			publishedValue := invocation.Arguments[0]
+
+			nameValue, ok := invocation.Arguments[1].(*interpreter.StringValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			recipientValue := invocation.Arguments[2].(interpreter.AddressValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			inter := invocation.Interpreter
+			getLocationRange := invocation.GetLocationRange
+
+			handler.EmitEvent(
+				inter,
+				AccountInboxPublishEventType,
+				[]interpreter.Value{
+					providerValue,
+					recipientValue,
+					nameValue,
+					interpreter.NewTypeValue(gauge, publishedValue.StaticType(inter)),
+				},
+				getLocationRange,
+			)
+
+			publishedValue = publishedValue.Transfer(
+				inter,
+				getLocationRange,
+				atree.Address(address),
+				true,
+				nil,
+			)
+
+			recipient := recipientValue.Transfer(
+				inter,
+				getLocationRange,
+				atree.Address(address),
+				true,
+				nil,
+			)
+
+			// we need to store both a value and an intended recipient for each name,
+			// so we do two writes to represent each published value.
+			inter.WriteStored(address, inboxStorageDomain, valuePath(nameValue.Str), publishedValue)
+			inter.WriteStored(address, inboxStorageDomain, recipientPath(nameValue.Str), recipient)
+
+			return interpreter.NewVoidValue(gauge)
+		},
+		sema.AuthAccountTypeInboxPublishFunctionType,
+	)
+}
+
+func accountInboxUnpublishFunction(
+	gauge common.MemoryGauge,
+	handler EventEmitter,
+	address common.Address,
+	providerValue interpreter.AddressValue,
+) *interpreter.HostFunctionValue {
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			inter := invocation.Interpreter
+			getLocationRange := invocation.GetLocationRange
+
+			publishedValue := inter.ReadStored(address, inboxStorageDomain, valuePath(nameValue.Str))
+
+			if publishedValue == nil {
+				return interpreter.NewNilValue(gauge)
+			}
+
+			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			if typeParameterPair == nil {
+				panic(errors.NewUnreachableError())
+			}
+
+			ty := sema.NewCapabilityType(gauge, typeParameterPair.Value)
+			publishedType := publishedValue.StaticType(invocation.Interpreter)
+			if !inter.IsSubTypeOfSemaType(publishedType, ty) {
+				panic(interpreter.ForceCastTypeMismatchError{
+					ExpectedType:  ty,
+					ActualType:    inter.MustConvertStaticToSemaType(publishedType),
+					LocationRange: getLocationRange(),
+				})
+			}
+
+			handler.EmitEvent(
+				inter,
+				AccountInboxRemoveEventType,
+				[]interpreter.Value{
+					providerValue,
+					providerValue,
+					nameValue,
+				},
+				getLocationRange,
+			)
+
+			inter.WriteStored(address, inboxStorageDomain, valuePath(nameValue.Str), nil)
+			inter.WriteStored(address, inboxStorageDomain, recipientPath(nameValue.Str), nil)
+
+			publishedValue = publishedValue.Transfer(
+				inter,
+				getLocationRange,
+				atree.Address(address),
+				true,
+				nil,
+			)
+
+			return interpreter.NewSomeValueNonCopying(inter, publishedValue)
+		},
+		sema.AuthAccountTypeInboxPublishFunctionType,
+	)
+}
+
+func accountInboxClaimFunction(
+	gauge common.MemoryGauge,
+	handler EventEmitter,
+	address common.Address,
+	recipientValue interpreter.AddressValue,
+) *interpreter.HostFunctionValue {
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			providerValue, ok := invocation.Arguments[1].(interpreter.AddressValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			inter := invocation.Interpreter
+			getLocationRange := invocation.GetLocationRange
+
+			providerAddress := providerValue.ToAddress()
+
+			publishedValue := inter.ReadStored(providerAddress, inboxStorageDomain, valuePath(nameValue.Str))
+
+			if publishedValue == nil {
+				return interpreter.NewNilValue(gauge)
+			}
+
+			// compare the intended recipient with the caller
+			intendedRecipient, ok := inter.ReadStored(providerAddress, inboxStorageDomain, recipientPath(nameValue.Str)).(interpreter.AddressValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+			if intendedRecipient.ToAddress() != recipientValue.ToAddress() {
+				return interpreter.NewNilValue(gauge)
+			}
+
+			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			if typeParameterPair == nil {
+				panic(errors.NewUnreachableError())
+			}
+
+			ty := sema.NewCapabilityType(gauge, typeParameterPair.Value)
+			publishedType := publishedValue.StaticType(invocation.Interpreter)
+			if !inter.IsSubTypeOfSemaType(publishedType, ty) {
+				panic(interpreter.ForceCastTypeMismatchError{
+					ExpectedType:  ty,
+					ActualType:    inter.MustConvertStaticToSemaType(publishedType),
+					LocationRange: getLocationRange(),
+				})
+			}
+
+			inter.WriteStored(providerAddress, inboxStorageDomain, valuePath(nameValue.Str), nil)
+			inter.WriteStored(providerAddress, inboxStorageDomain, recipientPath(nameValue.Str), nil)
+
+			handler.EmitEvent(
+				inter,
+				AccountInboxRemoveEventType,
+				[]interpreter.Value{
+					providerValue,
+					recipientValue,
+					nameValue,
+				},
+				getLocationRange,
+			)
+
+			publishedValue = publishedValue.Transfer(
+				inter,
+				getLocationRange,
+				atree.Address(address),
+				true,
+				nil,
+			)
+
+			return interpreter.NewSomeValueNonCopying(inter, publishedValue)
+		},
+		sema.AuthAccountTypeInboxPublishFunctionType,
+	)
+}
+
 func newAuthAccountInboxValue(
 	gauge common.MemoryGauge,
+	handler EventEmitter,
 	addressValue interpreter.AddressValue,
 ) interpreter.Value {
+	address := addressValue.ToAddress()
 	return interpreter.NewAuthAccountInboxValue(
 		gauge,
 		addressValue,
+		accountInboxPublishFunction(gauge, handler, address, addressValue),
+		accountInboxUnpublishFunction(gauge, handler, address, addressValue),
+		accountInboxClaimFunction(gauge, handler, address, addressValue),
 	)
 }
 
