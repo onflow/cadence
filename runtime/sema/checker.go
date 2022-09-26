@@ -1295,8 +1295,7 @@ func (checker *Checker) leaveValueScope(getEndPosition EndPositionGetter, checkR
 func (checker *Checker) checkResourceLoss(depth int) {
 
 	returnInfo := checker.functionActivations.Current().ReturnInfo
-	if returnInfo.DefinitelyReturned ||
-		returnInfo.DefinitelyHalted {
+	if returnInfo.IsUnreachable() {
 		return
 	}
 
