@@ -477,7 +477,7 @@ func TestCheckNeverInvocationExits(t *testing.T) {
 		t.Parallel()
 
 		testExits(t, exitTest{
-			body:`
+			body: `
               if true {
                   return nil
               }
