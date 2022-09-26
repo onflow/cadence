@@ -42,8 +42,6 @@ func (d *Decoder) DecodeValue() (value cadence.Value, err error) {
 		value, err = d.DecodeBool()
 	case EncodedValueString:
 		value, err = d.DecodeString()
-	case EncodedValueBytes:
-		value, err = d.DecodeBytes()
 	case EncodedValueCharacter:
 		value, err = d.DecodeCharacter()
 	case EncodedValueAddress:
@@ -398,16 +396,6 @@ func (d *Decoder) DecodeUFix64() (value cadence.UFix64, err error) {
 		return
 	}
 	value = cadence.UFix64(i)
-	return
-}
-
-func (d *Decoder) DecodeBytes() (value cadence.Bytes, err error) {
-	s, err := common_codec.DecodeBytes(&d.r)
-	if err != nil {
-		return
-	}
-
-	value = cadence.NewBytes(s)
 	return
 }
 

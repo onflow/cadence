@@ -129,7 +129,6 @@ func TestCadenceBinaryFormatCodecWriteErrorOnEncodeValueIdentifier(t *testing.T)
 		cadence.Optional{},
 		cadence.Bool(false),
 		cadence.String(""),
-		cadence.Bytes{},
 		cadence.Character("A"),
 		cadence.Address{},
 		cadence.NewInt(0),
@@ -807,86 +806,6 @@ func TestCadenceBinaryFormatCodecString(t *testing.T) {
 		assert.Equal(
 			t,
 			[]byte{byte(cbf_codec.EncodedTypeString)},
-			buffer.Bytes(),
-			"encoded bytes differ",
-		)
-
-		output, err := decoder.DecodeType()
-		require.NoError(t, err, "decoding error")
-
-		assert.Equal(t, typ, output, "decoded type differs")
-	})
-}
-
-func TestCadenceBinaryFormatCodecBytes(t *testing.T) {
-	t.Parallel()
-
-	t.Run("len=0", func(t *testing.T) {
-		t.Parallel()
-
-		encoder, decoder, buffer := NewTestCodec()
-
-		s := []byte("")
-		value := cadence.NewBytes(s)
-
-		err := encoder.Encode(value)
-		require.NoError(t, err, "encoding error")
-
-		assert.Equal(
-			t,
-			[]byte{
-				cbf_codec.VERSION,
-				byte(cbf_codec.EncodedValueBytes),
-				0, 0, 0, 0,
-			},
-			buffer.Bytes(), "encoded bytes differ")
-
-		output, err := decoder.Decode()
-		require.NoError(t, err, "decoding error")
-
-		assert.Equal(t, value, output, "decoded value differs")
-	})
-
-	t.Run("len>0", func(t *testing.T) {
-		t.Parallel()
-
-		encoder, decoder, buffer := NewTestCodec()
-
-		s := []byte("wot\x00 now")
-		value := cadence.NewBytes(s)
-
-		err := encoder.Encode(value)
-		require.NoError(t, err, "encoding error")
-
-		assert.Equal(
-			t,
-			common_codec.Concat(
-				[]byte{cbf_codec.VERSION},
-				[]byte{byte(cbf_codec.EncodedValueBytes)},
-				[]byte{0, 0, 0, byte(len(s))},
-				s,
-			),
-			buffer.Bytes(), "encoded bytes differ")
-
-		output, err := decoder.Decode()
-		require.NoError(t, err, "decoding error")
-
-		assert.Equal(t, value, output, "decoded value differs")
-	})
-
-	t.Run("type", func(t *testing.T) {
-		t.Parallel()
-
-		encoder, decoder, buffer := NewTestCodec()
-
-		typ := cadence.NewBytesType()
-
-		err := encoder.EncodeType(typ)
-		require.NoError(t, err, "encoding error")
-
-		assert.Equal(
-			t,
-			[]byte{byte(cbf_codec.EncodedTypeBytes)},
 			buffer.Bytes(),
 			"encoded bytes differ",
 		)
