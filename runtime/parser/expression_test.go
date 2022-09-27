@@ -1966,28 +1966,6 @@ func TestParseReference(t *testing.T) {
 			result,
 		)
 	})
-
-	t.Run("invalid: optional referenced value", func(t *testing.T) {
-
-		t.Parallel()
-
-		const code = `&x[y]? as &Z?`
-
-		_, errs := ParseExpression(code, nil)
-		utils.AssertEqualWithDiff(t,
-			[]error{
-				&SyntaxError{
-					Message: "expected casting expression",
-					Pos: ast.Position{
-						Offset: 5,
-						Line:   1,
-						Column: 5,
-					},
-				},
-			},
-			errs,
-		)
-	})
 }
 
 func TestParseNilCoelesceReference(t *testing.T) {
