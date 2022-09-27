@@ -21,7 +21,6 @@ package cbf_codec
 import "github.com/onflow/cadence/encoding/cbf/common_codec"
 
 func EncodeArray[T any](e *Encoder, arr []T, encodeFn func(T) error) (err error) {
-	// TODO save a bit in the array length for nil check?
 	err = common_codec.EncodeBool(&e.w, arr == nil)
 	if arr == nil || err != nil {
 		return
@@ -33,7 +32,6 @@ func EncodeArray[T any](e *Encoder, arr []T, encodeFn func(T) error) (err error)
 	}
 
 	for _, element := range arr {
-		// TODO does this need to include pointer logic for recursive types in arrays to be handled correctly?
 		err = encodeFn(element)
 		if err != nil {
 			return

@@ -137,7 +137,6 @@ func DecodeLocation(r io.Reader, memoryGauge common.MemoryGauge) (location commo
 	case NilLocationPrefix:
 		return
 
-	// TODO more locations
 	default:
 		err = CodecError(fmt.Sprintf("unknown location prefix: %s", prefix))
 	}

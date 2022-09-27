@@ -424,7 +424,6 @@ func (d *Decoder) decodeArray(arrayType cadence.ArrayType, size int) (array cade
 	array, err = cadence.NewMeteredArray(d.memoryGauge, size, func() (elements []cadence.Value, err error) {
 		elements = make([]cadence.Value, 0, size)
 		for i := 0; i < size; i++ {
-			// TODO if `elementType` is concrete then each element needn't encode its type
 			var elementValue cadence.Value
 			elementValue, err = d.DecodeValue()
 			if err != nil {

@@ -308,7 +308,6 @@ func (e *Encoder) EncodeDictionary(value cadence.Dictionary) (err error) {
 	if err != nil {
 		return
 	}
-	// TODO if dictionary type is concrete for key or value, don't encode type info for them
 	for _, kv := range value.Pairs {
 		err = e.EncodeValue(kv.Key)
 		if err != nil {
