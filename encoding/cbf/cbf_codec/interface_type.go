@@ -83,25 +83,25 @@ func (d *Decoder) decodeInterfaceType() (
 	initializers [][]cadence.Parameter,
 	err error,
 ) {
-	location, err = common_codec.DecodeLocation(&d.r, d.memoryGauge)
+	location, err = common_codec.DecodeLocation(&d.r, d.maxSize(), d.memoryGauge)
 	if err != nil {
 		return
 	}
 
-	qualifiedIdentifier, err = common_codec.DecodeString(&d.r)
+	qualifiedIdentifier, err = common_codec.DecodeString(&d.r, d.maxSize())
 	if err != nil {
 		return
 	}
 
-	fields, err = common_codec.DecodeArray(&d.r, func() (field cadence.Field, err error) {
+	fields, err = common_codec.DecodeArray(&d.r, d.maxSize(), func() (field cadence.Field, err error) {
 		return d.decodeField()
 	})
 	if err != nil {
 		return
 	}
 
-	initializers, err = common_codec.DecodeArray(&d.r, func() ([]cadence.Parameter, error) {
-		return common_codec.DecodeArray(&d.r, func() (cadence.Parameter, error) {
+	initializers, err = common_codec.DecodeArray(&d.r, d.maxSize(), func() ([]cadence.Parameter, error) {
+		return common_codec.DecodeArray(&d.r, d.maxSize(), func() (cadence.Parameter, error) {
 			return d.decodeParameter()
 		})
 	})

@@ -44,7 +44,7 @@ func TestCodecMiscValues(t *testing.T) {
 
 		assert.Equal(t, w.Bytes(), []byte{0, 0, 0, byte(length)}, "encoded bytes differ")
 
-		output, err := common_codec.DecodeLength(&w)
+		output, err := common_codec.DecodeLength(&w, 0xFFFFFFFF)
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, length, output)
@@ -64,7 +64,7 @@ func TestCodecMiscValues(t *testing.T) {
 
 		assert.Equal(t, w.Bytes(), []byte{0, 0, byte(length1), byte(length0)}, "encoded bytes differ")
 
-		output, err := common_codec.DecodeLength(&w)
+		output, err := common_codec.DecodeLength(&w, 0xFFFFFFFF)
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, length, output)
@@ -94,7 +94,7 @@ func TestCodecMiscValues(t *testing.T) {
 			[]byte(s),
 		), "encoded bytes differ")
 
-		output, err := common_codec.DecodeString(&w)
+		output, err := common_codec.DecodeString(&w, 0xFFFFFFFF)
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, s, output)
@@ -115,7 +115,7 @@ func TestCodecMiscValues(t *testing.T) {
 			[]byte(s),
 		), "encoded bytes differ")
 
-		output, err := common_codec.DecodeString(&w)
+		output, err := common_codec.DecodeString(&w, 0xFFFFFFFF)
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, s, output)
@@ -136,7 +136,7 @@ func TestCodecMiscValues(t *testing.T) {
 			s,
 		), "encoded bytes differ")
 
-		output, err := common_codec.DecodeBytes(&w)
+		output, err := common_codec.DecodeBytes(&w, 0xFFFFFFFF)
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, s, output)
@@ -265,7 +265,7 @@ func TestCodecLocations(t *testing.T) {
 
 		assert.Equal(t, w.Bytes(), []byte{0, 0, 0, byte(length)}, "encoded bytes differ")
 
-		output, err := common_codec.DecodeLength(&w)
+		output, err := common_codec.DecodeLength(&w, 0xFFFFFFFF)
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, length, output)
@@ -309,7 +309,7 @@ func TestCodecLocations(t *testing.T) {
 
 		assert.Equal(t, w.Bytes(), []byte{common_codec.NilLocationPrefix[0]}, "encoded bytes differ")
 
-		output, err := common_codec.DecodeLocation(&w, nil)
+		output, err := common_codec.DecodeLocation(&w, 0xFFFFFFFF, nil)
 		require.NoError(t, err, "decoding error")
 
 		assert.Nil(t, output, "bad decoding")
@@ -335,7 +335,7 @@ func TestCodecLocations(t *testing.T) {
 			[]byte(location.Name),
 		), "encoded bytes differ")
 
-		output, err := common_codec.DecodeLocation(&w, nil)
+		output, err := common_codec.DecodeLocation(&w, 0xFFFFFFFF, nil)
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, location, output, "bad decoding")
@@ -357,7 +357,7 @@ func TestCodecLocations(t *testing.T) {
 			[]byte(location),
 		), "encoded bytes differ")
 
-		output, err := common_codec.DecodeLocation(&w, nil)
+		output, err := common_codec.DecodeLocation(&w, 0xFFFFFFFF, nil)
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, location, output, "bad decoding")
@@ -378,7 +378,7 @@ func TestCodecLocations(t *testing.T) {
 			location[:],
 		), "encoded bytes differ")
 
-		output, err := common_codec.DecodeLocation(&w, nil)
+		output, err := common_codec.DecodeLocation(&w, 0xFFFFFFFF, nil)
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, location, output, "bad decoding")
@@ -400,7 +400,7 @@ func TestCodecLocations(t *testing.T) {
 			[]byte(location),
 		), "encoded bytes differ")
 
-		output, err := common_codec.DecodeLocation(&w, nil)
+		output, err := common_codec.DecodeLocation(&w, 0xFFFFFFFF, nil)
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, location, output, "bad decoding")
@@ -421,7 +421,7 @@ func TestCodecLocations(t *testing.T) {
 			location[:],
 		), "encoded bytes differ")
 
-		output, err := common_codec.DecodeLocation(&w, nil)
+		output, err := common_codec.DecodeLocation(&w, 0xFFFFFFFF, nil)
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, location, output, "bad decoding")
@@ -441,7 +441,7 @@ func TestCodecLocations(t *testing.T) {
 			[]byte{common.REPLLocationPrefix[0]},
 		), "encoded bytes differ")
 
-		output, err := common_codec.DecodeLocation(&w, nil)
+		output, err := common_codec.DecodeLocation(&w, 0xFFFFFFFF, nil)
 		require.NoError(t, err, "decoding error")
 
 		assert.Equal(t, location, output, "bad decoding")

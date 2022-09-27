@@ -113,25 +113,25 @@ func (d *Decoder) decodeCompositeType() (
 	fields []cadence.Field,
 	initializers [][]cadence.Parameter,
 	err error) {
-	location, err = common_codec.DecodeLocation(&d.r, d.memoryGauge)
+	location, err = common_codec.DecodeLocation(&d.r, d.maxSize(), d.memoryGauge)
 	if err != nil {
 		return
 	}
 
-	qualifiedIdentifier, err = common_codec.DecodeString(&d.r)
+	qualifiedIdentifier, err = common_codec.DecodeString(&d.r, d.maxSize())
 	if err != nil {
 		return
 	}
 
-	fields, err = common_codec.DecodeArray(&d.r, func() (field cadence.Field, err error) {
+	fields, err = common_codec.DecodeArray(&d.r, d.maxSize(), func() (field cadence.Field, err error) {
 		return d.decodeField()
 	})
 	if err != nil {
 		return
 	}
 
-	initializers, err = common_codec.DecodeArray(&d.r, func() ([]cadence.Parameter, error) {
-		return common_codec.DecodeArray(&d.r, func() (cadence.Parameter, error) {
+	initializers, err = common_codec.DecodeArray(&d.r, d.maxSize(), func() ([]cadence.Parameter, error) {
+		return common_codec.DecodeArray(&d.r, d.maxSize(), func() (cadence.Parameter, error) {
 			return d.decodeParameter()
 		})
 	})
@@ -150,7 +150,7 @@ func (e *Encoder) encodeField(field cadence.Field) (err error) {
 
 func (d *Decoder) decodeField() (field cadence.Field, err error) {
 	// TODO meter
-	field.Identifier, err = common_codec.DecodeString(&d.r)
+	field.Identifier, err = common_codec.DecodeString(&d.r, d.maxSize())
 	if err != nil {
 		return
 	}
@@ -175,12 +175,12 @@ func (e *Encoder) encodeParameter(parameter cadence.Parameter) (err error) {
 
 func (d *Decoder) decodeParameter() (parameter cadence.Parameter, err error) {
 	// TODO meter?
-	parameter.Label, err = common_codec.DecodeString(&d.r)
+	parameter.Label, err = common_codec.DecodeString(&d.r, d.maxSize())
 	if err != nil {
 		return
 	}
 
-	parameter.Identifier, err = common_codec.DecodeString(&d.r)
+	parameter.Identifier, err = common_codec.DecodeString(&d.r, d.maxSize())
 	if err != nil {
 		return
 	}

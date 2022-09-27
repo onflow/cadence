@@ -40,7 +40,7 @@ func (d *Decoder) DecodeStruct() (s cadence.Struct, err error) {
 		return
 	}
 
-	fields, err := common_codec.DecodeArray(&d.r, func() (cadence.Value, error) {
+	fields, err := common_codec.DecodeArray(&d.r, d.maxSize(), func() (cadence.Value, error) {
 		return d.DecodeValue()
 	})
 	if err != nil {

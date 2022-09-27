@@ -38,12 +38,12 @@ func (e *Encoder) EncodeFunctionType(t *cadence.FunctionType) (err error) {
 }
 
 func (d *Decoder) DecodeFunctionType() (t *cadence.FunctionType, err error) {
-	id, err := common_codec.DecodeString(&d.r)
+	id, err := common_codec.DecodeString(&d.r, d.maxSize())
 	if err != nil {
 		return
 	}
 
-	parameters, err := common_codec.DecodeArray(&d.r, d.decodeParameter)
+	parameters, err := common_codec.DecodeArray(&d.r, d.maxSize(), d.decodeParameter)
 	if err != nil {
 		return
 	}

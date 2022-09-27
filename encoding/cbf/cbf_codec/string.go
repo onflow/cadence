@@ -25,7 +25,7 @@ import (
 )
 
 func (d *Decoder) DecodeString() (value cadence.String, err error) {
-	s, err := common_codec.DecodeString(&d.r)
+	s, err := common_codec.DecodeString(&d.r, d.maxSize())
 	if err != nil {
 		return
 	}

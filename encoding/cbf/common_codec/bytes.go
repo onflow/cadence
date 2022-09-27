@@ -29,8 +29,8 @@ func EncodeBytes(w io.Writer, bytes []byte) (err error) {
 	return
 }
 
-func DecodeBytes(r io.Reader) (bytes []byte, err error) {
-	length, err := DecodeLength(r)
+func DecodeBytes(r io.Reader, maxSize int) (bytes []byte, err error) {
+	length, err := DecodeLength(r, maxSize)
 	if err != nil {
 		return
 	}
@@ -41,6 +41,7 @@ func DecodeBytes(r io.Reader) (bytes []byte, err error) {
 	if err != nil {
 		return
 	}
+
 	if bytesRead != length {
 		err = CodecError("EOF when reading bytes")
 		return

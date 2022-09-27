@@ -24,8 +24,8 @@ func EncodeString(w io.Writer, s string) (err error) {
 	return EncodeBytes(w, []byte(s))
 }
 
-func DecodeString(r io.Reader) (s string, err error) {
-	b, err := DecodeBytes(r)
+func DecodeString(r io.Reader, maxSize int) (s string, err error) {
+	b, err := DecodeBytes(r, maxSize)
 	if err != nil {
 		return
 	}

@@ -36,7 +36,7 @@ func EncodeLength(w io.Writer, length int) (err error) {
 	return binary.Write(w, binary.BigEndian, l)
 }
 
-func DecodeLength(r io.Reader) (length int, err error) {
+func DecodeLength(r io.Reader, maxSize int) (length int, err error) {
 	b := make([]byte, 4)
 
 	bytesRead, err := r.Read(b)
@@ -50,5 +50,11 @@ func DecodeLength(r io.Reader) (length int, err error) {
 
 	asUint32 := binary.BigEndian.Uint32(b)
 	length = int(asUint32)
+
+	if length > maxSize {
+		err = CodecError("malformed length")
+		return
+	}
+
 	return
 }

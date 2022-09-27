@@ -49,7 +49,7 @@ func (e *Encoder) EncodeArray(value cadence.Array) (err error) {
 }
 
 func (d *Decoder) DecodeUntypedArray() (array cadence.Array, err error) {
-	size, err := common_codec.DecodeLength(&d.r)
+	size, err := common_codec.DecodeLength(&d.r, d.maxSize())
 	if err != nil {
 		return
 	}
@@ -57,7 +57,7 @@ func (d *Decoder) DecodeUntypedArray() (array cadence.Array, err error) {
 }
 
 func (d *Decoder) DecodeVariableArray(arrayType cadence.VariableSizedArrayType) (array cadence.Array, err error) {
-	size, err := common_codec.DecodeLength(&d.r)
+	size, err := common_codec.DecodeLength(&d.r, d.maxSize())
 	if err != nil {
 		return
 	}

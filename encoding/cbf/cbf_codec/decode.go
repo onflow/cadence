@@ -90,3 +90,7 @@ func (d *Decoder) read(howManyBytes int) (b []byte, err error) {
 	_, err = d.r.Read(b)
 	return
 }
+
+func (d *Decoder) maxSize() int {
+	return 0xFFFF // TODO use the actual max
+}

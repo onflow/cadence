@@ -38,7 +38,7 @@ func (e *Encoder) EncodeRestrictedType(t *cadence.RestrictedType) (err error) {
 }
 
 func (d *Decoder) DecodeRestrictedType() (t *cadence.RestrictedType, err error) {
-	id, err := common_codec.DecodeString(&d.r)
+	id, err := common_codec.DecodeString(&d.r, d.maxSize())
 	if err != nil {
 		return
 	}
@@ -48,7 +48,7 @@ func (d *Decoder) DecodeRestrictedType() (t *cadence.RestrictedType, err error) 
 		return
 	}
 
-	restrictions, err := common_codec.DecodeArray(&d.r, d.DecodeType)
+	restrictions, err := common_codec.DecodeArray(&d.r, d.maxSize(), d.DecodeType)
 	if err != nil {
 		return
 	}

@@ -43,7 +43,7 @@ func (d *Decoder) DecodeConstantArrayType() (t cadence.ConstantSizedArrayType, e
 		return
 	}
 
-	size, err := common_codec.DecodeLength(&d.r)
+	size, err := common_codec.DecodeLength(&d.r, d.maxSize())
 	if err != nil {
 		return
 	}

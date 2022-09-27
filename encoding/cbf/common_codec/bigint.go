@@ -33,13 +33,13 @@ func EncodeBigInt(w io.Writer, i *big.Int) (err error) {
 	return EncodeBytes(w, i.Bytes())
 }
 
-func DecodeBigInt(r io.Reader) (i *big.Int, err error) {
+func DecodeBigInt(r io.Reader, maxSize int) (i *big.Int, err error) {
 	isNegative, err := DecodeBool(r)
 	if err != nil {
 		return
 	}
 
-	bytes, err := DecodeBytes(r)
+	bytes, err := DecodeBytes(r, maxSize)
 	if err != nil {
 		return
 	}

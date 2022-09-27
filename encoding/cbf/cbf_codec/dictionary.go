@@ -51,7 +51,7 @@ func (d *Decoder) DecodeDictionary() (dict cadence.Dictionary, err error) {
 		return
 	}
 
-	size, err := common_codec.DecodeLength(&d.r)
+	size, err := common_codec.DecodeLength(&d.r, d.maxSize())
 	if err != nil {
 		return
 	}

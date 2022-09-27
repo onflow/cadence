@@ -118,18 +118,18 @@ func EncodeREPLLocation(w io.Writer) (err error) {
 	return EncodeLocationPrefix(w, common.REPLLocationPrefix)
 }
 
-func DecodeLocation(r io.Reader, memoryGauge common.MemoryGauge) (location common.Location, err error) {
+func DecodeLocation(r io.Reader, maxSize int, memoryGauge common.MemoryGauge) (location common.Location, err error) {
 	prefix, err := DecodeLocationPrefix(r)
 
 	switch prefix {
 	case common.AddressLocationPrefix:
-		return DecodeAddressLocation(r, memoryGauge)
+		return DecodeAddressLocation(r, maxSize, memoryGauge)
 	case common.IdentifierLocationPrefix:
-		return DecodeIdentifierLocation(r, memoryGauge)
+		return DecodeIdentifierLocation(r, maxSize, memoryGauge)
 	case common.ScriptLocationPrefix:
 		return DecodeScriptLocation(r, memoryGauge)
 	case common.StringLocationPrefix:
-		return DecodeStringLocation(r, memoryGauge)
+		return DecodeStringLocation(r, maxSize, memoryGauge)
 	case common.TransactionLocationPrefix:
 		return DecodeTransactionLocation(r, memoryGauge)
 	case string(common.REPLLocationPrefix[0]):
@@ -150,13 +150,13 @@ func DecodeLocationPrefix(r io.Reader) (prefix string, err error) {
 	return
 }
 
-func DecodeAddressLocation(r io.Reader, memoryGauge common.MemoryGauge) (location common.AddressLocation, err error) {
+func DecodeAddressLocation(r io.Reader, maxSize int, memoryGauge common.MemoryGauge) (location common.AddressLocation, err error) {
 	address, err := DecodeAddress(r)
 	if err != nil {
 		return
 	}
 
-	name, err := DecodeString(r)
+	name, err := DecodeString(r, maxSize)
 	if err != nil {
 		return
 	}
@@ -166,8 +166,8 @@ func DecodeAddressLocation(r io.Reader, memoryGauge common.MemoryGauge) (locatio
 	return
 }
 
-func DecodeIdentifierLocation(r io.Reader, memoryGauge common.MemoryGauge) (location common.IdentifierLocation, err error) {
-	s, err := DecodeString(r)
+func DecodeIdentifierLocation(r io.Reader, maxSize int, memoryGauge common.MemoryGauge) (location common.IdentifierLocation, err error) {
+	s, err := DecodeString(r, maxSize)
 	location = common.NewIdentifierLocation(memoryGauge, s)
 	return
 }
@@ -187,8 +187,8 @@ func DecodeScriptLocation(r io.Reader, memoryGauge common.MemoryGauge) (location
 	return
 }
 
-func DecodeStringLocation(r io.Reader, memoryGauge common.MemoryGauge) (location common.StringLocation, err error) {
-	s, err := DecodeString(r)
+func DecodeStringLocation(r io.Reader, maxSize int, memoryGauge common.MemoryGauge) (location common.StringLocation, err error) {
+	s, err := DecodeString(r, maxSize)
 	location = common.NewStringLocation(memoryGauge, s)
 	return
 }

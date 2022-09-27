@@ -27,7 +27,7 @@ import (
 )
 
 func (d *Decoder) DecodeInt() (value cadence.Int, err error) {
-	i, err := common_codec.DecodeBigInt(&d.r)
+	i, err := common_codec.DecodeBigInt(&d.r, d.maxSize())
 	if err != nil {
 		return
 	}
@@ -67,7 +67,7 @@ func (d *Decoder) DecodeInt64() (value cadence.Int64, err error) {
 }
 
 func (d *Decoder) DecodeInt128() (value cadence.Int128, err error) {
-	i, err := common_codec.DecodeBigInt(&d.r)
+	i, err := common_codec.DecodeBigInt(&d.r, d.maxSize())
 	if err != nil {
 		return
 	}
@@ -81,7 +81,7 @@ func (d *Decoder) DecodeInt128() (value cadence.Int128, err error) {
 }
 
 func (d *Decoder) DecodeInt256() (value cadence.Int256, err error) {
-	i, err := common_codec.DecodeBigInt(&d.r)
+	i, err := common_codec.DecodeBigInt(&d.r, d.maxSize())
 	if err != nil {
 		return
 	}
@@ -95,7 +95,7 @@ func (d *Decoder) DecodeInt256() (value cadence.Int256, err error) {
 }
 
 func (d *Decoder) DecodeUInt() (value cadence.UInt, err error) {
-	i, err := common_codec.DecodeBigInt(&d.r)
+	i, err := common_codec.DecodeBigInt(&d.r, d.maxSize())
 	if err != nil {
 		return
 	}
@@ -134,7 +134,7 @@ func (d *Decoder) DecodeUInt64() (value cadence.UInt64, err error) {
 }
 
 func (d *Decoder) DecodeUInt128() (value cadence.UInt128, err error) {
-	i, err := common_codec.DecodeBigInt(&d.r)
+	i, err := common_codec.DecodeBigInt(&d.r, d.maxSize())
 	if err != nil {
 		return
 	}
@@ -148,7 +148,7 @@ func (d *Decoder) DecodeUInt128() (value cadence.UInt128, err error) {
 }
 
 func (d *Decoder) DecodeUInt256() (value cadence.UInt256, err error) {
-	i, err := common_codec.DecodeBigInt(&d.r)
+	i, err := common_codec.DecodeBigInt(&d.r, d.maxSize())
 	if err != nil {
 		return
 	}

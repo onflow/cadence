@@ -43,13 +43,13 @@ func EncodeArray[T any](w io.Writer, arr []T, encodeFn func(T) error) (err error
 	return
 }
 
-func DecodeArray[T any](r io.Reader, decodeFn func() (T, error)) (arr []T, err error) {
+func DecodeArray[T any](r io.Reader, maxSize int, decodeFn func() (T, error)) (arr []T, err error) {
 	isNil, err := DecodeBool(r)
 	if isNil || err != nil {
 		return
 	}
 
-	length, err := DecodeLength(r)
+	length, err := DecodeLength(r, maxSize)
 	if err != nil {
 		return
 	}
