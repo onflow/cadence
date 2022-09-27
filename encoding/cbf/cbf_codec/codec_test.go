@@ -779,7 +779,7 @@ func TestCadenceBinaryFormatCodecString(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueString)},
 				[]byte{0, 0, 0, byte(len(s))},
@@ -835,7 +835,7 @@ func TestCadenceBinaryFormatCodecCharacter(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueCharacter)},
 				[]byte{0, 0, 0, byte(len(s))},
@@ -864,7 +864,7 @@ func TestCadenceBinaryFormatCodecCharacter(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueCharacter)},
 				[]byte{0, 0, 0, byte(len(s))},
@@ -917,7 +917,7 @@ func TestCadenceBinaryFormatCodecAddress(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueAddress)},
 				value.Bytes(),
@@ -942,7 +942,7 @@ func TestCadenceBinaryFormatCodecAddress(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueAddress)},
 				value.Bytes(),
@@ -995,7 +995,7 @@ func TestCadenceBinaryFormatCodecInt(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueInt)},
 				[]byte{byte(common_codec.EncodedBoolFalse)}, // not negative
@@ -1024,7 +1024,7 @@ func TestCadenceBinaryFormatCodecInt(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueInt)},
 				[]byte{byte(common_codec.EncodedBoolFalse)}, // not negative
@@ -1052,7 +1052,7 @@ func TestCadenceBinaryFormatCodecInt(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueInt)},
 				[]byte{byte(common_codec.EncodedBoolTrue)}, // negative
@@ -1107,7 +1107,7 @@ func TestCadenceBinaryFormatCodecInt128(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueInt128)},
 				[]byte{byte(common_codec.EncodedBoolFalse)}, // not negative
@@ -1136,7 +1136,7 @@ func TestCadenceBinaryFormatCodecInt128(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueInt128)},
 				[]byte{byte(common_codec.EncodedBoolFalse)}, // not negative
@@ -1164,7 +1164,7 @@ func TestCadenceBinaryFormatCodecInt128(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueInt128)},
 				[]byte{byte(common_codec.EncodedBoolTrue)}, // negative
@@ -1219,7 +1219,7 @@ func TestCadenceBinaryFormatCodecInt256(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueInt256)},
 				[]byte{byte(common_codec.EncodedBoolFalse)}, // not negative
@@ -1248,7 +1248,7 @@ func TestCadenceBinaryFormatCodecInt256(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueInt256)},
 				[]byte{byte(common_codec.EncodedBoolFalse)}, // not negative
@@ -1276,7 +1276,7 @@ func TestCadenceBinaryFormatCodecInt256(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueInt256)},
 				[]byte{byte(common_codec.EncodedBoolTrue)}, // negative
@@ -1331,7 +1331,7 @@ func TestCadenceBinaryFormatCodecUInt128(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueUInt128)},
 				[]byte{byte(common_codec.EncodedBoolFalse)}, // not negative
@@ -1360,7 +1360,7 @@ func TestCadenceBinaryFormatCodecUInt128(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueUInt128)},
 				[]byte{byte(common_codec.EncodedBoolFalse)}, // not negative
@@ -1415,7 +1415,7 @@ func TestCadenceBinaryFormatCodecUInt256(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueUInt256)},
 				[]byte{byte(common_codec.EncodedBoolFalse)}, // not negative
@@ -1444,7 +1444,7 @@ func TestCadenceBinaryFormatCodecUInt256(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueUInt256)},
 				[]byte{byte(common_codec.EncodedBoolFalse)}, // not negative
@@ -1499,7 +1499,7 @@ func TestCadenceBinaryFormatCodecUInt(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueUInt)},
 				[]byte{byte(common_codec.EncodedBoolFalse)}, // not negative
@@ -1528,7 +1528,7 @@ func TestCadenceBinaryFormatCodecUInt(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueUInt)},
 				[]byte{byte(common_codec.EncodedBoolFalse)}, // not negative
@@ -1583,7 +1583,7 @@ func TestCadenceBinaryFormatCodecNumber(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueInt8)},
 				[]byte{byte(i)},
@@ -1630,7 +1630,7 @@ func TestCadenceBinaryFormatCodecNumber(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueInt16)},
 				[]byte{0, byte(i)},
@@ -1677,7 +1677,7 @@ func TestCadenceBinaryFormatCodecNumber(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueInt32)},
 				[]byte{0xF, 0xFF, 0xFF, 0xFF},
@@ -1724,7 +1724,7 @@ func TestCadenceBinaryFormatCodecNumber(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueInt64)},
 				[]byte{0, 0, 0, 0, 0, 0, 0, byte(i)},
@@ -1771,7 +1771,7 @@ func TestCadenceBinaryFormatCodecNumber(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueUInt8)},
 				[]byte{i},
@@ -1818,7 +1818,7 @@ func TestCadenceBinaryFormatCodecNumber(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueUInt16)},
 				[]byte{0, byte(i)},
@@ -1865,7 +1865,7 @@ func TestCadenceBinaryFormatCodecNumber(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueUInt32)},
 				[]byte{0, 0, 0, byte(i)},
@@ -1912,7 +1912,7 @@ func TestCadenceBinaryFormatCodecNumber(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueUInt64)},
 				[]byte{0, 0, 0, 0, 0, 0, 0, byte(i)},
@@ -1959,7 +1959,7 @@ func TestCadenceBinaryFormatCodecNumber(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueWord8)},
 				[]byte{i},
@@ -2006,7 +2006,7 @@ func TestCadenceBinaryFormatCodecNumber(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueWord16)},
 				[]byte{0, i},
@@ -2053,7 +2053,7 @@ func TestCadenceBinaryFormatCodecNumber(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueWord32)},
 				[]byte{0, 0, 0, i},
@@ -2100,7 +2100,7 @@ func TestCadenceBinaryFormatCodecNumber(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueWord64)},
 				[]byte{0, 0, 0, 0, 0, 0, 0, i},
@@ -2532,7 +2532,7 @@ func TestCadenceBinaryFormatCodecStruct(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueStruct)},
 				[]byte{common.REPLLocationPrefix[0]},
@@ -2595,7 +2595,7 @@ func TestCadenceBinaryFormatCodecStruct(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{byte(cbf_codec.EncodedTypeStruct)},
 				[]byte{common.REPLLocationPrefix[0]},
 				[]byte{0, 0, 0, byte(len(qualifiedIdentifier))},
@@ -2667,7 +2667,7 @@ func TestCadenceBinaryFormatCodecResource(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueResource)},
 				[]byte{common.REPLLocationPrefix[0]},
@@ -2730,7 +2730,7 @@ func TestCadenceBinaryFormatCodecResource(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{byte(cbf_codec.EncodedTypeResource)},
 				[]byte{common.REPLLocationPrefix[0]},
 				[]byte{0, 0, 0, byte(len(qualifiedIdentifier))},
@@ -2800,7 +2800,7 @@ func TestCadenceBinaryFormatCodecEvent(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueEvent)},
 				[]byte{common.REPLLocationPrefix[0]},
@@ -2860,7 +2860,7 @@ func TestCadenceBinaryFormatCodecEvent(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{byte(cbf_codec.EncodedTypeEvent)},
 				[]byte{common.REPLLocationPrefix[0]},
 				[]byte{0, 0, 0, byte(len(qualifiedIdentifier))},
@@ -2931,7 +2931,7 @@ func TestCadenceBinaryFormatCodecContract(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueContract)},
 				[]byte{common.REPLLocationPrefix[0]},
@@ -2994,7 +2994,7 @@ func TestCadenceBinaryFormatCodecContract(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{byte(cbf_codec.EncodedTypeContract)},
 				[]byte{common.REPLLocationPrefix[0]},
 				[]byte{0, 0, 0, byte(len(qualifiedIdentifier))},
@@ -3039,7 +3039,7 @@ func TestCadenceBinaryFormatCodecLink(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueLink)},
 				[]byte{0, 0, 0, byte(len(targetPath.Domain))},
@@ -3073,7 +3073,7 @@ func TestCadenceBinaryFormatCodecPath(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValuePath)},
 				[]byte{0, 0, 0, byte(len(value.Domain))},
@@ -3101,7 +3101,7 @@ func TestCadenceBinaryFormatCodecPath(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{byte(cbf_codec.EncodedTypeCapabilityPath)},
 			),
 			buffer.Bytes(),
@@ -3126,7 +3126,7 @@ func TestCadenceBinaryFormatCodecPath(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{byte(cbf_codec.EncodedTypeStoragePath)},
 			),
 			buffer.Bytes(),
@@ -3151,7 +3151,7 @@ func TestCadenceBinaryFormatCodecPath(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{byte(cbf_codec.EncodedTypePublicPath)},
 			),
 			buffer.Bytes(),
@@ -3176,7 +3176,7 @@ func TestCadenceBinaryFormatCodecPath(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{byte(cbf_codec.EncodedTypePrivatePath)},
 			),
 			buffer.Bytes(),
@@ -3209,7 +3209,7 @@ func TestCadenceBinaryFormatCodecCapability(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueCapability)},
 				[]byte{0, 0, 0, byte(len(path.Domain))},
@@ -3239,7 +3239,7 @@ func TestCadenceBinaryFormatCodecCapability(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{byte(cbf_codec.EncodedTypeCapability)},
 				[]byte{byte(cbf_codec.EncodedTypeAddress)},
 			),
@@ -3300,7 +3300,7 @@ func TestCadenceBinaryFormatCodecEnum(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{cbf_codec.VERSION},
 				[]byte{byte(cbf_codec.EncodedValueEnum)},
 				[]byte{common.REPLLocationPrefix[0]},
@@ -3366,7 +3366,7 @@ func TestCadenceBinaryFormatCodecEnum(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{byte(cbf_codec.EncodedTypeEnum)},
 				[]byte{common.REPLLocationPrefix[0]},
 				[]byte{0, 0, 0, byte(len(qualifiedIdentifier))},
@@ -3425,7 +3425,7 @@ func TestCadenceBinaryFormatCodecInterfaceType(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{byte(cbf_codec.EncodedTypeStructInterface)},
 				[]byte{common.REPLLocationPrefix[0]},
 				[]byte{0, 0, 0, byte(len(typ.QualifiedIdentifier))},
@@ -3483,7 +3483,7 @@ func TestCadenceBinaryFormatCodecInterfaceType(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{byte(cbf_codec.EncodedTypeResourceInterface)},
 				[]byte{common.REPLLocationPrefix[0]},
 				[]byte{0, 0, 0, byte(len(typ.QualifiedIdentifier))},
@@ -3541,7 +3541,7 @@ func TestCadenceBinaryFormatCodecInterfaceType(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{byte(cbf_codec.EncodedTypeContractInterface)},
 				[]byte{common.REPLLocationPrefix[0]},
 				[]byte{0, 0, 0, byte(len(typ.QualifiedIdentifier))},
@@ -3596,7 +3596,7 @@ func TestCadenceBinaryFormatCodecFunctionType(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{byte(cbf_codec.EncodedTypeFunction)},
 
 				[]byte{0, 0, 0, byte(len(typ.ID()))},
@@ -3637,7 +3637,7 @@ func TestCadenceBinaryFormatCodecReferenceType(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{byte(cbf_codec.EncodedTypeReference)},
 				[]byte{byte(common_codec.EncodedBoolTrue)},
 				[]byte{byte(cbf_codec.EncodedTypeInt64)},
@@ -3671,7 +3671,7 @@ func TestCadenceBinaryFormatCodecRestrictedType(t *testing.T) {
 
 		assert.Equal(
 			t,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{byte(cbf_codec.EncodedTypeRestricted)},
 
 				[]byte{0, 0, 0, byte(len(typ.ID()))},

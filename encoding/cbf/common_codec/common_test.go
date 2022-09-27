@@ -89,7 +89,7 @@ func TestCodecMiscValues(t *testing.T) {
 		err := common_codec.EncodeString(&w, s)
 		require.NoError(t, err, "encoding error")
 
-		assert.Equal(t, w.Bytes(), common_codec.Concat(
+		assert.Equal(t, w.Bytes(), common_codec.Flatten(
 			[]byte{0, 0, 0, byte(len(s))},
 			[]byte(s),
 		), "encoded bytes differ")
@@ -110,7 +110,7 @@ func TestCodecMiscValues(t *testing.T) {
 		err := common_codec.EncodeString(&w, s)
 		require.NoError(t, err, "encoding error")
 
-		assert.Equal(t, w.Bytes(), common_codec.Concat(
+		assert.Equal(t, w.Bytes(), common_codec.Flatten(
 			[]byte{0, 0, 0, byte(len(s))},
 			[]byte(s),
 		), "encoded bytes differ")
@@ -131,7 +131,7 @@ func TestCodecMiscValues(t *testing.T) {
 		err := common_codec.EncodeBytes(&w, s)
 		require.NoError(t, err, "encoding error")
 
-		assert.Equal(t, w.Bytes(), common_codec.Concat(
+		assert.Equal(t, w.Bytes(), common_codec.Flatten(
 			[]byte{0, 0, 0, byte(len(s))},
 			s,
 		), "encoded bytes differ")
@@ -328,7 +328,7 @@ func TestCodecLocations(t *testing.T) {
 		err := common_codec.EncodeLocation(&w, location)
 		require.NoError(t, err, "encoding error")
 
-		assert.Equal(t, w.Bytes(), common_codec.Concat(
+		assert.Equal(t, w.Bytes(), common_codec.Flatten(
 			[]byte{common.AddressLocationPrefix[0]},
 			location.Address.Bytes(),
 			[]byte{0, 0, 0, byte(len(location.Name))},
@@ -351,7 +351,7 @@ func TestCodecLocations(t *testing.T) {
 		err := common_codec.EncodeLocation(&w, location)
 		require.NoError(t, err, "encoding error")
 
-		assert.Equal(t, w.Bytes(), common_codec.Concat(
+		assert.Equal(t, w.Bytes(), common_codec.Flatten(
 			[]byte{common.IdentifierLocationPrefix[0]},
 			[]byte{0, 0, 0, byte(len(location))},
 			[]byte(location),
@@ -373,7 +373,7 @@ func TestCodecLocations(t *testing.T) {
 		err := common_codec.EncodeLocation(&w, location)
 		require.NoError(t, err, "encoding error")
 
-		assert.Equal(t, w.Bytes(), common_codec.Concat(
+		assert.Equal(t, w.Bytes(), common_codec.Flatten(
 			[]byte{common.ScriptLocationPrefix[0]},
 			location[:],
 		), "encoded bytes differ")
@@ -394,7 +394,7 @@ func TestCodecLocations(t *testing.T) {
 		err := common_codec.EncodeLocation(&w, location)
 		require.NoError(t, err, "encoding error")
 
-		assert.Equal(t, w.Bytes(), common_codec.Concat(
+		assert.Equal(t, w.Bytes(), common_codec.Flatten(
 			[]byte{common.StringLocationPrefix[0]},
 			[]byte{0, 0, 0, byte(len(location))},
 			[]byte(location),
@@ -416,7 +416,7 @@ func TestCodecLocations(t *testing.T) {
 		err := common_codec.EncodeLocation(&w, location)
 		require.NoError(t, err, "encoding error")
 
-		assert.Equal(t, w.Bytes(), common_codec.Concat(
+		assert.Equal(t, w.Bytes(), common_codec.Flatten(
 			[]byte{common.TransactionLocationPrefix[0]},
 			location[:],
 		), "encoded bytes differ")
@@ -437,7 +437,7 @@ func TestCodecLocations(t *testing.T) {
 		err := common_codec.EncodeLocation(&w, location)
 		require.NoError(t, err, "encoding error")
 
-		assert.Equal(t, w.Bytes(), common_codec.Concat(
+		assert.Equal(t, w.Bytes(), common_codec.Flatten(
 			[]byte{common.REPLLocationPrefix[0]},
 		), "encoded bytes differ")
 
