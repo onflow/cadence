@@ -24,7 +24,7 @@ import (
 )
 
 func (e *Encoder) EncodeContract(value cadence.Contract) (err error) {
-	err = e.EncodeContractType(value.ContractType)
+	err = e.EncodeCompositeType(value.ContractType)
 	if err != nil {
 		return
 	}

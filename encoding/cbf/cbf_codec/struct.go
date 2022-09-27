@@ -24,7 +24,7 @@ import (
 )
 
 func (e *Encoder) EncodeStruct(value cadence.Struct) (err error) {
-	err = e.EncodeStructType(value.StructType)
+	err = e.EncodeCompositeType(value.StructType)
 	if err != nil {
 		return
 	}

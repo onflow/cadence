@@ -24,11 +24,6 @@ import (
 )
 
 func (e *Encoder) EncodeOptionalType(t cadence.OptionalType) (err error) {
-	err = e.EncodeTypeIdentifier(EncodedTypeOptional)
-	if err != nil {
-		return
-	}
-
 	err = common_codec.EncodeBool(&e.w, t.Type == nil)
 	if err != nil {
 		return

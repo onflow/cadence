@@ -36,7 +36,6 @@ func EncodeBool(w io.Writer, boolean bool) (err error) {
 		_, err = w.Write([]byte{byte(EncodedBoolTrue)})
 	} else {
 		_, err = w.Write([]byte{byte(EncodedBoolFalse)})
-
 	}
 
 	return

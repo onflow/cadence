@@ -24,7 +24,7 @@ import (
 )
 
 func (e *Encoder) EncodeResource(value cadence.Resource) (err error) {
-	err = e.EncodeResourceType(value.ResourceType)
+	err = e.EncodeCompositeType(value.ResourceType)
 	if err != nil {
 		return
 	}
