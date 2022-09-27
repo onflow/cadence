@@ -9097,7 +9097,7 @@ func TestCheckBadResourceInterface(t *testing.T) {
 	})
 }
 
-func TestCheckResource(t *testing.T) {
+func TestCheckInvalidUnreachableResourceInvalidation(t *testing.T) {
 
 	t.Parallel()
 
