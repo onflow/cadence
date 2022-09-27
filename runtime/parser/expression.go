@@ -19,6 +19,7 @@
 package parser
 
 import (
+	"fmt"
 	"math/big"
 	"strings"
 	"unicode/utf8"
@@ -198,7 +199,7 @@ func defineExpr(def any) {
 func setExprNullDenotation(tokenType lexer.TokenType, nullDenotation exprNullDenotationFunc) {
 	current := exprNullDenotations[tokenType]
 	if current != nil {
-		panic(NewUnpositionedSyntaxError(
+		panic(fmt.Errorf(
 			"expression null denotation for token %s already exists",
 			tokenType,
 		))
@@ -225,7 +226,7 @@ func setExprIdentifierLeftBindingPower(keyword string, power int) {
 func setExprLeftDenotation(tokenType lexer.TokenType, leftDenotation exprLeftDenotationFunc) {
 	current := exprLeftDenotations[tokenType]
 	if current != nil {
-		panic(NewUnpositionedSyntaxError(
+		panic(fmt.Errorf(
 			"expression left denotation for token %s already exists",
 			tokenType,
 		))
@@ -237,7 +238,7 @@ func setExprLeftDenotation(tokenType lexer.TokenType, leftDenotation exprLeftDen
 func setExprMetaLeftDenotation(tokenType lexer.TokenType, metaLeftDenotation exprMetaLeftDenotationFunc) {
 	current := exprMetaLeftDenotations[tokenType]
 	if current != nil {
-		panic(NewUnpositionedSyntaxError(
+		panic(fmt.Errorf(
 			"expression meta left denotation for token %s already exists",
 			tokenType,
 		))
@@ -540,7 +541,7 @@ func init() {
 	defineIdentifierExpression()
 
 	setExprNullDenotation(lexer.TokenEOF, func(parser *parser, token lexer.Token) (ast.Expression, error) {
-		return nil, NewUnpositionedSyntaxError("expected expression")
+		return nil, NewSyntaxError(token.StartPos, "expected expression")
 	})
 }
 
