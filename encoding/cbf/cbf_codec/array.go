@@ -18,50 +18,73 @@
 
 package cbf_codec
 
-import "github.com/onflow/cadence/encoding/cbf/common_codec"
+import (
+	"fmt"
 
-func EncodeArray[T any](e *Encoder, arr []T, encodeFn func(T) error) (err error) {
-	err = common_codec.EncodeBool(&e.w, arr == nil)
-	if arr == nil || err != nil {
-		return
-	}
+	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/encoding/cbf/common_codec"
+)
 
-	err = common_codec.EncodeLength(&e.w, len(arr))
-	if err != nil {
-		return
-	}
-
-	for _, element := range arr {
-		err = encodeFn(element)
+func (e *Encoder) EncodeArray(value cadence.Array) (err error) {
+	switch v := value.ArrayType.(type) {
+	case cadence.VariableSizedArrayType, nil: // unknown type still needs length
+		err = common_codec.EncodeLength(&e.w, len(value.Values))
 		if err != nil {
 			return
+		}
+	case cadence.ConstantSizedArrayType:
+		if len(value.Values) != int(v.Size) {
+			return common_codec.CodecError(fmt.Sprintf("constant size array size=%d but has %d elements", v.Size, len(value.Values)))
+		}
+	}
+
+	for _, element := range value.Values {
+		err = e.EncodeValue(element)
+		if err != nil {
+			return err
 		}
 	}
 
 	return
 }
 
-func DecodeArray[T any](d *Decoder, decodeFn func() (T, error)) (arr []T, err error) {
-	isNil, err := common_codec.DecodeBool(&d.r)
-	if isNil || err != nil {
-		return
-	}
-
-	length, err := common_codec.DecodeLength(&d.r)
+func (d *Decoder) DecodeUntypedArray() (array cadence.Array, err error) {
+	size, err := common_codec.DecodeLength(&d.r)
 	if err != nil {
 		return
 	}
+	return d.decodeArray(nil, size)
+}
 
-	arr = make([]T, length)
-	for i := 0; i < length; i++ {
-		var element T
-		element, err = decodeFn()
-		if err != nil {
-			return
+func (d *Decoder) DecodeVariableArray(arrayType cadence.VariableSizedArrayType) (array cadence.Array, err error) {
+	size, err := common_codec.DecodeLength(&d.r)
+	if err != nil {
+		return
+	}
+	return d.decodeArray(arrayType, size)
+}
+
+func (d *Decoder) DecodeConstantArray(arrayType cadence.ConstantSizedArrayType) (array cadence.Array, err error) {
+	size := int(arrayType.Size)
+	return d.decodeArray(arrayType, size)
+}
+
+func (d *Decoder) decodeArray(arrayType cadence.ArrayType, size int) (array cadence.Array, err error) {
+	array, err = cadence.NewMeteredArray(d.memoryGauge, size, func() (elements []cadence.Value, err error) {
+		elements = make([]cadence.Value, 0, size)
+		for i := 0; i < size; i++ {
+			var elementValue cadence.Value
+			elementValue, err = d.DecodeValue()
+			if err != nil {
+				return
+			}
+			elements = append(elements, elementValue)
 		}
 
-		arr[i] = element
-	}
+		return elements, nil
+	})
+
+	array = array.WithType(arrayType)
 
 	return
 }

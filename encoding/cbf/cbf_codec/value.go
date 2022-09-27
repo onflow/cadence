@@ -262,144 +262,117 @@ func (e *Encoder) EncodeValue(value cadence.Value) (err error) {
 	return common_codec.CodecError(fmt.Sprintf("unexpected value: %s (type=%s)", value, value.Type()))
 }
 
+func (d *Decoder) DecodeValue() (value cadence.Value, err error) {
+	identifier, err := d.DecodeIdentifier()
+	if err != nil {
+		return
+	}
+
+	switch identifier {
+	case EncodedValueVoid:
+		value = cadence.NewMeteredVoid(d.memoryGauge)
+	case EncodedValueOptional:
+		value, err = d.DecodeOptional()
+	case EncodedValueBool:
+		value, err = d.DecodeBool()
+	case EncodedValueString:
+		value, err = d.DecodeString()
+	case EncodedValueCharacter:
+		value, err = d.DecodeCharacter()
+	case EncodedValueAddress:
+		value, err = d.DecodeAddress()
+	case EncodedValueInt:
+		value, err = d.DecodeInt()
+	case EncodedValueInt8:
+		value, err = d.DecodeInt8()
+	case EncodedValueInt16:
+		value, err = d.DecodeInt16()
+	case EncodedValueInt32:
+		value, err = d.DecodeInt32()
+	case EncodedValueInt64:
+		value, err = d.DecodeInt64()
+	case EncodedValueInt128:
+		value, err = d.DecodeInt128()
+	case EncodedValueInt256:
+		value, err = d.DecodeInt256()
+	case EncodedValueUInt:
+		value, err = d.DecodeUInt()
+	case EncodedValueUInt8:
+		value, err = d.DecodeUInt8()
+	case EncodedValueUInt16:
+		value, err = d.DecodeUInt16()
+	case EncodedValueUInt32:
+		value, err = d.DecodeUInt32()
+	case EncodedValueUInt64:
+		value, err = d.DecodeUInt64()
+	case EncodedValueUInt128:
+		value, err = d.DecodeUInt128()
+	case EncodedValueUInt256:
+		value, err = d.DecodeUInt256()
+	case EncodedValueWord8:
+		value, err = d.DecodeWord8()
+	case EncodedValueWord16:
+		value, err = d.DecodeWord16()
+	case EncodedValueWord32:
+		value, err = d.DecodeWord32()
+	case EncodedValueWord64:
+		value, err = d.DecodeWord64()
+	case EncodedValueFix64:
+		value, err = d.DecodeFix64()
+	case EncodedValueUFix64:
+		value, err = d.DecodeUFix64()
+	case EncodedValueUntypedArray:
+		value, err = d.DecodeUntypedArray()
+	case EncodedValueVariableArray:
+		var t cadence.VariableSizedArrayType
+		t, err = d.DecodeVariableArrayType()
+		if err != nil {
+			return
+		}
+		value, err = d.DecodeVariableArray(t)
+	case EncodedValueConstantArray:
+		var t cadence.ConstantSizedArrayType
+		t, err = d.DecodeConstantArrayType()
+		if err != nil {
+			return
+		}
+		value, err = d.DecodeConstantArray(t)
+	case EncodedValueDictionary:
+		value, err = d.DecodeDictionary()
+	case EncodedValueStruct:
+		value, err = d.DecodeStruct()
+	case EncodedValueResource:
+		value, err = d.DecodeResource()
+	case EncodedValueEvent:
+		value, err = d.DecodeEvent()
+	case EncodedValueContract:
+		value, err = d.DecodeContract()
+	case EncodedValueLink:
+		value, err = d.DecodeLink()
+	case EncodedValuePath:
+		value, err = d.DecodePath()
+	case EncodedValueCapability:
+		value, err = d.DecodeCapability()
+	case EncodedValueEnum:
+		value, err = d.DecodeEnum()
+
+	default:
+		err = common_codec.CodecError(fmt.Sprintf("unknown cadence.Value: %s", value))
+	}
+
+	return
+}
+
 func (e *Encoder) EncodeValueIdentifier(id EncodedValue) (err error) {
 	return e.writeByte(byte(id))
 }
 
-func (e *Encoder) EncodeOptional(value cadence.Optional) (err error) {
-	isNil := value.Value == nil
-	err = common_codec.EncodeBool(&e.w, isNil)
-	if isNil || err != nil {
+func (d *Decoder) DecodeIdentifier() (id EncodedValue, err error) {
+	b, err := d.read(1)
+	if err != nil {
 		return
 	}
 
-	return e.EncodeValue(value.Value)
-}
-
-func (e *Encoder) EncodeArray(value cadence.Array) (err error) {
-	switch v := value.ArrayType.(type) {
-	case cadence.VariableSizedArrayType, nil: // unknown type still needs length
-		err = common_codec.EncodeLength(&e.w, len(value.Values))
-		if err != nil {
-			return
-		}
-	case cadence.ConstantSizedArrayType:
-		if len(value.Values) != int(v.Size) {
-			return common_codec.CodecError(fmt.Sprintf("constant size array size=%d but has %d elements", v.Size, len(value.Values)))
-		}
-	}
-
-	for _, element := range value.Values {
-		err = e.EncodeValue(element)
-		if err != nil {
-			return err
-		}
-	}
-
+	id = EncodedValue(b[0])
 	return
-}
-
-func (e *Encoder) EncodeDictionary(value cadence.Dictionary) (err error) {
-	err = e.EncodeDictionaryType(value.DictionaryType)
-	if err != nil {
-		return
-	}
-	err = common_codec.EncodeLength(&e.w, len(value.Pairs))
-	if err != nil {
-		return
-	}
-	for _, kv := range value.Pairs {
-		err = e.EncodeValue(kv.Key)
-		if err != nil {
-			return
-		}
-		err = e.EncodeValue(kv.Value)
-		if err != nil {
-			return
-		}
-	}
-	return
-}
-
-func (e *Encoder) EncodeStruct(value cadence.Struct) (err error) {
-	err = e.EncodeStructType(value.StructType)
-	if err != nil {
-		return
-	}
-
-	return EncodeArray(e, value.Fields, func(field cadence.Value) (err error) {
-		return e.EncodeValue(field)
-	})
-}
-
-func (e *Encoder) EncodeResource(value cadence.Resource) (err error) {
-	err = e.EncodeResourceType(value.ResourceType)
-	if err != nil {
-		return
-	}
-	return EncodeArray(e, value.Fields, func(field cadence.Value) (err error) {
-		return e.EncodeValue(field)
-	})
-}
-
-func (e *Encoder) EncodeEvent(value cadence.Event) (err error) {
-	err = e.EncodeEventType(value.EventType)
-	if err != nil {
-		return
-	}
-	return EncodeArray(e, value.Fields, func(field cadence.Value) (err error) {
-		return e.EncodeValue(field)
-	})
-}
-
-func (e *Encoder) EncodeContract(value cadence.Contract) (err error) {
-	err = e.EncodeContractType(value.ContractType)
-	if err != nil {
-		return
-	}
-	return EncodeArray(e, value.Fields, func(field cadence.Value) (err error) {
-		return e.EncodeValue(field)
-	})
-}
-
-func (e *Encoder) EncodeLink(value cadence.Link) (err error) {
-	err = e.EncodePath(value.TargetPath)
-	if err != nil {
-		return
-	}
-
-	return common_codec.EncodeString(&e.w, value.BorrowType)
-}
-
-func (e *Encoder) EncodePath(value cadence.Path) (err error) {
-	err = common_codec.EncodeString(&e.w, value.Domain)
-	if err != nil {
-		return
-	}
-
-	return common_codec.EncodeString(&e.w, value.Identifier)
-}
-
-func (e *Encoder) EncodeCapability(value cadence.Capability) (err error) {
-	err = e.EncodePath(value.Path)
-	if err != nil {
-		return
-	}
-
-	err = common_codec.EncodeAddress(&e.w, value.Address)
-	if err != nil {
-		return
-	}
-
-	return e.EncodeType(value.BorrowType)
-}
-
-func (e *Encoder) EncodeEnum(value cadence.Enum) (err error) {
-	err = e.EncodeEnumType(value.EnumType)
-	if err != nil {
-		return
-	}
-	return EncodeArray(e, value.Fields, func(field cadence.Value) (err error) {
-		return e.EncodeValue(field)
-	})
 }
