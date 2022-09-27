@@ -7,30 +7,45 @@ A reference can be used to access fields and call functions on the referenced ob
 
 References are **copied**, i.e. they are value types.
 
-References are created by using the `&` operator, followed by the object,
-the `as` keyword, and the type through which they should be accessed.
-The given type must be a supertype of the referenced object's type.
-
 References have the type `&T`, where `T` is the type of the referenced object.
+
+References are created using the `&` operator.
+The reference type must be explicitly provided,
+for example through a type annotation on a variable declaration,
+or a type assertion using the `as` operator.
 
 ```cadence
 let hello = "Hello"
 
-// Create a reference to the "Hello" string, typed as a `String`
+// Create a reference to the `String` `hello`.
+// Provide the reference type `&String` using a type assertion
 //
-let helloRef: &String = &hello as &String
+let helloRef = &hello as &String
 
 helloRef.length // is `5`
 
+// Create another reference to the `String` `hello`.
+// Provide the reference type `&String` using a type annotation instead
+//
+let alsoHelloRef: &String = &hello
+
+// Invalid: Cannot create a reference without an explicit type
+//
+let unknownRef = &hello
+```
+
+The reference type must be a supertype of the referenced object's type.
+
+```cadence
 // Invalid: Cannot create a reference to `hello`
 // typed as `&Int`, as it has type `String`
 //
-let intRef: &Int = &hello as &Int
+let intRef = &hello as &Int
 ```
 
-If you attempt to reference an optional value, you will receive an optional reference.
-If the referenced value is nil, the reference itself will be nil. If the referenced value
-exists, then forcing the optional reference will yield a reference to that value:
+When creating a reference to an optional value, the result is an optional reference.
+If the referenced value is nil, the resulting reference itself will be nil.
+If the referenced value exists, then forcing the optional reference will yield a reference to that value:
 
 ```cadence
 let nilValue: String? = nil
@@ -98,7 +113,7 @@ Also, authorized references are subtypes of unauthorized references.
 // typed with the restricted type `&{HasCount}`,
 // i.e. some resource that conforms to the `HasCount` interface
 //
-let countRef: &{HasCount} = &counter as &{HasCount}
+let countRef = &counter as &{HasCount}
 
 countRef.count  // is `43`
 
@@ -120,7 +135,7 @@ let counterRef2: &Counter = countRef as? &Counter
 // again with the restricted type `{HasCount}`, i.e. some resource
 // that conforms to the `HasCount` interface
 //
-let authCountRef: auth &{HasCount} = &counter as auth &{HasCount}
+let authCountRef = &counter as auth &{HasCount}
 
 // Conditionally downcast to reference type `&Counter`.
 // This is valid, because the reference `authCountRef` is authorized
@@ -134,5 +149,5 @@ counterRef3.increment()
 counterRef3.count  // is `44`
 ```
 
-References are ephemeral, i.e they cannot be [stored](accounts#account-storage).
+References are ephemeral, i.e. they cannot be [stored](accounts#account-storage).
 Instead, consider [storing a capability and borrowing it](capability-based-access-control) when needed.
