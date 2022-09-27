@@ -9096,3 +9096,31 @@ func TestCheckBadResourceInterface(t *testing.T) {
 		assert.IsType(t, &sema.ConformanceError{}, errs[23])
 	})
 }
+
+func TestCheckResource(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheckWithPanic(t, `
+        resource R {}
+
+        fun test(_ r : @R): @R {
+            if true {
+                return <-r
+            } else {
+                if true {
+                    return <-r
+                } else {
+                    panic("")
+                }
+            }
+
+            destroy r
+            panic("")
+        }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+}
