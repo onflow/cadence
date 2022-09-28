@@ -250,7 +250,7 @@ func (p *parser) currentTokenSource() []byte {
 	return p.tokenSource(p.current)
 }
 
-func (p *parser) mustToken(token lexer.Token, tokenType lexer.TokenType, expected string) bool {
+func (p *parser) isToken(token lexer.Token, tokenType lexer.TokenType, expected string) bool {
 	if !token.Is(tokenType) {
 		return false
 	}
@@ -259,10 +259,9 @@ func (p *parser) mustToken(token lexer.Token, tokenType lexer.TokenType, expecte
 	return string(actual) == expected
 }
 
-func (p *parser) mustOneString(tokenType lexer.TokenType, string string) (lexer.Token, error) {
+func (p *parser) mustToken(tokenType lexer.TokenType, string string) (lexer.Token, error) {
 	t := p.current
-	p.tokens.Input()
-	if !p.mustToken(t, tokenType, string) {
+	if !p.isToken(t, tokenType, string) {
 		return lexer.Token{}, p.syntaxError("expected token %s with string value %s", tokenType, string)
 	}
 	p.next()

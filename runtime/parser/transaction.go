@@ -115,7 +115,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 
 	if execute == nil {
 		p.skipSpaceAndComments(true)
-		if p.mustToken(p.current, lexer.TokenIdentifier, keywordPre) {
+		if p.isToken(p.current, lexer.TokenIdentifier, keywordPre) {
 			// Skip the `pre` keyword
 			p.next()
 			conditions, err := parseConditions(p, ast.ConditionKindPre)
