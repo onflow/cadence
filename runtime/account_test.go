@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 
 	"github.com/stretchr/testify/assert"
@@ -816,7 +817,7 @@ func encodeArgs(argValues []cadence.Value) [][]byte {
 		var err error
 		args[i], err = json.Encode(arg)
 		if err != nil {
-			panic(fmt.Errorf("broken test: invalid argument: %w", err))
+			panic(errors.NewUnexpectedError("broken test: invalid argument: %w", err))
 		}
 	}
 	return args

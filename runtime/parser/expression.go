@@ -198,7 +198,7 @@ func defineExpr(def any) {
 func setExprNullDenotation(tokenType lexer.TokenType, nullDenotation exprNullDenotationFunc) {
 	current := exprNullDenotations[tokenType]
 	if current != nil {
-		panic(NewUnpositionedSyntaxError(
+		panic(errors.NewUnexpectedError(
 			"expression null denotation for token %s already exists",
 			tokenType,
 		))
@@ -225,7 +225,7 @@ func setExprIdentifierLeftBindingPower(keyword string, power int) {
 func setExprLeftDenotation(tokenType lexer.TokenType, leftDenotation exprLeftDenotationFunc) {
 	current := exprLeftDenotations[tokenType]
 	if current != nil {
-		panic(NewUnpositionedSyntaxError(
+		panic(errors.NewUnexpectedError(
 			"expression left denotation for token %s already exists",
 			tokenType,
 		))
@@ -237,7 +237,7 @@ func setExprLeftDenotation(tokenType lexer.TokenType, leftDenotation exprLeftDen
 func setExprMetaLeftDenotation(tokenType lexer.TokenType, metaLeftDenotation exprMetaLeftDenotationFunc) {
 	current := exprMetaLeftDenotations[tokenType]
 	if current != nil {
-		panic(NewUnpositionedSyntaxError(
+		panic(errors.NewUnexpectedError(
 			"expression meta left denotation for token %s already exists",
 			tokenType,
 		))
@@ -540,7 +540,7 @@ func init() {
 	defineIdentifierExpression()
 
 	setExprNullDenotation(lexer.TokenEOF, func(parser *parser, token lexer.Token) (ast.Expression, error) {
-		return nil, NewUnpositionedSyntaxError("expected expression")
+		return nil, NewSyntaxError(token.StartPos, "expected expression")
 	})
 }
 
@@ -720,7 +720,6 @@ func defineLessThanOrTypeArgumentsExpression() {
 // because that would introduce a parsing problem for function calls/invocations
 // which have a type argument, where the type argument is a type instantiation,
 // for example, `f<T<U>>()`.
-//
 func defineGreaterThanOrBitwiseRightShiftExpression() {
 
 	setExprMetaLeftDenotation(
@@ -966,8 +965,7 @@ func parseCreateExpressionRemainder(p *parser, token lexer.Token) (*ast.CreateEx
 
 // Invocation Expression Grammar:
 //
-//     invocation : '(' ( argument ( ',' argument )* )? ')'
-//
+//	invocation : '(' ( argument ( ',' argument )* )? ')'
 func defineInvocationExpression() {
 	setExprLeftBindingPower(lexer.TokenParenOpen, exprLeftBindingPowerAccess)
 
@@ -1049,8 +1047,7 @@ func parseArgumentListRemainder(p *parser) (arguments []*ast.Argument, endPos as
 
 // parseArgument parses an argument in an invocation.
 //
-//     argument : (identifier ':' )? expression
-//
+//	argument : (identifier ':' )? expression
 func parseArgument(p *parser) (*ast.Argument, error) {
 	var label string
 	var labelStartPos, labelEndPos ast.Position
@@ -1295,30 +1292,17 @@ func definePathExpression() {
 }
 
 func defineReferenceExpression() {
-	setExprNullDenotation(
-		lexer.TokenAmpersand,
-		func(p *parser, token lexer.Token) (ast.Expression, error) {
-			p.skipSpaceAndComments(true)
-			expression, err := parseExpression(p, exprLeftBindingPowerCasting-exprBindingPowerGap)
-			if err != nil {
-				return nil, err
-			}
-
-			castingExpression, ok := expression.(*ast.CastingExpression)
-			if !ok {
-				return nil, p.syntaxError("expected casting expression")
-			}
-
-			p.skipSpaceAndComments(true)
-
+	defineExpr(prefixExpr{
+		tokenType:    lexer.TokenAmpersand,
+		bindingPower: exprLeftBindingPowerUnaryPrefix,
+		nullDenotation: func(p *parser, right ast.Expression, tokenRange ast.Range) (ast.Expression, error) {
 			return ast.NewReferenceExpression(
 				p.memoryGauge,
-				castingExpression.Expression,
-				castingExpression.TypeAnnotation.Type,
-				token.StartPos,
+				right,
+				tokenRange.StartPos,
 			), nil
 		},
-	)
+	})
 }
 
 func defineMemberExpression() {
@@ -1411,7 +1395,6 @@ func exprLeftDenotationAllowsWhitespaceAfterToken(tokenType lexer.TokenType) boo
 
 // parseExpression uses "Top-Down operator precedence parsing" (TDOP) technique to
 // parse expressions.
-//
 func parseExpression(p *parser, rightBindingPower int) (ast.Expression, error) {
 
 	if p.expressionDepth == expressionDepthLimit {
@@ -1485,7 +1468,6 @@ func applyExprMetaLeftDenotation(
 
 // defaultExprMetaLeftDenotation is the default expression left denotation, which applies
 // if the right binding power is less than the left binding power of the current token
-//
 func defaultExprMetaLeftDenotation(
 	p *parser,
 	rightBindingPower int,
@@ -1551,7 +1533,6 @@ func applyExprLeftDenotation(p *parser, token lexer.Token, left ast.Expression) 
 }
 
 // parseStringLiteral parses a whole string literal, including start and end quotes
-//
 func parseStringLiteral(p *parser, literal string) (result string) {
 	length := len(literal)
 	if length == 0 {
@@ -1590,7 +1571,6 @@ func parseStringLiteral(p *parser, literal string) (result string) {
 }
 
 // parseStringLiteralContent parses the string literalExpr contents, excluding start and end quotes
-//
 func parseStringLiteralContent(p *parser, s string) (result string) {
 
 	var builder strings.Builder
