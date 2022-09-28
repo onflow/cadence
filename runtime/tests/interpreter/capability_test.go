@@ -1039,7 +1039,7 @@ func TestInterpretCapabilityFunctionMultipleTypes(t *testing.T) {
 			res, err := inter.Invoke("s1TypedGetCapabilityUntypedCheck")
 			require.NoError(t, err)
 
-			require.Equal(t, interpreter.NewUnmeteredBoolValue(true), res)
+			require.Equal(t, interpreter.TrueValue, res)
 		})
 
 		t.Run("s1UntypedGetCapabilityTypedCheck", func(t *testing.T) {
@@ -1047,7 +1047,7 @@ func TestInterpretCapabilityFunctionMultipleTypes(t *testing.T) {
 			res, err := inter.Invoke("s1UntypedGetCapabilityTypedCheck")
 			require.NoError(t, err)
 
-			require.Equal(t, interpreter.NewUnmeteredBoolValue(true), res)
+			require.Equal(t, interpreter.TrueValue, res)
 		})
 
 		t.Run("s2UntypedGetCapabilityTypedCheck", func(t *testing.T) {
@@ -1055,7 +1055,7 @@ func TestInterpretCapabilityFunctionMultipleTypes(t *testing.T) {
 			res, err := inter.Invoke("s2UntypedGetCapabilityTypedCheck")
 			require.NoError(t, err)
 
-			require.Equal(t, interpreter.NewUnmeteredBoolValue(false), res)
+			require.Equal(t, interpreter.FalseValue, res)
 		})
 
 		t.Run("s2TypedGetCapabilityTypedCheck", func(t *testing.T) {
@@ -1063,7 +1063,7 @@ func TestInterpretCapabilityFunctionMultipleTypes(t *testing.T) {
 			res, err := inter.Invoke("s2TypedGetCapabilityTypedCheck")
 			require.NoError(t, err)
 
-			require.Equal(t, interpreter.NewUnmeteredBoolValue(false), res)
+			require.Equal(t, interpreter.FalseValue, res)
 		})
 	})
 

@@ -3682,7 +3682,7 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 			}
 
 			if targetPath == EmptyPathValue {
-				return NewBoolValue(invocation.Interpreter, false)
+				return FalseValue
 			}
 
 			reference := NewStorageReferenceValue(
@@ -3698,10 +3698,10 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 			// and performs a dynamic type check
 
 			if reference.ReferencedValue(interpreter) == nil {
-				return NewBoolValue(invocation.Interpreter, false)
+				return FalseValue
 			}
 
-			return NewBoolValue(invocation.Interpreter, true)
+			return TrueValue
 		},
 		sema.CapabilityTypeCheckFunctionType(borrowType),
 	)
@@ -3967,18 +3967,15 @@ func (interpreter *Interpreter) isInstanceFunction(self Value) *HostFunctionValu
 
 			staticType := typeValue.Type
 
-			return NewBoolValueFromConstructor(
-				invocation.Interpreter,
-				func() bool {
-					// Values are never instances of unknown types
-					if staticType == nil {
-						return false
-					}
+			// Values are never instances of unknown types
+			if staticType == nil {
+				return FalseValue
+			}
 
-					// NOTE: not invocation.Self, as that is only set for composite values
-					selfType := self.StaticType(invocation.Interpreter)
-					return interpreter.IsSubType(selfType, staticType)
-				},
+			// NOTE: not invocation.Self, as that is only set for composite values
+			selfType := self.StaticType(invocation.Interpreter)
+			return AsBoolValue(
+				interpreter.IsSubType(selfType, staticType),
 			)
 		},
 		sema.IsInstanceFunctionType,
