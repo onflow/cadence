@@ -35,14 +35,13 @@ func (e *Encoder) EncodeInterfaceType(t cadence.InterfaceType) (err error) {
 		return
 	}
 
-	err = common_codec.EncodeArray(&e.w, t.InterfaceFields(), func(field cadence.Field) (err error) {
-		return e.encodeField(field)
-	})
+	err = common_codec.EncodeArray(&e.w, t.InterfaceFields(), e.encodeField)
+	if err != nil {
+		return
+	}
 
 	return common_codec.EncodeArray(&e.w, t.InterfaceInitializers(), func(parameters []cadence.Parameter) (err error) {
-		return common_codec.EncodeArray(&e.w, parameters, func(parameter cadence.Parameter) (err error) {
-			return e.encodeParameter(parameter)
-		})
+		return common_codec.EncodeArray(&e.w, parameters, e.encodeParameter)
 	})
 }
 
@@ -93,17 +92,13 @@ func (d *Decoder) decodeInterfaceType() (
 		return
 	}
 
-	fields, err = common_codec.DecodeArray(&d.r, d.maxSize(), func() (field cadence.Field, err error) {
-		return d.decodeField()
-	})
+	fields, err = common_codec.DecodeArray(&d.r, d.maxSize(), d.decodeField)
 	if err != nil {
 		return
 	}
 
 	initializers, err = common_codec.DecodeArray(&d.r, d.maxSize(), func() ([]cadence.Parameter, error) {
-		return common_codec.DecodeArray(&d.r, d.maxSize(), func() (cadence.Parameter, error) {
-			return d.decodeParameter()
-		})
+		return common_codec.DecodeArray(&d.r, d.maxSize(), d.decodeParameter)
 	})
 
 	return

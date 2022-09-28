@@ -40,9 +40,7 @@ func (e *Encoder) EncodeCompositeType(t cadence.CompositeType) (err error) {
 	})
 
 	return common_codec.EncodeArray(&e.w, t.CompositeInitializers(), func(parameters []cadence.Parameter) (err error) {
-		return common_codec.EncodeArray(&e.w, parameters, func(parameter cadence.Parameter) (err error) {
-			return e.encodeParameter(parameter)
-		})
+		return common_codec.EncodeArray(&e.w, parameters, e.encodeParameter)
 	})
 }
 
@@ -123,17 +121,13 @@ func (d *Decoder) decodeCompositeType() (
 		return
 	}
 
-	fields, err = common_codec.DecodeArray(&d.r, d.maxSize(), func() (field cadence.Field, err error) {
-		return d.decodeField()
-	})
+	fields, err = common_codec.DecodeArray(&d.r, d.maxSize(), d.decodeField)
 	if err != nil {
 		return
 	}
 
 	initializers, err = common_codec.DecodeArray(&d.r, d.maxSize(), func() ([]cadence.Parameter, error) {
-		return common_codec.DecodeArray(&d.r, d.maxSize(), func() (cadence.Parameter, error) {
-			return d.decodeParameter()
-		})
+		return common_codec.DecodeArray(&d.r, d.maxSize(), d.decodeParameter)
 	})
 
 	return

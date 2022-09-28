@@ -29,9 +29,7 @@ func (e *Encoder) EncodeStruct(value cadence.Struct) (err error) {
 		return
 	}
 
-	return common_codec.EncodeArray(&e.w, value.Fields, func(field cadence.Value) (err error) {
-		return e.EncodeValue(field)
-	})
+	return common_codec.EncodeArray(&e.w, value.Fields, e.EncodeValue)
 }
 
 func (d *Decoder) DecodeStruct() (s cadence.Struct, err error) {
@@ -40,18 +38,16 @@ func (d *Decoder) DecodeStruct() (s cadence.Struct, err error) {
 		return
 	}
 
-	fields, err := common_codec.DecodeArray(&d.r, d.maxSize(), func() (cadence.Value, error) {
-		return d.DecodeValue()
-	})
-	if err != nil {
+	isNil, length, err := common_codec.DecodeArrayHeader(&d.r, d.maxSize())
+	if isNil || err != nil {
 		return
 	}
 
 	s, err = cadence.NewMeteredStruct(
 		d.memoryGauge,
-		len(fields),
+		length,
 		func() ([]cadence.Value, error) {
-			return fields, nil
+			return common_codec.DecodeArrayElements(length, d.DecodeValue)
 		},
 	)
 	if err != nil {

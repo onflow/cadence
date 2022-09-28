@@ -44,16 +44,25 @@ func EncodeArray[T any](w io.Writer, arr []T, encodeFn func(T) error) (err error
 }
 
 func DecodeArray[T any](r io.Reader, maxSize int, decodeFn func() (T, error)) (arr []T, err error) {
-	isNil, err := DecodeBool(r)
+	isNil, length, err := DecodeArrayHeader(r, maxSize)
 	if isNil || err != nil {
 		return
 	}
 
-	length, err := DecodeLength(r, maxSize)
-	if err != nil {
+	return DecodeArrayElements(length, decodeFn)
+}
+
+func DecodeArrayHeader(r io.Reader, maxSize int) (isNil bool, length int, err error) {
+	isNil, err = DecodeBool(r)
+	if isNil || err != nil {
 		return
 	}
 
+	length, err = DecodeLength(r, maxSize)
+	return
+}
+
+func DecodeArrayElements[T any](length int, decodeFn func() (T, error)) (arr []T, err error) {
 	arr = make([]T, length)
 	for i := 0; i < length; i++ {
 		var element T

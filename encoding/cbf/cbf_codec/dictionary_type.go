@@ -27,6 +27,7 @@ func (e *Encoder) EncodeDictionaryType(t cadence.DictionaryType) (err error) {
 	if err != nil {
 		return
 	}
+
 	return e.EncodeType(t.ElementType)
 }
 
@@ -35,10 +36,12 @@ func (d *Decoder) DecodeDictionaryType() (t cadence.DictionaryType, err error) {
 	if err != nil {
 		return
 	}
+
 	elementType, err := d.DecodeType()
 	if err != nil {
 		return
 	}
+
 	t = cadence.NewMeteredDictionaryType(d.memoryGauge, keyType, elementType)
 	return
 }

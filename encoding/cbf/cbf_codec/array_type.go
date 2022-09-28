@@ -37,6 +37,15 @@ func (d *Decoder) DecodeVariableArrayType() (t cadence.VariableSizedArrayType, e
 	return
 }
 
+func (e *Encoder) EncodeConstantArrayType(t cadence.ConstantSizedArrayType) (err error) {
+	err = e.EncodeType(t.Element())
+	if err != nil {
+		return
+	}
+
+	return common_codec.EncodeLength(&e.w, int(t.Size))
+}
+
 func (d *Decoder) DecodeConstantArrayType() (t cadence.ConstantSizedArrayType, err error) {
 	elementType, err := d.DecodeType()
 	if err != nil {
@@ -47,15 +56,7 @@ func (d *Decoder) DecodeConstantArrayType() (t cadence.ConstantSizedArrayType, e
 	if err != nil {
 		return
 	}
+
 	t = cadence.NewMeteredConstantSizedArrayType(d.memoryGauge, uint(size), elementType)
 	return
-}
-
-func (e *Encoder) EncodeConstantArrayType(t cadence.ConstantSizedArrayType) (err error) {
-	err = e.EncodeType(t.Element())
-	if err != nil {
-		return
-	}
-
-	return common_codec.EncodeLength(&e.w, int(t.Size))
 }

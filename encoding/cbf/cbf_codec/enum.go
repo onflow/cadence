@@ -28,35 +28,32 @@ func (e *Encoder) EncodeEnum(value cadence.Enum) (err error) {
 	if err != nil {
 		return
 	}
-	return common_codec.EncodeArray(&e.w, value.Fields, func(field cadence.Value) (err error) {
-		return e.EncodeValue(field)
-	})
+
+	return common_codec.EncodeArray(&e.w, value.Fields, e.EncodeValue)
 }
 
-func (d *Decoder) DecodeEnum() (s cadence.Enum, err error) {
+func (d *Decoder) DecodeEnum() (enum cadence.Enum, err error) {
 	enumType, err := d.DecodeEnumType()
 	if err != nil {
 		return
 	}
 
-	fields, err := common_codec.DecodeArray(&d.r, d.maxSize(), func() (cadence.Value, error) {
-		return d.DecodeValue()
-	})
-	if err != nil {
+	isNil, length, err := common_codec.DecodeArrayHeader(&d.r, d.maxSize())
+	if isNil || err != nil {
 		return
 	}
 
-	s, err = cadence.NewMeteredEnum(
+	enum, err = cadence.NewMeteredEnum(
 		d.memoryGauge,
-		len(fields),
+		length,
 		func() ([]cadence.Value, error) {
-			return fields, nil
+			return common_codec.DecodeArrayElements(length, d.DecodeValue)
 		},
 	)
 	if err != nil {
 		return
 	}
 
-	s = s.WithType(enumType)
+	enum = enum.WithType(enumType)
 	return
 }

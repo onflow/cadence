@@ -21,6 +21,8 @@ package common_codec
 import (
 	"io"
 	"math/big"
+
+	"github.com/onflow/cadence/runtime/common"
 )
 
 func EncodeBigInt(w io.Writer, i *big.Int) (err error) {
@@ -33,19 +35,26 @@ func EncodeBigInt(w io.Writer, i *big.Int) (err error) {
 	return EncodeBytes(w, i.Bytes())
 }
 
-func DecodeBigInt(r io.Reader, maxSize int) (i *big.Int, err error) {
+func DecodeBigInt(r io.Reader, maxSize int, memoryGauge common.MemoryGauge) (i *big.Int, err error) {
 	isNegative, err := DecodeBool(r)
 	if err != nil {
 		return
 	}
 
-	bytes, err := DecodeBytes(r, maxSize)
+	length, err := DecodeBytesHeader(r, maxSize)
 	if err != nil {
 		return
 	}
 
+	b, err := DecodeBytesElements(r, length)
+	if err != nil {
+		return
+	}
+
+	common.UseMemory(memoryGauge, common.NewCadenceBigIntMemoryUsage(length))
+
 	i = big.NewInt(0)
-	i.SetBytes(bytes)
+	i.SetBytes(b)
 	if isNegative {
 		i.Neg(i)
 	}

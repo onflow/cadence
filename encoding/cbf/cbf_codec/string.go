@@ -24,17 +24,25 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
-func (d *Decoder) DecodeString() (value cadence.String, err error) {
-	s, err := common_codec.DecodeString(&d.r, d.maxSize())
+func (d *Decoder) DecodeString() (s cadence.String, err error) {
+	length, err := common_codec.DecodeStringHeader(&d.r, d.maxSize())
 	if err != nil {
 		return
 	}
 
-	return cadence.NewMeteredString(
+	s, err2 := cadence.NewMeteredString(
 		d.memoryGauge,
-		common.NewCadenceStringMemoryUsage(len(s)),
-		func() string {
-			return s
+		common.NewCadenceStringMemoryUsage(length),
+		func() (str string) {
+			// this inner error is set to the DecodeString method's `err` return value, so it's still captured
+			str, err = common_codec.DecodeStringElements(&d.r, length)
+			return
 		},
 	)
+
+	// outer error is captured too
+	if err2 != nil {
+		return
+	}
+	return
 }

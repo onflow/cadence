@@ -30,10 +30,17 @@ func EncodeBytes(w io.Writer, bytes []byte) (err error) {
 }
 
 func DecodeBytes(r io.Reader, maxSize int) (bytes []byte, err error) {
-	length, err := DecodeLength(r, maxSize)
+	length, err := DecodeBytesHeader(r, maxSize)
 	if err != nil {
 		return
 	}
+
+	return DecodeBytesElements(r, length)
+}
+
+var DecodeBytesHeader = DecodeLength
+
+func DecodeBytesElements(r io.Reader, length int) (bytes []byte, err error) {
 
 	bytes = make([]byte, length)
 

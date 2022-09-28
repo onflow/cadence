@@ -28,35 +28,32 @@ func (e *Encoder) EncodeEvent(value cadence.Event) (err error) {
 	if err != nil {
 		return
 	}
-	return common_codec.EncodeArray(&e.w, value.Fields, func(field cadence.Value) (err error) {
-		return e.EncodeValue(field)
-	})
+
+	return common_codec.EncodeArray(&e.w, value.Fields, e.EncodeValue)
 }
 
-func (d *Decoder) DecodeEvent() (s cadence.Event, err error) {
+func (d *Decoder) DecodeEvent() (event cadence.Event, err error) {
 	eventType, err := d.DecodeEventType()
 	if err != nil {
 		return
 	}
 
-	fields, err := common_codec.DecodeArray(&d.r, d.maxSize(), func() (cadence.Value, error) {
-		return d.DecodeValue()
-	})
-	if err != nil {
+	isNil, length, err := common_codec.DecodeArrayHeader(&d.r, d.maxSize())
+	if isNil || err != nil {
 		return
 	}
 
-	s, err = cadence.NewMeteredEvent(
+	event, err = cadence.NewMeteredEvent(
 		d.memoryGauge,
-		len(fields),
+		length,
 		func() ([]cadence.Value, error) {
-			return fields, nil
+			return common_codec.DecodeArrayElements(length, d.DecodeValue)
 		},
 	)
 	if err != nil {
 		return
 	}
 
-	s = s.WithType(eventType)
+	event = event.WithType(eventType)
 	return
 }

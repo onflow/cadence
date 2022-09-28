@@ -23,6 +23,8 @@ import (
 	"github.com/onflow/cadence/encoding/cbf/common_codec"
 )
 
+// TODO implement with common_codec.*Array?
+
 func (e *Encoder) EncodeDictionary(value cadence.Dictionary) (err error) {
 	err = e.EncodeDictionaryType(value.DictionaryType)
 	if err != nil {

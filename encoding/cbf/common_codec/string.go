@@ -25,10 +25,17 @@ func EncodeString(w io.Writer, s string) (err error) {
 }
 
 func DecodeString(r io.Reader, maxSize int) (s string, err error) {
-	b, err := DecodeBytes(r, maxSize)
+	length, err := DecodeStringHeader(r, maxSize)
 	if err != nil {
 		return
 	}
-	s = string(b)
-	return
+
+	return DecodeStringElements(r, length)
+}
+
+var DecodeStringHeader = DecodeBytesHeader
+
+func DecodeStringElements(r io.Reader, length int) (s string, err error) {
+	b, err := DecodeBytesElements(r, length)
+	return string(b), err // string(nil) casts to empty string
 }
