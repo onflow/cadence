@@ -46,78 +46,6 @@ func EncodeLocation(w io.Writer, location common.Location) (err error) {
 	}
 }
 
-// The location prefixes are stored as strings but are always* a single ascii character,
-// so they can be stored in a single byte.
-// * The exception is the REPL location but its first ascii character is unique anyway.
-func EncodeLocationPrefix(w io.Writer, prefix string) (err error) {
-	char := prefix[0]
-	_, err = w.Write([]byte{char})
-	return
-}
-
-var NilLocationPrefix = "\x00"
-
-// EncodeNilLocation encodes a value that indicates that no location is specified
-func EncodeNilLocation(w io.Writer) (err error) {
-	return EncodeLocationPrefix(w, NilLocationPrefix)
-}
-
-func EncodeAddressLocation(w io.Writer, t common.AddressLocation) (err error) {
-	err = EncodeLocationPrefix(w, common.AddressLocationPrefix)
-	if err != nil {
-		return
-	}
-
-	err = EncodeAddress(w, t.Address)
-	if err != nil {
-		return
-	}
-
-	return EncodeString(w, t.Name)
-}
-
-func EncodeIdentifierLocation(w io.Writer, t common.IdentifierLocation) (err error) {
-	err = EncodeLocationPrefix(w, common.IdentifierLocationPrefix)
-	if err != nil {
-		return
-	}
-
-	return EncodeString(w, string(t))
-}
-
-func EncodeScriptLocation(w io.Writer, t common.ScriptLocation) (err error) {
-	err = EncodeLocationPrefix(w, common.ScriptLocationPrefix)
-	if err != nil {
-		return
-	}
-
-	_, err = w.Write(t[:])
-	return
-}
-
-func EncodeStringLocation(w io.Writer, t common.StringLocation) (err error) {
-	err = EncodeLocationPrefix(w, common.StringLocationPrefix)
-	if err != nil {
-		return
-	}
-
-	return EncodeString(w, string(t))
-}
-
-func EncodeTransactionLocation(w io.Writer, t common.TransactionLocation) (err error) {
-	err = EncodeLocationPrefix(w, common.TransactionLocationPrefix)
-	if err != nil {
-		return
-	}
-
-	_, err = w.Write(t[:])
-	return
-}
-
-func EncodeREPLLocation(w io.Writer) (err error) {
-	return EncodeLocationPrefix(w, common.REPLLocationPrefix)
-}
-
 func DecodeLocation(r io.Reader, maxSize int, memoryGauge common.MemoryGauge) (location common.Location, err error) {
 	prefix, err := DecodeLocationPrefix(r)
 
@@ -143,11 +71,41 @@ func DecodeLocation(r io.Reader, maxSize int, memoryGauge common.MemoryGauge) (l
 	return
 }
 
+// The location prefixes are stored as strings but are always* a single ascii character,
+// so they can be stored in a single byte.
+// * The exception is the REPL location but its first ascii character is unique anyway.
+func EncodeLocationPrefix(w io.Writer, prefix string) (err error) {
+	char := prefix[0]
+	_, err = w.Write([]byte{char})
+	return
+}
+
 func DecodeLocationPrefix(r io.Reader) (prefix string, err error) {
 	b := make([]byte, 1)
 	_, err = r.Read(b)
 	prefix = string(b)
 	return
+}
+
+const NilLocationPrefix = "\x00"
+
+// EncodeNilLocation encodes a value that indicates that no location is specified
+func EncodeNilLocation(w io.Writer) (err error) {
+	return EncodeLocationPrefix(w, NilLocationPrefix)
+}
+
+func EncodeAddressLocation(w io.Writer, t common.AddressLocation) (err error) {
+	err = EncodeLocationPrefix(w, common.AddressLocationPrefix)
+	if err != nil {
+		return
+	}
+
+	err = EncodeAddress(w, t.Address)
+	if err != nil {
+		return
+	}
+
+	return EncodeString(w, t.Name)
 }
 
 func DecodeAddressLocation(r io.Reader, maxSize int, memoryGauge common.MemoryGauge) (location common.AddressLocation, err error) {
@@ -162,13 +120,31 @@ func DecodeAddressLocation(r io.Reader, maxSize int, memoryGauge common.MemoryGa
 	}
 
 	location = common.NewAddressLocation(memoryGauge, address, name)
-
 	return
+}
+
+func EncodeIdentifierLocation(w io.Writer, t common.IdentifierLocation) (err error) {
+	err = EncodeLocationPrefix(w, common.IdentifierLocationPrefix)
+	if err != nil {
+		return
+	}
+
+	return EncodeString(w, string(t))
 }
 
 func DecodeIdentifierLocation(r io.Reader, maxSize int, memoryGauge common.MemoryGauge) (location common.IdentifierLocation, err error) {
 	s, err := DecodeString(r, maxSize)
 	location = common.NewIdentifierLocation(memoryGauge, s)
+	return
+}
+
+func EncodeScriptLocation(w io.Writer, t common.ScriptLocation) (err error) {
+	err = EncodeLocationPrefix(w, common.ScriptLocationPrefix)
+	if err != nil {
+		return
+	}
+
+	_, err = w.Write(t[:])
 	return
 }
 
@@ -187,9 +163,28 @@ func DecodeScriptLocation(r io.Reader, memoryGauge common.MemoryGauge) (location
 	return
 }
 
+func EncodeStringLocation(w io.Writer, t common.StringLocation) (err error) {
+	err = EncodeLocationPrefix(w, common.StringLocationPrefix)
+	if err != nil {
+		return
+	}
+
+	return EncodeString(w, string(t))
+}
+
 func DecodeStringLocation(r io.Reader, maxSize int, memoryGauge common.MemoryGauge) (location common.StringLocation, err error) {
 	s, err := DecodeString(r, maxSize)
 	location = common.NewStringLocation(memoryGauge, s)
+	return
+}
+
+func EncodeTransactionLocation(w io.Writer, t common.TransactionLocation) (err error) {
+	err = EncodeLocationPrefix(w, common.TransactionLocationPrefix)
+	if err != nil {
+		return
+	}
+
+	_, err = w.Write(t[:])
 	return
 }
 
@@ -206,4 +201,8 @@ func DecodeTransactionLocation(r io.Reader, memoryGauge common.MemoryGauge) (loc
 
 	location = common.NewTransactionLocation(memoryGauge, byteArray)
 	return
+}
+
+func EncodeREPLLocation(w io.Writer) (err error) {
+	return EncodeLocationPrefix(w, common.REPLLocationPrefix)
 }
