@@ -392,14 +392,12 @@ func TestCheckArgumentLabels(t *testing.T) {
                   let t = test(x: 1, "2")
                 `,
 				ParseAndCheckOptions{
-					Options: []sema.Option{
-						sema.WithImportHandler(
-							func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
-								return sema.ElaborationImport{
-									Elaboration: importedChecker.Elaboration,
-								}, nil
-							},
-						),
+					Config: &sema.Config{
+						ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+							return sema.ElaborationImport{
+								Elaboration: importedChecker.Elaboration,
+							}, nil
+						},
 					},
 				},
 			)
@@ -455,14 +453,12 @@ func TestCheckArgumentLabels(t *testing.T) {
                   let t = Test().test(x: 1, "2")
                 `,
 				ParseAndCheckOptions{
-					Options: []sema.Option{
-						sema.WithImportHandler(
-							func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
-								return sema.ElaborationImport{
-									Elaboration: importedChecker.Elaboration,
-								}, nil
-							},
-						),
+					Config: &sema.Config{
+						ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+							return sema.ElaborationImport{
+								Elaboration: importedChecker.Elaboration,
+							}, nil
+						},
 					},
 				},
 			)
@@ -518,14 +514,12 @@ func TestCheckArgumentLabels(t *testing.T) {
                   let t = Test(x: 1, "2")
                 `,
 				ParseAndCheckOptions{
-					Options: []sema.Option{
-						sema.WithImportHandler(
-							func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
-								return sema.ElaborationImport{
-									Elaboration: importedChecker.Elaboration,
-								}, nil
-							},
-						),
+					Config: &sema.Config{
+						ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+							return sema.ElaborationImport{
+								Elaboration: importedChecker.Elaboration,
+							}, nil
+						},
 					},
 				},
 			)
@@ -585,14 +579,12 @@ func TestCheckArgumentLabels(t *testing.T) {
                   let t = C.S(x: 1, "2")
                 `,
 				ParseAndCheckOptions{
-					Options: []sema.Option{
-						sema.WithImportHandler(
-							func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
-								return sema.ElaborationImport{
-									Elaboration: importedChecker.Elaboration,
-								}, nil
-							},
-						),
+					Config: &sema.Config{
+						ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+							return sema.ElaborationImport{
+								Elaboration: importedChecker.Elaboration,
+							}, nil
+						},
 					},
 				},
 			)
