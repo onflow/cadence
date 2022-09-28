@@ -865,7 +865,7 @@ func newScriptResult(
 ) interpreter.Value {
 
 	if returnValue == nil {
-		returnValue = interpreter.NilValue{}
+		returnValue = interpreter.Nil
 	}
 
 	// Lookup and get 'ResultStatus' enum value.
@@ -1166,7 +1166,7 @@ func emulatorBackendExecuteNextTransactionFunction(testFramework TestFramework) 
 
 			// If there are no transactions to run, then return `nil`.
 			if result == nil {
-				return interpreter.NilValue{}
+				return interpreter.Nil
 			}
 
 			return newTransactionResult(invocation.Interpreter, result)
@@ -1212,7 +1212,7 @@ func newTransactionResult(inter *interpreter.Interpreter, result *TransactionRes
 
 func newErrorValue(inter *interpreter.Interpreter, err error) interpreter.Value {
 	if err == nil {
-		return interpreter.NilValue{}
+		return interpreter.Nil
 	}
 
 	// Create a 'Error' by calling its constructor.

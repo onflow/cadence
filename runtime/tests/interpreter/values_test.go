@@ -1236,7 +1236,7 @@ func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) inte
 		innerValue := v.InnerValue(inter, interpreter.ReturnEmptyLocationRange)
 		return interpreter.NewUnmeteredSomeValueNonCopying(deepCopyValue(inter, innerValue))
 	case interpreter.NilValue:
-		return interpreter.NilValue{}
+		return interpreter.Nil
 	default:
 		panic("unreachable")
 	}
@@ -1256,7 +1256,7 @@ func randomStorableValue(inter *interpreter.Interpreter, currentDepth int) inter
 	case Void:
 		return interpreter.VoidValue{}
 	case Nil:
-		return interpreter.NilValue{}
+		return interpreter.Nil
 	case Dictionary_1, Dictionary_2:
 		return randomDictionaryValue(inter, currentDepth)
 	case Array_1, Array_2:

@@ -131,7 +131,7 @@ func TestExportValue(t *testing.T) {
 		},
 		{
 			label:    "Nil",
-			value:    interpreter.NilValue{},
+			value:    interpreter.Nil,
 			expected: cadence.NewOptional(nil),
 		},
 		{
@@ -543,7 +543,7 @@ func TestImportValue(t *testing.T) {
 		{
 			label:    "Nil",
 			value:    cadence.NewOptional(nil),
-			expected: interpreter.NilValue{},
+			expected: interpreter.Nil,
 		},
 		{
 			label: "SomeValue",

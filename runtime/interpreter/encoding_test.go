@@ -130,7 +130,7 @@ func TestEncodeDecodeNilValue(t *testing.T) {
 
 	testEncodeDecode(t,
 		encodeDecodeTest{
-			value: NilValue{},
+			value: Nil,
 			encoded: []byte{
 				// null
 				0xf6,
@@ -2376,7 +2376,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: NewUnmeteredSomeValueNonCopying(NilValue{}),
+				value: NewUnmeteredSomeValueNonCopying(Nil),
 				encoded: []byte{
 					// tag
 					0xd8, CBORTagSomeValue,

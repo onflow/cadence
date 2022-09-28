@@ -321,7 +321,7 @@ func TestDictionaryStorage(t *testing.T) {
 			inter,
 			ReturnEmptyLocationRange,
 			NewUnmeteredStringValue("test"),
-			NilValue{},
+			Nil,
 		)
 
 		require.Equal(t, 1, storage.BasicSlabStorage.Count())

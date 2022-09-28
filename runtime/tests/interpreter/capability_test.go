@@ -164,7 +164,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			RequireValuesEqual(
 				t,
 				inter,
-				interpreter.NilValue{},
+				interpreter.Nil,
 				value,
 			)
 		})
@@ -177,7 +177,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			RequireValuesEqual(
 				t,
 				inter,
-				interpreter.NilValue{},
+				interpreter.Nil,
 				value,
 			)
 		})
@@ -190,7 +190,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			RequireValuesEqual(
 				t,
 				inter,
-				interpreter.NilValue{},
+				interpreter.Nil,
 				value,
 			)
 		})
@@ -395,7 +395,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			RequireValuesEqual(
 				t,
 				inter,
-				interpreter.NilValue{},
+				interpreter.Nil,
 				value,
 			)
 		})
@@ -408,7 +408,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			RequireValuesEqual(
 				t,
 				inter,
-				interpreter.NilValue{},
+				interpreter.Nil,
 				value,
 			)
 		})
@@ -421,7 +421,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			RequireValuesEqual(
 				t,
 				inter,
-				interpreter.NilValue{},
+				interpreter.Nil,
 				value,
 			)
 		})
@@ -1168,7 +1168,7 @@ func TestInterpretCapabilityFunctionMultipleTypes(t *testing.T) {
 			res, err := inter.Invoke("s2UntypedGetCapabilityTypedBorrow")
 			require.NoError(t, err)
 
-			require.Equal(t, interpreter.NewUnmeteredNilValue(), res)
+			require.Equal(t, interpreter.Nil, res)
 		})
 
 		t.Run("s2TypedGetCapabilityTypedBorrow", func(t *testing.T) {
@@ -1176,7 +1176,7 @@ func TestInterpretCapabilityFunctionMultipleTypes(t *testing.T) {
 			res, err := inter.Invoke("s2TypedGetCapabilityTypedBorrow")
 			require.NoError(t, err)
 
-			require.Equal(t, interpreter.NewUnmeteredNilValue(), res)
+			require.Equal(t, interpreter.Nil, res)
 		})
 
 		t.Run("what", func(t *testing.T) {

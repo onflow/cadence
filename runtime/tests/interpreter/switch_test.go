@@ -246,7 +246,7 @@ func TestInterpretSwitchStatement(t *testing.T) {
 			},
 			{
 				[]interpreter.Value{
-					interpreter.NilValue{},
+					interpreter.Nil,
 					interpreter.NewUnmeteredSomeValueNonCopying(
 						interpreter.NewUnmeteredIntValueFromInt64(1),
 					),

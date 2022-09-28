@@ -136,7 +136,7 @@ func TestInterpreterTracing(t *testing.T) {
 		require.Equal(t, len(traceOps), 2)
 		require.Equal(t, traceOps[1], "composite.deepRemove")
 
-		value.SetMember(inter, nil, "abc", interpreter.NilValue{})
+		value.SetMember(inter, nil, "abc", interpreter.Nil)
 		require.Equal(t, len(traceOps), 3)
 		require.Equal(t, traceOps[2], "composite.setMember.abc")
 
