@@ -173,8 +173,8 @@ pub struct Blockchain {
 
     /// Executes a given transaction and commit the current block.
     ///
-    pub fun executeTransaction(_ transaction: Transaction): TransactionResult {
-        self.addTransaction(transaction)
+    pub fun executeTransaction(_ tx: Transaction): TransactionResult {
+        self.addTransaction(tx)
         let txResult = self.executeNextTransaction()!
         self.commitBlock()
         return txResult
@@ -226,7 +226,7 @@ pub struct interface BlockchainBackend {
 
     pub fun createAccount(): Account
 
-    pub fun addTransaction(_ transaction: Transaction)
+    pub fun addTransaction(_ tx: Transaction)
 
     pub fun executeNextTransaction(): TransactionResult?
 

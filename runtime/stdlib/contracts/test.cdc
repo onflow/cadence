@@ -49,8 +49,8 @@ pub contract Test {
 
         /// Executes a given transaction and commit the current block.
         ///
-        pub fun executeTransaction(_ transaction: Transaction): TransactionResult {
-            self.addTransaction(transaction)
+        pub fun executeTransaction(_ tx: Transaction): TransactionResult {
+            self.addTransaction(tx)
             let txResult = self.executeNextTransaction()!
             self.commitBlock()
             return txResult
@@ -224,7 +224,7 @@ pub contract Test {
 
         /// Add a transaction to the current block.
         ///
-        pub fun addTransaction(_ transaction: Transaction)
+        pub fun addTransaction(_ tx: Transaction)
 
         /// Executes the next transaction in the block, if any.
         /// Returns the result of the transaction, or nil if no transaction was scheduled.
