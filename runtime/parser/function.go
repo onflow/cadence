@@ -25,8 +25,7 @@ import (
 
 func parsePurityAnnotation(p *parser) ast.FunctionPurity {
 	// get the purity annotation (if one exists) and skip it
-	switch p.current.Value {
-	case keywordView:
+	if p.mustToken(p.current, lexer.TokenIdentifier, keywordView) {
 		p.next()
 		p.skipSpaceAndComments(true)
 		return ast.FunctionPurityView
@@ -141,7 +140,7 @@ func parseParameter(p *parser) (*ast.Parameter, error) {
 	switch p.current.Type {
 	case lexer.TokenIdentifier:
 		argumentLabel = identifier.Identifier
-		newIdentifier, err := p.mustNotKeyword("for parameter name", p.current)
+		newIdentifier, err := p.nonReservedIdentifier("for parameter name")
 		if err != nil {
 			return nil, err
 		}

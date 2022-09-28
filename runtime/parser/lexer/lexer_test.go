@@ -47,12 +47,36 @@ func withTokens(tokenStream TokenStream, fn func([]Token)) {
 	}
 }
 
-func testLex(t *testing.T, input string, expected []Token) {
+type token struct {
+	Token
+	Source string
+}
+
+func testLex(t *testing.T, input string, expected []token) {
 
 	t.Parallel()
 
-	withTokens(Lex(input, nil), func(tokens []Token) {
-		utils.AssertEqualWithDiff(t, expected, tokens)
+	expectedTokens := make([]Token, len(expected))
+	for i, e := range expected {
+		expectedTokens[i] = e.Token
+	}
+
+	bytes := []byte(input)
+
+	withTokens(Lex(bytes, nil), func(actualTokens []Token) {
+		utils.AssertEqualWithDiff(t, expectedTokens, actualTokens)
+
+		require.Len(t, actualTokens, len(expectedTokens))
+		for i, expectedToken := range expected {
+			actualToken := actualTokens[i]
+			if actualToken.Type == TokenEOF {
+				continue
+			}
+			assert.Equal(t,
+				expectedToken.Source,
+				string(actualToken.Source(bytes)),
+			)
+		}
 	})
 }
 
@@ -63,45 +87,60 @@ func TestLexBasic(t *testing.T) {
 	t.Run("two numbers separated by whitespace", func(t *testing.T) {
 		testLex(t,
 			" 01\t  10",
-			[]Token{
+			[]token{
 				{
-
-					Type:  TokenSpace,
-					Value: Space{" ", false},
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+					Token: Token{
+						Type: TokenSpace,
+						SpaceOrError: Space{
+							ContainsNewline: false,
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+						},
 					},
+					Source: " ",
 				},
 				{
-					Type:  TokenDecimalIntegerLiteral,
-					Value: "01",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-						EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+					Token: Token{
+						Type: TokenDecimalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
 					},
+					Source: "01",
 				},
 				{
-					Type:  TokenSpace,
-					Value: Space{"\t  ", false},
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
-						EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+					Token: Token{
+						Type: TokenSpace,
+						SpaceOrError: Space{
+							ContainsNewline: false,
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+							EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+						},
 					},
+					Source: "\t  ",
 				},
 				{
-					Type:  TokenDecimalIntegerLiteral,
-					Value: "10",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
-						EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+					Token: Token{
+						Type: TokenDecimalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
+							EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
 					},
+					Source: "10",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
-						EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+							EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+						},
 					},
 				},
 			},
@@ -111,35 +150,44 @@ func TestLexBasic(t *testing.T) {
 	t.Run("assignment", func(t *testing.T) {
 		testLex(t,
 			"x=1",
-			[]Token{
+			[]token{
 				{
-					Type:  TokenIdentifier,
-					Value: "x",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+					Token: Token{
+						Type: TokenIdentifier,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+						},
 					},
+					Source: "x",
 				},
 				{
-					Type: TokenEqual,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+					Token: Token{
+						Type: TokenEqual,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
 					},
+					Source: "=",
 				},
 				{
-					Type:  TokenDecimalIntegerLiteral,
-					Value: "1",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-						EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+					Token: Token{
+						Type: TokenDecimalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
 					},
+					Source: "1",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
-						EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+						},
 					},
 				},
 			},
@@ -149,96 +197,136 @@ func TestLexBasic(t *testing.T) {
 	t.Run("simple arithmetic: plus and times", func(t *testing.T) {
 		testLex(t,
 			"(2 + 3) * 4",
-			[]Token{
+			[]token{
 				{
-					Type: TokenParenOpen,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+					Token: Token{
+						Type: TokenParenOpen,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+						},
 					},
+					Source: "(",
 				},
 				{
-					Type:  TokenDecimalIntegerLiteral,
-					Value: "2",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+					Token: Token{
+						Type: TokenDecimalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
 					},
+					Source: "2",
 				},
 				{
-					Type:  TokenSpace,
-					Value: Space{" ", false},
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-						EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+					Token: Token{
+						Type: TokenSpace,
+						SpaceOrError: Space{
+							ContainsNewline: false,
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
 					},
+					Source: " ",
 				},
 				{
-					Type: TokenPlus,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
-						EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+					Token: Token{
+						Type: TokenPlus,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+						},
 					},
+					Source: "+",
 				},
 				{
-					Type:  TokenSpace,
-					Value: Space{" ", false},
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
-						EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+					Token: Token{
+						Type: TokenSpace,
+						SpaceOrError: Space{
+							ContainsNewline: false,
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+						},
 					},
+					Source: " ",
 				},
 				{
-					Type:  TokenDecimalIntegerLiteral,
-					Value: "3",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
-						EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+					Token: Token{
+						Type: TokenDecimalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+							EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+						},
 					},
+					Source: "3",
 				},
 				{
-					Type: TokenParenClose,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
-						EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+					Token: Token{
+						Type: TokenParenClose,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
+							EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+						},
 					},
+					Source: ")",
 				},
 				{
-					Type:  TokenSpace,
-					Value: Space{" ", false},
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
-						EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+					Token: Token{
+						Type: TokenSpace,
+						SpaceOrError: Space{
+							ContainsNewline: false,
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
+							EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
 					},
+					Source: " ",
 				},
 				{
-					Type: TokenStar,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
-						EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+					Token: Token{
+						Type: TokenStar,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+							EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+						},
 					},
+					Source: "*",
 				},
 				{
-					Type:  TokenSpace,
-					Value: Space{" ", false},
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
-						EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
+					Token: Token{
+						Type: TokenSpace,
+						SpaceOrError: Space{
+							ContainsNewline: false,
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
+							EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
+						},
 					},
+					Source: " ",
 				},
 				{
-					Type:  TokenDecimalIntegerLiteral,
-					Value: "4",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 10, Offset: 10},
-						EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
+					Token: Token{
+						Type: TokenDecimalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 10, Offset: 10},
+							EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
+						},
 					},
+					Source: "4",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 11, Offset: 11},
-						EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 11, Offset: 11},
+							EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
+						},
 					},
 				},
 			},
@@ -248,96 +336,136 @@ func TestLexBasic(t *testing.T) {
 	t.Run("simple arithmetic: minus and div", func(t *testing.T) {
 		testLex(t,
 			"(2 - 3) / 4",
-			[]Token{
+			[]token{
 				{
-					Type: TokenParenOpen,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+					Token: Token{
+						Type: TokenParenOpen,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+						},
 					},
+					Source: "(",
 				},
 				{
-					Type:  TokenDecimalIntegerLiteral,
-					Value: "2",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+					Token: Token{
+						Type: TokenDecimalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
 					},
+					Source: "2",
 				},
 				{
-					Type:  TokenSpace,
-					Value: Space{" ", false},
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-						EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+					Token: Token{
+						Type: TokenSpace,
+						SpaceOrError: Space{
+							ContainsNewline: false,
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
 					},
+					Source: " ",
 				},
 				{
-					Type: TokenMinus,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
-						EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+					Token: Token{
+						Type: TokenMinus,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+						},
 					},
+					Source: "-",
 				},
 				{
-					Type:  TokenSpace,
-					Value: Space{" ", false},
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
-						EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+					Token: Token{
+						Type: TokenSpace,
+						SpaceOrError: Space{
+							ContainsNewline: false,
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+						},
 					},
+					Source: " ",
 				},
 				{
-					Type:  TokenDecimalIntegerLiteral,
-					Value: "3",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
-						EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+					Token: Token{
+						Type: TokenDecimalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+							EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+						},
 					},
+					Source: "3",
 				},
 				{
-					Type: TokenParenClose,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
-						EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+					Token: Token{
+						Type: TokenParenClose,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
+							EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+						},
 					},
+					Source: ")",
 				},
 				{
-					Type:  TokenSpace,
-					Value: Space{" ", false},
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
-						EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+					Token: Token{
+						Type: TokenSpace,
+						SpaceOrError: Space{
+							ContainsNewline: false,
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
+							EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
 					},
+					Source: " ",
 				},
 				{
-					Type: TokenSlash,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
-						EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+					Token: Token{
+						Type: TokenSlash,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+							EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+						},
 					},
+					Source: "/",
 				},
 				{
-					Type:  TokenSpace,
-					Value: Space{" ", false},
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
-						EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
+					Token: Token{
+						Type: TokenSpace,
+						SpaceOrError: Space{
+							ContainsNewline: false,
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
+							EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
+						},
 					},
+					Source: " ",
 				},
 				{
-					Type:  TokenDecimalIntegerLiteral,
-					Value: "4",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 10, Offset: 10},
-						EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
+					Token: Token{
+						Type: TokenDecimalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 10, Offset: 10},
+							EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
+						},
 					},
+					Source: "4",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 11, Offset: 11},
-						EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 11, Offset: 11},
+							EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
+						},
 					},
 				},
 			},
@@ -347,44 +475,60 @@ func TestLexBasic(t *testing.T) {
 	t.Run("multiple lines", func(t *testing.T) {
 		testLex(t,
 			"1 \n  2\n",
-			[]Token{
+			[]token{
 				{
-					Type:  TokenDecimalIntegerLiteral,
-					Value: "1",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+					Token: Token{
+						Type: TokenDecimalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+						},
 					},
+					Source: "1",
 				},
 				{
-					Type:  TokenSpace,
-					Value: Space{" \n  ", true},
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-						EndPos:   ast.Position{Line: 2, Column: 1, Offset: 4},
+					Token: Token{
+						Type: TokenSpace,
+						SpaceOrError: Space{
+							ContainsNewline: true,
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 2, Column: 1, Offset: 4},
+						},
 					},
+					Source: " \n  ",
 				},
 				{
-					Type:  TokenDecimalIntegerLiteral,
-					Value: "2",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 2, Column: 2, Offset: 5},
-						EndPos:   ast.Position{Line: 2, Column: 2, Offset: 5},
+					Token: Token{
+						Type: TokenDecimalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 2, Column: 2, Offset: 5},
+							EndPos:   ast.Position{Line: 2, Column: 2, Offset: 5},
+						},
 					},
+					Source: "2",
 				},
 				{
-					Type:  TokenSpace,
-					Value: Space{"\n", true},
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 2, Column: 3, Offset: 6},
-						EndPos:   ast.Position{Line: 2, Column: 3, Offset: 6},
+					Token: Token{
+						Type: TokenSpace,
+						SpaceOrError: Space{
+							ContainsNewline: true,
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 2, Column: 3, Offset: 6},
+							EndPos:   ast.Position{Line: 2, Column: 3, Offset: 6},
+						},
 					},
+					Source: "\n",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 3, Column: 0, Offset: 7},
-						EndPos:   ast.Position{Line: 3, Column: 0, Offset: 7},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 3, Column: 0, Offset: 7},
+							EndPos:   ast.Position{Line: 3, Column: 0, Offset: 7},
+						},
 					},
 				},
 			},
@@ -394,51 +538,70 @@ func TestLexBasic(t *testing.T) {
 	t.Run("nil-coalesce", func(t *testing.T) {
 		testLex(t,
 			"1 ?? 2",
-			[]Token{
+			[]token{
 				{
-					Type:  TokenDecimalIntegerLiteral,
-					Value: "1",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+					Token: Token{
+						Type: TokenDecimalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+						},
 					},
+					Source: "1",
 				},
 				{
-					Type:  TokenSpace,
-					Value: Space{" ", false},
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+					Token: Token{
+						Type: TokenSpace,
+						SpaceOrError: Space{
+							ContainsNewline: false,
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
 					},
+					Source: " ",
 				},
 				{
-					Type: TokenDoubleQuestionMark,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-						EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+					Token: Token{
+						Type: TokenDoubleQuestionMark,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+						},
 					},
+					Source: "??",
 				},
 				{
-					Type:  TokenSpace,
-					Value: Space{" ", false},
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
-						EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+					Token: Token{
+						Type: TokenSpace,
+						SpaceOrError: Space{
+							ContainsNewline: false,
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+						},
 					},
+					Source: " ",
 				},
 				{
-					Type:  TokenDecimalIntegerLiteral,
-					Value: "2",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
-						EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+					Token: Token{
+						Type: TokenDecimalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+							EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+						},
 					},
+					Source: "2",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
-						EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
+							EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+						},
 					},
 				},
 			},
@@ -448,20 +611,24 @@ func TestLexBasic(t *testing.T) {
 	t.Run("identifier", func(t *testing.T) {
 		testLex(t,
 			"test",
-			[]Token{
+			[]token{
 				{
-					Type:  TokenIdentifier,
-					Value: "test",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+					Token: Token{
+						Type: TokenIdentifier,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+						},
 					},
+					Source: "test",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
-						EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+						},
 					},
 				},
 			},
@@ -471,20 +638,24 @@ func TestLexBasic(t *testing.T) {
 	t.Run("identifier with leading underscore and trailing numbers", func(t *testing.T) {
 		testLex(t,
 			"_test_123",
-			[]Token{
+			[]token{
 				{
-					Type:  TokenIdentifier,
-					Value: "_test_123",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+					Token: Token{
+						Type: TokenIdentifier,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+						},
 					},
+					Source: "_test_123",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
-						EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
+							EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
+						},
 					},
 				},
 			},
@@ -495,47 +666,64 @@ func TestLexBasic(t *testing.T) {
 		testLex(t,
 			":,;.?",
 
-			[]Token{
+			[]token{
 				{
-					Type: TokenColon,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+					Token: Token{
+						Type: TokenColon,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+						},
 					},
+					Source: ":",
 				},
 				{
-					Type: TokenComma,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+					Token: Token{
+						Type: TokenComma,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
 					},
+					Source: ",",
 				},
 				{
-					Type: TokenSemicolon,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-						EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+					Token: Token{
+						Type: TokenSemicolon,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
 					},
+					Source: ";",
 				},
 				{
-					Type: TokenDot,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
-						EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+					Token: Token{
+						Type: TokenDot,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+						},
 					},
+					Source: ".",
 				},
 				{
-					Type: TokenQuestionMark,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
-						EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+					Token: Token{
+						Type: TokenQuestionMark,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+						},
 					},
+					Source: "?",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
-						EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+							EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+						},
 					},
 				},
 			},
@@ -545,41 +733,54 @@ func TestLexBasic(t *testing.T) {
 	t.Run("brackets and braces", func(t *testing.T) {
 		testLex(t,
 			"[}]{",
-			[]Token{
+			[]token{
 				{
-					Type: TokenBracketOpen,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+					Token: Token{
+						Type: TokenBracketOpen,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+						},
 					},
+					Source: "[",
 				},
 				{
-					Type: TokenBraceClose,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+					Token: Token{
+						Type: TokenBraceClose,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
 					},
+					Source: "}",
 				},
 				{
-					Type: TokenBracketClose,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-						EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+					Token: Token{
+						Type: TokenBracketClose,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
 					},
-				},
-
-				{
-					Type: TokenBraceOpen,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
-						EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
-					},
+					Source: "]",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
-						EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+					Token: Token{
+						Type: TokenBraceOpen,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+						},
+					},
+					Source: "{",
+				},
+				{
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+						},
 					},
 				},
 			},
@@ -589,54 +790,74 @@ func TestLexBasic(t *testing.T) {
 	t.Run("comparisons", func(t *testing.T) {
 		testLex(t,
 			"=<><-<=>=",
-			[]Token{
+			[]token{
 				{
-					Type: TokenEqual,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+					Token: Token{
+						Type: TokenEqual,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+						},
 					},
+					Source: "=",
 				},
 				{
-					Type: TokenLess,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+					Token: Token{
+						Type: TokenLess,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
 					},
+					Source: "<",
 				},
 				{
-					Type: TokenGreater,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-						EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+					Token: Token{
+						Type: TokenGreater,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
 					},
+					Source: ">",
 				},
 				{
-					Type: TokenLeftArrow,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
-						EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+					Token: Token{
+						Type: TokenLeftArrow,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+						},
 					},
+					Source: "<-",
 				},
 				{
-					Type: TokenLessEqual,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
-						EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+					Token: Token{
+						Type: TokenLessEqual,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+							EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+						},
 					},
+					Source: "<=",
 				},
 				{
-					Type: TokenGreaterEqual,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
-						EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+					Token: Token{
+						Type: TokenGreaterEqual,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
+							EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+						},
 					},
+					Source: ">=",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
-						EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
+							EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
+						},
 					},
 				},
 			},
@@ -651,20 +872,24 @@ func TestLexString(t *testing.T) {
 	t.Run("valid, empty", func(t *testing.T) {
 		testLex(t,
 			`""`,
-			[]Token{
+			[]token{
 				{
-					Type:  TokenString,
-					Value: `""`,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+					Token: Token{
+						Type: TokenString,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
 					},
+					Source: `""`,
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-						EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
 					},
 				},
 			},
@@ -674,20 +899,24 @@ func TestLexString(t *testing.T) {
 	t.Run("valid, non-empty", func(t *testing.T) {
 		testLex(t,
 			`"test"`,
-			[]Token{
+			[]token{
 				{
-					Type:  TokenString,
-					Value: `"test"`,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+					Token: Token{
+						Type: TokenString,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+						},
 					},
+					Source: `"test"`,
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
-						EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
+							EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+						},
 					},
 				},
 			},
@@ -697,20 +926,24 @@ func TestLexString(t *testing.T) {
 	t.Run("valid, with valid tab escape", func(t *testing.T) {
 		testLex(t,
 			`"te\tst"`,
-			[]Token{
+			[]token{
 				{
-					Type:  TokenString,
-					Value: `"te\tst"`,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+					Token: Token{
+						Type: TokenString,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
 					},
+					Source: `"te\tst"`,
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
-						EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+							EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+						},
 					},
 				},
 			},
@@ -720,20 +953,24 @@ func TestLexString(t *testing.T) {
 	t.Run("valid, with invalid escape character", func(t *testing.T) {
 		testLex(t,
 			`"te\Xst"`,
-			[]Token{
+			[]token{
 				{
-					Type:  TokenString,
-					Value: `"te\Xst"`,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+					Token: Token{
+						Type: TokenString,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
 					},
+					Source: `"te\Xst"`,
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
-						EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+							EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+						},
 					},
 				},
 			},
@@ -743,20 +980,24 @@ func TestLexString(t *testing.T) {
 	t.Run("valid, with valid quote escape", func(t *testing.T) {
 		testLex(t,
 			`"te\"st"`,
-			[]Token{
+			[]token{
 				{
-					Type:  TokenString,
-					Value: `"te\"st"`,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+					Token: Token{
+						Type: TokenString,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
 					},
+					Source: `"te\"st"`,
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
-						EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+							EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+						},
 					},
 				},
 			},
@@ -766,28 +1007,37 @@ func TestLexString(t *testing.T) {
 	t.Run("invalid, empty, not terminated at line end", func(t *testing.T) {
 		testLex(t,
 			"\"\n",
-			[]Token{
+			[]token{
 				{
-					Type:  TokenString,
-					Value: "\"",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+					Token: Token{
+						Type: TokenString,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+						},
 					},
+					Source: "\"",
 				},
 				{
-					Type:  TokenSpace,
-					Value: Space{"\n", true},
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+					Token: Token{
+						Type: TokenSpace,
+						SpaceOrError: Space{
+							ContainsNewline: true,
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
 					},
+					Source: "\n",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 2, Column: 0, Offset: 2},
-						EndPos:   ast.Position{Line: 2, Column: 0, Offset: 2},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 2, Column: 0, Offset: 2},
+							EndPos:   ast.Position{Line: 2, Column: 0, Offset: 2},
+						},
 					},
 				},
 			},
@@ -797,28 +1047,37 @@ func TestLexString(t *testing.T) {
 	t.Run("invalid, non-empty, not terminated at line end", func(t *testing.T) {
 		testLex(t,
 			"\"te\n",
-			[]Token{
+			[]token{
 				{
-					Type:  TokenString,
-					Value: "\"te",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+					Token: Token{
+						Type: TokenString,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
 					},
+					Source: "\"te",
 				},
 				{
-					Type:  TokenSpace,
-					Value: Space{"\n", true},
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
-						EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+					Token: Token{
+						Type: TokenSpace,
+						SpaceOrError: Space{
+							ContainsNewline: true,
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+						},
 					},
+					Source: "\n",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 2, Column: 0, Offset: 4},
-						EndPos:   ast.Position{Line: 2, Column: 0, Offset: 4},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 2, Column: 0, Offset: 4},
+							EndPos:   ast.Position{Line: 2, Column: 0, Offset: 4},
+						},
 					},
 				},
 			},
@@ -828,20 +1087,24 @@ func TestLexString(t *testing.T) {
 	t.Run("invalid, empty, not terminated at end of file", func(t *testing.T) {
 		testLex(t,
 			"\"",
-			[]Token{
+			[]token{
 				{
-					Type:  TokenString,
-					Value: "\"",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+					Token: Token{
+						Type: TokenString,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+						},
 					},
+					Source: "\"",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
 					},
 				},
 			},
@@ -851,20 +1114,24 @@ func TestLexString(t *testing.T) {
 	t.Run("invalid, non-empty, not terminated at end of file", func(t *testing.T) {
 		testLex(t,
 			"\"te",
-			[]Token{
+			[]token{
 				{
-					Type:  TokenString,
-					Value: "\"te",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+					Token: Token{
+						Type: TokenString,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
 					},
+					Source: "\"te",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
-						EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+						},
 					},
 				},
 			},
@@ -874,28 +1141,37 @@ func TestLexString(t *testing.T) {
 	t.Run("invalid, missing escape character", func(t *testing.T) {
 		testLex(t,
 			"\"\\\n",
-			[]Token{
+			[]token{
 				{
-					Type:  TokenString,
-					Value: "\"\\",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+					Token: Token{
+						Type: TokenString,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
 					},
+					Source: "\"\\",
 				},
 				{
-					Type:  TokenSpace,
-					Value: Space{"\n", true},
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-						EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+					Token: Token{
+						Type: TokenSpace,
+						SpaceOrError: Space{
+							ContainsNewline: true,
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
 					},
+					Source: "\n",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 2, Column: 0, Offset: 3},
-						EndPos:   ast.Position{Line: 2, Column: 0, Offset: 3},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 2, Column: 0, Offset: 3},
+							EndPos:   ast.Position{Line: 2, Column: 0, Offset: 3},
+						},
 					},
 				},
 			},
@@ -910,49 +1186,64 @@ func TestLexBlockComment(t *testing.T) {
 	t.Run("nested 1", func(t *testing.T) {
 		testLex(t,
 			`/*  // *X /* \\*  */`,
-			[]Token{
+			[]token{
 				{
-					Type: TokenBlockCommentStart,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+					Token: Token{
+						Type: TokenBlockCommentStart,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
 					},
+					Source: "/*",
 				},
 				{
-					Type:  TokenBlockCommentContent,
-					Value: `  // *X `,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-						EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
+					Token: Token{
+						Type: TokenBlockCommentContent,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+							EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
+						},
 					},
+					Source: `  // *X `,
 				},
 				{
-					Type: TokenBlockCommentStart,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 10, Offset: 10},
-						EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
+					Token: Token{
+						Type: TokenBlockCommentStart,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 10, Offset: 10},
+							EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
+						},
 					},
+					Source: "/*",
 				},
 				{
-					Type:  TokenBlockCommentContent,
-					Value: ` \\*  `,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 12, Offset: 12},
-						EndPos:   ast.Position{Line: 1, Column: 17, Offset: 17},
+					Token: Token{
+						Type: TokenBlockCommentContent,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 12, Offset: 12},
+							EndPos:   ast.Position{Line: 1, Column: 17, Offset: 17},
+						},
 					},
+					Source: ` \\*  `,
 				},
 				{
-					Type: TokenBlockCommentEnd,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 18, Offset: 18},
-						EndPos:   ast.Position{Line: 1, Column: 19, Offset: 19},
+					Token: Token{
+						Type: TokenBlockCommentEnd,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 18, Offset: 18},
+							EndPos:   ast.Position{Line: 1, Column: 19, Offset: 19},
+						},
 					},
+					Source: "*/",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 20, Offset: 20},
-						EndPos:   ast.Position{Line: 1, Column: 20, Offset: 20},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 20, Offset: 20},
+							EndPos:   ast.Position{Line: 1, Column: 20, Offset: 20},
+						},
 					},
 				},
 			},
@@ -962,72 +1253,97 @@ func TestLexBlockComment(t *testing.T) {
 	t.Run("nested 2", func(t *testing.T) {
 		testLex(t,
 			`/* test foo /* bar */ asd */  `,
-			[]Token{
+			[]token{
 				{
-					Type: TokenBlockCommentStart,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+					Token: Token{
+						Type: TokenBlockCommentStart,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
 					},
+					Source: "/*",
 				},
 				{
-					Type:  TokenBlockCommentContent,
-					Value: ` test foo `,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-						EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
+					Token: Token{
+						Type: TokenBlockCommentContent,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+							EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
+						},
 					},
+					Source: ` test foo `,
 				},
 				{
-					Type: TokenBlockCommentStart,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 12, Offset: 12},
-						EndPos:   ast.Position{Line: 1, Column: 13, Offset: 13},
+					Token: Token{
+						Type: TokenBlockCommentStart,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 12, Offset: 12},
+							EndPos:   ast.Position{Line: 1, Column: 13, Offset: 13},
+						},
 					},
+					Source: "/*",
 				},
 				{
-					Type:  TokenBlockCommentContent,
-					Value: ` bar `,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 14, Offset: 14},
-						EndPos:   ast.Position{Line: 1, Column: 18, Offset: 18},
+					Token: Token{
+						Type: TokenBlockCommentContent,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 14, Offset: 14},
+							EndPos:   ast.Position{Line: 1, Column: 18, Offset: 18},
+						},
 					},
+					Source: ` bar `,
 				},
 				{
-					Type: TokenBlockCommentEnd,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 19, Offset: 19},
-						EndPos:   ast.Position{Line: 1, Column: 20, Offset: 20},
+					Token: Token{
+						Type: TokenBlockCommentEnd,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 19, Offset: 19},
+							EndPos:   ast.Position{Line: 1, Column: 20, Offset: 20},
+						},
 					},
+					Source: "*/",
 				},
 				{
-					Type:  TokenBlockCommentContent,
-					Value: ` asd `,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 21, Offset: 21},
-						EndPos:   ast.Position{Line: 1, Column: 25, Offset: 25},
+					Token: Token{
+						Type: TokenBlockCommentContent,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 21, Offset: 21},
+							EndPos:   ast.Position{Line: 1, Column: 25, Offset: 25},
+						},
 					},
+					Source: ` asd `,
 				},
 				{
-					Type: TokenBlockCommentEnd,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 26, Offset: 26},
-						EndPos:   ast.Position{Line: 1, Column: 27, Offset: 27},
+					Token: Token{
+						Type: TokenBlockCommentEnd,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 26, Offset: 26},
+							EndPos:   ast.Position{Line: 1, Column: 27, Offset: 27},
+						},
 					},
+					Source: "*/",
 				},
 				{
-					Type:  TokenSpace,
-					Value: Space{"  ", false},
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 28, Offset: 28},
-						EndPos:   ast.Position{Line: 1, Column: 29, Offset: 29},
+					Token: Token{
+						Type: TokenSpace,
+						SpaceOrError: Space{
+							ContainsNewline: false,
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 28, Offset: 28},
+							EndPos:   ast.Position{Line: 1, Column: 29, Offset: 29},
+						},
 					},
+					Source: "  ",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 30, Offset: 30},
-						EndPos:   ast.Position{Line: 1, Column: 30, Offset: 30},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 30, Offset: 30},
+							EndPos:   ast.Position{Line: 1, Column: 30, Offset: 30},
+						},
 					},
 				},
 			},
@@ -1042,28 +1358,35 @@ func TestLexIntegerLiterals(t *testing.T) {
 	t.Run("binary prefix, missing trailing digits", func(t *testing.T) {
 		testLex(t,
 			`0b`,
-			[]Token{
+			[]token{
 				{
-					Type:  TokenError,
-					Value: errors.New("missing digits"),
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+					Token: Token{
+						Type:         TokenError,
+						SpaceOrError: errors.New("missing digits"),
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
 					},
+					Source: "b",
 				},
 				{
-					Type:  TokenBinaryIntegerLiteral,
-					Value: "0b",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+					Token: Token{
+						Type: TokenBinaryIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
 					},
+					Source: "0b",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-						EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
 					},
 				},
 			},
@@ -1073,20 +1396,24 @@ func TestLexIntegerLiterals(t *testing.T) {
 	t.Run("binary", func(t *testing.T) {
 		testLex(t,
 			`0b101010`,
-			[]Token{
+			[]token{
 				{
-					Type:  TokenBinaryIntegerLiteral,
-					Value: "0b101010",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+					Token: Token{
+						Type: TokenBinaryIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
 					},
+					Source: "0b101010",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
-						EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+							EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+						},
 					},
 				},
 			},
@@ -1096,20 +1423,24 @@ func TestLexIntegerLiterals(t *testing.T) {
 	t.Run("binary with leading zeros", func(t *testing.T) {
 		testLex(t,
 			`0b001000`,
-			[]Token{
+			[]token{
 				{
-					Type:  TokenBinaryIntegerLiteral,
-					Value: "0b001000",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+					Token: Token{
+						Type: TokenBinaryIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
 					},
+					Source: "0b001000",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
-						EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+							EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+						},
 					},
 				},
 			},
@@ -1119,20 +1450,24 @@ func TestLexIntegerLiterals(t *testing.T) {
 	t.Run("binary with underscores", func(t *testing.T) {
 		testLex(t,
 			`0b101010_101010`,
-			[]Token{
+			[]token{
 				{
-					Type:  TokenBinaryIntegerLiteral,
-					Value: "0b101010_101010",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 14, Offset: 14},
+					Token: Token{
+						Type: TokenBinaryIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 14, Offset: 14},
+						},
 					},
+					Source: "0b101010_101010",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 15, Offset: 15},
-						EndPos:   ast.Position{Line: 1, Column: 15, Offset: 15},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 15, Offset: 15},
+							EndPos:   ast.Position{Line: 1, Column: 15, Offset: 15},
+						},
 					},
 				},
 			},
@@ -1142,20 +1477,24 @@ func TestLexIntegerLiterals(t *testing.T) {
 	t.Run("binary with leading underscore", func(t *testing.T) {
 		testLex(t,
 			`0b_101010_101010`,
-			[]Token{
+			[]token{
 				{
-					Type:  TokenBinaryIntegerLiteral,
-					Value: "0b_101010_101010",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 15, Offset: 15},
+					Token: Token{
+						Type: TokenBinaryIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 15, Offset: 15},
+						},
 					},
+					Source: "0b_101010_101010",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 16, Offset: 16},
-						EndPos:   ast.Position{Line: 1, Column: 16, Offset: 16},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 16, Offset: 16},
+							EndPos:   ast.Position{Line: 1, Column: 16, Offset: 16},
+						},
 					},
 				},
 			},
@@ -1165,20 +1504,24 @@ func TestLexIntegerLiterals(t *testing.T) {
 	t.Run("binary with trailing underscore", func(t *testing.T) {
 		testLex(t,
 			`0b101010_101010_`,
-			[]Token{
+			[]token{
 				{
-					Type:  TokenBinaryIntegerLiteral,
-					Value: "0b101010_101010_",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 15, Offset: 15},
+					Token: Token{
+						Type: TokenBinaryIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 15, Offset: 15},
+						},
 					},
+					Source: "0b101010_101010_",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 16, Offset: 16},
-						EndPos:   ast.Position{Line: 1, Column: 16, Offset: 16},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 16, Offset: 16},
+							EndPos:   ast.Position{Line: 1, Column: 16, Offset: 16},
+						},
 					},
 				},
 			},
@@ -1188,28 +1531,35 @@ func TestLexIntegerLiterals(t *testing.T) {
 	t.Run("octal prefix, missing trailing digits", func(t *testing.T) {
 		testLex(t,
 			`0o`,
-			[]Token{
+			[]token{
 				{
-					Type:  TokenError,
-					Value: errors.New("missing digits"),
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+					Token: Token{
+						Type:         TokenError,
+						SpaceOrError: errors.New("missing digits"),
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
 					},
+					Source: "o",
 				},
 				{
-					Type:  TokenOctalIntegerLiteral,
-					Value: "0o",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+					Token: Token{
+						Type: TokenOctalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
 					},
+					Source: "0o",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-						EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
 					},
 				},
 			},
@@ -1219,20 +1569,24 @@ func TestLexIntegerLiterals(t *testing.T) {
 	t.Run("octal", func(t *testing.T) {
 		testLex(t,
 			`0o32`,
-			[]Token{
+			[]token{
 				{
-					Type:  TokenOctalIntegerLiteral,
-					Value: "0o32",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+					Token: Token{
+						Type: TokenOctalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+						},
 					},
+					Source: "0o32",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
-						EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+						},
 					},
 				},
 			},
@@ -1242,20 +1596,24 @@ func TestLexIntegerLiterals(t *testing.T) {
 	t.Run("octal with underscores", func(t *testing.T) {
 		testLex(t,
 			`0o32_45`,
-			[]Token{
+			[]token{
 				{
-					Type:  TokenOctalIntegerLiteral,
-					Value: "0o32_45",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+					Token: Token{
+						Type: TokenOctalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+						},
 					},
+					Source: "0o32_45",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
-						EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
+							EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
 					},
 				},
 			},
@@ -1265,20 +1623,24 @@ func TestLexIntegerLiterals(t *testing.T) {
 	t.Run("octal with leading underscore", func(t *testing.T) {
 		testLex(t,
 			`0o_32_45`,
-			[]Token{
+			[]token{
 				{
-					Type:  TokenOctalIntegerLiteral,
-					Value: "0o_32_45",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+					Token: Token{
+						Type: TokenOctalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
 					},
+					Source: "0o_32_45",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
-						EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+							EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+						},
 					},
 				},
 			},
@@ -1288,20 +1650,24 @@ func TestLexIntegerLiterals(t *testing.T) {
 	t.Run("octal with trailing underscore", func(t *testing.T) {
 		testLex(t,
 			`0o32_45_`,
-			[]Token{
+			[]token{
 				{
-					Type:  TokenOctalIntegerLiteral,
-					Value: "0o32_45_",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+					Token: Token{
+						Type: TokenOctalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
 					},
+					Source: "0o32_45_",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
-						EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+							EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+						},
 					},
 				},
 			},
@@ -1311,20 +1677,24 @@ func TestLexIntegerLiterals(t *testing.T) {
 	t.Run("decimal", func(t *testing.T) {
 		testLex(t,
 			`1234567890`,
-			[]Token{
+			[]token{
 				{
-					Type:  TokenDecimalIntegerLiteral,
-					Value: "1234567890",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
+					Token: Token{
+						Type: TokenDecimalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
+						},
 					},
+					Source: "1234567890",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 10, Offset: 10},
-						EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 10, Offset: 10},
+							EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
+						},
 					},
 				},
 			},
@@ -1334,20 +1704,24 @@ func TestLexIntegerLiterals(t *testing.T) {
 	t.Run("decimal with underscores", func(t *testing.T) {
 		testLex(t,
 			`1_234_567_890`,
-			[]Token{
+			[]token{
 				{
-					Type:  TokenDecimalIntegerLiteral,
-					Value: "1_234_567_890",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 12, Offset: 12},
+					Token: Token{
+						Type: TokenDecimalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 12, Offset: 12},
+						},
 					},
+					Source: "1_234_567_890",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 13, Offset: 13},
-						EndPos:   ast.Position{Line: 1, Column: 13, Offset: 13},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 13, Offset: 13},
+							EndPos:   ast.Position{Line: 1, Column: 13, Offset: 13},
+						},
 					},
 				},
 			},
@@ -1357,20 +1731,24 @@ func TestLexIntegerLiterals(t *testing.T) {
 	t.Run("decimal with trailing underscore", func(t *testing.T) {
 		testLex(t,
 			`1_234_567_890_`,
-			[]Token{
+			[]token{
 				{
-					Type:  TokenDecimalIntegerLiteral,
-					Value: "1_234_567_890_",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 13, Offset: 13},
+					Token: Token{
+						Type: TokenDecimalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 13, Offset: 13},
+						},
 					},
+					Source: "1_234_567_890_",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 14, Offset: 14},
-						EndPos:   ast.Position{Line: 1, Column: 14, Offset: 14},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 14, Offset: 14},
+							EndPos:   ast.Position{Line: 1, Column: 14, Offset: 14},
+						},
 					},
 				},
 			},
@@ -1380,28 +1758,35 @@ func TestLexIntegerLiterals(t *testing.T) {
 	t.Run("hexadecimal prefix, missing trailing digits", func(t *testing.T) {
 		testLex(t,
 			`0x`,
-			[]Token{
+			[]token{
 				{
-					Type:  TokenError,
-					Value: errors.New("missing digits"),
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+					Token: Token{
+						Type:         TokenError,
+						SpaceOrError: errors.New("missing digits"),
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
 					},
+					Source: "x",
 				},
 				{
-					Type:  TokenHexadecimalIntegerLiteral,
-					Value: "0x",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+					Token: Token{
+						Type: TokenHexadecimalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
 					},
+					Source: "0x",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-						EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
 					},
 				},
 			},
@@ -1411,20 +1796,24 @@ func TestLexIntegerLiterals(t *testing.T) {
 	t.Run("hexadecimal", func(t *testing.T) {
 		testLex(t,
 			`0xf2`,
-			[]Token{
+			[]token{
 				{
-					Type:  TokenHexadecimalIntegerLiteral,
-					Value: "0xf2",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+					Token: Token{
+						Type: TokenHexadecimalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+						},
 					},
+					Source: "0xf2",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
-						EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+						},
 					},
 				},
 			},
@@ -1434,20 +1823,24 @@ func TestLexIntegerLiterals(t *testing.T) {
 	t.Run("hexadecimal with underscores", func(t *testing.T) {
 		testLex(t,
 			`0xf2_09`,
-			[]Token{
+			[]token{
 				{
-					Type:  TokenHexadecimalIntegerLiteral,
-					Value: "0xf2_09",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+					Token: Token{
+						Type: TokenHexadecimalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+						},
 					},
+					Source: "0xf2_09",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
-						EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
+							EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
 					},
 				},
 			},
@@ -1457,20 +1850,24 @@ func TestLexIntegerLiterals(t *testing.T) {
 	t.Run("hexadecimal with leading underscore", func(t *testing.T) {
 		testLex(t,
 			`0x_f2_09`,
-			[]Token{
+			[]token{
 				{
-					Type:  TokenHexadecimalIntegerLiteral,
-					Value: "0x_f2_09",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+					Token: Token{
+						Type: TokenHexadecimalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
 					},
+					Source: "0x_f2_09",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
-						EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+							EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+						},
 					},
 				},
 			},
@@ -1480,20 +1877,24 @@ func TestLexIntegerLiterals(t *testing.T) {
 	t.Run("hexadecimal with trailing underscore", func(t *testing.T) {
 		testLex(t,
 			`0xf2_09_`,
-			[]Token{
+			[]token{
 				{
-					Type:  TokenHexadecimalIntegerLiteral,
-					Value: "0xf2_09_",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+					Token: Token{
+						Type: TokenHexadecimalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
 					},
+					Source: "0xf2_09_",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
-						EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+							EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+						},
 					},
 				},
 			},
@@ -1503,20 +1904,24 @@ func TestLexIntegerLiterals(t *testing.T) {
 	t.Run("0", func(t *testing.T) {
 		testLex(t,
 			"0",
-			[]Token{
+			[]token{
 				{
-					Type:  TokenDecimalIntegerLiteral,
-					Value: "0",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+					Token: Token{
+						Type: TokenDecimalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+						},
 					},
+					Source: "0",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
 					},
 				},
 			},
@@ -1526,20 +1931,24 @@ func TestLexIntegerLiterals(t *testing.T) {
 	t.Run("01", func(t *testing.T) {
 		testLex(t,
 			"01",
-			[]Token{
+			[]token{
 				{
-					Type:  TokenDecimalIntegerLiteral,
-					Value: "01",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+					Token: Token{
+						Type: TokenDecimalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
 					},
+					Source: "01",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-						EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
 					},
 				},
 			},
@@ -1549,28 +1958,37 @@ func TestLexIntegerLiterals(t *testing.T) {
 	t.Run("whitespace after 0", func(t *testing.T) {
 		testLex(t,
 			"0\n",
-			[]Token{
+			[]token{
 				{
-					Type:  TokenDecimalIntegerLiteral,
-					Value: "0",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+					Token: Token{
+						Type: TokenDecimalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+						},
 					},
+					Source: "0",
 				},
 				{
-					Type:  TokenSpace,
-					Value: Space{"\n", true},
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+					Token: Token{
+						Type: TokenSpace,
+						SpaceOrError: Space{
+							ContainsNewline: true,
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
 					},
+					Source: "\n",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 2, Column: 0, Offset: 2},
-						EndPos:   ast.Position{Line: 2, Column: 0, Offset: 2},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 2, Column: 0, Offset: 2},
+							EndPos:   ast.Position{Line: 2, Column: 0, Offset: 2},
+						},
 					},
 				},
 			},
@@ -1580,20 +1998,24 @@ func TestLexIntegerLiterals(t *testing.T) {
 	t.Run("leading zeros", func(t *testing.T) {
 		testLex(t,
 			"00123",
-			[]Token{
+			[]token{
 				{
-					Type:  TokenDecimalIntegerLiteral,
-					Value: "00123",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+					Token: Token{
+						Type: TokenDecimalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+						},
 					},
+					Source: "00123",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
-						EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+							EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+						},
 					},
 				},
 			},
@@ -1603,28 +2025,35 @@ func TestLexIntegerLiterals(t *testing.T) {
 	t.Run("invalid prefix", func(t *testing.T) {
 		testLex(t,
 			"0z123",
-			[]Token{
+			[]token{
 				{
-					Type:  TokenError,
-					Value: errors.New("invalid number literal prefix: 'z'"),
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+					Token: Token{
+						Type:         TokenError,
+						SpaceOrError: errors.New("invalid number literal prefix: 'z'"),
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
 					},
+					Source: "z",
 				},
 				{
-					Type:  TokenUnknownBaseIntegerLiteral,
-					Value: "0z123",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+					Token: Token{
+						Type: TokenUnknownBaseIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+						},
 					},
+					Source: "0z123",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
-						EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+							EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+						},
 					},
 				},
 			},
@@ -1635,20 +2064,24 @@ func TestLexIntegerLiterals(t *testing.T) {
 
 		testLex(t,
 			"0_100",
-			[]Token{
+			[]token{
 				{
-					Type:  TokenDecimalIntegerLiteral,
-					Value: "0_100",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+					Token: Token{
+						Type: TokenDecimalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+						},
 					},
+					Source: "0_100",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
-						EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+							EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+						},
 					},
 				},
 			},
@@ -1659,20 +2092,24 @@ func TestLexIntegerLiterals(t *testing.T) {
 
 		testLex(t,
 			"1_100",
-			[]Token{
+			[]token{
 				{
-					Type:  TokenDecimalIntegerLiteral,
-					Value: "1_100",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+					Token: Token{
+						Type: TokenDecimalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+						},
 					},
+					Source: "1_100",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
-						EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+							EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+						},
 					},
 				},
 			},
@@ -1687,20 +2124,24 @@ func TestLexFixedPoint(t *testing.T) {
 	t.Run("with underscores", func(t *testing.T) {
 		testLex(t,
 			"1234_5678_90.0009_8765_4321",
-			[]Token{
+			[]token{
 				{
-					Type:  TokenFixedPointNumberLiteral,
-					Value: "1234_5678_90.0009_8765_4321",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 26, Offset: 26},
+					Token: Token{
+						Type: TokenFixedPointNumberLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 26, Offset: 26},
+						},
 					},
+					Source: "1234_5678_90.0009_8765_4321",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 27, Offset: 27},
-						EndPos:   ast.Position{Line: 1, Column: 27, Offset: 27},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 27, Offset: 27},
+							EndPos:   ast.Position{Line: 1, Column: 27, Offset: 27},
+						},
 					},
 				},
 			},
@@ -1710,20 +2151,24 @@ func TestLexFixedPoint(t *testing.T) {
 	t.Run("leading zero", func(t *testing.T) {
 		testLex(t,
 			"0.1",
-			[]Token{
+			[]token{
 				{
-					Type:  TokenFixedPointNumberLiteral,
-					Value: "0.1",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+					Token: Token{
+						Type: TokenFixedPointNumberLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
 					},
+					Source: "0.1",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
-						EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+						},
 					},
 				},
 			},
@@ -1733,28 +2178,35 @@ func TestLexFixedPoint(t *testing.T) {
 	t.Run("missing fractional digits", func(t *testing.T) {
 		testLex(t,
 			"0.",
-			[]Token{
+			[]token{
 				{
-					Type:  TokenError,
-					Value: errors.New("missing fractional digits"),
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+					Token: Token{
+						Type:         TokenError,
+						SpaceOrError: errors.New("missing fractional digits"),
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
 					},
+					Source: ".",
 				},
 				{
-					Type:  TokenFixedPointNumberLiteral,
-					Value: "0.",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+					Token: Token{
+						Type: TokenFixedPointNumberLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
 					},
+					Source: "0.",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-						EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
 					},
 				},
 			},
@@ -1770,50 +2222,60 @@ func TestLexLineComment(t *testing.T) {
 
 		testLex(t,
 			` foo // bar `,
-			[]Token{
+			[]token{
 				{
-					Type: TokenSpace,
-					Value: Space{
-						String:          " ",
-						ContainsNewline: false,
+					Token: Token{
+						Type: TokenSpace,
+						SpaceOrError: Space{
+							ContainsNewline: false,
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+						},
 					},
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
-					},
+					Source: " ",
 				},
 				{
-					Type:  TokenIdentifier,
-					Value: "foo",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-						EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+					Token: Token{
+						Type: TokenIdentifier,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+						},
 					},
+					Source: "foo",
 				},
 				{
-					Type: TokenSpace,
-					Value: Space{
-						String:          " ",
-						ContainsNewline: false,
+					Token: Token{
+						Type: TokenSpace,
+						SpaceOrError: Space{
+							ContainsNewline: false,
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+						},
 					},
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
-						EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
-					},
+					Source: " ",
 				},
 				{
-					Type:  TokenLineComment,
-					Value: "// bar ",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
-						EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
+					Token: Token{
+						Type: TokenLineComment,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+							EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
+						},
 					},
+					Source: "// bar ",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 12, Offset: 12},
-						EndPos:   ast.Position{Line: 1, Column: 12, Offset: 12},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 12, Offset: 12},
+							EndPos:   ast.Position{Line: 1, Column: 12, Offset: 12},
+						},
 					},
 				},
 			},
@@ -1825,69 +2287,83 @@ func TestLexLineComment(t *testing.T) {
 		testLex(
 			t,
 			" foo // bar \n baz",
-			[]Token{
+			[]token{
 				{
-					Type: TokenSpace,
-					Value: Space{
-						String:          " ",
-						ContainsNewline: false,
+					Token: Token{
+						Type: TokenSpace,
+						SpaceOrError: Space{
+							ContainsNewline: false,
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+						},
 					},
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-						EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
-					},
+					Source: " ",
 				},
 				{
-					Type:  TokenIdentifier,
-					Value: "foo",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-						EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+					Token: Token{
+						Type: TokenIdentifier,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+						},
 					},
+					Source: "foo",
 				},
 				{
-					Type: TokenSpace,
-					Value: Space{
-						String:          " ",
-						ContainsNewline: false,
+					Token: Token{
+						Type: TokenSpace,
+						SpaceOrError: Space{
+							ContainsNewline: false,
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+						},
 					},
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
-						EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
-					},
+					Source: " ",
 				},
 				{
-					Type:  TokenLineComment,
-					Value: "// bar ",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
-						EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
+					Token: Token{
+						Type: TokenLineComment,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+							EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
+						},
 					},
+					Source: "// bar ",
 				},
 				{
-					Type: TokenSpace,
-					Value: Space{
-						String:          "\n ",
-						ContainsNewline: true,
+					Token: Token{
+						Type: TokenSpace,
+						SpaceOrError: Space{
+							ContainsNewline: true,
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 12, Offset: 12},
+							EndPos:   ast.Position{Line: 2, Column: 0, Offset: 13},
+						},
 					},
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 12, Offset: 12},
-						EndPos:   ast.Position{Line: 2, Column: 0, Offset: 13},
-					},
+					Source: "\n ",
 				},
 				{
-					Type:  TokenIdentifier,
-					Value: "baz",
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 2, Column: 1, Offset: 14},
-						EndPos:   ast.Position{Line: 2, Column: 3, Offset: 16},
+					Token: Token{
+						Type: TokenIdentifier,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 2, Column: 1, Offset: 14},
+							EndPos:   ast.Position{Line: 2, Column: 3, Offset: 16},
+						},
 					},
+					Source: "baz",
 				},
 				{
-					Type: TokenEOF,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 2, Column: 4, Offset: 17},
-						EndPos:   ast.Position{Line: 2, Column: 4, Offset: 17},
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 2, Column: 4, Offset: 17},
+							EndPos:   ast.Position{Line: 2, Column: 4, Offset: 17},
+						},
 					},
 				},
 			},
@@ -1899,14 +2375,13 @@ func TestRevert(t *testing.T) {
 
 	t.Parallel()
 
-	tokenStream := Lex("1 2 3", nil)
+	tokenStream := Lex([]byte("1 2 3"), nil)
 
 	// Assert all tokens
 
 	assert.Equal(t,
 		Token{
-			Type:  TokenDecimalIntegerLiteral,
-			Value: "1",
+			Type: TokenDecimalIntegerLiteral,
 			Range: ast.Range{
 				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 				EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -1917,8 +2392,10 @@ func TestRevert(t *testing.T) {
 
 	assert.Equal(t,
 		Token{
-			Type:  TokenSpace,
-			Value: Space{String: " "},
+			Type: TokenSpace,
+			SpaceOrError: Space{
+				ContainsNewline: false,
+			},
 			Range: ast.Range{
 				StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
 				EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
@@ -1931,8 +2408,7 @@ func TestRevert(t *testing.T) {
 
 	assert.Equal(t,
 		Token{
-			Type:  TokenDecimalIntegerLiteral,
-			Value: "2",
+			Type: TokenDecimalIntegerLiteral,
 			Range: ast.Range{
 				StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
 				EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
@@ -1943,8 +2419,10 @@ func TestRevert(t *testing.T) {
 
 	assert.Equal(t,
 		Token{
-			Type:  TokenSpace,
-			Value: Space{String: " "},
+			Type: TokenSpace,
+			SpaceOrError: Space{
+				ContainsNewline: false,
+			},
 			Range: ast.Range{
 				StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
 				EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
@@ -1955,8 +2433,7 @@ func TestRevert(t *testing.T) {
 
 	assert.Equal(t,
 		Token{
-			Type:  TokenDecimalIntegerLiteral,
-			Value: "3",
+			Type: TokenDecimalIntegerLiteral,
 			Range: ast.Range{
 				StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
 				EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
@@ -1998,8 +2475,7 @@ func TestRevert(t *testing.T) {
 
 	assert.Equal(t,
 		Token{
-			Type:  TokenDecimalIntegerLiteral,
-			Value: "2",
+			Type: TokenDecimalIntegerLiteral,
 			Range: ast.Range{
 				StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
 				EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
@@ -2010,8 +2486,10 @@ func TestRevert(t *testing.T) {
 
 	assert.Equal(t,
 		Token{
-			Type:  TokenSpace,
-			Value: Space{String: " "},
+			Type: TokenSpace,
+			SpaceOrError: Space{
+				ContainsNewline: false,
+			},
 			Range: ast.Range{
 				StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
 				EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
@@ -2022,8 +2500,7 @@ func TestRevert(t *testing.T) {
 
 	assert.Equal(t,
 		Token{
-			Type:  TokenDecimalIntegerLiteral,
-			Value: "3",
+			Type: TokenDecimalIntegerLiteral,
 			Range: ast.Range{
 				StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
 				EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
@@ -2063,14 +2540,13 @@ func TestEOFsAfterError(t *testing.T) {
 
 	t.Parallel()
 
-	tokenStream := Lex(`1 ''`, nil)
+	tokenStream := Lex([]byte(`1 ''`), nil)
 
 	// Assert all tokens
 
 	assert.Equal(t,
 		Token{
-			Type:  TokenDecimalIntegerLiteral,
-			Value: "1",
+			Type: TokenDecimalIntegerLiteral,
 			Range: ast.Range{
 				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 				EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -2081,8 +2557,10 @@ func TestEOFsAfterError(t *testing.T) {
 
 	assert.Equal(t,
 		Token{
-			Type:  TokenSpace,
-			Value: Space{String: " "},
+			Type: TokenSpace,
+			SpaceOrError: Space{
+				ContainsNewline: false,
+			},
 			Range: ast.Range{
 				StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
 				EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
@@ -2093,8 +2571,8 @@ func TestEOFsAfterError(t *testing.T) {
 
 	assert.Equal(t,
 		Token{
-			Type:  TokenError,
-			Value: errors.New(`unrecognized character: U+0027 '''`),
+			Type:         TokenError,
+			SpaceOrError: errors.New(`unrecognized character: U+0027 '''`),
 			Range: ast.Range{
 				StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
 				EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
@@ -2125,7 +2603,7 @@ func TestEOFsAfterEmptyInput(t *testing.T) {
 
 	t.Parallel()
 
-	tokenStream := Lex(``, nil)
+	tokenStream := Lex(nil, nil)
 
 	// Assert EOFs keep on being returned for Next()
 	// at the end of the stream
@@ -2159,7 +2637,7 @@ func TestLimit(t *testing.T) {
 	assert.PanicsWithValue(t,
 		TokenLimitReachedError{},
 		func() {
-			_ = Lex(code, nil)
+			_ = Lex([]byte(code), nil)
 		},
 	)
 }

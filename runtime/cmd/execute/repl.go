@@ -42,7 +42,7 @@ func RunREPL() {
 	errorPrettyPrinter := pretty.NewErrorPrettyPrinter(os.Stderr, true)
 
 	repl, err := runtime.NewREPL(
-		func(err error, location common.Location, codes map[common.Location]string) {
+		func(err error, location common.Location, codes map[common.Location][]byte) {
 			printErr := errorPrettyPrinter.PrettyPrintError(err, location, codes)
 			if printErr != nil {
 				panic(printErr)
@@ -77,7 +77,7 @@ func RunREPL() {
 
 		code += line + "\n"
 
-		inputIsComplete := repl.Accept(code)
+		inputIsComplete := repl.Accept([]byte(code))
 		if !inputIsComplete {
 			lineIsContinuation = true
 			return

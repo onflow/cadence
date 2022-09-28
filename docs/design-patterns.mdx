@@ -117,11 +117,19 @@ See [Script-Accessible public field/function](#script-accessible-public-fieldfun
 
 ```cadence
 pub contract AContract {
+    pub let BResourceStoragePath: StoragePath
+    pub let BResourcePublicPath: PublicPath
+    
+    init() {
+        self.BResourceStoragePath = /storage/BResource
+        self.BResourcePublicPath = /public/BResource
+    }
 
     // Resource definition
     pub resource BResource {
         pub var c: UInt64
         pub var d: String
+
 
         // Generate a struct with the same fields
         // to return when a script wants to see the fields of the resource
@@ -149,11 +157,25 @@ pub contract AContract {
     }
 }
 ...
+// Transaction
+import AContract from 0xAContract
+
+transaction {
+        prepare(acct: AuthAccount) {
+            //...
+            acct.link<&AContract.BResource>(AContract.BResourcePublicPath, target: AContract.BResourceStoragePath)
+        }
+}
+// Script
 import AContract from 0xAContract
 
 // Return the struct with a script
-pub fun main(): AContract.BReportStruct {
-    let b: AContract.BResource // Borrow the resource
+pub fun main(account: Address): AContract.BReportStruct {
+    // borrow the resource
+    let b = getAccount(account)
+        .getCapability(AContract.BResourcePublicPath)
+        .borrow<&AContract.BResource>()
+    // return the struct
     return b.generateReport()
 }
 ```

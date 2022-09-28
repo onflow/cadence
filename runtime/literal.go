@@ -56,10 +56,12 @@ func ParseLiteral(
 	cadence.Value,
 	error,
 ) {
-	expression, errs := parser.ParseExpression(literal, inter)
+	code := []byte(literal)
+
+	expression, errs := parser.ParseExpression(code, inter)
 	if len(errs) > 0 {
 		return nil, parser.Error{
-			Code:   literal,
+			Code:   code,
 			Errors: errs,
 		}
 	}
@@ -81,7 +83,8 @@ func ParseLiteralArgumentList(
 	[]cadence.Value,
 	error,
 ) {
-	arguments, errs := parser.ParseArgumentList(argumentList, inter)
+	code := []byte(argumentList)
+	arguments, errs := parser.ParseArgumentList(code, inter)
 	if len(errs) > 0 {
 		return nil, parser.Error{
 			Errors: errs,

@@ -137,7 +137,7 @@ There are three kinds of fields:
 In initializers, the special constant `self` refers to the composite value
 that is to be initialized.
 
-Field types must be storable. Non-storable types are:
+If a composite type is to be stored, all its field types must be storable. Non-storable types are:
 
 - Functions
 - [Accounts (`AuthAccount` / `PublicAccount`)](accounts)

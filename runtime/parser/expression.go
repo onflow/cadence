@@ -348,18 +348,12 @@ func init() {
 		operation:        ast.OperationMod,
 	})
 
-	defineCastingExpression()
+	defineIdentifierLeftDenotations()
 
 	defineExpr(literalExpr{
 		tokenType: lexer.TokenBinaryIntegerLiteral,
 		nullDenotation: func(p *parser, token lexer.Token) (ast.Expression, error) {
-			literal, ok := token.Value.(string)
-			if !ok {
-				return nil, p.syntaxError(
-					"value for token %s was not a string",
-					lexer.TokenBinaryIntegerLiteral,
-				)
-			}
+			literal := p.tokenSource(token)
 			return parseIntegerLiteral(
 				p,
 				literal,
@@ -373,13 +367,7 @@ func init() {
 	defineExpr(literalExpr{
 		tokenType: lexer.TokenOctalIntegerLiteral,
 		nullDenotation: func(p *parser, token lexer.Token) (ast.Expression, error) {
-			literal, ok := token.Value.(string)
-			if !ok {
-				return nil, p.syntaxError(
-					"value for token %s was not a string",
-					lexer.TokenOctalIntegerLiteral,
-				)
-			}
+			literal := p.tokenSource(token)
 			return parseIntegerLiteral(
 				p,
 				literal,
@@ -393,13 +381,7 @@ func init() {
 	defineExpr(literalExpr{
 		tokenType: lexer.TokenDecimalIntegerLiteral,
 		nullDenotation: func(p *parser, token lexer.Token) (ast.Expression, error) {
-			literal, ok := token.Value.(string)
-			if !ok {
-				return nil, p.syntaxError(
-					"value for token %s was not a string",
-					lexer.TokenDecimalIntegerLiteral,
-				)
-			}
+			literal := p.tokenSource(token)
 			return parseIntegerLiteral(
 				p,
 				literal,
@@ -413,13 +395,7 @@ func init() {
 	defineExpr(literalExpr{
 		tokenType: lexer.TokenHexadecimalIntegerLiteral,
 		nullDenotation: func(p *parser, token lexer.Token) (ast.Expression, error) {
-			literal, ok := token.Value.(string)
-			if !ok {
-				return nil, p.syntaxError(
-					"value for token %s was not a string",
-					lexer.TokenHexadecimalIntegerLiteral,
-				)
-			}
+			literal := p.tokenSource(token)
 			return parseIntegerLiteral(
 				p,
 				literal,
@@ -433,13 +409,7 @@ func init() {
 	defineExpr(literalExpr{
 		tokenType: lexer.TokenUnknownBaseIntegerLiteral,
 		nullDenotation: func(p *parser, token lexer.Token) (ast.Expression, error) {
-			literal, ok := token.Value.(string)
-			if !ok {
-				return nil, p.syntaxError(
-					"value for token %s was not a string",
-					lexer.TokenUnknownBaseIntegerLiteral,
-				)
-			}
+			literal := p.tokenSource(token)
 			return parseIntegerLiteral(
 				p,
 				literal,
@@ -453,9 +423,10 @@ func init() {
 	defineExpr(literalExpr{
 		tokenType: lexer.TokenFixedPointNumberLiteral,
 		nullDenotation: func(p *parser, token lexer.Token) (ast.Expression, error) {
+			literal := p.tokenSource(token)
 			return parseFixedPointLiteral(
 				p,
-				token.Value.(string),
+				literal,
 				token.Range,
 			), nil
 		},
@@ -464,7 +435,8 @@ func init() {
 	defineExpr(literalExpr{
 		tokenType: lexer.TokenString,
 		nullDenotation: func(p *parser, token lexer.Token) (ast.Expression, error) {
-			parsedString := parseStringLiteral(p, token.Value.(string))
+			literal := p.tokenSource(token)
+			parsedString := parseStringLiteral(p, literal)
 			return ast.NewStringExpression(
 				p.memoryGauge,
 				parsedString,
@@ -820,7 +792,7 @@ func defineIdentifierExpression() {
 	defineExpr(literalExpr{
 		tokenType: lexer.TokenIdentifier,
 		nullDenotation: func(p *parser, token lexer.Token) (ast.Expression, error) {
-			switch token.Value {
+			switch string(p.tokenSource(token)) {
 			case keywordTrue:
 				return ast.NewBoolExpression(p.memoryGauge, true, token.Range), nil
 
@@ -846,8 +818,11 @@ func defineIdentifierExpression() {
 				), nil
 
 			case keywordView:
-				if p.current.Value != keywordFun {
-					return nil, p.syntaxError("expected fun keyword, but got %s", p.current.Value)
+				if !p.mustToken(p.current, lexer.TokenIdentifier, keywordFun) {
+					return nil, p.syntaxError(
+						"expected fun keyword, but got %s",
+						string(p.tokenSource(p.current)),
+					)
 				}
 				p.next()
 				p.skipSpaceAndComments(true)
@@ -883,13 +858,16 @@ func parseFunctionExpression(p *parser, token lexer.Token, purity ast.FunctionPu
 	), nil
 }
 
-func defineCastingExpression() {
+func defineIdentifierLeftDenotations() {
 
 	setExprIdentifierLeftBindingPower(keywordAs, exprLeftBindingPowerCasting)
 	setExprLeftDenotation(
 		lexer.TokenIdentifier,
 		func(parser *parser, t lexer.Token, left ast.Expression) (ast.Expression, error) {
-			switch t.Value.(string) {
+			// NOTE: switch statement with just one case instead of if,
+			// as this function is called for *any identifier left denotation ("postfix keyword"),
+			// not just for `as`, it might be extended with more cases (keywords) in the future
+			switch string(parser.tokenSource(t)) {
 			case keywordAs:
 				right, err := parseTypeAnnotation(parser)
 				if err != nil {
@@ -903,6 +881,7 @@ func defineCastingExpression() {
 					right,
 					nil,
 				), nil
+
 			default:
 				panic(errors.NewUnreachableError())
 			}
@@ -1503,14 +1482,8 @@ func exprLeftBindingPower(p *parser) (int, error) {
 	token := p.current
 	tokenType := token.Type
 	if tokenType == lexer.TokenIdentifier {
-		identifier, ok := token.Value.(string)
-		if !ok {
-			return 0, p.syntaxError(
-				"value for token %s was not a string",
-				tokenType,
-			)
-		}
-		return exprIdentifierLeftBindingPowers[identifier], nil
+		identifier := p.tokenSource(token)
+		return exprIdentifierLeftBindingPowers[string(identifier)], nil
 	}
 	return exprLeftBindingPowers[tokenType], nil
 }
@@ -1533,7 +1506,7 @@ func applyExprLeftDenotation(p *parser, token lexer.Token, left ast.Expression) 
 }
 
 // parseStringLiteral parses a whole string literal, including start and end quotes
-func parseStringLiteral(p *parser, literal string) (result string) {
+func parseStringLiteral(p *parser, literal []byte) (result string) {
 	length := len(literal)
 	if length == 0 {
 		p.reportSyntaxError("missing start of string literal: expected '\"'")
@@ -1571,7 +1544,7 @@ func parseStringLiteral(p *parser, literal string) (result string) {
 }
 
 // parseStringLiteralContent parses the string literalExpr contents, excluding start and end quotes
-func parseStringLiteralContent(p *parser, s string) (result string) {
+func parseStringLiteralContent(p *parser, s []byte) (result string) {
 
 	var builder strings.Builder
 	defer func() {
@@ -1592,7 +1565,7 @@ func parseStringLiteralContent(p *parser, s string) (result string) {
 		}
 
 		var width int
-		r, width = utf8.DecodeRuneInString(s[index:])
+		r, width = utf8.DecodeRune(s[index:])
 		index += width
 
 		atEnd = index >= length
@@ -1702,7 +1675,7 @@ func parseHex(r rune) rune {
 	return -1
 }
 
-func parseIntegerLiteral(p *parser, literal, text string, kind IntegerLiteralKind, tokenRange ast.Range) *ast.IntegerExpression {
+func parseIntegerLiteral(p *parser, literal, text []byte, kind IntegerLiteralKind, tokenRange ast.Range) *ast.IntegerExpression {
 
 	report := func(invalidKind InvalidNumberLiteralKind) {
 		p.report(
@@ -1710,24 +1683,26 @@ func parseIntegerLiteral(p *parser, literal, text string, kind IntegerLiteralKin
 				IntegerLiteralKind:        kind,
 				InvalidIntegerLiteralKind: invalidKind,
 				// NOTE: not using text, because it has the base-prefix stripped
-				Literal: literal,
+				Literal: string(literal),
 				Range:   tokenRange,
 			},
 		)
 	}
 
-	// check literal has no leading underscore
+	// TODO: improve
+	s := string(text)
 
-	if strings.HasPrefix(text, "_") {
+	// check literal has no leading underscore
+	if strings.HasPrefix(s, "_") {
 		report(InvalidNumberLiteralKindLeadingUnderscore)
 	}
 
 	// check literal has no trailing underscore
-	if strings.HasSuffix(text, "_") {
+	if strings.HasSuffix(s, "_") {
 		report(InvalidNumberLiteralKindTrailingUnderscore)
 	}
 
-	withoutUnderscores := strings.ReplaceAll(text, "_", "")
+	withoutUnderscores := strings.ReplaceAll(s, "_", "")
 
 	var value *big.Int
 	var base int
@@ -1778,8 +1753,9 @@ func parseFixedPointPart(gauge common.MemoryGauge, part string) (integer *big.In
 	return integer, scale
 }
 
-func parseFixedPointLiteral(p *parser, literal string, tokenRange ast.Range) *ast.FixedPointExpression {
-	parts := strings.Split(literal, ".")
+func parseFixedPointLiteral(p *parser, literal []byte, tokenRange ast.Range) *ast.FixedPointExpression {
+	// TODO: improve
+	parts := strings.Split(string(literal), ".")
 	integer, _ := parseFixedPointPart(p.memoryGauge, parts[0])
 	fractional, scale := parseFixedPointPart(p.memoryGauge, parts[1])
 

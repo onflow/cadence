@@ -28,7 +28,7 @@ import (
 
 type Program struct {
 	Location    common.Location
-	Code        string
+	Code        []byte
 	Program     *ast.Program
 	Elaboration *sema.Elaboration
 }

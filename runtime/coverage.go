@@ -18,7 +18,11 @@
 
 package runtime
 
-import "github.com/onflow/cadence/runtime/common"
+import (
+	"encoding/json"
+
+	"github.com/onflow/cadence/runtime/common"
+)
 
 // LocationCoverage records coverage information for a location
 //
@@ -39,21 +43,38 @@ func NewLocationCoverage() *LocationCoverage {
 // CoverageReport is a collection of coverage per location
 //
 type CoverageReport struct {
-	Coverage map[common.LocationID]*LocationCoverage `json:"coverage"`
+	Coverage map[common.Location]*LocationCoverage `json:"-"`
 }
 
 func (r *CoverageReport) AddLineHit(location Location, line int) {
-	locationID := location.ID()
-	locationCoverage := r.Coverage[locationID]
+	locationCoverage := r.Coverage[location]
 	if locationCoverage == nil {
 		locationCoverage = NewLocationCoverage()
-		r.Coverage[locationID] = locationCoverage
+		r.Coverage[location] = locationCoverage
 	}
 	locationCoverage.AddLineHit(line)
 }
 
 func NewCoverageReport() *CoverageReport {
 	return &CoverageReport{
-		Coverage: map[common.LocationID]*LocationCoverage{},
+		Coverage: map[common.Location]*LocationCoverage{},
 	}
+}
+
+func (r *CoverageReport) MarshalJSON() ([]byte, error) {
+	type Alias CoverageReport
+
+	coverage := make(map[string]*LocationCoverage, len(r.Coverage))
+	for location, locationCoverage := range r.Coverage { // nolint:maprangecheck
+		typeID := location.TypeID(nil, "")
+		locationID := typeID[:len(typeID)-1]
+		coverage[string(locationID)] = locationCoverage
+	}
+	return json.Marshal(&struct {
+		Coverage map[string]*LocationCoverage `json:"coverage"`
+		*Alias
+	}{
+		Coverage: coverage,
+		Alias:    (*Alias)(r),
+	})
 }
