@@ -19,8 +19,6 @@
 package parser
 
 import (
-	"fmt"
-
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/parser/lexer"
@@ -55,7 +53,7 @@ var typeMetaLeftDenotations [lexer.TokenMax]typeMetaLeftDenotationFunc
 func setTypeNullDenotation(tokenType lexer.TokenType, nullDenotation typeNullDenotationFunc) {
 	current := typeNullDenotations[tokenType]
 	if current != nil {
-		panic(fmt.Errorf(
+		panic(errors.NewUnexpectedError(
 			"type null denotation for token %s already exists",
 			tokenType,
 		))
@@ -74,7 +72,7 @@ func setTypeLeftBindingPower(tokenType lexer.TokenType, power int) {
 func setTypeLeftDenotation(tokenType lexer.TokenType, leftDenotation typeLeftDenotationFunc) {
 	current := typeLeftDenotations[tokenType]
 	if current != nil {
-		panic(fmt.Errorf(
+		panic(errors.NewUnexpectedError(
 			"type left denotation for token %s already exists",
 			tokenType,
 		))
@@ -85,7 +83,7 @@ func setTypeLeftDenotation(tokenType lexer.TokenType, leftDenotation typeLeftDen
 func setTypeMetaLeftDenotation(tokenType lexer.TokenType, metaLeftDenotation typeMetaLeftDenotationFunc) {
 	current := typeMetaLeftDenotations[tokenType]
 	if current != nil {
-		panic(fmt.Errorf(
+		panic(errors.NewUnexpectedError(
 			"type meta left denotation for token %s already exists",
 			tokenType,
 		))
