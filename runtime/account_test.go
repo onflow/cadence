@@ -71,6 +71,8 @@ func TestRuntimeAccountKeyConstructor(t *testing.T) {
 		},
 	)
 	require.Error(t, err)
+	_ = err.Error()
+
 	assert.Contains(t, err.Error(), "cannot find variable in this scope: `AccountKey`")
 }
 
@@ -109,6 +111,8 @@ func TestRuntimeStoreAccountAPITypes(t *testing.T) {
 		)
 
 		require.Error(t, err)
+		_ = err.Error()
+
 		assert.Contains(t, err.Error(), "expected `Storable`")
 	}
 }
@@ -952,6 +956,8 @@ func TestRuntimePublicKey(t *testing.T) {
 
 		_, err := executeScript(script, runtimeInterface)
 		require.Error(t, err)
+		_ = err.Error()
+
 		assert.Contains(t, err.Error(), "value of type `PublicKey` has no member `validate`")
 	})
 
@@ -990,6 +996,8 @@ func TestRuntimePublicKey(t *testing.T) {
 				assert.NoError(t, err)
 			} else {
 				assert.Nil(t, value)
+				_ = err.Error()
+
 				assert.ErrorAs(t, err, &errorToReturn)
 				assert.ErrorAs(t, err, &interpreter.InvalidPublicKeyError{})
 			}
@@ -1136,6 +1144,7 @@ func TestRuntimePublicKey(t *testing.T) {
 
 		_, err := executeScript(script, runtimeInterface)
 		require.Error(t, err)
+		_ = err.Error()
 
 		var checkerErr *sema.CheckerError
 		require.ErrorAs(t, err, &checkerErr)
@@ -1173,6 +1182,7 @@ func TestRuntimePublicKey(t *testing.T) {
 		_, err := executeScript(script, runtimeInterface)
 
 		require.Error(t, err)
+		_ = err.Error()
 
 		var checkerErr *sema.CheckerError
 		require.ErrorAs(t, err, &checkerErr)
@@ -1303,6 +1313,7 @@ func TestAuthAccountContracts(t *testing.T) {
 			},
 		)
 		require.Error(t, err)
+		_ = err.Error()
 
 		var checkerErr *sema.CheckerError
 		require.ErrorAs(t, err, &checkerErr)
@@ -1538,6 +1549,7 @@ func TestPublicAccountContracts(t *testing.T) {
 		)
 
 		require.Error(t, err)
+		_ = err.Error()
 
 		var checkerErr *sema.CheckerError
 		require.ErrorAs(t, err, &checkerErr)
@@ -1582,6 +1594,7 @@ func TestPublicAccountContracts(t *testing.T) {
 		)
 
 		require.Error(t, err)
+		_ = err.Error()
 
 		var checkerErr *sema.CheckerError
 		require.ErrorAs(t, err, &checkerErr)
@@ -1652,6 +1665,7 @@ func TestGetAuthAccount(t *testing.T) {
 		)
 
 		require.Error(t, err)
+		_ = err.Error()
 
 		var checkerErr *sema.CheckerError
 		require.ErrorAs(t, err, &checkerErr)
@@ -1685,6 +1699,7 @@ func TestGetAuthAccount(t *testing.T) {
 		)
 
 		require.Error(t, err)
+		_ = err.Error()
 
 		var checkerErr *sema.CheckerError
 		require.ErrorAs(t, err, &checkerErr)
@@ -1718,6 +1733,7 @@ func TestGetAuthAccount(t *testing.T) {
 		)
 
 		require.Error(t, err)
+		_ = err.Error()
 
 		var checkerErr *sema.CheckerError
 		require.ErrorAs(t, err, &checkerErr)
@@ -1758,6 +1774,7 @@ func TestGetAuthAccount(t *testing.T) {
 		)
 
 		require.Error(t, err)
+		_ = err.Error()
 
 		var checkerErr *sema.CheckerError
 		require.ErrorAs(t, err, &checkerErr)

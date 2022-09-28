@@ -46,6 +46,18 @@ func TestIdentifierLocation_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestIdentifierLocation_TypeID(t *testing.T) {
+
+	t.Parallel()
+
+	location := IdentifierLocation("foo")
+
+	assert.Equal(t,
+		TypeID("I.foo.Bar.Baz"),
+		location.TypeID(nil, "Bar.Baz"),
+	)
+}
+
 func TestDecodeIdentifierLocationTypeID(t *testing.T) {
 
 	t.Parallel()

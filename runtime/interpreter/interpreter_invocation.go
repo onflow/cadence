@@ -118,8 +118,8 @@ func (interpreter *Interpreter) invokeInterpretedFunction(
 	// Start a new activation record.
 	// Lexical scope: use the function declaration's activation record,
 	// not the current one (which would be dynamic scope)
-	interpreter.activations.PushNewWithParent(function.Activation)
-	interpreter.activations.Current().isFunction = true
+	current := interpreter.activations.PushNewWithParent(function.Activation)
+	current.IsFunction = true
 
 	interpreter.sharedState.callStack.Push(invocation)
 

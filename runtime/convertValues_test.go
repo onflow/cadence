@@ -511,7 +511,7 @@ func TestImportValue(t *testing.T) {
 
 			inter := newTestInterpreter(t)
 
-			actual, err := importValue(
+			actual, err := ImportValue(
 				inter,
 				interpreter.ReturnEmptyLocationRange,
 				tt.value,
@@ -1859,7 +1859,7 @@ func TestExportTypeValue(t *testing.T) {
           pub struct S: SI {}
 
         `
-		program, err := parser.ParseProgram(code, nil)
+		program, err := parser.ParseProgram([]byte(code), nil)
 		require.NoError(t, err)
 
 		checker, err := sema.NewChecker(
@@ -1957,7 +1957,7 @@ func TestExportCapabilityValue(t *testing.T) {
 		const code = `
           struct S {}
         `
-		program, err := parser.ParseProgram(code, nil)
+		program, err := parser.ParseProgram([]byte(code), nil)
 		require.NoError(t, err)
 
 		checker, err := sema.NewChecker(
@@ -2077,7 +2077,7 @@ func TestExportLinkValue(t *testing.T) {
 		const code = `
           struct S {}
         `
-		program, err := parser.ParseProgram(code, nil)
+		program, err := parser.ParseProgram([]byte(code), nil)
 		require.NoError(t, err)
 
 		checker, err := sema.NewChecker(
@@ -3145,7 +3145,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 
 		inter := newTestInterpreter(t)
 
-		actual, err := importValue(
+		actual, err := ImportValue(
 			inter,
 			interpreter.ReturnEmptyLocationRange,
 			value,
@@ -3215,7 +3215,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 
 		inter := newTestInterpreter(t)
 
-		actual, err := importValue(
+		actual, err := ImportValue(
 			inter,
 			interpreter.ReturnEmptyLocationRange,
 			value,
@@ -3259,7 +3259,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 
 		inter := newTestInterpreter(t)
 
-		actual, err := importValue(
+		actual, err := ImportValue(
 			inter,
 			interpreter.ReturnEmptyLocationRange,
 			value,
@@ -3348,7 +3348,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 
 		inter := newTestInterpreter(t)
 
-		actual, err := importValue(
+		actual, err := ImportValue(
 			inter,
 			interpreter.ReturnEmptyLocationRange,
 			value,
@@ -3434,7 +3434,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 
 		inter := newTestInterpreter(t)
 
-		actual, err := importValue(
+		actual, err := ImportValue(
 			inter,
 			interpreter.ReturnEmptyLocationRange,
 			value,
@@ -3497,7 +3497,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 
 		inter := newTestInterpreter(t)
 
-		actual, err := importValue(
+		actual, err := ImportValue(
 			inter,
 			interpreter.ReturnEmptyLocationRange,
 			value,
@@ -4838,7 +4838,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 
 		program.Elaboration.CompositeTypes[semaCompositeType.ID()] = semaCompositeType
 
-		actual, err := importValue(
+		actual, err := ImportValue(
 			inter,
 			interpreter.ReturnEmptyLocationRange,
 			externalCompositeValue,

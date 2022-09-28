@@ -911,7 +911,7 @@ func encodeFix64(v int64) string {
 	if negative {
 		fraction = -fraction
 		if integer == 0 {
-			builder.WriteRune('-')
+			builder.WriteByte('-')
 		}
 	}
 

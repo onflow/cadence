@@ -34,3 +34,31 @@ var BuiltinValues = []StandardLibraryValue{
 	//   (BLSVerifyPoPHandler, BLSAggregateSignaturesHandler, BLSAggregatePublicKeysHandler)
 	BLSContract,
 }
+
+type StandardLibraryHandler interface {
+	Logger
+	UnsafeRandomGenerator
+	BlockAtHeightProvider
+	CurrentBlockProvider
+	PublicAccountHandler
+	AccountCreator
+}
+
+func DefaultStandardLibraryValues(handler StandardLibraryHandler) []StandardLibraryValue {
+	return append(
+		BuiltinValues[:],
+		NewLogFunction(handler),
+		NewUnsafeRandomFunction(handler),
+		NewGetBlockFunction(handler),
+		NewGetCurrentBlockFunction(handler),
+		NewGetAccountFunction(handler),
+		NewAuthAccountConstructor(handler),
+	)
+}
+
+func DefaultScriptStandardLibraryValues(handler StandardLibraryHandler) []StandardLibraryValue {
+	return append(
+		DefaultStandardLibraryValues(handler),
+		NewGetAuthAccountFunction(handler),
+	)
+}

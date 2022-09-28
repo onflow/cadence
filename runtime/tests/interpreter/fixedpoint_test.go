@@ -327,6 +327,8 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 		`)
 
 		_, err := inter.Invoke("test")
+		require.Error(t, err)
+		_ = err.Error()
 
 		require.ErrorAs(t, err, &interpreter.UnderflowError{})
 	})
@@ -346,6 +348,8 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 		)
 
 		_, err := inter.Invoke("test")
+		require.Error(t, err)
+		_ = err.Error()
 
 		require.ErrorAs(t, err, &interpreter.OverflowError{})
 	})
@@ -370,6 +374,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 				_, err := inter.Invoke("test")
 				require.Error(t, err)
+				_ = err.Error()
 
 				require.IsType(t,
 					interpreter.Error{},
@@ -410,6 +415,8 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 				)
 
 				_, err := inter.Invoke("test")
+				require.Error(t, err)
+				_ = err.Error()
 
 				require.ErrorAs(t, err, &interpreter.OverflowError{})
 			})
@@ -446,6 +453,8 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 				)
 
 				_, err := inter.Invoke("test")
+				require.Error(t, err)
+				_ = err.Error()
 
 				require.ErrorAs(t, err, &interpreter.OverflowError{})
 			})
@@ -483,6 +492,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 				_, err := inter.Invoke("test")
 				require.Error(t, err)
+				_ = err.Error()
 
 				require.ErrorAs(t, err, &interpreter.OverflowError{})
 			})
@@ -520,6 +530,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 				_, err := inter.Invoke("test")
 				require.Error(t, err)
+				_ = err.Error()
 
 				require.ErrorAs(t, err, &interpreter.UnderflowError{})
 			})

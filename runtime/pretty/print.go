@@ -143,7 +143,11 @@ func (p ErrorPrettyPrinter) writeString(str string) {
 	}
 }
 
-func (p ErrorPrettyPrinter) PrettyPrintError(err error, location common.Location, codes map[common.Location]string) error {
+func (p ErrorPrettyPrinter) PrettyPrintError(
+	err error,
+	location common.Location,
+	codes map[common.Location][]byte,
+) error {
 
 	// writeString panics when the write to the writer fails, so recover those errors and return them.
 	// This way we don't need to if-err for every single writer write
@@ -207,7 +211,7 @@ func (p ErrorPrettyPrinter) PrettyPrintError(err error, location common.Location
 	return printError(err, location)
 }
 
-func (p ErrorPrettyPrinter) prettyPrintError(err error, location common.Location, code string) {
+func (p ErrorPrettyPrinter) prettyPrintError(err error, location common.Location, code []byte) {
 
 	prefix := ErrorPrefix
 	if secondaryError, ok := err.(errors.HasPrefix); ok {
@@ -241,11 +245,11 @@ func (p ErrorPrettyPrinter) prettyPrintError(err error, location common.Location
 func (p ErrorPrettyPrinter) writeCodeExcerpts(
 	excerpts []excerpt,
 	location common.Location,
-	code string,
+	code []byte,
 ) {
 	var lastLineNumber int
 
-	lines := strings.Split(code, "\n")
+	lines := strings.Split(string(code), "\n")
 
 	for i, excerpt := range excerpts {
 

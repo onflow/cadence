@@ -41,14 +41,14 @@ type Config struct {
 		location common.Location,
 		importingLocation common.Location,
 		importRange ast.Range,
-	) (string, error)
+	) ([]byte, error)
 }
 
 func NewSimpleConfig(
 	mode LoadMode,
-	codes map[common.Location]string,
+	codes map[common.Location][]byte,
 	contractNames map[common.Address][]string,
-	resolveAddressContracts func(common.Address) (contracts map[string]string, err error),
+	resolveAddressContracts func(common.Address) (contracts map[string][]byte, err error),
 ) *Config {
 
 	loadAddressContracts := func(address common.Address) error {
@@ -116,7 +116,7 @@ func NewSimpleConfig(
 			importingLocation common.Location,
 			importRange ast.Range,
 		) (
-			string,
+			[]byte,
 			error,
 		) {
 			repeat := true
@@ -127,14 +127,14 @@ func NewSimpleConfig(
 						if addressLocation, ok := location.(common.AddressLocation); ok {
 							err := loadAddressContracts(addressLocation.Address)
 							if err != nil {
-								return "", err
+								return nil, err
 							}
 							repeat = false
 							continue
 						}
 					}
 
-					return "", fmt.Errorf(
+					return nil, fmt.Errorf(
 						"import of unknown location: %s",
 						location,
 					)

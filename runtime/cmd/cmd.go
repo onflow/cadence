@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/onflow/cadence/runtime/activations"
+
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -31,7 +33,7 @@ import (
 	"github.com/onflow/cadence/runtime/stdlib"
 )
 
-func must(err error, location common.Location, codes map[common.Location]string) {
+func must(err error, location common.Location, codes map[common.Location][]byte) {
 	if err == nil {
 		return
 	}
@@ -43,22 +45,22 @@ func must(err error, location common.Location, codes map[common.Location]string)
 	os.Exit(1)
 }
 
-func mustClosure(location common.Location, codes map[common.Location]string) func(error) {
+func mustClosure(location common.Location, codes map[common.Location][]byte) func(error) {
 	return func(e error) {
 		must(e, location, codes)
 	}
 }
 
-func PrepareProgramFromFile(location common.StringLocation, codes map[common.Location]string) (*ast.Program, func(error)) {
-	codeBytes, err := os.ReadFile(string(location))
+func PrepareProgramFromFile(location common.StringLocation, codes map[common.Location][]byte) (*ast.Program, func(error)) {
+	code, err := os.ReadFile(string(location))
 
-	program, must := PrepareProgram(string(codeBytes), location, codes)
+	program, must := PrepareProgram(code, location, codes)
 	must(err)
 
 	return program, must
 }
 
-func PrepareProgram(code string, location common.Location, codes map[common.Location]string) (*ast.Program, func(error)) {
+func PrepareProgram(code []byte, location common.Location, codes map[common.Location][]byte) (*ast.Program, func(error)) {
 	must := mustClosure(location, codes)
 
 	program, err := parser.ParseProgram(code, nil)
@@ -70,11 +72,25 @@ func PrepareProgram(code string, location common.Location, codes map[common.Loca
 
 var checkers = map[common.Location]*sema.Checker{}
 
+type StandardOutputLogger struct{}
+
+func (s StandardOutputLogger) ProgramLog(message string) error {
+	fmt.Println(message)
+	return nil
+}
+
+var _ stdlib.Logger = StandardOutputLogger{}
+
 func DefaultCheckerConfig(
 	checkers map[common.Location]*sema.Checker,
-	codes map[common.Location]string,
+	codes map[common.Location][]byte,
 ) *sema.Config {
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.NewLogFunction(StandardOutputLogger{}))
+
 	return &sema.Config{
+		BaseValueActivation: baseValueActivation,
+		AccessCheckMode:     sema.AccessCheckModeStrict,
 		ImportHandler: func(
 			checker *sema.Checker,
 			importedLocation common.Location,
@@ -116,8 +132,8 @@ func DefaultCheckerConfig(
 func PrepareChecker(
 	program *ast.Program,
 	location common.Location,
-	codes map[common.Location]string,
-	memberAccountAccess map[common.LocationID]map[common.LocationID]struct{},
+	codes map[common.Location][]byte,
+	memberAccountAccess map[common.Location]map[common.Location]struct{},
 	must func(error),
 ) (*sema.Checker, func(error)) {
 
@@ -128,12 +144,12 @@ func PrepareChecker(
 			return false
 		}
 
-		targets, ok := memberAccountAccess[checker.Location.ID()]
+		targets, ok := memberAccountAccess[checker.Location]
 		if !ok {
 			return false
 		}
 
-		_, ok = targets[memberLocation.ID()]
+		_, ok = targets[memberLocation]
 		return ok
 	}
 
@@ -150,7 +166,7 @@ func PrepareChecker(
 
 func PrepareInterpreter(filename string, debugger *interpreter.Debugger) (*interpreter.Interpreter, *sema.Checker, func(error)) {
 
-	codes := map[common.Location]string{}
+	codes := map[common.Location][]byte{}
 
 	// do not need to meter this as it's a one-off overhead
 	location := common.NewStringLocation(nil, filename)
@@ -168,8 +184,12 @@ func PrepareInterpreter(filename string, debugger *interpreter.Debugger) (*inter
 	// NOTE: storage option must be provided *before* the predeclared values option,
 	// as predeclared values may rely on storage
 
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, stdlib.NewLogFunction(StandardOutputLogger{}))
+
 	config := &interpreter.Config{
-		Storage: storage,
+		BaseActivation: baseActivation,
+		Storage:        storage,
 		UUIDHandler: func() (uint64, error) {
 			defer func() { uuid++ }()
 			return uuid, nil

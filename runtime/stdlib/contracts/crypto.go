@@ -23,4 +23,4 @@ import (
 )
 
 //go:embed crypto.cdc
-var Crypto string
+var Crypto []byte

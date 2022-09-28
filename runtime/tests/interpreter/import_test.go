@@ -390,6 +390,7 @@ func TestInterpretResourceConstructionThroughIndirectImport(t *testing.T) {
 
 	_, err = inter.Invoke("test", rConstructor)
 	require.Error(t, err)
+	_ = err.Error()
 
 	var resourceConstructionError interpreter.ResourceConstructionError
 	require.ErrorAs(t, err, &resourceConstructionError)
