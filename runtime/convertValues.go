@@ -768,7 +768,7 @@ func ImportValue(
 ) (interpreter.Value, error) {
 	switch v := value.(type) {
 	case cadence.Void:
-		return interpreter.NewVoidValue(inter), nil
+		return interpreter.Void, nil
 	case cadence.Optional:
 		return importOptionalValue(
 			inter,

@@ -217,7 +217,7 @@ func TestInterpretDynamicCastingVoid(t *testing.T) {
 						AssertValuesEqual(
 							t,
 							inter,
-							interpreter.VoidValue{},
+							interpreter.Void,
 							inter.Globals["x"].GetValue(),
 						)
 
@@ -225,7 +225,7 @@ func TestInterpretDynamicCastingVoid(t *testing.T) {
 							t,
 							inter,
 							interpreter.NewUnmeteredSomeValueNonCopying(
-								interpreter.VoidValue{},
+								interpreter.Void,
 							),
 							inter.Globals["y"].GetValue(),
 						)

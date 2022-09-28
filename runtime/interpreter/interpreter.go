@@ -810,10 +810,10 @@ func (interpreter *Interpreter) visitFunctionBody(
 		if result, ok := result.(ReturnResult); ok {
 			returnValue = result.Value
 		} else {
-			returnValue = NewVoidValue(interpreter)
+			returnValue = Void
 		}
 	} else {
-		returnValue = NewVoidValue(interpreter)
+		returnValue = Void
 	}
 
 	// If there is a return type, declare the constant `result`.
@@ -3370,7 +3370,7 @@ func (interpreter *Interpreter) newStorageIterationFunction(addressValue Address
 			storageMap := interpreter.Config.Storage.GetStorageMap(address, domain.Identifier(), false)
 			if storageMap == nil {
 				// if nothing is stored, no iteration is required
-				return NewVoidValue(inter)
+				return Void
 			}
 			storageIterator := storageMap.Iterator(interpreter)
 
@@ -3417,7 +3417,7 @@ func (interpreter *Interpreter) newStorageIterationFunction(addressValue Address
 
 			}
 
-			return NewVoidValue(inter)
+			return Void
 		},
 		sema.AccountForEachFunctionType(pathType),
 	)
@@ -3471,7 +3471,7 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 
 			interpreter.writeStored(address, domain, identifier, value)
 
-			return NewVoidValue(invocation.Interpreter)
+			return Void
 		},
 		sema.AuthAccountTypeSaveFunctionType,
 	)
@@ -3767,7 +3767,7 @@ func (interpreter *Interpreter) authAccountUnlinkFunction(addressValue AddressVa
 
 			interpreter.writeStored(address, domain, identifier, nil)
 
-			return NewVoidValue(invocation.Interpreter)
+			return Void
 		},
 		sema.AuthAccountTypeUnlinkFunctionType,
 	)

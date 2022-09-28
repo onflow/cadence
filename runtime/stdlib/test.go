@@ -368,7 +368,7 @@ var testAssertFunction = interpreter.NewUnmeteredHostFunctionValue(
 			})
 		}
 
-		return interpreter.VoidValue{}
+		return interpreter.Void
 	},
 	testAssertFunctionType,
 )
@@ -468,7 +468,7 @@ var testExpectFunction = interpreter.NewUnmeteredHostFunctionValue(
 			panic(AssertionError{})
 		}
 
-		return interpreter.VoidValue{}
+		return interpreter.Void
 	},
 	testExpectFunctionType,
 )
@@ -1049,7 +1049,7 @@ func emulatorBackendAddTransactionFunction(testFramework TestFramework) *interpr
 				panic(err)
 			}
 
-			return interpreter.VoidValue{}
+			return interpreter.Void
 		},
 		emulatorBackendAddTransactionFunctionType,
 	)
@@ -1254,7 +1254,7 @@ func emulatorBackendCommitBlockFunction(testFramework TestFramework) *interprete
 				panic(err)
 			}
 
-			return interpreter.VoidValue{}
+			return interpreter.Void
 		},
 		emulatorBackendCommitBlockFunctionType,
 	)
@@ -1437,7 +1437,7 @@ func emulatorBackendUseConfigFunction(testFramework TestFramework) *interpreter.
 				Addresses: mapping,
 			})
 
-			return interpreter.VoidValue{}
+			return interpreter.Void
 		},
 		emulatorBackendUseConfigFunctionType,
 	)

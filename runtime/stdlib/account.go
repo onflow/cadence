@@ -469,7 +469,7 @@ func newAddPublicKeyFunction(
 				invocation.GetLocationRange,
 			)
 
-			return interpreter.VoidValue{}
+			return interpreter.Void
 		},
 		sema.AuthAccountTypeAddPublicKeyFunctionType,
 	)
@@ -524,7 +524,7 @@ func newRemovePublicKeyFunction(
 				invocation.GetLocationRange,
 			)
 
-			return interpreter.VoidValue{}
+			return interpreter.Void
 		},
 		sema.AuthAccountTypeRemovePublicKeyFunctionType,
 	)

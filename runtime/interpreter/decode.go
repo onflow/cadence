@@ -204,7 +204,7 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 			if err != nil {
 				return nil, err
 			}
-			storable = NewVoidValue(d.memoryGauge)
+			storable = VoidValue{}
 
 		case CBORTagStringValue:
 			storable, err = d.decodeStringValue()
