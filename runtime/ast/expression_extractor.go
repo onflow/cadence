@@ -172,7 +172,7 @@ type ExpressionExtraction struct {
 }
 
 // utility for expressions whose rewritten form is identical, i.e. nothing to rewrite
-func RewriteAsIs(expression Expression) ExpressionExtraction {
+func rewriteAsIs(expression Expression) ExpressionExtraction {
 	return ExpressionExtraction{
 		RewrittenExpression:  expression,
 		ExtractedExpressions: nil,
@@ -188,7 +188,7 @@ func (extractor *ExpressionExtractor) VisitVoidExpression(expression *VoidExpres
 }
 
 func (extractor *ExpressionExtractor) ExtractVoid(expression *VoidExpression) ExpressionExtraction {
-	return RewriteAsIs(expression)
+	return rewriteAsIs(expression)
 }
 
 func (extractor *ExpressionExtractor) VisitBoolExpression(expression *BoolExpression) ExpressionExtraction {
@@ -203,7 +203,7 @@ func (extractor *ExpressionExtractor) VisitBoolExpression(expression *BoolExpres
 }
 
 func (extractor *ExpressionExtractor) ExtractBool(expression *BoolExpression) ExpressionExtraction {
-	return RewriteAsIs(expression)
+	return rewriteAsIs(expression)
 }
 
 func (extractor *ExpressionExtractor) VisitNilExpression(expression *NilExpression) ExpressionExtraction {
@@ -218,7 +218,7 @@ func (extractor *ExpressionExtractor) VisitNilExpression(expression *NilExpressi
 }
 
 func (extractor *ExpressionExtractor) ExtractNil(expression *NilExpression) ExpressionExtraction {
-	return RewriteAsIs(expression)
+	return rewriteAsIs(expression)
 }
 
 func (extractor *ExpressionExtractor) VisitIntegerExpression(expression *IntegerExpression) ExpressionExtraction {
@@ -233,7 +233,7 @@ func (extractor *ExpressionExtractor) VisitIntegerExpression(expression *Integer
 }
 
 func (extractor *ExpressionExtractor) ExtractInteger(expression *IntegerExpression) ExpressionExtraction {
-	return RewriteAsIs(expression)
+	return rewriteAsIs(expression)
 }
 
 func (extractor *ExpressionExtractor) VisitFixedPointExpression(expression *FixedPointExpression) ExpressionExtraction {
@@ -248,7 +248,7 @@ func (extractor *ExpressionExtractor) VisitFixedPointExpression(expression *Fixe
 }
 
 func (extractor *ExpressionExtractor) ExtractFixedPoint(expression *FixedPointExpression) ExpressionExtraction {
-	return RewriteAsIs(expression)
+	return rewriteAsIs(expression)
 }
 
 func (extractor *ExpressionExtractor) VisitStringExpression(expression *StringExpression) ExpressionExtraction {
@@ -263,7 +263,7 @@ func (extractor *ExpressionExtractor) VisitStringExpression(expression *StringEx
 }
 
 func (extractor *ExpressionExtractor) ExtractString(expression *StringExpression) ExpressionExtraction {
-	return RewriteAsIs(expression)
+	return rewriteAsIs(expression)
 }
 
 func (extractor *ExpressionExtractor) VisitArrayExpression(expression *ArrayExpression) ExpressionExtraction {
@@ -376,7 +376,7 @@ func (extractor *ExpressionExtractor) VisitIdentifierExpression(expression *Iden
 }
 
 func (extractor *ExpressionExtractor) ExtractIdentifier(expression *IdentifierExpression) ExpressionExtraction {
-	return RewriteAsIs(expression)
+	return rewriteAsIs(expression)
 }
 
 func (extractor *ExpressionExtractor) VisitInvocationExpression(expression *InvocationExpression) ExpressionExtraction {
@@ -779,5 +779,5 @@ func (extractor *ExpressionExtractor) VisitPathExpression(expression *PathExpres
 }
 
 func (extractor *ExpressionExtractor) ExtractPath(expression *PathExpression) ExpressionExtraction {
-	return RewriteAsIs(expression)
+	return rewriteAsIs(expression)
 }

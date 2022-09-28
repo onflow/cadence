@@ -9575,26 +9575,52 @@ func TestInterpretInternalAssignment(t *testing.T) {
 func TestInterpretVoidReturn(t *testing.T) {
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
-		// implicit void return
-		fun emptyFunction() {
-			return
+	newTestcase := func(index int, returnType, returnValue string) (name, body string) {
+		var returnSnippet string
+		if returnType != "" {
+			returnSnippet = ": " + returnType
 		}
 
-		// explicit void return
-		fun alsoEmptyFunction(): Void {
-			return ()
-		}
+		name = fmt.Sprintf("testVoid%d", index)
+		body = fmt.Sprintf(
+			`fun %s() %s { return %s }`,
+			name,
+			returnSnippet,
+			returnValue,
+		)
+		return
+	}
 
+	typeNames := []string{"", "Void"}
+	valueNames := []string{"", "()"}
+
+	returnValues := []string{
+		"()",
+		"(fun(){})()",
+	}
+
+	codeBuilder := new(strings.Builder)
+	idx := 0
+
+	for _, typ := range typeNames {
+		for _, val := range valueNames {
+			name, body := newTestcase(idx, typ, val)
+
+			returnValues = append(returnValues, name+"()")
+			codeBuilder.WriteString(body)
+			codeBuilder.WriteRune('\n')
+
+			idx++
+		}
+	}
+
+	codeBuilder.WriteString(fmt.Sprintf(`
 		fun test(): [Void] {
-			return [ 
-				(),
-				(fun(){})(),
-			    emptyFunction(),
-				alsoEmptyFunction() 
-			]
+			return [%s]
 		}
-	`)
+	`, strings.Join(returnValues, ",")))
+
+	inter := parseCheckAndInterpret(t, codeBuilder.String())
 
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
@@ -9602,7 +9628,10 @@ func TestInterpretVoidReturn(t *testing.T) {
 	arrayVal, ok := value.(*interpreter.ArrayValue)
 	require.True(t, ok)
 
-	voidVal := interpreter.VoidValue{}
+	expected := make([]interpreter.Value, len(returnValues))
+	for i := 0; i < len(returnValues); i++ {
+		expected[i] = interpreter.VoidValue{}
+	}
 
 	AssertValuesEqual(
 		t,
@@ -9611,7 +9640,7 @@ func TestInterpretVoidReturn(t *testing.T) {
 			inter, interpreter.ReturnEmptyLocationRange,
 			interpreter.VariableSizedStaticType{Type: interpreter.PrimitiveStaticTypeVoid},
 			common.Address{},
-			voidVal, voidVal, voidVal, voidVal,
+			expected...,
 		),
 		arrayVal,
 	)
