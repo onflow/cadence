@@ -41,6 +41,7 @@ import (
 	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/tests/checker"
 	"github.com/onflow/cadence/runtime/tests/examples"
+	"github.com/onflow/cadence/runtime/tests/utils"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -9572,77 +9573,70 @@ func TestInterpretInternalAssignment(t *testing.T) {
 	)
 }
 
-func TestInterpretVoidReturn(t *testing.T) {
+func TestInterpretVoidReturn_(t *testing.T) {
 	t.Parallel()
 
-	newTestcase := func(index int, returnType, returnValue string) (name, body string) {
+	labelNamed := func(s string) string {
+		if s == "" {
+			return "unnamed"
+		}
+		return "named"
+	}
+
+	test := func(testName, returnType, returnValue string) {
 		var returnSnippet string
+
 		if returnType != "" {
 			returnSnippet = ": " + returnType
 		}
 
-		name = fmt.Sprintf("testVoid%d", index)
-		body = fmt.Sprintf(
-			`fun %s() %s { return %s }`,
-			name,
+		if returnValue != "" {
+		}
+
+		var name string
+		if testName == "" {
+			name = fmt.Sprintf("%s type, %s value", labelNamed(returnType), labelNamed(returnValue))
+		} else {
+			name = testName
+		}
+
+		code := fmt.Sprintf(
+			`fun test() %s { return %s }`,
 			returnSnippet,
 			returnValue,
 		)
-		return
+
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			inter := parseCheckAndInterpret(t, code)
+
+			value, err := inter.Invoke("test")
+			require.NoError(t, err)
+
+			utils.AssertValuesEqual(t, inter, &interpreter.VoidValue{}, value)
+		})
 	}
 
 	typeNames := []string{"", "Void"}
 	valueNames := []string{"", "()"}
 
-	returnValues := []string{
-		"()",
-		"(fun(){})()",
-	}
-
-	codeBuilder := new(strings.Builder)
-	idx := 0
-
 	for _, typ := range typeNames {
 		for _, val := range valueNames {
-			name, body := newTestcase(idx, typ, val)
-
-			returnValues = append(returnValues, name+"()")
-			codeBuilder.WriteString(body)
-			codeBuilder.WriteRune('\n')
-
-			idx++
+			test("", typ, val)
 		}
 	}
 
-	codeBuilder.WriteString(fmt.Sprintf(`
-		fun test(): [Void] {
-			return [%s]
-		}
-	`, strings.Join(returnValues, ",")))
-
-	inter := parseCheckAndInterpret(t, codeBuilder.String())
-
-	value, err := inter.Invoke("test")
-	require.NoError(t, err)
-
-	arrayVal, ok := value.(*interpreter.ArrayValue)
-	require.True(t, ok)
-
-	expected := make([]interpreter.Value, len(returnValues))
-	for i := 0; i < len(returnValues); i++ {
-		expected[i] = interpreter.VoidValue{}
-	}
-
-	AssertValuesEqual(
-		t,
-		inter,
-		interpreter.NewArrayValue(
-			inter, interpreter.ReturnEmptyLocationRange,
-			interpreter.VariableSizedStaticType{Type: interpreter.PrimitiveStaticTypeVoid},
-			common.Address{},
-			expected...,
-		),
-		arrayVal,
+	test("inline lambda expression", "", "fun(){}()")
+	test(
+		"inline inline lambda expression",
+		"Void",
+		`(fun(v: Void): Void {
+			let w = fun() { };
+			let x: Void = w();
+			let y: Void = ();
+			let z = v;
+			return z;
+		 })( () )`,
 	)
 }
 
