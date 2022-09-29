@@ -26,6 +26,7 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 //
@@ -290,6 +291,8 @@ func EncodeLocation(w io.Writer, location common.Location) (err error) {
 		return EncodeTransactionLocation(w, concreteType)
 	case common.REPLLocation:
 		return EncodeREPLLocation(w)
+	case stdlib.FlowLocation:
+		return EncodeFlowLocation(w)
 	case nil:
 		return EncodeNilLocation(w)
 	default:
@@ -369,6 +372,10 @@ func EncodeREPLLocation(w io.Writer) (err error) {
 	return EncodeLocationPrefix(w, common.REPLLocationPrefix)
 }
 
+func EncodeFlowLocation(w io.Writer) (err error) {
+	return EncodeLocationPrefix(w, stdlib.FlowLocationPrefix)
+}
+
 func DecodeLocation(r io.Reader, memoryGauge common.MemoryGauge) (location common.Location, err error) {
 	prefix, err := DecodeLocationPrefix(r)
 
@@ -385,6 +392,8 @@ func DecodeLocation(r io.Reader, memoryGauge common.MemoryGauge) (location commo
 		return DecodeTransactionLocation(r, memoryGauge)
 	case string(common.REPLLocationPrefix[0]):
 		location = common.REPLLocation{}
+	case string(stdlib.FlowLocationPrefix[0]):
+		location = stdlib.FlowLocation{}
 	case NilLocationPrefix:
 		return
 
