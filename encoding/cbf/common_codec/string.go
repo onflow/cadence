@@ -18,10 +18,24 @@
 
 package common_codec
 
-type CodecError string
+import "io"
 
-var _ error = CodecError("")
+func EncodeString(w io.Writer, s string) (err error) {
+	return EncodeBytes(w, []byte(s))
+}
 
-func (c CodecError) Error() string {
-	return string(c)
+func DecodeString(r io.Reader, maxSize int) (s string, err error) {
+	length, err := DecodeStringHeader(r, maxSize)
+	if err != nil {
+		return
+	}
+
+	return DecodeStringElements(r, length)
+}
+
+var DecodeStringHeader = DecodeBytesHeader
+
+func DecodeStringElements(r io.Reader, length int) (s string, err error) {
+	b, err := DecodeBytesElements(r, length)
+	return string(b), err // string(nil) casts to empty string
 }

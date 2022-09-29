@@ -18,10 +18,29 @@
 
 package common_codec
 
-type CodecError string
+import (
+	"io"
 
-var _ error = CodecError("")
+	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/runtime/common"
+)
 
-func (c CodecError) Error() string {
-	return string(c)
+func EncodeAddress[Address common.Address | cadence.Address](w io.Writer, a Address) (err error) {
+	_, err = w.Write(a[:])
+	return
+}
+
+func DecodeAddress(r io.Reader) (a common.Address, err error) {
+	bytes := make([]byte, common.AddressLength)
+
+	bytesRead, err := r.Read(bytes)
+	if err != nil {
+		return
+	}
+	if bytesRead != common.AddressLength {
+		err = CodecError("EOF when reading address")
+		return
+	}
+
+	return common.BytesToAddress(bytes)
 }

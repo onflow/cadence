@@ -16,12 +16,30 @@
  * limitations under the License.
  */
 
-package common_codec
+package cbf_codec
 
-type CodecError string
+import (
+	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/encoding/cbf/common_codec"
+)
 
-var _ error = CodecError("")
+func (e *Encoder) EncodeOptional(value cadence.Optional) (err error) {
+	isNil := value.Value == nil
+	err = common_codec.EncodeBool(&e.w, isNil)
+	if isNil || err != nil {
+		return
+	}
 
-func (c CodecError) Error() string {
-	return string(c)
+	return e.EncodeValue(value.Value)
+}
+
+func (d *Decoder) DecodeOptional() (value cadence.Optional, err error) {
+	isNil, err := d.DecodeBool()
+	if isNil || err != nil {
+		return
+	}
+
+	innerValue, err := d.DecodeValue()
+	value = cadence.NewMeteredOptional(d.memoryGauge, innerValue)
+	return
 }

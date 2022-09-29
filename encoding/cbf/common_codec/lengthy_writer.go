@@ -18,10 +18,25 @@
 
 package common_codec
 
-type CodecError string
+import "io"
 
-var _ error = CodecError("")
+// LengthyWriter records how many bytes were written to its wrapped io.Writer.
+// Includes the bytes written when an error is returned by the io.Writer, if non-zero.
+type LengthyWriter struct {
+	w      io.Writer
+	length int
+}
 
-func (c CodecError) Error() string {
-	return string(c)
+func NewLengthyWriter(w io.Writer) LengthyWriter {
+	return LengthyWriter{w: w}
+}
+
+func (l *LengthyWriter) Write(p []byte) (n int, err error) {
+	n, err = l.w.Write(p)
+	l.length += n
+	return
+}
+
+func (l *LengthyWriter) Len() int {
+	return l.length
 }

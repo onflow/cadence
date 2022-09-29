@@ -18,10 +18,25 @@
 
 package common_codec
 
-type CodecError string
+import "io"
 
-var _ error = CodecError("")
+// LocatedReader records how many bytes were read from its wrapped io.Reader.
+// Includes the bytes written when an error is returned by the io.Reader, if non-zero.
+type LocatedReader struct {
+	r        io.Reader
+	location int
+}
 
-func (c CodecError) Error() string {
-	return string(c)
+func NewLocatedReader(r io.Reader) LocatedReader {
+	return LocatedReader{r: r}
+}
+
+func (l *LocatedReader) Read(p []byte) (n int, err error) {
+	n, err = l.r.Read(p)
+	l.location += n
+	return
+}
+
+func (l *LocatedReader) Location() int {
+	return l.location
 }

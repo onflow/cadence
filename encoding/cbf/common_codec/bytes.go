@@ -18,10 +18,41 @@
 
 package common_codec
 
-type CodecError string
+import "io"
 
-var _ error = CodecError("")
+func EncodeBytes(w io.Writer, bytes []byte) (err error) {
+	err = EncodeLength(w, len(bytes))
+	if err != nil {
+		return
+	}
+	_, err = w.Write(bytes)
+	return
+}
 
-func (c CodecError) Error() string {
-	return string(c)
+func DecodeBytes(r io.Reader, maxSize int) (bytes []byte, err error) {
+	length, err := DecodeBytesHeader(r, maxSize)
+	if err != nil {
+		return
+	}
+
+	return DecodeBytesElements(r, length)
+}
+
+var DecodeBytesHeader = DecodeLength
+
+func DecodeBytesElements(r io.Reader, length int) (bytes []byte, err error) {
+
+	bytes = make([]byte, length)
+
+	bytesRead, err := r.Read(bytes)
+	if err != nil {
+		return
+	}
+
+	if bytesRead != length {
+		err = CodecError("EOF when reading bytes")
+		return
+	}
+
+	return
 }

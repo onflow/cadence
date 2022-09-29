@@ -18,10 +18,16 @@
 
 package common_codec
 
-type CodecError string
+import (
+	"encoding/binary"
+	"io"
+)
 
-var _ error = CodecError("")
+func EncodeNumber[T int8 | int16 | int32 | int64 | uint8 | uint16 | uint32 | uint64](w io.Writer, i T) (err error) {
+	return binary.Write(w, binary.BigEndian, i)
+}
 
-func (c CodecError) Error() string {
-	return string(c)
+func DecodeNumber[T int8 | int16 | int32 | int64 | uint8 | uint16 | uint32 | uint64](r io.Reader) (i T, err error) {
+	err = binary.Read(r, binary.BigEndian, &i)
+	return
 }

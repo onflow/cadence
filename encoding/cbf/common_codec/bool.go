@@ -18,10 +18,43 @@
 
 package common_codec
 
-type CodecError string
+import (
+	"fmt"
+	"io"
+)
 
-var _ error = CodecError("")
+type EncodedBool byte
 
-func (c CodecError) Error() string {
-	return string(c)
+const (
+	EncodedBoolUnknown EncodedBool = iota
+	EncodedBoolFalse
+	EncodedBoolTrue
+)
+
+func EncodeBool(w io.Writer, boolean bool) (err error) {
+	if boolean {
+		_, err = w.Write([]byte{byte(EncodedBoolTrue)})
+	} else {
+		_, err = w.Write([]byte{byte(EncodedBoolFalse)})
+	}
+
+	return
+}
+
+func DecodeBool(r io.Reader) (boolean bool, err error) {
+	b := make([]byte, 1)
+	_, err = r.Read(b)
+	if err != nil {
+		return
+	}
+
+	if EncodedBool(b[0]) == EncodedBoolTrue {
+		boolean = true
+	} else if EncodedBool(b[0]) == EncodedBoolFalse {
+		boolean = false
+	} else {
+		err = CodecError(fmt.Sprintf("invalid boolean value: %d", b[0]))
+	}
+
+	return
 }

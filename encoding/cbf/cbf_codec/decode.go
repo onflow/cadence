@@ -33,7 +33,6 @@ type Decoder struct {
 	r           common_codec.LocatedReader
 	buf         []byte
 	memoryGauge common.MemoryGauge
-	// TODO abi for cutting down on what needs to be transferred
 }
 
 // Decode returns a Cadence value decoded from its custom-encoded representation.
@@ -65,9 +64,6 @@ func NewDecoder(memoryGauge common.MemoryGauge, r io.Reader) *Decoder {
 	}
 }
 
-// TODO need a way to decode values with known type vs values with unknown type
-//      if type is known then no identifier is needed, such as for elements in constant sized array
-
 // DecodeValue reads custom-encoded bytes from the io.Reader and decodes them to a
 // Cadence value.
 //
@@ -93,4 +89,8 @@ func (d *Decoder) read(howManyBytes int) (b []byte, err error) {
 	b = make([]byte, howManyBytes)
 	_, err = d.r.Read(b)
 	return
+}
+
+func (d *Decoder) maxSize() int {
+	return 0xFFFF // TODO use the actual max
 }

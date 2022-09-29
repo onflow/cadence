@@ -16,12 +16,33 @@
  * limitations under the License.
  */
 
-package common_codec
+package cbf_codec
 
-type CodecError string
+import (
+	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/encoding/cbf/common_codec"
+)
 
-var _ error = CodecError("")
+func (e *Encoder) EncodePath(value cadence.Path) (err error) {
+	err = common_codec.EncodeString(&e.w, value.Domain)
+	if err != nil {
+		return
+	}
 
-func (c CodecError) Error() string {
-	return string(c)
+	return common_codec.EncodeString(&e.w, value.Identifier)
+}
+
+func (d *Decoder) DecodePath() (path cadence.Path, err error) {
+	domain, err := d.DecodeString()
+	if err != nil {
+		return
+	}
+
+	identifier, err := d.DecodeString()
+	if err != nil {
+		return
+	}
+
+	path = cadence.NewMeteredPath(d.memoryGauge, string(domain), string(identifier))
+	return
 }

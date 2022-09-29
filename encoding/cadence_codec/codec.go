@@ -36,9 +36,6 @@ func NewCadenceCodec(defaultEncoder encoding.Codec) CadenceCodec {
 	return CadenceCodec{Encoder: defaultEncoder}
 }
 
-// TODO Write functions for instantiating CadenceCodec with different Encoders.
-//      One for JSON and one or more for various CBF versions and capabilities.
-
 func (c CadenceCodec) Encode(value cadence.Value) ([]byte, error) {
 	return c.Encoder.Encode(value)
 }

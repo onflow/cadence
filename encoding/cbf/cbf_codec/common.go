@@ -27,7 +27,6 @@ const (
 	EncodedValueOptional
 	EncodedValueBool
 	EncodedValueString
-	EncodedValueBytes // NOTE: only used in tests so this might be removable
 	EncodedValueCharacter
 	EncodedValueAddress
 	EncodedValueInt
@@ -69,8 +68,6 @@ type EncodedType byte
 const (
 	EncodedTypeUnknown EncodedType = iota
 
-	// TODO classify these types, probably as simple, complex, or abstract
-
 	// Concrete Types
 
 	EncodedTypeVoid
@@ -78,7 +75,6 @@ const (
 	EncodedTypeOptional
 	EncodedTypeString
 	EncodedTypeCharacter
-	EncodedTypeBytes
 	EncodedTypeAddress
 	EncodedTypeInt
 	EncodedTypeInt8

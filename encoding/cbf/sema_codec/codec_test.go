@@ -185,7 +185,7 @@ func TestSemaCodecMiscTypes(t *testing.T) {
 				TypeBound: sema.Int32Type,
 				Optional:  true,
 			}},
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{byte(sema_codec.EncodedSemaGenericType)},
 				[]byte{0, 0, 0, byte(len(name))},
 				[]byte(name),
@@ -207,7 +207,7 @@ func TestSemaCodecMiscTypes(t *testing.T) {
 				TypeBound: nil,
 				Optional:  true,
 			}},
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{byte(sema_codec.EncodedSemaGenericType)},
 				[]byte{0, 0, 0, byte(len(name))},
 				[]byte(name),
@@ -269,7 +269,7 @@ func TestSemaCodecMiscTypes(t *testing.T) {
 		err := encoder.EncodeType(functionType)
 		require.NoError(t, err, "encoding error")
 
-		expected := common_codec.Concat(
+		expected := common_codec.Flatten(
 			[]byte{byte(sema_codec.EncodedSemaFunctionType)},
 
 			[]byte{byte(common_codec.EncodedBoolTrue)}, // isConstructor
@@ -375,7 +375,7 @@ func TestSemaCodecMiscTypes(t *testing.T) {
 				KeyType:   sema.StringType,
 				ValueType: sema.AnyStructType,
 			},
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{byte(sema_codec.EncodedSemaDictionaryType)},
 				[]byte{byte(sema_codec.EncodedSemaSimpleTypeStringType)},
 				[]byte{byte(sema_codec.EncodedSemaSimpleTypeAnyStructType)},
@@ -432,7 +432,7 @@ func TestSemaCodecMiscTypes(t *testing.T) {
 		err := encoder.EncodeType(transactionType)
 		require.NoError(t, err, "encoding error")
 
-		expected := common_codec.Concat(
+		expected := common_codec.Flatten(
 			[]byte{byte(sema_codec.EncodedSemaTransactionType)},
 			// members
 			[]byte{byte(common_codec.EncodedBoolFalse)},      // Members is not nil
@@ -539,12 +539,12 @@ func TestSemaCodecMiscTypes(t *testing.T) {
 		err := encoder.EncodeType(restrictedType)
 		require.NoError(t, err, "encoding error")
 
-		expected := common_codec.Concat(
+		expected := common_codec.Flatten(
 			[]byte{byte(sema_codec.EncodedSemaRestrictedType)},
 			[]byte{byte(sema_codec.EncodedSemaNumericTypeIntType)},
 			[]byte{byte(common_codec.EncodedBoolFalse)}, // array is not nil
 			[]byte{0, 0, 0, 1}, // array length
-			common_codec.Concat([]byte{'s'}, location[:]),
+			common_codec.Flatten([]byte{'s'}, location[:]),
 			[]byte{0, 0, 0, 6}, []byte("peaked"), // identifier
 			[]byte{byte(common.CompositeKindContract)},
 			[]byte{byte(common_codec.EncodedBoolTrue)},                  // members is nil
@@ -740,7 +740,7 @@ func TestSemaCodecInterfaceType(t *testing.T) {
 		err := encoder.EncodeType(interfaceType)
 		require.NoError(t, err, "encoding error")
 
-		expected := common_codec.Concat(
+		expected := common_codec.Flatten(
 			[]byte{byte(sema_codec.EncodedSemaInterfaceType)},
 
 			[]byte{common.TransactionLocationPrefix[0]},
@@ -1058,7 +1058,7 @@ func TestSemaCodecRecursiveType(t *testing.T) {
 		testRootEncodeDecode(
 			t,
 			parent,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{byte(sema_codec.EncodedSemaGenericType)},
 				[]byte{0, 0, 0, byte(len(parent.TypeParameter.Name))},
 				[]byte(parent.TypeParameter.Name),
@@ -1093,7 +1093,7 @@ func TestSemaCodecRecursiveType(t *testing.T) {
 		testRootEncodeDecode(
 			t,
 			f,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{byte(sema_codec.EncodedSemaFunctionType)},
 				[]byte{byte(common_codec.EncodedBoolFalse)}, // isConstructor
 				[]byte{byte(common_codec.EncodedBoolFalse)}, // TypeParameters is not nil
@@ -1120,7 +1120,7 @@ func TestSemaCodecRecursiveType(t *testing.T) {
 		testRootEncodeDecode(
 			t,
 			d,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{byte(sema_codec.EncodedSemaDictionaryType)},
 				[]byte{byte(sema_codec.EncodedSemaPointerType), 0, 0, 0, 1},
 				[]byte{byte(sema_codec.EncodedSemaPointerType), 0, 0, 0, 1},
@@ -1146,7 +1146,7 @@ func TestSemaCodecRecursiveType(t *testing.T) {
 		testRootEncodeDecode(
 			t,
 			tx,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{byte(sema_codec.EncodedSemaTransactionType)},
 				[]byte{byte(common_codec.EncodedBoolTrue)},  // Members is nil
 				[]byte{byte(common_codec.EncodedBoolTrue)},  // Fields is nil
@@ -1173,7 +1173,7 @@ func TestSemaCodecRecursiveType(t *testing.T) {
 		testRootEncodeDecode(
 			t,
 			r,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{byte(sema_codec.EncodedSemaRestrictedType)},
 				[]byte{byte(sema_codec.EncodedSemaPointerType), 0, 0, 0, 1}, // type is recursive
 				[]byte{byte(common_codec.EncodedBoolTrue)},                  // Restrictions is nil
@@ -1190,7 +1190,7 @@ func TestSemaCodecRecursiveType(t *testing.T) {
 		testRootEncodeDecode(
 			t,
 			c,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{byte(sema_codec.EncodedSemaConstantSizedType)},
 				[]byte{byte(sema_codec.EncodedSemaPointerType), 0, 0, 0, 1}, // type is recursive
 				[]byte{0, 0, 0, 0, 0, 0, 0, 0},
@@ -1207,7 +1207,7 @@ func TestSemaCodecRecursiveType(t *testing.T) {
 		testRootEncodeDecode(
 			t,
 			v,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{byte(sema_codec.EncodedSemaVariableSizedType)},
 				[]byte{byte(sema_codec.EncodedSemaPointerType), 0, 0, 0, 1}, // type is recursive
 			)...,
@@ -1223,7 +1223,7 @@ func TestSemaCodecRecursiveType(t *testing.T) {
 		testRootEncodeDecode(
 			t,
 			o,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{byte(sema_codec.EncodedSemaOptionalType)},
 				[]byte{byte(sema_codec.EncodedSemaPointerType), 0, 0, 0, 1}, // type is recursive
 			)...,
@@ -1239,7 +1239,7 @@ func TestSemaCodecRecursiveType(t *testing.T) {
 		testRootEncodeDecode(
 			t,
 			r,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{byte(sema_codec.EncodedSemaReferenceType)},
 				[]byte{byte(common_codec.EncodedBoolFalse)},
 				[]byte{byte(sema_codec.EncodedSemaPointerType), 0, 0, 0, 1}, // type is recursive
@@ -1256,7 +1256,7 @@ func TestSemaCodecRecursiveType(t *testing.T) {
 		testRootEncodeDecode(
 			t,
 			v,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{byte(sema_codec.EncodedSemaCapabilityType)},
 				[]byte{byte(sema_codec.EncodedSemaPointerType), 0, 0, 0, 1}, // type is recursive
 			)...,
@@ -1318,7 +1318,7 @@ func TestSemaCodecElaboration(t *testing.T) {
 			buffer,
 			encoder.EncodeElaboration,
 			decoder.DecodeElaboration,
-			common_codec.Concat(
+			common_codec.Flatten(
 				[]byte{0, 0, 0, 1},                 // length of CompositeTypes map
 				[]byte{0, 0, 0, byte(len(typeId))}, // TypeID aka map key
 				[]byte(typeId),
@@ -1374,7 +1374,7 @@ func TestSemaCodecElaboration(t *testing.T) {
 		err := encoder.EncodeElaboration(elaboration)
 		require.NoError(t, err, "encoding error")
 
-		expected := common_codec.Concat(
+		expected := common_codec.Flatten(
 			[]byte{0, 0, 0, 2},
 			[]byte{0, 0, 0, byte(len("Parent"))},
 			[]byte("Parent"),
@@ -1435,7 +1435,7 @@ func TestSemaCodecElaboration(t *testing.T) {
 		err := encoder.EncodeElaboration(elaboration)
 		require.NoError(t, err, "encoding error")
 
-		expected := common_codec.Concat(
+		expected := common_codec.Flatten(
 			[]byte{0, 0, 0, 2},
 			[]byte{0, 0, 0, byte(len("first"))},
 			[]byte("first"),
