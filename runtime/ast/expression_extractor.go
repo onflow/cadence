@@ -172,7 +172,7 @@ type ExpressionExtraction struct {
 }
 
 // utility for expressions whose rewritten form is identical, i.e. nothing to rewrite
-func rewriteAsIs(expression Expression) ExpressionExtraction {
+func rewriteExpressionAsIs(expression Expression) ExpressionExtraction {
 	return ExpressionExtraction{
 		RewrittenExpression:  expression,
 		ExtractedExpressions: nil,

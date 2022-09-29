@@ -9645,6 +9645,7 @@ func TestInterpretVoidReturn(t *testing.T) {
 		arrayVal,
 	)
 }
+
 func TestInterpretCopyOnReturn(t *testing.T) {
 
 	t.Parallel()
