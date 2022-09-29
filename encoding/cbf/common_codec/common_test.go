@@ -28,6 +28,7 @@ import (
 
 	"github.com/onflow/cadence/encoding/cbf/common_codec"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 func TestCodecMiscValues(t *testing.T) {
@@ -251,7 +252,7 @@ func TestCodecMiscValues(t *testing.T) {
 	})
 }
 
-func TestCodecLocations(t *testing.T) {
+func TestLocationPrefixCodec(t *testing.T) {
 	t.Parallel()
 
 	t.Run("length (1 byte)", func(t *testing.T) {
@@ -278,6 +279,7 @@ func TestCodecLocations(t *testing.T) {
 		common.StringLocationPrefix,
 		common.TransactionLocationPrefix,
 		common.REPLLocationPrefix,
+		stdlib.FlowLocationPrefix,
 		common_codec.NilLocationPrefix,
 	} {
 		func(prefix string) {
@@ -298,152 +300,96 @@ func TestCodecLocations(t *testing.T) {
 			})
 		}(prefix)
 	}
+}
 
-	t.Run("EncodeLocation(nil)", func(t *testing.T) {
-		t.Parallel()
+func TestLocationCodec(t *testing.T) {
+	type testcase struct {
+		location common.Location
+		expected []byte
+	}
 
-		var w bytes.Buffer
+	addrLoc := common.AddressLocation{
+		Address: common.Address{12, 13, 14},
+		Name:    "foo-bar",
+	}
 
-		err := common_codec.EncodeLocation(&w, nil)
-		require.NoError(t, err, "encoding error")
+	identLoc := common.IdentifierLocation("id \x01 \x00\n\rsomeid\n")
 
-		assert.Equal(t, w.Bytes(), []byte{common_codec.NilLocationPrefix[0]}, "encoded bytes differ")
+	scriptLoc := common.ScriptLocation{'i', 'd', ' ', 1, 0, '\n', '\r', 's', 'o', 'm', 'e', 'i', 'd', '\n'}
 
-		output, err := common_codec.DecodeLocation(&w, nil)
-		require.NoError(t, err, "decoding error")
+	stringLoc := common.StringLocation("id \x01 \x00\n\rsomeid\n")
 
-		assert.Nil(t, output, "bad decoding")
-	})
+	txnLoc := common.TransactionLocation{'i', 'd', ' ', 1, 0, '\n', '\r', 's', 'o', 'm', 'e', 'i', 'd', '\n'}
 
-	t.Run("EncodeLocation(Address)", func(t *testing.T) {
-		t.Parallel()
-
-		location := common.AddressLocation{
-			Address: common.Address{12, 13, 14},
-			Name:    "foo-bar",
-		}
-
-		var w bytes.Buffer
-
-		err := common_codec.EncodeLocation(&w, location)
-		require.NoError(t, err, "encoding error")
-
-		assert.Equal(t, w.Bytes(), common_codec.Concat(
-			[]byte{common.AddressLocationPrefix[0]},
-			location.Address.Bytes(),
-			[]byte{0, 0, 0, byte(len(location.Name))},
-			[]byte(location.Name),
-		), "encoded bytes differ")
-
-		output, err := common_codec.DecodeLocation(&w, nil)
-		require.NoError(t, err, "decoding error")
-
-		assert.Equal(t, location, output, "bad decoding")
-	})
-
-	t.Run("EncodeLocation(Identifier)", func(t *testing.T) {
-		t.Parallel()
-
-		location := common.IdentifierLocation("id \x01 \x00\n\rsomeid\n")
-
-		var w bytes.Buffer
-
-		err := common_codec.EncodeLocation(&w, location)
-		require.NoError(t, err, "encoding error")
-
-		assert.Equal(t, w.Bytes(), common_codec.Concat(
-			[]byte{common.IdentifierLocationPrefix[0]},
-			[]byte{0, 0, 0, byte(len(location))},
-			[]byte(location),
-		), "encoded bytes differ")
-
-		output, err := common_codec.DecodeLocation(&w, nil)
-		require.NoError(t, err, "decoding error")
-
-		assert.Equal(t, location, output, "bad decoding")
-	})
-
-	t.Run("EncodeLocation(Script)", func(t *testing.T) {
-		t.Parallel()
-
-		location := common.ScriptLocation{'i', 'd', ' ', 1, 0, '\n', '\r', 's', 'o', 'm', 'e', 'i', 'd', '\n'}
-
-		var w bytes.Buffer
-
-		err := common_codec.EncodeLocation(&w, location)
-		require.NoError(t, err, "encoding error")
-
-		assert.Equal(t, w.Bytes(), common_codec.Concat(
-			[]byte{common.ScriptLocationPrefix[0]},
-			location[:],
-		), "encoded bytes differ")
-
-		output, err := common_codec.DecodeLocation(&w, nil)
-		require.NoError(t, err, "decoding error")
-
-		assert.Equal(t, location, output, "bad decoding")
-	})
-
-	t.Run("EncodeLocation(String)", func(t *testing.T) {
-		t.Parallel()
-
-		location := common.StringLocation("id \x01 \x00\n\rsomeid\n")
-
-		var w bytes.Buffer
-
-		err := common_codec.EncodeLocation(&w, location)
-		require.NoError(t, err, "encoding error")
-
-		assert.Equal(t, w.Bytes(), common_codec.Concat(
-			[]byte{common.StringLocationPrefix[0]},
-			[]byte{0, 0, 0, byte(len(location))},
-			[]byte(location),
-		), "encoded bytes differ")
-
-		output, err := common_codec.DecodeLocation(&w, nil)
-		require.NoError(t, err, "decoding error")
-
-		assert.Equal(t, location, output, "bad decoding")
-	})
-
-	t.Run("EncodeLocation(Transaction)", func(t *testing.T) {
-		t.Parallel()
-
-		location := common.TransactionLocation{'i', 'd', ' ', 1, 0, '\n', '\r', 's', 'o', 'm', 'e', 'i', 'd', '\n'}
-
-		var w bytes.Buffer
-
-		err := common_codec.EncodeLocation(&w, location)
-		require.NoError(t, err, "encoding error")
-
-		assert.Equal(t, w.Bytes(), common_codec.Concat(
-			[]byte{common.TransactionLocationPrefix[0]},
-			location[:],
-		), "encoded bytes differ")
-
-		output, err := common_codec.DecodeLocation(&w, nil)
-		require.NoError(t, err, "decoding error")
-
-		assert.Equal(t, location, output, "bad decoding")
-	})
-
-	t.Run("EncodeLocation(REPL)", func(t *testing.T) {
-		t.Parallel()
-
-		location := common.REPLLocation{}
-
-		var w bytes.Buffer
-
-		err := common_codec.EncodeLocation(&w, location)
-		require.NoError(t, err, "encoding error")
-
-		assert.Equal(t, w.Bytes(), common_codec.Concat(
+	testcases := []testcase{
+		{nil, []byte{common_codec.NilLocationPrefix[0]}},
+		{
+			addrLoc,
+			common_codec.Concat(
+				[]byte{common.AddressLocationPrefix[0]},
+				addrLoc.Address.Bytes(),
+				[]byte{0, 0, 0, byte(len(addrLoc.Name))},
+				[]byte(addrLoc.Name),
+			),
+		},
+		{
+			identLoc,
+			common_codec.Concat(
+				[]byte{common.IdentifierLocationPrefix[0]},
+				[]byte{0, 0, 0, byte(len(identLoc))},
+				[]byte(identLoc),
+			),
+		},
+		{
+			scriptLoc,
+			common_codec.Concat(
+				[]byte{common.ScriptLocationPrefix[0]},
+				scriptLoc[:],
+			),
+		},
+		{
+			stringLoc,
+			common_codec.Concat(
+				[]byte{common.StringLocationPrefix[0]},
+				[]byte{0, 0, 0, byte(len(stringLoc))},
+				[]byte(stringLoc),
+			),
+		},
+		{
+			txnLoc,
+			common_codec.Concat(
+				[]byte{common.TransactionLocationPrefix[0]},
+				txnLoc[:],
+			),
+		},
+		{
+			common.REPLLocation{},
 			[]byte{common.REPLLocationPrefix[0]},
-		), "encoded bytes differ")
+		},
+		{
+			stdlib.FlowLocation{},
+			[]byte{stdlib.FlowLocationPrefix[0]},
+		},
+	}
 
-		output, err := common_codec.DecodeLocation(&w, nil)
-		require.NoError(t, err, "decoding error")
+	for _, tc := range testcases {
+		func(tc testcase) {
+			name := fmt.Sprintf("EncodeLocation(%T)", tc.location)
+			t.Run(name, func(t *testing.T) {
+				t.Parallel()
 
-		assert.Equal(t, location, output, "bad decoding")
-	})
+				var w bytes.Buffer
+
+				err := common_codec.EncodeLocation(&w, tc.location)
+				require.NoError(t, err, "encoding error")
+
+				assert.Equal(t, w.Bytes(), tc.expected, "encoded bytes differ")
+
+				output, err := common_codec.DecodeLocation(&w, nil)
+				require.NoError(t, err, "decoding error")
+
+				assert.Equal(t, tc.location, output, "bad decoding")
+			})
+		}(tc)
+	}
 }
