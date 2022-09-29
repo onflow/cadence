@@ -383,9 +383,7 @@ func TestLocationCodec(t *testing.T) {
 				err := common_codec.EncodeLocation(&w, tc.location)
 				require.NoError(t, err, "encoding error")
 
-				assert.Equal(t, w.Bytes(), common_codec.Flatten(
-					[]byte{common.REPLLocationPrefix[0]},
-				), "encoded bytes differ")
+				assert.Equal(t, w.Bytes(), tc.expected, "encoded bytes differ")
 
 				output, err := common_codec.DecodeLocation(&w, 0xFFFFFFFF, nil)
 				require.NoError(t, err, "decoding error")
