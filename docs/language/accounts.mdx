@@ -714,6 +714,8 @@ fun forEachStored(_ function: ((StoragePath, Type): Bool))
 Each of these iterates over every element in the specified domain (public, private, and storage), 
 applying the function argument to each. 
 The first argument of the function is the path of the element, and the second is its runtime type. 
+In the case of the `private` and `public` path iteration functions,
+this is the runtime type of the capability linked at that path. 
 The `Bool` return value determines whether iteration continues; 
 `true` will proceed to the next stored element, 
 while `false` will terminate iteration. 

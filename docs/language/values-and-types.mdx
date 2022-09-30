@@ -1343,7 +1343,7 @@ booleans[0] = true
 
   Returns an array of the keys of type `K` in the dictionary. This does not
   modify the dictionary, just returns a copy of the keys as an array.
-  If the dictionary is empty, this returns an empty array.
+  If the dictionary is empty, this returns an empty array. The ordering of the keys is undefined.
 
   ```cadence
   // Declare a dictionary mapping strings to integers.
@@ -1394,6 +1394,33 @@ booleans[0] = true
   //
   let containsKey42 = numbers.containsKey(42)
   ```
+- `cadence•fun forEachKey(_ function: ((K): Bool)): Void`
+
+  Iterate through all the keys in the dictionary, exiting early if the passed function returns false.
+  This is more efficient than calling `.keys` and iterating over the resulting array, since an intermediate allocation is avoided.
+  The order of key iteration is undefined, similar to `.keys`.
+
+  ```cadence
+  // Take in a targetKey to look for, and a dictionary to iterate through.
+  fun myContainsKey(targetKey: String, dictionary: {String: Int}) {
+    // Declare an accumulator that we'll capture inside a closure.
+    var found = false
+
+    // At each step, `key` will be bound to another key from `dictionary`.
+    dictionary.forEachKey(fun (key: String): Bool {
+      found = key == targetKey
+
+      // The returned boolean value, signals whether to continue iterating. 
+      // This allows for control flow during the iteration process:
+      //  true = `continue`
+      //  false = `break`
+      return !found
+    })
+
+    return found
+  }
+  ```
+
 
 ### Dictionary Keys
 
