@@ -121,3 +121,51 @@ pub event AccountContractRemoved(
 | `address`   | `Address` | The address of the account the contract gets removed from |
 | `codeHash`  | `[UInt8]` | Hash of the contract source code                          |
 | `contract`  | `String`  | The name of the the contract                              |
+
+### Inbox Value Published
+
+Event that is emitted when a Capability is published from an account.
+
+Event name: `flow.InboxValuePublished`
+
+```cadence
+pub event InboxValuePublished(provider: Address, recipient: Address, name: String, type: Type) 
+```
+
+| Field             | Type      | Description                                  |
+| ----------------- | --------- | -------------------------------------------- |
+| `provider`        | `Address` | The address of the publishing account        |
+| `recipient`       | `Address` | The address of the intended recipient        |
+| `name`            | `String`  | The name associated with the published value |
+| `type`            | `Type`    | The type of the published value              |
+
+To reduce the potential for spam, 
+we recommend that user agents that display events do not display this event as-is to their users, 
+and allow users to restrict whom they see events from. 
+
+### Inbox Value Removed
+
+Event that is emitted when a Capability is removed from an account. 
+
+Event name: `flow.InboxValueRemoved`
+
+```cadence
+pub event InboxValueRemoved(provider: Address, remover: Address, name: String)
+```
+
+| Field           | Type      | Description                                  |
+| --------------- | --------- | -------------------------------------------- |
+| `provider`      | `Address` | The address of the publishing account        |
+| `remover`       | `Address` | The address of the removing account          |
+| `name`          | `String`  | The name associated with the published value |
+
+When this event is emitted by a call to `AuthAccount.Inbox.claim`, 
+the `provider` field of this event will be the original `provider` of the Capability, 
+and the `remover` field will be the claiming `recipient`. 
+
+When this event is emitted by a call to `AuthAccount.Inbox.unpublish`, 
+both the `provider` and the `remover` field of this event will be the original `provider` of the Capability. 
+
+To reduce the potential for spam, 
+we recommend that user agents that display events do not display this event as-is to their users, 
+and allow users to restrict whom they see events from. 
