@@ -110,6 +110,26 @@ func (r *REPL) handleCheckerError() error {
 var lineSep = []byte{'\n'}
 
 func (r *REPL) Accept(code []byte) (inputIsComplete bool, err error) {
+
+	// We need two codes:
+	//
+	// 1. The code used for parsing and type checking (`code`).
+	//
+	//    This is only the code that was just entered in the REPL,
+	//    as we do not want to re-check and re-run the whole program already previously entered into the REPL –
+	//    the checker's and interpreter's state are kept, and they already have the previously entered declarations.
+	//
+	//    However, just parsing the entered code would result in an AST with wrong position information,
+	//    the line number would be always 1. To adjust the line information, we prepend the new code with empty lines.
+	//
+	// 2. The code used for error pretty printing (`codes`).
+	//
+	//    We temporarily update the full code of the whole program to include the new code.
+	//    This allows the error pretty printer to properly refer to previous code (instead of empty lines),
+	//    as well as the new code.
+	//    However, if an error occurs, we revert the addition of the new code
+	//    and leave the program code as it was before.
+
 	// Append the new code to the existing code (used for error reporting),
 	// temporarily, so that errors for the new code can be reported
 
