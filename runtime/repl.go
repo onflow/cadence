@@ -19,6 +19,7 @@
 package runtime
 
 import (
+	"bytes"
 	"fmt"
 	goRuntime "runtime"
 	"sort"
@@ -95,18 +96,26 @@ func NewREPL(
 	return repl, nil
 }
 
-func (r *REPL) handleCheckerError() bool {
+func (r *REPL) handleCheckerError() error {
 	err := r.checker.CheckerError()
 	if err == nil {
-		return true
+		return nil
 	}
 	if r.onError != nil {
 		r.onError(err, r.checker.Location, r.codes)
 	}
-	return false
+	return err
 }
 
-func (r *REPL) Accept(code []byte) (inputIsComplete bool) {
+var lineSep = []byte{'\n'}
+
+func (r *REPL) Accept(code []byte) (inputIsComplete bool, err error) {
+	// Append the new code to the existing code (used for error reporting),
+	// temporarily, so that errors for the new code can be reported
+
+	currentCode := r.codes[r.checker.Location]
+
+	r.codes[r.checker.Location] = append(currentCode[:], code...)
 
 	defer func() {
 		if panicResult := recover(); panicResult != nil {
@@ -129,12 +138,35 @@ func (r *REPL) Accept(code []byte) (inputIsComplete bool) {
 		}
 	}()
 
-	r.codes[r.checker.Location] = code
+	// If the new code results in a parsing or checking error,
+	// reset the code
+	defer func() {
+		if err != nil {
+			r.codes[r.checker.Location] = currentCode
+		}
+	}()
+
+	// Only parse the new code, and ignore the existing code.
+	//
+	// Prefix the new code with empty lines,
+	// so that the line number is correct in error messages
+
+	lineSepCount := bytes.Count(currentCode, lineSep)
+
+	if lineSepCount > 0 {
+		prefixedCode := make([]byte, lineSepCount+len(code))
+
+		for i := 0; i < lineSepCount; i++ {
+			prefixedCode[i] = '\n'
+		}
+		copy(prefixedCode[lineSepCount:], code)
+
+		code = prefixedCode
+	}
 
 	// TODO: detect if the input is complete
 	inputIsComplete = true
 
-	var err error
 	result, errs := parser.ParseStatements(code, nil)
 	if len(errs) > 0 {
 		err = parser.Error{
@@ -161,7 +193,8 @@ func (r *REPL) Accept(code []byte) (inputIsComplete bool) {
 			program := ast.NewProgram(nil, []ast.Declaration{element})
 
 			r.checker.CheckProgram(program)
-			if !r.handleCheckerError() {
+			err = r.handleCheckerError()
+			if err != nil {
 				return
 			}
 
@@ -172,7 +205,8 @@ func (r *REPL) Accept(code []byte) (inputIsComplete bool) {
 
 			r.checker.CheckStatement(element)
 
-			if !r.handleCheckerError() {
+			err = r.handleCheckerError()
+			if err != nil {
 				return
 			}
 
