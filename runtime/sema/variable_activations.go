@@ -298,15 +298,12 @@ func (a *VariableActivations) declare(declaration variableDeclaration) (variable
 			existingVariable.ActivationDepth == depth ||
 			existingVariable.ActivationDepth == 0) {
 
-		err = &RedeclarationError{
+		return nil, &RedeclarationError{
 			Kind:        declaration.kind,
 			Name:        declaration.identifier,
 			Pos:         declaration.pos,
 			PreviousPos: existingVariable.Pos,
 		}
-
-		// NOTE: Don't return if there is an error,
-		// still declare the variable and return it
 	}
 
 	// A variable with this name is not yet declared in the current scope,
@@ -324,7 +321,7 @@ func (a *VariableActivations) declare(declaration variableDeclaration) (variable
 		DocString:       declaration.docString,
 	}
 	a.Set(declaration.identifier, variable)
-	return variable, err
+	return variable, nil
 }
 
 func (a *VariableActivations) DeclareValue(declaration ValueDeclaration) (*Variable, error) {

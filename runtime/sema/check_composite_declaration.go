@@ -442,7 +442,7 @@ func (checker *Checker) declareCompositeType(declaration *ast.CompositeDeclarati
 	})
 	checker.report(err)
 
-	if checker.PositionInfo != nil {
+	if checker.PositionInfo != nil && variable != nil {
 		checker.recordVariableDeclarationOccurrence(
 			identifier.Identifier,
 			variable,
