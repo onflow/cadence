@@ -41,6 +41,7 @@ import (
 	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/tests/checker"
 	"github.com/onflow/cadence/runtime/tests/examples"
+	"github.com/onflow/cadence/runtime/tests/utils"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -9657,6 +9658,73 @@ func TestInterpretInternalAssignment(t *testing.T) {
 			),
 		),
 		value,
+	)
+}
+
+func TestInterpretVoidReturn_(t *testing.T) {
+	t.Parallel()
+
+	labelNamed := func(s string) string {
+		if s == "" {
+			return "unnamed"
+		}
+		return "named"
+	}
+
+	test := func(testName, returnType, returnValue string) {
+		var returnSnippet string
+
+		if returnType != "" {
+			returnSnippet = ": " + returnType
+		}
+
+		if returnValue != "" {
+		}
+
+		var name string
+		if testName == "" {
+			name = fmt.Sprintf("%s type, %s value", labelNamed(returnType), labelNamed(returnValue))
+		} else {
+			name = testName
+		}
+
+		code := fmt.Sprintf(
+			`fun test() %s { return %s }`,
+			returnSnippet,
+			returnValue,
+		)
+
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			inter := parseCheckAndInterpret(t, code)
+
+			value, err := inter.Invoke("test")
+			require.NoError(t, err)
+
+			utils.AssertValuesEqual(t, inter, &interpreter.VoidValue{}, value)
+		})
+	}
+
+	typeNames := []string{"", "Void"}
+	valueNames := []string{"", "()"}
+
+	for _, typ := range typeNames {
+		for _, val := range valueNames {
+			test("", typ, val)
+		}
+	}
+
+	test("inline lambda expression", "", "fun(){}()")
+	test(
+		"inline inline lambda expression",
+		"Void",
+		`(fun(v: Void): Void {
+			let w = fun() { };
+			let x: Void = w();
+			let y: Void = ();
+			let z = v;
+			return z;
+		 })( () )`,
 	)
 }
 

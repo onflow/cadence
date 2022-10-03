@@ -506,6 +506,10 @@ func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpres
 	})
 }
 
+func (interpreter *Interpreter) VisitVoidExpression(expression *ast.VoidExpression) Value {
+	return NewVoidValue(interpreter)
+}
+
 func (interpreter *Interpreter) VisitBoolExpression(expression *ast.BoolExpression) Value {
 	return NewBoolValue(interpreter, expression.Value)
 }

@@ -205,19 +205,19 @@ var AuthAccountType = func() *CompositeType {
 			AuthAccountStoragePathsType,
 			authAccountTypeStoragePathsFieldDocString,
 		),
-		NewUnmeteredPublicConstantFieldMember(
+		NewUnmeteredPublicFunctionMember(
 			authAccountType,
 			AuthAccountForEachPublicField,
 			AuthAccountForEachPublicFunctionType,
 			authAccountForEachPublicDocString,
 		),
-		NewUnmeteredPublicConstantFieldMember(
+		NewUnmeteredPublicFunctionMember(
 			authAccountType,
 			AuthAccountForEachPrivateField,
 			AuthAccountForEachPrivateFunctionType,
 			authAccountForEachPrivateDocString,
 		),
-		NewUnmeteredPublicConstantFieldMember(
+		NewUnmeteredPublicFunctionMember(
 			authAccountType,
 			AuthAccountForEachStoredField,
 			AuthAccountForEachStoredFunctionType,

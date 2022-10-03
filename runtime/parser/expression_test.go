@@ -5029,6 +5029,50 @@ func TestParseTernaryRightAssociativity(t *testing.T) {
 	)
 }
 
+func TestParseVoidLiteral(t *testing.T) {
+	t.Parallel()
+
+	const code = `
+		let void: Void = ()
+	`
+
+	result, errs := testParseProgram(code)
+	require.Empty(t, errs)
+
+	utils.AssertEqualWithDiff(t,
+		[]ast.Declaration{
+			&ast.VariableDeclaration{
+				IsConstant: true,
+				Identifier: ast.Identifier{
+					Identifier: "void",
+					Pos:        ast.Position{Offset: 7, Line: 2, Column: 6},
+				},
+				TypeAnnotation: &ast.TypeAnnotation{
+					IsResource: false,
+					Type: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "Void",
+							Pos:        ast.Position{Offset: 13, Line: 2, Column: 12},
+						},
+						NestedIdentifiers: nil,
+					},
+					StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
+				},
+				Value: &ast.VoidExpression{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 20, Line: 2, Column: 19},
+						EndPos:   ast.Position{Offset: 23, Line: 3, Column: 0},
+					},
+				},
+				Transfer: &ast.Transfer{
+					Operation: 1,
+					Pos:       ast.Position{Offset: 18, Line: 2, Column: 17},
+				},
+				StartPos: ast.Position{Offset: 3, Line: 2, Column: 2},
+			},
+		}, result.Declarations())
+}
+
 func TestParseMissingReturnType(t *testing.T) {
 
 	t.Parallel()

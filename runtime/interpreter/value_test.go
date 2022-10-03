@@ -1872,6 +1872,20 @@ func TestAddressValue_Equal(t *testing.T) {
 	})
 }
 
+// ensure () == ()
+func TestVoidValue_Equal(t *testing.T) {
+	t.Parallel()
+
+	inter := newTestInterpreter(t)
+	require.True(t,
+		VoidValue{}.Equal(
+			inter,
+			ReturnEmptyLocationRange,
+			VoidValue{},
+		),
+	)
+}
+
 func TestBoolValue_Equal(t *testing.T) {
 
 	t.Parallel()

@@ -113,7 +113,7 @@ var PublicAccountType = func() *CompositeType {
 			PublicAccountPathsType,
 			publicAccountTypePathsFieldDocString,
 		),
-		NewUnmeteredPublicConstantFieldMember(
+		NewUnmeteredPublicFunctionMember(
 			publicAccountType,
 			PublicAccountForEachPublicField,
 			PublicAccountForEachPublicFunctionType,
