@@ -994,7 +994,7 @@ func (d StorableDecoder) decodeLink() (LinkValue, error) {
 
 func (d StorableDecoder) decodePublishedValue() (*PublishedValue, error) {
 
-	const expectedLength = encodedLinkValueLength
+	const expectedLength = encodedPublishedValueLength
 
 	size, err := d.decoder.DecodeArrayHead()
 	if err != nil {
