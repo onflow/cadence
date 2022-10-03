@@ -2334,16 +2334,20 @@ var fromStringFunctionValues = func() map[string]fromStringFunctionValue {
 			return int32(n)
 		})),
 		newFromStringFunction(sema.Int64Type, signedIntValueParser(64, NewInt64Value, identity[int64])),
-		newFromStringFunction(sema.Int128Type, bigIntValueParser(func(b *big.Int) (Value, bool) {
-			ok := inRange(b, sema.Int128TypeMinIntBig, sema.Int128TypeMaxIntBig)
-			return Int128Value{b}, ok
+		newFromStringFunction(sema.Int128Type, bigIntValueParser(func(b *big.Int) (v Value, ok bool) {
+			if ok = inRange(b, sema.Int128TypeMinIntBig, sema.Int128TypeMaxIntBig); ok {
+				v = NewUnmeteredInt128ValueFromBigInt(b)
+			}
+			return
 		})),
-		newFromStringFunction(sema.Int256Type, bigIntValueParser(func(b *big.Int) (Value, bool) {
-			ok := inRange(b, sema.Int256TypeMinIntBig, sema.Int256TypeMaxIntBig)
-			return Int256Value{b}, ok
+		newFromStringFunction(sema.Int256Type, bigIntValueParser(func(b *big.Int) (v Value, ok bool) {
+			if ok = inRange(b, sema.Int256TypeMinIntBig, sema.Int256TypeMaxIntBig); ok {
+				v = NewUnmeteredInt256ValueFromBigInt(b)
+			}
+			return
 		})),
 		newFromStringFunction(sema.IntType, bigIntValueParser(func(b *big.Int) (Value, bool) {
-			return IntValue{b}, true
+			return NewUnmeteredIntValueFromBigInt(b), true
 		})),
 
 		// unsigned int values from 8 bit -> infinity
@@ -2351,16 +2355,20 @@ var fromStringFunctionValues = func() map[string]fromStringFunctionValue {
 		newFromStringFunction(sema.UInt16Type, unsignedIntValueParser(16, NewUInt16Value, u64_16)),
 		newFromStringFunction(sema.UInt32Type, unsignedIntValueParser(32, NewUInt32Value, u64_32)),
 		newFromStringFunction(sema.UInt64Type, unsignedIntValueParser(64, NewUInt64Value, u64_64)),
-		newFromStringFunction(sema.UInt128Type, bigIntValueParser(func(b *big.Int) (Value, bool) {
-			ok := inRange(b, sema.UInt128TypeMinIntBig, sema.UInt128TypeMaxIntBig)
-			return UInt128Value{b}, ok
+		newFromStringFunction(sema.UInt128Type, bigIntValueParser(func(b *big.Int) (v Value, ok bool) {
+			if ok = inRange(b, sema.UInt128TypeMinIntBig, sema.UInt128TypeMaxIntBig); ok {
+				v = NewUnmeteredUInt128ValueFromBigInt(b)
+			}
+			return
 		})),
-		newFromStringFunction(sema.UInt256Type, bigIntValueParser(func(b *big.Int) (Value, bool) {
-			ok := inRange(b, sema.UInt256TypeMinIntBig, sema.UInt256TypeMaxIntBig)
-			return UInt256Value{b}, ok
+		newFromStringFunction(sema.UInt256Type, bigIntValueParser(func(b *big.Int) (v Value, ok bool) {
+			if ok = inRange(b, sema.UInt256TypeMinIntBig, sema.UInt256TypeMaxIntBig); ok {
+				v = NewUnmeteredUInt256ValueFromBigInt(b)
+			}
+			return
 		})),
 		newFromStringFunction(sema.UIntType, bigIntValueParser(func(b *big.Int) (Value, bool) {
-			return UIntValue{b}, true
+			return NewUnmeteredUIntValueFromBigInt(b), true
 		})),
 
 		// machine-sized word types
