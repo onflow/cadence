@@ -198,7 +198,7 @@ const (
 	CBORTagCapabilityValue
 	_ // DO NOT REPLACE! used to be used for storage references
 	CBORTagLinkValue
-	_
+	CBORTagPublishedValue
 	_
 	_
 	_
@@ -912,6 +912,46 @@ func (v LinkValue) Encode(e *atree.Encoder) error {
 	}
 	// Encode type at array index encodedLinkValueTypeFieldKey
 	return EncodeStaticType(e.CBOR, v.Type)
+}
+
+// NOTE: NEVER change, only add/increment; ensure uint64
+const (
+	// encodedPublishedValueRecipientFieldKey uint64 = 0
+	// encodedPublishedValueValueFieldKey     uint64 = 1
+
+	// !!! *WARNING* !!!
+	//
+	// encodedPublishedValueLength MUST be updated when new element is added.
+	// It is used to verify encoded link length during decoding.
+	encodedPublishedValueLength = 2
+)
+
+// Encode encodes PublishedValue as
+// cbor.Tag{
+//			Number: CBORTagPublishedValue,
+//			Content: []any{
+//				encodedPublishedValueRecipientFieldKey: AddressValue(v.Recipient),
+//				encodedPublishedValueValueFieldKey:     v.Value,
+//			},
+// }
+func (v *PublishedValue) Encode(e *atree.Encoder) error {
+	// Encode tag number and array head
+	err := e.CBOR.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, CBORTagPublishedValue,
+		// array, 2 items follow
+		0x82,
+	})
+	if err != nil {
+		return err
+	}
+	// Encode path at array index encodedLinkValueTargetPathFieldKey
+	err = v.Recipient.Encode(e)
+	if err != nil {
+		return err
+	}
+	// Encode type at array index encodedLinkValueValueFieldKey
+	return v.Value.Encode(e)
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64

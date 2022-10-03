@@ -773,10 +773,9 @@ Publishes the argument value under the given name, to be later claimed by the sp
 var AuthAccountTypeInboxPublishFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
-			Label:      ArgumentLabelNotRequired,
-			Identifier: "value",
-			TypeAnnotation: NewTypeAnnotation(&CapabilityType{
-			}),
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "value",
+			TypeAnnotation: NewTypeAnnotation(&CapabilityType{}),
 		},
 		{
 			Identifier:     "name",

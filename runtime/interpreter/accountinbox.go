@@ -45,12 +45,6 @@ func NewAuthAccountInboxValue(
 		sema.AuthAccountInboxClaimField:     claimFunction,
 	}
 
-	fieldNames := []string{
-		sema.AuthAccountInboxPublishField,
-		sema.AuthAccountInboxUnpublishField,
-		sema.AuthAccountInboxClaimField,
-	}
-
 	var str string
 	stringer := func(memoryGauge common.MemoryGauge, _ SeenReferences) string {
 		if str == "" {
@@ -65,7 +59,7 @@ func NewAuthAccountInboxValue(
 		gauge,
 		authAccountInboxTypeID,
 		authAccountInboxStaticType,
-		fieldNames,
+		nil,
 		fields,
 		nil,
 		nil,

@@ -52,6 +52,7 @@ const (
 	MemoryKindBoundFunctionValue
 	MemoryKindBigInt
 	MemoryKindSimpleCompositeValue
+	MemoryKindPublishedValue
 
 	// Atree Nodes
 	MemoryKindAtreeArrayDataSlab

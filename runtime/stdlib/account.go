@@ -801,17 +801,6 @@ func newPublicAccountContractsValue(
 }
 
 const inboxStorageDomain = "inbox"
-const inboxStorageSeparator = "$"
-const inboxStorageRecipientTag = "recipient"
-const inboxStorageValueTag = "value"
-
-func recipientPath(name string) string {
-	return name + inboxStorageSeparator + inboxStorageRecipientTag
-}
-
-func valuePath(name string) string {
-	return name + inboxStorageSeparator + inboxStorageValueTag
-}
 
 func accountInboxPublishFunction(
 	gauge common.MemoryGauge,
@@ -822,7 +811,10 @@ func accountInboxPublishFunction(
 	return interpreter.NewHostFunctionValue(
 		gauge,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			publishedValue := invocation.Arguments[0]
+			value, ok := invocation.Arguments[0].(*interpreter.CapabilityValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
 
 			nameValue, ok := invocation.Arguments[1].(*interpreter.StringValue)
 			if !ok {
@@ -844,18 +836,18 @@ func accountInboxPublishFunction(
 					providerValue,
 					recipientValue,
 					nameValue,
-					interpreter.NewTypeValue(gauge, publishedValue.StaticType(inter)),
+					interpreter.NewTypeValue(gauge, value.StaticType(inter)),
 				},
 				getLocationRange,
 			)
 
-			publishedValue = publishedValue.Transfer(
+			value = value.Transfer(
 				inter,
 				getLocationRange,
 				atree.Address(address),
 				true,
 				nil,
-			)
+			).(*interpreter.CapabilityValue)
 
 			recipient := recipientValue.Transfer(
 				inter,
@@ -863,12 +855,11 @@ func accountInboxPublishFunction(
 				atree.Address(address),
 				true,
 				nil,
-			)
+			).(interpreter.AddressValue)
 
-			// we need to store both a value and an intended recipient for each name,
-			// so we do two writes to represent each published value.
-			inter.WriteStored(address, inboxStorageDomain, valuePath(nameValue.Str), publishedValue)
-			inter.WriteStored(address, inboxStorageDomain, recipientPath(nameValue.Str), recipient)
+			publishedValue := interpreter.NewPublishedValue(inter, recipient, value)
+
+			inter.WriteStored(address, inboxStorageDomain, nameValue.Str, publishedValue)
 
 			return interpreter.NewVoidValue(gauge)
 		},
@@ -893,10 +884,13 @@ func accountInboxUnpublishFunction(
 			inter := invocation.Interpreter
 			getLocationRange := invocation.GetLocationRange
 
-			publishedValue := inter.ReadStored(address, inboxStorageDomain, valuePath(nameValue.Str))
-
-			if publishedValue == nil {
+			readValue := inter.ReadStored(address, inboxStorageDomain, nameValue.Str)
+			if readValue == nil {
 				return interpreter.NewNilValue(gauge)
+			}
+			publishedValue := readValue.(*interpreter.PublishedValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
 			}
 
 			typeParameterPair := invocation.TypeParameterTypes.Oldest()
@@ -905,7 +899,7 @@ func accountInboxUnpublishFunction(
 			}
 
 			ty := sema.NewCapabilityType(gauge, typeParameterPair.Value)
-			publishedType := publishedValue.StaticType(invocation.Interpreter)
+			publishedType := publishedValue.Value.StaticType(invocation.Interpreter)
 			if !inter.IsSubTypeOfSemaType(publishedType, ty) {
 				panic(interpreter.ForceCastTypeMismatchError{
 					ExpectedType:  ty,
@@ -925,10 +919,7 @@ func accountInboxUnpublishFunction(
 				getLocationRange,
 			)
 
-			inter.WriteStored(address, inboxStorageDomain, valuePath(nameValue.Str), nil)
-			inter.WriteStored(address, inboxStorageDomain, recipientPath(nameValue.Str), nil)
-
-			publishedValue = publishedValue.Transfer(
+			value := publishedValue.Value.Transfer(
 				inter,
 				getLocationRange,
 				atree.Address(address),
@@ -936,7 +927,9 @@ func accountInboxUnpublishFunction(
 				nil,
 			)
 
-			return interpreter.NewSomeValueNonCopying(inter, publishedValue)
+			inter.WriteStored(address, inboxStorageDomain, nameValue.Str, nil)
+
+			return interpreter.NewSomeValueNonCopying(inter, value)
 		},
 		sema.AuthAccountTypeInboxPublishFunctionType,
 	)
@@ -966,18 +959,17 @@ func accountInboxClaimFunction(
 
 			providerAddress := providerValue.ToAddress()
 
-			publishedValue := inter.ReadStored(providerAddress, inboxStorageDomain, valuePath(nameValue.Str))
-
-			if publishedValue == nil {
+			readValue := inter.ReadStored(providerAddress, inboxStorageDomain, nameValue.Str)
+			if readValue == nil {
 				return interpreter.NewNilValue(gauge)
 			}
-
-			// compare the intended recipient with the caller
-			intendedRecipient, ok := inter.ReadStored(providerAddress, inboxStorageDomain, recipientPath(nameValue.Str)).(interpreter.AddressValue)
+			publishedValue := readValue.(*interpreter.PublishedValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
-			if intendedRecipient.ToAddress() != recipientValue.ToAddress() {
+
+			// compare the intended recipient with the caller
+			if !publishedValue.Recipient.Equal(inter, getLocationRange, recipientValue) {
 				return interpreter.NewNilValue(gauge)
 			}
 
@@ -987,7 +979,7 @@ func accountInboxClaimFunction(
 			}
 
 			ty := sema.NewCapabilityType(gauge, typeParameterPair.Value)
-			publishedType := publishedValue.StaticType(invocation.Interpreter)
+			publishedType := publishedValue.Value.StaticType(invocation.Interpreter)
 			if !inter.IsSubTypeOfSemaType(publishedType, ty) {
 				panic(interpreter.ForceCastTypeMismatchError{
 					ExpectedType:  ty,
@@ -996,8 +988,15 @@ func accountInboxClaimFunction(
 				})
 			}
 
-			inter.WriteStored(providerAddress, inboxStorageDomain, valuePath(nameValue.Str), nil)
-			inter.WriteStored(providerAddress, inboxStorageDomain, recipientPath(nameValue.Str), nil)
+			value := publishedValue.Value.Transfer(
+				inter,
+				getLocationRange,
+				atree.Address(address),
+				true,
+				nil,
+			)
+
+			inter.WriteStored(providerAddress, inboxStorageDomain, nameValue.Str, nil)
 
 			handler.EmitEvent(
 				inter,
@@ -1010,15 +1009,7 @@ func accountInboxClaimFunction(
 				getLocationRange,
 			)
 
-			publishedValue = publishedValue.Transfer(
-				inter,
-				getLocationRange,
-				atree.Address(address),
-				true,
-				nil,
-			)
-
-			return interpreter.NewSomeValueNonCopying(inter, publishedValue)
+			return interpreter.NewSomeValueNonCopying(inter, value)
 		},
 		sema.AuthAccountTypeInboxPublishFunctionType,
 	)
