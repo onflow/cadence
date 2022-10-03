@@ -283,7 +283,7 @@ type variableDeclaration struct {
 	allowOuterScopeShadowing bool
 }
 
-func (a *VariableActivations) declare(declaration variableDeclaration) (variable *Variable, err error) {
+func (a *VariableActivations) declare(declaration variableDeclaration) (*Variable, error) {
 
 	depth := a.Depth()
 
@@ -309,7 +309,7 @@ func (a *VariableActivations) declare(declaration variableDeclaration) (variable
 	// A variable with this name is not yet declared in the current scope,
 	// declare it.
 
-	variable = &Variable{
+	variable := &Variable{
 		Identifier:      declaration.identifier,
 		Access:          declaration.access,
 		DeclarationKind: declaration.kind,
