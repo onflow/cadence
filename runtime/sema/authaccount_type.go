@@ -776,16 +776,13 @@ var AuthAccountTypeInboxPublishFunctionType = &FunctionType{
 			Label:      ArgumentLabelNotRequired,
 			Identifier: "value",
 			TypeAnnotation: NewTypeAnnotation(&CapabilityType{
-				BorrowType: AnyType,
 			}),
 		},
 		{
-			Label:          "name",
 			Identifier:     "name",
 			TypeAnnotation: NewTypeAnnotation(StringType),
 		},
 		{
-			Label:          "recipient",
 			Identifier:     "recipient",
 			TypeAnnotation: NewTypeAnnotation(&AddressType{}),
 		},
@@ -851,7 +848,6 @@ var AuthAccountTypeInboxClaimFunctionType = func() *FunctionType {
 				TypeAnnotation: NewTypeAnnotation(StringType),
 			},
 			{
-				Label:          "provider",
 				Identifier:     "provider",
 				TypeAnnotation: NewTypeAnnotation(&AddressType{}),
 			},
