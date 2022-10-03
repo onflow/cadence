@@ -197,6 +197,92 @@ func TestRuntimeAccountKeyConstructor(t *testing.T) {
 	assert.Contains(t, err.Error(), "cannot find variable in this scope: `AccountKey`")
 }
 
+func TestRuntimeReturnPublicAccount(t *testing.T) {
+
+	t.Parallel()
+
+	rt := newTestInterpreterRuntime()
+
+	script := []byte(`
+        pub fun main(): PublicAccount {
+			let acc = getAccount(0x02)
+            return acc
+          }
+    `)
+
+	runtimeInterface := &testRuntimeInterface{
+		getAccountBalance: func(_ common.Address) (uint64, error) {
+			return 0, nil
+		},
+		getAccountAvailableBalance: func(_ common.Address) (uint64, error) {
+			return 0, nil
+		},
+		getStorageUsed: func(_ common.Address) (uint64, error) {
+			return 0, nil
+		},
+		getStorageCapacity: func(_ common.Address) (uint64, error) {
+			return 0, nil
+		},
+		storage: newTestLedger(nil, nil),
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	_, err := rt.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+}
+
+func TestRuntimeReturnAuthAccount(t *testing.T) {
+
+	t.Parallel()
+
+	rt := newTestInterpreterRuntime()
+
+	script := []byte(`
+        pub fun main(): AuthAccount {
+			let acc = getAuthAccount(0x02)
+            return acc
+          }
+    `)
+
+	runtimeInterface := &testRuntimeInterface{
+		getAccountBalance: func(_ common.Address) (uint64, error) {
+			return 0, nil
+		},
+		getAccountAvailableBalance: func(_ common.Address) (uint64, error) {
+			return 0, nil
+		},
+		getStorageUsed: func(_ common.Address) (uint64, error) {
+			return 0, nil
+		},
+		getStorageCapacity: func(_ common.Address) (uint64, error) {
+			return 0, nil
+		},
+		storage: newTestLedger(nil, nil),
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	_, err := rt.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+}
+
 func TestRuntimeStoreAccountAPITypes(t *testing.T) {
 
 	t.Parallel()
