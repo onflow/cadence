@@ -2223,9 +2223,9 @@ type fromStringFunctionValue struct {
 }
 
 // a function that attempts to create a Cadence value from a string, e.g. parsing a number from a string
-type valueParser func(*Interpreter, string) OptionalValue
+type stringValueParser func(*Interpreter, string) OptionalValue
 
-func newFromStringFunction(ty sema.Type, parser valueParser) fromStringFunctionValue {
+func newFromStringFunction(ty sema.Type, parser stringValueParser) fromStringFunctionValue {
 	functionType := sema.FromStringFunctionType(ty)
 
 	hostFunctionImpl := NewUnmeteredHostFunctionValue(
@@ -2253,7 +2253,7 @@ func unsignedIntValueParser[ValueType Value, IntType any](
 	bitSize int,
 	toValue func(common.MemoryGauge, func() IntType) ValueType,
 	fromUInt64 func(uint64) IntType,
-) valueParser {
+) stringValueParser {
 	return func(interpreter *Interpreter, input string) OptionalValue {
 		val, err := strconv.ParseUint(input, 10, bitSize)
 		if err != nil {
@@ -2274,7 +2274,7 @@ func signedIntValueParser[ValueType Value, IntType any](
 	bitSize int,
 	toValue func(common.MemoryGauge, func() IntType) ValueType,
 	fromInt64 func(int64) IntType,
-) valueParser {
+) stringValueParser {
 
 	return func(interpreter *Interpreter, input string) OptionalValue {
 		val, err := strconv.ParseInt(input, 10, bitSize)
@@ -2290,7 +2290,7 @@ func signedIntValueParser[ValueType Value, IntType any](
 }
 
 // No need to use metered constructors for values represented by big.Ints, since estimation is more granular than fixed-size types.
-func bigIntValueParser(convert func(*big.Int) (Value, bool)) valueParser {
+func bigIntValueParser(convert func(*big.Int) (Value, bool)) stringValueParser {
 	return func(interpreter *Interpreter, input string) OptionalValue {
 		estimatedSize := common.OverEstimateBigIntFromString(input)
 		common.UseMemory(interpreter, common.NewBigIntMemoryUsage(estimatedSize))
