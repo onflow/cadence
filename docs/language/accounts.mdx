@@ -177,7 +177,7 @@ to the `prepare` phase of the transaction.
         // Unpublishes a Capability previously published by this account.
         // Returns `nil` if no Capability is published under the given name.
         // Errors if the Capability under that name does not match the provided type.
-        fun unpublish<T : &Any>(_ name: String): Capability<T>?
+        fun unpublish<T: &Any>(_ name: String): Capability<T>?
 
         // Claims a Capability previously published by the specified provider.
         // Returns `nil` if no Capability is published under the given name, or if this account is not its intended recipient.
@@ -346,7 +346,7 @@ Accounts also possess an Inbox that can be used to send [Capabilities](capabilit
 The functions in this Inbox provide a convenient means to "bootstrap" Capabilities, 
 setting up an initial connection between two accounts that will later allow them to transfer data or permissions through a Capability.
 
-#### Publishing a Capability
+### Publishing a Capability
 
 An account (the Provider) that would like to provide a Capability to another account (the Recipient) can do so using the `publish` function:
 
@@ -362,7 +362,7 @@ Calling this function emits an event, `InboxValuePublished`,
 that includes the address of both the Provider and the Recipient, as well as the name and the type of the published Capability.
 Refer to the [`Core Events` section](core-events#inbox-value-published) for more details on this event.
 
-#### Claiming a Capability
+### Claiming a Capability
 
 The intended Recipient of a Capability can claim that Capability from the Provider using the `claim` function: 
 
@@ -383,13 +383,13 @@ Calling this function emits an event, `InboxValueRemoved`,
 that includes the address of both the Provider and the Recipient, as well as the name of the claimed Capability.
 Refer to the [`Core Events` section](core-events#inbox-value-removed) for more details on this event.
 
-#### Unpublishing a Capability
+### Unpublishing a Capability
 
 If the Provider of a Capability no longer wishes for it to be published for some reason (e.g. they no longer wish to pay for its storage costs),
 they can unpublish it using the `unpublish` function: 
 
 ```cadence 
-fun unpublish<T : &Any>(_ name: String): Capability<T>?
+fun unpublish<T: &Any>(_ name: String): Capability<T>?
 ```
 
 This looks up the specified name in the Provider's inbox, returning it to the Provider if it is present and conforms to the provided type argument.
