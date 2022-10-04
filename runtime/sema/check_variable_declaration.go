@@ -180,7 +180,7 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 
 	identifier := declaration.Identifier.Identifier
 
-	variable, err := checker.valueActivations.Declare(variableDeclaration{
+	variable, err := checker.valueActivations.declare(variableDeclaration{
 		identifier:               identifier,
 		ty:                       declarationType,
 		docString:                declaration.DocString,

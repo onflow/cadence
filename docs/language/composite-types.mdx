@@ -137,7 +137,7 @@ There are three kinds of fields:
 In initializers, the special constant `self` refers to the composite value
 that is to be initialized.
 
-Field types must be storable. Non-storable types are:
+If a composite type is to be stored, all its field types must be storable. Non-storable types are:
 
 - Functions
 - [Accounts (`AuthAccount` / `PublicAccount`)](accounts)
@@ -481,3 +481,27 @@ let six = value!.setAndReturn(new: 6)
 ### Resources
 
 Resources are explained in detail [in the following page](resources).
+
+## Unbound References / Nulls
+
+There is **no** support for `null`.
+
+## Inheritance and Abstract Types
+
+There is **no** support for inheritance.
+Inheritance is a feature common in other programming languages,
+that allows including the fields and functions of one type in another type.
+
+Instead, follow the "composition over inheritance" principle,
+the idea of composing functionality from multiple individual parts,
+rather than building an inheritance tree.
+
+Furthermore, there is also **no** support for abstract types.
+An abstract type is a feature common in other programming languages,
+that prevents creating values of the type and only
+allows the creation of values of a subtype.
+In addition, abstract types may declare functions,
+but omit the implementation of them
+and instead require subtypes to implement them.
+
+Instead, consider using [interfaces](interfaces).

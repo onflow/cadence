@@ -35,6 +35,7 @@ import (
 type FunctionValue interface {
 	Value
 	isFunctionValue()
+	FunctionType() *sema.FunctionType
 	// invoke evaluates the function.
 	// Only used internally by the interpreter.
 	// Use Interpreter.InvokeFunctionValue if you want to invoke the function externally
@@ -80,6 +81,7 @@ func NewInterpretedFunctionValue(
 }
 
 var _ Value = &InterpretedFunctionValue{}
+var _ FunctionValue = &InterpretedFunctionValue{}
 
 func (*InterpretedFunctionValue) IsValue() {}
 
@@ -115,6 +117,10 @@ func (*InterpretedFunctionValue) IsImportable(_ *Interpreter) bool {
 }
 
 func (*InterpretedFunctionValue) isFunctionValue() {}
+
+func (f *InterpretedFunctionValue) FunctionType() *sema.FunctionType {
+	return f.Type
+}
 
 func (f *InterpretedFunctionValue) invoke(invocation Invocation) Value {
 
@@ -219,7 +225,9 @@ func NewHostFunctionValue(
 }
 
 var _ Value = &HostFunctionValue{}
+var _ FunctionValue = &HostFunctionValue{}
 var _ MemberAccessibleValue = &HostFunctionValue{}
+var _ ContractValue = &HostFunctionValue{}
 
 func (*HostFunctionValue) IsValue() {}
 
@@ -240,6 +248,10 @@ func (*HostFunctionValue) IsImportable(_ *Interpreter) bool {
 }
 
 func (*HostFunctionValue) isFunctionValue() {}
+
+func (f *HostFunctionValue) FunctionType() *sema.FunctionType {
+	return f.Type
+}
 
 func (f *HostFunctionValue) invoke(invocation Invocation) Value {
 
@@ -310,6 +322,10 @@ func (*HostFunctionValue) DeepRemove(_ *Interpreter) {
 	// NO-OP
 }
 
+func (v *HostFunctionValue) SetNestedVariables(variables map[string]*Variable) {
+	v.NestedVariables = variables
+}
+
 // BoundFunctionValue
 //
 type BoundFunctionValue struct {
@@ -318,6 +334,7 @@ type BoundFunctionValue struct {
 }
 
 var _ Value = BoundFunctionValue{}
+var _ FunctionValue = BoundFunctionValue{}
 
 func NewBoundFunctionValue(
 	interpreter *Interpreter,
@@ -364,6 +381,10 @@ func (BoundFunctionValue) IsImportable(_ *Interpreter) bool {
 }
 
 func (BoundFunctionValue) isFunctionValue() {}
+
+func (f BoundFunctionValue) FunctionType() *sema.FunctionType {
+	return f.Function.FunctionType()
+}
 
 func (f BoundFunctionValue) invoke(invocation Invocation) Value {
 	invocation.Self = f.Self

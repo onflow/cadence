@@ -23,13 +23,18 @@ import (
 	goErrors "errors"
 	"fmt"
 	"math"
+	"math/big"
+	"strconv"
 	"time"
 	"unicode/utf8"
+
+	"github.com/onflow/cadence/runtime/activations"
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
 	"go.opentelemetry.io/otel/attribute"
 
+	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
@@ -59,7 +64,6 @@ type getterSetter struct {
 // are treated like they are returning a value.
 
 // OnEventEmittedFunc is a function that is triggered when an event is emitted by the program.
-//
 type OnEventEmittedFunc func(
 	inter *Interpreter,
 	getLocationRange func() LocationRange,
@@ -68,25 +72,21 @@ type OnEventEmittedFunc func(
 ) error
 
 // OnStatementFunc is a function that is triggered when a statement is about to be executed.
-//
 type OnStatementFunc func(
 	inter *Interpreter,
 	statement ast.Statement,
 )
 
 // OnLoopIterationFunc is a function that is triggered when a loop iteration is about to be executed.
-//
 type OnLoopIterationFunc func(
 	inter *Interpreter,
 	line int,
 )
 
 // OnFunctionInvocationFunc is a function that is triggered when a function is about to be invoked.
-//
 type OnFunctionInvocationFunc func(inter *Interpreter)
 
 // OnInvokedFunctionReturnFunc is a function that is triggered when an invoked function returned.
-//
 type OnInvokedFunctionReturnFunc func(inter *Interpreter)
 
 // OnRecordTraceFunc is a function that records a trace.
@@ -115,7 +115,6 @@ type OnMeterComputationFunc func(
 )
 
 // InjectedCompositeFieldsHandlerFunc is a function that handles storage reads.
-//
 type InjectedCompositeFieldsHandlerFunc func(
 	inter *Interpreter,
 	location common.Location,
@@ -124,16 +123,14 @@ type InjectedCompositeFieldsHandlerFunc func(
 ) map[string]Value
 
 // ContractValueHandlerFunc is a function that handles contract values.
-//
 type ContractValueHandlerFunc func(
 	inter *Interpreter,
 	compositeType *sema.CompositeType,
 	constructorGenerator func(common.Address) *HostFunctionValue,
 	invocationRange ast.Range,
-) *CompositeValue
+) ContractValue
 
 // ImportLocationHandlerFunc is a function that handles imports of locations.
-//
 type ImportLocationHandlerFunc func(
 	inter *Interpreter,
 	location common.Location,
@@ -141,7 +138,6 @@ type ImportLocationHandlerFunc func(
 
 // PublicAccountHandlerFunc is a function that handles retrieving a public account at a given address.
 // The account returned must be of type `PublicAccount`.
-//
 type PublicAccountHandlerFunc func(
 	address AddressValue,
 ) Value
@@ -152,7 +148,6 @@ type UUIDHandlerFunc func() (uint64, error)
 // PublicKeyValidationHandlerFunc is a function that validates a given public key.
 // Parameter types:
 // - publicKey: PublicKey
-//
 type PublicKeyValidationHandlerFunc func(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
@@ -164,7 +159,6 @@ type PublicKeyValidationHandlerFunc func(
 // - publicKey: PublicKey
 // - signature: [UInt8]
 // Expected result type: Bool
-//
 type BLSVerifyPoPHandlerFunc func(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
@@ -176,7 +170,6 @@ type BLSVerifyPoPHandlerFunc func(
 // Parameter types:
 // - signatures: [[UInt8]]
 // Expected result type: [UInt8]?
-//
 type BLSAggregateSignaturesHandlerFunc func(
 	inter *Interpreter,
 	getLocationRange func() LocationRange,
@@ -187,7 +180,6 @@ type BLSAggregateSignaturesHandlerFunc func(
 // Parameter types:
 // - publicKeys: [PublicKey]
 // Expected result type: PublicKey?
-//
 type BLSAggregatePublicKeysHandlerFunc func(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
@@ -202,7 +194,6 @@ type BLSAggregatePublicKeysHandlerFunc func(
 // - hashAlgorithm: HashAlgorithm
 // - publicKey: PublicKey
 // Expected result type: Bool
-//
 type SignatureVerificationHandlerFunc func(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
@@ -219,7 +210,6 @@ type SignatureVerificationHandlerFunc func(
 // - domainSeparationTag: [UInt8]
 // - hashAlgorithm: HashAlgorithm
 // Expected result type: [UInt8]
-//
 type HashHandlerFunc func(
 	inter *Interpreter,
 	getLocationRange func() LocationRange,
@@ -234,7 +224,6 @@ type HashHandlerFunc func(
 //
 // As there is no support for inheritance of concrete types,
 // these are the "leaf" nodes in the call chain, and are functions.
-//
 type CompositeTypeCode struct {
 	CompositeFunctions map[string]FunctionValue
 	DestructorFunction FunctionValue
@@ -247,7 +236,6 @@ type FunctionWrapper = func(inner FunctionValue) FunctionValue
 //
 // These are "branch" nodes in the call chain, and are function wrappers,
 // i.e. they wrap the functions / function wrappers that inherit them.
-//
 type WrapperCode struct {
 	InitializerFunctionWrapper FunctionWrapper
 	DestructorFunctionWrapper  FunctionWrapper
@@ -257,7 +245,6 @@ type WrapperCode struct {
 
 // TypeCodes is the value which stores the "prepared" / "callable" "code"
 // of all composite types, interface types, and type requirements.
-//
 type TypeCodes struct {
 	CompositeCodes       map[sema.TypeID]CompositeTypeCode
 	InterfaceCodes       map[sema.TypeID]WrapperCode
@@ -309,10 +296,9 @@ var _ ast.ExpressionVisitor[Value] = &Interpreter{}
 
 // BaseActivation is the activation which contains all base declarations.
 // It is reused across all interpreters.
-//
 var BaseActivation = func() *VariableActivation {
 	// No need to meter since this is only created once
-	activation := NewVariableActivation(nil, nil)
+	activation := activations.NewActivation[*Variable](nil, nil)
 
 	defineBaseFunctions(activation)
 	return activation
@@ -351,7 +337,7 @@ func newInterpreter(
 		sharedState.allInterpreters[location] = interpreter
 	}
 
-	interpreter.activations = NewVariableActivations(interpreter)
+	interpreter.activations = activations.NewActivations[*Variable](interpreter)
 
 	baseActivation := config.BaseActivation
 	if baseActivation == nil {
@@ -365,7 +351,6 @@ func newInterpreter(
 
 // locationRangeGetter returns a function that returns the location range
 // for the given location and positioned element.
-//
 func locationRangeGetter(
 	memoryGauge common.MemoryGauge,
 	location common.Location,
@@ -379,12 +364,12 @@ func locationRangeGetter(
 	}
 }
 
-func (interpreter *Interpreter) findVariable(name string) *Variable {
+func (interpreter *Interpreter) FindVariable(name string) *Variable {
 	return interpreter.activations.Find(name)
 }
 
 func (interpreter *Interpreter) findOrDeclareVariable(name string) *Variable {
-	variable := interpreter.findVariable(name)
+	variable := interpreter.FindVariable(name)
 	if variable == nil {
 		variable = interpreter.declareVariable(name, nil)
 	}
@@ -416,7 +401,6 @@ func (interpreter *Interpreter) Interpret() (err error) {
 
 // visitGlobalDeclaration firsts interprets the global declaration,
 // then finds the declaration and adds it to the globals
-//
 func (interpreter *Interpreter) visitGlobalDeclaration(declaration ast.Declaration) {
 	ast.AcceptDeclaration[StatementResult](declaration, interpreter)
 	interpreter.declareGlobal(declaration)
@@ -429,7 +413,7 @@ func (interpreter *Interpreter) declareGlobal(declaration ast.Declaration) {
 	}
 	name := identifier.Identifier
 	// NOTE: semantic analysis already checked possible invalid redeclaration
-	interpreter.Globals.Set(name, interpreter.findVariable(name))
+	interpreter.Globals.Set(name, interpreter.FindVariable(name))
 }
 
 // invokeVariable looks up the function by the given name from global variables,
@@ -475,10 +459,10 @@ func (interpreter *Interpreter) invokeVariable(
 		}
 	}
 
-	return interpreter.invokeExternally(functionValue, functionType, arguments)
+	return interpreter.InvokeExternally(functionValue, functionType, arguments)
 }
 
-func (interpreter *Interpreter) invokeExternally(
+func (interpreter *Interpreter) InvokeExternally(
 	functionValue FunctionValue,
 	functionType *sema.FunctionType,
 	arguments []Value,
@@ -518,10 +502,15 @@ func (interpreter *Interpreter) invokeExternally(
 		preparedArguments[i] = interpreter.ConvertAndBox(getLocationRange, argument, nil, parameterType)
 	}
 
+	var self *CompositeValue
+	if boundFunc, ok := functionValue.(BoundFunctionValue); ok {
+		self = boundFunc.Self
+	}
+
 	// NOTE: can't fill argument types, as they are unknown
 	invocation := NewInvocation(
 		interpreter,
-		nil,
+		self,
 		preparedArguments,
 		nil,
 		nil,
@@ -570,7 +559,7 @@ func (interpreter *Interpreter) InvokeTransaction(index int, arguments ...Value)
 	transactionType := interpreter.Program.Elaboration.TransactionTypes[index]
 	functionType := transactionType.EntryPointFunctionType()
 
-	_, err = interpreter.invokeExternally(functionValue, functionType, arguments)
+	_, err = interpreter.InvokeExternally(functionValue, functionType, arguments)
 	return err
 }
 
@@ -613,10 +602,14 @@ func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 		}
 
 		interpreterErr := err.(Error)
-		interpreterErr.StackTrace = interpreter.sharedState.callStack.Invocations[:]
+		interpreterErr.StackTrace = interpreter.CallStack()
 
 		onError(interpreterErr)
 	}
+}
+
+func (interpreter *Interpreter) CallStack() []Invocation {
+	return interpreter.sharedState.callStack.Invocations[:]
 }
 
 func (interpreter *Interpreter) VisitProgram(program *ast.Program) {
@@ -958,7 +951,6 @@ func (interpreter *Interpreter) VisitCompositeDeclaration(declaration *ast.Compo
 // a contract value / instance (singleton).
 //
 // For all other composite kinds the constructor function is declared.
-//
 func (interpreter *Interpreter) declareCompositeValue(
 	declaration *ast.CompositeDeclaration,
 	lexicalScope *VariableActivation,
@@ -1262,14 +1254,15 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 		variable.getter = func() Value {
 			positioned := ast.NewRangeFromPositioned(interpreter, declaration.Identifier)
 
-			contract := interpreter.Config.ContractValueHandler(
+			contractValue := interpreter.Config.ContractValueHandler(
 				interpreter,
 				compositeType,
 				constructorGenerator,
 				positioned,
 			)
-			contract.NestedVariables = nestedVariables
-			return contract
+
+			contractValue.SetNestedVariables(nestedVariables)
+			return contractValue
 		}
 	} else {
 		constructor := constructorGenerator(common.Address{})
@@ -1646,11 +1639,16 @@ func (interpreter *Interpreter) transferAndConvert(
 	)
 
 	// Defensively check the value's type matches the target type
+	resultStaticType := result.StaticType(interpreter)
+
 	if targetType != nil &&
-		!interpreter.ValueIsSubtypeOfSemaType(result, targetType) {
+		!interpreter.IsSubTypeOfSemaType(resultStaticType, targetType) {
+
+		resultSemaType := interpreter.MustConvertStaticToSemaType(resultStaticType)
 
 		panic(ValueTransferTypeError{
-			TargetType:    targetType,
+			ExpectedType:  targetType,
+			ActualType:    resultSemaType,
 			LocationRange: getLocationRange(),
 		})
 	}
@@ -2224,6 +2222,196 @@ func (interpreter *Interpreter) writeStored(
 	interpreter.recordStorageMutation()
 }
 
+type fromStringFunctionValue struct {
+	receiverType sema.Type
+	hostFunction *HostFunctionValue
+}
+
+// a function that attempts to create a Cadence value from a string, e.g. parsing a number from a string
+type stringValueParser func(*Interpreter, string) OptionalValue
+
+func newFromStringFunction(ty sema.Type, parser stringValueParser) fromStringFunctionValue {
+	functionType := sema.FromStringFunctionType(ty)
+
+	hostFunctionImpl := NewUnmeteredHostFunctionValue(
+		func(invocation Invocation) Value {
+			argument, ok := invocation.Arguments[0].(*StringValue)
+			if !ok {
+				// expect typechecker to catch a mismatch here
+				panic(errors.NewUnreachableError())
+			}
+			inter := invocation.Interpreter
+			return parser(inter, argument.Str)
+		},
+		functionType,
+	)
+	return fromStringFunctionValue{
+		receiverType: ty,
+		hostFunction: hostFunctionImpl,
+	}
+}
+
+// default implementation for parsing a given unsigned numeric type from a string.
+// the size provided by sizeInBytes is passed to strconv.ParseUint, ensuring that the parsed value fits in the target type.
+// input strings must not begin with a '+' or '-'.
+func unsignedIntValueParser[ValueType Value, IntType any](
+	bitSize int,
+	toValue func(common.MemoryGauge, func() IntType) ValueType,
+	fromUInt64 func(uint64) IntType,
+) stringValueParser {
+	return func(interpreter *Interpreter, input string) OptionalValue {
+		val, err := strconv.ParseUint(input, 10, bitSize)
+		if err != nil {
+			return NewNilValue(interpreter)
+		}
+
+		converted := toValue(interpreter, func() IntType {
+			return fromUInt64(val)
+		})
+		return NewSomeValueNonCopying(interpreter, converted)
+	}
+}
+
+// default implementation for parsing a given signed numeric type from a string.
+// the size provided by sizeInBytes is passed to strconv.ParseUint, ensuring that the parsed value fits in the target type.
+// input strings may begin with a '+' or '-'.
+func signedIntValueParser[ValueType Value, IntType any](
+	bitSize int,
+	toValue func(common.MemoryGauge, func() IntType) ValueType,
+	fromInt64 func(int64) IntType,
+) stringValueParser {
+
+	return func(interpreter *Interpreter, input string) OptionalValue {
+		val, err := strconv.ParseInt(input, 10, bitSize)
+		if err != nil {
+			return NewNilValue(interpreter)
+		}
+
+		converted := toValue(interpreter, func() IntType {
+			return fromInt64(val)
+		})
+		return NewSomeValueNonCopying(interpreter, converted)
+	}
+}
+
+// No need to use metered constructors for values represented by big.Ints, since estimation is more granular than fixed-size types.
+func bigIntValueParser(convert func(*big.Int) (Value, bool)) stringValueParser {
+	return func(interpreter *Interpreter, input string) OptionalValue {
+		estimatedSize := common.OverEstimateBigIntFromString(input)
+		common.UseMemory(interpreter, common.NewBigIntMemoryUsage(estimatedSize))
+
+		val, ok := new(big.Int).SetString(input, 10)
+		if !ok {
+			return NewNilValue(interpreter)
+		}
+
+		converted, ok := convert(val)
+
+		if !ok {
+			return NewNilValue(interpreter)
+		}
+		return NewSomeValueNonCopying(interpreter, converted)
+	}
+}
+
+// check if val is in the inclusive interval [low, high]
+func inRange(val *big.Int, low *big.Int, high *big.Int) bool {
+	return -1 < val.Cmp(low) && val.Cmp(high) < 1
+}
+
+func identity[T any](t T) T { return t }
+
+var fromStringFunctionValues = func() map[string]fromStringFunctionValue {
+	u64_8 := func(n uint64) uint8 { return uint8(n) }
+	u64_16 := func(n uint64) uint16 { return uint16(n) }
+	u64_32 := func(n uint64) uint32 { return uint32(n) }
+	u64_64 := identity[uint64]
+
+	declarations := []fromStringFunctionValue{
+		// signed int values from 8 bit -> infinity
+		newFromStringFunction(sema.Int8Type, signedIntValueParser(8, NewInt8Value, func(n int64) int8 {
+			return int8(n)
+		})),
+		newFromStringFunction(sema.Int16Type, signedIntValueParser(16, NewInt16Value, func(n int64) int16 {
+			return int16(n)
+		})),
+		newFromStringFunction(sema.Int32Type, signedIntValueParser(32, NewInt32Value, func(n int64) int32 {
+			return int32(n)
+		})),
+		newFromStringFunction(sema.Int64Type, signedIntValueParser(64, NewInt64Value, identity[int64])),
+		newFromStringFunction(sema.Int128Type, bigIntValueParser(func(b *big.Int) (v Value, ok bool) {
+			if ok = inRange(b, sema.Int128TypeMinIntBig, sema.Int128TypeMaxIntBig); ok {
+				v = NewUnmeteredInt128ValueFromBigInt(b)
+			}
+			return
+		})),
+		newFromStringFunction(sema.Int256Type, bigIntValueParser(func(b *big.Int) (v Value, ok bool) {
+			if ok = inRange(b, sema.Int256TypeMinIntBig, sema.Int256TypeMaxIntBig); ok {
+				v = NewUnmeteredInt256ValueFromBigInt(b)
+			}
+			return
+		})),
+		newFromStringFunction(sema.IntType, bigIntValueParser(func(b *big.Int) (Value, bool) {
+			return NewUnmeteredIntValueFromBigInt(b), true
+		})),
+
+		// unsigned int values from 8 bit -> infinity
+		newFromStringFunction(sema.UInt8Type, unsignedIntValueParser(8, NewUInt8Value, u64_8)),
+		newFromStringFunction(sema.UInt16Type, unsignedIntValueParser(16, NewUInt16Value, u64_16)),
+		newFromStringFunction(sema.UInt32Type, unsignedIntValueParser(32, NewUInt32Value, u64_32)),
+		newFromStringFunction(sema.UInt64Type, unsignedIntValueParser(64, NewUInt64Value, u64_64)),
+		newFromStringFunction(sema.UInt128Type, bigIntValueParser(func(b *big.Int) (v Value, ok bool) {
+			if ok = inRange(b, sema.UInt128TypeMinIntBig, sema.UInt128TypeMaxIntBig); ok {
+				v = NewUnmeteredUInt128ValueFromBigInt(b)
+			}
+			return
+		})),
+		newFromStringFunction(sema.UInt256Type, bigIntValueParser(func(b *big.Int) (v Value, ok bool) {
+			if ok = inRange(b, sema.UInt256TypeMinIntBig, sema.UInt256TypeMaxIntBig); ok {
+				v = NewUnmeteredUInt256ValueFromBigInt(b)
+			}
+			return
+		})),
+		newFromStringFunction(sema.UIntType, bigIntValueParser(func(b *big.Int) (Value, bool) {
+			return NewUnmeteredUIntValueFromBigInt(b), true
+		})),
+
+		// machine-sized word types
+		newFromStringFunction(sema.Word8Type, unsignedIntValueParser(8, NewWord8Value, u64_8)),
+		newFromStringFunction(sema.Word16Type, unsignedIntValueParser(16, NewWord16Value, u64_16)),
+		newFromStringFunction(sema.Word32Type, unsignedIntValueParser(32, NewWord32Value, u64_32)),
+		newFromStringFunction(sema.Word64Type, unsignedIntValueParser(64, NewWord64Value, u64_64)),
+
+		// fixed-points
+		newFromStringFunction(sema.Fix64Type, func(inter *Interpreter, input string) OptionalValue {
+			n, err := fixedpoint.ParseFix64(input)
+			if err != nil {
+				return NewNilValue(inter)
+			}
+
+			val := NewFix64Value(inter, n.Int64)
+			return NewSomeValueNonCopying(inter, val)
+
+		}),
+		newFromStringFunction(sema.UFix64Type, func(inter *Interpreter, input string) OptionalValue {
+			n, err := fixedpoint.ParseUFix64(input)
+			if err != nil {
+				return NewNilValue(inter)
+			}
+			val := NewUFix64Value(inter, n.Uint64)
+			return NewSomeValueNonCopying(inter, val)
+		}),
+	}
+
+	values := make(map[string]fromStringFunctionValue, len(declarations))
+	for _, decl := range declarations {
+		// index declaration by type name
+		values[decl.receiverType.String()] = decl
+	}
+
+	return values
+}()
+
 type ValueConverterDeclaration struct {
 	name         string
 	convert      func(*Interpreter, Value) Value
@@ -2233,7 +2421,6 @@ type ValueConverterDeclaration struct {
 }
 
 // It would be nice if return types in Go's function types would be covariant
-//
 var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.IntTypeName,
@@ -2486,8 +2673,15 @@ func init() {
 			continue
 		}
 
-		if _, ok := converterNames[numberType.String()]; !ok {
+		// todo use TypeID's here?
+		typeName := numberType.String()
+
+		if _, ok := converterNames[typeName]; !ok {
 			panic(fmt.Sprintf("missing converter for number type: %s", numberType))
+		}
+
+		if _, ok := fromStringFunctionValues[typeName]; !ok {
+			panic(fmt.Sprintf("missing fromString implementation for number type: %s", numberType))
 		}
 	}
 
@@ -2735,7 +2929,6 @@ type converterFunction struct {
 }
 
 // Converter functions are stateless functions. Hence they can be re-used across interpreters.
-//
 var converterFunctionValues = func() []converterFunction {
 
 	converterFuncValues := make([]converterFunction, len(ConverterDeclarations))
@@ -2767,6 +2960,10 @@ var converterFunctionValues = func() []converterFunction {
 			addMember(sema.NumberTypeMaxFieldName, declaration.max)
 		}
 
+		fromStringVal := fromStringFunctionValues[declaration.name]
+
+		addMember(sema.FromStringFunctionName, fromStringVal.hostFunction)
+
 		converterFuncValues[index] = converterFunction{
 			name:      declaration.name,
 			converter: converterFunctionValue,
@@ -2788,7 +2985,6 @@ type runtimeTypeConstructor struct {
 }
 
 // Constructor functions are stateless functions. Hence they can be re-used across interpreters.
-//
 var runtimeTypeConstructors = []runtimeTypeConstructor{
 	{
 		name: "OptionalType",
@@ -2923,7 +3119,6 @@ func defineRuntimeTypeConstructorFunctions(activation *VariableActivation) {
 }
 
 // typeFunction is the `Type` function. It is stateless, hence it can be re-used across interpreters.
-//
 var typeFunction = NewUnmeteredHostFunctionValue(
 	func(invocation Invocation) Value {
 		typeParameterPair := invocation.TypeParameterTypes.Oldest()
@@ -2955,7 +3150,6 @@ func defineBaseValue(activation *VariableActivation, name string, value Value) {
 }
 
 // stringFunction is the `String` function. It is stateless, hence it can be re-used across interpreters.
-//
 var stringFunction = func() Value {
 	functionValue := NewUnmeteredHostFunctionValue(
 		func(invocation Invocation) Value {
@@ -3054,10 +3248,7 @@ func (interpreter *Interpreter) IsSubType(subType StaticType, superType StaticTy
 		return true
 	}
 
-	semaType, err := interpreter.ConvertStaticToSemaType(superType)
-	if err != nil {
-		return false
-	}
+	semaType := interpreter.MustConvertStaticToSemaType(superType)
 
 	return interpreter.IsSubTypeOfSemaType(subType, semaType)
 }
@@ -3169,7 +3360,7 @@ func (interpreter *Interpreter) newStorageIterationFunction(addressValue Address
 	return NewHostFunctionValue(
 		interpreter,
 		func(invocation Invocation) Value {
-			fn, ok := invocation.Arguments[0].(*InterpretedFunctionValue)
+			fn, ok := invocation.Arguments[0].(FunctionValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
@@ -3361,9 +3552,14 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 
 			ty := typeParameterPair.Value
 
-			if !interpreter.IsSubTypeOfSemaType(value.StaticType(invocation.Interpreter), ty) {
+			valueStaticType := value.StaticType(invocation.Interpreter)
+
+			if !interpreter.IsSubTypeOfSemaType(valueStaticType, ty) {
+				valueSemaType := interpreter.MustConvertStaticToSemaType(valueStaticType)
+
 				panic(ForceCastTypeMismatchError{
 					ExpectedType:  ty,
+					ActualType:    valueSemaType,
 					LocationRange: invocation.GetLocationRange(),
 				})
 			}
@@ -4013,13 +4209,19 @@ func (interpreter *Interpreter) ExpectType(
 	expectedType sema.Type,
 	getLocationRange func() LocationRange,
 ) {
-	if !interpreter.IsSubTypeOfSemaType(value.StaticType(interpreter), expectedType) {
+	valueStaticType := value.StaticType(interpreter)
+
+	if !interpreter.IsSubTypeOfSemaType(valueStaticType, expectedType) {
+		valueSemaType := interpreter.MustConvertStaticToSemaType(valueStaticType)
+
 		var locationRange LocationRange
 		if getLocationRange != nil {
 			locationRange = getLocationRange()
 		}
+
 		panic(TypeMismatchError{
 			ExpectedType:  expectedType,
+			ActualType:    valueSemaType,
 			LocationRange: locationRange,
 		})
 	}
@@ -4327,7 +4529,6 @@ func (interpreter *Interpreter) invalidateResource(value Value) {
 }
 
 // MeterMemory delegates the memory usage to the interpreter's memory gauge, if any.
-//
 func (interpreter *Interpreter) MeterMemory(usage common.MemoryUsage) error {
 	common.UseMemory(interpreter.Config.MemoryGauge, usage)
 	return nil

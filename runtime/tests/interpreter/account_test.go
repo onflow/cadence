@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/onflow/cadence/runtime/activations"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -91,10 +93,10 @@ func testAccount(
 		baseValueActivation.DeclareValue(valueDeclaration)
 	}
 
-	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
 
 	for _, valueDeclaration := range valueDeclarations {
-		baseActivation.Declare(valueDeclaration)
+		interpreter.Declare(baseActivation, valueDeclaration)
 	}
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
@@ -187,6 +189,7 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 
 			_, err := inter.Invoke("test")
 			require.Error(t, err)
+			_ = err.Error()
 
 			require.ErrorAs(t, err, &interpreter.OverwriteError{})
 		})
@@ -233,6 +236,7 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 
 			_, err := inter.Invoke("test")
 			require.Error(t, err)
+			_ = err.Error()
 
 			require.ErrorAs(t, err, &interpreter.OverwriteError{})
 		})
@@ -408,6 +412,7 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 
 			_, err = inter.Invoke("loadR2")
 			require.Error(t, err)
+			_ = err.Error()
 
 			require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 
@@ -490,6 +495,7 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 
 			_, err = inter.Invoke("loadS2")
 			require.Error(t, err)
+			_ = err.Error()
 
 			require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 
@@ -586,6 +592,7 @@ func TestInterpretAuthAccount_copy(t *testing.T) {
 
 		_, err = inter.Invoke("copyS2")
 		require.Error(t, err)
+		_ = err.Error()
 
 		require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 
@@ -715,6 +722,7 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 
 			_, err := inter.Invoke("borrowR2")
 			require.Error(t, err)
+			_ = err.Error()
 
 			require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 
@@ -726,6 +734,7 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 
 			_, err := inter.Invoke("changeAfterBorrow")
 			require.Error(t, err)
+			_ = err.Error()
 
 			require.ErrorAs(t, err, &interpreter.DereferenceError{})
 		})
@@ -855,6 +864,7 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 
 			_, err = inter.Invoke("borrowS2")
 			require.Error(t, err)
+			_ = err.Error()
 
 			require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 
@@ -866,6 +876,7 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 
 			_, err := inter.Invoke("changeAfterBorrow")
 			require.Error(t, err)
+			_ = err.Error()
 
 			require.ErrorAs(t, err, &interpreter.DereferenceError{})
 		})
@@ -873,6 +884,7 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 		t.Run("borrow as invalid type", func(t *testing.T) {
 			_, err = inter.Invoke("invalidBorrowS")
 			require.Error(t, err)
+			_ = err.Error()
 
 			require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 		})
@@ -2542,6 +2554,8 @@ func TestInterpretAccount_iteration(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
+		_ = err.Error()
+
 		require.ErrorAs(t, err, &interpreter.StorageMutatedDuringIterationError{})
 	})
 
@@ -2619,6 +2633,8 @@ func TestInterpretAccountIterationMutation(t *testing.T) {
 			_, err := inter.Invoke("test")
 			if continueAfterMutation {
 				require.Error(t, err)
+				_ = err.Error()
+
 				require.ErrorAs(t, err, &interpreter.StorageMutatedDuringIterationError{})
 			} else {
 				require.NoError(t, err)
@@ -2652,6 +2668,8 @@ func TestInterpretAccountIterationMutation(t *testing.T) {
 			_, err := inter.Invoke("test")
 			if continueAfterMutation {
 				require.Error(t, err)
+				_ = err.Error()
+
 				require.ErrorAs(t, err, &interpreter.StorageMutatedDuringIterationError{})
 			} else {
 				require.NoError(t, err)
@@ -2685,6 +2703,8 @@ func TestInterpretAccountIterationMutation(t *testing.T) {
 			_, err := inter.Invoke("test")
 			if continueAfterMutation {
 				require.Error(t, err)
+				_ = err.Error()
+
 				require.ErrorAs(t, err, &interpreter.StorageMutatedDuringIterationError{})
 			} else {
 				require.NoError(t, err)
@@ -2722,6 +2742,8 @@ func TestInterpretAccountIterationMutation(t *testing.T) {
 			_, err := inter.Invoke("test")
 			if continueAfterMutation {
 				require.Error(t, err)
+				_ = err.Error()
+
 				require.ErrorAs(t, err, &interpreter.StorageMutatedDuringIterationError{})
 			} else {
 				require.NoError(t, err)
@@ -2762,6 +2784,8 @@ func TestInterpretAccountIterationMutation(t *testing.T) {
 			_, err := inter.Invoke("test")
 			if continueAfterMutation {
 				require.Error(t, err)
+				_ = err.Error()
+
 				require.ErrorAs(t, err, &interpreter.StorageMutatedDuringIterationError{})
 			} else {
 				require.NoError(t, err)
@@ -2795,6 +2819,8 @@ func TestInterpretAccountIterationMutation(t *testing.T) {
 			_, err := inter.Invoke("test")
 			if continueAfterMutation {
 				require.Error(t, err)
+				_ = err.Error()
+
 				require.ErrorAs(t, err, &interpreter.StorageMutatedDuringIterationError{})
 			} else {
 				require.NoError(t, err)
@@ -2828,6 +2854,8 @@ func TestInterpretAccountIterationMutation(t *testing.T) {
 			_, err := inter.Invoke("test")
 			if continueAfterMutation {
 				require.Error(t, err)
+				_ = err.Error()
+
 				require.ErrorAs(t, err, &interpreter.StorageMutatedDuringIterationError{})
 			} else {
 				require.NoError(t, err)
@@ -2861,6 +2889,8 @@ func TestInterpretAccountIterationMutation(t *testing.T) {
 			_, err := inter.Invoke("test")
 			if continueAfterMutation {
 				require.Error(t, err)
+				_ = err.Error()
+
 				require.ErrorAs(t, err, &interpreter.StorageMutatedDuringIterationError{})
 			} else {
 				require.NoError(t, err)
@@ -2880,8 +2910,8 @@ func TestInterpretAccountIterationMutation(t *testing.T) {
 			}
 			baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 			baseValueActivation.DeclareValue(authAccountValueDeclaration)
-			baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-			baseActivation.Declare(authAccountValueDeclaration)
+			baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+			interpreter.Declare(baseActivation, authAccountValueDeclaration)
 
 			importedChecker, err := checker.ParseAndCheckWithOptions(t,
 				`
@@ -2983,6 +3013,8 @@ func TestInterpretAccountIterationMutation(t *testing.T) {
 			_, err = inter.Invoke("test")
 			if continueAfterMutation {
 				require.Error(t, err)
+				_ = err.Error()
+
 				require.ErrorAs(t, err, &interpreter.StorageMutatedDuringIterationError{})
 			} else {
 				require.NoError(t, err)
@@ -3019,6 +3051,51 @@ func TestInterpretAccountIterationMutation(t *testing.T) {
 					return true
 				})
 				account.save("baz", to: /storage/foo6)
+			}`,
+		)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("non-lambda", func(t *testing.T) {
+		t.Parallel()
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(
+			t,
+			address,
+			true,
+			`
+			fun foo  (path: StoragePath, type: Type): Bool {
+				return true
+			}
+			fun test() {
+				account.forEachStored(foo)
+			}`,
+		)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("method", func(t *testing.T) {
+		t.Parallel()
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(
+			t,
+			address,
+			true,
+			`
+			struct S {
+				fun foo(path: StoragePath, type: Type): Bool {
+					return true
+				}
+			}
+			fun test() {
+				let s = S()
+				account.forEachStored(s.foo)
 			}`,
 		)
 

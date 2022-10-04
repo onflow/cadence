@@ -108,11 +108,13 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				_, err = inter.Invoke("get", value)
 				require.Error(t, err)
+				_ = err.Error()
 
 				require.ErrorAs(t, err, &interpreter.MemberAccessTypeError{})
 
 				_, err = inter.Invoke("set", value)
 				require.Error(t, err)
+				_ = err.Error()
 
 				require.ErrorAs(t, err, &interpreter.MemberAccessTypeError{})
 			})
@@ -188,6 +190,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 					interpreter.NewUnmeteredSomeValueNonCopying(value),
 				)
 				require.Error(t, err)
+				_ = err.Error()
 
 				require.ErrorAs(t, err, &interpreter.MemberAccessTypeError{})
 			})
@@ -279,11 +282,13 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				_, err = inter.Invoke("get", value)
 				require.Error(t, err)
+				_ = err.Error()
 
 				require.ErrorAs(t, err, &interpreter.MemberAccessTypeError{})
 
 				_, err = inter.Invoke("set", value)
 				require.Error(t, err)
+				_ = err.Error()
 
 				require.ErrorAs(t, err, &interpreter.MemberAccessTypeError{})
 			})
@@ -367,6 +372,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 					interpreter.NewUnmeteredSomeValueNonCopying(value),
 				)
 				require.Error(t, err)
+				_ = err.Error()
 
 				require.ErrorAs(t, err, &interpreter.MemberAccessTypeError{})
 			})
@@ -458,11 +464,13 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				_, err = inter.Invoke("get", ref)
 				require.Error(t, err)
+				_ = err.Error()
 
 				require.ErrorAs(t, err, &interpreter.MemberAccessTypeError{})
 
 				_, err = inter.Invoke("set", ref)
 				require.Error(t, err)
+				_ = err.Error()
 
 				require.ErrorAs(t, err, &interpreter.MemberAccessTypeError{})
 			})
@@ -550,6 +558,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 					),
 				)
 				require.Error(t, err)
+				_ = err.Error()
 
 				require.ErrorAs(t, err, &interpreter.MemberAccessTypeError{})
 			})

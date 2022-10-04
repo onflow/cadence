@@ -18,19 +18,35 @@
 
 package sema
 
+// TODO: rename to e.g. ControlFlowInfo
+
+// ReturnInfo tracks control-flow information
 type ReturnInfo struct {
 	// MaybeReturned indicates that (the branch of) the function
 	// contains a potentially taken return statement
-	MaybeReturned      bool
+	MaybeReturned bool
+	// MaybeJumped indicates that (the branch of) the function
+	// contains a potential break or continue statement
+	MaybeJumped bool
+	// DefinitelyReturned indicates that (the branch of) the function
+	// contains a definite return statement
 	DefinitelyReturned bool
-	DefinitelyHalted   bool
-	DefinitelyJumped   bool
+	// DefinitelyHalted indicates that (the branch of) the function
+	// contains a definite halt (a function call with a Never return type)
+	DefinitelyHalted bool
+	// DefinitelyJumped indicates that (the branch of) the function
+	// contains a definite break or continue statement
+	DefinitelyJumped bool
 }
 
 func (ri *ReturnInfo) MergeBranches(thenReturnInfo *ReturnInfo, elseReturnInfo *ReturnInfo) {
 	ri.MaybeReturned = ri.MaybeReturned ||
 		thenReturnInfo.MaybeReturned ||
 		elseReturnInfo.MaybeReturned
+
+	ri.MaybeJumped = ri.MaybeJumped ||
+		thenReturnInfo.MaybeJumped ||
+		elseReturnInfo.MaybeJumped
 
 	ri.DefinitelyReturned = ri.DefinitelyReturned ||
 		(thenReturnInfo.DefinitelyReturned &&
@@ -43,6 +59,16 @@ func (ri *ReturnInfo) MergeBranches(thenReturnInfo *ReturnInfo, elseReturnInfo *
 	ri.DefinitelyHalted = ri.DefinitelyHalted ||
 		(thenReturnInfo.DefinitelyHalted &&
 			elseReturnInfo.DefinitelyHalted)
+}
+
+func (ri *ReturnInfo) MergePotentiallyUnevaluated(temporaryReturnInfo *ReturnInfo) {
+	ri.MaybeReturned = ri.MaybeReturned ||
+		temporaryReturnInfo.MaybeReturned
+
+	ri.MaybeJumped = ri.MaybeJumped ||
+		temporaryReturnInfo.MaybeJumped
+
+	// NOTE: the definitive return state does not change
 }
 
 func (ri *ReturnInfo) Clone() *ReturnInfo {

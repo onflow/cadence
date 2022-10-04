@@ -19,6 +19,7 @@
 package compiler
 
 import (
+	"github.com/onflow/cadence/runtime/activations"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/compiler/ir"
 	"github.com/onflow/cadence/runtime/errors"
@@ -27,7 +28,7 @@ import (
 
 type Compiler struct {
 	Checker     *sema.Checker
-	activations *LocalActivations
+	activations *activations.Activations[*Local]
 	locals      []*Local
 }
 
@@ -38,7 +39,7 @@ var _ ast.ExpressionVisitor[ir.Expr] = &Compiler{}
 func NewCompiler(checker *sema.Checker) *Compiler {
 	return &Compiler{
 		Checker:     checker,
-		activations: &LocalActivations{},
+		activations: activations.NewActivations[*Local](nil),
 	}
 }
 
@@ -132,6 +133,10 @@ func (compiler *Compiler) VisitSwapStatement(_ *ast.SwapStatement) ir.Stmt {
 
 func (compiler *Compiler) VisitExpressionStatement(_ *ast.ExpressionStatement) ir.Stmt {
 	// TODO
+	panic(errors.NewUnreachableError())
+}
+
+func (compiler *Compiler) VisitVoidExpression(_ *ast.VoidExpression) ir.Expr {
 	panic(errors.NewUnreachableError())
 }
 

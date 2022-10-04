@@ -24,6 +24,6 @@ type TokenStream interface {
 	Cursor() int
 	Revert(cursor int)
 	// Input returns the whole input as source code
-	Input() string
+	Input() []byte
 	Reclaim()
 }

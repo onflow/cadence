@@ -22,6 +22,8 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/onflow/cadence/runtime/activations"
+
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -64,18 +66,23 @@ type Environment interface {
 }
 
 type interpreterEnvironment struct {
-	config                                Config
-	baseActivation                        *interpreter.VariableActivation
-	baseValueActivation                   *sema.VariableActivation
-	runtimeInterface                      Interface
-	storage                               *Storage
-	coverageReport                        *CoverageReport
-	codesAndPrograms                      codesAndPrograms
+	config Config
+
+	baseActivation      *interpreter.VariableActivation
+	baseValueActivation *sema.VariableActivation
+
+	InterpreterConfig *interpreter.Config
+	CheckerConfig     *sema.Config
+
 	deployedContractConstructorInvocation *stdlib.DeployedContractConstructorInvocation
-	interpreterConfig                     *interpreter.Config
-	checkerConfig                         *sema.Config
 	stackDepthLimiter                     *stackDepthLimiter
 	checkedImports                        importResolutionResults
+
+	// the following fields are re-configurable, see Configure
+	runtimeInterface Interface
+	storage          *Storage
+	coverageReport   *CoverageReport
+	codesAndPrograms codesAndPrograms
 }
 
 var _ Environment = &interpreterEnvironment{}
@@ -91,7 +98,7 @@ var _ common.MemoryGauge = &interpreterEnvironment{}
 
 func newInterpreterEnvironment(config Config) *interpreterEnvironment {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
 
 	env := &interpreterEnvironment{
 		config:              config,
@@ -99,8 +106,8 @@ func newInterpreterEnvironment(config Config) *interpreterEnvironment {
 		baseValueActivation: baseValueActivation,
 		stackDepthLimiter:   newStackDepthLimiter(config.StackDepthLimit),
 	}
-	env.interpreterConfig = env.newInterpreterConfig()
-	env.checkerConfig = env.newCheckerConfig()
+	env.InterpreterConfig = env.newInterpreterConfig()
+	env.CheckerConfig = env.newCheckerConfig()
 	return env
 }
 
@@ -153,21 +160,17 @@ func (e *interpreterEnvironment) newCheckerConfig() *sema.Config {
 
 func NewBaseInterpreterEnvironment(config Config) *interpreterEnvironment {
 	env := newInterpreterEnvironment(config)
-	for _, valueDeclaration := range stdlib.BuiltinValues {
+	for _, valueDeclaration := range stdlib.DefaultStandardLibraryValues(env) {
 		env.Declare(valueDeclaration)
 	}
-	env.Declare(stdlib.NewLogFunction(env))
-	env.Declare(stdlib.NewUnsafeRandomFunction(env))
-	env.Declare(stdlib.NewGetBlockFunction(env))
-	env.Declare(stdlib.NewGetCurrentBlockFunction(env))
-	env.Declare(stdlib.NewGetAccountFunction(env))
-	env.Declare(stdlib.NewAuthAccountConstructor(env))
 	return env
 }
 
 func NewScriptInterpreterEnvironment(config Config) Environment {
-	env := NewBaseInterpreterEnvironment(config)
-	env.Declare(stdlib.NewGetAuthAccountFunction(env))
+	env := newInterpreterEnvironment(config)
+	for _, valueDeclaration := range stdlib.DefaultScriptStandardLibraryValues(env) {
+		env.Declare(valueDeclaration)
+	}
 	return env
 }
 
@@ -180,14 +183,14 @@ func (e *interpreterEnvironment) Configure(
 	e.runtimeInterface = runtimeInterface
 	e.codesAndPrograms = codesAndPrograms
 	e.storage = storage
-	e.interpreterConfig.Storage = storage
+	e.InterpreterConfig.Storage = storage
 	e.coverageReport = coverageReport
 	e.stackDepthLimiter.depth = 0
 }
 
 func (e *interpreterEnvironment) Declare(valueDeclaration stdlib.StandardLibraryValue) {
 	e.baseValueActivation.DeclareValue(valueDeclaration)
-	e.baseActivation.Declare(valueDeclaration)
+	interpreter.Declare(e.baseActivation, valueDeclaration)
 }
 
 func (e *interpreterEnvironment) NewAuthAccountValue(address interpreter.AddressValue) interpreter.Value {
@@ -365,7 +368,7 @@ func (e *interpreterEnvironment) parseAndCheckProgram(
 	var parse *ast.Program
 	reportMetric(
 		func() {
-			parse, err = parser.ParseProgram(string(code), e)
+			parse, err = parser.ParseProgram(code, e)
 		},
 		e.runtimeInterface,
 		func(metrics Metrics, duration time.Duration) {
@@ -420,7 +423,7 @@ func (e *interpreterEnvironment) check(
 		program,
 		location,
 		e,
-		e.checkerConfig,
+		e.CheckerConfig,
 	)
 	if err != nil {
 		return nil, err
@@ -560,7 +563,7 @@ func (e *interpreterEnvironment) newInterpreter(
 	return interpreter.NewInterpreter(
 		program,
 		location,
-		e.interpreterConfig,
+		e.InterpreterConfig,
 	)
 }
 
@@ -702,7 +705,7 @@ func (e *interpreterEnvironment) newContractValueHandler() interpreter.ContractV
 		compositeType *sema.CompositeType,
 		constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
 		invocationRange ast.Range,
-	) *interpreter.CompositeValue {
+	) interpreter.ContractValue {
 
 		// If the contract is the deployed contract, instantiate it using
 		// the provided constructor and given arguments

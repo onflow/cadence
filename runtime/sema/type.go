@@ -56,7 +56,7 @@ func qualifiedIdentifier(identifier string, containerType Type) string {
 	for i := len(identifiers) - 1; i >= 0; i-- {
 		sb.WriteString(identifiers[i])
 		if i != 0 {
-			sb.WriteRune('.')
+			sb.WriteByte('.')
 		}
 	}
 
@@ -360,6 +360,47 @@ var ToStringFunctionType = &FunctionType{
 const toStringFunctionDocString = `
 A textual representation of this object
 `
+
+// fromString
+const FromStringFunctionName = "fromString"
+
+func FromStringFunctionDocstring(ty Type) string {
+
+	builder := new(strings.Builder)
+	builder.WriteString(
+		fmt.Sprintf(
+			"Attempts to parse %s from a string. Returns `nil` on overflow or invalid input. Whitespace or invalid digits will return a nil value.\n",
+			ty.String(),
+		))
+
+	if IsSameTypeKind(ty, FixedPointType) {
+		builder.WriteString(
+			`Both decimal and fractional components must be supplied. For instance, both "0." and ".1" are invalid string representations, but "0.1" is accepted.\n`,
+		)
+	}
+	if IsSameTypeKind(ty, SignedIntegerType) || IsSameTypeKind(ty, SignedFixedPointType) {
+		builder.WriteString(
+			"The string may optionally begin with a sign prefix of '-' or '+'.\n",
+		)
+	}
+
+	return builder.String()
+}
+
+func FromStringFunctionType(ty Type) *FunctionType {
+	return &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "input",
+				TypeAnnotation: NewTypeAnnotation(StringType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{ty},
+		),
+	}
+}
 
 // toBigEndianBytes
 
@@ -3169,6 +3210,16 @@ func init() {
 				}
 			}
 
+			// add .fromString() method
+			fromStringFnType := FromStringFunctionType(numberType)
+			fromStringDocstring := FromStringFunctionDocstring(numberType)
+			addMember(NewUnmeteredPublicFunctionMember(
+				functionType,
+				FromStringFunctionName,
+				fromStringFnType,
+				fromStringDocstring,
+			))
+
 			BaseValueActivation.Set(
 				typeName,
 				baseFunctionVariable(
@@ -3481,7 +3532,7 @@ type CompositeType struct {
 	Fields                              []string
 	// TODO: add support for overloaded initializers
 	ConstructorParameters []*Parameter
-	nestedTypes           *StringTypeOrderedMap
+	NestedTypes           *StringTypeOrderedMap
 	containerType         Type
 	EnumRawType           Type
 	hasComputedMembers    bool
@@ -3549,8 +3600,8 @@ func (t *CompositeType) checkIdentifiersCached() {
 		panic(errors.NewUnreachableError())
 	}
 
-	if t.nestedTypes != nil {
-		t.nestedTypes.Foreach(checkIdentifiersCached)
+	if t.NestedTypes != nil {
+		t.NestedTypes.Foreach(checkIdentifiersCached)
 	}
 }
 
@@ -3737,7 +3788,7 @@ func (t *CompositeType) InterfaceType() *InterfaceType {
 		Fields:                t.Fields,
 		InitializerParameters: t.ConstructorParameters,
 		containerType:         t.containerType,
-		nestedTypes:           t.nestedTypes,
+		NestedTypes:           t.NestedTypes,
 	}
 }
 
@@ -3747,7 +3798,7 @@ func (t *CompositeType) TypeRequirements() []*CompositeType {
 
 	if containerComposite, ok := t.containerType.(*CompositeType); ok {
 		for _, conformance := range containerComposite.ExplicitInterfaceConformances {
-			ty, ok := conformance.nestedTypes.Get(t.Identifier)
+			ty, ok := conformance.NestedTypes.Get(t.Identifier)
 			if !ok {
 				continue
 			}
@@ -3774,11 +3825,11 @@ func (t *CompositeType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 }
 
 func (t *CompositeType) IsContainerType() bool {
-	return t.nestedTypes != nil
+	return t.NestedTypes != nil
 }
 
 func (t *CompositeType) GetNestedTypes() *StringTypeOrderedMap {
-	return t.nestedTypes
+	return t.NestedTypes
 }
 
 func (t *CompositeType) initializeMemberResolvers() {
@@ -3832,6 +3883,7 @@ func (t *CompositeType) FieldPosition(name string, declaration *ast.CompositeDec
 // Member
 
 type Member struct {
+	// Parent type where this member can be resolved
 	ContainerType  Type
 	Access         ast.Access
 	Identifier     ast.Identifier
@@ -4010,7 +4062,7 @@ type InterfaceType struct {
 	// TODO: add support for overloaded initializers
 	InitializerParameters []*Parameter
 	containerType         Type
-	nestedTypes           *StringTypeOrderedMap
+	NestedTypes           *StringTypeOrderedMap
 	cachedIdentifiers     *struct {
 		TypeID              TypeID
 		QualifiedIdentifier string
@@ -4049,8 +4101,8 @@ func (t *InterfaceType) checkIdentifiersCached() {
 		panic(errors.NewUnreachableError())
 	}
 
-	if t.nestedTypes != nil {
-		t.nestedTypes.Foreach(checkIdentifiersCached)
+	if t.NestedTypes != nil {
+		t.NestedTypes.Foreach(checkIdentifiersCached)
 	}
 }
 
@@ -4226,11 +4278,11 @@ func (t *InterfaceType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 }
 
 func (t *InterfaceType) IsContainerType() bool {
-	return t.nestedTypes != nil
+	return t.NestedTypes != nil
 }
 
 func (t *InterfaceType) GetNestedTypes() *StringTypeOrderedMap {
-	return t.nestedTypes
+	return t.NestedTypes
 }
 
 func (t *InterfaceType) FieldPosition(name string, declaration *ast.InterfaceDeclaration) ast.Position {
@@ -4367,6 +4419,14 @@ const dictionaryTypeKeysFieldDocString = `
 An array containing all keys of the dictionary
 `
 
+const dictionaryTypeForEachKeyFunctionDocString = `
+Iterate over each key in this dictionary, exiting early if the passed function returns false.
+This method is more performant than calling .keys and then iterating over the resulting array,
+since no intermediate storage is allocated.
+
+The order of iteration is undefined
+`
+
 const dictionaryTypeValuesFieldDocString = `
 An array containing all values of the dictionary
 `
@@ -4491,6 +4551,28 @@ func (t *DictionaryType) initializeMemberResolvers() {
 					)
 				},
 			},
+			"forEachKey": {
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
+					if t.KeyType.IsResourceType() {
+						report(
+							&InvalidResourceDictionaryMemberError{
+								Name:            identifier,
+								DeclarationKind: common.DeclarationKindField,
+								Range:           targetRange,
+							},
+						)
+					}
+
+					return NewPublicFunctionMember(
+						memoryGauge,
+						t,
+						identifier,
+						DictionaryForEachKeyFunctionType(t),
+						dictionaryTypeForEachKeyFunctionDocString,
+					)
+				},
+			},
 		})
 	})
 }
@@ -4544,6 +4626,32 @@ func DictionaryRemoveFunctionType(t *DictionaryType) *FunctionType {
 				Type: t.ValueType,
 			},
 		),
+	}
+}
+
+func DictionaryForEachKeyFunctionType(t *DictionaryType) *FunctionType {
+	// fun forEachKey(_ function: ((K): Bool)): Void
+
+	// funcType: K -> Bool
+	funcType := &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Identifier:     "key",
+				TypeAnnotation: NewTypeAnnotation(t.KeyType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(BoolType),
+	}
+
+	return &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "function",
+				TypeAnnotation: NewTypeAnnotation(funcType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
 	}
 }
 
@@ -6290,7 +6398,7 @@ var AccountKeyType = func() *CompositeType {
 	}
 
 	accountKeyType.Members = GetMembersAsMap(members)
-	accountKeyType.Fields = getFieldNames(members)
+	accountKeyType.Fields = GetFieldNames(members)
 	return accountKeyType
 }()
 
@@ -6358,7 +6466,7 @@ var PublicKeyType = func() *CompositeType {
 	}
 
 	publicKeyType.Members = GetMembersAsMap(members)
-	publicKeyType.Fields = getFieldNames(members)
+	publicKeyType.Fields = GetFieldNames(members)
 
 	return publicKeyType
 }()
@@ -6428,7 +6536,7 @@ func GetMembersAsMap(members []*Member) *StringMemberOrderedMap {
 	return membersMap
 }
 
-func getFieldNames(members []*Member) []string {
+func GetFieldNames(members []*Member) []string {
 	fields := make([]string, 0)
 	for _, member := range members {
 		if member.DeclarationKind == common.DeclarationKindField {

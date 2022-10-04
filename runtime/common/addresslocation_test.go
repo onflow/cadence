@@ -50,6 +50,21 @@ func TestAddressLocation_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestAddressLocationTypeID(t *testing.T) {
+
+	t.Parallel()
+
+	location := AddressLocation{
+		Address: MustBytesToAddress([]byte{1}),
+		Name:    "Foo",
+	}
+
+	assert.Equal(t,
+		TypeID("A.0000000000000001.Bar.Baz"),
+		location.TypeID(nil, "Bar.Baz"),
+	)
+}
+
 func TestDecodeAddressLocationTypeID(t *testing.T) {
 
 	t.Parallel()

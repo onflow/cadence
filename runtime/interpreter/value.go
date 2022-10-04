@@ -14300,6 +14300,7 @@ var _ EquatableValue = &CompositeValue{}
 var _ HashableValue = &CompositeValue{}
 var _ MemberAccessibleValue = &CompositeValue{}
 var _ ReferenceTrackedResourceKindedValue = &CompositeValue{}
+var _ ContractValue = &CompositeValue{}
 
 func (*CompositeValue) IsValue() {}
 
@@ -14339,10 +14340,7 @@ func (v *CompositeValue) StaticType(interpreter *Interpreter) StaticType {
 
 func (v *CompositeValue) IsImportable(inter *Interpreter) bool {
 	staticType := v.StaticType(inter)
-	semaType, err := inter.ConvertStaticToSemaType(staticType)
-	if err != nil {
-		panic(err)
-	}
+	semaType := inter.MustConvertStaticToSemaType(staticType)
 	return semaType.IsImportable(map[*sema.Member]bool{})
 }
 
@@ -14883,10 +14881,7 @@ func (v *CompositeValue) ConformsToStaticType(
 
 	staticType := v.StaticType(interpreter).(CompositeStaticType)
 
-	semaType, err := interpreter.ConvertStaticToSemaType(staticType)
-	if err != nil {
-		return false
-	}
+	semaType := interpreter.MustConvertStaticToSemaType(staticType)
 
 	compositeType, ok := semaType.(*sema.CompositeType)
 	if !ok ||
@@ -15317,6 +15312,10 @@ func (v *CompositeValue) RemoveField(
 	interpreter.RemoveReferencedSlab(existingValueStorable)
 }
 
+func (v *CompositeValue) SetNestedVariables(variables map[string]*Variable) {
+	v.NestedVariables = variables
+}
+
 func NewEnumCaseValue(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
@@ -15622,6 +15621,42 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, getLocationRange fun
 	)
 }
 
+func (v *DictionaryValue) ForEachKey(
+	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
+	procedure FunctionValue,
+) {
+	keyType := v.SemaType(interpreter).KeyType
+
+	iterationInvocation := func(key Value) Invocation {
+		return NewInvocation(
+			interpreter,
+			v,
+			[]Value{key},
+			[]sema.Type{keyType},
+			nil,
+			getLocationRange,
+		)
+	}
+
+	err := v.dictionary.IterateKeys(
+		func(item atree.Value) (bool, error) {
+			key := MustConvertStoredValue(interpreter, item)
+
+			shouldContinue, ok := procedure.invoke(iterationInvocation(key)).(BoolValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			return bool(shouldContinue), nil
+		},
+	)
+
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
+}
+
 func (v *DictionaryValue) ContainsKey(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
@@ -15902,7 +15937,27 @@ func (v *DictionaryValue) GetMember(
 				v.SemaType(interpreter),
 			),
 		)
+	case "forEachKey":
+		return NewHostFunctionValue(
+			interpreter,
+			func(invocation Invocation) Value {
+				funcArgument, ok := invocation.Arguments[0].(FunctionValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
 
+				v.ForEachKey(
+					invocation.Interpreter,
+					invocation.GetLocationRange,
+					funcArgument,
+				)
+
+				return NewVoidValue(interpreter)
+			},
+			sema.DictionaryForEachKeyFunctionType(
+				v.SemaType(interpreter),
+			),
+		)
 	}
 
 	return nil
@@ -17074,9 +17129,13 @@ func (v *StorageReferenceValue) dereference(interpreter *Interpreter, getLocatio
 
 	if v.BorrowedType != nil {
 		staticType := referenced.StaticType(interpreter)
+
 		if !interpreter.IsSubTypeOfSemaType(staticType, v.BorrowedType) {
+			semaType := interpreter.MustConvertStaticToSemaType(staticType)
+
 			return nil, ForceCastTypeMismatchError{
 				ExpectedType:  v.BorrowedType,
+				ActualType:    semaType,
 				LocationRange: getLocationRange(),
 			}
 		}
@@ -17897,9 +17956,16 @@ func accountGetCapabilityFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			if !invocation.Interpreter.IsSubTypeOfSemaType(path.StaticType(invocation.Interpreter), pathType) {
+			interpreter := invocation.Interpreter
+
+			pathStaticType := path.StaticType(interpreter)
+
+			if !interpreter.IsSubTypeOfSemaType(pathStaticType, pathType) {
+				pathSemaType := interpreter.MustConvertStaticToSemaType(pathStaticType)
+
 				panic(TypeMismatchError{
 					ExpectedType:  pathType,
+					ActualType:    pathSemaType,
 					LocationRange: invocation.GetLocationRange(),
 				})
 			}
@@ -17916,7 +17982,7 @@ func accountGetCapabilityFunction(
 
 			var borrowStaticType StaticType
 			if borrowType != nil {
-				borrowStaticType = ConvertSemaToStaticType(invocation.Interpreter, borrowType)
+				borrowStaticType = ConvertSemaToStaticType(interpreter, borrowType)
 			}
 
 			return NewCapabilityValue(gauge, addressValue, path, borrowStaticType)
@@ -18682,3 +18748,13 @@ var publicKeyVerifyPoPFunction = NewUnmeteredHostFunctionValue(
 	},
 	sema.PublicKeyVerifyPoPFunctionType,
 )
+
+// ContractValue is the value of a contract.
+// Under normal circumstances, a contract value is always a CompositeValue.
+// However, in the test framework, an imported contract is constructed via a constructor function.
+// Hence, during tests, the value is a HostFunctionValue.
+//
+type ContractValue interface {
+	Value
+	SetNestedVariables(variables map[string]*Variable)
+}

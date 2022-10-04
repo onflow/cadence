@@ -606,27 +606,3 @@ Otherwise the field is `nil`.
 The field's value changes when the resource is moved from outside account storage
 into account storage, when it is moved from the storage of one account
 to the storage of another account, and when it is moved out of account storage.
-
-## Unbound References / Nulls
-
-There is **no** support for `null`.
-
-## Inheritance and Abstract Types
-
-There is **no** support for inheritance.
-Inheritance is a feature common in other programming languages,
-that allows including the fields and functions of one type in another type.
-
-Instead, follow the "composition over inheritance" principle,
-the idea of composing functionality from multiple individual parts,
-rather than building an inheritance tree.
-
-Furthermore, there is also **no** support for abstract types.
-An abstract type is a feature common in other programming languages,
-that prevents creating values of the type and only
-allows the creation of values of a subtype.
-In addition, abstract types may declare functions,
-but omit the implementation of them
-and instead require subtypes to implement them.
-
-Instead, consider using [interfaces](interfaces).

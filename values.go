@@ -581,12 +581,15 @@ func NewInt128(i int) Int128 {
 	return Int128{big.NewInt(int64(i))}
 }
 
+var int128MinExceededError = errors.NewDefaultUserError("value exceeds min of Int128")
+var int128MaxExceededError = errors.NewDefaultUserError("value exceeds max of Int128")
+
 func NewInt128FromBig(i *big.Int) (Int128, error) {
 	if i.Cmp(sema.Int128TypeMinIntBig) < 0 {
-		return Int128{}, errors.NewDefaultUserError("value exceeds min of Int128: %s", i.String())
+		return Int128{}, int128MinExceededError
 	}
 	if i.Cmp(sema.Int128TypeMaxIntBig) > 0 {
-		return Int128{}, errors.NewDefaultUserError("value exceeds max of Int128: %s", i.String())
+		return Int128{}, int128MaxExceededError
 	}
 	return Int128{i}, nil
 }
@@ -644,12 +647,15 @@ func NewInt256(i int) Int256 {
 	return Int256{big.NewInt(int64(i))}
 }
 
+var int256MinExceededError = errors.NewDefaultUserError("value exceeds min of Int256")
+var int256MaxExceededError = errors.NewDefaultUserError("value exceeds max of Int256")
+
 func NewInt256FromBig(i *big.Int) (Int256, error) {
 	if i.Cmp(sema.Int256TypeMinIntBig) < 0 {
-		return Int256{}, errors.NewDefaultUserError("value exceeds min of Int256: %s", i.String())
+		return Int256{}, int256MinExceededError
 	}
 	if i.Cmp(sema.Int256TypeMaxIntBig) > 0 {
-		return Int256{}, errors.NewDefaultUserError("value exceeds max of Int256: %s", i.String())
+		return Int256{}, int256MaxExceededError
 	}
 	return Int256{i}, nil
 }
@@ -705,9 +711,11 @@ func NewUInt(i uint) UInt {
 	return UInt{big.NewInt(int64(i))}
 }
 
+var uintNegativeError = errors.NewDefaultUserError("invalid negative value for UInt")
+
 func NewUIntFromBig(i *big.Int) (UInt, error) {
 	if i.Sign() < 0 {
-		return UInt{}, errors.NewDefaultUserError("invalid negative value for UInt: %s", i.String())
+		return UInt{}, uintNegativeError
 	}
 	return UInt{i}, nil
 }
@@ -928,12 +936,15 @@ func NewUInt128(i uint) UInt128 {
 	return UInt128{big.NewInt(int64(i))}
 }
 
+var uint128NegativeError = errors.NewDefaultUserError("invalid negative value for UInt128")
+var uint128MaxExceededError = errors.NewDefaultUserError("value exceeds max of UInt128")
+
 func NewUInt128FromBig(i *big.Int) (UInt128, error) {
 	if i.Sign() < 0 {
-		return UInt128{}, errors.NewDefaultUserError("invalid negative value for UInt: %s", i.String())
+		return UInt128{}, uint128NegativeError
 	}
 	if i.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
-		return UInt128{}, errors.NewDefaultUserError("value exceeds max of UInt128: %s", i.String())
+		return UInt128{}, uint128MaxExceededError
 	}
 	return UInt128{i}, nil
 }
@@ -991,12 +1002,15 @@ func NewUInt256(i uint) UInt256 {
 	return UInt256{big.NewInt(int64(i))}
 }
 
+var uint256NegativeError = errors.NewDefaultUserError("invalid negative value for UInt256")
+var uint256MaxExceededError = errors.NewDefaultUserError("value exceeds max of UInt256")
+
 func NewUInt256FromBig(i *big.Int) (UInt256, error) {
 	if i.Sign() < 0 {
-		return UInt256{}, errors.NewDefaultUserError("invalid negative value for UInt256: %s", i.String())
+		return UInt256{}, uint256NegativeError
 	}
 	if i.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
-		return UInt256{}, errors.NewDefaultUserError("value exceeds max of UInt256: %s", i.String())
+		return UInt256{}, uint256MaxExceededError
 	}
 	return UInt256{i}, nil
 }

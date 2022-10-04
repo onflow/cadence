@@ -3750,6 +3750,30 @@ func TestCheckInvalidResourceDictionaryValues(t *testing.T) {
 	assert.IsType(t, &sema.InvalidNestedResourceMoveError{}, errs[1])
 }
 
+func TestCheckInvalidResourceDictionaryKeysForeach(t *testing.T) {
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+        resource X {}
+
+        fun test() {
+            let xs <- {<-create X(): "x1"}
+
+            xs.forEachKey(fun (x: @X): Bool {
+                destroy x
+                return true
+            }) 
+            destroy xs
+        }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 3)
+
+	assert.IsType(t, &sema.InvalidDictionaryKeyTypeError{}, errs[0])
+	assert.IsType(t, &sema.InvalidResourceDictionaryMemberError{}, errs[1])
+	assert.IsType(t, &sema.ResourceLossError{}, errs[2])
+}
+
 func TestCheckInvalidResourceLossAfterMoveThroughDictionaryIndexing(t *testing.T) {
 
 	t.Parallel()
@@ -4524,6 +4548,86 @@ func TestCheckResourceCreationAndInvalidationInLoop(t *testing.T) {
     `)
 
 	require.NoError(t, err)
+}
+
+func TestCheckInvalidResourceCreationAndPotentialInvalidationInLoop(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(loop, controlFlowStatement string) {
+		t.Run(fmt.Sprintf("%s, %s", loop, controlFlowStatement), func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				fmt.Sprintf(
+					`
+                      resource X {}
+
+                      fun loop() {
+                          %s {
+                              let x <- create X()
+                              if false {
+                                  %s
+                              }
+                              destroy x
+                          }
+                      }
+                    `,
+					loop,
+					controlFlowStatement,
+				),
+			)
+
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+		})
+	}
+
+	for _, loop := range []string{"while true", "for e in []"} {
+		for _, controlFlowStatement := range []string{"continue", "break", "return"} {
+			test(loop, controlFlowStatement)
+		}
+	}
+}
+
+func TestCheckResourceCreationAndInvalidationAfterLoopWithJump(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(loop, controlFlowStatement string) {
+		t.Run(fmt.Sprintf("%s, %s", loop, controlFlowStatement), func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				fmt.Sprintf(
+					`
+                      resource X {}
+
+                      fun loop() {
+                          let x <- create X()
+                          %s {
+                              if false {
+                                  %s
+                              }
+                          }
+                          destroy x
+                      }
+                    `,
+					loop,
+					controlFlowStatement,
+				),
+			)
+
+			require.NoError(t, err)
+		})
+	}
+
+	for _, loop := range []string{"while true", "for e in []"} {
+		for _, controlFlowStatement := range []string{"continue", "break"} {
+			test(loop, controlFlowStatement)
+		}
+	}
 }
 
 func TestCheckInvalidResourceOwnerField(t *testing.T) {

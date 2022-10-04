@@ -372,7 +372,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 
 		executeScript(script, meter, structValue)
 		assert.Equal(t, uint64(1), meter[common.MemoryKindCompositeValueBase])
-		assert.Equal(t, uint64(104), meter[common.MemoryKindRawString])
+		assert.Equal(t, uint64(16), meter[common.MemoryKindRawString])
 	})
 }
 
@@ -434,7 +434,7 @@ func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 		{
 			TypeName:   "Path",
 			MemoryKind: common.MemoryKindRawString,
-			Weight:     3 + 1 + 68 + 10, // 68 is for tokens
+			Weight:     3 + 1 + 10,
 			TypeInstance: cadence.Path{
 				Domain:     "storage",
 				Identifier: "id3",
@@ -477,7 +477,7 @@ func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 		{
 			TypeName:   "Capability",
 			MemoryKind: common.MemoryKindRawString,
-			Weight:     13 + 1 + 74 + 19, // 74 is for tokens
+			Weight:     13 + 1 + 19,
 			TypeInstance: cadence.Capability{
 				Path: cadence.Path{
 					Domain:     "public",
@@ -576,7 +576,7 @@ func TestScriptDecodedLocationMetering(t *testing.T) {
 		},
 		{
 			MemoryKind: common.MemoryKindRawString,
-			Weight:     119,
+			Weight:     12,
 			Name:       "string",
 			Location:   common.StringLocation("abc"),
 		},

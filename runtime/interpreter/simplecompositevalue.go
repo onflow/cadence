@@ -99,10 +99,7 @@ func (v *SimpleCompositeValue) StaticType(_ *Interpreter) StaticType {
 
 func (v *SimpleCompositeValue) IsImportable(inter *Interpreter) bool {
 	staticType := v.StaticType(inter)
-	semaType, err := inter.ConvertStaticToSemaType(staticType)
-	if err != nil {
-		panic(err)
-	}
+	semaType := inter.MustConvertStaticToSemaType(staticType)
 	return semaType.IsImportable(map[*sema.Member]bool{})
 }
 

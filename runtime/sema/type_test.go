@@ -650,7 +650,7 @@ func TestIdentifierCacheUpdate(t *testing.T) {
           }
 	`
 
-	program, err := parser.ParseProgram(code, nil)
+	program, err := parser.ParseProgram([]byte(code), nil)
 	require.NoError(t, err)
 
 	checker, err := NewChecker(
@@ -699,7 +699,7 @@ func TestIdentifierCacheUpdate(t *testing.T) {
 					assert.Equal(t, recalculatedID, cachedID)
 
 					// Recursively check for nested types
-					checkNestedTypes(semaType.nestedTypes)
+					checkNestedTypes(semaType.NestedTypes)
 
 				case *InterfaceType:
 					cachedQualifiedID := semaType.QualifiedIdentifier()
@@ -715,7 +715,7 @@ func TestIdentifierCacheUpdate(t *testing.T) {
 					assert.Equal(t, recalculatedID, cachedID)
 
 					// Recursively check for nested types
-					checkNestedTypes(semaType.nestedTypes)
+					checkNestedTypes(semaType.NestedTypes)
 				}
 			}
 
