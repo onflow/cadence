@@ -255,3 +255,34 @@ func TestInterpretForString(t *testing.T) {
 		value,
 	)
 }
+
+func TestInterpretForStatementCapturing(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+       fun test(): Int {
+           let fs: [((): Int)] = []
+           for x in [1, 2, 3] {
+               fs.append(fun (): Int {
+                   return x
+               })
+           }
+           var sum = 0
+           for f in fs {
+              sum = sum + f()
+           }
+           return sum
+       }
+    `)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewUnmeteredIntValueFromInt64(6),
+		value,
+	)
+}
