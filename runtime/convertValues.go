@@ -768,7 +768,7 @@ func ImportValue(
 ) (interpreter.Value, error) {
 	switch v := value.(type) {
 	case cadence.Void:
-		return interpreter.NewVoidValue(inter), nil
+		return interpreter.Void, nil
 	case cadence.Optional:
 		return importOptionalValue(
 			inter,
@@ -777,7 +777,7 @@ func ImportValue(
 			expectedType,
 		)
 	case cadence.Bool:
-		return interpreter.NewBoolValue(inter, bool(v)), nil
+		return interpreter.AsBoolValue(bool(v)), nil
 	case cadence.String:
 		return importString(inter, v), nil
 	case cadence.Character:
@@ -1190,7 +1190,7 @@ func importOptionalValue(
 	error,
 ) {
 	if v.Value == nil {
-		return interpreter.NewNilValue(inter), nil
+		return interpreter.Nil, nil
 	}
 
 	var innerType sema.Type

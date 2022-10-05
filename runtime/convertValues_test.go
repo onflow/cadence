@@ -126,12 +126,12 @@ func TestExportValue(t *testing.T) {
 	for _, tt := range []exportTest{
 		{
 			label:    "Void",
-			value:    interpreter.VoidValue{},
+			value:    interpreter.Void,
 			expected: cadence.NewVoid(),
 		},
 		{
 			label:    "Nil",
-			value:    interpreter.NilValue{},
+			value:    interpreter.Nil,
 			expected: cadence.NewOptional(nil),
 		},
 		{
@@ -537,13 +537,13 @@ func TestImportValue(t *testing.T) {
 	for _, tt := range []importTest{
 		{
 			label:    "Void",
-			expected: interpreter.VoidValue{},
+			expected: interpreter.Void,
 			value:    cadence.NewVoid(),
 		},
 		{
 			label:    "Nil",
 			value:    cadence.NewOptional(nil),
-			expected: interpreter.NilValue{},
+			expected: interpreter.Nil,
 		},
 		{
 			label: "SomeValue",

@@ -478,7 +478,7 @@ func newAddPublicKeyFunction(
 				invocation.GetLocationRange,
 			)
 
-			return interpreter.VoidValue{}
+			return interpreter.Void
 		},
 		sema.AuthAccountTypeAddPublicKeyFunctionType,
 	)
@@ -533,7 +533,7 @@ func newRemovePublicKeyFunction(
 				invocation.GetLocationRange,
 			)
 
-			return interpreter.VoidValue{}
+			return interpreter.Void
 		},
 		sema.AuthAccountTypeRemovePublicKeyFunctionType,
 	)
@@ -656,7 +656,7 @@ func newAccountKeysGetFunction(
 			// This is done because, if the host function returns an error when a key is not found, then
 			// currently there's no way to distinguish between a 'key not found error' vs other internal errors.
 			if accountKey == nil {
-				return interpreter.NewNilValue(invocation.Interpreter)
+				return interpreter.Nil
 			}
 
 			inter := invocation.Interpreter
@@ -719,7 +719,7 @@ func newAccountKeysRevokeFunction(
 			// This is done because, if the host function returns an error when a key is not found, then
 			// currently there's no way to distinguish between a 'key not found error' vs other internal errors.
 			if accountKey == nil {
-				return interpreter.NewNilValue(invocation.Interpreter)
+				return interpreter.Nil
 			}
 
 			inter := invocation.Interpreter
@@ -1135,7 +1135,7 @@ func newAccountContractsGetFunction(
 					),
 				)
 			} else {
-				return interpreter.NewNilValue(invocation.Interpreter)
+				return interpreter.Nil
 			}
 		},
 		sema.AuthAccountContractsTypeGetFunctionType,
@@ -1741,7 +1741,7 @@ func newAuthAccountContractsRemoveFunction(
 					),
 				)
 			} else {
-				return interpreter.NewNilValue(invocation.Interpreter)
+				return interpreter.Nil
 			}
 		},
 		sema.AuthAccountContractsTypeRemoveFunctionType,

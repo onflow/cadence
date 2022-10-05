@@ -359,7 +359,7 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ func() LocationRange, n
 
 				// if either type is unknown, the subtype relation is false, as it doesn't make sense to even ask this question
 				if staticType == nil || otherStaticType == nil {
-					return NewBoolValue(interpreter, false)
+					return FalseValue
 				}
 
 				inter := invocation.Interpreter
@@ -368,7 +368,7 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ func() LocationRange, n
 					inter.MustConvertStaticToSemaType(staticType),
 					inter.MustConvertStaticToSemaType(otherStaticType),
 				)
-				return NewBoolValue(interpreter, result)
+				return AsBoolValue(result)
 			},
 			sema.MetaTypeIsSubtypeFunctionType,
 		)
@@ -472,18 +472,11 @@ func (v TypeValue) HashInput(interpreter *Interpreter, _ func() LocationRange, s
 
 type VoidValue struct{}
 
+var Void Value = VoidValue{}
+
 var _ Value = VoidValue{}
 var _ atree.Storable = VoidValue{}
 var _ EquatableValue = VoidValue{}
-
-func NewUnmeteredVoidValue() VoidValue {
-	return VoidValue{}
-}
-
-func NewVoidValue(memoryGauge common.MemoryGauge) VoidValue {
-	common.UseMemory(memoryGauge, common.VoidValueMemoryUsage)
-	return NewUnmeteredVoidValue()
-}
 
 func (VoidValue) IsValue() {}
 
@@ -562,7 +555,7 @@ func (VoidValue) DeepRemove(_ *Interpreter) {
 	// NO-OP
 }
 
-func (v VoidValue) ByteSize() uint32 {
+func (VoidValue) ByteSize() uint32 {
 	return uint32(len(cborVoidValue))
 }
 
@@ -583,18 +576,14 @@ var _ atree.Storable = BoolValue(false)
 var _ EquatableValue = BoolValue(false)
 var _ HashableValue = BoolValue(false)
 
-func NewUnmeteredBoolValue(value bool) BoolValue {
-	return BoolValue(value)
-}
+const TrueValue = BoolValue(true)
+const FalseValue = BoolValue(false)
 
-func NewBoolValueFromConstructor(memoryGauge common.MemoryGauge, constructor func() bool) BoolValue {
-	common.UseMemory(memoryGauge, common.BoolValueMemoryUsage)
-	return NewUnmeteredBoolValue(constructor())
-}
-
-func NewBoolValue(memoryGauge common.MemoryGauge, value bool) BoolValue {
-	common.UseMemory(memoryGauge, common.BoolValueMemoryUsage)
-	return NewUnmeteredBoolValue(value)
+func AsBoolValue(v bool) BoolValue {
+	if v {
+		return TrueValue
+	}
+	return FalseValue
 }
 
 func (BoolValue) IsValue() {}
@@ -615,8 +604,11 @@ func (BoolValue) IsImportable(_ *Interpreter) bool {
 	return sema.BoolType.Importable
 }
 
-func (v BoolValue) Negate(interpreter *Interpreter) BoolValue {
-	return NewBoolValue(interpreter, !bool(v))
+func (v BoolValue) Negate(_ *Interpreter) BoolValue {
+	if v == TrueValue {
+		return FalseValue
+	}
+	return TrueValue
 }
 
 func (v BoolValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -1936,7 +1928,7 @@ func (v *ArrayValue) FirstIndex(interpreter *Interpreter, getLocationRange func(
 		value := NewIntValueFromInt64(interpreter, counter)
 		return NewSomeValueNonCopying(interpreter, value)
 	}
-	return NilValue{}
+	return NilOptionalValue
 }
 
 func (v *ArrayValue) Contains(
@@ -1950,22 +1942,18 @@ func (v *ArrayValue) Contains(
 		panic(errors.NewUnreachableError())
 	}
 
-	valueGetter := func() bool {
-		result := false
-		v.Iterate(interpreter, func(element Value) (resume bool) {
-			if needleEquatable.Equal(interpreter, getLocationRange, element) {
-				result = true
-				// stop iteration
-				return false
-			}
-			// continue iteration
-			return true
-		})
+	var result bool
+	v.Iterate(interpreter, func(element Value) (resume bool) {
+		if needleEquatable.Equal(interpreter, getLocationRange, element) {
+			result = true
+			// stop iteration
+			return false
+		}
+		// continue iteration
+		return true
+	})
 
-		return result
-	}
-
-	return NewBoolValueFromConstructor(interpreter, valueGetter)
+	return AsBoolValue(result)
 }
 
 func (v *ArrayValue) GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
@@ -1986,7 +1974,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, getLocationRange func()
 					invocation.GetLocationRange,
 					invocation.Arguments[0],
 				)
-				return NewVoidValue(invocation.Interpreter)
+				return Void
 			},
 			sema.ArrayAppendFunctionType(
 				v.SemaType(interpreter).ElementType(false),
@@ -2006,7 +1994,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, getLocationRange func()
 					invocation.GetLocationRange,
 					otherArray,
 				)
-				return NewVoidValue(invocation.Interpreter)
+				return Void
 			},
 			sema.ArrayAppendAllFunctionType(
 				v.SemaType(interpreter),
@@ -2050,7 +2038,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, getLocationRange func()
 					index,
 					element,
 				)
-				return NewVoidValue(invocation.Interpreter)
+				return Void
 			},
 			sema.ArrayInsertFunctionType(
 				v.SemaType(interpreter).ElementType(false),
@@ -3072,13 +3060,7 @@ func (v IntValue) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return cmp == -1
-		},
-	)
+	return AsBoolValue(cmp == -1)
 }
 
 func (v IntValue) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -3091,13 +3073,8 @@ func (v IntValue) LessEqual(interpreter *Interpreter, other NumberValue) BoolVal
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			cmp := v.BigInt.Cmp(o.BigInt)
-			return cmp <= 0
-		},
-	)
+	cmp := v.BigInt.Cmp(o.BigInt)
+	return AsBoolValue(cmp <= 0)
 }
 
 func (v IntValue) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -3110,13 +3087,9 @@ func (v IntValue) Greater(interpreter *Interpreter, other NumberValue) BoolValue
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			cmp := v.BigInt.Cmp(o.BigInt)
-			return cmp == 1
-		},
-	)
+	cmp := v.BigInt.Cmp(o.BigInt)
+	return AsBoolValue(cmp == 1)
+
 }
 
 func (v IntValue) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -3129,13 +3102,8 @@ func (v IntValue) GreaterEqual(interpreter *Interpreter, other NumberValue) Bool
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			cmp := v.BigInt.Cmp(o.BigInt)
-			return cmp >= 0
-		},
-	)
+	cmp := v.BigInt.Cmp(o.BigInt)
+	return AsBoolValue(cmp >= 0)
 }
 
 func (v IntValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -3694,12 +3662,7 @@ func (v Int8Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v < o
-		},
-	)
+	return AsBoolValue(v < o)
 }
 
 func (v Int8Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -3712,12 +3675,7 @@ func (v Int8Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolVa
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v <= o
-		},
-	)
+	return AsBoolValue(v <= o)
 }
 
 func (v Int8Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -3730,12 +3688,7 @@ func (v Int8Value) Greater(interpreter *Interpreter, other NumberValue) BoolValu
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v > o
-		},
-	)
+	return AsBoolValue(v > o)
 }
 
 func (v Int8Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -3748,12 +3701,7 @@ func (v Int8Value) GreaterEqual(interpreter *Interpreter, other NumberValue) Boo
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v >= o
-		},
-	)
+	return AsBoolValue(v >= o)
 }
 
 func (v Int8Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -4300,12 +4248,7 @@ func (v Int16Value) Less(interpreter *Interpreter, other NumberValue) BoolValue 
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v < o
-		},
-	)
+	return AsBoolValue(v < o)
 }
 
 func (v Int16Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -4318,12 +4261,7 @@ func (v Int16Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolV
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v <= o
-		},
-	)
+	return AsBoolValue(v <= o)
 }
 
 func (v Int16Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -4336,12 +4274,7 @@ func (v Int16Value) Greater(interpreter *Interpreter, other NumberValue) BoolVal
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v > o
-		},
-	)
+	return AsBoolValue(v > o)
 }
 
 func (v Int16Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -4354,12 +4287,7 @@ func (v Int16Value) GreaterEqual(interpreter *Interpreter, other NumberValue) Bo
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v >= o
-		},
-	)
+	return AsBoolValue(v >= o)
 }
 
 func (v Int16Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -4909,12 +4837,7 @@ func (v Int32Value) Less(interpreter *Interpreter, other NumberValue) BoolValue 
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v < o
-		},
-	)
+	return AsBoolValue(v < o)
 }
 
 func (v Int32Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -4927,12 +4850,7 @@ func (v Int32Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolV
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v <= o
-		},
-	)
+	return AsBoolValue(v <= o)
 }
 
 func (v Int32Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -4945,12 +4863,7 @@ func (v Int32Value) Greater(interpreter *Interpreter, other NumberValue) BoolVal
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v > o
-		},
-	)
+	return AsBoolValue(v > o)
 }
 
 func (v Int32Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -4963,12 +4876,7 @@ func (v Int32Value) GreaterEqual(interpreter *Interpreter, other NumberValue) Bo
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v >= o
-		},
-	)
+	return AsBoolValue(v >= o)
 }
 
 func (v Int32Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -5517,12 +5425,7 @@ func (v Int64Value) Less(interpreter *Interpreter, other NumberValue) BoolValue 
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v < o
-		},
-	)
+	return AsBoolValue(v < o)
 }
 
 func (v Int64Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -5535,12 +5438,7 @@ func (v Int64Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolV
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v <= o
-		},
-	)
+	return AsBoolValue(v <= o)
 }
 
 func (v Int64Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -5553,12 +5451,8 @@ func (v Int64Value) Greater(interpreter *Interpreter, other NumberValue) BoolVal
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v > o
-		},
-	)
+	return AsBoolValue(v > o)
+
 }
 
 func (v Int64Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -5571,12 +5465,7 @@ func (v Int64Value) GreaterEqual(interpreter *Interpreter, other NumberValue) Bo
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v >= o
-		},
-	)
+	return AsBoolValue(v >= o)
 }
 
 func (v Int64Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -6185,13 +6074,8 @@ func (v Int128Value) Less(interpreter *Interpreter, other NumberValue) BoolValue
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			cmp := v.BigInt.Cmp(o.BigInt)
-			return cmp == -1
-		},
-	)
+	cmp := v.BigInt.Cmp(o.BigInt)
+	return AsBoolValue(cmp == -1)
 }
 
 func (v Int128Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -6204,13 +6088,8 @@ func (v Int128Value) LessEqual(interpreter *Interpreter, other NumberValue) Bool
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			cmp := v.BigInt.Cmp(o.BigInt)
-			return cmp <= 0
-		},
-	)
+	cmp := v.BigInt.Cmp(o.BigInt)
+	return AsBoolValue(cmp <= 0)
 }
 
 func (v Int128Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -6223,13 +6102,8 @@ func (v Int128Value) Greater(interpreter *Interpreter, other NumberValue) BoolVa
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			cmp := v.BigInt.Cmp(o.BigInt)
-			return cmp == 1
-		},
-	)
+	cmp := v.BigInt.Cmp(o.BigInt)
+	return AsBoolValue(cmp == 1)
 }
 
 func (v Int128Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -6242,13 +6116,8 @@ func (v Int128Value) GreaterEqual(interpreter *Interpreter, other NumberValue) B
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			cmp := v.BigInt.Cmp(o.BigInt)
-			return cmp >= 0
-		},
-	)
+	cmp := v.BigInt.Cmp(o.BigInt)
+	return AsBoolValue(cmp >= 0)
 }
 
 func (v Int128Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -6891,13 +6760,8 @@ func (v Int256Value) Less(interpreter *Interpreter, other NumberValue) BoolValue
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			cmp := v.BigInt.Cmp(o.BigInt)
-			return cmp == -1
-		},
-	)
+	cmp := v.BigInt.Cmp(o.BigInt)
+	return AsBoolValue(cmp == -1)
 }
 
 func (v Int256Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -6910,13 +6774,8 @@ func (v Int256Value) LessEqual(interpreter *Interpreter, other NumberValue) Bool
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			cmp := v.BigInt.Cmp(o.BigInt)
-			return cmp <= 0
-		},
-	)
+	cmp := v.BigInt.Cmp(o.BigInt)
+	return AsBoolValue(cmp <= 0)
 }
 
 func (v Int256Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -6929,13 +6788,8 @@ func (v Int256Value) Greater(interpreter *Interpreter, other NumberValue) BoolVa
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			cmp := v.BigInt.Cmp(o.BigInt)
-			return cmp == 1
-		},
-	)
+	cmp := v.BigInt.Cmp(o.BigInt)
+	return AsBoolValue(cmp == 1)
 }
 
 func (v Int256Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -6948,13 +6802,8 @@ func (v Int256Value) GreaterEqual(interpreter *Interpreter, other NumberValue) B
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			cmp := v.BigInt.Cmp(o.BigInt)
-			return cmp >= 0
-		},
-	)
+	cmp := v.BigInt.Cmp(o.BigInt)
+	return AsBoolValue(cmp >= 0)
 }
 
 func (v Int256Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -7519,13 +7368,8 @@ func (v UIntValue) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			cmp := v.BigInt.Cmp(o.BigInt)
-			return cmp == -1
-		},
-	)
+	cmp := v.BigInt.Cmp(o.BigInt)
+	return AsBoolValue(cmp == -1)
 }
 
 func (v UIntValue) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -7538,13 +7382,8 @@ func (v UIntValue) LessEqual(interpreter *Interpreter, other NumberValue) BoolVa
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			cmp := v.BigInt.Cmp(o.BigInt)
-			return cmp <= 0
-		},
-	)
+	cmp := v.BigInt.Cmp(o.BigInt)
+	return AsBoolValue(cmp <= 0)
 }
 
 func (v UIntValue) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -7557,13 +7396,8 @@ func (v UIntValue) Greater(interpreter *Interpreter, other NumberValue) BoolValu
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			cmp := v.BigInt.Cmp(o.BigInt)
-			return cmp == 1
-		},
-	)
+	cmp := v.BigInt.Cmp(o.BigInt)
+	return AsBoolValue(cmp == 1)
 }
 
 func (v UIntValue) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -7576,13 +7410,8 @@ func (v UIntValue) GreaterEqual(interpreter *Interpreter, other NumberValue) Boo
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			cmp := v.BigInt.Cmp(o.BigInt)
-			return cmp >= 0
-		},
-	)
+	cmp := v.BigInt.Cmp(o.BigInt)
+	return AsBoolValue(cmp >= 0)
 }
 
 func (v UIntValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -8065,12 +7894,7 @@ func (v UInt8Value) Less(interpreter *Interpreter, other NumberValue) BoolValue 
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v < o
-		},
-	)
+	return AsBoolValue(v < o)
 }
 
 func (v UInt8Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -8083,12 +7907,7 @@ func (v UInt8Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolV
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v <= o
-		},
-	)
+	return AsBoolValue(v <= o)
 }
 
 func (v UInt8Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -8101,12 +7920,7 @@ func (v UInt8Value) Greater(interpreter *Interpreter, other NumberValue) BoolVal
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v > o
-		},
-	)
+	return AsBoolValue(v > o)
 }
 
 func (v UInt8Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -8119,12 +7933,7 @@ func (v UInt8Value) GreaterEqual(interpreter *Interpreter, other NumberValue) Bo
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v >= o
-		},
-	)
+	return AsBoolValue(v >= o)
 }
 
 func (v UInt8Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -8635,12 +8444,7 @@ func (v UInt16Value) Less(interpreter *Interpreter, other NumberValue) BoolValue
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v < o
-		},
-	)
+	return AsBoolValue(v < o)
 }
 
 func (v UInt16Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -8653,12 +8457,7 @@ func (v UInt16Value) LessEqual(interpreter *Interpreter, other NumberValue) Bool
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v <= o
-		},
-	)
+	return AsBoolValue(v <= o)
 }
 
 func (v UInt16Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -8671,12 +8470,7 @@ func (v UInt16Value) Greater(interpreter *Interpreter, other NumberValue) BoolVa
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v > o
-		},
-	)
+	return AsBoolValue(v > o)
 }
 
 func (v UInt16Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -8689,12 +8483,7 @@ func (v UInt16Value) GreaterEqual(interpreter *Interpreter, other NumberValue) B
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v >= o
-		},
-	)
+	return AsBoolValue(v >= o)
 }
 
 func (v UInt16Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -9166,12 +8955,7 @@ func (v UInt32Value) Less(interpreter *Interpreter, other NumberValue) BoolValue
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v < o
-		},
-	)
+	return AsBoolValue(v < o)
 }
 
 func (v UInt32Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -9184,12 +8968,7 @@ func (v UInt32Value) LessEqual(interpreter *Interpreter, other NumberValue) Bool
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v <= o
-		},
-	)
+	return AsBoolValue(v <= o)
 }
 
 func (v UInt32Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -9202,12 +8981,7 @@ func (v UInt32Value) Greater(interpreter *Interpreter, other NumberValue) BoolVa
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v > o
-		},
-	)
+	return AsBoolValue(v > o)
 }
 
 func (v UInt32Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -9220,12 +8994,7 @@ func (v UInt32Value) GreaterEqual(interpreter *Interpreter, other NumberValue) B
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v >= o
-		},
-	)
+	return AsBoolValue(v >= o)
 }
 
 func (v UInt32Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -9726,12 +9495,7 @@ func (v UInt64Value) Less(interpreter *Interpreter, other NumberValue) BoolValue
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v < o
-		},
-	)
+	return AsBoolValue(v < o)
 }
 
 func (v UInt64Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -9744,12 +9508,7 @@ func (v UInt64Value) LessEqual(interpreter *Interpreter, other NumberValue) Bool
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v <= o
-		},
-	)
+	return AsBoolValue(v <= o)
 }
 
 func (v UInt64Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -9762,12 +9521,7 @@ func (v UInt64Value) Greater(interpreter *Interpreter, other NumberValue) BoolVa
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v > o
-		},
-	)
+	return AsBoolValue(v > o)
 }
 
 func (v UInt64Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -9780,12 +9534,7 @@ func (v UInt64Value) GreaterEqual(interpreter *Interpreter, other NumberValue) B
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v >= o
-		},
-	)
+	return AsBoolValue(v >= o)
 }
 
 func (v UInt64Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -10331,13 +10080,8 @@ func (v UInt128Value) Less(interpreter *Interpreter, other NumberValue) BoolValu
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			cmp := v.BigInt.Cmp(o.BigInt)
-			return cmp == -1
-		},
-	)
+	cmp := v.BigInt.Cmp(o.BigInt)
+	return AsBoolValue(cmp == -1)
 }
 
 func (v UInt128Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -10350,13 +10094,8 @@ func (v UInt128Value) LessEqual(interpreter *Interpreter, other NumberValue) Boo
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			cmp := v.BigInt.Cmp(o.BigInt)
-			return cmp <= 0
-		},
-	)
+	cmp := v.BigInt.Cmp(o.BigInt)
+	return AsBoolValue(cmp <= 0)
 }
 
 func (v UInt128Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -10369,13 +10108,8 @@ func (v UInt128Value) Greater(interpreter *Interpreter, other NumberValue) BoolV
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			cmp := v.BigInt.Cmp(o.BigInt)
-			return cmp == 1
-		},
-	)
+	cmp := v.BigInt.Cmp(o.BigInt)
+	return AsBoolValue(cmp == 1)
 }
 
 func (v UInt128Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -10388,13 +10122,8 @@ func (v UInt128Value) GreaterEqual(interpreter *Interpreter, other NumberValue) 
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			cmp := v.BigInt.Cmp(o.BigInt)
-			return cmp >= 0
-		},
-	)
+	cmp := v.BigInt.Cmp(o.BigInt)
+	return AsBoolValue(cmp >= 0)
 }
 
 func (v UInt128Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -10984,13 +10713,8 @@ func (v UInt256Value) Less(interpreter *Interpreter, other NumberValue) BoolValu
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			cmp := v.BigInt.Cmp(o.BigInt)
-			return cmp == -1
-		},
-	)
+	cmp := v.BigInt.Cmp(o.BigInt)
+	return AsBoolValue(cmp == -1)
 }
 
 func (v UInt256Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -11003,13 +10727,8 @@ func (v UInt256Value) LessEqual(interpreter *Interpreter, other NumberValue) Boo
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			cmp := v.BigInt.Cmp(o.BigInt)
-			return cmp <= 0
-		},
-	)
+	cmp := v.BigInt.Cmp(o.BigInt)
+	return AsBoolValue(cmp <= 0)
 }
 
 func (v UInt256Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -11022,13 +10741,8 @@ func (v UInt256Value) Greater(interpreter *Interpreter, other NumberValue) BoolV
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			cmp := v.BigInt.Cmp(o.BigInt)
-			return cmp == 1
-		},
-	)
+	cmp := v.BigInt.Cmp(o.BigInt)
+	return AsBoolValue(cmp == 1)
 }
 
 func (v UInt256Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -11041,13 +10755,8 @@ func (v UInt256Value) GreaterEqual(interpreter *Interpreter, other NumberValue) 
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			cmp := v.BigInt.Cmp(o.BigInt)
-			return cmp >= 0
-		},
-	)
+	cmp := v.BigInt.Cmp(o.BigInt)
+	return AsBoolValue(cmp >= 0)
 }
 
 func (v UInt256Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -11476,12 +11185,7 @@ func (v Word8Value) Less(interpreter *Interpreter, other NumberValue) BoolValue 
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v < o
-		},
-	)
+	return AsBoolValue(v < o)
 }
 
 func (v Word8Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -11494,12 +11198,7 @@ func (v Word8Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolV
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v <= o
-		},
-	)
+	return AsBoolValue(v <= o)
 }
 
 func (v Word8Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -11512,12 +11211,7 @@ func (v Word8Value) Greater(interpreter *Interpreter, other NumberValue) BoolVal
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v > o
-		},
-	)
+	return AsBoolValue(v > o)
 }
 
 func (v Word8Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -11530,12 +11224,7 @@ func (v Word8Value) GreaterEqual(interpreter *Interpreter, other NumberValue) Bo
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v >= o
-		},
-	)
+	return AsBoolValue(v >= o)
 }
 
 func (v Word8Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -11912,12 +11601,7 @@ func (v Word16Value) Less(interpreter *Interpreter, other NumberValue) BoolValue
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v < o
-		},
-	)
+	return AsBoolValue(v < o)
 }
 
 func (v Word16Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -11930,12 +11614,7 @@ func (v Word16Value) LessEqual(interpreter *Interpreter, other NumberValue) Bool
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v <= o
-		},
-	)
+	return AsBoolValue(v <= o)
 }
 
 func (v Word16Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -11948,12 +11627,7 @@ func (v Word16Value) Greater(interpreter *Interpreter, other NumberValue) BoolVa
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v > o
-		},
-	)
+	return AsBoolValue(v > o)
 }
 
 func (v Word16Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -11966,12 +11640,7 @@ func (v Word16Value) GreaterEqual(interpreter *Interpreter, other NumberValue) B
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v >= o
-		},
-	)
+	return AsBoolValue(v >= o)
 }
 
 func (v Word16Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -12351,12 +12020,7 @@ func (v Word32Value) Less(interpreter *Interpreter, other NumberValue) BoolValue
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v < o
-		},
-	)
+	return AsBoolValue(v < o)
 }
 
 func (v Word32Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -12369,12 +12033,7 @@ func (v Word32Value) LessEqual(interpreter *Interpreter, other NumberValue) Bool
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v <= o
-		},
-	)
+	return AsBoolValue(v <= o)
 }
 
 func (v Word32Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -12387,12 +12046,7 @@ func (v Word32Value) Greater(interpreter *Interpreter, other NumberValue) BoolVa
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v > o
-		},
-	)
+	return AsBoolValue(v > o)
 }
 
 func (v Word32Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -12405,12 +12059,7 @@ func (v Word32Value) GreaterEqual(interpreter *Interpreter, other NumberValue) B
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v >= o
-		},
-	)
+	return AsBoolValue(v >= o)
 }
 
 func (v Word32Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -12816,12 +12465,7 @@ func (v Word64Value) Less(interpreter *Interpreter, other NumberValue) BoolValue
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v < o
-		},
-	)
+	return AsBoolValue(v < o)
 }
 
 func (v Word64Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -12834,12 +12478,7 @@ func (v Word64Value) LessEqual(interpreter *Interpreter, other NumberValue) Bool
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v <= o
-		},
-	)
+	return AsBoolValue(v <= o)
 }
 
 func (v Word64Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -12852,12 +12491,7 @@ func (v Word64Value) Greater(interpreter *Interpreter, other NumberValue) BoolVa
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v > o
-		},
-	)
+	return AsBoolValue(v > o)
 }
 
 func (v Word64Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -12870,12 +12504,7 @@ func (v Word64Value) GreaterEqual(interpreter *Interpreter, other NumberValue) B
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v >= o
-		},
-	)
+	return AsBoolValue(v >= o)
 }
 
 func (v Word64Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -13421,12 +13050,7 @@ func (v Fix64Value) Less(interpreter *Interpreter, other NumberValue) BoolValue 
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v < o
-		},
-	)
+	return AsBoolValue(v < o)
 }
 
 func (v Fix64Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -13439,12 +13063,7 @@ func (v Fix64Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolV
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v <= o
-		},
-	)
+	return AsBoolValue(v <= o)
 }
 
 func (v Fix64Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -13457,12 +13076,7 @@ func (v Fix64Value) Greater(interpreter *Interpreter, other NumberValue) BoolVal
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v > o
-		},
-	)
+	return AsBoolValue(v > o)
 }
 
 func (v Fix64Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -13475,12 +13089,7 @@ func (v Fix64Value) GreaterEqual(interpreter *Interpreter, other NumberValue) Bo
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v >= o
-		},
-	)
+	return AsBoolValue(v >= o)
 }
 
 func (v Fix64Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -13937,12 +13546,7 @@ func (v UFix64Value) Less(interpreter *Interpreter, other NumberValue) BoolValue
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v < o
-		},
-	)
+	return AsBoolValue(v < o)
 }
 
 func (v UFix64Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -13955,12 +13559,7 @@ func (v UFix64Value) LessEqual(interpreter *Interpreter, other NumberValue) Bool
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v <= o
-		},
-	)
+	return AsBoolValue(v <= o)
 }
 
 func (v UFix64Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -13973,12 +13572,7 @@ func (v UFix64Value) Greater(interpreter *Interpreter, other NumberValue) BoolVa
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v > o
-		},
-	)
+	return AsBoolValue(v > o)
 }
 
 func (v UFix64Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -13991,12 +13585,7 @@ func (v UFix64Value) GreaterEqual(interpreter *Interpreter, other NumberValue) B
 		})
 	}
 
-	return NewBoolValueFromConstructor(
-		interpreter,
-		func() bool {
-			return v >= o
-		},
-	)
+	return AsBoolValue(v >= o)
 }
 
 func (v UFix64Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -14545,7 +14134,7 @@ func (v *CompositeValue) OwnerValue(interpreter *Interpreter, getLocationRange f
 	address := v.StorageID().Address
 
 	if address == (atree.Address{}) {
-		return NewNilValue(interpreter)
+		return NilOptionalValue
 	}
 
 	ownerAccount := interpreter.Config.PublicAccountHandler(AddressValue(address))
@@ -15671,18 +15260,14 @@ func (v *DictionaryValue) ContainsKey(
 		hashInputProvider,
 		keyValue,
 	)
-
-	valueGetter := func() bool {
-		if err != nil {
-			if _, ok := err.(*atree.KeyNotFoundError); ok {
-				return false
-			}
-			panic(errors.NewExternalError(err))
+	if err != nil {
+		if _, ok := err.(*atree.KeyNotFoundError); ok {
+			return FalseValue
 		}
-		return true
+		panic(errors.NewExternalError(err))
 	}
 
-	return NewBoolValueFromConstructor(interpreter, valueGetter)
+	return TrueValue
 }
 
 func (v *DictionaryValue) Get(
@@ -15722,7 +15307,7 @@ func (v *DictionaryValue) GetKey(interpreter *Interpreter, getLocationRange func
 		return NewSomeValueNonCopying(interpreter, value)
 	}
 
-	return NewNilValue(interpreter)
+	return Nil
 }
 
 func (v *DictionaryValue) SetKey(
@@ -15952,7 +15537,7 @@ func (v *DictionaryValue) GetMember(
 					funcArgument,
 				)
 
-				return NewVoidValue(interpreter)
+				return Void
 			},
 			sema.DictionaryForEachKeyFunctionType(
 				v.SemaType(interpreter),
@@ -16018,7 +15603,7 @@ func (v *DictionaryValue) Remove(
 	)
 	if err != nil {
 		if _, ok := err.(*atree.KeyNotFoundError); ok {
-			return NewNilValue(interpreter)
+			return NilOptionalValue
 		}
 		panic(errors.NewExternalError(err))
 	}
@@ -16104,7 +15689,7 @@ func (v *DictionaryValue) Insert(
 	interpreter.maybeValidateAtreeValue(v.dictionary)
 
 	if existingValueStorable == nil {
-		return NewNilValue(interpreter)
+		return NilOptionalValue
 	}
 
 	storage := interpreter.Config.Storage
@@ -16544,19 +16129,14 @@ type OptionalValue interface {
 
 type NilValue struct{}
 
+var Nil Value = NilValue{}
+var NilOptionalValue OptionalValue = NilValue{}
+
 var _ Value = NilValue{}
 var _ atree.Storable = NilValue{}
 var _ EquatableValue = NilValue{}
 var _ MemberAccessibleValue = NilValue{}
-
-func NewUnmeteredNilValue() NilValue {
-	return NilValue{}
-}
-
-func NewNilValue(memoryGauge common.MemoryGauge) NilValue {
-	common.UseMemory(memoryGauge, common.NilValueMemoryUsage)
-	return NewUnmeteredNilValue()
-}
+var _ OptionalValue = NilValue{}
 
 func (NilValue) IsValue() {}
 
@@ -16612,7 +16192,7 @@ func (v NilValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences
 // Hence, no need to meter, as it's a constant.
 var nilValueMapFunction = NewUnmeteredHostFunctionValue(
 	func(invocation Invocation) Value {
-		return NewNilValue(invocation.Interpreter)
+		return Nil
 	},
 	&sema.FunctionType{
 		ReturnTypeAnnotation: sema.NewTypeAnnotation(
@@ -16726,6 +16306,7 @@ func NewUnmeteredSomeValueNonCopying(value Value) *SomeValue {
 var _ Value = &SomeValue{}
 var _ EquatableValue = &SomeValue{}
 var _ MemberAccessibleValue = &SomeValue{}
+var _ OptionalValue = &SomeValue{}
 
 func (*SomeValue) IsValue() {}
 
@@ -17112,7 +16693,7 @@ func (v *StorageReferenceValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v *StorageReferenceValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+func (v *StorageReferenceValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
 	common.UseMemory(memoryGauge, common.StorageReferenceValueStringMemoryUsage)
 	return v.String()
 }
@@ -17817,7 +17398,7 @@ func (v AddressValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v AddressValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+func (v AddressValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
 	common.UseMemory(memoryGauge, common.AddressValueStringMemoryUsage)
 	return v.String()
 }
@@ -18084,7 +17665,7 @@ func (v PathValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v PathValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+func (v PathValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
 	// len(domain) + len(identifier) + '/' x2
 	strLen := len(v.Domain.Identifier()) + len(v.Identifier) + 2
 	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(strLen))
@@ -18174,7 +17755,7 @@ func (PathValue) IsStorable() bool {
 func convertPath(interpreter *Interpreter, domain common.PathDomain, value Value) Value {
 	stringValue, ok := value.(*StringValue)
 	if !ok {
-		return NewNilValue(interpreter)
+		return Nil
 	}
 
 	_, err := sema.CheckPathLiteral(
@@ -18184,7 +17765,7 @@ func convertPath(interpreter *Interpreter, domain common.PathDomain, value Value
 		ReturnEmptyRange,
 	)
 	if err != nil {
-		return NewNilValue(interpreter)
+		return Nil
 	}
 
 	return NewSomeValueNonCopying(

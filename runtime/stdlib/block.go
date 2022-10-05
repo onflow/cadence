@@ -94,7 +94,7 @@ func NewGetBlockFunction(provider BlockAtHeightProvider) StandardLibraryValue {
 				uint64(heightValue),
 			)
 			if !exists {
-				return interpreter.NewNilValue(memoryGauge)
+				return interpreter.Nil
 			}
 
 			blockValue := NewBlockValue(memoryGauge, getLocationRange, block)

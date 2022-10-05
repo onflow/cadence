@@ -884,7 +884,7 @@ func TestInterpretReferenceExpressionOfOptional(t *testing.T) {
         `)
 
 		value := inter.Globals["ref"].GetValue()
-		require.IsType(t, interpreter.NilValue{}, value)
+		require.IsType(t, interpreter.Nil, value)
 	})
 
 	t.Run("upcast to optional", func(t *testing.T) {

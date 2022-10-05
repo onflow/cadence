@@ -77,7 +77,7 @@ var AssertFunction = NewStandardLibraryFunction(
 				LocationRange: invocation.GetLocationRange(),
 			})
 		}
-		return interpreter.VoidValue{}
+		return interpreter.Void
 	},
 )
 

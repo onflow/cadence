@@ -316,7 +316,7 @@ func TestRandomMapOperations(t *testing.T) {
 		for i := 0; i < numberOfValues; i++ {
 			// Create a random enum as key
 			key := generateRandomHashableValue(inter, Enum)
-			value := interpreter.VoidValue{}
+			value := interpreter.Void
 
 			newEntries.put(inter, key, value)
 
@@ -1173,7 +1173,7 @@ func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) inte
 		return v
 
 	case interpreter.VoidValue:
-		return interpreter.VoidValue{}
+		return interpreter.Void
 
 	case *interpreter.DictionaryValue:
 		keyValues := make([]interpreter.Value, 0, v.Count()*2)
@@ -1236,7 +1236,7 @@ func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) inte
 		innerValue := v.InnerValue(inter, interpreter.ReturnEmptyLocationRange)
 		return interpreter.NewUnmeteredSomeValueNonCopying(deepCopyValue(inter, innerValue))
 	case interpreter.NilValue:
-		return interpreter.NilValue{}
+		return interpreter.Nil
 	default:
 		panic("unreachable")
 	}
@@ -1254,9 +1254,9 @@ func randomStorableValue(inter *interpreter.Interpreter, currentDepth int) inter
 
 	// Non-hashable
 	case Void:
-		return interpreter.VoidValue{}
+		return interpreter.Void
 	case Nil:
-		return interpreter.NilValue{}
+		return interpreter.Nil
 	case Dictionary_1, Dictionary_2:
 		return randomDictionaryValue(inter, currentDepth)
 	case Array_1, Array_2:

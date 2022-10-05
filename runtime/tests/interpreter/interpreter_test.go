@@ -402,7 +402,7 @@ func TestInterpretFunctionSideEffects(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.VoidValue{},
+		interpreter.Void,
 		value,
 	)
 
@@ -987,7 +987,7 @@ func TestInterpretReturnWithoutExpression(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.VoidValue{},
+		interpreter.Void,
 		value,
 	)
 }
@@ -1927,7 +1927,7 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 				invocation.Arguments[2],
 			)
 
-			return interpreter.VoidValue{}
+			return interpreter.Void
 		},
 	)
 
@@ -2050,7 +2050,7 @@ func TestInterpretStructureSelfUseInInitializer(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.VoidValue{},
+		interpreter.Void,
 		value,
 	)
 }
@@ -2122,7 +2122,7 @@ func TestInterpretStructureSelfUseInFunction(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.VoidValue{},
+		interpreter.Void,
 		value,
 	)
 }
@@ -2150,7 +2150,7 @@ func TestInterpretStructureConstructorUseInFunction(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.VoidValue{},
+		interpreter.Void,
 		value,
 	)
 }
@@ -2212,7 +2212,7 @@ func TestInterpretStructureDeclarationWithFunction(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.VoidValue{},
+		interpreter.Void,
 		value,
 	)
 
@@ -2290,7 +2290,7 @@ func TestInterpretStructureFieldAssignment(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.VoidValue{},
+		interpreter.Void,
 		value,
 	)
 
@@ -2920,7 +2920,7 @@ func TestInterpretOptionalAssignment(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.VoidValue{},
+		interpreter.Void,
 		value,
 	)
 
@@ -2947,7 +2947,7 @@ func TestInterpretNil(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NilValue{},
+		interpreter.Nil,
 		inter.Globals["x"].GetValue(),
 	)
 }
@@ -2963,7 +2963,7 @@ func TestInterpretOptionalNestingNil(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NilValue{},
+		interpreter.Nil,
 		inter.Globals["x"].GetValue(),
 	)
 }
@@ -2984,7 +2984,7 @@ func TestInterpretNilReturnValue(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NilValue{},
+		interpreter.Nil,
 		value,
 	)
 }
@@ -3107,7 +3107,7 @@ func TestInterpretNilCoalescingRightSubtype(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NilValue{},
+		interpreter.Nil,
 		inter.Globals["x"].GetValue(),
 	)
 }
@@ -3559,7 +3559,7 @@ func TestInterpretOptionalMap(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NilValue{},
+			interpreter.Nil,
 			inter.Globals["result"].GetValue(),
 		)
 	})
@@ -4166,7 +4166,7 @@ func TestInterpretDictionaryIndexingString(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NilValue{},
+		interpreter.Nil,
 		inter.Globals["c"].GetValue(),
 	)
 }
@@ -4232,7 +4232,7 @@ func TestInterpretDictionaryIndexingInt(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NilValue{},
+		interpreter.Nil,
 		inter.Globals["c"].GetValue(),
 	)
 }
@@ -4282,13 +4282,13 @@ func TestInterpretDictionaryIndexingType(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		interpreter.NilValue{},
+		interpreter.Nil,
 		inter.Globals["d"].GetValue(),
 	)
 
 	// types need to match exactly, subtypes won't cut it
 	assert.Equal(t,
-		interpreter.NilValue{},
+		interpreter.Nil,
 		inter.Globals["e"].GetValue(),
 	)
 
@@ -4317,7 +4317,7 @@ func TestInterpretDictionaryIndexingAssignmentExisting(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.VoidValue{},
+		interpreter.Void,
 		value,
 	)
 
@@ -4365,7 +4365,7 @@ func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.VoidValue{},
+		interpreter.Void,
 		value,
 	)
 
@@ -4432,7 +4432,7 @@ func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.VoidValue{},
+		interpreter.Void,
 		value,
 	)
 
@@ -4464,7 +4464,7 @@ func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NilValue{},
+		interpreter.Nil,
 		newValue,
 	)
 
@@ -4575,7 +4575,7 @@ func TestInterpretOptionalAnyStructFailableCastingNil(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NilValue{},
+		interpreter.Nil,
 		inter.Globals["x"].GetValue(),
 	)
 
@@ -4640,7 +4640,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NilValue{},
+			interpreter.Nil,
 			result,
 		)
 
@@ -4789,7 +4789,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NilValue{},
+			interpreter.Nil,
 			result,
 		)
 
@@ -6014,7 +6014,7 @@ func TestInterpretIndirectDestroy(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.VoidValue{},
+		interpreter.Void,
 		value,
 	)
 }
@@ -6042,7 +6042,7 @@ func TestInterpretUnaryMove(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.VoidValue{},
+		interpreter.Void,
 		value,
 	)
 }
@@ -7170,7 +7170,7 @@ func TestInterpretSwapResourceDictionaryElementReturnSwapped(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NilValue{},
+		interpreter.Nil,
 		value,
 	)
 }
@@ -7776,7 +7776,7 @@ func TestInterpretOptionalChainingFieldRead(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NilValue{},
+		interpreter.Nil,
 		inter.Globals["x1"].GetValue(),
 	)
 
@@ -7813,7 +7813,7 @@ func TestInterpretOptionalChainingFunctionRead(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NilValue{},
+		interpreter.Nil,
 		inter.Globals["x1"].GetValue(),
 	)
 
@@ -7852,7 +7852,7 @@ func TestInterpretOptionalChainingFunctionCall(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NilValue{},
+		interpreter.Nil,
 		inter.Globals["x1"].GetValue(),
 	)
 
@@ -8971,7 +8971,7 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 		t,
 		inter,
 		[]interpreter.Value{
-			interpreter.NilValue{},
+			interpreter.Nil,
 			interpreter.NewUnmeteredSomeValueNonCopying(interpreter.AddressValue(address)),
 		},
 		arrayElements(inter, result.(*interpreter.ArrayValue)),
@@ -9475,7 +9475,7 @@ func TestInterpretFailableCastingCompositeTypeConfusion(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NilValue{},
+		interpreter.Nil,
 		inter.Globals["s"].GetValue(),
 	)
 }
@@ -9504,7 +9504,7 @@ func TestInterpretNestedDestroy(t *testing.T) {
 		func(invocation interpreter.Invocation) interpreter.Value {
 			message := invocation.Arguments[0].String()
 			logs = append(logs, message)
-			return interpreter.VoidValue{}
+			return interpreter.Void
 		},
 	)
 
@@ -9576,7 +9576,7 @@ func TestInterpretNestedDestroy(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.VoidValue{},
+		interpreter.Void,
 		value,
 	)
 
@@ -10038,7 +10038,7 @@ func TestInterpretArrayFirstIndexDoesNotExist(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NilValue{},
+		interpreter.Nil,
 		value,
 	)
 }

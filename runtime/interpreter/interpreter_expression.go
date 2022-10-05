@@ -460,20 +460,18 @@ func (interpreter *Interpreter) testEqual(left, right Value, expression *ast.Bin
 		right,
 	)
 
-	valueGetter := func() bool {
-		leftEquatable, ok := left.(EquatableValue)
-		if !ok {
-			return false
-		}
+	leftEquatable, ok := left.(EquatableValue)
+	if !ok {
+		return FalseValue
+	}
 
-		return leftEquatable.Equal(
+	return AsBoolValue(
+		leftEquatable.Equal(
 			interpreter,
 			locationRangeGetter(interpreter, interpreter.Location, expression),
 			right,
-		)
-	}
-
-	return NewBoolValueFromConstructor(interpreter, valueGetter)
+		),
+	)
 }
 
 func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpression) Value {
@@ -506,16 +504,16 @@ func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpres
 	})
 }
 
-func (interpreter *Interpreter) VisitVoidExpression(expression *ast.VoidExpression) Value {
-	return NewVoidValue(interpreter)
+func (interpreter *Interpreter) VisitVoidExpression(_ *ast.VoidExpression) Value {
+	return Void
 }
 
 func (interpreter *Interpreter) VisitBoolExpression(expression *ast.BoolExpression) Value {
-	return NewBoolValue(interpreter, expression.Value)
+	return AsBoolValue(expression.Value)
 }
 
 func (interpreter *Interpreter) VisitNilExpression(_ *ast.NilExpression) Value {
-	return NewNilValue(interpreter)
+	return Nil
 }
 
 func (interpreter *Interpreter) VisitIntegerExpression(expression *ast.IntegerExpression) Value {
@@ -929,7 +927,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 		switch expression.Operation {
 		case ast.OperationFailableCast:
 			if !isSubType {
-				return NewNilValue(interpreter)
+				return Nil
 			}
 
 			// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
@@ -980,7 +978,7 @@ func (interpreter *Interpreter) VisitDestroyExpression(expression *ast.DestroyEx
 
 	value.(ResourceKindedValue).Destroy(interpreter, getLocationRange)
 
-	return NewVoidValue(interpreter)
+	return Void
 }
 
 func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *ast.ReferenceExpression) Value {
@@ -1024,7 +1022,7 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 			)
 
 		case NilValue:
-			return NewNilValue(interpreter)
+			return Nil
 
 		default:
 			// If the referenced value is non-optional,

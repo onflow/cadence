@@ -1058,7 +1058,7 @@ func (e *interpreterEnvironment) newBLSAggregateSignaturesFunction() interpreter
 
 		// If the crypto layer produces an error, we have invalid input, return nil
 		if err != nil {
-			return interpreter.NilValue{}
+			return interpreter.NilOptionalValue
 		}
 
 		aggregatedSignatureValue := interpreter.ByteSliceToByteArrayValue(inter, aggregatedSignature)
@@ -1105,7 +1105,7 @@ func (e *interpreterEnvironment) newBLSAggregatePublicKeysFunction(
 
 		// If the crypto layer produces an error, we have invalid input, return nil
 		if err != nil {
-			return interpreter.NilValue{}
+			return interpreter.NilOptionalValue
 		}
 
 		aggregatedPublicKeyValue := stdlib.NewPublicKeyValue(
