@@ -245,6 +245,8 @@ func (checker *Checker) recordReferenceCreation(name string, expr ast.Expression
 	}
 }
 
+// referencedVariable return the referenced variable, if the passed expression
+// is a reference expression. Otherwise, return nil.
 func (checker *Checker) referencedVariable(expr ast.Expression) *Variable {
 	refExpression := checker.referenceExpression(expr)
 	if refExpression == nil {
@@ -280,6 +282,9 @@ func (checker *Checker) referencedVariable(expr ast.Expression) *Variable {
 	return checker.valueActivations.Find(referencedVariableName)
 }
 
+// referenceExpression returns a reference expression disguised as some other expression.
+// e.g(1): `&v as &T` is a casting expression, but has a hidden reference expression.
+// e.g(2): `(&v as &T?)!
 func (checker *Checker) referenceExpression(expr ast.Expression) *ast.ReferenceExpression {
 	switch expr := expr.(type) {
 	case *ast.ReferenceExpression:
@@ -293,6 +298,8 @@ func (checker *Checker) referenceExpression(expr ast.Expression) *ast.ReferenceE
 	}
 }
 
+// variableReferenceExpression returns the identifier expression
+// of a var-ref/member-access/index-access expression.
 func (checker *Checker) variableReferenceExpression(expr ast.Expression) *ast.IdentifierExpression {
 	switch expr := expr.(type) {
 	case *ast.IdentifierExpression:
