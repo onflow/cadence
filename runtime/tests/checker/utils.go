@@ -185,6 +185,13 @@ func ExpectCheckerErrors(t *testing.T, err error, count int) []error {
 
 	for _, checkerErr := range errs {
 		_ = checkerErr.Error()
+
+		if hasErrorNotes, ok := checkerErr.(errors.ErrorNotes); ok {
+			for _, note := range hasErrorNotes.ErrorNotes() {
+				_ = note.Message()
+			}
+		}
+
 		if hasSecondaryError, ok := checkerErr.(errors.SecondaryError); ok {
 			_ = hasSecondaryError.SecondaryError()
 		}

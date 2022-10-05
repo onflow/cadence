@@ -81,8 +81,7 @@ func (os *OrderedNodeSet) Remove(node *Node) {
 
 func (os *OrderedNodeSet) Contains(node *Node) bool {
 	om := (*orderedmap.OrderedMap[*Node, struct{}])(os)
-	_, ok := om.Get(node)
-	return ok
+	return om.Contains(node)
 }
 
 func (os *OrderedNodeSet) ForEach(f func(*Node) error) error {
