@@ -861,7 +861,7 @@ func accountInboxPublishFunction(
 
 			inter.WriteStored(address, inboxStorageDomain, nameValue.Str, publishedValue)
 
-			return interpreter.NewVoidValue(gauge)
+			return interpreter.Void
 		},
 		sema.AuthAccountTypeInboxPublishFunctionType,
 	)
@@ -886,7 +886,7 @@ func accountInboxUnpublishFunction(
 
 			readValue := inter.ReadStored(address, inboxStorageDomain, nameValue.Str)
 			if readValue == nil {
-				return interpreter.NewNilValue(gauge)
+				return interpreter.Nil
 			}
 			publishedValue := readValue.(*interpreter.PublishedValue)
 			if !ok {
@@ -961,7 +961,7 @@ func accountInboxClaimFunction(
 
 			readValue := inter.ReadStored(providerAddress, inboxStorageDomain, nameValue.Str)
 			if readValue == nil {
-				return interpreter.NewNilValue(gauge)
+				return interpreter.Nil
 			}
 			publishedValue := readValue.(*interpreter.PublishedValue)
 			if !ok {
@@ -970,7 +970,7 @@ func accountInboxClaimFunction(
 
 			// compare the intended recipient with the caller
 			if !publishedValue.Recipient.Equal(inter, getLocationRange, recipientValue) {
-				return interpreter.NewNilValue(gauge)
+				return interpreter.Nil
 			}
 
 			typeParameterPair := invocation.TypeParameterTypes.Oldest()
