@@ -59,6 +59,12 @@ type Environment interface {
 		*interpreter.Interpreter,
 		error,
 	)
+	EmptyInterpreter(
+		location common.Location,
+	) (
+		*interpreter.Interpreter,
+		error,
+	)
 	CommitStorage(inter *interpreter.Interpreter) error
 	NewAuthAccountValue(address interpreter.AddressValue) interpreter.Value
 	NewPublicAccountValue(address interpreter.AddressValue) interpreter.Value
@@ -556,11 +562,36 @@ func (e *interpreterEnvironment) newInterpreter(
 	location common.Location,
 	program *interpreter.Program,
 ) (*interpreter.Interpreter, error) {
-	return interpreter.NewInterpreter(
+	inter, err := interpreter.NewInterpreter(
 		program,
 		location,
 		e.InterpreterConfig,
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	e.runtimeInterface.SetInterpreter(inter)
+	return inter, err
+}
+
+func (e *interpreterEnvironment) getEmptyInterpreter(
+	location common.Location,
+) (*interpreter.Interpreter, error) {
+	inter := e.runtimeInterface.GetInterpreter()
+
+	inter, err := interpreter.EmptyInterpreterWithExistingSharedState(
+		location,
+		inter,
+		e.InterpreterConfig,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	e.runtimeInterface.SetInterpreter(inter)
+	return inter, err
 }
 
 func (e *interpreterEnvironment) newOnStatementHandler() interpreter.OnStatementFunc {
@@ -973,6 +1004,33 @@ func (e *interpreterEnvironment) Interpret(
 	}
 
 	return result, inter, nil
+}
+
+func (e *interpreterEnvironment) EmptyInterpreter(
+	location common.Location,
+) (
+	*interpreter.Interpreter,
+	error,
+) {
+	inter, err := e.getEmptyInterpreter(location)
+	if err != nil {
+		return nil, err
+	}
+
+	reportMetric(
+		func() {
+			err = inter.Interpret()
+		},
+		e.runtimeInterface,
+		func(metrics Metrics, duration time.Duration) {
+			metrics.ProgramInterpreted(location, duration)
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return inter, nil
 }
 
 func (e *interpreterEnvironment) newResourceOwnerChangedHandler() interpreter.OnResourceOwnerChangeFunc {

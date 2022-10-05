@@ -314,6 +314,29 @@ func NewInterpreter(
 	)
 }
 
+func EmptyInterpreterWithExistingSharedState(
+	location common.Location,
+	inter *Interpreter,
+	config *Config,
+) (*Interpreter, error) {
+	var ss *sharedState
+	if inter != nil {
+		ss = inter.sharedState
+		for _, i := range ss.allInterpreters {
+			i.Config = config
+		}
+	} else {
+		ss = newSharedState()
+	}
+
+	return newInterpreter(
+		nil,
+		location,
+		ss,
+		config,
+	)
+}
+
 func newInterpreter(
 	program *Program,
 	location common.Location,

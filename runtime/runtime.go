@@ -203,7 +203,7 @@ func reportMetric(
 	report(metrics, elapsed)
 }
 
-// interpreterRuntime is an interpreter-based version of the Flow runtime.
+// interpreterRuntime ixs an interpreter-based version of the Flow runtime.
 type interpreterRuntime struct {
 	defaultConfig Config
 }
@@ -552,10 +552,8 @@ func (r *interpreterRuntime) Storage(context Context) (*Storage, *interpreter.In
 		context.CoverageReport,
 	)
 
-	_, inter, err := environment.Interpret(
+	inter, err := environment.EmptyInterpreter(
 		location,
-		nil,
-		nil,
 	)
 	if err != nil {
 		return nil, nil, newError(err, location, codesAndPrograms)

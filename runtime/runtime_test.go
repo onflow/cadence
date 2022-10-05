@@ -139,6 +139,9 @@ type testRuntimeInterface struct {
 	getCode                 func(_ Location) ([]byte, error)
 	getProgram              func(Location) (*interpreter.Program, error)
 	setProgram              func(Location, *interpreter.Program) error
+	setInterpreter          func(*interpreter.Interpreter)
+	getInterpreter          func() *interpreter.Interpreter
+	interpreter             *interpreter.Interpreter
 	storage                 testLedger
 	createAccount           func(payer Address) (address Address, err error)
 	addEncodedAccountKey    func(address Address, publicKey []byte) error
@@ -238,6 +241,23 @@ func (i *testRuntimeInterface) SetProgram(location Location, program *interprete
 	}
 
 	return i.setProgram(location, program)
+}
+
+func (i *testRuntimeInterface) SetInterpreter(inter *interpreter.Interpreter) {
+	if i.setInterpreter == nil {
+		i.interpreter = inter
+		return
+	}
+
+	i.setInterpreter(inter)
+}
+
+func (i *testRuntimeInterface) GetInterpreter() *interpreter.Interpreter {
+	if i.getInterpreter == nil {
+		return i.interpreter
+	}
+
+	return i.getInterpreter()
 }
 
 func (i *testRuntimeInterface) ValueExists(owner, key []byte) (exists bool, err error) {
@@ -717,7 +737,7 @@ func TestRuntimeConcurrentImport(t *testing.T) {
 	//   however, currently the imported program gets re-checked if it is currently being checked.
 	//   This can probably be optimized by synchronizing the checking of a program using `sync`.
 	//
-	//require.Equal(t, concurrency+1, checkCount)
+	// require.Equal(t, concurrency+1, checkCount)
 }
 
 func TestRuntimeProgramSetAndGet(t *testing.T) {

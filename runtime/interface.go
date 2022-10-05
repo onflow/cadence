@@ -64,6 +64,9 @@ type Interface interface {
 	GetProgram(Location) (*interpreter.Program, error)
 	// SetProgram sets the program for the given location.
 	SetProgram(Location, *interpreter.Program) error
+	// GetOrCreateInterpreter gets an interpreter if one exists, otherwise provides a create method to create one.
+	SetInterpreter(*interpreter.Interpreter)
+	GetInterpreter() *interpreter.Interpreter
 	// GetValue gets a value for the given key in the storage, owned by the given account.
 	GetValue(owner, key []byte) (value []byte, err error)
 	// SetValue sets a value for the given key in the storage, owned by the given account.

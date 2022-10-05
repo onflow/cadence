@@ -148,10 +148,8 @@ func (executor *interpreterContractFunctionExecutor) execute() (val cadence.Valu
 	)
 
 	// create interpreter
-	_, inter, err := environment.Interpret(
+	inter, err := environment.EmptyInterpreter(
 		location,
-		nil,
-		nil,
 	)
 	if err != nil {
 		return nil, newError(err, location, codesAndPrograms)
