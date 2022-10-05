@@ -132,17 +132,6 @@ func (checker *Checker) checkFunction(
 		checker.checkTypeAnnotation(functionType.ReturnTypeAnnotation, returnTypeAnnotation)
 	}
 
-	// Reset the returning state and restore it when leaving
-
-	jumpedOrReturned := checker.resources.JumpsOrReturns
-	halted := checker.resources.Halts
-	checker.resources.JumpsOrReturns = false
-	checker.resources.Halts = false
-	defer func() {
-		checker.resources.JumpsOrReturns = jumpedOrReturned
-		checker.resources.Halts = halted
-	}()
-
 	// NOTE: Always declare the function parameters, even if the function body is empty.
 	// For example, event declarations have an initializer with an empty body,
 	// but their parameters (e.g. duplication) needs to still be checked.

@@ -1810,11 +1810,13 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
             }`,
 			ParseCheckAndInterpretOptions{
 				HandleCheckerError: func(err error) {
-					errs := checker.ExpectCheckerErrors(t, err, 4)
+					errs := checker.ExpectCheckerErrors(t, err, 6)
 					require.IsType(t, &sema.InvalidConditionalResourceOperandError{}, errs[0])
 					require.IsType(t, &sema.InvalidConditionalResourceOperandError{}, errs[1])
 					require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[2])
 					require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[3])
+					require.IsType(t, &sema.ResourceLossError{}, errs[4])
+					require.IsType(t, &sema.ResourceLossError{}, errs[5])
 				},
 			},
 		)
@@ -2569,8 +2571,7 @@ func TestInterpretResourceDestroyedInPreCondition(t *testing.T) {
 
 	t.Parallel()
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
-		`
+	inter := parseCheckAndInterpret(t, `
         resource interface I {
              pub fun receiveResource(_ r: @Bar) {
                 pre {
@@ -2598,14 +2599,10 @@ func TestInterpretResourceDestroyedInPreCondition(t *testing.T) {
 
             foo.receiveResource(<- bar)
             destroy foo
-        }`,
+        }
+    `)
 
-		ParseCheckAndInterpretOptions{},
-	)
-
-	require.NoError(t, err)
-
-	_, err = inter.Invoke("test")
+	_, err := inter.Invoke("test")
 	require.Error(t, err)
 	CheckErrorMessage(err)
 
