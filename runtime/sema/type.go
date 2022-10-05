@@ -361,6 +361,47 @@ const toStringFunctionDocString = `
 A textual representation of this object
 `
 
+// fromString
+const FromStringFunctionName = "fromString"
+
+func FromStringFunctionDocstring(ty Type) string {
+
+	builder := new(strings.Builder)
+	builder.WriteString(
+		fmt.Sprintf(
+			"Attempts to parse %s from a string. Returns `nil` on overflow or invalid input. Whitespace or invalid digits will return a nil value.\n",
+			ty.String(),
+		))
+
+	if IsSameTypeKind(ty, FixedPointType) {
+		builder.WriteString(
+			`Both decimal and fractional components must be supplied. For instance, both "0." and ".1" are invalid string representations, but "0.1" is accepted.\n`,
+		)
+	}
+	if IsSameTypeKind(ty, SignedIntegerType) || IsSameTypeKind(ty, SignedFixedPointType) {
+		builder.WriteString(
+			"The string may optionally begin with a sign prefix of '-' or '+'.\n",
+		)
+	}
+
+	return builder.String()
+}
+
+func FromStringFunctionType(ty Type) *FunctionType {
+	return &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "input",
+				TypeAnnotation: NewTypeAnnotation(StringType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{ty},
+		),
+	}
+}
+
 // toBigEndianBytes
 
 const ToBigEndianBytesFunctionName = "toBigEndianBytes"
@@ -3169,6 +3210,16 @@ func init() {
 				}
 			}
 
+			// add .fromString() method
+			fromStringFnType := FromStringFunctionType(numberType)
+			fromStringDocstring := FromStringFunctionDocstring(numberType)
+			addMember(NewUnmeteredPublicFunctionMember(
+				functionType,
+				FromStringFunctionName,
+				fromStringFnType,
+				fromStringDocstring,
+			))
+
 			BaseValueActivation.Set(
 				typeName,
 				baseFunctionVariable(
@@ -3832,6 +3883,7 @@ func (t *CompositeType) FieldPosition(name string, declaration *ast.CompositeDec
 // Member
 
 type Member struct {
+	// Parent type where this member can be resolved
 	ContainerType  Type
 	Access         ast.Access
 	Identifier     ast.Identifier
