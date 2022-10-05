@@ -616,8 +616,7 @@ transaction {
 		},
 	)
 
-	require.Error(t, err)
-	CheckErrorMessage(err)
+	RequireError(t, err)
 
 	require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 }
@@ -1590,8 +1589,7 @@ func TestRuntimeStorageReferenceCast(t *testing.T) {
 		},
 	)
 
-	require.Error(t, err)
-	CheckErrorMessage(err)
+	RequireError(t, err)
 
 	require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 }
@@ -1651,8 +1649,7 @@ func TestRuntimeStorageNonStorable(t *testing.T) {
 					Location:  nextTransactionLocation(),
 				},
 			)
-			require.Error(t, err)
-			CheckErrorMessage(err)
+			RequireError(t, err)
 
 			require.Contains(t, err.Error(), "cannot store non-storable value")
 		})
@@ -1695,8 +1692,7 @@ func TestRuntimeStorageRecursiveReference(t *testing.T) {
 			Location:  nextTransactionLocation(),
 		},
 	)
-	require.Error(t, err)
-	CheckErrorMessage(err)
+	RequireError(t, err)
 
 	require.Contains(t, err.Error(), "cannot store non-storable value")
 }
@@ -3015,8 +3011,7 @@ func TestRuntimeNoAtreeSendOnClosedChannelDuringCommit(t *testing.T) {
 					Location:  nextTransactionLocation(),
 				},
 			)
-			require.Error(t, err)
-			CheckErrorMessage(err)
+			RequireError(t, err)
 
 			require.Contains(t, err.Error(), "cannot store non-storable value")
 		}

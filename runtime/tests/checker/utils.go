@@ -183,7 +183,7 @@ func ExpectCheckerErrors(t *testing.T, err error, count int) []error {
 	// Get the error message, to check that it can be successfully generated
 
 	for _, checkerErr := range errs {
-		utils.CheckErrorMessage(checkerErr)
+		utils.RequireError(t, checkerErr)
 	}
 
 	return errs

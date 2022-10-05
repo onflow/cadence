@@ -37,8 +37,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 	t.Parallel()
 
 	expectNonImportableError := func(t *testing.T, err error) {
-		require.Error(t, err)
-		CheckErrorMessage(err)
+		RequireError(t, err)
 
 		require.IsType(t, Error{}, err)
 		runtimeErr := err.(Error)
@@ -47,8 +46,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 	}
 
 	expectRuntimeError := func(t *testing.T, err error, expectedError error) {
-		require.Error(t, err)
-		CheckErrorMessage(err)
+		RequireError(t, err)
 
 		require.IsType(t, Error{}, err)
 		runtimeErr := err.(Error)
@@ -470,8 +468,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
             `
 
 		err := executeScript(t, script, publicAccountKeys)
-		require.Error(t, err)
-		CheckErrorMessage(err)
+		RequireError(t, err)
 
 		assert.Contains(t, err.Error(), "cannot import value of type PublicAccount.Keys")
 	})
@@ -491,8 +488,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 				publicAccountKeys,
 			}),
 		)
-		require.Error(t, err)
-		CheckErrorMessage(err)
+		RequireError(t, err)
 
 		assert.Contains(t, err.Error(), "cannot import value of type PublicAccount.Keys")
 	})
@@ -507,8 +503,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 				},
 			).WithType(HashAlgoType),
 		)
-		require.Error(t, err)
-		CheckErrorMessage(err)
+		RequireError(t, err)
 
 		var entryPointErr *InvalidEntryPointArgumentError
 		require.ErrorAs(t, err, &entryPointErr)
@@ -524,8 +519,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 				},
 			).WithType(SignAlgoType),
 		)
-		require.Error(t, err)
-		CheckErrorMessage(err)
+		RequireError(t, err)
 
 		var entryPointErr *InvalidEntryPointArgumentError
 		require.ErrorAs(t, err, &entryPointErr)
@@ -537,8 +531,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 	t.Parallel()
 
 	expectCheckerErrors := func(t *testing.T, err error, expectedErrors ...error) {
-		require.Error(t, err)
-		CheckErrorMessage(err)
+		RequireError(t, err)
 
 		require.IsType(t, Error{}, err)
 		runtimeErr := err.(Error)
@@ -555,8 +548,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 	}
 
 	expectRuntimeError := func(t *testing.T, err error, expectedError error) {
-		require.Error(t, err)
-		CheckErrorMessage(err)
+		RequireError(t, err)
 
 		require.IsType(t, Error{}, err)
 		runtimeErr := err.(Error)
@@ -994,8 +986,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
             `
 
 		err := executeTransaction(t, script, publicAccountKeys)
-		require.Error(t, err)
-		CheckErrorMessage(err)
+		RequireError(t, err)
 
 		assert.Contains(t, err.Error(), "cannot import value of type PublicAccount.Keys")
 	})
@@ -1014,8 +1005,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 				publicAccountKeys,
 			}),
 		)
-		require.Error(t, err)
-		CheckErrorMessage(err)
+		RequireError(t, err)
 
 		assert.Contains(t, err.Error(), "cannot import value of type PublicAccount.Keys")
 	})
@@ -1030,8 +1020,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 				},
 			).WithType(HashAlgoType),
 		)
-		require.Error(t, err)
-		CheckErrorMessage(err)
+		RequireError(t, err)
 
 		var entryPointErr *InvalidEntryPointArgumentError
 		require.ErrorAs(t, err, &entryPointErr)
@@ -1047,8 +1036,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 				},
 			).WithType(SignAlgoType),
 		)
-		require.Error(t, err)
-		CheckErrorMessage(err)
+		RequireError(t, err)
 
 		var entryPointErr *InvalidEntryPointArgumentError
 		require.ErrorAs(t, err, &entryPointErr)

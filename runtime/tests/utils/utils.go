@@ -26,6 +26,7 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -194,7 +195,12 @@ func AssertValueSlicesEqual(t testing.TB, inter *interpreter.Interpreter, expect
 	return true
 }
 
-func CheckErrorMessage(err error) {
+// RequireError is a wrapper around require.Error which also ensures
+// that the error message, the secondary message (if any),
+// and the error notes' (if any) messages can be successfully produced
+func RequireError(t *testing.T, err error) {
+	require.Error(t, err)
+
 	_ = err.Error()
 
 	if hasErrorNotes, ok := err.(errors.ErrorNotes); ok {

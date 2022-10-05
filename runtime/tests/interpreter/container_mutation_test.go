@@ -83,8 +83,7 @@ func TestArrayMutation(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		CheckErrorMessage(err)
+		RequireError(t, err)
 
 		mutationError := &interpreter.ContainerMutationError{}
 		require.ErrorAs(t, err, mutationError)
@@ -104,8 +103,7 @@ func TestArrayMutation(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		CheckErrorMessage(err)
+		RequireError(t, err)
 
 		mutationError := &interpreter.ContainerMutationError{}
 		require.ErrorAs(t, err, mutationError)
@@ -160,8 +158,7 @@ func TestArrayMutation(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		CheckErrorMessage(err)
+		RequireError(t, err)
 
 		mutationError := &interpreter.ContainerMutationError{}
 		require.ErrorAs(t, err, mutationError)
@@ -181,8 +178,7 @@ func TestArrayMutation(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		CheckErrorMessage(err)
+		RequireError(t, err)
 
 		mutationError := &interpreter.ContainerMutationError{}
 		require.ErrorAs(t, err, mutationError)
@@ -237,8 +233,7 @@ func TestArrayMutation(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		CheckErrorMessage(err)
+		RequireError(t, err)
 
 		mutationError := &interpreter.ContainerMutationError{}
 		require.ErrorAs(t, err, mutationError)
@@ -260,8 +255,7 @@ func TestArrayMutation(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		CheckErrorMessage(err)
+		RequireError(t, err)
 
 		require.ErrorAs(t, err, &interpreter.ContainerMutationError{})
 
@@ -300,8 +294,7 @@ func TestArrayMutation(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		CheckErrorMessage(err)
+		RequireError(t, err)
 
 		mutationError := &interpreter.ContainerMutationError{}
 		require.ErrorAs(t, err, mutationError)
@@ -493,8 +486,7 @@ func TestArrayMutation(t *testing.T) {
 		require.NoError(t, err)
 
 		_, err = inter.Invoke("test")
-		require.Error(t, err)
-		CheckErrorMessage(err)
+		RequireError(t, err)
 
 		mutationError := &interpreter.ContainerMutationError{}
 		require.ErrorAs(t, err, mutationError)
@@ -561,8 +553,7 @@ func TestDictionaryMutation(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		CheckErrorMessage(err)
+		RequireError(t, err)
 
 		mutationError := &interpreter.ContainerMutationError{}
 		require.ErrorAs(t, err, mutationError)
@@ -641,8 +632,7 @@ func TestDictionaryMutation(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		CheckErrorMessage(err)
+		RequireError(t, err)
 
 		mutationError := &interpreter.ContainerMutationError{}
 		require.ErrorAs(t, err, mutationError)
@@ -662,8 +652,7 @@ func TestDictionaryMutation(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		CheckErrorMessage(err)
+		RequireError(t, err)
 
 		mutationError := &interpreter.ContainerMutationError{}
 		require.ErrorAs(t, err, mutationError)
@@ -684,8 +673,7 @@ func TestDictionaryMutation(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		CheckErrorMessage(err)
+		RequireError(t, err)
 
 		mutationError := &interpreter.ContainerMutationError{}
 		require.ErrorAs(t, err, mutationError)
@@ -888,8 +876,7 @@ func TestDictionaryMutation(t *testing.T) {
 		require.NoError(t, err)
 
 		_, err = inter.Invoke("test")
-		require.Error(t, err)
-		CheckErrorMessage(err)
+		RequireError(t, err)
 
 		mutationError := &interpreter.ContainerMutationError{}
 		require.ErrorAs(t, err, mutationError)

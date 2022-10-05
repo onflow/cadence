@@ -151,8 +151,7 @@ func TestRLPDecodeString(t *testing.T) {
 				},
 			)
 			if len(test.expectedErrMsg) > 0 {
-				require.Error(t, err)
-				CheckErrorMessage(err)
+				RequireError(t, err)
 
 				assert.ErrorContains(t, err, test.expectedErrMsg)
 			} else {
@@ -311,8 +310,7 @@ func TestRLPDecodeList(t *testing.T) {
 				},
 			)
 			if len(test.expectedErrMsg) > 0 {
-				require.Error(t, err)
-				CheckErrorMessage(err)
+				RequireError(t, err)
 
 				assert.ErrorContains(t, err, test.expectedErrMsg)
 			} else {

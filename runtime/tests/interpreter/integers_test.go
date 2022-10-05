@@ -238,8 +238,7 @@ func TestInterpretAddressConversion(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		CheckErrorMessage(err)
+		RequireError(t, err)
 
 		require.ErrorAs(t, err, &interpreter.OverflowError{})
 	})
@@ -256,8 +255,7 @@ func TestInterpretAddressConversion(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		CheckErrorMessage(err)
+		RequireError(t, err)
 
 		require.ErrorAs(t, err, &interpreter.UnderflowError{})
 	})
@@ -555,8 +553,7 @@ func TestInterpretIntegerConversion(t *testing.T) {
 		result, err := inter.Invoke("test", value)
 
 		if expectedError != nil {
-			require.Error(t, err)
-			CheckErrorMessage(err)
+			RequireError(t, err)
 
 			require.ErrorAs(t, err, &expectedError)
 		} else {

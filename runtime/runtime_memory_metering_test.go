@@ -1037,8 +1037,7 @@ func TestMemoryMeteringErrors(t *testing.T) {
 			memoryMeter{},
 			cadence.String("hello"),
 		)
-		require.Error(t, err)
-		CheckErrorMessage(err)
+		RequireError(t, err)
 
 		assert.ErrorIs(t, err, testMemoryError{})
 	})
@@ -1073,8 +1072,7 @@ func TestMemoryMeteringErrors(t *testing.T) {
         `)
 
 		err := executeScript(script, memoryMeter{})
-		require.Error(t, err)
-		CheckErrorMessage(err)
+		RequireError(t, err)
 
 		assert.ErrorIs(t, err, testMemoryError{})
 	})

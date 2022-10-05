@@ -87,8 +87,7 @@ func TestInterpretTransferCheck(t *testing.T) {
 		require.NoError(t, err)
 
 		_, err = inter.Invoke("test")
-		require.Error(t, err)
-		CheckErrorMessage(err)
+		RequireError(t, err)
 
 		require.ErrorAs(t, err, &interpreter.ValueTransferTypeError{})
 	})

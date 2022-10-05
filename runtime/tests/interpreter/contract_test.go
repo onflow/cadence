@@ -154,8 +154,7 @@ func TestInterpretContractUseBeforeInitializationComplete(t *testing.T) {
 				},
 			},
 		)
-		require.Error(t, err)
-		CheckErrorMessage(err)
+		RequireError(t, err)
 
 		require.ErrorAs(t, err, &interpreter.MissingMemberValueError{})
 	})

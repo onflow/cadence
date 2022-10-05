@@ -83,8 +83,7 @@ func TestRuntimeArgumentImportMissingType(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-		require.Error(t, err)
-		CheckErrorMessage(err)
+		RequireError(t, err)
 
 		var typeLoadingErr interpreter.TypeLoadingError
 		require.ErrorAs(t, err, &typeLoadingErr)
@@ -135,8 +134,7 @@ func TestRuntimeArgumentImportMissingType(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-		require.Error(t, err)
-		CheckErrorMessage(err)
+		RequireError(t, err)
 
 		var typeLoadingErr interpreter.TypeLoadingError
 		require.ErrorAs(t, err, &typeLoadingErr)

@@ -188,8 +188,7 @@ func TestInterpretContractTransfer(t *testing.T) {
 		inter, _ := testAccount(t, address, true, code)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		CheckErrorMessage(err)
+		RequireError(t, err)
 
 		var nonTransferableValueError interpreter.NonTransferableValueError
 		require.ErrorAs(t, err, &nonTransferableValueError)

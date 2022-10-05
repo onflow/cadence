@@ -89,8 +89,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 
 	expectFailure := func(expectedErrorMessage string) expectation {
 		return func(t *testing.T, err error, accountCode []byte, events []cadence.Event, _ cadence.Type) {
-			require.Error(t, err)
-			CheckErrorMessage(err)
+			RequireError(t, err)
 
 			var runtimeErr Error
 			require.ErrorAs(t, err, &runtimeErr)

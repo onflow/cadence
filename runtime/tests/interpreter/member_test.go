@@ -108,14 +108,12 @@ func TestInterpretMemberAccessType(t *testing.T) {
 				require.NoError(t, err)
 
 				_, err = inter.Invoke("get", value)
-				require.Error(t, err)
-				CheckErrorMessage(err)
+				RequireError(t, err)
 
 				require.ErrorAs(t, err, &interpreter.MemberAccessTypeError{})
 
 				_, err = inter.Invoke("set", value)
-				require.Error(t, err)
-				CheckErrorMessage(err)
+				RequireError(t, err)
 
 				require.ErrorAs(t, err, &interpreter.MemberAccessTypeError{})
 			})
@@ -190,8 +188,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 					"get",
 					interpreter.NewUnmeteredSomeValueNonCopying(value),
 				)
-				require.Error(t, err)
-				CheckErrorMessage(err)
+				RequireError(t, err)
 
 				require.ErrorAs(t, err, &interpreter.MemberAccessTypeError{})
 			})
@@ -282,14 +279,12 @@ func TestInterpretMemberAccessType(t *testing.T) {
 				require.NoError(t, err)
 
 				_, err = inter.Invoke("get", value)
-				require.Error(t, err)
-				CheckErrorMessage(err)
+				RequireError(t, err)
 
 				require.ErrorAs(t, err, &interpreter.MemberAccessTypeError{})
 
 				_, err = inter.Invoke("set", value)
-				require.Error(t, err)
-				CheckErrorMessage(err)
+				RequireError(t, err)
 
 				require.ErrorAs(t, err, &interpreter.MemberAccessTypeError{})
 			})
@@ -372,8 +367,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 					"get",
 					interpreter.NewUnmeteredSomeValueNonCopying(value),
 				)
-				require.Error(t, err)
-				CheckErrorMessage(err)
+				RequireError(t, err)
 
 				require.ErrorAs(t, err, &interpreter.MemberAccessTypeError{})
 			})
@@ -464,14 +458,12 @@ func TestInterpretMemberAccessType(t *testing.T) {
 				ref := interpreter.NewUnmeteredEphemeralReferenceValue(false, value, sType)
 
 				_, err = inter.Invoke("get", ref)
-				require.Error(t, err)
-				CheckErrorMessage(err)
+				RequireError(t, err)
 
 				require.ErrorAs(t, err, &interpreter.MemberAccessTypeError{})
 
 				_, err = inter.Invoke("set", ref)
-				require.Error(t, err)
-				CheckErrorMessage(err)
+				RequireError(t, err)
 
 				require.ErrorAs(t, err, &interpreter.MemberAccessTypeError{})
 			})
@@ -558,8 +550,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 						ref,
 					),
 				)
-				require.Error(t, err)
-				CheckErrorMessage(err)
+				RequireError(t, err)
 
 				require.ErrorAs(t, err, &interpreter.MemberAccessTypeError{})
 			})

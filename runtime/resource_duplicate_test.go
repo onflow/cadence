@@ -198,8 +198,7 @@ func TestRuntimeResourceDuplicationWithContractTransfer(t *testing.T) {
 			Location:  nextTransactionLocation(),
 		},
 	)
-	require.Error(t, err)
-	CheckErrorMessage(err)
+	RequireError(t, err)
 
 	var nonTransferableValueError interpreter.NonTransferableValueError
 	require.ErrorAs(t, err, &nonTransferableValueError)
