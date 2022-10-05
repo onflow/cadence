@@ -868,7 +868,6 @@ func (e *AssignmentToConstantMemberError) Error() string {
 }
 
 // FieldReinitializationError
-//
 type FieldReinitializationError struct {
 	Name string
 	ast.Range
@@ -886,7 +885,6 @@ func (e *FieldReinitializationError) Error() string {
 }
 
 // FieldUninitializedError
-//
 type FieldUninitializedError struct {
 	Name          string
 	ContainerType Type
@@ -1216,7 +1214,6 @@ func (n MemberMismatchNote) Message() string {
 // DuplicateConformanceError
 //
 // TODO: just make this a warning?
-//
 type DuplicateConformanceError struct {
 	CompositeType *CompositeType
 	InterfaceType *InterfaceType
@@ -1241,7 +1238,6 @@ func (e *DuplicateConformanceError) Error() string {
 }
 
 // MultipleInterfaceDefaultImplementationsError
-//
 type MultipleInterfaceDefaultImplementationsError struct {
 	CompositeType *CompositeType
 	Member        *Member
@@ -1272,7 +1268,6 @@ func (e *MultipleInterfaceDefaultImplementationsError) EndPosition(memoryGauge c
 }
 
 // SpecialFunctionDefaultImplementationError
-//
 type SpecialFunctionDefaultImplementationError struct {
 	Container  ast.Declaration
 	Identifier *ast.Identifier
@@ -1304,7 +1299,6 @@ func (e *SpecialFunctionDefaultImplementationError) EndPosition(memoryGauge comm
 }
 
 // DefaultFunctionConflictError
-//
 type DefaultFunctionConflictError struct {
 	CompositeType *CompositeType
 	Member        *Member
@@ -1335,7 +1329,6 @@ func (e *DefaultFunctionConflictError) EndPosition(memoryGauge common.MemoryGaug
 }
 
 // MissingConformanceError
-//
 type MissingConformanceError struct {
 	CompositeType *CompositeType
 	InterfaceType *InterfaceType
@@ -3836,3 +3829,20 @@ var _ errors.UserError = &PurityError{}
 func (*PurityError) IsUserError() {}
 
 func (*PurityError) isSemanticError() {}
+
+// InvalidatedResourceReferenceError
+
+type InvalidatedResourceReferenceError struct {
+	ast.Range
+}
+
+var _ SemanticError = &InvalidatedResourceReferenceError{}
+var _ errors.UserError = &InvalidatedResourceReferenceError{}
+
+func (*InvalidatedResourceReferenceError) isSemanticError() {}
+
+func (*InvalidatedResourceReferenceError) IsUserError() {}
+
+func (e *InvalidatedResourceReferenceError) Error() string {
+	return "invalid reference: referenced resource may have been moved"
+}

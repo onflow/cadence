@@ -121,6 +121,9 @@ type Checker struct {
 	// memoryGauge is used for metering memory usage
 	memoryGauge  common.MemoryGauge
 	PositionInfo *PositionInfo
+
+	// Holds a mapping between a references and their referenced-variable
+	resourceReferences *VariableActivations
 }
 
 var _ ast.DeclarationVisitor[struct{}] = &Checker{}
@@ -163,6 +166,7 @@ func NewChecker(
 		containerTypes:      map[Type]bool{},
 		purityCheckScopes:   []PurityCheckScope{{}},
 		memoryGauge:         memoryGauge,
+		resourceReferences:  NewVariableActivations(nil),
 	}
 
 	// Initialize value activations
@@ -306,6 +310,7 @@ func (checker *Checker) report(err error) {
 	if err == nil {
 		return
 	}
+
 	checker.errors = append(checker.errors, err)
 	if checker.Config.ErrorShortCircuitingEnabled {
 		panic(stopChecking{})
@@ -1334,6 +1339,7 @@ func (checker *Checker) recordFunctionDeclarationOrigin(
 func (checker *Checker) enterValueScope() {
 	//fmt.Printf("ENTER: %d\n", checker.valueActivations.Depth())
 	checker.valueActivations.Enter()
+	checker.resourceReferences.Enter()
 }
 
 func (checker *Checker) leaveValueScope(getEndPosition EndPositionGetter, checkResourceLoss bool) {
@@ -1342,6 +1348,7 @@ func (checker *Checker) leaveValueScope(getEndPosition EndPositionGetter, checkR
 	}
 
 	checker.valueActivations.Leave(getEndPosition)
+	checker.resourceReferences.Leave(getEndPosition)
 }
 
 // TODO: prune resource variables declared in function's scope

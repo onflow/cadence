@@ -198,6 +198,8 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 		checker.recordVariableDeclarationOccurrence(identifier, variable)
 		checker.recordVariableDeclarationRange(declaration, identifier, declarationType)
 	}
+
+	checker.recordReferenceCreation(identifier, declaration.Value)
 }
 
 func (checker *Checker) recordVariableDeclarationRange(
@@ -232,5 +234,74 @@ func (checker *Checker) elaborateNestedResourceMoveExpression(expression ast.Exp
 	switch expression.(type) {
 	case *ast.IndexExpression, *ast.MemberExpression:
 		checker.Elaboration.IsNestedResourceMoveExpression[expression] = struct{}{}
+	}
+}
+
+func (checker *Checker) recordReferenceCreation(name string, expr ast.Expression) {
+	referencedVar := checker.referencedVariable(expr)
+
+	if referencedVar != nil {
+		checker.resourceReferences.Set(name, referencedVar)
+	}
+}
+
+func (checker *Checker) referencedVariable(expr ast.Expression) *Variable {
+	refExpression := checker.referenceExpression(expr)
+	if refExpression == nil {
+		return nil
+	}
+
+	variableRefExpr := checker.variableReferenceExpression(refExpression.Expression)
+	if variableRefExpr == nil {
+		return nil
+	}
+
+	referencedVariableName := variableRefExpr.Identifier.Identifier
+
+	for {
+		// If the referenced variable is again a reference,
+		// then find the variable of the root of the reference chain.
+		// e.g::
+		//     ref1 = &v
+		//     ref2 = &ref1[0]
+		//     ref2.field = 3
+		//
+		// Here, `ref2` refers to `ref1`, which refers to `v`.
+		// So `ref2` is actually referring to `v`
+
+		referencedRef := checker.resourceReferences.Find(referencedVariableName)
+		if referencedRef == nil {
+			break
+		}
+
+		referencedVariableName = referencedRef.Identifier
+	}
+
+	return checker.valueActivations.Find(referencedVariableName)
+}
+
+func (checker *Checker) referenceExpression(expr ast.Expression) *ast.ReferenceExpression {
+	switch expr := expr.(type) {
+	case *ast.ReferenceExpression:
+		return expr
+	case *ast.ForceExpression:
+		return checker.referenceExpression(expr.Expression)
+	case *ast.CastingExpression:
+		return checker.referenceExpression(expr.Expression)
+	default:
+		return nil
+	}
+}
+
+func (checker *Checker) variableReferenceExpression(expr ast.Expression) *ast.IdentifierExpression {
+	switch expr := expr.(type) {
+	case *ast.IdentifierExpression:
+		return expr
+	case *ast.MemberExpression:
+		return checker.variableReferenceExpression(expr.Expression)
+	case *ast.IndexExpression:
+		return checker.variableReferenceExpression(expr.TargetExpression)
+	default:
+		return nil
 	}
 }
