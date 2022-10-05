@@ -922,7 +922,7 @@ func accountInboxUnpublishFunction(
 			value := publishedValue.Value.Transfer(
 				inter,
 				getLocationRange,
-				atree.Address(address),
+				atree.Address{},
 				true,
 				nil,
 			)
@@ -991,7 +991,7 @@ func accountInboxClaimFunction(
 			value := publishedValue.Value.Transfer(
 				inter,
 				getLocationRange,
-				atree.Address(address),
+				atree.Address{},
 				true,
 				nil,
 			)

@@ -52,20 +52,20 @@ func _() {
 	_ = x[PrimitiveStaticTypeCapabilityPath-79]
 	_ = x[PrimitiveStaticTypePublicPath-80]
 	_ = x[PrimitiveStaticTypePrivatePath-81]
-	_ = x[PrimitiveStaticTypePublicAccountInbox-88]
-	_ = x[PrimitiveStaticTypeAuthAccountInbox-89]
-	_ = x[PrimitiveStaticTypeAuthAccount-90]
-	_ = x[PrimitiveStaticTypePublicAccount-91]
-	_ = x[PrimitiveStaticTypeDeployedContract-92]
-	_ = x[PrimitiveStaticTypeAuthAccountContracts-93]
-	_ = x[PrimitiveStaticTypePublicAccountContracts-94]
-	_ = x[PrimitiveStaticTypeAuthAccountKeys-95]
-	_ = x[PrimitiveStaticTypePublicAccountKeys-96]
-	_ = x[PrimitiveStaticTypeAccountKey-97]
+	_ = x[PrimitiveStaticTypeAuthAccount-88]
+	_ = x[PrimitiveStaticTypePublicAccount-89]
+	_ = x[PrimitiveStaticTypeDeployedContract-90]
+	_ = x[PrimitiveStaticTypeAuthAccountContracts-91]
+	_ = x[PrimitiveStaticTypePublicAccountContracts-92]
+	_ = x[PrimitiveStaticTypeAuthAccountKeys-93]
+	_ = x[PrimitiveStaticTypePublicAccountKeys-94]
+	_ = x[PrimitiveStaticTypeAccountKey-95]
+	_ = x[PrimitiveStaticTypePublicAccountInbox-96]
+	_ = x[PrimitiveStaticTypeAuthAccountInbox-97]
 	_ = x[PrimitiveStaticType_Count-98]
 }
 
-const _PrimitiveStaticType_name = "UnknownVoidAnyNeverAnyStructAnyResourceBoolAddressStringCharacterMetaTypeBlockNumberSignedNumberIntegerSignedIntegerFixedPointSignedFixedPointIntInt8Int16Int32Int64Int128Int256UIntUInt8UInt16UInt32UInt64UInt128UInt256Word8Word16Word32Word64Fix64UFix64PathCapabilityStoragePathCapabilityPathPublicPathPrivatePathPublicAccountInboxAuthAccountInboxAuthAccountPublicAccountDeployedContractAuthAccountContractsPublicAccountContractsAuthAccountKeysPublicAccountKeysAccountKey_Count"
+const _PrimitiveStaticType_name = "UnknownVoidAnyNeverAnyStructAnyResourceBoolAddressStringCharacterMetaTypeBlockNumberSignedNumberIntegerSignedIntegerFixedPointSignedFixedPointIntInt8Int16Int32Int64Int128Int256UIntUInt8UInt16UInt32UInt64UInt128UInt256Word8Word16Word32Word64Fix64UFix64PathCapabilityStoragePathCapabilityPathPublicPathPrivatePathAuthAccountPublicAccountDeployedContractAuthAccountContractsPublicAccountContractsAuthAccountKeysPublicAccountKeysAccountKeyPublicAccountInboxAuthAccountInbox_Count"
 
 var _PrimitiveStaticType_map = map[PrimitiveStaticType]string{
 	0:  _PrimitiveStaticType_name[0:7],
@@ -112,16 +112,16 @@ var _PrimitiveStaticType_map = map[PrimitiveStaticType]string{
 	79: _PrimitiveStaticType_name[276:290],
 	80: _PrimitiveStaticType_name[290:300],
 	81: _PrimitiveStaticType_name[300:311],
-	88: _PrimitiveStaticType_name[311:329],
-	89: _PrimitiveStaticType_name[329:345],
-	90: _PrimitiveStaticType_name[345:356],
-	91: _PrimitiveStaticType_name[356:369],
-	92: _PrimitiveStaticType_name[369:385],
-	93: _PrimitiveStaticType_name[385:405],
-	94: _PrimitiveStaticType_name[405:427],
-	95: _PrimitiveStaticType_name[427:442],
-	96: _PrimitiveStaticType_name[442:459],
-	97: _PrimitiveStaticType_name[459:469],
+	88: _PrimitiveStaticType_name[311:322],
+	89: _PrimitiveStaticType_name[322:335],
+	90: _PrimitiveStaticType_name[335:351],
+	91: _PrimitiveStaticType_name[351:371],
+	92: _PrimitiveStaticType_name[371:393],
+	93: _PrimitiveStaticType_name[393:408],
+	94: _PrimitiveStaticType_name[408:425],
+	95: _PrimitiveStaticType_name[425:435],
+	96: _PrimitiveStaticType_name[435:453],
+	97: _PrimitiveStaticType_name[453:469],
 	98: _PrimitiveStaticType_name[469:475],
 }
 

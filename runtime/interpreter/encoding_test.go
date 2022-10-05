@@ -3097,7 +3097,7 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 			// positive integer to follow
 			0x18,
 			// public account (tag)
-			0x5b,
+			0x59,
 		}
 
 		testEncodeDecode(t,

@@ -18616,7 +18616,9 @@ func (v LinkValue) ChildStorables() []atree.Storable {
 
 type PublishedValue struct {
 	Recipient AddressValue
-	Value     *CapabilityValue
+	// NB: If `publish` and `claim` are ever extended to support arbitrary values, rather than just capabilities,
+	// this will need to be changed to `Value`, and more storage-related operations must be implemented for `PublishedValue`
+	Value *CapabilityValue
 }
 
 func NewPublishedValue(memoryGauge common.MemoryGauge, recipient AddressValue, value *CapabilityValue) *PublishedValue {

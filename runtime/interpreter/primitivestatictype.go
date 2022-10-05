@@ -189,8 +189,6 @@ const (
 	_
 	_
 	_
-	PrimitiveStaticTypePublicAccountInbox
-	PrimitiveStaticTypeAuthAccountInbox
 	PrimitiveStaticTypeAuthAccount
 	PrimitiveStaticTypePublicAccount
 	PrimitiveStaticTypeDeployedContract
@@ -199,6 +197,8 @@ const (
 	PrimitiveStaticTypeAuthAccountKeys
 	PrimitiveStaticTypePublicAccountKeys
 	PrimitiveStaticTypeAccountKey
+	PrimitiveStaticTypePublicAccountInbox
+	PrimitiveStaticTypeAuthAccountInbox
 
 	// !!! *WARNING* !!!
 	// ADD NEW TYPES *BEFORE* THIS WARNING.
