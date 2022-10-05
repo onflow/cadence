@@ -27,11 +27,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/fixedpoint"
-	"github.com/onflow/cadence/runtime/tests/utils"
-	. "github.com/onflow/cadence/runtime/tests/utils"
-
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestInterpretNegativeZeroFixedPoint(t *testing.T) {
@@ -330,7 +328,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
-		_ = err.Error()
+		CheckErrorMessage(err)
 
 		require.ErrorAs(t, err, &interpreter.UnderflowError{})
 	})
@@ -351,7 +349,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
-		_ = err.Error()
+		CheckErrorMessage(err)
 
 		require.ErrorAs(t, err, &interpreter.OverflowError{})
 	})
@@ -376,7 +374,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 				_, err := inter.Invoke("test")
 				require.Error(t, err)
-				_ = err.Error()
+				CheckErrorMessage(err)
 
 				require.IsType(t,
 					interpreter.Error{},
@@ -418,7 +416,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 				_, err := inter.Invoke("test")
 				require.Error(t, err)
-				_ = err.Error()
+				CheckErrorMessage(err)
 
 				require.ErrorAs(t, err, &interpreter.OverflowError{})
 			})
@@ -456,7 +454,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 				_, err := inter.Invoke("test")
 				require.Error(t, err)
-				_ = err.Error()
+				CheckErrorMessage(err)
 
 				require.ErrorAs(t, err, &interpreter.OverflowError{})
 			})
@@ -494,7 +492,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 				_, err := inter.Invoke("test")
 				require.Error(t, err)
-				_ = err.Error()
+				CheckErrorMessage(err)
 
 				require.ErrorAs(t, err, &interpreter.OverflowError{})
 			})
@@ -532,7 +530,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 				_, err := inter.Invoke("test")
 				require.Error(t, err)
-				_ = err.Error()
+				CheckErrorMessage(err)
 
 				require.ErrorAs(t, err, &interpreter.UnderflowError{})
 			})
@@ -714,7 +712,7 @@ func TestStringFixedpointConversion(t *testing.T) {
 
 				require.NoError(t, err)
 
-				utils.AssertEqualWithDiff(t, expectedVal, res)
+				AssertEqualWithDiff(t, expectedVal, res)
 			}
 
 		})

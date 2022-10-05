@@ -28,6 +28,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/checker"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestRuntimeCyclicImport(t *testing.T) {
@@ -81,7 +82,7 @@ func TestRuntimeCyclicImport(t *testing.T) {
 		},
 	)
 	require.Error(t, err)
-	_ = err.Error()
+	CheckErrorMessage(err)
 
 	require.Contains(t, err.Error(), "cyclic import of `p1`")
 
@@ -144,7 +145,7 @@ func TestRuntimeExport(t *testing.T) {
 		)
 
 		require.Error(t, err)
-		_ = err.Error()
+		CheckErrorMessage(err)
 
 		require.IsType(t, Error{}, err)
 	})

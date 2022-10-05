@@ -28,6 +28,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/stdlib"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/ast"
@@ -269,7 +270,7 @@ func TestRuntimeContract(t *testing.T) {
 
 			} else {
 				require.Error(t, err)
-				_ = err.Error()
+				CheckErrorMessage(err)
 
 				require.Empty(t, deployedCode)
 				require.Empty(t, events)
@@ -306,7 +307,7 @@ func TestRuntimeContract(t *testing.T) {
 				},
 			)
 			require.Error(t, err)
-			_ = err.Error()
+			CheckErrorMessage(err)
 
 			// the deployed code should not have been updated,
 			// and no events should have been emitted,
@@ -448,7 +449,7 @@ func TestRuntimeContract(t *testing.T) {
 
 			} else {
 				require.Error(t, err)
-				_ = err.Error()
+				CheckErrorMessage(err)
 
 				require.Empty(t, deployedCode)
 				require.Empty(t, events)

@@ -27,7 +27,7 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/tests/utils"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestRLPDecodeString(t *testing.T) {
@@ -147,12 +147,12 @@ func TestRLPDecodeString(t *testing.T) {
 				},
 				Context{
 					Interface: runtimeInterface,
-					Location:  utils.TestLocation,
+					Location:  TestLocation,
 				},
 			)
 			if len(test.expectedErrMsg) > 0 {
 				require.Error(t, err)
-				_ = err.Error()
+				CheckErrorMessage(err)
 
 				assert.ErrorContains(t, err, test.expectedErrMsg)
 			} else {
@@ -307,12 +307,12 @@ func TestRLPDecodeList(t *testing.T) {
 				},
 				Context{
 					Interface: runtimeInterface,
-					Location:  utils.TestLocation,
+					Location:  TestLocation,
 				},
 			)
 			if len(test.expectedErrMsg) > 0 {
 				require.Error(t, err)
-				_ = err.Error()
+				CheckErrorMessage(err)
 
 				assert.ErrorContains(t, err, test.expectedErrMsg)
 			} else {

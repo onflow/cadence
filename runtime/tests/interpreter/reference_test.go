@@ -125,7 +125,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
-		_ = err.Error()
+		CheckErrorMessage(err)
 
 		var containerMutationErr interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &containerMutationErr)
@@ -160,7 +160,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
-		_ = err.Error()
+		CheckErrorMessage(err)
 
 		var containerMutationErr interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &containerMutationErr)
@@ -200,7 +200,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
-		_ = err.Error()
+		CheckErrorMessage(err)
 
 		var containerMutationError interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &containerMutationError)
@@ -239,7 +239,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
-		_ = err.Error()
+		CheckErrorMessage(err)
 
 		var containerMutationError interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &containerMutationError)
@@ -284,7 +284,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
-		_ = err.Error()
+		CheckErrorMessage(err)
 
 		var containerMutationError interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &containerMutationError)
@@ -327,7 +327,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
-		_ = err.Error()
+		CheckErrorMessage(err)
 
 		var containerMutationError interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &containerMutationError)
@@ -356,7 +356,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
-		_ = err.Error()
+		CheckErrorMessage(err)
 
 		var containerMutationError interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &containerMutationError)
@@ -387,7 +387,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
-		_ = err.Error()
+		CheckErrorMessage(err)
 
 		var containerMutationError interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &containerMutationError)
@@ -412,7 +412,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
-		_ = err.Error()
+		CheckErrorMessage(err)
 
 		var containerMutationError interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &containerMutationError)
@@ -437,7 +437,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
-		_ = err.Error()
+		CheckErrorMessage(err)
 
 		var containerMutationError interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &containerMutationError)

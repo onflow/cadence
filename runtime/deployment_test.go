@@ -32,6 +32,7 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
@@ -89,7 +90,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 	expectFailure := func(expectedErrorMessage string) expectation {
 		return func(t *testing.T, err error, accountCode []byte, events []cadence.Event, _ cadence.Type) {
 			require.Error(t, err)
-			_ = err.Error()
+			CheckErrorMessage(err)
 
 			var runtimeErr Error
 			require.ErrorAs(t, err, &runtimeErr)

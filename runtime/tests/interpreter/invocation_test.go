@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/interpreter"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestInterpretFunctionInvocationCheckArgumentTypes(t *testing.T) {
@@ -38,7 +39,7 @@ func TestInterpretFunctionInvocationCheckArgumentTypes(t *testing.T) {
 
 	_, err := inter.Invoke("test", interpreter.BoolValue(true))
 	require.Error(t, err)
-	_ = err.Error()
+	CheckErrorMessage(err)
 
 	require.ErrorAs(t, err, &interpreter.ValueTransferTypeError{})
 }

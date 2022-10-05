@@ -128,7 +128,7 @@ func TestInterpretStringDecodeHex(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
-		_ = err.Error()
+		CheckErrorMessage(err)
 
 		var typedErr interpreter.InvalidHexByteError
 		require.ErrorAs(t, err, &typedErr)
@@ -147,7 +147,7 @@ func TestInterpretStringDecodeHex(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
-		_ = err.Error()
+		CheckErrorMessage(err)
 
 		var typedErr interpreter.InvalidHexLengthError
 		require.ErrorAs(t, err, &typedErr)

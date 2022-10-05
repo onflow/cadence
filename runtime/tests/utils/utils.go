@@ -27,6 +27,7 @@ import (
 	"github.com/go-test/deep"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -191,4 +192,18 @@ func AssertValueSlicesEqual(t testing.TB, inter *interpreter.Interpreter, expect
 	}
 
 	return true
+}
+
+func CheckErrorMessage(err error) {
+	_ = err.Error()
+
+	if hasErrorNotes, ok := err.(errors.ErrorNotes); ok {
+		for _, note := range hasErrorNotes.ErrorNotes() {
+			_ = note.Message()
+		}
+	}
+
+	if hasSecondaryError, ok := err.(errors.SecondaryError); ok {
+		_ = hasSecondaryError.SecondaryError()
+	}
 }

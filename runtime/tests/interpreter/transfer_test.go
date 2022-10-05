@@ -29,7 +29,7 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
-	"github.com/onflow/cadence/runtime/tests/utils"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestInterpretTransferCheck(t *testing.T) {
@@ -41,7 +41,7 @@ func TestInterpretTransferCheck(t *testing.T) {
 		t.Parallel()
 
 		ty := &sema.CompositeType{
-			Location:   utils.TestLocation,
+			Location:   TestLocation,
 			Identifier: "Fruit",
 			Kind:       common.CompositeKindStructure,
 		}
@@ -88,7 +88,7 @@ func TestInterpretTransferCheck(t *testing.T) {
 
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
-		_ = err.Error()
+		CheckErrorMessage(err)
 
 		require.ErrorAs(t, err, &interpreter.ValueTransferTypeError{})
 	})
