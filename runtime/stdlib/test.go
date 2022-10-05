@@ -364,7 +364,7 @@ var testAssertFunction = interpreter.NewUnmeteredHostFunctionValue(
 		if !condition {
 			panic(AssertionError{
 				Message:       message,
-				LocationRange: invocation.GetLocationRange(),
+				LocationRange: invocation.LocationRange,
 			})
 		}
 
@@ -409,7 +409,7 @@ var testFailFunction = interpreter.NewUnmeteredHostFunctionValue(
 
 		panic(AssertionError{
 			Message:       message,
-			LocationRange: invocation.GetLocationRange(),
+			LocationRange: invocation.LocationRange,
 		})
 	},
 	testFailFunctionType,
@@ -457,11 +457,14 @@ var testExpectFunction = interpreter.NewUnmeteredHostFunctionValue(
 			panic(errors.NewUnreachableError())
 		}
 
+		inter := invocation.Interpreter
+		locationRange := invocation.LocationRange
+
 		result := invokeMatcherTest(
-			invocation.Interpreter,
+			inter,
 			matcher,
 			value,
-			invocation.GetLocationRange,
+			locationRange,
 		)
 
 		if !result {
@@ -477,7 +480,7 @@ func invokeMatcherTest(
 	inter *interpreter.Interpreter,
 	matcher interpreter.MemberAccessibleValue,
 	value interpreter.Value,
-	locationRangeGetter func() interpreter.LocationRange,
+	locationRangeGetter interpreter.LocationRange,
 ) bool {
 	testFunc := matcher.GetMember(
 		inter,
@@ -576,12 +579,13 @@ func testNewEmulatorBlockchainFunction(testFramework TestFramework) *interpreter
 	return interpreter.NewUnmeteredHostFunctionValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
 			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
 
 			// Create an `EmulatorBackend`
 			emulatorBackend := newEmulatorBackend(
 				inter,
 				testFramework,
-				invocation.GetLocationRange,
+				locationRange,
 			)
 
 			// Create a 'Blockchain' struct value, that wraps the emulator backend,
@@ -762,7 +766,7 @@ var EmulatorBackendType = func() *sema.CompositeType {
 func newEmulatorBackend(
 	inter *interpreter.Interpreter,
 	testFramework TestFramework,
-	locationRangeGetter func() interpreter.LocationRange,
+	locationRangeGetter interpreter.LocationRange,
 ) *interpreter.CompositeValue {
 	var fields = []interpreter.CompositeField{
 		{
@@ -933,7 +937,10 @@ func emulatorBackendCreateAccountFunction(testFramework TestFramework) *interpre
 				panic(err)
 			}
 
-			return newAccountValue(invocation.Interpreter, account, invocation.GetLocationRange)
+			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
+
+			return newAccountValue(inter, account, locationRange)
 		},
 		emulatorBackendCreateAccountFunctionType,
 	)
@@ -942,7 +949,7 @@ func emulatorBackendCreateAccountFunction(testFramework TestFramework) *interpre
 func newAccountValue(
 	inter *interpreter.Interpreter,
 	account *Account,
-	locationRangeGetter func() interpreter.LocationRange,
+	locationRangeGetter interpreter.LocationRange,
 ) interpreter.Value {
 
 	// Create address value
@@ -997,7 +1004,7 @@ func emulatorBackendAddTransactionFunction(testFramework TestFramework) *interpr
 	return interpreter.NewUnmeteredHostFunctionValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
 			inter := invocation.Interpreter
-			locationRangeGetter := invocation.GetLocationRange
+			locationRange := invocation.LocationRange
 
 			transactionValue, ok := invocation.Arguments[0].(interpreter.MemberAccessibleValue)
 			if !ok {
@@ -1007,7 +1014,7 @@ func emulatorBackendAddTransactionFunction(testFramework TestFramework) *interpr
 			// Get transaction code
 			codeValue := transactionValue.GetMember(
 				inter,
-				locationRangeGetter,
+				locationRange,
 				transactionCodeFieldName,
 			)
 			code, ok := codeValue.(*interpreter.StringValue)
@@ -1018,7 +1025,7 @@ func emulatorBackendAddTransactionFunction(testFramework TestFramework) *interpr
 			// Get authorizers
 			authorizerValue := transactionValue.GetMember(
 				inter,
-				locationRangeGetter,
+				locationRange,
 				transactionAuthorizerFieldName,
 			)
 
@@ -1027,16 +1034,20 @@ func emulatorBackendAddTransactionFunction(testFramework TestFramework) *interpr
 			// Get signers
 			signersValue := transactionValue.GetMember(
 				inter,
-				locationRangeGetter,
+				locationRange,
 				transactionSignersFieldName,
 			)
 
-			signerAccounts := accountsFromValue(inter, signersValue, invocation.GetLocationRange)
+			signerAccounts := accountsFromValue(
+				inter,
+				signersValue,
+				locationRange,
+			)
 
 			// Get arguments
 			argsValue := transactionValue.GetMember(
 				inter,
-				locationRangeGetter,
+				locationRange,
 				transactionArgsFieldName,
 			)
 			args, err := arrayValueToSlice(argsValue)
@@ -1080,7 +1091,7 @@ func addressesFromValue(accountsValue interpreter.Value) []common.Address {
 func accountsFromValue(
 	inter *interpreter.Interpreter,
 	accountsValue interpreter.Value,
-	locationRangeGetter func() interpreter.LocationRange,
+	locationRangeGetter interpreter.LocationRange,
 ) []*Account {
 
 	accountsArray, ok := accountsValue.(*interpreter.ArrayValue)
@@ -1109,7 +1120,7 @@ func accountsFromValue(
 func accountFromValue(
 	inter *interpreter.Interpreter,
 	accountValue interpreter.MemberAccessibleValue,
-	locationRangeGetter func() interpreter.LocationRange,
+	locationRangeGetter interpreter.LocationRange,
 ) *Account {
 
 	// Get address
@@ -1313,7 +1324,7 @@ var equalMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
 
 				equal := thisValue.Equal(
 					inter,
-					invocation.GetLocationRange,
+					invocation.LocationRange,
 					otherValue,
 				)
 
@@ -1363,7 +1374,7 @@ func emulatorBackendDeployContractFunction(testFramework TestFramework) *interpr
 				panic(errors.NewUnreachableError())
 			}
 
-			account := accountFromValue(inter, accountValue, invocation.GetLocationRange)
+			account := accountFromValue(inter, accountValue, invocation.LocationRange)
 
 			// Contract init arguments
 			args, err := arrayValueToSlice(invocation.Arguments[3])
@@ -1408,7 +1419,7 @@ func emulatorBackendUseConfigFunction(testFramework TestFramework) *interpreter.
 
 			addresses, ok := configsValue.GetMember(
 				inter,
-				invocation.GetLocationRange,
+				invocation.LocationRange,
 				addressesFieldName,
 			).(*interpreter.DictionaryValue)
 			if !ok {
@@ -1501,7 +1512,7 @@ func newMatcherWithGenericTestFunction(
 					panic(interpreter.TypeMismatchError{
 						ExpectedType:  paramType,
 						ActualType:    argumentSemaType,
-						LocationRange: invocation.GetLocationRange(),
+						LocationRange: invocation.LocationRange,
 					})
 				}
 			}

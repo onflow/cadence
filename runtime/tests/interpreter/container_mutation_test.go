@@ -60,7 +60,7 @@ func TestArrayMutation(t *testing.T) {
 			inter,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.ReturnEmptyLocationRange,
+				interpreter.EmptyLocationRange,
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
@@ -136,7 +136,7 @@ func TestArrayMutation(t *testing.T) {
 			inter,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.ReturnEmptyLocationRange,
+				interpreter.EmptyLocationRange,
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
@@ -213,7 +213,7 @@ func TestArrayMutation(t *testing.T) {
 			inter,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.ReturnEmptyLocationRange,
+				interpreter.EmptyLocationRange,
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
@@ -276,7 +276,7 @@ func TestArrayMutation(t *testing.T) {
 			inter,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.ReturnEmptyLocationRange,
+				interpreter.EmptyLocationRange,
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
@@ -393,12 +393,12 @@ func TestArrayMutation(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("hello from foo"),
-			array.Get(inter, interpreter.ReturnEmptyLocationRange, 0),
+			array.Get(inter, interpreter.EmptyLocationRange, 0),
 		)
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("hello from bar"),
-			array.Get(inter, interpreter.ReturnEmptyLocationRange, 1),
+			array.Get(inter, interpreter.EmptyLocationRange, 1),
 		)
 	})
 
@@ -444,12 +444,12 @@ func TestArrayMutation(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("hello from foo"),
-			array.Get(inter, interpreter.ReturnEmptyLocationRange, 0),
+			array.Get(inter, interpreter.EmptyLocationRange, 0),
 		)
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("hello from bar"),
-			array.Get(inter, interpreter.ReturnEmptyLocationRange, 1),
+			array.Get(inter, interpreter.EmptyLocationRange, 1),
 		)
 	})
 
@@ -543,7 +543,7 @@ func TestDictionaryMutation(t *testing.T) {
 
 		val, present := dictionary.Get(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.NewUnmeteredStringValue("foo"),
 		)
 		assert.True(t, present)
@@ -623,7 +623,7 @@ func TestDictionaryMutation(t *testing.T) {
 
 		val, present := dictionary.Get(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.NewUnmeteredStringValue("foo"),
 		)
 		assert.True(t, present)
@@ -788,12 +788,12 @@ func TestDictionaryMutation(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("hello from foo"),
-			array.Get(inter, interpreter.ReturnEmptyLocationRange, 0),
+			array.Get(inter, interpreter.EmptyLocationRange, 0),
 		)
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("hello from bar"),
-			array.Get(inter, interpreter.ReturnEmptyLocationRange, 1),
+			array.Get(inter, interpreter.EmptyLocationRange, 1),
 		)
 	})
 
@@ -839,12 +839,12 @@ func TestDictionaryMutation(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("hello from foo"),
-			array.Get(inter, interpreter.ReturnEmptyLocationRange, 0),
+			array.Get(inter, interpreter.EmptyLocationRange, 0),
 		)
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("hello from bar"),
-			array.Get(inter, interpreter.ReturnEmptyLocationRange, 1),
+			array.Get(inter, interpreter.EmptyLocationRange, 1),
 		)
 	})
 
