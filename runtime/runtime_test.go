@@ -153,6 +153,7 @@ type testRuntimeInterface struct {
 	getAccountKey             func(address Address, index int) (*stdlib.AccountKey, error)
 	removeAccountKey          func(address Address, index int) (*stdlib.AccountKey, error)
 	accountKeysCount          func(address Address) *big.Int
+	iterateKeys               func(address Address, fn func(*stdlib.AccountKey) bool) error
 	updateAccountContractCode func(address Address, name string, code []byte) error
 	getAccountContractCode    func(address Address, name string) (code []byte, err error)
 	removeAccountContractCode func(address Address, name string) (err error)
@@ -315,6 +316,14 @@ func (i *testRuntimeInterface) AccountKeysCount(address Address) *big.Int {
 		panic("must specify testRuntimeInterface.accountKeysCount")
 	}
 	return i.accountKeysCount(address)
+}
+
+func (i *testRuntimeInterface) IterateKeys(address Address, fn func(*stdlib.AccountKey) bool) error {
+	if i.iterateKeys != nil {
+		panic("must specify testRuntimeInterface.IterateKeys")
+	}
+
+	return i.iterateKeys(address, fn)
 }
 
 func (i *testRuntimeInterface) RevokeAccountKey(address Address, index int) (*stdlib.AccountKey, error) {

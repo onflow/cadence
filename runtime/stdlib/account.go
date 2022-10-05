@@ -617,7 +617,13 @@ type PublicKey struct {
 type AccountKeyProvider interface {
 	// GetAccountKey retrieves a key from an account by index.
 	GetAccountKey(address common.Address, index int) (*AccountKey, error)
+	IterateKeys(address common.Address, fn func(*AccountKey) bool) error
 	AccountKeysCount(address common.Address) *big.Int
+}
+
+// public keys are assumed to be already validated
+var assumePublicKeyIsValid interpreter.PublicKeyValidationHandlerFunc = func(_ *interpreter.Interpreter, _ func() interpreter.LocationRange, _ *interpreter.CompositeValue) error {
+	return nil
 }
 
 func newAccountKeysGetFunction(
@@ -663,14 +669,7 @@ func newAccountKeysGetFunction(
 					inter,
 					invocation.GetLocationRange,
 					accountKey,
-					// public keys are assumed to be already validated.
-					func(
-						_ *interpreter.Interpreter,
-						_ func() interpreter.LocationRange,
-						_ *interpreter.CompositeValue,
-					) error {
-						return nil
-					},
+					assumePublicKeyIsValid,
 				),
 			)
 		},
@@ -684,15 +683,78 @@ func newAccountKeysForEachFunction(
 	addressValue interpreter.AddressValue,
 ) *interpreter.HostFunctionValue {
 	address := addressValue.ToAddress()
+	// the PublicKey in `forEachKey(_ f: (PublicKey): Bool): Void`
+	callbackTypeParams := []sema.Type{sema.AccountKeyType}
 
 	return interpreter.NewHostFunctionValue(
 		gauge,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			callback, ok := invocation.Arguments[0].(interpreter.FunctionValue)
+			fnValue, ok := invocation.Arguments[0].(interpreter.FunctionValue)
+
 			if !ok {
-				panic(errors.NewUnexpectedError())
+				panic(errors.NewUnreachableError())
 			}
 
+			inter := invocation.Interpreter
+			getLocationRange := invocation.GetLocationRange
+
+			newSubInvocation := func(key interpreter.Value) interpreter.Invocation {
+				return interpreter.NewInvocation(
+					inter,
+					nil,
+					[]interpreter.Value{key},
+					callbackTypeParams,
+					nil,
+					getLocationRange,
+				)
+			}
+
+			liftKeyToValue := func(key *AccountKey) interpreter.Value {
+				return NewAccountKeyValue(
+					inter,
+					getLocationRange,
+					key,
+					assumePublicKeyIsValid,
+				)
+			}
+
+			var invocationErr error
+
+			err := provider.IterateKeys(address, func(key *AccountKey) bool {
+				liftedKey := liftKeyToValue(key)
+				res, err := inter.InvokeFunction(
+					fnValue,
+					newSubInvocation(liftedKey),
+				)
+
+				if err != nil {
+					invocationErr = err
+					// signal to provider to stop iteration
+					return false
+				}
+
+				boolResult, ok := res.(interpreter.BoolValue)
+
+				if !ok {
+					// this might be dangerous as it leaves the provider
+					// in an inconsistent state
+					panic(errors.NewUnreachableError())
+				}
+
+				return bool(boolResult)
+			})
+
+			if err != nil {
+				// self address is invalid, or the provider threw a runtime error
+				panic(err)
+			}
+
+			if invocationErr != nil {
+				// error while interpreter while invoking the inner function value
+				panic(invocationErr)
+			}
+
+			return interpreter.NewVoidValue(invocation.Interpreter)
 		},
 		sema.AccountKeysTypeForEachFunctionType,
 	)
@@ -709,7 +771,9 @@ func newAccountKeysCountFunction(
 		func(invocation interpreter.Invocation) interpreter.Value {
 			keyCount := provider.AccountKeysCount(address)
 			usage := common.NewBigIntMemoryUsage(len(keyCount.Bits()))
-			return interpreter.NewIntValueFromBigInt(gauge, usage, func() *big.Int { return keyCount })
+			return interpreter.NewIntValueFromBigInt(gauge, usage, func() *big.Int {
+				return keyCount
+			})
 		},
 		sema.AccountKeysTypeCountFunctionType,
 	)
