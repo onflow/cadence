@@ -7196,7 +7196,7 @@ func TestInterpretNilMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindNilValue))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindNilValue))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
 	})
 }

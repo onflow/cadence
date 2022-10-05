@@ -513,7 +513,7 @@ func (interpreter *Interpreter) VisitBoolExpression(expression *ast.BoolExpressi
 }
 
 func (interpreter *Interpreter) VisitNilExpression(_ *ast.NilExpression) Value {
-	return NewNilValue(interpreter)
+	return Nil
 }
 
 func (interpreter *Interpreter) VisitIntegerExpression(expression *ast.IntegerExpression) Value {
@@ -927,7 +927,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 		switch expression.Operation {
 		case ast.OperationFailableCast:
 			if !isSubType {
-				return NewNilValue(interpreter)
+				return Nil
 			}
 
 			// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
@@ -1022,7 +1022,7 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 			)
 
 		case NilValue:
-			return NewNilValue(interpreter)
+			return Nil
 
 		default:
 			// If the referenced value is non-optional,

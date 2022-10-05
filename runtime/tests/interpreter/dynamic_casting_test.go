@@ -164,7 +164,7 @@ func TestInterpretDynamicCastingNumber(t *testing.T) {
 									AssertValuesEqual(
 										t,
 										inter,
-										interpreter.NilValue{},
+										interpreter.Nil,
 										result,
 									)
 								} else {
@@ -263,7 +263,7 @@ func TestInterpretDynamicCastingVoid(t *testing.T) {
 							AssertValuesEqual(
 								t,
 								inter,
-								interpreter.NilValue{},
+								interpreter.Nil,
 								result,
 							)
 						} else {
@@ -357,7 +357,7 @@ func TestInterpretDynamicCastingString(t *testing.T) {
 							AssertValuesEqual(
 								t,
 								inter,
-								interpreter.NilValue{},
+								interpreter.Nil,
 								result,
 							)
 						} else {
@@ -451,7 +451,7 @@ func TestInterpretDynamicCastingBool(t *testing.T) {
 							AssertValuesEqual(
 								t,
 								inter,
-								interpreter.NilValue{},
+								interpreter.Nil,
 								result,
 							)
 						} else {
@@ -550,7 +550,7 @@ func TestInterpretDynamicCastingAddress(t *testing.T) {
 							AssertValuesEqual(
 								t,
 								inter,
-								interpreter.NilValue{},
+								interpreter.Nil,
 								result,
 							)
 						} else {
@@ -643,7 +643,7 @@ func TestInterpretDynamicCastingStruct(t *testing.T) {
 						AssertValuesEqual(
 							t,
 							inter,
-							interpreter.NilValue{},
+							interpreter.Nil,
 							result,
 						)
 					} else {
@@ -687,7 +687,7 @@ func TestInterpretDynamicCastingStruct(t *testing.T) {
 							AssertValuesEqual(
 								t,
 								inter,
-								interpreter.NilValue{},
+								interpreter.Nil,
 								result,
 							)
 						} else {
@@ -797,7 +797,7 @@ func testResourceCastInvalid(t *testing.T, types, fromType, targetType string, o
 		require.NoError(t, err)
 
 		require.IsType(t,
-			interpreter.NilValue{},
+			interpreter.Nil,
 			value,
 		)
 
@@ -948,7 +948,7 @@ func testStructCastInvalid(t *testing.T, types, fromType, targetType string, ope
 		require.NoError(t, err)
 
 		require.IsType(t,
-			interpreter.NilValue{},
+			interpreter.Nil,
 			value,
 		)
 
@@ -1162,7 +1162,7 @@ func TestInterpretDynamicCastingSome(t *testing.T) {
 							AssertValuesEqual(
 								t,
 								inter,
-								interpreter.NilValue{},
+								interpreter.Nil,
 								result,
 							)
 						} else {
@@ -1271,7 +1271,7 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 							AssertValuesEqual(
 								t,
 								inter,
-								interpreter.NilValue{},
+								interpreter.Nil,
 								result,
 							)
 						} else {
@@ -1306,7 +1306,7 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 						t,
 						inter,
 
-						interpreter.NilValue{},
+						interpreter.Nil,
 						result,
 					)
 				} else {
@@ -1432,7 +1432,7 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 							AssertValuesEqual(
 								t,
 								inter,
-								interpreter.NilValue{},
+								interpreter.Nil,
 								result,
 							)
 						} else {
@@ -1466,7 +1466,7 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 					AssertValuesEqual(
 						t,
 						inter,
-						interpreter.NilValue{},
+						interpreter.Nil,
 						result,
 					)
 				} else {
@@ -2373,7 +2373,7 @@ func testReferenceCastInvalid(t *testing.T, types, fromType, targetType string, 
 		require.NoError(t, err)
 
 		require.IsType(t,
-			interpreter.NilValue{},
+			interpreter.Nil,
 			value,
 		)
 
@@ -3635,7 +3635,7 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 							AssertValuesEqual(
 								t,
 								inter,
-								interpreter.NilValue{},
+								interpreter.Nil,
 								result,
 							)
 						} else {
@@ -3671,7 +3671,7 @@ func TestInterpretResourceConstructorCast(t *testing.T) {
 		result, err := inter.Invoke("test")
 		if returnsOptional {
 			require.NoError(t, err)
-			require.Equal(t, interpreter.NilValue{}, result)
+			require.Equal(t, interpreter.Nil, result)
 		} else {
 			require.Error(t, err)
 			_ = err.Error()

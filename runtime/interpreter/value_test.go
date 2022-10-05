@@ -647,7 +647,7 @@ func TestOwnerDictionaryInsertNonExisting(t *testing.T) {
 		keyValue,
 		value,
 	)
-	assert.Equal(t, NilValue{}, existingValue)
+	assert.Equal(t, Nil, existingValue)
 
 	queriedValue, _ := dictionary.Get(inter, ReturnEmptyLocationRange, keyValue)
 	value = queriedValue.(*CompositeValue)
@@ -944,7 +944,7 @@ func TestStringer(t *testing.T) {
 			expected: "true",
 		},
 		"nil": {
-			value:    NilValue{},
+			value:    Nil,
 			expected: "nil",
 		},
 		"String": {
@@ -2015,7 +2015,7 @@ func TestNilValue_Equal(t *testing.T) {
 			NilValue{}.Equal(
 				inter,
 				ReturnEmptyLocationRange,
-				NilValue{},
+				Nil,
 			),
 		)
 	})
@@ -3816,7 +3816,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 
 		test(
 			func(_ *Interpreter) Value {
-				return NewUnmeteredNilValue()
+				return Nil
 			},
 			true,
 		)

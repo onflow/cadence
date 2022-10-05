@@ -216,7 +216,7 @@ func TestInterpretStringFromUtf8(t *testing.T) {
 			expected = interpreter.NewSomeValueNonCopying(inter,
 				interpreter.NewUnmeteredStringValue(strValue))
 		} else {
-			expected = interpreter.NewNilValue(inter)
+			expected = interpreter.Nil
 		}
 
 		result, err := inter.Invoke("testString")

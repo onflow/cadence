@@ -1928,7 +1928,7 @@ func (v *ArrayValue) FirstIndex(interpreter *Interpreter, getLocationRange func(
 		value := NewIntValueFromInt64(interpreter, counter)
 		return NewSomeValueNonCopying(interpreter, value)
 	}
-	return NilValue{}
+	return NilOptionalValue
 }
 
 func (v *ArrayValue) Contains(
@@ -14134,7 +14134,7 @@ func (v *CompositeValue) OwnerValue(interpreter *Interpreter, getLocationRange f
 	address := v.StorageID().Address
 
 	if address == (atree.Address{}) {
-		return NewNilValue(interpreter)
+		return NilOptionalValue
 	}
 
 	ownerAccount := interpreter.Config.PublicAccountHandler(AddressValue(address))
@@ -15307,7 +15307,7 @@ func (v *DictionaryValue) GetKey(interpreter *Interpreter, getLocationRange func
 		return NewSomeValueNonCopying(interpreter, value)
 	}
 
-	return NewNilValue(interpreter)
+	return Nil
 }
 
 func (v *DictionaryValue) SetKey(
@@ -15603,7 +15603,7 @@ func (v *DictionaryValue) Remove(
 	)
 	if err != nil {
 		if _, ok := err.(*atree.KeyNotFoundError); ok {
-			return NewNilValue(interpreter)
+			return NilOptionalValue
 		}
 		panic(errors.NewExternalError(err))
 	}
@@ -15689,7 +15689,7 @@ func (v *DictionaryValue) Insert(
 	interpreter.maybeValidateAtreeValue(v.dictionary)
 
 	if existingValueStorable == nil {
-		return NewNilValue(interpreter)
+		return NilOptionalValue
 	}
 
 	storage := interpreter.Config.Storage
@@ -16127,19 +16127,14 @@ type OptionalValue interface {
 
 type NilValue struct{}
 
+var Nil Value = NilValue{}
+var NilOptionalValue OptionalValue = NilValue{}
+
 var _ Value = NilValue{}
 var _ atree.Storable = NilValue{}
 var _ EquatableValue = NilValue{}
 var _ MemberAccessibleValue = NilValue{}
-
-func NewUnmeteredNilValue() NilValue {
-	return NilValue{}
-}
-
-func NewNilValue(memoryGauge common.MemoryGauge) NilValue {
-	common.UseMemory(memoryGauge, common.NilValueMemoryUsage)
-	return NewUnmeteredNilValue()
-}
+var _ OptionalValue = NilValue{}
 
 func (NilValue) IsValue() {}
 
@@ -16189,7 +16184,7 @@ func (v NilValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences
 // Hence, no need to meter, as it's a constant.
 var nilValueMapFunction = NewUnmeteredHostFunctionValue(
 	func(invocation Invocation) Value {
-		return NewNilValue(invocation.Interpreter)
+		return Nil
 	},
 	&sema.FunctionType{
 		ReturnTypeAnnotation: sema.NewTypeAnnotation(
@@ -16303,6 +16298,7 @@ func NewUnmeteredSomeValueNonCopying(value Value) *SomeValue {
 var _ Value = &SomeValue{}
 var _ EquatableValue = &SomeValue{}
 var _ MemberAccessibleValue = &SomeValue{}
+var _ OptionalValue = &SomeValue{}
 
 func (*SomeValue) IsValue() {}
 
@@ -17741,7 +17737,7 @@ func (PathValue) IsStorable() bool {
 func convertPath(interpreter *Interpreter, domain common.PathDomain, value Value) Value {
 	stringValue, ok := value.(*StringValue)
 	if !ok {
-		return NewNilValue(interpreter)
+		return Nil
 	}
 
 	_, err := sema.CheckPathLiteral(
@@ -17751,7 +17747,7 @@ func convertPath(interpreter *Interpreter, domain common.PathDomain, value Value
 		ReturnEmptyRange,
 	)
 	if err != nil {
-		return NewNilValue(interpreter)
+		return Nil
 	}
 
 	return NewSomeValueNonCopying(

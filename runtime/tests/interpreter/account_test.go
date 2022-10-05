@@ -284,7 +284,7 @@ func TestInterpretAuthAccount_type(t *testing.T) {
 		value, err := inter.Invoke("typeAt")
 		require.NoError(t, err)
 		require.Len(t, getAccountStorables(), 0)
-		require.Equal(t, interpreter.NilValue{}, value)
+		require.Equal(t, interpreter.Nil, value)
 
 		// save R
 
@@ -396,7 +396,7 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 			value, err = inter.Invoke("loadR")
 			require.NoError(t, err)
 
-			require.IsType(t, interpreter.NilValue{}, value)
+			require.IsType(t, interpreter.Nil, value)
 		})
 
 		t.Run("save R and load R2", func(t *testing.T) {
@@ -479,7 +479,7 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 			value, err = inter.Invoke("loadS")
 			require.NoError(t, err)
 
-			require.IsType(t, interpreter.NilValue{}, value)
+			require.IsType(t, interpreter.Nil, value)
 		})
 
 		t.Run("save S and load S2", func(t *testing.T) {
@@ -982,7 +982,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					value, err = inter.Invoke("linkR")
 					require.NoError(t, err)
 
-					require.IsType(t, interpreter.NilValue{}, value)
+					require.IsType(t, interpreter.Nil, value)
 
 					// NOTE: check loaded value was *not* removed from storage
 					require.Len(t, getAccountValues(), 2)
@@ -1031,7 +1031,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					value, err = inter.Invoke("linkR2")
 					require.NoError(t, err)
 
-					require.IsType(t, interpreter.NilValue{}, value)
+					require.IsType(t, interpreter.Nil, value)
 
 					// NOTE: check loaded value was *not* removed from storage
 					require.Len(t, getAccountValues(), 3)
@@ -1134,7 +1134,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					value, err = inter.Invoke("linkS")
 					require.NoError(t, err)
 
-					require.IsType(t, interpreter.NilValue{}, value)
+					require.IsType(t, interpreter.Nil, value)
 
 					// NOTE: check loaded value was *not* removed from storage
 					require.Len(t, getAccountValues(), 2)
@@ -1184,7 +1184,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					value, err = inter.Invoke("linkS2")
 					require.NoError(t, err)
 
-					require.IsType(t, interpreter.NilValue{}, value)
+					require.IsType(t, interpreter.Nil, value)
 
 					// NOTE: check loaded value was *not* removed from storage
 					require.Len(t, getAccountValues(), 3)
@@ -1246,7 +1246,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 			t.Run(capabilityDomain.Identifier(), func(t *testing.T) {
 				value, err := inter.Invoke("linkToSamePath")
 				require.NoError(t, err)
-				require.IsType(t, interpreter.NilValue{}, value)
+				require.IsType(t, interpreter.Nil, value)
 
 				// Only one link must have been created.
 				// i.e: 2 values + 1 link
@@ -1621,7 +1621,7 @@ func TestInterpretAccount_getLinkTarget(t *testing.T) {
 				RequireValuesEqual(
 					t,
 					inter,
-					interpreter.NilValue{},
+					interpreter.Nil,
 					value,
 				)
 
@@ -1699,7 +1699,7 @@ func TestInterpretAccount_getLinkTarget(t *testing.T) {
 				RequireValuesEqual(
 					t,
 					inter,
-					interpreter.NilValue{},
+					interpreter.Nil,
 					value,
 				)
 
