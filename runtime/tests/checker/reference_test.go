@@ -1960,4 +1960,45 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		require.NoError(t, err)
 	})
+
+	t.Run("partial invalidation", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub contract Test {
+                pub fun test() {
+                    let x <- create R()
+                    let xRef = &x as &R
+                    if true {
+                        destroy x
+                    } else {
+                        // nothing
+                    }
+                    xRef.a
+
+                    destroy x
+                }
+            }
+
+            pub resource R {
+                pub let a: Int
+
+                init() {
+                    self.a = 5
+                }
+            }
+            `,
+		)
+
+		require.Error(t, err)
+		errors := ExpectCheckerErrors(t, err, 2)
+
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+
+		resourceUseAfterInvalidationErr := &sema.ResourceUseAfterInvalidationError{}
+		assert.ErrorAs(t, errors[1], &resourceUseAfterInvalidationErr)
+	})
 }

@@ -63,11 +63,13 @@ func (checker *Checker) checkReferenceValidity(variable *Variable, hasPosition a
 	}
 
 	resourceInfo := checker.resources.Get(Resource{Variable: referencedVar})
-	if resourceInfo.DefinitivelyInvalidated {
-		checker.report(&InvalidatedResourceReferenceError{
-			Range: ast.NewRangeFromPositioned(checker.memoryGauge, hasPosition),
-		})
+	if resourceInfo.Invalidations.Size() == 0 {
+		return
 	}
+
+	checker.report(&InvalidatedResourceReferenceError{
+		Range: ast.NewRangeFromPositioned(checker.memoryGauge, hasPosition),
+	})
 }
 
 // checkSelfVariableUseInInitializer checks uses of `self` in the initializer
