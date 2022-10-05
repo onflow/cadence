@@ -3844,5 +3844,5 @@ func (*InvalidatedResourceReferenceError) isSemanticError() {}
 func (*InvalidatedResourceReferenceError) IsUserError() {}
 
 func (e *InvalidatedResourceReferenceError) Error() string {
-	return "invalid reference: referenced resource may have been moved"
+	return "invalid reference: referenced resource may have been moved or destroyed"
 }

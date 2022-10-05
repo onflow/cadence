@@ -21,10 +21,9 @@ package interpreter_test
 import (
 	"testing"
 
-	"github.com/onflow/atree"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/checker"
 
@@ -452,7 +451,7 @@ func TestInterpretResourceReferenceAfterMove(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		_, err := checker.ParseAndCheck(t, `
             resource R {
                 let value: String
 
@@ -469,43 +468,17 @@ func TestInterpretResourceReferenceAfterMove(t *testing.T) {
             }
         `)
 
-		address := common.Address{0x1}
-
-		rType := checker.RequireGlobalType(t, inter.Program.Elaboration, "R").(*sema.CompositeType)
-
-		array := interpreter.NewArrayValue(
-			inter,
-			interpreter.ReturnEmptyLocationRange,
-			interpreter.VariableSizedStaticType{
-				Type: interpreter.ConvertSemaToStaticType(nil, rType),
-			},
-			address,
-		)
-
-		arrayRef := &interpreter.EphemeralReferenceValue{
-			Authorized: false,
-			Value:      array,
-			BorrowedType: &sema.VariableSizedType{
-				Type: rType,
-			},
-		}
-
-		value, err := inter.Invoke("test", arrayRef)
-		require.NoError(t, err)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.NewUnmeteredStringValue("testValue"),
-			value,
-		)
+		require.Error(t, err)
+		errors := checker.ExpectCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
 	})
 
 	t.Run("array", func(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		_, err := checker.ParseAndCheck(t, `
             resource R {
                 let value: String
 
@@ -522,47 +495,17 @@ func TestInterpretResourceReferenceAfterMove(t *testing.T) {
             }
         `)
 
-		address := common.Address{0x1}
-
-		rType := checker.RequireGlobalType(t, inter.Program.Elaboration, "R").(*sema.CompositeType)
-
-		array := interpreter.NewArrayValue(
-			inter,
-			interpreter.ReturnEmptyLocationRange,
-			interpreter.VariableSizedStaticType{
-				Type: interpreter.VariableSizedStaticType{
-					Type: interpreter.ConvertSemaToStaticType(nil, rType),
-				},
-			},
-			address,
-		)
-
-		arrayRef := &interpreter.EphemeralReferenceValue{
-			Authorized: false,
-			Value:      array,
-			BorrowedType: &sema.VariableSizedType{
-				Type: &sema.VariableSizedType{
-					Type: rType,
-				},
-			},
-		}
-
-		value, err := inter.Invoke("test", arrayRef)
-		require.NoError(t, err)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.NewUnmeteredStringValue("testValue"),
-			value,
-		)
+		require.Error(t, err)
+		errors := checker.ExpectCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
 	})
 
 	t.Run("dictionary", func(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		_, err := checker.ParseAndCheck(t, `
             resource R {
                 let value: String
 
@@ -579,44 +522,10 @@ func TestInterpretResourceReferenceAfterMove(t *testing.T) {
             }
         `)
 
-		address := common.Address{0x1}
-
-		rType := checker.RequireGlobalType(t, inter.Program.Elaboration, "R").(*sema.CompositeType)
-
-		array := interpreter.NewArrayValue(
-			inter,
-			interpreter.ReturnEmptyLocationRange,
-			interpreter.VariableSizedStaticType{
-				Type: interpreter.DictionaryStaticType{
-					KeyType:   interpreter.PrimitiveStaticTypeInt,
-					ValueType: interpreter.ConvertSemaToStaticType(nil, rType),
-				},
-			},
-			address,
-		)
-
-		arrayRef := &interpreter.EphemeralReferenceValue{
-			Authorized: false,
-			Value:      array,
-			BorrowedType: &sema.VariableSizedType{
-				Type: &sema.DictionaryType{
-					KeyType:   sema.IntType,
-					ValueType: rType,
-				},
-			},
-		}
-
-		value, err := inter.Invoke("test", arrayRef)
-		require.NoError(t, err)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.NewUnmeteredSomeValueNonCopying(
-				interpreter.NewUnmeteredStringValue("testValue"),
-			),
-			value,
-		)
+		require.Error(t, err)
+		errors := checker.ExpectCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
 	})
 }
 
@@ -628,7 +537,7 @@ func TestInterpretReferenceUseAfterShiftStatementMove(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		_, err := checker.ParseAndCheck(t, `
           resource R2 {
               let value: String
 
@@ -668,23 +577,17 @@ func TestInterpretReferenceUseAfterShiftStatementMove(t *testing.T) {
           }
         `)
 
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.NewUnmeteredStringValue("test"),
-			value,
-		)
-
+		require.Error(t, err)
+		errors := checker.ExpectCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
 	})
 
 	t.Run("container in account", func(t *testing.T) {
 
 		t.Parallel()
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		_, err := checker.ParseAndCheck(t,
 			`
               resource R2 {
                   let value: String
@@ -734,67 +637,12 @@ func TestInterpretReferenceUseAfterShiftStatementMove(t *testing.T) {
                   return value
               }
             `,
-			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
-					PublicAccountHandler: func(address interpreter.AddressValue) interpreter.Value {
-						return newTestPublicAccountValue(nil, address)
-					},
-				},
-			},
-		)
-		require.NoError(t, err)
-
-		r1, err := inter.Invoke("createR1")
-		require.NoError(t, err)
-
-		r1 = r1.Transfer(inter, interpreter.ReturnEmptyLocationRange, atree.Address{1}, false, nil)
-
-		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")
-
-		ref := &interpreter.EphemeralReferenceValue{
-			Value:        r1,
-			BorrowedType: r1Type,
-		}
-
-		// Test
-
-		value, err := inter.Invoke("test", ref)
-		require.NoError(t, err)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.NewUnmeteredStringValue("test"),
-			value,
 		)
 
-		// Check R1 owner
-
-		r1Address, err := inter.Invoke("getOwnerR1", ref)
-		require.NoError(t, err)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.NewUnmeteredSomeValueNonCopying(
-				interpreter.AddressValue{1},
-			),
-			r1Address,
-		)
-
-		// Check R2 owner
-
-		r2Address, err := inter.Invoke("getOwnerR2", ref)
-		require.NoError(t, err)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.NewUnmeteredSomeValueNonCopying(
-				interpreter.AddressValue{1},
-			),
-			r2Address,
-		)
+		require.Error(t, err)
+		errors := checker.ExpectCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
 	})
 }
 

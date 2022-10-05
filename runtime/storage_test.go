@@ -35,6 +35,8 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/tests/checker"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -2438,19 +2440,13 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-		require.NoError(t, err)
 
-		require.Equal(t,
-			[]string{
-				"nil",
-				"0x0000000000000001",
-				"nil",
-				"nil",
-				"0x0000000000000002",
-				"0x0000000000000002",
-			},
-			loggedMessages,
-		)
+		errors := checker.ExpectCheckerErrors(t, err, 4)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+		assert.ErrorAs(t, errors[1], &invalidatedRefError)
+		assert.ErrorAs(t, errors[2], &invalidatedRefError)
+		assert.ErrorAs(t, errors[3], &invalidatedRefError)
 	})
 
 	t.Run("resource (array element)", func(t *testing.T) {
@@ -2568,15 +2564,10 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-		require.NoError(t, err)
 
-		require.Equal(t,
-			[]string{
-				"nil",
-				"0x0000000000000001",
-			},
-			loggedMessages,
-		)
+		errors := checker.ExpectCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
 	})
 
 	t.Run("resource (nested field, array element)", func(t *testing.T) {
@@ -2709,17 +2700,11 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-		require.NoError(t, err)
 
-		require.Equal(t,
-			[]string{
-				"nil",
-				"nil",
-				"0x0000000000000001",
-				"0x0000000000000001",
-			},
-			loggedMessages,
-		)
+		errors := checker.ExpectCheckerErrors(t, err, 2)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+		assert.ErrorAs(t, errors[1], &invalidatedRefError)
 	})
 
 	t.Run("array", func(t *testing.T) {
@@ -2837,15 +2822,10 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-		require.NoError(t, err)
 
-		require.Equal(t,
-			[]string{
-				"nil",
-				"0x0000000000000001",
-			},
-			loggedMessages,
-		)
+		errors := checker.ExpectCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
 	})
 
 	t.Run("dictionary", func(t *testing.T) {
@@ -2963,15 +2943,10 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-		require.NoError(t, err)
 
-		require.Equal(t,
-			[]string{
-				"nil",
-				"0x0000000000000001",
-			},
-			loggedMessages,
-		)
+		errors := checker.ExpectCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
 	})
 }
 

@@ -21,7 +21,6 @@ package interpreter_test
 import (
 	"fmt"
 	"math/big"
-	"sort"
 	"strings"
 	"testing"
 
@@ -7248,7 +7247,7 @@ func TestInterpretReferenceExpression(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	_, err := checker.ParseAndCheck(t, `
       resource R {}
 
       fun test(): &R {
@@ -7259,13 +7258,10 @@ func TestInterpretReferenceExpression(t *testing.T) {
       }
     `)
 
-	value, err := inter.Invoke("test")
-	require.NoError(t, err)
-
-	require.IsType(t,
-		&interpreter.EphemeralReferenceValue{},
-		value,
-	)
+	require.Error(t, err)
+	errs := checker.ExpectCheckerErrors(t, err, 1)
+	invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+	assert.ErrorAs(t, errs[0], &invalidatedRefError)
 }
 
 func TestInterpretReferenceUse(t *testing.T) {
@@ -7380,7 +7376,7 @@ func TestInterpretReferenceDereferenceFailure(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	_, err := checker.ParseAndCheck(t, `
       pub resource R {
           pub fun foo() {}
       }
@@ -7393,11 +7389,10 @@ func TestInterpretReferenceDereferenceFailure(t *testing.T) {
       }
     `)
 
-	_, err := inter.Invoke("test")
 	require.Error(t, err)
-	_ = err.Error()
-
-	require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
+	errs := checker.ExpectCheckerErrors(t, err, 1)
+	invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+	assert.ErrorAs(t, errs[0], &invalidatedRefError)
 }
 
 func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
@@ -7490,7 +7485,7 @@ func TestInterpretResourceMovingAndBorrowing(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		_, err := checker.ParseAndCheck(t, `
             resource R2 {
                 let value: String
 
@@ -7532,38 +7527,17 @@ func TestInterpretResourceMovingAndBorrowing(t *testing.T) {
             }
         `)
 
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.NewArrayValue(
-				inter,
-				interpreter.ReturnEmptyLocationRange,
-				interpreter.VariableSizedStaticType{
-					Type: interpreter.OptionalStaticType{
-						Type: interpreter.PrimitiveStaticTypeString,
-					},
-				},
-				common.Address{},
-				interpreter.NewUnmeteredSomeValueNonCopying(
-					interpreter.NewUnmeteredStringValue("test"),
-				),
-				interpreter.NewUnmeteredSomeValueNonCopying(
-					interpreter.NewUnmeteredStringValue("test"),
-				),
-			),
-			value,
-		)
-
+		require.Error(t, err)
+		errs := checker.ExpectCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errs[0], &invalidatedRefError)
 	})
 
 	t.Run("from account to stack and back", func(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		_, err := checker.ParseAndCheck(t, `
             resource R2 {
                 let value: String
 
@@ -7607,75 +7581,10 @@ func TestInterpretResourceMovingAndBorrowing(t *testing.T) {
             }
         `)
 
-		r1, err := inter.Invoke("createR1")
-		require.NoError(t, err)
-
-		r1 = r1.Transfer(inter, interpreter.ReturnEmptyLocationRange, atree.Address{1}, false, nil)
-
-		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")
-
-		ref := &interpreter.EphemeralReferenceValue{
-			Value:        r1,
-			BorrowedType: r1Type,
-		}
-
-		value, err := inter.Invoke("test", ref)
-		require.NoError(t, err)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.NewArrayValue(
-				inter,
-				interpreter.ReturnEmptyLocationRange,
-				interpreter.VariableSizedStaticType{
-					Type: interpreter.OptionalStaticType{
-						Type: interpreter.PrimitiveStaticTypeString,
-					},
-				},
-				common.Address{},
-				interpreter.NewUnmeteredSomeValueNonCopying(
-					interpreter.NewUnmeteredStringValue("test"),
-				),
-				interpreter.NewUnmeteredSomeValueNonCopying(
-					interpreter.NewUnmeteredStringValue("test"),
-				),
-			),
-			value,
-		)
-
-		var permanentSlabs []atree.Slab
-
-		for _, slab := range inter.Config.Storage.(interpreter.InMemoryStorage).Slabs {
-			if slab.ID().Address == (atree.Address{}) {
-				continue
-			}
-
-			permanentSlabs = append(permanentSlabs, slab)
-		}
-
-		require.Equal(t, 2, len(permanentSlabs))
-
-		sort.Slice(permanentSlabs, func(i, j int) bool {
-			a := permanentSlabs[i].ID()
-			b := permanentSlabs[j].ID()
-			return a.Compare(b) < 0
-		})
-
-		var storedValues []string
-
-		for _, slab := range permanentSlabs {
-			storedValue := interpreter.StoredValue(inter, slab, inter.Config.Storage)
-			storedValues = append(storedValues, storedValue.String())
-		}
-
-		require.Equal(t,
-			[]string{
-				`S.test.R1(r2: S.test.R2(value: "test", uuid: 2), uuid: 1)`,
-				`S.test.R2(value: "test", uuid: 2)`,
-			},
-			storedValues,
-		)
+		require.Error(t, err)
+		errs := checker.ExpectCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errs[0], &invalidatedRefError)
 	})
 }
 
@@ -8397,7 +8306,7 @@ func TestInterpretNonStorageReferenceAfterDestruction(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t,
+	_, err := checker.ParseAndCheck(t,
 		`
           resource NFT {
               var id: Int
@@ -8416,11 +8325,10 @@ func TestInterpretNonStorageReferenceAfterDestruction(t *testing.T) {
         `,
 	)
 
-	_, err := inter.Invoke("test")
 	require.Error(t, err)
-	_ = err.Error()
-
-	require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
+	errs := checker.ExpectCheckerErrors(t, err, 1)
+	invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+	assert.ErrorAs(t, errs[0], &invalidatedRefError)
 }
 
 func TestInterpretNonStorageReferenceToOptional(t *testing.T) {
@@ -8691,7 +8599,7 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		_, err := checker.ParseAndCheck(t, `
           resource R {
               var name: String
               init(name: String) {
@@ -8708,16 +8616,17 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
           }
         `)
 
-		_, err := inter.Invoke("test")
-		require.NoError(t, err)
-
+		require.Error(t, err)
+		errs := checker.ExpectCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errs[0], &invalidatedRefError)
 	})
 
 	t.Run("resource, field read", func(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		_, err := checker.ParseAndCheck(t, `
           resource R {
               var name: String
               init(name: String) {
@@ -8735,15 +8644,17 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
           }
         `)
 
-		_, err := inter.Invoke("test")
-		require.NoError(t, err)
+		require.Error(t, err)
+		errs := checker.ExpectCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errs[0], &invalidatedRefError)
 	})
 
 	t.Run("resource array, insert", func(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		_, err := checker.ParseAndCheck(t, `
           resource R {}
 
           fun test() {
@@ -8755,15 +8666,17 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
           }
         `)
 
-		_, err := inter.Invoke("test")
-		require.NoError(t, err)
+		require.Error(t, err)
+		errs := checker.ExpectCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errs[0], &invalidatedRefError)
 	})
 
 	t.Run("resource array, append", func(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		_, err := checker.ParseAndCheck(t, `
           resource R {}
 
           fun test() {
@@ -8775,15 +8688,17 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
           }
         `)
 
-		_, err := inter.Invoke("test")
-		require.NoError(t, err)
+		require.Error(t, err)
+		errs := checker.ExpectCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errs[0], &invalidatedRefError)
 	})
 
 	t.Run("resource array, get/set", func(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		_, err := checker.ParseAndCheck(t, `
           resource R {}
 
           fun test() {
@@ -8797,15 +8712,18 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
           }
         `)
 
-		_, err := inter.Invoke("test")
-		require.NoError(t, err)
+		require.Error(t, err)
+		errs := checker.ExpectCheckerErrors(t, err, 2)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errs[0], &invalidatedRefError)
+		assert.ErrorAs(t, errs[1], &invalidatedRefError)
 	})
 
 	t.Run("resource array, remove", func(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		_, err := checker.ParseAndCheck(t, `
           resource R {}
 
           fun test() {
@@ -8818,15 +8736,17 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
           }
         `)
 
-		_, err := inter.Invoke("test")
-		require.NoError(t, err)
+		require.Error(t, err)
+		errs := checker.ExpectCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errs[0], &invalidatedRefError)
 	})
 
 	t.Run("resource dictionary, insert", func(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		_, err := checker.ParseAndCheck(t, `
           resource R {}
 
           fun test() {
@@ -8838,15 +8758,17 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
           }
         `)
 
-		_, err := inter.Invoke("test")
-		require.NoError(t, err)
+		require.Error(t, err)
+		errs := checker.ExpectCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errs[0], &invalidatedRefError)
 	})
 
 	t.Run("resource dictionary, remove", func(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		_, err := checker.ParseAndCheck(t, `
           resource R {}
 
           fun test() {
@@ -8859,8 +8781,10 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
           }
         `)
 
-		_, err := inter.Invoke("test")
-		require.NoError(t, err)
+		require.Error(t, err)
+		errs := checker.ExpectCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errs[0], &invalidatedRefError)
 	})
 
 	t.Run("struct, field write and read", func(t *testing.T) {

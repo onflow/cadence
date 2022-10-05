@@ -2444,7 +2444,7 @@ func TestInterpretReferenceUseAfterTransferAndDestruction(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, resourceCode+`
+		_, err := checker.ParseAndCheck(t, resourceCode+`
 
           fun test(): Int {
 
@@ -2462,21 +2462,18 @@ func TestInterpretReferenceUseAfterTransferAndDestruction(t *testing.T) {
           }
         `)
 
-		_, err := inter.Invoke("test")
 		require.Error(t, err)
-		_ = err.Error()
-
-		var invalidatedResourceErr interpreter.DestroyedResourceError
-		require.ErrorAs(t, err, &invalidatedResourceErr)
-
-		assert.Equal(t, 26, invalidatedResourceErr.StartPosition().Line)
+		errors := checker.ExpectCheckerErrors(t, err, 2)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+		assert.ErrorAs(t, errors[1], &invalidatedRefError)
 	})
 
 	t.Run("dictionary", func(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, resourceCode+`
+		_, err := checker.ParseAndCheck(t, resourceCode+`
 
           fun test(): Int {
 
@@ -2493,21 +2490,17 @@ func TestInterpretReferenceUseAfterTransferAndDestruction(t *testing.T) {
           }
         `)
 
-		_, err := inter.Invoke("test")
 		require.Error(t, err)
-		_ = err.Error()
-
-		var invalidatedResourceErr interpreter.DestroyedResourceError
-		require.ErrorAs(t, err, &invalidatedResourceErr)
-
-		assert.Equal(t, 26, invalidatedResourceErr.StartPosition().Line)
+		errors := checker.ExpectCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
 	})
 
 	t.Run("array", func(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, resourceCode+`
+		_, err := checker.ParseAndCheck(t, resourceCode+`
 
           fun test(): Int {
 
@@ -2524,21 +2517,17 @@ func TestInterpretReferenceUseAfterTransferAndDestruction(t *testing.T) {
           }
         `)
 
-		_, err := inter.Invoke("test")
 		require.Error(t, err)
-		_ = err.Error()
-
-		var invalidatedResourceErr interpreter.DestroyedResourceError
-		require.ErrorAs(t, err, &invalidatedResourceErr)
-
-		assert.Equal(t, 26, invalidatedResourceErr.StartPosition().Line)
+		errors := checker.ExpectCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
 	})
 
 	t.Run("optional", func(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, resourceCode+`
+		_, err := checker.ParseAndCheck(t, resourceCode+`
 
           fun test(): Int {
 
@@ -2554,14 +2543,11 @@ func TestInterpretReferenceUseAfterTransferAndDestruction(t *testing.T) {
           }
         `)
 
-		_, err := inter.Invoke("test")
 		require.Error(t, err)
-		_ = err.Error()
-
-		var invalidatedResourceErr interpreter.DestroyedResourceError
-		require.ErrorAs(t, err, &invalidatedResourceErr)
-
-		assert.Equal(t, 24, invalidatedResourceErr.StartPosition().Line)
+		errors := checker.ExpectCheckerErrors(t, err, 2)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+		assert.ErrorAs(t, errors[1], &invalidatedRefError)
 	})
 }
 
