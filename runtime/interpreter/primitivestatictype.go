@@ -189,6 +189,8 @@ const (
 	_
 	_
 	_
+	_
+	_
 	PrimitiveStaticTypeAuthAccount
 	PrimitiveStaticTypePublicAccount
 	PrimitiveStaticTypeDeployedContract
