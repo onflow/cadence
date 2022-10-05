@@ -472,18 +472,11 @@ func (v TypeValue) HashInput(interpreter *Interpreter, _ func() LocationRange, s
 
 type VoidValue struct{}
 
+var Void Value = VoidValue{}
+
 var _ Value = VoidValue{}
 var _ atree.Storable = VoidValue{}
 var _ EquatableValue = VoidValue{}
-
-func NewUnmeteredVoidValue() VoidValue {
-	return VoidValue{}
-}
-
-func NewVoidValue(memoryGauge common.MemoryGauge) VoidValue {
-	common.UseMemory(memoryGauge, common.VoidValueMemoryUsage)
-	return NewUnmeteredVoidValue()
-}
 
 func (VoidValue) IsValue() {}
 
@@ -562,7 +555,7 @@ func (VoidValue) DeepRemove(_ *Interpreter) {
 	// NO-OP
 }
 
-func (v VoidValue) ByteSize() uint32 {
+func (VoidValue) ByteSize() uint32 {
 	return uint32(len(cborVoidValue))
 }
 
@@ -1986,7 +1979,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, getLocationRange func()
 					invocation.GetLocationRange,
 					invocation.Arguments[0],
 				)
-				return NewVoidValue(invocation.Interpreter)
+				return Void
 			},
 			sema.ArrayAppendFunctionType(
 				v.SemaType(interpreter).ElementType(false),
@@ -2006,7 +1999,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, getLocationRange func()
 					invocation.GetLocationRange,
 					otherArray,
 				)
-				return NewVoidValue(invocation.Interpreter)
+				return Void
 			},
 			sema.ArrayAppendAllFunctionType(
 				v.SemaType(interpreter),
@@ -2050,7 +2043,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, getLocationRange func()
 					index,
 					element,
 				)
-				return NewVoidValue(invocation.Interpreter)
+				return Void
 			},
 			sema.ArrayInsertFunctionType(
 				v.SemaType(interpreter).ElementType(false),
@@ -15952,7 +15945,7 @@ func (v *DictionaryValue) GetMember(
 					funcArgument,
 				)
 
-				return NewVoidValue(interpreter)
+				return Void
 			},
 			sema.DictionaryForEachKeyFunctionType(
 				v.SemaType(interpreter),

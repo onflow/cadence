@@ -72,7 +72,7 @@ func (interpreter *Interpreter) VisitReturnStatement(statement *ast.ReturnStatem
 
 	var value Value
 	if statement.Expression == nil {
-		value = NewVoidValue(interpreter)
+		value = Void
 	} else {
 		value = interpreter.evalExpression(statement.Expression)
 

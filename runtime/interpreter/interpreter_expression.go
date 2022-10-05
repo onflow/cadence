@@ -506,8 +506,8 @@ func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpres
 	})
 }
 
-func (interpreter *Interpreter) VisitVoidExpression(expression *ast.VoidExpression) Value {
-	return NewVoidValue(interpreter)
+func (interpreter *Interpreter) VisitVoidExpression(_ *ast.VoidExpression) Value {
+	return Void
 }
 
 func (interpreter *Interpreter) VisitBoolExpression(expression *ast.BoolExpression) Value {
@@ -980,7 +980,7 @@ func (interpreter *Interpreter) VisitDestroyExpression(expression *ast.DestroyEx
 
 	value.(ResourceKindedValue).Destroy(interpreter, getLocationRange)
 
-	return NewVoidValue(interpreter)
+	return Void
 }
 
 func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *ast.ReferenceExpression) Value {

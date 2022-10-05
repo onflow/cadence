@@ -928,7 +928,7 @@ func TestStringer(t *testing.T) {
 			expected: "-32.00000000",
 		},
 		"Void": {
-			value:    VoidValue{},
+			value:    Void,
 			expected: "()",
 		},
 		"true": {
@@ -3792,7 +3792,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 
 		test(
 			func(_ *Interpreter) Value {
-				return NewUnmeteredVoidValue()
+				return Void
 			},
 			true,
 		)

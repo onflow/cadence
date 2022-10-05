@@ -145,7 +145,7 @@ func TestEncodeDecodeVoidValue(t *testing.T) {
 
 	testEncodeDecode(t,
 		encodeDecodeTest{
-			value: VoidValue{},
+			value: Void,
 			encoded: []byte{
 				// tag
 				0xd8, CBORTagVoidValue,

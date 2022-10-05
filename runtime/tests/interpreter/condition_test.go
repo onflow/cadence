@@ -146,7 +146,7 @@ func TestInterpretFunctionWithoutResultAndPostConditionWithResult(t *testing.T) 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.VoidValue{},
+		interpreter.Void,
 		value,
 	)
 }
@@ -175,7 +175,7 @@ func TestInterpretFunctionPostConditionWithBefore(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.VoidValue{},
+		interpreter.Void,
 		value,
 	)
 }
@@ -706,7 +706,7 @@ func TestInterpretTypeRequirementWithPreCondition(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.IsType(t,
-			interpreter.VoidValue{},
+			interpreter.Void,
 			value,
 		)
 	})
@@ -1133,7 +1133,7 @@ func TestInterpretFunctionWithPostConditionAndResourceResult(t *testing.T) {
 				argument := invocation.Arguments[0]
 				require.IsType(t, &interpreter.EphemeralReferenceValue{}, argument)
 
-				return interpreter.VoidValue{}
+				return interpreter.Void
 			},
 			checkFunctionType,
 		),

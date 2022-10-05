@@ -402,7 +402,7 @@ func TestInterpretFunctionSideEffects(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.VoidValue{},
+		interpreter.Void,
 		value,
 	)
 
@@ -987,7 +987,7 @@ func TestInterpretReturnWithoutExpression(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.VoidValue{},
+		interpreter.Void,
 		value,
 	)
 }
@@ -1927,7 +1927,7 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 				invocation.Arguments[2],
 			)
 
-			return interpreter.VoidValue{}
+			return interpreter.Void
 		},
 	)
 
@@ -2050,7 +2050,7 @@ func TestInterpretStructureSelfUseInInitializer(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.VoidValue{},
+		interpreter.Void,
 		value,
 	)
 }
@@ -2122,7 +2122,7 @@ func TestInterpretStructureSelfUseInFunction(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.VoidValue{},
+		interpreter.Void,
 		value,
 	)
 }
@@ -2150,7 +2150,7 @@ func TestInterpretStructureConstructorUseInFunction(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.VoidValue{},
+		interpreter.Void,
 		value,
 	)
 }
@@ -2212,7 +2212,7 @@ func TestInterpretStructureDeclarationWithFunction(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.VoidValue{},
+		interpreter.Void,
 		value,
 	)
 
@@ -2290,7 +2290,7 @@ func TestInterpretStructureFieldAssignment(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.VoidValue{},
+		interpreter.Void,
 		value,
 	)
 
@@ -2920,7 +2920,7 @@ func TestInterpretOptionalAssignment(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.VoidValue{},
+		interpreter.Void,
 		value,
 	)
 
@@ -4317,7 +4317,7 @@ func TestInterpretDictionaryIndexingAssignmentExisting(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.VoidValue{},
+		interpreter.Void,
 		value,
 	)
 
@@ -4365,7 +4365,7 @@ func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.VoidValue{},
+		interpreter.Void,
 		value,
 	)
 
@@ -4432,7 +4432,7 @@ func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.VoidValue{},
+		interpreter.Void,
 		value,
 	)
 
@@ -6014,7 +6014,7 @@ func TestInterpretIndirectDestroy(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.VoidValue{},
+		interpreter.Void,
 		value,
 	)
 }
@@ -6042,7 +6042,7 @@ func TestInterpretUnaryMove(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.VoidValue{},
+		interpreter.Void,
 		value,
 	)
 }
@@ -9501,7 +9501,7 @@ func TestInterpretNestedDestroy(t *testing.T) {
 		func(invocation interpreter.Invocation) interpreter.Value {
 			message := invocation.Arguments[0].String()
 			logs = append(logs, message)
-			return interpreter.VoidValue{}
+			return interpreter.Void
 		},
 	)
 
@@ -9573,7 +9573,7 @@ func TestInterpretNestedDestroy(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.VoidValue{},
+		interpreter.Void,
 		value,
 	)
 

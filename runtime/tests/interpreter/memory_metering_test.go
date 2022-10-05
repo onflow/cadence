@@ -7217,7 +7217,7 @@ func TestInterpretVoidMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindVoidValue))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindVoidValue))
 	})
 
 	t.Run("returning function", func(t *testing.T) {
@@ -9309,7 +9309,7 @@ func TestInterpretValueStringConversion(t *testing.T) {
 				meter.meter = make(map[common.MemoryKind]uint64)
 
 				loggedString = invocation.Arguments[0].MeteredString(invocation.Interpreter, interpreter.SeenReferences{})
-				return interpreter.VoidValue{}
+				return interpreter.Void
 			},
 		)
 
@@ -9653,7 +9653,7 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 				meter.meter = make(map[common.MemoryKind]uint64)
 
 				loggedString = invocation.Arguments[0].MeteredString(invocation.Interpreter, interpreter.SeenReferences{})
-				return interpreter.VoidValue{}
+				return interpreter.Void
 			},
 		)
 

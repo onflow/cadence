@@ -322,7 +322,7 @@ func TestArrayMutation(t *testing.T) {
 			func(invocation interpreter.Invocation) interpreter.Value {
 				invoked = true
 				assert.Equal(t, "\"hello\"", invocation.Arguments[0].String())
-				return interpreter.VoidValue{}
+				return interpreter.Void
 			},
 		)
 
@@ -463,7 +463,7 @@ func TestArrayMutation(t *testing.T) {
 			"",
 			func(invocation interpreter.Invocation) interpreter.Value {
 				assert.Fail(t, "unexpected call of log")
-				return interpreter.VoidValue{}
+				return interpreter.Void
 			},
 		)
 
@@ -717,7 +717,7 @@ func TestDictionaryMutation(t *testing.T) {
 			func(invocation interpreter.Invocation) interpreter.Value {
 				invoked = true
 				assert.Equal(t, "\"hello\"", invocation.Arguments[0].String())
-				return interpreter.VoidValue{}
+				return interpreter.Void
 			},
 		)
 
@@ -858,7 +858,7 @@ func TestDictionaryMutation(t *testing.T) {
 			"",
 			func(invocation interpreter.Invocation) interpreter.Value {
 				assert.Fail(t, "unexpected call of log")
-				return interpreter.VoidValue{}
+				return interpreter.Void
 			},
 		)
 
