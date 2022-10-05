@@ -460,20 +460,18 @@ func (interpreter *Interpreter) testEqual(left, right Value, expression *ast.Bin
 		right,
 	)
 
-	valueGetter := func() bool {
-		leftEquatable, ok := left.(EquatableValue)
-		if !ok {
-			return false
-		}
+	leftEquatable, ok := left.(EquatableValue)
+	if !ok {
+		return FalseValue
+	}
 
-		return leftEquatable.Equal(
+	return AsBoolValue(
+		leftEquatable.Equal(
 			interpreter,
 			locationRangeGetter(interpreter, interpreter.Location, expression),
 			right,
-		)
-	}
-
-	return NewBoolValueFromConstructor(interpreter, valueGetter)
+		),
+	)
 }
 
 func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpression) Value {
@@ -511,7 +509,7 @@ func (interpreter *Interpreter) VisitVoidExpression(_ *ast.VoidExpression) Value
 }
 
 func (interpreter *Interpreter) VisitBoolExpression(expression *ast.BoolExpression) Value {
-	return NewBoolValue(interpreter, expression.Value)
+	return AsBoolValue(expression.Value)
 }
 
 func (interpreter *Interpreter) VisitNilExpression(_ *ast.NilExpression) Value {

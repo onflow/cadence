@@ -777,7 +777,7 @@ func ImportValue(
 			expectedType,
 		)
 	case cadence.Bool:
-		return interpreter.NewBoolValue(inter, bool(v)), nil
+		return interpreter.AsBoolValue(bool(v)), nil
 	case cadence.String:
 		return importString(inter, v), nil
 	case cadence.Character:

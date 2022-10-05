@@ -3685,7 +3685,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		require.NoError(t, err)
 
 		storageMap := storage.GetStorageMap(testAddress, "storage", true)
-		storageMap.WriteValue(inter, "test", NewUnmeteredBoolValue(true))
+		storageMap.WriteValue(inter, "test", TrueValue)
 
 		value := valueFactory(inter)
 
@@ -3744,7 +3744,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 
 		test(
 			func(_ *Interpreter) Value {
-				return NewUnmeteredBoolValue(true)
+				return TrueValue
 			},
 			true,
 		)
@@ -3829,7 +3829,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		test(
 			func(interpreter *Interpreter) Value {
 				return NewUnmeteredSomeValueNonCopying(
-					NewUnmeteredBoolValue(true),
+					TrueValue,
 				)
 			},
 			true,
@@ -3940,7 +3940,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 			func(_ *Interpreter) Value {
 				return NewUnmeteredEphemeralReferenceValue(
 					false,
-					NewUnmeteredBoolValue(true),
+					TrueValue,
 					sema.BoolType,
 				)
 			},
@@ -3951,7 +3951,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 			func(_ *Interpreter) Value {
 				return NewUnmeteredEphemeralReferenceValue(
 					false,
-					NewUnmeteredBoolValue(true),
+					TrueValue,
 					sema.StringType,
 				)
 			},
@@ -4198,7 +4198,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 				return newCompositeValue(inter, []CompositeField{
 					{
 						Name:  "foo",
-						Value: NewUnmeteredBoolValue(true),
+						Value: TrueValue,
 					},
 				})
 			},
