@@ -215,7 +215,7 @@ All fields, functions, types, variables, etc., need to have names that clearly d
 
 `account` / `accounts` is better than `array` / `element`.
 
-`providerAccount` / `tokenRecipientAccount` is better than `acct1` / `acct2`.
+`providerAccount` / `tokenrecipientAccount` is better than `acct1` / `acct2`.
 
 `/storage/bestPracticesDocsCollectionPath` is better than `/storage/collection`
 
@@ -406,26 +406,26 @@ from one account and delivering it to the other.
 
 The solution to the bootstrapping problem in Cadence is provided by the [Inbox API](/cadence/language/accounts#account-inbox)
 
-Account A (which we will call the Provider) creates the capability they wish to send to B (which we will call the Recipient),
-and stores this capability on their account in a place where the Recipient can access it using the `Inbox.publish` function on their account. 
-They choose a name for the capability that the Recipient can later use to identify it, and specify the Recipient's address when calling `publish`. 
-This call to `publish` will emit an `InboxValuePublished` event that the Recipient can listen for off-chain to know that the Capability is ready for them to claim. 
+Account A (which we will call the provider) creates the capability they wish to send to B (which we will call the recipient),
+and stores this capability on their account in a place where the recipient can access it using the `Inbox.publish` function on their account. 
+They choose a name for the capability that the recipient can later use to identify it, and specify the recipient's address when calling `publish`. 
+This call to `publish` will emit an `InboxValuePublished` event that the recipient can listen for off-chain to know that the Capability is ready for them to claim. 
 
-The Recipient then later can use the `Inbox.claim` function to securely grab the capability from the Provider's account. 
-They must provide the name and type with which the capability was published, as well as the address of the Provider's account 
+The recipient then later can use the `Inbox.claim` function to securely grab the capability from the provider's account. 
+They must provide the name and type with which the capability was published, as well as the address of the provider's account 
 (all of this information is available in the `InboxValuePublished` event emitted on `publish`). 
-This will remove the capability from the Provider's account and emit an `InboxValueRemoved` event that the Provider can listen for off-chain. 
+This will remove the capability from the provider's account and emit an `InboxValueClaimed` event that the provider can listen for off-chain. 
 
-One important caveat to this is that the published capability is stored on the Provider's account until the Recipient claims it, 
-so the Provider can also use the `Inbox.unpublish` function to remove the capability from their account if they no longer wish to pay for storage for it. 
+One important caveat to this is that the published capability is stored on the provider's account until the recipient claims it, 
+so the provider can also use the `Inbox.unpublish` function to remove the capability from their account if they no longer wish to pay for storage for it. 
 This also requires the name and type which the capability was published, 
-and emits an `InboxValueRemoved` event that the Recipient can listen for off-chain. 
+and emits an `InboxValueUnpublished` event that the recipient can listen for off-chain. 
 
-It is also important to note that the Recipient becomes the owner of the capability object once they have claimed it, 
+It is also important to note that the recipient becomes the owner of the capability object once they have claimed it, 
 and can thus store it or copy it anywhere they have access to. 
-This means Providers should only publish capabilities to Recipients they trust to use them properly, 
-or limit the type with which the capability is restricted in order to only give Recipients access to the functionality
-that the Provider is willing to allow them to copy. 
+This means providers should only publish capabilities to recipients they trust to use them properly, 
+or limit the type with which the capability is restricted in order to only give recipients access to the functionality
+that the provider is willing to allow them to copy. 
 
 ## Capability Revocation
 
