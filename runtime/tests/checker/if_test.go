@@ -53,7 +53,7 @@ func TestCheckIfStatementScoping(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 }
@@ -68,7 +68,7 @@ func TestCheckInvalidIfStatementTest(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -85,7 +85,7 @@ func TestCheckInvalidIfStatementElse(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 }
@@ -117,7 +117,7 @@ func TestCheckInvalidIfStatementTestWithDeclaration(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 }
@@ -136,7 +136,7 @@ func TestCheckInvalidIfStatementTestWithDeclarationReferenceInElse(t *testing.T)
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 }
@@ -189,7 +189,7 @@ func TestCheckInvalidIfStatementTestWithDeclarationNonOptional(t *testing.T) {
      }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -208,7 +208,7 @@ func TestCheckInvalidIfStatementTestWithDeclarationSameType(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }

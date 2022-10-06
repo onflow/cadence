@@ -27,7 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/tests/utils"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
@@ -55,7 +55,7 @@ func TestArrayMutation(t *testing.T) {
 		require.IsType(t, &interpreter.ArrayValue{}, value)
 		array := value.(*interpreter.ArrayValue)
 
-		utils.RequireValuesEqual(
+		RequireValuesEqual(
 			t,
 			inter,
 			interpreter.NewArrayValue(
@@ -83,8 +83,7 @@ func TestArrayMutation(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		mutationError := &interpreter.ContainerMutationError{}
 		require.ErrorAs(t, err, mutationError)
@@ -104,8 +103,7 @@ func TestArrayMutation(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		mutationError := &interpreter.ContainerMutationError{}
 		require.ErrorAs(t, err, mutationError)
@@ -131,7 +129,7 @@ func TestArrayMutation(t *testing.T) {
 		require.IsType(t, &interpreter.ArrayValue{}, value)
 		array := value.(*interpreter.ArrayValue)
 
-		utils.RequireValuesEqual(
+		RequireValuesEqual(
 			t,
 			inter,
 			interpreter.NewArrayValue(
@@ -160,8 +158,7 @@ func TestArrayMutation(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		mutationError := &interpreter.ContainerMutationError{}
 		require.ErrorAs(t, err, mutationError)
@@ -181,8 +178,7 @@ func TestArrayMutation(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		mutationError := &interpreter.ContainerMutationError{}
 		require.ErrorAs(t, err, mutationError)
@@ -208,7 +204,7 @@ func TestArrayMutation(t *testing.T) {
 		require.IsType(t, &interpreter.ArrayValue{}, value)
 		array := value.(*interpreter.ArrayValue)
 
-		utils.RequireValuesEqual(
+		RequireValuesEqual(
 			t,
 			inter,
 			interpreter.NewArrayValue(
@@ -237,8 +233,7 @@ func TestArrayMutation(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		mutationError := &interpreter.ContainerMutationError{}
 		require.ErrorAs(t, err, mutationError)
@@ -260,8 +255,7 @@ func TestArrayMutation(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		require.ErrorAs(t, err, &interpreter.ContainerMutationError{})
 
@@ -271,7 +265,7 @@ func TestArrayMutation(t *testing.T) {
 		require.IsType(t, &interpreter.ArrayValue{}, namesVal)
 		namesValArray := namesVal.(*interpreter.ArrayValue)
 
-		utils.RequireValuesEqual(
+		RequireValuesEqual(
 			t,
 			inter,
 			interpreter.NewArrayValue(
@@ -300,8 +294,7 @@ func TestArrayMutation(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		mutationError := &interpreter.ContainerMutationError{}
 		require.ErrorAs(t, err, mutationError)
@@ -493,8 +486,7 @@ func TestArrayMutation(t *testing.T) {
 		require.NoError(t, err)
 
 		_, err = inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		mutationError := &interpreter.ContainerMutationError{}
 		require.ErrorAs(t, err, mutationError)
@@ -561,8 +553,7 @@ func TestDictionaryMutation(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		mutationError := &interpreter.ContainerMutationError{}
 		require.ErrorAs(t, err, mutationError)
@@ -641,8 +632,7 @@ func TestDictionaryMutation(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		mutationError := &interpreter.ContainerMutationError{}
 		require.ErrorAs(t, err, mutationError)
@@ -662,8 +652,7 @@ func TestDictionaryMutation(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		mutationError := &interpreter.ContainerMutationError{}
 		require.ErrorAs(t, err, mutationError)
@@ -684,8 +673,7 @@ func TestDictionaryMutation(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		mutationError := &interpreter.ContainerMutationError{}
 		require.ErrorAs(t, err, mutationError)
@@ -888,8 +876,7 @@ func TestDictionaryMutation(t *testing.T) {
 		require.NoError(t, err)
 
 		_, err = inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		mutationError := &interpreter.ContainerMutationError{}
 		require.ErrorAs(t, err, mutationError)
@@ -958,7 +945,7 @@ func TestInterpretContainerMutationAfterNilCoalescing(t *testing.T) {
 	result, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	utils.RequireValuesEqual(
+	RequireValuesEqual(
 		t,
 		inter,
 		interpreter.NewUnmeteredSomeValueNonCopying(

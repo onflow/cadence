@@ -41,7 +41,6 @@ import (
 	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/tests/checker"
 	"github.com/onflow/cadence/runtime/tests/examples"
-	"github.com/onflow/cadence/runtime/tests/utils"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -640,8 +639,7 @@ func TestInterpretInvalidArrayIndexing(t *testing.T) {
 
 			indexValue := interpreter.NewUnmeteredIntValueFromInt64(int64(index))
 			_, err := inter.Invoke("test", indexValue)
-			require.Error(t, err)
-			_ = err.Error()
+			RequireError(t, err)
 
 			var indexErr interpreter.ArrayIndexOutOfBoundsError
 			require.ErrorAs(t, err, &indexErr)
@@ -716,8 +714,7 @@ func TestInterpretInvalidArrayIndexingAssignment(t *testing.T) {
 
 			indexValue := interpreter.NewUnmeteredIntValueFromInt64(int64(index))
 			_, err := inter.Invoke("test", indexValue)
-			require.Error(t, err)
-			_ = err.Error()
+			RequireError(t, err)
 
 			var indexErr interpreter.ArrayIndexOutOfBoundsError
 			require.ErrorAs(t, err, &indexErr)
@@ -787,8 +784,7 @@ func TestInterpretInvalidStringIndexing(t *testing.T) {
 
 			indexValue := interpreter.NewUnmeteredIntValueFromInt64(int64(index))
 			_, err := inter.Invoke("test", indexValue)
-			require.Error(t, err)
-			_ = err.Error()
+			RequireError(t, err)
 
 			var indexErr interpreter.StringIndexOutOfBoundsError
 			require.ErrorAs(t, err, &indexErr)
@@ -1032,7 +1028,7 @@ func TestInterpretReturns(t *testing.T) {
         `,
 		ParseCheckAndInterpretOptions{
 			HandleCheckerError: func(err error) {
-				errs := checker.ExpectCheckerErrors(t, err, 1)
+				errs := checker.RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 			},
@@ -4090,8 +4086,7 @@ func TestInterpretImportError(t *testing.T) {
 			"  |                  ^^^^^^^^^^^\n",
 		sb.String(),
 	)
-	require.Error(t, err)
-	_ = err.Error()
+	RequireError(t, err)
 
 	var panicErr stdlib.PanicError
 	require.ErrorAs(t, err, &panicErr)
@@ -5255,8 +5250,7 @@ func TestInterpretInvalidArrayInsert(t *testing.T) {
 
 			indexValue := interpreter.NewUnmeteredIntValueFromInt64(int64(index))
 			_, err := inter.Invoke("test", indexValue)
-			require.Error(t, err)
-			_ = err.Error()
+			RequireError(t, err)
 
 			var indexErr interpreter.ArrayIndexOutOfBoundsError
 			require.ErrorAs(t, err, &indexErr)
@@ -5327,8 +5321,7 @@ func TestInterpretInvalidArrayRemove(t *testing.T) {
 
 			indexValue := interpreter.NewUnmeteredIntValueFromInt64(int64(index))
 			_, err := inter.Invoke("test", indexValue)
-			require.Error(t, err)
-			_ = err.Error()
+			RequireError(t, err)
 
 			var indexErr interpreter.ArrayIndexOutOfBoundsError
 			require.ErrorAs(t, err, &indexErr)
@@ -5391,8 +5384,7 @@ func TestInterpretInvalidArrayRemoveFirst(t *testing.T) {
     `)
 
 	_, err := inter.Invoke("test")
-	require.Error(t, err)
-	_ = err.Error()
+	RequireError(t, err)
 
 	var indexErr interpreter.ArrayIndexOutOfBoundsError
 	require.ErrorAs(t, err, &indexErr)
@@ -5454,8 +5446,7 @@ func TestInterpretInvalidArrayRemoveLast(t *testing.T) {
     `)
 
 	_, err := inter.Invoke("test")
-	require.Error(t, err)
-	_ = err.Error()
+	RequireError(t, err)
 
 	var indexErr interpreter.ArrayIndexOutOfBoundsError
 	require.ErrorAs(t, err, &indexErr)
@@ -7445,8 +7436,7 @@ func TestInterpretReferenceDereferenceFailure(t *testing.T) {
     `)
 
 	_, err := inter.Invoke("test")
-	require.Error(t, err)
-	_ = err.Error()
+	RequireError(t, err)
 
 	require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
 }
@@ -8468,8 +8458,7 @@ func TestInterpretNonStorageReferenceAfterDestruction(t *testing.T) {
 	)
 
 	_, err := inter.Invoke("test")
-	require.Error(t, err)
-	_ = err.Error()
+	RequireError(t, err)
 
 	require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
 }
@@ -8516,8 +8505,7 @@ func TestInterpretNonStorageReferenceToOptional(t *testing.T) {
 
 	t.Run("nil", func(t *testing.T) {
 		_, err := inter.Invoke("testNil")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		require.ErrorAs(t, err, &interpreter.ForceNilError{})
 	})
@@ -9162,8 +9150,7 @@ func TestInterpretResourceAssignmentForceTransfer(t *testing.T) {
        `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		require.ErrorAs(t, err, &interpreter.ForceAssignmentToNonNilResourceError{})
 	})
@@ -9199,8 +9186,7 @@ func TestInterpretResourceAssignmentForceTransfer(t *testing.T) {
        `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		require.ErrorAs(t, err, &interpreter.ForceAssignmentToNonNilResourceError{})
 	})
@@ -9278,8 +9264,7 @@ func TestInterpretForce(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		require.ErrorAs(t, err, &interpreter.ForceNilError{})
 	})
@@ -9748,7 +9733,7 @@ func TestInterpretVoidReturn_(t *testing.T) {
 			value, err := inter.Invoke("test")
 			require.NoError(t, err)
 
-			utils.AssertValuesEqual(t, inter, &interpreter.VoidValue{}, value)
+			AssertValuesEqual(t, inter, &interpreter.VoidValue{}, value)
 		})
 	}
 
@@ -9867,8 +9852,7 @@ func TestInterpretMissingMember(t *testing.T) {
 	compositeValue.RemoveField(inter, interpreter.EmptyLocationRange, "y")
 
 	_, err := inter.Invoke("test")
-	require.Error(t, err)
-	_ = err.Error()
+	RequireError(t, err)
 
 	var missingMemberError interpreter.MissingMemberValueError
 	require.ErrorAs(t, err, &missingMemberError)
@@ -10122,8 +10106,7 @@ func TestInterpretOptionalReference(t *testing.T) {
 	)
 
 	_, err = inter.Invoke("absent")
-	require.Error(t, err)
-	_ = err.Error()
+	RequireError(t, err)
 
 	var forceNilError interpreter.ForceNilError
 	require.ErrorAs(t, err, &forceNilError)
@@ -10279,8 +10262,7 @@ func TestInterpretDictionaryDuplicateKey(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		require.ErrorAs(t, err, &interpreter.DuplicateKeyInResourceDictionaryError{})
 

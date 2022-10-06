@@ -130,7 +130,7 @@ func TestCheckRestrictedType(t *testing.T) {
             let r: @R{I} <- create R()
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[0])
 	})
@@ -148,7 +148,7 @@ func TestCheckRestrictedType(t *testing.T) {
             let s: S{I} = S()
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[0])
 	})
@@ -166,7 +166,7 @@ func TestCheckRestrictedType(t *testing.T) {
             let r: @R{I, I} <- create R()
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidRestrictionTypeDuplicateError{}, errs[0])
 	})
@@ -184,7 +184,7 @@ func TestCheckRestrictedType(t *testing.T) {
             let s: S{I, I} = S()
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidRestrictionTypeDuplicateError{}, errs[0])
 	})
@@ -201,7 +201,7 @@ func TestCheckRestrictedType(t *testing.T) {
             let r: @R{I} <- create R()
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[0])
 	})
@@ -218,7 +218,7 @@ func TestCheckRestrictedType(t *testing.T) {
             let s: S{I} = S()
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[0])
 	})
@@ -235,7 +235,7 @@ func TestCheckRestrictedType(t *testing.T) {
             let r: @[R]{I} <- [<-create R()]
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidRestrictedTypeError{}, errs[0])
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
@@ -253,7 +253,7 @@ func TestCheckRestrictedType(t *testing.T) {
             let s: [S]{I} = [S()]
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidRestrictedTypeError{}, errs[0])
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
@@ -271,7 +271,7 @@ func TestCheckRestrictedType(t *testing.T) {
             let r: @I{} <- create R()
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidRestrictedTypeError{}, errs[0])
 	})
@@ -288,7 +288,7 @@ func TestCheckRestrictedType(t *testing.T) {
             let s: I{} = S()
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidRestrictedTypeError{}, errs[0])
 	})
@@ -346,7 +346,7 @@ func TestCheckRestrictedTypeMemberAccess(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidRestrictedTypeMemberAccessError{}, errs[0])
 	})
@@ -368,7 +368,7 @@ func TestCheckRestrictedTypeMemberAccess(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidRestrictedTypeMemberAccessError{}, errs[0])
 	})
@@ -447,7 +447,7 @@ func TestCheckRestrictedTypeMemberAccess(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidRestrictedTypeMemberAccessError{}, errs[0])
 	})
@@ -474,7 +474,7 @@ func TestCheckRestrictedTypeMemberAccess(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidRestrictedTypeMemberAccessError{}, errs[0])
 	})
@@ -506,7 +506,7 @@ func TestCheckRestrictedTypeMemberAccess(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.ConformanceError{}, errs[0])
 		assert.IsType(t, &sema.RestrictionMemberClashError{}, errs[1])
@@ -538,7 +538,7 @@ func TestCheckRestrictedTypeMemberAccess(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.ConformanceError{}, errs[0])
 		assert.IsType(t, &sema.RestrictionMemberClashError{}, errs[1])
@@ -620,7 +620,7 @@ func TestCheckRestrictedTypeSubtyping(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
@@ -635,7 +635,7 @@ func TestCheckRestrictedTypeSubtyping(t *testing.T) {
             let s: S{} = R()
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
@@ -870,7 +870,7 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
             `,
 		)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.AmbiguousRestrictedTypeError{}, errs[0])
 	})
@@ -883,7 +883,7 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
             `,
 		)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.AmbiguousRestrictedTypeError{}, errs[0])
 	})
@@ -1000,7 +1000,7 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
             `,
 		)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.AmbiguousRestrictedTypeError{}, errs[0])
 	})
@@ -1152,7 +1152,7 @@ func TestCheckRestrictedTypeConformanceOrder(t *testing.T) {
 
 		// TODO: remove duplicate
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[0])
 		assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[1])
@@ -1191,7 +1191,7 @@ func TestCheckInvalidRestriction(t *testing.T) {
       let x: {h} = nil
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	require.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	require.IsType(t, &sema.AmbiguousRestrictedTypeError{}, errs[1])

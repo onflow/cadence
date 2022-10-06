@@ -66,7 +66,7 @@ func TestCheckInvalidArrayIndexingWithBool(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -81,7 +81,7 @@ func TestCheckInvalidArrayIndexingIntoBool(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotIndexableTypeError{}, errs[0])
 }
@@ -96,7 +96,7 @@ func TestCheckInvalidArrayIndexingIntoInteger(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotIndexableTypeError{}, errs[0])
 }
@@ -112,7 +112,7 @@ func TestCheckInvalidArrayIndexingAssignmentWithBool(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -144,7 +144,7 @@ func TestCheckInvalidIndexAssignmentMissingMember(t *testing.T) {
 	  }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
 }
@@ -160,7 +160,7 @@ func TestCheckInvalidArrayIndexingAssignmentWithWrongType(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -176,7 +176,7 @@ func TestCheckInvalidStringIndexingWithBool(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -191,7 +191,7 @@ func TestCheckInvalidUnknownDeclarationIndexing(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 }
@@ -206,7 +206,7 @@ func TestCheckInvalidUnknownDeclarationIndexingAssignment(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 }

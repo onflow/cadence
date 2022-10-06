@@ -83,7 +83,7 @@ func TestCheckCompositeDeclarationNesting(t *testing.T) {
 
 							switch innerComposite {
 							case common.CompositeKindContract:
-								errs := ExpectCheckerErrors(t, err, 1)
+								errs := RequireCheckerErrors(t, err, 1)
 
 								assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
 
@@ -101,7 +101,7 @@ func TestCheckCompositeDeclarationNesting(t *testing.T) {
 						case common.CompositeKindResource,
 							common.CompositeKindStructure:
 
-							errs := ExpectCheckerErrors(t, err, 1)
+							errs := RequireCheckerErrors(t, err, 1)
 
 							assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
 
@@ -211,7 +211,7 @@ func TestCheckInvalidCompositeDeclarationNestedTypeScopingAfterInner(t *testing.
       let x: X = X()
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[1])
@@ -230,7 +230,7 @@ func TestCheckInvalidCompositeDeclarationNestedDuplicateNames(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.RedeclarationError{}, errs[0])
 }
@@ -264,7 +264,7 @@ func TestCheckInvalidCompositeDeclarationNestedType(t *testing.T) {
       let x: Test.X = Test.X()
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 }
@@ -277,7 +277,7 @@ func TestCheckInvalidNestedType(t *testing.T) {
       let x: Int.X = 1
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidNestedTypeError{}, errs[0])
 }
@@ -307,7 +307,7 @@ func TestCheckNestedTypeInvalidChildType(t *testing.T) {
 				},
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.InvalidNestedTypeError{}, errs[0])
 		})
@@ -329,7 +329,7 @@ func TestCheckNestedTypeUnsupportedPublicKey(t *testing.T) {
 
 	_, err := ParseAndCheck(t, "let b=0.0as!PublicKey.Contracts")
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidNestedTypeError{}, errs[0])
 }

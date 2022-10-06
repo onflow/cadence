@@ -83,7 +83,7 @@ func TestCheckArrayUpdateIndexAccess(t *testing.T) {
             `, valueKind.Keyword(), access.Keyword(), declaration.Keywords(), assignmentOp, destroyStatement),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 			var externalMutationError *sema.ExternalMutationError
 			require.ErrorAs(t, errs[0], &externalMutationError)
 		})
@@ -152,7 +152,7 @@ func TestCheckDictionaryUpdateIndexAccess(t *testing.T) {
             `, valueKind.Keyword(), access.Keyword(), declaration.Keywords(), assignmentOp, destroyStatement),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 			var externalMutationError *sema.ExternalMutationError
 			require.ErrorAs(t, errs[0], &externalMutationError)
 		})
@@ -215,7 +215,7 @@ func TestCheckNestedArrayUpdateIndexAccess(t *testing.T) {
             `, access.Keyword(), declaration.Keywords()),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 			var externalMutationError *sema.ExternalMutationError
 			require.ErrorAs(t, errs[0], &externalMutationError)
 		})
@@ -276,7 +276,7 @@ func TestCheckNestedDictionaryUpdateIndexAccess(t *testing.T) {
             `, access.Keyword(), declaration.Keywords()),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 			var externalMutationError *sema.ExternalMutationError
 			require.ErrorAs(t, errs[0], &externalMutationError)
 		})
@@ -332,7 +332,7 @@ func TestCheckMutateContractIndexAccess(t *testing.T) {
 				expectedErrors++
 			}
 
-			errs := ExpectCheckerErrors(t, err, expectedErrors)
+			errs := RequireCheckerErrors(t, err, expectedErrors)
 			if expectedErrors > 1 {
 				var accessError *sema.InvalidAccessError
 				require.ErrorAs(t, errs[expectedErrors-2], &accessError)
@@ -399,7 +399,7 @@ func TestCheckContractNestedStructIndexAccess(t *testing.T) {
 				expectedErrors++
 			}
 
-			errs := ExpectCheckerErrors(t, err, expectedErrors)
+			errs := RequireCheckerErrors(t, err, expectedErrors)
 			if expectedErrors > 1 {
 				var accessError *sema.InvalidAccessError
 				require.ErrorAs(t, errs[expectedErrors-2], &accessError)
@@ -458,7 +458,7 @@ func TestCheckContractStructInitIndexAccess(t *testing.T) {
             `, access.Keyword(), declaration.Keywords()),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 			var externalMutationError *sema.ExternalMutationError
 			require.ErrorAs(t, errs[0], &externalMutationError)
 		})
@@ -544,7 +544,7 @@ func TestCheckArrayUpdateMethodCall(t *testing.T) {
 			)
 
 			if member.Mutating {
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 				var externalMutationError *sema.ExternalMutationError
 				require.ErrorAs(t, errs[0], &externalMutationError)
 			} else {
@@ -633,7 +633,7 @@ func TestCheckDictionaryUpdateMethodCall(t *testing.T) {
 			)
 
 			if member.Mutating {
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 				var externalMutationError *sema.ExternalMutationError
 				require.ErrorAs(t, errs[0], &externalMutationError)
 			} else {
@@ -781,7 +781,7 @@ func TestCheckMutationThroughReference(t *testing.T) {
               }
         `,
 		)
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 		var externalMutationError *sema.ExternalMutationError
 		require.ErrorAs(t, errs[0], &externalMutationError)
 	})
@@ -857,7 +857,7 @@ func TestCheckMutationThroughAccess(t *testing.T) {
             }
         `,
 		)
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 		var externalMutationError *sema.ExternalMutationError
 		require.ErrorAs(t, errs[0], &externalMutationError)
 	})

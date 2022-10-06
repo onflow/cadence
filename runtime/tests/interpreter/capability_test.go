@@ -211,8 +211,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 		t.Run("nonExistent", func(t *testing.T) {
 
 			_, err := inter.Invoke("nonExistent")
-			require.Error(t, err)
-			_ = err.Error()
+			RequireError(t, err)
 
 			require.ErrorAs(t, err, &interpreter.ForceNilError{})
 		})
@@ -220,8 +219,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 		t.Run("loop", func(t *testing.T) {
 
 			_, err := inter.Invoke("loop")
-			require.Error(t, err)
-			_ = err.Error()
+			RequireError(t, err)
 
 			var cyclicLinkErr interpreter.CyclicLinkError
 			require.ErrorAs(t, err, &cyclicLinkErr)
@@ -248,8 +246,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 		t.Run("r2", func(t *testing.T) {
 
 			_, err := inter.Invoke("r2")
-			require.Error(t, err)
-			_ = err.Error()
+			RequireError(t, err)
 
 			require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 		})
@@ -257,8 +254,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 		t.Run("single change after borrow", func(t *testing.T) {
 
 			_, err := inter.Invoke("singleChangeAfterBorrow")
-			require.Error(t, err)
-			_ = err.Error()
+			RequireError(t, err)
 
 			require.ErrorAs(t, err, &interpreter.DereferenceError{})
 		})
@@ -442,8 +438,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 		t.Run("nonExistent", func(t *testing.T) {
 
 			_, err := inter.Invoke("nonExistent")
-			require.Error(t, err)
-			_ = err.Error()
+			RequireError(t, err)
 
 			require.ErrorAs(t, err, &interpreter.ForceNilError{})
 		})
@@ -451,8 +446,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 		t.Run("loop", func(t *testing.T) {
 
 			_, err := inter.Invoke("loop")
-			require.Error(t, err)
-			_ = err.Error()
+			RequireError(t, err)
 
 			var cyclicLinkErr interpreter.CyclicLinkError
 			require.ErrorAs(t, err, &cyclicLinkErr)
@@ -479,8 +473,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 		t.Run("s2", func(t *testing.T) {
 
 			_, err := inter.Invoke("s2")
-			require.Error(t, err)
-			_ = err.Error()
+			RequireError(t, err)
 
 			require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 		})
@@ -488,8 +481,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 		t.Run("single change after borrow", func(t *testing.T) {
 
 			_, err := inter.Invoke("singleChangeAfterBorrow")
-			require.Error(t, err)
-			_ = err.Error()
+			RequireError(t, err)
 
 			require.ErrorAs(t, err, &interpreter.DereferenceError{})
 		})
@@ -679,8 +671,7 @@ func TestInterpretCapability_check(t *testing.T) {
 		t.Run("loop", func(t *testing.T) {
 
 			_, err := inter.Invoke("loop")
-			require.Error(t, err)
-			_ = err.Error()
+			RequireError(t, err)
 
 			var cyclicLinkErr interpreter.CyclicLinkError
 			require.ErrorAs(t, err, &cyclicLinkErr)
@@ -897,8 +888,7 @@ func TestInterpretCapability_check(t *testing.T) {
 		t.Run("loop", func(t *testing.T) {
 
 			_, err := inter.Invoke("loop")
-			require.Error(t, err)
-			_ = err.Error()
+			RequireError(t, err)
 
 			var cyclicLinkErr interpreter.CyclicLinkError
 			require.ErrorAs(t, err, &cyclicLinkErr)
@@ -1182,8 +1172,7 @@ func TestInterpretCapabilityFunctionMultipleTypes(t *testing.T) {
 		t.Run("what", func(t *testing.T) {
 
 			_, err := inter.Invoke("what")
-			require.Error(t, err)
-			_ = err.Error()
+			RequireError(t, err)
 
 			require.ErrorAs(t, err, &interpreter.ForceNilError{})
 		})

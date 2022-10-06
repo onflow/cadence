@@ -47,7 +47,7 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/tests/checker"
-	"github.com/onflow/cadence/runtime/tests/utils"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 type testLedger struct {
@@ -883,8 +883,7 @@ func TestRuntimeInvalidTransactionArgumentAccount(t *testing.T) {
 			Location:  nextTransactionLocation(),
 		},
 	)
-	require.Error(t, err)
-	_ = err.Error()
+	RequireError(t, err)
 
 }
 
@@ -1003,8 +1002,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 				{1, 2, 3, 4}, // not valid JSON-CDC
 			},
 			check: func(t *testing.T, err error) {
-				require.Error(t, err)
-				_ = err.Error()
+				RequireError(t, err)
 
 				assert.IsType(t, &InvalidEntryPointArgumentError{}, errors.Unwrap(err))
 			},
@@ -1022,8 +1020,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 				jsoncdc.MustEncode(cadence.String("foo")),
 			},
 			check: func(t *testing.T, err error) {
-				require.Error(t, err)
-				_ = err.Error()
+				RequireError(t, err)
 
 				assert.IsType(t, &InvalidEntryPointArgumentError{}, errors.Unwrap(err))
 				assert.IsType(t, &InvalidValueTypeError{}, errors.Unwrap(errors.Unwrap(err)))
@@ -1118,8 +1115,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 				),
 			},
 			check: func(t *testing.T, err error) {
-				require.Error(t, err)
-				_ = err.Error()
+				RequireError(t, err)
 
 				assertRuntimeErrorIsUserError(t, err)
 
@@ -1149,7 +1145,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 					cadence.
 						NewStruct([]cadence.Value{cadence.String("bar")}).
 						WithType(&cadence.StructType{
-							Location:            utils.TestLocation,
+							Location:            TestLocation,
 							QualifiedIdentifier: "Foo",
 							Fields: []cadence.Field{
 								{
@@ -1186,7 +1182,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 						cadence.
 							NewStruct([]cadence.Value{cadence.String("bar")}).
 							WithType(&cadence.StructType{
-								Location:            utils.TestLocation,
+								Location:            TestLocation,
 								QualifiedIdentifier: "Foo",
 								Fields: []cadence.Field{
 									{
@@ -1235,7 +1231,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 				},
 				Context{
 					Interface: runtimeInterface,
-					Location:  utils.TestLocation,
+					Location:  TestLocation,
 				},
 			)
 
@@ -1311,8 +1307,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 				{1, 2, 3, 4}, // not valid JSON-CDC
 			},
 			check: func(t *testing.T, err error) {
-				require.Error(t, err)
-				_ = err.Error()
+				RequireError(t, err)
 
 				assertRuntimeErrorIsUserError(t, err)
 
@@ -1330,8 +1325,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 				jsoncdc.MustEncode(cadence.String("foo")),
 			},
 			check: func(t *testing.T, err error) {
-				require.Error(t, err)
-				_ = err.Error()
+				RequireError(t, err)
 
 				assertRuntimeErrorIsUserError(t, err)
 
@@ -1397,8 +1391,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 				),
 			},
 			check: func(t *testing.T, err error) {
-				require.Error(t, err)
-				_ = err.Error()
+				RequireError(t, err)
 
 				assertRuntimeErrorIsUserError(t, err)
 
@@ -1423,8 +1416,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 				),
 			},
 			check: func(t *testing.T, err error) {
-				require.Error(t, err)
-				_ = err.Error()
+				RequireError(t, err)
 
 				assertRuntimeErrorIsUserError(t, err)
 
@@ -1473,8 +1465,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 				),
 			},
 			check: func(t *testing.T, err error) {
-				require.Error(t, err)
-				_ = err.Error()
+				RequireError(t, err)
 
 				assertRuntimeErrorIsUserError(t, err)
 
@@ -1502,7 +1493,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 					cadence.
 						NewStruct([]cadence.Value{cadence.String("bar")}).
 						WithType(&cadence.StructType{
-							Location:            utils.TestLocation,
+							Location:            TestLocation,
 							QualifiedIdentifier: "Foo",
 							Fields: []cadence.Field{
 								{
@@ -1537,7 +1528,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 						cadence.
 							NewStruct([]cadence.Value{cadence.String("bar")}).
 							WithType(&cadence.StructType{
-								Location:            utils.TestLocation,
+								Location:            TestLocation,
 								QualifiedIdentifier: "Foo",
 								Fields: []cadence.Field{
 									{
@@ -1585,7 +1576,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 				},
 				Context{
 					Interface: runtimeInterface,
-					Location:  utils.TestLocation,
+					Location:  TestLocation,
 				},
 			)
 
@@ -1626,8 +1617,7 @@ func TestRuntimeProgramWithNoTransaction(t *testing.T) {
 			Location:  nextTransactionLocation(),
 		},
 	)
-	require.Error(t, err)
-	_ = err.Error()
+	RequireError(t, err)
 
 	require.ErrorAs(t, err, &InvalidTransactionCountError{})
 }
@@ -1660,8 +1650,7 @@ func TestRuntimeProgramWithMultipleTransaction(t *testing.T) {
 			Location:  nextTransactionLocation(),
 		},
 	)
-	require.Error(t, err)
-	_ = err.Error()
+	RequireError(t, err)
 
 	require.ErrorAs(t, err, &InvalidTransactionCountError{})
 }
@@ -2555,8 +2544,7 @@ func TestRuntimeScriptReturnTypeNotReturnableError(t *testing.T) {
 		)
 
 		if expected == nil {
-			require.Error(t, err)
-			_ = err.Error()
+			RequireError(t, err)
 
 			var subErr *InvalidScriptReturnTypeError
 			require.ErrorAs(t, err, &subErr)
@@ -2740,8 +2728,7 @@ func TestRuntimeScriptParameterTypeNotImportableError(t *testing.T) {
 			Location:  nextTransactionLocation(),
 		},
 	)
-	require.Error(t, err)
-	_ = err.Error()
+	RequireError(t, err)
 
 	var subErr *ScriptParameterTypeNotImportableError
 	require.ErrorAs(t, err, &subErr)
@@ -2776,8 +2763,7 @@ func TestRuntimeSyntaxError(t *testing.T) {
 			Location:  nextTransactionLocation(),
 		},
 	)
-	require.Error(t, err)
-	_ = err.Error()
+	RequireError(t, err)
 
 }
 
@@ -3150,7 +3136,7 @@ func TestRuntimeContractAccount(t *testing.T) {
       }
     `)
 
-	deploy := utils.DeploymentTransaction("Test", contract)
+	deploy := DeploymentTransaction("Test", contract)
 
 	var accountCode []byte
 	var events []cadence.Event
@@ -3257,7 +3243,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
         }
     `)
 
-	deploy := utils.DeploymentTransaction("Test", contract)
+	deploy := DeploymentTransaction("Test", contract)
 
 	var accountCode []byte
 	var loggedMessage string
@@ -3415,8 +3401,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 			},
 		)
 
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		assert.ErrorAs(t, err, &Error{})
 	})
@@ -3438,8 +3423,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		require.ErrorAs(t, err, &interpreter.ValueTransferTypeError{})
 	})
@@ -3463,8 +3447,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		require.ErrorContains(t, err, "cannot import capability")
 	})
@@ -3552,7 +3535,7 @@ func TestRuntimeContractNestedResource(t *testing.T) {
         }
     `)
 
-	deploy := utils.DeploymentTransaction("Test", contract)
+	deploy := DeploymentTransaction("Test", contract)
 
 	var accountCode []byte
 	var loggedMessage string
@@ -3649,7 +3632,7 @@ func TestRuntimeStorageLoadedDestructionConcreteType(t *testing.T) {
         }
     `)
 
-	deploy := utils.DeploymentTransaction("Test", contract)
+	deploy := DeploymentTransaction("Test", contract)
 
 	var accountCode []byte
 	var loggedMessage string
@@ -3744,7 +3727,7 @@ func TestRuntimeStorageLoadedDestructionAnyResource(t *testing.T) {
         }
     `)
 
-	deploy := utils.DeploymentTransaction("Test", contract)
+	deploy := DeploymentTransaction("Test", contract)
 
 	var accountCode []byte
 	var loggedMessage string
@@ -3840,8 +3823,8 @@ func TestRuntimeStorageLoadedDestructionAfterRemoval(t *testing.T) {
         }
     `)
 
-	deploy := utils.DeploymentTransaction("Test", contract)
-	removal := utils.RemovalTransaction("Test")
+	deploy := DeploymentTransaction("Test", contract)
+	removal := RemovalTransaction("Test")
 
 	var accountCode []byte
 
@@ -3913,8 +3896,7 @@ func TestRuntimeStorageLoadedDestructionAfterRemoval(t *testing.T) {
 			Location:  nextTransactionLocation(),
 		},
 	)
-	require.Error(t, err)
-	_ = err.Error()
+	RequireError(t, err)
 
 	var typeLoadingErr interpreter.TypeLoadingError
 	require.ErrorAs(t, err, &typeLoadingErr)
@@ -4034,7 +4016,7 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
 		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
 	}
 
-	deploy := utils.DeploymentTransaction("FungibleToken", []byte(basicFungibleTokenContract))
+	deploy := DeploymentTransaction("FungibleToken", []byte(basicFungibleTokenContract))
 
 	setup1Transaction := []byte(`
       import FungibleToken from 0x01
@@ -4478,8 +4460,7 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 				if a == 2 && b == 2 {
 					assert.NoError(t, err)
 				} else {
-					require.Error(t, err)
-					_ = err.Error()
+					RequireError(t, err)
 
 					assertRuntimeErrorIsUserError(t, err)
 
@@ -4666,15 +4647,14 @@ func TestRuntimeTransactionTopLevelDeclarations(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		assertRuntimeErrorIsUserError(t, err)
 
 		var checkerErr *sema.CheckerError
 		require.ErrorAs(t, err, &checkerErr)
 
-		errs := checker.ExpectCheckerErrors(t, checkerErr, 1)
+		errs := checker.RequireCheckerErrors(t, checkerErr, 1)
 
 		assert.IsType(t, &sema.InvalidTopLevelDeclarationError{}, errs[0])
 	})
@@ -4712,7 +4692,7 @@ func TestRuntimeStoreIntegerTypes(t *testing.T) {
 				),
 			)
 
-			deploy := utils.DeploymentTransaction("Test", contract)
+			deploy := DeploymentTransaction("Test", contract)
 
 			var accountCode []byte
 			var events []cadence.Event
@@ -4782,7 +4762,7 @@ func TestRuntimeResourceOwnerFieldUseComposite(t *testing.T) {
       }
     `)
 
-	deploy := utils.DeploymentTransaction("Test", contract)
+	deploy := DeploymentTransaction("Test", contract)
 
 	tx := []byte(`
       import Test from 0x1
@@ -4984,7 +4964,7 @@ func TestRuntimeResourceOwnerFieldUseArray(t *testing.T) {
       }
     `)
 
-	deploy := utils.DeploymentTransaction("Test", contract)
+	deploy := DeploymentTransaction("Test", contract)
 
 	tx := []byte(`
       import Test from 0x1
@@ -5165,7 +5145,7 @@ func TestRuntimeResourceOwnerFieldUseDictionary(t *testing.T) {
       }
     `)
 
-	deploy := utils.DeploymentTransaction("Test", contract)
+	deploy := DeploymentTransaction("Test", contract)
 
 	tx := []byte(`
       import Test from 0x1
@@ -5510,7 +5490,7 @@ func TestRuntimeContractWriteback(t *testing.T) {
       }
     `)
 
-	deploy := utils.DeploymentTransaction("Test", contract)
+	deploy := DeploymentTransaction("Test", contract)
 
 	readTx := []byte(`
       import Test from 0xCADE
@@ -5674,7 +5654,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
       }
     `)
 
-	deploy := utils.DeploymentTransaction("Test", contract)
+	deploy := DeploymentTransaction("Test", contract)
 
 	var accountCode []byte
 	var events []cadence.Event
@@ -5892,8 +5872,7 @@ func TestRuntimeExternalError(t *testing.T) {
 		},
 	)
 
-	require.Error(t, err)
-	_ = err.Error()
+	RequireError(t, err)
 
 	assertRuntimeErrorIsExternalError(t, err)
 }
@@ -5935,7 +5914,7 @@ func TestRuntimeDeployCodeCaching(t *testing.T) {
         }
     `)
 
-	deployTx := utils.DeploymentTransaction("HelloWorld", []byte(helloWorldContract))
+	deployTx := DeploymentTransaction("HelloWorld", []byte(helloWorldContract))
 
 	runtime := newTestInterpreterRuntime()
 
@@ -6066,8 +6045,8 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
         }
     `)
 
-	deployTx := utils.DeploymentTransaction("HelloWorld", []byte(helloWorldContract1))
-	updateTx := utils.UpdateTransaction("HelloWorld", []byte(helloWorldContract2))
+	deployTx := DeploymentTransaction("HelloWorld", []byte(helloWorldContract1))
+	updateTx := UpdateTransaction("HelloWorld", []byte(helloWorldContract2))
 
 	runtime := newTestInterpreterRuntime()
 
@@ -6282,7 +6261,7 @@ func TestRuntimeNoProgramsHitForToplevelPrograms(t *testing.T) {
         }
     `)
 
-	deployTx := utils.DeploymentTransaction("HelloWorld", []byte(helloWorldContract))
+	deployTx := DeploymentTransaction("HelloWorld", []byte(helloWorldContract))
 
 	runtime := newTestInterpreterRuntime()
 
@@ -6527,7 +6506,7 @@ func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
 	// Deploy the Test contract
 
 	codeChanged = false
-	deployTx1 := utils.DeploymentTransaction("Test", []byte(contract1))
+	deployTx1 := DeploymentTransaction("Test", []byte(contract1))
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -6589,7 +6568,7 @@ func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
 
 	codeChanged = false
 
-	deployTx2 := utils.UpdateTransaction("Test", []byte(contract2))
+	deployTx2 := UpdateTransaction("Test", []byte(contract2))
 
 	err = runtime.ExecuteTransaction(
 		Script{
@@ -6692,8 +6671,7 @@ func TestRuntimeExecuteScriptArguments(t *testing.T) {
 			if tc.valid {
 				require.NoError(t, err)
 			} else {
-				require.Error(t, err)
-				_ = err.Error()
+				RequireError(t, err)
 
 				assertRuntimeErrorIsUserError(t, err)
 
@@ -6777,8 +6755,7 @@ func TestRuntimePanics(t *testing.T) {
 			Location:  nextTransactionLocation(),
 		},
 	)
-	require.Error(t, err)
-	_ = err.Error()
+	RequireError(t, err)
 
 }
 
@@ -6815,8 +6792,7 @@ func TestRuntimeGetCapability(t *testing.T) {
 			},
 		)
 
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		assertRuntimeErrorIsUserError(t, err)
 
@@ -6853,8 +6829,7 @@ func TestRuntimeGetCapability(t *testing.T) {
 			},
 		)
 
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		assertRuntimeErrorIsUserError(t, err)
 
@@ -6929,7 +6904,7 @@ func TestRuntimeStackOverflow(t *testing.T) {
         }
     `
 
-	deployTx := utils.DeploymentTransaction("Recurse", []byte(contract))
+	deployTx := DeploymentTransaction("Recurse", []byte(contract))
 
 	var events []cadence.Event
 	var loggedMessages []string
@@ -6986,8 +6961,7 @@ func TestRuntimeStackOverflow(t *testing.T) {
 			Location:  nextTransactionLocation(),
 		},
 	)
-	require.Error(t, err)
-	_ = err.Error()
+	RequireError(t, err)
 
 	assertRuntimeErrorIsUserError(t, err)
 
@@ -7031,8 +7005,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 			},
 		)
 
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		assertRuntimeErrorIsInternalError(t, err)
 	})
@@ -7066,8 +7039,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 			},
 		)
 
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		assertRuntimeErrorIsExternalError(t, err)
 	})
@@ -7105,8 +7077,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 			},
 		)
 
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		assertRuntimeErrorIsInternalError(t, err)
 	})
@@ -7156,7 +7127,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 
 		nextTransactionLocation := newTransactionLocationGenerator()
 
-		deploy := utils.DeploymentTransaction("Test", contract)
+		deploy := DeploymentTransaction("Test", contract)
 		err := runtime.ExecuteTransaction(
 			Script{
 				Source: deploy,
@@ -7184,8 +7155,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 			},
 		)
 
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		assertRuntimeErrorIsInternalError(t, err)
 	})
@@ -7211,8 +7181,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 			},
 		)
 
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		assertRuntimeErrorIsExternalError(t, err)
 	})
@@ -7243,8 +7212,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 			},
 		)
 
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		assertRuntimeErrorIsExternalError(t, err)
 	})
@@ -7275,8 +7243,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 			},
 		)
 
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		assertRuntimeErrorIsExternalError(t, err)
 	})
@@ -7306,8 +7273,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 			},
 		)
 
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		assertRuntimeErrorIsInternalError(t, err)
 	})
@@ -7415,8 +7381,7 @@ func TestRuntimeComputationMetring(t *testing.T) {
 			if test.ok {
 				require.NoError(t, err)
 			} else {
-				require.Error(t, err)
-				_ = err.Error()
+				RequireError(t, err)
 
 				var executionErr Error
 				require.ErrorAs(t, err, &executionErr)
@@ -7469,7 +7434,7 @@ func TestRuntimeImportAnyStruct(t *testing.T) {
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  utils.TestLocation,
+			Location:  TestLocation,
 		},
 	)
 	require.NoError(t, err)
@@ -7560,14 +7525,13 @@ func TestImportingTestStdlib(t *testing.T) {
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  utils.TestLocation,
+			Location:  TestLocation,
 		},
 	)
 
-	require.Error(t, err)
-	_ = err.Error()
+	RequireError(t, err)
 
-	errs := checker.ExpectCheckerErrors(t, err, 1)
+	errs := checker.RequireCheckerErrors(t, err, 1)
 
 	notDeclaredErr := &sema.NotDeclaredError{}
 	require.ErrorAs(t, errs[0], &notDeclaredErr)

@@ -74,7 +74,7 @@ func TestCheckFailableCastingWithResourceAnnotation(t *testing.T) {
 			switch compositeKind {
 			case common.CompositeKindResource:
 
-				errs := ExpectCheckerErrors(t, err, 2)
+				errs := RequireCheckerErrors(t, err, 2)
 
 				assert.IsType(t, &sema.InvalidFailableResourceDowncastOutsideOptionalBindingError{}, errs[0])
 				assert.IsType(t, &sema.InvalidNonIdentifierFailableResourceDowncast{}, errs[1])
@@ -83,13 +83,13 @@ func TestCheckFailableCastingWithResourceAnnotation(t *testing.T) {
 				common.CompositeKindContract,
 				common.CompositeKindEnum:
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
 
 			case common.CompositeKindEvent:
 
-				errs := ExpectCheckerErrors(t, err, 2)
+				errs := RequireCheckerErrors(t, err, 2)
 
 				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
 				assert.IsType(t, &sema.InvalidEventUsageError{}, errs[1])
@@ -151,7 +151,7 @@ func TestCheckFunctionDeclarationParameterWithResourceAnnotation(t *testing.T) {
 				common.CompositeKindEvent,
 				common.CompositeKindEnum:
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
 
@@ -205,7 +205,7 @@ func TestCheckFunctionDeclarationParameterWithoutResourceAnnotation(t *testing.T
 
 			switch kind {
 			case common.CompositeKindResource:
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.MissingResourceAnnotationError{}, errs[0])
 
@@ -276,20 +276,20 @@ func TestCheckFunctionDeclarationReturnTypeWithResourceAnnotation(t *testing.T) 
 			case common.CompositeKindStructure,
 				common.CompositeKindEnum:
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
 
 			case common.CompositeKindContract:
 
-				errs := ExpectCheckerErrors(t, err, 2)
+				errs := RequireCheckerErrors(t, err, 2)
 
 				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
 				assert.IsType(t, &sema.InvalidMoveError{}, errs[1])
 
 			case common.CompositeKindEvent:
 
-				errs := ExpectCheckerErrors(t, err, 2)
+				errs := RequireCheckerErrors(t, err, 2)
 
 				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
 				assert.IsType(t, &sema.InvalidEventUsageError{}, errs[1])
@@ -349,7 +349,7 @@ func TestCheckFunctionDeclarationReturnTypeWithoutResourceAnnotation(t *testing.
 
 			switch compositeKind {
 			case common.CompositeKindResource:
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.MissingResourceAnnotationError{}, errs[0])
 
@@ -360,7 +360,7 @@ func TestCheckFunctionDeclarationReturnTypeWithoutResourceAnnotation(t *testing.
 				require.NoError(t, err)
 
 			case common.CompositeKindEvent:
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.InvalidEventUsageError{}, errs[0])
 
@@ -426,18 +426,18 @@ func TestCheckVariableDeclarationWithResourceAnnotation(t *testing.T) {
 			case common.CompositeKindStructure,
 				common.CompositeKindEnum:
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
 
 			case common.CompositeKindContract:
-				errs := ExpectCheckerErrors(t, err, 2)
+				errs := RequireCheckerErrors(t, err, 2)
 
 				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
 				assert.IsType(t, &sema.InvalidMoveError{}, errs[1])
 
 			case common.CompositeKindEvent:
-				errs := ExpectCheckerErrors(t, err, 2)
+				errs := RequireCheckerErrors(t, err, 2)
 
 				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
 				assert.IsType(t, &sema.InvalidEventUsageError{}, errs[1])
@@ -495,7 +495,7 @@ func TestCheckVariableDeclarationWithoutResourceAnnotation(t *testing.T) {
 
 			switch compositeKind {
 			case common.CompositeKindResource:
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.MissingResourceAnnotationError{}, errs[0])
 
@@ -506,7 +506,7 @@ func TestCheckVariableDeclarationWithoutResourceAnnotation(t *testing.T) {
 				require.NoError(t, err)
 
 			case common.CompositeKindEvent:
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.InvalidEventUsageError{}, errs[0])
 
@@ -570,7 +570,7 @@ func TestCheckFieldDeclarationWithResourceAnnotation(t *testing.T) {
 				require.NoError(t, err)
 
 			case common.CompositeKindStructure:
-				errs := ExpectCheckerErrors(t, err, 2)
+				errs := RequireCheckerErrors(t, err, 2)
 
 				// NOTE: one invalid resource annotation error for field, one for parameter
 
@@ -578,7 +578,7 @@ func TestCheckFieldDeclarationWithResourceAnnotation(t *testing.T) {
 				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[1])
 
 			case common.CompositeKindContract:
-				errs := ExpectCheckerErrors(t, err, 4)
+				errs := RequireCheckerErrors(t, err, 4)
 
 				// NOTE: one invalid resource annotation error for field, one for parameter
 
@@ -641,13 +641,13 @@ func TestCheckFieldDeclarationWithoutResourceAnnotation(t *testing.T) {
 			case common.CompositeKindResource:
 				// NOTE: one missing resource annotation error for field, one for parameter
 
-				errs := ExpectCheckerErrors(t, err, 2)
+				errs := RequireCheckerErrors(t, err, 2)
 
 				assert.IsType(t, &sema.MissingResourceAnnotationError{}, errs[0])
 				assert.IsType(t, &sema.MissingResourceAnnotationError{}, errs[1])
 
 			case common.CompositeKindContract:
-				errs := ExpectCheckerErrors(t, err, 2)
+				errs := RequireCheckerErrors(t, err, 2)
 
 				assert.IsType(t, &sema.FieldTypeNotStorableError{}, errs[0])
 				assert.IsType(t, &sema.InvalidMoveError{}, errs[1])
@@ -711,7 +711,7 @@ func TestCheckFunctionExpressionParameterWithResourceAnnotation(t *testing.T) {
 				common.CompositeKindEvent,
 				common.CompositeKindEnum:
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
 
@@ -766,7 +766,7 @@ func TestCheckFunctionExpressionParameterWithoutResourceAnnotation(t *testing.T)
 			switch kind {
 			case common.CompositeKindResource:
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.MissingResourceAnnotationError{}, errs[0])
 
@@ -837,18 +837,18 @@ func TestCheckFunctionExpressionReturnTypeWithResourceAnnotation(t *testing.T) {
 			case common.CompositeKindStructure,
 				common.CompositeKindEnum:
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
 
 			case common.CompositeKindContract:
-				errs := ExpectCheckerErrors(t, err, 2)
+				errs := RequireCheckerErrors(t, err, 2)
 
 				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
 				assert.IsType(t, &sema.InvalidMoveError{}, errs[1])
 
 			case common.CompositeKindEvent:
-				errs := ExpectCheckerErrors(t, err, 2)
+				errs := RequireCheckerErrors(t, err, 2)
 
 				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
 				assert.IsType(t, &sema.InvalidEventUsageError{}, errs[1])
@@ -908,7 +908,7 @@ func TestCheckFunctionExpressionReturnTypeWithoutResourceAnnotation(t *testing.T
 
 			switch compositeKind {
 			case common.CompositeKindResource:
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.MissingResourceAnnotationError{}, errs[0])
 
@@ -919,7 +919,7 @@ func TestCheckFunctionExpressionReturnTypeWithoutResourceAnnotation(t *testing.T
 				require.NoError(t, err)
 
 			case common.CompositeKindEvent:
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.InvalidEventUsageError{}, errs[0])
 
@@ -984,7 +984,7 @@ func TestCheckFunctionTypeParameterWithResourceAnnotation(t *testing.T) {
 				common.CompositeKindEvent,
 				common.CompositeKindEnum:
 
-				errs := ExpectCheckerErrors(t, err, 2)
+				errs := RequireCheckerErrors(t, err, 2)
 
 				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
 				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[1])
@@ -1041,7 +1041,7 @@ func TestCheckFunctionTypeParameterWithoutResourceAnnotation(t *testing.T) {
 
 			switch kind {
 			case common.CompositeKindResource:
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.MissingResourceAnnotationError{}, errs[0])
 
@@ -1113,13 +1113,13 @@ func TestCheckFunctionTypeReturnTypeWithResourceAnnotation(t *testing.T) {
 				common.CompositeKindContract,
 				common.CompositeKindEnum:
 
-				errs := ExpectCheckerErrors(t, err, 2)
+				errs := RequireCheckerErrors(t, err, 2)
 
 				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
 				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[1])
 
 			case common.CompositeKindEvent:
-				errs := ExpectCheckerErrors(t, err, 3)
+				errs := RequireCheckerErrors(t, err, 3)
 
 				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
 				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[1])
@@ -1184,7 +1184,7 @@ func TestCheckFunctionTypeReturnTypeWithoutResourceAnnotation(t *testing.T) {
 
 			switch compositeKind {
 			case common.CompositeKindResource:
-				errs := ExpectCheckerErrors(t, err, 2)
+				errs := RequireCheckerErrors(t, err, 2)
 
 				assert.IsType(t, &sema.MissingResourceAnnotationError{}, errs[0])
 				assert.IsType(t, &sema.MissingResourceAnnotationError{}, errs[1])
@@ -1196,7 +1196,7 @@ func TestCheckFunctionTypeReturnTypeWithoutResourceAnnotation(t *testing.T) {
 				require.NoError(t, err)
 
 			case common.CompositeKindEvent:
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.InvalidEventUsageError{}, errs[0])
 
@@ -1247,7 +1247,7 @@ func TestCheckFailableCastingWithoutResourceAnnotation(t *testing.T) {
 
 			switch compositeKind {
 			case common.CompositeKindResource:
-				errs := ExpectCheckerErrors(t, err, 3)
+				errs := RequireCheckerErrors(t, err, 3)
 
 				assert.IsType(t, &sema.MissingResourceAnnotationError{}, errs[0])
 				assert.IsType(t, &sema.InvalidFailableResourceDowncastOutsideOptionalBindingError{}, errs[1])
@@ -1259,7 +1259,7 @@ func TestCheckFailableCastingWithoutResourceAnnotation(t *testing.T) {
 				require.NoError(t, err)
 
 			case common.CompositeKindEvent:
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.InvalidEventUsageError{}, errs[0])
 
@@ -1341,7 +1341,7 @@ func TestCheckInvalidResourceCreationWithoutCreate(t *testing.T) {
       let x <- X()
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.MissingCreateError{}, errs[0])
 
@@ -1359,7 +1359,7 @@ func TestCheckInvalidDestroy(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidDestructionError{}, errs[0])
 }
@@ -1419,7 +1419,7 @@ func TestCheckInvalidUnaryCreateAndDestroyWithWrongInitializerArguments(t *testi
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	assert.IsType(t, &sema.IncorrectArgumentLabelError{}, errs[1])
@@ -1437,7 +1437,7 @@ func TestCheckInvalidUnaryCreateStruct(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidConstructionError{}, errs[0])
 }
@@ -1476,7 +1476,7 @@ func TestCheckInvalidCreateImportedResource(t *testing.T) {
 		},
 	)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidResourceCreationError{}, errs[0])
 }
@@ -1502,7 +1502,7 @@ func TestCheckResourceCreationInContracts(t *testing.T) {
             `,
 		)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidResourceCreationError{}, errs[0])
 	})
@@ -1539,7 +1539,7 @@ func TestCheckInvalidResourceLoss(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
@@ -1558,7 +1558,7 @@ func TestCheckInvalidResourceLoss(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
@@ -1581,7 +1581,7 @@ func TestCheckInvalidResourceLoss(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
@@ -1597,7 +1597,7 @@ func TestCheckInvalidResourceLoss(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 		assert.IsType(t, &sema.InvalidNestedResourceMoveError{}, errs[1])
@@ -1621,7 +1621,7 @@ func TestCheckInvalidResourceLoss(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 		assert.IsType(t, &sema.InvalidNestedResourceMoveError{}, errs[1])
@@ -1639,7 +1639,7 @@ func TestCheckInvalidResourceLoss(t *testing.T) {
             pub let isNil = foo() == nil
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
@@ -1653,7 +1653,7 @@ func TestCheckInvalidResourceLoss(t *testing.T) {
             let isEmpty = [<- create Foo()] == empty
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidBinaryOperandsError{}, errs[0])
 		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
@@ -1677,7 +1677,7 @@ func TestCheckInvalidResourceLoss(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
@@ -1711,7 +1711,7 @@ func TestCheckInvalidResourceReturnMissingMove(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.MissingMoveOperationError{}, errs[0])
 }
@@ -1728,7 +1728,7 @@ func TestCheckInvalidResourceReturnMissingMoveInvalidReturnType(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	assert.IsType(t, &sema.MissingMoveOperationError{}, errs[1])
@@ -1746,7 +1746,7 @@ func TestCheckInvalidNonResourceReturnWithMove(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidMoveOperationError{}, errs[0])
 }
@@ -1786,7 +1786,7 @@ func TestCheckInvalidResourceArgumentMissingMove(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.MissingMoveOperationError{}, errs[0])
 }
@@ -1805,7 +1805,7 @@ func TestCheckInvalidResourceArgumentMissingMoveInvalidParameterType(t *testing.
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	assert.IsType(t, &sema.MissingMoveOperationError{}, errs[1])
@@ -1825,7 +1825,7 @@ func TestCheckInvalidNonResourceArgumentWithMove(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidMoveOperationError{}, errs[0])
 }
@@ -1855,7 +1855,7 @@ func TestCheckInvalidResourceVariableDeclarationIncorrectTransfer(t *testing.T) 
       let y = x
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.IncorrectTransferOperationError{}, errs[0])
 	assert.IsType(t, &sema.IncorrectTransferOperationError{}, errs[1])
@@ -1872,7 +1872,7 @@ func TestCheckInvalidNonResourceVariableDeclarationMoveTransfer(t *testing.T) {
       let y <- x
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.IncorrectTransferOperationError{}, errs[0])
 }
@@ -1892,7 +1892,7 @@ func TestCheckInvalidResourceAssignmentTransfer(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidResourceAssignmentError{}, errs[0])
 }
@@ -1912,7 +1912,7 @@ func TestCheckInvalidResourceAssignmentIncorrectTransfer(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.IncorrectTransferOperationError{}, errs[0])
 	assert.IsType(t, &sema.InvalidResourceAssignmentError{}, errs[1])
@@ -1932,7 +1932,7 @@ func TestCheckInvalidNonResourceAssignmentMoveTransfer(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.IncorrectTransferOperationError{}, errs[0])
 }
@@ -2016,7 +2016,7 @@ func TestCheckResourceAssignmentForceTransfer(t *testing.T) {
           }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidResourceAssignmentError{}, errs[0])
 	})
@@ -2034,7 +2034,7 @@ func TestCheckInvalidResourceLossThroughVariableDeclaration(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 }
@@ -2052,7 +2052,7 @@ func TestCheckInvalidResourceLossThroughVariableDeclarationAfterCreation(t *test
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 }
@@ -2071,7 +2071,7 @@ func TestCheckInvalidResourceLossThroughAssignment(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.InvalidResourceAssignmentError{}, errs[0])
 	assert.IsType(t, &sema.ResourceLossError{}, errs[1])
@@ -2131,7 +2131,7 @@ func TestCheckInvalidResourceUseAfterMoveToFunction(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 }
@@ -2150,7 +2150,7 @@ func TestCheckInvalidResourceUseAfterMoveToVariable(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 3)
+	errs := RequireCheckerErrors(t, err, 3)
 
 	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 
@@ -2184,7 +2184,7 @@ func TestCheckInvalidResourceFieldUseAfterMoveToVariable(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 }
@@ -2209,7 +2209,7 @@ func TestCheckResourceUseAfterMoveInIfStatementThenBranch(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 	assert.IsType(t, &sema.ResourceLossError{}, errs[1])
@@ -2266,7 +2266,7 @@ func TestCheckResourceUseInNestedIfStatement(t *testing.T) {
           }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
@@ -2324,7 +2324,7 @@ func TestCheckInvalidResourceUseAfterIfStatement(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 
@@ -2353,7 +2353,7 @@ func TestCheckInvalidResourceLossAfterDestroyInIfStatementThenBranch(t *testing.
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 }
@@ -2379,7 +2379,7 @@ func TestCheckInvalidResourceLossAndUseAfterDestroyInIfStatementThenBranch(t *te
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 	assert.IsType(t, &sema.ResourceLossError{}, errs[1])
@@ -2410,7 +2410,7 @@ func TestCheckInvalidResourceMoveIntoArrayMissingMoveOperation(t *testing.T) {
       let xs <- [x]
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.MissingMoveOperationError{}, errs[0])
 }
@@ -2426,7 +2426,7 @@ func TestCheckInvalidNonResourceMoveIntoArray(t *testing.T) {
       let xs = [<-x]
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidMoveOperationError{}, errs[0])
 }
@@ -2442,7 +2442,7 @@ func TestCheckInvalidUseAfterResourceMoveIntoArray(t *testing.T) {
       let xs <- [<-x, <-x]
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 }
@@ -2472,7 +2472,7 @@ func TestCheckInvalidResourceMoveIntoDictionaryMissingMoveOperation(t *testing.T
       let xs <- {"x": x}
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.MissingMoveOperationError{}, errs[0])
 }
@@ -2488,7 +2488,7 @@ func TestCheckInvalidNonResourceMoveIntoDictionary(t *testing.T) {
       let xs = {"x": <-x}
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidMoveOperationError{}, errs[0])
 }
@@ -2507,7 +2507,7 @@ func TestCheckInvalidUseAfterResourceMoveIntoDictionary(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 }
@@ -2523,7 +2523,7 @@ func TestCheckInvalidUseAfterResourceMoveIntoDictionaryAsKey(t *testing.T) {
       let xs <- {<-x: <-x}
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 	assert.IsType(t, &sema.InvalidDictionaryKeyTypeError{}, errs[1])
@@ -2549,7 +2549,7 @@ func TestCheckInvalidResourceDestroyAfterMoveInWhileStatement(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 	assert.IsType(t, &sema.ResourceLossError{}, errs[1])
@@ -2571,7 +2571,7 @@ func TestCheckInvalidResourceDestroyAfterDestroyInWhileStatement(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 	assert.IsType(t, &sema.ResourceLossError{}, errs[1])
@@ -2623,7 +2623,7 @@ func TestCheckInvalidResourceUseInWhileStatementAfterDestroy(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 	assert.IsType(t, &sema.ResourceLossError{}, errs[1])
@@ -2644,7 +2644,7 @@ func TestCheckInvalidResourceUseInWhileStatementAfterDestroyAndLoss(t *testing.T
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 }
@@ -2672,7 +2672,7 @@ func TestCheckInvalidResourceUseInNestedWhileStatementAfterDestroyAndLoss1(t *te
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 }
@@ -2700,7 +2700,7 @@ func TestCheckInvalidResourceUseInNestedWhileStatementAfterDestroyAndLoss2(t *te
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 }
@@ -2745,7 +2745,7 @@ func TestCheckInvalidResourceLossThroughReturn(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	assert.IsType(t, &sema.UnreachableStatementError{}, errs[1])
@@ -2767,7 +2767,7 @@ func TestCheckInvalidResourceLossThroughReturnInIfStatementThenBranch(t *testing
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 }
@@ -2795,7 +2795,7 @@ func TestCheckInvalidResourceLossThroughReturnInIfStatementBranches(t *testing.T
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	assert.IsType(t, &sema.UnreachableStatementError{}, errs[1])
@@ -3024,7 +3024,7 @@ func testResourceNesting(
 				require.NoError(t, err)
 
 			case common.CompositeKindResource:
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.InvalidResourceFieldError{}, errs[0])
 
@@ -3040,7 +3040,7 @@ func testResourceNesting(
 		case common.CompositeKindContract:
 
 			if innerCompositeKind == common.CompositeKindEvent {
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.FieldTypeNotStorableError{}, errs[0])
 			} else {
@@ -3093,7 +3093,7 @@ func TestCheckInvalidContractResourceFieldMove(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidNestedResourceMoveError{}, errs[0])
 }
@@ -3112,7 +3112,7 @@ func TestCheckInvalidEnumResourceField(t *testing.T) {
           enum E: R {}
 	    `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.InvalidEnumRawTypeError{}, errs[0])
 	})
@@ -3127,7 +3127,7 @@ func TestCheckInvalidEnumResourceField(t *testing.T) {
           }
 	    `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		require.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
 		require.IsType(t, &sema.InvalidEnumRawTypeError{}, errs[1])
@@ -3141,7 +3141,7 @@ func TestCheckInvalidEnumResourceField(t *testing.T) {
 	      enum E {}
 	    `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.MissingEnumRawTypeError{}, errs[0])
 	})
@@ -3180,7 +3180,7 @@ func TestCheckInvalidResourceInterfaceConformance(t *testing.T) {
       resource Y: X {}
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ConformanceError{}, errs[0])
 }
@@ -3199,7 +3199,7 @@ func TestCheckInvalidResourceInterfaceUseAsType(t *testing.T) {
       let r: @I <- create R()
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidInterfaceTypeError{}, errs[0])
 }
@@ -3267,7 +3267,7 @@ func TestCheckInvalidResourceLossReturnResourceAndMemberAccess(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 }
@@ -3289,7 +3289,7 @@ func TestCheckInvalidResourceLossAfterMoveThroughArrayIndexing(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 	assert.IsType(t, &sema.InvalidNestedResourceMoveError{}, errs[0])
 	assert.IsType(t, &sema.ResourceLossError{}, errs[1])
 }
@@ -3315,7 +3315,7 @@ func TestCheckInvalidResourceLossThroughFunctionResultAccess(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 }
@@ -3376,7 +3376,7 @@ func TestCheckInvalidResourceFieldMoveThroughVariableDeclaration(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.InvalidNestedResourceMoveError{}, errs[0])
 	assert.IsType(t, &sema.InvalidNestedResourceMoveError{}, errs[1])
@@ -3419,7 +3419,7 @@ func TestCheckInvalidResourceFieldMoveThroughParameter(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.InvalidNestedResourceMoveError{}, errs[0])
 	assert.IsType(t, &sema.InvalidNestedResourceMoveError{}, errs[1])
@@ -3454,7 +3454,7 @@ func TestCheckInvalidResourceFieldMoveSelf(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidNestedResourceMoveError{}, errs[0])
 }
@@ -3481,7 +3481,7 @@ func TestCheckInvalidResourceFieldUseAfterDestroy(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 }
@@ -3552,7 +3552,7 @@ func TestCheckInvalidResourceArrayRemoveResourceLoss(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 }
@@ -3607,7 +3607,7 @@ func TestCheckInvalidResourceArrayContains(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.InvalidResourceArrayMemberError{}, errs[0])
 	assert.IsType(t, &sema.NotEquatableTypeError{}, errs[1])
@@ -3647,7 +3647,7 @@ func TestCheckInvalidResourceArrayConcat(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidResourceArrayMemberError{}, errs[0])
 }
@@ -3684,7 +3684,7 @@ func TestCheckInvalidResourceDictionaryRemoveResourceLoss(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 }
@@ -3721,7 +3721,7 @@ func TestCheckInvalidResourceDictionaryInsertResourceLoss(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 }
@@ -3759,7 +3759,7 @@ func TestCheckInvalidResourceDictionaryKeys(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 3)
+	errs := RequireCheckerErrors(t, err, 3)
 
 	assert.IsType(t, &sema.InvalidDictionaryKeyTypeError{}, errs[0])
 	assert.IsType(t, &sema.InvalidResourceDictionaryMemberError{}, errs[1])
@@ -3781,7 +3781,7 @@ func TestCheckInvalidResourceDictionaryValues(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.InvalidResourceDictionaryMemberError{}, errs[0])
 	assert.IsType(t, &sema.InvalidNestedResourceMoveError{}, errs[1])
@@ -3804,7 +3804,7 @@ func TestCheckInvalidResourceDictionaryKeysForeach(t *testing.T) {
         }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 3)
+	errs := RequireCheckerErrors(t, err, 3)
 
 	assert.IsType(t, &sema.InvalidDictionaryKeyTypeError{}, errs[0])
 	assert.IsType(t, &sema.InvalidResourceDictionaryMemberError{}, errs[1])
@@ -3828,7 +3828,7 @@ func TestCheckInvalidResourceLossAfterMoveThroughDictionaryIndexing(t *testing.T
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 	assert.IsType(t, &sema.InvalidNestedResourceMoveError{}, errs[0])
 	assert.IsType(t, &sema.ResourceLossError{}, errs[1])
 }
@@ -3847,7 +3847,7 @@ func TestCheckInvalidResourceSwap(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidSwapExpressionError{}, errs[0])
 }
@@ -3881,7 +3881,7 @@ func TestCheckInvalidResourceConstantResourceFieldSwap(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.AssignmentToConstantMemberError{}, errs[0])
 }
@@ -3944,7 +3944,7 @@ func TestCheckInvalidResourceFieldDestroy(t *testing.T) {
      }
    `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	// TODO: maybe have dedicated error
 
@@ -4060,7 +4060,7 @@ func TestCheckInvalidResourceMethodBinding(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceMethodBindingError{}, errs[0])
 }
@@ -4119,7 +4119,7 @@ func TestCheckInvalidResourceOptionalBindingResourceLossInThen(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 }
@@ -4141,7 +4141,7 @@ func TestCheckInvalidResourceOptionalBindingResourceLossInElse(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 }
@@ -4164,7 +4164,7 @@ func TestCheckInvalidResourceOptionalBindingResourceUseAfterInvalidationInThen(t
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 }
@@ -4191,7 +4191,7 @@ func TestCheckInvalidResourceOptionalBindingResourceUseAfterInvalidationAfterBra
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 }
@@ -4268,7 +4268,7 @@ func TestCheckInvalidResourceOptionalBindingFailableCastResourceUseAfterInvalida
          }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 }
@@ -4292,7 +4292,7 @@ func TestCheckInvalidResourceOptionalBindingFailableCastResourceUseAfterInvalida
          }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 	assert.IsType(t, &sema.ResourceLossError{}, errs[1])
@@ -4315,7 +4315,7 @@ func TestCheckInvalidResourceOptionalBindingFailableCastResourceLossMissingElse(
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 }
@@ -4338,7 +4338,7 @@ func TestCheckInvalidResourceOptionalBindingFailableCastResourceUseAfterInvalida
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 	assert.IsType(t, &sema.ResourceLossError{}, errs[1])
@@ -4362,7 +4362,7 @@ func TestCheckInvalidResourceOptionalBindingFailableCastMissingElse(t *testing.T
           }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
@@ -4385,7 +4385,7 @@ func TestCheckInvalidResourceOptionalBindingFailableCastMissingElse(t *testing.T
           }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
@@ -4407,7 +4407,7 @@ func TestCheckInvalidResourceFailableCastOutsideOptionalBinding(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidFailableResourceDowncastOutsideOptionalBindingError{}, errs[0])
 }
@@ -4432,7 +4432,7 @@ func TestCheckInvalidResourceFailableCastNonIdentifier(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidNonIdentifierFailableResourceDowncast{}, errs[0])
 }
@@ -4450,7 +4450,7 @@ func TestCheckInvalidUnaryMoveAndCopyTransfer(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.IncorrectTransferOperationError{}, errs[0])
 }
@@ -4473,7 +4473,7 @@ func TestCheckInvalidResourceSelfMoveToFunction(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidSelfInvalidationError{}, errs[0])
 }
@@ -4493,7 +4493,7 @@ func TestCheckInvalidResourceSelfMoveInVariableDeclaration(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidSelfInvalidationError{}, errs[0])
 }
@@ -4512,7 +4512,7 @@ func TestCheckInvalidResourceSelfDestruction(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidSelfInvalidationError{}, errs[0])
 }
@@ -4531,7 +4531,7 @@ func TestCheckInvalidResourceSelfMoveReturnFromFunction(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidSelfInvalidationError{}, errs[0])
 }
@@ -4550,7 +4550,7 @@ func TestCheckInvalidResourceSelfMoveIntoArrayLiteral(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidSelfInvalidationError{}, errs[0])
 }
@@ -4569,7 +4569,7 @@ func TestCheckInvalidResourceSelfMoveIntoDictionaryLiteral(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidSelfInvalidationError{}, errs[0])
 }
@@ -4591,7 +4591,7 @@ func TestCheckInvalidResourceSelfMoveSwap(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidSelfInvalidationError{}, errs[0])
 }
@@ -4651,7 +4651,7 @@ func TestCheckInvalidResourceCreationAndPotentialInvalidationInLoop(t *testing.T
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 		})
@@ -4746,7 +4746,7 @@ func TestCheckInvalidResourceCreationAndPotentialInvalidationInLoopWithControlFl
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 2)
+			errs := RequireCheckerErrors(t, err, 2)
 
 			assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 			assert.IsType(t, &sema.ResourceLossError{}, errs[1])
@@ -4780,7 +4780,7 @@ func TestCheckInvalidResourceOwnerField(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidDeclarationError{}, errs[0])
 }
@@ -4795,7 +4795,7 @@ func TestCheckInvalidResourceInterfaceOwnerField(t *testing.T) {
      }
    `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidDeclarationError{}, errs[0])
 }
@@ -4810,7 +4810,7 @@ func TestCheckInvalidResourceOwnerFunction(t *testing.T) {
      }
    `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidDeclarationError{}, errs[0])
 }
@@ -4825,7 +4825,7 @@ func TestCheckInvalidResourceInterfaceOwnerFunction(t *testing.T) {
      }
    `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidDeclarationError{}, errs[0])
 }
@@ -4875,7 +4875,7 @@ func TestCheckInvalidResourceOwnerFieldInitialization(t *testing.T) {
      }
    `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.AssignmentToConstantMemberError{}, errs[0])
 }
@@ -4893,7 +4893,7 @@ func TestCheckInvalidResourceInterfaceType(t *testing.T) {
           let ri: @RI <- create R()
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidInterfaceTypeError{}, errs[0])
 	})
@@ -4907,7 +4907,7 @@ func TestCheckInvalidResourceInterfaceType(t *testing.T) {
           let ri: @[RI] <- [<-create R()]
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidInterfaceTypeError{}, errs[0])
 	})
@@ -4956,7 +4956,7 @@ func TestCheckInvalidOptionalResourceNilCoalescingResourceLoss(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 }
@@ -4993,7 +4993,7 @@ func TestCheckInvalidOptionalResourceCoalescingRightSide(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.InvalidNilCoalescingRightResourceOperandError{}, errs[0])
 	assert.IsType(t, &sema.ResourceLossError{}, errs[1])
@@ -5026,7 +5026,7 @@ func TestCheckInvalidResourceLossInNestedContractResource(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 }
@@ -5054,7 +5054,7 @@ func TestCheckResourceMoveMemberInvocation(t *testing.T) {
           }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 	})
@@ -5139,7 +5139,7 @@ func TestCheckResourceMoveMemberInvocation(t *testing.T) {
           }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
@@ -5152,7 +5152,7 @@ func TestCheckResourceMoveMemberInvocation(t *testing.T) {
           let x = y.isInstance(Type<Int>())
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	})
@@ -5178,7 +5178,7 @@ func TestCheckInvalidationInPreCondition(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 }
@@ -5203,7 +5203,7 @@ func TestCheckResourceRepeatedInvalidationWithBreak(t *testing.T) {
           }
         `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 	assert.IsType(t, &sema.ResourceLossError{}, errs[1])
@@ -5341,7 +5341,7 @@ func TestCheckInvalidationInPostConditionBefore(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 }
@@ -5366,7 +5366,7 @@ func TestCheckInvalidationInPostCondition(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 }
@@ -5520,7 +5520,7 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
@@ -5548,7 +5548,7 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
            }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
 	})
@@ -5569,7 +5569,7 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
@@ -5599,7 +5599,7 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
 	})
@@ -5622,7 +5622,7 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
@@ -5654,7 +5654,7 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
 	})
@@ -5679,7 +5679,7 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
@@ -5713,7 +5713,7 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
 	})
@@ -5737,7 +5737,7 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
@@ -5770,7 +5770,7 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
 	})
@@ -5845,7 +5845,7 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
@@ -5876,7 +5876,7 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
 	})
@@ -5902,7 +5902,7 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
@@ -5939,7 +5939,7 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
 	})
@@ -5965,7 +5965,7 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
@@ -6002,7 +6002,7 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
 	})
@@ -6028,7 +6028,7 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
@@ -6066,7 +6066,7 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
@@ -6091,7 +6091,7 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
@@ -6127,7 +6127,7 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
@@ -6151,7 +6151,7 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
@@ -6184,7 +6184,7 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
@@ -6311,7 +6311,7 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[1])
@@ -6345,7 +6345,7 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
@@ -6366,7 +6366,7 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
@@ -6396,7 +6396,7 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
@@ -6417,7 +6417,7 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
@@ -6447,7 +6447,7 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
@@ -6468,7 +6468,7 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 3)
+		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[1])
@@ -6499,7 +6499,7 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
@@ -6520,7 +6520,7 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
@@ -6550,7 +6550,7 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
@@ -6571,7 +6571,7 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
@@ -6601,7 +6601,7 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
@@ -6622,7 +6622,7 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 3)
+		errs := RequireCheckerErrors(t, err, 3)
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[1])
 		assert.IsType(t, &sema.ResourceLossError{}, errs[2])
@@ -6652,7 +6652,7 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
@@ -6837,7 +6837,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
@@ -6865,7 +6865,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
 	})
@@ -6886,7 +6886,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
@@ -6916,7 +6916,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
 	})
@@ -6939,7 +6939,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
@@ -6971,7 +6971,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
 	})
@@ -7040,7 +7040,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
@@ -7074,7 +7074,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
 	})
@@ -7099,7 +7099,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
@@ -7133,7 +7133,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
 	})
@@ -7157,7 +7157,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
@@ -7190,7 +7190,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
 	})
@@ -7214,7 +7214,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
@@ -7247,7 +7247,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
 	})
@@ -7302,7 +7302,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
 	})
@@ -7377,7 +7377,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
@@ -7408,7 +7408,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
 	})
@@ -7430,7 +7430,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
@@ -7461,7 +7461,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
 	})
@@ -7485,7 +7485,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
@@ -7520,7 +7520,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
 	})
@@ -7545,7 +7545,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
@@ -7581,7 +7581,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
 	})
@@ -7605,7 +7605,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
@@ -7640,7 +7640,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
 	})
@@ -7665,7 +7665,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
@@ -7701,7 +7701,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
 	})
@@ -7725,7 +7725,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
@@ -7761,7 +7761,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
@@ -7787,7 +7787,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
@@ -7824,7 +7824,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
@@ -7847,7 +7847,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
@@ -7881,7 +7881,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
@@ -7905,7 +7905,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
@@ -7940,7 +7940,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
@@ -7964,7 +7964,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
@@ -7997,7 +7997,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
@@ -8021,7 +8021,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
@@ -8054,7 +8054,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
@@ -8078,7 +8078,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 	})
@@ -8110,7 +8110,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
@@ -8134,7 +8134,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 	})
@@ -8166,7 +8166,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 	})
@@ -8189,7 +8189,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 	})
@@ -8221,7 +8221,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
@@ -8245,7 +8245,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 	})
@@ -8277,7 +8277,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 	})
@@ -8301,7 +8301,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
@@ -8335,7 +8335,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
@@ -8360,7 +8360,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
@@ -8394,7 +8394,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
@@ -8415,7 +8415,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
@@ -8445,7 +8445,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
@@ -8466,7 +8466,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
@@ -8496,7 +8496,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
@@ -8517,7 +8517,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 3)
+		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[1])
@@ -8548,7 +8548,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
@@ -8569,7 +8569,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
@@ -8599,7 +8599,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
@@ -8620,7 +8620,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
@@ -8650,7 +8650,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
@@ -8671,7 +8671,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 3)
+		errs := RequireCheckerErrors(t, err, 3)
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[1])
 		assert.IsType(t, &sema.ResourceLossError{}, errs[2])
@@ -8701,7 +8701,7 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
@@ -8731,7 +8731,7 @@ func TestCheckResourceInvalidationInConditionalExpression(t *testing.T) {
             }
         `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 	assert.IsType(t, &sema.InvalidConditionalResourceOperandError{}, errs[0])
 	assert.IsType(t, &sema.InvalidConditionalResourceOperandError{}, errs[1])
 }
@@ -8759,7 +8759,7 @@ func TestCheckResourceInvalidationInNilCoalescingExpression(t *testing.T) {
             }
         `)
 
-	errs := ExpectCheckerErrors(t, err, 3)
+	errs := RequireCheckerErrors(t, err, 3)
 	assert.IsType(t, &sema.InvalidNilCoalescingRightResourceOperandError{}, errs[0])
 	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[1])
 	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[2])
@@ -8779,7 +8779,7 @@ func TestCheckResourceInvalidationInForceExpression(t *testing.T) {
             }
         `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 }
 
@@ -8802,7 +8802,7 @@ func TestCheckResourceInvalidationWithMove(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 6)
+		errs := RequireCheckerErrors(t, err, 6)
 
 		assert.IsType(t, &sema.InvalidConditionalResourceOperandError{}, errs[0])
 		assert.IsType(t, &sema.InvalidConditionalResourceOperandError{}, errs[1])
@@ -8825,7 +8825,7 @@ func TestCheckResourceInvalidationWithMove(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 	})
 
@@ -8843,7 +8843,7 @@ func TestCheckResourceInvalidationWithMove(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 	})
 
@@ -8866,7 +8866,7 @@ func TestCheckResourceInvalidationWithMove(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[1])
 	})
@@ -8885,7 +8885,7 @@ func TestCheckResourceInvalidationWithMove(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 3)
+		errs := RequireCheckerErrors(t, err, 3)
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 		assert.IsType(t, &sema.InvalidNestedResourceMoveError{}, errs[1])
 		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[2])
@@ -8905,7 +8905,7 @@ func TestCheckResourceInvalidationWithMove(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 	})
 
@@ -8932,7 +8932,7 @@ func TestCheckResourceInvalidationWithMove(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 6)
+		errs := RequireCheckerErrors(t, err, 6)
 
 		assert.IsType(t, &sema.InvalidNilCoalescingRightResourceOperandError{}, errs[0])
 		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[1])
@@ -8955,7 +8955,7 @@ func TestCheckResourceInvalidationWithMove(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 	})
 
@@ -8976,7 +8976,7 @@ func TestCheckResourceInvalidationWithMove(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 	})
 
@@ -8994,7 +8994,7 @@ func TestCheckResourceInvalidationWithMove(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 	})
 
@@ -9012,7 +9012,7 @@ func TestCheckResourceInvalidationWithMove(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 	})
 }
@@ -9031,7 +9031,7 @@ func TestCheckResourceInvalidationWithConditionalExprInDestroy(t *testing.T) {
         }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 	assert.IsType(t, &sema.InvalidConditionalResourceOperandError{}, errs[0])
 	assert.IsType(t, &sema.InvalidConditionalResourceOperandError{}, errs[1])
 }
@@ -9043,7 +9043,7 @@ func TestCheckBadResourceInterface(t *testing.T) {
 
 		_, err := ParseAndCheck(t, "resource interface struct{struct d:struct{ struct d:struct{ }struct d:struct{ struct d:struct{ }}}}")
 
-		errs := ExpectCheckerErrors(t, err, 17)
+		errs := RequireCheckerErrors(t, err, 17)
 
 		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
 		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[1])
@@ -9068,7 +9068,7 @@ func TestCheckBadResourceInterface(t *testing.T) {
 
 		_, err := ParseAndCheck(t, "resource interface struct{struct d:struct{ contract d:struct{ contract x:struct{ struct d{} contract d:struct{ contract d:struct {}}}}}}")
 
-		errs := ExpectCheckerErrors(t, err, 24)
+		errs := RequireCheckerErrors(t, err, 24)
 
 		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
 		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[1])
@@ -9120,7 +9120,7 @@ func TestCheckInvalidUnreachableResourceInvalidation(t *testing.T) {
         }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 }

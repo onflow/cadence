@@ -81,7 +81,7 @@ func TestCheckInvalidForValueNonArray(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchWithDescriptionError{}, errs[0])
 }
@@ -100,7 +100,7 @@ func TestCheckInvalidForValueResource(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.UnsupportedResourceForLoopError{}, errs[0])
 }
@@ -115,7 +115,7 @@ func TestCheckInvalidForBlock(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 }
@@ -162,7 +162,7 @@ func TestCheckForIndexBindingTypeErr(t *testing.T) {
        }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
 
@@ -178,7 +178,7 @@ func TestCheckForIndexBindingReferenceErr(t *testing.T) {
            let y = index
        }
     `)
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 }
 
@@ -196,7 +196,7 @@ func TestCheckInvalidForBreakStatement(t *testing.T) {
        }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ControlStatementError{}, errs[0])
 }
@@ -230,7 +230,7 @@ func TestCheckInvalidForContinueStatement(t *testing.T) {
        }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ControlStatementError{}, errs[0])
 }
@@ -251,7 +251,7 @@ func TestCheckInvalidForShadowing(t *testing.T) {
 		}
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.RedeclarationError{}, errs[0])
 }
