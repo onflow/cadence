@@ -753,7 +753,7 @@ func newAccountKeysForEachFunction(
 				panic(invocationErr)
 			}
 
-			return interpreter.NewVoidValue(invocation.Interpreter)
+			return interpreter.Void
 		},
 		sema.AccountKeysTypeForEachFunctionType,
 	)
