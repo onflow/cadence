@@ -242,18 +242,18 @@ func (checker *Checker) recordReferenceCreation(target, expr ast.Expression) {
 	case *ast.IdentifierExpression:
 		checker.recordReference(target.Identifier.Identifier, expr)
 	default:
-		// TODO:
-		// handle field-access / index-expressions
+		// Currently it's not possible to track the references
+		// assigned to member-expressions/index-expressions.
 		return
 	}
 }
 
-func (checker *Checker) recordReference(name string, expr ast.Expression) {
+func (checker *Checker) recordReference(targetVarName string, expr ast.Expression) {
 	referencedVar := checker.referencedVariable(expr)
 
 	if referencedVar != nil &&
 		referencedVar.Type.IsResourceType() {
-		checker.references.Set(name, referencedVar)
+		checker.references.Set(targetVarName, referencedVar)
 	}
 }
 
@@ -265,14 +265,14 @@ func (checker *Checker) referencedVariable(expr ast.Expression) *Variable {
 
 	switch refExpression := refExpression.(type) {
 	case *ast.ReferenceExpression:
+		// If it is a reference expression, then find the root variable.
+		// i.e: root variable of `&a.b.c as &T` is `a`.
+		// This is because nested resources cannot be moved.
+		// If `c` needs to be moved, then `a` has to be moved.
+		// So tracking `a` is sufficient.
 		variableRefExpr = checker.variableReferenceExpression(refExpression.Expression)
 	case *ast.IdentifierExpression:
 		variableRefExpr = &refExpression.Identifier
-	case *ast.MemberExpression,
-		*ast.IndexExpression:
-		// TODO:
-		// handle cases where rhs is a field/array-element, with reference type
-		return nil
 	default:
 		return nil
 	}
@@ -305,10 +305,15 @@ func (checker *Checker) referencedVariable(expr ast.Expression) *Variable {
 	return checker.valueActivations.Find(referencedVariableName)
 }
 
-// referenceExpression returns the expression that resulted the reference.
-// Those could be:
-//  1. reference-expression,
-//  2. identifier-expression/member-expression/index-expression having a reference type
+// referenceExpression returns the expression that return a reference.
+// There could be two types of expressions that can result in a reference:
+//  1. Expressions that create a new reference.
+//     (i.e: reference-expression)
+//  2. Expressions that returns an existing reference.
+//     (i.e: identifier-expression/member-expression/index-expression having a reference type)
+//
+// However, it is  not currently possible to track member-expressions/index-expression.
+// So this method would only return either a `reference-expression` or an `identifier-expression`.
 //
 // The expression could also be hidden inside some other expression.
 // e.g(1): `&v as &T` is a casting expression, but has a hidden reference expression.

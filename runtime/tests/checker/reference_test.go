@@ -2156,4 +2156,81 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errors[0], &invalidatedRefError)
 	})
+
+	t.Run("ref target is field", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub contract Test {
+                pub fun test() {
+                    let r <- create R()
+                    let s = S()
+
+                    s.b = &r as &R
+                    destroy r
+                    s.b!.a
+                }
+            }
+
+            pub resource R {
+                pub let a: Int
+
+                init() {
+                    self.a = 5
+                }
+            }
+
+            pub struct S {
+                pub(set) var b: &R?
+
+                init() {
+                    self.b = nil
+                }
+            }
+            `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("ref source is field", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub contract Test {
+                pub fun test() {
+                    let r <- create R()
+                    let s = S()
+                    s.b = &r as &R
+
+                    let x = s.b!
+                    destroy r
+                    x.a
+                }
+            }
+
+            pub resource R {
+                pub let a: Int
+
+                init() {
+                    self.a = 5
+                }
+            }
+
+            pub struct S {
+                pub(set) var b: &R?
+
+                init() {
+                    self.b = nil
+                }
+            }
+            `,
+		)
+
+		require.NoError(t, err)
+	})
 }
