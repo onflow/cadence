@@ -123,7 +123,7 @@ type Checker struct {
 	PositionInfo *PositionInfo
 
 	// Holds a mapping between references and their referenced-variable
-	resourceReferences *VariableActivations
+	references *VariableActivations
 }
 
 var _ ast.DeclarationVisitor[struct{}] = &Checker{}
@@ -166,7 +166,7 @@ func NewChecker(
 		containerTypes:      map[Type]bool{},
 		purityCheckScopes:   []PurityCheckScope{{}},
 		memoryGauge:         memoryGauge,
-		resourceReferences:  NewVariableActivations(nil),
+		references:          NewVariableActivations(nil),
 	}
 
 	// Initialize value activations
@@ -1339,7 +1339,7 @@ func (checker *Checker) recordFunctionDeclarationOrigin(
 func (checker *Checker) enterValueScope() {
 	//fmt.Printf("ENTER: %d\n", checker.valueActivations.Depth())
 	checker.valueActivations.Enter()
-	checker.resourceReferences.Enter()
+	checker.references.Enter()
 }
 
 func (checker *Checker) leaveValueScope(getEndPosition EndPositionGetter, checkResourceLoss bool) {
@@ -1348,7 +1348,7 @@ func (checker *Checker) leaveValueScope(getEndPosition EndPositionGetter, checkR
 	}
 
 	checker.valueActivations.Leave(getEndPosition)
-	checker.resourceReferences.Leave(getEndPosition)
+	checker.references.Leave(getEndPosition)
 }
 
 // TODO: prune resource variables declared in function's scope

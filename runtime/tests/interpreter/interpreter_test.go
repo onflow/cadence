@@ -7258,7 +7258,6 @@ func TestInterpretReferenceExpression(t *testing.T) {
       }
     `)
 
-	require.Error(t, err)
 	errs := checker.ExpectCheckerErrors(t, err, 1)
 	invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 	assert.ErrorAs(t, errs[0], &invalidatedRefError)
@@ -7389,7 +7388,6 @@ func TestInterpretReferenceDereferenceFailure(t *testing.T) {
       }
     `)
 
-	require.Error(t, err)
 	errs := checker.ExpectCheckerErrors(t, err, 1)
 	invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 	assert.ErrorAs(t, errs[0], &invalidatedRefError)
@@ -7527,7 +7525,6 @@ func TestInterpretResourceMovingAndBorrowing(t *testing.T) {
             }
         `)
 
-		require.Error(t, err)
 		errs := checker.ExpectCheckerErrors(t, err, 1)
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errs[0], &invalidatedRefError)
@@ -7581,7 +7578,6 @@ func TestInterpretResourceMovingAndBorrowing(t *testing.T) {
             }
         `)
 
-		require.Error(t, err)
 		errs := checker.ExpectCheckerErrors(t, err, 1)
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errs[0], &invalidatedRefError)
@@ -8325,7 +8321,6 @@ func TestInterpretNonStorageReferenceAfterDestruction(t *testing.T) {
         `,
 	)
 
-	require.Error(t, err)
 	errs := checker.ExpectCheckerErrors(t, err, 1)
 	invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 	assert.ErrorAs(t, errs[0], &invalidatedRefError)
@@ -8616,7 +8611,6 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
           }
         `)
 
-		require.Error(t, err)
 		errs := checker.ExpectCheckerErrors(t, err, 1)
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errs[0], &invalidatedRefError)
@@ -8644,7 +8638,6 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
           }
         `)
 
-		require.Error(t, err)
 		errs := checker.ExpectCheckerErrors(t, err, 1)
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errs[0], &invalidatedRefError)
@@ -8666,7 +8659,6 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
           }
         `)
 
-		require.Error(t, err)
 		errs := checker.ExpectCheckerErrors(t, err, 1)
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errs[0], &invalidatedRefError)
@@ -8688,7 +8680,6 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
           }
         `)
 
-		require.Error(t, err)
 		errs := checker.ExpectCheckerErrors(t, err, 1)
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errs[0], &invalidatedRefError)
@@ -8712,7 +8703,6 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
           }
         `)
 
-		require.Error(t, err)
 		errs := checker.ExpectCheckerErrors(t, err, 2)
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errs[0], &invalidatedRefError)
@@ -8736,7 +8726,6 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
           }
         `)
 
-		require.Error(t, err)
 		errs := checker.ExpectCheckerErrors(t, err, 1)
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errs[0], &invalidatedRefError)
@@ -8758,7 +8747,6 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
           }
         `)
 
-		require.Error(t, err)
 		errs := checker.ExpectCheckerErrors(t, err, 1)
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errs[0], &invalidatedRefError)
@@ -8781,7 +8769,6 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
           }
         `)
 
-		require.Error(t, err)
 		errs := checker.ExpectCheckerErrors(t, err, 1)
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errs[0], &invalidatedRefError)

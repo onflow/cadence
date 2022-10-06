@@ -241,7 +241,7 @@ func (checker *Checker) recordReferenceCreation(name string, expr ast.Expression
 	referencedVar := checker.referencedVariable(expr)
 
 	if referencedVar != nil {
-		checker.resourceReferences.Set(name, referencedVar)
+		checker.references.Set(name, referencedVar)
 	}
 }
 
@@ -271,7 +271,7 @@ func (checker *Checker) referencedVariable(expr ast.Expression) *Variable {
 		// Here, `ref2` refers to `ref1`, which refers to `v`.
 		// So `ref2` is actually referring to `v`
 
-		referencedRef := checker.resourceReferences.Find(referencedVariableName)
+		referencedRef := checker.references.Find(referencedVariableName)
 		if referencedRef == nil {
 			break
 		}

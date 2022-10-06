@@ -56,7 +56,7 @@ func (checker *Checker) checkReferenceValidity(variable *Variable, hasPosition a
 		return
 	}
 
-	referencedVar := checker.resourceReferences.Find(variable.Identifier)
+	referencedVar := checker.references.Find(variable.Identifier)
 	if referencedVar == nil ||
 		!referencedVar.Type.IsResourceType() {
 		return

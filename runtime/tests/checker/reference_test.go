@@ -1452,7 +1452,6 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             `,
 		)
 
-		require.Error(t, err)
 		errors := ExpectCheckerErrors(t, err, 1)
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errors[0], &invalidatedRefError)
@@ -1487,7 +1486,6 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             `,
 		)
 
-		require.Error(t, err)
 		errors := ExpectCheckerErrors(t, err, 1)
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errors[0], &invalidatedRefError)
@@ -1521,7 +1519,6 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             `,
 		)
 
-		require.Error(t, err)
 		errors := ExpectCheckerErrors(t, err, 1)
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errors[0], &invalidatedRefError)
@@ -1562,7 +1559,6 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             `,
 		)
 
-		require.Error(t, err)
 		errors := ExpectCheckerErrors(t, err, 1)
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errors[0], &invalidatedRefError)
@@ -1631,7 +1627,6 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             `,
 		)
 
-		require.Error(t, err)
 		errors := ExpectCheckerErrors(t, err, 1)
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errors[0], &invalidatedRefError)
@@ -1755,7 +1750,6 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             `,
 		)
 
-		require.Error(t, err)
 		errors := ExpectCheckerErrors(t, err, 1)
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errors[0], &invalidatedRefError)
@@ -1785,7 +1779,6 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             `,
 		)
 
-		require.Error(t, err)
 		errors := ExpectCheckerErrors(t, err, 1)
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errors[0], &invalidatedRefError)
@@ -1992,7 +1985,6 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             `,
 		)
 
-		require.Error(t, err)
 		errors := ExpectCheckerErrors(t, err, 2)
 
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
@@ -2027,7 +2019,6 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             `,
 		)
 
-		require.Error(t, err)
 		errors := ExpectCheckerErrors(t, err, 1)
 
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
@@ -2062,7 +2053,6 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             `,
 		)
 
-		require.Error(t, err)
 		errors := ExpectCheckerErrors(t, err, 2)
 
 		nilCoalescingErr := &sema.InvalidNilCoalescingRightResourceOperandError{}
