@@ -1,6 +1,6 @@
 module github.com/onflow/cadence/tools/batch-script
 
-go 1.19
+go 1.18
 
 require (
 	github.com/onflow/cadence v0.21.2
