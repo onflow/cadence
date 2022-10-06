@@ -2,7 +2,8 @@
 
 ### 1) **Security and Safety**
 
-Cadence provides security and safety guarantees that greatly simplify the development of secure smart contracts. As smart contracts often deal with valuable assets, Cadence provides the resource-oriented programming paradigm, which guarantees that assets can only exist in one location at a time, cannot be copied, and cannot be accidentally lost or deleted. Cadence includes several language features which prevent entire classes of bugs.
+Cadence provides security and safety guarantees that greatly simplify the development of secure smart contracts. As smart contracts often deal with valuable assets, Cadence provides the resource-oriented programming paradigm, which guarantees that assets can only exist in one location at a time, cannot be copied, and cannot be accidentally lost or deleted. 
+Cadence includes several language features which prevent entire classes of bugs.
 These security and safety features allow smart contract developers to focus on the business logic of their contract instead of preventing accidents and attacks.
 
 ### 2) Composability
