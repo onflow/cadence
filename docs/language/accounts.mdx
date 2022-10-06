@@ -379,9 +379,9 @@ If the borrow type of the Capability is not a subtype of the provided type argum
 Upon successful completion of the `claim` function, the claimed Capability is removed from the provider's inbox. 
 Note that this means a given Capability can only be claimed once. 
 
-Calling this function emits an event, `InboxValueRemoved`, 
+Calling this function emits an event, `InboxValueClaimed`, 
 that includes the address of both the provider and the recipient, as well as the name of the claimed Capability.
-Refer to the [`Core Events` section](core-events#inbox-value-removed) for more details on this event.
+Refer to the [`Core Events` section](core-events#inbox-value-claimed) for more details on this event.
 
 ### Unpublishing a Capability
 
@@ -398,9 +398,9 @@ If the borrow type of the Capability is not a subtype of the provided type argum
 
 Upon successful completion of the `unpublish` function, the unpublished Capability is removed from the provider's inbox. 
 
-Calling this function emits an event, `InboxValueRemoved`, 
+Calling this function emits an event, `InboxValueUnpublished`, 
 that includes the address of the provider, and the name of the claimed Capability.
-Refer to the [`Core Events` section](core-events#inbox-value-removed) for more details on this event.
+Refer to the [`Core Events` section](core-events#inbox-value-unpublished) for more details on this event.
 
 ## Account Storage
 

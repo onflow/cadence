@@ -835,7 +835,7 @@ func accountInboxPublishFunction(
 
 			handler.EmitEvent(
 				inter,
-				AccountInboxPublishEventType,
+				AccountInboxPublishedEventType,
 				[]interpreter.Value{
 					providerValue,
 					recipientValue,
@@ -914,9 +914,8 @@ func accountInboxUnpublishFunction(
 
 			handler.EmitEvent(
 				inter,
-				AccountInboxRemoveEventType,
+				AccountInboxUnpublishedEventType,
 				[]interpreter.Value{
-					providerValue,
 					providerValue,
 					nameValue,
 				},
@@ -1004,7 +1003,7 @@ func accountInboxClaimFunction(
 
 			handler.EmitEvent(
 				inter,
-				AccountInboxRemoveEventType,
+				AccountInboxClaimedEventType,
 				[]interpreter.Value{
 					providerValue,
 					recipientValue,

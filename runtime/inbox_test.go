@@ -104,7 +104,7 @@ func TestAccountInboxPublishUnpublish(t *testing.T) {
 	require.Equal(t, logs[1], "3")
 
 	require.Equal(t, events[0], "flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\", type: Type<Capability<&[Int]>>())")
-	require.Equal(t, events[1], "flow.InboxValueRemove(provider: 0x0000000000000001, remover: 0x0000000000000001, name: \"foo\")")
+	require.Equal(t, events[1], "flow.InboxValueUnpublished(provider: 0x0000000000000001, name: \"foo\")")
 }
 
 func TestAccountInboxUnpublishWrongType(t *testing.T) {
@@ -347,7 +347,7 @@ func TestAccountInboxUnpublishRemove(t *testing.T) {
 	require.Equal(t, logs[2], "nil")
 
 	require.Equal(t, events[0], "flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\", type: Type<Capability<&[Int]>>())")
-	require.Equal(t, events[1], "flow.InboxValueRemove(provider: 0x0000000000000001, remover: 0x0000000000000001, name: \"foo\")")
+	require.Equal(t, events[1], "flow.InboxValueUnpublished(provider: 0x0000000000000001, name: \"foo\")")
 
 	// no event emitted on unsuccessful unpublish
 	require.Len(t, events, 2)
@@ -469,7 +469,7 @@ func TestAccountInboxUnpublishWrongAccount(t *testing.T) {
 	require.Equal(t, logs[2], "3")
 
 	require.Equal(t, events[0], "flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\", type: Type<Capability<&[Int]>>())")
-	require.Equal(t, events[1], "flow.InboxValueRemove(provider: 0x0000000000000001, remover: 0x0000000000000001, name: \"foo\")")
+	require.Equal(t, events[1], "flow.InboxValueUnpublished(provider: 0x0000000000000001, name: \"foo\")")
 
 	// no event emitted on unsuccessful unpublish
 	require.Len(t, events, 2)
@@ -566,7 +566,7 @@ func TestAccountInboxPublishClaim(t *testing.T) {
 	require.Equal(t, logs[1], "3")
 
 	require.Equal(t, events[0], "flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\", type: Type<Capability<&[Int]>>())")
-	require.Equal(t, events[1], "flow.InboxValueRemove(provider: 0x0000000000000001, remover: 0x0000000000000002, name: \"foo\")")
+	require.Equal(t, events[1], "flow.InboxValueClaimed(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\")")
 }
 
 func TestAccountInboxPublishClaimWrongType(t *testing.T) {
@@ -875,7 +875,7 @@ func TestAccountInboxPublishClaimRemove(t *testing.T) {
 	require.Equal(t, logs[2], "nil")
 
 	require.Equal(t, events[0], "flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\", type: Type<Capability<&[Int]>>())")
-	require.Equal(t, events[1], "flow.InboxValueRemove(provider: 0x0000000000000001, remover: 0x0000000000000002, name: \"foo\")")
+	require.Equal(t, events[1], "flow.InboxValueClaimed(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\")")
 
 	// no event emitted on unsuccessful claim
 	require.Len(t, events, 2)
@@ -1011,7 +1011,7 @@ func TestAccountInboxPublishClaimWrongAccount(t *testing.T) {
 	require.Equal(t, logs[2], "3")
 
 	require.Equal(t, events[0], "flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\", type: Type<Capability<&[Int]>>())")
-	require.Equal(t, events[1], "flow.InboxValueRemove(provider: 0x0000000000000001, remover: 0x0000000000000002, name: \"foo\")")
+	require.Equal(t, events[1], "flow.InboxValueClaimed(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: \"foo\")")
 
 	// no event emitted on unsuccessful claim
 	require.Len(t, events, 2)
