@@ -207,8 +207,7 @@ func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
 						require.NoError(t, err)
 						assert.Equal(t, interpreter.BoolValue(true), result)
 					default:
-						require.Error(t, err)
-						_ = err.Error()
+						RequireError(t, err)
 
 						operandError := &interpreter.InvalidOperandsError{}
 						require.ErrorAs(t, err, operandError)
@@ -258,8 +257,7 @@ func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
 						require.NoError(t, err)
 						assert.Equal(t, interpreter.BoolValue(true), result)
 					default:
-						require.Error(t, err)
-						_ = err.Error()
+						RequireError(t, err)
 
 						operandError := &interpreter.InvalidOperandsError{}
 						require.ErrorAs(t, err, operandError)
@@ -309,8 +307,7 @@ func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
 						require.NoError(t, err)
 						assert.Equal(t, interpreter.BoolValue(true), result)
 					default:
-						require.Error(t, err)
-						_ = err.Error()
+						RequireError(t, err)
 
 						operandError := &interpreter.InvalidOperandsError{}
 						require.ErrorAs(t, err, operandError)

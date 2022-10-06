@@ -246,7 +246,7 @@ func TestCheckInvalidIntegerLiteralValues(t *testing.T) {
 					),
 				)
 
-				errs := ExpectCheckerErrors(t, err, 2)
+				errs := RequireCheckerErrors(t, err, 2)
 
 				if _, isAddressType := ty.(*sema.AddressType); isAddressType {
 					assert.IsType(t, &sema.InvalidAddressLiteralError{}, errs[0])
@@ -283,7 +283,7 @@ func TestCheckInvalidIntegerLiteralValues(t *testing.T) {
 					),
 				)
 
-				errs := ExpectCheckerErrors(t, err, 2)
+				errs := RequireCheckerErrors(t, err, 2)
 
 				if _, isAddressType := ty.(*sema.AddressType); isAddressType {
 					assert.IsType(t, &sema.InvalidAddressLiteralError{}, errs[0])
@@ -299,7 +299,6 @@ func TestCheckInvalidIntegerLiteralValues(t *testing.T) {
 
 // Test fix for crasher, see https://github.com/dapperlabs/flow-go/pull/675
 // Integer literal value fits range can't be checked when target is Never
-//
 func TestCheckInvalidIntegerLiteralWithNeverReturnType(t *testing.T) {
 
 	t.Parallel()
@@ -310,7 +309,7 @@ func TestCheckInvalidIntegerLiteralWithNeverReturnType(t *testing.T) {
         }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -382,7 +381,7 @@ func TestCheckInvalidAddressDecimal(t *testing.T) {
         let b = Address(2)
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.InvalidAddressLiteralError{}, errs[0])
 	assert.IsType(t, &sema.InvalidAddressLiteralError{}, errs[1])
@@ -397,7 +396,7 @@ func TestCheckInvalidTooLongAddress(t *testing.T) {
         let b = Address(0x10000000000000001)
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.InvalidAddressLiteralError{}, errs[0])
 	assert.IsType(t, &sema.InvalidAddressLiteralError{}, errs[1])
@@ -442,7 +441,7 @@ func TestCheckInvalidUnsignedIntegerNegate(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.InvalidUnaryOperandError{}, errs[0])
 		})
@@ -471,7 +470,7 @@ func TestCheckInvalidIntegerConversionFunctionWithoutArgs(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.ArgumentCountError{}, errs[0])
 
@@ -530,7 +529,7 @@ func TestCheckIntegerLiteralArguments(t *testing.T) {
 			switch ty {
 			case sema.IntegerType,
 				sema.SignedIntegerType:
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 				assert.IsType(t, &sema.InvalidBinaryOperandsError{}, errs[0])
 			default:
 				require.NoError(t, err)

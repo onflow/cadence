@@ -41,7 +41,7 @@ func TestCheckStorable(t *testing.T) {
 		if len(errorTypes) == 0 {
 			require.NoError(t, err)
 		} else {
-			errs := ExpectCheckerErrors(t, err, len(errorTypes))
+			errs := RequireCheckerErrors(t, err, len(errorTypes))
 			for i, errorType := range errorTypes {
 				require.IsType(t, errorType, errs[i])
 			}
@@ -379,7 +379,7 @@ func TestCheckStorableCycle(t *testing.T) {
            }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 5)
+		errs := RequireCheckerErrors(t, err, 5)
 
 		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
 		assert.IsType(t, &sema.RedeclarationError{}, errs[1])

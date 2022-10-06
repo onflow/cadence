@@ -66,7 +66,7 @@ func TestCheckInvalidCompositeInitializerOverloading(t *testing.T) {
 					),
 				)
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.UnsupportedOverloadingError{}, errs[0])
 			})
@@ -105,7 +105,7 @@ func TestCheckInvalidResourceDestructorOverloading(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.UnsupportedOverloadingError{}, errs[0])
 		})

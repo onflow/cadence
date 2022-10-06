@@ -50,7 +50,7 @@ func TestCheckInvalidNonEnumCompositeEnumCases(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.InvalidEnumCaseError{}, errs[0])
 		})
@@ -76,7 +76,7 @@ func TestCheckInvalidEnumCompositeNonEnumCases(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.InvalidNonEnumCaseError{}, errs[0])
 	assert.IsType(t, &sema.MissingInitializerError{}, errs[1])
@@ -94,7 +94,7 @@ func TestCheckEnumRawType(t *testing.T) {
           enum E {}
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.MissingEnumRawTypeError{}, errs[0])
 	})
@@ -108,7 +108,7 @@ func TestCheckEnumRawType(t *testing.T) {
           enum E: SI {}
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidEnumRawTypeError{}, errs[0])
 	})
@@ -134,7 +134,7 @@ func TestCheckEnumRawType(t *testing.T) {
           enum E: Int, S {}
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidEnumConformancesError{}, errs[0])
 	})
@@ -148,7 +148,7 @@ func TestCheckInvalidEnumInterface(t *testing.T) {
       enum interface E {}
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidInterfaceDeclarationError{}, errs[0])
 }
@@ -164,7 +164,7 @@ func TestCheckInvalidEnumCaseDuplicate(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.RedeclarationError{}, errs[0])
 }
@@ -179,7 +179,7 @@ func TestCheckInvalidNonPublicEnumCase(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidAccessModifierError{}, errs[0])
 }

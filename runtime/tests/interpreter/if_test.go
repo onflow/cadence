@@ -83,7 +83,7 @@ func TestInterpretIfStatement(t *testing.T) {
         `,
 		ParseCheckAndInterpretOptions{
 			HandleCheckerError: func(err error) {
-				errs := checker.ExpectCheckerErrors(t, err, 2)
+				errs := checker.RequireCheckerErrors(t, err, 2)
 
 				assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 				assert.IsType(t, &sema.UnreachableStatementError{}, errs[1])

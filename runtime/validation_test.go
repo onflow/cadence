@@ -27,13 +27,13 @@ import (
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 // TestRuntimeArgumentImportMissingType tests if errors produced while validating
 // transaction and script arguments are gracefully handled.
 // This is for example the case when an argument specifies a non-existing type,
 // which results in a type loading error.
-//
 func TestRuntimeArgumentImportMissingType(t *testing.T) {
 
 	t.Parallel()
@@ -83,8 +83,7 @@ func TestRuntimeArgumentImportMissingType(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		var typeLoadingErr interpreter.TypeLoadingError
 		require.ErrorAs(t, err, &typeLoadingErr)
@@ -135,8 +134,7 @@ func TestRuntimeArgumentImportMissingType(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		var typeLoadingErr interpreter.TypeLoadingError
 		require.ErrorAs(t, err, &typeLoadingErr)

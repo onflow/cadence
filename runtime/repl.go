@@ -19,6 +19,7 @@
 package runtime
 
 import (
+	"bytes"
 	"fmt"
 	goRuntime "runtime"
 	"sort"
@@ -95,18 +96,46 @@ func NewREPL(
 	return repl, nil
 }
 
-func (r *REPL) handleCheckerError() bool {
+func (r *REPL) handleCheckerError() error {
 	err := r.checker.CheckerError()
 	if err == nil {
-		return true
+		return nil
 	}
 	if r.onError != nil {
 		r.onError(err, r.checker.Location, r.codes)
 	}
-	return false
+	return err
 }
 
-func (r *REPL) Accept(code []byte) (inputIsComplete bool) {
+var lineSep = []byte{'\n'}
+
+func (r *REPL) Accept(code []byte) (inputIsComplete bool, err error) {
+
+	// We need two codes:
+	//
+	// 1. The code used for parsing and type checking (`code`).
+	//
+	//    This is only the code that was just entered in the REPL,
+	//    as we do not want to re-check and re-run the whole program already previously entered into the REPL –
+	//    the checker's and interpreter's state are kept, and they already have the previously entered declarations.
+	//
+	//    However, just parsing the entered code would result in an AST with wrong position information,
+	//    the line number would be always 1. To adjust the line information, we prepend the new code with empty lines.
+	//
+	// 2. The code used for error pretty printing (`codes`).
+	//
+	//    We temporarily update the full code of the whole program to include the new code.
+	//    This allows the error pretty printer to properly refer to previous code (instead of empty lines),
+	//    as well as the new code.
+	//    However, if an error occurs, we revert the addition of the new code
+	//    and leave the program code as it was before.
+
+	// Append the new code to the existing code (used for error reporting),
+	// temporarily, so that errors for the new code can be reported
+
+	currentCode := r.codes[r.checker.Location]
+
+	r.codes[r.checker.Location] = append(currentCode[:], code...)
 
 	defer func() {
 		if panicResult := recover(); panicResult != nil {
@@ -129,12 +158,35 @@ func (r *REPL) Accept(code []byte) (inputIsComplete bool) {
 		}
 	}()
 
-	r.codes[r.checker.Location] = code
+	// If the new code results in a parsing or checking error,
+	// reset the code
+	defer func() {
+		if err != nil {
+			r.codes[r.checker.Location] = currentCode
+		}
+	}()
+
+	// Only parse the new code, and ignore the existing code.
+	//
+	// Prefix the new code with empty lines,
+	// so that the line number is correct in error messages
+
+	lineSepCount := bytes.Count(currentCode, lineSep)
+
+	if lineSepCount > 0 {
+		prefixedCode := make([]byte, lineSepCount+len(code))
+
+		for i := 0; i < lineSepCount; i++ {
+			prefixedCode[i] = '\n'
+		}
+		copy(prefixedCode[lineSepCount:], code)
+
+		code = prefixedCode
+	}
 
 	// TODO: detect if the input is complete
 	inputIsComplete = true
 
-	var err error
 	result, errs := parser.ParseStatements(code, nil)
 	if len(errs) > 0 {
 		err = parser.Error{
@@ -161,7 +213,8 @@ func (r *REPL) Accept(code []byte) (inputIsComplete bool) {
 			program := ast.NewProgram(nil, []ast.Declaration{element})
 
 			r.checker.CheckProgram(program)
-			if !r.handleCheckerError() {
+			err = r.handleCheckerError()
+			if err != nil {
 				return
 			}
 
@@ -172,7 +225,8 @@ func (r *REPL) Accept(code []byte) (inputIsComplete bool) {
 
 			r.checker.CheckStatement(element)
 
-			if !r.handleCheckerError() {
+			err = r.handleCheckerError()
+			if err != nil {
 				return
 			}
 

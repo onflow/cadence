@@ -28,6 +28,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/stdlib"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/ast"
@@ -268,8 +269,7 @@ func TestRuntimeContract(t *testing.T) {
 				assert.EqualValues(t, stdlib.AccountContractAddedEventType.ID(), events[0].Type().ID())
 
 			} else {
-				require.Error(t, err)
-				_ = err.Error()
+				RequireError(t, err)
 
 				require.Empty(t, deployedCode)
 				require.Empty(t, events)
@@ -305,8 +305,7 @@ func TestRuntimeContract(t *testing.T) {
 					Location:  nextTransactionLocation(),
 				},
 			)
-			require.Error(t, err)
-			_ = err.Error()
+			RequireError(t, err)
 
 			// the deployed code should not have been updated,
 			// and no events should have been emitted,
@@ -447,8 +446,7 @@ func TestRuntimeContract(t *testing.T) {
 				assert.EqualValues(t, stdlib.AccountContractAddedEventType.ID(), events[0].Type().ID())
 
 			} else {
-				require.Error(t, err)
-				_ = err.Error()
+				RequireError(t, err)
 
 				require.Empty(t, deployedCode)
 				require.Empty(t, events)

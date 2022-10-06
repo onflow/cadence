@@ -168,8 +168,7 @@ func TestInterpretDynamicCastingNumber(t *testing.T) {
 										result,
 									)
 								} else {
-									require.Error(t, err)
-									_ = err.Error()
+									RequireError(t, err)
 
 									require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 								}
@@ -267,8 +266,7 @@ func TestInterpretDynamicCastingVoid(t *testing.T) {
 								result,
 							)
 						} else {
-							require.Error(t, err)
-							_ = err.Error()
+							RequireError(t, err)
 
 							require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 						}
@@ -361,8 +359,7 @@ func TestInterpretDynamicCastingString(t *testing.T) {
 								result,
 							)
 						} else {
-							require.Error(t, err)
-							_ = err.Error()
+							RequireError(t, err)
 
 							require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 						}
@@ -455,8 +452,7 @@ func TestInterpretDynamicCastingBool(t *testing.T) {
 								result,
 							)
 						} else {
-							require.Error(t, err)
-							_ = err.Error()
+							RequireError(t, err)
 
 							require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 						}
@@ -554,8 +550,7 @@ func TestInterpretDynamicCastingAddress(t *testing.T) {
 								result,
 							)
 						} else {
-							require.Error(t, err)
-							_ = err.Error()
+							RequireError(t, err)
 
 							require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 						}
@@ -647,8 +642,7 @@ func TestInterpretDynamicCastingStruct(t *testing.T) {
 							result,
 						)
 					} else {
-						require.Error(t, err)
-						_ = err.Error()
+						RequireError(t, err)
 
 						require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 					}
@@ -691,8 +685,7 @@ func TestInterpretDynamicCastingStruct(t *testing.T) {
 								result,
 							)
 						} else {
-							require.Error(t, err)
-							_ = err.Error()
+							RequireError(t, err)
 
 							require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 						}
@@ -802,8 +795,7 @@ func testResourceCastInvalid(t *testing.T, types, fromType, targetType string, o
 		)
 
 	case ast.OperationForceCast:
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 
@@ -953,8 +945,7 @@ func testStructCastInvalid(t *testing.T, types, fromType, targetType string, ope
 		)
 
 	case ast.OperationForceCast:
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 
@@ -1166,8 +1157,7 @@ func TestInterpretDynamicCastingSome(t *testing.T) {
 								result,
 							)
 						} else {
-							require.Error(t, err)
-							_ = err.Error()
+							RequireError(t, err)
 
 							require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 						}
@@ -1275,8 +1265,7 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 								result,
 							)
 						} else {
-							require.Error(t, err)
-							_ = err.Error()
+							RequireError(t, err)
 
 							require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 						}
@@ -1310,8 +1299,7 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 						result,
 					)
 				} else {
-					require.Error(t, err)
-					_ = err.Error()
+					RequireError(t, err)
 
 					require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 				}
@@ -1329,8 +1317,7 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		assert.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 	})
@@ -1436,8 +1423,7 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 								result,
 							)
 						} else {
-							require.Error(t, err)
-							_ = err.Error()
+							RequireError(t, err)
 
 							require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 						}
@@ -1470,8 +1456,7 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 						result,
 					)
 				} else {
-					require.Error(t, err)
-					_ = err.Error()
+					RequireError(t, err)
 
 					require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 				}
@@ -2378,8 +2363,7 @@ func testReferenceCastInvalid(t *testing.T, types, fromType, targetType string, 
 		)
 
 	case ast.OperationForceCast:
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 
@@ -3639,8 +3623,7 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 								result,
 							)
 						} else {
-							require.Error(t, err)
-							_ = err.Error()
+							RequireError(t, err)
 
 							require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 						}
@@ -3673,8 +3656,7 @@ func TestInterpretResourceConstructorCast(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, interpreter.Nil, result)
 		} else {
-			require.Error(t, err)
-			_ = err.Error()
+			RequireError(t, err)
 		}
 	}
 }
@@ -3738,8 +3720,7 @@ func TestInterpretFunctionTypeCasting(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 	})
@@ -3778,8 +3759,7 @@ func TestInterpretFunctionTypeCasting(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 	})
@@ -3830,8 +3810,7 @@ func TestInterpretReferenceCasting(t *testing.T) {
 		inter := parseCheckAndInterpret(t, code)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		assert.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 	})
@@ -3854,8 +3833,7 @@ func TestInterpretReferenceCasting(t *testing.T) {
 		inter := parseCheckAndInterpret(t, code)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		assert.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 	})

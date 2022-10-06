@@ -92,7 +92,7 @@ func TestCheckOptionalTypeConstructor(t *testing.T) {
 					RequireGlobalValue(t, checker.Elaboration, "result"),
 				)
 			} else {
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 				assert.IsType(t, testCase.expectedError, errs[0])
 			}
 		})
@@ -164,7 +164,7 @@ func TestCheckVariableSizedArrayTypeConstructor(t *testing.T) {
 					RequireGlobalValue(t, checker.Elaboration, "result"),
 				)
 			} else {
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 				assert.IsType(t, testCase.expectedError, errs[0])
 			}
 		})
@@ -264,7 +264,7 @@ func TestCheckConstantSizedArrayTypeConstructor(t *testing.T) {
 					RequireGlobalValue(t, checker.Elaboration, "result"),
 				)
 			} else {
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 				assert.IsType(t, testCase.expectedError, errs[0])
 			}
 		})
@@ -365,7 +365,7 @@ func TestCheckDictionaryTypeConstructor(t *testing.T) {
 					RequireGlobalValue(t, checker.Elaboration, "result"),
 				)
 			} else {
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 				assert.IsType(t, testCase.expectedError, errs[0])
 			}
 		})
@@ -422,7 +422,7 @@ func TestCheckCompositeTypeConstructor(t *testing.T) {
 					RequireGlobalValue(t, checker.Elaboration, "result"),
 				)
 			} else {
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 				assert.IsType(t, testCase.expectedError, errs[0])
 			}
 		})
@@ -479,7 +479,7 @@ func TestCheckInterfaceTypeConstructor(t *testing.T) {
 					RequireGlobalValue(t, checker.Elaboration, "result"),
 				)
 			} else {
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 				assert.IsType(t, testCase.expectedError, errs[0])
 			}
 		})
@@ -578,7 +578,7 @@ func TestCheckFunctionTypeConstructor(t *testing.T) {
 					RequireGlobalValue(t, checker.Elaboration, "result"),
 				)
 			} else {
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 				assert.IsType(t, testCase.expectedError, errs[0])
 			}
 		})
@@ -673,7 +673,7 @@ func TestCheckReferenceTypeConstructor(t *testing.T) {
 					RequireGlobalValue(t, checker.Elaboration, "result"),
 				)
 			} else {
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 				assert.IsType(t, testCase.expectedError, errs[0])
 			}
 		})
@@ -774,7 +774,7 @@ func TestCheckRestrictedTypeConstructor(t *testing.T) {
 					RequireGlobalValue(t, checker.Elaboration, "result"),
 				)
 			} else {
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 				assert.IsType(t, testCase.expectedError, errs[0])
 			}
 		})
@@ -846,7 +846,7 @@ func TestCheckCapabilityTypeConstructor(t *testing.T) {
 					RequireGlobalValue(t, checker.Elaboration, "result"),
 				)
 			} else {
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 				assert.IsType(t, testCase.expectedError, errs[0])
 			}
 		})

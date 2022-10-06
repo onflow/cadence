@@ -37,7 +37,7 @@ func TestCheckInvalidUnknownDeclarationAssignment(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 }
@@ -53,7 +53,7 @@ func TestCheckInvalidConstantAssignment(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.AssignmentToConstantError{}, errs[0])
 }
@@ -84,7 +84,7 @@ func TestCheckInvalidGlobalConstantAssignment(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.AssignmentToConstantError{}, errs[0])
 }
@@ -115,7 +115,7 @@ func TestCheckInvalidAssignmentToParameter(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.AssignmentToConstantError{}, errs[0])
 }
@@ -136,7 +136,7 @@ func TestCheckInvalidAssignmentTargetExpression(t *testing.T) {
           }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidAssignmentTargetError{}, errs[0])
 	})
@@ -155,7 +155,7 @@ func TestCheckInvalidAssignmentTargetExpression(t *testing.T) {
           }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidAssignmentTargetError{}, errs[0])
 	})
@@ -184,7 +184,7 @@ func TestCheckInvalidAssignmentTargetExpression(t *testing.T) {
           }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidAssignmentTargetError{}, errs[0])
 	})
@@ -237,7 +237,7 @@ func TestCheckInvalidAssignmentTargetExpression(t *testing.T) {
           }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidAssignmentTargetError{}, errs[0])
 	})
@@ -252,7 +252,7 @@ func TestCheckInvalidAssignmentTargetExpression(t *testing.T) {
           }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidAssignmentTargetError{}, errs[0])
 	})
