@@ -491,30 +491,6 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		assert.Nil(t, storage.returnedKey)
 	})
 
-	t.Run("get key count", func(t *testing.T) {
-		t.Parallel()
-		storage := newTestAccountKeyStorage()
-		rt := newTestInterpreterRuntime()
-		runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
-		addPublicKeyValidation(runtimeInterface, nil)
-
-		addAuthAccountKey(t, rt, runtimeInterface)
-
-		test := accountKeyTestCase{
-			code: `
-				transaction {
-					prepare(signer: AuthAccount) {
-						let keyCount = signer.keys.count()
-						assert(keyCount == 1)
-					}
-				}
-			`,
-			args: []cadence.Value{},
-		}
-
-		err := test.executeTransaction(rt, runtimeInterface)
-		require.NoError(t, err)
-	})
 }
 
 func TestRuntimeAuthAccountKeysAdd(t *testing.T) {
