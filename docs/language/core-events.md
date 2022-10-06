@@ -143,28 +143,40 @@ To reduce the potential for spam,
 we recommend that user agents that display events do not display this event as-is to their users, 
 and allow users to restrict whom they see events from. 
 
-### Inbox Value Removed
+### Inbox Value Unpublished
 
-Event that is emitted when a Capability is removed from an account. 
+Event that is emitted when a Capability is unpublished from an account. 
 
-Event name: `flow.InboxValueRemoved`
+Event name: `flow.InboxValueUnpublished`
 
 ```cadence
-pub event InboxValueRemoved(provider: Address, remover: Address, name: String)
+pub event InboxValueUnpublished(provider: Address, name: String)
 ```
 
 | Field           | Type      | Description                                  |
 | --------------- | --------- | -------------------------------------------- |
 | `provider`      | `Address` | The address of the publishing account        |
-| `remover`       | `Address` | The address of the removing account          |
 | `name`          | `String`  | The name associated with the published value |
 
-When this event is emitted by a call to `AuthAccount.Inbox.claim`, 
-the `provider` field of this event will be the original `provider` of the Capability, 
-and the `remover` field will be the claiming `recipient`. 
+To reduce the potential for spam, 
+we recommend that user agents that display events do not display this event as-is to their users, 
+and allow users to restrict whom they see events from. 
 
-When this event is emitted by a call to `AuthAccount.Inbox.unpublish`, 
-both the `provider` and the `remover` field of this event will be the original `provider` of the Capability. 
+### Inbox Value Claimed
+
+Event that is emitted when a Capability is claimed by an account. 
+
+Event name: `flow.InboxValueClaimed`
+
+```cadence
+pub event InboxValueClaimed(provider: Address, recipient: Address, name: String)
+```
+
+| Field           | Type      | Description                                  |
+| --------------- | --------- | -------------------------------------------- |
+| `provider`      | `Address` | The address of the publishing account        |
+| `recipient`     | `Address` | The address of the claiming recipient        |
+| `name`          | `String`  | The name associated with the published value |
 
 To reduce the potential for spam, 
 we recommend that user agents that display events do not display this event as-is to their users, 

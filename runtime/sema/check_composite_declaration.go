@@ -796,7 +796,7 @@ func (checker *Checker) declareContractValue(
 	}
 
 	declarationMembers.Foreach(func(name string, declarationMember *Member) {
-		if _, ok := compositeType.Members.Get(name); ok {
+		if compositeType.Members.Contains(name) {
 			return
 		}
 		compositeType.Members.Set(name, declarationMember)
@@ -823,7 +823,7 @@ func (checker *Checker) declareEnumConstructor(
 	for _, enumCase := range enumCases {
 		caseName := enumCase.Identifier.Identifier
 
-		if _, ok := constructorType.Members.Get(caseName); ok {
+		if constructorType.Members.Contains(caseName) {
 			continue
 		}
 
@@ -2234,7 +2234,7 @@ func (checker *Checker) checkResourceFieldsInvalidated(
 		}
 
 		info := checker.resources.Get(Resource{Member: member})
-		if !info.DefinitivelyInvalidated {
+		if !info.DefinitivelyInvalidated() {
 			checker.report(
 				&ResourceFieldNotInvalidatedError{
 					FieldName: member.Identifier.Identifier,
@@ -2251,15 +2251,18 @@ func (checker *Checker) checkResourceFieldsInvalidated(
 //
 func (checker *Checker) checkResourceUseAfterInvalidation(resource Resource, usePosition ast.HasPosition) {
 	resourceInfo := checker.resources.Get(resource)
-	if resourceInfo.Invalidations.Size() == 0 {
+	invalidation := resourceInfo.Invalidation()
+	if invalidation == nil {
 		return
 	}
 
 	checker.report(
 		&ResourceUseAfterInvalidationError{
-			StartPos:      usePosition.StartPosition(),
-			EndPos:        usePosition.EndPosition(checker.memoryGauge),
-			Invalidations: resourceInfo.Invalidations.All(),
+			Invalidation: *invalidation,
+			Range: ast.NewRangeFromPositioned(
+				checker.memoryGauge,
+				usePosition,
+			),
 		},
 	)
 }

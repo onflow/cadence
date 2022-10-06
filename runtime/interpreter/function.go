@@ -132,7 +132,7 @@ func (f *InterpretedFunctionValue) invoke(invocation Invocation) Value {
 
 func (f *InterpretedFunctionValue) ConformsToStaticType(
 	_ *Interpreter,
-	_ func() LocationRange,
+	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
 	return true
@@ -152,7 +152,7 @@ func (*InterpretedFunctionValue) IsResourceKinded(_ *Interpreter) bool {
 
 func (f *InterpretedFunctionValue) Transfer(
 	interpreter *Interpreter,
-	_ func() LocationRange,
+	_ LocationRange,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -261,7 +261,7 @@ func (f *HostFunctionValue) invoke(invocation Invocation) Value {
 	return f.Function(invocation)
 }
 
-func (f *HostFunctionValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
+func (f *HostFunctionValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
 	if f.NestedVariables != nil {
 		if variable, ok := f.NestedVariables[name]; ok {
 			return variable.GetValue()
@@ -270,19 +270,19 @@ func (f *HostFunctionValue) GetMember(_ *Interpreter, _ func() LocationRange, na
 	return nil
 }
 
-func (*HostFunctionValue) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
+func (*HostFunctionValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
 	// Host functions have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (*HostFunctionValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+func (*HostFunctionValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
 	// Host functions have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
 func (f *HostFunctionValue) ConformsToStaticType(
 	_ *Interpreter,
-	_ func() LocationRange,
+	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
 	return true
@@ -302,7 +302,7 @@ func (*HostFunctionValue) IsResourceKinded(_ *Interpreter) bool {
 
 func (f *HostFunctionValue) Transfer(
 	interpreter *Interpreter,
-	_ func() LocationRange,
+	_ LocationRange,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -393,12 +393,12 @@ func (f BoundFunctionValue) invoke(invocation Invocation) Value {
 
 func (f BoundFunctionValue) ConformsToStaticType(
 	interpreter *Interpreter,
-	getLocationRange func() LocationRange,
+	locationRange LocationRange,
 	results TypeConformanceResults,
 ) bool {
 	return f.Function.ConformsToStaticType(
 		interpreter,
-		getLocationRange,
+		locationRange,
 		results,
 	)
 }
@@ -417,7 +417,7 @@ func (BoundFunctionValue) IsResourceKinded(_ *Interpreter) bool {
 
 func (f BoundFunctionValue) Transfer(
 	interpreter *Interpreter,
-	_ func() LocationRange,
+	_ LocationRange,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,

@@ -36,16 +36,14 @@ type LocationPosition struct {
 // defines the start/end position within the source of that script.
 type LocationRange struct {
 	Location common.Location
-	ast.Range
+	ast.HasPosition
 }
 
 func (r LocationRange) ImportLocation() common.Location {
 	return r.Location
 }
 
-func ReturnEmptyLocationRange() LocationRange {
-	return LocationRange{}
-}
+var EmptyLocationRange = LocationRange{}
 
 func ReturnEmptyRange() ast.Range {
 	return ast.EmptyRange

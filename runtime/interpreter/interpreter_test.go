@@ -37,7 +37,7 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		value := inter.BoxOptional(
-			ReturnEmptyLocationRange,
+			EmptyLocationRange,
 			BoolValue(true),
 			&sema.OptionalType{Type: sema.BoolType},
 		)
@@ -51,7 +51,7 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		value := inter.BoxOptional(
-			ReturnEmptyLocationRange,
+			EmptyLocationRange,
 			NewUnmeteredSomeValueNonCopying(BoolValue(true)),
 			&sema.OptionalType{Type: sema.BoolType},
 		)
@@ -65,7 +65,7 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		value := inter.BoxOptional(
-			ReturnEmptyLocationRange,
+			EmptyLocationRange,
 			NewUnmeteredSomeValueNonCopying(BoolValue(true)),
 			&sema.OptionalType{Type: &sema.OptionalType{Type: sema.BoolType}},
 		)
@@ -82,7 +82,7 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 
 		// NOTE:
 		value := inter.BoxOptional(
-			ReturnEmptyLocationRange,
+			EmptyLocationRange,
 			Nil,
 			&sema.OptionalType{Type: &sema.OptionalType{Type: sema.BoolType}},
 		)
@@ -97,7 +97,7 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 
 		// NOTE:
 		value := inter.BoxOptional(
-			ReturnEmptyLocationRange,
+			EmptyLocationRange,
 			NewUnmeteredSomeValueNonCopying(Nil),
 			&sema.OptionalType{Type: &sema.OptionalType{Type: sema.BoolType}},
 		)
@@ -127,7 +127,7 @@ func TestInterpreterBoxing(t *testing.T) {
 						BoolValue(true),
 					),
 					inter.ConvertAndBox(
-						ReturnEmptyLocationRange,
+						EmptyLocationRange,
 						BoolValue(true),
 						sema.BoolType,
 						&sema.OptionalType{Type: anyType},
@@ -144,7 +144,7 @@ func TestInterpreterBoxing(t *testing.T) {
 						BoolValue(true),
 					),
 					inter.ConvertAndBox(
-						ReturnEmptyLocationRange,
+						EmptyLocationRange,
 						NewUnmeteredSomeValueNonCopying(BoolValue(true)),
 						&sema.OptionalType{Type: sema.BoolType},
 						&sema.OptionalType{Type: anyType},
@@ -181,7 +181,7 @@ func BenchmarkValueIsSubtypeOfSemaType(b *testing.B) {
 
 	array := NewArrayValue(
 		inter,
-		ReturnEmptyLocationRange,
+		EmptyLocationRange,
 		typ,
 		owner,
 		values...,

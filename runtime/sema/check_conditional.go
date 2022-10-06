@@ -20,6 +20,7 @@ package sema
 
 import (
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common/persistent"
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -132,8 +133,8 @@ func (checker *Checker) checkConditionalBranches(
 	thenReturnInfo := initialReturnInfo.Clone()
 	elseReturnInfo := initialReturnInfo.Clone()
 
-	var thenInitializedMembers *MemberSet
-	var elseInitializedMembers *MemberSet
+	var thenInitializedMembers *persistent.OrderedSet[*Member]
+	var elseInitializedMembers *persistent.OrderedSet[*Member]
 	if functionActivation.InitializationInfo != nil {
 		initialInitializedMembers := functionActivation.InitializationInfo.InitializedFieldMembers
 		thenInitializedMembers = initialInitializedMembers.Clone()
@@ -174,7 +175,12 @@ func (checker *Checker) checkConditionalBranches(
 		}
 	}
 
-	checker.resources.MergeBranches(thenResources, elseResources)
+	checker.resources.MergeBranches(
+		thenResources,
+		thenReturnInfo,
+		elseResources,
+		elseReturnInfo,
+	)
 
 	return
 }
@@ -186,7 +192,7 @@ func (checker *Checker) checkConditionalBranches(
 func (checker *Checker) checkBranch(
 	check TypeCheckFunc,
 	temporaryReturnInfo *ReturnInfo,
-	temporaryInitializedMembers *MemberSet,
+	temporaryInitializedMembers *persistent.OrderedSet[*Member],
 	temporaryResources *Resources,
 ) Type {
 	return wrapTypeCheck(check,

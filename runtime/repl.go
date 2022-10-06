@@ -19,6 +19,8 @@
 package runtime
 
 import (
+	"fmt"
+	goRuntime "runtime"
 	"sort"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -105,6 +107,27 @@ func (r *REPL) handleCheckerError() bool {
 }
 
 func (r *REPL) Accept(code []byte) (inputIsComplete bool) {
+
+	defer func() {
+		if panicResult := recover(); panicResult != nil {
+
+			var err error
+
+			switch panicResult := panicResult.(type) {
+			case goRuntime.Error:
+				// don't recover Go or external panics
+				panic(panicResult)
+			case error:
+				err = panicResult
+				break
+			default:
+				err = fmt.Errorf("%s", panicResult)
+				break
+			}
+
+			r.onError(err, r.checker.Location, r.codes)
+		}
+	}()
 
 	r.codes[r.checker.Location] = code
 

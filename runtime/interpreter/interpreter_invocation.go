@@ -75,7 +75,10 @@ func (interpreter *Interpreter) invokeFunctionValue(
 			locationPos = invocationPosition
 		}
 
-		getLocationRange := locationRangeGetter(interpreter, interpreter.Location, locationPos)
+		locationRange := LocationRange{
+			Location:    interpreter.Location,
+			HasPosition: locationPos,
+		}
 
 		if i < parameterTypeCount {
 			parameterType := parameterTypes[i]
@@ -83,12 +86,12 @@ func (interpreter *Interpreter) invokeFunctionValue(
 				argument,
 				argumentType,
 				parameterType,
-				getLocationRange,
+				locationRange,
 			)
 		} else {
 			transferredArguments[i] = argument.Transfer(
 				interpreter,
-				getLocationRange,
+				locationRange,
 				atree.Address{},
 				false,
 				nil,
@@ -96,7 +99,10 @@ func (interpreter *Interpreter) invokeFunctionValue(
 		}
 	}
 
-	getLocationRange := locationRangeGetter(interpreter, interpreter.Location, invocationPosition)
+	locationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: invocationPosition,
+	}
 
 	invocation := NewInvocation(
 		interpreter,
@@ -104,7 +110,7 @@ func (interpreter *Interpreter) invokeFunctionValue(
 		transferredArguments,
 		argumentTypes,
 		typeParameterTypes,
-		getLocationRange,
+		locationRange,
 	)
 
 	return function.invoke(invocation)

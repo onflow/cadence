@@ -236,11 +236,6 @@ var AccountEventProviderParameter = &sema.Parameter{
 	TypeAnnotation: sema.NewTypeAnnotation(&sema.AddressType{}),
 }
 
-var AccountEventRemoverParameter = &sema.Parameter{
-	Identifier:     "remover",
-	TypeAnnotation: sema.NewTypeAnnotation(&sema.AddressType{}),
-}
-
 var AccountEventRecipientParameter = &sema.Parameter{
 	Identifier:     "recipient",
 	TypeAnnotation: sema.NewTypeAnnotation(&sema.AddressType{}),
@@ -256,7 +251,7 @@ var AccountEventTypeParameter = &sema.Parameter{
 	TypeAnnotation: sema.NewTypeAnnotation(sema.MetaType),
 }
 
-var AccountInboxPublishEventType = newFlowEventType(
+var AccountInboxPublishedEventType = newFlowEventType(
 	"InboxValuePublished",
 	AccountEventProviderParameter,
 	AccountEventRecipientParameter,
@@ -264,9 +259,15 @@ var AccountInboxPublishEventType = newFlowEventType(
 	AccountEventTypeParameter,
 )
 
-var AccountInboxRemoveEventType = newFlowEventType(
-	"InboxValueRemove",
+var AccountInboxUnpublishedEventType = newFlowEventType(
+	"InboxValueUnpublished",
 	AccountEventProviderParameter,
-	AccountEventRemoverParameter,
+	AccountEventNameParameter,
+)
+
+var AccountInboxClaimedEventType = newFlowEventType(
+	"InboxValueClaimed",
+	AccountEventProviderParameter,
+	AccountEventRecipientParameter,
 	AccountEventNameParameter,
 )
