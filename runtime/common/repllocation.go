@@ -28,7 +28,6 @@ import (
 const REPLLocationPrefix = "REPL"
 
 // REPLLocation
-//
 type REPLLocation struct{}
 
 var _ Location = REPLLocation{}

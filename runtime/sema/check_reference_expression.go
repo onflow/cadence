@@ -24,7 +24,6 @@ import (
 
 // VisitReferenceExpression checks a reference expression `&t as T`,
 // where `t` is the referenced expression, and `T` is the result type.
-//
 func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.ReferenceExpression) Type {
 
 	// Check the result type and ensure it is a reference type

@@ -26,7 +26,6 @@ import (
 // Each type has a unique dedicated bit/bit-pattern in the bitmask.
 // The mask consist of two sections: `lowerMask` and the `upperMask`.
 // Each section can represent 64-types.
-//
 type TypeTag struct {
 	lowerMask uint64
 	upperMask uint64

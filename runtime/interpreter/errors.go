@@ -104,7 +104,6 @@ func (e StackTraceError) ImportLocation() common.Location {
 }
 
 // PositionedError wraps an unpositioned error with position info
-//
 type PositionedError struct {
 	Err error
 	ast.Range
@@ -280,7 +279,6 @@ func (e DivisionByZeroError) Error() string {
 }
 
 // InvalidatedResourceError
-//
 type InvalidatedResourceError struct {
 	LocationRange
 }
@@ -295,7 +293,6 @@ func (e InvalidatedResourceError) Error() string {
 
 // DestroyedResourceError is the error which is reported
 // when a user uses a destroyed resource through a reference
-//
 type DestroyedResourceError struct {
 	LocationRange
 }
@@ -309,7 +306,6 @@ func (e DestroyedResourceError) Error() string {
 }
 
 // ForceAssignmentToNonNilResourceError
-//
 type ForceAssignmentToNonNilResourceError struct {
 	LocationRange
 }
@@ -323,7 +319,6 @@ func (e ForceAssignmentToNonNilResourceError) Error() string {
 }
 
 // ForceNilError
-//
 type ForceNilError struct {
 	LocationRange
 }
@@ -337,7 +332,6 @@ func (e ForceNilError) Error() string {
 }
 
 // ForceCastTypeMismatchError
-//
 type ForceCastTypeMismatchError struct {
 	ExpectedType sema.Type
 	ActualType   sema.Type
@@ -357,7 +351,6 @@ func (e ForceCastTypeMismatchError) Error() string {
 }
 
 // TypeMismatchError
-//
 type TypeMismatchError struct {
 	ExpectedType sema.Type
 	ActualType   sema.Type
@@ -377,7 +370,6 @@ func (e TypeMismatchError) Error() string {
 }
 
 // InvalidPathDomainError
-//
 type InvalidPathDomainError struct {
 	ActualDomain    common.PathDomain
 	ExpectedDomains []common.PathDomain
@@ -409,7 +401,6 @@ func (e InvalidPathDomainError) SecondaryError() string {
 }
 
 // OverwriteError
-//
 type OverwriteError struct {
 	Address AddressValue
 	Path    PathValue
@@ -429,7 +420,6 @@ func (e OverwriteError) Error() string {
 }
 
 // CyclicLinkError
-//
 type CyclicLinkError struct {
 	Address common.Address
 	Paths   []PathValue
@@ -458,7 +448,6 @@ func (e CyclicLinkError) Error() string {
 }
 
 // ArrayIndexOutOfBoundsError
-//
 type ArrayIndexOutOfBoundsError struct {
 	Index int
 	Size  int
@@ -478,7 +467,6 @@ func (e ArrayIndexOutOfBoundsError) Error() string {
 }
 
 // ArraySliceIndicesError
-//
 type ArraySliceIndicesError struct {
 	FromIndex int
 	UpToIndex int
@@ -514,7 +502,6 @@ func (e InvalidSliceIndexError) Error() string {
 }
 
 // StringIndexOutOfBoundsError
-//
 type StringIndexOutOfBoundsError struct {
 	Index  int
 	Length int
@@ -534,7 +521,6 @@ func (e StringIndexOutOfBoundsError) Error() string {
 }
 
 // StringSliceIndicesError
-//
 type StringSliceIndicesError struct {
 	FromIndex int
 	UpToIndex int
@@ -554,7 +540,6 @@ func (e StringSliceIndicesError) Error() string {
 }
 
 // EventEmissionUnavailableError
-//
 type EventEmissionUnavailableError struct {
 	LocationRange
 }
@@ -568,7 +553,6 @@ func (e EventEmissionUnavailableError) Error() string {
 }
 
 // UUIDUnavailableError
-//
 type UUIDUnavailableError struct {
 	LocationRange
 }
@@ -582,7 +566,6 @@ func (e UUIDUnavailableError) Error() string {
 }
 
 // TypeLoadingError
-//
 type TypeLoadingError struct {
 	TypeID common.TypeID
 }
@@ -611,7 +594,6 @@ func (e MissingMemberValueError) Error() string {
 }
 
 // InvocationArgumentTypeError
-//
 type InvocationArgumentTypeError struct {
 	Index         int
 	ParameterType sema.Type
@@ -631,7 +613,6 @@ func (e InvocationArgumentTypeError) Error() string {
 }
 
 // MemberAccessTypeError
-//
 type MemberAccessTypeError struct {
 	ExpectedType sema.Type
 	ActualType   sema.Type
@@ -651,7 +632,6 @@ func (e MemberAccessTypeError) Error() string {
 }
 
 // ValueTransferTypeError
-//
 type ValueTransferTypeError struct {
 	ExpectedType sema.Type
 	ActualType   sema.Type
@@ -671,7 +651,6 @@ func (e ValueTransferTypeError) Error() string {
 }
 
 // ResourceConstructionError
-//
 type ResourceConstructionError struct {
 	CompositeType *sema.CompositeType
 	LocationRange
@@ -690,7 +669,6 @@ func (e ResourceConstructionError) Error() string {
 }
 
 // ContainerMutationError
-//
 type ContainerMutationError struct {
 	ExpectedType sema.Type
 	ActualType   sema.Type
@@ -710,7 +688,6 @@ func (e ContainerMutationError) Error() string {
 }
 
 // NonStorableValueError
-//
 type NonStorableValueError struct {
 	Value Value
 }
@@ -724,7 +701,6 @@ func (e NonStorableValueError) Error() string {
 }
 
 // NonStorableStaticTypeError
-//
 type NonStorableStaticTypeError struct {
 	Type sema.Type
 }
@@ -758,7 +734,6 @@ func (e InterfaceMissingLocationError) Error() string {
 }
 
 // InvalidOperandsError
-//
 type InvalidOperandsError struct {
 	Operation    ast.Operation
 	FunctionName string
@@ -807,7 +782,6 @@ func (e InvalidPublicKeyError) Unwrap() error {
 }
 
 // NonTransferableValueError
-//
 type NonTransferableValueError struct {
 	Value Value
 }
@@ -821,7 +795,6 @@ func (e NonTransferableValueError) Error() string {
 }
 
 // DuplicateKeyInResourceDictionaryError
-//
 type DuplicateKeyInResourceDictionaryError struct {
 	LocationRange
 }

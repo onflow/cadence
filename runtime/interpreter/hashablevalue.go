@@ -23,7 +23,6 @@ import (
 )
 
 // HashableValue is an immutable value that can be hashed
-//
 type HashableValue interface {
 	Value
 	HashInput(interpreter *Interpreter, locationRange LocationRange, scratch []byte) []byte
@@ -52,7 +51,6 @@ func newHashInputProvider(interpreter *Interpreter, locationRange LocationRange)
 
 // HashInputType is a type flag that is included in the hash input for a value,
 // i.e., it should be included in the result of HashableValue.HashInput.
-//
 type HashInputType byte
 
 const (

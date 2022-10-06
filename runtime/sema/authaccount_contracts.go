@@ -30,7 +30,6 @@ const AuthAccountContractsTypeUpdateExperimentalFunctionName = "update__experime
 const AuthAccountContractsTypeNamesField = "names"
 
 // AuthAccountContractsType represents the type `AuthAccount.Contracts`
-//
 var AuthAccountContractsType = func() *CompositeType {
 
 	authAccountContractsType := &CompositeType{

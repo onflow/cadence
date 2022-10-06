@@ -23,7 +23,6 @@ const functionTypeIndicator = 0x60
 
 // FunctionType is the type of a function.
 // It may have multiple parameters and return values
-//
 type FunctionType struct {
 	Params  []ValueType
 	Results []ValueType

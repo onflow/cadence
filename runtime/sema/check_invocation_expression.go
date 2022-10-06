@@ -482,7 +482,6 @@ func (checker *Checker) checkInvocation(
 
 // checkTypeParameterInference checks that all type parameters
 // of the given generic function type have been assigned a type.
-//
 func (checker *Checker) checkTypeParameterInference(
 	functionType *FunctionType,
 	typeArguments *TypeParameterTypeOrderedMap,

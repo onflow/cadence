@@ -34,7 +34,6 @@ Attempt to decode the input as a UTF-8 encoded string. Returns nil if the input 
 `
 
 // StringType represents the string type
-//
 var StringType = &SimpleType{
 	Name:                 "String",
 	QualifiedName:        "String",

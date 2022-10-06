@@ -20,7 +20,6 @@ package ast
 
 // ExpressionAsType attempts to convert an expression to a type.
 // Some expressions can be considered both an expression and a type
-//
 func ExpressionAsType(expression Expression) Type {
 	switch expression := expression.(type) {
 	case *IdentifierExpression:

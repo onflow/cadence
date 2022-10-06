@@ -31,7 +31,6 @@ import (
 )
 
 // FunctionValue
-//
 type FunctionValue interface {
 	Value
 	isFunctionValue()
@@ -43,7 +42,6 @@ type FunctionValue interface {
 }
 
 // InterpretedFunctionValue
-//
 type InterpretedFunctionValue struct {
 	Interpreter      *Interpreter
 	ParameterList    *ast.ParameterList
@@ -173,7 +171,6 @@ func (*InterpretedFunctionValue) DeepRemove(_ *Interpreter) {
 }
 
 // HostFunctionValue
-//
 type HostFunction func(invocation Invocation) Value
 
 type HostFunctionValue struct {
@@ -327,7 +324,6 @@ func (v *HostFunctionValue) SetNestedVariables(variables map[string]*Variable) {
 }
 
 // BoundFunctionValue
-//
 type BoundFunctionValue struct {
 	Function FunctionValue
 	Self     *CompositeValue

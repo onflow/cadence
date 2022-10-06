@@ -55,7 +55,6 @@ const AuthAccountInboxClaimField = "claim"
 // AuthAccountType represents the authorized access to an account.
 // Access to an AuthAccount means having full access to its storage, public keys, and code.
 // Only signed transactions can get the AuthAccount for an account.
-//
 var AuthAccountType = func() *CompositeType {
 
 	authAccountType := &CompositeType{

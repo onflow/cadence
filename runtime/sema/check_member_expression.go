@@ -24,7 +24,6 @@ import (
 )
 
 // NOTE: only called if the member expression is *not* an assignment
-//
 func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) Type {
 	accessedType, member, isOptional := checker.visitMember(expression)
 
@@ -288,7 +287,6 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 
 // isReadableMember returns true if the given member can be read from
 // in the current location of the checker
-//
 func (checker *Checker) isReadableMember(member *Member) bool {
 	if checker.isReadableAccess(member.Access) ||
 		checker.containerTypes[member.ContainerType] {
@@ -326,7 +324,6 @@ func (checker *Checker) isReadableMember(member *Member) bool {
 
 // isWriteableMember returns true if the given member can be written to
 // in the current location of the checker
-//
 func (checker *Checker) isWriteableMember(member *Member) bool {
 	return checker.isWriteableAccess(member.Access) ||
 		checker.containerTypes[member.ContainerType]
@@ -343,7 +340,6 @@ func (checker *Checker) isMutatableMember(member *Member) bool {
 // of the given type, if any.
 //
 // The given type itself might be the result.
-//
 func containingContractKindedType(t Type) CompositeKindedType {
 	for {
 		if compositeKindedType, ok := t.(CompositeKindedType); ok &&

@@ -18,5 +18,4 @@
 
 // Package json implements the JSON-Cadence specification:
 // https://github.com/onflow/flow/blob/master/docs/json-cadence-spec.md
-//
 package json

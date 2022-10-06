@@ -31,7 +31,6 @@ import (
 
 // assignmentGetterSetter returns a getter/setter function pair
 // for the target expression
-//
 func (interpreter *Interpreter) assignmentGetterSetter(expression ast.Expression) getterSetter {
 	switch expression := expression.(type) {
 	case *ast.IdentifierExpression:
@@ -57,7 +56,6 @@ func (interpreter *Interpreter) assignmentGetterSetter(expression ast.Expression
 
 // identifierExpressionGetterSetter returns a getter/setter function pair
 // for the target identifier expression
-//
 func (interpreter *Interpreter) identifierExpressionGetterSetter(identifierExpression *ast.IdentifierExpression) getterSetter {
 	identifier := identifierExpression.Identifier.Identifier
 	variable := interpreter.FindVariable(identifier)
@@ -77,7 +75,6 @@ func (interpreter *Interpreter) identifierExpressionGetterSetter(identifierExpre
 
 // indexExpressionGetterSetter returns a getter/setter function pair
 // for the target index expression
-//
 func (interpreter *Interpreter) indexExpressionGetterSetter(indexExpression *ast.IndexExpression) getterSetter {
 	target, ok := interpreter.evalExpression(indexExpression.TargetExpression).(ValueIndexableValue)
 	if !ok {
@@ -131,7 +128,6 @@ func (interpreter *Interpreter) indexExpressionGetterSetter(indexExpression *ast
 
 // memberExpressionGetterSetter returns a getter/setter function pair
 // for the target member expression
-//
 func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *ast.MemberExpression) getterSetter {
 	target := interpreter.evalExpression(memberExpression.Expression)
 	identifier := memberExpression.Identifier.Identifier

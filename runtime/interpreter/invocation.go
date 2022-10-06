@@ -24,7 +24,6 @@ import (
 )
 
 // Invocation
-//
 type Invocation struct {
 	Self               MemberAccessibleValue
 	Arguments          []Value
@@ -55,7 +54,6 @@ func NewInvocation(
 }
 
 // CallStack is the stack of invocations (call stack).
-//
 type CallStack struct {
 	Invocations []Invocation
 }
