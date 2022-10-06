@@ -2001,4 +2001,74 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 		resourceUseAfterInvalidationErr := &sema.ResourceUseAfterInvalidationError{}
 		assert.ErrorAs(t, errors[1], &resourceUseAfterInvalidationErr)
 	})
+
+	t.Run("nil coalescing lhs", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub contract Test {
+                pub fun test() {
+                    let x: @R? <- create R()
+                    let xRef = (&x as &R?) ?? nil
+                    destroy x
+                    xRef!.a
+                }
+            }
+
+            pub resource R {
+                pub let a: Int
+
+                init() {
+                    self.a = 5
+                }
+            }
+            `,
+		)
+
+		require.Error(t, err)
+		errors := ExpectCheckerErrors(t, err, 1)
+
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+	})
+
+	t.Run("nil coalescing rhs", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub contract Test {
+                pub fun test() {
+                    let x: @R? <- create R()
+                    let y: @R <- create R()
+
+                    let xRef = (&x as &R?) ?? y
+                    destroy y
+                    xRef!.a
+                    destroy x
+                }
+            }
+
+            pub resource R {
+                pub let a: Int
+
+                init() {
+                    self.a = 5
+                }
+            }
+            `,
+		)
+
+		require.Error(t, err)
+		errors := ExpectCheckerErrors(t, err, 2)
+
+		nilCoalescingErr := &sema.InvalidNilCoalescingRightResourceOperandError{}
+		assert.ErrorAs(t, errors[0], &nilCoalescingErr)
+
+		invalidBinaryOp := &sema.InvalidBinaryOperandError{}
+		assert.ErrorAs(t, errors[1], &invalidBinaryOp)
+	})
 }

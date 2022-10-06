@@ -293,6 +293,11 @@ func (checker *Checker) referenceExpression(expr ast.Expression) *ast.ReferenceE
 		return checker.referenceExpression(expr.Expression)
 	case *ast.CastingExpression:
 		return checker.referenceExpression(expr.Expression)
+	case *ast.BinaryExpression:
+		if expr.Operation != ast.OperationNilCoalesce {
+			return nil
+		}
+		return checker.referenceExpression(expr.Left)
 	default:
 		return nil
 	}

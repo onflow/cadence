@@ -122,7 +122,7 @@ type Checker struct {
 	memoryGauge  common.MemoryGauge
 	PositionInfo *PositionInfo
 
-	// Holds a mapping between a references and their referenced-variable
+	// Holds a mapping between references and their referenced-variable
 	resourceReferences *VariableActivations
 }
 
