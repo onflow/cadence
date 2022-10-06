@@ -20,7 +20,6 @@ package stdlib
 
 import (
 	"fmt"
-	"math/big"
 
 	"golang.org/x/crypto/sha3"
 
@@ -616,8 +615,7 @@ type PublicKey struct {
 type AccountKeyProvider interface {
 	// GetAccountKey retrieves a key from an account by index.
 	GetAccountKey(address common.Address, index int) (*AccountKey, error)
-	IterateKeys(address common.Address, fn func(*AccountKey) bool) error
-	AccountKeysCount(address common.Address) *big.Int
+	AccountKeysCount(address common.Address) uint64
 }
 
 // public keys are assumed to be already validated
@@ -717,40 +715,39 @@ func newAccountKeysForEachFunction(
 				)
 			}
 
-			var invocationErr error
+			count := provider.AccountKeysCount(address)
 
-			err := provider.IterateKeys(address, func(key *AccountKey) bool {
+			var index uint64
+			for index = 0; index < count; index++ {
+				key, err := provider.GetAccountKey(address, int(index))
+				if err != nil {
+					// if storage fails to grab an account key, we have bigger problems to worry about
+					panic(err)
+				}
+
+				if key.IsRevoked {
+					continue
+				}
+
 				liftedKey := liftKeyToValue(key)
+
 				res, err := inter.InvokeFunction(
 					fnValue,
 					newSubInvocation(liftedKey),
 				)
-
 				if err != nil {
-					invocationErr = err
-					// signal to provider to stop iteration
-					return false
+					// interpreter panicked while invoking the inner function value
+					panic(err)
 				}
 
-				boolResult, ok := res.(interpreter.BoolValue)
-
+				shouldContinue, ok := res.(interpreter.BoolValue)
 				if !ok {
-					// this might be dangerous as it leaves the provider
-					// in an inconsistent state
 					panic(errors.NewUnreachableError())
 				}
 
-				return bool(boolResult)
-			})
-
-			if err != nil {
-				// self address is invalid, or the provider threw a runtime error
-				panic(err)
-			}
-
-			if invocationErr != nil {
-				// error while interpreter while invoking the inner function value
-				panic(invocationErr)
+				if !bool(shouldContinue) {
+					break
+				}
 			}
 
 			return interpreter.Void
@@ -758,6 +755,7 @@ func newAccountKeysForEachFunction(
 		sema.AccountKeysTypeForEachFunctionType,
 	)
 }
+
 func newAccountKeysCountFunction(
 	gauge common.MemoryGauge,
 	provider AccountKeyProvider,
@@ -768,10 +766,8 @@ func newAccountKeysCountFunction(
 	return interpreter.NewHostFunctionValue(
 		gauge,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			keyCount := provider.AccountKeysCount(address)
-			usage := common.NewBigIntMemoryUsage(len(keyCount.Bits()))
-			return interpreter.NewIntValueFromBigInt(gauge, usage, func() *big.Int {
-				return keyCount
+			return interpreter.NewUInt64Value(invocation.Interpreter, func() uint64 {
+				return provider.AccountKeysCount(address)
 			})
 		},
 		sema.AccountKeysTypeCountFunctionType,

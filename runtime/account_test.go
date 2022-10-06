@@ -20,7 +20,6 @@ package runtime
 
 import (
 	"fmt"
-	"math/big"
 	"testing"
 
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -982,8 +981,8 @@ func getAccountKeyTestRuntimeInterface(storage *testAccountKeyStorage) *testRunt
 
 			return accountKey, nil
 		},
-		accountKeysCount: func(address Address) *big.Int {
-			return big.NewInt(int64(storage.unrevokedKeyCount))
+		accountKeysCount: func(address Address) uint64 {
+			return uint64(storage.unrevokedKeyCount)
 		},
 		log: func(message string) {
 			storage.logs = append(storage.logs, message)

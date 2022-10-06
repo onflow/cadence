@@ -19,7 +19,6 @@
 package runtime
 
 import (
-	"math/big"
 	"time"
 
 	"github.com/onflow/cadence/runtime/activations"
@@ -246,12 +245,8 @@ func (e *interpreterEnvironment) GetAccountKey(address common.Address, index int
 	return e.runtimeInterface.GetAccountKey(address, index)
 }
 
-func (e *interpreterEnvironment) AccountKeysCount(address common.Address) *big.Int {
+func (e *interpreterEnvironment) AccountKeysCount(address common.Address) uint64 {
 	return e.runtimeInterface.AccountKeysCount(address)
-}
-
-func (e *interpreterEnvironment) IterateKeys(address common.Address, fn func(*stdlib.AccountKey) bool) error {
-	return e.runtimeInterface.IterateKeys(address, fn)
 }
 
 func (e *interpreterEnvironment) GetAccountContractNames(address common.Address) ([]string, error) {

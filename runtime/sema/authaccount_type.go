@@ -737,7 +737,7 @@ var AuthAccountKeysTypeRevokeFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
 			Identifier:     AccountKeyKeyIndexField,
-			TypeAnnotation: NewTypeAnnotation(IntType),
+			TypeAnnotation: NewTypeAnnotation(UInt64Type),
 		},
 	},
 	ReturnTypeAnnotation:  NewTypeAnnotation(&OptionalType{Type: AccountKeyType}),

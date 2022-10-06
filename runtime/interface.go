@@ -19,7 +19,6 @@
 package runtime
 
 import (
-	"math/big"
 	"time"
 
 	"github.com/onflow/atree"
@@ -83,8 +82,7 @@ type Interface interface {
 	AddAccountKey(address Address, publicKey *PublicKey, hashAlgo HashAlgorithm, weight int) (*AccountKey, error)
 	// GetAccountKey retrieves a key from an account by index.
 	GetAccountKey(address Address, index int) (*AccountKey, error)
-	AccountKeysCount(address Address) *big.Int
-	IterateKeys(address Address, fn func(*AccountKey) bool) error
+	AccountKeysCount(address Address) uint64
 	// RevokeAccountKey removes a key from an account by index.
 	RevokeAccountKey(address Address, index int) (*AccountKey, error)
 	// UpdateAccountContractCode updates the code associated with an account contract.
