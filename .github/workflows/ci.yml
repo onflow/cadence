@@ -27,7 +27,7 @@ jobs:
         fetch-depth: 0
     - uses: actions/setup-go@v2
       with:
-        go-version: env.GO_VERSION
+        go-version: $env:GO_VERSION
     - uses: actions/setup-node@v2
       with:
         node-version: '15'
@@ -58,7 +58,7 @@ jobs:
         fetch-depth: 0
     - uses: actions/setup-go@v2
       with:
-        go-version: env.GO_VERSION
+        go-version: $env:GO_VERSION
     - uses: actions/cache@v1
       with:
         path: ~/go/pkg/mod
