@@ -717,19 +717,26 @@ func newAccountKeysForEachFunction(
 
 			count := provider.AccountKeysCount(address)
 
+			var err error
+			var accountKey *AccountKey
+
 			var index uint64
 			for index = 0; index < count; index++ {
-				key, err := provider.GetAccountKey(address, int(index))
+				wrapPanic(func() {
+					accountKey, err = provider.GetAccountKey(address, int(index))
+				})
 				if err != nil {
-					// if storage fails to grab an account key, we have bigger problems to worry about
+					// Here it is expected the host function to return a nil key, if a key is not found at the given index.
+					// This is done because, if the host function returns an error when a key is not found, then
+					// currently there's no way to distinguish between a 'key not found error' vs other internal errors.
 					panic(err)
 				}
 
-				if key.IsRevoked {
+				if accountKey == nil || accountKey.IsRevoked {
 					continue
 				}
 
-				liftedKey := liftKeyToValue(key)
+				liftedKey := liftKeyToValue(accountKey)
 
 				res, err := inter.InvokeFunction(
 					fnValue,
