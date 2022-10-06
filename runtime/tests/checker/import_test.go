@@ -396,7 +396,9 @@ func TestCheckInvalidImportedError(t *testing.T) {
 	_, importedErr := ParseAndCheck(t, `
 	  let x: Bool = 1
 	`)
-	require.Error(t, importedErr)
+	errs := ExpectCheckerErrors(t, importedErr, 1)
+
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 
 	_, err := ParseAndCheckWithOptions(t,
 		`
@@ -411,7 +413,7 @@ func TestCheckInvalidImportedError(t *testing.T) {
 		},
 	)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs = ExpectCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ImportedProgramError{}, errs[0])
 }

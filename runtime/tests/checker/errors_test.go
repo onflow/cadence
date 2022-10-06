@@ -22,7 +22,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -87,7 +86,9 @@ func TestCheckErrorShortCircuiting(t *testing.T) {
 								},
 							},
 						)
-						require.Error(t, err)
+						errs := ExpectCheckerErrors(t, err, 1)
+
+						assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 
 						return nil, err
 					},

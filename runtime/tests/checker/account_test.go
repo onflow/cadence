@@ -1420,7 +1420,6 @@ func TestAuthAccountContracts(t *testing.T) {
             }
 	    `)
 
-		require.Error(t, err)
 		errors := ExpectCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidAssignmentAccessError{}, errors[0])
@@ -1455,7 +1454,6 @@ func TestPublicAccountContracts(t *testing.T) {
             }
 	    `)
 
-		require.Error(t, err)
 		errors := ExpectCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidAssignmentAccessError{}, errors[0])
@@ -1469,7 +1467,6 @@ func TestPublicAccountContracts(t *testing.T) {
             }
 	    `)
 
-		require.Error(t, err)
 		errors := ExpectCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.NotDeclaredMemberError{}, errors[0])
@@ -1484,7 +1481,6 @@ func TestPublicAccountContracts(t *testing.T) {
             }
 	    `)
 
-		require.Error(t, err)
 		errors := ExpectCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.NotDeclaredMemberError{}, errors[0])
@@ -1499,7 +1495,6 @@ func TestPublicAccountContracts(t *testing.T) {
             }
 	    `)
 
-		require.Error(t, err)
 		errors := ExpectCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.NotDeclaredMemberError{}, errors[0])
@@ -1520,10 +1515,11 @@ func TestCheckAccountPaths(t *testing.T) {
 		`,
 		)
 
-		require.Error(t, err)
 		errors := ExpectCheckerErrors(t, err, 1)
-		require.IsType(t, &sema.NotDeclaredMemberError{}, errors[0])
-		notDeclaredError := errors[0].(*sema.NotDeclaredMemberError)
+
+		var notDeclaredError *sema.NotDeclaredMemberError
+		require.ErrorAs(t, errors[0], &notDeclaredError)
+
 		assert.Equal(t, "StoragePaths", notDeclaredError.Name)
 	})
 
@@ -1561,7 +1557,6 @@ func TestCheckAccountPaths(t *testing.T) {
 		`,
 		)
 
-		require.Error(t, err)
 		errors := ExpectCheckerErrors(t, err, 1)
 		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
 	})
@@ -1617,12 +1612,12 @@ func TestCheckAccountPaths(t *testing.T) {
 		`,
 		)
 
-		require.Error(t, err)
 		errors := ExpectCheckerErrors(t, err, 1)
 
 		// `type` expects a `StoragePath`, not a `PublicPath`
-		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
-		mismatchError := errors[0].(*sema.TypeMismatchError)
+		var mismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errors[0], &mismatchError)
+
 		assert.Equal(t, "StoragePath", mismatchError.ExpectedType.QualifiedString())
 	})
 
@@ -1689,7 +1684,6 @@ func TestCheckPublicAccountIteration(t *testing.T) {
 			`,
 		)
 
-		require.Error(t, err)
 		errors := ExpectCheckerErrors(t, err, 1)
 		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
 	})
@@ -1704,7 +1698,6 @@ func TestCheckPublicAccountIteration(t *testing.T) {
 			`,
 		)
 
-		require.Error(t, err)
 		errors := ExpectCheckerErrors(t, err, 1)
 		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
 	})
@@ -1719,7 +1712,6 @@ func TestCheckPublicAccountIteration(t *testing.T) {
 			`,
 		)
 
-		require.Error(t, err)
 		errors := ExpectCheckerErrors(t, err, 1)
 		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
 	})
@@ -1734,7 +1726,6 @@ func TestCheckPublicAccountIteration(t *testing.T) {
 			`,
 		)
 
-		require.Error(t, err)
 		errors := ExpectCheckerErrors(t, err, 1)
 		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
 	})
@@ -1749,7 +1740,6 @@ func TestCheckPublicAccountIteration(t *testing.T) {
 			`,
 		)
 
-		require.Error(t, err)
 		errors := ExpectCheckerErrors(t, err, 1)
 		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
 	})
@@ -1817,7 +1807,6 @@ func TestCheckAuthAccountIteration(t *testing.T) {
 					`, pair.name, pair.correctType),
 				)
 
-				require.Error(t, err)
 				errors := ExpectCheckerErrors(t, err, 1)
 				require.IsType(t, &sema.TypeMismatchError{}, errors[0])
 			})
@@ -1832,7 +1821,6 @@ func TestCheckAuthAccountIteration(t *testing.T) {
 					`, pair.name, pair.correctType),
 				)
 
-				require.Error(t, err)
 				errors := ExpectCheckerErrors(t, err, 1)
 				require.IsType(t, &sema.TypeMismatchError{}, errors[0])
 			})
@@ -1847,7 +1835,6 @@ func TestCheckAuthAccountIteration(t *testing.T) {
 					`, pair.name),
 				)
 
-				require.Error(t, err)
 				errors := ExpectCheckerErrors(t, err, 1)
 				require.IsType(t, &sema.TypeMismatchError{}, errors[0])
 			})
@@ -1862,7 +1849,6 @@ func TestCheckAuthAccountIteration(t *testing.T) {
 					`, pair.name, pair.correctType),
 				)
 
-				require.Error(t, err)
 				errors := ExpectCheckerErrors(t, err, 1)
 				require.IsType(t, &sema.TypeMismatchError{}, errors[0])
 			})
@@ -1877,7 +1863,6 @@ func TestCheckAuthAccountIteration(t *testing.T) {
 					`, pair.name),
 				)
 
-				require.Error(t, err)
 				errors := ExpectCheckerErrors(t, err, 1)
 				require.IsType(t, &sema.TypeMismatchError{}, errors[0])
 			})

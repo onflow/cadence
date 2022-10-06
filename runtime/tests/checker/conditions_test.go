@@ -501,7 +501,6 @@ func TestCheckFunctionWithPostConditionAndResourceResult(t *testing.T) {
 // that the rewritten expression of a create expression may not be an invocation expression.
 // For example, this is the case for the expression `create before(...)`,
 // where the sema.BeforeExtractor returns an IdentifierExpression.
-//
 func TestCheckConditionCreateBefore(t *testing.T) {
 
 	t.Parallel()
@@ -513,7 +512,6 @@ func TestCheckConditionCreateBefore(t *testing.T) {
           }
       }
     `)
-	require.Error(t, err)
 
 	errs := ExpectCheckerErrors(t, err, 1)
 

@@ -1999,7 +1999,9 @@ func TestCheckAccessSameContractInnerStructField(t *testing.T) {
 			if expectSuccess {
 				require.NoError(t, err)
 			} else {
-				require.Error(t, err)
+				errs := ExpectCheckerErrors(t, err, 1)
+
+				assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
 			}
 		})
 	}
@@ -2048,7 +2050,10 @@ func TestCheckAccessSameContractInnerStructInterfaceField(t *testing.T) {
 			if expectSuccess {
 				require.NoError(t, err)
 			} else {
-				require.Error(t, err)
+				errs := ExpectCheckerErrors(t, err, 2)
+
+				assert.IsType(t, &sema.InvalidAccessModifierError{}, errs[0])
+				assert.IsType(t, &sema.InvalidAccessError{}, errs[1])
 			}
 		})
 	}
@@ -2095,7 +2100,9 @@ func TestCheckAccessOtherContractInnerStructField(t *testing.T) {
 			if expectSuccess {
 				require.NoError(t, err)
 			} else {
-				require.Error(t, err)
+				errs := ExpectCheckerErrors(t, err, 1)
+
+				assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
 			}
 		})
 	}
@@ -2105,14 +2112,19 @@ func TestCheckAccessOtherContractInnerStructInterfaceField(t *testing.T) {
 
 	t.Parallel()
 
-	tests := map[ast.Access]bool{
-		ast.AccessPrivate:  false,
-		ast.AccessContract: false,
-		ast.AccessAccount:  true,
-		ast.AccessPublic:   true,
+	tests := map[ast.Access][]error{
+		ast.AccessPrivate: {
+			&sema.InvalidAccessModifierError{},
+			&sema.InvalidAccessError{},
+		},
+		ast.AccessContract: {
+			&sema.InvalidAccessError{},
+		},
+		ast.AccessAccount: nil,
+		ast.AccessPublic:  nil,
 	}
 
-	for access, expectSuccess := range tests {
+	for access, expectedErrorTypes := range tests {
 
 		t.Run(access.Keyword(), func(t *testing.T) {
 			_, err := ParseAndCheck(t,
@@ -2143,10 +2155,10 @@ func TestCheckAccessOtherContractInnerStructInterfaceField(t *testing.T) {
 				),
 			)
 
-			if expectSuccess {
-				require.NoError(t, err)
-			} else {
-				require.Error(t, err)
+			errs := ExpectCheckerErrors(t, err, len(expectedErrorTypes))
+
+			for i, expectedErrorType := range expectedErrorTypes {
+				assert.IsType(t, expectedErrorType, errs[i])
 			}
 		})
 	}

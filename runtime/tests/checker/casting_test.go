@@ -6022,8 +6022,6 @@ func TestCheckStaticCastElaboration(t *testing.T) {
                 let x: T = 5 as R
             `)
 
-			require.Error(t, err)
-
 			errors := ExpectCheckerErrors(t, err, 2)
 			assert.IsType(t, &sema.NotDeclaredError{}, errors[0])
 			assert.IsType(t, &sema.NotDeclaredError{}, errors[1])
@@ -6159,7 +6157,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
                 let y: String = x as Int8
             `)
 
-			require.Error(t, err)
+			ExpectCheckerErrors(t, err, 1)
 
 			require.Len(t, checker.Elaboration.StaticCastTypes, 1)
 			for _, cast := range checker.Elaboration.StaticCastTypes { // nolint:maprangecheck
@@ -6273,7 +6271,11 @@ func TestCheckStaticCastElaboration(t *testing.T) {
                 let x = [a, b, c] as [String]
             `)
 
-			require.Error(t, err)
+			errs := ExpectCheckerErrors(t, err, 3)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
 
 			require.Len(t, checker.Elaboration.StaticCastTypes, 0)
 		})
@@ -6331,7 +6333,11 @@ func TestCheckStaticCastElaboration(t *testing.T) {
                 let x = {a: b, b: c, c: a} as {Int8: String}
             `)
 
-			require.Error(t, err)
+			errs := ExpectCheckerErrors(t, err, 3)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
 
 			require.Len(t, checker.Elaboration.StaticCastTypes, 0)
 		})
