@@ -10,7 +10,7 @@
          {
           "title": "Why Use Cadence?",
           "tags": ["reference", "patterns"],
-          "description": "Write and deploy your first smart contract within minutes on our Playground.",
+          "description":"Learn the main benefits of using Cadence for smart contract development."
           "href": "/cadence/why-cadence"
         },
         {
