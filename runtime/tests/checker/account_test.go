@@ -1898,7 +1898,7 @@ func TestCheckAccountPublish(t *testing.T) {
 			}`,
 		)
 		require.Error(t, err)
-		errors := ExpectCheckerErrors(t, err, 1)
+		errors := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, &sema.MissingArgumentLabelError{}, errors[0])
 	})
 
@@ -1911,7 +1911,7 @@ func TestCheckAccountPublish(t *testing.T) {
 			}`,
 		)
 		require.Error(t, err)
-		errors := ExpectCheckerErrors(t, err, 1)
+		errors := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, &sema.MissingArgumentLabelError{}, errors[0])
 	})
 
@@ -1924,7 +1924,7 @@ func TestCheckAccountPublish(t *testing.T) {
 			}`,
 		)
 		require.Error(t, err)
-		errors := ExpectCheckerErrors(t, err, 3)
+		errors := RequireCheckerErrors(t, err, 3)
 		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
 		require.IsType(t, &sema.TypeMismatchError{}, errors[1])
 		require.IsType(t, &sema.TypeMismatchError{}, errors[2])
@@ -1939,7 +1939,7 @@ func TestCheckAccountPublish(t *testing.T) {
 			}`,
 		)
 		require.Error(t, err)
-		errors := ExpectCheckerErrors(t, err, 1)
+		errors := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
 	})
 }
@@ -1968,7 +1968,7 @@ func TestCheckAccountUnpublish(t *testing.T) {
 			}`,
 		)
 		require.Error(t, err)
-		errors := ExpectCheckerErrors(t, err, 1)
+		errors := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
 	})
 
@@ -1983,7 +1983,7 @@ func TestCheckAccountUnpublish(t *testing.T) {
 			}`,
 		)
 		require.Error(t, err)
-		errors := ExpectCheckerErrors(t, err, 1)
+		errors := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, &sema.IncorrectTransferOperationError{}, errors[0])
 	})
 
@@ -1998,7 +1998,7 @@ func TestCheckAccountUnpublish(t *testing.T) {
 			}`,
 		)
 		require.Error(t, err)
-		errors := ExpectCheckerErrors(t, err, 1)
+		errors := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errors[0])
 	})
 }
@@ -2027,7 +2027,7 @@ func TestCheckAccountClaim(t *testing.T) {
 			}`,
 		)
 		require.Error(t, err)
-		errors := ExpectCheckerErrors(t, err, 2)
+		errors := RequireCheckerErrors(t, err, 2)
 		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
 		require.IsType(t, &sema.TypeMismatchError{}, errors[1])
 	})
@@ -2041,7 +2041,7 @@ func TestCheckAccountClaim(t *testing.T) {
 			}`,
 		)
 		require.Error(t, err)
-		errors := ExpectCheckerErrors(t, err, 1)
+		errors := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, &sema.MissingArgumentLabelError{}, errors[0])
 	})
 
@@ -2056,7 +2056,7 @@ func TestCheckAccountClaim(t *testing.T) {
 			}`,
 		)
 		require.Error(t, err)
-		errors := ExpectCheckerErrors(t, err, 1)
+		errors := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, &sema.IncorrectTransferOperationError{}, errors[0])
 	})
 
@@ -2071,7 +2071,7 @@ func TestCheckAccountClaim(t *testing.T) {
 			}`,
 		)
 		require.Error(t, err)
-		errors := ExpectCheckerErrors(t, err, 1)
+		errors := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errors[0])
 	})
 }
