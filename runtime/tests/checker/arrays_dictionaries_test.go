@@ -567,11 +567,10 @@ func TestCheckInvalidResourceArraySlice(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 3)
+	errs := ExpectCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.InvalidResourceArrayMemberError{}, errs[0])
 	assert.IsType(t, &sema.ResourceLossError{}, errs[1])
-	assert.IsType(t, &sema.ResourceLossError{}, errs[2])
 }
 
 func TestCheckArrayInsert(t *testing.T) {
@@ -809,13 +808,11 @@ func TestCheckInvalidResourceFirstIndex(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 4)
+	errs := ExpectCheckerErrors(t, err, 3)
 
 	assert.IsType(t, &sema.InvalidResourceArrayMemberError{}, errs[0])
 	assert.IsType(t, &sema.NotEquatableTypeError{}, errs[1])
 	assert.IsType(t, &sema.ResourceLossError{}, errs[2])
-	assert.IsType(t, &sema.ResourceLossError{}, errs[3])
-
 }
 
 func TestCheckArrayContains(t *testing.T) {

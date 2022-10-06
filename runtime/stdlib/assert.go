@@ -74,7 +74,7 @@ var AssertFunction = NewStandardLibraryFunction(
 			}
 			panic(AssertionError{
 				Message:       message,
-				LocationRange: invocation.GetLocationRange(),
+				LocationRange: invocation.LocationRange,
 			})
 		}
 		return interpreter.Void

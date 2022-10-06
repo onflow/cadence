@@ -66,7 +66,7 @@ func NewAuthAccountValue(
 	var keys Value
 	var inbox Value
 
-	computeField := func(name string, inter *Interpreter, getLocationRange func() LocationRange) Value {
+	computeField := func(name string, inter *Interpreter, locationRange LocationRange) Value {
 		switch name {
 		case sema.AuthAccountContractsField:
 			if contracts == nil {
@@ -84,11 +84,11 @@ func NewAuthAccountValue(
 			}
 			return inbox
 		case sema.AuthAccountPublicPathsField:
-			return inter.publicAccountPaths(address, getLocationRange)
+			return inter.publicAccountPaths(address, locationRange)
 		case sema.AuthAccountPrivatePathsField:
-			return inter.privateAccountPaths(address, getLocationRange)
+			return inter.privateAccountPaths(address, locationRange)
 		case sema.AuthAccountStoragePathsField:
-			return inter.storageAccountPaths(address, getLocationRange)
+			return inter.storageAccountPaths(address, locationRange)
 		case sema.AuthAccountForEachPublicField:
 			return inter.newStorageIterationFunction(address, common.PathDomainPublic, sema.PublicPathType)
 		case sema.AuthAccountForEachPrivateField:
@@ -181,7 +181,7 @@ func NewPublicAccountValue(
 	var keys Value
 	var contracts Value
 
-	computeField := func(name string, inter *Interpreter, getLocationRange func() LocationRange) Value {
+	computeField := func(name string, inter *Interpreter, locationRange LocationRange) Value {
 		switch name {
 		case sema.PublicAccountKeysField:
 			if keys == nil {
@@ -194,7 +194,7 @@ func NewPublicAccountValue(
 			}
 			return contracts
 		case sema.PublicAccountPathsField:
-			return inter.publicAccountPaths(address, getLocationRange)
+			return inter.publicAccountPaths(address, locationRange)
 		case sema.PublicAccountForEachPublicField:
 			return inter.newStorageIterationFunction(address, common.PathDomainPublic, sema.PublicPathType)
 		case sema.PublicAccountBalanceField:

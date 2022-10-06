@@ -76,6 +76,17 @@ func (om OrderedMap[K, V]) Get(key K) (result V, present bool) {
 	return
 }
 
+// Contains returns true if the key is present in the map
+// and false otherwise.
+func (om OrderedMap[K, V]) Contains(key K) (present bool) {
+	if om.pairs == nil {
+		return
+	}
+
+	_, present = om.pairs[key]
+	return
+}
+
 // GetPair returns the key-value pair associated with the given key.
 // Returns nil if not found.
 func (om OrderedMap[K, V]) GetPair(key K) *Pair[K, V] {

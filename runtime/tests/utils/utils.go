@@ -131,7 +131,7 @@ func ValuesAreEqual(inter *interpreter.Interpreter, expected, actual interpreter
 	}
 
 	if expected, ok := expected.(interpreter.EquatableValue); ok {
-		return expected.Equal(inter, interpreter.ReturnEmptyLocationRange, actual)
+		return expected.Equal(inter, interpreter.EmptyLocationRange, actual)
 	}
 
 	return assert.ObjectsAreEqual(expected, actual)

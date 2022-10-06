@@ -66,7 +66,7 @@ func TestInterpreterTracing(t *testing.T) {
 		owner := common.Address{0x1}
 		array := interpreter.NewArrayValue(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -83,7 +83,7 @@ func TestInterpreterTracing(t *testing.T) {
 		require.Equal(t, len(traceOps), 2)
 		require.Equal(t, traceOps[1], "array.deepRemove")
 
-		array.Destroy(inter, nil)
+		array.Destroy(inter, interpreter.EmptyLocationRange)
 		require.Equal(t, len(traceOps), 3)
 		require.Equal(t, traceOps[2], "array.destroy")
 	})
@@ -95,7 +95,7 @@ func TestInterpreterTracing(t *testing.T) {
 		})
 		dict := interpreter.NewDictionaryValue(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeString,
 				ValueType: interpreter.PrimitiveStaticTypeInt,
@@ -113,7 +113,7 @@ func TestInterpreterTracing(t *testing.T) {
 		require.Equal(t, len(traceOps), 2)
 		require.Equal(t, traceOps[1], "dictionary.deepRemove")
 
-		dict.Destroy(inter, nil)
+		dict.Destroy(inter, interpreter.EmptyLocationRange)
 		require.Equal(t, len(traceOps), 3)
 		require.Equal(t, traceOps[2], "dictionary.destroy")
 	})
@@ -136,25 +136,25 @@ func TestInterpreterTracing(t *testing.T) {
 		require.Equal(t, len(traceOps), 2)
 		require.Equal(t, traceOps[1], "composite.deepRemove")
 
-		value.SetMember(inter, nil, "abc", interpreter.Nil)
+		value.SetMember(inter, interpreter.EmptyLocationRange, "abc", interpreter.Nil)
 		require.Equal(t, len(traceOps), 3)
 		require.Equal(t, traceOps[2], "composite.setMember.abc")
 
-		value.GetMember(inter, nil, "abc")
+		value.GetMember(inter, interpreter.EmptyLocationRange, "abc")
 		require.Equal(t, len(traceOps), 4)
 		require.Equal(t, traceOps[3], "composite.getMember.abc")
 
-		value.RemoveMember(inter, nil, "abc")
+		value.RemoveMember(inter, interpreter.EmptyLocationRange, "abc")
 		require.Equal(t, len(traceOps), 5)
 		require.Equal(t, traceOps[4], "composite.removeMember.abc")
 
-		value.Destroy(inter, nil)
+		value.Destroy(inter, interpreter.EmptyLocationRange)
 		require.Equal(t, len(traceOps), 6)
 		require.Equal(t, traceOps[5], "composite.destroy")
 
 		array := interpreter.NewArrayValue(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},

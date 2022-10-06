@@ -146,7 +146,6 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 		res := Resource{Member: accessedSelfMember}
 
 		checker.checkResourceUseAfterInvalidation(res, expression.Identifier)
-		checker.resources.AddUse(res, expression.Identifier.Pos)
 	}
 
 	identifier := expression.Identifier.Identifier

@@ -29,18 +29,41 @@ type ResourceInvalidationKind uint
 const (
 	ResourceInvalidationKindUnknown ResourceInvalidationKind = iota
 	ResourceInvalidationKindMoveDefinite
+	ResourceInvalidationKindMovePotential
 	ResourceInvalidationKindMoveTemporary
-	ResourceInvalidationKindDestroy
+	ResourceInvalidationKindDestroyDefinite
+	ResourceInvalidationKindDestroyPotential
 )
 
-func (k ResourceInvalidationKind) Name() string {
+func (k ResourceInvalidationKind) DetailedNoun() string {
 	switch k {
 	case ResourceInvalidationKindMoveDefinite:
 		return "definite move"
 	case ResourceInvalidationKindMoveTemporary:
 		return "temporary move"
-	case ResourceInvalidationKindDestroy:
-		return "destroy"
+	case ResourceInvalidationKindMovePotential:
+		return "potential move"
+	case ResourceInvalidationKindDestroyDefinite:
+		return "definite destruction"
+	case ResourceInvalidationKindDestroyPotential:
+		return "potential destruction"
+	}
+
+	panic(errors.NewUnreachableError())
+}
+
+func (i ResourceInvalidationKind) CoarseNoun() string {
+	switch i {
+	case ResourceInvalidationKindMoveDefinite,
+		ResourceInvalidationKindMoveTemporary,
+		ResourceInvalidationKindMovePotential:
+
+		return "move"
+
+	case ResourceInvalidationKindDestroyDefinite,
+		ResourceInvalidationKindDestroyPotential:
+
+		return "destruction"
 	}
 
 	panic(errors.NewUnreachableError())
@@ -48,10 +71,45 @@ func (k ResourceInvalidationKind) Name() string {
 
 func (k ResourceInvalidationKind) IsDefinite() bool {
 	switch k {
-	case ResourceInvalidationKindMoveDefinite, ResourceInvalidationKindDestroy:
+	case ResourceInvalidationKindMoveDefinite,
+		ResourceInvalidationKindDestroyDefinite:
+
 		return true
-	case ResourceInvalidationKindMoveTemporary, ResourceInvalidationKindUnknown:
+
+	case ResourceInvalidationKindMovePotential,
+		ResourceInvalidationKindDestroyPotential,
+		ResourceInvalidationKindMoveTemporary,
+		ResourceInvalidationKindUnknown:
+
 		return false
+	}
+
+	panic(errors.NewUnreachableError())
+}
+
+func (k ResourceInvalidationKind) AsPotential() ResourceInvalidationKind {
+	switch k {
+	case ResourceInvalidationKindMoveDefinite:
+		return ResourceInvalidationKindMovePotential
+	case ResourceInvalidationKindDestroyDefinite:
+		return ResourceInvalidationKindDestroyPotential
+	}
+
+	return k
+}
+
+func (k ResourceInvalidationKind) CoarsePassiveVerb() string {
+	switch k {
+	case ResourceInvalidationKindMoveDefinite,
+		ResourceInvalidationKindMoveTemporary,
+		ResourceInvalidationKindMovePotential:
+
+		return "moved"
+
+	case ResourceInvalidationKindDestroyDefinite,
+		ResourceInvalidationKindDestroyPotential:
+
+		return "destroyed"
 	}
 
 	panic(errors.NewUnreachableError())
