@@ -12,6 +12,9 @@ on:
       - 'feature/**'
       - 'v**'
 
+env:
+  go-version: '1.19.2'
+
 jobs:
   test:
     name: Test
@@ -31,9 +34,9 @@ jobs:
     - uses: actions/cache@v1
       with:
         path: ~/go/pkg/mod
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        key: ${{ runner.os }}-go-${{ env.go-version }}-${{ hashFiles('**/go.sum') }}
         restore-keys: |
-          ${{ runner.os }}-go-
+          ${{ runner.os }}-go-${{ env.go-version }}-
     - name: Build
       run: make build
     - name: Test
@@ -55,7 +58,7 @@ jobs:
         fetch-depth: 0
     - uses: actions/setup-go@v2
       with:
-        go-version: '1.19.2'
+        go-version: env.go-version
     - uses: actions/cache@v1
       with:
         path: ~/go/pkg/mod
