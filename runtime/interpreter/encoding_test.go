@@ -271,7 +271,7 @@ func TestEncodeDecodeArray(t *testing.T) {
 
 		expected := NewArrayValue(
 			inter,
-			ReturnEmptyLocationRange,
+			EmptyLocationRange,
 			ConstantSizedStaticType{
 				Type: PrimitiveStaticTypeAnyStruct,
 				Size: 0,
@@ -303,7 +303,7 @@ func TestEncodeDecodeArray(t *testing.T) {
 
 		expected := NewArrayValue(
 			inter,
-			ReturnEmptyLocationRange,
+			EmptyLocationRange,
 			VariableSizedStaticType{
 				Type: PrimitiveStaticTypeAnyStruct,
 			},
@@ -340,7 +340,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 
 		expected := NewCompositeValue(
 			inter,
-			ReturnEmptyLocationRange,
+			EmptyLocationRange,
 			utils.TestLocation,
 			"TestStruct",
 			common.CompositeKindStructure,
@@ -378,7 +378,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 
 		expected := NewCompositeValue(
 			inter,
-			ReturnEmptyLocationRange,
+			EmptyLocationRange,
 			utils.TestLocation,
 			"TestResource",
 			common.CompositeKindResource,

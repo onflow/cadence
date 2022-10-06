@@ -1114,7 +1114,7 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 					BaseActivation: baseActivation,
 					PublicKeyValidationHandler: func(
 						_ *interpreter.Interpreter,
-						_ func() interpreter.LocationRange,
+						_ interpreter.LocationRange,
 						_ *interpreter.CompositeValue,
 					) error {
 						return nil
@@ -1172,7 +1172,7 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 					BaseActivation: baseActivation,
 					PublicKeyValidationHandler: func(
 						_ *interpreter.Interpreter,
-						_ func() interpreter.LocationRange,
+						_ interpreter.LocationRange,
 						_ *interpreter.CompositeValue,
 					) error {
 						return nil

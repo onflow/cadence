@@ -611,7 +611,7 @@ func TestInterpretDynamicCastingStruct(t *testing.T) {
 						require.IsType(t,
 							&interpreter.CompositeValue{},
 							inter.Globals["y"].GetValue().(*interpreter.SomeValue).
-								InnerValue(inter, interpreter.ReturnEmptyLocationRange),
+								InnerValue(inter, interpreter.EmptyLocationRange),
 						)
 					})
 				}
@@ -764,7 +764,7 @@ func testResourceCastValid(t *testing.T, types, fromType string, targetType stri
 		require.IsType(t,
 			&interpreter.CompositeValue{},
 			value.(*interpreter.SomeValue).
-				InnerValue(inter, interpreter.ReturnEmptyLocationRange),
+				InnerValue(inter, interpreter.EmptyLocationRange),
 		)
 
 	case ast.OperationForceCast:
@@ -914,7 +914,7 @@ func testStructCastValid(t *testing.T, types, fromType string, targetType string
 		require.IsType(t,
 			&interpreter.CompositeValue{},
 			value.(*interpreter.SomeValue).
-				InnerValue(inter, interpreter.ReturnEmptyLocationRange),
+				InnerValue(inter, interpreter.EmptyLocationRange),
 		)
 
 	case ast.OperationForceCast:
@@ -1229,7 +1229,7 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 						require.IsType(t, zValue, &interpreter.SomeValue{})
 						zSome := zValue.(*interpreter.SomeValue)
 
-						innerValue := zSome.InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+						innerValue := zSome.InnerValue(inter, interpreter.EmptyLocationRange)
 						require.IsType(t, innerValue, &interpreter.ArrayValue{})
 						innerArray := innerValue.(*interpreter.ArrayValue)
 
@@ -1375,7 +1375,7 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 
 						expectedDictionary := interpreter.NewDictionaryValue(
 							inter,
-							interpreter.ReturnEmptyLocationRange,
+							interpreter.EmptyLocationRange,
 							interpreter.DictionaryStaticType{
 								KeyType:   interpreter.PrimitiveStaticTypeString,
 								ValueType: interpreter.PrimitiveStaticTypeInt,
@@ -2343,7 +2343,7 @@ func testReferenceCastValid(t *testing.T, types, fromType, targetType string, op
 		require.IsType(t,
 			&interpreter.EphemeralReferenceValue{},
 			value.(*interpreter.SomeValue).
-				InnerValue(inter, interpreter.ReturnEmptyLocationRange),
+				InnerValue(inter, interpreter.EmptyLocationRange),
 		)
 
 	case ast.OperationForceCast:

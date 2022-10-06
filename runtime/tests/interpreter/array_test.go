@@ -26,7 +26,7 @@ func arrayElements(inter *interpreter.Interpreter, array *interpreter.ArrayValue
 	count := array.Count()
 	result := make([]interpreter.Value, count)
 	for i := 0; i < count; i++ {
-		result[i] = array.Get(inter, interpreter.ReturnEmptyLocationRange, i)
+		result[i] = array.Get(inter, interpreter.EmptyLocationRange, i)
 	}
 	return result
 }

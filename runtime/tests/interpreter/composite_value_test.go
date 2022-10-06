@@ -110,7 +110,7 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 		map[string]interpreter.Value{
 			"name": interpreter.NewUnmeteredStringValue("Apple"),
 		},
-		func(name string, _ *interpreter.Interpreter, _ func() interpreter.LocationRange) interpreter.Value {
+		func(name string, _ *interpreter.Interpreter, _ interpreter.LocationRange) interpreter.Value {
 			if name == "color" {
 				return interpreter.NewUnmeteredStringValue("Red")
 			}

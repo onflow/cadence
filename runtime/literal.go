@@ -196,7 +196,7 @@ func integerLiteralValue(
 		return nil, err
 	}
 
-	return ExportValue(convertedValue, inter, interpreter.ReturnEmptyLocationRange)
+	return ExportValue(convertedValue, inter, interpreter.EmptyLocationRange)
 }
 
 func convertIntValue(
