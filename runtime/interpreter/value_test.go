@@ -647,7 +647,7 @@ func TestOwnerDictionaryInsertNonExisting(t *testing.T) {
 		keyValue,
 		value,
 	)
-	assert.Equal(t, NilValue{}, existingValue)
+	assert.Equal(t, Nil, existingValue)
 
 	queriedValue, _ := dictionary.Get(inter, ReturnEmptyLocationRange, keyValue)
 	value = queriedValue.(*CompositeValue)
@@ -928,7 +928,7 @@ func TestStringer(t *testing.T) {
 			expected: "-32.00000000",
 		},
 		"Void": {
-			value:    VoidValue{},
+			value:    Void,
 			expected: "()",
 		},
 		"true": {
@@ -944,7 +944,7 @@ func TestStringer(t *testing.T) {
 			expected: "true",
 		},
 		"nil": {
-			value:    NilValue{},
+			value:    Nil,
 			expected: "nil",
 		},
 		"String": {
@@ -2015,7 +2015,7 @@ func TestNilValue_Equal(t *testing.T) {
 			NilValue{}.Equal(
 				inter,
 				ReturnEmptyLocationRange,
-				NilValue{},
+				Nil,
 			),
 		)
 	})
@@ -3685,7 +3685,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		require.NoError(t, err)
 
 		storageMap := storage.GetStorageMap(testAddress, "storage", true)
-		storageMap.WriteValue(inter, "test", NewUnmeteredBoolValue(true))
+		storageMap.WriteValue(inter, "test", TrueValue)
 
 		value := valueFactory(inter)
 
@@ -3744,7 +3744,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 
 		test(
 			func(_ *Interpreter) Value {
-				return NewUnmeteredBoolValue(true)
+				return TrueValue
 			},
 			true,
 		)
@@ -3792,7 +3792,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 
 		test(
 			func(_ *Interpreter) Value {
-				return NewUnmeteredVoidValue()
+				return Void
 			},
 			true,
 		)
@@ -3816,7 +3816,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 
 		test(
 			func(_ *Interpreter) Value {
-				return NewUnmeteredNilValue()
+				return Nil
 			},
 			true,
 		)
@@ -3829,7 +3829,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		test(
 			func(interpreter *Interpreter) Value {
 				return NewUnmeteredSomeValueNonCopying(
-					NewUnmeteredBoolValue(true),
+					TrueValue,
 				)
 			},
 			true,
@@ -3940,7 +3940,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 			func(_ *Interpreter) Value {
 				return NewUnmeteredEphemeralReferenceValue(
 					false,
-					NewUnmeteredBoolValue(true),
+					TrueValue,
 					sema.BoolType,
 				)
 			},
@@ -3951,7 +3951,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 			func(_ *Interpreter) Value {
 				return NewUnmeteredEphemeralReferenceValue(
 					false,
-					NewUnmeteredBoolValue(true),
+					TrueValue,
 					sema.StringType,
 				)
 			},
@@ -4198,7 +4198,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 				return newCompositeValue(inter, []CompositeField{
 					{
 						Name:  "foo",
-						Value: NewUnmeteredBoolValue(true),
+						Value: TrueValue,
 					},
 				})
 			},

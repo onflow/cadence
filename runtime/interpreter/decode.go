@@ -163,12 +163,11 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 	// CBOR Types
 
 	case cbor.BoolType:
-		common.UseMemory(d.memoryGauge, common.BoolValueMemoryUsage)
 		v, err := d.decoder.DecodeBool()
 		if err != nil {
 			return nil, err
 		}
-		storable = NewUnmeteredBoolValue(v)
+		storable = AsBoolValue(v)
 
 	case cbor.NilType:
 		common.UseMemory(d.memoryGauge, common.NilValueMemoryUsage)
@@ -176,7 +175,7 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 		if err != nil {
 			return nil, err
 		}
-		storable = NewUnmeteredNilValue()
+		storable = NilValue{}
 
 	case cbor.TextStringType:
 		str, err := decodeString(d.decoder, d.memoryGauge, common.MemoryKindRawString)
@@ -204,7 +203,7 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 			if err != nil {
 				return nil, err
 			}
-			storable = NewVoidValue(d.memoryGauge)
+			storable = VoidValue{}
 
 		case CBORTagStringValue:
 			storable, err = d.decodeStringValue()

@@ -18,10 +18,14 @@
 
 package sema
 
+import (
+	"github.com/onflow/cadence/runtime/common/persistent"
+)
+
 type InitializationInfo struct {
 	ContainerType           Type
 	FieldMembers            *MemberFieldDeclarationOrderedMap
-	InitializedFieldMembers *MemberSet
+	InitializedFieldMembers *persistent.OrderedSet[*Member]
 }
 
 func NewInitializationInfo(
@@ -31,7 +35,7 @@ func NewInitializationInfo(
 	return &InitializationInfo{
 		ContainerType:           containerType,
 		FieldMembers:            fieldMembers,
-		InitializedFieldMembers: NewMemberSet(nil),
+		InitializedFieldMembers: persistent.NewOrderedSet[*Member](nil),
 	}
 }
 

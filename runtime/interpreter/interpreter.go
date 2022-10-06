@@ -810,10 +810,10 @@ func (interpreter *Interpreter) visitFunctionBody(
 		if result, ok := result.(ReturnResult); ok {
 			returnValue = result.Value
 		} else {
-			returnValue = NewVoidValue(interpreter)
+			returnValue = Void
 		}
 	} else {
-		returnValue = NewVoidValue(interpreter)
+		returnValue = Void
 	}
 
 	// If there is a return type, declare the constant `result`.
@@ -1384,7 +1384,7 @@ func EnumConstructorFunction(
 
 			caseValue, ok := lookupTable[string(rawValueArgumentBigEndianBytes)]
 			if !ok {
-				return NewNilValue(gauge)
+				return Nil
 			}
 
 			return NewSomeValueNonCopying(invocation.Interpreter, caseValue)
@@ -2262,7 +2262,7 @@ func unsignedIntValueParser[ValueType Value, IntType any](
 	return func(interpreter *Interpreter, input string) OptionalValue {
 		val, err := strconv.ParseUint(input, 10, bitSize)
 		if err != nil {
-			return NewNilValue(interpreter)
+			return NilOptionalValue
 		}
 
 		converted := toValue(interpreter, func() IntType {
@@ -2284,7 +2284,7 @@ func signedIntValueParser[ValueType Value, IntType any](
 	return func(interpreter *Interpreter, input string) OptionalValue {
 		val, err := strconv.ParseInt(input, 10, bitSize)
 		if err != nil {
-			return NewNilValue(interpreter)
+			return NilOptionalValue
 		}
 
 		converted := toValue(interpreter, func() IntType {
@@ -2302,13 +2302,13 @@ func bigIntValueParser(convert func(*big.Int) (Value, bool)) stringValueParser {
 
 		val, ok := new(big.Int).SetString(input, 10)
 		if !ok {
-			return NewNilValue(interpreter)
+			return NilOptionalValue
 		}
 
 		converted, ok := convert(val)
 
 		if !ok {
-			return NewNilValue(interpreter)
+			return NilOptionalValue
 		}
 		return NewSomeValueNonCopying(interpreter, converted)
 	}
@@ -2386,7 +2386,7 @@ var fromStringFunctionValues = func() map[string]fromStringFunctionValue {
 		newFromStringFunction(sema.Fix64Type, func(inter *Interpreter, input string) OptionalValue {
 			n, err := fixedpoint.ParseFix64(input)
 			if err != nil {
-				return NewNilValue(inter)
+				return NilOptionalValue
 			}
 
 			val := NewFix64Value(inter, n.Int64)
@@ -2396,7 +2396,7 @@ var fromStringFunctionValues = func() map[string]fromStringFunctionValue {
 		newFromStringFunction(sema.UFix64Type, func(inter *Interpreter, input string) OptionalValue {
 			n, err := fixedpoint.ParseUFix64(input)
 			if err != nil {
-				return NewNilValue(inter)
+				return NilOptionalValue
 			}
 			val := NewUFix64Value(inter, n.Uint64)
 			return NewSomeValueNonCopying(inter, val)
@@ -2707,7 +2707,7 @@ func init() {
 				// if the given key is not a valid dictionary key, it wouldn't make sense to create this type
 				if keyType == nil ||
 					!sema.IsValidDictionaryKeyType(invocation.Interpreter.MustConvertStaticToSemaType(keyType)) {
-					return NewNilValue(invocation.Interpreter)
+					return Nil
 				}
 
 				return NewSomeValueNonCopying(
@@ -2738,7 +2738,7 @@ func init() {
 
 				composite, err := lookupComposite(invocation.Interpreter, typeID)
 				if err != nil {
-					return NewNilValue(invocation.Interpreter)
+					return Nil
 				}
 
 				return NewSomeValueNonCopying(
@@ -2766,7 +2766,7 @@ func init() {
 
 				interfaceType, err := lookupInterface(invocation.Interpreter, typeID)
 				if err != nil {
-					return NewNilValue(invocation.Interpreter)
+					return Nil
 				}
 
 				return NewSomeValueNonCopying(
@@ -2868,7 +2868,7 @@ func RestrictedTypeFunction(invocation Invocation) Value {
 	// If there are any invalid restrictions,
 	// then return nil
 	if invalidRestrictionID {
-		return NewNilValue(invocation.Interpreter)
+		return Nil
 	}
 
 	var semaType sema.Type
@@ -2881,7 +2881,7 @@ func RestrictedTypeFunction(invocation Invocation) Value {
 		innerValue := typeID.InnerValue(invocation.Interpreter, invocation.GetLocationRange)
 		semaType, err = lookupComposite(invocation.Interpreter, innerValue.(*StringValue).Str)
 		if err != nil {
-			return NewNilValue(invocation.Interpreter)
+			return Nil
 		}
 	default:
 		panic(errors.NewUnreachableError())
@@ -2900,7 +2900,7 @@ func RestrictedTypeFunction(invocation Invocation) Value {
 	// If the restricted type would have failed to type-check statically,
 	// then return nil
 	if invalidRestrictedType {
-		return NewNilValue(invocation.Interpreter)
+		return Nil
 	}
 
 	return NewSomeValueNonCopying(
@@ -3093,7 +3093,7 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 				// Capabilities must hold references
 				_, ok = ty.(ReferenceStaticType)
 				if !ok {
-					return NewNilValue(invocation.Interpreter)
+					return Nil
 				}
 
 				return NewSomeValueNonCopying(
@@ -3215,7 +3215,7 @@ var stringFunction = func() Value {
 				}
 
 				if !utf8.Valid(buf) {
-					return NewNilValue(inter)
+					return Nil
 				}
 
 				memoryUsage := common.NewStringMemoryUsage(len(buf))
@@ -3370,7 +3370,7 @@ func (interpreter *Interpreter) newStorageIterationFunction(addressValue Address
 			storageMap := interpreter.Config.Storage.GetStorageMap(address, domain.Identifier(), false)
 			if storageMap == nil {
 				// if nothing is stored, no iteration is required
-				return NewVoidValue(inter)
+				return Void
 			}
 			storageIterator := storageMap.Iterator(interpreter)
 
@@ -3417,7 +3417,7 @@ func (interpreter *Interpreter) newStorageIterationFunction(addressValue Address
 
 			}
 
-			return NewVoidValue(inter)
+			return Void
 		},
 		sema.AccountForEachFunctionType(pathType),
 	)
@@ -3471,7 +3471,7 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 
 			interpreter.writeStored(address, domain, identifier, value)
 
-			return NewVoidValue(invocation.Interpreter)
+			return Void
 		},
 		sema.AuthAccountTypeSaveFunctionType,
 	)
@@ -3496,7 +3496,7 @@ func (interpreter *Interpreter) authAccountTypeFunction(addressValue AddressValu
 			value := interpreter.ReadStored(address, domain, identifier)
 
 			if value == nil {
-				return NewNilValue(invocation.Interpreter)
+				return Nil
 			}
 
 			return NewSomeValueNonCopying(
@@ -3539,7 +3539,7 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 			value := interpreter.ReadStored(address, domain, identifier)
 
 			if value == nil {
-				return NewNilValue(invocation.Interpreter)
+				return Nil
 			}
 
 			// If there is value stored for the given path,
@@ -3634,7 +3634,7 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 				panic(err)
 			}
 			if value == nil {
-				return NewNilValue(invocation.Interpreter)
+				return Nil
 			}
 
 			return NewSomeValueNonCopying(invocation.Interpreter, reference)
@@ -3680,7 +3680,7 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 				newCapabilityDomain,
 				newCapabilityIdentifier,
 			) {
-				return NewNilValue(invocation.Interpreter)
+				return Nil
 			}
 
 			// Write new value
@@ -3732,12 +3732,12 @@ func (interpreter *Interpreter) accountGetLinkTargetFunction(addressValue Addres
 			value := interpreter.ReadStored(address, domain, identifier)
 
 			if value == nil {
-				return NewNilValue(invocation.Interpreter)
+				return Nil
 			}
 
 			link, ok := value.(LinkValue)
 			if !ok {
-				return NewNilValue(invocation.Interpreter)
+				return Nil
 			}
 
 			return NewSomeValueNonCopying(invocation.Interpreter, link.TargetPath)
@@ -3767,7 +3767,7 @@ func (interpreter *Interpreter) authAccountUnlinkFunction(addressValue AddressVa
 
 			interpreter.writeStored(address, domain, identifier, nil)
 
-			return NewVoidValue(invocation.Interpreter)
+			return Void
 		},
 		sema.AuthAccountTypeUnlinkFunctionType,
 	)
@@ -3815,7 +3815,7 @@ func (interpreter *Interpreter) capabilityBorrowFunction(
 			}
 
 			if targetPath == EmptyPathValue {
-				return NewNilValue(invocation.Interpreter)
+				return Nil
 			}
 
 			reference := NewStorageReferenceValue(
@@ -3835,7 +3835,7 @@ func (interpreter *Interpreter) capabilityBorrowFunction(
 				panic(err)
 			}
 			if value == nil {
-				return NewNilValue(invocation.Interpreter)
+				return Nil
 			}
 
 			return NewSomeValueNonCopying(invocation.Interpreter, reference)
@@ -3886,7 +3886,7 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 			}
 
 			if targetPath == EmptyPathValue {
-				return NewBoolValue(invocation.Interpreter, false)
+				return FalseValue
 			}
 
 			reference := NewStorageReferenceValue(
@@ -3902,10 +3902,10 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 			// and performs a dynamic type check
 
 			if reference.ReferencedValue(interpreter) == nil {
-				return NewBoolValue(invocation.Interpreter, false)
+				return FalseValue
 			}
 
-			return NewBoolValue(invocation.Interpreter, true)
+			return TrueValue
 		},
 		sema.CapabilityTypeCheckFunctionType(borrowType),
 	)
@@ -4171,18 +4171,15 @@ func (interpreter *Interpreter) isInstanceFunction(self Value) *HostFunctionValu
 
 			staticType := typeValue.Type
 
-			return NewBoolValueFromConstructor(
-				invocation.Interpreter,
-				func() bool {
-					// Values are never instances of unknown types
-					if staticType == nil {
-						return false
-					}
+			// Values are never instances of unknown types
+			if staticType == nil {
+				return FalseValue
+			}
 
-					// NOTE: not invocation.Self, as that is only set for composite values
-					selfType := self.StaticType(invocation.Interpreter)
-					return interpreter.IsSubType(selfType, staticType)
-				},
+			// NOTE: not invocation.Self, as that is only set for composite values
+			selfType := self.StaticType(invocation.Interpreter)
+			return AsBoolValue(
+				interpreter.IsSubType(selfType, staticType),
 			)
 		},
 		sema.IsInstanceFunctionType,
