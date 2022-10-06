@@ -653,18 +653,19 @@ var AuthAccountKeysType = func() *CompositeType {
 			AuthAccountKeysTypeRevokeFunctionType,
 			authAccountKeysTypeRevokeFunctionDocString,
 		),
-		NewUnmeteredPublicFunctionMember(
-			accountKeys,
-			AccountKeysForEachFunctionName,
-			AccountKeysTypeForEachFunctionType,
-			accountKeysTypeForEachFunctionDocString,
-		),
-		NewUnmeteredPublicFunctionMember(
-			accountKeys,
-			AccountKeysCountFieldName,
-			AccountKeysTypeCountFunctionType,
-			accountKeysTypeCountFieldDocString,
-		),
+		// TODO add back after flow-go is updated
+		// NewUnmeteredPublicFunctionMember(
+		// 	accountKeys,
+		// 	AccountKeysForEachFunctionName,
+		// 	AccountKeysTypeForEachFunctionType,
+		// 	accountKeysTypeForEachFunctionDocString,
+		// ),
+		// NewUnmeteredPublicFunctionMember(
+		// 	accountKeys,
+		// 	AccountKeysCountFieldName,
+		// 	AccountKeysTypeCountFunctionType,
+		// 	accountKeysTypeCountFieldDocString,
+		// ),
 	}
 
 	accountKeys.Members = GetMembersAsMap(members)

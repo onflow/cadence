@@ -283,7 +283,6 @@ func newAuthAccountKeysValue(
 			handler,
 			addressValue,
 		),
-		// todo foreachfunction
 		newAccountKeysForEachFunction(gauge, handler, addressValue),
 		newAccountKeysCountFunction(gauge, handler, addressValue),
 	)

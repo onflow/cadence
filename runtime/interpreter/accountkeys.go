@@ -42,11 +42,13 @@ func NewAuthAccountKeysValue(
 ) Value {
 
 	fields := map[string]Value{
-		sema.AccountKeysAddFunctionName:     addFunction,
-		sema.AccountKeysGetFunctionName:     getFunction,
-		sema.AccountKeysRevokeFunctionName:  revokeFunction,
-		sema.AccountKeysForEachFunctionName: forEachFunction,
-		sema.AccountKeysCountFieldName:      countFunction,
+		sema.AccountKeysAddFunctionName:    addFunction,
+		sema.AccountKeysGetFunctionName:    getFunction,
+		sema.AccountKeysRevokeFunctionName: revokeFunction,
+
+		// TODO add back after flow-go is updated
+		// sema.AccountKeysForEachFunctionName: forEachFunction,
+		// sema.AccountKeysCountFieldName:      countFunction,
 	}
 
 	var str string
@@ -86,9 +88,10 @@ func NewPublicAccountKeysValue(
 ) Value {
 
 	fields := map[string]Value{
-		sema.AccountKeysGetFunctionName:     getFunction,
-		sema.AccountKeysForEachFunctionName: forEachFunction,
-		sema.AccountKeysCountFieldName:      countFunction,
+		sema.AccountKeysGetFunctionName: getFunction,
+		// TODO add back after flow-go is updated
+		// sema.AccountKeysForEachFunctionName: forEachFunction,
+		// sema.AccountKeysCountFieldName:      countFunction,
 	}
 
 	var str string
