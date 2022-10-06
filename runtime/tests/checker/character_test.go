@@ -53,7 +53,7 @@ func TestCheckInvalidCharacterLiteral(t *testing.T) {
         let a: Character = "abc"
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidCharacterLiteralError{}, errs[0])
 }

@@ -89,7 +89,7 @@ func TestCheckArrayElementTypeInference(t *testing.T) {
           let x: [Int8]? = [1, 534, 3]
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.InvalidIntegerLiteralRangeError{}, errs[0])
 		intRangeErr := errs[0].(*sema.InvalidIntegerLiteralRangeError)
@@ -256,7 +256,7 @@ func TestCheckDictionaryTypeInference(t *testing.T) {
           let x: {Int8: Int64} = {23423: 6, 1: 5}
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.InvalidIntegerLiteralRangeError{}, errs[0])
 		intRangeErr := errs[0].(*sema.InvalidIntegerLiteralRangeError)
@@ -274,7 +274,7 @@ func TestCheckDictionaryTypeInference(t *testing.T) {
           let x: {Int: {Int: {Int: Int8}}} = {0: {0: {0: "hello"}, 1: {0: 7}}}
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		typeMismatchErr := errs[0].(*sema.TypeMismatchError)
@@ -310,7 +310,7 @@ func TestCheckReturnTypeInference(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		typeMismatchErr := errs[0].(*sema.TypeMismatchError)
 
@@ -368,7 +368,7 @@ func TestCheckFunctionArgumentTypeInference(t *testing.T) {
 			},
 		)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		require.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
 		typeParamMismatchErr := errs[0].(*sema.TypeParameterTypeMismatchError)
@@ -548,7 +548,7 @@ func TestCheckUnaryExpressionTypeInference(t *testing.T) {
           let x: Bool = !"string"
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.InvalidUnaryOperandError{}, errs[0])
 		invalidUnaryOpKindErr := errs[0].(*sema.InvalidUnaryOperandError)
@@ -691,7 +691,7 @@ func TestCastExpressionTypeInference(t *testing.T) {
           let x = [1, 764] as [Int8]
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.InvalidIntegerLiteralRangeError{}, errs[0])
 		intRangeErr := errs[0].(*sema.InvalidIntegerLiteralRangeError)
@@ -709,7 +709,7 @@ func TestCastExpressionTypeInference(t *testing.T) {
           let x = [1, "hello"] as [Int8]
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		typeMismatchErr := errs[0].(*sema.TypeMismatchError)
@@ -731,7 +731,7 @@ func TestCheckVoidTypeInference(t *testing.T) {
           let x: Void = 5 + 6
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		typeMismatchErr := errs[0].(*sema.TypeMismatchError)
@@ -763,7 +763,7 @@ func TestCheckInferenceWithCheckerErrors(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 4)
+		errs := RequireCheckerErrors(t, err, 4)
 
 		for _, err := range errs {
 			require.IsType(t, &sema.NotDeclaredError{}, err)
@@ -943,7 +943,7 @@ func TestCheckArraySupertypeInference(t *testing.T) {
             pub struct Bar {}
         `
 		_, err := ParseAndCheck(t, code)
-		checkerErr := ExpectCheckerErrors(t, err, 1)
+		checkerErr := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.TypeAnnotationRequiredError{}, checkerErr[0])
 	})
@@ -955,7 +955,7 @@ func TestCheckArraySupertypeInference(t *testing.T) {
             let x = [].getType()
         `
 		_, err := ParseAndCheck(t, code)
-		checkerErr := ExpectCheckerErrors(t, err, 1)
+		checkerErr := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.TypeAnnotationRequiredError{}, checkerErr[0])
 	})
@@ -1139,7 +1139,7 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
             pub struct Bar {}
         `
 		_, err := ParseAndCheck(t, code)
-		checkerErr := ExpectCheckerErrors(t, err, 1)
+		checkerErr := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.TypeAnnotationRequiredError{}, checkerErr[0])
 	})
@@ -1151,7 +1151,7 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
             let x = {1: 1, "two": 2}
         `
 		_, err := ParseAndCheck(t, code)
-		checkerErr := ExpectCheckerErrors(t, err, 1)
+		checkerErr := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidDictionaryKeyTypeError{}, checkerErr[0])
 	})
@@ -1163,7 +1163,7 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
             let x = {0: 1, "hello": 2}
         `
 		_, err := ParseAndCheck(t, code)
-		checkerErr := ExpectCheckerErrors(t, err, 1)
+		checkerErr := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.InvalidDictionaryKeyTypeError{}, checkerErr[0])
 		invalidKeyError := checkerErr[0].(*sema.InvalidDictionaryKeyTypeError)
@@ -1178,7 +1178,7 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
             let x = {}.getType()
         `
 		_, err := ParseAndCheck(t, code)
-		checkerErr := ExpectCheckerErrors(t, err, 1)
+		checkerErr := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.TypeAnnotationRequiredError{}, checkerErr[0])
 	})

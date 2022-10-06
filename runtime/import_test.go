@@ -90,7 +90,7 @@ func TestRuntimeCyclicImport(t *testing.T) {
 	var checkerErr *sema.CheckerError
 	require.ErrorAs(t, err, &checkerErr)
 
-	errs := checker.ExpectCheckerErrors(t, checkerErr, 1)
+	errs := checker.RequireCheckerErrors(t, checkerErr, 1)
 
 	var importedProgramErr *sema.ImportedProgramError
 	require.ErrorAs(t, errs[0], &importedProgramErr)
@@ -100,7 +100,7 @@ func TestRuntimeCyclicImport(t *testing.T) {
 	var checkerErr2 *sema.CheckerError
 	require.ErrorAs(t, importedProgramErr.Err, &checkerErr2)
 
-	errs = checker.ExpectCheckerErrors(t, checkerErr2, 1)
+	errs = checker.RequireCheckerErrors(t, checkerErr2, 1)
 
 	var importedProgramErr2 *sema.ImportedProgramError
 	require.ErrorAs(t, errs[0], &importedProgramErr2)
@@ -110,7 +110,7 @@ func TestRuntimeCyclicImport(t *testing.T) {
 	var checkerErr3 *sema.CheckerError
 	require.ErrorAs(t, importedProgramErr2.Err, &checkerErr3)
 
-	errs = checker.ExpectCheckerErrors(t, checkerErr3, 1)
+	errs = checker.RequireCheckerErrors(t, checkerErr3, 1)
 
 	require.IsType(t, &sema.CyclicImportsError{}, errs[0])
 }

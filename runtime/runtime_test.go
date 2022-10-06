@@ -4654,7 +4654,7 @@ func TestRuntimeTransactionTopLevelDeclarations(t *testing.T) {
 		var checkerErr *sema.CheckerError
 		require.ErrorAs(t, err, &checkerErr)
 
-		errs := checker.ExpectCheckerErrors(t, checkerErr, 1)
+		errs := checker.RequireCheckerErrors(t, checkerErr, 1)
 
 		assert.IsType(t, &sema.InvalidTopLevelDeclarationError{}, errs[0])
 	})
@@ -7531,7 +7531,7 @@ func TestImportingTestStdlib(t *testing.T) {
 
 	RequireError(t, err)
 
-	errs := checker.ExpectCheckerErrors(t, err, 1)
+	errs := checker.RequireCheckerErrors(t, err, 1)
 
 	notDeclaredErr := &sema.NotDeclaredError{}
 	require.ErrorAs(t, errs[0], &notDeclaredErr)

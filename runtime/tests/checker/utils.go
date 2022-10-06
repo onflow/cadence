@@ -166,7 +166,7 @@ func ParseAndCheckWithOptionsAndMemoryMetering(
 	return checker, err
 }
 
-func ExpectCheckerErrors(t *testing.T, err error, count int) []error {
+func RequireCheckerErrors(t *testing.T, err error, count int) []error {
 	if count <= 0 {
 		require.NoError(t, err)
 		return nil

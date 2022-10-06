@@ -53,7 +53,7 @@ func TestCheckErrorShortCircuiting(t *testing.T) {
 		// and 3 "cannot instantiate non-parameterized type",
 		// but we enabled error short-circuiting
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	})
@@ -86,7 +86,7 @@ func TestCheckErrorShortCircuiting(t *testing.T) {
 								},
 							},
 						)
-						errs := ExpectCheckerErrors(t, err, 1)
+						errs := RequireCheckerErrors(t, err, 1)
 
 						assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 
@@ -96,13 +96,13 @@ func TestCheckErrorShortCircuiting(t *testing.T) {
 			},
 		)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ImportedProgramError{}, errs[0])
 
 		err = errs[0].(*sema.ImportedProgramError).Err
 
-		errs = ExpectCheckerErrors(t, err, 1)
+		errs = RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	})

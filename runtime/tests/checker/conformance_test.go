@@ -43,7 +43,7 @@ func TestCheckInvalidEventTypeRequirementConformance(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	require.IsType(t, &sema.ConformanceError{}, errs[0])
 }
@@ -75,7 +75,7 @@ func TestCheckTypeRequirementConformance(t *testing.T) {
 		if valid {
 			require.NoError(t, err)
 		} else {
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			require.IsType(t, &sema.ConformanceError{}, errs[0])
 		}
@@ -313,7 +313,7 @@ func TestCheckConformanceWithFunctionSubtype(t *testing.T) {
           }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.ConformanceError{}, errs[0])
 	})
@@ -384,7 +384,7 @@ func TestCheckConformanceWithFunctionSubtype(t *testing.T) {
           }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.ConformanceError{}, errs[0])
 	})
@@ -409,7 +409,7 @@ func TestCheckConformanceWithFunctionSubtype(t *testing.T) {
           }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.ConformanceError{}, errs[0])
 	})
@@ -444,7 +444,7 @@ func TestCheckTypeRequirementDuplicateDeclaration(t *testing.T) {
 	  }
 	`)
 
-	errs := ExpectCheckerErrors(t, err, 13)
+	errs := RequireCheckerErrors(t, err, 13)
 
 	require.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
 	require.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[1])
@@ -493,7 +493,7 @@ func TestCheckMultipleTypeRequirements(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	require.IsType(t, &sema.ConformanceError{}, errs[0])
 }

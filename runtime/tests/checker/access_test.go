@@ -36,53 +36,53 @@ func expectSuccess(t *testing.T, err error) {
 }
 
 func expectInvalidAccessModifierError(t *testing.T, err error) {
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidAccessModifierError{}, errs[0])
 }
 
 func expectInvalidAccessError(t *testing.T, err error) {
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
 }
 
 func expectInvalidAssignmentAccessError(t *testing.T, err error) {
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidAssignmentAccessError{}, errs[0])
 }
 
 func expectAccessErrors(t *testing.T, err error) {
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
 	assert.IsType(t, &sema.InvalidAssignmentAccessError{}, errs[1])
 }
 
 func expectConformanceAndInvalidAccessErrors(t *testing.T, err error) {
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.ConformanceError{}, errs[0])
 	assert.IsType(t, &sema.InvalidAccessError{}, errs[1])
 }
 
 func expectInvalidAccessModifierAndInvalidAccessErrors(t *testing.T, err error) {
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.InvalidAccessModifierError{}, errs[0])
 	assert.IsType(t, &sema.InvalidAccessError{}, errs[1])
 }
 
 func expectTwoInvalidAssignmentAccessErrors(t *testing.T, err error) {
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.InvalidAssignmentAccessError{}, errs[0])
 	assert.IsType(t, &sema.InvalidAssignmentAccessError{}, errs[1])
 }
 
 func expectTwoAccessErrors(t *testing.T, err error) {
-	errs := ExpectCheckerErrors(t, err, 4)
+	errs := RequireCheckerErrors(t, err, 4)
 
 	assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
 	assert.IsType(t, &sema.InvalidAssignmentAccessError{}, errs[1])
@@ -210,7 +210,7 @@ func TestCheckAccessModifierInterfaceFunctionDeclaration(t *testing.T) {
 					if expectedErr == nil {
 						assert.NoError(t, err)
 					} else {
-						errs := ExpectCheckerErrors(t, err, 1)
+						errs := RequireCheckerErrors(t, err, 1)
 
 						assert.IsType(t, expectedErr, errs[0])
 					}
@@ -533,7 +533,7 @@ func TestCheckAccessModifierGlobalCompositeDeclaration(t *testing.T) {
 	t.Parallel()
 
 	expectMissingAccessModifierError := func(t *testing.T, err error) {
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.MissingAccessModifierError{}, errs[0])
 	}
@@ -1201,7 +1201,7 @@ func TestCheckAccessInterfaceFieldWrite(t *testing.T) {
 	t.Parallel()
 
 	expectConformanceAndAccessErrors := func(t *testing.T, err error) {
-		errs := ExpectCheckerErrors(t, err, 5)
+		errs := RequireCheckerErrors(t, err, 5)
 
 		assert.IsType(t, &sema.ConformanceError{}, errs[0])
 		assert.IsType(t, &sema.InvalidAccessError{}, errs[1])
@@ -1211,7 +1211,7 @@ func TestCheckAccessInterfaceFieldWrite(t *testing.T) {
 	}
 
 	expectInvalidAccessModifierAndAccessErrors := func(t *testing.T, err error) {
-		errs := ExpectCheckerErrors(t, err, 5)
+		errs := RequireCheckerErrors(t, err, 5)
 
 		assert.IsType(t, &sema.InvalidAccessModifierError{}, errs[0])
 		assert.IsType(t, &sema.InvalidAccessError{}, errs[1])
@@ -1438,7 +1438,7 @@ func TestCheckAccessInterfaceFieldVariableDeclarationWithSecondValue(t *testing.
 	t.Parallel()
 
 	expectPrivateAccessErrors := func(t *testing.T, err error) {
-		errs := ExpectCheckerErrors(t, err, 3)
+		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidAccessModifierError{}, errs[0])
 		assert.IsType(t, &sema.InvalidAccessError{}, errs[1])
@@ -1454,7 +1454,7 @@ func TestCheckAccessInterfaceFieldVariableDeclarationWithSecondValue(t *testing.
 		},
 		sema.AccessCheckModeNotSpecifiedRestricted: {
 			ast.AccessNotSpecified: func(t *testing.T, err error) {
-				errs := ExpectCheckerErrors(t, err, 3)
+				errs := RequireCheckerErrors(t, err, 3)
 
 				assert.IsType(t, &sema.ConformanceError{}, errs[0])
 				assert.IsType(t, &sema.InvalidAccessError{}, errs[1])
@@ -1551,7 +1551,7 @@ func TestCheckAccessImportGlobalValue(t *testing.T) {
 
 	checkModeTests := map[sema.AccessCheckMode]func(*testing.T, error){
 		sema.AccessCheckModeStrict: func(t *testing.T, err error) {
-			errs := ExpectCheckerErrors(t, err, 2)
+			errs := RequireCheckerErrors(t, err, 2)
 
 			require.IsType(t, &sema.InvalidAccessError{}, errs[0])
 			assert.Equal(t,
@@ -1566,7 +1566,7 @@ func TestCheckAccessImportGlobalValue(t *testing.T) {
 			)
 		},
 		sema.AccessCheckModeNotSpecifiedRestricted: func(t *testing.T, err error) {
-			errs := ExpectCheckerErrors(t, err, 2)
+			errs := RequireCheckerErrors(t, err, 2)
 
 			require.IsType(t, &sema.InvalidAccessError{}, errs[0])
 			assert.Equal(t,
@@ -1581,7 +1581,7 @@ func TestCheckAccessImportGlobalValue(t *testing.T) {
 			)
 		},
 		sema.AccessCheckModeNotSpecifiedUnrestricted: func(t *testing.T, err error) {
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			require.IsType(t, &sema.InvalidAccessError{}, errs[0])
 			assert.Equal(t,
@@ -1662,7 +1662,7 @@ func TestCheckAccessImportGlobalValueAssignmentAndSwap(t *testing.T) {
 	t.Parallel()
 
 	worstCase := func(t *testing.T, err error) {
-		errs := ExpectCheckerErrors(t, err, 8)
+		errs := RequireCheckerErrors(t, err, 8)
 
 		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
 		assert.Equal(t,
@@ -1717,7 +1717,7 @@ func TestCheckAccessImportGlobalValueAssignmentAndSwap(t *testing.T) {
 		sema.AccessCheckModeStrict:                 worstCase,
 		sema.AccessCheckModeNotSpecifiedRestricted: worstCase,
 		sema.AccessCheckModeNotSpecifiedUnrestricted: func(t *testing.T, err error) {
-			errs := ExpectCheckerErrors(t, err, 7)
+			errs := RequireCheckerErrors(t, err, 7)
 
 			require.IsType(t, &sema.InvalidAccessError{}, errs[0])
 			assert.Equal(t,
@@ -1762,7 +1762,7 @@ func TestCheckAccessImportGlobalValueAssignmentAndSwap(t *testing.T) {
 			)
 		},
 		sema.AccessCheckModeNone: func(t *testing.T, err error) {
-			errs := ExpectCheckerErrors(t, err, 6)
+			errs := RequireCheckerErrors(t, err, 6)
 
 			require.IsType(t, &sema.AssignmentToConstantError{}, errs[0])
 			assert.Equal(t,
@@ -1900,7 +1900,7 @@ func TestCheckAccessImportGlobalValueVariableDeclarationWithSecondValue(t *testi
 		},
 	)
 
-	errs := ExpectCheckerErrors(t, err, 5)
+	errs := RequireCheckerErrors(t, err, 5)
 
 	require.IsType(t, &sema.InvalidAccessError{}, errs[0])
 	assert.Equal(t,
@@ -1999,7 +1999,7 @@ func TestCheckAccessSameContractInnerStructField(t *testing.T) {
 			if expectSuccess {
 				require.NoError(t, err)
 			} else {
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
 			}
@@ -2050,7 +2050,7 @@ func TestCheckAccessSameContractInnerStructInterfaceField(t *testing.T) {
 			if expectSuccess {
 				require.NoError(t, err)
 			} else {
-				errs := ExpectCheckerErrors(t, err, 2)
+				errs := RequireCheckerErrors(t, err, 2)
 
 				assert.IsType(t, &sema.InvalidAccessModifierError{}, errs[0])
 				assert.IsType(t, &sema.InvalidAccessError{}, errs[1])
@@ -2100,7 +2100,7 @@ func TestCheckAccessOtherContractInnerStructField(t *testing.T) {
 			if expectSuccess {
 				require.NoError(t, err)
 			} else {
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
 			}
@@ -2155,7 +2155,7 @@ func TestCheckAccessOtherContractInnerStructInterfaceField(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, len(expectedErrorTypes))
+			errs := RequireCheckerErrors(t, err, len(expectedErrorTypes))
 
 			for i, expectedErrorType := range expectedErrorTypes {
 				assert.IsType(t, expectedErrorType, errs[i])

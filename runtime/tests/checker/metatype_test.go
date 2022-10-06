@@ -148,7 +148,7 @@ func TestCheckIsInstance(t *testing.T) {
 					RequireGlobalValue(t, checker.Elaboration, "result"),
 				)
 			} else {
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, testCase.expectedErrorType, errs[0])
 			}
@@ -237,7 +237,7 @@ func TestCheckIsSubtype(t *testing.T) {
 					RequireGlobalValue(t, checker.Elaboration, "result"),
 				)
 			} else {
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, testCase.expectedErrorType, errs[0])
 			}
@@ -255,7 +255,7 @@ func TestCheckIsInstance_Redeclaration(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidDeclarationError{}, errs[0])
 }

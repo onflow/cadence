@@ -1001,7 +1001,7 @@ func TestInterpretReturns(t *testing.T) {
         `,
 		ParseCheckAndInterpretOptions{
 			HandleCheckerError: func(err error) {
-				errs := checker.ExpectCheckerErrors(t, err, 1)
+				errs := checker.RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 			},

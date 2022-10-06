@@ -39,7 +39,7 @@ func TestCheckInvalidUnknownDeclarationSwap(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 }
@@ -56,7 +56,7 @@ func TestCheckInvalidLeftConstantSwap(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.AssignmentToConstantError{}, errs[0])
 }
@@ -73,7 +73,7 @@ func TestCheckInvalidRightConstantSwap(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.AssignmentToConstantError{}, errs[0])
 }
@@ -105,7 +105,7 @@ func TestCheckInvalidTypesSwap(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -122,7 +122,7 @@ func TestCheckInvalidTypesSwap2(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -142,7 +142,7 @@ func TestCheckInvalidSwapTargetExpressionLeft(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidSwapExpressionError{}, errs[0])
 }
@@ -162,7 +162,7 @@ func TestCheckInvalidSwapTargetExpressionRight(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidSwapExpressionError{}, errs[0])
 }
@@ -181,7 +181,7 @@ func TestCheckInvalidSwapTargetExpressions(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.InvalidSwapExpressionError{}, errs[0])
 	assert.IsType(t, &sema.InvalidSwapExpressionError{}, errs[1])
@@ -271,7 +271,6 @@ func TestCheckSwapResourceFields(t *testing.T) {
 
 // TestCheckInvalidSwapConstantResourceFields tests that it is invalid
 // to swap fields which are constant (`let`)
-//
 func TestCheckInvalidSwapConstantResourceFields(t *testing.T) {
 
 	t.Parallel()
@@ -331,7 +330,7 @@ func TestCheckInvalidSwapConstantResourceFields(t *testing.T) {
 					second,
 				))
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.AssignmentToConstantMemberError{}, errs[0])
 		})
@@ -373,7 +372,7 @@ func TestCheckInvalidSwapResourceDictionaryElement(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -391,7 +390,7 @@ func TestCheckInvalidTwoConstantsSwap(t *testing.T) {
         }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	require.IsType(t, &sema.AssignmentToConstantError{}, errs[0])
 	assignmentError := errs[0].(*sema.AssignmentToConstantError)

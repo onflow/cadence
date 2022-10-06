@@ -41,7 +41,7 @@ func TestCheckInvalidImport(t *testing.T) {
        import "unknown"
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.UnresolvedImportError{}, errs[0])
 }
@@ -191,7 +191,7 @@ func TestCheckInvalidRepeatedImport(t *testing.T) {
 		},
 	)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.RedeclarationError{}, errs[0])
 }
@@ -345,7 +345,7 @@ func TestCheckInvalidImportUnexported(t *testing.T) {
 		},
 	)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotExportedError{}, errs[0])
 }
@@ -396,7 +396,7 @@ func TestCheckInvalidImportedError(t *testing.T) {
 	_, importedErr := ParseAndCheck(t, `
 	  let x: Bool = 1
 	`)
-	errs := ExpectCheckerErrors(t, importedErr, 1)
+	errs := RequireCheckerErrors(t, importedErr, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 
@@ -413,7 +413,7 @@ func TestCheckInvalidImportedError(t *testing.T) {
 		},
 	)
 
-	errs = ExpectCheckerErrors(t, err, 1)
+	errs = RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ImportedProgramError{}, errs[0])
 }
@@ -491,7 +491,7 @@ func TestCheckImportTypes(t *testing.T) {
 				require.NoError(t, err)
 
 			case common.CompositeKindResource:
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.InvalidResourceCreationError{}, errs[0])
 
@@ -550,13 +550,13 @@ func TestCheckInvalidImportCycleSelf(t *testing.T) {
 
 	err = check(code, utils.TestLocation)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	require.IsType(t, &sema.ImportedProgramError{}, errs[0])
 
 	importedProgramError := errs[0].(*sema.ImportedProgramError).Err
 
-	errs = ExpectCheckerErrors(t, importedProgramError, 1)
+	errs = RequireCheckerErrors(t, importedProgramError, 1)
 
 	require.IsType(t, &sema.CyclicImportsError{}, errs[0])
 }
@@ -638,21 +638,21 @@ func TestCheckInvalidImportCycleTwoLocations(t *testing.T) {
 		},
 	)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	require.IsType(t, &sema.ImportedProgramError{}, errs[0])
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[1])
 
 	importedProgramError := errs[0].(*sema.ImportedProgramError).Err
 
-	errs = ExpectCheckerErrors(t, importedProgramError, 2)
+	errs = RequireCheckerErrors(t, importedProgramError, 2)
 
 	require.IsType(t, &sema.ImportedProgramError{}, errs[0])
 	require.IsType(t, &sema.NotDeclaredError{}, errs[1])
 
 	importedProgramError = errs[0].(*sema.ImportedProgramError).Err
 
-	errs = ExpectCheckerErrors(t, importedProgramError, 2)
+	errs = RequireCheckerErrors(t, importedProgramError, 2)
 	require.IsType(t, &sema.CyclicImportsError{}, errs[0])
 	require.IsType(t, &sema.NotDeclaredError{}, errs[1])
 }
