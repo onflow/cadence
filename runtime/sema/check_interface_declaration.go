@@ -244,7 +244,7 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 		allowOuterScopeShadowing: false,
 	})
 	checker.report(err)
-	if checker.PositionInfo != nil {
+	if checker.PositionInfo != nil && variable != nil {
 		checker.recordVariableDeclarationOccurrence(
 			identifier.Identifier,
 			variable,
