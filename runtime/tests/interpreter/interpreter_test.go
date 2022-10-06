@@ -7621,7 +7621,7 @@ func TestInterpretResourceMovingAndBorrowing(t *testing.T) {
 
 		_, err = inter.Invoke("test", ref)
 		require.Error(t, err)
-		require.ErrorAs(t, err, &interpreter.MovedResourceReferenceError{})
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 }
 

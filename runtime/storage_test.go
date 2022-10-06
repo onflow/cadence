@@ -2439,7 +2439,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 			},
 		)
 		require.Error(t, err)
-		require.ErrorAs(t, err, &interpreter.MovedResourceReferenceError{})
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 
 	t.Run("resource (array element)", func(t *testing.T) {
@@ -2558,7 +2558,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 			},
 		)
 		require.Error(t, err)
-		require.ErrorAs(t, err, &interpreter.MovedResourceReferenceError{})
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 
 	t.Run("resource (nested field, array element)", func(t *testing.T) {
@@ -2692,7 +2692,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 			},
 		)
 		require.Error(t, err)
-		require.ErrorAs(t, err, &interpreter.MovedResourceReferenceError{})
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 
 	t.Run("array", func(t *testing.T) {
@@ -2811,7 +2811,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 			},
 		)
 		require.Error(t, err)
-		require.ErrorAs(t, err, &interpreter.MovedResourceReferenceError{})
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 
 	t.Run("dictionary", func(t *testing.T) {
@@ -2930,7 +2930,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 			},
 		)
 		require.Error(t, err)
-		require.ErrorAs(t, err, &interpreter.MovedResourceReferenceError{})
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 }
 

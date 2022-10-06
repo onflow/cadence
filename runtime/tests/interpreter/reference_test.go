@@ -492,7 +492,7 @@ func TestInterpretResourceReferenceAfterMove(t *testing.T) {
 
 		_, err := inter.Invoke("test", arrayRef)
 		require.Error(t, err)
-		require.ErrorAs(t, err, &interpreter.MovedResourceReferenceError{})
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 
 	t.Run("array", func(t *testing.T) {
@@ -543,7 +543,7 @@ func TestInterpretResourceReferenceAfterMove(t *testing.T) {
 
 		_, err := inter.Invoke("test", arrayRef)
 		require.Error(t, err)
-		require.ErrorAs(t, err, &interpreter.MovedResourceReferenceError{})
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 
 	t.Run("dictionary", func(t *testing.T) {
@@ -596,7 +596,7 @@ func TestInterpretResourceReferenceAfterMove(t *testing.T) {
 
 		_, err := inter.Invoke("test", arrayRef)
 		require.Error(t, err)
-		require.ErrorAs(t, err, &interpreter.MovedResourceReferenceError{})
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 }
 
@@ -855,7 +855,7 @@ func TestInterpretReferenceUseAfterShiftStatementMove(t *testing.T) {
 
 		_, err = inter.Invoke("test", ref)
 		require.Error(t, err)
-		require.ErrorAs(t, err, &interpreter.MovedResourceReferenceError{})
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 }
 

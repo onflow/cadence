@@ -2388,7 +2388,7 @@ func TestInterpretOptionalResourceReference(t *testing.T) {
 
 	_, err := inter.Invoke("test")
 	require.Error(t, err)
-	require.ErrorAs(t, err, &interpreter.MovedResourceReferenceError{})
+	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 }
 
 func TestInterpretArrayOptionalResourceReference(t *testing.T) {
@@ -2425,7 +2425,7 @@ func TestInterpretArrayOptionalResourceReference(t *testing.T) {
 
 	_, err := inter.Invoke("test")
 	require.Error(t, err)
-	require.ErrorAs(t, err, &interpreter.MovedResourceReferenceError{})
+	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 }
 
 func TestInterpretReferenceUseAfterTransferAndDestruction(t *testing.T) {
@@ -2656,7 +2656,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
 		_ = err.Error()
-		require.ErrorAs(t, err, &interpreter.MovedResourceReferenceError{})
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 
 	t.Run("stack to account readonly", func(t *testing.T) {
@@ -2693,7 +2693,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
 		_ = err.Error()
-		require.ErrorAs(t, err, &interpreter.MovedResourceReferenceError{})
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 
 	t.Run("account to stack", func(t *testing.T) {
@@ -2749,7 +2749,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		_, err := inter.Invoke("test", arrayRef)
 		require.Error(t, err)
 		_ = err.Error()
-		require.ErrorAs(t, err, &interpreter.MovedResourceReferenceError{})
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 
 	t.Run("stack to stack", func(t *testing.T) {
@@ -2786,7 +2786,9 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		)
 
 		_, err := inter.Invoke("test")
-		require.NoError(t, err)
+		require.Error(t, err)
+		_ = err.Error()
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 
 	t.Run("one account to another account", func(t *testing.T) {
@@ -2859,7 +2861,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		_, err := inter.Invoke("test", arrayRef1, arrayRef2)
 		require.Error(t, err)
 		_ = err.Error()
-		require.ErrorAs(t, err, &interpreter.MovedResourceReferenceError{})
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 
 	t.Run("account to stack to same account", func(t *testing.T) {
@@ -2922,7 +2924,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		_, err := inter.Invoke("test", arrayRef)
 		require.Error(t, err)
 		_ = err.Error()
-		require.ErrorAs(t, err, &interpreter.MovedResourceReferenceError{})
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 
 	t.Run("account to stack storage reference", func(t *testing.T) {
@@ -3042,13 +3044,13 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		_, err = inter.Invoke("getRef1Id")
 		assert.Error(t, err)
 		_ = err.Error()
-		assert.ErrorAs(t, err, &interpreter.MovedResourceReferenceError{})
+		assert.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 
 		// Second reference must be invalid
 		_, err = inter.Invoke("getRef2Id")
 		assert.Error(t, err)
 		_ = err.Error()
-		assert.ErrorAs(t, err, &interpreter.MovedResourceReferenceError{})
+		assert.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 
 		// Third reference must be valid
 		result, err := inter.Invoke("getRef3Id")

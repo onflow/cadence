@@ -4068,7 +4068,7 @@ func (interpreter *Interpreter) checkReferencedResourceNotMovedOrDestroyed(
 	}
 
 	if resourceKindedValue.IsStaleResource(interpreter) {
-		panic(MovedResourceReferenceError{
+		panic(InvalidatedResourceReferenceError{
 			LocationRange: getLocationRange(),
 		})
 	}
