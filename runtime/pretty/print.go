@@ -315,7 +315,6 @@ func (p ErrorPrettyPrinter) writeCodeExcerpts(
 				indicatorLength = maxLineLength
 			}
 
-
 			p.writeString(" ")
 			for i := 0; i < indicatorLength; i++ {
 				c := line[i]
