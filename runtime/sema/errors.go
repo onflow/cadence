@@ -77,7 +77,7 @@ func (e *InvalidPragmaError) Error() string {
 
 type CheckerError struct {
 	Location common.Location
-	Codes    map[common.Location]string
+	Codes    map[common.Location][]byte
 	Errors   []error
 }
 
@@ -91,7 +91,7 @@ func (e CheckerError) Error() string {
 	sb.WriteString("Checking failed:\n")
 	codes := e.Codes
 	if codes == nil {
-		codes = map[common.Location]string{}
+		codes = map[common.Location][]byte{}
 	}
 	printErr := pretty.NewErrorPrettyPrinter(&sb, false).
 		PrettyPrintError(e, e.Location, codes)
@@ -1135,6 +1135,8 @@ type MemberMismatch struct {
 }
 
 type InitializerMismatch struct {
+	CompositePurity     FunctionPurity
+	InterfacePurity     FunctionPurity
 	CompositeParameters []*Parameter
 	InterfaceParameters []*Parameter
 }
@@ -3290,7 +3292,7 @@ func (*InvalidRestrictedTypeError) IsUserError() {}
 
 func (e *InvalidRestrictedTypeError) Error() string {
 	return fmt.Sprintf(
-		"cannot restrict type: %s",
+		"cannot restrict type: `%s`",
 		e.Type.QualifiedString(),
 	)
 }
@@ -3311,7 +3313,7 @@ func (*InvalidRestrictionTypeError) IsUserError() {}
 
 func (e *InvalidRestrictionTypeError) Error() string {
 	return fmt.Sprintf(
-		"cannot restrict using non-resource/structure interface type: %s",
+		"cannot restrict using non-resource/structure interface type: `%s`",
 		e.Type.QualifiedString(),
 	)
 }
@@ -3355,7 +3357,7 @@ func (*InvalidRestrictionTypeDuplicateError) IsUserError() {}
 
 func (e *InvalidRestrictionTypeDuplicateError) Error() string {
 	return fmt.Sprintf(
-		"duplicate restriction: %s",
+		"duplicate restriction: `%s`",
 		e.Type.QualifiedString(),
 	)
 }
@@ -3376,7 +3378,7 @@ func (*InvalidNonConformanceRestrictionError) IsUserError() {}
 
 func (e *InvalidNonConformanceRestrictionError) Error() string {
 	return fmt.Sprintf(
-		"restricted type does not conform to restricting type: %s",
+		"restricted type does not conform to restricting type: `%s`",
 		e.Type.QualifiedString(),
 	)
 }
@@ -3787,7 +3789,7 @@ func (e *InvalidEntryPointTypeError) Error() string {
 	)
 }
 
-// ImportedProgramError
+// ExternalMutationError
 
 type ExternalMutationError struct {
 	Name            string
@@ -3819,3 +3821,18 @@ func (e *ExternalMutationError) SecondaryError() string {
 		e.ContainerType.QualifiedString(),
 	)
 }
+
+type PurityError struct {
+	ast.Range
+}
+
+func (e *PurityError) Error() string {
+	return "Impure operation performed in view context"
+}
+
+var _ SemanticError = &PurityError{}
+var _ errors.UserError = &PurityError{}
+
+func (*PurityError) IsUserError() {}
+
+func (*PurityError) isSemanticError() {}

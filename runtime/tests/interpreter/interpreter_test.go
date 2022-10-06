@@ -24,6 +24,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/onflow/cadence/runtime/activations"
+
 	"github.com/onflow/atree"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -111,7 +113,7 @@ func parseCheckAndInterpretWithOptionsAndMemoryMetering(
 		var sb strings.Builder
 		location := checker.Location
 		printErr := pretty.NewErrorPrettyPrinter(&sb, true).
-			PrettyPrintError(err, location, map[common.Location]string{location: code})
+			PrettyPrintError(err, location, map[common.Location][]byte{location: []byte(code)})
 		if printErr != nil {
 			panic(printErr)
 		}
@@ -204,7 +206,7 @@ func makeContractValueHandler(
 		compositeType *sema.CompositeType,
 		constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
 		invocationRange ast.Range,
-	) *interpreter.CompositeValue {
+	) interpreter.ContractValue {
 
 		constructor := constructorGenerator(common.Address{})
 
@@ -636,6 +638,8 @@ func TestInterpretInvalidArrayIndexing(t *testing.T) {
 
 			indexValue := interpreter.NewUnmeteredIntValueFromInt64(int64(index))
 			_, err := inter.Invoke("test", indexValue)
+			require.Error(t, err)
+			_ = err.Error()
 
 			var indexErr interpreter.ArrayIndexOutOfBoundsError
 			require.ErrorAs(t, err, &indexErr)
@@ -714,6 +718,8 @@ func TestInterpretInvalidArrayIndexingAssignment(t *testing.T) {
 
 			indexValue := interpreter.NewUnmeteredIntValueFromInt64(int64(index))
 			_, err := inter.Invoke("test", indexValue)
+			require.Error(t, err)
+			_ = err.Error()
 
 			var indexErr interpreter.ArrayIndexOutOfBoundsError
 			require.ErrorAs(t, err, &indexErr)
@@ -787,6 +793,8 @@ func TestInterpretInvalidStringIndexing(t *testing.T) {
 
 			indexValue := interpreter.NewUnmeteredIntValueFromInt64(int64(index))
 			_, err := inter.Invoke("test", indexValue)
+			require.Error(t, err)
+			_ = err.Error()
 
 			var indexErr interpreter.StringIndexOutOfBoundsError
 			require.ErrorAs(t, err, &indexErr)
@@ -1780,7 +1788,7 @@ func TestInterpretHostFunction(t *testing.T) {
 	const code = `
       pub let a = test(1, 2)
     `
-	program, err := parser.ParseProgram(code, nil)
+	program, err := parser.ParseProgram([]byte(code), nil)
 
 	require.NoError(t, err)
 
@@ -1831,8 +1839,8 @@ func TestInterpretHostFunction(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-	baseActivation.Declare(testFunction)
+	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, testFunction)
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
@@ -1862,7 +1870,7 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 	const code = `
       pub let nothing = test(1, true, "test")
     `
-	program, err := parser.ParseProgram(code, nil)
+	program, err := parser.ParseProgram([]byte(code), nil)
 
 	require.NoError(t, err)
 
@@ -1940,8 +1948,8 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-	baseActivation.Declare(testFunction)
+	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, testFunction)
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
@@ -3982,8 +3990,8 @@ func TestInterpretImportError(t *testing.T) {
 
 	mainChecker := parseAndCheck(code, TestLocation)
 
-	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-	baseActivation.Declare(stdlib.PanicFunction)
+	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, stdlib.PanicFunction)
 
 	storage := newUnmeteredInMemoryStorage()
 
@@ -4028,10 +4036,10 @@ func TestInterpretImportError(t *testing.T) {
 		PrettyPrintError(
 			err,
 			mainChecker.Location,
-			map[common.Location]string{
-				TestLocation:      code,
-				importedLocation1: importedCode1,
-				importedLocation2: importedCode2,
+			map[common.Location][]byte{
+				TestLocation:      []byte(code),
+				importedLocation1: []byte(importedCode1),
+				importedLocation2: []byte(importedCode2),
 			},
 		)
 	require.NoError(t, printErr)
@@ -4053,6 +4061,8 @@ func TestInterpretImportError(t *testing.T) {
 			"  |                  ^^^^^^^^^^^\n",
 		sb.String(),
 	)
+	require.Error(t, err)
+	_ = err.Error()
 
 	var panicErr stdlib.PanicError
 	require.ErrorAs(t, err, &panicErr)
@@ -4714,8 +4724,8 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(valueDeclaration)
 
-		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-		baseActivation.Declare(valueDeclaration)
+		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, valueDeclaration)
 
 		storage := newUnmeteredInMemoryStorage()
 
@@ -5216,6 +5226,8 @@ func TestInterpretInvalidArrayInsert(t *testing.T) {
 
 			indexValue := interpreter.NewUnmeteredIntValueFromInt64(int64(index))
 			_, err := inter.Invoke("test", indexValue)
+			require.Error(t, err)
+			_ = err.Error()
 
 			var indexErr interpreter.ArrayIndexOutOfBoundsError
 			require.ErrorAs(t, err, &indexErr)
@@ -5290,6 +5302,8 @@ func TestInterpretInvalidArrayRemove(t *testing.T) {
 
 			indexValue := interpreter.NewUnmeteredIntValueFromInt64(int64(index))
 			_, err := inter.Invoke("test", indexValue)
+			require.Error(t, err)
+			_ = err.Error()
 
 			var indexErr interpreter.ArrayIndexOutOfBoundsError
 			require.ErrorAs(t, err, &indexErr)
@@ -5356,6 +5370,8 @@ func TestInterpretInvalidArrayRemoveFirst(t *testing.T) {
     `)
 
 	_, err := inter.Invoke("test")
+	require.Error(t, err)
+	_ = err.Error()
 
 	var indexErr interpreter.ArrayIndexOutOfBoundsError
 	require.ErrorAs(t, err, &indexErr)
@@ -5421,6 +5437,8 @@ func TestInterpretInvalidArrayRemoveLast(t *testing.T) {
     `)
 
 	_, err := inter.Invoke("test")
+	require.Error(t, err)
+	_ = err.Error()
 
 	var indexErr interpreter.ArrayIndexOutOfBoundsError
 	require.ErrorAs(t, err, &indexErr)
@@ -5767,6 +5785,91 @@ func TestInterpretDictionaryKeys(t *testing.T) {
 		},
 		arrayElements(inter, arrayValue),
 	)
+}
+
+func TestInterpretDictionaryForEachKey(t *testing.T) {
+	t.Parallel()
+
+	type testcase struct {
+		n        int64
+		endPoint int64
+	}
+	testcases := []testcase{
+		{10, 1},
+		{20, 5},
+		{100, 10},
+		{100, 0},
+	}
+	code := `
+	fun testForEachKey(n: Int, stopIter: Int): {Int: Int} {
+		var dict: {Int:Int} = {}
+		var counts: {Int:Int} = {}
+		var i = 0
+		while i < n {
+			dict[i] = i
+			counts[i] = 0
+			i = i + 1
+		}
+		dict.forEachKey(fun(k: Int): Bool {
+			if k == stopIter {
+				return false
+			}
+			let curVal = counts[k]!
+			counts[k] = curVal + 1
+			return true
+		})
+
+		return counts
+	}`
+	inter := parseCheckAndInterpret(t, code)
+
+	for _, test := range testcases {
+		name := fmt.Sprintf("n = %d", test.n)
+		t.Run(name, func(t *testing.T) {
+			n := test.n
+			endPoint := test.endPoint
+			// t.Parallel()
+
+			nVal := interpreter.NewUnmeteredIntValueFromInt64(n)
+			stopIter := interpreter.NewUnmeteredIntValueFromInt64(endPoint)
+			res, err := inter.Invoke("testForEachKey", nVal, stopIter)
+
+			require.NoError(t, err)
+
+			dict, ok := res.(*interpreter.DictionaryValue)
+			assert.True(t, ok)
+
+			toInt := func(val interpreter.Value) (int, bool) {
+				intVal, ok := val.(interpreter.IntValue)
+				if !ok {
+					return 0, ok
+				}
+				return intVal.ToInt(), true
+			}
+
+			entries, ok := dictionaryEntries(inter, dict, toInt, toInt)
+
+			assert.True(t, ok)
+
+			for _, entry := range entries {
+				// iteration order is undefined, so the only thing we can deterministically test is
+				// whether visited keys exist in the dict
+				// and whether iteration is affine
+
+				key := int64(entry.key)
+				require.True(t, 0 <= key && key < n, "Visited key not present in the original dictionary: %d", key)
+				// assert that we exited early
+				if int64(entry.key) == endPoint {
+					AssertEqualWithDiff(t, 0, entry.value)
+				} else {
+					// make sure no key was visited twice
+					require.LessOrEqual(t, entry.value, 1, "Dictionary entry visited twice during iteration")
+				}
+
+			}
+
+		})
+	}
 }
 
 func TestInterpretDictionaryValues(t *testing.T) {
@@ -7291,6 +7394,7 @@ func TestInterpretReferenceDereferenceFailure(t *testing.T) {
 
 	_, err := inter.Invoke("test")
 	require.Error(t, err)
+	_ = err.Error()
 
 	require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
 }
@@ -7714,8 +7818,8 @@ func TestInterpretOptionalChainingFieldReadAndNilCoalescing(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(stdlib.PanicFunction)
 
-	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-	baseActivation.Declare(stdlib.PanicFunction)
+	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, stdlib.PanicFunction)
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
@@ -7756,8 +7860,8 @@ func TestInterpretOptionalChainingFunctionCallAndNilCoalescing(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(stdlib.PanicFunction)
 
-	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-	baseActivation.Declare(stdlib.PanicFunction)
+	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, stdlib.PanicFunction)
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
@@ -7786,6 +7890,57 @@ func TestInterpretOptionalChainingFunctionCallAndNilCoalescing(t *testing.T) {
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(42),
 		inter.Globals["x"].GetValue(),
+	)
+}
+
+func TestInterpretOptionalChainingArgumentEvaluation(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t,
+		`
+          var a = 1
+          var b = 1
+
+          fun incA(): Int {
+              a = a + 1
+              return a
+          }
+
+          fun incB(): Int {
+              b = b + 1
+              return b
+          }
+
+          struct Test {
+              fun test(_ int: Int) {}
+          }
+
+          fun test() {
+              let test1: Test? = Test()
+              test1?.test(incA())
+
+              let test2: Test? = nil
+              test2?.test(incB())
+          }
+        `,
+	)
+
+	_, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewIntValueFromInt64(nil, 2),
+		inter.Globals["a"].GetValue(),
+	)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewIntValueFromInt64(nil, 1),
+		inter.Globals["b"].GetValue(),
 	)
 }
 
@@ -7911,8 +8066,8 @@ func TestInterpretFungibleTokenContract(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(stdlib.PanicFunction)
 
-	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-	baseActivation.Declare(stdlib.PanicFunction)
+	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, stdlib.PanicFunction)
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		code,
@@ -8209,6 +8364,7 @@ func TestInterpretNonStorageReferenceAfterDestruction(t *testing.T) {
 
 	_, err := inter.Invoke("test")
 	require.Error(t, err)
+	_ = err.Error()
 
 	require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
 }
@@ -8256,6 +8412,8 @@ func TestInterpretNonStorageReferenceToOptional(t *testing.T) {
 	t.Run("nil", func(t *testing.T) {
 		_, err := inter.Invoke("testNil")
 		require.Error(t, err)
+		_ = err.Error()
+
 		require.ErrorAs(t, err, &interpreter.ForceNilError{})
 	})
 }
@@ -8340,8 +8498,8 @@ func TestInterpretHexDecode(t *testing.T) {
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(stdlib.PanicFunction)
 
-		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-		baseActivation.Declare(stdlib.PanicFunction)
+		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, stdlib.PanicFunction)
 
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
@@ -8732,8 +8890,8 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(valueDeclaration)
 
-	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-	baseActivation.Declare(valueDeclaration)
+	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, valueDeclaration)
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		code,
@@ -8898,6 +9056,7 @@ func TestInterpretResourceAssignmentForceTransfer(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
+		_ = err.Error()
 
 		require.ErrorAs(t, err, &interpreter.ForceAssignmentToNonNilResourceError{})
 	})
@@ -8934,6 +9093,7 @@ func TestInterpretResourceAssignmentForceTransfer(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
+		_ = err.Error()
 
 		require.ErrorAs(t, err, &interpreter.ForceAssignmentToNonNilResourceError{})
 	})
@@ -9012,6 +9172,7 @@ func TestInterpretForce(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
+		_ = err.Error()
 
 		require.ErrorAs(t, err, &interpreter.ForceNilError{})
 	})
@@ -9290,8 +9451,8 @@ func TestInterpretNestedDestroy(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(logFunction)
 
-	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-	baseActivation.Declare(logFunction)
+	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, logFunction)
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
@@ -9533,6 +9694,7 @@ func TestInterpretMissingMember(t *testing.T) {
 
 	_, err := inter.Invoke("test")
 	require.Error(t, err)
+	_ = err.Error()
 
 	var missingMemberError interpreter.MissingMemberValueError
 	require.ErrorAs(t, err, &missingMemberError)
@@ -9601,6 +9763,7 @@ func TestHostFunctionStaticType(t *testing.T) {
 			interpreter.ConvertSemaToStaticType(
 				nil,
 				&sema.FunctionType{
+					Purity:               sema.FunctionPurityView,
 					ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.MetaType),
 				},
 			),
@@ -9786,6 +9949,9 @@ func TestInterpretOptionalReference(t *testing.T) {
 	)
 
 	_, err = inter.Invoke("absent")
+	require.Error(t, err)
+	_ = err.Error()
+
 	var forceNilError interpreter.ForceNilError
 	require.ErrorAs(t, err, &forceNilError)
 }
@@ -9868,8 +10034,8 @@ func TestInterpretNilCoalesceReference(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(stdlib.PanicFunction)
 
-	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-	baseActivation.Declare(stdlib.PanicFunction)
+	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, stdlib.PanicFunction)
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
@@ -9941,6 +10107,7 @@ func TestInterpretDictionaryDuplicateKey(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
+		_ = err.Error()
 
 		require.ErrorAs(t, err, &interpreter.DuplicateKeyInResourceDictionaryError{})
 

@@ -75,7 +75,7 @@ var AuthAccountContractsType = func() *CompositeType {
 	}
 
 	authAccountContractsType.Members = GetMembersAsMap(members)
-	authAccountContractsType.Fields = getFieldNames(members)
+	authAccountContractsType.Fields = GetFieldNames(members)
 	return authAccountContractsType
 }()
 
@@ -169,6 +169,7 @@ Returns nil if no contract/contract interface with the given name exists in the 
 `
 
 var AuthAccountContractsTypeGetFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	Parameters: []*Parameter{
 		{
 			Identifier: "name",

@@ -72,6 +72,7 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 		interfaceType,
 		declaration.DeclarationKind(),
 		declaration.DeclarationDocString(),
+		interfaceType.InitializerPurity,
 		interfaceType.InitializerParameters,
 		kind,
 		nil,
@@ -141,7 +142,7 @@ func (checker *Checker) declareInterfaceNestedTypes(
 	interfaceType := checker.Elaboration.InterfaceDeclarationTypes[declaration]
 	nestedDeclarations := checker.Elaboration.InterfaceNestedDeclarations[declaration]
 
-	interfaceType.nestedTypes.Foreach(func(name string, nestedType Type) {
+	interfaceType.NestedTypes.Foreach(func(name string, nestedType Type) {
 		nestedDeclaration := nestedDeclarations[name]
 
 		identifier := nestedDeclaration.DeclarationIdentifier()
@@ -152,7 +153,7 @@ func (checker *Checker) declareInterfaceNestedTypes(
 			panic(errors.NewUnreachableError())
 		}
 
-		_, err := checker.typeActivations.DeclareType(typeDeclaration{
+		_, err := checker.typeActivations.declareType(typeDeclaration{
 			identifier:               *identifier,
 			ty:                       nestedType,
 			declarationKind:          nestedDeclaration.DeclarationKind(),
@@ -166,7 +167,7 @@ func (checker *Checker) declareInterfaceNestedTypes(
 
 func (checker *Checker) checkInterfaceFunctions(
 	functions []*ast.FunctionDeclaration,
-	selfType Type,
+	selfType NominalType,
 	declarationKind common.DeclarationKind,
 	selfDocString string,
 ) {
@@ -209,7 +210,6 @@ func (checker *Checker) checkInterfaceFunctions(
 					checkResourceLoss: checkResourceLoss,
 				},
 			)
-
 		}()
 	}
 }
@@ -231,11 +231,11 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 		Location:      checker.Location,
 		Identifier:    identifier.Identifier,
 		CompositeKind: declaration.CompositeKind,
-		nestedTypes:   &StringTypeOrderedMap{},
+		NestedTypes:   &StringTypeOrderedMap{},
 		Members:       &StringMemberOrderedMap{},
 	}
 
-	variable, err := checker.typeActivations.DeclareType(typeDeclaration{
+	variable, err := checker.typeActivations.declareType(typeDeclaration{
 		identifier:               identifier,
 		ty:                       interfaceType,
 		declarationKind:          declaration.DeclarationKind(),
@@ -284,12 +284,12 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 	checker.Elaboration.InterfaceNestedDeclarations[declaration] = nestedDeclarations
 
 	for _, nestedInterfaceType := range nestedInterfaceTypes {
-		interfaceType.nestedTypes.Set(nestedInterfaceType.Identifier, nestedInterfaceType)
+		interfaceType.NestedTypes.Set(nestedInterfaceType.Identifier, nestedInterfaceType)
 		nestedInterfaceType.SetContainerType(interfaceType)
 	}
 
 	for _, nestedCompositeType := range nestedCompositeTypes {
-		interfaceType.nestedTypes.Set(nestedCompositeType.Identifier, nestedCompositeType)
+		interfaceType.NestedTypes.Set(nestedCompositeType.Identifier, nestedCompositeType)
 		nestedCompositeType.SetContainerType(interfaceType)
 	}
 
@@ -346,6 +346,8 @@ func (checker *Checker) declareInterfaceMembers(declaration *ast.InterfaceDeclar
 
 	interfaceType.InitializerParameters =
 		checker.initializerParameters(declaration.Members.Initializers())
+	interfaceType.InitializerPurity =
+		checker.initializerPurity(declaration.Members.Initializers())
 
 	// Declare nested declarations' members
 

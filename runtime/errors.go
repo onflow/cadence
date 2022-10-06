@@ -33,23 +33,15 @@ import (
 type Error struct {
 	Err      error
 	Location Location
-	Codes    map[Location]string
+	Codes    map[Location][]byte
 	Programs map[Location]*ast.Program
 }
 
 func newError(err error, location Location, codesAndPrograms codesAndPrograms) Error {
-
-	codes := make(map[Location]string, len(codesAndPrograms.codes))
-
-	// Regardless of iteration order, the final result will be the same.
-	for location, code := range codesAndPrograms.codes { //nolint:maprangecheck
-		codes[location] = string(code)
-	}
-
 	return Error{
 		Err:      err,
 		Location: location,
-		Codes:    codes,
+		Codes:    codesAndPrograms.codes,
 		Programs: codesAndPrograms.programs,
 	}
 }

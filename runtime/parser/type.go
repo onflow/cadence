@@ -53,7 +53,7 @@ var typeMetaLeftDenotations [lexer.TokenMax]typeMetaLeftDenotationFunc
 func setTypeNullDenotation(tokenType lexer.TokenType, nullDenotation typeNullDenotationFunc) {
 	current := typeNullDenotations[tokenType]
 	if current != nil {
-		panic(NewUnpositionedSyntaxError(
+		panic(errors.NewUnexpectedError(
 			"type null denotation for token %s already exists",
 			tokenType,
 		))
@@ -72,7 +72,7 @@ func setTypeLeftBindingPower(tokenType lexer.TokenType, power int) {
 func setTypeLeftDenotation(tokenType lexer.TokenType, leftDenotation typeLeftDenotationFunc) {
 	current := typeLeftDenotations[tokenType]
 	if current != nil {
-		panic(NewUnpositionedSyntaxError(
+		panic(errors.NewUnexpectedError(
 			"type left denotation for token %s already exists",
 			tokenType,
 		))
@@ -83,7 +83,7 @@ func setTypeLeftDenotation(tokenType lexer.TokenType, leftDenotation typeLeftDen
 func setTypeMetaLeftDenotation(tokenType lexer.TokenType, metaLeftDenotation typeMetaLeftDenotationFunc) {
 	current := typeMetaLeftDenotations[tokenType]
 	if current != nil {
-		panic(NewUnpositionedSyntaxError(
+		panic(errors.NewUnexpectedError(
 			"type meta left denotation for token %s already exists",
 			tokenType,
 		))
@@ -155,7 +155,7 @@ func init() {
 		lexer.TokenIdentifier,
 		func(p *parser, token lexer.Token) (ast.Type, error) {
 
-			switch token.Value {
+			switch string(p.tokenSource(token)) {
 			case keywordAuth:
 				p.skipSpaceAndComments(true)
 
@@ -633,6 +633,8 @@ func defineFunctionType() {
 		lexer.TokenParenOpen,
 		func(p *parser, startToken lexer.Token) (ast.Type, error) {
 
+			purity := parsePurityAnnotation(p)
+
 			parameterTypeAnnotations, err := parseParameterTypeAnnotations(p)
 			if err != nil {
 				return nil, err
@@ -658,6 +660,7 @@ func defineFunctionType() {
 
 			return ast.NewFunctionType(
 				p.memoryGauge,
+				purity,
 				parameterTypeAnnotations,
 				returnTypeAnnotation,
 				ast.NewRange(

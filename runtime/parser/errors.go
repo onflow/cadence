@@ -31,7 +31,7 @@ import (
 // Error
 
 type Error struct {
-	Code   string
+	Code   []byte
 	Errors []error
 }
 
@@ -39,7 +39,7 @@ func (e Error) Error() string {
 	var sb strings.Builder
 	sb.WriteString("Parsing failed:\n")
 	printErr := pretty.NewErrorPrettyPrinter(&sb, false).
-		PrettyPrintError(e, nil, map[common.Location]string{nil: e.Code})
+		PrettyPrintError(e, nil, map[common.Location][]byte{nil: e.Code})
 	if printErr != nil {
 		panic(printErr)
 	}
@@ -68,12 +68,6 @@ type SyntaxError struct {
 func NewSyntaxError(pos ast.Position, message string, params ...any) *SyntaxError {
 	return &SyntaxError{
 		Pos:     pos,
-		Message: fmt.Sprintf(message, params...),
-	}
-}
-
-func NewUnpositionedSyntaxError(message string, params ...any) *SyntaxError {
-	return &SyntaxError{
 		Message: fmt.Sprintf(message, params...),
 	}
 }
@@ -173,7 +167,6 @@ func (e *InvalidIntegerLiteralError) SecondaryError() string {
 }
 
 // ExpressionDepthLimitReachedError is reported when the expression depth limit was reached
-//
 type ExpressionDepthLimitReachedError struct {
 	Pos ast.Position
 }

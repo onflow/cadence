@@ -62,6 +62,7 @@ const (
 	keywordSwitch      = "switch"
 	keywordDefault     = "default"
 	keywordEnum        = "enum"
+	keywordView        = "view"
 )
 
 var allKeywords = map[string]struct{}{

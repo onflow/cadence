@@ -283,7 +283,7 @@ type variableDeclaration struct {
 	allowOuterScopeShadowing bool
 }
 
-func (a *VariableActivations) Declare(declaration variableDeclaration) (variable *Variable, err error) {
+func (a *VariableActivations) declare(declaration variableDeclaration) (variable *Variable, err error) {
 
 	depth := a.Depth()
 
@@ -327,6 +327,26 @@ func (a *VariableActivations) Declare(declaration variableDeclaration) (variable
 	return variable, err
 }
 
+func (a *VariableActivations) DeclareValue(declaration ValueDeclaration) (*Variable, error) {
+	var variablePos ast.Position
+	declarationPos := declaration.ValueDeclarationPosition()
+	if declarationPos != nil {
+		variablePos = *declarationPos
+	}
+
+	return a.declare(variableDeclaration{
+		identifier: declaration.ValueDeclarationName(),
+		kind:       declaration.ValueDeclarationKind(),
+		ty:         declaration.ValueDeclarationType(),
+		// TODO: add access to ValueDeclaration and use declaration's access instead here
+		access:         ast.AccessPublic,
+		isConstant:     declaration.ValueDeclarationIsConstant(),
+		argumentLabels: declaration.ValueDeclarationArgumentLabels(),
+		pos:            variablePos,
+		docString:      declaration.ValueDeclarationDocString(),
+	})
+}
+
 type typeDeclaration struct {
 	identifier               ast.Identifier
 	ty                       Type
@@ -336,8 +356,8 @@ type typeDeclaration struct {
 	docString                string
 }
 
-func (a *VariableActivations) DeclareType(declaration typeDeclaration) (*Variable, error) {
-	return a.Declare(
+func (a *VariableActivations) declareType(declaration typeDeclaration) (*Variable, error) {
+	return a.declare(
 		variableDeclaration{
 			identifier:               declaration.identifier.Identifier,
 			ty:                       declaration.ty,
@@ -352,12 +372,12 @@ func (a *VariableActivations) DeclareType(declaration typeDeclaration) (*Variabl
 	)
 }
 
-func (a *VariableActivations) DeclareImplicitConstant(
+func (a *VariableActivations) declareImplicitConstant(
 	identifier string,
 	ty Type,
 	kind common.DeclarationKind,
 ) (*Variable, error) {
-	return a.Declare(
+	return a.declare(
 		variableDeclaration{
 			identifier:               identifier,
 			ty:                       ty,

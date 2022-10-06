@@ -223,6 +223,103 @@ let double =
     }
 ```
 
+## View Functions
+
+Functions can be annotated as `view` to indicate that they do not modify any external state or any account state. 
+A `view` annotation can be added to the beginning of a function declaration or expression like so: 
+
+```cadence
+view pub fun foo(): Void {}
+let x = view fun(): Void {}
+pub struct S {
+    view pub fun foo(): Void {}
+    view init()
+}
+```
+
+All functions that do not have a `view` annotation are considered non-view, 
+and cannot be called inside of `view` contexts, 
+like inside of a `view` function or in a precondition or postcondition. 
+
+Function types can also have `view` annotations, 
+to be placed after the opening parenthesis but before the parameter list. 
+So, for example, these are valid types:
+
+```cadence
+    let f: (view (Int): Int) = ...
+    let h: (view (): (view (): Void)) = ...
+```
+
+Any function types without a `view` annotation will be considered non-view. 
+
+Functions are covariant with respect to `view` annotations, 
+so a `view` function is a subtype of an non-view function with the same parameters and return types. 
+So, the following declarations would typecheck:
+
+```cadence
+    let a: (view (): Void) = view fun() {}
+    let b: ((): Void) = view fun() {}
+    let c: ((): Void) = fun() {}
+    let d: (((view (): Void)): Void) = fun foo(x:((): Void)) {} // contravariance
+```
+
+while these would not: 
+
+
+```cadence
+    let x: (view (): Void) = fun() {}
+    let y: ((((): Void)): Void) = fun foo(f:(view (): Void)) {} // contravariance
+```
+
+The operations that are not permitted in `view` contexts are: 
+
+* Calling a non-view function (including any functions that modify account state or storage like `save` or `load`)
+* Writing to or modifying any resources
+* Writing to or modifying any references
+* Indexed assignment or writes to any variables not statically knowable to have been defined in the current function's scope, 
+or to any resources or references
+
+So, for example, this code would be allowed:
+
+    ```cadence
+    view fun foo(): Int {
+        let a: [Int] = []
+        a[0] = 3
+        return a.length
+    }
+    ```
+
+    while this would not:
+
+    ```cadence
+    let a: [Int] = []
+    view fun foo(): Int {
+        a[0] = 3
+        return a.length
+    }
+    ```
+
+A caveat to this is that in some cases a non-`view` function that only performs a mutation that would be allowed in a `view` context will be rejected as a limitation of the analysis. 
+In particular, users may encounter this with arrays or dictionaries, where a function like: 
+
+```cadence
+view fun foo(): Int {
+    let a: [Int] = [0]
+    a[0] = 1
+}
+```
+
+is acceptable, because `a` is local to this function, while 
+
+```cadence
+view fun foo(): Int {
+    let a: [Int] = [0]
+    a.append(1)
+}
+```
+
+will be rejected, because `append` is not `view`. 
+
 ## Function Calls
 
 Functions can be called (invoked). Function calls
@@ -478,6 +575,10 @@ fun incrementN() {
     n = n + 1
 }
 ```
+
+Both preconditions and postconditions are considered [`view` contexts](#view-functions); 
+any operations that are not legal in functions with `view` annotations are also not allowed in conditions. 
+In particular, this means that if you wish to call a function in a condition, that function must be `view`. 
 
 ## Functions are Values
 

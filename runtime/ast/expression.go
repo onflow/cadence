@@ -223,7 +223,7 @@ func (*StringExpression) precedence() precedence {
 // IntegerExpression
 
 type IntegerExpression struct {
-	PositiveLiteral string
+	PositiveLiteral []byte
 	Value           *big.Int `json:"-"`
 	Base            int
 	Range
@@ -234,7 +234,7 @@ var _ Expression = &IntegerExpression{}
 
 func NewIntegerExpression(
 	gauge common.MemoryGauge,
-	literal string,
+	literal []byte,
 	value *big.Int,
 	base int,
 	tokenRange Range,
@@ -266,23 +266,26 @@ func (e *IntegerExpression) String() string {
 }
 
 func (e *IntegerExpression) Doc() prettier.Doc {
-	literal := e.PositiveLiteral
+	var b strings.Builder
 	if e.Value.Sign() < 0 {
-		literal = "-" + literal
+		b.WriteRune('-')
 	}
-	return prettier.Text(literal)
+	b.Write(e.PositiveLiteral)
+	return prettier.Text(b.String())
 }
 
 func (e *IntegerExpression) MarshalJSON() ([]byte, error) {
 	type Alias IntegerExpression
 	return json.Marshal(&struct {
-		Type  string
-		Value string
+		Type            string
+		PositiveLiteral string
+		Value           string
 		*Alias
 	}{
-		Type:  "IntegerExpression",
-		Value: e.Value.String(),
-		Alias: (*Alias)(e),
+		Type:            "IntegerExpression",
+		PositiveLiteral: string(e.PositiveLiteral),
+		Value:           e.Value.String(),
+		Alias:           (*Alias)(e),
 	})
 }
 
@@ -293,7 +296,7 @@ func (*IntegerExpression) precedence() precedence {
 // FixedPointExpression
 
 type FixedPointExpression struct {
-	PositiveLiteral string
+	PositiveLiteral []byte
 	Negative        bool
 	UnsignedInteger *big.Int `json:"-"`
 	Fractional      *big.Int `json:"-"`
@@ -306,7 +309,7 @@ var _ Expression = &FixedPointExpression{}
 
 func NewFixedPointExpression(
 	gauge common.MemoryGauge,
-	literal string,
+	literal []byte,
 	isNegative bool,
 	integer *big.Int,
 	fractional *big.Int,
@@ -342,25 +345,25 @@ func (e *FixedPointExpression) String() string {
 }
 
 func (e *FixedPointExpression) Doc() prettier.Doc {
-	literal := e.PositiveLiteral
-	if literal != "" {
-		if e.Negative {
-			literal = "-" + literal
-		}
-		return prettier.Text(literal)
+	var builder strings.Builder
+
+	if e.Negative {
+		builder.WriteByte('-')
 	}
 
-	var builder strings.Builder
-	if e.Negative {
-		builder.WriteRune('-')
+	literal := e.PositiveLiteral
+	if literal != nil {
+		builder.Write(literal)
+	} else {
+		builder.WriteString(e.UnsignedInteger.String())
+		builder.WriteByte('.')
+		fractional := e.Fractional.String()
+		for i := uint(0); i < (e.Scale - uint(len(fractional))); i++ {
+			builder.WriteRune('0')
+		}
+		builder.WriteString(fractional)
 	}
-	builder.WriteString(e.UnsignedInteger.String())
-	builder.WriteRune('.')
-	fractional := e.Fractional.String()
-	for i := uint(0); i < (e.Scale - uint(len(fractional))); i++ {
-		builder.WriteRune('0')
-	}
-	builder.WriteString(fractional)
+
 	return prettier.Text(builder.String())
 }
 
@@ -368,11 +371,13 @@ func (e *FixedPointExpression) MarshalJSON() ([]byte, error) {
 	type Alias FixedPointExpression
 	return json.Marshal(&struct {
 		Type            string
+		PositiveLiteral string
 		UnsignedInteger string
 		Fractional      string
 		*Alias
 	}{
 		Type:            "FixedPointExpression",
+		PositiveLiteral: string(e.PositiveLiteral),
 		UnsignedInteger: e.UnsignedInteger.String(),
 		Fractional:      e.Fractional.String(),
 		Alias:           (*Alias)(e),
@@ -1336,6 +1341,7 @@ func (e *BinaryExpression) IsLeftAssociative() bool {
 // FunctionExpression
 
 type FunctionExpression struct {
+	Purity               FunctionPurity
 	ParameterList        *ParameterList
 	ReturnTypeAnnotation *TypeAnnotation
 	FunctionBlock        *FunctionBlock
@@ -1347,6 +1353,7 @@ var _ Expression = &FunctionExpression{}
 
 func NewFunctionExpression(
 	gauge common.MemoryGauge,
+	purity FunctionPurity,
 	parameters *ParameterList,
 	returnType *TypeAnnotation,
 	functionBlock *FunctionBlock,
@@ -1355,6 +1362,7 @@ func NewFunctionExpression(
 	common.UseMemory(gauge, common.FunctionExpressionMemoryUsage)
 
 	return &FunctionExpression{
+		Purity:               purity,
 		ParameterList:        parameters,
 		ReturnTypeAnnotation: returnType,
 		FunctionBlock:        functionBlock,
@@ -1736,7 +1744,6 @@ func (*DestroyExpression) precedence() precedence {
 
 type ReferenceExpression struct {
 	Expression Expression
-	Type       Type     `json:"TargetType"`
 	StartPos   Position `json:"-"`
 }
 
@@ -1746,14 +1753,12 @@ var _ Expression = &ReferenceExpression{}
 func NewReferenceExpression(
 	gauge common.MemoryGauge,
 	expression Expression,
-	targetType Type,
 	startPos Position,
 ) *ReferenceExpression {
 	common.UseMemory(gauge, common.ReferenceExpressionMemoryUsage)
 
 	return &ReferenceExpression{
 		Expression: expression,
-		Type:       targetType,
 		StartPos:   startPos,
 	}
 }
@@ -1776,7 +1781,6 @@ func (e *ReferenceExpression) String() string {
 }
 
 var referenceExpressionRefOperatorDoc prettier.Doc = prettier.Text("&")
-var referenceExpressionAsOperatorDoc prettier.Doc = prettier.Text("as")
 
 func (e *ReferenceExpression) Doc() prettier.Doc {
 	doc := parenthesizedExpressionDoc(
@@ -1790,10 +1794,6 @@ func (e *ReferenceExpression) Doc() prettier.Doc {
 			prettier.Group{
 				Doc: doc,
 			},
-			prettier.Line{},
-			referenceExpressionAsOperatorDoc,
-			prettier.Line{},
-			e.Type.Doc(),
 		},
 	}
 }
@@ -1803,7 +1803,7 @@ func (e *ReferenceExpression) StartPosition() Position {
 }
 
 func (e *ReferenceExpression) EndPosition(memoryGauge common.MemoryGauge) Position {
-	return e.Type.EndPosition(memoryGauge)
+	return e.Expression.EndPosition(memoryGauge)
 }
 
 func (e *ReferenceExpression) MarshalJSON() ([]byte, error) {

@@ -624,6 +624,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				_, err = inter.Invoke("test")
 				require.Error(t, err)
+				_ = err.Error()
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
@@ -670,6 +671,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				_, err = inter.Invoke("test")
 				require.Error(t, err)
+				_ = err.Error()
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
@@ -716,6 +718,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				_, err = inter.Invoke("test")
 				require.Error(t, err)
+				_ = err.Error()
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
@@ -762,6 +765,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				_, err = inter.Invoke("test")
 				require.Error(t, err)
+				_ = err.Error()
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
@@ -805,6 +809,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				_, err = inter.Invoke("test")
 				require.Error(t, err)
+				_ = err.Error()
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
@@ -845,6 +850,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				_, err = inter.Invoke("test")
 				require.Error(t, err)
+				_ = err.Error()
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
@@ -885,6 +891,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				_, err = inter.Invoke("test")
 				require.Error(t, err)
+				_ = err.Error()
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
@@ -925,6 +932,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				_, err = inter.Invoke("test")
 				require.Error(t, err)
+				_ = err.Error()
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
@@ -967,6 +975,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				_, err = inter.Invoke("test")
 				require.Error(t, err)
+				_ = err.Error()
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
@@ -1008,6 +1017,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				_, err = inter.Invoke("test")
 				require.Error(t, err)
+				_ = err.Error()
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
@@ -1046,6 +1056,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				_, err = inter.Invoke("test")
 				require.Error(t, err)
+				_ = err.Error()
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
@@ -1079,6 +1090,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				_, err = inter.Invoke("test")
 				require.Error(t, err)
+				_ = err.Error()
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
@@ -1112,6 +1124,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				_, err = inter.Invoke("test")
 				require.Error(t, err)
+				_ = err.Error()
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
@@ -1143,6 +1156,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				_, err = inter.Invoke("test")
 				require.Error(t, err)
+				_ = err.Error()
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
@@ -1194,6 +1208,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				_, err = inter.Invoke("test")
 				require.Error(t, err)
+				_ = err.Error()
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
@@ -1239,6 +1254,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				_, err = inter.Invoke("test")
 				require.Error(t, err)
+				_ = err.Error()
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
@@ -1284,6 +1300,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				_, err = inter.Invoke("test")
 				require.Error(t, err)
+				_ = err.Error()
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
@@ -1329,6 +1346,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				_, err = inter.Invoke("test")
 				require.Error(t, err)
+				_ = err.Error()
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
@@ -1370,6 +1388,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				_, err = inter.Invoke("test")
 				require.Error(t, err)
+				_ = err.Error()
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
@@ -1408,6 +1427,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				_, err = inter.Invoke("test")
 				require.Error(t, err)
+				_ = err.Error()
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
@@ -1446,6 +1466,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				_, err = inter.Invoke("test")
 				require.Error(t, err)
+				_ = err.Error()
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
@@ -1484,6 +1505,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				_, err = inter.Invoke("test")
 				require.Error(t, err)
+				_ = err.Error()
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
@@ -1525,6 +1547,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				_, err = inter.Invoke("test")
 				require.Error(t, err)
+				_ = err.Error()
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
@@ -1565,6 +1588,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				_, err = inter.Invoke("test")
 				require.Error(t, err)
+				_ = err.Error()
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
@@ -1603,6 +1627,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				_, err = inter.Invoke("test")
 				require.Error(t, err)
+				_ = err.Error()
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
@@ -1635,6 +1660,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				_, err = inter.Invoke("test")
 				require.Error(t, err)
+				_ = err.Error()
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
@@ -1667,6 +1693,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				_, err = inter.Invoke("test")
 				require.Error(t, err)
+				_ = err.Error()
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
@@ -1699,6 +1726,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				_, err = inter.Invoke("test")
 				require.Error(t, err)
+				_ = err.Error()
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
@@ -1733,6 +1761,8 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
+		_ = err.Error()
+
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
 	})
 
@@ -1760,6 +1790,8 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
+		_ = err.Error()
+
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
 	})
 
@@ -1794,6 +1826,8 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
+		_ = err.Error()
+
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
 	})
 
@@ -1822,6 +1856,8 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
+		_ = err.Error()
+
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
 	})
 
@@ -1849,6 +1885,8 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
+		_ = err.Error()
+
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
 	})
 
@@ -1880,6 +1918,8 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
+		_ = err.Error()
+
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
 	})
 
@@ -1908,6 +1948,8 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
+		_ = err.Error()
+
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
 	})
 
@@ -1936,6 +1978,8 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
+		_ = err.Error()
+
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
 	})
 
@@ -1968,6 +2012,8 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
+		_ = err.Error()
+
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
 	})
 
@@ -2000,6 +2046,8 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
+		_ = err.Error()
+
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
 	})
 }
@@ -2031,6 +2079,8 @@ func TestCheckResourceInvalidationWithConditionalExprInDestroy(t *testing.T) {
 
 	_, err = inter.Invoke("test")
 	require.Error(t, err)
+	_ = err.Error()
+
 	require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
 }
 
@@ -2072,6 +2122,7 @@ func TestInterpretResourceUseAfterInvalidation(t *testing.T) {
 
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
+		_ = err.Error()
 
 		invalidatedResourceError := interpreter.InvalidatedResourceError{}
 		require.ErrorAs(t, err, &invalidatedResourceError)
@@ -2109,6 +2160,8 @@ func TestInterpretResourceUseAfterInvalidation(t *testing.T) {
 
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
+		_ = err.Error()
+
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
 	})
 }
@@ -2416,6 +2469,8 @@ func TestInterpretReferenceUseAfterTransferAndDestruction(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
+		require.Error(t, err)
+		_ = err.Error()
 
 		var invalidatedResourceErr interpreter.DestroyedResourceError
 		require.ErrorAs(t, err, &invalidatedResourceErr)
@@ -2446,6 +2501,7 @@ func TestInterpretReferenceUseAfterTransferAndDestruction(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
+		_ = err.Error()
 
 		var invalidatedResourceErr interpreter.DestroyedResourceError
 		require.ErrorAs(t, err, &invalidatedResourceErr)
@@ -2476,6 +2532,7 @@ func TestInterpretReferenceUseAfterTransferAndDestruction(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
+		_ = err.Error()
 
 		var invalidatedResourceErr interpreter.DestroyedResourceError
 		require.ErrorAs(t, err, &invalidatedResourceErr)
@@ -2505,6 +2562,7 @@ func TestInterpretReferenceUseAfterTransferAndDestruction(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
+		_ = err.Error()
 
 		var invalidatedResourceErr interpreter.DestroyedResourceError
 		require.ErrorAs(t, err, &invalidatedResourceErr)
@@ -2514,10 +2572,10 @@ func TestInterpretReferenceUseAfterTransferAndDestruction(t *testing.T) {
 }
 
 func TestInterpretResourceDestroyedInPreCondition(t *testing.T) {
-
 	t.Parallel()
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	didError := false
+	_, err := parseCheckAndInterpretWithOptions(t,
 		`
         resource interface I {
              pub fun receiveResource(_ r: @Bar) {
@@ -2543,19 +2601,21 @@ func TestInterpretResourceDestroyedInPreCondition(t *testing.T) {
         fun test() {
             let foo <- create Foo()
             let bar <- create Bar()
-
             foo.receiveResource(<- bar)
             destroy foo
         }`,
 
-		ParseCheckAndInterpretOptions{},
+		ParseCheckAndInterpretOptions{
+			HandleCheckerError: func(err error) {
+				require.IsType(t, err, &sema.CheckerError{})
+				require.IsType(t, err.(*sema.CheckerError).Errors[0], &sema.PurityError{})
+				didError = true
+			},
+		},
 	)
 
 	require.NoError(t, err)
-
-	_, err = inter.Invoke("test")
-	require.Error(t, err)
-	require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+	require.True(t, didError)
 }
 
 func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {

@@ -77,7 +77,7 @@ func parseStatement(p *parser) (ast.Statement, error) {
 
 	switch p.current.Type {
 	case lexer.TokenIdentifier:
-		switch p.current.Value {
+		switch string(p.currentTokenSource()) {
 		case keywordReturn:
 			return parseReturnStatement(p)
 		case keywordBreak:
@@ -94,10 +94,21 @@ func parseStatement(p *parser) (ast.Statement, error) {
 			return parseForStatement(p)
 		case keywordEmit:
 			return parseEmitStatement(p)
+		case keywordView:
+			purityPos := p.current.StartPos
+			p.next()
+			p.skipSpaceAndComments(true)
+			if !p.mustToken(p.current, lexer.TokenIdentifier, keywordFun) {
+				return nil, p.syntaxError(
+					"expected fun keyword, but got %s",
+					string(p.tokenSource(p.current)),
+				)
+			}
+			return parseFunctionDeclarationOrFunctionExpressionStatement(p, ast.FunctionPurityView, &purityPos)
 		case keywordFun:
 			// The `fun` keyword is ambiguous: it either introduces a function expression
 			// or a function declaration, depending on if an identifier follows, or not.
-			return parseFunctionDeclarationOrFunctionExpressionStatement(p)
+			return parseFunctionDeclarationOrFunctionExpressionStatement(p, ast.FunctionPurityUnspecified, nil)
 		}
 	}
 
@@ -151,9 +162,13 @@ func parseStatement(p *parser) (ast.Statement, error) {
 	}
 }
 
-func parseFunctionDeclarationOrFunctionExpressionStatement(p *parser) (ast.Statement, error) {
+func parseFunctionDeclarationOrFunctionExpressionStatement(
+	p *parser,
+	purity ast.FunctionPurity,
+	purityPos *ast.Position,
+) (ast.Statement, error) {
 
-	startPos := p.current.StartPos
+	startPos := *ast.EarlierPosition(&p.current.StartPos, purityPos)
 
 	// Skip the `fun` keyword
 	p.next()
@@ -175,6 +190,7 @@ func parseFunctionDeclarationOrFunctionExpressionStatement(p *parser) (ast.State
 		return ast.NewFunctionDeclaration(
 			p.memoryGauge,
 			ast.AccessNotSpecified,
+			purity,
 			identifier,
 			parameterList,
 			returnTypeAnnotation,
@@ -193,6 +209,7 @@ func parseFunctionDeclarationOrFunctionExpressionStatement(p *parser) (ast.State
 			p.memoryGauge,
 			ast.NewFunctionExpression(
 				p.memoryGauge,
+				purity,
 				parameterList,
 				returnTypeAnnotation,
 				functionBlock,
@@ -264,7 +281,7 @@ func parseIfStatement(p *parser) (*ast.IfStatement, error) {
 		var err error
 
 		if p.current.Type == lexer.TokenIdentifier {
-			switch p.current.Value {
+			switch string(p.currentTokenSource()) {
 			case keywordLet, keywordVar:
 				variableDeclaration, err =
 					parseVariableDeclaration(p, ast.AccessNotSpecified, nil, "")
@@ -293,11 +310,11 @@ func parseIfStatement(p *parser) (*ast.IfStatement, error) {
 		parseNested := false
 
 		p.skipSpaceAndComments(true)
-		if p.current.IsString(lexer.TokenIdentifier, keywordElse) {
+		if p.mustToken(p.current, lexer.TokenIdentifier, keywordElse) {
 			p.next()
 
 			p.skipSpaceAndComments(true)
-			if p.current.IsString(lexer.TokenIdentifier, keywordIf) {
+			if p.mustToken(p.current, lexer.TokenIdentifier, keywordIf) {
 				parseNested = true
 			} else {
 				elseBlock, err = parseBlock(p)
@@ -378,7 +395,7 @@ func parseForStatement(p *parser) (*ast.ForStatement, error) {
 
 	p.skipSpaceAndComments(true)
 
-	if p.current.IsString(lexer.TokenIdentifier, keywordIn) {
+	if p.mustToken(p.current, lexer.TokenIdentifier, keywordIn) {
 		p.reportSyntaxError(
 			"expected identifier, got keyword %q",
 			keywordIn,
@@ -410,7 +427,7 @@ func parseForStatement(p *parser) (*ast.ForStatement, error) {
 		identifier = firstValue
 	}
 
-	if !p.current.IsString(lexer.TokenIdentifier, keywordIn) {
+	if !p.mustToken(p.current, lexer.TokenIdentifier, keywordIn) {
 		p.reportSyntaxError(
 			"expected keyword %q, got %s",
 			keywordIn,
@@ -480,7 +497,7 @@ func parseFunctionBlock(p *parser) (*ast.FunctionBlock, error) {
 	p.skipSpaceAndComments(true)
 
 	var preConditions *ast.Conditions
-	if p.current.IsString(lexer.TokenIdentifier, keywordPre) {
+	if p.mustToken(p.current, lexer.TokenIdentifier, keywordPre) {
 		p.next()
 		conditions, err := parseConditions(p, ast.ConditionKindPre)
 		if err != nil {
@@ -493,7 +510,7 @@ func parseFunctionBlock(p *parser) (*ast.FunctionBlock, error) {
 	p.skipSpaceAndComments(true)
 
 	var postConditions *ast.Conditions
-	if p.current.IsString(lexer.TokenIdentifier, keywordPost) {
+	if p.mustToken(p.current, lexer.TokenIdentifier, keywordPost) {
 		p.next()
 		conditions, err := parseConditions(p, ast.ConditionKindPost)
 		if err != nil {
@@ -672,7 +689,7 @@ func parseSwitchCases(p *parser) (cases []*ast.SwitchCase, err error) {
 		case lexer.TokenIdentifier:
 
 			var switchCase *ast.SwitchCase
-			switch p.current.Value {
+			switch string(p.currentTokenSource()) {
 			case keywordCase:
 				switchCase, err = parseSwitchCase(p, true)
 
@@ -742,7 +759,7 @@ func parseSwitchCase(p *parser, hasExpression bool) (*ast.SwitchCase, error) {
 			return true
 
 		case lexer.TokenIdentifier:
-			switch p.current.Value {
+			switch string(p.currentTokenSource()) {
 			case keywordCase, keywordDefault:
 				return true
 			default:

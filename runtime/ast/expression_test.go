@@ -182,7 +182,7 @@ func TestIntegerExpression_MarshalJSON(t *testing.T) {
 	t.Parallel()
 
 	expr := &IntegerExpression{
-		PositiveLiteral: "4_2",
+		PositiveLiteral: []byte("4_2"),
 		Value:           big.NewInt(42),
 		Base:            10,
 		Range: Range{
@@ -218,7 +218,7 @@ func TestIntegerExpression_Doc(t *testing.T) {
 		t.Parallel()
 
 		expr := &IntegerExpression{
-			PositiveLiteral: "4_2",
+			PositiveLiteral: []byte("4_2"),
 			Value:           big.NewInt(42),
 			Base:            10,
 		}
@@ -234,7 +234,7 @@ func TestIntegerExpression_Doc(t *testing.T) {
 		t.Parallel()
 
 		expr := &IntegerExpression{
-			PositiveLiteral: "4_2",
+			PositiveLiteral: []byte("4_2"),
 			Value:           big.NewInt(-42),
 			Base:            10,
 		}
@@ -250,7 +250,7 @@ func TestIntegerExpression_Doc(t *testing.T) {
 		t.Parallel()
 
 		expr := &IntegerExpression{
-			PositiveLiteral: "0b10_10_10",
+			PositiveLiteral: []byte("0b10_10_10"),
 			Value:           big.NewInt(42),
 			Base:            2,
 		}
@@ -266,7 +266,7 @@ func TestIntegerExpression_Doc(t *testing.T) {
 		t.Parallel()
 
 		expr := &IntegerExpression{
-			PositiveLiteral: "0o5_2",
+			PositiveLiteral: []byte("0o5_2"),
 			Value:           big.NewInt(42),
 			Base:            8,
 		}
@@ -282,7 +282,7 @@ func TestIntegerExpression_Doc(t *testing.T) {
 		t.Parallel()
 
 		expr := &IntegerExpression{
-			PositiveLiteral: "0x2_A",
+			PositiveLiteral: []byte("0x2_A"),
 			Value:           big.NewInt(42),
 			Base:            16,
 		}
@@ -303,7 +303,7 @@ func TestIntegerExpression_String(t *testing.T) {
 		t.Parallel()
 
 		expr := &IntegerExpression{
-			PositiveLiteral: "4_2",
+			PositiveLiteral: []byte("4_2"),
 			Value:           big.NewInt(42),
 			Base:            10,
 		}
@@ -319,7 +319,7 @@ func TestIntegerExpression_String(t *testing.T) {
 		t.Parallel()
 
 		expr := &IntegerExpression{
-			PositiveLiteral: "4_2",
+			PositiveLiteral: []byte("4_2"),
 			Value:           big.NewInt(-42),
 			Base:            10,
 		}
@@ -335,7 +335,7 @@ func TestIntegerExpression_String(t *testing.T) {
 		t.Parallel()
 
 		expr := &IntegerExpression{
-			PositiveLiteral: "0b10_10_10",
+			PositiveLiteral: []byte("0b10_10_10"),
 			Value:           big.NewInt(42),
 			Base:            2,
 		}
@@ -351,7 +351,7 @@ func TestIntegerExpression_String(t *testing.T) {
 		t.Parallel()
 
 		expr := &IntegerExpression{
-			PositiveLiteral: "0o5_2",
+			PositiveLiteral: []byte("0o5_2"),
 			Value:           big.NewInt(42),
 			Base:            8,
 		}
@@ -367,7 +367,7 @@ func TestIntegerExpression_String(t *testing.T) {
 		t.Parallel()
 
 		expr := &IntegerExpression{
-			PositiveLiteral: "0x2_A",
+			PositiveLiteral: []byte("0x2_A"),
 			Value:           big.NewInt(42),
 			Base:            16,
 		}
@@ -384,7 +384,7 @@ func TestFixedPointExpression_MarshalJSON(t *testing.T) {
 	t.Parallel()
 
 	expr := &FixedPointExpression{
-		PositiveLiteral: "42.2400000000",
+		PositiveLiteral: []byte("42.2400000000"),
 		Negative:        true,
 		UnsignedInteger: big.NewInt(42),
 		Fractional:      big.NewInt(24),
@@ -424,7 +424,7 @@ func TestFixedPointExpression_Doc(t *testing.T) {
 		t.Parallel()
 
 		expr := &FixedPointExpression{
-			PositiveLiteral: "1_2.3_4",
+			PositiveLiteral: []byte("1_2.3_4"),
 			UnsignedInteger: big.NewInt(42),
 			Scale:           2,
 		}
@@ -440,7 +440,7 @@ func TestFixedPointExpression_Doc(t *testing.T) {
 		t.Parallel()
 
 		expr := &FixedPointExpression{
-			PositiveLiteral: "1_2.3_4",
+			PositiveLiteral: []byte("1_2.3_4"),
 			Negative:        true,
 			UnsignedInteger: big.NewInt(42),
 			Scale:           2,
@@ -462,7 +462,7 @@ func TestFixedPointExpression_String(t *testing.T) {
 		t.Parallel()
 
 		expr := &FixedPointExpression{
-			PositiveLiteral: "1_2.3_4",
+			PositiveLiteral: []byte("1_2.3_4"),
 			UnsignedInteger: big.NewInt(42),
 			Scale:           2,
 		}
@@ -478,7 +478,7 @@ func TestFixedPointExpression_String(t *testing.T) {
 		t.Parallel()
 
 		expr := &FixedPointExpression{
-			PositiveLiteral: "1_2.3_4",
+			PositiveLiteral: []byte("1_2.3_4"),
 			Negative:        true,
 			UnsignedInteger: big.NewInt(42),
 			Scale:           2,
@@ -1596,7 +1596,7 @@ func TestUnaryExpression_MarshalJSON(t *testing.T) {
 	expr := &UnaryExpression{
 		Operation: OperationNegate,
 		Expression: &IntegerExpression{
-			PositiveLiteral: "42",
+			PositiveLiteral: []byte("42"),
 			Value:           big.NewInt(42),
 			Base:            10,
 			Range: Range{
@@ -1820,7 +1820,7 @@ func TestBinaryExpression_MarshalJSON(t *testing.T) {
 	expr := &BinaryExpression{
 		Operation: OperationPlus,
 		Left: &IntegerExpression{
-			PositiveLiteral: "42",
+			PositiveLiteral: []byte("42"),
 			Value:           big.NewInt(42),
 			Base:            10,
 			Range: Range{
@@ -1829,7 +1829,7 @@ func TestBinaryExpression_MarshalJSON(t *testing.T) {
 			},
 		},
 		Right: &IntegerExpression{
-			PositiveLiteral: "99",
+			PositiveLiteral: []byte("99"),
 			Value:           big.NewInt(99),
 			Base:            10,
 			Range: Range{
@@ -1882,12 +1882,12 @@ func TestBinaryExpression_Doc(t *testing.T) {
 		expr := &BinaryExpression{
 			Operation: OperationPlus,
 			Left: &IntegerExpression{
-				PositiveLiteral: "42",
+				PositiveLiteral: []byte("42"),
 				Value:           big.NewInt(42),
 				Base:            10,
 			},
 			Right: &IntegerExpression{
-				PositiveLiteral: "99",
+				PositiveLiteral: []byte("99"),
 				Value:           big.NewInt(99),
 				Base:            10,
 			},
@@ -1920,18 +1920,18 @@ func TestBinaryExpression_Doc(t *testing.T) {
 			Left: &BinaryExpression{
 				Operation: OperationPlus,
 				Left: &IntegerExpression{
-					PositiveLiteral: "42",
+					PositiveLiteral: []byte("42"),
 					Value:           big.NewInt(42),
 					Base:            10,
 				},
 				Right: &IntegerExpression{
-					PositiveLiteral: "1",
+					PositiveLiteral: []byte("1"),
 					Value:           big.NewInt(42),
 					Base:            10,
 				},
 			},
 			Right: &IntegerExpression{
-				PositiveLiteral: "99",
+				PositiveLiteral: []byte("99"),
 				Value:           big.NewInt(99),
 				Base:            10,
 			},
@@ -1976,18 +1976,18 @@ func TestBinaryExpression_Doc(t *testing.T) {
 			Left: &BinaryExpression{
 				Operation: OperationBitwiseOr,
 				Left: &IntegerExpression{
-					PositiveLiteral: "42",
+					PositiveLiteral: []byte("42"),
 					Value:           big.NewInt(42),
 					Base:            10,
 				},
 				Right: &IntegerExpression{
-					PositiveLiteral: "1",
+					PositiveLiteral: []byte("1"),
 					Value:           big.NewInt(42),
 					Base:            10,
 				},
 			},
 			Right: &IntegerExpression{
-				PositiveLiteral: "99",
+				PositiveLiteral: []byte("99"),
 				Value:           big.NewInt(99),
 				Base:            10,
 			},
@@ -2042,19 +2042,19 @@ func TestBinaryExpression_Doc(t *testing.T) {
 		expr := &BinaryExpression{
 			Operation: OperationNilCoalesce,
 			Left: &IntegerExpression{
-				PositiveLiteral: "99",
+				PositiveLiteral: []byte("99"),
 				Value:           big.NewInt(99),
 				Base:            10,
 			},
 			Right: &BinaryExpression{
 				Operation: OperationNilCoalesce,
 				Left: &IntegerExpression{
-					PositiveLiteral: "42",
+					PositiveLiteral: []byte("42"),
 					Value:           big.NewInt(42),
 					Base:            10,
 				},
 				Right: &IntegerExpression{
-					PositiveLiteral: "1",
+					PositiveLiteral: []byte("1"),
 					Value:           big.NewInt(42),
 					Base:            10,
 				},
@@ -2100,18 +2100,18 @@ func TestBinaryExpression_Doc(t *testing.T) {
 			Left: &BinaryExpression{
 				Operation: OperationOr,
 				Left: &IntegerExpression{
-					PositiveLiteral: "42",
+					PositiveLiteral: []byte("42"),
 					Value:           big.NewInt(42),
 					Base:            10,
 				},
 				Right: &IntegerExpression{
-					PositiveLiteral: "1",
+					PositiveLiteral: []byte("1"),
 					Value:           big.NewInt(42),
 					Base:            10,
 				},
 			},
 			Right: &IntegerExpression{
-				PositiveLiteral: "99",
+				PositiveLiteral: []byte("99"),
 				Value:           big.NewInt(99),
 				Base:            10,
 			},
@@ -2172,12 +2172,12 @@ func TestBinaryExpression_String(t *testing.T) {
 		expr := &BinaryExpression{
 			Operation: OperationPlus,
 			Left: &IntegerExpression{
-				PositiveLiteral: "42",
+				PositiveLiteral: []byte("42"),
 				Value:           big.NewInt(42),
 				Base:            10,
 			},
 			Right: &IntegerExpression{
-				PositiveLiteral: "99",
+				PositiveLiteral: []byte("99"),
 				Value:           big.NewInt(99),
 				Base:            10,
 			},
@@ -2198,18 +2198,18 @@ func TestBinaryExpression_String(t *testing.T) {
 			Left: &BinaryExpression{
 				Operation: OperationPlus,
 				Left: &IntegerExpression{
-					PositiveLiteral: "42",
+					PositiveLiteral: []byte("42"),
 					Value:           big.NewInt(42),
 					Base:            10,
 				},
 				Right: &IntegerExpression{
-					PositiveLiteral: "1",
+					PositiveLiteral: []byte("1"),
 					Value:           big.NewInt(42),
 					Base:            10,
 				},
 			},
 			Right: &IntegerExpression{
-				PositiveLiteral: "99",
+				PositiveLiteral: []byte("99"),
 				Value:           big.NewInt(99),
 				Base:            10,
 			},
@@ -2230,18 +2230,18 @@ func TestBinaryExpression_String(t *testing.T) {
 			Left: &BinaryExpression{
 				Operation: OperationBitwiseOr,
 				Left: &IntegerExpression{
-					PositiveLiteral: "42",
+					PositiveLiteral: []byte("42"),
 					Value:           big.NewInt(42),
 					Base:            10,
 				},
 				Right: &IntegerExpression{
-					PositiveLiteral: "1",
+					PositiveLiteral: []byte("1"),
 					Value:           big.NewInt(42),
 					Base:            10,
 				},
 			},
 			Right: &IntegerExpression{
-				PositiveLiteral: "99",
+				PositiveLiteral: []byte("99"),
 				Value:           big.NewInt(99),
 				Base:            10,
 			},
@@ -2260,19 +2260,19 @@ func TestBinaryExpression_String(t *testing.T) {
 		expr := &BinaryExpression{
 			Operation: OperationNilCoalesce,
 			Left: &IntegerExpression{
-				PositiveLiteral: "99",
+				PositiveLiteral: []byte("99"),
 				Value:           big.NewInt(99),
 				Base:            10,
 			},
 			Right: &BinaryExpression{
 				Operation: OperationNilCoalesce,
 				Left: &IntegerExpression{
-					PositiveLiteral: "42",
+					PositiveLiteral: []byte("42"),
 					Value:           big.NewInt(42),
 					Base:            10,
 				},
 				Right: &IntegerExpression{
-					PositiveLiteral: "1",
+					PositiveLiteral: []byte("1"),
 					Value:           big.NewInt(42),
 					Base:            10,
 				},
@@ -2294,18 +2294,18 @@ func TestBinaryExpression_String(t *testing.T) {
 			Left: &BinaryExpression{
 				Operation: OperationOr,
 				Left: &IntegerExpression{
-					PositiveLiteral: "42",
+					PositiveLiteral: []byte("42"),
 					Value:           big.NewInt(42),
 					Base:            10,
 				},
 				Right: &IntegerExpression{
-					PositiveLiteral: "1",
+					PositiveLiteral: []byte("1"),
 					Value:           big.NewInt(42),
 					Base:            10,
 				},
 			},
 			Right: &IntegerExpression{
-				PositiveLiteral: "99",
+				PositiveLiteral: []byte("99"),
 				Value:           big.NewInt(99),
 				Base:            10,
 			},
@@ -2741,7 +2741,7 @@ func TestConditionalExpression_MarshalJSON(t *testing.T) {
 			},
 		},
 		Then: &IntegerExpression{
-			PositiveLiteral: "42",
+			PositiveLiteral: []byte("42"),
 			Value:           big.NewInt(42),
 			Base:            10,
 			Range: Range{
@@ -2750,7 +2750,7 @@ func TestConditionalExpression_MarshalJSON(t *testing.T) {
 			},
 		},
 		Else: &IntegerExpression{
-			PositiveLiteral: "99",
+			PositiveLiteral: []byte("99"),
 			Value:           big.NewInt(99),
 			Base:            10,
 			Range: Range{
@@ -2810,12 +2810,12 @@ func TestConditionalExpression_Doc(t *testing.T) {
 				Value: false,
 			},
 			Then: &IntegerExpression{
-				PositiveLiteral: "42",
+				PositiveLiteral: []byte("42"),
 				Value:           big.NewInt(42),
 				Base:            10,
 			},
 			Else: &IntegerExpression{
-				PositiveLiteral: "99",
+				PositiveLiteral: []byte("99"),
 				Value:           big.NewInt(99),
 				Base:            10,
 			},
@@ -2860,23 +2860,23 @@ func TestConditionalExpression_Doc(t *testing.T) {
 					Value: false,
 				},
 				Then: &IntegerExpression{
-					PositiveLiteral: "1",
+					PositiveLiteral: []byte("1"),
 					Value:           big.NewInt(1),
 					Base:            10,
 				},
 				Else: &IntegerExpression{
-					PositiveLiteral: "2",
+					PositiveLiteral: []byte("2"),
 					Value:           big.NewInt(2),
 					Base:            10,
 				},
 			},
 			Then: &IntegerExpression{
-				PositiveLiteral: "3",
+				PositiveLiteral: []byte("3"),
 				Value:           big.NewInt(3),
 				Base:            10,
 			},
 			Else: &IntegerExpression{
-				PositiveLiteral: "4",
+				PositiveLiteral: []byte("4"),
 				Value:           big.NewInt(4),
 				Base:            10,
 			},
@@ -2957,18 +2957,18 @@ func TestConditionalExpression_Doc(t *testing.T) {
 					Value: false,
 				},
 				Then: &IntegerExpression{
-					PositiveLiteral: "1",
+					PositiveLiteral: []byte("1"),
 					Value:           big.NewInt(1),
 					Base:            10,
 				},
 				Else: &IntegerExpression{
-					PositiveLiteral: "2",
+					PositiveLiteral: []byte("2"),
 					Value:           big.NewInt(2),
 					Base:            10,
 				},
 			},
 			Else: &IntegerExpression{
-				PositiveLiteral: "3",
+				PositiveLiteral: []byte("3"),
 				Value:           big.NewInt(3),
 				Base:            10,
 			},
@@ -3045,7 +3045,7 @@ func TestConditionalExpression_Doc(t *testing.T) {
 				Value: false,
 			},
 			Then: &IntegerExpression{
-				PositiveLiteral: "1",
+				PositiveLiteral: []byte("1"),
 				Value:           big.NewInt(1),
 				Base:            10,
 			},
@@ -3054,12 +3054,12 @@ func TestConditionalExpression_Doc(t *testing.T) {
 					Value: false,
 				},
 				Then: &IntegerExpression{
-					PositiveLiteral: "2",
+					PositiveLiteral: []byte("2"),
 					Value:           big.NewInt(2),
 					Base:            10,
 				},
 				Else: &IntegerExpression{
-					PositiveLiteral: "3",
+					PositiveLiteral: []byte("3"),
 					Value:           big.NewInt(3),
 					Base:            10,
 				},
@@ -3131,12 +3131,12 @@ func TestConditionalExpression_String(t *testing.T) {
 				Value: false,
 			},
 			Then: &IntegerExpression{
-				PositiveLiteral: "42",
+				PositiveLiteral: []byte("42"),
 				Value:           big.NewInt(42),
 				Base:            10,
 			},
 			Else: &IntegerExpression{
-				PositiveLiteral: "99",
+				PositiveLiteral: []byte("99"),
 				Value:           big.NewInt(99),
 				Base:            10,
 			},
@@ -3158,23 +3158,23 @@ func TestConditionalExpression_String(t *testing.T) {
 					Value: false,
 				},
 				Then: &IntegerExpression{
-					PositiveLiteral: "1",
+					PositiveLiteral: []byte("1"),
 					Value:           big.NewInt(1),
 					Base:            10,
 				},
 				Else: &IntegerExpression{
-					PositiveLiteral: "2",
+					PositiveLiteral: []byte("2"),
 					Value:           big.NewInt(2),
 					Base:            10,
 				},
 			},
 			Then: &IntegerExpression{
-				PositiveLiteral: "3",
+				PositiveLiteral: []byte("3"),
 				Value:           big.NewInt(3),
 				Base:            10,
 			},
 			Else: &IntegerExpression{
-				PositiveLiteral: "4",
+				PositiveLiteral: []byte("4"),
 				Value:           big.NewInt(4),
 				Base:            10,
 			},
@@ -3199,18 +3199,18 @@ func TestConditionalExpression_String(t *testing.T) {
 					Value: false,
 				},
 				Then: &IntegerExpression{
-					PositiveLiteral: "1",
+					PositiveLiteral: []byte("1"),
 					Value:           big.NewInt(1),
 					Base:            10,
 				},
 				Else: &IntegerExpression{
-					PositiveLiteral: "2",
+					PositiveLiteral: []byte("2"),
 					Value:           big.NewInt(2),
 					Base:            10,
 				},
 			},
 			Else: &IntegerExpression{
-				PositiveLiteral: "3",
+				PositiveLiteral: []byte("3"),
 				Value:           big.NewInt(3),
 				Base:            10,
 			},
@@ -3231,7 +3231,7 @@ func TestConditionalExpression_String(t *testing.T) {
 				Value: false,
 			},
 			Then: &IntegerExpression{
-				PositiveLiteral: "1",
+				PositiveLiteral: []byte("1"),
 				Value:           big.NewInt(1),
 				Base:            10,
 			},
@@ -3240,12 +3240,12 @@ func TestConditionalExpression_String(t *testing.T) {
 					Value: false,
 				},
 				Then: &IntegerExpression{
-					PositiveLiteral: "2",
+					PositiveLiteral: []byte("2"),
 					Value:           big.NewInt(2),
 					Base:            10,
 				},
 				Else: &IntegerExpression{
-					PositiveLiteral: "3",
+					PositiveLiteral: []byte("3"),
 					Value:           big.NewInt(3),
 					Base:            10,
 				},
@@ -3672,7 +3672,7 @@ func TestCastingExpression_Doc(t *testing.T) {
 
 		expr := &CastingExpression{
 			Expression: &IntegerExpression{
-				PositiveLiteral: "42",
+				PositiveLiteral: []byte("42"),
 				Value:           big.NewInt(42),
 				Base:            10,
 			},
@@ -3709,7 +3709,7 @@ func TestCastingExpression_Doc(t *testing.T) {
 		expr := &CastingExpression{
 			Expression: &CastingExpression{
 				Expression: &IntegerExpression{
-					PositiveLiteral: "42",
+					PositiveLiteral: []byte("42"),
 					Value:           big.NewInt(42),
 					Base:            10,
 				},
@@ -3836,7 +3836,7 @@ func TestCastingExpression_String(t *testing.T) {
 
 		expr := &CastingExpression{
 			Expression: &IntegerExpression{
-				PositiveLiteral: "42",
+				PositiveLiteral: []byte("42"),
 				Value:           big.NewInt(42),
 				Base:            10,
 			},
@@ -3863,7 +3863,7 @@ func TestCastingExpression_String(t *testing.T) {
 		expr := &CastingExpression{
 			Expression: &CastingExpression{
 				Expression: &IntegerExpression{
-					PositiveLiteral: "42",
+					PositiveLiteral: []byte("42"),
 					Value:           big.NewInt(42),
 					Base:            10,
 				},
@@ -4091,12 +4091,6 @@ func TestReferenceExpression_MarshalJSON(t *testing.T) {
 				Pos:        Position{Offset: 1, Line: 2, Column: 3},
 			},
 		},
-		Type: &NominalType{
-			Identifier: Identifier{
-				Identifier: "AB",
-				Pos:        Position{Offset: 4, Line: 5, Column: 6},
-			},
-		},
 		StartPos: Position{Offset: 7, Line: 8, Column: 9},
 	}
 
@@ -4117,18 +4111,8 @@ func TestReferenceExpression_MarshalJSON(t *testing.T) {
                "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
                "EndPos": {"Offset": 6, "Line": 2, "Column": 8}
             },
-            "TargetType": {
-               "Type": "NominalType",
-               "Identifier": {
-                   "Identifier": "AB",
-                   "StartPos": {"Offset": 4, "Line": 5, "Column": 6},
-                   "EndPos": {"Offset": 5, "Line": 5, "Column": 7}
-               },
-               "StartPos": {"Offset": 4, "Line": 5, "Column": 6},
-               "EndPos": {"Offset": 5, "Line": 5, "Column": 7}
-            },
             "StartPos": {"Offset": 7, "Line": 8, "Column": 9},
-            "EndPos": {"Offset": 5, "Line": 5, "Column": 7}
+            "EndPos": {"Offset": 6, "Line": 2, "Column": 8}
         }
         `,
 		string(actual),
@@ -4145,17 +4129,9 @@ func TestReferenceExpression_Doc(t *testing.T) {
 
 		expr := &ReferenceExpression{
 			Expression: &IntegerExpression{
-				PositiveLiteral: "42",
+				PositiveLiteral: []byte("42"),
 				Value:           big.NewInt(42),
 				Base:            10,
-			},
-			Type: &ReferenceType{
-				Authorized: true,
-				Type: &NominalType{
-					Identifier: Identifier{
-						Identifier: "Int",
-					},
-				},
 			},
 		}
 
@@ -4165,14 +4141,6 @@ func TestReferenceExpression_Doc(t *testing.T) {
 					prettier.Text("&"),
 					prettier.Group{
 						Doc: prettier.Text("42"),
-					},
-					prettier.Line{},
-					prettier.Text("as"),
-					prettier.Line{},
-					prettier.Concat{
-						prettier.Text("auth "),
-						prettier.Text("&"),
-						prettier.Text("Int"),
 					},
 				},
 			},
@@ -4187,25 +4155,9 @@ func TestReferenceExpression_Doc(t *testing.T) {
 		expr := &ReferenceExpression{
 			Expression: &ReferenceExpression{
 				Expression: &IntegerExpression{
-					PositiveLiteral: "42",
+					PositiveLiteral: []byte("42"),
 					Value:           big.NewInt(42),
 					Base:            10,
-				},
-				Type: &ReferenceType{
-					Authorized: true,
-					Type: &NominalType{
-						Identifier: Identifier{
-							Identifier: "AnyStruct",
-						},
-					},
-				},
-			},
-			Type: &ReferenceType{
-				Authorized: true,
-				Type: &NominalType{
-					Identifier: Identifier{
-						Identifier: "XYZ",
-					},
 				},
 			},
 		}
@@ -4221,24 +4173,8 @@ func TestReferenceExpression_Doc(t *testing.T) {
 								prettier.Group{
 									Doc: prettier.Text("42"),
 								},
-								prettier.Line{},
-								prettier.Text("as"),
-								prettier.Line{},
-								prettier.Concat{
-									prettier.Text("auth "),
-									prettier.Text("&"),
-									prettier.Text("AnyStruct"),
-								},
 							},
 						},
-					},
-					prettier.Line{},
-					prettier.Text("as"),
-					prettier.Line{},
-					prettier.Concat{
-						prettier.Text("auth "),
-						prettier.Text("&"),
-						prettier.Text("XYZ"),
 					},
 				},
 			},
@@ -4261,14 +4197,6 @@ func TestReferenceExpression_Doc(t *testing.T) {
 				Right: &IdentifierExpression{
 					Identifier: Identifier{
 						Identifier: "bar",
-					},
-				},
-			},
-			Type: &ReferenceType{
-				Authorized: true,
-				Type: &NominalType{
-					Identifier: Identifier{
-						Identifier: "Int",
 					},
 				},
 			},
@@ -4304,14 +4232,6 @@ func TestReferenceExpression_Doc(t *testing.T) {
 							},
 						},
 					},
-					prettier.Line{},
-					prettier.Text("as"),
-					prettier.Line{},
-					prettier.Concat{
-						prettier.Text("auth "),
-						prettier.Text("&"),
-						prettier.Text("Int"),
-					},
 				},
 			},
 			expr.Doc(),
@@ -4329,22 +4249,14 @@ func TestReferenceExpression_String(t *testing.T) {
 
 		expr := &ReferenceExpression{
 			Expression: &IntegerExpression{
-				PositiveLiteral: "42",
+				PositiveLiteral: []byte("42"),
 				Value:           big.NewInt(42),
 				Base:            10,
-			},
-			Type: &ReferenceType{
-				Authorized: true,
-				Type: &NominalType{
-					Identifier: Identifier{
-						Identifier: "Int",
-					},
-				},
 			},
 		}
 
 		assert.Equal(t,
-			"&42 as auth &Int",
+			"&42",
 			expr.String(),
 		)
 	})
@@ -4356,31 +4268,15 @@ func TestReferenceExpression_String(t *testing.T) {
 		expr := &ReferenceExpression{
 			Expression: &ReferenceExpression{
 				Expression: &IntegerExpression{
-					PositiveLiteral: "42",
+					PositiveLiteral: []byte("42"),
 					Value:           big.NewInt(42),
 					Base:            10,
-				},
-				Type: &ReferenceType{
-					Authorized: true,
-					Type: &NominalType{
-						Identifier: Identifier{
-							Identifier: "AnyStruct",
-						},
-					},
-				},
-			},
-			Type: &ReferenceType{
-				Authorized: true,
-				Type: &NominalType{
-					Identifier: Identifier{
-						Identifier: "XYZ",
-					},
 				},
 			},
 		}
 
 		assert.Equal(t,
-			"&&42 as auth &AnyStruct as auth &XYZ",
+			"&&42",
 			expr.String(),
 		)
 	})
@@ -4403,18 +4299,10 @@ func TestReferenceExpression_String(t *testing.T) {
 					},
 				},
 			},
-			Type: &ReferenceType{
-				Authorized: true,
-				Type: &NominalType{
-					Identifier: Identifier{
-						Identifier: "Int",
-					},
-				},
-			},
 		}
 
 		assert.Equal(t,
-			"&(foo - bar) as auth &Int",
+			"&(foo - bar)",
 			expr.String(),
 		)
 	})
@@ -4513,6 +4401,7 @@ func TestFunctionExpression_MarshalJSON(t *testing.T) {
                 "StartPos": {"Offset": 16, "Line": 17, "Column": 18},
                 "EndPos": {"Offset": 19, "Line": 20, "Column": 21}
             },
+			"Purity": "Unspecified",
             "ReturnTypeAnnotation": {
                 "IsResource": true,
                 "AnnotatedType": {
@@ -4626,7 +4515,7 @@ func TestFunctionExpression_Doc(t *testing.T) {
 					Statements: []Statement{
 						&ReturnStatement{
 							Expression: &IntegerExpression{
-								PositiveLiteral: "1",
+								PositiveLiteral: []byte("1"),
 								Value:           big.NewInt(1),
 								Base:            10,
 							},
@@ -4737,7 +4626,7 @@ func TestFunctionExpression_Doc(t *testing.T) {
 					Statements: []Statement{
 						&ReturnStatement{
 							Expression: &IntegerExpression{
-								PositiveLiteral: "1",
+								PositiveLiteral: []byte("1"),
 								Value:           big.NewInt(1),
 								Base:            10,
 							},
@@ -4905,7 +4794,7 @@ func TestFunctionExpression_String(t *testing.T) {
 					Statements: []Statement{
 						&ReturnStatement{
 							Expression: &IntegerExpression{
-								PositiveLiteral: "1",
+								PositiveLiteral: []byte("1"),
 								Value:           big.NewInt(1),
 								Base:            10,
 							},
@@ -4963,7 +4852,7 @@ func TestFunctionExpression_String(t *testing.T) {
 					Statements: []Statement{
 						&ReturnStatement{
 							Expression: &IntegerExpression{
-								PositiveLiteral: "1",
+								PositiveLiteral: []byte("1"),
 								Value:           big.NewInt(1),
 								Base:            10,
 							},

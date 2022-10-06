@@ -26,8 +26,23 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
+type FunctionPurity int
+
+const (
+	FunctionPurityUnspecified FunctionPurity = iota
+	FunctionPurityView
+)
+
+func (p FunctionPurity) MarshalJSON() ([]byte, error) {
+	if p == FunctionPurityUnspecified {
+		return json.Marshal("Unspecified")
+	}
+	return json.Marshal("View")
+}
+
 type FunctionDeclaration struct {
 	Access               Access
+	Purity               FunctionPurity
 	Identifier           Identifier
 	ParameterList        *ParameterList
 	ReturnTypeAnnotation *TypeAnnotation
@@ -43,6 +58,7 @@ var _ Statement = &FunctionDeclaration{}
 func NewFunctionDeclaration(
 	gauge common.MemoryGauge,
 	access Access,
+	purity FunctionPurity,
 	identifier Identifier,
 	parameterList *ParameterList,
 	returnTypeAnnotation *TypeAnnotation,
@@ -54,6 +70,7 @@ func NewFunctionDeclaration(
 
 	return &FunctionDeclaration{
 		Access:               access,
+		Purity:               purity,
 		Identifier:           identifier,
 		ParameterList:        parameterList,
 		ReturnTypeAnnotation: returnTypeAnnotation,
@@ -108,6 +125,7 @@ func (d *FunctionDeclaration) DeclarationAccess() Access {
 func (d *FunctionDeclaration) ToExpression(memoryGauge common.MemoryGauge) *FunctionExpression {
 	return NewFunctionExpression(
 		memoryGauge,
+		d.Purity,
 		d.ParameterList,
 		d.ReturnTypeAnnotation,
 		d.FunctionBlock,

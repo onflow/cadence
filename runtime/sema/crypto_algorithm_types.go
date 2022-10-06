@@ -111,6 +111,7 @@ func (algo SignatureAlgorithm) DocString() string {
 const HashAlgorithmTypeHashFunctionName = "hash"
 
 var HashAlgorithmTypeHashFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	Parameters: []*Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
@@ -130,6 +131,7 @@ Returns the hash of the given data
 const HashAlgorithmTypeHashWithTagFunctionName = "hashWithTag"
 
 var HashAlgorithmTypeHashWithTagFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	Parameters: []*Parameter{
 		{
 			Label:      ArgumentLabelNotRequired,
@@ -286,7 +288,7 @@ func newNativeEnumType(
 	)
 
 	ty.Members = GetMembersAsMap(members)
-	ty.Fields = getFieldNames(members)
+	ty.Fields = GetFieldNames(members)
 	return ty
 }
 

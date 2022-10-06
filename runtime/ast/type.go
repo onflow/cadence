@@ -432,6 +432,7 @@ func (t *DictionaryType) CheckEqual(other Type, checker TypeEqualityChecker) err
 // FunctionType
 
 type FunctionType struct {
+	PurityAnnotation         FunctionPurity
 	ParameterTypeAnnotations []*TypeAnnotation `json:",omitempty"`
 	ReturnTypeAnnotation     *TypeAnnotation
 	Range
@@ -441,12 +442,14 @@ var _ Type = &FunctionType{}
 
 func NewFunctionType(
 	memoryGauge common.MemoryGauge,
+	purity FunctionPurity,
 	parameterTypes []*TypeAnnotation,
 	returnType *TypeAnnotation,
 	astRange Range,
 ) *FunctionType {
 	common.UseMemory(memoryGauge, common.FunctionTypeMemoryUsage)
 	return &FunctionType{
+		PurityAnnotation:         purity,
 		ParameterTypeAnnotations: parameterTypes,
 		ReturnTypeAnnotation:     returnType,
 		Range:                    astRange,

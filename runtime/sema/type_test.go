@@ -51,6 +51,7 @@ func TestConstantSizedType_String_OfFunctionType(t *testing.T) {
 
 	ty := &ConstantSizedType{
 		Type: &FunctionType{
+			Purity: FunctionPurityImpure,
 			Parameters: []*Parameter{
 				{
 					TypeAnnotation: NewTypeAnnotation(Int8Type),
@@ -65,6 +66,31 @@ func TestConstantSizedType_String_OfFunctionType(t *testing.T) {
 
 	assert.Equal(t,
 		"[((Int8): Int16); 2]",
+		ty.String(),
+	)
+}
+
+func TestConstantSizedType_String_OfViewFunctionType(t *testing.T) {
+
+	t.Parallel()
+
+	ty := &ConstantSizedType{
+		Type: &FunctionType{
+			Purity: FunctionPurityView,
+			Parameters: []*Parameter{
+				{
+					TypeAnnotation: NewTypeAnnotation(Int8Type),
+				},
+			},
+			ReturnTypeAnnotation: NewTypeAnnotation(
+				Int16Type,
+			),
+		},
+		Size: 2,
+	}
+
+	assert.Equal(t,
+		"[(view (Int8): Int16); 2]",
 		ty.String(),
 	)
 }
@@ -524,7 +550,7 @@ func TestBeforeType_Strings(t *testing.T) {
 
 	t.Parallel()
 
-	expected := "(<T: AnyStruct>(_ value: T): T)"
+	expected := "(view <T: AnyStruct>(_ value: T): T)"
 
 	assert.Equal(t,
 		expected,
@@ -650,7 +676,7 @@ func TestIdentifierCacheUpdate(t *testing.T) {
           }
 	`
 
-	program, err := parser.ParseProgram(code, nil)
+	program, err := parser.ParseProgram([]byte(code), nil)
 	require.NoError(t, err)
 
 	checker, err := NewChecker(
@@ -699,7 +725,7 @@ func TestIdentifierCacheUpdate(t *testing.T) {
 					assert.Equal(t, recalculatedID, cachedID)
 
 					// Recursively check for nested types
-					checkNestedTypes(semaType.nestedTypes)
+					checkNestedTypes(semaType.NestedTypes)
 
 				case *InterfaceType:
 					cachedQualifiedID := semaType.QualifiedIdentifier()
@@ -715,7 +741,7 @@ func TestIdentifierCacheUpdate(t *testing.T) {
 					assert.Equal(t, recalculatedID, cachedID)
 
 					// Recursively check for nested types
-					checkNestedTypes(semaType.nestedTypes)
+					checkNestedTypes(semaType.NestedTypes)
 				}
 			}
 
@@ -1471,6 +1497,7 @@ func TestCommonSuperType(t *testing.T) {
 		t.Parallel()
 
 		funcType1 := &FunctionType{
+			Purity: FunctionPurityImpure,
 			Parameters: []*Parameter{
 				{
 					TypeAnnotation: NewTypeAnnotation(StringType),
@@ -1481,6 +1508,7 @@ func TestCommonSuperType(t *testing.T) {
 		}
 
 		funcType2 := &FunctionType{
+			Purity: FunctionPurityImpure,
 			Parameters: []*Parameter{
 				{
 					TypeAnnotation: NewTypeAnnotation(IntType),

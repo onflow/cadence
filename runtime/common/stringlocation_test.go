@@ -46,6 +46,18 @@ func TestStringLocation_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestStringLocation_TypeID(t *testing.T) {
+
+	t.Parallel()
+
+	location := StringLocation("foo")
+
+	assert.Equal(t,
+		TypeID("S.foo.Bar.Baz"),
+		location.TypeID(nil, "Bar.Baz"),
+	)
+}
+
 func TestDecodeStringLocationTypeID(t *testing.T) {
 
 	t.Parallel()

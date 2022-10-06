@@ -23,10 +23,6 @@ git
 language/tools/vscode-extension/cadence-*.vsix
 language/tools/vscode-extension/out/*
 
-
-# Language server artifacts
-/languageserver/languageserver
-
 # Go mod ignores
 .history
 go.work
@@ -36,15 +32,12 @@ crashers
 corpus
 suppressions
 
-languageserver/test/languageserver
 coverage.txt
 coverage.txt-e
 runtime/cmd/check/check
 runtime/cmd/main/main
 runtime/cmd/parse/parse
 runtime/cmd/parse/parse.wasm
-languageserver/cmd/languageserver/languageserver
-languageserver/cmd/languageserver/languageserver.wasm
 tools/golangci-lint/golangci-lint
 tools/maprangecheck/maprangecheck.so
 tools/constructorcheck/constructorcheck.so

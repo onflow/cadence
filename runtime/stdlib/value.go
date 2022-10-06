@@ -31,6 +31,7 @@ type StandardLibraryValue struct {
 	DocString      string
 	Value          interpreter.Value
 	Kind           common.DeclarationKind
+	Position       *ast.Position
 	ArgumentLabels []string
 }
 
@@ -54,8 +55,8 @@ func (v StandardLibraryValue) ValueDeclarationKind() common.DeclarationKind {
 	return v.Kind
 }
 
-func (StandardLibraryValue) ValueDeclarationPosition() *ast.Position {
-	return nil
+func (v StandardLibraryValue) ValueDeclarationPosition() *ast.Position {
+	return v.Position
 }
 
 func (v StandardLibraryValue) ValueDeclarationIsConstant() bool {

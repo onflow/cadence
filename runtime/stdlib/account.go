@@ -146,6 +146,7 @@ Returns the AuthAccount for the given address. Only available in scripts
 `
 
 var getAuthAccountFunctionType = &sema.FunctionType{
+	Purity: sema.FunctionPurityView,
 	Parameters: []*sema.Parameter{{
 		Label:          sema.ArgumentLabelNotRequired,
 		Identifier:     "address",
@@ -997,7 +998,7 @@ func newAuthAccountContractsChangeFunction(
 				oldCode, err := handler.GetAccountContractCode(address, contractName)
 				handleContractUpdateError(err)
 
-				oldProgram, err := parser.ParseProgram(string(oldCode), gauge)
+				oldProgram, err := parser.ParseProgram(oldCode, gauge)
 
 				if !ignoreUpdatedProgramParserError(err) {
 					handleContractUpdateError(err)
@@ -1336,7 +1337,7 @@ func newAuthAccountContractsRemoveFunction(
 				// NOTE: *DO NOT* call setProgram – the program removal
 				// should not be effective during the execution, only after
 
-				existingProgram, err := parser.ParseProgram(string(code), gauge)
+				existingProgram, err := parser.ParseProgram(code, gauge)
 
 				// If the existing code is not parsable (i.e: `err != nil`),
 				// that shouldn't be a reason to fail the contract removal.

@@ -81,6 +81,7 @@ func TestRuntimeCyclicImport(t *testing.T) {
 		},
 	)
 	require.Error(t, err)
+	_ = err.Error()
 
 	require.Contains(t, err.Error(), "cyclic import of `p1`")
 
@@ -143,6 +144,8 @@ func TestRuntimeExport(t *testing.T) {
 		)
 
 		require.Error(t, err)
+		_ = err.Error()
+
 		require.IsType(t, Error{}, err)
 	})
 }

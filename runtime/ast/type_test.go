@@ -430,7 +430,7 @@ func TestConstantSizedType_Doc(t *testing.T) {
 			},
 		},
 		Size: &IntegerExpression{
-			PositiveLiteral: "42",
+			PositiveLiteral: []byte("42"),
 			Value:           big.NewInt(42),
 			Base:            10,
 		},
@@ -465,7 +465,7 @@ func TestConstantSizedType_String(t *testing.T) {
 			},
 		},
 		Size: &IntegerExpression{
-			PositiveLiteral: "42",
+			PositiveLiteral: []byte("42"),
 			Value:           big.NewInt(42),
 			Base:            10,
 		},
@@ -489,7 +489,7 @@ func TestConstantSizedType_MarshalJSON(t *testing.T) {
 			},
 		},
 		Size: &IntegerExpression{
-			PositiveLiteral: "42",
+			PositiveLiteral: []byte("42"),
 			Value:           big.NewInt(42),
 			Base:            10,
 			Range: Range{
@@ -812,6 +812,7 @@ func TestFunctionType_MarshalJSON(t *testing.T) {
                     "EndPos": {"Offset": 2, "Line": 2, "Column": 4}
                 }
            ],
+		   "PurityAnnotation": "Unspecified",
            "ReturnTypeAnnotation": {
                "IsResource": true,
                "AnnotatedType": {

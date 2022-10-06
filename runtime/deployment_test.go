@@ -72,7 +72,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 
 		inter := newTestInterpreter(t)
 
-		codeHash, err := importValue(
+		codeHash, err := ImportValue(
 			inter,
 			interpreter.ReturnEmptyLocationRange,
 			codeHashValue,
@@ -88,6 +88,9 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 
 	expectFailure := func(expectedErrorMessage string) expectation {
 		return func(t *testing.T, err error, accountCode []byte, events []cadence.Event, _ cadence.Type) {
+			require.Error(t, err)
+			_ = err.Error()
+
 			var runtimeErr Error
 			require.ErrorAs(t, err, &runtimeErr)
 

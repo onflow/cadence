@@ -137,7 +137,7 @@ There are three kinds of fields:
 In initializers, the special constant `self` refers to the composite value
 that is to be initialized.
 
-Field types must be storable. Non-storable types are:
+If a composite type is to be stored, all its field types must be storable. Non-storable types are:
 
 - Functions
 - [Accounts (`AuthAccount` / `PublicAccount`)](accounts)
@@ -227,6 +227,23 @@ token.id = 23
 ```
 
 Initializers do not support overloading.
+
+Initializers can also be declared with the `view` keyword, to indicate that they do not perform any mutating operations, 
+and to allow them to be called from within other `view` functions. 
+In an initializer, writes to `self` are considered `view` (unlike within other composite functions),
+as the value being constructed here is by definition local to the context calling the initializer. 
+
+```cadence
+pub struct Token {
+    pub let id: Int
+    pub var balance: Int
+
+    view init(id: Int, balance: Int) {
+        self.id = id
+        self.balance = balance
+    }
+}
+```
 
 ## Composite Type Functions
 

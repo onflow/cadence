@@ -38,9 +38,9 @@ type MemoryGauge interface {
 var (
 	// Tokens
 
-	ValueTokenMemoryUsage  = NewConstantMemoryUsage(MemoryKindValueToken)
-	SyntaxTokenMemoryUsage = NewConstantMemoryUsage(MemoryKindSyntaxToken)
-	SpaceTokenMemoryUsage  = NewConstantMemoryUsage(MemoryKindSpaceToken)
+	TypeTokenMemoryUsage  = NewConstantMemoryUsage(MemoryKindTypeToken)
+	ErrorTokenMemoryUsage = NewConstantMemoryUsage(MemoryKindErrorToken)
+	SpaceTokenMemoryUsage = NewConstantMemoryUsage(MemoryKindSpaceToken)
 
 	// AST
 

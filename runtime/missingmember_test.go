@@ -4402,7 +4402,7 @@ pub contract ExampleNFT {
 
         pub fun getIDs(): [UInt64]
 
-        pub fun idExists(id: UInt64): Bool
+        pub view fun idExists(id: UInt64): Bool
     }
 
     // The definition of the Collection resource that
@@ -4443,7 +4443,7 @@ pub contract ExampleNFT {
 
         // idExists checks to see if a NFT 
         // with the given ID exists in the collection
-        pub fun idExists(id: UInt64): Bool {
+        pub view fun idExists(id: UInt64): Bool {
             return self.ownedNFTs[id] != nil
         }
 

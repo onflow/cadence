@@ -139,8 +139,8 @@ const (
 
 	// Tokens
 
-	MemoryKindValueToken
-	MemoryKindSyntaxToken
+	MemoryKindTypeToken
+	MemoryKindErrorToken
 	MemoryKindSpaceToken
 
 	// AST nodes
