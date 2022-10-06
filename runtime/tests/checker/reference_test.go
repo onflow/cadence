@@ -2061,4 +2061,99 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 		invalidBinaryOp := &sema.InvalidBinaryOperandError{}
 		assert.ErrorAs(t, errors[1], &invalidBinaryOp)
 	})
+
+	t.Run("ref assignment", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub contract Test {
+                pub fun test() {
+                    let x <- create R()
+                    var ref1: &R? = nil
+                    ref1 = &x as &R
+
+                    destroy x
+                    ref1!.a
+                }
+            }
+
+            pub resource R {
+                pub let a: Int
+
+                init() {
+                    self.a = 5
+                }
+            }
+            `,
+		)
+
+		errors := ExpectCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+	})
+
+	t.Run("ref assignment non resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub contract Test {
+                pub fun test() {
+                    let x = S()
+                    var ref1: &S? = nil
+                    ref1 = &x as &S
+                    consume(x)
+                    ref1!.a
+                }
+            }
+
+            pub fun consume(_ s:S) {}
+
+            pub struct S {
+                pub let a: Int
+
+                init() {
+                    self.a = 5
+                }
+            }
+            `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("ref assignment chain", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub contract Test {
+                pub fun test() {
+                    let x <- create R()
+                    let ref1 = &x as &R
+                    let ref2 = ref1
+                    let ref3 = ref2
+                    destroy x
+                    ref3.a
+                }
+            }
+
+            pub resource R {
+                pub let a: Int
+
+                init() {
+                    self.a = 5
+                }
+            }
+            `,
+		)
+
+		errors := ExpectCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+	})
 }

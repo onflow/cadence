@@ -4607,28 +4607,31 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 
           resource R: RI {}
 
-          fun testInvalidUnauthorized(): &R? {
+          fun testInvalidUnauthorized(): Bool {
               let r  <- create R()
               let ref: AnyStruct = &r as &R{RI}
               let ref2 = ref as? &R
+              let isNil = ref2 == nil
               destroy r
-              return ref2
+              return isNil
           }
 
-          fun testValidAuthorized(): &R? {
+          fun testValidAuthorized(): Bool {
               let r  <- create R()
               let ref: AnyStruct = &r as auth &R{RI}
               let ref2 = ref as? &R
+              let isNil = ref2 == nil
               destroy r
-              return ref2
+              return isNil
           }
 
-          fun testValidRestricted(): &R{RI}? {
+          fun testValidRestricted(): Bool {
               let r  <- create R()
               let ref: AnyStruct = &r as &R{RI}
               let ref2 = ref as? &R{RI}
+              let isNil = ref2 == nil
               destroy r
-              return ref2
+              return isNil
           }
         `)
 
@@ -4638,7 +4641,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NilValue{},
+			interpreter.BoolValue(true),
 			result,
 		)
 
@@ -4646,7 +4649,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.IsType(t,
-			&interpreter.SomeValue{},
+			interpreter.BoolValue(false),
 			result,
 		)
 
@@ -4654,7 +4657,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.IsType(t,
-			&interpreter.SomeValue{},
+			interpreter.BoolValue(false),
 			result,
 		)
 	})

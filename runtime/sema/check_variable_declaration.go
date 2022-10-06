@@ -199,7 +199,7 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 		checker.recordVariableDeclarationRange(declaration, identifier, declarationType)
 	}
 
-	checker.recordReferenceCreation(identifier, declaration.Value)
+	checker.recordReference(identifier, declaration.Value)
 }
 
 func (checker *Checker) recordVariableDeclarationRange(
@@ -237,28 +237,51 @@ func (checker *Checker) elaborateNestedResourceMoveExpression(expression ast.Exp
 	}
 }
 
-func (checker *Checker) recordReferenceCreation(name string, expr ast.Expression) {
+func (checker *Checker) recordReferenceCreation(target, expr ast.Expression) {
+	switch target := target.(type) {
+	case *ast.IdentifierExpression:
+		checker.recordReference(target.Identifier.Identifier, expr)
+	default:
+		// TODO:
+		// handle field-access / index-expressions
+		return
+	}
+}
+
+func (checker *Checker) recordReference(name string, expr ast.Expression) {
 	referencedVar := checker.referencedVariable(expr)
 
-	if referencedVar != nil {
+	if referencedVar != nil &&
+		referencedVar.Type.IsResourceType() {
 		checker.references.Set(name, referencedVar)
 	}
 }
 
-// referencedVariable return the referenced variable, if the passed expression
-// is a reference expression. Otherwise, return nil.
+// referencedVariable return the referenced variable
 func (checker *Checker) referencedVariable(expr ast.Expression) *Variable {
 	refExpression := checker.referenceExpression(expr)
-	if refExpression == nil {
+
+	var variableRefExpr *ast.Identifier
+
+	switch refExpression := refExpression.(type) {
+	case *ast.ReferenceExpression:
+		variableRefExpr = checker.variableReferenceExpression(refExpression.Expression)
+	case *ast.IdentifierExpression:
+		variableRefExpr = &refExpression.Identifier
+	case *ast.MemberExpression,
+		*ast.IndexExpression:
+		// TODO:
+		// handle cases where rhs is a field/array-element, with reference type
+		return nil
+	default:
 		return nil
 	}
 
-	variableRefExpr := checker.variableReferenceExpression(refExpression.Expression)
 	if variableRefExpr == nil {
 		return nil
 	}
 
-	referencedVariableName := variableRefExpr.Identifier.Identifier
+	referencedVariableName := variableRefExpr.Identifier
 
 	for {
 		// If the referenced variable is again a reference,
@@ -282,10 +305,15 @@ func (checker *Checker) referencedVariable(expr ast.Expression) *Variable {
 	return checker.valueActivations.Find(referencedVariableName)
 }
 
-// referenceExpression returns a reference expression disguised as some other expression.
+// referenceExpression returns the expression that resulted the reference.
+// Those could be:
+//  1. reference-expression,
+//  2. identifier-expression/member-expression/index-expression having a reference type
+//
+// The expression could also be hidden inside some other expression.
 // e.g(1): `&v as &T` is a casting expression, but has a hidden reference expression.
 // e.g(2): `(&v as &T?)!
-func (checker *Checker) referenceExpression(expr ast.Expression) *ast.ReferenceExpression {
+func (checker *Checker) referenceExpression(expr ast.Expression) ast.Expression {
 	switch expr := expr.(type) {
 	case *ast.ReferenceExpression:
 		return expr
@@ -298,6 +326,8 @@ func (checker *Checker) referenceExpression(expr ast.Expression) *ast.ReferenceE
 			return nil
 		}
 		return checker.referenceExpression(expr.Left)
+	case *ast.IdentifierExpression:
+		return expr
 	default:
 		return nil
 	}
@@ -305,10 +335,10 @@ func (checker *Checker) referenceExpression(expr ast.Expression) *ast.ReferenceE
 
 // variableReferenceExpression returns the identifier expression
 // of a var-ref/member-access/index-access expression.
-func (checker *Checker) variableReferenceExpression(expr ast.Expression) *ast.IdentifierExpression {
+func (checker *Checker) variableReferenceExpression(expr ast.Expression) *ast.Identifier {
 	switch expr := expr.(type) {
 	case *ast.IdentifierExpression:
-		return expr
+		return &expr.Identifier
 	case *ast.MemberExpression:
 		return checker.variableReferenceExpression(expr.Expression)
 	case *ast.IndexExpression:
