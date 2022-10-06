@@ -199,6 +199,8 @@ const (
 	PrimitiveStaticTypeAuthAccountKeys
 	PrimitiveStaticTypePublicAccountKeys
 	PrimitiveStaticTypeAccountKey
+	PrimitiveStaticTypePublicAccountInbox
+	PrimitiveStaticTypeAuthAccountInbox
 
 	// !!! *WARNING* !!!
 	// ADD NEW TYPES *BEFORE* THIS WARNING.
@@ -276,6 +278,8 @@ func (t PrimitiveStaticType) elementSize() uint {
 		PrimitiveStaticTypeDeployedContract,
 		PrimitiveStaticTypeAuthAccountContracts,
 		PrimitiveStaticTypePublicAccountContracts,
+		PrimitiveStaticTypePublicAccountInbox,
+		PrimitiveStaticTypeAuthAccountInbox,
 		PrimitiveStaticTypeAuthAccountKeys,
 		PrimitiveStaticTypePublicAccountKeys,
 		PrimitiveStaticTypeAccountKey:

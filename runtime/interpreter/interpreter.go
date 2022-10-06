@@ -2213,7 +2213,7 @@ func (interpreter *Interpreter) ReadStored(
 	return accountStorage.ReadValue(interpreter, identifier)
 }
 
-func (interpreter *Interpreter) writeStored(
+func (interpreter *Interpreter) WriteStored(
 	storageAddress common.Address,
 	domain string,
 	identifier string,
@@ -3471,7 +3471,7 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 
 			// Write new value
 
-			interpreter.writeStored(address, domain, identifier, value)
+			interpreter.WriteStored(address, domain, identifier, value)
 
 			return Void
 		},
@@ -3583,7 +3583,7 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 			// Remove the value from storage,
 			// but only if the type check succeeded.
 			if clear {
-				interpreter.writeStored(address, domain, identifier, nil)
+				interpreter.WriteStored(address, domain, identifier, nil)
 			}
 
 			return NewSomeValueNonCopying(invocation.Interpreter, transferredValue)
@@ -3692,7 +3692,7 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 			// Note that this will be metered twice if Atree validation is enabled.
 			linkValue := NewLinkValue(interpreter, targetPath, borrowStaticType)
 
-			interpreter.writeStored(
+			interpreter.WriteStored(
 				address,
 				newCapabilityDomain,
 				newCapabilityIdentifier,
@@ -3767,7 +3767,7 @@ func (interpreter *Interpreter) authAccountUnlinkFunction(addressValue AddressVa
 
 			// Write new value
 
-			interpreter.writeStored(address, domain, identifier, nil)
+			interpreter.WriteStored(address, domain, identifier, nil)
 
 			return Void
 		},

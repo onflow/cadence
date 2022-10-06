@@ -230,3 +230,44 @@ var AccountContractRemovedEventType = newFlowEventType(
 	AccountEventCodeHashParameter,
 	AccountEventContractParameter,
 )
+
+var AccountEventProviderParameter = &sema.Parameter{
+	Identifier:     "provider",
+	TypeAnnotation: sema.NewTypeAnnotation(&sema.AddressType{}),
+}
+
+var AccountEventRecipientParameter = &sema.Parameter{
+	Identifier:     "recipient",
+	TypeAnnotation: sema.NewTypeAnnotation(&sema.AddressType{}),
+}
+
+var AccountEventNameParameter = &sema.Parameter{
+	Identifier:     "name",
+	TypeAnnotation: sema.NewTypeAnnotation(sema.StringType),
+}
+
+var AccountEventTypeParameter = &sema.Parameter{
+	Identifier:     "type",
+	TypeAnnotation: sema.NewTypeAnnotation(sema.MetaType),
+}
+
+var AccountInboxPublishedEventType = newFlowEventType(
+	"InboxValuePublished",
+	AccountEventProviderParameter,
+	AccountEventRecipientParameter,
+	AccountEventNameParameter,
+	AccountEventTypeParameter,
+)
+
+var AccountInboxUnpublishedEventType = newFlowEventType(
+	"InboxValueUnpublished",
+	AccountEventProviderParameter,
+	AccountEventNameParameter,
+)
+
+var AccountInboxClaimedEventType = newFlowEventType(
+	"InboxValueClaimed",
+	AccountEventProviderParameter,
+	AccountEventRecipientParameter,
+	AccountEventNameParameter,
+)
