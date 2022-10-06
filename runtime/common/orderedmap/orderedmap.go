@@ -26,7 +26,6 @@ import (
 )
 
 // OrderedMap
-//
 type OrderedMap[K comparable, V any] struct {
 	pairs map[K]*Pair[K, V]
 	list  *list.List[*Pair[K, V]]
@@ -192,7 +191,6 @@ func (om OrderedMap[K, V]) ForeachWithError(f func(key K, value V) error) error 
 }
 
 // Pair is an entry in an OrderedMap
-//
 type Pair[K any, V any] struct {
 	Key   K
 	Value V

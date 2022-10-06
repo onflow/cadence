@@ -138,7 +138,6 @@ func (interpreter *Interpreter) invokeInterpretedFunction(
 }
 
 // NOTE: assumes the function's activation (or an extension of it) is pushed!
-//
 func (interpreter *Interpreter) invokeInterpretedFunctionActivated(
 	function *InterpretedFunctionValue,
 	arguments []Value,
@@ -168,7 +167,6 @@ func (interpreter *Interpreter) invokeInterpretedFunctionActivated(
 }
 
 // bindParameterArguments binds the argument values to the given parameters
-//
 func (interpreter *Interpreter) bindParameterArguments(
 	parameterList *ast.ParameterList,
 	arguments []Value,

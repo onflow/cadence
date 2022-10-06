@@ -68,7 +68,6 @@ type seenReferences map[*interpreter.EphemeralReferenceValue]struct{}
 // The export is recursive, the results parameter prevents cycles:
 // it is checked at the start of the recursively called function,
 // and pre-set before a recursive call.
-//
 func exportValueWithInterpreter(
 	value interpreter.Value,
 	inter *interpreter.Interpreter,

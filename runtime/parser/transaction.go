@@ -26,20 +26,19 @@ import (
 
 // parseTransactionDeclaration parses a transaction declaration.
 //
-//     transactionDeclaration : 'transaction'
-//         parameterList?
-//         '{'
-//         fields
-//         prepare?
-//         preConditions?
-//         ( execute
-//         | execute postConditions
-//         | postConditions
-//         | postConditions execute
-//         | /* no execute or postConditions */
-//         )
-//         '}'
-//
+//	transactionDeclaration : 'transaction'
+//	    parameterList?
+//	    '{'
+//	    fields
+//	    prepare?
+//	    preConditions?
+//	    ( execute
+//	    | execute postConditions
+//	    | postConditions
+//	    | postConditions execute
+//	    | /* no execute or postConditions */
+//	    )
+//	    '}'
 func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionDeclaration, error) {
 
 	startPos := p.current.StartPos

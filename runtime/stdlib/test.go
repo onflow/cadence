@@ -861,7 +861,6 @@ func arrayValueToSlice(value interpreter.Value) ([]interpreter.Value, error) {
 }
 
 // newScriptResult Creates a "ScriptResult" using the return value of the executed script.
-//
 func newScriptResult(
 	inter *interpreter.Interpreter,
 	returnValue interpreter.Value,
@@ -1187,7 +1186,6 @@ func emulatorBackendExecuteNextTransactionFunction(testFramework TestFramework) 
 }
 
 // newTransactionResult Creates a "TransactionResult" indicating the status of the transaction execution.
-//
 func newTransactionResult(inter *interpreter.Interpreter, result *TransactionResult) interpreter.Value {
 	// Lookup and get 'ResultStatus' enum value.
 	resultStatusConstructor := getConstructor(inter, resultStatusTypeName)

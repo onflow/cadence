@@ -19,7 +19,6 @@
 package sema
 
 // AnyResourceType represents the top type of all resource types
-//
 var AnyResourceType = &SimpleType{
 	Name:          "AnyResource",
 	QualifiedName: "AnyResource",

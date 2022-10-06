@@ -32,7 +32,6 @@ const ScriptLocationPrefix = "s"
 const ScriptIDLength = 32
 
 // ScriptLocation
-//
 type ScriptLocation [ScriptIDLength]byte
 
 var _ Location = ScriptLocation{}

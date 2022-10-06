@@ -34,7 +34,6 @@ type Address [AddressLength]byte
 // MustBytesToAddress returns Address with value b.
 //
 // If the address is too large, then the function panics.
-//
 func MustBytesToAddress(b []byte) Address {
 	address, err := BytesToAddress(b)
 	if err != nil {
@@ -46,7 +45,6 @@ func MustBytesToAddress(b []byte) Address {
 // BytesToAddress returns Address with value b.
 //
 // If the address is too large, then the function returns an error.
-//
 func BytesToAddress(b []byte) (Address, error) {
 	if len(b) > AddressLength {
 		return Address{}, addressOverflowError

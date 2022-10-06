@@ -431,7 +431,6 @@ func (i PrimitiveStaticType) SemaType() sema.Type {
 // ConvertSemaToPrimitiveStaticType converts a `sema.Type` to a `PrimitiveStaticType`.
 //
 // Returns `PrimitiveStaticTypeUnknown` if the given type is not a primitive type.
-//
 func ConvertSemaToPrimitiveStaticType(
 	memoryGauge common.MemoryGauge,
 	t sema.Type,

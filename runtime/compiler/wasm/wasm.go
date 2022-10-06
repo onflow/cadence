@@ -46,5 +46,4 @@
 //
 // Package wasm is not a compiler for Cadence programs, but rather a building block that allows
 // reading and writing WebAssembly modules.
-//
 package wasm

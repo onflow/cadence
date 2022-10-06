@@ -41,7 +41,6 @@ func NewInitializationInfo(
 
 // InitializationComplete returns true if all fields of the container
 // were initialized, false if some fields are uninitialized
-//
 func (info *InitializationInfo) InitializationComplete() bool {
 	for pair := info.FieldMembers.Oldest(); pair != nil; pair = pair.Next() {
 		member := pair.Key

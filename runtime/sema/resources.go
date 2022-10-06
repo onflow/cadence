@@ -101,7 +101,6 @@ func (ris *Resources) MaybeRecordInvalidation(resource Resource, invalidation Re
 
 // RemoveTemporaryMoveInvalidation removes the given invalidation
 // from the set of invalidations for the given resource.
-//
 func (ris *Resources) RemoveTemporaryMoveInvalidation(resource Resource, invalidation ResourceInvalidation) {
 	if invalidation.Kind != ResourceInvalidationKindMoveTemporary {
 		panic(errors.NewUnreachableError())
@@ -136,7 +135,6 @@ func (ris *Resources) ForEach(f func(resource Resource, info ResourceInfo)) {
 // Invalidations occurring in both branches are considered definitive,
 // other new invalidations are only considered potential.
 // The else resources are optional.
-//
 func (ris *Resources) MergeBranches(
 	thenResources *Resources,
 	thenReturnInfo *ReturnInfo,

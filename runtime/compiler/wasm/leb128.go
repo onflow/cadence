@@ -28,7 +28,6 @@ import (
 //
 // "the total number of bytes encoding a value of type uN must not exceed ceil(N/7) bytes"
 // "the total number of bytes encoding a value of type sN must not exceed ceil(N/7) bytes"
-//
 const max32bitLEB128ByteCount = 5
 
 // max64bitLEB128ByteCount is the maximum number of bytes a 64-bit integer
@@ -37,7 +36,6 @@ const max32bitLEB128ByteCount = 5
 //
 // "the total number of bytes encoding a value of type uN must not exceed ceil(N/7) bytes"
 // "the total number of bytes encoding a value of type sN must not exceed ceil(N/7) bytes"
-//
 const max64bitLEB128ByteCount = 10
 
 // writeUint32LEB128 encodes and writes the given unsigned 32-bit integer
@@ -103,7 +101,6 @@ func (buf *Buffer) writeUint64LEB128(v uint64) error {
 // writeUint32LEB128FixedLength encodes and writes the given unsigned 32-bit integer
 // in non-canonical (fixed-size, instead of with the fewest bytes possible)
 // unsigned little endian base 128 format
-//
 func (buf *Buffer) writeUint32LEB128FixedLength(v uint32, length int) error {
 	for i := 0; i < length; i++ {
 		c := uint8(v & 0x7f)
@@ -123,7 +120,6 @@ func (buf *Buffer) writeUint32LEB128FixedLength(v uint32, length int) error {
 }
 
 // readUint32LEB128 reads and decodes an unsigned 32-bit integer
-//
 func (buf *Buffer) readUint32LEB128() (uint32, error) {
 	var result uint32
 	var shift, i uint
@@ -208,7 +204,6 @@ func (buf *Buffer) writeInt64LEB128(v int64) error {
 }
 
 // readInt32LEB128 reads and decodes a signed 32-bit integer
-//
 func (buf *Buffer) readInt32LEB128() (int32, error) {
 	var result int32
 	var i uint
@@ -231,7 +226,6 @@ func (buf *Buffer) readInt32LEB128() (int32, error) {
 }
 
 // readInt64LEB128 reads and decodes a signed 64-bit integer
-//
 func (buf *Buffer) readInt64LEB128() (int64, error) {
 	var result int64
 	var i uint
@@ -255,7 +249,6 @@ func (buf *Buffer) readInt64LEB128() (int64, error) {
 
 // writeFixedUint32LEB128Space writes a non-canonical 5-byte fixed-size space
 // (instead of the minimal size if canonical encoding would be used)
-//
 func (buf *Buffer) writeFixedUint32LEB128Space() (offset, error) {
 	off := buf.offset
 	for i := 0; i < max32bitLEB128ByteCount; i++ {
@@ -272,7 +265,6 @@ func (buf *Buffer) writeFixedUint32LEB128Space() (offset, error) {
 // as an uint32 in non-canonical 5-byte fixed-size format
 // (instead of the minimal size if canonical encoding would be used)
 // at the given offset
-//
 func (buf *Buffer) writeUint32LEB128SizeAt(off offset) error {
 	currentOff := buf.offset
 	if currentOff < max32bitLEB128ByteCount || currentOff-max32bitLEB128ByteCount < off {

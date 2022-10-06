@@ -23,7 +23,6 @@ package ast
 // precedence is the order of importance of expressions / operators.
 // NOTE: this enumeration does *NOT* influence parsing,
 // and should be kept in sync with the binding powers in the parser
-//
 type precedence uint
 
 const (

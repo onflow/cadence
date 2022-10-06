@@ -1171,7 +1171,6 @@ type AccountContractAdditionHandler interface {
 // newAuthAccountContractsChangeFunction called when e.g.
 // - adding: `AuthAccount.contracts.add(name: "Foo", code: [...])` (isUpdate = false)
 // - updating: `AuthAccount.contracts.update__experimental(name: "Foo", code: [...])` (isUpdate = true)
-//
 func newAuthAccountContractsChangeFunction(
 	gauge common.MemoryGauge,
 	handler AccountContractAdditionHandler,
@@ -1428,7 +1427,6 @@ func newAuthAccountContractsChangeFunction(
 }
 
 // InvalidContractDeploymentError
-//
 type InvalidContractDeploymentError struct {
 	Err error
 	interpreter.LocationRange
@@ -1457,7 +1455,6 @@ func (e *InvalidContractDeploymentError) Unwrap() error {
 }
 
 // InvalidContractDeploymentOriginError
-//
 type InvalidContractDeploymentOriginError struct {
 	interpreter.LocationRange
 }
@@ -1498,7 +1495,6 @@ type updateAccountContractCodeOptions struct {
 
 // updateAccountContractCode updates an account contract's code.
 // This function is only used for the new account code/contract API.
-//
 func updateAccountContractCode(
 	handler AccountContractAdditionHandler,
 	location common.AddressLocation,
@@ -1755,7 +1751,6 @@ func newAuthAccountContractsRemoveFunction(
 }
 
 // ContractRemovalError
-//
 type ContractRemovalError struct {
 	Name string
 	interpreter.LocationRange
