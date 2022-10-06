@@ -53,7 +53,7 @@ type EventEmitter interface {
 		inter *interpreter.Interpreter,
 		eventType *sema.CompositeType,
 		values []interpreter.Value,
-		getLocationRange func() interpreter.LocationRange,
+		locationRange interpreter.LocationRange,
 	)
 }
 
@@ -88,17 +88,17 @@ func NewAuthAccountConstructor(creator AccountCreator) StandardLibraryValue {
 			}
 
 			inter := invocation.Interpreter
-			getLocationRange := invocation.GetLocationRange
+			locationRange := invocation.LocationRange
 
 			inter.ExpectType(
 				payer,
 				sema.AuthAccountType,
-				getLocationRange,
+				locationRange,
 			)
 
 			payerValue := payer.GetMember(
 				inter,
-				getLocationRange,
+				locationRange,
 				sema.AuthAccountAddressField,
 			)
 			if payerValue == nil {
@@ -131,7 +131,7 @@ func NewAuthAccountConstructor(creator AccountCreator) StandardLibraryValue {
 				inter,
 				AccountCreatedEventType,
 				[]interpreter.Value{addressValue},
-				getLocationRange,
+				locationRange,
 			)
 
 			return NewAuthAccountValue(
@@ -458,6 +458,7 @@ func newAddPublicKeyFunction(
 			}
 
 			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
 
 			handler.EmitEvent(
 				inter,
@@ -466,7 +467,7 @@ func newAddPublicKeyFunction(
 					addressValue,
 					publicKeyValue,
 				},
-				invocation.GetLocationRange,
+				locationRange,
 			)
 
 			return interpreter.Void
@@ -508,6 +509,7 @@ func newRemovePublicKeyFunction(
 			}
 
 			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
 
 			publicKeyValue := interpreter.ByteSliceToByteArrayValue(
 				inter,
@@ -521,7 +523,7 @@ func newRemovePublicKeyFunction(
 					addressValue,
 					publicKeyValue,
 				},
-				invocation.GetLocationRange,
+				locationRange,
 			)
 
 			return interpreter.Void
@@ -554,14 +556,14 @@ func newAccountKeysAddFunction(
 			}
 
 			inter := invocation.Interpreter
-			getLocationRange := invocation.GetLocationRange
+			locationRange := invocation.LocationRange
 
-			publicKey, err := NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
+			publicKey, err := NewPublicKeyFromValue(inter, locationRange, publicKeyValue)
 			if err != nil {
 				panic(err)
 			}
 
-			hashAlgo := NewHashAlgorithmFromValue(inter, getLocationRange, invocation.Arguments[1])
+			hashAlgo := NewHashAlgorithmFromValue(inter, locationRange, invocation.Arguments[1])
 			weightValue, ok := invocation.Arguments[2].(interpreter.UFix64Value)
 			if !ok {
 				panic(errors.NewUnreachableError())
@@ -583,12 +585,12 @@ func newAccountKeysAddFunction(
 					addressValue,
 					publicKeyValue,
 				},
-				invocation.GetLocationRange,
+				locationRange,
 			)
 
 			return NewAccountKeyValue(
 				inter,
-				getLocationRange,
+				locationRange,
 				accountKey,
 				inter.Config.PublicKeyValidationHandler,
 			)
@@ -651,17 +653,18 @@ func newAccountKeysGetFunction(
 			}
 
 			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
 
 			return interpreter.NewSomeValueNonCopying(
 				inter,
 				NewAccountKeyValue(
 					inter,
-					invocation.GetLocationRange,
+					locationRange,
 					accountKey,
 					// public keys are assumed to be already validated.
 					func(
 						_ *interpreter.Interpreter,
-						_ func() interpreter.LocationRange,
+						_ interpreter.LocationRange,
 						_ *interpreter.CompositeValue,
 					) error {
 						return nil
@@ -714,6 +717,7 @@ func newAccountKeysRevokeFunction(
 			}
 
 			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
 
 			handler.EmitEvent(
 				inter,
@@ -722,19 +726,19 @@ func newAccountKeysRevokeFunction(
 					addressValue,
 					indexValue,
 				},
-				invocation.GetLocationRange,
+				locationRange,
 			)
 
 			return interpreter.NewSomeValueNonCopying(
 				inter,
 				NewAccountKeyValue(
 					inter,
-					invocation.GetLocationRange,
+					locationRange,
 					accountKey,
 					// public keys are assumed to be already validated.
 					func(
 						_ *interpreter.Interpreter,
-						_ func() interpreter.LocationRange,
+						_ interpreter.LocationRange,
 						_ *interpreter.CompositeValue,
 					) error {
 						return nil
@@ -801,7 +805,7 @@ func newAccountContractsGetNamesFunction(
 	addressValue interpreter.AddressValue,
 ) func(
 	inter *interpreter.Interpreter,
-	getLocationRange func() interpreter.LocationRange,
+	locationRange interpreter.LocationRange,
 ) *interpreter.ArrayValue {
 
 	// Converted addresses can be cached and don't have to be recomputed on each function invocation
@@ -809,7 +813,7 @@ func newAccountContractsGetNamesFunction(
 
 	return func(
 		inter *interpreter.Interpreter,
-		getLocationRange func() interpreter.LocationRange,
+		locationRange interpreter.LocationRange,
 	) *interpreter.ArrayValue {
 		var names []string
 		var err error
@@ -842,7 +846,7 @@ func newAccountContractsGetNamesFunction(
 
 		return interpreter.NewArrayValue(
 			inter,
-			getLocationRange,
+			locationRange,
 			arrayType,
 			common.Address{},
 			values...,
@@ -940,6 +944,8 @@ func newAuthAccountContractsChangeFunction(
 		gauge,
 		func(invocation interpreter.Invocation) interpreter.Value {
 
+			locationRange := invocation.LocationRange
+
 			const requiredArgumentCount = 2
 
 			nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
@@ -1018,7 +1024,7 @@ func newAuthAccountContractsChangeFunction(
 
 				panic(&InvalidContractDeploymentError{
 					Err:           err,
-					LocationRange: invocation.GetLocationRange(),
+					LocationRange: locationRange,
 				})
 			}
 
@@ -1169,7 +1175,7 @@ func newAuthAccountContractsChangeFunction(
 					codeHashValue,
 					nameValue,
 				},
-				invocation.GetLocationRange,
+				locationRange,
 			)
 
 			return interpreter.NewDeployedContractValue(
@@ -1448,6 +1454,7 @@ func newAuthAccountContractsRemoveFunction(
 			// if there is currently code deployed for the given contract name
 
 			if len(code) > 0 {
+				locationRange := invocation.LocationRange
 
 				// NOTE: *DO NOT* call setProgram – the program removal
 				// should not be effective during the execution, only after
@@ -1460,7 +1467,7 @@ func newAuthAccountContractsRemoveFunction(
 				if err == nil && containsEnumsInProgram(existingProgram) {
 					panic(&ContractRemovalError{
 						Name:          name,
-						LocationRange: invocation.GetLocationRange(),
+						LocationRange: locationRange,
 					})
 				}
 
@@ -1486,7 +1493,7 @@ func newAuthAccountContractsRemoveFunction(
 						codeHashValue,
 						nameValue,
 					},
-					invocation.GetLocationRange,
+					locationRange,
 				)
 
 				return interpreter.NewSomeValueNonCopying(
@@ -1595,7 +1602,7 @@ func NewPublicAccountValue(
 
 func NewAccountKeyValue(
 	inter *interpreter.Interpreter,
-	getLocationRange func() interpreter.LocationRange,
+	locationRange interpreter.LocationRange,
 	accountKey *AccountKey,
 	validatePublicKey interpreter.PublicKeyValidationHandlerFunc,
 ) interpreter.Value {
@@ -1604,7 +1611,7 @@ func NewAccountKeyValue(
 		interpreter.NewIntValueFromInt64(inter, int64(accountKey.KeyIndex)),
 		NewPublicKeyValue(
 			inter,
-			getLocationRange,
+			locationRange,
 			accountKey.PublicKey,
 			validatePublicKey,
 		),
@@ -1622,14 +1629,14 @@ func NewAccountKeyValue(
 
 func NewPublicKeyFromValue(
 	inter *interpreter.Interpreter,
-	getLocationRange func() interpreter.LocationRange,
+	locationRange interpreter.LocationRange,
 	publicKey interpreter.MemberAccessibleValue,
 ) (
 	*PublicKey,
 	error,
 ) {
 	// publicKey field
-	key := publicKey.GetMember(inter, getLocationRange, sema.PublicKeyPublicKeyField)
+	key := publicKey.GetMember(inter, locationRange, sema.PublicKeyPublicKeyField)
 
 	byteArray, err := interpreter.ByteArrayValueToByteSlice(inter, key)
 	if err != nil {
@@ -1637,7 +1644,7 @@ func NewPublicKeyFromValue(
 	}
 
 	// sign algo field
-	signAlgoField := publicKey.GetMember(inter, getLocationRange, sema.PublicKeySignAlgoField)
+	signAlgoField := publicKey.GetMember(inter, locationRange, sema.PublicKeySignAlgoField)
 	if signAlgoField == nil {
 		return nil, errors.NewUnexpectedError("sign algorithm is not set")
 	}
@@ -1650,7 +1657,7 @@ func NewPublicKeyFromValue(
 		)
 	}
 
-	rawValue := signAlgoValue.GetMember(inter, getLocationRange, sema.EnumRawValueFieldName)
+	rawValue := signAlgoValue.GetMember(inter, locationRange, sema.EnumRawValueFieldName)
 	if rawValue == nil {
 		return nil, errors.NewDefaultUserError("sign algorithm raw value is not set")
 	}
@@ -1671,13 +1678,13 @@ func NewPublicKeyFromValue(
 
 func NewPublicKeyValue(
 	inter *interpreter.Interpreter,
-	getLocationRange func() interpreter.LocationRange,
+	locationRange interpreter.LocationRange,
 	publicKey *PublicKey,
 	validatePublicKey interpreter.PublicKeyValidationHandlerFunc,
 ) *interpreter.CompositeValue {
 	return interpreter.NewPublicKeyValue(
 		inter,
-		getLocationRange,
+		locationRange,
 		interpreter.ByteSliceToByteArrayValue(
 			inter,
 			publicKey.PublicKey,
@@ -1687,22 +1694,22 @@ func NewPublicKeyValue(
 		),
 		func(
 			inter *interpreter.Interpreter,
-			getLocationRange func() interpreter.LocationRange,
+			locationRange interpreter.LocationRange,
 			publicKeyValue *interpreter.CompositeValue,
 		) error {
-			return validatePublicKey(inter, getLocationRange, publicKeyValue)
+			return validatePublicKey(inter, locationRange, publicKeyValue)
 		},
 	)
 }
 
 func NewHashAlgorithmFromValue(
 	inter *interpreter.Interpreter,
-	getLocationRange func() interpreter.LocationRange,
+	locationRange interpreter.LocationRange,
 	value interpreter.Value,
 ) sema.HashAlgorithm {
 	hashAlgoValue := value.(*interpreter.SimpleCompositeValue)
 
-	rawValue := hashAlgoValue.GetMember(inter, getLocationRange, sema.EnumRawValueFieldName)
+	rawValue := hashAlgoValue.GetMember(inter, locationRange, sema.EnumRawValueFieldName)
 	if rawValue == nil {
 		panic("cannot find hash algorithm raw value")
 	}

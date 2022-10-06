@@ -1857,7 +1857,7 @@ func TestRuntimeResourceOwnerChange(t *testing.T) {
 				resourceOwnerChange{
 					typeID: resource.TypeID(),
 					// TODO: provide proper location range
-					uuid:       resource.ResourceUUID(inter, interpreter.ReturnEmptyLocationRange),
+					uuid:       resource.ResourceUUID(inter, interpreter.EmptyLocationRange),
 					oldAddress: oldAddress,
 					newAddress: newAddress,
 				},
@@ -3361,7 +3361,7 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 
 	arrayValue := secondValue.(*interpreter.ArrayValue)
 
-	element := arrayValue.Get(inter, interpreter.ReturnEmptyLocationRange, 2)
+	element := arrayValue.Get(inter, interpreter.EmptyLocationRange, 2)
 	RequireValuesEqual(
 		t,
 		inter,
@@ -3374,6 +3374,6 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 	rValue := storageMap.ReadValue(nil, "r")
 	require.IsType(t, &interpreter.CompositeValue{}, rValue)
 
-	_, err = ExportValue(rValue, inter, interpreter.ReturnEmptyLocationRange)
+	_, err = ExportValue(rValue, inter, interpreter.EmptyLocationRange)
 	require.NoError(t, err)
 }

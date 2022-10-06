@@ -31,7 +31,7 @@ var authAccountContractsTypeID = sema.AuthAccountContractsType.ID()
 var authAccountContractsStaticType StaticType = PrimitiveStaticTypeAuthAccountContracts // unmetered
 var authAccountContractsFieldNames []string = nil
 
-type ContractNamesGetter func(interpreter *Interpreter, getLocationRange func() LocationRange) *ArrayValue
+type ContractNamesGetter func(interpreter *Interpreter, locationRange LocationRange) *ArrayValue
 
 func NewAuthAccountContractsValue(
 	gauge common.MemoryGauge,
@@ -53,11 +53,11 @@ func NewAuthAccountContractsValue(
 	computeField := func(
 		name string,
 		interpreter *Interpreter,
-		getLocationRange func() LocationRange,
+		locationRange LocationRange,
 	) Value {
 		switch name {
 		case sema.AuthAccountContractsTypeNamesField:
-			return namesGetter(interpreter, getLocationRange)
+			return namesGetter(interpreter, locationRange)
 		}
 		return nil
 	}
@@ -103,11 +103,11 @@ func NewPublicAccountContractsValue(
 	computeField := func(
 		name string,
 		interpreter *Interpreter,
-		getLocationRange func() LocationRange,
+		locationRange LocationRange,
 	) Value {
 		switch name {
 		case sema.PublicAccountContractsTypeNamesField:
-			return namesGetter(interpreter, getLocationRange)
+			return namesGetter(interpreter, locationRange)
 		}
 		return nil
 	}

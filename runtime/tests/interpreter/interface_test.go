@@ -149,11 +149,11 @@ func TestInterpretInterfaceDefaultImplementation(t *testing.T) {
 
 		assert.Equal(t,
 			interpreter.NewUnmeteredIntValueFromInt64(123),
-			array.Get(inter, nil, 0),
+			array.Get(inter, interpreter.EmptyLocationRange, 0),
 		)
 		assert.Equal(t,
 			interpreter.NewUnmeteredIntValueFromInt64(456),
-			array.Get(inter, nil, 1),
+			array.Get(inter, interpreter.EmptyLocationRange, 1),
 		)
 	})
 }

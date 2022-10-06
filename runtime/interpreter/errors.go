@@ -67,7 +67,7 @@ func (e Error) ChildErrors() []error {
 	errs := make([]error, 0, 1+len(e.StackTrace))
 
 	for _, invocation := range e.StackTrace {
-		locationRange := invocation.GetLocationRange()
+		locationRange := invocation.LocationRange
 		if locationRange.Location == nil {
 			continue
 		}

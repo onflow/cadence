@@ -26,13 +26,13 @@ import (
 //
 type HashableValue interface {
 	Value
-	HashInput(interpreter *Interpreter, getLocationRange func() LocationRange, scratch []byte) []byte
+	HashInput(interpreter *Interpreter, locationRange LocationRange, scratch []byte) []byte
 }
 
-func newHashInputProvider(interpreter *Interpreter, getLocationRange func() LocationRange) atree.HashInputProvider {
+func newHashInputProvider(interpreter *Interpreter, locationRange LocationRange) atree.HashInputProvider {
 	return func(value atree.Value, scratch []byte) ([]byte, error) {
 		hashInput := MustConvertStoredValue(interpreter, value).(HashableValue).
-			HashInput(interpreter, getLocationRange, scratch)
+			HashInput(interpreter, locationRange, scratch)
 		return hashInput, nil
 	}
 }

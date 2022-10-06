@@ -84,7 +84,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 
 					value := interpreter.NewCompositeValue(
 						inter,
-						interpreter.ReturnEmptyLocationRange,
+						interpreter.EmptyLocationRange,
 						location,
 						"Foo",
 						common.CompositeKindContract,

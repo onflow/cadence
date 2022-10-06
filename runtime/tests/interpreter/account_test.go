@@ -380,7 +380,7 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 
 			require.IsType(t, &interpreter.SomeValue{}, value)
 
-			innerValue := value.(*interpreter.SomeValue).InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+			innerValue := value.(*interpreter.SomeValue).InnerValue(inter, interpreter.EmptyLocationRange)
 
 			assert.IsType(t, &interpreter.CompositeValue{}, innerValue)
 
@@ -462,7 +462,7 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 
 			require.IsType(t, &interpreter.SomeValue{}, value)
 
-			innerValue := value.(*interpreter.SomeValue).InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+			innerValue := value.(*interpreter.SomeValue).InnerValue(inter, interpreter.EmptyLocationRange)
 
 			assert.IsType(t, &interpreter.CompositeValue{}, innerValue)
 
@@ -549,7 +549,7 @@ func TestInterpretAuthAccount_copy(t *testing.T) {
 
 			require.IsType(t, &interpreter.SomeValue{}, value)
 
-			innerValue := value.(*interpreter.SomeValue).InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+			innerValue := value.(*interpreter.SomeValue).InnerValue(inter, interpreter.EmptyLocationRange)
 
 			assert.IsType(t, &interpreter.CompositeValue{}, innerValue)
 
@@ -672,7 +672,7 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 
 			require.IsType(t, &interpreter.SomeValue{}, value)
 
-			innerValue := value.(*interpreter.SomeValue).InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+			innerValue := value.(*interpreter.SomeValue).InnerValue(inter, interpreter.EmptyLocationRange)
 
 			assert.IsType(t, &interpreter.StorageReferenceValue{}, innerValue)
 
@@ -703,7 +703,7 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 
 			require.IsType(t, &interpreter.SomeValue{}, value)
 
-			innerValue = value.(*interpreter.SomeValue).InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+			innerValue = value.(*interpreter.SomeValue).InnerValue(inter, interpreter.EmptyLocationRange)
 
 			assert.IsType(t, &interpreter.StorageReferenceValue{}, innerValue)
 
@@ -812,7 +812,7 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 
 			require.IsType(t, &interpreter.SomeValue{}, value)
 
-			innerValue := value.(*interpreter.SomeValue).InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+			innerValue := value.(*interpreter.SomeValue).InnerValue(inter, interpreter.EmptyLocationRange)
 
 			assert.IsType(t, &interpreter.StorageReferenceValue{}, innerValue)
 
@@ -843,7 +843,7 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 
 			require.IsType(t, &interpreter.SomeValue{}, value)
 
-			innerValue = value.(*interpreter.SomeValue).InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+			innerValue = value.(*interpreter.SomeValue).InnerValue(inter, interpreter.EmptyLocationRange)
 
 			assert.IsType(t, &interpreter.StorageReferenceValue{}, innerValue)
 
@@ -936,7 +936,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 
 					require.IsType(t, &interpreter.SomeValue{}, value)
 
-					capability := value.(*interpreter.SomeValue).InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+					capability := value.(*interpreter.SomeValue).InnerValue(inter, interpreter.EmptyLocationRange)
 
 					rType := checker.RequireGlobalType(t, inter.Program.Elaboration, "R")
 
@@ -985,7 +985,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 
 					require.IsType(t, &interpreter.SomeValue{}, value)
 
-					capability := value.(*interpreter.SomeValue).InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+					capability := value.(*interpreter.SomeValue).InnerValue(inter, interpreter.EmptyLocationRange)
 
 					r2Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R2")
 
@@ -1088,7 +1088,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 
 					require.IsType(t, &interpreter.SomeValue{}, value)
 
-					capability := value.(*interpreter.SomeValue).InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+					capability := value.(*interpreter.SomeValue).InnerValue(inter, interpreter.EmptyLocationRange)
 
 					sType := checker.RequireGlobalType(t, inter.Program.Elaboration, "S")
 
@@ -1137,7 +1137,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 
 					require.IsType(t, &interpreter.SomeValue{}, value)
 
-					capability := value.(*interpreter.SomeValue).InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+					capability := value.(*interpreter.SomeValue).InnerValue(inter, interpreter.EmptyLocationRange)
 					require.IsType(t, &interpreter.CapabilityValue{}, capability)
 
 					s2Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "S2")
@@ -1244,7 +1244,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 				require.NoError(t, err)
 				require.IsType(t, &interpreter.SomeValue{}, value)
 
-				capability := value.(*interpreter.SomeValue).InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+				capability := value.(*interpreter.SomeValue).InnerValue(inter, interpreter.EmptyLocationRange)
 
 				sType := checker.RequireGlobalType(t, inter.Program.Elaboration, "S1")
 				expectedBorrowType := interpreter.ConvertSemaToStaticType(
@@ -1324,7 +1324,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 				// 1 value + 2 links
 				require.Len(t, getAccountValues(), 3)
 
-				capability := value.(*interpreter.SomeValue).InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+				capability := value.(*interpreter.SomeValue).InnerValue(inter, interpreter.EmptyLocationRange)
 
 				sType := checker.RequireGlobalType(t, inter.Program.Elaboration, "S")
 				expectedBorrowType := interpreter.ConvertSemaToStaticType(
@@ -1353,7 +1353,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 				require.NoError(t, err)
 				require.IsType(t, &interpreter.SomeValue{}, value)
 
-				capability = value.(*interpreter.SomeValue).InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+				capability = value.(*interpreter.SomeValue).InnerValue(inter, interpreter.EmptyLocationRange)
 
 				sType = checker.RequireGlobalType(t, inter.Program.Elaboration, "S")
 				expectedBorrowType = interpreter.ConvertSemaToStaticType(
@@ -1586,7 +1586,7 @@ func TestInterpretAccount_getLinkTarget(t *testing.T) {
 
 				require.IsType(t, &interpreter.SomeValue{}, value)
 
-				innerValue := value.(*interpreter.SomeValue).InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+				innerValue := value.(*interpreter.SomeValue).InnerValue(inter, interpreter.EmptyLocationRange)
 
 				AssertValuesEqual(
 					t,
@@ -1664,7 +1664,7 @@ func TestInterpretAccount_getLinkTarget(t *testing.T) {
 
 				require.IsType(t, &interpreter.SomeValue{}, value)
 
-				innerValue := value.(*interpreter.SomeValue).InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+				innerValue := value.(*interpreter.SomeValue).InnerValue(inter, interpreter.EmptyLocationRange)
 
 				AssertValuesEqual(
 					t,
