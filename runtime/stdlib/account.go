@@ -680,7 +680,7 @@ func newAccountKeysForEachFunction(
 	addressValue interpreter.AddressValue,
 ) *interpreter.HostFunctionValue {
 	address := addressValue.ToAddress()
-	// the PublicKey in `forEachKey(_ f: (PublicKey): Bool): Void`
+	// the AccountKey in `forEachKey(_ f: ((AccountKey): Bool)): Void`
 	callbackTypeParams := []sema.Type{sema.AccountKeyType}
 
 	return interpreter.NewHostFunctionValue(

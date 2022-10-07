@@ -653,19 +653,18 @@ var AuthAccountKeysType = func() *CompositeType {
 			AuthAccountKeysTypeRevokeFunctionType,
 			authAccountKeysTypeRevokeFunctionDocString,
 		),
-		// TODO add back after flow-go is updated
-		// NewUnmeteredPublicFunctionMember(
-		// 	accountKeys,
-		// 	AccountKeysForEachFunctionName,
-		// 	AccountKeysTypeForEachFunctionType,
-		// 	accountKeysTypeForEachFunctionDocString,
-		// ),
-		// NewUnmeteredPublicFunctionMember(
-		// 	accountKeys,
-		// 	AccountKeysCountFieldName,
-		// 	AccountKeysTypeCountFunctionType,
-		// 	accountKeysTypeCountFieldDocString,
-		// ),
+		NewUnmeteredPublicFunctionMember(
+			accountKeys,
+			AccountKeysTypeForEachFunctionName,
+			AccountKeysTypeForEachFunctionType,
+			accountKeysTypeForEachFunctionDocString,
+		),
+		NewUnmeteredPublicFunctionMember(
+			accountKeys,
+			AccountKeysCountFieldName,
+			AccountKeysTypeCountFunctionType,
+			accountKeysTypeCountFieldDocString,
+		),
 	}
 
 	accountKeys.Members = GetMembersAsMap(members)
@@ -703,13 +702,12 @@ var AccountKeysTypeGetFunctionType = &FunctionType{
 	RequiredArgumentCount: RequiredArgumentCount(1),
 }
 
-// fun forEach(_ function: (AccountKey: Bool)): Void
+// fun keys.forEach(_ function: ((AccountKey): Bool)): Void
 var AccountKeysTypeForEachFunctionType = func() *FunctionType {
-	// fun (_ key: AccountKey): Bool
+	// ((AccountKey): Bool)
 	iterFunctionType := &FunctionType{
 		Parameters: []*Parameter{
 			{
-				Identifier:     "accountKey",
 				TypeAnnotation: NewTypeAnnotation(AccountKeyType),
 			},
 		},
@@ -752,7 +750,7 @@ func init() {
 const AccountKeysTypeName = "Keys"
 const AccountKeysAddFunctionName = "add"
 const AccountKeysGetFunctionName = "get"
-const AccountKeysForEachFunctionName = "forEach"
+const AccountKeysTypeForEachFunctionName = "forEach"
 const AccountKeysRevokeFunctionName = "revoke"
 const AccountKeysCountFieldName = "count"
 

@@ -189,19 +189,18 @@ var PublicAccountKeysType = func() *CompositeType {
 			AccountKeysTypeGetFunctionType,
 			accountKeysTypeGetFunctionDocString,
 		),
-		// TODO add back after flow-go is updated
-		// NewUnmeteredPublicFunctionMember(
-		// 	accountKeys,
-		// 	AccountKeysForEachFunctionName,
-		// 	AccountKeysTypeForEachFunctionType,
-		// 	accountKeysTypeForEachFunctionDocString,
-		// ),
-		// NewUnmeteredPublicConstantFieldMember(
-		// 	accountKeys,
-		// 	AccountKeysCountFieldName,
-		// 	AccountKeysTypeCountFunctionType,
-		// 	accountKeysTypeCountFieldDocString,
-		// ),
+		NewUnmeteredPublicFunctionMember(
+			accountKeys,
+			AccountKeysTypeForEachFunctionName,
+			AccountKeysTypeForEachFunctionType,
+			accountKeysTypeForEachFunctionDocString,
+		),
+		NewUnmeteredPublicConstantFieldMember(
+			accountKeys,
+			AccountKeysCountFieldName,
+			AccountKeysTypeCountFunctionType,
+			accountKeysTypeCountFieldDocString,
+		),
 	}
 
 	accountKeys.Members = GetMembersAsMap(members)
