@@ -4160,7 +4160,7 @@ func TestCheckResourceOptionalBindingResourceInvalidation(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("separate", func(t *testing.T) {
+	t.Run("separate, without else", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -4182,7 +4182,38 @@ func TestCheckResourceOptionalBindingResourceInvalidation(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("inline", func(t *testing.T) {
+	t.Run("separate, with else", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          resource R {}
+
+          fun asOpt(_ r: @R): @R? {
+              return <-r
+          }
+
+          fun consume(_ r: @R?) {
+              destroy <-r
+          }
+
+          fun test() {
+              let r <- create R()
+              let optR <- asOpt(<-r)
+              if let r2 <- optR {
+                  destroy r2
+              } else {
+                  consume(<-optR)
+              }
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+	})
+
+	t.Run("inline, without else", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -4202,6 +4233,66 @@ func TestCheckResourceOptionalBindingResourceInvalidation(t *testing.T) {
         `)
 
 		require.NoError(t, err)
+	})
+
+	t.Run("inline, with else, non-optional", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          resource R {}
+
+          fun asOpt(_ r: @R): @R? {
+              return <-r
+          }
+
+          fun consume(_ r: @R?) {
+              destroy <-r
+          }
+
+          fun test() {
+              let r <- create R()
+              if let r2 <- asOpt(<-r) {
+                  destroy r2
+              } else {
+                  consume(<-r)
+              }
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+	})
+
+	t.Run("inline, with else, optional", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          resource R {}
+
+          fun identity(_ r: @R?): @R? {
+              return <-r
+          }
+
+          fun consume(_ r: @R?) {
+              destroy <-r
+          }
+
+          fun test() {
+              let r: @R? <- create R()
+              if let r2 <- identity(<-r) {
+                  destroy r2
+              } else {
+                  consume(<-r)
+              }
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 	})
 }
 
