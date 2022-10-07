@@ -845,23 +845,13 @@ func accountInboxPublishFunction(
 				locationRange,
 			)
 
-			value = value.Transfer(
+			publishedValue := interpreter.NewPublishedValue(inter, recipientValue, value).Transfer(
 				inter,
 				locationRange,
 				atree.Address(address),
 				true,
 				nil,
-			).(*interpreter.CapabilityValue)
-
-			recipient := recipientValue.Transfer(
-				inter,
-				locationRange,
-				atree.Address(address),
-				true,
-				nil,
-			).(interpreter.AddressValue)
-
-			publishedValue := interpreter.NewPublishedValue(inter, recipient, value)
+			)
 
 			inter.WriteStored(address, inboxStorageDomain, nameValue.Str, publishedValue)
 
@@ -912,16 +902,6 @@ func accountInboxUnpublishFunction(
 				})
 			}
 
-			handler.EmitEvent(
-				inter,
-				AccountInboxUnpublishedEventType,
-				[]interpreter.Value{
-					providerValue,
-					nameValue,
-				},
-				locationRange,
-			)
-
 			value := publishedValue.Value.Transfer(
 				inter,
 				locationRange,
@@ -931,6 +911,16 @@ func accountInboxUnpublishFunction(
 			)
 
 			inter.WriteStored(address, inboxStorageDomain, nameValue.Str, nil)
+
+			handler.EmitEvent(
+				inter,
+				AccountInboxUnpublishedEventType,
+				[]interpreter.Value{
+					providerValue,
+					nameValue,
+				},
+				locationRange,
+			)
 
 			return interpreter.NewSomeValueNonCopying(inter, value)
 		},

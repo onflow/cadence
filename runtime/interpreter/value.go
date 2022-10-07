@@ -18261,8 +18261,8 @@ func (v *PublishedValue) Storable(storage atree.SlabStorage, address atree.Addre
 	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
 }
 
-func (*PublishedValue) NeedsStoreTo(_ atree.Address) bool {
-	return false
+func (v *PublishedValue) NeedsStoreTo(address atree.Address) bool {
+	return v.Value.NeedsStoreTo(address)
 }
 
 func (*PublishedValue) IsResourceKinded(_ *Interpreter) bool {
@@ -18271,15 +18271,29 @@ func (*PublishedValue) IsResourceKinded(_ *Interpreter) bool {
 
 func (v *PublishedValue) Transfer(
 	interpreter *Interpreter,
-	_ LocationRange,
-	_ atree.Address,
+	locationRange LocationRange,
+	address atree.Address,
 	remove bool,
 	storable atree.Storable,
 ) Value {
-	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+	// NB: if the inner value of a PublishedValue can be a resource,
+	// we must perform resource-related checks here as well
+
+	if v.NeedsStoreTo(address) {
+
+		innerValue := v.Value.Transfer(interpreter, locationRange, address, remove, nil).(*CapabilityValue)
+		addressValue := v.Recipient.Transfer(interpreter, locationRange, address, remove, nil).(AddressValue)
+
+		if remove {
+			interpreter.RemoveReferencedSlab(storable)
+		}
+
+		var res *PublishedValue = NewPublishedValue(interpreter, addressValue, innerValue)
+		return res
 	}
+
 	return v
+
 }
 
 func (v *PublishedValue) Clone(interpreter *Interpreter) Value {
