@@ -198,7 +198,7 @@ var PublicAccountKeysType = func() *CompositeType {
 		NewUnmeteredPublicConstantFieldMember(
 			accountKeys,
 			AccountKeysCountFieldName,
-			AccountKeysTypeCountFunctionType,
+			AccountKeysTypeCountFieldType,
 			accountKeysTypeCountFieldDocString,
 		),
 	}

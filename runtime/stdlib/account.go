@@ -283,7 +283,7 @@ func newAuthAccountKeysValue(
 			addressValue,
 		),
 		newAccountKeysForEachFunction(gauge, handler, addressValue),
-		newAccountKeysCountFunction(gauge, handler, addressValue),
+		newAccountKeysCountConstructor(gauge, handler, addressValue),
 	)
 }
 
@@ -763,22 +763,18 @@ func newAccountKeysForEachFunction(
 	)
 }
 
-func newAccountKeysCountFunction(
+func newAccountKeysCountConstructor(
 	gauge common.MemoryGauge,
 	provider AccountKeyProvider,
 	addressValue interpreter.AddressValue,
-) *interpreter.HostFunctionValue {
+) interpreter.AccountKeysCountConstructor {
 	address := addressValue.ToAddress()
 
-	return interpreter.NewHostFunctionValue(
-		gauge,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			return interpreter.NewUInt64Value(invocation.Interpreter, func() uint64 {
-				return provider.AccountKeysCount(address)
-			})
-		},
-		sema.AccountKeysTypeCountFunctionType,
-	)
+	return func() interpreter.UInt64Value {
+		return interpreter.NewUInt64Value(gauge, func() uint64 {
+			return provider.AccountKeysCount(address)
+		})
+	}
 }
 
 type AccountKeyRevocationHandler interface {
@@ -876,7 +872,7 @@ func newPublicAccountKeysValue(
 			handler,
 			addressValue,
 		),
-		newAccountKeysCountFunction(
+		newAccountKeysCountConstructor(
 			gauge,
 			handler,
 			addressValue,

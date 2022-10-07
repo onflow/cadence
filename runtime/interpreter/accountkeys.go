@@ -38,7 +38,7 @@ func NewAuthAccountKeysValue(
 	getFunction FunctionValue,
 	revokeFunction FunctionValue,
 	forEachFunction FunctionValue,
-	countFunction FunctionValue,
+	getKeysCount AccountKeysCountConstructor,
 ) Value {
 
 	fields := map[string]Value{
@@ -46,7 +46,14 @@ func NewAuthAccountKeysValue(
 		sema.AccountKeysGetFunctionName:         getFunction,
 		sema.AccountKeysRevokeFunctionName:      revokeFunction,
 		sema.AccountKeysTypeForEachFunctionName: forEachFunction,
-		sema.AccountKeysCountFieldName:          countFunction,
+	}
+
+	computeField := func(name string, inter *Interpreter, getLocationRange func() LocationRange) Value {
+		switch name {
+		case sema.AccountKeysCountFieldName:
+			return getKeysCount()
+		}
+		return nil
 	}
 
 	var str string
@@ -65,7 +72,7 @@ func NewAuthAccountKeysValue(
 		authAccountKeysStaticType,
 		nil,
 		fields,
-		nil,
+		computeField,
 		nil,
 		stringer,
 	)
@@ -82,15 +89,21 @@ func NewPublicAccountKeysValue(
 	address AddressValue,
 	getFunction FunctionValue,
 	forEachFunction FunctionValue,
-	countFunction FunctionValue,
+	getKeysCount AccountKeysCountConstructor,
 ) Value {
 
 	fields := map[string]Value{
 		sema.AccountKeysGetFunctionName:         getFunction,
 		sema.AccountKeysTypeForEachFunctionName: forEachFunction,
-		sema.AccountKeysCountFieldName:          countFunction,
 	}
 
+	computeField := func(name string, _ *Interpreter, _ func() LocationRange) Value {
+		switch name {
+		case sema.AccountKeysCountFieldName:
+			return getKeysCount()
+		}
+		return nil
+	}
 	var str string
 	stringer := func(memoryGauge common.MemoryGauge, _ SeenReferences) string {
 		if str == "" {
@@ -107,8 +120,10 @@ func NewPublicAccountKeysValue(
 		publicAccountKeysStaticType,
 		nil,
 		fields,
-		nil,
+		computeField,
 		nil,
 		stringer,
 	)
 }
+
+type AccountKeysCountConstructor func() UInt64Value

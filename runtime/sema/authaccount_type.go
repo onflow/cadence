@@ -659,10 +659,10 @@ var AuthAccountKeysType = func() *CompositeType {
 			AccountKeysTypeForEachFunctionType,
 			accountKeysTypeForEachFunctionDocString,
 		),
-		NewUnmeteredPublicFunctionMember(
+		NewUnmeteredPublicConstantFieldMember(
 			accountKeys,
 			AccountKeysCountFieldName,
-			AccountKeysTypeCountFunctionType,
+			AccountKeysTypeCountFieldType,
 			accountKeysTypeCountFieldDocString,
 		),
 	}
@@ -726,10 +726,7 @@ var AccountKeysTypeForEachFunctionType = func() *FunctionType {
 	}
 }()
 
-var AccountKeysTypeCountFunctionType = &FunctionType{
-	Parameters:           []*Parameter{},
-	ReturnTypeAnnotation: NewTypeAnnotation(IntType),
-}
+var AccountKeysTypeCountFieldType = UInt64Type
 
 var AuthAccountKeysTypeRevokeFunctionType = &FunctionType{
 	Parameters: []*Parameter{
