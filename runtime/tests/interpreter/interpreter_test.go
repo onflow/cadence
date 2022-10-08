@@ -8978,16 +8978,18 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 	)
 }
 
-func newTestAuthAccountValue(gauge common.MemoryGauge, addressValue interpreter.AddressValue) interpreter.Value {
-
-	panicFunction := interpreter.NewHostFunctionValue(
+func newPanicFunctionValue(gauge common.MemoryGauge) *interpreter.HostFunctionValue {
+	return interpreter.NewHostFunctionValue(
 		gauge,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			panic(errors.NewUnreachableError())
 		},
 		stdlib.PanicFunction.Type.(*sema.FunctionType),
 	)
+}
 
+func newTestAuthAccountValue(gauge common.MemoryGauge, addressValue interpreter.AddressValue) interpreter.Value {
+	panicFunctionValue := newPanicFunctionValue(gauge)
 	return interpreter.NewAuthAccountValue(
 		gauge,
 		addressValue,
@@ -8995,16 +8997,16 @@ func newTestAuthAccountValue(gauge common.MemoryGauge, addressValue interpreter.
 		returnZeroUFix64,
 		returnZeroUInt64,
 		returnZeroUInt64,
-		panicFunction,
-		panicFunction,
+		panicFunctionValue,
+		panicFunctionValue,
 		func() interpreter.Value {
 			return interpreter.NewAuthAccountContractsValue(
 				gauge,
 				addressValue,
-				panicFunction,
-				panicFunction,
-				panicFunction,
-				panicFunction,
+				panicFunctionValue,
+				panicFunctionValue,
+				panicFunctionValue,
+				panicFunctionValue,
 				func(
 					inter *interpreter.Interpreter,
 					getLocationRange func() interpreter.LocationRange,
@@ -9024,11 +9026,13 @@ func newTestAuthAccountValue(gauge common.MemoryGauge, addressValue interpreter.
 			return interpreter.NewAuthAccountKeysValue(
 				gauge,
 				addressValue,
-				panicFunction,
-				panicFunction,
-				panicFunction,
-				panicFunction,
-				panicFunction,
+				panicFunctionValue,
+				panicFunctionValue,
+				panicFunctionValue,
+				panicFunctionValue,
+				interpreter.AccountKeysCountConstructor(func() interpreter.UInt64Value {
+					panic(errors.NewUnreachableError())
+				}),
 			)
 		},
 	)
@@ -9036,13 +9040,7 @@ func newTestAuthAccountValue(gauge common.MemoryGauge, addressValue interpreter.
 
 func newTestPublicAccountValue(gauge common.MemoryGauge, addressValue interpreter.AddressValue) interpreter.Value {
 
-	panicFunction := interpreter.NewHostFunctionValue(
-		gauge,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			panic(errors.NewUnreachableError())
-		},
-		stdlib.PanicFunction.Type.(*sema.FunctionType),
-	)
+	panicFunctionValue := newPanicFunctionValue(gauge)
 
 	return interpreter.NewPublicAccountValue(
 		gauge,
@@ -9055,16 +9053,18 @@ func newTestPublicAccountValue(gauge common.MemoryGauge, addressValue interprete
 			return interpreter.NewPublicAccountKeysValue(
 				gauge,
 				addressValue,
-				panicFunction,
-				panicFunction,
-				panicFunction,
+				panicFunctionValue,
+				panicFunctionValue,
+				interpreter.AccountKeysCountConstructor(func() interpreter.UInt64Value {
+					panic(errors.NewUnreachableError())
+				}),
 			)
 		},
 		func() interpreter.Value {
 			return interpreter.NewPublicAccountContractsValue(
 				gauge,
 				addressValue,
-				panicFunction,
+				panicFunctionValue,
 				func(
 					inter *interpreter.Interpreter,
 					getLocationRange func() interpreter.LocationRange,
