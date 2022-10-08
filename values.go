@@ -255,7 +255,6 @@ func (v Bytes) String() string {
 // Character represents a Cadence character, which is a Unicode extended grapheme cluster.
 // Hence, use a Go string to be able to hold multiple Unicode code points (Go runes).
 // It should consist of exactly one grapheme cluster
-//
 type Character string
 
 var _ Value = Character("")

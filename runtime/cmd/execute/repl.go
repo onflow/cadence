@@ -58,29 +58,22 @@ func RunREPL() {
 	}
 
 	executor := func(line string) {
-		defer func() {
-			lineNumber++
-		}()
-
 		if code == "" && strings.HasPrefix(line, ".") {
 			handleCommand(line)
 			code = ""
 			return
 		}
 
-		// Prefix the code with empty lines,
-		// so that error messages match current line number
-
-		for i := 1; i < lineNumber; i++ {
-			code = "\n" + code
-		}
-
 		code += line + "\n"
 
-		inputIsComplete := repl.Accept([]byte(code))
-		if !inputIsComplete {
-			lineIsContinuation = true
-			return
+		inputIsComplete, err := repl.Accept([]byte(code))
+		if err == nil {
+			lineNumber++
+
+			if !inputIsComplete {
+				lineIsContinuation = true
+				return
+			}
 		}
 
 		lineIsContinuation = false

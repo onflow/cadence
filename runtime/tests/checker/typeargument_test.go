@@ -64,7 +64,7 @@ func TestCheckTypeArguments(t *testing.T) {
 			&sema.CapabilityType{},
 		)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidTypeArgumentCountError{}, errs[0])
 	})
@@ -108,7 +108,7 @@ func TestCheckTypeArguments(t *testing.T) {
 			},
 		)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
@@ -124,7 +124,7 @@ func TestCheckTypeArguments(t *testing.T) {
 			&sema.CapabilityType{},
 		)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidTypeArgumentCountError{}, errs[0])
 	})
@@ -241,7 +241,7 @@ func TestCheckTypeArgumentSubtyping(t *testing.T) {
 			cap2Type.(*sema.CapabilityType).BorrowType,
 		)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
@@ -281,7 +281,7 @@ func TestCheckTypeArgumentSubtyping(t *testing.T) {
 			RequireGlobalValue(t, checker.Elaboration, "cap2"),
 		)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})

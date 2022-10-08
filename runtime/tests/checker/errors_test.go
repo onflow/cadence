@@ -22,7 +22,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -54,7 +53,7 @@ func TestCheckErrorShortCircuiting(t *testing.T) {
 		// and 3 "cannot instantiate non-parameterized type",
 		// but we enabled error short-circuiting
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	})
@@ -87,7 +86,9 @@ func TestCheckErrorShortCircuiting(t *testing.T) {
 								},
 							},
 						)
-						require.Error(t, err)
+						errs := RequireCheckerErrors(t, err, 1)
+
+						assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 
 						return nil, err
 					},
@@ -95,13 +96,13 @@ func TestCheckErrorShortCircuiting(t *testing.T) {
 			},
 		)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ImportedProgramError{}, errs[0])
 
 		err = errs[0].(*sema.ImportedProgramError).Err
 
-		errs = ExpectCheckerErrors(t, err, 1)
+		errs = RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	})

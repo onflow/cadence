@@ -26,7 +26,6 @@ import (
 )
 
 // NewUnreachableError creates an internal error that indicates executing an unimplemented path.
-//
 func NewUnreachableError() InternalError {
 	return NewUnexpectedError("unreachable")
 }
@@ -35,7 +34,6 @@ func NewUnreachableError() InternalError {
 // A program should never throw an InternalError in an ideal world.
 //
 // InternalError s must always be thrown and not be caught (recovered), i.e. be propagated up the call stack.
-//
 type InternalError interface {
 	error
 	IsInternalError()
@@ -49,7 +47,6 @@ type UserError interface {
 
 // ExternalError is an error that occurred externally.
 // It contains the recovered value.
-//
 type ExternalError struct {
 	Recovered any
 }
@@ -67,13 +64,11 @@ func (e ExternalError) Error() string {
 // SecondaryError
 
 // SecondaryError is an interface for errors that provide a secondary error message
-//
 type SecondaryError interface {
 	SecondaryError() string
 }
 
 // ErrorNotes is an interface for errors that provide notes
-//
 type ErrorNotes interface {
 	ErrorNotes() []ErrorNote
 }
@@ -89,7 +84,6 @@ type ParentError interface {
 }
 
 // HasPrefix is an interface for errors that provide a custom prefix
-//
 type HasPrefix interface {
 	Prefix() string
 }
@@ -116,7 +110,6 @@ func (e MemoryError) Error() string {
 // It's a generic error that wraps an implementation error, which should have never occurred.
 //
 // NOTE: This error is not used for errors occur due to bugs in a user-provided program.
-//
 type UnexpectedError struct {
 	Err   error
 	Stack []byte
@@ -150,7 +143,6 @@ func (e UnexpectedError) Error() string {
 
 // DefaultUserError is the default implementation of UserError interface.
 // It's a generic error that wraps a user error.
-//
 type DefaultUserError struct {
 	Err error
 }
@@ -175,7 +167,6 @@ func (e DefaultUserError) Error() string {
 
 // IsInternalError Checks whether a given error was caused by an InternalError.
 // An error in an internal error, if it has at-least one InternalError in the error chain.
-//
 func IsInternalError(err error) bool {
 	switch err := err.(type) {
 	case InternalError:
@@ -189,7 +180,6 @@ func IsInternalError(err error) bool {
 
 // IsUserError Checks whether a given error was caused by an UserError.
 // An error in a user error, if it has at-least one UserError in the error chain.
-//
 func IsUserError(err error) bool {
 	switch err := err.(type) {
 	case UserError:

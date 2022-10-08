@@ -23,16 +23,15 @@ import (
 )
 
 // HashableValue is an immutable value that can be hashed
-//
 type HashableValue interface {
 	Value
-	HashInput(interpreter *Interpreter, getLocationRange func() LocationRange, scratch []byte) []byte
+	HashInput(interpreter *Interpreter, locationRange LocationRange, scratch []byte) []byte
 }
 
-func newHashInputProvider(interpreter *Interpreter, getLocationRange func() LocationRange) atree.HashInputProvider {
+func newHashInputProvider(interpreter *Interpreter, locationRange LocationRange) atree.HashInputProvider {
 	return func(value atree.Value, scratch []byte) ([]byte, error) {
 		hashInput := MustConvertStoredValue(interpreter, value).(HashableValue).
-			HashInput(interpreter, getLocationRange, scratch)
+			HashInput(interpreter, locationRange, scratch)
 		return hashInput, nil
 	}
 }
@@ -52,7 +51,6 @@ func newHashInputProvider(interpreter *Interpreter, getLocationRange func() Loca
 
 // HashInputType is a type flag that is included in the hash input for a value,
 // i.e., it should be included in the result of HashableValue.HashInput.
-//
 type HashInputType byte
 
 const (

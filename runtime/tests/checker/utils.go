@@ -29,7 +29,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/pretty"
 	"github.com/onflow/cadence/runtime/sema"
@@ -167,12 +166,13 @@ func ParseAndCheckWithOptionsAndMemoryMetering(
 	return checker, err
 }
 
-func ExpectCheckerErrors(t *testing.T, err error, count int) []error {
-	if count <= 0 && err == nil {
+func RequireCheckerErrors(t *testing.T, err error, count int) []error {
+	if count <= 0 {
+		require.NoError(t, err)
 		return nil
 	}
 
-	require.Error(t, err)
+	utils.RequireError(t, err)
 
 	var checkerErr *sema.CheckerError
 	require.ErrorAs(t, err, &checkerErr)
@@ -184,17 +184,7 @@ func ExpectCheckerErrors(t *testing.T, err error, count int) []error {
 	// Get the error message, to check that it can be successfully generated
 
 	for _, checkerErr := range errs {
-		_ = checkerErr.Error()
-
-		if hasErrorNotes, ok := checkerErr.(errors.ErrorNotes); ok {
-			for _, note := range hasErrorNotes.ErrorNotes() {
-				_ = note.Message()
-			}
-		}
-
-		if hasSecondaryError, ok := checkerErr.(errors.SecondaryError); ok {
-			_ = hasSecondaryError.SecondaryError()
-		}
+		utils.RequireError(t, checkerErr)
 	}
 
 	return errs

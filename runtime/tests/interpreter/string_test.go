@@ -54,7 +54,7 @@ func TestInterpretRecursiveValueString(t *testing.T) {
 	require.Equal(t,
 		`{"mapRef": ...}`,
 		mapValue.(*interpreter.DictionaryValue).
-			GetKey(inter, interpreter.ReturnEmptyLocationRange, interpreter.NewUnmeteredStringValue("mapRef")).
+			GetKey(inter, interpreter.EmptyLocationRange, interpreter.NewUnmeteredStringValue("mapRef")).
 			String(),
 	)
 }
@@ -102,7 +102,7 @@ func TestInterpretStringDecodeHex(t *testing.T) {
 			inter,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.ReturnEmptyLocationRange,
+				interpreter.EmptyLocationRange,
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeUInt8,
 				},
@@ -127,8 +127,7 @@ func TestInterpretStringDecodeHex(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		var typedErr interpreter.InvalidHexByteError
 		require.ErrorAs(t, err, &typedErr)
@@ -146,8 +145,7 @@ func TestInterpretStringDecodeHex(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		var typedErr interpreter.InvalidHexLengthError
 		require.ErrorAs(t, err, &typedErr)
@@ -249,7 +247,7 @@ func TestInterpretStringUtf8Field(t *testing.T) {
 		inter,
 		interpreter.NewArrayValue(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeUInt8,
 			},

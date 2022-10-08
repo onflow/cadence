@@ -1114,7 +1114,7 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 					BaseActivation: baseActivation,
 					PublicKeyValidationHandler: func(
 						_ *interpreter.Interpreter,
-						_ func() interpreter.LocationRange,
+						_ interpreter.LocationRange,
 						_ *interpreter.CompositeValue,
 					) error {
 						return nil
@@ -1172,7 +1172,7 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 					BaseActivation: baseActivation,
 					PublicKeyValidationHandler: func(
 						_ *interpreter.Interpreter,
-						_ func() interpreter.LocationRange,
+						_ interpreter.LocationRange,
 						_ *interpreter.CompositeValue,
 					) error {
 						return nil
@@ -9700,6 +9700,8 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 				interpreter.PrimitiveStaticTypePublicAccountContracts,
 				interpreter.PrimitiveStaticTypeAuthAccountKeys,
 				interpreter.PrimitiveStaticTypePublicAccountKeys,
+				interpreter.PrimitiveStaticTypeAuthAccountInbox,
+				interpreter.PrimitiveStaticTypePublicAccountInbox,
 				interpreter.PrimitiveStaticTypeAccountKey,
 				interpreter.PrimitiveStaticType_Count:
 				continue

@@ -39,7 +39,6 @@ func (checker *Checker) VisitCompositeDeclaration(declaration *ast.CompositeDecl
 // `declareCompositeType` and exists in `checker.Elaboration.CompositeDeclarationTypes`,
 // and that the members and nested declarations for the composite type were declared
 // through `declareCompositeMembersAndValue`.
-//
 func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDeclaration, kind ContainerKind) {
 
 	compositeType := checker.Elaboration.CompositeDeclarationTypes[declaration]
@@ -216,7 +215,6 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 //
 // It assumes the types were previously added to the elaboration in `CompositeNestedDeclarations`,
 // and the type for the declaration was added to the elaboration in `CompositeDeclarationTypes`.
-//
 func (checker *Checker) declareCompositeNestedTypes(
 	declaration *ast.CompositeDeclaration,
 	kind ContainerKind,
@@ -419,7 +417,6 @@ func (checker *Checker) declareNestedDeclarations(
 //
 // See `declareCompositeMembersAndValue` for the declaration of the composite type members.
 // See `visitCompositeDeclaration` for the checking of the composite declaration.
-//
 func (checker *Checker) declareCompositeType(declaration *ast.CompositeDeclaration) *CompositeType {
 
 	identifier := declaration.Identifier
@@ -442,7 +439,7 @@ func (checker *Checker) declareCompositeType(declaration *ast.CompositeDeclarati
 	})
 	checker.report(err)
 
-	if checker.PositionInfo != nil {
+	if checker.PositionInfo != nil && variable != nil {
 		checker.recordVariableDeclarationOccurrence(
 			identifier.Identifier,
 			variable,
@@ -502,7 +499,6 @@ func (checker *Checker) declareCompositeType(declaration *ast.CompositeDeclarati
 //
 // NOTE: This function assumes that the composite type was previously declared using
 // `declareCompositeType` and exists in `checker.Elaboration.CompositeDeclarationTypes`.
-//
 func (checker *Checker) declareCompositeMembersAndValue(
 	declaration *ast.CompositeDeclaration,
 	kind ContainerKind,
@@ -887,7 +883,6 @@ func EnumConstructorType(compositeType *CompositeType) *FunctionType {
 }
 
 // checkMemberStorability check that all fields have a type that is storable.
-//
 func (checker *Checker) checkMemberStorability(members *StringMemberOrderedMap) {
 
 	storableResults := map[*Member]bool{}
@@ -1042,7 +1037,6 @@ type compositeConformanceCheckOptions struct {
 // typeRequirementsInheritedMembers is an "input/output parameter":
 // It tracks which members were inherited in each nested type, which may be a conformance to a type requirement.
 // It allows tracking this across conformance checks of multiple interfaces' type requirements.
-//
 func (checker *Checker) checkCompositeConformance(
 	compositeDeclaration *ast.CompositeDeclaration,
 	compositeType *CompositeType,
@@ -1307,7 +1301,6 @@ func (checker *Checker) memberSatisfied(compositeMember, interfaceMember *Member
 
 // checkTypeRequirement checks conformance of a nested type declaration
 // to a type requirement of an interface.
-//
 func (checker *Checker) checkTypeRequirement(
 	declaredType Type,
 	containerDeclaration *ast.CompositeDeclaration,
@@ -1828,7 +1821,6 @@ func (checker *Checker) checkInitializers(
 // checkNoInitializerNoFields checks that if there are no initializers,
 // then there should also be no fields. Otherwise the fields will be uninitialized.
 // In interfaces this is allowed.
-//
 func (checker *Checker) checkNoInitializerNoFields(
 	fields []*ast.FieldDeclaration,
 	containerType Type,
@@ -1971,7 +1963,6 @@ func (checker *Checker) declareSelfValue(selfType Type, selfDocString string) {
 
 // checkNestedIdentifiers checks that nested identifiers, i.e. fields, functions,
 // and nested interfaces and composites, are unique and aren't named `init` or `destroy`
-//
 func (checker *Checker) checkNestedIdentifiers(members *ast.Members) {
 	positions := map[string]ast.Position{}
 
@@ -1996,7 +1987,6 @@ func (checker *Checker) checkNestedIdentifiers(members *ast.Members) {
 
 // checkNestedIdentifier checks that the nested identifier is unique
 // and isn't named `init` or `destroy`
-//
 func (checker *Checker) checkNestedIdentifier(
 	identifier ast.Identifier,
 	kind common.DeclarationKind,
@@ -2047,7 +2037,6 @@ func (checker *Checker) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclaration) str
 
 // checkUnknownSpecialFunctions checks that the special function declarations
 // are supported, i.e., they are either initializers or destructors
-//
 func (checker *Checker) checkUnknownSpecialFunctions(functions []*ast.SpecialFunctionDeclaration) {
 	for _, function := range functions {
 		switch function.Kind {
@@ -2139,7 +2128,6 @@ func (checker *Checker) checkDestructors(
 // checkNoDestructorNoResourceFields checks that if there is no destructor there are
 // also no fields which have a resource type – otherwise those fields will be lost.
 // In interfaces this is allowed.
-//
 func (checker *Checker) checkNoDestructorNoResourceFields(
 	members *StringMemberOrderedMap,
 	fields map[string]*ast.FieldDeclaration,
@@ -2206,7 +2194,6 @@ func (checker *Checker) checkDestructor(
 
 // checkCompositeResourceInvalidated checks that if the container is a resource,
 // that all resource fields are invalidated (moved or destroyed)
-//
 func (checker *Checker) checkCompositeResourceInvalidated(containerType Type) {
 	compositeType, isComposite := containerType.(*CompositeType)
 	if !isComposite || compositeType.Kind != common.CompositeKindResource {
@@ -2218,7 +2205,6 @@ func (checker *Checker) checkCompositeResourceInvalidated(containerType Type) {
 
 // checkResourceFieldsInvalidated checks that all resource fields for a container
 // type are invalidated.
-//
 func (checker *Checker) checkResourceFieldsInvalidated(
 	containerType Type,
 	members *StringMemberOrderedMap,
@@ -2248,7 +2234,6 @@ func (checker *Checker) checkResourceFieldsInvalidated(
 
 // checkResourceUseAfterInvalidation checks if a resource (variable or composite member)
 // is used after it was previously invalidated (moved or destroyed)
-//
 func (checker *Checker) checkResourceUseAfterInvalidation(resource Resource, usePosition ast.HasPosition) {
 	resourceInfo := checker.resources.Get(resource)
 	invalidation := resourceInfo.Invalidation()

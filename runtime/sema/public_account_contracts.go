@@ -27,7 +27,6 @@ const PublicAccountContractsTypeGetFunctionName = "get"
 const PublicAccountContractsTypeNamesField = "names"
 
 // PublicAccountContractsType represents the type `PublicAccount.Contracts`
-//
 var PublicAccountContractsType = func() *CompositeType {
 
 	publicAccountContractsType := &CompositeType{

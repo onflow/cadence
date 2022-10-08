@@ -26,7 +26,6 @@ import (
 )
 
 // CharacterType represents the character type
-//
 var CharacterType = &SimpleType{
 	Name:                 "Character",
 	QualifiedName:        "Character",

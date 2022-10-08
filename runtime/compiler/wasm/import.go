@@ -21,7 +21,6 @@ package wasm
 import "fmt"
 
 // Import represents an import
-//
 type Import struct {
 	Module string
 	Name   string

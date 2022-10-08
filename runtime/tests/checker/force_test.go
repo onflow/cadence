@@ -82,7 +82,7 @@ func TestCheckForce(t *testing.T) {
           let x3 <- x!
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 	})
@@ -94,7 +94,7 @@ func TestCheckForce(t *testing.T) {
           let y: String = x!
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		typeMismatchError := errs[0].(*sema.TypeMismatchError)
@@ -113,7 +113,7 @@ func TestCheckForce(t *testing.T) {
           let y: String = x!
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		typeMismatchError := errs[0].(*sema.TypeMismatchError)

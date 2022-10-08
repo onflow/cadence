@@ -31,7 +31,6 @@ import (
 
 // assignmentGetterSetter returns a getter/setter function pair
 // for the target expression
-//
 func (interpreter *Interpreter) assignmentGetterSetter(expression ast.Expression) getterSetter {
 	switch expression := expression.(type) {
 	case *ast.IdentifierExpression:
@@ -57,7 +56,6 @@ func (interpreter *Interpreter) assignmentGetterSetter(expression ast.Expression
 
 // identifierExpressionGetterSetter returns a getter/setter function pair
 // for the target identifier expression
-//
 func (interpreter *Interpreter) identifierExpressionGetterSetter(identifierExpression *ast.IdentifierExpression) getterSetter {
 	identifier := identifierExpression.Identifier.Identifier
 	variable := interpreter.FindVariable(identifier)
@@ -77,14 +75,16 @@ func (interpreter *Interpreter) identifierExpressionGetterSetter(identifierExpre
 
 // indexExpressionGetterSetter returns a getter/setter function pair
 // for the target index expression
-//
 func (interpreter *Interpreter) indexExpressionGetterSetter(indexExpression *ast.IndexExpression) getterSetter {
 	target, ok := interpreter.evalExpression(indexExpression.TargetExpression).(ValueIndexableValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
-	getLocationRange := locationRangeGetter(interpreter, interpreter.Location, indexExpression)
+	locationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: indexExpression,
+	}
 
 	// Evaluate, transfer, and convert the indexing value,
 	// as it is essentially an "argument" of the get/set operation
@@ -99,11 +99,10 @@ func (interpreter *Interpreter) indexExpressionGetterSetter(indexExpression *ast
 		interpreter.evalExpression(indexExpression.IndexingExpression),
 		indexingType,
 		indexedType.IndexingType(),
-		locationRangeGetter(
-			interpreter,
-			interpreter.Location,
-			indexExpression.IndexingExpression,
-		),
+		LocationRange{
+			Location:    interpreter.Location,
+			HasPosition: indexExpression.IndexingExpression,
+		},
 	)
 
 	_, isNestedResourceMove := elaboration.IsNestedResourceMoveExpression[indexExpression]
@@ -112,16 +111,16 @@ func (interpreter *Interpreter) indexExpressionGetterSetter(indexExpression *ast
 		target: target,
 		get: func(_ bool) Value {
 			if isNestedResourceMove {
-				return target.RemoveKey(interpreter, getLocationRange, transferredIndexingValue)
+				return target.RemoveKey(interpreter, locationRange, transferredIndexingValue)
 			} else {
-				return target.GetKey(interpreter, getLocationRange, transferredIndexingValue)
+				return target.GetKey(interpreter, locationRange, transferredIndexingValue)
 			}
 		},
 		set: func(value Value) {
 			if isNestedResourceMove {
-				target.InsertKey(interpreter, getLocationRange, transferredIndexingValue, value)
+				target.InsertKey(interpreter, locationRange, transferredIndexingValue, value)
 			} else {
-				target.SetKey(interpreter, getLocationRange, transferredIndexingValue, value)
+				target.SetKey(interpreter, locationRange, transferredIndexingValue, value)
 			}
 		},
 	}
@@ -129,11 +128,13 @@ func (interpreter *Interpreter) indexExpressionGetterSetter(indexExpression *ast
 
 // memberExpressionGetterSetter returns a getter/setter function pair
 // for the target member expression
-//
 func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *ast.MemberExpression) getterSetter {
 	target := interpreter.evalExpression(memberExpression.Expression)
 	identifier := memberExpression.Identifier.Identifier
-	getLocationRange := locationRangeGetter(interpreter, interpreter.Location, memberExpression)
+	locationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: memberExpression,
+	}
 
 	_, isNestedResourceMove := interpreter.Program.Elaboration.IsNestedResourceMoveExpression[memberExpression]
 
@@ -141,7 +142,7 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 		target: target,
 		get: func(allowMissing bool) Value {
 
-			interpreter.checkMemberAccess(memberExpression, target, getLocationRange)
+			interpreter.checkMemberAccess(memberExpression, target, locationRange)
 
 			isOptional := memberExpression.Optional
 
@@ -151,7 +152,7 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 					return typedTarget
 
 				case *SomeValue:
-					target = typedTarget.InnerValue(interpreter, getLocationRange)
+					target = typedTarget.InnerValue(interpreter, locationRange)
 
 				default:
 					panic(errors.NewUnreachableError())
@@ -160,14 +161,14 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 
 			var resultValue Value
 			if isNestedResourceMove {
-				resultValue = target.(MemberAccessibleValue).RemoveMember(interpreter, getLocationRange, identifier)
+				resultValue = target.(MemberAccessibleValue).RemoveMember(interpreter, locationRange, identifier)
 			} else {
-				resultValue = interpreter.getMember(target, getLocationRange, identifier)
+				resultValue = interpreter.getMember(target, locationRange, identifier)
 			}
 			if resultValue == nil && !allowMissing {
 				panic(MissingMemberValueError{
 					Name:          identifier,
-					LocationRange: getLocationRange(),
+					LocationRange: locationRange,
 				})
 			}
 
@@ -183,9 +184,9 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 			return resultValue
 		},
 		set: func(value Value) {
-			interpreter.checkMemberAccess(memberExpression, target, getLocationRange)
+			interpreter.checkMemberAccess(memberExpression, target, locationRange)
 
-			interpreter.setMember(target, getLocationRange, identifier, value)
+			interpreter.setMember(target, locationRange, identifier, value)
 		},
 	}
 }
@@ -193,7 +194,7 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 func (interpreter *Interpreter) checkMemberAccess(
 	memberExpression *ast.MemberExpression,
 	target Value,
-	getLocationRange func() LocationRange,
+	locationRange LocationRange,
 ) {
 	memberInfo := interpreter.Program.Elaboration.MemberExpressionMemberInfos[memberExpression]
 	expectedType := memberInfo.AccessedType
@@ -228,7 +229,7 @@ func (interpreter *Interpreter) checkMemberAccess(
 		panic(MemberAccessTypeError{
 			ExpectedType:  expectedType,
 			ActualType:    targetSemaType,
-			LocationRange: getLocationRange(),
+			LocationRange: locationRange,
 		})
 	}
 }
@@ -258,10 +259,13 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 
 	error := func(right Value) {
 		panic(InvalidOperandsError{
-			Operation:     expression.Operation,
-			LeftType:      leftValue.StaticType(interpreter),
-			RightType:     right.StaticType(interpreter),
-			LocationRange: locationRangeGetter(interpreter, interpreter.Location, expression)(),
+			Operation: expression.Operation,
+			LeftType:  leftValue.StaticType(interpreter),
+			RightType: right.StaticType(interpreter),
+			LocationRange: LocationRange{
+				Location:    interpreter.Location,
+				HasPosition: expression,
+			},
 		})
 	}
 
@@ -425,11 +429,14 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		return right
 
 	case ast.OperationNilCoalesce:
-		getLocationRange := locationRangeGetter(interpreter, interpreter.Location, expression)
+		locationRange := LocationRange{
+			Location:    interpreter.Location,
+			HasPosition: expression,
+		}
 
 		// only evaluate right-hand side if left-hand side is nil
 		if some, ok := leftValue.(*SomeValue); ok {
-			return some.InnerValue(interpreter, getLocationRange)
+			return some.InnerValue(interpreter, locationRange)
 		}
 
 		value := rightValue()
@@ -439,7 +446,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		resultType := binaryExpressionTypes.ResultType
 
 		// NOTE: important to convert both any and optional
-		return interpreter.ConvertAndBox(getLocationRange, value, rightType, resultType)
+		return interpreter.ConvertAndBox(locationRange, value, rightType, resultType)
 	}
 
 	panic(&unsupportedOperation{
@@ -451,12 +458,18 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 
 func (interpreter *Interpreter) testEqual(left, right Value, expression *ast.BinaryExpression) BoolValue {
 	left = interpreter.Unbox(
-		locationRangeGetter(interpreter, interpreter.Location, expression.Left),
+		LocationRange{
+			Location:    interpreter.Location,
+			HasPosition: expression.Left,
+		},
 		left,
 	)
 
 	right = interpreter.Unbox(
-		locationRangeGetter(interpreter, interpreter.Location, expression.Right),
+		LocationRange{
+			Location:    interpreter.Location,
+			HasPosition: expression.Right,
+		},
 		right,
 	)
 
@@ -468,7 +481,10 @@ func (interpreter *Interpreter) testEqual(left, right Value, expression *ast.Bin
 	return AsBoolValue(
 		leftEquatable.Equal(
 			interpreter,
-			locationRangeGetter(interpreter, interpreter.Location, expression),
+			LocationRange{
+				Location:    interpreter.Location,
+				HasPosition: expression,
+			},
 			right,
 		),
 	)
@@ -667,18 +683,24 @@ func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpres
 	for i, argument := range values {
 		argumentType := argumentTypes[i]
 		argumentExpression := expression.Values[i]
-		getLocationRange := locationRangeGetter(interpreter, interpreter.Location, argumentExpression)
-		copies[i] = interpreter.transferAndConvert(argument, argumentType, elementType, getLocationRange)
+		locationRange := LocationRange{
+			Location:    interpreter.Location,
+			HasPosition: argumentExpression,
+		}
+		copies[i] = interpreter.transferAndConvert(argument, argumentType, elementType, locationRange)
 	}
 
 	// TODO: cache
 	arrayStaticType := ConvertSemaArrayTypeToStaticArrayType(interpreter, arrayType)
 
-	getLocationRange := locationRangeGetter(interpreter, interpreter.Location, expression)
+	locationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: expression,
+	}
 
 	return NewArrayValue(
 		interpreter,
-		getLocationRange,
+		locationRange,
 		arrayStaticType,
 		common.Address{},
 		copies...,
@@ -702,14 +724,20 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 			dictionaryEntryValues.Key,
 			entryType.KeyType,
 			dictionaryType.KeyType,
-			locationRangeGetter(interpreter, interpreter.Location, entry.Key),
+			LocationRange{
+				Location:    interpreter.Location,
+				HasPosition: entry.Key,
+			},
 		)
 
 		value := interpreter.transferAndConvert(
 			dictionaryEntryValues.Value,
 			entryType.ValueType,
 			dictionaryType.ValueType,
-			locationRangeGetter(interpreter, interpreter.Location, entry.Value),
+			LocationRange{
+				Location:    interpreter.Location,
+				HasPosition: entry.Value,
+			},
 		)
 
 		keyValuePairs = append(
@@ -721,11 +749,14 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 
 	dictionaryStaticType := ConvertSemaDictionaryTypeToStaticDictionaryType(interpreter, dictionaryType)
 
-	getLocationRange := locationRangeGetter(interpreter, interpreter.Location, expression)
+	locationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: expression,
+	}
 
 	return NewDictionaryValue(
 		interpreter,
-		getLocationRange,
+		locationRange,
 		dictionaryStaticType,
 		keyValuePairs...,
 	)
@@ -742,8 +773,11 @@ func (interpreter *Interpreter) VisitIndexExpression(expression *ast.IndexExpres
 		panic(errors.NewUnreachableError())
 	}
 	indexingValue := interpreter.evalExpression(expression.IndexingExpression)
-	getLocationRange := locationRangeGetter(interpreter, interpreter.Location, expression)
-	return typedResult.GetKey(interpreter, getLocationRange, indexingValue)
+	locationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: expression,
+	}
+	return typedResult.GetKey(interpreter, locationRange, indexingValue)
 }
 
 func (interpreter *Interpreter) VisitConditionalExpression(expression *ast.ConditionalExpression) Value {
@@ -794,7 +828,10 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 		case *SomeValue:
 			result = typedResult.InnerValue(
 				interpreter,
-				locationRangeGetter(interpreter, interpreter.Location, invocationExpression.InvokedExpression),
+				LocationRange{
+					Location:    interpreter.Location,
+					HasPosition: invocationExpression.InvokedExpression,
+				},
 			)
 
 		default:
@@ -915,7 +952,10 @@ func (interpreter *Interpreter) VisitFunctionExpression(expression *ast.Function
 func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingExpression) Value {
 	value := interpreter.evalExpression(expression.Expression)
 
-	getLocationRange := locationRangeGetter(interpreter, interpreter.Location, expression.Expression)
+	locationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: expression.Expression,
+	}
 
 	expectedType := interpreter.Program.Elaboration.CastingTargetTypes[expression]
 
@@ -931,7 +971,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 			}
 
 			// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
-			value = interpreter.BoxOptional(getLocationRange, value, expectedType)
+			value = interpreter.BoxOptional(locationRange, value, expectedType)
 
 			return NewSomeValueNonCopying(interpreter, value)
 
@@ -939,17 +979,20 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 			if !isSubType {
 				valueSemaType := interpreter.MustConvertStaticToSemaType(valueStaticType)
 
-				getLocationRange := locationRangeGetter(interpreter, interpreter.Location, expression.Expression)
+				locationRange := LocationRange{
+					Location:    interpreter.Location,
+					HasPosition: expression.Expression,
+				}
 
 				panic(ForceCastTypeMismatchError{
 					ExpectedType:  expectedType,
 					ActualType:    valueSemaType,
-					LocationRange: getLocationRange(),
+					LocationRange: locationRange,
 				})
 			}
 
 			// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
-			return interpreter.BoxOptional(getLocationRange, value, expectedType)
+			return interpreter.BoxOptional(locationRange, value, expectedType)
 
 		default:
 			panic(errors.NewUnreachableError())
@@ -958,7 +1001,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 	case ast.OperationCast:
 		staticValueType := interpreter.Program.Elaboration.CastingStaticValueTypes[expression]
 		// The cast may upcast to an optional type, e.g. `1 as Int?`, so box
-		return interpreter.ConvertAndBox(getLocationRange, value, staticValueType, expectedType)
+		return interpreter.ConvertAndBox(locationRange, value, staticValueType, expectedType)
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -974,9 +1017,12 @@ func (interpreter *Interpreter) VisitDestroyExpression(expression *ast.DestroyEx
 
 	interpreter.invalidateResource(value)
 
-	getLocationRange := locationRangeGetter(interpreter, interpreter.Location, expression)
+	locationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: expression,
+	}
 
-	value.(ResourceKindedValue).Destroy(interpreter, getLocationRange)
+	value.(ResourceKindedValue).Destroy(interpreter, locationRange)
 
 	return Void
 }
@@ -1004,9 +1050,12 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 			// References to optionals are transformed into optional references,
 			// so move the *SomeValue out to the reference itself
 
-			getLocationRange := locationRangeGetter(interpreter, interpreter.Location, referenceExpression.Expression)
+			locationRange := LocationRange{
+				Location:    interpreter.Location,
+				HasPosition: referenceExpression.Expression,
+			}
 
-			innerValue := result.InnerValue(interpreter, getLocationRange)
+			innerValue := result.InnerValue(interpreter, locationRange)
 			if result, ok := innerValue.(ReferenceTrackedResourceKindedValue); ok {
 				interpreter.trackReferencedResourceKindedValue(result.StorageID(), result)
 			}
@@ -1029,10 +1078,13 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 			// but the target type is optional,
 			// then box the reference properly
 
-			getLocationRange := locationRangeGetter(interpreter, interpreter.Location, referenceExpression)
+			locationRange := LocationRange{
+				Location:    interpreter.Location,
+				HasPosition: referenceExpression,
+			}
 
 			return interpreter.BoxOptional(
-				getLocationRange,
+				locationRange,
 				NewEphemeralReferenceValue(
 					interpreter,
 					innerBorrowType.Authorized,
@@ -1054,18 +1106,18 @@ func (interpreter *Interpreter) VisitForceExpression(expression *ast.ForceExpres
 
 	switch result := result.(type) {
 	case *SomeValue:
-		getLocationRange := locationRangeGetter(interpreter, interpreter.Location, expression.Expression)
-		return result.InnerValue(interpreter, getLocationRange)
+		locationRange := LocationRange{
+			Location:    interpreter.Location,
+			HasPosition: expression.Expression,
+		}
+		return result.InnerValue(interpreter, locationRange)
 
 	case NilValue:
 		panic(
 			ForceNilError{
 				LocationRange: LocationRange{
-					Location: interpreter.Location,
-					Range: ast.NewUnmeteredRange(
-						expression.EndPosition(nil),
-						expression.EndPosition(nil),
-					),
+					Location:    interpreter.Location,
+					HasPosition: expression,
 				},
 			},
 		)

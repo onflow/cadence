@@ -104,7 +104,7 @@ func TestCheckInvalidStringConcat(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -150,7 +150,7 @@ func TestCheckInvalidStringSlice(t *testing.T) {
 		  let x = a.slice(0, 1)
 		`)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.MissingArgumentLabelError{}, errs[0])
 		assert.IsType(t, &sema.MissingArgumentLabelError{}, errs[1])
@@ -163,7 +163,7 @@ func TestCheckInvalidStringSlice(t *testing.T) {
 		  let x = a.slice(from: 0, 1)
 		`)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.MissingArgumentLabelError{}, errs[0])
 	})
@@ -175,7 +175,7 @@ func TestCheckInvalidStringSlice(t *testing.T) {
 		  let x = a.slice(from: "a", upTo: "b")
 		`)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
@@ -223,7 +223,7 @@ func TestCheckInvalidStringIndexingAssignment(t *testing.T) {
       }
 	`)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotIndexingAssignableTypeError{}, errs[0])
 }
@@ -239,7 +239,7 @@ func TestCheckInvalidStringIndexingAssignmentWithCharacterLiteral(t *testing.T) 
       }
 	`)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotIndexingAssignableTypeError{}, errs[0])
 }

@@ -257,7 +257,7 @@ func transactionExecutionFunction(
 		values, err := validateArgumentParams(
 			inter,
 			runtimeInterface,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			arguments,
 			parameters,
 		)

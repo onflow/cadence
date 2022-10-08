@@ -27,7 +27,6 @@ import (
 )
 
 // InstructionUnreachable is the 'unreachable' instruction
-//
 type InstructionUnreachable struct{}
 
 func (InstructionUnreachable) isInstruction() {}
@@ -42,7 +41,6 @@ func (i InstructionUnreachable) write(w *WASMWriter) error {
 }
 
 // InstructionNop is the 'nop' instruction
-//
 type InstructionNop struct{}
 
 func (InstructionNop) isInstruction() {}
@@ -57,7 +55,6 @@ func (i InstructionNop) write(w *WASMWriter) error {
 }
 
 // InstructionBlock is the 'block' instruction
-//
 type InstructionBlock struct {
 	Block Block
 }
@@ -80,7 +77,6 @@ func (i InstructionBlock) write(w *WASMWriter) error {
 }
 
 // InstructionLoop is the 'loop' instruction
-//
 type InstructionLoop struct {
 	Block Block
 }
@@ -103,7 +99,6 @@ func (i InstructionLoop) write(w *WASMWriter) error {
 }
 
 // InstructionIf is the 'if' instruction
-//
 type InstructionIf struct {
 	Block Block
 }
@@ -126,7 +121,6 @@ func (i InstructionIf) write(w *WASMWriter) error {
 }
 
 // InstructionEnd is the 'end' instruction
-//
 type InstructionEnd struct{}
 
 func (InstructionEnd) isInstruction() {}
@@ -141,7 +135,6 @@ func (i InstructionEnd) write(w *WASMWriter) error {
 }
 
 // InstructionBr is the 'br' instruction
-//
 type InstructionBr struct {
 	LabelIndex uint32
 }
@@ -164,7 +157,6 @@ func (i InstructionBr) write(w *WASMWriter) error {
 }
 
 // InstructionBrIf is the 'br_if' instruction
-//
 type InstructionBrIf struct {
 	LabelIndex uint32
 }
@@ -187,7 +179,6 @@ func (i InstructionBrIf) write(w *WASMWriter) error {
 }
 
 // InstructionBrTable is the 'br_table' instruction
-//
 type InstructionBrTable struct {
 	LabelIndices      []uint32
 	DefaultLabelIndex uint32
@@ -226,7 +217,6 @@ func (i InstructionBrTable) write(w *WASMWriter) error {
 }
 
 // InstructionReturn is the 'return' instruction
-//
 type InstructionReturn struct{}
 
 func (InstructionReturn) isInstruction() {}
@@ -241,7 +231,6 @@ func (i InstructionReturn) write(w *WASMWriter) error {
 }
 
 // InstructionCall is the 'call' instruction
-//
 type InstructionCall struct {
 	FuncIndex uint32
 }
@@ -264,7 +253,6 @@ func (i InstructionCall) write(w *WASMWriter) error {
 }
 
 // InstructionCallIndirect is the 'call_indirect' instruction
-//
 type InstructionCallIndirect struct {
 	TypeIndex  uint32
 	TableIndex uint32
@@ -294,7 +282,6 @@ func (i InstructionCallIndirect) write(w *WASMWriter) error {
 }
 
 // InstructionRefNull is the 'ref.null' instruction
-//
 type InstructionRefNull struct {
 	TypeIndex uint32
 }
@@ -317,7 +304,6 @@ func (i InstructionRefNull) write(w *WASMWriter) error {
 }
 
 // InstructionRefIsNull is the 'ref.is_null' instruction
-//
 type InstructionRefIsNull struct{}
 
 func (InstructionRefIsNull) isInstruction() {}
@@ -332,7 +318,6 @@ func (i InstructionRefIsNull) write(w *WASMWriter) error {
 }
 
 // InstructionRefFunc is the 'ref.func' instruction
-//
 type InstructionRefFunc struct {
 	FuncIndex uint32
 }
@@ -355,7 +340,6 @@ func (i InstructionRefFunc) write(w *WASMWriter) error {
 }
 
 // InstructionDrop is the 'drop' instruction
-//
 type InstructionDrop struct{}
 
 func (InstructionDrop) isInstruction() {}
@@ -370,7 +354,6 @@ func (i InstructionDrop) write(w *WASMWriter) error {
 }
 
 // InstructionSelect is the 'select' instruction
-//
 type InstructionSelect struct{}
 
 func (InstructionSelect) isInstruction() {}
@@ -385,7 +368,6 @@ func (i InstructionSelect) write(w *WASMWriter) error {
 }
 
 // InstructionLocalGet is the 'local.get' instruction
-//
 type InstructionLocalGet struct {
 	LocalIndex uint32
 }
@@ -408,7 +390,6 @@ func (i InstructionLocalGet) write(w *WASMWriter) error {
 }
 
 // InstructionLocalSet is the 'local.set' instruction
-//
 type InstructionLocalSet struct {
 	LocalIndex uint32
 }
@@ -431,7 +412,6 @@ func (i InstructionLocalSet) write(w *WASMWriter) error {
 }
 
 // InstructionLocalTee is the 'local.tee' instruction
-//
 type InstructionLocalTee struct {
 	LocalIndex uint32
 }
@@ -454,7 +434,6 @@ func (i InstructionLocalTee) write(w *WASMWriter) error {
 }
 
 // InstructionGlobalGet is the 'global.get' instruction
-//
 type InstructionGlobalGet struct {
 	GlobalIndex uint32
 }
@@ -477,7 +456,6 @@ func (i InstructionGlobalGet) write(w *WASMWriter) error {
 }
 
 // InstructionGlobalSet is the 'global.set' instruction
-//
 type InstructionGlobalSet struct {
 	GlobalIndex uint32
 }
@@ -500,7 +478,6 @@ func (i InstructionGlobalSet) write(w *WASMWriter) error {
 }
 
 // InstructionI32Const is the 'i32.const' instruction
-//
 type InstructionI32Const struct {
 	Value int32
 }
@@ -523,7 +500,6 @@ func (i InstructionI32Const) write(w *WASMWriter) error {
 }
 
 // InstructionI64Const is the 'i64.const' instruction
-//
 type InstructionI64Const struct {
 	Value int64
 }
@@ -546,7 +522,6 @@ func (i InstructionI64Const) write(w *WASMWriter) error {
 }
 
 // InstructionI32Eqz is the 'i32.eqz' instruction
-//
 type InstructionI32Eqz struct{}
 
 func (InstructionI32Eqz) isInstruction() {}
@@ -561,7 +536,6 @@ func (i InstructionI32Eqz) write(w *WASMWriter) error {
 }
 
 // InstructionI32Eq is the 'i32.eq' instruction
-//
 type InstructionI32Eq struct{}
 
 func (InstructionI32Eq) isInstruction() {}
@@ -576,7 +550,6 @@ func (i InstructionI32Eq) write(w *WASMWriter) error {
 }
 
 // InstructionI32Ne is the 'i32.ne' instruction
-//
 type InstructionI32Ne struct{}
 
 func (InstructionI32Ne) isInstruction() {}
@@ -591,7 +564,6 @@ func (i InstructionI32Ne) write(w *WASMWriter) error {
 }
 
 // InstructionI32LtS is the 'i32.lt_s' instruction
-//
 type InstructionI32LtS struct{}
 
 func (InstructionI32LtS) isInstruction() {}
@@ -606,7 +578,6 @@ func (i InstructionI32LtS) write(w *WASMWriter) error {
 }
 
 // InstructionI32LtU is the 'i32.lt_u' instruction
-//
 type InstructionI32LtU struct{}
 
 func (InstructionI32LtU) isInstruction() {}
@@ -621,7 +592,6 @@ func (i InstructionI32LtU) write(w *WASMWriter) error {
 }
 
 // InstructionI32GtS is the 'i32.gt_s' instruction
-//
 type InstructionI32GtS struct{}
 
 func (InstructionI32GtS) isInstruction() {}
@@ -636,7 +606,6 @@ func (i InstructionI32GtS) write(w *WASMWriter) error {
 }
 
 // InstructionI32GtU is the 'i32.gt_u' instruction
-//
 type InstructionI32GtU struct{}
 
 func (InstructionI32GtU) isInstruction() {}
@@ -651,7 +620,6 @@ func (i InstructionI32GtU) write(w *WASMWriter) error {
 }
 
 // InstructionI32LeS is the 'i32.le_s' instruction
-//
 type InstructionI32LeS struct{}
 
 func (InstructionI32LeS) isInstruction() {}
@@ -666,7 +634,6 @@ func (i InstructionI32LeS) write(w *WASMWriter) error {
 }
 
 // InstructionI32LeU is the 'i32.le_u' instruction
-//
 type InstructionI32LeU struct{}
 
 func (InstructionI32LeU) isInstruction() {}
@@ -681,7 +648,6 @@ func (i InstructionI32LeU) write(w *WASMWriter) error {
 }
 
 // InstructionI32GeS is the 'i32.ge_s' instruction
-//
 type InstructionI32GeS struct{}
 
 func (InstructionI32GeS) isInstruction() {}
@@ -696,7 +662,6 @@ func (i InstructionI32GeS) write(w *WASMWriter) error {
 }
 
 // InstructionI32GeU is the 'i32.ge_u' instruction
-//
 type InstructionI32GeU struct{}
 
 func (InstructionI32GeU) isInstruction() {}
@@ -711,7 +676,6 @@ func (i InstructionI32GeU) write(w *WASMWriter) error {
 }
 
 // InstructionI64Eqz is the 'i64.eqz' instruction
-//
 type InstructionI64Eqz struct{}
 
 func (InstructionI64Eqz) isInstruction() {}
@@ -726,7 +690,6 @@ func (i InstructionI64Eqz) write(w *WASMWriter) error {
 }
 
 // InstructionI64Eq is the 'i64.eq' instruction
-//
 type InstructionI64Eq struct{}
 
 func (InstructionI64Eq) isInstruction() {}
@@ -741,7 +704,6 @@ func (i InstructionI64Eq) write(w *WASMWriter) error {
 }
 
 // InstructionI64Ne is the 'i64.ne' instruction
-//
 type InstructionI64Ne struct{}
 
 func (InstructionI64Ne) isInstruction() {}
@@ -756,7 +718,6 @@ func (i InstructionI64Ne) write(w *WASMWriter) error {
 }
 
 // InstructionI64LtS is the 'i64.lt_s' instruction
-//
 type InstructionI64LtS struct{}
 
 func (InstructionI64LtS) isInstruction() {}
@@ -771,7 +732,6 @@ func (i InstructionI64LtS) write(w *WASMWriter) error {
 }
 
 // InstructionI64LtU is the 'i64.lt_u' instruction
-//
 type InstructionI64LtU struct{}
 
 func (InstructionI64LtU) isInstruction() {}
@@ -786,7 +746,6 @@ func (i InstructionI64LtU) write(w *WASMWriter) error {
 }
 
 // InstructionI64GtS is the 'i64.gt_s' instruction
-//
 type InstructionI64GtS struct{}
 
 func (InstructionI64GtS) isInstruction() {}
@@ -801,7 +760,6 @@ func (i InstructionI64GtS) write(w *WASMWriter) error {
 }
 
 // InstructionI64GtU is the 'i64.gt_u' instruction
-//
 type InstructionI64GtU struct{}
 
 func (InstructionI64GtU) isInstruction() {}
@@ -816,7 +774,6 @@ func (i InstructionI64GtU) write(w *WASMWriter) error {
 }
 
 // InstructionI64LeS is the 'i64.le_s' instruction
-//
 type InstructionI64LeS struct{}
 
 func (InstructionI64LeS) isInstruction() {}
@@ -831,7 +788,6 @@ func (i InstructionI64LeS) write(w *WASMWriter) error {
 }
 
 // InstructionI64LeU is the 'i64.le_u' instruction
-//
 type InstructionI64LeU struct{}
 
 func (InstructionI64LeU) isInstruction() {}
@@ -846,7 +802,6 @@ func (i InstructionI64LeU) write(w *WASMWriter) error {
 }
 
 // InstructionI64GeS is the 'i64.ge_s' instruction
-//
 type InstructionI64GeS struct{}
 
 func (InstructionI64GeS) isInstruction() {}
@@ -861,7 +816,6 @@ func (i InstructionI64GeS) write(w *WASMWriter) error {
 }
 
 // InstructionI64GeU is the 'i64.ge_u' instruction
-//
 type InstructionI64GeU struct{}
 
 func (InstructionI64GeU) isInstruction() {}
@@ -876,7 +830,6 @@ func (i InstructionI64GeU) write(w *WASMWriter) error {
 }
 
 // InstructionI32Clz is the 'i32.clz' instruction
-//
 type InstructionI32Clz struct{}
 
 func (InstructionI32Clz) isInstruction() {}
@@ -891,7 +844,6 @@ func (i InstructionI32Clz) write(w *WASMWriter) error {
 }
 
 // InstructionI32Ctz is the 'i32.ctz' instruction
-//
 type InstructionI32Ctz struct{}
 
 func (InstructionI32Ctz) isInstruction() {}
@@ -906,7 +858,6 @@ func (i InstructionI32Ctz) write(w *WASMWriter) error {
 }
 
 // InstructionI32Popcnt is the 'i32.popcnt' instruction
-//
 type InstructionI32Popcnt struct{}
 
 func (InstructionI32Popcnt) isInstruction() {}
@@ -921,7 +872,6 @@ func (i InstructionI32Popcnt) write(w *WASMWriter) error {
 }
 
 // InstructionI32Add is the 'i32.add' instruction
-//
 type InstructionI32Add struct{}
 
 func (InstructionI32Add) isInstruction() {}
@@ -936,7 +886,6 @@ func (i InstructionI32Add) write(w *WASMWriter) error {
 }
 
 // InstructionI32Sub is the 'i32.sub' instruction
-//
 type InstructionI32Sub struct{}
 
 func (InstructionI32Sub) isInstruction() {}
@@ -951,7 +900,6 @@ func (i InstructionI32Sub) write(w *WASMWriter) error {
 }
 
 // InstructionI32Mul is the 'i32.mul' instruction
-//
 type InstructionI32Mul struct{}
 
 func (InstructionI32Mul) isInstruction() {}
@@ -966,7 +914,6 @@ func (i InstructionI32Mul) write(w *WASMWriter) error {
 }
 
 // InstructionI32DivS is the 'i32.div_s' instruction
-//
 type InstructionI32DivS struct{}
 
 func (InstructionI32DivS) isInstruction() {}
@@ -981,7 +928,6 @@ func (i InstructionI32DivS) write(w *WASMWriter) error {
 }
 
 // InstructionI32DivU is the 'i32.div_u' instruction
-//
 type InstructionI32DivU struct{}
 
 func (InstructionI32DivU) isInstruction() {}
@@ -996,7 +942,6 @@ func (i InstructionI32DivU) write(w *WASMWriter) error {
 }
 
 // InstructionI32RemS is the 'i32.rem_s' instruction
-//
 type InstructionI32RemS struct{}
 
 func (InstructionI32RemS) isInstruction() {}
@@ -1011,7 +956,6 @@ func (i InstructionI32RemS) write(w *WASMWriter) error {
 }
 
 // InstructionI32RemU is the 'i32.rem_u' instruction
-//
 type InstructionI32RemU struct{}
 
 func (InstructionI32RemU) isInstruction() {}
@@ -1026,7 +970,6 @@ func (i InstructionI32RemU) write(w *WASMWriter) error {
 }
 
 // InstructionI32And is the 'i32.and' instruction
-//
 type InstructionI32And struct{}
 
 func (InstructionI32And) isInstruction() {}
@@ -1041,7 +984,6 @@ func (i InstructionI32And) write(w *WASMWriter) error {
 }
 
 // InstructionI32Or is the 'i32.or' instruction
-//
 type InstructionI32Or struct{}
 
 func (InstructionI32Or) isInstruction() {}
@@ -1056,7 +998,6 @@ func (i InstructionI32Or) write(w *WASMWriter) error {
 }
 
 // InstructionI32Xor is the 'i32.xor' instruction
-//
 type InstructionI32Xor struct{}
 
 func (InstructionI32Xor) isInstruction() {}
@@ -1071,7 +1012,6 @@ func (i InstructionI32Xor) write(w *WASMWriter) error {
 }
 
 // InstructionI32Shl is the 'i32.shl' instruction
-//
 type InstructionI32Shl struct{}
 
 func (InstructionI32Shl) isInstruction() {}
@@ -1086,7 +1026,6 @@ func (i InstructionI32Shl) write(w *WASMWriter) error {
 }
 
 // InstructionI32ShrS is the 'i32.shr_s' instruction
-//
 type InstructionI32ShrS struct{}
 
 func (InstructionI32ShrS) isInstruction() {}
@@ -1101,7 +1040,6 @@ func (i InstructionI32ShrS) write(w *WASMWriter) error {
 }
 
 // InstructionI32ShrU is the 'i32.shr_u' instruction
-//
 type InstructionI32ShrU struct{}
 
 func (InstructionI32ShrU) isInstruction() {}
@@ -1116,7 +1054,6 @@ func (i InstructionI32ShrU) write(w *WASMWriter) error {
 }
 
 // InstructionI32Rotl is the 'i32.rotl' instruction
-//
 type InstructionI32Rotl struct{}
 
 func (InstructionI32Rotl) isInstruction() {}
@@ -1131,7 +1068,6 @@ func (i InstructionI32Rotl) write(w *WASMWriter) error {
 }
 
 // InstructionI32Rotr is the 'i32.rotr' instruction
-//
 type InstructionI32Rotr struct{}
 
 func (InstructionI32Rotr) isInstruction() {}
@@ -1146,7 +1082,6 @@ func (i InstructionI32Rotr) write(w *WASMWriter) error {
 }
 
 // InstructionI64Clz is the 'i64.clz' instruction
-//
 type InstructionI64Clz struct{}
 
 func (InstructionI64Clz) isInstruction() {}
@@ -1161,7 +1096,6 @@ func (i InstructionI64Clz) write(w *WASMWriter) error {
 }
 
 // InstructionI64Ctz is the 'i64.ctz' instruction
-//
 type InstructionI64Ctz struct{}
 
 func (InstructionI64Ctz) isInstruction() {}
@@ -1176,7 +1110,6 @@ func (i InstructionI64Ctz) write(w *WASMWriter) error {
 }
 
 // InstructionI64Popcnt is the 'i64.popcnt' instruction
-//
 type InstructionI64Popcnt struct{}
 
 func (InstructionI64Popcnt) isInstruction() {}
@@ -1191,7 +1124,6 @@ func (i InstructionI64Popcnt) write(w *WASMWriter) error {
 }
 
 // InstructionI64Add is the 'i64.add' instruction
-//
 type InstructionI64Add struct{}
 
 func (InstructionI64Add) isInstruction() {}
@@ -1206,7 +1138,6 @@ func (i InstructionI64Add) write(w *WASMWriter) error {
 }
 
 // InstructionI64Sub is the 'i64.sub' instruction
-//
 type InstructionI64Sub struct{}
 
 func (InstructionI64Sub) isInstruction() {}
@@ -1221,7 +1152,6 @@ func (i InstructionI64Sub) write(w *WASMWriter) error {
 }
 
 // InstructionI64Mul is the 'i64.mul' instruction
-//
 type InstructionI64Mul struct{}
 
 func (InstructionI64Mul) isInstruction() {}
@@ -1236,7 +1166,6 @@ func (i InstructionI64Mul) write(w *WASMWriter) error {
 }
 
 // InstructionI64DivS is the 'i64.div_s' instruction
-//
 type InstructionI64DivS struct{}
 
 func (InstructionI64DivS) isInstruction() {}
@@ -1251,7 +1180,6 @@ func (i InstructionI64DivS) write(w *WASMWriter) error {
 }
 
 // InstructionI64DivU is the 'i64.div_u' instruction
-//
 type InstructionI64DivU struct{}
 
 func (InstructionI64DivU) isInstruction() {}
@@ -1266,7 +1194,6 @@ func (i InstructionI64DivU) write(w *WASMWriter) error {
 }
 
 // InstructionI64RemS is the 'i64.rem_s' instruction
-//
 type InstructionI64RemS struct{}
 
 func (InstructionI64RemS) isInstruction() {}
@@ -1281,7 +1208,6 @@ func (i InstructionI64RemS) write(w *WASMWriter) error {
 }
 
 // InstructionI64RemU is the 'i64.rem_u' instruction
-//
 type InstructionI64RemU struct{}
 
 func (InstructionI64RemU) isInstruction() {}
@@ -1296,7 +1222,6 @@ func (i InstructionI64RemU) write(w *WASMWriter) error {
 }
 
 // InstructionI64And is the 'i64.and' instruction
-//
 type InstructionI64And struct{}
 
 func (InstructionI64And) isInstruction() {}
@@ -1311,7 +1236,6 @@ func (i InstructionI64And) write(w *WASMWriter) error {
 }
 
 // InstructionI64Or is the 'i64.or' instruction
-//
 type InstructionI64Or struct{}
 
 func (InstructionI64Or) isInstruction() {}
@@ -1326,7 +1250,6 @@ func (i InstructionI64Or) write(w *WASMWriter) error {
 }
 
 // InstructionI64Xor is the 'i64.xor' instruction
-//
 type InstructionI64Xor struct{}
 
 func (InstructionI64Xor) isInstruction() {}
@@ -1341,7 +1264,6 @@ func (i InstructionI64Xor) write(w *WASMWriter) error {
 }
 
 // InstructionI64Shl is the 'i64.shl' instruction
-//
 type InstructionI64Shl struct{}
 
 func (InstructionI64Shl) isInstruction() {}
@@ -1356,7 +1278,6 @@ func (i InstructionI64Shl) write(w *WASMWriter) error {
 }
 
 // InstructionI64ShrS is the 'i64.shr_s' instruction
-//
 type InstructionI64ShrS struct{}
 
 func (InstructionI64ShrS) isInstruction() {}
@@ -1371,7 +1292,6 @@ func (i InstructionI64ShrS) write(w *WASMWriter) error {
 }
 
 // InstructionI64ShrU is the 'i64.shr_u' instruction
-//
 type InstructionI64ShrU struct{}
 
 func (InstructionI64ShrU) isInstruction() {}
@@ -1386,7 +1306,6 @@ func (i InstructionI64ShrU) write(w *WASMWriter) error {
 }
 
 // InstructionI64Rotl is the 'i64.rotl' instruction
-//
 type InstructionI64Rotl struct{}
 
 func (InstructionI64Rotl) isInstruction() {}
@@ -1401,7 +1320,6 @@ func (i InstructionI64Rotl) write(w *WASMWriter) error {
 }
 
 // InstructionI64Rotr is the 'i64.rotr' instruction
-//
 type InstructionI64Rotr struct{}
 
 func (InstructionI64Rotr) isInstruction() {}
@@ -1416,7 +1334,6 @@ func (i InstructionI64Rotr) write(w *WASMWriter) error {
 }
 
 // InstructionI32WrapI64 is the 'i32.wrap_i64' instruction
-//
 type InstructionI32WrapI64 struct{}
 
 func (InstructionI32WrapI64) isInstruction() {}
@@ -1431,7 +1348,6 @@ func (i InstructionI32WrapI64) write(w *WASMWriter) error {
 }
 
 // InstructionI64ExtendI32S is the 'i64.extend_i32_s' instruction
-//
 type InstructionI64ExtendI32S struct{}
 
 func (InstructionI64ExtendI32S) isInstruction() {}
@@ -1446,7 +1362,6 @@ func (i InstructionI64ExtendI32S) write(w *WASMWriter) error {
 }
 
 // InstructionI64ExtendI32U is the 'i64.extend_i32_u' instruction
-//
 type InstructionI64ExtendI32U struct{}
 
 func (InstructionI64ExtendI32U) isInstruction() {}
@@ -1634,7 +1549,6 @@ const (
 )
 
 // readInstruction reads an instruction in the WASM binary
-//
 func (r *WASMReader) readInstruction() (Instruction, error) {
 	opcodeOffset := r.buf.offset
 	b, err := r.buf.ReadByte()

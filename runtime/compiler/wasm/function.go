@@ -19,7 +19,6 @@
 package wasm
 
 // Function represents a function
-//
 type Function struct {
 	Name      string
 	TypeIndex uint32
@@ -27,7 +26,6 @@ type Function struct {
 }
 
 // Code represents the code of a function
-//
 type Code struct {
 	Locals       []ValueType
 	Instructions []Instruction

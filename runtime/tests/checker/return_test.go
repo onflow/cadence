@@ -39,7 +39,7 @@ func TestCheckInvalidReturnValue(t *testing.T) {
        }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	typeMismatchErr := errs[0].(*sema.TypeMismatchError)
@@ -56,7 +56,7 @@ func TestCheckMissingReturnStatement(t *testing.T) {
       fun test(): Int {}
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.MissingReturnStatementError{}, errs[0])
 }
@@ -75,7 +75,7 @@ func TestCheckReturnStatementMissingValue(t *testing.T) {
           }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.MissingReturnValueError{}, errs[0])
 	})
@@ -90,7 +90,7 @@ func TestCheckReturnStatementMissingValue(t *testing.T) {
           }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 		assert.IsType(t, &sema.MissingReturnValueError{}, errs[1])
@@ -111,7 +111,7 @@ func TestCheckReturnStatementTypeMismatch(t *testing.T) {
           }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	})
@@ -126,7 +126,7 @@ func TestCheckReturnStatementTypeMismatch(t *testing.T) {
           }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	})
@@ -141,7 +141,7 @@ func TestCheckReturnStatementTypeMismatch(t *testing.T) {
           }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
@@ -184,7 +184,7 @@ func TestCheckInvalidMissingReturnStatementStructFunction(t *testing.T) {
         }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.MissingReturnStatementError{}, errs[0])
 }
@@ -215,14 +215,14 @@ func testExits(t *testing.T, test exitTest) {
 	)
 
 	if test.errors != nil {
-		errs := ExpectCheckerErrors(t, err, len(test.errors))
+		errs := RequireCheckerErrors(t, err, len(test.errors))
 		for i, err := range errs {
 			assert.IsType(t, test.errors[i], err)
 		}
 	} else if test.exits {
 		require.NoError(t, err)
 	} else {
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.MissingReturnStatementError{}, errs[0])
 	}

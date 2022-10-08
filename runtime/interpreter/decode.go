@@ -304,6 +304,9 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 		case CBORTagLinkValue:
 			storable, err = d.decodeLink()
 
+		case CBORTagPublishedValue:
+			storable, err = d.decodePublishedValue()
+
 		case CBORTagTypeValue:
 			storable, err = d.decodeType()
 
@@ -986,6 +989,59 @@ func (d StorableDecoder) decodeLink() (LinkValue, error) {
 	}
 
 	return NewLinkValue(d.memoryGauge, pathValue, staticType), nil
+}
+
+func (d StorableDecoder) decodePublishedValue() (*PublishedValue, error) {
+
+	const expectedLength = encodedPublishedValueLength
+
+	size, err := d.decoder.DecodeArrayHead()
+	if err != nil {
+		if e, ok := err.(*cbor.WrongTypeError); ok {
+			return nil, errors.NewUnexpectedError(
+				"invalid published value encoding: expected [%d]any, got %s",
+				expectedLength,
+				e.ActualType.String(),
+			)
+		}
+		return nil, err
+	}
+
+	if size != expectedLength {
+		return nil, errors.NewUnexpectedError(
+			"invalid published value encoding: expected [%d]any, got [%d]any",
+			expectedLength,
+			size,
+		)
+	}
+
+	// Decode address at array index encodedPublishedValueRecipientFieldKey
+	num, err := d.decoder.DecodeTagNumber()
+	if err != nil {
+		return nil, errors.NewUnexpectedError("invalid published value recipient encoding: %w", err)
+	}
+	if num != CBORTagAddressValue {
+		return nil, errors.NewUnexpectedError("invalid published value recipient encoding: expected CBOR tag %d, got %d", CBORTagAddressValue, num)
+	}
+	addressValue, err := d.decodeAddress()
+	if err != nil {
+		return nil, errors.NewUnexpectedError("invalid published value recipient encoding: %w", err)
+	}
+
+	// Decode address at array index encodedPublishedValueValueFieldKey
+	num, err = d.decoder.DecodeTagNumber()
+	if err != nil {
+		return nil, errors.NewUnexpectedError("invalid published value recipient encoding: %w", err)
+	}
+	if num != CBORTagCapabilityValue {
+		return nil, errors.NewUnexpectedError("invalid published value recipient encoding: expected CBOR tag %d, got %d", CBORTagCapabilityValue, num)
+	}
+	value, err := d.decodeCapability()
+	if err != nil {
+		return nil, errors.NewUnexpectedError("invalid published value encoding: %w", err)
+	}
+
+	return NewPublishedValue(d.memoryGauge, addressValue, value), nil
 }
 
 func (d StorableDecoder) decodeType() (TypeValue, error) {

@@ -77,7 +77,7 @@ func TestCheckDynamicCastingAnyStruct(t *testing.T) {
 					),
 				)
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.AlwaysFailingResourceCastingTypeError{}, errs[0])
 			})
@@ -151,7 +151,7 @@ func TestCheckDynamicCastingAnyResource(t *testing.T) {
               }
             `)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.AlwaysFailingNonResourceCastingTypeError{}, errs[0])
 		})
@@ -170,7 +170,7 @@ func TestCheckDynamicCastingAnyResource(t *testing.T) {
               }
             `)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.AlwaysFailingNonResourceCastingTypeError{}, errs[0])
 		})
@@ -806,7 +806,7 @@ func TestCheckDynamicCastingStructInterface(t *testing.T) {
 					)
 
 					if fromType == "S" {
-						errs := ExpectCheckerErrors(t, err, 1)
+						errs := RequireCheckerErrors(t, err, 1)
 
 						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 					} else {
@@ -968,7 +968,7 @@ func TestCheckDynamicCastingResourceInterface(t *testing.T) {
 				)
 
 				if fromType == "R" {
-					errs := ExpectCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 
 					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 				} else {
@@ -998,7 +998,7 @@ func TestCheckDynamicCastingResourceInterface(t *testing.T) {
 				)
 
 				if fromType == "R" {
-					errs := ExpectCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 
 					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 				} else {

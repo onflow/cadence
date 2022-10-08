@@ -70,9 +70,9 @@ func TestCheckIsInstance(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
-		name  string
-		code  string
-		valid bool
+		name              string
+		code              string
+		expectedErrorType error
 	}{
 		{
 			name: "string is an instance of string",
@@ -80,7 +80,7 @@ func TestCheckIsInstance(t *testing.T) {
               let stringType = Type<String>()
               let result = "abc".isInstance(stringType)
             `,
-			valid: true,
+			expectedErrorType: nil,
 		},
 		{
 			name: "int is an instance of int",
@@ -88,7 +88,7 @@ func TestCheckIsInstance(t *testing.T) {
               let intType = Type<Int>()
               let result = (1).isInstance(intType)
             `,
-			valid: true,
+			expectedErrorType: nil,
 		},
 		{
 			name: "resource is an instance of resource",
@@ -99,42 +99,58 @@ func TestCheckIsInstance(t *testing.T) {
               let rType = Type<@R>()
               let result = r.isInstance(rType)
             `,
-			valid: true,
+			expectedErrorType: nil,
 		},
 		{
 			name: "1 is an instance of Int?",
 			code: `
               let result = (1).isInstance(Type<Int?>())
             `,
-			valid: true,
+			expectedErrorType: nil,
 		},
 		{
 			name: "isInstance must take a type",
 			code: `
               let result = (1).isInstance(3)
             `,
-			valid: false,
+			expectedErrorType: &sema.TypeMismatchError{},
 		},
 		{
 			name: "nil is not a type",
 			code: `
               let result = (1).isInstance(nil)
             `,
-			valid: false,
+			expectedErrorType: &sema.TypeMismatchError{},
+		},
+		{
+			name: "argument label",
+			code: `
+              let result = (1).isInstance(type: Type<Int>())
+            `,
+			expectedErrorType: &sema.IncorrectArgumentLabelError{},
+		},
+		{
+			name: "too many arguments",
+			code: `
+              let result = (1).isInstance(Type<Int>(), Type<Int>())
+            `,
+			expectedErrorType: &sema.ArgumentCountError{},
 		},
 	}
 
 	for _, testCase := range cases {
 		t.Run(testCase.name, func(t *testing.T) {
 			checker, err := ParseAndCheck(t, testCase.code)
-			if testCase.valid {
+			if testCase.expectedErrorType == nil {
 				require.NoError(t, err)
 				assert.Equal(t,
 					sema.BoolType,
 					RequireGlobalValue(t, checker.Elaboration, "result"),
 				)
 			} else {
-				require.Error(t, err)
+				errs := RequireCheckerErrors(t, err, 1)
+
+				assert.IsType(t, testCase.expectedErrorType, errs[0])
 			}
 		})
 	}
@@ -145,9 +161,9 @@ func TestCheckIsSubtype(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
-		name  string
-		code  string
-		valid bool
+		name              string
+		code              string
+		expectedErrorType error
 	}{
 		{
 			name: "string is a subtype of string",
@@ -155,7 +171,7 @@ func TestCheckIsSubtype(t *testing.T) {
               let stringType = Type<String>()
               let result = stringType.isSubtype(of: stringType)
             `,
-			valid: true,
+			expectedErrorType: nil,
 		},
 		{
 			name: "int is a subtype of int",
@@ -163,7 +179,7 @@ func TestCheckIsSubtype(t *testing.T) {
               let intType = Type<Int>()
               let result = intType.isSubtype(of: intType)
             `,
-			valid: true,
+			expectedErrorType: nil,
 		},
 		{
 			name: "resource is a subtype of resource",
@@ -172,56 +188,58 @@ func TestCheckIsSubtype(t *testing.T) {
               let rType = Type<@R>()
               let result = rType.isSubtype(of: rType)
             `,
-			valid: true,
+			expectedErrorType: nil,
 		},
 		{
 			name: "Int is an instance of Int?",
 			code: `
               let result = Type<Int>().isSubtype(of: Type<Int?>())
             `,
-			valid: true,
+			expectedErrorType: nil,
 		},
 		{
 			name: "isSubtype must take a type",
 			code: `
               let result = Type<Int>().isSubtype(of: 3)
             `,
-			valid: false,
+			expectedErrorType: &sema.TypeMismatchError{},
 		},
 		{
 			name: "isSubtype must take an argument",
 			code: `
               let result = Type<Int>().isSubtype()
             `,
-			valid: false,
+			expectedErrorType: &sema.ArgumentCountError{},
 		},
 		{
 			name: "isSubtype argument must be named",
 			code: `
               let result = Type<Int>().isSubtype(Type<Int?>())
             `,
-			valid: false,
+			expectedErrorType: &sema.MissingArgumentLabelError{},
 		},
 		{
 			name: "isSubtype must take fewer than two arguments",
 			code: `
               let result = Type<Int>().isSubtype(of: Type<Int?>(), Type<Int?>())
             `,
-			valid: false,
+			expectedErrorType: &sema.ArgumentCountError{},
 		},
 	}
 
 	for _, testCase := range cases {
 		t.Run(testCase.name, func(t *testing.T) {
 			checker, err := ParseAndCheck(t, testCase.code)
-			if testCase.valid {
+			if testCase.expectedErrorType == nil {
 				require.NoError(t, err)
 				assert.Equal(t,
 					sema.BoolType,
 					RequireGlobalValue(t, checker.Elaboration, "result"),
 				)
 			} else {
-				require.Error(t, err)
+				errs := RequireCheckerErrors(t, err, 1)
+
+				assert.IsType(t, testCase.expectedErrorType, errs[0])
 			}
 		})
 	}
@@ -237,7 +255,7 @@ func TestCheckIsInstance_Redeclaration(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidDeclarationError{}, errs[0])
 }

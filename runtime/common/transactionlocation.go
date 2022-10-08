@@ -32,7 +32,6 @@ const TransactionLocationPrefix = "t"
 const TransactionIDLength = 32
 
 // TransactionLocation
-//
 type TransactionLocation [TransactionIDLength]byte
 
 var _ Location = TransactionLocation{}

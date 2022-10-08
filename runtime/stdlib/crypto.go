@@ -162,7 +162,7 @@ func cryptoAlgorithmEnumValueAndCaseValues(
 
 	value = interpreter.EnumConstructorFunction(
 		nil,
-		interpreter.ReturnEmptyLocationRange,
+		interpreter.EmptyLocationRange,
 		enumType,
 		caseValues,
 		constructorNestedVariables,

@@ -532,7 +532,6 @@ func parseFunctionBlock(p *parser) (*ast.FunctionBlock, error) {
 }
 
 // parseConditions parses conditions (pre/post)
-//
 func parseConditions(p *parser, kind ast.ConditionKind) (conditions ast.Conditions, err error) {
 
 	p.skipSpaceAndComments(true)
@@ -570,8 +569,7 @@ func parseConditions(p *parser, kind ast.ConditionKind) (conditions ast.Conditio
 
 // parseCondition parses a condition (pre/post)
 //
-//    condition : expression (':' expression )?
-//
+//	condition : expression (':' expression )?
 func parseCondition(p *parser, kind ast.ConditionKind) (*ast.Condition, error) {
 
 	test, err := parseExpression(p, lowestBindingPower)
@@ -651,8 +649,7 @@ func parseSwitchStatement(p *parser) (*ast.SwitchStatement, error) {
 
 // parseSwitchCases parses cases of a switch statement.
 //
-//     switchCases : switchCase*
-//
+//	switchCases : switchCase*
 func parseSwitchCases(p *parser) (cases []*ast.SwitchCase, err error) {
 
 	reportUnexpected := func() {
@@ -702,9 +699,8 @@ func parseSwitchCases(p *parser) (cases []*ast.SwitchCase, err error) {
 // parseSwitchCase parses a switch case (hasExpression == true)
 // or default case (hasExpression == false)
 //
-//     switchCase : `case` expression `:` statements
-//                | `default` `:` statements
-//
+//	switchCase : `case` expression `:` statements
+//	           | `default` `:` statements
 func parseSwitchCase(p *parser, hasExpression bool) (*ast.SwitchCase, error) {
 
 	startPos := p.current.StartPos

@@ -199,6 +199,8 @@ const (
 	PrimitiveStaticTypeAuthAccountKeys
 	PrimitiveStaticTypePublicAccountKeys
 	PrimitiveStaticTypeAccountKey
+	PrimitiveStaticTypePublicAccountInbox
+	PrimitiveStaticTypeAuthAccountInbox
 
 	// !!! *WARNING* !!!
 	// ADD NEW TYPES *BEFORE* THIS WARNING.
@@ -276,6 +278,8 @@ func (t PrimitiveStaticType) elementSize() uint {
 		PrimitiveStaticTypeDeployedContract,
 		PrimitiveStaticTypeAuthAccountContracts,
 		PrimitiveStaticTypePublicAccountContracts,
+		PrimitiveStaticTypePublicAccountInbox,
+		PrimitiveStaticTypeAuthAccountInbox,
 		PrimitiveStaticTypeAuthAccountKeys,
 		PrimitiveStaticTypePublicAccountKeys,
 		PrimitiveStaticTypeAccountKey:
@@ -427,7 +431,6 @@ func (i PrimitiveStaticType) SemaType() sema.Type {
 // ConvertSemaToPrimitiveStaticType converts a `sema.Type` to a `PrimitiveStaticType`.
 //
 // Returns `PrimitiveStaticTypeUnknown` if the given type is not a primitive type.
-//
 func ConvertSemaToPrimitiveStaticType(
 	memoryGauge common.MemoryGauge,
 	t sema.Type,

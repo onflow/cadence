@@ -54,7 +54,7 @@ func TestCheckInvalidSwitchStatementTest(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotEquatableTypeError{}, errs[0])
 }
@@ -96,7 +96,7 @@ func TestCheckInvalidSwitchStatementCaseExpression(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidBinaryOperandsError{}, errs[0])
 }
@@ -118,7 +118,7 @@ func TestCheckInvalidSwitchStatementCaseExpressionInvalidTest(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	assert.IsType(t, &sema.NotEquatableTypeError{}, errs[1])
@@ -165,7 +165,7 @@ func TestCheckSwitchStatementDefaultDefinitiveReturn(t *testing.T) {
           }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.MissingReturnStatementError{}, errs[0])
 	})
@@ -189,7 +189,7 @@ func TestCheckSwitchStatementDefaultDefinitiveReturn(t *testing.T) {
           }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 	})
@@ -211,7 +211,7 @@ func TestCheckSwitchStatementDefaultDefinitiveReturn(t *testing.T) {
           }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 		assert.IsType(t, &sema.MissingReturnStatementError{}, errs[1])
@@ -232,7 +232,7 @@ func TestCheckInvalidSwitchStatementCaseStatement(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 }
@@ -251,7 +251,7 @@ func TestCheckInvalidSwitchStatementDefaultStatement(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 }
@@ -273,7 +273,7 @@ func TestCheckInvalidSwitchStatementDefaultPosition(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.SwitchDefaultPositionError{}, errs[0])
 }
@@ -295,7 +295,7 @@ func TestCheckInvalidSwitchStatementDefaultDuplicate(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.SwitchDefaultPositionError{}, errs[0])
 }
@@ -316,7 +316,7 @@ func TestCheckSwitchStatementCaseScope(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 }
@@ -356,7 +356,7 @@ func TestCheckInvalidSwitchStatementContinueStatement(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.ControlStatementError{}, errs[0])
 	assert.IsType(t, &sema.ControlStatementError{}, errs[1])
@@ -375,7 +375,7 @@ func TestCheckInvalidSwitchStatementMissingStatements(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.MissingSwitchCaseStatementsError{}, errs[0])
 }
@@ -396,7 +396,7 @@ func TestCheckSwitchStatementWithUnreachableReturn(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 	assert.IsType(t, &sema.MissingReturnStatementError{}, errs[1])

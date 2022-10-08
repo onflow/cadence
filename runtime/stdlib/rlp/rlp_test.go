@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/stdlib/rlp"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestRLPReadSize(t *testing.T) {
@@ -113,7 +114,7 @@ func TestRLPReadSize(t *testing.T) {
 	for _, test := range tests {
 		isString, dataStartIndex, dataSize, err := rlp.ReadSize(test.input, test.startIndex)
 		if test.expectedErr != nil {
-			require.Error(t, err)
+			RequireError(t, err)
 			require.Equal(t, test.expectedErr, err)
 		} else {
 			require.NoError(t, err)

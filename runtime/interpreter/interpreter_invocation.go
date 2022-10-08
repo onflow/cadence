@@ -75,7 +75,10 @@ func (interpreter *Interpreter) invokeFunctionValue(
 			locationPos = invocationPosition
 		}
 
-		getLocationRange := locationRangeGetter(interpreter, interpreter.Location, locationPos)
+		locationRange := LocationRange{
+			Location:    interpreter.Location,
+			HasPosition: locationPos,
+		}
 
 		if i < parameterTypeCount {
 			parameterType := parameterTypes[i]
@@ -83,12 +86,12 @@ func (interpreter *Interpreter) invokeFunctionValue(
 				argument,
 				argumentType,
 				parameterType,
-				getLocationRange,
+				locationRange,
 			)
 		} else {
 			transferredArguments[i] = argument.Transfer(
 				interpreter,
-				getLocationRange,
+				locationRange,
 				atree.Address{},
 				false,
 				nil,
@@ -96,7 +99,10 @@ func (interpreter *Interpreter) invokeFunctionValue(
 		}
 	}
 
-	getLocationRange := locationRangeGetter(interpreter, interpreter.Location, invocationPosition)
+	locationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: invocationPosition,
+	}
 
 	invocation := NewInvocation(
 		interpreter,
@@ -104,7 +110,7 @@ func (interpreter *Interpreter) invokeFunctionValue(
 		transferredArguments,
 		argumentTypes,
 		typeParameterTypes,
-		getLocationRange,
+		locationRange,
 	)
 
 	return function.invoke(invocation)
@@ -132,7 +138,6 @@ func (interpreter *Interpreter) invokeInterpretedFunction(
 }
 
 // NOTE: assumes the function's activation (or an extension of it) is pushed!
-//
 func (interpreter *Interpreter) invokeInterpretedFunctionActivated(
 	function *InterpretedFunctionValue,
 	arguments []Value,
@@ -162,7 +167,6 @@ func (interpreter *Interpreter) invokeInterpretedFunctionActivated(
 }
 
 // bindParameterArguments binds the argument values to the given parameters
-//
 func (interpreter *Interpreter) bindParameterArguments(
 	parameterList *ast.ParameterList,
 	arguments []Value,

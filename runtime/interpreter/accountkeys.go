@@ -57,10 +57,10 @@ func NewAuthAccountKeysValue(
 	}
 
 	var str string
-	stringer := func(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	stringer := func(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
 		if str == "" {
 			common.UseMemory(memoryGauge, common.AuthAccountKeysStringMemoryUsage)
-			addressStr := address.MeteredString(memoryGauge, SeenReferences{})
+			addressStr := address.MeteredString(memoryGauge, seenReferences)
 			str = fmt.Sprintf("AuthAccount.Keys(%s)", addressStr)
 		}
 		return str
@@ -105,10 +105,10 @@ func NewPublicAccountKeysValue(
 		return nil
 	}
 	var str string
-	stringer := func(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	stringer := func(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
 		if str == "" {
 			common.UseMemory(memoryGauge, common.PublicAccountKeysStringMemoryUsage)
-			addressStr := address.MeteredString(memoryGauge, SeenReferences{})
+			addressStr := address.MeteredString(memoryGauge, seenReferences)
 			str = fmt.Sprintf("PublicAccount.Keys(%s)", addressStr)
 		}
 		return str

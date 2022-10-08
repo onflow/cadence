@@ -72,7 +72,6 @@ type parser struct {
 //
 // It can be composed with different parse functions to parse the input string into different results.
 // See "ParseExpression", "ParseStatements" as examples.
-//
 func Parse[T any](
 	input []byte,
 	parse func(*parser) (T, error),

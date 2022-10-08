@@ -192,7 +192,6 @@ func (checker *Checker) checkFunction(
 // checkFunctionExits checks that the given function block exits
 // with a return-type appropriate return statement.
 // The return is not needed if the function has a `Void` return type.
-//
 func (checker *Checker) checkFunctionExits(functionBlock *ast.FunctionBlock, returnType Type) {
 
 	if returnType == VoidType {
@@ -228,7 +227,6 @@ func (checker *Checker) checkParameters(parameterList *ast.ParameterList, parame
 }
 
 // checkArgumentLabels checks that all argument labels (if any) are unique
-//
 func (checker *Checker) checkArgumentLabels(parameterList *ast.ParameterList) {
 
 	argumentLabelPositions := map[string]ast.Position{}
@@ -258,7 +256,6 @@ func (checker *Checker) checkArgumentLabels(parameterList *ast.ParameterList) {
 
 // declareParameters declares a constant for each parameter,
 // ensuring names are unique and constants don't already exist
-//
 func (checker *Checker) declareParameters(
 	parameterList *ast.ParameterList,
 	parameters []*Parameter,

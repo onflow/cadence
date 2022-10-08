@@ -22,7 +22,6 @@ package wasm
 const MemoryPageSize = 64 * 1024
 
 // Memory represents a memory
-//
 type Memory struct {
 	// minimum number of pages (each one is 64KiB in size)
 	Min uint32
