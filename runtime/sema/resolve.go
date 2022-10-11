@@ -29,7 +29,6 @@ type AddressContractNamesResolver func(address common.Address) ([]string, error)
 // which returns a single location for non-address locations,
 // and uses the given address contract names resolve function
 // to get all contract names for an address
-//
 func AddressLocationHandlerFunc(resolveAddressContractNames AddressContractNamesResolver) LocationHandlerFunc {
 	return func(identifiers []ast.Identifier, location common.Location) ([]ResolvedLocation, error) {
 		addressLocation, isAddress := location.(common.AddressLocation)

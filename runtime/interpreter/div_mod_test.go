@@ -3344,7 +3344,6 @@ func TestDivModUFix64(t *testing.T) {
 
 // TestNegativeMod ensures that modulo uses the dividend's sign
 // when an operand is negative
-//
 func TestNegativeMod(t *testing.T) {
 
 	t.Parallel()

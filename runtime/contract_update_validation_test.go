@@ -31,6 +31,7 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func newContractDeployTransaction(function, name, code string) string {
@@ -183,7 +184,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
         `
 
 		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
-		require.Error(t, err)
+		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertFieldTypeMismatchError(t, cause, "Test", "a", "String", "Int")
@@ -216,7 +217,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
         `
 
 		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
-		require.Error(t, err)
+		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertExtraneousFieldError(t, cause, "Test", "b")
@@ -297,7 +298,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
         `
 
 		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
-		require.Error(t, err)
+		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertFieldTypeMismatchError(t, cause, "TestResource", "b", "Int", "String")
@@ -350,7 +351,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
         `
 
 		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
-		require.Error(t, err)
+		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertExtraneousFieldError(t, cause, "TestResource", "c")
@@ -403,7 +404,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
         `
 
 		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
-		require.Error(t, err)
+		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertFieldTypeMismatchError(t, cause, "TestStruct", "b", "Int", "String")
@@ -480,7 +481,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
         `
 
 		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
-		require.Error(t, err)
+		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertFieldTypeMismatchError(t, cause, "Bar", "d", "Bar?", "String")
@@ -598,7 +599,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		require.NoError(t, err)
 
 		err = executeTransaction(newContractUpdateTransaction("Test", newCode))
-		require.Error(t, err)
+		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertFieldTypeMismatchError(t, cause, "Test", "x", "TestImport.TestStruct", "TestStruct")
@@ -623,7 +624,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
         `
 
 		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
-		require.Error(t, err)
+		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertFieldTypeMismatchError(t, cause, "Test", "a", "String", "Int")
@@ -656,7 +657,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
         `
 
 		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
-		require.Error(t, err)
+		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertDeclTypeChangeError(
@@ -695,7 +696,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
         `
 
 		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
-		require.Error(t, err)
+		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertDeclTypeChangeError(
@@ -789,7 +790,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 		// Changing unused public composite types should also fail, since those could be
 		// referred by anyone in the chain, and may cause data inconsistency.
-		require.Error(t, err)
+		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertFieldTypeMismatchError(t, cause, "UnusedStruct", "a", "Int", "String")
@@ -832,7 +833,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
         `
 
 		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
-		require.Error(t, err)
+		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertConformanceMismatchError(t, cause, "Foo")
@@ -875,7 +876,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
        `
 
 		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
-		require.Error(t, err)
+		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertFieldTypeMismatchError(t, cause, "TestStruct", "a", "String", "Int")
@@ -906,7 +907,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
         `
 
 		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
-		require.Error(t, err)
+		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertDeclTypeChangeError(
@@ -965,7 +966,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
         `
 
 		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
-		require.Error(t, err)
+		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertMissingDeclarationError(t, cause, "TestStruct")
@@ -994,7 +995,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
         `
 
 		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
-		require.Error(t, err)
+		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertExtraneousFieldError(t, cause, "Test", "b")
@@ -1039,7 +1040,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
         `
 
 		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
-		require.Error(t, err)
+		RequireError(t, err)
 
 		updateErr := getContractUpdateError(t, err, "Test")
 		require.NotNil(t, updateErr)
@@ -1097,7 +1098,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
         `
 
 		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
-		require.Error(t, err)
+		RequireError(t, err)
 
 		const expectedError = "error: mismatching field `a` in `Test`\n" +
 			" --> 0000000000000042.Test:3:27\n" +
@@ -1205,7 +1206,8 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
         `
 
 		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
-		require.Error(t, err)
+		RequireError(t, err)
+
 		assert.Contains(t, err.Error(), "error: field add has non-storable type: ((Int, Int): Int)")
 	})
 
@@ -1516,7 +1518,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
         `
 
 		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
-		require.Error(t, err)
+		RequireError(t, err)
 
 		assert.Contains(t, err.Error(), "pub var a: {TestInterface}"+
 			"\n  |                            ^^^^^^^^^^^^^^^ "+
@@ -1575,7 +1577,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
         `
 
 		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
-		require.Error(t, err)
+		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertMissingEnumCasesError(t, cause, "Foo", 2, 1)
@@ -1633,7 +1635,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
         `
 
 		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
-		require.Error(t, err)
+		RequireError(t, err)
 
 		updateErr := getContractUpdateError(t, err, "Test")
 		require.NotNil(t, updateErr)
@@ -1676,7 +1678,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		require.NoError(t, err)
 
 		err = executeTransaction(newContractUpdateTransaction("Test", updateCode1))
-		require.Error(t, err)
+		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertMissingDeclarationError(t, cause, "TestStruct")
@@ -1695,7 +1697,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		`
 
 		err = executeTransaction(newContractUpdateTransaction("Test", updateCode2))
-		require.Error(t, err)
+		RequireError(t, err)
 
 		cause = getSingleContractUpdateErrorCause(t, err, "Test")
 		assertFieldTypeMismatchError(t, cause, "TestStruct", "a", "Int", "String")
@@ -1736,7 +1738,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		`
 
 		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
-		require.Error(t, err)
+		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertMissingDeclarationError(t, cause, "TestStruct")
@@ -1754,7 +1756,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		`
 
 		err := testDeployAndRemove(t, "Test", code)
-		require.Error(t, err)
+		RequireError(t, err)
 
 		assertContractRemovalError(t, err, "Test")
 	})
@@ -1769,7 +1771,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		`
 
 		err := testDeployAndRemove(t, "Test", code)
-		require.Error(t, err)
+		RequireError(t, err)
 
 		assertContractRemovalError(t, err, "Test")
 	})
@@ -1815,7 +1817,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		for i := 0; i < 1000; i++ {
 
 			err := testDeployAndUpdate(t, "Test", oldCode, newCode)
-			require.Error(t, err)
+			RequireError(t, err)
 
 			updateErr := getContractUpdateError(t, err, "Test")
 
@@ -1924,7 +1926,7 @@ func getSingleContractUpdateErrorCause(t *testing.T, err error, contractName str
 }
 
 func getContractUpdateError(t *testing.T, err error, contractName string) *stdlib.ContractUpdateError {
-	require.Error(t, err)
+	RequireError(t, err)
 
 	var invalidContractDeploymentErr *stdlib.InvalidContractDeploymentError
 	require.ErrorAs(t, err, &invalidContractDeploymentErr)
@@ -2023,7 +2025,7 @@ func TestRuntimeContractUpdateConformanceChanges(t *testing.T) {
         `
 
 		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
-		require.Error(t, err)
+		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 
@@ -2067,7 +2069,7 @@ func TestRuntimeContractUpdateConformanceChanges(t *testing.T) {
         `
 
 		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
-		require.Error(t, err)
+		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 

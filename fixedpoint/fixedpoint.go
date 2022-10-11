@@ -18,5 +18,4 @@
 
 // Package fixedpoint provides constants, as well as formatting, conversion,
 // and checking functionality for Cadence fixed-point number types
-//
 package fixedpoint

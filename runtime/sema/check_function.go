@@ -132,17 +132,6 @@ func (checker *Checker) checkFunction(
 		checker.checkTypeAnnotation(functionType.ReturnTypeAnnotation, returnTypeAnnotation)
 	}
 
-	// Reset the returning state and restore it when leaving
-
-	jumpedOrReturned := checker.resources.JumpsOrReturns
-	halted := checker.resources.Halts
-	checker.resources.JumpsOrReturns = false
-	checker.resources.Halts = false
-	defer func() {
-		checker.resources.JumpsOrReturns = jumpedOrReturned
-		checker.resources.Halts = halted
-	}()
-
 	// NOTE: Always declare the function parameters, even if the function body is empty.
 	// For example, event declarations have an initializer with an empty body,
 	// but their parameters (e.g. duplication) needs to still be checked.
@@ -203,7 +192,6 @@ func (checker *Checker) checkFunction(
 // checkFunctionExits checks that the given function block exits
 // with a return-type appropriate return statement.
 // The return is not needed if the function has a `Void` return type.
-//
 func (checker *Checker) checkFunctionExits(functionBlock *ast.FunctionBlock, returnType Type) {
 
 	if returnType == VoidType {
@@ -239,7 +227,6 @@ func (checker *Checker) checkParameters(parameterList *ast.ParameterList, parame
 }
 
 // checkArgumentLabels checks that all argument labels (if any) are unique
-//
 func (checker *Checker) checkArgumentLabels(parameterList *ast.ParameterList) {
 
 	argumentLabelPositions := map[string]ast.Position{}
@@ -269,7 +256,6 @@ func (checker *Checker) checkArgumentLabels(parameterList *ast.ParameterList) {
 
 // declareParameters declares a constant for each parameter,
 // ensuring names are unique and constants don't already exist
-//
 func (checker *Checker) declareParameters(
 	parameterList *ast.ParameterList,
 	parameters []*Parameter,

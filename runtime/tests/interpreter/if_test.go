@@ -83,7 +83,7 @@ func TestInterpretIfStatement(t *testing.T) {
         `,
 		ParseCheckAndInterpretOptions{
 			HandleCheckerError: func(err error) {
-				errs := checker.ExpectCheckerErrors(t, err, 2)
+				errs := checker.RequireCheckerErrors(t, err, 2)
 
 				assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 				assert.IsType(t, &sema.UnreachableStatementError{}, errs[1])
@@ -151,7 +151,7 @@ func TestInterpretIfStatementTestWithDeclaration(t *testing.T) {
 	})
 
 	t.Run("nil", func(t *testing.T) {
-		value, err := inter.Invoke("test", interpreter.NilValue{})
+		value, err := inter.Invoke("test", interpreter.Nil)
 		require.NoError(t, err)
 		AssertValuesEqual(
 			t,
@@ -206,7 +206,7 @@ func TestInterpretIfStatementTestWithDeclarationAndElse(t *testing.T) {
 	})
 
 	t.Run("nil", func(t *testing.T) {
-		value, err := inter.Invoke("test", interpreter.NilValue{})
+		value, err := inter.Invoke("test", interpreter.Nil)
 		require.NoError(t, err)
 		AssertValuesEqual(
 			t,
@@ -265,7 +265,7 @@ func TestInterpretIfStatementTestWithDeclarationNestedOptionals(t *testing.T) {
 	})
 
 	t.Run("nil", func(t *testing.T) {
-		value, err := inter.Invoke("test", interpreter.NilValue{})
+		value, err := inter.Invoke("test", interpreter.Nil)
 		require.NoError(t, err)
 
 		AssertValuesEqual(
@@ -327,7 +327,7 @@ func TestInterpretIfStatementTestWithDeclarationNestedOptionalsExplicitAnnotatio
 	})
 
 	t.Run("nil", func(t *testing.T) {
-		value, err := inter.Invoke("test", interpreter.NilValue{})
+		value, err := inter.Invoke("test", interpreter.Nil)
 		require.NoError(t, err)
 		AssertValuesEqual(
 			t,

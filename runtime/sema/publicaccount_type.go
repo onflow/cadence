@@ -36,7 +36,6 @@ const PublicAccountContractsField = "contracts"
 const PublicAccountPathsField = "publicPaths"
 
 // PublicAccountType represents the publicly accessible portion of an account.
-//
 var PublicAccountType = func() *CompositeType {
 
 	publicAccountType := &CompositeType{
@@ -113,7 +112,7 @@ var PublicAccountType = func() *CompositeType {
 			PublicAccountPathsType,
 			publicAccountTypePathsFieldDocString,
 		),
-		NewUnmeteredPublicConstantFieldMember(
+		NewUnmeteredPublicFunctionMember(
 			publicAccountType,
 			PublicAccountForEachPublicField,
 			PublicAccountForEachPublicFunctionType,

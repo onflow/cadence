@@ -42,7 +42,7 @@ func TestCheckInvalidFieldInitializationEmptyInitializer(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.FieldUninitializedError{}, errs[0])
 	assert.IsType(t, &sema.FieldUninitializedError{}, errs[1])
@@ -102,7 +102,7 @@ func TestCheckInvalidFieldInitializationWithFunctionCallBeforeAllFieldsInitializ
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.UninitializedUseError{}, errs[0])
 }
@@ -126,7 +126,7 @@ func TestCheckInvalidFieldInitializationWithUseBeforeAllFieldsInitialized(t *tes
       fun bar(_ test: Test) {}
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.UninitializedUseError{}, errs[0])
 }
@@ -167,7 +167,7 @@ func TestCheckInvalidRepeatedFieldInitialization(t *testing.T) {
           }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.FieldReinitializationError{}, errs[0])
 
@@ -212,7 +212,7 @@ func TestCheckInvalidRepeatedFieldInitialization(t *testing.T) {
           }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.FieldReinitializationError{}, errs[0])
 	})
@@ -240,7 +240,7 @@ func TestCheckInvalidResourceMoveAfterInitialization(t *testing.T) {
           }
         `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidNestedResourceMoveError{}, errs[0])
 }
@@ -282,7 +282,7 @@ func TestCheckFieldInitializationInIfStatement(t *testing.T) {
            }
        `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.FieldUninitializedError{}, errs[0])
 	})
@@ -304,7 +304,7 @@ func TestCheckFieldInitializationInWhileStatement(t *testing.T) {
         }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.FieldUninitializedError{}, errs[0])
 }
@@ -343,7 +343,7 @@ func TestCheckFieldInitializationFromField(t *testing.T) {
            }
        `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.UninitializedFieldAccessError{}, errs[0])
 		assert.IsType(t, &sema.FieldUninitializedError{}, errs[1])
@@ -388,7 +388,7 @@ func TestCheckFieldInitializationUsages(t *testing.T) {
            }
        `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.UninitializedFieldAccessError{}, errs[0])
 	})
@@ -409,7 +409,7 @@ func TestCheckFieldInitializationUsages(t *testing.T) {
            }
        `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.UninitializedFieldAccessError{}, errs[0])
 	})
@@ -428,7 +428,7 @@ func TestCheckFieldInitializationUsages(t *testing.T) {
            }
        `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.UninitializedFieldAccessError{}, errs[0])
 	})
@@ -447,7 +447,7 @@ func TestCheckFieldInitializationUsages(t *testing.T) {
            }
        `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.UninitializedFieldAccessError{}, errs[0])
 	})
@@ -499,7 +499,7 @@ func TestCheckFieldInitializationWithReturn(t *testing.T) {
            }
        `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 		assert.IsType(t, &sema.FieldUninitializedError{}, errs[1])
@@ -524,7 +524,7 @@ func TestCheckFieldInitializationWithReturn(t *testing.T) {
 		// an initialization definitive if there is no return or jump,
 		// even if it is only potential
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.FieldUninitializedError{}, errs[0])
 	})
@@ -548,7 +548,7 @@ func TestCheckFieldInitializationWithReturn(t *testing.T) {
 		// an initialization definitive if there is no return or jump,
 		// even if it is only potential
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.FieldUninitializedError{}, errs[0])
 	})
@@ -570,7 +570,7 @@ func TestCheckFieldInitializationWithReturn(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.FieldUninitializedError{}, errs[0])
 	})
 
@@ -592,7 +592,7 @@ func TestCheckFieldInitializationWithReturn(t *testing.T) {
           }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.FieldUninitializedError{}, errs[0])
 	})
 }
@@ -655,7 +655,7 @@ func TestCheckInvalidFieldInitializationWithUseOfUninitializedInPrecondition(t *
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.UninitializedFieldAccessError{}, errs[0])
 }
@@ -681,7 +681,7 @@ func TestCheckFieldInitializationSwitchCase(t *testing.T) {
          }
        `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.FieldUninitializedError{}, errs[0])
 	})
@@ -728,7 +728,7 @@ func TestCheckFieldInitializationSwitchCase(t *testing.T) {
           }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 		assert.IsType(t, &sema.FieldUninitializedError{}, errs[1])
@@ -757,7 +757,7 @@ func TestCheckFieldInitializationSwitchCase(t *testing.T) {
 		// an initialization definitive if there is no return or jump,
 		// even if it is only potential
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.FieldUninitializedError{}, errs[0])
 	})
@@ -827,7 +827,7 @@ func TestCheckFieldInitializationAfterJump(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.FieldUninitializedError{}, errs[0])
 	})
 
@@ -891,7 +891,7 @@ func TestCheckFieldInitializationAfterJump(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.FieldUninitializedError{}, errs[0])
 	})
 
@@ -936,7 +936,7 @@ func TestCheckFieldInitializationAfterJump(t *testing.T) {
           }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.FieldUninitializedError{}, errs[0])
 	})
 
@@ -984,7 +984,7 @@ func TestCheckFieldInitializationAfterJump(t *testing.T) {
           }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.FieldUninitializedError{}, errs[0])
 	})
 

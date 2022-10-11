@@ -35,7 +35,7 @@ func (s InterfaceSet) IsSubsetOf(other *InterfaceSet) bool {
 
 	for pair := orderedMap.Oldest(); pair != nil; pair = pair.Next() {
 		interfaceType := pair.Key
-		if !other.Includes(interfaceType) {
+		if !other.Contains(interfaceType) {
 			return false
 		}
 	}
@@ -43,10 +43,9 @@ func (s InterfaceSet) IsSubsetOf(other *InterfaceSet) bool {
 	return true
 }
 
-func (s InterfaceSet) Includes(interfaceType *InterfaceType) bool {
+func (s InterfaceSet) Contains(interfaceType *InterfaceType) bool {
 	orderedMap := (orderedmap.OrderedMap[*InterfaceType, struct{}])(s)
-	_, present := orderedMap.Get(interfaceType)
-	return present
+	return orderedMap.Contains(interfaceType)
 }
 
 func (s *InterfaceSet) Add(interfaceType *InterfaceType) {

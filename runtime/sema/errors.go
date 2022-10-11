@@ -868,7 +868,6 @@ func (e *AssignmentToConstantMemberError) Error() string {
 }
 
 // FieldReinitializationError
-//
 type FieldReinitializationError struct {
 	Name string
 	ast.Range
@@ -886,7 +885,6 @@ func (e *FieldReinitializationError) Error() string {
 }
 
 // FieldUninitializedError
-//
 type FieldUninitializedError struct {
 	Name          string
 	ContainerType Type
@@ -1220,7 +1218,6 @@ func (n MemberMismatchNote) Message() string {
 // DuplicateConformanceError
 //
 // TODO: just make this a warning?
-//
 type DuplicateConformanceError struct {
 	CompositeType CompositeKindedType
 	InterfaceType *InterfaceType
@@ -1245,7 +1242,6 @@ func (e *DuplicateConformanceError) Error() string {
 }
 
 // MultipleInterfaceDefaultImplementationsError
-//
 type MultipleInterfaceDefaultImplementationsError struct {
 	CompositeType CompositeKindedType
 	Member        *Member
@@ -1276,7 +1272,6 @@ func (e *MultipleInterfaceDefaultImplementationsError) EndPosition(memoryGauge c
 }
 
 // SpecialFunctionDefaultImplementationError
-//
 type SpecialFunctionDefaultImplementationError struct {
 	Container  ast.Declaration
 	Identifier *ast.Identifier
@@ -1308,7 +1303,6 @@ func (e *SpecialFunctionDefaultImplementationError) EndPosition(memoryGauge comm
 }
 
 // DefaultFunctionConflictError
-//
 type DefaultFunctionConflictError struct {
 	CompositeType CompositeKindedType
 	Member        *Member
@@ -1385,7 +1379,6 @@ func (e *InterfaceMemberConflictError) Error() string {
 }
 
 // MissingConformanceError
-//
 type MissingConformanceError struct {
 	CompositeType *CompositeType
 	InterfaceType *InterfaceType
@@ -1764,8 +1757,7 @@ func (e *MissingResourceAnnotationError) Error() string {
 // InvalidNestedResourceMoveError
 
 type InvalidNestedResourceMoveError struct {
-	StartPos ast.Position
-	EndPos   ast.Position
+	ast.Range
 }
 
 var _ SemanticError = &InvalidNestedResourceMoveError{}
@@ -1777,14 +1769,6 @@ func (*InvalidNestedResourceMoveError) IsUserError() {}
 
 func (e *InvalidNestedResourceMoveError) Error() string {
 	return "cannot move nested resource"
-}
-
-func (e *InvalidNestedResourceMoveError) StartPosition() ast.Position {
-	return e.StartPos
-}
-
-func (e *InvalidNestedResourceMoveError) EndPosition(common.MemoryGauge) ast.Position {
-	return e.EndPos
 }
 
 // InvalidResourceAnnotationError
@@ -1937,40 +1921,8 @@ func (e *ResourceLossError) Error() string {
 // ResourceUseAfterInvalidationError
 
 type ResourceUseAfterInvalidationError struct {
-	StartPos      ast.Position
-	EndPos        ast.Position
-	Invalidations []ResourceInvalidation
-	InLoop        bool
-	// NOTE: cached values, use `Cause()`
-	_wasMoved     bool
-	_wasDestroyed bool
-	// NOTE: cached value, use `HasInvalidationInPreviousLoopIteration()`
-	_hasInvalidationInPreviousLoop *bool
-}
-
-func (e *ResourceUseAfterInvalidationError) Cause() (wasMoved, wasDestroyed bool) {
-	// check cache
-	if e._wasMoved || e._wasDestroyed {
-		return e._wasMoved, e._wasDestroyed
-	}
-
-	// update cache
-	for _, invalidation := range e.Invalidations {
-		switch invalidation.Kind {
-		case ResourceInvalidationKindMoveDefinite,
-			ResourceInvalidationKindMoveTemporary:
-			wasMoved = true
-		case ResourceInvalidationKindDestroy:
-			wasDestroyed = true
-		default:
-			panic(errors.NewUnreachableError())
-		}
-	}
-
-	e._wasMoved = wasMoved
-	e._wasDestroyed = wasDestroyed
-
-	return
+	Invalidation ResourceInvalidation
+	ast.Range
 }
 
 var _ SemanticError = &ResourceUseAfterInvalidationError{}
@@ -1982,105 +1934,44 @@ func (*ResourceUseAfterInvalidationError) isSemanticError() {}
 func (*ResourceUseAfterInvalidationError) IsUserError() {}
 
 func (e *ResourceUseAfterInvalidationError) Error() string {
-	wasMoved, wasDestroyed := e.Cause()
-	switch {
-	case wasMoved && wasDestroyed:
-		return "use of moved or destroyed resource"
-	case wasMoved:
-		return "use of moved resource"
-	case wasDestroyed:
-		return "use of destroyed resource"
-	default:
-		panic(errors.NewUnreachableError())
-	}
+	return fmt.Sprintf(
+		"use of previously %s resource",
+		e.Invalidation.Kind.CoarsePassiveVerb(),
+	)
 }
 
 func (e *ResourceUseAfterInvalidationError) SecondaryError() string {
-	message := ""
-	wasMoved, wasDestroyed := e.Cause()
-	switch {
-	case wasMoved && wasDestroyed:
-		message = "resource used here after being moved or destroyed"
-	case wasMoved:
-		message = "resource used here after being moved"
-	case wasDestroyed:
-		message = "resource used here after being destroyed"
-	default:
-		panic(errors.NewUnreachableError())
-	}
-
-	if e.InLoop {
-		site := "later"
-		if e.HasInvalidationInPreviousLoopIteration() {
-			site = "previous"
-		}
-		message += fmt.Sprintf(", in %s iteration of loop", site)
-	}
-
-	return message
+	return fmt.Sprintf(
+		"resource used here after %s",
+		e.Invalidation.Kind.CoarseNoun(),
+	)
 }
 
-func (e *ResourceUseAfterInvalidationError) HasInvalidationInPreviousLoopIteration() (result bool) {
-	if e._hasInvalidationInPreviousLoop != nil {
-		return *e._hasInvalidationInPreviousLoop
-	}
-
-	defer func() {
-		e._hasInvalidationInPreviousLoop = &result
-	}()
-
-	// invalidation occurred in previous loop
-	// if all invalidations occur after the use
-
-	for _, invalidation := range e.Invalidations {
-		if invalidation.StartPos.Compare(e.StartPos) < 0 {
-			return false
-		}
-	}
-
-	return true
-}
-
-func (e *ResourceUseAfterInvalidationError) ErrorNotes() (notes []errors.ErrorNote) {
-	for _, invalidation := range e.Invalidations {
-		notes = append(notes, &ResourceInvalidationNote{
+func (e *ResourceUseAfterInvalidationError) ErrorNotes() []errors.ErrorNote {
+	invalidation := e.Invalidation
+	return []errors.ErrorNote{
+		PreviousResourceInvalidationNote{
 			ResourceInvalidation: invalidation,
 			Range: ast.NewUnmeteredRange(
 				invalidation.StartPos,
 				invalidation.EndPos,
 			),
-		})
+		},
 	}
-	return
 }
 
-func (e *ResourceUseAfterInvalidationError) StartPosition() ast.Position {
-	return e.StartPos
-}
+// PreviousResourceInvalidationNote
 
-func (e *ResourceUseAfterInvalidationError) EndPosition(common.MemoryGauge) ast.Position {
-	return e.EndPos
-}
-
-// ResourceInvalidationNote
-
-type ResourceInvalidationNote struct {
+type PreviousResourceInvalidationNote struct {
 	ResourceInvalidation
 	ast.Range
 }
 
-func (n ResourceInvalidationNote) Message() string {
-	var action string
-	switch n.Kind {
-	case ResourceInvalidationKindMoveDefinite,
-		ResourceInvalidationKindMoveTemporary:
-		action = "moved"
-	case ResourceInvalidationKindDestroy:
-		action = "destroyed"
-	default:
-		panic(errors.NewUnreachableError())
-	}
-	return fmt.Sprintf("resource %s here", action)
+func (n PreviousResourceInvalidationNote) Message() string {
+	return fmt.Sprintf(
+		"resource previously %s here",
+		n.ResourceInvalidation.Kind.CoarsePassiveVerb(),
+	)
 }
 
 // MissingCreateError
@@ -3233,8 +3124,7 @@ func (e *InvalidTopLevelDeclarationError) Error() string {
 
 type InvalidSelfInvalidationError struct {
 	InvalidationKind ResourceInvalidationKind
-	StartPos         ast.Position
-	EndPos           ast.Position
+	ast.Range
 }
 
 var _ SemanticError = &InvalidSelfInvalidationError{}
@@ -3248,22 +3138,20 @@ func (e *InvalidSelfInvalidationError) Error() string {
 	var action string
 	switch e.InvalidationKind {
 	case ResourceInvalidationKindMoveDefinite,
-		ResourceInvalidationKindMoveTemporary:
+		ResourceInvalidationKindMoveTemporary,
+		ResourceInvalidationKindMovePotential:
+
 		action = "move"
-	case ResourceInvalidationKindDestroy:
+
+	case ResourceInvalidationKindDestroyDefinite,
+		ResourceInvalidationKindDestroyPotential:
+
 		action = "destroy"
+
 	default:
 		panic(errors.NewUnreachableError())
 	}
 	return fmt.Sprintf("cannot %s `self`", action)
-}
-
-func (e *InvalidSelfInvalidationError) StartPosition() ast.Position {
-	return e.StartPos
-}
-
-func (e *InvalidSelfInvalidationError) EndPosition(common.MemoryGauge) ast.Position {
-	return e.EndPos
 }
 
 // InvalidMoveError
@@ -3342,7 +3230,7 @@ func (*InvalidRestrictedTypeError) IsUserError() {}
 
 func (e *InvalidRestrictedTypeError) Error() string {
 	return fmt.Sprintf(
-		"cannot restrict type: %s",
+		"cannot restrict type: `%s`",
 		e.Type.QualifiedString(),
 	)
 }
@@ -3363,7 +3251,7 @@ func (*InvalidRestrictionTypeError) IsUserError() {}
 
 func (e *InvalidRestrictionTypeError) Error() string {
 	return fmt.Sprintf(
-		"cannot restrict using non-resource/structure interface type: %s",
+		"cannot restrict using non-resource/structure interface type: `%s`",
 		e.Type.QualifiedString(),
 	)
 }
@@ -3407,7 +3295,7 @@ func (*InvalidRestrictionTypeDuplicateError) IsUserError() {}
 
 func (e *InvalidRestrictionTypeDuplicateError) Error() string {
 	return fmt.Sprintf(
-		"duplicate restriction: %s",
+		"duplicate restriction: `%s`",
 		e.Type.QualifiedString(),
 	)
 }
@@ -3428,7 +3316,7 @@ func (*InvalidNonConformanceRestrictionError) IsUserError() {}
 
 func (e *InvalidNonConformanceRestrictionError) Error() string {
 	return fmt.Sprintf(
-		"restricted type does not conform to restricting type: %s",
+		"restricted type does not conform to restricting type: `%s`",
 		e.Type.QualifiedString(),
 	)
 }

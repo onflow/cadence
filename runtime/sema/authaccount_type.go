@@ -44,14 +44,17 @@ const AuthAccountForEachPrivateField = "forEachPrivate"
 const AuthAccountForEachStoredField = "forEachStored"
 const AuthAccountContractsField = "contracts"
 const AuthAccountKeysField = "keys"
+const AuthAccountInboxField = "inbox"
 const AuthAccountPublicPathsField = "publicPaths"
 const AuthAccountPrivatePathsField = "privatePaths"
 const AuthAccountStoragePathsField = "storagePaths"
+const AuthAccountInboxPublishField = "publish"
+const AuthAccountInboxUnpublishField = "unpublish"
+const AuthAccountInboxClaimField = "claim"
 
 // AuthAccountType represents the authorized access to an account.
 // Access to an AuthAccount means having full access to its storage, public keys, and code.
 // Only signed transactions can get the AuthAccount for an account.
-//
 var AuthAccountType = func() *CompositeType {
 
 	authAccountType := &CompositeType{
@@ -63,6 +66,7 @@ var AuthAccountType = func() *CompositeType {
 			nestedTypes := &StringTypeOrderedMap{}
 			nestedTypes.Set(AuthAccountContractsTypeName, AuthAccountContractsType)
 			nestedTypes.Set(AccountKeysTypeName, AuthAccountKeysType)
+			nestedTypes.Set(AuthAccountInboxTypeName, AuthAccountInboxType)
 			return nestedTypes
 		}(),
 	}
@@ -178,6 +182,12 @@ var AuthAccountType = func() *CompositeType {
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			authAccountType,
+			AuthAccountInboxField,
+			AuthAccountInboxType,
+			accountInboxDocString,
+		),
+		NewUnmeteredPublicConstantFieldMember(
+			authAccountType,
 			AuthAccountPublicPathsField,
 			AuthAccountPublicPathsType,
 			authAccountTypePublicPathsFieldDocString,
@@ -194,19 +204,19 @@ var AuthAccountType = func() *CompositeType {
 			AuthAccountStoragePathsType,
 			authAccountTypeStoragePathsFieldDocString,
 		),
-		NewUnmeteredPublicConstantFieldMember(
+		NewUnmeteredPublicFunctionMember(
 			authAccountType,
 			AuthAccountForEachPublicField,
 			AuthAccountForEachPublicFunctionType,
 			authAccountForEachPublicDocString,
 		),
-		NewUnmeteredPublicConstantFieldMember(
+		NewUnmeteredPublicFunctionMember(
 			authAccountType,
 			AuthAccountForEachPrivateField,
 			AuthAccountForEachPrivateFunctionType,
 			authAccountForEachPrivateDocString,
 		),
-		NewUnmeteredPublicConstantFieldMember(
+		NewUnmeteredPublicFunctionMember(
 			authAccountType,
 			AuthAccountForEachStoredField,
 			AuthAccountForEachStoredFunctionType,
@@ -754,3 +764,139 @@ Retrieves the key at the given index of the account.
 const authAccountKeysTypeRevokeFunctionDocString = `
 Revokes the key at the given index of the account.
 `
+
+const authAccountTypeInboxPublishFunctionDocString = `
+Publishes the argument value under the given name, to be later claimed by the specified recipient
+`
+
+var AuthAccountTypeInboxPublishFunctionType = &FunctionType{
+	Parameters: []*Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "value",
+			TypeAnnotation: NewTypeAnnotation(&CapabilityType{}),
+		},
+		{
+			Identifier:     "name",
+			TypeAnnotation: NewTypeAnnotation(StringType),
+		},
+		{
+			Identifier:     "recipient",
+			TypeAnnotation: NewTypeAnnotation(&AddressType{}),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		VoidType,
+	),
+}
+
+const authAccountTypeInboxUnpublishFunctionDocString = `
+Unpublishes the value specified by the argument string
+`
+
+var AuthAccountTypeInboxUnpublishFunctionType = func() *FunctionType {
+	typeParameter := &TypeParameter{
+		Name: "T",
+		TypeBound: &ReferenceType{
+			Type: AnyType,
+		},
+	}
+	return &FunctionType{
+		TypeParameters: []*TypeParameter{
+			typeParameter,
+		},
+		Parameters: []*Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "name",
+				TypeAnnotation: NewTypeAnnotation(StringType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{
+				Type: &CapabilityType{
+					BorrowType: &GenericType{
+						TypeParameter: typeParameter,
+					},
+				},
+			},
+		),
+	}
+}()
+
+const authAccountTypeInboxClaimFunctionDocString = `
+Claims the value specified by the argument string from the account specified as the provider
+`
+
+var AuthAccountTypeInboxClaimFunctionType = func() *FunctionType {
+	typeParameter := &TypeParameter{
+		Name: "T",
+		TypeBound: &ReferenceType{
+			Type: AnyType,
+		},
+	}
+	return &FunctionType{
+		TypeParameters: []*TypeParameter{
+			typeParameter,
+		},
+		Parameters: []*Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "name",
+				TypeAnnotation: NewTypeAnnotation(StringType),
+			},
+			{
+				Identifier:     "provider",
+				TypeAnnotation: NewTypeAnnotation(&AddressType{}),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{
+				Type: &CapabilityType{
+					BorrowType: &GenericType{
+						TypeParameter: typeParameter,
+					},
+				},
+			},
+		),
+	}
+}()
+
+var AuthAccountInboxTypeName = "Inbox"
+
+var accountInboxDocString = "an inbox for sending and receiving capabilities"
+
+// AuthAccountInboxType represents the account's inbox.
+var AuthAccountInboxType = func() *CompositeType {
+
+	accountInbox := &CompositeType{
+		Identifier: AuthAccountInboxTypeName,
+		Kind:       common.CompositeKindStructure,
+		importable: false,
+	}
+
+	var members = []*Member{
+		NewUnmeteredPublicFunctionMember(
+			accountInbox,
+			AuthAccountInboxClaimField,
+			AuthAccountTypeInboxClaimFunctionType,
+			authAccountTypeInboxClaimFunctionDocString,
+		),
+		NewUnmeteredPublicFunctionMember(
+			accountInbox,
+			AuthAccountInboxPublishField,
+			AuthAccountTypeInboxPublishFunctionType,
+			authAccountTypeInboxPublishFunctionDocString,
+		),
+		NewUnmeteredPublicFunctionMember(
+			accountInbox,
+			AuthAccountInboxUnpublishField,
+			AuthAccountTypeInboxUnpublishFunctionType,
+			authAccountTypeInboxUnpublishFunctionDocString,
+		),
+	}
+
+	accountInbox.Members = GetMembersAsMap(members)
+	accountInbox.Fields = GetFieldNames(members)
+	return accountInbox
+}()

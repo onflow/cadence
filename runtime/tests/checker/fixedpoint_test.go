@@ -241,7 +241,7 @@ func TestCheckFixedPointLiteralRanges(t *testing.T) {
 							),
 						)
 
-						errs := ExpectCheckerErrors(t, err, 1)
+						errs := RequireCheckerErrors(t, err, 1)
 
 						assert.IsType(t, &sema.InvalidFixedPointLiteralRangeError{}, errs[0])
 					})
@@ -259,7 +259,7 @@ func TestCheckFixedPointLiteralRanges(t *testing.T) {
 								),
 							)
 
-							errs := ExpectCheckerErrors(t, err, 1)
+							errs := RequireCheckerErrors(t, err, 1)
 
 							assert.IsType(t, &sema.InvalidFixedPointLiteralRangeError{}, errs[0])
 						})
@@ -283,7 +283,7 @@ func TestCheckFixedPointLiteralRanges(t *testing.T) {
 						),
 					)
 
-					errs := ExpectCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 
 					assert.IsType(t, &sema.InvalidFixedPointLiteralRangeError{}, errs[0])
 				})
@@ -301,7 +301,7 @@ func TestCheckFixedPointLiteralRanges(t *testing.T) {
 							),
 						)
 
-						errs := ExpectCheckerErrors(t, err, 1)
+						errs := RequireCheckerErrors(t, err, 1)
 
 						assert.IsType(t, &sema.InvalidFixedPointLiteralRangeError{}, errs[0])
 					})
@@ -406,7 +406,7 @@ func TestCheckFixedPointLiteralRanges(t *testing.T) {
 						),
 					)
 
-					errs := ExpectCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 
 					assert.IsType(t, &sema.InvalidFixedPointLiteralRangeError{}, errs[0])
 				})
@@ -424,7 +424,7 @@ func TestCheckFixedPointLiteralRanges(t *testing.T) {
 							),
 						)
 
-						errs := ExpectCheckerErrors(t, err, 1)
+						errs := RequireCheckerErrors(t, err, 1)
 
 						assert.IsType(t, &sema.InvalidFixedPointLiteralRangeError{}, errs[0])
 					})
@@ -447,7 +447,7 @@ func TestCheckFixedPointLiteralRanges(t *testing.T) {
 						),
 					)
 
-					errs := ExpectCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 
 					assert.IsType(t, &sema.InvalidFixedPointLiteralRangeError{}, errs[0])
 				})
@@ -465,7 +465,7 @@ func TestCheckFixedPointLiteralRanges(t *testing.T) {
 							),
 						)
 
-						errs := ExpectCheckerErrors(t, err, 1)
+						errs := RequireCheckerErrors(t, err, 1)
 
 						assert.IsType(t, &sema.InvalidFixedPointLiteralRangeError{}, errs[0])
 					})
@@ -476,7 +476,6 @@ func TestCheckFixedPointLiteralRanges(t *testing.T) {
 }
 
 // Fixed-point literal value fits range can't be checked when target is Never
-//
 func TestCheckInvalidFixedPointLiteralWithNeverReturnType(t *testing.T) {
 
 	t.Parallel()
@@ -487,7 +486,7 @@ func TestCheckInvalidFixedPointLiteralWithNeverReturnType(t *testing.T) {
         }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -590,7 +589,7 @@ func TestCheckInvalidUnsignedFixedPointNegate(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.InvalidUnaryOperandError{}, errs[0])
 		})
@@ -613,7 +612,7 @@ func TestCheckInvalidNegativeZeroUnsignedFixedPoint(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.InvalidFixedPointLiteralRangeError{}, errs[0])
 		})
@@ -661,7 +660,7 @@ func TestCheckFixedPointLiteralScales(t *testing.T) {
 				if i <= scale {
 					assert.NoError(t, err)
 				} else {
-					errs := ExpectCheckerErrors(t, err, 2)
+					errs := RequireCheckerErrors(t, err, 2)
 
 					assert.IsType(t, &sema.InvalidFixedPointLiteralScaleError{}, errs[0])
 					assert.IsType(t, &sema.InvalidFixedPointLiteralScaleError{}, errs[1])

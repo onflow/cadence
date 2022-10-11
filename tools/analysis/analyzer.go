@@ -19,7 +19,6 @@
 package analysis
 
 // Analyzer describes an analysis function and its options
-//
 type Analyzer struct {
 	Description string
 

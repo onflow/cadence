@@ -32,7 +32,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
-	"github.com/onflow/cadence/runtime/tests/utils"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestRuntimeTransaction_AddPublicKey(t *testing.T) {
@@ -191,8 +191,95 @@ func TestRuntimeAccountKeyConstructor(t *testing.T) {
 			Location:  nextTransactionLocation(),
 		},
 	)
-	require.Error(t, err)
+	RequireError(t, err)
+
 	assert.Contains(t, err.Error(), "cannot find variable in this scope: `AccountKey`")
+}
+
+func TestRuntimeReturnPublicAccount(t *testing.T) {
+
+	t.Parallel()
+
+	rt := newTestInterpreterRuntime()
+
+	script := []byte(`
+        pub fun main(): PublicAccount {
+			let acc = getAccount(0x02)
+            return acc
+          }
+    `)
+
+	runtimeInterface := &testRuntimeInterface{
+		getAccountBalance: func(_ common.Address) (uint64, error) {
+			return 0, nil
+		},
+		getAccountAvailableBalance: func(_ common.Address) (uint64, error) {
+			return 0, nil
+		},
+		getStorageUsed: func(_ common.Address) (uint64, error) {
+			return 0, nil
+		},
+		getStorageCapacity: func(_ common.Address) (uint64, error) {
+			return 0, nil
+		},
+		storage: newTestLedger(nil, nil),
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	_, err := rt.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+}
+
+func TestRuntimeReturnAuthAccount(t *testing.T) {
+
+	t.Parallel()
+
+	rt := newTestInterpreterRuntime()
+
+	script := []byte(`
+        pub fun main(): AuthAccount {
+			let acc = getAuthAccount(0x02)
+            return acc
+          }
+    `)
+
+	runtimeInterface := &testRuntimeInterface{
+		getAccountBalance: func(_ common.Address) (uint64, error) {
+			return 0, nil
+		},
+		getAccountAvailableBalance: func(_ common.Address) (uint64, error) {
+			return 0, nil
+		},
+		getStorageUsed: func(_ common.Address) (uint64, error) {
+			return 0, nil
+		},
+		getStorageCapacity: func(_ common.Address) (uint64, error) {
+			return 0, nil
+		},
+		storage: newTestLedger(nil, nil),
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	_, err := rt.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
 }
 
 func TestRuntimeStoreAccountAPITypes(t *testing.T) {
@@ -229,7 +316,8 @@ func TestRuntimeStoreAccountAPITypes(t *testing.T) {
 			},
 		)
 
-		require.Error(t, err)
+		RequireError(t, err)
+
 		assert.Contains(t, err.Error(), "expected `Storable`")
 	}
 }
@@ -1016,7 +1104,7 @@ func TestRuntimePublicKey(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  utils.TestLocation,
+				Location:  TestLocation,
 			},
 		)
 	}
@@ -1072,7 +1160,8 @@ func TestRuntimePublicKey(t *testing.T) {
 		runtimeInterface := &testRuntimeInterface{}
 
 		_, err := executeScript(script, runtimeInterface)
-		require.Error(t, err)
+		RequireError(t, err)
+
 		assert.Contains(t, err.Error(), "value of type `PublicKey` has no member `validate`")
 	})
 
@@ -1111,6 +1200,8 @@ func TestRuntimePublicKey(t *testing.T) {
 				assert.NoError(t, err)
 			} else {
 				assert.Nil(t, value)
+				RequireError(t, err)
+
 				assert.ErrorAs(t, err, &errorToReturn)
 				assert.ErrorAs(t, err, &interpreter.InvalidPublicKeyError{})
 			}
@@ -1256,7 +1347,7 @@ func TestRuntimePublicKey(t *testing.T) {
 		}
 
 		_, err := executeScript(script, runtimeInterface)
-		require.Error(t, err)
+		RequireError(t, err)
 
 		var checkerErr *sema.CheckerError
 		require.ErrorAs(t, err, &checkerErr)
@@ -1293,7 +1384,7 @@ func TestRuntimePublicKey(t *testing.T) {
 
 		_, err := executeScript(script, runtimeInterface)
 
-		require.Error(t, err)
+		RequireError(t, err)
 
 		var checkerErr *sema.CheckerError
 		require.ErrorAs(t, err, &checkerErr)
@@ -1423,7 +1514,7 @@ func TestAuthAccountContracts(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-		require.Error(t, err)
+		RequireError(t, err)
 
 		var checkerErr *sema.CheckerError
 		require.ErrorAs(t, err, &checkerErr)
@@ -1658,7 +1749,7 @@ func TestPublicAccountContracts(t *testing.T) {
 			},
 		)
 
-		require.Error(t, err)
+		RequireError(t, err)
 
 		var checkerErr *sema.CheckerError
 		require.ErrorAs(t, err, &checkerErr)
@@ -1702,7 +1793,7 @@ func TestPublicAccountContracts(t *testing.T) {
 			},
 		)
 
-		require.Error(t, err)
+		RequireError(t, err)
 
 		var checkerErr *sema.CheckerError
 		require.ErrorAs(t, err, &checkerErr)
@@ -1772,7 +1863,7 @@ func TestGetAuthAccount(t *testing.T) {
 			},
 		)
 
-		require.Error(t, err)
+		RequireError(t, err)
 
 		var checkerErr *sema.CheckerError
 		require.ErrorAs(t, err, &checkerErr)
@@ -1805,7 +1896,7 @@ func TestGetAuthAccount(t *testing.T) {
 			},
 		)
 
-		require.Error(t, err)
+		RequireError(t, err)
 
 		var checkerErr *sema.CheckerError
 		require.ErrorAs(t, err, &checkerErr)
@@ -1838,7 +1929,7 @@ func TestGetAuthAccount(t *testing.T) {
 			},
 		)
 
-		require.Error(t, err)
+		RequireError(t, err)
 
 		var checkerErr *sema.CheckerError
 		require.ErrorAs(t, err, &checkerErr)
@@ -1878,7 +1969,7 @@ func TestGetAuthAccount(t *testing.T) {
 			},
 		)
 
-		require.Error(t, err)
+		RequireError(t, err)
 
 		var checkerErr *sema.CheckerError
 		require.ErrorAs(t, err, &checkerErr)

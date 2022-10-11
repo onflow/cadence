@@ -29,7 +29,7 @@ import (
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/tests/utils"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestRuntimeResourceDuplicationWithContractTransfer(t *testing.T) {
@@ -85,7 +85,7 @@ func TestRuntimeResourceDuplicationWithContractTransfer(t *testing.T) {
 
 	err := runtime.ExecuteTransaction(
 		Script{
-			Source: utils.DeploymentTransaction(
+			Source: DeploymentTransaction(
 				"FungibleToken",
 				[]byte(realFungibleTokenContractInterface),
 			),
@@ -138,7 +138,7 @@ func TestRuntimeResourceDuplicationWithContractTransfer(t *testing.T) {
     `
 	err = runtime.ExecuteTransaction(
 		Script{
-			Source: utils.DeploymentTransaction(
+			Source: DeploymentTransaction(
 				"Holder",
 				[]byte(holderContract),
 			),
@@ -198,7 +198,7 @@ func TestRuntimeResourceDuplicationWithContractTransfer(t *testing.T) {
 			Location:  nextTransactionLocation(),
 		},
 	)
-	require.Error(t, err)
+	RequireError(t, err)
 
 	var nonTransferableValueError interpreter.NonTransferableValueError
 	require.ErrorAs(t, err, &nonTransferableValueError)

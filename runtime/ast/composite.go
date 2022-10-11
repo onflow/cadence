@@ -81,7 +81,6 @@ func (*CompositeDeclaration) isDeclaration() {}
 
 // NOTE: statement, so it can be represented in the AST,
 // but will be rejected in semantic analysis
-//
 func (*CompositeDeclaration) isStatement() {}
 
 func (d *CompositeDeclaration) DeclarationIdentifier() *Identifier {

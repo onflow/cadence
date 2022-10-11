@@ -30,7 +30,7 @@ func (checker *Checker) VisitDestroyExpression(expression *ast.DestroyExpression
 	checker.recordResourceInvalidation(
 		expression.Expression,
 		valueType,
-		ResourceInvalidationKindDestroy,
+		ResourceInvalidationKindDestroyDefinite,
 	)
 
 	// The destruction of any resource type (even compound resource types)

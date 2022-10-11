@@ -113,7 +113,6 @@ func (checker *Checker) checkTransactionParameters(declaration *ast.TransactionD
 }
 
 // checkTransactionFields validates the field declarations for a transaction.
-//
 func (checker *Checker) checkTransactionFields(declaration *ast.TransactionDeclaration) {
 	for _, field := range declaration.Fields {
 		if field.Access != ast.AccessNotSpecified {
@@ -131,7 +130,6 @@ func (checker *Checker) checkTransactionFields(declaration *ast.TransactionDecla
 // checkTransactionBlocks checks that a transaction contains the required prepare and execute blocks.
 //
 // An execute block is always required, but a prepare block is only required if fields are present.
-//
 func (checker *Checker) checkTransactionBlocks(declaration *ast.TransactionDeclaration) {
 	if declaration.Prepare != nil {
 		// parser allows any identifier so it must be checked here
@@ -170,7 +168,6 @@ func (checker *Checker) checkTransactionBlocks(declaration *ast.TransactionDecla
 }
 
 // visitTransactionPrepareFunction visits and checks the prepare function of a transaction.
-//
 func (checker *Checker) visitTransactionPrepareFunction(
 	prepareFunction *ast.SpecialFunctionDeclaration,
 	transactionType *TransactionType,
@@ -201,7 +198,6 @@ func (checker *Checker) visitTransactionPrepareFunction(
 }
 
 // checkTransactionPrepareFunctionParameters checks that the parameters are each of type Account.
-//
 func (checker *Checker) checkTransactionPrepareFunctionParameters(
 	parameterList *ast.ParameterList,
 	parameters []*Parameter,

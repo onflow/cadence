@@ -211,7 +211,6 @@ func (e *Elaboration) setIsChecking(isChecking bool) {
 // FunctionEntryPointType returns the type of the entry point function declaration, if any.
 //
 // Returns an error if no valid entry point function declaration exists.
-//
 func (e *Elaboration) FunctionEntryPointType() (*FunctionType, error) {
 
 	entryPointValue, ok := e.GlobalValues.Get(FunctionEntryPointName)

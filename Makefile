@@ -58,7 +58,7 @@ build-tools:
 
 .PHONY: lint-github-actions
 lint-github-actions: build-linter
-	tools/golangci-lint/golangci-lint run --out-format=github-actions --timeout=5m  -v ./...
+	tools/golangci-lint/golangci-lint run --out-format=colored-line-number,github-actions --timeout=5m  -v ./...
 
 .PHONY: lint
 lint: build-linter
@@ -97,8 +97,7 @@ check-tidy: generate
 .PHONY: release
 release:
 	@(VERSIONED_FILES="version.go \
-	npm-packages/cadence-parser/package.json \
-	npm-packages/cadence-docgen/package.json" \
+	npm-packages/cadence-parser/package.json" \
 	./bump-version.sh $(bump))
 
 .PHONY: check-capabilities

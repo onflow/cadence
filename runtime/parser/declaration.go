@@ -130,11 +130,10 @@ var enumeratedAccessModifierKeywords = common.EnumerateWords(
 
 // parseAccess parses an access modifier
 //
-//     access
-//         : 'priv'
-//         | 'pub' ( '(' 'set' ')' )?
-//         | 'access' '(' ( 'self' | 'contract' | 'account' | 'all' ) ')'
-//
+//	access
+//	    : 'priv'
+//	    | 'pub' ( '(' 'set' ')' )?
+//	    | 'access' '(' ( 'self' | 'contract' | 'account' | 'all' ) ')'
 func parseAccess(p *parser) (ast.Access, error) {
 
 	switch string(p.currentTokenSource()) {
@@ -245,13 +244,12 @@ func parseAccess(p *parser) (ast.Access, error) {
 
 // parseVariableDeclaration parses a variable declaration.
 //
-//     variableKind : 'var' | 'let'
+//	variableKind : 'var' | 'let'
 //
-//     variableDeclaration :
-//         variableKind identifier ( ':' typeAnnotation )?
-//         transfer expression
-//         ( transfer expression )?
-//
+//	variableDeclaration :
+//	    variableKind identifier ( ':' typeAnnotation )?
+//	    transfer expression
+//	    ( transfer expression )?
 func parseVariableDeclaration(
 	p *parser,
 	access ast.Access,
@@ -343,8 +341,7 @@ func parseVariableDeclaration(
 
 // parseTransfer parses a transfer.
 //
-//     transfer : '=' | '<-' | '<-!'
-//
+//	transfer : '=' | '<-' | '<-!'
 func parseTransfer(p *parser) *ast.Transfer {
 	var operation ast.TransferOperation
 
@@ -396,11 +393,10 @@ func parsePragmaDeclaration(p *parser) (*ast.PragmaDeclaration, error) {
 
 // parseImportDeclaration parses an import declaration
 //
-//     importDeclaration :
-//         'import'
-//         ( identifier (',' identifier)* 'from' )?
-//         ( string | hexadecimalLiteral | identifier )
-//
+//	importDeclaration :
+//	    'import'
+//	    ( identifier (',' identifier)* 'from' )?
+//	    ( string | hexadecimalLiteral | identifier )
 func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 
 	startPosition := p.current.StartPos
@@ -681,8 +677,7 @@ func parseHexadecimalLocation(p *parser) common.AddressLocation {
 
 // parseEventDeclaration parses an event declaration.
 //
-//     eventDeclaration : 'event' identifier parameterList
-//
+//	eventDeclaration : 'event' identifier parameterList
 func parseEventDeclaration(
 	p *parser,
 	access ast.Access,
@@ -755,8 +750,7 @@ func parseEventDeclaration(
 
 // parseCompositeKind parses a composite kind.
 //
-//     compositeKind : 'struct' | 'resource' | 'contract' | 'enum'
-//
+//	compositeKind : 'struct' | 'resource' | 'contract' | 'enum'
 func parseCompositeKind(p *parser) common.CompositeKind {
 
 	if p.current.Is(lexer.TokenIdentifier) {
@@ -780,10 +774,9 @@ func parseCompositeKind(p *parser) common.CompositeKind {
 
 // parseFieldWithVariableKind parses a field which has a variable kind.
 //
-//     variableKind : 'var' | 'let'
+//	variableKind : 'var' | 'let'
 //
-//     field : variableKind identifier ':' typeAnnotation
-//
+//	field : variableKind identifier ':' typeAnnotation
 func parseFieldWithVariableKind(
 	p *parser,
 	access ast.Access,
@@ -850,14 +843,13 @@ func parseFieldWithVariableKind(
 
 // parseCompositeOrInterfaceDeclaration parses an event declaration.
 //
-//     conformances : ':' nominalType ( ',' nominalType )*
+//	conformances : ':' nominalType ( ',' nominalType )*
 //
-//     compositeDeclaration : compositeKind identifier conformances?
-//                            '{' membersAndNestedDeclarations '}'
+//	compositeDeclaration : compositeKind identifier conformances?
+//	                       '{' membersAndNestedDeclarations '}'
 //
-//     interfaceDeclaration : compositeKind 'interface' identifier conformances?
-//                            '{' membersAndNestedDeclarations '}'
-//
+//	interfaceDeclaration : compositeKind 'interface' identifier conformances?
+//	                       '{' membersAndNestedDeclarations '}'
 func parseCompositeOrInterfaceDeclaration(
 	p *parser,
 	access ast.Access,
@@ -984,8 +976,7 @@ func parseCompositeOrInterfaceDeclaration(
 // parseMembersAndNestedDeclarations parses composite or interface members,
 // and nested declarations.
 //
-//     membersAndNestedDeclarations : ( memberOrNestedDeclaration ';'* )*
-//
+//	membersAndNestedDeclarations : ( memberOrNestedDeclaration ';'* )*
 func parseMembersAndNestedDeclarations(p *parser, endTokenType lexer.TokenType) (*ast.Members, error) {
 
 	var declarations []ast.Declaration
@@ -1023,14 +1014,13 @@ func parseMembersAndNestedDeclarations(p *parser, endTokenType lexer.TokenType) 
 // parseMemberOrNestedDeclaration parses a composite or interface member,
 // or a declaration nested in it.
 //
-//     memberOrNestedDeclaration : field
-//                               | specialFunctionDeclaration
-//                               | functionDeclaration
-//                               | interfaceDeclaration
-//                               | compositeDeclaration
-//                               | eventDeclaration
-//                               | enumCase
-//
+//	memberOrNestedDeclaration : field
+//	                          | specialFunctionDeclaration
+//	                          | functionDeclaration
+//	                          | interfaceDeclaration
+//	                          | compositeDeclaration
+//	                          | eventDeclaration
+//	                          | enumCase
 func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaration, error) {
 
 	const functionBlockIsOptional = true
@@ -1212,8 +1202,7 @@ func parseSpecialFunctionDeclaration(
 
 // parseEnumCase parses a field which has a variable kind.
 //
-//     enumCase : 'case' identifier
-//
+//	enumCase : 'case' identifier
 func parseEnumCase(
 	p *parser,
 	access ast.Access,

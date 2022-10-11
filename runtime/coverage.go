@@ -25,7 +25,6 @@ import (
 )
 
 // LocationCoverage records coverage information for a location
-//
 type LocationCoverage struct {
 	LineHits map[int]int `json:"line_hits"`
 }
@@ -41,7 +40,6 @@ func NewLocationCoverage() *LocationCoverage {
 }
 
 // CoverageReport is a collection of coverage per location
-//
 type CoverageReport struct {
 	Coverage map[common.Location]*LocationCoverage `json:"-"`
 }

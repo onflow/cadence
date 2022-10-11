@@ -36,7 +36,7 @@ func TestCheckTransactions(t *testing.T) {
 
 		_, err := ParseAndCheck(t, code)
 
-		errs := ExpectCheckerErrors(t, err, len(expectedErrors))
+		errs := RequireCheckerErrors(t, err, len(expectedErrors))
 
 		for i, err := range errs {
 			if !assert.IsType(t, expectedErrors[i], err) {
@@ -393,7 +393,7 @@ func TestCheckInvalidTransactionSelfMoveToFunction(t *testing.T) {
       fun use(_ any: AnyStruct) {}
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidMoveError{}, errs[0])
 }
@@ -412,7 +412,7 @@ func TestCheckInvalidTransactionSelfMoveInVariableDeclaration(t *testing.T) {
      }
    `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidMoveError{}, errs[0])
 }
@@ -431,7 +431,7 @@ func TestCheckInvalidTransactionSelfMoveReturnFromFunction(t *testing.T) {
      }
    `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	typeMismatchErr := errs[0].(*sema.TypeMismatchError)
@@ -454,7 +454,7 @@ func TestCheckInvalidTransactionSelfMoveIntoArrayLiteral(t *testing.T) {
      }
    `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidMoveError{}, errs[0])
 }
@@ -473,7 +473,7 @@ func TestCheckInvalidTransactionSelfMoveIntoDictionaryLiteral(t *testing.T) {
      }
    `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidMoveError{}, errs[0])
 }

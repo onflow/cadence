@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/interpreter"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestInterpretContractUseBeforeInitializationComplete(t *testing.T) {
@@ -153,6 +154,8 @@ func TestInterpretContractUseBeforeInitializationComplete(t *testing.T) {
 				},
 			},
 		)
+		RequireError(t, err)
+
 		require.ErrorAs(t, err, &interpreter.MissingMemberValueError{})
 	})
 }

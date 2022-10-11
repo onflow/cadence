@@ -28,6 +28,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/checker"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestRuntimeCyclicImport(t *testing.T) {
@@ -80,7 +81,7 @@ func TestRuntimeCyclicImport(t *testing.T) {
 			Location:  location,
 		},
 	)
-	require.Error(t, err)
+	RequireError(t, err)
 
 	require.Contains(t, err.Error(), "cyclic import of `p1`")
 
@@ -89,7 +90,7 @@ func TestRuntimeCyclicImport(t *testing.T) {
 	var checkerErr *sema.CheckerError
 	require.ErrorAs(t, err, &checkerErr)
 
-	errs := checker.ExpectCheckerErrors(t, checkerErr, 1)
+	errs := checker.RequireCheckerErrors(t, checkerErr, 1)
 
 	var importedProgramErr *sema.ImportedProgramError
 	require.ErrorAs(t, errs[0], &importedProgramErr)
@@ -99,7 +100,7 @@ func TestRuntimeCyclicImport(t *testing.T) {
 	var checkerErr2 *sema.CheckerError
 	require.ErrorAs(t, importedProgramErr.Err, &checkerErr2)
 
-	errs = checker.ExpectCheckerErrors(t, checkerErr2, 1)
+	errs = checker.RequireCheckerErrors(t, checkerErr2, 1)
 
 	var importedProgramErr2 *sema.ImportedProgramError
 	require.ErrorAs(t, errs[0], &importedProgramErr2)
@@ -109,7 +110,7 @@ func TestRuntimeCyclicImport(t *testing.T) {
 	var checkerErr3 *sema.CheckerError
 	require.ErrorAs(t, importedProgramErr2.Err, &checkerErr3)
 
-	errs = checker.ExpectCheckerErrors(t, checkerErr3, 1)
+	errs = checker.RequireCheckerErrors(t, checkerErr3, 1)
 
 	require.IsType(t, &sema.CyclicImportsError{}, errs[0])
 }
@@ -142,7 +143,8 @@ func TestRuntimeExport(t *testing.T) {
 			},
 		)
 
-		require.Error(t, err)
+		RequireError(t, err)
+
 		require.IsType(t, Error{}, err)
 	})
 }

@@ -28,7 +28,6 @@ import (
 
 // Location describes the origin of a Cadence script.
 // This could be a file, a transaction, or a smart contract.
-//
 type Location interface {
 	fmt.Stringer
 	// TypeID returns a type ID for the given qualified identifier
@@ -42,7 +41,6 @@ type Location interface {
 // LocationsInSameAccount returns true if both locations are nil,
 // if both locations are address locations when both locations have the same address,
 // or otherwise if their IDs are the same.
-//
 func LocationsInSameAccount(first, second Location) bool {
 
 	if first == nil {

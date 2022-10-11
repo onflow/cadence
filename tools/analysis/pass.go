@@ -20,7 +20,6 @@ package analysis
 
 // Pass provides information to the Analyzer.Run function,
 // which applies a specific analyzer to a single location.
-//
 type Pass struct {
 	Program *Program
 

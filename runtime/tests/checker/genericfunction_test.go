@@ -98,7 +98,7 @@ func TestCheckGenericFunction(t *testing.T) {
 			},
 		)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidTypeArgumentCountError{}, errs[0])
 	})
@@ -126,7 +126,7 @@ func TestCheckGenericFunction(t *testing.T) {
 			},
 		)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
 	})
@@ -254,7 +254,7 @@ func TestCheckGenericFunction(t *testing.T) {
 			},
 		)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.ArgumentCountError{}, errs[0])
 		assert.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
@@ -293,7 +293,7 @@ func TestCheckGenericFunction(t *testing.T) {
 			},
 		)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
@@ -436,7 +436,7 @@ func TestCheckGenericFunction(t *testing.T) {
 			},
 		)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
@@ -469,7 +469,7 @@ func TestCheckGenericFunction(t *testing.T) {
 			},
 		)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
 	})
@@ -645,7 +645,7 @@ func TestCheckGenericFunction(t *testing.T) {
 			},
 		)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
@@ -683,7 +683,7 @@ func TestCheckGenericFunction(t *testing.T) {
 			},
 		)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
@@ -935,7 +935,7 @@ func TestCheckUnparameterizedTypeInstantiationE(t *testing.T) {
       let s: S<Int> = panic("")
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.UnparameterizedTypeInstantiationError{}, errs[0])
 }

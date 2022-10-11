@@ -44,14 +44,14 @@ func TestInspectValue(t *testing.T) {
 		dictValueValue := NewUnmeteredInt256ValueFromInt64(1)
 		dictValue := NewDictionaryValue(
 			inter,
-			ReturnEmptyLocationRange,
+			EmptyLocationRange,
 			dictionaryStaticType,
 			dictValueKey, dictValueValue,
 		)
 
 		arrayValue := NewArrayValue(
 			inter,
-			ReturnEmptyLocationRange,
+			EmptyLocationRange,
 			VariableSizedStaticType{
 				Type: dictionaryStaticType,
 			},
@@ -64,7 +64,7 @@ func TestInspectValue(t *testing.T) {
 		compositeValue = newTestCompositeValue(inter, common.Address{})
 		compositeValue.SetMember(
 			inter,
-			ReturnEmptyLocationRange,
+			EmptyLocationRange,
 			"value",
 			optionalValue,
 		)
@@ -73,12 +73,12 @@ func TestInspectValue(t *testing.T) {
 	// Get actually stored values.
 	// The values above were removed when they were inserted into the containers.
 
-	optionalValue := compositeValue.GetField(inter, ReturnEmptyLocationRange, "value").(*SomeValue)
-	arrayValue := optionalValue.InnerValue(inter, ReturnEmptyLocationRange).(*ArrayValue)
-	dictValue := arrayValue.Get(inter, ReturnEmptyLocationRange, 0).(*DictionaryValue)
+	optionalValue := compositeValue.GetField(inter, EmptyLocationRange, "value").(*SomeValue)
+	arrayValue := optionalValue.InnerValue(inter, EmptyLocationRange).(*ArrayValue)
+	dictValue := arrayValue.Get(inter, EmptyLocationRange, 0).(*DictionaryValue)
 	dictValueKey := NewUnmeteredStringValue("hello world")
 
-	dictValueValue, _ := dictValue.Get(inter, ReturnEmptyLocationRange, dictValueKey)
+	dictValueValue, _ := dictValue.Get(inter, EmptyLocationRange, dictValueKey)
 
 	t.Run("dict", func(t *testing.T) {
 

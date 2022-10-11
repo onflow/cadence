@@ -23,6 +23,7 @@ import (
 	"math"
 	"math/big"
 	"testing"
+	"testing/quick"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -237,7 +238,7 @@ func TestInterpretAddressConversion(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
+		RequireError(t, err)
 
 		require.ErrorAs(t, err, &interpreter.OverflowError{})
 	})
@@ -254,7 +255,7 @@ func TestInterpretAddressConversion(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
+		RequireError(t, err)
 
 		require.ErrorAs(t, err, &interpreter.UnderflowError{})
 	})
@@ -552,7 +553,8 @@ func TestInterpretIntegerConversion(t *testing.T) {
 		result, err := inter.Invoke("test", value)
 
 		if expectedError != nil {
-			require.Error(t, err)
+			RequireError(t, err)
+
 			require.ErrorAs(t, err, &expectedError)
 		} else {
 			require.NoError(t, err)
@@ -880,5 +882,56 @@ func TestInterpretIntegerMinMax(t *testing.T) {
 				test(t, ty, sema.NumberTypeMaxFieldName, testCase.max)
 			}
 		})
+	}
+}
+
+func TestStringIntegerConversion(t *testing.T) {
+	t.Parallel()
+
+	test := func(t *testing.T, typ sema.Type) {
+		t.Parallel()
+
+		numericType := typ.(*sema.NumericType)
+		low := numericType.MinInt()
+		if low == nil {
+			low = big.NewInt(0)
+		}
+		high := numericType.MaxInt()
+		if high == nil {
+			high = big.NewInt(math.MaxInt64)
+		}
+
+		code := fmt.Sprintf(`
+			fun testFromString(_ input: String): Int? {
+				return %s.fromString(input).map(Int)
+			}
+		`, typ.String())
+		inter := parseCheckAndInterpret(t, code)
+
+		placeInRange := func(x *big.Int) *big.Int {
+			z := big.NewInt(0).Sub(high, low)
+			z.Mod(x, z)
+			z.Add(low, z)
+			return z
+		}
+
+		prop := func(x int64) bool {
+			normalized := placeInRange(big.NewInt(x))
+			strInput := interpreter.NewUnmeteredStringValue(normalized.String())
+			expected := interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredIntValueFromBigInt(normalized),
+			)
+
+			result, err := inter.Invoke("testFromString", strInput)
+			return err == nil && ValuesAreEqual(inter, expected, result)
+		}
+
+		if err := quick.Check(prop, nil); err != nil {
+			t.Error(err)
+		}
+	}
+
+	for _, typ := range append(sema.AllSignedIntegerTypes, sema.AllUnsignedIntegerTypes...) {
+		t.Run(typ.String(), func(t *testing.T) { test(t, typ) })
 	}
 }

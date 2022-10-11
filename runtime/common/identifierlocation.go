@@ -28,7 +28,6 @@ import (
 const IdentifierLocationPrefix = "I"
 
 // IdentifierLocation
-//
 type IdentifierLocation string
 
 var _ Location = IdentifierLocation("")

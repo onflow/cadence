@@ -18,10 +18,14 @@
 
 package sema
 
+import (
+	"github.com/onflow/cadence/runtime/common/persistent"
+)
+
 type InitializationInfo struct {
 	ContainerType           Type
 	FieldMembers            *MemberFieldDeclarationOrderedMap
-	InitializedFieldMembers *MemberSet
+	InitializedFieldMembers *persistent.OrderedSet[*Member]
 }
 
 func NewInitializationInfo(
@@ -31,13 +35,12 @@ func NewInitializationInfo(
 	return &InitializationInfo{
 		ContainerType:           containerType,
 		FieldMembers:            fieldMembers,
-		InitializedFieldMembers: NewMemberSet(nil),
+		InitializedFieldMembers: persistent.NewOrderedSet[*Member](nil),
 	}
 }
 
 // InitializationComplete returns true if all fields of the container
 // were initialized, false if some fields are uninitialized
-//
 func (info *InitializationInfo) InitializationComplete() bool {
 	for pair := info.FieldMembers.Oldest(); pair != nil; pair = pair.Next() {
 		member := pair.Key

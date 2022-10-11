@@ -26,7 +26,6 @@ import (
 )
 
 // StorageMap is an ordered map which stores values in an account.
-//
 type StorageMap struct {
 	orderedMap *atree.OrderedMap
 }
@@ -65,7 +64,6 @@ func NewStorageMapWithRootID(storage atree.SlabStorage, storageID atree.StorageI
 }
 
 // ValueExists returns true if the given key exists in the storage map.
-//
 func (s StorageMap) ValueExists(key string) bool {
 	_, err := s.orderedMap.Get(
 		StringAtreeComparator,
@@ -84,7 +82,6 @@ func (s StorageMap) ValueExists(key string) bool {
 
 // ReadValue returns the value for the given key.
 // Returns nil if the key does not exist.
-//
 func (s StorageMap) ReadValue(gauge common.MemoryGauge, key string) Value {
 	storable, err := s.orderedMap.Get(
 		StringAtreeComparator,
@@ -104,7 +101,6 @@ func (s StorageMap) ReadValue(gauge common.MemoryGauge, key string) Value {
 // WriteValue sets or removes a value in the storage map.
 // If the given value is nil, the key is removed.
 // If the given value is non-nil, the key is added/updated.
-//
 func (s StorageMap) WriteValue(interpreter *Interpreter, key string, value atree.Value) {
 	if value == nil {
 		s.RemoveValue(interpreter, key)
@@ -115,7 +111,6 @@ func (s StorageMap) WriteValue(interpreter *Interpreter, key string, value atree
 
 // SetValue sets a value in the storage map.
 // If the given key already stores a value, it is overwritten.
-//
 func (s StorageMap) SetValue(interpreter *Interpreter, key string, value atree.Value) {
 	existingStorable, err := s.orderedMap.Set(
 		StringAtreeComparator,
@@ -136,7 +131,6 @@ func (s StorageMap) SetValue(interpreter *Interpreter, key string, value atree.V
 }
 
 // RemoveValue removes a value in the storage map, if it exists.
-//
 func (s StorageMap) RemoveValue(interpreter *Interpreter, key string) {
 	existingKeyStorable, existingValueStorable, err := s.orderedMap.Remove(
 		StringAtreeComparator,
@@ -168,7 +162,6 @@ func (s StorageMap) RemoveValue(interpreter *Interpreter, key string) {
 
 // Iterator returns an iterator (StorageMapIterator),
 // which allows iterating over the keys and values of the storage map
-//
 func (s StorageMap) Iterator(gauge common.MemoryGauge) StorageMapIterator {
 	mapIterator, err := s.orderedMap.Iterator()
 	if err != nil {
@@ -191,7 +184,6 @@ func (s StorageMap) Count() uint64 {
 }
 
 // StorageMapIterator is an iterator over StorageMap
-//
 type StorageMapIterator struct {
 	gauge       common.MemoryGauge
 	mapIterator *atree.MapIterator
@@ -200,7 +192,6 @@ type StorageMapIterator struct {
 
 // Next returns the next key and value of the storage map iterator.
 // If there is no further key-value pair, ("", nil) is returned.
-//
 func (i StorageMapIterator) Next() (string, Value) {
 	k, v, err := i.mapIterator.Next()
 	if err != nil {
@@ -219,7 +210,6 @@ func (i StorageMapIterator) Next() (string, Value) {
 
 // NextKey returns the next key of the storage map iterator.
 // If there is no further key, "" is returned.
-//
 func (i StorageMapIterator) NextKey() string {
 	k, err := i.mapIterator.NextKey()
 	if err != nil {
@@ -235,7 +225,6 @@ func (i StorageMapIterator) NextKey() string {
 
 // NextValue returns the next value in the storage map iterator.
 // If there is nop further value, nil is returned.
-//
 func (i StorageMapIterator) NextValue() Value {
 	v, err := i.mapIterator.NextValue()
 	if err != nil {
