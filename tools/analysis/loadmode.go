@@ -20,7 +20,6 @@ package analysis
 
 // LoadMode controls the amount of detail to return when loading.
 // The bits below can be combined to specify what information is required.
-//
 type LoadMode int
 
 const (

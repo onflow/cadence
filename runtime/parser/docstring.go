@@ -31,7 +31,6 @@ var pragmaArgumentRegexp = regexp.MustCompile(`^\s+pragma\s+arguments\s+(.*)(?:\
 // where <argument-list> is a Cadence argument list.
 //
 // The validity of the argument list is NOT checked by this function.
-//
 func ParseDocstringPragmaArguments(docString string) []string {
 	var pragmaArguments []string
 
@@ -54,7 +53,6 @@ var pragmaSignersRegexp = regexp.MustCompile(`^\s+pragma\s+signers\s+(.*)(?:\n|$
 // where <signers-list> is a list of strings.
 //
 // The validity of the argument list is NOT checked by this function.
-//
 func ParseDocstringPragmaSigners(docString string) []string {
 	var pragmaSigners []string
 

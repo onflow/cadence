@@ -22,5 +22,4 @@
 // and can be traversed using the Visitor interface.
 // Elements also implement the json.Marshaler interface
 // so can be serialized to a standardized/stable JSON format.
-//
 package ast

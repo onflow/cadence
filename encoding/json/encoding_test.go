@@ -754,7 +754,7 @@ func exportFromScript(t *testing.T, code string) cadence.Value {
 	result, err := inter.Invoke("main")
 	require.NoError(t, err)
 
-	exported, err := runtime.ExportValue(result, inter, interpreter.ReturnEmptyLocationRange)
+	exported, err := runtime.ExportValue(result, inter, interpreter.EmptyLocationRange)
 	require.NoError(t, err)
 
 	return exported

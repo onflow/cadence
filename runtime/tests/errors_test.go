@@ -36,7 +36,6 @@ import (
 
 // TestErrorInterfaceConformance checks whether all the error structs implement
 // one of the interfaces.
-//
 func TestErrorInterfaceConformance(t *testing.T) {
 	t.Parallel()
 

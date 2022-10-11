@@ -563,7 +563,6 @@ func defineRestrictedOrDictionaryType() {
 }
 
 // parseNominalTypes parses zero or more nominal types separated by comma.
-//
 func parseNominalTypes(
 	p *parser,
 	endTokenType lexer.TokenType,
@@ -794,7 +793,6 @@ func applyTypeMetaLeftDenotation(
 
 // defaultTypeMetaLeftDenotation is the default type left denotation, which applies
 // if the right binding power is less than the left binding power of the current token
-//
 func defaultTypeMetaLeftDenotation(
 	p *parser,
 	rightBindingPower int,
@@ -907,7 +905,6 @@ func parseNominalTypeInvocationRemainder(p *parser) (*ast.InvocationExpression, 
 }
 
 // parseCommaSeparatedTypeAnnotations parses zero or more type annotations separated by comma.
-//
 func parseCommaSeparatedTypeAnnotations(
 	p *parser,
 	endTokenType lexer.TokenType,

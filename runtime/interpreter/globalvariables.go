@@ -19,7 +19,6 @@
 package interpreter
 
 // GlobalVariables represents global variables defined in a program.
-//
 type GlobalVariables map[string]*Variable
 
 func (globalVars GlobalVariables) Contains(name string) bool {

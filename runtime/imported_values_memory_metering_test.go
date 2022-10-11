@@ -411,7 +411,7 @@ func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 		{
 			TypeName:     "Bool",
 			MemoryKind:   common.MemoryKindBoolValue,
-			Weight:       1,
+			Weight:       0,
 			TypeInstance: cadence.Bool(true),
 		},
 		{

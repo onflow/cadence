@@ -58,6 +58,7 @@ const (
 
 	// Expressions
 
+	ElementTypeVoidExpression
 	ElementTypeBoolExpression
 	ElementTypeNilExpression
 	ElementTypeIntegerExpression

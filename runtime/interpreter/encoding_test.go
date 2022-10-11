@@ -130,7 +130,7 @@ func TestEncodeDecodeNilValue(t *testing.T) {
 
 	testEncodeDecode(t,
 		encodeDecodeTest{
-			value: NilValue{},
+			value: Nil,
 			encoded: []byte{
 				// null
 				0xf6,
@@ -145,7 +145,7 @@ func TestEncodeDecodeVoidValue(t *testing.T) {
 
 	testEncodeDecode(t,
 		encodeDecodeTest{
-			value: VoidValue{},
+			value: Void,
 			encoded: []byte{
 				// tag
 				0xd8, CBORTagVoidValue,
@@ -271,7 +271,7 @@ func TestEncodeDecodeArray(t *testing.T) {
 
 		expected := NewArrayValue(
 			inter,
-			ReturnEmptyLocationRange,
+			EmptyLocationRange,
 			ConstantSizedStaticType{
 				Type: PrimitiveStaticTypeAnyStruct,
 				Size: 0,
@@ -303,7 +303,7 @@ func TestEncodeDecodeArray(t *testing.T) {
 
 		expected := NewArrayValue(
 			inter,
-			ReturnEmptyLocationRange,
+			EmptyLocationRange,
 			VariableSizedStaticType{
 				Type: PrimitiveStaticTypeAnyStruct,
 			},
@@ -340,7 +340,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 
 		expected := NewCompositeValue(
 			inter,
-			ReturnEmptyLocationRange,
+			EmptyLocationRange,
 			utils.TestLocation,
 			"TestStruct",
 			common.CompositeKindStructure,
@@ -378,7 +378,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 
 		expected := NewCompositeValue(
 			inter,
-			ReturnEmptyLocationRange,
+			EmptyLocationRange,
 			utils.TestLocation,
 			"TestResource",
 			common.CompositeKindResource,
@@ -2376,7 +2376,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: NewUnmeteredSomeValueNonCopying(NilValue{}),
+				value: NewUnmeteredSomeValueNonCopying(Nil),
 				encoded: []byte{
 					// tag
 					0xd8, CBORTagSomeValue,

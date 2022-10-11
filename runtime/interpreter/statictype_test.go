@@ -963,7 +963,12 @@ func TestRestrictedStaticType_Equal(t *testing.T) {
 func TestPrimitiveStaticTypeCount(t *testing.T) {
 	t.Parallel()
 
+	// This asserts that the total number of types in the PrimitiveStaticType enum has not changed,
+	// in order to prevent adding new types into the enum in the middle.
+	// However, it is possible to safely change the size of this enum by only appending new types the end,
+	// (before the PrimitiveStaticType_Count of course).
+	// Only update this test if you are certain your change to this enum was to append new types to the end.
 	t.Run("No new types added in between", func(t *testing.T) {
-		require.Equal(t, byte(98), byte(PrimitiveStaticType_Count))
+		require.Equal(t, byte(100), byte(PrimitiveStaticType_Count))
 	})
 }

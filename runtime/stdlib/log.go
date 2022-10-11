@@ -67,7 +67,7 @@ func NewLogFunction(logger Logger) StandardLibraryValue {
 				panic(err)
 			}
 
-			return interpreter.NewVoidValue(memoryGauge)
+			return interpreter.Void
 		},
 	)
 }

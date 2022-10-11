@@ -110,7 +110,7 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 		map[string]interpreter.Value{
 			"name": interpreter.NewUnmeteredStringValue("Apple"),
 		},
-		func(name string, _ *interpreter.Interpreter, _ func() interpreter.LocationRange) interpreter.Value {
+		func(name string, _ *interpreter.Interpreter, _ interpreter.LocationRange) interpreter.Value {
 			if name == "color" {
 				return interpreter.NewUnmeteredStringValue("Red")
 			}
@@ -188,8 +188,7 @@ func TestInterpretContractTransfer(t *testing.T) {
 		inter, _ := testAccount(t, address, true, code)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		var nonTransferableValueError interpreter.NonTransferableValueError
 		require.ErrorAs(t, err, &nonTransferableValueError)

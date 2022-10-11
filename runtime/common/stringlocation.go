@@ -28,7 +28,6 @@ import (
 const StringLocationPrefix = "S"
 
 // StringLocation
-//
 type StringLocation string
 
 var _ Location = StringLocation("")

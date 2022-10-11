@@ -33,32 +33,33 @@ func _() {
 	_ = x[ElementTypeAssignmentStatement-22]
 	_ = x[ElementTypeSwapStatement-23]
 	_ = x[ElementTypeExpressionStatement-24]
-	_ = x[ElementTypeBoolExpression-25]
-	_ = x[ElementTypeNilExpression-26]
-	_ = x[ElementTypeIntegerExpression-27]
-	_ = x[ElementTypeFixedPointExpression-28]
-	_ = x[ElementTypeArrayExpression-29]
-	_ = x[ElementTypeDictionaryExpression-30]
-	_ = x[ElementTypeIdentifierExpression-31]
-	_ = x[ElementTypeInvocationExpression-32]
-	_ = x[ElementTypeMemberExpression-33]
-	_ = x[ElementTypeIndexExpression-34]
-	_ = x[ElementTypeConditionalExpression-35]
-	_ = x[ElementTypeUnaryExpression-36]
-	_ = x[ElementTypeBinaryExpression-37]
-	_ = x[ElementTypeFunctionExpression-38]
-	_ = x[ElementTypeStringExpression-39]
-	_ = x[ElementTypeCastingExpression-40]
-	_ = x[ElementTypeCreateExpression-41]
-	_ = x[ElementTypeDestroyExpression-42]
-	_ = x[ElementTypeReferenceExpression-43]
-	_ = x[ElementTypeForceExpression-44]
-	_ = x[ElementTypePathExpression-45]
+	_ = x[ElementTypeVoidExpression-25]
+	_ = x[ElementTypeBoolExpression-26]
+	_ = x[ElementTypeNilExpression-27]
+	_ = x[ElementTypeIntegerExpression-28]
+	_ = x[ElementTypeFixedPointExpression-29]
+	_ = x[ElementTypeArrayExpression-30]
+	_ = x[ElementTypeDictionaryExpression-31]
+	_ = x[ElementTypeIdentifierExpression-32]
+	_ = x[ElementTypeInvocationExpression-33]
+	_ = x[ElementTypeMemberExpression-34]
+	_ = x[ElementTypeIndexExpression-35]
+	_ = x[ElementTypeConditionalExpression-36]
+	_ = x[ElementTypeUnaryExpression-37]
+	_ = x[ElementTypeBinaryExpression-38]
+	_ = x[ElementTypeFunctionExpression-39]
+	_ = x[ElementTypeStringExpression-40]
+	_ = x[ElementTypeCastingExpression-41]
+	_ = x[ElementTypeCreateExpression-42]
+	_ = x[ElementTypeDestroyExpression-43]
+	_ = x[ElementTypeReferenceExpression-44]
+	_ = x[ElementTypeForceExpression-45]
+	_ = x[ElementTypePathExpression-46]
 }
 
-const _ElementType_name = "ElementTypeUnknownElementTypeProgramElementTypeBlockElementTypeFunctionBlockElementTypeFunctionDeclarationElementTypeSpecialFunctionDeclarationElementTypeCompositeDeclarationElementTypeInterfaceDeclarationElementTypeFieldDeclarationElementTypeEnumCaseDeclarationElementTypePragmaDeclarationElementTypeImportDeclarationElementTypeTransactionDeclarationElementTypeReturnStatementElementTypeBreakStatementElementTypeContinueStatementElementTypeIfStatementElementTypeSwitchStatementElementTypeWhileStatementElementTypeForStatementElementTypeEmitStatementElementTypeVariableDeclarationElementTypeAssignmentStatementElementTypeSwapStatementElementTypeExpressionStatementElementTypeBoolExpressionElementTypeNilExpressionElementTypeIntegerExpressionElementTypeFixedPointExpressionElementTypeArrayExpressionElementTypeDictionaryExpressionElementTypeIdentifierExpressionElementTypeInvocationExpressionElementTypeMemberExpressionElementTypeIndexExpressionElementTypeConditionalExpressionElementTypeUnaryExpressionElementTypeBinaryExpressionElementTypeFunctionExpressionElementTypeStringExpressionElementTypeCastingExpressionElementTypeCreateExpressionElementTypeDestroyExpressionElementTypeReferenceExpressionElementTypeForceExpressionElementTypePathExpression"
+const _ElementType_name = "ElementTypeUnknownElementTypeProgramElementTypeBlockElementTypeFunctionBlockElementTypeFunctionDeclarationElementTypeSpecialFunctionDeclarationElementTypeCompositeDeclarationElementTypeInterfaceDeclarationElementTypeFieldDeclarationElementTypeEnumCaseDeclarationElementTypePragmaDeclarationElementTypeImportDeclarationElementTypeTransactionDeclarationElementTypeReturnStatementElementTypeBreakStatementElementTypeContinueStatementElementTypeIfStatementElementTypeSwitchStatementElementTypeWhileStatementElementTypeForStatementElementTypeEmitStatementElementTypeVariableDeclarationElementTypeAssignmentStatementElementTypeSwapStatementElementTypeExpressionStatementElementTypeVoidExpressionElementTypeBoolExpressionElementTypeNilExpressionElementTypeIntegerExpressionElementTypeFixedPointExpressionElementTypeArrayExpressionElementTypeDictionaryExpressionElementTypeIdentifierExpressionElementTypeInvocationExpressionElementTypeMemberExpressionElementTypeIndexExpressionElementTypeConditionalExpressionElementTypeUnaryExpressionElementTypeBinaryExpressionElementTypeFunctionExpressionElementTypeStringExpressionElementTypeCastingExpressionElementTypeCreateExpressionElementTypeDestroyExpressionElementTypeReferenceExpressionElementTypeForceExpressionElementTypePathExpression"
 
-var _ElementType_index = [...]uint16{0, 18, 36, 52, 76, 106, 143, 174, 205, 232, 262, 290, 318, 351, 377, 402, 430, 452, 478, 503, 526, 550, 580, 610, 634, 664, 689, 713, 741, 772, 798, 829, 860, 891, 918, 944, 976, 1002, 1029, 1058, 1085, 1113, 1140, 1168, 1198, 1224, 1249}
+var _ElementType_index = [...]uint16{0, 18, 36, 52, 76, 106, 143, 174, 205, 232, 262, 290, 318, 351, 377, 402, 430, 452, 478, 503, 526, 550, 580, 610, 634, 664, 689, 714, 738, 766, 797, 823, 854, 885, 916, 943, 969, 1001, 1027, 1054, 1083, 1110, 1138, 1165, 1193, 1223, 1249, 1274}
 
 func (i ElementType) String() string {
 	if i >= ElementType(len(_ElementType_index)-1) {

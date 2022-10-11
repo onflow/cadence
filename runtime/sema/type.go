@@ -364,6 +364,47 @@ const toStringFunctionDocString = `
 A textual representation of this object
 `
 
+// fromString
+const FromStringFunctionName = "fromString"
+
+func FromStringFunctionDocstring(ty Type) string {
+
+	builder := new(strings.Builder)
+	builder.WriteString(
+		fmt.Sprintf(
+			"Attempts to parse %s from a string. Returns `nil` on overflow or invalid input. Whitespace or invalid digits will return a nil value.\n",
+			ty.String(),
+		))
+
+	if IsSameTypeKind(ty, FixedPointType) {
+		builder.WriteString(
+			`Both decimal and fractional components must be supplied. For instance, both "0." and ".1" are invalid string representations, but "0.1" is accepted.\n`,
+		)
+	}
+	if IsSameTypeKind(ty, SignedIntegerType) || IsSameTypeKind(ty, SignedFixedPointType) {
+		builder.WriteString(
+			"The string may optionally begin with a sign prefix of '-' or '+'.\n",
+		)
+	}
+
+	return builder.String()
+}
+
+func FromStringFunctionType(ty Type) *FunctionType {
+	return &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "input",
+				TypeAnnotation: NewTypeAnnotation(StringType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{ty},
+		),
+	}
+}
+
 // toBigEndianBytes
 
 const ToBigEndianBytesFunctionName = "toBigEndianBytes"
@@ -2522,7 +2563,6 @@ func formatFunctionType(
 	return builder.String()
 }
 
-// FunctionType
 type FunctionPurity int
 
 const (
@@ -2536,6 +2576,8 @@ func (p FunctionPurity) String() string {
 	}
 	return "view"
 }
+
+// FunctionType
 
 type FunctionType struct {
 	IsConstructor            bool
@@ -3181,8 +3223,7 @@ func init() {
 					functionType.Members = &StringMemberOrderedMap{}
 				}
 				name := member.Identifier.Identifier
-				_, exists := functionType.Members.Get(name)
-				if exists {
+				if functionType.Members.Contains(name) {
 					panic(errors.NewUnreachableError())
 				}
 				functionType.Members.Set(name, member)
@@ -3237,6 +3278,16 @@ func init() {
 					))
 				}
 			}
+
+			// add .fromString() method
+			fromStringFnType := FromStringFunctionType(numberType)
+			fromStringDocstring := FromStringFunctionDocstring(numberType)
+			addMember(NewUnmeteredPublicFunctionMember(
+				functionType,
+				FromStringFunctionName,
+				fromStringFnType,
+				fromStringDocstring,
+			))
 
 			BaseValueActivation.Set(
 				typeName,
@@ -3388,8 +3439,7 @@ func init() {
 			functionType.Members = &StringMemberOrderedMap{}
 		}
 		name := member.Identifier.Identifier
-		_, exists := functionType.Members.Get(name)
-		if exists {
+		if functionType.Members.Contains(name) {
 			panic(errors.NewUnreachableError())
 		}
 		functionType.Members.Set(name, member)
@@ -3913,6 +3963,7 @@ func (t *CompositeType) FieldPosition(name string, declaration *ast.CompositeDec
 // Member
 
 type Member struct {
+	// Parent type where this member can be resolved
 	ContainerType  Type
 	Access         ast.Access
 	Identifier     ast.Identifier
@@ -5022,9 +5073,17 @@ func (t *AddressType) GetMembers() map[string]MemberResolver {
 // However, to check if a type *strictly* belongs to a certain category, then consider
 // using `IsSameTypeKind` method. e.g: "Is type `T` an Integer type?". Using this method
 // for the later use-case may produce incorrect results.
-//   - IsSubType()      - To check the assignability. e.g: Is argument type T is a sub-type
-//     of parameter type R. This is the more frequent use-case.
-//   - IsSameTypeKind() - To check if a type strictly belongs to a certain category. e.g: Is the
+//
+// The differences between these methods is as follows:
+//
+//   - IsSubType():
+//
+//     To check the assignability, e.g: is argument type T is a sub-type
+//     of parameter type R? This is the more frequent use-case.
+//
+//   - IsSameTypeKind():
+//
+//     To check if a type strictly belongs to a certain category. e.g: Is the
 //     expression type T is any of the integer types, but nothing else.
 //     Another way to check is, asking the question of "if the subType is Never,
 //     should the check still pass?". A common code-smell for potential incorrect
@@ -5609,7 +5668,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 			// TODO: once interfaces can conform to interfaces, include
 			return typedSubType.ExplicitInterfaceConformanceSet().
-				Includes(typedSuperType)
+				Contains(typedSuperType)
 
 		case *InterfaceType:
 			// TODO: Once interfaces can conform to interfaces, check conformances here
@@ -6569,8 +6628,7 @@ func GetMembersAsMap(members []*Member) *StringMemberOrderedMap {
 	membersMap := &StringMemberOrderedMap{}
 	for _, member := range members {
 		name := member.Identifier.Identifier
-		_, ok := membersMap.Get(name)
-		if ok {
+		if membersMap.Contains(name) {
 			panic(errors.NewUnexpectedError("invalid duplicate member: %s", name))
 		}
 		membersMap.Set(name, member)

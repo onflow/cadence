@@ -261,7 +261,7 @@ func (e *interpreterEnvironment) EmitEvent(
 	inter *interpreter.Interpreter,
 	eventType *sema.CompositeType,
 	values []interpreter.Value,
-	getLocationRange func() interpreter.LocationRange,
+	locationRange interpreter.LocationRange,
 ) {
 	eventFields := make([]exportableValue, 0, len(values))
 
@@ -271,7 +271,7 @@ func (e *interpreterEnvironment) EmitEvent(
 
 	emitEventFields(
 		inter,
-		getLocationRange,
+		locationRange,
 		eventType,
 		eventFields,
 		e.runtimeInterface.EmitEvent,
@@ -583,7 +583,7 @@ func (e *interpreterEnvironment) newOnRecordTraceHandler() interpreter.OnRecordT
 func (e *interpreterEnvironment) newHashHandler() interpreter.HashHandlerFunc {
 	return func(
 		inter *interpreter.Interpreter,
-		getLocationRange func() interpreter.LocationRange,
+		locationRange interpreter.LocationRange,
 		dataValue *interpreter.ArrayValue,
 		tagValue *interpreter.StringValue,
 		hashAlgorithmValue interpreter.MemberAccessibleValue,
@@ -598,7 +598,7 @@ func (e *interpreterEnvironment) newHashHandler() interpreter.HashHandlerFunc {
 			tag = tagValue.Str
 		}
 
-		hashAlgorithm := stdlib.NewHashAlgorithmFromValue(inter, getLocationRange, hashAlgorithmValue)
+		hashAlgorithm := stdlib.NewHashAlgorithmFromValue(inter, locationRange, hashAlgorithmValue)
 
 		var result []byte
 		wrapPanic(func() {
@@ -620,7 +620,7 @@ func (e *interpreterEnvironment) newPublicAccountHandler() interpreter.PublicAcc
 func (e *interpreterEnvironment) newSignatureVerificationHandler() interpreter.SignatureVerificationHandlerFunc {
 	return func(
 		inter *interpreter.Interpreter,
-		getLocationRange func() interpreter.LocationRange,
+		locationRange interpreter.LocationRange,
 		signatureValue *interpreter.ArrayValue,
 		signedDataValue *interpreter.ArrayValue,
 		domainSeparationTagValue *interpreter.StringValue,
@@ -640,9 +640,9 @@ func (e *interpreterEnvironment) newSignatureVerificationHandler() interpreter.S
 
 		domainSeparationTag := domainSeparationTagValue.Str
 
-		hashAlgorithm := stdlib.NewHashAlgorithmFromValue(inter, getLocationRange, hashAlgorithmValue)
+		hashAlgorithm := stdlib.NewHashAlgorithmFromValue(inter, locationRange, hashAlgorithmValue)
 
-		publicKey, err := stdlib.NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
+		publicKey, err := stdlib.NewPublicKeyFromValue(inter, locationRange, publicKeyValue)
 		if err != nil {
 			return false
 		}
@@ -670,11 +670,11 @@ func (e *interpreterEnvironment) newSignatureVerificationHandler() interpreter.S
 func (e *interpreterEnvironment) newPublicKeyValidationHandler() interpreter.PublicKeyValidationHandlerFunc {
 	return func(
 		inter *interpreter.Interpreter,
-		getLocationRange func() interpreter.LocationRange,
+		locationRange interpreter.LocationRange,
 		publicKeyValue *interpreter.CompositeValue,
 	) error {
 
-		publicKey, err := stdlib.NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
+		publicKey, err := stdlib.NewPublicKeyFromValue(inter, locationRange, publicKeyValue)
 		if err != nil {
 			return err
 		}
@@ -742,13 +742,13 @@ func (e *interpreterEnvironment) newUUIDHandler() interpreter.UUIDHandlerFunc {
 func (e *interpreterEnvironment) newOnEventEmittedHandler() interpreter.OnEventEmittedFunc {
 	return func(
 		inter *interpreter.Interpreter,
-		getLocationRange func() interpreter.LocationRange,
+		locationRange interpreter.LocationRange,
 		eventValue *interpreter.CompositeValue,
 		eventType *sema.CompositeType,
 	) error {
 		emitEventValue(
 			inter,
-			getLocationRange,
+			locationRange,
 			eventType,
 			eventValue,
 			e.runtimeInterface.EmitEvent,
@@ -992,11 +992,11 @@ func (e *interpreterEnvironment) newResourceOwnerChangedHandler() interpreter.On
 func (e *interpreterEnvironment) newBLSVerifyPopFunction() interpreter.BLSVerifyPoPHandlerFunc {
 	return func(
 		inter *interpreter.Interpreter,
-		getLocationRange func() interpreter.LocationRange,
+		locationRange interpreter.LocationRange,
 		publicKeyValue interpreter.MemberAccessibleValue,
 		signatureValue *interpreter.ArrayValue,
 	) interpreter.BoolValue {
-		publicKey, err := stdlib.NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
+		publicKey, err := stdlib.NewPublicKeyFromValue(inter, locationRange, publicKeyValue)
 		if err != nil {
 			panic(err)
 		}
@@ -1020,7 +1020,7 @@ func (e *interpreterEnvironment) newBLSVerifyPopFunction() interpreter.BLSVerify
 func (e *interpreterEnvironment) newBLSAggregateSignaturesFunction() interpreter.BLSAggregateSignaturesHandlerFunc {
 	return func(
 		inter *interpreter.Interpreter,
-		getLocationRange func() interpreter.LocationRange,
+		locationRange interpreter.LocationRange,
 		signaturesValue *interpreter.ArrayValue,
 	) interpreter.OptionalValue {
 
@@ -1050,7 +1050,7 @@ func (e *interpreterEnvironment) newBLSAggregateSignaturesFunction() interpreter
 
 		// If the crypto layer produces an error, we have invalid input, return nil
 		if err != nil {
-			return interpreter.NilValue{}
+			return interpreter.NilOptionalValue
 		}
 
 		aggregatedSignatureValue := interpreter.ByteSliceToByteArrayValue(inter, aggregatedSignature)
@@ -1067,7 +1067,7 @@ func (e *interpreterEnvironment) newBLSAggregatePublicKeysFunction(
 ) interpreter.BLSAggregatePublicKeysHandlerFunc {
 	return func(
 		inter *interpreter.Interpreter,
-		getLocationRange func() interpreter.LocationRange,
+		locationRange interpreter.LocationRange,
 		publicKeysValue *interpreter.ArrayValue,
 	) interpreter.OptionalValue {
 
@@ -1078,7 +1078,7 @@ func (e *interpreterEnvironment) newBLSAggregatePublicKeysFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			publicKey, err := stdlib.NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
+			publicKey, err := stdlib.NewPublicKeyFromValue(inter, locationRange, publicKeyValue)
 			if err != nil {
 				panic(err)
 			}
@@ -1097,12 +1097,12 @@ func (e *interpreterEnvironment) newBLSAggregatePublicKeysFunction(
 
 		// If the crypto layer produces an error, we have invalid input, return nil
 		if err != nil {
-			return interpreter.NilValue{}
+			return interpreter.NilOptionalValue
 		}
 
 		aggregatedPublicKeyValue := stdlib.NewPublicKeyValue(
 			inter,
-			getLocationRange,
+			locationRange,
 			aggregatedPublicKey,
 			publicKeyValidationHandler,
 		)

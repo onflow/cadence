@@ -73,7 +73,7 @@ func TestCheckInvalidCastingIntLiteralToString(t *testing.T) {
       let x = 1 as String
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -257,7 +257,7 @@ func TestCheckCastResourceType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -278,7 +278,7 @@ func TestCheckCastResourceType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -350,7 +350,7 @@ func TestCheckCastResourceType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -371,7 +371,7 @@ func TestCheckCastResourceType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -396,7 +396,7 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			// NOTE: static cast not allowed, only dynamic
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -440,7 +440,7 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			// NOTE: static cast not allowed, only dynamic
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -482,7 +482,7 @@ func TestCheckCastResourceType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 3)
+			errs := RequireCheckerErrors(t, err, 3)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[1])
@@ -505,7 +505,7 @@ func TestCheckCastResourceType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 3)
+			errs := RequireCheckerErrors(t, err, 3)
 
 			assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[0])
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
@@ -582,7 +582,7 @@ func TestCheckCastResourceType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -603,7 +603,7 @@ func TestCheckCastResourceType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -628,7 +628,7 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			// NOTE: static cast not allowed, only dynamic
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -670,7 +670,7 @@ func TestCheckCastResourceType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 2)
+			errs := RequireCheckerErrors(t, err, 2)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
@@ -692,7 +692,7 @@ func TestCheckCastResourceType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -715,7 +715,7 @@ func TestCheckCastResourceType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -760,7 +760,7 @@ func TestCheckCastResourceType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -781,7 +781,7 @@ func TestCheckCastResourceType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -961,7 +961,7 @@ func TestCheckCastResourceType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -982,7 +982,7 @@ func TestCheckCastResourceType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -1049,7 +1049,7 @@ func TestCheckCastResourceType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -1093,7 +1093,7 @@ func TestCheckCastResourceType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -1135,7 +1135,7 @@ func TestCheckCastResourceType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -1402,7 +1402,7 @@ func TestCheckCastStructType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -1416,7 +1416,7 @@ func TestCheckCastStructType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -1481,7 +1481,7 @@ func TestCheckCastStructType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -1495,7 +1495,7 @@ func TestCheckCastStructType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -1520,7 +1520,7 @@ func TestCheckCastStructType(t *testing.T) {
 
 			// NOTE: static cast not allowed, only dynamic
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -1557,7 +1557,7 @@ func TestCheckCastStructType(t *testing.T) {
 
 			// NOTE: static cast not allowed, only dynamic
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -1592,7 +1592,7 @@ func TestCheckCastStructType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 3)
+			errs := RequireCheckerErrors(t, err, 3)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[1])
@@ -1608,7 +1608,7 @@ func TestCheckCastStructType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 2)
+			errs := RequireCheckerErrors(t, err, 2)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[1])
@@ -1676,7 +1676,7 @@ func TestCheckCastStructType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -1690,7 +1690,7 @@ func TestCheckCastStructType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -1715,7 +1715,7 @@ func TestCheckCastStructType(t *testing.T) {
 
 			// NOTE: static cast not allowed, only dynamic
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -1750,7 +1750,7 @@ func TestCheckCastStructType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 2)
+			errs := RequireCheckerErrors(t, err, 2)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
@@ -1765,7 +1765,7 @@ func TestCheckCastStructType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -1788,7 +1788,7 @@ func TestCheckCastStructType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -1826,7 +1826,7 @@ func TestCheckCastStructType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -1840,7 +1840,7 @@ func TestCheckCastStructType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -1999,7 +1999,7 @@ func TestCheckCastStructType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -2013,7 +2013,7 @@ func TestCheckCastStructType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -2073,7 +2073,7 @@ func TestCheckCastStructType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -2110,7 +2110,7 @@ func TestCheckCastStructType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -2145,7 +2145,7 @@ func TestCheckCastStructType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -2313,7 +2313,7 @@ func TestCheckReferenceTypeSubTyping(t *testing.T) {
 					),
 				)
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			})
@@ -2375,7 +2375,7 @@ func TestCheckReferenceTypeSubTyping(t *testing.T) {
 					),
 				)
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			})
@@ -2429,7 +2429,7 @@ func TestCheckReferenceTypeSubTyping(t *testing.T) {
 					),
 				)
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			})
@@ -2544,7 +2544,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -2557,7 +2557,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -2618,7 +2618,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -2631,7 +2631,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -2665,7 +2665,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 
 				// NOTE: static cast not allowed, only dynamic
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			})
@@ -2703,7 +2703,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
                     `,
 				)
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			})
@@ -2741,7 +2741,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
                     `,
 				)
 
-				errs := ExpectCheckerErrors(t, err, 3)
+				errs := RequireCheckerErrors(t, err, 3)
 
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 				assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[1])
@@ -2756,7 +2756,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
                     `,
 				)
 
-				errs := ExpectCheckerErrors(t, err, 2)
+				errs := RequireCheckerErrors(t, err, 2)
 
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 				assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[1])
@@ -2821,7 +2821,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -2834,7 +2834,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -2869,7 +2869,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 
 				// NOTE: static cast not allowed, only dynamic
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			})
@@ -2908,7 +2908,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
                     `,
 				)
 
-				errs := ExpectCheckerErrors(t, err, 2)
+				errs := RequireCheckerErrors(t, err, 2)
 
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
@@ -2922,7 +2922,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
                     `,
 				)
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			})
@@ -2950,7 +2950,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
                     `,
 				)
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			})
@@ -2992,7 +2992,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 					),
 				)
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			})
@@ -3008,7 +3008,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 					),
 				)
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			})
@@ -3160,7 +3160,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 					),
 				)
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			})
@@ -3176,7 +3176,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 					),
 				)
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			})
@@ -3216,7 +3216,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 
 					if ty == sema.AnyType && otherType == sema.AnyResourceType {
 
-						errs := ExpectCheckerErrors(t, err, 1)
+						errs := RequireCheckerErrors(t, err, 1)
 
 						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 
@@ -3268,7 +3268,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 						),
 					)
 
-					errs := ExpectCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 
 					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 				})
@@ -3315,7 +3315,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 						),
 					)
 
-					errs := ExpectCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 
 					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 				})
@@ -3360,7 +3360,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 						),
 					)
 
-					errs := ExpectCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 
 					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 				})
@@ -3458,7 +3458,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 
 					if ty == sema.AnyType && otherType == sema.AnyResourceType {
 
-						errs := ExpectCheckerErrors(t, err, 1)
+						errs := RequireCheckerErrors(t, err, 1)
 
 						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 
@@ -3628,7 +3628,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -3641,7 +3641,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -3703,7 +3703,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -3716,7 +3716,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -3750,7 +3750,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 
 				// NOTE: static cast not allowed, only dynamic
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			})
@@ -3789,7 +3789,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
                     `,
 				)
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			})
@@ -3828,7 +3828,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
                     `,
 				)
 
-				errs := ExpectCheckerErrors(t, err, 3)
+				errs := RequireCheckerErrors(t, err, 3)
 
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 				assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[1])
@@ -3843,7 +3843,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
                     `,
 				)
 
-				errs := ExpectCheckerErrors(t, err, 2)
+				errs := RequireCheckerErrors(t, err, 2)
 
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 				assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[1])
@@ -3908,7 +3908,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -3921,7 +3921,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
                 `,
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -3956,7 +3956,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 
 				// NOTE: static cast not allowed, only dynamic
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			})
@@ -3995,7 +3995,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
                     `,
 				)
 
-				errs := ExpectCheckerErrors(t, err, 2)
+				errs := RequireCheckerErrors(t, err, 2)
 
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
@@ -4009,7 +4009,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
                     `,
 				)
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			})
@@ -4037,7 +4037,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
                     `,
 				)
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			})
@@ -4079,7 +4079,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 					),
 				)
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			})
@@ -4095,7 +4095,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 					),
 				)
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			})
@@ -4247,7 +4247,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 					),
 				)
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			})
@@ -4263,7 +4263,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 					),
 				)
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			})
@@ -4303,7 +4303,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 
 					if ty == sema.AnyType && otherType == sema.AnyStructType {
 
-						errs := ExpectCheckerErrors(t, err, 1)
+						errs := RequireCheckerErrors(t, err, 1)
 
 						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 
@@ -4355,7 +4355,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 						),
 					)
 
-					errs := ExpectCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 
 					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 				})
@@ -4402,7 +4402,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 						),
 					)
 
-					errs := ExpectCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 
 					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 				})
@@ -4447,7 +4447,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 						),
 					)
 
-					errs := ExpectCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 
 					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 				})
@@ -4655,7 +4655,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 					),
 				)
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			})
@@ -4679,7 +4679,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 					),
 				)
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			})
@@ -4723,7 +4723,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 					),
 				)
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			})
@@ -4751,7 +4751,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 						),
 					)
 
-					errs := ExpectCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 
 					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 				})
@@ -4774,7 +4774,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 						),
 					)
 
-					errs := ExpectCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 
 					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 				})
@@ -4797,7 +4797,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 						),
 					)
 
-					errs := ExpectCheckerErrors(t, err, 3)
+					errs := RequireCheckerErrors(t, err, 3)
 
 					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 					assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[1])
@@ -4824,7 +4824,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 					),
 				)
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			})
@@ -4848,7 +4848,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 					),
 				)
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			})
@@ -4876,7 +4876,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 						),
 					)
 
-					errs := ExpectCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 
 					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 				})
@@ -4899,7 +4899,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 						),
 					)
 
-					errs := ExpectCheckerErrors(t, err, 2)
+					errs := RequireCheckerErrors(t, err, 2)
 
 					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 					assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
@@ -4923,7 +4923,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 						),
 					)
 
-					errs := ExpectCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 
 					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 				})
@@ -4949,7 +4949,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 						),
 					)
 
-					errs := ExpectCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 
 					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 				})
@@ -5016,7 +5016,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 						),
 					)
 
-					errs := ExpectCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 
 					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 				})
@@ -5041,7 +5041,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 						),
 					)
 
-					errs := ExpectCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 
 					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 
@@ -5075,7 +5075,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 
 						if ty == sema.AnyType && otherType == sema.AnyResourceType {
 
-							errs := ExpectCheckerErrors(t, err, 1)
+							errs := RequireCheckerErrors(t, err, 1)
 
 							assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 
@@ -5106,7 +5106,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 							),
 						)
 
-						errs := ExpectCheckerErrors(t, err, 1)
+						errs := RequireCheckerErrors(t, err, 1)
 
 						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 					})
@@ -5132,7 +5132,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 							),
 						)
 
-						errs := ExpectCheckerErrors(t, err, 1)
+						errs := RequireCheckerErrors(t, err, 1)
 
 						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 					})
@@ -5156,7 +5156,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 							),
 						)
 
-						errs := ExpectCheckerErrors(t, err, 1)
+						errs := RequireCheckerErrors(t, err, 1)
 
 						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 					})
@@ -5186,7 +5186,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 
 						if ty == sema.AnyType && otherType == sema.AnyResourceType {
 
-							errs := ExpectCheckerErrors(t, err, 1)
+							errs := RequireCheckerErrors(t, err, 1)
 
 							assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 
@@ -5302,7 +5302,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 					),
 				)
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			})
@@ -5326,7 +5326,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 					),
 				)
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			})
@@ -5370,7 +5370,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 					),
 				)
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			})
@@ -5398,7 +5398,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 						),
 					)
 
-					errs := ExpectCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 
 					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 				})
@@ -5421,7 +5421,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 						),
 					)
 
-					errs := ExpectCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 
 					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 				})
@@ -5444,7 +5444,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 						),
 					)
 
-					errs := ExpectCheckerErrors(t, err, 3)
+					errs := RequireCheckerErrors(t, err, 3)
 
 					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 					assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[1])
@@ -5471,7 +5471,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 					),
 				)
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			})
@@ -5495,7 +5495,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 					),
 				)
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			})
@@ -5523,7 +5523,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 						),
 					)
 
-					errs := ExpectCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 
 					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 				})
@@ -5546,7 +5546,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 						),
 					)
 
-					errs := ExpectCheckerErrors(t, err, 2)
+					errs := RequireCheckerErrors(t, err, 2)
 
 					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 					assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
@@ -5570,7 +5570,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 						),
 					)
 
-					errs := ExpectCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 
 					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 				})
@@ -5596,7 +5596,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 						),
 					)
 
-					errs := ExpectCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 
 					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 				})
@@ -5663,7 +5663,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 						),
 					)
 
-					errs := ExpectCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 
 					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 				})
@@ -5688,7 +5688,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 						),
 					)
 
-					errs := ExpectCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 
 					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 				})
@@ -5721,7 +5721,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 
 						if ty == sema.AnyType && otherType == sema.AnyStructType {
 
-							errs := ExpectCheckerErrors(t, err, 1)
+							errs := RequireCheckerErrors(t, err, 1)
 
 							assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 
@@ -5752,7 +5752,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 							),
 						)
 
-						errs := ExpectCheckerErrors(t, err, 1)
+						errs := RequireCheckerErrors(t, err, 1)
 
 						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 					})
@@ -5778,7 +5778,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 							),
 						)
 
-						errs := ExpectCheckerErrors(t, err, 1)
+						errs := RequireCheckerErrors(t, err, 1)
 
 						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 					})
@@ -5802,7 +5802,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 							),
 						)
 
-						errs := ExpectCheckerErrors(t, err, 1)
+						errs := RequireCheckerErrors(t, err, 1)
 
 						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 					})
@@ -5909,7 +5909,7 @@ func TestCheckResourceConstructorCast(t *testing.T) {
         `,
 	)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -5928,7 +5928,7 @@ func TestCheckResourceConstructorReturn(t *testing.T) {
         `,
 	)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -6022,9 +6022,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
                 let x: T = 5 as R
             `)
 
-			require.Error(t, err)
-
-			errors := ExpectCheckerErrors(t, err, 2)
+			errors := RequireCheckerErrors(t, err, 2)
 			assert.IsType(t, &sema.NotDeclaredError{}, errors[0])
 			assert.IsType(t, &sema.NotDeclaredError{}, errors[1])
 
@@ -6159,7 +6157,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
                 let y: String = x as Int8
             `)
 
-			require.Error(t, err)
+			RequireCheckerErrors(t, err, 1)
 
 			require.Len(t, checker.Elaboration.StaticCastTypes, 1)
 			for _, cast := range checker.Elaboration.StaticCastTypes { // nolint:maprangecheck
@@ -6273,7 +6271,11 @@ func TestCheckStaticCastElaboration(t *testing.T) {
                 let x = [a, b, c] as [String]
             `)
 
-			require.Error(t, err)
+			errs := RequireCheckerErrors(t, err, 3)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
 
 			require.Len(t, checker.Elaboration.StaticCastTypes, 0)
 		})
@@ -6331,7 +6333,11 @@ func TestCheckStaticCastElaboration(t *testing.T) {
                 let x = {a: b, b: c, c: a} as {Int8: String}
             `)
 
-			require.Error(t, err)
+			errs := RequireCheckerErrors(t, err, 3)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
 
 			require.Len(t, checker.Elaboration.StaticCastTypes, 0)
 		})
@@ -6634,7 +6640,7 @@ func TestCastResourceAsEnumAsEmptyDict(t *testing.T) {
 
 	_, err := ParseAndCheck(t, "resource foo { enum x : foo { } }")
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
 	assert.IsType(t, &sema.InvalidEnumRawTypeError{}, errs[1])

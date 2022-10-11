@@ -49,7 +49,7 @@ func (checker *Checker) VisitSwitchStatement(statement *ast.SwitchStatement) (_ 
 		checker.visitSwitchCase(switchCase, defaultAllowed, testType, testTypeIsValid)
 	}
 
-	checker.functionActivations.WithSwitch(func() {
+	checker.functionActivations.Current().WithSwitch(func() {
 		checker.checkSwitchCasesStatements(statement.Cases)
 	})
 
@@ -131,6 +131,8 @@ func (checker *Checker) checkSwitchCasesStatements(cases []*ast.SwitchCase) {
 		return
 	}
 
+	currentFunctionActivation := checker.functionActivations.Current()
+
 	// NOTE: always check blocks as if they're only *potentially* evaluated.
 	// However, the default case's block must be checked directly as the "else",
 	// because if a default case exists, the whole switch statement
@@ -139,13 +141,17 @@ func (checker *Checker) checkSwitchCasesStatements(cases []*ast.SwitchCase) {
 	switchCase := cases[0]
 
 	if caseCount == 1 && switchCase.Expression == nil {
-		checker.checkSwitchCaseStatements(switchCase)
+		currentFunctionActivation.ReturnInfo.WithNewJumpTarget(func() {
+			checker.checkSwitchCaseStatements(switchCase)
+		})
 		return
 	}
 
 	_, _ = checker.checkConditionalBranches(
 		func() Type {
-			checker.checkSwitchCaseStatements(switchCase)
+			currentFunctionActivation.ReturnInfo.WithNewJumpTarget(func() {
+				checker.checkSwitchCaseStatements(switchCase)
+			})
 			return nil
 		},
 		func() Type {

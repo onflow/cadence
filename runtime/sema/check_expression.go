@@ -36,7 +36,6 @@ func (checker *Checker) VisitIdentifierExpression(expression *ast.IdentifierExpr
 		res := Resource{Variable: variable}
 		checker.checkResourceVariableCapturingInFunction(variable, identifier)
 		checker.checkResourceUseAfterInvalidation(res, identifier)
-		checker.resources.AddUse(res, identifier.Pos)
 	}
 
 	checker.checkSelfVariableUseInInitializer(variable, identifier.Pos)
@@ -50,7 +49,6 @@ func (checker *Checker) VisitIdentifierExpression(expression *ast.IdentifierExpr
 
 // checkSelfVariableUseInInitializer checks uses of `self` in the initializer
 // and ensures it is properly initialized
-//
 func (checker *Checker) checkSelfVariableUseInInitializer(variable *Variable, position ast.Position) {
 
 	// Is this a use of `self`?
@@ -114,7 +112,6 @@ func (checker *Checker) checkSelfVariableUseInInitializer(variable *Variable, po
 }
 
 // checkResourceVariableCapturingInFunction checks if a resource variable is captured in a function
-//
 func (checker *Checker) checkResourceVariableCapturingInFunction(variable *Variable, useIdentifier ast.Identifier) {
 	currentFunctionDepth := -1
 	currentFunctionActivation := checker.functionActivations.Current()
@@ -150,6 +147,10 @@ func (checker *Checker) VisitExpressionStatement(statement *ast.ExpressionStatem
 	}
 
 	return
+}
+
+func (checker *Checker) VisitVoidExpression(_ *ast.VoidExpression) Type {
+	return VoidType
 }
 
 func (checker *Checker) VisitBoolExpression(_ *ast.BoolExpression) Type {
@@ -238,7 +239,6 @@ func (checker *Checker) VisitIndexExpression(expression *ast.IndexExpression) Ty
 // visitIndexExpression checks if the indexed expression is indexable,
 // checks if the indexing expression can be used to index into the indexed expression,
 // and returns the expected element type
-//
 func (checker *Checker) visitIndexExpression(
 	indexExpression *ast.IndexExpression,
 	isAssignment bool,

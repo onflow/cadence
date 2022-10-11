@@ -19,6 +19,7 @@
 package sema
 
 import (
+	goErrors "errors"
 	"math"
 	"math/big"
 
@@ -27,6 +28,7 @@ import (
 	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/persistent"
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -979,7 +981,7 @@ func CheckRestrictedType(
 			// The restriction must be an explicit or implicit conformance
 			// of the composite (restricted type)
 
-			if !conformances.Includes(restriction) {
+			if !conformances.Contains(restriction) {
 				report(func(t *ast.RestrictedType) error {
 					return &InvalidNonConformanceRestrictionError{
 						Type:  restriction,
@@ -1352,11 +1354,16 @@ func (checker *Checker) leaveValueScope(getEndPosition EndPositionGetter, checkR
 // that has a resource type and which was not moved or destroyed
 func (checker *Checker) checkResourceLoss(depth int) {
 
+	returnInfo := checker.functionActivations.Current().ReturnInfo
+	if returnInfo.IsUnreachable() {
+		return
+	}
+
 	checker.valueActivations.ForEachVariableDeclaredInAndBelow(depth, func(name string, variable *Variable) {
 
 		if variable.Type.IsResourceType() &&
 			variable.DeclarationKind != common.DeclarationKindSelf &&
-			!checker.resources.Get(Resource{Variable: variable}).DefinitivelyInvalidated {
+			!checker.resources.Get(Resource{Variable: variable}).DefinitivelyInvalidated() {
 
 			checker.report(
 				&ResourceLossError{
@@ -1382,6 +1389,12 @@ func (checker *Checker) recordResourceInvalidation(
 	invalidationKind ResourceInvalidationKind,
 ) *recordedResourceInvalidation {
 
+	if !(invalidationKind.IsDefinite() ||
+		invalidationKind == ResourceInvalidationKindMoveTemporary) {
+
+		panic(errors.NewUnexpectedError("invalidation should be recorded as definite or temporary"))
+	}
+
 	if !valueType.IsResourceType() {
 		return nil
 	}
@@ -1389,8 +1402,10 @@ func (checker *Checker) recordResourceInvalidation(
 	reportInvalidNestedMove := func() {
 		checker.report(
 			&InvalidNestedResourceMoveError{
-				StartPos: expression.StartPosition(),
-				EndPos:   expression.EndPosition(checker.memoryGauge),
+				Range: ast.NewRangeFromPositioned(
+					checker.memoryGauge,
+					expression,
+				),
 			},
 		)
 	}
@@ -1445,8 +1460,10 @@ func (checker *Checker) recordResourceInvalidation(
 		checker.report(
 			&InvalidSelfInvalidationError{
 				InvalidationKind: invalidationKind,
-				StartPos:         expression.StartPosition(),
-				EndPos:           expression.EndPosition(checker.memoryGauge),
+				Range: ast.NewRangeFromPositioned(
+					checker.memoryGauge,
+					expression,
+				),
 			},
 		)
 	}
@@ -1490,7 +1507,7 @@ func (checker *Checker) checkWithReturnInfo(
 
 func (checker *Checker) checkWithInitializedMembers(
 	check TypeCheckFunc,
-	temporaryInitializedMembers *MemberSet,
+	temporaryInitializedMembers *persistent.OrderedSet[*Member],
 ) Type {
 	if temporaryInitializedMembers != nil {
 		functionActivation := checker.functionActivations.Current()
@@ -1613,7 +1630,7 @@ func (checker *Checker) checkPotentiallyUnevaluated(check TypeCheckFunc) Type {
 	initialReturnInfo := functionActivation.ReturnInfo
 	temporaryReturnInfo := initialReturnInfo.Clone()
 
-	var temporaryInitializedMembers *MemberSet
+	var temporaryInitializedMembers *persistent.OrderedSet[*Member]
 	if functionActivation.InitializationInfo != nil {
 		initialInitializedMembers := functionActivation.InitializationInfo.InitializedFieldMembers
 		temporaryInitializedMembers = initialInitializedMembers.Clone()
@@ -1631,7 +1648,12 @@ func (checker *Checker) checkPotentiallyUnevaluated(check TypeCheckFunc) Type {
 
 	functionActivation.ReturnInfo.MergePotentiallyUnevaluated(temporaryReturnInfo)
 
-	checker.resources.MergeBranches(temporaryResources, nil)
+	checker.resources.MergeBranches(
+		temporaryResources,
+		temporaryReturnInfo,
+		nil,
+		nil,
+	)
 
 	return result
 }
@@ -2304,19 +2326,51 @@ func (checker *Checker) declareGlobalRanges() {
 	})
 }
 
+var errFoundJump = goErrors.New("jump found")
+
 func (checker *Checker) maybeAddResourceInvalidation(resource Resource, invalidation ResourceInvalidation) {
 	functionActivation := checker.functionActivations.Current()
+
+	returnInfo := functionActivation.ReturnInfo
 
 	// Resource invalidations are only definite
 	// if the invalidation can be definitely reached.
 
-	if functionActivation.ReturnInfo.IsUnreachable() ||
-		functionActivation.ReturnInfo.MaybeJumped {
-
+	if returnInfo.IsUnreachable() {
 		return
 	}
 
-	checker.resources.AddInvalidation(resource, invalidation)
+	var onlyPotential bool
+	switch {
+	case resource.Member != nil:
+		onlyPotential = returnInfo.MaybeReturned || returnInfo.MaybeJumped()
+
+	case resource.Variable != nil &&
+		resource.Variable.DeclarationKind != common.DeclarationKindSelf:
+
+		declarationOffset := resource.Variable.Pos.Offset
+		invalidationOffset := invalidation.StartPos.Offset
+
+		err := returnInfo.JumpOffsets.ForEach(func(jumpOffset int) error {
+			if declarationOffset < jumpOffset && jumpOffset < invalidationOffset {
+				return errFoundJump
+			}
+			return nil
+		})
+
+		onlyPotential = err == errFoundJump
+	}
+
+	if onlyPotential {
+		invalidation.Kind = invalidation.Kind.AsPotential()
+	}
+
+	// Maybe record the invalidation.
+	// If there had already been an invalidation before, the new invalidation is ignored.
+	// However, the repeated invalidation is still reported as an error,
+	// but as a use-after invalidation error.
+
+	checker.resources.MaybeRecordInvalidation(resource, invalidation)
 }
 
 func (checker *Checker) beforeExtractor() *BeforeExtractor {

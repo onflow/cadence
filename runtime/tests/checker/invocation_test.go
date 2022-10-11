@@ -45,7 +45,7 @@ func TestCheckInvalidFunctionCallWithTooFewArguments(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ArgumentCountError{}, errs[0])
 }
@@ -98,7 +98,7 @@ func TestCheckInvalidFunctionCallWithNotRequiredArgumentLabel(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.IncorrectArgumentLabelError{}, errs[0])
 }
@@ -135,7 +135,7 @@ func TestCheckFunctionCallMissingArgumentLabel(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.MissingArgumentLabelError{}, errs[0])
 }
@@ -154,7 +154,7 @@ func TestCheckFunctionCallIncorrectArgumentLabel(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.IncorrectArgumentLabelError{}, errs[0])
 }
@@ -173,7 +173,7 @@ func TestCheckInvalidFunctionCallWithTooManyArguments(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.ArgumentCountError{}, errs[0])
 
@@ -190,7 +190,7 @@ func TestCheckInvalidFunctionCallOfBool(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotCallableError{}, errs[0])
 }
@@ -205,7 +205,7 @@ func TestCheckInvalidFunctionCallOfInteger(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotCallableError{}, errs[0])
 }
@@ -224,7 +224,7 @@ func TestCheckInvalidFunctionCallWithWrongType(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -243,7 +243,7 @@ func TestCheckInvalidFunctionCallWithWrongTypeAndMissingArgumentLabel(t *testing
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 
@@ -278,7 +278,7 @@ func TestCheckInvalidStructFunctionInvocation(t *testing.T) {
         }
       }
     `)
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 }
@@ -364,7 +364,7 @@ func TestCheckArgumentLabels(t *testing.T) {
 	          let t = test(x: 1, "2")
 	        `)
 
-			errs := ExpectCheckerErrors(t, err, 2)
+			errs := RequireCheckerErrors(t, err, 2)
 
 			assert.IsType(t, &sema.IncorrectArgumentLabelError{}, errs[0])
 			assert.IsType(t, &sema.MissingArgumentLabelError{}, errs[1])
@@ -402,7 +402,7 @@ func TestCheckArgumentLabels(t *testing.T) {
 				},
 			)
 
-			errs := ExpectCheckerErrors(t, err, 2)
+			errs := RequireCheckerErrors(t, err, 2)
 
 			assert.IsType(t, &sema.IncorrectArgumentLabelError{}, errs[0])
 			assert.IsType(t, &sema.MissingArgumentLabelError{}, errs[1])
@@ -423,7 +423,7 @@ func TestCheckArgumentLabels(t *testing.T) {
 	          let t = Test().test(x: 1, "2")
 	        `)
 
-			errs := ExpectCheckerErrors(t, err, 2)
+			errs := RequireCheckerErrors(t, err, 2)
 
 			assert.IsType(t, &sema.IncorrectArgumentLabelError{}, errs[0])
 			assert.IsType(t, &sema.MissingArgumentLabelError{}, errs[1])
@@ -463,7 +463,7 @@ func TestCheckArgumentLabels(t *testing.T) {
 				},
 			)
 
-			errs := ExpectCheckerErrors(t, err, 2)
+			errs := RequireCheckerErrors(t, err, 2)
 
 			assert.IsType(t, &sema.IncorrectArgumentLabelError{}, errs[0])
 			assert.IsType(t, &sema.MissingArgumentLabelError{}, errs[1])
@@ -484,7 +484,7 @@ func TestCheckArgumentLabels(t *testing.T) {
 	          let t = Test(x: 1, "2")
 	        `)
 
-			errs := ExpectCheckerErrors(t, err, 2)
+			errs := RequireCheckerErrors(t, err, 2)
 
 			assert.IsType(t, &sema.IncorrectArgumentLabelError{}, errs[0])
 			assert.IsType(t, &sema.MissingArgumentLabelError{}, errs[1])
@@ -524,7 +524,7 @@ func TestCheckArgumentLabels(t *testing.T) {
 				},
 			)
 
-			errs := ExpectCheckerErrors(t, err, 2)
+			errs := RequireCheckerErrors(t, err, 2)
 
 			assert.IsType(t, &sema.IncorrectArgumentLabelError{}, errs[0])
 			assert.IsType(t, &sema.MissingArgumentLabelError{}, errs[1])
@@ -547,7 +547,7 @@ func TestCheckArgumentLabels(t *testing.T) {
 	          let t = C.S(x: 1, "2")
 	        `)
 
-			errs := ExpectCheckerErrors(t, err, 2)
+			errs := RequireCheckerErrors(t, err, 2)
 
 			assert.IsType(t, &sema.IncorrectArgumentLabelError{}, errs[0])
 			assert.IsType(t, &sema.MissingArgumentLabelError{}, errs[1])
@@ -589,7 +589,7 @@ func TestCheckArgumentLabels(t *testing.T) {
 				},
 			)
 
-			errs := ExpectCheckerErrors(t, err, 2)
+			errs := RequireCheckerErrors(t, err, 2)
 
 			assert.IsType(t, &sema.IncorrectArgumentLabelError{}, errs[0])
 			assert.IsType(t, &sema.MissingArgumentLabelError{}, errs[1])

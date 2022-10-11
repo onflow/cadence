@@ -19,7 +19,6 @@
 package wasm
 
 // ValueType is the type of a value
-//
 type ValueType byte
 
 const (
@@ -46,7 +45,6 @@ const (
 
 // AsValueType returns the value type for the given byte,
 // or 0 if the byte is not a valid value type
-//
 func AsValueType(b byte) ValueType {
 	switch ValueType(b) {
 	case ValueTypeI32:

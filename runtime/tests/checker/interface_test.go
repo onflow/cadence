@@ -74,7 +74,7 @@ func TestCheckInvalidLocalInterface(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.InvalidDeclarationError{}, errs[0])
 		})
@@ -183,7 +183,7 @@ func TestCheckInvalidInterfaceWithFunctionImplementationNoConditions(t *testing.
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.InvalidImplementationError{}, errs[0])
 		})
@@ -436,13 +436,13 @@ func TestCheckInvalidInterfaceConformanceIncompatibleCompositeKinds(t *testing.T
 				if firstKind != common.CompositeKindContract &&
 					secondKind != common.CompositeKindContract {
 
-					errs := ExpectCheckerErrors(t, err, 2)
+					errs := RequireCheckerErrors(t, err, 2)
 
 					assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[0])
 					assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 
 				} else {
-					errs := ExpectCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 
 					assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[0])
 				}
@@ -506,7 +506,7 @@ func TestCheckInvalidInterfaceConformanceUndeclared(t *testing.T) {
 			)
 
 			if compositeKind != common.CompositeKindContract {
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			} else {
@@ -550,7 +550,7 @@ func TestCheckInvalidCompositeInterfaceConformanceNonInterface(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.InvalidConformanceError{}, errs[0])
 		})
@@ -644,7 +644,7 @@ func TestCheckInvalidInterfaceUndeclaredFieldUse(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
 		})
@@ -743,7 +743,7 @@ func TestCheckInvalidInterfaceUndeclaredFunctionUse(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
 		})
@@ -772,7 +772,7 @@ func TestCheckInvalidInterfaceConformanceInitializerExplicitMismatch(t *testing.
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.ConformanceError{}, errs[0])
 		})
@@ -800,7 +800,7 @@ func TestCheckInvalidInterfaceConformanceInitializerImplicitMismatch(t *testing.
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.ConformanceError{}, errs[0])
 		})
@@ -827,7 +827,7 @@ func TestCheckInvalidInterfaceConformanceMissingFunction(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.ConformanceError{}, errs[0])
 		})
@@ -858,7 +858,7 @@ func TestCheckInvalidInterfaceConformanceFunctionMismatch(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.ConformanceError{}, errs[0])
 		})
@@ -889,7 +889,7 @@ func TestCheckInvalidInterfaceConformanceFunctionPrivateAccessModifier(t *testin
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.ConformanceError{}, errs[0])
 		})
@@ -936,7 +936,7 @@ func TestCheckInvalidInterfaceConformanceMissingField(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.ConformanceError{}, errs[0])
 		})
@@ -968,7 +968,7 @@ func TestCheckInvalidInterfaceConformanceFieldTypeMismatch(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.ConformanceError{}, errs[0])
 		})
@@ -1001,7 +1001,7 @@ func TestCheckInvalidInterfaceConformanceFieldPrivateAccessModifier(t *testing.T
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.ConformanceError{}, errs[0])
 		})
@@ -1034,7 +1034,7 @@ func TestCheckInvalidInterfaceConformanceFieldMismatchAccessModifierMoreRestrict
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.ConformanceError{}, errs[0])
 		})
@@ -1063,7 +1063,7 @@ func TestCheckInvalidInterfaceConformanceFunctionMismatchAccessModifierMoreRestr
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.ConformanceError{}, errs[0])
 		})
@@ -1125,7 +1125,7 @@ func TestCheckInvalidInterfaceConformanceKindFieldFunctionMismatch(t *testing.T)
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.ConformanceError{}, errs[0])
 		})
@@ -1158,7 +1158,7 @@ func TestCheckInvalidInterfaceConformanceKindFunctionFieldMismatch(t *testing.T)
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.ConformanceError{}, errs[0])
 		})
@@ -1191,7 +1191,7 @@ func TestCheckInvalidInterfaceConformanceFieldKindLetVarMismatch(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.ConformanceError{}, errs[0])
 		})
@@ -1224,7 +1224,7 @@ func TestCheckInvalidInterfaceConformanceFieldKindVarLetMismatch(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.ConformanceError{}, errs[0])
 		})
@@ -1280,7 +1280,7 @@ func TestCheckInvalidInterfaceConformanceFunctionArgumentLabelMismatch(t *testin
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.ConformanceError{}, errs[0])
 		})
@@ -1318,7 +1318,7 @@ func TestCheckInvalidInterfaceConformanceRepetition(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.DuplicateConformanceError{}, errs[0])
 		})
@@ -1354,7 +1354,7 @@ func TestCheckInvalidInterfaceTypeAsValue(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 		})
@@ -1405,7 +1405,7 @@ func TestCheckInterfaceWithFieldHavingStructType(t *testing.T) {
 					require.NoError(t, err)
 
 				default:
-					errs := ExpectCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 
 					assert.IsType(t, &sema.InvalidResourceFieldError{}, errs[0])
 				}
@@ -1418,7 +1418,7 @@ func TestCheckInterfaceWithFieldHavingStructType(t *testing.T) {
 					require.NoError(t, err)
 
 				default:
-					errs := ExpectCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 
 					assert.IsType(t, &sema.FieldTypeNotStorableError{}, errs[0])
 				}
@@ -1556,7 +1556,7 @@ func TestCheckInvalidContractInterfaceConformanceMissingTypeRequirement(t *testi
         `,
 	)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ConformanceError{}, errs[0])
 }
@@ -1578,7 +1578,7 @@ func TestCheckInvalidContractInterfaceConformanceTypeRequirementKindMismatch(t *
         `,
 	)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.DeclarationKindMismatchError{}, errs[0])
 }
@@ -1600,7 +1600,7 @@ func TestCheckInvalidContractInterfaceConformanceTypeRequirementMismatch(t *test
         `,
 	)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[0])
 }
@@ -1662,7 +1662,7 @@ func TestCheckInvalidContractInterfaceTypeRequirementMissingFunction(t *testing.
         `,
 	)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ConformanceError{}, errs[0])
 }
@@ -1735,7 +1735,7 @@ func TestCheckInvalidContractInterfaceTypeRequirementConformance(t *testing.T) {
         `,
 	)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ConformanceError{}, errs[0])
 }
@@ -1764,7 +1764,7 @@ func TestCheckInvalidContractInterfaceTypeRequirementConformanceMissingFunction(
         `,
 	)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ConformanceError{}, errs[0])
 }
@@ -1796,7 +1796,7 @@ func TestCheckInvalidContractInterfaceTypeRequirementMissingConformance(t *testi
         `,
 	)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.MissingConformanceError{}, errs[0])
 }
@@ -1959,7 +1959,7 @@ func TestCheckInvalidInterfaceUseAsTypeSuggestion(t *testing.T) {
       let s: ((I): {Int: I}) = panic("")
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	require.IsType(t, &sema.InvalidInterfaceTypeError{}, errs[0])
 
@@ -2025,7 +2025,7 @@ func TestCheckInvalidMultipleInterfaceDefaultImplementation(t *testing.T) {
           }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.MultipleInterfaceDefaultImplementationsError{}, errs[0])
 	})
@@ -2063,7 +2063,7 @@ func TestCheckInvalidMultipleInterfaceDefaultImplementation(t *testing.T) {
           }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.MultipleInterfaceDefaultImplementationsError{}, errs[0])
 	})
@@ -2173,7 +2173,7 @@ func TestCheckMultipleInterfaceSingleInterfaceDefaultImplementation(t *testing.T
           }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.DefaultFunctionConflictError{}, errs[0])
 	})
@@ -2207,7 +2207,7 @@ func TestCheckMultipleInterfaceSingleInterfaceDefaultImplementation(t *testing.T
           }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.DefaultFunctionConflictError{}, errs[0])
 	})
@@ -2419,7 +2419,7 @@ func TestSpecialFunctionDefaultImplementationUsage(t *testing.T) {
           }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.SpecialFunctionDefaultImplementationError{}, errs[0])
 	})
@@ -2456,7 +2456,7 @@ func TestSpecialFunctionDefaultImplementationUsage(t *testing.T) {
           }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.SpecialFunctionDefaultImplementationError{}, errs[0])
 	})
@@ -2490,7 +2490,7 @@ func TestCheckInvalidInterfaceDefaultImplementationConcreteTypeUsage(t *testing.
           }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
 	})
@@ -2525,7 +2525,7 @@ func TestCheckInvalidInterfaceDefaultImplementationConcreteTypeUsage(t *testing.
           }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
 	})
@@ -2561,7 +2561,7 @@ func TestCheckInvalidInterfaceDefaultImplementationConcreteTypeUsage2(t *testing
           }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.AssignmentToConstantMemberError{}, errs[0])
 	})
@@ -2598,7 +2598,7 @@ func TestCheckInvalidInterfaceDefaultImplementationConcreteTypeUsage2(t *testing
           }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.AssignmentToConstantMemberError{}, errs[0])
 	})
@@ -2676,7 +2676,7 @@ func TestCheckBadStructInterface(t *testing.T) {
 
 	_, err := ParseAndCheck(t, "struct interface foo { contract h : foo { contract h { } contract h { contract h { } } } }")
 
-	errs := ExpectCheckerErrors(t, err, 12)
+	errs := RequireCheckerErrors(t, err, 12)
 
 	assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
 	assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[1])

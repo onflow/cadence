@@ -818,7 +818,7 @@ func defineIdentifierExpression() {
 				), nil
 
 			case keywordView:
-				if !p.mustToken(p.current, lexer.TokenIdentifier, keywordFun) {
+				if !p.isToken(p.current, lexer.TokenIdentifier, keywordFun) {
 					return nil, p.syntaxError(
 						"expected fun keyword, but got %s",
 						string(p.tokenSource(p.current)),
@@ -1076,7 +1076,18 @@ func parseArgument(p *parser) (*ast.Argument, error) {
 func defineNestedExpression() {
 	setExprNullDenotation(
 		lexer.TokenParenOpen,
-		func(p *parser, token lexer.Token) (ast.Expression, error) {
+		func(p *parser, startToken lexer.Token) (ast.Expression, error) {
+			p.skipSpaceAndComments(true)
+
+			// special case: parse a Void literal `()`
+			if p.current.Type == lexer.TokenParenClose {
+				// skip the closing parenthesis
+				p.next()
+
+				voidExpr := ast.NewVoidExpression(p.memoryGauge, startToken.StartPos, p.current.EndPos)
+				return voidExpr, nil
+			}
+
 			expression, err := parseExpression(p, lowestBindingPower)
 			if err != nil {
 				return nil, err

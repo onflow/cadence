@@ -62,7 +62,7 @@ func TestCheckInvalidGlobalConstantRedeclaration(t *testing.T) {
         let y = false
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.RedeclarationError{}, errs[0])
 }
@@ -78,7 +78,7 @@ func TestCheckInvalidGlobalFunctionRedeclaration(t *testing.T) {
         fun y() {}
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.RedeclarationError{}, errs[0])
 }
@@ -94,7 +94,7 @@ func TestCheckInvalidLocalRedeclaration(t *testing.T) {
         }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.RedeclarationError{}, errs[0])
 }
@@ -112,7 +112,7 @@ func TestCheckInvalidLocalFunctionRedeclaration(t *testing.T) {
         }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.RedeclarationError{}, errs[0])
 }
@@ -127,7 +127,7 @@ func TestCheckInvalidUnknownDeclaration(t *testing.T) {
        }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 }
@@ -140,7 +140,7 @@ func TestCheckInvalidUnknownDeclarationInGlobal(t *testing.T) {
        let x = y
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 }
@@ -153,7 +153,7 @@ func TestCheckInvalidUnknownDeclarationInGlobalAndUnknownType(t *testing.T) {
        let x: X = y
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	assert.Equal(t,
@@ -184,7 +184,7 @@ func TestCheckInvalidUnknownDeclarationCallInGlobal(t *testing.T) {
        let x = y()
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 }
@@ -200,7 +200,7 @@ func TestCheckInvalidRedeclarations(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.RedeclarationError{}, errs[0])
 	assert.IsType(t, &sema.RedeclarationError{}, errs[1])
@@ -214,7 +214,7 @@ func TestCheckInvalidConstantValue(t *testing.T) {
       let x: Bool = 1
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -229,7 +229,7 @@ func TestCheckInvalidUse(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 }
@@ -243,7 +243,7 @@ func TestCheckInvalidVariableDeclarationSecondValueNotDeclared(t *testing.T) {
        let z = y = x
    `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.NonResourceTypeError{}, errs[0])
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[1])
@@ -259,7 +259,7 @@ func TestCheckInvalidVariableDeclarationSecondValueCopyTransfers(t *testing.T) {
        let z = y = x
    `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NonResourceTypeError{}, errs[0])
 }
@@ -276,7 +276,7 @@ func TestCheckInvalidVariableDeclarationSecondValueNotTarget(t *testing.T) {
       let z = f() <- x
   `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidAssignmentTargetError{}, errs[0])
 }
@@ -293,7 +293,7 @@ func TestCheckInvalidVariableDeclarationSecondValueCopyTransferSecond(t *testing
      let z <- y = x
    `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.IncorrectTransferOperationError{}, errs[0])
 }
@@ -310,7 +310,7 @@ func TestCheckInvalidVariableDeclarationSecondValueCopyTransferFirst(t *testing.
      let z = y <- x
    `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.IncorrectTransferOperationError{}, errs[0])
 }
@@ -327,7 +327,7 @@ func TestCheckInvalidVariableDeclarationSecondValueConstant(t *testing.T) {
      let z <- y <- x
    `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.AssignmentToConstantError{}, errs[0])
 }
@@ -345,7 +345,7 @@ func TestCheckInvalidVariableDeclarationSecondValueTypeMismatch(t *testing.T) {
      let z <- y <- x
    `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -364,7 +364,7 @@ func TestCheckInvalidVariableDeclarationSecondValueUseAfterInvalidation(t *testi
      let r <- x
    `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 }
@@ -519,7 +519,7 @@ func TestCheckInvalidTopLevelContractRestriction(t *testing.T) {
 				},
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.InvalidTopLevelDeclarationError{}, errs[0])
 		})
@@ -586,7 +586,7 @@ func TestCheckInvalidLocalDeclarations(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.InvalidDeclarationError{}, errs[0])
 
@@ -605,7 +605,7 @@ func TestCheckVariableDeclarationTypeAnnotationRequired(t *testing.T) {
 		_, err := ParseAndCheck(t, `
           let a = []
 	    `)
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.TypeAnnotationRequiredError{}, errs[0])
 	})
@@ -617,7 +617,7 @@ func TestCheckVariableDeclarationTypeAnnotationRequired(t *testing.T) {
 		_, err := ParseAndCheck(t, `
           let d = {}
 	    `)
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.TypeAnnotationRequiredError{}, errs[0])
 	})
@@ -647,7 +647,7 @@ func TestCheckBuiltinRedeclaration(t *testing.T) {
 						),
 					)
 
-					errs := ExpectCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 
 					assert.IsType(t, &sema.RedeclarationError{}, errs[0])
 				})
@@ -663,7 +663,7 @@ func TestCheckBuiltinRedeclaration(t *testing.T) {
 						),
 					)
 
-					errs := ExpectCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 
 					assert.IsType(t, &sema.RedeclarationError{}, errs[0])
 				})
@@ -679,7 +679,7 @@ func TestCheckUint64RedeclarationFails(t *testing.T) {
 
 	_, err := ParseAndCheck(t, "let UInt64 = UInt64 ( 0b0 )")
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.RedeclarationError{}, errs[0])
 }
@@ -689,7 +689,7 @@ func TestCheckTypeRedeclarationFails(t *testing.T) {
 
 	_, err := ParseAndCheck(t, "let Type = Type")
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.RedeclarationError{}, errs[0])
 }

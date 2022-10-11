@@ -29,7 +29,6 @@ import (
 // An VariableActivation is a map of strings to variables.
 // It is used to represent an active scope in a program,
 // i.e. it is used as a symbol table during semantic analysis.
-//
 type VariableActivation struct {
 	entries        *StringVariableOrderedMap
 	Depth          int
@@ -41,7 +40,6 @@ type EndPositionGetter func(common.MemoryGauge) ast.Position
 
 // NewVariableActivation returns as new activation with the given parent.
 // The parent may be nil.
-//
 func NewVariableActivation(parent *VariableActivation) *VariableActivation {
 	activation := &VariableActivation{}
 	activation.SetParent(parent)
@@ -50,7 +48,6 @@ func NewVariableActivation(parent *VariableActivation) *VariableActivation {
 
 // SetParent sets the parent of this activation to the given parent
 // and updates the depth.
-//
 func (a *VariableActivation) SetParent(parent *VariableActivation) {
 	a.Parent = parent
 
@@ -63,7 +60,6 @@ func (a *VariableActivation) SetParent(parent *VariableActivation) {
 
 // Find returns the variable for a given name in the activation.
 // It returns nil if no variable is found.
-//
 func (a *VariableActivation) Find(name string) *Variable {
 
 	current := a
@@ -83,7 +79,6 @@ func (a *VariableActivation) Find(name string) *Variable {
 }
 
 // Set sets the given variable.
-//
 func (a *VariableActivation) Set(name string, variable *Variable) {
 	if a.entries == nil {
 		a.entries = &StringVariableOrderedMap{}
@@ -93,7 +88,6 @@ func (a *VariableActivation) Set(name string, variable *Variable) {
 }
 
 // Clear removes all variables from this activation.
-//
 func (a *VariableActivation) Clear() {
 	a.LeaveCallbacks = nil
 
@@ -106,7 +100,6 @@ func (a *VariableActivation) Clear() {
 
 // ForEach calls the given function for each name-variable pair in the activation.
 // It can be used to iterate over all entries of the activation.
-//
 func (a *VariableActivation) ForEach(cb func(string, *Variable) error) error {
 
 	activation := a
@@ -182,7 +175,6 @@ func getVariableActivation() *VariableActivation {
 //
 // The current / most nested activation record can be found
 // at the top of the stack (see function `Current`).
-//
 type VariableActivations struct {
 	activations []*VariableActivation
 }
@@ -196,7 +188,6 @@ func NewVariableActivations(parent *VariableActivation) *VariableActivations {
 // pushNewWithParent pushes a new empty activation
 // to the top of the activation stack.
 // The new activation has the given parent as its parent.
-//
 func (a *VariableActivations) pushNewWithParent(parent *VariableActivation) *VariableActivation {
 	activation := getVariableActivation()
 	activation.SetParent(parent)
@@ -206,7 +197,6 @@ func (a *VariableActivations) pushNewWithParent(parent *VariableActivation) *Var
 
 // push pushes the given activation
 // onto the top of the activation stack.
-//
 func (a *VariableActivations) push(activation *VariableActivation) {
 	a.activations = append(
 		a.activations,
@@ -217,14 +207,12 @@ func (a *VariableActivations) push(activation *VariableActivation) {
 // Enter pushes a new empty activation
 // to the top of the activation stack.
 // The new activation has the current activation as its parent.
-//
 func (a *VariableActivations) Enter() {
 	a.pushNewWithParent(a.Current())
 }
 
 // Leave pops the top-most (current) activation
 // from the top of the activation stack.
-//
 func (a *VariableActivations) Leave(getEndPosition func(common.MemoryGauge) ast.Position) {
 	count := len(a.activations)
 	if count < 1 {
@@ -241,7 +229,6 @@ func (a *VariableActivations) Leave(getEndPosition func(common.MemoryGauge) ast.
 }
 
 // Set sets the variable in the current activation.
-//
 func (a *VariableActivations) Set(name string, variable *Variable) {
 	current := a.Current()
 	// create the first scope if there is no scope
@@ -254,7 +241,6 @@ func (a *VariableActivations) Set(name string, variable *Variable) {
 // Find returns the variable for a given name in the current activation.
 // It returns nil if no variable is found
 // or if there is no current activation.
-//
 func (a *VariableActivations) Find(name string) *Variable {
 
 	current := a.Current()
@@ -266,7 +252,6 @@ func (a *VariableActivations) Find(name string) *Variable {
 }
 
 // Depth returns the depth (size) of the activation stack.
-//
 func (a *VariableActivations) Depth() int {
 	return len(a.activations)
 }
@@ -283,7 +268,7 @@ type variableDeclaration struct {
 	allowOuterScopeShadowing bool
 }
 
-func (a *VariableActivations) declare(declaration variableDeclaration) (variable *Variable, err error) {
+func (a *VariableActivations) declare(declaration variableDeclaration) (*Variable, error) {
 
 	depth := a.Depth()
 
@@ -298,21 +283,18 @@ func (a *VariableActivations) declare(declaration variableDeclaration) (variable
 			existingVariable.ActivationDepth == depth ||
 			existingVariable.ActivationDepth == 0) {
 
-		err = &RedeclarationError{
+		return nil, &RedeclarationError{
 			Kind:        declaration.kind,
 			Name:        declaration.identifier,
 			Pos:         declaration.pos,
 			PreviousPos: existingVariable.Pos,
 		}
-
-		// NOTE: Don't return if there is an error,
-		// still declare the variable and return it
 	}
 
 	// A variable with this name is not yet declared in the current scope,
 	// declare it.
 
-	variable = &Variable{
+	variable := &Variable{
 		Identifier:      declaration.identifier,
 		Access:          declaration.access,
 		DeclarationKind: declaration.kind,
@@ -324,7 +306,7 @@ func (a *VariableActivations) declare(declaration variableDeclaration) (variable
 		DocString:       declaration.docString,
 	}
 	a.Set(declaration.identifier, variable)
-	return variable, err
+	return variable, nil
 }
 
 func (a *VariableActivations) DeclareValue(declaration ValueDeclaration) (*Variable, error) {
@@ -406,7 +388,6 @@ func (a *VariableActivations) ForEachVariableDeclaredInAndBelow(depth int, f fun
 // Current returns the current / most nested activation,
 // which can be found at the top of the stack.
 // It returns nil if there is no active activation.
-//
 func (a *VariableActivations) Current() *VariableActivation {
 	count := len(a.activations)
 	if count < 1 {

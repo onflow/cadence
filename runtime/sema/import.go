@@ -32,7 +32,6 @@ type Import interface {
 }
 
 // ImportElement
-//
 type ImportElement struct {
 	DeclarationKind common.DeclarationKind
 	Access          ast.Access
@@ -41,7 +40,6 @@ type ImportElement struct {
 }
 
 // ElaborationImport
-//
 type ElaborationImport struct {
 	Elaboration *Elaboration
 }

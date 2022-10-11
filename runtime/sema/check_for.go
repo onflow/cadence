@@ -83,7 +83,7 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) (_ struct
 		allowOuterScopeShadowing: false,
 	})
 	checker.report(err)
-	if checker.PositionInfo != nil {
+	if checker.PositionInfo != nil && variable != nil {
 		checker.recordVariableDeclarationOccurrence(identifier, variable)
 	}
 
@@ -99,7 +99,7 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) (_ struct
 			allowOuterScopeShadowing: false,
 		})
 		checker.report(err)
-		if checker.PositionInfo != nil {
+		if checker.PositionInfo != nil && indexVariable != nil {
 			checker.recordVariableDeclarationOccurrence(index, indexVariable)
 		}
 	}
@@ -109,15 +109,13 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) (_ struct
 	// returns are not definite, but only potential.
 
 	_ = checker.checkPotentiallyUnevaluated(func() Type {
-		checker.functionActivations.WithLoop(func() {
+		checker.functionActivations.Current().WithLoop(func() {
 			checker.checkBlock(statement.Block)
 		})
 
 		// ignored
 		return nil
 	})
-
-	checker.reportResourceUsesInLoop(statement.StartPos, statement.EndPosition(checker.memoryGauge))
 
 	return
 }

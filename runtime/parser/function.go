@@ -25,7 +25,7 @@ import (
 
 func parsePurityAnnotation(p *parser) ast.FunctionPurity {
 	// get the purity annotation (if one exists) and skip it
-	if p.mustToken(p.current, lexer.TokenIdentifier, keywordView) {
+	if p.isToken(p.current, lexer.TokenIdentifier, keywordView) {
 		p.next()
 		p.skipSpaceAndComments(true)
 		return ast.FunctionPurityView

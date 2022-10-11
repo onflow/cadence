@@ -415,7 +415,7 @@ func (checker *Checker) visitMemberExpressionAssignment(
 						},
 					)
 
-				} else if _, ok := functionActivation.InitializationInfo.FieldMembers.Get(accessedSelfMember); !ok {
+				} else if !functionActivation.InitializationInfo.FieldMembers.Contains(accessedSelfMember) {
 					// This member is not supposed to be initialized
 
 					reportAssignmentToConstant()

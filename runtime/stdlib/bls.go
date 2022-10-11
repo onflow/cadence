@@ -121,17 +121,17 @@ var blsAggregatePublicKeysFunction = interpreter.NewUnmeteredHostFunctionValue(
 		}
 
 		inter := invocation.Interpreter
-		getLocationRange := invocation.GetLocationRange
+		locationRange := invocation.LocationRange
 
 		inter.ExpectType(
 			publicKeys,
 			sema.PublicKeyArrayType,
-			getLocationRange,
+			locationRange,
 		)
 
 		return inter.Config.BLSAggregatePublicKeysHandler(
 			inter,
-			getLocationRange,
+			locationRange,
 			publicKeys,
 		)
 	},
@@ -146,17 +146,17 @@ var blsAggregateSignaturesFunction = interpreter.NewUnmeteredHostFunctionValue(
 		}
 
 		inter := invocation.Interpreter
-		getLocationRange := invocation.GetLocationRange
+		locationRange := invocation.LocationRange
 
 		inter.ExpectType(
 			signatures,
 			sema.ByteArrayArrayType,
-			getLocationRange,
+			locationRange,
 		)
 
 		return inter.Config.BLSAggregateSignaturesHandler(
 			inter,
-			getLocationRange,
+			locationRange,
 			signatures,
 		)
 	},

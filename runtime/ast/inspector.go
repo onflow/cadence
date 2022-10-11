@@ -37,22 +37,22 @@ package ast
 // do not use Inspector for one-off traversals.
 //
 // There are four orthogonal features in a traversal:
-//  1 type filtering
-//  2 pruning
-//  3 postorder calls to f
-//  4 stack
+//
+//	1 type filtering
+//	2 pruning
+//	3 postorder calls to f
+//	4 stack
 //
 // Rather than offer all of them in the API,
 // only a few combinations are exposed:
-// - Preorder is the fastest and has the fewest features,
-//   but is the most commonly needed traversal.
-// - Elements and WithStack both provide pruning and postorder calls,
-//   even though few clients need it, because supporting two versions
-//   is not justified.
+//   - Preorder is the fastest and has the fewest features,
+//     but is the most commonly needed traversal.
+//   - Elements and WithStack both provide pruning and postorder calls,
+//     even though few clients need it, because supporting two versions
+//     is not justified.
 //
 // More combinations could be supported  by expressing them as wrappers
 // around a more generic traversal, but likely has worse performance.
-//
 type Inspector struct {
 	events []event
 }
@@ -78,7 +78,6 @@ type event struct {
 //
 // Preorder is almost twice as fast as Elements,
 // because it avoids postorder calls to f, and the pruning check.
-//
 func (in *Inspector) Preorder(types []Element, f func(Element)) {
 	mask := maskOf(types)
 	for _, ev := range in.events {
@@ -96,7 +95,6 @@ func (in *Inspector) Preorder(types []Element, f func(Element)) {
 //
 // The types argument, if non-empty, enables type-based filtering of events.
 // The function f if is called only for elements whose type matches an element of the types slice.
-//
 func (in *Inspector) Elements(types []Element, f func(element Element, push bool) (proceed bool)) {
 	mask := maskOf(types)
 	for i := 0; i < len(in.events); {
@@ -122,7 +120,6 @@ func (in *Inspector) Elements(types []Element, f func(element Element, push bool
 // the current traversal stack.
 //
 // The stack's first element is the outermost element, its last is the innermost.
-//
 func (in *Inspector) WithStack(types []Element, f func(element Element, push bool, stack []Element) (proceed bool)) {
 	mask := maskOf(types)
 	var stack []Element

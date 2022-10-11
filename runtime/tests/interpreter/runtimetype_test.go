@@ -291,7 +291,7 @@ func TestInterpretDictionaryType(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		interpreter.NilValue{},
+		interpreter.Nil,
 		inter.Globals["f"].GetValue(),
 	)
 }
@@ -341,12 +341,12 @@ func TestInterpretCompositeType(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		interpreter.NilValue{},
+		interpreter.Nil,
 		inter.Globals["c"].GetValue(),
 	)
 
 	assert.Equal(t,
-		interpreter.NilValue{},
+		interpreter.Nil,
 		inter.Globals["d"].GetValue(),
 	)
 
@@ -425,12 +425,12 @@ func TestInterpretInterfaceType(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		interpreter.NilValue{},
+		interpreter.Nil,
 		inter.Globals["c"].GetValue(),
 	)
 
 	assert.Equal(t,
-		interpreter.NilValue{},
+		interpreter.Nil,
 		inter.Globals["d"].GetValue(),
 	)
 }
@@ -650,27 +650,27 @@ func TestInterpretRestrictedType(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		interpreter.NilValue{},
+		interpreter.Nil,
 		inter.Globals["c"].GetValue(),
 	)
 
 	assert.Equal(t,
-		interpreter.NilValue{},
+		interpreter.Nil,
 		inter.Globals["d"].GetValue(),
 	)
 
 	assert.Equal(t,
-		interpreter.NilValue{},
+		interpreter.Nil,
 		inter.Globals["e"].GetValue(),
 	)
 
 	assert.Equal(t,
-		interpreter.NilValue{},
+		interpreter.Nil,
 		inter.Globals["f"].GetValue(),
 	)
 
 	assert.Equal(t,
-		interpreter.NilValue{},
+		interpreter.Nil,
 		inter.Globals["g"].GetValue(),
 	)
 
@@ -741,7 +741,7 @@ func TestInterpretCapabilityType(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		interpreter.NilValue{},
+		interpreter.Nil,
 		inter.Globals["d"].GetValue(),
 	)
 

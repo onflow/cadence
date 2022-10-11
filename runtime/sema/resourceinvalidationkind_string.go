@@ -10,13 +10,15 @@ func _() {
 	var x [1]struct{}
 	_ = x[ResourceInvalidationKindUnknown-0]
 	_ = x[ResourceInvalidationKindMoveDefinite-1]
-	_ = x[ResourceInvalidationKindMoveTemporary-2]
-	_ = x[ResourceInvalidationKindDestroy-3]
+	_ = x[ResourceInvalidationKindMovePotential-2]
+	_ = x[ResourceInvalidationKindMoveTemporary-3]
+	_ = x[ResourceInvalidationKindDestroyDefinite-4]
+	_ = x[ResourceInvalidationKindDestroyPotential-5]
 }
 
-const _ResourceInvalidationKind_name = "ResourceInvalidationKindUnknownResourceInvalidationKindMoveDefiniteResourceInvalidationKindMoveTemporaryResourceInvalidationKindDestroy"
+const _ResourceInvalidationKind_name = "ResourceInvalidationKindUnknownResourceInvalidationKindMoveDefiniteResourceInvalidationKindMovePotentialResourceInvalidationKindMoveTemporaryResourceInvalidationKindDestroyDefiniteResourceInvalidationKindDestroyPotential"
 
-var _ResourceInvalidationKind_index = [...]uint8{0, 31, 67, 104, 135}
+var _ResourceInvalidationKind_index = [...]uint8{0, 31, 67, 104, 141, 180, 220}
 
 func (i ResourceInvalidationKind) String() string {
 	if i >= ResourceInvalidationKind(len(_ResourceInvalidationKind_index)-1) {
