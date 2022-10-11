@@ -24,11 +24,13 @@ import (
 )
 
 func (checker *Checker) VisitVariableDeclaration(declaration *ast.VariableDeclaration) (_ struct{}) {
-	checker.visitVariableDeclaration(declaration, false)
+	declarationType := checker.visitVariableDeclarationValues(declaration, false)
+	checker.declareVariableDeclaration(declaration, declarationType)
+
 	return
 }
 
-func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclaration, isOptionalBinding bool) {
+func (checker *Checker) visitVariableDeclarationValues(declaration *ast.VariableDeclaration, isOptionalBinding bool) Type {
 
 	checker.checkDeclarationAccessModifier(
 		declaration.Access,
@@ -177,6 +179,10 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 			SecondValueType: secondValueType,
 		}
 
+	return declarationType
+}
+
+func (checker *Checker) declareVariableDeclaration(declaration *ast.VariableDeclaration, declarationType Type) {
 	// Finally, declare the variable in the current value activation
 
 	identifier := declaration.Identifier.Identifier
