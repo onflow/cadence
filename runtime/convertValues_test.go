@@ -49,6 +49,7 @@ func TestExportValue(t *testing.T) {
 		// so provide an optional helper function to construct the value
 		valueFactory func(*interpreter.Interpreter) interpreter.Value
 		expected     cadence.Value
+		invalid      bool
 	}
 
 	test := func(tt exportTest) {
@@ -69,7 +70,8 @@ func TestExportValue(t *testing.T) {
 				interpreter.EmptyLocationRange,
 				seenReferences{},
 			)
-			if tt.expected == nil {
+
+			if tt.invalid {
 				RequireError(t, err)
 				if tt.expected == nil {
 					assertInternalError(t, err)
@@ -372,17 +374,17 @@ func TestExportValue(t *testing.T) {
 			},
 		},
 		{
-			label:    "Interpreted Function (invalid)",
+			label:    "Interpreted Function",
 			value:    &interpreter.InterpretedFunctionValue{},
 			expected: nil,
 		},
 		{
-			label:    "Host Function (invalid)",
+			label:    "Host Function",
 			value:    &interpreter.HostFunctionValue{},
 			expected: nil,
 		},
 		{
-			label:    "Bound Function (invalid)",
+			label:    "Bound Function",
 			value:    interpreter.BoundFunctionValue{},
 			expected: nil,
 		},
@@ -484,7 +486,7 @@ func TestExportValue(t *testing.T) {
 					),
 				)
 			},
-			expected: nil,
+			invalid: true,
 		},
 	} {
 		test(tt)

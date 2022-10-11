@@ -2514,11 +2514,17 @@ func TestRuntimeParseAndCheckProgram(t *testing.T) {
 	})
 }
 
-func TestRuntimeScriptReturnTypeNotReturnableError(t *testing.T) {
+func TestRuntimeScriptReturnSpecial(t *testing.T) {
 
 	t.Parallel()
 
-	test := func(t *testing.T, code string, expected cadence.Value) {
+	type testCase struct {
+		code     string
+		expected cadence.Value
+		invalid  bool
+	}
+
+	test := func(t *testing.T, test testCase) {
 
 		runtime := newTestInterpreterRuntime()
 
@@ -2531,42 +2537,79 @@ func TestRuntimeScriptReturnTypeNotReturnableError(t *testing.T) {
 			},
 		}
 
-		nextTransactionLocation := newTransactionLocationGenerator()
-
 		actual, err := runtime.ExecuteScript(
 			Script{
-				Source: []byte(code),
+				Source: []byte(test.code),
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
+				Location:  common.ScriptLocation{},
 			},
 		)
 
-		if expected == nil {
+		if test.invalid {
 			RequireError(t, err)
 
 			var subErr *InvalidScriptReturnTypeError
 			require.ErrorAs(t, err, &subErr)
 		} else {
 			require.NoError(t, err)
-			require.Equal(t, expected, actual)
+			require.Equal(t, test.expected, actual)
 		}
 	}
 
-	t.Run("function", func(t *testing.T) {
+	t.Run("interpreted function", func(t *testing.T) {
 
 		t.Parallel()
 
 		test(t,
-			`
-              pub fun main(): ((): Int) {
-                  return fun (): Int {
-                      return 0
+			testCase{
+				code: `
+                  pub fun main(): AnyStruct {
+                      return fun (): Int {
+                          return 0
+                      }
                   }
-              }
-            `,
-			nil,
+                `,
+				expected: nil,
+			},
+		)
+	})
+
+	t.Run("host function", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(t,
+			testCase{
+				code: `
+                  pub fun main(): AnyStruct {
+                      return panic
+                  }
+                `,
+				expected: nil,
+			},
+		)
+	})
+
+	t.Run("bound function", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(t,
+			testCase{
+				code: `
+                  pub struct S {
+                      pub fun f() {}
+                  }
+
+                  pub fun main(): AnyStruct {
+                      let s = S()
+                      return s.f
+                  }
+                `,
+				expected: nil,
+			},
 		)
 	})
 
@@ -2575,13 +2618,15 @@ func TestRuntimeScriptReturnTypeNotReturnableError(t *testing.T) {
 		t.Parallel()
 
 		test(t,
-			`
-              pub fun main(): &Address {
-                  let a: Address = 0x1
-                  return &a as &Address
-              }
-            `,
-			cadence.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
+			testCase{
+				code: `
+                  pub fun main(): AnyStruct {
+                      let a: Address = 0x1
+                      return &a as &Address
+                  }
+                `,
+				expected: cadence.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
+			},
 		)
 	})
 
@@ -2590,110 +2635,27 @@ func TestRuntimeScriptReturnTypeNotReturnableError(t *testing.T) {
 		t.Parallel()
 
 		test(t,
-			`
-              pub fun main(): [&AnyStruct] {
-                  let refs: [&AnyStruct] = []
-                  refs.append(&refs as &AnyStruct)
-                  return refs
-              }
-            `,
-			cadence.NewArray([]cadence.Value{
-				cadence.NewArray([]cadence.Value{
-					nil,
+			testCase{
+				code: `
+                  pub fun main(): AnyStruct {
+                      let refs: [&AnyStruct] = []
+                      refs.append(&refs as &AnyStruct)
+                      return refs
+                  }
+                `,
+				expected: cadence.NewArray([]cadence.Value{
+					cadence.NewArray([]cadence.Value{
+						nil,
+					}).WithType(cadence.VariableSizedArrayType{
+						ElementType: cadence.ReferenceType{
+							Type: cadence.AnyStructType{},
+						},
+					}),
 				}).WithType(cadence.VariableSizedArrayType{
 					ElementType: cadence.ReferenceType{
 						Type: cadence.AnyStructType{},
 					},
 				}),
-			}).WithType(cadence.VariableSizedArrayType{
-				ElementType: cadence.ReferenceType{
-					Type: cadence.AnyStructType{},
-				},
-			}),
-		)
-	})
-
-	t.Run("storage path", func(t *testing.T) {
-
-		t.Parallel()
-
-		test(t,
-			`
-              pub fun main(): StoragePath {
-                  return /storage/foo
-              }
-            `,
-			cadence.Path{
-				Domain:     "storage",
-				Identifier: "foo",
-			},
-		)
-	})
-
-	t.Run("public path", func(t *testing.T) {
-
-		t.Parallel()
-
-		test(t,
-			`
-              pub fun main(): PublicPath {
-                  return /public/foo
-              }
-            `,
-			cadence.Path{
-				Domain:     "public",
-				Identifier: "foo",
-			},
-		)
-	})
-
-	t.Run("private path", func(t *testing.T) {
-
-		t.Parallel()
-
-		test(t,
-			`
-              pub fun main(): PrivatePath {
-                  return /private/foo
-              }
-            `,
-			cadence.Path{
-				Domain:     "private",
-				Identifier: "foo",
-			},
-		)
-	})
-
-	t.Run("capability path", func(t *testing.T) {
-
-		t.Parallel()
-
-		test(t,
-			`
-              pub fun main(): CapabilityPath {
-                  return /public/foo
-              }
-            `,
-			cadence.Path{
-				Domain:     "public",
-				Identifier: "foo",
-			},
-		)
-	})
-
-	t.Run("path", func(t *testing.T) {
-
-		t.Parallel()
-
-		test(t,
-			`
-              pub fun main(): Path {
-                  return /storage/foo
-              }
-            `,
-			cadence.Path{
-				Domain:     "storage",
-				Identifier: "foo",
 			},
 		)
 	})
