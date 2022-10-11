@@ -117,19 +117,19 @@ func (checker *Checker) checkAssignment(
 // pointed to by the reference may have come from. Similarly, we can never safely assign
 // to a resource; because resources are moved instead of copied, we cannot currently
 // track the origin of a write target when it is a resource. Consider:
-// -----------------------------------------------------------------------------
-// pub resource R {
-//   pub(set) var x: Int
-//   init(x: Int) {
-//     self.x = x
-//   }
-//  }
 //
-// view fun foo(_ f: @R): @R {
-//   let b <- f
-//   b.x = 3 // b was created in the current scope but modifies the resource value
-//   return <-b
-// }
+//	pub resource R {
+//	  pub(set) var x: Int
+//	  init(x: Int) {
+//	    self.x = x
+//	  }
+//	 }
+//
+//	view fun foo(_ f: @R): @R {
+//	  let b <- f
+//	  b.x = 3 // b was created in the current scope but modifies the resource value
+//	  return <-b
+//	}
 func isWriteableInViewContext(t Type) bool {
 	_, isReference := t.(*ReferenceType)
 	return !isReference && !t.IsResourceType()
