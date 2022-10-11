@@ -1202,7 +1202,12 @@ func (e *ConformanceError) ErrorNotes() (notes []errors.ErrorNote) {
 }
 
 func (e *ConformanceError) SecondaryError() string {
-	return fmt.Sprintf("does not confirm to nested interface requirement `%s`", e.NestedInterfaceType)
+	// If the conformance mismatch is at the first level, then no secondary error.
+	if e.NestedInterfaceType == e.InterfaceType {
+		return ""
+	}
+
+	return fmt.Sprintf("does not conform to nested interface requirement `%s`", e.NestedInterfaceType)
 }
 
 // MemberMismatchNote
@@ -1333,7 +1338,6 @@ func (e *DefaultFunctionConflictError) EndPosition(memoryGauge common.MemoryGaug
 }
 
 // InterfaceMemberConflictError
-//
 type InterfaceMemberConflictError struct {
 	InterfaceType            *InterfaceType
 	ConflictingInterfaceType *InterfaceType

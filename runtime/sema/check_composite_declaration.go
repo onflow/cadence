@@ -592,63 +592,65 @@ func (checker *Checker) declareCompositeMembersAndValue(
 
 			var inheritedMembers StringMemberOrderedMap
 
-			compositeType.ExplicitInterfaceConformances.Foreach(func(_, compositeTypeConformance *InterfaceType) bool {
-				conformanceNestedTypes := compositeTypeConformance.GetNestedTypes()
+			compositeType.ExplicitInterfaceConformances.ForeachDistinct(
+				func(_, compositeTypeConformance *InterfaceType) bool {
+					conformanceNestedTypes := compositeTypeConformance.GetNestedTypes()
 
-				nestedType, ok := conformanceNestedTypes.Get(nestedTypeIdentifier)
-				if !ok {
-					return true
-				}
-
-				typeRequirement, ok := nestedType.(*CompositeType)
-				if !ok {
-					return true
-				}
-
-				nestedCompositeType.addImplicitTypeRequirementConformance(typeRequirement)
-
-				// Add default functions
-
-				typeRequirement.Members.Foreach(func(memberName string, member *Member) {
-
-					if member.Predeclared ||
-						member.DeclarationKind != common.DeclarationKindFunction {
-
-						return
+					nestedType, ok := conformanceNestedTypes.Get(nestedTypeIdentifier)
+					if !ok {
+						return true
 					}
 
-					_, existing := nestedCompositeType.Members.Get(memberName)
-					if existing {
-						return
+					typeRequirement, ok := nestedType.(*CompositeType)
+					if !ok {
+						return true
 					}
 
-					if _, ok := inheritedMembers.Get(memberName); ok {
-						if member.HasImplementation {
-							checker.report(
-								&MultipleInterfaceDefaultImplementationsError{
-									CompositeType: nestedCompositeType,
-									Member:        member,
-								},
-							)
-						} else {
-							checker.report(
-								&DefaultFunctionConflictError{
-									CompositeType: nestedCompositeType,
-									Member:        member,
-								},
-							)
+					nestedCompositeType.addImplicitTypeRequirementConformance(typeRequirement)
+
+					// Add default functions
+
+					typeRequirement.Members.Foreach(func(memberName string, member *Member) {
+
+						if member.Predeclared ||
+							member.DeclarationKind != common.DeclarationKindFunction {
+
+							return
 						}
 
-						return
-					}
+						_, existing := nestedCompositeType.Members.Get(memberName)
+						if existing {
+							return
+						}
 
-					if member.HasImplementation {
-						inheritedMembers.Set(memberName, member)
-					}
-				})
+						if _, ok := inheritedMembers.Get(memberName); ok {
+							if member.HasImplementation {
+								checker.report(
+									&MultipleInterfaceDefaultImplementationsError{
+										CompositeType: nestedCompositeType,
+										Member:        member,
+									},
+								)
+							} else {
+								checker.report(
+									&DefaultFunctionConflictError{
+										CompositeType: nestedCompositeType,
+										Member:        member,
+									},
+								)
+							}
 
-				return true
-			})
+							return
+						}
+
+						if member.HasImplementation {
+							inheritedMembers.Set(memberName, member)
+						}
+					})
+
+					return true
+				},
+			)
 
 			inheritedMembers.Foreach(func(memberName string, member *Member) {
 				inheritedMember := *member
@@ -1209,21 +1211,17 @@ func (checker *Checker) checkConformanceKindMatch(
 		return
 	}
 
-	var compositeKindMismatchIdentifier ast.Identifier
-
-	reportError := false
+	var compositeKindMismatchIdentifier *ast.Identifier
 
 	conformances := compositeDeclaration.InterfaceConformances()
 
 	if len(conformances) == 0 {
 		// This is for type requirements
-		compositeKindMismatchIdentifier = *compositeDeclaration.DeclarationIdentifier()
-		reportError = true
+		compositeKindMismatchIdentifier = compositeDeclaration.DeclarationIdentifier()
 	} else {
 		for _, conformance := range conformances {
 			if conformance.Identifier.Identifier == interfaceConformance.Identifier {
-				compositeKindMismatchIdentifier = conformance.Identifier
-				reportError = true
+				compositeKindMismatchIdentifier = &conformance.Identifier
 				break
 			}
 		}
@@ -1233,15 +1231,17 @@ func (checker *Checker) checkConformanceKindMatch(
 		// Hence, no need to report an error here again.
 	}
 
-	if reportError {
-		checker.report(
-			&CompositeKindMismatchError{
-				ExpectedKind: compositeType.GetCompositeKind(),
-				ActualKind:   interfaceConformance.CompositeKind,
-				Range:        ast.NewRangeFromPositioned(checker.memoryGauge, compositeKindMismatchIdentifier),
-			},
-		)
+	if compositeKindMismatchIdentifier == nil {
+		return
 	}
+
+	checker.report(
+		&CompositeKindMismatchError{
+			ExpectedKind: compositeType.GetCompositeKind(),
+			ActualKind:   interfaceConformance.CompositeKind,
+			Range:        ast.NewRangeFromPositioned(checker.memoryGauge, compositeKindMismatchIdentifier),
+		},
+	)
 }
 
 // TODO: return proper error
@@ -1428,31 +1428,35 @@ func (checker *Checker) checkTypeRequirement(
 	// Check that the composite declaration declares at least the conformances
 	// that the type requirement stated
 
-	requiredCompositeType.ExplicitInterfaceConformances.Foreach(func(_, requiredConformance *InterfaceType) bool {
-		found := false
+	requiredCompositeType.ExplicitInterfaceConformances.ForeachDistinct(
+		func(_, requiredConformance *InterfaceType) bool {
+			found := false
 
-		declaredCompositeType.ExplicitInterfaceConformances.Foreach(func(_, conformance *InterfaceType) bool {
-			if conformance == requiredConformance {
-				found = true
-				// stop further checking
-				return false
+			declaredCompositeType.ExplicitInterfaceConformances.ForeachDistinct(
+				func(_, conformance *InterfaceType) bool {
+					if conformance == requiredConformance {
+						found = true
+						// stop further checking
+						return false
+					}
+
+					return true
+				},
+			)
+
+			if !found {
+				checker.report(
+					&MissingConformanceError{
+						CompositeType: declaredCompositeType,
+						InterfaceType: requiredConformance,
+						Range:         ast.NewRangeFromPositioned(checker.memoryGauge, compositeDeclaration.Identifier),
+					},
+				)
 			}
 
 			return true
-		})
-
-		if !found {
-			checker.report(
-				&MissingConformanceError{
-					CompositeType: declaredCompositeType,
-					InterfaceType: requiredConformance,
-					Range:         ast.NewRangeFromPositioned(checker.memoryGauge, compositeDeclaration.Identifier),
-				},
-			)
-		}
-
-		return true
-	})
+		},
+	)
 
 	// Check the conformance of the composite to the type requirement
 	// like a top-level composite declaration to an interface type

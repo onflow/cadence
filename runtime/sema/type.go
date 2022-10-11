@@ -3546,7 +3546,7 @@ func (t *CompositeType) initializeExplicitInterfaceConformanceSet() {
 
 		// Interfaces can also have conformances.
 		// So add conformances' conformance recursively.
-		t.ExplicitInterfaceConformances.Foreach(func(_, conformance *InterfaceType) bool {
+		t.ExplicitInterfaceConformances.ForeachDistinct(func(_, conformance *InterfaceType) bool {
 			t.explicitInterfaceConformanceSet.Add(conformance)
 			return true
 		})
@@ -3871,7 +3871,6 @@ type InterfaceConformances []*InterfaceType
 // Foreach iterates over the conformances and its nested conformances in a breadth-first manner.
 // `conformance` refers to the currently visiting conformance.
 // `origin` refers to root of the current conformance chain.
-//
 func (c InterfaceConformances) Foreach(f func(origin, conformance *InterfaceType) bool) {
 	for _, conformance := range c {
 		if !f(conformance, conformance) {
@@ -4330,7 +4329,7 @@ func (t *InterfaceType) initializeExplicitInterfaceConformanceSet() {
 
 		// Interfaces can also have conformances.
 		// So add conformances' conformance recursively.
-		t.ExplicitInterfaceConformances.Foreach(func(_, conformance *InterfaceType) bool {
+		t.ExplicitInterfaceConformances.ForeachDistinct(func(_, conformance *InterfaceType) bool {
 			t.explicitInterfaceConformanceSet.Add(conformance)
 			return true
 		})

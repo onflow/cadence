@@ -2713,7 +2713,7 @@ func TestCheckInterfaceImplementationRequirement(t *testing.T) {
         `)
 
 		require.Error(t, err)
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		conformanceError := &sema.ConformanceError{}
 		require.ErrorAs(t, errs[0], &conformanceError)
@@ -2739,7 +2739,7 @@ func TestCheckInterfaceImplementationRequirement(t *testing.T) {
         `)
 
 		require.Error(t, err)
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		conformanceError := &sema.ConformanceError{}
 		require.ErrorAs(t, errs[0], &conformanceError)
@@ -2759,7 +2759,7 @@ func TestCheckInterfaceImplementationRequirement(t *testing.T) {
         `)
 
 		require.Error(t, err)
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		conformanceError := &sema.CompositeKindMismatchError{}
 		require.ErrorAs(t, errs[0], &conformanceError)
@@ -2779,7 +2779,7 @@ func TestCheckInterfaceImplementationRequirement(t *testing.T) {
         `)
 
 		require.Error(t, err)
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		conformanceError := &sema.CompositeKindMismatchError{}
 		require.ErrorAs(t, errs[0], &conformanceError)
@@ -2801,7 +2801,7 @@ func TestCheckInterfaceImplementationRequirement(t *testing.T) {
         `)
 
 		require.Error(t, err)
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		conformanceError := &sema.CompositeKindMismatchError{}
 		require.ErrorAs(t, errs[0], &conformanceError)
@@ -2823,7 +2823,7 @@ func TestCheckInterfaceImplementationRequirement(t *testing.T) {
         `)
 
 		require.Error(t, err)
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		conformanceError := &sema.CompositeKindMismatchError{}
 		require.ErrorAs(t, errs[0], &conformanceError)
@@ -2868,7 +2868,7 @@ func TestCheckInterfaceImplementationRequirement(t *testing.T) {
         `)
 
 		require.Error(t, err)
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		memberConflictError := &sema.InterfaceMemberConflictError{}
 		require.ErrorAs(t, errs[0], &memberConflictError)
@@ -2909,7 +2909,7 @@ func TestCheckInterfaceImplementationRequirement(t *testing.T) {
         `)
 
 		require.Error(t, err)
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		memberConflictError := &sema.InterfaceMemberConflictError{}
 		require.ErrorAs(t, errs[0], &memberConflictError)
@@ -2932,7 +2932,7 @@ func TestCheckInterfaceImplementationRequirement(t *testing.T) {
         `)
 
 		require.Error(t, err)
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		memberConflictError := &sema.InterfaceMemberConflictError{}
 		require.ErrorAs(t, errs[0], &memberConflictError)
@@ -2957,7 +2957,7 @@ func TestCheckInterfaceImplementationRequirement(t *testing.T) {
         `)
 
 		require.Error(t, err)
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		memberConflictError := &sema.InterfaceMemberConflictError{}
 		require.ErrorAs(t, errs[0], &memberConflictError)
@@ -2982,7 +2982,7 @@ func TestCheckInterfaceImplementationRequirement(t *testing.T) {
         `)
 
 		require.Error(t, err)
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		memberConflictError := &sema.InterfaceMemberConflictError{}
 		require.ErrorAs(t, errs[0], &memberConflictError)
@@ -3007,7 +3007,7 @@ func TestCheckInterfaceImplementationRequirement(t *testing.T) {
         `)
 
 		require.Error(t, err)
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		memberConflictError := &sema.InterfaceMemberConflictError{}
 		require.ErrorAs(t, errs[0], &memberConflictError)
@@ -3032,7 +3032,7 @@ func TestCheckInterfaceImplementationRequirement(t *testing.T) {
         `)
 
 		require.Error(t, err)
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		memberConflictError := &sema.InterfaceMemberConflictError{}
 		require.ErrorAs(t, errs[0], &memberConflictError)
@@ -3061,7 +3061,7 @@ func TestCheckInterfaceImplementationRequirement(t *testing.T) {
         `)
 
 		require.Error(t, err)
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		memberConflictError := &sema.InterfaceMemberConflictError{}
 		require.ErrorAs(t, errs[0], &memberConflictError)
@@ -3091,7 +3091,7 @@ func TestCheckInterfaceImplementationRequirement(t *testing.T) {
         `)
 
 		require.Error(t, err)
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		conformanceError := &sema.ConformanceError{}
 		require.ErrorAs(t, errs[0], &conformanceError)
