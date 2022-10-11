@@ -243,6 +243,9 @@ func exportValueWithInterpreter(
 			locationRange,
 			seenReferences,
 		)
+	case interpreter.FunctionValue:
+		// Functions cannot be serialized
+		return nil, nil
 	default:
 		return nil, errors.NewUnexpectedError("cannot export value of type %T", value)
 	}

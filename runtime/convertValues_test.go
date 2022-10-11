@@ -2124,6 +2124,50 @@ func TestExportLinkValue(t *testing.T) {
 	})
 }
 
+func TestExportCompositeValueWithFunctionValueField(t *testing.T) {
+
+	t.Parallel()
+
+	script := `
+        pub struct Foo {
+            pub let answer: Int
+            pub let f: ((): Void)
+
+            init() {
+                self.answer = 42
+                self.f = fun () {}
+            }
+        }
+
+        pub fun main(): Foo {
+            return Foo()
+        }
+    `
+
+	fooStructType := &cadence.StructType{
+		Location:            TestLocation,
+		QualifiedIdentifier: "Foo",
+		Fields: []cadence.Field{
+			{
+				Identifier: "answer",
+				Type:       cadence.IntType{},
+			},
+			{
+				Identifier: "f",
+				Type: (&cadence.FunctionType{
+					Parameters: []cadence.Parameter{},
+					ReturnType: cadence.VoidType{},
+				}).WithID("(():Void)"),
+			},
+		},
+	}
+
+	actual := exportValueFromScript(t, script)
+	expected := cadence.NewStruct([]cadence.Value{cadence.NewInt(42), nil}).WithType(fooStructType)
+
+	assert.Equal(t, expected, actual)
+}
+
 //go:embed test-export-json-deterministic.txt
 var exportJsonDeterministicExpected string
 
