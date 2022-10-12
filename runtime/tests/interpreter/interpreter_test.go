@@ -1838,10 +1838,9 @@ func TestInterpretHostFunction(t *testing.T) {
 		},
 		``,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			a := invocation.Arguments[0].(interpreter.IntValue).ToBigInt(nil)
-			b := invocation.Arguments[1].(interpreter.IntValue).ToBigInt(nil)
-			value := new(big.Int).Add(a, b)
-			return interpreter.NewUnmeteredIntValueFromBigInt(value)
+			a := invocation.Arguments[0].(interpreter.IntValue)
+			b := invocation.Arguments[1].(interpreter.IntValue)
+			return interpreter.NewUnmeteredIntValueFromInt64(int64(a.ToInt() + b.ToInt()))
 		},
 	)
 

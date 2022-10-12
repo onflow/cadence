@@ -308,7 +308,7 @@ func (v VoidValue) Encode(e *atree.Encoder) error {
 //			Number:  CBORTagIntValue,
 //			Content: *big.Int(v.BigInt),
 //	}
-func (v IntValue) Encode(e *atree.Encoder) error {
+func (v IntBigValue) Encode(e *atree.Encoder) error {
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
 		0xd8, CBORTagIntValue,

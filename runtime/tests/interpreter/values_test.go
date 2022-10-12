@@ -1104,7 +1104,7 @@ func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) inte
 	switch v := value.(type) {
 
 	// Int
-	case interpreter.IntValue:
+	case interpreter.IntBigValue:
 		var n big.Int
 		n.Set(v.BigInt)
 		return interpreter.NewUnmeteredIntValueFromBigInt(&n)

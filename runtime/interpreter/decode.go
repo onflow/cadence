@@ -388,12 +388,12 @@ func (d StorableDecoder) decodeInt() (IntValue, error) {
 	bigInt, err := d.decodeBigInt()
 	if err != nil {
 		if err, ok := err.(*cbor.WrongTypeError); ok {
-			return IntValue{}, errors.NewUnexpectedError(
+			return nil, errors.NewUnexpectedError(
 				"invalid Int encoding: %s",
 				err.ActualType.String(),
 			)
 		}
-		return IntValue{}, err
+		return nil, err
 	}
 
 	// NOTE: already metered by decodeBigInt

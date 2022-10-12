@@ -2747,7 +2747,13 @@ type BigNumberValue interface {
 
 // Int
 
-type IntValue struct {
+type IntValue interface {
+	IntegerValue
+	HashableValue
+	atree.Storable
+}
+
+type IntBigValue struct {
 	BigInt *big.Int
 }
 
@@ -2780,7 +2786,7 @@ func NewIntValueFromBigInt(
 }
 
 func NewUnmeteredIntValueFromBigInt(value *big.Int) IntValue {
-	return IntValue{
+	return IntBigValue{
 		BigInt: value,
 	}
 }
@@ -2803,57 +2809,57 @@ func ConvertInt(memoryGauge common.MemoryGauge, value Value) IntValue {
 	}
 }
 
-var _ Value = IntValue{}
-var _ atree.Storable = IntValue{}
-var _ NumberValue = IntValue{}
-var _ IntegerValue = IntValue{}
-var _ EquatableValue = IntValue{}
-var _ HashableValue = IntValue{}
-var _ MemberAccessibleValue = IntValue{}
+var _ Value = IntBigValue{}
+var _ atree.Storable = IntBigValue{}
+var _ NumberValue = IntBigValue{}
+var _ IntegerValue = IntBigValue{}
+var _ EquatableValue = IntBigValue{}
+var _ HashableValue = IntBigValue{}
+var _ MemberAccessibleValue = IntBigValue{}
 
-func (IntValue) IsValue() {}
+func (IntBigValue) IsValue() {}
 
-func (v IntValue) Accept(interpreter *Interpreter, visitor Visitor) {
-	visitor.VisitIntValue(interpreter, v)
+func (v IntBigValue) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitIntBigValue(interpreter, v)
 }
 
-func (IntValue) Walk(_ *Interpreter, _ func(Value)) {
+func (IntBigValue) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
-func (IntValue) StaticType(interpreter *Interpreter) StaticType {
+func (IntBigValue) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeInt)
 }
 
-func (IntValue) IsImportable(_ *Interpreter) bool {
+func (IntBigValue) IsImportable(_ *Interpreter) bool {
 	return true
 }
 
-func (v IntValue) ToInt() int {
+func (v IntBigValue) ToInt() int {
 	if !v.BigInt.IsInt64() {
 		panic(OverflowError{})
 	}
 	return int(v.BigInt.Int64())
 }
 
-func (v IntValue) ByteLength() int {
+func (v IntBigValue) ByteLength() int {
 	return common.BigIntByteLength(v.BigInt)
 }
 
-func (v IntValue) ToBigInt(memoryGauge common.MemoryGauge) *big.Int {
+func (v IntBigValue) ToBigInt(memoryGauge common.MemoryGauge) *big.Int {
 	common.UseMemory(memoryGauge, common.NewBigIntMemoryUsage(v.ByteLength()))
 	return new(big.Int).Set(v.BigInt)
 }
 
-func (v IntValue) String() string {
+func (v IntBigValue) String() string {
 	return format.BigInt(v.BigInt)
 }
 
-func (v IntValue) RecursiveString(_ SeenReferences) string {
+func (v IntBigValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v IntValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+func (v IntBigValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
 	common.UseMemory(
 		memoryGauge,
 		common.NewRawStringMemoryUsage(
@@ -2863,7 +2869,7 @@ func (v IntValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences
 	return v.String()
 }
 
-func (v IntValue) Negate(interpreter *Interpreter) NumberValue {
+func (v IntBigValue) Negate(interpreter *Interpreter) NumberValue {
 	return NewIntValueFromBigInt(
 		interpreter,
 		common.NewNegateBigIntMemoryUsage(v.BigInt),
@@ -2873,8 +2879,8 @@ func (v IntValue) Negate(interpreter *Interpreter) NumberValue {
 	)
 }
 
-func (v IntValue) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
-	o, ok := other.(IntValue)
+func (v IntBigValue) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
+	o, ok := other.(IntBigValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationPlus,
@@ -2893,7 +2899,7 @@ func (v IntValue) Plus(interpreter *Interpreter, other NumberValue) NumberValue 
 	)
 }
 
-func (v IntValue) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
+func (v IntBigValue) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	defer func() {
 		r := recover()
 		if _, ok := r.(InvalidOperandsError); ok {
@@ -2908,8 +2914,8 @@ func (v IntValue) SaturatingPlus(interpreter *Interpreter, other NumberValue) Nu
 	return v.Plus(interpreter, other)
 }
 
-func (v IntValue) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
-	o, ok := other.(IntValue)
+func (v IntBigValue) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
+	o, ok := other.(IntBigValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMinus,
@@ -2928,7 +2934,7 @@ func (v IntValue) Minus(interpreter *Interpreter, other NumberValue) NumberValue
 	)
 }
 
-func (v IntValue) SaturatingMinus(interpreter *Interpreter, other NumberValue) NumberValue {
+func (v IntBigValue) SaturatingMinus(interpreter *Interpreter, other NumberValue) NumberValue {
 	defer func() {
 		r := recover()
 		if _, ok := r.(InvalidOperandsError); ok {
@@ -2943,8 +2949,8 @@ func (v IntValue) SaturatingMinus(interpreter *Interpreter, other NumberValue) N
 	return v.Minus(interpreter, other)
 }
 
-func (v IntValue) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
-	o, ok := other.(IntValue)
+func (v IntBigValue) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
+	o, ok := other.(IntBigValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
@@ -2967,8 +2973,8 @@ func (v IntValue) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 	)
 }
 
-func (v IntValue) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
-	o, ok := other.(IntValue)
+func (v IntBigValue) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
+	o, ok := other.(IntBigValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMul,
@@ -2987,7 +2993,7 @@ func (v IntValue) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	)
 }
 
-func (v IntValue) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
+func (v IntBigValue) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	defer func() {
 		r := recover()
 		if _, ok := r.(InvalidOperandsError); ok {
@@ -3002,8 +3008,8 @@ func (v IntValue) SaturatingMul(interpreter *Interpreter, other NumberValue) Num
 	return v.Mul(interpreter, other)
 }
 
-func (v IntValue) Div(interpreter *Interpreter, other NumberValue) NumberValue {
-	o, ok := other.(IntValue)
+func (v IntBigValue) Div(interpreter *Interpreter, other NumberValue) NumberValue {
+	o, ok := other.(IntBigValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationDiv,
@@ -3026,7 +3032,7 @@ func (v IntValue) Div(interpreter *Interpreter, other NumberValue) NumberValue {
 	)
 }
 
-func (v IntValue) SaturatingDiv(interpreter *Interpreter, other NumberValue) NumberValue {
+func (v IntBigValue) SaturatingDiv(interpreter *Interpreter, other NumberValue) NumberValue {
 	defer func() {
 		r := recover()
 		if _, ok := r.(InvalidOperandsError); ok {
@@ -3041,8 +3047,8 @@ func (v IntValue) SaturatingDiv(interpreter *Interpreter, other NumberValue) Num
 	return v.Div(interpreter, other)
 }
 
-func (v IntValue) Less(interpreter *Interpreter, other NumberValue) BoolValue {
-	o, ok := other.(IntValue)
+func (v IntBigValue) Less(interpreter *Interpreter, other NumberValue) BoolValue {
+	o, ok := other.(IntBigValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLess,
@@ -3055,8 +3061,8 @@ func (v IntValue) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 	return AsBoolValue(cmp == -1)
 }
 
-func (v IntValue) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
-	o, ok := other.(IntValue)
+func (v IntBigValue) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
+	o, ok := other.(IntBigValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLessEqual,
@@ -3069,8 +3075,8 @@ func (v IntValue) LessEqual(interpreter *Interpreter, other NumberValue) BoolVal
 	return AsBoolValue(cmp <= 0)
 }
 
-func (v IntValue) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
-	o, ok := other.(IntValue)
+func (v IntBigValue) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
+	o, ok := other.(IntBigValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreater,
@@ -3084,8 +3090,8 @@ func (v IntValue) Greater(interpreter *Interpreter, other NumberValue) BoolValue
 
 }
 
-func (v IntValue) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
-	o, ok := other.(IntValue)
+func (v IntBigValue) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
+	o, ok := other.(IntBigValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreaterEqual,
@@ -3098,8 +3104,8 @@ func (v IntValue) GreaterEqual(interpreter *Interpreter, other NumberValue) Bool
 	return AsBoolValue(cmp >= 0)
 }
 
-func (v IntValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
-	otherInt, ok := other.(IntValue)
+func (v IntBigValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
+	otherInt, ok := other.(IntBigValue)
 	if !ok {
 		return false
 	}
@@ -3110,7 +3116,7 @@ func (v IntValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
 // HashInput returns a byte slice containing:
 // - HashInputTypeInt (1 byte)
 // - big int encoded in big-endian (n bytes)
-func (v IntValue) HashInput(_ *Interpreter, _ LocationRange, scratch []byte) []byte {
+func (v IntBigValue) HashInput(_ *Interpreter, _ LocationRange, scratch []byte) []byte {
 	b := SignedBigIntToBigEndianBytes(v.BigInt)
 
 	length := 1 + len(b)
@@ -3126,8 +3132,8 @@ func (v IntValue) HashInput(_ *Interpreter, _ LocationRange, scratch []byte) []b
 	return buffer
 }
 
-func (v IntValue) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
-	o, ok := other.(IntValue)
+func (v IntBigValue) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
+	o, ok := other.(IntBigValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseOr,
@@ -3146,8 +3152,8 @@ func (v IntValue) BitwiseOr(interpreter *Interpreter, other IntegerValue) Intege
 	)
 }
 
-func (v IntValue) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
-	o, ok := other.(IntValue)
+func (v IntBigValue) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
+	o, ok := other.(IntBigValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseXor,
@@ -3166,8 +3172,8 @@ func (v IntValue) BitwiseXor(interpreter *Interpreter, other IntegerValue) Integ
 	)
 }
 
-func (v IntValue) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
-	o, ok := other.(IntValue)
+func (v IntBigValue) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
+	o, ok := other.(IntBigValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseAnd,
@@ -3186,8 +3192,8 @@ func (v IntValue) BitwiseAnd(interpreter *Interpreter, other IntegerValue) Integ
 	)
 }
 
-func (v IntValue) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
-	o, ok := other.(IntValue)
+func (v IntBigValue) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
+	o, ok := other.(IntBigValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseLeftShift,
@@ -3214,8 +3220,8 @@ func (v IntValue) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue)
 	)
 }
 
-func (v IntValue) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
-	o, ok := other.(IntValue)
+func (v IntBigValue) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
+	o, ok := other.(IntBigValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseRightShift,
@@ -3242,25 +3248,25 @@ func (v IntValue) BitwiseRightShift(interpreter *Interpreter, other IntegerValue
 	)
 }
 
-func (v IntValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
+func (v IntBigValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
 	return getNumberValueMember(interpreter, v, name, sema.IntType)
 }
 
-func (IntValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (IntBigValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
 	// Numbers have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (IntValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (IntBigValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (v IntValue) ToBigEndianBytes() []byte {
+func (v IntBigValue) ToBigEndianBytes() []byte {
 	return SignedBigIntToBigEndianBytes(v.BigInt)
 }
 
-func (v IntValue) ConformsToStaticType(
+func (v IntBigValue) ConformsToStaticType(
 	_ *Interpreter,
 	_ LocationRange,
 	_ TypeConformanceResults,
@@ -3268,19 +3274,19 @@ func (v IntValue) ConformsToStaticType(
 	return true
 }
 
-func (v IntValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
+func (v IntBigValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
 	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
 }
 
-func (IntValue) NeedsStoreTo(_ atree.Address) bool {
+func (IntBigValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (IntValue) IsResourceKinded(_ *Interpreter) bool {
+func (IntBigValue) IsResourceKinded(_ *Interpreter) bool {
 	return false
 }
 
-func (v IntValue) Transfer(
+func (v IntBigValue) Transfer(
 	interpreter *Interpreter,
 	_ LocationRange,
 	_ atree.Address,
@@ -3293,23 +3299,23 @@ func (v IntValue) Transfer(
 	return v
 }
 
-func (v IntValue) Clone(_ *Interpreter) Value {
+func (v IntBigValue) Clone(_ *Interpreter) Value {
 	return NewUnmeteredIntValueFromBigInt(v.BigInt)
 }
 
-func (IntValue) DeepRemove(_ *Interpreter) {
+func (IntBigValue) DeepRemove(_ *Interpreter) {
 	// NO-OP
 }
 
-func (v IntValue) ByteSize() uint32 {
+func (v IntBigValue) ByteSize() uint32 {
 	return cborTagSize + getBigIntCBORSize(v.BigInt)
 }
 
-func (v IntValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
+func (v IntBigValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
-func (IntValue) ChildStorables() []atree.Storable {
+func (IntBigValue) ChildStorables() []atree.Storable {
 	return nil
 }
 

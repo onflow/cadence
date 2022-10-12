@@ -110,7 +110,7 @@ func exportValueWithInterpreter(
 			locationRange,
 			seenReferences,
 		)
-	case interpreter.IntValue:
+	case interpreter.IntBigValue:
 		bigInt := v.ToBigInt(inter)
 		return cadence.NewMeteredIntFromBig(
 			inter,
