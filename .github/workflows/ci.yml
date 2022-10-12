@@ -28,6 +28,9 @@ jobs:
         run: sudo apt-get update && sudo apt-get install wabt
       - name: Clone
         uses: actions/checkout@v3
+        with:
+          # fetch all tags. required to update the embedded version
+          fetch-depth: 0
       - name: Setup Go
         uses: actions/setup-go@v2
         with:
