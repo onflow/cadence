@@ -28,7 +28,7 @@ import (
 // AuthAccountInbox
 
 var authAccountInboxTypeID = sema.AuthAccountInboxType.ID()
-var authAccountInboxStaticType StaticType = PrimitiveStaticTypeAuthAccountKeys
+var authAccountInboxStaticType StaticType = PrimitiveStaticTypeAuthAccountInbox
 
 // NewAuthAccountInboxValue constructs a AuthAccount.Inbox value.
 func NewAuthAccountInboxValue(
