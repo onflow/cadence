@@ -241,3 +241,186 @@ func TestInterpretInterfaceDefaultImplementationWhenOverriden(t *testing.T) {
 	})
 
 }
+
+func TestInterpretInterfaceImplementationRequirement(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("struct interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct interface Foo {
+                let x: Int
+
+                fun test(): Int
+            }
+
+            struct interface Bar: Foo {}
+
+            struct Baz: Bar {
+                let x: Int
+
+                init() {
+                    self.x = 3
+                }
+
+                fun test(): Int {
+                    return self.x
+                }
+            }
+
+            pub fun main(): Int {
+                let baz = Baz()
+                return baz.test()
+            }
+        `)
+
+		value, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+			value,
+		)
+	})
+
+	t.Run("resource interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource interface Foo {
+                let x: Int
+
+                fun test(): Int
+            }
+
+            resource interface Bar: Foo {}
+
+            resource Baz: Bar {
+                let x: Int
+
+                init() {
+                    self.x = 3
+                }
+
+                fun test(): Int {
+                    return self.x
+                }
+            }
+
+            pub fun main(): Int {
+                let baz <- create Baz()
+                let x = baz.test()
+                destroy baz
+                return x
+            }
+        `)
+
+		value, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+			value,
+		)
+	})
+
+	t.Run("duplicate default methods", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct interface Foo {
+                pub fun test(): Int
+            }
+
+            struct interface Bar: Foo {
+                pub fun test(): Int
+            }
+
+            struct Baz: Bar {
+                fun test(): Int {
+                    return 3
+                }
+            }
+
+            pub fun main(): Int {
+                let baz = Baz()
+                return baz.test()
+            }
+        `)
+
+		value, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+			value,
+		)
+	})
+
+	t.Run("indirect default method", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct interface Foo {
+                pub fun test(): Int {
+                    return 3
+                }
+            }
+
+            struct interface Bar: Foo {}
+
+            struct Baz: Bar {}
+
+            pub fun main(): Int {
+                let baz = Baz()
+                return baz.test()
+            }
+        `)
+
+		value, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+			value,
+		)
+	})
+
+	t.Run("default method via different paths", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct interface A {
+                pub fun test(): Int {
+                    return 3
+                }
+            }
+
+            struct interface P: A {}
+
+            struct interface Q: A {}
+
+            struct Foo: P, Q {}
+
+            pub fun main(): Int {
+                let foo = Foo()
+                return foo.test()
+            }
+        `)
+
+		value, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+			value,
+		)
+	})
+}

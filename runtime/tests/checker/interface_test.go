@@ -2696,6 +2696,64 @@ func TestCheckInterfaceImplementationRequirement(t *testing.T) {
 
 	t.Parallel()
 
+	t.Run("struct interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface Foo {
+                let x: Int
+
+                fun test(): Int
+            }
+
+            struct interface Bar: Foo {}
+
+            struct Baz: Bar {
+                let x: Int
+
+                init() {
+                    self.x = 3
+                }
+
+                fun test(): Int {
+                    return self.x
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("resource interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource interface Foo {
+                let x: Int
+
+                fun test(): Int
+            }
+
+            resource interface Bar: Foo {}
+
+            resource Baz: Bar {
+                let x: Int
+
+                init() {
+                    self.x = 3
+                }
+
+                fun test(): Int {
+                    return self.x
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
 	t.Run("struct interface non-conforming", func(t *testing.T) {
 
 		t.Parallel()
@@ -2712,7 +2770,6 @@ func TestCheckInterfaceImplementationRequirement(t *testing.T) {
             struct Baz: Bar {}
         `)
 
-		require.Error(t, err)
 		errs := RequireCheckerErrors(t, err, 1)
 
 		conformanceError := &sema.ConformanceError{}
@@ -2738,7 +2795,6 @@ func TestCheckInterfaceImplementationRequirement(t *testing.T) {
             resource Baz: Bar {}
         `)
 
-		require.Error(t, err)
 		errs := RequireCheckerErrors(t, err, 1)
 
 		conformanceError := &sema.ConformanceError{}
@@ -2758,7 +2814,6 @@ func TestCheckInterfaceImplementationRequirement(t *testing.T) {
             struct Bar: Foo {}
         `)
 
-		require.Error(t, err)
 		errs := RequireCheckerErrors(t, err, 1)
 
 		conformanceError := &sema.CompositeKindMismatchError{}
@@ -2778,7 +2833,6 @@ func TestCheckInterfaceImplementationRequirement(t *testing.T) {
             struct interface Bar: Foo {}
         `)
 
-		require.Error(t, err)
 		errs := RequireCheckerErrors(t, err, 1)
 
 		conformanceError := &sema.CompositeKindMismatchError{}
@@ -2800,7 +2854,6 @@ func TestCheckInterfaceImplementationRequirement(t *testing.T) {
             struct Baz: Bar {}
         `)
 
-		require.Error(t, err)
 		errs := RequireCheckerErrors(t, err, 1)
 
 		conformanceError := &sema.CompositeKindMismatchError{}
@@ -2822,7 +2875,6 @@ func TestCheckInterfaceImplementationRequirement(t *testing.T) {
             struct Baz: Bar {}
         `)
 
-		require.Error(t, err)
 		errs := RequireCheckerErrors(t, err, 2)
 
 		conformanceError := &sema.CompositeKindMismatchError{}
@@ -2867,7 +2919,6 @@ func TestCheckInterfaceImplementationRequirement(t *testing.T) {
             }
         `)
 
-		require.Error(t, err)
 		errs := RequireCheckerErrors(t, err, 1)
 
 		memberConflictError := &sema.InterfaceMemberConflictError{}
@@ -2908,7 +2959,6 @@ func TestCheckInterfaceImplementationRequirement(t *testing.T) {
             }
         `)
 
-		require.Error(t, err)
 		errs := RequireCheckerErrors(t, err, 1)
 
 		memberConflictError := &sema.InterfaceMemberConflictError{}
@@ -2931,7 +2981,6 @@ func TestCheckInterfaceImplementationRequirement(t *testing.T) {
             }
         `)
 
-		require.Error(t, err)
 		errs := RequireCheckerErrors(t, err, 1)
 
 		memberConflictError := &sema.InterfaceMemberConflictError{}
@@ -2956,7 +3005,6 @@ func TestCheckInterfaceImplementationRequirement(t *testing.T) {
             }
         `)
 
-		require.Error(t, err)
 		errs := RequireCheckerErrors(t, err, 1)
 
 		memberConflictError := &sema.InterfaceMemberConflictError{}
@@ -2981,7 +3029,6 @@ func TestCheckInterfaceImplementationRequirement(t *testing.T) {
             }
         `)
 
-		require.Error(t, err)
 		errs := RequireCheckerErrors(t, err, 1)
 
 		memberConflictError := &sema.InterfaceMemberConflictError{}
@@ -3006,7 +3053,6 @@ func TestCheckInterfaceImplementationRequirement(t *testing.T) {
             }
         `)
 
-		require.Error(t, err)
 		errs := RequireCheckerErrors(t, err, 1)
 
 		memberConflictError := &sema.InterfaceMemberConflictError{}
@@ -3031,7 +3077,6 @@ func TestCheckInterfaceImplementationRequirement(t *testing.T) {
             }
         `)
 
-		require.Error(t, err)
 		errs := RequireCheckerErrors(t, err, 1)
 
 		memberConflictError := &sema.InterfaceMemberConflictError{}
@@ -3060,7 +3105,6 @@ func TestCheckInterfaceImplementationRequirement(t *testing.T) {
             struct interface X: B, Q {}
         `)
 
-		require.Error(t, err)
 		errs := RequireCheckerErrors(t, err, 1)
 
 		memberConflictError := &sema.InterfaceMemberConflictError{}
@@ -3090,7 +3134,6 @@ func TestCheckInterfaceImplementationRequirement(t *testing.T) {
             struct X: B, Q {}
         `)
 
-		require.Error(t, err)
 		errs := RequireCheckerErrors(t, err, 2)
 
 		conformanceError := &sema.ConformanceError{}
