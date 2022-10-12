@@ -41,3 +41,22 @@ jobs:
         run: go mod tidy
       - name: Build
         run: go build -v --tags relic ./...
+  flow-emulator:
+    name: Emulator
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone
+        uses: actions/checkout@v3
+        with:
+          repository: 'onflow/flow-emulator'
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+      - name: Update Cadence
+        run: go get github.com/onflow/cadence@${{ github.event.pull_request.head.sha }}
+      - name: Tidy up
+        run: go mod tidy
+      - name: Build
+        run: go build -v --tags relic ./...
