@@ -48,7 +48,7 @@ func NewAuthAccountKeysValue(
 		sema.AccountKeysTypeForEachFunctionName: forEachFunction,
 	}
 
-	computeField := func(name string, inter *Interpreter, locationRange LocationRange) Value {
+	computeField := func(name string, _ *Interpreter, _ LocationRange) Value {
 		switch name {
 		case sema.AccountKeysCountFieldName:
 			return getKeysCount()
