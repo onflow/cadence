@@ -20,64 +20,56 @@ jobs:
     name: Test
     runs-on: ubuntu-20.04
     steps:
-    - name: Install dependencies
-      run: sudo apt-get update && sudo apt-get install wabt
-    - uses: actions/checkout@v2
-      with:
-        fetch-depth: 0
-    - uses: actions/setup-go@v2
-      with:
-        go-version: ${{ env.GO_VERSION }}
-    - uses: actions/setup-node@v2
-      with:
-        node-version: '15'
-    - uses: actions/cache@v1
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-go-${{ env.GO_VERSION }}-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go-${{ env.GO_VERSION }}-
-    - name: Build
-      run: make build
-    - name: Test
-      run: make test
-    - name: Upload coverage report
-      uses: codecov/codecov-action@v2
-      with:
-        file: ./coverage.txt
-        flags: unittests
-    - name: Check tidy
-      run: make check-tidy
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install wabt
+      - name: Clone
+        uses: actions/checkout@v3
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '15'
+      - name: Build
+        run: make build
+      - name: Test
+        run: make test
+      - name: Upload coverage report
+        uses: codecov/codecov-action@v2
+        with:
+          file: ./coverage.txt
+          flags: unittests
+      - name: Check tidy
+        run: make check-tidy
 
   lint:
     name: Lint
     runs-on: ubuntu-20.04
     steps:
-    - uses: actions/checkout@v2
-      with:
-        fetch-depth: 0
-    - uses: actions/setup-go@v2
-      with:
-        go-version: ${{ env.GO_VERSION }}
-    - uses: actions/cache@v1
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-go-${{ env.GO_VERSION }}-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go-${{ env.GO_VERSION }}-
-    - name: Lint
-      run: make lint-github-actions
-    - name: Check license headers
-      run: make check-headers
-    - name: Check capabilities of dependencies
-      run: make check-capabilities
+      - name: Clone
+        uses: actions/checkout@v3
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+      - name: Lint
+        run: make lint-github-actions
+      - name: Check license headers
+        run: make check-headers
+      - name: Check capabilities of dependencies
+        run: make check-capabilities
 
   lint-docs:
     name: Lint Docs
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - name: Clone
+        uses: actions/checkout@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
         with:
           node-version: 14
       - name: Lint
@@ -90,7 +82,29 @@ jobs:
     name: Semgrep
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - name: Clone
+        uses: actions/checkout@v3
       - uses: returntocorp/semgrep-action@v1
         with:
           config: semgrep.yaml
+
+  downstream-flow-go:
+    name: Downstream dependency (flow-go)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone
+        uses: actions/checkout@v3
+        repository: 'onflow/flow-go'
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+      - name: Build relic
+        run: sh crypto_setup.sh
+      - name: Update Cadence
+        run: go get github.com/onflow/cadence@${{ github.sha }}
+      - name: Tidy up
+        run: go mod tidy
+      - name: Build
+        run: go build -v --tags relic ./...
