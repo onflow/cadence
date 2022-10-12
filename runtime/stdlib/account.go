@@ -727,15 +727,14 @@ func newAccountKeysForEachFunction(
 				)
 			}
 
-			count := provider.AccountKeysCount(address)
+			count := int(provider.AccountKeysCount(address))
 
 			var err error
 			var accountKey *AccountKey
 
-			var index uint64
-			for index = 0; index < count; index++ {
+			for index := 0; index < count; index++ {
 				wrapPanic(func() {
-					accountKey, err = provider.GetAccountKey(address, int(index))
+					accountKey, err = provider.GetAccountKey(address, index)
 				})
 				if err != nil {
 					panic(err)
