@@ -265,7 +265,7 @@ func (checker *Checker) recordReference(targetVarName string, expr ast.Expressio
 
 // referencedVariable return the referenced variable
 func (checker *Checker) referencedVariable(expr ast.Expression) *Variable {
-	refExpression := checker.referenceExpression(expr)
+	refExpression := referenceExpression(expr)
 
 	var variableRefExpr *ast.Identifier
 
@@ -274,7 +274,7 @@ func (checker *Checker) referencedVariable(expr ast.Expression) *Variable {
 		// If it is a reference expression, then find the "root variable".
 		// As nested resources cannot be tracked, at least track the "root" if possible.
 		// For example, for an expression `&a.b.c as &T`, the "root variable" is `a`.
-		variableRefExpr = checker.variableReferenceExpression(refExpression.Expression)
+		variableRefExpr = variableReferenceExpression(refExpression.Expression)
 	case *ast.IdentifierExpression:
 		variableRefExpr = &refExpression.Identifier
 	default:
@@ -322,19 +322,19 @@ func (checker *Checker) referencedVariable(expr ast.Expression) *Variable {
 // The expression could also be hidden inside some other expression.
 // e.g(1): `&v as &T` is a casting expression, but has a hidden reference expression.
 // e.g(2): `(&v as &T?)!
-func (checker *Checker) referenceExpression(expr ast.Expression) ast.Expression {
+func referenceExpression(expr ast.Expression) ast.Expression {
 	switch expr := expr.(type) {
 	case *ast.ReferenceExpression:
 		return expr
 	case *ast.ForceExpression:
-		return checker.referenceExpression(expr.Expression)
+		return referenceExpression(expr.Expression)
 	case *ast.CastingExpression:
-		return checker.referenceExpression(expr.Expression)
+		return referenceExpression(expr.Expression)
 	case *ast.BinaryExpression:
 		if expr.Operation != ast.OperationNilCoalesce {
 			return nil
 		}
-		return checker.referenceExpression(expr.Left)
+		return referenceExpression(expr.Left)
 	case *ast.IdentifierExpression:
 		return expr
 	default:
@@ -344,14 +344,14 @@ func (checker *Checker) referenceExpression(expr ast.Expression) ast.Expression 
 
 // variableReferenceExpression returns the identifier expression
 // of a var-ref/member-access/index-access expression.
-func (checker *Checker) variableReferenceExpression(expr ast.Expression) *ast.Identifier {
+func variableReferenceExpression(expr ast.Expression) *ast.Identifier {
 	switch expr := expr.(type) {
 	case *ast.IdentifierExpression:
 		return &expr.Identifier
 	case *ast.MemberExpression:
-		return checker.variableReferenceExpression(expr.Expression)
+		return variableReferenceExpression(expr.Expression)
 	case *ast.IndexExpression:
-		return checker.variableReferenceExpression(expr.TargetExpression)
+		return variableReferenceExpression(expr.TargetExpression)
 	default:
 		return nil
 	}
