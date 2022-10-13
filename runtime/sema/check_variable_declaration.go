@@ -256,56 +256,62 @@ func (checker *Checker) recordReferenceCreation(target, expr ast.Expression) {
 }
 
 func (checker *Checker) recordReference(targetVariable *Variable, expr ast.Expression) {
-	referencedVar := checker.referencedVariable(expr)
-
-	if referencedVar != nil &&
-		referencedVar.Type.IsResourceType() {
-		targetVariable.referencedVariable = referencedVar
+	if targetVariable == nil {
+		return
 	}
+
+	targetVariable.referencedResourceVariables = checker.referencedVariables(expr)
 }
 
-// referencedVariable return the referenced variable
-func (checker *Checker) referencedVariable(expr ast.Expression) *Variable {
-	refExpression := referenceExpression(expr)
+// referencedVariables return the referenced variables
+func (checker *Checker) referencedVariables(expr ast.Expression) (variables []*Variable) {
+	refExpressions := referenceExpressions(expr)
 
-	var variableRefExpr *ast.Identifier
+	for _, refExpr := range refExpressions {
+		var variableRefExpr *ast.Identifier
 
-	switch refExpression := refExpression.(type) {
-	case *ast.ReferenceExpression:
-		// If it is a reference expression, then find the "root variable".
-		// As nested resources cannot be tracked, at least track the "root" if possible.
-		// For example, for an expression `&a.b.c as &T`, the "root variable" is `a`.
-		variableRefExpr = variableReferenceExpression(refExpression.Expression)
-	case *ast.IdentifierExpression:
-		variableRefExpr = &refExpression.Identifier
-	default:
-		return nil
+		switch refExpr := refExpr.(type) {
+		case *ast.ReferenceExpression:
+			// If it is a reference expression, then find the "root variable".
+			// As nested resources cannot be tracked, at least track the "root" if possible.
+			// For example, for an expression `&a.b.c as &T`, the "root variable" is `a`.
+			variableRefExpr = rootVariableOfExpression(refExpr.Expression)
+		case *ast.IdentifierExpression:
+			variableRefExpr = &refExpr.Identifier
+		default:
+			continue
+		}
+
+		if variableRefExpr == nil {
+			continue
+		}
+
+		referencedVariable := checker.valueActivations.Find(variableRefExpr.Identifier)
+		if referencedVariable == nil {
+			continue
+		}
+
+		// If the referenced variable is again a reference,
+		// then find the variable of the root of the reference chain.
+		// e.g.:
+		//     ref1 = &v
+		//     ref2 = &ref1
+		//     ref2.field = 3
+		//
+		// Here, `ref2` refers to `ref1`, which refers to `v`.
+		// So `ref2` is actually referring to `v`
+
+		referencedVars := nestedReferencedVariables(referencedVariable)
+		if referencedVars != nil {
+			variables = append(variables, referencedVars...)
+		}
 	}
 
-	if variableRefExpr == nil {
-		return nil
-	}
-
-	referencedVariableName := variableRefExpr.Identifier
-	referencedVariable := checker.valueActivations.Find(referencedVariableName)
-
-	// If the referenced variable is again a reference,
-	// then find the variable of the root of the reference chain.
-	// e.g.:
-	//     ref1 = &v
-	//     ref2 = &ref1
-	//     ref2.field = 3
-	//
-	// Here, `ref2` refers to `ref1`, which refers to `v`.
-	// So `ref2` is actually referring to `v`
-	for referencedVariable.referencedVariable != nil {
-		referencedVariable = referencedVariable.referencedVariable
-	}
-
-	return referencedVariable
+	return
 }
 
-// referenceExpression returns the expression that return a reference.
+// referenceExpressions returns all sub-expressions that may produce a reference.
+//
 // There could be two types of expressions that can result in a reference:
 //  1. Expressions that create a new reference.
 //     (i.e: reference-expression)
@@ -318,37 +324,73 @@ func (checker *Checker) referencedVariable(expr ast.Expression) *Variable {
 // The expression could also be hidden inside some other expression.
 // e.g(1): `&v as &T` is a casting expression, but has a hidden reference expression.
 // e.g(2): `(&v as &T?)!
-func referenceExpression(expr ast.Expression) ast.Expression {
+func referenceExpressions(expr ast.Expression) []ast.Expression {
 	switch expr := expr.(type) {
 	case *ast.ReferenceExpression:
-		return expr
+		return []ast.Expression{expr}
 	case *ast.ForceExpression:
-		return referenceExpression(expr.Expression)
+		return referenceExpressions(expr.Expression)
 	case *ast.CastingExpression:
-		return referenceExpression(expr.Expression)
+		return referenceExpressions(expr.Expression)
 	case *ast.BinaryExpression:
 		if expr.Operation != ast.OperationNilCoalesce {
 			return nil
 		}
-		return referenceExpression(expr.Left)
+
+		refExpressions := make([]ast.Expression, 0)
+
+		lhsRef := referenceExpressions(expr.Left)
+		if lhsRef != nil {
+			refExpressions = append(refExpressions, lhsRef...)
+		}
+
+		rhsRef := referenceExpressions(expr.Right)
+		if rhsRef != nil {
+			refExpressions = append(refExpressions, rhsRef...)
+		}
+
+		return refExpressions
 	case *ast.IdentifierExpression:
-		return expr
+		return []ast.Expression{expr}
 	default:
 		return nil
 	}
 }
 
-// variableReferenceExpression returns the identifier expression
+// rootVariableOfExpression returns the identifier expression
 // of a var-ref/member-access/index-access expression.
-func variableReferenceExpression(expr ast.Expression) *ast.Identifier {
+func rootVariableOfExpression(expr ast.Expression) *ast.Identifier {
 	switch expr := expr.(type) {
 	case *ast.IdentifierExpression:
 		return &expr.Identifier
 	case *ast.MemberExpression:
-		return variableReferenceExpression(expr.Expression)
+		return rootVariableOfExpression(expr.Expression)
 	case *ast.IndexExpression:
-		return variableReferenceExpression(expr.TargetExpression)
+		return rootVariableOfExpression(expr.TargetExpression)
 	default:
 		return nil
 	}
+}
+
+func nestedReferencedVariables(variable *Variable) []*Variable {
+	// If there are no more referenced variables, then it is the root of the reference chain.
+	if len(variable.referencedResourceVariables) == 0 {
+		// Add it as the referenced variable, if it is a resource.
+		if !variable.Type.IsResourceType() {
+			return nil
+		}
+
+		return []*Variable{variable}
+	}
+
+	var referencedResourceVariables []*Variable
+	for _, referencedVar := range variable.referencedResourceVariables {
+		nestedReferencedVars := nestedReferencedVariables(referencedVar)
+		if nestedReferencedVars != nil {
+			referencedResourceVariables = append(referencedResourceVariables, nestedReferencedVars...)
+
+		}
+	}
+
+	return referencedResourceVariables
 }

@@ -58,21 +58,17 @@ func (checker *Checker) checkReferenceValidity(variable *Variable, hasPosition a
 
 	// Here it is not required to find the root of the reference chain,
 	// because it is already done at the time of recoding the reference.
-	// i.e: It is always the root of the chain that is being stored as the `referencedVariable`.
-	referencedVar := variable.referencedVariable
-	if referencedVar == nil ||
-		!referencedVar.Type.IsResourceType() {
-		return
-	}
+	// i.e: It is always the roots of the chain that is being stored as the `referencedResourceVariables`.
+	for _, referencedVar := range variable.referencedResourceVariables {
+		resourceInfo := checker.resources.Get(Resource{Variable: referencedVar})
+		if resourceInfo.Invalidations.Size() == 0 {
+			continue
+		}
 
-	resourceInfo := checker.resources.Get(Resource{Variable: referencedVar})
-	if resourceInfo.Invalidations.Size() == 0 {
-		return
+		checker.report(&InvalidatedResourceReferenceError{
+			Range: ast.NewRangeFromPositioned(checker.memoryGauge, hasPosition),
+		})
 	}
-
-	checker.report(&InvalidatedResourceReferenceError{
-		Range: ast.NewRangeFromPositioned(checker.memoryGauge, hasPosition),
-	})
 }
 
 // checkSelfVariableUseInInitializer checks uses of `self` in the initializer
