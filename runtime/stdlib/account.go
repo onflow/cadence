@@ -503,7 +503,7 @@ func newRemovePublicKeyFunction(
 	return interpreter.NewHostFunctionValue(
 		gauge,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			index, ok := invocation.Arguments[0].(interpreter.IntValue)
+			index, ok := invocation.Arguments[0].(interpreter.NumberValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
@@ -638,7 +638,7 @@ func newAccountKeysGetFunction(
 	return interpreter.NewHostFunctionValue(
 		gauge,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			indexValue, ok := invocation.Arguments[0].(interpreter.IntValue)
+			indexValue, ok := invocation.Arguments[0].(interpreter.NumberValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
@@ -703,7 +703,7 @@ func newAccountKeysRevokeFunction(
 	return interpreter.NewHostFunctionValue(
 		gauge,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			indexValue, ok := invocation.Arguments[0].(interpreter.IntValue)
+			indexValue, ok := invocation.Arguments[0].(interpreter.NumberValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}

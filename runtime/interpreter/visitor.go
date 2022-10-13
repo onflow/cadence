@@ -26,7 +26,8 @@ type Visitor interface {
 	VisitStringValue(interpreter *Interpreter, value *StringValue)
 	VisitCharacterValue(interpreter *Interpreter, value CharacterValue)
 	VisitArrayValue(interpreter *Interpreter, value *ArrayValue) bool
-	VisitIntValue(interpreter *Interpreter, value IntValue)
+	VisitIntBigValue(interpreter *Interpreter, value IntBigValue)
+	VisitIntSmallValue(interpreter *Interpreter, value IntSmallValue)
 	VisitInt8Value(interpreter *Interpreter, value Int8Value)
 	VisitInt16Value(interpreter *Interpreter, value Int16Value)
 	VisitInt32Value(interpreter *Interpreter, value Int32Value)
@@ -70,7 +71,8 @@ type EmptyVisitor struct {
 	CharacterValueVisitor           func(interpreter *Interpreter, value CharacterValue)
 	StringValueVisitor              func(interpreter *Interpreter, value *StringValue)
 	ArrayValueVisitor               func(interpreter *Interpreter, value *ArrayValue) bool
-	IntValueVisitor                 func(interpreter *Interpreter, value IntValue)
+	IntBigValueVisitor              func(interpreter *Interpreter, value IntBigValue)
+	IntSmallValueVisitor            func(interpreter *Interpreter, value IntSmallValue)
 	Int8ValueVisitor                func(interpreter *Interpreter, value Int8Value)
 	Int16ValueVisitor               func(interpreter *Interpreter, value Int16Value)
 	Int32ValueVisitor               func(interpreter *Interpreter, value Int32Value)
@@ -157,11 +159,18 @@ func (v EmptyVisitor) VisitArrayValue(interpreter *Interpreter, value *ArrayValu
 	return v.ArrayValueVisitor(interpreter, value)
 }
 
-func (v EmptyVisitor) VisitIntValue(interpreter *Interpreter, value IntValue) {
-	if v.IntValueVisitor == nil {
+func (v EmptyVisitor) VisitIntBigValue(interpreter *Interpreter, value IntBigValue) {
+	if v.IntBigValueVisitor == nil {
 		return
 	}
-	v.IntValueVisitor(interpreter, value)
+	v.IntBigValueVisitor(interpreter, value)
+}
+
+func (v EmptyVisitor) VisitIntSmallValue(interpreter *Interpreter, value IntSmallValue) {
+	if v.IntSmallValueVisitor == nil {
+		return
+	}
+	v.IntSmallValueVisitor(interpreter, value)
 }
 
 func (v EmptyVisitor) VisitInt8Value(interpreter *Interpreter, value Int8Value) {

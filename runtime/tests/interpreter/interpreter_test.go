@@ -1838,10 +1838,9 @@ func TestInterpretHostFunction(t *testing.T) {
 		},
 		``,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			a := invocation.Arguments[0].(interpreter.IntValue).ToBigInt(nil)
-			b := invocation.Arguments[1].(interpreter.IntValue).ToBigInt(nil)
-			value := new(big.Int).Add(a, b)
-			return interpreter.NewUnmeteredIntValueFromBigInt(value)
+			a := invocation.Arguments[0].(interpreter.NumberValue).ToInt()
+			b := invocation.Arguments[1].(interpreter.NumberValue).ToInt()
+			return interpreter.NewUnmeteredIntValueFromInt64(int64(a + b))
 		},
 	)
 
@@ -5883,7 +5882,7 @@ func TestInterpretDictionaryForEachKey(t *testing.T) {
 			assert.True(t, ok)
 
 			toInt := func(val interpreter.Value) (int, bool) {
-				intVal, ok := val.(interpreter.IntValue)
+				intVal, ok := val.(interpreter.NumberValue)
 				if !ok {
 					return 0, ok
 				}

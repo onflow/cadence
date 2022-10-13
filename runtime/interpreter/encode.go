@@ -308,7 +308,7 @@ func (v VoidValue) Encode(e *atree.Encoder) error {
 //			Number:  CBORTagIntValue,
 //			Content: *big.Int(v.BigInt),
 //	}
-func (v IntValue) Encode(e *atree.Encoder) error {
+func (v IntBigValue) Encode(e *atree.Encoder) error {
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
 		0xd8, CBORTagIntValue,
@@ -316,7 +316,29 @@ func (v IntValue) Encode(e *atree.Encoder) error {
 	if err != nil {
 		return err
 	}
-	return e.CBOR.EncodeBigInt(v.BigInt)
+	return e.CBOR.EncodeBigInt(v._big)
+}
+
+// Encode encodes the value as
+//
+//	cbor.Tag{
+//			Number:  CBORTagIntValue,
+//			Content: *big.Int(v.BigInt),
+//	}
+func (v IntSmallValue) Encode(e *atree.Encoder) error {
+	err := e.CBOR.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, CBORTagIntValue,
+	})
+	if err != nil {
+		return err
+	}
+
+	// TODO: avoid allocation of big.Int
+	// TODO: meter, but no gauge
+	vBig := new(big.Int).SetInt64(v._small)
+
+	return e.CBOR.EncodeBigInt(vBig)
 }
 
 // Encode encodes Int8Value as

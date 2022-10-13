@@ -1978,11 +1978,11 @@ func TestDivModInt(t *testing.T) {
 	inter, err := NewInterpreter(nil, nil, &Config{})
 	require.NoError(t, err)
 
-	for _, f := range []func(a, b IntValue){
-		func(a, b IntValue) {
+	for _, f := range []func(a, b NumberValue){
+		func(a, b NumberValue) {
 			a.Div(inter, b)
 		},
-		func(a, b IntValue) {
+		func(a, b NumberValue) {
 			a.Mod(inter, b)
 		},
 	} {

@@ -226,7 +226,12 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 		// Int*
 
 		case CBORTagIntValue:
-			storable, err = d.decodeInt()
+			var numberValue NumberValue
+			numberValue, err = d.decodeInt()
+			if err == nil {
+				// TODO:
+				storable = numberValue.(atree.Storable)
+			}
 
 		case CBORTagInt8Value:
 			storable, err = d.decodeInt8()
@@ -384,16 +389,16 @@ func (d StorableDecoder) decodeBigInt() (*big.Int, error) {
 	return d.decoder.DecodeBigInt()
 }
 
-func (d StorableDecoder) decodeInt() (IntValue, error) {
+func (d StorableDecoder) decodeInt() (NumberValue, error) {
 	bigInt, err := d.decodeBigInt()
 	if err != nil {
 		if err, ok := err.(*cbor.WrongTypeError); ok {
-			return IntValue{}, errors.NewUnexpectedError(
+			return nil, errors.NewUnexpectedError(
 				"invalid Int encoding: %s",
 				err.ActualType.String(),
 			)
 		}
-		return IntValue{}, err
+		return nil, err
 	}
 
 	// NOTE: already metered by decodeBigInt

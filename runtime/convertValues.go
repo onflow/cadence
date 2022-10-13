@@ -110,7 +110,19 @@ func exportValueWithInterpreter(
 			locationRange,
 			seenReferences,
 		)
-	case interpreter.IntValue:
+	case interpreter.IntBigValue:
+		bigInt := v.ToBigInt(inter)
+		return cadence.NewMeteredIntFromBig(
+			inter,
+			common.NewCadenceIntMemoryUsage(
+				common.BigIntByteLength(bigInt),
+			),
+			func() *big.Int {
+				return bigInt
+			},
+		), nil
+	case interpreter.IntSmallValue:
+		// TODO: avoid allocation of big.Int
 		bigInt := v.ToBigInt(inter)
 		return cadence.NewMeteredIntFromBig(
 			inter,
@@ -943,7 +955,7 @@ func importUInt256(inter *interpreter.Interpreter, v cadence.UInt256) interprete
 	)
 }
 
-func importInt(inter *interpreter.Interpreter, v cadence.Int) interpreter.IntValue {
+func importInt(inter *interpreter.Interpreter, v cadence.Int) interpreter.IntegerValue {
 	memoryUsage := common.NewBigIntMemoryUsage(
 		common.BigIntByteLength(v.Value),
 	)

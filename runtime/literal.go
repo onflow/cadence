@@ -199,7 +199,7 @@ func integerLiteralValue(
 
 func convertIntValue(
 	memoryGauge common.MemoryGauge,
-	intValue interpreter.IntValue,
+	intValue interpreter.NumberValue,
 	ty sema.Type,
 ) (
 	interpreter.Value,

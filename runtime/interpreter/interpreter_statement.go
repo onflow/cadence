@@ -369,7 +369,7 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) S
 		}
 
 		if indexVariable != nil {
-			currentIndex := indexVariable.GetValue().(IntValue)
+			currentIndex := indexVariable.GetValue().(NumberValue)
 			nextIndex := currentIndex.Plus(interpreter, intOne)
 			indexVariable.SetValue(nextIndex)
 		}

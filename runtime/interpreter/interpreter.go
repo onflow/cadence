@@ -3038,7 +3038,7 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 					panic(errors.NewUnreachableError())
 				}
 
-				sizeValue, ok := invocation.Arguments[1].(IntValue)
+				sizeValue, ok := invocation.Arguments[1].(NumberValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}

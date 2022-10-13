@@ -1117,11 +1117,11 @@ func TestVisitor(t *testing.T) {
 
 	inter := newTestInterpreter(t)
 
-	var intVisits, stringVisits int
+	var uintVisits, stringVisits int
 
 	visitor := EmptyVisitor{
-		IntValueVisitor: func(interpreter *Interpreter, value IntValue) {
-			intVisits++
+		UIntValueVisitor: func(interpreter *Interpreter, value UIntValue) {
+			uintVisits++
 		},
 		StringValueVisitor: func(interpreter *Interpreter, value *StringValue) {
 			stringVisits++
@@ -1129,7 +1129,7 @@ func TestVisitor(t *testing.T) {
 	}
 
 	var value Value
-	value = NewUnmeteredIntValueFromInt64(42)
+	value = NewUnmeteredUIntValueFromUint64(42)
 	value = NewUnmeteredSomeValueNonCopying(value)
 	value = NewArrayValue(
 		inter,
@@ -1170,7 +1170,7 @@ func TestVisitor(t *testing.T) {
 
 	value.Accept(inter, visitor)
 
-	require.Equal(t, 1, intVisits)
+	require.Equal(t, 1, uintVisits)
 	require.Equal(t, 1, stringVisits)
 }
 
