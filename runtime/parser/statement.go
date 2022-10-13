@@ -176,7 +176,10 @@ func parseFunctionDeclarationOrFunctionExpressionStatement(
 	p.skipSpaceAndComments(true)
 
 	if p.current.Is(lexer.TokenIdentifier) {
-		identifier := p.tokenToIdentifier(p.current)
+		identifier, err := p.nonReservedIdentifier("after start of function declaration")
+		if err != nil {
+			return nil, err
+		}
 
 		p.next()
 

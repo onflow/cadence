@@ -1124,6 +1124,36 @@ func TestParseFunctionStatementOrExpression(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("function expression with keyword as name", func(t *testing.T) {
+		t.Parallel()
+
+		result, errs := testParseStatements("fun continue() {}")
+
+		require.Empty(t, result)
+
+		utils.AssertEqualWithDiff(t, []error{
+			&SyntaxError{
+				Message: "expected identifier after start of function declaration, got keyword continue",
+				Pos:     ast.Position{Line: 1, Column: 4, Offset: 4},
+			},
+		}, errs)
+	})
+
+	t.Run("function expression with purity, and keyword as name", func(t *testing.T) {
+		t.Parallel()
+
+		result, errs := testParseStatements("view fun break() {}")
+
+		require.Empty(t, result)
+
+		utils.AssertEqualWithDiff(t, []error{
+			&SyntaxError{
+				Message: "expected identifier after start of function declaration, got keyword break",
+				Pos:     ast.Position{Line: 1, Column: 9, Offset: 9},
+			},
+		}, errs)
+	})
 }
 
 func TestParseViewNonFunction(t *testing.T) {
