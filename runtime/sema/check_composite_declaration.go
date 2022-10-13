@@ -1103,7 +1103,7 @@ func (checker *Checker) checkCompositeConformance(
 
 			// If the composite member exists, check if it satisfies the mem
 
-			if !checker.memberSatisfied(compositeMember, interfaceMember) {
+			if !checker.memberSatisfied(compositeType, compositeMember, interfaceMember) {
 				memberMismatches = append(
 					memberMismatches,
 					MemberMismatch{
@@ -1245,7 +1245,10 @@ func (checker *Checker) checkConformanceKindMatch(
 }
 
 // TODO: return proper error
-func (checker *Checker) memberSatisfied(compositeMember, interfaceMember *Member) bool {
+func (checker *Checker) memberSatisfied(
+	compositeType CompositeKindedType,
+	compositeMember, interfaceMember *Member,
+) bool {
 
 	// Check declaration kind
 	if compositeMember.DeclarationKind != interfaceMember.DeclarationKind {
@@ -1321,6 +1324,14 @@ func (checker *Checker) memberSatisfied(compositeMember, interfaceMember *Member
 				return false
 			}
 
+		case common.DeclarationKindStructure,
+			common.DeclarationKindResource,
+			common.DeclarationKindEnum:
+			// Interfaces and their conformances cannot have nested composite declarations
+			// with conflicting names (i.e: no type requirements for interfaces).
+			if _, isInterface := compositeType.(*InterfaceType); isInterface {
+				return false
+			}
 		}
 	}
 

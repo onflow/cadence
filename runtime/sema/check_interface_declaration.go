@@ -52,6 +52,7 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 	)
 
 	inheritedMembers := map[string]*Member{}
+	inheritedTypes := map[string]Type{}
 
 	interfaceType.ExplicitInterfaceConformances.ForeachDistinct(
 		func(_, conformance *InterfaceType) bool {
@@ -60,6 +61,7 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 				interfaceType,
 				conformance,
 				inheritedMembers,
+				inheritedTypes,
 			)
 
 			return true
@@ -378,6 +380,7 @@ func (checker *Checker) checkInterfaceConformance(
 	interfaceType *InterfaceType,
 	conformance *InterfaceType,
 	inheritedMembers map[string]*Member,
+	inheritedNestedTypes map[string]Type,
 ) {
 
 	// Ensure the composite kinds match, e.g. a structure shouldn't be able
@@ -402,7 +405,7 @@ func (checker *Checker) checkInterfaceConformance(
 
 		inheritedMembers[name] = conformanceMember
 
-		// Check if the members coming from other current declaration have conflicts.
+		// Check if the members coming from the current declaration have conflicts.
 		declarationMember, ok := interfaceType.Members.Get(name)
 		if !ok {
 			return
@@ -418,6 +421,53 @@ func (checker *Checker) checkInterfaceConformance(
 			},
 		)
 	})
+
+	reportError := func(typeName string, typ CompositeKindedType, otherType Type) {
+		nestedCompositeType, ok := otherType.(CompositeKindedType)
+		if !ok {
+			return
+		}
+
+		_, isInterface := typ.(*InterfaceType)
+		_, isNestedInterface := nestedCompositeType.(*InterfaceType)
+
+		checker.report(&InterfaceMemberConflictError{
+			InterfaceType:            interfaceType,
+			ConflictingInterfaceType: conformance,
+			MemberName:               typeName,
+			MemberKind:               typ.GetCompositeKind().DeclarationKind(isInterface),
+			ConflictingMemberKind:    nestedCompositeType.GetCompositeKind().DeclarationKind(isNestedInterface),
+			Range: ast.NewRangeFromPositioned(
+				checker.memoryGauge,
+				interfaceDeclaration.Identifier,
+			),
+		})
+	}
+
+	conformance.NestedTypes.Foreach(func(name string, typeRequirement Type) {
+		compositeType, ok := typeRequirement.(CompositeKindedType)
+		if !ok {
+			return
+		}
+
+		// Check if the type definitions coming from other conformances have conflicts.
+		if inheritedType, ok := inheritedNestedTypes[name]; ok {
+			inheritedCompositeType, ok := inheritedType.(CompositeKindedType)
+			if !ok {
+				return
+			}
+
+			reportError(name, compositeType, inheritedCompositeType)
+		}
+
+		inheritedNestedTypes[name] = typeRequirement
+
+		// Check if the type definitions coming from the current declaration have conflicts.
+		nestedType, ok := interfaceType.NestedTypes.Get(name)
+		if ok {
+			reportError(name, compositeType, nestedType)
+		}
+	})
 }
 
 func (checker *Checker) checkDuplicateInterfaceMembers(
@@ -431,7 +481,7 @@ func (checker *Checker) checkDuplicateInterfaceMembers(
 	// Check if the two members have identical signatures.
 	// If yes, they are allowed, but subject to the conditions below.
 	// If not, report an error.
-	if !checker.memberSatisfied(interfaceMember, conflictingMember) {
+	if !checker.memberSatisfied(interfaceType, interfaceMember, conflictingMember) {
 		checker.report(NewInterfaceMemberConflictError(
 			interfaceType,
 			interfaceMember,
