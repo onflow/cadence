@@ -60,12 +60,12 @@ func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.Res
 	if identifierLength > 0 {
 		variables = make(map[string]*Variable, identifierLength)
 		for _, identifier := range resolvedLocation.Identifiers {
-			variable, _ := subInterpreter.Globals.Get(identifier.Identifier)
-			variables[identifier.Identifier] = variable
+			variables[identifier.Identifier] =
+				subInterpreter.Globals.Get(identifier.Identifier)
 		}
 	} else {
 		// Only take the global values defined in the program.
-		variables = subInterpreter.Globals
+		variables = subInterpreter.Globals.variables
 	}
 
 	// Gather all variable names and sort them lexicographically

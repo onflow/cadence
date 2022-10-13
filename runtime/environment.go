@@ -926,8 +926,8 @@ func (e *interpreterEnvironment) InterpretContract(
 		return nil, err
 	}
 
-	variable, ok := inter.Globals.Get(name)
-	if !ok {
+	variable := inter.Globals.Get(name)
+	if variable == nil {
 		return nil, errors.NewDefaultUserError(
 			"cannot find contract: `%s`",
 			name,
