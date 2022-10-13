@@ -348,18 +348,12 @@ func init() {
 		operation:        ast.OperationMod,
 	})
 
-	defineCastingExpression()
+	defineIdentifierLeftDenotations()
 
 	defineExpr(literalExpr{
 		tokenType: lexer.TokenBinaryIntegerLiteral,
 		nullDenotation: func(p *parser, token lexer.Token) (ast.Expression, error) {
-			literal, ok := token.Value.(string)
-			if !ok {
-				return nil, p.syntaxError(
-					"value for token %s was not a string",
-					lexer.TokenBinaryIntegerLiteral,
-				)
-			}
+			literal := p.tokenSource(token)
 			return parseIntegerLiteral(
 				p,
 				literal,
@@ -373,13 +367,7 @@ func init() {
 	defineExpr(literalExpr{
 		tokenType: lexer.TokenOctalIntegerLiteral,
 		nullDenotation: func(p *parser, token lexer.Token) (ast.Expression, error) {
-			literal, ok := token.Value.(string)
-			if !ok {
-				return nil, p.syntaxError(
-					"value for token %s was not a string",
-					lexer.TokenOctalIntegerLiteral,
-				)
-			}
+			literal := p.tokenSource(token)
 			return parseIntegerLiteral(
 				p,
 				literal,
@@ -393,13 +381,7 @@ func init() {
 	defineExpr(literalExpr{
 		tokenType: lexer.TokenDecimalIntegerLiteral,
 		nullDenotation: func(p *parser, token lexer.Token) (ast.Expression, error) {
-			literal, ok := token.Value.(string)
-			if !ok {
-				return nil, p.syntaxError(
-					"value for token %s was not a string",
-					lexer.TokenDecimalIntegerLiteral,
-				)
-			}
+			literal := p.tokenSource(token)
 			return parseIntegerLiteral(
 				p,
 				literal,
@@ -413,13 +395,7 @@ func init() {
 	defineExpr(literalExpr{
 		tokenType: lexer.TokenHexadecimalIntegerLiteral,
 		nullDenotation: func(p *parser, token lexer.Token) (ast.Expression, error) {
-			literal, ok := token.Value.(string)
-			if !ok {
-				return nil, p.syntaxError(
-					"value for token %s was not a string",
-					lexer.TokenHexadecimalIntegerLiteral,
-				)
-			}
+			literal := p.tokenSource(token)
 			return parseIntegerLiteral(
 				p,
 				literal,
@@ -433,13 +409,7 @@ func init() {
 	defineExpr(literalExpr{
 		tokenType: lexer.TokenUnknownBaseIntegerLiteral,
 		nullDenotation: func(p *parser, token lexer.Token) (ast.Expression, error) {
-			literal, ok := token.Value.(string)
-			if !ok {
-				return nil, p.syntaxError(
-					"value for token %s was not a string",
-					lexer.TokenUnknownBaseIntegerLiteral,
-				)
-			}
+			literal := p.tokenSource(token)
 			return parseIntegerLiteral(
 				p,
 				literal,
@@ -453,9 +423,10 @@ func init() {
 	defineExpr(literalExpr{
 		tokenType: lexer.TokenFixedPointNumberLiteral,
 		nullDenotation: func(p *parser, token lexer.Token) (ast.Expression, error) {
+			literal := p.tokenSource(token)
 			return parseFixedPointLiteral(
 				p,
-				token.Value.(string),
+				literal,
 				token.Range,
 			), nil
 		},
@@ -464,7 +435,8 @@ func init() {
 	defineExpr(literalExpr{
 		tokenType: lexer.TokenString,
 		nullDenotation: func(p *parser, token lexer.Token) (ast.Expression, error) {
-			parsedString := parseStringLiteral(p, token.Value.(string))
+			literal := p.tokenSource(token)
+			parsedString := parseStringLiteral(p, literal)
 			return ast.NewStringExpression(
 				p.memoryGauge,
 				parsedString,
@@ -720,7 +692,6 @@ func defineLessThanOrTypeArgumentsExpression() {
 // because that would introduce a parsing problem for function calls/invocations
 // which have a type argument, where the type argument is a type instantiation,
 // for example, `f<T<U>>()`.
-//
 func defineGreaterThanOrBitwiseRightShiftExpression() {
 
 	setExprMetaLeftDenotation(
@@ -821,7 +792,7 @@ func defineIdentifierExpression() {
 	defineExpr(literalExpr{
 		tokenType: lexer.TokenIdentifier,
 		nullDenotation: func(p *parser, token lexer.Token) (ast.Expression, error) {
-			switch token.Value {
+			switch string(p.tokenSource(token)) {
 			case keywordTrue:
 				return ast.NewBoolExpression(p.memoryGauge, true, token.Range), nil
 
@@ -879,15 +850,18 @@ func parseFunctionExpression(p *parser, token lexer.Token) (*ast.FunctionExpress
 	), nil
 }
 
-func defineCastingExpression() {
+func defineIdentifierLeftDenotations() {
 
 	setExprIdentifierLeftBindingPower(keywordAs, exprLeftBindingPowerCasting)
 	setExprLeftDenotation(
 		lexer.TokenIdentifier,
 		func(parser *parser, t lexer.Token, left ast.Expression) (ast.Expression, error) {
-			switch t.Value.(string) {
+			// NOTE: switch statement with just one case instead of if,
+			// as this function is called for *any identifier left denotation ("postfix keyword"),
+			// not just for `as`, it might be extended with more cases (keywords) in the future
+			switch string(parser.tokenSource(t)) {
 			case keywordAs:
-				right, err := parseTypeAnnotation(parser, lowestBindingPower)
+				right, err := parseTypeAnnotation(parser)
 				if err != nil {
 					return nil, err
 				}
@@ -899,6 +873,7 @@ func defineCastingExpression() {
 					right,
 					nil,
 				), nil
+
 			default:
 				panic(errors.NewUnreachableError())
 			}
@@ -926,7 +901,7 @@ func defineCastingExpression() {
 
 		leftDenotation := (func(operation ast.Operation) exprLeftDenotationFunc {
 			return func(parser *parser, t lexer.Token, left ast.Expression) (ast.Expression, error) {
-				right, err := parseTypeAnnotation(parser, lowestBindingPower)
+				right, err := parseTypeAnnotation(parser)
 				if err != nil {
 					return nil, err
 				}
@@ -959,7 +934,7 @@ func parseCreateExpressionRemainder(p *parser, token lexer.Token) (*ast.CreateEx
 	), nil
 }
 
-func parseExtendExpressionRemainder(p *parser, token lexer.Token) (*ast.ExtendExpression, error) {
+func parseExtendExpressionRemainder(p *parser, token lexer.Token) (*ast.AttachExpression, error) {
 	base, err := parseExpression(p, lowestBindingPower)
 
 	if err != nil {
@@ -968,7 +943,7 @@ func parseExtendExpressionRemainder(p *parser, token lexer.Token) (*ast.ExtendEx
 
 	p.skipSpaceAndComments(true)
 
-	if p.current.Value != keywordWith {
+	if string(p.tokenSource(p.current)) != keywordWith {
 		return nil, p.syntaxError(
 			"expected 'with', got %s",
 			p.current.Type,
@@ -991,7 +966,7 @@ func parseExtendExpressionRemainder(p *parser, token lexer.Token) (*ast.ExtendEx
 		extensions = append(extensions, extension)
 
 		p.skipSpaceAndComments(true)
-		if p.current.Value != keywordAnd {
+		if string(p.tokenSource(p.current)) != keywordAnd {
 			break
 		}
 
@@ -1000,13 +975,12 @@ func parseExtendExpressionRemainder(p *parser, token lexer.Token) (*ast.ExtendEx
 		p.skipSpaceAndComments(true)
 	}
 
-	return ast.NewExtendExpression(p.memoryGauge, base, extensions, token.StartPos), nil
+	return ast.NewAttachExpression(p.memoryGauge, base, extensions, token.StartPos), nil
 }
 
 // Invocation Expression Grammar:
 //
-//     invocation : '(' ( argument ( ',' argument )* )? ')'
-//
+//	invocation : '(' ( argument ( ',' argument )* )? ')'
 func defineInvocationExpression() {
 	setExprLeftBindingPower(lexer.TokenParenOpen, exprLeftBindingPowerAccess)
 
@@ -1088,8 +1062,7 @@ func parseArgumentListRemainder(p *parser) (arguments []*ast.Argument, endPos as
 
 // parseArgument parses an argument in an invocation.
 //
-//     argument : (identifier ':' )? expression
-//
+//	argument : (identifier ':' )? expression
 func parseArgument(p *parser) (*ast.Argument, error) {
 	var label string
 	var labelStartPos, labelEndPos ast.Position
@@ -1139,7 +1112,18 @@ func parseArgument(p *parser) (*ast.Argument, error) {
 func defineNestedExpression() {
 	setExprNullDenotation(
 		lexer.TokenParenOpen,
-		func(p *parser, token lexer.Token) (ast.Expression, error) {
+		func(p *parser, startToken lexer.Token) (ast.Expression, error) {
+			p.skipSpaceAndComments(true)
+
+			// special case: parse a Void literal `()`
+			if p.current.Type == lexer.TokenParenClose {
+				// skip the closing parenthesis
+				p.next()
+
+				voidExpr := ast.NewVoidExpression(p.memoryGauge, startToken.StartPos, p.current.EndPos)
+				return voidExpr, nil
+			}
+
 			expression, err := parseExpression(p, lowestBindingPower)
 			if err != nil {
 				return nil, err
@@ -1450,7 +1434,6 @@ func exprLeftDenotationAllowsWhitespaceAfterToken(tokenType lexer.TokenType) boo
 
 // parseExpression uses "Top-Down operator precedence parsing" (TDOP) technique to
 // parse expressions.
-//
 func parseExpression(p *parser, rightBindingPower int) (ast.Expression, error) {
 
 	if p.expressionDepth == expressionDepthLimit {
@@ -1524,7 +1507,6 @@ func applyExprMetaLeftDenotation(
 
 // defaultExprMetaLeftDenotation is the default expression left denotation, which applies
 // if the right binding power is less than the left binding power of the current token
-//
 func defaultExprMetaLeftDenotation(
 	p *parser,
 	rightBindingPower int,
@@ -1560,14 +1542,8 @@ func exprLeftBindingPower(p *parser) (int, error) {
 	token := p.current
 	tokenType := token.Type
 	if tokenType == lexer.TokenIdentifier {
-		identifier, ok := token.Value.(string)
-		if !ok {
-			return 0, p.syntaxError(
-				"value for token %s was not a string",
-				tokenType,
-			)
-		}
-		return exprIdentifierLeftBindingPowers[identifier], nil
+		identifier := p.tokenSource(token)
+		return exprIdentifierLeftBindingPowers[string(identifier)], nil
 	}
 	return exprLeftBindingPowers[tokenType], nil
 }
@@ -1590,8 +1566,7 @@ func applyExprLeftDenotation(p *parser, token lexer.Token, left ast.Expression) 
 }
 
 // parseStringLiteral parses a whole string literal, including start and end quotes
-//
-func parseStringLiteral(p *parser, literal string) (result string) {
+func parseStringLiteral(p *parser, literal []byte) (result string) {
 	length := len(literal)
 	if length == 0 {
 		p.reportSyntaxError("missing start of string literal: expected '\"'")
@@ -1629,8 +1604,7 @@ func parseStringLiteral(p *parser, literal string) (result string) {
 }
 
 // parseStringLiteralContent parses the string literalExpr contents, excluding start and end quotes
-//
-func parseStringLiteralContent(p *parser, s string) (result string) {
+func parseStringLiteralContent(p *parser, s []byte) (result string) {
 
 	var builder strings.Builder
 	defer func() {
@@ -1651,7 +1625,7 @@ func parseStringLiteralContent(p *parser, s string) (result string) {
 		}
 
 		var width int
-		r, width = utf8.DecodeRuneInString(s[index:])
+		r, width = utf8.DecodeRune(s[index:])
 		index += width
 
 		atEnd = index >= length
@@ -1761,7 +1735,7 @@ func parseHex(r rune) rune {
 	return -1
 }
 
-func parseIntegerLiteral(p *parser, literal, text string, kind IntegerLiteralKind, tokenRange ast.Range) *ast.IntegerExpression {
+func parseIntegerLiteral(p *parser, literal, text []byte, kind IntegerLiteralKind, tokenRange ast.Range) *ast.IntegerExpression {
 
 	report := func(invalidKind InvalidNumberLiteralKind) {
 		p.report(
@@ -1769,24 +1743,26 @@ func parseIntegerLiteral(p *parser, literal, text string, kind IntegerLiteralKin
 				IntegerLiteralKind:        kind,
 				InvalidIntegerLiteralKind: invalidKind,
 				// NOTE: not using text, because it has the base-prefix stripped
-				Literal: literal,
+				Literal: string(literal),
 				Range:   tokenRange,
 			},
 		)
 	}
 
-	// check literal has no leading underscore
+	// TODO: improve
+	s := string(text)
 
-	if strings.HasPrefix(text, "_") {
+	// check literal has no leading underscore
+	if strings.HasPrefix(s, "_") {
 		report(InvalidNumberLiteralKindLeadingUnderscore)
 	}
 
 	// check literal has no trailing underscore
-	if strings.HasSuffix(text, "_") {
+	if strings.HasSuffix(s, "_") {
 		report(InvalidNumberLiteralKindTrailingUnderscore)
 	}
 
-	withoutUnderscores := strings.ReplaceAll(text, "_", "")
+	withoutUnderscores := strings.ReplaceAll(s, "_", "")
 
 	var value *big.Int
 	var base int
@@ -1837,8 +1813,9 @@ func parseFixedPointPart(gauge common.MemoryGauge, part string) (integer *big.In
 	return integer, scale
 }
 
-func parseFixedPointLiteral(p *parser, literal string, tokenRange ast.Range) *ast.FixedPointExpression {
-	parts := strings.Split(literal, ".")
+func parseFixedPointLiteral(p *parser, literal []byte, tokenRange ast.Range) *ast.FixedPointExpression {
+	// TODO: improve
+	parts := strings.Split(string(literal), ".")
 	integer, _ := parseFixedPointPart(p.memoryGauge, parts[0])
 	fractional, scale := parseFixedPointPart(p.memoryGauge, parts[1])
 

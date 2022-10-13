@@ -38,9 +38,9 @@ type MemoryGauge interface {
 var (
 	// Tokens
 
-	ValueTokenMemoryUsage  = NewConstantMemoryUsage(MemoryKindValueToken)
-	SyntaxTokenMemoryUsage = NewConstantMemoryUsage(MemoryKindSyntaxToken)
-	SpaceTokenMemoryUsage  = NewConstantMemoryUsage(MemoryKindSpaceToken)
+	TypeTokenMemoryUsage  = NewConstantMemoryUsage(MemoryKindTypeToken)
+	ErrorTokenMemoryUsage = NewConstantMemoryUsage(MemoryKindErrorToken)
+	SpaceTokenMemoryUsage = NewConstantMemoryUsage(MemoryKindSpaceToken)
 
 	// AST
 
@@ -59,7 +59,7 @@ var (
 
 	FunctionDeclarationMemoryUsage        = NewConstantMemoryUsage(MemoryKindFunctionDeclaration)
 	CompositeDeclarationMemoryUsage       = NewConstantMemoryUsage(MemoryKindCompositeDeclaration)
-	ExtensionDeclarationMemoryUsage       = NewConstantMemoryUsage(MemoryKindExtensionDeclaration)
+	AttachmentDeclarationMemoryUsage      = NewConstantMemoryUsage(MemoryKindAttachmentDeclaration)
 	InterfaceDeclarationMemoryUsage       = NewConstantMemoryUsage(MemoryKindInterfaceDeclaration)
 	ImportDeclarationMemoryUsage          = NewConstantMemoryUsage(MemoryKindImportDeclaration)
 	TransactionDeclarationMemoryUsage     = NewConstantMemoryUsage(MemoryKindTransactionDeclaration)
@@ -105,7 +105,7 @@ var (
 	ReferenceExpressionMemoryUsage   = NewConstantMemoryUsage(MemoryKindReferenceExpression)
 	ForceExpressionMemoryUsage       = NewConstantMemoryUsage(MemoryKindForceExpression)
 	PathExpressionMemoryUsage        = NewConstantMemoryUsage(MemoryKindPathExpression)
-	ExtendExpressionMemoryUsage      = NewConstantMemoryUsage(MemoryKindExtendExpression)
+	AttachExpressionMemoryUsage      = NewConstantMemoryUsage(MemoryKindAttachExpression)
 
 	// AST Types
 
@@ -117,7 +117,6 @@ var (
 	OptionalTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindOptionalType)
 	ReferenceTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindReferenceType)
 	RestrictedTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindRestrictedType)
-	ExtendedTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindExtendedType)
 	VariableSizedTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindVariableSizedType)
 
 	PositionMemoryUsage = NewConstantMemoryUsage(MemoryKindPosition)
@@ -151,6 +150,7 @@ var (
 	PathValueMemoryUsage                = NewConstantMemoryUsage(MemoryKindPathValue)
 	OptionalValueMemoryUsage            = NewConstantMemoryUsage(MemoryKindOptionalValue)
 	TypeValueMemoryUsage                = NewConstantMemoryUsage(MemoryKindTypeValue)
+	PublishedValueMemoryUsage           = NewConstantMemoryUsage(MemoryKindPublishedValue)
 
 	// Static Types
 
@@ -240,8 +240,10 @@ var (
 	PublicAccountContractsStringMemoryUsage = NewRawStringMemoryUsage(len("PublicAccount.Contracts()"))
 	AuthAccountKeysStringMemoryUsage        = NewRawStringMemoryUsage(len("AuthAccount.Keys()"))
 	PublicAccountKeysStringMemoryUsage      = NewRawStringMemoryUsage(len("PublicAccount.Keys()"))
+	AuthAccountInboxStringMemoryUsage       = NewRawStringMemoryUsage(len("AuthAccount.Inbox()"))
 	CapabilityValueStringMemoryUsage        = NewRawStringMemoryUsage(len("Capability<>(address: , path: )"))
 	LinkValueStringMemoryUsage              = NewRawStringMemoryUsage(len("Link<>()"))
+	PublishedValueStringMemoryUsage         = NewRawStringMemoryUsage(len("PublishedValue<>()"))
 
 	// Static types string representations
 

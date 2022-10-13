@@ -186,7 +186,6 @@ func SortContractUpdates(updates []ContractUpdate) {
 
 // commitContractUpdates writes the contract updates to storage.
 // The contract updates were delayed so they are not observable during execution.
-//
 func (s *Storage) commitContractUpdates(inter *interpreter.Interpreter) {
 
 	contractUpdateCount := len(s.contractUpdates)
@@ -256,7 +255,6 @@ func sortWrites(writes []write) {
 }
 
 // Commit serializes/saves all values in the readCache in storage (through the runtime interface).
-//
 func (s *Storage) Commit(inter *interpreter.Interpreter, commitContractUpdates bool) error {
 
 	if commitContractUpdates {

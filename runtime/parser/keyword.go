@@ -62,10 +62,8 @@ const (
 	keywordSwitch      = "switch"
 	keywordDefault     = "default"
 	keywordEnum        = "enum"
-	keywordExtend      = "extend"
-	keywordExtension   = "extension"
+	keywordAttachment  = "attachment"
 	keywordAttach      = "attach"
 	keywordRemove      = "remove"
-	keywordWith        = "with"
-	keywordAnd         = "and"
+	keywordTo          = "to"
 )

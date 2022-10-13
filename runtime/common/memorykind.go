@@ -21,7 +21,6 @@ package common
 //go:generate go run golang.org/x/tools/cmd/stringer -type=MemoryKind -trimprefix=MemoryKind
 
 // MemoryKind
-//
 type MemoryKind uint
 
 const (
@@ -52,6 +51,7 @@ const (
 	MemoryKindBoundFunctionValue
 	MemoryKindBigInt
 	MemoryKindSimpleCompositeValue
+	MemoryKindPublishedValue
 
 	// Atree Nodes
 	MemoryKindAtreeArrayDataSlab
@@ -139,8 +139,8 @@ const (
 
 	// Tokens
 
-	MemoryKindValueToken
-	MemoryKindSyntaxToken
+	MemoryKindTypeToken
+	MemoryKindErrorToken
 	MemoryKindSpaceToken
 
 	// AST nodes
@@ -159,7 +159,7 @@ const (
 
 	MemoryKindFunctionDeclaration
 	MemoryKindCompositeDeclaration
-	MemoryKindExtensionDeclaration
+	MemoryKindAttachmentDeclaration
 	MemoryKindInterfaceDeclaration
 	MemoryKindEnumCaseDeclaration
 	MemoryKindFieldDeclaration
@@ -203,7 +203,7 @@ const (
 	MemoryKindReferenceExpression
 	MemoryKindForceExpression
 	MemoryKindPathExpression
-	MemoryKindExtendExpression
+	MemoryKindAttachExpression
 
 	MemoryKindConstantSizedType
 	MemoryKindDictionaryType
@@ -213,7 +213,6 @@ const (
 	MemoryKindOptionalType
 	MemoryKindReferenceType
 	MemoryKindRestrictedType
-	MemoryKindExtendedType
 	MemoryKindVariableSizedType
 
 	MemoryKindPosition

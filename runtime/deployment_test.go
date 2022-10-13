@@ -32,6 +32,7 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
@@ -72,9 +73,9 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 
 		inter := newTestInterpreter(t)
 
-		codeHash, err := importValue(
+		codeHash, err := ImportValue(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			codeHashValue,
 			sema.ByteArrayType,
 		)
@@ -88,6 +89,8 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 
 	expectFailure := func(expectedErrorMessage string) expectation {
 		return func(t *testing.T, err error, accountCode []byte, events []cadence.Event, _ cadence.Type) {
+			RequireError(t, err)
+
 			var runtimeErr Error
 			require.ErrorAs(t, err, &runtimeErr)
 

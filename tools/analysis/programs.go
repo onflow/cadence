@@ -86,13 +86,18 @@ func (programs Programs) check(
 	*sema.Elaboration,
 	error,
 ) {
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	for _, value := range stdlib.DefaultScriptStandardLibraryValues(nil) {
+		baseValueActivation.DeclareValue(value)
+	}
 
 	checker, err := sema.NewChecker(
 		program,
 		location,
 		nil,
 		&sema.Config{
-			AccessCheckMode: sema.AccessCheckModeStrict,
+			BaseValueActivation: baseValueActivation,
+			AccessCheckMode:     sema.AccessCheckModeStrict,
 			LocationHandler: sema.AddressLocationHandlerFunc(
 				config.ResolveAddressContractNames,
 			),

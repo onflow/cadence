@@ -28,13 +28,12 @@ import (
 
 type Program struct {
 	Location    common.Location
-	Code        string
+	Code        []byte
 	Program     *ast.Program
 	Elaboration *sema.Elaboration
 }
 
 // Run runs the given DAG of analyzers in parallel
-//
 func (program *Program) Run(analyzers []*Analyzer, report func(Diagnostic)) {
 
 	type action struct {

@@ -27,6 +27,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/common"
 	. "github.com/onflow/cadence/runtime/interpreter"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestByteArrayValueToByteSlice(t *testing.T) {
@@ -43,7 +44,7 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 		invalid := []Value{
 			NewArrayValue(
 				inter,
-				ReturnEmptyLocationRange,
+				EmptyLocationRange,
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeUInt64,
 				},
@@ -52,7 +53,7 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 			),
 			NewArrayValue(
 				inter,
-				ReturnEmptyLocationRange,
+				EmptyLocationRange,
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInt256,
 				},
@@ -66,7 +67,7 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 
 		for _, value := range invalid {
 			_, err := ByteArrayValueToByteSlice(inter, value)
-			require.Error(t, err)
+			RequireError(t, err)
 		}
 	})
 
@@ -77,7 +78,7 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 		invalid := map[Value][]byte{
 			NewArrayValue(
 				inter,
-				ReturnEmptyLocationRange,
+				EmptyLocationRange,
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInteger,
 				},
@@ -85,7 +86,7 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 			): {},
 			NewArrayValue(
 				inter,
-				ReturnEmptyLocationRange,
+				EmptyLocationRange,
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInteger,
 				},
@@ -95,7 +96,7 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 			): {2, 3},
 			NewArrayValue(
 				inter,
-				ReturnEmptyLocationRange,
+				EmptyLocationRange,
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInteger,
 				},
@@ -129,7 +130,7 @@ func TestByteValueToByte(t *testing.T) {
 
 		for _, value := range invalid {
 			_, err := ByteValueToByte(nil, value)
-			require.Error(t, err)
+			RequireError(t, err)
 		}
 	})
 

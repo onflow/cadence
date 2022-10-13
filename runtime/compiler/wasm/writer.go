@@ -24,7 +24,6 @@ import (
 )
 
 // WASMWriter allows writing WASM binaries
-//
 type WASMWriter struct {
 	buf        *Buffer
 	WriteNames bool
@@ -37,7 +36,6 @@ func NewWASMWriter(buf *Buffer) *WASMWriter {
 }
 
 // writeMagicAndVersion writes the magic byte sequence and version at the beginning of the WASM binary
-//
 func (w *WASMWriter) writeMagicAndVersion() error {
 	err := w.buf.WriteBytes(wasmMagic)
 	if err != nil {
@@ -48,7 +46,6 @@ func (w *WASMWriter) writeMagicAndVersion() error {
 
 // writeSection writes a section in the WASM binary, with the given section ID and the given content.
 // The content is a function that writes the contents of the section.
-//
 func (w *WASMWriter) writeSection(sectionID sectionID, content func() error) error {
 	// write the section ID
 	err := w.buf.WriteByte(byte(sectionID))
@@ -62,7 +59,6 @@ func (w *WASMWriter) writeSection(sectionID sectionID, content func() error) err
 
 // writeContentWithSize writes the size of the content,
 // and the content itself
-//
 func (w *WASMWriter) writeContentWithSize(content func() error) error {
 
 	// write the temporary placeholder for the size
@@ -83,7 +79,6 @@ func (w *WASMWriter) writeContentWithSize(content func() error) error {
 
 // writeCustomSection writes a custom section with the given name and content.
 // The content is a function that writes the contents of the section.
-//
 func (w *WASMWriter) writeCustomSection(name string, content func() error) error {
 	return w.writeSection(sectionIDCustom, func() error {
 		err := w.writeName(name)
@@ -97,7 +92,6 @@ func (w *WASMWriter) writeCustomSection(name string, content func() error) error
 
 // writeTypeSection writes the section that declares all function types
 // so they can be referenced by index
-//
 func (w *WASMWriter) writeTypeSection(funcTypes []*FunctionType) error {
 	return w.writeSection(sectionIDType, func() error {
 
@@ -120,7 +114,6 @@ func (w *WASMWriter) writeTypeSection(funcTypes []*FunctionType) error {
 }
 
 // writeFuncType writes the function type
-//
 func (w *WASMWriter) writeFuncType(funcType *FunctionType) error {
 	// write the type
 	err := w.buf.WriteByte(functionTypeIndicator)
@@ -160,7 +153,6 @@ func (w *WASMWriter) writeFuncType(funcType *FunctionType) error {
 }
 
 // writeImportSection writes the section that declares all imports
-//
 func (w *WASMWriter) writeImportSection(imports []*Import) error {
 	return w.writeSection(sectionIDImport, func() error {
 
@@ -183,7 +175,6 @@ func (w *WASMWriter) writeImportSection(imports []*Import) error {
 }
 
 // writeImport writes the import
-//
 func (w *WASMWriter) writeImport(im *Import) error {
 	// write the module
 	err := w.writeName(im.Module)
@@ -210,7 +201,6 @@ func (w *WASMWriter) writeImport(im *Import) error {
 
 // writeFunctionSection writes the section that declares the types of functions.
 // The bodies of these functions will later be provided in the code section
-//
 func (w *WASMWriter) writeFunctionSection(functions []*Function) error {
 	return w.writeSection(sectionIDFunction, func() error {
 		// write the number of functions
@@ -232,7 +222,6 @@ func (w *WASMWriter) writeFunctionSection(functions []*Function) error {
 }
 
 // writeMemorySection writes the section that declares all memories
-//
 func (w *WASMWriter) writeMemorySection(memories []*Memory) error {
 	return w.writeSection(sectionIDMemory, func() error {
 
@@ -255,7 +244,6 @@ func (w *WASMWriter) writeMemorySection(memories []*Memory) error {
 }
 
 // writeMemory writes the memory
-//
 func (w *WASMWriter) writeMemory(memory *Memory) error {
 	return w.writeLimit(memory.Max, memory.Min)
 }
@@ -291,7 +279,6 @@ func (w *WASMWriter) writeLimit(max *uint32, min uint32) error {
 }
 
 // writeExportSection writes the section that declares all exports
-//
 func (w *WASMWriter) writeExportSection(exports []*Export) error {
 	return w.writeSection(sectionIDExport, func() error {
 
@@ -314,7 +301,6 @@ func (w *WASMWriter) writeExportSection(exports []*Export) error {
 }
 
 // writeExport writes the export
-//
 func (w *WASMWriter) writeExport(export *Export) error {
 
 	// write the name
@@ -350,7 +336,6 @@ func (w *WASMWriter) writeExport(export *Export) error {
 }
 
 // writeStartSection writes the section that declares the start function
-//
 func (w *WASMWriter) writeStartSection(funcIndex uint32) error {
 	return w.writeSection(sectionIDStart, func() error {
 		// write the index of the start function
@@ -360,7 +345,6 @@ func (w *WASMWriter) writeStartSection(funcIndex uint32) error {
 
 // writeCodeSection writes the section that provides the function bodies for the functions
 // declared by the function section (which only provides the function types)
-//
 func (w *WASMWriter) writeCodeSection(functions []*Function) error {
 	return w.writeSection(sectionIDCode, func() error {
 		// write the number of code entries (one for each function)
@@ -383,7 +367,6 @@ func (w *WASMWriter) writeCodeSection(functions []*Function) error {
 }
 
 // writeFunctionBody writes the body of the function
-//
 func (w *WASMWriter) writeFunctionBody(code *Code) error {
 	return w.writeContentWithSize(func() error {
 
@@ -417,7 +400,6 @@ func (w *WASMWriter) writeFunctionBody(code *Code) error {
 }
 
 // writeInstructions writes an instruction sequence
-//
 func (w *WASMWriter) writeInstructions(instructions []Instruction) error {
 	for _, instruction := range instructions {
 		err := instruction.write(w)
@@ -429,7 +411,6 @@ func (w *WASMWriter) writeInstructions(instructions []Instruction) error {
 }
 
 // writeOpcode writes the opcode of an instruction
-//
 func (w *WASMWriter) writeOpcode(opcodes ...opcode) error {
 	for _, b := range opcodes {
 		err := w.buf.WriteByte(byte(b))
@@ -441,7 +422,6 @@ func (w *WASMWriter) writeOpcode(opcodes ...opcode) error {
 }
 
 // writeName writes a name, a UTF-8 byte sequence
-//
 func (w *WASMWriter) writeName(name string) error {
 
 	// ensure the name is valid UTF-8
@@ -463,7 +443,6 @@ func (w *WASMWriter) writeName(name string) error {
 }
 
 // writeBlockInstructionArgument writes a block instruction argument
-//
 func (w *WASMWriter) writeBlockInstructionArgument(block Block, allowElse bool) error {
 
 	// write the block type
@@ -516,7 +495,6 @@ const customSectionNameName = "name"
 
 // writeNameSection writes the section which declares
 // the names of the module, functions, and locals
-//
 func (w *WASMWriter) writeNameSection(moduleName string, imports []*Import, functions []*Function) error {
 	return w.writeCustomSection(customSectionNameName, func() error {
 
@@ -532,7 +510,6 @@ func (w *WASMWriter) writeNameSection(moduleName string, imports []*Import, func
 }
 
 // nameSubSectionID is the ID of a sub-section in the name section of the WASM binary
-//
 type nameSubSectionID byte
 
 const (
@@ -545,7 +522,6 @@ const (
 // writeNameSubSection writes a sub-section in the name section of the WASM binary,
 // with the given sub-section ID and the given content.
 // The content is a function that writes the contents of the section.
-//
 func (w *WASMWriter) writeNameSubSection(nameSubSectionID nameSubSectionID, content func() error) error {
 	// write the name sub-section ID
 	err := w.buf.WriteByte(byte(nameSubSectionID))
@@ -558,7 +534,6 @@ func (w *WASMWriter) writeNameSubSection(nameSubSectionID nameSubSectionID, cont
 }
 
 // writeNameSectionModuleName writes the module name sub-section in the name section of the WASM binary
-//
 func (w *WASMWriter) writeNameSectionModuleNameSubSection(moduleName string) error {
 	return w.writeNameSubSection(nameSubSectionIDModuleName, func() error {
 		return w.writeName(moduleName)
@@ -566,7 +541,6 @@ func (w *WASMWriter) writeNameSectionModuleNameSubSection(moduleName string) err
 }
 
 // writeNameSectionFunctionNames writes the module name sub-section in the name section of the WASM binary
-//
 func (w *WASMWriter) writeNameSectionFunctionNamesSubSection(imports []*Import, functions []*Function) error {
 	return w.writeNameSubSection(nameSubSectionIDFunctionNames, func() error {
 
@@ -625,7 +599,6 @@ func (w *WASMWriter) writeNameSectionFunctionNamesSubSection(imports []*Import, 
 }
 
 // writeDataSection writes the section that declares the data segments
-//
 func (w *WASMWriter) writeDataSection(segments []*Data) error {
 	return w.writeSection(sectionIDData, func() error {
 		// write the number of data segments
@@ -647,7 +620,6 @@ func (w *WASMWriter) writeDataSection(segments []*Data) error {
 }
 
 // writeDataSegment writes the data segment
-//
 func (w *WASMWriter) writeDataSegment(segment *Data) error {
 
 	// write the memory index

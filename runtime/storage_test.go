@@ -35,7 +35,7 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/tests/utils"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func withWritesToStorage(
@@ -276,7 +276,7 @@ func TestRuntimePublicCapabilityBorrowTypeConfusion(t *testing.T) {
 
 	signingAddress := common.MustBytesToAddress(addressString)
 
-	deployFTContractTx := utils.DeploymentTransaction("FungibleToken", []byte(realFungibleTokenContractInterface))
+	deployFTContractTx := DeploymentTransaction("FungibleToken", []byte(realFungibleTokenContractInterface))
 
 	const ducContract = `
       import FungibleToken from 0xaad3e26e406987c2
@@ -481,7 +481,7 @@ func TestRuntimePublicCapabilityBorrowTypeConfusion(t *testing.T) {
 
     `
 
-	deployDucContractTx := utils.DeploymentTransaction("DapperUtilityCoin", []byte(ducContract))
+	deployDucContractTx := DeploymentTransaction("DapperUtilityCoin", []byte(ducContract))
 
 	const testContract = `
       access(all) contract TestContract{
@@ -510,7 +510,7 @@ func TestRuntimePublicCapabilityBorrowTypeConfusion(t *testing.T) {
       }
     `
 
-	deployTestContractTx := utils.DeploymentTransaction("TestContract", []byte(testContract))
+	deployTestContractTx := DeploymentTransaction("TestContract", []byte(testContract))
 
 	accountCodes := map[Location][]byte{}
 	var events []cadence.Event
@@ -616,7 +616,7 @@ transaction {
 		},
 	)
 
-	require.Error(t, err)
+	RequireError(t, err)
 
 	require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 }
@@ -706,7 +706,7 @@ func TestRuntimeStorageReadAndBorrow(t *testing.T) {
 				Identifier: "test",
 			},
 			Context{
-				Location:  utils.TestLocation,
+				Location:  TestLocation,
 				Interface: runtimeInterface,
 			},
 		)
@@ -723,7 +723,7 @@ func TestRuntimeStorageReadAndBorrow(t *testing.T) {
 				Identifier: "other",
 			},
 			Context{
-				Location:  utils.TestLocation,
+				Location:  TestLocation,
 				Interface: runtimeInterface,
 			},
 		)
@@ -743,8 +743,14 @@ func TestRuntimeTopShotContractDeployment(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	accountCodes := map[common.LocationID]string{
-		"A.1d7e57aa55817448.NonFungibleToken": realNonFungibleTokenInterface,
+	nftAddress, err := common.HexToAddress("0x1d7e57aa55817448")
+	require.NoError(t, err)
+
+	accountCodes := map[common.Location]string{
+		common.AddressLocation{
+			Address: nftAddress,
+			Name:    "NonFungibleToken",
+		}: realNonFungibleTokenInterface,
 	}
 
 	events := make([]cadence.Event, 0)
@@ -760,7 +766,7 @@ func TestRuntimeTopShotContractDeployment(t *testing.T) {
 				Address: address,
 				Name:    name,
 			}
-			accountCodes[location.ID()] = string(code)
+			accountCodes[location] = string(code)
 			return nil
 		},
 		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
@@ -768,7 +774,7 @@ func TestRuntimeTopShotContractDeployment(t *testing.T) {
 				Address: address,
 				Name:    name,
 			}
-			code = []byte(accountCodes[location.ID()])
+			code = []byte(accountCodes[location])
 			return code, nil
 		},
 		emitEvent: func(event cadence.Event) error {
@@ -785,7 +791,7 @@ func TestRuntimeTopShotContractDeployment(t *testing.T) {
 
 	err = runtime.ExecuteTransaction(
 		Script{
-			Source: utils.DeploymentTransaction(
+			Source: DeploymentTransaction(
 				"TopShot",
 				[]byte(realTopShotContract),
 			),
@@ -799,7 +805,7 @@ func TestRuntimeTopShotContractDeployment(t *testing.T) {
 
 	err = runtime.ExecuteTransaction(
 		Script{
-			Source: utils.DeploymentTransaction(
+			Source: DeploymentTransaction(
 				"TopShotShardedCollection",
 				[]byte(realTopShotShardedCollectionContract),
 			),
@@ -813,7 +819,7 @@ func TestRuntimeTopShotContractDeployment(t *testing.T) {
 
 	err = runtime.ExecuteTransaction(
 		Script{
-			Source: utils.DeploymentTransaction(
+			Source: DeploymentTransaction(
 				"TopshotAdminReceiver",
 				[]byte(realTopshotAdminReceiverContract),
 			),
@@ -832,11 +838,17 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
 
 	runtime := newTestInterpreterRuntime()
 
-	accountCodes := map[common.LocationID]string{
-		"A.1d7e57aa55817448.NonFungibleToken": realNonFungibleTokenInterface,
+	nftAddress, err := common.HexToAddress("0x1d7e57aa55817448")
+	require.NoError(t, err)
+
+	accountCodes := map[common.Location]string{
+		common.AddressLocation{
+			Address: nftAddress,
+			Name:    "NonFungibleToken",
+		}: realNonFungibleTokenInterface,
 	}
 
-	deployTx := utils.DeploymentTransaction("TopShot", []byte(realTopShotContract))
+	deployTx := DeploymentTransaction("TopShot", []byte(realTopShotContract))
 
 	topShotAddress, err := common.HexToAddress("0x0b2a3299cc857e29")
 	require.NoError(t, err)
@@ -857,7 +869,7 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
 				Address: address,
 				Name:    name,
 			}
-			accountCodes[location.ID()] = string(code)
+			accountCodes[location] = string(code)
 			return nil
 		},
 		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
@@ -865,7 +877,7 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
 				Address: address,
 				Name:    name,
 			}
-			code = []byte(accountCodes[location.ID()])
+			code = []byte(accountCodes[location])
 			return code, nil
 		},
 		emitEvent: func(event cadence.Event) error {
@@ -1117,7 +1129,7 @@ func TestRuntimeBatchMintAndTransfer(t *testing.T) {
       }
     `
 
-	deployTx := utils.DeploymentTransaction("Test", []byte(contract))
+	deployTx := DeploymentTransaction("Test", []byte(contract))
 
 	contractAddress := common.MustBytesToAddress([]byte{0x1})
 
@@ -1483,7 +1495,7 @@ func TestRuntimeStorageReferenceCast(t *testing.T) {
 
 	signerAddress := common.MustBytesToAddress([]byte{0x42})
 
-	deployTx := utils.DeploymentTransaction("Test", []byte(`
+	deployTx := DeploymentTransaction("Test", []byte(`
       pub contract Test {
 
           pub resource interface RI {}
@@ -1577,9 +1589,9 @@ func TestRuntimeStorageReferenceCast(t *testing.T) {
 		},
 	)
 
-	require.Error(t, err)
+	RequireError(t, err)
 
-	require.Contains(t, err.Error(), "unexpectedly found non-`&Test.R` while force-casting value")
+	require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 }
 
 func TestRuntimeStorageNonStorable(t *testing.T) {
@@ -1637,7 +1649,7 @@ func TestRuntimeStorageNonStorable(t *testing.T) {
 					Location:  nextTransactionLocation(),
 				},
 			)
-			require.Error(t, err)
+			RequireError(t, err)
 
 			require.Contains(t, err.Error(), "cannot store non-storable value")
 		})
@@ -1680,7 +1692,7 @@ func TestRuntimeStorageRecursiveReference(t *testing.T) {
 			Location:  nextTransactionLocation(),
 		},
 	)
-	require.Error(t, err)
+	RequireError(t, err)
 
 	require.Contains(t, err.Error(), "cannot store non-storable value")
 }
@@ -1782,7 +1794,7 @@ func TestRuntimeResourceOwnerChange(t *testing.T) {
 
 	var signers []Address
 
-	deployTx := utils.DeploymentTransaction("Test", []byte(`
+	deployTx := DeploymentTransaction("Test", []byte(`
       pub contract Test {
 
           pub resource R {}
@@ -1845,7 +1857,7 @@ func TestRuntimeResourceOwnerChange(t *testing.T) {
 				resourceOwnerChange{
 					typeID: resource.TypeID(),
 					// TODO: provide proper location range
-					uuid:       resource.ResourceUUID(inter, interpreter.ReturnEmptyLocationRange),
+					uuid:       resource.ResourceUUID(inter, interpreter.EmptyLocationRange),
 					oldAddress: oldAddress,
 					newAddress: newAddress,
 				},
@@ -2258,7 +2270,7 @@ transaction {
 
 	err := runtime.ExecuteTransaction(
 		Script{
-			Source: utils.DeploymentTransaction(
+			Source: DeploymentTransaction(
 				"Test",
 				[]byte(contract),
 			),
@@ -2394,7 +2406,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		err := runtime.ExecuteTransaction(
 			Script{
-				Source: utils.DeploymentTransaction(
+				Source: DeploymentTransaction(
 					"TestContract",
 					[]byte(contract),
 				),
@@ -2529,7 +2541,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		err := runtime.ExecuteTransaction(
 			Script{
-				Source: utils.DeploymentTransaction(
+				Source: DeploymentTransaction(
 					"TestContract",
 					[]byte(contract),
 				),
@@ -2670,7 +2682,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		err := runtime.ExecuteTransaction(
 			Script{
-				Source: utils.DeploymentTransaction(
+				Source: DeploymentTransaction(
 					"TestContract",
 					[]byte(contract),
 				),
@@ -2798,7 +2810,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		err := runtime.ExecuteTransaction(
 			Script{
-				Source: utils.DeploymentTransaction(
+				Source: DeploymentTransaction(
 					"TestContract",
 					[]byte(contract),
 				),
@@ -2924,7 +2936,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		err := runtime.ExecuteTransaction(
 			Script{
-				Source: utils.DeploymentTransaction(
+				Source: DeploymentTransaction(
 					"TestContract",
 					[]byte(contract),
 				),
@@ -2999,7 +3011,7 @@ func TestRuntimeNoAtreeSendOnClosedChannelDuringCommit(t *testing.T) {
 					Location:  nextTransactionLocation(),
 				},
 			)
-			require.Error(t, err)
+			RequireError(t, err)
 
 			require.Contains(t, err.Error(), "cannot store non-storable value")
 		}
@@ -3057,7 +3069,7 @@ func TestRuntimeStorageEnumCase(t *testing.T) {
 
 	err := runtime.ExecuteTransaction(
 		Script{
-			Source: utils.DeploymentTransaction(
+			Source: DeploymentTransaction(
 				"C",
 				[]byte(`
                   pub contract C {
@@ -3226,7 +3238,7 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
-	deployTx := utils.DeploymentTransaction("Test", []byte(`
+	deployTx := DeploymentTransaction("Test", []byte(`
      pub contract Test {
 
          pub resource interface RI {}
@@ -3239,7 +3251,7 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
      }
    `))
 
-	accountCodes := map[common.LocationID][]byte{}
+	accountCodes := map[common.Location][]byte{}
 	var events []cadence.Event
 	var loggedMessages []string
 
@@ -3257,7 +3269,7 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 					Address: address,
 					Name:    name,
 				}
-				accountCodes[location.ID()] = code
+				accountCodes[location] = code
 				return nil
 			},
 			getAccountContractCode: func(address Address, name string) (code []byte, err error) {
@@ -3265,7 +3277,7 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 					Address: address,
 					Name:    name,
 				}
-				code = accountCodes[location.ID()]
+				code = accountCodes[location]
 				return code, nil
 			},
 			emitEvent: func(event cadence.Event) error {
@@ -3335,7 +3347,7 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 	// Read first
 
 	firstValue := storageMap.ReadValue(nil, "first")
-	utils.RequireValuesEqual(
+	RequireValuesEqual(
 		t,
 		inter,
 		interpreter.NewUnmeteredStringValue("Hello, World!"),
@@ -3349,8 +3361,8 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 
 	arrayValue := secondValue.(*interpreter.ArrayValue)
 
-	element := arrayValue.Get(inter, interpreter.ReturnEmptyLocationRange, 2)
-	utils.RequireValuesEqual(
+	element := arrayValue.Get(inter, interpreter.EmptyLocationRange, 2)
+	RequireValuesEqual(
 		t,
 		inter,
 		interpreter.NewUnmeteredStringValue("three"),
@@ -3362,6 +3374,6 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 	rValue := storageMap.ReadValue(nil, "r")
 	require.IsType(t, &interpreter.CompositeValue{}, rValue)
 
-	_, err = ExportValue(rValue, inter, interpreter.ReturnEmptyLocationRange)
+	_, err = ExportValue(rValue, inter, interpreter.EmptyLocationRange)
 	require.NoError(t, err)
 }

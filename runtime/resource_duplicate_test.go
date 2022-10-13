@@ -29,7 +29,7 @@ import (
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/tests/utils"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestRuntimeResourceDuplicationWithContractTransfer(t *testing.T) {
@@ -38,7 +38,7 @@ func TestRuntimeResourceDuplicationWithContractTransfer(t *testing.T) {
 
 	runtime := newTestInterpreterRuntime()
 
-	accountCodes := map[common.LocationID][]byte{}
+	accountCodes := map[common.Location][]byte{}
 
 	var events []cadence.Event
 
@@ -48,7 +48,7 @@ func TestRuntimeResourceDuplicationWithContractTransfer(t *testing.T) {
 
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
-			return accountCodes[location.ID()], nil
+			return accountCodes[location], nil
 		},
 		storage: storage,
 		getSigningAccounts: func() ([]Address, error) {
@@ -60,14 +60,14 @@ func TestRuntimeResourceDuplicationWithContractTransfer(t *testing.T) {
 				Address: address,
 				Name:    name,
 			}
-			return accountCodes[location.ID()], nil
+			return accountCodes[location], nil
 		},
 		updateAccountContractCode: func(address Address, name string, code []byte) error {
 			location := common.AddressLocation{
 				Address: address,
 				Name:    name,
 			}
-			accountCodes[location.ID()] = code
+			accountCodes[location] = code
 			return nil
 		},
 		emitEvent: func(event cadence.Event) error {
@@ -85,7 +85,7 @@ func TestRuntimeResourceDuplicationWithContractTransfer(t *testing.T) {
 
 	err := runtime.ExecuteTransaction(
 		Script{
-			Source: utils.DeploymentTransaction(
+			Source: DeploymentTransaction(
 				"FungibleToken",
 				[]byte(realFungibleTokenContractInterface),
 			),
@@ -138,7 +138,7 @@ func TestRuntimeResourceDuplicationWithContractTransfer(t *testing.T) {
     `
 	err = runtime.ExecuteTransaction(
 		Script{
-			Source: utils.DeploymentTransaction(
+			Source: DeploymentTransaction(
 				"Holder",
 				[]byte(holderContract),
 			),
@@ -198,7 +198,7 @@ func TestRuntimeResourceDuplicationWithContractTransfer(t *testing.T) {
 			Location:  nextTransactionLocation(),
 		},
 	)
-	require.Error(t, err)
+	RequireError(t, err)
 
 	var nonTransferableValueError interpreter.NonTransferableValueError
 	require.ErrorAs(t, err, &nonTransferableValueError)

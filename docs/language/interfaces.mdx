@@ -470,6 +470,10 @@ struct SomeInner: OuterInterface.InnerInterface {}
 
 ## Interface Default Functions
 
+<Callout type="info">
+🚧 Status: This feature will be available in a future spork.
+</Callout>
+
 Interfaces can provide default functions:
 If the concrete type implementing the interface does not provide an implementation
 for the function required by the interface,
@@ -508,3 +512,39 @@ numbers.getCount()  // is 0
 Interfaces cannot provide default initializers or default destructors.
 
 Only one conformance may provide a default function.
+
+## Nested Type Requirements
+
+<Callout type="info">
+
+🚧 Status: Currently only contracts and contract interfaces support nested type requirements.
+
+</Callout>
+
+Interfaces can require implementing types to provide concrete nested types.
+For example, a resource interface may require an implementing type to provide a resource type.
+
+```cadence
+// Declare a resource interface named `FungibleToken`.
+//
+// Require implementing types to provide a resource type named `Vault`
+// which must have a field named `balance`.
+//
+resource interface FungibleToken {
+    pub resource Vault {
+        pub balance: Int
+    }
+}
+// Declare a resource named `ExampleToken` that implements the `FungibleToken` interface.
+//
+// The nested type `Vault` must be provided to conform to the interface.
+//
+resource ExampleToken: FungibleToken {
+    pub resource Vault {
+        pub var balance: Int
+        init(balance: Int) {
+            self.balance = balance
+        }
+    }
+}
+```

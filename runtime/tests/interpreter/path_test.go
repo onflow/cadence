@@ -111,7 +111,7 @@ func TestInterpretConvertStringToPath(t *testing.T) {
 			)
 
 			assert.Equal(t,
-				interpreter.NilValue{},
+				interpreter.Nil,
 				inter.Globals["x"].GetValue(),
 			)
 		})
@@ -132,7 +132,7 @@ func TestInterpretConvertStringToPath(t *testing.T) {
 			)
 
 			assert.Equal(t,
-				interpreter.NilValue{},
+				interpreter.Nil,
 				inter.Globals["x"].GetValue(),
 			)
 		})

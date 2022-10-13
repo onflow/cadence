@@ -10,10 +10,10 @@ In this tutorial, we're going to deploy, store, and transfer fungible tokens.
   Open the starter code for this tutorial in the Flow Playground:
   <br />
   <a
-    href="https://play.onflow.org/adc24257-ccc6-4de8-aba4-e1bc33f5f029"
+    href="https://play.onflow.org/e63bfce9-3324-4385-9542-626845ae0363"
     target="_blank"
   >
-    https://play.onflow.org/adc24257-ccc6-4de8-aba4-e1bc33f5f029
+    https://play.onflow.org/e63bfce9-3324-4385-9542-626845ae0363
   </a>
   <br />
   The tutorial will ask you to take various actions to interact with this code.
@@ -93,10 +93,10 @@ and [Hello, World!](02-hello-world) to learn the basics of the language and the 
   First, you'll need to follow this link to open a playground session with the
   Fungible Token contracts, transactions, and scripts pre-loaded:{" "}
   <a
-    href="https://play.onflow.org/adc24257-ccc6-4de8-aba4-e1bc33f5f029"
+    href="https://play.onflow.org/e63bfce9-3324-4385-9542-626845ae0363"
     target="_blank"
   >
-    https://play.onflow.org/adc24257-ccc6-4de8-aba4-e1bc33f5f029
+    https://play.onflow.org/e63bfce9-3324-4385-9542-626845ae0363
   </a>
 </Callout>
 <Callout type="info">
@@ -723,7 +723,7 @@ transaction {
     // by getting the public capability and checking
     // that it points to a valid `Vault` object
     // that implements the `Receiver` interface
-    getAccount(0x01).getCapability<&ExampleToken.Vault{ExampleToken.Receiver}>(/public/CadenceFungibleTokenTutorialReceiver)
+    getAccount(0x02).getCapability<&ExampleToken.Vault{ExampleToken.Receiver}>(/public/CadenceFungibleTokenTutorialReceiver)
                     .check():
                     "Vault Receiver Reference was not created correctly"
     }

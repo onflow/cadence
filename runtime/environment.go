@@ -21,6 +21,8 @@ package runtime
 import (
 	"time"
 
+	"github.com/onflow/cadence/runtime/activations"
+
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -63,18 +65,23 @@ type Environment interface {
 }
 
 type interpreterEnvironment struct {
-	config                                Config
-	baseActivation                        *interpreter.VariableActivation
-	baseValueActivation                   *sema.VariableActivation
-	runtimeInterface                      Interface
-	storage                               *Storage
-	coverageReport                        *CoverageReport
-	codesAndPrograms                      codesAndPrograms
+	config Config
+
+	baseActivation      *interpreter.VariableActivation
+	baseValueActivation *sema.VariableActivation
+
+	InterpreterConfig *interpreter.Config
+	CheckerConfig     *sema.Config
+
 	deployedContractConstructorInvocation *stdlib.DeployedContractConstructorInvocation
-	interpreterConfig                     *interpreter.Config
-	checkerConfig                         *sema.Config
 	stackDepthLimiter                     *stackDepthLimiter
 	checkedImports                        importResolutionResults
+
+	// the following fields are re-configurable, see Configure
+	runtimeInterface Interface
+	storage          *Storage
+	coverageReport   *CoverageReport
+	codesAndPrograms codesAndPrograms
 }
 
 var _ Environment = &interpreterEnvironment{}
@@ -90,7 +97,7 @@ var _ common.MemoryGauge = &interpreterEnvironment{}
 
 func newInterpreterEnvironment(config Config) *interpreterEnvironment {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
 
 	env := &interpreterEnvironment{
 		config:              config,
@@ -98,8 +105,8 @@ func newInterpreterEnvironment(config Config) *interpreterEnvironment {
 		baseValueActivation: baseValueActivation,
 		stackDepthLimiter:   newStackDepthLimiter(config.StackDepthLimit),
 	}
-	env.interpreterConfig = env.newInterpreterConfig()
-	env.checkerConfig = env.newCheckerConfig()
+	env.InterpreterConfig = env.newInterpreterConfig()
+	env.CheckerConfig = env.newCheckerConfig()
 	return env
 }
 
@@ -152,21 +159,17 @@ func (e *interpreterEnvironment) newCheckerConfig() *sema.Config {
 
 func NewBaseInterpreterEnvironment(config Config) *interpreterEnvironment {
 	env := newInterpreterEnvironment(config)
-	for _, valueDeclaration := range stdlib.BuiltinValues {
+	for _, valueDeclaration := range stdlib.DefaultStandardLibraryValues(env) {
 		env.Declare(valueDeclaration)
 	}
-	env.Declare(stdlib.NewLogFunction(env))
-	env.Declare(stdlib.NewUnsafeRandomFunction(env))
-	env.Declare(stdlib.NewGetBlockFunction(env))
-	env.Declare(stdlib.NewGetCurrentBlockFunction(env))
-	env.Declare(stdlib.NewGetAccountFunction(env))
-	env.Declare(stdlib.NewAuthAccountConstructor(env))
 	return env
 }
 
 func NewScriptInterpreterEnvironment(config Config) Environment {
-	env := NewBaseInterpreterEnvironment(config)
-	env.Declare(stdlib.NewGetAuthAccountFunction(env))
+	env := newInterpreterEnvironment(config)
+	for _, valueDeclaration := range stdlib.DefaultScriptStandardLibraryValues(env) {
+		env.Declare(valueDeclaration)
+	}
 	return env
 }
 
@@ -179,14 +182,14 @@ func (e *interpreterEnvironment) Configure(
 	e.runtimeInterface = runtimeInterface
 	e.codesAndPrograms = codesAndPrograms
 	e.storage = storage
-	e.interpreterConfig.Storage = storage
+	e.InterpreterConfig.Storage = storage
 	e.coverageReport = coverageReport
 	e.stackDepthLimiter.depth = 0
 }
 
 func (e *interpreterEnvironment) Declare(valueDeclaration stdlib.StandardLibraryValue) {
 	e.baseValueActivation.DeclareValue(valueDeclaration)
-	e.baseActivation.Declare(valueDeclaration)
+	interpreter.Declare(e.baseActivation, valueDeclaration)
 }
 
 func (e *interpreterEnvironment) NewAuthAccountValue(address interpreter.AddressValue) interpreter.Value {
@@ -258,7 +261,7 @@ func (e *interpreterEnvironment) EmitEvent(
 	inter *interpreter.Interpreter,
 	eventType *sema.CompositeType,
 	values []interpreter.Value,
-	getLocationRange func() interpreter.LocationRange,
+	locationRange interpreter.LocationRange,
 ) {
 	eventFields := make([]exportableValue, 0, len(values))
 
@@ -268,7 +271,7 @@ func (e *interpreterEnvironment) EmitEvent(
 
 	emitEventFields(
 		inter,
-		getLocationRange,
+		locationRange,
 		eventType,
 		eventFields,
 		e.runtimeInterface.EmitEvent,
@@ -361,7 +364,7 @@ func (e *interpreterEnvironment) parseAndCheckProgram(
 	var parse *ast.Program
 	reportMetric(
 		func() {
-			parse, err = parser.ParseProgram(string(code), e)
+			parse, err = parser.ParseProgram(code, e)
 		},
 		e.runtimeInterface,
 		func(metrics Metrics, duration time.Duration) {
@@ -416,7 +419,7 @@ func (e *interpreterEnvironment) check(
 		program,
 		location,
 		e,
-		e.checkerConfig,
+		e.CheckerConfig,
 	)
 	if err != nil {
 		return nil, err
@@ -556,7 +559,7 @@ func (e *interpreterEnvironment) newInterpreter(
 	return interpreter.NewInterpreter(
 		program,
 		location,
-		e.interpreterConfig,
+		e.InterpreterConfig,
 	)
 }
 
@@ -588,7 +591,7 @@ func (e *interpreterEnvironment) newOnRecordTraceHandler() interpreter.OnRecordT
 func (e *interpreterEnvironment) newHashHandler() interpreter.HashHandlerFunc {
 	return func(
 		inter *interpreter.Interpreter,
-		getLocationRange func() interpreter.LocationRange,
+		locationRange interpreter.LocationRange,
 		dataValue *interpreter.ArrayValue,
 		tagValue *interpreter.StringValue,
 		hashAlgorithmValue interpreter.MemberAccessibleValue,
@@ -603,7 +606,7 @@ func (e *interpreterEnvironment) newHashHandler() interpreter.HashHandlerFunc {
 			tag = tagValue.Str
 		}
 
-		hashAlgorithm := stdlib.NewHashAlgorithmFromValue(inter, getLocationRange, hashAlgorithmValue)
+		hashAlgorithm := stdlib.NewHashAlgorithmFromValue(inter, locationRange, hashAlgorithmValue)
 
 		var result []byte
 		wrapPanic(func() {
@@ -625,7 +628,7 @@ func (e *interpreterEnvironment) newPublicAccountHandler() interpreter.PublicAcc
 func (e *interpreterEnvironment) newSignatureVerificationHandler() interpreter.SignatureVerificationHandlerFunc {
 	return func(
 		inter *interpreter.Interpreter,
-		getLocationRange func() interpreter.LocationRange,
+		locationRange interpreter.LocationRange,
 		signatureValue *interpreter.ArrayValue,
 		signedDataValue *interpreter.ArrayValue,
 		domainSeparationTagValue *interpreter.StringValue,
@@ -645,9 +648,9 @@ func (e *interpreterEnvironment) newSignatureVerificationHandler() interpreter.S
 
 		domainSeparationTag := domainSeparationTagValue.Str
 
-		hashAlgorithm := stdlib.NewHashAlgorithmFromValue(inter, getLocationRange, hashAlgorithmValue)
+		hashAlgorithm := stdlib.NewHashAlgorithmFromValue(inter, locationRange, hashAlgorithmValue)
 
-		publicKey, err := stdlib.NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
+		publicKey, err := stdlib.NewPublicKeyFromValue(inter, locationRange, publicKeyValue)
 		if err != nil {
 			return false
 		}
@@ -675,11 +678,11 @@ func (e *interpreterEnvironment) newSignatureVerificationHandler() interpreter.S
 func (e *interpreterEnvironment) newPublicKeyValidationHandler() interpreter.PublicKeyValidationHandlerFunc {
 	return func(
 		inter *interpreter.Interpreter,
-		getLocationRange func() interpreter.LocationRange,
+		locationRange interpreter.LocationRange,
 		publicKeyValue *interpreter.CompositeValue,
 	) error {
 
-		publicKey, err := stdlib.NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
+		publicKey, err := stdlib.NewPublicKeyFromValue(inter, locationRange, publicKeyValue)
 		if err != nil {
 			return err
 		}
@@ -698,7 +701,7 @@ func (e *interpreterEnvironment) newContractValueHandler() interpreter.ContractV
 		compositeType *sema.CompositeType,
 		constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
 		invocationRange ast.Range,
-	) *interpreter.CompositeValue {
+	) interpreter.ContractValue {
 
 		// If the contract is the deployed contract, instantiate it using
 		// the provided constructor and given arguments
@@ -747,13 +750,13 @@ func (e *interpreterEnvironment) newUUIDHandler() interpreter.UUIDHandlerFunc {
 func (e *interpreterEnvironment) newOnEventEmittedHandler() interpreter.OnEventEmittedFunc {
 	return func(
 		inter *interpreter.Interpreter,
-		getLocationRange func() interpreter.LocationRange,
+		locationRange interpreter.LocationRange,
 		eventValue *interpreter.CompositeValue,
 		eventType *sema.CompositeType,
 	) error {
 		emitEventValue(
 			inter,
-			getLocationRange,
+			locationRange,
 			eventType,
 			eventValue,
 			e.runtimeInterface.EmitEvent,
@@ -997,11 +1000,11 @@ func (e *interpreterEnvironment) newResourceOwnerChangedHandler() interpreter.On
 func (e *interpreterEnvironment) newBLSVerifyPopFunction() interpreter.BLSVerifyPoPHandlerFunc {
 	return func(
 		inter *interpreter.Interpreter,
-		getLocationRange func() interpreter.LocationRange,
+		locationRange interpreter.LocationRange,
 		publicKeyValue interpreter.MemberAccessibleValue,
 		signatureValue *interpreter.ArrayValue,
 	) interpreter.BoolValue {
-		publicKey, err := stdlib.NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
+		publicKey, err := stdlib.NewPublicKeyFromValue(inter, locationRange, publicKeyValue)
 		if err != nil {
 			panic(err)
 		}
@@ -1025,7 +1028,7 @@ func (e *interpreterEnvironment) newBLSVerifyPopFunction() interpreter.BLSVerify
 func (e *interpreterEnvironment) newBLSAggregateSignaturesFunction() interpreter.BLSAggregateSignaturesHandlerFunc {
 	return func(
 		inter *interpreter.Interpreter,
-		getLocationRange func() interpreter.LocationRange,
+		locationRange interpreter.LocationRange,
 		signaturesValue *interpreter.ArrayValue,
 	) interpreter.OptionalValue {
 
@@ -1055,7 +1058,7 @@ func (e *interpreterEnvironment) newBLSAggregateSignaturesFunction() interpreter
 
 		// If the crypto layer produces an error, we have invalid input, return nil
 		if err != nil {
-			return interpreter.NilValue{}
+			return interpreter.NilOptionalValue
 		}
 
 		aggregatedSignatureValue := interpreter.ByteSliceToByteArrayValue(inter, aggregatedSignature)
@@ -1072,7 +1075,7 @@ func (e *interpreterEnvironment) newBLSAggregatePublicKeysFunction(
 ) interpreter.BLSAggregatePublicKeysHandlerFunc {
 	return func(
 		inter *interpreter.Interpreter,
-		getLocationRange func() interpreter.LocationRange,
+		locationRange interpreter.LocationRange,
 		publicKeysValue *interpreter.ArrayValue,
 	) interpreter.OptionalValue {
 
@@ -1083,7 +1086,7 @@ func (e *interpreterEnvironment) newBLSAggregatePublicKeysFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			publicKey, err := stdlib.NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
+			publicKey, err := stdlib.NewPublicKeyFromValue(inter, locationRange, publicKeyValue)
 			if err != nil {
 				panic(err)
 			}
@@ -1102,12 +1105,12 @@ func (e *interpreterEnvironment) newBLSAggregatePublicKeysFunction(
 
 		// If the crypto layer produces an error, we have invalid input, return nil
 		if err != nil {
-			return interpreter.NilValue{}
+			return interpreter.NilOptionalValue
 		}
 
 		aggregatedPublicKeyValue := stdlib.NewPublicKeyValue(
 			inter,
-			getLocationRange,
+			locationRange,
 			aggregatedPublicKey,
 			publicKeyValidationHandler,
 		)

@@ -51,7 +51,7 @@ type position struct {
 
 type lexer struct {
 	// input is the entire input string
-	input string
+	input []byte
 	// startOffset is the start offset of the current word in the current line
 	startOffset int
 	// endOffset is the end offset of the current word in the current line
@@ -107,7 +107,7 @@ func (l *lexer) Next() Token {
 	return token
 }
 
-func (l *lexer) Input() string {
+func (l *lexer) Input() []byte {
 	return l.input
 }
 
@@ -144,7 +144,7 @@ var pool = sync.Pool{
 	},
 }
 
-func Lex(input string, memoryGauge common.MemoryGauge) TokenStream {
+func Lex(input []byte, memoryGauge common.MemoryGauge) TokenStream {
 	l := pool.Get().(*lexer)
 	l.clear()
 	l.memoryGauge = memoryGauge
@@ -206,7 +206,7 @@ func (l *lexer) next() rune {
 	r := EOF
 	w := 1
 	if endOffset < len(l.input) {
-		r, w = utf8.DecodeRuneInString(l.input[endOffset:])
+		r, w = utf8.DecodeRune(l.input[endOffset:])
 	}
 
 	l.endOffset += w
@@ -228,11 +228,7 @@ func (l *lexer) backupOne() {
 	l.current = l.prev
 }
 
-func (l *lexer) wordLength() int {
-	return l.endOffset - l.startOffset
-}
-
-func (l *lexer) word() string {
+func (l *lexer) word() []byte {
 	start := l.startOffset
 	end := l.endOffset
 	return l.input[start:end]
@@ -241,7 +237,6 @@ func (l *lexer) word() string {
 // acceptOne reads one rune ahead.
 // It returns true if the next rune matches with the input rune,
 // otherwise it steps back one rune and returns false.
-//
 func (l *lexer) acceptOne(r rune) bool {
 	if l.next() == r {
 		return true
@@ -251,7 +246,7 @@ func (l *lexer) acceptOne(r rune) bool {
 }
 
 // emit writes a token to the channel.
-func (l *lexer) emit(ty TokenType, val any, rangeStart ast.Position, consume bool) {
+func (l *lexer) emit(ty TokenType, spaceOrError any, rangeStart ast.Position, consume bool) {
 
 	if len(l.tokens) >= tokenLimit {
 		panic(TokenLimitReachedError{})
@@ -260,8 +255,8 @@ func (l *lexer) emit(ty TokenType, val any, rangeStart ast.Position, consume boo
 	endPos := l.endPos()
 
 	token := Token{
-		Type:  ty,
-		Value: val,
+		Type:         ty,
+		SpaceOrError: spaceOrError,
 		Range: ast.NewRange(
 			l.memoryGauge,
 			rangeStart,
@@ -281,7 +276,7 @@ func (l *lexer) emit(ty TokenType, val any, rangeStart ast.Position, consume boo
 		l.startOffset = l.endOffset
 
 		l.startPos = endPos
-		r, _ := utf8.DecodeRuneInString(l.input[l.endOffset-1:])
+		r, _ := utf8.DecodeRune(l.input[l.endOffset-1:])
 
 		if r == '\n' {
 			l.startPos.line++
@@ -310,7 +305,7 @@ func (l *lexer) endPos() position {
 	var w int
 	for offset := startOffset; offset < endOffset-1; offset += w {
 		var r rune
-		r, w = utf8.DecodeRuneInString(l.input[offset:])
+		r, w = utf8.DecodeRune(l.input[offset:])
 
 		if r == '\n' {
 			endPos.line++
@@ -324,29 +319,14 @@ func (l *lexer) endPos() position {
 }
 
 func (l *lexer) emitType(ty TokenType) {
-	if l.memoryGauge != nil {
-		// Token value is always nil. Hence, only the wrapper is metered.
-		// No memory is used for the 'value' potion.
-		common.UseMemory(l.memoryGauge, common.SyntaxTokenMemoryUsage)
-	}
+	common.UseMemory(l.memoryGauge, common.TypeTokenMemoryUsage)
 
 	l.emit(ty, nil, l.startPosition(), true)
 }
 
-func (l *lexer) emitValue(ty TokenType) {
-	if l.memoryGauge != nil {
-		// Token wrapper
-		common.UseMemory(l.memoryGauge, common.ValueTokenMemoryUsage)
-
-		// Token content
-		usage := l.tokenValueMemoryUsage(ty)
-		common.UseMemory(l.memoryGauge, usage)
-	}
-
-	l.emit(ty, l.word(), l.startPosition(), true)
-}
-
 func (l *lexer) emitError(err error) {
+	common.UseMemory(l.memoryGauge, common.ErrorTokenMemoryUsage)
+
 	endPos := l.endPos()
 	rangeStart := ast.NewPosition(
 		l.memoryGauge,
@@ -468,21 +448,6 @@ func (l *lexer) scanFixedPointRemainder() {
 		return
 	}
 	l.acceptWhile(isDecimalDigitOrUnderscore)
-}
-
-// tokenValueMemoryUsage returns the memory usage, given the token type of the value.
-// All tokens are retained in AST in its string representation. Hence, memory usage
-// is always a string. However, string literals are special since they are
-// later represented as graphemes.
-//
-func (l *lexer) tokenValueMemoryUsage(tokenType TokenType) common.MemoryUsage {
-	tokenLength := l.wordLength()
-
-	if tokenType == TokenString {
-		return common.NewStringMemoryUsage(tokenLength)
-	}
-
-	return common.NewRawStringMemoryUsage(tokenLength)
 }
 
 func isDecimalDigitOrUnderscore(r rune) bool {

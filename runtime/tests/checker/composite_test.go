@@ -71,7 +71,7 @@ func TestCheckInvalidCompositeRedeclaringType(t *testing.T) {
 			// - One for the type
 			// - Another for the value
 
-			errs := ExpectCheckerErrors(t, err, 2)
+			errs := RequireCheckerErrors(t, err, 2)
 
 			assert.IsType(t, &sema.RedeclarationError{}, errs[0])
 			assert.IsType(t, &sema.RedeclarationError{}, errs[1])
@@ -163,7 +163,7 @@ func TestCheckDestructor(t *testing.T) {
 
 			switch kind {
 			case common.CompositeKindStructure, common.CompositeKindContract:
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.InvalidDestructorError{}, errs[0])
 
@@ -207,7 +207,7 @@ func TestCheckInvalidUnknownSpecialFunction(t *testing.T) {
 					),
 				)
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.UnknownSpecialFunctionError{}, errs[0])
 			})
@@ -247,12 +247,12 @@ func TestCheckInvalidCompositeFieldNames(t *testing.T) {
 				)
 
 				if isInterface {
-					errs := ExpectCheckerErrors(t, err, 2)
+					errs := RequireCheckerErrors(t, err, 2)
 
 					assert.IsType(t, &sema.InvalidNameError{}, errs[0])
 					assert.IsType(t, &sema.InvalidNameError{}, errs[1])
 				} else {
-					errs := ExpectCheckerErrors(t, err, 3)
+					errs := RequireCheckerErrors(t, err, 3)
 
 					assert.IsType(t, &sema.InvalidNameError{}, errs[0])
 					assert.IsType(t, &sema.InvalidNameError{}, errs[1])
@@ -300,7 +300,7 @@ func TestCheckInvalidCompositeFunctionNames(t *testing.T) {
 					),
 				)
 
-				errs := ExpectCheckerErrors(t, err, 2)
+				errs := RequireCheckerErrors(t, err, 2)
 
 				assert.IsType(t, &sema.InvalidNameError{}, errs[0])
 				assert.IsType(t, &sema.InvalidNameError{}, errs[1])
@@ -345,11 +345,11 @@ func TestCheckInvalidCompositeRedeclaringFields(t *testing.T) {
 			)
 
 			if kind == common.CompositeKindEvent {
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.RedeclarationError{}, errs[0])
 			} else {
-				errs := ExpectCheckerErrors(t, err, 2)
+				errs := RequireCheckerErrors(t, err, 2)
 
 				assert.IsType(t, &sema.RedeclarationError{}, errs[0])
 				assert.IsType(t, &sema.MissingInitializerError{}, errs[1])
@@ -386,7 +386,7 @@ func TestCheckInvalidCompositeRedeclaringFunctions(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.RedeclarationError{}, errs[0])
 		})
@@ -412,7 +412,7 @@ func TestCheckInvalidCompositeRedeclaringFieldsAndFunctions(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 2)
+			errs := RequireCheckerErrors(t, err, 2)
 
 			assert.IsType(t, &sema.RedeclarationError{}, errs[0])
 			assert.IsType(t, &sema.MissingInitializerError{}, errs[1])
@@ -471,7 +471,7 @@ func TestCheckInvalidCompositeFieldType(t *testing.T) {
 					),
 				)
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 				assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 			} else {
 				_, err := ParseAndCheck(t,
@@ -485,7 +485,7 @@ func TestCheckInvalidCompositeFieldType(t *testing.T) {
 					),
 				)
 
-				errs := ExpectCheckerErrors(t, err, 2)
+				errs := RequireCheckerErrors(t, err, 2)
 				assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 
 				assert.IsType(t, &sema.MissingInitializerError{}, errs[1])
@@ -512,7 +512,7 @@ func TestCheckInvalidCompositeInitializerParameterType(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 		})
@@ -537,7 +537,7 @@ func TestCheckInvalidCompositeInitializerParameters(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.RedeclarationError{}, errs[0])
 		})
@@ -565,14 +565,14 @@ func TestCheckInvalidCompositeSpecialFunction(t *testing.T) {
 
 			switch kind {
 			case common.CompositeKindStructure, common.CompositeKindContract:
-				errs := ExpectCheckerErrors(t, err, 2)
+				errs := RequireCheckerErrors(t, err, 2)
 
 				assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 				assert.IsType(t, &sema.InvalidDestructorError{}, errs[1])
 
 			case common.CompositeKindResource:
 
-				errs := ExpectCheckerErrors(t, err, 2)
+				errs := RequireCheckerErrors(t, err, 2)
 
 				assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 				assert.IsType(t, &sema.NotDeclaredError{}, errs[1])
@@ -602,7 +602,7 @@ func TestCheckInvalidCompositeFunction(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 		})
@@ -630,12 +630,12 @@ func TestCheckCompositeInitializerSelfUse(t *testing.T) {
 
 			switch kind {
 			case common.CompositeKindStructure, common.CompositeKindContract:
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.InvalidDestructorError{}, errs[0])
 
 			case common.CompositeKindResource:
-				errs := ExpectCheckerErrors(t, err, 2)
+				errs := RequireCheckerErrors(t, err, 2)
 
 				// TODO: handle `self` properly
 
@@ -672,7 +672,7 @@ func TestCheckCompositeFunctionSelfUse(t *testing.T) {
 				require.NoError(t, err)
 
 			case common.CompositeKindResource:
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				// TODO: handle `self` properly
 
@@ -704,7 +704,7 @@ func TestCheckInvalidCompositeMissingInitializer(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.MissingInitializerError{}, errs[0])
 		})
@@ -724,7 +724,7 @@ func TestCheckInvalidResourceMissingDestructor(t *testing.T) {
        }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.MissingDestructorError{}, errs[0])
 }
@@ -806,7 +806,7 @@ func TestCheckInvalidResourceFieldWithMissingResourceAnnotation(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.MissingResourceAnnotationError{}, errs[0])
 		})
@@ -870,7 +870,7 @@ func TestCheckInvalidCompositeFieldAccess(t *testing.T) {
 
 			expectedErrorCount := 2
 
-			errs := ExpectCheckerErrors(t, err, expectedErrorCount)
+			errs := RequireCheckerErrors(t, err, expectedErrorCount)
 
 			require.IsType(t,
 				&sema.NotDeclaredMemberError{},
@@ -929,14 +929,14 @@ func TestCheckCompositeFieldAssignment(t *testing.T) {
 				require.NoError(t, err)
 
 			case common.CompositeKindContract:
-				errs := ExpectCheckerErrors(t, err, 2)
+				errs := RequireCheckerErrors(t, err, 2)
 
 				assert.IsType(t, &sema.InvalidMoveError{}, errs[0])
 				assert.IsType(t, &sema.InvalidMoveError{}, errs[1])
 
 			case common.CompositeKindResource:
 
-				errs := ExpectCheckerErrors(t, err, 4)
+				errs := RequireCheckerErrors(t, err, 4)
 
 				assert.IsType(t, &sema.InvalidSelfInvalidationError{}, errs[0])
 				assert.IsType(t, &sema.ResourceLossError{}, errs[1])
@@ -956,13 +956,13 @@ func TestCheckInvalidCompositeSelfAssignment(t *testing.T) {
 
 	tests := map[common.CompositeKind]func(error){
 		common.CompositeKindStructure: func(err error) {
-			errs := ExpectCheckerErrors(t, err, 2)
+			errs := RequireCheckerErrors(t, err, 2)
 
 			assert.IsType(t, &sema.AssignmentToConstantError{}, errs[0])
 			assert.IsType(t, &sema.AssignmentToConstantError{}, errs[1])
 		},
 		common.CompositeKindResource: func(err error) {
-			errs := ExpectCheckerErrors(t, err, 4)
+			errs := RequireCheckerErrors(t, err, 4)
 
 			assert.IsType(t, &sema.AssignmentToConstantError{}, errs[0])
 			assert.IsType(t, &sema.InvalidResourceAssignmentError{}, errs[1])
@@ -970,7 +970,7 @@ func TestCheckInvalidCompositeSelfAssignment(t *testing.T) {
 			assert.IsType(t, &sema.InvalidResourceAssignmentError{}, errs[3])
 		},
 		common.CompositeKindContract: func(err error) {
-			errs := ExpectCheckerErrors(t, err, 4)
+			errs := RequireCheckerErrors(t, err, 4)
 
 			assert.IsType(t, &sema.AssignmentToConstantError{}, errs[0])
 			assert.IsType(t, &sema.InvalidMoveError{}, errs[1])
@@ -1032,7 +1032,7 @@ func TestCheckInvalidCompositeFieldAssignment(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 2)
+			errs := RequireCheckerErrors(t, err, 2)
 
 			require.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
 			assert.Equal(t,
@@ -1075,7 +1075,7 @@ func TestCheckInvalidCompositeFieldAssignmentWrongType(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 2)
+			errs := RequireCheckerErrors(t, err, 2)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
@@ -1111,7 +1111,7 @@ func TestCheckInvalidCompositeFieldConstantAssignment(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.AssignmentToConstantMemberError{}, errs[0])
 		})
@@ -1167,7 +1167,7 @@ func TestCheckInvalidCompositeFunctionCall(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
 		})
@@ -1196,7 +1196,7 @@ func TestCheckInvalidCompositeFunctionAssignment(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 2)
+			errs := RequireCheckerErrors(t, err, 2)
 
 			require.IsType(t, &sema.AssignmentToConstantMemberError{}, errs[0])
 			assert.Equal(t,
@@ -1286,7 +1286,7 @@ func TestCheckInvalidSameCompositeRedeclaration(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 2)
+			errs := RequireCheckerErrors(t, err, 2)
 
 			// NOTE: two errors: one because type is redeclared,
 			// the other because the global is redeclared
@@ -1357,7 +1357,7 @@ func TestCheckInvalidDifferentCompositeRedeclaration(t *testing.T) {
 					),
 				)
 
-				errs := ExpectCheckerErrors(t, err, 2)
+				errs := RequireCheckerErrors(t, err, 2)
 
 				// NOTE: two errors: one because type is redeclared,
 				// the other because the global is redeclared
@@ -1378,7 +1378,7 @@ func TestCheckInvalidForwardReference(t *testing.T) {
       let y = x
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 }
@@ -1429,7 +1429,7 @@ func TestCheckInvalidIncompatibleSameCompositeTypes(t *testing.T) {
 					),
 				)
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			})
@@ -1455,7 +1455,7 @@ func TestCheckInvalidCompositeFunctionWithSelfParameter(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.RedeclarationError{}, errs[0])
 		})
@@ -1480,7 +1480,7 @@ func TestCheckInvalidCompositeInitializerWithSelfParameter(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.RedeclarationError{}, errs[0])
 		})
@@ -1592,7 +1592,7 @@ func TestCheckInvalidCompositeInitializerCallWithMissingArgumentLabel(t *testing
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.MissingArgumentLabelError{}, errs[0])
 		})
@@ -1682,7 +1682,7 @@ func TestCheckInvalidCompositeFunctionCallWithMissingArgumentLabel(t *testing.T)
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.MissingArgumentLabelError{}, errs[0])
 		})
@@ -1785,7 +1785,7 @@ func TestCheckInvalidCompositeFieldMissingVariableKind(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.InvalidVariableKindError{}, errs[0])
 		})
@@ -1823,12 +1823,12 @@ func TestCheckCompositeFunction(t *testing.T) {
 				require.NoError(t, err)
 
 			case common.CompositeKindContract:
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.InvalidMoveError{}, errs[0])
 
 			case common.CompositeKindResource:
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.InvalidSelfInvalidationError{}, errs[0])
 
@@ -1911,7 +1911,7 @@ func TestCheckInvalidDestructorParameters(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.InvalidDestructorParametersError{}, errs[0])
 		})
@@ -1934,7 +1934,7 @@ func TestCheckInvalidResourceWithDestructorMissingFieldInvalidation(t *testing.T
        }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
 }
@@ -1964,7 +1964,7 @@ func TestCheckInvalidResourceWithDestructorMissingFieldInvalidationFirstFieldNon
        }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
 }
@@ -1989,7 +1989,7 @@ func TestCheckInvalidResourceWithDestructorMissingDefinitiveFieldInvalidation(t 
        }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
 }
@@ -2038,7 +2038,7 @@ func TestCheckInvalidResourceDestructorMoveInvalidation(t *testing.T) {
        }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 }
@@ -2062,7 +2062,7 @@ func TestCheckInvalidResourceDestructorRepeatedDestruction(t *testing.T) {
        }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 }
@@ -2089,7 +2089,7 @@ func TestCheckInvalidResourceDestructorCapturing(t *testing.T) {
        }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
 }
@@ -2104,7 +2104,7 @@ func TestCheckInvalidStructureFunctionWithMissingBody(t *testing.T) {
         }
 	`)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.MissingFunctionBodyError{}, errs[0])
 }
@@ -2119,7 +2119,7 @@ func TestCheckInvalidStructureInitializerWithMissingBody(t *testing.T) {
         }
 	`)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.MissingFunctionBodyError{}, errs[0])
 }
@@ -2286,7 +2286,7 @@ func TestCheckInvalidMissingMember(t *testing.T) {
 		  }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t,
 			&sema.NotDeclaredMemberError{},
@@ -2315,7 +2315,7 @@ func TestCheckInvalidMissingMember(t *testing.T) {
 		  }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t,
 			&sema.NotDeclaredMemberError{},
@@ -2344,7 +2344,7 @@ func TestCheckInvalidMissingMember(t *testing.T) {
 		  }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t,
 			&sema.NotDeclaredMemberError{},

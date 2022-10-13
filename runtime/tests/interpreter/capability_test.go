@@ -164,7 +164,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			RequireValuesEqual(
 				t,
 				inter,
-				interpreter.NilValue{},
+				interpreter.Nil,
 				value,
 			)
 		})
@@ -177,7 +177,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			RequireValuesEqual(
 				t,
 				inter,
-				interpreter.NilValue{},
+				interpreter.Nil,
 				value,
 			)
 		})
@@ -190,7 +190,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			RequireValuesEqual(
 				t,
 				inter,
-				interpreter.NilValue{},
+				interpreter.Nil,
 				value,
 			)
 		})
@@ -211,7 +211,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 		t.Run("nonExistent", func(t *testing.T) {
 
 			_, err := inter.Invoke("nonExistent")
-			require.Error(t, err)
+			RequireError(t, err)
 
 			require.ErrorAs(t, err, &interpreter.ForceNilError{})
 		})
@@ -219,7 +219,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 		t.Run("loop", func(t *testing.T) {
 
 			_, err := inter.Invoke("loop")
-			require.Error(t, err)
+			RequireError(t, err)
 
 			var cyclicLinkErr interpreter.CyclicLinkError
 			require.ErrorAs(t, err, &cyclicLinkErr)
@@ -246,13 +246,15 @@ func TestInterpretCapability_borrow(t *testing.T) {
 		t.Run("r2", func(t *testing.T) {
 
 			_, err := inter.Invoke("r2")
+			RequireError(t, err)
+
 			require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 		})
 
 		t.Run("single change after borrow", func(t *testing.T) {
 
 			_, err := inter.Invoke("singleChangeAfterBorrow")
-			require.Error(t, err)
+			RequireError(t, err)
 
 			require.ErrorAs(t, err, &interpreter.DereferenceError{})
 		})
@@ -389,7 +391,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			RequireValuesEqual(
 				t,
 				inter,
-				interpreter.NilValue{},
+				interpreter.Nil,
 				value,
 			)
 		})
@@ -402,7 +404,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			RequireValuesEqual(
 				t,
 				inter,
-				interpreter.NilValue{},
+				interpreter.Nil,
 				value,
 			)
 		})
@@ -415,7 +417,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			RequireValuesEqual(
 				t,
 				inter,
-				interpreter.NilValue{},
+				interpreter.Nil,
 				value,
 			)
 		})
@@ -436,7 +438,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 		t.Run("nonExistent", func(t *testing.T) {
 
 			_, err := inter.Invoke("nonExistent")
-			require.Error(t, err)
+			RequireError(t, err)
 
 			require.ErrorAs(t, err, &interpreter.ForceNilError{})
 		})
@@ -444,7 +446,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 		t.Run("loop", func(t *testing.T) {
 
 			_, err := inter.Invoke("loop")
-			require.Error(t, err)
+			RequireError(t, err)
 
 			var cyclicLinkErr interpreter.CyclicLinkError
 			require.ErrorAs(t, err, &cyclicLinkErr)
@@ -471,13 +473,15 @@ func TestInterpretCapability_borrow(t *testing.T) {
 		t.Run("s2", func(t *testing.T) {
 
 			_, err := inter.Invoke("s2")
+			RequireError(t, err)
+
 			require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 		})
 
 		t.Run("single change after borrow", func(t *testing.T) {
 
 			_, err := inter.Invoke("singleChangeAfterBorrow")
-			require.Error(t, err)
+			RequireError(t, err)
 
 			require.ErrorAs(t, err, &interpreter.DereferenceError{})
 		})
@@ -667,7 +671,7 @@ func TestInterpretCapability_check(t *testing.T) {
 		t.Run("loop", func(t *testing.T) {
 
 			_, err := inter.Invoke("loop")
-			require.Error(t, err)
+			RequireError(t, err)
 
 			var cyclicLinkErr interpreter.CyclicLinkError
 			require.ErrorAs(t, err, &cyclicLinkErr)
@@ -884,7 +888,7 @@ func TestInterpretCapability_check(t *testing.T) {
 		t.Run("loop", func(t *testing.T) {
 
 			_, err := inter.Invoke("loop")
-			require.Error(t, err)
+			RequireError(t, err)
 
 			var cyclicLinkErr interpreter.CyclicLinkError
 			require.ErrorAs(t, err, &cyclicLinkErr)
@@ -1025,7 +1029,7 @@ func TestInterpretCapabilityFunctionMultipleTypes(t *testing.T) {
 			res, err := inter.Invoke("s1TypedGetCapabilityUntypedCheck")
 			require.NoError(t, err)
 
-			require.Equal(t, interpreter.NewUnmeteredBoolValue(true), res)
+			require.Equal(t, interpreter.TrueValue, res)
 		})
 
 		t.Run("s1UntypedGetCapabilityTypedCheck", func(t *testing.T) {
@@ -1033,7 +1037,7 @@ func TestInterpretCapabilityFunctionMultipleTypes(t *testing.T) {
 			res, err := inter.Invoke("s1UntypedGetCapabilityTypedCheck")
 			require.NoError(t, err)
 
-			require.Equal(t, interpreter.NewUnmeteredBoolValue(true), res)
+			require.Equal(t, interpreter.TrueValue, res)
 		})
 
 		t.Run("s2UntypedGetCapabilityTypedCheck", func(t *testing.T) {
@@ -1041,7 +1045,7 @@ func TestInterpretCapabilityFunctionMultipleTypes(t *testing.T) {
 			res, err := inter.Invoke("s2UntypedGetCapabilityTypedCheck")
 			require.NoError(t, err)
 
-			require.Equal(t, interpreter.NewUnmeteredBoolValue(false), res)
+			require.Equal(t, interpreter.FalseValue, res)
 		})
 
 		t.Run("s2TypedGetCapabilityTypedCheck", func(t *testing.T) {
@@ -1049,7 +1053,7 @@ func TestInterpretCapabilityFunctionMultipleTypes(t *testing.T) {
 			res, err := inter.Invoke("s2TypedGetCapabilityTypedCheck")
 			require.NoError(t, err)
 
-			require.Equal(t, interpreter.NewUnmeteredBoolValue(false), res)
+			require.Equal(t, interpreter.FalseValue, res)
 		})
 	})
 
@@ -1154,7 +1158,7 @@ func TestInterpretCapabilityFunctionMultipleTypes(t *testing.T) {
 			res, err := inter.Invoke("s2UntypedGetCapabilityTypedBorrow")
 			require.NoError(t, err)
 
-			require.Equal(t, interpreter.NewUnmeteredNilValue(), res)
+			require.Equal(t, interpreter.Nil, res)
 		})
 
 		t.Run("s2TypedGetCapabilityTypedBorrow", func(t *testing.T) {
@@ -1162,13 +1166,13 @@ func TestInterpretCapabilityFunctionMultipleTypes(t *testing.T) {
 			res, err := inter.Invoke("s2TypedGetCapabilityTypedBorrow")
 			require.NoError(t, err)
 
-			require.Equal(t, interpreter.NewUnmeteredNilValue(), res)
+			require.Equal(t, interpreter.Nil, res)
 		})
 
 		t.Run("what", func(t *testing.T) {
 
 			_, err := inter.Invoke("what")
-			require.Error(t, err)
+			RequireError(t, err)
 
 			require.ErrorAs(t, err, &interpreter.ForceNilError{})
 		})

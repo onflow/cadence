@@ -171,9 +171,8 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 	// Update the return info for invocations that do not return (i.e. have a `Never` return type)
 
 	if returnType == NeverType {
-		checker.resources.Halts = true
-		functionActivation := checker.functionActivations.Current()
-		functionActivation.ReturnInfo.DefinitelyHalted = true
+		returnInfo := checker.functionActivations.Current().ReturnInfo
+		returnInfo.DefinitelyHalted = true
 	}
 
 	if isOptionalChainingResult {
@@ -483,7 +482,6 @@ func (checker *Checker) checkInvocation(
 
 // checkTypeParameterInference checks that all type parameters
 // of the given generic function type have been assigned a type.
-//
 func (checker *Checker) checkTypeParameterInference(
 	functionType *FunctionType,
 	typeArguments *TypeParameterTypeOrderedMap,

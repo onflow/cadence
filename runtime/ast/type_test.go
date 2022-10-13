@@ -430,7 +430,7 @@ func TestConstantSizedType_Doc(t *testing.T) {
 			},
 		},
 		Size: &IntegerExpression{
-			PositiveLiteral: "42",
+			PositiveLiteral: []byte("42"),
 			Value:           big.NewInt(42),
 			Base:            10,
 		},
@@ -465,7 +465,7 @@ func TestConstantSizedType_String(t *testing.T) {
 			},
 		},
 		Size: &IntegerExpression{
-			PositiveLiteral: "42",
+			PositiveLiteral: []byte("42"),
 			Value:           big.NewInt(42),
 			Base:            10,
 		},
@@ -489,7 +489,7 @@ func TestConstantSizedType_MarshalJSON(t *testing.T) {
 			},
 		},
 		Size: &IntegerExpression{
-			PositiveLiteral: "42",
+			PositiveLiteral: []byte("42"),
 			Value:           big.NewInt(42),
 			Base:            10,
 			Range: Range{
@@ -1306,129 +1306,6 @@ func TestInstantiationType_MarshalJSON(t *testing.T) {
             "TypeArgumentsStartPos": {"Offset": 16, "Line": 17, "Column": 18},
             "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
             "EndPos": {"Offset": 19, "Line": 20, "Column": 21}
-        }
-        `,
-		string(actual),
-	)
-}
-
-func TestExtendedType_String(t *testing.T) {
-
-	t.Parallel()
-
-	ty := &ExtendedType{
-		Type: &NominalType{
-			Identifier: Identifier{
-				Identifier: "R",
-			},
-		},
-		Extensions: []*TypeAnnotation{
-			{
-				IsResource: false,
-				Type: &NominalType{
-					Identifier: Identifier{
-						Identifier: "E1",
-					},
-				},
-			},
-			{
-				IsResource: true,
-				Type: &NominalType{
-					Identifier: Identifier{
-						Identifier: "E2",
-					},
-				},
-			},
-		},
-	}
-
-	assert.Equal(t,
-		"R with E1, @E2",
-		ty.String(),
-	)
-}
-
-func TestExtendedType_MarshalJSON(t *testing.T) {
-
-	t.Parallel()
-
-	ty := &ExtendedType{
-		Type: &NominalType{
-			Identifier: Identifier{
-				Identifier: "R",
-			},
-		},
-		Extensions: []*TypeAnnotation{
-			{
-				IsResource: false,
-				Type: &NominalType{
-					Identifier: Identifier{
-						Identifier: "E1",
-					},
-				},
-			},
-			{
-				IsResource: true,
-				Type: &NominalType{
-					Identifier: Identifier{
-						Identifier: "E2",
-					},
-				},
-			},
-		},
-	}
-
-	actual, err := json.Marshal(ty)
-	require.NoError(t, err)
-
-	assert.JSONEq(t,
-		`
-        {
-            "Type": "ExtendedType",
-            "ExtendedType": {
-                "Type": "NominalType",
-                "Identifier": {
-                    "Identifier": "R",
-                    "StartPos": {"Offset": 0, "Line": 0, "Column": 0},
-                    "EndPos": {"Offset": 0, "Line": 0, "Column": 0}
-                },
-                "StartPos": {"Offset": 0, "Line": 0, "Column": 0},
-                "EndPos": {"Offset": 0, "Line": 0, "Column": 0}
-            },
-            "Extensions": [
-				{
-                    "IsResource": false,
-                    "AnnotatedType": {
-						"Type": "NominalType",
-						"Identifier": {
-							"Identifier": "E1",
-							"StartPos": {"Offset": 0, "Line": 0, "Column": 0},
-							"EndPos": {"Offset": 1, "Line": 0, "Column": 1}
-						},
-						"StartPos": {"Offset": 0, "Line": 0, "Column": 0},
-						"EndPos": {"Offset": 1, "Line": 0, "Column": 1}
-					},
-					"StartPos": {"Offset": 0, "Line": 0, "Column": 0},
-					"EndPos": {"Offset": 1, "Line": 0, "Column": 1}
-				},
-				{
-					"IsResource": true,
-                    "AnnotatedType": {
-						"Type": "NominalType",
-						"Identifier": {
-							"Identifier": "E2",
-							"StartPos": {"Offset": 0, "Line": 0, "Column": 0},
-							"EndPos": {"Offset": 1, "Line": 0, "Column": 1}
-						},
-						"StartPos": {"Offset": 0, "Line": 0, "Column": 0},
-						"EndPos": {"Offset": 1, "Line": 0, "Column": 1}
-					}, 
-					"StartPos": {"Offset": 0, "Line": 0, "Column": 0},
-					"EndPos": {"Offset": 1, "Line": 0, "Column": 1}
-				}
-            ],
-            "StartPos": {"Offset": 0, "Line": 0, "Column": 0},
-            "EndPos": {"Offset":0, "Line": 0, "Column": 0}
         }
         `,
 		string(actual),

@@ -24,7 +24,6 @@ import (
 )
 
 // ModuleBuilder allows building modules
-//
 type ModuleBuilder struct {
 	functionImports    []*Import
 	types              []*FunctionType

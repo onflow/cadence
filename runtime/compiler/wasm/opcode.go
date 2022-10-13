@@ -19,7 +19,6 @@
 package wasm
 
 // opcode is the byte used to indicate a certain instruction in the WASM binary
-//
 type opcode byte
 
 const opcodeElse opcode = 0x05

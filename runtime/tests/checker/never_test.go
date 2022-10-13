@@ -56,7 +56,7 @@ func TestCheckNever(t *testing.T) {
             `,
 		)
 
-		errors := ExpectCheckerErrors(t, err, 1)
+		errors := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
 		typeMismatchErr := errors[0].(*sema.TypeMismatchError)
@@ -76,7 +76,7 @@ func TestCheckNever(t *testing.T) {
             `,
 		)
 
-		errors := ExpectCheckerErrors(t, err, 1)
+		errors := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
 		typeMismatchErr := errors[0].(*sema.TypeMismatchError)
@@ -96,7 +96,7 @@ func TestCheckNever(t *testing.T) {
             `,
 		)
 
-		errors := ExpectCheckerErrors(t, err, 1)
+		errors := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
 		typeMismatchErr := errors[0].(*sema.TypeMismatchError)
@@ -116,7 +116,7 @@ func TestCheckNever(t *testing.T) {
             `,
 		)
 
-		errors := ExpectCheckerErrors(t, err, 1)
+		errors := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, &sema.InvalidBinaryOperandsError{}, errors[0])
 		binaryOpErr := errors[0].(*sema.InvalidBinaryOperandsError)
 
@@ -135,7 +135,7 @@ func TestCheckNever(t *testing.T) {
             `,
 		)
 
-		errors := ExpectCheckerErrors(t, err, 1)
+		errors := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, &sema.InvalidUnaryOperandError{}, errors[0])
 		unaryOpErr := errors[0].(*sema.InvalidUnaryOperandError)
 
@@ -167,7 +167,7 @@ func TestCheckNever(t *testing.T) {
             `,
 		)
 
-		errors := ExpectCheckerErrors(t, err, 1)
+		errors := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.InvalidEnumRawTypeError{}, errors[0])
 		typeMismatchErr := errors[0].(*sema.InvalidEnumRawTypeError)
@@ -186,7 +186,7 @@ func TestCheckNever(t *testing.T) {
             `,
 		)
 
-		errors := ExpectCheckerErrors(t, err, 1)
+		errors := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.InvalidTransactionPrepareParameterTypeError{}, errors[0])
 		typeMismatchErr := errors[0].(*sema.InvalidTransactionPrepareParameterTypeError)

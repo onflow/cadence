@@ -20,6 +20,7 @@ package sema
 
 import (
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common/persistent"
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -119,7 +120,6 @@ func (checker *Checker) VisitConditionalExpression(expression *ast.ConditionalEx
 // It is assumed that either one of the branches is taken, so function returns,
 // resource uses and invalidations, as well as field initializations,
 // are only potential in each branch, but definite if they occur in both branches.
-//
 func (checker *Checker) checkConditionalBranches(
 	checkThen TypeCheckFunc,
 	checkElse TypeCheckFunc,
@@ -132,8 +132,8 @@ func (checker *Checker) checkConditionalBranches(
 	thenReturnInfo := initialReturnInfo.Clone()
 	elseReturnInfo := initialReturnInfo.Clone()
 
-	var thenInitializedMembers *MemberSet
-	var elseInitializedMembers *MemberSet
+	var thenInitializedMembers *persistent.OrderedSet[*Member]
+	var elseInitializedMembers *persistent.OrderedSet[*Member]
 	if functionActivation.InitializationInfo != nil {
 		initialInitializedMembers := functionActivation.InitializationInfo.InitializedFieldMembers
 		thenInitializedMembers = initialInitializedMembers.Clone()
@@ -174,7 +174,12 @@ func (checker *Checker) checkConditionalBranches(
 		}
 	}
 
-	checker.resources.MergeBranches(thenResources, elseResources)
+	checker.resources.MergeBranches(
+		thenResources,
+		thenReturnInfo,
+		elseResources,
+		elseReturnInfo,
+	)
 
 	return
 }
@@ -182,11 +187,10 @@ func (checker *Checker) checkConditionalBranches(
 // checkBranch checks a conditional branch.
 // It is assumed that function returns, resource uses and invalidations,
 // as well as field initializations, are only potential / temporary.
-//
 func (checker *Checker) checkBranch(
 	check TypeCheckFunc,
 	temporaryReturnInfo *ReturnInfo,
-	temporaryInitializedMembers *MemberSet,
+	temporaryInitializedMembers *persistent.OrderedSet[*Member],
 	temporaryResources *Resources,
 ) Type {
 	return wrapTypeCheck(check,

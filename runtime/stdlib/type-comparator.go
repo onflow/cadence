@@ -153,28 +153,6 @@ func (c *TypeComparator) CheckInstantiationTypeEquality(expected *ast.Instantiat
 	return nil
 }
 
-func (c *TypeComparator) CheckExtendedTypeEquality(expected *ast.ExtendedType, found ast.Type) error {
-	foundExtendedType, ok := found.(*ast.ExtendedType)
-	if !ok {
-		return newTypeMismatchError(expected, found)
-	}
-
-	err := expected.Type.CheckEqual(foundExtendedType.Type, c)
-	if err != nil || len(expected.Extensions) != len(foundExtendedType.Extensions) {
-		return newTypeMismatchError(expected, found)
-	}
-
-	for index, extension := range expected.Extensions {
-		otherExtension := foundExtendedType.Extensions[index]
-		err := extension.Type.CheckEqual(otherExtension.Type, c)
-		if err != nil {
-			return newTypeMismatchError(expected, found)
-		}
-	}
-
-	return nil
-}
-
 func (c *TypeComparator) CheckFunctionTypeEquality(expected *ast.FunctionType, found ast.Type) error {
 	foundFuncType, ok := found.(*ast.FunctionType)
 	if !ok || len(expected.ParameterTypeAnnotations) != len(foundFuncType.ParameterTypeAnnotations) {

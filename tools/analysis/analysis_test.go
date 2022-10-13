@@ -66,13 +66,13 @@ func TestNeedSyntaxAndImport(t *testing.T) {
 			location common.Location,
 			importingLocation common.Location,
 			importRange ast.Range,
-		) (string, error) {
-			switch location.ID() {
-			case txLocation.ID():
-				return txCode, nil
+		) ([]byte, error) {
+			switch location {
+			case txLocation:
+				return []byte(txCode), nil
 
-			case contractLocation.ID():
-				return contractCode, nil
+			case contractLocation:
+				return []byte(contractCode), nil
 
 			default:
 				require.FailNow(t,
@@ -80,7 +80,7 @@ func TestNeedSyntaxAndImport(t *testing.T) {
 					"location: %s",
 					location,
 				)
-				return "", nil
+				return nil, nil
 			}
 		},
 	}
@@ -139,7 +139,7 @@ func TestNeedSyntaxAndImport(t *testing.T) {
 		func(i, j int) bool {
 			a := locationRanges[i]
 			b := locationRanges[j]
-			return a.location.ID() < b.location.ID()
+			return a.location.TypeID(nil, "") < b.location.TypeID(nil, "")
 		},
 	)
 
@@ -188,10 +188,10 @@ func TestParseError(t *testing.T) {
 			location common.Location,
 			importingLocation common.Location,
 			importRange ast.Range,
-		) (string, error) {
-			switch location.ID() {
-			case contractLocation.ID():
-				return contractCode, nil
+		) ([]byte, error) {
+			switch location {
+			case contractLocation:
+				return []byte(contractCode), nil
 
 			default:
 				require.FailNow(t,
@@ -199,7 +199,7 @@ func TestParseError(t *testing.T) {
 					"location: %s",
 					location,
 				)
-				return "", nil
+				return nil, nil
 			}
 		},
 	}
@@ -234,10 +234,10 @@ func TestCheckError(t *testing.T) {
 			location common.Location,
 			importingLocation common.Location,
 			importRange ast.Range,
-		) (string, error) {
-			switch location.ID() {
-			case contractLocation.ID():
-				return contractCode, nil
+		) ([]byte, error) {
+			switch location {
+			case contractLocation:
+				return []byte(contractCode), nil
 
 			default:
 				require.FailNow(t,
@@ -245,7 +245,7 @@ func TestCheckError(t *testing.T) {
 					"location: %s",
 					location,
 				)
-				return "", nil
+				return nil, nil
 			}
 		},
 	}
@@ -255,4 +255,43 @@ func TestCheckError(t *testing.T) {
 
 	var checkerError *sema.CheckerError
 	require.ErrorAs(t, err, &checkerError)
+}
+
+func TestStdlib(t *testing.T) {
+
+	t.Parallel()
+
+	scriptLocation := common.ScriptLocation{}
+
+	const code = `
+	  pub fun main() {
+          panic("test")
+      }
+	`
+
+	config := &analysis.Config{
+		Mode: analysis.NeedTypes,
+		ResolveCode: func(
+			location common.Location,
+			importingLocation common.Location,
+			importRange ast.Range,
+		) ([]byte, error) {
+			switch location {
+			case scriptLocation:
+				return []byte(code), nil
+
+			default:
+				require.FailNow(t,
+					"import of unknown location: %s",
+					"location: %s",
+					location,
+				)
+				return nil, nil
+			}
+		},
+	}
+
+	_, err := analysis.Load(config, scriptLocation)
+	require.NoError(t, err)
+
 }

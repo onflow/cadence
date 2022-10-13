@@ -39,7 +39,7 @@ type AddressProvider struct {
 	currentIndex     uint
 }
 
-const endOfAccountsError = "storage used is not initialized or not initialized correctly"
+const endOfAccountsError = "get storage used failed"
 
 const accountStorageUsageScript = `
 pub fun main(address: Address): UInt64 {
@@ -120,7 +120,6 @@ func InitAddressProvider(
 // 3. (4,8): check address (8 - 4) / 2 = 6  address exists so next pair is (6,8)
 // 4. (6,8): check address 7 address exists so next pair is (7,8)
 // 5. (7,8): check address (8 - 7) / 2 = 7 ... ok already checked so this is the last existing address
-//
 func (p *AddressProvider) getLastAddress(
 	lowerIndex uint,
 	upperIndex uint,

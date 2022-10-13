@@ -36,7 +36,7 @@ func TestCheckInvalidWhileTest(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -64,7 +64,7 @@ func TestCheckInvalidWhileBlock(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 }
@@ -98,7 +98,7 @@ func TestCheckInvalidWhileBreakStatement(t *testing.T) {
        }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ControlStatementError{}, errs[0])
 }
@@ -132,7 +132,7 @@ func TestCheckInvalidWhileContinueStatement(t *testing.T) {
        }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ControlStatementError{}, errs[0])
 }
@@ -147,7 +147,7 @@ func TestCheckInvalidBreakStatement(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 	assert.IsType(t, &sema.ControlStatementError{}, errs[0])
 }
 
@@ -161,6 +161,6 @@ func TestCheckInvalidContinueStatement(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 	assert.IsType(t, &sema.ControlStatementError{}, errs[0])
 }

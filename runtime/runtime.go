@@ -155,6 +155,8 @@ type Runtime interface {
 	// such as executing a program.
 	//
 	Storage(context Context) (*Storage, *interpreter.Interpreter, error)
+
+	SetDebugger(debugger *interpreter.Debugger)
 }
 
 type ImportResolver = func(location Location) (program *ast.Program, e error)
@@ -208,12 +210,12 @@ type interpreterRuntime struct {
 
 // NewInterpreterRuntime returns a interpreter-based version of the Flow runtime.
 func NewInterpreterRuntime(defaultConfig Config) Runtime {
-	return interpreterRuntime{
+	return &interpreterRuntime{
 		defaultConfig: defaultConfig,
 	}
 }
 
-func (r interpreterRuntime) Recover(onError func(Error), location Location, codesAndPrograms codesAndPrograms) {
+func (r *interpreterRuntime) Recover(onError func(Error), location Location, codesAndPrograms codesAndPrograms) {
 	recovered := recover()
 	if recovered == nil {
 		return
@@ -252,18 +254,18 @@ func getWrappedError(recovered any, location Location, codesAndPrograms codesAnd
 		return newError(err, location, codesAndPrograms)
 	}
 }
-func (r interpreterRuntime) NewScriptExecutor(
+func (r *interpreterRuntime) NewScriptExecutor(
 	script Script,
 	context Context,
 ) Executor {
 	return newInterpreterScriptExecutor(r, script, context)
 }
 
-func (r interpreterRuntime) ExecuteScript(script Script, context Context) (val cadence.Value, err error) {
+func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val cadence.Value, err error) {
 	return r.NewScriptExecutor(script, context).Result()
 }
 
-func (r interpreterRuntime) NewContractFunctionExecutor(
+func (r *interpreterRuntime) NewContractFunctionExecutor(
 	contractLocation common.AddressLocation,
 	functionName string,
 	arguments []cadence.Value,
@@ -280,7 +282,7 @@ func (r interpreterRuntime) NewContractFunctionExecutor(
 	)
 }
 
-func (r interpreterRuntime) InvokeContractFunction(
+func (r *interpreterRuntime) InvokeContractFunction(
 	contractLocation common.AddressLocation,
 	functionName string,
 	arguments []cadence.Value,
@@ -296,11 +298,11 @@ func (r interpreterRuntime) InvokeContractFunction(
 	).Result()
 }
 
-func (r interpreterRuntime) NewTransactionExecutor(script Script, context Context) Executor {
+func (r *interpreterRuntime) NewTransactionExecutor(script Script, context Context) Executor {
 	return newInterpreterTransactionExecutor(r, script, context)
 }
 
-func (r interpreterRuntime) ExecuteTransaction(script Script, context Context) (err error) {
+func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) (err error) {
 	_, err = r.NewTransactionExecutor(script, context).Result()
 	return err
 }
@@ -352,7 +354,7 @@ func userPanicToError(f func()) (returnedError error) {
 func validateArgumentParams(
 	inter *interpreter.Interpreter,
 	runtimeInterface Interface,
-	getLocationRange func() interpreter.LocationRange,
+	locationRange interpreter.LocationRange,
 	arguments [][]byte,
 	parameters []*sema.Parameter,
 ) (
@@ -397,9 +399,9 @@ func validateArgumentParams(
 		var arg interpreter.Value
 		panicError := userPanicToError(func() {
 			// if importing an invalid public key, this call panics
-			arg, err = importValue(
+			arg, err = ImportValue(
 				inter,
-				getLocationRange,
+				locationRange,
 				value,
 				parameterType,
 			)
@@ -441,7 +443,7 @@ func validateArgumentParams(
 		// Check whether the decoded value conforms to the type associated with the value
 		if !arg.ConformsToStaticType(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.TypeConformanceResults{},
 		) {
 			return nil, &InvalidEntryPointArgumentError{
@@ -487,7 +489,7 @@ func hasValidStaticType(inter *interpreter.Interpreter, value interpreter.Value)
 
 // ParseAndCheckProgram parses the given code and checks it.
 // Returns a program that can be interpreted (AST + elaboration).
-func (r interpreterRuntime) ParseAndCheckProgram(
+func (r *interpreterRuntime) ParseAndCheckProgram(
 	code []byte,
 	context Context,
 ) (
@@ -531,7 +533,7 @@ func (r interpreterRuntime) ParseAndCheckProgram(
 
 type InterpretFunc func(inter *interpreter.Interpreter) (interpreter.Value, error)
 
-func (r interpreterRuntime) Storage(context Context) (*Storage, *interpreter.Interpreter, error) {
+func (r *interpreterRuntime) Storage(context Context) (*Storage, *interpreter.Interpreter, error) {
 
 	location := context.Location
 
@@ -562,7 +564,7 @@ func (r interpreterRuntime) Storage(context Context) (*Storage, *interpreter.Int
 	return storage, inter, nil
 }
 
-func (r interpreterRuntime) ReadStored(
+func (r *interpreterRuntime) ReadStored(
 	address common.Address,
 	path cadence.Path,
 	context Context,
@@ -597,7 +599,7 @@ func (r interpreterRuntime) ReadStored(
 
 	var exportedValue cadence.Value
 	if value != nil {
-		exportedValue, err = ExportValue(value, inter, interpreter.ReturnEmptyLocationRange)
+		exportedValue, err = ExportValue(value, inter, interpreter.EmptyLocationRange)
 		if err != nil {
 			return nil, newError(err, location, codesAndPrograms)
 		}
@@ -606,7 +608,7 @@ func (r interpreterRuntime) ReadStored(
 	return exportedValue, nil
 }
 
-func (r interpreterRuntime) ReadLinked(
+func (r *interpreterRuntime) ReadLinked(
 	address common.Address,
 	path cadence.Path,
 	context Context,
@@ -638,7 +640,7 @@ func (r interpreterRuntime) ReadLinked(
 		&sema.ReferenceType{
 			Type: sema.AnyType,
 		},
-		interpreter.ReturnEmptyLocationRange,
+		interpreter.EmptyLocationRange,
 	)
 	if err != nil {
 		return nil, err
@@ -656,11 +658,15 @@ func (r interpreterRuntime) ReadLinked(
 
 	var exportedValue cadence.Value
 	if value != nil {
-		exportedValue, err = ExportValue(value, inter, interpreter.ReturnEmptyLocationRange)
+		exportedValue, err = ExportValue(value, inter, interpreter.EmptyLocationRange)
 		if err != nil {
 			return nil, newError(err, location, codesAndPrograms)
 		}
 	}
 
 	return exportedValue, nil
+}
+
+func (r *interpreterRuntime) SetDebugger(debugger *interpreter.Debugger) {
+	r.defaultConfig.Debugger = debugger
 }

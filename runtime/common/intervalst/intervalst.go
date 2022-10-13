@@ -52,7 +52,6 @@ func (t *IntervalST[T]) Contains(interval Interval) bool {
 // Put associates an interval with a value.
 //
 // NOTE: does *not* check if the interval already exists
-//
 func (t *IntervalST[T]) Put(interval Interval, value T) {
 	t.root = t.randomizedInsert(t.root, interval, value)
 }

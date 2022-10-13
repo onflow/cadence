@@ -49,7 +49,7 @@ func TestCheckInvalidAnyStructResourceType(t *testing.T) {
       let b: AnyStruct = [<-create R()]
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
@@ -79,7 +79,7 @@ func TestCheckInvalidAnyResourceNonResourceType(t *testing.T) {
       let a: AnyStruct <- create R()
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	assert.IsType(t, &sema.IncorrectTransferOperationError{}, errs[1])

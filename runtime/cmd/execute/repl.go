@@ -42,7 +42,7 @@ func RunREPL() {
 	errorPrettyPrinter := pretty.NewErrorPrettyPrinter(os.Stderr, true)
 
 	repl, err := runtime.NewREPL(
-		func(err error, location common.Location, codes map[common.Location]string) {
+		func(err error, location common.Location, codes map[common.Location][]byte) {
 			printErr := errorPrettyPrinter.PrettyPrintError(err, location, codes)
 			if printErr != nil {
 				panic(printErr)
@@ -58,29 +58,22 @@ func RunREPL() {
 	}
 
 	executor := func(line string) {
-		defer func() {
-			lineNumber++
-		}()
-
 		if code == "" && strings.HasPrefix(line, ".") {
 			handleCommand(line)
 			code = ""
 			return
 		}
 
-		// Prefix the code with empty lines,
-		// so that error messages match current line number
-
-		for i := 1; i < lineNumber; i++ {
-			code = "\n" + code
-		}
-
 		code += line + "\n"
 
-		inputIsComplete := repl.Accept(code)
-		if !inputIsComplete {
-			lineIsContinuation = true
-			return
+		inputIsComplete, err := repl.Accept([]byte(code))
+		if err == nil {
+			lineNumber++
+
+			if !inputIsComplete {
+				lineIsContinuation = true
+				return
+			}
 		}
 
 		lineIsContinuation = false

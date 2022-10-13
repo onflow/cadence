@@ -45,6 +45,18 @@ func TestREPLLocation_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestREPLLocation_TypeID(t *testing.T) {
+
+	t.Parallel()
+
+	location := REPLLocation{}
+
+	assert.Equal(t,
+		TypeID("REPL.Bar.Baz"),
+		location.TypeID(nil, "Bar.Baz"),
+	)
+}
+
 func TestDecodeREPLLocationTypeID(t *testing.T) {
 
 	t.Parallel()

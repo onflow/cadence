@@ -84,7 +84,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 
 					value := interpreter.NewCompositeValue(
 						inter,
-						interpreter.ReturnEmptyLocationRange,
+						interpreter.EmptyLocationRange,
 						location,
 						"Foo",
 						common.CompositeKindContract,
@@ -389,7 +389,7 @@ func TestInterpretResourceConstructionThroughIndirectImport(t *testing.T) {
 	rConstructor := subInterpreter.Globals["R"].GetValue()
 
 	_, err = inter.Invoke("test", rConstructor)
-	require.Error(t, err)
+	RequireError(t, err)
 
 	var resourceConstructionError interpreter.ResourceConstructionError
 	require.ErrorAs(t, err, &resourceConstructionError)

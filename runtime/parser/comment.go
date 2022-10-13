@@ -28,6 +28,7 @@ const blockCommentStart = "/*"
 const blockCommentEnd = "*/"
 
 func (p *parser) parseCommentContent() (comment string) {
+	// TODO: improve: only build string if needed
 	var builder strings.Builder
 	defer func() {
 		comment = builder.String()
@@ -51,7 +52,7 @@ func (p *parser) parseCommentContent() (comment string) {
 					return nil
 
 				case lexer.TokenBlockCommentContent:
-					builder.WriteString(p.current.Value.(string))
+					builder.Write(p.currentTokenSource())
 
 				case lexer.TokenBlockCommentEnd:
 					builder.WriteString(blockCommentEnd)

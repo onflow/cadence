@@ -35,7 +35,7 @@ const (
 	ElementTypeSpecialFunctionDeclaration
 	ElementTypeCompositeDeclaration
 	ElementTypeInterfaceDeclaration
-	ElementTypeExtensionDeclaration
+	ElementTypeAttachmentDeclaration
 	ElementTypeFieldDeclaration
 	ElementTypeEnumCaseDeclaration
 	ElementTypePragmaDeclaration
@@ -60,6 +60,7 @@ const (
 
 	// Expressions
 
+	ElementTypeVoidExpression
 	ElementTypeBoolExpression
 	ElementTypeNilExpression
 	ElementTypeIntegerExpression
@@ -81,5 +82,5 @@ const (
 	ElementTypeReferenceExpression
 	ElementTypeForceExpression
 	ElementTypePathExpression
-	ElementTypeExtendExpression
+	ElementTypeAttachExpression
 )

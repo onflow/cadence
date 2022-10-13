@@ -25,7 +25,6 @@ import (
 
 // checkEventParameters checks that the event initializer's parameters are valid,
 // as determined by `isValidEventParameterType`.
-//
 func (checker *Checker) checkEventParameters(
 	parameterList *ast.ParameterList,
 	parameters []*Parameter,
@@ -56,7 +55,6 @@ func (checker *Checker) checkEventParameters(
 // IsValidEventParameterType returns true if the given type is a valid event parameter type.
 //
 // Events currently only support a few simple Cadence types.
-//
 func IsValidEventParameterType(t Type, results map[*Member]bool) bool {
 
 	switch t := t.(type) {

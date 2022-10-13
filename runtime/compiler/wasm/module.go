@@ -19,7 +19,6 @@
 package wasm
 
 // Module represents a module
-//
 type Module struct {
 	Name               string
 	Types              []*FunctionType

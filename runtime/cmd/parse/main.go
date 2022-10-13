@@ -26,7 +26,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"runtime/debug"
 	"testing"
@@ -58,7 +58,7 @@ type benchResult struct {
 
 type result struct {
 	Path     string       `json:"path,omitempty"`
-	Code     string       `json:"-"`
+	Code     []byte       `json:"-"`
 	Bench    *benchResult `json:"bench,omitempty"`
 	BenchStr string       `json:"-"`
 	Error    error        `json:"error,omitempty"`
@@ -108,7 +108,7 @@ func (s stdoutOutput) Append(r result) {
 	if r.Error != nil {
 		location := common.NewStringLocation(nil, r.Path)
 		printErr := pretty.NewErrorPrettyPrinter(os.Stdout, true).
-			PrettyPrintError(r.Error, location, map[common.Location]string{location: r.Code})
+			PrettyPrintError(r.Error, location, map[common.Location][]byte{location: r.Code})
 		if printErr != nil {
 			panic(printErr)
 		}
@@ -202,18 +202,18 @@ func runPath(path string, bench bool) (res result, succeeded bool) {
 	return
 }
 
-func read(path string) string {
+func read(path string) []byte {
 	var data []byte
 	var err error
 	if len(path) == 0 {
-		data, err = ioutil.ReadAll(bufio.NewReader(os.Stdin))
+		data, err = io.ReadAll(bufio.NewReader(os.Stdin))
 	} else {
-		data, err = ioutil.ReadFile(path)
+		data, err = os.ReadFile(path)
 	}
 	if err != nil {
 		panic(err)
 	}
-	return string(data)
+	return data
 }
 
 func benchParse(parse func() (err error)) testing.BenchmarkResult {

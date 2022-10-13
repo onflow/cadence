@@ -124,7 +124,7 @@ func TestInterpretContainerVariance(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
+		RequireError(t, err)
 
 		var containerMutationErr interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &containerMutationErr)
@@ -158,7 +158,7 @@ func TestInterpretContainerVariance(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
+		RequireError(t, err)
 
 		var containerMutationErr interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &containerMutationErr)
@@ -197,7 +197,7 @@ func TestInterpretContainerVariance(t *testing.T) {
        `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
+		RequireError(t, err)
 
 		var containerMutationError interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &containerMutationError)
@@ -235,7 +235,7 @@ func TestInterpretContainerVariance(t *testing.T) {
        `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
+		RequireError(t, err)
 
 		var containerMutationError interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &containerMutationError)
@@ -279,7 +279,7 @@ func TestInterpretContainerVariance(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
+		RequireError(t, err)
 
 		var containerMutationError interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &containerMutationError)
@@ -321,7 +321,7 @@ func TestInterpretContainerVariance(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
+		RequireError(t, err)
 
 		var containerMutationError interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &containerMutationError)
@@ -349,7 +349,7 @@ func TestInterpretContainerVariance(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
+		RequireError(t, err)
 
 		var containerMutationError interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &containerMutationError)
@@ -379,7 +379,7 @@ func TestInterpretContainerVariance(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
+		RequireError(t, err)
 
 		var containerMutationError interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &containerMutationError)
@@ -403,7 +403,7 @@ func TestInterpretContainerVariance(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
+		RequireError(t, err)
 
 		var containerMutationError interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &containerMutationError)
@@ -427,7 +427,7 @@ func TestInterpretContainerVariance(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
+		RequireError(t, err)
 
 		var containerMutationError interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &containerMutationError)
@@ -465,7 +465,7 @@ func TestInterpretResourceReferenceAfterMove(t *testing.T) {
 
 		array := interpreter.NewArrayValue(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.ConvertSemaToStaticType(nil, rType),
 			},
@@ -518,7 +518,7 @@ func TestInterpretResourceReferenceAfterMove(t *testing.T) {
 
 		array := interpreter.NewArrayValue(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.VariableSizedStaticType{
 					Type: interpreter.ConvertSemaToStaticType(nil, rType),
@@ -575,7 +575,7 @@ func TestInterpretResourceReferenceAfterMove(t *testing.T) {
 
 		array := interpreter.NewArrayValue(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeInt,
@@ -737,7 +737,7 @@ func TestInterpretReferenceUseAfterShiftStatementMove(t *testing.T) {
 		r1, err := inter.Invoke("createR1")
 		require.NoError(t, err)
 
-		r1 = r1.Transfer(inter, interpreter.ReturnEmptyLocationRange, atree.Address{1}, false, nil)
+		r1 = r1.Transfer(inter, interpreter.EmptyLocationRange, atree.Address{1}, false, nil)
 
 		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")
 
@@ -807,7 +807,7 @@ func TestInterpretReferenceExpressionOfOptional(t *testing.T) {
 		require.IsType(t, &interpreter.SomeValue{}, value)
 
 		innerValue := value.(*interpreter.SomeValue).
-			InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+			InnerValue(inter, interpreter.EmptyLocationRange)
 		require.IsType(t, &interpreter.EphemeralReferenceValue{}, innerValue)
 	})
 
@@ -826,7 +826,7 @@ func TestInterpretReferenceExpressionOfOptional(t *testing.T) {
 		require.IsType(t, &interpreter.SomeValue{}, value)
 
 		innerValue := value.(*interpreter.SomeValue).
-			InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+			InnerValue(inter, interpreter.EmptyLocationRange)
 		require.IsType(t, &interpreter.EphemeralReferenceValue{}, innerValue)
 	})
 
@@ -843,7 +843,7 @@ func TestInterpretReferenceExpressionOfOptional(t *testing.T) {
 		require.IsType(t, &interpreter.SomeValue{}, value)
 
 		innerValue := value.(*interpreter.SomeValue).
-			InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+			InnerValue(inter, interpreter.EmptyLocationRange)
 		require.IsType(t, &interpreter.EphemeralReferenceValue{}, innerValue)
 	})
 
@@ -860,7 +860,7 @@ func TestInterpretReferenceExpressionOfOptional(t *testing.T) {
 		require.IsType(t, &interpreter.SomeValue{}, value)
 
 		innerValue := value.(*interpreter.SomeValue).
-			InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+			InnerValue(inter, interpreter.EmptyLocationRange)
 		require.IsType(t, &interpreter.EphemeralReferenceValue{}, innerValue)
 	})
 
@@ -874,7 +874,7 @@ func TestInterpretReferenceExpressionOfOptional(t *testing.T) {
         `)
 
 		value := inter.Globals["ref"].GetValue()
-		require.IsType(t, interpreter.NilValue{}, value)
+		require.IsType(t, interpreter.Nil, value)
 	})
 
 	t.Run("upcast to optional", func(t *testing.T) {
@@ -890,7 +890,7 @@ func TestInterpretReferenceExpressionOfOptional(t *testing.T) {
 		require.IsType(t, &interpreter.SomeValue{}, value)
 
 		innerValue := value.(*interpreter.SomeValue).
-			InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+			InnerValue(inter, interpreter.EmptyLocationRange)
 		require.IsType(t, &interpreter.EphemeralReferenceValue{}, innerValue)
 	})
 }

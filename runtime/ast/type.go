@@ -770,86 +770,6 @@ func (t *InstantiationType) CheckEqual(other Type, checker TypeEqualityChecker) 
 	return checker.CheckInstantiationTypeEquality(t, other)
 }
 
-// ExtendedType represents an extended type
-type ExtendedType struct {
-	Type       Type `json:"ExtendedType"`
-	Extensions []*TypeAnnotation
-	Range
-}
-
-var _ Type = &ExtendedType{}
-
-func NewExtendedType(
-	memoryGauge common.MemoryGauge,
-	typ Type,
-	extensions []*TypeAnnotation,
-	astRange Range,
-) *ExtendedType {
-	common.UseMemory(memoryGauge, common.ExtendedTypeMemoryUsage)
-	return &ExtendedType{
-		Type:       typ,
-		Extensions: extensions,
-		Range:      astRange,
-	}
-}
-
-func (*ExtendedType) isType() {}
-
-func (t *ExtendedType) String() string {
-	return Prettier(t)
-}
-
-const extendedTypeWithDoc = prettier.Text("with")
-const extendedTypeSeparatorDoc = prettier.Text(",")
-
-func (t *ExtendedType) Doc() prettier.Doc {
-	extensionsDoc := prettier.Concat{
-		prettier.SoftLine{},
-	}
-
-	for i, restriction := range t.Extensions {
-		if i > 0 {
-			extensionsDoc = append(
-				extensionsDoc,
-				extendedTypeSeparatorDoc,
-				prettier.Line{},
-			)
-		}
-		extensionsDoc = append(
-			extensionsDoc,
-			restriction.Doc(),
-		)
-	}
-
-	var doc prettier.Concat
-	if t.Type != nil {
-		doc = append(doc, t.Type.Doc())
-	}
-
-	return append(
-		doc,
-		prettier.Space,
-		extendedTypeWithDoc,
-		prettier.Space,
-		extensionsDoc,
-	)
-}
-
-func (t *ExtendedType) MarshalJSON() ([]byte, error) {
-	type Alias ExtendedType
-	return json.Marshal(&struct {
-		Type string
-		*Alias
-	}{
-		Type:  "ExtendedType",
-		Alias: (*Alias)(t),
-	})
-}
-
-func (t *ExtendedType) CheckEqual(other Type, checker TypeEqualityChecker) error {
-	return checker.CheckExtendedTypeEquality(t, other)
-}
-
 type TypeEqualityChecker interface {
 	CheckNominalTypeEquality(*NominalType, Type) error
 	CheckOptionalTypeEquality(*OptionalType, Type) error
@@ -860,5 +780,4 @@ type TypeEqualityChecker interface {
 	CheckReferenceTypeEquality(*ReferenceType, Type) error
 	CheckRestrictedTypeEquality(*RestrictedType, Type) error
 	CheckInstantiationTypeEquality(*InstantiationType, Type) error
-	CheckExtendedTypeEquality(*ExtendedType, Type) error
 }

@@ -31,10 +31,10 @@ import (
 )
 
 // FunctionValue
-//
 type FunctionValue interface {
 	Value
 	isFunctionValue()
+	FunctionType() *sema.FunctionType
 	// invoke evaluates the function.
 	// Only used internally by the interpreter.
 	// Use Interpreter.InvokeFunctionValue if you want to invoke the function externally
@@ -42,7 +42,6 @@ type FunctionValue interface {
 }
 
 // InterpretedFunctionValue
-//
 type InterpretedFunctionValue struct {
 	Interpreter      *Interpreter
 	ParameterList    *ast.ParameterList
@@ -80,6 +79,7 @@ func NewInterpretedFunctionValue(
 }
 
 var _ Value = &InterpretedFunctionValue{}
+var _ FunctionValue = &InterpretedFunctionValue{}
 
 func (*InterpretedFunctionValue) IsValue() {}
 
@@ -116,6 +116,10 @@ func (*InterpretedFunctionValue) IsImportable(_ *Interpreter) bool {
 
 func (*InterpretedFunctionValue) isFunctionValue() {}
 
+func (f *InterpretedFunctionValue) FunctionType() *sema.FunctionType {
+	return f.Type
+}
+
 func (f *InterpretedFunctionValue) invoke(invocation Invocation) Value {
 
 	// The check that arguments' dynamic types match the parameter types
@@ -126,7 +130,7 @@ func (f *InterpretedFunctionValue) invoke(invocation Invocation) Value {
 
 func (f *InterpretedFunctionValue) ConformsToStaticType(
 	_ *Interpreter,
-	_ func() LocationRange,
+	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
 	return true
@@ -146,7 +150,7 @@ func (*InterpretedFunctionValue) IsResourceKinded(_ *Interpreter) bool {
 
 func (f *InterpretedFunctionValue) Transfer(
 	interpreter *Interpreter,
-	_ func() LocationRange,
+	_ LocationRange,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -167,7 +171,6 @@ func (*InterpretedFunctionValue) DeepRemove(_ *Interpreter) {
 }
 
 // HostFunctionValue
-//
 type HostFunction func(invocation Invocation) Value
 
 type HostFunctionValue struct {
@@ -219,7 +222,9 @@ func NewHostFunctionValue(
 }
 
 var _ Value = &HostFunctionValue{}
+var _ FunctionValue = &HostFunctionValue{}
 var _ MemberAccessibleValue = &HostFunctionValue{}
+var _ ContractValue = &HostFunctionValue{}
 
 func (*HostFunctionValue) IsValue() {}
 
@@ -241,6 +246,10 @@ func (*HostFunctionValue) IsImportable(_ *Interpreter) bool {
 
 func (*HostFunctionValue) isFunctionValue() {}
 
+func (f *HostFunctionValue) FunctionType() *sema.FunctionType {
+	return f.Type
+}
+
 func (f *HostFunctionValue) invoke(invocation Invocation) Value {
 
 	// The check that arguments' dynamic types match the parameter types
@@ -249,7 +258,7 @@ func (f *HostFunctionValue) invoke(invocation Invocation) Value {
 	return f.Function(invocation)
 }
 
-func (f *HostFunctionValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
+func (f *HostFunctionValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
 	if f.NestedVariables != nil {
 		if variable, ok := f.NestedVariables[name]; ok {
 			return variable.GetValue()
@@ -258,19 +267,19 @@ func (f *HostFunctionValue) GetMember(_ *Interpreter, _ func() LocationRange, na
 	return nil
 }
 
-func (*HostFunctionValue) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
+func (*HostFunctionValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
 	// Host functions have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (*HostFunctionValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+func (*HostFunctionValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
 	// Host functions have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
 func (f *HostFunctionValue) ConformsToStaticType(
 	_ *Interpreter,
-	_ func() LocationRange,
+	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
 	return true
@@ -290,7 +299,7 @@ func (*HostFunctionValue) IsResourceKinded(_ *Interpreter) bool {
 
 func (f *HostFunctionValue) Transfer(
 	interpreter *Interpreter,
-	_ func() LocationRange,
+	_ LocationRange,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -310,14 +319,18 @@ func (*HostFunctionValue) DeepRemove(_ *Interpreter) {
 	// NO-OP
 }
 
+func (v *HostFunctionValue) SetNestedVariables(variables map[string]*Variable) {
+	v.NestedVariables = variables
+}
+
 // BoundFunctionValue
-//
 type BoundFunctionValue struct {
 	Function FunctionValue
 	Self     *CompositeValue
 }
 
 var _ Value = BoundFunctionValue{}
+var _ FunctionValue = BoundFunctionValue{}
 
 func NewBoundFunctionValue(
 	interpreter *Interpreter,
@@ -365,6 +378,10 @@ func (BoundFunctionValue) IsImportable(_ *Interpreter) bool {
 
 func (BoundFunctionValue) isFunctionValue() {}
 
+func (f BoundFunctionValue) FunctionType() *sema.FunctionType {
+	return f.Function.FunctionType()
+}
+
 func (f BoundFunctionValue) invoke(invocation Invocation) Value {
 	invocation.Self = f.Self
 	return f.Function.invoke(invocation)
@@ -372,12 +389,12 @@ func (f BoundFunctionValue) invoke(invocation Invocation) Value {
 
 func (f BoundFunctionValue) ConformsToStaticType(
 	interpreter *Interpreter,
-	getLocationRange func() LocationRange,
+	locationRange LocationRange,
 	results TypeConformanceResults,
 ) bool {
 	return f.Function.ConformsToStaticType(
 		interpreter,
-		getLocationRange,
+		locationRange,
 		results,
 	)
 }
@@ -396,7 +413,7 @@ func (BoundFunctionValue) IsResourceKinded(_ *Interpreter) bool {
 
 func (f BoundFunctionValue) Transfer(
 	interpreter *Interpreter,
-	_ func() LocationRange,
+	_ LocationRange,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,

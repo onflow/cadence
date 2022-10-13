@@ -30,7 +30,6 @@ const AuthAccountContractsTypeUpdateExperimentalFunctionName = "update__experime
 const AuthAccountContractsTypeNamesField = "names"
 
 // AuthAccountContractsType represents the type `AuthAccount.Contracts`
-//
 var AuthAccountContractsType = func() *CompositeType {
 
 	authAccountContractsType := &CompositeType{
@@ -75,7 +74,7 @@ var AuthAccountContractsType = func() *CompositeType {
 	}
 
 	authAccountContractsType.Members = GetMembersAsMap(members)
-	authAccountContractsType.Fields = getFieldNames(members)
+	authAccountContractsType.Fields = GetFieldNames(members)
 	return authAccountContractsType
 }()
 

@@ -21,7 +21,6 @@ package deps
 import "github.com/onflow/cadence/runtime/common/orderedmap"
 
 // NodeSet is a set of Node
-//
 type NodeSet interface {
 	Add(*Node)
 	Remove(*Node)
@@ -31,7 +30,6 @@ type NodeSet interface {
 
 // MapNodeSet is a Node set backed by a Go map (unordered).
 // NOTE: DO *NOT* USE this for on-chain operations, but OrderedNodeSet
-//
 type MapNodeSet map[*Node]struct{}
 
 func NewMapNodeSet() NodeSet {
@@ -64,7 +62,6 @@ func (m MapNodeSet) ForEach(f func(*Node) error) error {
 }
 
 // OrderedNodeSet is a Node set backed by an ordered map
-//
 type OrderedNodeSet orderedmap.OrderedMap[*Node, struct{}]
 
 var _ NodeSet = &OrderedNodeSet{}
@@ -81,8 +78,7 @@ func (os *OrderedNodeSet) Remove(node *Node) {
 
 func (os *OrderedNodeSet) Contains(node *Node) bool {
 	om := (*orderedmap.OrderedMap[*Node, struct{}])(os)
-	_, ok := om.Get(node)
-	return ok
+	return om.Contains(node)
 }
 
 func (os *OrderedNodeSet) ForEach(f func(*Node) error) error {

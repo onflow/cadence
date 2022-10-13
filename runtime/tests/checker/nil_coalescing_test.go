@@ -73,7 +73,7 @@ func TestCheckInvalidNilCoalescingMismatch(t *testing.T) {
       let x: Int? = nil ?? false
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -112,7 +112,7 @@ func TestCheckInvalidNilCoalescingOptionalsInt(t *testing.T) {
       let x: Int = none ?? one
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -137,7 +137,7 @@ func TestCheckInvalidNilCoalescingMismatchNonOptional(t *testing.T) {
      let x: Int = nil ?? false
    `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -150,7 +150,7 @@ func TestCheckInvalidNilCoalescingRightSubtype(t *testing.T) {
      let x: Int = nil ?? nil
    `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -164,7 +164,7 @@ func TestCheckInvalidNilCoalescingNonMatchingTypes(t *testing.T) {
       let y = x ?? false
    `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidBinaryOperandError{}, errs[0])
 }

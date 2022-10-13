@@ -24,7 +24,6 @@ import (
 )
 
 // BlockType
-//
 var BlockType = &SimpleType{
 	Name:                 "Block",
 	QualifiedName:        "Block",

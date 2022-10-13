@@ -96,7 +96,7 @@ func (checker *Checker) declareFunctionDeclaration(
 ) {
 	argumentLabels := declaration.ParameterList.EffectiveArgumentLabels()
 
-	_, err := checker.valueActivations.Declare(variableDeclaration{
+	_, err := checker.valueActivations.declare(variableDeclaration{
 		identifier:               declaration.Identifier.Identifier,
 		ty:                       functionType,
 		docString:                declaration.DocString,
@@ -131,17 +131,6 @@ func (checker *Checker) checkFunction(
 	if functionType.ReturnTypeAnnotation != nil {
 		checker.checkTypeAnnotation(functionType.ReturnTypeAnnotation, returnTypeAnnotation)
 	}
-
-	// Reset the returning state and restore it when leaving
-
-	jumpedOrReturned := checker.resources.JumpsOrReturns
-	halted := checker.resources.Halts
-	checker.resources.JumpsOrReturns = false
-	checker.resources.Halts = false
-	defer func() {
-		checker.resources.JumpsOrReturns = jumpedOrReturned
-		checker.resources.Halts = halted
-	}()
 
 	// NOTE: Always declare the function parameters, even if the function body is empty.
 	// For example, event declarations have an initializer with an empty body,
@@ -203,7 +192,6 @@ func (checker *Checker) checkFunction(
 // checkFunctionExits checks that the given function block exits
 // with a return-type appropriate return statement.
 // The return is not needed if the function has a `Void` return type.
-//
 func (checker *Checker) checkFunctionExits(functionBlock *ast.FunctionBlock, returnType Type) {
 
 	if returnType == VoidType {
@@ -239,7 +227,6 @@ func (checker *Checker) checkParameters(parameterList *ast.ParameterList, parame
 }
 
 // checkArgumentLabels checks that all argument labels (if any) are unique
-//
 func (checker *Checker) checkArgumentLabels(parameterList *ast.ParameterList) {
 
 	argumentLabelPositions := map[string]ast.Position{}
@@ -269,7 +256,6 @@ func (checker *Checker) checkArgumentLabels(parameterList *ast.ParameterList) {
 
 // declareParameters declares a constant for each parameter,
 // ensuring names are unique and constants don't already exist
-//
 func (checker *Checker) declareParameters(
 	parameterList *ast.ParameterList,
 	parameters []*Parameter,
@@ -387,7 +373,7 @@ func (checker *Checker) visitFunctionBlock(
 }
 
 func (checker *Checker) declareResult(ty Type) {
-	_, err := checker.valueActivations.DeclareImplicitConstant(
+	_, err := checker.valueActivations.declareImplicitConstant(
 		ResultIdentifier,
 		ty,
 		common.DeclarationKindConstant,
@@ -397,7 +383,7 @@ func (checker *Checker) declareResult(ty Type) {
 }
 
 func (checker *Checker) declareBefore() {
-	_, err := checker.valueActivations.DeclareImplicitConstant(
+	_, err := checker.valueActivations.declareImplicitConstant(
 		BeforeIdentifier,
 		beforeType,
 		common.DeclarationKindFunction,

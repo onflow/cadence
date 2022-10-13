@@ -377,15 +377,19 @@ it originally was (type confusion).
     inconsistencies and type-confusions as described earlier.
 
 ## Functions
-Updating a function definition is always valid, as function definitions are never stored as data.
-i.e: Function definition is a part of the code, but not data.
-- Changing a function signature (parameters, return types) is valid.
-- Changing a function body is also valid.
-- Changing the access modifier is valid.
 
-However, changing a *function type* may or may not be valid, depending on where it is used.
-i.e: If a function type is used in the type annotation of a composite type field (direct or indirect), then changing
-the function type signature is the same as changing the type annotation of that field (which is again invalid).
+Adding, changing, and deleting a function definition is always valid, as function definitions are never stored as data 
+(function definitions are part of the code, but not data).
+
+- Adding a function is valid.
+- Deleting a function is valid.
+- Changing a function signature (parameters, return types) is valid.
+- Changing a function body is valid.
+- Changing the access modifiers is valid.
+
+However, changing a *function type* may or may not be valid, depending on where it is used:
+If a function type is used in the type annotation of a composite type field (direct or indirect), 
+then changing the function type signature is the same as changing the type annotation of that field (which is invalid).
 
 ## Constructors
 Similar to functions, constructors are also not stored. Hence, any changes to constructors are valid.

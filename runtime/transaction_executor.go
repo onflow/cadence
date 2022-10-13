@@ -27,7 +27,7 @@ import (
 )
 
 type interpreterTransactionExecutor struct {
-	runtime interpreterRuntime
+	runtime *interpreterRuntime
 	script  Script
 	context Context
 
@@ -48,7 +48,7 @@ type interpreterTransactionExecutor struct {
 }
 
 func newInterpreterTransactionExecutor(
-	runtime interpreterRuntime,
+	runtime *interpreterRuntime,
 	script Script,
 	context Context,
 ) Executor {
@@ -257,7 +257,7 @@ func transactionExecutionFunction(
 		values, err := validateArgumentParams(
 			inter,
 			runtimeInterface,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			arguments,
 			parameters,
 		)

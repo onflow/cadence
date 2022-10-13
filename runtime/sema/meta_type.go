@@ -34,7 +34,6 @@ Returns true if this type is a subtype of the given type at run-time
 const MetaTypeName = "Type"
 
 // MetaType represents the type of a type.
-//
 var MetaType = &SimpleType{
 	Name:                 MetaTypeName,
 	QualifiedName:        MetaTypeName,

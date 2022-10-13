@@ -49,8 +49,6 @@ type typeMetaLeftDenotationFunc func(
 
 var typeLeftBindingPowers [lexer.TokenMax]int
 var typeLeftDenotations [lexer.TokenMax]typeLeftDenotationFunc
-var typeLeftIdentifierBindingPowers = map[any]int{}
-var typeLeftIdentifierDenotations = map[any]typeLeftDenotationFunc{}
 var typeMetaLeftDenotations [lexer.TokenMax]typeMetaLeftDenotationFunc
 
 func setTypeNullDenotation(tokenType lexer.TokenType, nullDenotation typeNullDenotationFunc) {
@@ -64,31 +62,12 @@ func setTypeNullDenotation(tokenType lexer.TokenType, nullDenotation typeNullDen
 	typeNullDenotations[tokenType] = nullDenotation
 }
 
-func setTypeLeftIdentifierBindingPower(keyword string, power int) {
-	current := typeLeftIdentifierBindingPowers[keyword]
-	if current > power {
-		return
-	}
-	typeLeftIdentifierBindingPowers[keyword] = power
-}
-
 func setTypeLeftBindingPower(tokenType lexer.TokenType, power int) {
 	current := typeLeftBindingPowers[tokenType]
 	if current > power {
 		return
 	}
 	typeLeftBindingPowers[tokenType] = power
-}
-
-func setTypeLeftIdentifierDenotation(keyword string, leftDenotation typeLeftDenotationFunc) {
-	_, ok := typeLeftIdentifierDenotations[keyword]
-	if ok {
-		panic(NewUnpositionedSyntaxError(
-			"type left denotation for token %s already exists",
-			keyword,
-		))
-	}
-	typeLeftIdentifierDenotations[keyword] = leftDenotation
 }
 
 func setTypeLeftDenotation(tokenType lexer.TokenType, leftDenotation typeLeftDenotationFunc) {
@@ -114,7 +93,7 @@ func setTypeMetaLeftDenotation(tokenType lexer.TokenType, metaLeftDenotation typ
 }
 
 type prefixTypeFunc func(parser *parser, right ast.Type, tokenRange ast.Range) ast.Type
-type postfixTypeFunc func(parser *parser, left ast.Type, token lexer.Token) (ast.Type, error)
+type postfixTypeFunc func(parser *parser, left ast.Type, tokenRange ast.Range) ast.Type
 
 type literalType struct {
 	tokenType      lexer.TokenType
@@ -129,12 +108,6 @@ type prefixType struct {
 
 type postfixType struct {
 	tokenType      lexer.TokenType
-	bindingPower   int
-	leftDenotation postfixTypeFunc
-}
-
-type postfixKeywordType struct {
-	keyword        string
 	bindingPower   int
 	leftDenotation postfixTypeFunc
 }
@@ -160,16 +133,7 @@ func defineType(def any) {
 		setTypeLeftDenotation(
 			tokenType,
 			func(p *parser, token lexer.Token, left ast.Type) (ast.Type, error) {
-				return def.leftDenotation(p, left, token)
-			},
-		)
-	case postfixKeywordType:
-		keyword := def.keyword
-		setTypeLeftIdentifierBindingPower(keyword, def.bindingPower)
-		setTypeLeftIdentifierDenotation(
-			keyword,
-			func(p *parser, token lexer.Token, left ast.Type) (ast.Type, error) {
-				return def.leftDenotation(p, left, token)
+				return def.leftDenotation(p, left, token.Range), nil
 			},
 		)
 	case literalType:
@@ -183,7 +147,6 @@ func defineType(def any) {
 func init() {
 	defineArrayType()
 	defineOptionalType()
-	defineExtendedType()
 	defineReferenceType()
 	defineRestrictedOrDictionaryType()
 	defineFunctionType()
@@ -193,7 +156,7 @@ func init() {
 		lexer.TokenIdentifier,
 		func(p *parser, token lexer.Token) (ast.Type, error) {
 
-			switch token.Value {
+			switch string(p.tokenSource(token)) {
 			case keywordAuth:
 				p.skipSpaceAndComments(true)
 
@@ -333,75 +296,28 @@ func defineOptionalType() {
 	defineType(postfixType{
 		tokenType:    lexer.TokenQuestionMark,
 		bindingPower: typeLeftBindingPowerOptional,
-		leftDenotation: func(p *parser, left ast.Type, token lexer.Token) (ast.Type, error) {
+		leftDenotation: func(p *parser, left ast.Type, tokenRange ast.Range) ast.Type {
 			return ast.NewOptionalType(
 				p.memoryGauge,
 				left,
-				token.EndPos,
-			), nil
+				tokenRange.EndPos,
+			)
 		},
 	})
 
 	defineType(postfixType{
 		tokenType:    lexer.TokenDoubleQuestionMark,
 		bindingPower: typeLeftBindingPowerOptional,
-		leftDenotation: func(p *parser, left ast.Type, token lexer.Token) (ast.Type, error) {
+		leftDenotation: func(p *parser, left ast.Type, tokenRange ast.Range) ast.Type {
 			return ast.NewOptionalType(
 				p.memoryGauge,
 				ast.NewOptionalType(
 					p.memoryGauge,
 					left,
-					token.StartPos,
+					tokenRange.StartPos,
 				),
-				token.EndPos,
-			), nil
-		},
-	})
-}
-
-func defineExtendedType() {
-	defineType(postfixKeywordType{
-		keyword:      keywordWith,
-		bindingPower: typeLeftBindingPowerExtended,
-		leftDenotation: func(p *parser, left ast.Type, token lexer.Token) (ast.Type, error) {
-			switch token.Value {
-			case keywordWith:
-				var extensions []*ast.TypeAnnotation
-				var endPos ast.Position
-				p.skipSpaceAndComments(true)
-
-				for {
-					ty, err := parseTypeAnnotation(p, typeLeftBindingPowerExtended)
-					if err != nil {
-						return nil, err
-					}
-					nominalType, ok := ty.Type.(*ast.NominalType)
-					if !ok {
-						return nil, p.syntaxError("unexpected non-nominal type: %s", ty)
-					}
-					extensions = append(extensions, ty)
-
-					p.skipSpaceAndComments(true)
-					if p.current.Type != lexer.TokenComma {
-						endPos = nominalType.EndPosition(p.memoryGauge)
-						break
-					}
-					p.next()
-					p.skipSpaceAndComments(true)
-				}
-
-				return ast.NewExtendedType(
-					p.memoryGauge,
-					left,
-					extensions,
-					ast.NewRange(p.memoryGauge, left.StartPosition(), endPos),
-				), nil
-			default:
-				return nil, p.syntaxError(
-					"expected 'with', got %s",
-					p.current.Type,
-				)
-			}
+				tokenRange.EndPos,
+			)
 		},
 	})
 }
@@ -648,7 +564,6 @@ func defineRestrictedOrDictionaryType() {
 }
 
 // parseNominalTypes parses zero or more nominal types separated by comma.
-//
 func parseNominalTypes(
 	p *parser,
 	endTokenType lexer.TokenType,
@@ -730,7 +645,7 @@ func defineFunctionType() {
 			}
 
 			p.skipSpaceAndComments(true)
-			returnTypeAnnotation, err := parseTypeAnnotation(p, lowestBindingPower)
+			returnTypeAnnotation, err := parseTypeAnnotation(p)
 			if err != nil {
 				return nil, err
 			}
@@ -799,7 +714,7 @@ func parseParameterTypeAnnotations(p *parser) (typeAnnotations []*ast.TypeAnnota
 				)
 			}
 
-			typeAnnotation, err := parseTypeAnnotation(p, lowestBindingPower)
+			typeAnnotation, err := parseTypeAnnotation(p)
 			if err != nil {
 				return nil, err
 			}
@@ -836,15 +751,6 @@ func parseType(p *parser, rightBindingPower int) (ast.Type, error) {
 	}
 
 	for {
-		// some identifier postfix operators allow space to precede them;
-		// skip spaces and check whether the next token would continue the type
-		if p.current.Type == lexer.TokenSpace {
-			p.skipSpaceAndComments(true)
-			_, ok := typeLeftIdentifierDenotations[p.current.Value]
-			if !ok {
-				return left, nil
-			}
-		}
 		var done bool
 		left, err, done = applyTypeMetaLeftDenotation(p, rightBindingPower, left)
 		if err != nil {
@@ -885,7 +791,6 @@ func applyTypeMetaLeftDenotation(
 
 // defaultTypeMetaLeftDenotation is the default type left denotation, which applies
 // if the right binding power is less than the left binding power of the current token
-//
 func defaultTypeMetaLeftDenotation(
 	p *parser,
 	rightBindingPower int,
@@ -895,8 +800,7 @@ func defaultTypeMetaLeftDenotation(
 	err error,
 	done bool,
 ) {
-	if rightBindingPower >= typeLeftBindingPowers[p.current.Type] &&
-		rightBindingPower >= typeLeftIdentifierBindingPowers[p.current.Value] {
+	if rightBindingPower >= typeLeftBindingPowers[p.current.Type] {
 		return left, nil, true
 	}
 
@@ -909,7 +813,7 @@ func defaultTypeMetaLeftDenotation(
 	return result, err, false
 }
 
-func parseTypeAnnotation(p *parser, power int) (*ast.TypeAnnotation, error) {
+func parseTypeAnnotation(p *parser) (*ast.TypeAnnotation, error) {
 	startPos := p.current.StartPos
 
 	isResource := false
@@ -919,7 +823,7 @@ func parseTypeAnnotation(p *parser, power int) (*ast.TypeAnnotation, error) {
 		isResource = true
 	}
 
-	ty, err := parseType(p, power)
+	ty, err := parseType(p, lowestBindingPower)
 	if err != nil {
 		return nil, err
 	}
@@ -942,12 +846,7 @@ func applyTypeNullDenotation(p *parser, token lexer.Token) (ast.Type, error) {
 }
 
 func applyTypeLeftDenotation(p *parser, token lexer.Token, left ast.Type) (ast.Type, error) {
-	var leftDenotation typeLeftDenotationFunc
-	if token.Type == lexer.TokenIdentifier {
-		leftDenotation = typeLeftIdentifierDenotations[token.Value]
-	} else {
-		leftDenotation = typeLeftDenotations[token.Type]
-	}
+	leftDenotation := typeLeftDenotations[token.Type]
 	if leftDenotation == nil {
 		return nil, p.syntaxError("unexpected token in type: %s", token.Type)
 	}
@@ -1004,7 +903,6 @@ func parseNominalTypeInvocationRemainder(p *parser) (*ast.InvocationExpression, 
 }
 
 // parseCommaSeparatedTypeAnnotations parses zero or more type annotations separated by comma.
-//
 func parseCommaSeparatedTypeAnnotations(
 	p *parser,
 	endTokenType lexer.TokenType,
@@ -1049,7 +947,7 @@ func parseCommaSeparatedTypeAnnotations(
 				)
 			}
 
-			typeAnnotation, err := parseTypeAnnotation(p, lowestBindingPower)
+			typeAnnotation, err := parseTypeAnnotation(p)
 			if err != nil {
 				return nil, err
 			}

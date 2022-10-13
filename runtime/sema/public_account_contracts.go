@@ -27,7 +27,6 @@ const PublicAccountContractsTypeGetFunctionName = "get"
 const PublicAccountContractsTypeNamesField = "names"
 
 // PublicAccountContractsType represents the type `PublicAccount.Contracts`
-//
 var PublicAccountContractsType = func() *CompositeType {
 
 	publicAccountContractsType := &CompositeType{
@@ -54,7 +53,7 @@ var PublicAccountContractsType = func() *CompositeType {
 	}
 
 	publicAccountContractsType.Members = GetMembersAsMap(members)
-	publicAccountContractsType.Fields = getFieldNames(members)
+	publicAccountContractsType.Fields = GetFieldNames(members)
 	return publicAccountContractsType
 }()
 

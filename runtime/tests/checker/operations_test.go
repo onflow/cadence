@@ -39,7 +39,7 @@ func TestCheckInvalidUnaryBooleanNegationOfInteger(t *testing.T) {
       let a = !1
 	`)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidUnaryOperandError{}, errs[0])
 }
@@ -67,7 +67,7 @@ func TestCheckUnaryBooleanNegation(t *testing.T) {
           let a = !x
 	    `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	})
@@ -82,7 +82,7 @@ func TestCheckInvalidUnaryIntegerNegationOfBoolean(t *testing.T) {
       let a = -true
 	`)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidUnaryOperandError{}, errs[0])
 }
@@ -110,7 +110,7 @@ func TestCheckUnaryIntegerNegation(t *testing.T) {
           let a = -x
 	    `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	})
@@ -317,7 +317,7 @@ func TestCheckIntegerBinaryOperations(t *testing.T) {
 						),
 					)
 
-					errs := ExpectCheckerErrors(t, err, len(test.expectedErrors))
+					errs := RequireCheckerErrors(t, err, len(test.expectedErrors))
 
 					for i, expectedErr := range test.expectedErrors {
 						assert.IsType(t, expectedErr, errs[i])
@@ -411,7 +411,7 @@ func TestCheckSaturatedArithmeticFunctions(t *testing.T) {
 			if expected {
 				require.NoError(t, err)
 			} else {
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
 			}
@@ -488,7 +488,7 @@ func TestCheckInvalidCompositeEquality(t *testing.T) {
 			if compositeKind == common.CompositeKindEnum {
 				require.NoError(t, err)
 			} else {
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.InvalidBinaryOperandsError{}, errs[0])
 			}
@@ -551,7 +551,7 @@ func TestCheckNumericSuperTypeBinaryOperations(t *testing.T) {
 					)
 
 					_, err := ParseAndCheck(t, code)
-					errs := ExpectCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 					assert.IsType(t, &sema.InvalidBinaryOperandsError{}, errs[0])
 				})
 			}
@@ -581,7 +581,7 @@ func TestCheckNumericSuperTypeBinaryOperations(t *testing.T) {
 					)
 
 					_, err := ParseAndCheck(t, code)
-					errs := ExpectCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 					assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
 				})
 			}

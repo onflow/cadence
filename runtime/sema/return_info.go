@@ -18,13 +18,43 @@
 
 package sema
 
+import (
+	"github.com/onflow/cadence/runtime/common/persistent"
+)
+
+// TODO: rename to e.g. ControlFlowInfo
+
+// ReturnInfo tracks control-flow information
 type ReturnInfo struct {
 	// MaybeReturned indicates that (the branch of) the function
 	// contains a potentially taken return statement
-	MaybeReturned      bool
+	MaybeReturned bool
+	// JumpOffsets contains the offsets of all jumps
+	// (break or continue statements), potential or definite.
+	//
+	// If non-empty, indicates that (the branch of) the function
+	// contains a potential break or continue statement
+	JumpOffsets *persistent.OrderedSet[int]
+	// DefinitelyReturned indicates that (the branch of) the function
+	// contains a definite return statement
 	DefinitelyReturned bool
-	DefinitelyHalted   bool
-	DefinitelyJumped   bool
+	// DefinitelyHalted indicates that (the branch of) the function
+	// contains a definite halt (a function call with a Never return type)
+	DefinitelyHalted bool
+	// DefinitelyJumped indicates that (the branch of) the function
+	// contains a definite break or continue statement
+	DefinitelyJumped bool
+}
+
+func NewReturnInfo() *ReturnInfo {
+	return &ReturnInfo{
+		JumpOffsets: persistent.NewOrderedSet[int](nil),
+	}
+}
+
+func (ri *ReturnInfo) MaybeJumped() bool {
+	return ri.JumpOffsets != nil &&
+		!ri.JumpOffsets.IsEmpty()
 }
 
 func (ri *ReturnInfo) MergeBranches(thenReturnInfo *ReturnInfo, elseReturnInfo *ReturnInfo) {
@@ -45,8 +75,15 @@ func (ri *ReturnInfo) MergeBranches(thenReturnInfo *ReturnInfo, elseReturnInfo *
 			elseReturnInfo.DefinitelyHalted)
 }
 
+func (ri *ReturnInfo) MergePotentiallyUnevaluated(temporaryReturnInfo *ReturnInfo) {
+	ri.MaybeReturned = ri.MaybeReturned ||
+		temporaryReturnInfo.MaybeReturned
+
+	// NOTE: the definitive return state does not change
+}
+
 func (ri *ReturnInfo) Clone() *ReturnInfo {
-	result := &ReturnInfo{}
+	result := NewReturnInfo()
 	*result = *ri
 	return result
 }
@@ -55,4 +92,14 @@ func (ri *ReturnInfo) IsUnreachable() bool {
 	return ri.DefinitelyReturned ||
 		ri.DefinitelyHalted ||
 		ri.DefinitelyJumped
+}
+
+func (ri *ReturnInfo) AddJumpOffset(offset int) {
+	ri.JumpOffsets.Add(offset)
+}
+
+func (ri *ReturnInfo) WithNewJumpTarget(f func()) {
+	ri.JumpOffsets = ri.JumpOffsets.Clone()
+	f()
+	ri.JumpOffsets = ri.JumpOffsets.Parent
 }

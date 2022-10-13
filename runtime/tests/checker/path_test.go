@@ -100,7 +100,7 @@ func TestCheckPath(t *testing.T) {
           let x = /wrong/random
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidPathDomainError{}, errs[0])
 	})
@@ -155,7 +155,7 @@ func TestCheckConvertStringToPath(t *testing.T) {
 				),
 			)
 
-			require.IsType(t, &sema.MissingArgumentLabelError{}, ExpectCheckerErrors(t, err, 1)[0])
+			require.IsType(t, &sema.MissingArgumentLabelError{}, RequireCheckerErrors(t, err, 1)[0])
 		})
 	}
 

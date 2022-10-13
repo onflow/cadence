@@ -56,7 +56,7 @@ func qualifiedIdentifier(identifier string, containerType Type) string {
 	for i := len(identifiers) - 1; i >= 0; i-- {
 		sb.WriteString(identifiers[i])
 		if i != 0 {
-			sb.WriteRune('.')
+			sb.WriteByte('.')
 		}
 	}
 
@@ -172,7 +172,6 @@ type Type interface {
 }
 
 // ValueIndexableType is a type which can be indexed into using a value
-//
 type ValueIndexableType interface {
 	Type
 	isValueIndexableType() bool
@@ -193,7 +192,6 @@ type MemberResolver struct {
 }
 
 // ContainedType is a type which might have a container type
-//
 type ContainedType interface {
 	Type
 	GetContainerType() Type
@@ -201,7 +199,6 @@ type ContainedType interface {
 }
 
 // ContainerType is a type which might have nested types
-//
 type ContainerType interface {
 	Type
 	IsContainerType() bool
@@ -222,21 +219,18 @@ func VisitThisAndNested(t Type, visit func(ty Type)) {
 }
 
 // CompositeKindedType is a type which has a composite kind
-//
 type CompositeKindedType interface {
 	Type
 	GetCompositeKind() common.CompositeKind
 }
 
 // LocatedType is a type which has a location
-//
 type LocatedType interface {
 	Type
 	GetLocation() common.Location
 }
 
 // ParameterizedType is a type which might have type parameters
-//
 type ParameterizedType interface {
 	Type
 	TypeParameters() []*TypeParameter
@@ -360,6 +354,47 @@ var ToStringFunctionType = &FunctionType{
 const toStringFunctionDocString = `
 A textual representation of this object
 `
+
+// fromString
+const FromStringFunctionName = "fromString"
+
+func FromStringFunctionDocstring(ty Type) string {
+
+	builder := new(strings.Builder)
+	builder.WriteString(
+		fmt.Sprintf(
+			"Attempts to parse %s from a string. Returns `nil` on overflow or invalid input. Whitespace or invalid digits will return a nil value.\n",
+			ty.String(),
+		))
+
+	if IsSameTypeKind(ty, FixedPointType) {
+		builder.WriteString(
+			`Both decimal and fractional components must be supplied. For instance, both "0." and ".1" are invalid string representations, but "0.1" is accepted.\n`,
+		)
+	}
+	if IsSameTypeKind(ty, SignedIntegerType) || IsSameTypeKind(ty, SignedFixedPointType) {
+		builder.WriteString(
+			"The string may optionally begin with a sign prefix of '-' or '+'.\n",
+		)
+	}
+
+	return builder.String()
+}
+
+func FromStringFunctionType(ty Type) *FunctionType {
+	return &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "input",
+				TypeAnnotation: NewTypeAnnotation(StringType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{ty},
+		),
+	}
+}
 
 // toBigEndianBytes
 
@@ -649,7 +684,6 @@ func OptionalTypeMapFunctionType(typ Type) *FunctionType {
 }
 
 // GenericType
-//
 type GenericType struct {
 	TypeParameter *TypeParameter
 }
@@ -782,7 +816,6 @@ type FractionalRangedType interface {
 }
 
 // SaturatingArithmeticType is a type that supports saturating arithmetic functions
-//
 type SaturatingArithmeticType interface {
 	Type
 	SupportsSaturatingAdd() bool
@@ -864,7 +897,6 @@ func addSaturatingArithmeticFunctions(t SaturatingArithmeticType, members map[st
 
 // NumericType represent all the types in the integer range
 // and non-fractional ranged types.
-//
 type NumericType struct {
 	name                       string
 	tag                        TypeTag
@@ -1034,7 +1066,6 @@ func (t *NumericType) IsSuperType() bool {
 }
 
 // FixedPointNumericType represents all the types in the fixed-point range.
-//
 type FixedPointNumericType struct {
 	name                       string
 	tag                        TypeTag
@@ -2359,7 +2390,6 @@ func (p *Parameter) QualifiedString() string {
 // an argument in a call must use:
 // If no argument label is declared for parameter,
 // the parameter name is used as the argument label
-//
 func (p *Parameter) EffectiveArgumentLabel() string {
 	if p.Label != "" {
 		return p.Label
@@ -2481,7 +2511,6 @@ func formatFunctionType(
 }
 
 // FunctionType
-//
 type FunctionType struct {
 	IsConstructor            bool
 	TypeParameters           []*TypeParameter
@@ -2938,7 +2967,6 @@ type ArgumentExpressionsCheck func(
 
 // BaseTypeActivation is the base activation that contains
 // the types available in programs
-//
 var BaseTypeActivation = NewVariableActivation(nil)
 
 func init() {
@@ -3007,7 +3035,6 @@ func baseTypeVariable(name string, ty Type) *Variable {
 
 // BaseValueActivation is the base activation that contains
 // the values available in programs
-//
 var BaseValueActivation = NewVariableActivation(nil)
 
 var AllSignedFixedPointTypes = []Type{
@@ -3112,8 +3139,7 @@ func init() {
 					functionType.Members = &StringMemberOrderedMap{}
 				}
 				name := member.Identifier.Identifier
-				_, exists := functionType.Members.Get(name)
-				if exists {
+				if functionType.Members.Contains(name) {
 					panic(errors.NewUnreachableError())
 				}
 				functionType.Members.Set(name, member)
@@ -3168,6 +3194,16 @@ func init() {
 					))
 				}
 			}
+
+			// add .fromString() method
+			fromStringFnType := FromStringFunctionType(numberType)
+			fromStringDocstring := FromStringFunctionDocstring(numberType)
+			addMember(NewUnmeteredPublicFunctionMember(
+				functionType,
+				FromStringFunctionName,
+				fromStringFnType,
+				fromStringDocstring,
+			))
 
 			BaseValueActivation.Set(
 				typeName,
@@ -3316,8 +3352,7 @@ func init() {
 			functionType.Members = &StringMemberOrderedMap{}
 		}
 		name := member.Identifier.Identifier
-		_, exists := functionType.Members.Get(name)
-		if exists {
+		if functionType.Members.Contains(name) {
 			panic(errors.NewUnreachableError())
 		}
 		functionType.Members.Set(name, member)
@@ -3481,7 +3516,7 @@ type CompositeType struct {
 	Fields                              []string
 	// TODO: add support for overloaded initializers
 	ConstructorParameters []*Parameter
-	nestedTypes           *StringTypeOrderedMap
+	NestedTypes           *StringTypeOrderedMap
 	containerType         Type
 	EnumRawType           Type
 	hasComputedMembers    bool
@@ -3549,8 +3584,8 @@ func (t *CompositeType) checkIdentifiersCached() {
 		panic(errors.NewUnreachableError())
 	}
 
-	if t.nestedTypes != nil {
-		t.nestedTypes.Foreach(checkIdentifiersCached)
+	if t.NestedTypes != nil {
+		t.NestedTypes.Foreach(checkIdentifiersCached)
 	}
 }
 
@@ -3737,7 +3772,7 @@ func (t *CompositeType) InterfaceType() *InterfaceType {
 		Fields:                t.Fields,
 		InitializerParameters: t.ConstructorParameters,
 		containerType:         t.containerType,
-		nestedTypes:           t.nestedTypes,
+		NestedTypes:           t.NestedTypes,
 	}
 }
 
@@ -3747,7 +3782,7 @@ func (t *CompositeType) TypeRequirements() []*CompositeType {
 
 	if containerComposite, ok := t.containerType.(*CompositeType); ok {
 		for _, conformance := range containerComposite.ExplicitInterfaceConformances {
-			ty, ok := conformance.nestedTypes.Get(t.Identifier)
+			ty, ok := conformance.NestedTypes.Get(t.Identifier)
 			if !ok {
 				continue
 			}
@@ -3774,11 +3809,11 @@ func (t *CompositeType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 }
 
 func (t *CompositeType) IsContainerType() bool {
-	return t.nestedTypes != nil
+	return t.NestedTypes != nil
 }
 
 func (t *CompositeType) GetNestedTypes() *StringTypeOrderedMap {
-	return t.nestedTypes
+	return t.NestedTypes
 }
 
 func (t *CompositeType) initializeMemberResolvers() {
@@ -3832,6 +3867,7 @@ func (t *CompositeType) FieldPosition(name string, declaration *ast.CompositeDec
 // Member
 
 type Member struct {
+	// Parent type where this member can be resolved
 	ContainerType  Type
 	Access         ast.Access
 	Identifier     ast.Identifier
@@ -4010,7 +4046,7 @@ type InterfaceType struct {
 	// TODO: add support for overloaded initializers
 	InitializerParameters []*Parameter
 	containerType         Type
-	nestedTypes           *StringTypeOrderedMap
+	NestedTypes           *StringTypeOrderedMap
 	cachedIdentifiers     *struct {
 		TypeID              TypeID
 		QualifiedIdentifier string
@@ -4049,8 +4085,8 @@ func (t *InterfaceType) checkIdentifiersCached() {
 		panic(errors.NewUnreachableError())
 	}
 
-	if t.nestedTypes != nil {
-		t.nestedTypes.Foreach(checkIdentifiersCached)
+	if t.NestedTypes != nil {
+		t.NestedTypes.Foreach(checkIdentifiersCached)
 	}
 }
 
@@ -4226,11 +4262,11 @@ func (t *InterfaceType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 }
 
 func (t *InterfaceType) IsContainerType() bool {
-	return t.nestedTypes != nil
+	return t.NestedTypes != nil
 }
 
 func (t *InterfaceType) GetNestedTypes() *StringTypeOrderedMap {
-	return t.nestedTypes
+	return t.NestedTypes
 }
 
 func (t *InterfaceType) FieldPosition(name string, declaration *ast.InterfaceDeclaration) ast.Position {
@@ -4367,6 +4403,14 @@ const dictionaryTypeKeysFieldDocString = `
 An array containing all keys of the dictionary
 `
 
+const dictionaryTypeForEachKeyFunctionDocString = `
+Iterate over each key in this dictionary, exiting early if the passed function returns false.
+This method is more performant than calling .keys and then iterating over the resulting array,
+since no intermediate storage is allocated.
+
+The order of iteration is undefined
+`
+
 const dictionaryTypeValuesFieldDocString = `
 An array containing all values of the dictionary
 `
@@ -4491,6 +4535,28 @@ func (t *DictionaryType) initializeMemberResolvers() {
 					)
 				},
 			},
+			"forEachKey": {
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
+					if t.KeyType.IsResourceType() {
+						report(
+							&InvalidResourceDictionaryMemberError{
+								Name:            identifier,
+								DeclarationKind: common.DeclarationKindField,
+								Range:           targetRange,
+							},
+						)
+					}
+
+					return NewPublicFunctionMember(
+						memoryGauge,
+						t,
+						identifier,
+						DictionaryForEachKeyFunctionType(t),
+						dictionaryTypeForEachKeyFunctionDocString,
+					)
+				},
+			},
 		})
 	})
 }
@@ -4544,6 +4610,32 @@ func DictionaryRemoveFunctionType(t *DictionaryType) *FunctionType {
 				Type: t.ValueType,
 			},
 		),
+	}
+}
+
+func DictionaryForEachKeyFunctionType(t *DictionaryType) *FunctionType {
+	// fun forEachKey(_ function: ((K): Bool)): Void
+
+	// funcType: K -> Bool
+	funcType := &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Identifier:     "key",
+				TypeAnnotation: NewTypeAnnotation(t.KeyType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(BoolType),
+	}
+
+	return &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "function",
+				TypeAnnotation: NewTypeAnnotation(funcType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
 	}
 }
 
@@ -4876,15 +4968,22 @@ func (t *AddressType) GetMembers() map[string]MemberResolver {
 // However, to check if a type *strictly* belongs to a certain category, then consider
 // using `IsSameTypeKind` method. e.g: "Is type `T` an Integer type?". Using this method
 // for the later use-case may produce incorrect results.
-//   * IsSubType()      - To check the assignability. e.g: Is argument type T is a sub-type
-//                        of parameter type R. This is the more frequent use-case.
-//   * IsSameTypeKind() - To check if a type strictly belongs to a certain category. e.g: Is the
-//                        expression type T is any of the integer types, but nothing else.
-//                        Another way to check is, asking the question of "if the subType is Never,
-//                        should the check still pass?". A common code-smell for potential incorrect
-//                        usage is, using IsSubType() method with a constant/pre-defined superType.
-//                        e.g: IsSubType(<<someType>>, FixedPointType)
 //
+// The differences between these methods is as follows:
+//
+//   - IsSubType():
+//
+//     To check the assignability, e.g: is argument type T is a sub-type
+//     of parameter type R? This is the more frequent use-case.
+//
+//   - IsSameTypeKind():
+//
+//     To check if a type strictly belongs to a certain category. e.g: Is the
+//     expression type T is any of the integer types, but nothing else.
+//     Another way to check is, asking the question of "if the subType is Never,
+//     should the check still pass?". A common code-smell for potential incorrect
+//     usage is, using IsSubType() method with a constant/pre-defined superType.
+//     e.g: IsSubType(<<someType>>, FixedPointType)
 func IsSubType(subType Type, superType Type) bool {
 
 	if subType == nil {
@@ -4904,7 +5003,6 @@ func IsSubType(subType Type, superType Type) bool {
 // e.g: 'Never' type is a subtype of 'Integer', but not of the
 // same kind as 'Integer'. Whereas, 'Int8' is both a subtype
 // and also of same kind as 'Integer'.
-//
 func IsSameTypeKind(subType Type, superType Type) bool {
 
 	if subType == NeverType {
@@ -4918,7 +5016,6 @@ func IsSameTypeKind(subType Type, superType Type) bool {
 // i.e. it determines if the given subtype is a subtype
 // of the given supertype, but returns false
 // if the subtype and supertype refer to the same type.
-//
 func IsProperSubType(subType Type, superType Type) bool {
 
 	if subType.Equal(superType) {
@@ -4934,7 +5031,6 @@ func IsProperSubType(subType Type, superType Type) bool {
 // value when the two types are equal or are not.
 //
 // Consider using IsSubType or IsProperSubType
-//
 func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 	if subType == NeverType {
@@ -5462,7 +5558,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 			// TODO: once interfaces can conform to interfaces, include
 			return typedSubType.ExplicitInterfaceConformanceSet().
-				Includes(typedSuperType)
+				Contains(typedSuperType)
 
 		case *InterfaceType:
 			// TODO: Once interfaces can conform to interfaces, check conformances here
@@ -5524,7 +5620,6 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 // UnwrapOptionalType returns the type if it is not an optional type,
 // or the inner-most type if it is (optional types are repeatedly unwrapped)
-//
 func UnwrapOptionalType(ty Type) Type {
 	for {
 		optionalType, ok := ty.(*OptionalType)
@@ -5559,7 +5654,6 @@ func AreCompatibleEquatableTypes(leftType, rightType Type) bool {
 }
 
 // IsNilType returns true if the given type is the type of `nil`, i.e. `Never?`.
-//
 func IsNilType(ty Type) bool {
 	optionalType, ok := ty.(*OptionalType)
 	if !ok {
@@ -5689,7 +5783,6 @@ func (t *TransactionType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 //
 // No restrictions implies the type is fully restricted,
 // i.e. no members of the underlying resource type are available.
-//
 type RestrictedType struct {
 	Type         Type
 	Restrictions []*InterfaceType
@@ -6290,7 +6383,7 @@ var AccountKeyType = func() *CompositeType {
 	}
 
 	accountKeyType.Members = GetMembersAsMap(members)
-	accountKeyType.Fields = getFieldNames(members)
+	accountKeyType.Fields = GetFieldNames(members)
 	return accountKeyType
 }()
 
@@ -6358,7 +6451,7 @@ var PublicKeyType = func() *CompositeType {
 	}
 
 	publicKeyType.Members = GetMembersAsMap(members)
-	publicKeyType.Fields = getFieldNames(members)
+	publicKeyType.Fields = GetFieldNames(members)
 
 	return publicKeyType
 }()
@@ -6418,8 +6511,7 @@ func GetMembersAsMap(members []*Member) *StringMemberOrderedMap {
 	membersMap := &StringMemberOrderedMap{}
 	for _, member := range members {
 		name := member.Identifier.Identifier
-		_, ok := membersMap.Get(name)
-		if ok {
+		if membersMap.Contains(name) {
 			panic(errors.NewUnexpectedError("invalid duplicate member: %s", name))
 		}
 		membersMap.Set(name, member)
@@ -6428,7 +6520,7 @@ func GetMembersAsMap(members []*Member) *StringMemberOrderedMap {
 	return membersMap
 }
 
-func getFieldNames(members []*Member) []string {
+func GetFieldNames(members []*Member) []string {
 	fields := make([]string, 0)
 	for _, member := range members {
 		if member.DeclarationKind == common.DeclarationKindField {
