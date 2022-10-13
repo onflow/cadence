@@ -18288,8 +18288,7 @@ func (v *PublishedValue) Transfer(
 			interpreter.RemoveReferencedSlab(storable)
 		}
 
-		var res *PublishedValue = NewPublishedValue(interpreter, addressValue, innerValue)
-		return res
+		return NewPublishedValue(interpreter, addressValue, innerValue)
 	}
 
 	return v
