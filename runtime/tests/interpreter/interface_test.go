@@ -423,4 +423,62 @@ func TestInterpretInterfaceImplementationRequirement(t *testing.T) {
 			value,
 		)
 	})
+
+	t.Run("type requirement", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, err := parseCheckAndInterpretWithOptions(t, `
+            contract interface A {
+                struct NestedA {
+                    pub fun test(): Int {
+                        return 3
+                    }
+                }
+            }
+
+            contract interface B {
+                struct NestedB {
+                    pub fun test(): String {
+                        return "three"
+                    }
+                }
+            }
+
+            contract interface C: A, B {}
+
+            contract D: C {
+                struct NestedA {}
+
+                struct NestedB {}
+
+                pub fun getNestedA(): NestedA {
+                    return NestedA()
+                }
+
+                pub fun getNestedB(): NestedB {
+                    return NestedB()
+                }
+            }
+
+            pub fun main(): Int {
+                return D.getNestedA().test()
+            }`,
+
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					ContractValueHandler: makeContractValueHandler(nil, nil, nil),
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		value, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+			value,
+		)
+	})
 }

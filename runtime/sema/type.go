@@ -3782,20 +3782,20 @@ func (t *CompositeType) TypeRequirements() []*CompositeType {
 	var typeRequirements []*CompositeType
 
 	if containerComposite, ok := t.containerType.(*CompositeType); ok {
-		// TODO: get nested conformances. i.e: use 'explicitInterfaceConformanceSet' method
-		for _, conformance := range containerComposite.ExplicitInterfaceConformances {
+		containerComposite.ExplicitInterfaceConformances.ForeachDistinct(func(_, conformance *InterfaceType) bool {
 			ty, ok := conformance.NestedTypes.Get(t.Identifier)
 			if !ok {
-				continue
+				return true
 			}
 
 			typeRequirement, ok := ty.(*CompositeType)
 			if !ok {
-				continue
+				return true
 			}
 
 			typeRequirements = append(typeRequirements, typeRequirement)
-		}
+			return true
+		})
 	}
 
 	return typeRequirements
@@ -3871,7 +3871,7 @@ type InterfaceConformances []*InterfaceType
 // Foreach iterates over the conformances and its nested conformances in a breadth-first manner.
 // `conformance` refers to the currently visiting conformance.
 // `origin` refers to root of the current conformance chain.
-func (c InterfaceConformances) Foreach(f func(origin, conformance *InterfaceType) bool) {
+func (c InterfaceConformances) Foreach(f func(*InterfaceType, *InterfaceType) bool) {
 	for _, conformance := range c {
 		if !f(conformance, conformance) {
 			break
@@ -3889,19 +3889,17 @@ func (c InterfaceConformances) Foreach(f func(origin, conformance *InterfaceType
 	}
 }
 
-func (c InterfaceConformances) ForeachDistinct(f func(origin, conformance *InterfaceType) bool) {
+func (c InterfaceConformances) ForeachDistinct(f func(*InterfaceType, *InterfaceType) bool) {
 	seenConformances := map[*InterfaceType]struct{}{}
 
 	c.Foreach(func(origin, conformance *InterfaceType) bool {
 		if _, ok := seenConformances[conformance]; ok {
 			return true
 		}
-
 		seenConformances[conformance] = struct{}{}
 
 		return f(origin, conformance)
 	})
-
 }
 
 // Member

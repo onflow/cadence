@@ -3473,4 +3473,36 @@ func TestCheckInterfaceImplementationRequirement(t *testing.T) {
 		assert.Equal(t, common.DeclarationKindStructure, memberConflictError.MemberKind)
 		assert.Equal(t, common.DeclarationKindStructure, memberConflictError.ConflictingMemberKind)
 	})
+
+	t.Run("nested type requirement", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            contract interface A {
+                struct NestedA {
+                    pub fun test(): Int {
+                        return 3
+                    }
+                }
+            }
+
+            contract interface B {
+                struct NestedB {
+                    pub fun test(): String {
+                        return "three"
+                    }
+                }
+            }
+
+            contract interface C: A, B {}
+
+            contract D: C {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+		conformance := &sema.ConformanceError{}
+		require.ErrorAs(t, errs[0], &conformance)
+		require.ErrorAs(t, errs[1], &conformance)
+	})
 }
