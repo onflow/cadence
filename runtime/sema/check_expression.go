@@ -56,7 +56,10 @@ func (checker *Checker) checkReferenceValidity(variable *Variable, hasPosition a
 		return
 	}
 
-	referencedVar := checker.references.Find(variable.Identifier)
+	// Here it is not required to find the root of the reference chain,
+	// because it is already done at the time of recoding the reference.
+	// i.e: It is always the root of the chain that is being stored as the `referencedVariable`.
+	referencedVar := variable.referencedVariable
 	if referencedVar == nil ||
 		!referencedVar.Type.IsResourceType() {
 		return

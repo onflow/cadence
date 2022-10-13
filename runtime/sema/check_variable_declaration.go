@@ -205,7 +205,7 @@ func (checker *Checker) declareVariableDeclaration(declaration *ast.VariableDecl
 		checker.recordVariableDeclarationRange(declaration, identifier, declarationType)
 	}
 
-	checker.recordReference(identifier, declaration.Value)
+	checker.recordReference(variable, declaration.Value)
 }
 
 func (checker *Checker) recordVariableDeclarationRange(
@@ -246,7 +246,8 @@ func (checker *Checker) elaborateNestedResourceMoveExpression(expression ast.Exp
 func (checker *Checker) recordReferenceCreation(target, expr ast.Expression) {
 	switch target := target.(type) {
 	case *ast.IdentifierExpression:
-		checker.recordReference(target.Identifier.Identifier, expr)
+		targetVariable := checker.valueActivations.Find(target.Identifier.Identifier)
+		checker.recordReference(targetVariable, expr)
 	default:
 		// Currently it's not possible to track the references
 		// assigned to member-expressions/index-expressions.
@@ -254,12 +255,12 @@ func (checker *Checker) recordReferenceCreation(target, expr ast.Expression) {
 	}
 }
 
-func (checker *Checker) recordReference(targetVarName string, expr ast.Expression) {
+func (checker *Checker) recordReference(targetVariable *Variable, expr ast.Expression) {
 	referencedVar := checker.referencedVariable(expr)
 
 	if referencedVar != nil &&
 		referencedVar.Type.IsResourceType() {
-		checker.references.Set(targetVarName, referencedVar)
+		targetVariable.referencedVariable = referencedVar
 	}
 }
 
@@ -286,27 +287,22 @@ func (checker *Checker) referencedVariable(expr ast.Expression) *Variable {
 	}
 
 	referencedVariableName := variableRefExpr.Identifier
+	referencedVariable := checker.valueActivations.Find(referencedVariableName)
 
-	for {
-		// If the referenced variable is again a reference,
-		// then find the variable of the root of the reference chain.
-		// e.g.:
-		//     ref1 = &v
-		//     ref2 = &ref1
-		//     ref2.field = 3
-		//
-		// Here, `ref2` refers to `ref1`, which refers to `v`.
-		// So `ref2` is actually referring to `v`
-
-		referencedRef := checker.references.Find(referencedVariableName)
-		if referencedRef == nil {
-			break
-		}
-
-		referencedVariableName = referencedRef.Identifier
+	// If the referenced variable is again a reference,
+	// then find the variable of the root of the reference chain.
+	// e.g.:
+	//     ref1 = &v
+	//     ref2 = &ref1
+	//     ref2.field = 3
+	//
+	// Here, `ref2` refers to `ref1`, which refers to `v`.
+	// So `ref2` is actually referring to `v`
+	for referencedVariable.referencedVariable != nil {
+		referencedVariable = referencedVariable.referencedVariable
 	}
 
-	return checker.valueActivations.Find(referencedVariableName)
+	return referencedVariable
 }
 
 // referenceExpression returns the expression that return a reference.

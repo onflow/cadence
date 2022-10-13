@@ -40,4 +40,7 @@ type Variable struct {
 	Pos *ast.Position
 	// DocString is the optional docstring
 	DocString string
+	// referencedVariable is the variable referenced by this variable.
+	// Only applicable for reference-typed variables. Otherwise, it is nil.
+	referencedVariable *Variable
 }
