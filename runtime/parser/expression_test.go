@@ -1837,7 +1837,7 @@ func TestParseBlockComment(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("nested comment, nothing else", func(t *testing.T) {
+	t.Run("nested", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -1905,6 +1905,56 @@ func TestParseBlockComment(t *testing.T) {
 				},
 			},
 			result,
+		)
+	})
+
+	t.Run("nested, extra closing", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression(" /* test  foo/* bar  */ asd*/ true */ bar")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				// `true */ bar` is parsed as infix operation of path
+				&SyntaxError{
+					Message: "expected token '/'",
+					Pos: ast.Position{
+						Offset: 41,
+						Line:   1,
+						Column: 41,
+					},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("nested, missing closing", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression(" /* test  foo/* bar  */ asd true ")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				// `true */ bar` is parsed as infix operation of path
+				&SyntaxError{
+					Message: "missing comment end '*/'",
+					Pos: ast.Position{
+						Offset: 33,
+						Line:   1,
+						Column: 33,
+					},
+				},
+				&SyntaxError{
+					Message: "unexpected end of program",
+					Pos: ast.Position{
+						Offset: 33,
+						Line:   1,
+						Column: 33,
+					},
+				},
+			},
+			errs,
 		)
 	})
 }

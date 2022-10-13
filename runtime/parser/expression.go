@@ -512,7 +512,7 @@ func init() {
 	defineIdentifierExpression()
 
 	setExprNullDenotation(lexer.TokenEOF, func(parser *parser, token lexer.Token) (ast.Expression, error) {
-		return nil, NewUnpositionedSyntaxError("expected expression")
+		return nil, NewSyntaxError(token.StartPos, "unexpected end of program")
 	})
 }
 

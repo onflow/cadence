@@ -36,45 +36,40 @@ func (p *parser) parseCommentContent() (comment string) {
 
 	builder.WriteString(blockCommentStart)
 
-	var t trampoline
-	t = func(builder *strings.Builder) trampoline {
-		return func() []trampoline {
+	depth := 1
 
-			for {
-				p.next()
+	for depth > 0 {
+		p.next()
 
-				switch p.current.Type {
-				case lexer.TokenEOF:
-					p.reportSyntaxError(
-						"missing comment end %q",
-						lexer.TokenBlockCommentEnd,
-					)
-					return nil
+		switch p.current.Type {
+		case lexer.TokenEOF:
+			p.reportSyntaxError(
+				"missing comment end %s",
+				lexer.TokenBlockCommentEnd,
+			)
+			depth = 0
 
-				case lexer.TokenBlockCommentContent:
-					builder.Write(p.currentTokenSource())
+		case lexer.TokenBlockCommentContent:
+			builder.Write(p.currentTokenSource())
 
-				case lexer.TokenBlockCommentEnd:
-					builder.WriteString(blockCommentEnd)
-					// Skip the comment end (`*/`)
-					p.next()
-					return nil
+		case lexer.TokenBlockCommentEnd:
+			builder.WriteString(blockCommentEnd)
+			// Skip the comment end (`*/`)
+			p.next()
+			depth--
 
-				case lexer.TokenBlockCommentStart:
-					builder.WriteString(blockCommentStart)
-					// parse inner content, then rest of this comment
-					return []trampoline{t, t}
+		case lexer.TokenBlockCommentStart:
+			builder.WriteString(blockCommentStart)
+			depth++
 
-				default:
-					p.reportSyntaxError(
-						"unexpected token in comment: %q",
-						p.current.Type,
-					)
-					return nil
-				}
-			}
+		default:
+			p.reportSyntaxError(
+				"unexpected token in comment: %q",
+				p.current.Type,
+			)
+			depth = 0
 		}
-	}(&builder)
-	runTrampoline(t)
+	}
+
 	return
 }

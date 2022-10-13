@@ -73,13 +73,13 @@ func TestParseInvalid(t *testing.T) {
 	}
 
 	unexpectedToken := "Parsing failed:\nerror: unexpected token: identifier"
-	expectedExpression := "Parsing failed:\nerror: expected expression"
+	unexpectedEndOfProgram := "Parsing failed:\nerror: unexpected end of program"
 	missingTypeAnnotation := "Parsing failed:\nerror: missing type annotation after comma"
 
 	for _, test := range []test{
 		{unexpectedToken, "X"},
 		{unexpectedToken, "paste your code in here"},
-		{expectedExpression, "# a ( b > c > d > e > f > g > h > i > j > k > l > m > n > o > p > q > r >"},
+		{unexpectedEndOfProgram, "# a ( b > c > d > e > f > g > h > i > j > k > l > m > n > o > p > q > r >"},
 		{missingTypeAnnotation, "#0x0<{},>()"},
 	} {
 		t.Run(test.code, func(t *testing.T) {
