@@ -1619,12 +1619,12 @@ pub contract ItemNFT: NonFungibleToken {
 
        // get a reference to the garment that item stores
        pub fun borrowGarment(): &GarmentNFT.NFT? {
-           return &self.garment as auth &GarmentNFT.NFT?
+           return &self.garment as &GarmentNFT.NFT?
        }
 
        // get a reference to the material that item stores
        pub fun borrowMaterial(): &MaterialNFT.NFT?  {
-           return &self.material as auth &MaterialNFT.NFT?
+           return &self.material as &MaterialNFT.NFT?
        }
 
        // change name of item nft

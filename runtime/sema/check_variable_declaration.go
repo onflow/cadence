@@ -265,11 +265,9 @@ func (checker *Checker) referencedVariable(expr ast.Expression) *Variable {
 
 	switch refExpression := refExpression.(type) {
 	case *ast.ReferenceExpression:
-		// If it is a reference expression, then find the root variable.
-		// i.e: root variable of `&a.b.c as &T` is `a`.
-		// This is because nested resources cannot be moved.
-		// If `c` needs to be moved, then `a` has to be moved.
-		// So tracking `a` is sufficient.
+		// If it is a reference expression, then find the "root variable".
+		// As nested resources cannot be tracked, at least track the "root" if possible.
+		// For example, for an expression `&a.b.c as &T`, the "root variable" is `a`.
 		variableRefExpr = checker.variableReferenceExpression(refExpression.Expression)
 	case *ast.IdentifierExpression:
 		variableRefExpr = &refExpression.Identifier
@@ -286,9 +284,9 @@ func (checker *Checker) referencedVariable(expr ast.Expression) *Variable {
 	for {
 		// If the referenced variable is again a reference,
 		// then find the variable of the root of the reference chain.
-		// e.g::
+		// e.g.:
 		//     ref1 = &v
-		//     ref2 = &ref1[0]
+		//     ref2 = &ref1
 		//     ref2.field = 3
 		//
 		// Here, `ref2` refers to `ref1`, which refers to `v`.
@@ -309,11 +307,11 @@ func (checker *Checker) referencedVariable(expr ast.Expression) *Variable {
 // There could be two types of expressions that can result in a reference:
 //  1. Expressions that create a new reference.
 //     (i.e: reference-expression)
-//  2. Expressions that returns an existing reference.
+//  2. Expressions that return an existing reference.
 //     (i.e: identifier-expression/member-expression/index-expression having a reference type)
 //
-// However, it is  not currently possible to track member-expressions/index-expression.
-// So this method would only return either a `reference-expression` or an `identifier-expression`.
+// However, it is currently not possible to track member-expressions and index-expressions.
+// So this method either returns a reference-expression or an identifier-expression.
 //
 // The expression could also be hidden inside some other expression.
 // e.g(1): `&v as &T` is a casting expression, but has a hidden reference expression.

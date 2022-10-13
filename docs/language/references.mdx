@@ -155,7 +155,7 @@ Instead, consider [storing a capability and borrowing it](capability-based-acces
 ### Reference validity
 
 Ephemeral references stay valid throughout the course of the program.
-However, **references to resources** can become invalid during a program if the underlying resource is moved
+However, **references to resources** can become invalid during the execution of a program, if the referenced resource is moved
 or destroyed after taking the reference.
 
 ```cadence
@@ -177,7 +177,7 @@ A reference is invalidated upon the first transfer of the underlying resource, r
 ```cadence
 let ref = &r as &R
 
-// Moving the resource to a different vairable would also invalidate the reference.
+// Moving a resource to a different variable invalidates all references to it.
 let r2 <- r
 
 // Static error, since the referenced resource has been moved.
@@ -185,5 +185,5 @@ ref.id = 2
 ```
 
 <Callout type="info">
-Invalidation of storage references are not statically caught, but happens at run-time.
+Invalidations of storage references are not statically caught, but only at run-time.
 </Callout>
