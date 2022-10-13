@@ -231,6 +231,13 @@ func (p *parser) next() {
 	}
 }
 
+// utility for the common pattern of advancing past the current token to
+// the next semantic token
+func (p *parser) nextSemanticToken() {
+	p.next()
+	p.skipSpaceAndComments()
+}
+
 func (p *parser) mustOne(tokenType lexer.TokenType) (lexer.Token, error) {
 	t := p.current
 	if !t.Is(tokenType) {
@@ -383,11 +390,12 @@ type triviaOptions struct {
 	parseDocStrings bool
 }
 
-func (p *parser) skipSpaceAndComments(skipNewlines bool) (containsNewline bool) {
+// utility for the common pattern of skipping past whitespace to the next semantic token
+func (p *parser) skipSpaceAndComments() (containsNewline bool) {
 	containsNewline, _ = p.parseTrivia(triviaOptions{
-		skipNewlines: skipNewlines,
+		skipNewlines: true,
 	})
-	return containsNewline
+	return
 }
 
 func (p *parser) parseTrivia(options triviaOptions) (containsNewline bool, docString string) {
@@ -578,7 +586,7 @@ func ParseArgumentList(input []byte, memoryGauge common.MemoryGauge) (arguments 
 	res, errs = Parse(
 		input,
 		func(p *parser) (any, error) {
-			p.skipSpaceAndComments(true)
+			p.skipSpaceAndComments()
 
 			_, err := p.mustOne(lexer.TokenParenOpen)
 			if err != nil {

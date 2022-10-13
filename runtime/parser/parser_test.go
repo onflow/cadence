@@ -557,7 +557,7 @@ func TestParseEOF(t *testing.T) {
 			if err != nil {
 				return nil, err
 			}
-			p.skipSpaceAndComments(true)
+			p.skipSpaceAndComments()
 			_, err = p.mustToken(lexer.TokenIdentifier, "b")
 			if err != nil {
 				return nil, err
