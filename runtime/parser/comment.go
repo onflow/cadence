@@ -19,55 +19,49 @@
 package parser
 
 import (
-	"strings"
-
 	"github.com/onflow/cadence/runtime/parser/lexer"
 )
 
-const blockCommentStart = "/*"
-const blockCommentEnd = "*/"
+func (p *parser) parseBlockComment() (endToken lexer.Token, ok bool) {
+	var depth int
 
-func (p *parser) parseCommentContent() (comment string) {
-	// TODO: improve: only build string if needed
-	var builder strings.Builder
-	defer func() {
-		comment = builder.String()
-	}()
-
-	builder.WriteString(blockCommentStart)
-
-	depth := 1
-
-	for depth > 0 {
-		p.next()
-
+	for {
 		switch p.current.Type {
+		case lexer.TokenBlockCommentStart:
+			p.next()
+			ok = false
+			depth++
+
+		case lexer.TokenBlockCommentContent:
+			p.next()
+			ok = false
+
+		case lexer.TokenBlockCommentEnd:
+			endToken = p.current
+			// Skip the comment end (`*/`)
+			p.next()
+			ok = true
+			depth--
+
 		case lexer.TokenEOF:
 			p.reportSyntaxError(
 				"missing comment end %s",
 				lexer.TokenBlockCommentEnd,
 			)
+			ok = false
 			depth = 0
-
-		case lexer.TokenBlockCommentContent:
-			builder.Write(p.currentTokenSource())
-
-		case lexer.TokenBlockCommentEnd:
-			builder.WriteString(blockCommentEnd)
-			// Skip the comment end (`*/`)
-			p.next()
-			depth--
-
-		case lexer.TokenBlockCommentStart:
-			builder.WriteString(blockCommentStart)
-			depth++
 
 		default:
 			p.reportSyntaxError(
-				"unexpected token in comment: %q",
+				"unexpected token %s in block comment",
 				p.current.Type,
 			)
+			ok = false
 			depth = 0
+		}
+
+		if depth == 0 {
+			break
 		}
 	}
 
