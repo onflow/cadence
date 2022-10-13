@@ -22,7 +22,6 @@ import (
 	"flag"
 	"fmt"
 	"math"
-	"math/big"
 	"math/rand"
 	"strings"
 	"testing"
@@ -395,10 +394,10 @@ func TestRandomMapOperations(t *testing.T) {
 			if isInsert() {
 				key := keyValues[insertCount][0]
 				if _, ok := key.(*interpreter.CompositeValue); ok {
-					key = deepCopyValue(inter, key)
+					key = key.Clone(inter)
 				}
 
-				value := deepCopyValue(inter, keyValues[insertCount][1])
+				value := keyValues[insertCount][1].Clone(inter)
 
 				dictionary.Insert(
 					inter,
@@ -534,7 +533,7 @@ func TestRandomArrayOperations(t *testing.T) {
 		for i := 0; i < numberOfValues; i++ {
 			value := randomStorableValue(inter, 0)
 			elements[i] = value
-			values[i] = deepCopyValue(inter, value)
+			values[i] = value.Clone(inter)
 		}
 
 		testArray = interpreter.NewArrayValue(
@@ -641,7 +640,7 @@ func TestRandomArrayOperations(t *testing.T) {
 				inter,
 				interpreter.EmptyLocationRange,
 				i,
-				deepCopyValue(inter, element),
+				element.Clone(inter),
 			)
 		}
 
@@ -675,7 +674,7 @@ func TestRandomArrayOperations(t *testing.T) {
 			testArray.Append(
 				inter,
 				interpreter.EmptyLocationRange,
-				deepCopyValue(inter, element),
+				element.Clone(inter),
 			)
 		}
 
@@ -715,7 +714,7 @@ func TestRandomArrayOperations(t *testing.T) {
 				inter,
 				interpreter.EmptyLocationRange,
 				index,
-				deepCopyValue(inter, element),
+				element.Clone(inter),
 			)
 		}
 
@@ -778,7 +777,7 @@ func TestRandomArrayOperations(t *testing.T) {
 		for insertCount < numberOfValues || testArray.Count() > 0 {
 			// Perform a random operation out of insert/remove
 			if isInsert() {
-				value := deepCopyValue(inter, elements[insertCount])
+				value := elements[insertCount].Clone(inter)
 
 				testArray.Append(
 					inter,
@@ -814,7 +813,7 @@ func TestRandomArrayOperations(t *testing.T) {
 		for i := 0; i < numberOfValues; i++ {
 			value := randomStorableValue(inter, 0)
 			elements[i] = value
-			values[i] = deepCopyValue(inter, value)
+			values[i] = value.Clone(inter)
 		}
 
 		array := interpreter.NewArrayValue(
@@ -1042,7 +1041,7 @@ func newCompositeValue(
 		)
 
 		fields[i] = field
-		orgFields[field.Name] = deepCopyValue(inter, field.Value)
+		orgFields[field.Name] = field.Value.Clone(inter)
 
 		i++
 	}
@@ -1097,149 +1096,6 @@ func getSlabStorageSize(t *testing.T, storage interpreter.InMemoryStorage) (tota
 	}
 
 	return
-}
-
-// deepCopyValue deep copies values at a higher level
-func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) interpreter.Value {
-	switch v := value.(type) {
-
-	// Int
-	case interpreter.IntValue:
-		var n big.Int
-		n.Set(v.BigInt)
-		return interpreter.NewUnmeteredIntValueFromBigInt(&n)
-	case interpreter.Int8Value,
-		interpreter.Int16Value,
-		interpreter.Int32Value,
-		interpreter.Int64Value:
-		return v
-	case interpreter.Int128Value:
-		var n big.Int
-		n.Set(v.BigInt)
-		return interpreter.NewUnmeteredInt128ValueFromBigInt(&n)
-	case interpreter.Int256Value:
-		var n big.Int
-		n.Set(v.BigInt)
-		return interpreter.NewUnmeteredInt256ValueFromBigInt(&n)
-
-	// Uint
-	case interpreter.UIntValue:
-		var n big.Int
-		n.Set(v.BigInt)
-		return interpreter.NewUnmeteredUIntValueFromBigInt(&n)
-	case interpreter.UInt8Value,
-		interpreter.UInt16Value,
-		interpreter.UInt32Value,
-		interpreter.UInt64Value:
-		return v
-	case interpreter.UInt128Value:
-		var n big.Int
-		n.Set(v.BigInt)
-		return interpreter.NewUnmeteredUInt128ValueFromBigInt(&n)
-	case interpreter.UInt256Value:
-		var n big.Int
-		n.Set(v.BigInt)
-		return interpreter.NewUnmeteredUInt256ValueFromBigInt(&n)
-
-	case interpreter.Word8Value,
-		interpreter.Word16Value,
-		interpreter.Word32Value,
-		interpreter.Word64Value:
-		return v
-
-	case *interpreter.StringValue:
-		b := []byte(v.Str)
-		data := make([]byte, len(b))
-		copy(data, b)
-		return interpreter.NewUnmeteredStringValue(string(data))
-
-	case interpreter.AddressValue:
-		b := v[:]
-		data := make([]byte, len(b))
-		copy(data, b)
-		return interpreter.NewUnmeteredAddressValueFromBytes(data)
-	case interpreter.Fix64Value:
-		return interpreter.NewUnmeteredFix64ValueWithInteger(int64(v.ToInt()))
-	case interpreter.UFix64Value:
-		return interpreter.NewUnmeteredUFix64ValueWithInteger(uint64(v.ToInt()))
-
-	case interpreter.PathValue:
-		return interpreter.PathValue{
-			Domain:     v.Domain,
-			Identifier: v.Identifier,
-		}
-
-	case interpreter.BoolValue:
-		return v
-
-	case interpreter.VoidValue:
-		return interpreter.Void
-
-	case *interpreter.DictionaryValue:
-		keyValues := make([]interpreter.Value, 0, v.Count()*2)
-		v.Iterate(inter, func(key, value interpreter.Value) (resume bool) {
-			keyValues = append(keyValues, deepCopyValue(inter, key))
-			keyValues = append(keyValues, deepCopyValue(inter, value))
-			return true
-		})
-
-		return interpreter.NewDictionaryValueWithAddress(
-			inter,
-			interpreter.EmptyLocationRange,
-			interpreter.DictionaryStaticType{
-				KeyType:   v.Type.KeyType,
-				ValueType: v.Type.ValueType,
-			},
-			v.GetOwner(),
-			keyValues...,
-		)
-	case *interpreter.ArrayValue:
-		elements := make([]interpreter.Value, 0, v.Count())
-		v.Iterate(inter, func(value interpreter.Value) (resume bool) {
-			elements = append(elements, deepCopyValue(inter, value))
-			return true
-		})
-
-		return interpreter.NewArrayValue(
-			inter,
-			interpreter.EmptyLocationRange,
-			v.Type,
-			v.GetOwner(),
-			elements...,
-		)
-	case *interpreter.CompositeValue:
-		fields := make([]interpreter.CompositeField, 0)
-		v.ForEachField(inter, func(name string, value interpreter.Value) {
-			fields = append(fields, interpreter.NewUnmeteredCompositeField(
-				name,
-				deepCopyValue(inter, value),
-			))
-		})
-
-		return interpreter.NewCompositeValue(
-			inter,
-			interpreter.EmptyLocationRange,
-			v.Location,
-			v.QualifiedIdentifier,
-			v.Kind,
-			fields,
-			v.GetOwner(),
-		)
-
-	case *interpreter.CapabilityValue:
-		return &interpreter.CapabilityValue{
-			Address:    deepCopyValue(inter, v.Address).(interpreter.AddressValue),
-			Path:       deepCopyValue(inter, v.Path).(interpreter.PathValue),
-			BorrowType: v.BorrowType,
-		}
-	case *interpreter.SomeValue:
-		innerValue := v.InnerValue(inter, interpreter.EmptyLocationRange)
-		return interpreter.NewUnmeteredSomeValueNonCopying(deepCopyValue(inter, innerValue))
-	case interpreter.NilValue:
-		return interpreter.Nil
-	default:
-		panic("unreachable")
-	}
 }
 
 func randomStorableValue(inter *interpreter.Interpreter, currentDepth int) interpreter.Value {
@@ -1473,7 +1329,7 @@ func randomArrayValue(inter *interpreter.Interpreter, currentDepth int) interpre
 
 	for i := 0; i < elementsCount; i++ {
 		value := randomStorableValue(inter, currentDepth+1)
-		elements[i] = deepCopyValue(inter, value)
+		elements[i] = value.Clone(inter)
 	}
 
 	return interpreter.NewArrayValue(
@@ -1678,11 +1534,11 @@ func (m *valueMap) put(inter *interpreter.Interpreter, key, value interpreter.Va
 	// Deep copy enum keys. This should be fine since we use an internal key for enums.
 	// Deep copying other values would mess key-lookup.
 	if _, ok := key.(*interpreter.CompositeValue); ok {
-		key = deepCopyValue(inter, key)
+		key = key.Clone(inter)
 	}
 
 	m.keys[internalKey] = key
-	m.values[internalKey] = deepCopyValue(inter, value)
+	m.values[internalKey] = value.Clone(inter)
 }
 
 func (m *valueMap) get(inter *interpreter.Interpreter, key interpreter.Value) (interpreter.Value, bool) {
