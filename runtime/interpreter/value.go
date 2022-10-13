@@ -2748,7 +2748,11 @@ type BigNumberValue interface {
 // Int
 
 type IntValue struct {
-	BigInt *big.Int
+	// _small is the value when it is representable as an int32 (!).
+	// This ensures that arithmetic operations do not overflow.
+	_small int64
+	// _big is != nil iff the value is not representable as an int32
+	_big *big.Int
 }
 
 const int64Size = int(unsafe.Sizeof(int64(0)))
@@ -2756,17 +2760,15 @@ const int64Size = int(unsafe.Sizeof(int64(0)))
 var int64BigIntMemoryUsage = common.NewBigIntMemoryUsage(int64Size)
 
 func NewIntValueFromInt64(memoryGauge common.MemoryGauge, value int64) IntValue {
-	return NewIntValueFromBigInt(
-		memoryGauge,
-		int64BigIntMemoryUsage,
-		func() *big.Int {
-			return big.NewInt(value)
-		},
-	)
+	common.UseMemory(memoryGauge, int64BigIntMemoryUsage)
+	return NewUnmeteredIntValueFromInt64(value)
 }
 
 func NewUnmeteredIntValueFromInt64(value int64) IntValue {
-	return NewUnmeteredIntValueFromBigInt(big.NewInt(value))
+	if math.MinInt32 <= value && value <= math.MaxInt32 {
+		return IntValue{_small: value}
+	}
+	return IntValue{_big: big.NewInt(value)}
 }
 
 func NewIntValueFromBigInt(
@@ -2780,9 +2782,10 @@ func NewIntValueFromBigInt(
 }
 
 func NewUnmeteredIntValueFromBigInt(value *big.Int) IntValue {
-	return IntValue{
-		BigInt: value,
+	if value.IsInt64() {
+		return NewUnmeteredIntValueFromInt64(value.Int64())
 	}
+	return IntValue{_big: value}
 }
 
 func ConvertInt(memoryGauge common.MemoryGauge, value Value) IntValue {
@@ -2830,23 +2833,39 @@ func (IntValue) IsImportable(_ *Interpreter) bool {
 }
 
 func (v IntValue) ToInt() int {
-	if !v.BigInt.IsInt64() {
-		panic(OverflowError{})
+	_big := v._big
+	if _big != nil {
+		if !_big.IsInt64() {
+			panic(OverflowError{})
+		}
+		return int(_big.Int64())
 	}
-	return int(v.BigInt.Int64())
+	return int(v._small)
 }
 
 func (v IntValue) ByteLength() int {
-	return common.BigIntByteLength(v.BigInt)
+	_big := v._big
+	if _big != nil {
+		return common.BigIntByteLength(_big)
+	}
+	return int64Size
 }
 
 func (v IntValue) ToBigInt(memoryGauge common.MemoryGauge) *big.Int {
 	common.UseMemory(memoryGauge, common.NewBigIntMemoryUsage(v.ByteLength()))
-	return new(big.Int).Set(v.BigInt)
+	_big := v._big
+	if _big != nil {
+		return new(big.Int).Set(v._big)
+	}
+	return new(big.Int).SetInt64(v._small)
 }
 
 func (v IntValue) String() string {
-	return format.BigInt(v.BigInt)
+	_big := v._big
+	if _big != nil {
+		return format.BigInt(_big)
+	}
+	return format.Int(v._small)
 }
 
 func (v IntValue) RecursiveString(_ SeenReferences) string {
@@ -2864,13 +2883,12 @@ func (v IntValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences
 }
 
 func (v IntValue) Negate(interpreter *Interpreter) NumberValue {
-	return NewIntValueFromBigInt(
-		interpreter,
-		common.NewNegateBigIntMemoryUsage(v.BigInt),
-		func() *big.Int {
-			return new(big.Int).Neg(v.BigInt)
-		},
-	)
+	_big := v._big
+	if _big != nil {
+		common.UseMemory(interpreter, common.NewNegateBigIntMemoryUsage(_big))
+		return NewUnmeteredIntValueFromBigInt(new(big.Int).Neg(_big))
+	}
+	return NewIntValueFromInt64(interpreter, -v._small)
 }
 
 func (v IntValue) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -2883,13 +2901,25 @@ func (v IntValue) Plus(interpreter *Interpreter, other NumberValue) NumberValue 
 		})
 	}
 
-	return NewIntValueFromBigInt(
-		interpreter,
-		common.NewPlusBigIntMemoryUsage(v.BigInt, o.BigInt),
-		func() *big.Int {
-			res := new(big.Int)
-			return res.Add(v.BigInt, o.BigInt)
-		},
+	vBig := v._big
+	oBig := o._big
+
+	if vBig == nil && oBig == nil {
+		return NewIntValueFromInt64(interpreter, v._small+o._small)
+	}
+
+	// TODO: optimize: avoid allocation of big.Int for smaller other side
+	if oBig == nil {
+		common.UseMemory(interpreter, int64BigIntMemoryUsage)
+		oBig = new(big.Int).SetInt64(o._small)
+	} else if vBig == nil {
+		common.UseMemory(interpreter, int64BigIntMemoryUsage)
+		vBig = new(big.Int).SetInt64(v._small)
+	}
+
+	common.UseMemory(interpreter, common.NewPlusBigIntMemoryUsage(vBig, oBig))
+	return NewUnmeteredIntValueFromBigInt(
+		new(big.Int).Add(vBig, oBig),
 	)
 }
 
@@ -2918,13 +2948,25 @@ func (v IntValue) Minus(interpreter *Interpreter, other NumberValue) NumberValue
 		})
 	}
 
-	return NewIntValueFromBigInt(
-		interpreter,
-		common.NewMinusBigIntMemoryUsage(v.BigInt, o.BigInt),
-		func() *big.Int {
-			res := new(big.Int)
-			return res.Sub(v.BigInt, o.BigInt)
-		},
+	vBig := v._big
+	oBig := o._big
+
+	if vBig == nil && oBig == nil {
+		return NewIntValueFromInt64(interpreter, v._small-o._small)
+	}
+
+	// TODO: optimize: avoid allocation of big.Int for smaller other side
+	if oBig == nil {
+		common.UseMemory(interpreter, int64BigIntMemoryUsage)
+		oBig = new(big.Int).SetInt64(o._small)
+	} else if vBig == nil {
+		common.UseMemory(interpreter, int64BigIntMemoryUsage)
+		vBig = new(big.Int).SetInt64(v._small)
+	}
+
+	common.UseMemory(interpreter, common.NewMinusBigIntMemoryUsage(vBig, oBig))
+	return NewUnmeteredIntValueFromBigInt(
+		new(big.Int).Sub(vBig, oBig),
 	)
 }
 
@@ -2953,17 +2995,30 @@ func (v IntValue) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 		})
 	}
 
-	return NewIntValueFromBigInt(
-		interpreter,
-		common.NewModBigIntMemoryUsage(v.BigInt, o.BigInt),
-		func() *big.Int {
-			res := new(big.Int)
-			// INT33-C
-			if o.BigInt.Cmp(res) == 0 {
-				panic(DivisionByZeroError{})
-			}
-			return res.Rem(v.BigInt, o.BigInt)
-		},
+	vBig := v._big
+	oBig := o._big
+
+	if vBig == nil && oBig == nil {
+		return NewIntValueFromInt64(interpreter, v._small%o._small)
+	}
+
+	// TODO: optimize: avoid allocation of big.Int for smaller other side
+	if oBig == nil {
+		common.UseMemory(interpreter, int64BigIntMemoryUsage)
+		oBig = new(big.Int).SetInt64(o._small)
+	} else if vBig == nil {
+		common.UseMemory(interpreter, int64BigIntMemoryUsage)
+		vBig = new(big.Int).SetInt64(v._small)
+	}
+
+	common.UseMemory(interpreter, common.NewModBigIntMemoryUsage(vBig, oBig))
+	res := new(big.Int)
+	// INT33-C
+	if oBig.Cmp(res) == 0 {
+		panic(DivisionByZeroError{})
+	}
+	return NewUnmeteredIntValueFromBigInt(
+		res.Rem(vBig, oBig),
 	)
 }
 
@@ -2977,13 +3032,25 @@ func (v IntValue) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 		})
 	}
 
-	return NewIntValueFromBigInt(
-		interpreter,
-		common.NewMulBigIntMemoryUsage(v.BigInt, o.BigInt),
-		func() *big.Int {
-			res := new(big.Int)
-			return res.Mul(v.BigInt, o.BigInt)
-		},
+	vBig := v._big
+	oBig := o._big
+
+	if vBig == nil && oBig == nil {
+		return NewIntValueFromInt64(interpreter, v._small*o._small)
+	}
+
+	// TODO: optimize: avoid allocation of big.Int for smaller other side
+	if oBig == nil {
+		common.UseMemory(interpreter, int64BigIntMemoryUsage)
+		oBig = new(big.Int).SetInt64(o._small)
+	} else if vBig == nil {
+		common.UseMemory(interpreter, int64BigIntMemoryUsage)
+		vBig = new(big.Int).SetInt64(v._small)
+	}
+
+	common.UseMemory(interpreter, common.NewMulBigIntMemoryUsage(vBig, oBig))
+	return NewUnmeteredIntValueFromBigInt(
+		new(big.Int).Mul(vBig, oBig),
 	)
 }
 
@@ -3012,17 +3079,30 @@ func (v IntValue) Div(interpreter *Interpreter, other NumberValue) NumberValue {
 		})
 	}
 
-	return NewIntValueFromBigInt(
-		interpreter,
-		common.NewDivBigIntMemoryUsage(v.BigInt, o.BigInt),
-		func() *big.Int {
-			res := new(big.Int)
-			// INT33-C
-			if o.BigInt.Cmp(res) == 0 {
-				panic(DivisionByZeroError{})
-			}
-			return res.Div(v.BigInt, o.BigInt)
-		},
+	vBig := v._big
+	oBig := o._big
+
+	if vBig == nil && oBig == nil {
+		return NewIntValueFromInt64(interpreter, v._small/o._small)
+	}
+
+	// TODO: optimize: avoid allocation of big.Int for smaller other side
+	if oBig == nil {
+		common.UseMemory(interpreter, int64BigIntMemoryUsage)
+		oBig = new(big.Int).SetInt64(o._small)
+	} else if vBig == nil {
+		common.UseMemory(interpreter, int64BigIntMemoryUsage)
+		vBig = new(big.Int).SetInt64(v._small)
+	}
+
+	common.UseMemory(interpreter, common.NewDivBigIntMemoryUsage(vBig, oBig))
+	res := new(big.Int)
+	// INT33-C
+	if oBig.Cmp(res) == 0 {
+		panic(DivisionByZeroError{})
+	}
+	return NewUnmeteredIntValueFromBigInt(
+		res.Div(vBig, oBig),
 	)
 }
 
@@ -3051,7 +3131,23 @@ func (v IntValue) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
+	vBig := v._big
+	oBig := o._big
+
+	if vBig == nil && oBig == nil {
+		return AsBoolValue(v._small < o._small)
+	}
+
+	// TODO: optimize: avoid allocation of big.Int for smaller other side
+	if oBig == nil {
+		common.UseMemory(interpreter, int64BigIntMemoryUsage)
+		oBig = new(big.Int).SetInt64(o._small)
+	} else if vBig == nil {
+		common.UseMemory(interpreter, int64BigIntMemoryUsage)
+		vBig = new(big.Int).SetInt64(v._small)
+	}
+
+	cmp := vBig.Cmp(oBig)
 	return AsBoolValue(cmp == -1)
 }
 
@@ -3065,7 +3161,23 @@ func (v IntValue) LessEqual(interpreter *Interpreter, other NumberValue) BoolVal
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
+	vBig := v._big
+	oBig := o._big
+
+	if vBig == nil && oBig == nil {
+		return AsBoolValue(v._small <= o._small)
+	}
+
+	// TODO: optimize: avoid allocation of big.Int for smaller other side
+	if oBig == nil {
+		common.UseMemory(interpreter, int64BigIntMemoryUsage)
+		oBig = new(big.Int).SetInt64(o._small)
+	} else if vBig == nil {
+		common.UseMemory(interpreter, int64BigIntMemoryUsage)
+		vBig = new(big.Int).SetInt64(v._small)
+	}
+
+	cmp := vBig.Cmp(oBig)
 	return AsBoolValue(cmp <= 0)
 }
 
@@ -3079,7 +3191,23 @@ func (v IntValue) Greater(interpreter *Interpreter, other NumberValue) BoolValue
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
+	vBig := v._big
+	oBig := o._big
+
+	if vBig == nil && oBig == nil {
+		return AsBoolValue(v._small > o._small)
+	}
+
+	// TODO: optimize: avoid allocation of big.Int for smaller other side
+	if oBig == nil {
+		common.UseMemory(interpreter, int64BigIntMemoryUsage)
+		oBig = new(big.Int).SetInt64(o._small)
+	} else if vBig == nil {
+		common.UseMemory(interpreter, int64BigIntMemoryUsage)
+		vBig = new(big.Int).SetInt64(v._small)
+	}
+
+	cmp := vBig.Cmp(oBig)
 	return AsBoolValue(cmp == 1)
 
 }
@@ -3094,16 +3222,49 @@ func (v IntValue) GreaterEqual(interpreter *Interpreter, other NumberValue) Bool
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
+	vBig := v._big
+	oBig := o._big
+
+	if vBig == nil && oBig == nil {
+		return AsBoolValue(v._small >= o._small)
+	}
+
+	// TODO: optimize: avoid allocation of big.Int for smaller other side
+	if oBig == nil {
+		common.UseMemory(interpreter, int64BigIntMemoryUsage)
+		oBig = new(big.Int).SetInt64(o._small)
+	} else if vBig == nil {
+		common.UseMemory(interpreter, int64BigIntMemoryUsage)
+		vBig = new(big.Int).SetInt64(v._small)
+	}
+
+	cmp := vBig.Cmp(oBig)
 	return AsBoolValue(cmp >= 0)
 }
 
-func (v IntValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
-	otherInt, ok := other.(IntValue)
+func (v IntValue) Equal(interpreter *Interpreter, _ LocationRange, other Value) bool {
+	o, ok := other.(IntValue)
 	if !ok {
 		return false
 	}
-	cmp := v.BigInt.Cmp(otherInt.BigInt)
+
+	vBig := v._big
+	oBig := o._big
+
+	if vBig == nil && oBig == nil {
+		return v._small == o._small
+	}
+
+	// TODO: optimize: avoid allocation of big.Int for smaller other side
+	if oBig == nil {
+		common.UseMemory(interpreter, int64BigIntMemoryUsage)
+		oBig = new(big.Int).SetInt64(o._small)
+	} else if vBig == nil {
+		common.UseMemory(interpreter, int64BigIntMemoryUsage)
+		vBig = new(big.Int).SetInt64(v._small)
+	}
+
+	cmp := vBig.Cmp(oBig)
 	return cmp == 0
 }
 
@@ -3111,7 +3272,9 @@ func (v IntValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
 // - HashInputTypeInt (1 byte)
 // - big int encoded in big-endian (n bytes)
 func (v IntValue) HashInput(_ *Interpreter, _ LocationRange, scratch []byte) []byte {
-	b := SignedBigIntToBigEndianBytes(v.BigInt)
+	// TODO: maybe don't delegate for hash value implementation,
+	// but duplicate behaviour to prevent accidental break
+	b := v.ToBigEndianBytes()
 
 	length := 1 + len(b)
 	var buffer []byte
@@ -3136,13 +3299,25 @@ func (v IntValue) BitwiseOr(interpreter *Interpreter, other IntegerValue) Intege
 		})
 	}
 
-	return NewIntValueFromBigInt(
-		interpreter,
-		common.NewBitwiseOrBigIntMemoryUsage(v.BigInt, o.BigInt),
-		func() *big.Int {
-			res := new(big.Int)
-			return res.Or(v.BigInt, o.BigInt)
-		},
+	vBig := v._big
+	oBig := o._big
+
+	if vBig == nil && oBig == nil {
+		return NewIntValueFromInt64(interpreter, v._small|o._small)
+	}
+
+	// TODO: optimize: avoid allocation of big.Int for smaller other side
+	if oBig == nil {
+		common.UseMemory(interpreter, int64BigIntMemoryUsage)
+		oBig = new(big.Int).SetInt64(o._small)
+	} else if vBig == nil {
+		common.UseMemory(interpreter, int64BigIntMemoryUsage)
+		vBig = new(big.Int).SetInt64(v._small)
+	}
+
+	common.UseMemory(interpreter, common.NewBitwiseOrBigIntMemoryUsage(vBig, oBig))
+	return NewUnmeteredIntValueFromBigInt(
+		new(big.Int).Or(vBig, oBig),
 	)
 }
 
@@ -3156,13 +3331,25 @@ func (v IntValue) BitwiseXor(interpreter *Interpreter, other IntegerValue) Integ
 		})
 	}
 
-	return NewIntValueFromBigInt(
-		interpreter,
-		common.NewBitwiseXorBigIntMemoryUsage(v.BigInt, o.BigInt),
-		func() *big.Int {
-			res := new(big.Int)
-			return res.Xor(v.BigInt, o.BigInt)
-		},
+	vBig := v._big
+	oBig := o._big
+
+	if vBig == nil && oBig == nil {
+		return NewIntValueFromInt64(interpreter, v._small^o._small)
+	}
+
+	// TODO: optimize: avoid allocation of big.Int for smaller other side
+	if oBig == nil {
+		common.UseMemory(interpreter, int64BigIntMemoryUsage)
+		oBig = new(big.Int).SetInt64(o._small)
+	} else if vBig == nil {
+		common.UseMemory(interpreter, int64BigIntMemoryUsage)
+		vBig = new(big.Int).SetInt64(v._small)
+	}
+
+	common.UseMemory(interpreter, common.NewBitwiseXorBigIntMemoryUsage(vBig, oBig))
+	return NewUnmeteredIntValueFromBigInt(
+		new(big.Int).Xor(vBig, oBig),
 	)
 }
 
@@ -3176,13 +3363,24 @@ func (v IntValue) BitwiseAnd(interpreter *Interpreter, other IntegerValue) Integ
 		})
 	}
 
-	return NewIntValueFromBigInt(
-		interpreter,
-		common.NewBitwiseAndBigIntMemoryUsage(v.BigInt, o.BigInt),
-		func() *big.Int {
-			res := new(big.Int)
-			return res.And(v.BigInt, o.BigInt)
-		},
+	vBig := v._big
+	oBig := o._big
+
+	if vBig == nil && oBig == nil {
+		return NewIntValueFromInt64(interpreter, v._small&o._small)
+	}
+
+	// TODO: optimize: avoid allocation of big.Int for smaller other side
+	if vBig != nil {
+		common.UseMemory(interpreter, int64BigIntMemoryUsage)
+		oBig = new(big.Int).SetInt64(o._small)
+	} else if oBig != nil {
+		common.UseMemory(interpreter, int64BigIntMemoryUsage)
+		vBig = new(big.Int).SetInt64(v._small)
+	}
+	common.UseMemory(interpreter, common.NewBitwiseAndBigIntMemoryUsage(vBig, oBig))
+	return NewUnmeteredIntValueFromBigInt(
+		new(big.Int).And(vBig, oBig),
 	)
 }
 
@@ -3196,21 +3394,50 @@ func (v IntValue) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue)
 		})
 	}
 
-	if o.BigInt.Sign() < 0 {
+	vBig := v._big
+	oBig := o._big
+
+	vSmall := v._small
+	oSmall := o._small
+
+	if vBig == nil && oBig == nil {
+		if oSmall < 0 {
+			panic(UnderflowError{})
+		}
+
+		return NewIntValueFromInt64(interpreter, vSmall<<oSmall)
+	}
+
+	// TODO: optimize: avoid allocation of big.Int
+	if vBig == nil {
+		common.UseMemory(interpreter, int64BigIntMemoryUsage)
+		vBig = new(big.Int).SetInt64(vSmall)
+	}
+
+	if oBig != nil {
+		if oBig.Sign() < 0 {
+			panic(UnderflowError{})
+		}
+
+		if !oBig.IsUint64() {
+			panic(OverflowError{})
+		}
+
+		common.UseMemory(interpreter, common.NewBitwiseLeftShiftBigIntMemoryUsage(vBig, oBig))
+		return NewUnmeteredIntValueFromBigInt(
+			new(big.Int).Lsh(vBig, uint(oBig.Uint64())),
+		)
+	}
+
+	// oBig == nil -> use oSmall
+
+	if oSmall < 0 {
 		panic(UnderflowError{})
 	}
 
-	if !o.BigInt.IsUint64() {
-		panic(OverflowError{})
-	}
-
-	return NewIntValueFromBigInt(
-		interpreter,
-		common.NewBitwiseLeftShiftBigIntMemoryUsage(v.BigInt, o.BigInt),
-		func() *big.Int {
-			res := new(big.Int)
-			return res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
-		},
+	// TODO: common.UseMemory(interpreter, common.NewBitwiseLeftShiftBigIntMemoryUsage(vBig, oBig))
+	return NewUnmeteredIntValueFromBigInt(
+		new(big.Int).Lsh(vBig, uint(oSmall)),
 	)
 }
 
@@ -3224,21 +3451,51 @@ func (v IntValue) BitwiseRightShift(interpreter *Interpreter, other IntegerValue
 		})
 	}
 
-	if o.BigInt.Sign() < 0 {
+	vBig := v._big
+	oBig := o._big
+
+	vSmall := v._small
+	oSmall := o._small
+
+	if vBig == nil && oBig == nil {
+		if oSmall < 0 {
+			panic(UnderflowError{})
+		}
+
+		return NewIntValueFromInt64(interpreter, vSmall>>oSmall)
+	}
+
+	// TODO: optimize: avoid allocation of big.Int
+	if vBig == nil {
+		common.UseMemory(interpreter, int64BigIntMemoryUsage)
+		vBig = new(big.Int).SetInt64(vSmall)
+	}
+
+	if oBig != nil {
+
+		if oBig.Sign() < 0 {
+			panic(UnderflowError{})
+		}
+
+		if !oBig.IsUint64() {
+			panic(OverflowError{})
+		}
+
+		common.UseMemory(interpreter, common.NewBitwiseLeftShiftBigIntMemoryUsage(vBig, oBig))
+		return NewUnmeteredIntValueFromBigInt(
+			new(big.Int).Rsh(vBig, uint(oBig.Uint64())),
+		)
+	}
+
+	// oBig == nil -> use oSmall
+
+	if oSmall < 0 {
 		panic(UnderflowError{})
 	}
 
-	if !o.BigInt.IsUint64() {
-		panic(OverflowError{})
-	}
-
-	return NewIntValueFromBigInt(
-		interpreter,
-		common.NewBitwiseRightShiftBigIntMemoryUsage(v.BigInt, o.BigInt),
-		func() *big.Int {
-			res := new(big.Int)
-			return res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
-		},
+	// TODO: common.UseMemory(interpreter, common.NewBitwiseRightShiftBigIntMemoryUsage(vBig, oBig))
+	return NewUnmeteredIntValueFromBigInt(
+		new(big.Int).Rsh(vBig, uint(oSmall)),
 	)
 }
 
@@ -3257,7 +3514,24 @@ func (IntValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
 }
 
 func (v IntValue) ToBigEndianBytes() []byte {
-	return SignedBigIntToBigEndianBytes(v.BigInt)
+	_big := v._big
+	if _big != nil {
+		return SignedBigIntToBigEndianBytes(_big)
+	}
+
+	_small := v._small
+
+	switch {
+	case math.MinInt8 <= _small && _small <= math.MaxInt8:
+		return Int8Value(_small).ToBigEndianBytes()
+	case math.MinInt16 <= _small && _small <= math.MaxInt16:
+		return Int16Value(_small).ToBigEndianBytes()
+	// should always be the case, but perform sanity check
+	case math.MinInt32 <= _small && _small <= math.MaxInt32:
+		return Int32Value(_small).ToBigEndianBytes()
+	default:
+		panic(errors.NewUnexpectedError("Int._small outside of int32 range"))
+	}
 }
 
 func (v IntValue) ConformsToStaticType(
@@ -3294,7 +3568,11 @@ func (v IntValue) Transfer(
 }
 
 func (v IntValue) Clone(_ *Interpreter) Value {
-	return NewUnmeteredIntValueFromBigInt(v.BigInt)
+	_big := v._big
+	if _big != nil {
+		return IntValue{_big: new(big.Int).Set(_big)}
+	}
+	return IntValue{_small: v._small}
 }
 
 func (IntValue) DeepRemove(_ *Interpreter) {
@@ -3302,7 +3580,13 @@ func (IntValue) DeepRemove(_ *Interpreter) {
 }
 
 func (v IntValue) ByteSize() uint32 {
-	return cborTagSize + getBigIntCBORSize(v.BigInt)
+	// TODO: optimize: avoid allocation of big.Int
+	_big := v._big
+	if _big == nil {
+		// TODO: meter, but no gauge available
+		_big = new(big.Int).SetInt64(v._small)
+	}
+	return cborTagSize + getBigIntCBORSize(_big)
 }
 
 func (v IntValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {

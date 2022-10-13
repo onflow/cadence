@@ -316,7 +316,15 @@ func (v IntValue) Encode(e *atree.Encoder) error {
 	if err != nil {
 		return err
 	}
-	return e.CBOR.EncodeBigInt(v.BigInt)
+
+	// TODO: optimize: avoid allocation of big.Int
+	_big := v._big
+	if _big == nil {
+		// TODO: meter, but no gauge available
+		_big = new(big.Int).SetInt64(v._small)
+	}
+
+	return e.CBOR.EncodeBigInt(_big)
 }
 
 // Encode encodes Int8Value as

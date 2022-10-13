@@ -531,11 +531,11 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 		inter, err := NewInterpreter(nil, nil, &Config{})
 		require.NoError(t, err)
 
-		expected := NewUnmeteredIntValueFromInt64(1_000_000_000)
+		expected := NewUnmeteredUIntValueFromUint64(1_000_000_000)
 
 		maxInlineElementSize := atree.MaxInlineArrayElementSize
 		for len(expected.BigInt.Bytes()) < int(maxInlineElementSize+1) {
-			expected = expected.Mul(inter, expected).(IntValue)
+			expected = expected.Mul(inter, expected).(UIntValue)
 		}
 
 		testEncodeDecode(t,
