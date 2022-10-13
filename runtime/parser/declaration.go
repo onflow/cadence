@@ -245,7 +245,7 @@ func parseAccess(p *parser) (ast.Access, error) {
 	}
 }
 
-// parseVariableDeclaration parses a variable declaration
+// parseVariableDeclaration parses a variable declaration.
 //
 //	variableKind : 'var' | 'let'
 //
@@ -1093,10 +1093,7 @@ func parseAttachmentDeclaration(
 // and nested declarations.
 //
 //	membersAndNestedDeclarations : ( memberOrNestedDeclaration ';'* )*
-func parseMembersAndNestedDeclarations(
-	p *parser,
-	endTokenType lexer.TokenType,
-) (*ast.Members, error) {
+func parseMembersAndNestedDeclarations(p *parser, endTokenType lexer.TokenType) (*ast.Members, error) {
 
 	var declarations []ast.Declaration
 
