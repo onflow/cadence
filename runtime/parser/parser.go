@@ -231,8 +231,8 @@ func (p *parser) next() {
 	}
 }
 
-// utility for the common pattern of advancing past the current token to
-// the next semantic token
+// nextSemanticToken advances past the current token to the next semantic token.
+// It skips whitespace, including newlines, and comments
 func (p *parser) nextSemanticToken() {
 	p.next()
 	p.skipSpaceAndComments()
@@ -390,7 +390,7 @@ type triviaOptions struct {
 	parseDocStrings bool
 }
 
-// utility for the common pattern of skipping past whitespace to the next semantic token
+// skipSpaceAndComments skips whitespace, including newlines, and comments
 func (p *parser) skipSpaceAndComments() (containsNewline bool) {
 	containsNewline, _ = p.parseTrivia(triviaOptions{
 		skipNewlines: true,
