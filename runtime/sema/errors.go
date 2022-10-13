@@ -1347,23 +1347,6 @@ type InterfaceMemberConflictError struct {
 	ast.Range
 }
 
-func NewInterfaceMemberConflictError(
-	interfaceType *InterfaceType,
-	interfaceMember *Member,
-	conflictingInterfaceType *InterfaceType,
-	conflictingMember *Member,
-	getRange func() ast.Range,
-) *InterfaceMemberConflictError {
-	return &InterfaceMemberConflictError{
-		InterfaceType:            interfaceType,
-		ConflictingInterfaceType: conflictingInterfaceType,
-		MemberName:               interfaceMember.Identifier.Identifier,
-		MemberKind:               interfaceMember.DeclarationKind,
-		ConflictingMemberKind:    conflictingMember.DeclarationKind,
-		Range:                    getRange(),
-	}
-}
-
 var _ SemanticError = &InterfaceMemberConflictError{}
 var _ errors.UserError = &InterfaceMemberConflictError{}
 
