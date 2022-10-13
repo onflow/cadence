@@ -817,8 +817,8 @@ func defineIdentifierExpression() {
 					token.Range.StartPos,
 				), nil
 
-			case keywordExtend:
-				return parseExtendExpressionRemainder(p, token)
+			case keywordAttach:
+				return parseAttachExpressionRemainder(p, token)
 
 			case keywordFun:
 				return parseFunctionExpression(p, token)
@@ -934,8 +934,8 @@ func parseCreateExpressionRemainder(p *parser, token lexer.Token) (*ast.CreateEx
 	), nil
 }
 
-func parseExtendExpressionRemainder(p *parser, token lexer.Token) (*ast.AttachExpression, error) {
-	base, err := parseExpression(p, lowestBindingPower)
+func parseAttachExpressionRemainder(p *parser, token lexer.Token) (*ast.AttachExpression, error) {
+	attachment, err := parseExpression(p, lowestBindingPower)
 
 	if err != nil {
 		return nil, err
@@ -943,39 +943,24 @@ func parseExtendExpressionRemainder(p *parser, token lexer.Token) (*ast.AttachEx
 
 	p.skipSpaceAndComments(true)
 
-	if string(p.tokenSource(p.current)) != keywordWith {
+	if p.current.Type != lexer.TokenIdentifier || string(p.tokenSource(p.current)) != keywordTo {
 		return nil, p.syntaxError(
-			"expected 'with', got %s",
+			"expected 'to', got %s",
 			p.current.Type,
 		)
 	}
 
-	// consume the with token
+	// consume the to token
 	p.next()
 	p.skipSpaceAndComments(true)
 
-	extensions := []ast.Expression{}
+	base, err := parseExpression(p, lowestBindingPower)
 
-	for {
-		extension, err := parseExpression(p, lowestBindingPower)
-
-		if err != nil {
-			return nil, err
-		}
-
-		extensions = append(extensions, extension)
-
-		p.skipSpaceAndComments(true)
-		if string(p.tokenSource(p.current)) != keywordAnd {
-			break
-		}
-
-		// consume the and token
-		p.next()
-		p.skipSpaceAndComments(true)
+	if err != nil {
+		return nil, err
 	}
 
-	return ast.NewAttachExpression(p.memoryGauge, base, extensions, token.StartPos), nil
+	return ast.NewAttachExpression(p.memoryGauge, base, attachment, token.StartPos), nil
 }
 
 // Invocation Expression Grammar:

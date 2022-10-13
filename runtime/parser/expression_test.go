@@ -2496,7 +2496,7 @@ func TestParseDestroy(t *testing.T) {
 	})
 }
 
-func TestParseExtend(t *testing.T) {
+func TestParseAttach(t *testing.T) {
 
 	t.Parallel()
 
@@ -2504,7 +2504,7 @@ func TestParseExtend(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseExpression("extend r with e")
+		result, errs := testParseExpression("attach e to r")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -2512,50 +2512,13 @@ func TestParseExtend(t *testing.T) {
 				Base: &ast.IdentifierExpression{
 					Identifier: ast.Identifier{
 						Identifier: "r",
-						Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+						Pos:        ast.Position{Line: 1, Column: 12, Offset: 12},
 					},
 				},
-				Extensions: []ast.Expression{
-					&ast.IdentifierExpression{
-						Identifier: ast.Identifier{
-							Identifier: "e",
-							Pos:        ast.Position{Line: 1, Column: 14, Offset: 14},
-						},
-					},
-				},
-				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-			},
-			result,
-		)
-	})
-
-	t.Run("two extension", func(t *testing.T) {
-
-		t.Parallel()
-
-		result, errs := testParseExpression("extend r with e1 and e2")
-		require.Empty(t, errs)
-
-		utils.AssertEqualWithDiff(t,
-			&ast.AttachExpression{
-				Base: &ast.IdentifierExpression{
+				Attachment: &ast.IdentifierExpression{
 					Identifier: ast.Identifier{
-						Identifier: "r",
+						Identifier: "e",
 						Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
-					},
-				},
-				Extensions: []ast.Expression{
-					&ast.IdentifierExpression{
-						Identifier: ast.Identifier{
-							Identifier: "e1",
-							Pos:        ast.Position{Line: 1, Column: 14, Offset: 14},
-						},
-					},
-					&ast.IdentifierExpression{
-						Identifier: ast.Identifier{
-							Identifier: "e2",
-							Pos:        ast.Position{Line: 1, Column: 21, Offset: 21},
-						},
 					},
 				},
 				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -2568,7 +2531,7 @@ func TestParseExtend(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseExpression("extend extend r with e1 with foo(4) as E and e2")
+		result, errs := testParseExpression("attach a to attach b to r")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -2577,122 +2540,55 @@ func TestParseExtend(t *testing.T) {
 					Base: &ast.IdentifierExpression{
 						Identifier: ast.Identifier{
 							Identifier: "r",
-							Pos:        ast.Position{Line: 1, Column: 14, Offset: 14},
+							Pos:        ast.Position{Line: 1, Column: 24, Offset: 24},
 						},
 					},
-					Extensions: []ast.Expression{
-						&ast.IdentifierExpression{
-							Identifier: ast.Identifier{
-								Identifier: "e1",
-								Pos:        ast.Position{Line: 1, Column: 21, Offset: 21},
-							},
-						},
-					},
-					StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
-				},
-				Extensions: []ast.Expression{
-					&ast.CastingExpression{
-						Expression: &ast.InvocationExpression{
-							InvokedExpression: &ast.IdentifierExpression{
-								Identifier: ast.Identifier{
-									Identifier: "foo",
-									Pos:        ast.Position{Line: 1, Column: 29, Offset: 29},
-								},
-							},
-							ArgumentsStartPos: ast.Position{Line: 1, Column: 32, Offset: 32},
-							Arguments: []*ast.Argument{
-								{
-									Label:                "",
-									TrailingSeparatorPos: ast.Position{Line: 1, Column: 34, Offset: 34},
-									Expression: &ast.IntegerExpression{
-										PositiveLiteral: []byte("4"),
-										Value:           big.NewInt(4),
-										Base:            10,
-										Range: ast.Range{
-											StartPos: ast.Position{Line: 1, Column: 33, Offset: 33},
-											EndPos:   ast.Position{Line: 1, Column: 33, Offset: 33},
-										},
-									},
-								},
-							},
-							EndPos: ast.Position{Line: 1, Column: 34, Offset: 34},
-						},
-						Operation: ast.OperationCast,
-						TypeAnnotation: &ast.TypeAnnotation{
-							IsResource: false,
-							Type: &ast.NominalType{
-								Identifier: ast.Identifier{
-									Identifier: "E",
-									Pos:        ast.Position{Line: 1, Column: 39, Offset: 39},
-								},
-							},
-							StartPos: ast.Position{Line: 1, Column: 39, Offset: 39},
-						},
-					},
-					&ast.IdentifierExpression{
+					Attachment: &ast.IdentifierExpression{
 						Identifier: ast.Identifier{
-							Identifier: "e2",
-							Pos:        ast.Position{Line: 1, Column: 45, Offset: 45},
+							Identifier: "b",
+							Pos:        ast.Position{Line: 1, Column: 19, Offset: 19},
 						},
 					},
+					StartPos: ast.Position{Line: 1, Column: 12, Offset: 12},
 				},
-				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-			},
-			result,
-		)
-	})
-
-	t.Run("three extension", func(t *testing.T) {
-
-		t.Parallel()
-
-		result, errs := testParseExpression("extend r with e1 and e2 and e3")
-		require.Empty(t, errs)
-
-		utils.AssertEqualWithDiff(t,
-			&ast.AttachExpression{
-				Base: &ast.IdentifierExpression{
+				Attachment: &ast.IdentifierExpression{
 					Identifier: ast.Identifier{
-						Identifier: "r",
+						Identifier: "a",
 						Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
 					},
 				},
-				Extensions: []ast.Expression{
-					&ast.IdentifierExpression{
-						Identifier: ast.Identifier{
-							Identifier: "e1",
-							Pos:        ast.Position{Line: 1, Column: 14, Offset: 14},
-						},
-					},
-					&ast.IdentifierExpression{
-						Identifier: ast.Identifier{
-							Identifier: "e2",
-							Pos:        ast.Position{Line: 1, Column: 21, Offset: 21},
-						},
-					},
-					&ast.IdentifierExpression{
-						Identifier: ast.Identifier{
-							Identifier: "e3",
-							Pos:        ast.Position{Line: 1, Column: 28, Offset: 28},
-						},
-					},
-				},
 				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 			},
 			result,
 		)
 	})
 
-	t.Run("missing with", func(t *testing.T) {
+	t.Run("missing to", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseExpression("extend r")
+		_, errs := testParseExpression("attach 3")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected 'with', got EOF",
+					Message: "expected 'to', got EOF",
 					Pos:     ast.Position{Offset: 8, Line: 1, Column: 8},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("missing base", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression("attach e to")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected expression",
+					Pos:     ast.Position{Offset: 0, Line: 0, Column: 0},
 				},
 			},
 			errs,

@@ -234,7 +234,7 @@ func TestAttachExpressionMarshallJSON(t *testing.T) {
 				},
 				"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
 				"EndPos": {"Offset": 3, "Line": 2, "Column": 5}
-			},
+			}
         }
         `,
 		string(actual),
@@ -313,7 +313,7 @@ func TestRemoveStatement_MarshallJSON(t *testing.T) {
 	assert.JSONEq(t,
 		`
         {
-            "Type": "RemoveDeclaration",
+            "Type": "RemoveStatement",
 			"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
 			"EndPos": {"Offset": 3, "Line": 2, "Column": 5},
 			"Value":  {
@@ -335,7 +335,7 @@ func TestRemoveStatement_MarshallJSON(t *testing.T) {
 				},
 				"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
 				"EndPos": {"Offset": 1, "Line": 2, "Column": 3}
-			},
+			}
         }
         `,
 		string(actual),

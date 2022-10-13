@@ -25,8 +25,7 @@ import (
 )
 
 const (
-	typeLeftBindingPowerExtended = 10 * (iota + 1)
-	typeLeftBindingPowerOptional
+	typeLeftBindingPowerOptional = 10 * (iota + 1)
 	typeLeftBindingPowerReference
 	typeLeftBindingPowerRestriction
 	typeLeftBindingPowerInstantiation

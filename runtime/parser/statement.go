@@ -796,7 +796,7 @@ func parseRemoveStatement(
 	p.skipSpaceAndComments(true)
 
 	// check and skip from keyword
-	if string(p.tokenSource(p.current)) != keywordFrom {
+	if p.current.Type != lexer.TokenIdentifier || string(p.tokenSource(p.current)) != keywordFrom {
 		p.reportSyntaxError(
 			"expected from keyword, got %s",
 			p.current.Type,

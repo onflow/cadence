@@ -1126,6 +1126,163 @@ func TestParseStatements(t *testing.T) {
 	})
 }
 
+func TestParseRemoveAttachmentStatement(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("basic", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseStatements("remove A from b")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.RemoveStatement{
+					Attachment: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "A",
+							Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
+					},
+					Value: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "b",
+							Pos:        ast.Position{Line: 1, Column: 14, Offset: 14},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("namespaced attachment", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseStatements("remove Foo.E from b")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.RemoveStatement{
+					Attachment: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "Foo",
+							Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
+						NestedIdentifiers: []ast.Identifier{
+							{
+								Identifier: "E",
+								Pos:        ast.Position{Line: 1, Column: 11, Offset: 11},
+							},
+						},
+					},
+					Value: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "b",
+							Pos:        ast.Position{Line: 1, Column: 18, Offset: 18},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("no from", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseStatements("remove A")
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected from keyword, got EOF",
+					Pos:     ast.Position{Offset: 8, Line: 1, Column: 8},
+				},
+				&SyntaxError{
+					Message: "expected expression",
+					Pos:     ast.Position{Offset: 0, Line: 0, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("no target", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseStatements("remove A from")
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected expression",
+					Pos:     ast.Position{Offset: 0, Line: 0, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("no nominal type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseStatements("remove [A] from e")
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected attachment nominal type, got [A]",
+					Pos:     ast.Position{Offset: 10, Line: 1, Column: 10},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("complex source", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseStatements("remove A from foo()")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.RemoveStatement{
+					Attachment: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "A",
+							Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
+					},
+					Value: &ast.InvocationExpression{
+						InvokedExpression: &ast.IdentifierExpression{
+							Identifier: ast.Identifier{
+								Identifier: "foo",
+								Pos:        ast.Position{Line: 1, Column: 14, Offset: 14},
+							},
+						},
+						ArgumentsStartPos: ast.Position{Line: 1, Column: 17, Offset: 17},
+						EndPos:            ast.Position{Line: 1, Column: 18, Offset: 18},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
+}
+
 func TestParseSwitchStatement(t *testing.T) {
 
 	t.Parallel()
