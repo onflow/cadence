@@ -329,7 +329,6 @@ func newInterpreter(
 		Location:    location,
 		sharedState: sharedState,
 		Config:      config,
-		Globals:     map[string]*Variable{},
 	}
 
 	// Register self
@@ -412,8 +411,8 @@ func (interpreter *Interpreter) invokeVariable(
 ) {
 
 	// function must be defined as a global variable
-	variable, ok := interpreter.Globals.Get(functionName)
-	if !ok {
+	variable := interpreter.Globals.Get(functionName)
+	if variable == nil {
 		return nil, NotDeclaredError{
 			ExpectedKind: common.DeclarationKindFunction,
 			Name:         functionName,
@@ -4007,8 +4006,8 @@ func (interpreter *Interpreter) getElaboration(location common.Location) *sema.E
 
 // GetContractComposite gets the composite value of the contract at the address location.
 func (interpreter *Interpreter) GetContractComposite(contractLocation common.AddressLocation) (*CompositeValue, error) {
-	contractGlobal, ok := interpreter.Globals.Get(contractLocation.Name)
-	if !ok {
+	contractGlobal := interpreter.Globals.Get(contractLocation.Name)
+	if contractGlobal == nil {
 		return nil, NotDeclaredError{
 			ExpectedKind: common.DeclarationKindContract,
 			Name:         contractLocation.Name,
