@@ -35,6 +35,7 @@ const (
 	CompositeKindContract
 	CompositeKindEvent
 	CompositeKindEnum
+	CompositeKindAttachment
 )
 
 func CompositeKindCount() int {
@@ -47,12 +48,14 @@ var AllCompositeKinds = []CompositeKind{
 	CompositeKindContract,
 	CompositeKindEvent,
 	CompositeKindEnum,
+	CompositeKindAttachment,
 }
 
 var CompositeKindsWithFieldsAndFunctions = []CompositeKind{
 	CompositeKindStructure,
 	CompositeKindResource,
 	CompositeKindContract,
+	CompositeKindAttachment,
 }
 
 func (k CompositeKind) Name() string {
@@ -67,6 +70,8 @@ func (k CompositeKind) Name() string {
 		return "event"
 	case CompositeKindEnum:
 		return "enum"
+	case CompositeKindAttachment:
+		return "attachment"
 	}
 
 	panic(errors.NewUnreachableError())
@@ -84,6 +89,8 @@ func (k CompositeKind) Keyword() string {
 		return "event"
 	case CompositeKindEnum:
 		return "enum"
+	case CompositeKindAttachment:
+		return "attachment"
 	}
 
 	panic(errors.NewUnreachableError())
@@ -120,6 +127,11 @@ func (k CompositeKind) DeclarationKind(isInterface bool) DeclarationKind {
 			return DeclarationKindUnknown
 		}
 		return DeclarationKindEnum
+	case CompositeKindAttachment:
+		if isInterface {
+			return DeclarationKindUnknown
+		}
+		return DeclarationKindAttachment
 	}
 
 	panic(errors.NewUnreachableError())
@@ -169,7 +181,8 @@ func (k CompositeKind) SupportsInterfaces() bool {
 		return true
 
 	case CompositeKindEvent,
-		CompositeKindEnum:
+		CompositeKindEnum,
+		CompositeKindAttachment:
 
 		return false
 	}
