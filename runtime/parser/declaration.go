@@ -1167,6 +1167,9 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 			case keywordStruct, keywordResource, keywordContract, keywordEnum:
 				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, docString)
 
+			case keywordAttachment:
+				return parseAttachmentDeclaration(p, access, accessPos, docString)
+
 			case keywordPriv, keywordPub, keywordAccess:
 				if access != ast.AccessNotSpecified {
 					return nil, p.syntaxError("unexpected access modifier")
