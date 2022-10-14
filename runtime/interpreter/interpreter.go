@@ -610,6 +610,11 @@ func (interpreter *Interpreter) VisitProgram(program *ast.Program) {
 		interpreter.visitGlobalDeclaration(declaration)
 	}
 
+	// TODO: Add this
+	//for _, declaration := range program.AttachmentDeclarations() {
+	// interpreter.visitGlobalDeclaration(declaration)
+	//}
+
 	for _, declaration := range program.FunctionDeclarations() {
 		interpreter.visitGlobalDeclaration(declaration)
 	}

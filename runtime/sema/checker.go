@@ -319,6 +319,10 @@ func (checker *Checker) CheckProgram(program *ast.Program) {
 		checker.declareCompositeMembersAndValue(declaration, ContainerKindComposite)
 	}
 
+	for _, declaration := range program.AttachmentDeclarations() {
+		checker.declareAttachmentMembersAndValue(declaration)
+	}
+
 	// Declare events, functions, and transactions
 
 	for _, declaration := range program.FunctionDeclarations() {

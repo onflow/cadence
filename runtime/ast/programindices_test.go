@@ -49,6 +49,16 @@ func TestProgramIndices(t *testing.T) {
 		Identifier: Identifier{Identifier: "C"},
 	}
 
+	attachmentA := &AttachmentDeclaration{
+		Identifier: Identifier{Identifier: "A"},
+	}
+	attachmentB := &AttachmentDeclaration{
+		Identifier: Identifier{Identifier: "B"},
+	}
+	attachmentC := &AttachmentDeclaration{
+		Identifier: Identifier{Identifier: "C"},
+	}
+
 	interfaceA := &InterfaceDeclaration{
 		Identifier: Identifier{Identifier: "A"},
 	}
@@ -119,6 +129,7 @@ func TestProgramIndices(t *testing.T) {
 			importB,
 			pragmaA,
 			transactionC,
+			attachmentC,
 			functionC,
 			interfaceB,
 			transactionA,
@@ -127,11 +138,13 @@ func TestProgramIndices(t *testing.T) {
 			transactionB,
 			importA,
 			interfaceA,
+			attachmentA,
 			pragmaB,
 			functionA,
 			compositeC,
 			functionB,
 			interfaceC,
+			attachmentB,
 			pragmaC,
 			compositeA,
 		},
@@ -161,6 +174,15 @@ func TestProgramIndices(t *testing.T) {
 					compositeA,
 				},
 				program.CompositeDeclarations(),
+			)
+
+			require.Equal(t,
+				[]*AttachmentDeclaration{
+					attachmentC,
+					attachmentA,
+					attachmentB,
+				},
+				program.AttachmentDeclarations(),
 			)
 
 			require.Equal(t,

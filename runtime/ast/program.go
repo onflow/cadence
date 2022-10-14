@@ -134,7 +134,8 @@ func (p *Program) SoleContractInterfaceDeclaration() *InterfaceDeclaration {
 	if len(interfaceDeclarations) != 1 ||
 		len(p.TransactionDeclarations()) > 0 ||
 		len(p.FunctionDeclarations()) > 0 ||
-		len(p.CompositeDeclarations()) > 0 {
+		len(p.CompositeDeclarations()) > 0 ||
+		len(p.AttachmentDeclarations()) > 0 {
 
 		return nil
 	}
@@ -157,7 +158,8 @@ func (p *Program) SoleTransactionDeclaration() *TransactionDeclaration {
 	if len(transactionDeclarations) != 1 ||
 		len(p.CompositeDeclarations()) > 0 ||
 		len(p.InterfaceDeclarations()) > 0 ||
-		len(p.FunctionDeclarations()) > 0 {
+		len(p.FunctionDeclarations()) > 0 ||
+		len(p.AttachmentDeclarations()) > 0 {
 
 		return nil
 	}

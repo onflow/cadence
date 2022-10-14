@@ -98,6 +98,7 @@ type Elaboration struct {
 	AssignmentStatementTypes         map[*ast.AssignmentStatement]AssignmentStatementTypes
 	CompositeDeclarationTypes        map[*ast.CompositeDeclaration]*CompositeType
 	CompositeTypeDeclarations        map[*CompositeType]*ast.CompositeDeclaration
+	AttachmentCompositeDeclarations  map[*ast.AttachmentDeclaration]*ast.CompositeDeclaration
 	InterfaceDeclarationTypes        map[*ast.InterfaceDeclaration]*InterfaceType
 	InterfaceTypeDeclarations        map[*InterfaceType]*ast.InterfaceDeclaration
 	ConstructorFunctionTypes         map[*ast.SpecialFunctionDeclaration]*FunctionType
@@ -151,6 +152,7 @@ func NewElaboration(gauge common.MemoryGauge, extendedElaboration bool) *Elabora
 		AssignmentStatementTypes:            map[*ast.AssignmentStatement]AssignmentStatementTypes{},
 		CompositeDeclarationTypes:           map[*ast.CompositeDeclaration]*CompositeType{},
 		CompositeTypeDeclarations:           map[*CompositeType]*ast.CompositeDeclaration{},
+		AttachmentCompositeDeclarations:     map[*ast.AttachmentDeclaration]*ast.CompositeDeclaration{},
 		InterfaceDeclarationTypes:           map[*ast.InterfaceDeclaration]*InterfaceType{},
 		InterfaceTypeDeclarations:           map[*InterfaceType]*ast.InterfaceDeclaration{},
 		ConstructorFunctionTypes:            map[*ast.SpecialFunctionDeclaration]*FunctionType{},

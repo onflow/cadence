@@ -25,14 +25,16 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
-func (checker *Checker) VisitCompositeDeclaration(declaration *ast.CompositeDeclaration) (_ struct{}) {
-	checker.visitCompositeDeclaration(declaration, ContainerKindComposite)
-	return
-}
+// while strictly speaking attachment declarations are not strictly the same thing as composite declarations,
+// they are subject to many of the same checks. In order to avoid duplicating these checks, we create a mapping
+// between an attachment declaration and its composite "equivalent" that we can use for these composite checks
+func (checker *Checker) attachmentAsComposite(declaration *ast.AttachmentDeclaration) *ast.CompositeDeclaration {
+	compositeDelcaration, ok := checker.Elaboration.AttachmentCompositeDeclarations[declaration]
+	if ok {
+		return compositeDelcaration
+	}
 
-func (checker *Checker) VisitAttachmentDeclaration(declaration *ast.AttachmentDeclaration) (_ struct{}) {
-	// create a fake "composite" declaration to make use of the existing checking for composites
-	attachmentComposite := ast.NewCompositeDeclaration(
+	compositeDelcaration = ast.NewCompositeDeclaration(
 		checker.memoryGauge,
 		declaration.Access,
 		common.CompositeKindAttachment,
@@ -42,7 +44,17 @@ func (checker *Checker) VisitAttachmentDeclaration(declaration *ast.AttachmentDe
 		declaration.DocString,
 		declaration.Range,
 	)
-	checker.visitCompositeDeclaration(attachmentComposite, ContainerKindComposite)
+	checker.Elaboration.AttachmentCompositeDeclarations[declaration] = compositeDelcaration
+	return compositeDelcaration
+}
+
+func (checker *Checker) VisitCompositeDeclaration(declaration *ast.CompositeDeclaration) (_ struct{}) {
+	checker.visitCompositeDeclaration(declaration, ContainerKindComposite)
+	return
+}
+
+func (checker *Checker) VisitAttachmentDeclaration(declaration *ast.AttachmentDeclaration) (_ struct{}) {
+	checker.visitCompositeDeclaration(checker.attachmentAsComposite(declaration), ContainerKindAttachment)
 	return
 }
 
@@ -127,7 +139,7 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 	checker.checkUnknownSpecialFunctions(declaration.Members.SpecialFunctions())
 
 	switch kind {
-	case ContainerKindComposite:
+	case ContainerKindComposite, ContainerKindAttachment:
 		checker.checkCompositeFunctions(
 			declaration.Members.Functions(),
 			compositeType,
@@ -425,6 +437,12 @@ func (checker *Checker) declareNestedDeclarations(
 	return
 }
 
+func (checker *Checker) declareAttachmentType(declaration *ast.AttachmentDeclaration) *CompositeType {
+	composite := checker.declareCompositeType(checker.attachmentAsComposite(declaration))
+	composite.baseType = checker.convertNominalType(declaration.BaseType)
+	return composite
+}
+
 // declareCompositeType declares the type for the given composite declaration
 // and records it in the elaboration. It also recursively declares all types
 // for all nested declarations.
@@ -507,6 +525,10 @@ func (checker *Checker) declareCompositeType(declaration *ast.CompositeDeclarati
 	}
 
 	return compositeType
+}
+
+func (checker *Checker) declareAttachmentMembersAndValue(declaration *ast.AttachmentDeclaration) {
+	checker.declareCompositeMembersAndValue(checker.attachmentAsComposite(declaration), ContainerKindAttachment)
 }
 
 // declareCompositeMembersAndValue declares the members and the value

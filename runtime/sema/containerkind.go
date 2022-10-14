@@ -26,4 +26,5 @@ const (
 	ContainerKindUnknown ContainerKind = iota
 	ContainerKindInterface
 	ContainerKindComposite
+	ContainerKindAttachment
 )
