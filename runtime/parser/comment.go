@@ -42,6 +42,9 @@ func (p *parser) parseBlockComment() (endToken lexer.Token, ok bool) {
 			p.next()
 			ok = true
 			depth--
+			if depth == 0 {
+				return
+			}
 
 		case lexer.TokenEOF:
 			p.reportSyntaxError(
@@ -49,7 +52,7 @@ func (p *parser) parseBlockComment() (endToken lexer.Token, ok bool) {
 				lexer.TokenBlockCommentEnd,
 			)
 			ok = false
-			depth = 0
+			return
 
 		default:
 			p.reportSyntaxError(
@@ -57,13 +60,7 @@ func (p *parser) parseBlockComment() (endToken lexer.Token, ok bool) {
 				p.current.Type,
 			)
 			ok = false
-			depth = 0
-		}
-
-		if depth == 0 {
-			break
+			return
 		}
 	}
-
-	return
 }
