@@ -86,6 +86,10 @@ func (p *Program) CompositeDeclarations() []*CompositeDeclaration {
 	return p.indices.compositeDeclarations(p.declarations)
 }
 
+func (p *Program) AttachmentDeclarations() []*AttachmentDeclaration {
+	return p.indices.attachmentDeclarations(p.declarations)
+}
+
 func (p *Program) FunctionDeclarations() []*FunctionDeclaration {
 	return p.indices.functionDeclarations(p.declarations)
 }

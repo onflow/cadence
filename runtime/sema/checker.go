@@ -300,6 +300,15 @@ func (checker *Checker) CheckProgram(program *ast.Program) {
 		VisitThisAndNested(compositeType, registerInElaboration)
 	}
 
+	for _, declaration := range program.AttachmentDeclarations() {
+		compositeType := checker.declareAttachmentType(declaration)
+
+		// NOTE: register types in elaboration
+		// *after* the full container chain is fully set up
+
+		VisitThisAndNested(compositeType, registerInElaboration)
+	}
+
 	// Declare interfaces' and composites' members
 
 	for _, declaration := range program.InterfaceDeclarations() {

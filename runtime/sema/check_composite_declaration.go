@@ -31,7 +31,18 @@ func (checker *Checker) VisitCompositeDeclaration(declaration *ast.CompositeDecl
 }
 
 func (checker *Checker) VisitAttachmentDeclaration(declaration *ast.AttachmentDeclaration) (_ struct{}) {
-	// TODO: fill this in
+	// create a fake "composite" declaration to make use of the existing checking for composites
+	attachmentComposite := ast.NewCompositeDeclaration(
+		checker.memoryGauge,
+		declaration.Access,
+		common.CompositeKindAttachment,
+		declaration.Identifier,
+		declaration.Conformances,
+		declaration.Members,
+		declaration.DocString,
+		declaration.Range,
+	)
+	checker.visitCompositeDeclaration(attachmentComposite, ContainerKindComposite)
 	return
 }
 
