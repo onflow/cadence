@@ -2699,8 +2699,8 @@ func TestParseAttach(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected expression",
-					Pos:     ast.Position{Offset: 0, Line: 0, Column: 0},
+					Message: "unexpected end of program",
+					Pos:     ast.Position{Offset: 11, Line: 1, Column: 11},
 				},
 			},
 			errs,

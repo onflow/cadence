@@ -1207,8 +1207,8 @@ func TestParseRemoveAttachmentStatement(t *testing.T) {
 					Pos:     ast.Position{Offset: 8, Line: 1, Column: 8},
 				},
 				&SyntaxError{
-					Message: "expected expression",
-					Pos:     ast.Position{Offset: 0, Line: 0, Column: 0},
+					Message: "unexpected end of program",
+					Pos:     ast.Position{Offset: 8, Line: 1, Column: 8},
 				},
 			},
 			errs,
@@ -1224,8 +1224,8 @@ func TestParseRemoveAttachmentStatement(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected expression",
-					Pos:     ast.Position{Offset: 0, Line: 0, Column: 0},
+					Message: "unexpected end of program",
+					Pos:     ast.Position{Offset: 13, Line: 1, Column: 13},
 				},
 			},
 			errs,
