@@ -40,6 +40,46 @@ func TestMain(m *testing.M) {
 	goleak.VerifyTestMain(m)
 }
 
+type testTokenStream struct {
+	tokens []lexer.Token
+	input  []byte
+	cursor int
+}
+
+var _ lexer.TokenStream = &testTokenStream{}
+
+func (t *testTokenStream) Next() lexer.Token {
+	if t.cursor >= len(t.tokens) {
+
+		// At the end of the token stream,
+		// emit a synthetic EOF token
+
+		return lexer.Token{
+			Type: lexer.TokenEOF,
+		}
+
+	}
+	token := t.tokens[t.cursor]
+	t.cursor++
+	return token
+}
+
+func (t *testTokenStream) Cursor() int {
+	return t.cursor
+}
+
+func (t *testTokenStream) Revert(cursor int) {
+	t.cursor = cursor
+}
+
+func (t *testTokenStream) Input() []byte {
+	return t.input
+}
+
+func (*testTokenStream) Reclaim() {
+	// NO-OP
+}
+
 func testParseStatements(s string) ([]ast.Statement, []error) {
 	return ParseStatements([]byte(s), nil)
 }
@@ -73,13 +113,13 @@ func TestParseInvalid(t *testing.T) {
 	}
 
 	unexpectedToken := "Parsing failed:\nerror: unexpected token: identifier"
-	expectedExpression := "Parsing failed:\nerror: expected expression"
+	unexpectedEndOfProgram := "Parsing failed:\nerror: unexpected end of program"
 	missingTypeAnnotation := "Parsing failed:\nerror: missing type annotation after comma"
 
 	for _, test := range []test{
 		{unexpectedToken, "X"},
 		{unexpectedToken, "paste your code in here"},
-		{expectedExpression, "# a ( b > c > d > e > f > g > h > i > j > k > l > m > n > o > p > q > r >"},
+		{unexpectedEndOfProgram, "# a ( b > c > d > e > f > g > h > i > j > k > l > m > n > o > p > q > r >"},
 		{missingTypeAnnotation, "#0x0<{},>()"},
 	} {
 		t.Run(test.code, func(t *testing.T) {

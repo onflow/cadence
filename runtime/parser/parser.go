@@ -19,6 +19,7 @@
 package parser
 
 import (
+	"bytes"
 	"io/ioutil"
 	"strings"
 
@@ -390,6 +391,9 @@ func (p *parser) skipSpaceAndComments(skipNewlines bool) (containsNewline bool) 
 	return containsNewline
 }
 
+var blockCommentDocStringPrefix = []byte("/**")
+var lineCommentDocStringPrefix = []byte("///")
+
 func (p *parser) parseTrivia(options triviaOptions) (containsNewline bool, docString string) {
 	var docStringBuilder strings.Builder
 	defer func() {
@@ -398,8 +402,7 @@ func (p *parser) parseTrivia(options triviaOptions) (containsNewline bool, docSt
 		}
 	}()
 
-	atEnd := false
-	inLineDocString := false
+	var atEnd, insideLineDocString bool
 
 	for !atEnd {
 		switch p.current.Type {
@@ -421,31 +424,36 @@ func (p *parser) parseTrivia(options triviaOptions) (containsNewline bool, docSt
 			p.next()
 
 		case lexer.TokenBlockCommentStart:
-			comment := p.parseCommentContent()
-			if options.parseDocStrings {
-				inLineDocString = false
+			commentStartOffset := p.current.StartPos.Offset
+			endToken, ok := p.parseBlockComment()
+
+			if ok && options.parseDocStrings {
+				commentEndOffset := endToken.EndPos.Offset
+
+				contentWithPrefix := p.tokens.Input()[commentStartOffset : commentEndOffset-1]
+
+				insideLineDocString = false
 				docStringBuilder.Reset()
-				if strings.HasPrefix(comment, "/**") {
-					// Strip prefix and suffix (`*/`)
-					docStringBuilder.WriteString(comment[3 : len(comment)-2])
+				if bytes.HasPrefix(contentWithPrefix, blockCommentDocStringPrefix) {
+					// Strip prefix (`/**`)
+					docStringBuilder.Write(contentWithPrefix[len(blockCommentDocStringPrefix):])
 				}
 			}
 
 		case lexer.TokenLineComment:
 			if options.parseDocStrings {
 				comment := p.currentTokenSource()
-				// TODO: improve
-				if strings.HasPrefix(string(comment), "///") {
-					if inLineDocString {
+				if bytes.HasPrefix(comment, lineCommentDocStringPrefix) {
+					if insideLineDocString {
 						docStringBuilder.WriteByte('\n')
 					} else {
-						inLineDocString = true
+						insideLineDocString = true
 						docStringBuilder.Reset()
 					}
 					// Strip prefix
-					docStringBuilder.Write(comment[3:])
+					docStringBuilder.Write(comment[len(lineCommentDocStringPrefix):])
 				} else {
-					inLineDocString = false
+					insideLineDocString = false
 					docStringBuilder.Reset()
 				}
 			}

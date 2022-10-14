@@ -424,20 +424,20 @@ func TestInterpretCompareCharacters(t *testing.T) {
 		t,
 		inter,
 		interpreter.BoolValue(true),
-		inter.Globals["x"].GetValue(),
+		inter.Globals.Get("x").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.BoolValue(true),
-		inter.Globals["y"].GetValue(),
+		inter.Globals.Get("y").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.BoolValue(false),
-		inter.Globals["z"].GetValue(),
+		inter.Globals.Get("z").GetValue(),
 	)
 }

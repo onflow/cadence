@@ -261,7 +261,7 @@ func TestArrayMutation(t *testing.T) {
 
 		// Check original array
 
-		namesVal := inter.Globals["names"].GetValue()
+		namesVal := inter.Globals.Get("names").GetValue()
 		require.IsType(t, &interpreter.ArrayValue{}, namesVal)
 		namesValArray := namesVal.(*interpreter.ArrayValue)
 
