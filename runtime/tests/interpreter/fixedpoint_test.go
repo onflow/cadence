@@ -44,7 +44,7 @@ func TestInterpretNegativeZeroFixedPoint(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredFix64Value(-42000000),
-		inter.Globals["x"].GetValue(),
+		inter.Globals.Get("x").GetValue(),
 	)
 }
 
@@ -90,21 +90,21 @@ func TestInterpretFixedPointConversionAndAddition(t *testing.T) {
 				t,
 				inter,
 				value,
-				inter.Globals["x"].GetValue(),
+				inter.Globals.Get("x").GetValue(),
 			)
 
 			AssertValuesEqual(
 				t,
 				inter,
 				value,
-				inter.Globals["y"].GetValue(),
+				inter.Globals.Get("y").GetValue(),
 			)
 
 			AssertValuesEqual(
 				t,
 				inter,
 				interpreter.BoolValue(true),
-				inter.Globals["z"].GetValue(),
+				inter.Globals.Get("z").GetValue(),
 			)
 
 		})
@@ -159,14 +159,14 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 					t,
 					inter,
 					fixedPointValue,
-					inter.Globals["x"].GetValue(),
+					inter.Globals.Get("x").GetValue(),
 				)
 
 				AssertValuesEqual(
 					t,
 					inter,
 					integerValue,
-					inter.Globals["y"].GetValue(),
+					inter.Globals.Get("y").GetValue(),
 				)
 			})
 		}
@@ -198,14 +198,14 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 					t,
 					inter,
 					expected,
-					inter.Globals["x"].GetValue(),
+					inter.Globals.Get("x").GetValue(),
 				)
 
 				AssertValuesEqual(
 					t,
 					inter,
 					expected,
-					inter.Globals["y"].GetValue(),
+					inter.Globals.Get("y").GetValue(),
 				)
 			})
 		}
@@ -238,14 +238,14 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 					t,
 					inter,
 					expected,
-					inter.Globals["x"].GetValue(),
+					inter.Globals.Get("x").GetValue(),
 				)
 
 				AssertValuesEqual(
 					t,
 					inter,
 					expected,
-					inter.Globals["y"].GetValue(),
+					inter.Globals.Get("y").GetValue(),
 				)
 			})
 		}
@@ -271,14 +271,14 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 					t,
 					inter,
 					interpreter.NewUnmeteredFix64Value(value*sema.Fix64Factor),
-					inter.Globals["x"].GetValue(),
+					inter.Globals.Get("x").GetValue(),
 				)
 
 				AssertValuesEqual(
 					t,
 					inter,
 					interpreter.NewUnmeteredUFix64Value(uint64(value*sema.Fix64Factor)),
-					inter.Globals["y"].GetValue(),
+					inter.Globals.Get("y").GetValue(),
 				)
 			})
 		}
@@ -304,14 +304,14 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 					t,
 					inter,
 					interpreter.NewUnmeteredUFix64Value(uint64(value*sema.Fix64Factor)),
-					inter.Globals["x"].GetValue(),
+					inter.Globals.Get("x").GetValue(),
 				)
 
 				AssertValuesEqual(
 					t,
 					inter,
 					interpreter.NewUnmeteredFix64Value(value*sema.Fix64Factor),
-					inter.Globals["y"].GetValue(),
+					inter.Globals.Get("y").GetValue(),
 				)
 			})
 		}
@@ -556,13 +556,13 @@ func TestInterpretFixedPointMinMax(t *testing.T) {
 			t,
 			inter,
 			test.min,
-			inter.Globals["min"].GetValue(),
+			inter.Globals.Get("min").GetValue(),
 		)
 		RequireValuesEqual(
 			t,
 			inter,
 			test.max,
-			inter.Globals["max"].GetValue(),
+			inter.Globals.Get("max").GetValue(),
 		)
 	}
 

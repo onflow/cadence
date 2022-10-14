@@ -49,7 +49,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 			t,
 			inter,
 			interpreter.BoolValue(true),
-			inter.Globals["result"].GetValue(),
+			inter.Globals.Get("result").GetValue(),
 		)
 	})
 
@@ -65,7 +65,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 			t,
 			inter,
 			interpreter.BoolValue(false),
-			inter.Globals["result"].GetValue(),
+			inter.Globals.Get("result").GetValue(),
 		)
 	})
 
@@ -81,7 +81,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 			t,
 			inter,
 			interpreter.BoolValue(false),
-			inter.Globals["result"].GetValue(),
+			inter.Globals.Get("result").GetValue(),
 		)
 	})
 
@@ -97,7 +97,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 			t,
 			inter,
 			interpreter.BoolValue(true),
-			inter.Globals["result"].GetValue(),
+			inter.Globals.Get("result").GetValue(),
 		)
 	})
 
@@ -113,7 +113,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 			t,
 			inter,
 			interpreter.BoolValue(false),
-			inter.Globals["result"].GetValue(),
+			inter.Globals.Get("result").GetValue(),
 		)
 	})
 
@@ -155,7 +155,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 			t,
 			inter,
 			interpreter.BoolValue(false),
-			inter.Globals["result"].GetValue(),
+			inter.Globals.Get("result").GetValue(),
 		)
 	})
 
@@ -211,7 +211,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 			t,
 			inter,
 			interpreter.BoolValue(false),
-			inter.Globals["result"].GetValue(),
+			inter.Globals.Get("result").GetValue(),
 		)
 	})
 }
@@ -233,7 +233,7 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredStringValue("[Int]"),
-			inter.Globals["identifier"].GetValue(),
+			inter.Globals.Get("identifier").GetValue(),
 		)
 	})
 
@@ -252,7 +252,7 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredStringValue("S.test.S"),
-			inter.Globals["identifier"].GetValue(),
+			inter.Globals.Get("identifier").GetValue(),
 		)
 	})
 
@@ -300,7 +300,7 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredStringValue(""),
-			inter.Globals["identifier"].GetValue(),
+			inter.Globals.Get("identifier").GetValue(),
 		)
 	})
 }
@@ -425,7 +425,7 @@ func TestInterpretIsInstance(t *testing.T) {
 				t,
 				inter,
 				interpreter.BoolValue(testCase.result),
-				inter.Globals["result"].GetValue(),
+				inter.Globals.Get("result").GetValue(),
 			)
 		})
 	}
@@ -563,7 +563,7 @@ func TestInterpretIsSubtype(t *testing.T) {
 
 			assert.Equal(t,
 				interpreter.BoolValue(testCase.result),
-				inter.Globals["result"].GetValue(),
+				inter.Globals.Get("result").GetValue(),
 			)
 		})
 	}

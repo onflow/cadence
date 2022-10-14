@@ -85,14 +85,14 @@ func TestInterpretEquality(t *testing.T) {
 			t,
 			inter,
 			interpreter.BoolValue(true),
-			inter.Globals["res1"].GetValue(),
+			inter.Globals.Get("res1").GetValue(),
 		)
 
 		AssertValuesEqual(
 			t,
 			inter,
 			interpreter.BoolValue(true),
-			inter.Globals["res2"].GetValue(),
+			inter.Globals.Get("res2").GetValue(),
 		)
 	})
 
@@ -113,14 +113,14 @@ func TestInterpretEquality(t *testing.T) {
 			t,
 			inter,
 			interpreter.BoolValue(true),
-			inter.Globals["res1"].GetValue(),
+			inter.Globals.Get("res1").GetValue(),
 		)
 
 		AssertValuesEqual(
 			t,
 			inter,
 			interpreter.BoolValue(true),
-			inter.Globals["res2"].GetValue(),
+			inter.Globals.Get("res2").GetValue(),
 		)
 	})
 
@@ -137,7 +137,7 @@ func TestInterpretEquality(t *testing.T) {
 			t,
 			inter,
 			interpreter.BoolValue(false),
-			inter.Globals["res"].GetValue(),
+			inter.Globals.Get("res").GetValue(),
 		)
 	})
 }
