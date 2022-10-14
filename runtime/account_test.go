@@ -552,10 +552,10 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 
 			key, ok := keys[keyIdx]
 
-			assert.True(t, ok)
+			require.NotNil(t, key)
 
-			assert.False(t, key.IsRevoked) // revoked keys shouldn't be passed to the callback
-			keys[keyIdx] = nil             // throw an error on duplicate transactions
+			assert.True(t, ok) // no key should be passed to the callback twice
+			keys[keyIdx] = nil
 		}
 	})
 }
@@ -820,8 +820,8 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 
 			assert.True(t, ok)
 
-			assert.False(t, key.IsRevoked) // revoked keys shouldn't be passed to the callback
-			keys[keyIdx] = nil             // throw an error on duplicate transactions
+			require.NotNil(t, key)
+			keys[keyIdx] = nil // no key should be passed to the callback twice
 		}
 	})
 }
