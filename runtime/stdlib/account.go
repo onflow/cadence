@@ -686,14 +686,15 @@ func newAccountKeysGetFunction(
 	)
 }
 
+// the AccountKey in `forEachKey(_ f: ((AccountKey): Bool)): Void`
+var accountKeysForEachCallbackTypeParams []sema.Type = []sema.Type{sema.AccountKeyType}
+
 func newAccountKeysForEachFunction(
 	gauge common.MemoryGauge,
 	provider AccountKeyProvider,
 	addressValue interpreter.AddressValue,
 ) *interpreter.HostFunctionValue {
 	address := addressValue.ToAddress()
-	// the AccountKey in `forEachKey(_ f: ((AccountKey): Bool)): Void`
-	callbackTypeParams := []sema.Type{sema.AccountKeyType}
 
 	return interpreter.NewHostFunctionValue(
 		gauge,
@@ -712,7 +713,7 @@ func newAccountKeysForEachFunction(
 					inter,
 					nil,
 					[]interpreter.Value{key},
-					callbackTypeParams,
+					accountKeysForEachCallbackTypeParams,
 					nil,
 					locationRange,
 				)
