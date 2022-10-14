@@ -2033,6 +2033,57 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 		)
 	})
 
+	t.Run("nested in contract", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(`
+		contract Test {
+			pub attachment E for S {}
+		}`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.CompositeDeclaration{
+					Access:        ast.AccessNotSpecified,
+					CompositeKind: common.CompositeKindContract,
+					Identifier: ast.Identifier{
+						Identifier: "Test",
+						Pos:        ast.Position{Line: 2, Column: 11, Offset: 12},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 2, Column: 2, Offset: 3},
+						EndPos:   ast.Position{Line: 4, Column: 2, Offset: 50},
+					},
+					Members: ast.NewUnmeteredMembers(
+						[]ast.Declaration{
+							&ast.AttachmentDeclaration{
+								Access: ast.AccessPublic,
+								Identifier: ast.Identifier{
+									Identifier: "E",
+									Pos:        ast.Position{Line: 3, Column: 18, Offset: 37},
+								},
+								BaseType: &ast.NominalType{
+									Identifier: ast.Identifier{
+										Identifier: "S",
+										Pos:        ast.Position{Line: 3, Column: 24, Offset: 43},
+									},
+								},
+								Members: &ast.Members{},
+								Range: ast.Range{
+									StartPos: ast.Position{Line: 3, Column: 3, Offset: 22},
+									EndPos:   ast.Position{Line: 3, Column: 27, Offset: 46},
+								},
+							},
+						},
+					),
+				},
+			},
+			result,
+		)
+	})
+
 	t.Run("missing base type", func(t *testing.T) {
 
 		t.Parallel()
