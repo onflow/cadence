@@ -19,62 +19,48 @@
 package parser
 
 import (
-	"strings"
-
 	"github.com/onflow/cadence/runtime/parser/lexer"
 )
 
-const blockCommentStart = "/*"
-const blockCommentEnd = "*/"
+func (p *parser) parseBlockComment() (endToken lexer.Token, ok bool) {
+	var depth int
 
-func (p *parser) parseCommentContent() (comment string) {
-	// TODO: improve: only build string if needed
-	var builder strings.Builder
-	defer func() {
-		comment = builder.String()
-	}()
+	for {
+		switch p.current.Type {
+		case lexer.TokenBlockCommentStart:
+			p.next()
+			ok = false
+			depth++
 
-	builder.WriteString(blockCommentStart)
+		case lexer.TokenBlockCommentContent:
+			p.next()
+			ok = false
 
-	var t trampoline
-	t = func(builder *strings.Builder) trampoline {
-		return func() []trampoline {
-
-			for {
-				p.next()
-
-				switch p.current.Type {
-				case lexer.TokenEOF:
-					p.reportSyntaxError(
-						"missing comment end %q",
-						lexer.TokenBlockCommentEnd,
-					)
-					return nil
-
-				case lexer.TokenBlockCommentContent:
-					builder.Write(p.currentTokenSource())
-
-				case lexer.TokenBlockCommentEnd:
-					builder.WriteString(blockCommentEnd)
-					// Skip the comment end (`*/`)
-					p.next()
-					return nil
-
-				case lexer.TokenBlockCommentStart:
-					builder.WriteString(blockCommentStart)
-					// parse inner content, then rest of this comment
-					return []trampoline{t, t}
-
-				default:
-					p.reportSyntaxError(
-						"unexpected token in comment: %q",
-						p.current.Type,
-					)
-					return nil
-				}
+		case lexer.TokenBlockCommentEnd:
+			endToken = p.current
+			// Skip the comment end (`*/`)
+			p.next()
+			ok = true
+			depth--
+			if depth == 0 {
+				return
 			}
+
+		case lexer.TokenEOF:
+			p.reportSyntaxError(
+				"missing comment end %s",
+				lexer.TokenBlockCommentEnd,
+			)
+			ok = false
+			return
+
+		default:
+			p.reportSyntaxError(
+				"unexpected token %s in block comment",
+				p.current.Type,
+			)
+			ok = false
+			return
 		}
-	}(&builder)
-	runTrampoline(t)
-	return
+	}
 }
