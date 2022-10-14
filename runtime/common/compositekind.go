@@ -58,6 +58,12 @@ var CompositeKindsWithFieldsAndFunctions = []CompositeKind{
 	CompositeKindAttachment,
 }
 
+var InstantiableCompositeKindsWithFieldsAndFunctions = []CompositeKind{
+	CompositeKindStructure,
+	CompositeKindResource,
+	CompositeKindContract,
+}
+
 func (k CompositeKind) Name() string {
 	switch k {
 	case CompositeKindStructure:

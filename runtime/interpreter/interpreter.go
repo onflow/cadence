@@ -925,6 +925,11 @@ func (interpreter *Interpreter) VisitCompositeDeclaration(declaration *ast.Compo
 	return nil
 }
 
+func (interpreter *Interpreter) VisitAttachmentDeclaration(declaration *ast.AttachmentDeclaration) StatementResult {
+	// TODO: fill this in
+	return nil
+}
+
 // declareCompositeValue creates and declares the value for
 // the composite declaration.
 //

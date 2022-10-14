@@ -30,6 +30,11 @@ func (checker *Checker) VisitCompositeDeclaration(declaration *ast.CompositeDecl
 	return
 }
 
+func (checker *Checker) VisitAttachmentDeclaration(declaration *ast.AttachmentDeclaration) (_ struct{}) {
+	// TODO: fill this in
+	return
+}
+
 // visitCompositeDeclaration checks a previously declared composite declaration.
 // Checking behaviour depends on `kind`, i.e. if the composite declaration declares
 // a composite (`kind` is `ContainerKindComposite`), or the composite declaration is

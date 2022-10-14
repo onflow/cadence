@@ -4025,7 +4025,8 @@ func TestParseInterface(t *testing.T) {
 
 	t.Parallel()
 
-	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, kind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
+
 		code := fmt.Sprintf(`
             %s interface Test {
                 foo: Int
@@ -5114,30 +5115,36 @@ func TestParseAccessModifiers(t *testing.T) {
 				)
 			}
 
+			var baseType = ""
+
+			if compositeKind == common.CompositeKindAttachment {
+				baseType = "for AnyStruct"
+			}
+
 			formatCode := func(format string) string {
-				return fmt.Sprintf(format, compositeKind.Keyword(), interfaceKeyword)
+				return fmt.Sprintf(format, compositeKind.Keyword(), interfaceKeyword, baseType)
 			}
 
 			if compositeKind == common.CompositeKindEvent {
 				declarations = append(declarations,
 					declaration{
 						formatName("itself"),
-						formatCode("%%s %s %s Test()"),
+						formatCode("%%s %s %s Test()%s"),
 					},
 				)
 			} else {
 				declarations = append(declarations,
 					declaration{
 						formatName("itself"),
-						formatCode("%%s %s %s Test {}"),
+						formatCode("%%s %s %s Test %s {}"),
 					},
 					declaration{
 						formatName("field"),
-						formatCode("%s %s Test { %%s let test: Int ; init() { self.test = 1 } }"),
+						formatCode("%s %s Test %s { %%s let test: Int ; init() { self.test = 1 } }"),
 					},
 					declaration{
 						formatName("function"),
-						formatCode("%s %s Test { %%s fun test() {} }"),
+						formatCode("%s %s Test %s { %%s fun test() {} }"),
 					},
 				)
 			}

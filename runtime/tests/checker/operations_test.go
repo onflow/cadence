@@ -467,10 +467,15 @@ func TestCheckInvalidCompositeEquality(t *testing.T) {
 				conformances = ": Int"
 			}
 
+			var baseType string
+			if compositeKind == common.CompositeKindAttachment {
+				baseType = "for AnyStruct"
+			}
+
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %[1]s X%[2]s %[3]s
+                      %[1]s X %[7]s %[2]s %[3]s
 
                       %[4]s
 
@@ -482,6 +487,7 @@ func TestCheckInvalidCompositeEquality(t *testing.T) {
 					preparationCode,
 					firstIdentifier,
 					secondIdentifier,
+					baseType,
 				),
 			)
 

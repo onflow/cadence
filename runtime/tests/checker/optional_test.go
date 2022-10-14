@@ -270,7 +270,7 @@ func TestCheckCompositeNilEquality(t *testing.T) {
 
 	for _, compositeKind := range common.AllCompositeKinds {
 
-		if compositeKind == common.CompositeKindEvent {
+		if compositeKind == common.CompositeKindEvent || compositeKind == common.CompositeKindAttachment {
 			continue
 		}
 
@@ -350,7 +350,7 @@ func TestCheckInvalidCompositeNilEquality(t *testing.T) {
 
 	for _, compositeKind := range common.AllCompositeKinds {
 
-		if compositeKind == common.CompositeKindEvent {
+		if compositeKind == common.CompositeKindEvent || compositeKind == common.CompositeKindAttachment {
 			continue
 		}
 

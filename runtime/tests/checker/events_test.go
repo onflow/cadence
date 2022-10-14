@@ -47,10 +47,15 @@ func TestCheckEventDeclaration(t *testing.T) {
 
 				t.Parallel()
 
+				var baseType string
+				if compositeKind == common.CompositeKindAttachment {
+					baseType = "for AnyStruct"
+				}
+
 				_, err := ParseAndCheck(t,
 					fmt.Sprintf(
 						`
-                          %[1]s Token {
+                          %[1]s Token %[3]s {
                             let id: String
 
                             init(id: String) {
@@ -62,6 +67,7 @@ func TestCheckEventDeclaration(t *testing.T) {
                         `,
 						compositeKind.Keyword(),
 						compositeKind.Annotation(),
+						baseType,
 					),
 				)
 
@@ -73,7 +79,8 @@ func TestCheckEventDeclaration(t *testing.T) {
 					assert.IsType(t, &sema.InvalidEventParameterTypeError{}, errs[1])
 					assert.IsType(t, &sema.InvalidResourceFieldError{}, errs[2])
 
-				case common.CompositeKindStructure:
+				case common.CompositeKindStructure,
+					common.CompositeKindAttachment:
 					require.NoError(t, err)
 
 				default:
