@@ -1534,9 +1534,12 @@ func (checker *Checker) checkTypeRequirement(
 	requiredInterfaceType := requiredCompositeType.InterfaceType()
 
 	// while attachments cannot be declared as interfaces, an attachment type requirement essentially functions
-	// as an interface, so we must enforce that the concrete attachment has the same base type as the type requirement
+	// as an interface, so we must enforce that the concrete attachment's base type is a compatible with the requirement's.
+	// Specifically, attachment base types are contravariant; if the contract interface requires a struct attachment with a base type
+	// of `S`, the concrete contract can fulfill this requirement by implementing an attachment with a base type of `AnyStruct`:
+	// if the attachment is valid on any structure, then clearly it is a valid attachment for `S`
 	if requiredCompositeType.Kind == common.CompositeKindAttachment && declaredCompositeType.Kind == common.CompositeKindAttachment {
-		if !requiredCompositeType.baseType.Equal(declaredCompositeType.baseType) {
+		if !IsSubType(requiredCompositeType.baseType, declaredCompositeType.baseType) {
 			checker.report(
 				&ConformanceError{
 					CompositeDeclaration: compositeDeclaration,

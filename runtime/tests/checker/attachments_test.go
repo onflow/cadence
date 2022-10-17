@@ -452,12 +452,37 @@ func TestCheckTypeRequirement(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-			struct S {}
+			contract interface Test {
+				struct S {}
+				attachment A for S {
+				}
+			}
+			contract C: Test {
+				struct S {}
+				struct S2 {}
+				attachment A for S2 {
+				}
+			}
+			`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+	t.Run("basetype subtype", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
 			contract interface Test {
 				attachment A for AnyStruct {
 				}
 			}
 			contract C: Test {
+				struct S {}
 				attachment A for S {
 				}
 			}
@@ -467,6 +492,28 @@ func TestCheckTypeRequirement(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+	t.Run("base type supertype", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			contract interface Test {
+				struct S {}
+				attachment A for S {
+				}
+			}
+			contract C: Test {
+				struct S {}
+				attachment A for AnyStruct {
+				}
+			}
+			`,
+		)
+
+		require.NoError(t, err)
 	})
 
 	t.Run("conforms", func(t *testing.T) {
