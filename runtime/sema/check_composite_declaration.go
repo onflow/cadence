@@ -595,8 +595,8 @@ func (checker *Checker) declareCompositeType(declaration *ast.CompositeDeclarati
 	return compositeType
 }
 
-func (checker *Checker) declareAttachmentMembersAndValue(declaration *ast.AttachmentDeclaration) {
-	checker.declareCompositeMembersAndValue(checker.attachmentAsComposite(declaration), ContainerKindComposite)
+func (checker *Checker) declareAttachmentMembersAndValue(declaration *ast.AttachmentDeclaration, kind ContainerKind) {
+	checker.declareCompositeMembersAndValue(checker.attachmentAsComposite(declaration), kind)
 }
 
 // declareCompositeMembersAndValue declares the members and the value
@@ -1469,7 +1469,7 @@ func (checker *Checker) checkTypeRequirement(
 	var compositeDeclaration *ast.CompositeDeclaration
 	var foundRedeclaration bool
 
-	for _, nestedCompositeDeclaration := range containerDeclaration.Members.Composites() {
+	findDeclaration := func(nestedCompositeDeclaration *ast.CompositeDeclaration) {
 		nestedCompositeIdentifier := nestedCompositeDeclaration.Identifier.Identifier
 		if nestedCompositeIdentifier == declaredCompositeType.Identifier {
 			// If we detected a second nested composite declaration with the same identifier,
@@ -1488,6 +1488,14 @@ func (checker *Checker) checkTypeRequirement(
 			// another (invalid) nested composite declaration with the same identifier,
 			// as the first found declaration is not necessarily the correct one
 		}
+	}
+
+	for _, nestedCompositeDeclaration := range containerDeclaration.Members.Composites() {
+		findDeclaration(nestedCompositeDeclaration)
+	}
+
+	for _, nestedAttachmentDeclaration := range containerDeclaration.Members.Attachments() {
+		findDeclaration(checker.attachmentAsComposite(nestedAttachmentDeclaration))
 	}
 
 	if foundRedeclaration {
@@ -1524,6 +1532,21 @@ func (checker *Checker) checkTypeRequirement(
 	// like a top-level composite declaration to an interface type
 
 	requiredInterfaceType := requiredCompositeType.InterfaceType()
+
+	// while attachments cannot be declared as interfaces, an attachment type requirement essentially functions
+	// as an interface, so we must enforce that the concrete attachment has the same base type as the type requirement
+	if requiredCompositeType.Kind == common.CompositeKindAttachment && declaredCompositeType.Kind == common.CompositeKindAttachment {
+		if !requiredCompositeType.baseType.Equal(declaredCompositeType.baseType) {
+			checker.report(
+				&ConformanceError{
+					CompositeDeclaration: compositeDeclaration,
+					CompositeType:        declaredCompositeType,
+					InterfaceType:        requiredCompositeType.InterfaceType(),
+					Pos:                  compositeDeclaration.Identifier.Pos,
+				},
+			)
+		}
+	}
 
 	checker.checkCompositeConformance(
 		compositeDeclaration,

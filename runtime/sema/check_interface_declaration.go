@@ -359,4 +359,8 @@ func (checker *Checker) declareInterfaceMembers(declaration *ast.InterfaceDeclar
 	for _, nestedCompositeDeclaration := range declaration.Members.Composites() {
 		checker.declareCompositeMembersAndValue(nestedCompositeDeclaration, ContainerKindInterface)
 	}
+
+	for _, nestedAttachmentDeclaration := range declaration.Members.Attachments() {
+		checker.declareAttachmentMembersAndValue(nestedAttachmentDeclaration, ContainerKindInterface)
+	}
 }
