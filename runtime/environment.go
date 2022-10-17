@@ -245,6 +245,10 @@ func (e *interpreterEnvironment) GetAccountKey(address common.Address, index int
 	return e.runtimeInterface.GetAccountKey(address, index)
 }
 
+func (e *interpreterEnvironment) AccountKeysCount(address common.Address) uint64 {
+	return e.runtimeInterface.AccountKeysCount(address)
+}
+
 func (e *interpreterEnvironment) GetAccountContractNames(address common.Address) ([]string, error) {
 	return e.runtimeInterface.GetAccountContractNames(address)
 }
