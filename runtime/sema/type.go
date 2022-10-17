@@ -3607,6 +3607,17 @@ func (t *CompositeType) GetCompositeKind() common.CompositeKind {
 	return t.Kind
 }
 
+func (t *CompositeType) getBaseCompositeKind() common.CompositeKind {
+	if t.Kind != common.CompositeKindAttachment {
+		return t.Kind
+	}
+	base, ok := t.baseType.(*CompositeType)
+	if !ok {
+		return common.CompositeKindUnknown
+	}
+	return base.GetCompositeKind()
+}
+
 func (t *CompositeType) GetBaseType() Type {
 	return t.baseType
 }

@@ -54,7 +54,7 @@ func (checker *Checker) VisitCompositeDeclaration(declaration *ast.CompositeDecl
 }
 
 func (checker *Checker) VisitAttachmentDeclaration(declaration *ast.AttachmentDeclaration) (_ struct{}) {
-	checker.visitCompositeDeclaration(checker.attachmentAsComposite(declaration), ContainerKindAttachment)
+	checker.visitCompositeDeclaration(checker.attachmentAsComposite(declaration), ContainerKindComposite)
 	return
 }
 
@@ -139,7 +139,7 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 	checker.checkUnknownSpecialFunctions(declaration.Members.SpecialFunctions())
 
 	switch kind {
-	case ContainerKindComposite, ContainerKindAttachment:
+	case ContainerKindComposite:
 		checker.checkCompositeFunctions(
 			declaration.Members.Functions(),
 			compositeType,
@@ -528,7 +528,7 @@ func (checker *Checker) declareCompositeType(declaration *ast.CompositeDeclarati
 }
 
 func (checker *Checker) declareAttachmentMembersAndValue(declaration *ast.AttachmentDeclaration) {
-	checker.declareCompositeMembersAndValue(checker.attachmentAsComposite(declaration), ContainerKindAttachment)
+	checker.declareCompositeMembersAndValue(checker.attachmentAsComposite(declaration), ContainerKindComposite)
 }
 
 // declareCompositeMembersAndValue declares the members and the value
@@ -1094,7 +1094,8 @@ func (checker *Checker) checkCompositeConformance(
 	// Ensure the composite kinds match, e.g. a structure shouldn't be able
 	// to conform to a resource interface
 
-	if interfaceType.CompositeKind != compositeType.Kind {
+	if interfaceType.CompositeKind != compositeType.Kind &&
+		interfaceType.CompositeKind != compositeType.getBaseCompositeKind() {
 		checker.report(
 			&CompositeKindMismatchError{
 				ExpectedKind: compositeType.Kind,

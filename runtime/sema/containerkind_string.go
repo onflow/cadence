@@ -11,12 +11,11 @@ func _() {
 	_ = x[ContainerKindUnknown-0]
 	_ = x[ContainerKindInterface-1]
 	_ = x[ContainerKindComposite-2]
-	_ = x[ContainerKindAttachment-3]
 }
 
-const _ContainerKind_name = "ContainerKindUnknownContainerKindInterfaceContainerKindCompositeContainerKindAttachment"
+const _ContainerKind_name = "ContainerKindUnknownContainerKindInterfaceContainerKindComposite"
 
-var _ContainerKind_index = [...]uint8{0, 20, 42, 64, 87}
+var _ContainerKind_index = [...]uint8{0, 20, 42, 64}
 
 func (i ContainerKind) String() string {
 	if i >= ContainerKind(len(_ContainerKind_index)-1) {
