@@ -1453,6 +1453,62 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 		assert.ErrorAs(t, errors[0], &invalidatedRefError)
 	})
 
+	t.Run("after destroy - array", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub fun test() {
+                let x <- [<-create R()]
+                let xRef = &x as &[R]
+                destroy x
+                xRef[0].a
+            }
+
+            pub resource R {
+                pub let a: Int
+
+                init() {
+                    self.a = 5
+                }
+            }
+            `,
+		)
+
+		errors := ExpectCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+	})
+
+	t.Run("after destroy - dictionary", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub fun test() {
+                let x <- {1: <- create R()}
+                let xRef = &x as &{Int: R}
+                destroy x
+                xRef[1]?.a
+            }
+
+            pub resource R {
+                pub let a: Int
+
+                init() {
+                    self.a = 5
+                }
+            }
+            `,
+		)
+
+		errors := ExpectCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+	})
+
 	t.Run("after move", func(t *testing.T) {
 
 		t.Parallel()
@@ -1464,6 +1520,70 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
                 let xRef = &x as &R
                 consume(<-x)
                 xRef.a
+            }
+
+            pub fun consume(_ r: @AnyResource) {
+                destroy r
+            }
+
+            pub resource R {
+                pub let a: Int
+
+                init() {
+                    self.a = 5
+                }
+            }
+            `,
+		)
+
+		errors := ExpectCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+	})
+
+	t.Run("after move - array", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub fun test() {
+                let x <- [<-create R()]
+                let xRef = &x as &[R]
+                consume(<-x)
+                xRef[0].a
+            }
+
+            pub fun consume(_ r: @AnyResource) {
+                destroy r
+            }
+
+            pub resource R {
+                pub let a: Int
+
+                init() {
+                    self.a = 5
+                }
+            }
+            `,
+		)
+
+		errors := ExpectCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+	})
+
+	t.Run("after move - dictionary", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub fun test() {
+                let x <- {1: <- create R()}
+                let xRef = &x as &{Int: R}
+                consume(<-x)
+                xRef[1]?.a
             }
 
             pub fun consume(_ r: @AnyResource) {
