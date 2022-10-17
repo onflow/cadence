@@ -2268,9 +2268,9 @@ func returnReferenceCasted(fromType, targetType string, operation ast.Operation,
                       let x <- create R()
                       let r = &x as %[1]s
                       let r2 = r as? %[2]s
-                      let isSucess = r2 != nil
+                      let isSuccess = r2 != nil
                       destroy x
-                      return isSucess
+                      return isSuccess
                   }
                 `,
 				fromType,
@@ -2298,9 +2298,9 @@ func returnReferenceCasted(fromType, targetType string, operation ast.Operation,
                       let x <- create R()
                       let r = &x as %[1]s
                       let r2 = r as! %[2]s
-                      let isSucess = r2 != nil
+                      let isSuccess = r2 != nil
                       destroy x
-                      return isSucess
+                      return isSuccess
                   }
                 `,
 				fromType,
