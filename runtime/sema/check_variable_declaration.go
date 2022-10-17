@@ -350,6 +350,20 @@ func referenceExpressions(expr ast.Expression) []ast.Expression {
 		}
 
 		return refExpressions
+	case *ast.ConditionalExpression:
+		refExpressions := make([]ast.Expression, 0)
+
+		thenRef := referenceExpressions(expr.Then)
+		if thenRef != nil {
+			refExpressions = append(refExpressions, thenRef...)
+		}
+
+		elseRef := referenceExpressions(expr.Else)
+		if elseRef != nil {
+			refExpressions = append(refExpressions, elseRef...)
+		}
+
+		return refExpressions
 	case *ast.IdentifierExpression:
 		return []ast.Expression{expr}
 	default:
