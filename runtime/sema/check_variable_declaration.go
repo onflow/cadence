@@ -374,15 +374,17 @@ func referenceExpressions(expr ast.Expression) []ast.Expression {
 // rootVariableOfExpression returns the identifier expression
 // of a var-ref/member-access/index-access expression.
 func rootVariableOfExpression(expr ast.Expression) *ast.Identifier {
-	switch expr := expr.(type) {
-	case *ast.IdentifierExpression:
-		return &expr.Identifier
-	case *ast.MemberExpression:
-		return rootVariableOfExpression(expr.Expression)
-	case *ast.IndexExpression:
-		return rootVariableOfExpression(expr.TargetExpression)
-	default:
-		return nil
+	for {
+		switch typedExpr := expr.(type) {
+		case *ast.IdentifierExpression:
+			return &typedExpr.Identifier
+		case *ast.MemberExpression:
+			expr = typedExpr.Expression
+		case *ast.IndexExpression:
+			expr = typedExpr.TargetExpression
+		default:
+			return nil
+		}
 	}
 }
 
