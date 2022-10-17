@@ -836,9 +836,11 @@ func emulatorBackendExecuteScriptFunction(testFramework TestFramework) *interpre
 				panic(errors.NewUnexpectedErrorFromCause(err))
 			}
 
-			result := testFramework.RunScript(script.Str, args)
+			inter := invocation.Interpreter
 
-			return newScriptResult(invocation.Interpreter, result.Value, result)
+			result := testFramework.RunScript(inter, script.Str, args)
+
+			return newScriptResult(inter, result.Value, result)
 		},
 		emulatorBackendExecuteScriptFunctionType,
 	)
@@ -1054,7 +1056,14 @@ func emulatorBackendAddTransactionFunction(testFramework TestFramework) *interpr
 				panic(errors.NewUnexpectedErrorFromCause(err))
 			}
 
-			err = testFramework.AddTransaction(code.Str, authorizers, signerAccounts, args)
+			err = testFramework.AddTransaction(
+				invocation.Interpreter,
+				code.Str,
+				authorizers,
+				signerAccounts,
+				args,
+			)
+
 			if err != nil {
 				panic(err)
 			}
@@ -1381,6 +1390,7 @@ func emulatorBackendDeployContractFunction(testFramework TestFramework) *interpr
 			}
 
 			err = testFramework.DeployContract(
+				inter,
 				name.Str,
 				code.Str,
 				account,
