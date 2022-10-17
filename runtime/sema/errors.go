@@ -3675,7 +3675,7 @@ func (e *InvalidEntryPointTypeError) Error() string {
 	)
 }
 
-// ImportedProgramError
+// ExternalMutationError
 
 type ExternalMutationError struct {
 	Name            string
@@ -3705,5 +3705,28 @@ func (e *ExternalMutationError) SecondaryError() string {
 		"Consider adding a setter for `%s` to `%s`",
 		e.Name,
 		e.ContainerType.QualifiedString(),
+	)
+}
+
+// InvalidBaseTypeError
+
+type InvalidBaseTypeError struct {
+	BaseType   Type
+	Attachment *CompositeType
+	ast.Range
+}
+
+var _ SemanticError = &InvalidBaseTypeError{}
+var _ errors.UserError = &InvalidBaseTypeError{}
+
+func (*InvalidBaseTypeError) isSemanticError() {}
+
+func (*InvalidBaseTypeError) IsUserError() {}
+
+func (e *InvalidBaseTypeError) Error() string {
+	return fmt.Sprintf(
+		"cannot use `%s` as the base type for attachment `%s`",
+		e.BaseType.String(),
+		e.Attachment.Identifier,
 	)
 }

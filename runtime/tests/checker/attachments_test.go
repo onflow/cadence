@@ -30,16 +30,42 @@ func TestCheckBasic(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("basic", func(t *testing.T) {
+	_, err := ParseAndCheck(t,
+		`attachment Test for AnyStruct {}`,
+	)
 
-		t.Parallel()
+	require.NoError(t, err)
+}
 
-		_, err := ParseAndCheck(t,
-			`attachment Test for AnyStruct {}`,
-		)
+func TestCheckRedeclare(t *testing.T) {
 
-		require.NoError(t, err)
-	})
+	t.Parallel()
+
+	_, err := ParseAndCheck(t,
+		`struct R {} 
+		 attachment R for AnyStruct {}`,
+	)
+
+	errs := RequireCheckerErrors(t, err, 2)
+
+	// 2 redeclaration errors: one for the constructor, one for the type
+	assert.IsType(t, &sema.RedeclarationError{}, errs[0])
+	assert.IsType(t, &sema.RedeclarationError{}, errs[1])
+}
+
+func TestCheckRedeclareInContract(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t,
+		`contract C {
+			attachment C for AnyStruct {}
+		}`,
+	)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.RedeclarationError{}, errs[0])
 }
 
 func TestCheckBaseType(t *testing.T) {
@@ -111,6 +137,199 @@ func TestCheckBaseType(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("anystruct", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			attachment Test for AnyStruct {}`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("anyresource", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			attachment Test for AnyResource {}`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("non-composite", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			attachment Test for Int {}
+			`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidBaseTypeError{}, errs[0])
+	})
+
+	t.Run("contract", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			contract Test {}
+			attachment A for Test {}
+			`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidBaseTypeError{}, errs[0])
+	})
+
+	t.Run("contract interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			contract interface Test {}
+			attachment A for Test {}
+			`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidBaseTypeError{}, errs[0])
+	})
+
+	t.Run("enum", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			enum E: Int {}
+			attachment Test for E {}
+			`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidBaseTypeError{}, errs[0])
+	})
+}
+
+func TestCheckNestedBaseType(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("struct", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {
+				attachment Test for S {}
+			}
+			`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
+	})
+
+	t.Run("struct interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct interface S {
+				attachment Test for S {}
+			}
+			`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
+	})
+
+	t.Run("resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource R {
+				attachment Test for R {}
+			}
+			`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
+	})
+
+	t.Run("resource interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource interface R {
+				attachment Test for R {}
+			}
+			`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
+	})
+
+	t.Run("contract", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			contract Test {
+				attachment A for Test {}
+			}
+			`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidBaseTypeError{}, errs[0])
+	})
+
+	t.Run("contract interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			contract interface Test {
+				attachment A for Test {}
+			}
+			`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidBaseTypeError{}, errs[0])
+	})
 }
 
 func TestCheckWithMembers(t *testing.T) {

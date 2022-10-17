@@ -660,6 +660,10 @@ func TestCheckInvalidContractNestedTypeShadowing(t *testing.T) {
 		for _, isInterface := range []bool{true, false} {
 			keywords := kind.Keyword()
 
+			if isInterface && kind == common.CompositeKindAttachment {
+				continue
+			}
+
 			if isInterface {
 				keywords += " interface"
 			}
