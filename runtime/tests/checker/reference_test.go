@@ -1405,13 +1405,11 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub contract Test {
-                pub fun test() {
-                    let x <- create R()
-                    let xRef = &x as &R
-                    xRef.a
-                    destroy x
-                }
+            pub fun test() {
+                let x <- create R()
+                let xRef = &x as &R
+                xRef.a
+                destroy x
             }
 
             pub resource R {
@@ -1433,13 +1431,11 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub contract Test {
-                pub fun test() {
-                    let x <- create R()
-                    let xRef = &x as &R
-                    destroy x
-                    xRef.a
-                }
+            pub fun test() {
+                let x <- create R()
+                let xRef = &x as &R
+                destroy x
+                xRef.a
             }
 
             pub resource R {
@@ -1463,13 +1459,11 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub contract Test {
-                pub fun v() {
-                    let x <- create R()
-                    let xRef = &x as &R
-                    consume(<-x)
-                    xRef.a
-                }
+            pub fun test() {
+                let x <- create R()
+                let xRef = &x as &R
+                consume(<-x)
+                xRef.a
             }
 
             pub fun consume(_ r: @AnyResource) {
@@ -1497,16 +1491,14 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub contract Test {
-                pub fun test() {
-                    var x <- create R()
-                    var y <- create R()
-                    let xRef = &x as &R
-                    x <-> y
-                    destroy x
-                    destroy y
-                    xRef.a
-                }
+            pub fun test() {
+                var x <- create R()
+                var y <- create R()
+                let xRef = &x as &R
+                x <-> y
+                destroy x
+                destroy y
+                xRef.a
             }
 
             pub resource R {
@@ -1530,21 +1522,19 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub contract Test {
-                pub fun test() {
-                    let x <- create R()
-                    let xRef = &x as &R
-                    if true {
-                        destroy x
-                    } else {
-                        destroy x
-                    }
+            pub fun test() {
+                let x <- create R()
+                let xRef = &x as &R
+                if true {
+                    destroy x
+                } else {
+                    destroy x
+                }
 
+                if true {
                     if true {
-                        if true {
-                        } else {
-                            xRef.a
-                        }
+                    } else {
+                        xRef.a
                     }
                 }
             }
@@ -1570,18 +1560,16 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheckAccount(t,
 			`
-            pub contract Test {
-                pub fun test() {
-                    authAccount.save(<-[<-create R()], to: /storage/a)
+            pub fun test() {
+                authAccount.save(<-[<-create R()], to: /storage/a)
 
-                    let collectionRef = authAccount.borrow<&[R]>(from: /storage/a)!
-                    let ref = &collectionRef[0] as &R
+                let collectionRef = authAccount.borrow<&[R]>(from: /storage/a)!
+                let ref = &collectionRef[0] as &R
 
-                    let collection <- authAccount.load<@[R]>(from: /storage/a)!
-                    authAccount.save(<- collection, to: /storage/b)
+                let collection <- authAccount.load<@[R]>(from: /storage/a)!
+                authAccount.save(<- collection, to: /storage/b)
 
-                    ref.a = 2
-                }
+                ref.a = 2
             }
 
             pub resource R {
@@ -1604,17 +1592,15 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub contract Test {
-                pub fun test() {
-                    let f = fun() {
-                        let x <- create R()
-                        let xRef = &x as &R
-                        destroy x
-                        xRef.a
-                    }
-
-                    f()
+            pub fun test() {
+                let f = fun() {
+                    let x <- create R()
+                    let xRef = &x as &R
+                    destroy x
+                    xRef.a
                 }
+
+                f()
             }
 
             pub resource R {
@@ -1699,16 +1685,14 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub contract Test {
-                pub fun test() {
-                    var r: @{UInt64: {UInt64: [R]}} <- {}
-                    let ref1 = (&r[0] as &{UInt64: [R]}?)!
-                    let ref2 = (&ref1[0] as &[R]?)!
-                    let ref3 = &ref2[0] as &R
-                    ref3.a
+            pub fun test() {
+                var r: @{UInt64: {UInt64: [R]}} <- {}
+                let ref1 = (&r[0] as &{UInt64: [R]}?)!
+                let ref2 = (&ref1[0] as &[R]?)!
+                let ref3 = &ref2[0] as &R
+                ref3.a
 
-                    destroy r
-                }
+                destroy r
             }
 
             pub resource R {
@@ -1730,15 +1714,13 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub contract Test {
-                pub fun test() {
-                    var r: @{UInt64: {UInt64: [R]}} <- {}
-                    let ref1 = (&r[0] as &{UInt64: [R]}?)!
-                    let ref2 = (&ref1[0] as &[R]?)!
-                    let ref3 = &ref2[0] as &R
-                    destroy r
-                    ref3.a
-                }
+            pub fun test() {
+                var r: @{UInt64: {UInt64: [R]}} <- {}
+                let ref1 = (&r[0] as &{UInt64: [R]}?)!
+                let ref2 = (&ref1[0] as &[R]?)!
+                let ref3 = &ref2[0] as &R
+                destroy r
+                ref3.a
             }
 
             pub resource R {
@@ -1761,13 +1743,11 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub contract Test {
-                pub fun test() {
-                    let x <- create R()
-                    let xRef = (&x as &R?)!
-                    destroy x
-                    xRef.a
-                }
+            pub fun test() {
+                let x <- create R()
+                let xRef = (&x as &R?)!
+                destroy x
+                xRef.a
             }
 
             pub resource R {
@@ -1816,13 +1796,11 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 			`
             import Foo from "imported"
 
-            pub contract Test {
-                pub fun test() {
-                    let xRef = &Foo.field as &AnyResource
-                    xRef
-                }
+            pub fun test() {
+                let xRef = &Foo.field as &AnyResource
+                xRef
             }
-            `,
+        `,
 			ParseAndCheckOptions{
 				Config: &sema.Config{
 					ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
@@ -1843,18 +1821,16 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub contract Test {
-                pub resource R {
-                    pub let a: Int
+            pub resource R {
+                pub let a: Int
 
-                    init() {
-                        self.a = 5
-                    }
+                init() {
+                    self.a = 5
+                }
 
-                    pub fun test() {
-                        let xRef = &self as &R
-                        xRef.a
-                    }
+                pub fun test() {
+                    let xRef = &self as &R
+                    xRef.a
                 }
             }
             `,
@@ -1960,19 +1936,17 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub contract Test {
-                pub fun test() {
-                    let x <- create R()
-                    let xRef = &x as &R
-                    if true {
-                        destroy x
-                    } else {
-                        // nothing
-                    }
-                    xRef.a
-
+            pub fun test() {
+                let x <- create R()
+                let xRef = &x as &R
+                if true {
                     destroy x
+                } else {
+                    // nothing
                 }
+                xRef.a
+
+                destroy x
             }
 
             pub resource R {
@@ -2000,13 +1974,11 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub contract Test {
-                pub fun test() {
-                    let x: @R? <- create R()
-                    let ref = (&x as &R?) ?? nil
-                    destroy x
-                    ref!.a
-                }
+            pub fun test() {
+                let x: @R? <- create R()
+                let ref = (&x as &R?) ?? nil
+                destroy x
+                ref!.a
             }
 
             pub resource R {
@@ -2031,16 +2003,14 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub contract Test {
-                pub fun test() {
-                    let x: @R? <- create R()
-                    let y: @R <- create R()
+            pub fun test() {
+                let x: @R? <- create R()
+                let y: @R <- create R()
 
-                    let ref = nil ?? (&y as &R?)
-                    destroy y
-                    ref!.a
-                    destroy x
-                }
+                let ref = nil ?? (&y as &R?)
+                destroy y
+                ref!.a
+                destroy x
             }
 
             pub resource R {
@@ -2065,16 +2035,14 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub contract Test {
-                pub fun test() {
-                    let x: @R? <- create R()
-                    let y: @R <- create R()
+            pub fun test() {
+                let x: @R? <- create R()
+                let y: @R <- create R()
 
-                    let ref = (&x as &R?) ?? (&y as &R?)
-                    destroy y
-                    destroy x
-                    ref!.a
-                }
+                let ref = (&x as &R?) ?? (&y as &R?)
+                destroy y
+                destroy x
+                ref!.a
             }
 
             pub resource R {
@@ -2100,19 +2068,17 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub contract Test {
-                pub fun test() {
-                    let x: @R? <- create R()
-                    let y: @R <- create R()
-                    let z: @R? <- create R()
+            pub fun test() {
+                let x: @R? <- create R()
+                let y: @R <- create R()
+                let z: @R? <- create R()
 
-                    let ref1 = (&x as &R?) ?? ((&y as &R?) ?? (&z as &R?))
-                    let ref2 = ref1
-                    destroy y
-                    destroy x
-                    destroy z
-                    ref2!.a
-                }
+                let ref1 = (&x as &R?) ?? ((&y as &R?) ?? (&z as &R?))
+                let ref2 = ref1
+                destroy y
+                destroy x
+                destroy z
+                ref2!.a
             }
 
             pub resource R {
@@ -2139,15 +2105,13 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub contract Test {
-                pub fun test() {
-                    let x <- create R()
-                    var ref1: &R? = nil
-                    ref1 = &x as &R
+            pub fun test() {
+                let x <- create R()
+                var ref1: &R? = nil
+                ref1 = &x as &R
 
-                    destroy x
-                    ref1!.a
-                }
+                destroy x
+                ref1!.a
             }
 
             pub resource R {
@@ -2171,14 +2135,12 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub contract Test {
-                pub fun test() {
-                    let x = S()
-                    var ref1: &S? = nil
-                    ref1 = &x as &S
-                    consume(x)
-                    ref1!.a
-                }
+            pub fun test() {
+                let x = S()
+                var ref1: &S? = nil
+                ref1 = &x as &S
+                consume(x)
+                ref1!.a
             }
 
             pub fun consume(_ s:S) {}
@@ -2202,15 +2164,13 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub contract Test {
-                pub fun test() {
-                    let x <- create R()
-                    let ref1 = &x as &R
-                    let ref2 = ref1
-                    let ref3 = ref2
-                    destroy x
-                    ref3.a
-                }
+            pub fun test() {
+                let x <- create R()
+                let ref1 = &x as &R
+                let ref2 = ref1
+                let ref3 = ref2
+                destroy x
+                ref3.a
             }
 
             pub resource R {
@@ -2234,15 +2194,13 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub contract Test {
-                pub fun test() {
-                    let r <- create R()
-                    let s = S()
+            pub fun test() {
+                let r <- create R()
+                let s = S()
 
-                    s.b = &r as &R
-                    destroy r
-                    s.b!.a
-                }
+                s.b = &r as &R
+                destroy r
+                s.b!.a
             }
 
             pub resource R {
@@ -2272,16 +2230,14 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub contract Test {
-                pub fun test() {
-                    let r <- create R()
-                    let s = S()
-                    s.b = &r as &R
+            pub fun test() {
+                let r <- create R()
+                let s = S()
+                s.b = &r as &R
 
-                    let x = s.b!
-                    destroy r
-                    x.a
-                }
+                let x = s.b!
+                destroy r
+                x.a
             }
 
             pub resource R {
@@ -2311,13 +2267,11 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub contract Test {
-                pub fun test() {
-                    let x: @R? <- create R()
-                    let ref = true ? (&x as &R?) : nil
-                    destroy x
-                    ref!.a
-                }
+            pub fun test() {
+                let x: @R? <- create R()
+                let ref = true ? (&x as &R?) : nil
+                destroy x
+                ref!.a
             }
 
             pub resource R {
@@ -2342,16 +2296,14 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub contract Test {
-                pub fun test() {
-                    let x: @R? <- create R()
-                    let y: @R <- create R()
+            pub fun test() {
+                let x: @R? <- create R()
+                let y: @R <- create R()
 
-                    let ref = true ? nil : (&y as &R?)
-                    destroy y
-                    ref!.a
-                    destroy x
-                }
+                let ref = true ? nil : (&y as &R?)
+                destroy y
+                ref!.a
+                destroy x
             }
 
             pub resource R {
@@ -2376,16 +2328,14 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub contract Test {
-                pub fun test() {
-                    let x: @R? <- create R()
-                    let y: @R <- create R()
+            pub fun test() {
+                let x: @R? <- create R()
+                let y: @R <- create R()
 
-                    let ref = true ? (&x as &R?) : (&y as &R?)
-                    destroy y
-                    destroy x
-                    ref!.a
-                }
+                let ref = true ? (&x as &R?) : (&y as &R?)
+                destroy y
+                destroy x
+                ref!.a
             }
 
             pub resource R {
