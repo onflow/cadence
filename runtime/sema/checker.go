@@ -306,6 +306,7 @@ func (checker *Checker) report(err error) {
 	if err == nil {
 		return
 	}
+
 	checker.errors = append(checker.errors, err)
 	if checker.Config.ErrorShortCircuitingEnabled {
 		panic(stopChecking{})
