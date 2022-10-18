@@ -151,3 +151,39 @@ counterRef3.count  // is `44`
 
 References are ephemeral, i.e. they cannot be [stored](accounts#account-storage).
 Instead, consider [storing a capability and borrowing it](capability-based-access-control) when needed.
+
+### Reference validity
+
+Ephemeral references stay valid throughout the course of the program.
+However, **references to resources** can become invalid during the execution of a program, if the referenced resource is moved
+or destroyed after taking the reference.
+
+```cadence
+let r <-create R()
+
+// Take a reference to resource.
+let ref = &r as &R
+
+// Then transfer the resource into an account.
+// This will invalidate all the references taken to the resource `r`.
+account.save(<-r, to: /storage/r)
+
+// Static error, since the referenced resource has been moved.
+ref.id = 2
+```
+
+A reference is invalidated upon the first transfer of the underlying resource, regardless of the origin and the destination.
+
+```cadence
+let ref = &r as &R
+
+// Moving a resource to a different variable invalidates all references to it.
+let r2 <- r
+
+// Static error, since the referenced resource has been moved.
+ref.id = 2
+```
+
+<Callout type="info">
+Invalidations of storage references are not statically caught, but only at run-time.
+</Callout>

@@ -2326,29 +2326,32 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
               prepare(accountA: AuthAccount, accountB: AuthAccount) {
 
                   let testResource <- TestContract.makeTestResource()
-                  let ref = &testResource as &TestContract.TestResource
+                  let ref1 = &testResource as &TestContract.TestResource
 
                   // At this point the resource is not in storage
-                  log(ref.owner?.address)
+                  log(ref1.owner?.address)
 
                   accountA.save(<-testResource, to: /storage/test)
 
-                  // At this point the resource is in storage A. Reference must be invalidated.
-                  log(ref.owner?.address)
+                  // At this point the resource is in storage A
+                  accountA.link<&TestContract.TestResource>(/public/test, target: /storage/test)
+                  let ref2 = accountA.getCapability<&TestContract.TestResource>(/public/test).borrow()!
+                  log(ref2.owner?.address)
 
                   let testResource2 <- accountA.load<@TestContract.TestResource>(from: /storage/test)!
 
-                  let ref2 = &testResource2 as &TestContract.TestResource
+                  let ref3 = &testResource2 as &TestContract.TestResource
 
                    // At this point the resource is not in storage
-                  log(ref.owner?.address)
-                  log(ref2.owner?.address)
+                  log(ref3.owner?.address)
 
                   accountB.save(<-testResource2, to: /storage/test)
 
+                  accountB.link<&TestContract.TestResource>(/public/test, target: /storage/test)
+                  let ref4 = accountB.getCapability<&TestContract.TestResource>(/public/test).borrow()!
+
                   // At this point the resource is in storage B
-                  log(ref.owner?.address)
-                  log(ref2.owner?.address)
+                  log(ref4.owner?.address)
               }
           }
         `
@@ -2438,8 +2441,18 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-		require.Error(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+
+		require.NoError(t, err)
+
+		require.Equal(t,
+			[]string{
+				"nil",
+				"0x0000000000000001",
+				"nil",
+				"0x0000000000000002",
+			},
+			loggedMessages,
+		)
 	})
 
 	t.Run("resource (array element)", func(t *testing.T) {
@@ -2464,15 +2477,18 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
               prepare(account: AuthAccount) {
 
                   let testResources <- [<-TestContract.makeTestResource()]
-                  let ref = &testResources[0] as &TestContract.TestResource
+                  let ref1 = &testResources[0] as &TestContract.TestResource
 
                   // At this point the resource is not in storage
-                  log(ref.owner?.address)
+                  log(ref1.owner?.address)
 
                   account.save(<-testResources, to: /storage/test)
 
-                  // At this point the resource is in storage. Reference must be invalidated.
-                  log(ref.owner?.address)
+                  // At this point the resource is in storage
+                  account.link<&[TestContract.TestResource]>(/public/test, target: /storage/test)
+                  let ref2 = account.getCapability<&[TestContract.TestResource]>(/public/test).borrow()!
+                  let ref3 = &ref2[0] as &TestContract.TestResource
+                  log(ref3.owner?.address)
               }
           }
         `
@@ -2557,8 +2573,16 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-		require.Error(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+
+		require.NoError(t, err)
+
+		require.Equal(t,
+			[]string{
+				"nil",
+				"0x0000000000000001",
+			},
+			loggedMessages,
+		)
 	})
 
 	t.Run("resource (nested field, array element)", func(t *testing.T) {
@@ -2595,8 +2619,8 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
               prepare(account: AuthAccount) {
 
                   let nestingResource <- TestContract.makeTestNestingResource()
-                  let nestingResourceRef = &nestingResource as &TestContract.TestNestingResource
-                  let nestedElementResourceRef = &nestingResource.nestedResources[0] as &TestContract.TestNestedResource
+                  var nestingResourceRef = &nestingResource as &TestContract.TestNestingResource
+                  var nestedElementResourceRef = &nestingResource.nestedResources[0] as &TestContract.TestNestedResource
 
                   // At this point the nesting and nested resources are not in storage
                   log(nestingResourceRef.owner?.address)
@@ -2604,7 +2628,11 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
                   account.save(<-nestingResource, to: /storage/test)
 
-                  // At this point the nesting and nested resources are both in storage. References must be invalidated.
+                  // At this point the nesting and nested resources are both in storage
+                  account.link<&TestContract.TestNestingResource>(/public/test, target: /storage/test)
+                  nestingResourceRef = account.getCapability<&TestContract.TestNestingResource>(/public/test).borrow()!
+                  nestedElementResourceRef = &nestingResourceRef.nestedResources[0] as &TestContract.TestNestedResource
+
                   log(nestingResourceRef.owner?.address)
                   log(nestedElementResourceRef.owner?.address)
               }
@@ -2691,8 +2719,18 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-		require.Error(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+
+		require.NoError(t, err)
+
+		require.Equal(t,
+			[]string{
+				"nil",
+				"nil",
+				"0x0000000000000001",
+				"0x0000000000000001",
+			},
+			loggedMessages,
+		)
 	})
 
 	t.Run("array", func(t *testing.T) {
@@ -2717,14 +2755,17 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
               prepare(account: AuthAccount) {
 
                   let testResources <- [<-[<-TestContract.makeTestResource()]]
-                  let ref = &testResources[0] as &[TestContract.TestResource]
+                  var ref = &testResources[0] as &[TestContract.TestResource]
 
                   // At this point the resource is not in storage
                   log(ref[0].owner?.address)
 
                   account.save(<-testResources, to: /storage/test)
 
-                  // At this point the resource is in storage. Reference must be invalidated.
+                  // At this point the resource is in storage
+                  account.link<&[[TestContract.TestResource]]>(/public/test, target: /storage/test)
+                  let testResourcesRef = account.getCapability<&[[TestContract.TestResource]]>(/public/test).borrow()!
+                  ref = &testResourcesRef[0] as &[TestContract.TestResource]
                   log(ref[0].owner?.address)
               }
           }
@@ -2810,8 +2851,16 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-		require.Error(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+
+		require.NoError(t, err)
+
+		require.Equal(t,
+			[]string{
+				"nil",
+				"0x0000000000000001",
+			},
+			loggedMessages,
+		)
 	})
 
 	t.Run("dictionary", func(t *testing.T) {
@@ -2836,14 +2885,17 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
               prepare(account: AuthAccount) {
 
                   let testResources <- [<-{0: <-TestContract.makeTestResource()}]
-                  let ref = &testResources[0] as &{Int: TestContract.TestResource}
+                  var ref = &testResources[0] as &{Int: TestContract.TestResource}
 
                   // At this point the resource is not in storage
                   log(ref[0]?.owner?.address)
 
                   account.save(<-testResources, to: /storage/test)
 
-                  // At this point the resource is in storage. Reference must be invalidated.
+                  // At this point the resource is in storage
+                  account.link<&[{Int: TestContract.TestResource}]>(/public/test, target: /storage/test)
+                  let testResourcesRef = account.getCapability<&[{Int: TestContract.TestResource}]>(/public/test).borrow()!
+                  ref = &testResourcesRef[0] as &{Int: TestContract.TestResource}
                   log(ref[0]?.owner?.address)
               }
           }
@@ -2929,8 +2981,16 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-		require.Error(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+
+		require.NoError(t, err)
+
+		require.Equal(t,
+			[]string{
+				"nil",
+				"0x0000000000000001",
+			},
+			loggedMessages,
+		)
 	})
 }
 
