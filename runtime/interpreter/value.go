@@ -202,6 +202,18 @@ type ReferenceTrackedResourceKindedValue interface {
 	StorageID() atree.StorageID
 }
 
+// IterableValue is a value which can be iterated over, e.g. with a for-loop
+type IterableValue interface {
+	Value
+	Iterator(interpreter *Interpreter) ValueIterator
+}
+
+// ValueIterator is an iterator which returns values.
+// When Next returns nil, it signals the end of the iterator.
+type ValueIterator interface {
+	Next(interpreter *Interpreter) Value
+}
+
 func safeAdd(a, b int) int {
 	// INT32-C
 	if (b > 0) && (a > (goMaxInt - b)) {
@@ -909,6 +921,7 @@ var _ EquatableValue = &StringValue{}
 var _ HashableValue = &StringValue{}
 var _ ValueIndexableValue = &StringValue{}
 var _ MemberAccessibleValue = &StringValue{}
+var _ IterableValue = &StringValue{}
 
 func (v *StringValue) prepareGraphemes() {
 	if v.graphemes == nil {
@@ -1312,6 +1325,25 @@ func (v *StringValue) ConformsToStaticType(
 	return true
 }
 
+func (v *StringValue) Iterator(_ *Interpreter) ValueIterator {
+	return StringValueIterator{
+		graphemes: uniseg.NewGraphemes(v.Str),
+	}
+}
+
+type StringValueIterator struct {
+	graphemes *uniseg.Graphemes
+}
+
+var _ ValueIterator = StringValueIterator{}
+
+func (i StringValueIterator) Next(_ *Interpreter) Value {
+	if !i.graphemes.Next() {
+		return nil
+	}
+	return NewUnmeteredCharacterValue(i.graphemes.Str())
+}
+
 // ArrayValue
 
 type ArrayValue struct {
@@ -1321,6 +1353,33 @@ type ArrayValue struct {
 	isDestroyed      bool
 	isResourceKinded *bool
 	elementSize      uint
+}
+
+type ArrayValueIterator struct {
+	atreeIterator *atree.ArrayIterator
+}
+
+func (v *ArrayValue) Iterator(_ *Interpreter) ValueIterator {
+	arrayIterator, err := v.array.Iterator()
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
+	return ArrayValueIterator{
+		atreeIterator: arrayIterator,
+	}
+}
+
+var _ ValueIterator = ArrayValueIterator{}
+
+func (i ArrayValueIterator) Next(interpreter *Interpreter) Value {
+	atreeValue, err := i.atreeIterator.Next()
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
+
+	// atree.Array iterator returns low-level atree.Value,
+	// convert to high-level interpreter.Value
+	return MustConvertStoredValue(interpreter, atreeValue)
 }
 
 func NewArrayValue(
@@ -1449,6 +1508,7 @@ var _ EquatableValue = &ArrayValue{}
 var _ ValueIndexableValue = &ArrayValue{}
 var _ MemberAccessibleValue = &ArrayValue{}
 var _ ReferenceTrackedResourceKindedValue = &ArrayValue{}
+var _ IterableValue = &ArrayValue{}
 
 func (*ArrayValue) IsValue() {}
 
