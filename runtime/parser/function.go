@@ -26,7 +26,7 @@ import (
 func parseParameterList(p *parser) (parameterList *ast.ParameterList, err error) {
 	var parameters []*ast.Parameter
 
-	p.skipSpaceAndComments(true)
+	p.skipSpaceAndComments()
 
 	if !p.current.Is(lexer.TokenParenOpen) {
 		return nil, p.syntaxError(
@@ -46,7 +46,7 @@ func parseParameterList(p *parser) (parameterList *ast.ParameterList, err error)
 
 	atEnd := false
 	for !atEnd {
-		p.skipSpaceAndComments(true)
+		p.skipSpaceAndComments()
 		switch p.current.Type {
 		case lexer.TokenIdentifier:
 			if !expectParameter {
@@ -112,7 +112,7 @@ func parseParameterList(p *parser) (parameterList *ast.ParameterList, err error)
 }
 
 func parseParameter(p *parser) (*ast.Parameter, error) {
-	p.skipSpaceAndComments(true)
+	p.skipSpaceAndComments()
 
 	startPos := p.current.StartPos
 	parameterPos := startPos
@@ -128,19 +128,16 @@ func parseParameter(p *parser) (*ast.Parameter, error) {
 	parameterName := string(p.currentTokenSource())
 
 	// Skip the identifier
-	p.next()
+	p.nextSemanticToken()
 
 	// If another identifier is provided, then the previous identifier
 	// is the argument label, and this identifier is the parameter name
-
-	p.skipSpaceAndComments(true)
 	if p.current.Is(lexer.TokenIdentifier) {
 		argumentLabel = parameterName
 		parameterName = string(p.currentTokenSource())
 		parameterPos = p.current.StartPos
 		// Skip the identifier
-		p.next()
-		p.skipSpaceAndComments(true)
+		p.nextSemanticToken()
 	}
 
 	if !p.current.Is(lexer.TokenColon) {
@@ -152,8 +149,7 @@ func parseParameter(p *parser) (*ast.Parameter, error) {
 	}
 
 	// Skip the colon
-	p.next()
-	p.skipSpaceAndComments(true)
+	p.nextSemanticToken()
 
 	typeAnnotation, err := parseTypeAnnotation(p)
 	if err != nil {
@@ -193,9 +189,7 @@ func parseFunctionDeclaration(
 	}
 
 	// Skip the `fun` keyword
-	p.next()
-
-	p.skipSpaceAndComments(true)
+	p.nextSemanticToken()
 	if !p.current.Is(lexer.TokenIdentifier) {
 		return nil, p.syntaxError(
 			"expected identifier after start of function declaration, got %s",
@@ -241,17 +235,16 @@ func parseFunctionParameterListAndRest(
 		return
 	}
 
-	p.skipSpaceAndComments(true)
+	p.skipSpaceAndComments()
 	if p.current.Is(lexer.TokenColon) {
 		// Skip the colon
-		p.next()
-		p.skipSpaceAndComments(true)
+		p.nextSemanticToken()
 		returnTypeAnnotation, err = parseTypeAnnotation(p)
 		if err != nil {
 			return
 		}
 
-		p.skipSpaceAndComments(true)
+		p.skipSpaceAndComments()
 	} else {
 		positionBeforeMissingReturnType := parameterList.EndPos
 		returnType := ast.NewNominalType(
@@ -270,7 +263,7 @@ func parseFunctionParameterListAndRest(
 		)
 	}
 
-	p.skipSpaceAndComments(true)
+	p.skipSpaceAndComments()
 
 	if !functionBlockIsOptional ||
 		p.current.Is(lexer.TokenBraceOpen) {
