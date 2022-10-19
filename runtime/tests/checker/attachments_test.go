@@ -623,6 +623,51 @@ func TestCheckWithMembers(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("resource field", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource R {}
+			attachment Test for R {
+				let x: @R
+				init(x: @R) {
+					self.x <- x
+				}
+				destroy() {
+					destroy self.x
+				}
+			}`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("resource field in struct", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource R {}
+			attachment Test for AnyStruct {
+				let x: @R
+				init(x: @R) {
+					self.x <- x
+				}
+				destroy() {
+					destroy self.x
+				}
+			}`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.InvalidResourceFieldError{}, errs[0])
+		assert.IsType(t, &sema.InvalidDestructorError{}, errs[1])
+	})
+
 	t.Run("field with same name as base type", func(t *testing.T) {
 
 		t.Parallel()
@@ -659,6 +704,38 @@ func TestCheckWithMembers(t *testing.T) {
 		)
 
 		require.NoError(t, err)
+	})
+
+	t.Run("destroy", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource R {}
+			attachment Test for R {
+				destroy() {}
+			}`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("destroy in struct", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			attachment Test for S {
+				destroy() {}
+			}`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidDestructorError{}, errs[0])
 	})
 }
 
@@ -862,6 +939,25 @@ func TestCheckSuper(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("destroy", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource R {
+				fun foo() {}
+			}
+			attachment Test for R {
+				destroy() {
+					super.foo()
+				}
+			}`,
+		)
+
+		require.NoError(t, err)
+	})
+
 	t.Run("interface super", func(t *testing.T) {
 
 		t.Parallel()
@@ -939,5 +1035,140 @@ func TestCheckSuper(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+	})
+}
+
+func TestCheckAttachmentType(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			attachment T for AnyStruct {}
+			fun foo(x: &T) {}
+			`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("resource reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			attachment T for AnyResource {}
+			fun foo(x: &T) {}
+			`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("struct resource annotation", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			attachment T for AnyStruct {}
+			fun foo(x: @T) {}
+			`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
+	})
+
+	t.Run("resource annotation", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			attachment T for AnyResource {}
+			fun foo(x: @T) {
+				destroy x
+			}
+			`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
+	})
+
+	t.Run("resource without resource annotation", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			attachment T for AnyResource {}
+			fun foo(x: T) {
+				destroy x
+			}
+			`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
+	})
+
+	t.Run("optional annotation", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			attachment T for AnyStruct {}
+			fun foo(x: T?) {
+			}
+			`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
+	})
+
+	t.Run("nested", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			attachment T for AnyResource {}
+			fun foo(x: [T]) {
+				destroy x
+			}
+			`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
+	})
+
+	t.Run("nested reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			attachment T for AnyResource {}
+			fun foo(x: [&T]) {
+			}
+			`,
+		)
+
+		require.NoError(t, err)
 	})
 }

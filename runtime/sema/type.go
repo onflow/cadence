@@ -3783,7 +3783,10 @@ func (t *CompositeType) IsEquatable() bool {
 	return t.Kind == common.CompositeKindEnum
 }
 
-func (*CompositeType) TypeAnnotationState() TypeAnnotationState {
+func (c *CompositeType) TypeAnnotationState() TypeAnnotationState {
+	if c.Kind == common.CompositeKindAttachment {
+		return TypeAnnotationStateDirectAttachmentTypeAnnotation
+	}
 	return TypeAnnotationStateValid
 }
 
@@ -4812,7 +4815,7 @@ func (*ReferenceType) IsEquatable() bool {
 	return true
 }
 
-func (*ReferenceType) TypeAnnotationState() TypeAnnotationState {
+func (t *ReferenceType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 

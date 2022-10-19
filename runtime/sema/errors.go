@@ -3730,3 +3730,20 @@ func (e *InvalidBaseTypeError) Error() string {
 		e.Attachment.Identifier,
 	)
 }
+
+// InvalidAttachmentAnnotationError
+
+type InvalidAttachmentAnnotationError struct {
+	ast.Range
+}
+
+var _ SemanticError = &InvalidAttachmentAnnotationError{}
+var _ errors.UserError = &InvalidAttachmentAnnotationError{}
+
+func (*InvalidAttachmentAnnotationError) isSemanticError() {}
+
+func (*InvalidAttachmentAnnotationError) IsUserError() {}
+
+func (e *InvalidAttachmentAnnotationError) Error() string {
+	return "cannot refer directly to attachment type"
+}

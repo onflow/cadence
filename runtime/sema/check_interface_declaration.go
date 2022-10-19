@@ -96,6 +96,7 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 	checker.checkResourceFieldNesting(
 		interfaceType.Members,
 		interfaceType.CompositeKind,
+		nil,
 		fieldPositionGetter,
 	)
 

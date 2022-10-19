@@ -1530,6 +1530,7 @@ func (checker *Checker) checkUnusedExpressionResourceLoss(expressionType Type, e
 func (checker *Checker) checkResourceFieldNesting(
 	members *StringMemberOrderedMap,
 	compositeKind common.CompositeKind,
+	baseType Type,
 	fieldPositionGetter func(name string) ast.Position,
 ) {
 	// Resource fields are only allowed in resources and contracts
@@ -1539,6 +1540,10 @@ func (checker *Checker) checkResourceFieldNesting(
 		common.CompositeKindContract:
 
 		return
+	case common.CompositeKindAttachment:
+		if baseType != nil && baseType.IsResourceType() {
+			return
+		}
 	}
 
 	// The field is not a resource or contract.
@@ -2022,6 +2027,12 @@ func (checker *Checker) checkTypeAnnotation(typeAnnotation *TypeAnnotation, pos 
 	case TypeAnnotationStateInvalidResourceAnnotation:
 		checker.report(
 			&InvalidResourceAnnotationError{
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, pos),
+			},
+		)
+	case TypeAnnotationStateDirectAttachmentTypeAnnotation:
+		checker.report(
+			&InvalidAttachmentAnnotationError{
 				Range: ast.NewRangeFromPositioned(checker.memoryGauge, pos),
 			},
 		)

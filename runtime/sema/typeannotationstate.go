@@ -27,4 +27,5 @@ const (
 	TypeAnnotationStateValid
 	TypeAnnotationStateInvalidResourceAnnotation
 	TypeAnnotationStateMissingResourceAnnotation
+	TypeAnnotationStateDirectAttachmentTypeAnnotation
 )

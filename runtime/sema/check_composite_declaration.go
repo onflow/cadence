@@ -202,6 +202,7 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 	checker.checkResourceFieldNesting(
 		compositeType.Members,
 		compositeType.Kind,
+		compositeType.baseType,
 		fieldPositionGetter,
 	)
 
