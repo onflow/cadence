@@ -938,7 +938,7 @@ func parseAttachExpressionRemainder(p *parser, token lexer.Token) (*ast.AttachEx
 		return nil, err
 	}
 
-	p.skipSpaceAndComments(true)
+	p.skipSpaceAndComments()
 
 	if p.current.Type != lexer.TokenIdentifier || string(p.tokenSource(p.current)) != keywordTo {
 		return nil, p.syntaxError(
@@ -949,7 +949,7 @@ func parseAttachExpressionRemainder(p *parser, token lexer.Token) (*ast.AttachEx
 
 	// consume the to token
 	p.next()
-	p.skipSpaceAndComments(true)
+	p.skipSpaceAndComments()
 
 	base, err := parseExpression(p, lowestBindingPower)
 
