@@ -34,6 +34,7 @@ import (
 
 const ArgumentLabelNotRequired = "_"
 const SelfIdentifier = "self"
+const SuperIdentifier = "super"
 const BeforeIdentifier = "before"
 const ResultIdentifier = "result"
 

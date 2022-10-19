@@ -223,6 +223,51 @@ func TestCheckBaseType(t *testing.T) {
 
 		assert.IsType(t, &sema.InvalidBaseTypeError{}, errs[0])
 	})
+
+	t.Run("struct attachment", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			attachment S for AnyStruct {}
+			attachment Test for S {}`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidBaseTypeError{}, errs[0])
+	})
+
+	t.Run("resource attachment", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			attachment R for AnyResource {}
+			attachment Test for R {}`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidBaseTypeError{}, errs[0])
+	})
+
+	t.Run("event", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			event E()
+			attachment Test for E {}`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidBaseTypeError{}, errs[0])
+	})
 }
 
 func TestCheckNestedBaseType(t *testing.T) {
@@ -771,5 +816,128 @@ func TestCheckConformance(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[0])
+	})
+}
+
+func TestCheckSuper(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("basic", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			attachment Test for S {
+				fun foo() {
+					let x: &S = super
+				}
+			}`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("init", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {
+				fun foo(): Int {
+					return 3
+				}
+			}
+			attachment Test for S {
+				let x: Int
+				init() {
+					self.x = super.foo()
+				}
+			}`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("interface super", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource interface R {
+				fun foo(): Int {
+					return 3
+				}
+			}
+			attachment Test for R {
+				let x: Int
+				init() {
+					self.x = super.foo()
+				}
+			}`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("super in struct", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {
+				let x: Int
+				init() {
+					self.x = super
+				}
+			}`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+	})
+
+	t.Run("super in resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource S {
+				let x: Int
+				init() {
+					self.x = super
+				}
+			}`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+	})
+
+	t.Run("super in contract", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			contract S {
+				let x: Int
+				init() {
+					self.x = super
+				}
+			}`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	})
 }

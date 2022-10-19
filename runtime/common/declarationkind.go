@@ -49,6 +49,7 @@ const (
 	DeclarationKindContractInterface
 	DeclarationKindImport
 	DeclarationKindSelf
+	DeclarationKindSuper
 	DeclarationKindTransaction
 	DeclarationKindPrepare
 	DeclarationKindExecute
@@ -124,6 +125,8 @@ func (k DeclarationKind) Name() string {
 		return "import"
 	case DeclarationKindSelf:
 		return "self"
+	case DeclarationKindSuper:
+		return "super"
 	case DeclarationKindTransaction:
 		return "transaction"
 	case DeclarationKindPrepare:
@@ -177,6 +180,8 @@ func (k DeclarationKind) Keywords() string {
 		return "import"
 	case DeclarationKindSelf:
 		return "self"
+	case DeclarationKindSuper:
+		return "super"
 	case DeclarationKindTransaction:
 		return "transaction"
 	case DeclarationKindPrepare:

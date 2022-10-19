@@ -62,11 +62,11 @@ func (checker *Checker) checkAttachmentBaseType(attachmentType *CompositeType) {
 
 	switch ty := baseType.(type) {
 	case *InterfaceType:
-		if ty.CompositeKind != common.CompositeKindContract {
+		if ty.CompositeKind == common.CompositeKindResource || ty.CompositeKind == common.CompositeKindStructure {
 			return
 		}
 	case *CompositeType:
-		if ty.Kind != common.CompositeKindContract && ty.Kind != common.CompositeKindEnum {
+		if ty.Kind == common.CompositeKindResource || ty.Kind == common.CompositeKindStructure {
 			return
 		}
 	case *SimpleType:
@@ -1917,7 +1917,7 @@ func (checker *Checker) enumMembersAndOrigins(
 func (checker *Checker) checkInitializers(
 	initializers []*ast.SpecialFunctionDeclaration,
 	fields []*ast.FieldDeclaration,
-	containerType Type,
+	containerType CompositeKindedType,
 	containerDeclarationKind common.DeclarationKind,
 	containerDocString string,
 	initializerParameters []*Parameter,
@@ -1990,7 +1990,7 @@ func (checker *Checker) checkNoInitializerNoFields(
 // checkSpecialFunction checks special functions, like initializers and destructors
 func (checker *Checker) checkSpecialFunction(
 	specialFunction *ast.SpecialFunctionDeclaration,
-	containerType Type,
+	containerType CompositeKindedType,
 	containerDeclarationKind common.DeclarationKind,
 	containerDocString string,
 	parameters []*Parameter,
@@ -2006,6 +2006,14 @@ func (checker *Checker) checkSpecialFunction(
 	defer checker.leaveValueScope(specialFunction.EndPosition, checkResourceLoss)
 
 	checker.declareSelfValue(containerType, containerDocString)
+	if containerType.GetCompositeKind() == common.CompositeKindAttachment {
+		// attachments cannot be interfaces, so this cast must succeed
+		attachmentType, ok := containerType.(*CompositeType)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+		checker.declareSuperValue(attachmentType.baseType, attachmentType.baseTypeDocString)
+	}
 
 	functionType := &FunctionType{
 		Parameters:           parameters,
@@ -2057,6 +2065,9 @@ func (checker *Checker) checkCompositeFunctions(
 			defer checker.leaveValueScope(function.EndPosition, true)
 
 			checker.declareSelfValue(selfType, selfDocString)
+			if selfType.GetCompositeKind() == common.CompositeKindAttachment {
+				checker.declareSuperValue(selfType.baseType, selfType.baseTypeDocString)
+			}
 
 			checker.visitFunctionDeclaration(
 				function,
@@ -2078,27 +2089,40 @@ func (checker *Checker) checkCompositeFunctions(
 	}
 }
 
-func (checker *Checker) declareSelfValue(selfType Type, selfDocString string) {
-
-	// NOTE: declare `self` one depth lower ("inside" function),
+func (checker *Checker) declareLowerScopedValue(
+	ty Type,
+	docString string,
+	identifier string,
+	kind common.DeclarationKind,
+) {
+	// NOTE: declare value one depth lower ("inside" function),
 	// so it can't be re-declared by the function's parameters
 
 	depth := checker.valueActivations.Depth() + 1
 
-	self := &Variable{
-		Identifier:      SelfIdentifier,
+	variable := &Variable{
+		Identifier:      identifier,
 		Access:          ast.AccessPublic,
-		DeclarationKind: common.DeclarationKindSelf,
-		Type:            selfType,
+		DeclarationKind: kind,
+		Type:            ty,
 		IsConstant:      true,
 		ActivationDepth: depth,
 		Pos:             nil,
-		DocString:       selfDocString,
+		DocString:       docString,
 	}
-	checker.valueActivations.Set(SelfIdentifier, self)
+	checker.valueActivations.Set(identifier, variable)
 	if checker.PositionInfo != nil {
-		checker.recordVariableDeclarationOccurrence(SelfIdentifier, self)
+		checker.recordVariableDeclarationOccurrence(identifier, variable)
 	}
+}
+
+func (checker *Checker) declareSelfValue(selfType Type, selfDocString string) {
+	checker.declareLowerScopedValue(selfType, selfDocString, SelfIdentifier, common.DeclarationKindSelf)
+}
+
+func (checker *Checker) declareSuperValue(baseType Type, superDocString string) {
+	superType := NewReferenceType(checker.memoryGauge, baseType, false)
+	checker.declareLowerScopedValue(superType, superDocString, SuperIdentifier, common.DeclarationKindSuper)
 }
 
 // checkNestedIdentifiers checks that nested identifiers, i.e. fields, functions,
@@ -2213,7 +2237,7 @@ func (checker *Checker) checkDestructors(
 	destructors []*ast.SpecialFunctionDeclaration,
 	fields map[string]*ast.FieldDeclaration,
 	members *StringMemberOrderedMap,
-	containerType Type,
+	containerType CompositeKindedType,
 	containerDeclarationKind common.DeclarationKind,
 	containerDocString string,
 	containerKind ContainerKind,
@@ -2303,7 +2327,7 @@ func (checker *Checker) checkNoDestructorNoResourceFields(
 
 func (checker *Checker) checkDestructor(
 	destructor *ast.SpecialFunctionDeclaration,
-	containerType Type,
+	containerType CompositeKindedType,
 	containerDeclarationKind common.DeclarationKind,
 	containerDocString string,
 	containerKind ContainerKind,
