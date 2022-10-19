@@ -98,7 +98,7 @@ func TestCheckInvalidSwitchStatementCaseExpression(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.InvalidBinaryOperandsError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
 
 func TestCheckInvalidSwitchStatementCaseExpressionInvalidTest(t *testing.T) {
@@ -400,4 +400,66 @@ func TestCheckSwitchStatementWithUnreachableReturn(t *testing.T) {
 
 	assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 	assert.IsType(t, &sema.MissingReturnStatementError{}, errs[1])
+}
+
+func TestCheckCaseExpressionTypeInference(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("valid", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          fun test(): Int {
+              let x: UInt8 = 5
+
+              switch x {
+              case 1:
+                  return 1
+              default:
+                  return 2
+              }
+          }
+        `)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("invalid", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          fun test(): Int {
+              let x: UInt8 = 5
+
+              switch x {
+              case "one":
+                  return 1
+              default:
+                  return 2
+              }
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("unknown", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          fun test(): Int {
+              switch x {
+              case "one":
+                  return 1
+              default:
+                  return 2
+              }
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+	})
 }
