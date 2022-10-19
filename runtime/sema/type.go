@@ -3612,11 +3612,19 @@ func (t *CompositeType) getBaseCompositeKind() common.CompositeKind {
 	if t.Kind != common.CompositeKindAttachment {
 		return t.Kind
 	}
-	base, ok := t.baseType.(*CompositeType)
-	if !ok {
+	switch base := t.baseType.(type) {
+	case *CompositeType:
+		return base.Kind
+	case *InterfaceType:
+		return base.CompositeKind
+	case *SimpleType:
+		if base == AnyResourceType {
+			return common.CompositeKindResource
+		}
+		return common.CompositeKindStructure
+	default:
 		return common.CompositeKindUnknown
 	}
-	return base.GetCompositeKind()
 }
 
 func (t *CompositeType) GetBaseType() Type {
@@ -3681,7 +3689,9 @@ func (t *CompositeType) GetMembers() map[string]MemberResolver {
 func (t *CompositeType) IsResourceType() bool {
 	return t.Kind == common.CompositeKindResource ||
 		// attachments are always the same kind as their base type
-		(t.Kind == common.CompositeKindAttachment && t.baseType.IsResourceType())
+		(t.Kind == common.CompositeKindAttachment &&
+			t.baseType != t &&
+			t.baseType.IsResourceType())
 }
 
 func (*CompositeType) IsInvalidType() bool {

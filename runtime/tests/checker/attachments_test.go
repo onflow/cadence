@@ -268,6 +268,37 @@ func TestCheckBaseType(t *testing.T) {
 
 		assert.IsType(t, &sema.InvalidBaseTypeError{}, errs[0])
 	})
+
+	t.Run("recursive", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			attachment A for A {}`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidBaseTypeError{}, errs[0])
+	})
+
+	t.Run("mutually recursive", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			attachment A for B {}
+			attachment B for A {}`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 3)
+
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+		assert.IsType(t, &sema.InvalidBaseTypeError{}, errs[1])
+		assert.IsType(t, &sema.InvalidBaseTypeError{}, errs[2])
+	})
 }
 
 func TestCheckNestedBaseType(t *testing.T) {
@@ -374,6 +405,51 @@ func TestCheckNestedBaseType(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidBaseTypeError{}, errs[0])
+	})
+
+	t.Run("qualified base type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			contract C {
+				struct S {
+					fun foo() {}
+				}
+			}
+			pub attachment A for C.S {
+				fun bar() {
+					super.foo()
+				}
+			}
+			`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("unqualified base type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			contract C {
+				struct S {
+					fun foo() {}
+				}
+			}
+			pub attachment A for S {
+			}
+			`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		// 2 errors, for undeclared type, one for invalid type in base type
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	})
 }
 
@@ -743,6 +819,22 @@ func TestCheckConformance(t *testing.T) {
 
 	t.Parallel()
 
+	t.Run("basic", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource R {}
+			resource interface I {
+			}
+			attachment Test for R: I {
+			}`,
+		)
+
+		require.NoError(t, err)
+	})
+
 	t.Run("field", func(t *testing.T) {
 
 		t.Parallel()
@@ -863,6 +955,27 @@ func TestCheckConformance(t *testing.T) {
 		assert.IsType(t, &sema.ConformanceError{}, errs[0])
 	})
 
+	t.Run("method missing, exists in base type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource R {
+				fun x(): Int { return 3 }
+			}
+			resource interface I {
+				fun x(): Int
+			}
+			attachment Test for R: I {
+			}`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
 	t.Run("kind mismatch resource", func(t *testing.T) {
 
 		t.Parallel()
@@ -893,6 +1006,113 @@ func TestCheckConformance(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[0])
+	})
+
+	t.Run("conforms to base", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource interface I {}
+			attachment A for I: I {}`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("anyresource base, resource conformance", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource interface I {}
+			attachment A for AnyResource: I {}`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("anystruct base, struct conformance", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct interface I {}
+			attachment A for AnyStruct: I {}`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("anystruct base, resource conformance", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource interface I {}
+			attachment A for AnyStruct: I {}`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[0])
+	})
+
+	t.Run("anyresource base, struct conformance", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct interface I {}
+			attachment A for AnyResource: I {}`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[0])
+	})
+
+	t.Run("cross-contract concrete base", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			contract C0 {
+				resource interface R {}
+			}
+			contract C1 {
+				resource R {}
+				attachment A for R: C0.R {}
+			}
+			`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("cross-contract interface base", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			contract C0 {
+				resource R {}
+			}
+			contract C1 {
+				resource interface R {}
+				attachment A for C0.R: R {}
+			}
+			`,
+		)
+
+		require.NoError(t, err)
 	})
 }
 
@@ -1035,6 +1255,95 @@ func TestCheckSuper(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+	})
+}
+
+func TestCheckSuperScoping(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("pub member", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			pub struct S {
+				pub fun foo() {}
+			}
+			pub attachment Test for S {
+				fun foo() {
+					super.foo()
+				}
+			}`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("priv member", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			pub struct S {
+				priv fun foo() {}
+			}
+			pub attachment Test for S {
+				fun foo() {
+					super.foo()
+				}
+			}`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	t.Run("contract member", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			pub contract C {
+				pub struct S {
+					access(contract) fun foo() {}
+				}
+			}
+			pub attachment Test for C.S {
+				fun foo() {
+					super.foo()
+				}
+			}`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	t.Run("contract member valid", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			pub contract C {
+				pub struct S {
+					access(contract) fun foo() {}
+				}
+				pub attachment Test for S {
+					fun foo() {
+						super.foo()
+					}
+				}
+			}`,
+		)
+
+		require.NoError(t, err)
 	})
 }
 
