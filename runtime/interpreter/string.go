@@ -93,14 +93,14 @@ func stringFunctionFromCharacters(invocation Invocation) Value {
 	var builder strings.Builder
 
 	argument.Iterate(inter, func(element Value) (resume bool) {
-		character := string(element.(CharacterValue))
+		character := element.(CharacterValue)
 		common.UseMemory(inter,
 			common.MemoryUsage{
 				Kind:   common.MemoryKindStringValue,
 				Amount: uint64(len(character)),
 			},
 		)
-		builder.WriteString(character)
+		builder.WriteString(string(character))
 
 		return true
 	})
