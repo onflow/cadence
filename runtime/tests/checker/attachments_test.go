@@ -1484,3 +1484,923 @@ func TestCheckAttachmentType(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestCheckIllegalInit(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("struct", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`attachment Test for AnyStruct {}
+			let t = Test()
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidAttachmentUsageError{}, errs[0])
+	})
+
+	t.Run("resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`attachment Test for AnyResource {}
+			pub fun foo() {
+				let t <- Test()
+				destroy t
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidAttachmentUsageError{}, errs[0])
+	})
+}
+
+func TestCheckAttachNonAttachment(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("non-composite", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			pub fun A() {}
+			pub fun foo() {
+				attach A() to 4
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.AttachNonAttachmentError{}, errs[0])
+	})
+
+	t.Run("struct", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			pub struct S {}
+			pub fun foo() {
+				attach S() to 4
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.AttachNonAttachmentError{}, errs[0])
+	})
+
+	t.Run("resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			pub resource R {}
+			pub fun foo() {
+				attach R() to 4
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.MissingCreateError{}, errs[0])
+		assert.IsType(t, &sema.AttachNonAttachmentError{}, errs[1])
+	})
+
+	t.Run("event", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			event E()
+			pub fun foo() {
+				attach E() to 4
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.AttachNonAttachmentError{}, errs[0])
+	})
+
+	t.Run("enum", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			enum E: Int {}
+			pub fun foo() {
+				attach E(rawValue: 0) to 4
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.AttachNonAttachmentError{}, errs[0])
+	})
+
+	t.Run("contract", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			contract C {}
+			pub fun foo() {
+				attach C() to 4
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.NotCallableError{}, errs[0])
+	})
+}
+
+func TestCheckAttachToNonComposite(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("non-composite", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			attachment A for AnyStruct {}
+			pub fun foo() {
+				attach A() to 4
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.AttachToInvalidTypeError{}, errs[0])
+	})
+
+	t.Run("reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S{}
+			attachment A for AnyStruct {}
+			pub fun foo() {
+				let s = S()
+				attach A() to (&s as &S)
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.AttachToInvalidTypeError{}, errs[0])
+	})
+
+	t.Run("non-composite nonresource", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			attachment A for AnyResource {}
+			pub fun foo() {
+				attach A() to 4
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 3)
+
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.MissingMoveOperationError{}, errs[1])
+		assert.IsType(t, &sema.AttachToInvalidTypeError{}, errs[2])
+	})
+
+	t.Run("array", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			attachment A for AnyStruct {}
+			pub fun foo() {
+				attach A() to [4]
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.AttachToInvalidTypeError{}, errs[0])
+	})
+
+	t.Run("event", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			attachment A for AnyStruct {}
+			event E()
+			pub fun foo() {
+				attach A() to E()
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidEventUsageError{}, errs[0])
+	})
+
+	t.Run("contract", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			attachment A for AnyStruct {}
+			contract C {}
+			pub fun foo() {
+				attach A() to C()
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.NotCallableError{}, errs[0])
+	})
+
+	t.Run("attachment", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			attachment A for AnyStruct {}
+			attachment B for AnyStruct {}
+			pub fun foo() {
+				attach A() to B()
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidAttachmentUsageError{}, errs[0])
+	})
+
+	t.Run("enum", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			attachment A for AnyStruct {}
+			enum E: Int { }
+			pub fun foo() {
+				attach A() to E(rawValue: 0)
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.AttachToInvalidTypeError{}, errs[0])
+	})
+
+	t.Run("resource array", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource R {}
+			attachment A for AnyResource {}
+			pub fun foo() {
+				let r <- attach A() to <-[<-create R()]
+				destroy r
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.AttachToInvalidTypeError{}, errs[0])
+	})
+}
+
+func TestCheckAttach(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("struct", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			attachment A for S {}
+			pub fun foo() {
+				attach A() to S()
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("loss of resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource R {}
+			attachment A for R {}
+			pub fun foo() {
+				attach A() to <-create R()
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource R {}
+			attachment A for R {}
+			pub fun foo() {
+				let r <- attach A() to <-create R()
+				destroy r
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("enforce type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource R {}
+			attachment A for R {}
+			pub fun foo() {
+				let r <- create R()
+				let r2: @R <- attach A() to <-r
+				destroy r2
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("resource not moved", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource R {}
+			attachment A for R {}
+			pub fun foo() {
+				let r <- attach A() to create R()
+				destroy r
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.MissingMoveOperationError{}, errs[0])
+	})
+
+	t.Run("struct AnyStruct subtyping", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			attachment A for AnyStruct {}
+			pub fun foo() {
+				attach A() to S()
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("resource AnyResource", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource R {}
+			attachment A for AnyResource {}
+			pub fun foo() {
+				let r <- attach A() to <-create R()
+				destroy r
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("struct interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S: I {}
+			struct interface I {}
+			attachment A for I {}
+			pub fun foo() {
+				attach A() to S()
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("struct interface non-conform", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			struct interface I {}
+			attachment A for I {}
+			pub fun foo() {
+				attach A() to S()
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("resource interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource R: I {}
+			resource interface I {}
+			attachment A for I {}
+			pub fun foo() {
+				let r <- attach A() to <-create R()
+				destroy r
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("resource interface non conform", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource R {}
+			resource interface I {}
+			attachment A for I {}
+			pub fun foo() {
+				let r <- attach A() to <-create R()
+				destroy r
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("struct resource mismatch", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			resource interface I {}
+			attachment A for I {}
+			pub fun foo() {
+				let r <- attach A() to S()
+				destroy r
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.MissingMoveOperationError{}, errs[1])
+	})
+
+	t.Run("resource struct mismatch", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource R {}
+			struct interface I {}
+			attachment A for I {}
+			pub fun foo() {
+				attach A() to <-create R()
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("resource anystruct mismatch", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource R {}
+			attachment A for AnyStruct {}
+			pub fun foo() {
+				attach A() to <-create R()
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("struct anyresource mismatch", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			attachment A for AnyResource {}
+			pub fun foo() {
+				let r <- attach A() to S()
+				destroy r
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.MissingMoveOperationError{}, errs[1])
+	})
+
+	t.Run("attach struct interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct interface I {}
+			struct S: I {}
+			attachment A for AnyStruct {}
+			pub fun foo() {
+				let s: S{I} = S()
+				attach A() to s
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+}
+
+func TestCheckAttachToRestrictedType(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("struct restricted", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct interface I {}
+			struct S: I {}
+			attachment A for AnyStruct {}
+			pub fun foo() {
+				let s: S{I} = S()
+				attach A() to s
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("any struct restricted", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct interface I {}
+			struct S: I {}
+			attachment A for AnyStruct {}
+			pub fun foo() {
+				let s: {I} = S()
+				attach A() to s
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("resource restricted", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource interface I {}
+			resource R: I {}
+			attachment A for AnyResource {}
+			pub fun foo() {
+				let r: @R{I} <- create R()
+				destroy attach A() to <-r
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("anyresource restricted", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource interface I {}
+			resource R: I {}
+			attachment A for AnyResource {}
+			pub fun foo() {
+				let r: @{I} <- create R()
+				destroy attach A() to <-r
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("attach struct interface to struct interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct interface I {}
+			struct S: I {}
+			attachment A for I {}
+			pub fun foo() {
+				let s: S{I} = S()
+				attach A() to s
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("attach struct interface to struct", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct interface I {}
+			struct S: I {}
+			attachment A for S {}
+			pub fun foo() {
+				let s: S{I} = S()
+				attach A() to s
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("attach anystruct interface to struct", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct interface I {}
+			struct S: I {}
+			attachment A for S {}
+			pub fun foo() {
+				let s: {I} = S()
+				attach A() to s
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("attach resource interface to resource interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource interface I {}
+			resource R: I {}
+			attachment A for I {}
+			pub fun foo() {
+				let r: @R{I} <- create R()
+				destroy attach A() to <-r
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("attach resource interface to resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource interface I {}
+			resource R: I {}
+			attachment A for R {}
+			pub fun foo() {
+				let r: @R{I} <- create R()
+				destroy attach A() to <-r
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("attach anyresource interface to resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource interface I {}
+			resource R: I {}
+			attachment A for R {}
+			pub fun foo() {
+				let r: @{I} <- create R()
+				destroy attach A() to <-r
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("attach anystruct interface to struct interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct interface I {}
+			struct S: I {}
+			attachment A for I {}
+			pub fun foo() {
+				let s: {I} = S()
+				attach A() to s
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("attach multiply restricted to struct interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct interface I {}
+			struct interface I2 {}
+			struct S: I, I2 {}
+			attachment A for I {}
+			pub fun foo() {
+				let s: {I, I2} = S()
+				attach A() to s
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("attach anyresource interface to resource interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource interface I {}
+			resource R: I {}
+			attachment A for I {}
+			pub fun foo() {
+				let r: @{I} <- create R()
+				destroy attach A() to <-r
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("attach multiply restricted to resource interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource interface I {}
+			resource interface I2 {}
+			resource R: I, I2 {}
+			attachment A for I {}
+			pub fun foo() {
+				let r: @{I, I2} <- create R()
+				destroy attach A() to <-r
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	// TODO: once interfaces can conform to interfaces, add more tests here for interface hierarchy
+}

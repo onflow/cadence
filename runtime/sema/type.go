@@ -5603,6 +5603,12 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 			return typedSubType.ExplicitInterfaceConformanceSet().
 				Contains(typedSuperType)
 
+		// An interface type is a supertype of a restricted type if the restricted set contains
+		// that explicit interface type. Once interfaces can conform to interfaces, this should instead
+		// check that at least one value in the restriction set is a subtype of the interface supertype
+		case *RestrictedType:
+			return typedSubType.RestrictionSet().Contains(typedSuperType)
+
 		case *InterfaceType:
 			// TODO: Once interfaces can conform to interfaces, check conformances here
 			return false

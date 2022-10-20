@@ -3747,3 +3747,62 @@ func (*InvalidAttachmentAnnotationError) IsUserError() {}
 func (e *InvalidAttachmentAnnotationError) Error() string {
 	return "cannot refer directly to attachment type"
 }
+
+// InvalidAttachmentConstructorError
+
+type InvalidAttachmentUsageError struct {
+	ast.Range
+}
+
+var _ SemanticError = &InvalidAttachmentUsageError{}
+var _ errors.UserError = &InvalidAttachmentUsageError{}
+
+func (*InvalidAttachmentUsageError) isSemanticError() {}
+
+func (*InvalidAttachmentUsageError) IsUserError() {}
+
+func (e *InvalidAttachmentUsageError) Error() string {
+	return "cannot construct attachment outside of an `attach` expression"
+}
+
+// AttachNonAttachmentError
+
+type AttachNonAttachmentError struct {
+	Type Type
+	ast.Range
+}
+
+var _ SemanticError = &AttachNonAttachmentError{}
+var _ errors.UserError = &AttachNonAttachmentError{}
+
+func (*AttachNonAttachmentError) isSemanticError() {}
+
+func (*AttachNonAttachmentError) IsUserError() {}
+
+func (e *AttachNonAttachmentError) Error() string {
+	return fmt.Sprintf(
+		"cannot attach non-attachment type: `%s`",
+		e.Type.QualifiedString(),
+	)
+}
+
+// AttachToNonCompositeError
+
+type AttachToInvalidTypeError struct {
+	Type Type
+	ast.Range
+}
+
+var _ SemanticError = &AttachToInvalidTypeError{}
+var _ errors.UserError = &AttachToInvalidTypeError{}
+
+func (*AttachToInvalidTypeError) isSemanticError() {}
+
+func (*AttachToInvalidTypeError) IsUserError() {}
+
+func (e *AttachToInvalidTypeError) Error() string {
+	return fmt.Sprintf(
+		"cannot attach attachment to type: `%s`",
+		e.Type.QualifiedString(),
+	)
+}

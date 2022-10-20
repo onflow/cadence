@@ -198,7 +198,7 @@ func (d *AttachmentDeclaration) String() string {
 // AttachExpression
 type AttachExpression struct {
 	Base       Expression
-	Attachment Expression
+	Attachment *InvocationExpression
 	StartPos   Position `json:"-"`
 }
 
@@ -221,7 +221,7 @@ func (e *AttachExpression) Walk(walkChild func(Element)) {
 func NewAttachExpression(
 	gauge common.MemoryGauge,
 	base Expression,
-	attachment Expression,
+	attachment *InvocationExpression,
 	startPos Position,
 ) *AttachExpression {
 	common.UseMemory(gauge, common.AttachExpressionMemoryUsage)

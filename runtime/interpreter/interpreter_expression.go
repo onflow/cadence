@@ -1139,3 +1139,8 @@ func (interpreter *Interpreter) VisitPathExpression(expression *ast.PathExpressi
 		expression.Identifier.Identifier,
 	)
 }
+
+func (interpreter *Interpreter) VisitAttachExpression(_ *ast.AttachExpression) Value {
+	// TODO: implement this
+	return nil
+}

@@ -195,13 +195,20 @@ func TestAttachExpressionMarshallJSON(t *testing.T) {
 				Position{Offset: 1, Line: 2, Column: 3},
 			),
 		),
-		Attachment: NewIdentifierExpression(
+		Attachment: NewInvocationExpression(
 			nil,
-			NewIdentifier(
+			NewIdentifierExpression(
 				nil,
-				"bar",
-				Position{Offset: 1, Line: 2, Column: 3},
+				NewIdentifier(
+					nil,
+					"bar",
+					Position{Offset: 1, Line: 2, Column: 3},
+				),
 			),
+			[]*TypeAnnotation{},
+			Arguments{},
+			Position{Offset: 1, Line: 2, Column: 3},
+			Position{Offset: 1, Line: 2, Column: 3},
 		),
 		StartPos: Position{Offset: 1, Line: 2, Column: 3},
 	}
@@ -225,15 +232,23 @@ func TestAttachExpressionMarshallJSON(t *testing.T) {
 				"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
 				"EndPos": {"Offset": 3, "Line": 2, "Column": 5}
 			},
-			"Attachment":  {
-				"Type": "IdentifierExpression",
-				"Identifier": { 
-					"Identifier": "bar",
+			"Attachment": {
+				"Type": "InvocationExpression",
+				"InvokedExpression": {
+					"Type": "IdentifierExpression",
+					"Identifier": { 
+						"Identifier": "bar",
+						"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+						"EndPos": {"Offset": 3, "Line": 2, "Column": 5}
+					},
 					"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
 					"EndPos": {"Offset": 3, "Line": 2, "Column": 5}
 				},
+				"Arguments":[],
+				"TypeArguments":[],
 				"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
-				"EndPos": {"Offset": 3, "Line": 2, "Column": 5}
+				"ArgumentsStartPos": {"Offset": 1, "Line": 2, "Column": 3},
+				"EndPos": {"Offset": 1, "Line": 2, "Column": 3}
 			}
         }
         `,
@@ -254,13 +269,20 @@ func TestAttachExpression_Doc(t *testing.T) {
 				Position{Offset: 1, Line: 2, Column: 3},
 			),
 		),
-		Attachment: NewIdentifierExpression(
+		Attachment: NewInvocationExpression(
 			nil,
-			NewIdentifier(
+			NewIdentifierExpression(
 				nil,
-				"bar",
-				Position{Offset: 1, Line: 2, Column: 3},
+				NewIdentifier(
+					nil,
+					"bar",
+					Position{Offset: 1, Line: 2, Column: 3},
+				),
 			),
+			[]*TypeAnnotation{},
+			Arguments{},
+			Position{Offset: 1, Line: 2, Column: 3},
+			Position{Offset: 1, Line: 2, Column: 3},
 		),
 		StartPos: Position{Offset: 1, Line: 2, Column: 3},
 	}
@@ -270,7 +292,10 @@ func TestAttachExpression_Doc(t *testing.T) {
 		prettier.Concat{
 			prettier.Text("attach"),
 			prettier.Text(" "),
-			prettier.Text("bar"),
+			prettier.Concat{
+				prettier.Text("bar"),
+				prettier.Text("()"),
+			},
 			prettier.Text(" "),
 			prettier.Text("to"),
 			prettier.Text(" "),
@@ -279,7 +304,7 @@ func TestAttachExpression_Doc(t *testing.T) {
 		decl.Doc(),
 	)
 
-	require.Equal(t, "attach bar to foo", decl.String())
+	require.Equal(t, "attach bar() to foo", decl.String())
 }
 
 func TestRemoveStatement_MarshallJSON(t *testing.T) {

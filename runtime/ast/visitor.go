@@ -186,6 +186,7 @@ type ExpressionVisitor[T any] interface {
 	VisitCastingExpression(*CastingExpression) T
 	VisitBinaryExpression(*BinaryExpression) T
 	VisitConditionalExpression(*ConditionalExpression) T
+	VisitAttachExpression(*AttachExpression) T
 }
 
 func AcceptExpression[T any](expression Expression, visitor ExpressionVisitor[T]) (_ T) {
@@ -256,6 +257,9 @@ func AcceptExpression[T any](expression Expression, visitor ExpressionVisitor[T]
 
 	case ElementTypeConditionalExpression:
 		return visitor.VisitConditionalExpression(expression.(*ConditionalExpression))
+
+	case ElementTypeAttachExpression:
+		return visitor.VisitAttachExpression(expression.(*AttachExpression))
 	}
 
 	panic(errors.NewUnreachableError())

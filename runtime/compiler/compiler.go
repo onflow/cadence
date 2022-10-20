@@ -214,6 +214,11 @@ func (compiler *Compiler) VisitConditionalExpression(_ *ast.ConditionalExpressio
 	panic(errors.NewUnreachableError())
 }
 
+func (compiler *Compiler) VisitAttachExpression(_ *ast.AttachExpression) ir.Expr {
+	// TODO
+	panic(errors.NewUnreachableError())
+}
+
 func (compiler *Compiler) VisitUnaryExpression(_ *ast.UnaryExpression) ir.Expr {
 	// TODO
 	panic(errors.NewUnreachableError())

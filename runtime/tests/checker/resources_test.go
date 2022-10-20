@@ -87,9 +87,10 @@ func TestCheckFailableCastingWithResourceAnnotation(t *testing.T) {
 
 			case common.CompositeKindAttachment:
 
-				errs := RequireCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 2)
 
 				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
+				assert.IsType(t, &sema.InvalidAttachmentUsageError{}, errs[1])
 
 			case common.CompositeKindStructure,
 				common.CompositeKindContract,
@@ -313,9 +314,10 @@ func TestCheckFunctionDeclarationReturnTypeWithResourceAnnotation(t *testing.T) 
 				require.NoError(t, err)
 
 			case common.CompositeKindAttachment:
-				errs := RequireCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 2)
 
 				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
+				assert.IsType(t, &sema.InvalidAttachmentUsageError{}, errs[1])
 
 			case common.CompositeKindStructure,
 				common.CompositeKindEnum:
@@ -404,9 +406,10 @@ func TestCheckFunctionDeclarationReturnTypeWithoutResourceAnnotation(t *testing.
 				assert.IsType(t, &sema.MissingResourceAnnotationError{}, errs[0])
 
 			case common.CompositeKindAttachment:
-				errs := RequireCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 2)
 
 				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
+				assert.IsType(t, &sema.InvalidAttachmentUsageError{}, errs[1])
 
 			case common.CompositeKindStructure,
 				common.CompositeKindContract,
@@ -485,9 +488,10 @@ func TestCheckVariableDeclarationWithResourceAnnotation(t *testing.T) {
 				require.NoError(t, err)
 
 			case common.CompositeKindAttachment:
-				errs := RequireCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 2)
 
 				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
+				assert.IsType(t, &sema.InvalidAttachmentUsageError{}, errs[1])
 
 			case common.CompositeKindStructure,
 				common.CompositeKindEnum:
@@ -572,9 +576,10 @@ func TestCheckVariableDeclarationWithoutResourceAnnotation(t *testing.T) {
 				assert.IsType(t, &sema.MissingResourceAnnotationError{}, errs[0])
 
 			case common.CompositeKindAttachment:
-				errs := RequireCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 2)
 
 				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
+				assert.IsType(t, &sema.InvalidAttachmentUsageError{}, errs[1])
 
 			case common.CompositeKindStructure,
 				common.CompositeKindContract,
@@ -943,9 +948,10 @@ func TestCheckFunctionExpressionReturnTypeWithResourceAnnotation(t *testing.T) {
 				require.NoError(t, err)
 
 			case common.CompositeKindAttachment:
-				errs := RequireCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 2)
 
 				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
+				assert.IsType(t, &sema.InvalidAttachmentUsageError{}, errs[1])
 
 			case common.CompositeKindStructure,
 				common.CompositeKindEnum:
@@ -1032,9 +1038,10 @@ func TestCheckFunctionExpressionReturnTypeWithoutResourceAnnotation(t *testing.T
 				assert.IsType(t, &sema.MissingResourceAnnotationError{}, errs[0])
 
 			case common.CompositeKindAttachment:
-				errs := RequireCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 2)
 
 				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
+				assert.IsType(t, &sema.InvalidAttachmentUsageError{}, errs[1])
 
 			case common.CompositeKindStructure,
 				common.CompositeKindContract,
@@ -1262,10 +1269,12 @@ func TestCheckFunctionTypeReturnTypeWithResourceAnnotation(t *testing.T) {
 				require.NoError(t, err)
 
 			case common.CompositeKindAttachment:
-				errs := RequireCheckerErrors(t, err, 2)
+				errs := RequireCheckerErrors(t, err, 3)
 
 				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
 				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[1])
+				assert.IsType(t, &sema.InvalidAttachmentUsageError{}, errs[2])
+
 			case common.CompositeKindStructure,
 				common.CompositeKindContract,
 				common.CompositeKindEnum:
@@ -1353,10 +1362,11 @@ func TestCheckFunctionTypeReturnTypeWithoutResourceAnnotation(t *testing.T) {
 				assert.IsType(t, &sema.MissingResourceAnnotationError{}, errs[1])
 
 			case common.CompositeKindAttachment:
-				errs := RequireCheckerErrors(t, err, 2)
+				errs := RequireCheckerErrors(t, err, 3)
 
 				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
 				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[1])
+				assert.IsType(t, &sema.InvalidAttachmentUsageError{}, errs[2])
 
 			case common.CompositeKindStructure,
 				common.CompositeKindContract,

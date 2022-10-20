@@ -39,6 +39,19 @@ func (checker *Checker) VisitInvocationExpression(invocationExpression *ast.Invo
 		return InvalidType
 	}
 
+	// Attachments cannot be constructed without an attach statement
+
+	if compositeType, ok := ty.(*CompositeType); ok &&
+		compositeType.Kind == common.CompositeKindAttachment {
+
+		checker.report(
+			&InvalidAttachmentUsageError{
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, invocationExpression),
+			},
+		)
+		return InvalidType
+	}
+
 	return ty
 }
 
