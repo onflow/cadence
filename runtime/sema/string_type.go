@@ -36,7 +36,7 @@ Attempt to decode the input as a UTF-8 encoded string. Returns nil if the input 
 
 const StringTypeFromCharactersFunctionName = "fromCharacters"
 const StringTypeFromCharactersFunctionDocString = `
-Returns a string from the given characters
+Returns a string from the given array of characters
 `
 
 // StringType represents the string type
