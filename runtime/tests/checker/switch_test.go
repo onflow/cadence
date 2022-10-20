@@ -462,4 +462,23 @@ func TestCheckCaseExpressionTypeInference(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	})
+
+	t.Run("character literal", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test(): Int {
+                let c: Character = "a"
+                switch c {
+                case "b": return 0
+                case "c": return 1
+                case "d": return 2
+                case "a": return 1337
+                default: return -1
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
 }
