@@ -1140,6 +1140,23 @@ func TestCheckSuper(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct interface I {}
+			attachment Test for I {
+				fun foo() {
+					let x: &{I} = super
+				}
+			}`,
+		)
+
+		require.NoError(t, err)
+	})
+
 	t.Run("init", func(t *testing.T) {
 
 		t.Parallel()
@@ -1347,6 +1364,51 @@ func TestCheckSuperScoping(t *testing.T) {
 		)
 
 		require.NoError(t, err)
+	})
+}
+
+func TestCheckSuperTyping(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("struct cast", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct R: I {}
+			struct interface I {}
+			attachment Test for I {
+				fun foo() {
+					let x = super as! &R{I}
+				}
+			}`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		// super is not auth
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("resource cast", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource R: I {}
+			resource interface I {}
+			attachment Test for I {
+				fun foo() {
+					let x = super as! &R{I}
+				}
+			}`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		// super is not auth
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 }
 
@@ -2403,4 +2465,109 @@ func TestCheckAttachToRestrictedType(t *testing.T) {
 	})
 
 	// TODO: once interfaces can conform to interfaces, add more tests here for interface hierarchy
+}
+
+func TestCheckAttachWithArguments(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("attach one arg", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			attachment A for S {
+				let x: Int 
+				init(x: Int) {
+					self.x = x
+				}
+			}
+			pub fun foo() {
+				attach A(x: 3) to S()
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("attach two arg", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			attachment A for S {
+				let x: Int 
+				let y: String
+				init(x: Int, y: String) {
+					self.x = x
+					self.y = y
+				}
+			}
+			pub fun foo() {
+				attach A(x: 3, y: "") to S()
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("missing labels", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			attachment A for S {
+				let x: Int 
+				let y: String
+				init(x: Int, y: String) {
+					self.x = x
+					self.y = y
+				}
+			}
+			pub fun foo() {
+				attach A(3, "") to S()
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.MissingArgumentLabelError{}, errs[0])
+		assert.IsType(t, &sema.MissingArgumentLabelError{}, errs[1])
+	})
+
+	t.Run("wrong labels", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			attachment A for S {
+				let x: Int 
+				let y: String
+				init(x: Int, y: String) {
+					self.x = x
+					self.y = y
+				}
+			}
+			pub fun foo() {
+				attach A(z: 3, a: "") to S()
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.IncorrectArgumentLabelError{}, errs[0])
+		assert.IsType(t, &sema.IncorrectArgumentLabelError{}, errs[1])
+	})
 }

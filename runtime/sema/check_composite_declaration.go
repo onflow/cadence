@@ -2129,6 +2129,16 @@ func (checker *Checker) declareSelfValue(selfType Type, selfDocString string) {
 }
 
 func (checker *Checker) declareSuperValue(baseType Type, superDocString string) {
+	switch typedBaseType := baseType.(type) {
+	case *InterfaceType:
+		restrictedType := AnyStructType
+		if baseType.IsResourceType() {
+			restrictedType = AnyResourceType
+		}
+		// we can't actually have a value of an interface type I, so instead we create a value of {I}
+		// to be referenced by `super`
+		baseType = NewRestrictedType(checker.memoryGauge, restrictedType, []*InterfaceType{typedBaseType})
+	}
 	superType := NewReferenceType(checker.memoryGauge, baseType, false)
 	checker.declareLowerScopedValue(superType, superDocString, SuperIdentifier, common.DeclarationKindSuper)
 }
