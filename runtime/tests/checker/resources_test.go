@@ -85,9 +85,14 @@ func TestCheckFailableCastingWithResourceAnnotation(t *testing.T) {
 				assert.IsType(t, &sema.InvalidFailableResourceDowncastOutsideOptionalBindingError{}, errs[0])
 				assert.IsType(t, &sema.InvalidNonIdentifierFailableResourceDowncast{}, errs[1])
 
+			case common.CompositeKindAttachment:
+
+				errs := RequireCheckerErrors(t, err, 1)
+
+				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
+
 			case common.CompositeKindStructure,
 				common.CompositeKindContract,
-				common.CompositeKindAttachment,
 				common.CompositeKindEnum:
 
 				errs := RequireCheckerErrors(t, err, 1)
@@ -159,9 +164,13 @@ func TestCheckFunctionDeclarationParameterWithResourceAnnotation(t *testing.T) {
 			case common.CompositeKindResource:
 				require.NoError(t, err)
 
+			case common.CompositeKindAttachment:
+				errs := RequireCheckerErrors(t, err, 1)
+
+				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
+
 			case common.CompositeKindStructure,
 				common.CompositeKindContract,
-				common.CompositeKindAttachment,
 				common.CompositeKindEvent,
 				common.CompositeKindEnum:
 
@@ -229,8 +238,11 @@ func TestCheckFunctionDeclarationParameterWithoutResourceAnnotation(t *testing.T
 
 				assert.IsType(t, &sema.MissingResourceAnnotationError{}, errs[0])
 
+			case common.CompositeKindAttachment:
+				errs := RequireCheckerErrors(t, err, 1)
+
+				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
 			case common.CompositeKindStructure,
-				common.CompositeKindAttachment,
 				common.CompositeKindContract,
 				common.CompositeKindEvent,
 				common.CompositeKindEnum:
@@ -300,8 +312,12 @@ func TestCheckFunctionDeclarationReturnTypeWithResourceAnnotation(t *testing.T) 
 
 				require.NoError(t, err)
 
+			case common.CompositeKindAttachment:
+				errs := RequireCheckerErrors(t, err, 1)
+
+				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
+
 			case common.CompositeKindStructure,
-				common.CompositeKindAttachment,
 				common.CompositeKindEnum:
 
 				errs := RequireCheckerErrors(t, err, 1)
@@ -387,9 +403,13 @@ func TestCheckFunctionDeclarationReturnTypeWithoutResourceAnnotation(t *testing.
 
 				assert.IsType(t, &sema.MissingResourceAnnotationError{}, errs[0])
 
+			case common.CompositeKindAttachment:
+				errs := RequireCheckerErrors(t, err, 1)
+
+				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
+
 			case common.CompositeKindStructure,
 				common.CompositeKindContract,
-				common.CompositeKindAttachment,
 				common.CompositeKindEnum:
 
 				require.NoError(t, err)
@@ -464,8 +484,12 @@ func TestCheckVariableDeclarationWithResourceAnnotation(t *testing.T) {
 			case common.CompositeKindResource:
 				require.NoError(t, err)
 
+			case common.CompositeKindAttachment:
+				errs := RequireCheckerErrors(t, err, 1)
+
+				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
+
 			case common.CompositeKindStructure,
-				common.CompositeKindAttachment,
 				common.CompositeKindEnum:
 
 				errs := RequireCheckerErrors(t, err, 1)
@@ -547,9 +571,13 @@ func TestCheckVariableDeclarationWithoutResourceAnnotation(t *testing.T) {
 
 				assert.IsType(t, &sema.MissingResourceAnnotationError{}, errs[0])
 
+			case common.CompositeKindAttachment:
+				errs := RequireCheckerErrors(t, err, 1)
+
+				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
+
 			case common.CompositeKindStructure,
 				common.CompositeKindContract,
-				common.CompositeKindAttachment,
 				common.CompositeKindEnum:
 
 				require.NoError(t, err)
@@ -764,9 +792,13 @@ func TestCheckFunctionExpressionParameterWithResourceAnnotation(t *testing.T) {
 			case common.CompositeKindResource:
 				require.NoError(t, err)
 
+			case common.CompositeKindAttachment:
+				errs := RequireCheckerErrors(t, err, 1)
+
+				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
+
 			case common.CompositeKindStructure,
 				common.CompositeKindContract,
-				common.CompositeKindAttachment,
 				common.CompositeKindEvent,
 				common.CompositeKindEnum:
 
@@ -835,9 +867,13 @@ func TestCheckFunctionExpressionParameterWithoutResourceAnnotation(t *testing.T)
 
 				assert.IsType(t, &sema.MissingResourceAnnotationError{}, errs[0])
 
+			case common.CompositeKindAttachment:
+				errs := RequireCheckerErrors(t, err, 1)
+
+				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
+
 			case common.CompositeKindStructure,
 				common.CompositeKindContract,
-				common.CompositeKindAttachment,
 				common.CompositeKindEvent,
 				common.CompositeKindEnum:
 
@@ -906,8 +942,12 @@ func TestCheckFunctionExpressionReturnTypeWithResourceAnnotation(t *testing.T) {
 			case common.CompositeKindResource:
 				require.NoError(t, err)
 
+			case common.CompositeKindAttachment:
+				errs := RequireCheckerErrors(t, err, 1)
+
+				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
+
 			case common.CompositeKindStructure,
-				common.CompositeKindAttachment,
 				common.CompositeKindEnum:
 
 				errs := RequireCheckerErrors(t, err, 1)
@@ -991,9 +1031,13 @@ func TestCheckFunctionExpressionReturnTypeWithoutResourceAnnotation(t *testing.T
 
 				assert.IsType(t, &sema.MissingResourceAnnotationError{}, errs[0])
 
+			case common.CompositeKindAttachment:
+				errs := RequireCheckerErrors(t, err, 1)
+
+				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
+
 			case common.CompositeKindStructure,
 				common.CompositeKindContract,
-				common.CompositeKindAttachment,
 				common.CompositeKindEnum:
 
 				require.NoError(t, err)
@@ -1037,7 +1081,7 @@ func TestCheckFunctionTypeParameterWithResourceAnnotation(t *testing.T) {
 
 		var baseType string
 		if kind == common.CompositeKindAttachment {
-			baseType = "for AnyResource"
+			baseType = "for AnyStruct"
 		}
 
 		t.Run(kind.Keyword(), func(t *testing.T) {
@@ -1062,9 +1106,12 @@ func TestCheckFunctionTypeParameterWithResourceAnnotation(t *testing.T) {
 			)
 
 			switch kind {
-			case common.CompositeKindResource,
-				common.CompositeKindAttachment:
+			case common.CompositeKindResource:
 				require.NoError(t, err)
+			case common.CompositeKindAttachment:
+				errs := RequireCheckerErrors(t, err, 2)
+
+				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
 
 			case common.CompositeKindStructure,
 				common.CompositeKindContract,
@@ -1138,8 +1185,13 @@ func TestCheckFunctionTypeParameterWithoutResourceAnnotation(t *testing.T) {
 
 				assert.IsType(t, &sema.MissingResourceAnnotationError{}, errs[0])
 
+			case common.CompositeKindAttachment:
+				errs := RequireCheckerErrors(t, err, 2)
+
+				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
+				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[1])
+
 			case common.CompositeKindStructure,
-				common.CompositeKindAttachment,
 				common.CompositeKindContract,
 				common.CompositeKindEvent,
 				common.CompositeKindEnum:
@@ -1209,8 +1261,12 @@ func TestCheckFunctionTypeReturnTypeWithResourceAnnotation(t *testing.T) {
 			case common.CompositeKindResource:
 				require.NoError(t, err)
 
+			case common.CompositeKindAttachment:
+				errs := RequireCheckerErrors(t, err, 2)
+
+				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
+				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[1])
 			case common.CompositeKindStructure,
-				common.CompositeKindAttachment,
 				common.CompositeKindContract,
 				common.CompositeKindEnum:
 
@@ -1296,9 +1352,14 @@ func TestCheckFunctionTypeReturnTypeWithoutResourceAnnotation(t *testing.T) {
 				assert.IsType(t, &sema.MissingResourceAnnotationError{}, errs[0])
 				assert.IsType(t, &sema.MissingResourceAnnotationError{}, errs[1])
 
+			case common.CompositeKindAttachment:
+				errs := RequireCheckerErrors(t, err, 2)
+
+				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
+				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[1])
+
 			case common.CompositeKindStructure,
 				common.CompositeKindContract,
-				common.CompositeKindAttachment,
 				common.CompositeKindEnum:
 
 				require.NoError(t, err)

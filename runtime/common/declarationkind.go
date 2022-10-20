@@ -74,7 +74,8 @@ func (k DeclarationKind) IsTypeDeclaration() bool {
 		DeclarationKindResourceInterface,
 		DeclarationKindContractInterface,
 		DeclarationKindTypeParameter,
-		DeclarationKindEnum:
+		DeclarationKindEnum,
+		DeclarationKindAttachment:
 
 		return true
 

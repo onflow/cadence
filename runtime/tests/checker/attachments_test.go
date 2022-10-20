@@ -63,9 +63,11 @@ func TestCheckRedeclareInContract(t *testing.T) {
 		}`,
 	)
 
-	errs := RequireCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 2)
 
+	// 2 redeclaration errors: one for the constructor, one for the type
 	assert.IsType(t, &sema.RedeclarationError{}, errs[0])
+	assert.IsType(t, &sema.RedeclarationError{}, errs[1])
 }
 
 func TestCheckBaseType(t *testing.T) {

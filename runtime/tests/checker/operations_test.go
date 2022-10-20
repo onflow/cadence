@@ -493,6 +493,12 @@ func TestCheckInvalidCompositeEquality(t *testing.T) {
 
 			if compositeKind == common.CompositeKindEnum {
 				require.NoError(t, err)
+			} else if compositeKind == common.CompositeKindAttachment {
+				errs := RequireCheckerErrors(t, err, 3)
+
+				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
+				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[1])
+				assert.IsType(t, &sema.InvalidBinaryOperandsError{}, errs[2])
 			} else {
 				errs := RequireCheckerErrors(t, err, 1)
 

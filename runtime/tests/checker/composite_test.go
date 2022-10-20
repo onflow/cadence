@@ -1908,15 +1908,10 @@ func TestCheckCompositeConstructorUseInInitializerAndFunction(t *testing.T) {
 
 	t.Parallel()
 
-	for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, compositeKind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 
 		if compositeKind == common.CompositeKindContract {
 			continue
-		}
-
-		var baseType string
-		if compositeKind == common.CompositeKindAttachment {
-			baseType = "for AnyStruct"
 		}
 
 		t.Run(compositeKind.Keyword(), func(t *testing.T) {
@@ -1924,7 +1919,7 @@ func TestCheckCompositeConstructorUseInInitializerAndFunction(t *testing.T) {
 			checker, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %[1]s Test %[8]s {
+                      %[1]s Test {
 
                           init() {
                               Test
@@ -1953,7 +1948,6 @@ func TestCheckCompositeConstructorUseInInitializerAndFunction(t *testing.T) {
 					compositeKind.ConstructionKeyword(),
 					compositeKind.DestructionKeyword(),
 					constructorArguments(compositeKind),
-					baseType,
 				),
 			)
 
@@ -2050,9 +2044,13 @@ func TestCheckCompositeFunction(t *testing.T) {
 			)
 
 			switch kind {
-			case common.CompositeKindStructure, common.CompositeKindAttachment:
+			case common.CompositeKindStructure:
 				require.NoError(t, err)
+			case common.CompositeKindAttachment:
+				errs := RequireCheckerErrors(t, err, 2)
 
+				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
+				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[1])
 			case common.CompositeKindContract:
 				errs := RequireCheckerErrors(t, err, 1)
 

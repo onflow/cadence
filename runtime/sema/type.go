@@ -3620,8 +3620,10 @@ func (t *CompositeType) getBaseCompositeKind() common.CompositeKind {
 	case *SimpleType:
 		if base == AnyResourceType {
 			return common.CompositeKindResource
+		} else if base == AnyStructType {
+			return common.CompositeKindStructure
 		}
-		return common.CompositeKindStructure
+		return common.CompositeKindUnknown
 	default:
 		return common.CompositeKindUnknown
 	}

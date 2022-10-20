@@ -83,9 +83,10 @@ func TestCheckEventDeclaration(t *testing.T) {
 					require.NoError(t, err)
 
 				case common.CompositeKindAttachment:
-					errs := RequireCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 2)
 
-					assert.IsType(t, &sema.InvalidEventParameterTypeError{}, errs[0])
+					assert.IsType(t, &sema.InvalidEventParameterTypeError{}, errs[1])
+					assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
 
 				default:
 					panic(errors.NewUnreachableError())

@@ -323,8 +323,15 @@ func (checker *Checker) declareCompositeNestedTypes(
 			// for this nested declaration, but the value activation for it was only temporary,
 			// so that the constructor wouldn't be visible outside of the containing declaration
 
-			if nestedCompositeDeclaration, isCompositeDeclaration :=
-				nestedDeclaration.(*ast.CompositeDeclaration); isCompositeDeclaration {
+			nestedCompositeDeclaration, isCompositeDeclaration := nestedDeclaration.(*ast.CompositeDeclaration)
+			if !isCompositeDeclaration {
+				if nestedAttachmentDeclaration, isAttachmentDeclaration := nestedDeclaration.(*ast.AttachmentDeclaration); isAttachmentDeclaration {
+					nestedCompositeDeclaration = checker.attachmentAsComposite(nestedAttachmentDeclaration)
+					isCompositeDeclaration = true
+				}
+			}
+
+			if isCompositeDeclaration {
 
 				nestedCompositeType, ok := nestedType.(*CompositeType)
 				if !ok {
