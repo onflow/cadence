@@ -58,6 +58,24 @@ func TestCheckForConstantSized(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestCheckForString(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun test(): [Character] {
+          let characters: [Character] = []
+          let hello = "hello"
+          for c in hello {
+              characters.append(c)
+          }
+          return characters
+      }
+    `)
+
+	assert.NoError(t, err)
+}
+
 func TestCheckForEmpty(t *testing.T) {
 
 	t.Parallel()
