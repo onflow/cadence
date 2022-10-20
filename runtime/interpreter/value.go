@@ -1377,6 +1377,10 @@ func (i ArrayValueIterator) Next(interpreter *Interpreter) Value {
 		panic(errors.NewExternalError(err))
 	}
 
+	if atreeValue == nil {
+		return nil
+	}
+
 	// atree.Array iterator returns low-level atree.Value,
 	// convert to high-level interpreter.Value
 	return MustConvertStoredValue(interpreter, atreeValue)
