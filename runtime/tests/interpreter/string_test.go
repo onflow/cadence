@@ -229,6 +229,27 @@ func TestInterpretStringFromUtf8(t *testing.T) {
 	}
 }
 
+func TestInterpretStringFromCharacters(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+      fun test(): String {
+          return String.fromCharacters(["👪", "❤️"])
+      }
+	`)
+
+	result, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	RequireValuesEqual(
+		t,
+		inter,
+		interpreter.NewUnmeteredStringValue("👪❤️"),
+		result,
+	)
+}
+
 func TestInterpretStringUtf8Field(t *testing.T) {
 
 	t.Parallel()
