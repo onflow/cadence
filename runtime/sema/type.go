@@ -5368,13 +5368,13 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 			switch typedInnerSubType := typedSubType.Type.(type) {
 			case *RestrictedType:
 				if typedInnerInnerSubType, ok := typedInnerSubType.Type.(*CompositeType); ok {
-					return typedInnerInnerSubType.Kind == common.CompositeKindResource
+					return typedInnerInnerSubType.IsResourceType()
 				}
 
 				return typedInnerSubType.Type == AnyResourceType
 
 			case *CompositeType:
-				return typedInnerSubType.Kind == common.CompositeKindResource
+				return typedInnerSubType.IsResourceType()
 			}
 
 		case AnyStructType:

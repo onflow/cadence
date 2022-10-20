@@ -2037,11 +2037,12 @@ func TestCheckCompositeFunction(t *testing.T) {
 			case common.CompositeKindStructure:
 				require.NoError(t, err)
 			case common.CompositeKindAttachment:
-				errs := RequireCheckerErrors(t, err, 3)
+				errs := RequireCheckerErrors(t, err, 4)
 
 				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
 				assert.IsType(t, &sema.InvalidAttachmentUsageError{}, errs[1])
 				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[2])
+				assert.IsType(t, &sema.TypeMismatchError{}, errs[3])
 			case common.CompositeKindContract:
 				errs := RequireCheckerErrors(t, err, 1)
 

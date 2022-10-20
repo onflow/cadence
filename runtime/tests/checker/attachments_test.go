@@ -1410,6 +1410,132 @@ func TestCheckSuperTyping(t *testing.T) {
 		// super is not auth
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
+
+	t.Run("struct return", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct interface I {}
+			attachment Test for I {
+				fun foo(): &{I} {
+					return super
+				}
+			}`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("resource return", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource interface I {}
+			attachment Test for I {
+				fun foo(): &{I} {
+					return super
+				}
+			}`,
+		)
+
+		require.NoError(t, err)
+	})
+}
+
+func TestCheckSelfTyping(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("return self", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct R {}
+			attachment Test for R {
+				fun foo(): &Test {
+					return self
+				}
+			}`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("return self", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct R {}
+			attachment Test for R {
+				fun foo(): &AnyStruct {
+					return self
+				}
+			}`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("return self resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource R {}
+			attachment Test for R {
+				fun foo(): &AnyResource {
+					return self
+				}
+			}`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("return self struct interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct R {}
+			struct interface I {}
+			attachment Test for R: I {
+				fun foo(): &{I} {
+					return self
+				}
+			}`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("return self resource interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource R {}
+			resource interface I {}
+			attachment Test for R: I {
+				fun foo(): &{I} {
+					return self
+				}
+			}`,
+		)
+
+		require.NoError(t, err)
+	})
 }
 
 func TestCheckAttachmentType(t *testing.T) {
