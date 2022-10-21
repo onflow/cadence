@@ -2718,7 +2718,7 @@ func (t *FunctionType) IsStorable(_ map[*Member]bool) bool {
 }
 
 func (t *FunctionType) IsExternallyReturnable(_ map[*Member]bool) bool {
-	// Event though function cannot be serialized,
+	// Even though functions cannot be serialized,
 	// they are still treated as exportable,
 	// as values are simply omitted.
 	return true
