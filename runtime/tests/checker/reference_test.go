@@ -2079,13 +2079,16 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             `,
 		)
 
-		errors := RequireCheckerErrors(t, err, 2)
+		errors := RequireCheckerErrors(t, err, 3)
 
-		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		var invalidatedRefError *sema.InvalidatedResourceReferenceError
 		assert.ErrorAs(t, errors[0], &invalidatedRefError)
 
-		resourceUseAfterInvalidationErr := &sema.ResourceUseAfterInvalidationError{}
+		var resourceUseAfterInvalidationErr *sema.ResourceUseAfterInvalidationError
 		assert.ErrorAs(t, errors[1], &resourceUseAfterInvalidationErr)
+
+		var resourceLossErr *sema.ResourceLossError
+		assert.ErrorAs(t, errors[2], &resourceLossErr)
 	})
 
 	t.Run("nil coalescing lhs", func(t *testing.T) {
