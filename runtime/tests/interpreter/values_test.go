@@ -54,6 +54,8 @@ func TestRandomMapOperations(t *testing.T) {
 		t.SkipNow()
 	}
 
+	t.Parallel()
+
 	seed := time.Now().UnixNano()
 	fmt.Printf("Seed used for map opearations test: %d \n", seed)
 	rand.Seed(seed)

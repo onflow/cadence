@@ -28,6 +28,7 @@ import (
 )
 
 func TestDeclarationKind_MarshalJSON(t *testing.T) {
+	t.Parallel()
 
 	for declarationKind := DeclarationKind(0); declarationKind < DeclarationKind(DeclarationKindCount()); declarationKind++ {
 		actual, err := json.Marshal(declarationKind)

@@ -29,6 +29,8 @@ import (
 
 func TestMemberIndices(t *testing.T) {
 
+	t.Parallel()
+
 	fieldA := &FieldDeclaration{
 		Identifier: Identifier{Identifier: "A"},
 	}

@@ -2128,6 +2128,7 @@ func TestExportLinkValue(t *testing.T) {
 var exportJsonDeterministicExpected string
 
 func TestExportJsonDeterministic(t *testing.T) {
+	t.Parallel()
 
 	// exported order of field in a dictionary depends on the execution ,
 	// however the deterministic code should generate deterministic type

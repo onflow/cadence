@@ -692,6 +692,8 @@ func TestParseNames(t *testing.T) {
 
 func TestParseArgumentList(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("invalid", func(t *testing.T) {
 		t.Parallel()
 

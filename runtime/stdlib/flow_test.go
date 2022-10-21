@@ -32,6 +32,9 @@ import (
 )
 
 func TestFlowEventTypeIDs(t *testing.T) {
+
+	t.Parallel()
+
 	for _, ty := range []sema.Type{
 		AccountCreatedEventType,
 		AccountKeyAddedEventType,
