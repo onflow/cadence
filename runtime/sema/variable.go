@@ -40,4 +40,10 @@ type Variable struct {
 	Pos *ast.Position
 	// DocString is the optional docstring
 	DocString string
+
+	// referencedResourceVariables holds the resource-typed variables referenced by this variable.
+	// Only applicable for reference-typed variables. Otherwise, it is nil.
+	// This has to be a slice, because some variables can conditionally point to multiple resources.
+	// e.g: nil-coalescing operator: `let ref = (&x as &R?) ?? (&y as &R?)`
+	referencedResourceVariables []*Variable
 }

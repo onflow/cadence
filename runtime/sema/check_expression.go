@@ -40,11 +40,34 @@ func (checker *Checker) VisitIdentifierExpression(expression *ast.IdentifierExpr
 
 	checker.checkSelfVariableUseInInitializer(variable, identifier.Pos)
 
+	checker.checkReferenceValidity(variable, expression)
+
 	if checker.inInvocation {
 		checker.Elaboration.IdentifierInInvocationTypes[expression] = valueType
 	}
 
 	return valueType
+}
+
+func (checker *Checker) checkReferenceValidity(variable *Variable, hasPosition ast.HasPosition) {
+	typ := UnwrapOptionalType(variable.Type)
+	if _, ok := typ.(*ReferenceType); !ok {
+		return
+	}
+
+	// Here it is not required to find the root of the reference chain,
+	// because it is already done at the time of recoding the reference.
+	// i.e: It is always the roots of the chain that is being stored as the `referencedResourceVariables`.
+	for _, referencedVar := range variable.referencedResourceVariables {
+		resourceInfo := checker.resources.Get(Resource{Variable: referencedVar})
+		if resourceInfo.Invalidation() == nil {
+			continue
+		}
+
+		checker.report(&InvalidatedResourceReferenceError{
+			Range: ast.NewRangeFromPositioned(checker.memoryGauge, hasPosition),
+		})
+	}
 }
 
 // checkSelfVariableUseInInitializer checks uses of `self` in the initializer

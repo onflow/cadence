@@ -110,6 +110,8 @@ func (checker *Checker) checkAssignment(
 		ResourceInvalidationKindMoveDefinite,
 	)
 
+	checker.recordReferenceCreation(target, value)
+
 	return
 }
 

@@ -3724,3 +3724,20 @@ var _ errors.UserError = &PurityError{}
 func (*PurityError) IsUserError() {}
 
 func (*PurityError) isSemanticError() {}
+
+// InvalidatedResourceReferenceError
+
+type InvalidatedResourceReferenceError struct {
+	ast.Range
+}
+
+var _ SemanticError = &InvalidatedResourceReferenceError{}
+var _ errors.UserError = &InvalidatedResourceReferenceError{}
+
+func (*InvalidatedResourceReferenceError) isSemanticError() {}
+
+func (*InvalidatedResourceReferenceError) IsUserError() {}
+
+func (e *InvalidatedResourceReferenceError) Error() string {
+	return "invalid reference: referenced resource may have been moved or destroyed"
+}

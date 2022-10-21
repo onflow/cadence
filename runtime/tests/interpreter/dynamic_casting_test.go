@@ -2249,12 +2249,13 @@ func returnReferenceCasted(fromType, targetType string, operation ast.Operation,
 		if isResource {
 			return fmt.Sprintf(
 				`
-                  fun test(): %[2]s? {
+                  fun test(): Bool {
                       let x <- create R()
                       let r = &x as %[1]s
                       let r2 = r as? %[2]s
+                      let isSuccess = r2 != nil
                       destroy x
-                      return r2
+                      return isSuccess
                   }
                 `,
 				fromType,
@@ -2278,12 +2279,13 @@ func returnReferenceCasted(fromType, targetType string, operation ast.Operation,
 		if isResource {
 			return fmt.Sprintf(
 				`
-                  fun test(): %[2]s {
+                  fun test(): Bool {
                       let x <- create R()
                       let r = &x as %[1]s
                       let r2 = r as! %[2]s
+                      let isSuccess = r2 != nil
                       destroy x
-                      return r2
+                      return isSuccess
                   }
                 `,
 				fromType,
@@ -2319,6 +2321,15 @@ func testReferenceCastValid(t *testing.T, types, fromType, targetType string, op
 
 	switch operation {
 	case ast.OperationFailableCast:
+		if isResource {
+			AssertValuesEqual(
+				t,
+				inter,
+				interpreter.BoolValue(true),
+				value,
+			)
+			break
+		}
 
 		require.IsType(t,
 			&interpreter.SomeValue{},
@@ -2332,6 +2343,15 @@ func testReferenceCastValid(t *testing.T, types, fromType, targetType string, op
 		)
 
 	case ast.OperationForceCast:
+		if isResource {
+			AssertValuesEqual(
+				t,
+				inter,
+				interpreter.BoolValue(true),
+				value,
+			)
+			break
+		}
 
 		require.IsType(t,
 			&interpreter.EphemeralReferenceValue{},
@@ -2356,6 +2376,16 @@ func testReferenceCastInvalid(t *testing.T, types, fromType, targetType string, 
 	switch operation {
 	case ast.OperationFailableCast:
 		require.NoError(t, err)
+
+		if isResource {
+			AssertValuesEqual(
+				t,
+				inter,
+				interpreter.BoolValue(false),
+				value,
+			)
+			break
+		}
 
 		require.IsType(t,
 			interpreter.Nil,
