@@ -1012,4 +1012,160 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("ref source is field", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(
+			t,
+			`
+            pub fun test() {
+                let r <- create R()
+                let s = S()
+                s.b = &r as &R
+
+                let x = s.b!     // get reference from a struct field
+                let movedR <- r  // move the resource
+                x.a
+
+                destroy movedR
+            }
+
+            pub resource R {
+                pub let a: Int
+
+                init() {
+                    self.a = 5
+                }
+            }
+
+            pub struct S {
+                pub(set) var b: &R?
+
+                init() {
+                    self.b = nil
+                }
+            }`,
+		)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+		_ = err.Error()
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("ref target is field", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(
+			t,
+			`
+            pub fun test() {
+                let r <- create R()
+                let s = S()
+                s.b = &r as &R
+
+                s.b = &r as &R   // assign reference to a struct field
+                let movedR <- r  // move the resource
+                s.b!.a
+
+                destroy movedR
+            }
+
+            pub resource R {
+                pub let a: Int
+
+                init() {
+                    self.a = 5
+                }
+            }
+
+            pub struct S {
+                pub(set) var b: &R?
+
+                init() {
+                    self.b = nil
+                }
+            }`,
+		)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+		_ = err.Error()
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("resource is array element", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(
+			t,
+			`
+            resource R {
+                pub(set) var id: Int
+
+                init() {
+                    self.id = 1
+                }
+            }
+
+            fun test() {
+                let array <- [<- create R()]
+                let ref = &array[0] as &R
+
+                // remove the resource from array
+                let r <- array.remove(at: 0)
+
+                // Update the reference
+                ref.id = 2
+
+                destroy r
+                destroy array
+            }`,
+		)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+		_ = err.Error()
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("resource is dictionary entry", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(
+			t,
+			`
+            resource R {
+                pub(set) var id: Int
+
+                init() {
+                    self.id = 1
+                }
+            }
+
+            fun test() {
+                let dictionary <- {0: <- create R()}
+                let ref = (&dictionary[0] as &R?)!
+
+                // remove the resource from array
+                let r <- dictionary.remove(key: 0)
+
+                // Update the reference
+                ref.id = 2
+
+                destroy r
+                destroy dictionary
+            }`,
+		)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+		_ = err.Error()
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
 }
