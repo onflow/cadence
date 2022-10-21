@@ -33,6 +33,7 @@ var authAccountFieldNames = []string{
 	sema.AuthAccountAddressField,
 	sema.AuthAccountContractsField,
 	sema.AuthAccountKeysField,
+	sema.AuthAccountInboxField,
 }
 
 // NewAuthAccountValue constructs an auth account value.

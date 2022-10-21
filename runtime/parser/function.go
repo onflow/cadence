@@ -26,8 +26,7 @@ import (
 func parsePurityAnnotation(p *parser) ast.FunctionPurity {
 	// get the purity annotation (if one exists) and skip it
 	if p.isToken(p.current, lexer.TokenIdentifier, keywordView) {
-		p.next()
-		p.skipSpaceAndComments(true)
+		p.nextSemanticToken()
 		return ast.FunctionPurityView
 	}
 	return ast.FunctionPurityUnspecified
@@ -36,7 +35,7 @@ func parsePurityAnnotation(p *parser) ast.FunctionPurity {
 func parseParameterList(p *parser) (parameterList *ast.ParameterList, err error) {
 	var parameters []*ast.Parameter
 
-	p.skipSpaceAndComments(true)
+	p.skipSpaceAndComments()
 
 	if !p.current.Is(lexer.TokenParenOpen) {
 		return nil, p.syntaxError(
@@ -56,7 +55,7 @@ func parseParameterList(p *parser) (parameterList *ast.ParameterList, err error)
 
 	atEnd := false
 	for !atEnd {
-		p.skipSpaceAndComments(true)
+		p.skipSpaceAndComments()
 		switch p.current.Type {
 		case lexer.TokenIdentifier:
 			if !expectParameter {
@@ -122,7 +121,7 @@ func parseParameterList(p *parser) (parameterList *ast.ParameterList, err error)
 }
 
 func parseParameter(p *parser) (*ast.Parameter, error) {
-	p.skipSpaceAndComments(true)
+	p.skipSpaceAndComments()
 
 	startPos := p.current.StartPos
 
@@ -134,11 +133,11 @@ func parseParameter(p *parser) (*ast.Parameter, error) {
 	}
 
 	// Skip the identifier
-	p.next()
-	p.skipSpaceAndComments(true)
+	p.nextSemanticToken()
 
-	switch p.current.Type {
-	case lexer.TokenIdentifier:
+	// If another identifier is provided, then the previous identifier
+	// is the argument label, and this identifier is the parameter name
+	if p.current.Is(lexer.TokenIdentifier) {
 		argumentLabel = identifier.Identifier
 		newIdentifier, err := p.nonReservedIdentifier("for parameter name")
 		if err != nil {
@@ -148,8 +147,7 @@ func parseParameter(p *parser) (*ast.Parameter, error) {
 		identifier = newIdentifier
 
 		// skip the identifier, now known to be the argument name
-		p.next()
-		p.skipSpaceAndComments(true)
+		p.nextSemanticToken()
 	}
 
 	if !p.current.Is(lexer.TokenColon) {
@@ -160,9 +158,8 @@ func parseParameter(p *parser) (*ast.Parameter, error) {
 		)
 	}
 
-	// skip the colon
-	p.next()
-	p.skipSpaceAndComments(true)
+	// Skip the colon
+	p.nextSemanticToken()
 
 	typeAnnotation, err := parseTypeAnnotation(p)
 
@@ -193,9 +190,7 @@ func parseFunctionDeclaration(
 
 	startPos := *ast.EarlierPosition(ast.EarlierPosition(purityPos, accessPos), &p.current.StartPos)
 	// Skip the `fun` keyword
-	p.next()
-
-	p.skipSpaceAndComments(true)
+	p.nextSemanticToken()
 
 	identifier, err := p.nonReservedIdentifier("after start of function declaration")
 
@@ -240,17 +235,16 @@ func parseFunctionParameterListAndRest(
 		return
 	}
 
-	p.skipSpaceAndComments(true)
+	p.skipSpaceAndComments()
 	if p.current.Is(lexer.TokenColon) {
 		// Skip the colon
-		p.next()
-		p.skipSpaceAndComments(true)
+		p.nextSemanticToken()
 		returnTypeAnnotation, err = parseTypeAnnotation(p)
 		if err != nil {
 			return
 		}
 
-		p.skipSpaceAndComments(true)
+		p.skipSpaceAndComments()
 	} else {
 		positionBeforeMissingReturnType := parameterList.EndPos
 		returnType := ast.NewNominalType(
@@ -269,7 +263,7 @@ func parseFunctionParameterListAndRest(
 		)
 	}
 
-	p.skipSpaceAndComments(true)
+	p.skipSpaceAndComments()
 
 	if !functionBlockIsOptional ||
 		p.current.Is(lexer.TokenBraceOpen) {

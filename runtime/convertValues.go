@@ -529,9 +529,7 @@ func exportSimpleCompositeValue(
 		structure, err := cadence.NewMeteredStruct(
 			inter,
 			len(fieldNames),
-			func() ([]cadence.Value, error) {
-				return makeFields()
-			},
+			makeFields,
 		)
 		if err != nil {
 			return nil, err
@@ -541,9 +539,7 @@ func exportSimpleCompositeValue(
 		resource, err := cadence.NewMeteredResource(
 			inter,
 			len(fieldNames),
-			func() ([]cadence.Value, error) {
-				return makeFields()
-			},
+			makeFields,
 		)
 		if err != nil {
 			return nil, err
@@ -553,9 +549,7 @@ func exportSimpleCompositeValue(
 		event, err := cadence.NewMeteredEvent(
 			inter,
 			len(fieldNames),
-			func() ([]cadence.Value, error) {
-				return makeFields()
-			},
+			makeFields,
 		)
 		if err != nil {
 			return nil, err
@@ -565,9 +559,7 @@ func exportSimpleCompositeValue(
 		contract, err := cadence.NewMeteredContract(
 			inter,
 			len(fieldNames),
-			func() ([]cadence.Value, error) {
-				return makeFields()
-			},
+			makeFields,
 		)
 		if err != nil {
 			return nil, err
@@ -577,9 +569,7 @@ func exportSimpleCompositeValue(
 		enum, err := cadence.NewMeteredEnum(
 			inter,
 			len(fieldNames),
-			func() ([]cadence.Value, error) {
-				return makeFields()
-			},
+			makeFields,
 		)
 		if err != nil {
 			return nil, err

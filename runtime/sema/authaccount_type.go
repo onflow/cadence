@@ -617,6 +617,18 @@ var AuthAccountKeysType = func() *CompositeType {
 			AuthAccountKeysTypeRevokeFunctionType,
 			authAccountKeysTypeRevokeFunctionDocString,
 		),
+		NewUnmeteredPublicFunctionMember(
+			accountKeys,
+			AccountKeysTypeForEachFunctionName,
+			AccountKeysTypeForEachFunctionType,
+			accountKeysTypeForEachFunctionDocString,
+		),
+		NewUnmeteredPublicConstantFieldMember(
+			accountKeys,
+			AccountKeysCountFieldName,
+			AccountKeysTypeCountFieldType,
+			accountKeysTypeCountFieldDocString,
+		),
 	}
 
 	accountKeys.Members = GetMembersAsMap(members)
@@ -655,6 +667,32 @@ var AccountKeysTypeGetFunctionType = &FunctionType{
 	RequiredArgumentCount: RequiredArgumentCount(1),
 }
 
+// fun keys.forEach(_ function: ((AccountKey): Bool)): Void
+var AccountKeysTypeForEachFunctionType = func() *FunctionType {
+	// ((AccountKey): Bool)
+	iterFunctionType := &FunctionType{
+		Parameters: []*Parameter{
+			{
+				TypeAnnotation: NewTypeAnnotation(AccountKeyType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(BoolType),
+	}
+
+	return &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "function",
+				TypeAnnotation: NewTypeAnnotation(iterFunctionType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
+	}
+}()
+
+var AccountKeysTypeCountFieldType = UInt64Type
+
 var AuthAccountKeysTypeRevokeFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
@@ -674,7 +712,9 @@ func init() {
 const AccountKeysTypeName = "Keys"
 const AccountKeysAddFunctionName = "add"
 const AccountKeysGetFunctionName = "get"
+const AccountKeysTypeForEachFunctionName = "forEach"
 const AccountKeysRevokeFunctionName = "revoke"
+const AccountKeysCountFieldName = "count"
 
 const accountTypeGetLinkTargetFunctionDocString = `
 Returns the target path of the capability at the given public or private path, or nil if there exists no capability at the given path.
@@ -718,6 +758,15 @@ Retrieves the key at the given index of the account.
 
 const authAccountKeysTypeRevokeFunctionDocString = `
 Revokes the key at the given index of the account.
+`
+const accountKeysTypeForEachFunctionDocString = `
+Iterates through all the keys of this account, passing each key to the provided function and short-circuiting if the function returns false. 
+
+The order of iteration is undefined.
+`
+
+const accountKeysTypeCountFieldDocString = `
+The number of keys associated with this account.
 `
 
 const authAccountTypeInboxPublishFunctionDocString = `

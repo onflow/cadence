@@ -512,7 +512,7 @@ func init() {
 	defineIdentifierExpression()
 
 	setExprNullDenotation(lexer.TokenEOF, func(parser *parser, token lexer.Token) (ast.Expression, error) {
-		return nil, NewSyntaxError(token.StartPos, "expected expression")
+		return nil, NewSyntaxError(token.StartPos, "unexpected end of program")
 	})
 }
 
@@ -559,8 +559,7 @@ func defineLessThanOrTypeArgumentsExpression() {
 			defer p.endAmbiguity()
 
 			// Skip the `<` token.
-			p.next()
-			p.skipSpaceAndComments(true)
+			p.nextSemanticToken()
 
 			// First, try to parse zero or more comma-separated type
 			// arguments (type annotations), a closing greater token `>`,
@@ -591,7 +590,7 @@ func defineLessThanOrTypeArgumentsExpression() {
 					return err
 				}
 
-				p.skipSpaceAndComments(true)
+				p.skipSpaceAndComments()
 				parenOpenToken, err := p.mustOne(lexer.TokenParenOpen)
 				if err != nil {
 					return err
@@ -664,8 +663,7 @@ func defineLessThanOrTypeArgumentsExpression() {
 				// because it should have maybe not been parsed in the first place
 				// if the right binding power is higher.
 
-				p.next()
-				p.skipSpaceAndComments(true)
+				p.nextSemanticToken()
 
 				right, err := parseExpression(p, binaryExpressionLeftBindingPower)
 				if err != nil {
@@ -769,8 +767,7 @@ func defineGreaterThanOrBitwiseRightShiftExpression() {
 				nextRightBindingPower = exprLeftBindingPowerComparison
 			}
 
-			p.next()
-			p.skipSpaceAndComments(true)
+			p.nextSemanticToken()
 
 			right, err := parseExpression(p, nextRightBindingPower)
 			if err != nil {
@@ -824,8 +821,7 @@ func defineIdentifierExpression() {
 						string(p.tokenSource(p.current)),
 					)
 				}
-				p.next()
-				p.skipSpaceAndComments(true)
+				p.nextSemanticToken()
 
 				return parseFunctionExpression(p, token, ast.FunctionPurityView)
 			case keywordFun:
@@ -972,7 +968,7 @@ func parseArgumentListRemainder(p *parser) (arguments []*ast.Argument, endPos as
 	atEnd := false
 	expectArgument := true
 	for !atEnd {
-		p.skipSpaceAndComments(true)
+		p.skipSpaceAndComments()
 
 		switch p.current.Type {
 		case lexer.TokenComma:
@@ -1012,7 +1008,7 @@ func parseArgumentListRemainder(p *parser) (arguments []*ast.Argument, endPos as
 				return nil, ast.EmptyPosition, err
 			}
 
-			p.skipSpaceAndComments(true)
+			p.skipSpaceAndComments()
 
 			argument.TrailingSeparatorPos = p.current.StartPos
 
@@ -1036,7 +1032,7 @@ func parseArgument(p *parser) (*ast.Argument, error) {
 		return nil, err
 	}
 
-	p.skipSpaceAndComments(true)
+	p.skipSpaceAndComments()
 
 	// If a colon follows the expression, the expression was our label.
 	if p.current.Is(lexer.TokenColon) {
@@ -1052,8 +1048,7 @@ func parseArgument(p *parser) (*ast.Argument, error) {
 		labelEndPos = expr.EndPosition(p.memoryGauge)
 
 		// Skip the identifier
-		p.next()
-		p.skipSpaceAndComments(true)
+		p.nextSemanticToken()
 
 		expr, err = parseExpression(p, lowestBindingPower)
 		if err != nil {
@@ -1077,7 +1072,7 @@ func defineNestedExpression() {
 	setExprNullDenotation(
 		lexer.TokenParenOpen,
 		func(p *parser, startToken lexer.Token) (ast.Expression, error) {
-			p.skipSpaceAndComments(true)
+			p.skipSpaceAndComments()
 
 			// special case: parse a Void literal `()`
 			if p.current.Type == lexer.TokenParenClose {
@@ -1321,7 +1316,7 @@ func parseMemberAccess(p *parser, token lexer.Token, left ast.Expression, option
 
 	if p.current.Is(lexer.TokenSpace) {
 		errorPos := p.current.StartPos
-		p.skipSpaceAndComments(true)
+		p.skipSpaceAndComments()
 		p.report(NewSyntaxError(
 			errorPos,
 			"invalid whitespace after %s",
@@ -1398,11 +1393,11 @@ func parseExpression(p *parser, rightBindingPower int) (ast.Expression, error) {
 		p.expressionDepth--
 	}()
 
-	p.skipSpaceAndComments(true)
+	p.skipSpaceAndComments()
 	t := p.current
 	p.next()
 
-	newLineAfterLeft := p.skipSpaceAndComments(true)
+	newLineAfterLeft := p.skipSpaceAndComments()
 
 	left, err := applyExprNullDenotation(p, t)
 	if err != nil {
@@ -1410,7 +1405,7 @@ func parseExpression(p *parser, rightBindingPower int) (ast.Expression, error) {
 	}
 
 	for {
-		newLineAfterLeft = p.skipSpaceAndComments(true) || newLineAfterLeft
+		newLineAfterLeft = p.skipSpaceAndComments() || newLineAfterLeft
 
 		if newLineAfterLeft && !exprLeftDenotationAllowsNewlineAfterNullDenotation(p.current.Type) {
 			break
@@ -1482,7 +1477,7 @@ func defaultExprMetaLeftDenotation(
 
 	p.next()
 	if allowWhitespace {
-		p.skipSpaceAndComments(true)
+		p.skipSpaceAndComments()
 	}
 
 	result, err = applyExprLeftDenotation(p, t, left)

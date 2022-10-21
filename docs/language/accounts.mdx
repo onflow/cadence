@@ -50,6 +50,15 @@ which represents the publicly available portion of an account.
           // Returns the key at the given index, if it exists.
           // Revoked keys are always returned, but they have \`isRevoked\` field set to true.
           fun get(keyIndex: Int): AccountKey?
+
+          // Iterate over all unrevoked keys in this account,
+          // passing each key in turn to the provided function.
+          // Iteration is stopped early if the function returns `false`.
+          // The order of iteration is undefined.
+          fun forEach(function: ((AccountKey): Bool)): Void
+
+          // The total number of unrevoked keys in this account.
+          let count: UInt64
       }
   }
   ```
@@ -162,6 +171,15 @@ to the `prepare` phase of the transaction.
           // Marks the key at the given index revoked, but does not delete it.
           // Returns the revoked key if it exists, or nil otherwise.
           fun revoke(keyIndex: Int): AccountKey?
+
+          // Iterate over all unrevoked keys in this account,
+          // passing each key in turn to the provided function.
+          // Iteration is stopped early if the function returns `false`.
+          // The order of iteration is undefined.
+          fun forEach(function: ((AccountKey): Bool)): Void
+
+          // The total number of unrevoked keys in this account.
+          let count: UInt64
       }
 
       struct Inbox {

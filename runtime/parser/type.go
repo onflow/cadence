@@ -157,7 +157,7 @@ func init() {
 
 			switch string(p.tokenSource(token)) {
 			case keywordAuth:
-				p.skipSpaceAndComments(true)
+				p.skipSpaceAndComments()
 
 				_, err := p.mustOne(lexer.TokenAmpersand)
 				if err != nil {
@@ -229,15 +229,13 @@ func defineArrayType() {
 				return nil, err
 			}
 
-			p.skipSpaceAndComments(true)
+			p.skipSpaceAndComments()
 
 			var size *ast.IntegerExpression
 
 			if p.current.Is(lexer.TokenSemicolon) {
 				// Skip the semicolon
-				p.next()
-
-				p.skipSpaceAndComments(true)
+				p.nextSemanticToken()
 
 				if !p.current.Type.IsIntegerLiteral() {
 					p.reportSyntaxError("expected positive integer size for constant sized type")
@@ -260,7 +258,7 @@ func defineArrayType() {
 				}
 			}
 
-			p.skipSpaceAndComments(true)
+			p.skipSpaceAndComments()
 
 			endToken, err := p.mustOne(lexer.TokenBracketClose)
 			if err != nil {
@@ -360,7 +358,7 @@ func defineRestrictedOrDictionaryType() {
 			expectType := true
 
 			for !atEnd {
-				p.skipSpaceAndComments(true)
+				p.skipSpaceAndComments()
 
 				switch p.current.Type {
 				case lexer.TokenComma:
@@ -574,7 +572,7 @@ func parseNominalTypes(
 	expectType := true
 	atEnd := false
 	for !atEnd {
-		p.skipSpaceAndComments(true)
+		p.skipSpaceAndComments()
 
 		switch p.current.Type {
 		case lexer.TokenComma:
@@ -639,19 +637,19 @@ func defineFunctionType() {
 				return nil, err
 			}
 
-			p.skipSpaceAndComments(true)
+			p.skipSpaceAndComments()
 			_, err = p.mustOne(lexer.TokenColon)
 			if err != nil {
 				return nil, err
 			}
 
-			p.skipSpaceAndComments(true)
+			p.skipSpaceAndComments()
 			returnTypeAnnotation, err := parseTypeAnnotation(p)
 			if err != nil {
 				return nil, err
 			}
 
-			p.skipSpaceAndComments(true)
+			p.skipSpaceAndComments()
 			endToken, err := p.mustOne(lexer.TokenParenClose)
 			if err != nil {
 				return nil, err
@@ -674,7 +672,7 @@ func defineFunctionType() {
 
 func parseParameterTypeAnnotations(p *parser) (typeAnnotations []*ast.TypeAnnotation, err error) {
 
-	p.skipSpaceAndComments(true)
+	p.skipSpaceAndComments()
 	_, err = p.mustOne(lexer.TokenParenOpen)
 	if err != nil {
 		return
@@ -684,7 +682,7 @@ func parseParameterTypeAnnotations(p *parser) (typeAnnotations []*ast.TypeAnnota
 
 	atEnd := false
 	for !atEnd {
-		p.skipSpaceAndComments(true)
+		p.skipSpaceAndComments()
 		switch p.current.Type {
 		case lexer.TokenComma:
 			if expectTypeAnnotation {
@@ -743,7 +741,7 @@ func parseType(p *parser, rightBindingPower int) (ast.Type, error) {
 		p.typeDepth--
 	}()
 
-	p.skipSpaceAndComments(true)
+	p.skipSpaceAndComments()
 	t := p.current
 	p.next()
 
@@ -856,7 +854,7 @@ func applyTypeLeftDenotation(p *parser, token lexer.Token, left ast.Type) (ast.T
 }
 
 func parseNominalTypeInvocationRemainder(p *parser) (*ast.InvocationExpression, error) {
-	p.skipSpaceAndComments(true)
+	p.skipSpaceAndComments()
 	identifier, err := p.mustOne(lexer.TokenIdentifier)
 	if err != nil {
 		return nil, err
@@ -867,7 +865,7 @@ func parseNominalTypeInvocationRemainder(p *parser) (*ast.InvocationExpression, 
 		return nil, err
 	}
 
-	p.skipSpaceAndComments(true)
+	p.skipSpaceAndComments()
 	parenOpenToken, err := p.mustOne(lexer.TokenParenOpen)
 	if err != nil {
 		return nil, err
@@ -915,7 +913,7 @@ func parseCommaSeparatedTypeAnnotations(
 	expectTypeAnnotation := true
 	atEnd := false
 	for !atEnd {
-		p.skipSpaceAndComments(true)
+		p.skipSpaceAndComments()
 
 		switch p.current.Type {
 		case lexer.TokenComma:

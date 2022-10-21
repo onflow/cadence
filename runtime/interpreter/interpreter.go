@@ -19,14 +19,12 @@
 package interpreter
 
 import (
-	"encoding/hex"
 	goErrors "errors"
 	"fmt"
 	"math"
 	"math/big"
 	"strconv"
 	"time"
-	"unicode/utf8"
 
 	"github.com/onflow/cadence/runtime/activations"
 
@@ -330,7 +328,6 @@ func newInterpreter(
 		Location:    location,
 		sharedState: sharedState,
 		Config:      config,
-		Globals:     map[string]*Variable{},
 	}
 
 	// Register self
@@ -413,8 +410,8 @@ func (interpreter *Interpreter) invokeVariable(
 ) {
 
 	// function must be defined as a global variable
-	variable, ok := interpreter.Globals.Get(functionName)
-	if !ok {
+	variable := interpreter.Globals.Get(functionName)
+	if variable == nil {
 		return nil, NotDeclaredError{
 			ExpectedKind: common.DeclarationKindFunction,
 			Name:         functionName,
@@ -3154,91 +3151,6 @@ func defineBaseValue(activation *VariableActivation, name string, value Value) {
 	activation.Set(name, NewVariableWithValue(nil, value))
 }
 
-// stringFunction is the `String` function. It is stateless, hence it can be re-used across interpreters.
-var stringFunction = func() Value {
-	functionValue := NewUnmeteredHostFunctionValue(
-		func(invocation Invocation) Value {
-			return emptyString
-		},
-		&sema.FunctionType{
-			Purity: sema.FunctionPurityView,
-			ReturnTypeAnnotation: sema.NewTypeAnnotation(
-				sema.StringType,
-			),
-		},
-	)
-
-	addMember := func(name string, value Value) {
-		if functionValue.NestedVariables == nil {
-			functionValue.NestedVariables = map[string]*Variable{}
-		}
-		// these variables are not needed to be metered as they are only ever declared once,
-		// and can be considered base interpreter overhead
-		functionValue.NestedVariables[name] = NewVariableWithValue(nil, value)
-	}
-
-	addMember(
-		sema.StringTypeEncodeHexFunctionName,
-		NewUnmeteredHostFunctionValue(
-			func(invocation Invocation) Value {
-				argument, ok := invocation.Arguments[0].(*ArrayValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				inter := invocation.Interpreter
-				memoryUsage := common.NewStringMemoryUsage(
-					safeMul(argument.Count(), 2),
-				)
-				return NewStringValue(
-					inter,
-					memoryUsage,
-					func() string {
-						bytes, _ := ByteArrayValueToByteSlice(inter, argument)
-						return hex.EncodeToString(bytes)
-					},
-				)
-			},
-			sema.StringTypeEncodeHexFunctionType,
-		),
-	)
-
-	addMember(
-		sema.StringTypeFromUtf8FunctionName,
-		NewUnmeteredHostFunctionValue(
-			func(invocation Invocation) Value {
-				argument, ok := invocation.Arguments[0].(*ArrayValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				inter := invocation.Interpreter
-				// naively read the entire byte array before validating
-				buf, err := ByteArrayValueToByteSlice(inter, argument)
-
-				if err != nil {
-					panic(errors.NewExternalError(err))
-				}
-
-				if !utf8.Valid(buf) {
-					return Nil
-				}
-
-				memoryUsage := common.NewStringMemoryUsage(len(buf))
-
-				return NewSomeValueNonCopying(
-					inter,
-					NewStringValue(inter, memoryUsage, func() string {
-						return string(buf)
-					}),
-				)
-			},
-			sema.StringTypeFromUtf8FunctionType,
-		),
-	)
-	return functionValue
-}()
-
 func defineStringFunction(activation *VariableActivation) {
 	defineBaseValue(activation, sema.StringType.String(), stringFunction)
 }
@@ -4011,8 +3923,8 @@ func (interpreter *Interpreter) getElaboration(location common.Location) *sema.E
 
 // GetContractComposite gets the composite value of the contract at the address location.
 func (interpreter *Interpreter) GetContractComposite(contractLocation common.AddressLocation) (*CompositeValue, error) {
-	contractGlobal, ok := interpreter.Globals.Get(contractLocation.Name)
-	if !ok {
+	contractGlobal := interpreter.Globals.Get(contractLocation.Name)
+	if contractGlobal == nil {
 		return nil, NotDeclaredError{
 			ExpectedKind: common.DeclarationKindContract,
 			Name:         contractLocation.Name,

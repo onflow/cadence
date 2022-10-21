@@ -21,6 +21,7 @@ package sema
 import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 )
 
 const StringTypeEncodeHexFunctionName = "encodeHex"
@@ -30,7 +31,12 @@ Returns a hexadecimal string for the given byte array
 
 const StringTypeFromUtf8FunctionName = "fromUTF8"
 const StringTypeFromUtf8FunctionDocString = `
-Attempt to decode the input as a UTF-8 encoded string. Returns nil if the input bytes are malformed UTF-8.
+Attempt to decode the input as a UTF-8 encoded string. Returns nil if the input bytes are malformed UTF-8
+`
+
+const StringTypeFromCharactersFunctionName = "fromCharacters"
+const StringTypeFromCharactersFunctionDocString = `
+Returns a string from the given array of characters
 `
 
 // StringType represents the string type
@@ -215,3 +221,114 @@ var StringTypeToLowerFunctionType = &FunctionType{
 const stringTypeToLowerFunctionDocString = `
 Returns the string with upper case letters replaced with lowercase
 `
+
+const stringFunctionDocString = "Creates an empty string"
+
+var StringFunctionType = func() *FunctionType {
+	// Declare a function for the string type.
+	// For now, it has no parameters and creates an empty string
+
+	typeName := StringType.String()
+
+	// Check that the function is not accidentally redeclared
+
+	if BaseValueActivation.Find(typeName) != nil {
+		panic(errors.NewUnreachableError())
+	}
+
+	functionType := &FunctionType{
+		Purity:               FunctionPurityView,
+		ReturnTypeAnnotation: NewTypeAnnotation(StringType),
+	}
+
+	addMember := func(member *Member) {
+		if functionType.Members == nil {
+			functionType.Members = &StringMemberOrderedMap{}
+		}
+		name := member.Identifier.Identifier
+		if functionType.Members.Contains(name) {
+			panic(errors.NewUnreachableError())
+		}
+		functionType.Members.Set(name, member)
+	}
+
+	addMember(NewUnmeteredPublicFunctionMember(
+		functionType,
+		StringTypeEncodeHexFunctionName,
+		StringTypeEncodeHexFunctionType,
+		StringTypeEncodeHexFunctionDocString,
+	))
+
+	addMember(NewUnmeteredPublicFunctionMember(
+		functionType,
+		StringTypeFromUtf8FunctionName,
+		StringTypeFromUtf8FunctionType,
+		StringTypeFromUtf8FunctionDocString,
+	))
+
+	addMember(NewUnmeteredPublicFunctionMember(
+		functionType,
+		StringTypeFromCharactersFunctionName,
+		StringTypeFromCharactersFunctionType,
+		StringTypeFromCharactersFunctionDocString,
+	))
+
+	BaseValueActivation.Set(
+		typeName,
+		baseFunctionVariable(
+			typeName,
+			functionType,
+			stringFunctionDocString,
+		),
+	)
+
+	return functionType
+}()
+
+var StringTypeEncodeHexFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
+	Parameters: []*Parameter{
+		{
+			Label:      ArgumentLabelNotRequired,
+			Identifier: "data",
+			TypeAnnotation: NewTypeAnnotation(
+				ByteArrayType,
+			),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		StringType,
+	),
+}
+
+var StringTypeFromUtf8FunctionType = &FunctionType{
+	Purity: FunctionPurityView,
+	Parameters: []*Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "bytes",
+			TypeAnnotation: NewTypeAnnotation(ByteArrayType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&OptionalType{
+			Type: StringType,
+		},
+	),
+}
+
+var StringTypeFromCharactersFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
+	Parameters: []*Parameter{
+		{
+			Label:      ArgumentLabelNotRequired,
+			Identifier: "characters",
+			TypeAnnotation: NewTypeAnnotation(&VariableSizedType{
+				Type: CharacterType,
+			}),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		StringType,
+	),
+}
