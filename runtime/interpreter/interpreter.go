@@ -4236,7 +4236,7 @@ func (interpreter *Interpreter) updateReferencedResource(
 		updateFunc(value)
 	}
 
-	// If the move is for a new location, then the resources are already cleared via the update function above.
+	// If the move is to a new location, then the resources are already cleared via the update function above.
 	// So no need to track those stale resources anymore.
 	if newStorageID != currentStorageID {
 		interpreter.sharedState.referencedResourceKindedValues[currentStorageID] = nil

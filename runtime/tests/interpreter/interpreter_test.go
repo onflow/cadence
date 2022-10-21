@@ -7558,7 +7558,7 @@ func TestInterpretResourceMovingAndBorrowing(t *testing.T) {
                 }
 
                 fun moveToStack_Borrow_AndMoveBack(): &R2 {
-                    // The second assignment should lead to the invalidation of the resource-ref
+                    // The second assignment should not lead to the resource being cleared
                     let optR2 <- self.r2 <- nil
                     let r2 <- optR2!
                     let ref = &r2 as &R2

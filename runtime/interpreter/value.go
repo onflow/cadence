@@ -17388,7 +17388,6 @@ type EphemeralReferenceValue struct {
 	Authorized   bool
 	Value        Value
 	BorrowedType sema.Type
-	invalidated  bool
 }
 
 var _ Value = &EphemeralReferenceValue{}
@@ -17415,11 +17414,7 @@ func NewEphemeralReferenceValue(
 	borrowedType sema.Type,
 ) *EphemeralReferenceValue {
 	common.UseMemory(interpreter, common.EphemeralReferenceValueMemoryUsage)
-	return NewUnmeteredEphemeralReferenceValue(
-		authorized,
-		value,
-		borrowedType,
-	)
+	return NewUnmeteredEphemeralReferenceValue(authorized, value, borrowedType)
 }
 
 func (*EphemeralReferenceValue) IsValue() {}
