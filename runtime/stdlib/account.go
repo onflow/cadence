@@ -626,7 +626,7 @@ type PublicKey struct {
 type AccountKeyProvider interface {
 	// GetAccountKey retrieves a key from an account by index.
 	GetAccountKey(address common.Address, index int) (*AccountKey, error)
-	AccountKeysCount(address common.Address) uint64
+	AccountKeysCount(address common.Address) (uint64, error)
 }
 
 // public keys are assumed to be already validated
@@ -728,12 +728,20 @@ func newAccountKeysForEachFunction(
 				)
 			}
 
-			count := int(provider.AccountKeysCount(address))
-
+			var count uint64
 			var err error
+
+			wrapPanic(func() {
+				count, err = provider.AccountKeysCount(address)
+			})
+
+			if err != nil {
+				panic(err)
+			}
+
 			var accountKey *AccountKey
 
-			for index := 0; index < count; index++ {
+			for index := 0; index < int(count); index++ {
 				wrapPanic(func() {
 					accountKey, err = provider.GetAccountKey(address, index)
 				})
@@ -784,7 +792,12 @@ func newAccountKeysCountConstructor(
 
 	return func() interpreter.UInt64Value {
 		return interpreter.NewUInt64Value(gauge, func() uint64 {
-			return provider.AccountKeysCount(address)
+			count, err := provider.AccountKeysCount(address)
+			if err != nil {
+				// if the FVM isn't able to fetch the number of account keys, we have a problem
+				panic(err)
+			}
+			return count
 		})
 	}
 }
