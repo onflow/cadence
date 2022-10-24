@@ -4084,6 +4084,8 @@ func TestCreateExpression_String(t *testing.T) {
 
 func TestReferenceExpression_MarshalJSON(t *testing.T) {
 
+	t.Parallel()
+
 	expr := &ReferenceExpression{
 		Expression: &IdentifierExpression{
 			Identifier: Identifier{
