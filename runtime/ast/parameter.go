@@ -47,7 +47,6 @@ func NewParameter(
 // an argument in a call must use:
 // If no argument label is declared for parameter,
 // the parameter name is used as the argument label
-//
 func (p Parameter) EffectiveArgumentLabel() string {
 	if p.Label != "" {
 		return p.Label

@@ -27,7 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/tests/utils"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
@@ -55,12 +55,12 @@ func TestArrayMutation(t *testing.T) {
 		require.IsType(t, &interpreter.ArrayValue{}, value)
 		array := value.(*interpreter.ArrayValue)
 
-		utils.RequireValuesEqual(
+		RequireValuesEqual(
 			t,
 			inter,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.ReturnEmptyLocationRange,
+				interpreter.EmptyLocationRange,
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
@@ -83,8 +83,7 @@ func TestArrayMutation(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		mutationError := &interpreter.ContainerMutationError{}
 		require.ErrorAs(t, err, mutationError)
@@ -104,8 +103,7 @@ func TestArrayMutation(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		mutationError := &interpreter.ContainerMutationError{}
 		require.ErrorAs(t, err, mutationError)
@@ -131,12 +129,12 @@ func TestArrayMutation(t *testing.T) {
 		require.IsType(t, &interpreter.ArrayValue{}, value)
 		array := value.(*interpreter.ArrayValue)
 
-		utils.RequireValuesEqual(
+		RequireValuesEqual(
 			t,
 			inter,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.ReturnEmptyLocationRange,
+				interpreter.EmptyLocationRange,
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
@@ -160,8 +158,7 @@ func TestArrayMutation(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		mutationError := &interpreter.ContainerMutationError{}
 		require.ErrorAs(t, err, mutationError)
@@ -181,8 +178,7 @@ func TestArrayMutation(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		mutationError := &interpreter.ContainerMutationError{}
 		require.ErrorAs(t, err, mutationError)
@@ -208,12 +204,12 @@ func TestArrayMutation(t *testing.T) {
 		require.IsType(t, &interpreter.ArrayValue{}, value)
 		array := value.(*interpreter.ArrayValue)
 
-		utils.RequireValuesEqual(
+		RequireValuesEqual(
 			t,
 			inter,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.ReturnEmptyLocationRange,
+				interpreter.EmptyLocationRange,
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
@@ -237,8 +233,7 @@ func TestArrayMutation(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		mutationError := &interpreter.ContainerMutationError{}
 		require.ErrorAs(t, err, mutationError)
@@ -260,23 +255,22 @@ func TestArrayMutation(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		require.ErrorAs(t, err, &interpreter.ContainerMutationError{})
 
 		// Check original array
 
-		namesVal := inter.Globals["names"].GetValue()
+		namesVal := inter.Globals.Get("names").GetValue()
 		require.IsType(t, &interpreter.ArrayValue{}, namesVal)
 		namesValArray := namesVal.(*interpreter.ArrayValue)
 
-		utils.RequireValuesEqual(
+		RequireValuesEqual(
 			t,
 			inter,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.ReturnEmptyLocationRange,
+				interpreter.EmptyLocationRange,
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
@@ -300,8 +294,7 @@ func TestArrayMutation(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		mutationError := &interpreter.ContainerMutationError{}
 		require.ErrorAs(t, err, mutationError)
@@ -322,7 +315,7 @@ func TestArrayMutation(t *testing.T) {
 			func(invocation interpreter.Invocation) interpreter.Value {
 				invoked = true
 				assert.Equal(t, "\"hello\"", invocation.Arguments[0].String())
-				return interpreter.VoidValue{}
+				return interpreter.Void
 			},
 		)
 
@@ -393,12 +386,12 @@ func TestArrayMutation(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("hello from foo"),
-			array.Get(inter, interpreter.ReturnEmptyLocationRange, 0),
+			array.Get(inter, interpreter.EmptyLocationRange, 0),
 		)
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("hello from bar"),
-			array.Get(inter, interpreter.ReturnEmptyLocationRange, 1),
+			array.Get(inter, interpreter.EmptyLocationRange, 1),
 		)
 	})
 
@@ -444,12 +437,12 @@ func TestArrayMutation(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("hello from foo"),
-			array.Get(inter, interpreter.ReturnEmptyLocationRange, 0),
+			array.Get(inter, interpreter.EmptyLocationRange, 0),
 		)
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("hello from bar"),
-			array.Get(inter, interpreter.ReturnEmptyLocationRange, 1),
+			array.Get(inter, interpreter.EmptyLocationRange, 1),
 		)
 	})
 
@@ -463,7 +456,7 @@ func TestArrayMutation(t *testing.T) {
 			"",
 			func(invocation interpreter.Invocation) interpreter.Value {
 				assert.Fail(t, "unexpected call of log")
-				return interpreter.VoidValue{}
+				return interpreter.Void
 			},
 		)
 
@@ -493,8 +486,7 @@ func TestArrayMutation(t *testing.T) {
 		require.NoError(t, err)
 
 		_, err = inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		mutationError := &interpreter.ContainerMutationError{}
 		require.ErrorAs(t, err, mutationError)
@@ -543,7 +535,7 @@ func TestDictionaryMutation(t *testing.T) {
 
 		val, present := dictionary.Get(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.NewUnmeteredStringValue("foo"),
 		)
 		assert.True(t, present)
@@ -561,8 +553,7 @@ func TestDictionaryMutation(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		mutationError := &interpreter.ContainerMutationError{}
 		require.ErrorAs(t, err, mutationError)
@@ -623,7 +614,7 @@ func TestDictionaryMutation(t *testing.T) {
 
 		val, present := dictionary.Get(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.NewUnmeteredStringValue("foo"),
 		)
 		assert.True(t, present)
@@ -641,8 +632,7 @@ func TestDictionaryMutation(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		mutationError := &interpreter.ContainerMutationError{}
 		require.ErrorAs(t, err, mutationError)
@@ -662,8 +652,7 @@ func TestDictionaryMutation(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		mutationError := &interpreter.ContainerMutationError{}
 		require.ErrorAs(t, err, mutationError)
@@ -684,8 +673,7 @@ func TestDictionaryMutation(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		mutationError := &interpreter.ContainerMutationError{}
 		require.ErrorAs(t, err, mutationError)
@@ -717,7 +705,7 @@ func TestDictionaryMutation(t *testing.T) {
 			func(invocation interpreter.Invocation) interpreter.Value {
 				invoked = true
 				assert.Equal(t, "\"hello\"", invocation.Arguments[0].String())
-				return interpreter.VoidValue{}
+				return interpreter.Void
 			},
 		)
 
@@ -788,12 +776,12 @@ func TestDictionaryMutation(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("hello from foo"),
-			array.Get(inter, interpreter.ReturnEmptyLocationRange, 0),
+			array.Get(inter, interpreter.EmptyLocationRange, 0),
 		)
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("hello from bar"),
-			array.Get(inter, interpreter.ReturnEmptyLocationRange, 1),
+			array.Get(inter, interpreter.EmptyLocationRange, 1),
 		)
 	})
 
@@ -839,12 +827,12 @@ func TestDictionaryMutation(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("hello from foo"),
-			array.Get(inter, interpreter.ReturnEmptyLocationRange, 0),
+			array.Get(inter, interpreter.EmptyLocationRange, 0),
 		)
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("hello from bar"),
-			array.Get(inter, interpreter.ReturnEmptyLocationRange, 1),
+			array.Get(inter, interpreter.EmptyLocationRange, 1),
 		)
 	})
 
@@ -858,7 +846,7 @@ func TestDictionaryMutation(t *testing.T) {
 			"",
 			func(invocation interpreter.Invocation) interpreter.Value {
 				assert.Fail(t, "unexpected call of log")
-				return interpreter.VoidValue{}
+				return interpreter.Void
 			},
 		)
 
@@ -888,8 +876,7 @@ func TestDictionaryMutation(t *testing.T) {
 		require.NoError(t, err)
 
 		_, err = inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		mutationError := &interpreter.ContainerMutationError{}
 		require.ErrorAs(t, err, mutationError)
@@ -958,7 +945,7 @@ func TestInterpretContainerMutationAfterNilCoalescing(t *testing.T) {
 	result, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	utils.RequireValuesEqual(
+	RequireValuesEqual(
 		t,
 		inter,
 		interpreter.NewUnmeteredSomeValueNonCopying(

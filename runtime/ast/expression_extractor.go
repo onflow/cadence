@@ -25,6 +25,9 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
+type VoidExtractor interface {
+	ExtractVoid(extractor *ExpressionExtractor, expression *VoidExpression) ExpressionExtraction
+}
 type BoolExtractor interface {
 	ExtractBool(extractor *ExpressionExtractor, expression *BoolExpression) ExpressionExtraction
 }
@@ -111,6 +114,7 @@ type PathExtractor interface {
 
 type ExpressionExtractor struct {
 	nextIdentifier       int
+	VoidExtractor        VoidExtractor
 	BoolExtractor        BoolExtractor
 	NilExtractor         NilExtractor
 	IntExtractor         IntExtractor
@@ -167,6 +171,26 @@ type ExpressionExtraction struct {
 	ExtractedExpressions []ExtractedExpression
 }
 
+// utility for expressions whose rewritten form is identical, i.e. nothing to rewrite
+func rewriteExpressionAsIs(expression Expression) ExpressionExtraction {
+	return ExpressionExtraction{
+		RewrittenExpression:  expression,
+		ExtractedExpressions: nil,
+	}
+}
+
+func (extractor *ExpressionExtractor) VisitVoidExpression(expression *VoidExpression) ExpressionExtraction {
+	if extractor.VoidExtractor != nil {
+		return extractor.VoidExtractor.ExtractVoid(extractor, expression)
+	}
+
+	return extractor.ExtractVoid(expression)
+}
+
+func (extractor *ExpressionExtractor) ExtractVoid(expression *VoidExpression) ExpressionExtraction {
+	return rewriteExpressionAsIs(expression)
+}
+
 func (extractor *ExpressionExtractor) VisitBoolExpression(expression *BoolExpression) ExpressionExtraction {
 
 	// delegate to child extractor, if any,
@@ -179,13 +203,7 @@ func (extractor *ExpressionExtractor) VisitBoolExpression(expression *BoolExpres
 }
 
 func (extractor *ExpressionExtractor) ExtractBool(expression *BoolExpression) ExpressionExtraction {
-
-	// nothing to rewrite, return as-is
-
-	return ExpressionExtraction{
-		RewrittenExpression:  expression,
-		ExtractedExpressions: nil,
-	}
+	return rewriteExpressionAsIs(expression)
 }
 
 func (extractor *ExpressionExtractor) VisitNilExpression(expression *NilExpression) ExpressionExtraction {
@@ -200,13 +218,7 @@ func (extractor *ExpressionExtractor) VisitNilExpression(expression *NilExpressi
 }
 
 func (extractor *ExpressionExtractor) ExtractNil(expression *NilExpression) ExpressionExtraction {
-
-	// nothing to rewrite, return as-is
-
-	return ExpressionExtraction{
-		RewrittenExpression:  expression,
-		ExtractedExpressions: nil,
-	}
+	return rewriteExpressionAsIs(expression)
 }
 
 func (extractor *ExpressionExtractor) VisitIntegerExpression(expression *IntegerExpression) ExpressionExtraction {
@@ -221,13 +233,7 @@ func (extractor *ExpressionExtractor) VisitIntegerExpression(expression *Integer
 }
 
 func (extractor *ExpressionExtractor) ExtractInteger(expression *IntegerExpression) ExpressionExtraction {
-
-	// nothing to rewrite, return as-is
-
-	return ExpressionExtraction{
-		RewrittenExpression:  expression,
-		ExtractedExpressions: nil,
-	}
+	return rewriteExpressionAsIs(expression)
 }
 
 func (extractor *ExpressionExtractor) VisitFixedPointExpression(expression *FixedPointExpression) ExpressionExtraction {
@@ -242,13 +248,7 @@ func (extractor *ExpressionExtractor) VisitFixedPointExpression(expression *Fixe
 }
 
 func (extractor *ExpressionExtractor) ExtractFixedPoint(expression *FixedPointExpression) ExpressionExtraction {
-
-	// nothing to rewrite, return as-is
-
-	return ExpressionExtraction{
-		RewrittenExpression:  expression,
-		ExtractedExpressions: nil,
-	}
+	return rewriteExpressionAsIs(expression)
 }
 
 func (extractor *ExpressionExtractor) VisitStringExpression(expression *StringExpression) ExpressionExtraction {
@@ -263,13 +263,7 @@ func (extractor *ExpressionExtractor) VisitStringExpression(expression *StringEx
 }
 
 func (extractor *ExpressionExtractor) ExtractString(expression *StringExpression) ExpressionExtraction {
-
-	// nothing to rewrite, return as-is
-
-	return ExpressionExtraction{
-		RewrittenExpression:  expression,
-		ExtractedExpressions: nil,
-	}
+	return rewriteExpressionAsIs(expression)
 }
 
 func (extractor *ExpressionExtractor) VisitArrayExpression(expression *ArrayExpression) ExpressionExtraction {
@@ -382,12 +376,7 @@ func (extractor *ExpressionExtractor) VisitIdentifierExpression(expression *Iden
 }
 
 func (extractor *ExpressionExtractor) ExtractIdentifier(expression *IdentifierExpression) ExpressionExtraction {
-
-	// nothing to rewrite, return as-is
-
-	return ExpressionExtraction{
-		RewrittenExpression: expression,
-	}
+	return rewriteExpressionAsIs(expression)
 }
 
 func (extractor *ExpressionExtractor) VisitInvocationExpression(expression *InvocationExpression) ExpressionExtraction {
@@ -790,11 +779,5 @@ func (extractor *ExpressionExtractor) VisitPathExpression(expression *PathExpres
 }
 
 func (extractor *ExpressionExtractor) ExtractPath(expression *PathExpression) ExpressionExtraction {
-
-	// nothing to rewrite, return as-is
-
-	return ExpressionExtraction{
-		RewrittenExpression:  expression,
-		ExtractedExpressions: nil,
-	}
+	return rewriteExpressionAsIs(expression)
 }

@@ -35,6 +35,19 @@ func (a FunctionActivation) InSwitch() bool {
 	return a.Switches > 0
 }
 
+func (a *FunctionActivation) WithLoop(f func()) {
+	a.Loops++
+	a.ReturnInfo.WithNewJumpTarget(f)
+	a.Loops--
+}
+
+func (a *FunctionActivation) WithSwitch(f func()) {
+	// NOTE: new jump-offsets child-set for each case instead of whole switch
+	a.Switches++
+	f()
+	a.Switches--
+}
+
 type FunctionActivations struct {
 	activations []*FunctionActivation
 }
@@ -54,7 +67,7 @@ func (a *FunctionActivations) EnterFunction(functionType *FunctionType, valueAct
 	activation := &FunctionActivation{
 		ReturnType:           functionType.ReturnTypeAnnotation.Type,
 		ValueActivationDepth: valueActivationDepth,
-		ReturnInfo:           &ReturnInfo{},
+		ReturnInfo:           NewReturnInfo(),
 	}
 	a.activations = append(a.activations, activation)
 	return activation
@@ -72,8 +85,8 @@ func (a *FunctionActivations) WithFunction(
 	f func(activation *FunctionActivation),
 ) {
 	activation := a.EnterFunction(functionType, valueActivationDepth)
-	defer a.LeaveFunction()
 	f(activation)
+	a.LeaveFunction()
 }
 
 func (a *FunctionActivations) Current() *FunctionActivation {
@@ -82,36 +95,4 @@ func (a *FunctionActivations) Current() *FunctionActivation {
 		return nil
 	}
 	return a.activations[lastIndex]
-}
-
-func (a *FunctionActivations) WithLoop(f func()) {
-	current := a.Current()
-	current.Loops++
-
-	returnInfo := current.ReturnInfo
-	maybeJumped := returnInfo.MaybeJumped
-	returnInfo.MaybeJumped = false
-
-	defer func() {
-		current.Loops--
-		returnInfo.MaybeJumped = maybeJumped
-	}()
-
-	f()
-}
-
-func (a *FunctionActivations) WithSwitch(f func()) {
-	current := a.Current()
-	current.Switches++
-
-	returnInfo := current.ReturnInfo
-	maybeJumped := returnInfo.MaybeJumped
-	returnInfo.MaybeJumped = false
-
-	defer func() {
-		current.Switches--
-		returnInfo.MaybeJumped = maybeJumped
-	}()
-
-	f()
 }

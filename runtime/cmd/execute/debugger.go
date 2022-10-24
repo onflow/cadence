@@ -72,7 +72,6 @@ func (d *InteractiveDebugger) Next() {
 
 // Show shows the values for the variables with the given names.
 // If no names are given, lists all non-base variables
-//
 func (d *InteractiveDebugger) Show(names []string) {
 	current := d.debugger.CurrentActivation(d.stop.Interpreter)
 	switch len(names) {

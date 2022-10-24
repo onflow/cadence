@@ -59,10 +59,11 @@ var PublicKeyConstructor = NewStandardLibraryFunction(
 		}
 
 		inter := invocation.Interpreter
+		locationRange := invocation.LocationRange
 
 		return interpreter.NewPublicKeyValue(
 			inter,
-			invocation.GetLocationRange,
+			locationRange,
 			publicKey,
 			signAlgo,
 			inter.Config.PublicKeyValidationHandler,

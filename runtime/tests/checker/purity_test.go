@@ -69,7 +69,7 @@ func TestCheckPuritySubtyping(t *testing.T) {
         let x: (view (): Void) = foo
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
@@ -91,7 +91,7 @@ func TestCheckPuritySubtyping(t *testing.T) {
         let x: (view (((): Void)): Void) = foo
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
@@ -127,7 +127,7 @@ func TestCheckPuritySubtyping(t *testing.T) {
         }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ConformanceError{}, errs[0])
 	})
@@ -159,7 +159,7 @@ func TestCheckPuritySubtyping(t *testing.T) {
         }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ConformanceError{}, errs[0])
 	})
@@ -176,7 +176,7 @@ func TestCheckPuritySubtyping(t *testing.T) {
         }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ConformanceError{}, errs[0])
 	})
@@ -219,7 +219,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
         }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
@@ -239,7 +239,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
         }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
@@ -273,7 +273,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
         }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
@@ -294,7 +294,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
         }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
@@ -311,7 +311,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
         }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
@@ -328,7 +328,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
         }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
@@ -356,7 +356,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
         }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
@@ -373,7 +373,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
         }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
@@ -390,7 +390,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
         }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
@@ -407,7 +407,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
         }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
@@ -424,7 +424,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
         }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
@@ -441,7 +441,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
         }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
@@ -459,7 +459,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
         }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
@@ -477,7 +477,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
         }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
@@ -495,7 +495,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
         }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
@@ -513,7 +513,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
         }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
@@ -573,7 +573,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
         }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
@@ -649,7 +649,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
         }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
@@ -671,7 +671,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
         }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
@@ -723,7 +723,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
         }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
@@ -749,7 +749,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
         }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
@@ -773,7 +773,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
         }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 		assert.IsType(t, &sema.PurityError{}, errs[1])
@@ -801,7 +801,7 @@ func TestCheckResourceWritePurity(t *testing.T) {
             }
             `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
@@ -820,7 +820,7 @@ func TestCheckResourceWritePurity(t *testing.T) {
             }
             `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
@@ -849,7 +849,7 @@ func TestCheckResourceWritePurity(t *testing.T) {
             }
             `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
@@ -875,7 +875,7 @@ func TestCheckResourceWritePurity(t *testing.T) {
             }
             `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
@@ -901,7 +901,7 @@ func TestCheckResourceWritePurity(t *testing.T) {
             }
             `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
@@ -926,7 +926,7 @@ func TestCheckResourceWritePurity(t *testing.T) {
         }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
@@ -951,7 +951,7 @@ func TestCheckResourceWritePurity(t *testing.T) {
         }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
@@ -997,7 +997,7 @@ func TestCheckCompositeWritePurity(t *testing.T) {
         }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
@@ -1081,7 +1081,7 @@ func TestCheckCompositeWritePurity(t *testing.T) {
         }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
@@ -1108,7 +1108,7 @@ func TestCheckCompositeWritePurity(t *testing.T) {
         }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
@@ -1176,7 +1176,7 @@ func TestCheckContainerMethodPurity(t *testing.T) {
         }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 	})
@@ -1190,7 +1190,7 @@ func TestCheckContainerMethodPurity(t *testing.T) {
         }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 	})
@@ -1204,7 +1204,7 @@ func TestCheckContainerMethodPurity(t *testing.T) {
         }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 	})
@@ -1218,7 +1218,7 @@ func TestCheckContainerMethodPurity(t *testing.T) {
         }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 	})
@@ -1232,7 +1232,7 @@ func TestCheckContainerMethodPurity(t *testing.T) {
         }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 	})
@@ -1246,7 +1246,7 @@ func TestCheckContainerMethodPurity(t *testing.T) {
         }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 	})
@@ -1260,7 +1260,7 @@ func TestCheckContainerMethodPurity(t *testing.T) {
         }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 	})
@@ -1274,7 +1274,7 @@ func TestCheckContainerMethodPurity(t *testing.T) {
         }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 	})
@@ -1334,7 +1334,7 @@ func TestCheckConditionPurity(t *testing.T) {
 		}
 		`)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 	})
@@ -1350,7 +1350,7 @@ func TestCheckConditionPurity(t *testing.T) {
 		}
 		`)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 	})

@@ -48,7 +48,7 @@ func TestCheckInvalidOptional(t *testing.T) {
       let x: Int? = false
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -107,7 +107,7 @@ func TestCheckInvalidNonOptionalNil(t *testing.T) {
       let x: Int = nil
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -207,7 +207,7 @@ func TestCheckInvalidNestedOptionalComparison(t *testing.T) {
      let z = x == y
    `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidBinaryOperandsError{}, errs[0])
 }
@@ -341,7 +341,7 @@ func TestCheckInvalidCompositeNilEquality(t *testing.T) {
 			if compositeKind == common.CompositeKindEnum {
 				require.NoError(t, err)
 			} else {
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.InvalidBinaryOperandsError{}, errs[0])
 			}
@@ -368,7 +368,7 @@ func TestCheckInvalidNonOptionalReturn(t *testing.T) {
       }
 	`)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -382,7 +382,7 @@ func TestCheckInvalidOptionalIntegerConversion(t *testing.T) {
       let y: Int16? = x
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -430,7 +430,7 @@ func TestCheckOptionalMap(t *testing.T) {
           }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
@@ -446,7 +446,7 @@ func TestCheckOptionalMap(t *testing.T) {
           }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})

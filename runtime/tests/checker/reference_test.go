@@ -70,7 +70,7 @@ func TestCheckReference(t *testing.T) {
               let x: Int = &1
             `)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.NonReferenceTypeReferenceError{}, errs[0])
 		})
@@ -108,7 +108,7 @@ func TestCheckReference(t *testing.T) {
               let x = &1 as Int
             `)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.NonReferenceTypeReferenceError{}, errs[0])
 		})
@@ -122,7 +122,7 @@ func TestCheckReference(t *testing.T) {
           let x = &1 as &Int as auth &Int
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
@@ -135,7 +135,7 @@ func TestCheckReference(t *testing.T) {
           let x = &1
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.TypeAnnotationRequiredError{}, errs[0])
 	})
@@ -277,7 +277,7 @@ func TestCheckInvalidReferenceType(t *testing.T) {
       fun test(t: &T) {}
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 
@@ -376,7 +376,7 @@ func TestCheckReferenceExpressionWithInterfaceResultType(t *testing.T) {
           let ref = &r as &I
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidInterfaceTypeError{}, errs[0])
 	})
@@ -393,7 +393,7 @@ func TestCheckReferenceExpressionWithInterfaceResultType(t *testing.T) {
           let ref = &s as &I
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidInterfaceTypeError{}, errs[0])
 	})
@@ -494,7 +494,7 @@ func TestCheckInvalidReferenceExpressionType(t *testing.T) {
           let ref = &r as &X
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	})
@@ -510,7 +510,7 @@ func TestCheckInvalidReferenceExpressionType(t *testing.T) {
           let ref = &s as &X
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	})
@@ -524,7 +524,7 @@ func TestCheckInvalidReferenceExpressionType(t *testing.T) {
           let ref = &i as &X
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	})
@@ -546,7 +546,7 @@ func TestCheckInvalidReferenceExpressionTypeMismatchStructResource(t *testing.T)
           let ref = &s as &R
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
@@ -563,7 +563,7 @@ func TestCheckInvalidReferenceExpressionTypeMismatchStructResource(t *testing.T)
           let ref = &r as &S
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
@@ -581,7 +581,7 @@ func TestCheckInvalidReferenceExpressionDifferentStructs(t *testing.T) {
       let ref = &s as &T
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -598,7 +598,7 @@ func TestCheckInvalidReferenceExpressionTypeMismatchDifferentResources(t *testin
       let ref = &r as &T
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -829,7 +829,7 @@ func TestCheckInvalidReferenceResourceLoss(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 }
@@ -854,7 +854,7 @@ func TestCheckInvalidReferenceIndexingIfReferencedNotIndexable(t *testing.T) {
           }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.NotIndexableTypeError{}, errs[0])
 	})
@@ -874,7 +874,7 @@ func TestCheckInvalidReferenceIndexingIfReferencedNotIndexable(t *testing.T) {
           }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.NotIndexableTypeError{}, errs[0])
 	})
@@ -891,7 +891,7 @@ func TestCheckInvalidReferenceIndexingIfReferencedNotIndexable(t *testing.T) {
           }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.NotIndexableTypeError{}, errs[0])
 	})
@@ -975,7 +975,7 @@ func TestCheckInvalidResourceInterfaceReferenceFunctionCall(t *testing.T) {
           }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
 	})
@@ -999,7 +999,7 @@ func TestCheckInvalidResourceInterfaceReferenceFunctionCall(t *testing.T) {
           }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
 	})
@@ -1078,7 +1078,7 @@ func TestCheckReferenceExpressionOfOptional(t *testing.T) {
           let ref = &r as &R
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
@@ -1094,7 +1094,7 @@ func TestCheckReferenceExpressionOfOptional(t *testing.T) {
           let ref = &s as &S
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
@@ -1108,7 +1108,7 @@ func TestCheckReferenceExpressionOfOptional(t *testing.T) {
           let ref = &i as &Int
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
@@ -1144,7 +1144,7 @@ func TestCheckReferenceExpressionOfOptional(t *testing.T) {
           let ref = &i as &Int??
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.NonReferenceTypeReferenceError{}, errs[0])
 	})
 
@@ -1157,7 +1157,7 @@ func TestCheckReferenceExpressionOfOptional(t *testing.T) {
           let ref = &i as &Int?
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
@@ -1212,7 +1212,7 @@ func TestCheckInvalidReferenceExpressionNonReferenceAmbiguous(t *testing.T) {
       let y = &x as {}
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.AmbiguousRestrictedTypeError{}, errs[0])
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[1])
@@ -1226,7 +1226,7 @@ func TestCheckInvalidReferenceExpressionNonReferenceAnyResource(t *testing.T) {
       let y = &x as AnyResource{}
     `)
 
-	errs := ExpectCheckerErrors(t, err, 4)
+	errs := RequireCheckerErrors(t, err, 4)
 
 	assert.IsType(t, &sema.MissingResourceAnnotationError{}, errs[0])
 	assert.IsType(t, &sema.NonReferenceTypeReferenceError{}, errs[1])
@@ -1242,7 +1242,7 @@ func TestCheckInvalidReferenceExpressionNonReferenceAnyStruct(t *testing.T) {
       let y = &x as AnyStruct{}
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.NonReferenceTypeReferenceError{}, errs[0])
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[1])
@@ -1257,7 +1257,7 @@ func TestCheckInvalidDictionaryAccessReference(t *testing.T) {
       let ref = &xs[1] as &String
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 
@@ -1275,7 +1275,7 @@ func TestCheckDictionaryAccessReferenceIsOptional(t *testing.T) {
       let ref: Int = &xs[1] as &Int?
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 
@@ -1300,7 +1300,7 @@ func TestCheckInvalidDictionaryAccessOptionalReference(t *testing.T) {
 		let n = s.foo
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	require.IsType(t, &sema.NotDeclaredMemberError{}, errs[0]) // nil has no member foo
 }
@@ -1320,7 +1320,7 @@ func TestCheckInvalidDictionaryAccessNonOptionalReference(t *testing.T) {
 		let s = &dict[""] as &S
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -1389,7 +1389,7 @@ func TestCheckReferenceTypeImplicitConformance(t *testing.T) {
           let refS: &CI.S = &s as &C.S
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
@@ -1448,7 +1448,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             `,
 		)
 
-		errors := ExpectCheckerErrors(t, err, 1)
+		errors := RequireCheckerErrors(t, err, 1)
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errors[0], &invalidatedRefError)
 	})
@@ -1476,7 +1476,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             `,
 		)
 
-		errors := ExpectCheckerErrors(t, err, 1)
+		errors := RequireCheckerErrors(t, err, 1)
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errors[0], &invalidatedRefError)
 	})
@@ -1504,7 +1504,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             `,
 		)
 
-		errors := ExpectCheckerErrors(t, err, 1)
+		errors := RequireCheckerErrors(t, err, 1)
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errors[0], &invalidatedRefError)
 	})
@@ -1536,7 +1536,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             `,
 		)
 
-		errors := ExpectCheckerErrors(t, err, 1)
+		errors := RequireCheckerErrors(t, err, 1)
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errors[0], &invalidatedRefError)
 	})
@@ -1568,7 +1568,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             `,
 		)
 
-		errors := ExpectCheckerErrors(t, err, 1)
+		errors := RequireCheckerErrors(t, err, 1)
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errors[0], &invalidatedRefError)
 	})
@@ -1600,7 +1600,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             `,
 		)
 
-		errors := ExpectCheckerErrors(t, err, 1)
+		errors := RequireCheckerErrors(t, err, 1)
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errors[0], &invalidatedRefError)
 	})
@@ -1631,7 +1631,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             `,
 		)
 
-		errors := ExpectCheckerErrors(t, err, 1)
+		errors := RequireCheckerErrors(t, err, 1)
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errors[0], &invalidatedRefError)
 	})
@@ -1669,7 +1669,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             `,
 		)
 
-		errors := ExpectCheckerErrors(t, err, 1)
+		errors := RequireCheckerErrors(t, err, 1)
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errors[0], &invalidatedRefError)
 	})
@@ -1733,7 +1733,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             `,
 		)
 
-		errors := ExpectCheckerErrors(t, err, 1)
+		errors := RequireCheckerErrors(t, err, 1)
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errors[0], &invalidatedRefError)
 	})
@@ -1852,7 +1852,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             `,
 		)
 
-		errors := ExpectCheckerErrors(t, err, 1)
+		errors := RequireCheckerErrors(t, err, 1)
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errors[0], &invalidatedRefError)
 	})
@@ -1879,7 +1879,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             `,
 		)
 
-		errors := ExpectCheckerErrors(t, err, 1)
+		errors := RequireCheckerErrors(t, err, 1)
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errors[0], &invalidatedRefError)
 	})
@@ -2079,13 +2079,16 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             `,
 		)
 
-		errors := ExpectCheckerErrors(t, err, 2)
+		errors := RequireCheckerErrors(t, err, 3)
 
-		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		var invalidatedRefError *sema.InvalidatedResourceReferenceError
 		assert.ErrorAs(t, errors[0], &invalidatedRefError)
 
-		resourceUseAfterInvalidationErr := &sema.ResourceUseAfterInvalidationError{}
+		var resourceUseAfterInvalidationErr *sema.ResourceUseAfterInvalidationError
 		assert.ErrorAs(t, errors[1], &resourceUseAfterInvalidationErr)
+
+		var resourceLossErr *sema.ResourceLossError
+		assert.ErrorAs(t, errors[2], &resourceLossErr)
 	})
 
 	t.Run("nil coalescing lhs", func(t *testing.T) {
@@ -2111,7 +2114,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             `,
 		)
 
-		errors := ExpectCheckerErrors(t, err, 1)
+		errors := RequireCheckerErrors(t, err, 1)
 
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errors[0], &invalidatedRefError)
@@ -2143,7 +2146,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             `,
 		)
 
-		errors := ExpectCheckerErrors(t, err, 1)
+		errors := RequireCheckerErrors(t, err, 1)
 
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errors[0], &invalidatedRefError)
@@ -2175,7 +2178,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             `,
 		)
 
-		errors := ExpectCheckerErrors(t, err, 2)
+		errors := RequireCheckerErrors(t, err, 2)
 
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errors[0], &invalidatedRefError)
@@ -2211,7 +2214,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             `,
 		)
 
-		errors := ExpectCheckerErrors(t, err, 3)
+		errors := RequireCheckerErrors(t, err, 3)
 
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errors[0], &invalidatedRefError)
@@ -2244,7 +2247,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             `,
 		)
 
-		errors := ExpectCheckerErrors(t, err, 1)
+		errors := RequireCheckerErrors(t, err, 1)
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errors[0], &invalidatedRefError)
 	})
@@ -2303,7 +2306,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             `,
 		)
 
-		errors := ExpectCheckerErrors(t, err, 1)
+		errors := RequireCheckerErrors(t, err, 1)
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errors[0], &invalidatedRefError)
 	})
@@ -2404,7 +2407,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             `,
 		)
 
-		errors := ExpectCheckerErrors(t, err, 1)
+		errors := RequireCheckerErrors(t, err, 1)
 
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errors[0], &invalidatedRefError)
@@ -2436,7 +2439,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             `,
 		)
 
-		errors := ExpectCheckerErrors(t, err, 1)
+		errors := RequireCheckerErrors(t, err, 1)
 
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errors[0], &invalidatedRefError)
@@ -2468,7 +2471,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             `,
 		)
 
-		errors := ExpectCheckerErrors(t, err, 2)
+		errors := RequireCheckerErrors(t, err, 2)
 
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errors[0], &invalidatedRefError)

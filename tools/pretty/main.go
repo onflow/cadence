@@ -43,7 +43,7 @@ func pretty(code string, maxLineWidth int) string {
 	return b.String()
 }
 
-//language=html
+// language=html
 const page = `
 <html>
 <head>

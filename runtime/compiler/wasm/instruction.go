@@ -19,7 +19,6 @@
 package wasm
 
 // Instruction represents an instruction in the code of a WASM binary
-//
 type Instruction interface {
 	isInstruction()
 	write(*WASMWriter) error

@@ -26,27 +26,25 @@ import (
 
 // parseTransactionDeclaration parses a transaction declaration.
 //
-//     transactionDeclaration : 'transaction'
-//         parameterList?
-//         '{'
-//         fields
-//         prepare?
-//         preConditions?
-//         ( execute
-//         | execute postConditions
-//         | postConditions
-//         | postConditions execute
-//         | /* no execute or postConditions */
-//         )
-//         '}'
-//
+//	transactionDeclaration : 'transaction'
+//	    parameterList?
+//	    '{'
+//	    fields
+//	    prepare?
+//	    preConditions?
+//	    ( execute
+//	    | execute postConditions
+//	    | postConditions
+//	    | postConditions execute
+//	    | /* no execute or postConditions */
+//	    )
+//	    '}'
 func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionDeclaration, error) {
 
 	startPos := p.current.StartPos
 
 	// Skip the `transaction` keyword
-	p.next()
-	p.skipSpaceAndComments(true)
+	p.nextSemanticToken()
 
 	// Parameter list (optional)
 
@@ -60,7 +58,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 		}
 	}
 
-	p.skipSpaceAndComments(true)
+	p.skipSpaceAndComments()
 	_, err = p.mustOne(lexer.TokenBraceOpen)
 	if err != nil {
 		return nil, err
@@ -78,7 +76,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 	var prepare *ast.SpecialFunctionDeclaration
 	var execute *ast.SpecialFunctionDeclaration
 
-	p.skipSpaceAndComments(true)
+	p.skipSpaceAndComments()
 	if p.current.Is(lexer.TokenIdentifier) {
 
 		keyword := p.currentTokenSource()
@@ -122,8 +120,8 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 	var preConditions *ast.Conditions
 
 	if execute == nil {
-		p.skipSpaceAndComments(true)
-		if p.mustToken(p.current, lexer.TokenIdentifier, keywordPre) {
+		p.skipSpaceAndComments()
+		if p.isToken(p.current, lexer.TokenIdentifier, keywordPre) {
 			// Skip the `pre` keyword
 			p.next()
 			conditions, err := parseConditions(p, ast.ConditionKindPre)
@@ -144,7 +142,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 	sawPost := false
 	atEnd := false
 	for !atEnd {
-		p.skipSpaceAndComments(true)
+		p.skipSpaceAndComments()
 
 		switch p.current.Type {
 		case lexer.TokenIdentifier:
@@ -253,8 +251,7 @@ func parseTransactionExecute(p *parser) (*ast.SpecialFunctionDeclaration, error)
 	identifier := p.tokenToIdentifier(p.current)
 
 	// Skip the `execute` keyword
-	p.next()
-	p.skipSpaceAndComments(true)
+	p.nextSemanticToken()
 
 	block, err := parseBlock(p)
 	if err != nil {

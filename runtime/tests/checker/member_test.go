@@ -108,7 +108,7 @@ func TestCheckOptionalChainingNonOptionalFieldAccess(t *testing.T) {
             `,
 		)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidOptionalChainingError{}, errs[0])
 
@@ -145,7 +145,7 @@ func TestCheckOptionalChainingNonOptionalFieldAccess(t *testing.T) {
             `,
 		)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidOptionalChainingError{}, errs[0])
 		assert.IsType(t, &sema.NotCallableError{}, errs[1])
@@ -224,7 +224,7 @@ func TestCheckInvalidOptionalChainingNonOptional(t *testing.T) {
       let x = test?.x
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidOptionalChainingError{}, errs[0])
 }
@@ -247,7 +247,7 @@ func TestCheckInvalidOptionalChainingFieldAssignment(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.UnsupportedOptionalChainingAssignmentError{}, errs[0])
 }

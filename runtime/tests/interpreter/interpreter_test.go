@@ -169,7 +169,7 @@ func parseCheckAndInterpretWithOptionsAndMemoryMetering(
 				continue
 			}
 
-			contractVariable := inter.Globals[compositeDeclaration.Identifier.Identifier]
+			contractVariable := inter.Globals.Get(compositeDeclaration.Identifier.Identifier)
 
 			_ = contractVariable.GetValue()
 		}
@@ -242,28 +242,28 @@ func TestInterpretConstantAndVariableDeclarations(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(1),
-		inter.Globals["x"].GetValue(),
+		inter.Globals.Get("x").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.BoolValue(true),
-		inter.Globals["y"].GetValue(),
+		inter.Globals.Get("y").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(3),
-		inter.Globals["z"].GetValue(),
+		inter.Globals.Get("z").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.BoolValue(true),
-		inter.Globals["a"].GetValue(),
+		inter.Globals.Get("a").GetValue(),
 	)
 
 	AssertValuesEqual(
@@ -271,7 +271,7 @@ func TestInterpretConstantAndVariableDeclarations(t *testing.T) {
 		inter,
 		interpreter.NewArrayValue(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
@@ -279,14 +279,14 @@ func TestInterpretConstantAndVariableDeclarations(t *testing.T) {
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 			interpreter.NewUnmeteredIntValueFromInt64(2),
 		),
-		inter.Globals["b"].GetValue(),
+		inter.Globals.Get("b").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.NewUnmeteredStringValue("123"),
-		inter.Globals["s"].GetValue(),
+		inter.Globals.Get("s").GetValue(),
 	)
 }
 
@@ -356,7 +356,7 @@ func TestInterpretLexicalScope(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(10),
-		inter.Globals["x"].GetValue(),
+		inter.Globals.Get("x").GetValue(),
 	)
 
 	value, err := inter.Invoke("f")
@@ -400,7 +400,7 @@ func TestInterpretFunctionSideEffects(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.VoidValue{},
+		interpreter.Void,
 		value,
 	)
 
@@ -408,7 +408,7 @@ func TestInterpretFunctionSideEffects(t *testing.T) {
 		t,
 		inter,
 		newValue,
-		inter.Globals["value"].GetValue(),
+		inter.Globals.Get("value").GetValue(),
 	)
 }
 
@@ -442,7 +442,7 @@ func TestInterpretNoHoisting(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(2),
-		inter.Globals["x"].GetValue(),
+		inter.Globals.Get("x").GetValue(),
 	)
 }
 
@@ -461,14 +461,14 @@ func TestInterpretFunctionExpressionsAndScope(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(10),
-		inter.Globals["x"].GetValue(),
+		inter.Globals.Get("x").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(42),
-		inter.Globals["y"].GetValue(),
+		inter.Globals.Get("y").GetValue(),
 	)
 }
 
@@ -512,7 +512,7 @@ func TestInterpretGlobalVariableAssignment(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(2),
-		inter.Globals["x"].GetValue(),
+		inter.Globals.Get("x").GetValue(),
 	)
 
 	value, err := inter.Invoke("test")
@@ -529,7 +529,7 @@ func TestInterpretGlobalVariableAssignment(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(3),
-		inter.Globals["x"].GetValue(),
+		inter.Globals.Get("x").GetValue(),
 	)
 }
 
@@ -550,7 +550,7 @@ func TestInterpretConstantRedeclaration(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(2),
-		inter.Globals["x"].GetValue(),
+		inter.Globals.Get("x").GetValue(),
 	)
 
 	value, err := inter.Invoke("test")
@@ -638,25 +638,20 @@ func TestInterpretInvalidArrayIndexing(t *testing.T) {
 
 			indexValue := interpreter.NewUnmeteredIntValueFromInt64(int64(index))
 			_, err := inter.Invoke("test", indexValue)
-			require.Error(t, err)
-			_ = err.Error()
+			RequireError(t, err)
 
 			var indexErr interpreter.ArrayIndexOutOfBoundsError
 			require.ErrorAs(t, err, &indexErr)
 
-			require.Equal(t,
-				interpreter.ArrayIndexOutOfBoundsError{
-					Index: index,
-					Size:  2,
-					LocationRange: interpreter.LocationRange{
-						Location: TestLocation,
-						Range: ast.Range{
-							StartPos: ast.Position{Offset: 107, Line: 4, Column: 27},
-							EndPos:   ast.Position{Offset: 113, Line: 4, Column: 33},
-						},
-					},
-				},
-				indexErr,
+			assert.Equal(t, index, indexErr.Index)
+			assert.Equal(t, 2, indexErr.Size)
+			assert.Equal(t,
+				ast.Position{Offset: 107, Line: 4, Column: 27},
+				indexErr.HasPosition.StartPosition(),
+			)
+			assert.Equal(t,
+				ast.Position{Offset: 113, Line: 4, Column: 33},
+				indexErr.HasPosition.EndPosition(nil),
 			)
 		})
 	}
@@ -677,11 +672,11 @@ func TestInterpretArrayIndexingAssignment(t *testing.T) {
 	_, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	actualArray := inter.Globals["z"].GetValue()
+	actualArray := inter.Globals.Get("z").GetValue()
 
 	expectedArray := interpreter.NewArrayValue(
 		inter,
-		interpreter.ReturnEmptyLocationRange,
+		interpreter.EmptyLocationRange,
 		interpreter.VariableSizedStaticType{
 			Type: interpreter.PrimitiveStaticTypeInt,
 		},
@@ -718,25 +713,20 @@ func TestInterpretInvalidArrayIndexingAssignment(t *testing.T) {
 
 			indexValue := interpreter.NewUnmeteredIntValueFromInt64(int64(index))
 			_, err := inter.Invoke("test", indexValue)
-			require.Error(t, err)
-			_ = err.Error()
+			RequireError(t, err)
 
 			var indexErr interpreter.ArrayIndexOutOfBoundsError
 			require.ErrorAs(t, err, &indexErr)
 
-			require.Equal(t,
-				interpreter.ArrayIndexOutOfBoundsError{
-					Index: index,
-					Size:  2,
-					LocationRange: interpreter.LocationRange{
-						Location: TestLocation,
-						Range: ast.Range{
-							StartPos: ast.Position{Offset: 95, Line: 4, Column: 20},
-							EndPos:   ast.Position{Offset: 101, Line: 4, Column: 26},
-						},
-					},
-				},
-				indexErr,
+			assert.Equal(t, index, indexErr.Index)
+			assert.Equal(t, 2, indexErr.Size)
+			assert.Equal(t,
+				ast.Position{Offset: 95, Line: 4, Column: 20},
+				indexErr.HasPosition.StartPosition(),
+			)
+			assert.Equal(t,
+				ast.Position{Offset: 101, Line: 4, Column: 26},
+				indexErr.HasPosition.EndPosition(nil),
 			)
 		})
 	}
@@ -757,19 +747,19 @@ func TestInterpretStringIndexing(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredCharacterValue("a"),
-		inter.Globals["x"].GetValue(),
+		inter.Globals.Get("x").GetValue(),
 	)
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.NewUnmeteredCharacterValue("b"),
-		inter.Globals["y"].GetValue(),
+		inter.Globals.Get("y").GetValue(),
 	)
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.NewUnmeteredCharacterValue("c"),
-		inter.Globals["z"].GetValue(),
+		inter.Globals.Get("z").GetValue(),
 	)
 }
 
@@ -793,25 +783,20 @@ func TestInterpretInvalidStringIndexing(t *testing.T) {
 
 			indexValue := interpreter.NewUnmeteredIntValueFromInt64(int64(index))
 			_, err := inter.Invoke("test", indexValue)
-			require.Error(t, err)
-			_ = err.Error()
+			RequireError(t, err)
 
 			var indexErr interpreter.StringIndexOutOfBoundsError
 			require.ErrorAs(t, err, &indexErr)
 
-			require.Equal(t,
-				interpreter.StringIndexOutOfBoundsError{
-					Index:  index,
-					Length: 2,
-					LocationRange: interpreter.LocationRange{
-						Location: TestLocation,
-						Range: ast.Range{
-							StartPos: ast.Position{Offset: 93, Line: 4, Column: 20},
-							EndPos:   ast.Position{Offset: 99, Line: 4, Column: 26},
-						},
-					},
-				},
-				indexErr,
+			assert.Equal(t, index, indexErr.Index)
+			assert.Equal(t, 2, indexErr.Length)
+			assert.Equal(t,
+				ast.Position{Offset: 93, Line: 4, Column: 20},
+				indexErr.HasPosition.StartPosition(),
+			)
+			assert.Equal(t,
+				ast.Position{Offset: 99, Line: 4, Column: 26},
+				indexErr.HasPosition.EndPosition(nil),
 			)
 		})
 	}
@@ -858,28 +843,22 @@ func TestInterpretStringSlicing(t *testing.T) {
 
 	t.Parallel()
 
-	locationRange1 := interpreter.LocationRange{
-		Location: TestLocation,
-		Range: ast.Range{
-			StartPos: ast.Position{Offset: 116, Line: 4, Column: 31},
-			EndPos:   ast.Position{Offset: 140, Line: 4, Column: 55},
-		},
+	range1 := ast.Range{
+		StartPos: ast.Position{Offset: 116, Line: 4, Column: 31},
+		EndPos:   ast.Position{Offset: 140, Line: 4, Column: 55},
 	}
 
-	locationRange2 := interpreter.LocationRange{
-		Location: TestLocation,
-		Range: ast.Range{
-			StartPos: ast.Position{Offset: 116, Line: 4, Column: 31},
-			EndPos:   ast.Position{Offset: 141, Line: 4, Column: 56},
-		},
+	range2 := ast.Range{
+		StartPos: ast.Position{Offset: 116, Line: 4, Column: 31},
+		EndPos:   ast.Position{Offset: 141, Line: 4, Column: 56},
 	}
 
 	type test struct {
-		str           string
-		from          int
-		to            int
-		result        string
-		expectedError error
+		str        string
+		from       int
+		to         int
+		result     string
+		checkError func(t *testing.T, err error)
 	}
 
 	tests := []test{
@@ -892,28 +871,68 @@ func TestInterpretStringSlicing(t *testing.T) {
 		{"abcdef", 5, 6, "f", nil},
 		{"abcdef", 1, 6, "bcdef", nil},
 		// Invalid indices
-		{"abcdef", -1, 0, "", interpreter.StringSliceIndicesError{
-			FromIndex:     -1,
-			UpToIndex:     0,
-			Length:        6,
-			LocationRange: locationRange2,
+		{"abcdef", -1, 0, "", func(t *testing.T, err error) {
+			var sliceErr interpreter.StringSliceIndicesError
+			require.ErrorAs(t, err, &sliceErr)
+
+			assert.Equal(t, -1, sliceErr.FromIndex)
+			assert.Equal(t, 0, sliceErr.UpToIndex)
+			assert.Equal(t, 6, sliceErr.Length)
+			assert.Equal(t,
+				range2.StartPos,
+				sliceErr.LocationRange.StartPosition(),
+			)
+			assert.Equal(t,
+				range2.EndPos,
+				sliceErr.LocationRange.EndPosition(nil),
+			)
 		}},
-		{"abcdef", 0, -1, "", interpreter.StringSliceIndicesError{
-			FromIndex:     0,
-			UpToIndex:     -1,
-			Length:        6,
-			LocationRange: locationRange2,
+		{"abcdef", 0, -1, "", func(t *testing.T, err error) {
+			var sliceErr interpreter.StringSliceIndicesError
+			require.ErrorAs(t, err, &sliceErr)
+
+			assert.Equal(t, 0, sliceErr.FromIndex)
+			assert.Equal(t, -1, sliceErr.UpToIndex)
+			assert.Equal(t, 6, sliceErr.Length)
+			assert.Equal(t,
+				range2.StartPos,
+				sliceErr.LocationRange.StartPosition(),
+			)
+			assert.Equal(t,
+				range2.EndPos,
+				sliceErr.LocationRange.EndPosition(nil),
+			)
 		}},
-		{"abcdef", 0, 10, "", interpreter.StringSliceIndicesError{
-			FromIndex:     0,
-			UpToIndex:     10,
-			Length:        6,
-			LocationRange: locationRange2,
+		{"abcdef", 0, 10, "", func(t *testing.T, err error) {
+			var sliceErr interpreter.StringSliceIndicesError
+			require.ErrorAs(t, err, &sliceErr)
+
+			assert.Equal(t, 0, sliceErr.FromIndex)
+			assert.Equal(t, 10, sliceErr.UpToIndex)
+			assert.Equal(t, 6, sliceErr.Length)
+			assert.Equal(t,
+				range2.StartPos,
+				sliceErr.LocationRange.StartPosition(),
+			)
+			assert.Equal(t,
+				range2.EndPos,
+				sliceErr.LocationRange.EndPosition(nil),
+			)
 		}},
-		{"abcdef", 2, 1, "", interpreter.InvalidSliceIndexError{
-			FromIndex:     2,
-			UpToIndex:     1,
-			LocationRange: locationRange1,
+		{"abcdef", 2, 1, "", func(t *testing.T, err error) {
+			var indexErr interpreter.InvalidSliceIndexError
+			require.ErrorAs(t, err, &indexErr)
+
+			assert.Equal(t, 2, indexErr.FromIndex)
+			assert.Equal(t, 1, indexErr.UpToIndex)
+			assert.Equal(t,
+				range1.StartPos,
+				indexErr.LocationRange.StartPosition(),
+			)
+			assert.Equal(t,
+				range1.EndPos,
+				indexErr.LocationRange.EndPosition(nil),
+			)
 		}},
 		// Unicode: indices are based on characters = grapheme clusters
 		{"cafe\\u{301}b", 0, 5, "cafe\u0301b", nil},
@@ -929,8 +948,10 @@ func TestInterpretStringSlicing(t *testing.T) {
 		{"cafe\\u{301}ba\\u{308}be", 5, 6, "a\u0308", nil},
 	}
 
-	for _, test := range tests {
+	runTest := func(test test) {
 		t.Run("", func(t *testing.T) {
+
+			t.Parallel()
 
 			inter := parseCheckAndInterpret(t,
 				fmt.Sprintf(
@@ -947,7 +968,7 @@ func TestInterpretStringSlicing(t *testing.T) {
 			)
 
 			value, err := inter.Invoke("test")
-			if test.expectedError == nil {
+			if test.checkError == nil {
 				require.NoError(t, err)
 
 				AssertValuesEqual(
@@ -961,11 +982,14 @@ func TestInterpretStringSlicing(t *testing.T) {
 					interpreter.Error{},
 					err,
 				)
-				err = err.(interpreter.Error).Unwrap()
 
-				assert.Equal(t, test.expectedError, err)
+				test.checkError(t, err)
 			}
 		})
+	}
+
+	for _, test := range tests {
+		runTest(test)
 	}
 }
 
@@ -985,7 +1009,7 @@ func TestInterpretReturnWithoutExpression(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.VoidValue{},
+		interpreter.Void,
 		value,
 	)
 }
@@ -1003,7 +1027,7 @@ func TestInterpretReturns(t *testing.T) {
         `,
 		ParseCheckAndInterpretOptions{
 			HandleCheckerError: func(err error) {
-				errs := checker.ExpectCheckerErrors(t, err, 1)
+				errs := checker.RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 			},
@@ -1378,21 +1402,21 @@ func TestInterpretOrOperatorShortCircuitLeftSuccess(t *testing.T) {
 		t,
 		inter,
 		interpreter.BoolValue(true),
-		inter.Globals["test"].GetValue(),
+		inter.Globals.Get("test").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.BoolValue(true),
-		inter.Globals["x"].GetValue(),
+		inter.Globals.Get("x").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.BoolValue(false),
-		inter.Globals["y"].GetValue(),
+		inter.Globals.Get("y").GetValue(),
 	)
 }
 
@@ -1421,21 +1445,21 @@ func TestInterpretOrOperatorShortCircuitLeftFailure(t *testing.T) {
 		t,
 		inter,
 		interpreter.BoolValue(true),
-		inter.Globals["test"].GetValue(),
+		inter.Globals.Get("test").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.BoolValue(true),
-		inter.Globals["x"].GetValue(),
+		inter.Globals.Get("x").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.BoolValue(true),
-		inter.Globals["y"].GetValue(),
+		inter.Globals.Get("y").GetValue(),
 	)
 }
 
@@ -1506,21 +1530,21 @@ func TestInterpretAndOperatorShortCircuitLeftSuccess(t *testing.T) {
 		t,
 		inter,
 		interpreter.BoolValue(true),
-		inter.Globals["test"].GetValue(),
+		inter.Globals.Get("test").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.BoolValue(true),
-		inter.Globals["x"].GetValue(),
+		inter.Globals.Get("x").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.BoolValue(true),
-		inter.Globals["y"].GetValue(),
+		inter.Globals.Get("y").GetValue(),
 	)
 }
 
@@ -1549,21 +1573,21 @@ func TestInterpretAndOperatorShortCircuitLeftFailure(t *testing.T) {
 		t,
 		inter,
 		interpreter.BoolValue(false),
-		inter.Globals["test"].GetValue(),
+		inter.Globals.Get("test").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.BoolValue(true),
-		inter.Globals["x"].GetValue(),
+		inter.Globals.Get("x").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.BoolValue(false),
-		inter.Globals["y"].GetValue(),
+		inter.Globals.Get("y").GetValue(),
 	)
 }
 
@@ -1588,7 +1612,7 @@ func TestInterpretExpressionStatement(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(0),
-		inter.Globals["x"].GetValue(),
+		inter.Globals.Get("x").GetValue(),
 	)
 
 	value, err := inter.Invoke("test")
@@ -1605,7 +1629,7 @@ func TestInterpretExpressionStatement(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(2),
-		inter.Globals["x"].GetValue(),
+		inter.Globals.Get("x").GetValue(),
 	)
 }
 
@@ -1730,14 +1754,14 @@ func TestInterpretUnaryIntegerNegation(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(-2),
-		inter.Globals["x"].GetValue(),
+		inter.Globals.Get("x").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(2),
-		inter.Globals["y"].GetValue(),
+		inter.Globals.Get("y").GetValue(),
 	)
 }
 
@@ -1756,28 +1780,28 @@ func TestInterpretUnaryBooleanNegation(t *testing.T) {
 		t,
 		inter,
 		interpreter.BoolValue(false),
-		inter.Globals["a"].GetValue(),
+		inter.Globals.Get("a").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.BoolValue(true),
-		inter.Globals["b"].GetValue(),
+		inter.Globals.Get("b").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.BoolValue(true),
-		inter.Globals["c"].GetValue(),
+		inter.Globals.Get("c").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.BoolValue(false),
-		inter.Globals["d"].GetValue(),
+		inter.Globals.Get("d").GetValue(),
 	)
 }
 
@@ -1859,7 +1883,7 @@ func TestInterpretHostFunction(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(3),
-		inter.Globals["a"].GetValue(),
+		inter.Globals.Get("a").GetValue(),
 	)
 }
 
@@ -1925,7 +1949,7 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 				invocation.Arguments[2],
 			)
 
-			return interpreter.VoidValue{}
+			return interpreter.Void
 		},
 	)
 
@@ -2048,7 +2072,7 @@ func TestInterpretStructureSelfUseInInitializer(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.VoidValue{},
+		interpreter.Void,
 		value,
 	)
 }
@@ -2120,7 +2144,7 @@ func TestInterpretStructureSelfUseInFunction(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.VoidValue{},
+		interpreter.Void,
 		value,
 	)
 }
@@ -2148,7 +2172,7 @@ func TestInterpretStructureConstructorUseInFunction(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.VoidValue{},
+		interpreter.Void,
 		value,
 	)
 }
@@ -2210,13 +2234,13 @@ func TestInterpretStructureDeclarationWithFunction(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.VoidValue{},
+		interpreter.Void,
 		value,
 	)
 
 	AssertValuesEqual(
 		t,
-		inter, newValue, inter.Globals["value"].GetValue())
+		inter, newValue, inter.Globals.Get("value").GetValue())
 }
 
 func TestInterpretStructureFunctionCall(t *testing.T) {
@@ -2241,7 +2265,7 @@ func TestInterpretStructureFunctionCall(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(42),
-		inter.Globals["value"].GetValue(),
+		inter.Globals.Get("value").GetValue(),
 	)
 }
 
@@ -2273,13 +2297,13 @@ func TestInterpretStructureFieldAssignment(t *testing.T) {
       }
     `)
 
-	test := inter.Globals["test"].GetValue().(*interpreter.CompositeValue)
+	test := inter.Globals.Get("test").GetValue().(*interpreter.CompositeValue)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(1),
-		test.GetField(inter, interpreter.ReturnEmptyLocationRange, "foo"),
+		test.GetField(inter, interpreter.EmptyLocationRange, "foo"),
 	)
 
 	value, err := inter.Invoke("callTest")
@@ -2288,7 +2312,7 @@ func TestInterpretStructureFieldAssignment(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.VoidValue{},
+		interpreter.Void,
 		value,
 	)
 
@@ -2296,7 +2320,7 @@ func TestInterpretStructureFieldAssignment(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(3),
-		test.GetField(inter, interpreter.ReturnEmptyLocationRange, "foo"),
+		test.GetField(inter, interpreter.EmptyLocationRange, "foo"),
 	)
 }
 
@@ -2316,8 +2340,8 @@ func TestInterpretStructureInitializesConstant(t *testing.T) {
       let test = Test()
     `)
 
-	actual := inter.Globals["test"].GetValue().(*interpreter.CompositeValue).
-		GetMember(inter, interpreter.ReturnEmptyLocationRange, "foo")
+	actual := inter.Globals.Get("test").GetValue().(*interpreter.CompositeValue).
+		GetMember(inter, interpreter.EmptyLocationRange, "foo")
 	AssertValuesEqual(
 		t,
 		inter,
@@ -2391,7 +2415,7 @@ func TestInterpretStructCopyOnDeclaration(t *testing.T) {
 		inter,
 		interpreter.NewArrayValue(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
@@ -2436,7 +2460,7 @@ func TestInterpretStructCopyOnDeclarationModifiedWithStructFunction(t *testing.T
 		inter,
 		interpreter.NewArrayValue(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
@@ -2478,7 +2502,7 @@ func TestInterpretStructCopyOnIdentifierAssignment(t *testing.T) {
 		inter,
 		interpreter.NewArrayValue(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
@@ -2520,7 +2544,7 @@ func TestInterpretStructCopyOnIndexingAssignment(t *testing.T) {
 		inter,
 		interpreter.NewArrayValue(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
@@ -2569,7 +2593,7 @@ func TestInterpretStructCopyOnMemberAssignment(t *testing.T) {
 		inter,
 		interpreter.NewArrayValue(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
@@ -2645,7 +2669,7 @@ func TestInterpretArrayCopy(t *testing.T) {
 		inter,
 		interpreter.NewArrayValue(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
@@ -2686,7 +2710,7 @@ func TestInterpretStructCopyInArray(t *testing.T) {
 		inter,
 		interpreter.NewArrayValue(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
@@ -2764,7 +2788,7 @@ func TestInterpretUseBeforeDeclaration(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(0),
-		inter.Globals["tests"].GetValue(),
+		inter.Globals.Get("tests").GetValue(),
 	)
 
 	value, err := inter.Invoke("test")
@@ -2779,7 +2803,7 @@ func TestInterpretUseBeforeDeclaration(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(1),
-		inter.Globals["tests"].GetValue(),
+		inter.Globals.Get("tests").GetValue(),
 	)
 
 	value, err = inter.Invoke("test")
@@ -2794,7 +2818,7 @@ func TestInterpretUseBeforeDeclaration(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(2),
-		inter.Globals["tests"].GetValue(),
+		inter.Globals.Get("tests").GetValue(),
 	)
 }
 
@@ -2814,7 +2838,7 @@ func TestInterpretOptionalVariableDeclaration(t *testing.T) {
 				interpreter.NewUnmeteredIntValueFromInt64(2),
 			),
 		),
-		inter.Globals["x"].GetValue(),
+		inter.Globals.Get("x").GetValue(),
 	)
 }
 
@@ -2918,7 +2942,7 @@ func TestInterpretOptionalAssignment(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.VoidValue{},
+		interpreter.Void,
 		value,
 	)
 
@@ -2930,7 +2954,7 @@ func TestInterpretOptionalAssignment(t *testing.T) {
 				interpreter.NewUnmeteredIntValueFromInt64(2),
 			),
 		),
-		inter.Globals["x"].GetValue(),
+		inter.Globals.Get("x").GetValue(),
 	)
 }
 
@@ -2945,8 +2969,8 @@ func TestInterpretNil(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NilValue{},
-		inter.Globals["x"].GetValue(),
+		interpreter.Nil,
+		inter.Globals.Get("x").GetValue(),
 	)
 }
 
@@ -2961,8 +2985,8 @@ func TestInterpretOptionalNestingNil(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NilValue{},
-		inter.Globals["x"].GetValue(),
+		interpreter.Nil,
+		inter.Globals.Get("x").GetValue(),
 	)
 }
 
@@ -2982,7 +3006,7 @@ func TestInterpretNilReturnValue(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NilValue{},
+		interpreter.Nil,
 		value,
 	)
 }
@@ -3051,7 +3075,7 @@ func TestInterpretNilCoalescingNilIntToOptional(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 		),
-		inter.Globals["x"].GetValue(),
+		inter.Globals.Get("x").GetValue(),
 	)
 }
 
@@ -3071,7 +3095,7 @@ func TestInterpretNilCoalescingNilIntToOptionals(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 		),
-		inter.Globals["x"].GetValue(),
+		inter.Globals.Get("x").GetValue(),
 	)
 }
 
@@ -3090,7 +3114,7 @@ func TestInterpretNilCoalescingNilIntToOptionalNilLiteral(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 		),
-		inter.Globals["x"].GetValue(),
+		inter.Globals.Get("x").GetValue(),
 	)
 }
 
@@ -3105,8 +3129,8 @@ func TestInterpretNilCoalescingRightSubtype(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NilValue{},
-		inter.Globals["x"].GetValue(),
+		interpreter.Nil,
+		inter.Globals.Get("x").GetValue(),
 	)
 }
 
@@ -3124,7 +3148,7 @@ func TestInterpretNilCoalescingNilInt(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(1),
-		inter.Globals["x"].GetValue(),
+		inter.Globals.Get("x").GetValue(),
 	)
 }
 
@@ -3141,7 +3165,7 @@ func TestInterpretNilCoalescingNilLiteralInt(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(1),
-		inter.Globals["x"].GetValue(),
+		inter.Globals.Get("x").GetValue(),
 	)
 }
 
@@ -3170,21 +3194,21 @@ func TestInterpretNilCoalescingShortCircuitLeftSuccess(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(1),
-		inter.Globals["test"].GetValue(),
+		inter.Globals.Get("test").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.BoolValue(true),
-		inter.Globals["x"].GetValue(),
+		inter.Globals.Get("x").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.BoolValue(false),
-		inter.Globals["y"].GetValue(),
+		inter.Globals.Get("y").GetValue(),
 	)
 }
 
@@ -3213,21 +3237,21 @@ func TestInterpretNilCoalescingShortCircuitLeftFailure(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(2),
-		inter.Globals["test"].GetValue(),
+		inter.Globals.Get("test").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.BoolValue(true),
-		inter.Globals["x"].GetValue(),
+		inter.Globals.Get("x").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.BoolValue(true),
-		inter.Globals["y"].GetValue(),
+		inter.Globals.Get("y").GetValue(),
 	)
 }
 
@@ -3244,7 +3268,7 @@ func TestInterpretNilCoalescingOptionalAnyStructNil(t *testing.T) {
 		t,
 		inter,
 		interpreter.BoolValue(true),
-		inter.Globals["y"].GetValue(),
+		inter.Globals.Get("y").GetValue(),
 	)
 }
 
@@ -3261,7 +3285,7 @@ func TestInterpretNilCoalescingOptionalAnyStructSome(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(2),
-		inter.Globals["y"].GetValue(),
+		inter.Globals.Get("y").GetValue(),
 	)
 }
 
@@ -3281,7 +3305,7 @@ func TestInterpretNilCoalescingOptionalRightHandSide(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 		),
-		inter.Globals["z"].GetValue(),
+		inter.Globals.Get("z").GetValue(),
 	)
 }
 
@@ -3301,7 +3325,7 @@ func TestInterpretNilCoalescingBothOptional(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 		),
-		inter.Globals["z"].GetValue(),
+		inter.Globals.Get("z").GetValue(),
 	)
 }
 
@@ -3321,7 +3345,7 @@ func TestInterpretNilCoalescingBothOptionalLeftNil(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredIntValueFromInt64(2),
 		),
-		inter.Globals["z"].GetValue(),
+		inter.Globals.Get("z").GetValue(),
 	)
 }
 
@@ -3337,7 +3361,7 @@ func TestInterpretNilsComparison(t *testing.T) {
 		t,
 		inter,
 		interpreter.BoolValue(true),
-		inter.Globals["x"].GetValue(),
+		inter.Globals.Get("x").GetValue(),
 	)
 }
 
@@ -3355,14 +3379,14 @@ func TestInterpretNonOptionalNilComparison(t *testing.T) {
 		t,
 		inter,
 		interpreter.BoolValue(false),
-		inter.Globals["y"].GetValue(),
+		inter.Globals.Get("y").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.BoolValue(false),
-		inter.Globals["z"].GetValue(),
+		inter.Globals.Get("z").GetValue(),
 	)
 }
 
@@ -3379,7 +3403,7 @@ func TestInterpretOptionalNilComparison(t *testing.T) {
 		t,
 		inter,
 		interpreter.BoolValue(false),
-		inter.Globals["y"].GetValue(),
+		inter.Globals.Get("y").GetValue(),
 	)
 }
 
@@ -3396,7 +3420,7 @@ func TestInterpretNestedOptionalNilComparison(t *testing.T) {
 		t,
 		inter,
 		interpreter.BoolValue(false),
-		inter.Globals["y"].GetValue(),
+		inter.Globals.Get("y").GetValue(),
 	)
 }
 
@@ -3413,7 +3437,7 @@ func TestInterpretOptionalNilComparisonSwapped(t *testing.T) {
 		t,
 		inter,
 		interpreter.BoolValue(false),
-		inter.Globals["y"].GetValue(),
+		inter.Globals.Get("y").GetValue(),
 	)
 }
 
@@ -3430,7 +3454,7 @@ func TestInterpretNestedOptionalNilComparisonSwapped(t *testing.T) {
 		t,
 		inter,
 		interpreter.BoolValue(false),
-		inter.Globals["y"].GetValue(),
+		inter.Globals.Get("y").GetValue(),
 	)
 }
 
@@ -3448,7 +3472,7 @@ func TestInterpretNestedOptionalComparisonNils(t *testing.T) {
 		t,
 		inter,
 		interpreter.BoolValue(true),
-		inter.Globals["z"].GetValue(),
+		inter.Globals.Get("z").GetValue(),
 	)
 }
 
@@ -3466,7 +3490,7 @@ func TestInterpretNestedOptionalComparisonValues(t *testing.T) {
 		t,
 		inter,
 		interpreter.BoolValue(true),
-		inter.Globals["z"].GetValue(),
+		inter.Globals.Get("z").GetValue(),
 	)
 }
 
@@ -3484,7 +3508,7 @@ func TestInterpretNestedOptionalComparisonMixed(t *testing.T) {
 		t,
 		inter,
 		interpreter.BoolValue(false),
-		inter.Globals["z"].GetValue(),
+		inter.Globals.Get("z").GetValue(),
 	)
 }
 
@@ -3501,7 +3525,7 @@ func TestInterpretOptionalSomeValueComparison(t *testing.T) {
 		t,
 		inter,
 		interpreter.BoolValue(true),
-		inter.Globals["y"].GetValue(),
+		inter.Globals.Get("y").GetValue(),
 	)
 }
 
@@ -3518,7 +3542,7 @@ func TestInterpretOptionalNilValueComparison(t *testing.T) {
 		t,
 		inter,
 		interpreter.BoolValue(false),
-		inter.Globals["y"].GetValue(),
+		inter.Globals.Get("y").GetValue(),
 	)
 }
 
@@ -3541,7 +3565,7 @@ func TestInterpretOptionalMap(t *testing.T) {
 			interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.NewUnmeteredStringValue("42"),
 			),
-			inter.Globals["result"].GetValue(),
+			inter.Globals.Get("result").GetValue(),
 		)
 	})
 
@@ -3557,8 +3581,8 @@ func TestInterpretOptionalMap(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NilValue{},
-			inter.Globals["result"].GetValue(),
+			interpreter.Nil,
+			inter.Globals.Get("result").GetValue(),
 		)
 	})
 }
@@ -3625,14 +3649,14 @@ func TestInterpretCompositeNilEquality(t *testing.T) {
 				t,
 				inter,
 				interpreter.BoolValue(false),
-				inter.Globals["y"].GetValue(),
+				inter.Globals.Get("y").GetValue(),
 			)
 
 			AssertValuesEqual(
 				t,
 				inter,
 				interpreter.BoolValue(false),
-				inter.Globals["z"].GetValue(),
+				inter.Globals.Get("z").GetValue(),
 			)
 		})
 	}
@@ -3685,7 +3709,7 @@ func TestInterpretInterfaceConformanceNoRequirements(t *testing.T) {
 
 			assert.IsType(t,
 				&interpreter.CompositeValue{},
-				inter.Globals["test"].GetValue(),
+				inter.Globals.Get("test").GetValue(),
 			)
 		})
 	}
@@ -3765,7 +3789,7 @@ func TestInterpretInterfaceFieldUse(t *testing.T) {
 				t,
 				inter,
 				interpreter.NewUnmeteredIntValueFromInt64(1),
-				inter.Globals["x"].GetValue(),
+				inter.Globals.Get("x").GetValue(),
 			)
 		})
 	}
@@ -3833,7 +3857,7 @@ func TestInterpretInterfaceFunctionUse(t *testing.T) {
 				t,
 				inter,
 				interpreter.NewUnmeteredIntValueFromInt64(2),
-				inter.Globals["val"].GetValue(),
+				inter.Globals.Get("val").GetValue(),
 			)
 		})
 	}
@@ -4061,8 +4085,7 @@ func TestInterpretImportError(t *testing.T) {
 			"  |                  ^^^^^^^^^^^\n",
 		sb.String(),
 	)
-	require.Error(t, err)
-	_ = err.Error()
+	RequireError(t, err)
 
 	var panicErr stdlib.PanicError
 	require.ErrorAs(t, err, &panicErr)
@@ -4083,7 +4106,7 @@ func TestInterpretDictionary(t *testing.T) {
 
 	expectedDict := interpreter.NewDictionaryValue(
 		inter,
-		interpreter.ReturnEmptyLocationRange,
+		interpreter.EmptyLocationRange,
 		interpreter.DictionaryStaticType{
 			KeyType:   interpreter.PrimitiveStaticTypeString,
 			ValueType: interpreter.PrimitiveStaticTypeInt,
@@ -4092,7 +4115,7 @@ func TestInterpretDictionary(t *testing.T) {
 		interpreter.NewUnmeteredStringValue("b"), interpreter.NewUnmeteredIntValueFromInt64(2),
 	)
 
-	actualDict := inter.Globals["x"].GetValue()
+	actualDict := inter.Globals.Get("x").GetValue()
 
 	AssertValuesEqual(
 		t,
@@ -4112,7 +4135,7 @@ func TestInterpretDictionaryInsertionOrder(t *testing.T) {
 
 	expectedDict := interpreter.NewDictionaryValue(
 		inter,
-		interpreter.ReturnEmptyLocationRange,
+		interpreter.EmptyLocationRange,
 		interpreter.DictionaryStaticType{
 			KeyType:   interpreter.PrimitiveStaticTypeString,
 			ValueType: interpreter.PrimitiveStaticTypeInt,
@@ -4122,7 +4145,7 @@ func TestInterpretDictionaryInsertionOrder(t *testing.T) {
 		interpreter.NewUnmeteredStringValue("b"), interpreter.NewUnmeteredIntValueFromInt64(2),
 	)
 
-	actualDict := inter.Globals["x"].GetValue()
+	actualDict := inter.Globals.Get("x").GetValue()
 
 	AssertValuesEqual(
 		t,
@@ -4149,7 +4172,7 @@ func TestInterpretDictionaryIndexingString(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 		),
-		inter.Globals["a"].GetValue(),
+		inter.Globals.Get("a").GetValue(),
 	)
 
 	AssertValuesEqual(
@@ -4158,14 +4181,14 @@ func TestInterpretDictionaryIndexingString(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredIntValueFromInt64(2),
 		),
-		inter.Globals["b"].GetValue(),
+		inter.Globals.Get("b").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NilValue{},
-		inter.Globals["c"].GetValue(),
+		interpreter.Nil,
+		inter.Globals.Get("c").GetValue(),
 	)
 }
 
@@ -4185,7 +4208,7 @@ func TestInterpretDictionaryIndexingBool(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 		),
-		inter.Globals["a"].GetValue(),
+		inter.Globals.Get("a").GetValue(),
 	)
 
 	AssertValuesEqual(
@@ -4194,7 +4217,7 @@ func TestInterpretDictionaryIndexingBool(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredIntValueFromInt64(2),
 		),
-		inter.Globals["b"].GetValue(),
+		inter.Globals.Get("b").GetValue(),
 	)
 }
 
@@ -4215,7 +4238,7 @@ func TestInterpretDictionaryIndexingInt(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredStringValue("a"),
 		),
-		inter.Globals["a"].GetValue(),
+		inter.Globals.Get("a").GetValue(),
 	)
 
 	AssertValuesEqual(
@@ -4224,14 +4247,14 @@ func TestInterpretDictionaryIndexingInt(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredStringValue("b"),
 		),
-		inter.Globals["b"].GetValue(),
+		inter.Globals.Get("b").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NilValue{},
-		inter.Globals["c"].GetValue(),
+		interpreter.Nil,
+		inter.Globals.Get("c").GetValue(),
 	)
 }
 
@@ -4262,39 +4285,39 @@ func TestInterpretDictionaryIndexingType(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredStringValue("a"),
 		),
-		inter.Globals["a"].GetValue(),
+		inter.Globals.Get("a").GetValue(),
 	)
 
 	assert.Equal(t,
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredStringValue("b"),
 		),
-		inter.Globals["b"].GetValue(),
+		inter.Globals.Get("b").GetValue(),
 	)
 
 	assert.Equal(t,
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredStringValue("c"),
 		),
-		inter.Globals["c"].GetValue(),
+		inter.Globals.Get("c").GetValue(),
 	)
 
 	assert.Equal(t,
-		interpreter.NilValue{},
-		inter.Globals["d"].GetValue(),
+		interpreter.Nil,
+		inter.Globals.Get("d").GetValue(),
 	)
 
 	// types need to match exactly, subtypes won't cut it
 	assert.Equal(t,
-		interpreter.NilValue{},
-		inter.Globals["e"].GetValue(),
+		interpreter.Nil,
+		inter.Globals.Get("e").GetValue(),
 	)
 
 	assert.Equal(t,
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredStringValue("f"),
 		),
-		inter.Globals["f"].GetValue(),
+		inter.Globals.Get("f").GetValue(),
 	)
 }
 
@@ -4315,16 +4338,16 @@ func TestInterpretDictionaryIndexingAssignmentExisting(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.VoidValue{},
+		interpreter.Void,
 		value,
 	)
 
-	actualValue := inter.Globals["x"].GetValue()
+	actualValue := inter.Globals.Get("x").GetValue()
 	actualDict := actualValue.(*interpreter.DictionaryValue)
 
 	newValue := actualDict.GetKey(
 		inter,
-		interpreter.ReturnEmptyLocationRange,
+		interpreter.EmptyLocationRange,
 		interpreter.NewUnmeteredStringValue("abc"),
 	)
 
@@ -4363,13 +4386,13 @@ func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.VoidValue{},
+		interpreter.Void,
 		value,
 	)
 
 	expectedDict := interpreter.NewDictionaryValue(
 		inter,
-		interpreter.ReturnEmptyLocationRange,
+		interpreter.EmptyLocationRange,
 		interpreter.DictionaryStaticType{
 			KeyType:   interpreter.PrimitiveStaticTypeString,
 			ValueType: interpreter.PrimitiveStaticTypeInt,
@@ -4378,7 +4401,7 @@ func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
 		interpreter.NewUnmeteredStringValue("abc"), interpreter.NewUnmeteredIntValueFromInt64(23),
 	)
 
-	actualDict := inter.Globals["x"].GetValue().(*interpreter.DictionaryValue)
+	actualDict := inter.Globals.Get("x").GetValue().(*interpreter.DictionaryValue)
 
 	AssertValuesEqual(
 		t,
@@ -4389,7 +4412,7 @@ func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
 
 	newValue := actualDict.GetKey(
 		inter,
-		interpreter.ReturnEmptyLocationRange,
+		interpreter.EmptyLocationRange,
 		interpreter.NewUnmeteredStringValue("abc"),
 	)
 
@@ -4430,13 +4453,13 @@ func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.VoidValue{},
+		interpreter.Void,
 		value,
 	)
 
 	expectedDict := interpreter.NewDictionaryValue(
 		inter,
-		interpreter.ReturnEmptyLocationRange,
+		interpreter.EmptyLocationRange,
 		interpreter.DictionaryStaticType{
 			KeyType:   interpreter.PrimitiveStaticTypeString,
 			ValueType: interpreter.PrimitiveStaticTypeInt,
@@ -4444,7 +4467,7 @@ func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
 		interpreter.NewUnmeteredStringValue("abc"), interpreter.NewUnmeteredIntValueFromInt64(23),
 	)
 
-	actualDict := inter.Globals["x"].GetValue().(*interpreter.DictionaryValue)
+	actualDict := inter.Globals.Get("x").GetValue().(*interpreter.DictionaryValue)
 
 	RequireValuesEqual(
 		t,
@@ -4455,14 +4478,14 @@ func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
 
 	newValue := actualDict.GetKey(
 		inter,
-		interpreter.ReturnEmptyLocationRange,
+		interpreter.EmptyLocationRange,
 		interpreter.NewUnmeteredStringValue("def"),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NilValue{},
+		interpreter.Nil,
 		newValue,
 	)
 
@@ -4492,7 +4515,7 @@ func TestInterpretOptionalAnyStruct(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredIntValueFromInt64(42),
 		),
-		inter.Globals["x"].GetValue(),
+		inter.Globals.Get("x").GetValue(),
 	)
 }
 
@@ -4511,7 +4534,7 @@ func TestInterpretOptionalAnyStructFailableCasting(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredIntValueFromInt64(42),
 		),
-		inter.Globals["x"].GetValue(),
+		inter.Globals.Get("x").GetValue(),
 	)
 
 	AssertValuesEqual(
@@ -4520,7 +4543,7 @@ func TestInterpretOptionalAnyStructFailableCasting(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredIntValueFromInt64(42),
 		),
-		inter.Globals["y"].GetValue(),
+		inter.Globals.Get("y").GetValue(),
 	)
 }
 
@@ -4540,14 +4563,14 @@ func TestInterpretOptionalAnyStructFailableCastingInt(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredIntValueFromInt64(23),
 		),
-		inter.Globals["x"].GetValue(),
+		inter.Globals.Get("x").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(23),
-		inter.Globals["y"].GetValue(),
+		inter.Globals.Get("y").GetValue(),
 	)
 
 	AssertValuesEqual(
@@ -4556,7 +4579,7 @@ func TestInterpretOptionalAnyStructFailableCastingInt(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredIntValueFromInt64(23),
 		),
-		inter.Globals["z"].GetValue(),
+		inter.Globals.Get("z").GetValue(),
 	)
 }
 
@@ -4573,15 +4596,15 @@ func TestInterpretOptionalAnyStructFailableCastingNil(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NilValue{},
-		inter.Globals["x"].GetValue(),
+		interpreter.Nil,
+		inter.Globals.Get("x").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(42),
-		inter.Globals["y"].GetValue(),
+		inter.Globals.Get("y").GetValue(),
 	)
 
 	AssertValuesEqual(
@@ -4590,7 +4613,7 @@ func TestInterpretOptionalAnyStructFailableCastingNil(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredIntValueFromInt64(42),
 		),
-		inter.Globals["z"].GetValue(),
+		inter.Globals.Get("z").GetValue(),
 	)
 }
 
@@ -4641,7 +4664,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.BoolValue(true),
+			interpreter.TrueValue,
 			result,
 		)
 
@@ -4775,7 +4798,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 
 		r = r.Transfer(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			atree.Address(storageAddress),
 			true,
 			nil,
@@ -4790,7 +4813,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NilValue{},
+			interpreter.Nil,
 			result,
 		)
 
@@ -4824,7 +4847,7 @@ func TestInterpretArrayLength(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(3),
-		inter.Globals["y"].GetValue(),
+		inter.Globals.Get("y").GetValue(),
 	)
 }
 
@@ -4841,13 +4864,13 @@ func TestInterpretStringLength(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(4),
-		inter.Globals["x"].GetValue(),
+		inter.Globals.Get("x").GetValue(),
 	)
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(4),
-		inter.Globals["y"].GetValue(),
+		inter.Globals.Get("y").GetValue(),
 	)
 }
 
@@ -4941,7 +4964,7 @@ func TestInterpretArrayAppend(t *testing.T) {
 	_, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	actualArray := inter.Globals["xs"].GetValue()
+	actualArray := inter.Globals.Get("xs").GetValue()
 
 	arrayValue := actualArray.(*interpreter.ArrayValue)
 	AssertValueSlicesEqual(
@@ -5193,7 +5216,7 @@ func TestInterpretArrayInsert(t *testing.T) {
 			_, err := inter.Invoke("test", interpreter.NewUnmeteredIntValueFromInt64(int64(testCase.index)))
 			require.NoError(t, err)
 
-			actualArray := inter.Globals["x"].GetValue()
+			actualArray := inter.Globals.Get("x").GetValue()
 
 			require.IsType(t, &interpreter.ArrayValue{}, actualArray)
 
@@ -5229,25 +5252,20 @@ func TestInterpretInvalidArrayInsert(t *testing.T) {
 
 			indexValue := interpreter.NewUnmeteredIntValueFromInt64(int64(index))
 			_, err := inter.Invoke("test", indexValue)
-			require.Error(t, err)
-			_ = err.Error()
+			RequireError(t, err)
 
 			var indexErr interpreter.ArrayIndexOutOfBoundsError
 			require.ErrorAs(t, err, &indexErr)
 
-			require.Equal(t,
-				interpreter.ArrayIndexOutOfBoundsError{
-					Index: index,
-					Size:  3,
-					LocationRange: interpreter.LocationRange{
-						Location: TestLocation,
-						Range: ast.Range{
-							StartPos: ast.Position{Offset: 94, Line: 5, Column: 19},
-							EndPos:   ast.Position{Offset: 115, Line: 5, Column: 40},
-						},
-					},
-				},
-				indexErr,
+			assert.Equal(t, index, indexErr.Index)
+			assert.Equal(t, 3, indexErr.Size)
+			assert.Equal(t,
+				ast.Position{Offset: 94, Line: 5, Column: 19},
+				indexErr.HasPosition.StartPosition(),
+			)
+			assert.Equal(t,
+				ast.Position{Offset: 115, Line: 5, Column: 40},
+				indexErr.HasPosition.EndPosition(nil),
 			)
 		})
 	}
@@ -5262,7 +5280,7 @@ func TestInterpretArrayRemove(t *testing.T) {
       let y = x.remove(at: 1)
     `)
 
-	value := inter.Globals["x"].GetValue()
+	value := inter.Globals.Get("x").GetValue()
 
 	arrayValue := value.(*interpreter.ArrayValue)
 	AssertValueSlicesEqual(
@@ -5280,7 +5298,7 @@ func TestInterpretArrayRemove(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(2),
-		inter.Globals["y"].GetValue(),
+		inter.Globals.Get("y").GetValue(),
 	)
 }
 
@@ -5305,25 +5323,20 @@ func TestInterpretInvalidArrayRemove(t *testing.T) {
 
 			indexValue := interpreter.NewUnmeteredIntValueFromInt64(int64(index))
 			_, err := inter.Invoke("test", indexValue)
-			require.Error(t, err)
-			_ = err.Error()
+			RequireError(t, err)
 
 			var indexErr interpreter.ArrayIndexOutOfBoundsError
 			require.ErrorAs(t, err, &indexErr)
 
-			require.Equal(t,
-				interpreter.ArrayIndexOutOfBoundsError{
-					Index: index,
-					Size:  3,
-					LocationRange: interpreter.LocationRange{
-						Location: TestLocation,
-						Range: ast.Range{
-							StartPos: ast.Position{Offset: 94, Line: 5, Column: 19},
-							EndPos:   ast.Position{Offset: 112, Line: 5, Column: 37},
-						},
-					},
-				},
-				indexErr,
+			assert.Equal(t, index, indexErr.Index)
+			assert.Equal(t, 3, indexErr.Size)
+			assert.Equal(t,
+				ast.Position{Offset: 94, Line: 5, Column: 19},
+				indexErr.HasPosition.StartPosition(),
+			)
+			assert.Equal(t,
+				ast.Position{Offset: 112, Line: 5, Column: 37},
+				indexErr.HasPosition.EndPosition(nil),
 			)
 		})
 	}
@@ -5338,7 +5351,7 @@ func TestInterpretArrayRemoveFirst(t *testing.T) {
       let y = x.removeFirst()
     `)
 
-	value := inter.Globals["x"].GetValue()
+	value := inter.Globals.Get("x").GetValue()
 
 	arrayValue := value.(*interpreter.ArrayValue)
 	AssertValueSlicesEqual(
@@ -5356,7 +5369,7 @@ func TestInterpretArrayRemoveFirst(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(1),
-		inter.Globals["y"].GetValue(),
+		inter.Globals.Get("y").GetValue(),
 	)
 }
 
@@ -5373,25 +5386,20 @@ func TestInterpretInvalidArrayRemoveFirst(t *testing.T) {
     `)
 
 	_, err := inter.Invoke("test")
-	require.Error(t, err)
-	_ = err.Error()
+	RequireError(t, err)
 
 	var indexErr interpreter.ArrayIndexOutOfBoundsError
 	require.ErrorAs(t, err, &indexErr)
 
-	require.Equal(t,
-		interpreter.ArrayIndexOutOfBoundsError{
-			Index: 0,
-			Size:  0,
-			LocationRange: interpreter.LocationRange{
-				Location: TestLocation,
-				Range: ast.Range{
-					StartPos: ast.Position{Offset: 58, Line: 5, Column: 11},
-					EndPos:   ast.Position{Offset: 72, Line: 5, Column: 25},
-				},
-			},
-		},
-		indexErr,
+	assert.Equal(t, 0, indexErr.Index)
+	assert.Equal(t, 0, indexErr.Size)
+	assert.Equal(t,
+		ast.Position{Offset: 58, Line: 5, Column: 11},
+		indexErr.HasPosition.StartPosition(),
+	)
+	assert.Equal(t,
+		ast.Position{Offset: 72, Line: 5, Column: 25},
+		indexErr.HasPosition.EndPosition(nil),
 	)
 }
 
@@ -5404,7 +5412,7 @@ func TestInterpretArrayRemoveLast(t *testing.T) {
           let y = x.removeLast()
     `)
 
-	value := inter.Globals["x"].GetValue()
+	value := inter.Globals.Get("x").GetValue()
 
 	arrayValue := value.(*interpreter.ArrayValue)
 
@@ -5423,7 +5431,7 @@ func TestInterpretArrayRemoveLast(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(3),
-		inter.Globals["y"].GetValue(),
+		inter.Globals.Get("y").GetValue(),
 	)
 }
 
@@ -5440,25 +5448,20 @@ func TestInterpretInvalidArrayRemoveLast(t *testing.T) {
     `)
 
 	_, err := inter.Invoke("test")
-	require.Error(t, err)
-	_ = err.Error()
+	RequireError(t, err)
 
 	var indexErr interpreter.ArrayIndexOutOfBoundsError
 	require.ErrorAs(t, err, &indexErr)
 
-	require.Equal(t,
-		interpreter.ArrayIndexOutOfBoundsError{
-			Index: -1,
-			Size:  0,
-			LocationRange: interpreter.LocationRange{
-				Location: TestLocation,
-				Range: ast.Range{
-					StartPos: ast.Position{Offset: 58, Line: 5, Column: 11},
-					EndPos:   ast.Position{Offset: 71, Line: 5, Column: 24},
-				},
-			},
-		},
-		indexErr,
+	assert.Equal(t, -1, indexErr.Index)
+	assert.Equal(t, 0, indexErr.Size)
+	assert.Equal(t,
+		ast.Position{Offset: 58, Line: 5, Column: 11},
+		indexErr.HasPosition.StartPosition(),
+	)
+	assert.Equal(t,
+		ast.Position{Offset: 71, Line: 5, Column: 24},
+		indexErr.HasPosition.EndPosition(nil),
 	)
 }
 
@@ -5466,28 +5469,22 @@ func TestInterpretArraySlicing(t *testing.T) {
 
 	t.Parallel()
 
-	locationRange1 := interpreter.LocationRange{
-		Location: TestLocation,
-		Range: ast.Range{
-			StartPos: ast.Position{Offset: 125, Line: 4, Column: 31},
-			EndPos:   ast.Position{Offset: 149, Line: 4, Column: 55},
-		},
+	range1 := ast.Range{
+		StartPos: ast.Position{Offset: 125, Line: 4, Column: 31},
+		EndPos:   ast.Position{Offset: 149, Line: 4, Column: 55},
 	}
 
-	locationRange2 := interpreter.LocationRange{
-		Location: TestLocation,
-		Range: ast.Range{
-			StartPos: ast.Position{Offset: 125, Line: 4, Column: 31},
-			EndPos:   ast.Position{Offset: 150, Line: 4, Column: 56},
-		},
+	range2 := ast.Range{
+		StartPos: ast.Position{Offset: 125, Line: 4, Column: 31},
+		EndPos:   ast.Position{Offset: 150, Line: 4, Column: 56},
 	}
 
 	type test struct {
-		literal       string
-		from          int
-		to            int
-		result        string
-		expectedError error
+		literal    string
+		from       int
+		to         int
+		result     string
+		checkError func(t *testing.T, err error)
 	}
 
 	tests := []test{
@@ -5500,33 +5497,75 @@ func TestInterpretArraySlicing(t *testing.T) {
 		{"[1, 2, 3, 4, 5, 6]", 5, 6, "[6]", nil},
 		{"[1, 2, 3, 4, 5, 6]", 1, 6, "[2, 3, 4, 5, 6]", nil},
 		// Invalid indices
-		{"[1, 2, 3, 4, 5, 6]", -1, 0, "", interpreter.ArraySliceIndicesError{
-			FromIndex:     -1,
-			UpToIndex:     0,
-			Size:          6,
-			LocationRange: locationRange2,
+		{"[1, 2, 3, 4, 5, 6]", -1, 0, "", func(t *testing.T, err error) {
+			var sliceErr interpreter.ArraySliceIndicesError
+			require.ErrorAs(t, err, &sliceErr)
+
+			assert.Equal(t, -1, sliceErr.FromIndex)
+			assert.Equal(t, 0, sliceErr.UpToIndex)
+			assert.Equal(t, 6, sliceErr.Size)
+			assert.Equal(t,
+				range2.StartPos,
+				sliceErr.LocationRange.StartPosition(),
+			)
+			assert.Equal(t,
+				range2.EndPos,
+				sliceErr.LocationRange.EndPosition(nil),
+			)
 		}},
-		{"[1, 2, 3, 4, 5, 6]", 0, -1, "", interpreter.ArraySliceIndicesError{
-			FromIndex:     0,
-			UpToIndex:     -1,
-			Size:          6,
-			LocationRange: locationRange2,
+		{"[1, 2, 3, 4, 5, 6]", 0, -1, "", func(t *testing.T, err error) {
+			var sliceErr interpreter.ArraySliceIndicesError
+			require.ErrorAs(t, err, &sliceErr)
+
+			assert.Equal(t, 0, sliceErr.FromIndex)
+			assert.Equal(t, -1, sliceErr.UpToIndex)
+			assert.Equal(t, 6, sliceErr.Size)
+			assert.Equal(t,
+				range2.StartPos,
+				sliceErr.LocationRange.StartPosition(),
+			)
+			assert.Equal(t,
+				range2.EndPos,
+				sliceErr.LocationRange.EndPosition(nil),
+			)
 		}},
-		{"[1, 2, 3, 4, 5, 6]", 0, 10, "", interpreter.ArraySliceIndicesError{
-			FromIndex:     0,
-			UpToIndex:     10,
-			Size:          6,
-			LocationRange: locationRange2,
+		{"[1, 2, 3, 4, 5, 6]", 0, 10, "", func(t *testing.T, err error) {
+			var sliceErr interpreter.ArraySliceIndicesError
+			require.ErrorAs(t, err, &sliceErr)
+
+			assert.Equal(t, 0, sliceErr.FromIndex)
+			assert.Equal(t, 10, sliceErr.UpToIndex)
+			assert.Equal(t, 6, sliceErr.Size)
+			assert.Equal(t,
+				range2.StartPos,
+				sliceErr.LocationRange.StartPosition(),
+			)
+			assert.Equal(t,
+				range2.EndPos,
+				sliceErr.LocationRange.EndPosition(nil),
+			)
 		}},
-		{"[1, 2, 3, 4, 5, 6]", 2, 1, "", interpreter.InvalidSliceIndexError{
-			FromIndex:     2,
-			UpToIndex:     1,
-			LocationRange: locationRange1,
+		{"[1, 2, 3, 4, 5, 6]", 2, 1, "", func(t *testing.T, err error) {
+			var indexErr interpreter.InvalidSliceIndexError
+			require.ErrorAs(t, err, &indexErr)
+
+			assert.Equal(t, 2, indexErr.FromIndex)
+			assert.Equal(t, 1, indexErr.UpToIndex)
+			assert.Equal(t,
+				range1.StartPos,
+				indexErr.LocationRange.StartPosition(),
+			)
+			assert.Equal(t,
+				range1.EndPos,
+				indexErr.LocationRange.EndPosition(nil),
+			)
 		}},
 	}
 
-	for _, test := range tests {
+	runTest := func(test test) {
 		t.Run("", func(t *testing.T) {
+
+			t.Parallel()
 
 			inter := parseCheckAndInterpret(t,
 				fmt.Sprintf(
@@ -5543,7 +5582,7 @@ func TestInterpretArraySlicing(t *testing.T) {
 			)
 
 			value, err := inter.Invoke("test")
-			if test.expectedError == nil {
+			if test.checkError == nil {
 				require.NoError(t, err)
 
 				assert.Equal(
@@ -5556,11 +5595,14 @@ func TestInterpretArraySlicing(t *testing.T) {
 					interpreter.Error{},
 					err,
 				)
-				err = err.(interpreter.Error).Unwrap()
 
-				assert.Equal(t, test.expectedError, err)
+				test.checkError(t, err)
 			}
 		})
+	}
+
+	for _, test := range tests {
+		runTest(test)
 	}
 }
 
@@ -5698,7 +5740,7 @@ func TestInterpretDictionaryRemove(t *testing.T) {
       let removed = xs.remove(key: "abc")
     `)
 
-	actualValue := inter.Globals["xs"].GetValue()
+	actualValue := inter.Globals.Get("xs").GetValue()
 
 	require.IsType(t, actualValue, &interpreter.DictionaryValue{})
 	actualDict := actualValue.(*interpreter.DictionaryValue)
@@ -5720,7 +5762,7 @@ func TestInterpretDictionaryRemove(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 		),
-		inter.Globals["removed"].GetValue(),
+		inter.Globals.Get("removed").GetValue(),
 	)
 }
 
@@ -5733,7 +5775,7 @@ func TestInterpretDictionaryInsert(t *testing.T) {
       let inserted = xs.insert(key: "abc", 3)
     `)
 
-	actualValue := inter.Globals["xs"].GetValue()
+	actualValue := inter.Globals.Get("xs").GetValue()
 
 	require.IsType(t, actualValue, &interpreter.DictionaryValue{})
 	actualDict := actualValue.(*interpreter.DictionaryValue)
@@ -5756,7 +5798,7 @@ func TestInterpretDictionaryInsert(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 		),
-		inter.Globals["inserted"].GetValue(),
+		inter.Globals.Get("inserted").GetValue(),
 	)
 }
 
@@ -5958,7 +6000,7 @@ func TestInterpretDictionaryKeyTypes(t *testing.T) {
 				interpreter.NewUnmeteredSomeValueNonCopying(
 					interpreter.NewUnmeteredStringValue("test"),
 				),
-				inter.Globals["v"].GetValue(),
+				inter.Globals.Get("v").GetValue(),
 			)
 		})
 	}
@@ -5990,7 +6032,7 @@ func TestInterpretPathToString(t *testing.T) {
 
 			assert.Equal(t,
 				interpreter.NewUnmeteredStringValue(val),
-				inter.Globals["y"].GetValue(),
+				inter.Globals.Get("y").GetValue(),
 			)
 		})
 	}
@@ -6015,7 +6057,7 @@ func TestInterpretIndirectDestroy(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.VoidValue{},
+		interpreter.Void,
 		value,
 	)
 }
@@ -6043,7 +6085,7 @@ func TestInterpretUnaryMove(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.VoidValue{},
+		interpreter.Void,
 		value,
 	)
 }
@@ -6081,7 +6123,7 @@ func TestInterpretResourceMoveInArrayAndDestroy(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(0),
-		inter.Globals["destroys"].GetValue(),
+		inter.Globals.Get("destroys").GetValue(),
 	)
 
 	value, err := inter.Invoke("test")
@@ -6098,7 +6140,7 @@ func TestInterpretResourceMoveInArrayAndDestroy(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(2),
-		inter.Globals["destroys"].GetValue(),
+		inter.Globals.Get("destroys").GetValue(),
 	)
 }
 
@@ -6133,7 +6175,7 @@ func TestInterpretResourceMoveInDictionaryAndDestroy(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(0),
-		inter.Globals["destroys"].GetValue(),
+		inter.Globals.Get("destroys").GetValue(),
 	)
 
 	_, err := inter.Invoke("test")
@@ -6143,7 +6185,7 @@ func TestInterpretResourceMoveInDictionaryAndDestroy(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(2),
-		inter.Globals["destroys"].GetValue(),
+		inter.Globals.Get("destroys").GetValue(),
 	)
 }
 
@@ -6304,7 +6346,7 @@ func TestInterpretSwapVariables(t *testing.T) {
 		inter,
 		interpreter.NewArrayValue(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
@@ -6345,7 +6387,7 @@ func TestInterpretSwapArrayAndField(t *testing.T) {
 		inter,
 		interpreter.NewArrayValue(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
@@ -6397,7 +6439,7 @@ func TestInterpretResourceDestroyExpressionDestructor(t *testing.T) {
 		t,
 		inter,
 		interpreter.BoolValue(false),
-		inter.Globals["ranDestructor"].GetValue(),
+		inter.Globals.Get("ranDestructor").GetValue(),
 	)
 
 	_, err := inter.Invoke("test")
@@ -6407,7 +6449,7 @@ func TestInterpretResourceDestroyExpressionDestructor(t *testing.T) {
 		t,
 		inter,
 		interpreter.BoolValue(true),
-		inter.Globals["ranDestructor"].GetValue(),
+		inter.Globals.Get("ranDestructor").GetValue(),
 	)
 }
 
@@ -6449,14 +6491,14 @@ func TestInterpretResourceDestroyExpressionNestedResources(t *testing.T) {
 		t,
 		inter,
 		interpreter.BoolValue(false),
-		inter.Globals["ranDestructorA"].GetValue(),
+		inter.Globals.Get("ranDestructorA").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.BoolValue(false),
-		inter.Globals["ranDestructorB"].GetValue(),
+		inter.Globals.Get("ranDestructorB").GetValue(),
 	)
 
 	_, err := inter.Invoke("test")
@@ -6466,14 +6508,14 @@ func TestInterpretResourceDestroyExpressionNestedResources(t *testing.T) {
 		t,
 		inter,
 		interpreter.BoolValue(true),
-		inter.Globals["ranDestructorA"].GetValue(),
+		inter.Globals.Get("ranDestructorA").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.BoolValue(true),
-		inter.Globals["ranDestructorB"].GetValue(),
+		inter.Globals.Get("ranDestructorB").GetValue(),
 	)
 }
 
@@ -6500,7 +6542,7 @@ func TestInterpretResourceDestroyArray(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(0),
-		inter.Globals["destructionCount"].GetValue(),
+		inter.Globals.Get("destructionCount").GetValue(),
 	)
 
 	_, err := inter.Invoke("test")
@@ -6510,7 +6552,7 @@ func TestInterpretResourceDestroyArray(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(2),
-		inter.Globals["destructionCount"].GetValue(),
+		inter.Globals.Get("destructionCount").GetValue(),
 	)
 }
 
@@ -6537,7 +6579,7 @@ func TestInterpretResourceDestroyDictionary(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(0),
-		inter.Globals["destructionCount"].GetValue(),
+		inter.Globals.Get("destructionCount").GetValue(),
 	)
 
 	_, err := inter.Invoke("test")
@@ -6547,7 +6589,7 @@ func TestInterpretResourceDestroyDictionary(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(2),
-		inter.Globals["destructionCount"].GetValue(),
+		inter.Globals.Get("destructionCount").GetValue(),
 	)
 }
 
@@ -6574,7 +6616,7 @@ func TestInterpretResourceDestroyOptionalSome(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(0),
-		inter.Globals["destructionCount"].GetValue(),
+		inter.Globals.Get("destructionCount").GetValue(),
 	)
 
 	_, err := inter.Invoke("test")
@@ -6584,7 +6626,7 @@ func TestInterpretResourceDestroyOptionalSome(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(1),
-		inter.Globals["destructionCount"].GetValue(),
+		inter.Globals.Get("destructionCount").GetValue(),
 	)
 }
 
@@ -6611,7 +6653,7 @@ func TestInterpretResourceDestroyOptionalNil(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(0),
-		inter.Globals["destructionCount"].GetValue(),
+		inter.Globals.Get("destructionCount").GetValue(),
 	)
 
 	_, err := inter.Invoke("test")
@@ -6621,7 +6663,7 @@ func TestInterpretResourceDestroyOptionalNil(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(0),
-		inter.Globals["destructionCount"].GetValue(),
+		inter.Globals.Get("destructionCount").GetValue(),
 	)
 }
 
@@ -6716,7 +6758,7 @@ func TestInterpretEmitEvent(t *testing.T) {
 			Config: &interpreter.Config{
 				OnEventEmitted: func(
 					_ *interpreter.Interpreter,
-					_ func() interpreter.LocationRange,
+					_ interpreter.LocationRange,
 					event *interpreter.CompositeValue,
 					eventType *sema.CompositeType,
 				) error {
@@ -6774,7 +6816,7 @@ func TestInterpretEmitEvent(t *testing.T) {
 	expectedEvents := []interpreter.Value{
 		interpreter.NewCompositeValue(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			TestLocation,
 			TestLocation.QualifiedIdentifier(transferEventType.ID()),
 			common.CompositeKindEvent,
@@ -6783,7 +6825,7 @@ func TestInterpretEmitEvent(t *testing.T) {
 		),
 		interpreter.NewCompositeValue(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			TestLocation,
 			TestLocation.QualifiedIdentifier(transferEventType.ID()),
 			common.CompositeKindEvent,
@@ -6792,7 +6834,7 @@ func TestInterpretEmitEvent(t *testing.T) {
 		),
 		interpreter.NewCompositeValue(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			TestLocation,
 			TestLocation.QualifiedIdentifier(transferAmountEventType.ID()),
 			common.CompositeKindEvent,
@@ -6850,7 +6892,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 
 	sValue := interpreter.NewCompositeValue(
 		inter,
-		interpreter.ReturnEmptyLocationRange,
+		interpreter.EmptyLocationRange,
 		TestLocation,
 		"S",
 		common.CompositeKindStructure,
@@ -7010,7 +7052,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 			testValue{
 				value: interpreter.NewArrayValue(
 					inter,
-					interpreter.ReturnEmptyLocationRange,
+					interpreter.EmptyLocationRange,
 					interpreter.VariableSizedStaticType{
 						Type: interpreter.ConvertSemaToStaticType(nil, testCase.ty),
 					},
@@ -7024,7 +7066,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 			testValue{
 				value: interpreter.NewArrayValue(
 					inter,
-					interpreter.ReturnEmptyLocationRange,
+					interpreter.EmptyLocationRange,
 					interpreter.ConstantSizedStaticType{
 						Type: interpreter.ConvertSemaToStaticType(nil, testCase.ty),
 						Size: 1,
@@ -7039,7 +7081,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 
 			value := interpreter.NewDictionaryValue(
 				inter,
-				interpreter.ReturnEmptyLocationRange,
+				interpreter.EmptyLocationRange,
 				interpreter.DictionaryStaticType{
 					KeyType:   interpreter.ConvertSemaToStaticType(nil, testCase.ty),
 					ValueType: interpreter.ConvertSemaToStaticType(nil, testCase.ty),
@@ -7098,7 +7140,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 						Storage: storage,
 						OnEventEmitted: func(
 							_ *interpreter.Interpreter,
-							_ func() interpreter.LocationRange,
+							_ interpreter.LocationRange,
 							event *interpreter.CompositeValue,
 							eventType *sema.CompositeType,
 						) error {
@@ -7125,7 +7167,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 			expectedEvents := []interpreter.Value{
 				interpreter.NewCompositeValue(
 					inter,
-					interpreter.ReturnEmptyLocationRange,
+					interpreter.EmptyLocationRange,
 					TestLocation,
 					TestLocation.QualifiedIdentifier(testType.ID()),
 					common.CompositeKindEvent,
@@ -7171,7 +7213,7 @@ func TestInterpretSwapResourceDictionaryElementReturnSwapped(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NilValue{},
+		interpreter.Nil,
 		value,
 	)
 }
@@ -7201,7 +7243,7 @@ func TestInterpretSwapResourceDictionaryElementReturnDictionary(t *testing.T) {
 	)
 
 	foo := value.(*interpreter.DictionaryValue).
-		GetKey(inter, interpreter.ReturnEmptyLocationRange, interpreter.NewUnmeteredStringValue("foo"))
+		GetKey(inter, interpreter.EmptyLocationRange, interpreter.NewUnmeteredStringValue("foo"))
 
 	require.IsType(t,
 		&interpreter.SomeValue{},
@@ -7211,7 +7253,7 @@ func TestInterpretSwapResourceDictionaryElementReturnDictionary(t *testing.T) {
 	assert.IsType(t,
 		&interpreter.CompositeValue{},
 		foo.(*interpreter.SomeValue).
-			InnerValue(inter, interpreter.ReturnEmptyLocationRange),
+			InnerValue(inter, interpreter.EmptyLocationRange),
 	)
 }
 
@@ -7242,7 +7284,7 @@ func TestInterpretSwapResourceDictionaryElementRemoveUsingNil(t *testing.T) {
 	assert.IsType(t,
 		&interpreter.CompositeValue{},
 		value.(*interpreter.SomeValue).
-			InnerValue(inter, interpreter.ReturnEmptyLocationRange),
+			InnerValue(inter, interpreter.EmptyLocationRange),
 	)
 }
 
@@ -7261,7 +7303,7 @@ func TestInterpretReferenceExpression(t *testing.T) {
       }
     `)
 
-	errs := checker.ExpectCheckerErrors(t, err, 1)
+	errs := checker.RequireCheckerErrors(t, err, 1)
 	invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 	assert.ErrorAs(t, errs[0], &invalidatedRefError)
 }
@@ -7309,7 +7351,7 @@ func TestInterpretReferenceUse(t *testing.T) {
 		inter,
 		interpreter.NewArrayValue(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
@@ -7361,7 +7403,7 @@ func TestInterpretReferenceUseAccess(t *testing.T) {
 		inter,
 		interpreter.NewArrayValue(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
@@ -7391,7 +7433,7 @@ func TestInterpretReferenceDereferenceFailure(t *testing.T) {
       }
     `)
 
-	errs := checker.ExpectCheckerErrors(t, err, 1)
+	errs := checker.RequireCheckerErrors(t, err, 1)
 	invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 	assert.ErrorAs(t, errs[0], &invalidatedRefError)
 }
@@ -7439,7 +7481,7 @@ func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
 	)
 
 	firstValue := values[0].(*interpreter.SomeValue).
-		InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+		InnerValue(inter, interpreter.EmptyLocationRange)
 
 	require.IsType(t,
 		&interpreter.CompositeValue{},
@@ -7452,7 +7494,7 @@ func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(2),
-		firstResource.GetField(inter, interpreter.ReturnEmptyLocationRange, "id"),
+		firstResource.GetField(inter, interpreter.EmptyLocationRange, "id"),
 	)
 
 	require.IsType(t,
@@ -7461,7 +7503,7 @@ func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
 	)
 
 	secondValue := values[1].(*interpreter.SomeValue).
-		InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+		InnerValue(inter, interpreter.EmptyLocationRange)
 
 	require.IsType(t,
 		&interpreter.CompositeValue{},
@@ -7474,7 +7516,7 @@ func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(1),
-		secondResource.GetField(inter, interpreter.ReturnEmptyLocationRange, "id"),
+		secondResource.GetField(inter, interpreter.EmptyLocationRange, "id"),
 	)
 }
 
@@ -7528,7 +7570,7 @@ func TestInterpretResourceMovingAndBorrowing(t *testing.T) {
             }
         `)
 
-		errs := checker.ExpectCheckerErrors(t, err, 1)
+		errs := checker.RequireCheckerErrors(t, err, 1)
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errs[0], &invalidatedRefError)
 	})
@@ -7581,7 +7623,7 @@ func TestInterpretResourceMovingAndBorrowing(t *testing.T) {
             }
         `)
 
-		errs := checker.ExpectCheckerErrors(t, err, 1)
+		errs := checker.RequireCheckerErrors(t, err, 1)
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errs[0], &invalidatedRefError)
 	})
@@ -7599,7 +7641,7 @@ func TestInterpretCastingIntLiteralToInt8(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredInt8Value(42),
-		inter.Globals["x"].GetValue(),
+		inter.Globals.Get("x").GetValue(),
 	)
 }
 
@@ -7615,7 +7657,7 @@ func TestInterpretCastingIntLiteralToAnyStruct(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(42),
-		inter.Globals["x"].GetValue(),
+		inter.Globals.Get("x").GetValue(),
 	)
 }
 
@@ -7631,7 +7673,7 @@ func TestInterpretCastingIntLiteralToOptional(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredSomeValueNonCopying(interpreter.NewUnmeteredIntValueFromInt64(42)),
-		inter.Globals["x"].GetValue(),
+		inter.Globals.Get("x").GetValue(),
 	)
 }
 
@@ -7683,8 +7725,8 @@ func TestInterpretOptionalChainingFieldRead(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NilValue{},
-		inter.Globals["x1"].GetValue(),
+		interpreter.Nil,
+		inter.Globals.Get("x1").GetValue(),
 	)
 
 	AssertValuesEqual(
@@ -7693,7 +7735,7 @@ func TestInterpretOptionalChainingFieldRead(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredIntValueFromInt64(42),
 		),
-		inter.Globals["x2"].GetValue(),
+		inter.Globals.Get("x2").GetValue(),
 	)
 }
 
@@ -7720,19 +7762,19 @@ func TestInterpretOptionalChainingFunctionRead(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NilValue{},
-		inter.Globals["x1"].GetValue(),
+		interpreter.Nil,
+		inter.Globals.Get("x1").GetValue(),
 	)
 
 	require.IsType(t,
 		&interpreter.SomeValue{},
-		inter.Globals["x2"].GetValue(),
+		inter.Globals.Get("x2").GetValue(),
 	)
 
 	assert.IsType(t,
 		interpreter.BoundFunctionValue{},
-		inter.Globals["x2"].GetValue().(*interpreter.SomeValue).
-			InnerValue(inter, interpreter.ReturnEmptyLocationRange),
+		inter.Globals.Get("x2").GetValue().(*interpreter.SomeValue).
+			InnerValue(inter, interpreter.EmptyLocationRange),
 	)
 }
 
@@ -7759,8 +7801,8 @@ func TestInterpretOptionalChainingFunctionCall(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NilValue{},
-		inter.Globals["x1"].GetValue(),
+		interpreter.Nil,
+		inter.Globals.Get("x1").GetValue(),
 	)
 
 	AssertValuesEqual(
@@ -7769,7 +7811,7 @@ func TestInterpretOptionalChainingFunctionCall(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredIntValueFromInt64(42),
 		),
-		inter.Globals["x2"].GetValue(),
+		inter.Globals.Get("x2").GetValue(),
 	)
 }
 
@@ -7811,7 +7853,7 @@ func TestInterpretOptionalChainingFieldReadAndNilCoalescing(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(42),
-		inter.Globals["x"].GetValue(),
+		inter.Globals.Get("x").GetValue(),
 	)
 }
 
@@ -7851,7 +7893,7 @@ func TestInterpretOptionalChainingFunctionCallAndNilCoalescing(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(42),
-		inter.Globals["x"].GetValue(),
+		inter.Globals.Get("x").GetValue(),
 	)
 }
 
@@ -7895,14 +7937,14 @@ func TestInterpretOptionalChainingArgumentEvaluation(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewIntValueFromInt64(nil, 2),
-		inter.Globals["a"].GetValue(),
+		inter.Globals.Get("a").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.NewIntValueFromInt64(nil, 1),
-		inter.Globals["b"].GetValue(),
+		inter.Globals.Get("b").GetValue(),
 	)
 }
 
@@ -7937,8 +7979,8 @@ func TestInterpretCompositeDeclarationNestedTypeScopingOuterInner(t *testing.T) 
 	)
 	require.NoError(t, err)
 
-	x1 := inter.Globals["x1"].GetValue()
-	x2 := inter.Globals["x2"].GetValue()
+	x1 := inter.Globals.Get("x1").GetValue()
+	x2 := inter.Globals.Get("x2").GetValue()
 
 	require.IsType(t,
 		&interpreter.CompositeValue{},
@@ -7982,7 +8024,7 @@ func TestInterpretCompositeDeclarationNestedConstructor(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	x := inter.Globals["x"].GetValue()
+	x := inter.Globals.Get("x").GetValue()
 
 	require.IsType(t,
 		&interpreter.CompositeValue{},
@@ -8053,7 +8095,7 @@ func TestInterpretFungibleTokenContract(t *testing.T) {
 		inter,
 		interpreter.NewArrayValue(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.ConstantSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 				Size: 2,
@@ -8115,14 +8157,14 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 		t,
 		inter,
 		addressValue,
-		inter.Globals["address1"].GetValue(),
+		inter.Globals.Get("address1").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		addressValue,
-		inter.Globals["address2"].GetValue(),
+		inter.Globals.Get("address2").GetValue(),
 	)
 }
 
@@ -8250,8 +8292,8 @@ func TestInterpretContractUseInNestedDeclaration(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	i := inter.Globals["C"].GetValue().(interpreter.MemberAccessibleValue).
-		GetMember(inter, interpreter.ReturnEmptyLocationRange, "i")
+	i := inter.Globals.Get("C").GetValue().(interpreter.MemberAccessibleValue).
+		GetMember(inter, interpreter.EmptyLocationRange, "i")
 
 	require.IsType(t,
 		interpreter.NewUnmeteredIntValueFromInt64(2),
@@ -8324,7 +8366,7 @@ func TestInterpretNonStorageReferenceAfterDestruction(t *testing.T) {
         `,
 	)
 
-	errs := checker.ExpectCheckerErrors(t, err, 1)
+	errs := checker.RequireCheckerErrors(t, err, 1)
 	invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 	assert.ErrorAs(t, errs[0], &invalidatedRefError)
 }
@@ -8371,8 +8413,7 @@ func TestInterpretNonStorageReferenceToOptional(t *testing.T) {
 
 	t.Run("nil", func(t *testing.T) {
 		_, err := inter.Invoke("testNil")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		require.ErrorAs(t, err, &interpreter.ForceNilError{})
 	})
@@ -8394,21 +8435,21 @@ func TestInterpretFix64(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredUFix64Value(78_900_123_010),
-		inter.Globals["a"].GetValue(),
+		inter.Globals.Get("a").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.NewUnmeteredUFix64Value(123_405_600_000),
-		inter.Globals["b"].GetValue(),
+		inter.Globals.Get("b").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.NewUnmeteredFix64Value(-1_234_500_678_900),
-		inter.Globals["c"].GetValue(),
+		inter.Globals.Get("c").GetValue(),
 	)
 }
 
@@ -8426,7 +8467,7 @@ func TestInterpretFix64Mul(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredFix64Value(-121000000),
-		inter.Globals["a"].GetValue(),
+		inter.Globals.Get("a").GetValue(),
 	)
 }
 
@@ -8585,7 +8626,7 @@ func TestInterpretOptionalChainingOptionalFieldRead(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 		),
-		inter.Globals["x"].GetValue(),
+		inter.Globals.Get("x").GetValue(),
 	)
 }
 
@@ -8614,7 +8655,7 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
           }
         `)
 
-		errs := checker.ExpectCheckerErrors(t, err, 1)
+		errs := checker.RequireCheckerErrors(t, err, 1)
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errs[0], &invalidatedRefError)
 	})
@@ -8641,7 +8682,7 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
           }
         `)
 
-		errs := checker.ExpectCheckerErrors(t, err, 1)
+		errs := checker.RequireCheckerErrors(t, err, 1)
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errs[0], &invalidatedRefError)
 	})
@@ -8662,7 +8703,7 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
           }
         `)
 
-		errs := checker.ExpectCheckerErrors(t, err, 1)
+		errs := checker.RequireCheckerErrors(t, err, 1)
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errs[0], &invalidatedRefError)
 	})
@@ -8683,7 +8724,7 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
           }
         `)
 
-		errs := checker.ExpectCheckerErrors(t, err, 1)
+		errs := checker.RequireCheckerErrors(t, err, 1)
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errs[0], &invalidatedRefError)
 	})
@@ -8706,7 +8747,7 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
           }
         `)
 
-		errs := checker.ExpectCheckerErrors(t, err, 2)
+		errs := checker.RequireCheckerErrors(t, err, 2)
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errs[0], &invalidatedRefError)
 		assert.ErrorAs(t, errs[1], &invalidatedRefError)
@@ -8729,7 +8770,7 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
           }
         `)
 
-		errs := checker.ExpectCheckerErrors(t, err, 1)
+		errs := checker.RequireCheckerErrors(t, err, 1)
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errs[0], &invalidatedRefError)
 	})
@@ -8750,7 +8791,7 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
           }
         `)
 
-		errs := checker.ExpectCheckerErrors(t, err, 1)
+		errs := checker.RequireCheckerErrors(t, err, 1)
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errs[0], &invalidatedRefError)
 	})
@@ -8772,7 +8813,7 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
           }
         `)
 
-		errs := checker.ExpectCheckerErrors(t, err, 1)
+		errs := checker.RequireCheckerErrors(t, err, 1)
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errs[0], &invalidatedRefError)
 	})
@@ -8808,7 +8849,7 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
 			inter,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.ReturnEmptyLocationRange,
+				interpreter.EmptyLocationRange,
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
@@ -8884,23 +8925,25 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 		t,
 		inter,
 		[]interpreter.Value{
-			interpreter.NilValue{},
+			interpreter.Nil,
 			interpreter.NewUnmeteredSomeValueNonCopying(interpreter.AddressValue(address)),
 		},
 		arrayElements(inter, result.(*interpreter.ArrayValue)),
 	)
 }
 
-func newTestAuthAccountValue(gauge common.MemoryGauge, addressValue interpreter.AddressValue) interpreter.Value {
-
-	panicFunction := interpreter.NewHostFunctionValue(
+func newPanicFunctionValue(gauge common.MemoryGauge) *interpreter.HostFunctionValue {
+	return interpreter.NewHostFunctionValue(
 		gauge,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			panic(errors.NewUnreachableError())
 		},
 		stdlib.PanicFunction.Type.(*sema.FunctionType),
 	)
+}
 
+func newTestAuthAccountValue(gauge common.MemoryGauge, addressValue interpreter.AddressValue) interpreter.Value {
+	panicFunctionValue := newPanicFunctionValue(gauge)
 	return interpreter.NewAuthAccountValue(
 		gauge,
 		addressValue,
@@ -8912,17 +8955,17 @@ func newTestAuthAccountValue(gauge common.MemoryGauge, addressValue interpreter.
 			return interpreter.NewAuthAccountContractsValue(
 				gauge,
 				addressValue,
-				panicFunction,
-				panicFunction,
-				panicFunction,
-				panicFunction,
+				panicFunctionValue,
+				panicFunctionValue,
+				panicFunctionValue,
+				panicFunctionValue,
 				func(
 					inter *interpreter.Interpreter,
-					getLocationRange func() interpreter.LocationRange,
+					locationRange interpreter.LocationRange,
 				) *interpreter.ArrayValue {
 					return interpreter.NewArrayValue(
 						inter,
-						getLocationRange,
+						locationRange,
 						interpreter.VariableSizedStaticType{
 							Type: interpreter.PrimitiveStaticTypeString,
 						},
@@ -8935,9 +8978,22 @@ func newTestAuthAccountValue(gauge common.MemoryGauge, addressValue interpreter.
 			return interpreter.NewAuthAccountKeysValue(
 				gauge,
 				addressValue,
-				panicFunction,
-				panicFunction,
-				panicFunction,
+				panicFunctionValue,
+				panicFunctionValue,
+				panicFunctionValue,
+				panicFunctionValue,
+				func() interpreter.UInt64Value {
+					panic(errors.NewUnreachableError())
+				},
+			)
+		},
+		func() interpreter.Value {
+			return interpreter.NewAuthAccountInboxValue(
+				gauge,
+				addressValue,
+				panicFunctionValue,
+				panicFunctionValue,
+				panicFunctionValue,
 			)
 		},
 	)
@@ -8945,13 +9001,7 @@ func newTestAuthAccountValue(gauge common.MemoryGauge, addressValue interpreter.
 
 func newTestPublicAccountValue(gauge common.MemoryGauge, addressValue interpreter.AddressValue) interpreter.Value {
 
-	panicFunction := interpreter.NewHostFunctionValue(
-		gauge,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			panic(errors.NewUnreachableError())
-		},
-		stdlib.PanicFunction.Type.(*sema.FunctionType),
-	)
+	panicFunctionValue := newPanicFunctionValue(gauge)
 
 	return interpreter.NewPublicAccountValue(
 		gauge,
@@ -8964,21 +9014,25 @@ func newTestPublicAccountValue(gauge common.MemoryGauge, addressValue interprete
 			return interpreter.NewPublicAccountKeysValue(
 				gauge,
 				addressValue,
-				panicFunction,
+				panicFunctionValue,
+				panicFunctionValue,
+				interpreter.AccountKeysCountConstructor(func() interpreter.UInt64Value {
+					panic(errors.NewUnreachableError())
+				}),
 			)
 		},
 		func() interpreter.Value {
 			return interpreter.NewPublicAccountContractsValue(
 				gauge,
 				addressValue,
-				panicFunction,
+				panicFunctionValue,
 				func(
 					inter *interpreter.Interpreter,
-					getLocationRange func() interpreter.LocationRange,
+					locationRange interpreter.LocationRange,
 				) *interpreter.ArrayValue {
 					return interpreter.NewArrayValue(
 						inter,
-						interpreter.ReturnEmptyLocationRange,
+						interpreter.EmptyLocationRange,
 						interpreter.VariableSizedStaticType{
 							Type: interpreter.PrimitiveStaticTypeString,
 						},
@@ -9023,8 +9077,7 @@ func TestInterpretResourceAssignmentForceTransfer(t *testing.T) {
        `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		require.ErrorAs(t, err, &interpreter.ForceAssignmentToNonNilResourceError{})
 	})
@@ -9060,8 +9113,7 @@ func TestInterpretResourceAssignmentForceTransfer(t *testing.T) {
        `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		require.ErrorAs(t, err, &interpreter.ForceAssignmentToNonNilResourceError{})
 	})
@@ -9115,14 +9167,14 @@ func TestInterpretForce(t *testing.T) {
 			interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.NewUnmeteredIntValueFromInt64(1),
 			),
-			inter.Globals["x"].GetValue(),
+			inter.Globals.Get("x").GetValue(),
 		)
 
 		AssertValuesEqual(
 			t,
 			inter,
 			interpreter.NewUnmeteredIntValueFromInt64(1),
-			inter.Globals["y"].GetValue(),
+			inter.Globals.Get("y").GetValue(),
 		)
 	})
 
@@ -9139,8 +9191,7 @@ func TestInterpretForce(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		require.ErrorAs(t, err, &interpreter.ForceNilError{})
 	})
@@ -9158,7 +9209,7 @@ func TestInterpretForce(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredIntValueFromInt64(1),
-			inter.Globals["y"].GetValue(),
+			inter.Globals.Get("y").GetValue(),
 		)
 	})
 }
@@ -9338,7 +9389,7 @@ func TestInterpretCountDigits256(t *testing.T) {
 
 			assert.Equal(t,
 				bigInt,
-				inter.Globals["number"].GetValue().(interpreter.BigNumberValue).ToBigInt(nil),
+				inter.Globals.Get("number").GetValue().(interpreter.BigNumberValue).ToBigInt(nil),
 			)
 
 			expected := interpreter.NewUnmeteredUInt8Value(uint8(test.Count))
@@ -9349,7 +9400,7 @@ func TestInterpretCountDigits256(t *testing.T) {
 					t,
 					inter,
 					expected,
-					inter.Globals[variableName].GetValue(),
+					inter.Globals.Get(variableName).GetValue(),
 				)
 			}
 		})
@@ -9383,8 +9434,8 @@ func TestInterpretFailableCastingCompositeTypeConfusion(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NilValue{},
-		inter.Globals["s"].GetValue(),
+		interpreter.Nil,
+		inter.Globals.Get("s").GetValue(),
 	)
 }
 
@@ -9412,7 +9463,7 @@ func TestInterpretNestedDestroy(t *testing.T) {
 		func(invocation interpreter.Invocation) interpreter.Value {
 			message := invocation.Arguments[0].String()
 			logs = append(logs, message)
-			return interpreter.VoidValue{}
+			return interpreter.Void
 		},
 	)
 
@@ -9484,7 +9535,7 @@ func TestInterpretNestedDestroy(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.VoidValue{},
+		interpreter.Void,
 		value,
 	)
 
@@ -9543,14 +9594,14 @@ func TestInterpretInternalAssignment(t *testing.T) {
 		inter,
 		interpreter.NewArrayValue(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: stringIntDictionaryStaticType,
 			},
 			common.Address{},
 			interpreter.NewDictionaryValue(
 				inter,
-				interpreter.ReturnEmptyLocationRange,
+				interpreter.EmptyLocationRange,
 				stringIntDictionaryStaticType,
 				interpreter.NewUnmeteredStringValue("a"),
 				interpreter.NewUnmeteredIntValueFromInt64(1),
@@ -9559,13 +9610,80 @@ func TestInterpretInternalAssignment(t *testing.T) {
 			),
 			interpreter.NewDictionaryValue(
 				inter,
-				interpreter.ReturnEmptyLocationRange,
+				interpreter.EmptyLocationRange,
 				stringIntDictionaryStaticType,
 				interpreter.NewUnmeteredStringValue("a"),
 				interpreter.NewUnmeteredIntValueFromInt64(1),
 			),
 		),
 		value,
+	)
+}
+
+func TestInterpretVoidReturn_(t *testing.T) {
+	t.Parallel()
+
+	labelNamed := func(s string) string {
+		if s == "" {
+			return "unnamed"
+		}
+		return "named"
+	}
+
+	test := func(testName, returnType, returnValue string) {
+		var returnSnippet string
+
+		if returnType != "" {
+			returnSnippet = ": " + returnType
+		}
+
+		if returnValue != "" {
+		}
+
+		var name string
+		if testName == "" {
+			name = fmt.Sprintf("%s type, %s value", labelNamed(returnType), labelNamed(returnValue))
+		} else {
+			name = testName
+		}
+
+		code := fmt.Sprintf(
+			`fun test() %s { return %s }`,
+			returnSnippet,
+			returnValue,
+		)
+
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			inter := parseCheckAndInterpret(t, code)
+
+			value, err := inter.Invoke("test")
+			require.NoError(t, err)
+
+			AssertValuesEqual(t, inter, &interpreter.VoidValue{}, value)
+		})
+	}
+
+	typeNames := []string{"", "Void"}
+	valueNames := []string{"", "()"}
+
+	for _, typ := range typeNames {
+		for _, val := range valueNames {
+			test("", typ, val)
+		}
+	}
+
+	test("inline lambda expression", "", "fun(){}()")
+	test(
+		"inline inline lambda expression",
+		"Void",
+		`(fun(v: Void): Void {
+			let w = fun() { };
+			let x: Void = w();
+			let y: Void = ();
+			let z = v;
+			return z;
+		 })( () )`,
 	)
 }
 
@@ -9596,7 +9714,7 @@ func TestInterpretCopyOnReturn(t *testing.T) {
 		inter,
 		interpreter.NewDictionaryValue(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeString,
 				ValueType: interpreter.PrimitiveStaticTypeString,
@@ -9657,12 +9775,11 @@ func TestInterpretMissingMember(t *testing.T) {
 	)
 
 	// Remove field `y`
-	compositeValue := inter.Globals["x"].GetValue().(*interpreter.CompositeValue)
-	compositeValue.RemoveField(inter, interpreter.ReturnEmptyLocationRange, "y")
+	compositeValue := inter.Globals.Get("x").GetValue().(*interpreter.CompositeValue)
+	compositeValue.RemoveField(inter, interpreter.EmptyLocationRange, "y")
 
 	_, err := inter.Invoke("test")
-	require.Error(t, err)
-	_ = err.Error()
+	RequireError(t, err)
 
 	var missingMemberError interpreter.MissingMemberValueError
 	require.ErrorAs(t, err, &missingMemberError)
@@ -9709,7 +9826,7 @@ func TestHostFunctionStaticType(t *testing.T) {
             let y = x.toString
         `)
 
-		value := inter.Globals["y"].GetValue()
+		value := inter.Globals.Get("y").GetValue()
 		assert.Equal(
 			t,
 			interpreter.ConvertSemaToStaticType(nil, sema.ToStringFunctionType),
@@ -9725,7 +9842,7 @@ func TestHostFunctionStaticType(t *testing.T) {
             let y = x<Int8>()
         `)
 
-		value := inter.Globals["x"].GetValue()
+		value := inter.Globals.Get("x").GetValue()
 		assert.Equal(
 			t,
 			interpreter.ConvertSemaToStaticType(
@@ -9738,7 +9855,7 @@ func TestHostFunctionStaticType(t *testing.T) {
 			value.StaticType(inter),
 		)
 
-		value = inter.Globals["y"].GetValue()
+		value = inter.Globals.Get("y").GetValue()
 		assert.Equal(
 			t,
 			interpreter.PrimitiveStaticTypeMetaType,
@@ -9764,14 +9881,14 @@ func TestHostFunctionStaticType(t *testing.T) {
 		// Both `x` and `y` are two functions that returns a string.
 		// Hence, their types are equal. i.e: Receivers shouldn't matter.
 
-		xValue := inter.Globals["x"].GetValue()
+		xValue := inter.Globals.Get("x").GetValue()
 		assert.Equal(
 			t,
 			interpreter.ConvertSemaToStaticType(nil, sema.ToStringFunctionType),
 			xValue.StaticType(inter),
 		)
 
-		yValue := inter.Globals["y"].GetValue()
+		yValue := inter.Globals.Get("y").GetValue()
 		assert.Equal(
 			t,
 			interpreter.ConvertSemaToStaticType(nil, sema.ToStringFunctionType),
@@ -9880,7 +9997,7 @@ func TestInterpretArrayFirstIndexDoesNotExist(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NilValue{},
+		interpreter.Nil,
 		value,
 	)
 }
@@ -9917,8 +10034,7 @@ func TestInterpretOptionalReference(t *testing.T) {
 	)
 
 	_, err = inter.Invoke("absent")
-	require.Error(t, err)
-	_ = err.Error()
+	RequireError(t, err)
 
 	var forceNilError interpreter.ForceNilError
 	require.ErrorAs(t, err, &forceNilError)
@@ -9936,8 +10052,8 @@ func TestInterpretCastingBoxing(t *testing.T) {
           let a = (1 as? Int?!)?.getType()
         `)
 
-		variable, ok := inter.Globals.Get("a")
-		require.True(t, ok)
+		variable := inter.Globals.Get("a")
+		require.NotNil(t, variable)
 
 		require.Equal(
 			t,
@@ -9958,8 +10074,8 @@ func TestInterpretCastingBoxing(t *testing.T) {
           let a = (1 as! Int?)?.getType()
         `)
 
-		variable, ok := inter.Globals.Get("a")
-		require.True(t, ok)
+		variable := inter.Globals.Get("a")
+		require.NotNil(t, variable)
 
 		require.Equal(
 			t,
@@ -9980,8 +10096,8 @@ func TestInterpretCastingBoxing(t *testing.T) {
           let a = (1 as Int?)?.getType()
         `)
 
-		variable, ok := inter.Globals.Get("a")
-		require.True(t, ok)
+		variable := inter.Globals.Get("a")
+		require.NotNil(t, variable)
 
 		require.Equal(
 			t,
@@ -10021,8 +10137,8 @@ func TestInterpretNilCoalesceReference(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	variable, ok := inter.Globals.Get("ref")
-	require.True(t, ok)
+	variable := inter.Globals.Get("ref")
+	require.NotNil(t, variable)
 
 	require.Equal(
 		t,
@@ -10074,8 +10190,7 @@ func TestInterpretDictionaryDuplicateKey(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		require.ErrorAs(t, err, &interpreter.DuplicateKeyInResourceDictionaryError{})
 

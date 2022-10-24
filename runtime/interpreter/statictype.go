@@ -38,7 +38,6 @@ const UnknownElementSize = 0
 //
 // This allows static types to be efficiently serialized and deserialized,
 // for example in the world state.
-//
 type StaticType interface {
 	fmt.Stringer
 	isStaticType()
@@ -414,7 +413,6 @@ func NewRestrictedStaticType(
 // which are used as keys in maps when exporting.
 // Key types in Go maps must be (transitively) hashable types,
 // and slices are not, but `Restrictions` is one.
-//
 func (*RestrictedStaticType) isStaticType() {}
 
 func (RestrictedStaticType) elementSize() uint {

@@ -24,8 +24,9 @@ func (checker *Checker) VisitReturnStatement(statement *ast.ReturnStatement) (_ 
 	functionActivation := checker.functionActivations.Current()
 
 	defer func() {
+		// NOTE: check for resource loss before declaring the function
+		// as having definitely returned
 		checker.checkResourceLossForFunction()
-		checker.resources.JumpsOrReturns = true
 		functionActivation.ReturnInfo.MaybeReturned = true
 		functionActivation.ReturnInfo.DefinitelyReturned = true
 	}()

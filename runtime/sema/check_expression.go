@@ -36,7 +36,6 @@ func (checker *Checker) VisitIdentifierExpression(expression *ast.IdentifierExpr
 		res := Resource{Variable: variable}
 		checker.checkResourceVariableCapturingInFunction(variable, identifier)
 		checker.checkResourceUseAfterInvalidation(res, identifier)
-		checker.resources.AddUse(res, identifier.Pos)
 	}
 
 	checker.checkSelfVariableUseInInitializer(variable, identifier.Pos)
@@ -61,7 +60,7 @@ func (checker *Checker) checkReferenceValidity(variable *Variable, hasPosition a
 	// i.e: It is always the roots of the chain that is being stored as the `referencedResourceVariables`.
 	for _, referencedVar := range variable.referencedResourceVariables {
 		resourceInfo := checker.resources.Get(Resource{Variable: referencedVar})
-		if resourceInfo.Invalidations.Size() == 0 {
+		if resourceInfo.Invalidation() == nil {
 			continue
 		}
 
@@ -171,6 +170,10 @@ func (checker *Checker) VisitExpressionStatement(statement *ast.ExpressionStatem
 	}
 
 	return
+}
+
+func (checker *Checker) VisitVoidExpression(_ *ast.VoidExpression) Type {
+	return VoidType
 }
 
 func (checker *Checker) VisitBoolExpression(_ *ast.BoolExpression) Type {

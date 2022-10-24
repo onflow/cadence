@@ -119,7 +119,6 @@ func (checker *Checker) checkAssignment(
 // pointed to by the reference may have come from. Similarly, we can never safely assign
 // to a resource; because resources are moved instead of copied, we cannot currently
 // track the origin of a write target when it is a resource. Consider:
-// -----------------------------------------------------------------------------
 //
 //	pub resource R {
 //	  pub(set) var x: Int
@@ -418,7 +417,7 @@ func (checker *Checker) visitMemberExpressionAssignment(
 						},
 					)
 
-				} else if _, ok := functionActivation.InitializationInfo.FieldMembers.Get(accessedSelfMember); !ok {
+				} else if !functionActivation.InitializationInfo.FieldMembers.Contains(accessedSelfMember) {
 					// This member is not supposed to be initialized
 
 					reportAssignmentToConstant()

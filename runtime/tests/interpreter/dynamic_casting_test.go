@@ -111,14 +111,14 @@ func TestInterpretDynamicCastingNumber(t *testing.T) {
 									t,
 									inter,
 									test.expected,
-									inter.Globals["x"].GetValue(),
+									inter.Globals.Get("x").GetValue(),
 								)
 
 								AssertValuesEqual(
 									t,
 									inter,
 									test.expected,
-									inter.Globals["y"].GetValue(),
+									inter.Globals.Get("y").GetValue(),
 								)
 
 								AssertValuesEqual(
@@ -127,7 +127,7 @@ func TestInterpretDynamicCastingNumber(t *testing.T) {
 									interpreter.NewUnmeteredSomeValueNonCopying(
 										test.expected,
 									),
-									inter.Globals["z"].GetValue(),
+									inter.Globals.Get("z").GetValue(),
 								)
 							})
 						}
@@ -164,12 +164,11 @@ func TestInterpretDynamicCastingNumber(t *testing.T) {
 									AssertValuesEqual(
 										t,
 										inter,
-										interpreter.NilValue{},
+										interpreter.Nil,
 										result,
 									)
 								} else {
-									require.Error(t, err)
-									_ = err.Error()
+									RequireError(t, err)
 
 									require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 								}
@@ -217,17 +216,17 @@ func TestInterpretDynamicCastingVoid(t *testing.T) {
 						AssertValuesEqual(
 							t,
 							inter,
-							interpreter.VoidValue{},
-							inter.Globals["x"].GetValue(),
+							interpreter.Void,
+							inter.Globals.Get("x").GetValue(),
 						)
 
 						AssertValuesEqual(
 							t,
 							inter,
 							interpreter.NewUnmeteredSomeValueNonCopying(
-								interpreter.VoidValue{},
+								interpreter.Void,
 							),
-							inter.Globals["y"].GetValue(),
+							inter.Globals.Get("y").GetValue(),
 						)
 					})
 				}
@@ -263,12 +262,11 @@ func TestInterpretDynamicCastingVoid(t *testing.T) {
 							AssertValuesEqual(
 								t,
 								inter,
-								interpreter.NilValue{},
+								interpreter.Nil,
 								result,
 							)
 						} else {
-							require.Error(t, err)
-							_ = err.Error()
+							RequireError(t, err)
 
 							require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 						}
@@ -313,7 +311,7 @@ func TestInterpretDynamicCastingString(t *testing.T) {
 							t,
 							inter,
 							interpreter.NewUnmeteredStringValue("test"),
-							inter.Globals["x"].GetValue(),
+							inter.Globals.Get("x").GetValue(),
 						)
 
 						AssertValuesEqual(
@@ -322,7 +320,7 @@ func TestInterpretDynamicCastingString(t *testing.T) {
 							interpreter.NewUnmeteredSomeValueNonCopying(
 								interpreter.NewUnmeteredStringValue("test"),
 							),
-							inter.Globals["y"].GetValue(),
+							inter.Globals.Get("y").GetValue(),
 						)
 					})
 				}
@@ -357,12 +355,11 @@ func TestInterpretDynamicCastingString(t *testing.T) {
 							AssertValuesEqual(
 								t,
 								inter,
-								interpreter.NilValue{},
+								interpreter.Nil,
 								result,
 							)
 						} else {
-							require.Error(t, err)
-							_ = err.Error()
+							RequireError(t, err)
 
 							require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 						}
@@ -407,7 +404,7 @@ func TestInterpretDynamicCastingBool(t *testing.T) {
 							t,
 							inter,
 							interpreter.BoolValue(true),
-							inter.Globals["x"].GetValue(),
+							inter.Globals.Get("x").GetValue(),
 						)
 
 						AssertValuesEqual(
@@ -416,7 +413,7 @@ func TestInterpretDynamicCastingBool(t *testing.T) {
 							interpreter.NewUnmeteredSomeValueNonCopying(
 								interpreter.BoolValue(true),
 							),
-							inter.Globals["y"].GetValue(),
+							inter.Globals.Get("y").GetValue(),
 						)
 					})
 				}
@@ -451,12 +448,11 @@ func TestInterpretDynamicCastingBool(t *testing.T) {
 							AssertValuesEqual(
 								t,
 								inter,
-								interpreter.NilValue{},
+								interpreter.Nil,
 								result,
 							)
 						} else {
-							require.Error(t, err)
-							_ = err.Error()
+							RequireError(t, err)
 
 							require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 						}
@@ -505,7 +501,7 @@ func TestInterpretDynamicCastingAddress(t *testing.T) {
 							t,
 							inter,
 							addressValue,
-							inter.Globals["y"].GetValue(),
+							inter.Globals.Get("y").GetValue(),
 						)
 
 						AssertValuesEqual(
@@ -514,7 +510,7 @@ func TestInterpretDynamicCastingAddress(t *testing.T) {
 							interpreter.NewUnmeteredSomeValueNonCopying(
 								addressValue,
 							),
-							inter.Globals["z"].GetValue(),
+							inter.Globals.Get("z").GetValue(),
 						)
 					})
 				}
@@ -550,12 +546,11 @@ func TestInterpretDynamicCastingAddress(t *testing.T) {
 							AssertValuesEqual(
 								t,
 								inter,
-								interpreter.NilValue{},
+								interpreter.Nil,
 								result,
 							)
 						} else {
-							require.Error(t, err)
-							_ = err.Error()
+							RequireError(t, err)
 
 							require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 						}
@@ -600,18 +595,18 @@ func TestInterpretDynamicCastingStruct(t *testing.T) {
 
 						assert.IsType(t,
 							&interpreter.CompositeValue{},
-							inter.Globals["x"].GetValue(),
+							inter.Globals.Get("x").GetValue(),
 						)
 
 						require.IsType(t,
 							&interpreter.SomeValue{},
-							inter.Globals["y"].GetValue(),
+							inter.Globals.Get("y").GetValue(),
 						)
 
 						require.IsType(t,
 							&interpreter.CompositeValue{},
-							inter.Globals["y"].GetValue().(*interpreter.SomeValue).
-								InnerValue(inter, interpreter.ReturnEmptyLocationRange),
+							inter.Globals.Get("y").GetValue().(*interpreter.SomeValue).
+								InnerValue(inter, interpreter.EmptyLocationRange),
 						)
 					})
 				}
@@ -643,12 +638,11 @@ func TestInterpretDynamicCastingStruct(t *testing.T) {
 						AssertValuesEqual(
 							t,
 							inter,
-							interpreter.NilValue{},
+							interpreter.Nil,
 							result,
 						)
 					} else {
-						require.Error(t, err)
-						_ = err.Error()
+						RequireError(t, err)
 
 						require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 					}
@@ -687,12 +681,11 @@ func TestInterpretDynamicCastingStruct(t *testing.T) {
 							AssertValuesEqual(
 								t,
 								inter,
-								interpreter.NilValue{},
+								interpreter.Nil,
 								result,
 							)
 						} else {
-							require.Error(t, err)
-							_ = err.Error()
+							RequireError(t, err)
 
 							require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 						}
@@ -764,7 +757,7 @@ func testResourceCastValid(t *testing.T, types, fromType string, targetType stri
 		require.IsType(t,
 			&interpreter.CompositeValue{},
 			value.(*interpreter.SomeValue).
-				InnerValue(inter, interpreter.ReturnEmptyLocationRange),
+				InnerValue(inter, interpreter.EmptyLocationRange),
 		)
 
 	case ast.OperationForceCast:
@@ -797,13 +790,12 @@ func testResourceCastInvalid(t *testing.T, types, fromType, targetType string, o
 		require.NoError(t, err)
 
 		require.IsType(t,
-			interpreter.NilValue{},
+			interpreter.Nil,
 			value,
 		)
 
 	case ast.OperationForceCast:
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 
@@ -914,7 +906,7 @@ func testStructCastValid(t *testing.T, types, fromType string, targetType string
 		require.IsType(t,
 			&interpreter.CompositeValue{},
 			value.(*interpreter.SomeValue).
-				InnerValue(inter, interpreter.ReturnEmptyLocationRange),
+				InnerValue(inter, interpreter.EmptyLocationRange),
 		)
 
 	case ast.OperationForceCast:
@@ -948,13 +940,12 @@ func testStructCastInvalid(t *testing.T, types, fromType, targetType string, ope
 		require.NoError(t, err)
 
 		require.IsType(t,
-			interpreter.NilValue{},
+			interpreter.Nil,
 			value,
 		)
 
 	case ast.OperationForceCast:
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 
@@ -1107,7 +1098,7 @@ func TestInterpretDynamicCastingSome(t *testing.T) {
 							t,
 							inter,
 							expectedValue,
-							inter.Globals["y"].GetValue(),
+							inter.Globals.Get("y").GetValue(),
 						)
 
 						if targetType == sema.AnyStructType && !returnsOptional {
@@ -1116,7 +1107,7 @@ func TestInterpretDynamicCastingSome(t *testing.T) {
 								t,
 								inter,
 								expectedValue,
-								inter.Globals["z"].GetValue(),
+								inter.Globals.Get("z").GetValue(),
 							)
 
 						} else {
@@ -1126,7 +1117,7 @@ func TestInterpretDynamicCastingSome(t *testing.T) {
 								interpreter.NewUnmeteredSomeValueNonCopying(
 									expectedValue,
 								),
-								inter.Globals["z"].GetValue(),
+								inter.Globals.Get("z").GetValue(),
 							)
 						}
 
@@ -1162,12 +1153,11 @@ func TestInterpretDynamicCastingSome(t *testing.T) {
 							AssertValuesEqual(
 								t,
 								inter,
-								interpreter.NilValue{},
+								interpreter.Nil,
 								result,
 							)
 						} else {
-							require.Error(t, err)
-							_ = err.Error()
+							RequireError(t, err)
 
 							require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 						}
@@ -1214,7 +1204,7 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 							interpreter.NewUnmeteredIntValueFromInt64(42),
 						}
 
-						yValue := inter.Globals["y"].GetValue()
+						yValue := inter.Globals.Get("y").GetValue()
 						require.IsType(t, yValue, &interpreter.ArrayValue{})
 						yArray := yValue.(*interpreter.ArrayValue)
 
@@ -1225,11 +1215,11 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 							arrayElements(inter, yArray),
 						)
 
-						zValue := inter.Globals["z"].GetValue()
+						zValue := inter.Globals.Get("z").GetValue()
 						require.IsType(t, zValue, &interpreter.SomeValue{})
 						zSome := zValue.(*interpreter.SomeValue)
 
-						innerValue := zSome.InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+						innerValue := zSome.InnerValue(inter, interpreter.EmptyLocationRange)
 						require.IsType(t, innerValue, &interpreter.ArrayValue{})
 						innerArray := innerValue.(*interpreter.ArrayValue)
 
@@ -1271,12 +1261,11 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 							AssertValuesEqual(
 								t,
 								inter,
-								interpreter.NilValue{},
+								interpreter.Nil,
 								result,
 							)
 						} else {
-							require.Error(t, err)
-							_ = err.Error()
+							RequireError(t, err)
 
 							require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 						}
@@ -1306,12 +1295,11 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 						t,
 						inter,
 
-						interpreter.NilValue{},
+						interpreter.Nil,
 						result,
 					)
 				} else {
-					require.Error(t, err)
-					_ = err.Error()
+					RequireError(t, err)
 
 					require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 				}
@@ -1329,8 +1317,7 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		assert.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 	})
@@ -1375,7 +1362,7 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 
 						expectedDictionary := interpreter.NewDictionaryValue(
 							inter,
-							interpreter.ReturnEmptyLocationRange,
+							interpreter.EmptyLocationRange,
 							interpreter.DictionaryStaticType{
 								KeyType:   interpreter.PrimitiveStaticTypeString,
 								ValueType: interpreter.PrimitiveStaticTypeInt,
@@ -1388,7 +1375,7 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 							t,
 							inter,
 							expectedDictionary,
-							inter.Globals["y"].GetValue(),
+							inter.Globals.Get("y").GetValue(),
 						)
 
 						AssertValuesEqual(
@@ -1397,7 +1384,7 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 							interpreter.NewUnmeteredSomeValueNonCopying(
 								expectedDictionary,
 							),
-							inter.Globals["z"].GetValue(),
+							inter.Globals.Get("z").GetValue(),
 						)
 					})
 				}
@@ -1432,12 +1419,11 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 							AssertValuesEqual(
 								t,
 								inter,
-								interpreter.NilValue{},
+								interpreter.Nil,
 								result,
 							)
 						} else {
-							require.Error(t, err)
-							_ = err.Error()
+							RequireError(t, err)
 
 							require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 						}
@@ -1466,12 +1452,11 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 					AssertValuesEqual(
 						t,
 						inter,
-						interpreter.NilValue{},
+						interpreter.Nil,
 						result,
 					)
 				} else {
-					require.Error(t, err)
-					_ = err.Error()
+					RequireError(t, err)
 
 					require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 				}
@@ -2354,7 +2339,7 @@ func testReferenceCastValid(t *testing.T, types, fromType, targetType string, op
 		require.IsType(t,
 			&interpreter.EphemeralReferenceValue{},
 			value.(*interpreter.SomeValue).
-				InnerValue(inter, interpreter.ReturnEmptyLocationRange),
+				InnerValue(inter, interpreter.EmptyLocationRange),
 		)
 
 	case ast.OperationForceCast:
@@ -2403,13 +2388,12 @@ func testReferenceCastInvalid(t *testing.T, types, fromType, targetType string, 
 		}
 
 		require.IsType(t,
-			interpreter.NilValue{},
+			interpreter.Nil,
 			value,
 		)
 
 	case ast.OperationForceCast:
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 
@@ -3618,7 +3602,7 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 							t,
 							inter,
 							capabilityValue,
-							inter.Globals["x"].GetValue(),
+							inter.Globals.Get("x").GetValue(),
 						)
 
 						AssertValuesEqual(
@@ -3627,7 +3611,7 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 							interpreter.NewUnmeteredSomeValueNonCopying(
 								capabilityValue,
 							),
-							inter.Globals["y"].GetValue(),
+							inter.Globals.Get("y").GetValue(),
 						)
 					})
 				}
@@ -3665,12 +3649,11 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 							AssertValuesEqual(
 								t,
 								inter,
-								interpreter.NilValue{},
+								interpreter.Nil,
 								result,
 							)
 						} else {
-							require.Error(t, err)
-							_ = err.Error()
+							RequireError(t, err)
 
 							require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 						}
@@ -3701,10 +3684,9 @@ func TestInterpretResourceConstructorCast(t *testing.T) {
 		result, err := inter.Invoke("test")
 		if returnsOptional {
 			require.NoError(t, err)
-			require.Equal(t, interpreter.NilValue{}, result)
+			require.Equal(t, interpreter.Nil, result)
 		} else {
-			require.Error(t, err)
-			_ = err.Error()
+			RequireError(t, err)
 		}
 	}
 }
@@ -3768,8 +3750,7 @@ func TestInterpretFunctionTypeCasting(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 	})
@@ -3808,8 +3789,7 @@ func TestInterpretFunctionTypeCasting(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 	})
@@ -3860,8 +3840,7 @@ func TestInterpretReferenceCasting(t *testing.T) {
 		inter := parseCheckAndInterpret(t, code)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		assert.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 	})
@@ -3884,8 +3863,7 @@ func TestInterpretReferenceCasting(t *testing.T) {
 		inter := parseCheckAndInterpret(t, code)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		assert.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 	})

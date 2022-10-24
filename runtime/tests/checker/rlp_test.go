@@ -65,7 +65,7 @@ func TestCheckInvalidRLPDecodeString(t *testing.T) {
 		},
 	)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 	var mismatch *sema.TypeMismatchError
 	require.IsType(t, mismatch, errs[0])
 	require.IsType(t, mismatch, errs[1])
@@ -109,7 +109,7 @@ func TestCheckInvalidRLPDecodeList(t *testing.T) {
 		},
 	)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 	var mismatch *sema.TypeMismatchError
 	require.IsType(t, mismatch, errs[0])
 	require.IsType(t, mismatch, errs[1])

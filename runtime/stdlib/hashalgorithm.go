@@ -61,11 +61,11 @@ func hashAlgorithmHashFunction(hashAlgoValue interpreter.MemberAccessibleValue) 
 
 			inter := invocation.Interpreter
 
-			getLocationRange := invocation.GetLocationRange
+			locationRange := invocation.LocationRange
 
 			return inter.Config.HashHandler(
 				inter,
-				getLocationRange,
+				locationRange,
 				dataValue,
 				nil,
 				hashAlgoValue,
@@ -90,11 +90,11 @@ func hashAlgorithmHashWithTagFunction(hashAlgoValue interpreter.MemberAccessible
 
 			inter := invocation.Interpreter
 
-			getLocationRange := invocation.GetLocationRange
+			locationRange := invocation.LocationRange
 
 			return inter.Config.HashHandler(
 				inter,
-				getLocationRange,
+				locationRange,
 				dataValue,
 				tagValue,
 				hashAlgoValue,

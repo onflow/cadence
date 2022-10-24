@@ -237,7 +237,6 @@ func (l *lexer) word() []byte {
 // acceptOne reads one rune ahead.
 // It returns true if the next rune matches with the input rune,
 // otherwise it steps back one rune and returns false.
-//
 func (l *lexer) acceptOne(r rune) bool {
 	if l.next() == r {
 		return true

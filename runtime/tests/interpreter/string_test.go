@@ -54,7 +54,7 @@ func TestInterpretRecursiveValueString(t *testing.T) {
 	require.Equal(t,
 		`{"mapRef": ...}`,
 		mapValue.(*interpreter.DictionaryValue).
-			GetKey(inter, interpreter.ReturnEmptyLocationRange, interpreter.NewUnmeteredStringValue("mapRef")).
+			GetKey(inter, interpreter.EmptyLocationRange, interpreter.NewUnmeteredStringValue("mapRef")).
 			String(),
 	)
 }
@@ -102,7 +102,7 @@ func TestInterpretStringDecodeHex(t *testing.T) {
 			inter,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.ReturnEmptyLocationRange,
+				interpreter.EmptyLocationRange,
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeUInt8,
 				},
@@ -127,8 +127,7 @@ func TestInterpretStringDecodeHex(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		var typedErr interpreter.InvalidHexByteError
 		require.ErrorAs(t, err, &typedErr)
@@ -146,8 +145,7 @@ func TestInterpretStringDecodeHex(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 
 		var typedErr interpreter.InvalidHexLengthError
 		require.ErrorAs(t, err, &typedErr)
@@ -216,7 +214,7 @@ func TestInterpretStringFromUtf8(t *testing.T) {
 			expected = interpreter.NewSomeValueNonCopying(inter,
 				interpreter.NewUnmeteredStringValue(strValue))
 		} else {
-			expected = interpreter.NewNilValue(inter)
+			expected = interpreter.Nil
 		}
 
 		result, err := inter.Invoke("testString")
@@ -229,6 +227,27 @@ func TestInterpretStringFromUtf8(t *testing.T) {
 			result,
 		)
 	}
+}
+
+func TestInterpretStringFromCharacters(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+      fun test(): String {
+          return String.fromCharacters(["👪", "❤️"])
+      }
+	`)
+
+	result, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	RequireValuesEqual(
+		t,
+		inter,
+		interpreter.NewUnmeteredStringValue("👪❤️"),
+		result,
+	)
 }
 
 func TestInterpretStringUtf8Field(t *testing.T) {
@@ -249,7 +268,7 @@ func TestInterpretStringUtf8Field(t *testing.T) {
 		inter,
 		interpreter.NewArrayValue(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeUInt8,
 			},
@@ -426,20 +445,20 @@ func TestInterpretCompareCharacters(t *testing.T) {
 		t,
 		inter,
 		interpreter.BoolValue(true),
-		inter.Globals["x"].GetValue(),
+		inter.Globals.Get("x").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.BoolValue(true),
-		inter.Globals["y"].GetValue(),
+		inter.Globals.Get("y").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.BoolValue(false),
-		inter.Globals["z"].GetValue(),
+		inter.Globals.Get("z").GetValue(),
 	)
 }

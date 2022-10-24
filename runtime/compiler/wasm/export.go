@@ -19,7 +19,6 @@
 package wasm
 
 // Exports represents an export
-//
 type Export struct {
 	Name       string
 	Descriptor ExportDescriptor
@@ -36,13 +35,11 @@ const (
 )
 
 // ExportDescriptor represents an export (e.g. a function, memory, etc.)
-//
 type ExportDescriptor interface {
 	isExportDescriptor()
 }
 
 // FunctionExport represents the export of a function
-//
 type FunctionExport struct {
 	FunctionIndex uint32
 }
@@ -50,7 +47,6 @@ type FunctionExport struct {
 func (FunctionExport) isExportDescriptor() {}
 
 // MemoryExport represents the export of a memory
-//
 type MemoryExport struct {
 	MemoryIndex uint32
 }

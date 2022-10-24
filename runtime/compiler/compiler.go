@@ -136,6 +136,10 @@ func (compiler *Compiler) VisitExpressionStatement(_ *ast.ExpressionStatement) i
 	panic(errors.NewUnreachableError())
 }
 
+func (compiler *Compiler) VisitVoidExpression(_ *ast.VoidExpression) ir.Expr {
+	panic(errors.NewUnreachableError())
+}
+
 func (compiler *Compiler) VisitBoolExpression(_ *ast.BoolExpression) ir.Expr {
 	// TODO
 	panic(errors.NewUnreachableError())

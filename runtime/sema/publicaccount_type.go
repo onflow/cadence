@@ -36,7 +36,6 @@ const PublicAccountContractsField = "contracts"
 const PublicAccountPathsField = "publicPaths"
 
 // PublicAccountType represents the publicly accessible portion of an account.
-//
 var PublicAccountType = func() *CompositeType {
 
 	publicAccountType := &CompositeType{
@@ -113,7 +112,7 @@ var PublicAccountType = func() *CompositeType {
 			PublicAccountPathsType,
 			publicAccountTypePathsFieldDocString,
 		),
-		NewUnmeteredPublicConstantFieldMember(
+		NewUnmeteredPublicFunctionMember(
 			publicAccountType,
 			PublicAccountForEachPublicField,
 			PublicAccountForEachPublicFunctionType,
@@ -167,8 +166,8 @@ Iterate over all the public paths in an account.
 
 Takes two arguments: the first is the path (/domain/key) of the stored object, and the second is the runtime type of that object
 
-Returns a bool indicating whether the iteration should continue; true will continue iterating onto the next element in storage, 
-false will abort iteration
+The returned boolean of the supplied function indicates whether the iteration should continue; true will continue iterating onto the next element in storage, 
+false will abort iteration.
 `
 
 var PublicAccountForEachPublicFunctionType = AccountForEachFunctionType(PublicPathType)
@@ -188,6 +187,18 @@ var PublicAccountKeysType = func() *CompositeType {
 			AccountKeysGetFunctionName,
 			AccountKeysTypeGetFunctionType,
 			accountKeysTypeGetFunctionDocString,
+		),
+		NewUnmeteredPublicFunctionMember(
+			accountKeys,
+			AccountKeysTypeForEachFunctionName,
+			AccountKeysTypeForEachFunctionType,
+			accountKeysTypeForEachFunctionDocString,
+		),
+		NewUnmeteredPublicConstantFieldMember(
+			accountKeys,
+			AccountKeysCountFieldName,
+			AccountKeysTypeCountFieldType,
+			accountKeysTypeCountFieldDocString,
 		),
 	}
 

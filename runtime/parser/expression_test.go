@@ -33,6 +33,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/parser/lexer"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -1837,7 +1838,7 @@ func TestParseBlockComment(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("nested comment, nothing else", func(t *testing.T) {
+	t.Run("nested", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -1905,6 +1906,117 @@ func TestParseBlockComment(t *testing.T) {
 				},
 			},
 			result,
+		)
+	})
+
+	t.Run("nested, extra closing", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression(" /* test  foo/* bar  */ asd*/ true */ bar")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				// `true */ bar` is parsed as infix operation of path
+				&SyntaxError{
+					Message: "expected token '/'",
+					Pos: ast.Position{
+						Offset: 41,
+						Line:   1,
+						Column: 41,
+					},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("nested, missing closing", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression(" /* test  foo/* bar  */ asd true ")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				// `true */ bar` is parsed as infix operation of path
+				&SyntaxError{
+					Message: "missing comment end '*/'",
+					Pos: ast.Position{
+						Offset: 33,
+						Line:   1,
+						Column: 33,
+					},
+				},
+				&SyntaxError{
+					Message: "unexpected end of program",
+					Pos: ast.Position{
+						Offset: 33,
+						Line:   1,
+						Column: 33,
+					},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("invalid content", func(t *testing.T) {
+
+		t.Parallel()
+
+		// The lexer should never produce such an invalid token stream in the first place
+
+		tokens := &testTokenStream{
+			tokens: []lexer.Token{
+				{
+					Type: lexer.TokenBlockCommentStart,
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Line:   1,
+							Offset: 0,
+							Column: 0,
+						},
+						EndPos: ast.Position{
+							Line:   1,
+							Offset: 1,
+							Column: 1,
+						},
+					},
+				},
+				{
+					Type: lexer.TokenIdentifier,
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Line:   1,
+							Offset: 2,
+							Column: 2,
+						},
+						EndPos: ast.Position{
+							Line:   1,
+							Offset: 4,
+							Column: 4,
+						},
+					},
+				},
+				{Type: lexer.TokenEOF},
+			},
+			input: []byte(`/*foo`),
+		}
+
+		_, errs := ParseTokenStream(nil, tokens, func(p *parser) (ast.Expression, error) {
+			return parseExpression(p, lowestBindingPower)
+		})
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token identifier in block comment",
+					Pos: ast.Position{
+						Line:   1,
+						Offset: 2,
+						Column: 2,
+					},
+				},
+			},
+			errs,
 		)
 	})
 }
@@ -2011,7 +2123,7 @@ func TestParseReference(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected expression",
+					Message: "unexpected end of program",
 					Pos: ast.Position{
 						Offset: 13,
 						Line:   1,
@@ -5100,6 +5212,50 @@ func TestParseTernaryRightAssociativity(t *testing.T) {
 		},
 		result.Declarations(),
 	)
+}
+
+func TestParseVoidLiteral(t *testing.T) {
+	t.Parallel()
+
+	const code = `
+		let void: Void = ()
+	`
+
+	result, errs := testParseProgram(code)
+	require.Empty(t, errs)
+
+	utils.AssertEqualWithDiff(t,
+		[]ast.Declaration{
+			&ast.VariableDeclaration{
+				IsConstant: true,
+				Identifier: ast.Identifier{
+					Identifier: "void",
+					Pos:        ast.Position{Offset: 7, Line: 2, Column: 6},
+				},
+				TypeAnnotation: &ast.TypeAnnotation{
+					IsResource: false,
+					Type: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "Void",
+							Pos:        ast.Position{Offset: 13, Line: 2, Column: 12},
+						},
+						NestedIdentifiers: nil,
+					},
+					StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
+				},
+				Value: &ast.VoidExpression{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 20, Line: 2, Column: 19},
+						EndPos:   ast.Position{Offset: 23, Line: 3, Column: 0},
+					},
+				},
+				Transfer: &ast.Transfer{
+					Operation: 1,
+					Pos:       ast.Position{Offset: 18, Line: 2, Column: 17},
+				},
+				StartPos: ast.Position{Offset: 3, Line: 2, Column: 2},
+			},
+		}, result.Declarations())
 }
 
 func TestParseMissingReturnType(t *testing.T) {

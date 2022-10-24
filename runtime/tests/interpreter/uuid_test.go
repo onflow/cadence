@@ -128,14 +128,14 @@ func TestInterpretResourceUUID(t *testing.T) {
 	require.Equal(t, length, array.Count())
 
 	for i := 0; i < length; i++ {
-		element := array.Get(inter, interpreter.ReturnEmptyLocationRange, i)
+		element := array.Get(inter, interpreter.EmptyLocationRange, i)
 
 		require.IsType(t, &interpreter.CompositeValue{}, element)
 		res := element.(*interpreter.CompositeValue)
 
 		uuidValue := res.GetMember(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			sema.ResourceUUIDFieldName,
 		)
 

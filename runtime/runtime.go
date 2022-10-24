@@ -354,7 +354,7 @@ func userPanicToError(f func()) (returnedError error) {
 func validateArgumentParams(
 	inter *interpreter.Interpreter,
 	runtimeInterface Interface,
-	getLocationRange func() interpreter.LocationRange,
+	locationRange interpreter.LocationRange,
 	arguments [][]byte,
 	parameters []*sema.Parameter,
 ) (
@@ -401,7 +401,7 @@ func validateArgumentParams(
 			// if importing an invalid public key, this call panics
 			arg, err = ImportValue(
 				inter,
-				getLocationRange,
+				locationRange,
 				value,
 				parameterType,
 			)
@@ -443,7 +443,7 @@ func validateArgumentParams(
 		// Check whether the decoded value conforms to the type associated with the value
 		if !arg.ConformsToStaticType(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.TypeConformanceResults{},
 		) {
 			return nil, &InvalidEntryPointArgumentError{
@@ -600,7 +600,7 @@ func (r *interpreterRuntime) ReadStored(
 
 	var exportedValue cadence.Value
 	if value != nil {
-		exportedValue, err = ExportValue(value, inter, interpreter.ReturnEmptyLocationRange)
+		exportedValue, err = ExportValue(value, inter, interpreter.EmptyLocationRange)
 		if err != nil {
 			return nil, newError(err, location, codesAndPrograms)
 		}
@@ -641,7 +641,7 @@ func (r *interpreterRuntime) ReadLinked(
 		&sema.ReferenceType{
 			Type: sema.AnyType,
 		},
-		interpreter.ReturnEmptyLocationRange,
+		interpreter.EmptyLocationRange,
 	)
 	if err != nil {
 		return nil, err
@@ -659,7 +659,7 @@ func (r *interpreterRuntime) ReadLinked(
 
 	var exportedValue cadence.Value
 	if value != nil {
-		exportedValue, err = ExportValue(value, inter, interpreter.ReturnEmptyLocationRange)
+		exportedValue, err = ExportValue(value, inter, interpreter.EmptyLocationRange)
 		if err != nil {
 			return nil, newError(err, location, codesAndPrograms)
 		}

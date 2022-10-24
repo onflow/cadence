@@ -40,6 +40,46 @@ func TestMain(m *testing.M) {
 	goleak.VerifyTestMain(m)
 }
 
+type testTokenStream struct {
+	tokens []lexer.Token
+	input  []byte
+	cursor int
+}
+
+var _ lexer.TokenStream = &testTokenStream{}
+
+func (t *testTokenStream) Next() lexer.Token {
+	if t.cursor >= len(t.tokens) {
+
+		// At the end of the token stream,
+		// emit a synthetic EOF token
+
+		return lexer.Token{
+			Type: lexer.TokenEOF,
+		}
+
+	}
+	token := t.tokens[t.cursor]
+	t.cursor++
+	return token
+}
+
+func (t *testTokenStream) Cursor() int {
+	return t.cursor
+}
+
+func (t *testTokenStream) Revert(cursor int) {
+	t.cursor = cursor
+}
+
+func (t *testTokenStream) Input() []byte {
+	return t.input
+}
+
+func (*testTokenStream) Reclaim() {
+	// NO-OP
+}
+
 func testParseStatements(s string) ([]ast.Statement, []error) {
 	return ParseStatements([]byte(s), nil)
 }
@@ -73,13 +113,13 @@ func TestParseInvalid(t *testing.T) {
 	}
 
 	unexpectedToken := "Parsing failed:\nerror: unexpected token: identifier"
-	expectedExpression := "Parsing failed:\nerror: expected expression"
+	unexpectedEndOfProgram := "Parsing failed:\nerror: unexpected end of program"
 	missingTypeAnnotation := "Parsing failed:\nerror: missing type annotation after comma"
 
 	for _, test := range []test{
 		{unexpectedToken, "X"},
 		{unexpectedToken, "paste your code in here"},
-		{expectedExpression, "# a ( b > c > d > e > f > g > h > i > j > k > l > m > n > o > p > q > r >"},
+		{unexpectedEndOfProgram, "# a ( b > c > d > e > f > g > h > i > j > k > l > m > n > o > p > q > r >"},
 		{missingTypeAnnotation, "#0x0<{},>()"},
 	} {
 		t.Run(test.code, func(t *testing.T) {
@@ -100,7 +140,7 @@ func TestParseBuffering(t *testing.T) {
 		_, errs := Parse(
 			[]byte("a b c d"),
 			func(p *parser) (any, error) {
-				_, err := p.mustOneString(lexer.TokenIdentifier, "a")
+				_, err := p.mustToken(lexer.TokenIdentifier, "a")
 				if err != nil {
 					return nil, err
 				}
@@ -112,7 +152,7 @@ func TestParseBuffering(t *testing.T) {
 
 				p.startBuffering()
 
-				_, err = p.mustOneString(lexer.TokenIdentifier, "b")
+				_, err = p.mustToken(lexer.TokenIdentifier, "b")
 				if err != nil {
 					return nil, err
 				}
@@ -122,7 +162,7 @@ func TestParseBuffering(t *testing.T) {
 					return nil, err
 				}
 
-				_, err = p.mustOneString(lexer.TokenIdentifier, "c")
+				_, err = p.mustToken(lexer.TokenIdentifier, "c")
 				if err != nil {
 					return nil, err
 				}
@@ -134,7 +174,7 @@ func TestParseBuffering(t *testing.T) {
 					return nil, err
 				}
 
-				_, err = p.mustOneString(lexer.TokenIdentifier, "d")
+				_, err = p.mustToken(lexer.TokenIdentifier, "d")
 				if err != nil {
 					return nil, err
 				}
@@ -154,7 +194,7 @@ func TestParseBuffering(t *testing.T) {
 		_, errs := Parse(
 			[]byte("a b x d"),
 			func(p *parser) (any, error) {
-				_, err := p.mustOneString(lexer.TokenIdentifier, "a")
+				_, err := p.mustToken(lexer.TokenIdentifier, "a")
 				if err != nil {
 					return nil, err
 				}
@@ -166,7 +206,7 @@ func TestParseBuffering(t *testing.T) {
 
 				p.startBuffering()
 
-				_, err = p.mustOneString(lexer.TokenIdentifier, "b")
+				_, err = p.mustToken(lexer.TokenIdentifier, "b")
 				if err != nil {
 					return nil, err
 				}
@@ -176,7 +216,7 @@ func TestParseBuffering(t *testing.T) {
 					return nil, err
 				}
 
-				_, err = p.mustOneString(lexer.TokenIdentifier, "c")
+				_, err = p.mustToken(lexer.TokenIdentifier, "c")
 				if err != nil {
 					return nil, err
 				}
@@ -188,7 +228,7 @@ func TestParseBuffering(t *testing.T) {
 					return nil, err
 				}
 
-				_, err = p.mustOneString(lexer.TokenIdentifier, "d")
+				_, err = p.mustToken(lexer.TokenIdentifier, "d")
 				if err != nil {
 					return nil, err
 				}
@@ -216,7 +256,7 @@ func TestParseBuffering(t *testing.T) {
 		_, errs := Parse(
 			[]byte("a b c d"),
 			func(p *parser) (any, error) {
-				_, err := p.mustOneString(lexer.TokenIdentifier, "a")
+				_, err := p.mustToken(lexer.TokenIdentifier, "a")
 				if err != nil {
 					return nil, err
 				}
@@ -227,7 +267,7 @@ func TestParseBuffering(t *testing.T) {
 
 				p.startBuffering()
 
-				_, err = p.mustOneString(lexer.TokenIdentifier, "b")
+				_, err = p.mustToken(lexer.TokenIdentifier, "b")
 				if err != nil {
 					return nil, err
 				}
@@ -235,7 +275,7 @@ func TestParseBuffering(t *testing.T) {
 				if err != nil {
 					return nil, err
 				}
-				_, err = p.mustOneString(lexer.TokenIdentifier, "c")
+				_, err = p.mustToken(lexer.TokenIdentifier, "c")
 				if err != nil {
 					return nil, err
 				}
@@ -245,7 +285,7 @@ func TestParseBuffering(t *testing.T) {
 					return nil, err
 				}
 
-				_, err = p.mustOneString(lexer.TokenIdentifier, "b")
+				_, err = p.mustToken(lexer.TokenIdentifier, "b")
 				if err != nil {
 					return nil, err
 				}
@@ -253,7 +293,7 @@ func TestParseBuffering(t *testing.T) {
 				if err != nil {
 					return nil, err
 				}
-				_, err = p.mustOneString(lexer.TokenIdentifier, "c")
+				_, err = p.mustToken(lexer.TokenIdentifier, "c")
 				if err != nil {
 					return nil, err
 				}
@@ -261,7 +301,7 @@ func TestParseBuffering(t *testing.T) {
 				if err != nil {
 					return nil, err
 				}
-				_, err = p.mustOneString(lexer.TokenIdentifier, "d")
+				_, err = p.mustToken(lexer.TokenIdentifier, "d")
 				if err != nil {
 					return nil, err
 				}
@@ -281,7 +321,7 @@ func TestParseBuffering(t *testing.T) {
 		_, errs := Parse(
 			[]byte("a b c d"),
 			func(p *parser) (any, error) {
-				_, err := p.mustOneString(lexer.TokenIdentifier, "a")
+				_, err := p.mustToken(lexer.TokenIdentifier, "a")
 				if err != nil {
 					return nil, err
 				}
@@ -305,7 +345,7 @@ func TestParseBuffering(t *testing.T) {
 						}
 					}()
 
-					_, bufferingError = p.mustOneString(lexer.TokenIdentifier, "x")
+					_, bufferingError = p.mustToken(lexer.TokenIdentifier, "x")
 					if bufferingError != nil {
 						return
 					}
@@ -313,7 +353,7 @@ func TestParseBuffering(t *testing.T) {
 					if bufferingError != nil {
 						return
 					}
-					_, bufferingError = p.mustOneString(lexer.TokenIdentifier, "c")
+					_, bufferingError = p.mustToken(lexer.TokenIdentifier, "c")
 					if bufferingError != nil {
 						return
 					}
@@ -329,7 +369,7 @@ func TestParseBuffering(t *testing.T) {
 					return nil, err
 				}
 
-				_, err = p.mustOneString(lexer.TokenIdentifier, "b")
+				_, err = p.mustToken(lexer.TokenIdentifier, "b")
 				if err != nil {
 					return nil, err
 				}
@@ -337,7 +377,7 @@ func TestParseBuffering(t *testing.T) {
 				if err != nil {
 					return nil, err
 				}
-				_, err = p.mustOneString(lexer.TokenIdentifier, "c")
+				_, err = p.mustToken(lexer.TokenIdentifier, "c")
 				if err != nil {
 					return nil, err
 				}
@@ -345,7 +385,7 @@ func TestParseBuffering(t *testing.T) {
 				if err != nil {
 					return nil, err
 				}
-				_, err = p.mustOneString(lexer.TokenIdentifier, "d")
+				_, err = p.mustToken(lexer.TokenIdentifier, "d")
 				if err != nil {
 					return nil, err
 				}
@@ -365,7 +405,7 @@ func TestParseBuffering(t *testing.T) {
 		_, errs := Parse(
 			[]byte("a b c x"),
 			func(p *parser) (any, error) {
-				_, err := p.mustOneString(lexer.TokenIdentifier, "a")
+				_, err := p.mustToken(lexer.TokenIdentifier, "a")
 				if err != nil {
 					return nil, err
 				}
@@ -388,7 +428,7 @@ func TestParseBuffering(t *testing.T) {
 						}
 					}()
 
-					_, bufferingError = p.mustOneString(lexer.TokenIdentifier, "x")
+					_, bufferingError = p.mustToken(lexer.TokenIdentifier, "x")
 					if bufferingError != nil {
 						return
 					}
@@ -396,7 +436,7 @@ func TestParseBuffering(t *testing.T) {
 					if bufferingError != nil {
 						return
 					}
-					_, bufferingError = p.mustOneString(lexer.TokenIdentifier, "c")
+					_, bufferingError = p.mustToken(lexer.TokenIdentifier, "c")
 					if bufferingError != nil {
 						return
 					}
@@ -412,7 +452,7 @@ func TestParseBuffering(t *testing.T) {
 					return nil, err
 				}
 
-				_, err = p.mustOneString(lexer.TokenIdentifier, "b")
+				_, err = p.mustToken(lexer.TokenIdentifier, "b")
 				if err != nil {
 					return nil, err
 				}
@@ -420,7 +460,7 @@ func TestParseBuffering(t *testing.T) {
 				if err != nil {
 					return nil, err
 				}
-				_, err = p.mustOneString(lexer.TokenIdentifier, "c")
+				_, err = p.mustToken(lexer.TokenIdentifier, "c")
 				if err != nil {
 					return nil, err
 				}
@@ -428,7 +468,7 @@ func TestParseBuffering(t *testing.T) {
 				if err != nil {
 					return nil, err
 				}
-				_, err = p.mustOneString(lexer.TokenIdentifier, "d")
+				_, err = p.mustToken(lexer.TokenIdentifier, "d")
 				if err != nil {
 					return nil, err
 				}
@@ -553,12 +593,12 @@ func TestParseEOF(t *testing.T) {
 	_, errs := Parse(
 		[]byte("a b"),
 		func(p *parser) (any, error) {
-			_, err := p.mustOneString(lexer.TokenIdentifier, "a")
+			_, err := p.mustToken(lexer.TokenIdentifier, "a")
 			if err != nil {
 				return nil, err
 			}
-			p.skipSpaceAndComments(true)
-			_, err = p.mustOneString(lexer.TokenIdentifier, "b")
+			p.skipSpaceAndComments()
+			_, err = p.mustToken(lexer.TokenIdentifier, "b")
 			if err != nil {
 				return nil, err
 			}
