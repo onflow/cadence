@@ -2978,7 +2978,9 @@ func init() {
 		MetaType,
 		VoidType,
 		AnyStructType,
+		AnyStructAttachmentType,
 		AnyResourceType,
+		AnyResourceAttachmentType,
 		NeverType,
 		BoolType,
 		CharacterType,
@@ -3627,6 +3629,11 @@ func (t *CompositeType) getBaseCompositeKind() common.CompositeKind {
 	default:
 		return common.CompositeKindUnknown
 	}
+}
+
+func isAttachmentType(t Type) bool {
+	composite, ok := t.(*CompositeType)
+	return ok && composite.Kind == common.CompositeKindAttachment
 }
 
 func (t *CompositeType) GetBaseType() Type {
@@ -5093,6 +5100,12 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 	case AnyResourceType:
 		return subType.IsResourceType()
 
+	case AnyResourceAttachmentType:
+		return subType.IsResourceType() && isAttachmentType(subType)
+
+	case AnyStructAttachmentType:
+		return !subType.IsResourceType() && isAttachmentType(subType)
+
 	case NumberType:
 		switch subType {
 		case NumberType, SignedNumberType:
@@ -5379,6 +5392,8 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 		case AnyStructType:
 			// `&T <: &AnyStruct` iff `T <: AnyStruct`
+			return IsSubType(typedSubType.Type, typedSuperType.Type)
+		case AnyResourceAttachmentType, AnyStructAttachmentType:
 			return IsSubType(typedSubType.Type, typedSuperType.Type)
 		}
 

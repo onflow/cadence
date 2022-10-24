@@ -79,6 +79,25 @@ func (AnyStructType) ID() string {
 	return "AnyStruct"
 }
 
+// AnyStructAttachmentType
+
+type AnyStructAttachmentType struct{}
+
+func NewAnyStructAttachmentType() AnyStructAttachmentType {
+	return AnyStructAttachmentType{}
+}
+
+func NewMeteredAnyStructAttachmentType(gauge common.MemoryGauge) AnyStructAttachmentType {
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
+	return NewAnyStructAttachmentType()
+}
+
+func (AnyStructAttachmentType) isType() {}
+
+func (AnyStructAttachmentType) ID() string {
+	return "AnyStructAttachment"
+}
+
 // AnyResourceType
 
 type AnyResourceType struct{}
@@ -96,6 +115,25 @@ func (AnyResourceType) isType() {}
 
 func (AnyResourceType) ID() string {
 	return "AnyResource"
+}
+
+// AnyResourceAttachmentType
+
+type AnyResourceAttachmentType struct{}
+
+func NewAnyResourceAttachmentType() AnyResourceAttachmentType {
+	return AnyResourceAttachmentType{}
+}
+
+func NewMeteredAnyResourceAttachmentType(gauge common.MemoryGauge) AnyResourceAttachmentType {
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
+	return NewAnyResourceAttachmentType()
+}
+
+func (AnyResourceAttachmentType) isType() {}
+
+func (AnyResourceAttachmentType) ID() string {
+	return "AnyResourceAttachment"
 }
 
 // OptionalType

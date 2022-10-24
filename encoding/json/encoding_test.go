@@ -1062,8 +1062,10 @@ func TestEncodeSimpleTypes(t *testing.T) {
 
 	for _, ty := range []cadence.Type{
 		cadence.AnyType{},
+		cadence.AnyStructType{},
+		cadence.AnyStructAttachmentType{},
 		cadence.AnyResourceType{},
-		cadence.AnyResourceType{},
+		cadence.AnyResourceAttachmentType{},
 		cadence.MetaType{},
 		cadence.VoidType{},
 		cadence.NeverType{},

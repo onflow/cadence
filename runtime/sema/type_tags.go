@@ -216,6 +216,8 @@ const (
 	capabilityTypeMask uint64 = 1 << iota
 	restrictedTypeMask
 	transactionTypeMask
+	anyResourceAttachmentMask
+	anyStructAttachmentMask
 
 	invalidTypeMask
 )
@@ -325,10 +327,12 @@ var (
 	FunctionTypeTag      = newTypeTagFromLowerMask(functionTypeMask)
 	InterfaceTypeTag     = newTypeTagFromLowerMask(interfaceTypeMask)
 
-	RestrictedTypeTag  = newTypeTagFromUpperMask(restrictedTypeMask)
-	CapabilityTypeTag  = newTypeTagFromUpperMask(capabilityTypeMask)
-	InvalidTypeTag     = newTypeTagFromUpperMask(invalidTypeMask)
-	TransactionTypeTag = newTypeTagFromUpperMask(transactionTypeMask)
+	RestrictedTypeTag            = newTypeTagFromUpperMask(restrictedTypeMask)
+	CapabilityTypeTag            = newTypeTagFromUpperMask(capabilityTypeMask)
+	InvalidTypeTag               = newTypeTagFromUpperMask(invalidTypeMask)
+	TransactionTypeTag           = newTypeTagFromUpperMask(transactionTypeMask)
+	AnyResourceAttachmentTypeTag = newTypeTagFromUpperMask(anyResourceAttachmentMask)
+	AnyStructAttachmentTypeTag   = newTypeTagFromUpperMask(anyStructAttachmentMask)
 
 	// AnyStructTypeTag only includes the types that are pre-known
 	// to belong to AnyStruct type. This is more of an optimization.
@@ -336,6 +340,7 @@ var (
 	// to be included in the mask without knowing their member types.
 	// Hence, they are checked on demand in `getSuperTypeOfDerivedTypes()`.
 	AnyStructTypeTag = newTypeTagFromLowerMask(anyStructTypeMask).
+				Or(AnyStructAttachmentTypeTag).
 				Or(NeverTypeTag).
 				Or(NumberTypeTag).
 				Or(StringTypeTag).
@@ -352,7 +357,8 @@ var (
 				Or(CapabilityTypeTag).
 				Or(FunctionTypeTag)
 
-	AnyResourceTypeTag = newTypeTagFromLowerMask(anyResourceTypeMask)
+	AnyResourceTypeTag = newTypeTagFromLowerMask(anyResourceTypeMask).
+				Or(AnyResourceAttachmentTypeTag)
 
 	AnyTypeTag = newTypeTagFromLowerMask(anyTypeMask).
 			Or(AnyStructTypeTag).

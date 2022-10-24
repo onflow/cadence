@@ -19,6 +19,7 @@
 package checker
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -2696,4 +2697,123 @@ func TestCheckAttachWithArguments(t *testing.T) {
 		assert.IsType(t, &sema.IncorrectArgumentLabelError{}, errs[0])
 		assert.IsType(t, &sema.IncorrectArgumentLabelError{}, errs[1])
 	})
+}
+
+func TestCheckAnyAttachmentTypes(t *testing.T) {
+
+	type TestCase struct {
+		subType         string
+		setupCode       string
+		expectedSuccess bool
+	}
+
+	testCases := func(resource bool) []TestCase {
+		return []TestCase{
+			{
+				subType:         "Int",
+				expectedSuccess: false,
+			},
+			{
+				subType:         "AnyStruct",
+				expectedSuccess: false,
+			},
+			{
+				subType:         "AnyResource",
+				expectedSuccess: false,
+			},
+			{
+				setupCode:       "attachment S for AnyStruct {}",
+				subType:         "S",
+				expectedSuccess: !resource,
+			},
+			{
+				setupCode:       "struct S2 {}",
+				subType:         "S2",
+				expectedSuccess: false,
+			},
+			{
+				setupCode:       "struct S {}\nattachment S3 for S {}",
+				subType:         "S3",
+				expectedSuccess: !resource,
+			},
+			{
+				setupCode:       "attachment R for AnyResource {}",
+				subType:         "R",
+				expectedSuccess: resource,
+			},
+			{
+				setupCode:       "resource R2 {}",
+				subType:         "R2",
+				expectedSuccess: false,
+			},
+			{
+				setupCode:       "resource R {}\nattachment R3 for R {}",
+				subType:         "R3",
+				expectedSuccess: resource,
+			},
+			{
+				setupCode:       "event E()",
+				subType:         "E",
+				expectedSuccess: false,
+			},
+			{
+				setupCode:       "contract C {}",
+				subType:         "C",
+				expectedSuccess: false,
+			},
+			{
+				setupCode:       "contract interface CI {}",
+				subType:         "CI",
+				expectedSuccess: false,
+			},
+		}
+	}
+
+	t.Run("AnyStructAttachmentType", func(t *testing.T) {
+
+		for _, testCase := range testCases(false) {
+			t.Run(testCase.subType, func(t *testing.T) {
+
+				_, err := ParseAndCheck(t,
+					fmt.Sprintf(`
+					%s
+					pub fun foo(x: &%s): &AnyStructAttachment {
+						return x
+					}
+				`, testCase.setupCode, testCase.subType),
+				)
+
+				if testCase.expectedSuccess {
+					require.NoError(t, err)
+				} else {
+					errs := RequireCheckerErrors(t, err, 1)
+					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				}
+			})
+		}
+	})
+
+	t.Run("AnyResourceAttachmentType", func(t *testing.T) {
+		for _, testCase := range testCases(true) {
+			t.Run(testCase.subType, func(t *testing.T) {
+
+				_, err := ParseAndCheck(t,
+					fmt.Sprintf(`
+					%s
+					pub fun foo(x: &%s): &AnyResourceAttachment {
+						return x
+					}
+				`, testCase.setupCode, testCase.subType),
+				)
+
+				if testCase.expectedSuccess {
+					require.NoError(t, err)
+				} else {
+					errs := RequireCheckerErrors(t, err, 1)
+					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				}
+			})
+		}
+	})
+
 }

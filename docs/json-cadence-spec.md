@@ -383,7 +383,7 @@ These are basic types like `Int`, `String`, or `StoragePath`.
 
 ```json
 {
-  "kind": "Any" | "AnyStruct" | "AnyResource" | "Type" | 
+  "kind": "Any" | "AnyStruct" | "AnyResource" | "AnyStructAttachment" | "AnyResourceAttachment" | "Type" | 
     "Void" | "Never" | "Bool" | "String" | "Character" | 
     "Bytes" | "Address" | "Number" | "SignedNumber" | 
     "Integer" | "SignedInteger" | "FixedPoint" | 
