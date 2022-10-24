@@ -3784,6 +3784,126 @@ func (t *CompositeType) GetNestedTypes() *StringTypeOrderedMap {
 	return t.NestedTypes
 }
 
+func CompositeGetAttachmentFunctionType(t *CompositeType) *FunctionType {
+	attachmentSuperType := AnyStructAttachmentType
+	if t.IsResourceType() {
+		attachmentSuperType = AnyResourceAttachmentType
+	}
+
+	typeParameter := &TypeParameter{
+		Name:      "T",
+		TypeBound: attachmentSuperType,
+	}
+
+	return &FunctionType{
+		TypeParameters: []*TypeParameter{
+			typeParameter,
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{
+				Type: &ReferenceType{
+					Type: &GenericType{
+						TypeParameter: typeParameter,
+					},
+				},
+			},
+		),
+	}
+}
+
+func CompositeForEachAttachmentFunctionType(t *CompositeType) *FunctionType {
+	attachmentSuperType := AnyStructAttachmentType
+	if t.IsResourceType() {
+		attachmentSuperType = AnyResourceAttachmentType
+	}
+
+	typeParameter := &TypeParameter{
+		Name:      "T",
+		TypeBound: attachmentSuperType,
+	}
+
+	return &FunctionType{
+		TypeParameters: []*TypeParameter{
+			typeParameter,
+		},
+		Parameters: []*Parameter{
+			{
+				Label:      ArgumentLabelNotRequired,
+				Identifier: "f",
+				TypeAnnotation: NewTypeAnnotation(
+					&FunctionType{
+						Parameters: []*Parameter{
+							{
+								TypeAnnotation: NewTypeAnnotation(&GenericType{
+									TypeParameter: typeParameter,
+								}),
+							},
+						},
+						ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
+					},
+				),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
+	}
+}
+
+func AttachmentGetFieldFunctionType(t *CompositeType) *FunctionType {
+	typeParameter := &TypeParameter{
+		Name:      "T",
+		TypeBound: AnyType,
+	}
+
+	return &FunctionType{
+		TypeParameters: []*TypeParameter{
+			typeParameter,
+		},
+		Parameters: []*Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "name",
+				TypeAnnotation: NewTypeAnnotation(StringType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{
+				Type: &ReferenceType{
+					Type: &GenericType{
+						TypeParameter: typeParameter,
+					},
+				},
+			},
+		),
+	}
+}
+
+func AttachmentGetMethodFunctionType(t *CompositeType) *FunctionType {
+	typeParameter := &TypeParameter{
+		Name:      "T",
+		TypeBound: AnyType,
+	}
+
+	return &FunctionType{
+		TypeParameters: []*TypeParameter{
+			typeParameter,
+		},
+		Parameters: []*Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "name",
+				TypeAnnotation: NewTypeAnnotation(StringType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{
+				Type: &GenericType{
+					TypeParameter: typeParameter,
+				},
+			},
+		),
+	}
+}
+
 func (t *CompositeType) initializeMemberResolvers() {
 	t.memberResolversOnce.Do(func() {
 		members := make(map[string]MemberResolver, t.Members.Len())
