@@ -3173,8 +3173,9 @@ func TestCheckRemove(t *testing.T) {
 			`
 			resource S {}
 			attachment A for S {}
-			pub fun foo(s: S) {
+			pub fun foo(s: @S) {
 				remove S from s
+				destroy s
 			}
 		`,
 		)

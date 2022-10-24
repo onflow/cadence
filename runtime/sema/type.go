@@ -3551,7 +3551,7 @@ func (t *CompositeType) getBaseCompositeKind() common.CompositeKind {
 
 func isAttachmentType(t Type) bool {
 	composite, ok := t.(*CompositeType)
-	return ok && composite.Kind == common.CompositeKindAttachment
+	return (ok && composite.Kind == common.CompositeKindAttachment) || t == AnyResourceAttachmentType || t == AnyStructAttachmentType
 }
 
 func (t *CompositeType) GetBaseType() Type {
