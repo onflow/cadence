@@ -14002,7 +14002,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 	interpreter.ReportComputation(common.ComputationKindDestroyCompositeValue, 1)
 
 	if interpreter.Config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(locationRange)
+		v.checkInvalidatedResourceUse(interpreter, locationRange)
 	}
 
 	storageID := v.StorageID()
@@ -14074,7 +14074,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
 
 	if interpreter.Config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(locationRange)
+		v.checkInvalidatedResourceUse(interpreter, locationRange)
 	}
 
 	if interpreter.Config.TracingEnabled {
@@ -14160,8 +14160,8 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 	return nil
 }
 
-func (v *CompositeValue) checkInvalidatedResourceUse(locationRange LocationRange) {
-	if v.isDestroyed || v.IsStaleResource(nil) {
+func (v *CompositeValue) checkInvalidatedResourceUse(interpreter *Interpreter, locationRange LocationRange) {
+	if v.isDestroyed || v.IsStaleResource(interpreter) {
 		panic(InvalidatedResourceError{
 			LocationRange: locationRange,
 		})
@@ -14216,7 +14216,7 @@ func (v *CompositeValue) RemoveMember(
 ) Value {
 
 	if interpreter.Config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(locationRange)
+		v.checkInvalidatedResourceUse(interpreter, locationRange)
 	}
 
 	if interpreter.Config.TracingEnabled {
@@ -14277,7 +14277,7 @@ func (v *CompositeValue) SetMember(
 	value Value,
 ) {
 	if interpreter.Config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(locationRange)
+		v.checkInvalidatedResourceUse(interpreter, locationRange)
 	}
 
 	if interpreter.Config.TracingEnabled {
@@ -14406,7 +14406,7 @@ func formatComposite(memoryGauge common.MemoryGauge, typeId string, fields []Com
 func (v *CompositeValue) GetField(interpreter *Interpreter, locationRange LocationRange, name string) Value {
 
 	if interpreter.Config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(locationRange)
+		v.checkInvalidatedResourceUse(interpreter, locationRange)
 	}
 
 	storable, err := v.dictionary.Get(
@@ -14646,7 +14646,7 @@ func (v *CompositeValue) Transfer(
 	interpreter.ReportComputation(common.ComputationKindTransferCompositeValue, 1)
 
 	if interpreter.Config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(locationRange)
+		v.checkInvalidatedResourceUse(interpreter, locationRange)
 	}
 
 	if interpreter.Config.TracingEnabled {
@@ -17317,7 +17317,7 @@ func (v *EphemeralReferenceValue) ConformsToStaticType(
 		return false
 	}
 
-	interpreter.checkReferencedResourceNotMovedOrDestroyed(*referencedValue, getLocationRange)
+	interpreter.checkReferencedResourceNotMovedOrDestroyed(*referencedValue, locationRange)
 
 	staticType := (*referencedValue).StaticType(interpreter)
 

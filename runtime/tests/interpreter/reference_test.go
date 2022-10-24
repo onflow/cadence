@@ -546,7 +546,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 	errorHandler := func(tt *testing.T) func(err error) {
 		return func(err error) {
-			errors := checker.ExpectCheckerErrors(tt, err, 1)
+			errors := checker.RequireCheckerErrors(tt, err, 1)
 			invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 			assert.ErrorAs(tt, errors[0], &invalidatedRefError)
 		}
@@ -665,7 +665,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		array := interpreter.NewArrayValue(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.ConvertSemaToStaticType(nil, rType),
 			},
@@ -759,7 +759,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		array1 := interpreter.NewArrayValue(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.ConvertSemaToStaticType(nil, rType),
 			},
@@ -778,7 +778,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		array2 := interpreter.NewArrayValue(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.ConvertSemaToStaticType(nil, rType),
 			},
@@ -841,7 +841,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		array := interpreter.NewArrayValue(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.ConvertSemaToStaticType(nil, rType),
 			},
@@ -962,7 +962,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		array := interpreter.NewArrayValue(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.ConvertSemaToStaticType(nil, rType),
 			},
