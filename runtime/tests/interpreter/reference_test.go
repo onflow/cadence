@@ -1159,3 +1159,94 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 }
+
+func TestInterpretResourceReferenceInvalidationOnDestroy(t *testing.T) {
+
+	t.Parallel()
+
+	errorHandler := func(tt *testing.T) func(err error) {
+		return func(err error) {
+			errors := checker.RequireCheckerErrors(tt, err, 1)
+			invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+			assert.ErrorAs(tt, errors[0], &invalidatedRefError)
+		}
+	}
+
+	t.Run("on stack", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccountWithErrorHandler(
+			t,
+			address,
+			true,
+			`
+            resource R {
+                pub(set) var id: Int
+
+                init() {
+                    self.id = 1
+                }
+            }
+
+            fun test() {
+                let r <-create R()
+                let ref = &r as &R
+
+                destroy r
+
+                // Update the reference
+                ref.id = 2
+            }`,
+
+			errorHandler(t),
+		)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+		_ = err.Error()
+		require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
+	})
+
+	t.Run("ref source is field", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(
+			t,
+			`
+            pub fun test() {
+                let r <- create R()
+                let s = S()
+                s.b = &r as &R
+
+                let x = s.b!     // get reference from a struct field
+                destroy r        // destroy the resource
+                x.a
+            }
+
+            pub resource R {
+                pub let a: Int
+
+                init() {
+                    self.a = 5
+                }
+            }
+
+            pub struct S {
+                pub(set) var b: &R?
+
+                init() {
+                    self.b = nil
+                }
+            }`,
+		)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+		_ = err.Error()
+		require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
+	})
+}
