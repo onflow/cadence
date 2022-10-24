@@ -30,7 +30,6 @@ import (
 // `declareInterfaceType` and exists in `checker.Elaboration.InterfaceDeclarationTypes`,
 // and that the members and nested declarations for the interface type were declared
 // through `declareInterfaceMembers`.
-//
 func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaration) (_ struct{}) {
 
 	const kind = ContainerKindInterface
@@ -134,7 +133,6 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 //
 // It assumes the types were previously added to the elaboration in `InterfaceNestedDeclarations`,
 // and the type for the declaration was added to the elaboration in `InterfaceDeclarationTypes`.
-//
 func (checker *Checker) declareInterfaceNestedTypes(
 	declaration *ast.InterfaceDeclaration,
 ) {
@@ -222,7 +220,6 @@ func (checker *Checker) checkInterfaceFunctions(
 //
 // See `declareInterfaceMembers` for the declaration of the interface type members.
 // See `VisitInterfaceDeclaration` for the checking of the interface declaration.
-//
 func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclaration) *InterfaceType {
 
 	identifier := declaration.Identifier
@@ -244,7 +241,7 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 		allowOuterScopeShadowing: false,
 	})
 	checker.report(err)
-	if checker.PositionInfo != nil {
+	if checker.PositionInfo != nil && variable != nil {
 		checker.recordVariableDeclarationOccurrence(
 			identifier.Identifier,
 			variable,
@@ -302,7 +299,6 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 // NOTE: This function assumes that the interface type and the nested declarations' types
 // were previously declared using `declareInterfaceType` and exists
 // in the elaboration's `InterfaceDeclarationTypes` and `InterfaceNestedDeclarations` fields.
-//
 func (checker *Checker) declareInterfaceMembers(declaration *ast.InterfaceDeclaration) {
 
 	interfaceType := checker.Elaboration.InterfaceDeclarationTypes[declaration]

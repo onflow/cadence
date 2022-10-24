@@ -54,7 +54,7 @@ func TestInterpretPath(t *testing.T) {
 					Domain:     domain,
 					Identifier: "random",
 				},
-				inter.Globals["x"].GetValue(),
+				inter.Globals.Get("x").GetValue(),
 			)
 		})
 	}
@@ -91,7 +91,7 @@ func TestInterpretConvertStringToPath(t *testing.T) {
 					Domain:     domain,
 					Identifier: "foo",
 				},
-				inter.Globals["x"].GetValue(),
+				inter.Globals.Get("x").GetValue(),
 			)
 		})
 
@@ -111,8 +111,8 @@ func TestInterpretConvertStringToPath(t *testing.T) {
 			)
 
 			assert.Equal(t,
-				interpreter.NilValue{},
-				inter.Globals["x"].GetValue(),
+				interpreter.Nil,
+				inter.Globals.Get("x").GetValue(),
 			)
 		})
 
@@ -132,8 +132,8 @@ func TestInterpretConvertStringToPath(t *testing.T) {
 			)
 
 			assert.Equal(t,
-				interpreter.NilValue{},
-				inter.Globals["x"].GetValue(),
+				interpreter.Nil,
+				inter.Globals.Get("x").GetValue(),
 			)
 		})
 	}

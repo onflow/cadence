@@ -49,7 +49,6 @@ func NewParameterList(
 // the arguments of a call must use:
 // If no argument label is declared for parameter,
 // the parameter name is used as the argument label
-//
 func (l *ParameterList) EffectiveArgumentLabels() []string {
 	argumentLabels := make([]string, len(l.Parameters))
 

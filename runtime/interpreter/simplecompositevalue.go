@@ -35,7 +35,7 @@ type SimpleCompositeValue struct {
 	// FieldNames are the names of the field members (i.e. not functions, and not computed fields), in order
 	FieldNames      []string
 	Fields          map[string]Value
-	ComputeField    func(name string, interpreter *Interpreter, getLocationRange func() LocationRange) Value
+	ComputeField    func(name string, interpreter *Interpreter, locationRange LocationRange) Value
 	fieldFormatters map[string]func(common.MemoryGauge, Value, SeenReferences) string
 	// stringer is an optional function that is used to produce the string representation of the value.
 	// If nil, the FieldNames are used.
@@ -51,7 +51,7 @@ func NewSimpleCompositeValue(
 	staticType StaticType,
 	fieldNames []string,
 	fields map[string]Value,
-	computeField func(name string, interpreter *Interpreter, getLocationRange func() LocationRange) Value,
+	computeField func(name string, interpreter *Interpreter, locationRange LocationRange) Value,
 	fieldFormatters map[string]func(common.MemoryGauge, Value, SeenReferences) string,
 	stringer func(common.MemoryGauge, SeenReferences) string,
 ) *SimpleCompositeValue {
@@ -105,7 +105,7 @@ func (v *SimpleCompositeValue) IsImportable(inter *Interpreter) bool {
 
 func (v *SimpleCompositeValue) GetMember(
 	interpreter *Interpreter,
-	getLocationRange func() LocationRange,
+	locationRange LocationRange,
 	name string,
 ) Value {
 
@@ -116,18 +116,18 @@ func (v *SimpleCompositeValue) GetMember(
 
 	computeField := v.ComputeField
 	if computeField != nil {
-		return computeField(name, interpreter, getLocationRange)
+		return computeField(name, interpreter, locationRange)
 	}
 
 	return nil
 }
 
-func (*SimpleCompositeValue) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
+func (*SimpleCompositeValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
 	// Simple composite values have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (v *SimpleCompositeValue) SetMember(_ *Interpreter, _ func() LocationRange, name string, value Value) {
+func (v *SimpleCompositeValue) SetMember(_ *Interpreter, _ LocationRange, name string, value Value) {
 	v.Fields[name] = value
 }
 
@@ -195,7 +195,7 @@ func (v *SimpleCompositeValue) MeteredString(memoryGauge common.MemoryGauge, see
 
 func (v *SimpleCompositeValue) ConformsToStaticType(
 	interpreter *Interpreter,
-	getLocationRange func() LocationRange,
+	locationRange LocationRange,
 	results TypeConformanceResults,
 ) bool {
 
@@ -206,7 +206,7 @@ func (v *SimpleCompositeValue) ConformsToStaticType(
 		}
 		if !value.ConformsToStaticType(
 			interpreter,
-			getLocationRange,
+			locationRange,
 			results,
 		) {
 			return false
@@ -230,7 +230,7 @@ func (v *SimpleCompositeValue) IsResourceKinded(_ *Interpreter) bool {
 
 func (v *SimpleCompositeValue) Transfer(
 	interpreter *Interpreter,
-	_ func() LocationRange,
+	_ LocationRange,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,

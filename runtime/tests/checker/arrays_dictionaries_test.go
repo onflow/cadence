@@ -62,7 +62,7 @@ func TestCheckInvalidDictionaryTypeKey(t *testing.T) {
       let z: {Int: Int} = {"a": 1, "b": 2}
 	`)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	typeMismatchError := errs[0].(*sema.TypeMismatchError)
@@ -83,7 +83,7 @@ func TestCheckInvalidDictionaryTypeValue(t *testing.T) {
       let z: {String: String} = {"a": 1, "b": 2}
 	`)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	typeMisMatchError := errs[0].(*sema.TypeMismatchError)
@@ -104,7 +104,7 @@ func TestCheckInvalidDictionaryTypeSwapped(t *testing.T) {
       let z: {Int: String} = {"a": 1, "b": 2}
 	`)
 
-	errs := ExpectCheckerErrors(t, err, 4)
+	errs := RequireCheckerErrors(t, err, 4)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	typeMisMatchError := errs[0].(*sema.TypeMismatchError)
@@ -135,7 +135,7 @@ func TestCheckInvalidDictionaryKeys(t *testing.T) {
       let z = {"a": 1, true: 2}
 	`)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidDictionaryKeyTypeError{}, errs[0])
 }
@@ -182,7 +182,7 @@ func TestCheckInvalidDictionaryIndexing(t *testing.T) {
       let y = x[true]
 	`)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	typeMismatchError := errs[0].(*sema.TypeMismatchError)
@@ -215,7 +215,7 @@ func TestCheckInvalidDictionaryIndexingAssignment(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -245,7 +245,7 @@ func TestCheckInvalidDictionaryRemove(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -275,7 +275,7 @@ func TestCheckInvalidDictionaryInsert(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -355,7 +355,7 @@ func TestCheckInvalidArrayAppend(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -388,7 +388,7 @@ func TestCheckInvalidArrayAppendToConstantSize(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
 }
@@ -422,7 +422,7 @@ func TestCheckInvalidArrayAppendAll(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 
@@ -435,7 +435,7 @@ func TestCheckInvalidArrayAppendAll(t *testing.T) {
       }
     `)
 
-	errs = ExpectCheckerErrors(t, err, 1)
+	errs = RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -452,7 +452,7 @@ func TestCheckInvalidArrayAppendAllOnConstantSize(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
 }
@@ -486,7 +486,7 @@ func TestCheckInvalidArrayConcat(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -504,7 +504,7 @@ func TestCheckInvalidArrayConcatOfConstantSized(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
 }
@@ -567,11 +567,10 @@ func TestCheckInvalidResourceArraySlice(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 3)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.InvalidResourceArrayMemberError{}, errs[0])
 	assert.IsType(t, &sema.ResourceLossError{}, errs[1])
-	assert.IsType(t, &sema.ResourceLossError{}, errs[2])
 }
 
 func TestCheckArrayInsert(t *testing.T) {
@@ -601,7 +600,7 @@ func TestCheckInvalidArrayInsert(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -618,7 +617,7 @@ func TestCheckInvalidArrayInsertIntoConstantSized(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
 }
@@ -650,7 +649,7 @@ func TestCheckInvalidArrayRemove(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -667,7 +666,7 @@ func TestCheckInvalidArrayRemoveFromConstantSized(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
 }
@@ -699,7 +698,7 @@ func TestCheckInvalidArrayRemoveFirst(t *testing.T) {
       }
 	`)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ArgumentCountError{}, errs[0])
 }
@@ -716,7 +715,7 @@ func TestCheckInvalidArrayRemoveFirstFromConstantSized(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
 }
@@ -748,7 +747,7 @@ func TestCheckInvalidArrayRemoveLastFromConstantSized(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
 }
@@ -778,7 +777,7 @@ func TestCheckArrayIndexOfNonEquatableValueArray(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 	assert.IsType(t, &sema.NotEquatableTypeError{}, errs[0])
 }
 
@@ -792,7 +791,7 @@ func TestCheckArrayFirstIndexWrongType(t *testing.T) {
           return x.firstIndex(of: "foo")
       }
     `)
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
 
@@ -809,13 +808,11 @@ func TestCheckInvalidResourceFirstIndex(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 4)
+	errs := RequireCheckerErrors(t, err, 3)
 
 	assert.IsType(t, &sema.InvalidResourceArrayMemberError{}, errs[0])
 	assert.IsType(t, &sema.NotEquatableTypeError{}, errs[1])
 	assert.IsType(t, &sema.ResourceLossError{}, errs[2])
-	assert.IsType(t, &sema.ResourceLossError{}, errs[3])
-
 }
 
 func TestCheckArrayContains(t *testing.T) {
@@ -843,7 +840,7 @@ func TestCheckInvalidArrayContains(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -859,7 +856,7 @@ func TestCheckInvalidArrayContainsNotEquatable(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotEquatableTypeError{}, errs[0])
 }
@@ -913,7 +910,7 @@ func TestCheckInvalidDictionaryContainsKey(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -991,7 +988,7 @@ func TestCheckInvalidArraySubtyping(t *testing.T) {
       let ys: [Int] = xs
 	`)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -1046,7 +1043,7 @@ func TestCheckInvalidDictionarySubtyping(t *testing.T) {
       let ys: {String: Int} = xs
 	`)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -1070,7 +1067,7 @@ func TestCheckInvalidConstantSizedArrayDeclarationCountMismatchTooMany(t *testin
       let x: [Int; 2] = [1, 2, 3]
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ConstantSizedArrayLiteralSizeError{}, errs[0])
 }
@@ -1093,7 +1090,7 @@ func TestCheckInvalidConstantSizedArrayDeclarationOutOfRangeSize(t *testing.T) {
 			),
 		)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidConstantSizedTypeSizeError{}, errs[0])
 		assert.IsType(t, &sema.ConstantSizedArrayLiteralSizeError{}, errs[1])
@@ -1117,7 +1114,7 @@ func TestCheckInvalidConstantSizedArrayDeclarationBase(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 2)
+			errs := RequireCheckerErrors(t, err, 2)
 
 			assert.IsType(t, &sema.InvalidConstantSizedTypeBaseError{}, errs[0])
 			assert.IsType(t, &sema.ConstantSizedArrayLiteralSizeError{}, errs[1])
@@ -1187,7 +1184,7 @@ func TestCheckDictionaryKeyTypesExpressions(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.InvalidDictionaryKeyTypeError{}, errs[0])
 		})

@@ -28,7 +28,7 @@ import (
 
 func emitEventValue(
 	inter *interpreter.Interpreter,
-	getLocationRange func() interpreter.LocationRange,
+	locationRange interpreter.LocationRange,
 	eventType *sema.CompositeType,
 	event *interpreter.CompositeValue,
 	emitEvent func(cadence.Event) error,
@@ -36,16 +36,16 @@ func emitEventValue(
 	fields := make([]exportableValue, len(eventType.ConstructorParameters))
 
 	for i, parameter := range eventType.ConstructorParameters {
-		value := event.GetField(inter, getLocationRange, parameter.Identifier)
+		value := event.GetField(inter, locationRange, parameter.Identifier)
 		fields[i] = newExportableValue(value, inter)
 	}
 
-	emitEventFields(inter, getLocationRange, eventType, fields, emitEvent)
+	emitEventFields(inter, locationRange, eventType, fields, emitEvent)
 }
 
 func emitEventFields(
 	gauge common.MemoryGauge,
-	getLocationRange func() interpreter.LocationRange,
+	locationRange interpreter.LocationRange,
 	eventType *sema.CompositeType,
 	eventFields []exportableValue,
 	emitEvent func(cadence.Event) error,
@@ -70,7 +70,7 @@ func emitEventFields(
 	exportedEvent, err := exportEvent(
 		gauge,
 		eventValue,
-		getLocationRange,
+		locationRange,
 		seenReferences{},
 	)
 	if err != nil {

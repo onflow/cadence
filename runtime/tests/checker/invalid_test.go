@@ -39,7 +39,7 @@ func TestCheckSpuriousIdentifierAssignmentInvalidValueTypeMismatch(t *testing.T)
         `,
 	)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 }
@@ -57,7 +57,7 @@ func TestCheckSpuriousIdentifierAssignmentInvalidTargetTypeMismatch(t *testing.T
         `,
 	)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 }
@@ -75,7 +75,7 @@ func TestCheckSpuriousIndexAssignmentInvalidValueTypeMismatch(t *testing.T) {
         `,
 	)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 }
@@ -93,7 +93,7 @@ func TestCheckSpuriousIndexAssignmentInvalidElementTypeMismatch(t *testing.T) {
         `,
 	)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 }
@@ -113,7 +113,7 @@ func TestCheckSpuriousMemberAssignmentInvalidValueTypeMismatch(t *testing.T) {
         `,
 	)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 }
@@ -133,7 +133,7 @@ func TestCheckSpuriousMemberAssignmentInvalidMemberTypeMismatch(t *testing.T) {
         `,
 	)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 }
@@ -150,7 +150,7 @@ func TestCheckSpuriousReturnWithInvalidValueTypeMismatch(t *testing.T) {
         `,
 	)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 }
@@ -167,7 +167,7 @@ func TestCheckSpuriousReturnWithInvalidReturnTypeMismatch(t *testing.T) {
         `,
 	)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 }
@@ -182,7 +182,7 @@ func TestCheckSpuriousCastWithInvalidTargetTypeMismatch(t *testing.T) {
         `,
 	)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 }
@@ -197,7 +197,7 @@ func TestCheckSpuriousCastWithInvalidValueTypeMismatch(t *testing.T) {
         `,
 	)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 }

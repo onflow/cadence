@@ -60,7 +60,7 @@ func TestCheckInvalidFunctionPreConditionReference(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	assert.Equal(t,
@@ -90,7 +90,7 @@ func TestCheckInvalidFunctionNonBoolCondition(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
@@ -125,7 +125,7 @@ func TestCheckFunctionPostConditionWithBeforeNotDeclaredUse(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 }
@@ -142,7 +142,7 @@ func TestCheckInvalidFunctionPostConditionWithBeforeAndNoArgument(t *testing.T) 
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.ArgumentCountError{}, errs[0])
 	assert.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
@@ -160,7 +160,7 @@ func TestCheckInvalidFunctionPreConditionWithBefore(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	assert.Equal(t,
@@ -182,7 +182,7 @@ func TestCheckInvalidFunctionWithBeforeVariableAndPostConditionWithBefore(t *tes
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.RedeclarationError{}, errs[0])
 }
@@ -230,7 +230,7 @@ func TestCheckInvalidFunctionPreConditionWithResult(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	assert.Equal(t,
@@ -252,7 +252,7 @@ func TestCheckInvalidFunctionPostConditionWithResultWrongType(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidBinaryOperandsError{}, errs[0])
 }
@@ -285,7 +285,7 @@ func TestCheckInvalidFunctionPostConditionWithResult(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	assert.Equal(t,
@@ -339,7 +339,7 @@ func TestCheckInvalidFunctionWithReturnTypeAndLocalResultAndPostConditionWithRes
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.RedeclarationError{}, errs[0])
 }
@@ -357,7 +357,7 @@ func TestCheckInvalidFunctionWithReturnTypeAndResultParameterAndPostConditionWit
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.RedeclarationError{}, errs[0])
 }
@@ -374,7 +374,7 @@ func TestCheckInvalidFunctionPostConditionWithFunction(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.FunctionExpressionInConditionError{}, errs[0])
 }
@@ -406,7 +406,7 @@ func TestCheckInvalidFunctionPostConditionWithMessageUsingBooleanLiteral(t *test
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -491,7 +491,7 @@ func TestCheckFunctionWithPostConditionAndResourceResult(t *testing.T) {
         }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 3)
+	errs := RequireCheckerErrors(t, err, 3)
 
 	require.IsType(t, &sema.InvalidMoveOperationError{}, errs[1])
 	require.IsType(t, &sema.TypeMismatchError{}, errs[2])
@@ -502,7 +502,6 @@ func TestCheckFunctionWithPostConditionAndResourceResult(t *testing.T) {
 // that the rewritten expression of a create expression may not be an invocation expression.
 // For example, this is the case for the expression `create before(...)`,
 // where the sema.BeforeExtractor returns an IdentifierExpression.
-//
 func TestCheckConditionCreateBefore(t *testing.T) {
 
 	t.Parallel()
@@ -514,9 +513,8 @@ func TestCheckConditionCreateBefore(t *testing.T) {
           }
       }
     `)
-	require.Error(t, err)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	var notCallableErr *sema.NotCallableError
 	require.ErrorAs(t, errs[0], &notCallableErr)

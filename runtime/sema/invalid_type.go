@@ -21,7 +21,6 @@ package sema
 // InvalidType represents a type that is invalid.
 // It is the result of type checking failing and
 // can't be expressed in programs.
-//
 var InvalidType = &SimpleType{
 	Name:                 "<<invalid>>",
 	QualifiedName:        "<<invalid>>",

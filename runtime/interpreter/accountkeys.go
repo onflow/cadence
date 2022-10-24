@@ -37,19 +37,30 @@ func NewAuthAccountKeysValue(
 	addFunction FunctionValue,
 	getFunction FunctionValue,
 	revokeFunction FunctionValue,
+	forEachFunction FunctionValue,
+	getKeysCount AccountKeysCountConstructor,
 ) Value {
 
 	fields := map[string]Value{
-		sema.AccountKeysAddFunctionName:    addFunction,
-		sema.AccountKeysGetFunctionName:    getFunction,
-		sema.AccountKeysRevokeFunctionName: revokeFunction,
+		sema.AccountKeysAddFunctionName:         addFunction,
+		sema.AccountKeysGetFunctionName:         getFunction,
+		sema.AccountKeysRevokeFunctionName:      revokeFunction,
+		sema.AccountKeysTypeForEachFunctionName: forEachFunction,
+	}
+
+	computeField := func(name string, _ *Interpreter, _ LocationRange) Value {
+		switch name {
+		case sema.AccountKeysCountFieldName:
+			return getKeysCount()
+		}
+		return nil
 	}
 
 	var str string
-	stringer := func(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	stringer := func(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
 		if str == "" {
 			common.UseMemory(memoryGauge, common.AuthAccountKeysStringMemoryUsage)
-			addressStr := address.MeteredString(memoryGauge, SeenReferences{})
+			addressStr := address.MeteredString(memoryGauge, seenReferences)
 			str = fmt.Sprintf("AuthAccount.Keys(%s)", addressStr)
 		}
 		return str
@@ -61,7 +72,7 @@ func NewAuthAccountKeysValue(
 		authAccountKeysStaticType,
 		nil,
 		fields,
-		nil,
+		computeField,
 		nil,
 		stringer,
 	)
@@ -77,17 +88,27 @@ func NewPublicAccountKeysValue(
 	gauge common.MemoryGauge,
 	address AddressValue,
 	getFunction FunctionValue,
+	forEachFunction FunctionValue,
+	getKeysCount AccountKeysCountConstructor,
 ) Value {
 
 	fields := map[string]Value{
-		sema.AccountKeysGetFunctionName: getFunction,
+		sema.AccountKeysGetFunctionName:         getFunction,
+		sema.AccountKeysTypeForEachFunctionName: forEachFunction,
 	}
 
+	computeField := func(name string, _ *Interpreter, _ LocationRange) Value {
+		switch name {
+		case sema.AccountKeysCountFieldName:
+			return getKeysCount()
+		}
+		return nil
+	}
 	var str string
-	stringer := func(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	stringer := func(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
 		if str == "" {
 			common.UseMemory(memoryGauge, common.PublicAccountKeysStringMemoryUsage)
-			addressStr := address.MeteredString(memoryGauge, SeenReferences{})
+			addressStr := address.MeteredString(memoryGauge, seenReferences)
 			str = fmt.Sprintf("PublicAccount.Keys(%s)", addressStr)
 		}
 		return str
@@ -99,8 +120,10 @@ func NewPublicAccountKeysValue(
 		publicAccountKeysStaticType,
 		nil,
 		fields,
-		nil,
+		computeField,
 		nil,
 		stringer,
 	)
 }
+
+type AccountKeysCountConstructor func() UInt64Value

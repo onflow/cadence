@@ -24,13 +24,12 @@ import (
 )
 
 // Invocation
-//
 type Invocation struct {
 	Self               MemberAccessibleValue
 	Arguments          []Value
 	ArgumentTypes      []sema.Type
 	TypeParameterTypes *sema.TypeParameterTypeOrderedMap
-	GetLocationRange   func() LocationRange
+	LocationRange      LocationRange
 	Interpreter        *Interpreter
 }
 
@@ -40,7 +39,7 @@ func NewInvocation(
 	arguments []Value,
 	argumentTypes []sema.Type,
 	typeParameterTypes *sema.TypeParameterTypeOrderedMap,
-	getLocationRange func() LocationRange,
+	locationRange LocationRange,
 ) Invocation {
 	common.UseMemory(interpreter, common.InvocationMemoryUsage)
 
@@ -49,13 +48,12 @@ func NewInvocation(
 		Arguments:          arguments,
 		ArgumentTypes:      argumentTypes,
 		TypeParameterTypes: typeParameterTypes,
-		GetLocationRange:   getLocationRange,
+		LocationRange:      locationRange,
 		Interpreter:        interpreter,
 	}
 }
 
 // CallStack is the stack of invocations (call stack).
-//
 type CallStack struct {
 	Invocations []Invocation
 }

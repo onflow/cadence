@@ -26,7 +26,6 @@ import (
 )
 
 // OrderedMap
-//
 type OrderedMap[K comparable, V any] struct {
 	pairs map[K]*Pair[K, V]
 	list  *list.List[*Pair[K, V]]
@@ -73,6 +72,17 @@ func (om OrderedMap[K, V]) Get(key K) (result V, present bool) {
 	if pair, present = om.pairs[key]; present {
 		return pair.Value, present
 	}
+	return
+}
+
+// Contains returns true if the key is present in the map
+// and false otherwise.
+func (om OrderedMap[K, V]) Contains(key K) (present bool) {
+	if om.pairs == nil {
+		return
+	}
+
+	_, present = om.pairs[key]
 	return
 }
 
@@ -181,7 +191,6 @@ func (om OrderedMap[K, V]) ForeachWithError(f func(key K, value V) error) error 
 }
 
 // Pair is an entry in an OrderedMap
-//
 type Pair[K any, V any] struct {
 	Key   K
 	Value V

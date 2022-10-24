@@ -121,3 +121,63 @@ pub event AccountContractRemoved(
 | `address`   | `Address` | The address of the account the contract gets removed from |
 | `codeHash`  | `[UInt8]` | Hash of the contract source code                          |
 | `contract`  | `String`  | The name of the the contract                              |
+
+### Inbox Value Published
+
+Event that is emitted when a Capability is published from an account.
+
+Event name: `flow.InboxValuePublished`
+
+```cadence
+pub event InboxValuePublished(provider: Address, recipient: Address, name: String, type: Type) 
+```
+
+| Field             | Type      | Description                                  |
+| ----------------- | --------- | -------------------------------------------- |
+| `provider`        | `Address` | The address of the publishing account        |
+| `recipient`       | `Address` | The address of the intended recipient        |
+| `name`            | `String`  | The name associated with the published value |
+| `type`            | `Type`    | The type of the published value              |
+
+To reduce the potential for spam, 
+we recommend that user agents that display events do not display this event as-is to their users, 
+and allow users to restrict whom they see events from. 
+
+### Inbox Value Unpublished
+
+Event that is emitted when a Capability is unpublished from an account. 
+
+Event name: `flow.InboxValueUnpublished`
+
+```cadence
+pub event InboxValueUnpublished(provider: Address, name: String)
+```
+
+| Field           | Type      | Description                                  |
+| --------------- | --------- | -------------------------------------------- |
+| `provider`      | `Address` | The address of the publishing account        |
+| `name`          | `String`  | The name associated with the published value |
+
+To reduce the potential for spam, 
+we recommend that user agents that display events do not display this event as-is to their users, 
+and allow users to restrict whom they see events from. 
+
+### Inbox Value Claimed
+
+Event that is emitted when a Capability is claimed by an account. 
+
+Event name: `flow.InboxValueClaimed`
+
+```cadence
+pub event InboxValueClaimed(provider: Address, recipient: Address, name: String)
+```
+
+| Field           | Type      | Description                                  |
+| --------------- | --------- | -------------------------------------------- |
+| `provider`      | `Address` | The address of the publishing account        |
+| `recipient`     | `Address` | The address of the claiming recipient        |
+| `name`          | `String`  | The name associated with the published value |
+
+To reduce the potential for spam, 
+we recommend that user agents that display events do not display this event as-is to their users, 
+and allow users to restrict whom they see events from. 

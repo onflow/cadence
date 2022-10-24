@@ -25,7 +25,6 @@ import (
 )
 
 // WASMReader allows reading WASM binaries
-//
 type WASMReader struct {
 	buf              *Buffer
 	Module           Module
@@ -45,7 +44,6 @@ func NewWASMReader(buf *Buffer) *WASMReader {
 // See https://webassembly.github.io/spec/core/binary/modules.html#binary-module:
 //
 // The encoding of a module starts with a preamble containing a 4-byte magic number [...] and a version field.
-//
 func (r *WASMReader) readMagicAndVersion() error {
 
 	// Read the magic
@@ -70,7 +68,6 @@ func (r *WASMReader) readMagicAndVersion() error {
 }
 
 // readSection reads a section in the WASM binary
-//
 func (r *WASMReader) readSection() error {
 	// read the section ID
 	sectionIDOffset := r.buf.offset
@@ -212,7 +209,6 @@ func (r *WASMReader) readSection() error {
 }
 
 // readSectionSize reads the content size of a section
-//
 func (r *WASMReader) readSectionSize() (uint32, error) {
 	// read the size
 	sizeOffset := r.buf.offset
@@ -229,7 +225,6 @@ func (r *WASMReader) readSectionSize() (uint32, error) {
 
 // readTypeSection reads the section that declares all function types
 // so they can be referenced by index
-//
 func (r *WASMReader) readTypeSection() error {
 
 	_, err := r.readSectionSize()
@@ -264,7 +259,6 @@ func (r *WASMReader) readTypeSection() error {
 }
 
 // readFuncType reads a function type
-//
 func (r *WASMReader) readFuncType() (*FunctionType, error) {
 	// read the function type indicator
 	funcTypeIndicatorOffset := r.buf.offset
@@ -339,7 +333,6 @@ func (r *WASMReader) readFuncType() (*FunctionType, error) {
 }
 
 // readValType reads a value type
-//
 func (r *WASMReader) readValType() (ValueType, error) {
 	valTypeOffset := r.buf.offset
 	b, err := r.buf.ReadByte()
@@ -366,7 +359,6 @@ func (r *WASMReader) readValType() (ValueType, error) {
 }
 
 // readImportSection reads the section that declares the imports
-//
 func (r *WASMReader) readImportSection() error {
 
 	_, err := r.readSectionSize()
@@ -404,7 +396,6 @@ func (r *WASMReader) readImportSection() error {
 }
 
 // readImport reads an import in the import section
-//
 func (r *WASMReader) readImport() (*Import, error) {
 
 	// read the module
@@ -453,7 +444,6 @@ func (r *WASMReader) readImport() (*Import, error) {
 
 // readFunctionSection reads the section that declares the types of functions.
 // The bodies of these functions will later be provided in the code section
-//
 func (r *WASMReader) readFunctionSection() error {
 
 	_, err := r.readSectionSize()
@@ -514,7 +504,6 @@ func (r *WASMReader) ensureModuleFunctions(count int) bool {
 }
 
 // readMemorySection reads the section that declares the memories
-//
 func (r *WASMReader) readMemorySection() error {
 
 	_, err := r.readSectionSize()
@@ -552,7 +541,6 @@ func (r *WASMReader) readMemorySection() error {
 }
 
 // readMemory reads a memory in the memory section
-//
 func (r *WASMReader) readMemory() (*Memory, error) {
 	min, max, err := r.readLimit()
 	if err != nil {
@@ -566,7 +554,6 @@ func (r *WASMReader) readMemory() (*Memory, error) {
 }
 
 // readLimit reads a limit
-//
 func (r *WASMReader) readLimit() (min uint32, max *uint32, err error) {
 	// read the limit indicator
 	indicatorOffset := r.buf.offset
@@ -622,7 +609,6 @@ func (r *WASMReader) readLimit() (min uint32, max *uint32, err error) {
 }
 
 // readExportSection reads the section that declares the exports
-//
 func (r *WASMReader) readExportSection() error {
 
 	_, err := r.readSectionSize()
@@ -660,7 +646,6 @@ func (r *WASMReader) readExportSection() error {
 }
 
 // readExport reads an export in the export section
-//
 func (r *WASMReader) readExport() (*Export, error) {
 
 	// read the name
@@ -722,7 +707,6 @@ func (r *WASMReader) readExport() (*Export, error) {
 
 // readStartSection reads the section that declares the types of functions.
 // The bodies of these functions will later be provided in the code section
-//
 func (r *WASMReader) readStartSection() error {
 
 	_, err := r.readSectionSize()
@@ -747,7 +731,6 @@ func (r *WASMReader) readStartSection() error {
 
 // readCodeSection reads the section that provides the function bodies for the functions
 // declared by the function section (which only provides the function types)
-//
 func (r *WASMReader) readCodeSection() error {
 
 	_, err := r.readSectionSize()
@@ -794,7 +777,6 @@ func (r *WASMReader) readCodeSection() error {
 }
 
 // readFunctionBody reads the body (locals and instruction) of one function in the code section
-//
 func (r *WASMReader) readFunctionBody() (*Code, error) {
 
 	// read the size
@@ -827,7 +809,6 @@ func (r *WASMReader) readFunctionBody() (*Code, error) {
 }
 
 // readLocals reads the locals for one function in the code sections
-//
 func (r *WASMReader) readLocals() ([]ValueType, error) {
 	// read the number of locals
 	localsCountOffset := r.buf.offset
@@ -881,7 +862,6 @@ func (r *WASMReader) readLocals() ([]ValueType, error) {
 }
 
 // readInstructions reads the instructions for one function in the code sections
-//
 func (r *WASMReader) readInstructions() (instructions []Instruction, err error) {
 	for {
 		instruction, err := r.readInstruction()
@@ -898,7 +878,6 @@ func (r *WASMReader) readInstructions() (instructions []Instruction, err error) 
 }
 
 // readName reads a name
-//
 func (r *WASMReader) readName() (string, error) {
 
 	// read the length
@@ -946,7 +925,6 @@ func (r *WASMReader) readName() (string, error) {
 
 // readUint32LEB128InstructionArgument reads a uint32 instruction argument
 // (in LEB128 format)
-//
 func (r *WASMReader) readUint32LEB128InstructionArgument() (uint32, error) {
 	offset := r.buf.offset
 	v, err := r.buf.readUint32LEB128()
@@ -961,7 +939,6 @@ func (r *WASMReader) readUint32LEB128InstructionArgument() (uint32, error) {
 
 // readInt32LEB128InstructionArgument reads an int32 instruction argument
 // (in LEB128 format)
-//
 func (r *WASMReader) readInt32LEB128InstructionArgument() (int32, error) {
 	offset := r.buf.offset
 	v, err := r.buf.readInt32LEB128()
@@ -976,7 +953,6 @@ func (r *WASMReader) readInt32LEB128InstructionArgument() (int32, error) {
 
 // readInt64LEB128InstructionArgument reads an int64 instruction argument
 // (in LEB128 format)
-//
 func (r *WASMReader) readInt64LEB128InstructionArgument() (int64, error) {
 	offset := r.buf.offset
 	v, err := r.buf.readInt64LEB128()
@@ -990,7 +966,6 @@ func (r *WASMReader) readInt64LEB128InstructionArgument() (int64, error) {
 }
 
 // readBlockInstructionArgument reads a block instruction argument
-//
 func (r *WASMReader) readBlockInstructionArgument(allowElse bool) (Block, error) {
 	// read the block type.
 	blockType, err := r.readBlockType()
@@ -1104,7 +1079,6 @@ func (r *WASMReader) readBlockType() (BlockType, error) {
 
 // readBlockTypeValueType reads a value type block type
 // and returns nil if the next byte is not a valid value type
-//
 func (r *WASMReader) readBlockTypeValueType() (BlockType, error) {
 	b, err := r.buf.PeekByte()
 	if err != nil {
@@ -1119,7 +1093,6 @@ func (r *WASMReader) readBlockTypeValueType() (BlockType, error) {
 }
 
 // readCustomSection reads a custom section
-//
 func (r *WASMReader) readCustomSection() error {
 
 	size, err := r.readSectionSize()
@@ -1149,7 +1122,6 @@ func (r *WASMReader) readCustomSection() error {
 }
 
 // readDataSection reads the section that declares the data segments
-//
 func (r *WASMReader) readDataSection() error {
 
 	_, err := r.readSectionSize()
@@ -1187,7 +1159,6 @@ func (r *WASMReader) readDataSection() error {
 }
 
 // readDataSegment reads a segment in the data section
-//
 func (r *WASMReader) readDataSegment() (*Data, error) {
 
 	// read the memory index
@@ -1235,7 +1206,6 @@ func (r *WASMReader) readDataSegment() (*Data, error) {
 }
 
 // readNameSection reads the section that provides names
-//
 func (r *WASMReader) readNameSection(size uint32) error {
 
 	// TODO: read the names and store them. for now, just skip the content

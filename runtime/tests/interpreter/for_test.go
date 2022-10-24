@@ -23,6 +23,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/common"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -216,6 +217,41 @@ func TestInterpretForStatementEmpty(t *testing.T) {
 		t,
 		inter,
 		interpreter.BoolValue(false),
+		value,
+	)
+}
+
+func TestInterpretForString(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+      fun test(): [Character] {
+          let characters: [Character] = []
+          let hello = "👪❤️"
+          for c in hello {
+              characters.append(c)
+          }
+          return characters
+      }
+    `)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	RequireValuesEqual(
+		t,
+		inter,
+		interpreter.NewArrayValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeCharacter,
+			},
+			common.Address{},
+			interpreter.NewUnmeteredCharacterValue("👪"),
+			interpreter.NewUnmeteredCharacterValue("❤️"),
+		),
 		value,
 	)
 }

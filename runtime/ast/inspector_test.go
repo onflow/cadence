@@ -29,7 +29,6 @@ import (
 )
 
 // TestInspector_Elements compares Inspector against Inspect.
-//
 func TestInspector_Elements(t *testing.T) {
 
 	t.Parallel()

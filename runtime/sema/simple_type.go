@@ -32,7 +32,6 @@ type ValueIndexingInfo struct {
 }
 
 // SimpleType represents a simple nominal type.
-//
 type SimpleType struct {
 	Name                 string
 	QualifiedName        string

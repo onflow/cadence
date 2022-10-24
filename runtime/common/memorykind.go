@@ -21,7 +21,6 @@ package common
 //go:generate go run golang.org/x/tools/cmd/stringer -type=MemoryKind -trimprefix=MemoryKind
 
 // MemoryKind
-//
 type MemoryKind uint
 
 const (
@@ -52,6 +51,7 @@ const (
 	MemoryKindBoundFunctionValue
 	MemoryKindBigInt
 	MemoryKindSimpleCompositeValue
+	MemoryKindPublishedValue
 
 	// Atree Nodes
 	MemoryKindAtreeArrayDataSlab

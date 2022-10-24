@@ -70,7 +70,7 @@ var PanicFunction = NewStandardLibraryFunction(
 
 		panic(PanicError{
 			Message:       message,
-			LocationRange: invocation.GetLocationRange(),
+			LocationRange: invocation.LocationRange,
 		})
 	},
 )

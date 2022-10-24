@@ -72,7 +72,7 @@ func (interpreter *Interpreter) VisitReturnStatement(statement *ast.ReturnStatem
 
 	var value Value
 	if statement.Expression == nil {
-		value = NewVoidValue(interpreter)
+		value = Void
 	} else {
 		value = interpreter.evalExpression(statement.Expression)
 
@@ -80,10 +80,13 @@ func (interpreter *Interpreter) VisitReturnStatement(statement *ast.ReturnStatem
 		valueType := returnStatementTypes.ValueType
 		returnType := returnStatementTypes.ReturnType
 
-		getLocationRange := locationRangeGetter(interpreter, interpreter.Location, statement.Expression)
+		locationRange := LocationRange{
+			Location:    interpreter.Location,
+			HasPosition: statement.Expression,
+		}
 
 		// NOTE: copy on return
-		value = interpreter.transferAndConvert(value, valueType, returnType, getLocationRange)
+		value = interpreter.transferAndConvert(value, valueType, returnType, locationRange)
 	}
 
 	return ReturnResult{value}
@@ -173,13 +176,16 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 	if someValue, ok := value.(*SomeValue); ok {
 
 		targetType := variableDeclarationTypes.TargetType
-		getLocationRange := locationRangeGetter(interpreter, interpreter.Location, declaration.Value)
-		innerValue := someValue.InnerValue(interpreter, getLocationRange)
+		locationRange := LocationRange{
+			Location:    interpreter.Location,
+			HasPosition: declaration.Value,
+		}
+		innerValue := someValue.InnerValue(interpreter, locationRange)
 		transferredUnwrappedValue := interpreter.transferAndConvert(
 			innerValue,
 			valueType,
 			targetType,
-			getLocationRange,
+			locationRange,
 		)
 
 		interpreter.activations.PushNewWithCurrent()
@@ -216,7 +222,7 @@ func (interpreter *Interpreter) VisitSwitchStatement(switchStatement *ast.Switch
 			block := ast.NewBlock(
 				interpreter,
 				switchCase.Statements,
-				ReturnEmptyRange(),
+				ast.EmptyRange,
 			)
 
 			result := interpreter.visitBlock(block)
@@ -249,9 +255,12 @@ func (interpreter *Interpreter) VisitSwitchStatement(switchStatement *ast.Switch
 		// If the test value and case values are equal,
 		// evaluate the case's statements
 
-		getLocationRange := locationRangeGetter(interpreter, interpreter.Location, switchCase.Expression)
+		locationRange := LocationRange{
+			Location:    interpreter.Location,
+			HasPosition: switchCase.Expression,
+		}
 
-		if testValue.Equal(interpreter, getLocationRange, caseValue) {
+		if testValue.Equal(interpreter, locationRange, caseValue) {
 			return runStatements()
 		}
 
@@ -300,21 +309,26 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) S
 		nil,
 	)
 
-	getLocationRange := locationRangeGetter(interpreter, interpreter.Location, statement)
+	locationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: statement,
+	}
 
 	value := interpreter.evalExpression(statement.Value)
 	transferredValue := value.Transfer(
 		interpreter,
-		getLocationRange,
+		locationRange,
 		atree.Address{},
 		false,
 		nil,
 	)
 
-	iterator, err := transferredValue.(*ArrayValue).array.Iterator()
-	if err != nil {
-		panic(errors.NewExternalError(err))
+	iterable, ok := transferredValue.(IterableValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
 	}
+
+	iterator := iterable.Iterator(interpreter)
 
 	var indexVariable *Variable
 	if statement.Index != nil {
@@ -325,21 +339,12 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) S
 	}
 
 	for {
-		var atreeValue atree.Value
-		atreeValue, err = iterator.Next()
-		if err != nil {
-			panic(errors.NewExternalError(err))
-		}
-
-		if atreeValue == nil {
+		value := iterator.Next(interpreter)
+		if value == nil {
 			return nil
 		}
 
 		interpreter.reportLoopIteration(statement)
-
-		// atree.Array iterator returns low-level atree.Value,
-		// convert to high-level interpreter.Value
-		value := MustConvertStoredValue(interpreter, atreeValue)
 
 		variable.SetValue(value)
 
@@ -372,16 +377,19 @@ func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement)
 
 	eventType := interpreter.Program.Elaboration.EmitStatementEventTypes[statement]
 
-	getLocationRange := locationRangeGetter(interpreter, interpreter.Location, statement)
+	locationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: statement,
+	}
 
 	onEventEmitted := interpreter.Config.OnEventEmitted
 	if onEventEmitted == nil {
 		panic(EventEmissionUnavailableError{
-			LocationRange: getLocationRange(),
+			LocationRange: locationRange,
 		})
 	}
 
-	err := onEventEmitted(interpreter, getLocationRange, event, eventType)
+	err := onEventEmitted(interpreter, locationRange, event, eventType)
 	if err != nil {
 		panic(err)
 	}
@@ -445,9 +453,12 @@ func (interpreter *Interpreter) visitVariableDeclaration(
 	// Assignment is a potential resource move.
 	interpreter.invalidateResource(result)
 
-	getLocationRange := locationRangeGetter(interpreter, interpreter.Location, declaration.Value)
+	locationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: declaration.Value,
+	}
 
-	transferredValue := interpreter.transferAndConvert(result, valueType, targetType, getLocationRange)
+	transferredValue := interpreter.transferAndConvert(result, valueType, targetType, locationRange)
 
 	valueCallback(
 		declaration.Identifier.Identifier,
@@ -506,11 +517,17 @@ func (interpreter *Interpreter) VisitSwapStatement(swap *ast.SwapStatement) Stat
 	// Set right value to left target
 	// and left value to right target
 
-	getLocationRange := locationRangeGetter(interpreter, interpreter.Location, swap.Right)
-	transferredRightValue := interpreter.transferAndConvert(rightValue, rightType, leftType, getLocationRange)
+	locationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: swap.Right,
+	}
+	transferredRightValue := interpreter.transferAndConvert(rightValue, rightType, leftType, locationRange)
 
-	getLocationRange = locationRangeGetter(interpreter, interpreter.Location, swap.Left)
-	transferredLeftValue := interpreter.transferAndConvert(leftValue, leftType, rightType, getLocationRange)
+	locationRange = LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: swap.Left,
+	}
+	transferredLeftValue := interpreter.transferAndConvert(leftValue, leftType, rightType, locationRange)
 
 	leftGetterSetter.set(transferredRightValue)
 	rightGetterSetter.set(transferredLeftValue)
@@ -525,8 +542,11 @@ func (interpreter *Interpreter) checkSwapValue(value Value, expression ast.Expre
 
 	if expression, ok := expression.(*ast.MemberExpression); ok {
 		panic(MissingMemberValueError{
-			Name:          expression.Identifier.Identifier,
-			LocationRange: locationRangeGetter(interpreter, interpreter.Location, expression)(),
+			Name: expression.Identifier.Identifier,
+			LocationRange: LocationRange{
+				Location:    interpreter.Location,
+				HasPosition: expression,
+			},
 		})
 	}
 

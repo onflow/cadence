@@ -34,7 +34,6 @@ type Program struct {
 }
 
 // Run runs the given DAG of analyzers in parallel
-//
 func (program *Program) Run(analyzers []*Analyzer, report func(Diagnostic)) {
 
 	type action struct {

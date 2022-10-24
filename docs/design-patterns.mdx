@@ -387,7 +387,7 @@ transaction {
 
 # Capabilities
 
-## Capability Receiver
+## Capability Bootstrapping
 
 ### Problem
 
@@ -404,33 +404,28 @@ from one account and delivering it to the other.
 
 ### Solution
 
-Account B creates a resource that can receive the capability and stores this in their `/storage/` area.
-They then expose a Capability to this in their `/public/` area with a function
-that can receive the desired Capability and store it in the resource for later use.
+The solution to the bootstrapping problem in Cadence is provided by the [Inbox API](/cadence/language/accounts#account-inbox)
 
-Account A fetches the receiver Capability from B's `/public/` area, creates the desired Capability,
-and passes it to the receiver function. The receiver function stores the Capability
-in the resource that it is on in account B's `/storage/` area for later use.
+Account A (which we will call the provider) creates the capability they wish to send to B (which we will call the recipient),
+and stores this capability on their account in a place where the recipient can access it using the `Inbox.publish` function on their account. 
+They choose a name for the capability that the recipient can later use to identify it, and specify the recipient's address when calling `publish`. 
+This call to `publish` will emit an `InboxValuePublished` event that the recipient can listen for off-chain to know that the Capability is ready for them to claim. 
 
-There are two nuances to this workflow that are required to ensure that it is secure.
+The recipient then later can use the `Inbox.claim` function to securely grab the capability from the provider's account. 
+They must provide the name and type with which the capability was published, as well as the address of the provider's account 
+(all of this information is available in the `InboxValuePublished` event emitted on `publish`). 
+This will remove the capability from the provider's account and emit an `InboxValueClaimed` event that the provider can listen for off-chain. 
 
-The first is that only Account A should be able to create instances of the desired Capability.
-This ensures that nobody else can create instances of it and call the receiver function
-on B's receiver capability instead of A. This means that A is probably an admin account.
+One important caveat to this is that the published capability is stored on the provider's account until the recipient claims it, 
+so the provider can also use the `Inbox.unpublish` function to remove the capability from their account if they no longer wish to pay for storage for it. 
+This also requires the name and type which the capability was published, 
+and emits an `InboxValueUnpublished` event that the recipient can listen for off-chain. 
 
-The second is that the field on the receiver resource that stores the desired Capability
-should be `access(contract)` and only accessed by code within the contract that needs to.
-This ensures that B cannot copy and share the Capability with anyone else.
-
-### Example Code
-
-See:
-
-[LockedTokens.cdc](https://github.com/onflow/flow-core-contracts/blob/bfb115869bd9f815cde1fe64ab6d91ca95c0938e/contracts/LockedTokens.cdc#L527-L546)
-
-[custody_setup_account_creator.cdc](https://github.com/onflow/flow-core-contracts/blob/79941fe65b634800065a440ae5243744b2ca8a2f/transactions/lockedTokens/admin/custody_setup_account_creator.cdc)
-
-[admin_deposit_account_creator.cdc](https://github.com/onflow/flow-core-contracts/blob/79941fe65b634800065a440ae5243744b2ca8a2f/transactions/lockedTokens/admin/admin_deposit_account_creator.cdc)
+It is also important to note that the recipient becomes the owner of the capability object once they have claimed it, 
+and can thus store it or copy it anywhere they have access to. 
+This means providers should only publish capabilities to recipients they trust to use them properly, 
+or limit the type with which the capability is restricted in order to only give recipients access to the functionality
+that the provider is willing to allow them to copy. 
 
 ## Capability Revocation
 
@@ -446,13 +441,12 @@ See the [Capability Controller FLIP](https://github.com/onflow/flow/pull/798) fo
 The first account should create the capability as a link to a capability in `/private/`,
 which then links to a resource in `/storage/`. That second-order link is then handed
 to the second account as the capability for them to use.
-This can be stored in their private storage or a Capability Receiver.
 
 **Account 1:** `/private/capability` → `/storage/resource`
 
 `/private/revokableLink` -> `/private/capability`
 
-**Account 2:** `Capability Receiver(Capability(→Account 1: /private/revokableLink))`
+**Account 2:** `/storage/capability -> (Capability(→Account 1: /private/revokableLink))`
 
 If the first account wants to revoke access to the resource in storage,
 they should delete the `/private/` link that the second account's capability refers to.

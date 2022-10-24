@@ -25,7 +25,6 @@ import (
 )
 
 // programIndices is a container for all indices of members
-//
 type memberIndices struct {
 	once sync.Once
 	// Use `Fields()` instead

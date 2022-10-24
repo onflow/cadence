@@ -198,7 +198,7 @@ func (executor *interpreterScriptExecutor) execute() (val cadence.Value, err err
 	exportableValue := newExportableValue(value, inter)
 	result, err := exportValue(
 		exportableValue,
-		interpreter.ReturnEmptyLocationRange,
+		interpreter.EmptyLocationRange,
 	)
 	if err != nil {
 		return nil, newError(err, location, codesAndPrograms)
@@ -235,7 +235,7 @@ func scriptExecutionFunction(
 		values, err := validateArgumentParams(
 			inter,
 			runtimeInterface,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			arguments,
 			parameters,
 		)
