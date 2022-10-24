@@ -29,6 +29,8 @@ import (
 
 func TestProgramIndices(t *testing.T) {
 
+	t.Parallel()
+
 	functionA := &FunctionDeclaration{
 		Identifier: Identifier{Identifier: "A"},
 	}

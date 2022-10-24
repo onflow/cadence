@@ -155,7 +155,9 @@ func (checker *Checker) checkConditionalBranches(
 
 	initialResources := checker.resources
 	thenResources := initialResources.Clone()
+	defer thenResources.Reclaim()
 	elseResources := initialResources.Clone()
+	defer elseResources.Reclaim()
 
 	thenType = checker.checkBranch(
 		checkThen,
