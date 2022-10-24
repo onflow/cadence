@@ -9844,6 +9844,8 @@ func TestInterpretBytesMetering(t *testing.T) {
 
 func TestOverEstimateBigIntFromString(t *testing.T) {
 
+	t.Parallel()
+
 	for _, v := range []*big.Int{
 		big.NewInt(0),
 		big.NewInt(1),
