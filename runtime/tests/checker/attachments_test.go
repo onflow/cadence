@@ -3523,7 +3523,6 @@ func TestCheckRemoveFromRestricted(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-			struct S: I {}
 			struct interface I {}
 			struct interface J {}
 			attachment A for I {}
