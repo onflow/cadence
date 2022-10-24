@@ -550,6 +550,7 @@ func TestCheckRestrictedTypeSubtyping(t *testing.T) {
 	t.Parallel()
 
 	t.Run("resource type to restricted type with same type, no restriction", func(t *testing.T) {
+		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
             resource R {}
@@ -564,6 +565,7 @@ func TestCheckRestrictedTypeSubtyping(t *testing.T) {
 	})
 
 	t.Run("struct type to restricted type with same type, no restriction", func(t *testing.T) {
+		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
             struct S {}
@@ -575,6 +577,7 @@ func TestCheckRestrictedTypeSubtyping(t *testing.T) {
 	})
 
 	t.Run("resource type to restricted type with same type, one restriction", func(t *testing.T) {
+		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
             resource interface I1 {}
@@ -593,6 +596,7 @@ func TestCheckRestrictedTypeSubtyping(t *testing.T) {
 	})
 
 	t.Run("struct type to restricted type with same type, one restriction", func(t *testing.T) {
+		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
             struct interface I1 {}
@@ -608,6 +612,7 @@ func TestCheckRestrictedTypeSubtyping(t *testing.T) {
 	})
 
 	t.Run("resource type to restricted type with different restricted type", func(t *testing.T) {
+		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
             resource R {}
@@ -626,6 +631,7 @@ func TestCheckRestrictedTypeSubtyping(t *testing.T) {
 	})
 
 	t.Run("struct type to restricted type with different restricted type", func(t *testing.T) {
+		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
             struct R {}
@@ -641,6 +647,7 @@ func TestCheckRestrictedTypeSubtyping(t *testing.T) {
 	})
 
 	t.Run("restricted resource type to restricted type with same type, no restrictions", func(t *testing.T) {
+		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
             resource R {}
@@ -656,6 +663,7 @@ func TestCheckRestrictedTypeSubtyping(t *testing.T) {
 	})
 
 	t.Run("restricted struct type to restricted type with same type, no restrictions", func(t *testing.T) {
+		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
             struct S {}
@@ -670,6 +678,7 @@ func TestCheckRestrictedTypeSubtyping(t *testing.T) {
 	})
 
 	t.Run("restricted resource type to restricted type with same type, 0 to 1 restriction", func(t *testing.T) {
+		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
             resource interface I1 {}
@@ -689,6 +698,7 @@ func TestCheckRestrictedTypeSubtyping(t *testing.T) {
 	})
 
 	t.Run("restricted struct type to restricted type with same type, 0 to 1 restriction", func(t *testing.T) {
+		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
             struct interface I1 {}
@@ -705,6 +715,7 @@ func TestCheckRestrictedTypeSubtyping(t *testing.T) {
 	})
 
 	t.Run("restricted resource type to restricted type with same type, 1 to 2 restrictions", func(t *testing.T) {
+		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
             resource interface I1 {}
@@ -724,6 +735,7 @@ func TestCheckRestrictedTypeSubtyping(t *testing.T) {
 	})
 
 	t.Run("restricted struct type to restricted type with same type, 1 to 2 restrictions", func(t *testing.T) {
+		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
 
@@ -741,6 +753,7 @@ func TestCheckRestrictedTypeSubtyping(t *testing.T) {
 	})
 
 	t.Run("restricted resource type to restricted type with same type, reordered restrictions", func(t *testing.T) {
+		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
             resource interface I1 {}
@@ -760,6 +773,7 @@ func TestCheckRestrictedTypeSubtyping(t *testing.T) {
 	})
 
 	t.Run("restricted struct type to restricted type with same type, reordered restrictions", func(t *testing.T) {
+		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
             struct interface I1 {}
@@ -776,6 +790,7 @@ func TestCheckRestrictedTypeSubtyping(t *testing.T) {
 	})
 
 	t.Run("restricted resource type to restricted type with same type, fewer restrictions", func(t *testing.T) {
+		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
             resource interface I1 {}
@@ -795,6 +810,7 @@ func TestCheckRestrictedTypeSubtyping(t *testing.T) {
 	})
 
 	t.Run("restricted struct type to restricted type with same type, fewer restrictions", func(t *testing.T) {
+		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
             struct interface I1 {}
@@ -811,6 +827,7 @@ func TestCheckRestrictedTypeSubtyping(t *testing.T) {
 	})
 
 	t.Run("restricted resource type to resource type", func(t *testing.T) {
+		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
             resource interface I1 {}
@@ -830,6 +847,7 @@ func TestCheckRestrictedTypeSubtyping(t *testing.T) {
 	})
 
 	t.Run("restricted struct type to struct type", func(t *testing.T) {
+		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
             struct interface I1 {}
@@ -863,6 +881,7 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
     `
 
 	t.Run("resource: empty", func(t *testing.T) {
+		t.Parallel()
 
 		_, err := ParseAndCheckWithPanic(t,
 			resourceTypes+`
@@ -876,6 +895,7 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 	})
 
 	t.Run("struct: empty", func(t *testing.T) {
+		t.Parallel()
 
 		_, err := ParseAndCheckWithPanic(t,
 			structTypes+`
@@ -889,6 +909,7 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 	})
 
 	t.Run("resource: one", func(t *testing.T) {
+		t.Parallel()
 
 		checker, err := ParseAndCheckWithPanic(t,
 			resourceTypes+`
@@ -913,6 +934,7 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 	})
 
 	t.Run("struct: one", func(t *testing.T) {
+		t.Parallel()
 
 		checker, err := ParseAndCheckWithPanic(t,
 			structTypes+`
@@ -937,6 +959,7 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 	})
 
 	t.Run("resource: two", func(t *testing.T) {
+		t.Parallel()
 
 		checker, err := ParseAndCheckWithPanic(t,
 			resourceTypes+`
@@ -965,6 +988,7 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 	})
 
 	t.Run("struct: two", func(t *testing.T) {
+		t.Parallel()
 
 		checker, err := ParseAndCheckWithPanic(t,
 			structTypes+`
@@ -993,6 +1017,7 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 	})
 
 	t.Run("reference: empty", func(t *testing.T) {
+		t.Parallel()
 
 		_, err := ParseAndCheckWithPanic(t,
 			resourceTypes+`
@@ -1006,6 +1031,7 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 	})
 
 	t.Run("resource reference: one", func(t *testing.T) {
+		t.Parallel()
 
 		checker, err := ParseAndCheckWithPanic(t,
 			resourceTypes+`
@@ -1033,6 +1059,7 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 	})
 
 	t.Run("struct reference: one", func(t *testing.T) {
+		t.Parallel()
 
 		checker, err := ParseAndCheckWithPanic(t,
 			structTypes+`
@@ -1060,6 +1087,7 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 	})
 
 	t.Run("resource reference: two", func(t *testing.T) {
+		t.Parallel()
 
 		checker, err := ParseAndCheckWithPanic(t,
 			resourceTypes+`
@@ -1091,6 +1119,7 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 	})
 
 	t.Run("struct reference: two", func(t *testing.T) {
+		t.Parallel()
 
 		checker, err := ParseAndCheckWithPanic(t,
 			structTypes+`
@@ -1124,7 +1153,11 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 
 func TestCheckRestrictedTypeConformanceOrder(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("valid", func(t *testing.T) {
+
+		t.Parallel()
 
 		// Test that the conformances for a composite are declared
 		// before functions using them are checked
@@ -1141,6 +1174,8 @@ func TestCheckRestrictedTypeConformanceOrder(t *testing.T) {
 	})
 
 	t.Run("invalid", func(t *testing.T) {
+
+		t.Parallel()
 
 		_, err := ParseAndCheckWithPanic(t, `
           contract C {
@@ -1162,6 +1197,8 @@ func TestCheckRestrictedTypeConformanceOrder(t *testing.T) {
 
 // https://github.com/onflow/cadence/issues/326
 func TestCheckRestrictedConformance(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
 

@@ -29,6 +29,8 @@ import (
 
 func TestCompositeKind_MarshalJSON(t *testing.T) {
 
+	t.Parallel()
+
 	for compositeKind := CompositeKind(0); compositeKind < CompositeKind(CompositeKindCount()); compositeKind++ {
 		actual, err := json.Marshal(compositeKind)
 		require.NoError(t, err)

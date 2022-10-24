@@ -2592,6 +2592,9 @@ func TestInterpretAccount_iteration(t *testing.T) {
 }
 
 func TestInterpretAccountIterationMutation(t *testing.T) {
+
+	t.Parallel()
+
 	test := func(continueAfterMutation bool) {
 		t.Run(fmt.Sprintf("forEachStored, continue: %t", continueAfterMutation), func(t *testing.T) {
 			t.Parallel()

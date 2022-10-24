@@ -63,7 +63,7 @@ func (om *OrderedMap[K, V]) Clear() {
 // Get returns the value associated with the given key.
 // Returns nil if not found.
 // The second return value indicates if the key is present in the map.
-func (om OrderedMap[K, V]) Get(key K) (result V, present bool) {
+func (om *OrderedMap[K, V]) Get(key K) (result V, present bool) {
 	if om.pairs == nil {
 		return
 	}
@@ -77,7 +77,7 @@ func (om OrderedMap[K, V]) Get(key K) (result V, present bool) {
 
 // Contains returns true if the key is present in the map
 // and false otherwise.
-func (om OrderedMap[K, V]) Contains(key K) (present bool) {
+func (om *OrderedMap[K, V]) Contains(key K) (present bool) {
 	if om.pairs == nil {
 		return
 	}
@@ -88,7 +88,7 @@ func (om OrderedMap[K, V]) Contains(key K) (present bool) {
 
 // GetPair returns the key-value pair associated with the given key.
 // Returns nil if not found.
-func (om OrderedMap[K, V]) GetPair(key K) *Pair[K, V] {
+func (om *OrderedMap[K, V]) GetPair(key K) *Pair[K, V] {
 	if om.pairs == nil {
 		return nil
 	}
@@ -139,12 +139,12 @@ func (om *OrderedMap[K, V]) Delete(key K) (oldValue V, present bool) {
 }
 
 // Len returns the length of the ordered map.
-func (om OrderedMap[K, V]) Len() int {
+func (om *OrderedMap[K, V]) Len() int {
 	return len(om.pairs)
 }
 
 // Oldest returns a pointer to the oldest pair.
-func (om OrderedMap[K, V]) Oldest() *Pair[K, V] {
+func (om *OrderedMap[K, V]) Oldest() *Pair[K, V] {
 	if om.pairs == nil {
 		return nil
 	}
@@ -153,7 +153,7 @@ func (om OrderedMap[K, V]) Oldest() *Pair[K, V] {
 }
 
 // Newest returns a pointer to the newest pair.
-func (om OrderedMap[K, V]) Newest() *Pair[K, V] {
+func (om *OrderedMap[K, V]) Newest() *Pair[K, V] {
 	if om.pairs == nil {
 		return nil
 	}
@@ -163,7 +163,7 @@ func (om OrderedMap[K, V]) Newest() *Pair[K, V] {
 
 // Foreach iterates over the entries of the map in the insertion order, and invokes
 // the provided function for each key-value pair.
-func (om OrderedMap[K, V]) Foreach(f func(key K, value V)) {
+func (om *OrderedMap[K, V]) Foreach(f func(key K, value V)) {
 	if om.pairs == nil {
 		return
 	}
@@ -176,7 +176,7 @@ func (om OrderedMap[K, V]) Foreach(f func(key K, value V)) {
 // ForeachWithError iterates over the entries of the map in the insertion order,
 // and invokes the provided function for each key-value pair.
 // If the passed function returns an error, iteration breaks and the error is returned.
-func (om OrderedMap[K, V]) ForeachWithError(f func(key K, value V) error) error {
+func (om *OrderedMap[K, V]) ForeachWithError(f func(key K, value V) error) error {
 	if om.pairs == nil {
 		return nil
 	}

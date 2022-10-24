@@ -28,6 +28,9 @@ import (
 )
 
 func TestRLPReadSize(t *testing.T) {
+
+	t.Parallel()
+
 	tests := []struct {
 		input          []byte
 		startIndex     int
@@ -127,6 +130,9 @@ func TestRLPReadSize(t *testing.T) {
 }
 
 func TestDecodeString(t *testing.T) {
+
+	t.Parallel()
+
 	tests := []struct {
 		expectedOutput []byte
 		encoded        []byte
@@ -265,6 +271,9 @@ func TestDecodeString(t *testing.T) {
 }
 
 func TestDecodeList(t *testing.T) {
+
+	t.Parallel()
+
 	tests := []struct {
 		expectedItems [][]byte
 		encoded       []byte

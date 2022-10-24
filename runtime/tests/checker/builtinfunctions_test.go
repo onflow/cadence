@@ -87,6 +87,8 @@ func TestCheckToBytes(t *testing.T) {
 
 func TestCheckToBigEndianBytes(t *testing.T) {
 
+	t.Parallel()
+
 	for _, ty := range sema.AllNumberTypes {
 
 		t.Run(ty.String(), func(t *testing.T) {
