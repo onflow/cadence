@@ -2479,3 +2479,192 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 	})
 
 }
+
+func TestCheckReferenceUseAfterCopy(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("resource, field write", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          resource R {
+              var name: String
+              init(name: String) {
+                  self.name = name
+              }
+          }
+
+          fun test() {
+              let r <- create R(name: "1")
+              let ref = &r as &R
+              let container <- [<-r]
+              ref.name = "2"
+              destroy container
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errs[0], &invalidatedRefError)
+	})
+
+	t.Run("resource, field read", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          resource R {
+              var name: String
+              init(name: String) {
+                  self.name = name
+              }
+          }
+
+          fun test(): String {
+              let r <- create R(name: "1")
+              let ref = &r as &R
+              let container <- [<-r]
+              let name = ref.name
+              destroy container
+              return name
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errs[0], &invalidatedRefError)
+	})
+
+	t.Run("resource array, insert", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          resource R {}
+
+          fun test() {
+              let rs <- [<-create R()]
+              let ref = &rs as &[R]
+              let container <- [<-rs]
+              ref.insert(at: 1, <-create R())
+              destroy container
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errs[0], &invalidatedRefError)
+	})
+
+	t.Run("resource array, append", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          resource R {}
+
+          fun test() {
+              let rs <- [<-create R()]
+              let ref = &rs as &[R]
+              let container <- [<-rs]
+              ref.append(<-create R())
+              destroy container
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errs[0], &invalidatedRefError)
+	})
+
+	t.Run("resource array, get/set", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          resource R {}
+
+          fun test() {
+              let rs <- [<-create R()]
+              let ref = &rs as &[R]
+              let container <- [<-rs]
+              var r <- create R()
+              ref[0] <-> r
+              destroy container
+              destroy r
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errs[0], &invalidatedRefError)
+		assert.ErrorAs(t, errs[1], &invalidatedRefError)
+	})
+
+	t.Run("resource array, remove", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          resource R {}
+
+          fun test() {
+              let rs <- [<-create R()]
+              let ref = &rs as &[R]
+              let container <- [<-rs]
+              let r <- ref.remove(at: 0)
+              destroy container
+              destroy r
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errs[0], &invalidatedRefError)
+	})
+
+	t.Run("resource dictionary, insert", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          resource R {}
+
+          fun test() {
+              let rs <- {0: <-create R()}
+              let ref = &rs as &{Int: R}
+              let container <- [<-rs]
+              ref[1] <-! create R()
+              destroy container
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errs[0], &invalidatedRefError)
+	})
+
+	t.Run("resource dictionary, remove", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          resource R {}
+
+          fun test() {
+              let rs <- {0: <-create R()}
+              let ref = &rs as &{Int: R}
+              let container <- [<-rs]
+              let r <- ref.remove(key: 0)
+              destroy container
+              destroy r
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errs[0], &invalidatedRefError)
+	})
+}
