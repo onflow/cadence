@@ -235,6 +235,9 @@ func (checker *Checker) Check() error {
 
 		checker.Elaboration.setIsChecking(false)
 		checker.isChecked = true
+
+		checker.resources.Reclaim()
+		checker.resources = nil
 	}
 	err := checker.CheckerError()
 	if err != nil {
@@ -1578,6 +1581,7 @@ func (checker *Checker) checkPotentiallyUnevaluated(check TypeCheckFunc) Type {
 
 	initialResources := checker.resources
 	temporaryResources := initialResources.Clone()
+	defer temporaryResources.Reclaim()
 
 	result := checker.checkBranch(
 		check,
