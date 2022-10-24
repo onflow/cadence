@@ -586,8 +586,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 
@@ -625,8 +624,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 
@@ -681,8 +679,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		)
 
 		_, err := inter.Invoke("test", arrayRef)
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 
@@ -721,8 +718,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		require.NoError(t, err)
 
 		_, err = inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 
@@ -794,8 +790,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		)
 
 		_, err := inter.Invoke("test", arrayRef1, arrayRef2)
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 
@@ -857,8 +852,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		)
 
 		_, err := inter.Invoke("test", arrayRef)
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 
@@ -895,7 +889,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
+		RequireError(t, err)
 		require.ErrorAs(t, err, &interpreter.DereferenceError{})
 	})
 
@@ -982,14 +976,12 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		// First reference must be invalid
 		_, err = inter.Invoke("getRef1Id")
-		assert.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 		assert.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 
 		// Second reference must be invalid
 		_, err = inter.Invoke("getRef2Id")
-		assert.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 		assert.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 
 		// Third reference must be valid
@@ -1040,8 +1032,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 
@@ -1082,8 +1073,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 
@@ -1118,8 +1108,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 
@@ -1154,8 +1143,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 }
@@ -1205,8 +1193,7 @@ func TestInterpretResourceReferenceInvalidationOnDestroy(t *testing.T) {
 		)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 		require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
 	})
 
@@ -1245,8 +1232,7 @@ func TestInterpretResourceReferenceInvalidationOnDestroy(t *testing.T) {
 		)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		_ = err.Error()
+		RequireError(t, err)
 		require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
 	})
 }
