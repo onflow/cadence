@@ -31,6 +31,7 @@ import (
 )
 
 func TestLiteralValue(t *testing.T) {
+	t.Parallel()
 
 	t.Run("String, valid literal", func(t *testing.T) {
 		value, err := ParseLiteral(`"hello"`, sema.StringType, newTestInterpreter(t))
@@ -647,20 +648,27 @@ func TestLiteralValue(t *testing.T) {
 }
 
 func TestParseLiteralArgumentList(t *testing.T) {
+	t.Parallel()
 
 	t.Run("invalid", func(t *testing.T) {
+		t.Parallel()
+
 		_, err := ParseLiteralArgumentList("", nil, newTestInterpreter(t))
 		RequireError(t, err)
 
 	})
 
 	t.Run("empty", func(t *testing.T) {
+		t.Parallel()
+
 		arguments, err := ParseLiteralArgumentList(`()`, nil, newTestInterpreter(t))
 		require.NoError(t, err)
 		require.Equal(t, []cadence.Value{}, arguments)
 	})
 
 	t.Run("one argument", func(t *testing.T) {
+		t.Parallel()
+
 		arguments, err := ParseLiteralArgumentList(
 			`(a: 1)`,
 			[]sema.Type{
@@ -678,6 +686,8 @@ func TestParseLiteralArgumentList(t *testing.T) {
 	})
 
 	t.Run("two arguments", func(t *testing.T) {
+		t.Parallel()
+
 		arguments, err := ParseLiteralArgumentList(
 			`(a: 1, 2)`,
 			[]sema.Type{
@@ -697,6 +707,8 @@ func TestParseLiteralArgumentList(t *testing.T) {
 	})
 
 	t.Run("invalid second argument", func(t *testing.T) {
+		t.Parallel()
+
 		_, err := ParseLiteralArgumentList(
 			`(a: 1, 2)`,
 			[]sema.Type{
@@ -710,6 +722,8 @@ func TestParseLiteralArgumentList(t *testing.T) {
 	})
 
 	t.Run("too many arguments", func(t *testing.T) {
+		t.Parallel()
+
 		_, err := ParseLiteralArgumentList(
 			`(a: 1, 2)`,
 			[]sema.Type{
@@ -722,6 +736,8 @@ func TestParseLiteralArgumentList(t *testing.T) {
 	})
 
 	t.Run("too few arguments", func(t *testing.T) {
+		t.Parallel()
+
 		_, err := ParseLiteralArgumentList(
 			`(a: 1)`,
 			[]sema.Type{
@@ -735,6 +751,8 @@ func TestParseLiteralArgumentList(t *testing.T) {
 	})
 
 	t.Run("non-literal argument", func(t *testing.T) {
+		t.Parallel()
+
 		_, err := ParseLiteralArgumentList(
 			`(a: b)`,
 			[]sema.Type{

@@ -659,6 +659,8 @@ func TestCheckInvalidImportCycleTwoLocations(t *testing.T) {
 
 func TestCheckImportVirtual(t *testing.T) {
 
+	t.Parallel()
+
 	const code = `
        import Foo
 

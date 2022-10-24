@@ -323,10 +323,12 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) S
 		nil,
 	)
 
-	iterator, err := transferredValue.(*ArrayValue).array.Iterator()
-	if err != nil {
-		panic(errors.NewExternalError(err))
+	iterable, ok := transferredValue.(IterableValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
 	}
+
+	iterator := iterable.Iterator(interpreter)
 
 	var indexVariable *Variable
 	if statement.Index != nil {
@@ -337,21 +339,12 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) S
 	}
 
 	for {
-		var atreeValue atree.Value
-		atreeValue, err = iterator.Next()
-		if err != nil {
-			panic(errors.NewExternalError(err))
-		}
-
-		if atreeValue == nil {
+		value := iterator.Next(interpreter)
+		if value == nil {
 			return nil
 		}
 
 		interpreter.reportLoopIteration(statement)
-
-		// atree.Array iterator returns low-level atree.Value,
-		// convert to high-level interpreter.Value
-		value := MustConvertStoredValue(interpreter, atreeValue)
 
 		variable.SetValue(value)
 

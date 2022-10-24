@@ -121,9 +121,8 @@ func TestRuntimeHashAlgorithm_hash(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
-
 	executeScript := func(code string, inter Interface) (cadence.Value, error) {
+		runtime := newTestInterpreterRuntime()
 		return runtime.ExecuteScript(
 			Script{
 				Source: []byte(code),
@@ -136,6 +135,8 @@ func TestRuntimeHashAlgorithm_hash(t *testing.T) {
 	}
 
 	t.Run("hash", func(t *testing.T) {
+		t.Parallel()
+
 		script := `
             pub fun main() {
                 log(HashAlgorithm.SHA3_256.hash("01020304".decodeHex()))
@@ -179,6 +180,8 @@ func TestRuntimeHashAlgorithm_hash(t *testing.T) {
 	})
 
 	t.Run("hash - check tag", func(t *testing.T) {
+		t.Parallel()
+
 		script := `
             pub fun main() {
                 HashAlgorithm.SHA3_256.hash("01020304".decodeHex())
@@ -207,6 +210,8 @@ func TestRuntimeHashAlgorithm_hash(t *testing.T) {
 	})
 
 	t.Run("hashWithTag - check tag", func(t *testing.T) {
+		t.Parallel()
+
 		script := `
             pub fun main() {
                 HashAlgorithm.SHA3_256.hashWithTag(

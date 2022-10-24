@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/tests/checker"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -38,6 +39,9 @@ import (
 )
 
 func TestRuntimeTransaction_AddPublicKey(t *testing.T) {
+
+	t.Parallel()
+
 	rt := newTestInterpreterRuntime()
 
 	keyA := cadence.NewArray([]cadence.Value{
@@ -1229,9 +1233,9 @@ func TestRuntimePublicKey(t *testing.T) {
 
 	t.Parallel()
 
-	rt := newTestInterpreterRuntime()
-
 	executeScript := func(code string, runtimeInterface Interface) (cadence.Value, error) {
+		rt := newTestInterpreterRuntime()
+
 		return rt.ExecuteScript(
 			Script{
 				Source: []byte(code),
@@ -1244,6 +1248,8 @@ func TestRuntimePublicKey(t *testing.T) {
 	}
 
 	t.Run("Constructor", func(t *testing.T) {
+		t.Parallel()
+
 		script := `
             pub fun main(): PublicKey {
                 let publicKey = PublicKey(
@@ -1280,6 +1286,8 @@ func TestRuntimePublicKey(t *testing.T) {
 	})
 
 	t.Run("Validate func", func(t *testing.T) {
+		t.Parallel()
+
 		script := `
             pub fun main(): Bool {
                 let publicKey =  PublicKey(
@@ -1300,6 +1308,8 @@ func TestRuntimePublicKey(t *testing.T) {
 	})
 
 	t.Run("Construct PublicKey in Cadence code", func(t *testing.T) {
+		t.Parallel()
+
 		script := `
               pub fun main(): PublicKey {
                   let publicKey = PublicKey(
@@ -1343,6 +1353,8 @@ func TestRuntimePublicKey(t *testing.T) {
 	})
 
 	t.Run("PublicKey from host env", func(t *testing.T) {
+		t.Parallel()
+
 		storage := newTestAccountKeyStorage()
 		storage.keys = append(storage.keys, accountKeyA, accountKeyB)
 
@@ -1376,6 +1388,8 @@ func TestRuntimePublicKey(t *testing.T) {
 	})
 
 	t.Run("Verify", func(t *testing.T) {
+		t.Parallel()
+
 		script := `
             pub fun main(): Bool {
                 let publicKey =  PublicKey(
@@ -1419,6 +1433,7 @@ func TestRuntimePublicKey(t *testing.T) {
 	})
 
 	t.Run("Verify - publicKey from host env", func(t *testing.T) {
+		t.Parallel()
 
 		storage := newTestAccountKeyStorage()
 		storage.keys = append(storage.keys, accountKeyA, accountKeyB)
@@ -1460,6 +1475,8 @@ func TestRuntimePublicKey(t *testing.T) {
 	})
 
 	t.Run("field mutability", func(t *testing.T) {
+		t.Parallel()
+
 		script := `
             pub fun main(): PublicKey {
                 let publicKey =  PublicKey(
@@ -1481,13 +1498,7 @@ func TestRuntimePublicKey(t *testing.T) {
 		}
 
 		_, err := executeScript(script, runtimeInterface)
-		RequireError(t, err)
-
-		var checkerErr *sema.CheckerError
-		require.ErrorAs(t, err, &checkerErr)
-
-		errs := checkerErr.Errors
-		require.Len(t, errs, 4)
+		errs := checker.RequireCheckerErrors(t, err, 4)
 
 		assert.IsType(t, &sema.InvalidAssignmentAccessError{}, errs[0])
 		assert.IsType(t, &sema.AssignmentToConstantMemberError{}, errs[1])
@@ -1496,6 +1507,8 @@ func TestRuntimePublicKey(t *testing.T) {
 	})
 
 	t.Run("raw-key mutability", func(t *testing.T) {
+		t.Parallel()
+
 		script := `
             pub fun main(): PublicKey {
                 let publicKey =  PublicKey(
@@ -1517,20 +1530,16 @@ func TestRuntimePublicKey(t *testing.T) {
 		addPublicKeyValidation(runtimeInterface, nil)
 
 		_, err := executeScript(script, runtimeInterface)
-
-		RequireError(t, err)
-
-		var checkerErr *sema.CheckerError
-		require.ErrorAs(t, err, &checkerErr)
-		errs := checkerErr.Errors
-		require.Len(t, errs, 1)
+		errs := checker.RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ExternalMutationError{}, errs[0])
 	})
 
 	t.Run("raw-key reference mutability", func(t *testing.T) {
+		t.Parallel()
+
 		script := `
-        pub fun main(): PublicKey {
+          pub fun main(): PublicKey {
             let publicKey =  PublicKey(
                 publicKey: "0102".decodeHex(),
                 signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
@@ -1648,12 +1657,7 @@ func TestAuthAccountContracts(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-		RequireError(t, err)
-
-		var checkerErr *sema.CheckerError
-		require.ErrorAs(t, err, &checkerErr)
-		errs := checkerErr.Errors
-		require.Len(t, errs, 1)
+		errs := checker.RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ExternalMutationError{}, errs[0])
 	})
@@ -1882,13 +1886,7 @@ func TestPublicAccountContracts(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-
-		RequireError(t, err)
-
-		var checkerErr *sema.CheckerError
-		require.ErrorAs(t, err, &checkerErr)
-		errs := checkerErr.Errors
-		require.Len(t, errs, 1)
+		errs := checker.RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ExternalMutationError{}, errs[0])
 	})
@@ -1926,13 +1924,7 @@ func TestPublicAccountContracts(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-
-		RequireError(t, err)
-
-		var checkerErr *sema.CheckerError
-		require.ErrorAs(t, err, &checkerErr)
-		errs := checkerErr.Errors
-		require.Len(t, errs, 1)
+		errs := checker.RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ExternalMutationError{}, errs[0])
 	})
@@ -1997,12 +1989,7 @@ func TestGetAuthAccount(t *testing.T) {
 			},
 		)
 
-		RequireError(t, err)
-
-		var checkerErr *sema.CheckerError
-		require.ErrorAs(t, err, &checkerErr)
-		errs := checkerErr.Errors
-		require.Len(t, errs, 1)
+		errs := checker.RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
@@ -2030,12 +2017,7 @@ func TestGetAuthAccount(t *testing.T) {
 			},
 		)
 
-		RequireError(t, err)
-
-		var checkerErr *sema.CheckerError
-		require.ErrorAs(t, err, &checkerErr)
-		errs := checkerErr.Errors
-		require.Len(t, errs, 1)
+		errs := checker.RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ArgumentCountError{}, errs[0])
 	})
@@ -2062,13 +2044,7 @@ func TestGetAuthAccount(t *testing.T) {
 				Location:  common.ScriptLocation{0x1},
 			},
 		)
-
-		RequireError(t, err)
-
-		var checkerErr *sema.CheckerError
-		require.ErrorAs(t, err, &checkerErr)
-		errs := checkerErr.Errors
-		require.Len(t, errs, 1)
+		errs := checker.RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ArgumentCountError{}, errs[0])
 	})
@@ -2103,12 +2079,7 @@ func TestGetAuthAccount(t *testing.T) {
 			},
 		)
 
-		RequireError(t, err)
-
-		var checkerErr *sema.CheckerError
-		require.ErrorAs(t, err, &checkerErr)
-		errs := checkerErr.Errors
-		require.Len(t, errs, 1)
+		errs := checker.RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	})

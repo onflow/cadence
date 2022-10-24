@@ -33,6 +33,7 @@ import (
 )
 
 func TestContractUpdateWithDependencies(t *testing.T) {
+	t.Parallel()
 
 	runtime := newTestInterpreterRuntime()
 	accountCodes := map[common.Location][]byte{}

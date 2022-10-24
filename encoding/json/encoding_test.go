@@ -2006,6 +2006,9 @@ var fooResourceType = &cadence.ResourceType{
 }
 
 func TestNonUTF8StringEncoding(t *testing.T) {
+
+	t.Parallel()
+
 	nonUTF8String := "\xbd\xb2\x3d\xbc\x20\xe2"
 
 	// Make sure it is an invalid utf8 string

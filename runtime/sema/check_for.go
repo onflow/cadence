@@ -60,6 +60,8 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) (_ struct
 			)
 		} else if arrayType, ok := valueType.(ArrayType); ok {
 			elementType = arrayType.ElementType(false)
+		} else if valueType == StringType {
+			elementType = CharacterType
 		} else {
 			checker.report(
 				&TypeMismatchWithDescriptionError{

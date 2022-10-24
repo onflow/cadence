@@ -30,6 +30,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/interpreter"
 
 	"github.com/onflow/cadence"
@@ -64,7 +65,10 @@ func withWritesToStorage(
 		var storageIndex atree.StorageIndex
 		binary.BigEndian.PutUint32(storageIndex[:], randomIndex)
 
-		storage.writes[storageKey] = storageIndex
+		if storage.newStorageMaps == nil {
+			storage.newStorageMaps = &orderedmap.OrderedMap[interpreter.StorageKey, atree.StorageIndex]{}
+		}
+		storage.newStorageMaps.Set(storageKey, storageIndex)
 	}
 
 	handler(storage, inter)
