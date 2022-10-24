@@ -284,6 +284,8 @@ func TestStringer(t *testing.T) {
 
 func TestToBigEndianBytes(t *testing.T) {
 
+	t.Parallel()
+
 	typeTests := map[string]map[NumberValue][]byte{
 		// Int*
 		"Int": {
@@ -493,6 +495,7 @@ func TestToBigEndianBytes(t *testing.T) {
 }
 
 func TestOptional_Type(t *testing.T) {
+	t.Parallel()
 
 	t.Run("none", func(t *testing.T) {
 
@@ -518,6 +521,8 @@ func TestOptional_Type(t *testing.T) {
 }
 
 func TestNonUTF8String(t *testing.T) {
+	t.Parallel()
+
 	nonUTF8String := "\xbd\xb2\x3d\xbc\x20\xe2"
 
 	// Make sure it is an invalid utf8 string
@@ -530,6 +535,7 @@ func TestNonUTF8String(t *testing.T) {
 }
 
 func TestNewInt128FromBig(t *testing.T) {
+	t.Parallel()
 
 	_, err := NewInt128FromBig(big.NewInt(1))
 	require.NoError(t, err)
@@ -550,6 +556,7 @@ func TestNewInt128FromBig(t *testing.T) {
 }
 
 func TestNewInt256FromBig(t *testing.T) {
+	t.Parallel()
 
 	_, err := NewInt256FromBig(big.NewInt(1))
 	require.NoError(t, err)
@@ -570,6 +577,7 @@ func TestNewInt256FromBig(t *testing.T) {
 }
 
 func TestNewUIntFromBig(t *testing.T) {
+	t.Parallel()
 
 	_, err := NewUIntFromBig(big.NewInt(1))
 	require.NoError(t, err)
@@ -587,6 +595,7 @@ func TestNewUIntFromBig(t *testing.T) {
 }
 
 func TestNewUInt128FromBig(t *testing.T) {
+	t.Parallel()
 
 	_, err := NewUInt128FromBig(big.NewInt(1))
 	require.NoError(t, err)
@@ -604,6 +613,7 @@ func TestNewUInt128FromBig(t *testing.T) {
 }
 
 func TestNewUInt256FromBig(t *testing.T) {
+	t.Parallel()
 
 	_, err := NewUInt256FromBig(big.NewInt(1))
 	require.NoError(t, err)

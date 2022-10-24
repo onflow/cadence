@@ -87,6 +87,8 @@ receiverRef.deposit(from: <-self.sentVault)
 
 // Test to test the minifier function
 func TestMinify(t *testing.T) {
+	t.Parallel()
+
 	// create an input file with the test cadence script
 	inputFile, err := ioutil.TempFile("", "test_*.cdc")
 	require.NoError(t, err)

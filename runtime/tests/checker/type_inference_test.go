@@ -943,9 +943,9 @@ func TestCheckArraySupertypeInference(t *testing.T) {
             pub struct Bar {}
         `
 		_, err := ParseAndCheck(t, code)
-		checkerErr := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.TypeAnnotationRequiredError{}, checkerErr[0])
+		require.IsType(t, &sema.TypeAnnotationRequiredError{}, errs[0])
 	})
 
 	t.Run("empty array", func(t *testing.T) {
@@ -955,9 +955,9 @@ func TestCheckArraySupertypeInference(t *testing.T) {
             let x = [].getType()
         `
 		_, err := ParseAndCheck(t, code)
-		checkerErr := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.TypeAnnotationRequiredError{}, checkerErr[0])
+		require.IsType(t, &sema.TypeAnnotationRequiredError{}, errs[0])
 	})
 }
 
@@ -1139,9 +1139,9 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
             pub struct Bar {}
         `
 		_, err := ParseAndCheck(t, code)
-		checkerErr := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.TypeAnnotationRequiredError{}, checkerErr[0])
+		assert.IsType(t, &sema.TypeAnnotationRequiredError{}, errs[0])
 	})
 
 	t.Run("no supertype for keys", func(t *testing.T) {
@@ -1151,9 +1151,9 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
             let x = {1: 1, "two": 2}
         `
 		_, err := ParseAndCheck(t, code)
-		checkerErr := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.InvalidDictionaryKeyTypeError{}, checkerErr[0])
+		assert.IsType(t, &sema.InvalidDictionaryKeyTypeError{}, errs[0])
 	})
 
 	t.Run("unsupported supertype for keys", func(t *testing.T) {
@@ -1163,10 +1163,10 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
             let x = {0: 1, "hello": 2}
         `
 		_, err := ParseAndCheck(t, code)
-		checkerErr := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.InvalidDictionaryKeyTypeError{}, checkerErr[0])
-		invalidKeyError := checkerErr[0].(*sema.InvalidDictionaryKeyTypeError)
+		require.IsType(t, &sema.InvalidDictionaryKeyTypeError{}, errs[0])
+		invalidKeyError := errs[0].(*sema.InvalidDictionaryKeyTypeError)
 
 		assert.Equal(t, sema.AnyStructType, invalidKeyError.Type)
 	})
@@ -1178,8 +1178,8 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
             let x = {}.getType()
         `
 		_, err := ParseAndCheck(t, code)
-		checkerErr := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.TypeAnnotationRequiredError{}, checkerErr[0])
+		require.IsType(t, &sema.TypeAnnotationRequiredError{}, errs[0])
 	})
 }

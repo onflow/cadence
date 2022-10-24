@@ -75,6 +75,9 @@ func TestQuoteString(t *testing.T) {
 }
 
 func TestStringQuick(t *testing.T) {
+
+	t.Parallel()
+
 	f := func(text string) bool {
 		res, errs := parser.ParseExpression([]byte(ast.QuoteString(text)), nil)
 		if len(errs) > 0 {

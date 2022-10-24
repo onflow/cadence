@@ -34,6 +34,8 @@ import (
 
 func TestRuntimeMissingMemberFabricant(t *testing.T) {
 
+	t.Parallel()
+
 	runtime := newTestInterpreterRuntime()
 
 	testAddress, err := common.HexToAddress("0x1")
@@ -2774,6 +2776,7 @@ transaction(recipientAddr: Address, name: String, garmentWithdrawID: UInt64, mat
 }
 
 func TestRuntimeMissingMemberVersus(t *testing.T) {
+	t.Parallel()
 
 	runtime := newTestInterpreterRuntime()
 

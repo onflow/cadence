@@ -3359,6 +3359,7 @@ func TestPublicKeyValue(t *testing.T) {
 }
 
 func TestHashable(t *testing.T) {
+	t.Parallel()
 
 	// Assert that all Value implementations are hashable
 

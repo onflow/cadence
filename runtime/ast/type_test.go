@@ -169,6 +169,8 @@ func TestNominalType_String(t *testing.T) {
 
 	t.Run("simple", func(t *testing.T) {
 
+		t.Parallel()
+
 		ty := &NominalType{
 			Identifier: Identifier{
 				Identifier: "R",

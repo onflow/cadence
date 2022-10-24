@@ -657,7 +657,11 @@ func TestParseDictionaryExpression(t *testing.T) {
 }
 
 func TestParseIndexExpression(t *testing.T) {
+	t.Parallel()
+
 	t.Run("index expression", func(t *testing.T) {
+		t.Parallel()
+
 		result, errs := testParseExpression("a[0]")
 		require.Empty(t, errs)
 
@@ -686,7 +690,10 @@ func TestParseIndexExpression(t *testing.T) {
 			result,
 		)
 	})
+
 	t.Run("index expression with whitespace", func(t *testing.T) {
+		t.Parallel()
+
 		result, errs := testParseExpression("a [ 0 ]")
 		require.Empty(t, errs)
 
@@ -715,7 +722,10 @@ func TestParseIndexExpression(t *testing.T) {
 			result,
 		)
 	})
+
 	t.Run("index expression with identifier", func(t *testing.T) {
+		t.Parallel()
+
 		result, errs := testParseExpression("a [foo]")
 		require.Empty(t, errs)
 
@@ -3609,6 +3619,8 @@ func TestParseFixedPoint(t *testing.T) {
 }
 
 func TestParseLessThanOrTypeArguments(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("binary expression with less operator", func(t *testing.T) {
 
