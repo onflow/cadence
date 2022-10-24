@@ -174,6 +174,7 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 	if returnType == NeverType {
 		returnInfo := checker.functionActivations.Current().ReturnInfo
 		returnInfo.DefinitelyHalted = true
+		returnInfo.DefinitelyReturned = true
 	}
 
 	if isOptionalChainingResult {

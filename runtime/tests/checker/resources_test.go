@@ -8433,18 +8433,15 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
                 switch n {
                     case 1:
                         panic("")
-                        return
                     default:
                         return
                 }
-                panic("")
             }
         `)
 
-		errs := RequireCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
-		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
 
 	t.Run("switch-case: invalidation missing in default case, transaction", func(t *testing.T) {
@@ -8466,19 +8463,16 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
                     switch n {
                         case 1:
                             panic("")
-                            return
                         default:
                             return
                     }
-                    panic("")
                 }
             }
         `)
 
-		errs := RequireCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
-		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
 	})
 
 	t.Run("switch-case: invalidation missing in default case, mixed", func(t *testing.T) {
@@ -8492,7 +8486,6 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
                 switch n {
                     case 1:
                         panic("")
-                        return
                     default:
                         return
                 }
@@ -8502,8 +8495,8 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 2)
 
-		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
-		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[1])
 	})
 
 	t.Run("switch-case: invalidation missing in default case, mixed, transaction", func(t *testing.T) {
@@ -8525,7 +8518,6 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
                     switch n {
                         case 1:
                             panic("")
-                            return
                         default:
                             return
                     }
@@ -9237,7 +9229,7 @@ func TestCheckBadResourceInterface(t *testing.T) {
 	})
 }
 
-func TestCheckInvalidUnreachableResourceInvalidation(t *testing.T) {
+func TestCheckUnreachableResourceInvalidation(t *testing.T) {
 
 	t.Parallel()
 
@@ -9254,13 +9246,27 @@ func TestCheckInvalidUnreachableResourceInvalidation(t *testing.T) {
                     panic("")
                 }
             }
-
-            destroy r
-            panic("")
         }
     `)
 
-	errs := RequireCheckerErrors(t, err, 1)
+	require.NoError(t, err)
+}
 
-	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+func TestCheckConditionalResourceCreationAndReturn(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheckWithPanic(t, `
+        resource R {}
+
+        fun mint(id: UInt64): @R {
+            if id > 100 {
+                return <- create R()
+            } else {
+                panic("bad id")
+            }
+        }
+    `)
+
+	require.NoError(t, err)
 }
