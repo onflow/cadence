@@ -98,6 +98,11 @@ func (compiler *Compiler) VisitEmitStatement(_ *ast.EmitStatement) ir.Stmt {
 	panic(errors.NewUnreachableError())
 }
 
+func (compiler *Compiler) VisitRemoveStatement(_ *ast.RemoveStatement) ir.Stmt {
+	// TODO
+	panic(errors.NewUnreachableError())
+}
+
 func (compiler *Compiler) VisitSwitchStatement(_ *ast.SwitchStatement) ir.Stmt {
 	// TODO
 	panic(errors.NewUnreachableError())

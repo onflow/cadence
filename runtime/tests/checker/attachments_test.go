@@ -303,6 +303,21 @@ func TestCheckBaseType(t *testing.T) {
 		assert.IsType(t, &sema.InvalidBaseTypeError{}, errs[1])
 		assert.IsType(t, &sema.InvalidBaseTypeError{}, errs[2])
 	})
+
+	t.Run("invalid type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			attachment A for B {}`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+		assert.IsType(t, &sema.InvalidBaseTypeError{}, errs[1])
+	})
 }
 
 func TestCheckNestedBaseType(t *testing.T) {
@@ -722,6 +737,26 @@ func TestCheckWithMembers(t *testing.T) {
 		)
 
 		require.NoError(t, err)
+	})
+
+	t.Run("resource field no destroy", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource R {}
+			attachment Test for R {
+				let x: @R
+				init(x: @R) {
+					self.x <- x
+				}
+			}`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.MissingDestructorError{}, errs[0])
 	})
 
 	t.Run("resource field in struct", func(t *testing.T) {
@@ -2117,6 +2152,44 @@ func TestCheckAttach(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("cannot attach directly to anystruct", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			attachment A for AnyStruct {}
+			pub fun foo() {
+				attach A() to (S() as AnyStruct)
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.AttachToInvalidTypeError{}, errs[0])
+	})
+
+	t.Run("cannot attach directly to anyresource", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource S {}
+			attachment A for AnyResource {}
+			pub fun foo() {
+				destroy attach A() to <-(create S() as @AnyResource)
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.AttachToInvalidTypeError{}, errs[0])
+	})
+
 	t.Run("resource AnyResource", func(t *testing.T) {
 
 		t.Parallel()
@@ -2699,6 +2772,25 @@ func TestCheckAttachWithArguments(t *testing.T) {
 	})
 }
 
+func TestCheckAttachInvalidType(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t,
+		`
+		resource C {}
+		attachment A for B {}
+		pub fun foo() {
+			destroy attach A() to <- create C()
+		}`,
+	)
+
+	errs := RequireCheckerErrors(t, err, 2)
+
+	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+	assert.IsType(t, &sema.InvalidBaseTypeError{}, errs[1])
+}
+
 func TestCheckAnyAttachmentTypes(t *testing.T) {
 
 	type TestCase struct {
@@ -2815,5 +2907,631 @@ func TestCheckAnyAttachmentTypes(t *testing.T) {
 			})
 		}
 	})
+}
 
+func TestCheckRemove(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("basic struct", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			attachment A for S {}
+			pub fun foo(s: S) {
+				remove A from s
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("basic resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource R {}
+			attachment A for R {}
+			pub fun foo(r: @R) {
+				remove A from r
+				destroy r
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("resource lost", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource R {}
+			attachment A for R {}
+			pub fun foo(r: @R) {
+				remove A from r
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("struct with anystruct base", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			attachment A for AnyStruct {}
+			pub fun foo(s: S) {
+				remove A from s
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("struct with struct interface base", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S: I {}
+			struct interface I {}
+			attachment A for I {}
+			pub fun foo(s: S) {
+				remove A from s
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("struct with no implement", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			struct interface I {}
+			attachment A for I {}
+			pub fun foo(s: S) {
+				remove A from s
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.RemoveFromInvalidTypeError{}, errs[0])
+	})
+
+	t.Run("resource with anyresource base", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource R {}
+			attachment A for AnyResource {}
+			pub fun foo(r: @R) {
+				remove A from r
+				destroy r
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("resource with interface base", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource R: I {}
+			resource interface I {}
+			attachment A for I {}
+			pub fun foo(r: @R) {
+				remove A from r
+				destroy r
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("resource with interface no implements", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource R {}
+			resource interface I {}
+			attachment A for I {}
+			pub fun foo(r: @R) {
+				remove A from r
+				destroy r
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.RemoveFromInvalidTypeError{}, errs[0])
+	})
+
+	t.Run("noncomposite base", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			attachment A for S {}
+			pub fun foo(s: Int) {
+				remove A from s
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.RemoveFromInvalidTypeError{}, errs[0])
+	})
+
+	t.Run("cannot remove from anystruct", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			attachment A for AnyStruct {}
+			pub fun foo(s: AnyStruct) {
+				remove A from s
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.RemoveFromInvalidTypeError{}, errs[0])
+	})
+
+	t.Run("cannot remove from anyresource", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			attachment A for AnyResource {}
+			pub fun foo(s: @AnyResource) {
+				remove A from s
+				destroy s
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.RemoveFromInvalidTypeError{}, errs[0])
+	})
+
+	t.Run("noncomposite base anystruct declaration", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			attachment A for AnyStruct {}
+			pub fun foo(s: Int) {
+				remove A from s
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.RemoveFromInvalidTypeError{}, errs[0])
+	})
+
+	t.Run("remove non-attachment struct", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			attachment A for S {}
+			pub fun foo(s: S) {
+				remove S from s
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.RemoveFromInvalidTypeError{}, errs[0])
+	})
+
+	t.Run("remove non-attachment resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource S {}
+			attachment A for S {}
+			pub fun foo(s: S) {
+				remove S from s
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.RemoveFromInvalidTypeError{}, errs[0])
+	})
+
+	t.Run("remove nondeclared", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			attachment A for S {}
+			pub fun foo(s: S) {
+				remove X from s
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+	})
+
+	t.Run("remove event", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			event E()
+			pub fun foo(s: S) {
+				remove E from s
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.RemoveFromInvalidTypeError{}, errs[0])
+	})
+
+	t.Run("remove contract", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			contract C {}
+			pub fun foo(s: S) {
+				remove C from s
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.RemoveFromInvalidTypeError{}, errs[0])
+	})
+
+	t.Run("remove resource interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			resource interface C {}
+			pub fun foo(s: S) {
+				remove C from s
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.RemoveFromInvalidTypeError{}, errs[0])
+	})
+
+	t.Run("remove struct interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			resource interface C {}
+			pub fun foo(s: S) {
+				remove C from s
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.RemoveFromInvalidTypeError{}, errs[0])
+	})
+
+	t.Run("remove anystruct", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			pub fun foo(s: S) {
+				remove AnyStruct from s
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.RemoveFromInvalidTypeError{}, errs[0])
+	})
+
+	t.Run("remove anyresource", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource S {}
+			pub fun foo(s: @S) {
+				remove AnyResource from s
+				destroy s
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.RemoveFromInvalidTypeError{}, errs[0])
+	})
+
+	t.Run("remove anystructattachment", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			pub fun foo(s: S) {
+				remove AnyStructAttachment from s
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.RemoveFromInvalidTypeError{}, errs[0])
+	})
+
+	t.Run("remove anyresourceattachment", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource S {}
+			pub fun foo(s: @S) {
+				remove AnyResourceAttachment from s
+				destroy s
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.RemoveFromInvalidTypeError{}, errs[0])
+	})
+
+}
+
+func TestCheckRemoveFromRestricted(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("basic struct", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S: I {}
+			struct interface I {}
+			attachment A for S {}
+			pub fun foo(s: S{I}) {
+				remove A from s
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("basic struct interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S: I {}
+			struct interface I {}
+			attachment A for I {}
+			pub fun foo(s: S{I}) {
+				remove A from s
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("basic resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource S: I {}
+			resource interface I {}
+			attachment A for S {}
+			pub fun foo(s: @S{I}) {
+				remove A from s
+				destroy s
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("basic resource interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource S: I {}
+			resource interface I {}
+			attachment A for I {}
+			pub fun foo(s: @S{I}) {
+				remove A from s
+				destroy s
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("struct base anystruct restricted", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S: I {}
+			struct interface I {}
+			attachment A for S {}
+			pub fun foo(s: {I}) {
+				remove A from s
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.RemoveFromInvalidTypeError{}, errs[0])
+	})
+
+	t.Run("resource base anyresource restricted", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource S: I {}
+			resource interface I {}
+			attachment A for S {}
+			pub fun foo(s: @{I}) {
+				remove A from s
+				destroy s
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.RemoveFromInvalidTypeError{}, errs[0])
+	})
+
+	t.Run("interface base anystruct restricted", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct interface I {}
+			attachment A for I {}
+			pub fun foo(s: {I}) {
+				remove A from s
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("interface base anyresource restricted", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource interface I {}
+			attachment A for I {}
+			pub fun foo(s: @{I}) {
+				remove A from s
+				destroy s
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("multiple restriction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S: I, J {}
+			struct interface I {}
+			struct interface J {}
+			attachment A for I {}
+			pub fun foo(s: S{I, J}) {
+				remove A from s
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("anystruct multiple restriction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S: I {}
+			struct interface I {}
+			struct interface J {}
+			attachment A for I {}
+			pub fun foo(s: {I, J}) {
+				remove A from s
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
 }

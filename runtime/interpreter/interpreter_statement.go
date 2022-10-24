@@ -404,6 +404,11 @@ func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement)
 	return nil
 }
 
+func (interpreter *Interpreter) VisitRemoveStatement(_ *ast.RemoveStatement) StatementResult {
+	// TODO: fill this in
+	return nil
+}
+
 func (interpreter *Interpreter) VisitPragmaDeclaration(_ *ast.PragmaDeclaration) StatementResult {
 	return nil
 }

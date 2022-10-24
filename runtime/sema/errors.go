@@ -3786,8 +3786,7 @@ func (e *AttachNonAttachmentError) Error() string {
 	)
 }
 
-// AttachToNonCompositeError
-
+// AttachToInvalidTypeError
 type AttachToInvalidTypeError struct {
 	Type Type
 	ast.Range
@@ -3802,7 +3801,35 @@ func (*AttachToInvalidTypeError) IsUserError() {}
 
 func (e *AttachToInvalidTypeError) Error() string {
 	return fmt.Sprintf(
-		"cannot attach attachment to type: `%s`",
+		"cannot attach attachment to type `%s`, as it is not valid for this base type",
 		e.Type.QualifiedString(),
+	)
+}
+
+// RemoveFromInvalidTypeError
+type RemoveFromInvalidTypeError struct {
+	Attachment Type
+	BaseType   Type
+	ast.Range
+}
+
+var _ SemanticError = &RemoveFromInvalidTypeError{}
+var _ errors.UserError = &RemoveFromInvalidTypeError{}
+
+func (*RemoveFromInvalidTypeError) isSemanticError() {}
+
+func (*RemoveFromInvalidTypeError) IsUserError() {}
+
+func (e *RemoveFromInvalidTypeError) Error() string {
+	if e.BaseType == nil {
+		return fmt.Sprintf(
+			"cannot remove `%s`, as it is not an attachment type",
+			e.Attachment.QualifiedString(),
+		)
+	}
+	return fmt.Sprintf(
+		"cannot remove `%s` from type `%s`, as this attachment cannot exist on this base type",
+		e.Attachment.QualifiedString(),
+		e.BaseType.QualifiedString(),
 	)
 }

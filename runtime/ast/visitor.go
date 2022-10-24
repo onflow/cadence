@@ -100,6 +100,7 @@ type StatementVisitor[T any] interface {
 	VisitSwitchStatement(*SwitchStatement) T
 	VisitEmitStatement(*EmitStatement) T
 	VisitExpressionStatement(*ExpressionStatement) T
+	VisitRemoveStatement(*RemoveStatement) T
 }
 
 func AcceptStatement[T any](statement Statement, visitor StatementVisitor[T]) (_ T) {
@@ -158,6 +159,9 @@ func AcceptStatement[T any](statement Statement, visitor StatementVisitor[T]) (_
 
 	case ElementTypeTransactionDeclaration:
 		return visitor.VisitTransactionDeclaration(statement.(*TransactionDeclaration))
+
+	case ElementTypeRemoveStatement:
+		return visitor.VisitRemoveStatement(statement.(*RemoveStatement))
 	}
 
 	panic(errors.NewUnreachableError())
