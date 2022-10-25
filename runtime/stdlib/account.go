@@ -292,7 +292,7 @@ func newAuthAccountKeysValue(
 			addressValue,
 		),
 		newAccountKeysForEachFunction(gauge, handler, addressValue),
-		newAccountKeysCountConstructor(gauge, handler, addressValue),
+		newAccountKeysCountGetter(gauge, handler, addressValue),
 	)
 }
 
@@ -741,9 +741,9 @@ func newAccountKeysForEachFunction(
 
 			var accountKey *AccountKey
 
-			for index := 0; index < int(count); index++ {
+			for index := uint64(0); index < count; index++ {
 				wrapPanic(func() {
-					accountKey, err = provider.GetAccountKey(address, index)
+					accountKey, err = provider.GetAccountKey(address, int(index))
 				})
 				if err != nil {
 					panic(err)
@@ -783,7 +783,7 @@ func newAccountKeysForEachFunction(
 	)
 }
 
-func newAccountKeysCountConstructor(
+func newAccountKeysCountGetter(
 	gauge common.MemoryGauge,
 	provider AccountKeyProvider,
 	addressValue interpreter.AddressValue,
@@ -792,11 +792,18 @@ func newAccountKeysCountConstructor(
 
 	return func() interpreter.UInt64Value {
 		return interpreter.NewUInt64Value(gauge, func() uint64 {
-			count, err := provider.AccountKeysCount(address)
+			var count uint64
+			var err error
+
+			wrapPanic(func() {
+				count, err = provider.AccountKeysCount(address)
+			})
 			if err != nil {
-				// if the FVM isn't able to fetch the number of account keys, we have a problem
+				// The provider might not be able to fetch the number of account keys
+				// e.g. when the account does not exist
 				panic(err)
 			}
+
 			return count
 		})
 	}
@@ -898,7 +905,7 @@ func newPublicAccountKeysValue(
 			handler,
 			addressValue,
 		),
-		newAccountKeysCountConstructor(
+		newAccountKeysCountGetter(
 			gauge,
 			handler,
 			addressValue,
