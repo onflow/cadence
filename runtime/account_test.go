@@ -1311,19 +1311,19 @@ func TestRuntimePublicKey(t *testing.T) {
 		t.Parallel()
 
 		script := `
-              pub fun main(): PublicKey {
-                  let publicKey = PublicKey(
-                      publicKey: "0102".decodeHex(),
-                      signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
-                  )
+          pub fun main(): PublicKey {
+              let publicKey = PublicKey(
+                  publicKey: "0102".decodeHex(),
+                  signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
+              )
 
-                  return publicKey
-              }
-            `
+              return publicKey
+          }
+        `
 
 		fakeError := &fakeError{}
 		for _, errorToReturn := range []error{fakeError, nil} {
-			invoked := false
+			var invoked bool
 
 			storage := newTestLedger(nil, nil)
 
@@ -1359,17 +1359,19 @@ func TestRuntimePublicKey(t *testing.T) {
 		storage.keys = append(storage.keys, accountKeyA, accountKeyB)
 
 		for index := range storage.keys {
-			script := fmt.Sprintf(`
-                          pub fun main(): PublicKey {
-                              // Get a public key from host env
-                              let acc = getAccount(0x02)
-                              let publicKey = acc.keys.get(keyIndex: %d)!.publicKey
-                              return publicKey
-                          }`,
+			script := fmt.Sprintf(
+				`
+                  pub fun main(): PublicKey {
+                      // Get a public key from host env
+                      let acc = getAccount(0x02)
+                      let publicKey = acc.keys.get(keyIndex: %d)!.publicKey
+                      return publicKey
+                  }
+                `,
 				index,
 			)
 
-			invoked := false
+			var invoked bool
 
 			runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
 			runtimeInterface.validatePublicKey = func(publicKey *stdlib.PublicKey) error {
@@ -1405,7 +1407,8 @@ func TestRuntimePublicKey(t *testing.T) {
                 )
             }
         `
-		invoked := false
+
+		var invoked bool
 
 		storage := newTestLedger(nil, nil)
 
@@ -1452,7 +1455,8 @@ func TestRuntimePublicKey(t *testing.T) {
                 )
             }
         `
-		invoked := false
+
+		var invoked bool
 
 		runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
 		runtimeInterface.verifySignature = func(
@@ -1596,7 +1600,7 @@ func TestAuthAccountContracts(t *testing.T) {
             }
         `)
 
-		invoked := false
+		var invoked bool
 
 		runtimeInterface := &testRuntimeInterface{
 			getSigningAccounts: func() ([]Address, error) {
@@ -1720,7 +1724,7 @@ func TestPublicAccountContracts(t *testing.T) {
             }
         `)
 
-		invoked := false
+		var invoked bool
 
 		runtimeInterface := &testRuntimeInterface{
 			getSigningAccounts: func() ([]Address, error) {
@@ -1778,7 +1782,7 @@ func TestPublicAccountContracts(t *testing.T) {
             }
         `)
 
-		invoked := false
+		var invoked bool
 
 		runtimeInterface := &testRuntimeInterface{
 			getSigningAccounts: func() ([]Address, error) {
@@ -1818,7 +1822,7 @@ func TestPublicAccountContracts(t *testing.T) {
             }
         `)
 
-		invoked := false
+		var invoked bool
 
 		runtimeInterface := &testRuntimeInterface{
 			getSigningAccounts: func() ([]Address, error) {

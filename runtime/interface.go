@@ -102,7 +102,7 @@ type Interface interface {
 	// MeterComputation is a callback method for metering computation, it returns error
 	// when computation passes the limit (set by the environment)
 	MeterComputation(operationType common.ComputationKind, intensity uint) error
-	// DecodeArgument decodes a transaction argument against the given type.
+	// DecodeArgument decodes a transaction/script argument against the given type.
 	DecodeArgument(argument []byte, argumentType cadence.Type) (cadence.Value, error)
 	// GetCurrentBlockHeight returns the current block height.
 	GetCurrentBlockHeight() (uint64, error)
@@ -140,11 +140,11 @@ type Interface interface {
 	// RecordTrace records an opentelemetry trace.
 	RecordTrace(operation string, location Location, duration time.Duration, attrs []attribute.KeyValue)
 	// BLSVerifyPOP verifies a proof of possession (PoP) for the receiver public key.
-	BLSVerifyPOP(pk *PublicKey, s []byte) (bool, error)
+	BLSVerifyPOP(publicKey *PublicKey, signature []byte) (bool, error)
 	// BLSAggregateSignatures aggregate multiple BLS signatures into one.
-	BLSAggregateSignatures(sigs [][]byte) ([]byte, error)
+	BLSAggregateSignatures(signatures [][]byte) ([]byte, error)
 	// BLSAggregatePublicKeys aggregate multiple BLS public keys into one.
-	BLSAggregatePublicKeys(keys []*PublicKey) (*PublicKey, error)
+	BLSAggregatePublicKeys(publicKeys []*PublicKey) (*PublicKey, error)
 	// ResourceOwnerChanged gets called when a resource's owner changed (if enabled)
 	ResourceOwnerChanged(
 		interpreter *interpreter.Interpreter,

@@ -28,6 +28,7 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 type Script struct {
@@ -351,9 +352,16 @@ func userPanicToError(f func()) (returnedError error) {
 	return nil
 }
 
+type ArgumentDecoder interface {
+	stdlib.StandardLibraryHandler
+
+	// DecodeArgument decodes a transaction/script argument against the given type.
+	DecodeArgument(argument []byte, argumentType cadence.Type) (cadence.Value, error)
+}
+
 func validateArgumentParams(
 	inter *interpreter.Interpreter,
-	runtimeInterface Interface,
+	decoder ArgumentDecoder,
 	locationRange interpreter.LocationRange,
 	arguments [][]byte,
 	parameters []*sema.Parameter,
@@ -374,16 +382,16 @@ func validateArgumentParams(
 	argumentValues := make([]interpreter.Value, len(arguments))
 
 	// Decode arguments against parameter types
-	for i, parameter := range parameters {
+	for parameterIndex, parameter := range parameters {
 		parameterType := parameter.TypeAnnotation.Type
-		argument := arguments[i]
+		argument := arguments[parameterIndex]
 
 		exportedParameterType := ExportMeteredType(inter, parameterType, map[sema.TypeID]cadence.Type{})
 		var value cadence.Value
 		var err error
 
 		wrapPanic(func() {
-			value, err = runtimeInterface.DecodeArgument(
+			value, err = decoder.DecodeArgument(
 				argument,
 				exportedParameterType,
 			)
@@ -391,7 +399,7 @@ func validateArgumentParams(
 
 		if err != nil {
 			return nil, &InvalidEntryPointArgumentError{
-				Index: i,
+				Index: parameterIndex,
 				Err:   err,
 			}
 		}
@@ -402,6 +410,7 @@ func validateArgumentParams(
 			arg, err = ImportValue(
 				inter,
 				locationRange,
+				decoder,
 				value,
 				parameterType,
 			)
@@ -409,14 +418,14 @@ func validateArgumentParams(
 
 		if panicError != nil {
 			return nil, &InvalidEntryPointArgumentError{
-				Index: i,
+				Index: parameterIndex,
 				Err:   panicError,
 			}
 		}
 
 		if err != nil {
 			return nil, &InvalidEntryPointArgumentError{
-				Index: i,
+				Index: parameterIndex,
 				Err:   err,
 			}
 		}
@@ -433,7 +442,7 @@ func validateArgumentParams(
 		// Check that decoded value is a subtype of static parameter type
 		if !inter.IsSubTypeOfSemaType(argType, parameterType) {
 			return nil, &InvalidEntryPointArgumentError{
-				Index: i,
+				Index: parameterIndex,
 				Err: &InvalidValueTypeError{
 					ExpectedType: parameterType,
 				},
@@ -447,7 +456,7 @@ func validateArgumentParams(
 			interpreter.TypeConformanceResults{},
 		) {
 			return nil, &InvalidEntryPointArgumentError{
-				Index: i,
+				Index: parameterIndex,
 				Err: &MalformedValueError{
 					ExpectedType: parameterType,
 				},
@@ -461,13 +470,13 @@ func validateArgumentParams(
 			}
 
 			if !hasValidStaticType(inter, value) {
-				panic(errors.NewUnexpectedError("invalid static type for argument: %d", i))
+				panic(errors.NewUnexpectedError("invalid static type for argument: %d", parameterIndex))
 			}
 
 			return true
 		})
 
-		argumentValues[i] = arg
+		argumentValues[parameterIndex] = arg
 	}
 
 	return argumentValues, nil
@@ -590,7 +599,7 @@ func (r *interpreterRuntime) ReadStored(
 		return nil, err
 	}
 
-	pathValue := importPathValue(inter, path)
+	pathValue := valueImporter{inter: inter}.importPathValue(path)
 
 	domain := pathValue.Domain.Identifier()
 	identifier := pathValue.Identifier
@@ -634,9 +643,11 @@ func (r *interpreterRuntime) ReadLinked(
 		return nil, err
 	}
 
+	pathValue := valueImporter{inter: inter}.importPathValue(path)
+
 	targetPath, _, err := inter.GetCapabilityFinalTargetPath(
 		address,
-		importPathValue(inter, path),
+		pathValue,
 		&sema.ReferenceType{
 			Type: sema.AnyType,
 		},

@@ -33,7 +33,7 @@ func TestCheckHashAlgorithmCases(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	for _, value := range stdlib.BuiltinValues {
+	for _, value := range stdlib.DefaultScriptStandardLibraryValues(nil) {
 		baseValueActivation.DeclareValue(value)
 	}
 
@@ -66,7 +66,7 @@ func TestCheckHashAlgorithmConstructor(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(stdlib.HashAlgorithmConstructor)
+	baseValueActivation.DeclareValue(stdlib.NewHashAlgorithmConstructor(nil))
 
 	_, err := ParseAndCheckWithOptions(t,
 		`
@@ -87,7 +87,7 @@ func TestCheckHashAlgorithmHashFunctions(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(stdlib.HashAlgorithmConstructor)
+	baseValueActivation.DeclareValue(stdlib.NewHashAlgorithmConstructor(nil))
 
 	_, err := ParseAndCheckWithOptions(t,
 		`
@@ -162,7 +162,7 @@ func TestCheckVerifyPoP(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	for _, valueDeclaration := range stdlib.BuiltinValues {
+	for _, valueDeclaration := range stdlib.DefaultStandardLibraryValues(nil) {
 		baseValueActivation.DeclareValue(valueDeclaration)
 	}
 
@@ -189,7 +189,7 @@ func TestCheckVerifyPoPInvalidArgument(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	for _, valueDeclaration := range stdlib.BuiltinValues {
+	for _, valueDeclaration := range stdlib.DefaultStandardLibraryValues(nil) {
 		baseValueActivation.DeclareValue(valueDeclaration)
 	}
 
@@ -219,7 +219,7 @@ func TestCheckBLSAggregateSignatures(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(stdlib.BLSContract)
+	baseValueActivation.DeclareValue(stdlib.NewBLSContract(nil, nil))
 
 	_, err := ParseAndCheckWithOptions(t,
 		`
@@ -240,7 +240,7 @@ func TestCheckInvalidBLSAggregateSignatures(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(stdlib.BLSContract)
+	baseValueActivation.DeclareValue(stdlib.NewBLSContract(nil, nil))
 
 	_, err := ParseAndCheckWithOptions(t,
 		`
@@ -264,7 +264,7 @@ func TestCheckBLSAggregatePublicKeys(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	for _, valueDeclaration := range stdlib.BuiltinValues {
+	for _, valueDeclaration := range stdlib.DefaultStandardLibraryValues(nil) {
 		baseValueActivation.DeclareValue(valueDeclaration)
 	}
 
@@ -292,7 +292,7 @@ func TestCheckInvalidBLSAggregatePublicKeys(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	for _, valueDeclaration := range stdlib.BuiltinValues {
+	for _, valueDeclaration := range stdlib.DefaultStandardLibraryValues(nil) {
 		baseValueActivation.DeclareValue(valueDeclaration)
 	}
 

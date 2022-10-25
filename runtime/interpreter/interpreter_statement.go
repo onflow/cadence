@@ -37,17 +37,19 @@ func (interpreter *Interpreter) evalStatement(statement ast.Statement) Statement
 
 	interpreter.statement = statement
 
-	onMeterComputation := interpreter.Config.OnMeterComputation
+	config := interpreter.sharedState.config
+
+	onMeterComputation := config.OnMeterComputation
 	if onMeterComputation != nil {
 		onMeterComputation(common.ComputationKindStatement, 1)
 	}
 
-	debugger := interpreter.Config.Debugger
+	debugger := config.Debugger
 	if debugger != nil {
 		debugger.onStatement(interpreter, statement)
 	}
 
-	onStatement := interpreter.Config.OnStatement
+	onStatement := config.OnStatement
 	if onStatement != nil {
 		onStatement(interpreter, statement)
 	}
@@ -382,7 +384,9 @@ func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement)
 		HasPosition: statement,
 	}
 
-	onEventEmitted := interpreter.Config.OnEventEmitted
+	config := interpreter.sharedState.config
+
+	onEventEmitted := config.OnEventEmitted
 	if onEventEmitted == nil {
 		panic(EventEmissionUnavailableError{
 			LocationRange: locationRange,

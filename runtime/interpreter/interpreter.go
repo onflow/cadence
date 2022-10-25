@@ -143,79 +143,6 @@ type PublicAccountHandlerFunc func(
 // UUIDHandlerFunc is a function that handles the generation of UUIDs.
 type UUIDHandlerFunc func() (uint64, error)
 
-// PublicKeyValidationHandlerFunc is a function that validates a given public key.
-// Parameter types:
-// - publicKey: PublicKey
-type PublicKeyValidationHandlerFunc func(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	publicKey *CompositeValue,
-) error
-
-// BLSVerifyPoPHandlerFunc is a function that verifies a BLS proof of possession.
-// Parameter types:
-// - publicKey: PublicKey
-// - signature: [UInt8]
-// Expected result type: Bool
-type BLSVerifyPoPHandlerFunc func(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	publicKey MemberAccessibleValue,
-	signature *ArrayValue,
-) BoolValue
-
-// BLSAggregateSignaturesHandlerFunc is a function that aggregates multiple BLS signatures.
-// Parameter types:
-// - signatures: [[UInt8]]
-// Expected result type: [UInt8]?
-type BLSAggregateSignaturesHandlerFunc func(
-	inter *Interpreter,
-	locationRange LocationRange,
-	signatures *ArrayValue,
-) OptionalValue
-
-// BLSAggregatePublicKeysHandlerFunc is a function that aggregates multiple BLS public keys.
-// Parameter types:
-// - publicKeys: [PublicKey]
-// Expected result type: PublicKey?
-type BLSAggregatePublicKeysHandlerFunc func(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	publicKeys *ArrayValue,
-) OptionalValue
-
-// SignatureVerificationHandlerFunc is a function that validates a signature.
-// Parameter types:
-// - signature: [UInt8]
-// - signedData: [UInt8]
-// - domainSeparationTag: String
-// - hashAlgorithm: HashAlgorithm
-// - publicKey: PublicKey
-// Expected result type: Bool
-type SignatureVerificationHandlerFunc func(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	signature *ArrayValue,
-	signedData *ArrayValue,
-	domainSeparationTag *StringValue,
-	hashAlgorithm *SimpleCompositeValue,
-	publicKey MemberAccessibleValue,
-) BoolValue
-
-// HashHandlerFunc is a function that hashes.
-// Parameter types:
-// - data: [UInt8]
-// - domainSeparationTag: [UInt8]
-// - hashAlgorithm: HashAlgorithm
-// Expected result type: [UInt8]
-type HashHandlerFunc func(
-	inter *Interpreter,
-	locationRange LocationRange,
-	data *ArrayValue,
-	domainSeparationTag *StringValue,
-	hashAlgorithm MemberAccessibleValue,
-) *ArrayValue
-
 // CompositeTypeCode contains the "prepared" / "callable" "code"
 // for the functions and the destructor of a composite
 // (contract, struct, resource, event).
@@ -282,7 +209,6 @@ type Interpreter struct {
 	activations  *VariableActivations
 	Globals      GlobalVariables
 	Transactions []*HostFunctionValue
-	Config       *Config
 	interpreted  bool
 	statement    ast.Statement
 }
@@ -310,8 +236,7 @@ func NewInterpreter(
 	return newInterpreter(
 		program,
 		location,
-		newSharedState(),
-		config,
+		newSharedState(config),
 	)
 }
 
@@ -319,14 +244,12 @@ func newInterpreter(
 	program *Program,
 	location common.Location,
 	sharedState *sharedState,
-	config *Config,
 ) (*Interpreter, error) {
 
 	interpreter := &Interpreter{
 		Program:     program,
 		Location:    location,
 		sharedState: sharedState,
-		Config:      config,
 	}
 
 	// Register self
@@ -336,7 +259,7 @@ func newInterpreter(
 
 	interpreter.activations = activations.NewActivations[*Variable](interpreter)
 
-	baseActivation := config.BaseActivation
+	baseActivation := sharedState.config.BaseActivation
 	if baseActivation == nil {
 		baseActivation = BaseActivation
 	}
@@ -1138,6 +1061,8 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 	qualifiedIdentifier := compositeType.QualifiedIdentifier()
 
+	config := interpreter.sharedState.config
+
 	constructorGenerator := func(address common.Address) *HostFunctionValue {
 		return NewHostFunctionValue(
 			interpreter,
@@ -1160,7 +1085,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				// Load injected fields
 				var injectedFields map[string]Value
 				injectedCompositeFieldsHandler :=
-					interpreter.Config.InjectedCompositeFieldsHandler
+					config.InjectedCompositeFieldsHandler
 				if injectedCompositeFieldsHandler != nil {
 					injectedFields = injectedCompositeFieldsHandler(
 						interpreter,
@@ -1174,7 +1099,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 				if declaration.CompositeKind == common.CompositeKindResource {
 
-					uuidHandler := interpreter.Config.UUIDHandler
+					uuidHandler := config.UUIDHandler
 					if uuidHandler == nil {
 						panic(UUIDUnavailableError{
 							LocationRange: locationRange,
@@ -1247,7 +1172,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 		variable.getter = func() Value {
 			positioned := ast.NewRangeFromPositioned(interpreter, declaration.Identifier)
 
-			contractValue := interpreter.Config.ContractValueHandler(
+			contractValue := config.ContractValueHandler(
 				interpreter,
 				compositeType,
 				constructorGenerator,
@@ -2100,7 +2025,7 @@ func (interpreter *Interpreter) EnsureLoaded(
 	return interpreter.ensureLoadedWithLocationHandler(
 		location,
 		func() Import {
-			return interpreter.Config.ImportLocationHandler(interpreter, location)
+			return interpreter.sharedState.config.ImportLocationHandler(interpreter, location)
 		},
 	)
 }
@@ -2178,11 +2103,9 @@ func (interpreter *Interpreter) NewSubInterpreter(
 	error,
 ) {
 	return newInterpreter(
-
 		program,
 		location,
 		interpreter.sharedState,
-		interpreter.Config,
 	)
 }
 
@@ -2191,7 +2114,8 @@ func (interpreter *Interpreter) storedValueExists(
 	domain string,
 	identifier string,
 ) bool {
-	accountStorage := interpreter.Config.Storage.GetStorageMap(storageAddress, domain, false)
+	config := interpreter.sharedState.config
+	accountStorage := config.Storage.GetStorageMap(storageAddress, domain, false)
 	if accountStorage == nil {
 		return false
 	}
@@ -2203,7 +2127,8 @@ func (interpreter *Interpreter) ReadStored(
 	domain string,
 	identifier string,
 ) Value {
-	accountStorage := interpreter.Config.Storage.GetStorageMap(storageAddress, domain, false)
+	config := interpreter.sharedState.config
+	accountStorage := config.Storage.GetStorageMap(storageAddress, domain, false)
 	if accountStorage == nil {
 		return nil
 	}
@@ -2216,7 +2141,8 @@ func (interpreter *Interpreter) WriteStored(
 	identifier string,
 	value Value,
 ) {
-	accountStorage := interpreter.Config.Storage.GetStorageMap(storageAddress, domain, true)
+	config := interpreter.sharedState.config
+	accountStorage := config.Storage.GetStorageMap(storageAddress, domain, true)
 	accountStorage.WriteValue(interpreter, identifier, value)
 	interpreter.recordStorageMutation()
 }
@@ -3227,7 +3153,8 @@ func (interpreter *Interpreter) IsSubTypeOfSemaType(subType StaticType, superTyp
 }
 
 func (interpreter *Interpreter) domainPaths(address common.Address, domain common.PathDomain) []Value {
-	storageMap := interpreter.Config.Storage.GetStorageMap(address, domain.Identifier(), false)
+	config := interpreter.sharedState.config
+	storageMap := config.Storage.GetStorageMap(address, domain.Identifier(), false)
 	if storageMap == nil {
 		return []Value{}
 	}
@@ -3271,6 +3198,7 @@ func (interpreter *Interpreter) recordStorageMutation() {
 
 func (interpreter *Interpreter) newStorageIterationFunction(addressValue AddressValue, domain common.PathDomain, pathType sema.Type) *HostFunctionValue {
 	address := addressValue.ToAddress()
+	config := interpreter.sharedState.config
 
 	return NewHostFunctionValue(
 		interpreter,
@@ -3282,7 +3210,7 @@ func (interpreter *Interpreter) newStorageIterationFunction(addressValue Address
 
 			locationRange := invocation.LocationRange
 			inter := invocation.Interpreter
-			storageMap := interpreter.Config.Storage.GetStorageMap(address, domain.Identifier(), false)
+			storageMap := config.Storage.GetStorageMap(address, domain.Identifier(), false)
 			if storageMap == nil {
 				// if nothing is stored, no iteration is required
 				return Void
@@ -3883,8 +3811,9 @@ func (interpreter *Interpreter) GetCapabilityFinalTargetPath(
 }
 
 func (interpreter *Interpreter) ConvertStaticToSemaType(staticType StaticType) (sema.Type, error) {
+	config := interpreter.sharedState.config
 	return ConvertStaticToSemaType(
-		interpreter.Config.MemoryGauge,
+		config.MemoryGauge,
 		staticType,
 		func(location common.Location, qualifiedIdentifier string) (*sema.InterfaceType, error) {
 			return interpreter.getInterfaceType(location, qualifiedIdentifier)
@@ -4006,12 +3935,14 @@ func (interpreter *Interpreter) getInterfaceType(location common.Location, quali
 }
 
 func (interpreter *Interpreter) reportLoopIteration(pos ast.HasPosition) {
-	onMeterComputation := interpreter.Config.OnMeterComputation
+	config := interpreter.sharedState.config
+
+	onMeterComputation := config.OnMeterComputation
 	if onMeterComputation != nil {
 		onMeterComputation(common.ComputationKindLoop, 1)
 	}
 
-	onLoopIteration := interpreter.Config.OnLoopIteration
+	onLoopIteration := config.OnLoopIteration
 	if onLoopIteration != nil {
 		line := pos.StartPosition().Line
 		onLoopIteration(interpreter, line)
@@ -4019,19 +3950,23 @@ func (interpreter *Interpreter) reportLoopIteration(pos ast.HasPosition) {
 }
 
 func (interpreter *Interpreter) reportFunctionInvocation() {
-	onMeterComputation := interpreter.Config.OnMeterComputation
+	config := interpreter.sharedState.config
+
+	onMeterComputation := config.OnMeterComputation
 	if onMeterComputation != nil {
 		onMeterComputation(common.ComputationKindFunctionInvocation, 1)
 	}
 
-	onFunctionInvocation := interpreter.Config.OnFunctionInvocation
+	onFunctionInvocation := config.OnFunctionInvocation
 	if onFunctionInvocation != nil {
 		onFunctionInvocation(interpreter)
 	}
 }
 
 func (interpreter *Interpreter) reportInvokedFunctionReturn() {
-	onInvokedFunctionReturn := interpreter.Config.OnInvokedFunctionReturn
+	config := interpreter.sharedState.config
+
+	onInvokedFunctionReturn := config.OnInvokedFunctionReturn
 	if onInvokedFunctionReturn == nil {
 		return
 	}
@@ -4040,7 +3975,9 @@ func (interpreter *Interpreter) reportInvokedFunctionReturn() {
 }
 
 func (interpreter *Interpreter) ReportComputation(compKind common.ComputationKind, intensity uint) {
-	onMeterComputation := interpreter.Config.OnMeterComputation
+	config := interpreter.sharedState.config
+
+	onMeterComputation := config.OnMeterComputation
 	if onMeterComputation != nil {
 		onMeterComputation(compKind, intensity)
 	}
@@ -4165,20 +4102,24 @@ func (interpreter *Interpreter) RemoveReferencedSlab(storable atree.Storable) {
 		return
 	}
 
+	config := interpreter.sharedState.config
+
 	storageID := atree.StorageID(storageIDStorable)
-	err := interpreter.Config.Storage.Remove(storageID)
+	err := config.Storage.Remove(storageID)
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
 }
 
 func (interpreter *Interpreter) maybeValidateAtreeValue(v atree.Value) {
-	if interpreter.Config.AtreeValueValidationEnabled {
+	config := interpreter.sharedState.config
+
+	if config.AtreeValueValidationEnabled {
 		interpreter.ValidateAtreeValue(v)
 	}
 
-	if interpreter.Config.AtreeStorageValidationEnabled {
-		err := interpreter.Config.Storage.CheckHealth()
+	if config.AtreeStorageValidationEnabled {
+		err := config.Storage.CheckHealth()
 		if err != nil {
 			panic(errors.NewExternalError(err))
 		}
@@ -4213,15 +4154,18 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 		return defaultHIP(value, buffer)
 	}
 
+	config := interpreter.sharedState.config
+	storage := config.Storage
+
 	compare := func(storable, otherStorable atree.Storable) bool {
-		value, err := storable.StoredValue(interpreter.Config.Storage)
+		value, err := storable.StoredValue(storage)
 		if err != nil {
 			panic(err)
 		}
 
 		if _, ok := value.(StringAtreeValue); ok {
 			equal, err := StringAtreeComparator(
-				interpreter.Config.Storage,
+				storage,
 				value,
 				otherStorable,
 			)
@@ -4233,7 +4177,7 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 		}
 
 		if equatableValue, ok := value.(EquatableValue); ok {
-			otherValue := StoredValue(interpreter, otherStorable, interpreter.Config.Storage)
+			otherValue := StoredValue(interpreter, otherStorable, storage)
 			return equatableValue.Equal(interpreter, EmptyLocationRange, otherValue)
 		}
 
@@ -4335,7 +4279,9 @@ func (interpreter *Interpreter) startResourceTracking(
 	hasPosition ast.HasPosition,
 ) {
 
-	if !interpreter.Config.InvalidatedResourceValidationEnabled ||
+	config := interpreter.sharedState.config
+
+	if !config.InvalidatedResourceValidationEnabled ||
 		identifier == sema.SelfIdentifier {
 		return
 	}
@@ -4368,8 +4314,9 @@ func (interpreter *Interpreter) checkInvalidatedResourceUse(
 	identifier string,
 	hasPosition ast.HasPosition,
 ) {
+	config := interpreter.sharedState.config
 
-	if !interpreter.Config.InvalidatedResourceValidationEnabled ||
+	if !config.InvalidatedResourceValidationEnabled ||
 		identifier == sema.SelfIdentifier {
 		return
 	}
@@ -4413,7 +4360,9 @@ func (interpreter *Interpreter) resourceForValidation(value Value) ResourceKinde
 }
 
 func (interpreter *Interpreter) invalidateResource(value Value) {
-	if !interpreter.Config.InvalidatedResourceValidationEnabled {
+	config := interpreter.sharedState.config
+
+	if !config.InvalidatedResourceValidationEnabled {
 		return
 	}
 
@@ -4432,7 +4381,8 @@ func (interpreter *Interpreter) invalidateResource(value Value) {
 
 // MeterMemory delegates the memory usage to the interpreter's memory gauge, if any.
 func (interpreter *Interpreter) MeterMemory(usage common.MemoryUsage) error {
-	common.UseMemory(interpreter.Config.MemoryGauge, usage)
+	config := interpreter.sharedState.config
+	common.UseMemory(config.MemoryGauge, usage)
 	return nil
 }
 
@@ -4448,4 +4398,8 @@ func (interpreter *Interpreter) DecodeStorable(
 
 func (interpreter *Interpreter) DecodeTypeInfo(decoder *cbor.StreamDecoder) (atree.TypeInfo, error) {
 	return DecodeTypeInfo(decoder, interpreter)
+}
+
+func (interpreter *Interpreter) Storage() Storage {
+	return interpreter.sharedState.config.Storage
 }

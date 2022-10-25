@@ -389,6 +389,8 @@ func TestExportValue(t *testing.T) {
 		{
 			label: "Account key",
 			valueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
+				hashAlgorithm, _ := stdlib.NewHashAlgorithmCase(1, nil)
+
 				return interpreter.NewAccountKeyValue(
 					inter,
 					interpreter.NewUnmeteredIntValueFromInt64(1),
@@ -399,15 +401,10 @@ func TestExportValue(t *testing.T) {
 							PublicKey: []byte{1, 2, 3},
 							SignAlgo:  2,
 						},
-						func(
-							_ *interpreter.Interpreter,
-							_ interpreter.LocationRange,
-							_ *interpreter.CompositeValue,
-						) error {
-							return nil
-						},
+						nil,
+						nil,
 					),
-					stdlib.NewHashAlgorithmCase(1),
+					hashAlgorithm,
 					interpreter.NewUnmeteredUFix64ValueWithInteger(10),
 					false,
 				)
@@ -514,6 +511,7 @@ func TestImportValue(t *testing.T) {
 			actual, err := ImportValue(
 				inter,
 				interpreter.EmptyLocationRange,
+				nil,
 				tt.value,
 				tt.expectedType,
 			)
@@ -3149,6 +3147,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 		actual, err := ImportValue(
 			inter,
 			interpreter.EmptyLocationRange,
+			nil,
 			value,
 			sema.ByteArrayType,
 		)
@@ -3219,6 +3218,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 		actual, err := ImportValue(
 			inter,
 			interpreter.EmptyLocationRange,
+			nil,
 			value,
 			&sema.VariableSizedType{
 				Type: sema.AnyStructType,
@@ -3263,6 +3263,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 		actual, err := ImportValue(
 			inter,
 			interpreter.EmptyLocationRange,
+			nil,
 			value,
 			sema.AnyStructType,
 		)
@@ -3352,6 +3353,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 		actual, err := ImportValue(
 			inter,
 			interpreter.EmptyLocationRange,
+			nil,
 			value,
 			&sema.DictionaryType{
 				KeyType:   sema.StringType,
@@ -3438,6 +3440,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 		actual, err := ImportValue(
 			inter,
 			interpreter.EmptyLocationRange,
+			nil,
 			value,
 			&sema.DictionaryType{
 				KeyType:   sema.StringType,
@@ -3501,6 +3504,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 		actual, err := ImportValue(
 			inter,
 			interpreter.EmptyLocationRange,
+			nil,
 			value,
 			sema.AnyStructType,
 		)
@@ -3657,7 +3661,7 @@ func TestRuntimeStringValueImport(t *testing.T) {
 
 		rt := newTestInterpreterRuntime()
 
-		validated := false
+		var validated bool
 
 		runtimeInterface := &testRuntimeInterface{
 			log: func(s string) {
@@ -4107,7 +4111,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 						},
 					).WithType(PublicKeyType)
 
-					publicKeyValidated := false
+					var publicKeyValidated bool
 
 					storage := newTestLedger(nil, nil)
 
@@ -4178,7 +4182,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			},
 		).WithType(PublicKeyType)
 
-		verifyInvoked := false
+		var verifyInvoked bool
 
 		storage := newTestLedger(nil, nil)
 
@@ -4562,7 +4566,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 		rt := newTestInterpreterRuntime()
 
-		publicKeyValidated := false
+		var publicKeyValidated bool
 
 		storage := newTestLedger(nil, nil)
 
@@ -4635,7 +4639,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 		rt := newTestInterpreterRuntime()
 
-		publicKeyValidated := false
+		var publicKeyValidated bool
 
 		storage := newTestLedger(nil, nil)
 
@@ -4842,6 +4846,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 		actual, err := ImportValue(
 			inter,
 			interpreter.EmptyLocationRange,
+			nil,
 			externalCompositeValue,
 			semaCompositeType,
 		)
