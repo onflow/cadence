@@ -787,7 +787,7 @@ func newAccountKeysCountGetter(
 	gauge common.MemoryGauge,
 	provider AccountKeyProvider,
 	addressValue interpreter.AddressValue,
-) interpreter.AccountKeysCountConstructor {
+) interpreter.AccountKeysCountGetter {
 	address := addressValue.ToAddress()
 
 	return func() interpreter.UInt64Value {
