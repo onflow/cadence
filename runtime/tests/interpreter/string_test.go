@@ -229,6 +229,27 @@ func TestInterpretStringFromUtf8(t *testing.T) {
 	}
 }
 
+func TestInterpretStringFromCharacters(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+      fun test(): String {
+          return String.fromCharacters(["👪", "❤️"])
+      }
+	`)
+
+	result, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	RequireValuesEqual(
+		t,
+		inter,
+		interpreter.NewUnmeteredStringValue("👪❤️"),
+		result,
+	)
+}
+
 func TestInterpretStringUtf8Field(t *testing.T) {
 
 	t.Parallel()
@@ -424,20 +445,20 @@ func TestInterpretCompareCharacters(t *testing.T) {
 		t,
 		inter,
 		interpreter.BoolValue(true),
-		inter.Globals["x"].GetValue(),
+		inter.Globals.Get("x").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.BoolValue(true),
-		inter.Globals["y"].GetValue(),
+		inter.Globals.Get("y").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.BoolValue(false),
-		inter.Globals["z"].GetValue(),
+		inter.Globals.Get("z").GetValue(),
 	)
 }

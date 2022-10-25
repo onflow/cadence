@@ -291,6 +291,8 @@ func newAuthAccountKeysValue(
 			handler,
 			addressValue,
 		),
+		newAccountKeysForEachFunction(gauge, handler, addressValue),
+		newAccountKeysCountConstructor(gauge, handler, addressValue),
 	)
 }
 
@@ -624,6 +626,12 @@ type PublicKey struct {
 type AccountKeyProvider interface {
 	// GetAccountKey retrieves a key from an account by index.
 	GetAccountKey(address common.Address, index int) (*AccountKey, error)
+	AccountKeysCount(address common.Address) uint64
+}
+
+// public keys are assumed to be already validated
+var assumePublicKeyIsValid interpreter.PublicKeyValidationHandlerFunc = func(_ *interpreter.Interpreter, _ interpreter.LocationRange, _ *interpreter.CompositeValue) error {
+	return nil
 }
 
 func newAccountKeysGetFunction(
@@ -670,19 +678,115 @@ func newAccountKeysGetFunction(
 					inter,
 					locationRange,
 					accountKey,
-					// public keys are assumed to be already validated.
-					func(
-						_ *interpreter.Interpreter,
-						_ interpreter.LocationRange,
-						_ *interpreter.CompositeValue,
-					) error {
-						return nil
-					},
+					assumePublicKeyIsValid,
 				),
 			)
 		},
 		sema.AccountKeysTypeGetFunctionType,
 	)
+}
+
+// the AccountKey in `forEachKey(_ f: ((AccountKey): Bool)): Void`
+var accountKeysForEachCallbackTypeParams []sema.Type = []sema.Type{sema.AccountKeyType}
+
+func newAccountKeysForEachFunction(
+	gauge common.MemoryGauge,
+	provider AccountKeyProvider,
+	addressValue interpreter.AddressValue,
+) *interpreter.HostFunctionValue {
+	address := addressValue.ToAddress()
+
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			fnValue, ok := invocation.Arguments[0].(interpreter.FunctionValue)
+
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
+
+			newSubInvocation := func(key interpreter.Value) interpreter.Invocation {
+				return interpreter.NewInvocation(
+					inter,
+					nil,
+					[]interpreter.Value{key},
+					accountKeysForEachCallbackTypeParams,
+					nil,
+					locationRange,
+				)
+			}
+
+			liftKeyToValue := func(key *AccountKey) interpreter.Value {
+				return NewAccountKeyValue(
+					inter,
+					locationRange,
+					key,
+					assumePublicKeyIsValid,
+				)
+			}
+
+			count := int(provider.AccountKeysCount(address))
+
+			var err error
+			var accountKey *AccountKey
+
+			for index := 0; index < count; index++ {
+				wrapPanic(func() {
+					accountKey, err = provider.GetAccountKey(address, index)
+				})
+				if err != nil {
+					panic(err)
+				}
+
+				// Here it is expected the host function to return a nil key, if a key is not found at the given index.
+				// This is done because, if the host function returns an error when a key is not found, then
+				// currently there's no way to distinguish between a 'key not found error' vs other internal errors.
+				if accountKey == nil {
+					continue
+				}
+
+				liftedKey := liftKeyToValue(accountKey)
+
+				res, err := inter.InvokeFunction(
+					fnValue,
+					newSubInvocation(liftedKey),
+				)
+				if err != nil {
+					// interpreter panicked while invoking the inner function value
+					panic(err)
+				}
+
+				shouldContinue, ok := res.(interpreter.BoolValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				if !bool(shouldContinue) {
+					break
+				}
+			}
+
+			return interpreter.Void
+		},
+		sema.AccountKeysTypeForEachFunctionType,
+	)
+}
+
+func newAccountKeysCountConstructor(
+	gauge common.MemoryGauge,
+	provider AccountKeyProvider,
+	addressValue interpreter.AddressValue,
+) interpreter.AccountKeysCountConstructor {
+	address := addressValue.ToAddress()
+
+	return func() interpreter.UInt64Value {
+		return interpreter.NewUInt64Value(gauge, func() uint64 {
+			return provider.AccountKeysCount(address)
+		})
+	}
 }
 
 type AccountKeyRevocationHandler interface {
@@ -776,6 +880,16 @@ func newPublicAccountKeysValue(
 			handler,
 			addressValue,
 		),
+		newAccountKeysForEachFunction(
+			gauge,
+			handler,
+			addressValue,
+		),
+		newAccountKeysCountConstructor(
+			gauge,
+			handler,
+			addressValue,
+		),
 	)
 }
 
@@ -845,23 +959,13 @@ func accountInboxPublishFunction(
 				locationRange,
 			)
 
-			value = value.Transfer(
+			publishedValue := interpreter.NewPublishedValue(inter, recipientValue, value).Transfer(
 				inter,
 				locationRange,
 				atree.Address(address),
 				true,
 				nil,
-			).(*interpreter.CapabilityValue)
-
-			recipient := recipientValue.Transfer(
-				inter,
-				locationRange,
-				atree.Address(address),
-				true,
-				nil,
-			).(interpreter.AddressValue)
-
-			publishedValue := interpreter.NewPublishedValue(inter, recipient, value)
+			)
 
 			inter.WriteStored(address, inboxStorageDomain, nameValue.Str, publishedValue)
 
@@ -912,16 +1016,6 @@ func accountInboxUnpublishFunction(
 				})
 			}
 
-			handler.EmitEvent(
-				inter,
-				AccountInboxUnpublishedEventType,
-				[]interpreter.Value{
-					providerValue,
-					nameValue,
-				},
-				locationRange,
-			)
-
 			value := publishedValue.Value.Transfer(
 				inter,
 				locationRange,
@@ -931,6 +1025,16 @@ func accountInboxUnpublishFunction(
 			)
 
 			inter.WriteStored(address, inboxStorageDomain, nameValue.Str, nil)
+
+			handler.EmitEvent(
+				inter,
+				AccountInboxUnpublishedEventType,
+				[]interpreter.Value{
+					providerValue,
+					nameValue,
+				},
+				locationRange,
+			)
 
 			return interpreter.NewSomeValueNonCopying(inter, value)
 		},

@@ -20,9 +20,11 @@ package runtime
 
 import (
 	"fmt"
+	"strconv"
 	"testing"
 
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/tests/checker"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -32,10 +34,14 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
+	"github.com/onflow/cadence/runtime/tests/utils"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestRuntimeTransaction_AddPublicKey(t *testing.T) {
+
+	t.Parallel()
+
 	rt := newTestInterpreterRuntime()
 
 	keyA := cadence.NewArray([]cadence.Value{
@@ -196,6 +202,10 @@ func TestRuntimeAccountKeyConstructor(t *testing.T) {
 	assert.Contains(t, err.Error(), "cannot find variable in this scope: `AccountKey`")
 }
 
+func noopRuntimeUInt64Getter(_ common.Address) (uint64, error) {
+	return 0, nil
+}
+
 func TestRuntimeReturnPublicAccount(t *testing.T) {
 
 	t.Parallel()
@@ -210,17 +220,12 @@ func TestRuntimeReturnPublicAccount(t *testing.T) {
     `)
 
 	runtimeInterface := &testRuntimeInterface{
-		getAccountBalance: func(_ common.Address) (uint64, error) {
-			return 0, nil
-		},
-		getAccountAvailableBalance: func(_ common.Address) (uint64, error) {
-			return 0, nil
-		},
-		getStorageUsed: func(_ common.Address) (uint64, error) {
-			return 0, nil
-		},
-		getStorageCapacity: func(_ common.Address) (uint64, error) {
-			return 0, nil
+		getAccountBalance:          noopRuntimeUInt64Getter,
+		getAccountAvailableBalance: noopRuntimeUInt64Getter,
+		getStorageUsed:             noopRuntimeUInt64Getter,
+		getStorageCapacity:         noopRuntimeUInt64Getter,
+		accountKeysCount: func(_ common.Address) uint64 {
+			return 0
 		},
 		storage: newTestLedger(nil, nil),
 	}
@@ -253,19 +258,12 @@ func TestRuntimeReturnAuthAccount(t *testing.T) {
     `)
 
 	runtimeInterface := &testRuntimeInterface{
-		getAccountBalance: func(_ common.Address) (uint64, error) {
-			return 0, nil
-		},
-		getAccountAvailableBalance: func(_ common.Address) (uint64, error) {
-			return 0, nil
-		},
-		getStorageUsed: func(_ common.Address) (uint64, error) {
-			return 0, nil
-		},
-		getStorageCapacity: func(_ common.Address) (uint64, error) {
-			return 0, nil
-		},
-		storage: newTestLedger(nil, nil),
+		getAccountBalance:          noopRuntimeUInt64Getter,
+		getAccountAvailableBalance: noopRuntimeUInt64Getter,
+		getStorageUsed:             noopRuntimeUInt64Getter,
+		getStorageCapacity:         noopRuntimeUInt64Getter,
+		accountKeysCount:           func(_ common.Address) uint64 { return 0 },
+		storage:                    newTestLedger(nil, nil),
 	}
 
 	nextTransactionLocation := newTransactionLocationGenerator()
@@ -350,34 +348,50 @@ var revokedAccountKeyA = func() *stdlib.AccountKey {
 	return &revokedKey
 }()
 
+type accountTestEnvironment struct {
+	storage          *testAccountKeyStorage
+	runtime          Runtime
+	runtimeInterface *testRuntimeInterface
+}
+
+func newAccountTestEnv() accountTestEnvironment {
+	storage := newTestAccountKeyStorage()
+	rt := newTestInterpreterRuntime()
+	rtInterface := getAccountKeyTestRuntimeInterface(storage)
+
+	addPublicKeyValidation(rtInterface, nil)
+
+	return accountTestEnvironment{
+		storage,
+		rt,
+		rtInterface,
+	}
+}
+
 func TestRuntimeAuthAccountKeys(t *testing.T) {
 
 	t.Parallel()
+
+	initTestEnvironment := func(t *testing.T) accountTestEnvironment {
+		testEnv := newAccountTestEnv()
+		addAuthAccountKey(t, testEnv.runtime, testEnv.runtimeInterface)
+		return testEnv
+	}
 
 	t.Run("add key", func(t *testing.T) {
 
 		t.Parallel()
 
-		storage := newTestAccountKeyStorage()
-		rt := newTestInterpreterRuntime()
-		runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
-		addPublicKeyValidation(runtimeInterface, nil)
-		addAuthAccountKey(t, rt, runtimeInterface)
+		testEnv := initTestEnvironment(t)
 
-		assert.Equal(t, []*stdlib.AccountKey{accountKeyA}, storage.keys)
-		assert.Equal(t, accountKeyA, storage.returnedKey)
+		assert.Equal(t, []*stdlib.AccountKey{accountKeyA}, testEnv.storage.keys)
+		assert.Equal(t, accountKeyA, testEnv.storage.returnedKey)
 	})
 
 	t.Run("get existing key", func(t *testing.T) {
 
 		t.Parallel()
-
-		storage := newTestAccountKeyStorage()
-		rt := newTestInterpreterRuntime()
-		runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
-		addPublicKeyValidation(runtimeInterface, nil)
-
-		addAuthAccountKey(t, rt, runtimeInterface)
+		testEnv := initTestEnvironment(t)
 
 		test := accountKeyTestCase{
 			code: `
@@ -391,17 +405,17 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 			args: []cadence.Value{},
 		}
 
-		err := test.executeTransaction(rt, runtimeInterface)
+		err := test.executeTransaction(testEnv.runtime, testEnv.runtimeInterface)
 		require.NoError(t, err)
 
-		assert.Equal(t, []*stdlib.AccountKey{accountKeyA}, storage.keys)
-		assert.Equal(t, accountKeyA, storage.returnedKey)
+		assert.Equal(t, []*stdlib.AccountKey{accountKeyA}, testEnv.storage.keys)
+		assert.Equal(t, accountKeyA, testEnv.storage.returnedKey)
 		assert.Equal(
 			t,
 			[]string{
 				"AccountKey(keyIndex: 0, publicKey: PublicKey(publicKey: [1, 2, 3], signatureAlgorithm: SignatureAlgorithm(rawValue: 1)), hashAlgorithm: HashAlgorithm(rawValue: 3), weight: 100.00000000, isRevoked: false)",
 			},
-			storage.logs,
+			testEnv.storage.logs,
 		)
 	})
 
@@ -409,12 +423,7 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 
 		t.Parallel()
 
-		storage := newTestAccountKeyStorage()
-		rt := newTestInterpreterRuntime()
-		runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
-		addPublicKeyValidation(runtimeInterface, nil)
-
-		addAuthAccountKey(t, rt, runtimeInterface)
+		testEnv := initTestEnvironment(t)
 
 		test := accountKeyTestCase{
 			code: `
@@ -427,21 +436,16 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 			args: []cadence.Value{},
 		}
 
-		err := test.executeTransaction(rt, runtimeInterface)
+		err := test.executeTransaction(testEnv.runtime, testEnv.runtimeInterface)
 		require.NoError(t, err)
-		assert.Nil(t, storage.returnedKey)
+		assert.Nil(t, testEnv.storage.returnedKey)
 	})
 
 	t.Run("revoke existing key", func(t *testing.T) {
 
 		t.Parallel()
 
-		storage := newTestAccountKeyStorage()
-		rt := newTestInterpreterRuntime()
-		runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
-		addPublicKeyValidation(runtimeInterface, nil)
-
-		addAuthAccountKey(t, rt, runtimeInterface)
+		testEnv := initTestEnvironment(t)
 
 		test := accountKeyTestCase{
 			code: `
@@ -454,23 +458,18 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 			args: []cadence.Value{},
 		}
 
-		err := test.executeTransaction(rt, runtimeInterface)
+		err := test.executeTransaction(testEnv.runtime, testEnv.runtimeInterface)
 		require.NoError(t, err)
 
-		assert.Equal(t, []*stdlib.AccountKey{revokedAccountKeyA}, storage.keys)
-		assert.Equal(t, revokedAccountKeyA, storage.returnedKey)
+		assert.Equal(t, []*stdlib.AccountKey{revokedAccountKeyA}, testEnv.storage.keys)
+		assert.Equal(t, revokedAccountKeyA, testEnv.storage.returnedKey)
 	})
 
 	t.Run("revoke non-existing key", func(t *testing.T) {
 
 		t.Parallel()
 
-		storage := newTestAccountKeyStorage()
-		rt := newTestInterpreterRuntime()
-		runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
-		addPublicKeyValidation(runtimeInterface, nil)
-
-		addAuthAccountKey(t, rt, runtimeInterface)
+		testEnv := initTestEnvironment(t)
 
 		test := accountKeyTestCase{
 			code: `
@@ -483,9 +482,85 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 			args: []cadence.Value{},
 		}
 
-		err := test.executeTransaction(rt, runtimeInterface)
+		err := test.executeTransaction(testEnv.runtime, testEnv.runtimeInterface)
 		require.NoError(t, err)
-		assert.Nil(t, storage.returnedKey)
+		assert.Nil(t, testEnv.storage.returnedKey)
+	})
+
+	t.Run("get key count", func(t *testing.T) {
+		t.Parallel()
+
+		testEnv := initTestEnvironment(t)
+
+		test := accountKeyTestCase{
+			code: `
+				transaction {
+					prepare(signer: AuthAccount) {
+						assert(signer.keys.count == 1)
+
+						let key = signer.keys.revoke(keyIndex: 0) ?? panic("unexpectedly nil")
+						assert(key.isRevoked)
+
+						assert(signer.keys.count == 0)
+					}
+				}
+			`,
+			args: []cadence.Value{},
+		}
+
+		err := test.executeTransaction(testEnv.runtime, testEnv.runtimeInterface)
+		require.NoError(t, err)
+		assert.Equal(t, []*stdlib.AccountKey{revokedAccountKeyA}, testEnv.storage.keys)
+		assert.Equal(t, revokedAccountKeyA, testEnv.storage.returnedKey)
+	})
+
+	t.Run("test keys forEach", func(t *testing.T) {
+		t.Parallel()
+
+		testEnv := initTestEnvironment(t)
+		test := accountKeyTestCase{
+			code: `
+				transaction {
+					prepare(signer: AuthAccount) {
+						signer.keys.add(
+							publicKey: PublicKey(
+								publicKey: [1, 2, 3],
+								signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
+							),
+							hashAlgorithm: HashAlgorithm.SHA3_256,
+							weight: 100.0
+						)
+
+						signer.keys.revoke(keyIndex: 0) ?? panic("unexpectedly nil")
+
+						signer.keys.forEach(fun(key: AccountKey): Bool {
+							log(key.keyIndex)
+							return true
+						})
+					}
+				}
+			`,
+			args: []cadence.Value{},
+		}
+
+		err := test.executeTransaction(testEnv.runtime, testEnv.runtimeInterface)
+		require.NoError(t, err)
+
+		keys := make(map[int]*AccountKey, len(testEnv.storage.keys))
+		for _, key := range testEnv.storage.keys {
+			keys[key.KeyIndex] = key
+		}
+		for _, loggedIndex := range testEnv.storage.logs {
+			keyIdx, err := strconv.Atoi(loggedIndex)
+			require.NoError(t, err)
+
+			key, ok := keys[keyIdx]
+
+			require.NotNil(t, key)
+
+			assert.True(t, ok) // no key should be passed to the callback twice
+			keys[keyIdx] = nil
+		}
 	})
 }
 
@@ -550,16 +625,22 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 
 	t.Parallel()
 
+	initTestEnv := func(keys ...*AccountKey) accountTestEnvironment {
+		testEnv := newAccountTestEnv()
+		testEnv.storage.keys = append(testEnv.storage.keys, keys...)
+		for _, key := range keys {
+			if !key.IsRevoked {
+				testEnv.storage.unrevokedKeyCount++
+			}
+		}
+		return testEnv
+	}
+
 	t.Run("get key", func(t *testing.T) {
 
 		t.Parallel()
 
-		storage := newTestAccountKeyStorage()
-		storage.keys = append(storage.keys, accountKeyA, accountKeyB)
-
-		runtime := newTestInterpreterRuntime()
-		runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
-
+		testEnv := initTestEnv(accountKeyA, accountKeyB)
 		test := accountKeyTestCase{
 			code: `
               pub fun main(): AccountKey? {
@@ -570,7 +651,7 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 			args: []cadence.Value{},
 		}
 
-		value, err := test.executeScript(runtime, runtimeInterface)
+		value, err := test.executeScript(testEnv.runtime, testEnv.runtimeInterface)
 		require.NoError(t, err)
 		require.NotNil(t, value)
 
@@ -587,7 +668,7 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 		)
 
 		assert.Equal(t, expectedValue, optionalValue.Value)
-		assert.Equal(t, accountKeyA, storage.returnedKey)
+		assert.Equal(t, accountKeyA, testEnv.storage.returnedKey)
 
 	})
 
@@ -595,11 +676,7 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 
 		t.Parallel()
 
-		storage := newTestAccountKeyStorage()
-		storage.keys = append(storage.keys, accountKeyA, accountKeyB)
-
-		runtime := newTestInterpreterRuntime()
-		runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
+		testEnv := initTestEnv(accountKeyA, accountKeyB)
 
 		test := accountKeyTestCase{
 			code: `
@@ -611,7 +688,7 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 			args: []cadence.Value{},
 		}
 
-		value, err := test.executeScript(runtime, runtimeInterface)
+		value, err := test.executeScript(testEnv.runtime, testEnv.runtimeInterface)
 		require.NoError(t, err)
 		require.NotNil(t, value)
 
@@ -628,18 +705,14 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 		)
 
 		assert.Equal(t, expectedValue, optionalValue.Value)
-		assert.Equal(t, accountKeyB, storage.returnedKey)
+		assert.Equal(t, accountKeyB, testEnv.storage.returnedKey)
 	})
 
 	t.Run("get non-existing key", func(t *testing.T) {
 
 		t.Parallel()
 
-		storage := newTestAccountKeyStorage()
-		storage.keys = append(storage.keys, accountKeyA, accountKeyB)
-
-		runtime := newTestInterpreterRuntime()
-		runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
+		testEnv := initTestEnv(accountKeyA, accountKeyB)
 
 		test := accountKeyTestCase{
 			code: `
@@ -651,7 +724,7 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 			args: []cadence.Value{},
 		}
 
-		value, err := test.executeScript(runtime, runtimeInterface)
+		value, err := test.executeScript(testEnv.runtime, testEnv.runtimeInterface)
 		require.NoError(t, err)
 		require.NotNil(t, value)
 
@@ -665,11 +738,7 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 
 		t.Parallel()
 
-		storage := newTestAccountKeyStorage()
-		storage.keys = append(storage.keys, revokedAccountKeyA, accountKeyB)
-
-		runtime := newTestInterpreterRuntime()
-		runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
+		testEnv := initTestEnv(revokedAccountKeyA, accountKeyB)
 
 		test := accountKeyTestCase{
 			code: `
@@ -682,7 +751,7 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 			args: []cadence.Value{},
 		}
 
-		value, err := test.executeScript(runtime, runtimeInterface)
+		value, err := test.executeScript(testEnv.runtime, testEnv.runtimeInterface)
 		require.NoError(t, err)
 		require.NotNil(t, value)
 
@@ -699,7 +768,65 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 		)
 
 		assert.Equal(t, expectedValue, optionalValue.Value)
-		assert.Equal(t, revokedAccountKeyA, storage.returnedKey)
+		assert.Equal(t, revokedAccountKeyA, testEnv.storage.returnedKey)
+	})
+
+	t.Run("get key count", func(t *testing.T) {
+		t.Parallel()
+
+		testEnv := initTestEnv(revokedAccountKeyA, accountKeyB)
+
+		test := accountKeyTestCase{
+			code: `
+			pub fun main(): UInt64 {
+				return getAccount(0x02).keys.count
+			}
+			`,
+		}
+
+		value, err := test.executeScript(testEnv.runtime, testEnv.runtimeInterface)
+		require.NoError(t, err)
+		require.NotNil(t, value)
+
+		expected := cadence.UInt64(1)
+		assert.Equal(t, expected, value)
+	})
+
+	t.Run("test keys.forEach", func(t *testing.T) {
+		t.Parallel()
+
+		testEnv := initTestEnv(revokedAccountKeyA, accountKeyB)
+		test := accountKeyTestCase{
+			code: `
+				pub fun main() {
+						getAccount(0x02).keys.forEach(fun(key: AccountKey): Bool {
+							log(key.keyIndex)
+							return true
+						})
+					}
+			`,
+			args: []cadence.Value{},
+		}
+
+		value, err := test.executeScript(testEnv.runtime, testEnv.runtimeInterface)
+		require.NoError(t, err)
+		utils.AssertEqualWithDiff(t, cadence.Void{}, value)
+
+		keys := make(map[int]*AccountKey, len(testEnv.storage.keys))
+		for _, key := range testEnv.storage.keys {
+			keys[key.KeyIndex] = key
+		}
+		for _, loggedIndex := range testEnv.storage.logs {
+			keyIdx, err := strconv.Atoi(loggedIndex)
+			require.NoError(t, err)
+
+			key, ok := keys[keyIdx]
+
+			assert.True(t, ok)
+
+			require.NotNil(t, key)
+			keys[keyIdx] = nil // no key should be passed to the callback twice
+		}
 	})
 }
 
@@ -945,6 +1072,7 @@ func getAccountKeyTestRuntimeInterface(storage *testAccountKeyStorage) *testRunt
 			}
 
 			storage.keys = append(storage.keys, accountKey)
+			storage.unrevokedKeyCount += 1
 			storage.returnedKey = accountKey
 			return accountKey, nil
 		},
@@ -965,12 +1093,20 @@ func getAccountKeyTestRuntimeInterface(storage *testAccountKeyStorage) *testRunt
 			}
 
 			accountKey := storage.keys[index]
+
+			if !accountKey.IsRevoked {
+				storage.unrevokedKeyCount -= 1
+			}
+
 			accountKey.IsRevoked = true
 
 			storage.keys[index] = accountKey
 			storage.returnedKey = accountKey
 
 			return accountKey, nil
+		},
+		accountKeysCount: func(address Address) uint64 {
+			return uint64(storage.unrevokedKeyCount)
 		},
 		log: func(message string) {
 			storage.logs = append(storage.logs, message)
@@ -1079,25 +1215,27 @@ func (test accountKeyTestCase) executeScript(
 
 func newTestAccountKeyStorage() *testAccountKeyStorage {
 	return &testAccountKeyStorage{
-		events: make([]cadence.Event, 0),
-		keys:   make([]*stdlib.AccountKey, 0),
+		events:            make([]cadence.Event, 0),
+		keys:              make([]*stdlib.AccountKey, 0),
+		unrevokedKeyCount: 0,
 	}
 }
 
 type testAccountKeyStorage struct {
-	events      []cadence.Event
-	keys        []*stdlib.AccountKey
-	returnedKey *stdlib.AccountKey
-	logs        []string
+	events            []cadence.Event
+	keys              []*stdlib.AccountKey
+	unrevokedKeyCount int
+	returnedKey       *stdlib.AccountKey
+	logs              []string
 }
 
 func TestRuntimePublicKey(t *testing.T) {
 
 	t.Parallel()
 
-	rt := newTestInterpreterRuntime()
-
 	executeScript := func(code string, runtimeInterface Interface) (cadence.Value, error) {
+		rt := newTestInterpreterRuntime()
+
 		return rt.ExecuteScript(
 			Script{
 				Source: []byte(code),
@@ -1110,6 +1248,8 @@ func TestRuntimePublicKey(t *testing.T) {
 	}
 
 	t.Run("Constructor", func(t *testing.T) {
+		t.Parallel()
+
 		script := `
             pub fun main(): PublicKey {
                 let publicKey = PublicKey(
@@ -1146,6 +1286,8 @@ func TestRuntimePublicKey(t *testing.T) {
 	})
 
 	t.Run("Validate func", func(t *testing.T) {
+		t.Parallel()
+
 		script := `
             pub fun main(): Bool {
                 let publicKey =  PublicKey(
@@ -1166,6 +1308,8 @@ func TestRuntimePublicKey(t *testing.T) {
 	})
 
 	t.Run("Construct PublicKey in Cadence code", func(t *testing.T) {
+		t.Parallel()
+
 		script := `
               pub fun main(): PublicKey {
                   let publicKey = PublicKey(
@@ -1209,6 +1353,8 @@ func TestRuntimePublicKey(t *testing.T) {
 	})
 
 	t.Run("PublicKey from host env", func(t *testing.T) {
+		t.Parallel()
+
 		storage := newTestAccountKeyStorage()
 		storage.keys = append(storage.keys, accountKeyA, accountKeyB)
 
@@ -1242,6 +1388,8 @@ func TestRuntimePublicKey(t *testing.T) {
 	})
 
 	t.Run("Verify", func(t *testing.T) {
+		t.Parallel()
+
 		script := `
             pub fun main(): Bool {
                 let publicKey =  PublicKey(
@@ -1285,6 +1433,7 @@ func TestRuntimePublicKey(t *testing.T) {
 	})
 
 	t.Run("Verify - publicKey from host env", func(t *testing.T) {
+		t.Parallel()
 
 		storage := newTestAccountKeyStorage()
 		storage.keys = append(storage.keys, accountKeyA, accountKeyB)
@@ -1326,6 +1475,8 @@ func TestRuntimePublicKey(t *testing.T) {
 	})
 
 	t.Run("field mutability", func(t *testing.T) {
+		t.Parallel()
+
 		script := `
             pub fun main(): PublicKey {
                 let publicKey =  PublicKey(
@@ -1347,13 +1498,7 @@ func TestRuntimePublicKey(t *testing.T) {
 		}
 
 		_, err := executeScript(script, runtimeInterface)
-		RequireError(t, err)
-
-		var checkerErr *sema.CheckerError
-		require.ErrorAs(t, err, &checkerErr)
-
-		errs := checkerErr.Errors
-		require.Len(t, errs, 4)
+		errs := checker.RequireCheckerErrors(t, err, 4)
 
 		assert.IsType(t, &sema.InvalidAssignmentAccessError{}, errs[0])
 		assert.IsType(t, &sema.AssignmentToConstantMemberError{}, errs[1])
@@ -1362,6 +1507,8 @@ func TestRuntimePublicKey(t *testing.T) {
 	})
 
 	t.Run("raw-key mutability", func(t *testing.T) {
+		t.Parallel()
+
 		script := `
             pub fun main(): PublicKey {
                 let publicKey =  PublicKey(
@@ -1383,20 +1530,16 @@ func TestRuntimePublicKey(t *testing.T) {
 		addPublicKeyValidation(runtimeInterface, nil)
 
 		_, err := executeScript(script, runtimeInterface)
-
-		RequireError(t, err)
-
-		var checkerErr *sema.CheckerError
-		require.ErrorAs(t, err, &checkerErr)
-		errs := checkerErr.Errors
-		require.Len(t, errs, 1)
+		errs := checker.RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ExternalMutationError{}, errs[0])
 	})
 
 	t.Run("raw-key reference mutability", func(t *testing.T) {
+		t.Parallel()
+
 		script := `
-        pub fun main(): PublicKey {
+          pub fun main(): PublicKey {
             let publicKey =  PublicKey(
                 publicKey: "0102".decodeHex(),
                 signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
@@ -1514,12 +1657,7 @@ func TestAuthAccountContracts(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-		RequireError(t, err)
-
-		var checkerErr *sema.CheckerError
-		require.ErrorAs(t, err, &checkerErr)
-		errs := checkerErr.Errors
-		require.Len(t, errs, 1)
+		errs := checker.RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ExternalMutationError{}, errs[0])
 	})
@@ -1748,13 +1886,7 @@ func TestPublicAccountContracts(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-
-		RequireError(t, err)
-
-		var checkerErr *sema.CheckerError
-		require.ErrorAs(t, err, &checkerErr)
-		errs := checkerErr.Errors
-		require.Len(t, errs, 1)
+		errs := checker.RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ExternalMutationError{}, errs[0])
 	})
@@ -1792,13 +1924,7 @@ func TestPublicAccountContracts(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-
-		RequireError(t, err)
-
-		var checkerErr *sema.CheckerError
-		require.ErrorAs(t, err, &checkerErr)
-		errs := checkerErr.Errors
-		require.Len(t, errs, 1)
+		errs := checker.RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ExternalMutationError{}, errs[0])
 	})
@@ -1863,12 +1989,7 @@ func TestGetAuthAccount(t *testing.T) {
 			},
 		)
 
-		RequireError(t, err)
-
-		var checkerErr *sema.CheckerError
-		require.ErrorAs(t, err, &checkerErr)
-		errs := checkerErr.Errors
-		require.Len(t, errs, 1)
+		errs := checker.RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
@@ -1896,12 +2017,7 @@ func TestGetAuthAccount(t *testing.T) {
 			},
 		)
 
-		RequireError(t, err)
-
-		var checkerErr *sema.CheckerError
-		require.ErrorAs(t, err, &checkerErr)
-		errs := checkerErr.Errors
-		require.Len(t, errs, 1)
+		errs := checker.RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ArgumentCountError{}, errs[0])
 	})
@@ -1928,13 +2044,7 @@ func TestGetAuthAccount(t *testing.T) {
 				Location:  common.ScriptLocation{0x1},
 			},
 		)
-
-		RequireError(t, err)
-
-		var checkerErr *sema.CheckerError
-		require.ErrorAs(t, err, &checkerErr)
-		errs := checkerErr.Errors
-		require.Len(t, errs, 1)
+		errs := checker.RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ArgumentCountError{}, errs[0])
 	})
@@ -1969,12 +2079,7 @@ func TestGetAuthAccount(t *testing.T) {
 			},
 		)
 
-		RequireError(t, err)
-
-		var checkerErr *sema.CheckerError
-		require.ErrorAs(t, err, &checkerErr)
-		errs := checkerErr.Errors
-		require.Len(t, errs, 1)
+		errs := checker.RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	})

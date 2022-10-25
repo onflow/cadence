@@ -56,14 +56,14 @@ func TestInterpretCompositeValue(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredStringValue("Apple"),
-			inter.Globals["name"].GetValue(),
+			inter.Globals.Get("name").GetValue(),
 		)
 
 		RequireValuesEqual(
 			t,
 			inter,
 			interpreter.NewUnmeteredStringValue("Red"),
-			inter.Globals["color"].GetValue(),
+			inter.Globals.Get("color").GetValue(),
 		)
 	})
 }

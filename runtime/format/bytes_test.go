@@ -25,6 +25,7 @@ import (
 )
 
 func TestBytes(t *testing.T) {
+	t.Parallel()
 
 	t.Run("empty", func(t *testing.T) {
 		require.Equal(t, "[]", Bytes([]byte{}))

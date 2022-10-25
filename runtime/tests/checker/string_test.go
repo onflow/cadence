@@ -292,6 +292,36 @@ func TestCheckStringEncodeHex(t *testing.T) {
 	)
 }
 
+func TestCheckStringFromUTF8(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+        let x = String.fromUTF8([0xEA, 0x99, 0xAE])
+	`)
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		&sema.OptionalType{Type: sema.StringType},
+		RequireGlobalValue(t, checker.Elaboration, "x"),
+	)
+}
+
+func TestCheckStringFromCharacters(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+        let x = String.fromCharacters(["👪", "❤️"])
+	`)
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		sema.StringType,
+		RequireGlobalValue(t, checker.Elaboration, "x"),
+	)
+}
+
 func TestCheckStringUtf8Field(t *testing.T) {
 
 	t.Parallel()

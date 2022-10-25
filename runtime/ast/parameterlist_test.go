@@ -28,6 +28,8 @@ import (
 
 func TestParameterList_ParametersByIdentifier(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("result", func(t *testing.T) {
 		l := &ParameterList{
 			Parameters: []*Parameter{

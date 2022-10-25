@@ -102,7 +102,7 @@ and [Hello, World!](02-hello-world) to learn the basics of the language and the 
 <Callout type="info">
 
 Open the account `0x01` tab to see the file named
-`ExampleToken.cdc`. `ExampleToken.cdc` should contain the full code for the
+`BasicToken.cdc`. `BasicToken.cdc` should contain the full code for the
 fungible token, which provides the core functionality to store fungible tokens
 in your account and transfer to and accept tokens from other users.
 
@@ -447,9 +447,6 @@ See the [account](/cadence/language/accounts) documentation for a list of all th
 In this line, we call the `save` method to store an object in storage.
 The first argument is the value to store, and the second argument is the path where the value is being stored.
 For `save` the path has to be in the `/storage/` domain.
-
-You should also see that the `ExampleToken.Vault` and `ExampleToken.VaultMinter` resource objects are stored in the account storage.
-This will be shown in the Resources box at the bottom of the screen.
 
 You are now ready to run transactions that use the fungible tokens!
 

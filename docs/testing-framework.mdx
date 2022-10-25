@@ -13,6 +13,34 @@ The testing framework can only be used off-chain, e.g. by using the [Flow CLI](h
 🚧 Status: This will be available in a future version of the CLI.
 </Callout>
 
+Tests must be written in the form of a Cadence script.
+A test script may contain testing functions that starts with the `test` prefix,
+a `setup` function that will always run before the tests,
+and a `tearDown` function that will always run at the end of all test cases.
+Both `setup` and `tearDown` functions are optional.
+
+```cadence
+// A `setup` function that will always run before the rest of the methods.
+// Can be used to initialize things that would be used across the test cases.
+// e.g: initialling a blockchain backend, initializing a contract, etc.  
+pub fun setup() {
+}
+
+// Test functions start with the 'test' prefix.
+pub fun testSomething() {
+}
+
+pub fun testAnotherThing() {
+}
+
+pub fun testMoreThings() {
+}
+
+// A `tearDown` function that will always run at the end of all test cases.
+// e.g: Can be used to stop the blockchain back-end used for tests, etc. or any cleanup.
+pub fun tearDown() {
+}
+```
 ## Test Standard Library
 
 The testing framework can be used by importing the built-in `Test` contract:

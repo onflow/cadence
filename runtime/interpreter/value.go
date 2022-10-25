@@ -202,6 +202,18 @@ type ReferenceTrackedResourceKindedValue interface {
 	StorageID() atree.StorageID
 }
 
+// IterableValue is a value which can be iterated over, e.g. with a for-loop
+type IterableValue interface {
+	Value
+	Iterator(interpreter *Interpreter) ValueIterator
+}
+
+// ValueIterator is an iterator which returns values.
+// When Next returns nil, it signals the end of the iterator.
+type ValueIterator interface {
+	Next(interpreter *Interpreter) Value
+}
+
 func safeAdd(a, b int) int {
 	// INT32-C
 	if (b > 0) && (a > (goMaxInt - b)) {
@@ -909,6 +921,7 @@ var _ EquatableValue = &StringValue{}
 var _ HashableValue = &StringValue{}
 var _ ValueIndexableValue = &StringValue{}
 var _ MemberAccessibleValue = &StringValue{}
+var _ IterableValue = &StringValue{}
 
 func (v *StringValue) prepareGraphemes() {
 	if v.graphemes == nil {
@@ -1312,6 +1325,25 @@ func (v *StringValue) ConformsToStaticType(
 	return true
 }
 
+func (v *StringValue) Iterator(_ *Interpreter) ValueIterator {
+	return StringValueIterator{
+		graphemes: uniseg.NewGraphemes(v.Str),
+	}
+}
+
+type StringValueIterator struct {
+	graphemes *uniseg.Graphemes
+}
+
+var _ ValueIterator = StringValueIterator{}
+
+func (i StringValueIterator) Next(_ *Interpreter) Value {
+	if !i.graphemes.Next() {
+		return nil
+	}
+	return NewUnmeteredCharacterValue(i.graphemes.Str())
+}
+
 // ArrayValue
 
 type ArrayValue struct {
@@ -1321,6 +1353,37 @@ type ArrayValue struct {
 	isDestroyed      bool
 	isResourceKinded *bool
 	elementSize      uint
+}
+
+type ArrayValueIterator struct {
+	atreeIterator *atree.ArrayIterator
+}
+
+func (v *ArrayValue) Iterator(_ *Interpreter) ValueIterator {
+	arrayIterator, err := v.array.Iterator()
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
+	return ArrayValueIterator{
+		atreeIterator: arrayIterator,
+	}
+}
+
+var _ ValueIterator = ArrayValueIterator{}
+
+func (i ArrayValueIterator) Next(interpreter *Interpreter) Value {
+	atreeValue, err := i.atreeIterator.Next()
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
+
+	if atreeValue == nil {
+		return nil
+	}
+
+	// atree.Array iterator returns low-level atree.Value,
+	// convert to high-level interpreter.Value
+	return MustConvertStoredValue(interpreter, atreeValue)
 }
 
 func NewArrayValue(
@@ -1449,6 +1512,7 @@ var _ EquatableValue = &ArrayValue{}
 var _ ValueIndexableValue = &ArrayValue{}
 var _ MemberAccessibleValue = &ArrayValue{}
 var _ ReferenceTrackedResourceKindedValue = &ArrayValue{}
+var _ IterableValue = &ArrayValue{}
 
 func (*ArrayValue) IsValue() {}
 
@@ -18261,8 +18325,8 @@ func (v *PublishedValue) Storable(storage atree.SlabStorage, address atree.Addre
 	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
 }
 
-func (*PublishedValue) NeedsStoreTo(_ atree.Address) bool {
-	return false
+func (v *PublishedValue) NeedsStoreTo(address atree.Address) bool {
+	return v.Value.NeedsStoreTo(address)
 }
 
 func (*PublishedValue) IsResourceKinded(_ *Interpreter) bool {
@@ -18271,15 +18335,28 @@ func (*PublishedValue) IsResourceKinded(_ *Interpreter) bool {
 
 func (v *PublishedValue) Transfer(
 	interpreter *Interpreter,
-	_ LocationRange,
-	_ atree.Address,
+	locationRange LocationRange,
+	address atree.Address,
 	remove bool,
 	storable atree.Storable,
 ) Value {
-	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+	// NB: if the inner value of a PublishedValue can be a resource,
+	// we must perform resource-related checks here as well
+
+	if v.NeedsStoreTo(address) {
+
+		innerValue := v.Value.Transfer(interpreter, locationRange, address, remove, nil).(*CapabilityValue)
+		addressValue := v.Recipient.Transfer(interpreter, locationRange, address, remove, nil).(AddressValue)
+
+		if remove {
+			interpreter.RemoveReferencedSlab(storable)
+		}
+
+		return NewPublishedValue(interpreter, addressValue, innerValue)
 	}
+
 	return v
+
 }
 
 func (v *PublishedValue) Clone(interpreter *Interpreter) Value {

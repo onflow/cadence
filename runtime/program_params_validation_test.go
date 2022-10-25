@@ -494,6 +494,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 	})
 
 	t.Run("invalid HashAlgorithm", func(t *testing.T) {
+		t.Parallel()
 
 		err := executeScript(t,
 			`pub fun main(arg: HashAlgorithm) {}`,
@@ -510,6 +511,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 	})
 
 	t.Run("invalid SignatureAlgorithm", func(t *testing.T) {
+		t.Parallel()
 
 		err := executeScript(t,
 			`pub fun main(arg: SignatureAlgorithm) {}`,

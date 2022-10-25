@@ -67,7 +67,7 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 	var accessPos *ast.Position
 
 	for {
-		p.skipSpaceAndComments(true)
+		p.skipSpaceAndComments()
 
 		switch p.current.Type {
 		case lexer.TokenPragma:
@@ -144,15 +144,13 @@ func parseAccess(p *parser) (ast.Access, error) {
 
 	case keywordPub:
 		// Skip the `pub` keyword
-		p.next()
-		p.skipSpaceAndComments(true)
+		p.nextSemanticToken()
 		if !p.current.Is(lexer.TokenParenOpen) {
 			return ast.AccessPublic, nil
 		}
 
 		// Skip the opening paren
-		p.next()
-		p.skipSpaceAndComments(true)
+		p.nextSemanticToken()
 
 		if !p.current.Is(lexer.TokenIdentifier) {
 			return ast.AccessNotSpecified, p.syntaxError(
@@ -172,8 +170,7 @@ func parseAccess(p *parser) (ast.Access, error) {
 		}
 
 		// Skip the `set` keyword
-		p.next()
-		p.skipSpaceAndComments(true)
+		p.nextSemanticToken()
 
 		_, err := p.mustOne(lexer.TokenParenClose)
 		if err != nil {
@@ -184,15 +181,14 @@ func parseAccess(p *parser) (ast.Access, error) {
 
 	case keywordAccess:
 		// Skip the `access` keyword
-		p.next()
-		p.skipSpaceAndComments(true)
+		p.nextSemanticToken()
 
 		_, err := p.mustOne(lexer.TokenParenOpen)
 		if err != nil {
 			return ast.AccessNotSpecified, err
 		}
 
-		p.skipSpaceAndComments(true)
+		p.skipSpaceAndComments()
 
 		if !p.current.Is(lexer.TokenIdentifier) {
 			return ast.AccessNotSpecified, p.syntaxError(
@@ -227,8 +223,7 @@ func parseAccess(p *parser) (ast.Access, error) {
 		}
 
 		// Skip the keyword
-		p.next()
-		p.skipSpaceAndComments(true)
+		p.nextSemanticToken()
 
 		_, err = p.mustOne(lexer.TokenParenClose)
 		if err != nil {
@@ -265,9 +260,7 @@ func parseVariableDeclaration(
 	isLet := string(p.currentTokenSource()) == keywordLet
 
 	// Skip the `let` or `var` keyword
-	p.next()
-
-	p.skipSpaceAndComments(true)
+	p.nextSemanticToken()
 	if !p.current.Is(lexer.TokenIdentifier) {
 		return nil, p.syntaxError(
 			"expected identifier after start of variable declaration, got %s",
@@ -278,16 +271,14 @@ func parseVariableDeclaration(
 	identifier := p.tokenToIdentifier(p.current)
 
 	// Skip the identifier
-	p.next()
-	p.skipSpaceAndComments(true)
+	p.nextSemanticToken()
 
 	var typeAnnotation *ast.TypeAnnotation
 	var err error
 
 	if p.current.Is(lexer.TokenColon) {
 		// Skip the colon
-		p.next()
-		p.skipSpaceAndComments(true)
+		p.nextSemanticToken()
 
 		typeAnnotation, err = parseTypeAnnotation(p)
 		if err != nil {
@@ -295,7 +286,7 @@ func parseVariableDeclaration(
 		}
 	}
 
-	p.skipSpaceAndComments(true)
+	p.skipSpaceAndComments()
 	transfer := parseTransfer(p)
 	if transfer == nil {
 		return nil, p.syntaxError("expected transfer")
@@ -306,7 +297,7 @@ func parseVariableDeclaration(
 		return nil, err
 	}
 
-	p.skipSpaceAndComments(true)
+	p.skipSpaceAndComments()
 
 	secondTransfer := parseTransfer(p)
 	var secondValue ast.Expression
@@ -459,8 +450,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 
 		atEnd := false
 		for !atEnd {
-			p.next()
-			p.skipSpaceAndComments(true)
+			p.nextSemanticToken()
 
 			switch p.current.Type {
 			case lexer.TokenComma:
@@ -482,8 +472,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 						atEnd = true
 
 						// Skip the `from` keyword
-						p.next()
-						p.skipSpaceAndComments(true)
+						p.nextSemanticToken()
 
 						err := parseLocation()
 						if err != nil {
@@ -546,8 +535,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 		if string(p.currentTokenSource()) == keywordFrom {
 			identifiers = append(identifiers, identifier)
 			// Skip the `from` keyword
-			p.next()
-			p.skipSpaceAndComments(true)
+			p.nextSemanticToken()
 
 			err := parseLocation()
 			if err != nil {
@@ -561,8 +549,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 	}
 
 	// Skip the `import` keyword
-	p.next()
-	p.skipSpaceAndComments(true)
+	p.nextSemanticToken()
 
 	switch p.current.Type {
 	case lexer.TokenString, lexer.TokenHexadecimalIntegerLiteral:
@@ -571,8 +558,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 	case lexer.TokenIdentifier:
 		identifier := p.tokenToIdentifier(p.current)
 		// Skip the identifier
-		p.next()
-		p.skipSpaceAndComments(true)
+		p.nextSemanticToken()
 
 		switch p.current.Type {
 		case lexer.TokenComma:
@@ -632,8 +618,7 @@ func isNextTokenCommaOrFrom(p *parser) (b bool, err error) {
 	}()
 
 	// skip the current token
-	p.next()
-	p.skipSpaceAndComments(true)
+	p.nextSemanticToken()
 
 	// Lookahead the next token
 	switch p.current.Type {
@@ -691,9 +676,7 @@ func parseEventDeclaration(
 	}
 
 	// Skip the `event` keyword
-	p.next()
-
-	p.skipSpaceAndComments(true)
+	p.nextSemanticToken()
 	if !p.current.Is(lexer.TokenIdentifier) {
 		return nil, p.syntaxError(
 			"expected identifier after start of event declaration, got %s",
@@ -799,9 +782,7 @@ func parseFieldWithVariableKind(
 	}
 
 	// Skip the `let` or `var` keyword
-	p.next()
-
-	p.skipSpaceAndComments(true)
+	p.nextSemanticToken()
 	if !p.current.Is(lexer.TokenIdentifier) {
 		return nil, p.syntaxError(
 			"expected identifier after start of field declaration, got %s",
@@ -811,15 +792,14 @@ func parseFieldWithVariableKind(
 
 	identifier := p.tokenToIdentifier(p.current)
 	// Skip the identifier
-	p.next()
-	p.skipSpaceAndComments(true)
+	p.nextSemanticToken()
 
 	_, err := p.mustOne(lexer.TokenColon)
 	if err != nil {
 		return nil, err
 	}
 
-	p.skipSpaceAndComments(true)
+	p.skipSpaceAndComments()
 
 	typeAnnotation, err := parseTypeAnnotation(p)
 	if err != nil {
@@ -871,7 +851,7 @@ func parseCompositeOrInterfaceDeclaration(
 	var identifier ast.Identifier
 
 	for {
-		p.skipSpaceAndComments(true)
+		p.skipSpaceAndComments()
 		if !p.current.Is(lexer.TokenIdentifier) {
 			return nil, p.syntaxError(
 				"expected %s, got %s",
@@ -901,7 +881,7 @@ func parseCompositeOrInterfaceDeclaration(
 		}
 	}
 
-	p.skipSpaceAndComments(true)
+	p.skipSpaceAndComments()
 
 	var conformances []*ast.NominalType
 	var err error
@@ -923,7 +903,7 @@ func parseCompositeOrInterfaceDeclaration(
 		}
 	}
 
-	p.skipSpaceAndComments(true)
+	p.skipSpaceAndComments()
 
 	_, err = p.mustOne(lexer.TokenBraceOpen)
 	if err != nil {
@@ -935,7 +915,7 @@ func parseCompositeOrInterfaceDeclaration(
 		return nil, err
 	}
 
-	p.skipSpaceAndComments(true)
+	p.skipSpaceAndComments()
 
 	endToken, err := p.mustOne(lexer.TokenBraceClose)
 	if err != nil {
@@ -1031,7 +1011,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 	var previousIdentifierToken *lexer.Token
 
 	for {
-		p.skipSpaceAndComments(true)
+		p.skipSpaceAndComments()
 
 		switch p.current.Type {
 		case lexer.TokenIdentifier:
@@ -1116,7 +1096,7 @@ func parseFieldDeclarationWithoutVariableKind(
 		return nil, err
 	}
 
-	p.skipSpaceAndComments(true)
+	p.skipSpaceAndComments()
 
 	typeAnnotation, err := parseTypeAnnotation(p)
 	if err != nil {
@@ -1159,7 +1139,7 @@ func parseSpecialFunctionDeclaration(
 		return nil, err
 	}
 
-	p.skipSpaceAndComments(true)
+	p.skipSpaceAndComments()
 
 	var functionBlock *ast.FunctionBlock
 
@@ -1216,9 +1196,7 @@ func parseEnumCase(
 	}
 
 	// Skip the `enum` keyword
-	p.next()
-
-	p.skipSpaceAndComments(true)
+	p.nextSemanticToken()
 	if !p.current.Is(lexer.TokenIdentifier) {
 		return nil, p.syntaxError(
 			"expected identifier after start of enum case declaration, got %s",
