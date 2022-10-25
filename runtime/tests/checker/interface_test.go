@@ -2692,7 +2692,7 @@ func TestCheckBadStructInterface(t *testing.T) {
 	assert.IsType(t, &sema.RedeclarationError{}, errs[11])
 }
 
-func TestCheckInterfaceImplementationRequirement(t *testing.T) {
+func TestCheckInterfaceInheritance(t *testing.T) {
 
 	t.Parallel()
 
@@ -2970,7 +2970,6 @@ func TestCheckInterfaceImplementationRequirement(t *testing.T) {
             }
         `)
 
-		// If none of them have default methods then that's ok
 		require.NoError(t, err)
 	})
 
@@ -3034,36 +3033,7 @@ func TestCheckInterfaceImplementationRequirement(t *testing.T) {
             }
         `)
 
-		errs := RequireCheckerErrors(t, err, 1)
-
-		memberConflictError := &sema.InterfaceMemberConflictError{}
-		require.ErrorAs(t, errs[0], &memberConflictError)
-		assert.Equal(t, memberConflictError.MemberName, "hello")
-		assert.Equal(t, memberConflictError.ConflictingInterfaceType.QualifiedIdentifier(), "Foo")
-	})
-
-	t.Run("duplicate methods with default impl in super", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-            struct interface Foo {
-                pub fun hello() {
-                    var a = 1
-                }
-            }
-
-            struct interface Bar: Foo {
-                pub fun hello()
-            }
-        `)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		memberConflictError := &sema.InterfaceMemberConflictError{}
-		require.ErrorAs(t, errs[0], &memberConflictError)
-		assert.Equal(t, memberConflictError.MemberName, "hello")
-		assert.Equal(t, memberConflictError.ConflictingInterfaceType.QualifiedIdentifier(), "Foo")
+		require.NoError(t, err)
 	})
 
 	t.Run("duplicate methods with conditions in child", func(t *testing.T) {
@@ -3082,36 +3052,7 @@ func TestCheckInterfaceImplementationRequirement(t *testing.T) {
             }
         `)
 
-		errs := RequireCheckerErrors(t, err, 1)
-
-		memberConflictError := &sema.InterfaceMemberConflictError{}
-		require.ErrorAs(t, errs[0], &memberConflictError)
-		assert.Equal(t, memberConflictError.MemberName, "hello")
-		assert.Equal(t, memberConflictError.ConflictingInterfaceType.QualifiedIdentifier(), "Foo")
-	})
-
-	t.Run("duplicate methods with default impl in child", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-            struct interface Foo {
-                pub fun hello()
-            }
-
-            struct interface Bar: Foo {
-                pub fun hello() {
-                    var a = 1
-                }
-            }
-        `)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		memberConflictError := &sema.InterfaceMemberConflictError{}
-		require.ErrorAs(t, errs[0], &memberConflictError)
-		assert.Equal(t, memberConflictError.MemberName, "hello")
-		assert.Equal(t, memberConflictError.ConflictingInterfaceType.QualifiedIdentifier(), "Foo")
+		require.NoError(t, err)
 	})
 
 	t.Run("duplicate methods indirect", func(t *testing.T) {
@@ -3216,6 +3157,194 @@ func TestCheckInterfaceImplementationRequirement(t *testing.T) {
 
 		require.NoError(t, err)
 	})
+}
+
+func TestCheckInterfaceDefaultMethodsInheritance(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("default impl in super", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+                pub fun hello() {
+                    var a = 1
+                }
+            }
+
+            struct interface B: A {
+                pub fun hello()
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("default impl in child", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+                pub fun hello()
+            }
+
+            struct interface B: A {
+                pub fun hello() {
+                    var a = 1
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("default impl in both", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+                pub fun hello() {
+                    var a = 1
+                }
+            }
+
+            struct interface B: A {
+                pub fun hello() {
+                    var a = 2
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		memberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[0], &memberConflictError)
+		assert.Equal(t, memberConflictError.MemberName, "hello")
+		assert.Equal(t, memberConflictError.ConflictingInterfaceType.QualifiedIdentifier(), "A")
+	})
+
+	t.Run("default impl from two paths", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+                pub fun hello() {
+                    var a = 1
+                }
+            }
+
+            struct interface B {
+                pub fun hello() {
+                    var a = 2
+                }
+            }
+
+            struct interface C: A, B {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		memberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[0], &memberConflictError)
+		assert.Equal(t, memberConflictError.MemberName, "hello")
+		assert.Equal(t, memberConflictError.ConflictingInterfaceType.QualifiedIdentifier(), "A")
+	})
+
+	t.Run("overridden default impl in one path", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+                pub fun hello() {
+                    var a = 1
+                }
+            }
+
+            struct interface B: A {
+                pub fun hello() {
+                    var a = 2
+                }
+            }
+
+            struct interface C: A, B {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		memberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[0], &memberConflictError)
+		assert.Equal(t, memberConflictError.MemberName, "hello")
+		assert.Equal(t, memberConflictError.ConflictingInterfaceType.QualifiedIdentifier(), "A")
+
+		require.ErrorAs(t, errs[1], &memberConflictError)
+		assert.Equal(t, memberConflictError.MemberName, "hello")
+		assert.Equal(t, memberConflictError.ConflictingInterfaceType.QualifiedIdentifier(), "A")
+	})
+
+	t.Run("default impl in one path and condition in another", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+                pub fun hello() {
+                    var a = 1
+                }
+            }
+
+            struct interface B {
+                pub fun hello() {
+                    pre { true }
+                }
+            }
+
+            struct interface C: A, B {}
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("default impl in one path and condition in another, in concrete type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+                pub fun hello() {
+                    var a = 1
+                }
+            }
+
+            struct interface B {
+                pub fun hello() {
+                    pre { true }
+                }
+            }
+
+            struct interface C: A, B {}
+
+            struct D: C {}
+        `)
+
+		// The interface `C` allows to have a default implementation coming from one path,
+		// and a condition from another path, from inherited types.
+		// However, for the concrete type `D`, it is as if `B.hello` doesn't have an implementation.
+		// Hence, the concrete type is required to have an explicit implementation.
+		errs := RequireCheckerErrors(t, err, 1)
+		memberConflictError := &sema.DefaultFunctionConflictError{}
+		require.ErrorAs(t, errs[0], &memberConflictError)
+	})
+}
+
+func TestCheckInterfaceTypeDefinitionInheritance(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("type requirement", func(t *testing.T) {
 

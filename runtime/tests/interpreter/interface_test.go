@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestInterpretInterfaceDefaultImplementation(t *testing.T) {
@@ -242,7 +243,7 @@ func TestInterpretInterfaceDefaultImplementationWhenOverriden(t *testing.T) {
 
 }
 
-func TestInterpretInterfaceImplementationRequirement(t *testing.T) {
+func TestInterpretInterfaceInheritance(t *testing.T) {
 
 	t.Parallel()
 
@@ -251,15 +252,15 @@ func TestInterpretInterfaceImplementationRequirement(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-            struct interface Foo {
+            struct interface A {
                 let x: Int
 
                 fun test(): Int
             }
 
-            struct interface Bar: Foo {}
+            struct interface B: A {}
 
-            struct Baz: Bar {
+            struct C: B {
                 let x: Int
 
                 init() {
@@ -272,8 +273,8 @@ func TestInterpretInterfaceImplementationRequirement(t *testing.T) {
             }
 
             pub fun main(): Int {
-                let baz = Baz()
-                return baz.test()
+                let c = C()
+                return c.test()
             }
         `)
 
@@ -291,15 +292,15 @@ func TestInterpretInterfaceImplementationRequirement(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-            resource interface Foo {
+            resource interface A {
                 let x: Int
 
                 fun test(): Int
             }
 
-            resource interface Bar: Foo {}
+            resource interface B: A {}
 
-            resource Baz: Bar {
+            resource C: B {
                 let x: Int
 
                 init() {
@@ -312,9 +313,9 @@ func TestInterpretInterfaceImplementationRequirement(t *testing.T) {
             }
 
             pub fun main(): Int {
-                let baz <- create Baz()
-                let x = baz.test()
-                destroy baz
+                let c <- create C()
+                let x = c.test()
+                destroy c
                 return x
             }
         `)
@@ -328,28 +329,28 @@ func TestInterpretInterfaceImplementationRequirement(t *testing.T) {
 		)
 	})
 
-	t.Run("duplicate default methods", func(t *testing.T) {
+	t.Run("duplicate methods", func(t *testing.T) {
 
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-            struct interface Foo {
+            struct interface A {
                 pub fun test(): Int
             }
 
-            struct interface Bar: Foo {
+            struct interface B: A {
                 pub fun test(): Int
             }
 
-            struct Baz: Bar {
+            struct C: B {
                 fun test(): Int {
                     return 3
                 }
             }
 
             pub fun main(): Int {
-                let baz = Baz()
-                return baz.test()
+                let c = C()
+                return c.test()
             }
         `)
 
@@ -367,19 +368,19 @@ func TestInterpretInterfaceImplementationRequirement(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-            struct interface Foo {
+            struct interface A {
                 pub fun test(): Int {
                     return 3
                 }
             }
 
-            struct interface Bar: Foo {}
+            struct interface B: A {}
 
-            struct Baz: Bar {}
+            struct C: B {}
 
             pub fun main(): Int {
-                let baz = Baz()
-                return baz.test()
+                let c = C()
+                return c.test()
             }
         `)
 
@@ -403,15 +404,15 @@ func TestInterpretInterfaceImplementationRequirement(t *testing.T) {
                 }
             }
 
-            struct interface P: A {}
+            struct interface B: A {}
 
-            struct interface Q: A {}
+            struct interface C: A {}
 
-            struct Foo: P, Q {}
+            struct D: B, C {}
 
             pub fun main(): Int {
-                let foo = Foo()
-                return foo.test()
+                let d = D()
+                return d.test()
             }
         `)
 
@@ -480,5 +481,186 @@ func TestInterpretInterfaceImplementationRequirement(t *testing.T) {
 			interpreter.NewUnmeteredIntValueFromInt64(3),
 			value,
 		)
+	})
+}
+
+func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("condition in super", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct interface A {
+                pub fun test(_ a: Int): Int {
+                    pre { a > 10 }
+                }
+            }
+
+            struct interface B: A {
+                pub fun test(_ a: Int): Int
+            }
+
+            struct C: B {
+                fun test(_ a: Int): Int {
+                    return a + 3
+                }
+            }
+
+            pub fun main(_ a: Int): Int {
+                let c = C()
+                return c.test(a)
+            }
+        `)
+
+		value, err := inter.Invoke("main", interpreter.NewUnmeteredIntValueFromInt64(15))
+		require.NoError(t, err)
+		assert.Equal(t,
+			interpreter.NewUnmeteredIntValueFromInt64(18),
+			value,
+		)
+
+		// Implementation should satisfy inherited conditions
+		_, err = inter.Invoke("main", interpreter.NewUnmeteredIntValueFromInt64(5))
+		utils.RequireError(t, err)
+		assert.ErrorAs(t, err, &interpreter.ConditionError{})
+	})
+
+	t.Run("condition in child", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct interface A {
+                pub fun test(_ a: Int): Int
+            }
+
+            struct interface B: A {
+                pub fun test(_ a: Int): Int {
+                    pre { a > 10 }
+                }
+            }
+
+            struct C: B {
+                fun test(_ a: Int): Int {
+                    return a + 3
+                }
+            }
+
+            pub fun main(_ a: Int): Int {
+                let c = C()
+                return c.test(a)
+            }
+        `)
+
+		value, err := inter.Invoke("main", interpreter.NewUnmeteredIntValueFromInt64(15))
+		require.NoError(t, err)
+		assert.Equal(t,
+			interpreter.NewUnmeteredIntValueFromInt64(18),
+			value,
+		)
+
+		// Implementation should satisfy inherited conditions
+		_, err = inter.Invoke("main", interpreter.NewUnmeteredIntValueFromInt64(5))
+		utils.RequireError(t, err)
+		assert.ErrorAs(t, err, &interpreter.ConditionError{})
+	})
+
+	t.Run("conditions in both", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct interface A {
+                pub fun test(_ a: Int): Int {
+                    pre { a < 20 }
+                }
+            }
+
+            struct interface B: A {
+                pub fun test(_ a: Int): Int {
+                    pre { a > 10 }
+                }
+            }
+
+            struct C: B {
+                fun test(_ a: Int): Int {
+                    return a + 3
+                }
+            }
+
+            pub fun main(_ a: Int): Int {
+                let c = C()
+                return c.test(a)
+            }
+        `)
+
+		value, err := inter.Invoke("main", interpreter.NewUnmeteredIntValueFromInt64(15))
+		require.NoError(t, err)
+		assert.Equal(t,
+			interpreter.NewUnmeteredIntValueFromInt64(18),
+			value,
+		)
+
+		// Implementation should satisfy both inherited conditions
+
+		_, err = inter.Invoke("main", interpreter.NewUnmeteredIntValueFromInt64(5))
+		utils.RequireError(t, err)
+		assert.ErrorAs(t, err, &interpreter.ConditionError{})
+
+		_, err = inter.Invoke("main", interpreter.NewUnmeteredIntValueFromInt64(25))
+		utils.RequireError(t, err)
+		assert.ErrorAs(t, err, &interpreter.ConditionError{})
+	})
+
+	t.Run("conditions from two paths", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct interface A {
+                pub fun test(_ a: Int): Int {
+                    pre { a < 20 }
+                }
+            }
+
+            struct interface B {
+                pub fun test(_ a: Int): Int {
+                    pre { a > 10 }
+                }
+            }
+
+            struct interface C: A, B {}
+
+            struct D: C {
+                fun test(_ a: Int): Int {
+                    return a + 3
+                }
+            }
+
+            pub fun main(_ a: Int): Int {
+                let d = D()
+                return d.test(a)
+            }
+        `)
+
+		value, err := inter.Invoke("main", interpreter.NewUnmeteredIntValueFromInt64(15))
+		require.NoError(t, err)
+		assert.Equal(t,
+			interpreter.NewUnmeteredIntValueFromInt64(18),
+			value,
+		)
+
+		// Implementation should satisfy both inherited conditions
+
+		_, err = inter.Invoke("main", interpreter.NewUnmeteredIntValueFromInt64(5))
+		utils.RequireError(t, err)
+		assert.ErrorAs(t, err, &interpreter.ConditionError{})
+
+		_, err = inter.Invoke("main", interpreter.NewUnmeteredIntValueFromInt64(25))
+		utils.RequireError(t, err)
+		assert.ErrorAs(t, err, &interpreter.ConditionError{})
 	})
 }

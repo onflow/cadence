@@ -501,15 +501,9 @@ func (checker *Checker) checkDuplicateInterfaceMembers(
 		return
 	}
 
-	// If they are functions with same name, check whether any of them have
-	// default implementations or conditions. i.e: Anything more than just the signature.
-	// It is invalid to have default impl / conditions, because it creates ambiguity.
-
-	if interfaceMember.HasConditions ||
-		interfaceMember.HasImplementation ||
-		conflictingMember.HasConditions ||
-		conflictingMember.HasImplementation {
-
+	// If there are functions with same name, check whether any of them have default implementations.
+	// It is invalid to have more than one default impl, because it creates ambiguity.
+	if interfaceMember.HasImplementation && conflictingMember.HasImplementation {
 		reportMemberConflictError()
 	}
 }

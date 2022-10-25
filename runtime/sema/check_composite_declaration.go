@@ -1687,10 +1687,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 			)
 		}
 
-		functionBlock := function.FunctionBlock
-		hasImplementation := functionBlock.HasStatements()
-		hasConditions := functionBlock != nil &&
-			(functionBlock.PreConditions.IsEmpty() || functionBlock.PostConditions.IsEmpty())
+		hasImplementation := function.FunctionBlock.HasStatements()
 
 		members.Set(
 			identifier,
@@ -1704,7 +1701,6 @@ func (checker *Checker) defaultMembersAndOrigins(
 				ArgumentLabels:    argumentLabels,
 				DocString:         function.DocString,
 				HasImplementation: hasImplementation,
-				HasConditions:     hasConditions,
 			})
 
 		if checker.PositionInfo != nil && origins != nil {
