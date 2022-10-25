@@ -481,6 +481,36 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 		}
 	}
 
+	// all attachment types have a `getField` and a `getMethod` function
+
+	if IsSubType(ty, AnyResourceAttachmentType) || IsSubType(ty, AnyStructAttachmentType) {
+		members[attachmentGetFieldFunctionName] = MemberResolver{
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
+				return NewPublicFunctionMember(
+					memoryGauge,
+					ty,
+					identifier,
+					AttachmentGetFieldFunctionType(),
+					attachmentGetFieldFunctionDocString,
+				)
+			},
+		}
+
+		members[attachmentGetMethodFunctionName] = MemberResolver{
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
+				return NewPublicFunctionMember(
+					memoryGauge,
+					ty,
+					identifier,
+					AttachmentGetMethodFunctionType(),
+					attachmentGetMethodFunctionDocString,
+				)
+			},
+		}
+	}
+
 	return members
 }
 
@@ -3784,6 +3814,8 @@ func (t *CompositeType) GetNestedTypes() *StringTypeOrderedMap {
 	return t.NestedTypes
 }
 
+const compositeGetAttachmentFunctionName = "getAttachment"
+
 const compositeGetAttachmentFunctionDocString = `
 Returns a reference to the attachment specified by the profided type argument, if it exists
 on the receiver composite. Otherwise, returns nil. 
@@ -3815,6 +3847,8 @@ func CompositeGetAttachmentFunctionType(t *CompositeType) *FunctionType {
 		),
 	}
 }
+
+const compositeForEachAttachmentFunctionName = "forEachAttachment"
 
 const compositeForEachAttachmentFunctionDocString = `
 Iterates over the attachments present on the receiver, applying the function argument to each.
@@ -3859,13 +3893,15 @@ func CompositeForEachAttachmentFunctionType(t *CompositeType) *FunctionType {
 	}
 }
 
+const attachmentGetFieldFunctionName = "getField"
+
 const attachmentGetFieldFunctionDocString = `
 Returns a reference to the field with the specified name and type on the receiver. If a field with the
 specified name does not exist on the receiver, or if the field exists but does not exactly match the provided type, 
 returns nil.
 `
 
-func AttachmentGetFieldFunctionType(t *CompositeType) *FunctionType {
+func AttachmentGetFieldFunctionType() *FunctionType {
 	typeParameter := &TypeParameter{
 		Name:      "T",
 		TypeBound: AnyType,
@@ -3894,13 +3930,15 @@ func AttachmentGetFieldFunctionType(t *CompositeType) *FunctionType {
 	}
 }
 
+const attachmentGetMethodFunctionName = "getMethod"
+
 const attachmentGetMethodFunctionDocString = `
 Returns the method with the specified name and type on the receiver. If a method with the
 specified name does not exist on the receiver, or if the method exists but does not exactly match the provided type, 
 returns nil.
 `
 
-func AttachmentGetMethodFunctionType(t *CompositeType) *FunctionType {
+func AttachmentGetMethodFunctionType() *FunctionType {
 	typeParameter := &TypeParameter{
 		Name:      "T",
 		TypeBound: AnyType,
