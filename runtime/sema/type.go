@@ -3784,6 +3784,11 @@ func (t *CompositeType) GetNestedTypes() *StringTypeOrderedMap {
 	return t.NestedTypes
 }
 
+const compositeGetAttachmentFunctionDocString = `
+Returns a reference to the attachment specified by the profided type argument, if it exists
+on the receiver composite. Otherwise, returns nil. 
+`
+
 func CompositeGetAttachmentFunctionType(t *CompositeType) *FunctionType {
 	attachmentSuperType := AnyStructAttachmentType
 	if t.IsResourceType() {
@@ -3810,6 +3815,12 @@ func CompositeGetAttachmentFunctionType(t *CompositeType) *FunctionType {
 		),
 	}
 }
+
+const compositeForEachAttachmentFunctionDocString = `
+Iterates over the attachments present on the receiver, applying the function argument to each.
+The order of iteration is undefined. If a type argument is provided, only attachments that conform
+to the specified interface are iterated on, the others are filtered out. 
+`
 
 func CompositeForEachAttachmentFunctionType(t *CompositeType) *FunctionType {
 	attachmentSuperType := AnyStructAttachmentType
@@ -3848,6 +3859,12 @@ func CompositeForEachAttachmentFunctionType(t *CompositeType) *FunctionType {
 	}
 }
 
+const attachmentGetFieldFunctionDocString = `
+Returns a reference to the field with the specified name and type on the receiver. If a field with the
+specified name does not exist on the receiver, or if the field exists but does not exactly match the provided type, 
+returns nil.
+`
+
 func AttachmentGetFieldFunctionType(t *CompositeType) *FunctionType {
 	typeParameter := &TypeParameter{
 		Name:      "T",
@@ -3876,6 +3893,12 @@ func AttachmentGetFieldFunctionType(t *CompositeType) *FunctionType {
 		),
 	}
 }
+
+const attachmentGetMethodFunctionDocString = `
+Returns the method with the specified name and type on the receiver. If a method with the
+specified name does not exist on the receiver, or if the method exists but does not exactly match the provided type, 
+returns nil.
+`
 
 func AttachmentGetMethodFunctionType(t *CompositeType) *FunctionType {
 	typeParameter := &TypeParameter{
