@@ -60,12 +60,14 @@ func (checker *Checker) checkReferenceValidity(variable *Variable, hasPosition a
 	// i.e: It is always the roots of the chain that is being stored as the `referencedResourceVariables`.
 	for _, referencedVar := range variable.referencedResourceVariables {
 		resourceInfo := checker.resources.Get(Resource{Variable: referencedVar})
-		if resourceInfo.Invalidation() == nil {
+		invalidation := resourceInfo.Invalidation()
+		if invalidation == nil {
 			continue
 		}
 
 		checker.report(&InvalidatedResourceReferenceError{
-			Range: ast.NewRangeFromPositioned(checker.memoryGauge, hasPosition),
+			Invalidation: *invalidation,
+			Range:        ast.NewRangeFromPositioned(checker.memoryGauge, hasPosition),
 		})
 	}
 }
