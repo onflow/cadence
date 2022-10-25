@@ -1216,9 +1216,12 @@ func (checker *Checker) checkConformanceKindMatch(
 	conformances := compositeDeclaration.InterfaceConformances()
 
 	if len(conformances) == 0 {
-		// This is for type requirements
+		// For type requirements, there is no explicit conformance.
+		// Hence, log the error at the type requirement (i.e: declaration identifier)
 		compositeKindMismatchIdentifier = compositeDeclaration.DeclarationIdentifier()
 	} else {
+		// Otherwise, find the conformance which resulted in the mismatch,
+		// and log the error there.
 		for _, conformance := range conformances {
 			if conformance.Identifier.Identifier == interfaceConformance.Identifier {
 				compositeKindMismatchIdentifier = &conformance.Identifier
@@ -1226,8 +1229,8 @@ func (checker *Checker) checkConformanceKindMatch(
 			}
 		}
 
-		// If not found, then that means, the mismatching interface is a nested conformance.
-		// Then it should have already been reported when checking that interface.
+		// If not found, then that means, the mismatching interface is a grandparent.
+		// Then it should have already been reported when checking the parent.
 		// Hence, no need to report an error here again.
 	}
 
