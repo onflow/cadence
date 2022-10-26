@@ -30,6 +30,12 @@
           "tags": ["guide", "patterns"],
           "description": "Learn the key differences in the account models between Solidity and Cadence.",
           "href": "/cadence/msg-sender"
+        },
+        {
+          "title": "Flow Playground",
+          "tags": ["beginner", "advanced", "smart-contracts"],
+          "description": "Learn Cadence Smart Contract programming using our web-based Cadence IDE",
+          "href": "https://play.flow.com"
         }
       ]
     }
