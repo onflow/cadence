@@ -200,6 +200,7 @@ type ReferenceTrackedResourceKindedValue interface {
 	ResourceKindedValue
 	IsReferenceTrackedResourceKindedValue()
 	StorageID() atree.StorageID
+	IsStaleResource(*Interpreter) bool
 }
 
 // IterableValue is a value which can be iterated over, e.g. with a for-loop
@@ -1570,11 +1571,15 @@ func (v *ArrayValue) IsImportable(inter *Interpreter) bool {
 }
 
 func (v *ArrayValue) checkInvalidatedResourceUse(interpreter *Interpreter, locationRange LocationRange) {
-	if v.isDestroyed || (v.array == nil && v.IsResourceKinded(interpreter)) {
+	if v.isDestroyed || v.IsStaleResource(interpreter) {
 		panic(InvalidatedResourceError{
 			LocationRange: locationRange,
 		})
 	}
+}
+
+func (v *ArrayValue) IsStaleResource(interpreter *Interpreter) bool {
+	return v.array == nil && v.IsResourceKinded(interpreter)
 }
 
 func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRange) {
@@ -2453,7 +2458,9 @@ func (v *ArrayValue) Transfer(
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
-				arrayValue.array = array
+
+				// Any kind of move would invalidate the references.
+				arrayValue.array = nil
 			},
 		)
 	}
@@ -13995,7 +14002,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 	interpreter.ReportComputation(common.ComputationKindDestroyCompositeValue, 1)
 
 	if interpreter.Config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(locationRange)
+		v.checkInvalidatedResourceUse(interpreter, locationRange)
 	}
 
 	storageID := v.StorageID()
@@ -14067,7 +14074,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
 
 	if interpreter.Config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(locationRange)
+		v.checkInvalidatedResourceUse(interpreter, locationRange)
 	}
 
 	if interpreter.Config.TracingEnabled {
@@ -14153,12 +14160,16 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 	return nil
 }
 
-func (v *CompositeValue) checkInvalidatedResourceUse(locationRange LocationRange) {
-	if v.isDestroyed || (v.dictionary == nil && v.Kind == common.CompositeKindResource) {
+func (v *CompositeValue) checkInvalidatedResourceUse(interpreter *Interpreter, locationRange LocationRange) {
+	if v.isDestroyed || v.IsStaleResource(interpreter) {
 		panic(InvalidatedResourceError{
 			LocationRange: locationRange,
 		})
 	}
+}
+
+func (v *CompositeValue) IsStaleResource(*Interpreter) bool {
+	return v.dictionary == nil && v.Kind == common.CompositeKindResource
 }
 
 func (v *CompositeValue) getInterpreter(interpreter *Interpreter) *Interpreter {
@@ -14205,7 +14216,7 @@ func (v *CompositeValue) RemoveMember(
 ) Value {
 
 	if interpreter.Config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(locationRange)
+		v.checkInvalidatedResourceUse(interpreter, locationRange)
 	}
 
 	if interpreter.Config.TracingEnabled {
@@ -14266,7 +14277,7 @@ func (v *CompositeValue) SetMember(
 	value Value,
 ) {
 	if interpreter.Config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(locationRange)
+		v.checkInvalidatedResourceUse(interpreter, locationRange)
 	}
 
 	if interpreter.Config.TracingEnabled {
@@ -14395,7 +14406,7 @@ func formatComposite(memoryGauge common.MemoryGauge, typeId string, fields []Com
 func (v *CompositeValue) GetField(interpreter *Interpreter, locationRange LocationRange, name string) Value {
 
 	if interpreter.Config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(locationRange)
+		v.checkInvalidatedResourceUse(interpreter, locationRange)
 	}
 
 	storable, err := v.dictionary.Get(
@@ -14635,7 +14646,7 @@ func (v *CompositeValue) Transfer(
 	interpreter.ReportComputation(common.ComputationKindTransferCompositeValue, 1)
 
 	if interpreter.Config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(locationRange)
+		v.checkInvalidatedResourceUse(interpreter, locationRange)
 	}
 
 	if interpreter.Config.TracingEnabled {
@@ -14752,7 +14763,9 @@ func (v *CompositeValue) Transfer(
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
-				compositeValue.dictionary = dictionary
+
+				// Any kind of move would invalidate the references.
+				compositeValue.dictionary = nil
 			},
 		)
 	}
@@ -15199,11 +15212,15 @@ func (v *DictionaryValue) IsDestroyed() bool {
 }
 
 func (v *DictionaryValue) checkInvalidatedResourceUse(interpreter *Interpreter, locationRange LocationRange) {
-	if v.isDestroyed || (v.dictionary == nil && v.IsResourceKinded(interpreter)) {
+	if v.isDestroyed || v.IsStaleResource(interpreter) {
 		panic(InvalidatedResourceError{
 			LocationRange: locationRange,
 		})
 	}
+}
+
+func (v *DictionaryValue) IsStaleResource(interpreter *Interpreter) bool {
+	return v.dictionary == nil && v.IsResourceKinded(interpreter)
 }
 
 func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange LocationRange) {
@@ -16034,7 +16051,9 @@ func (v *DictionaryValue) Transfer(
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
-				dictionaryValue.dictionary = dictionary
+
+				// Any kind of move would invalidate the references.
+				dictionaryValue.dictionary = nil
 			},
 		)
 	}
@@ -17142,7 +17161,7 @@ func (v *EphemeralReferenceValue) GetMember(
 
 	self := *referencedValue
 
-	interpreter.checkReferencedResourceNotDestroyed(self, locationRange)
+	interpreter.checkReferencedResourceNotMovedOrDestroyed(self, locationRange)
 
 	return interpreter.getMember(self, locationRange, name)
 }
@@ -17161,7 +17180,7 @@ func (v *EphemeralReferenceValue) RemoveMember(
 
 	self := *referencedValue
 
-	interpreter.checkReferencedResourceNotDestroyed(self, locationRange)
+	interpreter.checkReferencedResourceNotMovedOrDestroyed(self, locationRange)
 
 	if memberAccessibleValue, ok := self.(MemberAccessibleValue); ok {
 		return memberAccessibleValue.RemoveMember(interpreter, locationRange, identifier)
@@ -17185,7 +17204,7 @@ func (v *EphemeralReferenceValue) SetMember(
 
 	self := *referencedValue
 
-	interpreter.checkReferencedResourceNotDestroyed(self, locationRange)
+	interpreter.checkReferencedResourceNotMovedOrDestroyed(self, locationRange)
 
 	interpreter.setMember(self, locationRange, name, value)
 }
@@ -17204,7 +17223,7 @@ func (v *EphemeralReferenceValue) GetKey(
 
 	self := *referencedValue
 
-	interpreter.checkReferencedResourceNotDestroyed(self, locationRange)
+	interpreter.checkReferencedResourceNotMovedOrDestroyed(self, locationRange)
 
 	return self.(ValueIndexableValue).
 		GetKey(interpreter, locationRange, key)
@@ -17225,7 +17244,7 @@ func (v *EphemeralReferenceValue) SetKey(
 
 	self := *referencedValue
 
-	interpreter.checkReferencedResourceNotDestroyed(self, locationRange)
+	interpreter.checkReferencedResourceNotMovedOrDestroyed(self, locationRange)
 
 	self.(ValueIndexableValue).
 		SetKey(interpreter, locationRange, key, value)
@@ -17246,7 +17265,7 @@ func (v *EphemeralReferenceValue) InsertKey(
 
 	self := *referencedValue
 
-	interpreter.checkReferencedResourceNotDestroyed(self, locationRange)
+	interpreter.checkReferencedResourceNotMovedOrDestroyed(self, locationRange)
 
 	self.(ValueIndexableValue).
 		InsertKey(interpreter, locationRange, key, value)
@@ -17266,7 +17285,7 @@ func (v *EphemeralReferenceValue) RemoveKey(
 
 	self := *referencedValue
 
-	interpreter.checkReferencedResourceNotDestroyed(self, locationRange)
+	interpreter.checkReferencedResourceNotMovedOrDestroyed(self, locationRange)
 
 	return self.(ValueIndexableValue).
 		RemoveKey(interpreter, locationRange, key)
@@ -17297,6 +17316,8 @@ func (v *EphemeralReferenceValue) ConformsToStaticType(
 	if referencedValue == nil {
 		return false
 	}
+
+	interpreter.checkReferencedResourceNotMovedOrDestroyed(*referencedValue, locationRange)
 
 	staticType := (*referencedValue).StaticType(interpreter)
 
@@ -17357,7 +17378,7 @@ func (v *EphemeralReferenceValue) Transfer(
 	return v
 }
 
-func (v *EphemeralReferenceValue) Clone(_ *Interpreter) Value {
+func (v *EphemeralReferenceValue) Clone(*Interpreter) Value {
 	return NewUnmeteredEphemeralReferenceValue(v.Authorized, v.Value, v.BorrowedType)
 }
 

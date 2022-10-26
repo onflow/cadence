@@ -4162,6 +4162,28 @@ func (interpreter *Interpreter) checkReferencedResourceNotDestroyed(value Value,
 	})
 }
 
+func (interpreter *Interpreter) checkReferencedResourceNotMovedOrDestroyed(
+	referencedValue Value,
+	locationRange LocationRange,
+) {
+	resourceKindedValue, ok := referencedValue.(ReferenceTrackedResourceKindedValue)
+	if !ok {
+		return
+	}
+
+	if resourceKindedValue.IsDestroyed() {
+		panic(DestroyedResourceError{
+			LocationRange: locationRange,
+		})
+	}
+
+	if resourceKindedValue.IsStaleResource(interpreter) {
+		panic(InvalidatedResourceReferenceError{
+			LocationRange: locationRange,
+		})
+	}
+}
+
 func (interpreter *Interpreter) RemoveReferencedSlab(storable atree.Storable) {
 	storageIDStorable, ok := storable.(atree.StorageIDStorable)
 	if !ok {
@@ -4323,8 +4345,10 @@ func (interpreter *Interpreter) updateReferencedResource(
 	for value := range values { //nolint:maprangecheck
 		updateFunc(value)
 	}
+
+	// If the move is to a new location, then the resources are already cleared via the update function above.
+	// So no need to track those stale resources anymore.
 	if newStorageID != currentStorageID {
-		interpreter.sharedState.referencedResourceKindedValues[newStorageID] = values
 		interpreter.sharedState.referencedResourceKindedValues[currentStorageID] = nil
 	}
 }

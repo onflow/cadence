@@ -51,6 +51,25 @@ func testAccount(
 	*interpreter.Interpreter,
 	func() map[storageKey]interpreter.Value,
 ) {
+	return testAccountWithErrorHandler(
+		t,
+		address,
+		auth,
+		code,
+		nil,
+	)
+}
+
+func testAccountWithErrorHandler(
+	t *testing.T,
+	address interpreter.AddressValue,
+	auth bool,
+	code string,
+	checkerErrorHandler func(error),
+) (
+	*interpreter.Interpreter,
+	func() map[storageKey]interpreter.Value,
+) {
 
 	var valueDeclarations []stdlib.StandardLibraryValue
 
@@ -104,9 +123,11 @@ func testAccount(
 				BaseValueActivation: baseValueActivation,
 			},
 			Config: &interpreter.Config{
-				BaseActivation:       baseActivation,
-				ContractValueHandler: makeContractValueHandler(nil, nil, nil),
+				BaseActivation:                       baseActivation,
+				ContractValueHandler:                 makeContractValueHandler(nil, nil, nil),
+				InvalidatedResourceValidationEnabled: true,
 			},
+			HandleCheckerError: checkerErrorHandler,
 		},
 	)
 	require.NoError(t, err)
