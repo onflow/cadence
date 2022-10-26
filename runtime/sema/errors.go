@@ -3833,3 +3833,25 @@ func (e *RemoveFromInvalidTypeError) Error() string {
 		e.BaseType.QualifiedString(),
 	)
 }
+
+// InvalidAttachmentAccessError
+type InvalidAttachmentAccessError struct {
+	IndexingExpression ast.Expression
+	BaseType           Type
+	ast.Range
+}
+
+var _ SemanticError = &InvalidAttachmentAccessError{}
+var _ errors.UserError = &InvalidAttachmentAccessError{}
+
+func (*InvalidAttachmentAccessError) isSemanticError() {}
+
+func (*InvalidAttachmentAccessError) IsUserError() {}
+
+func (e *InvalidAttachmentAccessError) Error() string {
+	return fmt.Sprintf(
+		"cannot index `%s` with `%s`, as it is not an valid attachment type for this base",
+		e.BaseType.QualifiedString(),
+		e.IndexingExpression.String(),
+	)
+}

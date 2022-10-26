@@ -3731,6 +3731,22 @@ func TestCheckGetField(t *testing.T) {
 		assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
 	})
 
+	t.Run("not on enum", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			enum S:Int {}
+			pub fun foo(s: S) {
+				s.getField<[String]>("x")
+			}
+		`,
+		)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+	})
+
 	t.Run("not on struct", func(t *testing.T) {
 
 		t.Parallel()
@@ -3925,6 +3941,22 @@ func TestCheckGetMethod(t *testing.T) {
 		assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
 	})
 
+	t.Run("not on enum", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			enum S:Int {}
+			pub fun foo(s: S) {
+				s.getMethod<[String]>("x")
+			}
+		`,
+		)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+	})
+
 	t.Run("not on struct", func(t *testing.T) {
 
 		t.Parallel()
@@ -3956,5 +3988,611 @@ func TestCheckGetMethod(t *testing.T) {
 		)
 		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+	})
+}
+
+func TestCheckForEachAttachment(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("basic", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			fun bar (_: &AnyStructAttachment) {}
+			struct A {}
+			pub fun foo(s: A) {
+				s.forEachAttachment(bar)
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("type check return", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			fun bar (_: &AnyStructAttachment): Bool { return false }
+			struct A {}
+			pub fun foo(s: A) {
+				s.forEachAttachment(bar)
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("param not reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			fun bar (_: AnyStructAttachment) { }
+			struct A {}
+			pub fun foo(s: A) {
+				s.forEachAttachment(bar)
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
+	})
+
+	t.Run("param mismatch", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			fun bar (_: &AnyStruct) { }
+			struct A {}
+			pub fun foo(s: A) {
+				s.forEachAttachment(bar)
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			fun bar (_: &AnyResourceAttachment) {}
+			resource A {}
+			pub fun foo(s: @A) {
+				s.forEachAttachment(bar)
+				destroy s
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("resource type mismatch", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			fun bar (_: &AnyStructAttachment) {}
+			resource A {}
+			pub fun foo(s: @A) {
+				s.forEachAttachment(bar)
+				destroy s
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("not on anystruct", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			fun bar (_: &AnyResourceAttachment) {}
+			pub fun foo(s: AnyStruct) {
+				s.forEachAttachment(bar)
+			}
+		`,
+		)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+	})
+
+	t.Run("not on anyresource", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			fun bar (_: &AnyResourceAttachment) {}
+			pub fun foo(s: @AnyResource) {
+				s.forEachAttachment(bar)
+				destroy s
+			}
+		`,
+		)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+	})
+
+	t.Run("not on anyresourceAttachment", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			fun bar (_: &AnyResourceAttachment) {}
+			pub fun foo(s: &AnyResourceAttachment) {
+				s.forEachAttachment(bar)
+			}
+		`,
+		)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+	})
+
+	t.Run("not on anyStructAttachment", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			fun bar (_: &AnyStructAttachment) {}
+			pub fun foo(s: &AnyStructAttachment) {
+				s.forEachAttachment(bar)
+			}
+		`,
+		)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+	})
+
+	t.Run("not on event", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			fun bar (_: &AnyStructAttachment) {}
+			event E()
+			pub fun foo(s: E) {
+				s.forEachAttachment(bar)
+			}
+		`,
+		)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+	})
+
+	t.Run("not on contract", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			fun bar (_: &AnyStructAttachment) {}
+			contract C {}
+			pub fun foo(s: C) {
+				s.forEachAttachment(bar)
+			}
+		`,
+		)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+	})
+
+	t.Run("not on enum", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			fun bar (_: &AnyStructAttachment) {}
+			enum S:Int {}
+			pub fun foo(s: S) {
+				s.forEachAttachment(bar)
+			}
+		`,
+		)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+	})
+
+	t.Run("not on struct attachment", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			fun bar (_: &AnyStructAttachment) {}
+			attachment S for AnyStruct {}
+			pub fun foo(s: &S) {
+				s.forEachAttachment(bar)
+			}
+		`,
+		)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+	})
+
+	t.Run("not on resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			fun bar (_: &AnyStructAttachment) {}
+			attachment R for AnyResource {}
+			pub fun foo(s: &R) {
+				s.forEachAttachment(bar)
+			}
+		`,
+		)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+	})
+
+	t.Run("with type argument", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct interface I {}
+			fun bar (_: &{I}) {}
+			struct A {}
+			pub fun foo(s: A) {
+				s.forEachAttachment<{I}>(bar)
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+}
+
+func TestCheckAccessAttachment(t *testing.T) {
+
+	t.Parallel()
+
+	runTests := func(suffix, sigil, destructor string) {
+		t.Run(fmt.Sprintf("basic %s", suffix), func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				fmt.Sprintf(`
+					resource R {}
+					attachment A for R {}
+					pub fun foo(r: %sR) {
+						let a: &A? = r[A]
+						%s
+					}`, sigil, destructor),
+			)
+			require.NoError(t, err)
+		})
+
+		t.Run(fmt.Sprintf("non-composite %s", suffix), func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				fmt.Sprintf(`
+					resource R {}
+					attachment A for R {}
+					pub fun foo(r: %sR) {
+						let a: &A? = r[Int]
+						%s
+					}`, sigil, destructor),
+			)
+			errs := RequireCheckerErrors(t, err, 1)
+			assert.IsType(t, &sema.InvalidAttachmentAccessError{}, errs[0])
+		})
+
+		t.Run(fmt.Sprintf("struct %s", suffix), func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				fmt.Sprintf(`
+					resource R {}
+					struct D {}
+					pub fun foo(r: %sR) {
+						r[D]
+						%s
+					}`, sigil, destructor),
+			)
+			errs := RequireCheckerErrors(t, err, 1)
+			assert.IsType(t, &sema.InvalidAttachmentAccessError{}, errs[0])
+		})
+
+		t.Run(fmt.Sprintf("resource %s", suffix), func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				fmt.Sprintf(`
+					resource R {}
+					resource X {}
+					pub fun foo(r: %sR) {
+						r[X]
+						%s
+					}
+				`, sigil, destructor),
+			)
+			errs := RequireCheckerErrors(t, err, 1)
+			assert.IsType(t, &sema.InvalidAttachmentAccessError{}, errs[0])
+		})
+
+		t.Run(fmt.Sprintf("contract %s", suffix), func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				fmt.Sprintf(`
+					resource R {}
+					contract X {}
+					pub fun foo(r: %sR) {
+						r[X]
+						%s
+					}
+				`, sigil, destructor),
+			)
+			errs := RequireCheckerErrors(t, err, 1)
+			assert.IsType(t, &sema.InvalidAttachmentAccessError{}, errs[0])
+		})
+
+		t.Run(fmt.Sprintf("event %s", suffix), func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				fmt.Sprintf(`
+					resource R {}
+					event X()
+					pub fun foo(r: %sR) {
+						r[X]
+						%s
+					}
+				`, sigil, destructor),
+			)
+			errs := RequireCheckerErrors(t, err, 1)
+			assert.IsType(t, &sema.InvalidAttachmentAccessError{}, errs[0])
+		})
+
+		t.Run(fmt.Sprintf("enum %s", suffix), func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				fmt.Sprintf(`
+					resource R {}
+					enum X: Int {}
+					pub fun foo(r: %sR) {
+						r[X]
+						%s
+					}
+				`, sigil, destructor),
+			)
+			errs := RequireCheckerErrors(t, err, 1)
+			assert.IsType(t, &sema.InvalidAttachmentAccessError{}, errs[0])
+		})
+
+		t.Run(fmt.Sprintf("AnyStructAttachment %s", suffix), func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				fmt.Sprintf(`
+					resource R {}
+					pub fun foo(r: %sR) {
+						r[AnyStructAttachment]
+						%s
+					}
+				`, sigil, destructor),
+			)
+			errs := RequireCheckerErrors(t, err, 1)
+			assert.IsType(t, &sema.InvalidAttachmentAccessError{}, errs[0])
+		})
+
+		t.Run(fmt.Sprintf("AnyResourceAttachment %s", suffix), func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				fmt.Sprintf(`
+					resource R {}
+					pub fun foo(r: %sR) {
+						r[AnyResourceAttachment]
+						%s
+					}
+				`, sigil, destructor),
+			)
+			errs := RequireCheckerErrors(t, err, 1)
+			assert.IsType(t, &sema.InvalidAttachmentAccessError{}, errs[0])
+		})
+
+		t.Run(fmt.Sprintf("AnyStruct %s", suffix), func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				fmt.Sprintf(`
+					resource R {}
+					pub fun foo(r: %sR) {
+						r[AnyStruct]
+						%s
+					}
+				`, sigil, destructor),
+			)
+			errs := RequireCheckerErrors(t, err, 1)
+			assert.IsType(t, &sema.InvalidAttachmentAccessError{}, errs[0])
+		})
+
+		t.Run(fmt.Sprintf("AnyResource %s", suffix), func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				fmt.Sprintf(`
+					resource R {}
+					pub fun foo(r: %sR) {
+						r[AnyResource]
+						%s
+					}
+				`, sigil, destructor),
+			)
+			errs := RequireCheckerErrors(t, err, 1)
+			assert.IsType(t, &sema.InvalidAttachmentAccessError{}, errs[0])
+		})
+
+		t.Run(fmt.Sprintf("AnyResource index %s", suffix), func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				fmt.Sprintf(`
+					attachment A for AnyResource {}
+					pub fun foo(r: %sAnyResource) {
+						r[A]
+						%s
+					}
+				`, sigil, destructor),
+			)
+			errs := RequireCheckerErrors(t, err, 1)
+			assert.IsType(t, &sema.NotIndexableTypeError{}, errs[0])
+		})
+
+		t.Run(fmt.Sprintf("interface %s", suffix), func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				fmt.Sprintf(`
+					resource interface I {}
+					resource R: I {}
+					attachment A for I {}
+					pub fun foo(r: %sR) {
+						let a: &A? = r[A]
+						%s
+					}
+				`, sigil, destructor),
+			)
+			require.NoError(t, err)
+		})
+
+		t.Run(fmt.Sprintf("interface indexer %s", suffix), func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				fmt.Sprintf(`
+					resource R {}
+					resource interface I {}
+					attachment A for AnyResource: I {}
+					pub fun foo(r: %sR) {
+						r[I]
+						%s
+					}
+				`, sigil, destructor),
+			)
+			errs := RequireCheckerErrors(t, err, 1)
+			assert.IsType(t, &sema.InvalidAttachmentAccessError{}, errs[0])
+		})
+
+		t.Run(fmt.Sprintf("interface nonconforming %s", suffix), func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				fmt.Sprintf(`
+					resource interface I {}
+					resource R {}
+					attachment A for I {}
+					pub fun foo(r: %sR) {
+						let a: &A? = r[A]
+						%s
+					}
+				`, sigil, destructor),
+			)
+			errs := RequireCheckerErrors(t, err, 1)
+			assert.IsType(t, &sema.InvalidAttachmentAccessError{}, errs[0])
+		})
+
+		t.Run(fmt.Sprintf("not writeable %s", suffix), func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				fmt.Sprintf(`
+					resource R {}
+					attachment A for R {}
+					pub fun foo(r: %sR) {
+						r[A] = 3
+						%s
+					}
+				`, sigil, destructor),
+			)
+			errs := RequireCheckerErrors(t, err, 1)
+			assert.IsType(t, &sema.NotIndexingAssignableTypeError{}, errs[0])
+		})
+
+		t.Run(fmt.Sprintf("qualified %s", suffix), func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				fmt.Sprintf(`
+					resource R {}
+					contract C {
+						attachment A for R {}
+					}
+					pub fun foo(r: %sR) {
+						let a: &C.A? = r[C.A]
+						%s
+					}
+				`, sigil, destructor),
+			)
+			require.NoError(t, err)
+		})
+	}
+
+	runTests("resource", "@", "destroy r")
+	runTests("reference", "&", "")
+
+	t.Run("AnyStruct index", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+		attachment A for AnyStruct {}
+		pub fun foo(r: AnyStruct) {
+			r[A]
+		}
+	`,
+		)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.NotIndexableTypeError{}, errs[0])
+	})
+
+	t.Run("restricted", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+		struct interface I {}
+		attachment A for I {}
+		pub fun foo(r: {I}) {
+			r[A]
+		}
+	`,
+		)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.NotIndexableTypeError{}, errs[0])
 	})
 }

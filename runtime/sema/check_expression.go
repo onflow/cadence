@@ -256,45 +256,98 @@ func (checker *Checker) visitIndexExpression(
 		return InvalidType
 	}
 
+	reportNonIndexable := func(t Type) {
+		checker.report(
+			&NotIndexableTypeError{
+				Type:  t,
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, targetExpression),
+			},
+		)
+	}
+
 	// Check if the type instance is actually indexable. For most types (e.g. arrays and dictionaries)
 	// this is known statically (in the sense of this host language (Go), not the implemented language),
 	// i.e. a Go type switch would be sufficient.
 	// However, for some types (e.g. reference types) this depends on what type is referenced
+	// we cannot use a switch here because in the reference type case we need to be able to "fallthrough",
+	// and Go does not allow fallthroughs in typed switches
+	valueIndexedType, isValueIndexableType := targetType.(ValueIndexableType)
+	typeIndexedType, isTypeIndexableType := targetType.(TypeIndexableType)
 
-	indexedType, ok := targetType.(ValueIndexableType)
-	if !ok || !indexedType.isValueIndexableType() {
-		checker.report(
-			&NotIndexableTypeError{
-				Type:  targetType,
-				Range: ast.NewRangeFromPositioned(checker.memoryGauge, targetExpression),
-			},
+	if isValueIndexableType && valueIndexedType.isValueIndexableType() {
+		if isAssignment && !valueIndexedType.AllowsValueIndexingAssignment() {
+			checker.report(
+				&NotIndexingAssignableTypeError{
+					Type:  valueIndexedType,
+					Range: ast.NewRangeFromPositioned(checker.memoryGauge, targetExpression),
+				},
+			)
+		}
+		indexingType := checker.VisitExpression(
+			indexExpression.IndexingExpression,
+			valueIndexedType.IndexingType(),
 		)
 
+		elementType := valueIndexedType.ElementType(isAssignment)
+
+		checker.checkUnusedExpressionResourceLoss(elementType, targetExpression)
+
+		checker.Elaboration.IndexExpressionTypes[indexExpression] = IndexExpressionTypes{
+			IndexedType:  valueIndexedType,
+			IndexingType: indexingType,
+		}
+
+		return elementType
+	} else if isTypeIndexableType && typeIndexedType.isTypeIndexableType() {
+		reportError := func(indexedType Type) {
+			checker.report(
+				&InvalidAttachmentAccessError{
+					BaseType:           indexedType,
+					IndexingExpression: indexExpression.IndexingExpression,
+					Range:              ast.NewRangeFromPositioned(checker.memoryGauge, indexExpression.IndexingExpression),
+				},
+			)
+		}
+		if isAssignment {
+			checker.report(
+				&NotIndexingAssignableTypeError{
+					Type:  typeIndexedType,
+					Range: ast.NewRangeFromPositioned(checker.memoryGauge, targetExpression),
+				},
+			)
+			return InvalidType
+		}
+		return checker.checkTypeIndexingExpression(typeIndexedType, reportError, indexExpression.IndexingExpression)
+	} else {
+		reportNonIndexable(targetType)
+		return InvalidType
+	}
+}
+
+func (checker *Checker) checkTypeIndexingExpression(
+	base TypeIndexableType,
+	reportError func(indexedType Type),
+	indexingExpression ast.Expression,
+) Type {
+
+	expressionType := ast.ExpressionAsType(indexingExpression)
+	if expressionType == nil {
+		reportError(base)
+		return InvalidType
+	}
+	nominalTypeExpression, isNominalType := expressionType.(*ast.NominalType)
+	if !isNominalType {
+		reportError(base)
+		return InvalidType
+	}
+	nominalType := checker.convertNominalType(nominalTypeExpression)
+
+	if !base.IsValidIndexingType(nominalType) {
+		reportError(base)
 		return InvalidType
 	}
 
-	indexingType := checker.VisitExpression(
-		indexExpression.IndexingExpression,
-		indexedType.IndexingType(),
-	)
-
-	if isAssignment && !indexedType.AllowsValueIndexingAssignment() {
-		checker.report(
-			&NotIndexingAssignableTypeError{
-				Type:  indexedType,
-				Range: ast.NewRangeFromPositioned(checker.memoryGauge, targetExpression),
-			},
-		)
-	}
-
-	elementType := indexedType.ElementType(isAssignment)
-
-	checker.checkUnusedExpressionResourceLoss(elementType, targetExpression)
-
-	checker.Elaboration.IndexExpressionTypes[indexExpression] = IndexExpressionTypes{
-		IndexedType:  indexedType,
-		IndexingType: indexingType,
-	}
-
-	return elementType
+	// at this point, the base is known to be a struct/resource,
+	// and the attachment is known to be a valid attachment for that base
+	return base.TypeIndexingElementType(nominalType)
 }

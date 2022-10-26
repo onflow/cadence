@@ -180,6 +180,14 @@ type ValueIndexableType interface {
 	IndexingType() Type
 }
 
+// TypeIndexableType is a type which can be indexed into using a type
+type TypeIndexableType interface {
+	Type
+	isTypeIndexableType() bool
+	IsValidIndexingType(indexingType Type) bool
+	TypeIndexingElementType(indexingType Type) Type
+}
+
 type MemberResolver struct {
 	Kind     common.DeclarationKind
 	Mutating bool
@@ -3487,6 +3495,9 @@ type CompositeType struct {
 	cachedIdentifiersLock sync.RWMutex
 }
 
+var _ CompositeKindedType = &CompositeType{}
+var _ TypeIndexableType = &CompositeType{}
+
 func (t *CompositeType) Tag() TypeTag {
 	return CompositeTypeTag
 }
@@ -3814,6 +3825,26 @@ func (t *CompositeType) GetNestedTypes() *StringTypeOrderedMap {
 	return t.NestedTypes
 }
 
+func (t *CompositeType) isTypeIndexableType() bool {
+	// resources and structs only can be indexed for attachments
+	return t.Kind == common.CompositeKindResource || t.Kind == common.CompositeKindStructure
+}
+
+func (t *CompositeType) TypeIndexingElementType(indexingType Type) Type {
+	return &OptionalType{
+		&ReferenceType{
+			Type: indexingType,
+		},
+	}
+}
+
+func (t *CompositeType) IsValidIndexingType(ty Type) bool {
+	attachmentType, isComposite := ty.(*CompositeType)
+	return isComposite &&
+		IsSubType(t, attachmentType.baseType) &&
+		attachmentType.IsResourceType() == t.IsResourceType()
+}
+
 const compositeForEachAttachmentFunctionName = "forEachAttachment"
 
 const compositeForEachAttachmentFunctionDocString = `
@@ -3845,9 +3876,13 @@ func CompositeForEachAttachmentFunctionType(t *CompositeType) *FunctionType {
 					&FunctionType{
 						Parameters: []*Parameter{
 							{
-								TypeAnnotation: NewTypeAnnotation(&GenericType{
-									TypeParameter: typeParameter,
-								}),
+								TypeAnnotation: NewTypeAnnotation(
+									&ReferenceType{
+										Type: &GenericType{
+											TypeParameter: typeParameter,
+										},
+									},
+								),
 							},
 						},
 						ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
@@ -3960,6 +3995,22 @@ func (t *CompositeType) initializeMemberResolvers() {
 					}
 				}
 			})
+
+		// resource and struct composites have the ability to iterate over their attachments
+		if t.Kind == common.CompositeKindResource || t.Kind == common.CompositeKindStructure {
+			members[compositeForEachAttachmentFunctionName] = MemberResolver{
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicFunctionMember(
+						memoryGauge,
+						t,
+						identifier,
+						CompositeForEachAttachmentFunctionType(t),
+						compositeForEachAttachmentFunctionDocString,
+					)
+				},
+			}
+		}
 
 		t.memberResolvers = withBuiltinMembers(t, members)
 	})
@@ -4815,6 +4866,8 @@ type ReferenceType struct {
 	Type       Type
 }
 
+var _ TypeIndexableType = &ReferenceType{}
+
 func NewReferenceType(memoryGauge common.MemoryGauge, typ Type, authorized bool) *ReferenceType {
 	common.UseMemory(memoryGauge, common.ReferenceSemaTypeMemoryUsage)
 	return &ReferenceType{
@@ -4925,6 +4978,30 @@ func (t *ReferenceType) isValueIndexableType() bool {
 		return false
 	}
 	return referencedType.isValueIndexableType()
+}
+
+func (t *ReferenceType) isTypeIndexableType() bool {
+	referencedType, ok := t.Type.(TypeIndexableType)
+	if !ok {
+		return false
+	}
+	return referencedType.isTypeIndexableType()
+}
+
+func (t *ReferenceType) TypeIndexingElementType(indexingType Type) Type {
+	referencedType, ok := t.Type.(TypeIndexableType)
+	if !ok {
+		return nil
+	}
+	return referencedType.TypeIndexingElementType(indexingType)
+}
+
+func (t *ReferenceType) IsValidIndexingType(ty Type) bool {
+	referencedType, ok := t.Type.(TypeIndexableType)
+	if !ok {
+		return false
+	}
+	return referencedType.IsValidIndexingType(ty)
 }
 
 func (t *ReferenceType) AllowsValueIndexingAssignment() bool {
