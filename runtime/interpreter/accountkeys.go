@@ -38,7 +38,7 @@ func NewAuthAccountKeysValue(
 	getFunction FunctionValue,
 	revokeFunction FunctionValue,
 	forEachFunction FunctionValue,
-	getKeysCount AccountKeysCountConstructor,
+	getKeysCount AccountKeysCountGetter,
 ) Value {
 
 	fields := map[string]Value{
@@ -89,7 +89,7 @@ func NewPublicAccountKeysValue(
 	address AddressValue,
 	getFunction FunctionValue,
 	forEachFunction FunctionValue,
-	getKeysCount AccountKeysCountConstructor,
+	getKeysCount AccountKeysCountGetter,
 ) Value {
 
 	fields := map[string]Value{
@@ -126,4 +126,4 @@ func NewPublicAccountKeysValue(
 	)
 }
 
-type AccountKeysCountConstructor func() UInt64Value
+type AccountKeysCountGetter func() UInt64Value
