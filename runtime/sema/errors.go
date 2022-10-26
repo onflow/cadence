@@ -1900,13 +1900,7 @@ func (e *ResourceUseAfterInvalidationError) SecondaryError() string {
 func (e *ResourceUseAfterInvalidationError) ErrorNotes() []errors.ErrorNote {
 	invalidation := e.Invalidation
 	return []errors.ErrorNote{
-		PreviousResourceInvalidationNote{
-			ResourceInvalidation: invalidation,
-			Range: ast.NewUnmeteredRange(
-				invalidation.StartPos,
-				invalidation.EndPos,
-			),
-		},
+		newPreviousResourceInvalidationNote(invalidation),
 	}
 }
 
@@ -1915,6 +1909,16 @@ func (e *ResourceUseAfterInvalidationError) ErrorNotes() []errors.ErrorNote {
 type PreviousResourceInvalidationNote struct {
 	ResourceInvalidation
 	ast.Range
+}
+
+func newPreviousResourceInvalidationNote(invalidation ResourceInvalidation) PreviousResourceInvalidationNote {
+	return PreviousResourceInvalidationNote{
+		ResourceInvalidation: invalidation,
+		Range: ast.NewUnmeteredRange(
+			invalidation.StartPos,
+			invalidation.EndPos,
+		),
+	}
 }
 
 func (n PreviousResourceInvalidationNote) Message() string {
@@ -3728,6 +3732,7 @@ func (*PurityError) isSemanticError() {}
 // InvalidatedResourceReferenceError
 
 type InvalidatedResourceReferenceError struct {
+	Invalidation ResourceInvalidation
 	ast.Range
 }
 
@@ -3740,4 +3745,11 @@ func (*InvalidatedResourceReferenceError) IsUserError() {}
 
 func (e *InvalidatedResourceReferenceError) Error() string {
 	return "invalid reference: referenced resource may have been moved or destroyed"
+}
+
+func (e *InvalidatedResourceReferenceError) ErrorNotes() []errors.ErrorNote {
+	invalidation := e.Invalidation
+	return []errors.ErrorNote{
+		newPreviousResourceInvalidationNote(invalidation),
+	}
 }

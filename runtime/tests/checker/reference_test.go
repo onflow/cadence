@@ -2478,6 +2478,56 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 		assert.ErrorAs(t, errors[1], &invalidatedRefError)
 	})
 
+	t.Run("error notes", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub fun test() {
+                let x <- create R()
+                let xRef = &x as &R
+                destroy x
+                xRef.a
+            }
+
+            pub resource R {
+                pub let a: Int
+
+                init() {
+                    self.a = 5
+                }
+            }
+            `,
+		)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+
+		errorNotes := invalidatedRefError.ErrorNotes()
+		require.Len(t, errorNotes, 1)
+
+		require.IsType(t, errorNotes[0], sema.PreviousResourceInvalidationNote{})
+		prevInvalidationNote := errorNotes[0].(sema.PreviousResourceInvalidationNote)
+
+		assert.Equal(
+			t,
+			prevInvalidationNote.Range.StartPos,
+			ast.Position{
+				Offset: 126,
+				Line:   5,
+				Column: 24,
+			})
+		assert.Equal(
+			t,
+			prevInvalidationNote.Range.EndPos,
+			ast.Position{
+				Offset: 126,
+				Line:   5,
+				Column: 24,
+			})
+	})
 }
 
 func TestCheckReferenceUseAfterCopy(t *testing.T) {
