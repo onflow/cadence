@@ -3859,15 +3859,7 @@ func CompositeForEachAttachmentFunctionType(t *CompositeType) *FunctionType {
 		attachmentSuperType = AnyResourceAttachmentType
 	}
 
-	typeParameter := &TypeParameter{
-		Name:      "T",
-		TypeBound: attachmentSuperType,
-	}
-
 	return &FunctionType{
-		TypeParameters: []*TypeParameter{
-			typeParameter,
-		},
 		Parameters: []*Parameter{
 			{
 				Label:      ArgumentLabelNotRequired,
@@ -3878,9 +3870,7 @@ func CompositeForEachAttachmentFunctionType(t *CompositeType) *FunctionType {
 							{
 								TypeAnnotation: NewTypeAnnotation(
 									&ReferenceType{
-										Type: &GenericType{
-											TypeParameter: typeParameter,
-										},
+										Type: attachmentSuperType,
 									},
 								),
 							},

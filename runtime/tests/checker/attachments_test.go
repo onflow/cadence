@@ -4044,12 +4044,29 @@ func TestCheckForEachAttachment(t *testing.T) {
 		`,
 		)
 
-		errs := RequireCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		assert.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
 	})
 
 	t.Run("param mismatch", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			fun bar (_: &AnyResource) { }
+			struct A {}
+			pub fun foo(s: A) {
+				s.forEachAttachment(bar)
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("param supertype", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -4063,8 +4080,7 @@ func TestCheckForEachAttachment(t *testing.T) {
 		`,
 		)
 
-		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		require.NoError(t, err)
 	})
 
 	t.Run("resource", func(t *testing.T) {
@@ -4252,24 +4268,6 @@ func TestCheckForEachAttachment(t *testing.T) {
 		)
 		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
-	})
-
-	t.Run("with type argument", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-			struct interface I {}
-			fun bar (_: &{I}) {}
-			struct A {}
-			pub fun foo(s: A) {
-				s.forEachAttachment<{I}>(bar)
-			}
-		`,
-		)
-
-		require.NoError(t, err)
 	})
 }
 
