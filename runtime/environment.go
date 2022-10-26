@@ -245,7 +245,7 @@ func (e *interpreterEnvironment) GetAccountKey(address common.Address, index int
 	return e.runtimeInterface.GetAccountKey(address, index)
 }
 
-func (e *interpreterEnvironment) AccountKeysCount(address common.Address) uint64 {
+func (e *interpreterEnvironment) AccountKeysCount(address common.Address) (uint64, error) {
 	return e.runtimeInterface.AccountKeysCount(address)
 }
 

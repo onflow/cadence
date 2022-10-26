@@ -224,10 +224,8 @@ func TestRuntimeReturnPublicAccount(t *testing.T) {
 		getAccountAvailableBalance: noopRuntimeUInt64Getter,
 		getStorageUsed:             noopRuntimeUInt64Getter,
 		getStorageCapacity:         noopRuntimeUInt64Getter,
-		accountKeysCount: func(_ common.Address) uint64 {
-			return 0
-		},
-		storage: newTestLedger(nil, nil),
+		accountKeysCount:           noopRuntimeUInt64Getter,
+		storage:                    newTestLedger(nil, nil),
 	}
 
 	nextTransactionLocation := newTransactionLocationGenerator()
@@ -262,7 +260,7 @@ func TestRuntimeReturnAuthAccount(t *testing.T) {
 		getAccountAvailableBalance: noopRuntimeUInt64Getter,
 		getStorageUsed:             noopRuntimeUInt64Getter,
 		getStorageCapacity:         noopRuntimeUInt64Getter,
-		accountKeysCount:           func(_ common.Address) uint64 { return 0 },
+		accountKeysCount:           noopRuntimeUInt64Getter,
 		storage:                    newTestLedger(nil, nil),
 	}
 
@@ -1105,8 +1103,8 @@ func getAccountKeyTestRuntimeInterface(storage *testAccountKeyStorage) *testRunt
 
 			return accountKey, nil
 		},
-		accountKeysCount: func(address Address) uint64 {
-			return uint64(storage.unrevokedKeyCount)
+		accountKeysCount: func(address Address) (uint64, error) {
+			return uint64(storage.unrevokedKeyCount), nil
 		},
 		log: func(message string) {
 			storage.logs = append(storage.logs, message)
