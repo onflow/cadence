@@ -56,6 +56,10 @@ func (checker *Checker) VisitInvocationExpression(invocationExpression *ast.Invo
 }
 
 func (checker *Checker) checkInvocationExpression(invocationExpression *ast.InvocationExpression) Type {
+	if invocationExpression.InvokedExpression.String() == "s.getField" {
+		_ = 3
+	}
+
 	inCreate := checker.inCreate
 	checker.inCreate = false
 	defer func() {

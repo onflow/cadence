@@ -3814,40 +3814,6 @@ func (t *CompositeType) GetNestedTypes() *StringTypeOrderedMap {
 	return t.NestedTypes
 }
 
-const compositeGetAttachmentFunctionName = "getAttachment"
-
-const compositeGetAttachmentFunctionDocString = `
-Returns a reference to the attachment specified by the profided type argument, if it exists
-on the receiver composite. Otherwise, returns nil. 
-`
-
-func CompositeGetAttachmentFunctionType(t *CompositeType) *FunctionType {
-	attachmentSuperType := AnyStructAttachmentType
-	if t.IsResourceType() {
-		attachmentSuperType = AnyResourceAttachmentType
-	}
-
-	typeParameter := &TypeParameter{
-		Name:      "T",
-		TypeBound: attachmentSuperType,
-	}
-
-	return &FunctionType{
-		TypeParameters: []*TypeParameter{
-			typeParameter,
-		},
-		ReturnTypeAnnotation: NewTypeAnnotation(
-			&OptionalType{
-				Type: &ReferenceType{
-					Type: &GenericType{
-						TypeParameter: typeParameter,
-					},
-				},
-			},
-		),
-	}
-}
-
 const compositeForEachAttachmentFunctionName = "forEachAttachment"
 
 const compositeForEachAttachmentFunctionDocString = `
@@ -4985,14 +4951,30 @@ func (t *ReferenceType) IndexingType() Type {
 	return referencedType.IndexingType()
 }
 
-func (*ReferenceType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
-	// TODO:
-	return false
+func (t *ReferenceType) Unify(
+	other Type,
+	typeParameters *TypeParameterTypeOrderedMap,
+	report func(err error),
+	outerRange ast.Range,
+) bool {
+	otherReference, ok := other.(*ReferenceType)
+	if !ok {
+		return false
+	}
+
+	return t.Type.Unify(otherReference.Type, typeParameters, report, outerRange)
 }
 
-func (t *ReferenceType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
-	// TODO:
-	return t
+func (t *ReferenceType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
+	newInnerType := t.Type.Resolve(typeArguments)
+	if newInnerType == nil {
+		return nil
+	}
+
+	return &ReferenceType{
+		Authorized: t.Authorized,
+		Type:       newInnerType,
+	}
 }
 
 const AddressTypeName = "Address"
