@@ -1433,7 +1433,7 @@ func NewArrayValueWithIterator(
 ) *ArrayValue {
 	interpreter.ReportComputation(common.ComputationKindCreateArrayValue, 1)
 
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	var v *ArrayValue
 
@@ -1583,7 +1583,7 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRan
 
 	interpreter.ReportComputation(common.ComputationKindDestroyArrayValue, 1)
 
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, locationRange)
@@ -1705,7 +1705,7 @@ func (v *ArrayValue) Concat(interpreter *Interpreter, locationRange LocationRang
 }
 
 func (v *ArrayValue) GetKey(interpreter *Interpreter, locationRange LocationRange, key Value) Value {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, locationRange)
@@ -1745,13 +1745,13 @@ func (v *ArrayValue) Get(interpreter *Interpreter, locationRange LocationRange, 
 		panic(errors.NewExternalError(err))
 	}
 
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	return StoredValue(interpreter, storable, config.Storage)
 }
 
 func (v *ArrayValue) SetKey(interpreter *Interpreter, locationRange LocationRange, key Value, value Value) {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, locationRange)
@@ -1794,7 +1794,7 @@ func (v *ArrayValue) Set(interpreter *Interpreter, locationRange LocationRange, 
 	}
 	interpreter.maybeValidateAtreeValue(v.array)
 
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 	existingValue := StoredValue(interpreter, existingStorable, config.Storage)
 
 	existingValue.DeepRemove(interpreter)
@@ -1870,7 +1870,7 @@ func (v *ArrayValue) AppendAll(interpreter *Interpreter, locationRange LocationR
 }
 
 func (v *ArrayValue) InsertKey(interpreter *Interpreter, locationRange LocationRange, key Value, value Value) {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, locationRange)
@@ -1923,7 +1923,7 @@ func (v *ArrayValue) Insert(interpreter *Interpreter, locationRange LocationRang
 }
 
 func (v *ArrayValue) RemoveKey(interpreter *Interpreter, locationRange LocationRange, key Value) Value {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, locationRange)
@@ -1954,7 +1954,7 @@ func (v *ArrayValue) Remove(interpreter *Interpreter, locationRange LocationRang
 	}
 	interpreter.maybeValidateAtreeValue(v.array)
 
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 	value := StoredValue(interpreter, storable, config.Storage)
 
 	return value.Transfer(
@@ -2027,7 +2027,7 @@ func (v *ArrayValue) Contains(
 }
 
 func (v *ArrayValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, locationRange)
@@ -2226,7 +2226,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, locationRange LocationR
 }
 
 func (v *ArrayValue) RemoveMember(interpreter *Interpreter, locationRange LocationRange, _ string) Value {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, locationRange)
@@ -2237,7 +2237,7 @@ func (v *ArrayValue) RemoveMember(interpreter *Interpreter, locationRange Locati
 }
 
 func (v *ArrayValue) SetMember(interpreter *Interpreter, locationRange LocationRange, _ string, _ Value) {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, locationRange)
@@ -2256,7 +2256,7 @@ func (v *ArrayValue) ConformsToStaticType(
 	locationRange LocationRange,
 	results TypeConformanceResults,
 ) bool {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	count := v.Count()
 
@@ -2368,7 +2368,7 @@ func (v *ArrayValue) Transfer(
 	common.UseMemory(interpreter, dataSlabs)
 	common.UseMemory(interpreter, metaDataSlabs)
 
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, locationRange)
@@ -2488,7 +2488,7 @@ func (v *ArrayValue) Transfer(
 }
 
 func (v *ArrayValue) Clone(interpreter *Interpreter) Value {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	iterator, err := v.array.Iterator()
 	if err != nil {
@@ -2533,7 +2533,7 @@ func (v *ArrayValue) Clone(interpreter *Interpreter) Value {
 }
 
 func (v *ArrayValue) DeepRemove(interpreter *Interpreter) {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	if config.TracingEnabled {
 		startTime := time.Now()
@@ -13864,7 +13864,7 @@ func NewCompositeValue(
 
 	interpreter.ReportComputation(common.ComputationKindCreateCompositeValue, 1)
 
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	var v *CompositeValue
 
@@ -14012,7 +14012,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 
 	interpreter.ReportComputation(common.ComputationKindDestroyCompositeValue, 1)
 
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(locationRange)
@@ -14042,7 +14042,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 
 	// if composite was deserialized, dynamically link in the destructor
 	if v.Destructor == nil {
-		v.Destructor = interpreter.sharedState.typeCodes.CompositeCodes[v.TypeID()].DestructorFunction
+		v.Destructor = interpreter.SharedState.typeCodes.CompositeCodes[v.TypeID()].DestructorFunction
 	}
 
 	destructor := v.Destructor
@@ -14085,7 +14085,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 }
 
 func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(locationRange)
@@ -14201,7 +14201,7 @@ func (v *CompositeValue) InitializeFunctions(interpreter *Interpreter) {
 		return
 	}
 
-	v.Functions = interpreter.sharedState.typeCodes.CompositeCodes[v.TypeID()].CompositeFunctions
+	v.Functions = interpreter.SharedState.typeCodes.CompositeCodes[v.TypeID()].CompositeFunctions
 }
 
 func (v *CompositeValue) OwnerValue(interpreter *Interpreter, locationRange LocationRange) OptionalValue {
@@ -14211,7 +14211,7 @@ func (v *CompositeValue) OwnerValue(interpreter *Interpreter, locationRange Loca
 		return NilOptionalValue
 	}
 
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	ownerAccount := config.PublicAccountHandler(AddressValue(address))
 
@@ -14227,7 +14227,7 @@ func (v *CompositeValue) RemoveMember(
 	name string,
 ) Value {
 
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(locationRange)
@@ -14292,7 +14292,7 @@ func (v *CompositeValue) SetMember(
 	name string,
 	value Value,
 ) {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(locationRange)
@@ -14422,7 +14422,7 @@ func formatComposite(memoryGauge common.MemoryGauge, typeId string, fields []Com
 }
 
 func (v *CompositeValue) GetField(interpreter *Interpreter, locationRange LocationRange, name string) Value {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(locationRange)
@@ -14533,7 +14533,7 @@ func (v *CompositeValue) ConformsToStaticType(
 	locationRange LocationRange,
 	results TypeConformanceResults,
 ) bool {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	if config.TracingEnabled {
 		startTime := time.Now()
@@ -14665,7 +14665,7 @@ func (v *CompositeValue) Transfer(
 
 	interpreter.ReportComputation(common.ComputationKindTransferCompositeValue, 1)
 
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(locationRange)
@@ -14842,7 +14842,7 @@ func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
 		panic(errors.NewExternalError(err))
 	}
 
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	elementMemoryUse := common.NewAtreeMapPreAllocatedElementsMemoryUsage(v.dictionary.Count(), 0)
 	common.UseMemory(config.MemoryGauge, elementMemoryUse)
@@ -14893,7 +14893,7 @@ func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
 }
 
 func (v *CompositeValue) DeepRemove(interpreter *Interpreter) {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	if config.TracingEnabled {
 		startTime := time.Now()
@@ -14981,7 +14981,7 @@ func (v *CompositeValue) RemoveField(
 	interpreter.RemoveReferencedSlab(existingKeyStorable)
 
 	// Value
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 	existingValue := StoredValue(interpreter, existingValueStorable, config.Storage)
 	existingValue.DeepRemove(interpreter)
 	interpreter.RemoveReferencedSlab(existingValueStorable)
@@ -15059,7 +15059,7 @@ func NewDictionaryValueWithAddress(
 
 	var v *DictionaryValue
 
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	if config.TracingEnabled {
 		startTime := time.Now()
@@ -15246,7 +15246,7 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange Locati
 
 	interpreter.ReportComputation(common.ComputationKindDestroyDictionaryValue, 1)
 
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, locationRange)
@@ -15387,7 +15387,7 @@ func (v *DictionaryValue) Get(
 }
 
 func (v *DictionaryValue) GetKey(interpreter *Interpreter, locationRange LocationRange, keyValue Value) Value {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, locationRange)
@@ -15407,7 +15407,7 @@ func (v *DictionaryValue) SetKey(
 	keyValue Value,
 	value Value,
 ) {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, locationRange)
@@ -15486,7 +15486,7 @@ func (v *DictionaryValue) GetMember(
 	locationRange LocationRange,
 	name string,
 ) Value {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, locationRange)
@@ -15642,7 +15642,7 @@ func (v *DictionaryValue) GetMember(
 }
 
 func (v *DictionaryValue) RemoveMember(interpreter *Interpreter, locationRange LocationRange, _ string) Value {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, locationRange)
@@ -15653,7 +15653,7 @@ func (v *DictionaryValue) RemoveMember(interpreter *Interpreter, locationRange L
 }
 
 func (v *DictionaryValue) SetMember(interpreter *Interpreter, locationRange LocationRange, _ string, _ Value) {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, locationRange)
@@ -15672,7 +15672,7 @@ func (v *DictionaryValue) RemoveKey(
 	locationRange LocationRange,
 	key Value,
 ) Value {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, locationRange)
@@ -15705,7 +15705,7 @@ func (v *DictionaryValue) Remove(
 	}
 	interpreter.maybeValidateAtreeValue(v.dictionary)
 
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 	storage := config.Storage
 
 	// Key
@@ -15789,7 +15789,7 @@ func (v *DictionaryValue) Insert(
 		return NilOptionalValue
 	}
 
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 	storage := config.Storage
 
 	existingValue := StoredValue(
@@ -15820,7 +15820,7 @@ func (v *DictionaryValue) ConformsToStaticType(
 
 	count := v.Count()
 
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	if config.TracingEnabled {
 		startTime := time.Now()
@@ -15969,7 +15969,7 @@ func (v *DictionaryValue) Transfer(
 
 	interpreter.ReportComputation(common.ComputationKindTransferDictionaryValue, uint(v.Count()))
 
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, locationRange)
@@ -16102,7 +16102,7 @@ func (v *DictionaryValue) Transfer(
 }
 
 func (v *DictionaryValue) Clone(interpreter *Interpreter) Value {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	valueComparator := newValueComparator(interpreter, EmptyLocationRange)
 	hashInputProvider := newHashInputProvider(interpreter, EmptyLocationRange)
@@ -16156,7 +16156,7 @@ func (v *DictionaryValue) Clone(interpreter *Interpreter) Value {
 }
 
 func (v *DictionaryValue) DeepRemove(interpreter *Interpreter) {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	if config.TracingEnabled {
 		startTime := time.Now()
@@ -16458,7 +16458,7 @@ func (v *SomeValue) IsDestroyed() bool {
 }
 
 func (v *SomeValue) Destroy(interpreter *Interpreter, locationRange LocationRange) {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(locationRange)
@@ -16487,7 +16487,7 @@ func (v SomeValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences 
 }
 
 func (v *SomeValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(locationRange)
@@ -16536,7 +16536,7 @@ func (v *SomeValue) GetMember(interpreter *Interpreter, locationRange LocationRa
 }
 
 func (v *SomeValue) RemoveMember(interpreter *Interpreter, locationRange LocationRange, _ string) Value {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(locationRange)
@@ -16546,7 +16546,7 @@ func (v *SomeValue) RemoveMember(interpreter *Interpreter, locationRange Locatio
 }
 
 func (v *SomeValue) SetMember(interpreter *Interpreter, locationRange LocationRange, _ string, _ Value) {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(locationRange)
@@ -16641,7 +16641,7 @@ func (v *SomeValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 ) Value {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(locationRange)
@@ -16706,7 +16706,7 @@ func (v *SomeValue) DeepRemove(interpreter *Interpreter) {
 }
 
 func (v *SomeValue) InnerValue(interpreter *Interpreter, locationRange LocationRange) Value {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(locationRange)

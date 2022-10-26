@@ -38,7 +38,7 @@ func (interpreter *Interpreter) VisitImportDeclaration(declaration *ast.ImportDe
 }
 
 func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.ResolvedLocation) {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	// tracing
 	if config.TracingEnabled {

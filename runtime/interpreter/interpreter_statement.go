@@ -37,7 +37,7 @@ func (interpreter *Interpreter) evalStatement(statement ast.Statement) Statement
 
 	interpreter.statement = statement
 
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	onMeterComputation := config.OnMeterComputation
 	if onMeterComputation != nil {
@@ -384,7 +384,7 @@ func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement)
 		HasPosition: statement,
 	}
 
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	onEventEmitted := config.OnEventEmitted
 	if onEventEmitted == nil {
