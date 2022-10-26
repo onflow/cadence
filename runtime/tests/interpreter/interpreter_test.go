@@ -8686,7 +8686,7 @@ func newTestPublicAccountValue(gauge common.MemoryGauge, addressValue interprete
 				addressValue,
 				panicFunctionValue,
 				panicFunctionValue,
-				interpreter.AccountKeysCountConstructor(func() interpreter.UInt64Value {
+				interpreter.AccountKeysCountGetter(func() interpreter.UInt64Value {
 					panic(errors.NewUnreachableError())
 				}),
 			)

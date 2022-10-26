@@ -289,7 +289,7 @@ func newAuthAccountKeysValue(
 			addressValue,
 		),
 		newAccountKeysForEachFunction(gauge, handler, addressValue),
-		newAccountKeysCountConstructor(gauge, handler, addressValue),
+		newAccountKeysCountGetter(gauge, handler, addressValue),
 	)
 }
 
@@ -513,7 +513,7 @@ type PublicKey struct {
 type AccountKeyProvider interface {
 	// GetAccountKey retrieves a key from an account by index.
 	GetAccountKey(address common.Address, index int) (*AccountKey, error)
-	AccountKeysCount(address common.Address) uint64
+	AccountKeysCount(address common.Address) (uint64, error)
 }
 
 // public keys are assumed to be already validated
@@ -615,14 +615,22 @@ func newAccountKeysForEachFunction(
 				)
 			}
 
-			count := int(provider.AccountKeysCount(address))
-
+			var count uint64
 			var err error
+
+			wrapPanic(func() {
+				count, err = provider.AccountKeysCount(address)
+			})
+
+			if err != nil {
+				panic(err)
+			}
+
 			var accountKey *AccountKey
 
-			for index := 0; index < count; index++ {
+			for index := uint64(0); index < count; index++ {
 				wrapPanic(func() {
-					accountKey, err = provider.GetAccountKey(address, index)
+					accountKey, err = provider.GetAccountKey(address, int(index))
 				})
 				if err != nil {
 					panic(err)
@@ -662,16 +670,28 @@ func newAccountKeysForEachFunction(
 	)
 }
 
-func newAccountKeysCountConstructor(
+func newAccountKeysCountGetter(
 	gauge common.MemoryGauge,
 	provider AccountKeyProvider,
 	addressValue interpreter.AddressValue,
-) interpreter.AccountKeysCountConstructor {
+) interpreter.AccountKeysCountGetter {
 	address := addressValue.ToAddress()
 
 	return func() interpreter.UInt64Value {
 		return interpreter.NewUInt64Value(gauge, func() uint64 {
-			return provider.AccountKeysCount(address)
+			var count uint64
+			var err error
+
+			wrapPanic(func() {
+				count, err = provider.AccountKeysCount(address)
+			})
+			if err != nil {
+				// The provider might not be able to fetch the number of account keys
+				// e.g. when the account does not exist
+				panic(err)
+			}
+
+			return count
 		})
 	}
 }
@@ -772,7 +792,7 @@ func newPublicAccountKeysValue(
 			handler,
 			addressValue,
 		),
-		newAccountKeysCountConstructor(
+		newAccountKeysCountGetter(
 			gauge,
 			handler,
 			addressValue,
