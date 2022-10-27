@@ -168,6 +168,20 @@ Integers have multiple built-in functions you can use.
   answer.toString()  // is "42"
   ```
 
+- `cadence•fun fromString(_ input: String): T?`
+
+  Attempts to parse an integer value from a base-10 encoded string, returning `nil` if the string is invalid.
+
+  For a given integer `n` of type `T`, `T.fromString(n.toString())` is equivalent to wrapping `n` up in an `Optional`.
+
+  Strings are invalid if:
+    - they contain non-digit characters
+    - they don't fit in the target type
+  
+  For signed integer types like `Int64`, and `Int`, the string may optionally begin with `+` or `-` sign prefix.
+
+  For unsigned integer types like `Word64`, `UInt64`, and `UInt`, sign prefices are not allowed.
+
 - `cadence•fun toBigEndianBytes(): [UInt8]`
 
   Returns the byte array representation (`[UInt8]`) in big-endian order of the integer.
@@ -221,6 +235,21 @@ Fixed-Point numbers have multiple built-in functions you can use.
 
   fix.toString()  // is "1.23000000"
   ```
+
+- `cadence•fun fromString(_ input: String): T?`
+
+  Attempts to parse a fixed-point value from a base-10 encoded string, returning `nil` if the string is invalid.
+
+  For a given fixed-point numeral `n` of type `T`, `T.fromString(n.toString())` is equivalent to wrapping `n` up in an `Optional`.
+
+  Strings are invalid if:
+    - they contain non-digit characters.
+    - they don't fit in the target type.
+    - they're missing a decimal or fractional component. For example, both "0." and ".1" are invalid strings, but "0.1" is accepted.
+
+  For signed types like `Fix64`, the string may optionally begin with `+` or `-` sign prefix.
+
+  For unsigned types like `UFix64`, sign prefices are not allowed.
 
 - `cadence•fun toBigEndianBytes(): [UInt8]`
 
