@@ -172,7 +172,7 @@ Integers have multiple built-in functions you can use.
 
   Attempts to parse an integer value from a base-10 encoded string, returning `nil` if the string is invalid.
 
-  For a given integer `n` of type `T`, `T.fromString(n.toString())` is equivalent to wrapping `n` up in an `Optional`.
+  For a given integer `n` of type `T`, `T.fromString(n.toString())` is equivalent to wrapping `n` up in an [optional](#optionals).
 
   Strings are invalid if:
     - they contain non-digit characters
@@ -240,7 +240,7 @@ Fixed-Point numbers have multiple built-in functions you can use.
 
   Attempts to parse a fixed-point value from a base-10 encoded string, returning `nil` if the string is invalid.
 
-  For a given fixed-point numeral `n` of type `T`, `T.fromString(n.toString())` is equivalent to wrapping `n` up in an `Optional`.
+  For a given fixed-point numeral `n` of type `T`, `T.fromString(n.toString())` is equivalent to wrapping `n` up in an `optional`.
 
   Strings are invalid if:
     - they contain non-digit characters.
@@ -679,6 +679,13 @@ Strings have multiple built-in functions you can use:
   let bytes = flowers.utf8
   // `bytes` is `[70, 108, 111, 119, 101, 114, 115, 32, 240, 159, 146, 144]`
   ```
+
+- `cadence•fun fromUTF8(_ input: [UInt8]): String?`
+
+  Attempts to convert a UTF-8 encoded byte array into a `String`. This function returns `nil` if the byte array contains invalid UTF-8,
+  such as incomplete codepoint sequences or undefined graphemes.
+
+  For a given string `s`, `String.fromUTF8(s.utf8)` is equivalent to wrapping `s` up in an [optional](#optionals).
 
 - `cadence•fun concat(_ other: String): String`
 
