@@ -489,7 +489,7 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 		}
 	}
 
-	// all attachment types have a `getField` and a `getMethod` function
+	// all attachment types have a `getField` and a `getFunction` function
 
 	if IsSubType(ty, AnyResourceAttachmentType) || IsSubType(ty, AnyStructAttachmentType) {
 		members[attachmentGetFieldFunctionName] = MemberResolver{
@@ -505,15 +505,15 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 			},
 		}
 
-		members[attachmentGetMethodFunctionName] = MemberResolver{
+		members[attachmentGetFunctionFunctionName] = MemberResolver{
 			Kind: common.DeclarationKindFunction,
 			Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 				return NewPublicFunctionMember(
 					memoryGauge,
 					ty,
 					identifier,
-					AttachmentGetMethodFunctionType(),
-					attachmentGetMethodFunctionDocString,
+					AttachmentGetFunctionFunctionType(),
+					attachmentGetFunctionFunctionDocString,
 				)
 			},
 		}
@@ -3921,15 +3921,15 @@ func AttachmentGetFieldFunctionType() *FunctionType {
 	}
 }
 
-const attachmentGetMethodFunctionName = "getMethod"
+const attachmentGetFunctionFunctionName = "getFunction"
 
-const attachmentGetMethodFunctionDocString = `
+const attachmentGetFunctionFunctionDocString = `
 Returns the method with the specified name and type on the receiver. If a method with the
 specified name does not exist on the receiver, or if the method exists but does not exactly match the provided type, 
 returns nil.
 `
 
-func AttachmentGetMethodFunctionType() *FunctionType {
+func AttachmentGetFunctionFunctionType() *FunctionType {
 	typeParameter := &TypeParameter{
 		Name:      "T",
 		TypeBound: AnyType,

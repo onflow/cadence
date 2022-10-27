@@ -3781,7 +3781,7 @@ func TestCheckGetField(t *testing.T) {
 	})
 }
 
-func TestCheckGetMethod(t *testing.T) {
+func TestCheckGetFunction(t *testing.T) {
 
 	t.Parallel()
 
@@ -3793,7 +3793,7 @@ func TestCheckGetMethod(t *testing.T) {
 			`
 			attachment A for AnyStruct {}
 			pub fun foo(s: &A) {
-				s.getMethod<(():Void)>("x")
+				s.getFunction<(():Void)>("x")
 			}
 		`,
 		)
@@ -3809,7 +3809,7 @@ func TestCheckGetMethod(t *testing.T) {
 			`
 			attachment A for AnyStruct {}
 			pub fun foo(s: &A) {
-				let x: (():Void)? = s.getMethod<(():Void)>("x")
+				let x: (():Void)? = s.getFunction<(():Void)>("x")
 			}
 		`,
 		)
@@ -3824,7 +3824,7 @@ func TestCheckGetMethod(t *testing.T) {
 		_, err := ParseAndCheck(t,
 			`
 			pub fun foo(s: &AnyStructAttachment) {
-				let x: (():Void)? = s.getMethod<(():Void)>("x")
+				let x: (():Void)? = s.getFunction<(():Void)>("x")
 			}
 		`,
 		)
@@ -3839,7 +3839,7 @@ func TestCheckGetMethod(t *testing.T) {
 		_, err := ParseAndCheck(t,
 			`
 			pub fun foo(s: &AnyResourceAttachment) {
-				let x: (():Void)? = s.getMethod<(():Void)>("x")
+				let x: (():Void)? = s.getFunction<(():Void)>("x")
 			}
 		`,
 		)
@@ -3854,7 +3854,7 @@ func TestCheckGetMethod(t *testing.T) {
 		_, err := ParseAndCheck(t,
 			`
 			pub fun foo(s: &AnyResourceAttachment) {
-				let x: ((Int):Void)? = s.getMethod<(():Void)>("x")
+				let x: ((Int):Void)? = s.getFunction<(():Void)>("x")
 			}
 		`,
 		)
@@ -3870,7 +3870,7 @@ func TestCheckGetMethod(t *testing.T) {
 		_, err := ParseAndCheck(t,
 			`
 			pub fun foo(s: &AnyResourceAttachment) {
-				let x: (():AnyStruct)? = s.getMethod<(():String)>("x")
+				let x: (():AnyStruct)? = s.getFunction<(():String)>("x")
 			}
 		`,
 		)
@@ -3885,7 +3885,7 @@ func TestCheckGetMethod(t *testing.T) {
 		_, err := ParseAndCheck(t,
 			`
 			pub fun foo(s: AnyStruct) {
-				s.getMethod<[String]>("x")
+				s.getFunction<[String]>("x")
 			}
 		`,
 		)
@@ -3900,7 +3900,7 @@ func TestCheckGetMethod(t *testing.T) {
 		_, err := ParseAndCheck(t,
 			`
 			pub fun foo(s: @AnyResource) {
-				s.getMethod<[String]>("x")
+				s.getFunction<[String]>("x")
 				destroy s
 			}
 		`,
@@ -3917,7 +3917,7 @@ func TestCheckGetMethod(t *testing.T) {
 			`
 			event E()
 			pub fun foo(s: E) {
-				s.getMethod<[String]>("x")
+				s.getFunction<[String]>("x")
 			}
 		`,
 		)
@@ -3933,7 +3933,7 @@ func TestCheckGetMethod(t *testing.T) {
 			`
 			contract C {}
 			pub fun foo(s: C) {
-				s.getMethod<[String]>("x")
+				s.getFunction<[String]>("x")
 			}
 		`,
 		)
@@ -3949,7 +3949,7 @@ func TestCheckGetMethod(t *testing.T) {
 			`
 			enum S:Int {}
 			pub fun foo(s: S) {
-				s.getMethod<[String]>("x")
+				s.getFunction<[String]>("x")
 			}
 		`,
 		)
@@ -3965,7 +3965,7 @@ func TestCheckGetMethod(t *testing.T) {
 			`
 			struct S {}
 			pub fun foo(s: S) {
-				s.getMethod<[String]>("x")
+				s.getFunction<[String]>("x")
 			}
 		`,
 		)
@@ -3981,7 +3981,7 @@ func TestCheckGetMethod(t *testing.T) {
 			`
 			resource R {}
 			pub fun foo(s: @R) {
-				s.getMethod<[String]>("x")
+				s.getFunction<[String]>("x")
 				destroy s
 			}
 		`,
