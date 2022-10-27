@@ -22,7 +22,6 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"io"
 	"math/big"
 	"strconv"
@@ -92,7 +91,7 @@ func (d *Decoder) Decode() (value cadence.Value, err error) {
 
 	err = d.dec.Decode(&jsonMap)
 	if err != nil {
-		return nil, fmt.Errorf("json-cdc: failed to decode valid JSON structure: %w", err)
+		return nil, errors.NewDefaultUserError("failed to decode JSON: %w", err)
 	}
 
 	// capture panics that occur during decoding
@@ -103,7 +102,7 @@ func (d *Decoder) Decode() (value cadence.Value, err error) {
 				panic(r)
 			}
 
-			err = errors.NewDefaultUserError("failed to decode value: %w", panicErr)
+			err = errors.NewDefaultUserError("failed to decode JSON-CDC: %w", panicErr)
 		}
 	}()
 
@@ -136,8 +135,6 @@ const (
 	returnKey       = "return"
 )
 
-var ErrInvalidJSONCadence = errors.NewDefaultUserError("invalid JSON Cadence structure")
-
 func (d *Decoder) decodeJSON(v any) cadence.Value {
 	obj := toObject(v)
 
@@ -150,7 +147,7 @@ func (d *Decoder) decodeJSON(v any) cadence.Value {
 
 	// object should only contain two keys: "type", "value"
 	if len(obj) != 2 {
-		panic(ErrInvalidJSONCadence)
+		panic(errors.NewDefaultUserError("expected JSON object with keys `s` and `%s`", typeKey, valueKey))
 	}
 
 	valueJSON := obj.Get(valueKey)
@@ -230,14 +227,13 @@ func (d *Decoder) decodeJSON(v any) cadence.Value {
 		return d.decodeEnum(valueJSON)
 	}
 
-	panic(ErrInvalidJSONCadence)
+	panic(errors.NewDefaultUserError("invalid type: %s", typeStr))
 }
 
 func (d *Decoder) decodeVoid(m map[string]any) cadence.Void {
 	// object should not contain fields other than "type"
 	if len(m) != 1 {
-		// TODO: improve error message
-		panic(ErrInvalidJSONCadence)
+		panic(errors.NewDefaultUserError("invalid additional fields in void value"))
 	}
 
 	return cadence.NewMeteredVoid(d.gauge)
@@ -284,19 +280,29 @@ func (d *Decoder) decodeString(valueJSON any) cadence.String {
 	return str
 }
 
+const addressPrefix = "0x"
+
 func (d *Decoder) decodeAddress(valueJSON any) cadence.Address {
 	v := toString(valueJSON)
 
-	// must include 0x prefix
-	if v[:2] != "0x" {
-		// TODO: improve error message
-		panic(ErrInvalidJSONCadence)
+	prefixLength := len(addressPrefix)
+	if len(v) < prefixLength {
+		panic(errors.NewDefaultUserError("missing address prefix: `%s`"))
 	}
 
-	b, err := hex.DecodeString(v[2:])
+	// must include 0x prefix
+	actualPrefix := v[:prefixLength]
+	if actualPrefix != addressPrefix {
+		panic(errors.NewDefaultUserError(
+			"invalid address prefix: expected `%s`, got `%s`",
+			addressPrefix,
+			actualPrefix,
+		))
+	}
+
+	b, err := hex.DecodeString(v[prefixLength:])
 	if err != nil {
-		// TODO: improve error message
-		panic(ErrInvalidJSONCadence)
+		panic(errors.NewDefaultUserError("invalid address: %w", err))
 	}
 
 	return cadence.BytesToMeteredAddress(d.gauge, b)
@@ -308,8 +314,7 @@ func (d *Decoder) decodeBigInt(valueJSON any) *big.Int {
 	i := new(big.Int)
 	i, ok := i.SetString(v, 10)
 	if !ok {
-		// TODO: improve error message
-		panic(ErrInvalidJSONCadence)
+		return nil
 	}
 
 	return i
@@ -317,6 +322,11 @@ func (d *Decoder) decodeBigInt(valueJSON any) *big.Int {
 
 func (d *Decoder) decodeInt(valueJSON any) cadence.Int {
 	bigInt := d.decodeBigInt(valueJSON)
+	if bigInt == nil {
+		// TODO: propagate toString error from decodeBigInt
+		panic(errors.NewDefaultUserError("invalid Int: %s", valueJSON))
+	}
+
 	return cadence.NewMeteredIntFromBig(
 		d.gauge,
 		common.NewCadenceIntMemoryUsage(
@@ -333,8 +343,7 @@ func (d *Decoder) decodeInt8(valueJSON any) cadence.Int8 {
 
 	i, err := strconv.ParseInt(v, 10, 8)
 	if err != nil {
-		// TODO: improve error message
-		panic(ErrInvalidJSONCadence)
+		panic(errors.NewDefaultUserError("invalid Int8: %s", v))
 	}
 
 	return cadence.NewMeteredInt8(d.gauge, int8(i))
@@ -345,8 +354,7 @@ func (d *Decoder) decodeInt16(valueJSON any) cadence.Int16 {
 
 	i, err := strconv.ParseInt(v, 10, 16)
 	if err != nil {
-		// TODO: improve error message
-		panic(ErrInvalidJSONCadence)
+		panic(errors.NewDefaultUserError("invalid Int16: %s", v))
 	}
 
 	return cadence.NewMeteredInt16(d.gauge, int16(i))
@@ -357,8 +365,7 @@ func (d *Decoder) decodeInt32(valueJSON any) cadence.Int32 {
 
 	i, err := strconv.ParseInt(v, 10, 32)
 	if err != nil {
-		// TODO: improve error message
-		panic(ErrInvalidJSONCadence)
+		panic(errors.NewDefaultUserError("invalid Int32: %s", v))
 	}
 
 	return cadence.NewMeteredInt32(d.gauge, int32(i))
@@ -369,8 +376,7 @@ func (d *Decoder) decodeInt64(valueJSON any) cadence.Int64 {
 
 	i, err := strconv.ParseInt(v, 10, 64)
 	if err != nil {
-		// TODO: improve error message
-		panic(ErrInvalidJSONCadence)
+		panic(errors.NewDefaultUserError("invalid Int64: %s", v))
 	}
 
 	return cadence.NewMeteredInt64(d.gauge, i)
@@ -380,13 +386,17 @@ func (d *Decoder) decodeInt128(valueJSON any) cadence.Int128 {
 	value, err := cadence.NewMeteredInt128FromBig(
 		d.gauge,
 		func() *big.Int {
-			return d.decodeBigInt(valueJSON)
+			bigInt := d.decodeBigInt(valueJSON)
+			if bigInt == nil {
+				// TODO: propagate toString error from decodeBigInt
+				panic(errors.NewDefaultUserError("invalid Int128: %s", valueJSON))
+			}
+			return bigInt
 		},
 	)
 
 	if err != nil {
-		// TODO: improve error message
-		panic(ErrInvalidJSONCadence)
+		panic(errors.NewDefaultUserError("invalid Int128: %w", err))
 	}
 	return value
 }
@@ -395,19 +405,27 @@ func (d *Decoder) decodeInt256(valueJSON any) cadence.Int256 {
 	value, err := cadence.NewMeteredInt256FromBig(
 		d.gauge,
 		func() *big.Int {
-			return d.decodeBigInt(valueJSON)
+			bigInt := d.decodeBigInt(valueJSON)
+			if bigInt == nil {
+				// TODO: propagate toString error from decodeBigInt
+				panic(errors.NewDefaultUserError("invalid Int256: %s", valueJSON))
+			}
+			return bigInt
 		},
 	)
 
 	if err != nil {
-		// TODO: improve error message
-		panic(ErrInvalidJSONCadence)
+		panic(errors.NewDefaultUserError("invalid Int256: %w", err))
 	}
 	return value
 }
 
 func (d *Decoder) decodeUInt(valueJSON any) cadence.UInt {
 	bigInt := d.decodeBigInt(valueJSON)
+	if bigInt == nil {
+		// TODO: propagate toString error from decodeBigInt
+		panic(errors.NewDefaultUserError("invalid UInt: %s", valueJSON))
+	}
 	value, err := cadence.NewMeteredUIntFromBig(
 		d.gauge,
 		common.NewCadenceIntMemoryUsage(
@@ -419,8 +437,7 @@ func (d *Decoder) decodeUInt(valueJSON any) cadence.UInt {
 	)
 
 	if err != nil {
-		// TODO: improve error message
-		panic(ErrInvalidJSONCadence)
+		panic(errors.NewDefaultUserError("invalid UInt: %w", err))
 	}
 	return value
 }
@@ -430,8 +447,7 @@ func (d *Decoder) decodeUInt8(valueJSON any) cadence.UInt8 {
 
 	i, err := strconv.ParseUint(v, 10, 8)
 	if err != nil {
-		// TODO: improve error message
-		panic(ErrInvalidJSONCadence)
+		panic(errors.NewDefaultUserError("invalid UInt8: %w", err))
 	}
 
 	return cadence.NewMeteredUInt8(d.gauge, uint8(i))
@@ -442,8 +458,7 @@ func (d *Decoder) decodeUInt16(valueJSON any) cadence.UInt16 {
 
 	i, err := strconv.ParseUint(v, 10, 16)
 	if err != nil {
-		// TODO: improve error message
-		panic(ErrInvalidJSONCadence)
+		panic(errors.NewDefaultUserError("invalid UInt16: %w", err))
 	}
 
 	return cadence.NewMeteredUInt16(d.gauge, uint16(i))
@@ -454,8 +469,7 @@ func (d *Decoder) decodeUInt32(valueJSON any) cadence.UInt32 {
 
 	i, err := strconv.ParseUint(v, 10, 32)
 	if err != nil {
-		// TODO: improve error message
-		panic(ErrInvalidJSONCadence)
+		panic(errors.NewDefaultUserError("invalid UInt32: %w", err))
 	}
 
 	return cadence.NewMeteredUInt32(d.gauge, uint32(i))
@@ -466,8 +480,7 @@ func (d *Decoder) decodeUInt64(valueJSON any) cadence.UInt64 {
 
 	i, err := strconv.ParseUint(v, 10, 64)
 	if err != nil {
-		// TODO: improve error message
-		panic(ErrInvalidJSONCadence)
+		panic(errors.NewDefaultUserError("invalid UInt64: %w", err))
 	}
 
 	return cadence.NewMeteredUInt64(d.gauge, i)
@@ -477,12 +490,16 @@ func (d *Decoder) decodeUInt128(valueJSON any) cadence.UInt128 {
 	value, err := cadence.NewMeteredUInt128FromBig(
 		d.gauge,
 		func() *big.Int {
-			return d.decodeBigInt(valueJSON)
+			bigInt := d.decodeBigInt(valueJSON)
+			if bigInt == nil {
+				// TODO: propagate toString error from decodeBigInt
+				panic(errors.NewDefaultUserError("invalid UInt128: %s", valueJSON))
+			}
+			return bigInt
 		},
 	)
 	if err != nil {
-		// TODO: improve error message
-		panic(ErrInvalidJSONCadence)
+		panic(errors.NewDefaultUserError("invalid UInt128: %w", err))
 	}
 	return value
 }
@@ -491,12 +508,15 @@ func (d *Decoder) decodeUInt256(valueJSON any) cadence.UInt256 {
 	value, err := cadence.NewMeteredUInt256FromBig(
 		d.gauge,
 		func() *big.Int {
-			return d.decodeBigInt(valueJSON)
+			bigInt := d.decodeBigInt(valueJSON)
+			if bigInt == nil {
+				panic(errors.NewDefaultUserError("invalid UInt256: %s", valueJSON))
+			}
+			return bigInt
 		},
 	)
 	if err != nil {
-		// TODO: improve error message
-		panic(ErrInvalidJSONCadence)
+		panic(errors.NewDefaultUserError("invalid UInt256: %w", err))
 	}
 	return value
 }
@@ -506,8 +526,7 @@ func (d *Decoder) decodeWord8(valueJSON any) cadence.Word8 {
 
 	i, err := strconv.ParseUint(v, 10, 8)
 	if err != nil {
-		// TODO: improve error message
-		panic(ErrInvalidJSONCadence)
+		panic(errors.NewDefaultUserError("invalid Word8: %w", err))
 	}
 
 	return cadence.NewMeteredWord8(d.gauge, uint8(i))
@@ -518,8 +537,7 @@ func (d *Decoder) decodeWord16(valueJSON any) cadence.Word16 {
 
 	i, err := strconv.ParseUint(v, 10, 16)
 	if err != nil {
-		// TODO: improve error message
-		panic(ErrInvalidJSONCadence)
+		panic(errors.NewDefaultUserError("invalid Word16: %w", err))
 	}
 
 	return cadence.NewMeteredWord16(d.gauge, uint16(i))
@@ -530,8 +548,7 @@ func (d *Decoder) decodeWord32(valueJSON any) cadence.Word32 {
 
 	i, err := strconv.ParseUint(v, 10, 32)
 	if err != nil {
-		// TODO: improve error message
-		panic(ErrInvalidJSONCadence)
+		panic(errors.NewDefaultUserError("invalid Word32: %w", err))
 	}
 
 	return cadence.NewMeteredWord32(d.gauge, uint32(i))
@@ -542,8 +559,7 @@ func (d *Decoder) decodeWord64(valueJSON any) cadence.Word64 {
 
 	i, err := strconv.ParseUint(v, 10, 64)
 	if err != nil {
-		// TODO: improve error message
-		panic(ErrInvalidJSONCadence)
+		panic(errors.NewDefaultUserError("invalid Word64: %w", err))
 	}
 
 	return cadence.NewMeteredWord64(d.gauge, i)
@@ -554,8 +570,7 @@ func (d *Decoder) decodeFix64(valueJSON any) cadence.Fix64 {
 		return toString(valueJSON), nil
 	})
 	if err != nil {
-		// TODO: improve error message
-		panic(ErrInvalidJSONCadence)
+		panic(errors.NewDefaultUserError("invalid Fix64: %w", err))
 	}
 	return v
 }
@@ -565,8 +580,7 @@ func (d *Decoder) decodeUFix64(valueJSON any) cadence.UFix64 {
 		return toString(valueJSON), nil
 	})
 	if err != nil {
-		// TODO: improve error message
-		panic(ErrInvalidJSONCadence)
+		panic(errors.NewDefaultUserError("invalid UFix64: %w", err))
 	}
 	return v
 }
@@ -587,8 +601,7 @@ func (d *Decoder) decodeArray(valueJSON any) cadence.Array {
 	)
 
 	if err != nil {
-		// TODO: improve error message
-		panic(ErrInvalidJSONCadence)
+		panic(errors.NewDefaultUserError("invalid array: %w", err))
 	}
 	return value
 }
@@ -611,8 +624,7 @@ func (d *Decoder) decodeDictionary(valueJSON any) cadence.Dictionary {
 	)
 
 	if err != nil {
-		// TODO: improve error message
-		panic(ErrInvalidJSONCadence)
+		panic(errors.NewDefaultUserError("invalid dictionary: %w", err))
 	}
 
 	return value
@@ -644,12 +656,13 @@ func (d *Decoder) decodeComposite(valueJSON any) composite {
 	typeID := obj.GetString(idKey)
 	location, qualifiedIdentifier, err := common.DecodeTypeID(d.gauge, typeID)
 
-	if err != nil ||
-		location == nil && sema.NativeCompositeTypes[typeID] == nil {
+	if err != nil {
+		panic(errors.NewDefaultUserError("invalid type ID `%s`: %w", typeID, err))
+	} else if location == nil && sema.NativeCompositeTypes[typeID] == nil {
 
 		// If the location is nil, and there is no native composite type with this ID, then it's an invalid type.
 		// Note: This is moved out from the common.DecodeTypeID() to avoid the circular dependency.
-		panic(errors.NewDefaultUserError("%s. invalid type ID: `%s`", ErrInvalidJSONCadence, typeID))
+		panic(errors.NewDefaultUserError("invalid type ID for built-in: `%s`", typeID))
 	}
 
 	fields := obj.GetSlice(fieldsKey)
@@ -702,7 +715,7 @@ func (d *Decoder) decodeStruct(valueJSON any) cadence.Struct {
 	)
 
 	if err != nil {
-		panic(ErrInvalidJSONCadence)
+		panic(errors.NewDefaultUserError("invalid struct: %w", err))
 	}
 
 	return structure.WithType(cadence.NewMeteredStructType(
@@ -726,7 +739,7 @@ func (d *Decoder) decodeResource(valueJSON any) cadence.Resource {
 	)
 
 	if err != nil {
-		panic(ErrInvalidJSONCadence)
+		panic(errors.NewDefaultUserError("invalid resource: %w", err))
 	}
 	return resource.WithType(cadence.NewMeteredResourceType(
 		d.gauge,
@@ -749,7 +762,7 @@ func (d *Decoder) decodeEvent(valueJSON any) cadence.Event {
 	)
 
 	if err != nil {
-		panic(ErrInvalidJSONCadence)
+		panic(errors.NewDefaultUserError("invalid event: %w", err))
 	}
 
 	return event.WithType(cadence.NewMeteredEventType(
@@ -773,7 +786,7 @@ func (d *Decoder) decodeContract(valueJSON any) cadence.Contract {
 	)
 
 	if err != nil {
-		panic(ErrInvalidJSONCadence)
+		panic(errors.NewDefaultUserError("invalid contract: %w", err))
 	}
 
 	return contract.WithType(cadence.NewMeteredContractType(
@@ -797,7 +810,7 @@ func (d *Decoder) decodeEnum(valueJSON any) cadence.Enum {
 	)
 
 	if err != nil {
-		panic(ErrInvalidJSONCadence)
+		panic(errors.NewDefaultUserError("invalid enum: %w", err))
 	}
 
 	return enum.WithType(cadence.NewMeteredEnumType(
@@ -815,8 +828,7 @@ func (d *Decoder) decodeLink(valueJSON any) cadence.Link {
 
 	targetPath, ok := d.decodeJSON(obj.Get(targetPathKey)).(cadence.Path)
 	if !ok {
-		// TODO: improve error message
-		panic(ErrInvalidJSONCadence)
+		panic(errors.NewDefaultUserError("invalid link: missing or invalid target path"))
 	}
 
 	borrowType := obj.GetString(borrowTypeKey)
@@ -937,7 +949,7 @@ func (d *Decoder) decodeNominalType(
 
 	location, qualifiedIdentifier, err := common.DecodeTypeID(d.gauge, typeID)
 	if err != nil {
-		panic(ErrInvalidJSONCadence)
+		panic(errors.NewDefaultUserError("invalid type ID in nominal type: %w", err))
 	}
 
 	var result cadence.Type
@@ -1019,7 +1031,7 @@ func (d *Decoder) decodeNominalType(
 		)
 		result = compositeType
 	default:
-		panic(ErrInvalidJSONCadence)
+		panic(errors.NewDefaultUserError("invalid kind: %s", kind))
 	}
 
 	results[typeID] = result
@@ -1260,8 +1272,7 @@ func (d *Decoder) decodeCapability(valueJSON any) cadence.Capability {
 
 	path, ok := d.decodeJSON(obj.Get(pathKey)).(cadence.Path)
 	if !ok {
-		// TODO: improve error message
-		panic(ErrInvalidJSONCadence)
+		panic(errors.NewDefaultUserError("invalid capability: missing or invalid path"))
 	}
 
 	return cadence.NewMeteredCapability(
@@ -1279,8 +1290,7 @@ type jsonObject map[string]any
 func (obj jsonObject) Get(key string) any {
 	v, hasKey := obj[key]
 	if !hasKey {
-		// TODO: improve error message
-		panic(ErrInvalidJSONCadence)
+		panic(errors.NewDefaultUserError("missing property: %s", key))
 	}
 
 	return v
@@ -1311,8 +1321,7 @@ func (obj jsonObject) GetValue(d *Decoder, key string) cadence.Value {
 func toBool(valueJSON any) bool {
 	v, isBool := valueJSON.(bool)
 	if !isBool {
-		// TODO: improve error message
-		panic(ErrInvalidJSONCadence)
+		panic(errors.NewDefaultUserError("expected JSON bool, got %s", valueJSON))
 	}
 
 	return v
@@ -1321,8 +1330,7 @@ func toBool(valueJSON any) bool {
 func toUInt(valueJSON any) uint {
 	v, isNum := valueJSON.(float64)
 	if !isNum {
-		// TODO: improve error message
-		panic(ErrInvalidJSONCadence)
+		panic(errors.NewDefaultUserError("expected JSON number, got %s", valueJSON))
 	}
 
 	return uint(v)
@@ -1331,8 +1339,8 @@ func toUInt(valueJSON any) uint {
 func toString(valueJSON any) string {
 	v, isString := valueJSON.(string)
 	if !isString {
-		// TODO: improve error message
-		panic(ErrInvalidJSONCadence)
+		panic(errors.NewDefaultUserError("expected JSON string, got %s", valueJSON))
+
 	}
 
 	return v
@@ -1341,8 +1349,7 @@ func toString(valueJSON any) string {
 func toSlice(valueJSON any) []any {
 	v, isSlice := valueJSON.([]any)
 	if !isSlice {
-		// TODO: improve error message
-		panic(ErrInvalidJSONCadence)
+		panic(errors.NewDefaultUserError("expected JSON array, got %s", valueJSON))
 	}
 
 	return v
@@ -1351,8 +1358,7 @@ func toSlice(valueJSON any) []any {
 func toObject(valueJSON any) jsonObject {
 	v, isMap := valueJSON.(map[string]any)
 	if !isMap {
-		// TODO: improve error message
-		panic(ErrInvalidJSONCadence)
+		panic(errors.NewDefaultUserError("expecte JSON object, got %s", valueJSON))
 	}
 
 	return v
