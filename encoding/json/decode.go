@@ -147,7 +147,7 @@ func (d *Decoder) decodeJSON(v any) cadence.Value {
 
 	// object should only contain two keys: "type", "value"
 	if len(obj) != 2 {
-		panic(errors.NewDefaultUserError("expected JSON object with keys `s` and `%s`", typeKey, valueKey))
+		panic(errors.NewDefaultUserError("expected JSON object with keys `%s` and `%s`", typeKey, valueKey))
 	}
 
 	valueJSON := obj.Get(valueKey)
@@ -287,7 +287,7 @@ func (d *Decoder) decodeAddress(valueJSON any) cadence.Address {
 
 	prefixLength := len(addressPrefix)
 	if len(v) < prefixLength {
-		panic(errors.NewDefaultUserError("missing address prefix: `%s`"))
+		panic(errors.NewDefaultUserError("missing address prefix: `%s`", addressPrefix))
 	}
 
 	// must include 0x prefix
