@@ -1837,3 +1837,54 @@ func TestTypeInclusions(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func BenchmarkSuperTypeInference(b *testing.B) {
+
+	b.Run("integers", func(b *testing.B) {
+		types := []Type{
+			UInt8Type,
+			UInt256Type,
+			IntegerType,
+			Word64Type,
+		}
+
+		b.ReportAllocs()
+		b.ResetTimer()
+
+		for i := 0; i < b.N; i++ {
+			LeastCommonSuperType(types...)
+		}
+	})
+
+	b.Run("arrays", func(b *testing.B) {
+		types := []Type{
+			&VariableSizedType{
+				Type: IntType,
+			},
+			&VariableSizedType{
+				Type: Int8Type,
+			},
+		}
+
+		b.ReportAllocs()
+		b.ResetTimer()
+
+		for i := 0; i < b.N; i++ {
+			LeastCommonSuperType(types...)
+		}
+	})
+
+	b.Run("composites", func(b *testing.B) {
+		types := []Type{
+			PublicKeyType,
+			AuthAccountType,
+		}
+
+		b.ReportAllocs()
+		b.ResetTimer()
+
+		for i := 0; i < b.N; i++ {
+			LeastCommonSuperType(types...)
+		}
+	})
+}
