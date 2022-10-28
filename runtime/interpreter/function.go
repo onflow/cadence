@@ -323,7 +323,7 @@ func (v *HostFunctionValue) SetNestedVariables(variables map[string]*Variable) {
 // BoundFunctionValue
 type BoundFunctionValue struct {
 	Function FunctionValue
-	Self     *CompositeValue
+	Self     *MemberAccessibleValue
 }
 
 var _ Value = BoundFunctionValue{}
@@ -332,7 +332,7 @@ var _ FunctionValue = BoundFunctionValue{}
 func NewBoundFunctionValue(
 	interpreter *Interpreter,
 	function FunctionValue,
-	self *CompositeValue,
+	self *MemberAccessibleValue,
 ) BoundFunctionValue {
 
 	common.UseMemory(interpreter, common.BoundFunctionValueMemoryUsage)

@@ -183,10 +183,12 @@ func (executor *interpreterContractFunctionExecutor) execute() (val cadence.Valu
 		return nil, newError(err, location, codesAndPrograms)
 	}
 
+	var self interpreter.MemberAccessibleValue = contractValue
+
 	// prepare invocation
 	invocation := interpreter.NewInvocation(
 		inter,
-		contractValue,
+		&self,
 		interpreterArguments,
 		executor.argumentTypes,
 		nil,

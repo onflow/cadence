@@ -14048,9 +14048,10 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 	destructor := v.Destructor
 
 	if destructor != nil {
+		var self MemberAccessibleValue = v
 		invocation := NewInvocation(
 			interpreter,
-			v,
+			&self,
 			nil,
 			nil,
 			nil,
@@ -14168,7 +14169,8 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 
 	function, ok := v.Functions[name]
 	if ok {
-		return NewBoundFunctionValue(interpreter, function, v)
+		var self MemberAccessibleValue = v
+		return NewBoundFunctionValue(interpreter, function, &self)
 	}
 
 	return nil
@@ -15308,9 +15310,10 @@ func (v *DictionaryValue) ForEachKey(
 	keyType := v.SemaType(interpreter).KeyType
 
 	iterationInvocation := func(key Value) Invocation {
+		var self MemberAccessibleValue = v
 		return NewInvocation(
 			interpreter,
-			v,
+			&self,
 			[]Value{key},
 			[]sema.Type{keyType},
 			nil,
