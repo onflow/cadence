@@ -1931,7 +1931,7 @@ func TestDecodeInvalidType(t *testing.T) {
 	`
 		_, err := json.Decode(nil, []byte(encodedValue))
 		require.Error(t, err)
-		assert.Equal(t, "failed to decode value: invalid JSON Cadence structure. invalid type ID: ``", err.Error())
+		assert.Equal(t, "failed to decode JSON-Cadence value: invalid type ID for built-in: ``", err.Error())
 	})
 
 	t.Run("undefined type", func(t *testing.T) {
@@ -1948,7 +1948,7 @@ func TestDecodeInvalidType(t *testing.T) {
 	`
 		_, err := json.Decode(nil, []byte(encodedValue))
 		require.Error(t, err)
-		assert.Equal(t, "failed to decode value: invalid JSON Cadence structure. invalid type ID: `I.Foo`", err.Error())
+		assert.Equal(t, "failed to decode JSON-Cadence value: invalid type ID `I.Foo`: invalid identifier location type ID: missing qualified identifier", err.Error())
 	})
 
 	t.Run("unknown location prefix", func(t *testing.T) {
@@ -1965,7 +1965,7 @@ func TestDecodeInvalidType(t *testing.T) {
 	`
 		_, err := json.Decode(nil, []byte(encodedValue))
 		require.Error(t, err)
-		assert.Equal(t, "failed to decode value: invalid JSON Cadence structure. invalid type ID: `N.PublicKey`", err.Error())
+		assert.Equal(t, "failed to decode JSON-Cadence value: invalid type ID for built-in: `N.PublicKey`", err.Error())
 	})
 }
 
