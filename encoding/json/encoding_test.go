@@ -1931,7 +1931,7 @@ func TestDecodeInvalidType(t *testing.T) {
 	`
 		_, err := json.Decode(nil, []byte(encodedValue))
 		require.Error(t, err)
-		assert.Equal(t, "failed to decode value: invalid JSON Cadence structure. invalid type ID: ``", err.Error())
+		assert.Equal(t, "failed to decode JSON-Cadence value: invalid type ID for built-in: ``", err.Error())
 	})
 
 	t.Run("undefined type", func(t *testing.T) {
@@ -1948,7 +1948,7 @@ func TestDecodeInvalidType(t *testing.T) {
 	`
 		_, err := json.Decode(nil, []byte(encodedValue))
 		require.Error(t, err)
-		assert.Equal(t, "failed to decode value: invalid JSON Cadence structure. invalid type ID: `I.Foo`", err.Error())
+		assert.Equal(t, "failed to decode JSON-Cadence value: invalid type ID `I.Foo`: invalid identifier location type ID: missing qualified identifier", err.Error())
 	})
 
 	t.Run("unknown location prefix", func(t *testing.T) {
@@ -1965,7 +1965,7 @@ func TestDecodeInvalidType(t *testing.T) {
 	`
 		_, err := json.Decode(nil, []byte(encodedValue))
 		require.Error(t, err)
-		assert.Equal(t, "failed to decode value: invalid JSON Cadence structure. invalid type ID: `N.PublicKey`", err.Error())
+		assert.Equal(t, "failed to decode JSON-Cadence value: invalid type ID for built-in: `N.PublicKey`", err.Error())
 	})
 }
 
@@ -2141,4 +2141,49 @@ func TestEncodeBuiltinComposites(t *testing.T) {
 
 		testEncode(t, typeValue, expectedJson)
 	}
+}
+
+func TestExportFunctionValue(t *testing.T) {
+
+	t.Parallel()
+
+	ty := &cadence.ResourceType{
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "Foo",
+		Fields: []cadence.Field{
+			{
+				Identifier: "foo",
+			},
+		},
+	}
+
+	ty.Fields[0].Type = cadence.OptionalType{
+		Type: ty,
+	}
+
+	testEncode(
+		t,
+		cadence.Function{
+			FunctionType: (&cadence.FunctionType{
+				Parameters: []cadence.Parameter{},
+				ReturnType: cadence.VoidType{},
+			}).WithID("(():Void)"),
+		},
+		// language=json
+		`
+          {
+            "type": "Function",
+            "value": {
+              "functionType": {
+                "kind": "Function",
+                "typeID": "(():Void)",
+                "parameters": [],
+                "return": {
+                  "kind": "Void"
+                }
+              }
+            }
+          }
+        `,
+	)
 }

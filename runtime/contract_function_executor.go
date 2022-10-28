@@ -259,6 +259,7 @@ func (executor *interpreterContractFunctionExecutor) convertArgument(
 	return ImportValue(
 		inter,
 		locationRange,
+		environment,
 		argument,
 		argumentType,
 	)
