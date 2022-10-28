@@ -168,7 +168,19 @@ Integers have multiple built-in functions you can use.
   answer.toString()  // is "42"
   ```
 
-- `cadence•fun fromString(_ input: String): T?`
+- `cadence•fun toBigEndianBytes(): [UInt8]`
+
+  Returns the byte array representation (`[UInt8]`) in big-endian order of the integer.
+
+  ```cadence
+  let largeNumber = 1234567890
+
+  largeNumber.toBigEndianBytes()  // is `[73, 150, 2, 210]`
+  ```
+
+All integer types support the following functions:
+
+- `cadence•fun T.fromString(_ input: String): T?`
 
   Attempts to parse an integer value from a base-10 encoded string, returning `nil` if the string is invalid.
 
@@ -182,14 +194,16 @@ Integers have multiple built-in functions you can use.
 
   For unsigned integer types like `Word64`, `UInt64`, and `UInt`, sign prefices are not allowed.
 
-- `cadence•fun toBigEndianBytes(): [UInt8]`
-
-  Returns the byte array representation (`[UInt8]`) in big-endian order of the integer.
+  Examples:
 
   ```cadence
-  let largeNumber = 1234567890
+  let fortyTwo: Int64? = Int64.fromString("42") // ok
 
-  largeNumber.toBigEndianBytes()  // is `[73, 150, 2, 210]`
+  let twenty: UInt? = UInt.fromString("20") // ok
+
+  let nilWord: Word8? = Word8.fromString("1024") // nil, out of bounds
+
+  let negTwenty: Int? = Int.fromString("-20") // ok
   ```
 
 ## Fixed-Point Numbers
@@ -236,7 +250,19 @@ Fixed-Point numbers have multiple built-in functions you can use.
   fix.toString()  // is "1.23000000"
   ```
 
-- `cadence•fun fromString(_ input: String): T?`
+- `cadence•fun toBigEndianBytes(): [UInt8]`
+
+  Returns the byte array representation (`[UInt8]`) in big-endian order of the fixed-point number.
+
+  ```cadence
+  let fix = 1.23
+
+  fix.toBigEndianBytes()  // is `[0, 0, 0, 0, 7, 84, 212, 192]`
+  ```
+
+All fixed-point types support the following functions:
+
+- `cadence•fun T.fromString(_ input: String): T?`
 
   Attempts to parse a fixed-point value from a base-10 encoded string, returning `nil` if the string is invalid.
 
@@ -251,14 +277,20 @@ Fixed-Point numbers have multiple built-in functions you can use.
 
   For unsigned types like `UFix64`, sign prefices are not allowed.
 
-- `cadence•fun toBigEndianBytes(): [UInt8]`
-
-  Returns the byte array representation (`[UInt8]`) in big-endian order of the fixed-point number.
+  Examples:
 
   ```cadence
-  let fix = 1.23
+  let nil1: UFix64? = UFix64.fromString("0.") // nil, fractional part is required
 
-  fix.toBigEndianBytes()  // is `[0, 0, 0, 0, 7, 84, 212, 192]`
+  let nil2: UFix64? = UFix64.fromString(".1") // nil, decimal part is required
+
+  let smol: UFix64? = UFix64.fromString("0.1") // ok
+
+  let smolString: String = "-0.1"
+
+  let nil3: UFix64? = UFix64.fromString(smolString) // nil, unsigned types don't allow a sign prefix
+
+  let smolFix64: Fix64? = Fix64.fromString(smolString) // ok
   ```
 
 ## Minimum and maximum values
