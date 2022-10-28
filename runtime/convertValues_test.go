@@ -49,6 +49,7 @@ func TestExportValue(t *testing.T) {
 		// so provide an optional helper function to construct the value
 		valueFactory func(*interpreter.Interpreter) interpreter.Value
 		expected     cadence.Value
+		invalid      bool
 	}
 
 	test := func(tt exportTest) {
@@ -69,7 +70,8 @@ func TestExportValue(t *testing.T) {
 				interpreter.EmptyLocationRange,
 				seenReferences{},
 			)
-			if tt.expected == nil {
+
+			if tt.invalid {
 				RequireError(t, err)
 				if tt.expected == nil {
 					assertInternalError(t, err)
@@ -121,7 +123,15 @@ func TestExportValue(t *testing.T) {
 		},
 	}
 
-	a, _ := cadence.NewCharacter("a")
+	testCharacter, _ := cadence.NewCharacter("a")
+
+	testFunction := &interpreter.InterpretedFunctionValue{
+		Type: &sema.FunctionType{
+			ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
+		},
+	}
+
+	testFunctionType := cadence.NewFunctionType("(():Void)", []cadence.Parameter{}, cadence.VoidType{})
 
 	for _, tt := range []exportTest{
 		{
@@ -263,7 +273,7 @@ func TestExportValue(t *testing.T) {
 		{
 			label:    "Character",
 			value:    interpreter.NewUnmeteredCharacterValue("a"),
-			expected: a,
+			expected: testCharacter,
 		},
 		{
 			label:    "Int8",
@@ -372,19 +382,29 @@ func TestExportValue(t *testing.T) {
 			},
 		},
 		{
-			label:    "Interpreted Function (invalid)",
-			value:    &interpreter.InterpretedFunctionValue{},
-			expected: nil,
+			label: "Interpreted Function",
+			value: testFunction,
+			expected: cadence.Function{
+				FunctionType: testFunctionType,
+			},
 		},
 		{
-			label:    "Host Function (invalid)",
-			value:    &interpreter.HostFunctionValue{},
-			expected: nil,
+			label: "Host Function",
+			value: &interpreter.HostFunctionValue{
+				Type: testFunction.Type,
+			},
+			expected: cadence.Function{
+				FunctionType: testFunctionType,
+			},
 		},
 		{
-			label:    "Bound Function (invalid)",
-			value:    interpreter.BoundFunctionValue{},
-			expected: nil,
+			label: "Bound Function",
+			value: interpreter.BoundFunctionValue{
+				Function: testFunction,
+			},
+			expected: cadence.Function{
+				FunctionType: testFunctionType,
+			},
 		},
 		{
 			label: "Account key",
@@ -481,7 +501,7 @@ func TestExportValue(t *testing.T) {
 					),
 				)
 			},
-			expected: nil,
+			invalid: true,
 		},
 	} {
 		test(tt)
@@ -2120,6 +2140,58 @@ func TestExportLinkValue(t *testing.T) {
 
 		assert.Equal(t, expected, actual)
 	})
+}
+
+func TestExportCompositeValueWithFunctionValueField(t *testing.T) {
+
+	t.Parallel()
+
+	script := `
+        pub struct Foo {
+            pub let answer: Int
+            pub let f: ((): Void)
+
+            init() {
+                self.answer = 42
+                self.f = fun () {}
+            }
+        }
+
+        pub fun main(): Foo {
+            return Foo()
+        }
+    `
+
+	fooStructType := &cadence.StructType{
+		Location:            TestLocation,
+		QualifiedIdentifier: "Foo",
+		Fields: []cadence.Field{
+			{
+				Identifier: "answer",
+				Type:       cadence.IntType{},
+			},
+			{
+				Identifier: "f",
+				Type: (&cadence.FunctionType{
+					Parameters: []cadence.Parameter{},
+					ReturnType: cadence.VoidType{},
+				}).WithID("(():Void)"),
+			},
+		},
+	}
+
+	actual := exportValueFromScript(t, script)
+	expected := cadence.NewStruct([]cadence.Value{
+		cadence.NewInt(42),
+		cadence.Function{
+			FunctionType: (&cadence.FunctionType{
+				Parameters: []cadence.Parameter{},
+				ReturnType: cadence.VoidType{},
+			}).WithID("(():Void)"),
+		},
+	}).WithType(fooStructType)
+
+	assert.Equal(t, expected, actual)
 }
 
 //go:embed test-export-json-deterministic.txt

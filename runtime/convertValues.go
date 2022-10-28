@@ -243,6 +243,8 @@ func exportValueWithInterpreter(
 			locationRange,
 			seenReferences,
 		)
+	case interpreter.FunctionValue:
+		return exportFunctionValue(v, inter), nil
 	default:
 		return nil, errors.NewUnexpectedError("cannot export value of type %T", value)
 	}
@@ -746,6 +748,16 @@ func exportEvent(
 	eventType := ExportMeteredType(gauge, event.Type, map[sema.TypeID]cadence.Type{}).(*cadence.EventType)
 
 	return exported.WithType(eventType), nil
+}
+
+func exportFunctionValue(
+	v interpreter.FunctionValue,
+	inter *interpreter.Interpreter,
+) cadence.Function {
+	return cadence.NewMeteredFunction(
+		inter,
+		ExportMeteredType(inter, v.FunctionType(), map[sema.TypeID]cadence.Type{}).(*cadence.FunctionType),
+	)
 }
 
 type valueImporter struct {
