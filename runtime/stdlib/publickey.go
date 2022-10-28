@@ -245,7 +245,7 @@ func newPublicKeyVerifySignatureFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			publicKeyValue := invocation.Self
+			publicKeyValue := *invocation.Self
 
 			inter := invocation.Interpreter
 
@@ -315,7 +315,7 @@ func newPublicKeyVerifyPoPFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			publicKeyValue := invocation.Self
+			publicKeyValue := *invocation.Self
 
 			inter := invocation.Interpreter
 
