@@ -102,7 +102,7 @@ func (d *Decoder) Decode() (value cadence.Value, err error) {
 				panic(r)
 			}
 
-			err = errors.NewDefaultUserError("failed to decode JSON-CDC: %w", panicErr)
+			err = errors.NewDefaultUserError("failed to decode JSON-Cadence value: %w", panicErr)
 		}
 	}()
 
