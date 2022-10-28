@@ -26,6 +26,7 @@ import (
 )
 
 type sharedState struct {
+	config                        *Config
 	allInterpreters               map[common.Location]*Interpreter
 	callStack                     *CallStack
 	typeCodes                     TypeCodes
@@ -36,8 +37,9 @@ type sharedState struct {
 	resourceVariables              map[ResourceKindedValue]*Variable
 }
 
-func newSharedState() *sharedState {
+func newSharedState(config *Config) *sharedState {
 	return &sharedState{
+		config:          config,
 		allInterpreters: map[common.Location]*Interpreter{},
 		callStack:       &CallStack{},
 		typeCodes: TypeCodes{

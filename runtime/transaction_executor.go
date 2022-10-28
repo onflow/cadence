@@ -173,12 +173,7 @@ func (executor *interpreterTransactionExecutor) preprocess() (err error) {
 
 	// gather authorizers
 
-	executor.interpret = transactionExecutionFunction(
-		transactionType.Parameters,
-		script.Arguments,
-		context.Interface,
-		executor.authorizerValues,
-	)
+	executor.interpret = executor.transactionExecutionFunction(executor.authorizerValues)
 
 	return nil
 }
@@ -238,10 +233,7 @@ func (executor *interpreterTransactionExecutor) execute() (err error) {
 	return nil
 }
 
-func transactionExecutionFunction(
-	parameters []*sema.Parameter,
-	arguments [][]byte,
-	runtimeInterface Interface,
+func (executor *interpreterTransactionExecutor) transactionExecutionFunction(
 	authorizerValues func(*interpreter.Interpreter) []interpreter.Value,
 ) InterpretFunc {
 	return func(inter *interpreter.Interpreter) (value interpreter.Value, err error) {
@@ -256,10 +248,10 @@ func transactionExecutionFunction(
 
 		values, err := validateArgumentParams(
 			inter,
-			runtimeInterface,
+			executor.environment,
 			interpreter.EmptyLocationRange,
-			arguments,
-			parameters,
+			executor.script.Arguments,
+			executor.transactionType.Parameters,
 		)
 		if err != nil {
 			return nil, err
