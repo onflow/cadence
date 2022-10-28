@@ -135,15 +135,17 @@ func newTestInterpreterRuntime() Runtime {
 }
 
 type testRuntimeInterface struct {
-	resolveLocation         func(identifiers []Identifier, location Location) ([]ResolvedLocation, error)
-	getCode                 func(_ Location) ([]byte, error)
-	getProgram              func(Location) (*interpreter.Program, error)
-	setProgram              func(Location, *interpreter.Program) error
-	storage                 testLedger
-	createAccount           func(payer Address) (address Address, err error)
-	addEncodedAccountKey    func(address Address, publicKey []byte) error
-	removeEncodedAccountKey func(address Address, index int) (publicKey []byte, err error)
-	addAccountKey           func(
+	resolveLocation           func(identifiers []Identifier, location Location) ([]ResolvedLocation, error)
+	getCode                   func(_ Location) ([]byte, error)
+	getProgram                func(Location) (*interpreter.Program, error)
+	setProgram                func(Location, *interpreter.Program) error
+	setInterpreterSharedState func(state *interpreter.SharedState)
+	getInterpreterSharedState func() *interpreter.SharedState
+	storage                   testLedger
+	createAccount             func(payer Address) (address Address, err error)
+	addEncodedAccountKey      func(address Address, publicKey []byte) error
+	removeEncodedAccountKey   func(address Address, index int) (publicKey []byte, err error)
+	addAccountKey             func(
 		address Address,
 		publicKey *stdlib.PublicKey,
 		hashAlgo HashAlgorithm,
@@ -239,6 +241,22 @@ func (i *testRuntimeInterface) SetProgram(location Location, program *interprete
 	}
 
 	return i.setProgram(location, program)
+}
+
+func (i *testRuntimeInterface) SetInterpreterSharedState(state *interpreter.SharedState) {
+	if i.setInterpreterSharedState == nil {
+		return
+	}
+
+	i.setInterpreterSharedState(state)
+}
+
+func (i *testRuntimeInterface) GetInterpreterSharedState() *interpreter.SharedState {
+	if i.getInterpreterSharedState == nil {
+		return nil
+	}
+
+	return i.getInterpreterSharedState()
 }
 
 func (i *testRuntimeInterface) ValueExists(owner, key []byte) (exists bool, err error) {
@@ -5471,11 +5489,11 @@ func TestRuntimeMetrics(t *testing.T) {
 	)
 }
 
-type testWrite struct {
+type ownerKeyPair struct {
 	owner, key []byte
 }
 
-func (w testWrite) String() string {
+func (w ownerKeyPair) String() string {
 	return string(w.key)
 }
 
@@ -5525,10 +5543,10 @@ func TestRuntimeContractWriteback(t *testing.T) {
 	var accountCode []byte
 	var events []cadence.Event
 	var loggedMessages []string
-	var writes []testWrite
+	var writes []ownerKeyPair
 
 	onWrite := func(owner, key, value []byte) {
-		writes = append(writes, testWrite{
+		writes = append(writes, ownerKeyPair{
 			owner,
 			key,
 		})
@@ -5575,7 +5593,7 @@ func TestRuntimeContractWriteback(t *testing.T) {
 	assert.NotNil(t, accountCode)
 
 	assert.Equal(t,
-		[]testWrite{
+		[]ownerKeyPair{
 			// storage index to contract domain storage map
 			{
 				addressValue[:],
@@ -5624,7 +5642,7 @@ func TestRuntimeContractWriteback(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t,
-		[]testWrite{
+		[]ownerKeyPair{
 			// contract value
 			{
 				addressValue[:],
@@ -5667,10 +5685,10 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 	var accountCode []byte
 	var events []cadence.Event
 	var loggedMessages []string
-	var writes []testWrite
+	var writes []ownerKeyPair
 
 	onWrite := func(owner, key, _ []byte) {
-		writes = append(writes, testWrite{
+		writes = append(writes, ownerKeyPair{
 			owner,
 			key,
 		})
@@ -5717,7 +5735,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 	assert.NotNil(t, accountCode)
 
 	assert.Equal(t,
-		[]testWrite{
+		[]ownerKeyPair{
 			// storage index to contract domain storage map
 			{
 				addressValue[:],
@@ -5760,7 +5778,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t,
-		[]testWrite{
+		[]ownerKeyPair{
 			// storage index to storage domain storage map
 			{
 				addressValue[:],
@@ -5832,7 +5850,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t,
-		[]testWrite{
+		[]ownerKeyPair{
 			// resource value
 			{
 				addressValue[:],

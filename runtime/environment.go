@@ -562,11 +562,33 @@ func (e *interpreterEnvironment) newInterpreter(
 	location common.Location,
 	program *interpreter.Program,
 ) (*interpreter.Interpreter, error) {
-	return interpreter.NewInterpreter(
+
+	sharedState := e.runtimeInterface.GetInterpreterSharedState()
+	if sharedState != nil {
+		// NOTE: no need to reset storage, as each top-level entry call
+		// (e.g. transaction execution, contract invocation, etc.) creates a new storage.
+		// Even though suboptimal, this ensures that no writes "leak" from one top-level entry call to another
+		// (when interpreter shared state is reused).
+
+		return interpreter.NewInterpreterWithSharedState(
+			program,
+			location,
+			sharedState,
+		)
+	}
+
+	inter, err := interpreter.NewInterpreter(
 		program,
 		location,
 		e.InterpreterConfig,
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	e.runtimeInterface.SetInterpreterSharedState(inter.SharedState)
+
+	return inter, nil
 }
 
 func (e *interpreterEnvironment) newOnStatementHandler() interpreter.OnStatementFunc {

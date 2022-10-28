@@ -64,6 +64,11 @@ type Interface interface {
 	GetProgram(Location) (*interpreter.Program, error)
 	// SetProgram sets the program for the given location.
 	SetProgram(Location, *interpreter.Program) error
+	// SetInterpreterSharedState sets the shared state of all interpreters.
+	SetInterpreterSharedState(state *interpreter.SharedState)
+	// GetInterpreterSharedState gets the shared state of all interpreters.
+	// May return nil if none is available or use is not applicable.
+	GetInterpreterSharedState() *interpreter.SharedState
 	// GetValue gets a value for the given key in the storage, owned by the given account.
 	GetValue(owner, key []byte) (value []byte, err error)
 	// SetValue sets a value for the given key in the storage, owned by the given account.

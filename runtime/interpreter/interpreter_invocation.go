@@ -127,7 +127,7 @@ func (interpreter *Interpreter) invokeInterpretedFunction(
 	current := interpreter.activations.PushNewWithParent(function.Activation)
 	current.IsFunction = true
 
-	interpreter.sharedState.callStack.Push(invocation)
+	interpreter.SharedState.callStack.Push(invocation)
 
 	// Make `self` available, if any
 	if invocation.Self != nil {
@@ -147,7 +147,7 @@ func (interpreter *Interpreter) invokeInterpretedFunctionActivated(
 		if r := recover(); r != nil {
 			panic(r)
 		}
-		interpreter.sharedState.callStack.Pop()
+		interpreter.SharedState.callStack.Pop()
 	}()
 	defer interpreter.activations.Pop()
 

@@ -48,12 +48,12 @@ const (
 )
 
 func (interpreter *Interpreter) reportFunctionTrace(functionName string, duration time.Duration) {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 	config.OnRecordTrace(interpreter, tracingFunctionPrefix+functionName, duration, nil)
 }
 
 func (interpreter *Interpreter) reportImportTrace(importPath string, duration time.Duration) {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 	config.OnRecordTrace(interpreter, tracingImportPrefix+importPath, duration, nil)
 }
 
@@ -69,7 +69,7 @@ func (interpreter *Interpreter) reportArrayValueConstructTrace(
 	count int,
 	duration time.Duration,
 ) {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 	config.OnRecordTrace(
 		interpreter,
 		tracingArrayPrefix+tracingConstructPostfix,
@@ -83,7 +83,7 @@ func (interpreter *Interpreter) reportArrayValueDeepRemoveTrace(
 	count int,
 	duration time.Duration,
 ) {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 	config.OnRecordTrace(
 		interpreter,
 		tracingArrayPrefix+tracingDeepRemovePostfix,
@@ -97,7 +97,7 @@ func (interpreter *Interpreter) reportArrayValueDestroyTrace(
 	count int,
 	duration time.Duration,
 ) {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 	config.OnRecordTrace(
 		interpreter,
 		tracingArrayPrefix+tracingDestroyPostfix,
@@ -111,7 +111,7 @@ func (interpreter *Interpreter) reportArrayValueTransferTrace(
 	count int,
 	duration time.Duration,
 ) {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 	config.OnRecordTrace(
 		interpreter,
 		tracingArrayPrefix+tracingTransferPostfix,
@@ -125,7 +125,7 @@ func (interpreter *Interpreter) reportArrayValueConformsToStaticTypeTrace(
 	count int,
 	duration time.Duration,
 ) {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 	config.OnRecordTrace(
 		interpreter,
 		tracingArrayPrefix+tracingConformsToStaticTypePostfix,
@@ -139,7 +139,7 @@ func (interpreter *Interpreter) reportDictionaryValueConstructTrace(
 	count int,
 	duration time.Duration,
 ) {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 	config.OnRecordTrace(
 		interpreter,
 		tracingDictionaryPrefix+tracingConstructPostfix,
@@ -153,7 +153,7 @@ func (interpreter *Interpreter) reportDictionaryValueDeepRemoveTrace(
 	count int,
 	duration time.Duration,
 ) {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 	config.OnRecordTrace(
 		interpreter,
 		tracingDictionaryPrefix+tracingDeepRemovePostfix,
@@ -167,7 +167,7 @@ func (interpreter *Interpreter) reportDictionaryValueDestroyTrace(
 	count int,
 	duration time.Duration,
 ) {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 	config.OnRecordTrace(
 		interpreter,
 		tracingDictionaryPrefix+tracingDestroyPostfix,
@@ -181,7 +181,7 @@ func (interpreter *Interpreter) reportDictionaryValueTransferTrace(
 	count int,
 	duration time.Duration,
 ) {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 	config.OnRecordTrace(
 		interpreter,
 		tracingDictionaryPrefix+tracingTransferPostfix,
@@ -195,7 +195,7 @@ func (interpreter *Interpreter) reportDictionaryValueConformsToStaticTypeTrace(
 	count int,
 	duration time.Duration,
 ) {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 	config.OnRecordTrace(
 		interpreter,
 		tracingDictionaryPrefix+tracingConformsToStaticTypePostfix,
@@ -210,7 +210,7 @@ func (interpreter *Interpreter) reportDictionaryValueGetMemberTrace(
 	name string,
 	duration time.Duration,
 ) {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 	config.OnRecordTrace(
 		interpreter,
 		tracingDictionaryPrefix+tracingGetMemberPrefix+name,
@@ -233,7 +233,7 @@ func (interpreter *Interpreter) reportCompositeValueConstructTrace(
 	kind string,
 	duration time.Duration,
 ) {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 	config.OnRecordTrace(
 		interpreter,
 		tracingCompositePrefix+tracingConstructPostfix,
@@ -248,7 +248,7 @@ func (interpreter *Interpreter) reportCompositeValueDeepRemoveTrace(
 	kind string,
 	duration time.Duration,
 ) {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 	config.OnRecordTrace(
 		interpreter,
 		tracingCompositePrefix+tracingDeepRemovePostfix,
@@ -263,7 +263,7 @@ func (interpreter *Interpreter) reportCompositeValueDestroyTrace(
 	kind string,
 	duration time.Duration,
 ) {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 	config.OnRecordTrace(
 		interpreter,
 		tracingCompositePrefix+tracingDestroyPostfix,
@@ -278,7 +278,7 @@ func (interpreter *Interpreter) reportCompositeValueTransferTrace(
 	kind string,
 	duration time.Duration,
 ) {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 	config.OnRecordTrace(
 		interpreter,
 		tracingCompositePrefix+tracingTransferPostfix,
@@ -293,7 +293,7 @@ func (interpreter *Interpreter) reportCompositeValueConformsToStaticTypeTrace(
 	kind string,
 	duration time.Duration,
 ) {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 	config.OnRecordTrace(
 		interpreter,
 		tracingCompositePrefix+tracingConformsToStaticTypePostfix,
@@ -309,7 +309,7 @@ func (interpreter *Interpreter) reportCompositeValueGetMemberTrace(
 	name string,
 	duration time.Duration,
 ) {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 	config.OnRecordTrace(
 		interpreter,
 		tracingCompositePrefix+tracingGetMemberPrefix+name,
@@ -325,7 +325,7 @@ func (interpreter *Interpreter) reportCompositeValueSetMemberTrace(
 	name string,
 	duration time.Duration,
 ) {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 	config.OnRecordTrace(
 		interpreter,
 		tracingCompositePrefix+tracingSetMemberPrefix+name,
@@ -341,7 +341,7 @@ func (interpreter *Interpreter) reportCompositeValueRemoveMemberTrace(
 	name string,
 	duration time.Duration,
 ) {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 	config.OnRecordTrace(
 		interpreter,
 		tracingCompositePrefix+tracingRemoveMemberPrefix+name,

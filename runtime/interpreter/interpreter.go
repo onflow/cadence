@@ -205,11 +205,11 @@ type ReferencedResourceKindedValues map[atree.StorageID]map[ReferenceTrackedReso
 type Interpreter struct {
 	Program      *Program
 	Location     common.Location
-	sharedState  *sharedState
-	activations  *VariableActivations
+	SharedState  *SharedState
 	Globals      GlobalVariables
 	Transactions []*HostFunctionValue
 	interpreted  bool
+	activations  *VariableActivations
 	statement    ast.Statement
 }
 
@@ -233,23 +233,23 @@ func NewInterpreter(
 	location common.Location,
 	config *Config,
 ) (*Interpreter, error) {
-	return newInterpreter(
+	return NewInterpreterWithSharedState(
 		program,
 		location,
-		newSharedState(config),
+		NewSharedState(config),
 	)
 }
 
-func newInterpreter(
+func NewInterpreterWithSharedState(
 	program *Program,
 	location common.Location,
-	sharedState *sharedState,
+	sharedState *SharedState,
 ) (*Interpreter, error) {
 
 	interpreter := &Interpreter{
 		Program:     program,
 		Location:    location,
-		sharedState: sharedState,
+		SharedState: sharedState,
 	}
 
 	// Register self
@@ -259,7 +259,7 @@ func newInterpreter(
 
 	interpreter.activations = activations.NewActivations[*Variable](interpreter)
 
-	baseActivation := sharedState.config.BaseActivation
+	baseActivation := sharedState.Config.BaseActivation
 	if baseActivation == nil {
 		baseActivation = BaseActivation
 	}
@@ -514,7 +514,7 @@ func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 }
 
 func (interpreter *Interpreter) CallStack() []Invocation {
-	return interpreter.sharedState.callStack.Invocations[:]
+	return interpreter.SharedState.callStack.Invocations[:]
 }
 
 func (interpreter *Interpreter) VisitProgram(program *ast.Program) {
@@ -1042,17 +1042,17 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	for i := len(compositeType.ExplicitInterfaceConformances) - 1; i >= 0; i-- {
 		conformance := compositeType.ExplicitInterfaceConformances[i]
 
-		wrapFunctions(interpreter.sharedState.typeCodes.InterfaceCodes[conformance.ID()])
+		wrapFunctions(interpreter.SharedState.typeCodes.InterfaceCodes[conformance.ID()])
 	}
 
 	typeRequirements := compositeType.TypeRequirements()
 
 	for i := len(typeRequirements) - 1; i >= 0; i-- {
 		typeRequirement := typeRequirements[i]
-		wrapFunctions(interpreter.sharedState.typeCodes.TypeRequirementCodes[typeRequirement.ID()])
+		wrapFunctions(interpreter.SharedState.typeCodes.TypeRequirementCodes[typeRequirement.ID()])
 	}
 
-	interpreter.sharedState.typeCodes.CompositeCodes[compositeType.ID()] = CompositeTypeCode{
+	interpreter.SharedState.typeCodes.CompositeCodes[compositeType.ID()] = CompositeTypeCode{
 		DestructorFunction: destructorFunction,
 		CompositeFunctions: functions,
 	}
@@ -1061,7 +1061,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 	qualifiedIdentifier := compositeType.QualifiedIdentifier()
 
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	constructorGenerator := func(address common.Address) *HostFunctionValue {
 		return NewHostFunctionValue(
@@ -1800,7 +1800,7 @@ func (interpreter *Interpreter) declareInterface(
 	functionWrappers := interpreter.functionWrappers(declaration.Members, lexicalScope)
 	defaultFunctions := interpreter.defaultFunctions(declaration.Members, lexicalScope)
 
-	interpreter.sharedState.typeCodes.InterfaceCodes[typeID] = WrapperCode{
+	interpreter.SharedState.typeCodes.InterfaceCodes[typeID] = WrapperCode{
 		InitializerFunctionWrapper: initializerFunctionWrapper,
 		DestructorFunctionWrapper:  destructorFunctionWrapper,
 		FunctionWrappers:           functionWrappers,
@@ -1836,7 +1836,7 @@ func (interpreter *Interpreter) declareTypeRequirement(
 	functionWrappers := interpreter.functionWrappers(declaration.Members, lexicalScope)
 	defaultFunctions := interpreter.defaultFunctions(declaration.Members, lexicalScope)
 
-	interpreter.sharedState.typeCodes.TypeRequirementCodes[typeID] = WrapperCode{
+	interpreter.SharedState.typeCodes.TypeRequirementCodes[typeID] = WrapperCode{
 		InitializerFunctionWrapper: initializerFunctionWrapper,
 		DestructorFunctionWrapper:  destructorFunctionWrapper,
 		FunctionWrappers:           functionWrappers,
@@ -1982,7 +1982,7 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 							argumentVariables = append(
 								argumentVariables,
 								argumentVariable{
-									variable: interpreter.sharedState.resourceVariables[resourceKindedValue],
+									variable: interpreter.SharedState.resourceVariables[resourceKindedValue],
 									value:    resourceKindedValue,
 								},
 							)
@@ -2001,7 +2001,7 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 						for _, argumentVariable := range argumentVariables {
 							value := argumentVariable.value
 							interpreter.invalidateResource(value)
-							interpreter.sharedState.resourceVariables[value] = argumentVariable.variable
+							interpreter.SharedState.resourceVariables[value] = argumentVariable.variable
 						}
 						return ReturnResult{returnValue}
 					}
@@ -2025,7 +2025,7 @@ func (interpreter *Interpreter) EnsureLoaded(
 	return interpreter.ensureLoadedWithLocationHandler(
 		location,
 		func() Import {
-			return interpreter.sharedState.config.ImportLocationHandler(interpreter, location)
+			return interpreter.SharedState.Config.ImportLocationHandler(interpreter, location)
 		},
 	)
 }
@@ -2037,7 +2037,7 @@ func (interpreter *Interpreter) ensureLoadedWithLocationHandler(
 
 	// If a sub-interpreter already exists, return it
 
-	subInterpreter := interpreter.sharedState.allInterpreters[location]
+	subInterpreter := interpreter.SharedState.allInterpreters[location]
 	if subInterpreter != nil {
 		return subInterpreter
 	}
@@ -2077,12 +2077,12 @@ func (interpreter *Interpreter) ensureLoadedWithLocationHandler(
 			subInterpreter.Globals.Set(global.Name, variable)
 		}
 
-		subInterpreter.sharedState.typeCodes.
+		subInterpreter.SharedState.typeCodes.
 			Merge(virtualImport.TypeCodes)
 
 		// Virtual import does not register interpreter itself,
 		// unlike InterpreterImport
-		interpreter.sharedState.allInterpreters[location] = subInterpreter
+		interpreter.SharedState.allInterpreters[location] = subInterpreter
 
 		subInterpreter.Program = &Program{
 			Elaboration: virtualImport.Elaboration,
@@ -2102,10 +2102,10 @@ func (interpreter *Interpreter) NewSubInterpreter(
 	*Interpreter,
 	error,
 ) {
-	return newInterpreter(
+	return NewInterpreterWithSharedState(
 		program,
 		location,
-		interpreter.sharedState,
+		interpreter.SharedState,
 	)
 }
 
@@ -2114,7 +2114,7 @@ func (interpreter *Interpreter) storedValueExists(
 	domain string,
 	identifier string,
 ) bool {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 	accountStorage := config.Storage.GetStorageMap(storageAddress, domain, false)
 	if accountStorage == nil {
 		return false
@@ -2127,7 +2127,7 @@ func (interpreter *Interpreter) ReadStored(
 	domain string,
 	identifier string,
 ) Value {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 	accountStorage := config.Storage.GetStorageMap(storageAddress, domain, false)
 	if accountStorage == nil {
 		return nil
@@ -2141,7 +2141,7 @@ func (interpreter *Interpreter) WriteStored(
 	identifier string,
 	value Value,
 ) {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 	accountStorage := config.Storage.GetStorageMap(storageAddress, domain, true)
 	accountStorage.WriteValue(interpreter, identifier, value)
 	interpreter.recordStorageMutation()
@@ -3153,7 +3153,7 @@ func (interpreter *Interpreter) IsSubTypeOfSemaType(subType StaticType, superTyp
 }
 
 func (interpreter *Interpreter) domainPaths(address common.Address, domain common.PathDomain) []Value {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 	storageMap := config.Storage.GetStorageMap(address, domain.Identifier(), false)
 	if storageMap == nil {
 		return []Value{}
@@ -3191,14 +3191,14 @@ func (interpreter *Interpreter) storageAccountPaths(addressValue AddressValue, l
 }
 
 func (interpreter *Interpreter) recordStorageMutation() {
-	if interpreter.sharedState.inStorageIteration {
-		interpreter.sharedState.storageMutatedDuringIteration = true
+	if interpreter.SharedState.inStorageIteration {
+		interpreter.SharedState.storageMutatedDuringIteration = true
 	}
 }
 
 func (interpreter *Interpreter) newStorageIterationFunction(addressValue AddressValue, domain common.PathDomain, pathType sema.Type) *HostFunctionValue {
 	address := addressValue.ToAddress()
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	return NewHostFunctionValue(
 		interpreter,
@@ -3219,10 +3219,10 @@ func (interpreter *Interpreter) newStorageIterationFunction(addressValue Address
 
 			invocationTypeParams := []sema.Type{pathType, sema.MetaType}
 
-			inIteration := inter.sharedState.inStorageIteration
-			inter.sharedState.inStorageIteration = true
+			inIteration := inter.SharedState.inStorageIteration
+			inter.SharedState.inStorageIteration = true
 			defer func() {
-				inter.sharedState.inStorageIteration = inIteration
+				inter.SharedState.inStorageIteration = inIteration
 			}()
 
 			for key, value := storageIterator.Next(); key != "" && value != nil; key, value = storageIterator.Next() {
@@ -3252,7 +3252,7 @@ func (interpreter *Interpreter) newStorageIterationFunction(addressValue Address
 				// at the end, we will not invoke the callback again but will still silently skip elements of storage. In order
 				// to be safe, we perform this check here to effectively enforce that users return `false` from their callback
 				// in all cases where storage is mutated
-				if inter.sharedState.storageMutatedDuringIteration {
+				if inter.SharedState.storageMutatedDuringIteration {
 					panic(StorageMutatedDuringIterationError{
 						LocationRange: locationRange,
 					})
@@ -3811,7 +3811,7 @@ func (interpreter *Interpreter) GetCapabilityFinalTargetPath(
 }
 
 func (interpreter *Interpreter) ConvertStaticToSemaType(staticType StaticType) (sema.Type, error) {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 	return ConvertStaticToSemaType(
 		config.MemoryGauge,
 		staticType,
@@ -3839,7 +3839,7 @@ func (interpreter *Interpreter) getElaboration(location common.Location) *sema.E
 
 	inter := interpreter.EnsureLoaded(location)
 
-	subInterpreter := inter.sharedState.allInterpreters[location]
+	subInterpreter := inter.SharedState.allInterpreters[location]
 	if subInterpreter == nil || subInterpreter.Program == nil {
 		return nil
 	}
@@ -3935,7 +3935,7 @@ func (interpreter *Interpreter) getInterfaceType(location common.Location, quali
 }
 
 func (interpreter *Interpreter) reportLoopIteration(pos ast.HasPosition) {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	onMeterComputation := config.OnMeterComputation
 	if onMeterComputation != nil {
@@ -3950,7 +3950,7 @@ func (interpreter *Interpreter) reportLoopIteration(pos ast.HasPosition) {
 }
 
 func (interpreter *Interpreter) reportFunctionInvocation() {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	onMeterComputation := config.OnMeterComputation
 	if onMeterComputation != nil {
@@ -3964,7 +3964,7 @@ func (interpreter *Interpreter) reportFunctionInvocation() {
 }
 
 func (interpreter *Interpreter) reportInvokedFunctionReturn() {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	onInvokedFunctionReturn := config.OnInvokedFunctionReturn
 	if onInvokedFunctionReturn == nil {
@@ -3975,7 +3975,7 @@ func (interpreter *Interpreter) reportInvokedFunctionReturn() {
 }
 
 func (interpreter *Interpreter) ReportComputation(compKind common.ComputationKind, intensity uint) {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	onMeterComputation := config.OnMeterComputation
 	if onMeterComputation != nil {
@@ -4102,7 +4102,7 @@ func (interpreter *Interpreter) RemoveReferencedSlab(storable atree.Storable) {
 		return
 	}
 
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	storageID := atree.StorageID(storageIDStorable)
 	err := config.Storage.Remove(storageID)
@@ -4112,7 +4112,7 @@ func (interpreter *Interpreter) RemoveReferencedSlab(storable atree.Storable) {
 }
 
 func (interpreter *Interpreter) maybeValidateAtreeValue(v atree.Value) {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	if config.AtreeValueValidationEnabled {
 		interpreter.ValidateAtreeValue(v)
@@ -4154,7 +4154,7 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 		return defaultHIP(value, buffer)
 	}
 
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 	storage := config.Storage
 
 	compare := func(storable, otherStorable atree.Storable) bool {
@@ -4244,10 +4244,10 @@ func (interpreter *Interpreter) trackReferencedResourceKindedValue(
 	id atree.StorageID,
 	value ReferenceTrackedResourceKindedValue,
 ) {
-	values := interpreter.sharedState.referencedResourceKindedValues[id]
+	values := interpreter.SharedState.referencedResourceKindedValues[id]
 	if values == nil {
 		values = map[ReferenceTrackedResourceKindedValue]struct{}{}
-		interpreter.sharedState.referencedResourceKindedValues[id] = values
+		interpreter.SharedState.referencedResourceKindedValues[id] = values
 	}
 	values[value] = struct{}{}
 }
@@ -4257,7 +4257,7 @@ func (interpreter *Interpreter) updateReferencedResource(
 	newStorageID atree.StorageID,
 	updateFunc func(value ReferenceTrackedResourceKindedValue),
 ) {
-	values := interpreter.sharedState.referencedResourceKindedValues[currentStorageID]
+	values := interpreter.SharedState.referencedResourceKindedValues[currentStorageID]
 	if values == nil {
 		return
 	}
@@ -4265,8 +4265,8 @@ func (interpreter *Interpreter) updateReferencedResource(
 		updateFunc(value)
 	}
 	if newStorageID != currentStorageID {
-		interpreter.sharedState.referencedResourceKindedValues[newStorageID] = values
-		interpreter.sharedState.referencedResourceKindedValues[currentStorageID] = nil
+		interpreter.SharedState.referencedResourceKindedValues[newStorageID] = values
+		interpreter.SharedState.referencedResourceKindedValues[currentStorageID] = nil
 	}
 }
 
@@ -4279,7 +4279,7 @@ func (interpreter *Interpreter) startResourceTracking(
 	hasPosition ast.HasPosition,
 ) {
 
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	if !config.InvalidatedResourceValidationEnabled ||
 		identifier == sema.SelfIdentifier {
@@ -4295,7 +4295,7 @@ func (interpreter *Interpreter) startResourceTracking(
 	// If the resource already has a variable-association, that means there is a
 	// resource variable that has not been invalidated properly.
 	// This should not be allowed, and must have been caught by the checker ideally.
-	if _, exists := interpreter.sharedState.resourceVariables[resourceKindedValue]; exists {
+	if _, exists := interpreter.SharedState.resourceVariables[resourceKindedValue]; exists {
 		panic(InvalidatedResourceError{
 			LocationRange: LocationRange{
 				Location:    interpreter.Location,
@@ -4304,7 +4304,7 @@ func (interpreter *Interpreter) startResourceTracking(
 		})
 	}
 
-	interpreter.sharedState.resourceVariables[resourceKindedValue] = variable
+	interpreter.SharedState.resourceVariables[resourceKindedValue] = variable
 }
 
 // checkInvalidatedResourceUse checks whether a resource variable is used after invalidation.
@@ -4314,7 +4314,7 @@ func (interpreter *Interpreter) checkInvalidatedResourceUse(
 	identifier string,
 	hasPosition ast.HasPosition,
 ) {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	if !config.InvalidatedResourceValidationEnabled ||
 		identifier == sema.SelfIdentifier {
@@ -4332,7 +4332,7 @@ func (interpreter *Interpreter) checkInvalidatedResourceUse(
 	// This should not be allowed, and must have been caught by the checker ideally.
 	//
 	// Note: if the `resourceVariables` doesn't have a mapping, that implies an invalidated resource.
-	if existingVar, exists := interpreter.sharedState.resourceVariables[resourceKindedValue]; !exists || existingVar != variable {
+	if existingVar, exists := interpreter.SharedState.resourceVariables[resourceKindedValue]; !exists || existingVar != variable {
 		panic(InvalidatedResourceError{
 			LocationRange: LocationRange{
 				Location:    interpreter.Location,
@@ -4360,7 +4360,7 @@ func (interpreter *Interpreter) resourceForValidation(value Value) ResourceKinde
 }
 
 func (interpreter *Interpreter) invalidateResource(value Value) {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 
 	if !config.InvalidatedResourceValidationEnabled {
 		return
@@ -4376,12 +4376,12 @@ func (interpreter *Interpreter) invalidateResource(value Value) {
 	}
 
 	// Remove the resource-to-variable mapping.
-	delete(interpreter.sharedState.resourceVariables, resourceKindedValue)
+	delete(interpreter.SharedState.resourceVariables, resourceKindedValue)
 }
 
 // MeterMemory delegates the memory usage to the interpreter's memory gauge, if any.
 func (interpreter *Interpreter) MeterMemory(usage common.MemoryUsage) error {
-	config := interpreter.sharedState.config
+	config := interpreter.SharedState.Config
 	common.UseMemory(config.MemoryGauge, usage)
 	return nil
 }
@@ -4401,5 +4401,5 @@ func (interpreter *Interpreter) DecodeTypeInfo(decoder *cbor.StreamDecoder) (atr
 }
 
 func (interpreter *Interpreter) Storage() Storage {
-	return interpreter.sharedState.config.Storage
+	return interpreter.SharedState.Config.Storage
 }
