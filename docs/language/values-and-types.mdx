@@ -712,13 +712,6 @@ Strings have multiple built-in functions you can use:
   // `bytes` is `[70, 108, 111, 119, 101, 114, 115, 32, 240, 159, 146, 144]`
   ```
 
-- `cadence•fun fromUTF8(_ input: [UInt8]): String?`
-
-  Attempts to convert a UTF-8 encoded byte array into a `String`. This function returns `nil` if the byte array contains invalid UTF-8,
-  such as incomplete codepoint sequences or undefined graphemes.
-
-  For a given string `s`, `String.fromUTF8(s.utf8)` is equivalent to wrapping `s` up in an [optional](#optionals).
-
 - `cadence•fun concat(_ other: String): String`
 
   Concatenates the string `other` to the end of the original string,
@@ -800,6 +793,13 @@ let str = "abc"
 let c = str[0] // is the Character "a"
 ```
 
+- `cadence•fun String.fromUTF8(_ input: [UInt8]): String?`
+
+  Attempts to convert a UTF-8 encoded byte array into a `String`. This function returns `nil` if the byte array contains invalid UTF-8,
+  such as incomplete codepoint sequences or undefined graphemes.
+
+  For a given string `s`, `String.fromUTF8(s.utf8)` is equivalent to wrapping `s` up in an [optional](#optionals).
+
 ### Character Fields and Functions
 
 `Character` values can be converted into `String` values using the `toString` function:
@@ -812,6 +812,15 @@ let c = str[0] // is the Character "a"
   let c: Character = "x"
 
   c.toString()  // is "x"
+  ```
+
+- `cadence•fun String.fromCharacters(_ characters: [Character]): String`
+
+  Builds a new `String` value from an array of `Character`s. Because `String`s are immutable, this operation makes a copy of the input array.
+
+  ```cadence
+  let rawUwU: [Character] = ["U", "w", "U"]
+  let uwu: String = String.fromCharacters(rawUwU) // "UwU"
   ```
 
 ## Arrays
