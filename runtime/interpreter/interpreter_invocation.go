@@ -131,7 +131,7 @@ func (interpreter *Interpreter) invokeInterpretedFunction(
 
 	// Make `self` available, if any
 	if invocation.Self != nil {
-		interpreter.declareVariable(sema.SelfIdentifier, invocation.Self)
+		interpreter.declareVariable(sema.SelfIdentifier, *invocation.Self)
 	}
 
 	return interpreter.invokeInterpretedFunctionActivated(function, invocation.Arguments)

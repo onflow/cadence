@@ -591,7 +591,10 @@ func testNewEmulatorBlockchainFunction(testFramework TestFramework) *interpreter
 			// Create a 'Blockchain' struct value, that wraps the emulator backend,
 			// by calling the constructor of 'Blockchain'.
 
-			blockchainConstructor := getNestedTypeConstructorValue(invocation.Self, blockchainTypeName)
+			blockchainConstructor := getNestedTypeConstructorValue(
+				*invocation.Self,
+				blockchainTypeName,
+			)
 
 			blockchain, err := inter.InvokeExternally(
 				blockchainConstructor,
@@ -1535,7 +1538,10 @@ func newMatcherWithGenericTestFunction(
 		matcherTestFunctionType,
 	)
 
-	matcherConstructor := getNestedTypeConstructorValue(invocation.Self, matcherTypeName)
+	matcherConstructor := getNestedTypeConstructorValue(
+		*invocation.Self,
+		matcherTypeName,
+	)
 	matcher, err := inter.InvokeExternally(
 		matcherConstructor,
 		matcherConstructor.Type,

@@ -484,7 +484,7 @@ func (interpreter *Interpreter) InvokeExternally(
 		preparedArguments[i] = interpreter.ConvertAndBox(locationRange, argument, nil, parameterType)
 	}
 
-	var self *CompositeValue
+	var self *MemberAccessibleValue
 	if boundFunc, ok := functionValue.(BoundFunctionValue); ok {
 		self = boundFunc.Self
 	}
@@ -1032,7 +1032,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 			func(invocation Invocation) Value {
 				inter := invocation.Interpreter
 				locationRange := invocation.LocationRange
-				self := invocation.Self
+				self := *invocation.Self
 
 				for i, argument := range invocation.Arguments {
 					parameter := compositeType.ConstructorParameters[i]
@@ -1215,7 +1215,8 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				value.Functions = functions
 				value.Destructor = destructorFunction
 
-				invocation.Self = value
+				var self MemberAccessibleValue = value
+				invocation.Self = &self
 
 				if declaration.CompositeKind == common.CompositeKindContract {
 					// NOTE: set the variable value immediately, as the contract value
@@ -2011,7 +2012,7 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 				}
 
 				if invocation.Self != nil {
-					interpreter.declareVariable(sema.SelfIdentifier, invocation.Self)
+					interpreter.declareVariable(sema.SelfIdentifier, *invocation.Self)
 				}
 
 				// NOTE: The `inner` function might be nil.
