@@ -1312,6 +1312,22 @@ func TestCheckSuper(t *testing.T) {
 
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	})
+
+	t.Run("super outside composite", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			fun foo() {
+				let x = super
+			}`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+	})
 }
 
 func TestCheckSuperScoping(t *testing.T) {

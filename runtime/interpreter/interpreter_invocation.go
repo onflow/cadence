@@ -107,6 +107,7 @@ func (interpreter *Interpreter) invokeFunctionValue(
 	invocation := NewInvocation(
 		interpreter,
 		nil,
+		nil,
 		transferredArguments,
 		argumentTypes,
 		typeParameterTypes,
@@ -132,6 +133,9 @@ func (interpreter *Interpreter) invokeInterpretedFunction(
 	// Make `self` available, if any
 	if invocation.Self != nil {
 		interpreter.declareVariable(sema.SelfIdentifier, invocation.Self)
+	}
+	if invocation.Super != nil {
+		interpreter.declareVariable(sema.SuperIdentifier, invocation.Super)
 	}
 
 	return interpreter.invokeInterpretedFunctionActivated(function, invocation.Arguments)

@@ -484,15 +484,18 @@ func (interpreter *Interpreter) InvokeExternally(
 		preparedArguments[i] = interpreter.ConvertAndBox(locationRange, argument, nil, parameterType)
 	}
 
-	var self *CompositeValue
+	var self MemberAccessibleValue
+	var super *EphemeralReferenceValue
 	if boundFunc, ok := functionValue.(BoundFunctionValue); ok {
 		self = boundFunc.Self
+		super = boundFunc.Super
 	}
 
 	// NOTE: can't fill argument types, as they are unknown
 	invocation := NewInvocation(
 		interpreter,
 		self,
+		super,
 		preparedArguments,
 		nil,
 		nil,
@@ -2065,6 +2068,9 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 				if invocation.Self != nil {
 					interpreter.declareVariable(sema.SelfIdentifier, invocation.Self)
 				}
+				if invocation.Super != nil {
+					interpreter.declareVariable(sema.SuperIdentifier, invocation.Super)
+				}
 
 				// NOTE: The `inner` function might be nil.
 				//   This is the case if the conforming type did not declare a function.
@@ -3355,6 +3361,7 @@ func (interpreter *Interpreter) newStorageIterationFunction(addressValue Address
 
 				subInvocation := NewInvocation(
 					inter,
+					nil,
 					nil,
 					[]Value{pathValue, runtimeType},
 					invocationTypeParams,

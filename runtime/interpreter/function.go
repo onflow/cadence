@@ -326,7 +326,8 @@ func (v *HostFunctionValue) SetNestedVariables(variables map[string]*Variable) {
 // BoundFunctionValue
 type BoundFunctionValue struct {
 	Function FunctionValue
-	Self     *CompositeValue
+	Self     MemberAccessibleValue
+	Super    *EphemeralReferenceValue
 }
 
 var _ Value = BoundFunctionValue{}
@@ -335,7 +336,8 @@ var _ FunctionValue = BoundFunctionValue{}
 func NewBoundFunctionValue(
 	interpreter *Interpreter,
 	function FunctionValue,
-	self *CompositeValue,
+	self MemberAccessibleValue,
+	super *EphemeralReferenceValue,
 ) BoundFunctionValue {
 
 	common.UseMemory(interpreter, common.BoundFunctionValueMemoryUsage)
@@ -343,6 +345,7 @@ func NewBoundFunctionValue(
 	return BoundFunctionValue{
 		Function: function,
 		Self:     self,
+		Super:    super,
 	}
 }
 
@@ -384,6 +387,7 @@ func (f BoundFunctionValue) FunctionType() *sema.FunctionType {
 
 func (f BoundFunctionValue) invoke(invocation Invocation) Value {
 	invocation.Self = f.Self
+	invocation.Super = f.Super
 	return f.Function.invoke(invocation)
 }
 

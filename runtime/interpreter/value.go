@@ -14052,10 +14052,18 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 
 	destructor := v.Destructor
 
+	var super *EphemeralReferenceValue
+	var self MemberAccessibleValue = v
+	if v.Kind == common.CompositeKindAttachment {
+		super = v.AccessBase(interpreter, locationRange)
+		self = NewEphemeralReferenceValue(interpreter, false, v, interpreter.MustConvertStaticToSemaType(v.staticType))
+	}
+
 	if destructor != nil {
 		invocation := NewInvocation(
 			interpreter,
-			v,
+			self,
+			super,
 			nil,
 			nil,
 			nil,
@@ -14172,7 +14180,14 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 
 	function, ok := v.Functions[name]
 	if ok {
-		return NewBoundFunctionValue(interpreter, function, v)
+		var super *EphemeralReferenceValue
+		var self MemberAccessibleValue = v
+		if v.Kind == common.CompositeKindAttachment {
+			super = v.AccessBase(interpreter, locationRange)
+			// in attachment functions, self is a reference value
+			self = NewEphemeralReferenceValue(interpreter, false, v, interpreter.MustConvertStaticToSemaType(v.staticType))
+		}
+		return NewBoundFunctionValue(interpreter, function, self, super)
 	}
 
 	return nil
@@ -15055,7 +15070,7 @@ func (v *CompositeValue) forEachAttachment(interpreter *Interpreter, locationRan
 	}
 }
 
-func (v *CompositeValue) AccessBase(interpreter *Interpreter, locationRange LocationRange) Value {
+func (v *CompositeValue) AccessBase(interpreter *Interpreter, locationRange LocationRange) *EphemeralReferenceValue {
 	base := v.getBaseValue(interpreter, locationRange)
 
 	attachmentType, ok := interpreter.MustConvertStaticToSemaType(v.staticType).(*sema.CompositeType)
@@ -15375,6 +15390,7 @@ func (v *DictionaryValue) ForEachKey(
 		return NewInvocation(
 			interpreter,
 			v,
+			nil,
 			[]Value{key},
 			[]sema.Type{keyType},
 			nil,
@@ -16560,6 +16576,7 @@ func (v *SomeValue) GetMember(interpreter *Interpreter, locationRange LocationRa
 				f := func(v Value) Value {
 					transformInvocation := NewInvocation(
 						invocation.Interpreter,
+						nil,
 						nil,
 						[]Value{v},
 						[]sema.Type{valueType},

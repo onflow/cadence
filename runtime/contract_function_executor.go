@@ -187,6 +187,7 @@ func (executor *interpreterContractFunctionExecutor) execute() (val cadence.Valu
 	invocation := interpreter.NewInvocation(
 		inter,
 		contractValue,
+		nil,
 		interpreterArguments,
 		executor.argumentTypes,
 		nil,
