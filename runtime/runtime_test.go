@@ -2571,7 +2571,12 @@ func TestRuntimeScriptReturnSpecial(t *testing.T) {
                       }
                   }
                 `,
-				expected: nil,
+				expected: cadence.Function{
+					FunctionType: (&cadence.FunctionType{
+						Parameters: []cadence.Parameter{},
+						ReturnType: cadence.IntType{},
+					}).WithID("(():Int)"),
+				},
 			},
 		)
 	})
@@ -2587,7 +2592,18 @@ func TestRuntimeScriptReturnSpecial(t *testing.T) {
                       return panic
                   }
                 `,
-				expected: nil,
+				expected: cadence.Function{
+					FunctionType: (&cadence.FunctionType{
+						Parameters: []cadence.Parameter{
+							{
+								Label:      sema.ArgumentLabelNotRequired,
+								Identifier: "message",
+								Type:       cadence.StringType{},
+							},
+						},
+						ReturnType: cadence.NeverType{},
+					}).WithID("((String):Never)"),
+				},
 			},
 		)
 	})
@@ -2608,7 +2624,12 @@ func TestRuntimeScriptReturnSpecial(t *testing.T) {
                       return s.f
                   }
                 `,
-				expected: nil,
+				expected: cadence.Function{
+					FunctionType: (&cadence.FunctionType{
+						Parameters: []cadence.Parameter{},
+						ReturnType: cadence.VoidType{},
+					}).WithID("(():Void)"),
+				},
 			},
 		)
 	})

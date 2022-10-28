@@ -19,8 +19,6 @@
 package interpreter
 
 import (
-	"fmt"
-
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -84,7 +82,7 @@ var _ FunctionValue = &InterpretedFunctionValue{}
 func (*InterpretedFunctionValue) IsValue() {}
 
 func (f *InterpretedFunctionValue) String() string {
-	return fmt.Sprintf("Function%s", f.Type.String())
+	return format.Function(f.Type.String())
 }
 
 func (f *InterpretedFunctionValue) RecursiveString(_ SeenReferences) string {
@@ -180,8 +178,7 @@ type HostFunctionValue struct {
 }
 
 func (f *HostFunctionValue) String() string {
-	// TODO: include type
-	return format.HostFunction
+	return format.Function(f.Type.String())
 }
 
 func (f *HostFunctionValue) RecursiveString(_ SeenReferences) string {

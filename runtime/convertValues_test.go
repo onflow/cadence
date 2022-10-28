@@ -123,7 +123,15 @@ func TestExportValue(t *testing.T) {
 		},
 	}
 
-	a, _ := cadence.NewCharacter("a")
+	testCharacter, _ := cadence.NewCharacter("a")
+
+	testFunction := &interpreter.InterpretedFunctionValue{
+		Type: &sema.FunctionType{
+			ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
+		},
+	}
+
+	testFunctionType := cadence.NewFunctionType("(():Void)", []cadence.Parameter{}, cadence.VoidType{})
 
 	for _, tt := range []exportTest{
 		{
@@ -265,7 +273,7 @@ func TestExportValue(t *testing.T) {
 		{
 			label:    "Character",
 			value:    interpreter.NewUnmeteredCharacterValue("a"),
-			expected: a,
+			expected: testCharacter,
 		},
 		{
 			label:    "Int8",
@@ -374,19 +382,29 @@ func TestExportValue(t *testing.T) {
 			},
 		},
 		{
-			label:    "Interpreted Function",
-			value:    &interpreter.InterpretedFunctionValue{},
-			expected: nil,
+			label: "Interpreted Function",
+			value: testFunction,
+			expected: cadence.Function{
+				FunctionType: testFunctionType,
+			},
 		},
 		{
-			label:    "Host Function",
-			value:    &interpreter.HostFunctionValue{},
-			expected: nil,
+			label: "Host Function",
+			value: &interpreter.HostFunctionValue{
+				Type: testFunction.Type,
+			},
+			expected: cadence.Function{
+				FunctionType: testFunctionType,
+			},
 		},
 		{
-			label:    "Bound Function",
-			value:    interpreter.BoundFunctionValue{},
-			expected: nil,
+			label: "Bound Function",
+			value: interpreter.BoundFunctionValue{
+				Function: testFunction,
+			},
+			expected: cadence.Function{
+				FunctionType: testFunctionType,
+			},
 		},
 		{
 			label: "Account key",
@@ -2165,7 +2183,15 @@ func TestExportCompositeValueWithFunctionValueField(t *testing.T) {
 	}
 
 	actual := exportValueFromScript(t, script)
-	expected := cadence.NewStruct([]cadence.Value{cadence.NewInt(42), nil}).WithType(fooStructType)
+	expected := cadence.NewStruct([]cadence.Value{
+		cadence.NewInt(42),
+		cadence.Function{
+			FunctionType: (&cadence.FunctionType{
+				Parameters: []cadence.Parameter{},
+				ReturnType: cadence.VoidType{},
+			}).WithID("(():Void)"),
+		},
+	}).WithType(fooStructType)
 
 	assert.Equal(t, expected, actual)
 }

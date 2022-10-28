@@ -2139,3 +2139,48 @@ func TestEncodeBuiltinComposites(t *testing.T) {
 		testEncode(t, typeValue, expectedJson)
 	}
 }
+
+func TestExportFunctionValue(t *testing.T) {
+
+	t.Parallel()
+
+	ty := &cadence.ResourceType{
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "Foo",
+		Fields: []cadence.Field{
+			{
+				Identifier: "foo",
+			},
+		},
+	}
+
+	ty.Fields[0].Type = cadence.OptionalType{
+		Type: ty,
+	}
+
+	testEncode(
+		t,
+		cadence.Function{
+			FunctionType: (&cadence.FunctionType{
+				Parameters: []cadence.Parameter{},
+				ReturnType: cadence.VoidType{},
+			}).WithID("(():Void)"),
+		},
+		// language=json
+		`
+          {
+            "type": "Function",
+            "value": {
+              "functionType": {
+                "kind": "Function",
+                "typeID": "(():Void)",
+                "parameters": [],
+                "return": {
+                  "kind": "Void"
+                }
+              }
+            }
+          }
+        `,
+	)
+}
