@@ -36,7 +36,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	switch os.Args[1] {
+	command := os.Args[1]
+	switch command {
 	case "decode":
 		var data bytes.Buffer
 		reader := bufio.NewReader(os.Stdin)
@@ -51,5 +52,9 @@ func main() {
 		}
 
 		_, _ = pp.Print(value)
+
+	default:
+		_, _ = fmt.Fprintf(os.Stderr, "unsupported command: %s", command)
+		os.Exit(1)
 	}
 }
