@@ -1396,6 +1396,7 @@ func (t *ContractInterfaceType) InterfaceInitializers() [][]Parameter {
 
 // Function
 
+// TODO: type parameters
 type FunctionType struct {
 	typeID     string
 	Parameters []Parameter

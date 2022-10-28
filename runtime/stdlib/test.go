@@ -480,11 +480,11 @@ func invokeMatcherTest(
 	inter *interpreter.Interpreter,
 	matcher interpreter.MemberAccessibleValue,
 	value interpreter.Value,
-	locationRangeGetter interpreter.LocationRange,
+	locationRange interpreter.LocationRange,
 ) bool {
 	testFunc := matcher.GetMember(
 		inter,
-		locationRangeGetter,
+		locationRange,
 		matcherTestFunctionName,
 	)
 
@@ -766,7 +766,7 @@ var EmulatorBackendType = func() *sema.CompositeType {
 func newEmulatorBackend(
 	inter *interpreter.Interpreter,
 	testFramework TestFramework,
-	locationRangeGetter interpreter.LocationRange,
+	locationRange interpreter.LocationRange,
 ) *interpreter.CompositeValue {
 	var fields = []interpreter.CompositeField{
 		{
@@ -800,7 +800,7 @@ func newEmulatorBackend(
 
 	return interpreter.NewCompositeValue(
 		inter,
-		locationRangeGetter,
+		locationRange,
 		EmulatorBackendType.Location,
 		emulatorBackendTypeName,
 		common.CompositeKindStructure,
@@ -941,33 +941,35 @@ func emulatorBackendCreateAccountFunction(testFramework TestFramework) *interpre
 			inter := invocation.Interpreter
 			locationRange := invocation.LocationRange
 
-			return newAccountValue(inter, account, locationRange)
+			return newAccountValue(
+				testFramework,
+				inter,
+				locationRange,
+				account,
+			)
 		},
 		emulatorBackendCreateAccountFunctionType,
 	)
 }
 
 func newAccountValue(
+	framework TestFramework,
 	inter *interpreter.Interpreter,
+	locationRange interpreter.LocationRange,
 	account *Account,
-	locationRangeGetter interpreter.LocationRange,
 ) interpreter.Value {
 
 	// Create address value
 	address := interpreter.NewAddressValue(nil, account.Address)
 
-	// Create public key
-	publicKey := interpreter.NewPublicKeyValue(
+	standardLibraryHandler := framework.StandardLibraryHandler()
+
+	publicKey := NewPublicKeyValue(
 		inter,
-		locationRangeGetter,
-		interpreter.ByteSliceToByteArrayValue(
-			inter,
-			account.PublicKey.PublicKey,
-		),
-		NewSignatureAlgorithmCase(
-			interpreter.UInt8Value(account.PublicKey.SignAlgo.RawValue()),
-		),
-		inter.Config.PublicKeyValidationHandler,
+		locationRange,
+		account.PublicKey,
+		standardLibraryHandler,
+		standardLibraryHandler,
 	)
 
 	// Create an 'Account' by calling its constructor.
@@ -1099,7 +1101,7 @@ func addressesFromValue(accountsValue interpreter.Value) []common.Address {
 func accountsFromValue(
 	inter *interpreter.Interpreter,
 	accountsValue interpreter.Value,
-	locationRangeGetter interpreter.LocationRange,
+	locationRange interpreter.LocationRange,
 ) []*Account {
 
 	accountsArray, ok := accountsValue.(*interpreter.ArrayValue)
@@ -1115,7 +1117,7 @@ func accountsFromValue(
 			panic(errors.NewUnreachableError())
 		}
 
-		account := accountFromValue(inter, accountValue, locationRangeGetter)
+		account := accountFromValue(inter, accountValue, locationRange)
 
 		accounts = append(accounts, account)
 
@@ -1128,13 +1130,13 @@ func accountsFromValue(
 func accountFromValue(
 	inter *interpreter.Interpreter,
 	accountValue interpreter.MemberAccessibleValue,
-	locationRangeGetter interpreter.LocationRange,
+	locationRange interpreter.LocationRange,
 ) *Account {
 
 	// Get address
 	addressValue := accountValue.GetMember(
 		inter,
-		locationRangeGetter,
+		locationRange,
 		accountAddressFieldName,
 	)
 	address, ok := addressValue.(interpreter.AddressValue)
@@ -1145,7 +1147,7 @@ func accountFromValue(
 	// Get public key
 	publicKeyVal, ok := accountValue.GetMember(
 		inter,
-		locationRangeGetter,
+		locationRange,
 		sema.AccountKeyPublicKeyField,
 	).(interpreter.MemberAccessibleValue)
 
@@ -1153,7 +1155,7 @@ func accountFromValue(
 		panic(errors.NewUnreachableError())
 	}
 
-	publicKey, err := NewPublicKeyFromValue(inter, locationRangeGetter, publicKeyVal)
+	publicKey, err := NewPublicKeyFromValue(inter, locationRange, publicKeyVal)
 	if err != nil {
 		panic(err)
 	}
@@ -1335,7 +1337,7 @@ var equalMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
 					otherValue,
 				)
 
-				return interpreter.BoolValue(equal)
+				return interpreter.AsBoolValue(equal)
 			},
 			matcherTestFunctionType,
 		)
