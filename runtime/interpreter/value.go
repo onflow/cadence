@@ -13820,6 +13820,9 @@ type CompositeField struct {
 	Value Value
 }
 
+const attachmentNamePrefix = "$"
+const attachmentBaseName = "$base"
+
 func NewCompositeField(memoryGauge common.MemoryGauge, name string, value Value) CompositeField {
 	common.UseMemory(memoryGauge, common.CompositeFieldMemoryUsage)
 	return NewUnmeteredCompositeField(name, value)
@@ -13907,6 +13910,28 @@ func NewCompositeValue(
 	return v
 }
 
+func NewAttachmentValue(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	location common.Location,
+	qualifiedIdentifier string,
+	fields []CompositeField,
+	address common.Address,
+	base *CompositeValue,
+) (attachment *CompositeValue) {
+	attachment = NewCompositeValue(
+		interpreter,
+		locationRange,
+		location,
+		qualifiedIdentifier,
+		common.CompositeKindAttachment,
+		fields,
+		address,
+	)
+	attachment.SetMember(interpreter, locationRange, attachmentBaseName, base)
+	return
+}
+
 func newCompositeValueFromOrderedMap(
 	dict *atree.OrderedMap,
 	typeInfo compositeTypeInfo,
@@ -13954,7 +13979,7 @@ func (v *CompositeValue) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 // Walk iterates over all field values of the composite value.
-// It does NOT walk the computed fields and functions!
+// It does NOT walk the computed field or functions!
 func (v *CompositeValue) Walk(interpreter *Interpreter, walkChild func(Value)) {
 	v.ForEachField(interpreter, func(_ string, value Value) {
 		walkChild(value)
@@ -14012,6 +14037,11 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 			)
 		}()
 	}
+
+	// if this type has attachments, destroy all of them before invoking the destructor
+	v.forEachAttachment(interpreter, locationRange, func(v *CompositeValue) {
+		v.Destroy(interpreter, locationRange)
+	})
 
 	interpreter = v.getInterpreter(interpreter)
 
@@ -14528,6 +14558,13 @@ func (v *CompositeValue) ConformsToStaticType(
 		return false
 	}
 
+	if compositeType.Kind == common.CompositeKindAttachment {
+		base := v.getBaseValue(interpreter, locationRange)
+		if base == nil || !base.ConformsToStaticType(interpreter, locationRange, results) {
+			return false
+		}
+	}
+
 	fieldsLen := int(v.dictionary.Count())
 	if v.ComputedFields != nil {
 		fieldsLen += len(v.ComputedFields)
@@ -14585,6 +14622,7 @@ func (v *CompositeValue) IsStorable() bool {
 	case common.CompositeKindStructure,
 		common.CompositeKindResource,
 		common.CompositeKindEnum,
+		common.CompositeKindAttachment,
 		common.CompositeKindContract:
 		break
 	default:
@@ -14607,7 +14645,11 @@ func (v *CompositeValue) NeedsStoreTo(address atree.Address) bool {
 	return address != v.StorageID().Address
 }
 
-func (v *CompositeValue) IsResourceKinded(_ *Interpreter) bool {
+func (v *CompositeValue) IsResourceKinded(interpreter *Interpreter) bool {
+	if v.Kind == common.CompositeKindAttachment {
+		base := v.getBaseValue(interpreter, EmptyLocationRange)
+		return base != nil && base.IsResourceKinded(interpreter)
+	}
 	return v.Kind == common.CompositeKindResource
 }
 
@@ -14980,6 +15022,71 @@ func NewEnumCaseValue(
 	v.Functions = functions
 
 	return v
+}
+
+func (v *CompositeValue) getBaseValue(interpreter *Interpreter, locationRange LocationRange) Value {
+	return v.GetMember(interpreter, locationRange, attachmentBaseName)
+}
+
+func (v *CompositeValue) getAttachmentValue(interpreter *Interpreter, locationRange LocationRange, ty sema.Type) Value {
+	return v.GetMember(interpreter, locationRange, attachmentNamePrefix+ty.QualifiedString())
+}
+
+func (v *CompositeValue) forEachAttachment(interpreter *Interpreter, locationRange LocationRange, f func(*CompositeValue)) {
+	iterator, err := v.dictionary.Iterator()
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
+	for {
+		key, value, err := iterator.Next()
+		if err != nil {
+			panic(errors.NewExternalError(err))
+		}
+		if key == nil {
+			break
+		}
+		if strings.HasPrefix(string(key.(StringAtreeValue)), attachmentNamePrefix) {
+			attachment, ok := MustConvertStoredValue(interpreter, value).(*CompositeValue)
+			if !ok {
+				panic(errors.NewExternalError(err))
+			}
+			f(attachment)
+		}
+	}
+}
+
+func (v *CompositeValue) AccessBase(interpreter *Interpreter, locationRange LocationRange) Value {
+	base := v.getBaseValue(interpreter, locationRange)
+
+	attachmentType, ok := interpreter.MustConvertStaticToSemaType(v.staticType).(*sema.CompositeType)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	// the super reference can only be borrowed with the declared type of the attachment's base
+	return NewEphemeralReferenceValue(interpreter, false, base, attachmentType.GetBaseType())
+}
+
+func (v *CompositeValue) AccessAttachment(interpreter *Interpreter, locationRange LocationRange, ty sema.Type) Value {
+	attachment := v.getAttachmentValue(interpreter, locationRange, ty)
+	if attachment == nil {
+		return NilValue{}
+	}
+	return NewSomeValueNonCopying(interpreter, NewEphemeralReferenceValue(interpreter, false, v, ty))
+}
+
+func (v *CompositeValue) AttachAttachment(interpreter *Interpreter, locationRange LocationRange, attachment *CompositeValue) {
+
+	attachmentType, ok := interpreter.MustConvertStaticToSemaType(attachment.staticType).(*sema.CompositeType)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	v.SetMember(interpreter, locationRange, attachmentNamePrefix+attachmentType.QualifiedString(), attachment)
+}
+
+func (v *CompositeValue) RemoveAttachment(interpreter *Interpreter, locationRange LocationRange, attachmentType *sema.CompositeType) {
+	v.RemoveMember(interpreter, locationRange, attachmentNamePrefix+attachmentType.QualifiedString())
 }
 
 // DictionaryValue

@@ -608,10 +608,9 @@ func (interpreter *Interpreter) VisitProgram(program *ast.Program) {
 		interpreter.visitGlobalDeclaration(declaration)
 	}
 
-	// TODO: Add this
-	//for _, declaration := range program.AttachmentDeclarations() {
-	// interpreter.visitGlobalDeclaration(declaration)
-	//}
+	for _, declaration := range program.AttachmentDeclarations() {
+		interpreter.visitGlobalDeclaration(declaration)
+	}
 
 	for _, declaration := range program.FunctionDeclarations() {
 		interpreter.visitGlobalDeclaration(declaration)
@@ -928,8 +927,30 @@ func (interpreter *Interpreter) VisitCompositeDeclaration(declaration *ast.Compo
 }
 
 func (interpreter *Interpreter) VisitAttachmentDeclaration(declaration *ast.AttachmentDeclaration) StatementResult {
-	// TODO: fill this in
+	// lexical scope: variables in functions are bound to what is visible at declaration time
+	lexicalScope := interpreter.activations.CurrentOrNew()
+	_, _ = interpreter.declareAttachmentValue(declaration, lexicalScope)
 	return nil
+}
+
+func (interpreter *Interpreter) declareAttachmentValue(
+	declaration *ast.AttachmentDeclaration,
+	lexicalScope *VariableActivation,
+) (
+	scope *VariableActivation,
+	variable *Variable,
+) {
+	compositeDeclaration := ast.NewCompositeDeclaration(
+		interpreter,
+		declaration.Access,
+		common.CompositeKindAttachment,
+		declaration.Identifier,
+		declaration.Conformances,
+		declaration.Members,
+		declaration.DocString,
+		declaration.Range,
+	)
+	return interpreter.declareCompositeValue(compositeDeclaration, lexicalScope)
 }
 
 // declareCompositeValue creates and declares the value for
@@ -1002,6 +1023,10 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 			predeclare(nestedCompositeDeclaration.Identifier)
 		}
 
+		for _, nestedAttachmentDeclaration := range declaration.Members.Attachments() {
+			predeclare(nestedAttachmentDeclaration.Identifier)
+		}
+
 		for _, nestedInterfaceDeclaration := range declaration.Members.Interfaces() {
 			interpreter.declareInterface(nestedInterfaceDeclaration, lexicalScope)
 		}
@@ -1020,6 +1045,23 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				)
 
 			memberIdentifier := nestedCompositeDeclaration.Identifier.Identifier
+			nestedVariables[memberIdentifier] = nestedVariable
+		}
+
+		for _, nestedAttachmentDeclaration := range declaration.Members.Attachments() {
+
+			// Pass the lexical scope, which has the containing composite's value declared,
+			// to the nested declarations so they can refer to it, and update the lexical scope
+			// so the container's functions can refer to the nested composite's value
+
+			var nestedVariable *Variable
+			lexicalScope, nestedVariable =
+				interpreter.declareAttachmentValue(
+					nestedAttachmentDeclaration,
+					lexicalScope,
+				)
+
+			memberIdentifier := nestedAttachmentDeclaration.Identifier.Identifier
 			nestedVariables[memberIdentifier] = nestedVariable
 		}
 	})()
