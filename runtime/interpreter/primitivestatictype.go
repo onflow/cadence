@@ -199,7 +199,6 @@ const (
 	PrimitiveStaticTypeAuthAccountKeys
 	PrimitiveStaticTypePublicAccountKeys
 	PrimitiveStaticTypeAccountKey
-	PrimitiveStaticTypePublicAccountInbox
 	PrimitiveStaticTypeAuthAccountInbox
 
 	// !!! *WARNING* !!!
@@ -278,7 +277,6 @@ func (t PrimitiveStaticType) elementSize() uint {
 		PrimitiveStaticTypeDeployedContract,
 		PrimitiveStaticTypeAuthAccountContracts,
 		PrimitiveStaticTypePublicAccountContracts,
-		PrimitiveStaticTypePublicAccountInbox,
 		PrimitiveStaticTypeAuthAccountInbox,
 		PrimitiveStaticTypeAuthAccountKeys,
 		PrimitiveStaticTypePublicAccountKeys,
@@ -423,8 +421,10 @@ func (i PrimitiveStaticType) SemaType() sema.Type {
 		return sema.PublicAccountKeysType
 	case PrimitiveStaticTypeAccountKey:
 		return sema.AccountKeyType
+	case PrimitiveStaticTypeAuthAccountInbox:
+		return sema.AuthAccountInboxType
 	default:
-		panic(errors.NewUnreachableError())
+		panic(errors.NewUnexpectedError("missing case for %s", i))
 	}
 }
 
@@ -436,6 +436,9 @@ func ConvertSemaToPrimitiveStaticType(
 	t sema.Type,
 ) (typ PrimitiveStaticType) {
 	switch t {
+
+	case sema.StringType:
+		typ = PrimitiveStaticTypeString
 
 	// Number
 
@@ -550,8 +553,8 @@ func ConvertSemaToPrimitiveStaticType(
 		typ = PrimitiveStaticTypePublicAccountKeys
 	case sema.AccountKeyType:
 		typ = PrimitiveStaticTypeAccountKey
-	case sema.StringType:
-		typ = PrimitiveStaticTypeString
+	case sema.AuthAccountInboxType:
+		typ = PrimitiveStaticTypeAuthAccountInbox
 	}
 
 	switch t.(type) {

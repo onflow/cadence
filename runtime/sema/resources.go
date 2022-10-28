@@ -21,6 +21,7 @@ package sema
 import (
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
@@ -67,10 +68,26 @@ type Resources struct {
 	resources *orderedmap.OrderedMap[Resource, ResourceInfo]
 }
 
+var resourcesPool = sync.Pool{
+	New: func() any {
+		return &Resources{
+			resources: &orderedmap.OrderedMap[Resource, ResourceInfo]{},
+		}
+	},
+}
+
 func NewResources() *Resources {
-	return &Resources{
-		resources: &orderedmap.OrderedMap[Resource, ResourceInfo]{},
-	}
+	resources := resourcesPool.Get().(*Resources)
+	resources.clear()
+	return resources
+}
+
+func (ris *Resources) clear() {
+	ris.resources.Clear()
+}
+
+func (ris *Resources) Reclaim() {
+	resourcesPool.Put(ris)
 }
 
 func (ris *Resources) String() string {

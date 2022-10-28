@@ -72,7 +72,7 @@ func TestRuntimeCrypto_verify(t *testing.T) {
       }
     `)
 
-	called := false
+	var called bool
 
 	storage := newTestLedger(nil, nil)
 
@@ -121,9 +121,8 @@ func TestRuntimeHashAlgorithm_hash(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
-
 	executeScript := func(code string, inter Interface) (cadence.Value, error) {
+		runtime := newTestInterpreterRuntime()
 		return runtime.ExecuteScript(
 			Script{
 				Source: []byte(code),
@@ -136,13 +135,15 @@ func TestRuntimeHashAlgorithm_hash(t *testing.T) {
 	}
 
 	t.Run("hash", func(t *testing.T) {
+		t.Parallel()
+
 		script := `
             pub fun main() {
                 log(HashAlgorithm.SHA3_256.hash("01020304".decodeHex()))
             }
         `
 
-		called := false
+		var called bool
 
 		var loggedMessages []string
 
@@ -179,13 +180,15 @@ func TestRuntimeHashAlgorithm_hash(t *testing.T) {
 	})
 
 	t.Run("hash - check tag", func(t *testing.T) {
+		t.Parallel()
+
 		script := `
             pub fun main() {
                 HashAlgorithm.SHA3_256.hash("01020304".decodeHex())
             }
         `
 
-		called := false
+		var called bool
 		hashTag := "non-empty-string"
 
 		storage := newTestLedger(nil, nil)
@@ -207,6 +210,8 @@ func TestRuntimeHashAlgorithm_hash(t *testing.T) {
 	})
 
 	t.Run("hashWithTag - check tag", func(t *testing.T) {
+		t.Parallel()
+
 		script := `
             pub fun main() {
                 HashAlgorithm.SHA3_256.hashWithTag(
@@ -216,7 +221,7 @@ func TestRuntimeHashAlgorithm_hash(t *testing.T) {
             }
         `
 
-		called := false
+		var called bool
 		hashTag := ""
 
 		storage := newTestLedger(nil, nil)
@@ -485,7 +490,7 @@ func TestBLSVerifyPoP(t *testing.T) {
       }
     `)
 
-	called := false
+	var called bool
 
 	storage := newTestLedger(nil, nil)
 
@@ -545,7 +550,7 @@ func TestBLSAggregateSignatures(t *testing.T) {
       }
     `)
 
-	called := false
+	var called bool
 
 	storage := newTestLedger(nil, nil)
 
@@ -612,7 +617,7 @@ func TestBLSAggregatePublicKeys(t *testing.T) {
       }
     `)
 
-	called := false
+	var called bool
 
 	storage := newTestLedger(nil, nil)
 

@@ -281,6 +281,9 @@ func TestOrderedMapOperations(t *testing.T) {
 // TestGeneratedMapOperations tests the basic functionality of a generated map.
 // This is to make sure any update to the generator would not cause any regression issues.
 func TestGeneratedMapOperations(t *testing.T) {
+
+	t.Parallel()
+
 	fruits := OrderedMap[string, *Fruit]{}
 	require.NotNil(t, fruits)
 

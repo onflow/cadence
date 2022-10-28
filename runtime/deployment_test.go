@@ -76,6 +76,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 		codeHash, err := ImportValue(
 			inter,
 			interpreter.EmptyLocationRange,
+			nil,
 			codeHashValue,
 			sema.ByteArrayType,
 		)
@@ -222,7 +223,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
               }
             `,
 			arguments: []argument{
-				interpreter.BoolValue(true),
+				interpreter.TrueValue,
 			},
 			check: expectFailure(
 				"Execution failed:\n" +

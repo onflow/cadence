@@ -21,6 +21,7 @@ package runtime
 import (
 	"time"
 
+	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/activations"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -35,6 +36,8 @@ import (
 )
 
 type Environment interface {
+	ArgumentDecoder
+
 	Declare(valueDeclaration stdlib.StandardLibraryValue)
 	Configure(
 		runtimeInterface Interface,
@@ -93,6 +96,13 @@ var _ stdlib.PublicAccountHandler = &interpreterEnvironment{}
 var _ stdlib.AccountCreator = &interpreterEnvironment{}
 var _ stdlib.EventEmitter = &interpreterEnvironment{}
 var _ stdlib.AuthAccountHandler = &interpreterEnvironment{}
+var _ stdlib.PublicKeyValidator = &interpreterEnvironment{}
+var _ stdlib.PublicKeySignatureVerifier = &interpreterEnvironment{}
+var _ stdlib.BLSPoPVerifier = &interpreterEnvironment{}
+var _ stdlib.BLSPublicKeyAggregator = &interpreterEnvironment{}
+var _ stdlib.BLSSignatureAggregator = &interpreterEnvironment{}
+var _ stdlib.Hasher = &interpreterEnvironment{}
+var _ ArgumentDecoder = &interpreterEnvironment{}
 var _ common.MemoryGauge = &interpreterEnvironment{}
 
 func newInterpreterEnvironment(config Config) *interpreterEnvironment {
@@ -111,8 +121,6 @@ func newInterpreterEnvironment(config Config) *interpreterEnvironment {
 }
 
 func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
-	publicKeyValidationHandler := e.newPublicKeyValidationHandler()
-
 	return &interpreter.Config{
 		InvalidatedResourceValidationEnabled: true,
 		MemoryGauge:                          e,
@@ -123,12 +131,6 @@ func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
 		ContractValueHandler:                 e.newContractValueHandler(),
 		ImportLocationHandler:                e.newImportLocationHandler(),
 		PublicAccountHandler:                 e.newPublicAccountHandler(),
-		PublicKeyValidationHandler:           publicKeyValidationHandler,
-		BLSVerifyPoPHandler:                  e.newBLSVerifyPopFunction(),
-		BLSAggregateSignaturesHandler:        e.newBLSAggregateSignaturesFunction(),
-		BLSAggregatePublicKeysHandler:        e.newBLSAggregatePublicKeysFunction(publicKeyValidationHandler),
-		SignatureVerificationHandler:         e.newSignatureVerificationHandler(),
-		HashHandler:                          e.newHashHandler(),
 		OnRecordTrace:                        e.newOnRecordTraceHandler(),
 		OnResourceOwnerChange:                e.newResourceOwnerChangedHandler(),
 		TracingEnabled:                       e.config.TracingEnabled,
@@ -243,6 +245,10 @@ func (e *interpreterEnvironment) GetStorageCapacity(address common.Address) (uin
 
 func (e *interpreterEnvironment) GetAccountKey(address common.Address, index int) (*stdlib.AccountKey, error) {
 	return e.runtimeInterface.GetAccountKey(address, index)
+}
+
+func (e *interpreterEnvironment) AccountKeysCount(address common.Address) (uint64, error) {
+	return e.runtimeInterface.AccountKeysCount(address)
 }
 
 func (e *interpreterEnvironment) GetAccountContractNames(address common.Address) ([]string, error) {
@@ -588,111 +594,52 @@ func (e *interpreterEnvironment) newOnRecordTraceHandler() interpreter.OnRecordT
 	}
 }
 
-func (e *interpreterEnvironment) newHashHandler() interpreter.HashHandlerFunc {
-	return func(
-		inter *interpreter.Interpreter,
-		locationRange interpreter.LocationRange,
-		dataValue *interpreter.ArrayValue,
-		tagValue *interpreter.StringValue,
-		hashAlgorithmValue interpreter.MemberAccessibleValue,
-	) *interpreter.ArrayValue {
-		data, err := interpreter.ByteArrayValueToByteSlice(inter, dataValue)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to get data. %w", err))
-		}
-
-		var tag string
-		if tagValue != nil {
-			tag = tagValue.Str
-		}
-
-		hashAlgorithm := stdlib.NewHashAlgorithmFromValue(inter, locationRange, hashAlgorithmValue)
-
-		var result []byte
-		wrapPanic(func() {
-			result, err = e.runtimeInterface.Hash(data, tag, hashAlgorithm)
-		})
-		if err != nil {
-			panic(err)
-		}
-		return interpreter.ByteSliceToByteArrayValue(inter, result)
-	}
-}
-
 func (e *interpreterEnvironment) newPublicAccountHandler() interpreter.PublicAccountHandlerFunc {
 	return func(address interpreter.AddressValue) interpreter.Value {
 		return stdlib.NewPublicAccountValue(e, e, address)
 	}
 }
 
-func (e *interpreterEnvironment) newSignatureVerificationHandler() interpreter.SignatureVerificationHandlerFunc {
-	return func(
-		inter *interpreter.Interpreter,
-		locationRange interpreter.LocationRange,
-		signatureValue *interpreter.ArrayValue,
-		signedDataValue *interpreter.ArrayValue,
-		domainSeparationTagValue *interpreter.StringValue,
-		hashAlgorithmValue *interpreter.SimpleCompositeValue,
-		publicKeyValue interpreter.MemberAccessibleValue,
-	) interpreter.BoolValue {
-
-		signature, err := interpreter.ByteArrayValueToByteSlice(inter, signatureValue)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to get signature. %w", err))
-		}
-
-		signedData, err := interpreter.ByteArrayValueToByteSlice(inter, signedDataValue)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to get signed data. %w", err))
-		}
-
-		domainSeparationTag := domainSeparationTagValue.Str
-
-		hashAlgorithm := stdlib.NewHashAlgorithmFromValue(inter, locationRange, hashAlgorithmValue)
-
-		publicKey, err := stdlib.NewPublicKeyFromValue(inter, locationRange, publicKeyValue)
-		if err != nil {
-			return false
-		}
-
-		var valid bool
-		wrapPanic(func() {
-			valid, err = e.runtimeInterface.VerifySignature(
-				signature,
-				domainSeparationTag,
-				signedData,
-				publicKey.PublicKey,
-				publicKey.SignAlgo,
-				hashAlgorithm,
-			)
-		})
-
-		if err != nil {
-			panic(err)
-		}
-
-		return interpreter.BoolValue(valid)
-	}
+func (e *interpreterEnvironment) ValidatePublicKey(publicKey *stdlib.PublicKey) error {
+	return e.runtimeInterface.ValidatePublicKey(publicKey)
 }
 
-func (e *interpreterEnvironment) newPublicKeyValidationHandler() interpreter.PublicKeyValidationHandlerFunc {
-	return func(
-		inter *interpreter.Interpreter,
-		locationRange interpreter.LocationRange,
-		publicKeyValue *interpreter.CompositeValue,
-	) error {
+func (e *interpreterEnvironment) VerifySignature(
+	signature []byte,
+	tag string,
+	signedData []byte,
+	publicKey []byte,
+	signatureAlgorithm sema.SignatureAlgorithm,
+	hashAlgorithm sema.HashAlgorithm,
+) (bool, error) {
+	return e.runtimeInterface.VerifySignature(
+		signature,
+		tag,
+		signedData,
+		publicKey,
+		signatureAlgorithm,
+		hashAlgorithm,
+	)
+}
 
-		publicKey, err := stdlib.NewPublicKeyFromValue(inter, locationRange, publicKeyValue)
-		if err != nil {
-			return err
-		}
+func (e *interpreterEnvironment) BLSVerifyPOP(publicKeys *stdlib.PublicKey, signature []byte) (bool, error) {
+	return e.runtimeInterface.BLSVerifyPOP(publicKeys, signature)
+}
 
-		wrapPanic(func() {
-			err = e.runtimeInterface.ValidatePublicKey(publicKey)
-		})
+func (e *interpreterEnvironment) BLSAggregatePublicKeys(publicKeys []*stdlib.PublicKey) (*stdlib.PublicKey, error) {
+	return e.runtimeInterface.BLSAggregatePublicKeys(publicKeys)
+}
 
-		return err
-	}
+func (e *interpreterEnvironment) BLSAggregateSignatures(signatures [][]byte) ([]byte, error) {
+	return e.runtimeInterface.BLSAggregateSignatures(signatures)
+}
+
+func (e *interpreterEnvironment) Hash(data []byte, tag string, algorithm sema.HashAlgorithm) ([]byte, error) {
+	return e.runtimeInterface.Hash(data, tag, algorithm)
+}
+
+func (e *interpreterEnvironment) DecodeArgument(argument []byte, argumentType cadence.Type) (cadence.Value, error) {
+	return e.runtimeInterface.DecodeArgument(argument, argumentType)
 }
 
 func (e *interpreterEnvironment) newContractValueHandler() interpreter.ContractValueHandlerFunc {
@@ -926,8 +873,8 @@ func (e *interpreterEnvironment) InterpretContract(
 		return nil, err
 	}
 
-	variable, ok := inter.Globals.Get(name)
-	if !ok {
+	variable := inter.Globals.Get(name)
+	if variable == nil {
 		return nil, errors.NewDefaultUserError(
 			"cannot find contract: `%s`",
 			name,
@@ -994,131 +941,6 @@ func (e *interpreterEnvironment) newResourceOwnerChangedHandler() interpreter.On
 				newOwner,
 			)
 		})
-	}
-}
-
-func (e *interpreterEnvironment) newBLSVerifyPopFunction() interpreter.BLSVerifyPoPHandlerFunc {
-	return func(
-		inter *interpreter.Interpreter,
-		locationRange interpreter.LocationRange,
-		publicKeyValue interpreter.MemberAccessibleValue,
-		signatureValue *interpreter.ArrayValue,
-	) interpreter.BoolValue {
-		publicKey, err := stdlib.NewPublicKeyFromValue(inter, locationRange, publicKeyValue)
-		if err != nil {
-			panic(err)
-		}
-
-		signature, err := interpreter.ByteArrayValueToByteSlice(inter, signatureValue)
-		if err != nil {
-			panic(err)
-		}
-
-		var valid bool
-		wrapPanic(func() {
-			valid, err = e.runtimeInterface.BLSVerifyPOP(publicKey, signature)
-		})
-		if err != nil {
-			panic(err)
-		}
-		return interpreter.BoolValue(valid)
-	}
-}
-
-func (e *interpreterEnvironment) newBLSAggregateSignaturesFunction() interpreter.BLSAggregateSignaturesHandlerFunc {
-	return func(
-		inter *interpreter.Interpreter,
-		locationRange interpreter.LocationRange,
-		signaturesValue *interpreter.ArrayValue,
-	) interpreter.OptionalValue {
-
-		bytesArray := make([][]byte, 0, signaturesValue.Count())
-		signaturesValue.Iterate(inter, func(element interpreter.Value) (resume bool) {
-			signature, ok := element.(*interpreter.ArrayValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			bytes, err := interpreter.ByteArrayValueToByteSlice(inter, signature)
-			if err != nil {
-				panic(err)
-			}
-
-			bytesArray = append(bytesArray, bytes)
-
-			// Continue iteration
-			return true
-		})
-
-		var err error
-		var aggregatedSignature []byte
-		wrapPanic(func() {
-			aggregatedSignature, err = e.runtimeInterface.BLSAggregateSignatures(bytesArray)
-		})
-
-		// If the crypto layer produces an error, we have invalid input, return nil
-		if err != nil {
-			return interpreter.NilOptionalValue
-		}
-
-		aggregatedSignatureValue := interpreter.ByteSliceToByteArrayValue(inter, aggregatedSignature)
-
-		return interpreter.NewSomeValueNonCopying(
-			inter,
-			aggregatedSignatureValue,
-		)
-	}
-}
-
-func (e *interpreterEnvironment) newBLSAggregatePublicKeysFunction(
-	publicKeyValidationHandler interpreter.PublicKeyValidationHandlerFunc,
-) interpreter.BLSAggregatePublicKeysHandlerFunc {
-	return func(
-		inter *interpreter.Interpreter,
-		locationRange interpreter.LocationRange,
-		publicKeysValue *interpreter.ArrayValue,
-	) interpreter.OptionalValue {
-
-		publicKeys := make([]*stdlib.PublicKey, 0, publicKeysValue.Count())
-		publicKeysValue.Iterate(inter, func(element interpreter.Value) (resume bool) {
-			publicKeyValue, ok := element.(*interpreter.CompositeValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			publicKey, err := stdlib.NewPublicKeyFromValue(inter, locationRange, publicKeyValue)
-			if err != nil {
-				panic(err)
-			}
-
-			publicKeys = append(publicKeys, publicKey)
-
-			// Continue iteration
-			return true
-		})
-
-		var err error
-		var aggregatedPublicKey *stdlib.PublicKey
-		wrapPanic(func() {
-			aggregatedPublicKey, err = e.runtimeInterface.BLSAggregatePublicKeys(publicKeys)
-		})
-
-		// If the crypto layer produces an error, we have invalid input, return nil
-		if err != nil {
-			return interpreter.NilOptionalValue
-		}
-
-		aggregatedPublicKeyValue := stdlib.NewPublicKeyValue(
-			inter,
-			locationRange,
-			aggregatedPublicKey,
-			publicKeyValidationHandler,
-		)
-
-		return interpreter.NewSomeValueNonCopying(
-			inter,
-			aggregatedPublicKeyValue,
-		)
 	}
 }
 

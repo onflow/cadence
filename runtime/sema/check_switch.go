@@ -87,7 +87,12 @@ func (checker *Checker) checkSwitchCaseExpression(
 	testTypeIsValid bool,
 ) {
 
-	caseType := checker.VisitExpression(caseExpression, nil)
+	var caseExprExpectedType Type
+	if testTypeIsValid {
+		caseExprExpectedType = testType
+	}
+
+	caseType := checker.VisitExpression(caseExpression, caseExprExpectedType)
 
 	if caseType.IsInvalidType() {
 		return
@@ -96,21 +101,7 @@ func (checker *Checker) checkSwitchCaseExpression(
 	// The type of each case expression must be the same
 	// as the type of the test expression
 
-	if testTypeIsValid {
-		// If the test type is valid,
-		// the case type can be checked to be equatable and compatible in one go
-
-		if !AreCompatibleEquatableTypes(testType, caseType) {
-			checker.report(
-				&InvalidBinaryOperandsError{
-					Operation: ast.OperationEqual,
-					LeftType:  testType,
-					RightType: caseType,
-					Range:     ast.NewRangeFromPositioned(checker.memoryGauge, caseExpression),
-				},
-			)
-		}
-	} else {
+	if !testTypeIsValid {
 		// If the test type is invalid,
 		// at least the case type can be checked to be equatable
 

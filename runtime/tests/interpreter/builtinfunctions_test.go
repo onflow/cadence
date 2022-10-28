@@ -50,7 +50,7 @@ func TestInterpretToString(t *testing.T) {
 				t,
 				inter,
 				interpreter.NewUnmeteredStringValue("42"),
-				inter.Globals["y"].GetValue(),
+				inter.Globals.Get("y").GetValue(),
 			)
 		})
 	}
@@ -68,7 +68,7 @@ func TestInterpretToString(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredStringValue("0x0000000000000042"),
-			inter.Globals["y"].GetValue(),
+			inter.Globals.Get("y").GetValue(),
 		)
 	})
 
@@ -104,7 +104,7 @@ func TestInterpretToString(t *testing.T) {
 				t,
 				inter,
 				expected,
-				inter.Globals["y"].GetValue(),
+				inter.Globals.Get("y").GetValue(),
 			)
 		})
 	}
@@ -142,7 +142,7 @@ func TestInterpretToBytes(t *testing.T) {
 				interpreter.NewUnmeteredUInt8Value(0x34),
 				interpreter.NewUnmeteredUInt8Value(0x56),
 			),
-			inter.Globals["y"].GetValue(),
+			inter.Globals.Get("y").GetValue(),
 		)
 	})
 }
@@ -345,7 +345,7 @@ func TestInterpretToBigEndianBytes(t *testing.T) {
 					t,
 					inter,
 					interpreter.ByteSliceToByteArrayValue(inter, expected),
-					inter.Globals["result"].GetValue(),
+					inter.Globals.Get("result").GetValue(),
 				)
 			})
 		}

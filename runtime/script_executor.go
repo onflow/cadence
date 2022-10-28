@@ -156,11 +156,7 @@ func (executor *interpreterScriptExecutor) preprocess() (err error) {
 		return newError(err, location, codesAndPrograms)
 	}
 
-	executor.interpret = scriptExecutionFunction(
-		parameters,
-		script.Arguments,
-		runtimeInterface,
-	)
+	executor.interpret = executor.scriptExecutionFunction()
 
 	return nil
 }
@@ -217,11 +213,7 @@ func (executor *interpreterScriptExecutor) execute() (val cadence.Value, err err
 	return result, nil
 }
 
-func scriptExecutionFunction(
-	parameters []*sema.Parameter,
-	arguments [][]byte,
-	runtimeInterface Interface,
-) InterpretFunc {
+func (executor *interpreterScriptExecutor) scriptExecutionFunction() InterpretFunc {
 	return func(inter *interpreter.Interpreter) (value interpreter.Value, err error) {
 
 		// Recover internal panics and return them as an error.
@@ -234,10 +226,10 @@ func scriptExecutionFunction(
 
 		values, err := validateArgumentParams(
 			inter,
-			runtimeInterface,
+			executor.environment,
 			interpreter.EmptyLocationRange,
-			arguments,
-			parameters,
+			executor.script.Arguments,
+			executor.functionEntryPointType.Parameters,
 		)
 		if err != nil {
 			return nil, err

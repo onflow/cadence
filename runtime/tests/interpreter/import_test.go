@@ -386,7 +386,7 @@ func TestInterpretResourceConstructionThroughIndirectImport(t *testing.T) {
 	err = inter.Interpret()
 	require.NoError(t, err)
 
-	rConstructor := subInterpreter.Globals["R"].GetValue()
+	rConstructor := subInterpreter.Globals.Get("R").GetValue()
 
 	_, err = inter.Invoke("test", rConstructor)
 	RequireError(t, err)

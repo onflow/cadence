@@ -37,17 +37,19 @@ func (interpreter *Interpreter) evalStatement(statement ast.Statement) Statement
 
 	interpreter.statement = statement
 
-	onMeterComputation := interpreter.Config.OnMeterComputation
+	config := interpreter.sharedState.config
+
+	onMeterComputation := config.OnMeterComputation
 	if onMeterComputation != nil {
 		onMeterComputation(common.ComputationKindStatement, 1)
 	}
 
-	debugger := interpreter.Config.Debugger
+	debugger := config.Debugger
 	if debugger != nil {
 		debugger.onStatement(interpreter, statement)
 	}
 
-	onStatement := interpreter.Config.OnStatement
+	onStatement := config.OnStatement
 	if onStatement != nil {
 		onStatement(interpreter, statement)
 	}
@@ -323,10 +325,12 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) S
 		nil,
 	)
 
-	iterator, err := transferredValue.(*ArrayValue).array.Iterator()
-	if err != nil {
-		panic(errors.NewExternalError(err))
+	iterable, ok := transferredValue.(IterableValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
 	}
+
+	iterator := iterable.Iterator(interpreter)
 
 	var indexVariable *Variable
 	if statement.Index != nil {
@@ -337,21 +341,12 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) S
 	}
 
 	for {
-		var atreeValue atree.Value
-		atreeValue, err = iterator.Next()
-		if err != nil {
-			panic(errors.NewExternalError(err))
-		}
-
-		if atreeValue == nil {
+		value := iterator.Next(interpreter)
+		if value == nil {
 			return nil
 		}
 
 		interpreter.reportLoopIteration(statement)
-
-		// atree.Array iterator returns low-level atree.Value,
-		// convert to high-level interpreter.Value
-		value := MustConvertStoredValue(interpreter, atreeValue)
 
 		variable.SetValue(value)
 
@@ -389,7 +384,9 @@ func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement)
 		HasPosition: statement,
 	}
 
-	onEventEmitted := interpreter.Config.OnEventEmitted
+	config := interpreter.sharedState.config
+
+	onEventEmitted := config.OnEventEmitted
 	if onEventEmitted == nil {
 		panic(EventEmissionUnavailableError{
 			LocationRange: locationRange,
