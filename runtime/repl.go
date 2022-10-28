@@ -280,8 +280,8 @@ func (r *REPL) Suggestions() (result []REPLSuggestion) {
 }
 
 func (r *REPL) GetGlobal(name string) interpreter.Value {
-	variable, ok := r.inter.Globals.Get(name)
-	if !ok {
+	variable := r.inter.Globals.Get(name)
+	if variable == nil {
 		return nil
 	}
 	return variable.GetValue()
