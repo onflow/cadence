@@ -135,7 +135,7 @@ func TestRuntimeSharedState(t *testing.T) {
 		setInterpreterSharedState: func(state *interpreter.SharedState) {
 			interpreterState = state
 		},
-		getInterpreterShareState: func() *interpreter.SharedState {
+		getInterpreterSharedState: func() *interpreter.SharedState {
 			return interpreterState
 		},
 	}

@@ -140,7 +140,7 @@ type testRuntimeInterface struct {
 	getProgram                func(Location) (*interpreter.Program, error)
 	setProgram                func(Location, *interpreter.Program) error
 	setInterpreterSharedState func(state *interpreter.SharedState)
-	getInterpreterShareState  func() *interpreter.SharedState
+	getInterpreterSharedState func() *interpreter.SharedState
 	storage                   testLedger
 	createAccount             func(payer Address) (address Address, err error)
 	addEncodedAccountKey      func(address Address, publicKey []byte) error
@@ -252,11 +252,11 @@ func (i *testRuntimeInterface) SetInterpreterSharedState(state *interpreter.Shar
 }
 
 func (i *testRuntimeInterface) GetInterpreterSharedState() *interpreter.SharedState {
-	if i.getInterpreterShareState == nil {
+	if i.getInterpreterSharedState == nil {
 		return nil
 	}
 
-	return i.getInterpreterShareState()
+	return i.getInterpreterSharedState()
 }
 
 func (i *testRuntimeInterface) ValueExists(owner, key []byte) (exists bool, err error) {
