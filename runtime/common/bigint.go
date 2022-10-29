@@ -42,6 +42,8 @@ func NewBigIntFromAbsoluteValue(gauge MemoryGauge, value *big.Int) *big.Int {
 	return new(big.Int).Abs(value)
 }
 
+const minBigIntLength = 4 * BigIntWordSize
+
 // OverEstimateBigIntFromString is an approximate inverse of `interpreter.OverEstimateBigIntStringLength`.
 // Returns the estimated size in bytes.
 func OverEstimateBigIntFromString(s string) int {
@@ -54,5 +56,9 @@ func OverEstimateBigIntFromString(s string) int {
 	// First convert to word, and then find the size,
 	// to be consistent with `common.BigIntByteLength`
 	wordLen := (bitLen + 63) / 64
-	return (wordLen + 4) * BigIntWordSize
+	result := wordLen * BigIntWordSize
+	if result < minBigIntLength {
+		return minBigIntLength
+	}
+	return result
 }

@@ -1726,6 +1726,9 @@ func parseIntegerLiteral(p *parser, literal, text []byte, kind IntegerLiteralKin
 		if withoutUnderscores == "" {
 			report(InvalidNumberLiteralKindMissingDigits)
 		} else {
+			estimatedSize := common.OverEstimateBigIntFromString(withoutUnderscores)
+			common.UseMemory(p.memoryGauge, common.NewBigIntMemoryUsage(estimatedSize))
+
 			var ok bool
 			value, ok = new(big.Int).SetString(withoutUnderscores, base)
 			if !ok {
@@ -1735,6 +1738,8 @@ func parseIntegerLiteral(p *parser, literal, text []byte, kind IntegerLiteralKin
 	}
 
 	if value == nil {
+		common.UseMemory(p.memoryGauge, common.NewBigIntMemoryUsage(1))
+
 		value = new(big.Int)
 	}
 
@@ -1750,6 +1755,9 @@ func parseFixedPointPart(gauge common.MemoryGauge, part string) (integer *big.In
 			common.OverEstimateBigIntFromString(withoutUnderscores),
 		),
 	)
+
+	estimatedSize := common.OverEstimateBigIntFromString(withoutUnderscores)
+	common.UseMemory(gauge, common.NewBigIntMemoryUsage(estimatedSize))
 
 	integer, _ = new(big.Int).SetString(withoutUnderscores, 10)
 	if integer == nil {
