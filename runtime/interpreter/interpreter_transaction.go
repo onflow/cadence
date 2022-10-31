@@ -75,7 +75,8 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 		Function: func(invocation Invocation) Value {
 			interpreter.activations.PushNewWithParent(lexicalScope)
 
-			invocation.Self = self
+			self := MemberAccessibleValue(self)
+			invocation.Self = &self
 			interpreter.declareVariable(sema.SelfIdentifier, self)
 
 			if declaration.ParameterList != nil {

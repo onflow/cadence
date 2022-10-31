@@ -103,6 +103,7 @@ const (
 	MemoryKindCadencePathValue
 	MemoryKindCadenceTypeValue
 	MemoryKindCadenceCapabilityValue
+	MemoryKindCadenceFunctionValue
 
 	// Cadence Types
 	MemoryKindCadenceSimpleType

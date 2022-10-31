@@ -550,7 +550,8 @@ func (interpreter *Interpreter) VisitIntegerExpression(expression *ast.IntegerEx
 // NewIntegerValueFromBigInt creates a Cadence interpreter value of a given subtype.
 // This method assumes the range validations are done prior to calling this method. (i.e: at semantic level)
 func (interpreter *Interpreter) NewIntegerValueFromBigInt(value *big.Int, integerSubType sema.Type) Value {
-	memoryGauge := interpreter.Config.MemoryGauge
+	config := interpreter.SharedState.Config
+	memoryGauge := config.MemoryGauge
 
 	// NOTE: cases meter manually and call the unmetered constructors to avoid allocating closures
 
@@ -793,9 +794,10 @@ func (interpreter *Interpreter) VisitConditionalExpression(expression *ast.Condi
 }
 
 func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *ast.InvocationExpression) Value {
+	config := interpreter.SharedState.Config
 
 	// tracing
-	if interpreter.Config.TracingEnabled {
+	if config.TracingEnabled {
 		startTime := time.Now()
 		invokedExpression := invocationExpression.InvokedExpression.String()
 		defer func() {

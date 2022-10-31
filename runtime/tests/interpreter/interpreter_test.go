@@ -7686,9 +7686,11 @@ func TestInterpretResourceMovingAndBorrowing(t *testing.T) {
 			value,
 		)
 
+		storage := inter.Storage()
+
 		var permanentSlabs []atree.Slab
 
-		for _, slab := range inter.Config.Storage.(interpreter.InMemoryStorage).Slabs {
+		for _, slab := range storage.(interpreter.InMemoryStorage).Slabs {
 			if slab.ID().Address == (atree.Address{}) {
 				continue
 			}
@@ -7707,7 +7709,7 @@ func TestInterpretResourceMovingAndBorrowing(t *testing.T) {
 		var storedValues []string
 
 		for _, slab := range permanentSlabs {
-			storedValue := interpreter.StoredValue(inter, slab, inter.Config.Storage)
+			storedValue := interpreter.StoredValue(inter, slab, storage)
 			storedValues = append(storedValues, storedValue.String())
 		}
 
