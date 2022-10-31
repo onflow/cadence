@@ -292,7 +292,7 @@ func newAuthAccountKeysValue(
 			addressValue,
 		),
 		newAccountKeysForEachFunction(gauge, handler, addressValue),
-		newAccountKeysCountConstructor(gauge, handler, addressValue),
+		newAccountKeysCountGetter(gauge, handler, addressValue),
 	)
 }
 
@@ -545,6 +545,10 @@ func newRemovePublicKeyFunction(
 
 type AccountKeyAdditionHandler interface {
 	EventEmitter
+	PublicKeyValidator
+	PublicKeySignatureVerifier
+	BLSPoPVerifier
+	Hasher
 	// AddAccountKey appends a key to an account.
 	AddAccountKey(address common.Address, key *PublicKey, algo sema.HashAlgorithm, weight int) (*AccountKey, error)
 }
@@ -603,7 +607,9 @@ func newAccountKeysAddFunction(
 				inter,
 				locationRange,
 				accountKey,
-				inter.Config.PublicKeyValidationHandler,
+				handler,
+				handler,
+				handler,
 			)
 		},
 		sema.AuthAccountKeysTypeAddFunctionType,
@@ -618,20 +624,14 @@ type AccountKey struct {
 	IsRevoked bool
 }
 
-type PublicKey struct {
-	PublicKey []byte
-	SignAlgo  sema.SignatureAlgorithm
-}
-
 type AccountKeyProvider interface {
+	PublicKeyValidator
+	PublicKeySignatureVerifier
+	BLSPoPVerifier
+	Hasher
 	// GetAccountKey retrieves a key from an account by index.
 	GetAccountKey(address common.Address, index int) (*AccountKey, error)
-	AccountKeysCount(address common.Address) uint64
-}
-
-// public keys are assumed to be already validated
-var assumePublicKeyIsValid interpreter.PublicKeyValidationHandlerFunc = func(_ *interpreter.Interpreter, _ interpreter.LocationRange, _ *interpreter.CompositeValue) error {
-	return nil
+	AccountKeysCount(address common.Address) (uint64, error)
 }
 
 func newAccountKeysGetFunction(
@@ -678,7 +678,9 @@ func newAccountKeysGetFunction(
 					inter,
 					locationRange,
 					accountKey,
-					assumePublicKeyIsValid,
+					provider,
+					provider,
+					provider,
 				),
 			)
 		},
@@ -687,7 +689,7 @@ func newAccountKeysGetFunction(
 }
 
 // the AccountKey in `forEachKey(_ f: ((AccountKey): Bool)): Void`
-var accountKeysForEachCallbackTypeParams []sema.Type = []sema.Type{sema.AccountKeyType}
+var accountKeysForEachCallbackTypeParams = []sema.Type{sema.AccountKeyType}
 
 func newAccountKeysForEachFunction(
 	gauge common.MemoryGauge,
@@ -724,18 +726,28 @@ func newAccountKeysForEachFunction(
 					inter,
 					locationRange,
 					key,
-					assumePublicKeyIsValid,
+					provider,
+					provider,
+					provider,
 				)
 			}
 
-			count := int(provider.AccountKeysCount(address))
-
+			var count uint64
 			var err error
+
+			wrapPanic(func() {
+				count, err = provider.AccountKeysCount(address)
+			})
+
+			if err != nil {
+				panic(err)
+			}
+
 			var accountKey *AccountKey
 
-			for index := 0; index < count; index++ {
+			for index := uint64(0); index < count; index++ {
 				wrapPanic(func() {
-					accountKey, err = provider.GetAccountKey(address, index)
+					accountKey, err = provider.GetAccountKey(address, int(index))
 				})
 				if err != nil {
 					panic(err)
@@ -764,7 +776,7 @@ func newAccountKeysForEachFunction(
 					panic(errors.NewUnreachableError())
 				}
 
-				if !bool(shouldContinue) {
+				if !shouldContinue {
 					break
 				}
 			}
@@ -775,22 +787,38 @@ func newAccountKeysForEachFunction(
 	)
 }
 
-func newAccountKeysCountConstructor(
+func newAccountKeysCountGetter(
 	gauge common.MemoryGauge,
 	provider AccountKeyProvider,
 	addressValue interpreter.AddressValue,
-) interpreter.AccountKeysCountConstructor {
+) interpreter.AccountKeysCountGetter {
 	address := addressValue.ToAddress()
 
 	return func() interpreter.UInt64Value {
 		return interpreter.NewUInt64Value(gauge, func() uint64 {
-			return provider.AccountKeysCount(address)
+			var count uint64
+			var err error
+
+			wrapPanic(func() {
+				count, err = provider.AccountKeysCount(address)
+			})
+			if err != nil {
+				// The provider might not be able to fetch the number of account keys
+				// e.g. when the account does not exist
+				panic(err)
+			}
+
+			return count
 		})
 	}
 }
 
 type AccountKeyRevocationHandler interface {
 	EventEmitter
+	Hasher
+	PublicKeyValidator
+	PublicKeySignatureVerifier
+	BLSPoPVerifier
 	// RevokeAccountKey removes a key from an account by index.
 	RevokeAccountKey(address common.Address, index int) (*AccountKey, error)
 }
@@ -848,14 +876,9 @@ func newAccountKeysRevokeFunction(
 					inter,
 					locationRange,
 					accountKey,
-					// public keys are assumed to be already validated.
-					func(
-						_ *interpreter.Interpreter,
-						_ interpreter.LocationRange,
-						_ *interpreter.CompositeValue,
-					) error {
-						return nil
-					},
+					handler,
+					handler,
+					handler,
 				),
 			)
 		},
@@ -885,7 +908,7 @@ func newPublicAccountKeysValue(
 			handler,
 			addressValue,
 		),
-		newAccountKeysCountConstructor(
+		newAccountKeysCountGetter(
 			gauge,
 			handler,
 			addressValue,
@@ -1045,7 +1068,6 @@ func accountInboxUnpublishFunction(
 func accountInboxClaimFunction(
 	gauge common.MemoryGauge,
 	handler EventEmitter,
-	address common.Address,
 	recipientValue interpreter.AddressValue,
 ) *interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
@@ -1133,7 +1155,7 @@ func newAuthAccountInboxValue(
 		addressValue,
 		accountInboxPublishFunction(gauge, handler, address, addressValue),
 		accountInboxUnpublishFunction(gauge, handler, address, addressValue),
-		accountInboxClaimFunction(gauge, handler, address, addressValue),
+		accountInboxClaimFunction(gauge, handler, addressValue),
 	)
 }
 
@@ -1941,8 +1963,17 @@ func NewAccountKeyValue(
 	inter *interpreter.Interpreter,
 	locationRange interpreter.LocationRange,
 	accountKey *AccountKey,
-	validatePublicKey interpreter.PublicKeyValidationHandlerFunc,
+	publicKeySignatureVerifier PublicKeySignatureVerifier,
+	blsPoPVerifier BLSPoPVerifier,
+	hasher Hasher,
 ) interpreter.Value {
+
+	// hash algorithms converted from "native" (non-interpreter) values are assumed to be already valid
+	hashAlgorithm, _ := NewHashAlgorithmCase(
+		interpreter.UInt8Value(accountKey.HashAlgo.RawValue()),
+		hasher,
+	)
+
 	return interpreter.NewAccountKeyValue(
 		inter,
 		interpreter.NewIntValueFromInt64(inter, int64(accountKey.KeyIndex)),
@@ -1950,92 +1981,16 @@ func NewAccountKeyValue(
 			inter,
 			locationRange,
 			accountKey.PublicKey,
-			validatePublicKey,
+			publicKeySignatureVerifier,
+			blsPoPVerifier,
 		),
-		NewHashAlgorithmCase(
-			interpreter.UInt8Value(accountKey.HashAlgo.RawValue()),
-		),
+		hashAlgorithm,
 		interpreter.NewUFix64ValueWithInteger(
 			inter, func() uint64 {
 				return uint64(accountKey.Weight)
 			},
 		),
-		interpreter.BoolValue(accountKey.IsRevoked),
-	)
-}
-
-func NewPublicKeyFromValue(
-	inter *interpreter.Interpreter,
-	locationRange interpreter.LocationRange,
-	publicKey interpreter.MemberAccessibleValue,
-) (
-	*PublicKey,
-	error,
-) {
-	// publicKey field
-	key := publicKey.GetMember(inter, locationRange, sema.PublicKeyPublicKeyField)
-
-	byteArray, err := interpreter.ByteArrayValueToByteSlice(inter, key)
-	if err != nil {
-		return nil, errors.NewUnexpectedError("public key needs to be a byte array. %w", err)
-	}
-
-	// sign algo field
-	signAlgoField := publicKey.GetMember(inter, locationRange, sema.PublicKeySignAlgoField)
-	if signAlgoField == nil {
-		return nil, errors.NewUnexpectedError("sign algorithm is not set")
-	}
-
-	signAlgoValue, ok := signAlgoField.(*interpreter.SimpleCompositeValue)
-	if !ok {
-		return nil, errors.NewUnexpectedError(
-			"sign algorithm does not belong to type: %s",
-			sema.SignatureAlgorithmType.QualifiedString(),
-		)
-	}
-
-	rawValue := signAlgoValue.GetMember(inter, locationRange, sema.EnumRawValueFieldName)
-	if rawValue == nil {
-		return nil, errors.NewDefaultUserError("sign algorithm raw value is not set")
-	}
-
-	signAlgoRawValue, ok := rawValue.(interpreter.UInt8Value)
-	if !ok {
-		return nil, errors.NewUnexpectedError(
-			"sign algorithm raw-value does not belong to type: %s",
-			sema.UInt8Type.QualifiedString(),
-		)
-	}
-
-	return &PublicKey{
-		PublicKey: byteArray,
-		SignAlgo:  sema.SignatureAlgorithm(signAlgoRawValue.ToInt()),
-	}, nil
-}
-
-func NewPublicKeyValue(
-	inter *interpreter.Interpreter,
-	locationRange interpreter.LocationRange,
-	publicKey *PublicKey,
-	validatePublicKey interpreter.PublicKeyValidationHandlerFunc,
-) *interpreter.CompositeValue {
-	return interpreter.NewPublicKeyValue(
-		inter,
-		locationRange,
-		interpreter.ByteSliceToByteArrayValue(
-			inter,
-			publicKey.PublicKey,
-		),
-		NewSignatureAlgorithmCase(
-			interpreter.UInt8Value(publicKey.SignAlgo.RawValue()),
-		),
-		func(
-			inter *interpreter.Interpreter,
-			locationRange interpreter.LocationRange,
-			publicKeyValue *interpreter.CompositeValue,
-		) error {
-			return validatePublicKey(inter, locationRange, publicKeyValue)
-		},
+		interpreter.AsBoolValue(accountKey.IsRevoked),
 	)
 }
 

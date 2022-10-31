@@ -369,6 +369,25 @@ var (
 // Methods
 
 func LeastCommonSuperType(types ...Type) Type {
+
+	superType := leastCommonSuperType(types...)
+	if superType == InvalidType {
+		return superType
+	}
+
+	// Do a sanity check to see if all types are
+	// actually subtypes of the inferred supertype.
+	for _, typ := range types {
+		if !IsSubType(typ, superType) {
+			return InvalidType
+		}
+
+	}
+
+	return superType
+}
+
+func leastCommonSuperType(types ...Type) Type {
 	join := NoTypeTag
 
 	for _, typ := range types {
@@ -404,10 +423,16 @@ func findCommonSuperType(joinedTypeTag TypeTag, types ...Type) Type {
 	// finding super type for the rest of the types is sufficient.
 	joinedTypeTag = joinedTypeTag.And(notNeverType)
 
-	if joinedTypeTag.upperMask != 0 {
-		superType = findSuperTypeFromUpperMask(joinedTypeTag, types)
-	} else {
+	if joinedTypeTag == NoTypeTag {
+		return InvalidType
+	}
+
+	// If both masks are on, then the types are heterogeneous.
+	// So skip the optimization and find the supertype in the hard way.
+	if joinedTypeTag.lowerMask != 0 && joinedTypeTag.upperMask == 0 {
 		superType = findSuperTypeFromLowerMask(joinedTypeTag, types)
+	} else if joinedTypeTag.lowerMask == 0 && joinedTypeTag.upperMask != 0 {
+		superType = findSuperTypeFromUpperMask(joinedTypeTag, types)
 	}
 
 	if superType != nil {
@@ -423,7 +448,7 @@ func findCommonSuperType(joinedTypeTag TypeTag, types ...Type) Type {
 		// Get the types without the optionals
 		unwrappedTypes, levels := unwrapOptionals(types)
 
-		superType := findCommonSuperType(joinedTypeTag, unwrappedTypes...)
+		superType = findCommonSuperType(joinedTypeTag, unwrappedTypes...)
 
 		// If the common supertype of the rest of types contain nil (e.g: AnyStruct),
 		// then do not wrap with optional again.
@@ -680,7 +705,7 @@ func commonSuperTypeOfVariableSizedArrays(types []Type) Type {
 		elementTypes = append(elementTypes, arrayType.ElementType(false))
 	}
 
-	elementSuperType := LeastCommonSuperType(elementTypes...)
+	elementSuperType := leastCommonSuperType(elementTypes...)
 
 	if elementSuperType == InvalidType {
 		return InvalidType
@@ -723,7 +748,7 @@ func commonSuperTypeOfConstantSizedArrays(types []Type) Type {
 		}
 	}
 
-	elementSuperType := LeastCommonSuperType(elementTypes...)
+	elementSuperType := leastCommonSuperType(elementTypes...)
 
 	if elementSuperType == InvalidType {
 		return InvalidType
@@ -758,8 +783,8 @@ func commonSuperTypeOfDictionaries(types []Type) Type {
 		keyTypes = append(keyTypes, dictionaryType.KeyType)
 	}
 
-	keySuperType := LeastCommonSuperType(keyTypes...)
-	valueSuperType := LeastCommonSuperType(valueTypes...)
+	keySuperType := leastCommonSuperType(keyTypes...)
+	valueSuperType := leastCommonSuperType(valueTypes...)
 
 	if keySuperType == InvalidType ||
 		valueSuperType == InvalidType {

@@ -1184,6 +1184,45 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
 	})
 }
 
+func TestCheckTypeInferenceForTypesWithDifferentTypeMaskRanges(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("array expression", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            let x: @AnyResource{Foo} <- create Bar()
+            let y = [<-x, 6]
+
+            resource interface Foo {}
+
+            resource Bar: Foo {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.TypeAnnotationRequiredError{}, errs[0])
+	})
+
+	t.Run("conditional expression", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+            let x: AnyStruct{Foo} = Bar()
+            let y = true ? x : nil
+
+            struct interface Foo {}
+
+            struct Bar: Foo {}
+        `)
+
+		require.NoError(t, err)
+
+		xType := RequireGlobalValue(t, checker.Elaboration, "y")
+		require.IsType(t, &sema.OptionalType{Type: sema.AnyStructType}, xType)
+	})
+}
+
 func TestCheckCompositeSupertypeInference(t *testing.T) {
 
 	t.Parallel()

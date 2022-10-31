@@ -543,13 +543,12 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 			events = append(events, event)
 			return nil
 		},
-		meterMemory: func(_ common.MemoryUsage) error {
-			return nil
-		},
 	}
 	runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 		return json.Decode(runtimeInterface, b)
 	}
+
+	environment := NewBaseInterpreterEnvironment(Config{})
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
@@ -563,8 +562,9 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 			),
 		},
 		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
+			Interface:   runtimeInterface,
+			Location:    nextTransactionLocation(),
+			Environment: environment,
 		},
 	)
 	require.NoError(b, err)
@@ -586,8 +586,9 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 			)),
 		},
 		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
+			Interface:   runtimeInterface,
+			Location:    nextTransactionLocation(),
+			Environment: environment,
 		},
 	)
 	require.NoError(b, err)
@@ -606,8 +607,9 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 				Source: []byte(realSetupFlowTokenAccountTransaction),
 			},
 			Context{
-				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
+				Interface:   runtimeInterface,
+				Location:    nextTransactionLocation(),
+				Environment: environment,
 			},
 		)
 		require.NoError(b, err)
@@ -631,8 +633,9 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 			}),
 		},
 		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
+			Interface:   runtimeInterface,
+			Location:    nextTransactionLocation(),
+			Environment: environment,
 		},
 	)
 	require.NoError(b, err)
@@ -643,8 +646,6 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 	require.NoError(b, err)
 
 	signerAccount = senderAddress
-
-	environment := NewBaseInterpreterEnvironment(Config{})
 
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -689,8 +690,9 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 				}),
 			},
 			Context{
-				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
+				Interface:   runtimeInterface,
+				Location:    nextTransactionLocation(),
+				Environment: environment,
 			},
 		)
 		require.NoError(b, err)

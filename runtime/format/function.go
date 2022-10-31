@@ -18,4 +18,10 @@
 
 package format
 
-const HostFunction = "Function(...)"
+import (
+	"fmt"
+)
+
+func Function(signature string) string {
+	return fmt.Sprintf("Function%s", signature)
+}

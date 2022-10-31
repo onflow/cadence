@@ -224,10 +224,8 @@ func TestRuntimeReturnPublicAccount(t *testing.T) {
 		getAccountAvailableBalance: noopRuntimeUInt64Getter,
 		getStorageUsed:             noopRuntimeUInt64Getter,
 		getStorageCapacity:         noopRuntimeUInt64Getter,
-		accountKeysCount: func(_ common.Address) uint64 {
-			return 0
-		},
-		storage: newTestLedger(nil, nil),
+		accountKeysCount:           noopRuntimeUInt64Getter,
+		storage:                    newTestLedger(nil, nil),
 	}
 
 	nextTransactionLocation := newTransactionLocationGenerator()
@@ -262,7 +260,7 @@ func TestRuntimeReturnAuthAccount(t *testing.T) {
 		getAccountAvailableBalance: noopRuntimeUInt64Getter,
 		getStorageUsed:             noopRuntimeUInt64Getter,
 		getStorageCapacity:         noopRuntimeUInt64Getter,
-		accountKeysCount:           func(_ common.Address) uint64 { return 0 },
+		accountKeysCount:           noopRuntimeUInt64Getter,
 		storage:                    newTestLedger(nil, nil),
 	}
 
@@ -1105,8 +1103,8 @@ func getAccountKeyTestRuntimeInterface(storage *testAccountKeyStorage) *testRunt
 
 			return accountKey, nil
 		},
-		accountKeysCount: func(address Address) uint64 {
-			return uint64(storage.unrevokedKeyCount)
+		accountKeysCount: func(address Address) (uint64, error) {
+			return uint64(storage.unrevokedKeyCount), nil
 		},
 		log: func(message string) {
 			storage.logs = append(storage.logs, message)
@@ -1311,19 +1309,19 @@ func TestRuntimePublicKey(t *testing.T) {
 		t.Parallel()
 
 		script := `
-              pub fun main(): PublicKey {
-                  let publicKey = PublicKey(
-                      publicKey: "0102".decodeHex(),
-                      signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
-                  )
+          pub fun main(): PublicKey {
+              let publicKey = PublicKey(
+                  publicKey: "0102".decodeHex(),
+                  signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
+              )
 
-                  return publicKey
-              }
-            `
+              return publicKey
+          }
+        `
 
 		fakeError := &fakeError{}
 		for _, errorToReturn := range []error{fakeError, nil} {
-			invoked := false
+			var invoked bool
 
 			storage := newTestLedger(nil, nil)
 
@@ -1359,17 +1357,19 @@ func TestRuntimePublicKey(t *testing.T) {
 		storage.keys = append(storage.keys, accountKeyA, accountKeyB)
 
 		for index := range storage.keys {
-			script := fmt.Sprintf(`
-                          pub fun main(): PublicKey {
-                              // Get a public key from host env
-                              let acc = getAccount(0x02)
-                              let publicKey = acc.keys.get(keyIndex: %d)!.publicKey
-                              return publicKey
-                          }`,
+			script := fmt.Sprintf(
+				`
+                  pub fun main(): PublicKey {
+                      // Get a public key from host env
+                      let acc = getAccount(0x02)
+                      let publicKey = acc.keys.get(keyIndex: %d)!.publicKey
+                      return publicKey
+                  }
+                `,
 				index,
 			)
 
-			invoked := false
+			var invoked bool
 
 			runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
 			runtimeInterface.validatePublicKey = func(publicKey *stdlib.PublicKey) error {
@@ -1405,7 +1405,8 @@ func TestRuntimePublicKey(t *testing.T) {
                 )
             }
         `
-		invoked := false
+
+		var invoked bool
 
 		storage := newTestLedger(nil, nil)
 
@@ -1452,7 +1453,8 @@ func TestRuntimePublicKey(t *testing.T) {
                 )
             }
         `
-		invoked := false
+
+		var invoked bool
 
 		runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
 		runtimeInterface.verifySignature = func(
@@ -1596,7 +1598,7 @@ func TestAuthAccountContracts(t *testing.T) {
             }
         `)
 
-		invoked := false
+		var invoked bool
 
 		runtimeInterface := &testRuntimeInterface{
 			getSigningAccounts: func() ([]Address, error) {
@@ -1720,7 +1722,7 @@ func TestPublicAccountContracts(t *testing.T) {
             }
         `)
 
-		invoked := false
+		var invoked bool
 
 		runtimeInterface := &testRuntimeInterface{
 			getSigningAccounts: func() ([]Address, error) {
@@ -1778,7 +1780,7 @@ func TestPublicAccountContracts(t *testing.T) {
             }
         `)
 
-		invoked := false
+		var invoked bool
 
 		runtimeInterface := &testRuntimeInterface{
 			getSigningAccounts: func() ([]Address, error) {
@@ -1818,7 +1820,7 @@ func TestPublicAccountContracts(t *testing.T) {
             }
         `)
 
-		invoked := false
+		var invoked bool
 
 		runtimeInterface := &testRuntimeInterface{
 			getSigningAccounts: func() ([]Address, error) {

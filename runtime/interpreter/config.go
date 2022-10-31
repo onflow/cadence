@@ -18,9 +18,7 @@
 
 package interpreter
 
-import (
-	"github.com/onflow/cadence/runtime/common"
-)
+import "github.com/onflow/cadence/runtime/common"
 
 type Config struct {
 	// OnEventEmitted is triggered when an event is emitted by the program.
@@ -37,7 +35,7 @@ type Config struct {
 	OnRecordTrace OnRecordTraceFunc
 	// OnResourceOwnerChange is triggered when the owner of a resource changes.
 	OnResourceOwnerChange OnResourceOwnerChangeFunc
-	// OnMeterComputation sets the function that is triggered when a computation is about to happen.
+	// OnMeterComputation is triggered when a computation is about to happen.
 	OnMeterComputation OnMeterComputationFunc
 	// InjectedCompositeFieldsHandler is used to initialize new composite values' fields
 	InjectedCompositeFieldsHandler InjectedCompositeFieldsHandlerFunc
@@ -49,26 +47,18 @@ type Config struct {
 	PublicAccountHandler PublicAccountHandlerFunc
 	// UUIDHandler is used to handle the generation of UUIDs.
 	UUIDHandler UUIDHandlerFunc
-	// PublicKeyValidationHandler is used to handle public key validation.
-	PublicKeyValidationHandler PublicKeyValidationHandlerFunc
-	// SignatureVerificationHandler is used to handle signature validation.
-	SignatureVerificationHandler SignatureVerificationHandlerFunc
-	// BLSVerifyPoPHandler is used to verify BLS PoPs.
-	BLSVerifyPoPHandler BLSVerifyPoPHandlerFunc
-	// BLSAggregateSignaturesHandler is used to aggregate BLS signatures.
-	BLSAggregateSignaturesHandler BLSAggregateSignaturesHandlerFunc
-	// BLSAggregatePublicKeysHandler is used to aggregate BLS public keys.
-	BLSAggregatePublicKeysHandler BLSAggregatePublicKeysHandlerFunc
-	// HashHandler is used to hash.
-	HashHandler HashHandlerFunc
-	// AtreeValueValidationEnabled sets the atree value validation option.
+	// AtreeValueValidationEnabled determines if the validation of atree values is enabled.
 	AtreeValueValidationEnabled bool
-	// AtreeStorageValidationEnabled sets the atree storage validation option.
-	AtreeStorageValidationEnabled        bool
-	TracingEnabled                       bool
+	// AtreeStorageValidationEnabled determines if the validation of atree storage is enabled.
+	AtreeStorageValidationEnabled bool
+	// TracingEnabled determines if tracing is enabled.
+	// Tracing reports certain operations, e.g. composite value transfers
+	TracingEnabled bool
+	// InvalidatedResourceValidationEnabled determines if the validation of invalidated resources is enabled.
 	InvalidatedResourceValidationEnabled bool
-	BaseActivation                       *VariableActivation
-	Debugger                             *Debugger
-	MemoryGauge                          common.MemoryGauge
-	Storage                              Storage
+
+	MemoryGauge    common.MemoryGauge
+	Storage        Storage
+	Debugger       *Debugger
+	BaseActivation *VariableActivation
 }
