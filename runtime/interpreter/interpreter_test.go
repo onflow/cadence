@@ -38,11 +38,11 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 
 		value := inter.BoxOptional(
 			EmptyLocationRange,
-			BoolValue(true),
+			TrueValue,
 			&sema.OptionalType{Type: sema.BoolType},
 		)
 		assert.Equal(t,
-			NewUnmeteredSomeValueNonCopying(BoolValue(true)),
+			NewUnmeteredSomeValueNonCopying(TrueValue),
 			value,
 		)
 	})
@@ -52,11 +52,11 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 
 		value := inter.BoxOptional(
 			EmptyLocationRange,
-			NewUnmeteredSomeValueNonCopying(BoolValue(true)),
+			NewUnmeteredSomeValueNonCopying(TrueValue),
 			&sema.OptionalType{Type: sema.BoolType},
 		)
 		assert.Equal(t,
-			NewUnmeteredSomeValueNonCopying(BoolValue(true)),
+			NewUnmeteredSomeValueNonCopying(TrueValue),
 			value,
 		)
 	})
@@ -66,12 +66,12 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 
 		value := inter.BoxOptional(
 			EmptyLocationRange,
-			NewUnmeteredSomeValueNonCopying(BoolValue(true)),
+			NewUnmeteredSomeValueNonCopying(TrueValue),
 			&sema.OptionalType{Type: &sema.OptionalType{Type: sema.BoolType}},
 		)
 		assert.Equal(t,
 			NewUnmeteredSomeValueNonCopying(
-				NewUnmeteredSomeValueNonCopying(BoolValue(true)),
+				NewUnmeteredSomeValueNonCopying(TrueValue),
 			),
 			value,
 		)
@@ -124,11 +124,11 @@ func TestInterpreterBoxing(t *testing.T) {
 
 				assert.Equal(t,
 					NewUnmeteredSomeValueNonCopying(
-						BoolValue(true),
+						TrueValue,
 					),
 					inter.ConvertAndBox(
 						EmptyLocationRange,
-						BoolValue(true),
+						TrueValue,
 						sema.BoolType,
 						&sema.OptionalType{Type: anyType},
 					),
@@ -141,11 +141,11 @@ func TestInterpreterBoxing(t *testing.T) {
 
 				assert.Equal(t,
 					NewUnmeteredSomeValueNonCopying(
-						BoolValue(true),
+						TrueValue,
 					),
 					inter.ConvertAndBox(
 						EmptyLocationRange,
-						NewUnmeteredSomeValueNonCopying(BoolValue(true)),
+						NewUnmeteredSomeValueNonCopying(TrueValue),
 						&sema.OptionalType{Type: sema.BoolType},
 						&sema.OptionalType{Type: anyType},
 					),

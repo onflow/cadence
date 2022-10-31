@@ -107,15 +107,15 @@ func TestRuntimeStorageWriteCachedIsDeterministic(t *testing.T) {
 
 	t.Parallel()
 
-	var previousWrites []testWrite
+	var previousWrites []ownerKeyPair
 
 	// verify for 10 times and check the writes are always deterministic
 	for i := 0; i < 10; i++ {
 
-		var writes []testWrite
+		var writes []ownerKeyPair
 
 		onWrite := func(owner, key, _ []byte) {
-			writes = append(writes, testWrite{
+			writes = append(writes, ownerKeyPair{
 				owner: owner,
 				key:   key,
 			})
@@ -164,10 +164,10 @@ func TestRuntimeStorageWrite(t *testing.T) {
        }
     `)
 
-	var writes []testWrite
+	var writes []ownerKeyPair
 
 	onWrite := func(owner, key, _ []byte) {
-		writes = append(writes, testWrite{
+		writes = append(writes, ownerKeyPair{
 			owner,
 			key,
 		})
@@ -194,7 +194,7 @@ func TestRuntimeStorageWrite(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t,
-		[]testWrite{
+		[]ownerKeyPair{
 			// storage index to storage domain storage map
 			{
 				[]byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},

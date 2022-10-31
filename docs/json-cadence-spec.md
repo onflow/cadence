@@ -2,7 +2,7 @@
 title: JSON-Cadence Data Interchange Format
 ---
 
-> Version 0.3.0
+> Version 0.3.1
 
 JSON-Cadence is a data interchange format used to represent Cadence values as language-independent JSON objects.
 
@@ -369,6 +369,39 @@ Composite fields are encoded as a list of name-value pairs in the order in which
     "borrowType": {
       "kind": "Int"
     },
+  }
+}
+```
+
+---
+
+## Functions
+
+```json
+{
+  "type": "Function",
+  "value": {
+    "functionType": <type>
+  }
+}
+```
+
+Function values can only be exported, they cannot be imported.
+
+### Example
+
+```json
+{
+  "type": "Function",
+  "value": {
+    "functionType": {
+      "kind": "Function",
+      "typeID": "(():Void)",
+      "parameters": [],
+      "return": {
+        "kind": "Void"
+      }
+    }
   }
 }
 ```

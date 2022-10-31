@@ -25,7 +25,8 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-type sharedState struct {
+type SharedState struct {
+	Config                        *Config
 	allInterpreters               map[common.Location]*Interpreter
 	callStack                     *CallStack
 	typeCodes                     TypeCodes
@@ -36,8 +37,9 @@ type sharedState struct {
 	resourceVariables              map[ResourceKindedValue]*Variable
 }
 
-func newSharedState() *sharedState {
-	return &sharedState{
+func NewSharedState(config *Config) *SharedState {
+	return &SharedState{
+		Config:          config,
 		allInterpreters: map[common.Location]*Interpreter{},
 		callStack:       &CallStack{},
 		typeCodes: TypeCodes{
