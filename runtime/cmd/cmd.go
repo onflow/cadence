@@ -85,6 +85,9 @@ func DefaultCheckerConfig(
 	checkers map[common.Location]*sema.Checker,
 	codes map[common.Location][]byte,
 ) *sema.Config {
+	// NOTE: declarations here only create a nil binding in the checker environment,
+	// not a definition that the interpreter can follow. (see #2106 and #2109)
+	// remember to also implement all definitions, e.g. for the `REPL` in `NewREPL`
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(stdlib.NewLogFunction(StandardOutputLogger{}))
 

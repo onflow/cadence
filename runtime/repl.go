@@ -24,6 +24,7 @@ import (
 	goRuntime "runtime"
 	"sort"
 
+	"github.com/onflow/cadence/runtime/activations"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/cmd"
 	"github.com/onflow/cadence/runtime/common"
@@ -69,7 +70,7 @@ func NewREPL(
 
 	// necessary now due to log being looked up in the
 	// interpreter's activations instead of the checker
-	baseActivation := interpreter.NewBaseActivation()
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, stdlib.NewLogFunction(cmd.StandardOutputLogger{}))
 
 	interpreterConfig := &interpreter.Config{
