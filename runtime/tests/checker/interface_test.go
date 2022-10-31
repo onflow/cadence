@@ -2788,15 +2788,17 @@ func TestCheckInterfaceInheritance(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
-            struct interface Foo {
+            struct interface A {
                 let x: Int
 
                 fun test(): Int
             }
 
-            struct interface Bar: Foo {}
+            struct interface B: A {}
 
-            struct Baz: Bar {}
+            struct interface C: B {}
+
+            struct Foo: C {}
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
@@ -2804,8 +2806,8 @@ func TestCheckInterfaceInheritance(t *testing.T) {
 		conformanceError := &sema.ConformanceError{}
 		require.ErrorAs(t, errs[0], &conformanceError)
 
-		assert.Equal(t, conformanceError.InterfaceType.Identifier, "Bar")
-		assert.Equal(t, conformanceError.NestedInterfaceType.Identifier, "Foo")
+		assert.Equal(t, "C", conformanceError.InterfaceType.Identifier)
+		assert.Equal(t, "A", conformanceError.NestedInterfaceType.Identifier)
 	})
 
 	t.Run("resource interface non-conforming", func(t *testing.T) {
@@ -2829,8 +2831,8 @@ func TestCheckInterfaceInheritance(t *testing.T) {
 		conformanceError := &sema.ConformanceError{}
 		require.ErrorAs(t, errs[0], &conformanceError)
 
-		assert.Equal(t, conformanceError.InterfaceType.Identifier, "Bar")
-		assert.Equal(t, conformanceError.NestedInterfaceType.Identifier, "Foo")
+		assert.Equal(t, "Bar", conformanceError.InterfaceType.Identifier)
+		assert.Equal(t, "Foo", conformanceError.NestedInterfaceType.Identifier)
 	})
 
 	t.Run("mismatching conformance kind on composite", func(t *testing.T) {
@@ -2848,8 +2850,8 @@ func TestCheckInterfaceInheritance(t *testing.T) {
 		conformanceError := &sema.CompositeKindMismatchError{}
 		require.ErrorAs(t, errs[0], &conformanceError)
 
-		assert.Equal(t, conformanceError.ExpectedKind, common.CompositeKindStructure)
-		assert.Equal(t, conformanceError.ActualKind, common.CompositeKindResource)
+		assert.Equal(t, common.CompositeKindStructure, conformanceError.ExpectedKind)
+		assert.Equal(t, common.CompositeKindResource, conformanceError.ActualKind)
 	})
 
 	t.Run("mismatching conformance kind on interface", func(t *testing.T) {
@@ -2867,8 +2869,8 @@ func TestCheckInterfaceInheritance(t *testing.T) {
 		conformanceError := &sema.CompositeKindMismatchError{}
 		require.ErrorAs(t, errs[0], &conformanceError)
 
-		assert.Equal(t, conformanceError.ExpectedKind, common.CompositeKindStructure)
-		assert.Equal(t, conformanceError.ActualKind, common.CompositeKindResource)
+		assert.Equal(t, common.CompositeKindStructure, conformanceError.ExpectedKind)
+		assert.Equal(t, common.CompositeKindResource, conformanceError.ActualKind)
 	})
 
 	t.Run("mismatching inner conformance", func(t *testing.T) {
@@ -2888,8 +2890,8 @@ func TestCheckInterfaceInheritance(t *testing.T) {
 		conformanceError := &sema.CompositeKindMismatchError{}
 		require.ErrorAs(t, errs[0], &conformanceError)
 
-		assert.Equal(t, conformanceError.ExpectedKind, common.CompositeKindStructure)
-		assert.Equal(t, conformanceError.ActualKind, common.CompositeKindResource)
+		assert.Equal(t, common.CompositeKindStructure, conformanceError.ExpectedKind)
+		assert.Equal(t, common.CompositeKindResource, conformanceError.ActualKind)
 	})
 
 	t.Run("nested mismatching conformance", func(t *testing.T) {
@@ -2908,12 +2910,12 @@ func TestCheckInterfaceInheritance(t *testing.T) {
 
 		conformanceError := &sema.CompositeKindMismatchError{}
 		require.ErrorAs(t, errs[0], &conformanceError)
-		assert.Equal(t, conformanceError.ExpectedKind, common.CompositeKindResource)
-		assert.Equal(t, conformanceError.ActualKind, common.CompositeKindStructure)
+		assert.Equal(t, common.CompositeKindResource, conformanceError.ExpectedKind)
+		assert.Equal(t, common.CompositeKindStructure, conformanceError.ActualKind)
 
 		require.ErrorAs(t, errs[1], &conformanceError)
-		assert.Equal(t, conformanceError.ExpectedKind, common.CompositeKindStructure)
-		assert.Equal(t, conformanceError.ActualKind, common.CompositeKindResource)
+		assert.Equal(t, common.CompositeKindStructure, conformanceError.ExpectedKind)
+		assert.Equal(t, common.CompositeKindResource, conformanceError.ActualKind)
 	})
 
 	t.Run("duplicate methods matching", func(t *testing.T) {
@@ -2952,8 +2954,8 @@ func TestCheckInterfaceInheritance(t *testing.T) {
 
 		memberConflictError := &sema.InterfaceMemberConflictError{}
 		require.ErrorAs(t, errs[0], &memberConflictError)
-		assert.Equal(t, memberConflictError.MemberName, "hello")
-		assert.Equal(t, memberConflictError.ConflictingInterfaceType.QualifiedIdentifier(), "Foo")
+		assert.Equal(t, "hello", memberConflictError.MemberName)
+		assert.Equal(t, "Foo", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
 	})
 
 	t.Run("duplicate fields matching", func(t *testing.T) {
@@ -2991,8 +2993,8 @@ func TestCheckInterfaceInheritance(t *testing.T) {
 
 		memberConflictError := &sema.InterfaceMemberConflictError{}
 		require.ErrorAs(t, errs[0], &memberConflictError)
-		assert.Equal(t, memberConflictError.MemberName, "x")
-		assert.Equal(t, memberConflictError.ConflictingInterfaceType.QualifiedIdentifier(), "Foo")
+		assert.Equal(t, "x", memberConflictError.MemberName)
+		assert.Equal(t, "Foo", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
 	})
 
 	t.Run("duplicate members mixed type", func(t *testing.T) {
@@ -3013,8 +3015,8 @@ func TestCheckInterfaceInheritance(t *testing.T) {
 
 		memberConflictError := &sema.InterfaceMemberConflictError{}
 		require.ErrorAs(t, errs[0], &memberConflictError)
-		assert.Equal(t, memberConflictError.MemberName, "hello")
-		assert.Equal(t, memberConflictError.ConflictingInterfaceType.QualifiedIdentifier(), "Foo")
+		assert.Equal(t, "hello", memberConflictError.MemberName)
+		assert.Equal(t, "Foo", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
 	})
 
 	t.Run("duplicate methods with conditions in super", func(t *testing.T) {
@@ -3079,9 +3081,9 @@ func TestCheckInterfaceInheritance(t *testing.T) {
 
 		memberConflictError := &sema.InterfaceMemberConflictError{}
 		require.ErrorAs(t, errs[0], &memberConflictError)
-		assert.Equal(t, memberConflictError.MemberName, "hello")
-		assert.Equal(t, memberConflictError.InterfaceType.QualifiedIdentifier(), "P")
-		assert.Equal(t, memberConflictError.ConflictingInterfaceType.QualifiedIdentifier(), "A")
+		assert.Equal(t, "hello", memberConflictError.MemberName)
+		assert.Equal(t, "P", memberConflictError.InterfaceType.QualifiedIdentifier())
+		assert.Equal(t, "A", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
 	})
 
 	t.Run("duplicate methods indirect for struct", func(t *testing.T) {
@@ -3108,12 +3110,12 @@ func TestCheckInterfaceInheritance(t *testing.T) {
 
 		conformanceError := &sema.ConformanceError{}
 		require.ErrorAs(t, errs[0], &conformanceError)
-		assert.Equal(t, conformanceError.InterfaceType.QualifiedIdentifier(), "B")
-		assert.Equal(t, conformanceError.NestedInterfaceType.QualifiedIdentifier(), "A")
+		assert.Equal(t, "B", conformanceError.InterfaceType.QualifiedIdentifier())
+		assert.Equal(t, "A", conformanceError.NestedInterfaceType.QualifiedIdentifier())
 
 		require.ErrorAs(t, errs[1], &conformanceError)
-		assert.Equal(t, conformanceError.InterfaceType.QualifiedIdentifier(), "Q")
-		assert.Equal(t, conformanceError.NestedInterfaceType.QualifiedIdentifier(), "P")
+		assert.Equal(t, "Q", conformanceError.InterfaceType.QualifiedIdentifier())
+		assert.Equal(t, "P", conformanceError.NestedInterfaceType.QualifiedIdentifier())
 	})
 
 	t.Run("same conformance via different paths", func(t *testing.T) {
@@ -3223,8 +3225,8 @@ func TestCheckInterfaceDefaultMethodsInheritance(t *testing.T) {
 
 		memberConflictError := &sema.InterfaceMemberConflictError{}
 		require.ErrorAs(t, errs[0], &memberConflictError)
-		assert.Equal(t, memberConflictError.MemberName, "hello")
-		assert.Equal(t, memberConflictError.ConflictingInterfaceType.QualifiedIdentifier(), "A")
+		assert.Equal(t, "hello", memberConflictError.MemberName)
+		assert.Equal(t, "A", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
 	})
 
 	t.Run("default impl from two paths", func(t *testing.T) {
@@ -3251,8 +3253,8 @@ func TestCheckInterfaceDefaultMethodsInheritance(t *testing.T) {
 
 		memberConflictError := &sema.InterfaceMemberConflictError{}
 		require.ErrorAs(t, errs[0], &memberConflictError)
-		assert.Equal(t, memberConflictError.MemberName, "hello")
-		assert.Equal(t, memberConflictError.ConflictingInterfaceType.QualifiedIdentifier(), "A")
+		assert.Equal(t, "hello", memberConflictError.MemberName)
+		assert.Equal(t, "A", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
 	})
 
 	t.Run("overridden default impl in one path", func(t *testing.T) {
@@ -3279,12 +3281,12 @@ func TestCheckInterfaceDefaultMethodsInheritance(t *testing.T) {
 
 		memberConflictError := &sema.InterfaceMemberConflictError{}
 		require.ErrorAs(t, errs[0], &memberConflictError)
-		assert.Equal(t, memberConflictError.MemberName, "hello")
-		assert.Equal(t, memberConflictError.ConflictingInterfaceType.QualifiedIdentifier(), "A")
+		assert.Equal(t, "hello", memberConflictError.MemberName)
+		assert.Equal(t, "A", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
 
 		require.ErrorAs(t, errs[1], &memberConflictError)
-		assert.Equal(t, memberConflictError.MemberName, "hello")
-		assert.Equal(t, memberConflictError.ConflictingInterfaceType.QualifiedIdentifier(), "A")
+		assert.Equal(t, "hello", memberConflictError.MemberName)
+		assert.Equal(t, "A", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
 	})
 
 	t.Run("default impl in one path and condition in another", func(t *testing.T) {

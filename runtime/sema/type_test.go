@@ -1072,10 +1072,16 @@ func TestCommonSuperType(t *testing.T) {
 					newCompositeWithInterfaces("Foo", inheritedInterfaceType1),
 					newCompositeWithInterfaces("Bar", inheritedInterfaceType2),
 				},
-				expectedSuperType: &RestrictedType{
-					Type:         AnyStructType,
-					Restrictions: []*InterfaceType{superInterfaceType},
-				},
+				expectedSuperType: func() Type {
+					typ := &RestrictedType{
+						Type:         AnyStructType,
+						Restrictions: []*InterfaceType{superInterfaceType},
+					}
+
+					// just initialize for equality
+					typ.initializeRestrictionSet()
+					return typ
+				}(),
 			},
 			{
 				name: "structs with never",

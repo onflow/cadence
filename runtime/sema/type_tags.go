@@ -857,31 +857,34 @@ func commonSuperTypeOfComposites(types []Type) Type {
 			panic(errors.NewUnreachableError())
 		}
 
-		// NOTE: index 0 may not always be the first type, since there can be 'Never' types.
-		if firstType {
-			compositeType.ExplicitInterfaceConformances.ForeachDistinct(
-				func(_ *InterfaceType, interfaceType *InterfaceType) bool {
-					commonInterfaces[interfaceType.QualifiedIdentifier()] = true
-					commonInterfacesList = append(commonInterfacesList, interfaceType)
-					return true
-				},
-			)
-			firstType = false
-		} else {
-			intersection := map[string]bool{}
-			commonInterfacesList = make([]*InterfaceType, 0)
+		if len(compositeType.ExplicitInterfaceConformances) > 0 {
 
-			compositeType.ExplicitInterfaceConformances.ForeachDistinct(
-				func(_ *InterfaceType, interfaceType *InterfaceType) bool {
-					if _, ok := commonInterfaces[interfaceType.QualifiedIdentifier()]; ok {
-						intersection[interfaceType.QualifiedIdentifier()] = true
+			// NOTE: index 0 may not always be the first type, since there can be 'Never' types.
+			if firstType {
+				compositeType.ExplicitInterfaceConformances.ForeachDistinct(
+					func(_ *InterfaceType, interfaceType *InterfaceType) bool {
+						commonInterfaces[interfaceType.QualifiedIdentifier()] = true
 						commonInterfacesList = append(commonInterfacesList, interfaceType)
-					}
-					return true
-				},
-			)
+						return true
+					},
+				)
+				firstType = false
+			} else {
+				intersection := map[string]bool{}
+				commonInterfacesList = make([]*InterfaceType, 0)
 
-			commonInterfaces = intersection
+				compositeType.ExplicitInterfaceConformances.ForeachDistinct(
+					func(_ *InterfaceType, interfaceType *InterfaceType) bool {
+						if _, ok := commonInterfaces[interfaceType.QualifiedIdentifier()]; ok {
+							intersection[interfaceType.QualifiedIdentifier()] = true
+							commonInterfacesList = append(commonInterfacesList, interfaceType)
+						}
+						return true
+					},
+				)
+
+				commonInterfaces = intersection
+			}
 		}
 
 		if len(commonInterfaces) == 0 {
