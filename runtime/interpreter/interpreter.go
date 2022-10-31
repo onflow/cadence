@@ -866,16 +866,7 @@ func (interpreter *Interpreter) declareAttachmentValue(
 	scope *VariableActivation,
 	variable *Variable,
 ) {
-	compositeDeclaration := ast.NewCompositeDeclaration(
-		interpreter,
-		declaration.Access,
-		common.CompositeKindAttachment,
-		declaration.Identifier,
-		declaration.Conformances,
-		declaration.Members,
-		declaration.DocString,
-		declaration.Range,
-	)
+	compositeDeclaration := sema.AttachmentAsComposite(interpreter, interpreter.Program.Elaboration, declaration)
 	return interpreter.declareCompositeValue(compositeDeclaration, lexicalScope)
 }
 

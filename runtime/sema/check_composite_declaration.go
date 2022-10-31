@@ -28,14 +28,14 @@ import (
 // while strictly speaking attachment declarations are not strictly the same thing as composite declarations,
 // they are subject to many of the same checks. In order to avoid duplicating these checks, we create a mapping
 // between an attachment declaration and its composite "equivalent" that we can use for these composite checks
-func (checker *Checker) attachmentAsComposite(declaration *ast.AttachmentDeclaration) *ast.CompositeDeclaration {
-	compositeDelcaration, ok := checker.Elaboration.AttachmentCompositeDeclarations[declaration]
+func AttachmentAsComposite(memoryGauge common.MemoryGauge, elaboration *Elaboration, declaration *ast.AttachmentDeclaration) *ast.CompositeDeclaration {
+	compositeDelcaration, ok := elaboration.AttachmentCompositeDeclarations[declaration]
 	if ok {
 		return compositeDelcaration
 	}
 
 	compositeDelcaration = ast.NewCompositeDeclaration(
-		checker.memoryGauge,
+		memoryGauge,
 		declaration.Access,
 		common.CompositeKindAttachment,
 		declaration.Identifier,
@@ -44,7 +44,7 @@ func (checker *Checker) attachmentAsComposite(declaration *ast.AttachmentDeclara
 		declaration.DocString,
 		declaration.Range,
 	)
-	checker.Elaboration.AttachmentCompositeDeclarations[declaration] = compositeDelcaration
+	elaboration.AttachmentCompositeDeclarations[declaration] = compositeDelcaration
 	return compositeDelcaration
 }
 
@@ -86,7 +86,7 @@ func (checker *Checker) VisitAttachmentDeclaration(declaration *ast.AttachmentDe
 }
 
 func (checker *Checker) visitAttachmentDeclaration(declaration *ast.AttachmentDeclaration, kind ContainerKind) (_ struct{}) {
-	attachmentCompositeDeclaration := checker.attachmentAsComposite(declaration)
+	attachmentCompositeDeclaration := AttachmentAsComposite(checker.memoryGauge, checker.Elaboration, declaration)
 	checker.visitCompositeDeclaration(attachmentCompositeDeclaration, kind)
 	attachmentType := checker.Elaboration.CompositeDeclarationTypes[attachmentCompositeDeclaration]
 	checker.checkAttachmentBaseType(attachmentType)
@@ -326,7 +326,7 @@ func (checker *Checker) declareCompositeNestedTypes(
 			nestedCompositeDeclaration, isCompositeDeclaration := nestedDeclaration.(*ast.CompositeDeclaration)
 			if !isCompositeDeclaration {
 				if nestedAttachmentDeclaration, isAttachmentDeclaration := nestedDeclaration.(*ast.AttachmentDeclaration); isAttachmentDeclaration {
-					nestedCompositeDeclaration = checker.attachmentAsComposite(nestedAttachmentDeclaration)
+					nestedCompositeDeclaration = AttachmentAsComposite(checker.memoryGauge, checker.Elaboration, nestedAttachmentDeclaration)
 					isCompositeDeclaration = true
 				}
 			}
@@ -513,7 +513,7 @@ func (checker *Checker) declareNestedDeclarations(
 }
 
 func (checker *Checker) declareAttachmentType(declaration *ast.AttachmentDeclaration) *CompositeType {
-	composite := checker.declareCompositeType(checker.attachmentAsComposite(declaration))
+	composite := checker.declareCompositeType(AttachmentAsComposite(checker.memoryGauge, checker.Elaboration, declaration))
 	composite.baseType = checker.convertNominalType(declaration.BaseType)
 	return composite
 }
@@ -604,7 +604,7 @@ func (checker *Checker) declareCompositeType(declaration *ast.CompositeDeclarati
 }
 
 func (checker *Checker) declareAttachmentMembersAndValue(declaration *ast.AttachmentDeclaration, kind ContainerKind) {
-	checker.declareCompositeMembersAndValue(checker.attachmentAsComposite(declaration), kind)
+	checker.declareCompositeMembersAndValue(AttachmentAsComposite(checker.memoryGauge, checker.Elaboration, declaration), kind)
 }
 
 // declareCompositeMembersAndValue declares the members and the value
@@ -690,7 +690,7 @@ func (checker *Checker) declareCompositeMembersAndValue(
 			declareNestedComposite(nestedCompositeDeclaration)
 		}
 		for _, nestedAttachmentDeclaration := range nestedAttachments {
-			declareNestedComposite(checker.attachmentAsComposite(nestedAttachmentDeclaration))
+			declareNestedComposite(AttachmentAsComposite(checker.memoryGauge, checker.Elaboration, nestedAttachmentDeclaration))
 		}
 
 		// Declare implicit type requirement conformances, if any,
@@ -1503,7 +1503,7 @@ func (checker *Checker) checkTypeRequirement(
 	}
 
 	for _, nestedAttachmentDeclaration := range containerDeclaration.Members.Attachments() {
-		findDeclaration(checker.attachmentAsComposite(nestedAttachmentDeclaration))
+		findDeclaration(AttachmentAsComposite(checker.memoryGauge, checker.Elaboration, nestedAttachmentDeclaration))
 	}
 
 	if foundRedeclaration {

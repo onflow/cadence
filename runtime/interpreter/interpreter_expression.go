@@ -37,6 +37,9 @@ func (interpreter *Interpreter) assignmentGetterSetter(expression ast.Expression
 		return interpreter.identifierExpressionGetterSetter(expression)
 
 	case *ast.IndexExpression:
+		if attachmentType, ok := interpreter.Program.Elaboration.AttachmentAccessTypes[expression]; ok {
+			return interpreter.typeIndexExpressionGetterSetter(expression, attachmentType)
+		}
 		return interpreter.indexExpressionGetterSetter(expression)
 
 	case *ast.MemberExpression:
@@ -69,6 +72,32 @@ func (interpreter *Interpreter) identifierExpressionGetterSetter(identifierExpre
 		set: func(value Value) {
 			interpreter.startResourceTracking(value, variable, identifier, identifierExpression)
 			variable.SetValue(value)
+		},
+	}
+}
+
+func (interpreter *Interpreter) typeIndexExpressionGetterSetter(
+	indexExpression *ast.IndexExpression,
+	attachmentType sema.Type,
+) getterSetter {
+	target, ok := interpreter.evalExpression(indexExpression.TargetExpression).(TypeIndexableValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	locationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: indexExpression,
+	}
+
+	return getterSetter{
+		target: target,
+		get: func(_ bool) Value {
+			return target.GetTypeKey(interpreter, locationRange, attachmentType)
+		},
+		set: func(_ Value) {
+			// writing to composites with indexing syntax is not supported
+			panic(errors.NewUnreachableError())
 		},
 	}
 }
@@ -769,16 +798,28 @@ func (interpreter *Interpreter) VisitMemberExpression(expression *ast.MemberExpr
 }
 
 func (interpreter *Interpreter) VisitIndexExpression(expression *ast.IndexExpression) Value {
-	typedResult, ok := interpreter.evalExpression(expression.TargetExpression).(ValueIndexableValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
+	if attachmentType, ok := interpreter.Program.Elaboration.AttachmentAccessTypes[expression]; ok {
+		typedResult, ok := interpreter.evalExpression(expression.TargetExpression).(TypeIndexableValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+		locationRange := LocationRange{
+			Location:    interpreter.Location,
+			HasPosition: expression,
+		}
+		return typedResult.GetTypeKey(interpreter, locationRange, attachmentType)
+	} else {
+		typedResult, ok := interpreter.evalExpression(expression.TargetExpression).(ValueIndexableValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+		indexingValue := interpreter.evalExpression(expression.IndexingExpression)
+		locationRange := LocationRange{
+			Location:    interpreter.Location,
+			HasPosition: expression,
+		}
+		return typedResult.GetKey(interpreter, locationRange, indexingValue)
 	}
-	indexingValue := interpreter.evalExpression(expression.IndexingExpression)
-	locationRange := LocationRange{
-		Location:    interpreter.Location,
-		HasPosition: expression,
-	}
-	return typedResult.GetKey(interpreter, locationRange, indexingValue)
 }
 
 func (interpreter *Interpreter) VisitConditionalExpression(expression *ast.ConditionalExpression) Value {
@@ -1142,7 +1183,31 @@ func (interpreter *Interpreter) VisitPathExpression(expression *ast.PathExpressi
 	)
 }
 
-func (interpreter *Interpreter) VisitAttachExpression(_ *ast.AttachExpression) Value {
-	// TODO: implement this
-	return nil
+func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.AttachExpression) Value {
+
+	base, ok := interpreter.evalExpression(attachExpression.Base).(*CompositeValue)
+	// we enforce this in the checker
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	attachment, ok := interpreter.VisitInvocationExpression(attachExpression.Attachment).(*CompositeValue)
+	// we enforce this in the checker
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	locationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: attachExpression,
+	}
+
+	base.SetTypeKey(
+		interpreter,
+		locationRange,
+		interpreter.MustConvertStaticToSemaType(attachment.StaticType(interpreter)),
+		attachment,
+	)
+
+	return base
 }

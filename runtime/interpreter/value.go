@@ -151,6 +151,13 @@ type ValueIndexableValue interface {
 	InsertKey(interpreter *Interpreter, locationRange LocationRange, key Value, value Value)
 }
 
+type TypeIndexableValue interface {
+	Value
+	GetTypeKey(interpreter *Interpreter, locationRange LocationRange, ty sema.Type) Value
+	SetTypeKey(interpreter *Interpreter, locationRange LocationRange, ty sema.Type, value Value)
+	RemoveTypeKey(interpreter *Interpreter, locationRange LocationRange, ty sema.Type) Value
+}
+
 // MemberAccessibleValue
 
 type MemberAccessibleValue interface {
@@ -13843,6 +13850,8 @@ type CompositeField struct {
 const attachmentNamePrefix = "$"
 const attachmentBaseName = "$base"
 
+var _ TypeIndexableValue = &CompositeValue{}
+
 func NewCompositeField(memoryGauge common.MemoryGauge, name string, value Value) CompositeField {
 	common.UseMemory(memoryGauge, common.CompositeFieldMemoryUsage)
 	return NewUnmeteredCompositeField(name, value)
@@ -15121,26 +15130,33 @@ func (v *CompositeValue) AccessBase(interpreter *Interpreter, locationRange Loca
 	return NewEphemeralReferenceValue(interpreter, false, base, attachmentType.GetBaseType())
 }
 
-func (v *CompositeValue) AccessAttachment(interpreter *Interpreter, locationRange LocationRange, ty sema.Type) Value {
+func (v *CompositeValue) GetTypeKey(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	ty sema.Type,
+) Value {
 	attachment := v.getAttachmentValue(interpreter, locationRange, ty)
 	if attachment == nil {
 		return NilValue{}
 	}
-	return NewSomeValueNonCopying(interpreter, NewEphemeralReferenceValue(interpreter, false, v, ty))
+	return NewSomeValueNonCopying(interpreter, NewEphemeralReferenceValue(interpreter, false, attachment, ty))
 }
 
-func (v *CompositeValue) AttachAttachment(interpreter *Interpreter, locationRange LocationRange, attachment *CompositeValue) {
-
-	attachmentType, ok := interpreter.MustConvertStaticToSemaType(attachment.staticType).(*sema.CompositeType)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
+func (v *CompositeValue) SetTypeKey(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	attachmentType sema.Type,
+	attachment Value,
+) {
 	v.SetMember(interpreter, locationRange, attachmentNamePrefix+attachmentType.QualifiedString(), attachment)
 }
 
-func (v *CompositeValue) RemoveAttachment(interpreter *Interpreter, locationRange LocationRange, attachmentType *sema.CompositeType) {
-	v.RemoveMember(interpreter, locationRange, attachmentNamePrefix+attachmentType.QualifiedString())
+func (v *CompositeValue) RemoveTypeKey(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	attachmentType sema.Type,
+) Value {
+	return v.RemoveMember(interpreter, locationRange, attachmentNamePrefix+attachmentType.QualifiedString())
 }
 
 // DictionaryValue
@@ -17220,6 +17236,7 @@ type EphemeralReferenceValue struct {
 var _ Value = &EphemeralReferenceValue{}
 var _ EquatableValue = &EphemeralReferenceValue{}
 var _ ValueIndexableValue = &EphemeralReferenceValue{}
+var _ TypeIndexableValue = &EphemeralReferenceValue{}
 var _ MemberAccessibleValue = &EphemeralReferenceValue{}
 
 func NewUnmeteredEphemeralReferenceValue(
@@ -17311,10 +17328,9 @@ func (v *EphemeralReferenceValue) ReferencedValue(
 	}
 }
 
-func (v *EphemeralReferenceValue) GetMember(
+func (v *EphemeralReferenceValue) mustReferencedValue(
 	interpreter *Interpreter,
 	locationRange LocationRange,
-	name string,
 ) Value {
 	referencedValue := v.ReferencedValue(interpreter, locationRange)
 	if referencedValue == nil {
@@ -17326,6 +17342,15 @@ func (v *EphemeralReferenceValue) GetMember(
 	self := *referencedValue
 
 	interpreter.checkReferencedResourceNotDestroyed(self, locationRange)
+	return self
+}
+
+func (v *EphemeralReferenceValue) GetMember(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	name string,
+) Value {
+	self := v.mustReferencedValue(interpreter, locationRange)
 
 	return interpreter.getMember(self, locationRange, name)
 }
@@ -17335,16 +17360,7 @@ func (v *EphemeralReferenceValue) RemoveMember(
 	locationRange LocationRange,
 	identifier string,
 ) Value {
-	referencedValue := v.ReferencedValue(interpreter, locationRange)
-	if referencedValue == nil {
-		panic(DereferenceError{
-			LocationRange: locationRange,
-		})
-	}
-
-	self := *referencedValue
-
-	interpreter.checkReferencedResourceNotDestroyed(self, locationRange)
+	self := v.mustReferencedValue(interpreter, locationRange)
 
 	if memberAccessibleValue, ok := self.(MemberAccessibleValue); ok {
 		return memberAccessibleValue.RemoveMember(interpreter, locationRange, identifier)
@@ -17359,16 +17375,7 @@ func (v *EphemeralReferenceValue) SetMember(
 	name string,
 	value Value,
 ) {
-	referencedValue := v.ReferencedValue(interpreter, locationRange)
-	if referencedValue == nil {
-		panic(DereferenceError{
-			LocationRange: locationRange,
-		})
-	}
-
-	self := *referencedValue
-
-	interpreter.checkReferencedResourceNotDestroyed(self, locationRange)
+	self := v.mustReferencedValue(interpreter, locationRange)
 
 	interpreter.setMember(self, locationRange, name, value)
 }
@@ -17378,16 +17385,7 @@ func (v *EphemeralReferenceValue) GetKey(
 	locationRange LocationRange,
 	key Value,
 ) Value {
-	referencedValue := v.ReferencedValue(interpreter, locationRange)
-	if referencedValue == nil {
-		panic(DereferenceError{
-			LocationRange: locationRange,
-		})
-	}
-
-	self := *referencedValue
-
-	interpreter.checkReferencedResourceNotDestroyed(self, locationRange)
+	self := v.mustReferencedValue(interpreter, locationRange)
 
 	return self.(ValueIndexableValue).
 		GetKey(interpreter, locationRange, key)
@@ -17399,16 +17397,7 @@ func (v *EphemeralReferenceValue) SetKey(
 	key Value,
 	value Value,
 ) {
-	referencedValue := v.ReferencedValue(interpreter, locationRange)
-	if referencedValue == nil {
-		panic(DereferenceError{
-			LocationRange: locationRange,
-		})
-	}
-
-	self := *referencedValue
-
-	interpreter.checkReferencedResourceNotDestroyed(self, locationRange)
+	self := v.mustReferencedValue(interpreter, locationRange)
 
 	self.(ValueIndexableValue).
 		SetKey(interpreter, locationRange, key, value)
@@ -17420,16 +17409,7 @@ func (v *EphemeralReferenceValue) InsertKey(
 	key Value,
 	value Value,
 ) {
-	referencedValue := v.ReferencedValue(interpreter, locationRange)
-	if referencedValue == nil {
-		panic(DereferenceError{
-			LocationRange: locationRange,
-		})
-	}
-
-	self := *referencedValue
-
-	interpreter.checkReferencedResourceNotDestroyed(self, locationRange)
+	self := v.mustReferencedValue(interpreter, locationRange)
 
 	self.(ValueIndexableValue).
 		InsertKey(interpreter, locationRange, key, value)
@@ -17440,19 +17420,44 @@ func (v *EphemeralReferenceValue) RemoveKey(
 	locationRange LocationRange,
 	key Value,
 ) Value {
-	referencedValue := v.ReferencedValue(interpreter, locationRange)
-	if referencedValue == nil {
-		panic(DereferenceError{
-			LocationRange: locationRange,
-		})
-	}
-
-	self := *referencedValue
-
-	interpreter.checkReferencedResourceNotDestroyed(self, locationRange)
+	self := v.mustReferencedValue(interpreter, locationRange)
 
 	return self.(ValueIndexableValue).
 		RemoveKey(interpreter, locationRange, key)
+}
+
+func (v *EphemeralReferenceValue) GetTypeKey(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	key sema.Type,
+) Value {
+	self := v.mustReferencedValue(interpreter, locationRange)
+
+	return self.(TypeIndexableValue).
+		GetTypeKey(interpreter, locationRange, key)
+}
+
+func (v *EphemeralReferenceValue) SetTypeKey(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	key sema.Type,
+	value Value,
+) {
+	self := v.mustReferencedValue(interpreter, locationRange)
+
+	self.(TypeIndexableValue).
+		SetTypeKey(interpreter, locationRange, key, value)
+}
+
+func (v *EphemeralReferenceValue) RemoveTypeKey(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	key sema.Type,
+) Value {
+	self := v.mustReferencedValue(interpreter, locationRange)
+
+	return self.(TypeIndexableValue).
+		RemoveTypeKey(interpreter, locationRange, key)
 }
 
 func (v *EphemeralReferenceValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
