@@ -218,17 +218,15 @@ var _ ast.DeclarationVisitor[StatementResult] = &Interpreter{}
 var _ ast.StatementVisitor[StatementResult] = &Interpreter{}
 var _ ast.ExpressionVisitor[Value] = &Interpreter{}
 
-func NewBaseActivation() *VariableActivation {
+// BaseActivation is the activation which contains all base declarations.
+// It is reused across all interpreters.
+var BaseActivation = func() *VariableActivation {
 	// No need to meter since this is only created once
 	activation := activations.NewActivation[*Variable](nil, nil)
 
 	defineBaseFunctions(activation)
 	return activation
-}
-
-// BaseActivation is the activation which contains all base declarations.
-// It is reused across all interpreters.
-var BaseActivation *VariableActivation = NewBaseActivation()
+}()
 
 func NewInterpreter(
 	program *Program,
