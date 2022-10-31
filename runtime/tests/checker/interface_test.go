@@ -3630,8 +3630,69 @@ func TestCheckInterfaceTypeDefinitionInheritance(t *testing.T) {
         `)
 
 		errs := RequireCheckerErrors(t, err, 2)
-		conformance := &sema.ConformanceError{}
-		require.ErrorAs(t, errs[0], &conformance)
-		require.ErrorAs(t, errs[1], &conformance)
+		conformanceError := &sema.ConformanceError{}
+		require.ErrorAs(t, errs[0], &conformanceError)
+		require.ErrorAs(t, errs[1], &conformanceError)
+	})
+}
+
+func TestCheckInterfaceEventsInheritance(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("non inherited interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            contract interface A {
+                event FooEvent(_ x: String)
+            }
+
+            contract X: A {
+                pub fun test() {
+                   emit FooEvent("hello")
+                }
+            }
+        `)
+
+		require.Error(t, err)
+		errs := RequireCheckerErrors(t, err, 2)
+
+		notDeclaredError := &sema.NotDeclaredError{}
+		require.ErrorAs(t, errs[0], &notDeclaredError)
+
+		conformanceError := &sema.ConformanceError{}
+		require.ErrorAs(t, errs[1], &conformanceError)
+	})
+
+	t.Run("inherited interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            contract interface A {
+                event FooEvent(_ x: String)
+            }
+
+            contract interface B: A {}
+
+            contract interface C: B {}
+
+            contract X: C {
+                pub fun test() {
+                   emit FooEvent("hello")
+                }
+            }
+        `)
+
+		require.Error(t, err)
+		errs := RequireCheckerErrors(t, err, 2)
+
+		notDeclaredError := &sema.NotDeclaredError{}
+		require.ErrorAs(t, errs[0], &notDeclaredError)
+
+		conformanceError := &sema.ConformanceError{}
+		require.ErrorAs(t, errs[1], &conformanceError)
 	})
 }
