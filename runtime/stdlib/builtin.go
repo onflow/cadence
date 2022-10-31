@@ -18,23 +18,6 @@
 
 package stdlib
 
-var BuiltinValues = []StandardLibraryValue{
-	AssertFunction,
-	PanicFunction,
-	SignatureAlgorithmConstructor,
-	RLPContract,
-	// TODO: refactor. should be function accepting handler,
-	//   instead of relying on callback on interpreter (PublicKeyValidationHandler, SignatureVerificationHandler)
-	PublicKeyConstructor,
-	// TODO: refactor. should be function accepting handler,
-	//   instead of relying on callback on interpreter (HashHandler)
-	HashAlgorithmConstructor,
-	// TODO: refactor. should be function accepting handler,
-	//   instead of relying on callback on interpreter
-	//   (BLSVerifyPoPHandler, BLSAggregateSignaturesHandler, BLSAggregatePublicKeysHandler)
-	BLSContract,
-}
-
 type StandardLibraryHandler interface {
 	Logger
 	UnsafeRandomGenerator
@@ -42,18 +25,30 @@ type StandardLibraryHandler interface {
 	CurrentBlockProvider
 	PublicAccountHandler
 	AccountCreator
+	PublicKeyValidator
+	PublicKeySignatureVerifier
+	BLSPoPVerifier
+	BLSPublicKeyAggregator
+	BLSSignatureAggregator
+	Hasher
 }
 
 func DefaultStandardLibraryValues(handler StandardLibraryHandler) []StandardLibraryValue {
-	return append(
-		BuiltinValues[:],
+	return []StandardLibraryValue{
+		AssertFunction,
+		PanicFunction,
+		SignatureAlgorithmConstructor,
+		RLPContract,
 		NewLogFunction(handler),
 		NewUnsafeRandomFunction(handler),
 		NewGetBlockFunction(handler),
 		NewGetCurrentBlockFunction(handler),
 		NewGetAccountFunction(handler),
 		NewAuthAccountConstructor(handler),
-	)
+		NewPublicKeyConstructor(handler, handler, handler),
+		NewBLSContract(nil, handler),
+		NewHashAlgorithmConstructor(handler),
+	}
 }
 
 func DefaultScriptStandardLibraryValues(handler StandardLibraryHandler) []StandardLibraryValue {

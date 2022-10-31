@@ -1966,3 +1966,40 @@ func (v Enum) ToGoValue() any {
 func (v Enum) String() string {
 	return formatComposite(v.EnumType.ID(), v.EnumType.Fields, v.Fields)
 }
+
+// Function
+type Function struct {
+	FunctionType *FunctionType
+}
+
+var _ Value = Function{}
+
+func NewFunction(functionType *FunctionType) Function {
+	return Function{
+		FunctionType: functionType,
+	}
+}
+
+func NewMeteredFunction(gauge common.MemoryGauge, functionType *FunctionType) Function {
+	common.UseMemory(gauge, common.CadenceFunctionValueMemoryUsage)
+	return NewFunction(functionType)
+}
+
+func (Function) isValue() {}
+
+func (v Function) Type() Type {
+	return v.FunctionType
+}
+
+func (v Function) MeteredType(_ common.MemoryGauge) Type {
+	return v.FunctionType
+}
+
+func (Function) ToGoValue() any {
+	return nil
+}
+
+func (v Function) String() string {
+	// TODO: include function type
+	return format.Function("(...)")
+}

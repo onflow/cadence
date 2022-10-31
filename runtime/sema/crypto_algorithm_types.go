@@ -26,21 +26,6 @@ import (
 //go:generate go run golang.org/x/tools/cmd/stringer -type=SignatureAlgorithm
 //go:generate go run golang.org/x/tools/cmd/stringer -type=HashAlgorithm
 
-var SignatureAlgorithms = []CryptoAlgorithm{
-	SignatureAlgorithmECDSA_P256,
-	SignatureAlgorithmECDSA_secp256k1,
-	SignatureAlgorithmBLS_BLS12_381,
-}
-
-var HashAlgorithms = []CryptoAlgorithm{
-	HashAlgorithmSHA2_256,
-	HashAlgorithmSHA2_384,
-	HashAlgorithmSHA3_256,
-	HashAlgorithmSHA3_384,
-	HashAlgorithmKMAC128_BLS_BLS12_381,
-	HashAlgorithmKECCAK_256,
-}
-
 var SignatureAlgorithmType = newNativeEnumType(
 	SignatureAlgorithmTypeName,
 	UInt8Type,
@@ -49,13 +34,24 @@ var SignatureAlgorithmType = newNativeEnumType(
 
 type SignatureAlgorithm uint8
 
+// NOTE: only add new algorithms, do *NOT* change existing items,
+// reuse raw values for other items, swap the order, etc.
+//
+// # Existing stored values use these raw values and should not change
+//
+// IMPORTANT: update SignatureAlgorithms
 const (
-	// Supported signing algorithms
 	SignatureAlgorithmUnknown SignatureAlgorithm = iota
 	SignatureAlgorithmECDSA_P256
 	SignatureAlgorithmECDSA_secp256k1
 	SignatureAlgorithmBLS_BLS12_381
 )
+
+var SignatureAlgorithms = []SignatureAlgorithm{
+	SignatureAlgorithmECDSA_P256,
+	SignatureAlgorithmECDSA_secp256k1,
+	SignatureAlgorithmBLS_BLS12_381,
+}
 
 // Name returns the string representation of this signing algorithm.
 func (algo SignatureAlgorithm) Name() string {
@@ -177,8 +173,13 @@ var HashAlgorithmType = newNativeEnumType(
 
 type HashAlgorithm uint8
 
+// NOTE: only add new algorithms, do *NOT* change existing items,
+// reuse raw values for other items, swap the order, etc.
+//
+// # Existing stored values use these raw values and should not change
+//
+// IMPORTANT: update HashAlgorithms AND HashAlgorithm.IsValid
 const (
-	// Supported hashing algorithms
 	HashAlgorithmUnknown HashAlgorithm = iota
 	HashAlgorithmSHA2_256
 	HashAlgorithmSHA2_384
@@ -187,6 +188,15 @@ const (
 	HashAlgorithmKMAC128_BLS_BLS12_381
 	HashAlgorithmKECCAK_256
 )
+
+var HashAlgorithms = []HashAlgorithm{
+	HashAlgorithmSHA2_256,
+	HashAlgorithmSHA2_384,
+	HashAlgorithmSHA3_256,
+	HashAlgorithmSHA3_384,
+	HashAlgorithmKMAC128_BLS_BLS12_381,
+	HashAlgorithmKECCAK_256,
+}
 
 func (algo HashAlgorithm) Name() string {
 	switch algo {
@@ -210,11 +220,6 @@ func (algo HashAlgorithm) Name() string {
 }
 
 func (algo HashAlgorithm) RawValue() uint8 {
-	// NOTE: only add new algorithms, do *NOT* change existing items,
-	// reuse raw values for other items, swap the order, etc.
-	//
-	// Existing stored values use these raw values and should not change
-
 	switch algo {
 	case HashAlgorithmUnknown:
 		return 0
@@ -254,6 +259,19 @@ func (algo HashAlgorithm) DocString() string {
 	}
 
 	panic(errors.NewUnreachableError())
+}
+
+func (algo HashAlgorithm) IsValid() bool {
+	switch algo {
+	case HashAlgorithmSHA2_256,
+		HashAlgorithmSHA2_384,
+		HashAlgorithmSHA3_256,
+		HashAlgorithmSHA3_384,
+		HashAlgorithmKMAC128_BLS_BLS12_381,
+		HashAlgorithmKECCAK_256:
+		return true
+	}
+	return false
 }
 
 func newNativeEnumType(

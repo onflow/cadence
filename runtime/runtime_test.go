@@ -135,15 +135,17 @@ func newTestInterpreterRuntime() Runtime {
 }
 
 type testRuntimeInterface struct {
-	resolveLocation         func(identifiers []Identifier, location Location) ([]ResolvedLocation, error)
-	getCode                 func(_ Location) ([]byte, error)
-	getProgram              func(Location) (*interpreter.Program, error)
-	setProgram              func(Location, *interpreter.Program) error
-	storage                 testLedger
-	createAccount           func(payer Address) (address Address, err error)
-	addEncodedAccountKey    func(address Address, publicKey []byte) error
-	removeEncodedAccountKey func(address Address, index int) (publicKey []byte, err error)
-	addAccountKey           func(
+	resolveLocation           func(identifiers []Identifier, location Location) ([]ResolvedLocation, error)
+	getCode                   func(_ Location) ([]byte, error)
+	getProgram                func(Location) (*interpreter.Program, error)
+	setProgram                func(Location, *interpreter.Program) error
+	setInterpreterSharedState func(state *interpreter.SharedState)
+	getInterpreterSharedState func() *interpreter.SharedState
+	storage                   testLedger
+	createAccount             func(payer Address) (address Address, err error)
+	addEncodedAccountKey      func(address Address, publicKey []byte) error
+	removeEncodedAccountKey   func(address Address, index int) (publicKey []byte, err error)
+	addAccountKey             func(
 		address Address,
 		publicKey *stdlib.PublicKey,
 		hashAlgo HashAlgorithm,
@@ -239,6 +241,22 @@ func (i *testRuntimeInterface) SetProgram(location Location, program *interprete
 	}
 
 	return i.setProgram(location, program)
+}
+
+func (i *testRuntimeInterface) SetInterpreterSharedState(state *interpreter.SharedState) {
+	if i.setInterpreterSharedState == nil {
+		return
+	}
+
+	i.setInterpreterSharedState(state)
+}
+
+func (i *testRuntimeInterface) GetInterpreterSharedState() *interpreter.SharedState {
+	if i.getInterpreterSharedState == nil {
+		return nil
+	}
+
+	return i.getInterpreterSharedState()
 }
 
 func (i *testRuntimeInterface) ValueExists(owner, key []byte) (exists bool, err error) {
@@ -2522,11 +2540,17 @@ func TestRuntimeParseAndCheckProgram(t *testing.T) {
 	})
 }
 
-func TestRuntimeScriptReturnTypeNotReturnableError(t *testing.T) {
+func TestRuntimeScriptReturnSpecial(t *testing.T) {
 
 	t.Parallel()
 
-	test := func(t *testing.T, code string, expected cadence.Value) {
+	type testCase struct {
+		code     string
+		expected cadence.Value
+		invalid  bool
+	}
+
+	test := func(t *testing.T, test testCase) {
 
 		runtime := newTestInterpreterRuntime()
 
@@ -2539,42 +2563,100 @@ func TestRuntimeScriptReturnTypeNotReturnableError(t *testing.T) {
 			},
 		}
 
-		nextTransactionLocation := newTransactionLocationGenerator()
-
 		actual, err := runtime.ExecuteScript(
 			Script{
-				Source: []byte(code),
+				Source: []byte(test.code),
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
+				Location:  common.ScriptLocation{},
 			},
 		)
 
-		if expected == nil {
+		if test.invalid {
 			RequireError(t, err)
 
 			var subErr *InvalidScriptReturnTypeError
 			require.ErrorAs(t, err, &subErr)
 		} else {
 			require.NoError(t, err)
-			require.Equal(t, expected, actual)
+			require.Equal(t, test.expected, actual)
 		}
 	}
 
-	t.Run("function", func(t *testing.T) {
+	t.Run("interpreted function", func(t *testing.T) {
 
 		t.Parallel()
 
 		test(t,
-			`
-              pub fun main(): ((): Int) {
-                  return fun (): Int {
-                      return 0
+			testCase{
+				code: `
+                  pub fun main(): AnyStruct {
+                      return fun (): Int {
+                          return 0
+                      }
                   }
-              }
-            `,
-			nil,
+                `,
+				expected: cadence.Function{
+					FunctionType: (&cadence.FunctionType{
+						Parameters: []cadence.Parameter{},
+						ReturnType: cadence.IntType{},
+					}).WithID("(():Int)"),
+				},
+			},
+		)
+	})
+
+	t.Run("host function", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(t,
+			testCase{
+				code: `
+                  pub fun main(): AnyStruct {
+                      return panic
+                  }
+                `,
+				expected: cadence.Function{
+					FunctionType: (&cadence.FunctionType{
+						Parameters: []cadence.Parameter{
+							{
+								Label:      sema.ArgumentLabelNotRequired,
+								Identifier: "message",
+								Type:       cadence.StringType{},
+							},
+						},
+						ReturnType: cadence.NeverType{},
+					}).WithID("((String):Never)"),
+				},
+			},
+		)
+	})
+
+	t.Run("bound function", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(t,
+			testCase{
+				code: `
+                  pub struct S {
+                      pub fun f() {}
+                  }
+
+                  pub fun main(): AnyStruct {
+                      let s = S()
+                      return s.f
+                  }
+                `,
+				expected: cadence.Function{
+					FunctionType: (&cadence.FunctionType{
+						Parameters: []cadence.Parameter{},
+						ReturnType: cadence.VoidType{},
+					}).WithID("(():Void)"),
+				},
+			},
 		)
 	})
 
@@ -2583,13 +2665,15 @@ func TestRuntimeScriptReturnTypeNotReturnableError(t *testing.T) {
 		t.Parallel()
 
 		test(t,
-			`
-              pub fun main(): &Address {
-                  let a: Address = 0x1
-                  return &a as &Address
-              }
-            `,
-			cadence.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
+			testCase{
+				code: `
+                  pub fun main(): AnyStruct {
+                      let a: Address = 0x1
+                      return &a as &Address
+                  }
+                `,
+				expected: cadence.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
+			},
 		)
 	})
 
@@ -2598,110 +2682,27 @@ func TestRuntimeScriptReturnTypeNotReturnableError(t *testing.T) {
 		t.Parallel()
 
 		test(t,
-			`
-              pub fun main(): [&AnyStruct] {
-                  let refs: [&AnyStruct] = []
-                  refs.append(&refs as &AnyStruct)
-                  return refs
-              }
-            `,
-			cadence.NewArray([]cadence.Value{
-				cadence.NewArray([]cadence.Value{
-					nil,
+			testCase{
+				code: `
+                  pub fun main(): AnyStruct {
+                      let refs: [&AnyStruct] = []
+                      refs.append(&refs as &AnyStruct)
+                      return refs
+                  }
+                `,
+				expected: cadence.NewArray([]cadence.Value{
+					cadence.NewArray([]cadence.Value{
+						nil,
+					}).WithType(cadence.VariableSizedArrayType{
+						ElementType: cadence.ReferenceType{
+							Type: cadence.AnyStructType{},
+						},
+					}),
 				}).WithType(cadence.VariableSizedArrayType{
 					ElementType: cadence.ReferenceType{
 						Type: cadence.AnyStructType{},
 					},
 				}),
-			}).WithType(cadence.VariableSizedArrayType{
-				ElementType: cadence.ReferenceType{
-					Type: cadence.AnyStructType{},
-				},
-			}),
-		)
-	})
-
-	t.Run("storage path", func(t *testing.T) {
-
-		t.Parallel()
-
-		test(t,
-			`
-              pub fun main(): StoragePath {
-                  return /storage/foo
-              }
-            `,
-			cadence.Path{
-				Domain:     "storage",
-				Identifier: "foo",
-			},
-		)
-	})
-
-	t.Run("public path", func(t *testing.T) {
-
-		t.Parallel()
-
-		test(t,
-			`
-              pub fun main(): PublicPath {
-                  return /public/foo
-              }
-            `,
-			cadence.Path{
-				Domain:     "public",
-				Identifier: "foo",
-			},
-		)
-	})
-
-	t.Run("private path", func(t *testing.T) {
-
-		t.Parallel()
-
-		test(t,
-			`
-              pub fun main(): PrivatePath {
-                  return /private/foo
-              }
-            `,
-			cadence.Path{
-				Domain:     "private",
-				Identifier: "foo",
-			},
-		)
-	})
-
-	t.Run("capability path", func(t *testing.T) {
-
-		t.Parallel()
-
-		test(t,
-			`
-              pub fun main(): CapabilityPath {
-                  return /public/foo
-              }
-            `,
-			cadence.Path{
-				Domain:     "public",
-				Identifier: "foo",
-			},
-		)
-	})
-
-	t.Run("path", func(t *testing.T) {
-
-		t.Parallel()
-
-		test(t,
-			`
-              pub fun main(): Path {
-                  return /storage/foo
-              }
-            `,
-			cadence.Path{
-				Domain:     "storage",
-				Identifier: "foo",
 			},
 		)
 	})
@@ -5471,11 +5472,11 @@ func TestRuntimeMetrics(t *testing.T) {
 	)
 }
 
-type testWrite struct {
+type ownerKeyPair struct {
 	owner, key []byte
 }
 
-func (w testWrite) String() string {
+func (w ownerKeyPair) String() string {
 	return string(w.key)
 }
 
@@ -5525,10 +5526,10 @@ func TestRuntimeContractWriteback(t *testing.T) {
 	var accountCode []byte
 	var events []cadence.Event
 	var loggedMessages []string
-	var writes []testWrite
+	var writes []ownerKeyPair
 
 	onWrite := func(owner, key, value []byte) {
-		writes = append(writes, testWrite{
+		writes = append(writes, ownerKeyPair{
 			owner,
 			key,
 		})
@@ -5575,7 +5576,7 @@ func TestRuntimeContractWriteback(t *testing.T) {
 	assert.NotNil(t, accountCode)
 
 	assert.Equal(t,
-		[]testWrite{
+		[]ownerKeyPair{
 			// storage index to contract domain storage map
 			{
 				addressValue[:],
@@ -5624,7 +5625,7 @@ func TestRuntimeContractWriteback(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t,
-		[]testWrite{
+		[]ownerKeyPair{
 			// contract value
 			{
 				addressValue[:],
@@ -5667,10 +5668,10 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 	var accountCode []byte
 	var events []cadence.Event
 	var loggedMessages []string
-	var writes []testWrite
+	var writes []ownerKeyPair
 
 	onWrite := func(owner, key, _ []byte) {
-		writes = append(writes, testWrite{
+		writes = append(writes, ownerKeyPair{
 			owner,
 			key,
 		})
@@ -5717,7 +5718,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 	assert.NotNil(t, accountCode)
 
 	assert.Equal(t,
-		[]testWrite{
+		[]ownerKeyPair{
 			// storage index to contract domain storage map
 			{
 				addressValue[:],
@@ -5760,7 +5761,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t,
-		[]testWrite{
+		[]ownerKeyPair{
 			// storage index to storage domain storage map
 			{
 				addressValue[:],
@@ -5832,7 +5833,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t,
-		[]testWrite{
+		[]ownerKeyPair{
 			// resource value
 			{
 				addressValue[:],
