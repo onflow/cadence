@@ -190,7 +190,7 @@ typeAnnotation
 fullType
     : ( Auth? Ampersand (* followed by no whitespace *) )?
       innerType
-      ( (* no whitespace *) optionals+=Optional)*
+      ( (* no whitespace *) Optional)*
     ;
 
 
@@ -218,8 +218,8 @@ nominalType
 
 functionType
     : '('
-        '(' ( parameterTypes+=typeAnnotation ( ',' parameterTypes+=typeAnnotation )* )? ')'
-        ':' returnType=typeAnnotation
+        '(' ( typeAnnotation ( ',' typeAnnotation )* )? ')'
+        ':' typeAnnotation
       ')'
     ;
 

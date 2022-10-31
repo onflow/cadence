@@ -1004,10 +1004,15 @@ func TestCommonSuperType(t *testing.T) {
 					newCompositeWithInterfaces("Bar", interfaceType2, interfaceType3),
 					newCompositeWithInterfaces("Baz", interfaceType1, interfaceType2, interfaceType3),
 				},
-				expectedSuperType: &RestrictedType{
-					Type:         AnyStructType,
-					Restrictions: []*InterfaceType{interfaceType2},
-				},
+				expectedSuperType: func() Type {
+					typ := &RestrictedType{
+						Type:         AnyStructType,
+						Restrictions: []*InterfaceType{interfaceType2},
+					}
+					// just initialize for equality
+					typ.initializeRestrictionSet()
+					return typ
+				}(),
 			},
 			{
 				name: "multiple common interfaces",
@@ -1015,10 +1020,15 @@ func TestCommonSuperType(t *testing.T) {
 					newCompositeWithInterfaces("Foo", interfaceType1, interfaceType2),
 					newCompositeWithInterfaces("Baz", interfaceType1, interfaceType2, interfaceType3),
 				},
-				expectedSuperType: &RestrictedType{
-					Type:         AnyStructType,
-					Restrictions: []*InterfaceType{interfaceType1, interfaceType2},
-				},
+				expectedSuperType: func() Type {
+					typ := &RestrictedType{
+						Type:         AnyStructType,
+						Restrictions: []*InterfaceType{interfaceType1, interfaceType2},
+					}
+					// just initialize for equality
+					typ.initializeRestrictionSet()
+					return typ
+				}(),
 			},
 			{
 				name: "no common interfaces",
@@ -1513,6 +1523,8 @@ func TestCommonSuperType(t *testing.T) {
 	})
 
 	t.Run("Lower mask types", func(t *testing.T) {
+		t.Parallel()
+
 		for _, typeTag := range allLowerMaskedTypeTags {
 			// Upper mask must be zero
 			assert.Equal(t, uint64(0), typeTag.upperMask)
@@ -1537,6 +1549,8 @@ func TestCommonSuperType(t *testing.T) {
 	})
 
 	t.Run("Upper mask types", func(t *testing.T) {
+		t.Parallel()
+
 		for _, typeTag := range allUpperMaskedTypeTags {
 			// Lower mask must be zero
 			assert.Equal(t, uint64(0), typeTag.lowerMask)
@@ -1546,6 +1560,47 @@ func TestCommonSuperType(t *testing.T) {
 				typ := findSuperTypeFromUpperMask(typeTag, nil)
 				assert.NotNil(t, typ, fmt.Sprintf("not implemented %v", typeTag))
 			})
+		}
+	})
+
+	t.Run("Upper and lower mask types", func(t *testing.T) {
+		t.Parallel()
+
+		lowerMaskTypes := []Type{
+			NilType,
+			Int64Type,
+			AnyStructType,
+			AnyResourceType,
+		}
+
+		upperMaskTypes := []Type{
+			&CapabilityType{
+				BorrowType: AnyStructType,
+			},
+			&RestrictedType{
+				Type: AnyStructType,
+				Restrictions: []*InterfaceType{
+					{
+						Location:   common.StringLocation("test"),
+						Identifier: "Foo",
+					},
+				},
+			},
+		}
+
+		for _, firstType := range lowerMaskTypes {
+			for _, secondType := range upperMaskTypes {
+				superType := leastCommonSuperType(firstType, secondType)
+
+				switch firstType {
+				case AnyResourceType:
+					assert.Equal(t, InvalidType, superType)
+				case NilType:
+					assert.Equal(t, &OptionalType{Type: secondType}, superType)
+				default:
+					assert.Equal(t, AnyStructType, superType)
+				}
+			}
 		}
 	})
 
@@ -1780,5 +1835,56 @@ func TestTypeInclusions(t *testing.T) {
 		})
 
 		require.NoError(t, err)
+	})
+}
+
+func BenchmarkSuperTypeInference(b *testing.B) {
+
+	b.Run("integers", func(b *testing.B) {
+		types := []Type{
+			UInt8Type,
+			UInt256Type,
+			IntegerType,
+			Word64Type,
+		}
+
+		b.ReportAllocs()
+		b.ResetTimer()
+
+		for i := 0; i < b.N; i++ {
+			LeastCommonSuperType(types...)
+		}
+	})
+
+	b.Run("arrays", func(b *testing.B) {
+		types := []Type{
+			&VariableSizedType{
+				Type: IntType,
+			},
+			&VariableSizedType{
+				Type: Int8Type,
+			},
+		}
+
+		b.ReportAllocs()
+		b.ResetTimer()
+
+		for i := 0; i < b.N; i++ {
+			LeastCommonSuperType(types...)
+		}
+	})
+
+	b.Run("composites", func(b *testing.B) {
+		types := []Type{
+			PublicKeyType,
+			AuthAccountType,
+		}
+
+		b.ReportAllocs()
+		b.ResetTimer()
+
+		for i := 0; i < b.N; i++ {
+			LeastCommonSuperType(types...)
+		}
 	})
 }
