@@ -131,7 +131,12 @@ func TestExportValue(t *testing.T) {
 		},
 	}
 
-	testFunctionType := cadence.NewFunctionType("(():Void)", []cadence.Parameter{}, cadence.VoidType{})
+	testFunctionType := cadence.NewFunctionType(
+		"(():Void)",
+		sema.FunctionPurityImpure,
+		[]cadence.Parameter{},
+		cadence.VoidType{},
+	)
 
 	for _, tt := range []exportTest{
 		{

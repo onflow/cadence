@@ -2234,6 +2234,7 @@ func TestExportFunctionValue(t *testing.T) {
                 "kind": "Function",
                 "typeID": "(():Void)",
                 "parameters": [],
+                "purity":"",
                 "return": {
                   "kind": "Void"
                 }
