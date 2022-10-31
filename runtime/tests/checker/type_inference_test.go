@@ -1183,3 +1183,47 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
 		require.IsType(t, &sema.TypeAnnotationRequiredError{}, errs[0])
 	})
 }
+
+func TestCheckCompositeSupertypeInference(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("common inherited interface", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+                let x = true ? Foo() : Bar()
+
+                pub struct interface I1 {}
+
+                pub struct interface I2: I1 {}
+
+                pub struct interface I3: I1 {}
+
+                pub struct Foo: I2 {}
+
+                pub struct Bar: I3 {}
+            `
+
+		expectedType := &sema.RestrictedType{
+			Type: sema.AnyStructType,
+			Restrictions: []*sema.InterfaceType{
+				{
+					Location:      common.StringLocation("test"),
+					Identifier:    "I1",
+					CompositeKind: common.CompositeKindStructure,
+				},
+			},
+		}
+
+		checker, err := ParseAndCheck(t, code)
+		require.NoError(t, err)
+
+		xType := RequireGlobalValue(t, checker.Elaboration, "x")
+
+		require.IsType(t, &sema.RestrictedType{}, xType)
+		restrictedType := xType.(*sema.RestrictedType)
+
+		assert.Equal(t, expectedType.ID(), restrictedType.ID())
+	})
+}

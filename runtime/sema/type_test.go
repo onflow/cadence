@@ -938,6 +938,33 @@ func TestCommonSuperType(t *testing.T) {
 			Members:       &StringMemberOrderedMap{},
 		}
 
+		superInterfaceType := &InterfaceType{
+			Location:      testLocation,
+			Identifier:    "SI",
+			CompositeKind: common.CompositeKindStructure,
+			Members:       &StringMemberOrderedMap{},
+		}
+
+		inheritedInterfaceType1 := &InterfaceType{
+			Location:      testLocation,
+			Identifier:    "II1",
+			CompositeKind: common.CompositeKindStructure,
+			Members:       &StringMemberOrderedMap{},
+			ExplicitInterfaceConformances: []*InterfaceType{
+				superInterfaceType,
+			},
+		}
+
+		inheritedInterfaceType2 := &InterfaceType{
+			Location:      testLocation,
+			Identifier:    "II2",
+			CompositeKind: common.CompositeKindStructure,
+			Members:       &StringMemberOrderedMap{},
+			ExplicitInterfaceConformances: []*InterfaceType{
+				superInterfaceType,
+			},
+		}
+
 		newCompositeWithInterfaces := func(name string, interfaces ...*InterfaceType) *CompositeType {
 			return &CompositeType{
 				Location:                      testLocation,
@@ -1028,6 +1055,17 @@ func TestCommonSuperType(t *testing.T) {
 					newCompositeWithInterfaces("Baz", interfaceType3),
 				},
 				expectedSuperType: AnyStructType,
+			},
+			{
+				name: "inherited common interface",
+				types: []Type{
+					newCompositeWithInterfaces("Foo", inheritedInterfaceType1),
+					newCompositeWithInterfaces("Bar", inheritedInterfaceType2),
+				},
+				expectedSuperType: &RestrictedType{
+					Type:         AnyStructType,
+					Restrictions: []*InterfaceType{superInterfaceType},
+				},
 			},
 			{
 				name: "structs with never",

@@ -834,21 +834,27 @@ func commonSuperTypeOfComposites(types []Type) Type {
 
 		// NOTE: index 0 may not always be the first type, since there can be 'Never' types.
 		if firstType {
-			for _, interfaceType := range compositeType.ExplicitInterfaceConformances {
-				commonInterfaces[interfaceType.QualifiedIdentifier()] = true
-				commonInterfacesList = append(commonInterfacesList, interfaceType)
-			}
+			compositeType.ExplicitInterfaceConformances.ForeachDistinct(
+				func(_ *InterfaceType, interfaceType *InterfaceType) bool {
+					commonInterfaces[interfaceType.QualifiedIdentifier()] = true
+					commonInterfacesList = append(commonInterfacesList, interfaceType)
+					return true
+				},
+			)
 			firstType = false
 		} else {
 			intersection := map[string]bool{}
 			commonInterfacesList = make([]*InterfaceType, 0)
 
-			for _, interfaceType := range compositeType.ExplicitInterfaceConformances {
-				if _, ok := commonInterfaces[interfaceType.QualifiedIdentifier()]; ok {
-					intersection[interfaceType.QualifiedIdentifier()] = true
-					commonInterfacesList = append(commonInterfacesList, interfaceType)
-				}
-			}
+			compositeType.ExplicitInterfaceConformances.ForeachDistinct(
+				func(_ *InterfaceType, interfaceType *InterfaceType) bool {
+					if _, ok := commonInterfaces[interfaceType.QualifiedIdentifier()]; ok {
+						intersection[interfaceType.QualifiedIdentifier()] = true
+						commonInterfacesList = append(commonInterfacesList, interfaceType)
+					}
+					return true
+				},
+			)
 
 			commonInterfaces = intersection
 		}
