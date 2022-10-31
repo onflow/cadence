@@ -281,7 +281,7 @@ func TestEncodeDecodeArray(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				storage: inter.Config.Storage,
+				storage: inter.Storage(),
 				value:   expected,
 				encoded: []byte{
 					// tag
@@ -314,7 +314,7 @@ func TestEncodeDecodeArray(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				storage: inter.Config.Storage,
+				storage: inter.Storage(),
 				value:   expected,
 				encoded: []byte{
 					// tag
@@ -350,7 +350,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				storage: inter.Config.Storage,
+				storage: inter.Storage(),
 				value:   expected,
 				encoded: []byte{
 					// tag
@@ -388,7 +388,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				storage: inter.Config.Storage,
+				storage: inter.Storage(),
 				value:   expected,
 				encoded: []byte{
 					// tag

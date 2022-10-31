@@ -38,6 +38,14 @@ import (
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
+type assumeValidPublicKeyValidator struct{}
+
+var _ stdlib.PublicKeyValidator = assumeValidPublicKeyValidator{}
+
+func (assumeValidPublicKeyValidator) ValidatePublicKey(_ *stdlib.PublicKey) error {
+	return nil
+}
+
 type testMemoryGauge struct {
 	meter map[common.MemoryKind]uint64
 }
@@ -97,14 +105,14 @@ func TestInterpretArrayMetering(t *testing.T) {
 	t.Run("iteration", func(t *testing.T) {
 		t.Parallel()
 
-		script := `
-    pub fun main() {
-        let values: [[Int128]] = [[], [], []]
-        for value in values {
-        let a = value
-        }
-    }
-`
+		const script = `
+          pub fun main() {
+              let values: [[Int128]] = [[], [], []]
+              for value in values {
+              let a = value
+              }
+          }
+        `
 
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
@@ -423,13 +431,13 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-	            pub fun main() {
-	                let values: [{Int8: String}] = [{}, {}, {}]
-	                for value in values {
-	                  let a = value
-	                }
+	        pub fun main() {
+	            let values: [{Int8: String}] = [{}, {}, {}]
+	            for value in values {
+	              let a = value
 	            }
-	        `
+	        }
+	    `
 
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
@@ -1049,12 +1057,9 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 		meter := newTestMemoryGauge()
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-		for _, valueDeclaration := range stdlib.BuiltinValues {
-			baseValueActivation.DeclareValue(valueDeclaration)
-		}
-
 		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
-		for _, valueDeclaration := range stdlib.BuiltinValues {
+		for _, valueDeclaration := range stdlib.DefaultStandardLibraryValues(nil) {
+			baseValueActivation.DeclareValue(valueDeclaration)
 			interpreter.Declare(baseActivation, valueDeclaration)
 		}
 
@@ -1093,12 +1098,16 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
         `
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-		for _, valueDeclaration := range stdlib.BuiltinValues {
-			baseValueActivation.DeclareValue(valueDeclaration)
-		}
-
 		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
-		for _, valueDeclaration := range stdlib.BuiltinValues {
+		for _, valueDeclaration := range []stdlib.StandardLibraryValue{
+			stdlib.NewPublicKeyConstructor(
+				assumeValidPublicKeyValidator{},
+				nil,
+				nil,
+			),
+			stdlib.SignatureAlgorithmConstructor,
+		} {
+			baseValueActivation.DeclareValue(valueDeclaration)
 			interpreter.Declare(baseActivation, valueDeclaration)
 		}
 
@@ -1112,13 +1121,6 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 				},
 				Config: &interpreter.Config{
 					BaseActivation: baseActivation,
-					PublicKeyValidationHandler: func(
-						_ *interpreter.Interpreter,
-						_ interpreter.LocationRange,
-						_ *interpreter.CompositeValue,
-					) error {
-						return nil
-					},
 				},
 			},
 			meter,
@@ -1129,8 +1131,7 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		// 1 host function created for 'decodeHex' of String value
-		// 'publicKeyVerify' and 'publicKeyVerifyPop' functions of PublicKey value are not metered
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindHostFunctionValue))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindHostFunctionValue))
 	})
 
 	t.Run("multiple public key creation", func(t *testing.T) {
@@ -1151,12 +1152,16 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
         `
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-		for _, valueDeclaration := range stdlib.BuiltinValues {
-			baseValueActivation.DeclareValue(valueDeclaration)
-		}
-
 		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
-		for _, valueDeclaration := range stdlib.BuiltinValues {
+		for _, valueDeclaration := range []stdlib.StandardLibraryValue{
+			stdlib.NewPublicKeyConstructor(
+				assumeValidPublicKeyValidator{},
+				nil,
+				nil,
+			),
+			stdlib.SignatureAlgorithmConstructor,
+		} {
+			baseValueActivation.DeclareValue(valueDeclaration)
 			interpreter.Declare(baseActivation, valueDeclaration)
 		}
 
@@ -1170,13 +1175,6 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 				},
 				Config: &interpreter.Config{
 					BaseActivation: baseActivation,
-					PublicKeyValidationHandler: func(
-						_ *interpreter.Interpreter,
-						_ interpreter.LocationRange,
-						_ *interpreter.CompositeValue,
-					) error {
-						return nil
-					},
 				},
 			},
 			meter,
@@ -1187,8 +1185,7 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		// 2 = 2x 1 host function created for 'decodeHex' of String value
-		// 'publicKeyVerify' and 'publicKeyVerifyPop' functions of PublicKey value are not metered
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindHostFunctionValue))
+		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindHostFunctionValue))
 	})
 }
 
