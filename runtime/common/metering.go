@@ -195,6 +195,7 @@ var (
 	CadenceAddressValueMemoryUsage      = NewConstantMemoryUsage(MemoryKindCadenceAddressValue)
 	CadenceBoolValueMemoryUsage         = NewConstantMemoryUsage(MemoryKindCadenceBoolValue)
 	CadenceCapabilityValueMemoryUsage   = NewConstantMemoryUsage(MemoryKindCadenceCapabilityValue)
+	CadenceFunctionValueMemoryUsage     = NewConstantMemoryUsage(MemoryKindCadenceFunctionValue)
 	CadenceKeyValuePairMemoryUsage      = NewConstantMemoryUsage(MemoryKindCadenceKeyValuePair)
 	CadenceLinkValueMemoryUsage         = NewConstantMemoryUsage(MemoryKindCadenceLinkValue)
 	CadenceOptionalValueMemoryUsage     = NewConstantMemoryUsage(MemoryKindCadenceOptionalValue)

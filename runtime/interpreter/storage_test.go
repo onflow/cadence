@@ -65,7 +65,7 @@ func TestCompositeStorage(t *testing.T) {
 
 	const fieldName = "test"
 
-	value.SetMember(inter, EmptyLocationRange, fieldName, BoolValue(true))
+	value.SetMember(inter, EmptyLocationRange, fieldName, TrueValue)
 
 	require.Equal(t, 1, storage.BasicSlabStorage.Count())
 
@@ -81,7 +81,7 @@ func TestCompositeStorage(t *testing.T) {
 	RequireValuesEqual(
 		t,
 		inter,
-		BoolValue(true),
+		TrueValue,
 		storedComposite.GetField(inter, EmptyLocationRange, fieldName),
 	)
 }
@@ -259,7 +259,7 @@ func TestDictionaryStorage(t *testing.T) {
 		require.True(t, ok)
 
 		entryKey := NewUnmeteredStringValue("test")
-		entryValue := BoolValue(true)
+		entryValue := TrueValue
 
 		value.SetKey(
 			inter,
@@ -306,7 +306,7 @@ func TestDictionaryStorage(t *testing.T) {
 				ValueType: PrimitiveStaticTypeAnyStruct,
 			},
 			NewUnmeteredStringValue("test"),
-			NewUnmeteredSomeValueNonCopying(BoolValue(true)),
+			NewUnmeteredSomeValueNonCopying(TrueValue),
 		)
 
 		require.NotEqual(t, atree.StorageIDUndefined, value.StorageID())
@@ -356,7 +356,7 @@ func TestDictionaryStorage(t *testing.T) {
 				ValueType: PrimitiveStaticTypeAnyStruct,
 			},
 			NewUnmeteredStringValue("test"),
-			NewUnmeteredSomeValueNonCopying(BoolValue(true)),
+			NewUnmeteredSomeValueNonCopying(TrueValue),
 		)
 
 		require.NotEqual(t, atree.StorageIDUndefined, value.StorageID())
@@ -418,7 +418,7 @@ func TestDictionaryStorage(t *testing.T) {
 			inter,
 			EmptyLocationRange,
 			NewUnmeteredStringValue("test"),
-			NewUnmeteredSomeValueNonCopying(BoolValue(true)),
+			NewUnmeteredSomeValueNonCopying(TrueValue),
 		)
 
 		require.Equal(t, 1, storage.BasicSlabStorage.Count())

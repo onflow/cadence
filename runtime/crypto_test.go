@@ -72,7 +72,7 @@ func TestRuntimeCrypto_verify(t *testing.T) {
       }
     `)
 
-	called := false
+	var called bool
 
 	storage := newTestLedger(nil, nil)
 
@@ -143,7 +143,7 @@ func TestRuntimeHashAlgorithm_hash(t *testing.T) {
             }
         `
 
-		called := false
+		var called bool
 
 		var loggedMessages []string
 
@@ -188,7 +188,7 @@ func TestRuntimeHashAlgorithm_hash(t *testing.T) {
             }
         `
 
-		called := false
+		var called bool
 		hashTag := "non-empty-string"
 
 		storage := newTestLedger(nil, nil)
@@ -221,7 +221,7 @@ func TestRuntimeHashAlgorithm_hash(t *testing.T) {
             }
         `
 
-		called := false
+		var called bool
 		hashTag := ""
 
 		storage := newTestLedger(nil, nil)
@@ -490,7 +490,7 @@ func TestBLSVerifyPoP(t *testing.T) {
       }
     `)
 
-	called := false
+	var called bool
 
 	storage := newTestLedger(nil, nil)
 
@@ -550,7 +550,7 @@ func TestBLSAggregateSignatures(t *testing.T) {
       }
     `)
 
-	called := false
+	var called bool
 
 	storage := newTestLedger(nil, nil)
 
@@ -617,7 +617,7 @@ func TestBLSAggregatePublicKeys(t *testing.T) {
       }
     `)
 
-	called := false
+	var called bool
 
 	storage := newTestLedger(nil, nil)
 
