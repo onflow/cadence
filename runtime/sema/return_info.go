@@ -41,6 +41,31 @@ type ReturnInfo struct {
 	// DefinitelyHalted indicates that (the branch of) the function
 	// contains a definite halt (a function call with a Never return type)
 	DefinitelyHalted bool
+	// DefinitelyReturnedOrHalted indicates that (the branch of)
+	// the function contains a definite return statement
+	// or a definite halt (a function call with a Never return type).
+	//
+	// NOTE: this is NOT the same DefinitelyReturned || DefinitelyHalted:
+	// For example, for the following program:
+	//
+	//   if ... {
+	//       return
+	//
+	//       // DefinitelyReturned = true
+	//	     // DefinitelyHalted = false
+	//	     // DefinitelyReturnedOrHalted = true
+	//   } else {
+	//       panic(...)
+	//
+	//       // DefinitelyReturned = false
+	//	     // DefinitelyHalted = true
+	//	     // DefinitelyReturnedOrHalted = true
+	//   }
+	//
+	//   // DefinitelyReturned = false
+	//   // DefinitelyHalted = false
+	//   // DefinitelyReturnedOrHalted = true
+	DefinitelyReturnedOrHalted bool
 	// DefinitelyJumped indicates that (the branch of) the function
 	// contains a definite break or continue statement
 	DefinitelyJumped bool
@@ -73,6 +98,10 @@ func (ri *ReturnInfo) MergeBranches(thenReturnInfo *ReturnInfo, elseReturnInfo *
 	ri.DefinitelyHalted = ri.DefinitelyHalted ||
 		(thenReturnInfo.DefinitelyHalted &&
 			elseReturnInfo.DefinitelyHalted)
+
+	ri.DefinitelyReturnedOrHalted = ri.DefinitelyReturnedOrHalted ||
+		(thenReturnInfo.DefinitelyReturnedOrHalted &&
+			elseReturnInfo.DefinitelyReturnedOrHalted)
 }
 
 func (ri *ReturnInfo) MergePotentiallyUnevaluated(temporaryReturnInfo *ReturnInfo) {
@@ -89,8 +118,9 @@ func (ri *ReturnInfo) Clone() *ReturnInfo {
 }
 
 func (ri *ReturnInfo) IsUnreachable() bool {
-	return ri.DefinitelyReturned ||
-		ri.DefinitelyHalted ||
+	// NOTE: intentionally NOT DefinitelyReturned || DefinitelyHalted,
+	// see DefinitelyReturnedOrHalted
+	return ri.DefinitelyReturnedOrHalted ||
 		ri.DefinitelyJumped
 }
 
