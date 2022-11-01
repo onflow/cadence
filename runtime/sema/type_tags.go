@@ -823,7 +823,7 @@ func commonSuperTypeOfHeterogeneousTypes(types []Type) Type {
 func commonSuperTypeOfComposites(types []Type) Type {
 	var hasStructs, hasResources bool
 
-	commonInterfaces := map[string]bool{}
+	commonInterfaces := map[*InterfaceType]struct{}{}
 	commonInterfacesList := make([]*InterfaceType, 0)
 
 	hasCommonInterface := true
@@ -863,20 +863,20 @@ func commonSuperTypeOfComposites(types []Type) Type {
 			if firstType {
 				compositeType.ExplicitInterfaceConformances.ForeachDistinct(
 					func(_ *InterfaceType, interfaceType *InterfaceType) bool {
-						commonInterfaces[interfaceType.QualifiedIdentifier()] = true
+						commonInterfaces[interfaceType] = struct{}{}
 						commonInterfacesList = append(commonInterfacesList, interfaceType)
 						return true
 					},
 				)
 				firstType = false
 			} else {
-				intersection := map[string]bool{}
+				intersection := map[*InterfaceType]struct{}{}
 				commonInterfacesList = make([]*InterfaceType, 0)
 
 				compositeType.ExplicitInterfaceConformances.ForeachDistinct(
 					func(_ *InterfaceType, interfaceType *InterfaceType) bool {
-						if _, ok := commonInterfaces[interfaceType.QualifiedIdentifier()]; ok {
-							intersection[interfaceType.QualifiedIdentifier()] = true
+						if _, ok := commonInterfaces[interfaceType]; ok {
+							intersection[interfaceType] = struct{}{}
 							commonInterfacesList = append(commonInterfacesList, interfaceType)
 						}
 						return true
