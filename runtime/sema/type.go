@@ -6236,6 +6236,27 @@ func (t *RestrictedType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
+func (t *RestrictedType) isTypeIndexableType() bool {
+	// resources and structs only can be indexed for attachments, but all restricted types
+	// are necessarily structs and resources, we return true
+	return true
+}
+
+func (t *RestrictedType) TypeIndexingElementType(indexingType Type) Type {
+	return &OptionalType{
+		&ReferenceType{
+			Type: indexingType,
+		},
+	}
+}
+
+func (t *RestrictedType) IsValidIndexingType(ty Type) bool {
+	attachmentType, isComposite := ty.(*CompositeType)
+	return isComposite &&
+		IsSubType(t, attachmentType.baseType) &&
+		attachmentType.IsResourceType() == t.IsResourceType()
+}
+
 // CapabilityType
 
 type CapabilityType struct {
