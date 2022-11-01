@@ -510,7 +510,7 @@ func TestParseArrayExpression(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("array expression", func(t *testing.T) {
+	t.Run("single line", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -577,13 +577,60 @@ func TestParseArrayExpression(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("multi line", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseExpression("[ 1 , \n 2 \n , \n\n 3 \n\n\n]")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.ArrayExpression{
+				Values: []ast.Expression{
+					&ast.IntegerExpression{
+						PositiveLiteral: []byte("1"),
+						Value:           big.NewInt(1),
+						Base:            10,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
+					},
+					&ast.IntegerExpression{
+						PositiveLiteral: []byte("2"),
+						Value:           big.NewInt(2),
+						Base:            10,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 2, Column: 1, Offset: 8},
+							EndPos:   ast.Position{Line: 2, Column: 1, Offset: 8},
+						},
+					},
+					&ast.IntegerExpression{
+						PositiveLiteral: []byte("3"),
+						Value:           big.NewInt(3),
+						Base:            10,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 5, Column: 1, Offset: 17},
+							EndPos:   ast.Position{Line: 5, Column: 1, Offset: 17},
+						},
+					},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 8, Column: 0, Offset: 22},
+				},
+			},
+			result,
+		)
+	})
 }
 
 func TestParseDictionaryExpression(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("dictionary expression", func(t *testing.T) {
+	t.Run("single line", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -649,6 +696,86 @@ func TestParseDictionaryExpression(t *testing.T) {
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 19, Offset: 19},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("multi line", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseExpression("{ 1 : 2 , \n 3 \n : \n 4 \n , \n\n 5 \n\n : \n\n 6 \n\n }")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.DictionaryExpression{
+				Entries: []ast.DictionaryEntry{
+					{
+						Key: &ast.IntegerExpression{
+							PositiveLiteral: []byte("1"),
+							Value:           big.NewInt(1),
+							Base:            10,
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+								EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+							},
+						},
+						Value: &ast.IntegerExpression{
+							PositiveLiteral: []byte("2"),
+							Value:           big.NewInt(2),
+							Base:            10,
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
+								EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+							},
+						},
+					},
+					{
+						Key: &ast.IntegerExpression{
+							PositiveLiteral: []byte("3"),
+							Value:           big.NewInt(3),
+							Base:            10,
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 2, Column: 1, Offset: 12},
+								EndPos:   ast.Position{Line: 2, Column: 1, Offset: 12},
+							},
+						},
+						Value: &ast.IntegerExpression{
+							PositiveLiteral: []byte("4"),
+							Value:           big.NewInt(4),
+							Base:            10,
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 4, Column: 1, Offset: 20},
+								EndPos:   ast.Position{Line: 4, Column: 1, Offset: 20},
+							},
+						},
+					},
+					{
+						Key: &ast.IntegerExpression{
+							PositiveLiteral: []byte("5"),
+							Value:           big.NewInt(5),
+							Base:            10,
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 7, Column: 1, Offset: 29},
+								EndPos:   ast.Position{Line: 7, Column: 1, Offset: 29},
+							},
+						},
+						Value: &ast.IntegerExpression{
+							PositiveLiteral: []byte("6"),
+							Value:           big.NewInt(6),
+							Base:            10,
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 11, Column: 1, Offset: 39},
+								EndPos:   ast.Position{Line: 11, Column: 1, Offset: 39},
+							},
+						},
+					},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 13, Column: 1, Offset: 44},
 				},
 			},
 			result,

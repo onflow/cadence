@@ -1090,20 +1090,19 @@ func defineArrayExpression() {
 		func(p *parser, startToken lexer.Token) (ast.Expression, error) {
 			var values []ast.Expression
 			for !p.current.Is(lexer.TokenBracketClose) {
+				p.skipSpaceAndComments()
+				if len(values) > 0 {
+					if !p.current.Is(lexer.TokenComma) {
+						break
+					}
+					p.next()
+				}
+
 				value, err := parseExpression(p, lowestBindingPower)
 				if err != nil {
 					return nil, err
 				}
-
 				values = append(values, value)
-				if !p.current.Is(lexer.TokenComma) {
-					break
-				}
-
-				_, err = p.mustOne(lexer.TokenComma)
-				if err != nil {
-					return nil, err
-				}
 			}
 
 			endToken, err := p.mustOne(lexer.TokenBracketClose)
@@ -1130,6 +1129,14 @@ func defineDictionaryExpression() {
 		func(p *parser, startToken lexer.Token) (ast.Expression, error) {
 			var entries []ast.DictionaryEntry
 			for !p.current.Is(lexer.TokenBraceClose) {
+				p.skipSpaceAndComments()
+				if len(entries) > 0 {
+					if !p.current.Is(lexer.TokenComma) {
+						break
+					}
+					p.next()
+				}
+
 				key, err := parseExpression(p, lowestBindingPower)
 				if err != nil {
 					return nil, err
@@ -1150,15 +1157,8 @@ func defineDictionaryExpression() {
 					key,
 					value,
 				))
-				if !p.current.Is(lexer.TokenComma) {
-					break
-				}
-
-				_, err = p.mustOne(lexer.TokenComma)
-				if err != nil {
-					return nil, err
-				}
 			}
+
 			endToken, err := p.mustOne(lexer.TokenBraceClose)
 			if err != nil {
 				return nil, err
