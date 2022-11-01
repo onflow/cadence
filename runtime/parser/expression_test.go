@@ -870,7 +870,7 @@ func TestParseString(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message: "invalid end of string literal: missing '\"'",
-					Pos:     ast.Position{Line: 2, Column: 0, Offset: 2},
+					Pos:     ast.Position{Line: 1, Column: 1, Offset: 1},
 				},
 			},
 			errs,
@@ -923,7 +923,7 @@ func TestParseString(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message: "invalid end of string literal: missing '\"'",
-					Pos:     ast.Position{Line: 2, Column: 0, Offset: 3},
+					Pos:     ast.Position{Line: 1, Column: 2, Offset: 2},
 				},
 			},
 			errs,
@@ -1928,11 +1928,11 @@ func TestParseBlockComment(t *testing.T) {
 			[]error{
 				// `true */ bar` is parsed as infix operation of path
 				&SyntaxError{
-					Message: "expected token '/'",
+					Message: "expected token identifier",
 					Pos: ast.Position{
-						Offset: 41,
+						Offset: 37,
 						Line:   1,
-						Column: 41,
+						Column: 37,
 					},
 				},
 			},
