@@ -13838,6 +13838,13 @@ type CompositeValue struct {
 	isDestroyed         bool
 	typeID              common.TypeID
 	staticType          StaticType
+
+	// attachments also have a reference to their base value. This field is set in three cases:
+	// 1) when an attachment `A` is accessed off `v` using `v[A]`, this is set to `&v`
+	// 2) When a resource `r`'s destructor is invoked, all of `r`'s attachments' destructors will also run, and
+	//    have their `super` fields set to `&r`
+	// 3) When a value is transferred, this field is copied between its attachments
+	base *EphemeralReferenceValue
 }
 
 type ComputedField func(*Interpreter, LocationRange) Value
@@ -13940,28 +13947,6 @@ func NewCompositeValue(
 	}
 
 	return v
-}
-
-func NewAttachmentValue(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	location common.Location,
-	qualifiedIdentifier string,
-	fields []CompositeField,
-	address common.Address,
-	base *CompositeValue,
-) (attachment *CompositeValue) {
-	attachment = NewCompositeValue(
-		interpreter,
-		locationRange,
-		location,
-		qualifiedIdentifier,
-		common.CompositeKindAttachment,
-		fields,
-		address,
-	)
-	attachment.SetMember(interpreter, locationRange, attachmentBaseName, base)
-	return
 }
 
 func newCompositeValueFromOrderedMap(
@@ -14073,8 +14058,11 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 	}
 
 	// if this type has attachments, destroy all of them before invoking the destructor
-	v.forEachAttachment(interpreter, locationRange, func(v *CompositeValue) {
-		v.Destroy(interpreter, locationRange)
+	v.forEachAttachment(interpreter, locationRange, func(attachment *CompositeValue) {
+		// an attachment's destructor may make reference to `super`, so we must set the base value
+		// for the attachment before invoking its destructor
+		attachment.setBaseValue(interpreter, v)
+		attachment.Destroy(interpreter, locationRange)
 	})
 
 	interpreter = v.getInterpreter(interpreter)
@@ -14089,8 +14077,8 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 	var super *EphemeralReferenceValue
 	var self MemberAccessibleValue = v
 	if v.Kind == common.CompositeKindAttachment {
-		super = v.AccessBase(interpreter, locationRange)
-		self = NewEphemeralReferenceValue(interpreter, false, v, interpreter.MustConvertStaticToSemaType(v.staticType))
+		super = v.getBaseValue(interpreter, locationRange)
+		self = NewEphemeralReferenceValue(interpreter, false, v, interpreter.MustConvertStaticToSemaType(v.StaticType(interpreter)))
 	}
 
 	if destructor != nil {
@@ -14218,9 +14206,9 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 		var super *EphemeralReferenceValue
 		var self MemberAccessibleValue = v
 		if v.Kind == common.CompositeKindAttachment {
-			super = v.AccessBase(interpreter, locationRange)
+			super = v.getBaseValue(interpreter, locationRange)
 			// in attachment functions, self is a reference value
-			self = NewEphemeralReferenceValue(interpreter, false, v, interpreter.MustConvertStaticToSemaType(v.staticType))
+			self = NewEphemeralReferenceValue(interpreter, false, v, interpreter.MustConvertStaticToSemaType(v.StaticType(interpreter)))
 		}
 		return NewBoundFunctionValue(interpreter, function, &self, super)
 	}
@@ -14619,7 +14607,7 @@ func (v *CompositeValue) ConformsToStaticType(
 	}
 
 	if compositeType.Kind == common.CompositeKindAttachment {
-		base := v.getBaseValue(interpreter, locationRange)
+		base := v.getBaseValue(interpreter, locationRange).Value
 		if base == nil || !base.ConformsToStaticType(interpreter, locationRange, results) {
 			return false
 		}
@@ -14707,7 +14695,7 @@ func (v *CompositeValue) NeedsStoreTo(address atree.Address) bool {
 
 func (v *CompositeValue) IsResourceKinded(interpreter *Interpreter) bool {
 	if v.Kind == common.CompositeKindAttachment {
-		base := v.getBaseValue(interpreter, EmptyLocationRange)
+		base := v.getBaseValue(interpreter, EmptyLocationRange).Value
 		return base != nil && base.IsResourceKinded(interpreter)
 	}
 	return v.Kind == common.CompositeKindResource
@@ -14798,8 +14786,14 @@ func (v *CompositeValue) Transfer(
 				// NOTE: key is stringAtreeValue
 				// and does not need to be converted or copied
 
-				value := MustConvertStoredValue(interpreter, atreeValue).
-					Transfer(interpreter, locationRange, address, remove, nil)
+				value := MustConvertStoredValue(interpreter, atreeValue)
+				// the super of an attachment is not stored in the atree, so in order to make the
+				// transfer happen properly, we set the base value here if this field is an attachment
+				if compositeValue, ok := value.(*CompositeValue); ok && compositeValue.Kind == common.CompositeKindAttachment {
+					compositeValue.setBaseValue(interpreter, v)
+				}
+
+				value = value.Transfer(interpreter, locationRange, address, remove, nil)
 
 				return atreeKey, value, nil
 			},
@@ -14873,6 +14867,7 @@ func (v *CompositeValue) Transfer(
 		res.isDestroyed = v.isDestroyed
 		res.typeID = v.typeID
 		res.staticType = v.staticType
+		res.base = v.base
 	}
 
 	onResourceOwnerChange := config.OnResourceOwnerChange
@@ -14955,6 +14950,7 @@ func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
 		isDestroyed:         v.isDestroyed,
 		typeID:              v.typeID,
 		staticType:          v.staticType,
+		base:                v.base,
 	}
 }
 
@@ -15087,8 +15083,18 @@ func NewEnumCaseValue(
 	return v
 }
 
-func (v *CompositeValue) getBaseValue(interpreter *Interpreter, locationRange LocationRange) Value {
-	return v.GetMember(interpreter, locationRange, attachmentBaseName)
+func (v *CompositeValue) getBaseValue(interpreter *Interpreter, locationRange LocationRange) *EphemeralReferenceValue {
+	return v.base
+}
+
+func (v *CompositeValue) setBaseValue(interpreter *Interpreter, base *CompositeValue) {
+	attachmentType, ok := interpreter.MustConvertStaticToSemaType(v.StaticType(interpreter)).(*sema.CompositeType)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	// the super reference can only be borrowed with the declared type of the attachment's base
+	v.base = NewEphemeralReferenceValue(interpreter, false, base, attachmentType.GetBaseType())
 }
 
 func (v *CompositeValue) getAttachmentValue(interpreter *Interpreter, locationRange LocationRange, ty sema.Type) Value {
@@ -15118,18 +15124,6 @@ func (v *CompositeValue) forEachAttachment(interpreter *Interpreter, locationRan
 	}
 }
 
-func (v *CompositeValue) AccessBase(interpreter *Interpreter, locationRange LocationRange) *EphemeralReferenceValue {
-	base := v.getBaseValue(interpreter, locationRange)
-
-	attachmentType, ok := interpreter.MustConvertStaticToSemaType(v.staticType).(*sema.CompositeType)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	// the super reference can only be borrowed with the declared type of the attachment's base
-	return NewEphemeralReferenceValue(interpreter, false, base, attachmentType.GetBaseType())
-}
-
 func (v *CompositeValue) GetTypeKey(
 	interpreter *Interpreter,
 	locationRange LocationRange,
@@ -15139,6 +15133,8 @@ func (v *CompositeValue) GetTypeKey(
 	if attachment == nil {
 		return NilValue{}
 	}
+	// dynamically set the attachment's base to this composite
+	attachment.(*CompositeValue).setBaseValue(interpreter, v)
 	return NewSomeValueNonCopying(interpreter, NewEphemeralReferenceValue(interpreter, false, attachment, ty))
 }
 
@@ -16894,6 +16890,7 @@ type StorageReferenceValue struct {
 var _ Value = &StorageReferenceValue{}
 var _ EquatableValue = &StorageReferenceValue{}
 var _ ValueIndexableValue = &StorageReferenceValue{}
+var _ TypeIndexableValue = &StorageReferenceValue{}
 var _ MemberAccessibleValue = &StorageReferenceValue{}
 
 func NewUnmeteredStorageReferenceValue(
@@ -17003,10 +17000,9 @@ func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter) *Value
 	return value
 }
 
-func (v *StorageReferenceValue) GetMember(
+func (v *StorageReferenceValue) mustReferencedValue(
 	interpreter *Interpreter,
 	locationRange LocationRange,
-	name string,
 ) Value {
 	referencedValue := v.ReferencedValue(interpreter)
 	if referencedValue == nil {
@@ -17018,6 +17014,15 @@ func (v *StorageReferenceValue) GetMember(
 	self := *referencedValue
 
 	interpreter.checkReferencedResourceNotDestroyed(self, locationRange)
+	return self
+}
+
+func (v *StorageReferenceValue) GetMember(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	name string,
+) Value {
+	self := v.mustReferencedValue(interpreter, locationRange)
 
 	return interpreter.getMember(self, locationRange, name)
 }
@@ -17027,16 +17032,7 @@ func (v *StorageReferenceValue) RemoveMember(
 	locationRange LocationRange,
 	name string,
 ) Value {
-	referencedValue := v.ReferencedValue(interpreter)
-	if referencedValue == nil {
-		panic(DereferenceError{
-			LocationRange: locationRange,
-		})
-	}
-
-	self := *referencedValue
-
-	interpreter.checkReferencedResourceNotDestroyed(self, locationRange)
+	self := v.mustReferencedValue(interpreter, locationRange)
 
 	return self.(MemberAccessibleValue).RemoveMember(interpreter, locationRange, name)
 }
@@ -17047,16 +17043,7 @@ func (v *StorageReferenceValue) SetMember(
 	name string,
 	value Value,
 ) {
-	referencedValue := v.ReferencedValue(interpreter)
-	if referencedValue == nil {
-		panic(DereferenceError{
-			LocationRange: locationRange,
-		})
-	}
-
-	self := *referencedValue
-
-	interpreter.checkReferencedResourceNotDestroyed(self, locationRange)
+	self := v.mustReferencedValue(interpreter, locationRange)
 
 	interpreter.setMember(self, locationRange, name, value)
 }
@@ -17066,16 +17053,7 @@ func (v *StorageReferenceValue) GetKey(
 	locationRange LocationRange,
 	key Value,
 ) Value {
-	referencedValue := v.ReferencedValue(interpreter)
-	if referencedValue == nil {
-		panic(DereferenceError{
-			LocationRange: locationRange,
-		})
-	}
-
-	self := *referencedValue
-
-	interpreter.checkReferencedResourceNotDestroyed(self, locationRange)
+	self := v.mustReferencedValue(interpreter, locationRange)
 
 	return self.(ValueIndexableValue).
 		GetKey(interpreter, locationRange, key)
@@ -17087,16 +17065,7 @@ func (v *StorageReferenceValue) SetKey(
 	key Value,
 	value Value,
 ) {
-	referencedValue := v.ReferencedValue(interpreter)
-	if referencedValue == nil {
-		panic(DereferenceError{
-			LocationRange: locationRange,
-		})
-	}
-
-	self := *referencedValue
-
-	interpreter.checkReferencedResourceNotDestroyed(self, locationRange)
+	self := v.mustReferencedValue(interpreter, locationRange)
 
 	self.(ValueIndexableValue).
 		SetKey(interpreter, locationRange, key, value)
@@ -17108,16 +17077,7 @@ func (v *StorageReferenceValue) InsertKey(
 	key Value,
 	value Value,
 ) {
-	referencedValue := v.ReferencedValue(interpreter)
-	if referencedValue == nil {
-		panic(DereferenceError{
-			LocationRange: locationRange,
-		})
-	}
-
-	self := *referencedValue
-
-	interpreter.checkReferencedResourceNotDestroyed(self, locationRange)
+	self := v.mustReferencedValue(interpreter, locationRange)
 
 	self.(ValueIndexableValue).
 		InsertKey(interpreter, locationRange, key, value)
@@ -17128,19 +17088,44 @@ func (v *StorageReferenceValue) RemoveKey(
 	locationRange LocationRange,
 	key Value,
 ) Value {
-	referencedValue := v.ReferencedValue(interpreter)
-	if referencedValue == nil {
-		panic(DereferenceError{
-			LocationRange: locationRange,
-		})
-	}
-
-	self := *referencedValue
-
-	interpreter.checkReferencedResourceNotDestroyed(self, locationRange)
+	self := v.mustReferencedValue(interpreter, locationRange)
 
 	return self.(ValueIndexableValue).
 		RemoveKey(interpreter, locationRange, key)
+}
+
+func (v *StorageReferenceValue) GetTypeKey(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	key sema.Type,
+) Value {
+	self := v.mustReferencedValue(interpreter, locationRange)
+
+	return self.(TypeIndexableValue).
+		GetTypeKey(interpreter, locationRange, key)
+}
+
+func (v *StorageReferenceValue) SetTypeKey(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	key sema.Type,
+	value Value,
+) {
+	self := v.mustReferencedValue(interpreter, locationRange)
+
+	self.(TypeIndexableValue).
+		SetTypeKey(interpreter, locationRange, key, value)
+}
+
+func (v *StorageReferenceValue) RemoveTypeKey(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	key sema.Type,
+) Value {
+	self := v.mustReferencedValue(interpreter, locationRange)
+
+	return self.(TypeIndexableValue).
+		RemoveTypeKey(interpreter, locationRange, key)
 }
 
 func (v *StorageReferenceValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {

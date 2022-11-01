@@ -2709,6 +2709,30 @@ func TestCheckAttachWithArguments(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("attach super argument", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			attachment A for S {
+				let x: Int 
+				init(x: Int) {
+					self.x = x
+				}
+			}
+			pub fun foo() {
+				attach A(x: super) to S()
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+	})
+
 	t.Run("attach two arg", func(t *testing.T) {
 
 		t.Parallel()

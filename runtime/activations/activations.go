@@ -107,6 +107,15 @@ func (a *Activation[T]) Set(name string, value T) {
 	a.entries[name] = value
 }
 
+// Remove removes the given name from the activation.
+func (a *Activation[T]) Remove(name string) {
+	if a.entries == nil {
+		return
+	}
+
+	delete(a.entries, name)
+}
+
 // Activations is a stack of activation records.
 // Each entry represents a new activation record.
 //
@@ -157,6 +166,16 @@ func (a *Activations[T]) Set(name string, value T) {
 	}
 
 	current.Set(name, value)
+}
+
+// Remove removes the given name from the current scope.
+func (a *Activations[T]) Remove(name string) {
+	current := a.Current()
+	if current == nil {
+		return
+	}
+
+	current.Remove(name)
 }
 
 // PushNewWithParent pushes a new empty activation

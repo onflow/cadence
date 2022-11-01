@@ -1187,6 +1187,10 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				value.Destructor = destructorFunction
 
 				var self MemberAccessibleValue = value
+				if declaration.CompositeKind == common.CompositeKindAttachment {
+					self = NewEphemeralReferenceValue(interpreter, false, value, interpreter.MustConvertStaticToSemaType(value.StaticType(interpreter)))
+					invocation.Super = interpreter.FindVariable(sema.SuperIdentifier).GetValue().(*EphemeralReferenceValue)
+				}
 				invocation.Self = &self
 
 				if declaration.CompositeKind == common.CompositeKindContract {

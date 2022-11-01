@@ -1191,7 +1191,23 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 		panic(errors.NewUnreachableError())
 	}
 
+	// the `super` value must be accessible during the attachment's constructor, but we cannot
+	// set it on the attachment's `CompositeValue` yet, because the value does not exist. Instead
+	// we directly declare `super` as a `&base` reference in the scope of the constructor's invocation,
+	// and remove it immediately afterwards.\
+	baseValue := NewEphemeralReferenceValue(
+		interpreter,
+		false,
+		base,
+		interpreter.MustConvertStaticToSemaType(base.StaticType(interpreter)).(*sema.CompositeType),
+	)
+	// technically this makes `super` available to the arguments to the attachment constructor, but we enforce statically
+	// that it cannot appear there, so it's ok
+	interpreter.declareVariable(sema.SuperIdentifier, baseValue)
+
 	attachment, ok := interpreter.VisitInvocationExpression(attachExpression.Attachment).(*CompositeValue)
+	interpreter.activations.Remove(sema.SuperIdentifier)
+
 	// we enforce this in the checker
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -1201,6 +1217,9 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 		Location:    interpreter.Location,
 		HasPosition: attachExpression,
 	}
+
+	// when `v[A]` is executed, we set `A`'s super to `&v`
+	attachment.setBaseValue(interpreter, base)
 
 	base.SetTypeKey(
 		interpreter,
