@@ -98,9 +98,9 @@ func NewCryptoContract(
 	return compositeValue, nil
 }
 
-func cryptoAlgorithmEnumConstructorType(
+func cryptoAlgorithmEnumConstructorType[T sema.CryptoAlgorithm](
 	enumType *sema.CompositeType,
-	enumCases []sema.CryptoAlgorithm,
+	enumCases []T,
 ) *sema.FunctionType {
 
 	members := make([]*sema.Member, len(enumCases))
@@ -135,9 +135,9 @@ func cryptoAlgorithmEnumConstructorType(
 
 type enumCaseConstructor func(rawValue interpreter.UInt8Value) interpreter.MemberAccessibleValue
 
-func cryptoAlgorithmEnumValueAndCaseValues(
+func cryptoAlgorithmEnumValueAndCaseValues[T sema.CryptoAlgorithm](
 	enumType *sema.CompositeType,
-	enumCases []sema.CryptoAlgorithm,
+	enumCases []T,
 	caseConstructor enumCaseConstructor,
 ) (
 	value interpreter.Value,

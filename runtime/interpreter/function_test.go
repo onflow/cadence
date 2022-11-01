@@ -89,10 +89,12 @@ func TestFunctionStaticType(t *testing.T) {
 			common.MustBytesToAddress([]byte{0}),
 		)
 
+		var self MemberAccessibleValue = compositeValue
+
 		boundFunctionValue := NewBoundFunctionValue(
 			inter,
 			hostFunctionValue,
-			compositeValue,
+			&self,
 		)
 
 		staticType := boundFunctionValue.StaticType(inter)

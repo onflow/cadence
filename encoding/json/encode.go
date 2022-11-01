@@ -207,6 +207,10 @@ type jsonCapabilityValue struct {
 	BorrowType jsonValue `json:"borrowType"`
 }
 
+type jsonFunctionValue struct {
+	FunctionType jsonValue `json:"functionType"`
+}
+
 const (
 	voidTypeStr       = "Void"
 	optionalTypeStr   = "Optional"
@@ -245,6 +249,7 @@ const (
 	typeTypeStr       = "Type"
 	capabilityTypeStr = "Capability"
 	enumTypeStr       = "Enum"
+	functionTypeStr   = "Function"
 )
 
 // Prepare traverses the object graph of the provided value and constructs
@@ -325,6 +330,8 @@ func Prepare(v cadence.Value) jsonValue {
 		return prepareCapability(x)
 	case cadence.Enum:
 		return prepareEnum(x)
+	case cadence.Function:
+		return prepareFunction(x)
 	default:
 		panic(fmt.Errorf("unsupported value: %T, %v", v, v))
 	}
@@ -565,27 +572,19 @@ func prepareEnum(v cadence.Enum) jsonValue {
 }
 
 func prepareComposite(kind, id string, fieldTypes []cadence.Field, fields []cadence.Value) jsonValue {
-	nonFunctionFieldTypes := make([]cadence.Field, 0)
-
-	for _, field := range fieldTypes {
-		if _, ok := field.Type.(*cadence.FunctionType); !ok {
-			nonFunctionFieldTypes = append(nonFunctionFieldTypes, field)
-		}
-	}
-
-	if len(nonFunctionFieldTypes) != len(fields) {
+	if len(fieldTypes) != len(fields) {
 		panic(fmt.Errorf(
 			"%s field count (%d) does not match declared type (%d)",
 			kind,
 			len(fields),
-			len(nonFunctionFieldTypes),
+			len(fieldTypes),
 		))
 	}
 
 	compositeFields := make([]jsonCompositeField, len(fields))
 
 	for i, value := range fields {
-		fieldType := nonFunctionFieldTypes[i]
+		fieldType := fieldTypes[i]
 
 		compositeFields[i] = jsonCompositeField{
 			Name:  fieldType.Identifier,
@@ -880,6 +879,15 @@ func prepareCapability(capability cadence.Capability) jsonValue {
 			Path:       preparePath(capability.Path),
 			Address:    encodeBytes(capability.Address.Bytes()),
 			BorrowType: prepareType(capability.BorrowType, typePreparationResults{}),
+		},
+	}
+}
+
+func prepareFunction(function cadence.Function) jsonValue {
+	return jsonValueObject{
+		Type: functionTypeStr,
+		Value: jsonFunctionValue{
+			FunctionType: prepareType(function.FunctionType, typePreparationResults{}),
 		},
 	}
 }

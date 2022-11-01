@@ -55,6 +55,8 @@ type TestFramework interface {
 	ReadFile(string) (string, error)
 
 	UseConfiguration(configuration *Configuration)
+
+	StandardLibraryHandler() StandardLibraryHandler
 }
 
 type ScriptResult struct {

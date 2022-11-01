@@ -3278,9 +3278,6 @@ func TestPublicKeyValue(t *testing.T) {
 			utils.TestLocation,
 			&Config{
 				Storage: storage,
-				PublicKeyValidationHandler: func(_ *Interpreter, _ LocationRange, _ *CompositeValue) error {
-					return nil
-				},
 			},
 		)
 		require.NoError(t, err)
@@ -3306,7 +3303,11 @@ func TestPublicKeyValue(t *testing.T) {
 			EmptyLocationRange,
 			publicKey,
 			sigAlgo,
-			inter.Config.PublicKeyValidationHandler,
+			func(interpreter *Interpreter, locationRange LocationRange, publicKey *CompositeValue) error {
+				return nil
+			},
+			nil,
+			nil,
 		)
 
 		require.Equal(t,
@@ -3328,9 +3329,6 @@ func TestPublicKeyValue(t *testing.T) {
 			utils.TestLocation,
 			&Config{
 				Storage: storage,
-				PublicKeyValidationHandler: func(_ *Interpreter, _ LocationRange, _ *CompositeValue) error {
-					return fakeError
-				},
 			},
 		)
 		require.NoError(t, err)
@@ -3353,15 +3351,19 @@ func TestPublicKeyValue(t *testing.T) {
 			UInt8Value(sema.SignatureAlgorithmECDSA_secp256k1.RawValue()),
 		)
 
-		assert.PanicsWithError(t,
-			(InvalidPublicKeyError{PublicKey: publicKey, Err: fakeError}).Error(),
+		assert.PanicsWithValue(t,
+			InvalidPublicKeyError{PublicKey: publicKey, Err: fakeError},
 			func() {
 				_ = NewPublicKeyValue(
 					inter,
 					EmptyLocationRange,
 					publicKey,
 					sigAlgo,
-					inter.Config.PublicKeyValidationHandler,
+					func(interpreter *Interpreter, locationRange LocationRange, publicKey *CompositeValue) error {
+						return fakeError
+					},
+					nil,
+					nil,
 				)
 			})
 	})

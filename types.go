@@ -1403,6 +1403,7 @@ const (
 	FunctionPurityView
 )
 
+// TODO: type parameters
 type FunctionType struct {
 	typeID     string
 	Purity     FunctionPurity
