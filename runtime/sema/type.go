@@ -3990,11 +3990,9 @@ type InterfaceType struct {
 	}
 	cachedIdentifiersLock sync.RWMutex
 
-	explicitInterfaceConformanceSet     *InterfaceSet
-	explicitInterfaceConformanceSetOnce sync.Once
-	ExplicitInterfaceConformances       []*InterfaceType
-	interfaceConformancesOnce           sync.Once
-	interfaceConformances               []Conformance
+	ExplicitInterfaceConformances []*InterfaceType
+	interfaceConformancesOnce     sync.Once
+	interfaceConformances         []Conformance
 }
 
 func (*InterfaceType) IsType() {}
@@ -4214,21 +4212,6 @@ func (t *InterfaceType) GetNestedTypes() *StringTypeOrderedMap {
 
 func (t *InterfaceType) FieldPosition(name string, declaration *ast.InterfaceDeclaration) ast.Position {
 	return declaration.Members.FieldPosition(name, declaration.CompositeKind)
-}
-
-func (t *InterfaceType) ExplicitInterfaceConformanceSet() *InterfaceSet {
-	t.initializeExplicitInterfaceConformanceSet()
-	return t.explicitInterfaceConformanceSet
-}
-
-func (t *InterfaceType) initializeExplicitInterfaceConformanceSet() {
-	t.explicitInterfaceConformanceSetOnce.Do(func() {
-		t.explicitInterfaceConformanceSet = NewInterfaceSet()
-
-		for _, conformance := range t.InterfaceConformances() {
-			t.explicitInterfaceConformanceSet.Add(conformance.InterfaceType)
-		}
-	})
 }
 
 func (t *InterfaceType) InterfaceConformances() []Conformance {
