@@ -4578,7 +4578,29 @@ func TestCheckAccessAttachment(t *testing.T) {
 		assert.IsType(t, &sema.NotIndexableTypeError{}, errs[0])
 	})
 
+}
+
+func TestCheckAccessAttachmentRestricted(t *testing.T) {
+
+	t.Parallel()
+
 	t.Run("restricted", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+		struct R: I {}
+		struct interface I {}
+		attachment A for I {}
+		pub fun foo(r: R{I}) {
+			r[A]
+		}
+		`,
+		)
+		require.NoError(t, err)
+	})
+
+	t.Run("restricted anystruct base", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,
@@ -4588,9 +4610,62 @@ func TestCheckAccessAttachment(t *testing.T) {
 		pub fun foo(r: {I}) {
 			r[A]
 		}
-	`,
+		`,
 		)
+		require.NoError(t, err)
+	})
+
+	t.Run("restricted invalid base", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+		struct interface I {}
+		struct interface J {}
+		attachment A for I {}
+		pub fun foo(r: {J}) {
+			r[A]
+		}
+		`,
+		)
+
 		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.NotIndexableTypeError{}, errs[0])
+		assert.IsType(t, &sema.InvalidAttachmentAccessError{}, errs[0])
+	})
+
+	t.Run("restricted multiply extended base", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+		struct R: I, J {}
+		struct interface I {}
+		struct interface J {}
+		attachment A for I {}
+		pub fun foo(r: R{J}) {
+			r[A]
+		}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAttachmentAccessError{}, errs[0])
+	})
+
+	t.Run("restricted multiply restricted base", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+		struct interface I {}
+		struct interface J {}
+		attachment A for I {}
+		pub fun foo(r: {I, J}) {
+			r[A]
+		}
+		`,
+		)
+
+		require.NoError(t, err)
 	})
 }
