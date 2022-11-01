@@ -100,7 +100,7 @@ execute
 
 importDeclaration
     : Import ( identifier ( ',' identifier )* From )?
-      ( stringLiteral | HexadecimalLiteral | location=identifier )
+      ( stringLiteral | HexadecimalLiteral | identifier )
     ;
 
 access
@@ -168,7 +168,7 @@ specialFunctionDeclaration
     ;
 
 functionDeclaration
-    : access Fun identifier parameterList ( ':' returnType=typeAnnotation )? functionBlock?
+    : access Fun identifier parameterList ( ':' typeAnnotation )? functionBlock?
     ;
 
 eventDeclaration
@@ -180,7 +180,7 @@ parameterList
     ;
 
 parameter
-    : ( argumentLabel=identifier )? parameterName=identifier ':' typeAnnotation
+    : identifier? identifier ':' typeAnnotation
     ;
 
 typeAnnotation
@@ -228,11 +228,11 @@ variableSizedType
     ;
 
 constantSizedType
-    : '[' fullType ';' size=integerLiteral ']'
+    : '[' fullType ';' integerLiteral ']'
     ;
 
 dictionaryType
-    : '{' keyType=fullType ':' valueType=fullType '}'
+    : '{' fullType ':' fullType '}'
     ;
 
 block
@@ -256,7 +256,7 @@ conditions
     ;
 
 condition
-    : test=expression ( ':' message=expression )?
+    : expression ( ':' expression )?
     ;
 
 statements
@@ -303,9 +303,9 @@ continueStatement
 
 ifStatement
     : If
-      ( testExpression=expression | testDeclaration=variableDeclaration )
-      then=block
-      ( Else ( ifStatement | alt=block ))?
+      ( expression | variableDeclaration )
+      block
+      ( Else ( ifStatement | block ))?
     ;
 
 whileStatement
@@ -325,8 +325,8 @@ emitStatement
 *)
 variableDeclaration
     : access variableKind identifier ( ':' typeAnnotation )?
-      leftTransfer=transfer leftExpression=expression
-      ( rightTransfer=transfer rightExpression=expression )?
+      transfer expression
+      ( transfer expression )?
     ;
 
 (*
@@ -337,7 +337,7 @@ variableDeclaration
   in the semantic analysis.
 *)
 assignment
-    : target=expression transfer value=expression
+    : expression transfer expression
     ;
 
 (*
@@ -346,7 +346,7 @@ assignment
   in the semantic analysis. This allows us to provide better error messages
 *)
 swap
-    : left=expression '<->' right=expression
+    : expression '<->' expression
     ;
 
 transfer
@@ -361,7 +361,7 @@ expression
 
 conditionalExpression
     (* right associative *)
-    : orExpression ( '?' then=expression ':' alt=expression )?
+    : orExpression ( '?' expression ':' expression )?
     ;
 
 orExpression
@@ -447,7 +447,7 @@ primaryExpression
 postfixExpression
     : identifier
     | literal
-    | Fun parameterList ( ':' returnType=typeAnnotation )? functionBlock
+    | Fun parameterList ( ':' typeAnnotation )? functionBlock
     | '(' expression ')'
     | postfixExpression (* if no line terminator ahead *) invocation
     | postfixExpression expressionAccess
@@ -584,8 +584,8 @@ nilLiteral
     ;
 
 pathLiteral
-    : '/' (* no whitespace *) domain=identifier (* no whitespace *)
-      '/' (* no whitespace *) id=identifier
+    : '/' (* no whitespace *) identifier (* no whitespace *)
+      '/' (* no whitespace *) identifier
     ;
 
 stringLiteral
@@ -617,7 +617,7 @@ dictionaryLiteral
     ;
 
 dictionaryEntry
-    : key=expression ':' value=expression
+    : expression ':' expression
     ;
 
 OpenParen: '(' ;

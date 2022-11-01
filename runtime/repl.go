@@ -24,6 +24,7 @@ import (
 	goRuntime "runtime"
 	"sort"
 
+	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/activations"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/cmd"
@@ -281,4 +282,22 @@ func (r *REPL) Suggestions() (result []REPLSuggestion) {
 	})
 
 	return
+}
+
+func (r *REPL) GetGlobal(name string) interpreter.Value {
+	variable := r.inter.Globals.Get(name)
+	if variable == nil {
+		return nil
+	}
+	return variable.GetValue()
+}
+
+func (r *REPL) ExportValue(value interpreter.Value) (cadence.Value, error) {
+	return ExportValue(
+		value, r.inter,
+		interpreter.LocationRange{
+			Location: r.checker.Location,
+			// TODO: hasPosition
+		},
+	)
 }
