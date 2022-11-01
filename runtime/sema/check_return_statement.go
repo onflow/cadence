@@ -29,7 +29,7 @@ func (checker *Checker) VisitReturnStatement(statement *ast.ReturnStatement) (_ 
 		checker.checkResourceLossForFunction()
 		functionActivation.ReturnInfo.MaybeReturned = true
 		functionActivation.ReturnInfo.DefinitelyReturned = true
-		functionActivation.ReturnInfo.DefinitelyReturnedOrHalted = true
+		functionActivation.ReturnInfo.DefinitelyExited = true
 	}()
 
 	returnType := functionActivation.ReturnType

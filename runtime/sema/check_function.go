@@ -211,8 +211,8 @@ func (checker *Checker) checkFunctionExits(functionBlock *ast.FunctionBlock, ret
 	functionActivation := checker.functionActivations.Current()
 
 	// NOTE: intentionally NOT DefinitelyReturned || DefinitelyHalted,
-	// see DefinitelyReturnedOrHalted
-	if functionActivation.ReturnInfo.DefinitelyReturnedOrHalted {
+	// see DefinitelyExited
+	if functionActivation.ReturnInfo.DefinitelyExited {
 		return
 	}
 

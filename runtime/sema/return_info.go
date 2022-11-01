@@ -41,9 +41,10 @@ type ReturnInfo struct {
 	// DefinitelyHalted indicates that (the branch of) the function
 	// contains a definite halt (a function call with a Never return type)
 	DefinitelyHalted bool
-	// DefinitelyReturnedOrHalted indicates that (the branch of)
-	// the function contains a definite return statement
-	// or a definite halt (a function call with a Never return type).
+	// DefinitelyExited indicates that (the branch of)
+	// the function either contains a definite return statement,
+	// contains a definite halt (a function call with a Never return type),
+	// or both.
 	//
 	// NOTE: this is NOT the same DefinitelyReturned || DefinitelyHalted:
 	// For example, for the following program:
@@ -53,19 +54,19 @@ type ReturnInfo struct {
 	//
 	//       // DefinitelyReturned = true
 	//	     // DefinitelyHalted = false
-	//	     // DefinitelyReturnedOrHalted = true
+	//	     // DefinitelyExited = true
 	//   } else {
 	//       panic(...)
 	//
 	//       // DefinitelyReturned = false
 	//	     // DefinitelyHalted = true
-	//	     // DefinitelyReturnedOrHalted = true
+	//	     // DefinitelyExited = true
 	//   }
 	//
 	//   // DefinitelyReturned = false
 	//   // DefinitelyHalted = false
-	//   // DefinitelyReturnedOrHalted = true
-	DefinitelyReturnedOrHalted bool
+	//   // DefinitelyExited = true
+	DefinitelyExited bool
 	// DefinitelyJumped indicates that (the branch of) the function
 	// contains a definite break or continue statement
 	DefinitelyJumped bool
@@ -99,9 +100,9 @@ func (ri *ReturnInfo) MergeBranches(thenReturnInfo *ReturnInfo, elseReturnInfo *
 		(thenReturnInfo.DefinitelyHalted &&
 			elseReturnInfo.DefinitelyHalted)
 
-	ri.DefinitelyReturnedOrHalted = ri.DefinitelyReturnedOrHalted ||
-		(thenReturnInfo.DefinitelyReturnedOrHalted &&
-			elseReturnInfo.DefinitelyReturnedOrHalted)
+	ri.DefinitelyExited = ri.DefinitelyExited ||
+		(thenReturnInfo.DefinitelyExited &&
+			elseReturnInfo.DefinitelyExited)
 }
 
 func (ri *ReturnInfo) MergePotentiallyUnevaluated(temporaryReturnInfo *ReturnInfo) {
@@ -119,8 +120,8 @@ func (ri *ReturnInfo) Clone() *ReturnInfo {
 
 func (ri *ReturnInfo) IsUnreachable() bool {
 	// NOTE: intentionally NOT DefinitelyReturned || DefinitelyHalted,
-	// see DefinitelyReturnedOrHalted
-	return ri.DefinitelyReturnedOrHalted ||
+	// see DefinitelyExited
+	return ri.DefinitelyExited ||
 		ri.DefinitelyJumped
 }
 
