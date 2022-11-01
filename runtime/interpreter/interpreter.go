@@ -3879,6 +3879,10 @@ func (interpreter *Interpreter) ConvertStaticToSemaType(staticType StaticType) (
 	)
 }
 
+func (interpreter *Interpreter) MustSemaTypeOfValue(value Value) sema.Type {
+	return interpreter.MustConvertStaticToSemaType(value.StaticType(interpreter))
+}
+
 func (interpreter *Interpreter) MustConvertStaticToSemaType(staticType StaticType) sema.Type {
 	semaType, err := interpreter.ConvertStaticToSemaType(staticType)
 	if err != nil {
@@ -4104,8 +4108,8 @@ func (interpreter *Interpreter) getTypeFunction(self Value) *HostFunctionValue {
 	)
 }
 
-func (interpreter *Interpreter) setMember(self Value, locationRange LocationRange, identifier string, value Value) {
-	self.(MemberAccessibleValue).SetMember(interpreter, locationRange, identifier, value)
+func (interpreter *Interpreter) setMember(self Value, locationRange LocationRange, identifier string, value Value) bool {
+	return self.(MemberAccessibleValue).SetMember(interpreter, locationRange, identifier, value)
 }
 
 func (interpreter *Interpreter) ExpectType(
@@ -4134,7 +4138,7 @@ func (interpreter *Interpreter) checkContainerMutation(
 	if !interpreter.IsSubType(element.StaticType(interpreter), elementType) {
 		panic(ContainerMutationError{
 			ExpectedType:  interpreter.MustConvertStaticToSemaType(elementType),
-			ActualType:    interpreter.MustConvertStaticToSemaType(element.StaticType(interpreter)),
+			ActualType:    interpreter.MustSemaTypeOfValue(element),
 			LocationRange: locationRange,
 		})
 	}

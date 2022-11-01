@@ -52,6 +52,27 @@ func TestInterpretAttachmentStruct(t *testing.T) {
 		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
 	})
 
+	t.Run("duplicate attach", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+        struct S {}
+        attachment A for S {
+            fun foo(): Int { return 3 }
+        }
+        fun test(): Int {
+            var s = S()
+            s = attach A() to s
+			s = attach A() to s
+            return s[A]?.foo()!
+        }
+    `)
+
+		_, err := inter.Invoke("test")
+		require.ErrorAs(t, err, &interpreter.DuplicateAttachmentError{})
+	})
+
 	t.Run("reference", func(t *testing.T) {
 
 		t.Parallel()
@@ -66,6 +87,53 @@ func TestInterpretAttachmentStruct(t *testing.T) {
             s = attach A() to s
             let ref = &s as &S
             return ref[A]?.foo()!
+        }
+    `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
+	})
+
+	t.Run("removed", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+        struct S {}
+        attachment A for S {
+            fun foo(): Int { return 3 }
+        }
+        fun test(): Int? {
+            var s = S()
+            s = attach A() to s
+			remove A from s
+            return s[A]?.foo()
+        }
+    `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t, inter, interpreter.Nil, value)
+	})
+
+	t.Run("not removed", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+        struct S {}
+		attachment B for S {}
+        attachment A for S {
+            fun foo(): Int { return 3 }
+        }
+        fun test(): Int {
+            var s = S()
+            s = attach A() to s
+			remove B from s
+            return s[A]?.foo()!
         }
     `)
 
@@ -93,7 +161,7 @@ func TestInterpretAttachmentStruct(t *testing.T) {
 		value, err := inter.Invoke("test")
 		require.NoError(t, err)
 
-		AssertValuesEqual(t, inter, interpreter.NilValue{}, value)
+		AssertValuesEqual(t, inter, interpreter.Nil, value)
 	})
 }
 
@@ -124,6 +192,29 @@ func TestInterpretAttachmentResource(t *testing.T) {
 		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
 	})
 
+	t.Run("duplicate attach", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+       resource R {}
+       attachment A for R {
+          fun foo(): Int { return 3 }
+       }
+       fun test(): Int {
+           let r <- create R()
+           let r2 <- attach A() to <-r
+		   let r3 <- attach A() to <-r2
+           let i = r3[A]?.foo()!
+           destroy r3
+           return i
+       }
+    `)
+
+		_, err := inter.Invoke("test")
+		require.ErrorAs(t, err, &interpreter.DuplicateAttachmentError{})
+	})
+
 	t.Run("reference", func(t *testing.T) {
 
 		t.Parallel()
@@ -138,6 +229,57 @@ func TestInterpretAttachmentResource(t *testing.T) {
            let r2 <- attach A() to <-r
            let ref = &r2 as &R
            let i = ref[A]?.foo()!
+           destroy r2
+           return i
+       }
+    `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
+	})
+
+	t.Run("removed", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+       resource R {}
+       attachment A for R {
+          fun foo(): Int { return 3 }
+       }
+       fun test(): Int? {
+           let r <- create R()
+           let r2 <- attach A() to <-r
+		   remove A from r2
+           let i = r2[A]?.foo()
+           destroy r2
+           return i
+       }
+    `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t, inter, interpreter.Nil, value)
+	})
+
+	t.Run("not removed", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+       resource R {}
+	   attachment B for R {}
+       attachment A for R {
+          fun foo(): Int { return 3 }
+       }
+       fun test(): Int {
+           let r <- create R()
+           let r2 <- attach A() to <-r
+		   remove B from r2
+           let i = r2[A]?.foo()!
            destroy r2
            return i
        }
@@ -169,7 +311,7 @@ func TestInterpretAttachmentResource(t *testing.T) {
 		value, err := inter.Invoke("test")
 		require.NoError(t, err)
 
-		AssertValuesEqual(t, inter, interpreter.NilValue{}, value)
+		AssertValuesEqual(t, inter, interpreter.Nil, value)
 	})
 }
 
@@ -279,6 +421,42 @@ func TestInterpretAttachmentSuperUse(t *testing.T) {
 		require.NoError(t, err)
 
 		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(7), value)
+	})
+
+	t.Run("access other attachments", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+       resource R {
+          let x: Int
+          init (x: Int) {
+            self.x = x
+          }
+       }
+       attachment A for R {
+          fun foo(): Int { return super.x }
+       }
+	   attachment B for R {
+		let x: Int 
+		init() {
+			self.x = super[A]?.foo()! + super.x
+		}
+		fun foo(): Int { return self.x }
+	 }
+       fun test(): Int {
+           let r <- create R(x: 3)
+           let r2 <- attach B() to <- attach A() to  <-r
+           let i = r2[B]?.foo()!
+           destroy r2
+           return i
+       }
+    `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(6), value)
 	})
 }
 
@@ -498,4 +676,126 @@ func TestInterpretAttachmentStorage(t *testing.T) {
 
 		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
 	})
+}
+
+func TestInterpretAttachmentDestructor(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("destructor run on base destroy", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			var destructorRun = false
+			resource R {}
+			attachment A for R {
+				destroy() {
+					destructorRun = true
+				}
+			}
+			fun test() {
+				let r <- create R()
+				let r2 <- attach A() to <-r
+				destroy r2
+			}
+		`)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t, inter, interpreter.TrueValue, inter.Globals.Get("destructorRun").GetValue())
+	})
+
+	t.Run("base destructor executed last", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			var lastDestructorRun = ""
+			resource R {
+				destroy() {
+					lastDestructorRun = "R"
+				}
+			}
+			attachment A for R {
+				destroy() {
+					lastDestructorRun = "A"
+				}
+			}
+			attachment B for R {
+				destroy() {
+					lastDestructorRun = "B"
+				}
+			}
+			attachment C for R {
+				destroy() {
+					lastDestructorRun = "C"
+				}
+			}
+			fun test() {
+				let r <- create R()
+				let r2 <- attach A() to <- attach B() to <- attach C() to <-r
+				destroy r2
+			}
+		`)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t, inter, interpreter.NewUnmeteredStringValue("R"), inter.Globals.Get("lastDestructorRun").GetValue())
+	})
+
+	t.Run("remove runs destroy", func(t *testing.T) {
+
+		inter := parseCheckAndInterpret(t, `
+			var destructorRun = false
+			resource R {}
+			attachment A for R {
+				destroy() {
+					destructorRun = true
+				}
+			}
+			fun test(): @R {
+				let r <- create R()
+				let r2 <- attach A() to <-r
+				remove A from r2
+				return <-r2
+			}
+		`)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t, inter, interpreter.TrueValue, inter.Globals.Get("destructorRun").GetValue())
+	})
+}
+
+func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
+	t.Parallel()
+
+	t.Run("basic", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t, address, true, `
+			resource R {}
+			attachment A for R {
+				fun foo(): Int { return 3 }
+			}
+			fun test() {
+				let r <- create R()
+				let r2 <- attach A() to <-r
+				let a = r2[A]!
+				authAccount.save(<-r2, to: /storage/foo)
+				let i = a.foo()
+			}
+		`)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
 }

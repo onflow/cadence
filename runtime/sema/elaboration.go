@@ -135,6 +135,7 @@ type Elaboration struct {
 	ReferenceExpressionBorrowTypes      map[*ast.ReferenceExpression]Type
 	IndexExpressionTypes                map[*ast.IndexExpression]IndexExpressionTypes
 	AttachmentAccessTypes               map[*ast.IndexExpression]Type
+	AttachmentRemoveTypes               map[*ast.RemoveStatement]Type
 	ForceExpressionTypes                map[*ast.ForceExpression]Type
 	StaticCastTypes                     map[*ast.CastingExpression]CastTypes
 	NumberConversionArgumentTypes       map[ast.Expression]struct {
@@ -186,6 +187,7 @@ func NewElaboration(gauge common.MemoryGauge, extendedElaboration bool) *Elabora
 		ReferenceExpressionBorrowTypes:      map[*ast.ReferenceExpression]Type{},
 		IndexExpressionTypes:                map[*ast.IndexExpression]IndexExpressionTypes{},
 		AttachmentAccessTypes:               map[*ast.IndexExpression]Type{},
+		AttachmentRemoveTypes:               map[*ast.RemoveStatement]Type{},
 	}
 	if extendedElaboration {
 		elaboration.ForceExpressionTypes = map[*ast.ForceExpression]Type{}

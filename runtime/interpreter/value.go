@@ -164,7 +164,8 @@ type MemberAccessibleValue interface {
 	Value
 	GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value
 	RemoveMember(interpreter *Interpreter, locationRange LocationRange, name string) Value
-	SetMember(interpreter *Interpreter, locationRange LocationRange, name string, value Value)
+	// returns whether a value previously existed with this name
+	SetMember(interpreter *Interpreter, locationRange LocationRange, name string, value Value) bool
 }
 
 // EquatableValue
@@ -398,7 +399,7 @@ func (TypeValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
 	panic(errors.NewUnreachableError())
 }
 
-func (TypeValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (TypeValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Types have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -886,7 +887,7 @@ func (CharacterValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Va
 	panic(errors.NewUnreachableError())
 }
 
-func (CharacterValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (CharacterValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Characters have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -1186,7 +1187,7 @@ func (*StringValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Valu
 	panic(errors.NewUnreachableError())
 }
 
-func (*StringValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (*StringValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Strings have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -2243,7 +2244,7 @@ func (v *ArrayValue) RemoveMember(interpreter *Interpreter, locationRange Locati
 	panic(errors.NewUnreachableError())
 }
 
-func (v *ArrayValue) SetMember(interpreter *Interpreter, locationRange LocationRange, _ string, _ Value) {
+func (v *ArrayValue) SetMember(interpreter *Interpreter, locationRange LocationRange, _ string, _ Value) bool {
 	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
@@ -3342,7 +3343,7 @@ func (IntValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
 	panic(errors.NewUnreachableError())
 }
 
-func (IntValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (IntValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -3928,7 +3929,7 @@ func (Int8Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
 	panic(errors.NewUnreachableError())
 }
 
-func (Int8Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (Int8Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -4514,7 +4515,7 @@ func (Int16Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value 
 	panic(errors.NewUnreachableError())
 }
 
-func (Int16Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (Int16Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -5102,7 +5103,7 @@ func (Int32Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value 
 	panic(errors.NewUnreachableError())
 }
 
-func (Int32Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (Int32Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -5686,7 +5687,7 @@ func (Int64Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value 
 	panic(errors.NewUnreachableError())
 }
 
-func (Int64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (Int64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -6376,7 +6377,7 @@ func (Int128Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value
 	panic(errors.NewUnreachableError())
 }
 
-func (Int128Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (Int128Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -7061,7 +7062,7 @@ func (Int256Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value
 	panic(errors.NewUnreachableError())
 }
 
-func (Int256Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (Int256Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -7650,7 +7651,7 @@ func (UIntValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
 	panic(errors.NewUnreachableError())
 }
 
-func (UIntValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (UIntValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -8195,7 +8196,7 @@ func (UInt8Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value 
 	panic(errors.NewUnreachableError())
 }
 
-func (UInt8Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (UInt8Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -8699,7 +8700,7 @@ func (UInt16Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value
 	panic(errors.NewUnreachableError())
 }
 
-func (UInt16Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (UInt16Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -9210,7 +9211,7 @@ func (UInt32Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value
 	panic(errors.NewUnreachableError())
 }
 
-func (UInt32Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (UInt32Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -9748,7 +9749,7 @@ func (UInt64Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value
 	panic(errors.NewUnreachableError())
 }
 
-func (UInt64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (UInt64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -10381,7 +10382,7 @@ func (UInt128Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Valu
 	panic(errors.NewUnreachableError())
 }
 
-func (UInt128Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (UInt128Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -11012,7 +11013,7 @@ func (UInt256Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Valu
 	panic(errors.NewUnreachableError())
 }
 
-func (UInt256Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (UInt256Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -11428,7 +11429,7 @@ func (Word8Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value 
 	panic(errors.NewUnreachableError())
 }
 
-func (Word8Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (Word8Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -11844,7 +11845,7 @@ func (Word16Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value
 	panic(errors.NewUnreachableError())
 }
 
-func (Word16Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (Word16Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -12263,7 +12264,7 @@ func (Word32Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value
 	panic(errors.NewUnreachableError())
 }
 
-func (Word32Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (Word32Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -12706,7 +12707,7 @@ func (Word64Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value
 	panic(errors.NewUnreachableError())
 }
 
-func (Word64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (Word64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -13243,7 +13244,7 @@ func (Fix64Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value 
 	panic(errors.NewUnreachableError())
 }
 
-func (Fix64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (Fix64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -13746,7 +13747,7 @@ func (UFix64Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value
 	panic(errors.NewUnreachableError())
 }
 
-func (UFix64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (UFix64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -14333,7 +14334,7 @@ func (v *CompositeValue) SetMember(
 	locationRange LocationRange,
 	name string,
 	value Value,
-) {
+) bool {
 	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
@@ -14385,7 +14386,10 @@ func (v *CompositeValue) SetMember(
 		existingValue.DeepRemove(interpreter)
 
 		interpreter.RemoveReferencedSlab(existingStorable)
+		return true
 	}
+
+	return false
 }
 
 func (v *CompositeValue) String() string {
@@ -14695,8 +14699,7 @@ func (v *CompositeValue) NeedsStoreTo(address atree.Address) bool {
 
 func (v *CompositeValue) IsResourceKinded(interpreter *Interpreter) bool {
 	if v.Kind == common.CompositeKindAttachment {
-		base := v.getBaseValue(interpreter, EmptyLocationRange).Value
-		return base != nil && base.IsResourceKinded(interpreter)
+		return interpreter.MustSemaTypeOfValue(v).IsResourceType()
 	}
 	return v.Kind == common.CompositeKindResource
 }
@@ -15144,7 +15147,13 @@ func (v *CompositeValue) SetTypeKey(
 	attachmentType sema.Type,
 	attachment Value,
 ) {
-	v.SetMember(interpreter, locationRange, attachmentNamePrefix+attachmentType.QualifiedString(), attachment)
+	if v.SetMember(interpreter, locationRange, attachmentNamePrefix+attachmentType.QualifiedString(), attachment) {
+		panic(DuplicateAttachmentError{
+			AttachmentType: attachmentType,
+			Value:          v,
+			LocationRange:  locationRange,
+		})
+	}
 }
 
 func (v *CompositeValue) RemoveTypeKey(
@@ -15788,7 +15797,7 @@ func (v *DictionaryValue) RemoveMember(interpreter *Interpreter, locationRange L
 	panic(errors.NewUnreachableError())
 }
 
-func (v *DictionaryValue) SetMember(interpreter *Interpreter, locationRange LocationRange, _ string, _ Value) {
+func (v *DictionaryValue) SetMember(interpreter *Interpreter, locationRange LocationRange, _ string, _ Value) bool {
 	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
@@ -16456,7 +16465,7 @@ func (NilValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
 	panic(errors.NewUnreachableError())
 }
 
-func (NilValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (NilValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Nil has no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -16682,7 +16691,7 @@ func (v *SomeValue) RemoveMember(interpreter *Interpreter, locationRange Locatio
 	panic(errors.NewUnreachableError())
 }
 
-func (v *SomeValue) SetMember(interpreter *Interpreter, locationRange LocationRange, _ string, _ Value) {
+func (v *SomeValue) SetMember(interpreter *Interpreter, locationRange LocationRange, _ string, _ Value) bool {
 	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
@@ -17042,10 +17051,10 @@ func (v *StorageReferenceValue) SetMember(
 	locationRange LocationRange,
 	name string,
 	value Value,
-) {
+) bool {
 	self := v.mustReferencedValue(interpreter, locationRange)
 
-	interpreter.setMember(self, locationRange, name, value)
+	return interpreter.setMember(self, locationRange, name, value)
 }
 
 func (v *StorageReferenceValue) GetKey(
@@ -17359,10 +17368,10 @@ func (v *EphemeralReferenceValue) SetMember(
 	locationRange LocationRange,
 	name string,
 	value Value,
-) {
+) bool {
 	self := v.mustReferencedValue(interpreter, locationRange)
 
-	interpreter.setMember(self, locationRange, name, value)
+	return interpreter.setMember(self, locationRange, name, value)
 }
 
 func (v *EphemeralReferenceValue) GetKey(
@@ -17701,7 +17710,7 @@ func (AddressValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Valu
 	panic(errors.NewUnreachableError())
 }
 
-func (AddressValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (AddressValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Addresses have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -17930,7 +17939,7 @@ func (PathValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
 	panic(errors.NewUnreachableError())
 }
 
-func (PathValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (PathValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Paths have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -18180,7 +18189,7 @@ func (*CapabilityValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) 
 	panic(errors.NewUnreachableError())
 }
 
-func (*CapabilityValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (*CapabilityValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Capabilities have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }

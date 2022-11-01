@@ -269,7 +269,7 @@ func (*HostFunctionValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string
 	panic(errors.NewUnreachableError())
 }
 
-func (*HostFunctionValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (*HostFunctionValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Host functions have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }

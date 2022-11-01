@@ -1199,7 +1199,7 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 		interpreter,
 		false,
 		base,
-		interpreter.MustConvertStaticToSemaType(base.StaticType(interpreter)).(*sema.CompositeType),
+		interpreter.MustSemaTypeOfValue(base).(*sema.CompositeType),
 	)
 	// technically this makes `super` available to the arguments to the attachment constructor, but we enforce statically
 	// that it cannot appear there, so it's ok
@@ -1224,7 +1224,7 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 	base.SetTypeKey(
 		interpreter,
 		locationRange,
-		interpreter.MustConvertStaticToSemaType(attachment.StaticType(interpreter)),
+		interpreter.MustSemaTypeOfValue(attachment),
 		attachment,
 	)
 
