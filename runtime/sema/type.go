@@ -3421,6 +3421,11 @@ type EnumInfo struct {
 	Cases   []string
 }
 
+type Conformance struct {
+	InterfaceType        *InterfaceType
+	ConformanceChainRoot *InterfaceType
+}
+
 type CompositeType struct {
 	Location   common.Location
 	Identifier string
@@ -3428,7 +3433,9 @@ type CompositeType struct {
 	// an internal set of field `ExplicitInterfaceConformances`
 	explicitInterfaceConformanceSet     *InterfaceSet
 	explicitInterfaceConformanceSetOnce sync.Once
-	ExplicitInterfaceConformances       InterfaceConformances
+	interfaceConformancesOnce           sync.Once
+	interfaceConformances               []Conformance
+	ExplicitInterfaceConformances       []*InterfaceType
 	ImplicitTypeRequirementConformances []*CompositeType
 	Members                             *StringMemberOrderedMap
 	memberResolvers                     map[string]MemberResolver
@@ -3464,13 +3471,22 @@ func (t *CompositeType) initializeExplicitInterfaceConformanceSet() {
 	t.explicitInterfaceConformanceSetOnce.Do(func() {
 		t.explicitInterfaceConformanceSet = NewInterfaceSet()
 
-		// Interfaces can also have conformances.
-		// So add conformances' conformance recursively.
-		t.ExplicitInterfaceConformances.ForeachDistinct(func(_, conformance *InterfaceType) bool {
-			t.explicitInterfaceConformanceSet.Add(conformance)
-			return true
-		})
+		for _, conformance := range t.InterfaceConformances() {
+			t.explicitInterfaceConformanceSet.Add(conformance.InterfaceType)
+		}
 	})
+}
+
+func (t *CompositeType) InterfaceConformances() []Conformance {
+	t.interfaceConformancesOnce.Do(func() {
+		t.interfaceConformances = distinctConformances(
+			t.ExplicitInterfaceConformances,
+			nil,
+			map[*InterfaceType]struct{}{},
+		)
+	})
+
+	return t.interfaceConformances
 }
 
 func (t *CompositeType) addImplicitTypeRequirementConformance(typeRequirement *CompositeType) {
@@ -3702,20 +3718,19 @@ func (t *CompositeType) TypeRequirements() []*CompositeType {
 	var typeRequirements []*CompositeType
 
 	if containerComposite, ok := t.containerType.(*CompositeType); ok {
-		containerComposite.ExplicitInterfaceConformances.ForeachDistinct(func(_, conformance *InterfaceType) bool {
-			ty, ok := conformance.NestedTypes.Get(t.Identifier)
+		for _, conformance := range containerComposite.InterfaceConformances() {
+			ty, ok := conformance.InterfaceType.NestedTypes.Get(t.Identifier)
 			if !ok {
-				return true
+				continue
 			}
 
 			typeRequirement, ok := ty.(*CompositeType)
 			if !ok {
-				return true
+				continue
 			}
 
 			typeRequirements = append(typeRequirements, typeRequirement)
-			return true
-		})
+		}
 	}
 
 	return typeRequirements
@@ -3784,49 +3799,6 @@ func (t *CompositeType) FieldPosition(name string, declaration *ast.CompositeDec
 		pos = declaration.Members.FieldPosition(name, declaration.CompositeKind)
 	}
 	return pos
-}
-
-type InterfaceConformances []*InterfaceType
-
-// Foreach iterates over the conformances and its nested conformances in a breadth-first manner,
-// and invokes the given function. The function have two parameters:
-//   - `origin` refers to root of the current conformance chain.
-//   - `conformance` refers to the currently visiting conformance.
-func (c InterfaceConformances) Foreach(f func(origin *InterfaceType, conformance *InterfaceType) bool) {
-	for _, conformance := range c {
-		if !f(conformance, conformance) {
-			break
-		}
-
-		cont := true
-		conformance.ExplicitInterfaceConformances.Foreach(func(_, nestedConformance *InterfaceType) bool {
-			cont = f(conformance, nestedConformance)
-			return cont
-		})
-
-		if cont {
-			continue
-		}
-	}
-}
-
-// ForeachDistinct iterates over the conformances and its nested conformances in a breadth-first manner,
-// and invokes the given function. Any duplicate conformance would be skipped.
-//
-// The function have two parameters:
-//   - `origin` refers to root of the current conformance chain.
-//   - `conformance` refers to the currently visiting conformance.
-func (c InterfaceConformances) ForeachDistinct(f func(origin *InterfaceType, conformance *InterfaceType) bool) {
-	seenConformances := map[*InterfaceType]struct{}{}
-
-	c.Foreach(func(origin, conformance *InterfaceType) bool {
-		if _, ok := seenConformances[conformance]; ok {
-			return true
-		}
-		seenConformances[conformance] = struct{}{}
-
-		return f(origin, conformance)
-	})
 }
 
 // Member
@@ -4020,7 +3992,9 @@ type InterfaceType struct {
 
 	explicitInterfaceConformanceSet     *InterfaceSet
 	explicitInterfaceConformanceSetOnce sync.Once
-	ExplicitInterfaceConformances       InterfaceConformances
+	ExplicitInterfaceConformances       []*InterfaceType
+	interfaceConformancesOnce           sync.Once
+	interfaceConformances               []Conformance
 }
 
 func (*InterfaceType) IsType() {}
@@ -4251,13 +4225,67 @@ func (t *InterfaceType) initializeExplicitInterfaceConformanceSet() {
 	t.explicitInterfaceConformanceSetOnce.Do(func() {
 		t.explicitInterfaceConformanceSet = NewInterfaceSet()
 
-		// Interfaces can also have conformances.
-		// So add conformances' conformance recursively.
-		t.ExplicitInterfaceConformances.ForeachDistinct(func(_, conformance *InterfaceType) bool {
-			t.explicitInterfaceConformanceSet.Add(conformance)
-			return true
-		})
+		for _, conformance := range t.InterfaceConformances() {
+			t.explicitInterfaceConformanceSet.Add(conformance.InterfaceType)
+		}
 	})
+}
+
+func (t *InterfaceType) InterfaceConformances() []Conformance {
+	t.interfaceConformancesOnce.Do(func() {
+		t.interfaceConformances = distinctConformances(
+			t.ExplicitInterfaceConformances,
+			nil,
+			map[*InterfaceType]struct{}{},
+		)
+	})
+
+	return t.interfaceConformances
+}
+
+// distinctConformances recursively visit conformances and their conformances,
+// and return all the distinct conformances as an array.
+func distinctConformances(
+	conformances []*InterfaceType,
+	parent *InterfaceType,
+	seenConformances map[*InterfaceType]struct{},
+) []Conformance {
+
+	collectedConformances := make([]Conformance, 0)
+
+	var origin *InterfaceType
+
+	for _, conformance := range conformances {
+		if _, ok := seenConformances[conformance]; ok {
+			continue
+		}
+		seenConformances[conformance] = struct{}{}
+
+		if parent != nil {
+			origin = parent
+		} else {
+			origin = conformance
+		}
+
+		collectedConformances = append(
+			collectedConformances,
+			Conformance{
+				InterfaceType:        conformance,
+				ConformanceChainRoot: origin,
+			},
+		)
+
+		// Recursively collect conformances
+		nestedConformances := distinctConformances(
+			conformance.ExplicitInterfaceConformances,
+			origin,
+			seenConformances,
+		)
+
+		collectedConformances = append(collectedConformances, nestedConformances...)
+	}
+
+	return collectedConformances
 }
 
 // DictionaryType consists of the key and value type

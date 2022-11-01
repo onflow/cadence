@@ -54,19 +54,15 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 	inheritedMembers := map[string]*Member{}
 	inheritedTypes := map[string]Type{}
 
-	interfaceType.ExplicitInterfaceConformances.ForeachDistinct(
-		func(_, conformance *InterfaceType) bool {
-			checker.checkInterfaceConformance(
-				declaration,
-				interfaceType,
-				conformance,
-				inheritedMembers,
-				inheritedTypes,
-			)
-
-			return true
-		},
-	)
+	for _, conformance := range interfaceType.InterfaceConformances() {
+		checker.checkInterfaceConformance(
+			declaration,
+			interfaceType,
+			conformance.InterfaceType,
+			inheritedMembers,
+			inheritedTypes,
+		)
+	}
 
 	// NOTE: functions are checked separately
 	checker.checkFieldsAccessModifier(declaration.Members.Fields())

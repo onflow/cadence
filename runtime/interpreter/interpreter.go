@@ -1039,9 +1039,11 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	// in reverse order: first the conformances, then the type requirements;
 	// each conformances and type requirements in reverse order as well.
 
-	compositeType.ExplicitInterfaceConformanceSet().ForEachReverse(func(conformance *sema.InterfaceType) {
+	conformances := compositeType.InterfaceConformances()
+	for i := len(conformances) - 1; i >= 0; i-- {
+		conformance := conformances[i].InterfaceType
 		wrapFunctions(interpreter.SharedState.typeCodes.InterfaceCodes[conformance.ID()])
-	})
+	}
 
 	typeRequirements := compositeType.TypeRequirements()
 
