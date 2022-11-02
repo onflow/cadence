@@ -1530,11 +1530,10 @@ func TestInterpretMutationDuringForEachAttachment(t *testing.T) {
 			struct S {}
 			attachment A for S {}
 			attachment B for S {}
-			attachment C for S {}
 			fun test() {
-				var s = attach B() to attach A() to S()
+				var s = attach A() to S()
 				s.forEachAttachment(fun(attachment: &AnyStructAttachment) {
-					s = attach C() to s
+					s = attach B() to s
 				}) 
 			}
 		`)
@@ -1567,9 +1566,99 @@ func TestInterpretMutationDuringForEachAttachment(t *testing.T) {
 		require.ErrorAs(t, err, &interpreter.AttachmentIterationMutationError{})
 	})
 
+	t.Run("attach to other", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			struct S {}
+			attachment A for S {}
+			attachment B for S {}
+			fun test() {
+				var s = attach A() to S()
+				var s2 = attach A() to S()
+				s.forEachAttachment(fun(attachment: &AnyStructAttachment) {
+					s = attach B() to s2
+				}) 
+			}
+		`)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("remove from other", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			struct S {}
+			attachment A for S {}
+			attachment B for S {}
+			fun test() {
+				var s = attach B() to attach A() to S()
+				var s2 = attach B() to attach A() to S()
+				s.forEachAttachment(fun(attachment: &AnyStructAttachment) {
+					remove A from s2
+				}) 
+			}
+		`)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
 	t.Run("nested iteration", func(t *testing.T) {
 
-		// TODO: test for nested calls to forEachAttachment
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			struct S {}
+			attachment A for S {}
+			attachment B for S {}
+			fun test() {
+				var s = attach B() to attach A() to S()
+				var s2 = attach B() to attach A() to S()
+				s.forEachAttachment(fun(attachment: &AnyStructAttachment) {
+					s2.forEachAttachment(fun(attachment: &AnyStructAttachment) {
+						remove A from s2
+					})
+				}) 
+			}
+		`)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		require.ErrorAs(t, err, &interpreter.AttachmentIterationMutationError{})
+	})
+
+	t.Run("nested iteration ok", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			struct S {}
+			attachment A for S {}
+			attachment B for S {}
+			fun test(): Int {
+				var s = attach B() to attach A() to S()
+				var s2 = attach B() to attach A() to S()
+				var i = 0
+				s.forEachAttachment(fun(attachment: &AnyStructAttachment) {
+					remove A from s2
+					s2.forEachAttachment(fun(attachment: &AnyStructAttachment) {
+						i = i + 1
+					})
+				}) 
+				return i
+			}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(1), value)
 	})
 
 }
