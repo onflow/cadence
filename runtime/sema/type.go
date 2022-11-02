@@ -492,7 +492,7 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 	// all attachment types have a `getField` and a `getFunction` function
 
 	if IsSubType(ty, AnyResourceAttachmentType) || IsSubType(ty, AnyStructAttachmentType) {
-		members[attachmentGetFieldFunctionName] = MemberResolver{
+		members[AttachmentGetFieldFunctionName] = MemberResolver{
 			Kind: common.DeclarationKindFunction,
 			Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 				return NewPublicFunctionMember(
@@ -505,7 +505,7 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 			},
 		}
 
-		members[attachmentGetFunctionFunctionName] = MemberResolver{
+		members[AttachmentGetFunctionFunctionName] = MemberResolver{
 			Kind: common.DeclarationKindFunction,
 			Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 				return NewPublicFunctionMember(
@@ -3847,7 +3847,7 @@ func (t *CompositeType) IsValidIndexingType(ty Type) bool {
 		attachmentType.IsResourceType() == t.IsResourceType()
 }
 
-const compositeForEachAttachmentFunctionName = "forEachAttachment"
+const CompositeForEachAttachmentFunctionName = "forEachAttachment"
 
 const compositeForEachAttachmentFunctionDocString = `
 Iterates over the attachments present on the receiver, applying the function argument to each.
@@ -3886,7 +3886,7 @@ func CompositeForEachAttachmentFunctionType(t *CompositeType) *FunctionType {
 	}
 }
 
-const attachmentGetFieldFunctionName = "getField"
+const AttachmentGetFieldFunctionName = "getField"
 
 const attachmentGetFieldFunctionDocString = `
 Returns a reference to the field with the specified name and type on the receiver. If a field with the
@@ -3923,7 +3923,7 @@ func AttachmentGetFieldFunctionType() *FunctionType {
 	}
 }
 
-const attachmentGetFunctionFunctionName = "getFunction"
+const AttachmentGetFunctionFunctionName = "getFunction"
 
 const attachmentGetFunctionFunctionDocString = `
 Returns the method with the specified name and type on the receiver. If a method with the
@@ -3990,7 +3990,7 @@ func (t *CompositeType) initializeMemberResolvers() {
 
 		// resource and struct composites have the ability to iterate over their attachments
 		if t.Kind == common.CompositeKindResource || t.Kind == common.CompositeKindStructure {
-			members[compositeForEachAttachmentFunctionName] = MemberResolver{
+			members[CompositeForEachAttachmentFunctionName] = MemberResolver{
 				Kind: common.DeclarationKindFunction,
 				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicFunctionMember(

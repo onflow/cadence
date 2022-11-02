@@ -1926,7 +1926,7 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 			// all attachments contain `getField` and `getFunction`
 
 			addPredeclaredMember(
-				attachmentGetFieldFunctionName,
+				AttachmentGetFieldFunctionName,
 				AttachmentGetFieldFunctionType(),
 				common.DeclarationKindFunction,
 				ast.AccessPublic,
@@ -1935,7 +1935,7 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 			)
 
 			addPredeclaredMember(
-				attachmentGetFunctionFunctionName,
+				AttachmentGetFunctionFunctionName,
 				AttachmentGetFunctionFunctionType(),
 				common.DeclarationKindFunction,
 				ast.AccessPublic,

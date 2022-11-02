@@ -990,6 +990,43 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 			}
 		`)
 
+		// TODO: in the stable cadence branch, with the new resource reference invalidation,
+		// this should be an error, as `a` shoudl be invalidated after the save
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("nested", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t, address, true, `
+			resource R {}
+			resource R2 {
+				let r: @R 
+				init(r: @R) {
+					self.r <- r
+				}
+				destroy() {
+					destroy self.r
+				}
+			}
+			attachment A for R {
+				fun foo(): Int { return 3 }
+			}
+			fun test() {
+				let r2 <- create R2(r: <-attach A() to <-create R())
+				let a = r2.r[A]!
+				authAccount.save(<-r2, to: /storage/foo)
+				let i = a.foo()
+			}
+		
+		`)
+
+		// TODO: in the stable cadence branch, with the new resource reference invalidation,
+		// this should be an error, as `a` shoudl be invalidated after the save
 		_, err := inter.Invoke("test")
 		require.NoError(t, err)
 	})

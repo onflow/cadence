@@ -14120,6 +14120,30 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 	)
 }
 
+func (v *CompositeValue) getBuiltinMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+
+	switch name {
+	case sema.ResourceOwnerFieldName:
+		if v.Kind == common.CompositeKindResource {
+			return v.OwnerValue(interpreter, locationRange)
+		}
+	case sema.CompositeForEachAttachmentFunctionName:
+		if v.Kind == common.CompositeKindResource || v.Kind == common.CompositeKindStructure {
+
+		}
+	case sema.AttachmentGetFieldFunctionName:
+		if v.Kind == common.CompositeKindAttachment {
+
+		}
+	case sema.AttachmentGetFunctionFunctionName:
+		if v.Kind == common.CompositeKindAttachment {
+
+		}
+	}
+
+	return nil
+}
+
 func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
 	config := interpreter.SharedState.Config
 
@@ -14145,10 +14169,8 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 		}()
 	}
 
-	if v.Kind == common.CompositeKindResource &&
-		name == sema.ResourceOwnerFieldName {
-
-		return v.OwnerValue(interpreter, locationRange)
+	if builtin := v.getBuiltinMember(interpreter, locationRange, name); builtin != nil {
+		return builtin
 	}
 
 	storable, err := v.dictionary.Get(
