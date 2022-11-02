@@ -3829,7 +3829,7 @@ func (t *CompositeType) GetNestedTypes() *StringTypeOrderedMap {
 
 func (t *CompositeType) isTypeIndexableType() bool {
 	// resources and structs only can be indexed for attachments
-	return t.Kind == common.CompositeKindResource || t.Kind == common.CompositeKindStructure
+	return t.Kind.SupportsAttachments()
 }
 
 func (t *CompositeType) TypeIndexingElementType(indexingType Type) Type {
@@ -4974,10 +4974,7 @@ func (t *ReferenceType) isValueIndexableType() bool {
 
 func (t *ReferenceType) isTypeIndexableType() bool {
 	referencedType, ok := t.Type.(TypeIndexableType)
-	if !ok {
-		return false
-	}
-	return referencedType.isTypeIndexableType()
+	return ok && referencedType.isTypeIndexableType()
 }
 
 func (t *ReferenceType) TypeIndexingElementType(indexingType Type) Type {
@@ -4990,10 +4987,7 @@ func (t *ReferenceType) TypeIndexingElementType(indexingType Type) Type {
 
 func (t *ReferenceType) IsValidIndexingType(ty Type) bool {
 	referencedType, ok := t.Type.(TypeIndexableType)
-	if !ok {
-		return false
-	}
-	return referencedType.IsValidIndexingType(ty)
+	return ok && referencedType.IsValidIndexingType(ty)
 }
 
 func (t *ReferenceType) AllowsValueIndexingAssignment() bool {

@@ -196,6 +196,24 @@ func (k CompositeKind) SupportsInterfaces() bool {
 	panic(errors.NewUnreachableError())
 }
 
+func (k CompositeKind) SupportsAttachments() bool {
+	switch k {
+	case CompositeKindStructure,
+		CompositeKindResource:
+
+		return true
+
+	case CompositeKindEvent,
+		CompositeKindEnum,
+		CompositeKindContract,
+		CompositeKindAttachment:
+
+		return false
+	}
+
+	panic(errors.NewUnreachableError())
+}
+
 func (k CompositeKind) MarshalJSON() ([]byte, error) {
 	return json.Marshal(k.String())
 }

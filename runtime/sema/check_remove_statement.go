@@ -47,7 +47,7 @@ func (checker *Checker) VisitRemoveStatement(statement *ast.RemoveStatement) (_ 
 	// and it must also be a valid subtype of the declared base type
 	switch baseType := base.(type) {
 	case *CompositeType:
-		if (baseType.Kind != common.CompositeKindResource && baseType.Kind != common.CompositeKindStructure) ||
+		if !baseType.Kind.SupportsAttachments() ||
 			!IsSubType(baseType, attachmentType.baseType) {
 			checker.report(
 				&RemoveFromInvalidTypeError{
