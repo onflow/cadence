@@ -4299,27 +4299,47 @@ func TestParsePragmaNoArguments(t *testing.T) {
 
 	t.Parallel()
 
-	const code = `#pedantic`
-	result, err := testParseProgram(code)
-	require.NoError(t, err)
+	t.Run("identifier", func(t *testing.T) {
 
-	utils.AssertEqualWithDiff(t,
-		[]ast.Declaration{
-			&ast.PragmaDeclaration{
-				Expression: &ast.IdentifierExpression{
-					Identifier: ast.Identifier{
-						Identifier: "pedantic",
-						Pos:        ast.Position{Offset: 1, Line: 1, Column: 1},
+		t.Parallel()
+
+		result, errs := testParseDeclarations(`#pedantic`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.PragmaDeclaration{
+					Expression: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "pedantic",
+							Pos:        ast.Position{Offset: 1, Line: 1, Column: 1},
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+						EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
 					},
 				},
-				Range: ast.Range{
-					StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
-					EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+			},
+			result,
+		)
+	})
+
+	t.Run("with purity", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("view #foo")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid view modifier for pragma",
+					Pos:     ast.Position{Offset: 5, Line: 1, Column: 5},
 				},
 			},
-		},
-		result.Declarations(),
-	)
+			errs,
+		)
+	})
 }
 
 func TestParsePragmaArguments(t *testing.T) {

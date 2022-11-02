@@ -75,6 +75,9 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 
 		switch p.current.Type {
 		case lexer.TokenPragma:
+			if purity != ast.FunctionPurityUnspecified {
+				return nil, p.syntaxError("invalid view modifier for pragma")
+			}
 			if access != ast.AccessNotSpecified {
 				return nil, p.syntaxError("invalid access modifier for pragma")
 			}
