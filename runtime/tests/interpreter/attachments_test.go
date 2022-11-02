@@ -224,6 +224,28 @@ func TestInterpretAttachmentStruct(t *testing.T) {
 
 		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(45), value)
 	})
+
+	t.Run("attachment does not mutate original", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+        struct S {}
+        attachment A for S {
+            fun foo(): Int { return 3 }
+        }
+        fun test(): Int? {
+            var s = S()
+            var s2 = attach A() to s
+            return s[A]?.foo()
+        }
+    `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t, inter, interpreter.Nil, value)
+	})
 }
 
 func TestInterpretAttachmentResource(t *testing.T) {
@@ -442,6 +464,96 @@ func TestInterpretAttachmentResource(t *testing.T) {
 		require.NoError(t, err)
 
 		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(45), value)
+	})
+
+	t.Run("attachment does not mutate original, but original is moved", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+        resource R {}
+        attachment A for R {
+            fun foo(): Int { return 3 }
+        }
+        fun test(): Int {
+            var r <- create R()
+			let ref = &r as &R
+            var r2 <- attach A() to <-r
+            let i = ref[A]?.foo()!
+			destroy r2
+			return i
+        }
+    `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
+	})
+}
+
+func TestAttachExecutionOrdering(t *testing.T) {
+	t.Parallel()
+
+	t.Run("basic", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			struct S {}
+			attachment A for S {
+				let x: Int
+				fun foo(): Int { return self.x }
+				init() { self.x = super[B]!.x }
+			}
+			attachment B for S {
+				let x: Int 
+				init() {
+					self.x = 3
+				}
+			}
+			fun test(): Int {
+				var s = S()
+				var s2 = attach A() to attach B() to s
+				return s2[A]?.foo()!
+			}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		// super must already have `B` attached to it during A's initializer
+		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
+	})
+
+	t.Run("self already attached", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			struct S {
+				fun bar(): Int? {
+					return self[A]?.bar()
+				}
+			}
+			attachment A for S {
+				let x: Int?
+				fun foo(): Int? { return self.x }
+				fun bar(): Int { return 3 }
+				init() { self.x = super.bar() }
+			}
+			fun test(): Int? {
+				var s = S()
+				var s2 = attach A() to s
+				return s2[A]?.foo()!
+			}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		// super does not yet have `A` attached to it during A's initializer
+		AssertValuesEqual(t, inter, interpreter.Nil, value)
 	})
 }
 
@@ -1405,4 +1517,59 @@ func TestInterpretForEachAttachment(t *testing.T) {
 		// order of interation over the attachment is not defined, but must be deterministic nonetheless
 		AssertValuesEqual(t, inter, interpreter.NewUnmeteredStringValue(" HelloWorld"), value)
 	})
+}
+
+func TestInterpretMutationDuringForEachAttachment(t *testing.T) {
+	t.Parallel()
+
+	t.Run("basic attach", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			struct S {}
+			attachment A for S {}
+			attachment B for S {}
+			attachment C for S {}
+			fun test() {
+				var s = attach B() to attach A() to S()
+				s.forEachAttachment(fun(attachment: &AnyStructAttachment) {
+					s = attach C() to s
+				}) 
+			}
+		`)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		require.ErrorAs(t, err, &interpreter.AttachmentIterationMutationError{})
+	})
+
+	t.Run("basic remove", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			struct S {}
+			attachment A for S {}
+			attachment B for S {}
+			fun test() {
+				var s = attach B() to attach A() to S()
+				s.forEachAttachment(fun(attachment: &AnyStructAttachment) {
+					remove A from s
+				}) 
+			}
+		`)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		require.ErrorAs(t, err, &interpreter.AttachmentIterationMutationError{})
+	})
+
+	t.Run("nested iteration", func(t *testing.T) {
+
+		// TODO: test for nested calls to forEachAttachment
+	})
+
 }

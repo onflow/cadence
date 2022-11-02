@@ -865,3 +865,20 @@ func (e DuplicateAttachmentError) Error() string {
 		e.Value.QualifiedIdentifier,
 	)
 }
+
+// AttachmentIterationMutationError
+type AttachmentIterationMutationError struct {
+	Value *CompositeValue
+	LocationRange
+}
+
+var _ errors.UserError = AttachmentIterationMutationError{}
+
+func (AttachmentIterationMutationError) IsUserError() {}
+
+func (e AttachmentIterationMutationError) Error() string {
+	return fmt.Sprintf(
+		"cannot modify %s's attachments while iterating over them",
+		e.Value.QualifiedIdentifier,
+	)
+}

@@ -22,6 +22,7 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/onflow/atree"
 	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -1191,6 +1192,11 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 		panic(errors.NewUnreachableError())
 	}
 
+	locationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: attachExpression,
+	}
+
 	// the `super` value must be accessible during the attachment's constructor, but we cannot
 	// set it on the attachment's `CompositeValue` yet, because the value does not exist. Instead
 	// we directly declare `super` as a `&base` reference in the scope of the constructor's invocation,
@@ -1213,10 +1219,7 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 		panic(errors.NewUnreachableError())
 	}
 
-	locationRange := LocationRange{
-		Location:    interpreter.Location,
-		HasPosition: attachExpression,
-	}
+	base = base.Transfer(interpreter, locationRange, atree.Address{}, false, nil).(*CompositeValue)
 
 	// when `v[A]` is executed, we set `A`'s super to `&v`
 	attachment.setBaseValue(interpreter, base)
