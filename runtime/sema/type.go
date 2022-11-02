@@ -3855,7 +3855,7 @@ The order of iteration is undefined. If a type argument is provided, only attach
 to the specified interface are iterated on, the others are filtered out. 
 `
 
-func CompositeForEachAttachmentFunctionType(t *CompositeType) *FunctionType {
+func CompositeForEachAttachmentFunctionType(t CompositeKindedType) *FunctionType {
 	attachmentSuperType := AnyStructAttachmentType
 	if t.IsResourceType() {
 		attachmentSuperType = AnyResourceAttachmentType
@@ -3989,7 +3989,7 @@ func (t *CompositeType) initializeMemberResolvers() {
 			})
 
 		// resource and struct composites have the ability to iterate over their attachments
-		if t.Kind == common.CompositeKindResource || t.Kind == common.CompositeKindStructure {
+		if t.Kind.SupportsAttachments() {
 			members[compositeForEachAttachmentFunctionName] = MemberResolver{
 				Kind: common.DeclarationKindFunction,
 				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {

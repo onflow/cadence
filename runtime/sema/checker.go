@@ -1943,6 +1943,17 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 				attachmentGetFunctionFunctionDocString,
 			)
 		}
+
+		if compositeKindedType.GetCompositeKind().SupportsAttachments() {
+			addPredeclaredMember(
+				compositeForEachAttachmentFunctionName,
+				CompositeForEachAttachmentFunctionType(compositeKindedType),
+				common.DeclarationKindFunction,
+				ast.AccessPublic,
+				true,
+				compositeForEachAttachmentFunctionDocString,
+			)
+		}
 	}
 
 	return predeclaredMembers
