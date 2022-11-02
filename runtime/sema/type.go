@@ -3855,7 +3855,7 @@ The order of iteration is undefined. If a type argument is provided, only attach
 to the specified interface are iterated on, the others are filtered out. 
 `
 
-func CompositeForEachAttachmentFunctionType(t CompositeKindedType) *FunctionType {
+func CompositeForEachAttachmentFunctionType(t Type) *FunctionType {
 	attachmentSuperType := AnyStructAttachmentType
 	if t.IsResourceType() {
 		attachmentSuperType = AnyResourceAttachmentType

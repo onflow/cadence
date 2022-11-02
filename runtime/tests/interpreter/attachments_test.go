@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
 
 	. "github.com/onflow/cadence/runtime/tests/utils"
 	"github.com/stretchr/testify/require"
@@ -1031,4 +1032,291 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+}
+
+func TestInterpretAttachmentGetFunction(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("basic", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+		resource R {}
+		attachment A for R {
+			fun x(): Int { return 3 }
+		}
+		fun test(): Int {
+			var r <- attach A() to <- create R()
+			let ret = r[A]!.getFunction<(():Int)>("x")!()
+			destroy r
+			return ret
+		}
+	`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
+	})
+
+	t.Run("wrong name", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+		resource R {}
+		attachment A for R {
+			fun x(): Int { return 3 }
+		}
+		fun test(): (():Int)? {
+			var r <- attach A() to <- create R()
+			let ret = r[A]!.getFunction<(():Int)>("y")
+			destroy r
+			return ret
+		}
+	`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t, inter, interpreter.Nil, value)
+	})
+
+	t.Run("wrong type", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+		resource R {}
+		attachment A for R {
+			fun x(): Int { return 3 }
+		}
+		fun test(): (():String)? {
+			var r <- attach A() to <- create R()
+			let ret = r[A]!.getFunction<(():String)>("x")
+			destroy r
+			return ret
+		}
+	`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t, inter, interpreter.Nil, value)
+	})
+
+	t.Run("does not find function-typed field", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+        resource R {}
+        attachment A for R {
+			let x: (():Void)
+			init() {
+				self.x = fun () {}
+			}
+        }
+        fun test(): ((): Void)? {
+            var r <- attach A() to <- create R()
+            let ret = r[A]!.getFunction<(():Void)>("x")
+			destroy r
+			return ret
+        }
+    `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t, inter, interpreter.Nil, value)
+	})
+}
+
+func TestInterpretAttachmentGetField(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("basic", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+        struct S {}
+        attachment A for S {
+            let x: Int
+			init() {
+				self.x = 3
+			}
+        }
+        fun test(): &Int {
+            var s = S()
+            s = attach A() to s
+            return s[A]!.getField<Int>("x")!
+        }
+    `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value.(*interpreter.EphemeralReferenceValue).Value)
+		require.Equal(t, sema.IntType, value.(*interpreter.EphemeralReferenceValue).BorrowedType)
+	})
+
+	t.Run("wrong name", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+        struct S {}
+        attachment A for S {
+            let x: Int
+			init() {
+				self.x = 3
+			}
+        }
+        fun test(): &Int? {
+            var s = S()
+            s = attach A() to s
+            return s[A]!.getField<Int>("y")
+        }
+    `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t, inter, interpreter.Nil, value)
+	})
+
+	t.Run("wrong type", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+        resource R {}
+        attachment A for R {
+            let x: Int
+			init() {
+				self.x = 3
+			}
+        }
+        fun test(): &String? {
+            var r <- attach A() to <- create R()
+            let ret = r[A]!.getField<String>("x")
+			destroy r
+			return ret
+        }
+    `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t, inter, interpreter.Nil, value)
+	})
+
+	t.Run("finds function-typed field", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+        resource R {}
+        attachment A for R {
+			let x: (():Void)
+			init() {
+				self.x = fun () {}
+			}
+        }
+        fun test(): &((): Void) {
+            var r <- attach A() to <- create R()
+            let ret = r[A]!.getField<(():Void)>("x")!
+			destroy r
+			return ret
+        }
+    `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.IsType(t, &interpreter.InterpretedFunctionValue{}, value.(*interpreter.EphemeralReferenceValue).Value)
+	})
+
+	t.Run("does not find function", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+        resource R {}
+        attachment A for R {
+            fun x() {}
+        }
+        fun test(): &(():Void)? {
+            var r <- attach A() to <- create R()
+            let ret = r[A]!.getField<(():Void)>("x")
+			destroy r
+			return ret
+        }
+    `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t, inter, interpreter.Nil, value)
+	})
+}
+
+func TestInterpretForEachAttachment(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("count resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			resource R {}
+			attachment A for R {}
+			attachment B for R {}
+			attachment C for R {}
+			fun test(): Int {
+				var r <- attach C() to <- attach B() to <- attach A() to <- create R()
+				var i = 0
+				r.forEachAttachment(fun(attachment: &AnyResourceAttachment) {
+					i = i + 1
+				}) 
+				destroy r
+				return i 
+			}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
+	})
+
+	t.Run("count struct", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			struct S {}
+			attachment A for S {}
+			attachment B for S {}
+			attachment C for S {}
+			fun test(): Int {
+				var s = attach C() to attach B() to attach A() to S()
+				var i = 0
+				s.forEachAttachment(fun(attachment: &AnyStructAttachment) {
+					i = i + 1
+				}) 
+				return i 
+			}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
+	})
 }

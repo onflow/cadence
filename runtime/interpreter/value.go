@@ -14129,15 +14129,110 @@ func (v *CompositeValue) getBuiltinMember(interpreter *Interpreter, locationRang
 		}
 	case sema.CompositeForEachAttachmentFunctionName:
 		if v.Kind == common.CompositeKindResource || v.Kind == common.CompositeKindStructure {
+			return NewHostFunctionValue(
+				interpreter,
+				func(invocation Invocation) Value {
+					functionValue, ok := invocation.Arguments[0].(FunctionValue)
+					if !ok {
+						panic(errors.NewUnreachableError())
+					}
 
+					fn := func(attachment *CompositeValue) {
+						invocation := NewInvocation(
+							interpreter,
+							nil,
+							nil,
+							[]Value{attachment},
+							[]sema.Type{interpreter.MustSemaTypeOfValue(attachment)},
+							nil,
+							locationRange,
+						)
+						functionValue.invoke(invocation)
+					}
+
+					v.forEachAttachment(interpreter, locationRange, fn)
+					return Void
+				},
+				sema.CompositeForEachAttachmentFunctionType(
+					interpreter.MustSemaTypeOfValue(v),
+				),
+			)
 		}
 	case sema.AttachmentGetFieldFunctionName:
 		if v.Kind == common.CompositeKindAttachment {
+			return NewHostFunctionValue(
+				interpreter,
+				func(invocation Invocation) Value {
+					nameValue, ok := invocation.Arguments[0].(*StringValue)
+					if !ok {
+						panic(errors.NewUnreachableError())
+					}
+					name = nameValue.Str
 
+					member := v.GetMember(interpreter, locationRange, name)
+
+					if member == nil {
+						return Nil
+					}
+
+					if _, isFunction := v.Functions[name]; isFunction {
+						return Nil
+					}
+
+					typeParameterPair := invocation.TypeParameterTypes.Oldest()
+					if typeParameterPair == nil {
+						panic(errors.NewUnreachableError())
+					}
+					ty := typeParameterPair.Value
+
+					if !ty.Equal(invocation.Interpreter.MustSemaTypeOfValue(member)) {
+						return Nil
+					}
+
+					return NewSomeValueNonCopying(interpreter, NewEphemeralReferenceValue(interpreter, false, member, ty))
+				},
+				sema.CompositeForEachAttachmentFunctionType(
+					interpreter.MustSemaTypeOfValue(v),
+				),
+			)
 		}
 	case sema.AttachmentGetFunctionFunctionName:
 		if v.Kind == common.CompositeKindAttachment {
+			return NewHostFunctionValue(
+				interpreter,
+				func(invocation Invocation) Value {
+					nameValue, ok := invocation.Arguments[0].(*StringValue)
+					if !ok {
+						panic(errors.NewUnreachableError())
+					}
+					name = nameValue.Str
 
+					member := v.GetMember(interpreter, locationRange, name)
+
+					if member == nil {
+						return Nil
+					}
+
+					if _, isFunction := v.Functions[name]; !isFunction {
+						return Nil
+					}
+
+					typeParameterPair := invocation.TypeParameterTypes.Oldest()
+					if typeParameterPair == nil {
+						panic(errors.NewUnreachableError())
+					}
+					ty := typeParameterPair.Value
+
+					if !ty.Equal(invocation.Interpreter.MustSemaTypeOfValue(member)) {
+						return Nil
+					}
+
+					return NewSomeValueNonCopying(interpreter, member)
+				},
+				sema.CompositeForEachAttachmentFunctionType(
+					interpreter.MustSemaTypeOfValue(v),
+				),
+			)
 		}
 	}
 
@@ -15473,10 +15568,9 @@ func (v *DictionaryValue) ForEachKey(
 	keyType := v.SemaType(interpreter).KeyType
 
 	iterationInvocation := func(key Value) Invocation {
-		var self MemberAccessibleValue = v
 		return NewInvocation(
 			interpreter,
-			&self,
+			nil,
 			nil,
 			[]Value{key},
 			[]sema.Type{keyType},
