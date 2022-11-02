@@ -1312,6 +1312,22 @@ func TestCheckSuper(t *testing.T) {
 
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	})
+
+	t.Run("super outside composite", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			fun foo() {
+				let x = super
+			}`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+	})
 }
 
 func TestCheckSuperScoping(t *testing.T) {
@@ -2691,6 +2707,30 @@ func TestCheckAttachWithArguments(t *testing.T) {
 		)
 
 		require.NoError(t, err)
+	})
+
+	t.Run("attach super argument", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			attachment A for S {
+				let x: Int 
+				init(x: Int) {
+					self.x = x
+				}
+			}
+			pub fun foo() {
+				attach A(x: super) to S()
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	})
 
 	t.Run("attach two arg", func(t *testing.T) {
@@ -4568,16 +4608,31 @@ func TestCheckAccessAttachment(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-		attachment A for AnyStruct {}
-		pub fun foo(r: AnyStruct) {
-			r[A]
-		}
-	`,
+			attachment A for AnyStruct {}
+			pub fun foo(r: AnyStruct) {
+				r[A]
+			}
+		`,
 		)
 		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.NotIndexableTypeError{}, errs[0])
 	})
 
+	t.Run("non-nominal array", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			attachment A for S {}
+			struct S {}
+			pub fun foo(r: S) {
+				r[[A]]
+			}
+		`,
+		)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAttachmentAccessError{}, errs[0])
+	})
 }
 
 func TestCheckAccessAttachmentRestricted(t *testing.T) {
