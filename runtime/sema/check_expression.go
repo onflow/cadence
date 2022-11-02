@@ -272,7 +272,6 @@ func (checker *Checker) visitIndexExpression(
 	// we cannot use a switch here because in the reference type case we need to be able to "fallthrough",
 	// and Go does not allow fallthroughs in typed switches
 	valueIndexedType, isValueIndexableType := targetType.(ValueIndexableType)
-	typeIndexedType, isTypeIndexableType := targetType.(TypeIndexableType)
 
 	if isValueIndexableType && valueIndexedType.isValueIndexableType() {
 		if isAssignment && !valueIndexedType.AllowsValueIndexingAssignment() {
@@ -298,7 +297,11 @@ func (checker *Checker) visitIndexExpression(
 		}
 
 		return elementType
-	} else if isTypeIndexableType && typeIndexedType.isTypeIndexableType() {
+	}
+
+	typeIndexedType, isTypeIndexableType := targetType.(TypeIndexableType)
+
+	if isTypeIndexableType && typeIndexedType.isTypeIndexableType() {
 		reportError := func(indexedType Type) {
 			checker.report(
 				&InvalidAttachmentAccessError{

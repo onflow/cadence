@@ -3829,7 +3829,7 @@ func (t *CompositeType) GetNestedTypes() *StringTypeOrderedMap {
 
 func (t *CompositeType) isTypeIndexableType() bool {
 	// resources and structs only can be indexed for attachments
-	return t.Kind == common.CompositeKindResource || t.Kind == common.CompositeKindStructure
+	return t.Kind.SupportsAttachments()
 }
 
 func (t *CompositeType) TypeIndexingElementType(indexingType Type) Type {
@@ -3855,7 +3855,7 @@ The order of iteration is undefined. If a type argument is provided, only attach
 to the specified interface are iterated on, the others are filtered out. 
 `
 
-func CompositeForEachAttachmentFunctionType(t *CompositeType) *FunctionType {
+func CompositeForEachAttachmentFunctionType(t CompositeKindedType) *FunctionType {
 	attachmentSuperType := AnyStructAttachmentType
 	if t.IsResourceType() {
 		attachmentSuperType = AnyResourceAttachmentType
@@ -3989,7 +3989,7 @@ func (t *CompositeType) initializeMemberResolvers() {
 			})
 
 		// resource and struct composites have the ability to iterate over their attachments
-		if t.Kind == common.CompositeKindResource || t.Kind == common.CompositeKindStructure {
+		if t.Kind.SupportsAttachments() {
 			members[CompositeForEachAttachmentFunctionName] = MemberResolver{
 				Kind: common.DeclarationKindFunction,
 				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
@@ -4974,10 +4974,7 @@ func (t *ReferenceType) isValueIndexableType() bool {
 
 func (t *ReferenceType) isTypeIndexableType() bool {
 	referencedType, ok := t.Type.(TypeIndexableType)
-	if !ok {
-		return false
-	}
-	return referencedType.isTypeIndexableType()
+	return ok && referencedType.isTypeIndexableType()
 }
 
 func (t *ReferenceType) TypeIndexingElementType(indexingType Type) Type {
@@ -4990,10 +4987,7 @@ func (t *ReferenceType) TypeIndexingElementType(indexingType Type) Type {
 
 func (t *ReferenceType) IsValidIndexingType(ty Type) bool {
 	referencedType, ok := t.Type.(TypeIndexableType)
-	if !ok {
-		return false
-	}
-	return referencedType.IsValidIndexingType(ty)
+	return ok && referencedType.IsValidIndexingType(ty)
 }
 
 func (t *ReferenceType) AllowsValueIndexingAssignment() bool {

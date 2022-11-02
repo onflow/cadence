@@ -4709,3 +4709,406 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestCheckDebug(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t,
+		`
+		resource R {
+			fun forEachAttachment() {}
+		}
+		`,
+	)
+
+	errs := RequireCheckerErrors(t, err, 1)
+	assert.IsType(t, &sema.InvalidDeclarationError{}, errs[0])
+}
+
+func TestCheckAttachmentsDuplicateFields(t *testing.T) {
+	t.Parallel()
+
+	t.Run("forEachAttachment", func(t *testing.T) {
+
+		t.Parallel()
+
+		t.Run("resource", func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				`
+				resource R {
+					fun forEachAttachment() {}
+				}
+				`,
+			)
+
+			errs := RequireCheckerErrors(t, err, 1)
+			assert.IsType(t, &sema.InvalidDeclarationError{}, errs[0])
+		})
+
+		t.Run("struct", func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				`
+				struct S {
+					fun forEachAttachment() {}
+				}
+				`,
+			)
+
+			errs := RequireCheckerErrors(t, err, 1)
+			assert.IsType(t, &sema.InvalidDeclarationError{}, errs[0])
+		})
+
+		t.Run("resource interface", func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				`
+				resource interface R {
+					fun forEachAttachment()
+				}
+				`,
+			)
+
+			errs := RequireCheckerErrors(t, err, 1)
+			assert.IsType(t, &sema.InvalidDeclarationError{}, errs[0])
+		})
+
+		t.Run("struct interface", func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				`
+				struct interface S {
+					fun forEachAttachment()
+				}
+				`,
+			)
+
+			errs := RequireCheckerErrors(t, err, 1)
+			assert.IsType(t, &sema.InvalidDeclarationError{}, errs[0])
+		})
+
+		t.Run("contract", func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				`
+				contract C {
+					fun forEachAttachment() {}
+				}
+				`,
+			)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("contract interface", func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				`
+				contract interface C {
+					fun forEachAttachment()
+				}
+				`,
+			)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("resource attachment", func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				`
+				attachment A for AnyResource {
+					fun forEachAttachment() {}
+				}
+				`,
+			)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("struct attachment", func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				`
+				attachment A for AnyStruct {
+					fun forEachAttachment() {}
+				}
+				`,
+			)
+
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("getField", func(t *testing.T) {
+
+		t.Parallel()
+
+		t.Run("resource", func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				`
+				resource R {
+					fun getField() {}
+				}
+				`,
+			)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("struct", func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				`
+				struct S {
+					fun getField() {}
+				}
+				`,
+			)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("resource interface", func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				`
+				resource interface R {
+					fun getField()
+				}
+				`,
+			)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("struct interface", func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				`
+				struct interface S {
+					fun getField()
+				}
+				`,
+			)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("contract", func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				`
+				contract C {
+					fun getField() {}
+				}
+				`,
+			)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("contract interface", func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				`
+				contract interface C {
+					fun getField()
+				}
+				`,
+			)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("resource attachment", func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				`
+				attachment A for AnyResource {
+					fun getField() {}
+				}
+				`,
+			)
+
+			errs := RequireCheckerErrors(t, err, 1)
+			assert.IsType(t, &sema.InvalidDeclarationError{}, errs[0])
+		})
+
+		t.Run("struct attachment", func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				`
+				attachment A for AnyStruct {
+					fun getField() {}
+				}
+				`,
+			)
+
+			errs := RequireCheckerErrors(t, err, 1)
+			assert.IsType(t, &sema.InvalidDeclarationError{}, errs[0])
+		})
+	})
+
+	t.Run("getFunction", func(t *testing.T) {
+
+		t.Parallel()
+
+		t.Run("resource", func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				`
+				resource R {
+					fun getFunction() {}
+				}
+				`,
+			)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("struct", func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				`
+				struct S {
+					fun getFunction() {}
+				}
+				`,
+			)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("resource interface", func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				`
+				resource interface R {
+					fun getFunction()
+				}
+				`,
+			)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("struct interface", func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				`
+				struct interface S {
+					fun getFunction()
+				}
+				`,
+			)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("contract", func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				`
+				contract C {
+					fun getFunction() {}
+				}
+				`,
+			)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("contract interface", func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				`
+				contract interface C {
+					fun getFunction()
+				}
+				`,
+			)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("resource attachment", func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				`
+				attachment A for AnyResource {
+					fun getFunction() {}
+				}
+				`,
+			)
+
+			errs := RequireCheckerErrors(t, err, 1)
+			assert.IsType(t, &sema.InvalidDeclarationError{}, errs[0])
+		})
+
+		t.Run("struct attachment", func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				`
+				attachment A for AnyStruct {
+					fun getFunction() {}
+				}
+				`,
+			)
+
+			errs := RequireCheckerErrors(t, err, 1)
+			assert.IsType(t, &sema.InvalidDeclarationError{}, errs[0])
+		})
+	})
+}

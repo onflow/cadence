@@ -32,7 +32,7 @@ func (checker *Checker) VisitAttachExpression(expression *ast.AttachExpression) 
 	}
 
 	attachmentType, baseIsCompositeType := ty.(*CompositeType)
-	if !baseIsCompositeType || attachmentType.Kind != common.CompositeKindAttachment {
+	if !(baseIsCompositeType && attachmentType.Kind == common.CompositeKindAttachment) {
 		checker.report(
 			&AttachNonAttachmentError{
 				Type:  ty,
@@ -69,7 +69,8 @@ func (checker *Checker) VisitAttachExpression(expression *ast.AttachExpression) 
 	if _, annotatedIsCompositeType := annotatedBaseType.(CompositeKindedType); !annotatedIsCompositeType {
 		switch baseType := actualBaseType.(type) {
 		case CompositeKindedType:
-			if baseType.GetCompositeKind() != common.CompositeKindResource && baseType.GetCompositeKind() != common.CompositeKindStructure {
+			compositeKind := baseType.GetCompositeKind()
+			if !(compositeKind == common.CompositeKindResource || compositeKind == common.CompositeKindStructure) {
 				return reportInvalidBase(actualBaseType)
 			}
 		// these are always resource/structure types
