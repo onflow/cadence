@@ -1319,4 +1319,90 @@ func TestInterpretForEachAttachment(t *testing.T) {
 
 		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
 	})
+
+	t.Run("invoke foos", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			struct S {}
+			attachment A for S {
+				fun foo(_ x: Int): Int { return 7 + x }
+			}
+			attachment B for S {
+				fun foo(): Int { return 10 }
+			}
+			attachment C for S {
+				fun foo(_ x: Int): Int { return 8 + x }
+			}
+			fun test(): Int {
+				var s = attach C() to attach B() to attach A() to S()
+				var i = 0
+				s.forEachAttachment(fun(attachment: &AnyStructAttachment) {
+					if let foo = attachment.getFunction<((Int):Int)>("foo") {
+						i = i + foo(1)
+					}
+				}) 
+				return i 
+			}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(17), value)
+	})
+
+	t.Run("access fields", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			resource Sub {
+				let name: String
+				init(_ name: String) {
+					self.name = name
+				}
+			}
+			resource R {}
+			attachment A for R {
+				let r: @Sub
+				init(_ name: String) {
+					self.r <- create Sub(name)
+				}
+				destroy() {
+					destroy self.r
+				}
+			}
+			attachment B for R {}
+			attachment C for R {
+				let r: @Sub
+				init(_ name: String) {
+					self.r <- create Sub(name)
+				}
+				destroy() {
+					destroy self.r
+				}
+			}
+			fun test(): String {
+				var r <- attach C("World") to <- attach B() to <- attach A("Hello") to <- create R()
+				var text = ""
+				r.forEachAttachment(fun(attachment: &AnyResourceAttachment) {
+					if let r = attachment.getField<@Sub>("r") {
+						text = text.concat(r.name)
+					} else {
+						text = text.concat(" ")
+					}
+				}) 
+				destroy r
+				return text
+			}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		// order of interation over the attachment is not defined, but must be deterministic nonetheless
+		AssertValuesEqual(t, inter, interpreter.NewUnmeteredStringValue(" HelloWorld"), value)
+	})
 }
