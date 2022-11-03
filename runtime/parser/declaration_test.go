@@ -2681,6 +2681,22 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("enum case with view modifier", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" enum E { view case e }")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid view modifier for enum case",
+					Pos:     ast.Position{Offset: 10, Line: 1, Column: 10},
+				},
+			},
+			errs,
+		)
+	})
 }
 
 func TestParseTransactionDeclaration(t *testing.T) {
@@ -4576,7 +4592,7 @@ func TestParseImportWithFromIdentifier(t *testing.T) {
 	)
 }
 
-func TestParseImportWithPurity(t *testing.T) {
+func TestParseInvalidImportWithPurity(t *testing.T) {
 
 	t.Parallel()
 
@@ -4596,7 +4612,7 @@ func TestParseImportWithPurity(t *testing.T) {
 	)
 }
 
-func TestParseEventWithPurity(t *testing.T) {
+func TestParseInvalidEventWithPurity(t *testing.T) {
 
 	t.Parallel()
 
@@ -4616,7 +4632,7 @@ func TestParseEventWithPurity(t *testing.T) {
 	)
 }
 
-func TestParseCompositeWithPurity(t *testing.T) {
+func TestParseInvalidCompositeWithPurity(t *testing.T) {
 
 	t.Parallel()
 
@@ -4636,7 +4652,7 @@ func TestParseCompositeWithPurity(t *testing.T) {
 	)
 }
 
-func TestParseTransactionWithPurity(t *testing.T) {
+func TestParseInvalidTransactionWithPurity(t *testing.T) {
 
 	t.Parallel()
 

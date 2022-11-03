@@ -1064,7 +1064,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 
 			case keywordCase:
 				if purity != ast.FunctionPurityUnspecified {
-					return nil, NewSyntaxError(*purityPos, "invalid view modifier for case")
+					return nil, NewSyntaxError(*purityPos, "invalid view modifier for enum case")
 				}
 				return parseEnumCase(p, access, accessPos, docString)
 
