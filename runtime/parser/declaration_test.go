@@ -2573,52 +2573,6 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 		}, errs)
 	})
 
-	t.Run("enum, two cases one one line", func(t *testing.T) {
-
-		t.Parallel()
-
-		result, errs := testParseDeclarations(" pub enum E { case c ; pub case d }")
-		require.Empty(t, errs)
-
-		utils.AssertEqualWithDiff(t,
-			[]ast.Declaration{
-				&ast.CompositeDeclaration{
-					Access:        ast.AccessPublic,
-					CompositeKind: common.CompositeKindEnum,
-					Identifier: ast.Identifier{
-						Identifier: "E",
-						Pos:        ast.Position{Line: 1, Column: 10, Offset: 10},
-					},
-					Members: ast.NewUnmeteredMembers(
-						[]ast.Declaration{
-							&ast.EnumCaseDeclaration{
-								Access: ast.AccessNotSpecified,
-								Identifier: ast.Identifier{
-									Identifier: "c",
-									Pos:        ast.Position{Line: 1, Column: 19, Offset: 19},
-								},
-								StartPos: ast.Position{Line: 1, Column: 14, Offset: 14},
-							},
-							&ast.EnumCaseDeclaration{
-								Access: ast.AccessPublic,
-								Identifier: ast.Identifier{
-									Identifier: "d",
-									Pos:        ast.Position{Line: 1, Column: 32, Offset: 32},
-								},
-								StartPos: ast.Position{Line: 1, Column: 23, Offset: 23},
-							},
-						},
-					),
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-						EndPos:   ast.Position{Line: 1, Column: 34, Offset: 34},
-					},
-				},
-			},
-			result,
-		)
-	})
-
 	t.Run("struct with view member", func(t *testing.T) {
 
 		t.Parallel()
@@ -2675,6 +2629,57 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 						EndPos:   ast.Position{Line: 3, Column: 2, Offset: 45},
+					},
+				},
+			},
+			result,
+		)
+	})
+}
+
+func TestParseEnumDeclaration(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("enum, two cases one one line", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(" pub enum E { case c ; pub case d }")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.CompositeDeclaration{
+					Access:        ast.AccessPublic,
+					CompositeKind: common.CompositeKindEnum,
+					Identifier: ast.Identifier{
+						Identifier: "E",
+						Pos:        ast.Position{Line: 1, Column: 10, Offset: 10},
+					},
+					Members: ast.NewUnmeteredMembers(
+						[]ast.Declaration{
+							&ast.EnumCaseDeclaration{
+								Access: ast.AccessNotSpecified,
+								Identifier: ast.Identifier{
+									Identifier: "c",
+									Pos:        ast.Position{Line: 1, Column: 19, Offset: 19},
+								},
+								StartPos: ast.Position{Line: 1, Column: 14, Offset: 14},
+							},
+							&ast.EnumCaseDeclaration{
+								Access: ast.AccessPublic,
+								Identifier: ast.Identifier{
+									Identifier: "d",
+									Pos:        ast.Position{Line: 1, Column: 32, Offset: 32},
+								},
+								StartPos: ast.Position{Line: 1, Column: 23, Offset: 23},
+							},
+						},
+					),
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+						EndPos:   ast.Position{Line: 1, Column: 34, Offset: 34},
 					},
 				},
 			},
