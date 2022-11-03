@@ -18,6 +18,7 @@
 
 package parser
 
+// NOTE: ensure to update allKeywords when adding a new keyword
 const (
 	keywordIf          = "if"
 	keywordElse        = "else"
@@ -63,6 +64,7 @@ const (
 	keywordDefault     = "default"
 	keywordEnum        = "enum"
 	keywordView        = "view"
+	// NOTE: ensure to update allKeywords when adding a new keyword
 )
 
 var allKeywords = map[string]struct{}{
@@ -109,6 +111,7 @@ var allKeywords = map[string]struct{}{
 	keywordSwitch:      {},
 	keywordDefault:     {},
 	keywordEnum:        {},
+	keywordView:        {},
 }
 
 // Keywords that can be used in identifier position without ambiguity.
@@ -120,7 +123,7 @@ var softKeywords = map[string]struct{}{
 }
 
 // Keywords that aren't allowed in identifier position.
-var hardKeywords map[string]struct{} = mapDiff(allKeywords, softKeywords)
+var hardKeywords = mapDiff(allKeywords, softKeywords)
 
 // take the boolean difference of two maps
 func mapDiff[T comparable, U any](minuend map[T]U, subtrahend map[T]U) map[T]U {

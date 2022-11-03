@@ -270,7 +270,7 @@ func TestParseVariableDeclaration(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message: "invalid view modifier for variable",
-					Pos:     ast.Position{Offset: 5, Line: 1, Column: 5},
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
 				},
 			},
 			errs,
@@ -2263,7 +2263,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message: "invalid view modifier for variable",
-					Pos:     ast.Position{Offset: 23, Line: 2, Column: 11},
+					Pos:     ast.Position{Offset: 15, Line: 2, Column: 3},
 				},
 			},
 			errs,
@@ -2573,52 +2573,6 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 		}, errs)
 	})
 
-	t.Run("enum, two cases one one line", func(t *testing.T) {
-
-		t.Parallel()
-
-		result, errs := testParseDeclarations(" pub enum E { case c ; pub case d }")
-		require.Empty(t, errs)
-
-		utils.AssertEqualWithDiff(t,
-			[]ast.Declaration{
-				&ast.CompositeDeclaration{
-					Access:        ast.AccessPublic,
-					CompositeKind: common.CompositeKindEnum,
-					Identifier: ast.Identifier{
-						Identifier: "E",
-						Pos:        ast.Position{Line: 1, Column: 10, Offset: 10},
-					},
-					Members: ast.NewUnmeteredMembers(
-						[]ast.Declaration{
-							&ast.EnumCaseDeclaration{
-								Access: ast.AccessNotSpecified,
-								Identifier: ast.Identifier{
-									Identifier: "c",
-									Pos:        ast.Position{Line: 1, Column: 19, Offset: 19},
-								},
-								StartPos: ast.Position{Line: 1, Column: 14, Offset: 14},
-							},
-							&ast.EnumCaseDeclaration{
-								Access: ast.AccessPublic,
-								Identifier: ast.Identifier{
-									Identifier: "d",
-									Pos:        ast.Position{Line: 1, Column: 32, Offset: 32},
-								},
-								StartPos: ast.Position{Line: 1, Column: 23, Offset: 23},
-							},
-						},
-					),
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-						EndPos:   ast.Position{Line: 1, Column: 34, Offset: 34},
-					},
-				},
-			},
-			result,
-		)
-	})
-
 	t.Run("struct with view member", func(t *testing.T) {
 
 		t.Parallel()
@@ -2679,6 +2633,73 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 				},
 			},
 			result,
+		)
+	})
+}
+
+func TestParseEnumDeclaration(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("enum, two cases one one line", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(" pub enum E { case c ; pub case d }")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.CompositeDeclaration{
+					Access:        ast.AccessPublic,
+					CompositeKind: common.CompositeKindEnum,
+					Identifier: ast.Identifier{
+						Identifier: "E",
+						Pos:        ast.Position{Line: 1, Column: 10, Offset: 10},
+					},
+					Members: ast.NewUnmeteredMembers(
+						[]ast.Declaration{
+							&ast.EnumCaseDeclaration{
+								Access: ast.AccessNotSpecified,
+								Identifier: ast.Identifier{
+									Identifier: "c",
+									Pos:        ast.Position{Line: 1, Column: 19, Offset: 19},
+								},
+								StartPos: ast.Position{Line: 1, Column: 14, Offset: 14},
+							},
+							&ast.EnumCaseDeclaration{
+								Access: ast.AccessPublic,
+								Identifier: ast.Identifier{
+									Identifier: "d",
+									Pos:        ast.Position{Line: 1, Column: 32, Offset: 32},
+								},
+								StartPos: ast.Position{Line: 1, Column: 23, Offset: 23},
+							},
+						},
+					),
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+						EndPos:   ast.Position{Line: 1, Column: 34, Offset: 34},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("enum case with view modifier", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" enum E { view case e }")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid view modifier for enum case",
+					Pos:     ast.Position{Offset: 10, Line: 1, Column: 10},
+				},
+			},
+			errs,
 		)
 	})
 }
@@ -4299,27 +4320,47 @@ func TestParsePragmaNoArguments(t *testing.T) {
 
 	t.Parallel()
 
-	const code = `#pedantic`
-	result, err := testParseProgram(code)
-	require.NoError(t, err)
+	t.Run("identifier", func(t *testing.T) {
 
-	utils.AssertEqualWithDiff(t,
-		[]ast.Declaration{
-			&ast.PragmaDeclaration{
-				Expression: &ast.IdentifierExpression{
-					Identifier: ast.Identifier{
-						Identifier: "pedantic",
-						Pos:        ast.Position{Offset: 1, Line: 1, Column: 1},
+		t.Parallel()
+
+		result, errs := testParseDeclarations(`#pedantic`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.PragmaDeclaration{
+					Expression: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "pedantic",
+							Pos:        ast.Position{Offset: 1, Line: 1, Column: 1},
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+						EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
 					},
 				},
-				Range: ast.Range{
-					StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
-					EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+			},
+			result,
+		)
+	})
+
+	t.Run("with purity", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("view #foo")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid view modifier for pragma",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
 				},
 			},
-		},
-		result.Declarations(),
-	)
+			errs,
+		)
+	})
 }
 
 func TestParsePragmaArguments(t *testing.T) {
@@ -4556,7 +4597,7 @@ func TestParseImportWithFromIdentifier(t *testing.T) {
 	)
 }
 
-func TestParseImportWithPurity(t *testing.T) {
+func TestParseInvalidImportWithPurity(t *testing.T) {
 
 	t.Parallel()
 
@@ -4569,14 +4610,14 @@ func TestParseImportWithPurity(t *testing.T) {
 		[]error{
 			&SyntaxError{
 				Message: "invalid view modifier for import",
-				Pos:     ast.Position{Offset: 14, Line: 2, Column: 13},
+				Pos:     ast.Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
 		errs,
 	)
 }
 
-func TestParseEventWithPurity(t *testing.T) {
+func TestParseInvalidEventWithPurity(t *testing.T) {
 
 	t.Parallel()
 
@@ -4589,14 +4630,14 @@ func TestParseEventWithPurity(t *testing.T) {
 		[]error{
 			&SyntaxError{
 				Message: "invalid view modifier for event",
-				Pos:     ast.Position{Offset: 14, Line: 2, Column: 13},
+				Pos:     ast.Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
 		errs,
 	)
 }
 
-func TestParseCompositeWithPurity(t *testing.T) {
+func TestParseInvalidCompositeWithPurity(t *testing.T) {
 
 	t.Parallel()
 
@@ -4609,14 +4650,14 @@ func TestParseCompositeWithPurity(t *testing.T) {
 		[]error{
 			&SyntaxError{
 				Message: "invalid view modifier for composite",
-				Pos:     ast.Position{Offset: 14, Line: 2, Column: 13},
+				Pos:     ast.Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
 		errs,
 	)
 }
 
-func TestParseTransactionWithPurity(t *testing.T) {
+func TestParseInvalidTransactionWithPurity(t *testing.T) {
 
 	t.Parallel()
 
@@ -4629,7 +4670,7 @@ func TestParseTransactionWithPurity(t *testing.T) {
 		[]error{
 			&SyntaxError{
 				Message: "invalid view modifier for transaction",
-				Pos:     ast.Position{Offset: 14, Line: 2, Column: 13},
+				Pos:     ast.Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
 		errs,
@@ -5534,7 +5575,7 @@ func TestParseInvalidAccessModifiers(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message: "invalid access modifier for pragma",
-					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
 				},
 			},
 			errs,
@@ -5550,7 +5591,7 @@ func TestParseInvalidAccessModifiers(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message: "invalid access modifier for transaction",
-					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
 				},
 			},
 			errs,

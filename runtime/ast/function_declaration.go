@@ -24,6 +24,7 @@ import (
 	"github.com/turbolent/prettier"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 )
 
 type FunctionPurity int
@@ -33,11 +34,26 @@ const (
 	FunctionPurityView
 )
 
-func (p FunctionPurity) MarshalJSON() ([]byte, error) {
-	if p == FunctionPurityUnspecified {
-		return json.Marshal("Unspecified")
+func (p FunctionPurity) Keyword() string {
+	switch p {
+	case FunctionPurityUnspecified:
+		return ""
+	case FunctionPurityView:
+		return "view"
+	default:
+		panic(errors.NewUnreachableError())
 	}
-	return json.Marshal("View")
+}
+
+func (p FunctionPurity) MarshalJSON() ([]byte, error) {
+	switch p {
+	case FunctionPurityUnspecified:
+		return json.Marshal("Unspecified")
+	case FunctionPurityView:
+		return json.Marshal("View")
+	default:
+		panic(errors.NewUnreachableError())
+	}
 }
 
 type FunctionDeclaration struct {
@@ -144,6 +160,7 @@ func (d *FunctionDeclaration) DeclarationDocString() string {
 func (d *FunctionDeclaration) Doc() prettier.Doc {
 	return FunctionDocument(
 		d.Access,
+		d.Purity,
 		true,
 		d.Identifier.Identifier,
 		d.ParameterList,
@@ -236,6 +253,7 @@ func (d *SpecialFunctionDeclaration) DeclarationDocString() string {
 func (d *SpecialFunctionDeclaration) Doc() prettier.Doc {
 	return FunctionDocument(
 		d.FunctionDeclaration.Access,
+		d.FunctionDeclaration.Purity,
 		false,
 		d.Kind.Keywords(),
 		d.FunctionDeclaration.ParameterList,

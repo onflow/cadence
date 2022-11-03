@@ -659,6 +659,7 @@ func TestFunctionType_Doc(t *testing.T) {
 	t.Parallel()
 
 	ty := &FunctionType{
+		PurityAnnotation: FunctionPurityView,
 		ParameterTypeAnnotations: []*TypeAnnotation{
 			{
 				IsResource: true,
@@ -689,6 +690,8 @@ func TestFunctionType_Doc(t *testing.T) {
 	assert.Equal(t,
 		prettier.Concat{
 			prettier.Text("("),
+			prettier.Text("view"),
+			prettier.Space,
 			prettier.Group{
 				Doc: prettier.Concat{
 					prettier.Text("("),

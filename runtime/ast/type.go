@@ -471,6 +471,10 @@ func (t *FunctionType) Doc() prettier.Doc {
 		prettier.SoftLine{},
 	}
 
+	result := prettier.Concat{
+		functionTypeStartDoc,
+	}
+
 	for i, parameterTypeAnnotation := range t.ParameterTypeAnnotations {
 		if i > 0 {
 			parametersDoc = append(
@@ -485,8 +489,16 @@ func (t *FunctionType) Doc() prettier.Doc {
 		)
 	}
 
-	return prettier.Concat{
-		functionTypeStartDoc,
+	if t.PurityAnnotation != FunctionPurityUnspecified {
+		result = append(
+			result,
+			prettier.Text(t.PurityAnnotation.Keyword()),
+			prettier.Space,
+		)
+	}
+
+	result = append(
+		result,
 		prettier.Group{
 			Doc: prettier.Concat{
 				functionTypeStartDoc,
@@ -500,7 +512,9 @@ func (t *FunctionType) Doc() prettier.Doc {
 		typeSeparatorSpaceDoc,
 		t.ReturnTypeAnnotation.Doc(),
 		functionTypeEndDoc,
-	}
+	)
+
+	return result
 }
 
 func (t *FunctionType) MarshalJSON() ([]byte, error) {

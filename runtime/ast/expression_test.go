@@ -4722,6 +4722,35 @@ func TestFunctionExpression_Doc(t *testing.T) {
 
 		assert.Equal(t, expected, expr.Doc())
 	})
+
+	t.Run("view", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &FunctionExpression{
+			Purity:        FunctionPurityView,
+			ParameterList: &ParameterList{},
+			FunctionBlock: &FunctionBlock{
+				Block: &Block{
+					Statements: []Statement{},
+				},
+			},
+		}
+
+		expected := prettier.Concat{
+			prettier.Text("view"),
+			prettier.Space,
+			prettier.Text("fun "),
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("()"),
+				},
+			},
+			prettier.Text(" {}"),
+		}
+
+		assert.Equal(t, expected, expr.Doc())
+	})
 }
 
 func TestFunctionExpression_String(t *testing.T) {

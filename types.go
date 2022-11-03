@@ -1399,7 +1399,7 @@ func (t *ContractInterfaceType) InterfaceInitializers() [][]Parameter {
 type FunctionPurity int
 
 const (
-	FunctionPurityUnspecified = iota
+	FunctionPurityUnspecified FunctionPurity = iota
 	FunctionPurityView
 )
 

@@ -176,6 +176,7 @@ func TestFunctionDeclaration_Doc(t *testing.T) {
 
 	decl := &FunctionDeclaration{
 		Access: AccessPublic,
+		Purity: FunctionPurityView,
 		Identifier: Identifier{
 			Identifier: "xyz",
 		},
@@ -214,6 +215,8 @@ func TestFunctionDeclaration_Doc(t *testing.T) {
 	require.Equal(t,
 		prettier.Concat{
 			prettier.Text("pub"),
+			prettier.Space,
+			prettier.Text("view"),
 			prettier.Space,
 			prettier.Text("fun "),
 			prettier.Text("xyz"),
