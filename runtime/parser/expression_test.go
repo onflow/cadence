@@ -5889,6 +5889,18 @@ func TestParseCasting(t *testing.T) {
 	)
 }
 
+func testParseIdentifiersWith(t *testing.T, identifiers []string, condition func(*testing.T, string, error)) {
+	for _, name := range identifiers {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			code := fmt.Sprintf(`let %s = 0`, name)
+			_, errs := testParseProgram(code)
+			condition(t, name, errs)
+		})
+	}
+}
+
 func TestParseIdentifiers(t *testing.T) {
 
 	t.Parallel()
@@ -5900,27 +5912,23 @@ func TestParseIdentifiers(t *testing.T) {
 		"foo________",
 		"FOO_______",
 		"Fo123__21341278AAAAAAAAAAAAA",
-		"view",
 	}
-	for _, name := range names {
-		t.Run(name, func(t *testing.T) {
 
-			code := fmt.Sprintf(`let %s = 1`, name)
-			_, errs := testParseProgram(code)
-			require.Empty(t, errs)
-		})
-	}
+	testParseIdentifiersWith(t, names, func(t *testing.T, _ string, errs error) {
+		require.Empty(t, errs)
+	})
 }
 
-func TestParseReservedIdent(t *testing.T) {
+func TestParseHardKeywords(t *testing.T) {
 	t.Parallel()
 
-	for keyword := range hardKeywords {
-		code := fmt.Sprintf(`let %s = 0`, keyword)
-		_, err := testParseProgram(code)
-		upcast := err.(Error)
-		errs := upcast.Errors
+	// seriously why doesn't golang have iterators
+	hardKeywordList := make([]string, len(hardKeywords))
+	for kw := range hardKeywords {
+		hardKeywordList = append(hardKeywordList, kw)
+	}
 
+	testParseIdentifiersWith(t, hardKeywordList, func(t *testing.T, keyword string, err error) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -5928,9 +5936,22 @@ func TestParseReservedIdent(t *testing.T) {
 					Message: "expected identifier after start of variable declaration, got keyword " + keyword,
 				},
 			},
-			errs,
+			err.(Error).Errors,
 		)
+	})
+}
+
+func TestParseSoftKeywords(t *testing.T) {
+	t.Parallel()
+
+	softKeywordList := make([]string, len(softKeywords))
+	for kw := range softKeywords {
+		softKeywordList = append(softKeywordList, kw)
 	}
+
+	testParseIdentifiersWith(t, softKeywordList, func(t *testing.T, _ string, err error) {
+		require.Empty(t, err)
+	})
 }
 
 func TestParseReferenceInVariableDeclaration(t *testing.T) {
