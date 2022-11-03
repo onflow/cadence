@@ -2799,7 +2799,7 @@ func TestParseFunctionExpression(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected fun keyword, but got for",
+					Message: "unexpected token: identifier",
 					Pos:     ast.Position{Offset: 5, Line: 1, Column: 5},
 				},
 			},
@@ -5900,6 +5900,7 @@ func TestParseIdentifiers(t *testing.T) {
 		"foo________",
 		"FOO_______",
 		"Fo123__21341278AAAAAAAAAAAAA",
+		"view",
 	}
 	for _, name := range names {
 		t.Run(name, func(t *testing.T) {

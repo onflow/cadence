@@ -120,6 +120,7 @@ var softKeywords = map[string]struct{}{
 	keywordAccount: {},
 	keywordSet:     {},
 	keywordAll:     {},
+	keywordView:    {},
 }
 
 // Keywords that aren't allowed in identifier position.
