@@ -1043,7 +1043,7 @@ func (checker *Checker) checkCompositeConformance(
 	compositeKindMismatchIdentifier ast.Identifier,
 	options compositeConformanceCheckOptions,
 	inheritedMembers map[string]struct{},
-// type requirement name -> inherited members
+	// type requirement name -> inherited members
 	typeRequirementsInheritedMembers map[string]map[string]struct{},
 ) {
 
