@@ -76,17 +76,17 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 		switch p.current.Type {
 		case lexer.TokenPragma:
 			if purity != ast.FunctionPurityUnspecified {
-				return nil, p.syntaxError("invalid view modifier for pragma")
+				return nil, NewSyntaxError(*purityPos, "invalid view modifier for pragma")
 			}
 			if access != ast.AccessNotSpecified {
-				return nil, p.syntaxError("invalid access modifier for pragma")
+				return nil, NewSyntaxError(*accessPos, "invalid access modifier for pragma")
 			}
 			return parsePragmaDeclaration(p)
 		case lexer.TokenIdentifier:
 			switch string(p.currentTokenSource()) {
 			case keywordLet, keywordVar:
 				if purity != ast.FunctionPurityUnspecified {
-					return nil, p.syntaxError("invalid view modifier for variable")
+					return nil, NewSyntaxError(*purityPos, "invalid view modifier for variable")
 				}
 				return parseVariableDeclaration(p, access, accessPos, docString)
 
@@ -95,28 +95,28 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 
 			case keywordImport:
 				if purity != ast.FunctionPurityUnspecified {
-					return nil, p.syntaxError("invalid view modifier for import")
+					return nil, NewSyntaxError(*purityPos, "invalid view modifier for import")
 				}
 				return parseImportDeclaration(p)
 
 			case keywordEvent:
 				if purity != ast.FunctionPurityUnspecified {
-					return nil, p.syntaxError("invalid view modifier for event")
+					return nil, NewSyntaxError(*purityPos, "invalid view modifier for event")
 				}
 				return parseEventDeclaration(p, access, accessPos, docString)
 
 			case keywordStruct, keywordResource, keywordContract, keywordEnum:
 				if purity != ast.FunctionPurityUnspecified {
-					return nil, p.syntaxError("invalid view modifier for composite")
+					return nil, NewSyntaxError(*purityPos, "invalid view modifier for composite")
 				}
 				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, docString)
 
 			case keywordTransaction:
 				if access != ast.AccessNotSpecified {
-					return nil, p.syntaxError("invalid access modifier for transaction")
+					return nil, NewSyntaxError(*accessPos, "invalid access modifier for transaction")
 				}
 				if purity != ast.FunctionPurityUnspecified {
-					return nil, p.syntaxError("invalid view modifier for transaction")
+					return nil, NewSyntaxError(*purityPos, "invalid view modifier for transaction")
 				}
 
 				return parseTransactionDeclaration(p, docString)
@@ -1058,13 +1058,13 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 			switch string(p.currentTokenSource()) {
 			case keywordLet, keywordVar:
 				if purity != ast.FunctionPurityUnspecified {
-					return nil, p.syntaxError("invalid view modifier for variable")
+					return nil, NewSyntaxError(*purityPos, "invalid view modifier for variable")
 				}
 				return parseFieldWithVariableKind(p, access, accessPos, docString)
 
 			case keywordCase:
 				if purity != ast.FunctionPurityUnspecified {
-					return nil, p.syntaxError("invalid view modifier for case")
+					return nil, NewSyntaxError(*purityPos, "invalid view modifier for case")
 				}
 				return parseEnumCase(p, access, accessPos, docString)
 
@@ -1073,13 +1073,13 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 
 			case keywordEvent:
 				if purity != ast.FunctionPurityUnspecified {
-					return nil, p.syntaxError("invalid view modifier for event")
+					return nil, NewSyntaxError(*purityPos, "invalid view modifier for event")
 				}
 				return parseEventDeclaration(p, access, accessPos, docString)
 
 			case keywordStruct, keywordResource, keywordContract, keywordEnum:
 				if purity != ast.FunctionPurityUnspecified {
-					return nil, p.syntaxError("invalid view modifier for composite")
+					return nil, NewSyntaxError(*purityPos, "invalid view modifier for composite")
 				}
 				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, docString)
 
@@ -1123,7 +1123,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				return nil, p.syntaxError("unexpected %s", p.current.Type)
 			}
 			if purity != ast.FunctionPurityUnspecified {
-				return nil, p.syntaxError("invalid view modifier for variable")
+				return nil, NewSyntaxError(*purityPos, "invalid view modifier for variable")
 			}
 			identifier := p.tokenToIdentifier(*previousIdentifierToken)
 			return parseFieldDeclarationWithoutVariableKind(p, access, accessPos, identifier, docString)

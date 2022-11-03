@@ -270,7 +270,7 @@ func TestParseVariableDeclaration(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message: "invalid view modifier for variable",
-					Pos:     ast.Position{Offset: 5, Line: 1, Column: 5},
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
 				},
 			},
 			errs,
@@ -2263,7 +2263,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message: "invalid view modifier for variable",
-					Pos:     ast.Position{Offset: 23, Line: 2, Column: 11},
+					Pos:     ast.Position{Offset: 15, Line: 2, Column: 3},
 				},
 			},
 			errs,
@@ -4334,7 +4334,7 @@ func TestParsePragmaNoArguments(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message: "invalid view modifier for pragma",
-					Pos:     ast.Position{Offset: 5, Line: 1, Column: 5},
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
 				},
 			},
 			errs,
@@ -4589,7 +4589,7 @@ func TestParseImportWithPurity(t *testing.T) {
 		[]error{
 			&SyntaxError{
 				Message: "invalid view modifier for import",
-				Pos:     ast.Position{Offset: 14, Line: 2, Column: 13},
+				Pos:     ast.Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
 		errs,
@@ -4609,7 +4609,7 @@ func TestParseEventWithPurity(t *testing.T) {
 		[]error{
 			&SyntaxError{
 				Message: "invalid view modifier for event",
-				Pos:     ast.Position{Offset: 14, Line: 2, Column: 13},
+				Pos:     ast.Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
 		errs,
@@ -4629,7 +4629,7 @@ func TestParseCompositeWithPurity(t *testing.T) {
 		[]error{
 			&SyntaxError{
 				Message: "invalid view modifier for composite",
-				Pos:     ast.Position{Offset: 14, Line: 2, Column: 13},
+				Pos:     ast.Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
 		errs,
@@ -4649,7 +4649,7 @@ func TestParseTransactionWithPurity(t *testing.T) {
 		[]error{
 			&SyntaxError{
 				Message: "invalid view modifier for transaction",
-				Pos:     ast.Position{Offset: 14, Line: 2, Column: 13},
+				Pos:     ast.Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
 		errs,
@@ -5554,7 +5554,7 @@ func TestParseInvalidAccessModifiers(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message: "invalid access modifier for pragma",
-					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
 				},
 			},
 			errs,
@@ -5570,7 +5570,7 @@ func TestParseInvalidAccessModifiers(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message: "invalid access modifier for transaction",
-					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
 				},
 			},
 			errs,
