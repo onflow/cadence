@@ -4655,6 +4655,23 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("restricted anystruct base, resource interface reference", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+		struct interface I {}
+		resource R: I {}
+		attachment A for R {}
+		pub fun foo(r: &{I}) {
+			r[A]
+		}
+		`,
+		)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAttachmentAccessError{}, errs[0])
+	})
+
 	t.Run("restricted invalid base", func(t *testing.T) {
 		t.Parallel()
 
