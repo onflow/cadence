@@ -15217,6 +15217,10 @@ func (v *CompositeValue) forEachAttachment(interpreter *Interpreter, locationRan
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
+
+	interpreter.SharedState.inAttachmentIteration[v] = struct{}{}
+	defer delete(interpreter.SharedState.inAttachmentIteration, v)
+
 	for {
 		key, value, err := iterator.Next()
 		if err != nil {

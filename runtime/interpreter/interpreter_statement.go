@@ -408,12 +408,19 @@ func (interpreter *Interpreter) VisitRemoveStatement(removeStatement *ast.Remove
 		panic(errors.NewUnreachableError())
 	}
 
-	nominalType := interpreter.Program.Elaboration.AttachmentRemoveTypes[removeStatement]
-
 	locationRange := LocationRange{
 		Location:    interpreter.Location,
 		HasPosition: removeStatement,
 	}
+
+	if _, inIteration := interpreter.SharedState.inAttachmentIteration[base]; inIteration {
+		panic(AttachmentIterationMutationError{
+			Value:         base,
+			LocationRange: locationRange,
+		})
+	}
+
+	nominalType := interpreter.Program.Elaboration.AttachmentRemoveTypes[removeStatement]
 
 	removed := base.RemoveTypeKey(interpreter, locationRange, nominalType)
 

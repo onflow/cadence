@@ -1144,6 +1144,49 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("circular", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			resource R {
+				pub(set) var x: @[R2]
+				init() {
+					self.x <- []
+				}
+				destroy() {
+					destroy self.x
+				}
+			}
+		  
+			resource R2 {
+				let y: @R
+				init(r: @R) {
+					self.y <- r
+				}
+				destroy() {
+					destroy self.y
+				}
+			}
+
+			attachment A for R {
+				fun evil(r: @R2) {
+					super.x.append(<-r)
+				}
+			}
+			fun test() {
+				var r <- attach A() to <-create R()
+				var r2 <- create R2(r: <-r)
+				let a = r2.y[A]!
+				a.evil(r: <-r2)
+			}
+		`)
+
+		// TODO: in the stable cadence branch, with the new resource reference invalidation,
+		// this should be an error, as `a` should be invalidated after `r2`'s move
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
 }
 
 func TestInterpretAttachmentGetFunction(t *testing.T) {
@@ -1656,9 +1699,8 @@ func TestInterpretMutationDuringForEachAttachment(t *testing.T) {
 		`)
 
 		value, err := inter.Invoke("test")
-		require.Error(t, err)
+		require.NoError(t, err)
 
-		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(1), value)
+		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(2), value)
 	})
-
 }

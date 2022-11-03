@@ -1197,6 +1197,13 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 		HasPosition: attachExpression,
 	}
 
+	if _, inIteration := interpreter.SharedState.inAttachmentIteration[base]; inIteration {
+		panic(AttachmentIterationMutationError{
+			Value:         base,
+			LocationRange: locationRange,
+		})
+	}
+
 	// the `super` value must be accessible during the attachment's constructor, but we cannot
 	// set it on the attachment's `CompositeValue` yet, because the value does not exist. Instead
 	// we directly declare `super` as a `&base` reference in the scope of the constructor's invocation,
