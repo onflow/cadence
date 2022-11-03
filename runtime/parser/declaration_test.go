@@ -259,6 +259,37 @@ func TestParseVariableDeclaration(t *testing.T) {
 		)
 	})
 
+	t.Run("static", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("static var x = 1")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid static modifier for variable",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("native", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("native var x = 1")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid native modifier for variable",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
 }
 
 func TestParseParameterList(t *testing.T) {
@@ -956,6 +987,212 @@ func TestParseFunctionDeclaration(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("native", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations("native fun foo() {}")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.FunctionDeclaration{
+					Flags: ast.FunctionDeclarationFlagsIsNative,
+					Identifier: ast.Identifier{
+						Identifier: "foo",
+						Pos:        ast.Position{Line: 1, Column: 11, Offset: 11},
+					},
+					ParameterList: &ast.ParameterList{
+						Parameters: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 14, Offset: 14},
+							EndPos:   ast.Position{Line: 1, Column: 15, Offset: 15},
+						},
+					},
+					ReturnTypeAnnotation: &ast.TypeAnnotation{
+						IsResource: false,
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "",
+								Pos:        ast.Position{Line: 1, Column: 15, Offset: 15},
+							},
+						},
+						StartPos: ast.Position{Line: 1, Column: 15, Offset: 15},
+					},
+					FunctionBlock: &ast.FunctionBlock{
+						Block: &ast.Block{
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 1, Column: 17, Offset: 17},
+								EndPos:   ast.Position{Line: 1, Column: 18, Offset: 18},
+							},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("static", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations("static fun foo() {}")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.FunctionDeclaration{
+					Flags: ast.FunctionDeclarationFlagsIsStatic,
+					Identifier: ast.Identifier{
+						Identifier: "foo",
+						Pos:        ast.Position{Line: 1, Column: 11, Offset: 11},
+					},
+					ParameterList: &ast.ParameterList{
+						Parameters: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 14, Offset: 14},
+							EndPos:   ast.Position{Line: 1, Column: 15, Offset: 15},
+						},
+					},
+					ReturnTypeAnnotation: &ast.TypeAnnotation{
+						IsResource: false,
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "",
+								Pos:        ast.Position{Line: 1, Column: 15, Offset: 15},
+							},
+						},
+						StartPos: ast.Position{Line: 1, Column: 15, Offset: 15},
+					},
+					FunctionBlock: &ast.FunctionBlock{
+						Block: &ast.Block{
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 1, Column: 17, Offset: 17},
+								EndPos:   ast.Position{Line: 1, Column: 18, Offset: 18},
+							},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("static native", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations("static native fun foo() {}")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.FunctionDeclaration{
+					Flags: ast.FunctionDeclarationFlagsIsStatic | ast.FunctionDeclarationFlagsIsNative,
+					Identifier: ast.Identifier{
+						Identifier: "foo",
+						Pos:        ast.Position{Line: 1, Column: 18, Offset: 18},
+					},
+					ParameterList: &ast.ParameterList{
+						Parameters: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 21, Offset: 21},
+							EndPos:   ast.Position{Line: 1, Column: 22, Offset: 22},
+						},
+					},
+					ReturnTypeAnnotation: &ast.TypeAnnotation{
+						IsResource: false,
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "",
+								Pos:        ast.Position{Line: 1, Column: 22, Offset: 22},
+							},
+						},
+						StartPos: ast.Position{Line: 1, Column: 22, Offset: 22},
+					},
+					FunctionBlock: &ast.FunctionBlock{
+						Block: &ast.Block{
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 1, Column: 24, Offset: 24},
+								EndPos:   ast.Position{Line: 1, Column: 25, Offset: 25},
+							},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("native static", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("native static fun foo() {}")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid static modifier after native modifier",
+					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("pub static native", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations("pub static native fun foo() {}")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.FunctionDeclaration{
+					Access: ast.AccessPublic,
+					Flags:  ast.FunctionDeclarationFlagsIsStatic | ast.FunctionDeclarationFlagsIsNative,
+					Identifier: ast.Identifier{
+						Identifier: "foo",
+						Pos:        ast.Position{Line: 1, Column: 22, Offset: 22},
+					},
+					ParameterList: &ast.ParameterList{
+						Parameters: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 25, Offset: 25},
+							EndPos:   ast.Position{Line: 1, Column: 26, Offset: 26},
+						},
+					},
+					ReturnTypeAnnotation: &ast.TypeAnnotation{
+						IsResource: false,
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "",
+								Pos:        ast.Position{Line: 1, Column: 26, Offset: 26},
+							},
+						},
+						StartPos: ast.Position{Line: 1, Column: 26, Offset: 26},
+					},
+					FunctionBlock: &ast.FunctionBlock{
+						Block: &ast.Block{
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 1, Column: 28, Offset: 28},
+								EndPos:   ast.Position{Line: 1, Column: 29, Offset: 29},
+							},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
+
 }
 
 func TestParseAccess(t *testing.T) {
@@ -1664,7 +1901,14 @@ func TestParseFieldWithVariableKind(t *testing.T) {
 		return Parse(
 			[]byte(input),
 			func(p *parser) (any, error) {
-				return parseFieldWithVariableKind(p, ast.AccessNotSpecified, nil, "")
+				return parseFieldWithVariableKind(
+					p,
+					ast.AccessNotSpecified,
+					nil,
+					nil,
+					nil,
+					"",
+				)
 			},
 			nil,
 		)
@@ -1737,6 +1981,174 @@ func TestParseFieldWithVariableKind(t *testing.T) {
 			result,
 		)
 	})
+}
+
+func TestParseField(t *testing.T) {
+
+	t.Parallel()
+
+	parse := func(input string) (any, []error) {
+		return Parse(
+			[]byte(input),
+			func(p *parser) (any, error) {
+				return parseMemberOrNestedDeclaration(
+					p,
+					"",
+				)
+			},
+			nil,
+		)
+	}
+
+	t.Run("native", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("native let foo: Int")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.FieldDeclaration{
+				Flags:        ast.FieldDeclarationFlagsIsNative,
+				VariableKind: ast.VariableKindConstant,
+				Identifier: ast.Identifier{
+					Identifier: "foo",
+					Pos:        ast.Position{Line: 1, Column: 11, Offset: 11},
+				},
+				TypeAnnotation: &ast.TypeAnnotation{
+					Type: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "Int",
+							Pos:        ast.Position{Line: 1, Column: 16, Offset: 16},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 16, Offset: 16},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 18, Offset: 18},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("static", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("static let foo: Int")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.FieldDeclaration{
+				Flags:        ast.FieldDeclarationFlagsIsStatic,
+				VariableKind: ast.VariableKindConstant,
+				Identifier: ast.Identifier{
+					Identifier: "foo",
+					Pos:        ast.Position{Line: 1, Column: 11, Offset: 11},
+				},
+				TypeAnnotation: &ast.TypeAnnotation{
+					Type: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "Int",
+							Pos:        ast.Position{Line: 1, Column: 16, Offset: 16},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 16, Offset: 16},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 18, Offset: 18},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("static native", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("static native let foo: Int")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.FieldDeclaration{
+				Flags:        ast.FieldDeclarationFlagsIsStatic | ast.FieldDeclarationFlagsIsNative,
+				VariableKind: ast.VariableKindConstant,
+				Identifier: ast.Identifier{
+					Identifier: "foo",
+					Pos:        ast.Position{Line: 1, Column: 18, Offset: 18},
+				},
+				TypeAnnotation: &ast.TypeAnnotation{
+					Type: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "Int",
+							Pos:        ast.Position{Line: 1, Column: 23, Offset: 23},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 23, Offset: 23},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 25, Offset: 25},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("native static", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse("native static let foo: Int")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid static modifier after native modifier",
+					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("pub static native", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("pub static native let foo: Int")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.FieldDeclaration{
+				Access:       ast.AccessPublic,
+				Flags:        ast.FieldDeclarationFlagsIsStatic | ast.FieldDeclarationFlagsIsNative,
+				VariableKind: ast.VariableKindConstant,
+				Identifier: ast.Identifier{
+					Identifier: "foo",
+					Pos:        ast.Position{Line: 1, Column: 22, Offset: 22},
+				},
+				TypeAnnotation: &ast.TypeAnnotation{
+					Type: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "Int",
+							Pos:        ast.Position{Line: 1, Column: 27, Offset: 27},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 27, Offset: 27},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 29, Offset: 29},
+				},
+			},
+			result,
+		)
+	})
+
 }
 
 func TestParseCompositeDeclaration(t *testing.T) {
@@ -2233,6 +2645,11 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 			result,
 		)
 	})
+}
+
+func TestParseEnumDeclaration(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("enum, two cases one one line", func(t *testing.T) {
 
@@ -2277,6 +2694,38 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 				},
 			},
 			result,
+		)
+	})
+
+	t.Run("enum case with static modifier", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" enum E { static case e }")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid static modifier for enum case",
+					Pos:     ast.Position{Offset: 10, Line: 1, Column: 10},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("enum case with native modifier", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" enum E { native case e }")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid native modifier for enum case",
+					Pos:     ast.Position{Offset: 10, Line: 1, Column: 10},
+				},
+			},
+			errs,
 		)
 	})
 }
@@ -3872,27 +4321,63 @@ func TestParsePragmaNoArguments(t *testing.T) {
 
 	t.Parallel()
 
-	const code = `#pedantic`
-	result, err := testParseProgram(code)
-	require.NoError(t, err)
+	t.Run("identifier", func(t *testing.T) {
 
-	utils.AssertEqualWithDiff(t,
-		[]ast.Declaration{
-			&ast.PragmaDeclaration{
-				Expression: &ast.IdentifierExpression{
-					Identifier: ast.Identifier{
-						Identifier: "pedantic",
-						Pos:        ast.Position{Offset: 1, Line: 1, Column: 1},
+		t.Parallel()
+
+		result, errs := testParseDeclarations(`#pedantic`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.PragmaDeclaration{
+					Expression: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "pedantic",
+							Pos:        ast.Position{Offset: 1, Line: 1, Column: 1},
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+						EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
 					},
 				},
-				Range: ast.Range{
-					StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
-					EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+			},
+			result,
+		)
+	})
+
+	t.Run("static", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("static #foo")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid static modifier for pragma",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
 				},
 			},
-		},
-		result.Declarations(),
-	)
+			errs,
+		)
+	})
+
+	t.Run("native", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("native #foo")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid native modifier for pragma",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
 }
 
 func TestParsePragmaArguments(t *testing.T) {
@@ -4975,7 +5460,7 @@ func TestParseInvalidAccessModifiers(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message: "invalid access modifier for pragma",
-					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
 				},
 			},
 			errs,
@@ -4991,7 +5476,7 @@ func TestParseInvalidAccessModifiers(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message: "invalid access modifier for transaction",
-					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
 				},
 			},
 			errs,
@@ -5008,6 +5493,178 @@ func TestParseInvalidAccessModifiers(t *testing.T) {
 				&SyntaxError{
 					Message: "invalid second access modifier",
 					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+				},
+			},
+			errs,
+		)
+	})
+}
+
+func TestParseInvalidImportWithModifier(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("static", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(`
+            static import x from 0x1
+	    `)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid static modifier for import",
+					Pos:     ast.Position{Offset: 13, Line: 2, Column: 12},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("native", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(`
+            native import x from 0x1
+	    `)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid native modifier for import",
+					Pos:     ast.Position{Offset: 13, Line: 2, Column: 12},
+				},
+			},
+			errs,
+		)
+	})
+}
+
+func TestParseInvalidEventWithModifier(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("static", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(`
+            static event Foo()
+	    `)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid static modifier for event",
+					Pos:     ast.Position{Offset: 13, Line: 2, Column: 12},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("native", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(`
+            native event Foo()
+	    `)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid native modifier for event",
+					Pos:     ast.Position{Offset: 13, Line: 2, Column: 12},
+				},
+			},
+			errs,
+		)
+	})
+}
+
+func TestParseCompositeWithPurity(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("static", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(`
+            static struct Foo()
+	    `)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid static modifier for composite",
+					Pos:     ast.Position{Offset: 13, Line: 2, Column: 12},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("native", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(`
+            native struct Foo()
+	    `)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid native modifier for composite",
+					Pos:     ast.Position{Offset: 13, Line: 2, Column: 12},
+				},
+			},
+			errs,
+		)
+	})
+}
+
+func TestParseTransactionWithPurity(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("static", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(`
+            static transaction {}
+	    `)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid static modifier for transaction",
+					Pos:     ast.Position{Offset: 13, Line: 2, Column: 12},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("native", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(`
+            native transaction {}
+	    `)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid native modifier for transaction",
+					Pos:     ast.Position{Offset: 13, Line: 2, Column: 12},
 				},
 			},
 			errs,

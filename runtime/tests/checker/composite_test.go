@@ -2358,3 +2358,37 @@ func TestCheckInvalidMissingMember(t *testing.T) {
 		)
 	})
 }
+
+func TestCheckStaticFieldDeclaration(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      struct S {
+          static let foo: Int
+      }
+    `)
+
+	errs := RequireCheckerErrors(t, err, 2)
+
+	assert.IsType(t, &sema.InvalidStaticModifierError{}, errs[0])
+	// TODO: static fields must be native and need no initializer
+	assert.IsType(t, &sema.MissingInitializerError{}, errs[1])
+}
+
+func TestCheckNativeFieldDeclaration(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      struct S {
+          native let foo: Int
+      }
+    `)
+
+	errs := RequireCheckerErrors(t, err, 2)
+
+	assert.IsType(t, &sema.InvalidNativeModifierError{}, errs[0])
+	// TODO: native fields need no initializer
+	assert.IsType(t, &sema.MissingInitializerError{}, errs[1])
+}

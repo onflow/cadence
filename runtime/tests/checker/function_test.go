@@ -415,3 +415,29 @@ func TestCheckFunctionNonExistingField(t *testing.T) {
 
 	assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
 }
+
+func TestCheckStaticFunctionDeclaration(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      static fun test() {}
+    `)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.InvalidStaticModifierError{}, errs[0])
+}
+
+func TestCheckNativeFunctionDeclaration(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      native fun test() {}
+    `)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.InvalidNativeModifierError{}, errs[0])
+}
