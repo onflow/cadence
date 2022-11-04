@@ -41,7 +41,7 @@ func TestCheckInvalidImport(t *testing.T) {
        import "unknown"
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.UnresolvedImportError{}, errs[0])
 }
@@ -191,7 +191,7 @@ func TestCheckInvalidRepeatedImport(t *testing.T) {
 		},
 	)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.RedeclarationError{}, errs[0])
 }
@@ -345,7 +345,7 @@ func TestCheckInvalidImportUnexported(t *testing.T) {
 		},
 	)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotExportedError{}, errs[0])
 }
@@ -396,7 +396,9 @@ func TestCheckInvalidImportedError(t *testing.T) {
 	_, importedErr := ParseAndCheck(t, `
 	  let x: Bool = 1
 	`)
-	require.Error(t, importedErr)
+	errs := RequireCheckerErrors(t, importedErr, 1)
+
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 
 	_, err := ParseAndCheckWithOptions(t,
 		`
@@ -411,7 +413,7 @@ func TestCheckInvalidImportedError(t *testing.T) {
 		},
 	)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs = RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ImportedProgramError{}, errs[0])
 }
@@ -489,7 +491,7 @@ func TestCheckImportTypes(t *testing.T) {
 				require.NoError(t, err)
 
 			case common.CompositeKindResource:
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.InvalidResourceCreationError{}, errs[0])
 
@@ -504,11 +506,11 @@ func TestCheckInvalidImportCycleSelf(t *testing.T) {
 
 	t.Parallel()
 
-	// NOTE: only parse, don't check imported program.
-	// will be checked by checker checking importing program
+	// NOTE: only parse, don't check the imported program.
+	// it will be checked by checker that is checking the importing program
 
 	const code = `import "test"`
-	importedProgram, err := parser.ParseProgram(code, nil)
+	importedProgram, err := parser.ParseProgram([]byte(code), nil)
 
 	require.NoError(t, err)
 
@@ -548,13 +550,13 @@ func TestCheckInvalidImportCycleSelf(t *testing.T) {
 
 	err = check(code, utils.TestLocation)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	require.IsType(t, &sema.ImportedProgramError{}, errs[0])
 
 	importedProgramError := errs[0].(*sema.ImportedProgramError).Err
 
-	errs = ExpectCheckerErrors(t, importedProgramError, 1)
+	errs = RequireCheckerErrors(t, importedProgramError, 1)
 
 	require.IsType(t, &sema.CyclicImportsError{}, errs[0])
 }
@@ -563,8 +565,8 @@ func TestCheckInvalidImportCycleTwoLocations(t *testing.T) {
 
 	t.Parallel()
 
-	// NOTE: only parse, don't check imported program.
-	// will be checked by checker checking importing program
+	// NOTE: only parse, don't check the imported program.
+	// it will be checked by checker that is checking the importing program
 
 	const codeEven = `
       import odd from "odd"
@@ -576,7 +578,7 @@ func TestCheckInvalidImportCycleTwoLocations(t *testing.T) {
           return odd(n - 1)
       }
     `
-	programEven, err := parser.ParseProgram(codeEven, nil)
+	programEven, err := parser.ParseProgram([]byte(codeEven), nil)
 	require.NoError(t, err)
 
 	const codeOdd = `
@@ -589,7 +591,7 @@ func TestCheckInvalidImportCycleTwoLocations(t *testing.T) {
           return even(n - 1)
       }
     `
-	programOdd, err := parser.ParseProgram(codeOdd, nil)
+	programOdd, err := parser.ParseProgram([]byte(codeOdd), nil)
 	require.NoError(t, err)
 
 	getProgram := func(location common.Location) *ast.Program {
@@ -636,26 +638,28 @@ func TestCheckInvalidImportCycleTwoLocations(t *testing.T) {
 		},
 	)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	require.IsType(t, &sema.ImportedProgramError{}, errs[0])
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[1])
 
 	importedProgramError := errs[0].(*sema.ImportedProgramError).Err
 
-	errs = ExpectCheckerErrors(t, importedProgramError, 2)
+	errs = RequireCheckerErrors(t, importedProgramError, 2)
 
 	require.IsType(t, &sema.ImportedProgramError{}, errs[0])
 	require.IsType(t, &sema.NotDeclaredError{}, errs[1])
 
 	importedProgramError = errs[0].(*sema.ImportedProgramError).Err
 
-	errs = ExpectCheckerErrors(t, importedProgramError, 2)
+	errs = RequireCheckerErrors(t, importedProgramError, 2)
 	require.IsType(t, &sema.CyclicImportsError{}, errs[0])
 	require.IsType(t, &sema.NotDeclaredError{}, errs[1])
 }
 
 func TestCheckImportVirtual(t *testing.T) {
+
+	t.Parallel()
 
 	const code = `
        import Foo

@@ -67,7 +67,7 @@ func TestCheckEventDeclaration(t *testing.T) {
 
 				switch compositeKind {
 				case common.CompositeKindResource:
-					errs := ExpectCheckerErrors(t, err, 3)
+					errs := RequireCheckerErrors(t, err, 3)
 
 					assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 					assert.IsType(t, &sema.InvalidEventParameterTypeError{}, errs[1])
@@ -181,7 +181,7 @@ func TestCheckEventDeclaration(t *testing.T) {
 
 		// NOTE: two redeclaration errors: one for type, one for function
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.RedeclarationError{}, errs[0])
 		assert.IsType(t, &sema.RedeclarationError{}, errs[1])
@@ -214,7 +214,7 @@ func TestCheckEmitEvent(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidEventUsageError{}, errs[0])
 	})
@@ -228,7 +228,7 @@ func TestCheckEmitEvent(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.EmitNonEventError{}, errs[0])
 	})
@@ -240,7 +240,7 @@ func TestCheckEmitEvent(t *testing.T) {
             }
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	})
@@ -275,7 +275,7 @@ func TestCheckEmitEvent(t *testing.T) {
 			},
 		)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.EmitImportedEventError{}, errs[0])
 	})

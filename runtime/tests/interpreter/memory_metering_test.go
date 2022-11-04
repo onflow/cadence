@@ -24,6 +24,8 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/onflow/cadence/runtime/activations"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -35,6 +37,14 @@ import (
 	"github.com/onflow/cadence/runtime/tests/checker"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
+
+type assumeValidPublicKeyValidator struct{}
+
+var _ stdlib.PublicKeyValidator = assumeValidPublicKeyValidator{}
+
+func (assumeValidPublicKeyValidator) ValidatePublicKey(_ *stdlib.PublicKey) error {
+	return nil
+}
 
 type testMemoryGauge struct {
 	meter map[common.MemoryKind]uint64
@@ -95,14 +105,14 @@ func TestInterpretArrayMetering(t *testing.T) {
 	t.Run("iteration", func(t *testing.T) {
 		t.Parallel()
 
-		script := `
-    pub fun main() {
-        let values: [[Int128]] = [[], [], []]
-        for value in values {
-        let a = value
-        }
-    }
-`
+		const script = `
+          pub fun main() {
+              let values: [[Int128]] = [[], [], []]
+              for value in values {
+              let a = value
+              }
+          }
+        `
 
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
@@ -142,7 +152,7 @@ func TestInterpretArrayMetering(t *testing.T) {
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeArrayDataSlab))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeArrayMetaDataSlab))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeArrayElementOverhead))
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindBoolValue))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 	})
 
@@ -401,7 +411,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindStringValue))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindStringValue))
 		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindDictionaryValueBase))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeMapElementOverhead))
 		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
@@ -421,13 +431,13 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-	            pub fun main() {
-	                let values: [{Int8: String}] = [{}, {}, {}]
-	                for value in values {
-	                  let a = value
-	                }
+	        pub fun main() {
+	            let values: [{Int8: String}] = [{}, {}, {}]
+	            for value in values {
+	              let a = value
 	            }
-	        `
+	        }
+	    `
 
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
@@ -464,7 +474,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindBoolValue))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 	})
 
@@ -637,8 +647,8 @@ func TestInterpretCompositeMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(14), meter.getMemory(common.MemoryKindStringValue))
-		assert.Equal(t, uint64(540), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindStringValue))
+		assert.Equal(t, uint64(66), meter.getMemory(common.MemoryKindRawString))
 		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindCompositeValueBase))
 		assert.Equal(t, uint64(5), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
@@ -745,7 +755,7 @@ func TestInterpretCompositeFieldMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(122), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindRawString))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCompositeValueBase))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
@@ -773,7 +783,7 @@ func TestInterpretCompositeFieldMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(286), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, uint64(16), meter.getMemory(common.MemoryKindRawString))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCompositeValueBase))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindAtreeMapElementOverhead))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
@@ -804,7 +814,7 @@ func TestInterpretCompositeFieldMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(399), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, uint64(34), meter.getMemory(common.MemoryKindRawString))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeMapElementOverhead))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
@@ -1047,13 +1057,10 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 		meter := newTestMemoryGauge()
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-		for _, valueDeclaration := range stdlib.BuiltinValues {
+		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		for _, valueDeclaration := range stdlib.DefaultStandardLibraryValues(nil) {
 			baseValueActivation.DeclareValue(valueDeclaration)
-		}
-
-		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-		for _, valueDeclaration := range stdlib.BuiltinValues {
-			baseActivation.Declare(valueDeclaration)
+			interpreter.Declare(baseActivation, valueDeclaration)
 		}
 
 		inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(
@@ -1091,13 +1098,17 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
         `
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-		for _, valueDeclaration := range stdlib.BuiltinValues {
+		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		for _, valueDeclaration := range []stdlib.StandardLibraryValue{
+			stdlib.NewPublicKeyConstructor(
+				assumeValidPublicKeyValidator{},
+				nil,
+				nil,
+			),
+			stdlib.SignatureAlgorithmConstructor,
+		} {
 			baseValueActivation.DeclareValue(valueDeclaration)
-		}
-
-		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-		for _, valueDeclaration := range stdlib.BuiltinValues {
-			baseActivation.Declare(valueDeclaration)
+			interpreter.Declare(baseActivation, valueDeclaration)
 		}
 
 		meter := newTestMemoryGauge()
@@ -1110,13 +1121,6 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 				},
 				Config: &interpreter.Config{
 					BaseActivation: baseActivation,
-					PublicKeyValidationHandler: func(
-						_ *interpreter.Interpreter,
-						_ func() interpreter.LocationRange,
-						_ *interpreter.CompositeValue,
-					) error {
-						return nil
-					},
 				},
 			},
 			meter,
@@ -1127,8 +1131,7 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		// 1 host function created for 'decodeHex' of String value
-		// 'publicKeyVerify' and 'publicKeyVerifyPop' functions of PublicKey value are not metered
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindHostFunctionValue))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindHostFunctionValue))
 	})
 
 	t.Run("multiple public key creation", func(t *testing.T) {
@@ -1149,13 +1152,17 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
         `
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-		for _, valueDeclaration := range stdlib.BuiltinValues {
+		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		for _, valueDeclaration := range []stdlib.StandardLibraryValue{
+			stdlib.NewPublicKeyConstructor(
+				assumeValidPublicKeyValidator{},
+				nil,
+				nil,
+			),
+			stdlib.SignatureAlgorithmConstructor,
+		} {
 			baseValueActivation.DeclareValue(valueDeclaration)
-		}
-
-		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-		for _, valueDeclaration := range stdlib.BuiltinValues {
-			baseActivation.Declare(valueDeclaration)
+			interpreter.Declare(baseActivation, valueDeclaration)
 		}
 
 		meter := newTestMemoryGauge()
@@ -1168,13 +1175,6 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 				},
 				Config: &interpreter.Config{
 					BaseActivation: baseActivation,
-					PublicKeyValidationHandler: func(
-						_ *interpreter.Interpreter,
-						_ func() interpreter.LocationRange,
-						_ *interpreter.CompositeValue,
-					) error {
-						return nil
-					},
 				},
 			},
 			meter,
@@ -1185,8 +1185,7 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		// 2 = 2x 1 host function created for 'decodeHex' of String value
-		// 'publicKeyVerify' and 'publicKeyVerifyPop' functions of PublicKey value are not metered
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindHostFunctionValue))
+		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindHostFunctionValue))
 	})
 }
 
@@ -1609,7 +1608,7 @@ func TestInterpretIntMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindBoolValue))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
 	})
 }
 
@@ -1888,7 +1887,7 @@ func TestInterpretUIntMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindBoolValue))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
 	})
 }
 
@@ -2212,7 +2211,7 @@ func TestInterpretUInt8Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindBoolValue))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
 	})
 }
 
@@ -2535,7 +2534,7 @@ func TestInterpretUInt16Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindBoolValue))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
 	})
 }
 
@@ -2858,7 +2857,7 @@ func TestInterpretUInt32Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindBoolValue))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
 	})
 }
 
@@ -3181,7 +3180,7 @@ func TestInterpretUInt64Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindBoolValue))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
 	})
 }
 
@@ -3505,7 +3504,7 @@ func TestInterpretUInt128Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindBoolValue))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
 	})
 }
 
@@ -3828,7 +3827,7 @@ func TestInterpretUInt256Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindBoolValue))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
 	})
 }
 
@@ -4197,7 +4196,7 @@ func TestInterpretInt8Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindBoolValue))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
 	})
 }
 
@@ -4566,7 +4565,7 @@ func TestInterpretInt16Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindBoolValue))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
 	})
 }
 
@@ -4935,7 +4934,7 @@ func TestInterpretInt32Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindBoolValue))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
 	})
 }
 
@@ -5304,7 +5303,7 @@ func TestInterpretInt64Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindBoolValue))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
 	})
 }
 
@@ -5673,7 +5672,7 @@ func TestInterpretInt128Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindBoolValue))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindElaboration))
 	})
 }
@@ -6043,7 +6042,7 @@ func TestInterpretInt256Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindBoolValue))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
 	})
 }
 
@@ -6304,7 +6303,7 @@ func TestInterpretWord8Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindBoolValue))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
 	})
 }
 
@@ -6564,7 +6563,7 @@ func TestInterpretWord16Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindBoolValue))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
 	})
 }
 
@@ -6824,7 +6823,7 @@ func TestInterpretWord32Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindBoolValue))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
 	})
 }
 
@@ -7084,7 +7083,7 @@ func TestInterpretWord64Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindBoolValue))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
 	})
 }
 
@@ -7105,7 +7104,7 @@ func TestInterpretBoolMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindBoolValue))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
 	})
 
 	t.Run("negation", func(t *testing.T) {
@@ -7122,7 +7121,7 @@ func TestInterpretBoolMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindBoolValue))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
 	})
 
 	t.Run("equality, true", func(t *testing.T) {
@@ -7139,7 +7138,7 @@ func TestInterpretBoolMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindBoolValue))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
 	})
 
 	t.Run("equality, false", func(t *testing.T) {
@@ -7156,7 +7155,7 @@ func TestInterpretBoolMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindBoolValue))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
 	})
 
 	t.Run("inequality", func(t *testing.T) {
@@ -7173,7 +7172,7 @@ func TestInterpretBoolMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindBoolValue))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
 	})
 }
 
@@ -7194,7 +7193,7 @@ func TestInterpretNilMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindNilValue))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindNilValue))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
 	})
 }
@@ -7215,7 +7214,7 @@ func TestInterpretVoidMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindVoidValue))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindVoidValue))
 	})
 
 	t.Run("returning function", func(t *testing.T) {
@@ -7328,7 +7327,7 @@ func TestInterpretStringMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindStringValue))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindStringValue))
 	})
 
 	t.Run("assignment", func(t *testing.T) {
@@ -7347,8 +7346,7 @@ func TestInterpretStringMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// 1 + 2 * " + 1 (a)
-		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindStringValue))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindStringValue))
 	})
 
 	t.Run("Unicode", func(t *testing.T) {
@@ -7366,8 +7364,7 @@ func TestInterpretStringMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// 1 + 2 * " + 2 (0xC4, 0xB1)
-		assert.Equal(t, uint64(5), meter.getMemory(common.MemoryKindStringValue))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindStringValue))
 	})
 
 	t.Run("toLower, ASCII", func(t *testing.T) {
@@ -7385,9 +7382,8 @@ func TestInterpretStringMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// creation: 1 + 2 * " + 3 (ABC)
-		// + result: 1 + 3 (abc)
-		assert.Equal(t, uint64(10), meter.getMemory(common.MemoryKindStringValue))
+		// 1 + 3 (abc)
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindStringValue))
 	})
 
 	t.Run("toLower, Unicode", func(t *testing.T) {
@@ -7405,9 +7401,8 @@ func TestInterpretStringMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// creation: 1 + 2 * " + 2 (0xC4, 0xB1)
-		// + result: 1 + 4 (max UTF8 encoding)
-		assert.Equal(t, uint64(10), meter.getMemory(common.MemoryKindStringValue))
+		// 1 + 4 (max UTF8 encoding)
+		assert.Equal(t, uint64(5), meter.getMemory(common.MemoryKindStringValue))
 	})
 }
 
@@ -7428,10 +7423,8 @@ func TestInterpretCharacterMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// The lexer meters the literal "a" as a string.
-		// To avoid double-counting, it is NOT metered as a Character as well.
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindCharacterValue))
-		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindStringValue))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindStringValue))
 	})
 
 	t.Run("assignment", func(t *testing.T) {
@@ -7449,11 +7442,8 @@ func TestInterpretCharacterMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// The lexer meters the literal "a" as a string.
-		// To avoid double-counting, it is NOT metered as a Character as well.
-		// Since characters are immutable, assigning them also does not allocate memory for them.
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindCharacterValue))
-		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindStringValue))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindStringValue))
 	})
 
 	t.Run("from string GetKey", func(t *testing.T) {
@@ -7720,7 +7710,11 @@ func TestInterpretVariableMetering(t *testing.T) {
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 
-		_, err := inter.Invoke("main", interpreter.NewUnmeteredStringValue(""), interpreter.NewUnmeteredBoolValue(false))
+		_, err := inter.Invoke(
+			"main",
+			interpreter.NewUnmeteredStringValue(""),
+			interpreter.FalseValue,
+		)
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindVariable))
@@ -8066,7 +8060,7 @@ func TestInterpretFix64Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindBoolValue))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
 		assert.Equal(t, uint64(560), meter.getMemory(common.MemoryKindBigInt))
 	})
 }
@@ -8352,7 +8346,7 @@ func TestInterpretUFix64Metering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindBoolValue))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoolValue))
 
 		assert.Equal(t, uint64(560), meter.getMemory(common.MemoryKindBigInt))
 	})
@@ -8383,10 +8377,9 @@ func TestInterpretTokenMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(15), meter.getMemory(common.MemoryKindSyntaxToken))
-		assert.Equal(t, uint64(17), meter.getMemory(common.MemoryKindValueToken))
+		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindTypeToken))
 		assert.Equal(t, uint64(25), meter.getMemory(common.MemoryKindSpaceToken))
-		assert.Equal(t, uint64(257), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindRawString))
 	})
 
 	t.Run("syntax tokens", func(t *testing.T) {
@@ -8405,10 +8398,9 @@ func TestInterpretTokenMetering(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
-		assert.Equal(t, uint64(17), meter.getMemory(common.MemoryKindSyntaxToken))
-		assert.Equal(t, uint64(19), meter.getMemory(common.MemoryKindValueToken))
+		assert.Equal(t, uint64(36), meter.getMemory(common.MemoryKindTypeToken))
 		assert.Equal(t, uint64(31), meter.getMemory(common.MemoryKindSpaceToken))
-		assert.Equal(t, uint64(235), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindRawString))
 	})
 
 	t.Run("comments", func(t *testing.T) {
@@ -8427,14 +8419,9 @@ func TestInterpretTokenMetering(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
-
-		// block comment start, end, (, ), {, }
-		// Line comment start is not emitted
-		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindSyntaxToken))
-
-		assert.Equal(t, uint64(5), meter.getMemory(common.MemoryKindValueToken))
+		assert.Equal(t, uint64(11), meter.getMemory(common.MemoryKindTypeToken))
 		assert.Equal(t, uint64(7), meter.getMemory(common.MemoryKindSpaceToken))
-		assert.Equal(t, uint64(149), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindRawString))
 	})
 
 	t.Run("numeric literals", func(t *testing.T) {
@@ -8454,10 +8441,9 @@ func TestInterpretTokenMetering(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
-		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindSyntaxToken))
-		assert.Equal(t, uint64(18), meter.getMemory(common.MemoryKindValueToken))
+		assert.Equal(t, uint64(27), meter.getMemory(common.MemoryKindTypeToken))
 		assert.Equal(t, uint64(26), meter.getMemory(common.MemoryKindSpaceToken))
-		assert.Equal(t, uint64(225), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindRawString))
 	})
 }
 
@@ -8946,7 +8932,7 @@ func TestInterpretASTMetering(t *testing.T) {
 						compositeType *sema.CompositeType,
 						constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
 						invocationRange ast.Range,
-					) *interpreter.CompositeValue {
+					) interpreter.ContractValue {
 						// Just return a dummy value
 						return &interpreter.CompositeValue{}
 					},
@@ -9164,7 +9150,7 @@ func TestInterpretASTMetering(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(99), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, uint64(16), meter.getMemory(common.MemoryKindRawString))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindAddressLocation))
 	})
 
@@ -9324,15 +9310,15 @@ func TestInterpretValueStringConversion(t *testing.T) {
 				meter.meter = make(map[common.MemoryKind]uint64)
 
 				loggedString = invocation.Arguments[0].MeteredString(invocation.Interpreter, interpreter.SeenReferences{})
-				return interpreter.VoidValue{}
+				return interpreter.Void
 			},
 		)
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(logFunction)
 
-		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-		baseActivation.Declare(logFunction)
+		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, logFunction)
 
 		inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(t, script,
 			ParseCheckAndInterpretOptions{
@@ -9668,15 +9654,15 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 				meter.meter = make(map[common.MemoryKind]uint64)
 
 				loggedString = invocation.Arguments[0].MeteredString(invocation.Interpreter, interpreter.SeenReferences{})
-				return interpreter.VoidValue{}
+				return interpreter.Void
 			},
 		)
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(logFunction)
 
-		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-		baseActivation.Declare(logFunction)
+		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, logFunction)
 
 		inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(t, script,
 			ParseCheckAndInterpretOptions{
@@ -9711,6 +9697,7 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 				interpreter.PrimitiveStaticTypePublicAccountContracts,
 				interpreter.PrimitiveStaticTypeAuthAccountKeys,
 				interpreter.PrimitiveStaticTypePublicAccountKeys,
+				interpreter.PrimitiveStaticTypeAuthAccountInbox,
 				interpreter.PrimitiveStaticTypeAccountKey,
 				interpreter.PrimitiveStaticType_Count:
 				continue
@@ -9853,6 +9840,8 @@ func TestInterpretBytesMetering(t *testing.T) {
 }
 
 func TestOverEstimateBigIntFromString(t *testing.T) {
+
+	t.Parallel()
 
 	for _, v := range []*big.Int{
 		big.NewInt(0),

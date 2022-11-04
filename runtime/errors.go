@@ -33,23 +33,15 @@ import (
 type Error struct {
 	Err      error
 	Location Location
-	Codes    map[Location]string
+	Codes    map[Location][]byte
 	Programs map[Location]*ast.Program
 }
 
 func newError(err error, location Location, codesAndPrograms codesAndPrograms) Error {
-
-	codes := make(map[Location]string, len(codesAndPrograms.codes))
-
-	// Regardless of iteration order, the final result will be the same.
-	for location, code := range codesAndPrograms.codes { //nolint:maprangecheck
-		codes[location] = string(code)
-	}
-
 	return Error{
 		Err:      err,
 		Location: location,
-		Codes:    codes,
+		Codes:    codesAndPrograms.codes,
 		Programs: codesAndPrograms.programs,
 	}
 }
@@ -146,7 +138,6 @@ func (e InvalidTransactionAuthorizerCountError) Error() string {
 }
 
 // InvalidEntryPointArgumentError
-//
 type InvalidEntryPointArgumentError struct {
 	Index int
 	Err   error
@@ -186,7 +177,6 @@ func (e *MalformedValueError) Error() string {
 }
 
 // InvalidValueTypeError
-//
 type InvalidValueTypeError struct {
 	ExpectedType sema.Type
 }
@@ -208,7 +198,6 @@ func (e *InvalidValueTypeError) Error() string {
 // For example, the type `Int` is valid,
 // whereas a function type is not,
 // because it cannot be exported/serialized.
-//
 type InvalidScriptReturnTypeError struct {
 	Type sema.Type
 }
@@ -229,7 +218,6 @@ func (e *InvalidScriptReturnTypeError) Error() string {
 //
 // For example, the type `Int` is a storable type,
 // whereas a function type is not.
-//
 type ScriptParameterTypeNotStorableError struct {
 	Type sema.Type
 }
@@ -250,7 +238,6 @@ func (e *ScriptParameterTypeNotStorableError) Error() string {
 //
 // For example, the type `Int` is an importable type,
 // whereas a function-type is not.
-//
 type ScriptParameterTypeNotImportableError struct {
 	Type sema.Type
 }
@@ -268,7 +255,6 @@ func (e *ScriptParameterTypeNotImportableError) Error() string {
 
 // ArgumentNotImportableError is an error that is reported for
 // script arguments that belongs to non-importable types.
-//
 type ArgumentNotImportableError struct {
 	Type interpreter.StaticType
 }
@@ -286,7 +272,6 @@ func (e *ArgumentNotImportableError) Error() string {
 
 // ParsingCheckingError is an error wrapper
 // for a parsing or a checking error at a specific location
-//
 type ParsingCheckingError struct {
 	Err      error
 	Location Location

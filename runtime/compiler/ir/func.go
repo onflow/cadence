@@ -25,6 +25,8 @@ type Func struct {
 	Statement Stmt
 }
 
+func (*Func) isStmt() {}
+
 func (f *Func) Accept(v Visitor) Repr {
 	return v.VisitFunc(f)
 }

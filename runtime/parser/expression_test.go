@@ -33,6 +33,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/parser/lexer"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -44,14 +45,14 @@ func TestParseSimpleInfixExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("1+2*3", nil)
+		result, errs := testParseExpression("1+2*3")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
 			&ast.BinaryExpression{
 				Operation: ast.OperationPlus,
 				Left: &ast.IntegerExpression{
-					PositiveLiteral: "1",
+					PositiveLiteral: []byte("1"),
 					Value:           big.NewInt(1),
 					Base:            10,
 					Range: ast.Range{
@@ -62,7 +63,7 @@ func TestParseSimpleInfixExpression(t *testing.T) {
 				Right: &ast.BinaryExpression{
 					Operation: ast.OperationMul,
 					Left: &ast.IntegerExpression{
-						PositiveLiteral: "2",
+						PositiveLiteral: []byte("2"),
 						Value:           big.NewInt(2),
 						Base:            10,
 						Range: ast.Range{
@@ -71,7 +72,7 @@ func TestParseSimpleInfixExpression(t *testing.T) {
 						},
 					},
 					Right: &ast.IntegerExpression{
-						PositiveLiteral: "3",
+						PositiveLiteral: []byte("3"),
 						Value:           big.NewInt(3),
 						Base:            10,
 						Range: ast.Range{
@@ -89,14 +90,14 @@ func TestParseSimpleInfixExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("  1   +   2  *   3 ", nil)
+		result, errs := testParseExpression("  1   +   2  *   3 ")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
 			&ast.BinaryExpression{
 				Operation: ast.OperationPlus,
 				Left: &ast.IntegerExpression{
-					PositiveLiteral: "1",
+					PositiveLiteral: []byte("1"),
 					Value:           big.NewInt(1),
 					Base:            10,
 					Range: ast.Range{
@@ -107,7 +108,7 @@ func TestParseSimpleInfixExpression(t *testing.T) {
 				Right: &ast.BinaryExpression{
 					Operation: ast.OperationMul,
 					Left: &ast.IntegerExpression{
-						PositiveLiteral: "2",
+						PositiveLiteral: []byte("2"),
 						Value:           big.NewInt(2),
 						Base:            10,
 						Range: ast.Range{
@@ -116,7 +117,7 @@ func TestParseSimpleInfixExpression(t *testing.T) {
 						},
 					},
 					Right: &ast.IntegerExpression{
-						PositiveLiteral: "3",
+						PositiveLiteral: []byte("3"),
 						Value:           big.NewInt(3),
 						Base:            10,
 						Range: ast.Range{
@@ -134,7 +135,7 @@ func TestParseSimpleInfixExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("1 + 2 + 3", nil)
+		result, errs := testParseExpression("1 + 2 + 3")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -143,7 +144,7 @@ func TestParseSimpleInfixExpression(t *testing.T) {
 				Left: &ast.BinaryExpression{
 					Operation: ast.OperationPlus,
 					Left: &ast.IntegerExpression{
-						PositiveLiteral: "1",
+						PositiveLiteral: []byte("1"),
 						Value:           big.NewInt(1),
 						Base:            10,
 						Range: ast.Range{
@@ -152,7 +153,7 @@ func TestParseSimpleInfixExpression(t *testing.T) {
 						},
 					},
 					Right: &ast.IntegerExpression{
-						PositiveLiteral: "2",
+						PositiveLiteral: []byte("2"),
 						Value:           big.NewInt(2),
 						Base:            10,
 						Range: ast.Range{
@@ -162,7 +163,7 @@ func TestParseSimpleInfixExpression(t *testing.T) {
 					},
 				},
 				Right: &ast.IntegerExpression{
-					PositiveLiteral: "3",
+					PositiveLiteral: []byte("3"),
 					Value:           big.NewInt(3),
 					Base:            10,
 					Range: ast.Range{
@@ -179,14 +180,14 @@ func TestParseSimpleInfixExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("1 ?? 2 ?? 3", nil)
+		result, errs := testParseExpression("1 ?? 2 ?? 3")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
 			&ast.BinaryExpression{
 				Operation: ast.OperationNilCoalesce,
 				Left: &ast.IntegerExpression{
-					PositiveLiteral: "1",
+					PositiveLiteral: []byte("1"),
 					Value:           big.NewInt(1),
 					Base:            10,
 					Range: ast.Range{
@@ -197,7 +198,7 @@ func TestParseSimpleInfixExpression(t *testing.T) {
 				Right: &ast.BinaryExpression{
 					Operation: ast.OperationNilCoalesce,
 					Left: &ast.IntegerExpression{
-						PositiveLiteral: "2",
+						PositiveLiteral: []byte("2"),
 						Value:           big.NewInt(2),
 						Base:            10,
 						Range: ast.Range{
@@ -206,7 +207,7 @@ func TestParseSimpleInfixExpression(t *testing.T) {
 						},
 					},
 					Right: &ast.IntegerExpression{
-						PositiveLiteral: "3",
+						PositiveLiteral: []byte("3"),
 						Value:           big.NewInt(3),
 						Base:            10,
 						Range: ast.Range{
@@ -229,7 +230,7 @@ func TestParseAdvancedExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("1 +- 2 -- 3", nil)
+		result, errs := testParseExpression("1 +- 2 -- 3")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -238,7 +239,7 @@ func TestParseAdvancedExpression(t *testing.T) {
 				Left: &ast.BinaryExpression{
 					Operation: ast.OperationPlus,
 					Left: &ast.IntegerExpression{
-						PositiveLiteral: "1",
+						PositiveLiteral: []byte("1"),
 						Value:           big.NewInt(1),
 						Base:            10,
 						Range: ast.Range{
@@ -247,7 +248,7 @@ func TestParseAdvancedExpression(t *testing.T) {
 						},
 					},
 					Right: &ast.IntegerExpression{
-						PositiveLiteral: "2",
+						PositiveLiteral: []byte("2"),
 						Value:           big.NewInt(-2),
 						Base:            10,
 						Range: ast.Range{
@@ -257,7 +258,7 @@ func TestParseAdvancedExpression(t *testing.T) {
 					},
 				},
 				Right: &ast.IntegerExpression{
-					PositiveLiteral: "3",
+					PositiveLiteral: []byte("3"),
 					Value:           big.NewInt(-3),
 					Base:            10,
 					Range: ast.Range{
@@ -274,7 +275,7 @@ func TestParseAdvancedExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("(1 + 2) * 3", nil)
+		result, errs := testParseExpression("(1 + 2) * 3")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -283,7 +284,7 @@ func TestParseAdvancedExpression(t *testing.T) {
 				Left: &ast.BinaryExpression{
 					Operation: ast.OperationPlus,
 					Left: &ast.IntegerExpression{
-						PositiveLiteral: "1",
+						PositiveLiteral: []byte("1"),
 						Value:           big.NewInt(1),
 						Base:            10,
 						Range: ast.Range{
@@ -292,7 +293,7 @@ func TestParseAdvancedExpression(t *testing.T) {
 						},
 					},
 					Right: &ast.IntegerExpression{
-						PositiveLiteral: "2",
+						PositiveLiteral: []byte("2"),
 						Value:           big.NewInt(2),
 						Base:            10,
 						Range: ast.Range{
@@ -302,7 +303,7 @@ func TestParseAdvancedExpression(t *testing.T) {
 					},
 				},
 				Right: &ast.IntegerExpression{
-					PositiveLiteral: "3",
+					PositiveLiteral: []byte("3"),
 					Value:           big.NewInt(3),
 					Base:            10,
 					Range: ast.Range{
@@ -328,7 +329,7 @@ func TestParseAdvancedExpression(t *testing.T) {
 			defer func() {
 				panicMsg = recover()
 			}()
-			ParseExpression("1 < 2", gauge)
+			ParseExpression([]byte("1 < 2"), gauge)
 		})()
 
 		require.IsType(t, errors.MemoryError{}, panicMsg)
@@ -351,7 +352,7 @@ func TestParseAdvancedExpression(t *testing.T) {
 				panicMsg = recover()
 			}()
 
-			ParseExpression("1 < 2 > 3", gauge)
+			ParseExpression([]byte("1 < 2 > 3"), gauge)
 		})()
 
 		require.IsType(t, errors.MemoryError{}, panicMsg)
@@ -365,7 +366,7 @@ func TestParseAdvancedExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("1 < 2 > 3", nil)
+		result, errs := testParseExpression("1 < 2 > 3")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -374,7 +375,7 @@ func TestParseAdvancedExpression(t *testing.T) {
 				Left: &ast.BinaryExpression{
 					Operation: ast.OperationLess,
 					Left: &ast.IntegerExpression{
-						PositiveLiteral: "1",
+						PositiveLiteral: []byte("1"),
 						Value:           big.NewInt(1),
 						Base:            10,
 						Range: ast.Range{
@@ -383,7 +384,7 @@ func TestParseAdvancedExpression(t *testing.T) {
 						},
 					},
 					Right: &ast.IntegerExpression{
-						PositiveLiteral: "2",
+						PositiveLiteral: []byte("2"),
 						Value:           big.NewInt(2),
 						Base:            10,
 						Range: ast.Range{
@@ -393,7 +394,7 @@ func TestParseAdvancedExpression(t *testing.T) {
 					},
 				},
 				Right: &ast.IntegerExpression{
-					PositiveLiteral: "3",
+					PositiveLiteral: []byte("3"),
 					Value:           big.NewInt(3),
 					Base:            10,
 					Range: ast.Range{
@@ -410,7 +411,7 @@ func TestParseAdvancedExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("a ? b : c ? d : e", nil)
+		result, errs := testParseExpression("a ? b : c ? d : e")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -456,7 +457,7 @@ func TestParseAdvancedExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("true + false", nil)
+		result, errs := testParseExpression("true + false")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -485,7 +486,7 @@ func TestParseAdvancedExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("(<-x)", nil)
+		result, errs := testParseExpression("(<-x)")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -513,14 +514,14 @@ func TestParseArrayExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("[ 1,2 + 3, 4  ,  5 ]", nil)
+		result, errs := testParseExpression("[ 1,2 + 3, 4  ,  5 ]")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
 			&ast.ArrayExpression{
 				Values: []ast.Expression{
 					&ast.IntegerExpression{
-						PositiveLiteral: "1",
+						PositiveLiteral: []byte("1"),
 						Value:           big.NewInt(1),
 						Base:            10,
 						Range: ast.Range{
@@ -531,7 +532,7 @@ func TestParseArrayExpression(t *testing.T) {
 					&ast.BinaryExpression{
 						Operation: ast.OperationPlus,
 						Left: &ast.IntegerExpression{
-							PositiveLiteral: "2",
+							PositiveLiteral: []byte("2"),
 							Value:           big.NewInt(2),
 							Base:            10,
 							Range: ast.Range{
@@ -540,7 +541,7 @@ func TestParseArrayExpression(t *testing.T) {
 							},
 						},
 						Right: &ast.IntegerExpression{
-							PositiveLiteral: "3",
+							PositiveLiteral: []byte("3"),
 							Value:           big.NewInt(3),
 							Base:            10,
 							Range: ast.Range{
@@ -550,7 +551,7 @@ func TestParseArrayExpression(t *testing.T) {
 						},
 					},
 					&ast.IntegerExpression{
-						PositiveLiteral: "4",
+						PositiveLiteral: []byte("4"),
 						Value:           big.NewInt(4),
 						Base:            10,
 						Range: ast.Range{
@@ -559,7 +560,7 @@ func TestParseArrayExpression(t *testing.T) {
 						},
 					},
 					&ast.IntegerExpression{
-						PositiveLiteral: "5",
+						PositiveLiteral: []byte("5"),
 						Value:           big.NewInt(5),
 						Base:            10,
 						Range: ast.Range{
@@ -586,7 +587,7 @@ func TestParseDictionaryExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("{ 1:2 + 3, 4  :  5 }", nil)
+		result, errs := testParseExpression("{ 1:2 + 3, 4  :  5 }")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -594,7 +595,7 @@ func TestParseDictionaryExpression(t *testing.T) {
 				Entries: []ast.DictionaryEntry{
 					{
 						Key: &ast.IntegerExpression{
-							PositiveLiteral: "1",
+							PositiveLiteral: []byte("1"),
 							Value:           big.NewInt(1),
 							Base:            10,
 							Range: ast.Range{
@@ -605,7 +606,7 @@ func TestParseDictionaryExpression(t *testing.T) {
 						Value: &ast.BinaryExpression{
 							Operation: ast.OperationPlus,
 							Left: &ast.IntegerExpression{
-								PositiveLiteral: "2",
+								PositiveLiteral: []byte("2"),
 								Value:           big.NewInt(2),
 								Base:            10,
 								Range: ast.Range{
@@ -614,7 +615,7 @@ func TestParseDictionaryExpression(t *testing.T) {
 								},
 							},
 							Right: &ast.IntegerExpression{
-								PositiveLiteral: "3",
+								PositiveLiteral: []byte("3"),
 								Value:           big.NewInt(3),
 								Base:            10,
 								Range: ast.Range{
@@ -626,7 +627,7 @@ func TestParseDictionaryExpression(t *testing.T) {
 					},
 					{
 						Key: &ast.IntegerExpression{
-							PositiveLiteral: "4",
+							PositiveLiteral: []byte("4"),
 							Value:           big.NewInt(4),
 							Base:            10,
 							Range: ast.Range{
@@ -635,7 +636,7 @@ func TestParseDictionaryExpression(t *testing.T) {
 							},
 						},
 						Value: &ast.IntegerExpression{
-							PositiveLiteral: "5",
+							PositiveLiteral: []byte("5"),
 							Value:           big.NewInt(5),
 							Base:            10,
 							Range: ast.Range{
@@ -656,8 +657,12 @@ func TestParseDictionaryExpression(t *testing.T) {
 }
 
 func TestParseIndexExpression(t *testing.T) {
+	t.Parallel()
+
 	t.Run("index expression", func(t *testing.T) {
-		result, errs := ParseExpression("a[0]", nil)
+		t.Parallel()
+
+		result, errs := testParseExpression("a[0]")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -669,7 +674,7 @@ func TestParseIndexExpression(t *testing.T) {
 					},
 				},
 				IndexingExpression: &ast.IntegerExpression{
-					PositiveLiteral: "0",
+					PositiveLiteral: []byte("0"),
 					Value:           new(big.Int),
 					Base:            10,
 					Range: ast.Range{
@@ -685,8 +690,11 @@ func TestParseIndexExpression(t *testing.T) {
 			result,
 		)
 	})
+
 	t.Run("index expression with whitespace", func(t *testing.T) {
-		result, errs := ParseExpression("a [ 0 ]", nil)
+		t.Parallel()
+
+		result, errs := testParseExpression("a [ 0 ]")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -698,7 +706,7 @@ func TestParseIndexExpression(t *testing.T) {
 					},
 				},
 				IndexingExpression: &ast.IntegerExpression{
-					PositiveLiteral: "0",
+					PositiveLiteral: []byte("0"),
 					Value:           new(big.Int),
 					Base:            10,
 					Range: ast.Range{
@@ -714,8 +722,11 @@ func TestParseIndexExpression(t *testing.T) {
 			result,
 		)
 	})
+
 	t.Run("index expression with identifier", func(t *testing.T) {
-		result, errs := ParseExpression("a [foo]", nil)
+		t.Parallel()
+
+		result, errs := testParseExpression("a [foo]")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -750,7 +761,7 @@ func TestParseIdentifier(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("a + 3", nil)
+		result, errs := testParseExpression("a + 3")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -763,7 +774,7 @@ func TestParseIdentifier(t *testing.T) {
 					},
 				},
 				Right: &ast.IntegerExpression{
-					PositiveLiteral: "3",
+					PositiveLiteral: []byte("3"),
 					Value:           big.NewInt(3),
 					Base:            10,
 					Range: ast.Range{
@@ -781,7 +792,7 @@ func TestParsePath(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseExpression("/foo/bar", nil)
+	result, errs := testParseExpression("/foo/bar")
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -808,7 +819,7 @@ func TestParseString(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("\"\"", nil)
+		result, errs := testParseExpression("\"\"")
 		assert.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -827,7 +838,7 @@ func TestParseString(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("\"", nil)
+		result, errs := testParseExpression("\"")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -854,7 +865,7 @@ func TestParseString(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("\"\n", nil)
+		result, errs := testParseExpression("\"\n")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -880,7 +891,7 @@ func TestParseString(t *testing.T) {
 	t.Run("invalid, non-empty, missing end at end of file", func(t *testing.T) {
 
 		t.Parallel()
-		result, errs := ParseExpression("\"t", nil)
+		result, errs := testParseExpression("\"t")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -907,7 +918,7 @@ func TestParseString(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("\"t\n", nil)
+		result, errs := testParseExpression("\"t\n")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -934,7 +945,7 @@ func TestParseString(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("\"\\", nil)
+		result, errs := testParseExpression("\"\\")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -965,7 +976,7 @@ func TestParseString(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`"te\tst\"te\u{1F3CE}\u{FE0F}xt"`, nil)
+		result, errs := testParseExpression(`"te\tst\"te\u{1F3CE}\u{FE0F}xt"`)
 		assert.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -984,7 +995,7 @@ func TestParseString(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`"te\Xst"`, nil)
+		result, errs := testParseExpression(`"te\Xst"`)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -1011,7 +1022,7 @@ func TestParseString(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`"te\u`, nil)
+		result, errs := testParseExpression(`"te\u`)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -1042,7 +1053,7 @@ func TestParseString(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`"te\us`, nil)
+		result, errs := testParseExpression(`"te\us`)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -1073,7 +1084,7 @@ func TestParseString(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`"te\u{`, nil)
+		result, errs := testParseExpression(`"te\u{`)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -1104,7 +1115,7 @@ func TestParseString(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`"te\u{}"`, nil)
+		result, errs := testParseExpression(`"te\u{}"`)
 		assert.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1123,15 +1134,14 @@ func TestParseString(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(
-			`"te\u{73}t `+
-				`\u{4A}J\u{4a}J `+
-				`\u{4B}K\u{4b}K `+
-				`\u{4C}L\u{4c}L `+
-				`\u{4D}M\u{4d}M `+
-				`\u{4E}N\u{4e}N `+
+		result, errs := testParseExpression(
+			`"te\u{73}t ` +
+				`\u{4A}J\u{4a}J ` +
+				`\u{4B}K\u{4b}K ` +
+				`\u{4C}L\u{4c}L ` +
+				`\u{4D}M\u{4d}M ` +
+				`\u{4E}N\u{4e}N ` +
 				`\u{4F}O\u{4f}O"`,
-			nil,
 		)
 		assert.Empty(t, errs)
 
@@ -1151,7 +1161,7 @@ func TestParseString(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`"te\u{X}st"`, nil)
+		result, errs := testParseExpression(`"te\u{X}st"`)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -1183,7 +1193,7 @@ func TestParseInvocation(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("f()", nil)
+		result, errs := testParseExpression("f()")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1206,7 +1216,7 @@ func TestParseInvocation(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("f ()", nil)
+		result, errs := testParseExpression("f ()")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1229,7 +1239,7 @@ func TestParseInvocation(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("f ( )", nil)
+		result, errs := testParseExpression("f ( )")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1252,7 +1262,7 @@ func TestParseInvocation(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("f(1)", nil)
+		result, errs := testParseExpression("f(1)")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1267,7 +1277,7 @@ func TestParseInvocation(t *testing.T) {
 					{
 						Label: "",
 						Expression: &ast.IntegerExpression{
-							PositiveLiteral: "1",
+							PositiveLiteral: []byte("1"),
 							Value:           big.NewInt(1),
 							Base:            10,
 							Range: ast.Range{
@@ -1289,7 +1299,7 @@ func TestParseInvocation(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("f(label:1)", nil)
+		result, errs := testParseExpression("f(label:1)")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1306,7 +1316,7 @@ func TestParseInvocation(t *testing.T) {
 						LabelStartPos: &ast.Position{Offset: 2, Line: 1, Column: 2},
 						LabelEndPos:   &ast.Position{Offset: 6, Line: 1, Column: 6},
 						Expression: &ast.IntegerExpression{
-							PositiveLiteral: "1",
+							PositiveLiteral: []byte("1"),
 							Value:           big.NewInt(1),
 							Base:            10,
 							Range: ast.Range{
@@ -1328,7 +1338,7 @@ func TestParseInvocation(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("f(1,2)", nil)
+		result, errs := testParseExpression("f(1,2)")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1343,7 +1353,7 @@ func TestParseInvocation(t *testing.T) {
 					{
 						Label: "",
 						Expression: &ast.IntegerExpression{
-							PositiveLiteral: "1",
+							PositiveLiteral: []byte("1"),
 							Value:           big.NewInt(1),
 							Base:            10,
 							Range: ast.Range{
@@ -1356,7 +1366,7 @@ func TestParseInvocation(t *testing.T) {
 					{
 						Label: "",
 						Expression: &ast.IntegerExpression{
-							PositiveLiteral: "2",
+							PositiveLiteral: []byte("2"),
 							Value:           big.NewInt(2),
 							Base:            10,
 							Range: ast.Range{
@@ -1378,7 +1388,7 @@ func TestParseInvocation(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("f(a:1,b:2)", nil)
+		result, errs := testParseExpression("f(a:1,b:2)")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1395,7 +1405,7 @@ func TestParseInvocation(t *testing.T) {
 						LabelStartPos: &ast.Position{Offset: 2, Line: 1, Column: 2},
 						LabelEndPos:   &ast.Position{Offset: 2, Line: 1, Column: 2},
 						Expression: &ast.IntegerExpression{
-							PositiveLiteral: "1",
+							PositiveLiteral: []byte("1"),
 							Value:           big.NewInt(1),
 							Base:            10,
 							Range: ast.Range{
@@ -1410,7 +1420,7 @@ func TestParseInvocation(t *testing.T) {
 						LabelStartPos: &ast.Position{Offset: 6, Line: 1, Column: 6},
 						LabelEndPos:   &ast.Position{Offset: 6, Line: 1, Column: 6},
 						Expression: &ast.IntegerExpression{
-							PositiveLiteral: "2",
+							PositiveLiteral: []byte("2"),
 							Value:           big.NewInt(2),
 							Base:            10,
 							Range: ast.Range{
@@ -1432,7 +1442,7 @@ func TestParseInvocation(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseExpression("f(,,)", nil)
+		_, errs := testParseExpression("f(,,)")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -1448,7 +1458,7 @@ func TestParseInvocation(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseExpression("f(1,,)", nil)
+		_, errs := testParseExpression("f(1,,)")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -1464,7 +1474,7 @@ func TestParseInvocation(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseExpression("f(1 2)", nil)
+		_, errs := testParseExpression("f(1 2)")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -1481,7 +1491,7 @@ func TestParseInvocation(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("f(1,g(2))", nil)
+		result, errs := testParseExpression("f(1,g(2))")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1496,7 +1506,7 @@ func TestParseInvocation(t *testing.T) {
 					{
 						Label: "",
 						Expression: &ast.IntegerExpression{
-							PositiveLiteral: "1",
+							PositiveLiteral: []byte("1"),
 							Value:           big.NewInt(1),
 							Base:            10,
 							Range: ast.Range{
@@ -1519,7 +1529,7 @@ func TestParseInvocation(t *testing.T) {
 								{
 									Label: "",
 									Expression: &ast.IntegerExpression{
-										PositiveLiteral: "2",
+										PositiveLiteral: []byte("2"),
 										Value:           big.NewInt(2),
 										Base:            10,
 										Range: ast.Range{
@@ -1547,7 +1557,7 @@ func TestParseInvocation(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("f(1,g(\"test\"))", nil)
+		result, errs := testParseExpression("f(1,g(\"test\"))")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1562,7 +1572,7 @@ func TestParseInvocation(t *testing.T) {
 					{
 						Label: "",
 						Expression: &ast.IntegerExpression{
-							PositiveLiteral: "1",
+							PositiveLiteral: []byte("1"),
 							Value:           big.NewInt(1),
 							Base:            10,
 							Range: ast.Range{
@@ -1616,7 +1626,7 @@ func TestParseMemberExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("f.n", nil)
+		result, errs := testParseExpression("f.n")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1641,7 +1651,7 @@ func TestParseMemberExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("f .n", nil)
+		result, errs := testParseExpression("f .n")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1666,7 +1676,7 @@ func TestParseMemberExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("f.", nil)
+		result, errs := testParseExpression("f.")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -1695,7 +1705,7 @@ func TestParseMemberExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("f.n * 3", nil)
+		result, errs := testParseExpression("f.n * 3")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1715,7 +1725,7 @@ func TestParseMemberExpression(t *testing.T) {
 					},
 				},
 				Right: &ast.IntegerExpression{
-					PositiveLiteral: "3",
+					PositiveLiteral: []byte("3"),
 					Value:           big.NewInt(3),
 					Base:            10,
 					Range: ast.Range{
@@ -1732,14 +1742,14 @@ func TestParseMemberExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("3 * f.n", nil)
+		result, errs := testParseExpression("3 * f.n")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
 			&ast.BinaryExpression{
 				Operation: ast.OperationMul,
 				Left: &ast.IntegerExpression{
-					PositiveLiteral: "3",
+					PositiveLiteral: []byte("3"),
 					Value:           big.NewInt(3),
 					Base:            10,
 					Range: ast.Range{
@@ -1769,7 +1779,7 @@ func TestParseMemberExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("f?.n", nil)
+		result, errs := testParseExpression("f?.n")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1798,7 +1808,7 @@ func TestParseMemberExpression(t *testing.T) {
 		const code = `
           let a = b.c
         `
-		result, errs := ParseProgram(code, nil)
+		result, errs := testParseProgram(code)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1838,11 +1848,11 @@ func TestParseBlockComment(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("nested comment, nothing else", func(t *testing.T) {
+	t.Run("nested", func(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(" /* test  foo/* bar  */ asd*/ true", nil)
+		result, errs := testParseExpression(" /* test  foo/* bar  */ asd*/ true")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1861,7 +1871,7 @@ func TestParseBlockComment(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(" /*test  foo*/ /* bar  */ true", nil)
+		result, errs := testParseExpression(" /*test  foo*/ /* bar  */ true")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1880,14 +1890,14 @@ func TestParseBlockComment(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(" 1/*test  foo*/+/* bar  */ 2  ", nil)
+		result, errs := testParseExpression(" 1/*test  foo*/+/* bar  */ 2  ")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
 			&ast.BinaryExpression{
 				Operation: ast.OperationPlus,
 				Left: &ast.IntegerExpression{
-					PositiveLiteral: "1",
+					PositiveLiteral: []byte("1"),
 					Value:           big.NewInt(1),
 					Base:            10,
 					Range: ast.Range{
@@ -1896,7 +1906,7 @@ func TestParseBlockComment(t *testing.T) {
 					},
 				},
 				Right: &ast.IntegerExpression{
-					PositiveLiteral: "2",
+					PositiveLiteral: []byte("2"),
 					Value:           big.NewInt(2),
 					Base:            10,
 					Range: ast.Range{
@@ -1908,12 +1918,123 @@ func TestParseBlockComment(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("nested, extra closing", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression(" /* test  foo/* bar  */ asd*/ true */ bar")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				// `true */ bar` is parsed as infix operation of path
+				&SyntaxError{
+					Message: "expected token '/'",
+					Pos: ast.Position{
+						Offset: 41,
+						Line:   1,
+						Column: 41,
+					},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("nested, missing closing", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression(" /* test  foo/* bar  */ asd true ")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				// `true */ bar` is parsed as infix operation of path
+				&SyntaxError{
+					Message: "missing comment end '*/'",
+					Pos: ast.Position{
+						Offset: 33,
+						Line:   1,
+						Column: 33,
+					},
+				},
+				&SyntaxError{
+					Message: "unexpected end of program",
+					Pos: ast.Position{
+						Offset: 33,
+						Line:   1,
+						Column: 33,
+					},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("invalid content", func(t *testing.T) {
+
+		t.Parallel()
+
+		// The lexer should never produce such an invalid token stream in the first place
+
+		tokens := &testTokenStream{
+			tokens: []lexer.Token{
+				{
+					Type: lexer.TokenBlockCommentStart,
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Line:   1,
+							Offset: 0,
+							Column: 0,
+						},
+						EndPos: ast.Position{
+							Line:   1,
+							Offset: 1,
+							Column: 1,
+						},
+					},
+				},
+				{
+					Type: lexer.TokenIdentifier,
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Line:   1,
+							Offset: 2,
+							Column: 2,
+						},
+						EndPos: ast.Position{
+							Line:   1,
+							Offset: 4,
+							Column: 4,
+						},
+					},
+				},
+				{Type: lexer.TokenEOF},
+			},
+			input: []byte(`/*foo`),
+		}
+
+		_, errs := ParseTokenStream(nil, tokens, func(p *parser) (ast.Expression, error) {
+			return parseExpression(p, lowestBindingPower)
+		})
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token identifier in block comment",
+					Pos: ast.Position{
+						Line:   1,
+						Offset: 2,
+						Column: 2,
+					},
+				},
+			},
+			errs,
+		)
+	})
 }
 
 func BenchmarkParseInfix(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
-		_, errs := ParseExpression("(8 - 1 + 3) * 6 - ((3 + 7) * 2)", nil)
+		_, errs := testParseExpression("(8 - 1 + 3) * 6 - ((3 + 7) * 2)")
 		if len(errs) > 0 {
 			b.Fatalf("parsing expression failed: %s", errs)
 		}
@@ -1935,7 +2056,7 @@ func BenchmarkParseArray(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		_, errs := ParseExpression(lit, nil)
+		_, errs := testParseExpression(lit)
 		if len(errs) > 0 {
 			b.Fatalf("parsing expression failed: %s", errs)
 		}
@@ -1946,36 +2067,85 @@ func TestParseReference(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseExpression("& t as T", nil)
-	require.Empty(t, errs)
+	t.Run("valid", func(t *testing.T) {
 
-	utils.AssertEqualWithDiff(t,
-		&ast.ReferenceExpression{
-			Expression: &ast.IdentifierExpression{
-				Identifier: ast.Identifier{
-					Identifier: "t",
-					Pos:        ast.Position{Line: 1, Column: 2, Offset: 2},
+		t.Parallel()
+
+		result, errs := testParseExpression("& t as T")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.ReferenceExpression{
+				Expression: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "t",
+						Pos:        ast.Position{Line: 1, Column: 2, Offset: 2},
+					},
+				},
+				Type: &ast.NominalType{
+					Identifier: ast.Identifier{
+						Identifier: "T",
+						Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+					},
+				},
+				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+			},
+			result,
+		)
+	})
+
+	t.Run("invalid: missing casting expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = `&y[z]`
+
+		_, errs := testParseExpression(code)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected casting expression",
+					Pos: ast.Position{
+						Offset: 5,
+						Line:   1,
+						Column: 5,
+					},
 				},
 			},
-			Type: &ast.NominalType{
-				Identifier: ast.Identifier{
-					Identifier: "T",
-					Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+			errs,
+		)
+	})
+
+	t.Run("invalid: optional referenced value", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = `&x[y]? as &Z?`
+
+		_, errs := testParseExpression(code)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected casting expression",
+					Pos: ast.Position{
+						Offset: 5,
+						Line:   1,
+						Column: 5,
+					},
 				},
 			},
-			StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-		},
-		result,
-	)
+			errs,
+		)
+	})
 }
 
 func TestParseNilCoelesceReference(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseExpression(`
+	result, errs := testParseExpression(`
           &xs["a"] as &Int? ?? 1
-        `, nil)
+        `)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -2053,7 +2223,7 @@ func TestParseNilCoelesceReference(t *testing.T) {
 				},
 			},
 			Right: &ast.IntegerExpression{
-				PositiveLiteral: "1",
+				PositiveLiteral: []byte("1"),
 				Value:           big.NewInt(1),
 				Base:            10,
 				Range: ast.Range{
@@ -2082,7 +2252,7 @@ func TestParseCasts(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(" t as T", nil)
+		result, errs := testParseExpression(" t as T")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -2112,7 +2282,7 @@ func TestParseCasts(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(" t as? T", nil)
+		result, errs := testParseExpression(" t as? T")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -2143,7 +2313,7 @@ func TestParseCasts(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(" t as! T", nil)
+		result, errs := testParseExpression(" t as! T")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -2167,7 +2337,6 @@ func TestParseCasts(t *testing.T) {
 			},
 			result,
 		)
-
 	})
 }
 
@@ -2179,7 +2348,7 @@ func TestParseForceExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("t!", nil)
+		result, errs := testParseExpression("t!")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -2200,7 +2369,7 @@ func TestParseForceExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(" t ! ", nil)
+		result, errs := testParseExpression(" t ! ")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -2221,7 +2390,7 @@ func TestParseForceExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("<-t!", nil)
+		result, errs := testParseExpression("<-t!")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -2246,14 +2415,14 @@ func TestParseForceExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("10 *  t!", nil)
+		result, errs := testParseExpression("10 *  t!")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
 			&ast.BinaryExpression{
 				Operation: ast.OperationMul,
 				Left: &ast.IntegerExpression{
-					PositiveLiteral: "10",
+					PositiveLiteral: []byte("10"),
 					Value:           big.NewInt(10),
 					Base:            10,
 					Range: ast.Range{
@@ -2278,7 +2447,7 @@ func TestParseForceExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseStatements("x\n!y", nil)
+		result, errs := testParseStatements("x\n!y")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -2312,7 +2481,7 @@ func TestParseForceExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseStatements("x\n.y!", nil)
+		result, errs := testParseStatements("x\n.y!")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -2344,7 +2513,7 @@ func TestParseForceExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseStatements("x. y", nil)
+		result, errs := testParseStatements("x. y")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -2386,7 +2555,7 @@ func TestParseCreate(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("create T()", nil)
+		result, errs := testParseExpression("create T()")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -2412,7 +2581,7 @@ func TestParseNil(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseExpression(" nil", nil)
+	result, errs := testParseExpression(" nil")
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -2431,7 +2600,7 @@ func TestParseDestroy(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("destroy t", nil)
+		result, errs := testParseExpression("destroy t")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -2453,14 +2622,14 @@ func TestParseLineComment(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseExpression(" //// // this is a comment\n 1 / 2", nil)
+	result, errs := testParseExpression(" //// // this is a comment\n 1 / 2")
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
 		&ast.BinaryExpression{
 			Operation: ast.OperationDiv,
 			Left: &ast.IntegerExpression{
-				PositiveLiteral: "1",
+				PositiveLiteral: []byte("1"),
 				Value:           big.NewInt(1),
 				Base:            10,
 				Range: ast.Range{
@@ -2469,7 +2638,7 @@ func TestParseLineComment(t *testing.T) {
 				},
 			},
 			Right: &ast.IntegerExpression{
-				PositiveLiteral: "2",
+				PositiveLiteral: []byte("2"),
 				Value:           big.NewInt(2),
 				Base:            10,
 				Range: ast.Range{
@@ -2490,7 +2659,7 @@ func TestParseFunctionExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("fun () { }", nil)
+		result, errs := testParseExpression("fun () { }")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -2530,7 +2699,7 @@ func TestParseFunctionExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("fun (): X { }", nil)
+		result, errs := testParseExpression("fun (): X { }")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -2574,7 +2743,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`0b`, nil)
+		result, errs := testParseExpression(`0b`)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -2596,7 +2765,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				PositiveLiteral: "0b",
+				PositiveLiteral: []byte("0b"),
 				Value:           new(big.Int),
 				Base:            2,
 				Range: ast.Range{
@@ -2612,12 +2781,12 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`0b101010`, nil)
+		result, errs := testParseExpression(`0b101010`)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				PositiveLiteral: "0b101010",
+				PositiveLiteral: []byte("0b101010"),
 				Value:           big.NewInt(42),
 				Base:            2,
 				Range: ast.Range{
@@ -2631,12 +2800,12 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 	t.Run("binary with leading zeros", func(t *testing.T) {
 
-		result, errs := ParseExpression(`0b001000`, nil)
+		result, errs := testParseExpression(`0b001000`)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				PositiveLiteral: "0b001000",
+				PositiveLiteral: []byte("0b001000"),
 				Value:           big.NewInt(8),
 				Base:            2,
 				Range: ast.Range{
@@ -2652,12 +2821,12 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`0b101010_101010`, nil)
+		result, errs := testParseExpression(`0b101010_101010`)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				PositiveLiteral: "0b101010_101010",
+				PositiveLiteral: []byte("0b101010_101010"),
 				Value:           big.NewInt(2730),
 				Base:            2,
 				Range: ast.Range{
@@ -2673,7 +2842,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`0b_101010_101010`, nil)
+		result, errs := testParseExpression(`0b_101010_101010`)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&InvalidIntegerLiteralError{
@@ -2691,7 +2860,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				PositiveLiteral: "0b_101010_101010",
+				PositiveLiteral: []byte("0b_101010_101010"),
 				Value:           big.NewInt(2730),
 				Base:            2,
 				Range: ast.Range{
@@ -2707,7 +2876,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`0b101010_101010_`, nil)
+		result, errs := testParseExpression(`0b101010_101010_`)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&InvalidIntegerLiteralError{
@@ -2725,7 +2894,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				PositiveLiteral: "0b101010_101010_",
+				PositiveLiteral: []byte("0b101010_101010_"),
 				Value:           big.NewInt(2730),
 				Base:            2,
 				Range: ast.Range{
@@ -2741,7 +2910,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`0o`, nil)
+		result, errs := testParseExpression(`0o`)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -2763,7 +2932,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				PositiveLiteral: "0o",
+				PositiveLiteral: []byte("0o"),
 				Value:           new(big.Int),
 				Base:            8,
 				Range: ast.Range{
@@ -2779,12 +2948,12 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`0o32`, nil)
+		result, errs := testParseExpression(`0o32`)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				PositiveLiteral: "0o32",
+				PositiveLiteral: []byte("0o32"),
 				Value:           big.NewInt(26),
 				Base:            8,
 				Range: ast.Range{
@@ -2800,12 +2969,12 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`0o32_45`, nil)
+		result, errs := testParseExpression(`0o32_45`)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				PositiveLiteral: "0o32_45",
+				PositiveLiteral: []byte("0o32_45"),
 				Value:           big.NewInt(1701),
 				Base:            8,
 				Range: ast.Range{
@@ -2821,7 +2990,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`0o_32_45`, nil)
+		result, errs := testParseExpression(`0o_32_45`)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&InvalidIntegerLiteralError{
@@ -2839,7 +3008,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				PositiveLiteral: "0o_32_45",
+				PositiveLiteral: []byte("0o_32_45"),
 				Value:           big.NewInt(1701),
 				Base:            8,
 				Range: ast.Range{
@@ -2855,7 +3024,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`0o32_45_`, nil)
+		result, errs := testParseExpression(`0o32_45_`)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&InvalidIntegerLiteralError{
@@ -2873,7 +3042,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				PositiveLiteral: "0o32_45_",
+				PositiveLiteral: []byte("0o32_45_"),
 				Value:           big.NewInt(1701),
 				Base:            8,
 				Range: ast.Range{
@@ -2889,12 +3058,12 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`1234567890`, nil)
+		result, errs := testParseExpression(`1234567890`)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				PositiveLiteral: "1234567890",
+				PositiveLiteral: []byte("1234567890"),
 				Value:           big.NewInt(1234567890),
 				Base:            10,
 				Range: ast.Range{
@@ -2910,12 +3079,12 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`1_234_567_890`, nil)
+		result, errs := testParseExpression(`1_234_567_890`)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				PositiveLiteral: "1_234_567_890",
+				PositiveLiteral: []byte("1_234_567_890"),
 				Value:           big.NewInt(1234567890),
 				Base:            10,
 				Range: ast.Range{
@@ -2931,7 +3100,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`1_234_567_890_`, nil)
+		result, errs := testParseExpression(`1_234_567_890_`)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&InvalidIntegerLiteralError{
@@ -2949,7 +3118,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				PositiveLiteral: "1_234_567_890_",
+				PositiveLiteral: []byte("1_234_567_890_"),
 				Value:           big.NewInt(1234567890),
 				Base:            10,
 				Range: ast.Range{
@@ -2965,7 +3134,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`0x`, nil)
+		result, errs := testParseExpression(`0x`)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -2987,7 +3156,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				PositiveLiteral: "0x",
+				PositiveLiteral: []byte("0x"),
 				Value:           new(big.Int),
 				Base:            16,
 				Range: ast.Range{
@@ -3003,12 +3172,12 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`0xf2`, nil)
+		result, errs := testParseExpression(`0xf2`)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				PositiveLiteral: "0xf2",
+				PositiveLiteral: []byte("0xf2"),
 				Value:           big.NewInt(242),
 				Base:            16,
 				Range: ast.Range{
@@ -3024,12 +3193,12 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`0xf2_09`, nil)
+		result, errs := testParseExpression(`0xf2_09`)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				PositiveLiteral: "0xf2_09",
+				PositiveLiteral: []byte("0xf2_09"),
 				Value:           big.NewInt(61961),
 				Base:            16,
 				Range: ast.Range{
@@ -3045,7 +3214,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`0x_f2_09`, nil)
+		result, errs := testParseExpression(`0x_f2_09`)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&InvalidIntegerLiteralError{
@@ -3063,7 +3232,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				PositiveLiteral: "0x_f2_09",
+				PositiveLiteral: []byte("0x_f2_09"),
 				Value:           big.NewInt(61961),
 				Base:            16,
 				Range: ast.Range{
@@ -3079,7 +3248,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`0xf2_09_`, nil)
+		result, errs := testParseExpression(`0xf2_09_`)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&InvalidIntegerLiteralError{
@@ -3097,7 +3266,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				PositiveLiteral: "0xf2_09_",
+				PositiveLiteral: []byte("0xf2_09_"),
 				Value:           big.NewInt(61961),
 				Base:            16,
 				Range: ast.Range{
@@ -3113,12 +3282,12 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`0`, nil)
+		result, errs := testParseExpression(`0`)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				PositiveLiteral: "0",
+				PositiveLiteral: []byte("0"),
 				Value:           big.NewInt(0),
 				Base:            10,
 				Range: ast.Range{
@@ -3134,12 +3303,12 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`01`, nil)
+		result, errs := testParseExpression(`01`)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				PositiveLiteral: "01",
+				PositiveLiteral: []byte("01"),
 				Value:           big.NewInt(1),
 				Base:            10,
 				Range: ast.Range{
@@ -3155,12 +3324,12 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`09`, nil)
+		result, errs := testParseExpression(`09`)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				PositiveLiteral: "09",
+				PositiveLiteral: []byte("09"),
 				Value:           big.NewInt(9),
 				Base:            10,
 				Range: ast.Range{
@@ -3176,12 +3345,12 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("00123", nil)
+		result, errs := testParseExpression("00123")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				PositiveLiteral: "00123",
+				PositiveLiteral: []byte("00123"),
 				Value:           big.NewInt(123),
 				Base:            10,
 				Range: ast.Range{
@@ -3197,7 +3366,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`0z123`, nil)
+		result, errs := testParseExpression(`0z123`)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -3219,7 +3388,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				PositiveLiteral: "0z123",
+				PositiveLiteral: []byte("0z123"),
 				Value:           new(big.Int),
 				Base:            1,
 				Range: ast.Range{
@@ -3235,12 +3404,12 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`0_100`, nil)
+		result, errs := testParseExpression(`0_100`)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				PositiveLiteral: "0_100",
+				PositiveLiteral: []byte("0_100"),
 				Value:           big.NewInt(100),
 				Base:            10,
 				Range: ast.Range{
@@ -3256,12 +3425,12 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`1_100`, nil)
+		result, errs := testParseExpression(`1_100`)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				PositiveLiteral: "1_100",
+				PositiveLiteral: []byte("1_100"),
 				Value:           big.NewInt(1100),
 				Base:            10,
 				Range: ast.Range{
@@ -3279,7 +3448,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		// NOTE: a leading underscore introduces an identifier
 
-		result, errs := ParseExpression(`_100`, nil)
+		result, errs := testParseExpression(`_100`)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -3302,12 +3471,12 @@ func TestParseFixedPoint(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("1234_5678_90.0009_8765_4321", nil)
+		result, errs := testParseExpression("1234_5678_90.0009_8765_4321")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
 			&ast.FixedPointExpression{
-				PositiveLiteral: "1234_5678_90.0009_8765_4321",
+				PositiveLiteral: []byte("1234_5678_90.0009_8765_4321"),
 				Negative:        false,
 				UnsignedInteger: big.NewInt(1234567890),
 				Fractional:      big.NewInt(987654321),
@@ -3325,12 +3494,12 @@ func TestParseFixedPoint(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("0.1", nil)
+		result, errs := testParseExpression("0.1")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
 			&ast.FixedPointExpression{
-				PositiveLiteral: "0.1",
+				PositiveLiteral: []byte("0.1"),
 				Negative:        false,
 				UnsignedInteger: big.NewInt(0),
 				Fractional:      big.NewInt(1),
@@ -3348,7 +3517,7 @@ func TestParseFixedPoint(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("0.", nil)
+		result, errs := testParseExpression("0.")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -3361,7 +3530,7 @@ func TestParseFixedPoint(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.FixedPointExpression{
-				PositiveLiteral: "0.",
+				PositiveLiteral: []byte("0."),
 				Negative:        false,
 				UnsignedInteger: big.NewInt(0),
 				Fractional:      big.NewInt(0),
@@ -3378,18 +3547,20 @@ func TestParseFixedPoint(t *testing.T) {
 
 func TestParseLessThanOrTypeArguments(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("binary expression with less operator", func(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("1 < 2", nil)
+		result, errs := testParseExpression("1 < 2")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
 			&ast.BinaryExpression{
 				Operation: ast.OperationLess,
 				Left: &ast.IntegerExpression{
-					PositiveLiteral: "1",
+					PositiveLiteral: []byte("1"),
 					Value:           big.NewInt(1),
 					Base:            10,
 					Range: ast.Range{
@@ -3398,7 +3569,7 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 					},
 				},
 				Right: &ast.IntegerExpression{
-					PositiveLiteral: "2",
+					PositiveLiteral: []byte("2"),
 					Value:           big.NewInt(2),
 					Base:            10,
 					Range: ast.Range{
@@ -3415,7 +3586,7 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("a < > ()", nil)
+		result, errs := testParseExpression("a < > ()")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -3439,7 +3610,7 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("a < { K : V } > ( 1 )", nil)
+		result, errs := testParseExpression("a < { K : V } > ( 1 )")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -3477,7 +3648,7 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 				Arguments: []*ast.Argument{
 					{
 						Expression: &ast.IntegerExpression{
-							PositiveLiteral: "1",
+							PositiveLiteral: []byte("1"),
 							Value:           big.NewInt(1),
 							Base:            10,
 							Range: ast.Range{
@@ -3499,7 +3670,7 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("a < { K : V } , @R , [ S ] > ( 1 , 2 )", nil)
+		result, errs := testParseExpression("a < { K : V } , @R , [ S ] > ( 1 , 2 )")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -3563,7 +3734,7 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 				Arguments: []*ast.Argument{
 					{
 						Expression: &ast.IntegerExpression{
-							PositiveLiteral: "1",
+							PositiveLiteral: []byte("1"),
 							Value:           big.NewInt(1),
 							Base:            10,
 							Range: ast.Range{
@@ -3575,7 +3746,7 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 					},
 					{
 						Expression: &ast.IntegerExpression{
-							PositiveLiteral: "2",
+							PositiveLiteral: []byte("2"),
 							Value:           big.NewInt(2),
 							Base:            10,
 							Range: ast.Range{
@@ -3597,14 +3768,14 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("1 + a<>()", nil)
+		result, errs := testParseExpression("1 + a<>()")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
 			&ast.BinaryExpression{
 				Operation: ast.OperationPlus,
 				Left: &ast.IntegerExpression{
-					PositiveLiteral: "1",
+					PositiveLiteral: []byte("1"),
 					Value:           big.NewInt(1),
 					Base:            10,
 					Range: ast.Range{
@@ -3633,7 +3804,7 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("a<T<U>>()", nil)
+		result, errs := testParseExpression("a<T<U>>()")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -3683,7 +3854,7 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("a<T< U > >()", nil)
+		result, errs := testParseExpression("a<T< U > >()")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -3733,7 +3904,7 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("0 + 1 < 2", nil)
+		result, errs := testParseExpression("0 + 1 < 2")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -3742,7 +3913,7 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 				Left: &ast.BinaryExpression{
 					Operation: ast.OperationPlus,
 					Left: &ast.IntegerExpression{
-						PositiveLiteral: "0",
+						PositiveLiteral: []byte("0"),
 						Value:           new(big.Int),
 						Base:            10,
 						Range: ast.Range{
@@ -3751,7 +3922,7 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 						},
 					},
 					Right: &ast.IntegerExpression{
-						PositiveLiteral: "1",
+						PositiveLiteral: []byte("1"),
 						Value:           big.NewInt(1),
 						Base:            10,
 						Range: ast.Range{
@@ -3761,7 +3932,7 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 					},
 				},
 				Right: &ast.IntegerExpression{
-					PositiveLiteral: "2",
+					PositiveLiteral: []byte("2"),
 					Value:           big.NewInt(2),
 					Base:            10,
 					Range: ast.Range{
@@ -3778,7 +3949,7 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("0 + 1 << 2", nil)
+		result, errs := testParseExpression("0 + 1 << 2")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -3787,7 +3958,7 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 				Left: &ast.BinaryExpression{
 					Operation: ast.OperationPlus,
 					Left: &ast.IntegerExpression{
-						PositiveLiteral: "0",
+						PositiveLiteral: []byte("0"),
 						Value:           new(big.Int),
 						Base:            10,
 						Range: ast.Range{
@@ -3796,7 +3967,7 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 						},
 					},
 					Right: &ast.IntegerExpression{
-						PositiveLiteral: "1",
+						PositiveLiteral: []byte("1"),
 						Value:           big.NewInt(1),
 						Base:            10,
 						Range: ast.Range{
@@ -3806,7 +3977,7 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 					},
 				},
 				Right: &ast.IntegerExpression{
-					PositiveLiteral: "2",
+					PositiveLiteral: []byte("2"),
 					Value:           big.NewInt(2),
 					Base:            10,
 					Range: ast.Range{
@@ -3823,7 +3994,7 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("0 + 1 > 2", nil)
+		result, errs := testParseExpression("0 + 1 > 2")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -3832,7 +4003,7 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 				Left: &ast.BinaryExpression{
 					Operation: ast.OperationPlus,
 					Left: &ast.IntegerExpression{
-						PositiveLiteral: "0",
+						PositiveLiteral: []byte("0"),
 						Value:           new(big.Int),
 						Base:            10,
 						Range: ast.Range{
@@ -3841,7 +4012,7 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 						},
 					},
 					Right: &ast.IntegerExpression{
-						PositiveLiteral: "1",
+						PositiveLiteral: []byte("1"),
 						Value:           big.NewInt(1),
 						Base:            10,
 						Range: ast.Range{
@@ -3851,7 +4022,7 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 					},
 				},
 				Right: &ast.IntegerExpression{
-					PositiveLiteral: "2",
+					PositiveLiteral: []byte("2"),
 					Value:           big.NewInt(2),
 					Base:            10,
 					Range: ast.Range{
@@ -3868,7 +4039,7 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("0 + 1 >> 2", nil)
+		result, errs := testParseExpression("0 + 1 >> 2")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -3877,7 +4048,7 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 				Left: &ast.BinaryExpression{
 					Operation: ast.OperationPlus,
 					Left: &ast.IntegerExpression{
-						PositiveLiteral: "0",
+						PositiveLiteral: []byte("0"),
 						Value:           new(big.Int),
 						Base:            10,
 						Range: ast.Range{
@@ -3886,7 +4057,7 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 						},
 					},
 					Right: &ast.IntegerExpression{
-						PositiveLiteral: "1",
+						PositiveLiteral: []byte("1"),
 						Value:           big.NewInt(1),
 						Base:            10,
 						Range: ast.Range{
@@ -3896,7 +4067,7 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 					},
 				},
 				Right: &ast.IntegerExpression{
-					PositiveLiteral: "2",
+					PositiveLiteral: []byte("2"),
 					Value:           big.NewInt(2),
 					Base:            10,
 					Range: ast.Range{
@@ -3917,7 +4088,7 @@ func TestParseBoolExpression(t *testing.T) {
 	const code = `
 	    let a = true
 	`
-	result, errs := ParseProgram(code, nil)
+	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -3953,7 +4124,7 @@ func TestParseIdentifierExpression(t *testing.T) {
 	const code = `
 	    let b = a
 	`
-	result, errs := ParseProgram(code, nil)
+	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -3988,7 +4159,7 @@ func TestParseArrayExpressionInVariableDeclaration(t *testing.T) {
 	const code = `
 	    let a = [1, 2]
 	`
-	result, errs := ParseProgram(code, nil)
+	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -4005,7 +4176,7 @@ func TestParseArrayExpressionInVariableDeclaration(t *testing.T) {
 				Value: &ast.ArrayExpression{
 					Values: []ast.Expression{
 						&ast.IntegerExpression{
-							PositiveLiteral: "1",
+							PositiveLiteral: []byte("1"),
 							Value:           big.NewInt(1),
 							Base:            10,
 							Range: ast.Range{
@@ -4014,7 +4185,7 @@ func TestParseArrayExpressionInVariableDeclaration(t *testing.T) {
 							},
 						},
 						&ast.IntegerExpression{
-							PositiveLiteral: "2",
+							PositiveLiteral: []byte("2"),
 							Value:           big.NewInt(2),
 							Base:            10,
 							Range: ast.Range{
@@ -4042,7 +4213,7 @@ func TestParseDictionaryExpressionInVariableDeclaration(t *testing.T) {
 	const code = `
 	    let x = {"a": 1, "b": 2}
 	`
-	result, errs := ParseProgram(code, nil)
+	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -4067,7 +4238,7 @@ func TestParseDictionaryExpressionInVariableDeclaration(t *testing.T) {
 								},
 							},
 							Value: &ast.IntegerExpression{
-								PositiveLiteral: "1",
+								PositiveLiteral: []byte("1"),
 								Value:           big.NewInt(1),
 								Base:            10,
 								Range: ast.Range{
@@ -4085,7 +4256,7 @@ func TestParseDictionaryExpressionInVariableDeclaration(t *testing.T) {
 								},
 							},
 							Value: &ast.IntegerExpression{
-								PositiveLiteral: "2",
+								PositiveLiteral: []byte("2"),
 								Value:           big.NewInt(2),
 								Base:            10,
 								Range: ast.Range{
@@ -4114,7 +4285,7 @@ func TestParseInvocationExpressionWithoutLabels(t *testing.T) {
 	const code = `
 	    let a = b(1, 2)
 	`
-	result, errs := ParseProgram(code, nil)
+	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -4140,7 +4311,7 @@ func TestParseInvocationExpressionWithoutLabels(t *testing.T) {
 						{
 							Label: "",
 							Expression: &ast.IntegerExpression{
-								PositiveLiteral: "1",
+								PositiveLiteral: []byte("1"),
 								Value:           big.NewInt(1),
 								Base:            10,
 								Range: ast.Range{
@@ -4153,7 +4324,7 @@ func TestParseInvocationExpressionWithoutLabels(t *testing.T) {
 						{
 							Label: "",
 							Expression: &ast.IntegerExpression{
-								PositiveLiteral: "2",
+								PositiveLiteral: []byte("2"),
 								Value:           big.NewInt(2),
 								Base:            10,
 								Range: ast.Range{
@@ -4181,7 +4352,7 @@ func TestParseInvocationExpressionWithLabels(t *testing.T) {
 	const code = `
 	    let a = b(x: 1, y: 2)
 	`
-	result, errs := ParseProgram(code, nil)
+	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -4209,7 +4380,7 @@ func TestParseInvocationExpressionWithLabels(t *testing.T) {
 							LabelStartPos: &ast.Position{Offset: 16, Line: 2, Column: 15},
 							LabelEndPos:   &ast.Position{Offset: 16, Line: 2, Column: 15},
 							Expression: &ast.IntegerExpression{
-								PositiveLiteral: "1",
+								PositiveLiteral: []byte("1"),
 								Value:           big.NewInt(1),
 								Base:            10,
 								Range: ast.Range{
@@ -4224,7 +4395,7 @@ func TestParseInvocationExpressionWithLabels(t *testing.T) {
 							LabelStartPos: &ast.Position{Offset: 22, Line: 2, Column: 21},
 							LabelEndPos:   &ast.Position{Offset: 22, Line: 2, Column: 21},
 							Expression: &ast.IntegerExpression{
-								PositiveLiteral: "2",
+								PositiveLiteral: []byte("2"),
 								Value:           big.NewInt(2),
 								Base:            10,
 								Range: ast.Range{
@@ -4252,7 +4423,7 @@ func TestParseOptionalMemberExpression(t *testing.T) {
 	const code = `
 	    let a = b?.c
 	`
-	result, errs := ParseProgram(code, nil)
+	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -4295,7 +4466,7 @@ func TestParseIndexExpressionInVariableDeclaration(t *testing.T) {
 	const code = `
 	    let a = b[1]
 	`
-	result, errs := ParseProgram(code, nil)
+	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -4318,7 +4489,7 @@ func TestParseIndexExpressionInVariableDeclaration(t *testing.T) {
 						},
 					},
 					IndexingExpression: &ast.IntegerExpression{
-						PositiveLiteral: "1",
+						PositiveLiteral: []byte("1"),
 						Value:           big.NewInt(1),
 						Base:            10,
 						Range: ast.Range{
@@ -4345,7 +4516,7 @@ func TestParseUnaryExpression(t *testing.T) {
 	const code = `
 	    let foo = -boo
 	`
-	result, errs := ParseProgram(code, nil)
+	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -4384,7 +4555,7 @@ func TestParseOrExpression(t *testing.T) {
 	const code = `
         let a = false || true
 	`
-	result, errs := ParseProgram(code, nil)
+	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -4430,7 +4601,7 @@ func TestParseAndExpression(t *testing.T) {
 	const code = `
         let a = false && true
 	`
-	result, errs := ParseProgram(code, nil)
+	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -4476,7 +4647,7 @@ func TestParseEqualityExpression(t *testing.T) {
 	const code = `
         let a = false == true
 	`
-	result, errs := ParseProgram(code, nil)
+	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -4522,7 +4693,7 @@ func TestParseRelationalExpression(t *testing.T) {
 	const code = `
         let a = 1 < 2
 	`
-	result, errs := ParseProgram(code, nil)
+	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -4540,7 +4711,7 @@ func TestParseRelationalExpression(t *testing.T) {
 				Value: &ast.BinaryExpression{
 					Operation: ast.OperationLess,
 					Left: &ast.IntegerExpression{
-						PositiveLiteral: "1",
+						PositiveLiteral: []byte("1"),
 						Value:           big.NewInt(1),
 						Base:            10,
 						Range: ast.Range{
@@ -4549,7 +4720,7 @@ func TestParseRelationalExpression(t *testing.T) {
 						},
 					},
 					Right: &ast.IntegerExpression{
-						PositiveLiteral: "2",
+						PositiveLiteral: []byte("2"),
 						Value:           big.NewInt(2),
 						Base:            10,
 						Range: ast.Range{
@@ -4572,7 +4743,7 @@ func TestParseAdditiveExpression(t *testing.T) {
 	const code = `
         let a = 1 + 2
 	`
-	result, errs := ParseProgram(code, nil)
+	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -4590,7 +4761,7 @@ func TestParseAdditiveExpression(t *testing.T) {
 				Value: &ast.BinaryExpression{
 					Operation: ast.OperationPlus,
 					Left: &ast.IntegerExpression{
-						PositiveLiteral: "1",
+						PositiveLiteral: []byte("1"),
 						Value:           big.NewInt(1),
 						Base:            10,
 						Range: ast.Range{
@@ -4599,7 +4770,7 @@ func TestParseAdditiveExpression(t *testing.T) {
 						},
 					},
 					Right: &ast.IntegerExpression{
-						PositiveLiteral: "2",
+						PositiveLiteral: []byte("2"),
 						Value:           big.NewInt(2),
 						Base:            10,
 						Range: ast.Range{
@@ -4622,7 +4793,7 @@ func TestParseMultiplicativeExpression(t *testing.T) {
 	const code = `
         let a = 1 * 2
 	`
-	result, errs := ParseProgram(code, nil)
+	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -4640,7 +4811,7 @@ func TestParseMultiplicativeExpression(t *testing.T) {
 				Value: &ast.BinaryExpression{
 					Operation: ast.OperationMul,
 					Left: &ast.IntegerExpression{
-						PositiveLiteral: "1",
+						PositiveLiteral: []byte("1"),
 						Value:           big.NewInt(1),
 						Base:            10,
 						Range: ast.Range{
@@ -4649,7 +4820,7 @@ func TestParseMultiplicativeExpression(t *testing.T) {
 						},
 					},
 					Right: &ast.IntegerExpression{
-						PositiveLiteral: "2",
+						PositiveLiteral: []byte("2"),
 						Value:           big.NewInt(2),
 						Base:            10,
 						Range: ast.Range{
@@ -4672,7 +4843,7 @@ func TestParseFunctionExpressionAndReturn(t *testing.T) {
 	const code = `
 	    let test = fun (): Int { return 1 }
 	`
-	result, errs := ParseProgram(code, nil)
+	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -4709,7 +4880,7 @@ func TestParseFunctionExpressionAndReturn(t *testing.T) {
 							Statements: []ast.Statement{
 								&ast.ReturnStatement{
 									Expression: &ast.IntegerExpression{
-										PositiveLiteral: "1",
+										PositiveLiteral: []byte("1"),
 										Value:           big.NewInt(1),
 										Base:            10,
 										Range: ast.Range{
@@ -4745,7 +4916,7 @@ func TestParseLeftAssociativity(t *testing.T) {
 	const code = `
         let a = 1 + 2 + 3
 	`
-	result, errs := ParseProgram(code, nil)
+	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -4765,7 +4936,7 @@ func TestParseLeftAssociativity(t *testing.T) {
 					Left: &ast.BinaryExpression{
 						Operation: ast.OperationPlus,
 						Left: &ast.IntegerExpression{
-							PositiveLiteral: "1",
+							PositiveLiteral: []byte("1"),
 							Value:           big.NewInt(1),
 							Base:            10,
 							Range: ast.Range{
@@ -4774,7 +4945,7 @@ func TestParseLeftAssociativity(t *testing.T) {
 							},
 						},
 						Right: &ast.IntegerExpression{
-							PositiveLiteral: "2",
+							PositiveLiteral: []byte("2"),
 							Value:           big.NewInt(2),
 							Base:            10,
 							Range: ast.Range{
@@ -4784,7 +4955,7 @@ func TestParseLeftAssociativity(t *testing.T) {
 						},
 					},
 					Right: &ast.IntegerExpression{
-						PositiveLiteral: "3",
+						PositiveLiteral: []byte("3"),
 						Value:           big.NewInt(3),
 						Base:            10,
 						Range: ast.Range{
@@ -4807,7 +4978,7 @@ func TestParseNegativeInteger(t *testing.T) {
 	const code = `
       let a = -42
 	`
-	result, errs := ParseProgram(code, nil)
+	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -4823,7 +4994,7 @@ func TestParseNegativeInteger(t *testing.T) {
 					Pos:       ast.Position{Offset: 13, Line: 2, Column: 12},
 				},
 				Value: &ast.IntegerExpression{
-					PositiveLiteral: "42",
+					PositiveLiteral: []byte("42"),
 					Value:           big.NewInt(-42),
 					Base:            10,
 					Range: ast.Range{
@@ -4845,7 +5016,7 @@ func TestParseNegativeFixedPoint(t *testing.T) {
 	const code = `
       let a = -42.3
 	`
-	result, errs := ParseProgram(code, nil)
+	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -4861,7 +5032,7 @@ func TestParseNegativeFixedPoint(t *testing.T) {
 					Pos:       ast.Position{Offset: 13, Line: 2, Column: 12},
 				},
 				Value: &ast.FixedPointExpression{
-					PositiveLiteral: "42.3",
+					PositiveLiteral: []byte("42.3"),
 					Negative:        true,
 					UnsignedInteger: big.NewInt(42),
 					Fractional:      big.NewInt(3),
@@ -4887,7 +5058,7 @@ func TestParseTernaryRightAssociativity(t *testing.T) {
           ? 0
           : 3 > 2 ? 1 : 2
 	`
-	result, errs := ParseProgram(code, nil)
+	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -4906,7 +5077,7 @@ func TestParseTernaryRightAssociativity(t *testing.T) {
 					Test: &ast.BinaryExpression{
 						Operation: ast.OperationGreater,
 						Left: &ast.IntegerExpression{
-							PositiveLiteral: "2",
+							PositiveLiteral: []byte("2"),
 							Value:           big.NewInt(2),
 							Base:            10,
 							Range: ast.Range{
@@ -4915,7 +5086,7 @@ func TestParseTernaryRightAssociativity(t *testing.T) {
 							},
 						},
 						Right: &ast.IntegerExpression{
-							PositiveLiteral: "1",
+							PositiveLiteral: []byte("1"),
 							Value:           big.NewInt(1),
 							Base:            10,
 							Range: ast.Range{
@@ -4925,7 +5096,7 @@ func TestParseTernaryRightAssociativity(t *testing.T) {
 						},
 					},
 					Then: &ast.IntegerExpression{
-						PositiveLiteral: "0",
+						PositiveLiteral: []byte("0"),
 						Value:           new(big.Int),
 						Base:            10,
 						Range: ast.Range{
@@ -4937,7 +5108,7 @@ func TestParseTernaryRightAssociativity(t *testing.T) {
 						Test: &ast.BinaryExpression{
 							Operation: ast.OperationGreater,
 							Left: &ast.IntegerExpression{
-								PositiveLiteral: "3",
+								PositiveLiteral: []byte("3"),
 								Value:           big.NewInt(3),
 								Base:            10,
 								Range: ast.Range{
@@ -4946,7 +5117,7 @@ func TestParseTernaryRightAssociativity(t *testing.T) {
 								},
 							},
 							Right: &ast.IntegerExpression{
-								PositiveLiteral: "2",
+								PositiveLiteral: []byte("2"),
 								Value:           big.NewInt(2),
 								Base:            10,
 								Range: ast.Range{
@@ -4956,7 +5127,7 @@ func TestParseTernaryRightAssociativity(t *testing.T) {
 							},
 						},
 						Then: &ast.IntegerExpression{
-							PositiveLiteral: "1",
+							PositiveLiteral: []byte("1"),
 							Value:           big.NewInt(1),
 							Base:            10,
 							Range: ast.Range{
@@ -4965,7 +5136,7 @@ func TestParseTernaryRightAssociativity(t *testing.T) {
 							},
 						},
 						Else: &ast.IntegerExpression{
-							PositiveLiteral: "2",
+							PositiveLiteral: []byte("2"),
 							Value:           big.NewInt(2),
 							Base:            10,
 							Range: ast.Range{
@@ -4982,6 +5153,50 @@ func TestParseTernaryRightAssociativity(t *testing.T) {
 	)
 }
 
+func TestParseVoidLiteral(t *testing.T) {
+	t.Parallel()
+
+	const code = `
+		let void: Void = ()
+	`
+
+	result, errs := testParseProgram(code)
+	require.Empty(t, errs)
+
+	utils.AssertEqualWithDiff(t,
+		[]ast.Declaration{
+			&ast.VariableDeclaration{
+				IsConstant: true,
+				Identifier: ast.Identifier{
+					Identifier: "void",
+					Pos:        ast.Position{Offset: 7, Line: 2, Column: 6},
+				},
+				TypeAnnotation: &ast.TypeAnnotation{
+					IsResource: false,
+					Type: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "Void",
+							Pos:        ast.Position{Offset: 13, Line: 2, Column: 12},
+						},
+						NestedIdentifiers: nil,
+					},
+					StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
+				},
+				Value: &ast.VoidExpression{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 20, Line: 2, Column: 19},
+						EndPos:   ast.Position{Offset: 23, Line: 3, Column: 0},
+					},
+				},
+				Transfer: &ast.Transfer{
+					Operation: 1,
+					Pos:       ast.Position{Offset: 18, Line: 2, Column: 17},
+				},
+				StartPos: ast.Position{Offset: 3, Line: 2, Column: 2},
+			},
+		}, result.Declarations())
+}
+
 func TestParseMissingReturnType(t *testing.T) {
 
 	t.Parallel()
@@ -4990,7 +5205,7 @@ func TestParseMissingReturnType(t *testing.T) {
 		let noop: ((): Void) =
             fun () { return }
 	`
-	result, errs := ParseProgram(code, nil)
+	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -5071,9 +5286,9 @@ func TestParseExpression(t *testing.T) {
 
 	t.Parallel()
 
-	actual, errs := ParseExpression(`
+	actual, errs := testParseExpression(`
         before(x + before(y)) + z
-	`, nil)
+	`)
 	var err error
 	if len(errs) > 0 {
 		err = Error{
@@ -5150,9 +5365,9 @@ func TestParseStringEscapes(t *testing.T) {
 
 	t.Parallel()
 
-	actual, errs := ParseExpression(`
+	actual, errs := testParseExpression(`
        "test \0\n\r\t\"\'\\ xyz"
-	`, nil)
+	`)
 
 	var err error
 	if len(errs) > 0 {
@@ -5178,9 +5393,9 @@ func TestParseStringWithUnicode(t *testing.T) {
 
 	t.Parallel()
 
-	actual, errs := ParseExpression(`
+	actual, errs := testParseExpression(`
       "this is a test \t\\new line and race car:\n\u{1F3CE}\u{FE0F}"
-	`, nil)
+	`)
 
 	var err error
 	if len(errs) > 0 {
@@ -5209,7 +5424,7 @@ func TestParseNilCoalescing(t *testing.T) {
 	const code = `
        let x = nil ?? 1
 	`
-	result, errs := ParseProgram(code, nil)
+	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -5230,7 +5445,7 @@ func TestParseNilCoalescing(t *testing.T) {
 						Pos: ast.Position{Offset: 16, Line: 2, Column: 15},
 					},
 					Right: &ast.IntegerExpression{
-						PositiveLiteral: "1",
+						PositiveLiteral: []byte("1"),
 						Value:           big.NewInt(1),
 						Base:            10,
 						Range: ast.Range{
@@ -5254,7 +5469,7 @@ func TestParseNilCoalescingRightAssociativity(t *testing.T) {
 	const code = `
        let x = 1 ?? 2 ?? 3
 	`
-	result, errs := ParseProgram(code, nil)
+	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -5272,7 +5487,7 @@ func TestParseNilCoalescingRightAssociativity(t *testing.T) {
 				Value: &ast.BinaryExpression{
 					Operation: ast.OperationNilCoalesce,
 					Left: &ast.IntegerExpression{
-						PositiveLiteral: "1",
+						PositiveLiteral: []byte("1"),
 						Value:           big.NewInt(1),
 						Base:            10,
 						Range: ast.Range{
@@ -5283,7 +5498,7 @@ func TestParseNilCoalescingRightAssociativity(t *testing.T) {
 					Right: &ast.BinaryExpression{
 						Operation: ast.OperationNilCoalesce,
 						Left: &ast.IntegerExpression{
-							PositiveLiteral: "2",
+							PositiveLiteral: []byte("2"),
 							Value:           big.NewInt(2),
 							Base:            10,
 							Range: ast.Range{
@@ -5292,7 +5507,7 @@ func TestParseNilCoalescingRightAssociativity(t *testing.T) {
 							},
 						},
 						Right: &ast.IntegerExpression{
-							PositiveLiteral: "3",
+							PositiveLiteral: []byte("3"),
 							Value:           big.NewInt(3),
 							Base:            10,
 							Range: ast.Range{
@@ -5316,12 +5531,12 @@ func TestParseFailableCasting(t *testing.T) {
 	const code = `
        let x = 0 as? Int
 	`
-	result, errs := ParseProgram(code, nil)
+	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
 	failableDowncast := &ast.CastingExpression{
 		Expression: &ast.IntegerExpression{
-			PositiveLiteral: "0",
+			PositiveLiteral: []byte("0"),
 			Value:           new(big.Int),
 			Base:            10,
 			Range: ast.Range{
@@ -5373,7 +5588,7 @@ func TestParseMoveOperator(t *testing.T) {
 	const code = `
       let x = foo(<-y)
 	`
-	result, errs := ParseProgram(code, nil)
+	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -5430,7 +5645,7 @@ func TestParseFunctionExpressionWithResourceTypeAnnotation(t *testing.T) {
 	const code = `
         let f = fun (): @R { return X }
 	`
-	result, errs := ParseProgram(code, nil)
+	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -5501,7 +5716,7 @@ func TestParseFailableCastingResourceTypeAnnotation(t *testing.T) {
 	const code = `
         let y = x as? @R
 	`
-	result, errs := ParseProgram(code, nil)
+	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
 	failableDowncast := &ast.CastingExpression{
@@ -5555,7 +5770,7 @@ func TestParseCasting(t *testing.T) {
 	const code = `
         let y = x as Y
 	`
-	result, errs := ParseProgram(code, nil)
+	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
 	cast := &ast.CastingExpression{
@@ -5608,7 +5823,7 @@ func TestParseIdentifiers(t *testing.T) {
 	for _, name := range []string{"foo", "from", "create", "destroy", "for", "in"} {
 		t.Run(name, func(t *testing.T) {
 			code := fmt.Sprintf(`let %s = 1`, name)
-			_, errs := ParseProgram(code, nil)
+			_, errs := testParseProgram(code)
 			require.Empty(t, errs)
 		})
 	}
@@ -5621,7 +5836,7 @@ func TestParseReferenceInVariableDeclaration(t *testing.T) {
 	const code = `
        let x = &account.storage[R] as &R
 	`
-	result, errs := ParseProgram(code, nil)
+	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -5687,7 +5902,7 @@ func TestParseFixedPointExpression(t *testing.T) {
 	const code = `
 	    let a = -1234_5678_90.0009_8765_4321
 	`
-	result, errs := ParseProgram(code, nil)
+	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -5702,7 +5917,7 @@ func TestParseFixedPointExpression(t *testing.T) {
 					Pos:       ast.Position{Offset: 12, Line: 2, Column: 11},
 				},
 				Value: &ast.FixedPointExpression{
-					PositiveLiteral: "1234_5678_90.0009_8765_4321",
+					PositiveLiteral: []byte("1234_5678_90.0009_8765_4321"),
 					Negative:        true,
 					UnsignedInteger: big.NewInt(1234567890),
 					Fractional:      big.NewInt(987654321),
@@ -5726,7 +5941,7 @@ func TestParseFixedPointExpressionZeroInteger(t *testing.T) {
 	const code = `
 	    let a = -0.1
 	`
-	result, errs := ParseProgram(code, nil)
+	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -5741,7 +5956,7 @@ func TestParseFixedPointExpressionZeroInteger(t *testing.T) {
 					Pos:       ast.Position{Offset: 12, Line: 2, Column: 11},
 				},
 				Value: &ast.FixedPointExpression{
-					PositiveLiteral: "0.1",
+					PositiveLiteral: []byte("0.1"),
 					Negative:        true,
 					UnsignedInteger: new(big.Int),
 					Fractional:      big.NewInt(1),
@@ -5765,7 +5980,7 @@ func TestParsePathLiteral(t *testing.T) {
 	const code = `
 	    let a = /foo/bar
 	`
-	result, errs := ParseProgram(code, nil)
+	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -5804,7 +6019,7 @@ func TestParseBitwiseExpression(t *testing.T) {
 	const code = `
       let a = 1 | 2 ^ 3 & 4 << 5 >> 6
 	`
-	result, errs := ParseProgram(code, nil)
+	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -5822,7 +6037,7 @@ func TestParseBitwiseExpression(t *testing.T) {
 				Value: &ast.BinaryExpression{
 					Operation: ast.OperationBitwiseOr,
 					Left: &ast.IntegerExpression{
-						PositiveLiteral: "1",
+						PositiveLiteral: []byte("1"),
 						Value:           big.NewInt(1),
 						Base:            10,
 						Range: ast.Range{
@@ -5833,7 +6048,7 @@ func TestParseBitwiseExpression(t *testing.T) {
 					Right: &ast.BinaryExpression{
 						Operation: ast.OperationBitwiseXor,
 						Left: &ast.IntegerExpression{
-							PositiveLiteral: "2",
+							PositiveLiteral: []byte("2"),
 							Value:           big.NewInt(2),
 							Base:            10,
 							Range: ast.Range{
@@ -5844,7 +6059,7 @@ func TestParseBitwiseExpression(t *testing.T) {
 						Right: &ast.BinaryExpression{
 							Operation: ast.OperationBitwiseAnd,
 							Left: &ast.IntegerExpression{
-								PositiveLiteral: "3",
+								PositiveLiteral: []byte("3"),
 								Value:           big.NewInt(3),
 								Base:            10,
 								Range: ast.Range{
@@ -5857,7 +6072,7 @@ func TestParseBitwiseExpression(t *testing.T) {
 								Left: &ast.BinaryExpression{
 									Operation: ast.OperationBitwiseLeftShift,
 									Left: &ast.IntegerExpression{
-										PositiveLiteral: "4",
+										PositiveLiteral: []byte("4"),
 										Value:           big.NewInt(4),
 										Base:            10,
 										Range: ast.Range{
@@ -5866,7 +6081,7 @@ func TestParseBitwiseExpression(t *testing.T) {
 										},
 									},
 									Right: &ast.IntegerExpression{
-										PositiveLiteral: "5",
+										PositiveLiteral: []byte("5"),
 										Value:           big.NewInt(5),
 										Base:            10,
 										Range: ast.Range{
@@ -5876,7 +6091,7 @@ func TestParseBitwiseExpression(t *testing.T) {
 									},
 								},
 								Right: &ast.IntegerExpression{
-									PositiveLiteral: "6",
+									PositiveLiteral: []byte("6"),
 									Value:           big.NewInt(6),
 									Base:            10,
 									Range: ast.Range{
@@ -5902,7 +6117,7 @@ func TestParseInvalidNegativeIntegerLiteralWithIncorrectPrefix(t *testing.T) {
 	const code = `
 	    let e = -0K0
 	`
-	_, err := ParseProgram(code, nil)
+	_, err := testParseProgram(code)
 
 	require.Error(t, err)
 }

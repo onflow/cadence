@@ -26,7 +26,7 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-func (interpreter *Interpreter) VisitImportDeclaration(declaration *ast.ImportDeclaration) ast.Repr {
+func (interpreter *Interpreter) VisitImportDeclaration(declaration *ast.ImportDeclaration) StatementResult {
 
 	resolvedLocations := interpreter.Program.Elaboration.ImportDeclarationsResolvedLocations[declaration]
 
@@ -38,9 +38,10 @@ func (interpreter *Interpreter) VisitImportDeclaration(declaration *ast.ImportDe
 }
 
 func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.ResolvedLocation) {
+	config := interpreter.SharedState.Config
 
 	// tracing
-	if interpreter.Config.TracingEnabled {
+	if config.TracingEnabled {
 		startTime := time.Now()
 		defer func() {
 			interpreter.reportImportTrace(
@@ -60,12 +61,12 @@ func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.Res
 	if identifierLength > 0 {
 		variables = make(map[string]*Variable, identifierLength)
 		for _, identifier := range resolvedLocation.Identifiers {
-			variable, _ := subInterpreter.Globals.Get(identifier.Identifier)
-			variables[identifier.Identifier] = variable
+			variables[identifier.Identifier] =
+				subInterpreter.Globals.Get(identifier.Identifier)
 		}
 	} else {
 		// Only take the global values defined in the program.
-		variables = subInterpreter.Globals
+		variables = subInterpreter.Globals.variables
 	}
 
 	// Gather all variable names and sort them lexicographically

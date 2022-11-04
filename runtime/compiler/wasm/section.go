@@ -36,7 +36,6 @@ package wasm
 // 9 = element section
 // 10 = code section
 // 11 = data section
-//
 type sectionID byte
 
 const (

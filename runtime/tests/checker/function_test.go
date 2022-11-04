@@ -107,7 +107,7 @@ func TestCheckInvalidFunctionDeclarations(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.RedeclarationError{}, errs[0])
 }
@@ -122,7 +122,7 @@ func TestCheckInvalidFunctionRedeclaration(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.RedeclarationError{}, errs[0])
 }
@@ -198,7 +198,7 @@ func TestCheckInvalidParameterTypes(t *testing.T) {
       fun test(x: X, y: Y) {}
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 
@@ -214,7 +214,7 @@ func TestCheckInvalidParameterNameRedeclaration(t *testing.T) {
       fun test(a: Int, a: Int) {}
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.RedeclarationError{}, errs[0])
 }
@@ -242,7 +242,7 @@ func TestCheckInvalidParameterAssignment(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.AssignmentToConstantError{}, errs[0])
 }
@@ -255,7 +255,7 @@ func TestCheckInvalidArgumentLabelRedeclaration(t *testing.T) {
       fun test(x a: Int, x b: Int) {}
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.RedeclarationError{}, errs[0])
 }
@@ -281,7 +281,7 @@ func TestCheckInvalidFunctionDeclarationReturnValue(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -303,7 +303,7 @@ func TestCheckInvalidResourceCapturingThroughVariable(t *testing.T) {
       let test = makeKittyCloner()
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
 }
@@ -324,7 +324,7 @@ func TestCheckInvalidResourceCapturingThroughParameter(t *testing.T) {
       let test = makeKittyCloner(kitty: <-create Kitty())
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
 }
@@ -346,7 +346,7 @@ func TestCheckInvalidSelfResourceCapturing(t *testing.T) {
       let test = kitty.makeCloner()
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
 	assert.IsType(t, &sema.InvalidSelfInvalidationError{}, errs[1])
@@ -379,7 +379,7 @@ func TestCheckInvalidResourceCapturingJustMemberAccess(t *testing.T) {
       let test = makeKittyIdGetter()
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
 	assert.IsType(t, &sema.ResourceLossError{}, errs[1])
@@ -396,7 +396,7 @@ func TestCheckInvalidFunctionWithResult(t *testing.T) {
      }
    `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.RedeclarationError{}, errs[0])
 }
@@ -411,7 +411,7 @@ func TestCheckFunctionNonExistingField(t *testing.T) {
       let x = f.y
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
 }

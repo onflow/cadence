@@ -29,7 +29,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/pretty"
 	"github.com/onflow/cadence/runtime/sema"
@@ -40,7 +39,7 @@ func init() {
 	deep.MaxDepth = 20
 }
 
-func ParseAndCheck(t *testing.T, code string) (*sema.Checker, error) {
+func ParseAndCheck(t testing.TB, code string) (*sema.Checker, error) {
 	return ParseAndCheckWithOptions(t, code, ParseAndCheckOptions{})
 }
 
@@ -75,12 +74,12 @@ func ParseAndCheckWithOptionsAndMemoryMetering(
 		options.Location = utils.TestLocation
 	}
 
-	program, err := parser.ParseProgram(code, memoryGauge)
+	program, err := parser.ParseProgram([]byte(code), memoryGauge)
 	if !options.IgnoreParseError && !assert.NoError(t, err) {
 		var sb strings.Builder
 		location := options.Location
 		printErr := pretty.NewErrorPrettyPrinter(&sb, true).
-			PrettyPrintError(err, location, map[common.Location]string{location: code})
+			PrettyPrintError(err, location, map[common.Location][]byte{location: []byte(code)})
 		if printErr != nil {
 			panic(printErr)
 		}
@@ -167,12 +166,13 @@ func ParseAndCheckWithOptionsAndMemoryMetering(
 	return checker, err
 }
 
-func ExpectCheckerErrors(t *testing.T, err error, count int) []error {
-	if count <= 0 && err == nil {
+func RequireCheckerErrors(t *testing.T, err error, count int) []error {
+	if count <= 0 {
+		require.NoError(t, err)
 		return nil
 	}
 
-	require.Error(t, err)
+	utils.RequireError(t, err)
 
 	var checkerErr *sema.CheckerError
 	require.ErrorAs(t, err, &checkerErr)
@@ -184,10 +184,7 @@ func ExpectCheckerErrors(t *testing.T, err error, count int) []error {
 	// Get the error message, to check that it can be successfully generated
 
 	for _, checkerErr := range errs {
-		_ = checkerErr.Error()
-		if hasSecondaryError, ok := checkerErr.(errors.SecondaryError); ok {
-			_ = hasSecondaryError.SecondaryError()
-		}
+		utils.RequireError(t, checkerErr)
 	}
 
 	return errs

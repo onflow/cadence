@@ -21,11 +21,10 @@ package sema
 import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
 )
 
-func (checker *Checker) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration) ast.Repr {
-	return checker.visitFunctionDeclaration(
+func (checker *Checker) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration) (_ struct{}) {
+	checker.visitFunctionDeclaration(
 		declaration,
 		functionDeclarationOptions{
 			mustExit:          true,
@@ -33,9 +32,11 @@ func (checker *Checker) VisitFunctionDeclaration(declaration *ast.FunctionDeclar
 			checkResourceLoss: true,
 		},
 	)
+
+	return
 }
 
-func (checker *Checker) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunctionDeclaration) ast.Repr {
+func (checker *Checker) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunctionDeclaration) struct{} {
 	return checker.VisitFunctionDeclaration(declaration.FunctionDeclaration)
 }
 
@@ -56,7 +57,7 @@ type functionDeclarationOptions struct {
 func (checker *Checker) visitFunctionDeclaration(
 	declaration *ast.FunctionDeclaration,
 	options functionDeclarationOptions,
-) ast.Repr {
+) {
 
 	checker.checkDeclarationAccessModifier(
 		declaration.Access,
@@ -87,8 +88,6 @@ func (checker *Checker) visitFunctionDeclaration(
 		nil,
 		options.checkResourceLoss,
 	)
-
-	return nil
 }
 
 func (checker *Checker) declareFunctionDeclaration(
@@ -97,7 +96,7 @@ func (checker *Checker) declareFunctionDeclaration(
 ) {
 	argumentLabels := declaration.ParameterList.EffectiveArgumentLabels()
 
-	_, err := checker.valueActivations.Declare(variableDeclaration{
+	_, err := checker.valueActivations.declare(variableDeclaration{
 		identifier:               declaration.Identifier.Identifier,
 		ty:                       functionType,
 		docString:                declaration.DocString,
@@ -132,17 +131,6 @@ func (checker *Checker) checkFunction(
 	if functionType.ReturnTypeAnnotation != nil {
 		checker.checkTypeAnnotation(functionType.ReturnTypeAnnotation, returnTypeAnnotation)
 	}
-
-	// Reset the returning state and restore it when leaving
-
-	jumpedOrReturned := checker.resources.JumpsOrReturns
-	halted := checker.resources.Halts
-	checker.resources.JumpsOrReturns = false
-	checker.resources.Halts = false
-	defer func() {
-		checker.resources.JumpsOrReturns = jumpedOrReturned
-		checker.resources.Halts = halted
-	}()
 
 	// NOTE: Always declare the function parameters, even if the function body is empty.
 	// For example, event declarations have an initializer with an empty body,
@@ -204,7 +192,6 @@ func (checker *Checker) checkFunction(
 // checkFunctionExits checks that the given function block exits
 // with a return-type appropriate return statement.
 // The return is not needed if the function has a `Void` return type.
-//
 func (checker *Checker) checkFunctionExits(functionBlock *ast.FunctionBlock, returnType Type) {
 
 	if returnType == VoidType {
@@ -240,7 +227,6 @@ func (checker *Checker) checkParameters(parameterList *ast.ParameterList, parame
 }
 
 // checkArgumentLabels checks that all argument labels (if any) are unique
-//
 func (checker *Checker) checkArgumentLabels(parameterList *ast.ParameterList) {
 
 	argumentLabelPositions := map[string]ast.Position{}
@@ -270,7 +256,6 @@ func (checker *Checker) checkArgumentLabels(parameterList *ast.ParameterList) {
 
 // declareParameters declares a constant for each parameter,
 // ensuring names are unique and constants don't already exist
-//
 func (checker *Checker) declareParameters(
 	parameterList *ast.ParameterList,
 	parameters []*Parameter,
@@ -311,11 +296,6 @@ func (checker *Checker) declareParameters(
 			checker.recordVariableDeclarationOccurrence(identifier.Identifier, variable)
 		}
 	}
-}
-
-func (checker *Checker) VisitFunctionBlock(functionBlock *ast.FunctionBlock) ast.Repr {
-	// NOTE: see visitFunctionBlock
-	panic(errors.NewUnreachableError())
 }
 
 func (checker *Checker) visitWithPostConditions(postConditions *ast.Conditions, returnType Type, body func()) {
@@ -393,7 +373,7 @@ func (checker *Checker) visitFunctionBlock(
 }
 
 func (checker *Checker) declareResult(ty Type) {
-	_, err := checker.valueActivations.DeclareImplicitConstant(
+	_, err := checker.valueActivations.declareImplicitConstant(
 		ResultIdentifier,
 		ty,
 		common.DeclarationKindConstant,
@@ -403,7 +383,7 @@ func (checker *Checker) declareResult(ty Type) {
 }
 
 func (checker *Checker) declareBefore() {
-	_, err := checker.valueActivations.DeclareImplicitConstant(
+	_, err := checker.valueActivations.declareImplicitConstant(
 		BeforeIdentifier,
 		beforeType,
 		common.DeclarationKindFunction,
@@ -412,7 +392,7 @@ func (checker *Checker) declareBefore() {
 	// TODO: record occurrence – but what position?
 }
 
-func (checker *Checker) VisitFunctionExpression(expression *ast.FunctionExpression) ast.Repr {
+func (checker *Checker) VisitFunctionExpression(expression *ast.FunctionExpression) Type {
 
 	// TODO: infer
 	functionType := checker.functionType(expression.ParameterList, expression.ReturnTypeAnnotation)
@@ -444,7 +424,6 @@ func (checker *Checker) VisitFunctionExpression(expression *ast.FunctionExpressi
 
 // checkFieldMembersInitialized checks that all fields that were required
 // to be initialized (as stated in the initialization info) have been initialized.
-//
 func (checker *Checker) checkFieldMembersInitialized(info *InitializationInfo) {
 	for pair := info.FieldMembers.Oldest(); pair != nil; pair = pair.Next() {
 		member := pair.Key

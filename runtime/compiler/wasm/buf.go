@@ -25,7 +25,6 @@ import (
 type offset int
 
 // Buffer is a byte buffer, which allows reading and writing.
-//
 type Buffer struct {
 	data   []byte
 	offset offset

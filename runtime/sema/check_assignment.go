@@ -24,7 +24,7 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
-func (checker *Checker) VisitAssignmentStatement(assignment *ast.AssignmentStatement) ast.Repr {
+func (checker *Checker) VisitAssignmentStatement(assignment *ast.AssignmentStatement) (_ struct{}) {
 	targetType, valueType := checker.checkAssignment(
 		assignment.Target,
 		assignment.Value,
@@ -38,7 +38,7 @@ func (checker *Checker) VisitAssignmentStatement(assignment *ast.AssignmentState
 			TargetType: targetType,
 		}
 
-	return nil
+	return
 }
 
 func (checker *Checker) checkAssignment(
@@ -319,7 +319,7 @@ func (checker *Checker) visitMemberExpressionAssignment(
 						},
 					)
 
-				} else if _, ok := functionActivation.InitializationInfo.FieldMembers.Get(accessedSelfMember); !ok {
+				} else if !functionActivation.InitializationInfo.FieldMembers.Contains(accessedSelfMember) {
 					// This member is not supposed to be initialized
 
 					reportAssignmentToConstant()

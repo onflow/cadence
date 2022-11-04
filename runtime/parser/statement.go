@@ -27,7 +27,7 @@ import (
 func parseStatements(p *parser, isEndToken func(token lexer.Token) bool) (statements []ast.Statement, err error) {
 	sawSemicolon := false
 	for {
-		p.skipSpaceAndComments(true)
+		p.skipSpaceAndComments()
 		switch p.current.Type {
 		case lexer.TokenSemicolon:
 			sawSemicolon = true
@@ -71,13 +71,13 @@ func parseStatements(p *parser, isEndToken func(token lexer.Token) bool) (statem
 }
 
 func parseStatement(p *parser) (ast.Statement, error) {
-	p.skipSpaceAndComments(true)
+	p.skipSpaceAndComments()
 
 	// It might start with a keyword for a statement
 
 	switch p.current.Type {
 	case lexer.TokenIdentifier:
-		switch p.current.Value {
+		switch string(p.currentTokenSource()) {
 		case keywordReturn:
 			return parseReturnStatement(p)
 		case keywordBreak:
@@ -124,7 +124,7 @@ func parseStatement(p *parser) (ast.Statement, error) {
 	// If the expression is followed by a transfer,
 	// it is actually the target of an assignment or swap statement
 
-	p.skipSpaceAndComments(true)
+	p.skipSpaceAndComments()
 	switch p.current.Type {
 	case lexer.TokenEqual, lexer.TokenLeftArrow, lexer.TokenLeftArrowExclamation:
 		transfer := parseTransfer(p)
@@ -156,9 +156,7 @@ func parseFunctionDeclarationOrFunctionExpressionStatement(p *parser) (ast.State
 	startPos := p.current.StartPos
 
 	// Skip the `fun` keyword
-	p.next()
-
-	p.skipSpaceAndComments(true)
+	p.nextSemanticToken()
 
 	if p.current.Is(lexer.TokenIdentifier) {
 		identifier := p.tokenToIdentifier(p.current)
@@ -207,7 +205,9 @@ func parseReturnStatement(p *parser) (*ast.ReturnStatement, error) {
 	endPosition := tokenRange.EndPos
 	p.next()
 
-	sawNewLine := p.skipSpaceAndComments(false)
+	sawNewLine, _ := p.parseTrivia(triviaOptions{
+		skipNewlines: false,
+	})
 
 	var expression ast.Expression
 	var err error
@@ -256,15 +256,13 @@ func parseIfStatement(p *parser) (*ast.IfStatement, error) {
 
 	for {
 		startPos := p.current.StartPos
-		p.next()
-
-		p.skipSpaceAndComments(true)
+		p.nextSemanticToken()
 
 		var variableDeclaration *ast.VariableDeclaration
 		var err error
 
 		if p.current.Type == lexer.TokenIdentifier {
-			switch p.current.Value {
+			switch string(p.currentTokenSource()) {
 			case keywordLet, keywordVar:
 				variableDeclaration, err =
 					parseVariableDeclaration(p, ast.AccessNotSpecified, nil, "")
@@ -292,12 +290,10 @@ func parseIfStatement(p *parser) (*ast.IfStatement, error) {
 
 		parseNested := false
 
-		p.skipSpaceAndComments(true)
-		if p.current.IsString(lexer.TokenIdentifier, keywordElse) {
-			p.next()
-
-			p.skipSpaceAndComments(true)
-			if p.current.IsString(lexer.TokenIdentifier, keywordIf) {
+		p.skipSpaceAndComments()
+		if p.isToken(p.current, lexer.TokenIdentifier, keywordElse) {
+			p.nextSemanticToken()
+			if p.isToken(p.current, lexer.TokenIdentifier, keywordIf) {
 				parseNested = true
 			} else {
 				elseBlock, err = parseBlock(p)
@@ -374,11 +370,9 @@ func parseWhileStatement(p *parser) (*ast.WhileStatement, error) {
 func parseForStatement(p *parser) (*ast.ForStatement, error) {
 
 	startPos := p.current.StartPos
-	p.next()
+	p.nextSemanticToken()
 
-	p.skipSpaceAndComments(true)
-
-	if p.current.IsString(lexer.TokenIdentifier, keywordIn) {
+	if p.isToken(p.current, lexer.TokenIdentifier, keywordIn) {
 		p.reportSyntaxError(
 			"expected identifier, got keyword %q",
 			keywordIn,
@@ -391,26 +385,25 @@ func parseForStatement(p *parser) (*ast.ForStatement, error) {
 		return nil, err
 	}
 
-	p.skipSpaceAndComments(true)
+	p.skipSpaceAndComments()
 
 	var index *ast.Identifier
 	var identifier ast.Identifier
 
 	if p.current.Is(lexer.TokenComma) {
-		p.next()
-		p.skipSpaceAndComments(true)
+		p.nextSemanticToken()
 		index = &firstValue
 		identifier, err = p.mustIdentifier()
 		if err != nil {
 			return nil, err
 		}
 
-		p.skipSpaceAndComments(true)
+		p.skipSpaceAndComments()
 	} else {
 		identifier = firstValue
 	}
 
-	if !p.current.IsString(lexer.TokenIdentifier, keywordIn) {
+	if !p.isToken(p.current, lexer.TokenIdentifier, keywordIn) {
 		p.reportSyntaxError(
 			"expected keyword %q, got %s",
 			keywordIn,
@@ -470,17 +463,17 @@ func parseBlock(p *parser) (*ast.Block, error) {
 }
 
 func parseFunctionBlock(p *parser) (*ast.FunctionBlock, error) {
-	p.skipSpaceAndComments(true)
+	p.skipSpaceAndComments()
 
 	startToken, err := p.mustOne(lexer.TokenBraceOpen)
 	if err != nil {
 		return nil, err
 	}
 
-	p.skipSpaceAndComments(true)
+	p.skipSpaceAndComments()
 
 	var preConditions *ast.Conditions
-	if p.current.IsString(lexer.TokenIdentifier, keywordPre) {
+	if p.isToken(p.current, lexer.TokenIdentifier, keywordPre) {
 		p.next()
 		conditions, err := parseConditions(p, ast.ConditionKindPre)
 		if err != nil {
@@ -490,10 +483,10 @@ func parseFunctionBlock(p *parser) (*ast.FunctionBlock, error) {
 		preConditions = &conditions
 	}
 
-	p.skipSpaceAndComments(true)
+	p.skipSpaceAndComments()
 
 	var postConditions *ast.Conditions
-	if p.current.IsString(lexer.TokenIdentifier, keywordPost) {
+	if p.isToken(p.current, lexer.TokenIdentifier, keywordPost) {
 		p.next()
 		conditions, err := parseConditions(p, ast.ConditionKindPost)
 		if err != nil {
@@ -532,22 +525,21 @@ func parseFunctionBlock(p *parser) (*ast.FunctionBlock, error) {
 }
 
 // parseConditions parses conditions (pre/post)
-//
 func parseConditions(p *parser, kind ast.ConditionKind) (conditions ast.Conditions, err error) {
 
-	p.skipSpaceAndComments(true)
+	p.skipSpaceAndComments()
 	_, err = p.mustOne(lexer.TokenBraceOpen)
 	if err != nil {
 		return nil, err
 	}
 
 	defer func() {
-		p.skipSpaceAndComments(true)
+		p.skipSpaceAndComments()
 		_, err = p.mustOne(lexer.TokenBraceClose)
 	}()
 
 	for {
-		p.skipSpaceAndComments(true)
+		p.skipSpaceAndComments()
 		switch p.current.Type {
 		case lexer.TokenSemicolon:
 			p.next()
@@ -570,8 +562,7 @@ func parseConditions(p *parser, kind ast.ConditionKind) (conditions ast.Conditio
 
 // parseCondition parses a condition (pre/post)
 //
-//    condition : expression (':' expression )?
-//
+//	condition : expression (':' expression )?
 func parseCondition(p *parser, kind ast.ConditionKind) (*ast.Condition, error) {
 
 	test, err := parseExpression(p, lowestBindingPower)
@@ -579,7 +570,7 @@ func parseCondition(p *parser, kind ast.ConditionKind) (*ast.Condition, error) {
 		return nil, err
 	}
 
-	p.skipSpaceAndComments(true)
+	p.skipSpaceAndComments()
 
 	var message ast.Expression
 	if p.current.Is(lexer.TokenColon) {
@@ -651,8 +642,7 @@ func parseSwitchStatement(p *parser) (*ast.SwitchStatement, error) {
 
 // parseSwitchCases parses cases of a switch statement.
 //
-//     switchCases : switchCase*
-//
+//	switchCases : switchCase*
 func parseSwitchCases(p *parser) (cases []*ast.SwitchCase, err error) {
 
 	reportUnexpected := func() {
@@ -666,13 +656,13 @@ func parseSwitchCases(p *parser) (cases []*ast.SwitchCase, err error) {
 	}
 
 	for {
-		p.skipSpaceAndComments(true)
+		p.skipSpaceAndComments()
 
 		switch p.current.Type {
 		case lexer.TokenIdentifier:
 
 			var switchCase *ast.SwitchCase
-			switch p.current.Value {
+			switch string(p.currentTokenSource()) {
 			case keywordCase:
 				switchCase, err = parseSwitchCase(p, true)
 
@@ -702,9 +692,8 @@ func parseSwitchCases(p *parser) (cases []*ast.SwitchCase, err error) {
 // parseSwitchCase parses a switch case (hasExpression == true)
 // or default case (hasExpression == false)
 //
-//     switchCase : `case` expression `:` statements
-//                | `default` `:` statements
-//
+//	switchCase : `case` expression `:` statements
+//	           | `default` `:` statements
 func parseSwitchCase(p *parser, hasExpression bool) (*ast.SwitchCase, error) {
 
 	startPos := p.current.StartPos
@@ -721,7 +710,7 @@ func parseSwitchCase(p *parser, hasExpression bool) (*ast.SwitchCase, error) {
 			return nil, err
 		}
 	} else {
-		p.skipSpaceAndComments(true)
+		p.skipSpaceAndComments()
 	}
 
 	colonPos := p.current.StartPos
@@ -742,7 +731,7 @@ func parseSwitchCase(p *parser, hasExpression bool) (*ast.SwitchCase, error) {
 			return true
 
 		case lexer.TokenIdentifier:
-			switch p.current.Value {
+			switch string(p.currentTokenSource()) {
 			case keywordCase, keywordDefault:
 				return true
 			default:

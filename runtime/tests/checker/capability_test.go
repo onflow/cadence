@@ -84,7 +84,7 @@ func TestCheckCapability_borrow(t *testing.T) {
           let r = capability.borrow()
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
 	})
@@ -242,7 +242,7 @@ func TestCheckCapability_borrow(t *testing.T) {
               let r <- capability.borrow<@R>()
             `)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -258,7 +258,7 @@ func TestCheckCapability_borrow(t *testing.T) {
               let s = capability.borrow<S>()
             `)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -278,7 +278,7 @@ func TestCheckCapability_check(t *testing.T) {
           let ok = capability.check()
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
 	})
@@ -412,7 +412,7 @@ func TestCheckCapability_check(t *testing.T) {
               let ok = capability.check<@R>()
             `)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
@@ -428,7 +428,7 @@ func TestCheckCapability_check(t *testing.T) {
               let ok = capability.check<S>()
             `)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})

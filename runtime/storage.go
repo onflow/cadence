@@ -26,6 +26,7 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 )
@@ -34,9 +35,9 @@ const StorageDomainContract = "contract"
 
 type Storage struct {
 	*atree.PersistentSlabStorage
-	writes          map[interpreter.StorageKey]atree.StorageIndex
+	newStorageMaps  *orderedmap.OrderedMap[interpreter.StorageKey, atree.StorageIndex]
 	storageMaps     map[interpreter.StorageKey]*interpreter.StorageMap
-	contractUpdates map[interpreter.StorageKey]*interpreter.CompositeValue
+	contractUpdates *orderedmap.OrderedMap[interpreter.StorageKey, *interpreter.CompositeValue]
 	Ledger          atree.Ledger
 	memoryGauge     common.MemoryGauge
 }
@@ -74,9 +75,7 @@ func NewStorage(ledger atree.Ledger, memoryGauge common.MemoryGauge) *Storage {
 	return &Storage{
 		Ledger:                ledger,
 		PersistentSlabStorage: persistentSlabStorage,
-		writes:                map[interpreter.StorageKey]atree.StorageIndex{},
 		storageMaps:           map[interpreter.StorageKey]*interpreter.StorageMap{},
-		contractUpdates:       map[interpreter.StorageKey]*interpreter.CompositeValue{},
 		memoryGauge:           memoryGauge,
 	}
 }
@@ -153,7 +152,10 @@ func (s *Storage) storeNewStorageMap(address atree.Address, domain string) *inte
 
 	storageKey := interpreter.NewStorageKey(s.memoryGauge, common.Address(address), domain)
 
-	s.writes[storageKey] = storageIndex
+	if s.newStorageMaps == nil {
+		s.newStorageMaps = &orderedmap.OrderedMap[interpreter.StorageKey, atree.StorageIndex]{}
+	}
+	s.newStorageMaps.Set(storageKey, storageIndex)
 
 	return storageMap
 }
@@ -168,7 +170,10 @@ func (s *Storage) recordContractUpdate(
 	// NOTE: do NOT delete the map entry,
 	// otherwise the removal write is lost
 
-	s.contractUpdates[key] = contractValue
+	if s.contractUpdates == nil {
+		s.contractUpdates = &orderedmap.OrderedMap[interpreter.StorageKey, *interpreter.CompositeValue]{}
+	}
+	s.contractUpdates.Set(key, contractValue)
 }
 
 type ContractUpdate struct {
@@ -186,45 +191,13 @@ func SortContractUpdates(updates []ContractUpdate) {
 
 // commitContractUpdates writes the contract updates to storage.
 // The contract updates were delayed so they are not observable during execution.
-//
 func (s *Storage) commitContractUpdates(inter *interpreter.Interpreter) {
+	if s.contractUpdates == nil {
+		return
+	}
 
-	contractUpdateCount := len(s.contractUpdates)
-
-	if contractUpdateCount <= 1 {
-		// NOTE: ranging over maps is safe (deterministic),
-		// if the loop breaks after the first element (if any)
-
-		for key, contractValue := range s.contractUpdates { //nolint:maprangecheck
-			s.writeContractUpdate(inter, key, contractValue)
-			break
-		}
-	} else {
-
-		contractUpdates := make([]ContractUpdate, 0, contractUpdateCount)
-
-		// NOTE: ranging over maps is safe (deterministic),
-		// if it is side effect free and the keys are sorted afterwards
-
-		for key, contractValue := range s.contractUpdates { //nolint:maprangecheck
-			contractUpdates = append(
-				contractUpdates,
-				ContractUpdate{
-					Key:           key,
-					ContractValue: contractValue,
-				},
-			)
-		}
-
-		// Sort the contract updates by key in lexicographic order
-
-		SortContractUpdates(contractUpdates)
-
-		// Perform contract updates in order
-
-		for _, contractUpdate := range contractUpdates {
-			s.writeContractUpdate(inter, contractUpdate.Key, contractUpdate.ContractValue)
-		}
+	for pair := s.contractUpdates.Oldest(); pair != nil; pair = pair.Next() {
+		s.writeContractUpdate(inter, pair.Key, pair.Value)
 	}
 }
 
@@ -242,73 +215,16 @@ func (s *Storage) writeContractUpdate(
 	}
 }
 
-type write struct {
-	storageKey   interpreter.StorageKey
-	storageIndex atree.StorageIndex
-}
-
-func sortWrites(writes []write) {
-	sort.Slice(writes, func(i, j int) bool {
-		a := writes[i].storageKey
-		b := writes[j].storageKey
-		return a.IsLess(b)
-	})
-}
-
 // Commit serializes/saves all values in the readCache in storage (through the runtime interface).
-//
 func (s *Storage) Commit(inter *interpreter.Interpreter, commitContractUpdates bool) error {
 
 	if commitContractUpdates {
 		s.commitContractUpdates(inter)
 	}
 
-	var writes []write
-
-	writeCount := len(s.writes)
-	if writeCount > 0 {
-		writes = make([]write, 0, writeCount)
-	}
-
-	// NOTE: ranging over maps is safe (deterministic),
-	// if it is side effect free and the keys are sorted afterwards
-
-	for storageKey, storageIndex := range s.writes { //nolint:maprangecheck
-		writes = append(
-			writes,
-			write{
-				storageKey:   storageKey,
-				storageIndex: storageIndex,
-			},
-		)
-	}
-
-	// Sort the writes by storage key in lexicographic order
-	if writeCount > 1 {
-		sortWrites(writes)
-	}
-
-	// Write account storage entries in order
-
-	// NOTE: Important: do not use a for-range loop,
-	// as the introduced variable will be overridden on each loop iteration,
-	// leading to the slices created in the loop body being backed by the same data
-	for i := 0; i < len(writes); i++ {
-		write := writes[i]
-
-		var err error
-		wrapPanic(func() {
-			err = s.Ledger.SetValue(
-				write.storageKey.Address[:],
-				[]byte(write.storageKey.Key),
-				write.storageIndex[:],
-			)
-		})
-		if err != nil {
-			return err
-		}
-
-		delete(s.writes, write.storageKey)
+	err := s.commitNewStorageMaps()
+	if err != nil {
+		return err
 	}
 
 	// Commit the underlying slab storage's writes
@@ -318,6 +234,28 @@ func (s *Storage) Commit(inter *interpreter.Interpreter, commitContractUpdates b
 
 	// TODO: report encoding metric for all encoded slabs
 	return s.PersistentSlabStorage.FastCommit(runtime.NumCPU())
+}
+
+func (s *Storage) commitNewStorageMaps() error {
+	if s.newStorageMaps == nil {
+		return nil
+	}
+
+	for pair := s.newStorageMaps.Oldest(); pair != nil; pair = pair.Next() {
+		var err error
+		wrapPanic(func() {
+			err = s.Ledger.SetValue(
+				pair.Key.Address[:],
+				[]byte(pair.Key.Key),
+				pair.Value[:],
+			)
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (s *Storage) CheckHealth() error {

@@ -66,10 +66,6 @@ func (*InterfaceDeclaration) ElementType() ElementType {
 	return ElementTypeInterfaceDeclaration
 }
 
-func (d *InterfaceDeclaration) Accept(visitor Visitor) Repr {
-	return visitor.VisitInterfaceDeclaration(d)
-}
-
 func (d *InterfaceDeclaration) Walk(walkChild func(Element)) {
 	walkDeclarations(walkChild, d.Members.declarations)
 }
@@ -78,7 +74,6 @@ func (*InterfaceDeclaration) isDeclaration() {}
 
 // NOTE: statement, so it can be represented in the AST,
 // but will be rejected in semantic analysis
-//
 func (*InterfaceDeclaration) isStatement() {}
 
 func (d *InterfaceDeclaration) DeclarationIdentifier() *Identifier {

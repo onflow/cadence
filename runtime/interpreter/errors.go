@@ -67,7 +67,7 @@ func (e Error) ChildErrors() []error {
 	errs := make([]error, 0, 1+len(e.StackTrace))
 
 	for _, invocation := range e.StackTrace {
-		locationRange := invocation.GetLocationRange()
+		locationRange := invocation.LocationRange
 		if locationRange.Location == nil {
 			continue
 		}
@@ -104,7 +104,6 @@ func (e StackTraceError) ImportLocation() common.Location {
 }
 
 // PositionedError wraps an unpositioned error with position info
-//
 type PositionedError struct {
 	Err error
 	ast.Range
@@ -280,7 +279,6 @@ func (e DivisionByZeroError) Error() string {
 }
 
 // InvalidatedResourceError
-//
 type InvalidatedResourceError struct {
 	LocationRange
 }
@@ -295,7 +293,6 @@ func (e InvalidatedResourceError) Error() string {
 
 // DestroyedResourceError is the error which is reported
 // when a user uses a destroyed resource through a reference
-//
 type DestroyedResourceError struct {
 	LocationRange
 }
@@ -309,7 +306,6 @@ func (e DestroyedResourceError) Error() string {
 }
 
 // ForceAssignmentToNonNilResourceError
-//
 type ForceAssignmentToNonNilResourceError struct {
 	LocationRange
 }
@@ -323,7 +319,6 @@ func (e ForceAssignmentToNonNilResourceError) Error() string {
 }
 
 // ForceNilError
-//
 type ForceNilError struct {
 	LocationRange
 }
@@ -337,9 +332,9 @@ func (e ForceNilError) Error() string {
 }
 
 // ForceCastTypeMismatchError
-//
 type ForceCastTypeMismatchError struct {
 	ExpectedType sema.Type
+	ActualType   sema.Type
 	LocationRange
 }
 
@@ -349,15 +344,16 @@ func (ForceCastTypeMismatchError) IsUserError() {}
 
 func (e ForceCastTypeMismatchError) Error() string {
 	return fmt.Sprintf(
-		"unexpectedly found non-`%s` while force-casting value",
+		"failed to force-cast value: expected type `%s`, got `%s`",
 		e.ExpectedType.QualifiedString(),
+		e.ActualType.QualifiedString(),
 	)
 }
 
 // TypeMismatchError
-//
 type TypeMismatchError struct {
 	ExpectedType sema.Type
+	ActualType   sema.Type
 	LocationRange
 }
 
@@ -367,13 +363,13 @@ func (TypeMismatchError) IsUserError() {}
 
 func (e TypeMismatchError) Error() string {
 	return fmt.Sprintf(
-		"type mismatch: expected %s",
+		"type mismatch: expected `%s`, got `%s`",
 		e.ExpectedType.QualifiedString(),
+		e.ActualType.QualifiedString(),
 	)
 }
 
 // InvalidPathDomainError
-//
 type InvalidPathDomainError struct {
 	ActualDomain    common.PathDomain
 	ExpectedDomains []common.PathDomain
@@ -405,7 +401,6 @@ func (e InvalidPathDomainError) SecondaryError() string {
 }
 
 // OverwriteError
-//
 type OverwriteError struct {
 	Address AddressValue
 	Path    PathValue
@@ -425,7 +420,6 @@ func (e OverwriteError) Error() string {
 }
 
 // CyclicLinkError
-//
 type CyclicLinkError struct {
 	Address common.Address
 	Paths   []PathValue
@@ -454,7 +448,6 @@ func (e CyclicLinkError) Error() string {
 }
 
 // ArrayIndexOutOfBoundsError
-//
 type ArrayIndexOutOfBoundsError struct {
 	Index int
 	Size  int
@@ -474,7 +467,6 @@ func (e ArrayIndexOutOfBoundsError) Error() string {
 }
 
 // ArraySliceIndicesError
-//
 type ArraySliceIndicesError struct {
 	FromIndex int
 	UpToIndex int
@@ -510,7 +502,6 @@ func (e InvalidSliceIndexError) Error() string {
 }
 
 // StringIndexOutOfBoundsError
-//
 type StringIndexOutOfBoundsError struct {
 	Index  int
 	Length int
@@ -530,7 +521,6 @@ func (e StringIndexOutOfBoundsError) Error() string {
 }
 
 // StringSliceIndicesError
-//
 type StringSliceIndicesError struct {
 	FromIndex int
 	UpToIndex int
@@ -550,7 +540,6 @@ func (e StringSliceIndicesError) Error() string {
 }
 
 // EventEmissionUnavailableError
-//
 type EventEmissionUnavailableError struct {
 	LocationRange
 }
@@ -564,7 +553,6 @@ func (e EventEmissionUnavailableError) Error() string {
 }
 
 // UUIDUnavailableError
-//
 type UUIDUnavailableError struct {
 	LocationRange
 }
@@ -578,7 +566,6 @@ func (e UUIDUnavailableError) Error() string {
 }
 
 // TypeLoadingError
-//
 type TypeLoadingError struct {
 	TypeID common.TypeID
 }
@@ -607,7 +594,6 @@ func (e MissingMemberValueError) Error() string {
 }
 
 // InvocationArgumentTypeError
-//
 type InvocationArgumentTypeError struct {
 	Index         int
 	ParameterType sema.Type
@@ -620,16 +606,16 @@ func (InvocationArgumentTypeError) IsUserError() {}
 
 func (e InvocationArgumentTypeError) Error() string {
 	return fmt.Sprintf(
-		"invalid invocation with argument at index %d: expected %s",
+		"invalid invocation with argument at index %d: expected `%s`",
 		e.Index,
 		e.ParameterType.QualifiedString(),
 	)
 }
 
 // MemberAccessTypeError
-//
 type MemberAccessTypeError struct {
 	ExpectedType sema.Type
+	ActualType   sema.Type
 	LocationRange
 }
 
@@ -639,15 +625,16 @@ func (MemberAccessTypeError) IsUserError() {}
 
 func (e MemberAccessTypeError) Error() string {
 	return fmt.Sprintf(
-		"invalid member access: expected %s",
+		"invalid member access: expected `%s`, got `%s`",
 		e.ExpectedType.QualifiedString(),
+		e.ActualType.QualifiedString(),
 	)
 }
 
 // ValueTransferTypeError
-//
 type ValueTransferTypeError struct {
-	TargetType sema.Type
+	ExpectedType sema.Type
+	ActualType   sema.Type
 	LocationRange
 }
 
@@ -657,13 +644,13 @@ func (ValueTransferTypeError) IsUserError() {}
 
 func (e ValueTransferTypeError) Error() string {
 	return fmt.Sprintf(
-		"invalid transfer of value: expected %s",
-		e.TargetType.QualifiedString(),
+		"invalid transfer of value: expected `%s`, got `%s`",
+		e.ExpectedType.QualifiedString(),
+		e.ActualType.QualifiedString(),
 	)
 }
 
 // ResourceConstructionError
-//
 type ResourceConstructionError struct {
 	CompositeType *sema.CompositeType
 	LocationRange
@@ -675,14 +662,13 @@ func (ResourceConstructionError) IsUserError() {}
 
 func (e ResourceConstructionError) Error() string {
 	return fmt.Sprintf(
-		"cannot create resource %s: outside of declaring location %s",
+		"cannot create resource `%s`: outside of declaring location %s",
 		e.CompositeType.QualifiedString(),
 		e.CompositeType.Location.String(),
 	)
 }
 
 // ContainerMutationError
-//
 type ContainerMutationError struct {
 	ExpectedType sema.Type
 	ActualType   sema.Type
@@ -695,14 +681,13 @@ func (ContainerMutationError) IsUserError() {}
 
 func (e ContainerMutationError) Error() string {
 	return fmt.Sprintf(
-		"invalid container update: expected a subtype of '%s', found '%s'",
+		"invalid container update: expected a subtype of `%s`, found `%s`",
 		e.ExpectedType.QualifiedString(),
 		e.ActualType.QualifiedString(),
 	)
 }
 
 // NonStorableValueError
-//
 type NonStorableValueError struct {
 	Value Value
 }
@@ -716,9 +701,8 @@ func (e NonStorableValueError) Error() string {
 }
 
 // NonStorableStaticTypeError
-//
 type NonStorableStaticTypeError struct {
-	Type StaticType
+	Type sema.Type
 }
 
 var _ errors.UserError = NonStorableStaticTypeError{}
@@ -727,8 +711,8 @@ func (NonStorableStaticTypeError) IsUserError() {}
 
 func (e NonStorableStaticTypeError) Error() string {
 	return fmt.Sprintf(
-		"cannot store non-storable static type: %s",
-		e.Type,
+		"cannot store non-storable type: `%s`",
+		e.Type.QualifiedString(),
 	)
 }
 
@@ -750,7 +734,6 @@ func (e InterfaceMissingLocationError) Error() string {
 }
 
 // InvalidOperandsError
-//
 type InvalidOperandsError struct {
 	Operation    ast.Operation
 	FunctionName string
@@ -799,7 +782,6 @@ func (e InvalidPublicKeyError) Unwrap() error {
 }
 
 // NonTransferableValueError
-//
 type NonTransferableValueError struct {
 	Value Value
 }
@@ -813,7 +795,6 @@ func (e NonTransferableValueError) Error() string {
 }
 
 // DuplicateKeyInResourceDictionaryError
-//
 type DuplicateKeyInResourceDictionaryError struct {
 	LocationRange
 }

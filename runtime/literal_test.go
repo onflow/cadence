@@ -27,9 +27,11 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/sema"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestLiteralValue(t *testing.T) {
+	t.Parallel()
 
 	t.Run("String, valid literal", func(t *testing.T) {
 		value, err := ParseLiteral(`"hello"`, sema.StringType, newTestInterpreter(t))
@@ -42,7 +44,8 @@ func TestLiteralValue(t *testing.T) {
 
 	t.Run("String, invalid literal", func(t *testing.T) {
 		value, err := ParseLiteral(`true`, sema.StringType, newTestInterpreter(t))
-		require.Error(t, err)
+		RequireError(t, err)
+
 		require.Nil(t, value)
 	})
 
@@ -57,7 +60,8 @@ func TestLiteralValue(t *testing.T) {
 
 	t.Run("Bool, invalid literal", func(t *testing.T) {
 		value, err := ParseLiteral(`"hello"`, sema.BoolType, newTestInterpreter(t))
-		require.Error(t, err)
+		RequireError(t, err)
+
 		require.Nil(t, value)
 	})
 
@@ -93,7 +97,8 @@ func TestLiteralValue(t *testing.T) {
 			&sema.OptionalType{Type: sema.BoolType},
 			newTestInterpreter(t),
 		)
-		require.Error(t, err)
+		RequireError(t, err)
+
 		require.Nil(t, value)
 	})
 
@@ -131,7 +136,8 @@ func TestLiteralValue(t *testing.T) {
 			&sema.VariableSizedType{Type: sema.BoolType},
 			newTestInterpreter(t),
 		)
-		require.Error(t, err)
+		RequireError(t, err)
+
 		require.Nil(t, value)
 	})
 
@@ -169,7 +175,8 @@ func TestLiteralValue(t *testing.T) {
 			&sema.ConstantSizedType{Type: sema.BoolType},
 			newTestInterpreter(t),
 		)
-		require.Error(t, err)
+		RequireError(t, err)
+
 		require.Nil(t, value)
 	})
 
@@ -219,7 +226,8 @@ func TestLiteralValue(t *testing.T) {
 			},
 			newTestInterpreter(t),
 		)
-		require.Error(t, err)
+		RequireError(t, err)
+
 		require.Nil(t, value)
 	})
 
@@ -277,7 +285,8 @@ func TestLiteralValue(t *testing.T) {
 			sema.PathType,
 			newTestInterpreter(t),
 		)
-		require.Error(t, err)
+		RequireError(t, err)
+
 		require.Nil(t, value)
 	})
 
@@ -303,7 +312,8 @@ func TestLiteralValue(t *testing.T) {
 			sema.StoragePathType,
 			newTestInterpreter(t),
 		)
-		require.Error(t, err)
+		RequireError(t, err)
+
 		require.Nil(t, value)
 	})
 
@@ -313,7 +323,8 @@ func TestLiteralValue(t *testing.T) {
 			sema.StoragePathType,
 			newTestInterpreter(t),
 		)
-		require.Error(t, err)
+		RequireError(t, err)
+
 		require.Nil(t, value)
 	})
 
@@ -323,7 +334,8 @@ func TestLiteralValue(t *testing.T) {
 			sema.StoragePathType,
 			newTestInterpreter(t),
 		)
-		require.Error(t, err)
+		RequireError(t, err)
+
 		require.Nil(t, value)
 	})
 
@@ -357,13 +369,15 @@ func TestLiteralValue(t *testing.T) {
 
 	t.Run("CapabilityPath, invalid literal (storage)", func(t *testing.T) {
 		value, err := ParseLiteral(`/storage/foo`, sema.CapabilityPathType, newTestInterpreter(t))
-		require.Error(t, err)
+		RequireError(t, err)
+
 		require.Nil(t, value)
 	})
 
 	t.Run("CapabilityPath, invalid literal", func(t *testing.T) {
 		value, err := ParseLiteral(`true`, sema.CapabilityPathType, newTestInterpreter(t))
-		require.Error(t, err)
+		RequireError(t, err)
+
 		require.Nil(t, value)
 	})
 
@@ -381,19 +395,22 @@ func TestLiteralValue(t *testing.T) {
 
 	t.Run("PublicPath, invalid literal (private)", func(t *testing.T) {
 		value, err := ParseLiteral(`/private/foo`, sema.PublicPathType, newTestInterpreter(t))
-		require.Error(t, err)
+		RequireError(t, err)
+
 		require.Nil(t, value)
 	})
 
 	t.Run("PublicPath, invalid literal (storage)", func(t *testing.T) {
 		value, err := ParseLiteral(`/storage/foo`, sema.PublicPathType, newTestInterpreter(t))
-		require.Error(t, err)
+		RequireError(t, err)
+
 		require.Nil(t, value)
 	})
 
 	t.Run("PublicPath, invalid literal", func(t *testing.T) {
 		value, err := ParseLiteral(`true`, sema.PublicPathType, newTestInterpreter(t))
-		require.Error(t, err)
+		RequireError(t, err)
+
 		require.Nil(t, value)
 	})
 
@@ -411,19 +428,22 @@ func TestLiteralValue(t *testing.T) {
 
 	t.Run("PrivatePath, invalid literal (public)", func(t *testing.T) {
 		value, err := ParseLiteral(`/public/foo`, sema.PrivatePathType, newTestInterpreter(t))
-		require.Error(t, err)
+		RequireError(t, err)
+
 		require.Nil(t, value)
 	})
 
 	t.Run("PrivatePath, invalid literal (storage)", func(t *testing.T) {
 		value, err := ParseLiteral(`/storage/foo`, sema.PrivatePathType, newTestInterpreter(t))
-		require.Error(t, err)
+		RequireError(t, err)
+
 		require.Nil(t, value)
 	})
 
 	t.Run("PrivatePath, invalid literal", func(t *testing.T) {
 		value, err := ParseLiteral(`true`, sema.PrivatePathType, newTestInterpreter(t))
-		require.Error(t, err)
+		RequireError(t, err)
+
 		require.Nil(t, value)
 	})
 
@@ -438,7 +458,8 @@ func TestLiteralValue(t *testing.T) {
 
 	t.Run("Address, invalid literal", func(t *testing.T) {
 		value, err := ParseLiteral(`1`, &sema.AddressType{}, newTestInterpreter(t))
-		require.Error(t, err)
+		RequireError(t, err)
+
 		require.Nil(t, value)
 	})
 
@@ -462,7 +483,8 @@ func TestLiteralValue(t *testing.T) {
 
 	t.Run("Fix64, invalid literal", func(t *testing.T) {
 		value, err := ParseLiteral(`1`, sema.Fix64Type, newTestInterpreter(t))
-		require.Error(t, err)
+		RequireError(t, err)
+
 		require.Nil(t, value)
 	})
 
@@ -477,13 +499,15 @@ func TestLiteralValue(t *testing.T) {
 
 	t.Run("UFix64, invalid literal, negative", func(t *testing.T) {
 		value, err := ParseLiteral(`-1.0`, sema.UFix64Type, newTestInterpreter(t))
-		require.Error(t, err)
+		RequireError(t, err)
+
 		require.Nil(t, value)
 	})
 
 	t.Run("UFix64, invalid literal, invalid expression", func(t *testing.T) {
 		value, err := ParseLiteral(`1`, sema.UFix64Type, newTestInterpreter(t))
-		require.Error(t, err)
+		RequireError(t, err)
+
 		require.Nil(t, value)
 	})
 
@@ -507,7 +531,8 @@ func TestLiteralValue(t *testing.T) {
 
 	t.Run("FixedPoint, invalid literal", func(t *testing.T) {
 		value, err := ParseLiteral(`1`, sema.FixedPointType, newTestInterpreter(t))
-		require.Error(t, err)
+		RequireError(t, err)
+
 		require.Nil(t, value)
 	})
 
@@ -531,7 +556,8 @@ func TestLiteralValue(t *testing.T) {
 
 	t.Run("SignedFixedPoint, invalid literal", func(t *testing.T) {
 		value, err := ParseLiteral(`1`, sema.SignedFixedPointType, newTestInterpreter(t))
-		require.Error(t, err)
+		RequireError(t, err)
+
 		require.Nil(t, value)
 	})
 
@@ -556,7 +582,8 @@ func TestLiteralValue(t *testing.T) {
 			),
 			func(t *testing.T) {
 				value, err := ParseLiteral(`-1`, unsignedIntegerType, newTestInterpreter(t))
-				require.Error(t, err)
+				RequireError(t, err)
+
 				require.Nil(t, value)
 			},
 		)
@@ -568,7 +595,8 @@ func TestLiteralValue(t *testing.T) {
 			),
 			func(t *testing.T) {
 				value, err := ParseLiteral(`true`, unsignedIntegerType, newTestInterpreter(t))
-				require.Error(t, err)
+				RequireError(t, err)
+
 				require.Nil(t, value)
 			},
 		)
@@ -611,7 +639,8 @@ func TestLiteralValue(t *testing.T) {
 			),
 			func(t *testing.T) {
 				value, err := ParseLiteral(`true`, signedIntegerType, newTestInterpreter(t))
-				require.Error(t, err)
+				RequireError(t, err)
+
 				require.Nil(t, value)
 			},
 		)
@@ -619,19 +648,27 @@ func TestLiteralValue(t *testing.T) {
 }
 
 func TestParseLiteralArgumentList(t *testing.T) {
+	t.Parallel()
 
 	t.Run("invalid", func(t *testing.T) {
+		t.Parallel()
+
 		_, err := ParseLiteralArgumentList("", nil, newTestInterpreter(t))
-		require.Error(t, err)
+		RequireError(t, err)
+
 	})
 
 	t.Run("empty", func(t *testing.T) {
+		t.Parallel()
+
 		arguments, err := ParseLiteralArgumentList(`()`, nil, newTestInterpreter(t))
 		require.NoError(t, err)
 		require.Equal(t, []cadence.Value{}, arguments)
 	})
 
 	t.Run("one argument", func(t *testing.T) {
+		t.Parallel()
+
 		arguments, err := ParseLiteralArgumentList(
 			`(a: 1)`,
 			[]sema.Type{
@@ -649,6 +686,8 @@ func TestParseLiteralArgumentList(t *testing.T) {
 	})
 
 	t.Run("two arguments", func(t *testing.T) {
+		t.Parallel()
+
 		arguments, err := ParseLiteralArgumentList(
 			`(a: 1, 2)`,
 			[]sema.Type{
@@ -668,6 +707,8 @@ func TestParseLiteralArgumentList(t *testing.T) {
 	})
 
 	t.Run("invalid second argument", func(t *testing.T) {
+		t.Parallel()
+
 		_, err := ParseLiteralArgumentList(
 			`(a: 1, 2)`,
 			[]sema.Type{
@@ -676,10 +717,13 @@ func TestParseLiteralArgumentList(t *testing.T) {
 			},
 			newTestInterpreter(t),
 		)
-		require.Error(t, err)
+		RequireError(t, err)
+
 	})
 
 	t.Run("too many arguments", func(t *testing.T) {
+		t.Parallel()
+
 		_, err := ParseLiteralArgumentList(
 			`(a: 1, 2)`,
 			[]sema.Type{
@@ -687,10 +731,13 @@ func TestParseLiteralArgumentList(t *testing.T) {
 			},
 			newTestInterpreter(t),
 		)
-		require.Error(t, err)
+		RequireError(t, err)
+
 	})
 
 	t.Run("too few arguments", func(t *testing.T) {
+		t.Parallel()
+
 		_, err := ParseLiteralArgumentList(
 			`(a: 1)`,
 			[]sema.Type{
@@ -699,10 +746,13 @@ func TestParseLiteralArgumentList(t *testing.T) {
 			},
 			newTestInterpreter(t),
 		)
-		require.Error(t, err)
+		RequireError(t, err)
+
 	})
 
 	t.Run("non-literal argument", func(t *testing.T) {
+		t.Parallel()
+
 		_, err := ParseLiteralArgumentList(
 			`(a: b)`,
 			[]sema.Type{
@@ -710,6 +760,6 @@ func TestParseLiteralArgumentList(t *testing.T) {
 			},
 			newTestInterpreter(t),
 		)
-		require.Error(t, err)
+		RequireError(t, err)
 	})
 }

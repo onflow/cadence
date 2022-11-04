@@ -44,6 +44,7 @@ func TestBoolExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "BoolExpression",
@@ -98,6 +99,7 @@ func TestNilExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "NilExpression",
@@ -145,6 +147,7 @@ func TestStringExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "StringExpression",
@@ -182,7 +185,7 @@ func TestIntegerExpression_MarshalJSON(t *testing.T) {
 	t.Parallel()
 
 	expr := &IntegerExpression{
-		PositiveLiteral: "4_2",
+		PositiveLiteral: []byte("4_2"),
 		Value:           big.NewInt(42),
 		Base:            10,
 		Range: Range{
@@ -195,6 +198,7 @@ func TestIntegerExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "IntegerExpression",
@@ -218,7 +222,7 @@ func TestIntegerExpression_Doc(t *testing.T) {
 		t.Parallel()
 
 		expr := &IntegerExpression{
-			PositiveLiteral: "4_2",
+			PositiveLiteral: []byte("4_2"),
 			Value:           big.NewInt(42),
 			Base:            10,
 		}
@@ -234,7 +238,7 @@ func TestIntegerExpression_Doc(t *testing.T) {
 		t.Parallel()
 
 		expr := &IntegerExpression{
-			PositiveLiteral: "4_2",
+			PositiveLiteral: []byte("4_2"),
 			Value:           big.NewInt(-42),
 			Base:            10,
 		}
@@ -250,7 +254,7 @@ func TestIntegerExpression_Doc(t *testing.T) {
 		t.Parallel()
 
 		expr := &IntegerExpression{
-			PositiveLiteral: "0b10_10_10",
+			PositiveLiteral: []byte("0b10_10_10"),
 			Value:           big.NewInt(42),
 			Base:            2,
 		}
@@ -266,7 +270,7 @@ func TestIntegerExpression_Doc(t *testing.T) {
 		t.Parallel()
 
 		expr := &IntegerExpression{
-			PositiveLiteral: "0o5_2",
+			PositiveLiteral: []byte("0o5_2"),
 			Value:           big.NewInt(42),
 			Base:            8,
 		}
@@ -282,7 +286,7 @@ func TestIntegerExpression_Doc(t *testing.T) {
 		t.Parallel()
 
 		expr := &IntegerExpression{
-			PositiveLiteral: "0x2_A",
+			PositiveLiteral: []byte("0x2_A"),
 			Value:           big.NewInt(42),
 			Base:            16,
 		}
@@ -303,7 +307,7 @@ func TestIntegerExpression_String(t *testing.T) {
 		t.Parallel()
 
 		expr := &IntegerExpression{
-			PositiveLiteral: "4_2",
+			PositiveLiteral: []byte("4_2"),
 			Value:           big.NewInt(42),
 			Base:            10,
 		}
@@ -319,7 +323,7 @@ func TestIntegerExpression_String(t *testing.T) {
 		t.Parallel()
 
 		expr := &IntegerExpression{
-			PositiveLiteral: "4_2",
+			PositiveLiteral: []byte("4_2"),
 			Value:           big.NewInt(-42),
 			Base:            10,
 		}
@@ -335,7 +339,7 @@ func TestIntegerExpression_String(t *testing.T) {
 		t.Parallel()
 
 		expr := &IntegerExpression{
-			PositiveLiteral: "0b10_10_10",
+			PositiveLiteral: []byte("0b10_10_10"),
 			Value:           big.NewInt(42),
 			Base:            2,
 		}
@@ -351,7 +355,7 @@ func TestIntegerExpression_String(t *testing.T) {
 		t.Parallel()
 
 		expr := &IntegerExpression{
-			PositiveLiteral: "0o5_2",
+			PositiveLiteral: []byte("0o5_2"),
 			Value:           big.NewInt(42),
 			Base:            8,
 		}
@@ -367,7 +371,7 @@ func TestIntegerExpression_String(t *testing.T) {
 		t.Parallel()
 
 		expr := &IntegerExpression{
-			PositiveLiteral: "0x2_A",
+			PositiveLiteral: []byte("0x2_A"),
 			Value:           big.NewInt(42),
 			Base:            16,
 		}
@@ -384,7 +388,7 @@ func TestFixedPointExpression_MarshalJSON(t *testing.T) {
 	t.Parallel()
 
 	expr := &FixedPointExpression{
-		PositiveLiteral: "42.2400000000",
+		PositiveLiteral: []byte("42.2400000000"),
 		Negative:        true,
 		UnsignedInteger: big.NewInt(42),
 		Fractional:      big.NewInt(24),
@@ -399,6 +403,7 @@ func TestFixedPointExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "FixedPointExpression",
@@ -424,7 +429,7 @@ func TestFixedPointExpression_Doc(t *testing.T) {
 		t.Parallel()
 
 		expr := &FixedPointExpression{
-			PositiveLiteral: "1_2.3_4",
+			PositiveLiteral: []byte("1_2.3_4"),
 			UnsignedInteger: big.NewInt(42),
 			Scale:           2,
 		}
@@ -440,7 +445,7 @@ func TestFixedPointExpression_Doc(t *testing.T) {
 		t.Parallel()
 
 		expr := &FixedPointExpression{
-			PositiveLiteral: "1_2.3_4",
+			PositiveLiteral: []byte("1_2.3_4"),
 			Negative:        true,
 			UnsignedInteger: big.NewInt(42),
 			Scale:           2,
@@ -462,7 +467,7 @@ func TestFixedPointExpression_String(t *testing.T) {
 		t.Parallel()
 
 		expr := &FixedPointExpression{
-			PositiveLiteral: "1_2.3_4",
+			PositiveLiteral: []byte("1_2.3_4"),
 			UnsignedInteger: big.NewInt(42),
 			Scale:           2,
 		}
@@ -478,7 +483,7 @@ func TestFixedPointExpression_String(t *testing.T) {
 		t.Parallel()
 
 		expr := &FixedPointExpression{
-			PositiveLiteral: "1_2.3_4",
+			PositiveLiteral: []byte("1_2.3_4"),
 			Negative:        true,
 			UnsignedInteger: big.NewInt(42),
 			Scale:           2,
@@ -518,6 +523,7 @@ func TestArrayExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "ArrayExpression",
@@ -661,6 +667,7 @@ func TestDictionaryExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "DictionaryExpression",
@@ -818,6 +825,7 @@ func TestIdentifierExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "IdentifierExpression",
@@ -882,6 +890,7 @@ func TestPathExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "PathExpression",
@@ -970,6 +979,7 @@ func TestMemberExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "MemberExpression",
@@ -1304,6 +1314,7 @@ func TestIndexExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "IndexExpression",
@@ -1596,7 +1607,7 @@ func TestUnaryExpression_MarshalJSON(t *testing.T) {
 	expr := &UnaryExpression{
 		Operation: OperationNegate,
 		Expression: &IntegerExpression{
-			PositiveLiteral: "42",
+			PositiveLiteral: []byte("42"),
 			Value:           big.NewInt(42),
 			Base:            10,
 			Range: Range{
@@ -1611,6 +1622,7 @@ func TestUnaryExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "UnaryExpression",
@@ -1820,7 +1832,7 @@ func TestBinaryExpression_MarshalJSON(t *testing.T) {
 	expr := &BinaryExpression{
 		Operation: OperationPlus,
 		Left: &IntegerExpression{
-			PositiveLiteral: "42",
+			PositiveLiteral: []byte("42"),
 			Value:           big.NewInt(42),
 			Base:            10,
 			Range: Range{
@@ -1829,7 +1841,7 @@ func TestBinaryExpression_MarshalJSON(t *testing.T) {
 			},
 		},
 		Right: &IntegerExpression{
-			PositiveLiteral: "99",
+			PositiveLiteral: []byte("99"),
 			Value:           big.NewInt(99),
 			Base:            10,
 			Range: Range{
@@ -1843,6 +1855,7 @@ func TestBinaryExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "BinaryExpression",
@@ -1882,12 +1895,12 @@ func TestBinaryExpression_Doc(t *testing.T) {
 		expr := &BinaryExpression{
 			Operation: OperationPlus,
 			Left: &IntegerExpression{
-				PositiveLiteral: "42",
+				PositiveLiteral: []byte("42"),
 				Value:           big.NewInt(42),
 				Base:            10,
 			},
 			Right: &IntegerExpression{
-				PositiveLiteral: "99",
+				PositiveLiteral: []byte("99"),
 				Value:           big.NewInt(99),
 				Base:            10,
 			},
@@ -1920,18 +1933,18 @@ func TestBinaryExpression_Doc(t *testing.T) {
 			Left: &BinaryExpression{
 				Operation: OperationPlus,
 				Left: &IntegerExpression{
-					PositiveLiteral: "42",
+					PositiveLiteral: []byte("42"),
 					Value:           big.NewInt(42),
 					Base:            10,
 				},
 				Right: &IntegerExpression{
-					PositiveLiteral: "1",
+					PositiveLiteral: []byte("1"),
 					Value:           big.NewInt(42),
 					Base:            10,
 				},
 			},
 			Right: &IntegerExpression{
-				PositiveLiteral: "99",
+				PositiveLiteral: []byte("99"),
 				Value:           big.NewInt(99),
 				Base:            10,
 			},
@@ -1976,18 +1989,18 @@ func TestBinaryExpression_Doc(t *testing.T) {
 			Left: &BinaryExpression{
 				Operation: OperationBitwiseOr,
 				Left: &IntegerExpression{
-					PositiveLiteral: "42",
+					PositiveLiteral: []byte("42"),
 					Value:           big.NewInt(42),
 					Base:            10,
 				},
 				Right: &IntegerExpression{
-					PositiveLiteral: "1",
+					PositiveLiteral: []byte("1"),
 					Value:           big.NewInt(42),
 					Base:            10,
 				},
 			},
 			Right: &IntegerExpression{
-				PositiveLiteral: "99",
+				PositiveLiteral: []byte("99"),
 				Value:           big.NewInt(99),
 				Base:            10,
 			},
@@ -2042,19 +2055,19 @@ func TestBinaryExpression_Doc(t *testing.T) {
 		expr := &BinaryExpression{
 			Operation: OperationNilCoalesce,
 			Left: &IntegerExpression{
-				PositiveLiteral: "99",
+				PositiveLiteral: []byte("99"),
 				Value:           big.NewInt(99),
 				Base:            10,
 			},
 			Right: &BinaryExpression{
 				Operation: OperationNilCoalesce,
 				Left: &IntegerExpression{
-					PositiveLiteral: "42",
+					PositiveLiteral: []byte("42"),
 					Value:           big.NewInt(42),
 					Base:            10,
 				},
 				Right: &IntegerExpression{
-					PositiveLiteral: "1",
+					PositiveLiteral: []byte("1"),
 					Value:           big.NewInt(42),
 					Base:            10,
 				},
@@ -2100,18 +2113,18 @@ func TestBinaryExpression_Doc(t *testing.T) {
 			Left: &BinaryExpression{
 				Operation: OperationOr,
 				Left: &IntegerExpression{
-					PositiveLiteral: "42",
+					PositiveLiteral: []byte("42"),
 					Value:           big.NewInt(42),
 					Base:            10,
 				},
 				Right: &IntegerExpression{
-					PositiveLiteral: "1",
+					PositiveLiteral: []byte("1"),
 					Value:           big.NewInt(42),
 					Base:            10,
 				},
 			},
 			Right: &IntegerExpression{
-				PositiveLiteral: "99",
+				PositiveLiteral: []byte("99"),
 				Value:           big.NewInt(99),
 				Base:            10,
 			},
@@ -2172,12 +2185,12 @@ func TestBinaryExpression_String(t *testing.T) {
 		expr := &BinaryExpression{
 			Operation: OperationPlus,
 			Left: &IntegerExpression{
-				PositiveLiteral: "42",
+				PositiveLiteral: []byte("42"),
 				Value:           big.NewInt(42),
 				Base:            10,
 			},
 			Right: &IntegerExpression{
-				PositiveLiteral: "99",
+				PositiveLiteral: []byte("99"),
 				Value:           big.NewInt(99),
 				Base:            10,
 			},
@@ -2198,18 +2211,18 @@ func TestBinaryExpression_String(t *testing.T) {
 			Left: &BinaryExpression{
 				Operation: OperationPlus,
 				Left: &IntegerExpression{
-					PositiveLiteral: "42",
+					PositiveLiteral: []byte("42"),
 					Value:           big.NewInt(42),
 					Base:            10,
 				},
 				Right: &IntegerExpression{
-					PositiveLiteral: "1",
+					PositiveLiteral: []byte("1"),
 					Value:           big.NewInt(42),
 					Base:            10,
 				},
 			},
 			Right: &IntegerExpression{
-				PositiveLiteral: "99",
+				PositiveLiteral: []byte("99"),
 				Value:           big.NewInt(99),
 				Base:            10,
 			},
@@ -2230,18 +2243,18 @@ func TestBinaryExpression_String(t *testing.T) {
 			Left: &BinaryExpression{
 				Operation: OperationBitwiseOr,
 				Left: &IntegerExpression{
-					PositiveLiteral: "42",
+					PositiveLiteral: []byte("42"),
 					Value:           big.NewInt(42),
 					Base:            10,
 				},
 				Right: &IntegerExpression{
-					PositiveLiteral: "1",
+					PositiveLiteral: []byte("1"),
 					Value:           big.NewInt(42),
 					Base:            10,
 				},
 			},
 			Right: &IntegerExpression{
-				PositiveLiteral: "99",
+				PositiveLiteral: []byte("99"),
 				Value:           big.NewInt(99),
 				Base:            10,
 			},
@@ -2260,19 +2273,19 @@ func TestBinaryExpression_String(t *testing.T) {
 		expr := &BinaryExpression{
 			Operation: OperationNilCoalesce,
 			Left: &IntegerExpression{
-				PositiveLiteral: "99",
+				PositiveLiteral: []byte("99"),
 				Value:           big.NewInt(99),
 				Base:            10,
 			},
 			Right: &BinaryExpression{
 				Operation: OperationNilCoalesce,
 				Left: &IntegerExpression{
-					PositiveLiteral: "42",
+					PositiveLiteral: []byte("42"),
 					Value:           big.NewInt(42),
 					Base:            10,
 				},
 				Right: &IntegerExpression{
-					PositiveLiteral: "1",
+					PositiveLiteral: []byte("1"),
 					Value:           big.NewInt(42),
 					Base:            10,
 				},
@@ -2294,18 +2307,18 @@ func TestBinaryExpression_String(t *testing.T) {
 			Left: &BinaryExpression{
 				Operation: OperationOr,
 				Left: &IntegerExpression{
-					PositiveLiteral: "42",
+					PositiveLiteral: []byte("42"),
 					Value:           big.NewInt(42),
 					Base:            10,
 				},
 				Right: &IntegerExpression{
-					PositiveLiteral: "1",
+					PositiveLiteral: []byte("1"),
 					Value:           big.NewInt(42),
 					Base:            10,
 				},
 			},
 			Right: &IntegerExpression{
-				PositiveLiteral: "99",
+				PositiveLiteral: []byte("99"),
 				Value:           big.NewInt(99),
 				Base:            10,
 			},
@@ -2337,6 +2350,7 @@ func TestDestroyExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "DestroyExpression",
@@ -2552,6 +2566,7 @@ func TestForceExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "ForceExpression",
@@ -2741,7 +2756,7 @@ func TestConditionalExpression_MarshalJSON(t *testing.T) {
 			},
 		},
 		Then: &IntegerExpression{
-			PositiveLiteral: "42",
+			PositiveLiteral: []byte("42"),
 			Value:           big.NewInt(42),
 			Base:            10,
 			Range: Range{
@@ -2750,7 +2765,7 @@ func TestConditionalExpression_MarshalJSON(t *testing.T) {
 			},
 		},
 		Else: &IntegerExpression{
-			PositiveLiteral: "99",
+			PositiveLiteral: []byte("99"),
 			Value:           big.NewInt(99),
 			Base:            10,
 			Range: Range{
@@ -2764,6 +2779,7 @@ func TestConditionalExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "ConditionalExpression",
@@ -2810,12 +2826,12 @@ func TestConditionalExpression_Doc(t *testing.T) {
 				Value: false,
 			},
 			Then: &IntegerExpression{
-				PositiveLiteral: "42",
+				PositiveLiteral: []byte("42"),
 				Value:           big.NewInt(42),
 				Base:            10,
 			},
 			Else: &IntegerExpression{
-				PositiveLiteral: "99",
+				PositiveLiteral: []byte("99"),
 				Value:           big.NewInt(99),
 				Base:            10,
 			},
@@ -2860,23 +2876,23 @@ func TestConditionalExpression_Doc(t *testing.T) {
 					Value: false,
 				},
 				Then: &IntegerExpression{
-					PositiveLiteral: "1",
+					PositiveLiteral: []byte("1"),
 					Value:           big.NewInt(1),
 					Base:            10,
 				},
 				Else: &IntegerExpression{
-					PositiveLiteral: "2",
+					PositiveLiteral: []byte("2"),
 					Value:           big.NewInt(2),
 					Base:            10,
 				},
 			},
 			Then: &IntegerExpression{
-				PositiveLiteral: "3",
+				PositiveLiteral: []byte("3"),
 				Value:           big.NewInt(3),
 				Base:            10,
 			},
 			Else: &IntegerExpression{
-				PositiveLiteral: "4",
+				PositiveLiteral: []byte("4"),
 				Value:           big.NewInt(4),
 				Base:            10,
 			},
@@ -2957,18 +2973,18 @@ func TestConditionalExpression_Doc(t *testing.T) {
 					Value: false,
 				},
 				Then: &IntegerExpression{
-					PositiveLiteral: "1",
+					PositiveLiteral: []byte("1"),
 					Value:           big.NewInt(1),
 					Base:            10,
 				},
 				Else: &IntegerExpression{
-					PositiveLiteral: "2",
+					PositiveLiteral: []byte("2"),
 					Value:           big.NewInt(2),
 					Base:            10,
 				},
 			},
 			Else: &IntegerExpression{
-				PositiveLiteral: "3",
+				PositiveLiteral: []byte("3"),
 				Value:           big.NewInt(3),
 				Base:            10,
 			},
@@ -3045,7 +3061,7 @@ func TestConditionalExpression_Doc(t *testing.T) {
 				Value: false,
 			},
 			Then: &IntegerExpression{
-				PositiveLiteral: "1",
+				PositiveLiteral: []byte("1"),
 				Value:           big.NewInt(1),
 				Base:            10,
 			},
@@ -3054,12 +3070,12 @@ func TestConditionalExpression_Doc(t *testing.T) {
 					Value: false,
 				},
 				Then: &IntegerExpression{
-					PositiveLiteral: "2",
+					PositiveLiteral: []byte("2"),
 					Value:           big.NewInt(2),
 					Base:            10,
 				},
 				Else: &IntegerExpression{
-					PositiveLiteral: "3",
+					PositiveLiteral: []byte("3"),
 					Value:           big.NewInt(3),
 					Base:            10,
 				},
@@ -3131,12 +3147,12 @@ func TestConditionalExpression_String(t *testing.T) {
 				Value: false,
 			},
 			Then: &IntegerExpression{
-				PositiveLiteral: "42",
+				PositiveLiteral: []byte("42"),
 				Value:           big.NewInt(42),
 				Base:            10,
 			},
 			Else: &IntegerExpression{
-				PositiveLiteral: "99",
+				PositiveLiteral: []byte("99"),
 				Value:           big.NewInt(99),
 				Base:            10,
 			},
@@ -3158,23 +3174,23 @@ func TestConditionalExpression_String(t *testing.T) {
 					Value: false,
 				},
 				Then: &IntegerExpression{
-					PositiveLiteral: "1",
+					PositiveLiteral: []byte("1"),
 					Value:           big.NewInt(1),
 					Base:            10,
 				},
 				Else: &IntegerExpression{
-					PositiveLiteral: "2",
+					PositiveLiteral: []byte("2"),
 					Value:           big.NewInt(2),
 					Base:            10,
 				},
 			},
 			Then: &IntegerExpression{
-				PositiveLiteral: "3",
+				PositiveLiteral: []byte("3"),
 				Value:           big.NewInt(3),
 				Base:            10,
 			},
 			Else: &IntegerExpression{
-				PositiveLiteral: "4",
+				PositiveLiteral: []byte("4"),
 				Value:           big.NewInt(4),
 				Base:            10,
 			},
@@ -3199,18 +3215,18 @@ func TestConditionalExpression_String(t *testing.T) {
 					Value: false,
 				},
 				Then: &IntegerExpression{
-					PositiveLiteral: "1",
+					PositiveLiteral: []byte("1"),
 					Value:           big.NewInt(1),
 					Base:            10,
 				},
 				Else: &IntegerExpression{
-					PositiveLiteral: "2",
+					PositiveLiteral: []byte("2"),
 					Value:           big.NewInt(2),
 					Base:            10,
 				},
 			},
 			Else: &IntegerExpression{
-				PositiveLiteral: "3",
+				PositiveLiteral: []byte("3"),
 				Value:           big.NewInt(3),
 				Base:            10,
 			},
@@ -3231,7 +3247,7 @@ func TestConditionalExpression_String(t *testing.T) {
 				Value: false,
 			},
 			Then: &IntegerExpression{
-				PositiveLiteral: "1",
+				PositiveLiteral: []byte("1"),
 				Value:           big.NewInt(1),
 				Base:            10,
 			},
@@ -3240,12 +3256,12 @@ func TestConditionalExpression_String(t *testing.T) {
 					Value: false,
 				},
 				Then: &IntegerExpression{
-					PositiveLiteral: "2",
+					PositiveLiteral: []byte("2"),
 					Value:           big.NewInt(2),
 					Base:            10,
 				},
 				Else: &IntegerExpression{
-					PositiveLiteral: "3",
+					PositiveLiteral: []byte("3"),
 					Value:           big.NewInt(3),
 					Base:            10,
 				},
@@ -3306,6 +3322,7 @@ func TestInvocationExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "InvocationExpression",
@@ -3625,6 +3642,7 @@ func TestCastingExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "CastingExpression",
@@ -3672,7 +3690,7 @@ func TestCastingExpression_Doc(t *testing.T) {
 
 		expr := &CastingExpression{
 			Expression: &IntegerExpression{
-				PositiveLiteral: "42",
+				PositiveLiteral: []byte("42"),
 				Value:           big.NewInt(42),
 				Base:            10,
 			},
@@ -3709,7 +3727,7 @@ func TestCastingExpression_Doc(t *testing.T) {
 		expr := &CastingExpression{
 			Expression: &CastingExpression{
 				Expression: &IntegerExpression{
-					PositiveLiteral: "42",
+					PositiveLiteral: []byte("42"),
 					Value:           big.NewInt(42),
 					Base:            10,
 				},
@@ -3836,7 +3854,7 @@ func TestCastingExpression_String(t *testing.T) {
 
 		expr := &CastingExpression{
 			Expression: &IntegerExpression{
-				PositiveLiteral: "42",
+				PositiveLiteral: []byte("42"),
 				Value:           big.NewInt(42),
 				Base:            10,
 			},
@@ -3863,7 +3881,7 @@ func TestCastingExpression_String(t *testing.T) {
 		expr := &CastingExpression{
 			Expression: &CastingExpression{
 				Expression: &IntegerExpression{
-					PositiveLiteral: "42",
+					PositiveLiteral: []byte("42"),
 					Value:           big.NewInt(42),
 					Base:            10,
 				},
@@ -3976,6 +3994,7 @@ func TestCreateExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "CreateExpression",
@@ -4084,6 +4103,8 @@ func TestCreateExpression_String(t *testing.T) {
 
 func TestReferenceExpression_MarshalJSON(t *testing.T) {
 
+	t.Parallel()
+
 	expr := &ReferenceExpression{
 		Expression: &IdentifierExpression{
 			Identifier: Identifier{
@@ -4104,6 +4125,7 @@ func TestReferenceExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "ReferenceExpression",
@@ -4145,7 +4167,7 @@ func TestReferenceExpression_Doc(t *testing.T) {
 
 		expr := &ReferenceExpression{
 			Expression: &IntegerExpression{
-				PositiveLiteral: "42",
+				PositiveLiteral: []byte("42"),
 				Value:           big.NewInt(42),
 				Base:            10,
 			},
@@ -4187,7 +4209,7 @@ func TestReferenceExpression_Doc(t *testing.T) {
 		expr := &ReferenceExpression{
 			Expression: &ReferenceExpression{
 				Expression: &IntegerExpression{
-					PositiveLiteral: "42",
+					PositiveLiteral: []byte("42"),
 					Value:           big.NewInt(42),
 					Base:            10,
 				},
@@ -4329,7 +4351,7 @@ func TestReferenceExpression_String(t *testing.T) {
 
 		expr := &ReferenceExpression{
 			Expression: &IntegerExpression{
-				PositiveLiteral: "42",
+				PositiveLiteral: []byte("42"),
 				Value:           big.NewInt(42),
 				Base:            10,
 			},
@@ -4356,7 +4378,7 @@ func TestReferenceExpression_String(t *testing.T) {
 		expr := &ReferenceExpression{
 			Expression: &ReferenceExpression{
 				Expression: &IntegerExpression{
-					PositiveLiteral: "42",
+					PositiveLiteral: []byte("42"),
 					Value:           big.NewInt(42),
 					Base:            10,
 				},
@@ -4479,6 +4501,7 @@ func TestFunctionExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "FunctionExpression",
@@ -4626,7 +4649,7 @@ func TestFunctionExpression_Doc(t *testing.T) {
 					Statements: []Statement{
 						&ReturnStatement{
 							Expression: &IntegerExpression{
-								PositiveLiteral: "1",
+								PositiveLiteral: []byte("1"),
 								Value:           big.NewInt(1),
 								Base:            10,
 							},
@@ -4737,7 +4760,7 @@ func TestFunctionExpression_Doc(t *testing.T) {
 					Statements: []Statement{
 						&ReturnStatement{
 							Expression: &IntegerExpression{
-								PositiveLiteral: "1",
+								PositiveLiteral: []byte("1"),
 								Value:           big.NewInt(1),
 								Base:            10,
 							},
@@ -4905,7 +4928,7 @@ func TestFunctionExpression_String(t *testing.T) {
 					Statements: []Statement{
 						&ReturnStatement{
 							Expression: &IntegerExpression{
-								PositiveLiteral: "1",
+								PositiveLiteral: []byte("1"),
 								Value:           big.NewInt(1),
 								Base:            10,
 							},
@@ -4963,7 +4986,7 @@ func TestFunctionExpression_String(t *testing.T) {
 					Statements: []Statement{
 						&ReturnStatement{
 							Expression: &IntegerExpression{
-								PositiveLiteral: "1",
+								PositiveLiteral: []byte("1"),
 								Value:           big.NewInt(1),
 								Base:            10,
 							},

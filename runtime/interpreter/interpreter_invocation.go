@@ -75,7 +75,10 @@ func (interpreter *Interpreter) invokeFunctionValue(
 			locationPos = invocationPosition
 		}
 
-		getLocationRange := locationRangeGetter(interpreter, interpreter.Location, locationPos)
+		locationRange := LocationRange{
+			Location:    interpreter.Location,
+			HasPosition: locationPos,
+		}
 
 		if i < parameterTypeCount {
 			parameterType := parameterTypes[i]
@@ -83,12 +86,12 @@ func (interpreter *Interpreter) invokeFunctionValue(
 				argument,
 				argumentType,
 				parameterType,
-				getLocationRange,
+				locationRange,
 			)
 		} else {
 			transferredArguments[i] = argument.Transfer(
 				interpreter,
-				getLocationRange,
+				locationRange,
 				atree.Address{},
 				false,
 				nil,
@@ -96,7 +99,10 @@ func (interpreter *Interpreter) invokeFunctionValue(
 		}
 	}
 
-	getLocationRange := locationRangeGetter(interpreter, interpreter.Location, invocationPosition)
+	locationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: invocationPosition,
+	}
 
 	invocation := NewInvocation(
 		interpreter,
@@ -104,7 +110,7 @@ func (interpreter *Interpreter) invokeFunctionValue(
 		transferredArguments,
 		argumentTypes,
 		typeParameterTypes,
-		getLocationRange,
+		locationRange,
 	)
 
 	return function.invoke(invocation)
@@ -118,21 +124,20 @@ func (interpreter *Interpreter) invokeInterpretedFunction(
 	// Start a new activation record.
 	// Lexical scope: use the function declaration's activation record,
 	// not the current one (which would be dynamic scope)
-	interpreter.activations.PushNewWithParent(function.Activation)
-	interpreter.activations.Current().isFunction = true
+	current := interpreter.activations.PushNewWithParent(function.Activation)
+	current.IsFunction = true
 
-	interpreter.sharedState.callStack.Push(invocation)
+	interpreter.SharedState.callStack.Push(invocation)
 
 	// Make `self` available, if any
 	if invocation.Self != nil {
-		interpreter.declareVariable(sema.SelfIdentifier, invocation.Self)
+		interpreter.declareVariable(sema.SelfIdentifier, *invocation.Self)
 	}
 
 	return interpreter.invokeInterpretedFunctionActivated(function, invocation.Arguments)
 }
 
 // NOTE: assumes the function's activation (or an extension of it) is pushed!
-//
 func (interpreter *Interpreter) invokeInterpretedFunctionActivated(
 	function *InterpretedFunctionValue,
 	arguments []Value,
@@ -142,7 +147,7 @@ func (interpreter *Interpreter) invokeInterpretedFunctionActivated(
 		if r := recover(); r != nil {
 			panic(r)
 		}
-		interpreter.sharedState.callStack.Pop()
+		interpreter.SharedState.callStack.Pop()
 	}()
 	defer interpreter.activations.Pop()
 
@@ -153,7 +158,7 @@ func (interpreter *Interpreter) invokeInterpretedFunctionActivated(
 	return interpreter.visitFunctionBody(
 		function.BeforeStatements,
 		function.PreConditions,
-		func() controlReturn {
+		func() StatementResult {
 			return interpreter.visitStatements(function.Statements)
 		},
 		function.PostConditions,
@@ -162,7 +167,6 @@ func (interpreter *Interpreter) invokeInterpretedFunctionActivated(
 }
 
 // bindParameterArguments binds the argument values to the given parameters
-//
 func (interpreter *Interpreter) bindParameterArguments(
 	parameterList *ast.ParameterList,
 	arguments []Value,

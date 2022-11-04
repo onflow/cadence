@@ -47,7 +47,7 @@ func TestCompositeStorage(t *testing.T) {
 
 	value := NewCompositeValue(
 		inter,
-		ReturnEmptyLocationRange,
+		EmptyLocationRange,
 		TestLocation,
 		"TestStruct",
 		common.CompositeKindStructure,
@@ -65,7 +65,7 @@ func TestCompositeStorage(t *testing.T) {
 
 	const fieldName = "test"
 
-	value.SetMember(inter, ReturnEmptyLocationRange, fieldName, BoolValue(true))
+	value.SetMember(inter, EmptyLocationRange, fieldName, TrueValue)
 
 	require.Equal(t, 1, storage.BasicSlabStorage.Count())
 
@@ -81,8 +81,8 @@ func TestCompositeStorage(t *testing.T) {
 	RequireValuesEqual(
 		t,
 		inter,
-		BoolValue(true),
-		storedComposite.GetField(inter, ReturnEmptyLocationRange, fieldName),
+		TrueValue,
+		storedComposite.GetField(inter, EmptyLocationRange, fieldName),
 	)
 }
 
@@ -118,7 +118,7 @@ func TestArrayStorage(t *testing.T) {
 
 		value := NewArrayValue(
 			inter,
-			ReturnEmptyLocationRange,
+			EmptyLocationRange,
 			VariableSizedStaticType{
 				Type: element.StaticType(inter),
 			},
@@ -134,16 +134,16 @@ func TestArrayStorage(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, ok)
 
-		require.False(t, bool(value.Contains(inter, nil, element)))
+		require.False(t, bool(value.Contains(inter, EmptyLocationRange, element)))
 
 		value.Insert(
 			inter,
-			ReturnEmptyLocationRange,
+			EmptyLocationRange,
 			0,
 			element,
 		)
 
-		require.True(t, bool(value.Contains(inter, nil, element)))
+		require.True(t, bool(value.Contains(inter, EmptyLocationRange, element)))
 
 		// array + original composite element + new copy of composite element
 		require.Equal(t, 3, storage.BasicSlabStorage.Count())
@@ -157,7 +157,7 @@ func TestArrayStorage(t *testing.T) {
 		require.IsType(t, storedValue, &ArrayValue{})
 		storedArray := storedValue.(*ArrayValue)
 
-		actual := storedArray.Get(inter, ReturnEmptyLocationRange, 0)
+		actual := storedArray.Get(inter, EmptyLocationRange, 0)
 
 		RequireValuesEqual(t, inter, element, actual)
 	})
@@ -184,7 +184,7 @@ func TestArrayStorage(t *testing.T) {
 
 		value := NewArrayValue(
 			inter,
-			ReturnEmptyLocationRange,
+			EmptyLocationRange,
 			VariableSizedStaticType{
 				Type: element.StaticType(inter),
 			},
@@ -192,7 +192,7 @@ func TestArrayStorage(t *testing.T) {
 			element,
 		)
 
-		require.True(t, bool(value.Contains(inter, nil, element)))
+		require.True(t, bool(value.Contains(inter, EmptyLocationRange, element)))
 
 		require.NotEqual(t, atree.StorageIDUndefined, value.StorageID())
 
@@ -205,7 +205,7 @@ func TestArrayStorage(t *testing.T) {
 
 		value.Remove(
 			inter,
-			ReturnEmptyLocationRange,
+			EmptyLocationRange,
 			0,
 		)
 
@@ -220,7 +220,7 @@ func TestArrayStorage(t *testing.T) {
 		require.IsType(t, storedValue, &ArrayValue{})
 		storedArray := storedValue.(*ArrayValue)
 
-		require.False(t, bool(storedArray.Contains(inter, nil, element)))
+		require.False(t, bool(storedArray.Contains(inter, EmptyLocationRange, element)))
 	})
 }
 
@@ -243,7 +243,7 @@ func TestDictionaryStorage(t *testing.T) {
 
 		value := NewDictionaryValue(
 			inter,
-			ReturnEmptyLocationRange,
+			EmptyLocationRange,
 			DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeString,
 				ValueType: PrimitiveStaticTypeAnyStruct,
@@ -259,11 +259,11 @@ func TestDictionaryStorage(t *testing.T) {
 		require.True(t, ok)
 
 		entryKey := NewUnmeteredStringValue("test")
-		entryValue := BoolValue(true)
+		entryValue := TrueValue
 
 		value.SetKey(
 			inter,
-			ReturnEmptyLocationRange,
+			EmptyLocationRange,
 			entryKey,
 			NewUnmeteredSomeValueNonCopying(entryValue),
 		)
@@ -279,7 +279,7 @@ func TestDictionaryStorage(t *testing.T) {
 		require.IsType(t, storedValue, &DictionaryValue{})
 		storedDictionary := storedValue.(*DictionaryValue)
 
-		actual, ok := storedDictionary.Get(inter, ReturnEmptyLocationRange, entryKey)
+		actual, ok := storedDictionary.Get(inter, EmptyLocationRange, entryKey)
 		require.True(t, ok)
 
 		RequireValuesEqual(t, inter, entryValue, actual)
@@ -300,13 +300,13 @@ func TestDictionaryStorage(t *testing.T) {
 
 		value := NewDictionaryValue(
 			inter,
-			ReturnEmptyLocationRange,
+			EmptyLocationRange,
 			DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeString,
 				ValueType: PrimitiveStaticTypeAnyStruct,
 			},
 			NewUnmeteredStringValue("test"),
-			NewUnmeteredSomeValueNonCopying(BoolValue(true)),
+			NewUnmeteredSomeValueNonCopying(TrueValue),
 		)
 
 		require.NotEqual(t, atree.StorageIDUndefined, value.StorageID())
@@ -319,9 +319,9 @@ func TestDictionaryStorage(t *testing.T) {
 
 		value.SetKey(
 			inter,
-			ReturnEmptyLocationRange,
+			EmptyLocationRange,
 			NewUnmeteredStringValue("test"),
-			NilValue{},
+			Nil,
 		)
 
 		require.Equal(t, 1, storage.BasicSlabStorage.Count())
@@ -350,13 +350,13 @@ func TestDictionaryStorage(t *testing.T) {
 
 		value := NewDictionaryValue(
 			inter,
-			ReturnEmptyLocationRange,
+			EmptyLocationRange,
 			DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeString,
 				ValueType: PrimitiveStaticTypeAnyStruct,
 			},
 			NewUnmeteredStringValue("test"),
-			NewUnmeteredSomeValueNonCopying(BoolValue(true)),
+			NewUnmeteredSomeValueNonCopying(TrueValue),
 		)
 
 		require.NotEqual(t, atree.StorageIDUndefined, value.StorageID())
@@ -369,7 +369,7 @@ func TestDictionaryStorage(t *testing.T) {
 
 		value.Remove(
 			inter,
-			ReturnEmptyLocationRange,
+			EmptyLocationRange,
 			NewUnmeteredStringValue("test"),
 		)
 
@@ -399,7 +399,7 @@ func TestDictionaryStorage(t *testing.T) {
 
 		value := NewDictionaryValue(
 			inter,
-			ReturnEmptyLocationRange,
+			EmptyLocationRange,
 			DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeString,
 				ValueType: PrimitiveStaticTypeAnyStruct,
@@ -416,9 +416,9 @@ func TestDictionaryStorage(t *testing.T) {
 
 		value.Insert(
 			inter,
-			ReturnEmptyLocationRange,
+			EmptyLocationRange,
 			NewUnmeteredStringValue("test"),
-			NewUnmeteredSomeValueNonCopying(BoolValue(true)),
+			NewUnmeteredSomeValueNonCopying(TrueValue),
 		)
 
 		require.Equal(t, 1, storage.BasicSlabStorage.Count())
@@ -450,7 +450,7 @@ func TestInterpretStorageOverwriteAndRemove(t *testing.T) {
 
 	array1 := NewArrayValue(
 		inter,
-		ReturnEmptyLocationRange,
+		EmptyLocationRange,
 		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
@@ -467,7 +467,7 @@ func TestInterpretStorageOverwriteAndRemove(t *testing.T) {
 
 	array2 := NewArrayValue(
 		inter,
-		ReturnEmptyLocationRange,
+		EmptyLocationRange,
 		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},

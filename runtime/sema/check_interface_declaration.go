@@ -30,8 +30,7 @@ import (
 // `declareInterfaceType` and exists in `checker.Elaboration.InterfaceDeclarationTypes`,
 // and that the members and nested declarations for the interface type were declared
 // through `declareInterfaceMembers`.
-//
-func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaration) ast.Repr {
+func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaration) (_ struct{}) {
 
 	const kind = ContainerKindInterface
 
@@ -114,7 +113,7 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 	// DON'T use `nestedDeclarations`, because of non-deterministic order
 
 	for _, nestedInterface := range declaration.Members.Interfaces() {
-		nestedInterface.Accept(checker)
+		ast.AcceptDeclaration[struct{}](nestedInterface, checker)
 	}
 
 	for _, nestedComposite := range declaration.Members.Composites() {
@@ -124,7 +123,7 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 		checker.visitCompositeDeclaration(nestedComposite, kind)
 	}
 
-	return nil
+	return
 }
 
 // declareInterfaceNestedTypes declares the types nested in an interface.
@@ -133,7 +132,6 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 //
 // It assumes the types were previously added to the elaboration in `InterfaceNestedDeclarations`,
 // and the type for the declaration was added to the elaboration in `InterfaceDeclarationTypes`.
-//
 func (checker *Checker) declareInterfaceNestedTypes(
 	declaration *ast.InterfaceDeclaration,
 ) {
@@ -141,7 +139,7 @@ func (checker *Checker) declareInterfaceNestedTypes(
 	interfaceType := checker.Elaboration.InterfaceDeclarationTypes[declaration]
 	nestedDeclarations := checker.Elaboration.InterfaceNestedDeclarations[declaration]
 
-	interfaceType.nestedTypes.Foreach(func(name string, nestedType Type) {
+	interfaceType.NestedTypes.Foreach(func(name string, nestedType Type) {
 		nestedDeclaration := nestedDeclarations[name]
 
 		identifier := nestedDeclaration.DeclarationIdentifier()
@@ -152,7 +150,7 @@ func (checker *Checker) declareInterfaceNestedTypes(
 			panic(errors.NewUnreachableError())
 		}
 
-		_, err := checker.typeActivations.DeclareType(typeDeclaration{
+		_, err := checker.typeActivations.declareType(typeDeclaration{
 			identifier:               *identifier,
 			ty:                       nestedType,
 			declarationKind:          nestedDeclaration.DeclarationKind(),
@@ -222,7 +220,6 @@ func (checker *Checker) checkInterfaceFunctions(
 //
 // See `declareInterfaceMembers` for the declaration of the interface type members.
 // See `VisitInterfaceDeclaration` for the checking of the interface declaration.
-//
 func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclaration) *InterfaceType {
 
 	identifier := declaration.Identifier
@@ -231,11 +228,11 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 		Location:      checker.Location,
 		Identifier:    identifier.Identifier,
 		CompositeKind: declaration.CompositeKind,
-		nestedTypes:   &StringTypeOrderedMap{},
+		NestedTypes:   &StringTypeOrderedMap{},
 		Members:       &StringMemberOrderedMap{},
 	}
 
-	variable, err := checker.typeActivations.DeclareType(typeDeclaration{
+	variable, err := checker.typeActivations.declareType(typeDeclaration{
 		identifier:               identifier,
 		ty:                       interfaceType,
 		declarationKind:          declaration.DeclarationKind(),
@@ -244,7 +241,7 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 		allowOuterScopeShadowing: false,
 	})
 	checker.report(err)
-	if checker.PositionInfo != nil {
+	if checker.PositionInfo != nil && variable != nil {
 		checker.recordVariableDeclarationOccurrence(
 			identifier.Identifier,
 			variable,
@@ -284,12 +281,12 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 	checker.Elaboration.InterfaceNestedDeclarations[declaration] = nestedDeclarations
 
 	for _, nestedInterfaceType := range nestedInterfaceTypes {
-		interfaceType.nestedTypes.Set(nestedInterfaceType.Identifier, nestedInterfaceType)
+		interfaceType.NestedTypes.Set(nestedInterfaceType.Identifier, nestedInterfaceType)
 		nestedInterfaceType.SetContainerType(interfaceType)
 	}
 
 	for _, nestedCompositeType := range nestedCompositeTypes {
-		interfaceType.nestedTypes.Set(nestedCompositeType.Identifier, nestedCompositeType)
+		interfaceType.NestedTypes.Set(nestedCompositeType.Identifier, nestedCompositeType)
 		nestedCompositeType.SetContainerType(interfaceType)
 	}
 
@@ -302,7 +299,6 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 // NOTE: This function assumes that the interface type and the nested declarations' types
 // were previously declared using `declareInterfaceType` and exists
 // in the elaboration's `InterfaceDeclarationTypes` and `InterfaceNestedDeclarations` fields.
-//
 func (checker *Checker) declareInterfaceMembers(declaration *ast.InterfaceDeclaration) {
 
 	interfaceType := checker.Elaboration.InterfaceDeclarationTypes[declaration]

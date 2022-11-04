@@ -22,7 +22,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 )
 
-func (checker *Checker) VisitSwitchStatement(statement *ast.SwitchStatement) ast.Repr {
+func (checker *Checker) VisitSwitchStatement(statement *ast.SwitchStatement) (_ struct{}) {
 
 	testType := checker.VisitExpression(statement.Expression, nil)
 
@@ -49,11 +49,11 @@ func (checker *Checker) VisitSwitchStatement(statement *ast.SwitchStatement) ast
 		checker.visitSwitchCase(switchCase, defaultAllowed, testType, testTypeIsValid)
 	}
 
-	checker.functionActivations.WithSwitch(func() {
+	checker.functionActivations.Current().WithSwitch(func() {
 		checker.checkSwitchCasesStatements(statement.Cases)
 	})
 
-	return nil
+	return
 }
 
 func (checker *Checker) visitSwitchCase(
@@ -87,7 +87,12 @@ func (checker *Checker) checkSwitchCaseExpression(
 	testTypeIsValid bool,
 ) {
 
-	caseType := checker.VisitExpression(caseExpression, nil)
+	var caseExprExpectedType Type
+	if testTypeIsValid {
+		caseExprExpectedType = testType
+	}
+
+	caseType := checker.VisitExpression(caseExpression, caseExprExpectedType)
 
 	if caseType.IsInvalidType() {
 		return
@@ -96,21 +101,7 @@ func (checker *Checker) checkSwitchCaseExpression(
 	// The type of each case expression must be the same
 	// as the type of the test expression
 
-	if testTypeIsValid {
-		// If the test type is valid,
-		// the case type can be checked to be equatable and compatible in one go
-
-		if !AreCompatibleEquatableTypes(testType, caseType) {
-			checker.report(
-				&InvalidBinaryOperandsError{
-					Operation: ast.OperationEqual,
-					LeftType:  testType,
-					RightType: caseType,
-					Range:     ast.NewRangeFromPositioned(checker.memoryGauge, caseExpression),
-				},
-			)
-		}
-	} else {
+	if !testTypeIsValid {
 		// If the test type is invalid,
 		// at least the case type can be checked to be equatable
 
@@ -131,6 +122,8 @@ func (checker *Checker) checkSwitchCasesStatements(cases []*ast.SwitchCase) {
 		return
 	}
 
+	currentFunctionActivation := checker.functionActivations.Current()
+
 	// NOTE: always check blocks as if they're only *potentially* evaluated.
 	// However, the default case's block must be checked directly as the "else",
 	// because if a default case exists, the whole switch statement
@@ -139,13 +132,17 @@ func (checker *Checker) checkSwitchCasesStatements(cases []*ast.SwitchCase) {
 	switchCase := cases[0]
 
 	if caseCount == 1 && switchCase.Expression == nil {
-		checker.checkSwitchCaseStatements(switchCase)
+		currentFunctionActivation.ReturnInfo.WithNewJumpTarget(func() {
+			checker.checkSwitchCaseStatements(switchCase)
+		})
 		return
 	}
 
 	_, _ = checker.checkConditionalBranches(
 		func() Type {
-			checker.checkSwitchCaseStatements(switchCase)
+			currentFunctionActivation.ReturnInfo.WithNewJumpTarget(func() {
+				checker.checkSwitchCaseStatements(switchCase)
+			})
 			return nil
 		},
 		func() Type {
@@ -180,5 +177,5 @@ func (checker *Checker) checkSwitchCaseStatements(switchCase *ast.SwitchCase) {
 			switchCase.EndPos,
 		),
 	)
-	block.Accept(checker)
+	checker.checkBlock(block)
 }

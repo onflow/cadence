@@ -111,75 +111,178 @@ var blsAggregatePublicKeysFunctionType = &sema.FunctionType{
 	),
 }
 
-var blsAggregatePublicKeysFunction = interpreter.NewUnmeteredHostFunctionValue(
-	func(invocation interpreter.Invocation) interpreter.Value {
-		publicKeys, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-
-		inter := invocation.Interpreter
-		getLocationRange := invocation.GetLocationRange
-
-		inter.ExpectType(
-			publicKeys,
-			sema.PublicKeyArrayType,
-			getLocationRange,
-		)
-
-		return inter.Config.BLSAggregatePublicKeysHandler(
-			inter,
-			getLocationRange,
-			publicKeys,
-		)
-	},
-	blsAggregatePublicKeysFunctionType,
-)
-
-var blsAggregateSignaturesFunction = interpreter.NewUnmeteredHostFunctionValue(
-	func(invocation interpreter.Invocation) interpreter.Value {
-		signatures, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-
-		inter := invocation.Interpreter
-		getLocationRange := invocation.GetLocationRange
-
-		inter.ExpectType(
-			signatures,
-			sema.ByteArrayArrayType,
-			getLocationRange,
-		)
-
-		return inter.Config.BLSAggregateSignaturesHandler(
-			inter,
-			getLocationRange,
-			signatures,
-		)
-	},
-	blsAggregateSignaturesFunctionType,
-)
-
-var blsContractFields = map[string]interpreter.Value{
-	blsAggregatePublicKeysFunctionName: blsAggregatePublicKeysFunction,
-	blsAggregateSignaturesFunctionName: blsAggregateSignaturesFunction,
+type BLSPublicKeyAggregator interface {
+	PublicKeySignatureVerifier
+	BLSPoPVerifier
+	// BLSAggregatePublicKeys aggregate multiple BLS public keys into one.
+	BLSAggregatePublicKeys(publicKeys []*PublicKey) (*PublicKey, error)
 }
 
-var blsContractValue = interpreter.NewSimpleCompositeValue(
-	nil,
-	blsContractType.ID(),
-	blsContractStaticType,
-	nil,
-	blsContractFields,
-	nil,
-	nil,
-	nil,
-)
+func newBLSAggregatePublicKeysFunction(
+	gauge common.MemoryGauge,
+	aggregator BLSPublicKeyAggregator,
+) *interpreter.HostFunctionValue {
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			publicKeysValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
 
-var BLSContract = StandardLibraryValue{
-	Name:  "BLS",
-	Type:  blsContractType,
-	Value: blsContractValue,
-	Kind:  common.DeclarationKindContract,
+			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
+
+			inter.ExpectType(
+				publicKeysValue,
+				sema.PublicKeyArrayType,
+				locationRange,
+			)
+
+			publicKeys := make([]*PublicKey, 0, publicKeysValue.Count())
+			publicKeysValue.Iterate(inter, func(element interpreter.Value) (resume bool) {
+				publicKeyValue, ok := element.(*interpreter.CompositeValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				publicKey, err := NewPublicKeyFromValue(inter, locationRange, publicKeyValue)
+				if err != nil {
+					panic(err)
+				}
+
+				publicKeys = append(publicKeys, publicKey)
+
+				// Continue iteration
+				return true
+			})
+
+			var err error
+			var aggregatedPublicKey *PublicKey
+			wrapPanic(func() {
+				aggregatedPublicKey, err = aggregator.BLSAggregatePublicKeys(publicKeys)
+			})
+
+			// If the crypto layer produces an error, we have invalid input, return nil
+			if err != nil {
+				return interpreter.NilOptionalValue
+			}
+
+			aggregatedPublicKeyValue := NewPublicKeyValue(
+				inter,
+				locationRange,
+				aggregatedPublicKey,
+				aggregator,
+				aggregator,
+			)
+
+			return interpreter.NewSomeValueNonCopying(
+				inter,
+				aggregatedPublicKeyValue,
+			)
+		},
+		blsAggregatePublicKeysFunctionType,
+	)
+}
+
+type BLSSignatureAggregator interface {
+	// BLSAggregateSignatures aggregate multiple BLS signatures into one.
+	BLSAggregateSignatures(signatures [][]byte) ([]byte, error)
+}
+
+func newBLSAggregateSignaturesFunction(
+	gauge common.MemoryGauge,
+	aggregator BLSSignatureAggregator,
+) *interpreter.HostFunctionValue {
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			signaturesValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
+
+			inter.ExpectType(
+				signaturesValue,
+				sema.ByteArrayArrayType,
+				locationRange,
+			)
+
+			bytesArray := make([][]byte, 0, signaturesValue.Count())
+			signaturesValue.Iterate(inter, func(element interpreter.Value) (resume bool) {
+				signature, ok := element.(*interpreter.ArrayValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				bytes, err := interpreter.ByteArrayValueToByteSlice(inter, signature)
+				if err != nil {
+					panic(err)
+				}
+
+				bytesArray = append(bytesArray, bytes)
+
+				// Continue iteration
+				return true
+			})
+
+			var err error
+			var aggregatedSignature []byte
+			wrapPanic(func() {
+				aggregatedSignature, err = aggregator.BLSAggregateSignatures(bytesArray)
+			})
+
+			// If the crypto layer produces an error, we have invalid input, return nil
+			if err != nil {
+				return interpreter.NilOptionalValue
+			}
+
+			aggregatedSignatureValue := interpreter.ByteSliceToByteArrayValue(inter, aggregatedSignature)
+
+			return interpreter.NewSomeValueNonCopying(
+				inter,
+				aggregatedSignatureValue,
+			)
+		},
+		blsAggregateSignaturesFunctionType,
+	)
+}
+
+type BLSContractHandler interface {
+	PublicKeyValidator
+	PublicKeySignatureVerifier
+	BLSPoPVerifier
+	BLSPublicKeyAggregator
+	BLSSignatureAggregator
+}
+
+func NewBLSContract(
+	gauge common.MemoryGauge,
+	handler BLSContractHandler,
+) StandardLibraryValue {
+	var blsContractFields = map[string]interpreter.Value{
+		blsAggregatePublicKeysFunctionName: newBLSAggregatePublicKeysFunction(gauge, handler),
+		blsAggregateSignaturesFunctionName: newBLSAggregateSignaturesFunction(gauge, handler),
+	}
+
+	var blsContractValue = interpreter.NewSimpleCompositeValue(
+		nil,
+		blsContractType.ID(),
+		blsContractStaticType,
+		nil,
+		blsContractFields,
+		nil,
+		nil,
+		nil,
+	)
+
+	return StandardLibraryValue{
+		Name:  "BLS",
+		Type:  blsContractType,
+		Value: blsContractValue,
+		Kind:  common.DeclarationKindContract,
+	}
 }

@@ -199,6 +199,7 @@ const (
 	PrimitiveStaticTypeAuthAccountKeys
 	PrimitiveStaticTypePublicAccountKeys
 	PrimitiveStaticTypeAccountKey
+	PrimitiveStaticTypeAuthAccountInbox
 
 	// !!! *WARNING* !!!
 	// ADD NEW TYPES *BEFORE* THIS WARNING.
@@ -276,6 +277,7 @@ func (t PrimitiveStaticType) elementSize() uint {
 		PrimitiveStaticTypeDeployedContract,
 		PrimitiveStaticTypeAuthAccountContracts,
 		PrimitiveStaticTypePublicAccountContracts,
+		PrimitiveStaticTypeAuthAccountInbox,
 		PrimitiveStaticTypeAuthAccountKeys,
 		PrimitiveStaticTypePublicAccountKeys,
 		PrimitiveStaticTypeAccountKey:
@@ -419,20 +421,24 @@ func (i PrimitiveStaticType) SemaType() sema.Type {
 		return sema.PublicAccountKeysType
 	case PrimitiveStaticTypeAccountKey:
 		return sema.AccountKeyType
+	case PrimitiveStaticTypeAuthAccountInbox:
+		return sema.AuthAccountInboxType
 	default:
-		panic(errors.NewUnreachableError())
+		panic(errors.NewUnexpectedError("missing case for %s", i))
 	}
 }
 
 // ConvertSemaToPrimitiveStaticType converts a `sema.Type` to a `PrimitiveStaticType`.
 //
 // Returns `PrimitiveStaticTypeUnknown` if the given type is not a primitive type.
-//
 func ConvertSemaToPrimitiveStaticType(
 	memoryGauge common.MemoryGauge,
 	t sema.Type,
 ) (typ PrimitiveStaticType) {
 	switch t {
+
+	case sema.StringType:
+		typ = PrimitiveStaticTypeString
 
 	// Number
 
@@ -547,8 +553,8 @@ func ConvertSemaToPrimitiveStaticType(
 		typ = PrimitiveStaticTypePublicAccountKeys
 	case sema.AccountKeyType:
 		typ = PrimitiveStaticTypeAccountKey
-	case sema.StringType:
-		typ = PrimitiveStaticTypeString
+	case sema.AuthAccountInboxType:
+		typ = PrimitiveStaticTypeAuthAccountInbox
 	}
 
 	switch t.(type) {

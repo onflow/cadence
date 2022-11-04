@@ -20,12 +20,13 @@ package sema
 
 import "github.com/onflow/cadence/runtime/ast"
 
-func (checker *Checker) VisitReturnStatement(statement *ast.ReturnStatement) ast.Repr {
+func (checker *Checker) VisitReturnStatement(statement *ast.ReturnStatement) (_ struct{}) {
 	functionActivation := checker.functionActivations.Current()
 
 	defer func() {
+		// NOTE: check for resource loss before declaring the function
+		// as having definitely returned
 		checker.checkResourceLossForFunction()
-		checker.resources.JumpsOrReturns = true
 		functionActivation.ReturnInfo.MaybeReturned = true
 		functionActivation.ReturnInfo.DefinitelyReturned = true
 	}()
@@ -47,7 +48,7 @@ func (checker *Checker) VisitReturnStatement(statement *ast.ReturnStatement) ast
 			)
 		}
 
-		return nil
+		return
 	}
 
 	// If the return statement has a return value,
@@ -62,13 +63,13 @@ func (checker *Checker) VisitReturnStatement(statement *ast.ReturnStatement) ast
 		}
 
 	if returnType == VoidType {
-		return nil
+		return
 	}
 
 	checker.checkVariableMove(statement.Expression)
 	checker.checkResourceMoveOperation(statement.Expression, valueType)
 
-	return nil
+	return
 }
 
 func (checker *Checker) checkResourceLossForFunction() {

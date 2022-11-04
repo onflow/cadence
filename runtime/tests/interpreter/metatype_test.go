@@ -21,6 +21,8 @@ package interpreter_test
 import (
 	"testing"
 
+	"github.com/onflow/cadence/runtime/activations"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -47,7 +49,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 			t,
 			inter,
 			interpreter.BoolValue(true),
-			inter.Globals["result"].GetValue(),
+			inter.Globals.Get("result").GetValue(),
 		)
 	})
 
@@ -63,7 +65,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 			t,
 			inter,
 			interpreter.BoolValue(false),
-			inter.Globals["result"].GetValue(),
+			inter.Globals.Get("result").GetValue(),
 		)
 	})
 
@@ -79,7 +81,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 			t,
 			inter,
 			interpreter.BoolValue(false),
-			inter.Globals["result"].GetValue(),
+			inter.Globals.Get("result").GetValue(),
 		)
 	})
 
@@ -95,7 +97,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 			t,
 			inter,
 			interpreter.BoolValue(true),
-			inter.Globals["result"].GetValue(),
+			inter.Globals.Get("result").GetValue(),
 		)
 	})
 
@@ -111,7 +113,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 			t,
 			inter,
 			interpreter.BoolValue(false),
-			inter.Globals["result"].GetValue(),
+			inter.Globals.Get("result").GetValue(),
 		)
 	})
 
@@ -131,8 +133,8 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(valueDeclaration)
 
-		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-		baseActivation.Declare(valueDeclaration)
+		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, valueDeclaration)
 
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
@@ -153,7 +155,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 			t,
 			inter,
 			interpreter.BoolValue(false),
-			inter.Globals["result"].GetValue(),
+			inter.Globals.Get("result").GetValue(),
 		)
 	})
 
@@ -185,9 +187,9 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 			baseValueActivation.DeclareValue(valueDeclaration)
 		}
 
-		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
 		for _, valueDeclaration := range valueDeclarations {
-			baseActivation.Declare(valueDeclaration)
+			interpreter.Declare(baseActivation, valueDeclaration)
 		}
 
 		inter, err := parseCheckAndInterpretWithOptions(t,
@@ -209,7 +211,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 			t,
 			inter,
 			interpreter.BoolValue(false),
-			inter.Globals["result"].GetValue(),
+			inter.Globals.Get("result").GetValue(),
 		)
 	})
 }
@@ -231,7 +233,7 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredStringValue("[Int]"),
-			inter.Globals["identifier"].GetValue(),
+			inter.Globals.Get("identifier").GetValue(),
 		)
 	})
 
@@ -250,7 +252,7 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredStringValue("S.test.S"),
-			inter.Globals["identifier"].GetValue(),
+			inter.Globals.Get("identifier").GetValue(),
 		)
 	})
 
@@ -274,9 +276,9 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 			baseValueActivation.DeclareValue(valueDeclaration)
 		}
 
-		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
+		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
 		for _, valueDeclaration := range valueDeclarations {
-			baseActivation.Declare(valueDeclaration)
+			interpreter.Declare(baseActivation, valueDeclaration)
 		}
 
 		inter, err := parseCheckAndInterpretWithOptions(t,
@@ -298,7 +300,7 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredStringValue(""),
-			inter.Globals["identifier"].GetValue(),
+			inter.Globals.Get("identifier").GetValue(),
 		)
 	})
 }
@@ -404,8 +406,8 @@ func TestInterpretIsInstance(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(valueDeclaration)
 
-	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-	baseActivation.Declare(valueDeclaration)
+	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, valueDeclaration)
 
 	for _, testCase := range cases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -423,7 +425,7 @@ func TestInterpretIsInstance(t *testing.T) {
 				t,
 				inter,
 				interpreter.BoolValue(testCase.result),
-				inter.Globals["result"].GetValue(),
+				inter.Globals.Get("result").GetValue(),
 			)
 		})
 	}
@@ -544,8 +546,8 @@ func TestInterpretIsSubtype(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(valueDeclaration)
 
-	baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-	baseActivation.Declare(valueDeclaration)
+	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, valueDeclaration)
 
 	for _, testCase := range cases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -561,7 +563,7 @@ func TestInterpretIsSubtype(t *testing.T) {
 
 			assert.Equal(t,
 				interpreter.BoolValue(testCase.result),
-				inter.Globals["result"].GetValue(),
+				inter.Globals.Get("result").GetValue(),
 			)
 		})
 	}
@@ -710,8 +712,8 @@ func TestInterpretGetType(t *testing.T) {
 			baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 			baseValueActivation.DeclareValue(valueDeclaration)
 
-			baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-			baseActivation.Declare(valueDeclaration)
+			baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+			interpreter.Declare(baseActivation, valueDeclaration)
 
 			storage := newUnmeteredInMemoryStorage()
 

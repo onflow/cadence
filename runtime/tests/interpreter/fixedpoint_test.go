@@ -26,10 +26,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	. "github.com/onflow/cadence/runtime/tests/utils"
-
+	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestInterpretNegativeZeroFixedPoint(t *testing.T) {
@@ -44,7 +44,7 @@ func TestInterpretNegativeZeroFixedPoint(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredFix64Value(-42000000),
-		inter.Globals["x"].GetValue(),
+		inter.Globals.Get("x").GetValue(),
 	)
 }
 
@@ -90,21 +90,21 @@ func TestInterpretFixedPointConversionAndAddition(t *testing.T) {
 				t,
 				inter,
 				value,
-				inter.Globals["x"].GetValue(),
+				inter.Globals.Get("x").GetValue(),
 			)
 
 			AssertValuesEqual(
 				t,
 				inter,
 				value,
-				inter.Globals["y"].GetValue(),
+				inter.Globals.Get("y").GetValue(),
 			)
 
 			AssertValuesEqual(
 				t,
 				inter,
 				interpreter.BoolValue(true),
-				inter.Globals["z"].GetValue(),
+				inter.Globals.Get("z").GetValue(),
 			)
 
 		})
@@ -159,14 +159,14 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 					t,
 					inter,
 					fixedPointValue,
-					inter.Globals["x"].GetValue(),
+					inter.Globals.Get("x").GetValue(),
 				)
 
 				AssertValuesEqual(
 					t,
 					inter,
 					integerValue,
-					inter.Globals["y"].GetValue(),
+					inter.Globals.Get("y").GetValue(),
 				)
 			})
 		}
@@ -198,14 +198,14 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 					t,
 					inter,
 					expected,
-					inter.Globals["x"].GetValue(),
+					inter.Globals.Get("x").GetValue(),
 				)
 
 				AssertValuesEqual(
 					t,
 					inter,
 					expected,
-					inter.Globals["y"].GetValue(),
+					inter.Globals.Get("y").GetValue(),
 				)
 			})
 		}
@@ -238,14 +238,14 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 					t,
 					inter,
 					expected,
-					inter.Globals["x"].GetValue(),
+					inter.Globals.Get("x").GetValue(),
 				)
 
 				AssertValuesEqual(
 					t,
 					inter,
 					expected,
-					inter.Globals["y"].GetValue(),
+					inter.Globals.Get("y").GetValue(),
 				)
 			})
 		}
@@ -271,14 +271,14 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 					t,
 					inter,
 					interpreter.NewUnmeteredFix64Value(value*sema.Fix64Factor),
-					inter.Globals["x"].GetValue(),
+					inter.Globals.Get("x").GetValue(),
 				)
 
 				AssertValuesEqual(
 					t,
 					inter,
 					interpreter.NewUnmeteredUFix64Value(uint64(value*sema.Fix64Factor)),
-					inter.Globals["y"].GetValue(),
+					inter.Globals.Get("y").GetValue(),
 				)
 			})
 		}
@@ -304,14 +304,14 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 					t,
 					inter,
 					interpreter.NewUnmeteredUFix64Value(uint64(value*sema.Fix64Factor)),
-					inter.Globals["x"].GetValue(),
+					inter.Globals.Get("x").GetValue(),
 				)
 
 				AssertValuesEqual(
 					t,
 					inter,
 					interpreter.NewUnmeteredFix64Value(value*sema.Fix64Factor),
-					inter.Globals["y"].GetValue(),
+					inter.Globals.Get("y").GetValue(),
 				)
 			})
 		}
@@ -327,6 +327,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 		`)
 
 		_, err := inter.Invoke("test")
+		RequireError(t, err)
 
 		require.ErrorAs(t, err, &interpreter.UnderflowError{})
 	})
@@ -346,6 +347,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 		)
 
 		_, err := inter.Invoke("test")
+		RequireError(t, err)
 
 		require.ErrorAs(t, err, &interpreter.OverflowError{})
 	})
@@ -369,7 +371,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 				)
 
 				_, err := inter.Invoke("test")
-				require.Error(t, err)
+				RequireError(t, err)
 
 				require.IsType(t,
 					interpreter.Error{},
@@ -410,6 +412,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 				)
 
 				_, err := inter.Invoke("test")
+				RequireError(t, err)
 
 				require.ErrorAs(t, err, &interpreter.OverflowError{})
 			})
@@ -446,6 +449,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 				)
 
 				_, err := inter.Invoke("test")
+				RequireError(t, err)
 
 				require.ErrorAs(t, err, &interpreter.OverflowError{})
 			})
@@ -482,7 +486,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 				)
 
 				_, err := inter.Invoke("test")
-				require.Error(t, err)
+				RequireError(t, err)
 
 				require.ErrorAs(t, err, &interpreter.OverflowError{})
 			})
@@ -519,7 +523,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 				)
 
 				_, err := inter.Invoke("test")
-				require.Error(t, err)
+				RequireError(t, err)
 
 				require.ErrorAs(t, err, &interpreter.UnderflowError{})
 			})
@@ -552,13 +556,13 @@ func TestInterpretFixedPointMinMax(t *testing.T) {
 			t,
 			inter,
 			test.min,
-			inter.Globals["min"].GetValue(),
+			inter.Globals.Get("min").GetValue(),
 		)
 		RequireValuesEqual(
 			t,
 			inter,
 			test.max,
-			inter.Globals["max"].GetValue(),
+			inter.Globals.Get("max").GetValue(),
 		)
 	}
 
@@ -591,4 +595,124 @@ func TestInterpretFixedPointMinMax(t *testing.T) {
 			test(t, ty, testCase)
 		})
 	}
+}
+
+func TestStringFixedpointConversion(t *testing.T) {
+	t.Parallel()
+
+	type testcase struct {
+		decimal    *big.Int
+		fractional *big.Int
+	}
+
+	type testsuite struct {
+		name         string
+		toFixedValue func(isNegative bool, decimal, fractional *big.Int, scale uint) (interpreter.Value, error)
+		intBounds    []*big.Int
+		fracBounds   []*big.Int
+	}
+
+	bigZero := big.NewInt(0)
+	bigOne := big.NewInt(1)
+
+	suites := []testsuite{
+		{
+			"Fix64",
+			func(isNeg bool, decimal, fractional *big.Int, scale uint) (interpreter.Value, error) {
+				fixedVal, err := fixedpoint.NewFix64(isNeg, decimal, fractional, scale)
+				if err != nil {
+					return nil, err
+				}
+				return interpreter.NewUnmeteredFix64Value(fixedVal.Int64()), nil
+			},
+			[]*big.Int{sema.Fix64TypeMinIntBig, sema.Fix64TypeMaxIntBig, bigZero, bigOne},
+			[]*big.Int{sema.UFix64TypeMinFractionalBig, sema.Fix64TypeMaxFractionalBig, bigZero, bigOne},
+		},
+		{
+			"UFix64",
+			func(_ bool, decimal, fractional *big.Int, scale uint) (interpreter.Value, error) {
+				fixedVal, err := fixedpoint.NewUFix64(decimal, fractional, scale)
+				if err != nil {
+					return nil, err
+				}
+				return interpreter.NewUnmeteredUFix64Value(fixedVal.Uint64()), nil
+			},
+			[]*big.Int{sema.UFix64TypeMinIntBig, sema.UFix64TypeMaxIntBig, bigZero, bigOne},
+			[]*big.Int{sema.UFix64TypeMinFractionalBig, sema.UFix64TypeMaxFractionalBig, bigZero, bigOne},
+		},
+	}
+
+	genCases := func(intComponents, fracComponents []*big.Int) []testcase {
+		testcases := []testcase{
+			{big.NewInt(10), big.NewInt(11)},
+			{big.NewInt(420), big.NewInt(840)},
+			{big.NewInt(123), big.NewInt(45)},
+		}
+
+		for _, intPart := range intComponents {
+			for _, fracPart := range fracComponents {
+				clonedInt := new(big.Int).Set(intPart)
+				clonedFrac := new(big.Int).Set(fracPart)
+				testcases = append(testcases, testcase{clonedInt, clonedFrac})
+			}
+		}
+		return testcases
+	}
+
+	getMagnitude := func(n *big.Int) uint {
+		var m uint
+
+		cloned := new(big.Int).Set(n)
+		bigTen := big.NewInt(10)
+
+		for m = 0; cloned.Cmp(bigZero) != 0; m++ {
+			cloned.Div(cloned, bigTen)
+		}
+
+		return m
+	}
+
+	test := func(suite testsuite) {
+		t.Run(suite.name, func(t *testing.T) {
+			t.Parallel()
+
+			code := fmt.Sprintf(`
+				fun fromStringTest(s: String): %s? {
+					return %s.fromString(s)
+				}
+			`, suite.name, suite.name)
+
+			inter := parseCheckAndInterpret(t, code)
+
+			testcases := genCases(suite.intBounds, suite.fracBounds)
+
+			for _, tc := range testcases {
+				isNegative := tc.decimal.Cmp(big.NewInt(0)) == -1
+				scale := getMagnitude(tc.fractional)
+
+				absDecimal := new(big.Int)
+				tc.decimal.Abs(absDecimal)
+				absFractional := new(big.Int)
+				tc.fractional.Abs(absFractional)
+
+				expectedNumericVal, err := suite.toFixedValue(isNegative, absDecimal, absFractional, scale)
+				require.NoError(t, err)
+
+				expectedVal := interpreter.NewUnmeteredSomeValueNonCopying(expectedNumericVal)
+
+				stringified := fmt.Sprintf("%d.%d", absDecimal, absFractional)
+				res, err := inter.Invoke("fromStringTest", interpreter.NewUnmeteredStringValue(stringified))
+
+				require.NoError(t, err)
+
+				AssertEqualWithDiff(t, expectedVal, res)
+			}
+
+		})
+
+	}
+	for _, testsuite := range suites {
+		test(testsuite)
+	}
+
 }

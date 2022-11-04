@@ -45,6 +45,7 @@ func TestExpressionStatement_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "ExpressionStatement",
@@ -116,6 +117,7 @@ func TestReturnStatement_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "ReturnStatement",
@@ -217,6 +219,7 @@ func TestBreakStatement_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "BreakStatement",
@@ -263,6 +266,7 @@ func TestContinueStatement_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "ContinueStatement",
@@ -327,6 +331,7 @@ func TestIfStatement_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "IfStatement",
@@ -523,6 +528,7 @@ func TestWhileStatement_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "WhileStatement",
@@ -625,6 +631,7 @@ func TestForStatement_MarshalJSON(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.JSONEq(t,
+			// language=json
 			`
             {
                 "Type": "ForStatement",
@@ -688,6 +695,7 @@ func TestForStatement_MarshalJSON(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.JSONEq(t,
+			// language=json
 			`
             {
                 "Type": "ForStatement",
@@ -875,6 +883,7 @@ func TestAssignmentStatement_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "AssignmentStatement",
@@ -992,6 +1001,7 @@ func TestSwapStatement_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "SwapStatement",
@@ -1116,6 +1126,7 @@ func TestEmitStatement_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "EmitStatement",
@@ -1284,6 +1295,7 @@ func TestSwitchStatement_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "SwitchStatement",

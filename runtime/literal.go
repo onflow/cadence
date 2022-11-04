@@ -38,7 +38,6 @@ var LiteralExpressionTypeError = parser.NewUnpositionedSyntaxError("input is not
 //
 // Returns an error if the literal string is not a literal (e.g. it does not have valid syntax,
 // or does not parse to a literal).
-//
 func ParseLiteral(
 	literal string,
 	ty sema.Type,
@@ -47,10 +46,12 @@ func ParseLiteral(
 	cadence.Value,
 	error,
 ) {
-	expression, errs := parser.ParseExpression(literal, inter)
+	code := []byte(literal)
+
+	expression, errs := parser.ParseExpression(code, inter)
 	if len(errs) > 0 {
 		return nil, parser.Error{
-			Code:   literal,
+			Code:   code,
 			Errors: errs,
 		}
 	}
@@ -63,7 +64,6 @@ func ParseLiteral(
 //
 // Note: This method is not used directly within Cadence, but used by downstream dependencies
 // such as CLI, playground, etc. Hence, shouldn't be moved to test.
-//
 func ParseLiteralArgumentList(
 	argumentList string,
 	parameterTypes []sema.Type,
@@ -72,7 +72,8 @@ func ParseLiteralArgumentList(
 	[]cadence.Value,
 	error,
 ) {
-	arguments, errs := parser.ParseArgumentList(argumentList, inter)
+	code := []byte(argumentList)
+	arguments, errs := parser.ParseArgumentList(code, inter)
 	if len(errs) > 0 {
 		return nil, parser.Error{
 			Errors: errs,
@@ -193,7 +194,7 @@ func integerLiteralValue(
 		return nil, err
 	}
 
-	return ExportValue(convertedValue, inter, interpreter.ReturnEmptyLocationRange)
+	return ExportValue(convertedValue, inter, interpreter.EmptyLocationRange)
 }
 
 func convertIntValue(

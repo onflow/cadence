@@ -25,6 +25,9 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
+type VoidExtractor interface {
+	ExtractVoid(extractor *ExpressionExtractor, expression *VoidExpression) ExpressionExtraction
+}
 type BoolExtractor interface {
 	ExtractBool(extractor *ExpressionExtractor, expression *BoolExpression) ExpressionExtraction
 }
@@ -111,6 +114,7 @@ type PathExtractor interface {
 
 type ExpressionExtractor struct {
 	nextIdentifier       int
+	VoidExtractor        VoidExtractor
 	BoolExtractor        BoolExtractor
 	NilExtractor         NilExtractor
 	IntExtractor         IntExtractor
@@ -135,8 +139,10 @@ type ExpressionExtractor struct {
 	MemoryGauge          common.MemoryGauge
 }
 
+var _ ExpressionVisitor[ExpressionExtraction] = &ExpressionExtractor{}
+
 func (extractor *ExpressionExtractor) Extract(expression Expression) ExpressionExtraction {
-	return expression.AcceptExp(extractor).(ExpressionExtraction)
+	return AcceptExpression[ExpressionExtraction](expression, extractor)
 }
 
 func (extractor *ExpressionExtractor) FreshIdentifier() string {
@@ -165,7 +171,27 @@ type ExpressionExtraction struct {
 	ExtractedExpressions []ExtractedExpression
 }
 
-func (extractor *ExpressionExtractor) VisitBoolExpression(expression *BoolExpression) Repr {
+// utility for expressions whose rewritten form is identical, i.e. nothing to rewrite
+func rewriteExpressionAsIs(expression Expression) ExpressionExtraction {
+	return ExpressionExtraction{
+		RewrittenExpression:  expression,
+		ExtractedExpressions: nil,
+	}
+}
+
+func (extractor *ExpressionExtractor) VisitVoidExpression(expression *VoidExpression) ExpressionExtraction {
+	if extractor.VoidExtractor != nil {
+		return extractor.VoidExtractor.ExtractVoid(extractor, expression)
+	}
+
+	return extractor.ExtractVoid(expression)
+}
+
+func (extractor *ExpressionExtractor) ExtractVoid(expression *VoidExpression) ExpressionExtraction {
+	return rewriteExpressionAsIs(expression)
+}
+
+func (extractor *ExpressionExtractor) VisitBoolExpression(expression *BoolExpression) ExpressionExtraction {
 
 	// delegate to child extractor, if any,
 	// or call default implementation
@@ -177,16 +203,10 @@ func (extractor *ExpressionExtractor) VisitBoolExpression(expression *BoolExpres
 }
 
 func (extractor *ExpressionExtractor) ExtractBool(expression *BoolExpression) ExpressionExtraction {
-
-	// nothing to rewrite, return as-is
-
-	return ExpressionExtraction{
-		RewrittenExpression:  expression,
-		ExtractedExpressions: nil,
-	}
+	return rewriteExpressionAsIs(expression)
 }
 
-func (extractor *ExpressionExtractor) VisitNilExpression(expression *NilExpression) Repr {
+func (extractor *ExpressionExtractor) VisitNilExpression(expression *NilExpression) ExpressionExtraction {
 
 	// delegate to child extractor, if any,
 	// or call default implementation
@@ -198,16 +218,10 @@ func (extractor *ExpressionExtractor) VisitNilExpression(expression *NilExpressi
 }
 
 func (extractor *ExpressionExtractor) ExtractNil(expression *NilExpression) ExpressionExtraction {
-
-	// nothing to rewrite, return as-is
-
-	return ExpressionExtraction{
-		RewrittenExpression:  expression,
-		ExtractedExpressions: nil,
-	}
+	return rewriteExpressionAsIs(expression)
 }
 
-func (extractor *ExpressionExtractor) VisitIntegerExpression(expression *IntegerExpression) Repr {
+func (extractor *ExpressionExtractor) VisitIntegerExpression(expression *IntegerExpression) ExpressionExtraction {
 
 	// delegate to child extractor, if any,
 	// or call default implementation
@@ -219,16 +233,10 @@ func (extractor *ExpressionExtractor) VisitIntegerExpression(expression *Integer
 }
 
 func (extractor *ExpressionExtractor) ExtractInteger(expression *IntegerExpression) ExpressionExtraction {
-
-	// nothing to rewrite, return as-is
-
-	return ExpressionExtraction{
-		RewrittenExpression:  expression,
-		ExtractedExpressions: nil,
-	}
+	return rewriteExpressionAsIs(expression)
 }
 
-func (extractor *ExpressionExtractor) VisitFixedPointExpression(expression *FixedPointExpression) Repr {
+func (extractor *ExpressionExtractor) VisitFixedPointExpression(expression *FixedPointExpression) ExpressionExtraction {
 
 	// delegate to child extractor, if any,
 	// or call default implementation
@@ -240,16 +248,10 @@ func (extractor *ExpressionExtractor) VisitFixedPointExpression(expression *Fixe
 }
 
 func (extractor *ExpressionExtractor) ExtractFixedPoint(expression *FixedPointExpression) ExpressionExtraction {
-
-	// nothing to rewrite, return as-is
-
-	return ExpressionExtraction{
-		RewrittenExpression:  expression,
-		ExtractedExpressions: nil,
-	}
+	return rewriteExpressionAsIs(expression)
 }
 
-func (extractor *ExpressionExtractor) VisitStringExpression(expression *StringExpression) Repr {
+func (extractor *ExpressionExtractor) VisitStringExpression(expression *StringExpression) ExpressionExtraction {
 
 	// delegate to child extractor, if any,
 	// or call default implementation
@@ -261,16 +263,10 @@ func (extractor *ExpressionExtractor) VisitStringExpression(expression *StringEx
 }
 
 func (extractor *ExpressionExtractor) ExtractString(expression *StringExpression) ExpressionExtraction {
-
-	// nothing to rewrite, return as-is
-
-	return ExpressionExtraction{
-		RewrittenExpression:  expression,
-		ExtractedExpressions: nil,
-	}
+	return rewriteExpressionAsIs(expression)
 }
 
-func (extractor *ExpressionExtractor) VisitArrayExpression(expression *ArrayExpression) Repr {
+func (extractor *ExpressionExtractor) VisitArrayExpression(expression *ArrayExpression) ExpressionExtraction {
 
 	// delegate to child extractor, if any,
 	// or call default implementation
@@ -324,7 +320,7 @@ func (extractor *ExpressionExtractor) VisitExpressions(
 	return rewrittenExpressions, extractedExpressions
 }
 
-func (extractor *ExpressionExtractor) VisitDictionaryExpression(expression *DictionaryExpression) Repr {
+func (extractor *ExpressionExtractor) VisitDictionaryExpression(expression *DictionaryExpression) ExpressionExtraction {
 
 	// delegate to child extractor, if any,
 	// or call default implementation
@@ -368,7 +364,7 @@ func (extractor *ExpressionExtractor) ExtractDictionary(expression *DictionaryEx
 	}
 }
 
-func (extractor *ExpressionExtractor) VisitIdentifierExpression(expression *IdentifierExpression) Repr {
+func (extractor *ExpressionExtractor) VisitIdentifierExpression(expression *IdentifierExpression) ExpressionExtraction {
 
 	// delegate to child extractor, if any,
 	// or call default implementation
@@ -380,15 +376,10 @@ func (extractor *ExpressionExtractor) VisitIdentifierExpression(expression *Iden
 }
 
 func (extractor *ExpressionExtractor) ExtractIdentifier(expression *IdentifierExpression) ExpressionExtraction {
-
-	// nothing to rewrite, return as-is
-
-	return ExpressionExtraction{
-		RewrittenExpression: expression,
-	}
+	return rewriteExpressionAsIs(expression)
 }
 
-func (extractor *ExpressionExtractor) VisitInvocationExpression(expression *InvocationExpression) Repr {
+func (extractor *ExpressionExtractor) VisitInvocationExpression(expression *InvocationExpression) ExpressionExtraction {
 
 	// delegate to child extractor, if any,
 	// or call default implementation
@@ -457,7 +448,7 @@ func (extractor *ExpressionExtractor) extractArguments(
 	return newArguments, extractedExpressions
 }
 
-func (extractor *ExpressionExtractor) VisitMemberExpression(expression *MemberExpression) Repr {
+func (extractor *ExpressionExtractor) VisitMemberExpression(expression *MemberExpression) ExpressionExtraction {
 
 	// delegate to child extractor, if any,
 	// or call default implementation
@@ -485,7 +476,7 @@ func (extractor *ExpressionExtractor) ExtractMember(expression *MemberExpression
 	}
 }
 
-func (extractor *ExpressionExtractor) VisitIndexExpression(expression *IndexExpression) Repr {
+func (extractor *ExpressionExtractor) VisitIndexExpression(expression *IndexExpression) ExpressionExtraction {
 
 	// delegate to child extractor, if any,
 	// or call default implementation
@@ -513,7 +504,7 @@ func (extractor *ExpressionExtractor) ExtractIndex(expression *IndexExpression) 
 	}
 }
 
-func (extractor *ExpressionExtractor) VisitConditionalExpression(expression *ConditionalExpression) Repr {
+func (extractor *ExpressionExtractor) VisitConditionalExpression(expression *ConditionalExpression) ExpressionExtraction {
 
 	// delegate to child extractor, if any,
 	// or call default implementation
@@ -548,7 +539,7 @@ func (extractor *ExpressionExtractor) ExtractConditional(expression *Conditional
 	}
 }
 
-func (extractor *ExpressionExtractor) VisitUnaryExpression(expression *UnaryExpression) Repr {
+func (extractor *ExpressionExtractor) VisitUnaryExpression(expression *UnaryExpression) ExpressionExtraction {
 
 	// delegate to child extractor, if any,
 	// or call default implementation
@@ -576,7 +567,7 @@ func (extractor *ExpressionExtractor) ExtractUnary(expression *UnaryExpression) 
 	}
 }
 
-func (extractor *ExpressionExtractor) VisitBinaryExpression(expression *BinaryExpression) Repr {
+func (extractor *ExpressionExtractor) VisitBinaryExpression(expression *BinaryExpression) ExpressionExtraction {
 
 	// delegate to child extractor, if any,
 	// or call default implementation
@@ -609,7 +600,7 @@ func (extractor *ExpressionExtractor) ExtractBinary(expression *BinaryExpression
 	}
 }
 
-func (extractor *ExpressionExtractor) VisitFunctionExpression(expression *FunctionExpression) Repr {
+func (extractor *ExpressionExtractor) VisitFunctionExpression(expression *FunctionExpression) ExpressionExtraction {
 
 	// delegate to child extractor, if any,
 	// or call default implementation
@@ -625,7 +616,7 @@ func (extractor *ExpressionExtractor) ExtractFunction(_ *FunctionExpression) Exp
 	panic(errors.NewUnreachableError())
 }
 
-func (extractor *ExpressionExtractor) VisitCastingExpression(expression *CastingExpression) Repr {
+func (extractor *ExpressionExtractor) VisitCastingExpression(expression *CastingExpression) ExpressionExtraction {
 
 	// delegate to child extractor, if any,
 	// or call default implementation
@@ -654,7 +645,7 @@ func (extractor *ExpressionExtractor) ExtractCast(expression *CastingExpression)
 	}
 }
 
-func (extractor *ExpressionExtractor) VisitCreateExpression(expression *CreateExpression) Repr {
+func (extractor *ExpressionExtractor) VisitCreateExpression(expression *CreateExpression) ExpressionExtraction {
 	// delegate to child extractor, if any,
 	// or call default implementation
 
@@ -695,7 +686,7 @@ func (extractor *ExpressionExtractor) ExtractCreate(expression *CreateExpression
 	}
 }
 
-func (extractor *ExpressionExtractor) VisitDestroyExpression(expression *DestroyExpression) Repr {
+func (extractor *ExpressionExtractor) VisitDestroyExpression(expression *DestroyExpression) ExpressionExtraction {
 	// delegate to child extractor, if any,
 	// or call default implementation
 
@@ -722,7 +713,7 @@ func (extractor *ExpressionExtractor) ExtractDestroy(expression *DestroyExpressi
 	}
 }
 
-func (extractor *ExpressionExtractor) VisitReferenceExpression(expression *ReferenceExpression) Repr {
+func (extractor *ExpressionExtractor) VisitReferenceExpression(expression *ReferenceExpression) ExpressionExtraction {
 	// delegate to child extractor, if any,
 	// or call default implementation
 
@@ -749,7 +740,7 @@ func (extractor *ExpressionExtractor) ExtractReference(expression *ReferenceExpr
 	}
 }
 
-func (extractor *ExpressionExtractor) VisitForceExpression(expression *ForceExpression) Repr {
+func (extractor *ExpressionExtractor) VisitForceExpression(expression *ForceExpression) ExpressionExtraction {
 	// delegate to child extractor, if any,
 	// or call default implementation
 
@@ -776,7 +767,7 @@ func (extractor *ExpressionExtractor) ExtractForce(expression *ForceExpression) 
 	}
 }
 
-func (extractor *ExpressionExtractor) VisitPathExpression(expression *PathExpression) Repr {
+func (extractor *ExpressionExtractor) VisitPathExpression(expression *PathExpression) ExpressionExtraction {
 
 	// delegate to child extractor, if any,
 	// or call default implementation
@@ -788,11 +779,5 @@ func (extractor *ExpressionExtractor) VisitPathExpression(expression *PathExpres
 }
 
 func (extractor *ExpressionExtractor) ExtractPath(expression *PathExpression) ExpressionExtraction {
-
-	// nothing to rewrite, return as-is
-
-	return ExpressionExtraction{
-		RewrittenExpression:  expression,
-		ExtractedExpressions: nil,
-	}
+	return rewriteExpressionAsIs(expression)
 }

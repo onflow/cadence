@@ -31,7 +31,24 @@ var hashAlgorithmStaticType interpreter.StaticType = interpreter.CompositeStatic
 	TypeID:              hashAlgorithmTypeID,
 }
 
-func NewHashAlgorithmCase(rawValue interpreter.UInt8Value) interpreter.MemberAccessibleValue {
+type Hasher interface {
+	// Hash returns the digest of hashing the given data with using the given hash algorithm
+	Hash(data []byte, tag string, algorithm sema.HashAlgorithm) ([]byte, error)
+}
+
+func NewHashAlgorithmCase(
+	rawValue interpreter.UInt8Value,
+	hasher Hasher,
+) (
+	interpreter.MemberAccessibleValue,
+	error,
+) {
+	if !sema.HashAlgorithm(rawValue).IsValid() {
+		return nil, errors.NewDefaultUserError(
+			"unknown HashAlgorithm with rawValue %d",
+			rawValue,
+		)
+	}
 
 	value := interpreter.NewSimpleCompositeValue(
 		nil,
@@ -45,13 +62,16 @@ func NewHashAlgorithmCase(rawValue interpreter.UInt8Value) interpreter.MemberAcc
 	)
 	value.Fields = map[string]interpreter.Value{
 		sema.EnumRawValueFieldName:                    rawValue,
-		sema.HashAlgorithmTypeHashFunctionName:        hashAlgorithmHashFunction(value),
-		sema.HashAlgorithmTypeHashWithTagFunctionName: hashAlgorithmHashWithTagFunction(value),
+		sema.HashAlgorithmTypeHashFunctionName:        newHashAlgorithmHashFunction(value, hasher),
+		sema.HashAlgorithmTypeHashWithTagFunctionName: newHashAlgorithmHashWithTagFunction(value, hasher),
 	}
-	return value
+	return value, nil
 }
 
-func hashAlgorithmHashFunction(hashAlgoValue interpreter.MemberAccessibleValue) *interpreter.HostFunctionValue {
+func newHashAlgorithmHashFunction(
+	hashAlgoValue interpreter.MemberAccessibleValue,
+	hasher Hasher,
+) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
 			dataValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
@@ -61,11 +81,12 @@ func hashAlgorithmHashFunction(hashAlgoValue interpreter.MemberAccessibleValue) 
 
 			inter := invocation.Interpreter
 
-			getLocationRange := invocation.GetLocationRange
+			locationRange := invocation.LocationRange
 
-			return inter.Config.HashHandler(
+			return hash(
 				inter,
-				getLocationRange,
+				locationRange,
+				hasher,
 				dataValue,
 				nil,
 				hashAlgoValue,
@@ -75,9 +96,13 @@ func hashAlgorithmHashFunction(hashAlgoValue interpreter.MemberAccessibleValue) 
 	)
 }
 
-func hashAlgorithmHashWithTagFunction(hashAlgoValue interpreter.MemberAccessibleValue) *interpreter.HostFunctionValue {
+func newHashAlgorithmHashWithTagFunction(
+	hashAlgorithmValue interpreter.MemberAccessibleValue,
+	hasher Hasher,
+) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
+
 			dataValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
@@ -90,32 +115,70 @@ func hashAlgorithmHashWithTagFunction(hashAlgoValue interpreter.MemberAccessible
 
 			inter := invocation.Interpreter
 
-			getLocationRange := invocation.GetLocationRange
+			locationRange := invocation.LocationRange
 
-			return inter.Config.HashHandler(
+			return hash(
 				inter,
-				getLocationRange,
+				locationRange,
+				hasher,
 				dataValue,
 				tagValue,
-				hashAlgoValue,
+				hashAlgorithmValue,
 			)
 		},
 		sema.HashAlgorithmTypeHashWithTagFunctionType,
 	)
 }
 
-var hashAlgorithmConstructorValue, HashAlgorithmCaseValues = cryptoAlgorithmEnumValueAndCaseValues(
-	sema.HashAlgorithmType,
-	sema.HashAlgorithms,
-	NewHashAlgorithmCase,
-)
+func hash(
+	inter *interpreter.Interpreter,
+	locationRange interpreter.LocationRange,
+	hasher Hasher,
+	dataValue *interpreter.ArrayValue,
+	tagValue *interpreter.StringValue,
+	hashAlgorithmValue interpreter.MemberAccessibleValue,
+) interpreter.Value {
+	data, err := interpreter.ByteArrayValueToByteSlice(inter, dataValue)
+	if err != nil {
+		panic(errors.NewUnexpectedError("failed to get data. %w", err))
+	}
 
-var HashAlgorithmConstructor = StandardLibraryValue{
-	Name: sema.HashAlgorithmTypeName,
-	Type: cryptoAlgorithmEnumConstructorType(
+	var tag string
+	if tagValue != nil {
+		tag = tagValue.Str
+	}
+
+	hashAlgorithm := NewHashAlgorithmFromValue(inter, locationRange, hashAlgorithmValue)
+
+	var result []byte
+	wrapPanic(func() {
+		result, err = hasher.Hash(data, tag, hashAlgorithm)
+	})
+	if err != nil {
+		panic(err)
+	}
+	return interpreter.ByteSliceToByteArrayValue(inter, result)
+}
+
+func NewHashAlgorithmConstructor(hasher Hasher) StandardLibraryValue {
+
+	hashAlgorithmConstructorValue, _ := cryptoAlgorithmEnumValueAndCaseValues(
 		sema.HashAlgorithmType,
 		sema.HashAlgorithms,
-	),
-	Value: hashAlgorithmConstructorValue,
-	Kind:  common.DeclarationKindEnum,
+		func(rawValue interpreter.UInt8Value) interpreter.MemberAccessibleValue {
+			// Assume rawValues are all valid, given we iterate over sema.HashAlgorithms
+			caseValue, _ := NewHashAlgorithmCase(rawValue, hasher)
+			return caseValue
+		},
+	)
+
+	return StandardLibraryValue{
+		Name: sema.HashAlgorithmTypeName,
+		Type: cryptoAlgorithmEnumConstructorType(
+			sema.HashAlgorithmType,
+			sema.HashAlgorithms,
+		),
+		Value: hashAlgorithmConstructorValue,
+		Kind:  common.DeclarationKindEnum,
+	}
 }

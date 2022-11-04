@@ -83,7 +83,7 @@ func TestInterpretIfStatement(t *testing.T) {
         `,
 		ParseCheckAndInterpretOptions{
 			HandleCheckerError: func(err error) {
-				errs := checker.ExpectCheckerErrors(t, err, 2)
+				errs := checker.RequireCheckerErrors(t, err, 2)
 
 				assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 				assert.IsType(t, &sema.UnreachableStatementError{}, errs[1])
@@ -146,12 +146,12 @@ func TestInterpretIfStatementTestWithDeclaration(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredIntValueFromInt64(1),
-			inter.Globals["branch"].GetValue(),
+			inter.Globals.Get("branch").GetValue(),
 		)
 	})
 
 	t.Run("nil", func(t *testing.T) {
-		value, err := inter.Invoke("test", interpreter.NilValue{})
+		value, err := inter.Invoke("test", interpreter.Nil)
 		require.NoError(t, err)
 		AssertValuesEqual(
 			t,
@@ -163,7 +163,7 @@ func TestInterpretIfStatementTestWithDeclaration(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredIntValueFromInt64(2),
-			inter.Globals["branch"].GetValue(),
+			inter.Globals.Get("branch").GetValue(),
 		)
 	})
 }
@@ -201,12 +201,12 @@ func TestInterpretIfStatementTestWithDeclarationAndElse(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredIntValueFromInt64(1),
-			inter.Globals["branch"].GetValue(),
+			inter.Globals.Get("branch").GetValue(),
 		)
 	})
 
 	t.Run("nil", func(t *testing.T) {
-		value, err := inter.Invoke("test", interpreter.NilValue{})
+		value, err := inter.Invoke("test", interpreter.Nil)
 		require.NoError(t, err)
 		AssertValuesEqual(
 			t,
@@ -218,7 +218,7 @@ func TestInterpretIfStatementTestWithDeclarationAndElse(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredIntValueFromInt64(2),
-			inter.Globals["branch"].GetValue(),
+			inter.Globals.Get("branch").GetValue(),
 		)
 
 	})
@@ -260,12 +260,12 @@ func TestInterpretIfStatementTestWithDeclarationNestedOptionals(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredIntValueFromInt64(1),
-			inter.Globals["branch"].GetValue(),
+			inter.Globals.Get("branch").GetValue(),
 		)
 	})
 
 	t.Run("nil", func(t *testing.T) {
-		value, err := inter.Invoke("test", interpreter.NilValue{})
+		value, err := inter.Invoke("test", interpreter.Nil)
 		require.NoError(t, err)
 
 		AssertValuesEqual(
@@ -280,7 +280,7 @@ func TestInterpretIfStatementTestWithDeclarationNestedOptionals(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredIntValueFromInt64(2),
-			inter.Globals["branch"].GetValue(),
+			inter.Globals.Get("branch").GetValue(),
 		)
 	})
 }
@@ -321,13 +321,13 @@ func TestInterpretIfStatementTestWithDeclarationNestedOptionalsExplicitAnnotatio
 			t,
 			inter,
 			interpreter.NewUnmeteredIntValueFromInt64(1),
-			inter.Globals["branch"].GetValue(),
+			inter.Globals.Get("branch").GetValue(),
 		)
 
 	})
 
 	t.Run("nil", func(t *testing.T) {
-		value, err := inter.Invoke("test", interpreter.NilValue{})
+		value, err := inter.Invoke("test", interpreter.Nil)
 		require.NoError(t, err)
 		AssertValuesEqual(
 			t,
@@ -341,7 +341,7 @@ func TestInterpretIfStatementTestWithDeclarationNestedOptionalsExplicitAnnotatio
 			t,
 			inter,
 			interpreter.NewUnmeteredIntValueFromInt64(2),
-			inter.Globals["branch"].GetValue(),
+			inter.Globals.Get("branch").GetValue(),
 		)
 	})
 }

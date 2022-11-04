@@ -21,8 +21,8 @@ package sema
 import (
 	"fmt"
 	"strings"
+	"sync"
 
-	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 )
@@ -30,84 +30,64 @@ import (
 /*
 
 
-   ┌────────────────────────┐
-   │                        │
-   │       Resources:       │      ┌─────────────────┐                ┏━━━━━━━━━━┓
-   │                        │      │                 │                ▼          ┃
-   │      map[any]Info 	   ━╋━━━━━▶│      Info:      │       ┌────────────────┐  ┃
-   │                        │      │                 │       │                │  ┃
-   └────────────────────────┘      │  Invalidations ━╋━━━━━━▶│ Invalidations: │  ┃
-                                   │                 │       │                │  ┃
-                │                  │      Uses ━━━━━━╋━━━┓   └────────────────┘  ┃
-                                   │                 │   ┃                       ┃          ┏━━━━━━━━┓
-                │                  └─────────────────┘   ┃            │          ┃          ▼        ┃
-                                                         ┃                       ┃    ┌───────────┐  ┃
-             Clone                          │            ┃            │          ┃    │           │  ┃
-                                                         ┗━━━━━━━━━━━━━━━━━━━━━━━╋━━━▶│   Uses:   │  ┃
-                │                        Clone                        │          ┃    │           │  ┃
-                                                                                 ┃    └───────────┘  ┃
-                ▼                           │                      Clone         ┃                   ┃
-   ┌────────────────────────┐                                                    ┃          │        ┃
-   │                        │               ▼                         │          ┃                   ┃
-   │       Resources:       │      ┌─────────────────┐                           ┃          │        ┃
-   │                        │      │                 │                ▼          ┃                   ┃
-   │      map[any]Info     ━╋━━━━━▶│      Info:      │       ┌────────────────┐  ┃       Clone       ┃
-   │                        │      │                 │       │                │  ┃                   ┃
-   └────────────────────────┘      │  Invalidations ━╋━━━━━━▶│ Invalidations: │  ┃          │        ┃
-                                   │                 │       │                │  ┃                   ┃
-                                   │      Uses ━━━━━━╋━━━┓   │     Parent ━━━━╋━━┛          │        ┃
-                                   │                 │   ┃   │                │                      ┃
-                                   └─────────────────┘   ┃   └────────────────┘             ▼        ┃
-                                                         ┃                            ┌───────────┐  ┃
-                                                         ┃                            │   Uses:   │  ┃
-                                                         ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━▶│           │  ┃
-                                                                                      │  Parent ━━╋━━┛
-                                                                                      └───────────┘
+   ┌────────────────────────┐              ┏━━━━━━━━━━━━┓
+   │                        │              ▼            ┃
+   │       Resources:       │      ┌─────────────────┐  ┃
+   │                        │      │                 │  ┃
+   │    map[Resource]Info  ━╋━━━━━▶│      Info:      │  ┃
+   │                        │      │                 │  ┃
+   └────────────────────────┘      │                 │  ┃
+                                   │                 │  ┃
+                │                  └─────────────────┘  ┃
+                                                        ┃
+             Clone                          │           ┃
+                                                        ┃
+                │                        Clone          ┃
+                                                        ┃
+                ▼                           │           ┃
+   ┌────────────────────────┐                           ┃
+   │                        │               ▼           ┃
+   │       Resources:       │      ┌─────────────────┐  ┃
+   │                        │      │                 │  ┃
+   │    map[Resource]Info  ━╋━━━━━▶│      Info:      │  ┃
+   │                        │      │                 │  ┃
+   └────────────────────────┘      │      Parent  ━━━╋━━┛
+                                   │                 │
+                                   └─────────────────┘
+
 */
 
-// ResourceInfo is the info for a resource.
-//
-type ResourceInfo struct {
-	// DefinitivelyInvalidated is true if the invalidation of the resource
-	// can be considered definitive
-	DefinitivelyInvalidated bool
-	// Invalidations is the set of invalidations of the resource
-	Invalidations ResourceInvalidations
-	// UsePositions is the set of uses of the resource
-	UsePositions ResourceUses
-}
-
-func (ri ResourceInfo) Clone() ResourceInfo {
-	return ResourceInfo{
-		DefinitivelyInvalidated: ri.DefinitivelyInvalidated,
-		Invalidations:           ri.Invalidations.Clone(),
-		UsePositions:            ri.UsePositions.Clone(),
-	}
-}
-
 // A Resource is a variable or a member
-//
 type Resource struct {
-	*Variable
-	*Member
+	Variable *Variable
+	Member   *Member
 }
 
 // Resources is a map which contains invalidation info for resources.
-//
 type Resources struct {
 	resources *orderedmap.OrderedMap[Resource, ResourceInfo]
-	// JumpsOrReturns indicates that the (branch of) the function
-	// contains a definite return, break, or continue statement
-	JumpsOrReturns bool
-	// Halts indicates that the (branch of) the function
-	// contains a definite halt (a function call with a Never return type)
-	Halts bool
+}
+
+var resourcesPool = sync.Pool{
+	New: func() any {
+		return &Resources{
+			resources: &orderedmap.OrderedMap[Resource, ResourceInfo]{},
+		}
+	},
 }
 
 func NewResources() *Resources {
-	return &Resources{
-		resources: &orderedmap.OrderedMap[Resource, ResourceInfo]{},
-	}
+	resources := resourcesPool.Get().(*Resources)
+	resources.clear()
+	return resources
+}
+
+func (ris *Resources) clear() {
+	ris.resources.Clear()
+}
+
+func (ris *Resources) Reclaim() {
+	resourcesPool.Put(ris)
 }
 
 func (ris *Resources) String() string {
@@ -128,54 +108,29 @@ func (ris *Resources) Get(resource Resource) ResourceInfo {
 	return info
 }
 
-// AddInvalidation adds the given invalidation to the set of invalidations for the given resource.
-// If the invalidation is not temporary, marks the resource to be definitely invalidated.
-//
-func (ris *Resources) AddInvalidation(resource Resource, invalidation ResourceInvalidation) {
+// MaybeRecordInvalidation records the given resource invalidation,
+// if no invalidation has yet been recorded for the given resource.
+func (ris *Resources) MaybeRecordInvalidation(resource Resource, invalidation ResourceInvalidation) {
 	info, _ := ris.resources.Get(resource)
-	info.Invalidations.Add(invalidation)
-	if invalidation.Kind.IsDefinite() {
-		info.DefinitivelyInvalidated = true
-	}
+	info.MaybeRecordInvalidation(invalidation)
 	ris.resources.Set(resource, info)
 }
 
 // RemoveTemporaryMoveInvalidation removes the given invalidation
 // from the set of invalidations for the given resource.
-//
 func (ris *Resources) RemoveTemporaryMoveInvalidation(resource Resource, invalidation ResourceInvalidation) {
 	if invalidation.Kind != ResourceInvalidationKindMoveTemporary {
 		panic(errors.NewUnreachableError())
 	}
 
 	info, _ := ris.resources.Get(resource)
-	info.Invalidations.DeleteLocally(invalidation)
+	info.DeleteLocally(invalidation)
 	ris.resources.Set(resource, info)
-}
-
-// AddUse adds the given use position to the set of use positions for the given resource.
-//
-func (ris *Resources) AddUse(resource Resource, use ast.Position) {
-	info, _ := ris.resources.Get(resource)
-	info.UsePositions.Add(use)
-	ris.resources.Set(resource, info)
-}
-
-func (ris *Resources) MarkUseAfterInvalidationReported(resource Resource, pos ast.Position) {
-	info, _ := ris.resources.Get(resource)
-	info.UsePositions.MarkUseAfterInvalidationReported(pos)
-	ris.resources.Set(resource, info)
-}
-
-func (ris *Resources) IsUseAfterInvalidationReported(resource Resource, pos ast.Position) bool {
-	info, _ := ris.resources.Get(resource)
-	return info.UsePositions.IsUseAfterInvalidationReported(pos)
 }
 
 func (ris *Resources) Clone() *Resources {
+	// TODO: optimize
 	result := NewResources()
-	result.JumpsOrReturns = ris.JumpsOrReturns
-	result.Halts = ris.Halts
 	for pair := ris.resources.Oldest(); pair != nil; pair = pair.Next() {
 		resource := pair.Key
 		info := pair.Value
@@ -197,17 +152,14 @@ func (ris *Resources) ForEach(f func(resource Resource, info ResourceInfo)) {
 // Invalidations occurring in both branches are considered definitive,
 // other new invalidations are only considered potential.
 // The else resources are optional.
-//
-func (ris *Resources) MergeBranches(thenResources *Resources, elseResources *Resources) {
+func (ris *Resources) MergeBranches(
+	thenResources *Resources,
+	thenReturnInfo *ReturnInfo,
+	elseResources *Resources,
+	elseReturnInfo *ReturnInfo,
+) {
 
-	elseJumpsOrReturns := false
-	elseHalts := false
-	if elseResources != nil {
-		elseJumpsOrReturns = elseResources.JumpsOrReturns
-		elseHalts = elseResources.Halts
-	}
-
-	merged := make(map[any]struct{})
+	merged := make(map[Resource]struct{})
 
 	merge := func(resource Resource) {
 
@@ -222,11 +174,20 @@ func (ris *Resources) MergeBranches(thenResources *Resources, elseResources *Res
 			merged[resource] = struct{}{}
 		}()
 
-		// Get the resource info in this outer scope,
-		// in the then-branch,
-		// and if there is an else-branch, from it.
+		// Get the resource info in this outer scope
 
 		info := ris.Get(resource)
+
+		// If the resource is already invalidated in the outer scope,
+		// then there is nothing to do.
+
+		if info.Invalidation() != nil {
+			return
+		}
+
+		// Get the resource info in the then-branch,
+		// and from the else-branch, if any.
+
 		thenInfo := thenResources.Get(resource)
 		var elseInfo ResourceInfo
 		if elseResources != nil {
@@ -234,8 +195,9 @@ func (ris *Resources) MergeBranches(thenResources *Resources, elseResources *Res
 		}
 
 		// The resource can be considered definitively invalidated
-		// if it was already invalidated, or it was invalidated in both branches.
-		//
+		// if it was definitely invalidated in both branches.
+
+		// TODO:
 		// A halting branch should also be considered resulting in a definitive invalidation,
 		// to support e.g.
 		//
@@ -246,26 +208,12 @@ func (ris *Resources) MergeBranches(thenResources *Resources, elseResources *Res
 		//         panic("")
 		//     }
 
-		definitelyInvalidatedInBranches :=
-			(thenInfo.DefinitivelyInvalidated || thenResources.Halts) &&
-				(elseInfo.DefinitivelyInvalidated || elseHalts)
-
-		info.DefinitivelyInvalidated =
-			info.DefinitivelyInvalidated ||
-				definitelyInvalidatedInBranches
-
-		// If a branch returns or jumps, the invalidations and uses won't have occurred in the outer scope,
-		// so only merge invalidations and uses if the branch did not return or jump
-
-		if !thenResources.JumpsOrReturns {
-			info.Invalidations.Merge(thenInfo.Invalidations)
-			info.UsePositions.Merge(thenInfo.UsePositions)
-		}
-
-		if !elseJumpsOrReturns {
-			info.Invalidations.Merge(elseInfo.Invalidations)
-			info.UsePositions.Merge(elseInfo.UsePositions)
-		}
+		info.invalidation = mergeResourceInfos(
+			thenInfo,
+			thenReturnInfo,
+			elseInfo,
+			elseReturnInfo,
+		)
 
 		ris.resources.Set(resource, info)
 	}
@@ -284,10 +232,121 @@ func (ris *Resources) MergeBranches(thenResources *Resources, elseResources *Res
 			merge(resource)
 		})
 	}
+}
 
-	ris.JumpsOrReturns = ris.JumpsOrReturns ||
-		(thenResources.JumpsOrReturns && elseJumpsOrReturns)
+func mergeResourceInfos(
+	thenInfo ResourceInfo,
+	thenReturnInfo *ReturnInfo,
+	elseInfo ResourceInfo,
+	elseReturnInfo *ReturnInfo,
+) (invalidation *ResourceInvalidation) {
+	thenInvalidation := thenInfo.Invalidation()
+	elseInvalidation := elseInfo.Invalidation()
 
-	ris.Halts = ris.Halts ||
-		(thenResources.Halts && elseHalts)
+	// First level: Existence of invalidation
+	// Second level: definite return status
+	// Third level: definite halt status
+
+	if thenInvalidation != nil && elseInvalidation != nil {
+		// First level: Both branches have an invalidation
+
+		if thenReturnInfo.DefinitelyReturned && elseReturnInfo.DefinitelyReturned {
+			// Second level: Both branches definitely returned,
+			// neither invalidation will be effective after the branches
+
+			// NO-OP
+
+		} else if thenReturnInfo.DefinitelyReturned {
+			// Second level: Only the then branch returned,
+			// only the invalidation in the else branch
+			// will be effective after the branches, as-is
+
+			invalidation = elseInvalidation
+
+		} else if elseReturnInfo.DefinitelyReturned {
+			// Second level: Only the else branch returned,
+			// only the invalidation in the then branch
+			// will be effective after the branches, as-is
+
+			invalidation = thenInvalidation
+
+		} else {
+			// Second level: Neither branch returned.
+			// Either one invalidation will be effective after the branches.
+			// We pick the invalidation in the then branch,
+			// but could also take the invalidation of the else branch.
+
+			invalidation = thenInvalidation
+
+			// The resulting invalidation after the branches is definite,
+			// if both the invalidations in the branches were definite;
+			// and potential otherwise
+
+			thenIsDefinite := thenInvalidation.Kind.IsDefinite()
+			elseIsDefinite := elseInvalidation.Kind.IsDefinite()
+
+			if !elseIsDefinite || !thenIsDefinite {
+				invalidation.Kind = invalidation.Kind.AsPotential()
+			}
+		}
+
+	} else if thenInvalidation != nil {
+		// First level: Only the then branch has an invalidation
+
+		if thenReturnInfo.DefinitelyReturned {
+			// Second level: the then branch definitely returned
+
+			if elseReturnInfo != nil && elseReturnInfo.DefinitelyHalted {
+				// Third level: the else branch definitely halted.
+				// The branches return/halt,
+				// so the resource can be considered definitely invalidated.
+
+				invalidation = &ResourceInvalidation{
+					Kind: ResourceInvalidationKindDestroyDefinite,
+				}
+			}
+		} else {
+			// Second level: the then branch did not return,
+			// the invalidation will be effective after the branches.
+
+			invalidation = thenInvalidation
+
+			// The invalidation can be considered definitive if the else branch halted;
+			// and potential otherwise
+
+			if elseReturnInfo == nil || !elseReturnInfo.DefinitelyHalted {
+				invalidation.Kind = invalidation.Kind.AsPotential()
+			}
+		}
+	} else if elseInvalidation != nil {
+		// First level: Only the else branch has an invalidation
+
+		if elseReturnInfo.DefinitelyReturned {
+			// Second level: the else branch definitely returned
+
+			if thenReturnInfo.DefinitelyHalted {
+				// Third level: the then branch definitely halted.
+				// The branches halt/return,
+				// so the resource can be considered definitely invalidated.
+
+				invalidation = &ResourceInvalidation{
+					Kind: ResourceInvalidationKindDestroyDefinite,
+				}
+			}
+		} else {
+			// Second level: the else branch did not return,
+			// the invalidation will be effective after the branches.
+
+			invalidation = elseInvalidation
+
+			// The invalidation can be considered definitive if the then branch halted;
+			// and potential otherwise
+
+			if !thenReturnInfo.DefinitelyHalted {
+				invalidation.Kind = invalidation.Kind.AsPotential()
+			}
+		}
+	}
+
+	return
 }

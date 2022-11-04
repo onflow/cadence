@@ -72,10 +72,6 @@ func (*CompositeDeclaration) ElementType() ElementType {
 	return ElementTypeCompositeDeclaration
 }
 
-func (d *CompositeDeclaration) Accept(visitor Visitor) Repr {
-	return visitor.VisitCompositeDeclaration(d)
-}
-
 func (d *CompositeDeclaration) Walk(walkChild func(Element)) {
 	walkDeclarations(walkChild, d.Members.declarations)
 }
@@ -84,7 +80,6 @@ func (*CompositeDeclaration) isDeclaration() {}
 
 // NOTE: statement, so it can be represented in the AST,
 // but will be rejected in semantic analysis
-//
 func (*CompositeDeclaration) isStatement() {}
 
 func (d *CompositeDeclaration) DeclarationIdentifier() *Identifier {
@@ -301,10 +296,6 @@ func (*FieldDeclaration) ElementType() ElementType {
 	return ElementTypeFieldDeclaration
 }
 
-func (d *FieldDeclaration) Accept(visitor Visitor) Repr {
-	return visitor.VisitFieldDeclaration(d)
-}
-
 func (d *FieldDeclaration) Walk(_ func(Element)) {
 	// NO-OP
 	// TODO: walk type
@@ -442,10 +433,6 @@ func NewEnumCaseDeclaration(
 
 func (*EnumCaseDeclaration) ElementType() ElementType {
 	return ElementTypeEnumCaseDeclaration
-}
-
-func (d *EnumCaseDeclaration) Accept(visitor Visitor) Repr {
-	return visitor.VisitEnumCaseDeclaration(d)
 }
 
 func (*EnumCaseDeclaration) Walk(_ func(Element)) {

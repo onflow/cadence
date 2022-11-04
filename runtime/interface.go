@@ -64,6 +64,11 @@ type Interface interface {
 	GetProgram(Location) (*interpreter.Program, error)
 	// SetProgram sets the program for the given location.
 	SetProgram(Location, *interpreter.Program) error
+	// SetInterpreterSharedState sets the shared state of all interpreters.
+	SetInterpreterSharedState(state *interpreter.SharedState)
+	// GetInterpreterSharedState gets the shared state of all interpreters.
+	// May return nil if none is available or use is not applicable.
+	GetInterpreterSharedState() *interpreter.SharedState
 	// GetValue gets a value for the given key in the storage, owned by the given account.
 	GetValue(owner, key []byte) (value []byte, err error)
 	// SetValue sets a value for the given key in the storage, owned by the given account.
@@ -82,6 +87,7 @@ type Interface interface {
 	AddAccountKey(address Address, publicKey *PublicKey, hashAlgo HashAlgorithm, weight int) (*AccountKey, error)
 	// GetAccountKey retrieves a key from an account by index.
 	GetAccountKey(address Address, index int) (*AccountKey, error)
+	AccountKeysCount(address Address) (uint64, error)
 	// RevokeAccountKey removes a key from an account by index.
 	RevokeAccountKey(address Address, index int) (*AccountKey, error)
 	// UpdateAccountContractCode updates the code associated with an account contract.
@@ -101,7 +107,7 @@ type Interface interface {
 	// MeterComputation is a callback method for metering computation, it returns error
 	// when computation passes the limit (set by the environment)
 	MeterComputation(operationType common.ComputationKind, intensity uint) error
-	// DecodeArgument decodes a transaction argument against the given type.
+	// DecodeArgument decodes a transaction/script argument against the given type.
 	DecodeArgument(argument []byte, argumentType cadence.Type) (cadence.Value, error)
 	// GetCurrentBlockHeight returns the current block height.
 	GetCurrentBlockHeight() (uint64, error)
@@ -139,11 +145,11 @@ type Interface interface {
 	// RecordTrace records an opentelemetry trace.
 	RecordTrace(operation string, location Location, duration time.Duration, attrs []attribute.KeyValue)
 	// BLSVerifyPOP verifies a proof of possession (PoP) for the receiver public key.
-	BLSVerifyPOP(pk *PublicKey, s []byte) (bool, error)
+	BLSVerifyPOP(publicKey *PublicKey, signature []byte) (bool, error)
 	// BLSAggregateSignatures aggregate multiple BLS signatures into one.
-	BLSAggregateSignatures(sigs [][]byte) ([]byte, error)
+	BLSAggregateSignatures(signatures [][]byte) ([]byte, error)
 	// BLSAggregatePublicKeys aggregate multiple BLS public keys into one.
-	BLSAggregatePublicKeys(keys []*PublicKey) (*PublicKey, error)
+	BLSAggregatePublicKeys(publicKeys []*PublicKey) (*PublicKey, error)
 	// ResourceOwnerChanged gets called when a resource's owner changed (if enabled)
 	ResourceOwnerChanged(
 		interpreter *interpreter.Interpreter,

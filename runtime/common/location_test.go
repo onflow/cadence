@@ -26,6 +26,8 @@ import (
 
 func TestLocationEquality(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("AddressLocation", func(t *testing.T) {
 
 		require.True(t,
@@ -90,6 +92,8 @@ func TestLocationEquality(t *testing.T) {
 }
 
 func TestLocationsInSameAccount(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("AddressLocation", func(t *testing.T) {
 

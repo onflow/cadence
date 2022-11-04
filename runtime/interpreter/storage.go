@@ -111,7 +111,6 @@ func (k StorageKey) IsLess(o StorageKey) bool {
 }
 
 // InMemoryStorage
-//
 type InMemoryStorage struct {
 	*atree.BasicSlabStorage
 	StorageMaps map[StorageKey]*StorageMap
@@ -165,7 +164,6 @@ func (i InMemoryStorage) CheckHealth() error {
 }
 
 // writeCounter is an io.Writer which counts the amount of written data.
-//
 type writeCounter struct {
 	length uint64
 }
@@ -179,7 +177,6 @@ func (w *writeCounter) Write(p []byte) (n int, err error) {
 }
 
 // mustStorableSize returns the result of StorableSize, and panics if it fails.
-//
 func mustStorableSize(storable atree.Storable) uint32 {
 	size, err := StorableSize(storable)
 	if err != nil {
@@ -189,7 +186,6 @@ func mustStorableSize(storable atree.Storable) uint32 {
 }
 
 // StorableSize returns the size of the storable in bytes.
-//
 func StorableSize(storable atree.Storable) (uint32, error) {
 	var writer writeCounter
 	enc := atree.NewEncoder(&writer, CBOREncMode)
@@ -215,7 +211,6 @@ func StorableSize(storable atree.Storable) (uint32, error) {
 // maybeLargeImmutableStorable either returns the given immutable atree.Storable
 // if it can be stored inline inside its parent container,
 // or else stores it in a separate slab and returns an atree.StorageIDStorable.
-//
 func maybeLargeImmutableStorable(
 	storable atree.Storable,
 	storage atree.SlabStorage,

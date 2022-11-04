@@ -23,7 +23,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
-func (checker *Checker) VisitWhileStatement(statement *ast.WhileStatement) ast.Repr {
+func (checker *Checker) VisitWhileStatement(statement *ast.WhileStatement) (_ struct{}) {
 
 	checker.VisitExpression(statement.Test, BoolType)
 
@@ -32,74 +32,18 @@ func (checker *Checker) VisitWhileStatement(statement *ast.WhileStatement) ast.R
 	// returns are not definite, but only potential.
 
 	_ = checker.checkPotentiallyUnevaluated(func() Type {
-		checker.functionActivations.WithLoop(func() {
-			statement.Block.Accept(checker)
+		checker.functionActivations.Current().WithLoop(func() {
+			checker.checkBlock(statement.Block)
 		})
 
 		// ignored
 		return nil
 	})
 
-	checker.reportResourceUsesInLoop(statement.StartPos, statement.EndPosition(checker.memoryGauge))
-
-	return nil
+	return
 }
 
-func (checker *Checker) reportResourceUsesInLoop(startPos, endPos ast.Position) {
-
-	checker.resources.ForEach(func(resource Resource, info ResourceInfo) {
-
-		// If the resource is a variable,
-		// only report an error if the variable was declared outside the loop
-
-		if variable := resource.Variable; variable != nil &&
-			variable.Pos != nil &&
-			variable.Pos.Compare(startPos) > 0 &&
-			variable.Pos.Compare(endPos) < 0 {
-
-			return
-		}
-
-		// Only report an error if the resource was invalidated
-
-		if info.Invalidations.IsEmpty() {
-			return
-		}
-
-		invalidations := info.Invalidations.All()
-
-		_ = info.UsePositions.ForEach(func(usePosition ast.Position, _ ResourceUse) error {
-
-			// Only report an error if the use is inside the loop
-
-			if usePosition.Compare(startPos) < 0 ||
-				usePosition.Compare(endPos) > 0 {
-
-				return nil
-			}
-
-			if checker.resources.IsUseAfterInvalidationReported(resource, usePosition) {
-				return nil
-			}
-
-			checker.resources.MarkUseAfterInvalidationReported(resource, usePosition)
-
-			checker.report(
-				&ResourceUseAfterInvalidationError{
-					// TODO: improve position information
-					StartPos:      usePosition,
-					EndPos:        usePosition,
-					Invalidations: invalidations,
-					InLoop:        true,
-				},
-			)
-
-			return nil
-		})
-	})
-}
-
-func (checker *Checker) VisitBreakStatement(statement *ast.BreakStatement) ast.Repr {
+func (checker *Checker) VisitBreakStatement(statement *ast.BreakStatement) (_ struct{}) {
 
 	// Ensure that the `break` statement is inside a loop or switch statement
 
@@ -110,17 +54,17 @@ func (checker *Checker) VisitBreakStatement(statement *ast.BreakStatement) ast.R
 				Range:            ast.NewRangeFromPositioned(checker.memoryGauge, statement),
 			},
 		)
-		return nil
+		return
 	}
 
 	functionActivation := checker.functionActivations.Current()
-	checker.resources.JumpsOrReturns = true
+	functionActivation.ReturnInfo.AddJumpOffset(statement.StartPos.Offset)
 	functionActivation.ReturnInfo.DefinitelyJumped = true
 
-	return nil
+	return
 }
 
-func (checker *Checker) VisitContinueStatement(statement *ast.ContinueStatement) ast.Repr {
+func (checker *Checker) VisitContinueStatement(statement *ast.ContinueStatement) (_ struct{}) {
 
 	// Ensure that the `continue` statement is inside a loop statement
 
@@ -131,12 +75,12 @@ func (checker *Checker) VisitContinueStatement(statement *ast.ContinueStatement)
 				Range:            ast.NewRangeFromPositioned(checker.memoryGauge, statement),
 			},
 		)
-		return nil
+		return
 	}
 
 	functionActivation := checker.functionActivations.Current()
-	checker.resources.JumpsOrReturns = true
+	functionActivation.ReturnInfo.AddJumpOffset(statement.StartPos.Offset)
 	functionActivation.ReturnInfo.DefinitelyJumped = true
 
-	return nil
+	return
 }

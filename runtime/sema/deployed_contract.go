@@ -24,7 +24,6 @@ import (
 )
 
 // DeployedContractType represents the type `DeployedContract`
-//
 var DeployedContractType = &SimpleType{
 	Name:                 "DeployedContract",
 	QualifiedName:        "DeployedContract",

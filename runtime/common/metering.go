@@ -38,9 +38,9 @@ type MemoryGauge interface {
 var (
 	// Tokens
 
-	ValueTokenMemoryUsage  = NewConstantMemoryUsage(MemoryKindValueToken)
-	SyntaxTokenMemoryUsage = NewConstantMemoryUsage(MemoryKindSyntaxToken)
-	SpaceTokenMemoryUsage  = NewConstantMemoryUsage(MemoryKindSpaceToken)
+	TypeTokenMemoryUsage  = NewConstantMemoryUsage(MemoryKindTypeToken)
+	ErrorTokenMemoryUsage = NewConstantMemoryUsage(MemoryKindErrorToken)
+	SpaceTokenMemoryUsage = NewConstantMemoryUsage(MemoryKindSpaceToken)
 
 	// AST
 
@@ -147,6 +147,7 @@ var (
 	PathValueMemoryUsage                = NewConstantMemoryUsage(MemoryKindPathValue)
 	OptionalValueMemoryUsage            = NewConstantMemoryUsage(MemoryKindOptionalValue)
 	TypeValueMemoryUsage                = NewConstantMemoryUsage(MemoryKindTypeValue)
+	PublishedValueMemoryUsage           = NewConstantMemoryUsage(MemoryKindPublishedValue)
 
 	// Static Types
 
@@ -191,6 +192,7 @@ var (
 	CadenceAddressValueMemoryUsage      = NewConstantMemoryUsage(MemoryKindCadenceAddressValue)
 	CadenceBoolValueMemoryUsage         = NewConstantMemoryUsage(MemoryKindCadenceBoolValue)
 	CadenceCapabilityValueMemoryUsage   = NewConstantMemoryUsage(MemoryKindCadenceCapabilityValue)
+	CadenceFunctionValueMemoryUsage     = NewConstantMemoryUsage(MemoryKindCadenceFunctionValue)
 	CadenceKeyValuePairMemoryUsage      = NewConstantMemoryUsage(MemoryKindCadenceKeyValuePair)
 	CadenceLinkValueMemoryUsage         = NewConstantMemoryUsage(MemoryKindCadenceLinkValue)
 	CadenceOptionalValueMemoryUsage     = NewConstantMemoryUsage(MemoryKindCadenceOptionalValue)
@@ -236,8 +238,10 @@ var (
 	PublicAccountContractsStringMemoryUsage = NewRawStringMemoryUsage(len("PublicAccount.Contracts()"))
 	AuthAccountKeysStringMemoryUsage        = NewRawStringMemoryUsage(len("AuthAccount.Keys()"))
 	PublicAccountKeysStringMemoryUsage      = NewRawStringMemoryUsage(len("PublicAccount.Keys()"))
+	AuthAccountInboxStringMemoryUsage       = NewRawStringMemoryUsage(len("AuthAccount.Inbox()"))
 	CapabilityValueStringMemoryUsage        = NewRawStringMemoryUsage(len("Capability<>(address: , path: )"))
 	LinkValueStringMemoryUsage              = NewRawStringMemoryUsage(len("Link<>()"))
+	PublishedValueStringMemoryUsage         = NewRawStringMemoryUsage(len("PublishedValue<>()"))
 
 	// Static types string representations
 

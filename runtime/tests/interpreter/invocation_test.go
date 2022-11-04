@@ -23,7 +23,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/activations"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestInterpretFunctionInvocationCheckArgumentTypes(t *testing.T) {
@@ -37,7 +41,95 @@ func TestInterpretFunctionInvocationCheckArgumentTypes(t *testing.T) {
    `)
 
 	_, err := inter.Invoke("test", interpreter.BoolValue(true))
-	require.Error(t, err)
+	RequireError(t, err)
 
 	require.ErrorAs(t, err, &interpreter.ValueTransferTypeError{})
+}
+
+func TestInterpretSelfDeclaration(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(t *testing.T, code string, expectSelf bool) {
+
+		checkFunction := stdlib.NewStandardLibraryFunction(
+			"check",
+			&sema.FunctionType{
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(
+					sema.VoidType,
+				),
+			},
+			``,
+			func(invocation interpreter.Invocation) interpreter.Value {
+				// Check that the *caller's* self
+
+				callStack := invocation.Interpreter.CallStack()
+				parentInvocation := callStack[len(callStack)-1]
+
+				if expectSelf {
+					require.NotNil(t, parentInvocation.Self)
+				} else {
+					require.Nil(t, parentInvocation.Self)
+				}
+				return interpreter.Void
+			},
+		)
+
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(checkFunction)
+
+		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, checkFunction)
+
+		inter, err := parseCheckAndInterpretWithOptions(t, code, ParseCheckAndInterpretOptions{
+			Config: &interpreter.Config{
+				Storage:        newUnmeteredInMemoryStorage(),
+				BaseActivation: baseActivation,
+			},
+			CheckerConfig: &sema.Config{
+				BaseValueActivation: baseValueActivation,
+				AccessCheckMode:     sema.AccessCheckModeNotSpecifiedUnrestricted,
+			},
+		})
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+	}
+
+	t.Run("plain function", func(t *testing.T) {
+
+		t.Parallel()
+
+		code := `
+            fun foo() {
+                check()
+            }
+
+            fun test() {
+                foo()
+            }
+        `
+		test(t, code, false)
+	})
+
+	t.Run("composite function", func(t *testing.T) {
+
+		t.Parallel()
+
+		code := `
+            struct S {
+                fun test() {
+                     check()
+                }
+            }
+
+
+            fun test() {
+                S().test()
+            }
+        `
+		test(t, code, true)
+	})
+
 }

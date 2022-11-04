@@ -78,6 +78,7 @@ func TestVariableDeclaration_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "VariableDeclaration",

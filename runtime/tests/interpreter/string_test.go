@@ -19,6 +19,7 @@
 package interpreter_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -53,7 +54,7 @@ func TestInterpretRecursiveValueString(t *testing.T) {
 	require.Equal(t,
 		`{"mapRef": ...}`,
 		mapValue.(*interpreter.DictionaryValue).
-			GetKey(inter, interpreter.ReturnEmptyLocationRange, interpreter.NewUnmeteredStringValue("mapRef")).
+			GetKey(inter, interpreter.EmptyLocationRange, interpreter.NewUnmeteredStringValue("mapRef")).
 			String(),
 	)
 }
@@ -101,7 +102,7 @@ func TestInterpretStringDecodeHex(t *testing.T) {
 			inter,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.ReturnEmptyLocationRange,
+				interpreter.EmptyLocationRange,
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeUInt8,
 				},
@@ -126,7 +127,7 @@ func TestInterpretStringDecodeHex(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
+		RequireError(t, err)
 
 		var typedErr interpreter.InvalidHexByteError
 		require.ErrorAs(t, err, &typedErr)
@@ -144,7 +145,7 @@ func TestInterpretStringDecodeHex(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
+		RequireError(t, err)
 
 		var typedErr interpreter.InvalidHexLengthError
 		require.ErrorAs(t, err, &typedErr)
@@ -172,6 +173,83 @@ func TestInterpretStringEncodeHex(t *testing.T) {
 	)
 }
 
+func TestInterpretStringFromUtf8(t *testing.T) {
+	t.Parallel()
+
+	type Testcase struct {
+		expr     string
+		expected any
+	}
+
+	testCases := [...]Testcase{
+		// String.fromUTF(str.utf8) = str
+		{`"omae wa mou shindeiru".utf8`, "omae wa mou shindeiru"},
+		{`"would you still use cadence if i was a worm 🥺😳 👉👈".utf8`, "would you still use cadence if i was a worm 🥺😳 👉👈"},
+		// ¥: yen symbol
+		{"[0xC2, 0xA5]", "¥"},
+		// cyrillic multiocular O
+		{"[0xEA, 0x99, 0xAE]", "ꙮ"},
+		// chinese biangbiang noodles, doesn't render in 99% of fonts
+		{"[0xF0, 0xB0, 0xBB, 0x9E]", "𰻞"},
+		{"[0xF0, 0x9F, 0x98, 0x94]", "😔"},
+		{"[]", ""},
+		// invalid codepoint
+		{"[0xc3, 0x28]", nil},
+	}
+
+	for _, testCase := range testCases {
+
+		code := fmt.Sprintf(`
+			fun testString(): String? {
+				return String.fromUTF8(%s)
+			}
+		`, testCase.expr)
+
+		inter := parseCheckAndInterpret(t, code)
+
+		var expected interpreter.Value
+		strValue, ok := testCase.expected.(string)
+		// assume that a nil expected means that conversion should fail
+		if ok {
+			expected = interpreter.NewSomeValueNonCopying(inter,
+				interpreter.NewUnmeteredStringValue(strValue))
+		} else {
+			expected = interpreter.Nil
+		}
+
+		result, err := inter.Invoke("testString")
+		require.NoError(t, err)
+
+		RequireValuesEqual(
+			t,
+			inter,
+			expected,
+			result,
+		)
+	}
+}
+
+func TestInterpretStringFromCharacters(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+      fun test(): String {
+          return String.fromCharacters(["👪", "❤️"])
+      }
+	`)
+
+	result, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	RequireValuesEqual(
+		t,
+		inter,
+		interpreter.NewUnmeteredStringValue("👪❤️"),
+		result,
+	)
+}
+
 func TestInterpretStringUtf8Field(t *testing.T) {
 
 	t.Parallel()
@@ -190,7 +268,7 @@ func TestInterpretStringUtf8Field(t *testing.T) {
 		inter,
 		interpreter.NewArrayValue(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeUInt8,
 			},
@@ -367,20 +445,20 @@ func TestInterpretCompareCharacters(t *testing.T) {
 		t,
 		inter,
 		interpreter.BoolValue(true),
-		inter.Globals["x"].GetValue(),
+		inter.Globals.Get("x").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.BoolValue(true),
-		inter.Globals["y"].GetValue(),
+		inter.Globals.Get("y").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.BoolValue(false),
-		inter.Globals["z"].GetValue(),
+		inter.Globals.Get("z").GetValue(),
 	)
 }

@@ -66,10 +66,6 @@ func (p *Program) EndPosition(memoryGauge common.MemoryGauge) Position {
 	return lastDeclaration.EndPosition(memoryGauge)
 }
 
-func (p *Program) Accept(visitor Visitor) Repr {
-	return visitor.VisitProgram(p)
-}
-
 func (p *Program) Walk(walkChild func(Element)) {
 	walkDeclarations(walkChild, p.declarations)
 }
@@ -104,7 +100,6 @@ func (p *Program) VariableDeclarations() []*VariableDeclaration {
 
 // SoleContractDeclaration returns the sole contract declaration, if any,
 // and if there are no other actionable declarations.
-//
 func (p *Program) SoleContractDeclaration() *CompositeDeclaration {
 
 	compositeDeclarations := p.CompositeDeclarations()
@@ -128,7 +123,6 @@ func (p *Program) SoleContractDeclaration() *CompositeDeclaration {
 
 // SoleContractInterfaceDeclaration returns the sole contract interface declaration, if any,
 // and if there are no other actionable declarations.
-//
 func (p *Program) SoleContractInterfaceDeclaration() *InterfaceDeclaration {
 
 	interfaceDeclarations := p.InterfaceDeclarations()
@@ -152,7 +146,6 @@ func (p *Program) SoleContractInterfaceDeclaration() *InterfaceDeclaration {
 
 // SoleTransactionDeclaration returns the sole transaction declaration, if any,
 // and if there are no other actionable declarations.
-//
 func (p *Program) SoleTransactionDeclaration() *TransactionDeclaration {
 
 	transactionDeclarations := p.TransactionDeclarations()

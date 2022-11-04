@@ -40,7 +40,7 @@ func TestFunctionStaticType(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		hostFunction := func(_ Invocation) Value {
-			return NewBoolValue(inter, true)
+			return TrueValue
 		}
 
 		hostFunctionType := &sema.FunctionType{
@@ -65,7 +65,7 @@ func TestFunctionStaticType(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		hostFunction := func(_ Invocation) Value {
-			return NewBoolValue(inter, true)
+			return TrueValue
 		}
 
 		hostFunctionType := &sema.FunctionType{
@@ -81,7 +81,7 @@ func TestFunctionStaticType(t *testing.T) {
 
 		compositeValue := NewCompositeValue(
 			inter,
-			ReturnEmptyLocationRange,
+			EmptyLocationRange,
 			utils.TestLocation,
 			"foo",
 			common.CompositeKindStructure,
@@ -89,10 +89,12 @@ func TestFunctionStaticType(t *testing.T) {
 			common.MustBytesToAddress([]byte{0}),
 		)
 
+		var self MemberAccessibleValue = compositeValue
+
 		boundFunctionValue := NewBoundFunctionValue(
 			inter,
 			hostFunctionValue,
-			compositeValue,
+			&self,
 		)
 
 		staticType := boundFunctionValue.StaticType(inter)

@@ -23,7 +23,6 @@ import (
 )
 
 // programIndices is a container for all indices of a program's declarations
-//
 type programIndices struct {
 	once sync.Once
 	// Use `pragmaDeclarations` instead

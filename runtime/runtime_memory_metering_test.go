@@ -31,7 +31,7 @@ import (
 	jsoncdc "github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/tests/utils"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 type testMemoryGauge struct {
@@ -90,14 +90,14 @@ func TestInterpreterAddressLocationMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  utils.TestLocation,
+				Location:  TestLocation,
 			},
 		)
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindAddressLocation))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindElaboration))
-		assert.Equal(t, uint64(92), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindRawString))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 }
@@ -174,7 +174,7 @@ func TestInterpreterElaborationImportMetering(t *testing.T) {
 			for j := 0; j <= imports; j++ {
 				err := runtime.ExecuteTransaction(
 					Script{
-						Source: utils.DeploymentTransaction(fmt.Sprintf("C%d", j), contracts[j]),
+						Source: DeploymentTransaction(fmt.Sprintf("C%d", j), contracts[j]),
 					},
 					Context{
 						Interface: runtimeInterface,
@@ -242,7 +242,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  utils.TestLocation,
+				Location:  TestLocation,
 			},
 		)
 		require.NoError(t, err)
@@ -286,7 +286,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  utils.TestLocation,
+				Location:  TestLocation,
 			},
 		)
 		require.NoError(t, err)
@@ -323,7 +323,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  utils.TestLocation,
+				Location:  TestLocation,
 			},
 		)
 		require.NoError(t, err)
@@ -360,7 +360,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  utils.TestLocation,
+				Location:  TestLocation,
 			},
 		)
 		require.NoError(t, err)
@@ -397,7 +397,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  utils.TestLocation,
+				Location:  TestLocation,
 			},
 		)
 		require.NoError(t, err)
@@ -434,7 +434,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  utils.TestLocation,
+				Location:  TestLocation,
 			},
 		)
 		require.NoError(t, err)
@@ -471,7 +471,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  utils.TestLocation,
+				Location:  TestLocation,
 			},
 		)
 		require.NoError(t, err)
@@ -508,7 +508,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  utils.TestLocation,
+				Location:  TestLocation,
 			},
 		)
 		require.NoError(t, err)
@@ -544,7 +544,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  utils.TestLocation,
+				Location:  TestLocation,
 			},
 		)
 		require.NoError(t, err)
@@ -580,7 +580,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  utils.TestLocation,
+				Location:  TestLocation,
 			},
 		)
 		require.NoError(t, err)
@@ -611,7 +611,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  utils.TestLocation,
+				Location:  TestLocation,
 			},
 		)
 		require.NoError(t, err)
@@ -642,7 +642,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  utils.TestLocation,
+				Location:  TestLocation,
 			},
 		)
 		require.NoError(t, err)
@@ -673,7 +673,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  utils.TestLocation,
+				Location:  TestLocation,
 			},
 		)
 		require.NoError(t, err)
@@ -704,7 +704,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  utils.TestLocation,
+				Location:  TestLocation,
 			},
 		)
 		require.NoError(t, err)
@@ -735,7 +735,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  utils.TestLocation,
+				Location:  TestLocation,
 			},
 		)
 		require.NoError(t, err)
@@ -766,7 +766,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  utils.TestLocation,
+				Location:  TestLocation,
 			},
 		)
 		require.NoError(t, err)
@@ -819,7 +819,7 @@ func TestLogFunctionStringConversionMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  utils.TestLocation,
+				Location:  TestLocation,
 			},
 		)
 		require.NoError(t, err)
@@ -879,7 +879,7 @@ func TestStorageCommitsMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  utils.TestLocation,
+				Location:  TestLocation,
 			},
 		)
 
@@ -917,7 +917,7 @@ func TestStorageCommitsMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  utils.TestLocation,
+				Location:  TestLocation,
 			},
 		)
 
@@ -963,7 +963,7 @@ func TestStorageCommitsMetering(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  utils.TestLocation,
+				Location:  TestLocation,
 			},
 		)
 
@@ -985,7 +985,9 @@ func TestMemoryMeteringErrors(t *testing.T) {
 		intf := &testRuntimeInterface{
 			meterMemory: func(usage common.MemoryUsage) error {
 				if usage.Kind == common.MemoryKindStringValue ||
-					usage.Kind == common.MemoryKindArrayValueBase {
+					usage.Kind == common.MemoryKindArrayValueBase ||
+					usage.Kind == common.MemoryKindErrorToken {
+
 					return testMemoryError{}
 				}
 				return nil
@@ -1005,7 +1007,7 @@ func TestMemoryMeteringErrors(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface(meter),
-				Location:  utils.TestLocation,
+				Location:  TestLocation,
 			},
 		)
 
@@ -1035,6 +1037,7 @@ func TestMemoryMeteringErrors(t *testing.T) {
 			memoryMeter{},
 			cadence.String("hello"),
 		)
+		RequireError(t, err)
 
 		assert.ErrorIs(t, err, testMemoryError{})
 	})
@@ -1044,7 +1047,7 @@ func TestMemoryMeteringErrors(t *testing.T) {
 
 		script := []byte(`
             pub fun main() {
-                let x = "hello"
+                0b
             }
         `)
 
@@ -1069,6 +1072,8 @@ func TestMemoryMeteringErrors(t *testing.T) {
         `)
 
 		err := executeScript(script, memoryMeter{})
+		RequireError(t, err)
+
 		assert.ErrorIs(t, err, testMemoryError{})
 	})
 }

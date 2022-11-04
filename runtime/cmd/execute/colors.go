@@ -30,7 +30,7 @@ func colorizeResult(value interpreter.Value) string {
 }
 
 func formatValue(value interpreter.Value) string {
-	if _, isVoid := value.(*interpreter.VoidValue); isVoid || value == nil {
+	if value == nil {
 		return ""
 	}
 

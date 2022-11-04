@@ -32,8 +32,6 @@ type ValueWalker interface {
 // followed by a call of WalkValue(nil) on the returned walker.
 //
 // The initial walker may not be nil.
-//
-//
 func WalkValue(interpreter *Interpreter, walker ValueWalker, value Value) {
 	if walker = walker.WalkValue(interpreter, value); walker == nil {
 		return

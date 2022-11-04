@@ -35,20 +35,25 @@ var _ common.Location = FlowLocation{}
 
 const FlowLocationPrefix = "flow"
 
-func (l FlowLocation) ID() common.LocationID {
-	return FlowLocationPrefix
-}
-
-func (l FlowLocation) MeteredID(_ common.MemoryGauge) common.LocationID {
-	return FlowLocationPrefix
-}
-
 func (l FlowLocation) TypeID(memoryGauge common.MemoryGauge, qualifiedIdentifier string) common.TypeID {
-	return common.NewMeteredTypeID(
-		memoryGauge,
-		FlowLocationPrefix,
-		qualifiedIdentifier,
-	)
+	var i int
+
+	// FlowLocationPrefix '.' qualifiedIdentifier
+	length := len(FlowLocationPrefix) + 1 + len(qualifiedIdentifier)
+
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(length))
+
+	b := make([]byte, length)
+
+	copy(b, FlowLocationPrefix)
+	i += len(FlowLocationPrefix)
+
+	b[i] = '.'
+	i += 1
+
+	copy(b[i:], qualifiedIdentifier)
+
+	return common.TypeID(b)
 }
 
 func (l FlowLocation) QualifiedIdentifier(typeID common.TypeID) string {
@@ -224,4 +229,45 @@ var AccountContractRemovedEventType = newFlowEventType(
 	AccountEventAddressParameter,
 	AccountEventCodeHashParameter,
 	AccountEventContractParameter,
+)
+
+var AccountEventProviderParameter = &sema.Parameter{
+	Identifier:     "provider",
+	TypeAnnotation: sema.NewTypeAnnotation(&sema.AddressType{}),
+}
+
+var AccountEventRecipientParameter = &sema.Parameter{
+	Identifier:     "recipient",
+	TypeAnnotation: sema.NewTypeAnnotation(&sema.AddressType{}),
+}
+
+var AccountEventNameParameter = &sema.Parameter{
+	Identifier:     "name",
+	TypeAnnotation: sema.NewTypeAnnotation(sema.StringType),
+}
+
+var AccountEventTypeParameter = &sema.Parameter{
+	Identifier:     "type",
+	TypeAnnotation: sema.NewTypeAnnotation(sema.MetaType),
+}
+
+var AccountInboxPublishedEventType = newFlowEventType(
+	"InboxValuePublished",
+	AccountEventProviderParameter,
+	AccountEventRecipientParameter,
+	AccountEventNameParameter,
+	AccountEventTypeParameter,
+)
+
+var AccountInboxUnpublishedEventType = newFlowEventType(
+	"InboxValueUnpublished",
+	AccountEventProviderParameter,
+	AccountEventNameParameter,
+)
+
+var AccountInboxClaimedEventType = newFlowEventType(
+	"InboxValueClaimed",
+	AccountEventProviderParameter,
+	AccountEventRecipientParameter,
+	AccountEventNameParameter,
 )

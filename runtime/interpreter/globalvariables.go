@@ -19,19 +19,28 @@
 package interpreter
 
 // GlobalVariables represents global variables defined in a program.
-//
-type GlobalVariables map[string]*Variable
+type GlobalVariables struct {
+	variables map[string]*Variable
+}
 
-func (globalVars GlobalVariables) Contains(name string) bool {
-	_, ok := globalVars[name]
+func (g *GlobalVariables) Contains(name string) bool {
+	if g.variables == nil {
+		return false
+	}
+	_, ok := g.variables[name]
 	return ok
 }
 
-func (globalVars GlobalVariables) Get(name string) (*Variable, bool) {
-	variable, ok := globalVars[name]
-	return variable, ok
+func (g *GlobalVariables) Get(name string) *Variable {
+	if g.variables == nil {
+		return nil
+	}
+	return g.variables[name]
 }
 
-func (globalVars GlobalVariables) Set(name string, variable *Variable) {
-	globalVars[name] = variable
+func (g *GlobalVariables) Set(name string, variable *Variable) {
+	if g.variables == nil {
+		g.variables = map[string]*Variable{}
+	}
+	g.variables[name] = variable
 }

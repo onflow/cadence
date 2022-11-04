@@ -23,7 +23,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
-func (checker *Checker) VisitForStatement(statement *ast.ForStatement) ast.Repr {
+func (checker *Checker) VisitForStatement(statement *ast.ForStatement) (_ struct{}) {
 
 	checker.enterValueScope()
 	defer checker.leaveValueScope(statement.EndPosition, true)
@@ -60,6 +60,8 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) ast.Repr 
 			)
 		} else if arrayType, ok := valueType.(ArrayType); ok {
 			elementType = arrayType.ElementType(false)
+		} else if valueType == StringType {
+			elementType = CharacterType
 		} else {
 			checker.report(
 				&TypeMismatchWithDescriptionError{
@@ -73,7 +75,7 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) ast.Repr 
 
 	identifier := statement.Identifier.Identifier
 
-	variable, err := checker.valueActivations.Declare(variableDeclaration{
+	variable, err := checker.valueActivations.declare(variableDeclaration{
 		identifier:               identifier,
 		ty:                       elementType,
 		kind:                     common.DeclarationKindConstant,
@@ -83,13 +85,13 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) ast.Repr 
 		allowOuterScopeShadowing: false,
 	})
 	checker.report(err)
-	if checker.PositionInfo != nil {
+	if checker.PositionInfo != nil && variable != nil {
 		checker.recordVariableDeclarationOccurrence(identifier, variable)
 	}
 
 	if statement.Index != nil {
 		index := statement.Index.Identifier
-		indexVariable, err := checker.valueActivations.Declare(variableDeclaration{
+		indexVariable, err := checker.valueActivations.declare(variableDeclaration{
 			identifier:               index,
 			ty:                       IntType,
 			kind:                     common.DeclarationKindConstant,
@@ -99,7 +101,7 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) ast.Repr 
 			allowOuterScopeShadowing: false,
 		})
 		checker.report(err)
-		if checker.PositionInfo != nil {
+		if checker.PositionInfo != nil && indexVariable != nil {
 			checker.recordVariableDeclarationOccurrence(index, indexVariable)
 		}
 	}
@@ -109,15 +111,13 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) ast.Repr 
 	// returns are not definite, but only potential.
 
 	_ = checker.checkPotentiallyUnevaluated(func() Type {
-		checker.functionActivations.WithLoop(func() {
-			statement.Block.Accept(checker)
+		checker.functionActivations.Current().WithLoop(func() {
+			checker.checkBlock(statement.Block)
 		})
 
 		// ignored
 		return nil
 	})
 
-	checker.reportResourceUsesInLoop(statement.StartPos, statement.EndPosition(checker.memoryGauge))
-
-	return nil
+	return
 }

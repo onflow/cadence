@@ -22,7 +22,6 @@ import (
 	"flag"
 	"fmt"
 	"math"
-	"math/big"
 	"math/rand"
 	"strings"
 	"testing"
@@ -53,6 +52,8 @@ func TestRandomMapOperations(t *testing.T) {
 	if !*runSmokeTests {
 		t.SkipNow()
 	}
+
+	t.Parallel()
 
 	seed := time.Now().UnixNano()
 	fmt.Printf("Seed used for map opearations test: %d \n", seed)
@@ -100,7 +101,7 @@ func TestRandomMapOperations(t *testing.T) {
 
 		testMap = interpreter.NewDictionaryValueWithAddress(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -114,10 +115,10 @@ func TestRandomMapOperations(t *testing.T) {
 		require.Equal(t, testMap.Count(), entries.size())
 
 		entries.foreach(func(orgKey, orgValue interpreter.Value) (exit bool) {
-			exists := testMap.ContainsKey(inter, interpreter.ReturnEmptyLocationRange, orgKey)
+			exists := testMap.ContainsKey(inter, interpreter.EmptyLocationRange, orgKey)
 			require.True(t, bool(exists))
 
-			value, found := testMap.Get(inter, interpreter.ReturnEmptyLocationRange, orgKey)
+			value, found := testMap.Get(inter, interpreter.EmptyLocationRange, orgKey)
 			require.True(t, found)
 			utils.AssertValuesEqual(t, inter, orgValue, value)
 
@@ -144,7 +145,7 @@ func TestRandomMapOperations(t *testing.T) {
 		newOwner := atree.Address{'B'}
 		copyOfTestMap = testMap.Transfer(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			newOwner,
 			false,
 			nil,
@@ -153,10 +154,10 @@ func TestRandomMapOperations(t *testing.T) {
 		require.Equal(t, entries.size(), copyOfTestMap.Count())
 
 		entries.foreach(func(orgKey, orgValue interpreter.Value) (exit bool) {
-			exists := copyOfTestMap.ContainsKey(inter, interpreter.ReturnEmptyLocationRange, orgKey)
+			exists := copyOfTestMap.ContainsKey(inter, interpreter.EmptyLocationRange, orgKey)
 			require.True(t, bool(exists))
 
-			value, found := copyOfTestMap.Get(inter, interpreter.ReturnEmptyLocationRange, orgKey)
+			value, found := copyOfTestMap.Get(inter, interpreter.EmptyLocationRange, orgKey)
 			require.True(t, found)
 			utils.AssertValuesEqual(t, inter, orgValue, value)
 
@@ -181,10 +182,10 @@ func TestRandomMapOperations(t *testing.T) {
 
 		// go over original values again and check no missing data (no side effect should be found)
 		entries.foreach(func(orgKey, orgValue interpreter.Value) (exit bool) {
-			exists := testMap.ContainsKey(inter, interpreter.ReturnEmptyLocationRange, orgKey)
+			exists := testMap.ContainsKey(inter, interpreter.EmptyLocationRange, orgKey)
 			require.True(t, bool(exists))
 
-			value, found := testMap.Get(inter, interpreter.ReturnEmptyLocationRange, orgKey)
+			value, found := testMap.Get(inter, interpreter.EmptyLocationRange, orgKey)
 			require.True(t, found)
 			utils.AssertValuesEqual(t, inter, orgValue, value)
 
@@ -200,7 +201,7 @@ func TestRandomMapOperations(t *testing.T) {
 
 		dictionary := interpreter.NewDictionaryValueWithAddress(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -215,17 +216,17 @@ func TestRandomMapOperations(t *testing.T) {
 
 			newEntries.put(inter, key, value)
 
-			_ = dictionary.Insert(inter, interpreter.ReturnEmptyLocationRange, key, value)
+			_ = dictionary.Insert(inter, interpreter.EmptyLocationRange, key, value)
 		}
 
 		require.Equal(t, newEntries.size(), dictionary.Count())
 
 		// Go over original values again and check no missing data (no side effect should be found)
 		newEntries.foreach(func(orgKey, orgValue interpreter.Value) (exit bool) {
-			exists := dictionary.ContainsKey(inter, interpreter.ReturnEmptyLocationRange, orgKey)
+			exists := dictionary.ContainsKey(inter, interpreter.EmptyLocationRange, orgKey)
 			require.True(t, bool(exists))
 
-			value, found := dictionary.Get(inter, interpreter.ReturnEmptyLocationRange, orgKey)
+			value, found := dictionary.Get(inter, interpreter.EmptyLocationRange, orgKey)
 			require.True(t, found)
 			utils.AssertValuesEqual(t, inter, orgValue, value)
 
@@ -249,7 +250,7 @@ func TestRandomMapOperations(t *testing.T) {
 
 		dictionary := interpreter.NewDictionaryValueWithAddress(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -264,20 +265,20 @@ func TestRandomMapOperations(t *testing.T) {
 
 		// Insert
 		for _, keyValue := range keyValues {
-			dictionary.Insert(inter, interpreter.ReturnEmptyLocationRange, keyValue[0], keyValue[1])
+			dictionary.Insert(inter, interpreter.EmptyLocationRange, keyValue[0], keyValue[1])
 		}
 
 		require.Equal(t, newEntries.size(), dictionary.Count())
 
 		// Remove
 		newEntries.foreach(func(orgKey, orgValue interpreter.Value) (exit bool) {
-			removedValue := dictionary.Remove(inter, interpreter.ReturnEmptyLocationRange, orgKey)
+			removedValue := dictionary.Remove(inter, interpreter.EmptyLocationRange, orgKey)
 
 			assert.IsType(t, &interpreter.SomeValue{}, removedValue)
 			someValue := removedValue.(*interpreter.SomeValue)
 
 			// Removed value must be same as the original value
-			innerValue := someValue.InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+			innerValue := someValue.InnerValue(inter, interpreter.EmptyLocationRange)
 			utils.AssertValuesEqual(t, inter, orgValue, innerValue)
 
 			return false
@@ -297,7 +298,7 @@ func TestRandomMapOperations(t *testing.T) {
 
 		dictionary := interpreter.NewDictionaryValueWithAddress(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -316,7 +317,7 @@ func TestRandomMapOperations(t *testing.T) {
 		for i := 0; i < numberOfValues; i++ {
 			// Create a random enum as key
 			key := generateRandomHashableValue(inter, Enum)
-			value := interpreter.VoidValue{}
+			value := interpreter.Void
 
 			newEntries.put(inter, key, value)
 
@@ -326,18 +327,18 @@ func TestRandomMapOperations(t *testing.T) {
 
 		// Insert
 		for _, keyValue := range keyValues {
-			dictionary.Insert(inter, interpreter.ReturnEmptyLocationRange, keyValue[0], keyValue[1])
+			dictionary.Insert(inter, interpreter.EmptyLocationRange, keyValue[0], keyValue[1])
 		}
 
 		// Remove
 		newEntries.foreach(func(orgKey, orgValue interpreter.Value) (exit bool) {
-			removedValue := dictionary.Remove(inter, interpreter.ReturnEmptyLocationRange, orgKey)
+			removedValue := dictionary.Remove(inter, interpreter.EmptyLocationRange, orgKey)
 
 			assert.IsType(t, &interpreter.SomeValue{}, removedValue)
 			someValue := removedValue.(*interpreter.SomeValue)
 
 			// Removed value must be same as the original value
-			innerValue := someValue.InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+			innerValue := someValue.InnerValue(inter, interpreter.EmptyLocationRange)
 			utils.AssertValuesEqual(t, inter, orgValue, innerValue)
 
 			return false
@@ -362,7 +363,7 @@ func TestRandomMapOperations(t *testing.T) {
 
 		dictionary := interpreter.NewDictionaryValueWithAddress(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -395,14 +396,14 @@ func TestRandomMapOperations(t *testing.T) {
 			if isInsert() {
 				key := keyValues[insertCount][0]
 				if _, ok := key.(*interpreter.CompositeValue); ok {
-					key = deepCopyValue(inter, key)
+					key = key.Clone(inter)
 				}
 
-				value := deepCopyValue(inter, keyValues[insertCount][1])
+				value := keyValues[insertCount][1].Clone(inter)
 
 				dictionary.Insert(
 					inter,
-					interpreter.ReturnEmptyLocationRange,
+					interpreter.EmptyLocationRange,
 					key,
 					value,
 				)
@@ -411,13 +412,13 @@ func TestRandomMapOperations(t *testing.T) {
 				key := keyValues[deleteCount][0]
 				orgValue := keyValues[deleteCount][1]
 
-				removedValue := dictionary.Remove(inter, interpreter.ReturnEmptyLocationRange, key)
+				removedValue := dictionary.Remove(inter, interpreter.EmptyLocationRange, key)
 
 				assert.IsType(t, &interpreter.SomeValue{}, removedValue)
 				someValue := removedValue.(*interpreter.SomeValue)
 
 				// Removed value must be same as the original value
-				innerValue := someValue.InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+				innerValue := someValue.InnerValue(inter, interpreter.EmptyLocationRange)
 				utils.AssertValuesEqual(t, inter, orgValue, innerValue)
 
 				deleteCount++
@@ -452,7 +453,7 @@ func TestRandomMapOperations(t *testing.T) {
 
 		dictionary := interpreter.NewDictionaryValueWithAddress(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -465,7 +466,7 @@ func TestRandomMapOperations(t *testing.T) {
 
 		movedDictionary := dictionary.Transfer(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			newOwner,
 			true,
 			nil,
@@ -479,10 +480,10 @@ func TestRandomMapOperations(t *testing.T) {
 
 		// Check the values
 		entries.foreach(func(orgKey, orgValue interpreter.Value) (exit bool) {
-			exists := movedDictionary.ContainsKey(inter, interpreter.ReturnEmptyLocationRange, orgKey)
+			exists := movedDictionary.ContainsKey(inter, interpreter.EmptyLocationRange, orgKey)
 			require.True(t, bool(exists))
 
-			value, found := movedDictionary.Get(inter, interpreter.ReturnEmptyLocationRange, orgKey)
+			value, found := movedDictionary.Get(inter, interpreter.EmptyLocationRange, orgKey)
 			require.True(t, found)
 			utils.AssertValuesEqual(t, inter, orgValue, value)
 
@@ -534,12 +535,12 @@ func TestRandomArrayOperations(t *testing.T) {
 		for i := 0; i < numberOfValues; i++ {
 			value := randomStorableValue(inter, 0)
 			elements[i] = value
-			values[i] = deepCopyValue(inter, value)
+			values[i] = value.Clone(inter)
 		}
 
 		testArray = interpreter.NewArrayValue(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -552,7 +553,7 @@ func TestRandomArrayOperations(t *testing.T) {
 		require.Equal(t, len(elements), testArray.Count())
 
 		for index, orgElement := range elements {
-			element := testArray.Get(inter, interpreter.ReturnEmptyLocationRange, index)
+			element := testArray.Get(inter, interpreter.EmptyLocationRange, index)
 			utils.AssertValuesEqual(t, inter, orgElement, element)
 		}
 
@@ -568,7 +569,7 @@ func TestRandomArrayOperations(t *testing.T) {
 			orgElement := elements[index]
 			utils.AssertValuesEqual(t, inter, orgElement, element)
 
-			elementByIndex := testArray.Get(inter, interpreter.ReturnEmptyLocationRange, index)
+			elementByIndex := testArray.Get(inter, interpreter.EmptyLocationRange, index)
 			utils.AssertValuesEqual(t, inter, element, elementByIndex)
 
 			index++
@@ -580,7 +581,7 @@ func TestRandomArrayOperations(t *testing.T) {
 		newOwner := atree.Address{'B'}
 		copyOfTestArray = testArray.Transfer(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			newOwner,
 			false,
 			nil,
@@ -589,7 +590,7 @@ func TestRandomArrayOperations(t *testing.T) {
 		require.Equal(t, len(elements), copyOfTestArray.Count())
 
 		for index, orgElement := range elements {
-			element := copyOfTestArray.Get(inter, interpreter.ReturnEmptyLocationRange, index)
+			element := copyOfTestArray.Get(inter, interpreter.EmptyLocationRange, index)
 			utils.AssertValuesEqual(t, inter, orgElement, element)
 		}
 
@@ -611,7 +612,7 @@ func TestRandomArrayOperations(t *testing.T) {
 
 		// go over original elements again and check no missing data (no side effect should be found)
 		for index, orgElement := range elements {
-			element := testArray.Get(inter, interpreter.ReturnEmptyLocationRange, index)
+			element := testArray.Get(inter, interpreter.EmptyLocationRange, index)
 			utils.AssertValuesEqual(t, inter, orgElement, element)
 		}
 
@@ -624,7 +625,7 @@ func TestRandomArrayOperations(t *testing.T) {
 
 		testArray = interpreter.NewArrayValue(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -639,9 +640,9 @@ func TestRandomArrayOperations(t *testing.T) {
 
 			testArray.Insert(
 				inter,
-				interpreter.ReturnEmptyLocationRange,
+				interpreter.EmptyLocationRange,
 				i,
-				deepCopyValue(inter, element),
+				element.Clone(inter),
 			)
 		}
 
@@ -649,7 +650,7 @@ func TestRandomArrayOperations(t *testing.T) {
 
 		// Go over original values again and check no missing data (no side effect should be found)
 		for index, element := range newElements {
-			value := testArray.Get(inter, interpreter.ReturnEmptyLocationRange, index)
+			value := testArray.Get(inter, interpreter.EmptyLocationRange, index)
 			utils.AssertValuesEqual(t, inter, element, value)
 		}
 	})
@@ -659,7 +660,7 @@ func TestRandomArrayOperations(t *testing.T) {
 
 		testArray = interpreter.NewArrayValue(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -674,8 +675,8 @@ func TestRandomArrayOperations(t *testing.T) {
 
 			testArray.Append(
 				inter,
-				interpreter.ReturnEmptyLocationRange,
-				deepCopyValue(inter, element),
+				interpreter.EmptyLocationRange,
+				element.Clone(inter),
 			)
 		}
 
@@ -683,7 +684,7 @@ func TestRandomArrayOperations(t *testing.T) {
 
 		// Go over original values again and check no missing data (no side effect should be found)
 		for index, element := range newElements {
-			value := testArray.Get(inter, interpreter.ReturnEmptyLocationRange, index)
+			value := testArray.Get(inter, interpreter.EmptyLocationRange, index)
 			utils.AssertValuesEqual(t, inter, element, value)
 		}
 	})
@@ -697,7 +698,7 @@ func TestRandomArrayOperations(t *testing.T) {
 
 		testArray = interpreter.NewArrayValue(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -713,9 +714,9 @@ func TestRandomArrayOperations(t *testing.T) {
 		for index, element := range newElements {
 			testArray.Insert(
 				inter,
-				interpreter.ReturnEmptyLocationRange,
+				interpreter.EmptyLocationRange,
 				index,
-				deepCopyValue(inter, element),
+				element.Clone(inter),
 			)
 		}
 
@@ -723,7 +724,7 @@ func TestRandomArrayOperations(t *testing.T) {
 
 		// Remove
 		for _, element := range newElements {
-			removedValue := testArray.Remove(inter, interpreter.ReturnEmptyLocationRange, 0)
+			removedValue := testArray.Remove(inter, interpreter.EmptyLocationRange, 0)
 
 			// Removed value must be same as the original value
 			utils.AssertValuesEqual(t, inter, element, removedValue)
@@ -748,7 +749,7 @@ func TestRandomArrayOperations(t *testing.T) {
 
 		testArray = interpreter.NewArrayValue(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -778,17 +779,17 @@ func TestRandomArrayOperations(t *testing.T) {
 		for insertCount < numberOfValues || testArray.Count() > 0 {
 			// Perform a random operation out of insert/remove
 			if isInsert() {
-				value := deepCopyValue(inter, elements[insertCount])
+				value := elements[insertCount].Clone(inter)
 
 				testArray.Append(
 					inter,
-					interpreter.ReturnEmptyLocationRange,
+					interpreter.EmptyLocationRange,
 					value,
 				)
 				insertCount++
 			} else {
 				orgValue := elements[deleteCount]
-				removedValue := testArray.RemoveFirst(inter, interpreter.ReturnEmptyLocationRange)
+				removedValue := testArray.RemoveFirst(inter, interpreter.EmptyLocationRange)
 
 				// Removed value must be same as the original value
 				utils.AssertValuesEqual(t, inter, orgValue, removedValue)
@@ -814,12 +815,12 @@ func TestRandomArrayOperations(t *testing.T) {
 		for i := 0; i < numberOfValues; i++ {
 			value := randomStorableValue(inter, 0)
 			elements[i] = value
-			values[i] = deepCopyValue(inter, value)
+			values[i] = value.Clone(inter)
 		}
 
 		array := interpreter.NewArrayValue(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -835,7 +836,7 @@ func TestRandomArrayOperations(t *testing.T) {
 		newOwner := atree.Address{'B'}
 		movedArray := array.Transfer(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			newOwner,
 			true,
 			nil,
@@ -849,7 +850,7 @@ func TestRandomArrayOperations(t *testing.T) {
 
 		// Check the elements
 		for index, orgElement := range elements {
-			element := movedArray.Get(inter, interpreter.ReturnEmptyLocationRange, index)
+			element := movedArray.Get(inter, interpreter.EmptyLocationRange, index)
 			utils.AssertValuesEqual(t, inter, orgElement, element)
 		}
 
@@ -898,7 +899,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 		storageSize, slabCounts = getSlabStorageSize(t, storage)
 
 		for fieldName, orgFieldValue := range orgFields {
-			fieldValue := testComposite.GetField(inter, interpreter.ReturnEmptyLocationRange, fieldName)
+			fieldValue := testComposite.GetField(inter, interpreter.EmptyLocationRange, fieldName)
 			utils.AssertValuesEqual(t, inter, orgFieldValue, fieldValue)
 		}
 
@@ -923,14 +924,14 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 
 		copyOfTestComposite = testComposite.Transfer(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			newOwner,
 			false,
 			nil,
 		).(*interpreter.CompositeValue)
 
 		for name, orgValue := range orgFields {
-			value := copyOfTestComposite.GetField(inter, interpreter.ReturnEmptyLocationRange, name)
+			value := copyOfTestComposite.GetField(inter, interpreter.EmptyLocationRange, name)
 			utils.AssertValuesEqual(t, inter, orgValue, value)
 		}
 
@@ -950,7 +951,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 
 		// go over original values again and check no missing data (no side effect should be found)
 		for name, orgValue := range orgFields {
-			value := testComposite.GetField(inter, interpreter.ReturnEmptyLocationRange, name)
+			value := testComposite.GetField(inter, interpreter.EmptyLocationRange, name)
 			utils.AssertValuesEqual(t, inter, orgValue, value)
 		}
 
@@ -963,7 +964,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 
 		composite := testComposite.Transfer(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			newOwner,
 			false,
 			nil,
@@ -972,8 +973,8 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 		require.NoError(t, err)
 
 		for name := range orgFields {
-			composite.RemoveField(inter, interpreter.ReturnEmptyLocationRange, name)
-			value := composite.GetField(inter, interpreter.ReturnEmptyLocationRange, name)
+			composite.RemoveField(inter, interpreter.EmptyLocationRange, name)
+			value := composite.GetField(inter, interpreter.EmptyLocationRange, name)
 			assert.Nil(t, value)
 		}
 	})
@@ -987,7 +988,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 		newOwner := atree.Address{'B'}
 		movedComposite := composite.Transfer(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			newOwner,
 			true,
 			nil,
@@ -999,7 +1000,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 
 		// Check the elements
 		for fieldName, orgFieldValue := range fields {
-			fieldValue := movedComposite.GetField(inter, interpreter.ReturnEmptyLocationRange, fieldName)
+			fieldValue := movedComposite.GetField(inter, interpreter.EmptyLocationRange, fieldName)
 			utils.AssertValuesEqual(t, inter, orgFieldValue, fieldValue)
 		}
 
@@ -1042,7 +1043,7 @@ func newCompositeValue(
 		)
 
 		fields[i] = field
-		orgFields[field.Name] = deepCopyValue(inter, field.Value)
+		orgFields[field.Name] = field.Value.Clone(inter)
 
 		i++
 	}
@@ -1073,7 +1074,7 @@ func newCompositeValue(
 
 	testComposite := interpreter.NewCompositeValue(
 		inter,
-		interpreter.ReturnEmptyLocationRange,
+		interpreter.EmptyLocationRange,
 		location,
 		identifier,
 		kind,
@@ -1099,149 +1100,6 @@ func getSlabStorageSize(t *testing.T, storage interpreter.InMemoryStorage) (tota
 	return
 }
 
-// deepCopyValue deep copies values at a higher level
-func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) interpreter.Value {
-	switch v := value.(type) {
-
-	// Int
-	case interpreter.IntValue:
-		var n big.Int
-		n.Set(v.BigInt)
-		return interpreter.NewUnmeteredIntValueFromBigInt(&n)
-	case interpreter.Int8Value,
-		interpreter.Int16Value,
-		interpreter.Int32Value,
-		interpreter.Int64Value:
-		return v
-	case interpreter.Int128Value:
-		var n big.Int
-		n.Set(v.BigInt)
-		return interpreter.NewUnmeteredInt128ValueFromBigInt(&n)
-	case interpreter.Int256Value:
-		var n big.Int
-		n.Set(v.BigInt)
-		return interpreter.NewUnmeteredInt256ValueFromBigInt(&n)
-
-	// Uint
-	case interpreter.UIntValue:
-		var n big.Int
-		n.Set(v.BigInt)
-		return interpreter.NewUnmeteredUIntValueFromBigInt(&n)
-	case interpreter.UInt8Value,
-		interpreter.UInt16Value,
-		interpreter.UInt32Value,
-		interpreter.UInt64Value:
-		return v
-	case interpreter.UInt128Value:
-		var n big.Int
-		n.Set(v.BigInt)
-		return interpreter.NewUnmeteredUInt128ValueFromBigInt(&n)
-	case interpreter.UInt256Value:
-		var n big.Int
-		n.Set(v.BigInt)
-		return interpreter.NewUnmeteredUInt256ValueFromBigInt(&n)
-
-	case interpreter.Word8Value,
-		interpreter.Word16Value,
-		interpreter.Word32Value,
-		interpreter.Word64Value:
-		return v
-
-	case *interpreter.StringValue:
-		b := []byte(v.Str)
-		data := make([]byte, len(b))
-		copy(data, b)
-		return interpreter.NewUnmeteredStringValue(string(data))
-
-	case interpreter.AddressValue:
-		b := v[:]
-		data := make([]byte, len(b))
-		copy(data, b)
-		return interpreter.NewUnmeteredAddressValueFromBytes(data)
-	case interpreter.Fix64Value:
-		return interpreter.NewUnmeteredFix64ValueWithInteger(int64(v.ToInt()))
-	case interpreter.UFix64Value:
-		return interpreter.NewUnmeteredUFix64ValueWithInteger(uint64(v.ToInt()))
-
-	case interpreter.PathValue:
-		return interpreter.PathValue{
-			Domain:     v.Domain,
-			Identifier: v.Identifier,
-		}
-
-	case interpreter.BoolValue:
-		return v
-
-	case interpreter.VoidValue:
-		return interpreter.VoidValue{}
-
-	case *interpreter.DictionaryValue:
-		keyValues := make([]interpreter.Value, 0, v.Count()*2)
-		v.Iterate(inter, func(key, value interpreter.Value) (resume bool) {
-			keyValues = append(keyValues, deepCopyValue(inter, key))
-			keyValues = append(keyValues, deepCopyValue(inter, value))
-			return true
-		})
-
-		return interpreter.NewDictionaryValueWithAddress(
-			inter,
-			interpreter.ReturnEmptyLocationRange,
-			interpreter.DictionaryStaticType{
-				KeyType:   v.Type.KeyType,
-				ValueType: v.Type.ValueType,
-			},
-			v.GetOwner(),
-			keyValues...,
-		)
-	case *interpreter.ArrayValue:
-		elements := make([]interpreter.Value, 0, v.Count())
-		v.Iterate(inter, func(value interpreter.Value) (resume bool) {
-			elements = append(elements, deepCopyValue(inter, value))
-			return true
-		})
-
-		return interpreter.NewArrayValue(
-			inter,
-			interpreter.ReturnEmptyLocationRange,
-			v.Type,
-			v.GetOwner(),
-			elements...,
-		)
-	case *interpreter.CompositeValue:
-		fields := make([]interpreter.CompositeField, 0)
-		v.ForEachField(inter, func(name string, value interpreter.Value) {
-			fields = append(fields, interpreter.NewUnmeteredCompositeField(
-				name,
-				deepCopyValue(inter, value),
-			))
-		})
-
-		return interpreter.NewCompositeValue(
-			inter,
-			interpreter.ReturnEmptyLocationRange,
-			v.Location,
-			v.QualifiedIdentifier,
-			v.Kind,
-			fields,
-			v.GetOwner(),
-		)
-
-	case *interpreter.CapabilityValue:
-		return &interpreter.CapabilityValue{
-			Address:    deepCopyValue(inter, v.Address).(interpreter.AddressValue),
-			Path:       deepCopyValue(inter, v.Path).(interpreter.PathValue),
-			BorrowType: v.BorrowType,
-		}
-	case *interpreter.SomeValue:
-		innerValue := v.InnerValue(inter, interpreter.ReturnEmptyLocationRange)
-		return interpreter.NewUnmeteredSomeValueNonCopying(deepCopyValue(inter, innerValue))
-	case interpreter.NilValue:
-		return interpreter.NilValue{}
-	default:
-		panic("unreachable")
-	}
-}
-
 func randomStorableValue(inter *interpreter.Interpreter, currentDepth int) interpreter.Value {
 	n := 0
 	if currentDepth < containerMaxDepth {
@@ -1254,9 +1112,9 @@ func randomStorableValue(inter *interpreter.Interpreter, currentDepth int) inter
 
 	// Non-hashable
 	case Void:
-		return interpreter.VoidValue{}
+		return interpreter.Void
 	case Nil:
-		return interpreter.NilValue{}
+		return interpreter.Nil
 	case Dictionary_1, Dictionary_2:
 		return randomDictionaryValue(inter, currentDepth)
 	case Array_1, Array_2:
@@ -1388,7 +1246,7 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpre
 
 		enum := interpreter.NewCompositeValue(
 			inter,
-			interpreter.ReturnEmptyLocationRange,
+			interpreter.EmptyLocationRange,
 			location,
 			enumType.QualifiedIdentifier(),
 			enumType.Kind,
@@ -1401,7 +1259,7 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpre
 			common.Address{},
 		)
 
-		if enum.GetField(inter, interpreter.ReturnEmptyLocationRange, sema.EnumRawValueFieldName) == nil {
+		if enum.GetField(inter, interpreter.EmptyLocationRange, sema.EnumRawValueFieldName) == nil {
 			panic("enum without raw value")
 		}
 
@@ -1453,7 +1311,7 @@ func randomDictionaryValue(
 
 	return interpreter.NewDictionaryValueWithAddress(
 		inter,
-		interpreter.ReturnEmptyLocationRange,
+		interpreter.EmptyLocationRange,
 		interpreter.DictionaryStaticType{
 			KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 			ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -1473,12 +1331,12 @@ func randomArrayValue(inter *interpreter.Interpreter, currentDepth int) interpre
 
 	for i := 0; i < elementsCount; i++ {
 		value := randomStorableValue(inter, currentDepth+1)
-		elements[i] = deepCopyValue(inter, value)
+		elements[i] = value.Clone(inter)
 	}
 
 	return interpreter.NewArrayValue(
 		inter,
-		interpreter.ReturnEmptyLocationRange,
+		interpreter.EmptyLocationRange,
 		interpreter.VariableSizedStaticType{
 			Type: interpreter.PrimitiveStaticTypeAnyStruct,
 		},
@@ -1539,7 +1397,7 @@ func randomCompositeValue(
 
 	return interpreter.NewCompositeValue(
 		inter,
-		interpreter.ReturnEmptyLocationRange,
+		interpreter.EmptyLocationRange,
 		location,
 		identifier,
 		kind,
@@ -1678,11 +1536,11 @@ func (m *valueMap) put(inter *interpreter.Interpreter, key, value interpreter.Va
 	// Deep copy enum keys. This should be fine since we use an internal key for enums.
 	// Deep copying other values would mess key-lookup.
 	if _, ok := key.(*interpreter.CompositeValue); ok {
-		key = deepCopyValue(inter, key)
+		key = key.Clone(inter)
 	}
 
 	m.keys[internalKey] = key
-	m.values[internalKey] = deepCopyValue(inter, value)
+	m.values[internalKey] = value.Clone(inter)
 }
 
 func (m *valueMap) get(inter *interpreter.Interpreter, key interpreter.Value) (interpreter.Value, bool) {
@@ -1711,7 +1569,7 @@ func (m *valueMap) internalKey(inter *interpreter.Interpreter, key interpreter.V
 			location:            key.Location,
 			qualifiedIdentifier: key.QualifiedIdentifier,
 			kind:                key.Kind,
-			rawValue:            key.GetField(inter, interpreter.ReturnEmptyLocationRange, sema.EnumRawValueFieldName),
+			rawValue:            key.GetField(inter, interpreter.EmptyLocationRange, sema.EnumRawValueFieldName),
 		}
 	case interpreter.Value:
 		return key

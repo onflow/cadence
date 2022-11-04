@@ -50,6 +50,15 @@ which represents the publicly available portion of an account.
           // Returns the key at the given index, if it exists.
           // Revoked keys are always returned, but they have \`isRevoked\` field set to true.
           fun get(keyIndex: Int): AccountKey?
+
+          // Iterate over all unrevoked keys in this account,
+          // passing each key in turn to the provided function.
+          // Iteration is stopped early if the function returns `false`.
+          // The order of iteration is undefined.
+          fun forEach(function: ((AccountKey): Bool)): Void
+
+          // The total number of unrevoked keys in this account.
+          let count: UInt64
       }
   }
   ```
@@ -93,6 +102,10 @@ to the `prepare` phase of the transaction.
       // Keys assigned to the account
 
       let keys: AuthAccount.Keys
+
+      // Provides a API for bootstrapping (sending and receiving) capabilities
+      
+      let inbox: AuthAccount.Inbox
 
       // All the paths associated with this account
       let publicPaths: [PublicPath]
@@ -164,7 +177,31 @@ to the `prepare` phase of the transaction.
           // Marks the key at the given index revoked, but does not delete it.
           // Returns the revoked key if it exists, or nil otherwise.
           fun revoke(keyIndex: Int): AccountKey?
+
+          // Iterate over all unrevoked keys in this account,
+          // passing each key in turn to the provided function.
+          // Iteration is stopped early if the function returns `false`.
+          // The order of iteration is undefined.
+          fun forEach(function: ((AccountKey): Bool)): Void
+
+          // The total number of unrevoked keys in this account.
+          let count: UInt64
       }
+
+      struct Inbox {
+        // Publishes a new Capability under the given name, to be claimed by the specified recipient
+        fun publish(_ value: Capability, name: String, recipient: Address)
+
+        // Unpublishes a Capability previously published by this account.
+        // Returns `nil` if no Capability is published under the given name.
+        // Errors if the Capability under that name does not match the provided type.
+        fun unpublish<T: &Any>(_ name: String): Capability<T>?
+
+        // Claims a Capability previously published by the specified provider.
+        // Returns `nil` if no Capability is published under the given name, or if this account is not its intended recipient.
+        // Errors if the Capability under that name does not match the provided type.
+        fun claim<T: &Any>(_ name: String, provider: Address): Capability<T>?
+    }
   }
 
   struct DeployedContract {
@@ -320,6 +357,73 @@ transaction() {
 ⚠️  Note: Keys can also be removed using the `removePublicKey` function.
 However, this method is deprecated and is available only for the backward compatibility.
 </Callout>
+
+
+<Callout type="warning">
+⚠️  This section describes a feature that is not yet released on Mainnet. 
+It will be available following the next Mainnet Spork. 
+</Callout>
+## Account Inbox
+
+Accounts also possess an `Inbox` that can be used to make [Capabilities](capability-based-access-control) available to specific accounts. 
+The functions in this `Inbox` provide a convenient means to "bootstrap" Capabilities, 
+setting up an initial connection between two accounts that will later allow them to transfer data or permissions through a Capability.
+
+### Publishing a Capability
+
+An account (the provider) that would like to provide a Capability to another account (the recipient) can do so using the `publish` function:
+
+```cadence
+fun publish(_ value: Capability, name: String, recipient: Address)
+```
+
+This publishes the specified Capability using the provided string as an identifier, to be later claimed by the recipient.
+Note, however, that until the recipient does claim this Capability, it is stored on the provider's account, 
+and contributes towards their Account Storage total. 
+
+Calling this function emits an event, `InboxValuePublished`, 
+that includes the address of both the provider and the recipient, as well as the name and the type of the published Capability.
+Refer to the [`Core Events` section](core-events#inbox-value-published) for more details on this event.
+
+### Claiming a Capability
+
+The intended recipient of a Capability can claim that Capability from the provider using the `claim` function: 
+
+```cadence 
+fun claim<T: &Any>(_ name: String, provider: Address): Capability<T>?
+```
+
+This looks up the specified name in the provider's inbox, returning it to the recipient if it is present, 
+conforms to the provided type argument, and is intended for the calling recipient. 
+If the provider has no Capability stored under the provided name, 
+or if the calling recipient is not the intended recipient of the Capability, the function returns `nil`. 
+If the borrow type of the Capability is not a subtype of the provided type argument, the function will error at runtime. 
+
+Upon successful completion of the `claim` function, the claimed Capability is removed from the provider's inbox. 
+Note that this means a given Capability can only be claimed once. 
+
+Calling this function emits an event, `InboxValueClaimed`, 
+that includes the address of both the provider and the recipient, as well as the name of the claimed Capability.
+Refer to the [`Core Events` section](core-events#inbox-value-claimed) for more details on this event.
+
+### Unpublishing a Capability
+
+If the provider of a Capability no longer wishes for it to be published for some reason (e.g. they no longer wish to pay for its storage costs),
+they can unpublish it using the `unpublish` function: 
+
+```cadence 
+fun unpublish<T: &Any>(_ name: String): Capability<T>?
+```
+
+This looks up the specified name in the provider's inbox, returning it to the provider if it is present and conforms to the provided type argument.
+If the provider has no Capability stored under the provided name, the function returns `nil`. 
+If the borrow type of the Capability is not a subtype of the provided type argument, the function will error at runtime. 
+
+Upon successful completion of the `unpublish` function, the unpublished Capability is removed from the provider's inbox. 
+
+Calling this function emits an event, `InboxValueUnpublished`, 
+that includes the address of the provider, and the name of the claimed Capability.
+Refer to the [`Core Events` section](core-events#inbox-value-unpublished) for more details on this event.
 
 ## Account Storage
 
@@ -633,6 +737,8 @@ fun forEachStored(_ function: ((StoragePath, Type): Bool))
 Each of these iterates over every element in the specified domain (public, private, and storage), 
 applying the function argument to each. 
 The first argument of the function is the path of the element, and the second is its runtime type. 
+In the case of the `private` and `public` path iteration functions,
+this is the runtime type of the capability linked at that path. 
 The `Bool` return value determines whether iteration continues; 
 `true` will proceed to the next stored element, 
 while `false` will terminate iteration. 

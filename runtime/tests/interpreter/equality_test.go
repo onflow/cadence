@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/onflow/cadence/runtime/activations"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -58,8 +60,8 @@ func TestInterpretEquality(t *testing.T) {
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(capabilityValueDeclaration)
 
-		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-		baseActivation.Declare(capabilityValueDeclaration)
+		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, capabilityValueDeclaration)
 
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
@@ -83,14 +85,14 @@ func TestInterpretEquality(t *testing.T) {
 			t,
 			inter,
 			interpreter.BoolValue(true),
-			inter.Globals["res1"].GetValue(),
+			inter.Globals.Get("res1").GetValue(),
 		)
 
 		AssertValuesEqual(
 			t,
 			inter,
 			interpreter.BoolValue(true),
-			inter.Globals["res2"].GetValue(),
+			inter.Globals.Get("res2").GetValue(),
 		)
 	})
 
@@ -111,14 +113,14 @@ func TestInterpretEquality(t *testing.T) {
 			t,
 			inter,
 			interpreter.BoolValue(true),
-			inter.Globals["res1"].GetValue(),
+			inter.Globals.Get("res1").GetValue(),
 		)
 
 		AssertValuesEqual(
 			t,
 			inter,
 			interpreter.BoolValue(true),
-			inter.Globals["res2"].GetValue(),
+			inter.Globals.Get("res2").GetValue(),
 		)
 	})
 
@@ -135,7 +137,7 @@ func TestInterpretEquality(t *testing.T) {
 			t,
 			inter,
 			interpreter.BoolValue(false),
-			inter.Globals["res"].GetValue(),
+			inter.Globals.Get("res").GetValue(),
 		)
 	})
 }
@@ -205,7 +207,7 @@ func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
 						require.NoError(t, err)
 						assert.Equal(t, interpreter.BoolValue(true), result)
 					default:
-						require.Error(t, err)
+						RequireError(t, err)
 
 						operandError := &interpreter.InvalidOperandsError{}
 						require.ErrorAs(t, err, operandError)
@@ -255,7 +257,7 @@ func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
 						require.NoError(t, err)
 						assert.Equal(t, interpreter.BoolValue(true), result)
 					default:
-						require.Error(t, err)
+						RequireError(t, err)
 
 						operandError := &interpreter.InvalidOperandsError{}
 						require.ErrorAs(t, err, operandError)
@@ -305,7 +307,7 @@ func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
 						require.NoError(t, err)
 						assert.Equal(t, interpreter.BoolValue(true), result)
 					default:
-						require.Error(t, err)
+						RequireError(t, err)
 
 						operandError := &interpreter.InvalidOperandsError{}
 						require.ErrorAs(t, err, operandError)

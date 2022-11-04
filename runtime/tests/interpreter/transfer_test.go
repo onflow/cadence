@@ -21,13 +21,15 @@ package interpreter_test
 import (
 	"testing"
 
+	"github.com/onflow/cadence/runtime/activations"
+
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
-	"github.com/onflow/cadence/runtime/tests/utils"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestInterpretTransferCheck(t *testing.T) {
@@ -39,7 +41,7 @@ func TestInterpretTransferCheck(t *testing.T) {
 		t.Parallel()
 
 		ty := &sema.CompositeType{
-			Location:   utils.TestLocation,
+			Location:   TestLocation,
 			Identifier: "Fruit",
 			Kind:       common.CompositeKindStructure,
 		}
@@ -63,8 +65,8 @@ func TestInterpretTransferCheck(t *testing.T) {
 			Kind: common.DeclarationKindStructure,
 		})
 
-		baseActivation := interpreter.NewVariableActivation(nil, interpreter.BaseActivation)
-		baseActivation.Declare(valueDeclaration)
+		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, valueDeclaration)
 
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
@@ -85,7 +87,7 @@ func TestInterpretTransferCheck(t *testing.T) {
 		require.NoError(t, err)
 
 		_, err = inter.Invoke("test")
-		require.Error(t, err)
+		RequireError(t, err)
 
 		require.ErrorAs(t, err, &interpreter.ValueTransferTypeError{})
 	})

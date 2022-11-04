@@ -33,7 +33,7 @@ import (
 )
 
 func pretty(code string, maxLineWidth int) string {
-	program, err := parser.ParseProgram(code, nil)
+	program, err := parser.ParseProgram([]byte(code), nil)
 	if err != nil {
 		return err.Error()
 	}
@@ -43,7 +43,7 @@ func pretty(code string, maxLineWidth int) string {
 	return b.String()
 }
 
-//language=html
+// language=html
 const page = `
 <html>
 <head>

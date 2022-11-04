@@ -24,8 +24,10 @@ import (
 	"strings"
 
 	"github.com/c-bata/go-prompt"
+	prettyJSON "github.com/tidwall/pretty"
 
 	"github.com/onflow/cadence"
+	jsoncdc "github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -42,7 +44,7 @@ func RunREPL() {
 	errorPrettyPrinter := pretty.NewErrorPrettyPrinter(os.Stderr, true)
 
 	repl, err := runtime.NewREPL(
-		func(err error, location common.Location, codes map[common.Location]string) {
+		func(err error, location common.Location, codes map[common.Location][]byte) {
 			printErr := errorPrettyPrinter.PrettyPrintError(err, location, codes)
 			if printErr != nil {
 				panic(printErr)
@@ -58,29 +60,22 @@ func RunREPL() {
 	}
 
 	executor := func(line string) {
-		defer func() {
-			lineNumber++
-		}()
-
 		if code == "" && strings.HasPrefix(line, ".") {
-			handleCommand(line)
+			handleCommand(repl, line)
 			code = ""
 			return
 		}
 
-		// Prefix the code with empty lines,
-		// so that error messages match current line number
-
-		for i := 1; i < lineNumber; i++ {
-			code = "\n" + code
-		}
-
 		code += line + "\n"
 
-		inputIsComplete := repl.Accept(code)
-		if !inputIsComplete {
-			lineIsContinuation = true
-			return
+		inputIsComplete, err := repl.Accept([]byte(code))
+		if err == nil {
+			lineNumber++
+
+			if !inputIsComplete {
+				lineIsContinuation = true
+				return
+			}
 		}
 
 		lineIsContinuation = false
@@ -123,19 +118,42 @@ const replHelpMessage = `
 Enter declarations and statements to evaluate them.
 Commands are prefixed with a dot. Valid commands are:
 
-.exit     Exit the interpreter
-.help     Print this help message
+.exit                 Exit the interpreter
+.help                 Print this help message
+.export variable      Export variable
 
 Press ^C to abort current expression, ^D to exit`
 
 const replAssistanceMessage = `Type '.help' for assistance.`
 
-func handleCommand(command string) {
-	switch command {
+func handleCommand(repl *runtime.REPL, command string) {
+	parts := strings.SplitN(command, " ", 2)
+	switch parts[0] {
 	case ".exit":
 		os.Exit(0)
 	case ".help":
 		fmt.Println(replHelpMessage)
+	case ".export":
+		name := strings.TrimSpace(parts[1])
+		global := repl.GetGlobal(name)
+		if global == nil {
+			fmt.Println(colorizeError(fmt.Sprintf("Undefined global: %s", name)))
+			return
+		}
+
+		value, err := repl.ExportValue(global)
+		if err != nil {
+			fmt.Println(colorizeError(fmt.Sprintf("Failed to export global %s: %s", name, err.Error())))
+			return
+		}
+
+		json, err := jsoncdc.Encode(value)
+		if err != nil {
+			fmt.Println(colorizeError(fmt.Sprintf("Failed to encode global %s to JSON: %s", name, err.Error())))
+			return
+		}
+		_, _ = os.Stdout.Write(prettyJSON.Color(prettyJSON.Pretty(json), nil))
+
 	default:
 		fmt.Println(colorizeError(fmt.Sprintf("Unknown command. %s", replAssistanceMessage)))
 	}

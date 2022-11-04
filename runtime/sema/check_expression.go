@@ -23,7 +23,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
-func (checker *Checker) VisitIdentifierExpression(expression *ast.IdentifierExpression) ast.Repr {
+func (checker *Checker) VisitIdentifierExpression(expression *ast.IdentifierExpression) Type {
 	identifier := expression.Identifier
 	variable := checker.findAndCheckValueVariable(expression, true)
 	if variable == nil {
@@ -36,7 +36,6 @@ func (checker *Checker) VisitIdentifierExpression(expression *ast.IdentifierExpr
 		res := Resource{Variable: variable}
 		checker.checkResourceVariableCapturingInFunction(variable, identifier)
 		checker.checkResourceUseAfterInvalidation(res, identifier)
-		checker.resources.AddUse(res, identifier.Pos)
 	}
 
 	checker.checkSelfVariableUseInInitializer(variable, identifier.Pos)
@@ -50,7 +49,6 @@ func (checker *Checker) VisitIdentifierExpression(expression *ast.IdentifierExpr
 
 // checkSelfVariableUseInInitializer checks uses of `self` in the initializer
 // and ensures it is properly initialized
-//
 func (checker *Checker) checkSelfVariableUseInInitializer(variable *Variable, position ast.Position) {
 
 	// Is this a use of `self`?
@@ -114,7 +112,6 @@ func (checker *Checker) checkSelfVariableUseInInitializer(variable *Variable, po
 }
 
 // checkResourceVariableCapturingInFunction checks if a resource variable is captured in a function
-//
 func (checker *Checker) checkResourceVariableCapturingInFunction(variable *Variable, useIdentifier ast.Identifier) {
 	currentFunctionDepth := -1
 	currentFunctionActivation := checker.functionActivations.Current()
@@ -136,7 +133,7 @@ func (checker *Checker) checkResourceVariableCapturingInFunction(variable *Varia
 	)
 }
 
-func (checker *Checker) VisitExpressionStatement(statement *ast.ExpressionStatement) ast.Repr {
+func (checker *Checker) VisitExpressionStatement(statement *ast.ExpressionStatement) (_ struct{}) {
 	expression := statement.Expression
 
 	ty := checker.VisitExpression(expression, nil)
@@ -149,10 +146,14 @@ func (checker *Checker) VisitExpressionStatement(statement *ast.ExpressionStatem
 		)
 	}
 
-	return nil
+	return
 }
 
-func (checker *Checker) VisitBoolExpression(_ *ast.BoolExpression) ast.Repr {
+func (checker *Checker) VisitVoidExpression(_ *ast.VoidExpression) Type {
+	return VoidType
+}
+
+func (checker *Checker) VisitBoolExpression(_ *ast.BoolExpression) Type {
 	return BoolType
 }
 
@@ -160,11 +161,11 @@ var NilType = &OptionalType{
 	Type: NeverType,
 }
 
-func (checker *Checker) VisitNilExpression(_ *ast.NilExpression) ast.Repr {
+func (checker *Checker) VisitNilExpression(_ *ast.NilExpression) Type {
 	return NilType
 }
 
-func (checker *Checker) VisitIntegerExpression(expression *ast.IntegerExpression) ast.Repr {
+func (checker *Checker) VisitIntegerExpression(expression *ast.IntegerExpression) Type {
 	expectedType := UnwrapOptionalType(checker.expectedType)
 
 	var actualType Type
@@ -191,7 +192,7 @@ func (checker *Checker) VisitIntegerExpression(expression *ast.IntegerExpression
 	return actualType
 }
 
-func (checker *Checker) VisitFixedPointExpression(expression *ast.FixedPointExpression) ast.Repr {
+func (checker *Checker) VisitFixedPointExpression(expression *ast.FixedPointExpression) Type {
 	// TODO: adjust once/if we support more fixed point types
 
 	// If the contextually expected type is a subtype of FixedPoint, then take that.
@@ -216,7 +217,7 @@ func (checker *Checker) VisitFixedPointExpression(expression *ast.FixedPointExpr
 	return actualType
 }
 
-func (checker *Checker) VisitStringExpression(expression *ast.StringExpression) ast.Repr {
+func (checker *Checker) VisitStringExpression(expression *ast.StringExpression) Type {
 	expectedType := UnwrapOptionalType(checker.expectedType)
 
 	var actualType Type = StringType
@@ -231,14 +232,13 @@ func (checker *Checker) VisitStringExpression(expression *ast.StringExpression) 
 	return actualType
 }
 
-func (checker *Checker) VisitIndexExpression(expression *ast.IndexExpression) ast.Repr {
+func (checker *Checker) VisitIndexExpression(expression *ast.IndexExpression) Type {
 	return checker.visitIndexExpression(expression, false)
 }
 
 // visitIndexExpression checks if the indexed expression is indexable,
 // checks if the indexing expression can be used to index into the indexed expression,
 // and returns the expected element type
-//
 func (checker *Checker) visitIndexExpression(
 	indexExpression *ast.IndexExpression,
 	isAssignment bool,

@@ -23,6 +23,8 @@ import (
 
 	"golang.org/x/crypto/sha3"
 
+	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -53,7 +55,7 @@ type EventEmitter interface {
 		inter *interpreter.Interpreter,
 		eventType *sema.CompositeType,
 		values []interpreter.Value,
-		getLocationRange func() interpreter.LocationRange,
+		locationRange interpreter.LocationRange,
 	)
 }
 
@@ -88,17 +90,17 @@ func NewAuthAccountConstructor(creator AccountCreator) StandardLibraryValue {
 			}
 
 			inter := invocation.Interpreter
-			getLocationRange := invocation.GetLocationRange
+			locationRange := invocation.LocationRange
 
 			inter.ExpectType(
 				payer,
 				sema.AuthAccountType,
-				getLocationRange,
+				locationRange,
 			)
 
 			payerValue := payer.GetMember(
 				inter,
-				getLocationRange,
+				locationRange,
 				sema.AuthAccountAddressField,
 			)
 			if payerValue == nil {
@@ -131,7 +133,7 @@ func NewAuthAccountConstructor(creator AccountCreator) StandardLibraryValue {
 				inter,
 				AccountCreatedEventType,
 				[]interpreter.Value{addressValue},
-				getLocationRange,
+				locationRange,
 			)
 
 			return NewAuthAccountValue(
@@ -201,6 +203,13 @@ func NewAuthAccountValue(
 		},
 		func() interpreter.Value {
 			return newAuthAccountKeysValue(
+				gauge,
+				handler,
+				addressValue,
+			)
+		},
+		func() interpreter.Value {
+			return newAuthAccountInboxValue(
 				gauge,
 				handler,
 				addressValue,
@@ -286,6 +295,8 @@ func newAuthAccountKeysValue(
 			handler,
 			addressValue,
 		),
+		newAccountKeysForEachFunction(gauge, handler, addressValue),
+		newAccountKeysCountGetter(gauge, handler, addressValue),
 	)
 }
 
@@ -462,6 +473,7 @@ func newAddPublicKeyFunction(
 			}
 
 			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
 
 			handler.EmitEvent(
 				inter,
@@ -470,10 +482,10 @@ func newAddPublicKeyFunction(
 					addressValue,
 					publicKeyValue,
 				},
-				invocation.GetLocationRange,
+				locationRange,
 			)
 
-			return interpreter.VoidValue{}
+			return interpreter.Void
 		},
 		sema.AuthAccountTypeAddPublicKeyFunctionType,
 	)
@@ -512,6 +524,7 @@ func newRemovePublicKeyFunction(
 			}
 
 			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
 
 			publicKeyValue := interpreter.ByteSliceToByteArrayValue(
 				inter,
@@ -525,10 +538,10 @@ func newRemovePublicKeyFunction(
 					addressValue,
 					publicKeyValue,
 				},
-				invocation.GetLocationRange,
+				locationRange,
 			)
 
-			return interpreter.VoidValue{}
+			return interpreter.Void
 		},
 		sema.AuthAccountTypeRemovePublicKeyFunctionType,
 	)
@@ -536,6 +549,10 @@ func newRemovePublicKeyFunction(
 
 type AccountKeyAdditionHandler interface {
 	EventEmitter
+	PublicKeyValidator
+	PublicKeySignatureVerifier
+	BLSPoPVerifier
+	Hasher
 	// AddAccountKey appends a key to an account.
 	AddAccountKey(address common.Address, key *PublicKey, algo sema.HashAlgorithm, weight int) (*AccountKey, error)
 }
@@ -558,14 +575,14 @@ func newAccountKeysAddFunction(
 			}
 
 			inter := invocation.Interpreter
-			getLocationRange := invocation.GetLocationRange
+			locationRange := invocation.LocationRange
 
-			publicKey, err := NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
+			publicKey, err := NewPublicKeyFromValue(inter, locationRange, publicKeyValue)
 			if err != nil {
 				panic(err)
 			}
 
-			hashAlgo := NewHashAlgorithmFromValue(inter, getLocationRange, invocation.Arguments[1])
+			hashAlgo := NewHashAlgorithmFromValue(inter, locationRange, invocation.Arguments[1])
 			weightValue, ok := invocation.Arguments[2].(interpreter.UFix64Value)
 			if !ok {
 				panic(errors.NewUnreachableError())
@@ -587,14 +604,16 @@ func newAccountKeysAddFunction(
 					addressValue,
 					publicKeyValue,
 				},
-				invocation.GetLocationRange,
+				locationRange,
 			)
 
 			return NewAccountKeyValue(
 				inter,
-				getLocationRange,
+				locationRange,
 				accountKey,
-				inter.Config.PublicKeyValidationHandler,
+				handler,
+				handler,
+				handler,
 			)
 		},
 		sema.AuthAccountKeysTypeAddFunctionType,
@@ -609,14 +628,14 @@ type AccountKey struct {
 	IsRevoked bool
 }
 
-type PublicKey struct {
-	PublicKey []byte
-	SignAlgo  sema.SignatureAlgorithm
-}
-
 type AccountKeyProvider interface {
+	PublicKeyValidator
+	PublicKeySignatureVerifier
+	BLSPoPVerifier
+	Hasher
 	// GetAccountKey retrieves a key from an account by index.
 	GetAccountKey(address common.Address, index int) (*AccountKey, error)
+	AccountKeysCount(address common.Address) (uint64, error)
 }
 
 func newAccountKeysGetFunction(
@@ -651,25 +670,21 @@ func newAccountKeysGetFunction(
 			// This is done because, if the host function returns an error when a key is not found, then
 			// currently there's no way to distinguish between a 'key not found error' vs other internal errors.
 			if accountKey == nil {
-				return interpreter.NewNilValue(invocation.Interpreter)
+				return interpreter.Nil
 			}
 
 			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
 
 			return interpreter.NewSomeValueNonCopying(
 				inter,
 				NewAccountKeyValue(
 					inter,
-					invocation.GetLocationRange,
+					locationRange,
 					accountKey,
-					// public keys are assumed to be already validated.
-					func(
-						_ *interpreter.Interpreter,
-						_ func() interpreter.LocationRange,
-						_ *interpreter.CompositeValue,
-					) error {
-						return nil
-					},
+					provider,
+					provider,
+					provider,
 				),
 			)
 		},
@@ -677,8 +692,137 @@ func newAccountKeysGetFunction(
 	)
 }
 
+// the AccountKey in `forEachKey(_ f: ((AccountKey): Bool)): Void`
+var accountKeysForEachCallbackTypeParams = []sema.Type{sema.AccountKeyType}
+
+func newAccountKeysForEachFunction(
+	gauge common.MemoryGauge,
+	provider AccountKeyProvider,
+	addressValue interpreter.AddressValue,
+) *interpreter.HostFunctionValue {
+	address := addressValue.ToAddress()
+
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			fnValue, ok := invocation.Arguments[0].(interpreter.FunctionValue)
+
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
+
+			newSubInvocation := func(key interpreter.Value) interpreter.Invocation {
+				return interpreter.NewInvocation(
+					inter,
+					nil,
+					[]interpreter.Value{key},
+					accountKeysForEachCallbackTypeParams,
+					nil,
+					locationRange,
+				)
+			}
+
+			liftKeyToValue := func(key *AccountKey) interpreter.Value {
+				return NewAccountKeyValue(
+					inter,
+					locationRange,
+					key,
+					provider,
+					provider,
+					provider,
+				)
+			}
+
+			var count uint64
+			var err error
+
+			wrapPanic(func() {
+				count, err = provider.AccountKeysCount(address)
+			})
+
+			if err != nil {
+				panic(err)
+			}
+
+			var accountKey *AccountKey
+
+			for index := uint64(0); index < count; index++ {
+				wrapPanic(func() {
+					accountKey, err = provider.GetAccountKey(address, int(index))
+				})
+				if err != nil {
+					panic(err)
+				}
+
+				// Here it is expected the host function to return a nil key, if a key is not found at the given index.
+				// This is done because, if the host function returns an error when a key is not found, then
+				// currently there's no way to distinguish between a 'key not found error' vs other internal errors.
+				if accountKey == nil {
+					continue
+				}
+
+				liftedKey := liftKeyToValue(accountKey)
+
+				res, err := inter.InvokeFunction(
+					fnValue,
+					newSubInvocation(liftedKey),
+				)
+				if err != nil {
+					// interpreter panicked while invoking the inner function value
+					panic(err)
+				}
+
+				shouldContinue, ok := res.(interpreter.BoolValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				if !shouldContinue {
+					break
+				}
+			}
+
+			return interpreter.Void
+		},
+		sema.AccountKeysTypeForEachFunctionType,
+	)
+}
+
+func newAccountKeysCountGetter(
+	gauge common.MemoryGauge,
+	provider AccountKeyProvider,
+	addressValue interpreter.AddressValue,
+) interpreter.AccountKeysCountGetter {
+	address := addressValue.ToAddress()
+
+	return func() interpreter.UInt64Value {
+		return interpreter.NewUInt64Value(gauge, func() uint64 {
+			var count uint64
+			var err error
+
+			wrapPanic(func() {
+				count, err = provider.AccountKeysCount(address)
+			})
+			if err != nil {
+				// The provider might not be able to fetch the number of account keys
+				// e.g. when the account does not exist
+				panic(err)
+			}
+
+			return count
+		})
+	}
+}
+
 type AccountKeyRevocationHandler interface {
 	EventEmitter
+	Hasher
+	PublicKeyValidator
+	PublicKeySignatureVerifier
+	BLSPoPVerifier
 	// RevokeAccountKey removes a key from an account by index.
 	RevokeAccountKey(address common.Address, index int) (*AccountKey, error)
 }
@@ -714,10 +858,11 @@ func newAccountKeysRevokeFunction(
 			// This is done because, if the host function returns an error when a key is not found, then
 			// currently there's no way to distinguish between a 'key not found error' vs other internal errors.
 			if accountKey == nil {
-				return interpreter.NewNilValue(invocation.Interpreter)
+				return interpreter.Nil
 			}
 
 			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
 
 			handler.EmitEvent(
 				inter,
@@ -726,23 +871,18 @@ func newAccountKeysRevokeFunction(
 					addressValue,
 					indexValue,
 				},
-				invocation.GetLocationRange,
+				locationRange,
 			)
 
 			return interpreter.NewSomeValueNonCopying(
 				inter,
 				NewAccountKeyValue(
 					inter,
-					invocation.GetLocationRange,
+					locationRange,
 					accountKey,
-					// public keys are assumed to be already validated.
-					func(
-						_ *interpreter.Interpreter,
-						_ func() interpreter.LocationRange,
-						_ *interpreter.CompositeValue,
-					) error {
-						return nil
-					},
+					handler,
+					handler,
+					handler,
 				),
 			)
 		},
@@ -763,6 +903,16 @@ func newPublicAccountKeysValue(
 		gauge,
 		addressValue,
 		newAccountKeysGetFunction(
+			gauge,
+			handler,
+			addressValue,
+		),
+		newAccountKeysForEachFunction(
+			gauge,
+			handler,
+			addressValue,
+		),
+		newAccountKeysCountGetter(
 			gauge,
 			handler,
 			addressValue,
@@ -799,6 +949,224 @@ func newPublicAccountContractsValue(
 	)
 }
 
+const inboxStorageDomain = "inbox"
+
+func accountInboxPublishFunction(
+	gauge common.MemoryGauge,
+	handler EventEmitter,
+	address common.Address,
+	providerValue interpreter.AddressValue,
+) *interpreter.HostFunctionValue {
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			value, ok := invocation.Arguments[0].(*interpreter.CapabilityValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			nameValue, ok := invocation.Arguments[1].(*interpreter.StringValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			recipientValue := invocation.Arguments[2].(interpreter.AddressValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
+
+			handler.EmitEvent(
+				inter,
+				AccountInboxPublishedEventType,
+				[]interpreter.Value{
+					providerValue,
+					recipientValue,
+					nameValue,
+					interpreter.NewTypeValue(gauge, value.StaticType(inter)),
+				},
+				locationRange,
+			)
+
+			publishedValue := interpreter.NewPublishedValue(inter, recipientValue, value).Transfer(
+				inter,
+				locationRange,
+				atree.Address(address),
+				true,
+				nil,
+			)
+
+			inter.WriteStored(address, inboxStorageDomain, nameValue.Str, publishedValue)
+
+			return interpreter.Void
+		},
+		sema.AuthAccountTypeInboxPublishFunctionType,
+	)
+}
+
+func accountInboxUnpublishFunction(
+	gauge common.MemoryGauge,
+	handler EventEmitter,
+	address common.Address,
+	providerValue interpreter.AddressValue,
+) *interpreter.HostFunctionValue {
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
+
+			readValue := inter.ReadStored(address, inboxStorageDomain, nameValue.Str)
+			if readValue == nil {
+				return interpreter.Nil
+			}
+			publishedValue := readValue.(*interpreter.PublishedValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			if typeParameterPair == nil {
+				panic(errors.NewUnreachableError())
+			}
+
+			ty := sema.NewCapabilityType(gauge, typeParameterPair.Value)
+			publishedType := publishedValue.Value.StaticType(invocation.Interpreter)
+			if !inter.IsSubTypeOfSemaType(publishedType, ty) {
+				panic(interpreter.ForceCastTypeMismatchError{
+					ExpectedType:  ty,
+					ActualType:    inter.MustConvertStaticToSemaType(publishedType),
+					LocationRange: locationRange,
+				})
+			}
+
+			value := publishedValue.Value.Transfer(
+				inter,
+				locationRange,
+				atree.Address{},
+				true,
+				nil,
+			)
+
+			inter.WriteStored(address, inboxStorageDomain, nameValue.Str, nil)
+
+			handler.EmitEvent(
+				inter,
+				AccountInboxUnpublishedEventType,
+				[]interpreter.Value{
+					providerValue,
+					nameValue,
+				},
+				locationRange,
+			)
+
+			return interpreter.NewSomeValueNonCopying(inter, value)
+		},
+		sema.AuthAccountTypeInboxPublishFunctionType,
+	)
+}
+
+func accountInboxClaimFunction(
+	gauge common.MemoryGauge,
+	handler EventEmitter,
+	recipientValue interpreter.AddressValue,
+) *interpreter.HostFunctionValue {
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			providerValue, ok := invocation.Arguments[1].(interpreter.AddressValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
+
+			providerAddress := providerValue.ToAddress()
+
+			readValue := inter.ReadStored(providerAddress, inboxStorageDomain, nameValue.Str)
+			if readValue == nil {
+				return interpreter.Nil
+			}
+			publishedValue := readValue.(*interpreter.PublishedValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			// compare the intended recipient with the caller
+			if !publishedValue.Recipient.Equal(inter, locationRange, recipientValue) {
+				return interpreter.Nil
+			}
+
+			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			if typeParameterPair == nil {
+				panic(errors.NewUnreachableError())
+			}
+
+			ty := sema.NewCapabilityType(gauge, typeParameterPair.Value)
+			publishedType := publishedValue.Value.StaticType(invocation.Interpreter)
+			if !inter.IsSubTypeOfSemaType(publishedType, ty) {
+				panic(interpreter.ForceCastTypeMismatchError{
+					ExpectedType:  ty,
+					ActualType:    inter.MustConvertStaticToSemaType(publishedType),
+					LocationRange: locationRange,
+				})
+			}
+
+			value := publishedValue.Value.Transfer(
+				inter,
+				locationRange,
+				atree.Address{},
+				true,
+				nil,
+			)
+
+			inter.WriteStored(providerAddress, inboxStorageDomain, nameValue.Str, nil)
+
+			handler.EmitEvent(
+				inter,
+				AccountInboxClaimedEventType,
+				[]interpreter.Value{
+					providerValue,
+					recipientValue,
+					nameValue,
+				},
+				locationRange,
+			)
+
+			return interpreter.NewSomeValueNonCopying(inter, value)
+		},
+		sema.AuthAccountTypeInboxPublishFunctionType,
+	)
+}
+
+func newAuthAccountInboxValue(
+	gauge common.MemoryGauge,
+	handler EventEmitter,
+	addressValue interpreter.AddressValue,
+) interpreter.Value {
+	address := addressValue.ToAddress()
+	return interpreter.NewAuthAccountInboxValue(
+		gauge,
+		addressValue,
+		accountInboxPublishFunction(gauge, handler, address, addressValue),
+		accountInboxUnpublishFunction(gauge, handler, address, addressValue),
+		accountInboxClaimFunction(gauge, handler, addressValue),
+	)
+}
+
 type AccountContractNamesProvider interface {
 	// GetAccountContractNames returns the names of all contracts deployed in an account.
 	GetAccountContractNames(address common.Address) ([]string, error)
@@ -809,7 +1177,7 @@ func newAccountContractsGetNamesFunction(
 	addressValue interpreter.AddressValue,
 ) func(
 	inter *interpreter.Interpreter,
-	getLocationRange func() interpreter.LocationRange,
+	locationRange interpreter.LocationRange,
 ) *interpreter.ArrayValue {
 
 	// Converted addresses can be cached and don't have to be recomputed on each function invocation
@@ -817,7 +1185,7 @@ func newAccountContractsGetNamesFunction(
 
 	return func(
 		inter *interpreter.Interpreter,
-		getLocationRange func() interpreter.LocationRange,
+		locationRange interpreter.LocationRange,
 	) *interpreter.ArrayValue {
 		var names []string
 		var err error
@@ -850,7 +1218,7 @@ func newAccountContractsGetNamesFunction(
 
 		return interpreter.NewArrayValue(
 			inter,
-			getLocationRange,
+			locationRange,
 			arrayType,
 			common.Address{},
 			values...,
@@ -904,7 +1272,7 @@ func newAccountContractsGetFunction(
 					),
 				)
 			} else {
-				return interpreter.NewNilValue(invocation.Interpreter)
+				return interpreter.Nil
 			}
 		},
 		sema.AccountContractsTypeGetFunctionType,
@@ -952,12 +1320,12 @@ func newAccountContractsBorrowFunction(
 			})
 
 			if err != nil {
-				return interpreter.NewNilValue(inter)
+				return interpreter.Nil
 			}
 
 			staticType := contractValue.StaticType(inter)
 			if !inter.IsSubTypeOfSemaType(staticType, referenceType.Type) {
-				return interpreter.NewNilValue(inter)
+				return interpreter.Nil
 			}
 
 			reference := interpreter.NewEphemeralReferenceValue(
@@ -1011,6 +1379,8 @@ func newAuthAccountContractsChangeFunction(
 	return interpreter.NewHostFunctionValue(
 		gauge,
 		func(invocation interpreter.Invocation) interpreter.Value {
+
+			locationRange := invocation.LocationRange
 
 			const requiredArgumentCount = 2
 
@@ -1090,7 +1460,7 @@ func newAuthAccountContractsChangeFunction(
 
 				panic(&InvalidContractDeploymentError{
 					Err:           err,
-					LocationRange: invocation.GetLocationRange(),
+					LocationRange: locationRange,
 				})
 			}
 
@@ -1182,7 +1552,7 @@ func newAuthAccountContractsChangeFunction(
 				oldCode, err := handler.GetAccountContractCode(address, contractName)
 				handleContractUpdateError(err)
 
-				oldProgram, err := parser.ParseProgram(string(oldCode), gauge)
+				oldProgram, err := parser.ParseProgram(oldCode, gauge)
 
 				if !ignoreUpdatedProgramParserError(err) {
 					handleContractUpdateError(err)
@@ -1241,7 +1611,7 @@ func newAuthAccountContractsChangeFunction(
 					codeHashValue,
 					nameValue,
 				},
-				invocation.GetLocationRange,
+				locationRange,
 			)
 
 			return interpreter.NewDeployedContractValue(
@@ -1517,11 +1887,12 @@ func newAuthAccountContractsRemoveFunction(
 			// if there is currently code deployed for the given contract name
 
 			if len(code) > 0 {
+				locationRange := invocation.LocationRange
 
 				// NOTE: *DO NOT* call setProgram – the program removal
 				// should not be effective during the execution, only after
 
-				existingProgram, err := parser.ParseProgram(string(code), gauge)
+				existingProgram, err := parser.ParseProgram(code, gauge)
 
 				// If the existing code is not parsable (i.e: `err != nil`),
 				// that shouldn't be a reason to fail the contract removal.
@@ -1529,7 +1900,7 @@ func newAuthAccountContractsRemoveFunction(
 				if err == nil && containsEnumsInProgram(existingProgram) {
 					panic(&ContractRemovalError{
 						Name:          name,
-						LocationRange: invocation.GetLocationRange(),
+						LocationRange: locationRange,
 					})
 				}
 
@@ -1555,7 +1926,7 @@ func newAuthAccountContractsRemoveFunction(
 						codeHashValue,
 						nameValue,
 					},
-					invocation.GetLocationRange,
+					locationRange,
 				)
 
 				return interpreter.NewSomeValueNonCopying(
@@ -1571,7 +1942,7 @@ func newAuthAccountContractsRemoveFunction(
 					),
 				)
 			} else {
-				return interpreter.NewNilValue(invocation.Interpreter)
+				return interpreter.Nil
 			}
 		},
 		sema.AuthAccountContractsTypeRemoveFunctionType,
@@ -1663,114 +2034,47 @@ func NewPublicAccountValue(
 
 func NewAccountKeyValue(
 	inter *interpreter.Interpreter,
-	getLocationRange func() interpreter.LocationRange,
+	locationRange interpreter.LocationRange,
 	accountKey *AccountKey,
-	validatePublicKey interpreter.PublicKeyValidationHandlerFunc,
+	publicKeySignatureVerifier PublicKeySignatureVerifier,
+	blsPoPVerifier BLSPoPVerifier,
+	hasher Hasher,
 ) interpreter.Value {
+
+	// hash algorithms converted from "native" (non-interpreter) values are assumed to be already valid
+	hashAlgorithm, _ := NewHashAlgorithmCase(
+		interpreter.UInt8Value(accountKey.HashAlgo.RawValue()),
+		hasher,
+	)
+
 	return interpreter.NewAccountKeyValue(
 		inter,
 		interpreter.NewIntValueFromInt64(inter, int64(accountKey.KeyIndex)),
 		NewPublicKeyValue(
 			inter,
-			getLocationRange,
+			locationRange,
 			accountKey.PublicKey,
-			validatePublicKey,
+			publicKeySignatureVerifier,
+			blsPoPVerifier,
 		),
-		NewHashAlgorithmCase(
-			interpreter.UInt8Value(accountKey.HashAlgo.RawValue()),
-		),
+		hashAlgorithm,
 		interpreter.NewUFix64ValueWithInteger(
 			inter, func() uint64 {
 				return uint64(accountKey.Weight)
 			},
 		),
-		interpreter.BoolValue(accountKey.IsRevoked),
-	)
-}
-
-func NewPublicKeyFromValue(
-	inter *interpreter.Interpreter,
-	getLocationRange func() interpreter.LocationRange,
-	publicKey interpreter.MemberAccessibleValue,
-) (
-	*PublicKey,
-	error,
-) {
-	// publicKey field
-	key := publicKey.GetMember(inter, getLocationRange, sema.PublicKeyPublicKeyField)
-
-	byteArray, err := interpreter.ByteArrayValueToByteSlice(inter, key)
-	if err != nil {
-		return nil, errors.NewUnexpectedError("public key needs to be a byte array. %w", err)
-	}
-
-	// sign algo field
-	signAlgoField := publicKey.GetMember(inter, getLocationRange, sema.PublicKeySignAlgoField)
-	if signAlgoField == nil {
-		return nil, errors.NewUnexpectedError("sign algorithm is not set")
-	}
-
-	signAlgoValue, ok := signAlgoField.(*interpreter.SimpleCompositeValue)
-	if !ok {
-		return nil, errors.NewUnexpectedError(
-			"sign algorithm does not belong to type: %s",
-			sema.SignatureAlgorithmType.QualifiedString(),
-		)
-	}
-
-	rawValue := signAlgoValue.GetMember(inter, getLocationRange, sema.EnumRawValueFieldName)
-	if rawValue == nil {
-		return nil, errors.NewDefaultUserError("sign algorithm raw value is not set")
-	}
-
-	signAlgoRawValue, ok := rawValue.(interpreter.UInt8Value)
-	if !ok {
-		return nil, errors.NewUnexpectedError(
-			"sign algorithm raw-value does not belong to type: %s",
-			sema.UInt8Type.QualifiedString(),
-		)
-	}
-
-	return &PublicKey{
-		PublicKey: byteArray,
-		SignAlgo:  sema.SignatureAlgorithm(signAlgoRawValue.ToInt()),
-	}, nil
-}
-
-func NewPublicKeyValue(
-	inter *interpreter.Interpreter,
-	getLocationRange func() interpreter.LocationRange,
-	publicKey *PublicKey,
-	validatePublicKey interpreter.PublicKeyValidationHandlerFunc,
-) *interpreter.CompositeValue {
-	return interpreter.NewPublicKeyValue(
-		inter,
-		getLocationRange,
-		interpreter.ByteSliceToByteArrayValue(
-			inter,
-			publicKey.PublicKey,
-		),
-		NewSignatureAlgorithmCase(
-			interpreter.UInt8Value(publicKey.SignAlgo.RawValue()),
-		),
-		func(
-			inter *interpreter.Interpreter,
-			getLocationRange func() interpreter.LocationRange,
-			publicKeyValue *interpreter.CompositeValue,
-		) error {
-			return validatePublicKey(inter, getLocationRange, publicKeyValue)
-		},
+		interpreter.AsBoolValue(accountKey.IsRevoked),
 	)
 }
 
 func NewHashAlgorithmFromValue(
 	inter *interpreter.Interpreter,
-	getLocationRange func() interpreter.LocationRange,
+	locationRange interpreter.LocationRange,
 	value interpreter.Value,
 ) sema.HashAlgorithm {
 	hashAlgoValue := value.(*interpreter.SimpleCompositeValue)
 
-	rawValue := hashAlgoValue.GetMember(inter, getLocationRange, sema.EnumRawValueFieldName)
+	rawValue := hashAlgoValue.GetMember(inter, locationRange, sema.EnumRawValueFieldName)
 	if rawValue == nil {
 		panic("cannot find hash algorithm raw value")
 	}

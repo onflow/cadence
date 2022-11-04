@@ -23,7 +23,7 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
-func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression) ast.Repr {
+func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression) Type {
 
 	// Visit type annotation
 
@@ -163,7 +163,6 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 // FailableCastCanSucceed checks a failable (dynamic) cast, i.e. a cast that might succeed at run-time.
 // It returns true if the cast from subType to superType could potentially succeed at run-time,
 // and returns false if the cast will definitely always fail.
-//
 func FailableCastCanSucceed(subType, superType Type) bool {
 
 	// TODO: report impossible casts, e.g.

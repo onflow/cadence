@@ -19,8 +19,13 @@
 package runtime
 
 import (
+	"bytes"
+	"fmt"
+	goRuntime "runtime"
 	"sort"
 
+	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/runtime/activations"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/cmd"
 	"github.com/onflow/cadence/runtime/common"
@@ -28,23 +33,24 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 type REPL struct {
 	checker  *sema.Checker
 	inter    *interpreter.Interpreter
-	onError  func(err error, location Location, codes map[Location]string)
+	onError  func(err error, location Location, codes map[Location][]byte)
 	onResult func(interpreter.Value)
-	codes    map[Location]string
+	codes    map[Location][]byte
 }
 
 func NewREPL(
-	onError func(err error, location Location, codes map[Location]string),
+	onError func(err error, location Location, codes map[Location][]byte),
 	onResult func(interpreter.Value),
 ) (*REPL, error) {
 
 	checkers := map[Location]*sema.Checker{}
-	codes := map[Location]string{}
+	codes := map[Location][]byte{}
 
 	checkerConfig := cmd.DefaultCheckerConfig(checkers, codes)
 	checkerConfig.AccessCheckMode = sema.AccessCheckModeNotSpecifiedUnrestricted
@@ -63,8 +69,10 @@ func NewREPL(
 
 	storage := interpreter.NewInMemoryStorage(nil)
 
-	// NOTE: storage option must be provided *before* the predeclared values option,
-	// as predeclared values may rely on storage
+	// necessary now due to log being looked up in the
+	// interpreter's activations instead of the checker
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, stdlib.NewLogFunction(cmd.StandardOutputLogger{}))
 
 	interpreterConfig := &interpreter.Config{
 		Storage: storage,
@@ -72,6 +80,7 @@ func NewREPL(
 			defer func() { uuid++ }()
 			return uuid, nil
 		},
+		BaseActivation: baseActivation,
 	}
 
 	inter, err := interpreter.NewInterpreter(
@@ -93,41 +102,97 @@ func NewREPL(
 	return repl, nil
 }
 
-func (r *REPL) handleCheckerError() bool {
+func (r *REPL) handleCheckerError() error {
 	err := r.checker.CheckerError()
 	if err == nil {
-		return true
+		return nil
 	}
 	if r.onError != nil {
 		r.onError(err, r.checker.Location, r.codes)
 	}
-	return false
+	return err
 }
 
-func (r *REPL) execute(element ast.Element) {
-	result := element.Accept(r.inter)
-	expStatementRes, ok := result.(interpreter.ExpressionStatementResult)
-	if !ok {
-		return
+var lineSep = []byte{'\n'}
+
+func (r *REPL) Accept(code []byte) (inputIsComplete bool, err error) {
+
+	// We need two codes:
+	//
+	// 1. The code used for parsing and type checking (`code`).
+	//
+	//    This is only the code that was just entered in the REPL,
+	//    as we do not want to re-check and re-run the whole program already previously entered into the REPL –
+	//    the checker's and interpreter's state are kept, and they already have the previously entered declarations.
+	//
+	//    However, just parsing the entered code would result in an AST with wrong position information,
+	//    the line number would be always 1. To adjust the line information, we prepend the new code with empty lines.
+	//
+	// 2. The code used for error pretty printing (`codes`).
+	//
+	//    We temporarily update the full code of the whole program to include the new code.
+	//    This allows the error pretty printer to properly refer to previous code (instead of empty lines),
+	//    as well as the new code.
+	//    However, if an error occurs, we revert the addition of the new code
+	//    and leave the program code as it was before.
+
+	// Append the new code to the existing code (used for error reporting),
+	// temporarily, so that errors for the new code can be reported
+
+	currentCode := r.codes[r.checker.Location]
+
+	r.codes[r.checker.Location] = append(currentCode[:], code...)
+
+	defer func() {
+		if panicResult := recover(); panicResult != nil {
+
+			var err error
+
+			switch panicResult := panicResult.(type) {
+			case goRuntime.Error:
+				// don't recover Go or external panics
+				panic(panicResult)
+			case error:
+				err = panicResult
+				break
+			default:
+				err = fmt.Errorf("%s", panicResult)
+				break
+			}
+
+			r.onError(err, r.checker.Location, r.codes)
+		}
+	}()
+
+	// If the new code results in a parsing or checking error,
+	// reset the code
+	defer func() {
+		if err != nil {
+			r.codes[r.checker.Location] = currentCode
+		}
+	}()
+
+	// Only parse the new code, and ignore the existing code.
+	//
+	// Prefix the new code with empty lines,
+	// so that the line number is correct in error messages
+
+	lineSepCount := bytes.Count(currentCode, lineSep)
+
+	if lineSepCount > 0 {
+		prefixedCode := make([]byte, lineSepCount+len(code))
+
+		for i := 0; i < lineSepCount; i++ {
+			prefixedCode[i] = '\n'
+		}
+		copy(prefixedCode[lineSepCount:], code)
+
+		code = prefixedCode
 	}
-	if r.onResult == nil {
-		return
-	}
-	r.onResult(expStatementRes.Value)
-}
-
-func (r *REPL) check(element ast.Element, code string) bool {
-	element.Accept(r.checker)
-	r.codes[r.checker.Location] = code
-	return r.handleCheckerError()
-}
-
-func (r *REPL) Accept(code string) (inputIsComplete bool) {
 
 	// TODO: detect if the input is complete
 	inputIsComplete = true
 
-	var err error
 	result, errs := parser.ParseStatements(code, nil)
 	if len(errs) > 0 {
 		err = parser.Error{
@@ -149,24 +214,34 @@ func (r *REPL) Accept(code string) (inputIsComplete bool) {
 
 	for _, element := range result {
 
-		switch typedElement := element.(type) {
+		switch element := element.(type) {
 		case ast.Declaration:
-			program := ast.NewProgram(nil, []ast.Declaration{typedElement})
+			program := ast.NewProgram(nil, []ast.Declaration{element})
 
-			if !r.check(program, code) {
+			r.checker.CheckProgram(program)
+			err = r.handleCheckerError()
+			if err != nil {
 				return
 			}
 
-			r.execute(typedElement)
+			r.inter.VisitProgram(program)
 
 		case ast.Statement:
 			r.checker.Program = nil
 
-			if !r.check(typedElement, code) {
+			r.checker.CheckStatement(element)
+
+			err = r.handleCheckerError()
+			if err != nil {
 				return
 			}
 
-			r.execute(typedElement)
+			result := ast.AcceptStatement[interpreter.StatementResult](element, r.inter)
+
+			onResult := r.onResult
+			if result, ok := result.(interpreter.ExpressionResult); ok && onResult != nil {
+				onResult(result)
+			}
 
 		default:
 			panic(errors.NewUnreachableError())
@@ -207,4 +282,22 @@ func (r *REPL) Suggestions() (result []REPLSuggestion) {
 	})
 
 	return
+}
+
+func (r *REPL) GetGlobal(name string) interpreter.Value {
+	variable := r.inter.Globals.Get(name)
+	if variable == nil {
+		return nil
+	}
+	return variable.GetValue()
+}
+
+func (r *REPL) ExportValue(value interpreter.Value) (cadence.Value, error) {
+	return ExportValue(
+		value, r.inter,
+		interpreter.LocationRange{
+			Location: r.checker.Location,
+			// TODO: hasPosition
+		},
+	)
 }

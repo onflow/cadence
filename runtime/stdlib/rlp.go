@@ -105,26 +105,26 @@ var rlpDecodeStringFunction = interpreter.NewUnmeteredHostFunctionValue(
 
 		invocation.Interpreter.ReportComputation(common.ComputationKindSTDLIBRLPDecodeString, uint(input.Count()))
 
-		getLocationRange := invocation.GetLocationRange
+		locationRange := invocation.LocationRange
 
 		convertedInput, err := interpreter.ByteArrayValueToByteSlice(invocation.Interpreter, input)
 		if err != nil {
 			panic(RLPDecodeStringError{
 				Msg:           err.Error(),
-				LocationRange: getLocationRange(),
+				LocationRange: locationRange,
 			})
 		}
 		output, bytesRead, err := rlp.DecodeString(convertedInput, 0)
 		if err != nil {
 			panic(RLPDecodeStringError{
 				Msg:           err.Error(),
-				LocationRange: getLocationRange(),
+				LocationRange: locationRange,
 			})
 		}
 		if bytesRead != len(convertedInput) {
 			panic(RLPDecodeStringError{
 				Msg:           rlpErrMsgInputContainsExtraBytes,
-				LocationRange: getLocationRange(),
+				LocationRange: locationRange,
 			})
 		}
 		return interpreter.ByteSliceToByteArrayValue(invocation.Interpreter, output)
@@ -179,13 +179,13 @@ var rlpDecodeListFunction = interpreter.NewUnmeteredHostFunctionValue(
 
 		invocation.Interpreter.ReportComputation(common.ComputationKindSTDLIBRLPDecodeList, uint(input.Count()))
 
-		getLocationRange := invocation.GetLocationRange
+		locationRange := invocation.LocationRange
 
 		convertedInput, err := interpreter.ByteArrayValueToByteSlice(invocation.Interpreter, input)
 		if err != nil {
 			panic(RLPDecodeListError{
 				Msg:           err.Error(),
-				LocationRange: getLocationRange(),
+				LocationRange: locationRange,
 			})
 		}
 
@@ -194,14 +194,14 @@ var rlpDecodeListFunction = interpreter.NewUnmeteredHostFunctionValue(
 		if err != nil {
 			panic(RLPDecodeListError{
 				Msg:           err.Error(),
-				LocationRange: getLocationRange(),
+				LocationRange: locationRange,
 			})
 		}
 
 		if bytesRead != len(convertedInput) {
 			panic(RLPDecodeListError{
 				Msg:           rlpErrMsgInputContainsExtraBytes,
-				LocationRange: getLocationRange(),
+				LocationRange: locationRange,
 			})
 		}
 
@@ -212,7 +212,7 @@ var rlpDecodeListFunction = interpreter.NewUnmeteredHostFunctionValue(
 
 		return interpreter.NewArrayValue(
 			invocation.Interpreter,
-			getLocationRange,
+			locationRange,
 			interpreter.NewVariableSizedStaticType(
 				invocation.Interpreter,
 				interpreter.ByteArrayStaticType,

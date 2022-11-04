@@ -43,7 +43,7 @@ func TestCheckInvalidContractAccountField(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidDeclarationError{}, errs[0])
 }
@@ -58,7 +58,7 @@ func TestCheckInvalidContractInterfaceAccountField(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidDeclarationError{}, errs[0])
 }
@@ -73,7 +73,7 @@ func TestCheckInvalidContractAccountFunction(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidDeclarationError{}, errs[0])
 }
@@ -88,7 +88,7 @@ func TestCheckInvalidContractInterfaceAccountFunction(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidDeclarationError{}, errs[0])
 }
@@ -138,7 +138,7 @@ func TestCheckInvalidContractAccountFieldInitialization(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.AssignmentToConstantMemberError{}, errs[0])
 }
@@ -153,7 +153,7 @@ func TestCheckInvalidContractAccountFieldAccess(t *testing.T) {
       let test = Test.account
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
 }
@@ -208,7 +208,7 @@ func TestCheckInvalidContractMoveToFunction(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.InvalidMoveError{}, errs[0])
 		})
@@ -237,7 +237,7 @@ func TestCheckInvalidContractMoveInVariableDeclaration(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.InvalidMoveError{}, errs[0])
 		})
@@ -266,7 +266,7 @@ func TestCheckInvalidContractMoveReturnFromFunction(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.InvalidMoveError{}, errs[0])
 		})
@@ -295,7 +295,7 @@ func TestCheckInvalidContractMoveIntoArrayLiteral(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.InvalidMoveError{}, errs[0])
 		})
@@ -324,7 +324,7 @@ func TestCheckInvalidContractMoveIntoDictionaryLiteral(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.InvalidMoveError{}, errs[0])
 		})
@@ -699,7 +699,7 @@ func TestCheckInvalidContractNestedTypeShadowing(t *testing.T) {
 				expectedErrors += 1
 			}
 
-			errs := ExpectCheckerErrors(t, err, expectedErrors)
+			errs := RequireCheckerErrors(t, err, expectedErrors)
 
 			for i := 0; i < expectedErrors; i++ {
 				assert.IsType(t, &sema.RedeclarationError{}, errs[i])
@@ -713,7 +713,7 @@ func TestCheckBadContractNesting(t *testing.T) {
 
 	_, err := ParseAndCheck(t, "contract signatureAlgorithm { resource interface payer { contract fun : payer { contract fun { contract fun { } contract fun { contract interface account { } } contract account { } } } } }")
 
-	errs := ExpectCheckerErrors(t, err, 14)
+	errs := RequireCheckerErrors(t, err, 14)
 
 	assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
 	assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[1])
@@ -742,7 +742,7 @@ func TestCheckContractEnumAccessRestricted(t *testing.T) {
 		},
 	)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.MissingAccessModifierError{}, errs[0])
 	assert.IsType(t, &sema.MissingAccessModifierError{}, errs[1])

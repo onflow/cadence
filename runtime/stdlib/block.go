@@ -87,17 +87,17 @@ func NewGetBlockFunction(provider BlockAtHeightProvider) StandardLibraryValue {
 			}
 
 			memoryGauge := invocation.Interpreter
-			getLocationRange := invocation.GetLocationRange
+			locationRange := invocation.LocationRange
 
 			block, exists := getBlockAtHeight(
 				provider,
 				uint64(heightValue),
 			)
 			if !exists {
-				return interpreter.NewNilValue(memoryGauge)
+				return interpreter.Nil
 			}
 
-			blockValue := NewBlockValue(memoryGauge, getLocationRange, block)
+			blockValue := NewBlockValue(memoryGauge, locationRange, block)
 			return interpreter.NewSomeValueNonCopying(memoryGauge, blockValue)
 		},
 	)
@@ -114,7 +114,7 @@ var blockIDMemoryUsage = common.NewNumberMemoryUsage(
 
 func NewBlockValue(
 	inter *interpreter.Interpreter,
-	getLocationRange func() interpreter.LocationRange,
+	locationRange interpreter.LocationRange,
 	block Block,
 ) interpreter.Value {
 
@@ -143,7 +143,7 @@ func NewBlockValue(
 
 	idValue := interpreter.NewArrayValue(
 		inter,
-		getLocationRange,
+		locationRange,
 		BlockIDStaticType,
 		common.Address{},
 		values...,
@@ -216,9 +216,9 @@ func NewGetCurrentBlockFunction(provider CurrentBlockProvider) StandardLibraryVa
 			}
 
 			memoryGauge := invocation.Interpreter
-			getLocationRange := invocation.GetLocationRange
+			locationRange := invocation.LocationRange
 
-			return NewBlockValue(memoryGauge, getLocationRange, block)
+			return NewBlockValue(memoryGauge, locationRange, block)
 		},
 	)
 }

@@ -23,7 +23,6 @@ package sema
 // It is only used as e.g. a type bound, but is not accessible
 // to user programs, i.e. can't be used in type annotations
 // for e.g. parameters, return types, fields, etc.
-//
 var StorableType = &SimpleType{
 	Name:          "Storable",
 	QualifiedName: "Storable",

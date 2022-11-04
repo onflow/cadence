@@ -26,6 +26,8 @@ import (
 
 func TestParseDocstringPragmaArguments(t *testing.T) {
 
+	t.Parallel()
+
 	actual := ParseDocstringPragmaArguments(`
       pragma arguments (a: 1)
       other stuff
@@ -45,6 +47,7 @@ func TestParseDocstringPragmaArguments(t *testing.T) {
 }
 
 func TestParseDocstringPragmaSigners(t *testing.T) {
+	t.Parallel()
 
 	actual := ParseDocstringPragmaSigners(`
 	  pragma signers (alice)

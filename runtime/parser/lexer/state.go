@@ -195,33 +195,33 @@ func numberState(l *lexer) stateFn {
 			if l.endOffset-l.startOffset <= 2 {
 				l.emitError(fmt.Errorf("missing digits"))
 			}
-			l.emitValue(TokenBinaryIntegerLiteral)
+			l.emitType(TokenBinaryIntegerLiteral)
 
 		case 'o':
 			l.scanOctalRemainder()
 			if l.endOffset-l.startOffset <= 2 {
 				l.emitError(fmt.Errorf("missing digits"))
 			}
-			l.emitValue(TokenOctalIntegerLiteral)
+			l.emitType(TokenOctalIntegerLiteral)
 
 		case 'x':
 			l.scanHexadecimalRemainder()
 			if l.endOffset-l.startOffset <= 2 {
 				l.emitError(fmt.Errorf("missing digits"))
 			}
-			l.emitValue(TokenHexadecimalIntegerLiteral)
+			l.emitType(TokenHexadecimalIntegerLiteral)
 
 		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '_':
 			tokenType := l.scanDecimalOrFixedPointRemainder()
-			l.emitValue(tokenType)
+			l.emitType(tokenType)
 
 		case '.':
 			l.scanFixedPointRemainder()
-			l.emitValue(TokenFixedPointNumberLiteral)
+			l.emitType(TokenFixedPointNumberLiteral)
 
 		case EOF:
 			l.backupOne()
-			l.emitValue(TokenDecimalIntegerLiteral)
+			l.emitType(TokenDecimalIntegerLiteral)
 
 		default:
 			prefixChar := r
@@ -234,23 +234,22 @@ func numberState(l *lexer) stateFn {
 				if tokenType == TokenDecimalIntegerLiteral {
 					tokenType = TokenUnknownBaseIntegerLiteral
 				}
-				l.emitValue(tokenType)
+				l.emitType(tokenType)
 			} else {
 				l.backupOne()
-				l.emitValue(TokenDecimalIntegerLiteral)
+				l.emitType(TokenDecimalIntegerLiteral)
 			}
 		}
 
 	} else {
 		tokenType := l.scanDecimalOrFixedPointRemainder()
-		l.emitValue(tokenType)
+		l.emitType(tokenType)
 	}
 
 	return rootState
 }
 
 type Space struct {
-	String          string
 	ContainsNewline bool
 }
 
@@ -259,19 +258,11 @@ func spaceState(startIsNewline bool) stateFn {
 		containsNewline := l.scanSpace()
 		containsNewline = containsNewline || startIsNewline
 
-		if l.memoryGauge != nil {
-			// Meter token wrapper
-			common.UseMemory(l.memoryGauge, common.SpaceTokenMemoryUsage)
-
-			// Meter token content
-			tokenLength := l.wordLength()
-			common.UseMemory(l.memoryGauge, common.NewRawStringMemoryUsage(tokenLength))
-		}
+		common.UseMemory(l.memoryGauge, common.SpaceTokenMemoryUsage)
 
 		l.emit(
 			TokenSpace,
 			Space{
-				String:          l.word(),
 				ContainsNewline: containsNewline,
 			},
 			l.startPosition(),
@@ -283,7 +274,8 @@ func spaceState(startIsNewline bool) stateFn {
 
 func identifierState(l *lexer) stateFn {
 	l.scanIdentifier()
-	if l.word() == keywordAs {
+	// https://github.com/golang/go/commit/69cd91a5981c49eaaa59b33196bdb5586c18d289
+	if string(l.word()) == keywordAs {
 		r := l.next()
 		switch r {
 		case '?':
@@ -296,19 +288,19 @@ func identifierState(l *lexer) stateFn {
 			l.backupOne()
 		}
 	}
-	l.emitValue(TokenIdentifier)
+	l.emitType(TokenIdentifier)
 	return rootState
 }
 
 func stringState(l *lexer) stateFn {
 	l.scanString('"')
-	l.emitValue(TokenString)
+	l.emitType(TokenString)
 	return rootState
 }
 
 func lineCommentState(l *lexer) stateFn {
 	l.scanLineComment()
-	l.emitValue(TokenLineComment)
+	l.emitType(TokenLineComment)
 	return rootState
 }
 
@@ -327,7 +319,7 @@ func blockCommentState(nesting int) stateFn {
 			if l.acceptOne('*') {
 				starOffset := l.endOffset
 				l.endOffset = beforeSlashOffset
-				l.emitValue(TokenBlockCommentContent)
+				l.emitType(TokenBlockCommentContent)
 				l.endOffset = starOffset
 				l.emitType(TokenBlockCommentStart)
 				return blockCommentState(nesting + 1)
@@ -338,7 +330,7 @@ func blockCommentState(nesting int) stateFn {
 			if l.acceptOne('/') {
 				slashOffset := l.endOffset
 				l.endOffset = beforeStarOffset
-				l.emitValue(TokenBlockCommentContent)
+				l.emitType(TokenBlockCommentContent)
 				l.endOffset = slashOffset
 				l.emitType(TokenBlockCommentEnd)
 				return blockCommentState(nesting - 1)

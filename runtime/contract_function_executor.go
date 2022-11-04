@@ -22,13 +22,14 @@ import (
 	"sync"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
 type interpreterContractFunctionExecutor struct {
-	runtime interpreterRuntime
+	runtime *interpreterRuntime
 
 	contractLocation common.AddressLocation
 	functionName     string
@@ -50,7 +51,7 @@ type interpreterContractFunctionExecutor struct {
 }
 
 func newInterpreterContractFunctionExecutor(
-	runtime interpreterRuntime,
+	runtime *interpreterRuntime,
 	contractLocation common.AddressLocation,
 	functionName string,
 	arguments []cadence.Value,
@@ -167,10 +168,9 @@ func (executor *interpreterContractFunctionExecutor) execute() (val cadence.Valu
 			inter,
 			executor.arguments[i],
 			argumentType,
-			func() interpreter.LocationRange {
-				return interpreter.LocationRange{
-					Location: location,
-				}
+			interpreter.LocationRange{
+				Location:    location,
+				HasPosition: ast.EmptyRange,
 			},
 		)
 		if err != nil {
@@ -183,23 +183,24 @@ func (executor *interpreterContractFunctionExecutor) execute() (val cadence.Valu
 		return nil, newError(err, location, codesAndPrograms)
 	}
 
+	var self interpreter.MemberAccessibleValue = contractValue
+
 	// prepare invocation
 	invocation := interpreter.NewInvocation(
 		inter,
-		contractValue,
+		&self,
 		interpreterArguments,
 		executor.argumentTypes,
 		nil,
-		func() interpreter.LocationRange {
-			return interpreter.LocationRange{
-				Location: context.Location,
-			}
+		interpreter.LocationRange{
+			Location:    context.Location,
+			HasPosition: ast.EmptyRange,
 		},
 	)
 
 	contractMember := contractValue.GetMember(
 		inter,
-		invocation.GetLocationRange,
+		invocation.LocationRange,
 		executor.functionName,
 	)
 
@@ -223,7 +224,7 @@ func (executor *interpreterContractFunctionExecutor) execute() (val cadence.Valu
 	}
 
 	var exportedValue cadence.Value
-	exportedValue, err = ExportValue(value, inter, interpreter.ReturnEmptyLocationRange)
+	exportedValue, err = ExportValue(value, inter, interpreter.EmptyLocationRange)
 	if err != nil {
 		return nil, newError(err, location, codesAndPrograms)
 	}
@@ -235,7 +236,7 @@ func (executor *interpreterContractFunctionExecutor) convertArgument(
 	inter *interpreter.Interpreter,
 	argument cadence.Value,
 	argumentType sema.Type,
-	getLocationRange func() interpreter.LocationRange,
+	locationRange interpreter.LocationRange,
 ) (interpreter.Value, error) {
 	environment := executor.environment
 
@@ -255,9 +256,10 @@ func (executor *interpreterContractFunctionExecutor) convertArgument(
 		}
 	}
 
-	return importValue(
+	return ImportValue(
 		inter,
-		getLocationRange,
+		locationRange,
+		environment,
 		argument,
 		argumentType,
 	)

@@ -22,7 +22,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 )
 
-func (checker *Checker) VisitDestroyExpression(expression *ast.DestroyExpression) (resultType ast.Repr) {
+func (checker *Checker) VisitDestroyExpression(expression *ast.DestroyExpression) (resultType Type) {
 	resultType = VoidType
 
 	valueType := checker.VisitExpression(expression.Expression, nil)
@@ -30,7 +30,7 @@ func (checker *Checker) VisitDestroyExpression(expression *ast.DestroyExpression
 	checker.recordResourceInvalidation(
 		expression.Expression,
 		valueType,
-		ResourceInvalidationKindDestroy,
+		ResourceInvalidationKindDestroyDefinite,
 	)
 
 	// The destruction of any resource type (even compound resource types)
