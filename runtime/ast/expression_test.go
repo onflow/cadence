@@ -44,6 +44,7 @@ func TestBoolExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "BoolExpression",
@@ -98,6 +99,7 @@ func TestNilExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "NilExpression",
@@ -145,6 +147,7 @@ func TestStringExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "StringExpression",
@@ -195,6 +198,7 @@ func TestIntegerExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "IntegerExpression",
@@ -399,6 +403,7 @@ func TestFixedPointExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "FixedPointExpression",
@@ -518,6 +523,7 @@ func TestArrayExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "ArrayExpression",
@@ -661,6 +667,7 @@ func TestDictionaryExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "DictionaryExpression",
@@ -818,6 +825,7 @@ func TestIdentifierExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "IdentifierExpression",
@@ -882,6 +890,7 @@ func TestPathExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "PathExpression",
@@ -970,6 +979,7 @@ func TestMemberExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "MemberExpression",
@@ -1304,6 +1314,7 @@ func TestIndexExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "IndexExpression",
@@ -1611,6 +1622,7 @@ func TestUnaryExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "UnaryExpression",
@@ -1843,6 +1855,7 @@ func TestBinaryExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "BinaryExpression",
@@ -2337,6 +2350,7 @@ func TestDestroyExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "DestroyExpression",
@@ -2552,6 +2566,7 @@ func TestForceExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "ForceExpression",
@@ -2764,6 +2779,7 @@ func TestConditionalExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "ConditionalExpression",
@@ -3306,6 +3322,7 @@ func TestInvocationExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "InvocationExpression",
@@ -3625,6 +3642,7 @@ func TestCastingExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "CastingExpression",
@@ -3976,6 +3994,7 @@ func TestCreateExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "CreateExpression",
@@ -4100,6 +4119,7 @@ func TestReferenceExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "ReferenceExpression",
@@ -4369,6 +4389,7 @@ func TestFunctionExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "FunctionExpression",
