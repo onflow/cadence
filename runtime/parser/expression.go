@@ -815,24 +815,22 @@ func defineIdentifierExpression() {
 				), nil
 
 			case keywordView:
-				if !p.isToken(p.current, lexer.TokenIdentifier, keywordFun) {
-					return nil, p.syntaxError(
-						"expected fun keyword, but got %s",
-						string(p.tokenSource(p.current)),
-					)
+				// if `view` is followed by `fun`, then it denotes a view function expression
+				if p.isToken(p.current, lexer.TokenIdentifier, keywordFun) {
+					p.nextSemanticToken()
+					return parseFunctionExpression(p, token, ast.FunctionPurityView)
 				}
-				p.nextSemanticToken()
 
-				return parseFunctionExpression(p, token, ast.FunctionPurityView)
+				// otherwise, we treat it as an identifier called "view"
+				break
 			case keywordFun:
 				return parseFunctionExpression(p, token, ast.FunctionPurityUnspecified)
-
-			default:
-				return ast.NewIdentifierExpression(
-					p.memoryGauge,
-					p.tokenToIdentifier(token),
-				), nil
 			}
+
+			return ast.NewIdentifierExpression(
+				p.memoryGauge,
+				p.tokenToIdentifier(token),
+			), nil
 		},
 	})
 }

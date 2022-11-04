@@ -73,8 +73,11 @@ func parseStatements(p *parser, isEndToken func(token lexer.Token) bool) (statem
 func parseStatement(p *parser) (ast.Statement, error) {
 	p.skipSpaceAndComments()
 
-	// It might start with a keyword for a statement
+	// Flag for cases where we can tell early-on that the current token isn't being used as a keyword
+	// e.g. soft keywords like `view`
+	tokenIsIdentifier := false
 
+	// It might start with a keyword for a statement
 	switch p.current.Type {
 	case lexer.TokenIdentifier:
 		switch string(p.currentTokenSource()) {
@@ -95,15 +98,21 @@ func parseStatement(p *parser) (ast.Statement, error) {
 		case keywordEmit:
 			return parseEmitStatement(p)
 		case keywordView:
-			purityPos := p.current.StartPos
+			// save current stream state before looking ahead for the `fun` keyword
+			cursor := p.tokens.Cursor()
+			current := p.current
+			purityPos := current.StartPos
+
 			p.nextSemanticToken()
-			if !p.isToken(p.current, lexer.TokenIdentifier, keywordFun) {
-				return nil, p.syntaxError(
-					"expected fun keyword, but got %s",
-					string(p.tokenSource(p.current)),
-				)
+			if p.isToken(p.current, lexer.TokenIdentifier, keywordFun) {
+				return parseFunctionDeclarationOrFunctionExpressionStatement(p, ast.FunctionPurityView, &purityPos)
 			}
-			return parseFunctionDeclarationOrFunctionExpressionStatement(p, ast.FunctionPurityView, &purityPos)
+
+			// no `fun` :( revert back to previous lexer state and treat it as an identifier
+			p.tokens.Revert(cursor)
+			p.current = current
+			tokenIsIdentifier = true
+
 		case keywordFun:
 			// The `fun` keyword is ambiguous: it either introduces a function expression
 			// or a function declaration, depending on if an identifier follows, or not.
@@ -111,16 +120,17 @@ func parseStatement(p *parser) (ast.Statement, error) {
 		}
 	}
 
-	// If it is not a keyword for a statement,
-	// it might start with a keyword for a declaration
+	if !tokenIsIdentifier {
+		// If it is not a keyword for a statement,
+		// it might start with a keyword for a declaration
+		declaration, err := parseDeclaration(p, "")
+		if err != nil {
+			return nil, err
+		}
 
-	declaration, err := parseDeclaration(p, "")
-	if err != nil {
-		return nil, err
-	}
-
-	if statement, ok := declaration.(ast.Statement); ok {
-		return statement, nil
+		if statement, ok := declaration.(ast.Statement); ok {
+			return statement, nil
+		}
 	}
 
 	// If it is not a statement or declaration,

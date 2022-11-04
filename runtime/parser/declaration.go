@@ -125,6 +125,7 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 				if purity != ast.FunctionPurityUnspecified {
 					return nil, p.syntaxError("invalid second view modifier")
 				}
+
 				pos := p.current.StartPos
 				purityPos = &pos
 				purity = parsePurityAnnotation(p)
