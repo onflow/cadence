@@ -822,20 +822,15 @@ func defineIdentifierExpression() {
 				}
 
 				// otherwise, we treat it as an identifier called "view"
-				return ast.NewIdentifierExpression(
-					p.memoryGauge,
-					p.tokenToIdentifier(token),
-				), nil
-
+				break
 			case keywordFun:
 				return parseFunctionExpression(p, token, ast.FunctionPurityUnspecified)
-
-			default:
-				return ast.NewIdentifierExpression(
-					p.memoryGauge,
-					p.tokenToIdentifier(token),
-				), nil
 			}
+
+			return ast.NewIdentifierExpression(
+				p.memoryGauge,
+				p.tokenToIdentifier(token),
+			), nil
 		},
 	})
 }

@@ -73,8 +73,11 @@ func parseStatements(p *parser, isEndToken func(token lexer.Token) bool) (statem
 func parseStatement(p *parser) (ast.Statement, error) {
 	p.skipSpaceAndComments()
 
-	// It might start with a keyword for a statement
+	// Flag for cases we can tell early-on that the current token isn't being used as a keyword
+	// e.g. soft keywrods like `view`
+	tokenIsIdentifier := false
 
+	// It might start with a keyword for a statement
 	switch p.current.Type {
 	case lexer.TokenIdentifier:
 		switch string(p.currentTokenSource()) {
@@ -111,6 +114,8 @@ func parseStatement(p *parser) (ast.Statement, error) {
 				return nil, err
 			}
 
+			tokenIsIdentifier = true
+
 		case keywordFun:
 			// The `fun` keyword is ambiguous: it either introduces a function expression
 			// or a function declaration, depending on if an identifier follows, or not.
@@ -118,15 +123,17 @@ func parseStatement(p *parser) (ast.Statement, error) {
 		}
 	}
 
-	// If it is not a keyword for a statement,
-	// it might start with a keyword for a declaration
-	declaration, err := parseDeclaration(p, "")
-	if err != nil {
-		return nil, err
-	}
+	if !tokenIsIdentifier {
+		// If it is not a keyword for a statement,
+		// it might start with a keyword for a declaration
+		declaration, err := parseDeclaration(p, "")
+		if err != nil {
+			return nil, err
+		}
 
-	if statement, ok := declaration.(ast.Statement); ok {
-		return statement, nil
+		if statement, ok := declaration.(ast.Statement); ok {
+			return statement, nil
+		}
 	}
 
 	// If it is not a statement or declaration,

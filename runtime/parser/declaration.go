@@ -62,31 +62,13 @@ func parseDeclarations(p *parser, endTokenType lexer.TokenType) (declarations []
 	}
 }
 
-func parseDeclaration(p *parser, docString string) (declaration ast.Declaration, err error) {
+func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 
 	access := ast.AccessNotSpecified
 	var accessPos *ast.Position
 
 	purity := ast.FunctionPurityUnspecified
 	var purityPos *ast.Position
-
-	// some access modifiers/purity annotations are soft keywords
-	// in which case, parsing them as semantic tokens might mangle the
-	// parser state before they can parsed as identifiers
-	noDeclarationFound := false
-	p.startBuffering()
-
-	defer func() {
-		if noDeclarationFound {
-			bufferErr := p.replayBuffered()
-			if bufferErr != nil && err == nil {
-				declaration = nil
-				err = bufferErr
-			}
-		} else {
-			p.acceptBuffered()
-		}
-	}()
 
 	for {
 		p.skipSpaceAndComments()
@@ -155,17 +137,17 @@ func parseDeclaration(p *parser, docString string) (declaration ast.Declaration,
 				}
 				pos := p.current.StartPos
 				accessPos = &pos
+				var err error
 				access, err = parseAccess(p)
 				if err != nil {
-					return
+					return nil, err
 				}
 
 				continue
 			}
 		}
 
-		noDeclarationFound = true
-		return
+		return nil, nil
 	}
 }
 
