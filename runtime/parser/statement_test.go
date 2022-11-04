@@ -19,6 +19,7 @@
 package parser
 
 import (
+	"fmt"
 	"math/big"
 	"testing"
 
@@ -1163,7 +1164,7 @@ func TestParseViewNonFunction(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]error{
 			&SyntaxError{
-				Message: "expected fun keyword, but got return",
+				Message: "statements on the same line must be separated with a semicolon",
 				Pos:     ast.Position{Offset: 5, Line: 1, Column: 5},
 			},
 		},
@@ -2636,4 +2637,55 @@ func TestParseReferenceExpressionStatement(t *testing.T) {
 		},
 		result,
 	)
+}
+
+func TestSoftKeywordsInStatement(t *testing.T) {
+	t.Parallel()
+
+	posFromName := func(name string, offset int) ast.Position {
+		offsetPos := len(name) + offset
+		return ast.Position{
+			Line:   1,
+			Offset: offsetPos,
+			Column: offsetPos,
+		}
+	}
+
+	for keyword := range softKeywords {
+		// haha scoping
+		name := keyword
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			code := fmt.Sprintf(`%s = 42`, name)
+
+			result, errs := testParseStatements(code)
+			require.Empty(t, errs)
+
+			expected := []ast.Statement{
+				&ast.AssignmentStatement{
+					Target: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: name,
+							Pos:        ast.Position{Offset: 0, Line: 1, Column: 0},
+						},
+					},
+					Transfer: &ast.Transfer{
+						Operation: ast.TransferOperationCopy,
+						Pos:       posFromName(name, 1),
+					},
+					Value: &ast.IntegerExpression{
+						PositiveLiteral: []byte("42"),
+						Base:            10,
+						Value:           big.NewInt(42),
+						Range: ast.NewUnmeteredRange(
+							posFromName(name, 3),
+							posFromName(name, 4),
+						),
+					},
+				},
+			}
+			utils.AssertEqualWithDiff(t, expected, result)
+		})
+	}
 }

@@ -70,6 +70,20 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 	purity := ast.FunctionPurityUnspecified
 	var purityPos *ast.Position
 
+	// access modifiers/purity annotations are soft keywords
+	// in which case, parsing them as semantic tokens might mangle the
+	// parser state before they can parsed as identifiers
+	noDeclarationFound := false
+	p.startBuffering()
+
+	defer func() {
+		if noDeclarationFound {
+			p.replayBuffered()
+		} else {
+			p.acceptBuffered()
+		}
+	}()
+
 	for {
 		p.skipSpaceAndComments()
 
@@ -125,6 +139,7 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 				if purity != ast.FunctionPurityUnspecified {
 					return nil, p.syntaxError("invalid second view modifier")
 				}
+
 				pos := p.current.StartPos
 				purityPos = &pos
 				purity = parsePurityAnnotation(p)
@@ -146,6 +161,7 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 			}
 		}
 
+		noDeclarationFound = true
 		return nil, nil
 	}
 }

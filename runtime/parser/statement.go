@@ -96,14 +96,21 @@ func parseStatement(p *parser) (ast.Statement, error) {
 			return parseEmitStatement(p)
 		case keywordView:
 			purityPos := p.current.StartPos
+			// look ahead 1 token for the `fun` keyword
+			p.startBuffering()
+
 			p.nextSemanticToken()
-			if !p.isToken(p.current, lexer.TokenIdentifier, keywordFun) {
-				return nil, p.syntaxError(
-					"expected fun keyword, but got %s",
-					string(p.tokenSource(p.current)),
-				)
+			if p.isToken(p.current, lexer.TokenIdentifier, keywordFun) {
+				p.acceptBuffered()
+
+				return parseFunctionDeclarationOrFunctionExpressionStatement(p, ast.FunctionPurityView, &purityPos)
 			}
-			return parseFunctionDeclarationOrFunctionExpressionStatement(p, ast.FunctionPurityView, &purityPos)
+			// no `fun` :( revert back to previous lexer state and treat it as an identifier
+			err := p.replayBuffered()
+			if err != nil {
+				return nil, err
+			}
+
 		case keywordFun:
 			// The `fun` keyword is ambiguous: it either introduces a function expression
 			// or a function declaration, depending on if an identifier follows, or not.
@@ -113,7 +120,6 @@ func parseStatement(p *parser) (ast.Statement, error) {
 
 	// If it is not a keyword for a statement,
 	// it might start with a keyword for a declaration
-
 	declaration, err := parseDeclaration(p, "")
 	if err != nil {
 		return nil, err
