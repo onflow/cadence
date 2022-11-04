@@ -1428,8 +1428,8 @@ func TestAuthAccountContracts(t *testing.T) {
 
 	t.Run("get contract", func(t *testing.T) {
 		_, err := ParseAndCheckAccount(t, `
-            fun test() {
-                authAccount.contracts.get(name: "foo")
+            fun test(): DeployedContract? {
+                return authAccount.contracts.get(name: "foo")
             }
 	    `)
 
@@ -1438,8 +1438,8 @@ func TestAuthAccountContracts(t *testing.T) {
 
 	t.Run("add contract", func(t *testing.T) {
 		_, err := ParseAndCheckAccount(t, `
-            fun test() {
-                authAccount.contracts.add(name: "foo", code: "012".decodeHex())
+            fun test(): DeployedContract {
+                return authAccount.contracts.add(name: "foo", code: "012".decodeHex())
             }
 	    `)
 
@@ -1448,8 +1448,8 @@ func TestAuthAccountContracts(t *testing.T) {
 
 	t.Run("update contract", func(t *testing.T) {
 		_, err := ParseAndCheckAccount(t, `
-            fun test() {
-                authAccount.contracts.update__experimental(name: "foo", code: "012".decodeHex())
+            fun test(): DeployedContract {
+                return authAccount.contracts.update__experimental(name: "foo", code: "012".decodeHex())
             }
 	    `)
 
@@ -1458,8 +1458,8 @@ func TestAuthAccountContracts(t *testing.T) {
 
 	t.Run("remove contract", func(t *testing.T) {
 		_, err := ParseAndCheckAccount(t, `
-            fun test() {
-                authAccount.contracts.remove(name: "foo")
+            fun test(): DeployedContract? {
+                return authAccount.contracts.remove(name: "foo")
             }
 	    `)
 
@@ -1502,8 +1502,8 @@ func TestPublicAccountContracts(t *testing.T) {
 
 	t.Run("get contract", func(t *testing.T) {
 		_, err := ParseAndCheckAccount(t, `
-            fun test() {
-                publicAccount.contracts.get(name: "foo")
+            fun test(): DeployedContract? {
+                return publicAccount.contracts.get(name: "foo")
             }
 	    `)
 
@@ -1512,8 +1512,8 @@ func TestPublicAccountContracts(t *testing.T) {
 
 	t.Run("add contract", func(t *testing.T) {
 		_, err := ParseAndCheckAccount(t, `
-            fun test() {
-                publicAccount.contracts.add(name: "foo", code: "012".decodeHex())
+            fun test(): DeployedContract {
+                return publicAccount.contracts.add(name: "foo", code: "012".decodeHex())
             }
 	    `)
 
@@ -1526,8 +1526,8 @@ func TestPublicAccountContracts(t *testing.T) {
 
 	t.Run("update contract", func(t *testing.T) {
 		_, err := ParseAndCheckAccount(t, `
-            fun test() {
-                publicAccount.contracts.update__experimental(name: "foo", code: "012".decodeHex())
+            fun test(): DeployedContract {
+                return publicAccount.contracts.update__experimental(name: "foo", code: "012".decodeHex())
             }
 	    `)
 
@@ -1540,8 +1540,8 @@ func TestPublicAccountContracts(t *testing.T) {
 
 	t.Run("remove contract", func(t *testing.T) {
 		_, err := ParseAndCheckAccount(t, `
-            fun test() {
-                publicAccount.contracts.remove(name: "foo")
+            fun test(): DeployedContract {
+                return publicAccount.contracts.remove(name: "foo")
             }
 	    `)
 
