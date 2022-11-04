@@ -5890,7 +5890,9 @@ func TestParseCasting(t *testing.T) {
 }
 
 func testParseIdentifiersWith(t *testing.T, identifiers []string, condition func(*testing.T, string, error)) {
-	for _, name := range identifiers {
+	for _, identifier := range identifiers {
+		// to ensure proper name capture
+		name := identifier
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -5922,8 +5924,7 @@ func TestParseIdentifiers(t *testing.T) {
 func TestParseHardKeywords(t *testing.T) {
 	t.Parallel()
 
-	// seriously why doesn't golang have iterators
-	hardKeywordList := make([]string, len(hardKeywords))
+	hardKeywordList := make([]string, 0, len(hardKeywords))
 	for kw := range hardKeywords {
 		hardKeywordList = append(hardKeywordList, kw)
 	}
@@ -5944,7 +5945,7 @@ func TestParseHardKeywords(t *testing.T) {
 func TestParseSoftKeywords(t *testing.T) {
 	t.Parallel()
 
-	softKeywordList := make([]string, len(softKeywords))
+	softKeywordList := make([]string, 0, len(softKeywords))
 	for kw := range softKeywords {
 		softKeywordList = append(softKeywordList, kw)
 	}

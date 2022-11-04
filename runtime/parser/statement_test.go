@@ -2651,9 +2651,7 @@ func TestSoftKeywordsInStatement(t *testing.T) {
 		}
 	}
 
-	for keyword := range softKeywords {
-		// haha scoping
-		name := keyword
+	testSoftKeyword := func(name string) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -2686,6 +2684,11 @@ func TestSoftKeywordsInStatement(t *testing.T) {
 				},
 			}
 			utils.AssertEqualWithDiff(t, expected, result)
+
 		})
+	}
+
+	for keyword := range softKeywords {
+		testSoftKeyword(keyword)
 	}
 }
