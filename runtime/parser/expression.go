@@ -815,7 +815,7 @@ func defineIdentifierExpression() {
 				), nil
 
 			case keywordView:
-				// if `view` is followed by `fun`, then it denotes a pure function expression
+				// if `view` is followed by `fun`, then it denotes a view function expression
 				if p.isToken(p.current, lexer.TokenIdentifier, keywordFun) {
 					p.nextSemanticToken()
 					return parseFunctionExpression(p, token, ast.FunctionPurityView)
