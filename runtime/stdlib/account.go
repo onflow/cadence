@@ -1314,10 +1314,8 @@ func newAccountContractsBorrowFunction(
 			var contractValue *interpreter.CompositeValue
 
 			contractLocation := common.NewAddressLocation(gauge, address, name)
-			wrapPanic(func() {
-				subInterpreter := inter.EnsureLoaded(contractLocation)
-				contractValue, err = subInterpreter.GetContractComposite(contractLocation)
-			})
+			subInterpreter := inter.EnsureLoaded(contractLocation)
+			contractValue, err = subInterpreter.GetContractComposite(contractLocation)
 
 			if err != nil {
 				return interpreter.Nil
