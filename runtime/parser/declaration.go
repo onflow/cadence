@@ -62,7 +62,7 @@ func parseDeclarations(p *parser, endTokenType lexer.TokenType) (declarations []
 	}
 }
 
-func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
+func parseDeclaration(p *parser, docString string) (declaration ast.Declaration, err error) {
 
 	access := ast.AccessNotSpecified
 	var accessPos *ast.Position
@@ -78,7 +78,11 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 
 	defer func() {
 		if noDeclarationFound {
-			p.replayBuffered()
+			bufferErr := p.replayBuffered()
+			if bufferErr != nil && err == nil {
+				declaration = nil
+				err = bufferErr
+			}
 		} else {
 			p.acceptBuffered()
 		}
@@ -151,10 +155,9 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 				}
 				pos := p.current.StartPos
 				accessPos = &pos
-				var err error
 				access, err = parseAccess(p)
 				if err != nil {
-					return nil, err
+					return
 				}
 
 				continue
@@ -162,7 +165,7 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 		}
 
 		noDeclarationFound = true
-		return nil, nil
+		return
 	}
 }
 
