@@ -70,7 +70,7 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 	purity := ast.FunctionPurityUnspecified
 	var purityPos *ast.Position
 
-	// access modifiers/purity annotations are soft keywords
+	// some access modifiers/purity annotations are soft keywords
 	// in which case, parsing them as semantic tokens might mangle the
 	// parser state before they can parsed as identifiers
 	noDeclarationFound := false
