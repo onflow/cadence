@@ -88,6 +88,7 @@ func TestTypeAnnotation_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "IsResource": true,
@@ -232,6 +233,7 @@ func TestNominalType_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "NominalType",
@@ -312,6 +314,7 @@ func TestOptionalType_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "OptionalType",
@@ -400,6 +403,7 @@ func TestVariableSizedType_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "VariableSizedType",
@@ -509,6 +513,7 @@ func TestConstantSizedType_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "ConstantSizedType",
@@ -623,6 +628,7 @@ func TestDictionaryType_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "DictionaryType",
@@ -797,6 +803,7 @@ func TestFunctionType_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "FunctionType",
@@ -952,6 +959,7 @@ func TestReferenceType_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "ReferenceType",
@@ -1087,6 +1095,7 @@ func TestRestrictedType_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "RestrictedType",
@@ -1264,6 +1273,7 @@ func TestInstantiationType_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "InstantiationType",

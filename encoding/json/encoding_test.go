@@ -48,7 +48,11 @@ func TestEncodeVoid(t *testing.T) {
 
 	t.Parallel()
 
-	testEncodeAndDecode(t, cadence.NewVoid(), `{"type":"Void"}`)
+	testEncodeAndDecode(t,
+		cadence.NewVoid(),
+		// language=json
+		`{"type": "Void"}`,
+	)
 }
 
 func TestEncodeOptional(t *testing.T) {
@@ -59,12 +63,27 @@ func TestEncodeOptional(t *testing.T) {
 		{
 			"Nil",
 			cadence.NewOptional(nil),
-			`{"type":"Optional","value":null}`,
+			// language=json
+			`
+              {
+                "type": "Optional",
+                "value": null
+              }
+            `,
 		},
 		{
 			"Non-nil",
 			cadence.NewOptional(cadence.NewInt(42)),
-			`{"type":"Optional","value":{"type":"Int","value":"42"}}`,
+			// language=json
+			`
+              {
+                "type": "Optional",
+                "value": {
+                  "type": "Int",
+                  "value": "42"
+                }
+              }
+            `,
 		},
 	}...)
 }
@@ -77,11 +96,13 @@ func TestEncodeBool(t *testing.T) {
 		{
 			"True",
 			cadence.NewBool(true),
+			// language=json
 			`{"type":"Bool","value":true}`,
 		},
 		{
 			"False",
 			cadence.NewBool(false),
+			// language=json
 			`{"type":"Bool","value":false}`,
 		},
 	}...)
@@ -131,11 +152,13 @@ func TestEncodeCharacter(t *testing.T) {
 		{
 			"a",
 			a,
+			// language=json
 			`{"type":"Character","value":"a"}`,
 		},
 		{
 			"b",
 			b,
+			// language=json
 			`{"type":"Character","value":"b"}`,
 		},
 	}...)
@@ -149,11 +172,13 @@ func TestEncodeString(t *testing.T) {
 		{
 			"Empty",
 			cadence.String(""),
+			// language=json
 			`{"type":"String","value":""}`,
 		},
 		{
 			"Non-empty",
 			cadence.String("foo"),
+			// language=json
 			`{"type":"String","value":"foo"}`,
 		},
 	}...)
@@ -166,6 +191,7 @@ func TestEncodeAddress(t *testing.T) {
 	testEncodeAndDecode(
 		t,
 		cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
+		// language=json
 		`{"type":"Address","value":"0x0000000102030405"}`,
 	)
 }
@@ -178,26 +204,31 @@ func TestEncodeInt(t *testing.T) {
 		{
 			"Negative",
 			cadence.NewInt(-42),
+			// language=json
 			`{"type":"Int","value":"-42"}`,
 		},
 		{
 			"Zero",
 			cadence.NewInt(0),
+			// language=json
 			`{"type":"Int","value":"0"}`,
 		},
 		{
 			"Positive",
 			cadence.NewInt(42),
+			// language=json
 			`{"type":"Int","value":"42"}`,
 		},
 		{
 			"SmallerThanMinInt256",
 			cadence.NewIntFromBig(new(big.Int).Sub(sema.Int256TypeMinIntBig, big.NewInt(10))),
+			// language=json
 			`{"type":"Int","value":"-57896044618658097711785492504343953926634992332820282019728792003956564819978"}`,
 		},
 		{
 			"LargerThanMaxUInt256",
 			cadence.NewIntFromBig(new(big.Int).Add(sema.UInt256TypeMaxIntBig, big.NewInt(10))),
+			// language=json
 			`{"type":"Int","value":"115792089237316195423570985008687907853269984665640564039457584007913129639945"}`,
 		},
 	}...)
@@ -211,16 +242,19 @@ func TestEncodeInt8(t *testing.T) {
 		{
 			"Min",
 			cadence.NewInt8(math.MinInt8),
+			// language=json
 			`{"type":"Int8","value":"-128"}`,
 		},
 		{
 			"Zero",
 			cadence.NewInt8(0),
+			// language=json
 			`{"type":"Int8","value":"0"}`,
 		},
 		{
 			"Max",
 			cadence.NewInt8(math.MaxInt8),
+			// language=json
 			`{"type":"Int8","value":"127"}`,
 		},
 	}...)
@@ -234,16 +268,19 @@ func TestEncodeInt16(t *testing.T) {
 		{
 			"Min",
 			cadence.NewInt16(math.MinInt16),
+			// language=json
 			`{"type":"Int16","value":"-32768"}`,
 		},
 		{
 			"Zero",
 			cadence.NewInt16(0),
+			// language=json
 			`{"type":"Int16","value":"0"}`,
 		},
 		{
 			"Max",
 			cadence.NewInt16(math.MaxInt16),
+			// language=json
 			`{"type":"Int16","value":"32767"}`,
 		},
 	}...)
@@ -257,16 +294,19 @@ func TestEncodeInt32(t *testing.T) {
 		{
 			"Min",
 			cadence.NewInt32(math.MinInt32),
+			// language=json
 			`{"type":"Int32","value":"-2147483648"}`,
 		},
 		{
 			"Zero",
 			cadence.NewInt32(0),
+			// language=json
 			`{"type":"Int32","value":"0"}`,
 		},
 		{
 			"Max",
 			cadence.NewInt32(math.MaxInt32),
+			// language=json
 			`{"type":"Int32","value":"2147483647"}`,
 		},
 	}...)
@@ -280,16 +320,19 @@ func TestEncodeInt64(t *testing.T) {
 		{
 			"Min",
 			cadence.NewInt64(math.MinInt64),
+			// language=json
 			`{"type":"Int64","value":"-9223372036854775808"}`,
 		},
 		{
 			"Zero",
 			cadence.NewInt64(0),
+			// language=json
 			`{"type":"Int64","value":"0"}`,
 		},
 		{
 			"Max",
 			cadence.NewInt64(math.MaxInt64),
+			// language=json
 			`{"type":"Int64","value":"9223372036854775807"}`,
 		},
 	}...)
@@ -303,16 +346,19 @@ func TestEncodeInt128(t *testing.T) {
 		{
 			"Min",
 			cadence.Int128{Value: sema.Int128TypeMinIntBig},
+			// language=json
 			`{"type":"Int128","value":"-170141183460469231731687303715884105728"}`,
 		},
 		{
 			"Zero",
 			cadence.NewInt128(0),
+			// language=json
 			`{"type":"Int128","value":"0"}`,
 		},
 		{
 			"Max",
 			cadence.Int128{Value: sema.Int128TypeMaxIntBig},
+			// language=json
 			`{"type":"Int128","value":"170141183460469231731687303715884105727"}`,
 		},
 	}...)
@@ -326,16 +372,19 @@ func TestEncodeInt256(t *testing.T) {
 		{
 			"Min",
 			cadence.Int256{Value: sema.Int256TypeMinIntBig},
+			// language=json
 			`{"type":"Int256","value":"-57896044618658097711785492504343953926634992332820282019728792003956564819968"}`,
 		},
 		{
 			"Zero",
 			cadence.NewInt256(0),
+			// language=json
 			`{"type":"Int256","value":"0"}`,
 		},
 		{
 			"Max",
 			cadence.Int256{Value: sema.Int256TypeMaxIntBig},
+			// language=json
 			`{"type":"Int256","value":"57896044618658097711785492504343953926634992332820282019728792003956564819967"}`,
 		},
 	}...)
@@ -349,16 +398,19 @@ func TestEncodeUInt(t *testing.T) {
 		{
 			"Zero",
 			cadence.NewUInt(0),
+			// language=json
 			`{"type":"UInt","value":"0"}`,
 		},
 		{
 			"Positive",
 			cadence.NewUInt(42),
+			// language=json
 			`{"type":"UInt","value":"42"}`,
 		},
 		{
 			"LargerThanMaxUInt256",
 			cadence.UInt{Value: new(big.Int).Add(sema.UInt256TypeMaxIntBig, big.NewInt(10))},
+			// language=json
 			`{"type":"UInt","value":"115792089237316195423570985008687907853269984665640564039457584007913129639945"}`,
 		},
 	}...)
@@ -372,11 +424,13 @@ func TestEncodeUInt8(t *testing.T) {
 		{
 			"Zero",
 			cadence.NewUInt8(0),
+			// language=json
 			`{"type":"UInt8","value":"0"}`,
 		},
 		{
 			"Max",
 			cadence.NewUInt8(math.MaxUint8),
+			// language=json
 			`{"type":"UInt8","value":"255"}`,
 		},
 	}...)
@@ -390,11 +444,13 @@ func TestEncodeUInt16(t *testing.T) {
 		{
 			"Zero",
 			cadence.NewUInt16(0),
+			// language=json
 			`{"type":"UInt16","value":"0"}`,
 		},
 		{
 			"Max",
 			cadence.NewUInt16(math.MaxUint16),
+			// language=json
 			`{"type":"UInt16","value":"65535"}`,
 		},
 	}...)
@@ -408,11 +464,13 @@ func TestEncodeUInt32(t *testing.T) {
 		{
 			"Zero",
 			cadence.NewUInt32(0),
+			// language=json
 			`{"type":"UInt32","value":"0"}`,
 		},
 		{
 			"Max",
 			cadence.NewUInt32(math.MaxUint32),
+			// language=json
 			`{"type":"UInt32","value":"4294967295"}`,
 		},
 	}...)
@@ -426,11 +484,13 @@ func TestEncodeUInt64(t *testing.T) {
 		{
 			"Zero",
 			cadence.NewUInt64(0),
+			// language=json
 			`{"type":"UInt64","value":"0"}`,
 		},
 		{
 			"Max",
 			cadence.NewUInt64(uint64(math.MaxUint64)),
+			// language=json
 			`{"type":"UInt64","value":"18446744073709551615"}`,
 		},
 	}...)
@@ -444,11 +504,13 @@ func TestEncodeUInt128(t *testing.T) {
 		{
 			"Zero",
 			cadence.NewUInt128(0),
+			// language=json
 			`{"type":"UInt128","value":"0"}`,
 		},
 		{
 			"Max",
 			cadence.UInt128{Value: sema.UInt128TypeMaxIntBig},
+			// language=json
 			`{"type":"UInt128","value":"340282366920938463463374607431768211455"}`,
 		},
 	}...)
@@ -462,11 +524,13 @@ func TestEncodeUInt256(t *testing.T) {
 		{
 			"Zero",
 			cadence.NewUInt256(0),
+			// language=json
 			`{"type":"UInt256","value":"0"}`,
 		},
 		{
 			"Max",
 			cadence.UInt256{Value: sema.UInt256TypeMaxIntBig},
+			// language=json
 			`{"type":"UInt256","value":"115792089237316195423570985008687907853269984665640564039457584007913129639935"}`,
 		},
 	}...)
@@ -480,11 +544,13 @@ func TestEncodeWord8(t *testing.T) {
 		{
 			"Zero",
 			cadence.NewWord8(0),
+			// language=json
 			`{"type":"Word8","value":"0"}`,
 		},
 		{
 			"Max",
 			cadence.NewWord8(math.MaxUint8),
+			// language=json
 			`{"type":"Word8","value":"255"}`,
 		},
 	}...)
@@ -498,11 +564,13 @@ func TestEncodeWord16(t *testing.T) {
 		{
 			"Zero",
 			cadence.NewWord16(0),
+			// language=json
 			`{"type":"Word16","value":"0"}`,
 		},
 		{
 			"Max",
 			cadence.NewWord16(math.MaxUint16),
+			// language=json
 			`{"type":"Word16","value":"65535"}`,
 		},
 	}...)
@@ -516,11 +584,13 @@ func TestEncodeWord32(t *testing.T) {
 		{
 			"Zero",
 			cadence.NewWord32(0),
+			// language=json
 			`{"type":"Word32","value":"0"}`,
 		},
 		{
 			"Max",
 			cadence.NewWord32(math.MaxUint32),
+			// language=json
 			`{"type":"Word32","value":"4294967295"}`,
 		},
 	}...)
@@ -534,11 +604,13 @@ func TestEncodeWord64(t *testing.T) {
 		{
 			"Zero",
 			cadence.NewWord64(0),
+			// language=json
 			`{"type":"Word64","value":"0"}`,
 		},
 		{
 			"Max",
 			cadence.NewWord64(math.MaxUint64),
+			// language=json
 			`{"type":"Word64","value":"18446744073709551615"}`,
 		},
 	}...)
@@ -552,21 +624,25 @@ func TestEncodeFix64(t *testing.T) {
 		{
 			"Zero",
 			cadence.Fix64(0),
+			// language=json
 			`{"type":"Fix64","value":"0.00000000"}`,
 		},
 		{
 			"789.00123010",
 			cadence.Fix64(78_900_123_010),
+			// language=json
 			`{"type":"Fix64","value":"789.00123010"}`,
 		},
 		{
 			"1234.056",
 			cadence.Fix64(123_405_600_000),
+			// language=json
 			`{"type":"Fix64","value":"1234.05600000"}`,
 		},
 		{
 			"-12345.006789",
 			cadence.Fix64(-1_234_500_678_900),
+			// language=json
 			`{"type":"Fix64","value":"-12345.00678900"}`,
 		},
 	}...)
@@ -580,16 +656,19 @@ func TestEncodeUFix64(t *testing.T) {
 		{
 			"Zero",
 			cadence.UFix64(0),
+			// language=json
 			`{"type":"UFix64","value":"0.00000000"}`,
 		},
 		{
 			"789.00123010",
 			cadence.UFix64(78_900_123_010),
+			// language=json
 			`{"type":"UFix64","value":"789.00123010"}`,
 		},
 		{
 			"1234.056",
 			cadence.UFix64(123_405_600_000),
+			// language=json
 			`{"type":"UFix64","value":"1234.05600000"}`,
 		},
 	}...)
@@ -602,6 +681,7 @@ func TestEncodeArray(t *testing.T) {
 	emptyArray := encodeTest{
 		"Empty",
 		cadence.NewArray([]cadence.Value{}),
+		// language=json
 		`{"type":"Array","value":[]}`,
 	}
 
@@ -612,7 +692,26 @@ func TestEncodeArray(t *testing.T) {
 			cadence.NewInt(2),
 			cadence.NewInt(3),
 		}),
-		`{"type":"Array","value":[{"type":"Int","value":"1"},{"type":"Int","value":"2"},{"type":"Int","value":"3"}]}`,
+		// language=json
+		`
+          {
+            "type": "Array",
+            "value": [
+              {
+                "type": "Int",
+                "value": "1"
+              },
+              {
+                "type": "Int",
+                "value": "2"
+              },
+              {
+                "type": "Int",
+                "value": "3"
+              }
+            ]
+          }
+        `,
 	}
 
 	resourceArray := encodeTest{
@@ -628,7 +727,59 @@ func TestEncodeArray(t *testing.T) {
 				cadence.NewInt(3),
 			}).WithType(fooResourceType),
 		}),
-		`{"type":"Array","value":[{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"1"}}]}},{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"2"}}]}},{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"3"}}]}}]}`,
+		// language=json
+		`
+          {
+            "type": "Array",
+            "value": [
+              {
+                "type": "Resource",
+                "value": {
+                  "id": "S.test.Foo",
+                  "fields": [
+                    {
+                      "name": "bar",
+                      "value": {
+                        "type": "Int",
+                        "value": "1"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "Resource",
+                "value": {
+                  "id": "S.test.Foo",
+                  "fields": [
+                    {
+                      "name": "bar",
+                      "value": {
+                        "type": "Int",
+                        "value": "2"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "Resource",
+                "value": {
+                  "id": "S.test.Foo",
+                  "fields": [
+                    {
+                      "name": "bar",
+                      "value": {
+                        "type": "Int",
+                        "value": "3"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        `,
 	}
 
 	testAllEncodeAndDecode(t,
@@ -658,7 +809,44 @@ func TestEncodeDictionary(t *testing.T) {
 				Value: cadence.NewInt(3),
 			},
 		}),
-		`{"type":"Dictionary","value":[{"key":{"type":"String","value":"a"},"value":{"type":"Int","value":"1"}},{"key":{"type":"String","value":"b"},"value":{"type":"Int","value":"2"}},{"key":{"type":"String","value":"c"},"value":{"type":"Int","value":"3"}}]}`,
+		// language=json
+		`
+          {
+            "type": "Dictionary",
+            "value": [
+              {
+                "key": {
+                  "type": "String",
+                  "value": "a"
+                },
+                "value": {
+                  "type": "Int",
+                  "value": "1"
+                }
+              },
+              {
+                "key": {
+                  "type": "String",
+                  "value": "b"
+                },
+                "value": {
+                  "type": "Int",
+                  "value": "2"
+                }
+              },
+              {
+                "key": {
+                  "type": "String",
+                  "value": "c"
+                },
+                "value": {
+                  "type": "Int",
+                  "value": "3"
+                }
+              }
+            ]
+          }
+        `,
 	}
 
 	nestedDict := encodeTest{
@@ -692,7 +880,77 @@ func TestEncodeDictionary(t *testing.T) {
 				}),
 			},
 		}),
-		`{"type":"Dictionary","value":[{"key":{"type":"String","value":"a"},"value":{"type":"Dictionary","value":[{"key":{"type":"String","value":"1"},"value":{"type":"Int","value":"1"}}]}},{"key":{"type":"String","value":"b"},"value":{"type":"Dictionary","value":[{"key":{"type":"String","value":"2"},"value":{"type":"Int","value":"2"}}]}},{"key":{"type":"String","value":"c"},"value":{"type":"Dictionary","value":[{"key":{"type":"String","value":"3"},"value":{"type":"Int","value":"3"}}]}}]}`,
+		// language=json
+		`
+          {
+            "type": "Dictionary",
+            "value": [
+              {
+                "key": {
+                  "type": "String",
+                  "value": "a"
+                },
+                "value": {
+                  "type": "Dictionary",
+                  "value": [
+                    {
+                      "key": {
+                        "type": "String",
+                        "value": "1"
+                      },
+                      "value": {
+                        "type": "Int",
+                        "value": "1"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "key": {
+                  "type": "String",
+                  "value": "b"
+                },
+                "value": {
+                  "type": "Dictionary",
+                  "value": [
+                    {
+                      "key": {
+                        "type": "String",
+                        "value": "2"
+                      },
+                      "value": {
+                        "type": "Int",
+                        "value": "2"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "key": {
+                  "type": "String",
+                  "value": "c"
+                },
+                "value": {
+                  "type": "Dictionary",
+                  "value": [
+                    {
+                      "key": {
+                        "type": "String",
+                        "value": "3"
+                      },
+                      "value": {
+                        "type": "Int",
+                        "value": "3"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        `,
 	}
 
 	resourceDict := encodeTest{
@@ -717,7 +975,77 @@ func TestEncodeDictionary(t *testing.T) {
 				}).WithType(fooResourceType),
 			},
 		}),
-		`{"type":"Dictionary","value":[{"key":{"type":"String","value":"a"},"value":{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"1"}}]}}},{"key":{"type":"String","value":"b"},"value":{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"2"}}]}}},{"key":{"type":"String","value":"c"},"value":{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"3"}}]}}}]}`,
+		// language=json
+		`
+          {
+            "type": "Dictionary",
+            "value": [
+              {
+                "key": {
+                  "type": "String",
+                  "value": "a"
+                },
+                "value": {
+                  "type": "Resource",
+                  "value": {
+                    "id": "S.test.Foo",
+                    "fields": [
+                      {
+                        "name": "bar",
+                        "value": {
+                          "type": "Int",
+                          "value": "1"
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "key": {
+                  "type": "String",
+                  "value": "b"
+                },
+                "value": {
+                  "type": "Resource",
+                  "value": {
+                    "id": "S.test.Foo",
+                    "fields": [
+                      {
+                        "name": "bar",
+                        "value": {
+                          "type": "Int",
+                          "value": "2"
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "key": {
+                  "type": "String",
+                  "value": "c"
+                },
+                "value": {
+                  "type": "Resource",
+                  "value": {
+                    "id": "S.test.Foo",
+                    "fields": [
+                      {
+                        "name": "bar",
+                        "value": {
+                          "type": "Int",
+                          "value": "3"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        `,
 	}
 
 	testAllEncodeAndDecode(t,
@@ -769,20 +1097,44 @@ func TestEncodeResource(t *testing.T) {
 		t.Parallel()
 
 		actual := exportFromScript(t, `
-			resource Foo {
-				let bar: Int
-	
-				init(bar: Int) {
-					self.bar = bar
-				}
-			}
-	
-			fun main(): @Foo {
-				return <- create Foo(bar: 42)
-			}
-		`)
+            resource Foo {
+                let bar: Int
 
-		expectedJSON := `{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"uuid","value":{"type":"UInt64","value":"1"}},{"name":"bar","value":{"type":"Int","value":"42"}}]}}`
+                init(bar: Int) {
+                    self.bar = bar
+                }
+            }
+
+            fun main(): @Foo {
+                return <- create Foo(bar: 42)
+            }
+        `)
+
+		// language=json
+		expectedJSON := `
+          {
+            "type": "Resource",
+            "value": {
+              "id": "S.test.Foo",
+              "fields": [
+                {
+                  "name": "uuid",
+                  "value": {
+                    "type": "UInt64",
+                    "value": "1"
+                  }
+                },
+                {
+                  "name": "bar",
+                  "value": {
+                    "type": "Int",
+                    "value": "42"
+                  }
+                }
+              ]
+            }
+          }
+        `
 
 		testEncodeAndDecode(t, actual, expectedJSON)
 	})
@@ -792,25 +1144,49 @@ func TestEncodeResource(t *testing.T) {
 		t.Parallel()
 
 		actual := exportFromScript(t, `
-			resource Foo {
-				let bar: Int
-	
-				fun foo(): String {
-					return "foo"
-				}
-	
-				init(bar: Int) {
-					self.bar = bar
-				}
-			}
-	
-			fun main(): @Foo {
-				return <- create Foo(bar: 42)
-			}
-		`)
+            resource Foo {
+                let bar: Int
+
+                fun foo(): String {
+                    return "foo"
+                }
+
+                init(bar: Int) {
+                    self.bar = bar
+                }
+            }
+
+            fun main(): @Foo {
+                return <- create Foo(bar: 42)
+            }
+        `)
 
 		// function "foo" should be omitted from resulting JSON
-		expectedJSON := `{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"uuid","value":{"type":"UInt64","value":"1"}},{"name":"bar","value":{"type":"Int","value":"42"}}]}}`
+		// language=json
+		expectedJSON := `
+          {
+            "type": "Resource",
+            "value": {
+              "id": "S.test.Foo",
+              "fields": [
+                {
+                  "name": "uuid",
+                  "value": {
+                    "type": "UInt64",
+                    "value": "1"
+                  }
+                },
+                {
+                  "name": "bar",
+                  "value": {
+                    "type": "Int",
+                    "value": "42"
+                  }
+                }
+              ]
+            }
+          }
+        `
 
 		testEncodeAndDecode(t, actual, expectedJSON)
 	})
@@ -820,32 +1196,74 @@ func TestEncodeResource(t *testing.T) {
 		t.Parallel()
 
 		actual := exportFromScript(t, `
-			resource Bar {
-				let x: Int
-	
-				init(x: Int) {
-					self.x = x
-				}
-			}
-	
-			resource Foo {
-				let bar: @Bar
-	
-				init(bar: @Bar) {
-					self.bar <- bar
-				}
-	
-				destroy() {
-					destroy self.bar
-				}
-			}
-	
-			fun main(): @Foo {
-				return <- create Foo(bar: <- create Bar(x: 42))
-			}
-		`)
+            resource Bar {
+                let x: Int
 
-		expectedJSON := `{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"uuid","value":{"type":"UInt64","value":"2"}},{"name":"bar","value":{"type":"Resource","value":{"id":"S.test.Bar","fields":[{"name":"uuid","value":{"type":"UInt64","value":"1"}},{"name":"x","value":{"type":"Int","value":"42"}}]}}}]}}`
+                init(x: Int) {
+                    self.x = x
+                }
+            }
+
+            resource Foo {
+                let bar: @Bar
+
+                init(bar: @Bar) {
+                    self.bar <- bar
+                }
+
+                destroy() {
+                    destroy self.bar
+                }
+            }
+
+            fun main(): @Foo {
+                return <- create Foo(bar: <- create Bar(x: 42))
+            }
+        `)
+
+		// language=json
+		expectedJSON := `
+          {
+            "type": "Resource",
+            "value": {
+              "id": "S.test.Foo",
+              "fields": [
+                {
+                  "name": "uuid",
+                  "value": {
+                    "type": "UInt64",
+                    "value": "2"
+                  }
+                },
+                {
+                  "name": "bar",
+                  "value": {
+                    "type": "Resource",
+                    "value": {
+                      "id": "S.test.Bar",
+                      "fields": [
+                        {
+                          "name": "uuid",
+                          "value": {
+                            "type": "UInt64",
+                            "value": "1"
+                          }
+                        },
+                        {
+                          "name": "x",
+                          "value": {
+                            "type": "Int",
+                            "value": "42"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        `
 
 		testEncodeAndDecode(t, actual, expectedJSON)
 	})
@@ -878,7 +1296,31 @@ func TestEncodeStruct(t *testing.T) {
 				cadence.String("foo"),
 			},
 		).WithType(simpleStructType),
-		`{"type":"Struct","value":{"id":"S.test.FooStruct","fields":[{"name":"a","value":{"type":"Int","value":"1"}},{"name":"b","value":{"type":"String","value":"foo"}}]}}`,
+		// language=json
+		`
+          {
+            "type": "Struct",
+            "value": {
+              "id": "S.test.FooStruct",
+              "fields": [
+                {
+                  "name": "a",
+                  "value": {
+                    "type": "Int",
+                    "value": "1"
+                  }
+                },
+                {
+                  "name": "b",
+                  "value": {
+                    "type": "String",
+                    "value": "foo"
+                  }
+                }
+              ]
+            }
+          }
+        `,
 	}
 
 	resourceStructType := &cadence.StructType{
@@ -908,7 +1350,42 @@ func TestEncodeStruct(t *testing.T) {
 				).WithType(fooResourceType),
 			},
 		).WithType(resourceStructType),
-		`{"type":"Struct","value":{"id":"S.test.FooStruct","fields":[{"name":"a","value":{"type":"String","value":"foo"}},{"name":"b","value":{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"42"}}]}}}]}}`,
+		// language=json
+		`
+          {
+            "type": "Struct",
+            "value": {
+              "id": "S.test.FooStruct",
+              "fields": [
+                {
+                  "name": "a",
+                  "value": {
+                    "type": "String",
+                    "value": "foo"
+                  }
+                },
+                {
+                  "name": "b",
+                  "value": {
+                    "type": "Resource",
+                    "value": {
+                      "id": "S.test.Foo",
+                      "fields": [
+                        {
+                          "name": "bar",
+                          "value": {
+                            "type": "Int",
+                            "value": "42"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        `,
 	}
 
 	testAllEncodeAndDecode(t, simpleStruct, resourceStruct)
@@ -941,7 +1418,31 @@ func TestEncodeEvent(t *testing.T) {
 				cadence.String("foo"),
 			},
 		).WithType(simpleEventType),
-		`{"type":"Event","value":{"id":"S.test.FooEvent","fields":[{"name":"a","value":{"type":"Int","value":"1"}},{"name":"b","value":{"type":"String","value":"foo"}}]}}`,
+		// language=json
+		`
+          {
+            "type": "Event",
+            "value": {
+              "id": "S.test.FooEvent",
+              "fields": [
+                {
+                  "name": "a",
+                  "value": {
+                    "type": "Int",
+                    "value": "1"
+                  }
+                },
+                {
+                  "name": "b",
+                  "value": {
+                    "type": "String",
+                    "value": "foo"
+                  }
+                }
+              ]
+            }
+          }
+        `,
 	}
 
 	resourceEventType := &cadence.EventType{
@@ -971,7 +1472,42 @@ func TestEncodeEvent(t *testing.T) {
 				).WithType(fooResourceType),
 			},
 		).WithType(resourceEventType),
-		`{"type":"Event","value":{"id":"S.test.FooEvent","fields":[{"name":"a","value":{"type":"String","value":"foo"}},{"name":"b","value":{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"42"}}]}}}]}}`,
+		// language=json
+		`
+          {
+            "type": "Event",
+            "value": {
+              "id": "S.test.FooEvent",
+              "fields": [
+                {
+                  "name": "a",
+                  "value": {
+                    "type": "String",
+                    "value": "foo"
+                  }
+                },
+                {
+                  "name": "b",
+                  "value": {
+                    "type": "Resource",
+                    "value": {
+                      "id": "S.test.Foo",
+                      "fields": [
+                        {
+                          "name": "bar",
+                          "value": {
+                            "type": "Int",
+                            "value": "42"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        `,
 	}
 
 	testAllEncodeAndDecode(t, simpleEvent, resourceEvent)
@@ -1004,7 +1540,31 @@ func TestEncodeContract(t *testing.T) {
 				cadence.String("foo"),
 			},
 		).WithType(simpleContractType),
-		`{"type":"Contract","value":{"id":"S.test.FooContract","fields":[{"name":"a","value":{"type":"Int","value":"1"}},{"name":"b","value":{"type":"String","value":"foo"}}]}}`,
+		// language=json
+		`
+          {
+            "type": "Contract",
+            "value": {
+              "id": "S.test.FooContract",
+              "fields": [
+                {
+                  "name": "a",
+                  "value": {
+                    "type": "Int",
+                    "value": "1"
+                  }
+                },
+                {
+                  "name": "b",
+                  "value": {
+                    "type": "String",
+                    "value": "foo"
+                  }
+                }
+              ]
+            }
+          }
+        `,
 	}
 
 	resourceContractType := &cadence.ContractType{
@@ -1034,7 +1594,42 @@ func TestEncodeContract(t *testing.T) {
 				).WithType(fooResourceType),
 			},
 		).WithType(resourceContractType),
-		`{"type":"Contract","value":{"id":"S.test.FooContract","fields":[{"name":"a","value":{"type":"String","value":"foo"}},{"name":"b","value":{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"42"}}]}}}]}}`,
+		// language=json
+		`
+          {
+            "type": "Contract",
+            "value": {
+              "id": "S.test.FooContract",
+              "fields": [
+                {
+                  "name": "a",
+                  "value": {
+                    "type": "String",
+                    "value": "foo"
+                  }
+                },
+                {
+                  "name": "b",
+                  "value": {
+                    "type": "Resource",
+                    "value": {
+                      "id": "S.test.Foo",
+                      "fields": [
+                        {
+                          "name": "bar",
+                          "value": {
+                            "type": "Int",
+                            "value": "42"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        `,
 	}
 
 	testAllEncodeAndDecode(t, simpleContract, resourceContract)
@@ -1050,7 +1645,22 @@ func TestEncodeLink(t *testing.T) {
 			cadence.NewPath("storage", "foo"),
 			"Bar",
 		),
-		`{"type":"Link","value":{"targetPath":{"type":"Path","value":{"domain":"storage","identifier":"foo"}},"borrowType":"Bar"}}`,
+		// language=json
+		`
+          {
+            "type": "Link",
+            "value": {
+              "targetPath": {
+                "type": "Path",
+                "value": {
+                  "domain": "storage",
+                  "identifier": "foo"
+                }
+              },
+              "borrowType": "Bar"
+            }
+          }
+        `,
 	)
 }
 
@@ -1116,6 +1726,7 @@ func TestEncodeSimpleTypes(t *testing.T) {
 			val: cadence.TypeValue{
 				StaticType: ty,
 			},
+			// language=json
 			expected: fmt.Sprintf(`{"type":"Type","value":{"staticType":{"kind":"%s"}}}`, ty.ID()),
 		})
 	}
@@ -1134,7 +1745,20 @@ func TestEncodeType(t *testing.T) {
 			cadence.TypeValue{
 				StaticType: cadence.OptionalType{Type: cadence.IntType{}},
 			},
-			`{"type":"Type","value":{"staticType":{"kind":"Optional", "type" : {"kind" : "Int"}}}}`,
+			// language=json
+			`
+              {
+                "type": "Type",
+                "value": {
+                  "staticType": {
+                    "kind": "Optional",
+                    "type": {
+                      "kind": "Int"
+                    }
+                  }
+                }
+              }
+            `,
 		)
 
 	})
@@ -1146,7 +1770,20 @@ func TestEncodeType(t *testing.T) {
 			cadence.TypeValue{
 				StaticType: cadence.VariableSizedArrayType{ElementType: cadence.IntType{}},
 			},
-			`{"type":"Type","value":{"staticType":{"kind":"VariableSizedArray", "type" : {"kind" : "Int"}}}}`,
+			// language=json
+			`
+              {
+                "type": "Type",
+                "value": {
+                  "staticType": {
+                    "kind": "VariableSizedArray",
+                    "type": {
+                      "kind": "Int"
+                    }
+                  }
+                }
+              }
+            `,
 		)
 
 	})
@@ -1161,8 +1798,21 @@ func TestEncodeType(t *testing.T) {
 					Size:        3,
 				},
 			},
-			`{"type":"Type","value":{"staticType":{"kind":"ConstantSizedArray", 
-			"type" : {"kind" : "Int"}, "size" : 3}}}`,
+			// language=json
+			`
+              {
+                "type": "Type",
+                "value": {
+                  "staticType": {
+                    "kind": "ConstantSizedArray",
+                    "type": {
+                      "kind": "Int"
+                    },
+                    "size": 3
+                  }
+                }
+              }
+            `,
 		)
 
 	})
@@ -1177,8 +1827,23 @@ func TestEncodeType(t *testing.T) {
 					KeyType:     cadence.IntType{},
 				},
 			},
-			`{"type":"Type","value":{"staticType":{"kind":"Dictionary", 
-			"key" : {"kind" : "Int"}, "value" : {"kind" : "String"}}}}`,
+			// language=json
+			`
+              {
+                "type": "Type",
+                "value": {
+                  "staticType": {
+                    "kind": "Dictionary",
+                    "key": {
+                      "kind": "Int"
+                    },
+                    "value": {
+                      "kind": "String"
+                    }
+                  }
+                }
+              }
+            `,
 		)
 
 	})
@@ -1200,20 +1865,47 @@ func TestEncodeType(t *testing.T) {
 					},
 				},
 			},
-			`{"type":"Type", "value": {"staticType":
-					{"kind": "Struct", 
-					 "type" : "",
-					 "typeID" : "S.test.S", 
-					 "fields" : [
-						  {"id" : "foo", "type": {"kind" : "Int"} }
-					    ],
-					 "initializers" : [
-						  [{"label" : "foo", "id" : "bar", "type": {"kind" : "Int"}}],
-						  [{"label" : "qux", "id" : "baz", "type": {"kind" : "String"}}]
-						]
-					}
-				}
-			}`,
+			// language=json
+			`
+              {
+                "type": "Type",
+                "value": {
+                  "staticType": {
+                    "kind": "Struct",
+                    "type": "",
+                    "typeID": "S.test.S",
+                    "fields": [
+                      {
+                        "id": "foo",
+                        "type": {
+                          "kind": "Int"
+                        }
+                      }
+                    ],
+                    "initializers": [
+                      [
+                        {
+                          "label": "foo",
+                          "id": "bar",
+                          "type": {
+                            "kind": "Int"
+                          }
+                        }
+                      ],
+                      [
+                        {
+                          "label": "qux",
+                          "id": "baz",
+                          "type": {
+                            "kind": "String"
+                          }
+                        }
+                      ]
+                    ]
+                  }
+                }
+              }
+            `,
 		)
 	})
 
@@ -1234,20 +1926,47 @@ func TestEncodeType(t *testing.T) {
 					},
 				},
 			},
-			`{"type":"Type", "value": {"staticType":
-					{"kind": "Resource", 
-					 "type" : "",
-					 "typeID" : "S.test.R", 
-					 "fields" : [
-						  {"id" : "foo", "type": {"kind" : "Int"} }
-					    ],
-					 "initializers" : [
-						  [{"label" : "foo", "id" : "bar", "type": {"kind" : "Int"}}],
-						  [{"label" : "qux", "id" : "baz", "type": {"kind" : "String"}}]
-						]
-					}
-				}
-			}`,
+			// language=json
+			`
+              {
+                "type": "Type",
+                "value": {
+                  "staticType": {
+                    "kind": "Resource",
+                    "type": "",
+                    "typeID": "S.test.R",
+                    "fields": [
+                      {
+                        "id": "foo",
+                        "type": {
+                          "kind": "Int"
+                        }
+                      }
+                    ],
+                    "initializers": [
+                      [
+                        {
+                          "label": "foo",
+                          "id": "bar",
+                          "type": {
+                            "kind": "Int"
+                          }
+                        }
+                      ],
+                      [
+                        {
+                          "label": "qux",
+                          "id": "baz",
+                          "type": {
+                            "kind": "String"
+                          }
+                        }
+                      ]
+                    ]
+                  }
+                }
+              }
+            `,
 		)
 	})
 
@@ -1268,20 +1987,47 @@ func TestEncodeType(t *testing.T) {
 					},
 				},
 			},
-			`{"type":"Type", "value": {"staticType":
-					{"kind": "Contract", 
-					 "type" : "",
-					 "typeID" : "S.test.C", 
-					 "fields" : [
-						  {"id" : "foo", "type": {"kind" : "Int"} }
-					    ],
-					 "initializers" : [
-						  [{"label" : "foo", "id" : "bar", "type": {"kind" : "Int"}}],
-						  [{"label" : "qux", "id" : "baz", "type": {"kind" : "String"}}]
-						]
-					}
-				}
-			}`,
+			// language=json
+			`
+              {
+                "type": "Type",
+                "value": {
+                  "staticType": {
+                    "kind": "Contract",
+                    "type": "",
+                    "typeID": "S.test.C",
+                    "fields": [
+                      {
+                        "id": "foo",
+                        "type": {
+                          "kind": "Int"
+                        }
+                      }
+                    ],
+                    "initializers": [
+                      [
+                        {
+                          "label": "foo",
+                          "id": "bar",
+                          "type": {
+                            "kind": "Int"
+                          }
+                        }
+                      ],
+                      [
+                        {
+                          "label": "qux",
+                          "id": "baz",
+                          "type": {
+                            "kind": "String"
+                          }
+                        }
+                      ]
+                    ]
+                  }
+                }
+              }
+            `,
 		)
 	})
 
@@ -1302,20 +2048,47 @@ func TestEncodeType(t *testing.T) {
 					},
 				},
 			},
-			`{"type":"Type", "value": {"staticType":
-					{"kind": "StructInterface", 
-					 "type" : "",
-					 "typeID" : "S.test.S", 
-					 "fields" : [
-						  {"id" : "foo", "type": {"kind" : "Int"} }
-					    ],
-					 "initializers" : [
-						  [{"label" : "foo", "id" : "bar", "type": {"kind" : "Int"}}],
-						  [{"label" : "qux", "id" : "baz", "type": {"kind" : "String"}}]
-						]
-					}
-				}
-			}`,
+			// language=json
+			`
+              {
+                "type": "Type",
+                "value": {
+                  "staticType": {
+                    "kind": "StructInterface",
+                    "type": "",
+                    "typeID": "S.test.S",
+                    "fields": [
+                      {
+                        "id": "foo",
+                        "type": {
+                          "kind": "Int"
+                        }
+                      }
+                    ],
+                    "initializers": [
+                      [
+                        {
+                          "label": "foo",
+                          "id": "bar",
+                          "type": {
+                            "kind": "Int"
+                          }
+                        }
+                      ],
+                      [
+                        {
+                          "label": "qux",
+                          "id": "baz",
+                          "type": {
+                            "kind": "String"
+                          }
+                        }
+                      ]
+                    ]
+                  }
+                }
+              }
+            `,
 		)
 	})
 
@@ -1336,20 +2109,47 @@ func TestEncodeType(t *testing.T) {
 					},
 				},
 			},
-			`{"type":"Type", "value": {"staticType":
-					{"kind": "ResourceInterface", 
-					 "type" : "",
-					 "typeID" : "S.test.R", 
-					 "fields" : [
-						  {"id" : "foo", "type": {"kind" : "Int"} }
-					    ],
-					 "initializers" : [
-						  [{"label" : "foo", "id" : "bar", "type": {"kind" : "Int"}}],
-						  [{"label" : "qux", "id" : "baz", "type": {"kind" : "String"}}]
-						]
-					}
-				}
-			}`,
+			// language=json
+			`
+              {
+                "type": "Type",
+                "value": {
+                  "staticType": {
+                    "kind": "ResourceInterface",
+                    "type": "",
+                    "typeID": "S.test.R",
+                    "fields": [
+                      {
+                        "id": "foo",
+                        "type": {
+                          "kind": "Int"
+                        }
+                      }
+                    ],
+                    "initializers": [
+                      [
+                        {
+                          "label": "foo",
+                          "id": "bar",
+                          "type": {
+                            "kind": "Int"
+                          }
+                        }
+                      ],
+                      [
+                        {
+                          "label": "qux",
+                          "id": "baz",
+                          "type": {
+                            "kind": "String"
+                          }
+                        }
+                      ]
+                    ]
+                  }
+                }
+              }
+            `,
 		)
 	})
 
@@ -1370,20 +2170,47 @@ func TestEncodeType(t *testing.T) {
 					},
 				},
 			},
-			`{"type":"Type", "value": {"staticType":
-					{"kind": "ContractInterface", 
-					 "type" : "",
-					 "typeID" : "S.test.C", 
-					 "fields" : [
-						  {"id" : "foo", "type": {"kind" : "Int"} }
-					    ],
-					 "initializers" : [
-						  [{"label" : "foo", "id" : "bar", "type": {"kind" : "Int"}}],
-						  [{"label" : "qux", "id" : "baz", "type": {"kind" : "String"}}]
-						]
-					}
-				}
-			}`,
+			// language=json
+			`
+              {
+                "type": "Type",
+                "value": {
+                  "staticType": {
+                    "kind": "ContractInterface",
+                    "type": "",
+                    "typeID": "S.test.C",
+                    "fields": [
+                      {
+                        "id": "foo",
+                        "type": {
+                          "kind": "Int"
+                        }
+                      }
+                    ],
+                    "initializers": [
+                      [
+                        {
+                          "label": "foo",
+                          "id": "bar",
+                          "type": {
+                            "kind": "Int"
+                          }
+                        }
+                      ],
+                      [
+                        {
+                          "label": "qux",
+                          "id": "baz",
+                          "type": {
+                            "kind": "String"
+                          }
+                        }
+                      ]
+                    ]
+                  }
+                }
+              }
+            `,
 		)
 	})
 
@@ -1404,19 +2231,45 @@ func TestEncodeType(t *testing.T) {
 					},
 				},
 			},
-			`{"type":"Type", "value": {"staticType":
-					{"kind": "Event", 
-					 "type" : "",
-					 "typeID" : "S.test.E", 
-					 "fields" : [
-						  {"id" : "foo", "type": {"kind" : "Int"} }
-					    ],
-					 "initializers" : 
-						  [[{"label" : "foo", "id" : "bar", "type": {"kind" : "Int"}},
-						  {"label" : "qux", "id" : "baz", "type": {"kind" : "String"}}]]
-					}
-				}
-			}`,
+			// language=json
+			`
+              {
+                "type": "Type",
+                "value": {
+                  "staticType": {
+                    "kind": "Event",
+                    "type": "",
+                    "typeID": "S.test.E",
+                    "fields": [
+                      {
+                        "id": "foo",
+                        "type": {
+                          "kind": "Int"
+                        }
+                      }
+                    ],
+                    "initializers": [
+                      [
+                        {
+                          "label": "foo",
+                          "id": "bar",
+                          "type": {
+                            "kind": "Int"
+                          }
+                        },
+                        {
+                          "label": "qux",
+                          "id": "baz",
+                          "type": {
+                            "kind": "String"
+                          }
+                        }
+                      ]
+                    ]
+                  }
+                }
+              }
+            `,
 		)
 	})
 
@@ -1438,20 +2291,49 @@ func TestEncodeType(t *testing.T) {
 					},
 				},
 			},
-			`{"type":"Type", "value": {"staticType":
-					{"kind": "Enum", 
-					 "type" : {"kind" : "String"},
-					 "typeID" : "S.test.E", 
-					 "fields" : [
-						  {"id" : "foo", "type": {"kind" : "Int"} }
-					    ],
-					 "initializers" : [
-						  [{"label" : "foo", "id" : "bar", "type": {"kind" : "Int"}}],
-						  [{"label" : "qux", "id" : "baz", "type": {"kind" : "String"}}]
-						]
-					}
-				}
-			}`,
+			// language=json
+			`
+              {
+                "type": "Type",
+                "value": {
+                  "staticType": {
+                    "kind": "Enum",
+                    "type": {
+                      "kind": "String"
+                    },
+                    "typeID": "S.test.E",
+                    "fields": [
+                      {
+                        "id": "foo",
+                        "type": {
+                          "kind": "Int"
+                        }
+                      }
+                    ],
+                    "initializers": [
+                      [
+                        {
+                          "label": "foo",
+                          "id": "bar",
+                          "type": {
+                            "kind": "Int"
+                          }
+                        }
+                      ],
+                      [
+                        {
+                          "label": "qux",
+                          "id": "baz",
+                          "type": {
+                            "kind": "String"
+                          }
+                        }
+                      ]
+                    ]
+                  }
+                }
+              }
+            `,
 		)
 	})
 
@@ -1465,8 +2347,21 @@ func TestEncodeType(t *testing.T) {
 					Type:       cadence.IntType{},
 				},
 			},
-			`{"type":"Type","value":{"staticType":{"kind":"Reference", 
-			"type" : {"kind" : "Int"}, "authorized" : false}}}`,
+			// language=json
+			`
+              {
+                "type": "Type",
+                "value": {
+                  "staticType": {
+                    "kind": "Reference",
+                    "type": {
+                      "kind": "Int"
+                    },
+                    "authorized": false
+                  }
+                }
+              }
+            `,
 		)
 
 	})
@@ -1483,17 +2378,31 @@ func TestEncodeType(t *testing.T) {
 					ReturnType: cadence.IntType{},
 				}).WithID("Foo"),
 			},
-			`{"type":"Type","value":{"staticType":
-				{	
-					"kind" : "Function",
-					"typeID":"Foo", 
+			// language=json
+			`
+              {
+                "type": "Type",
+                "value": {
+                  "staticType": {
+                    "kind": "Function",
+                    "typeID": "Foo",
 					"purity": "",
-					"return" : {"kind" : "Int"}, 
-					"parameters" : [
-						{"label" : "qux", "id" : "baz", "type": {"kind" : "String"}}
-					]}
-				}
-			}`,
+                    "return": {
+                      "kind": "Int"
+                    },
+                    "parameters": [
+                      {
+                        "label": "qux",
+                        "id": "baz",
+                        "type": {
+                          "kind": "String"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            `,
 		)
 
 	})
@@ -1562,7 +2471,20 @@ func TestEncodeType(t *testing.T) {
 					BorrowType: cadence.IntType{},
 				},
 			},
-			`{"type":"Type","value":{"staticType":{"kind":"Capability", "type" : {"kind" : "Int"}}}}`,
+			// language=json
+			`
+              {
+                "type": "Type",
+                "value": {
+                  "staticType": {
+                    "kind": "Capability",
+                    "type": {
+                      "kind": "Int"
+                    }
+                  }
+                }
+              }
+            `,
 		)
 
 	})
@@ -1579,16 +2501,26 @@ func TestEncodeType(t *testing.T) {
 					Type: cadence.IntType{},
 				}).WithID("Int{String}"),
 			},
-			`{"type":"Type","value":{"staticType":
-				{	
-					"kind": "Restriction",
-					"typeID":"Int{String}", 
-					"type" : {"kind" : "Int"}, 
-					"restrictions" : [
-						{"kind" : "String"}
-					]}
-				}
-			}`,
+			// language=json
+			`
+              {
+                "type": "Type",
+                "value": {
+                  "staticType": {
+                    "kind": "Restriction",
+                    "typeID": "Int{String}",
+                    "type": {
+                      "kind": "Int"
+                    },
+                    "restrictions": [
+                      {
+                        "kind": "String"
+                      }
+                    ]
+                  }
+                }
+              }
+            `,
 		)
 
 	})
@@ -1600,6 +2532,7 @@ func TestEncodeType(t *testing.T) {
 		testEncodeAndDecode(
 			t,
 			cadence.TypeValue{},
+			// language=json
 			`{"type":"Type","value":{"staticType":""}}`,
 		)
 	})
@@ -1616,7 +2549,25 @@ func TestEncodeCapability(t *testing.T) {
 			Address:    cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
 			BorrowType: cadence.IntType{},
 		},
-		`{"type":"Capability","value":{"path":{"type":"Path","value":{"domain":"storage","identifier":"foo"}},"borrowType":{"kind":"Int"},"address":"0x0000000102030405"}}`,
+		// language=json
+		`
+          {
+            "type": "Capability",
+            "value": {
+              "path": {
+                "type": "Path",
+                "value": {
+                  "domain": "storage",
+                  "identifier": "foo"
+                }
+              },
+              "borrowType": {
+                "kind": "Int"
+              },
+              "address": "0x0000000102030405"
+            }
+          }
+        `,
 	)
 }
 
@@ -1793,7 +2744,8 @@ func TestDecodeFixedPoints(t *testing.T) {
 			for _, tt := range tests {
 				t.Run(tt.input, func(t *testing.T) {
 
-					enc := fmt.Sprintf(`{ "type": "%s", "value": "%s"}`, ty.ID(), tt.input)
+					// language=json
+					enc := fmt.Sprintf(`{"type": "%s", "value": "%s"}`, ty.ID(), tt.input)
 
 					actual, err := json.Decode(nil, []byte(enc))
 
@@ -1812,6 +2764,7 @@ func TestDecodeFixedPoints(t *testing.T) {
 
 		t.Parallel()
 
+		// language=json
 		_, err := json.Decode(nil, []byte(`{"type": "Fix64", "value": "1.-1"}`))
 		assert.Error(t, err)
 	})
@@ -1820,6 +2773,7 @@ func TestDecodeFixedPoints(t *testing.T) {
 
 		t.Parallel()
 
+		// language=json
 		_, err := json.Decode(nil, []byte(`{"type": "Fix64", "value": "1.+1"}`))
 		assert.Error(t, err)
 	})
@@ -1828,6 +2782,7 @@ func TestDecodeFixedPoints(t *testing.T) {
 
 		t.Parallel()
 
+		// language=json
 		_, err := json.Decode(nil, []byte(`{"type": "Fix64", "value": ".1"}`))
 		assert.Error(t, err)
 	})
@@ -1836,6 +2791,7 @@ func TestDecodeFixedPoints(t *testing.T) {
 
 		t.Parallel()
 
+		// language=json
 		_, err := json.Decode(nil, []byte(`{"type": "Fix64", "value": "1."}`))
 		assert.Error(t, err)
 	})
@@ -1866,7 +2822,24 @@ func TestExportRecursiveType(t *testing.T) {
 				cadence.Optional{},
 			},
 		}.WithType(ty),
-		`{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"foo","value":{"type": "Optional","value":null}}]}}`,
+		// language=json
+		`
+          {
+            "type": "Resource",
+            "value": {
+              "id": "S.test.Foo",
+              "fields": [
+                {
+                  "name": "foo",
+                  "value": {
+                    "type": "Optional",
+                    "value": null
+                  }
+                }
+              ]
+            }
+          }
+        `,
 	)
 
 }
@@ -1899,7 +2872,29 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 			cadence.TypeValue{
 				StaticType: ty,
 			},
-			`{"type":"Type","value":{"staticType":{"kind":"Resource","typeID":"S.test.Foo","fields":[{"id":"foo","type":{"kind":"Optional","type":"S.test.Foo"}}],"initializers":[],"type":""}}}`,
+			// language=json
+			`
+              {
+                "type": "Type",
+                "value": {
+                  "staticType": {
+                    "kind": "Resource",
+                    "typeID": "S.test.Foo",
+                    "fields": [
+                      {
+                        "id": "foo",
+                        "type": {
+                          "kind": "Optional",
+                          "type": "S.test.Foo"
+                        }
+                      }
+                    ],
+                    "initializers": [],
+                    "type": ""
+                  }
+                }
+              }
+            `,
 		)
 
 	})
@@ -1936,7 +2931,36 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 			cadence.TypeValue{
 				StaticType: barTy,
 			},
-			`{"type":"Type","value":{"staticType":{"kind":"Resource","typeID":"S.test.Bar","fields":[{"id":"foo1","type":{"kind":"Resource","typeID":"S.test.Foo","fields":[],"initializers":[],"type":""}},{"id":"foo2","type":"S.test.Foo"}],"initializers":[],"type":""}}}`,
+			// language=json
+			`
+              {
+                "type": "Type",
+                "value": {
+                  "staticType": {
+                    "kind": "Resource",
+                    "typeID": "S.test.Bar",
+                    "fields": [
+                      {
+                        "id": "foo1",
+                        "type": {
+                          "kind": "Resource",
+                          "typeID": "S.test.Foo",
+                          "fields": [],
+                          "initializers": [],
+                          "type": ""
+                        }
+                      },
+                      {
+                        "id": "foo2",
+                        "type": "S.test.Foo"
+                      }
+                    ],
+                    "initializers": [],
+                    "type": ""
+                  }
+                }
+              }
+            `,
 		)
 	})
 }
@@ -1948,6 +2972,7 @@ func TestEncodePath(t *testing.T) {
 	testEncodeAndDecode(
 		t,
 		cadence.NewPath("storage", "foo"),
+		// language=json
 		`{"type":"Path","value":{"domain":"storage","identifier":"foo"}}`,
 	)
 }
@@ -1976,15 +3001,16 @@ func TestDecodeInvalidType(t *testing.T) {
 	t.Run("empty type", func(t *testing.T) {
 		t.Parallel()
 
+		// language=json
 		encodedValue := `
-		{
-			"type":"Struct",
-			"value":{
-				"id":"",
-				"fields":[]
-			}
-		}
-	`
+          {
+            "type": "Struct",
+            "value": {
+              "id": "",
+              "fields": []
+            }
+          }
+        `
 		_, err := json.Decode(nil, []byte(encodedValue))
 		require.Error(t, err)
 		assert.Equal(t, "failed to decode JSON-Cadence value: invalid type ID for built-in: ``", err.Error())
@@ -1993,15 +3019,16 @@ func TestDecodeInvalidType(t *testing.T) {
 	t.Run("undefined type", func(t *testing.T) {
 		t.Parallel()
 
+		// language=json
 		encodedValue := `
-		{
-			"type":"Struct",
-			"value":{
-				"id":"I.Foo",
-				"fields":[]
-			}
-		}
-	`
+          {
+            "type": "Struct",
+            "value": {
+              "id": "I.Foo",
+              "fields": []
+            }
+          }
+        `
 		_, err := json.Decode(nil, []byte(encodedValue))
 		require.Error(t, err)
 		assert.Equal(t, "failed to decode JSON-Cadence value: invalid type ID `I.Foo`: invalid identifier location type ID: missing qualified identifier", err.Error())
@@ -2010,15 +3037,16 @@ func TestDecodeInvalidType(t *testing.T) {
 	t.Run("unknown location prefix", func(t *testing.T) {
 		t.Parallel()
 
+		// language=json
 		encodedValue := `
-		{
-			"type":"Struct",
-			"value":{
-				"id":"N.PublicKey",
-				"fields":[]
-			}
-		}
-	`
+          {
+            "type": "Struct",
+            "value":{
+              "id": "N.PublicKey",
+              "fields": []
+            }
+          }
+        `
 		_, err := json.Decode(nil, []byte(encodedValue))
 		require.Error(t, err)
 		assert.Equal(t, "failed to decode JSON-Cadence value: invalid type ID for built-in: `N.PublicKey`", err.Error())
@@ -2086,7 +3114,8 @@ func TestDecodeBackwardsCompatibilityTypeID(t *testing.T) {
 
 	t.Parallel()
 
-	const encoded = `{"type":"Type","value":{"staticType":"&Int"}}}`
+	// language=json
+	encoded := `{"type":"Type","value":{"staticType":"&Int"}}`
 
 	t.Run("unstructured static types allowed", func(t *testing.T) {
 
@@ -2180,9 +3209,39 @@ func TestEncodeBuiltinComposites(t *testing.T) {
 		},
 	}
 
-	const compositeJson = `{"type":"Type","value":{"staticType":{"kind":"%s","typeID":"Foo","fields":[],"initializers":[],"type":""}}}`
+	// language=json
+	compositeJsonTemplate := `
+      {
+        "type": "Type",
+        "value": {
+          "staticType": {
+            "kind": "%s",
+            "typeID": "Foo",
+            "fields": [],
+            "initializers": [],
+            "type": ""
+          }
+        }
+      }
+    `
 
-	const eventJson = `{"type":"Type","value":{"staticType":{"kind":"Event","typeID":"Foo","fields":[],"initializers":[[]],"type":""}}}`
+	// language=json
+	eventJson := `
+      {
+        "type": "Type",
+        "value": {
+          "staticType": {
+            "kind": "Event",
+            "typeID": "Foo",
+            "fields": [],
+            "initializers": [
+              []
+            ],
+            "type": ""
+          }
+        }
+      }
+    `
 
 	for _, typ := range types {
 		typeValue := cadence.NewTypeValue(typ.typ)
@@ -2192,7 +3251,7 @@ func TestEncodeBuiltinComposites(t *testing.T) {
 		case *cadence.EventType:
 			expectedJson = eventJson
 		default:
-			expectedJson = fmt.Sprintf(compositeJson, typ.kind)
+			expectedJson = fmt.Sprintf(compositeJsonTemplate, typ.kind)
 		}
 
 		testEncode(t, typeValue, expectedJson)

@@ -50,6 +50,7 @@ func TestArgument_MarshalJSON(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.JSONEq(t,
+			// language=json
 			`
             {
                 "Expression": {
@@ -89,6 +90,7 @@ func TestArgument_MarshalJSON(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.JSONEq(t,
+			// language=json
 			`
             {
                 "Label": "ok",
