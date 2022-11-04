@@ -1436,6 +1436,32 @@ func TestAuthAccountContracts(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("borrow contract", func(t *testing.T) {
+		_, err := ParseAndCheckAccount(t, `
+            contract C {}
+
+            fun test(): &C? {
+                return authAccount.contracts.borrow<&C>(name: "foo")
+            }
+	    `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("invalid borrow contract: missing type argument", func(t *testing.T) {
+		_, err := ParseAndCheckAccount(t, `
+            contract C {}
+
+            fun test(): &AnyStruct? {
+                return authAccount.contracts.borrow(name: "foo")
+            }
+	    `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeParameterTypeInferenceError{}, errors[0])
+	})
+
 	t.Run("add contract", func(t *testing.T) {
 		_, err := ParseAndCheckAccount(t, `
             fun test(): DeployedContract {
@@ -1508,6 +1534,32 @@ func TestPublicAccountContracts(t *testing.T) {
 	    `)
 
 		require.NoError(t, err)
+	})
+
+	t.Run("borrow contract", func(t *testing.T) {
+		_, err := ParseAndCheckAccount(t, `
+            contract C {}
+
+            fun test(): &C? {
+                return publicAccount.contracts.borrow<&C>(name: "foo")
+            }
+	    `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("invalid borrow contract: missing type argument", func(t *testing.T) {
+		_, err := ParseAndCheckAccount(t, `
+            contract C {}
+
+            fun test(): &AnyStruct? {
+                return publicAccount.contracts.borrow(name: "foo")
+            }
+	    `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeParameterTypeInferenceError{}, errors[0])
 	})
 
 	t.Run("add contract", func(t *testing.T) {
