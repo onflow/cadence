@@ -65,7 +65,6 @@ var AccountContractsTypeBorrowFunctionType = func() *FunctionType {
 		},
 		Parameters: []*Parameter{
 			{
-				Label:          ArgumentLabelNotRequired,
 				Identifier:     "name",
 				TypeAnnotation: NewTypeAnnotation(StringType),
 			},
