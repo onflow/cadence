@@ -252,6 +252,7 @@ func newAuthAccountContractsValue(
 		),
 		newAccountContractsBorrowFunction(
 			gauge,
+			handler,
 			addressValue,
 		),
 		newAuthAccountContractsRemoveFunction(
@@ -940,6 +941,7 @@ func newPublicAccountContractsValue(
 		),
 		newAccountContractsBorrowFunction(
 			gauge,
+			handler,
 			addressValue,
 		),
 		newAccountContractsGetNamesFunction(
@@ -1281,6 +1283,7 @@ func newAccountContractsGetFunction(
 
 func newAccountContractsBorrowFunction(
 	gauge common.MemoryGauge,
+	handler PublicAccountContractsHandler,
 	addressValue interpreter.AddressValue,
 ) *interpreter.HostFunctionValue {
 
@@ -1310,16 +1313,30 @@ func newAccountContractsBorrowFunction(
 				panic(errors.NewUnreachableError())
 			}
 
+			// Check if the contract exists
+
+			var code []byte
 			var err error
-			var contractValue *interpreter.CompositeValue
+			wrapPanic(func() {
+				code, err = handler.GetAccountContractCode(address, name)
+			})
+			if err != nil {
+				panic(err)
+			}
+			if len(code) == 0 {
+				return interpreter.Nil
+			}
+
+			// Load the contract
 
 			contractLocation := common.NewAddressLocation(gauge, address, name)
 			subInterpreter := inter.EnsureLoaded(contractLocation)
-			contractValue, err = subInterpreter.GetContractComposite(contractLocation)
-
+			contractValue, err := subInterpreter.GetContractComposite(contractLocation)
 			if err != nil {
-				return interpreter.Nil
+				panic(err)
 			}
+
+			// Check the type
 
 			staticType := contractValue.StaticType(inter)
 			if !inter.IsSubTypeOfSemaType(staticType, referenceType.Type) {
