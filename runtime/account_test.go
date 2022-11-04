@@ -1582,6 +1582,90 @@ func TestAuthAccountContracts(t *testing.T) {
 
 	t.Parallel()
 
+	t.Run("get contract", func(t *testing.T) {
+		t.Parallel()
+
+		rt := newTestInterpreterRuntime()
+
+		script := []byte(`
+            transaction {
+                prepare(acc: AuthAccount) {
+                    let deployedContract: DeployedContract? = acc.contracts.get(name: "foo")
+                    assert(deployedContract!.name == "foo")
+                }
+            }
+        `)
+
+		var invoked bool
+
+		runtimeInterface := &testRuntimeInterface{
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{{42}}, nil
+			},
+			getAccountContractCode: func(address Address, name string) ([]byte, error) {
+				invoked = true
+				return []byte{1, 2}, nil
+			},
+		}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		err := rt.ExecuteTransaction(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.NoError(t, err)
+		assert.True(t, invoked)
+	})
+
+	t.Run("get non existing contract", func(t *testing.T) {
+		t.Parallel()
+
+		rt := newTestInterpreterRuntime()
+
+		script := []byte(`
+            transaction {
+                prepare(acc: AuthAccount) {
+                    let deployedContract: DeployedContract? = acc.contracts.get(name: "foo")
+                    assert(deployedContract == nil)
+                }
+            }
+        `)
+
+		var invoked bool
+
+		runtimeInterface := &testRuntimeInterface{
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{{42}}, nil
+			},
+			getAccountContractCode: func(address Address, name string) ([]byte, error) {
+				invoked = true
+				return nil, nil
+			},
+		}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		err := rt.ExecuteTransaction(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.NoError(t, err)
+		assert.True(t, invoked)
+	})
+
 	t.Run("get names", func(t *testing.T) {
 		t.Parallel()
 
