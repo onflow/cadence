@@ -1425,6 +1425,46 @@ func TestAuthAccountContracts(t *testing.T) {
 		assert.IsType(t, &sema.InvalidAssignmentAccessError{}, errors[0])
 		assert.IsType(t, &sema.AssignmentToConstantMemberError{}, errors[1])
 	})
+
+	t.Run("get contract", func(t *testing.T) {
+		_, err := ParseAndCheckAccount(t, `
+            fun test() {
+                authAccount.contracts.get(name: "foo")
+            }
+	    `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("add contract", func(t *testing.T) {
+		_, err := ParseAndCheckAccount(t, `
+            fun test() {
+                authAccount.contracts.add(name: "foo", code: "012".decodeHex())
+            }
+	    `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("update contract", func(t *testing.T) {
+		_, err := ParseAndCheckAccount(t, `
+            fun test() {
+                authAccount.contracts.update__experimental(name: "foo", code: "012".decodeHex())
+            }
+	    `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("remove contract", func(t *testing.T) {
+		_, err := ParseAndCheckAccount(t, `
+            fun test() {
+                authAccount.contracts.remove(name: "foo")
+            }
+	    `)
+
+		require.NoError(t, err)
+	})
 }
 
 func TestPublicAccountContracts(t *testing.T) {
@@ -1458,6 +1498,16 @@ func TestPublicAccountContracts(t *testing.T) {
 
 		assert.IsType(t, &sema.InvalidAssignmentAccessError{}, errors[0])
 		assert.IsType(t, &sema.AssignmentToConstantMemberError{}, errors[1])
+	})
+
+	t.Run("get contract", func(t *testing.T) {
+		_, err := ParseAndCheckAccount(t, `
+            fun test() {
+                publicAccount.contracts.get(name: "foo")
+            }
+	    `)
+
+		require.NoError(t, err)
 	})
 
 	t.Run("add contract", func(t *testing.T) {
