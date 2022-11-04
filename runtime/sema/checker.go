@@ -2339,7 +2339,7 @@ func (checker *Checker) CheckStatement(element ast.Statement) {
 }
 
 func (checker *Checker) checkStaticModifier(isStatic bool, position ast.HasPosition) {
-	if isStatic && !checker.Config.AllowStaticFunctions {
+	if isStatic && !checker.Config.AllowStaticDeclarations {
 		checker.report(
 			&InvalidStaticModifierError{
 				Range: ast.NewRangeFromPositioned(checker.memoryGauge, position),
@@ -2349,7 +2349,7 @@ func (checker *Checker) checkStaticModifier(isStatic bool, position ast.HasPosit
 }
 
 func (checker *Checker) checkNativeModifier(isNative bool, position ast.HasPosition) {
-	if isNative && !checker.Config.AllowStaticFunctions {
+	if isNative && !checker.Config.AllowNativeDeclarations {
 		checker.report(
 			&InvalidNativeModifierError{
 				Range: ast.NewRangeFromPositioned(checker.memoryGauge, position),
