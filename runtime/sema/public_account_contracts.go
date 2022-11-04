@@ -23,12 +23,8 @@ import (
 )
 
 const PublicAccountContractsTypeName = "Contracts"
-const PublicAccountContractsTypeGetFunctionName = "get"
-const PublicAccountContractsTypeBorrowFunctionName = "borrow"
-const PublicAccountContractsTypeNamesField = "names"
 
 // PublicAccountContractsType represents the type `PublicAccount.Contracts`
-//
 var PublicAccountContractsType = func() *CompositeType {
 
 	publicAccountContractsType := &CompositeType{
@@ -40,23 +36,21 @@ var PublicAccountContractsType = func() *CompositeType {
 	var members = []*Member{
 		NewUnmeteredPublicFunctionMember(
 			publicAccountContractsType,
-			PublicAccountContractsTypeGetFunctionName,
-			publicAccountContractsTypeGetFunctionType,
-			publicAccountContractsTypeGetFunctionDocString,
+			AccountContractsTypeGetFunctionName,
+			AccountContractsTypeGetFunctionType,
+			accountContractsTypeGetFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			publicAccountContractsType,
-			PublicAccountContractsTypeBorrowFunctionName,
-			publicAccountContractsTypeBorrowFunctionType,
-			publicAccountContractsTypeBorrowFunctionDocString,
+			AccountContractsTypeBorrowFunctionName,
+			AccountContractsTypeBorrowFunctionType,
+			accountContractsTypeBorrowFunctionDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			publicAccountContractsType,
-			PublicAccountContractsTypeNamesField,
-			&VariableSizedType{
-				Type: StringType,
-			},
-			publicAccountContractsTypeNamesDocString,
+			AccountContractsTypeNamesFieldName,
+			accountContractsTypeNamesFieldType,
+			accountContractsTypeNamesFieldDocString,
 		),
 	}
 
@@ -69,65 +63,3 @@ func init() {
 	// Set the container type after initializing the `PublicAccountContractsType`, to avoid initializing loop.
 	PublicAccountContractsType.SetContainerType(PublicAccountType)
 }
-
-const publicAccountContractsTypeGetFunctionDocString = `
-Returns the deployed contract for the contract/contract interface with the given name in the account, if any.
-
-Returns nil if no contract/contract interface with the given name exists in the account.
-`
-
-var publicAccountContractsTypeGetFunctionType = &FunctionType{
-	Parameters: []*Parameter{
-		{
-			Identifier: "name",
-			TypeAnnotation: NewTypeAnnotation(
-				StringType,
-			),
-		},
-	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		&OptionalType{
-			Type: DeployedContractType,
-		},
-	),
-}
-
-const publicAccountContractsTypeBorrowFunctionDocString = `
-Returns a reference of the given type to the contract with the given name in the account, if any.
-
-Returns nil if no contract with the given name exists in the account, or if the contract does not conform to the given type.
-`
-
-var publicAccountContractsTypeBorrowFunctionType = func() *FunctionType {
-
-	typeParameter := &TypeParameter{
-		TypeBound: &ReferenceType{
-			Type: AnyType,
-		},
-		Name: "T",
-	}
-
-	return &FunctionType{
-		TypeParameters: []*TypeParameter{
-			typeParameter,
-		},
-		Parameters: []*Parameter{
-			{
-				Label:          ArgumentLabelNotRequired,
-				Identifier:     "name",
-				TypeAnnotation: NewTypeAnnotation(StringType),
-			},
-		},
-		ReturnTypeAnnotation: NewTypeAnnotation(
-			&OptionalType{
-				Type: &GenericType{
-					TypeParameter: typeParameter,
-				},
-			},
-		),
-	}
-}()
-
-const publicAccountContractsTypeNamesDocString = `
-Names of all contracts deployed in the account.
-`

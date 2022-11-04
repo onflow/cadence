@@ -24,14 +24,10 @@ import (
 
 const AuthAccountContractsTypeName = "Contracts"
 const AuthAccountContractsTypeAddFunctionName = "add"
-const AuthAccountContractsTypeGetFunctionName = "get"
-const AuthAccountContractsTypeBorrowFunctionName = "borrow"
-const AuthAccountContractsTypeRemoveFunctionName = "remove"
 const AuthAccountContractsTypeUpdateExperimentalFunctionName = "update__experimental"
-const AuthAccountContractsTypeNamesField = "names"
+const AuthAccountContractsTypeRemoveFunctionName = "remove"
 
 // AuthAccountContractsType represents the type `AuthAccount.Contracts`
-//
 var AuthAccountContractsType = func() *CompositeType {
 
 	authAccountContractsType := &CompositeType{
@@ -55,15 +51,15 @@ var AuthAccountContractsType = func() *CompositeType {
 		),
 		NewUnmeteredPublicFunctionMember(
 			authAccountContractsType,
-			AuthAccountContractsTypeGetFunctionName,
-			AuthAccountContractsTypeGetFunctionType,
-			authAccountContractsTypeGetFunctionDocString,
+			AccountContractsTypeGetFunctionName,
+			AccountContractsTypeGetFunctionType,
+			accountContractsTypeGetFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			authAccountContractsType,
-			AuthAccountContractsTypeBorrowFunctionName,
-			AuthAccountContractsTypeBorrowFunctionType,
-			authAccountContractsTypeBorrowFunctionDocString,
+			AccountContractsTypeBorrowFunctionName,
+			AccountContractsTypeBorrowFunctionType,
+			accountContractsTypeBorrowFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			authAccountContractsType,
@@ -73,11 +69,9 @@ var AuthAccountContractsType = func() *CompositeType {
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			authAccountContractsType,
-			AuthAccountContractsTypeNamesField,
-			&VariableSizedType{
-				Type: StringType,
-			},
-			authAccountContractsTypeGetNamesDocString,
+			AccountContractsTypeNamesFieldName,
+			accountContractsTypeNamesFieldType,
+			accountContractsTypeNamesFieldDocString,
 		),
 	}
 
@@ -169,64 +163,6 @@ var AuthAccountContractsTypeUpdateExperimentalFunctionType = &FunctionType{
 	),
 }
 
-const authAccountContractsTypeGetFunctionDocString = `
-Returns the deployed contract for the contract/contract interface with the given name in the account, if any.
-
-Returns nil if no contract/contract interface with the given name exists in the account.
-`
-
-var AuthAccountContractsTypeGetFunctionType = &FunctionType{
-	Parameters: []*Parameter{
-		{
-			Identifier: "name",
-			TypeAnnotation: NewTypeAnnotation(
-				StringType,
-			),
-		},
-	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		&OptionalType{
-			Type: DeployedContractType,
-		},
-	),
-}
-
-const authAccountContractsTypeBorrowFunctionDocString = `
-Returns a reference of the given type to the contract with the given name in the account, if any.
-
-Returns nil if no contract with the given name exists in the account, or if the contract does not conform to the given type.
-`
-
-var AuthAccountContractsTypeBorrowFunctionType = func() *FunctionType {
-
-	typeParameter := &TypeParameter{
-		TypeBound: &ReferenceType{
-			Type: AnyType,
-		},
-		Name: "T",
-	}
-
-	return &FunctionType{
-		TypeParameters: []*TypeParameter{
-			typeParameter,
-		},
-		Parameters: []*Parameter{
-			{
-				Label:          ArgumentLabelNotRequired,
-				Identifier:     "name",
-				TypeAnnotation: NewTypeAnnotation(StringType),
-			},
-		},
-		ReturnTypeAnnotation: NewTypeAnnotation(
-			&OptionalType{
-				Type: &GenericType{
-					TypeParameter: typeParameter,
-				},
-			},
-		),
-	}
-}()
-
 const authAccountContractsTypeRemoveFunctionDocString = `
 Removes the contract/contract interface from the account which has the given name, if any.
 
@@ -248,7 +184,3 @@ var AuthAccountContractsTypeRemoveFunctionType = &FunctionType{
 		},
 	),
 }
-
-const authAccountContractsTypeGetNamesDocString = `
-Names of all contracts deployed in the account.
-`
