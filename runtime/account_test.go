@@ -1877,7 +1877,7 @@ func TestAuthAccountContracts(t *testing.T) {
 				return []Address{{0, 0, 0, 0, 0, 0, 0, 0x42}}, nil
 			},
 			getAccountContractCode: func(address Address, name string) ([]byte, error) {
-				return nil, fmt.Errorf("contract %s.%s does not exist", address, name)
+				return nil, nil
 			},
 		}
 
