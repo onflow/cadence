@@ -73,8 +73,8 @@ func parseStatements(p *parser, isEndToken func(token lexer.Token) bool) (statem
 func parseStatement(p *parser) (ast.Statement, error) {
 	p.skipSpaceAndComments()
 
-	// Flag for cases we can tell early-on that the current token isn't being used as a keyword
-	// e.g. soft keywrods like `view`
+	// Flag for cases where we can tell early-on that the current token isn't being used as a keyword
+	// e.g. soft keywords like `view`
 	tokenIsIdentifier := false
 
 	// It might start with a keyword for a statement
@@ -98,22 +98,19 @@ func parseStatement(p *parser) (ast.Statement, error) {
 		case keywordEmit:
 			return parseEmitStatement(p)
 		case keywordView:
-			purityPos := p.current.StartPos
-			// look ahead 1 token for the `fun` keyword
-			p.startBuffering()
+			// save current stream state before looking ahead for the `fun` keyword
+			cursor := p.tokens.Cursor()
+			current := p.current
+			purityPos := current.StartPos
 
 			p.nextSemanticToken()
 			if p.isToken(p.current, lexer.TokenIdentifier, keywordFun) {
-				p.acceptBuffered()
-
 				return parseFunctionDeclarationOrFunctionExpressionStatement(p, ast.FunctionPurityView, &purityPos)
 			}
-			// no `fun` :( revert back to previous lexer state and treat it as an identifier
-			err := p.replayBuffered()
-			if err != nil {
-				return nil, err
-			}
 
+			// no `fun` :( revert back to previous lexer state and treat it as an identifier
+			p.tokens.Revert(cursor)
+			p.current = current
 			tokenIsIdentifier = true
 
 		case keywordFun:
