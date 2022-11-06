@@ -1,0 +1,31 @@
+name: Dispatch workflow on devex-tests
+
+on:
+  push:
+    branches:
+      - master
+      - 'feature/**'
+      - 'v**'
+      - 'gpavlov/**'
+  pull_request:
+    branches:
+      - master
+      - 'feature/**'
+      - 'v**'
+
+jobs:
+  dispatch:
+    name: dispatch
+    permissions: write-all
+    runs-on: ubuntu-latest
+    steps:
+      - run: >
+          curl https://api.github.com/repos/onflow/devex-tests/actions/workflows -H "Authorization: token ${{ secrets.PAT }}"
+      - run: >
+          curl 
+          -X POST 
+          -H "Accept: application/vnd.github+json" 
+          -H "Authorization: token ${{ secrets.PAT }}" 
+          https://api.github.com/repos/onflow/devex-tests/actions/workflows/39775220/dispatches 
+          -d '{"ref":"main","inputs":{"CADENCE_HASH":"${{ github.sha }}"}}'
+    
