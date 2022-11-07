@@ -2519,6 +2519,9 @@ func TestCheckAttachToRestrictedType(t *testing.T) {
 		`,
 		)
 
+		// there is no reason to error here; the owner of this
+		// restricted type is always able to unrestrict
+
 		require.NoError(t, err)
 	})
 
@@ -2577,6 +2580,9 @@ func TestCheckAttachToRestrictedType(t *testing.T) {
 			}
 		`,
 		)
+
+		// owner can unrestrict `r` as they wish, so there is no reason to
+		// limit attach here
 
 		require.NoError(t, err)
 	})
@@ -3460,6 +3466,8 @@ func TestCheckRemoveFromRestricted(t *testing.T) {
 			}
 		`,
 		)
+
+		// owner can always unrestrict `s`, so no need to prevent removal of A
 
 		require.NoError(t, err)
 	})
@@ -4655,6 +4663,57 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("restricted concrete base", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+		struct R: I {}
+		struct interface I {}
+		attachment A for R {}
+		pub fun foo(r: {I}) {
+			r[A]
+		}
+		`,
+		)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAttachmentAccessError{}, errs[0])
+	})
+
+	t.Run("restricted concrete base reference", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+		struct R: I {}
+		struct interface I {}
+		attachment A for R {}
+		pub fun foo(r: &R{I}) {
+			r[A]
+		}
+		`,
+		)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAttachmentAccessError{}, errs[0])
+	})
+
+	t.Run("restricted concrete base reference to interface", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+		struct R: I {}
+		struct interface I {}
+		attachment A for R {}
+		pub fun foo(r: &{I}) {
+			r[A]
+		}
+		`,
+		)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAttachmentAccessError{}, errs[0])
+	})
+
 	t.Run("restricted anystruct base", func(t *testing.T) {
 		t.Parallel()
 
@@ -4663,6 +4722,21 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		struct interface I {}
 		attachment A for I {}
 		pub fun foo(r: {I}) {
+			r[A]
+		}
+		`,
+		)
+		require.NoError(t, err)
+	})
+
+	t.Run("restricted anystruct base interface", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+		struct interface I {}
+		attachment A for I {}
+		pub fun foo(r: &{I}) {
 			r[A]
 		}
 		`,
@@ -4723,22 +4797,23 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 
 		require.NoError(t, err)
 	})
-}
 
-func TestCheckDebug(t *testing.T) {
+	t.Run("restricted multiply restricted base interface", func(t *testing.T) {
+		t.Parallel()
 
-	t.Parallel()
-
-	_, err := ParseAndCheck(t,
-		`
-		resource R {
-			fun forEachAttachment() {}
+		_, err := ParseAndCheck(t,
+			`
+		struct interface I {}
+		struct interface J {}
+		attachment A for I {}
+		pub fun foo(r: &{I, J}) {
+			r[A]
 		}
 		`,
-	)
+		)
 
-	errs := RequireCheckerErrors(t, err, 1)
-	assert.IsType(t, &sema.InvalidDeclarationError{}, errs[0])
+		require.NoError(t, err)
+	})
 }
 
 func TestCheckAttachmentsDuplicateFields(t *testing.T) {
@@ -5125,5 +5200,82 @@ func TestCheckAttachmentsDuplicateFields(t *testing.T) {
 			errs := RequireCheckerErrors(t, err, 1)
 			assert.IsType(t, &sema.InvalidDeclarationError{}, errs[0])
 		})
+	})
+}
+
+func TestCheckAttachmentsExternalMutation(t *testing.T) {
+	t.Parallel()
+
+	t.Run("basic", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+				pub resource R {}
+				pub attachment A for R {
+					pub let x: [String] 
+					init() {
+						self.x = ["x"]
+					}
+				}
+
+				fun main(r: @R) {
+					r[A]!.x.append("y")
+					destroy r
+				}
+				`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ExternalMutationError{}, errs[0])
+	})
+
+	t.Run("in base", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+				pub resource R {
+					pub fun foo() {
+						self[A]!.x.append("y")
+					}
+				}
+				pub attachment A for R {
+					pub let x: [String] 
+					init() {
+						self.x = ["x"]
+					}
+				}
+				
+				`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ExternalMutationError{}, errs[0])
+	})
+
+	t.Run("in self, through base", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+				pub resource R {}
+				pub attachment A for R {
+					pub let x: [String] 
+					init() {
+						self.x = ["x"]
+					}
+					pub fun foo() {
+						super[A]!.x.append("y")
+					}
+				}
+				
+				`,
+		)
+
+		require.NoError(t, err)
 	})
 }
