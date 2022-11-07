@@ -24,6 +24,8 @@ import (
 	goRuntime "runtime"
 	"sort"
 
+	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/runtime/activations"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/cmd"
 	"github.com/onflow/cadence/runtime/common"
@@ -31,6 +33,7 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 type REPL struct {
@@ -66,8 +69,10 @@ func NewREPL(
 
 	storage := interpreter.NewInMemoryStorage(nil)
 
-	// NOTE: storage option must be provided *before* the predeclared values option,
-	// as predeclared values may rely on storage
+	// necessary now due to log being looked up in the
+	// interpreter's activations instead of the checker
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, stdlib.NewLogFunction(cmd.StandardOutputLogger{}))
 
 	interpreterConfig := &interpreter.Config{
 		Storage: storage,
@@ -75,6 +80,7 @@ func NewREPL(
 			defer func() { uuid++ }()
 			return uuid, nil
 		},
+		BaseActivation: baseActivation,
 	}
 
 	inter, err := interpreter.NewInterpreter(
@@ -276,4 +282,22 @@ func (r *REPL) Suggestions() (result []REPLSuggestion) {
 	})
 
 	return
+}
+
+func (r *REPL) GetGlobal(name string) interpreter.Value {
+	variable := r.inter.Globals.Get(name)
+	if variable == nil {
+		return nil
+	}
+	return variable.GetValue()
+}
+
+func (r *REPL) ExportValue(value interpreter.Value) (cadence.Value, error) {
+	return ExportValue(
+		value, r.inter,
+		interpreter.LocationRange{
+			Location: r.checker.Location,
+			// TODO: hasPosition
+		},
+	)
 }

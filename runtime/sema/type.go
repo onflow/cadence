@@ -4986,8 +4986,12 @@ func (t *ReferenceType) TypeIndexingElementType(indexingType Type) Type {
 }
 
 func (t *ReferenceType) IsValidIndexingType(ty Type) bool {
-	referencedType, ok := t.Type.(TypeIndexableType)
-	return ok && referencedType.IsValidIndexingType(ty)
+	attachmentType, isComposite := ty.(*CompositeType)
+	return isComposite &&
+		IsSubType(t, &ReferenceType{
+			Type: attachmentType.baseType,
+		}) &&
+		attachmentType.IsResourceType() == t.Type.IsResourceType()
 }
 
 func (t *ReferenceType) AllowsValueIndexingAssignment() bool {
@@ -5501,6 +5505,19 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 			// (e.g. reference to a restricted type `&T{Us}`, or reference to an interface type `&T`)
 			//
 			// The holder of the reference may not gain more permissions or knowledge.
+
+			return false
+
+		case *InterfaceType:
+			switch typedInnerSubType := typedSubType.Type.(type) {
+			case *CompositeType:
+				return typedInnerSubType.ExplicitInterfaceConformanceSet().Contains(typedInnerSuperType)
+			// An interface type is a supertype of a restricted type if the restricted set contains
+			// that explicit interface type. Once interfaces can conform to interfaces, this should instead
+			// check that at least one value in the restriction set is a subtype of the interface supertype
+			case *RestrictedType:
+				return typedInnerSubType.RestrictionSet().Contains(typedInnerSuperType)
+			}
 
 			return false
 		}

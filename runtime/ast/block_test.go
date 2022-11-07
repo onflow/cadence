@@ -53,6 +53,7 @@ func TestBlock_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "Block",
@@ -176,6 +177,7 @@ func TestFunctionBlock_MarshalJSON(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.JSONEq(t,
+			// language=json
 			`
             {
                 "Type": "FunctionBlock",
@@ -261,6 +263,7 @@ func TestFunctionBlock_MarshalJSON(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.JSONEq(t,
+			// language=json
 			`
             {
                 "Type": "FunctionBlock",
