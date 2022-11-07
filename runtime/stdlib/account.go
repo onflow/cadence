@@ -36,9 +36,9 @@ const authAccountFunctionDocString = `
 Creates a new account, paid by the given existing account
 `
 
-var authAccountFunctionType = &sema.FunctionType{
-	Purity: sema.FunctionPurityImpure,
-	Parameters: []*sema.Parameter{
+var authAccountFunctionType = sema.NewSimpleFunctionType(
+	sema.FunctionPurityImpure,
+	[]*sema.Parameter{
 		{
 			Identifier: "payer",
 			TypeAnnotation: sema.NewTypeAnnotation(
@@ -46,10 +46,10 @@ var authAccountFunctionType = &sema.FunctionType{
 			),
 		},
 	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
+	sema.NewTypeAnnotation(
 		sema.AuthAccountType,
 	),
-}
+)
 
 type EventEmitter interface {
 	EmitEvent(
@@ -148,15 +148,17 @@ const getAuthAccountDocString = `
 Returns the AuthAccount for the given address. Only available in scripts
 `
 
-var getAuthAccountFunctionType = &sema.FunctionType{
-	Purity: sema.FunctionPurityView,
-	Parameters: []*sema.Parameter{{
-		Label:          sema.ArgumentLabelNotRequired,
-		Identifier:     "address",
-		TypeAnnotation: sema.NewTypeAnnotation(&sema.AddressType{}),
-	}},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.AuthAccountType),
-}
+var getAuthAccountFunctionType = sema.NewSimpleFunctionType(
+	sema.FunctionPurityView,
+	[]*sema.Parameter{
+		{
+			Label:          sema.ArgumentLabelNotRequired,
+			Identifier:     "address",
+			TypeAnnotation: sema.NewTypeAnnotation(&sema.AddressType{}),
+		},
+	},
+	sema.NewTypeAnnotation(sema.AuthAccountType),
+)
 
 func NewGetAuthAccountFunction(handler AuthAccountHandler) StandardLibraryValue {
 	return NewStandardLibraryFunction(
@@ -1782,9 +1784,9 @@ const getAccountFunctionDocString = `
 Returns the public account for the given address
 `
 
-var getAccountFunctionType = &sema.FunctionType{
-	Purity: sema.FunctionPurityView,
-	Parameters: []*sema.Parameter{
+var getAccountFunctionType = sema.NewSimpleFunctionType(
+	sema.FunctionPurityView,
+	[]*sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
 			Identifier: "address",
@@ -1793,10 +1795,10 @@ var getAccountFunctionType = &sema.FunctionType{
 			),
 		},
 	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
+	sema.NewTypeAnnotation(
 		sema.PublicAccountType,
 	),
-}
+)
 
 type PublicAccountHandler interface {
 	BalanceProvider

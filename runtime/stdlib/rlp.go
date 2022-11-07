@@ -68,9 +68,9 @@ If any error is encountered while decoding, the program aborts.
 
 const rlpDecodeStringFunctionName = "decodeString"
 
-var rlpDecodeStringFunctionType = &sema.FunctionType{
-	Purity: sema.FunctionPurityView,
-	Parameters: []*sema.Parameter{
+var rlpDecodeStringFunctionType = sema.NewSimpleFunctionType(
+	sema.FunctionPurityView,
+	[]*sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
 			Identifier: "input",
@@ -79,10 +79,10 @@ var rlpDecodeStringFunctionType = &sema.FunctionType{
 			),
 		},
 	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
+	sema.NewTypeAnnotation(
 		sema.ByteArrayType,
 	),
-}
+)
 
 type RLPDecodeStringError struct {
 	Msg string
@@ -143,9 +143,9 @@ If any error is encountered while decoding, the program aborts.
 
 const rlpDecodeListFunctionName = "decodeList"
 
-var rlpDecodeListFunctionType = &sema.FunctionType{
-	Purity: sema.FunctionPurityView,
-	Parameters: []*sema.Parameter{
+var rlpDecodeListFunctionType = sema.NewSimpleFunctionType(
+	sema.FunctionPurityView,
+	[]*sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
 			Identifier: "input",
@@ -154,10 +154,10 @@ var rlpDecodeListFunctionType = &sema.FunctionType{
 			),
 		},
 	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
+	sema.NewTypeAnnotation(
 		sema.ByteArrayArrayType,
 	),
-}
+)
 
 type RLPDecodeListError struct {
 	Msg string

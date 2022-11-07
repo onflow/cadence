@@ -47,19 +47,17 @@ var MetaType = &SimpleType{
 	Importable:           true,
 }
 
-var MetaTypeIsSubtypeFunctionType = &FunctionType{
-	Purity: FunctionPurityView,
-	Parameters: []*Parameter{
+var MetaTypeIsSubtypeFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]*Parameter{
 		{
 			Label:          "of",
 			Identifier:     "otherType",
 			TypeAnnotation: NewTypeAnnotation(MetaType),
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		BoolType,
-	),
-}
+	NewTypeAnnotation(BoolType),
+)
 
 func init() {
 	MetaType.Members = func(t *SimpleType) map[string]MemberResolver {

@@ -2745,12 +2745,7 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 					other,
 				)
 			},
-			&sema.FunctionType{
-				Purity: sema.FunctionPurityView,
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(
-					typ,
-				),
-			},
+			sema.SaturatingArithmeticTypeFunctionTypes[typ],
 		)
 
 	case sema.NumericTypeSaturatingSubtractFunctionName:
@@ -2766,12 +2761,7 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 					other,
 				)
 			},
-			&sema.FunctionType{
-				Purity: sema.FunctionPurityView,
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(
-					typ,
-				),
-			},
+			sema.SaturatingArithmeticTypeFunctionTypes[typ],
 		)
 
 	case sema.NumericTypeSaturatingMultiplyFunctionName:
@@ -2787,12 +2777,7 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 					other,
 				)
 			},
-			&sema.FunctionType{
-				Purity: sema.FunctionPurityView,
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(
-					typ,
-				),
-			},
+			sema.SaturatingArithmeticTypeFunctionTypes[typ],
 		)
 
 	case sema.NumericTypeSaturatingDivideFunctionName:
@@ -2808,12 +2793,7 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 					other,
 				)
 			},
-			&sema.FunctionType{
-				Purity: sema.FunctionPurityView,
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(
-					typ,
-				),
-			},
+			sema.SaturatingArithmeticTypeFunctionTypes[typ],
 		)
 	}
 
@@ -16321,12 +16301,7 @@ var nilValueMapFunction = NewUnmeteredHostFunctionValue(
 	func(invocation Invocation) Value {
 		return Nil
 	},
-	&sema.FunctionType{
-		Purity: sema.FunctionPurityView,
-		ReturnTypeAnnotation: sema.NewTypeAnnotation(
-			sema.NeverType,
-		),
-	},
+	sema.OptionalTypeMapFunctionType(sema.NeverType),
 )
 
 func (v NilValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {

@@ -43,10 +43,11 @@ func TestFunctionStaticType(t *testing.T) {
 			return TrueValue
 		}
 
-		hostFunctionType := &sema.FunctionType{
-			Parameters:           []*sema.Parameter{},
-			ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.BoolType),
-		}
+		hostFunctionType := sema.NewSimpleFunctionType(
+			sema.FunctionPurityImpure,
+			nil,
+			sema.NewTypeAnnotation(sema.BoolType),
+		)
 
 		hostFunctionValue := NewHostFunctionValue(
 			inter,
@@ -68,10 +69,11 @@ func TestFunctionStaticType(t *testing.T) {
 			return TrueValue
 		}
 
-		hostFunctionType := &sema.FunctionType{
-			Parameters:           []*sema.Parameter{},
-			ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.BoolType),
-		}
+		hostFunctionType := sema.NewSimpleFunctionType(
+			sema.FunctionPurityImpure,
+			nil,
+			sema.NewTypeAnnotation(sema.BoolType),
+		)
 
 		hostFunctionValue := NewHostFunctionValue(
 			inter,

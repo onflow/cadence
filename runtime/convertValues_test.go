@@ -126,9 +126,11 @@ func TestExportValue(t *testing.T) {
 	testCharacter, _ := cadence.NewCharacter("a")
 
 	testFunction := &interpreter.InterpretedFunctionValue{
-		Type: &sema.FunctionType{
-			ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
-		},
+		Type: sema.NewSimpleFunctionType(
+			sema.FunctionPurityImpure,
+			nil,
+			sema.NewTypeAnnotation(sema.VoidType),
+		),
 	}
 
 	testFunctionType := cadence.NewFunctionType(

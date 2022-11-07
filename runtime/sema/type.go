@@ -314,9 +314,9 @@ func NewTypeAnnotation(ty Type) *TypeAnnotation {
 
 const IsInstanceFunctionName = "isInstance"
 
-var IsInstanceFunctionType = &FunctionType{
-	Purity: FunctionPurityView,
-	Parameters: []*Parameter{
+var IsInstanceFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]*Parameter{
 		{
 			Label:      ArgumentLabelNotRequired,
 			Identifier: "type",
@@ -325,10 +325,8 @@ var IsInstanceFunctionType = &FunctionType{
 			),
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		BoolType,
-	),
-}
+	NewTypeAnnotation(BoolType),
+)
 
 const isInstanceFunctionDocString = `
 Returns true if the object conforms to the given type at runtime
@@ -338,12 +336,11 @@ Returns true if the object conforms to the given type at runtime
 
 const GetTypeFunctionName = "getType"
 
-var GetTypeFunctionType = &FunctionType{
-	Purity: FunctionPurityView,
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		MetaType,
-	),
-}
+var GetTypeFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	nil,
+	NewTypeAnnotation(MetaType),
+)
 
 const getTypeFunctionDocString = `
 Returns the type of the value
@@ -353,12 +350,11 @@ Returns the type of the value
 
 const ToStringFunctionName = "toString"
 
-var ToStringFunctionType = &FunctionType{
-	Purity: FunctionPurityView,
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		StringType,
-	),
-}
+var ToStringFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	nil,
+	NewTypeAnnotation(StringType),
+)
 
 const toStringFunctionDocString = `
 A textual representation of this object
@@ -391,31 +387,30 @@ func FromStringFunctionDocstring(ty Type) string {
 }
 
 func FromStringFunctionType(ty Type) *FunctionType {
-	return &FunctionType{
-		Purity: FunctionPurityView,
-		Parameters: []*Parameter{
+	return NewSimpleFunctionType(
+		FunctionPurityView,
+		[]*Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "input",
 				TypeAnnotation: NewTypeAnnotation(StringType),
 			},
 		},
-		ReturnTypeAnnotation: NewTypeAnnotation(
+		NewTypeAnnotation(
 			&OptionalType{ty},
 		),
-	}
+	)
 }
 
 // toBigEndianBytes
 
 const ToBigEndianBytesFunctionName = "toBigEndianBytes"
 
-var ToBigEndianBytesFunctionType = &FunctionType{
-	Purity: FunctionPurityView,
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		ByteArrayType,
-	),
-}
+var ToBigEndianBytesFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	nil,
+	NewTypeAnnotation(ByteArrayType),
+)
 
 const toBigEndianBytesFunctionDocString = `
 Returns an array containing the big-endian byte representation of the number
@@ -858,19 +853,23 @@ const numericTypeSaturatingDivideFunctionDocString = `
 self / other, saturating at the numeric bounds instead of overflowing.
 `
 
+var SaturatingArithmeticTypeFunctionTypes = map[Type]*FunctionType{}
+
 func addSaturatingArithmeticFunctions(t SaturatingArithmeticType, members map[string]MemberResolver) {
 
-	arithmeticFunctionType := &FunctionType{
-		Purity: FunctionPurityView,
-		Parameters: []*Parameter{
+	arithmeticFunctionType := NewSimpleFunctionType(
+		FunctionPurityView,
+		[]*Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "other",
 				TypeAnnotation: NewTypeAnnotation(t),
 			},
 		},
-		ReturnTypeAnnotation: NewTypeAnnotation(t),
-	}
+		NewTypeAnnotation(t),
+	)
+
+	SaturatingArithmeticTypeFunctionTypes[t] = arithmeticFunctionType
 
 	addArithmeticFunction := func(name string, docString string) {
 		members[name] = MemberResolver{
@@ -1958,42 +1957,38 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 }
 
 func ArrayRemoveLastFunctionType(elementType Type) *FunctionType {
-	return &FunctionType{
-		Purity: FunctionPurityImpure,
-		ReturnTypeAnnotation: NewTypeAnnotation(
-			elementType,
-		),
-	}
+	return NewSimpleFunctionType(
+		FunctionPurityImpure,
+		nil,
+		NewTypeAnnotation(elementType),
+	)
 }
 
 func ArrayRemoveFirstFunctionType(elementType Type) *FunctionType {
-	return &FunctionType{
-		Purity: FunctionPurityImpure,
-		ReturnTypeAnnotation: NewTypeAnnotation(
-			elementType,
-		),
-	}
+	return NewSimpleFunctionType(
+		FunctionPurityImpure,
+		nil,
+		NewTypeAnnotation(elementType),
+	)
 }
 
 func ArrayRemoveFunctionType(elementType Type) *FunctionType {
-	return &FunctionType{
-		Purity: FunctionPurityImpure,
-		Parameters: []*Parameter{
+	return NewSimpleFunctionType(
+		FunctionPurityImpure,
+		[]*Parameter{
 			{
 				Identifier:     "at",
 				TypeAnnotation: NewTypeAnnotation(IntegerType),
 			},
 		},
-		ReturnTypeAnnotation: NewTypeAnnotation(
-			elementType,
-		),
-	}
+		NewTypeAnnotation(elementType),
+	)
 }
 
 func ArrayInsertFunctionType(elementType Type) *FunctionType {
-	return &FunctionType{
-		Purity: FunctionPurityImpure,
-		Parameters: []*Parameter{
+	return NewSimpleFunctionType(
+		FunctionPurityImpure,
+		[]*Parameter{
 			{
 				Identifier:     "at",
 				TypeAnnotation: NewTypeAnnotation(IntegerType),
@@ -2004,91 +1999,85 @@ func ArrayInsertFunctionType(elementType Type) *FunctionType {
 				TypeAnnotation: NewTypeAnnotation(elementType),
 			},
 		},
-		ReturnTypeAnnotation: NewTypeAnnotation(
-			VoidType,
-		),
-	}
+		NewTypeAnnotation(VoidType),
+	)
 }
 
 func ArrayConcatFunctionType(arrayType Type) *FunctionType {
 	typeAnnotation := NewTypeAnnotation(arrayType)
-	return &FunctionType{
-		Purity: FunctionPurityView,
-		Parameters: []*Parameter{
+	return NewSimpleFunctionType(
+		FunctionPurityView,
+		[]*Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "other",
 				TypeAnnotation: typeAnnotation,
 			},
 		},
-		ReturnTypeAnnotation: typeAnnotation,
-	}
+		typeAnnotation,
+	)
 }
 
 func ArrayFirstIndexFunctionType(elementType Type) *FunctionType {
-	return &FunctionType{
-		Purity: FunctionPurityView,
-		Parameters: []*Parameter{
+	return NewSimpleFunctionType(
+		FunctionPurityView,
+		[]*Parameter{
 			{
 				Identifier:     "of",
 				TypeAnnotation: NewTypeAnnotation(elementType),
 			},
 		},
-		ReturnTypeAnnotation: NewTypeAnnotation(
+		NewTypeAnnotation(
 			&OptionalType{Type: IntType},
 		),
-	}
+	)
 }
 func ArrayContainsFunctionType(elementType Type) *FunctionType {
-	return &FunctionType{
-		Purity: FunctionPurityView,
-		Parameters: []*Parameter{
+	return NewSimpleFunctionType(
+		FunctionPurityView,
+		[]*Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "element",
 				TypeAnnotation: NewTypeAnnotation(elementType),
 			},
 		},
-		ReturnTypeAnnotation: NewTypeAnnotation(
-			BoolType,
-		),
-	}
+		NewTypeAnnotation(BoolType),
+	)
 }
 
 func ArrayAppendAllFunctionType(arrayType Type) *FunctionType {
-	return &FunctionType{
-		Purity: FunctionPurityImpure,
-		Parameters: []*Parameter{
+	return NewSimpleFunctionType(
+		FunctionPurityImpure,
+		[]*Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "other",
 				TypeAnnotation: NewTypeAnnotation(arrayType),
 			},
 		},
-		ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
-	}
+		NewTypeAnnotation(VoidType),
+	)
 }
 
 func ArrayAppendFunctionType(elementType Type) *FunctionType {
-	return &FunctionType{
-		Purity: FunctionPurityImpure,
-		Parameters: []*Parameter{
+	return NewSimpleFunctionType(
+		FunctionPurityImpure,
+		[]*Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "element",
 				TypeAnnotation: NewTypeAnnotation(elementType),
 			},
 		},
-		ReturnTypeAnnotation: NewTypeAnnotation(
-			VoidType,
-		),
-	}
+		NewTypeAnnotation(VoidType),
+	)
 }
 
 func ArraySliceFunctionType(elementType Type) *FunctionType {
-	return &FunctionType{
-		Purity: FunctionPurityView,
-		Parameters: []*Parameter{
+	return NewSimpleFunctionType(
+		FunctionPurityView,
+		[]*Parameter{
 			{
 				Identifier:     "from",
 				TypeAnnotation: NewTypeAnnotation(IntType),
@@ -2098,10 +2087,10 @@ func ArraySliceFunctionType(elementType Type) *FunctionType {
 				TypeAnnotation: NewTypeAnnotation(IntType),
 			},
 		},
-		ReturnTypeAnnotation: NewTypeAnnotation(&VariableSizedType{
+		NewTypeAnnotation(&VariableSizedType{
 			Type: elementType,
 		}),
-	}
+	)
 }
 
 // VariableSizedType is a variable sized array type
@@ -2591,6 +2580,18 @@ type FunctionType struct {
 	RequiredArgumentCount    *int
 	ArgumentExpressionsCheck ArgumentExpressionsCheck
 	Members                  *StringMemberOrderedMap
+}
+
+func NewSimpleFunctionType(
+	purity FunctionPurity,
+	parameters []*Parameter,
+	returnTypeAnnotation *TypeAnnotation,
+) *FunctionType {
+	return &FunctionType{
+		Purity:               purity,
+		Parameters:           parameters,
+		ReturnTypeAnnotation: returnTypeAnnotation,
+	}
 }
 
 func RequiredArgumentCount(count int) *int {
@@ -3422,20 +3423,20 @@ func numberFunctionArgumentExpressionsChecker(targetType Type) ArgumentExpressio
 }
 
 func pathConversionFunctionType(pathType Type) *FunctionType {
-	return &FunctionType{
-		Purity: FunctionPurityView,
-		Parameters: []*Parameter{
+	return NewSimpleFunctionType(
+		FunctionPurityView,
+		[]*Parameter{
 			{
 				Identifier:     "identifier",
 				TypeAnnotation: NewTypeAnnotation(StringType),
 			},
 		},
-		ReturnTypeAnnotation: NewTypeAnnotation(
+		NewTypeAnnotation(
 			&OptionalType{
 				Type: pathType,
 			},
 		),
-	}
+	)
 }
 
 var PublicPathConversionFunctionType = pathConversionFunctionType(PublicPathType)
@@ -4584,25 +4585,23 @@ func (t *DictionaryType) initializeMemberResolvers() {
 }
 
 func DictionaryContainsKeyFunctionType(t *DictionaryType) *FunctionType {
-	return &FunctionType{
-		Purity: FunctionPurityView,
-		Parameters: []*Parameter{
+	return NewSimpleFunctionType(
+		FunctionPurityView,
+		[]*Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "key",
 				TypeAnnotation: NewTypeAnnotation(t.KeyType),
 			},
 		},
-		ReturnTypeAnnotation: NewTypeAnnotation(
-			BoolType,
-		),
-	}
+		NewTypeAnnotation(BoolType),
+	)
 }
 
 func DictionaryInsertFunctionType(t *DictionaryType) *FunctionType {
-	return &FunctionType{
-		Purity: FunctionPurityImpure,
-		Parameters: []*Parameter{
+	return NewSimpleFunctionType(
+		FunctionPurityImpure,
+		[]*Parameter{
 			{
 				Identifier:     "key",
 				TypeAnnotation: NewTypeAnnotation(t.KeyType),
@@ -4613,54 +4612,58 @@ func DictionaryInsertFunctionType(t *DictionaryType) *FunctionType {
 				TypeAnnotation: NewTypeAnnotation(t.ValueType),
 			},
 		},
-		ReturnTypeAnnotation: NewTypeAnnotation(
+		NewTypeAnnotation(
 			&OptionalType{
 				Type: t.ValueType,
 			},
 		),
-	}
+	)
 }
 
 func DictionaryRemoveFunctionType(t *DictionaryType) *FunctionType {
-	return &FunctionType{
-		Purity: FunctionPurityImpure,
-		Parameters: []*Parameter{
+	return NewSimpleFunctionType(
+		FunctionPurityImpure,
+		[]*Parameter{
 			{
 				Identifier:     "key",
 				TypeAnnotation: NewTypeAnnotation(t.KeyType),
 			},
 		},
-		ReturnTypeAnnotation: NewTypeAnnotation(
+		NewTypeAnnotation(
 			&OptionalType{
 				Type: t.ValueType,
 			},
 		),
-	}
+	)
 }
 
 func DictionaryForEachKeyFunctionType(t *DictionaryType) *FunctionType {
+	const functionPurity = FunctionPurityImpure
+
 	// ((K): Bool)
-	funcType := &FunctionType{
-		Parameters: []*Parameter{
+	funcType := NewSimpleFunctionType(
+		functionPurity,
+		[]*Parameter{
 			{
 				Identifier:     "key",
 				TypeAnnotation: NewTypeAnnotation(t.KeyType),
 			},
 		},
-		ReturnTypeAnnotation: NewTypeAnnotation(BoolType),
-	}
+		NewTypeAnnotation(BoolType),
+	)
 
 	// fun forEachKey(_ function: ((K): Bool)): Void
-	return &FunctionType{
-		Parameters: []*Parameter{
+	return NewSimpleFunctionType(
+		functionPurity,
+		[]*Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "function",
 				TypeAnnotation: NewTypeAnnotation(funcType),
 			},
 		},
-		ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
-	}
+		NewTypeAnnotation(VoidType),
+	)
 }
 
 func (*DictionaryType) isValueIndexableType() bool {
@@ -4957,12 +4960,11 @@ func (t *AddressType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 
 const AddressTypeToBytesFunctionName = `toBytes`
 
-var AddressTypeToBytesFunctionType = &FunctionType{
-	Purity: FunctionPurityView,
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		ByteArrayType,
-	),
-}
+var AddressTypeToBytesFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	nil,
+	NewTypeAnnotation(ByteArrayType),
+)
 
 const addressTypeToBytesFunctionDocString = `
 Returns an array containing the byte representation of the address
@@ -5705,11 +5707,11 @@ type TransactionType struct {
 }
 
 func (t *TransactionType) EntryPointFunctionType() *FunctionType {
-	return &FunctionType{
-		Purity:               FunctionPurityImpure,
-		Parameters:           append(t.Parameters, t.PrepareParameters...),
-		ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
-	}
+	return NewSimpleFunctionType(
+		FunctionPurityImpure,
+		append(t.Parameters, t.PrepareParameters...),
+		NewTypeAnnotation(VoidType),
+	)
 }
 
 func (t *TransactionType) PrepareFunctionType() *FunctionType {
@@ -5724,7 +5726,6 @@ func (t *TransactionType) PrepareFunctionType() *FunctionType {
 var transactionTypeExecuteFunctionType = &FunctionType{
 	Purity:               FunctionPurityImpure,
 	IsConstructor:        true,
-	Parameters:           []*Parameter{},
 	ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
 }
 
@@ -6497,21 +6498,16 @@ var PublicKeyArrayType = &VariableSizedType{
 	Type: PublicKeyType,
 }
 
-var PublicKeyVerifyFunctionType = &FunctionType{
-	Purity:         FunctionPurityView,
-	TypeParameters: []*TypeParameter{},
-	Parameters: []*Parameter{
+var PublicKeyVerifyFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]*Parameter{
 		{
-			Identifier: "signature",
-			TypeAnnotation: NewTypeAnnotation(
-				ByteArrayType,
-			),
+			Identifier:     "signature",
+			TypeAnnotation: NewTypeAnnotation(ByteArrayType),
 		},
 		{
-			Identifier: "signedData",
-			TypeAnnotation: NewTypeAnnotation(
-				ByteArrayType,
-			),
+			Identifier:     "signedData",
+			TypeAnnotation: NewTypeAnnotation(ByteArrayType),
 		},
 		{
 			Identifier:     "domainSeparationTag",
@@ -6522,23 +6518,20 @@ var PublicKeyVerifyFunctionType = &FunctionType{
 			TypeAnnotation: NewTypeAnnotation(HashAlgorithmType),
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(BoolType),
-}
+	NewTypeAnnotation(BoolType),
+)
 
-var PublicKeyVerifyPoPFunctionType = &FunctionType{
-	Purity:         FunctionPurityView,
-	TypeParameters: []*TypeParameter{},
-	Parameters: []*Parameter{
+var PublicKeyVerifyPoPFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]*Parameter{
 		{
-			Label:      ArgumentLabelNotRequired,
-			Identifier: "proof",
-			TypeAnnotation: NewTypeAnnotation(
-				ByteArrayType,
-			),
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "proof",
+			TypeAnnotation: NewTypeAnnotation(ByteArrayType),
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(BoolType),
-}
+	NewTypeAnnotation(BoolType),
+)
 
 type CryptoAlgorithm interface {
 	RawValue() uint8

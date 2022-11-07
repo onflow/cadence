@@ -43,19 +43,19 @@ const panicFunctionDocString = `
 Terminates the program unconditionally and reports a message which explains why the unrecoverable error occurred.
 `
 
-var panicFunctionType = &sema.FunctionType{
-	Purity: sema.FunctionPurityView,
-	Parameters: []*sema.Parameter{
+var panicFunctionType = sema.NewSimpleFunctionType(
+	sema.FunctionPurityView,
+	[]*sema.Parameter{
 		{
 			Label:          sema.ArgumentLabelNotRequired,
 			Identifier:     "message",
 			TypeAnnotation: sema.NewTypeAnnotation(sema.StringType),
 		},
 	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
+	sema.NewTypeAnnotation(
 		sema.NeverType,
 	),
-}
+)
 
 var PanicFunction = NewStandardLibraryFunction(
 	"panic",

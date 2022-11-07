@@ -106,19 +106,19 @@ func (algo SignatureAlgorithm) DocString() string {
 
 const HashAlgorithmTypeHashFunctionName = "hash"
 
-var HashAlgorithmTypeHashFunctionType = &FunctionType{
-	Purity: FunctionPurityView,
-	Parameters: []*Parameter{
+var HashAlgorithmTypeHashFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]*Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "data",
 			TypeAnnotation: NewTypeAnnotation(ByteArrayType),
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
+	NewTypeAnnotation(
 		ByteArrayType,
 	),
-}
+)
 
 const HashAlgorithmTypeHashFunctionDocString = `
 Returns the hash of the given data
@@ -126,9 +126,9 @@ Returns the hash of the given data
 
 const HashAlgorithmTypeHashWithTagFunctionName = "hashWithTag"
 
-var HashAlgorithmTypeHashWithTagFunctionType = &FunctionType{
-	Purity: FunctionPurityView,
-	Parameters: []*Parameter{
+var HashAlgorithmTypeHashWithTagFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]*Parameter{
 		{
 			Label:      ArgumentLabelNotRequired,
 			Identifier: "data",
@@ -141,10 +141,10 @@ var HashAlgorithmTypeHashWithTagFunctionType = &FunctionType{
 			TypeAnnotation: NewTypeAnnotation(StringType),
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
+	NewTypeAnnotation(
 		ByteArrayType,
 	),
-}
+)
 
 const HashAlgorithmTypeHashWithTagFunctionDocString = `
 Returns the hash of the given data and tag

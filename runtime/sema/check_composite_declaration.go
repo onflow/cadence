@@ -1088,16 +1088,16 @@ func (checker *Checker) checkCompositeConformance(
 
 	if interfaceType.InitializerParameters != nil {
 
-		initializerType := &FunctionType{
-			Purity:               compositeType.ConstructorPurity,
-			Parameters:           compositeType.ConstructorParameters,
-			ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
-		}
-		interfaceInitializerType := &FunctionType{
-			Purity:               interfaceType.InitializerPurity,
-			Parameters:           interfaceType.InitializerParameters,
-			ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
-		}
+		initializerType := NewSimpleFunctionType(
+			compositeType.ConstructorPurity,
+			compositeType.ConstructorParameters,
+			NewTypeAnnotation(VoidType),
+		)
+		interfaceInitializerType := NewSimpleFunctionType(
+			interfaceType.InitializerPurity,
+			interfaceType.InitializerParameters,
+			NewTypeAnnotation(VoidType),
+		)
 
 		// TODO: subtype?
 		if !initializerType.Equal(interfaceInitializerType) {
@@ -1896,11 +1896,11 @@ func (checker *Checker) checkSpecialFunction(
 
 	checker.declareSelfValue(containerType, containerDocString)
 
-	functionType := &FunctionType{
-		Purity:               purity,
-		Parameters:           parameters,
-		ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
-	}
+	functionType := NewSimpleFunctionType(
+		purity,
+		parameters,
+		NewTypeAnnotation(VoidType),
+	)
 
 	checker.checkFunction(
 		specialFunction.FunctionDeclaration.ParameterList,

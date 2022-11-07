@@ -142,9 +142,9 @@ or if the given name does not match the name of the contract/contract interface 
 Returns the deployed contract for the updated contract.
 `
 
-var AuthAccountContractsTypeUpdateExperimentalFunctionType = &FunctionType{
-	Purity: FunctionPurityImpure,
-	Parameters: []*Parameter{
+var AuthAccountContractsTypeUpdateExperimentalFunctionType = NewSimpleFunctionType(
+	FunctionPurityImpure,
+	[]*Parameter{
 		{
 			Identifier: "name",
 			TypeAnnotation: NewTypeAnnotation(
@@ -158,10 +158,10 @@ var AuthAccountContractsTypeUpdateExperimentalFunctionType = &FunctionType{
 			),
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
+	NewTypeAnnotation(
 		DeployedContractType,
 	),
-}
+)
 
 const authAccountContractsTypeGetFunctionDocString = `
 Returns the deployed contract for the contract/contract interface with the given name in the account, if any.
@@ -169,9 +169,9 @@ Returns the deployed contract for the contract/contract interface with the given
 Returns nil if no contract/contract interface with the given name exists in the account.
 `
 
-var AuthAccountContractsTypeGetFunctionType = &FunctionType{
-	Purity: FunctionPurityView,
-	Parameters: []*Parameter{
+var AuthAccountContractsTypeGetFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]*Parameter{
 		{
 			Identifier: "name",
 			TypeAnnotation: NewTypeAnnotation(
@@ -179,12 +179,12 @@ var AuthAccountContractsTypeGetFunctionType = &FunctionType{
 			),
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
+	NewTypeAnnotation(
 		&OptionalType{
 			Type: DeployedContractType,
 		},
 	),
-}
+)
 
 const authAccountContractsTypeRemoveFunctionDocString = `
 Removes the contract/contract interface from the account which has the given name, if any.
@@ -194,20 +194,20 @@ Returns the removed deployed contract, if any.
 Returns nil if no contract/contract interface with the given name exists in the account.
 `
 
-var AuthAccountContractsTypeRemoveFunctionType = &FunctionType{
-	Purity: FunctionPurityImpure,
-	Parameters: []*Parameter{
+var AuthAccountContractsTypeRemoveFunctionType = NewSimpleFunctionType(
+	FunctionPurityImpure,
+	[]*Parameter{
 		{
 			Identifier:     "name",
 			TypeAnnotation: NewTypeAnnotation(StringType),
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
+	NewTypeAnnotation(
 		&OptionalType{
 			Type: DeployedContractType,
 		},
 	),
-}
+)
 
 const authAccountContractsTypeGetNamesDocString = `
 Names of all contracts deployed in the account.

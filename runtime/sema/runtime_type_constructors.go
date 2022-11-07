@@ -24,38 +24,39 @@ type RuntimeTypeConstructor struct {
 	DocString string
 }
 
-var MetaTypeFunctionType = &FunctionType{
-	Purity:               FunctionPurityView,
-	ReturnTypeAnnotation: NewTypeAnnotation(MetaType),
-}
+var MetaTypeFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	nil,
+	NewTypeAnnotation(MetaType),
+)
 
-var OptionalTypeFunctionType = &FunctionType{
-	Purity: FunctionPurityView,
-	Parameters: []*Parameter{
+var OptionalTypeFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]*Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "type",
 			TypeAnnotation: NewTypeAnnotation(MetaType),
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(MetaType),
-}
+	NewTypeAnnotation(MetaType),
+)
 
-var VariableSizedArrayTypeFunctionType = &FunctionType{
-	Purity: FunctionPurityView,
-	Parameters: []*Parameter{
+var VariableSizedArrayTypeFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]*Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "type",
 			TypeAnnotation: NewTypeAnnotation(MetaType),
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(MetaType),
-}
+	NewTypeAnnotation(MetaType),
+)
 
-var ConstantSizedArrayTypeFunctionType = &FunctionType{
-	Purity: FunctionPurityView,
-	Parameters: []*Parameter{
+var ConstantSizedArrayTypeFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]*Parameter{
 		{
 			Identifier:     "type",
 			TypeAnnotation: NewTypeAnnotation(MetaType),
@@ -65,12 +66,12 @@ var ConstantSizedArrayTypeFunctionType = &FunctionType{
 			TypeAnnotation: NewTypeAnnotation(IntType),
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(MetaType),
-}
+	NewTypeAnnotation(MetaType),
+)
 
-var DictionaryTypeFunctionType = &FunctionType{
-	Purity: FunctionPurityView,
-	Parameters: []*Parameter{
+var DictionaryTypeFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]*Parameter{
 		{
 			Identifier:     "key",
 			TypeAnnotation: NewTypeAnnotation(MetaType),
@@ -80,36 +81,36 @@ var DictionaryTypeFunctionType = &FunctionType{
 			TypeAnnotation: NewTypeAnnotation(MetaType),
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(&OptionalType{MetaType}),
-}
+	NewTypeAnnotation(&OptionalType{MetaType}),
+)
 
-var CompositeTypeFunctionType = &FunctionType{
-	Purity: FunctionPurityView,
-	Parameters: []*Parameter{
+var CompositeTypeFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]*Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "identifier",
 			TypeAnnotation: NewTypeAnnotation(StringType),
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(&OptionalType{MetaType}),
-}
+	NewTypeAnnotation(&OptionalType{MetaType}),
+)
 
-var InterfaceTypeFunctionType = &FunctionType{
-	Purity: FunctionPurityView,
-	Parameters: []*Parameter{
+var InterfaceTypeFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]*Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "identifier",
 			TypeAnnotation: NewTypeAnnotation(StringType),
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(&OptionalType{MetaType}),
-}
+	NewTypeAnnotation(&OptionalType{MetaType}),
+)
 
-var FunctionTypeFunctionType = &FunctionType{
-	Purity: FunctionPurityView,
-	Parameters: []*Parameter{
+var FunctionTypeFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]*Parameter{
 		{
 			Identifier:     "parameters",
 			TypeAnnotation: NewTypeAnnotation(&VariableSizedType{Type: MetaType}),
@@ -119,12 +120,12 @@ var FunctionTypeFunctionType = &FunctionType{
 			TypeAnnotation: NewTypeAnnotation(MetaType),
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(MetaType),
-}
+	NewTypeAnnotation(MetaType),
+)
 
-var RestrictedTypeFunctionType = &FunctionType{
-	Purity: FunctionPurityView,
-	Parameters: []*Parameter{
+var RestrictedTypeFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]*Parameter{
 		{
 			Identifier:     "identifier",
 			TypeAnnotation: NewTypeAnnotation(&OptionalType{StringType}),
@@ -134,12 +135,12 @@ var RestrictedTypeFunctionType = &FunctionType{
 			TypeAnnotation: NewTypeAnnotation(&VariableSizedType{Type: StringType}),
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(&OptionalType{MetaType}),
-}
+	NewTypeAnnotation(&OptionalType{MetaType}),
+)
 
-var ReferenceTypeFunctionType = &FunctionType{
-	Purity: FunctionPurityView,
-	Parameters: []*Parameter{
+var ReferenceTypeFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]*Parameter{
 		{
 			Identifier:     "authorized",
 			TypeAnnotation: NewTypeAnnotation(BoolType),
@@ -149,20 +150,20 @@ var ReferenceTypeFunctionType = &FunctionType{
 			TypeAnnotation: NewTypeAnnotation(MetaType),
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(MetaType),
-}
+	NewTypeAnnotation(MetaType),
+)
 
-var CapabilityTypeFunctionType = &FunctionType{
-	Purity: FunctionPurityView,
-	Parameters: []*Parameter{
+var CapabilityTypeFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]*Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "type",
 			TypeAnnotation: NewTypeAnnotation(MetaType),
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(&OptionalType{MetaType}),
-}
+	NewTypeAnnotation(&OptionalType{MetaType}),
+)
 
 var runtimeTypeConstructors = []*RuntimeTypeConstructor{
 	{
