@@ -41,7 +41,7 @@ import (
 
 //
 
-var emptyFunctionType = &sema.FunctionType{
+var emptyImpureFunctionType = &sema.FunctionType{
 	Purity: sema.FunctionPurityImpure,
 	ReturnTypeAnnotation: &sema.TypeAnnotation{
 		Type: sema.VoidType,
@@ -1407,7 +1407,7 @@ func (interpreter *Interpreter) compositeDestructorFunction(
 	return NewInterpretedFunctionValue(
 		interpreter,
 		nil,
-		emptyFunctionType,
+		emptyImpureFunctionType,
 		lexicalScope,
 		beforeStatements,
 		preConditions,
@@ -3059,10 +3059,7 @@ var typeFunction = NewUnmeteredHostFunctionValue(
 		staticType := ConvertSemaToStaticType(invocation.Interpreter, ty)
 		return NewTypeValue(invocation.Interpreter, staticType)
 	},
-	&sema.FunctionType{
-		Purity:               sema.FunctionPurityView,
-		ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.MetaType),
-	},
+	sema.MetaTypeFunctionType,
 )
 
 func defineTypeFunction(activation *VariableActivation) {

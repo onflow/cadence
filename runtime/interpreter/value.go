@@ -2729,12 +2729,7 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 					v.ToBigEndianBytes(),
 				)
 			},
-			&sema.FunctionType{
-				Purity: sema.FunctionPurityView,
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(
-					sema.ByteArrayType,
-				),
-			},
+			sema.ToBigEndianBytesFunctionType,
 		)
 
 	case sema.NumericTypeSaturatingAddFunctionName:

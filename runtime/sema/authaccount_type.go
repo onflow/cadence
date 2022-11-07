@@ -286,6 +286,7 @@ var AuthAccountTypeSaveFunctionType = func() *FunctionType {
 	}
 
 	return &FunctionType{
+		Purity: FunctionPurityImpure,
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
@@ -326,6 +327,7 @@ var AuthAccountTypeLoadFunctionType = func() *FunctionType {
 	}
 
 	return &FunctionType{
+		Purity: FunctionPurityImpure,
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
@@ -523,6 +525,7 @@ The link is latent. The target value might be stored after the link is created, 
 `
 
 var AuthAccountTypeUnlinkFunctionType = &FunctionType{
+	Purity: FunctionPurityImpure,
 	Parameters: []*Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
@@ -637,6 +640,7 @@ var AuthAccountKeysType = func() *CompositeType {
 }()
 
 var AuthAccountKeysTypeAddFunctionType = &FunctionType{
+	Purity: FunctionPurityImpure,
 	Parameters: []*Parameter{
 		{
 			Identifier:     AccountKeyPublicKeyField,
@@ -669,8 +673,11 @@ var AccountKeysTypeGetFunctionType = &FunctionType{
 
 // fun keys.forEach(_ function: ((AccountKey): Bool)): Void
 var AccountKeysTypeForEachFunctionType = func() *FunctionType {
+	const functionPurity = FunctionPurityImpure
+
 	// ((AccountKey): Bool)
 	iterFunctionType := &FunctionType{
+		Purity: functionPurity,
 		Parameters: []*Parameter{
 			{
 				TypeAnnotation: NewTypeAnnotation(AccountKeyType),
@@ -680,6 +687,7 @@ var AccountKeysTypeForEachFunctionType = func() *FunctionType {
 	}
 
 	return &FunctionType{
+		Purity: functionPurity,
 		Parameters: []*Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
@@ -694,6 +702,7 @@ var AccountKeysTypeForEachFunctionType = func() *FunctionType {
 var AccountKeysTypeCountFieldType = UInt64Type
 
 var AuthAccountKeysTypeRevokeFunctionType = &FunctionType{
+	Purity: FunctionPurityImpure,
 	Parameters: []*Parameter{
 		{
 			Identifier:     AccountKeyKeyIndexField,
@@ -774,6 +783,7 @@ Publishes the argument value under the given name, to be later claimed by the sp
 `
 
 var AuthAccountTypeInboxPublishFunctionType = &FunctionType{
+	Purity: FunctionPurityImpure,
 	Parameters: []*Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
@@ -806,6 +816,7 @@ var AuthAccountTypeInboxUnpublishFunctionType = func() *FunctionType {
 		},
 	}
 	return &FunctionType{
+		Purity: FunctionPurityImpure,
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
@@ -840,6 +851,7 @@ var AuthAccountTypeInboxClaimFunctionType = func() *FunctionType {
 		},
 	}
 	return &FunctionType{
+		Purity: FunctionPurityImpure,
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},

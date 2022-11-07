@@ -134,7 +134,10 @@ All the public paths of an account
 `
 
 func AccountForEachFunctionType(pathType Type) *FunctionType {
+	const functionPurity = FunctionPurityImpure
+
 	iterFunctionType := &FunctionType{
+		Purity: functionPurity,
 		Parameters: []*Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
@@ -150,6 +153,7 @@ func AccountForEachFunctionType(pathType Type) *FunctionType {
 		ReturnTypeAnnotation: NewTypeAnnotation(BoolType),
 	}
 	return &FunctionType{
+		Purity: functionPurity,
 		Parameters: []*Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,

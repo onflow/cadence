@@ -33,6 +33,7 @@ Returns the current block, i.e. the block which contains the currently executed 
 `
 
 var getCurrentBlockFunctionType = &sema.FunctionType{
+	Purity: sema.FunctionPurityView,
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(
 		sema.BlockType,
 	),
