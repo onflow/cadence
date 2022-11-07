@@ -28,7 +28,7 @@ func _() {
 	_ = x[DeclarationKindContractInterface-17]
 	_ = x[DeclarationKindImport-18]
 	_ = x[DeclarationKindSelf-19]
-	_ = x[DeclarationKindSuper-20]
+	_ = x[DeclarationKindBase-20]
 	_ = x[DeclarationKindTransaction-21]
 	_ = x[DeclarationKindPrepare-22]
 	_ = x[DeclarationKindExecute-23]
