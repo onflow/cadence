@@ -2148,7 +2148,7 @@ func (checker *Checker) declareSuperValue(baseType Type, superDocString string) 
 		baseType = NewRestrictedType(checker.memoryGauge, restrictedType, []*InterfaceType{typedBaseType})
 	}
 	superType := NewReferenceType(checker.memoryGauge, baseType, false)
-	checker.declareLowerScopedValue(superType, superDocString, SuperIdentifier, common.DeclarationKindSuper)
+	checker.declareLowerScopedValue(superType, superDocString, BaseIdentifier, common.DeclarationKindBase)
 }
 
 // checkNestedIdentifiers checks that nested identifiers, i.e. fields, functions,

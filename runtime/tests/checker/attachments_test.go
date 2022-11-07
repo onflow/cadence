@@ -439,7 +439,7 @@ func TestCheckNestedBaseType(t *testing.T) {
 			}
 			pub attachment A for C.S {
 				fun bar() {
-					super.foo()
+					base.foo()
 				}
 			}
 			`,
@@ -634,7 +634,7 @@ func TestCheckTypeRequirement(t *testing.T) {
 		assert.IsType(t, &sema.ConformanceError{}, errs[0])
 	})
 
-	t.Run("base type supertype", func(t *testing.T) {
+	t.Run("base type Basetype", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -1155,7 +1155,7 @@ func TestCheckConformance(t *testing.T) {
 	})
 }
 
-func TestCheckSuper(t *testing.T) {
+func TestCheckBase(t *testing.T) {
 
 	t.Parallel()
 
@@ -1168,7 +1168,7 @@ func TestCheckSuper(t *testing.T) {
 			struct S {}
 			attachment Test for S {
 				fun foo() {
-					let x: &S = super
+					let x: &S = base
 				}
 			}`,
 		)
@@ -1207,7 +1207,7 @@ func TestCheckSuper(t *testing.T) {
 			attachment Test for S {
 				let x: Int
 				init() {
-					self.x = super.foo()
+					self.x = base.foo()
 				}
 			}`,
 		)
@@ -1226,7 +1226,7 @@ func TestCheckSuper(t *testing.T) {
 			}
 			attachment Test for R {
 				destroy() {
-					super.foo()
+					base.foo()
 				}
 			}`,
 		)
@@ -1234,7 +1234,7 @@ func TestCheckSuper(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("interface super", func(t *testing.T) {
+	t.Run("interface base", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -1248,7 +1248,7 @@ func TestCheckSuper(t *testing.T) {
 			attachment Test for R {
 				let x: Int
 				init() {
-					self.x = super.foo()
+					self.x = base.foo()
 				}
 			}`,
 		)
@@ -1256,7 +1256,7 @@ func TestCheckSuper(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("super in struct", func(t *testing.T) {
+	t.Run("base in struct", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -1265,7 +1265,7 @@ func TestCheckSuper(t *testing.T) {
 			struct S {
 				let x: Int
 				init() {
-					self.x = super
+					self.x = base
 				}
 			}`,
 		)
@@ -1275,7 +1275,7 @@ func TestCheckSuper(t *testing.T) {
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	})
 
-	t.Run("super in resource", func(t *testing.T) {
+	t.Run("base in resource", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -1284,7 +1284,7 @@ func TestCheckSuper(t *testing.T) {
 			resource S {
 				let x: Int
 				init() {
-					self.x = super
+					self.x = base
 				}
 			}`,
 		)
@@ -1294,7 +1294,7 @@ func TestCheckSuper(t *testing.T) {
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	})
 
-	t.Run("super in contract", func(t *testing.T) {
+	t.Run("base in contract", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -1303,7 +1303,7 @@ func TestCheckSuper(t *testing.T) {
 			contract S {
 				let x: Int
 				init() {
-					self.x = super
+					self.x = base
 				}
 			}`,
 		)
@@ -1330,7 +1330,7 @@ func TestCheckSuper(t *testing.T) {
 	})
 }
 
-func TestCheckSuperScoping(t *testing.T) {
+func TestCheckBaseScoping(t *testing.T) {
 
 	t.Parallel()
 
@@ -1345,7 +1345,7 @@ func TestCheckSuperScoping(t *testing.T) {
 			}
 			pub attachment Test for S {
 				fun foo() {
-					super.foo()
+					base.foo()
 				}
 			}`,
 		)
@@ -1364,7 +1364,7 @@ func TestCheckSuperScoping(t *testing.T) {
 			}
 			pub attachment Test for S {
 				fun foo() {
-					super.foo()
+					base.foo()
 				}
 			}`,
 		)
@@ -1387,7 +1387,7 @@ func TestCheckSuperScoping(t *testing.T) {
 			}
 			pub attachment Test for C.S {
 				fun foo() {
-					super.foo()
+					base.foo()
 				}
 			}`,
 		)
@@ -1409,7 +1409,7 @@ func TestCheckSuperScoping(t *testing.T) {
 				}
 				pub attachment Test for S {
 					fun foo() {
-						super.foo()
+						base.foo()
 					}
 				}
 			}`,
