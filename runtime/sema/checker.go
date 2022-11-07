@@ -129,6 +129,10 @@ var _ ast.DeclarationVisitor[struct{}] = &Checker{}
 var _ ast.StatementVisitor[struct{}] = &Checker{}
 var _ ast.ExpressionVisitor[Type] = &Checker{}
 
+var baseFunctionType = &FunctionType{
+	ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
+}
+
 func NewChecker(
 	program *ast.Program,
 	location common.Location,
@@ -145,8 +149,8 @@ func NewChecker(
 	}
 
 	functionActivations := &FunctionActivations{}
-	functionActivations.EnterFunction(&FunctionType{
-		ReturnTypeAnnotation: NewTypeAnnotation(VoidType)},
+	functionActivations.EnterFunction(
+		baseFunctionType,
 		0,
 	)
 

@@ -24,6 +24,11 @@ type RuntimeTypeConstructor struct {
 	DocString string
 }
 
+var MetaTypeFunctionType = &FunctionType{
+	Purity:               FunctionPurityView,
+	ReturnTypeAnnotation: NewTypeAnnotation(MetaType),
+}
+
 var OptionalTypeFunctionType = &FunctionType{
 	Purity: FunctionPurityView,
 	Parameters: []*Parameter{

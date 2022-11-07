@@ -392,6 +392,7 @@ func FromStringFunctionDocstring(ty Type) string {
 
 func FromStringFunctionType(ty Type) *FunctionType {
 	return &FunctionType{
+		Purity: FunctionPurityView,
 		Parameters: []*Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
@@ -409,7 +410,7 @@ func FromStringFunctionType(ty Type) *FunctionType {
 
 const ToBigEndianBytesFunctionName = "toBigEndianBytes"
 
-var toBigEndianBytesFunctionType = &FunctionType{
+var ToBigEndianBytesFunctionType = &FunctionType{
 	Purity: FunctionPurityView,
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		ByteArrayType,
@@ -484,7 +485,7 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 					memoryGauge,
 					ty,
 					identifier,
-					toBigEndianBytesFunctionType,
+					ToBigEndianBytesFunctionType,
 					toBigEndianBytesFunctionDocString,
 				)
 			},
@@ -661,8 +662,10 @@ func OptionalTypeMapFunctionType(typ Type) *FunctionType {
 		TypeParameter: typeParameter,
 	}
 
+	const functionPurity = FunctionPurityImpure
+
 	return &FunctionType{
-		Purity: FunctionPurityImpure,
+		Purity: functionPurity,
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
@@ -672,7 +675,7 @@ func OptionalTypeMapFunctionType(typ Type) *FunctionType {
 				Identifier: "transform",
 				TypeAnnotation: NewTypeAnnotation(
 					&FunctionType{
-						Purity: FunctionPurityImpure,
+						Purity: functionPurity,
 						Parameters: []*Parameter{
 							{
 								Label:          ArgumentLabelNotRequired,
@@ -4636,9 +4639,7 @@ func DictionaryRemoveFunctionType(t *DictionaryType) *FunctionType {
 }
 
 func DictionaryForEachKeyFunctionType(t *DictionaryType) *FunctionType {
-	// fun forEachKey(_ function: ((K): Bool)): Void
-
-	// funcType: K -> Bool
+	// ((K): Bool)
 	funcType := &FunctionType{
 		Parameters: []*Parameter{
 			{
@@ -4649,6 +4650,7 @@ func DictionaryForEachKeyFunctionType(t *DictionaryType) *FunctionType {
 		ReturnTypeAnnotation: NewTypeAnnotation(BoolType),
 	}
 
+	// fun forEachKey(_ function: ((K): Bool)): Void
 	return &FunctionType{
 		Parameters: []*Parameter{
 			{
@@ -5719,13 +5721,15 @@ func (t *TransactionType) PrepareFunctionType() *FunctionType {
 	}
 }
 
+var transactionTypeExecuteFunctionType = &FunctionType{
+	Purity:               FunctionPurityImpure,
+	IsConstructor:        true,
+	Parameters:           []*Parameter{},
+	ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
+}
+
 func (*TransactionType) ExecuteFunctionType() *FunctionType {
-	return &FunctionType{
-		Purity:               FunctionPurityImpure,
-		IsConstructor:        true,
-		Parameters:           []*Parameter{},
-		ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
-	}
+	return transactionTypeExecuteFunctionType
 }
 
 func (*TransactionType) IsType() {}

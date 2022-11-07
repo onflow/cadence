@@ -32,6 +32,7 @@ Follow best practices to prevent security issues when using this function
 `
 
 var unsafeRandomFunctionType = &sema.FunctionType{
+	Purity: sema.FunctionPurityImpure,
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(
 		sema.UInt64Type,
 	),

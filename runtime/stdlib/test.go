@@ -186,17 +186,6 @@ var matcherType = func() *sema.CompositeType {
 	return compositeType
 }()
 
-var matcherTestFunctionType = compositeFunctionType(matcherType, matcherTestFunctionName)
-
-func compositeFunctionType(parent *sema.CompositeType, funcName string) *sema.FunctionType {
-	testFunc, ok := parent.Members.Get(funcName)
-	if !ok {
-		panic(memberNotFoundError(parent.Identifier, funcName))
-	}
-
-	return getFunctionTypeFromMember(testFunc, funcName)
-}
-
 func interfaceFunctionType(parent *sema.InterfaceType, funcName string) *sema.FunctionType {
 	testFunc, ok := parent.Members.Get(funcName)
 	if !ok {
@@ -324,6 +313,7 @@ Fails the test-case if the given condition is false, and reports a message which
 const testAssertFunctionName = "assert"
 
 var testAssertFunctionType = &sema.FunctionType{
+	Purity: sema.FunctionPurityView,
 	Parameters: []*sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
@@ -382,6 +372,7 @@ Fails the test-case with a message.
 const testFailFunctionName = "fail"
 
 var testFailFunctionType = &sema.FunctionType{
+	Purity: sema.FunctionPurityView,
 	Parameters: []*sema.Parameter{
 		{
 			Identifier: "message",
@@ -424,6 +415,7 @@ Expect function tests a value against a matcher, and fails the test if it's not 
 const testExpectFunctionName = "expect"
 
 var testExpectFunctionType = &sema.FunctionType{
+	Purity: matcherTestFunctionType.Purity,
 	Parameters: []*sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
@@ -646,30 +638,33 @@ The test function is of type '((T): Bool)', where 'T' is bound to 'AnyStruct'.
 
 const newMatcherFunctionName = "newMatcher"
 
+// Type of the Matcher.test function: ((T): Bool)
+var matcherTestFunctionType = &sema.FunctionType{
+	Parameters: []*sema.Parameter{
+		{
+			Label:      sema.ArgumentLabelNotRequired,
+			Identifier: "value",
+			TypeAnnotation: sema.NewTypeAnnotation(
+				&sema.GenericType{
+					TypeParameter: newMatcherFunctionTypeParameter,
+				},
+			),
+		},
+	},
+	ReturnTypeAnnotation: sema.NewTypeAnnotation(
+		sema.BoolType,
+	),
+}
+
 var newMatcherFunctionType = &sema.FunctionType{
+	Purity:        sema.FunctionPurityView,
 	IsConstructor: true,
 	Parameters: []*sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
 			Identifier: "test",
 			TypeAnnotation: sema.NewTypeAnnotation(
-				// Type of the 'test' function: ((T): Bool)
-				&sema.FunctionType{
-					Parameters: []*sema.Parameter{
-						{
-							Label:      sema.ArgumentLabelNotRequired,
-							Identifier: "value",
-							TypeAnnotation: sema.NewTypeAnnotation(
-								&sema.GenericType{
-									TypeParameter: newMatcherFunctionTypeParameter,
-								},
-							),
-						},
-					},
-					ReturnTypeAnnotation: sema.NewTypeAnnotation(
-						sema.BoolType,
-					),
-				},
+				matcherTestFunctionType,
 			),
 		},
 	},
