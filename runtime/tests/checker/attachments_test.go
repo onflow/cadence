@@ -1185,7 +1185,7 @@ func TestCheckBase(t *testing.T) {
 			struct interface I {}
 			attachment Test for I {
 				fun foo() {
-					let x: &{I} = super
+					let x: &{I} = base
 				}
 			}`,
 		)
@@ -1313,14 +1313,14 @@ func TestCheckBase(t *testing.T) {
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	})
 
-	t.Run("super outside composite", func(t *testing.T) {
+	t.Run("base outside composite", func(t *testing.T) {
 
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,
 			`
 			fun foo() {
-				let x = super
+				let x = base
 			}`,
 		)
 
@@ -1419,7 +1419,7 @@ func TestCheckBaseScoping(t *testing.T) {
 	})
 }
 
-func TestCheckSuperTyping(t *testing.T) {
+func TestCheckBaseTyping(t *testing.T) {
 
 	t.Parallel()
 
@@ -1433,13 +1433,13 @@ func TestCheckSuperTyping(t *testing.T) {
 			struct interface I {}
 			attachment Test for I {
 				fun foo() {
-					let x = super as! &R{I}
+					let x = base as! &R{I}
 				}
 			}`,
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		// super is not auth
+		// base is not auth
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
@@ -1453,13 +1453,13 @@ func TestCheckSuperTyping(t *testing.T) {
 			resource interface I {}
 			attachment Test for I {
 				fun foo() {
-					let x = super as! &R{I}
+					let x = base as! &R{I}
 				}
 			}`,
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		// super is not auth
+		// base is not auth
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
@@ -1472,7 +1472,7 @@ func TestCheckSuperTyping(t *testing.T) {
 			struct interface I {}
 			attachment Test for I {
 				fun foo(): &{I} {
-					return super
+					return base
 				}
 			}`,
 		)
@@ -1489,7 +1489,7 @@ func TestCheckSuperTyping(t *testing.T) {
 			resource interface I {}
 			attachment Test for I {
 				fun foo(): &{I} {
-					return super
+					return base
 				}
 			}`,
 		)
@@ -2715,7 +2715,7 @@ func TestCheckAttachWithArguments(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("attach super argument", func(t *testing.T) {
+	t.Run("attach base argument", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2729,7 +2729,7 @@ func TestCheckAttachWithArguments(t *testing.T) {
 				}
 			}
 			pub fun foo() {
-				attach A(x: super) to S()
+				attach A(x: base) to S()
 			}
 		`,
 		)
@@ -5269,7 +5269,7 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 						self.x = ["x"]
 					}
 					pub fun foo() {
-						super[A]!.x.append("y")
+						base[A]!.x.append("y")
 					}
 				}
 				
