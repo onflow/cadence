@@ -201,7 +201,7 @@ func TestInterpretAttachmentStruct(t *testing.T) {
 			}
 		}
         attachment A for S {
-            fun foo(): Int { return super.i }
+            fun foo(): Int { return base.i }
         }
         fun test(): Int {
             let arr: [S] = []
@@ -439,7 +439,7 @@ func TestInterpretAttachmentResource(t *testing.T) {
 			}
 		}
         attachment A for R {
-            fun foo(): Int { return super.i }
+            fun foo(): Int { return base.i }
         }
         fun test(): Int {
             let arr: @[R] <- []
@@ -504,7 +504,7 @@ func TestAttachExecutionOrdering(t *testing.T) {
 			attachment A for S {
 				let x: Int
 				fun foo(): Int { return self.x }
-				init() { self.x = super[B]!.x }
+				init() { self.x = base[B]!.x }
 			}
 			attachment B for S {
 				let x: Int 
@@ -522,7 +522,7 @@ func TestAttachExecutionOrdering(t *testing.T) {
 		value, err := inter.Invoke("test")
 		require.NoError(t, err)
 
-		// super must already have `B` attached to it during A's initializer
+		// base must already have `B` attached to it during A's initializer
 		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
 	})
 
@@ -540,7 +540,7 @@ func TestAttachExecutionOrdering(t *testing.T) {
 				let x: Int?
 				fun foo(): Int? { return self.x }
 				fun bar(): Int { return 3 }
-				init() { self.x = super.bar() }
+				init() { self.x = base.bar() }
 			}
 			fun test(): Int? {
 				var s = S()
@@ -552,12 +552,12 @@ func TestAttachExecutionOrdering(t *testing.T) {
 		value, err := inter.Invoke("test")
 		require.NoError(t, err)
 
-		// super does not yet have `A` attached to it during A's initializer
+		// base does not yet have `A` attached to it during A's initializer
 		AssertValuesEqual(t, inter, interpreter.Nil, value)
 	})
 }
 
-func TestInterpretAttachmentSuperUse(t *testing.T) {
+func TestInterpretAttachmentBaseUse(t *testing.T) {
 	t.Parallel()
 
 	t.Run("basic use", func(t *testing.T) {
@@ -572,7 +572,7 @@ func TestInterpretAttachmentSuperUse(t *testing.T) {
           }
        }
        attachment A for R {
-          fun foo(): Int { return super.x }
+          fun foo(): Int { return base.x }
        }
        fun test(): Int {
            let r <- create R(x: 3)
@@ -603,7 +603,7 @@ func TestInterpretAttachmentSuperUse(t *testing.T) {
        attachment A for R {
           let x: Int 
           init () {
-            self.x = super.x
+            self.x = base.x
           }
           fun foo(): Int { return self.x }
        }
@@ -636,7 +636,7 @@ func TestInterpretAttachmentSuperUse(t *testing.T) {
        attachment A for R {
           let x: Int 
           init () {
-            self.x = super.x
+            self.x = base.x
           }
           fun foo(): Int { return self.x }
        }
@@ -645,7 +645,7 @@ func TestInterpretAttachmentSuperUse(t *testing.T) {
             init () {
 				let r <- create R(x: 4)
 				let r2 <- attach A() to <-r
-                self.x = super.x + r2[A]?.foo()!
+                self.x = base.x + r2[A]?.foo()!
 				destroy r2
             }
             fun foo(): Int { return self.x }
@@ -677,12 +677,12 @@ func TestInterpretAttachmentSuperUse(t *testing.T) {
           }
        }
        attachment A for R {
-          fun foo(): Int { return super.x }
+          fun foo(): Int { return base.x }
        }
 	   attachment B for R {
 		let x: Int 
 		init() {
-			self.x = super[A]?.foo()! + super.x
+			self.x = base[A]?.foo()! + base.x
 		}
 		fun foo(): Int { return self.x }
 	 }
@@ -733,7 +733,7 @@ func TestInterpretAttachmentSelfUse(t *testing.T) {
 		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(4), value)
 	})
 
-	t.Run("with super", func(t *testing.T) {
+	t.Run("with base", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -749,7 +749,7 @@ func TestInterpretAttachmentSelfUse(t *testing.T) {
           init (y: Int) {
             self.y = y
           }
-          fun foo(): Int { return self.y + super.x }
+          fun foo(): Int { return self.y + base.x }
        }
        fun test(): Int {
            let r <- create R(x: 3)
@@ -771,7 +771,7 @@ func TestInterpretAttachmentSelfUse(t *testing.T) {
 func TestInterpretAttachmentNameConflict(t *testing.T) {
 	t.Parallel()
 
-	t.Run("fields", func(t *testing.T) {
+	t.Run("base field", func(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
@@ -783,14 +783,14 @@ func TestInterpretAttachmentNameConflict(t *testing.T) {
 			}
 			attachment A for R {
 				let base: Int
-				fun foo(): Int { return self.base + super.A }
-				init(base: Int) {
-					self.base = base
+				fun foo(): Int { return self.base + base.A }
+				init(b: Int) {
+					self.base = b
 				}
 			}
 			fun test(): Int {
 				let r <- create R(a: 3)
-				let r2 <- attach A(base: 3) to <-r
+				let r2 <- attach A(b: 3) to <-r
 				let i = r2[A]?.foo()!
 				destroy r2
 				return i
@@ -1140,50 +1140,6 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		// TODO: in the stable cadence branch, with the new resource reference invalidation,
 		// this should be an error, as `a` shoudl be invalidated after the save
-		_, err := inter.Invoke("test")
-		require.NoError(t, err)
-	})
-
-	t.Run("circular", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, `
-			resource R {
-				pub(set) var x: @[R2]
-				init() {
-					self.x <- []
-				}
-				destroy() {
-					destroy self.x
-				}
-			}
-		  
-			resource R2 {
-				let y: @R
-				init(r: @R) {
-					self.y <- r
-				}
-				destroy() {
-					destroy self.y
-				}
-			}
-
-			attachment A for R {
-				fun evil(r: @R2) {
-					super.x.append(<-r)
-				}
-			}
-			fun test() {
-				var r <- attach A() to <-create R()
-				var r2 <- create R2(r: <-r)
-				let a = r2.y[A]!
-				a.evil(r: <-r2)
-			}
-		`)
-
-		// TODO: in the stable cadence branch, with the new resource reference invalidation,
-		// this should be an error, as `a` should be invalidated after `r2`'s move
 		_, err := inter.Invoke("test")
 		require.NoError(t, err)
 	})

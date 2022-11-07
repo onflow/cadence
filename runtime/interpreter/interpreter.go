@@ -408,17 +408,17 @@ func (interpreter *Interpreter) InvokeExternally(
 	}
 
 	var self *MemberAccessibleValue
-	var super *EphemeralReferenceValue
+	var base *EphemeralReferenceValue
 	if boundFunc, ok := functionValue.(BoundFunctionValue); ok {
 		self = boundFunc.Self
-		super = boundFunc.Super
+		base = boundFunc.Base
 	}
 
 	// NOTE: can't fill argument types, as they are unknown
 	invocation := NewInvocation(
 		interpreter,
 		self,
-		super,
+		base,
 		preparedArguments,
 		nil,
 		nil,
@@ -1189,7 +1189,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				var self MemberAccessibleValue = value
 				if declaration.CompositeKind == common.CompositeKindAttachment {
 					self = NewEphemeralReferenceValue(interpreter, false, value, interpreter.MustConvertStaticToSemaType(value.StaticType(interpreter)))
-					invocation.Super = interpreter.FindVariable(sema.SuperIdentifier).GetValue().(*EphemeralReferenceValue)
+					invocation.Base = interpreter.FindVariable(sema.BaseIdentifier).GetValue().(*EphemeralReferenceValue)
 				}
 				invocation.Self = &self
 
@@ -1989,8 +1989,8 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 				if invocation.Self != nil {
 					interpreter.declareVariable(sema.SelfIdentifier, *invocation.Self)
 				}
-				if invocation.Super != nil {
-					interpreter.declareVariable(sema.SuperIdentifier, invocation.Super)
+				if invocation.Base != nil {
+					interpreter.declareVariable(sema.BaseIdentifier, invocation.Base)
 				}
 
 				// NOTE: The `inner` function might be nil.

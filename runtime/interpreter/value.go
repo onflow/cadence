@@ -13843,7 +13843,7 @@ type CompositeValue struct {
 	// attachments also have a reference to their base value. This field is set in three cases:
 	// 1) when an attachment `A` is accessed off `v` using `v[A]`, this is set to `&v`
 	// 2) When a resource `r`'s destructor is invoked, all of `r`'s attachments' destructors will also run, and
-	//    have their `super` fields set to `&r`
+	//    have their `base` fields set to `&r`
 	// 3) When a value is transferred, this field is copied between its attachments
 	base *EphemeralReferenceValue
 }
@@ -14060,7 +14060,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 
 	// if this type has attachments, destroy all of them before invoking the destructor
 	v.forEachAttachment(interpreter, locationRange, func(attachment *CompositeValue) {
-		// an attachment's destructor may make reference to `super`, so we must set the base value
+		// an attachment's destructor may make reference to `base`, so we must set the base value
 		// for the attachment before invoking its destructor
 		attachment.setBaseValue(interpreter, v)
 		attachment.Destroy(interpreter, locationRange)
@@ -14075,10 +14075,10 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 
 	destructor := v.Destructor
 
-	var super *EphemeralReferenceValue
+	var base *EphemeralReferenceValue
 	var self MemberAccessibleValue = v
 	if v.Kind == common.CompositeKindAttachment {
-		super = v.getBaseValue(interpreter, locationRange)
+		base = v.getBaseValue(interpreter, locationRange)
 		self = NewEphemeralReferenceValue(interpreter, false, v, interpreter.MustConvertStaticToSemaType(v.StaticType(interpreter)))
 	}
 
@@ -14086,7 +14086,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 		invocation := NewInvocation(
 			interpreter,
 			&self,
-			super,
+			base,
 			nil,
 			nil,
 			nil,
@@ -14312,14 +14312,14 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 
 	function, ok := v.Functions[name]
 	if ok {
-		var super *EphemeralReferenceValue
+		var base *EphemeralReferenceValue
 		var self MemberAccessibleValue = v
 		if v.Kind == common.CompositeKindAttachment {
-			super = v.getBaseValue(interpreter, locationRange)
+			base = v.getBaseValue(interpreter, locationRange)
 			// in attachment functions, self is a reference value
 			self = NewEphemeralReferenceValue(interpreter, false, v, interpreter.MustConvertStaticToSemaType(v.StaticType(interpreter)))
 		}
-		return NewBoundFunctionValue(interpreter, function, &self, super)
+		return NewBoundFunctionValue(interpreter, function, &self, base)
 	}
 
 	return nil
@@ -14898,7 +14898,7 @@ func (v *CompositeValue) Transfer(
 				// and does not need to be converted or copied
 
 				value := MustConvertStoredValue(interpreter, atreeValue)
-				// the super of an attachment is not stored in the atree, so in order to make the
+				// the base of an attachment is not stored in the atree, so in order to make the
 				// transfer happen properly, we set the base value here if this field is an attachment
 				if compositeValue, ok := value.(*CompositeValue); ok && compositeValue.Kind == common.CompositeKindAttachment {
 					compositeValue.setBaseValue(interpreter, v)
@@ -15204,7 +15204,7 @@ func (v *CompositeValue) setBaseValue(interpreter *Interpreter, base *CompositeV
 		panic(errors.NewUnreachableError())
 	}
 
-	// the super reference can only be borrowed with the declared type of the attachment's base
+	// the base reference can only be borrowed with the declared type of the attachment's base
 	v.base = NewEphemeralReferenceValue(interpreter, false, base, attachmentType.GetBaseType())
 }
 

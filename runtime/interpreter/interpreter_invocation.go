@@ -134,8 +134,8 @@ func (interpreter *Interpreter) invokeInterpretedFunction(
 	if invocation.Self != nil {
 		interpreter.declareVariable(sema.SelfIdentifier, *invocation.Self)
 	}
-	if invocation.Super != nil {
-		interpreter.declareVariable(sema.SuperIdentifier, invocation.Super)
+	if invocation.Base != nil {
+		interpreter.declareVariable(sema.BaseIdentifier, invocation.Base)
 	}
 
 	return interpreter.invokeInterpretedFunctionActivated(function, invocation.Arguments)

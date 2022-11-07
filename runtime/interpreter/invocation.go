@@ -26,7 +26,7 @@ import (
 // Invocation
 type Invocation struct {
 	Self               *MemberAccessibleValue
-	Super              *EphemeralReferenceValue
+	Base               *EphemeralReferenceValue
 	Arguments          []Value
 	ArgumentTypes      []sema.Type
 	TypeParameterTypes *sema.TypeParameterTypeOrderedMap
@@ -37,7 +37,7 @@ type Invocation struct {
 func NewInvocation(
 	interpreter *Interpreter,
 	self *MemberAccessibleValue,
-	super *EphemeralReferenceValue,
+	base *EphemeralReferenceValue,
 	arguments []Value,
 	argumentTypes []sema.Type,
 	typeParameterTypes *sema.TypeParameterTypeOrderedMap,
@@ -47,7 +47,7 @@ func NewInvocation(
 
 	return Invocation{
 		Self:               self,
-		Super:              super,
+		Base:               base,
 		Arguments:          arguments,
 		ArgumentTypes:      argumentTypes,
 		TypeParameterTypes: typeParameterTypes,
