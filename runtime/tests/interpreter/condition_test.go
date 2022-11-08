@@ -1090,7 +1090,7 @@ func TestInterpretFunctionWithPostConditionAndResourceResult(t *testing.T) {
 	// and not a resource (composite value)
 
 	checkFunctionType := &sema.FunctionType{
-		Parameters: []*sema.Parameter{
+		Parameters: []sema.Parameter{
 			{
 				Label:      sema.ArgumentLabelNotRequired,
 				Identifier: "value",

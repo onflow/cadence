@@ -54,7 +54,7 @@ var beforeType = func() *FunctionType {
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "value",
@@ -1038,14 +1038,17 @@ func (checker *Checker) convertOptionalType(t *ast.OptionalType) Type {
 
 // convertFunctionType converts the given AST function type into a sema function type.
 //
-// NOTE: type annotations ar *NOT* checked!
+// NOTE: type annotations are *NOT* checked!
 func (checker *Checker) convertFunctionType(t *ast.FunctionType) Type {
-	var parameters []*Parameter
+	parameterTypeAnnotations := t.ParameterTypeAnnotations
 
-	for _, parameterTypeAnnotation := range t.ParameterTypeAnnotations {
+	parameters := make([]Parameter, 0, len(parameterTypeAnnotations))
+
+	for _, parameterTypeAnnotation := range parameterTypeAnnotations {
 		convertedParameterTypeAnnotation := checker.ConvertTypeAnnotation(parameterTypeAnnotation)
-		parameters = append(parameters,
-			&Parameter{
+		parameters = append(
+			parameters,
+			Parameter{
 				TypeAnnotation: convertedParameterTypeAnnotation,
 			},
 		)
@@ -1215,23 +1218,27 @@ func (checker *Checker) functionType(
 	}
 }
 
-func (checker *Checker) parameters(parameterList *ast.ParameterList) []*Parameter {
+func (checker *Checker) parameters(parameterList *ast.ParameterList) []Parameter {
 
-	parameters := make([]*Parameter, len(parameterList.Parameters))
+	var parameters []Parameter
 
-	for i, parameter := range parameterList.Parameters {
-		convertedParameterType := checker.ConvertType(parameter.TypeAnnotation.Type)
+	if len(parameterList.Parameters) > 0 {
+		parameters = make([]Parameter, len(parameterList.Parameters))
 
-		// NOTE: copying resource annotation from source type annotation as-is,
-		// so a potential error is properly reported
+		for i, parameter := range parameterList.Parameters {
+			convertedParameterType := checker.ConvertType(parameter.TypeAnnotation.Type)
 
-		parameters[i] = &Parameter{
-			Label:      parameter.Label,
-			Identifier: parameter.Identifier.Identifier,
-			TypeAnnotation: &TypeAnnotation{
-				IsResource: parameter.TypeAnnotation.IsResource,
-				Type:       convertedParameterType,
-			},
+			// NOTE: copying resource annotation from source type annotation as-is,
+			// so a potential error is properly reported
+
+			parameters[i] = Parameter{
+				Label:      parameter.Label,
+				Identifier: parameter.Identifier.Identifier,
+				TypeAnnotation: &TypeAnnotation{
+					IsResource: parameter.TypeAnnotation.IsResource,
+					Type:       convertedParameterType,
+				},
+			}
 		}
 	}
 

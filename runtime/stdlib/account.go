@@ -37,7 +37,7 @@ Creates a new account, paid by the given existing account
 `
 
 var authAccountFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{
+	Parameters: []sema.Parameter{
 		{
 			Identifier: "payer",
 			TypeAnnotation: sema.NewTypeAnnotation(
@@ -150,7 +150,7 @@ Returns the AuthAccount for the given address. Only available in scripts
 `
 
 var getAuthAccountFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{{
+	Parameters: []sema.Parameter{{
 		Label:          sema.ArgumentLabelNotRequired,
 		Identifier:     "address",
 		TypeAnnotation: sema.NewTypeAnnotation(&sema.AddressType{}),
@@ -1895,7 +1895,7 @@ Returns the public account for the given address
 `
 
 var getAccountFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{
+	Parameters: []sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
 			Identifier: "address",

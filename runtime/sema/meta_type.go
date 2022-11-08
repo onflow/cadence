@@ -48,7 +48,7 @@ var MetaType = &SimpleType{
 }
 
 var MetaTypeIsSubtypeFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+	Parameters: []Parameter{
 		{
 			Label:          "of",
 			Identifier:     "otherType",

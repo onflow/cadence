@@ -69,7 +69,7 @@ If any error is encountered while decoding, the program aborts.
 const rlpDecodeStringFunctionName = "decodeString"
 
 var rlpDecodeStringFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{
+	Parameters: []sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
 			Identifier: "input",
@@ -143,7 +143,7 @@ If any error is encountered while decoding, the program aborts.
 const rlpDecodeListFunctionName = "decodeList"
 
 var rlpDecodeListFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{
+	Parameters: []sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
 			Identifier: "input",

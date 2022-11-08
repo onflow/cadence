@@ -188,7 +188,7 @@ func TestCheckGenericFunction(t *testing.T) {
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				Parameters: []*sema.Parameter{
+				Parameters: []sema.Parameter{
 					{
 						Label:      sema.ArgumentLabelNotRequired,
 						Identifier: "value",
@@ -238,7 +238,7 @@ func TestCheckGenericFunction(t *testing.T) {
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				Parameters: []*sema.Parameter{
+				Parameters: []sema.Parameter{
 					{
 						Label:      sema.ArgumentLabelNotRequired,
 						Identifier: "value",
@@ -277,7 +277,7 @@ func TestCheckGenericFunction(t *testing.T) {
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				Parameters: []*sema.Parameter{
+				Parameters: []sema.Parameter{
 					{
 						Label:      sema.ArgumentLabelNotRequired,
 						Identifier: "value",
@@ -316,7 +316,7 @@ func TestCheckGenericFunction(t *testing.T) {
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				Parameters: []*sema.Parameter{
+				Parameters: []sema.Parameter{
 					{
 						Label:      sema.ArgumentLabelNotRequired,
 						Identifier: "value",
@@ -352,7 +352,7 @@ func TestCheckGenericFunction(t *testing.T) {
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				Parameters: []*sema.Parameter{
+				Parameters: []sema.Parameter{
 					{
 						Label:      sema.ArgumentLabelNotRequired,
 						Identifier: "first",
@@ -411,7 +411,7 @@ func TestCheckGenericFunction(t *testing.T) {
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				Parameters: []*sema.Parameter{
+				Parameters: []sema.Parameter{
 					{
 						Label:      sema.ArgumentLabelNotRequired,
 						Identifier: "first",
@@ -540,7 +540,7 @@ func TestCheckGenericFunction(t *testing.T) {
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				Parameters: []*sema.Parameter{
+				Parameters: []sema.Parameter{
 					{
 						Label:      sema.ArgumentLabelNotRequired,
 						Identifier: "value",
@@ -667,7 +667,7 @@ func TestCheckGenericFunction(t *testing.T) {
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				Parameters: []*sema.Parameter{
+				Parameters: []sema.Parameter{
 					{
 						Label:      sema.ArgumentLabelNotRequired,
 						Identifier: "value",
@@ -845,7 +845,7 @@ func TestCheckGenericFunction(t *testing.T) {
 						TypeParameters: []*sema.TypeParameter{
 							typeParameter,
 						},
-						Parameters: []*sema.Parameter{
+						Parameters: []sema.Parameter{
 							{
 								Label:      sema.ArgumentLabelNotRequired,
 								Identifier: "value",
@@ -894,7 +894,7 @@ func TestCheckGenericFunctionIsInvalid(t *testing.T) {
 		TypeParameters: []*sema.TypeParameter{
 			typeParameter,
 		},
-		Parameters: []*sema.Parameter{
+		Parameters: []sema.Parameter{
 			{
 				Label:      sema.ArgumentLabelNotRequired,
 				Identifier: "value",

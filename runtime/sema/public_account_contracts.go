@@ -69,7 +69,7 @@ Returns nil if no contract/contract interface with the given name exists in the 
 `
 
 var publicAccountContractsTypeGetFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+	Parameters: []Parameter{
 		{
 			Identifier: "name",
 			TypeAnnotation: NewTypeAnnotation(

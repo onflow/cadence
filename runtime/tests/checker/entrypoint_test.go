@@ -58,7 +58,7 @@ func TestEntryPointParameters(t *testing.T) {
 		parameters := checker.EntryPointParameters()
 
 		require.Equal(t,
-			[]*sema.Parameter{
+			[]sema.Parameter{
 				{
 					Label:          "",
 					Identifier:     "a",
@@ -97,7 +97,7 @@ func TestEntryPointParameters(t *testing.T) {
 		parameters := checker.EntryPointParameters()
 
 		require.Equal(t,
-			[]*sema.Parameter{
+			[]sema.Parameter{
 				{
 					Label:          "",
 					Identifier:     "a",
@@ -123,7 +123,7 @@ func TestEntryPointParameters(t *testing.T) {
 		parameters := checker.EntryPointParameters()
 
 		require.Equal(t,
-			[]*sema.Parameter{
+			[]sema.Parameter{
 				{
 					Label:          "",
 					Identifier:     "a",
@@ -149,7 +149,7 @@ func TestEntryPointParameters(t *testing.T) {
 		parameters := checker.EntryPointParameters()
 
 		require.Equal(t,
-			[]*sema.Parameter{
+			[]sema.Parameter{
 				{
 					Label:          "",
 					Identifier:     "a",

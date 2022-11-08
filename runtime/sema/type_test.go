@@ -51,7 +51,7 @@ func TestConstantSizedType_String_OfFunctionType(t *testing.T) {
 
 	ty := &ConstantSizedType{
 		Type: &FunctionType{
-			Parameters: []*Parameter{
+			Parameters: []Parameter{
 				{
 					TypeAnnotation: NewTypeAnnotation(Int8Type),
 				},
@@ -92,7 +92,7 @@ func TestVariableSizedType_String_OfFunctionType(t *testing.T) {
 
 	ty := &VariableSizedType{
 		Type: &FunctionType{
-			Parameters: []*Parameter{
+			Parameters: []Parameter{
 				{
 					TypeAnnotation: NewTypeAnnotation(Int8Type),
 				},
@@ -1481,7 +1481,7 @@ func TestCommonSuperType(t *testing.T) {
 		t.Parallel()
 
 		funcType1 := &FunctionType{
-			Parameters: []*Parameter{
+			Parameters: []Parameter{
 				{
 					TypeAnnotation: NewTypeAnnotation(StringType),
 				},
@@ -1491,7 +1491,7 @@ func TestCommonSuperType(t *testing.T) {
 		}
 
 		funcType2 := &FunctionType{
-			Parameters: []*Parameter{
+			Parameters: []Parameter{
 				{
 					TypeAnnotation: NewTypeAnnotation(IntType),
 				},

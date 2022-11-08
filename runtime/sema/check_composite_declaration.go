@@ -867,7 +867,7 @@ func (checker *Checker) declareEnumConstructor(
 func EnumConstructorType(compositeType *CompositeType) *FunctionType {
 	return &FunctionType{
 		IsConstructor: true,
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Identifier:     EnumRawValueFieldName,
 				TypeAnnotation: NewTypeAnnotation(compositeType.EnumRawType),
@@ -903,9 +903,9 @@ func (checker *Checker) checkMemberStorability(members *StringMemberOrderedMap) 
 	})
 }
 
-func (checker *Checker) initializerParameters(initializers []*ast.SpecialFunctionDeclaration) []*Parameter {
+func (checker *Checker) initializerParameters(initializers []*ast.SpecialFunctionDeclaration) []Parameter {
 	// TODO: support multiple overloaded initializers
-	var parameters []*Parameter
+	var parameters []Parameter
 
 	initializerCount := len(initializers)
 	if initializerCount > 0 {
@@ -1780,7 +1780,7 @@ func (checker *Checker) checkInitializers(
 	containerType Type,
 	containerDeclarationKind common.DeclarationKind,
 	containerDocString string,
-	initializerParameters []*Parameter,
+	initializerParameters []Parameter,
 	containerKind ContainerKind,
 	initializationInfo *InitializationInfo,
 ) {
@@ -1853,7 +1853,7 @@ func (checker *Checker) checkSpecialFunction(
 	containerType Type,
 	containerDeclarationKind common.DeclarationKind,
 	containerDocString string,
-	parameters []*Parameter,
+	parameters []Parameter,
 	containerKind ContainerKind,
 	initializationInfo *InitializationInfo,
 ) {

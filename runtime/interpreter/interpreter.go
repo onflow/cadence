@@ -2723,24 +2723,29 @@ func init() {
 				}
 
 				returnType := invocation.Interpreter.MustConvertStaticToSemaType(typeValue.Type)
-				parameterTypes := make([]*sema.Parameter, 0, parameters.Count())
-				parameters.Iterate(invocation.Interpreter, func(param Value) bool {
-					semaType := invocation.Interpreter.MustConvertStaticToSemaType(param.(TypeValue).Type)
-					parameterTypes = append(
-						parameterTypes,
-						&sema.Parameter{
-							TypeAnnotation: sema.NewTypeAnnotation(semaType),
-						},
-					)
 
-					// Continue iteration
-					return true
-				})
+				var resultParameters []sema.Parameter
+				parameterCount := parameters.Count()
+				if parameterCount > 0 {
+					resultParameters = make([]sema.Parameter, 0, parameterCount)
+					parameters.Iterate(invocation.Interpreter, func(param Value) bool {
+						semaType := invocation.Interpreter.MustConvertStaticToSemaType(param.(TypeValue).Type)
+						resultParameters = append(
+							resultParameters,
+							sema.Parameter{
+								TypeAnnotation: sema.NewTypeAnnotation(semaType),
+							},
+						)
+
+						// Continue iteration
+						return true
+					})
+				}
 				functionStaticType := NewFunctionStaticType(
 					invocation.Interpreter,
 					&sema.FunctionType{
 						ReturnTypeAnnotation: sema.NewTypeAnnotation(returnType),
-						Parameters:           parameterTypes,
+						Parameters:           resultParameters,
 					},
 				)
 				return NewUnmeteredTypeValue(functionStaticType)

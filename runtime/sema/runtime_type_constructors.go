@@ -25,7 +25,7 @@ type RuntimeTypeConstructor struct {
 }
 
 var OptionalTypeFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+	Parameters: []Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "type",
@@ -36,7 +36,7 @@ var OptionalTypeFunctionType = &FunctionType{
 }
 
 var VariableSizedArrayTypeFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+	Parameters: []Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "type",
@@ -47,7 +47,7 @@ var VariableSizedArrayTypeFunctionType = &FunctionType{
 }
 
 var ConstantSizedArrayTypeFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+	Parameters: []Parameter{
 		{
 			Identifier:     "type",
 			TypeAnnotation: NewTypeAnnotation(MetaType),
@@ -61,7 +61,7 @@ var ConstantSizedArrayTypeFunctionType = &FunctionType{
 }
 
 var DictionaryTypeFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+	Parameters: []Parameter{
 		{
 			Identifier:     "key",
 			TypeAnnotation: NewTypeAnnotation(MetaType),
@@ -75,7 +75,7 @@ var DictionaryTypeFunctionType = &FunctionType{
 }
 
 var CompositeTypeFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+	Parameters: []Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "identifier",
@@ -86,7 +86,7 @@ var CompositeTypeFunctionType = &FunctionType{
 }
 
 var InterfaceTypeFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+	Parameters: []Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "identifier",
@@ -97,7 +97,7 @@ var InterfaceTypeFunctionType = &FunctionType{
 }
 
 var FunctionTypeFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+	Parameters: []Parameter{
 		{
 			Identifier:     "parameters",
 			TypeAnnotation: NewTypeAnnotation(&VariableSizedType{Type: MetaType}),
@@ -111,7 +111,7 @@ var FunctionTypeFunctionType = &FunctionType{
 }
 
 var RestrictedTypeFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+	Parameters: []Parameter{
 		{
 			Identifier:     "identifier",
 			TypeAnnotation: NewTypeAnnotation(&OptionalType{StringType}),
@@ -125,7 +125,7 @@ var RestrictedTypeFunctionType = &FunctionType{
 }
 
 var ReferenceTypeFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+	Parameters: []Parameter{
 		{
 			Identifier:     "authorized",
 			TypeAnnotation: NewTypeAnnotation(BoolType),
@@ -139,7 +139,7 @@ var ReferenceTypeFunctionType = &FunctionType{
 }
 
 var CapabilityTypeFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+	Parameters: []Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "type",

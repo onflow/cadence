@@ -272,7 +272,6 @@ func TestCheckFunctionTypeReceiverType(t *testing.T) {
 
 		assert.Equal(t,
 			&sema.FunctionType{
-				Parameters: []*sema.Parameter{},
 				ReturnTypeAnnotation: sema.NewTypeAnnotation(
 					sema.VoidType,
 				),

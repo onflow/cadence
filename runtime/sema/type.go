@@ -309,7 +309,7 @@ func NewTypeAnnotation(ty Type) *TypeAnnotation {
 const IsInstanceFunctionName = "isInstance"
 
 var IsInstanceFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+	Parameters: []Parameter{
 		{
 			Label:      ArgumentLabelNotRequired,
 			Identifier: "type",
@@ -383,7 +383,7 @@ func FromStringFunctionDocstring(ty Type) string {
 
 func FromStringFunctionType(ty Type) *FunctionType {
 	return &FunctionType{
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "input",
@@ -655,13 +655,13 @@ func OptionalTypeMapFunctionType(typ Type) *FunctionType {
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:      ArgumentLabelNotRequired,
 				Identifier: "transform",
 				TypeAnnotation: NewTypeAnnotation(
 					&FunctionType{
-						Parameters: []*Parameter{
+						Parameters: []Parameter{
 							{
 								Label:          ArgumentLabelNotRequired,
 								Identifier:     "value",
@@ -846,7 +846,7 @@ self / other, saturating at the numeric bounds instead of overflowing.
 func addSaturatingArithmeticFunctions(t SaturatingArithmeticType, members map[string]MemberResolver) {
 
 	arithmeticFunctionType := &FunctionType{
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "other",
@@ -1937,7 +1937,7 @@ func ArrayRemoveFirstFunctionType(elementType Type) *FunctionType {
 
 func ArrayRemoveFunctionType(elementType Type) *FunctionType {
 	return &FunctionType{
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Identifier:     "at",
 				TypeAnnotation: NewTypeAnnotation(IntegerType),
@@ -1951,7 +1951,7 @@ func ArrayRemoveFunctionType(elementType Type) *FunctionType {
 
 func ArrayInsertFunctionType(elementType Type) *FunctionType {
 	return &FunctionType{
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Identifier:     "at",
 				TypeAnnotation: NewTypeAnnotation(IntegerType),
@@ -1971,7 +1971,7 @@ func ArrayInsertFunctionType(elementType Type) *FunctionType {
 func ArrayConcatFunctionType(arrayType Type) *FunctionType {
 	typeAnnotation := NewTypeAnnotation(arrayType)
 	return &FunctionType{
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "other",
@@ -1984,7 +1984,7 @@ func ArrayConcatFunctionType(arrayType Type) *FunctionType {
 
 func ArrayFirstIndexFunctionType(elementType Type) *FunctionType {
 	return &FunctionType{
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Identifier:     "of",
 				TypeAnnotation: NewTypeAnnotation(elementType),
@@ -1997,7 +1997,7 @@ func ArrayFirstIndexFunctionType(elementType Type) *FunctionType {
 }
 func ArrayContainsFunctionType(elementType Type) *FunctionType {
 	return &FunctionType{
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "element",
@@ -2012,7 +2012,7 @@ func ArrayContainsFunctionType(elementType Type) *FunctionType {
 
 func ArrayAppendAllFunctionType(arrayType Type) *FunctionType {
 	return &FunctionType{
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "other",
@@ -2025,7 +2025,7 @@ func ArrayAppendAllFunctionType(arrayType Type) *FunctionType {
 
 func ArrayAppendFunctionType(elementType Type) *FunctionType {
 	return &FunctionType{
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "element",
@@ -2040,7 +2040,7 @@ func ArrayAppendFunctionType(elementType Type) *FunctionType {
 
 func ArraySliceFunctionType(elementType Type) *FunctionType {
 	return &FunctionType{
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Identifier:     "from",
 				TypeAnnotation: NewTypeAnnotation(IntType),
@@ -2368,7 +2368,7 @@ type Parameter struct {
 	TypeAnnotation *TypeAnnotation
 }
 
-func (p *Parameter) String() string {
+func (p Parameter) String() string {
 	return formatParameter(
 		true,
 		p.Label,
@@ -2377,7 +2377,7 @@ func (p *Parameter) String() string {
 	)
 }
 
-func (p *Parameter) QualifiedString() string {
+func (p Parameter) QualifiedString() string {
 	return formatParameter(
 		true,
 		p.Label,
@@ -2390,7 +2390,7 @@ func (p *Parameter) QualifiedString() string {
 // an argument in a call must use:
 // If no argument label is declared for parameter,
 // the parameter name is used as the argument label
-func (p *Parameter) EffectiveArgumentLabel() string {
+func (p Parameter) EffectiveArgumentLabel() string {
 	if p.Label != "" {
 		return p.Label
 	}
@@ -2514,7 +2514,7 @@ func formatFunctionType(
 type FunctionType struct {
 	IsConstructor            bool
 	TypeParameters           []*TypeParameter
-	Parameters               []*Parameter
+	Parameters               []Parameter
 	ReturnTypeAnnotation     *TypeAnnotation
 	RequiredArgumentCount    *int
 	ArgumentExpressionsCheck ArgumentExpressionsCheck
@@ -2775,7 +2775,8 @@ func (t *FunctionType) RewriteWithRestrictedTypes() (Type, bool) {
 
 	rewrittenParameterTypes := map[*Parameter]Type{}
 
-	for _, parameter := range t.Parameters {
+	for i := range t.Parameters {
+		parameter := &t.Parameters[i]
 		rewrittenType, rewritten := parameter.TypeAnnotation.Type.RewriteWithRestrictedTypes()
 		if rewritten {
 			anyRewritten = true
@@ -2806,19 +2807,20 @@ func (t *FunctionType) RewriteWithRestrictedTypes() (Type, bool) {
 			}
 		}
 
-		var rewrittenParameters []*Parameter
+		var rewrittenParameters []Parameter
 		if len(t.Parameters) > 0 {
-			rewrittenParameters = make([]*Parameter, len(t.Parameters))
-			for i, parameter := range t.Parameters {
+			rewrittenParameters = make([]Parameter, len(t.Parameters))
+			for i := range t.Parameters {
+				parameter := &t.Parameters[i]
 				rewrittenParameterType, ok := rewrittenParameterTypes[parameter]
 				if ok {
-					rewrittenParameters[i] = &Parameter{
+					rewrittenParameters[i] = Parameter{
 						Label:          parameter.Label,
 						Identifier:     parameter.Identifier,
 						TypeAnnotation: NewTypeAnnotation(rewrittenParameterType),
 					}
 				} else {
-					rewrittenParameters[i] = parameter
+					rewrittenParameters[i] = *parameter
 				}
 			}
 		}
@@ -2910,7 +2912,7 @@ func (t *FunctionType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type 
 
 	// parameters
 
-	var newParameters []*Parameter
+	var newParameters []Parameter
 
 	for _, parameter := range t.Parameters {
 		newParameterType := parameter.TypeAnnotation.Type.Resolve(typeArguments)
@@ -2918,8 +2920,9 @@ func (t *FunctionType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type 
 			return nil
 		}
 
-		newParameters = append(newParameters,
-			&Parameter{
+		newParameters = append(
+			newParameters,
+			Parameter{
 				Label:          parameter.Label,
 				Identifier:     parameter.Identifier,
 				TypeAnnotation: NewTypeAnnotation(newParameterType),
@@ -3223,7 +3226,7 @@ func init() {
 
 func NumberConversionFunctionType(numberType Type) *FunctionType {
 	return &FunctionType{
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "value",
@@ -3256,7 +3259,7 @@ func baseFunctionVariable(name string, ty *FunctionType, docString string) *Vari
 }
 
 var AddressConversionFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+	Parameters: []Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "value",
@@ -3334,7 +3337,7 @@ func numberFunctionArgumentExpressionsChecker(targetType Type) ArgumentExpressio
 
 func pathConversionFunctionType(pathType Type) *FunctionType {
 	return &FunctionType{
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Identifier:     "identifier",
 				TypeAnnotation: NewTypeAnnotation(StringType),
@@ -3435,7 +3438,7 @@ type CompositeType struct {
 	memberResolversOnce                 sync.Once
 	Fields                              []string
 	// TODO: add support for overloaded initializers
-	ConstructorParameters []*Parameter
+	ConstructorParameters []Parameter
 	NestedTypes           *StringTypeOrderedMap
 	containerType         Type
 	EnumRawType           Type
@@ -3964,7 +3967,7 @@ type InterfaceType struct {
 	memberResolversOnce sync.Once
 	Fields              []string
 	// TODO: add support for overloaded initializers
-	InitializerParameters []*Parameter
+	InitializerParameters []Parameter
 	containerType         Type
 	NestedTypes           *StringTypeOrderedMap
 	cachedIdentifiers     *struct {
@@ -4483,7 +4486,7 @@ func (t *DictionaryType) initializeMemberResolvers() {
 
 func DictionaryContainsKeyFunctionType(t *DictionaryType) *FunctionType {
 	return &FunctionType{
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "key",
@@ -4498,7 +4501,7 @@ func DictionaryContainsKeyFunctionType(t *DictionaryType) *FunctionType {
 
 func DictionaryInsertFunctionType(t *DictionaryType) *FunctionType {
 	return &FunctionType{
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Identifier:     "key",
 				TypeAnnotation: NewTypeAnnotation(t.KeyType),
@@ -4519,7 +4522,7 @@ func DictionaryInsertFunctionType(t *DictionaryType) *FunctionType {
 
 func DictionaryRemoveFunctionType(t *DictionaryType) *FunctionType {
 	return &FunctionType{
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Identifier:     "key",
 				TypeAnnotation: NewTypeAnnotation(t.KeyType),
@@ -4538,7 +4541,7 @@ func DictionaryForEachKeyFunctionType(t *DictionaryType) *FunctionType {
 
 	// funcType: K -> Bool
 	funcType := &FunctionType{
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Identifier:     "key",
 				TypeAnnotation: NewTypeAnnotation(t.KeyType),
@@ -4548,7 +4551,7 @@ func DictionaryForEachKeyFunctionType(t *DictionaryType) *FunctionType {
 	}
 
 	return &FunctionType{
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "function",
@@ -5590,8 +5593,8 @@ func IsNilType(ty Type) bool {
 type TransactionType struct {
 	Members           *StringMemberOrderedMap
 	Fields            []string
-	PrepareParameters []*Parameter
-	Parameters        []*Parameter
+	PrepareParameters []Parameter
+	Parameters        []Parameter
 }
 
 func (t *TransactionType) EntryPointFunctionType() *FunctionType {
@@ -5612,7 +5615,7 @@ func (t *TransactionType) PrepareFunctionType() *FunctionType {
 func (*TransactionType) ExecuteFunctionType() *FunctionType {
 	return &FunctionType{
 		IsConstructor:        true,
-		Parameters:           []*Parameter{},
+		Parameters:           []Parameter{},
 		ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
 	}
 }
@@ -6382,7 +6385,7 @@ var PublicKeyArrayType = &VariableSizedType{
 
 var PublicKeyVerifyFunctionType = &FunctionType{
 	TypeParameters: []*TypeParameter{},
-	Parameters: []*Parameter{
+	Parameters: []Parameter{
 		{
 			Identifier: "signature",
 			TypeAnnotation: NewTypeAnnotation(
@@ -6409,7 +6412,7 @@ var PublicKeyVerifyFunctionType = &FunctionType{
 
 var PublicKeyVerifyPoPFunctionType = &FunctionType{
 	TypeParameters: []*TypeParameter{},
-	Parameters: []*Parameter{
+	Parameters: []Parameter{
 		{
 			Label:      ArgumentLabelNotRequired,
 			Identifier: "proof",

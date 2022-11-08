@@ -3709,7 +3709,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		t.Parallel()
 
 		functionType := &sema.FunctionType{
-			Parameters: []*sema.Parameter{
+			Parameters: []sema.Parameter{
 				{
 					TypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
 				},

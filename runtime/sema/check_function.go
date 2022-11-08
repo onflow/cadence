@@ -215,7 +215,7 @@ func (checker *Checker) checkFunctionExits(functionBlock *ast.FunctionBlock, ret
 	)
 }
 
-func (checker *Checker) checkParameters(parameterList *ast.ParameterList, parameters []*Parameter) {
+func (checker *Checker) checkParameters(parameterList *ast.ParameterList, parameters []Parameter) {
 	for i, parameter := range parameterList.Parameters {
 		parameterTypeAnnotation := parameters[i].TypeAnnotation
 
@@ -258,7 +258,7 @@ func (checker *Checker) checkArgumentLabels(parameterList *ast.ParameterList) {
 // ensuring names are unique and constants don't already exist
 func (checker *Checker) declareParameters(
 	parameterList *ast.ParameterList,
-	parameters []*Parameter,
+	parameters []Parameter,
 ) {
 	depth := checker.valueActivations.Depth()
 

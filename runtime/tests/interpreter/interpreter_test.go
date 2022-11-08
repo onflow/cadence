@@ -1820,7 +1820,7 @@ func TestInterpretHostFunction(t *testing.T) {
 	testFunction := stdlib.NewStandardLibraryFunction(
 		"test",
 		&sema.FunctionType{
-			Parameters: []*sema.Parameter{
+			Parameters: []sema.Parameter{
 				{
 					Label:          sema.ArgumentLabelNotRequired,
 					Identifier:     "a",
@@ -1904,7 +1904,7 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 	testFunction := stdlib.NewStandardLibraryFunction(
 		"test",
 		&sema.FunctionType{
-			Parameters: []*sema.Parameter{
+			Parameters: []sema.Parameter{
 				{
 					Label:          sema.ArgumentLabelNotRequired,
 					Identifier:     "value",
@@ -4707,7 +4707,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		}
 
 		getStorageReferenceFunctionType := &sema.FunctionType{
-			Parameters: []*sema.Parameter{
+			Parameters: []sema.Parameter{
 				{
 					Label:      "authorized",
 					Identifier: "authorized",
@@ -9536,7 +9536,7 @@ func TestInterpretNestedDestroy(t *testing.T) {
 	logFunction := stdlib.NewStandardLibraryFunction(
 		"log",
 		&sema.FunctionType{
-			Parameters: []*sema.Parameter{
+			Parameters: []sema.Parameter{
 				{
 					Label:          sema.ArgumentLabelNotRequired,
 					Identifier:     "value",
