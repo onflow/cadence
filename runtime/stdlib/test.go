@@ -316,22 +316,16 @@ var testAssertFunctionType = &sema.FunctionType{
 	Purity: sema.FunctionPurityView,
 	Parameters: []*sema.Parameter{
 		{
-			Label:      sema.ArgumentLabelNotRequired,
-			Identifier: "condition",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.BoolType,
-			),
+			Label:          sema.ArgumentLabelNotRequired,
+			Identifier:     "condition",
+			TypeAnnotation: sema.BoolTypeAnnotation,
 		},
 		{
-			Identifier: "message",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.StringType,
-			),
+			Identifier:     "message",
+			TypeAnnotation: sema.StringTypeAnnotation,
 		},
 	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		sema.VoidType,
-	),
+	ReturnTypeAnnotation:  sema.VoidTypeAnnotation,
 	RequiredArgumentCount: sema.RequiredArgumentCount(1),
 }
 
@@ -375,15 +369,11 @@ var testFailFunctionType = &sema.FunctionType{
 	Purity: sema.FunctionPurityView,
 	Parameters: []*sema.Parameter{
 		{
-			Identifier: "message",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.StringType,
-			),
+			Identifier:     "message",
+			TypeAnnotation: sema.StringTypeAnnotation,
 		},
 	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		sema.VoidType,
-	),
+	ReturnTypeAnnotation:  sema.VoidTypeAnnotation,
 	RequiredArgumentCount: sema.RequiredArgumentCount(0),
 }
 
@@ -416,6 +406,9 @@ const testExpectFunctionName = "expect"
 
 var testExpectFunctionType = &sema.FunctionType{
 	Purity: matcherTestFunctionType.Purity,
+	TypeParameters: []*sema.TypeParameter{
+		typeParameter,
+	},
 	Parameters: []*sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
@@ -432,12 +425,7 @@ var testExpectFunctionType = &sema.FunctionType{
 			TypeAnnotation: sema.NewTypeAnnotation(matcherType),
 		},
 	},
-	TypeParameters: []*sema.TypeParameter{
-		typeParameter,
-	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		sema.VoidType,
-	),
+	ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 }
 
 var testExpectFunction = interpreter.NewUnmeteredHostFunctionValue(
@@ -518,20 +506,17 @@ Read a local file, and return the content as a string.
 
 const testReadFileFunctionName = "readFile"
 
-var testReadFileFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{
+var testReadFileFunctionType = sema.NewSimpleFunctionType(
+	sema.FunctionPurityImpure,
+	[]*sema.Parameter{
 		{
-			Label:      sema.ArgumentLabelNotRequired,
-			Identifier: "path",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.StringType,
-			),
+			Label:          sema.ArgumentLabelNotRequired,
+			Identifier:     "path",
+			TypeAnnotation: sema.StringTypeAnnotation,
 		},
 	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		sema.StringType,
-	),
-}
+	sema.StringTypeAnnotation,
+)
 
 func testReadFileFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
@@ -560,12 +545,13 @@ Creates a blockchain which is backed by a new emulator instance.
 
 const testNewEmulatorBlockchainFunctionName = "newEmulatorBlockchain"
 
-var testNewEmulatorBlockchainFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
+var testNewEmulatorBlockchainFunctionType = sema.NewSimpleFunctionType(
+	sema.FunctionPurityView,
+	nil,
+	sema.NewTypeAnnotation(
 		blockchainType,
 	),
-}
+)
 
 func testNewEmulatorBlockchainFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
@@ -639,8 +625,9 @@ The test function is of type '((T): Bool)', where 'T' is bound to 'AnyStruct'.
 const newMatcherFunctionName = "newMatcher"
 
 // Type of the Matcher.test function: ((T): Bool)
-var matcherTestFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{
+var matcherTestFunctionType = sema.NewSimpleFunctionType(
+	sema.FunctionPurityImpure,
+	[]*sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
 			Identifier: "value",
@@ -651,14 +638,15 @@ var matcherTestFunctionType = &sema.FunctionType{
 			),
 		},
 	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		sema.BoolType,
-	),
-}
+	sema.BoolTypeAnnotation,
+)
 
 var newMatcherFunctionType = &sema.FunctionType{
 	Purity:        sema.FunctionPurityView,
 	IsConstructor: true,
+	TypeParameters: []*sema.TypeParameter{
+		newMatcherFunctionTypeParameter,
+	},
 	Parameters: []*sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
@@ -669,9 +657,6 @@ var newMatcherFunctionType = &sema.FunctionType{
 		},
 	},
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(matcherType),
-	TypeParameters: []*sema.TypeParameter{
-		newMatcherFunctionTypeParameter,
-	},
 }
 
 var newMatcherFunctionTypeParameter = &sema.TypeParameter{

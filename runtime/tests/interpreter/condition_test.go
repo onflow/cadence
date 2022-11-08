@@ -1093,16 +1093,12 @@ func TestInterpretFunctionWithPostConditionAndResourceResult(t *testing.T) {
 		Purity: sema.FunctionPurityView,
 		Parameters: []*sema.Parameter{
 			{
-				Label:      sema.ArgumentLabelNotRequired,
-				Identifier: "value",
-				TypeAnnotation: sema.NewTypeAnnotation(
-					sema.AnyStructType,
-				),
+				Label:          sema.ArgumentLabelNotRequired,
+				Identifier:     "value",
+				TypeAnnotation: sema.AnyStructTypeAnnotation,
 			},
 		},
-		ReturnTypeAnnotation: sema.NewTypeAnnotation(
-			sema.VoidType,
-		),
+		ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 	}
 
 	valueDeclaration := stdlib.StandardLibraryValue{

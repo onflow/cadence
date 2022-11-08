@@ -9297,12 +9297,10 @@ func TestInterpretValueStringConversion(t *testing.T) {
 					{
 						Label:          sema.ArgumentLabelNotRequired,
 						Identifier:     "value",
-						TypeAnnotation: sema.NewTypeAnnotation(sema.AnyStructType),
+						TypeAnnotation: sema.AnyStructTypeAnnotation,
 					},
 				},
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(
-					sema.VoidType,
-				),
+				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 			},
 			``,
 			func(invocation interpreter.Invocation) interpreter.Value {
@@ -9641,12 +9639,10 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 					{
 						Label:          sema.ArgumentLabelNotRequired,
 						Identifier:     "value",
-						TypeAnnotation: sema.NewTypeAnnotation(sema.AnyStructType),
+						TypeAnnotation: sema.AnyStructTypeAnnotation,
 					},
 				},
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(
-					sema.VoidType,
-				),
+				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 			},
 			``,
 			func(invocation interpreter.Invocation) interpreter.Value {

@@ -129,9 +129,11 @@ var _ ast.DeclarationVisitor[struct{}] = &Checker{}
 var _ ast.StatementVisitor[struct{}] = &Checker{}
 var _ ast.ExpressionVisitor[Type] = &Checker{}
 
-var baseFunctionType = &FunctionType{
-	ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
-}
+var baseFunctionType = NewSimpleFunctionType(
+	FunctionPurityImpure,
+	nil,
+	VoidTypeAnnotation,
+)
 
 func NewChecker(
 	program *ast.Program,
@@ -1112,11 +1114,11 @@ func (checker *Checker) convertFunctionType(t *ast.FunctionType) Type {
 
 	purity := PurityFromAnnotation(t.PurityAnnotation)
 
-	return &FunctionType{
-		Purity:               purity,
-		Parameters:           parameters,
-		ReturnTypeAnnotation: returnTypeAnnotation,
-	}
+	return NewSimpleFunctionType(
+		purity,
+		parameters,
+		returnTypeAnnotation,
+	)
 }
 
 func (checker *Checker) convertConstantSizedType(t *ast.ConstantSizedType) Type {

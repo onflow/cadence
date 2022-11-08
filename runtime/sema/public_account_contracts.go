@@ -68,22 +68,16 @@ Returns the deployed contract for the contract/contract interface with the given
 Returns nil if no contract/contract interface with the given name exists in the account.
 `
 
-var publicAccountContractsTypeGetFunctionType = &FunctionType{
-	Purity: FunctionPurityView,
-	Parameters: []*Parameter{
+var publicAccountContractsTypeGetFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]*Parameter{
 		{
-			Identifier: "name",
-			TypeAnnotation: NewTypeAnnotation(
-				StringType,
-			),
+			Identifier:     "name",
+			TypeAnnotation: StringTypeAnnotation,
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		&OptionalType{
-			Type: DeployedContractType,
-		},
-	),
-}
+	OptionalDeployedContractTypeAnnotation,
+)
 
 const publicAccountContractsTypeNamesDocString = `
 Names of all contracts deployed in the account.
