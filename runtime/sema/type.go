@@ -246,7 +246,7 @@ type TypeAnnotation struct {
 	Type       Type
 }
 
-func (a *TypeAnnotation) TypeAnnotationState() TypeAnnotationState {
+func (a TypeAnnotation) TypeAnnotationState() TypeAnnotationState {
 	if a.Type.IsInvalidType() {
 		return TypeAnnotationStateValid
 	}
@@ -267,7 +267,7 @@ func (a *TypeAnnotation) TypeAnnotationState() TypeAnnotationState {
 	}
 }
 
-func (a *TypeAnnotation) String() string {
+func (a TypeAnnotation) String() string {
 	if a.IsResource {
 		return fmt.Sprintf(
 			"%s%s",
@@ -279,7 +279,7 @@ func (a *TypeAnnotation) String() string {
 	}
 }
 
-func (a *TypeAnnotation) QualifiedString() string {
+func (a TypeAnnotation) QualifiedString() string {
 	qualifiedString := a.Type.QualifiedString()
 	if a.IsResource {
 		return fmt.Sprintf(
@@ -292,13 +292,13 @@ func (a *TypeAnnotation) QualifiedString() string {
 	}
 }
 
-func (a *TypeAnnotation) Equal(other *TypeAnnotation) bool {
+func (a TypeAnnotation) Equal(other TypeAnnotation) bool {
 	return a.IsResource == other.IsResource &&
 		a.Type.Equal(other.Type)
 }
 
-func NewTypeAnnotation(ty Type) *TypeAnnotation {
-	return &TypeAnnotation{
+func NewTypeAnnotation(ty Type) TypeAnnotation {
+	return TypeAnnotation{
 		IsResource: ty.IsResourceType(),
 		Type:       ty,
 	}
@@ -2365,7 +2365,7 @@ func formatParameter(spaces bool, label, identifier, typeAnnotation string) stri
 type Parameter struct {
 	Label          string
 	Identifier     string
-	TypeAnnotation *TypeAnnotation
+	TypeAnnotation TypeAnnotation
 }
 
 func (p Parameter) String() string {
@@ -2515,7 +2515,7 @@ type FunctionType struct {
 	IsConstructor            bool
 	TypeParameters           []*TypeParameter
 	Parameters               []Parameter
-	ReturnTypeAnnotation     *TypeAnnotation
+	ReturnTypeAnnotation     TypeAnnotation
 	RequiredArgumentCount    *int
 	ArgumentExpressionsCheck ArgumentExpressionsCheck
 	Members                  *StringMemberOrderedMap
@@ -3794,7 +3794,7 @@ type Member struct {
 	ContainerType  Type
 	Access         ast.Access
 	Identifier     ast.Identifier
-	TypeAnnotation *TypeAnnotation
+	TypeAnnotation TypeAnnotation
 	// TODO: replace with dedicated MemberKind enum
 	DeclarationKind common.DeclarationKind
 	VariableKind    ast.VariableKind
@@ -5286,8 +5286,8 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 		// Functions are covariant in their return type
 
-		if typedSubType.ReturnTypeAnnotation != nil {
-			if typedSuperType.ReturnTypeAnnotation == nil {
+		if typedSubType.ReturnTypeAnnotation.Type != nil {
+			if typedSuperType.ReturnTypeAnnotation.Type == nil {
 				return false
 			}
 
@@ -5297,7 +5297,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 			) {
 				return false
 			}
-		} else if typedSuperType.ReturnTypeAnnotation != nil {
+		} else if typedSuperType.ReturnTypeAnnotation.Type != nil {
 			return false
 		}
 

@@ -42,7 +42,7 @@ import (
 //
 
 var emptyFunctionType = &sema.FunctionType{
-	ReturnTypeAnnotation: &sema.TypeAnnotation{
+	ReturnTypeAnnotation: sema.TypeAnnotation{
 		Type: sema.VoidType,
 	},
 }
@@ -942,7 +942,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	constructorType := &sema.FunctionType{
 		IsConstructor: true,
 		Parameters:    compositeType.ConstructorParameters,
-		ReturnTypeAnnotation: &sema.TypeAnnotation{
+		ReturnTypeAnnotation: sema.TypeAnnotation{
 			Type: compositeType,
 		},
 		RequiredArgumentCount: nil,

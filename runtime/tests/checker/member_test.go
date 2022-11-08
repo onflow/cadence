@@ -173,7 +173,7 @@ func TestCheckOptionalChainingFunctionRead(t *testing.T) {
 
 	expectedType := &sema.OptionalType{
 		Type: &sema.FunctionType{
-			ReturnTypeAnnotation: &sema.TypeAnnotation{
+			ReturnTypeAnnotation: sema.TypeAnnotation{
 				Type: sema.IntType,
 			},
 		},

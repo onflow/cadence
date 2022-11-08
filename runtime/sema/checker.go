@@ -1194,10 +1194,10 @@ func (checker *Checker) convertNominalType(t *ast.NominalType) Type {
 // ConvertTypeAnnotation converts an AST type annotation representation
 // to a sema type annotation
 //
-// NOTE: type annotations ar *NOT* checked!
-func (checker *Checker) ConvertTypeAnnotation(typeAnnotation *ast.TypeAnnotation) *TypeAnnotation {
+// NOTE: type annotations are *NOT* checked!
+func (checker *Checker) ConvertTypeAnnotation(typeAnnotation *ast.TypeAnnotation) TypeAnnotation {
 	convertedType := checker.ConvertType(typeAnnotation.Type)
-	return &TypeAnnotation{
+	return TypeAnnotation{
 		IsResource: typeAnnotation.IsResource,
 		Type:       convertedType,
 	}
@@ -1234,7 +1234,7 @@ func (checker *Checker) parameters(parameterList *ast.ParameterList) []Parameter
 			parameters[i] = Parameter{
 				Label:      parameter.Label,
 				Identifier: parameter.Identifier.Identifier,
-				TypeAnnotation: &TypeAnnotation{
+				TypeAnnotation: TypeAnnotation{
 					IsResource: parameter.TypeAnnotation.IsResource,
 					Type:       convertedParameterType,
 				},
@@ -2009,7 +2009,7 @@ func (checker *Checker) rewritePostConditions(postConditions []*ast.Condition) P
 	}
 }
 
-func (checker *Checker) checkTypeAnnotation(typeAnnotation *TypeAnnotation, pos ast.HasPosition) {
+func (checker *Checker) checkTypeAnnotation(typeAnnotation TypeAnnotation, pos ast.HasPosition) {
 
 	switch typeAnnotation.TypeAnnotationState() {
 	case TypeAnnotationStateMissingResourceAnnotation:
@@ -2099,7 +2099,7 @@ func (checker *Checker) convertInstantiationType(t *ast.InstantiationType) Type 
 	// even if the instantiated type
 
 	typeArgumentCount := len(t.TypeArguments)
-	typeArgumentAnnotations := make([]*TypeAnnotation, typeArgumentCount)
+	typeArgumentAnnotations := make([]TypeAnnotation, typeArgumentCount)
 
 	for i, rawTypeArgument := range t.TypeArguments {
 		typeArgument := checker.ConvertTypeAnnotation(rawTypeArgument)

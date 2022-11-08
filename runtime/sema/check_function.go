@@ -128,7 +128,7 @@ func (checker *Checker) checkFunction(
 
 	checker.checkParameters(parameterList, functionType.Parameters)
 
-	if functionType.ReturnTypeAnnotation != nil {
+	if functionType.ReturnTypeAnnotation.Type != nil {
 		checker.checkTypeAnnotation(functionType.ReturnTypeAnnotation, returnTypeAnnotation)
 	}
 
@@ -350,7 +350,7 @@ func (checker *Checker) visitWithPostConditions(postConditions *ast.Conditions, 
 
 func (checker *Checker) visitFunctionBlock(
 	functionBlock *ast.FunctionBlock,
-	returnTypeAnnotation *TypeAnnotation,
+	returnTypeAnnotation TypeAnnotation,
 	checkResourceLoss bool,
 ) {
 	checker.enterValueScope()
