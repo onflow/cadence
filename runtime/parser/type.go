@@ -148,8 +148,8 @@ func init() {
 	defineOptionalType()
 	defineReferenceType()
 	defineRestrictedOrDictionaryType()
-	defineOldSyntaxFunctionType()
 	defineInstantiationType()
+	defineOldSyntaxFunctionType()
 	defineIdentifierTypes()
 }
 
@@ -612,14 +612,18 @@ func defineOldSyntaxFunctionType() {
 	setTypeNullDenotation(
 		lexer.TokenParenOpen,
 		func(p *parser, token lexer.Token) (ast.Type, error) {
-			p.skipSpaceAndComments()
+			// skip the opening '(' token
+			p.nextSemanticToken()
 
 			purity := ast.FunctionPurityUnspecified
 			if p.isToken(p.current, lexer.TokenIdentifier, keywordView) {
 				purity = ast.FunctionPurityView
+				// skip the `view` keyword
+				p.nextSemanticToken()
 			}
 
-			functionType, err := parseFunctionType(p, token.StartPos, purity)
+			// require an explicit return type annotation, since we rely on the ':' token
+			functionType, err := parseFunctionType(p, token.StartPos, purity, true)
 
 			if err != nil {
 				return nil, err
@@ -628,11 +632,13 @@ func defineOldSyntaxFunctionType() {
 			p.skipSpaceAndComments()
 
 			// find the matching end parenthesis and skip
-			endToken, err := p.mustOne(lexer.TokenParenClose)
+			_, err = p.mustOne(lexer.TokenParenClose)
 			if err != nil {
 				return nil, err
 			}
 			p.next()
+
+			return functionType, nil
 
 		},
 	)
@@ -983,7 +989,9 @@ func defineIdentifierTypes() {
 				), nil
 
 			case keywordFun:
-				return parseFunctionType(p, token.StartPos, ast.FunctionPurityUnspecified)
+				// skip the `fun` keyword
+				p.nextSemanticToken()
+				return parseFunctionType(p, token.StartPos, ast.FunctionPurityUnspecified, false)
 
 			case keywordView:
 
@@ -994,8 +1002,9 @@ func defineIdentifierTypes() {
 				p.nextSemanticToken()
 
 				if p.isToken(p.current, lexer.TokenIdentifier, keywordFun) {
+					// skip the `fun` keyword
 					p.nextSemanticToken()
-					return parseFunctionType(p, current.StartPos, ast.FunctionPurityView)
+					return parseFunctionType(p, current.StartPos, ast.FunctionPurityView, false)
 				} else {
 					// backtrack otherwise - view is a nominal type here
 					p.current = current
@@ -1011,11 +1020,13 @@ func defineIdentifierTypes() {
 	)
 }
 
+// parse a function type starting after the `fun` keyword.
+// this is to ensure compatibility with the old syntax that doesn't require `fun` before the argument tuple.
 // ('view')? 'fun'
 //
 //	'(' ( type ( ',' type )* )? ')'
 //	( ':' type )?
-func parseFunctionType(p *parser, startPos ast.Position, purity ast.FunctionPurity) (ast.Type, error) {
+func parseFunctionType(p *parser, startPos ast.Position, purity ast.FunctionPurity, requireReturnType bool) (ast.Type, error) {
 	parameterTypeAnnotations, err := parseParameterTypeAnnotations(p)
 	if err != nil {
 		return nil, err
@@ -1028,13 +1039,16 @@ func parseFunctionType(p *parser, startPos ast.Position, purity ast.FunctionPuri
 	var returnTypeAnnotation *ast.TypeAnnotation
 	// return type annotation is optional in function types too
 	if p.current.Is(lexer.TokenColon) {
-		p.skipSpaceAndComments()
+		// skip the colon
+		p.nextSemanticToken()
 
 		returnTypeAnnotation, err = parseTypeAnnotation(p)
 		if err != nil {
 			return nil, err
 		}
 		endPos = p.current.EndPos
+	} else if requireReturnType {
+		return nil, NewSyntaxError(p.current.StartPos, "expected return type")
 	} else {
 		// if the return type is omitted, infer it to be `Void`
 		voidType := ast.NewNominalType(
