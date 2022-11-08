@@ -215,6 +215,8 @@ var AuthAccountType = func() *CompositeType {
 	return authAccountType
 }()
 
+var AuthAccountTypeAnnotation = NewTypeAnnotation(AuthAccountType)
+
 var AuthAccountPublicPathsType = &VariableSizedType{
 	Type: PublicPathType,
 }
@@ -303,10 +305,10 @@ var AuthAccountTypeSaveFunctionType = func() *FunctionType {
 			{
 				Label:          "to",
 				Identifier:     "path",
-				TypeAnnotation: NewTypeAnnotation(StoragePathType),
+				TypeAnnotation: StoragePathTypeAnnotation,
 			},
 		},
-		ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
+		ReturnTypeAnnotation: VoidTypeAnnotation,
 	}
 }()
 
@@ -335,7 +337,7 @@ var AuthAccountTypeLoadFunctionType = func() *FunctionType {
 			{
 				Label:          "from",
 				Identifier:     "path",
-				TypeAnnotation: NewTypeAnnotation(StoragePathType),
+				TypeAnnotation: StoragePathTypeAnnotation,
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(
@@ -362,7 +364,7 @@ var AuthAccountTypeTypeFunctionType = NewSimpleFunctionType(
 		{
 			Label:          "at",
 			Identifier:     "path",
-			TypeAnnotation: NewTypeAnnotation(StoragePathType),
+			TypeAnnotation: StoragePathTypeAnnotation,
 		},
 	},
 	NewTypeAnnotation(
@@ -402,7 +404,7 @@ var AuthAccountTypeCopyFunctionType = func() *FunctionType {
 			{
 				Label:          "from",
 				Identifier:     "path",
-				TypeAnnotation: NewTypeAnnotation(StoragePathType),
+				TypeAnnotation: StoragePathTypeAnnotation,
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(
@@ -446,7 +448,7 @@ var AuthAccountTypeBorrowFunctionType = func() *FunctionType {
 			{
 				Label:          "from",
 				Identifier:     "path",
-				TypeAnnotation: NewTypeAnnotation(StoragePathType),
+				TypeAnnotation: StoragePathTypeAnnotation,
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(
@@ -492,11 +494,11 @@ var AuthAccountTypeLinkFunctionType = func() *FunctionType {
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "newCapabilityPath",
-				TypeAnnotation: NewTypeAnnotation(CapabilityPathType),
+				TypeAnnotation: CapabilityPathTypeAnnotation,
 			},
 			{
 				Identifier:     "target",
-				TypeAnnotation: NewTypeAnnotation(PathType),
+				TypeAnnotation: PathTypeAnnotation,
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(
@@ -530,10 +532,10 @@ var AuthAccountTypeUnlinkFunctionType = NewSimpleFunctionType(
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "capabilityPath",
-			TypeAnnotation: NewTypeAnnotation(CapabilityPathType),
+			TypeAnnotation: CapabilityPathTypeAnnotation,
 		},
 	},
-	NewTypeAnnotation(VoidType),
+	VoidTypeAnnotation,
 )
 
 const authAccountTypeUnlinkFunctionDocString = `
@@ -559,7 +561,7 @@ var AuthAccountTypeGetCapabilityFunctionType = func() *FunctionType {
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "capabilityPath",
-				TypeAnnotation: NewTypeAnnotation(CapabilityPathType),
+				TypeAnnotation: CapabilityPathTypeAnnotation,
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(
@@ -582,7 +584,7 @@ var AccountTypeGetLinkTargetFunctionType = NewSimpleFunctionType(
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "capabilityPath",
-			TypeAnnotation: NewTypeAnnotation(CapabilityPathType),
+			TypeAnnotation: CapabilityPathTypeAnnotation,
 		},
 	},
 	NewTypeAnnotation(
@@ -644,18 +646,18 @@ var AuthAccountKeysTypeAddFunctionType = NewSimpleFunctionType(
 	[]*Parameter{
 		{
 			Identifier:     AccountKeyPublicKeyField,
-			TypeAnnotation: NewTypeAnnotation(PublicKeyType),
+			TypeAnnotation: PublicKeyTypeAnnotation,
 		},
 		{
 			Identifier:     AccountKeyHashAlgoField,
-			TypeAnnotation: NewTypeAnnotation(HashAlgorithmType),
+			TypeAnnotation: HashAlgorithmTypeAnnotation,
 		},
 		{
 			Identifier:     AccountKeyWeightField,
-			TypeAnnotation: NewTypeAnnotation(UFix64Type),
+			TypeAnnotation: UFix64TypeAnnotation,
 		},
 	},
-	NewTypeAnnotation(AccountKeyType),
+	AccountKeyTypeAnnotation,
 )
 
 var AccountKeysTypeGetFunctionType = NewSimpleFunctionType(
@@ -663,7 +665,7 @@ var AccountKeysTypeGetFunctionType = NewSimpleFunctionType(
 	[]*Parameter{
 		{
 			Identifier:     AccountKeyKeyIndexField,
-			TypeAnnotation: NewTypeAnnotation(IntType),
+			TypeAnnotation: IntTypeAnnotation,
 		},
 	},
 	NewTypeAnnotation(&OptionalType{Type: AccountKeyType}),
@@ -678,10 +680,10 @@ var AccountKeysTypeForEachFunctionType = func() *FunctionType {
 		functionPurity,
 		[]*Parameter{
 			{
-				TypeAnnotation: NewTypeAnnotation(AccountKeyType),
+				TypeAnnotation: AccountKeyTypeAnnotation,
 			},
 		},
-		NewTypeAnnotation(BoolType),
+		BoolTypeAnnotation,
 	)
 
 	return NewSimpleFunctionType(
@@ -693,7 +695,7 @@ var AccountKeysTypeForEachFunctionType = func() *FunctionType {
 				TypeAnnotation: NewTypeAnnotation(iterFunctionType),
 			},
 		},
-		NewTypeAnnotation(VoidType),
+		VoidTypeAnnotation,
 	)
 }()
 
@@ -704,7 +706,7 @@ var AuthAccountKeysTypeRevokeFunctionType = NewSimpleFunctionType(
 	[]*Parameter{
 		{
 			Identifier:     AccountKeyKeyIndexField,
-			TypeAnnotation: NewTypeAnnotation(IntType),
+			TypeAnnotation: IntTypeAnnotation,
 		},
 	},
 	NewTypeAnnotation(&OptionalType{Type: AccountKeyType}),
@@ -789,14 +791,14 @@ var AuthAccountTypeInboxPublishFunctionType = NewSimpleFunctionType(
 		},
 		{
 			Identifier:     "name",
-			TypeAnnotation: NewTypeAnnotation(StringType),
+			TypeAnnotation: StringTypeAnnotation,
 		},
 		{
 			Identifier:     "recipient",
 			TypeAnnotation: NewTypeAnnotation(&AddressType{}),
 		},
 	},
-	NewTypeAnnotation(VoidType),
+	VoidTypeAnnotation,
 )
 
 const authAccountTypeInboxUnpublishFunctionDocString = `
@@ -819,7 +821,7 @@ var AuthAccountTypeInboxUnpublishFunctionType = func() *FunctionType {
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "name",
-				TypeAnnotation: NewTypeAnnotation(StringType),
+				TypeAnnotation: StringTypeAnnotation,
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(
@@ -854,7 +856,7 @@ var AuthAccountTypeInboxClaimFunctionType = func() *FunctionType {
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "name",
-				TypeAnnotation: NewTypeAnnotation(StringType),
+				TypeAnnotation: StringTypeAnnotation,
 			},
 			{
 				Identifier:     "provider",

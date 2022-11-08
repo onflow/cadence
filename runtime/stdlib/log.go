@@ -27,16 +27,12 @@ var LogFunctionType = sema.NewSimpleFunctionType(
 	sema.FunctionPurityImpure,
 	[]*sema.Parameter{
 		{
-			Label:      sema.ArgumentLabelNotRequired,
-			Identifier: "value",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.AnyStructType,
-			),
+			Label:          sema.ArgumentLabelNotRequired,
+			Identifier:     "value",
+			TypeAnnotation: sema.AnyStructTypeAnnotation,
 		},
 	},
-	sema.NewTypeAnnotation(
-		sema.VoidType,
-	),
+	sema.VoidTypeAnnotation,
 )
 
 const logFunctionDocString = `

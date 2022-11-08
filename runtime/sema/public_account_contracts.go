@@ -72,17 +72,11 @@ var publicAccountContractsTypeGetFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
 	[]*Parameter{
 		{
-			Identifier: "name",
-			TypeAnnotation: NewTypeAnnotation(
-				StringType,
-			),
+			Identifier:     "name",
+			TypeAnnotation: StringTypeAnnotation,
 		},
 	},
-	NewTypeAnnotation(
-		&OptionalType{
-			Type: DeployedContractType,
-		},
-	),
+	OptionalDeployedContractTypeAnnotation,
 )
 
 const publicAccountContractsTypeNamesDocString = `

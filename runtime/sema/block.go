@@ -89,6 +89,8 @@ var BlockType = &SimpleType{
 	},
 }
 
+var BlockTypeAnnotation = NewTypeAnnotation(BlockType)
+
 const BlockIDSize = 32
 
 var blockIDFieldType = &ConstantSizedType{

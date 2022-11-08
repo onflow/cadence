@@ -34,14 +34,14 @@ var publicKeyConstructorFunctionType = sema.NewSimpleFunctionType(
 	[]*sema.Parameter{
 		{
 			Identifier:     sema.PublicKeyPublicKeyField,
-			TypeAnnotation: sema.NewTypeAnnotation(sema.ByteArrayType),
+			TypeAnnotation: sema.ByteArrayTypeAnnotation,
 		},
 		{
 			Identifier:     sema.PublicKeySignAlgoField,
-			TypeAnnotation: sema.NewTypeAnnotation(sema.SignatureAlgorithmType),
+			TypeAnnotation: sema.SignatureAlgorithmTypeAnnotation,
 		},
 	},
-	sema.NewTypeAnnotation(sema.PublicKeyType),
+	sema.PublicKeyTypeAnnotation,
 )
 
 type PublicKey struct {

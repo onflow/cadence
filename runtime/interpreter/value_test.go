@@ -3721,10 +3721,10 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 			sema.FunctionPurityImpure,
 			[]*sema.Parameter{
 				{
-					TypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
+					TypeAnnotation: sema.IntTypeAnnotation,
 				},
 			},
-			sema.NewTypeAnnotation(sema.BoolType),
+			sema.BoolTypeAnnotation,
 		)
 
 		for name, f := range map[string]Value{

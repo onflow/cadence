@@ -41,16 +41,14 @@ var assertFunctionType = &sema.FunctionType{
 		{
 			Label:          sema.ArgumentLabelNotRequired,
 			Identifier:     "condition",
-			TypeAnnotation: sema.NewTypeAnnotation(sema.BoolType),
+			TypeAnnotation: sema.BoolTypeAnnotation,
 		},
 		{
 			Identifier:     "message",
-			TypeAnnotation: sema.NewTypeAnnotation(sema.StringType),
+			TypeAnnotation: sema.StringTypeAnnotation,
 		},
 	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		sema.VoidType,
-	),
+	ReturnTypeAnnotation:  sema.VoidTypeAnnotation,
 	RequiredArgumentCount: sema.RequiredArgumentCount(1),
 }
 

@@ -1091,12 +1091,12 @@ func (checker *Checker) checkCompositeConformance(
 		initializerType := NewSimpleFunctionType(
 			compositeType.ConstructorPurity,
 			compositeType.ConstructorParameters,
-			NewTypeAnnotation(VoidType),
+			VoidTypeAnnotation,
 		)
 		interfaceInitializerType := NewSimpleFunctionType(
 			interfaceType.InitializerPurity,
 			interfaceType.InitializerParameters,
-			NewTypeAnnotation(VoidType),
+			VoidTypeAnnotation,
 		)
 
 		// TODO: subtype?
@@ -1485,7 +1485,7 @@ func CompositeConstructorType(
 			&FunctionType{
 				IsConstructor:        true,
 				Parameters:           constructorFunctionType.Parameters,
-				ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
+				ReturnTypeAnnotation: VoidTypeAnnotation,
 			}
 	}
 
@@ -1899,7 +1899,7 @@ func (checker *Checker) checkSpecialFunction(
 	functionType := NewSimpleFunctionType(
 		purity,
 		parameters,
-		NewTypeAnnotation(VoidType),
+		VoidTypeAnnotation,
 	)
 
 	checker.checkFunction(

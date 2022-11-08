@@ -34,9 +34,7 @@ Follow best practices to prevent security issues when using this function
 var unsafeRandomFunctionType = sema.NewSimpleFunctionType(
 	sema.FunctionPurityImpure,
 	nil,
-	sema.NewTypeAnnotation(
-		sema.UInt64Type,
-	),
+	sema.UInt64TypeAnnotation,
 )
 
 type UnsafeRandomGenerator interface {

@@ -316,22 +316,16 @@ var testAssertFunctionType = &sema.FunctionType{
 	Purity: sema.FunctionPurityView,
 	Parameters: []*sema.Parameter{
 		{
-			Label:      sema.ArgumentLabelNotRequired,
-			Identifier: "condition",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.BoolType,
-			),
+			Label:          sema.ArgumentLabelNotRequired,
+			Identifier:     "condition",
+			TypeAnnotation: sema.BoolTypeAnnotation,
 		},
 		{
-			Identifier: "message",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.StringType,
-			),
+			Identifier:     "message",
+			TypeAnnotation: sema.StringTypeAnnotation,
 		},
 	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		sema.VoidType,
-	),
+	ReturnTypeAnnotation:  sema.VoidTypeAnnotation,
 	RequiredArgumentCount: sema.RequiredArgumentCount(1),
 }
 
@@ -375,15 +369,11 @@ var testFailFunctionType = &sema.FunctionType{
 	Purity: sema.FunctionPurityView,
 	Parameters: []*sema.Parameter{
 		{
-			Identifier: "message",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.StringType,
-			),
+			Identifier:     "message",
+			TypeAnnotation: sema.StringTypeAnnotation,
 		},
 	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		sema.VoidType,
-	),
+	ReturnTypeAnnotation:  sema.VoidTypeAnnotation,
 	RequiredArgumentCount: sema.RequiredArgumentCount(0),
 }
 
@@ -435,9 +425,7 @@ var testExpectFunctionType = &sema.FunctionType{
 			TypeAnnotation: sema.NewTypeAnnotation(matcherType),
 		},
 	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		sema.VoidType,
-	),
+	ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 }
 
 var testExpectFunction = interpreter.NewUnmeteredHostFunctionValue(
@@ -522,16 +510,12 @@ var testReadFileFunctionType = sema.NewSimpleFunctionType(
 	sema.FunctionPurityImpure,
 	[]*sema.Parameter{
 		{
-			Label:      sema.ArgumentLabelNotRequired,
-			Identifier: "path",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.StringType,
-			),
+			Label:          sema.ArgumentLabelNotRequired,
+			Identifier:     "path",
+			TypeAnnotation: sema.StringTypeAnnotation,
 		},
 	},
-	sema.NewTypeAnnotation(
-		sema.StringType,
-	),
+	sema.StringTypeAnnotation,
 )
 
 func testReadFileFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
@@ -654,9 +638,7 @@ var matcherTestFunctionType = sema.NewSimpleFunctionType(
 			),
 		},
 	},
-	sema.NewTypeAnnotation(
-		sema.BoolType,
-	),
+	sema.BoolTypeAnnotation,
 )
 
 var newMatcherFunctionType = &sema.FunctionType{

@@ -318,14 +318,12 @@ var IsInstanceFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
 	[]*Parameter{
 		{
-			Label:      ArgumentLabelNotRequired,
-			Identifier: "type",
-			TypeAnnotation: NewTypeAnnotation(
-				MetaType,
-			),
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "type",
+			TypeAnnotation: MetaTypeAnnotation,
 		},
 	},
-	NewTypeAnnotation(BoolType),
+	BoolTypeAnnotation,
 )
 
 const isInstanceFunctionDocString = `
@@ -339,7 +337,7 @@ const GetTypeFunctionName = "getType"
 var GetTypeFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
 	nil,
-	NewTypeAnnotation(MetaType),
+	MetaTypeAnnotation,
 )
 
 const getTypeFunctionDocString = `
@@ -353,7 +351,7 @@ const ToStringFunctionName = "toString"
 var ToStringFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
 	nil,
-	NewTypeAnnotation(StringType),
+	StringTypeAnnotation,
 )
 
 const toStringFunctionDocString = `
@@ -393,7 +391,7 @@ func FromStringFunctionType(ty Type) *FunctionType {
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "input",
-				TypeAnnotation: NewTypeAnnotation(StringType),
+				TypeAnnotation: StringTypeAnnotation,
 			},
 		},
 		NewTypeAnnotation(
@@ -409,7 +407,7 @@ const ToBigEndianBytesFunctionName = "toBigEndianBytes"
 var ToBigEndianBytesFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
 	nil,
-	NewTypeAnnotation(ByteArrayType),
+	ByteArrayTypeAnnotation,
 )
 
 const toBigEndianBytesFunctionDocString = `
@@ -1290,24 +1288,34 @@ var (
 			WithTag(NumberTypeTag).
 			AsSuperType()
 
+	NumberTypeAnnotation = NewTypeAnnotation(NumberType)
+
 	// SignedNumberType represents the super-type of all signed number types
 	SignedNumberType = NewNumericType(SignedNumberTypeName).
 				WithTag(SignedNumberTypeTag).
 				AsSuperType()
+
+	SignedNumberTypeAnnotation = NewTypeAnnotation(SignedNumberType)
 
 	// IntegerType represents the super-type of all integer types
 	IntegerType = NewNumericType(IntegerTypeName).
 			WithTag(IntegerTypeTag).
 			AsSuperType()
 
+	IntegerTypeAnnotation = NewTypeAnnotation(IntegerType)
+
 	// SignedIntegerType represents the super-type of all signed integer types
 	SignedIntegerType = NewNumericType(SignedIntegerTypeName).
 				WithTag(SignedIntegerTypeTag).
 				AsSuperType()
 
+	SignedIntegerTypeAnnotation = NewTypeAnnotation(SignedIntegerType)
+
 	// IntType represents the arbitrary-precision integer type `Int`
 	IntType = NewNumericType(IntTypeName).
 		WithTag(IntTypeTag)
+
+	IntTypeAnnotation = NewTypeAnnotation(IntType)
 
 	// Int8Type represents the 8-bit signed integer type `Int8`
 	Int8Type = NewNumericType(Int8TypeName).
@@ -1318,6 +1326,8 @@ var (
 			WithSaturatingMultiply().
 			WithSaturatingDivide()
 
+	Int8TypeAnnotation = NewTypeAnnotation(Int8Type)
+
 	// Int16Type represents the 16-bit signed integer type `Int16`
 	Int16Type = NewNumericType(Int16TypeName).
 			WithTag(Int16TypeTag).
@@ -1326,6 +1336,8 @@ var (
 			WithSaturatingSubtract().
 			WithSaturatingMultiply().
 			WithSaturatingDivide()
+
+	Int16TypeAnnotation = NewTypeAnnotation(Int16Type)
 
 	// Int32Type represents the 32-bit signed integer type `Int32`
 	Int32Type = NewNumericType(Int32TypeName).
@@ -1336,6 +1348,8 @@ var (
 			WithSaturatingMultiply().
 			WithSaturatingDivide()
 
+	Int32TypeAnnotation = NewTypeAnnotation(Int32Type)
+
 	// Int64Type represents the 64-bit signed integer type `Int64`
 	Int64Type = NewNumericType(Int64TypeName).
 			WithTag(Int64TypeTag).
@@ -1344,6 +1358,8 @@ var (
 			WithSaturatingSubtract().
 			WithSaturatingMultiply().
 			WithSaturatingDivide()
+
+	Int64TypeAnnotation = NewTypeAnnotation(Int64Type)
 
 	// Int128Type represents the 128-bit signed integer type `Int128`
 	Int128Type = NewNumericType(Int128TypeName).
@@ -1354,6 +1370,8 @@ var (
 			WithSaturatingMultiply().
 			WithSaturatingDivide()
 
+	Int128TypeAnnotation = NewTypeAnnotation(Int128Type)
+
 	// Int256Type represents the 256-bit signed integer type `Int256`
 	Int256Type = NewNumericType(Int256TypeName).
 			WithTag(Int256TypeTag).
@@ -1363,11 +1381,15 @@ var (
 			WithSaturatingMultiply().
 			WithSaturatingDivide()
 
+	Int256TypeAnnotation = NewTypeAnnotation(Int256Type)
+
 	// UIntType represents the arbitrary-precision unsigned integer type `UInt`
 	UIntType = NewNumericType(UIntTypeName).
 			WithTag(UIntTypeTag).
 			WithIntRange(UIntTypeMin, nil).
 			WithSaturatingSubtract()
+
+	UIntTypeAnnotation = NewTypeAnnotation(UIntType)
 
 	// UInt8Type represents the 8-bit unsigned integer type `UInt8`
 	// which checks for overflow and underflow
@@ -1378,6 +1400,8 @@ var (
 			WithSaturatingSubtract().
 			WithSaturatingMultiply()
 
+	UInt8TypeAnnotation = NewTypeAnnotation(UInt8Type)
+
 	// UInt16Type represents the 16-bit unsigned integer type `UInt16`
 	// which checks for overflow and underflow
 	UInt16Type = NewNumericType(UInt16TypeName).
@@ -1386,6 +1410,8 @@ var (
 			WithSaturatingAdd().
 			WithSaturatingSubtract().
 			WithSaturatingMultiply()
+
+	UInt16TypeAnnotation = NewTypeAnnotation(UInt16Type)
 
 	// UInt32Type represents the 32-bit unsigned integer type `UInt32`
 	// which checks for overflow and underflow
@@ -1396,6 +1422,8 @@ var (
 			WithSaturatingSubtract().
 			WithSaturatingMultiply()
 
+	UInt32TypeAnnotation = NewTypeAnnotation(UInt32Type)
+
 	// UInt64Type represents the 64-bit unsigned integer type `UInt64`
 	// which checks for overflow and underflow
 	UInt64Type = NewNumericType(UInt64TypeName).
@@ -1404,6 +1432,8 @@ var (
 			WithSaturatingAdd().
 			WithSaturatingSubtract().
 			WithSaturatingMultiply()
+
+	UInt64TypeAnnotation = NewTypeAnnotation(UInt64Type)
 
 	// UInt128Type represents the 128-bit unsigned integer type `UInt128`
 	// which checks for overflow and underflow
@@ -1414,6 +1444,8 @@ var (
 			WithSaturatingSubtract().
 			WithSaturatingMultiply()
 
+	UInt128TypeAnnotation = NewTypeAnnotation(UInt128Type)
+
 	// UInt256Type represents the 256-bit unsigned integer type `UInt256`
 	// which checks for overflow and underflow
 	UInt256Type = NewNumericType(UInt256TypeName).
@@ -1423,11 +1455,15 @@ var (
 			WithSaturatingSubtract().
 			WithSaturatingMultiply()
 
+	UInt256TypeAnnotation = NewTypeAnnotation(UInt256Type)
+
 	// Word8Type represents the 8-bit unsigned integer type `Word8`
 	// which does NOT check for overflow and underflow
 	Word8Type = NewNumericType(Word8TypeName).
 			WithTag(Word8TypeTag).
 			WithIntRange(Word8TypeMinInt, Word8TypeMaxInt)
+
+	Word8TypeAnnotation = NewTypeAnnotation(Word8Type)
 
 	// Word16Type represents the 16-bit unsigned integer type `Word16`
 	// which does NOT check for overflow and underflow
@@ -1435,11 +1471,15 @@ var (
 			WithTag(Word16TypeTag).
 			WithIntRange(Word16TypeMinInt, Word16TypeMaxInt)
 
+	Word16TypeAnnotation = NewTypeAnnotation(Word16Type)
+
 	// Word32Type represents the 32-bit unsigned integer type `Word32`
 	// which does NOT check for overflow and underflow
 	Word32Type = NewNumericType(Word32TypeName).
 			WithTag(Word32TypeTag).
 			WithIntRange(Word32TypeMinInt, Word32TypeMaxInt)
+
+	Word32TypeAnnotation = NewTypeAnnotation(Word32Type)
 
 	// Word64Type represents the 64-bit unsigned integer type `Word64`
 	// which does NOT check for overflow and underflow
@@ -1447,15 +1487,21 @@ var (
 			WithTag(Word64TypeTag).
 			WithIntRange(Word64TypeMinInt, Word64TypeMaxInt)
 
+	Word64TypeAnnotation = NewTypeAnnotation(Word64Type)
+
 	// FixedPointType represents the super-type of all fixed-point types
 	FixedPointType = NewNumericType(FixedPointTypeName).
 			WithTag(FixedPointTypeTag).
 			AsSuperType()
 
+	FixedPointTypeAnnotation = NewTypeAnnotation(FixedPointType)
+
 	// SignedFixedPointType represents the super-type of all signed fixed-point types
 	SignedFixedPointType = NewNumericType(SignedFixedPointTypeName).
 				WithTag(SignedFixedPointTypeTag).
 				AsSuperType()
+
+	SignedFixedPointTypeAnnotation = NewTypeAnnotation(SignedFixedPointType)
 
 	// Fix64Type represents the 64-bit signed decimal fixed-point type `Fix64`
 	// which has a scale of Fix64Scale, and checks for overflow and underflow
@@ -1469,6 +1515,8 @@ var (
 			WithSaturatingMultiply().
 			WithSaturatingDivide()
 
+	Fix64TypeAnnotation = NewTypeAnnotation(Fix64Type)
+
 	// UFix64Type represents the 64-bit unsigned decimal fixed-point type `UFix64`
 	// which has a scale of 1E9, and checks for overflow and underflow
 	UFix64Type = NewFixedPointNumericType(UFix64TypeName).
@@ -1479,6 +1527,8 @@ var (
 			WithSaturatingAdd().
 			WithSaturatingSubtract().
 			WithSaturatingMultiply()
+
+	UFix64TypeAnnotation = NewTypeAnnotation(UFix64Type)
 )
 
 // Numeric type ranges
@@ -1978,7 +2028,7 @@ func ArrayRemoveFunctionType(elementType Type) *FunctionType {
 		[]*Parameter{
 			{
 				Identifier:     "at",
-				TypeAnnotation: NewTypeAnnotation(IntegerType),
+				TypeAnnotation: IntegerTypeAnnotation,
 			},
 		},
 		NewTypeAnnotation(elementType),
@@ -1991,7 +2041,7 @@ func ArrayInsertFunctionType(elementType Type) *FunctionType {
 		[]*Parameter{
 			{
 				Identifier:     "at",
-				TypeAnnotation: NewTypeAnnotation(IntegerType),
+				TypeAnnotation: IntegerTypeAnnotation,
 			},
 			{
 				Label:          ArgumentLabelNotRequired,
@@ -1999,7 +2049,7 @@ func ArrayInsertFunctionType(elementType Type) *FunctionType {
 				TypeAnnotation: NewTypeAnnotation(elementType),
 			},
 		},
-		NewTypeAnnotation(VoidType),
+		VoidTypeAnnotation,
 	)
 }
 
@@ -2042,7 +2092,7 @@ func ArrayContainsFunctionType(elementType Type) *FunctionType {
 				TypeAnnotation: NewTypeAnnotation(elementType),
 			},
 		},
-		NewTypeAnnotation(BoolType),
+		BoolTypeAnnotation,
 	)
 }
 
@@ -2056,7 +2106,7 @@ func ArrayAppendAllFunctionType(arrayType Type) *FunctionType {
 				TypeAnnotation: NewTypeAnnotation(arrayType),
 			},
 		},
-		NewTypeAnnotation(VoidType),
+		VoidTypeAnnotation,
 	)
 }
 
@@ -2070,7 +2120,7 @@ func ArrayAppendFunctionType(elementType Type) *FunctionType {
 				TypeAnnotation: NewTypeAnnotation(elementType),
 			},
 		},
-		NewTypeAnnotation(VoidType),
+		VoidTypeAnnotation,
 	)
 }
 
@@ -2080,11 +2130,11 @@ func ArraySliceFunctionType(elementType Type) *FunctionType {
 		[]*Parameter{
 			{
 				Identifier:     "from",
-				TypeAnnotation: NewTypeAnnotation(IntType),
+				TypeAnnotation: IntTypeAnnotation,
 			},
 			{
 				Identifier:     "upTo",
-				TypeAnnotation: NewTypeAnnotation(IntType),
+				TypeAnnotation: IntTypeAnnotation,
 			},
 		},
 		NewTypeAnnotation(&VariableSizedType{
@@ -3316,7 +3366,7 @@ func NumberConversionFunctionType(numberType Type) *FunctionType {
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "value",
-				TypeAnnotation: NewTypeAnnotation(NumberType),
+				TypeAnnotation: NumberTypeAnnotation,
 			},
 		},
 		ReturnTypeAnnotation:     NewTypeAnnotation(numberType),
@@ -3350,7 +3400,7 @@ var AddressConversionFunctionType = &FunctionType{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "value",
-			TypeAnnotation: NewTypeAnnotation(IntegerType),
+			TypeAnnotation: IntegerTypeAnnotation,
 		},
 	},
 	ReturnTypeAnnotation: NewTypeAnnotation(&AddressType{}),
@@ -3428,7 +3478,7 @@ func pathConversionFunctionType(pathType Type) *FunctionType {
 		[]*Parameter{
 			{
 				Identifier:     "identifier",
-				TypeAnnotation: NewTypeAnnotation(StringType),
+				TypeAnnotation: StringTypeAnnotation,
 			},
 		},
 		NewTypeAnnotation(
@@ -3462,7 +3512,7 @@ func init() {
 			&FunctionType{
 				Purity:               FunctionPurityView,
 				TypeParameters:       []*TypeParameter{{Name: "T"}},
-				ReturnTypeAnnotation: NewTypeAnnotation(MetaType),
+				ReturnTypeAnnotation: MetaTypeAnnotation,
 			},
 			"Creates a run-time type representing the given static type as a value",
 		),
@@ -4594,7 +4644,7 @@ func DictionaryContainsKeyFunctionType(t *DictionaryType) *FunctionType {
 				TypeAnnotation: NewTypeAnnotation(t.KeyType),
 			},
 		},
-		NewTypeAnnotation(BoolType),
+		BoolTypeAnnotation,
 	)
 }
 
@@ -4649,7 +4699,7 @@ func DictionaryForEachKeyFunctionType(t *DictionaryType) *FunctionType {
 				TypeAnnotation: NewTypeAnnotation(t.KeyType),
 			},
 		},
-		NewTypeAnnotation(BoolType),
+		BoolTypeAnnotation,
 	)
 
 	// fun forEachKey(_ function: ((K): Bool)): Void
@@ -4662,7 +4712,7 @@ func DictionaryForEachKeyFunctionType(t *DictionaryType) *FunctionType {
 				TypeAnnotation: NewTypeAnnotation(funcType),
 			},
 		},
-		NewTypeAnnotation(VoidType),
+		VoidTypeAnnotation,
 	)
 }
 
@@ -4963,7 +5013,7 @@ const AddressTypeToBytesFunctionName = `toBytes`
 var AddressTypeToBytesFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
 	nil,
-	NewTypeAnnotation(ByteArrayType),
+	ByteArrayTypeAnnotation,
 )
 
 const addressTypeToBytesFunctionDocString = `
@@ -5710,7 +5760,7 @@ func (t *TransactionType) EntryPointFunctionType() *FunctionType {
 	return NewSimpleFunctionType(
 		FunctionPurityImpure,
 		append(t.Parameters, t.PrepareParameters...),
-		NewTypeAnnotation(VoidType),
+		VoidTypeAnnotation,
 	)
 }
 
@@ -5719,14 +5769,14 @@ func (t *TransactionType) PrepareFunctionType() *FunctionType {
 		Purity:               FunctionPurityImpure,
 		IsConstructor:        true,
 		Parameters:           t.PrepareParameters,
-		ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
+		ReturnTypeAnnotation: VoidTypeAnnotation,
 	}
 }
 
 var transactionTypeExecuteFunctionType = &FunctionType{
 	Purity:               FunctionPurityImpure,
 	IsConstructor:        true,
-	ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
+	ReturnTypeAnnotation: VoidTypeAnnotation,
 }
 
 func (*TransactionType) ExecuteFunctionType() *FunctionType {
@@ -6276,7 +6326,7 @@ func CapabilityTypeCheckFunctionType(borrowType Type) *FunctionType {
 	return &FunctionType{
 		Purity:               FunctionPurityView,
 		TypeParameters:       typeParameters,
-		ReturnTypeAnnotation: NewTypeAnnotation(BoolType),
+		ReturnTypeAnnotation: BoolTypeAnnotation,
 	}
 }
 
@@ -6425,6 +6475,8 @@ var AccountKeyType = func() *CompositeType {
 	return accountKeyType
 }()
 
+var AccountKeyTypeAnnotation = NewTypeAnnotation(AccountKeyType)
+
 const PublicKeyTypeName = "PublicKey"
 const PublicKeyPublicKeyField = "publicKey"
 const PublicKeySignAlgoField = "signatureAlgorithm"
@@ -6494,31 +6546,35 @@ var PublicKeyType = func() *CompositeType {
 	return publicKeyType
 }()
 
+var PublicKeyTypeAnnotation = NewTypeAnnotation(PublicKeyType)
+
 var PublicKeyArrayType = &VariableSizedType{
 	Type: PublicKeyType,
 }
+
+var PublicKeyArrayTypeAnnotation = NewTypeAnnotation(PublicKeyArrayType)
 
 var PublicKeyVerifyFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
 	[]*Parameter{
 		{
 			Identifier:     "signature",
-			TypeAnnotation: NewTypeAnnotation(ByteArrayType),
+			TypeAnnotation: ByteArrayTypeAnnotation,
 		},
 		{
 			Identifier:     "signedData",
-			TypeAnnotation: NewTypeAnnotation(ByteArrayType),
+			TypeAnnotation: ByteArrayTypeAnnotation,
 		},
 		{
 			Identifier:     "domainSeparationTag",
-			TypeAnnotation: NewTypeAnnotation(StringType),
+			TypeAnnotation: StringTypeAnnotation,
 		},
 		{
 			Identifier:     "hashAlgorithm",
-			TypeAnnotation: NewTypeAnnotation(HashAlgorithmType),
+			TypeAnnotation: HashAlgorithmTypeAnnotation,
 		},
 	},
-	NewTypeAnnotation(BoolType),
+	BoolTypeAnnotation,
 )
 
 var PublicKeyVerifyPoPFunctionType = NewSimpleFunctionType(
@@ -6527,10 +6583,10 @@ var PublicKeyVerifyPoPFunctionType = NewSimpleFunctionType(
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "proof",
-			TypeAnnotation: NewTypeAnnotation(ByteArrayType),
+			TypeAnnotation: ByteArrayTypeAnnotation,
 		},
 	},
-	NewTypeAnnotation(BoolType),
+	BoolTypeAnnotation,
 )
 
 type CryptoAlgorithm interface {

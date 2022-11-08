@@ -132,7 +132,7 @@ var _ ast.ExpressionVisitor[Type] = &Checker{}
 var baseFunctionType = NewSimpleFunctionType(
 	FunctionPurityImpure,
 	nil,
-	NewTypeAnnotation(VoidType),
+	VoidTypeAnnotation,
 )
 
 func NewChecker(

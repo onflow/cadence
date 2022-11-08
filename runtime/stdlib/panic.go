@@ -49,12 +49,10 @@ var panicFunctionType = sema.NewSimpleFunctionType(
 		{
 			Label:          sema.ArgumentLabelNotRequired,
 			Identifier:     "message",
-			TypeAnnotation: sema.NewTypeAnnotation(sema.StringType),
+			TypeAnnotation: sema.StringTypeAnnotation,
 		},
 	},
-	sema.NewTypeAnnotation(
-		sema.NeverType,
-	),
+	sema.NeverTypeAnnotation,
 )
 
 var PanicFunction = NewStandardLibraryFunction(

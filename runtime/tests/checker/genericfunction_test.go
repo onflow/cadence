@@ -66,7 +66,7 @@ func TestCheckGenericFunction(t *testing.T) {
 					variant,
 				),
 				&sema.FunctionType{
-					ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
+					ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 				},
 			)
 
@@ -88,7 +88,7 @@ func TestCheckGenericFunction(t *testing.T) {
               let res = test<X>()
             `,
 			&sema.FunctionType{
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
+				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 			},
 		)
 
@@ -114,7 +114,7 @@ func TestCheckGenericFunction(t *testing.T) {
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
+				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 			},
 		)
 
@@ -140,7 +140,7 @@ func TestCheckGenericFunction(t *testing.T) {
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
+				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 			},
 		)
 
@@ -189,7 +189,7 @@ func TestCheckGenericFunction(t *testing.T) {
 						),
 					},
 				},
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
+				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 			},
 		)
 
@@ -238,7 +238,7 @@ func TestCheckGenericFunction(t *testing.T) {
 						),
 					},
 				},
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
+				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 			},
 		)
 
@@ -276,7 +276,7 @@ func TestCheckGenericFunction(t *testing.T) {
 						),
 					},
 				},
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
+				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 			},
 		)
 
@@ -314,7 +314,7 @@ func TestCheckGenericFunction(t *testing.T) {
 						),
 					},
 				},
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
+				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 			},
 		)
 
@@ -358,7 +358,7 @@ func TestCheckGenericFunction(t *testing.T) {
 						),
 					},
 				},
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
+				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 			},
 		)
 
@@ -416,7 +416,7 @@ func TestCheckGenericFunction(t *testing.T) {
 						),
 					},
 				},
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
+				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 			},
 		)
 
@@ -580,7 +580,7 @@ func TestCheckGenericFunction(t *testing.T) {
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
+				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 			},
 		)
 
@@ -618,7 +618,7 @@ func TestCheckGenericFunction(t *testing.T) {
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
+				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 			},
 		)
 
@@ -655,7 +655,7 @@ func TestCheckGenericFunction(t *testing.T) {
 						),
 					},
 				},
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
+				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 			},
 		)
 
@@ -879,7 +879,7 @@ func TestCheckGenericFunctionIsInvalid(t *testing.T) {
 				),
 			},
 		},
-		ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
+		ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 	}
 
 	assert.False(t, genericFunctionType.IsInvalidType())

@@ -104,21 +104,15 @@ var AuthAccountContractsTypeAddFunctionType = &FunctionType{
 	Purity: FunctionPurityImpure,
 	Parameters: []*Parameter{
 		{
-			Identifier: "name",
-			TypeAnnotation: NewTypeAnnotation(
-				StringType,
-			),
+			Identifier:     "name",
+			TypeAnnotation: StringTypeAnnotation,
 		},
 		{
-			Identifier: "code",
-			TypeAnnotation: NewTypeAnnotation(
-				ByteArrayType,
-			),
+			Identifier:     "code",
+			TypeAnnotation: ByteArrayTypeAnnotation,
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		DeployedContractType,
-	),
+	ReturnTypeAnnotation: DeployedContractTypeAnnotation,
 	// additional arguments are passed to the contract initializer
 	RequiredArgumentCount: RequiredArgumentCount(2),
 }
@@ -146,21 +140,15 @@ var AuthAccountContractsTypeUpdateExperimentalFunctionType = NewSimpleFunctionTy
 	FunctionPurityImpure,
 	[]*Parameter{
 		{
-			Identifier: "name",
-			TypeAnnotation: NewTypeAnnotation(
-				StringType,
-			),
+			Identifier:     "name",
+			TypeAnnotation: StringTypeAnnotation,
 		},
 		{
-			Identifier: "code",
-			TypeAnnotation: NewTypeAnnotation(
-				ByteArrayType,
-			),
+			Identifier:     "code",
+			TypeAnnotation: ByteArrayTypeAnnotation,
 		},
 	},
-	NewTypeAnnotation(
-		DeployedContractType,
-	),
+	DeployedContractTypeAnnotation,
 )
 
 const authAccountContractsTypeGetFunctionDocString = `
@@ -169,21 +157,21 @@ Returns the deployed contract for the contract/contract interface with the given
 Returns nil if no contract/contract interface with the given name exists in the account.
 `
 
+var OptionalDeployedContractTypeAnnotation = NewTypeAnnotation(
+	&OptionalType{
+		Type: DeployedContractType,
+	},
+)
+
 var AuthAccountContractsTypeGetFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
 	[]*Parameter{
 		{
-			Identifier: "name",
-			TypeAnnotation: NewTypeAnnotation(
-				StringType,
-			),
+			Identifier:     "name",
+			TypeAnnotation: StringTypeAnnotation,
 		},
 	},
-	NewTypeAnnotation(
-		&OptionalType{
-			Type: DeployedContractType,
-		},
-	),
+	OptionalDeployedContractTypeAnnotation,
 )
 
 const authAccountContractsTypeRemoveFunctionDocString = `
@@ -199,14 +187,10 @@ var AuthAccountContractsTypeRemoveFunctionType = NewSimpleFunctionType(
 	[]*Parameter{
 		{
 			Identifier:     "name",
-			TypeAnnotation: NewTypeAnnotation(StringType),
+			TypeAnnotation: StringTypeAnnotation,
 		},
 	},
-	NewTypeAnnotation(
-		&OptionalType{
-			Type: DeployedContractType,
-		},
-	),
+	OptionalDeployedContractTypeAnnotation,
 )
 
 const authAccountContractsTypeGetNamesDocString = `

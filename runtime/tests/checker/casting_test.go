@@ -6055,7 +6055,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 							),
 						},
 					},
-					ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
+					ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 				},
 			)
 

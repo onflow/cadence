@@ -129,7 +129,7 @@ func TestExportValue(t *testing.T) {
 		Type: sema.NewSimpleFunctionType(
 			sema.FunctionPurityImpure,
 			nil,
-			sema.NewTypeAnnotation(sema.VoidType),
+			sema.VoidTypeAnnotation,
 		),
 	}
 

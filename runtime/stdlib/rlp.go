@@ -72,16 +72,12 @@ var rlpDecodeStringFunctionType = sema.NewSimpleFunctionType(
 	sema.FunctionPurityView,
 	[]*sema.Parameter{
 		{
-			Label:      sema.ArgumentLabelNotRequired,
-			Identifier: "input",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.ByteArrayType,
-			),
+			Label:          sema.ArgumentLabelNotRequired,
+			Identifier:     "input",
+			TypeAnnotation: sema.ByteArrayTypeAnnotation,
 		},
 	},
-	sema.NewTypeAnnotation(
-		sema.ByteArrayType,
-	),
+	sema.ByteArrayTypeAnnotation,
 )
 
 type RLPDecodeStringError struct {
@@ -147,16 +143,12 @@ var rlpDecodeListFunctionType = sema.NewSimpleFunctionType(
 	sema.FunctionPurityView,
 	[]*sema.Parameter{
 		{
-			Label:      sema.ArgumentLabelNotRequired,
-			Identifier: "input",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.ByteArrayType,
-			),
+			Label:          sema.ArgumentLabelNotRequired,
+			Identifier:     "input",
+			TypeAnnotation: sema.ByteArrayTypeAnnotation,
 		},
 	},
-	sema.NewTypeAnnotation(
-		sema.ByteArrayArrayType,
-	),
+	sema.ByteArrayArrayTypeAnnotation,
 )
 
 type RLPDecodeListError struct {

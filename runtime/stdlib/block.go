@@ -35,9 +35,7 @@ Returns the current block, i.e. the block which contains the currently executed 
 var getCurrentBlockFunctionType = sema.NewSimpleFunctionType(
 	sema.FunctionPurityView,
 	nil,
-	sema.NewTypeAnnotation(
-		sema.BlockType,
-	),
+	sema.BlockTypeAnnotation,
 )
 
 const getBlockFunctionDocString = `
@@ -48,11 +46,9 @@ var getBlockFunctionType = sema.NewSimpleFunctionType(
 	sema.FunctionPurityView,
 	[]*sema.Parameter{
 		{
-			Label:      "at",
-			Identifier: "height",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.UInt64Type,
-			),
+			Label:          "at",
+			Identifier:     "height",
+			TypeAnnotation: sema.UInt64TypeAnnotation,
 		},
 	},
 	sema.NewTypeAnnotation(

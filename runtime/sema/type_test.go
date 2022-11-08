@@ -54,12 +54,10 @@ func TestConstantSizedType_String_OfFunctionType(t *testing.T) {
 			Purity: FunctionPurityImpure,
 			Parameters: []*Parameter{
 				{
-					TypeAnnotation: NewTypeAnnotation(Int8Type),
+					TypeAnnotation: Int8TypeAnnotation,
 				},
 			},
-			ReturnTypeAnnotation: NewTypeAnnotation(
-				Int16Type,
-			),
+			ReturnTypeAnnotation: Int16TypeAnnotation,
 		},
 		Size: 2,
 	}
@@ -79,12 +77,10 @@ func TestConstantSizedType_String_OfViewFunctionType(t *testing.T) {
 			Purity: FunctionPurityView,
 			Parameters: []*Parameter{
 				{
-					TypeAnnotation: NewTypeAnnotation(Int8Type),
+					TypeAnnotation: Int8TypeAnnotation,
 				},
 			},
-			ReturnTypeAnnotation: NewTypeAnnotation(
-				Int16Type,
-			),
+			ReturnTypeAnnotation: Int16TypeAnnotation,
 		},
 		Size: 2,
 	}
@@ -120,12 +116,10 @@ func TestVariableSizedType_String_OfFunctionType(t *testing.T) {
 		Type: &FunctionType{
 			Parameters: []*Parameter{
 				{
-					TypeAnnotation: NewTypeAnnotation(Int8Type),
+					TypeAnnotation: Int8TypeAnnotation,
 				},
 			},
-			ReturnTypeAnnotation: NewTypeAnnotation(
-				Int16Type,
-			),
+			ReturnTypeAnnotation: Int16TypeAnnotation,
 		},
 	}
 
@@ -1510,10 +1504,10 @@ func TestCommonSuperType(t *testing.T) {
 			Purity: FunctionPurityImpure,
 			Parameters: []*Parameter{
 				{
-					TypeAnnotation: NewTypeAnnotation(StringType),
+					TypeAnnotation: StringTypeAnnotation,
 				},
 			},
-			ReturnTypeAnnotation: NewTypeAnnotation(Int8Type),
+			ReturnTypeAnnotation: Int8TypeAnnotation,
 			Members:              &StringMemberOrderedMap{},
 		}
 
@@ -1521,10 +1515,10 @@ func TestCommonSuperType(t *testing.T) {
 			Purity: FunctionPurityImpure,
 			Parameters: []*Parameter{
 				{
-					TypeAnnotation: NewTypeAnnotation(IntType),
+					TypeAnnotation: IntTypeAnnotation,
 				},
 			},
-			ReturnTypeAnnotation: NewTypeAnnotation(Int8Type),
+			ReturnTypeAnnotation: Int8TypeAnnotation,
 			Members:              &StringMemberOrderedMap{},
 		}
 

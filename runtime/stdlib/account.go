@@ -40,15 +40,11 @@ var authAccountFunctionType = sema.NewSimpleFunctionType(
 	sema.FunctionPurityImpure,
 	[]*sema.Parameter{
 		{
-			Identifier: "payer",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.AuthAccountType,
-			),
+			Identifier:     "payer",
+			TypeAnnotation: sema.AuthAccountTypeAnnotation,
 		},
 	},
-	sema.NewTypeAnnotation(
-		sema.AuthAccountType,
-	),
+	sema.AuthAccountTypeAnnotation,
 )
 
 type EventEmitter interface {
@@ -157,7 +153,7 @@ var getAuthAccountFunctionType = sema.NewSimpleFunctionType(
 			TypeAnnotation: sema.NewTypeAnnotation(&sema.AddressType{}),
 		},
 	},
-	sema.NewTypeAnnotation(sema.AuthAccountType),
+	sema.AuthAccountTypeAnnotation,
 )
 
 func NewGetAuthAccountFunction(handler AuthAccountHandler) StandardLibraryValue {
@@ -1795,9 +1791,7 @@ var getAccountFunctionType = sema.NewSimpleFunctionType(
 			),
 		},
 	},
-	sema.NewTypeAnnotation(
-		sema.PublicAccountType,
-	),
+	sema.PublicAccountTypeAnnotation,
 )
 
 type PublicAccountHandler interface {

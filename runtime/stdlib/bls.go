@@ -71,11 +71,9 @@ var blsAggregateSignaturesFunctionType = sema.NewSimpleFunctionType(
 	sema.FunctionPurityView,
 	[]*sema.Parameter{
 		{
-			Label:      sema.ArgumentLabelNotRequired,
-			Identifier: "signatures",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.ByteArrayArrayType,
-			),
+			Label:          sema.ArgumentLabelNotRequired,
+			Identifier:     "signatures",
+			TypeAnnotation: sema.ByteArrayArrayTypeAnnotation,
 		},
 	},
 	sema.NewTypeAnnotation(
@@ -99,11 +97,9 @@ var blsAggregatePublicKeysFunctionType = sema.NewSimpleFunctionType(
 	sema.FunctionPurityView,
 	[]*sema.Parameter{
 		{
-			Label:      sema.ArgumentLabelNotRequired,
-			Identifier: "keys",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.PublicKeyArrayType,
-			),
+			Label:          sema.ArgumentLabelNotRequired,
+			Identifier:     "keys",
+			TypeAnnotation: sema.PublicKeyArrayTypeAnnotation,
 		},
 	},
 	sema.NewTypeAnnotation(

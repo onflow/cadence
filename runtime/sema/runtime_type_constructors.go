@@ -27,7 +27,7 @@ type RuntimeTypeConstructor struct {
 var MetaTypeFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
 	nil,
-	NewTypeAnnotation(MetaType),
+	MetaTypeAnnotation,
 )
 
 var OptionalTypeFunctionType = NewSimpleFunctionType(
@@ -36,10 +36,10 @@ var OptionalTypeFunctionType = NewSimpleFunctionType(
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "type",
-			TypeAnnotation: NewTypeAnnotation(MetaType),
+			TypeAnnotation: MetaTypeAnnotation,
 		},
 	},
-	NewTypeAnnotation(MetaType),
+	MetaTypeAnnotation,
 )
 
 var VariableSizedArrayTypeFunctionType = NewSimpleFunctionType(
@@ -48,10 +48,10 @@ var VariableSizedArrayTypeFunctionType = NewSimpleFunctionType(
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "type",
-			TypeAnnotation: NewTypeAnnotation(MetaType),
+			TypeAnnotation: MetaTypeAnnotation,
 		},
 	},
-	NewTypeAnnotation(MetaType),
+	MetaTypeAnnotation,
 )
 
 var ConstantSizedArrayTypeFunctionType = NewSimpleFunctionType(
@@ -59,29 +59,31 @@ var ConstantSizedArrayTypeFunctionType = NewSimpleFunctionType(
 	[]*Parameter{
 		{
 			Identifier:     "type",
-			TypeAnnotation: NewTypeAnnotation(MetaType),
+			TypeAnnotation: MetaTypeAnnotation,
 		},
 		{
 			Identifier:     "size",
-			TypeAnnotation: NewTypeAnnotation(IntType),
+			TypeAnnotation: IntTypeAnnotation,
 		},
 	},
-	NewTypeAnnotation(MetaType),
+	MetaTypeAnnotation,
 )
+
+var OptionalMetaTypeAnnotation = NewTypeAnnotation(&OptionalType{MetaType})
 
 var DictionaryTypeFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
 	[]*Parameter{
 		{
 			Identifier:     "key",
-			TypeAnnotation: NewTypeAnnotation(MetaType),
+			TypeAnnotation: MetaTypeAnnotation,
 		},
 		{
 			Identifier:     "value",
-			TypeAnnotation: NewTypeAnnotation(MetaType),
+			TypeAnnotation: MetaTypeAnnotation,
 		},
 	},
-	NewTypeAnnotation(&OptionalType{MetaType}),
+	OptionalMetaTypeAnnotation,
 )
 
 var CompositeTypeFunctionType = NewSimpleFunctionType(
@@ -90,10 +92,10 @@ var CompositeTypeFunctionType = NewSimpleFunctionType(
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "identifier",
-			TypeAnnotation: NewTypeAnnotation(StringType),
+			TypeAnnotation: StringTypeAnnotation,
 		},
 	},
-	NewTypeAnnotation(&OptionalType{MetaType}),
+	OptionalMetaTypeAnnotation,
 )
 
 var InterfaceTypeFunctionType = NewSimpleFunctionType(
@@ -102,10 +104,10 @@ var InterfaceTypeFunctionType = NewSimpleFunctionType(
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "identifier",
-			TypeAnnotation: NewTypeAnnotation(StringType),
+			TypeAnnotation: StringTypeAnnotation,
 		},
 	},
-	NewTypeAnnotation(&OptionalType{MetaType}),
+	OptionalMetaTypeAnnotation,
 )
 
 var FunctionTypeFunctionType = NewSimpleFunctionType(
@@ -117,10 +119,10 @@ var FunctionTypeFunctionType = NewSimpleFunctionType(
 		},
 		{
 			Identifier:     "return",
-			TypeAnnotation: NewTypeAnnotation(MetaType),
+			TypeAnnotation: MetaTypeAnnotation,
 		},
 	},
-	NewTypeAnnotation(MetaType),
+	MetaTypeAnnotation,
 )
 
 var RestrictedTypeFunctionType = NewSimpleFunctionType(
@@ -135,7 +137,7 @@ var RestrictedTypeFunctionType = NewSimpleFunctionType(
 			TypeAnnotation: NewTypeAnnotation(&VariableSizedType{Type: StringType}),
 		},
 	},
-	NewTypeAnnotation(&OptionalType{MetaType}),
+	OptionalMetaTypeAnnotation,
 )
 
 var ReferenceTypeFunctionType = NewSimpleFunctionType(
@@ -143,14 +145,14 @@ var ReferenceTypeFunctionType = NewSimpleFunctionType(
 	[]*Parameter{
 		{
 			Identifier:     "authorized",
-			TypeAnnotation: NewTypeAnnotation(BoolType),
+			TypeAnnotation: BoolTypeAnnotation,
 		},
 		{
 			Identifier:     "type",
-			TypeAnnotation: NewTypeAnnotation(MetaType),
+			TypeAnnotation: MetaTypeAnnotation,
 		},
 	},
-	NewTypeAnnotation(MetaType),
+	MetaTypeAnnotation,
 )
 
 var CapabilityTypeFunctionType = NewSimpleFunctionType(
@@ -159,10 +161,10 @@ var CapabilityTypeFunctionType = NewSimpleFunctionType(
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "type",
-			TypeAnnotation: NewTypeAnnotation(MetaType),
+			TypeAnnotation: MetaTypeAnnotation,
 		},
 	},
-	NewTypeAnnotation(&OptionalType{MetaType}),
+	OptionalMetaTypeAnnotation,
 )
 
 var runtimeTypeConstructors = []*RuntimeTypeConstructor{

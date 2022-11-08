@@ -32,6 +32,8 @@ var SignatureAlgorithmType = newNativeEnumType(
 	nil,
 )
 
+var SignatureAlgorithmTypeAnnotation = NewTypeAnnotation(SignatureAlgorithmType)
+
 type SignatureAlgorithm uint8
 
 // NOTE: only add new algorithms, do *NOT* change existing items,
@@ -112,12 +114,10 @@ var HashAlgorithmTypeHashFunctionType = NewSimpleFunctionType(
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "data",
-			TypeAnnotation: NewTypeAnnotation(ByteArrayType),
+			TypeAnnotation: ByteArrayTypeAnnotation,
 		},
 	},
-	NewTypeAnnotation(
-		ByteArrayType,
-	),
+	ByteArrayTypeAnnotation,
 )
 
 const HashAlgorithmTypeHashFunctionDocString = `
@@ -130,20 +130,16 @@ var HashAlgorithmTypeHashWithTagFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
 	[]*Parameter{
 		{
-			Label:      ArgumentLabelNotRequired,
-			Identifier: "data",
-			TypeAnnotation: NewTypeAnnotation(
-				ByteArrayType,
-			),
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "data",
+			TypeAnnotation: ByteArrayTypeAnnotation,
 		},
 		{
 			Identifier:     "tag",
-			TypeAnnotation: NewTypeAnnotation(StringType),
+			TypeAnnotation: StringTypeAnnotation,
 		},
 	},
-	NewTypeAnnotation(
-		ByteArrayType,
-	),
+	ByteArrayTypeAnnotation,
 )
 
 const HashAlgorithmTypeHashWithTagFunctionDocString = `
@@ -170,6 +166,8 @@ var HashAlgorithmType = newNativeEnumType(
 		}
 	},
 )
+
+var HashAlgorithmTypeAnnotation = NewTypeAnnotation(HashAlgorithmType)
 
 type HashAlgorithm uint8
 
