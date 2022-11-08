@@ -99,7 +99,7 @@ type Checker struct {
 	resources                          *Resources
 	typeActivations                    *VariableActivations
 	containerTypes                     map[Type]bool
-	functionActivations                *FunctionActivations
+	functionActivations                FunctionActivations
 	inCondition                        bool
 	isChecked                          bool
 	inCreate                           bool
@@ -135,7 +135,10 @@ func NewChecker(
 		return nil, errors.NewDefaultUserError("invalid default access check mode")
 	}
 
-	functionActivations := &FunctionActivations{}
+	functionActivations := FunctionActivations{
+		// Pre-allocate a common function depth
+		make([]FunctionActivation, 0, 2),
+	}
 	functionActivations.EnterFunction(&FunctionType{
 		ReturnTypeAnnotation: NewTypeAnnotation(VoidType)},
 		0,
