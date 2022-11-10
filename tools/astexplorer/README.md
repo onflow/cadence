@@ -1,13 +1,19 @@
 # Cadence AST Explorer
 
-- `npm install` 
-- `npm run start`
+Install the dependencies:
 
-## Development
+  ```sh
+  npm install
+  ```
 
-To use an in-development version of the parser, replace the dependency for the parser to the local package,
-and follow the instructions there to build the WebAssembly binary for the parser and the package itself:
+Start the UI:
 
-```json
-"@onflow/cadence-parser": "file:../../npm-packages/cadence-parser",
-```
+  ```sh
+  npm run start
+  ```
+
+In a separate shell, run the API:
+
+  ```sh
+  go run .
+  ```

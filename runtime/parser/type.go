@@ -814,6 +814,8 @@ func defaultTypeMetaLeftDenotation(
 }
 
 func parseTypeAnnotation(p *parser) (*ast.TypeAnnotation, error) {
+	p.skipSpaceAndComments()
+
 	startPos := p.current.StartPos
 
 	isResource := false
