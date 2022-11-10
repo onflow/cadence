@@ -22,68 +22,59 @@ concurrency:
 jobs:
   test:
     name: Test
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get install wabt
+
       - name: Clone
         uses: actions/checkout@v3
         with:
           # fetch all tags. required to update the embedded version
           fetch-depth: 0
+
       - name: Setup Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
-      - uses: actions/setup-node@v2
-        with:
-          node-version: '15'
+
       - name: Build
         run: make build
+
       - name: Test
         run: make test
+
       - name: Upload coverage report
         uses: codecov/codecov-action@v2
         with:
           file: ./coverage.txt
           flags: unittests
+
       - name: Check tidy
         run: make check-tidy
 
   lint:
     name: Lint
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - name: Clone
         uses: actions/checkout@v3
+
       - name: Setup Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
+
       - name: Lint
         run: make lint-github-actions
+
       - name: Check license headers
         run: make check-headers
+
       - name: Check capabilities of dependencies
         run: make check-capabilities
-
-  lint-docs:
-    name: Lint Docs
-    runs-on: ubuntu-20.04
-    steps:
-      - name: Clone
-        uses: actions/checkout@v3
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: 14
-      - name: Lint
-        working-directory: ./docs
-        run: |
-          npm ci
-          node lint.js
 
   semgrep:
     name: Semgrep
@@ -91,6 +82,7 @@ jobs:
     steps:
       - name: Clone
         uses: actions/checkout@v3
+
       - uses: returntocorp/semgrep-action@v1
         with:
           config: semgrep.yaml
