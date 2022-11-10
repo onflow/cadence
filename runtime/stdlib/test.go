@@ -54,7 +54,7 @@ const transactionArgsFieldName = "arguments"
 
 const accountAddressFieldName = "address"
 
-const matcherTestFunctionName = "test"
+const matcherTestFieldName = "test"
 
 const addressesFieldName = "addresses"
 
@@ -103,7 +103,7 @@ func NewTestContract(
 ) {
 	value, err := inter.InvokeFunctionValue(
 		constructor,
-		[]interpreter.Value{},
+		nil,
 		testContractInitializerTypes,
 		testContractInitializerTypes,
 		invocationRange,
@@ -185,6 +185,17 @@ var matcherType = func() *sema.CompositeType {
 
 	return compositeType
 }()
+
+var matcherTestFieldType = compositeFunctionType(matcherType, matcherTestFieldName)
+
+func compositeFunctionType(parent *sema.CompositeType, funcName string) *sema.FunctionType {
+	testFunc, ok := parent.Members.Get(funcName)
+	if !ok {
+		panic(memberNotFoundError(parent.Identifier, funcName))
+	}
+
+	return getFunctionTypeFromMember(testFunc, funcName)
+}
 
 func interfaceFunctionType(parent *sema.InterfaceType, funcName string) *sema.FunctionType {
 	testFunc, ok := parent.Members.Get(funcName)
@@ -465,14 +476,14 @@ func invokeMatcherTest(
 	testFunc := matcher.GetMember(
 		inter,
 		locationRange,
-		matcherTestFunctionName,
+		matcherTestFieldName,
 	)
 
 	funcValue, ok := testFunc.(interpreter.FunctionValue)
 	if !ok {
 		panic(errors.NewUnexpectedError(
-			"invalid type for '%s'. expected function",
-			matcherTestFunctionName,
+			"invalid value type for field '%s'. expected function value",
+			matcherTestFieldName,
 		))
 	}
 
@@ -674,7 +685,7 @@ var newMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
 
 		return newMatcherWithGenericTestFunction(invocation, test)
 	},
-	equalMatcherFunctionType,
+	newMatcherFunctionType,
 )
 
 // 'EmulatorBackend' struct.
@@ -1472,12 +1483,12 @@ func newMatcherWithGenericTestFunction(
 
 	inter := invocation.Interpreter
 
-	staticType, ok := testFunc.StaticType(inter).(interpreter.FunctionStaticType)
-	if !ok {
+	typeParameterPair := invocation.TypeParameterTypes.Oldest()
+	if typeParameterPair == nil {
 		panic(errors.NewUnreachableError())
 	}
 
-	parameters := staticType.Type.Parameters
+	parameterType := typeParameterPair.Value
 
 	// Wrap the user provided test function with a function that validates the argument types.
 	// i.e: create a closure that cast the arguments.
@@ -1495,15 +1506,14 @@ func newMatcherWithGenericTestFunction(
 		func(invocation interpreter.Invocation) interpreter.Value {
 			inter := invocation.Interpreter
 
-			for i, argument := range invocation.Arguments {
-				paramType := parameters[i].TypeAnnotation.Type
+			for _, argument := range invocation.Arguments {
 				argumentStaticType := argument.StaticType(inter)
 
-				if !inter.IsSubTypeOfSemaType(argumentStaticType, paramType) {
+				if !inter.IsSubTypeOfSemaType(argumentStaticType, parameterType) {
 					argumentSemaType := inter.MustConvertStaticToSemaType(argumentStaticType)
 
 					panic(interpreter.TypeMismatchError{
-						ExpectedType:  paramType,
+						ExpectedType:  parameterType,
 						ActualType:    argumentSemaType,
 						LocationRange: invocation.LocationRange,
 					})
@@ -1517,7 +1527,7 @@ func newMatcherWithGenericTestFunction(
 
 			return value
 		},
-		matcherTestFunctionType,
+		matcherTestFieldType,
 	)
 
 	matcherConstructor := getNestedTypeConstructorValue(
@@ -1537,4 +1547,67 @@ func newMatcherWithGenericTestFunction(
 	}
 
 	return matcher
+}
+
+func TestCheckerContractValueHandler(
+	checker *sema.Checker,
+	declaration *ast.CompositeDeclaration,
+	compositeType *sema.CompositeType,
+) sema.ValueDeclaration {
+	constructorType, constructorArgumentLabels := sema.CompositeConstructorType(
+		checker.Elaboration,
+		declaration,
+		compositeType,
+	)
+
+	return StandardLibraryValue{
+		Name:           declaration.Identifier.Identifier,
+		Type:           constructorType,
+		DocString:      declaration.DocString,
+		Kind:           declaration.DeclarationKind(),
+		Position:       &declaration.Identifier.Pos,
+		ArgumentLabels: constructorArgumentLabels,
+	}
+}
+
+func NewTestInterpreterContractValueHandler(
+	testFramework TestFramework,
+) interpreter.ContractValueHandlerFunc {
+	return func(
+		inter *interpreter.Interpreter,
+		compositeType *sema.CompositeType,
+		constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
+		invocationRange ast.Range,
+	) interpreter.ContractValue {
+
+		switch compositeType.Location {
+		case CryptoChecker.Location:
+			contract, err := NewCryptoContract(
+				inter,
+				constructorGenerator(common.Address{}),
+				invocationRange,
+			)
+			if err != nil {
+				panic(err)
+			}
+			return contract
+
+		case TestContractLocation:
+			contract, err := NewTestContract(
+				inter,
+				testFramework,
+				constructorGenerator(common.Address{}),
+				invocationRange,
+			)
+			if err != nil {
+				panic(err)
+			}
+			return contract
+
+		default:
+			// During tests, imported contracts can be constructed using the constructor,
+			// similar to structs. Therefore, generate a constructor function.
+			return constructorGenerator(common.Address{})
+		}
+	}
 }
