@@ -39,9 +39,9 @@ type Response struct {
 	Program *ast.Program `json:"program"`
 }
 
-var portFlag = flag.Int("port", 3000, "port")
-
 func main() {
+
+	portFlag := flag.Int("port", 3000, "port")
 
 	http.HandleFunc("/api", func(w http.ResponseWriter, r *http.Request) {
 		var req Request
