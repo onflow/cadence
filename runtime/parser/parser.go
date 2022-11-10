@@ -155,6 +155,8 @@ func ParseTokenStream[T any](
 		return zero, p.errors
 	}
 
+	p.skipSpaceAndComments()
+
 	if !p.current.Is(lexer.TokenEOF) {
 		p.reportSyntaxError("unexpected token: %s", p.current.Type)
 	}

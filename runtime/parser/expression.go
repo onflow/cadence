@@ -1090,20 +1090,19 @@ func defineArrayExpression() {
 		func(p *parser, startToken lexer.Token) (ast.Expression, error) {
 			var values []ast.Expression
 			for !p.current.Is(lexer.TokenBracketClose) {
+				p.skipSpaceAndComments()
+				if len(values) > 0 {
+					if !p.current.Is(lexer.TokenComma) {
+						break
+					}
+					p.next()
+				}
+
 				value, err := parseExpression(p, lowestBindingPower)
 				if err != nil {
 					return nil, err
 				}
-
 				values = append(values, value)
-				if !p.current.Is(lexer.TokenComma) {
-					break
-				}
-
-				_, err = p.mustOne(lexer.TokenComma)
-				if err != nil {
-					return nil, err
-				}
 			}
 
 			endToken, err := p.mustOne(lexer.TokenBracketClose)
@@ -1130,6 +1129,14 @@ func defineDictionaryExpression() {
 		func(p *parser, startToken lexer.Token) (ast.Expression, error) {
 			var entries []ast.DictionaryEntry
 			for !p.current.Is(lexer.TokenBraceClose) {
+				p.skipSpaceAndComments()
+				if len(entries) > 0 {
+					if !p.current.Is(lexer.TokenComma) {
+						break
+					}
+					p.next()
+				}
+
 				key, err := parseExpression(p, lowestBindingPower)
 				if err != nil {
 					return nil, err
@@ -1150,15 +1157,8 @@ func defineDictionaryExpression() {
 					key,
 					value,
 				))
-				if !p.current.Is(lexer.TokenComma) {
-					break
-				}
-
-				_, err = p.mustOne(lexer.TokenComma)
-				if err != nil {
-					return nil, err
-				}
 			}
+
 			endToken, err := p.mustOne(lexer.TokenBraceClose)
 			if err != nil {
 				return nil, err
@@ -1314,8 +1314,8 @@ func defineMemberExpression() {
 
 func parseMemberAccess(p *parser, token lexer.Token, left ast.Expression, optional bool) ast.Expression {
 
-	// Whitespace after the '.' (dot token) is not allowed.
-	// We parse it anyways and report an error
+	// Whitespace after '.' (dot token) and '?.' (question mark dot token) is not allowed.
+	// We parse it anyway and report an error
 
 	if p.current.Is(lexer.TokenSpace) {
 		errorPos := p.current.StartPos
@@ -1354,31 +1354,22 @@ func parseMemberAccess(p *parser, token lexer.Token, left ast.Expression, option
 
 func exprLeftDenotationAllowsNewlineAfterNullDenotation(tokenType lexer.TokenType) bool {
 
-	// The postfix force unwrap, invocation expressions,
-	// and indexing expressions don't support newlines before them,
-	// as this clashes with a unary negations, nested expressions,
-	// and array literals on a new line / separate statement.
+	// Some tokens do not support newlines before them,
+	// as this could lead to ambiguities and potential underhanded code
 
 	switch tokenType {
-	case lexer.TokenExclamationMark, lexer.TokenParenOpen, lexer.TokenBracketOpen:
+	case
+		// '!': postfix force-unwrap VS unary prefix negation
+		lexer.TokenExclamationMark,
+		// '(': invocation VS parenthesized expression
+		lexer.TokenParenOpen,
+		// '[': indexing VS array literal
+		lexer.TokenBracketOpen:
+
 		return false
-	default:
-		return true
 	}
-}
 
-func exprLeftDenotationAllowsWhitespaceAfterToken(tokenType lexer.TokenType) bool {
-
-	// The member access expressions, which starts with a '.' (dot token)
-	// or `?.` (question mark dot token), do not allow whitespace
-	// after the token (before the identifier)
-
-	switch tokenType {
-	case lexer.TokenDot, lexer.TokenQuestionMarkDot:
-		return false
-	default:
-		return true
-	}
+	return true
 }
 
 // parseExpression uses "Top-Down operator precedence parsing" (TDOP) technique to
@@ -1400,18 +1391,29 @@ func parseExpression(p *parser, rightBindingPower int) (ast.Expression, error) {
 	t := p.current
 	p.next()
 
-	newLineAfterLeft := p.skipSpaceAndComments()
-
 	left, err := applyExprNullDenotation(p, t)
 	if err != nil {
 		return nil, err
 	}
 
 	for {
-		newLineAfterLeft = p.skipSpaceAndComments() || newLineAfterLeft
+		// Automatically skip any trivia between the left and right expression.
+		// However, do not automatically skip newlines:
+		// Some left denotations do not support newlines before them,
+		// to avoid ambiguities and potential underhanded code
 
-		if newLineAfterLeft && !exprLeftDenotationAllowsNewlineAfterNullDenotation(p.current.Type) {
-			break
+		p.parseTrivia(triviaOptions{
+			skipNewlines: false,
+		})
+
+		current := p.current
+		if current.Is(lexer.TokenSpace) {
+			cursor := p.tokens.Cursor()
+			p.next()
+			if !exprLeftDenotationAllowsNewlineAfterNullDenotation(p.current.Type) {
+				p.tokens.Revert(cursor)
+				p.current = current
+			}
 		}
 
 		var done bool
@@ -1423,8 +1425,6 @@ func parseExpression(p *parser, rightBindingPower int) (ast.Expression, error) {
 		if done {
 			break
 		}
-
-		newLineAfterLeft = false
 	}
 
 	return left, nil
@@ -1474,14 +1474,9 @@ func defaultExprMetaLeftDenotation(
 		return left, nil, true
 	}
 
-	allowWhitespace := exprLeftDenotationAllowsWhitespaceAfterToken(p.current.Type)
-
 	t := p.current
 
 	p.next()
-	if allowWhitespace {
-		p.skipSpaceAndComments()
-	}
 
 	result, err = applyExprLeftDenotation(p, t, left)
 	return result, err, false

@@ -109,6 +109,10 @@
         "title": "Cadence Language",
         "items": [
           {
+            "href": "index",
+            "title": "Cadence"
+          },
+          {
             "href": "syntax",
             "title": "Syntax"
           },
@@ -197,6 +201,9 @@
           },
           {
             "href": "crypto"
+          },
+          {
+            "href": "type-hierarchy"
           },
           {
             "href": "glossary"

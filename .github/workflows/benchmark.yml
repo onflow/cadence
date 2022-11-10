@@ -1,10 +1,19 @@
 name: Benchmark
+
 on:
+  push:
+    branches:
+      - master
+      - 'feature/**'
+      - 'v**'
   pull_request:
     branches:
       - master
       - 'feature/**'
       - 'v**'
+
+env:
+  GO_VERSION: '1.19.2'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
@@ -26,24 +35,14 @@ jobs:
         run: sudo apt-get update && sudo apt-get install wabt
 
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-go@v2
+      - uses: actions/setup-go@v3
         with:
-          go-version: '1.18.x'
-
-      - uses: actions/setup-node@v2
-        with:
-          node-version: '15'
-
-      - uses: actions/cache@v1
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
 
       - name: Build
         run: make build
@@ -52,7 +51,6 @@ jobs:
         run: |
           ( for i in {1..${{ steps.settings.outputs.benchmark_repetitions }}}; do go test ./... -run=XXX -bench=. -benchmem -shuffle=on; done | sed 's/pkg:.*/pkg: github.com\/onflow\/cadence\/runtime/' ) | tee new.txt
       # the package replace line above is to make the results table more readable, since it is not fragmented by package
-      
 
       - name: Checkout base branch
         run: git checkout ${{ github.event.pull_request.base.sha }}
@@ -96,5 +94,5 @@ jobs:
             
             </p>
             </details>  
-            
+
           edit-mode: replace
