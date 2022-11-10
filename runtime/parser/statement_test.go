@@ -2416,3 +2416,64 @@ func TestParseSwapStatementInFunctionDeclaration(t *testing.T) {
 		result.Declarations(),
 	)
 }
+
+func TestParseStatementsWithWhitespace(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("two statements: variable declaration and parenthesized expression, not one function-call", func(t *testing.T) {
+		t.Parallel()
+
+		const code = `
+          a == b
+          (c)
+	    `
+
+		statements, errs := testParseStatements(code)
+		require.Empty(t, errs)
+
+		require.Len(t, statements, 2)
+	})
+
+	t.Run("two statements: binary expression and array literal, not an indexing expression", func(t *testing.T) {
+		t.Parallel()
+
+		const code = `
+          a == b
+          [c]
+	    `
+
+		statements, errs := testParseStatements(code)
+		require.Empty(t, errs)
+
+		require.Len(t, statements, 2)
+	})
+
+	t.Run("two statements: binary expression and unary prefix negation, not unary postfix force", func(t *testing.T) {
+		t.Parallel()
+
+		const code = `
+          a == b
+          !c == d
+	    `
+
+		statements, errs := testParseStatements(code)
+		require.Empty(t, errs)
+
+		require.Len(t, statements, 2)
+	})
+
+	t.Run("one statement: binary expression, right-hand side with member access", func(t *testing.T) {
+		t.Parallel()
+
+		const code = `
+          a == b
+          .c
+	    `
+
+		statements, errs := testParseStatements(code)
+		require.Empty(t, errs)
+
+		require.Len(t, statements, 1)
+	})
+}
