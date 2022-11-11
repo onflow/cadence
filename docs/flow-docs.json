@@ -11,7 +11,7 @@
           "title": "Why Use Cadence?",
           "tags": ["reference", "patterns"],
           "description":"Learn the main benefits of using Cadence for smart contract development.",
-          "href": "/cadence/why-cadence"
+          "href": "/cadence/why"
         },
         {
           "title": "Hello World Tutorial",
