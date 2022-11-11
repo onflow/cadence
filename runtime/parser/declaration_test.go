@@ -2311,10 +2311,15 @@ func TestParseField(t *testing.T) {
 
 		_, errs := parse("native let foo: Int", Config{})
 
-		// For now, leading unknown identifiers are valid.
-		// This will be rejected in Stable Cadence.
-
-		require.Empty(t, errs)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected identifier",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
 	})
 
 	t.Run("static", func(t *testing.T) {
@@ -2364,10 +2369,15 @@ func TestParseField(t *testing.T) {
 			Config{},
 		)
 
-		// For now, leading unknown identifiers are valid.
-		// This will be rejected in Stable Cadence.
-
-		require.Empty(t, errs)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected identifier",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
 	})
 
 	t.Run("static native, enabled", func(t *testing.T) {
@@ -2415,14 +2425,11 @@ func TestParseField(t *testing.T) {
 
 		_, errs := parse("static native let foo: Int", Config{})
 
-		// For now, leading unknown identifiers are valid.
-		// This will be rejected in Stable Cadence.
-
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected identifier",
-					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
 				},
 			},
 			errs,
@@ -2498,14 +2505,11 @@ func TestParseField(t *testing.T) {
 
 		_, errs := parse("pub static native let foo: Int", Config{})
 
-		// For now, leading unknown identifiers are valid.
-		// This will be rejected in Stable Cadence.
-
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected identifier",
-					Pos:     ast.Position{Offset: 11, Line: 1, Column: 11},
+					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
 				},
 			},
 			errs,
@@ -3382,10 +3386,15 @@ func TestParseEnumDeclaration(t *testing.T) {
 
 		_, errs := testParseDeclarations(" enum E { static case e }")
 
-		// For now, leading unknown identifiers are valid.
-		// This will be rejected in Stable Cadence.
-
-		require.Empty(t, errs)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected identifier",
+					Pos:     ast.Position{Offset: 10, Line: 1, Column: 10},
+				},
+			},
+			errs,
+		)
 	})
 
 	t.Run("enum case with native modifier, enabled", func(t *testing.T) {
@@ -3416,10 +3425,15 @@ func TestParseEnumDeclaration(t *testing.T) {
 
 		_, errs := testParseDeclarations(" enum E { native case e }")
 
-		// For now, leading unknown identifiers are valid.
-		// This will be rejected in Stable Cadence.
-
-		require.Empty(t, errs)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected identifier",
+					Pos:     ast.Position{Offset: 10, Line: 1, Column: 10},
+				},
+			},
+			errs,
+		)
 	})
 }
 
@@ -4599,9 +4613,6 @@ func TestParseStructureWithConformances(t *testing.T) {
 
 func TestParseInvalidMember(t *testing.T) {
 
-	// For now, leading unknown identifiers are valid.
-	// This will be rejected in Stable Cadence.
-
 	t.Parallel()
 
 	const code = `
@@ -4610,9 +4621,33 @@ func TestParseInvalidMember(t *testing.T) {
         }
 	`
 
-	_, errs := testParseDeclarations(code)
+	t.Run("ignore", func(t *testing.T) {
+		t.Parallel()
 
-	require.Empty(t, errs)
+		_, errs := ParseDeclarations(nil, []byte(code), Config{
+			IgnoreLeadingIdentifierEnabled: true,
+		})
+		require.Empty(t, errs)
+
+	})
+
+	t.Run("report", func(t *testing.T) {
+		t.Parallel()
+
+		_, errs := ParseDeclarations(nil, []byte(code), Config{
+			IgnoreLeadingIdentifierEnabled: false,
+		})
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected identifier",
+					Pos:     ast.Position{Offset: 35, Line: 3, Column: 12},
+				},
+			},
+			errs,
+		)
+	})
 }
 
 func TestParsePreAndPostConditions(t *testing.T) {
@@ -6889,14 +6924,11 @@ func TestParseNestedPragma(t *testing.T) {
 
 		_, errs := parse("static native #pragma", Config{})
 
-		// For now, leading unknown identifiers are valid.
-		// This will be rejected in Stable Cadence.
-
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected identifier",
-					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
 				},
 			},
 			errs,
@@ -6971,14 +7003,11 @@ func TestParseNestedPragma(t *testing.T) {
 
 		_, errs := parse("pub static native #pragma", Config{})
 
-		// For now, leading unknown identifiers are valid.
-		// This will be rejected in Stable Cadence.
-
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected identifier",
-					Pos:     ast.Position{Offset: 11, Line: 1, Column: 11},
+					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
 				},
 			},
 			errs,
