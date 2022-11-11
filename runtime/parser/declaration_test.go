@@ -3897,6 +3897,30 @@ func TestParseStructureWithConformances(t *testing.T) {
 	)
 }
 
+func TestParseInvalidMember(t *testing.T) {
+
+	t.Parallel()
+
+	const code = `
+        struct Test {
+            foo let x: Int
+        }
+	`
+
+	_, errs := testParseDeclarations(code)
+
+	utils.AssertEqualWithDiff(t,
+		[]error{
+			&SyntaxError{
+				Message: "unexpected identifier",
+				Pos:     ast.Position{Offset: 35, Line: 3, Column: 12},
+			},
+		},
+		errs,
+	)
+
+}
+
 func TestParsePreAndPostConditions(t *testing.T) {
 
 	t.Parallel()
