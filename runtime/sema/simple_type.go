@@ -37,7 +37,6 @@ type SimpleType struct {
 	QualifiedName        string
 	TypeID               TypeID
 	tag                  TypeTag
-	IsInvalid            bool
 	IsResource           bool
 	Storable             bool
 	Equatable            bool
@@ -78,7 +77,7 @@ func (t *SimpleType) IsResourceType() bool {
 }
 
 func (t *SimpleType) IsInvalidType() bool {
-	return t.IsInvalid
+	return t == InvalidType
 }
 
 func (t *SimpleType) IsStorable(_ map[*Member]bool) bool {
