@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,13 +19,11 @@
 
 import * as monaco from "monaco-editor";
 import configureCadence, {CADENCE_LANGUAGE_ID} from "./cadence";
-import {CadenceParser} from "@onflow/cadence-parser"
-
 import * as React from "react"
-import * as ReactDOM from "react-dom"
-import {TreeView} from "./tree"
+import { Data, TreeView } from "./tree";
+import { createRoot } from 'react-dom/client';
 
-const code = `
+const defaultCode = `
 pub contract C {
     pub resource R {}
     pub fun createR(): @R {
@@ -33,6 +31,10 @@ pub contract C {
     }
 }
 `
+
+function Error({ children }: {children?: React.ReactNode[]}) {
+  return <div className='error'>{children}</div>;
+}
 
 interface Position {
   Offset: number
@@ -57,6 +59,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const editorElement = document.getElementById(`editor`);
   const astElement = document.getElementById(`ast`);
 
+  const code = localStorage.getItem('code') || defaultCode
+
   const model = monaco.editor.createModel(
     code,
     CADENCE_LANGUAGE_ID,
@@ -75,20 +79,53 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   );
 
-  const parser = await CadenceParser.create("cadence-parser.wasm")
+  const root = createRoot(astElement)
+  const render = root.render.bind(root)
 
-  function update() {
+  async function update() {
     const code = model.getValue()
-    const result = parser.parse(code)
-    console.log(result)
+    localStorage.setItem('code', code)
+
+    const request = new Request('/api', {
+      method: 'POST',
+      body: JSON.stringify({code})
+    });
+
+    let response: Response
+    try {
+      response = await fetch(request)
+    } catch (e) {
+      render(
+        <Error>💥 Failed to make API request: {e.toString()}</Error>
+      )
+      return
+    }
+
+    let result: Data
+    try {
+      result = await response.json()
+    } catch (e) {
+      render(
+        <Error>💥 Failed to parse result as JSON: {e.toString()}</Error>
+      )
+      return
+    }
+
+    if (result.error) {
+      render(
+        <Error>💥 {result.error.toString()}</Error>
+      )
+      return
+    }
+
 
     let decorations: string[];
 
     let current: unknown;
 
-    ReactDOM.render(
+    render(
       <TreeView
-        data={result}
+        data={result.program}
         onOver={node => {
           if (!isNode(node)) {
             return false
@@ -115,7 +152,6 @@ document.addEventListener('DOMContentLoaded', async () => {
           }
         }}
       />,
-      astElement
     )
   }
 

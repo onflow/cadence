@@ -1,7 +1,5 @@
 const MonacoWebpackPlugin = require('monaco-editor-webpack-plugin')
-const path = require('path')
 const HtmlWebpackPlugin = require("html-webpack-plugin");
-const CopyPlugin = require('copy-webpack-plugin');
 
 module.exports = {
   entry: [ "./src/index.tsx"],
@@ -34,25 +32,15 @@ module.exports = {
     new HtmlWebpackPlugin({
       template: "./src/index.html",
     }),
-    new CopyPlugin({
-      patterns: [
-        {
-          from: 'node_modules/@onflow/cadence-parser/dist/cadence-parser.wasm',
-          to: 'cadence-parser.wasm'
-        }
-      ]
-    }),
   ],
+  mode: 'development',
   devServer: {
-    contentBase: path.join(__dirname, 'dist'),
-    compress: true,
     port: 8000,
-    writeToDisk: true
+    devMiddleware: {
+      writeToDisk: true,
+    },
+    proxy: {
+      '/api': 'http://127.0.0.1:3000',
+    },
   },
-  node: {
-    crypto: 'empty',
-    path: 'empty',
-    os: 'empty',
-    net: 'empty',
-  }
 }

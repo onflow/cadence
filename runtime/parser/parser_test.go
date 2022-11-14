@@ -510,7 +510,7 @@ func TestParseBuffering(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message: "expected token identifier",
-					Pos:     ast.Position{Offset: 420, Line: 10, Column: 20},
+					Pos:     ast.Position{Offset: 399, Line: 9, Column: 95},
 				},
 			},
 			err.(Error).Errors,
@@ -534,8 +534,8 @@ func TestParseBuffering(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected token '/'",
-					Pos:     ast.Position{Offset: 181, Line: 5, Column: 34},
+					Message: "expected token identifier",
+					Pos:     ast.Position{Offset: 146, Line: 4, Column: 63},
 				},
 			},
 			err.(Error).Errors,
@@ -877,9 +877,9 @@ func TestParseExpressionDepthLimit(t *testing.T) {
 		[]error{
 			ExpressionDepthLimitReachedError{
 				Pos: ast.Position{
-					Offset: 88,
+					Offset: 87,
 					Line:   1,
-					Column: 88,
+					Column: 87,
 				},
 			},
 		},
@@ -989,4 +989,19 @@ func TestParseGlobalReplayLimit(t *testing.T) {
 		},
 		err,
 	)
+}
+
+func TestParseWhitespaceAtEnd(t *testing.T) {
+
+	t.Parallel()
+
+	_, errs := Parse(
+		[]byte("a  "),
+		func(p *parser) (any, error) {
+			return p.mustToken(lexer.TokenIdentifier, "a")
+		},
+		nil,
+	)
+
+	assert.Empty(t, errs)
 }
