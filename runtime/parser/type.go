@@ -612,8 +612,6 @@ func defineOldSyntaxFunctionType() {
 	setTypeNullDenotation(
 		lexer.TokenParenOpen,
 		func(p *parser, token lexer.Token) (ast.Type, error) {
-			// skip the opening '(' token
-			p.nextSemanticToken()
 
 			purity := ast.FunctionPurityUnspecified
 			if p.isToken(p.current, lexer.TokenIdentifier, keywordView) {
@@ -630,13 +628,11 @@ func defineOldSyntaxFunctionType() {
 			}
 
 			p.skipSpaceAndComments()
-
 			// find the matching end parenthesis and skip
 			_, err = p.mustOne(lexer.TokenParenClose)
 			if err != nil {
 				return nil, err
 			}
-			p.next()
 
 			return functionType, nil
 
@@ -989,8 +985,7 @@ func defineIdentifierTypes() {
 				), nil
 
 			case keywordFun:
-				// skip the `fun` keyword
-				p.nextSemanticToken()
+				p.skipSpaceAndComments()
 				return parseFunctionType(p, token.StartPos, ast.FunctionPurityUnspecified, false)
 
 			case keywordView:
@@ -998,8 +993,8 @@ func defineIdentifierTypes() {
 				current := p.current
 				cursor := p.tokens.Cursor()
 
-				// skip the `view` keyword and look ahead for a `fun` token
-				p.nextSemanticToken()
+				// look ahead for the `fun` keyword, if it exists
+				p.skipSpaceAndComments()
 
 				if p.isToken(p.current, lexer.TokenIdentifier, keywordFun) {
 					// skip the `fun` keyword
@@ -1033,7 +1028,7 @@ func parseFunctionType(p *parser, startPos ast.Position, purity ast.FunctionPuri
 	}
 
 	endPos := p.current.EndPos
-	// skip the closing parenthesis of the argument tuple
+	// // skip the closing parenthesis of the argument tuple
 	p.nextSemanticToken()
 
 	var returnTypeAnnotation *ast.TypeAnnotation

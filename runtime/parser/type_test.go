@@ -2258,6 +2258,86 @@ func TestParseFunctionTypeWithFunctionReturnType(t *testing.T) {
 	)
 }
 
+func TestParseNewSyntaxFunctionType(t *testing.T) {
+	t.Parallel()
+
+	code := `
+		let test: fun(Int8): fun(Int16): Int32 = nothing
+	`
+	result, errs := testParseProgram(code)
+	require.Empty(t, errs)
+
+	expected := []ast.Declaration{
+		&ast.VariableDeclaration{
+			IsConstant: true,
+			Identifier: ast.Identifier{
+				Identifier: "test",
+				Pos:        ast.Position{Offset: 7, Line: 2, Column: 6},
+			},
+			TypeAnnotation: &ast.TypeAnnotation{
+				Type: &ast.FunctionType{
+					ParameterTypeAnnotations: []*ast.TypeAnnotation{
+						{
+							Type: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "Int8",
+									Pos:        ast.Position{Offset: 17, Line: 2, Column: 16},
+								},
+							},
+							StartPos: ast.Position{Offset: 17, Line: 2, Column: 16},
+						},
+					},
+					ReturnTypeAnnotation: &ast.TypeAnnotation{
+						Type: &ast.FunctionType{
+							ParameterTypeAnnotations: []*ast.TypeAnnotation{
+								{
+									Type: &ast.NominalType{
+										Identifier: ast.Identifier{
+											Identifier: "Int16",
+											Pos:        ast.Position{Offset: 28, Line: 2, Column: 27},
+										},
+									},
+									StartPos: ast.Position{Offset: 28, Line: 2, Column: 27},
+								},
+							},
+							ReturnTypeAnnotation: &ast.TypeAnnotation{
+								Type: &ast.NominalType{
+									Identifier: ast.Identifier{
+										Identifier: "Int32",
+										Pos:        ast.Position{Offset: 36, Line: 2, Column: 35},
+									},
+								},
+								StartPos: ast.Position{Offset: 36, Line: 2, Column: 35},
+							},
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 24, Line: 2, Column: 23},
+								EndPos:   ast.Position{Offset: 41, Line: 2, Column: 40},
+							},
+						},
+						StartPos: ast.Position{Offset: 24, Line: 2, Column: 23},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
+						EndPos:   ast.Position{Offset: 41, Line: 2, Column: 40},
+					},
+				},
+				StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
+			},
+			Value: &ast.IdentifierExpression{
+				Identifier: ast.Identifier{
+					Identifier: "nothing",
+					Pos:        ast.Position{Offset: 44, Line: 2, Column: 43},
+				},
+			},
+			Transfer: &ast.Transfer{
+				Operation: 1,
+				Pos:       ast.Position{Offset: 42, Line: 2, Column: 41},
+			},
+			StartPos: ast.Position{Offset: 3, Line: 2, Column: 2},
+		},
+	}
+	utils.AssertEqualWithDiff(t, expected, result.Declarations())
+}
 func TestParseOptionalTypeDouble(t *testing.T) {
 
 	t.Parallel()
