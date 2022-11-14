@@ -27,6 +27,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -2363,11 +2364,18 @@ func TestCheckStaticFieldDeclaration(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
-      struct S {
-          static let foo: Int
-      }
-    `)
+	_, err := ParseAndCheckWithOptions(t,
+		`
+          struct S {
+              static let foo: Int
+          }
+        `,
+		ParseAndCheckOptions{
+			ParseOptions: parser.Config{
+				StaticModifierEnabled: true,
+			},
+		},
+	)
 
 	errs := RequireCheckerErrors(t, err, 2)
 
@@ -2380,11 +2388,18 @@ func TestCheckNativeFieldDeclaration(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
-      struct S {
-          native let foo: Int
-      }
-    `)
+	_, err := ParseAndCheckWithOptions(t,
+		`
+          struct S {
+              native let foo: Int
+          }
+        `,
+		ParseAndCheckOptions{
+			ParseOptions: parser.Config{
+				NativeModifierEnabled: true,
+			},
+		},
+	)
 
 	errs := RequireCheckerErrors(t, err, 2)
 

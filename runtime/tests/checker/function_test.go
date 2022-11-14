@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -420,9 +421,16 @@ func TestCheckStaticFunctionDeclaration(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
-      static fun test() {}
-    `)
+	_, err := ParseAndCheckWithOptions(t,
+		`
+          static fun test() {}
+        `,
+		ParseAndCheckOptions{
+			ParseOptions: parser.Config{
+				StaticModifierEnabled: true,
+			},
+		},
+	)
 
 	errs := RequireCheckerErrors(t, err, 1)
 
@@ -433,9 +441,16 @@ func TestCheckNativeFunctionDeclaration(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
-      native fun test() {}
-    `)
+	_, err := ParseAndCheckWithOptions(t,
+		`
+          native fun test() {}
+        `,
+		ParseAndCheckOptions{
+			ParseOptions: parser.Config{
+				NativeModifierEnabled: true,
+			},
+		},
+	)
 
 	errs := RequireCheckerErrors(t, err, 1)
 

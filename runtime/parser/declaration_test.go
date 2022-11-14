@@ -259,11 +259,17 @@ func TestParseVariableDeclaration(t *testing.T) {
 		)
 	})
 
-	t.Run("static", func(t *testing.T) {
+	t.Run("static, enabled", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseDeclarations("static var x = 1")
+		_, errs := ParseDeclarations(
+			nil,
+			[]byte("static var x = 1"),
+			Config{
+				StaticModifierEnabled: true,
+			},
+		)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -275,7 +281,45 @@ func TestParseVariableDeclaration(t *testing.T) {
 		)
 	})
 
-	t.Run("native", func(t *testing.T) {
+	t.Run("static, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("static var x = 1")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: identifier",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("native, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseDeclarations(
+			nil,
+			[]byte("native var x = 1"),
+			Config{
+				NativeModifierEnabled: true,
+			},
+		)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid native modifier for variable",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("native, disabled", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -283,7 +327,7 @@ func TestParseVariableDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid native modifier for variable",
+					Message: "unexpected token: identifier",
 					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
 				},
 			},
@@ -298,11 +342,12 @@ func TestParseParameterList(t *testing.T) {
 
 	parse := func(input string) (any, []error) {
 		return Parse(
+			nil,
 			[]byte(input),
 			func(p *parser) (any, error) {
 				return parseParameterList(p)
 			},
-			nil,
+			Config{},
 		)
 	}
 
@@ -988,11 +1033,17 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		)
 	})
 
-	t.Run("native", func(t *testing.T) {
+	t.Run("native, enabled", func(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseDeclarations("native fun foo() {}")
+		result, errs := ParseDeclarations(
+			nil,
+			[]byte("native fun foo() {}"),
+			Config{
+				NativeModifierEnabled: true,
+			},
+		)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1035,11 +1086,34 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		)
 	})
 
+	t.Run("native, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("native fun foo() {}")
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: identifier",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
 	t.Run("static", func(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseDeclarations("static fun foo() {}")
+		result, errs := ParseDeclarations(
+			nil,
+			[]byte("static fun foo() {}"),
+			Config{
+				StaticModifierEnabled: true,
+			},
+		)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1082,11 +1156,35 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		)
 	})
 
-	t.Run("static native", func(t *testing.T) {
+	t.Run("static, disabled", func(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseDeclarations("static native fun foo() {}")
+		_, errs := testParseDeclarations("static fun foo() {}")
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: identifier",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("static native, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseDeclarations(
+			nil,
+			[]byte("static native fun foo() {}"),
+			Config{
+				StaticModifierEnabled: true,
+				NativeModifierEnabled: true,
+			},
+		)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1129,11 +1227,35 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		)
 	})
 
-	t.Run("native static", func(t *testing.T) {
+	t.Run("static native, disabled", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseDeclarations("native static fun foo() {}")
+		_, errs := testParseDeclarations("static native fun foo() {}")
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: identifier",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("native static, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseDeclarations(
+			nil,
+			[]byte("native static fun foo() {}"),
+			Config{
+				StaticModifierEnabled: true,
+				NativeModifierEnabled: true,
+			},
+		)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -1145,11 +1267,35 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		)
 	})
 
-	t.Run("pub static native", func(t *testing.T) {
+	t.Run("native static, disabled", func(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseDeclarations("pub static native fun foo() {}")
+		_, errs := testParseDeclarations("native static fun foo() {}")
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: identifier",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("pub static native, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseDeclarations(
+			nil,
+			[]byte("pub static native fun foo() {}"),
+			Config{
+				StaticModifierEnabled: true,
+				NativeModifierEnabled: true,
+			},
+		)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1193,6 +1339,23 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		)
 	})
 
+	t.Run("pub static native, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("pub static native fun foo() {}")
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: identifier",
+					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+				},
+			},
+			errs,
+		)
+	})
+
 }
 
 func TestParseAccess(t *testing.T) {
@@ -1201,11 +1364,12 @@ func TestParseAccess(t *testing.T) {
 
 	parse := func(input string) (any, []error) {
 		return Parse(
+			nil,
 			[]byte(input),
 			func(p *parser) (any, error) {
 				return parseAccess(p)
 			},
-			nil,
+			Config{},
 		)
 	}
 
@@ -1899,6 +2063,7 @@ func TestParseFieldWithVariableKind(t *testing.T) {
 
 	parse := func(input string) (any, []error) {
 		return Parse(
+			nil,
 			[]byte(input),
 			func(p *parser) (any, error) {
 				return parseFieldWithVariableKind(
@@ -1910,7 +2075,7 @@ func TestParseFieldWithVariableKind(t *testing.T) {
 					"",
 				)
 			},
-			nil,
+			Config{},
 		)
 	}
 
@@ -1987,8 +2152,9 @@ func TestParseField(t *testing.T) {
 
 	t.Parallel()
 
-	parse := func(input string) (any, []error) {
+	parse := func(input string, config Config) (any, []error) {
 		return Parse(
+			nil,
 			[]byte(input),
 			func(p *parser) (any, error) {
 				return parseMemberOrNestedDeclaration(
@@ -1996,15 +2162,20 @@ func TestParseField(t *testing.T) {
 					"",
 				)
 			},
-			nil,
+			config,
 		)
 	}
 
-	t.Run("native", func(t *testing.T) {
+	t.Run("native, enabled", func(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := parse("native let foo: Int")
+		result, errs := parse(
+			"native let foo: Int",
+			Config{
+				NativeModifierEnabled: true,
+			},
+		)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -2033,11 +2204,33 @@ func TestParseField(t *testing.T) {
 		)
 	})
 
+	t.Run("native, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse("native let foo: Int", Config{})
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: identifier",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
 	t.Run("static", func(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := parse("static let foo: Int")
+		result, errs := parse(
+			"static let foo: Int",
+			Config{
+				StaticModifierEnabled: true,
+			},
+		)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -2066,11 +2259,37 @@ func TestParseField(t *testing.T) {
 		)
 	})
 
-	t.Run("static native", func(t *testing.T) {
+	t.Run("static, disabled", func(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := parse("static native let foo: Int")
+		_, errs := parse(
+			"static let foo: Int",
+			Config{},
+		)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: identifier",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("static native, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse(
+			"static native let foo: Int",
+			Config{
+				StaticModifierEnabled: true,
+				NativeModifierEnabled: true,
+			},
+		)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -2099,11 +2318,35 @@ func TestParseField(t *testing.T) {
 		)
 	})
 
-	t.Run("native static", func(t *testing.T) {
+	t.Run("static native, disabled", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := parse("native static let foo: Int")
+		_, errs := parse("static native let foo: Int", Config{})
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: identifier",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("native static, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse(
+			"native static let foo: Int",
+			Config{
+				StaticModifierEnabled: true,
+				NativeModifierEnabled: true,
+			},
+		)
+
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -2115,11 +2358,17 @@ func TestParseField(t *testing.T) {
 		)
 	})
 
-	t.Run("pub static native", func(t *testing.T) {
+	t.Run("pub static native, enabled", func(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := parse("pub static native let foo: Int")
+		result, errs := parse(
+			"pub static native let foo: Int",
+			Config{
+				StaticModifierEnabled: true,
+				NativeModifierEnabled: true,
+			},
+		)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -2146,6 +2395,23 @@ func TestParseField(t *testing.T) {
 				},
 			},
 			result,
+		)
+	})
+
+	t.Run("pub static native, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse("pub static native let foo: Int", Config{})
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: identifier",
+					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+				},
+			},
+			errs,
 		)
 	})
 
@@ -2697,11 +2963,17 @@ func TestParseEnumDeclaration(t *testing.T) {
 		)
 	})
 
-	t.Run("enum case with static modifier", func(t *testing.T) {
+	t.Run("enum case with static modifier, enabled", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseDeclarations(" enum E { static case e }")
+		_, errs := ParseDeclarations(
+			nil,
+			[]byte(" enum E { static case e }"),
+			Config{
+				StaticModifierEnabled: true,
+			},
+		)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -2713,7 +2985,45 @@ func TestParseEnumDeclaration(t *testing.T) {
 		)
 	})
 
-	t.Run("enum case with native modifier", func(t *testing.T) {
+	t.Run("enum case with static modifier, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" enum E { static case e }")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: identifier",
+					Pos:     ast.Position{Offset: 10, Line: 1, Column: 10},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("enum case with native modifier, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseDeclarations(
+			nil,
+			[]byte(" enum E { native case e }"),
+			Config{
+				NativeModifierEnabled: true,
+			},
+		)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid native modifier for enum case",
+					Pos:     ast.Position{Offset: 10, Line: 1, Column: 10},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("enum case with native modifier, disabled", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2721,7 +3031,7 @@ func TestParseEnumDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid native modifier for enum case",
+					Message: "unexpected token: identifier",
 					Pos:     ast.Position{Offset: 10, Line: 1, Column: 10},
 				},
 			},
@@ -3912,7 +4222,7 @@ func TestParseInvalidMember(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]error{
 			&SyntaxError{
-				Message: "unexpected identifier",
+				Message: "unexpected token: identifier",
 				Pos:     ast.Position{Offset: 35, Line: 3, Column: 12},
 			},
 		},
@@ -4371,11 +4681,17 @@ func TestParsePragmaNoArguments(t *testing.T) {
 		)
 	})
 
-	t.Run("static", func(t *testing.T) {
+	t.Run("static, enabled", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseDeclarations("static #foo")
+		_, errs := ParseDeclarations(
+			nil,
+			[]byte("static #foo"),
+			Config{
+				StaticModifierEnabled: true,
+			},
+		)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -4387,7 +4703,45 @@ func TestParsePragmaNoArguments(t *testing.T) {
 		)
 	})
 
-	t.Run("native", func(t *testing.T) {
+	t.Run("static, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("static #foo")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: identifier",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("native, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseDeclarations(
+			nil,
+			[]byte("native #foo"),
+			Config{
+				NativeModifierEnabled: true,
+			},
+		)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid native modifier for pragma",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("native, disabled", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -4395,7 +4749,7 @@ func TestParsePragmaNoArguments(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid native modifier for pragma",
+					Message: "unexpected token: identifier",
 					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
 				},
 			},
@@ -5528,7 +5882,32 @@ func TestParseInvalidImportWithModifier(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("static", func(t *testing.T) {
+	t.Run("static, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseDeclarations(
+			nil,
+			[]byte(`
+                static import x from 0x1
+	        `),
+			Config{
+				StaticModifierEnabled: true,
+			},
+		)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid static modifier for import",
+					Pos:     ast.Position{Offset: 17, Line: 2, Column: 16},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("static, disabled", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -5539,7 +5918,7 @@ func TestParseInvalidImportWithModifier(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid static modifier for import",
+					Message: "unexpected token: identifier",
 					Pos:     ast.Position{Offset: 13, Line: 2, Column: 12},
 				},
 			},
@@ -5547,7 +5926,32 @@ func TestParseInvalidImportWithModifier(t *testing.T) {
 		)
 	})
 
-	t.Run("native", func(t *testing.T) {
+	t.Run("native, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseDeclarations(
+			nil,
+			[]byte(`
+                native import x from 0x1
+	        `),
+			Config{
+				NativeModifierEnabled: true,
+			},
+		)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid native modifier for import",
+					Pos:     ast.Position{Offset: 17, Line: 2, Column: 16},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("native, disabled", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -5558,7 +5962,7 @@ func TestParseInvalidImportWithModifier(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid native modifier for import",
+					Message: "unexpected token: identifier",
 					Pos:     ast.Position{Offset: 13, Line: 2, Column: 12},
 				},
 			},
@@ -5571,7 +5975,32 @@ func TestParseInvalidEventWithModifier(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("static", func(t *testing.T) {
+	t.Run("static, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseDeclarations(
+			nil,
+			[]byte(`
+                static event Foo()
+	        `),
+			Config{
+				StaticModifierEnabled: true,
+			},
+		)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid static modifier for event",
+					Pos:     ast.Position{Offset: 17, Line: 2, Column: 16},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("static, disabled", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -5582,7 +6011,7 @@ func TestParseInvalidEventWithModifier(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid static modifier for event",
+					Message: "unexpected token: identifier",
 					Pos:     ast.Position{Offset: 13, Line: 2, Column: 12},
 				},
 			},
@@ -5590,7 +6019,32 @@ func TestParseInvalidEventWithModifier(t *testing.T) {
 		)
 	})
 
-	t.Run("native", func(t *testing.T) {
+	t.Run("native, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseDeclarations(
+			nil,
+			[]byte(`
+                native event Foo()
+	        `),
+			Config{
+				NativeModifierEnabled: true,
+			},
+		)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid native modifier for event",
+					Pos:     ast.Position{Offset: 17, Line: 2, Column: 16},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("native, disabled", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -5601,20 +6055,46 @@ func TestParseInvalidEventWithModifier(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid native modifier for event",
+					Message: "unexpected token: identifier",
 					Pos:     ast.Position{Offset: 13, Line: 2, Column: 12},
 				},
 			},
 			errs,
 		)
 	})
+
 }
 
-func TestParseCompositeWithPurity(t *testing.T) {
+func TestParseCompositeWithModifier(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("static", func(t *testing.T) {
+	t.Run("static, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseDeclarations(
+			nil,
+			[]byte(`
+                static struct Foo()
+	        `),
+			Config{
+				StaticModifierEnabled: true,
+			},
+		)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid static modifier for composite",
+					Pos:     ast.Position{Offset: 17, Line: 2, Column: 16},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("static, disabled", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -5625,7 +6105,7 @@ func TestParseCompositeWithPurity(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid static modifier for composite",
+					Message: "unexpected token: identifier",
 					Pos:     ast.Position{Offset: 13, Line: 2, Column: 12},
 				},
 			},
@@ -5633,7 +6113,32 @@ func TestParseCompositeWithPurity(t *testing.T) {
 		)
 	})
 
-	t.Run("native", func(t *testing.T) {
+	t.Run("native, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseDeclarations(
+			nil,
+			[]byte(`
+                native struct Foo()
+	        `),
+			Config{
+				NativeModifierEnabled: true,
+			},
+		)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid native modifier for composite",
+					Pos:     ast.Position{Offset: 17, Line: 2, Column: 16},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("native, disabled", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -5644,7 +6149,7 @@ func TestParseCompositeWithPurity(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid native modifier for composite",
+					Message: "unexpected token: identifier",
 					Pos:     ast.Position{Offset: 13, Line: 2, Column: 12},
 				},
 			},
@@ -5653,11 +6158,36 @@ func TestParseCompositeWithPurity(t *testing.T) {
 	})
 }
 
-func TestParseTransactionWithPurity(t *testing.T) {
+func TestParseTransactionWithModifier(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("static", func(t *testing.T) {
+	t.Run("static, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseDeclarations(
+			nil,
+			[]byte(`
+                static transaction {}
+	        `),
+			Config{
+				StaticModifierEnabled: true,
+			},
+		)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid static modifier for transaction",
+					Pos:     ast.Position{Offset: 17, Line: 2, Column: 16},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("static, disabled", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -5668,7 +6198,7 @@ func TestParseTransactionWithPurity(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid static modifier for transaction",
+					Message: "unexpected token: identifier",
 					Pos:     ast.Position{Offset: 13, Line: 2, Column: 12},
 				},
 			},
@@ -5676,7 +6206,32 @@ func TestParseTransactionWithPurity(t *testing.T) {
 		)
 	})
 
-	t.Run("native", func(t *testing.T) {
+	t.Run("native, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseDeclarations(
+			nil,
+			[]byte(`
+                native transaction {}
+	        `),
+			Config{
+				NativeModifierEnabled: true,
+			},
+		)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid native modifier for transaction",
+					Pos:     ast.Position{Offset: 17, Line: 2, Column: 16},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("native, disabled", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -5687,7 +6242,7 @@ func TestParseTransactionWithPurity(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid native modifier for transaction",
+					Message: "unexpected token: identifier",
 					Pos:     ast.Position{Offset: 13, Line: 2, Column: 12},
 				},
 			},

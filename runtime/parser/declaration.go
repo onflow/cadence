@@ -69,6 +69,9 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 	var staticPos *ast.Position
 	var nativePos *ast.Position
 
+	staticModifierEnabled := p.config.StaticModifierEnabled
+	nativeModifierEnabled := p.config.NativeModifierEnabled
+
 	for {
 		p.skipSpaceAndComments()
 
@@ -77,10 +80,10 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 			if access != ast.AccessNotSpecified {
 				return nil, NewSyntaxError(*accessPos, "invalid access modifier for pragma")
 			}
-			if staticPos != nil {
+			if staticModifierEnabled && staticPos != nil {
 				return nil, NewSyntaxError(*staticPos, "invalid static modifier for pragma")
 			}
-			if nativePos != nil {
+			if nativeModifierEnabled && nativePos != nil {
 				return nil, NewSyntaxError(*nativePos, "invalid native modifier for pragma")
 			}
 			return parsePragmaDeclaration(p)
@@ -88,10 +91,10 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 		case lexer.TokenIdentifier:
 			switch string(p.currentTokenSource()) {
 			case keywordLet, keywordVar:
-				if staticPos != nil {
+				if staticModifierEnabled && staticPos != nil {
 					return nil, NewSyntaxError(*staticPos, "invalid static modifier for variable")
 				}
-				if nativePos != nil {
+				if nativeModifierEnabled && nativePos != nil {
 					return nil, NewSyntaxError(*nativePos, "invalid native modifier for variable")
 				}
 				return parseVariableDeclaration(p, access, accessPos, docString)
@@ -108,28 +111,28 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 				)
 
 			case keywordImport:
-				if staticPos != nil {
+				if staticModifierEnabled && staticPos != nil {
 					return nil, NewSyntaxError(*staticPos, "invalid static modifier for import")
 				}
-				if nativePos != nil {
+				if nativeModifierEnabled && nativePos != nil {
 					return nil, NewSyntaxError(*nativePos, "invalid native modifier for import")
 				}
 				return parseImportDeclaration(p)
 
 			case keywordEvent:
-				if staticPos != nil {
+				if staticModifierEnabled && staticPos != nil {
 					return nil, NewSyntaxError(*staticPos, "invalid static modifier for event")
 				}
-				if nativePos != nil {
+				if nativeModifierEnabled && nativePos != nil {
 					return nil, NewSyntaxError(*nativePos, "invalid native modifier for event")
 				}
 				return parseEventDeclaration(p, access, accessPos, docString)
 
 			case keywordStruct, keywordResource, keywordContract, keywordEnum:
-				if staticPos != nil {
+				if staticModifierEnabled && staticPos != nil {
 					return nil, NewSyntaxError(*staticPos, "invalid static modifier for composite")
 				}
-				if nativePos != nil {
+				if nativeModifierEnabled && nativePos != nil {
 					return nil, NewSyntaxError(*nativePos, "invalid native modifier for composite")
 				}
 				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, docString)
@@ -138,10 +141,10 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 				if access != ast.AccessNotSpecified {
 					return nil, NewSyntaxError(*accessPos, "invalid access modifier for transaction")
 				}
-				if staticPos != nil {
+				if staticModifierEnabled && staticPos != nil {
 					return nil, NewSyntaxError(*staticPos, "invalid static modifier for transaction")
 				}
-				if nativePos != nil {
+				if nativeModifierEnabled && nativePos != nil {
 					return nil, NewSyntaxError(*nativePos, "invalid native modifier for transaction")
 				}
 				return parseTransactionDeclaration(p, docString)
@@ -150,10 +153,10 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 				if access != ast.AccessNotSpecified {
 					return nil, p.syntaxError("invalid second access modifier")
 				}
-				if staticPos != nil {
+				if staticModifierEnabled && staticPos != nil {
 					return nil, p.syntaxError("invalid access modifier after static modifier")
 				}
-				if nativePos != nil {
+				if nativeModifierEnabled && nativePos != nil {
 					return nil, p.syntaxError("invalid access modifier after native modifier")
 				}
 				pos := p.current.StartPos
@@ -167,10 +170,14 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 				continue
 
 			case keywordStatic:
+				if !staticModifierEnabled {
+					break
+				}
+
 				if staticPos != nil {
 					return nil, p.syntaxError("invalid second static modifier")
 				}
-				if nativePos != nil {
+				if nativeModifierEnabled && nativePos != nil {
 					return nil, p.syntaxError("invalid static modifier after native modifier")
 				}
 				pos := p.current.StartPos
@@ -179,6 +186,10 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 				continue
 
 			case keywordNative:
+				if !nativeModifierEnabled {
+					break
+				}
+
 				if nativePos != nil {
 					return nil, p.syntaxError("invalid second native modifier")
 				}
@@ -1096,15 +1107,19 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 
 	var previousIdentifierToken *lexer.Token
 
+	staticModifierEnabled := p.config.StaticModifierEnabled
+	nativeModifierEnabled := p.config.NativeModifierEnabled
+
 	for {
 		p.skipSpaceAndComments()
 
 		switch p.current.Type {
 		case lexer.TokenIdentifier:
+
 			if previousIdentifierToken != nil {
 				return nil, NewSyntaxError(
 					previousIdentifierToken.StartPos,
-					"unexpected %s",
+					"unexpected token: %s",
 					previousIdentifierToken.Type,
 				)
 			}
@@ -1121,10 +1136,10 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				)
 
 			case keywordCase:
-				if staticPos != nil {
+				if staticModifierEnabled && staticPos != nil {
 					return nil, NewSyntaxError(*staticPos, "invalid static modifier for enum case")
 				}
-				if nativePos != nil {
+				if nativeModifierEnabled && nativePos != nil {
 					return nil, NewSyntaxError(*nativePos, "invalid native modifier for enum case")
 				}
 				return parseEnumCase(p, access, accessPos, docString)
@@ -1141,19 +1156,19 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				)
 
 			case keywordEvent:
-				if staticPos != nil {
+				if staticModifierEnabled && staticPos != nil {
 					return nil, NewSyntaxError(*staticPos, "invalid static modifier for event")
 				}
-				if nativePos != nil {
+				if nativeModifierEnabled && nativePos != nil {
 					return nil, NewSyntaxError(*nativePos, "invalid native modifier for event")
 				}
 				return parseEventDeclaration(p, access, accessPos, docString)
 
 			case keywordStruct, keywordResource, keywordContract, keywordEnum:
-				if staticPos != nil {
+				if staticModifierEnabled && staticPos != nil {
 					return nil, NewSyntaxError(*staticPos, "invalid static modifier for composite")
 				}
-				if nativePos != nil {
+				if nativeModifierEnabled && nativePos != nil {
 					return nil, NewSyntaxError(*nativePos, "invalid native modifier for composite")
 				}
 				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, docString)
@@ -1162,10 +1177,10 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				if access != ast.AccessNotSpecified {
 					return nil, p.syntaxError("invalid second access modifier")
 				}
-				if staticPos != nil {
+				if staticModifierEnabled && staticPos != nil {
 					return nil, p.syntaxError("invalid access modifier after static modifier")
 				}
-				if nativePos != nil {
+				if nativeModifierEnabled && nativePos != nil {
 					return nil, p.syntaxError("invalid access modifier after native modifier")
 				}
 				pos := p.current.StartPos
@@ -1178,10 +1193,14 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				continue
 
 			case keywordStatic:
+				if !staticModifierEnabled {
+					break
+				}
+
 				if staticPos != nil {
 					return nil, p.syntaxError("invalid second static modifier")
 				}
-				if nativePos != nil {
+				if nativeModifierEnabled && nativePos != nil {
 					return nil, p.syntaxError("invalid static modifier after native modifier")
 				}
 				pos := p.current.StartPos
@@ -1190,6 +1209,10 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				continue
 
 			case keywordNative:
+				if !nativeModifierEnabled {
+					break
+				}
+
 				if nativePos != nil {
 					return nil, p.syntaxError("invalid second native modifier")
 				}
@@ -1197,14 +1220,13 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				nativePos = &pos
 				p.next()
 				continue
-
-			default:
-				t := p.current
-				previousIdentifierToken = &t
-				// Skip the identifier
-				p.next()
-				continue
 			}
+
+			t := p.current
+			previousIdentifierToken = &t
+			// Skip the identifier
+			p.next()
+			continue
 
 		case lexer.TokenColon:
 			if previousIdentifierToken == nil {
