@@ -111,17 +111,17 @@ The view of the block.
 It is a detail of the consensus algorithm. It is a monotonically increasing integer and counts rounds in the consensus algorithm. Since not all rounds result in a finalized block, the view number is strictly greater than or equal to the block height
 `
 
-const BlockTypeTimestampFieldName = "timestamp"
+const BlockTypeIDFieldName = "id"
 
-const blockTypeTimestampFieldDocString = `
+const blockTypeIDFieldDocString = `
 The ID of the block.
 
 It is essentially the hash of the block
 `
 
-const BlockTypeIDFieldName = "id"
+const BlockTypeTimestampFieldName = "timestamp"
 
-const blockTypeIDFieldDocString = `
+const blockTypeTimestampFieldDocString = `
 The timestamp of the block.
 
 Unix timestamp of when the proposer claims it constructed the block.
