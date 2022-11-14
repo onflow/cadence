@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -2841,7 +2842,7 @@ func TestParseConstantSizedSizedArrayWithTrailingUnderscoreSize(t *testing.T) {
 		[]error{
 			&InvalidIntegerLiteralError{
 				Literal:                   "0_",
-				IntegerLiteralKind:        IntegerLiteralKindDecimal,
+				IntegerLiteralKind:        common.IntegerLiteralKindDecimal,
 				InvalidIntegerLiteralKind: InvalidNumberLiteralKindTrailingUnderscore,
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 2, Column: 12, Offset: 13},

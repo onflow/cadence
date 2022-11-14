@@ -20,6 +20,8 @@ package common
 
 import (
 	"math/big"
+
+	"github.com/onflow/cadence/runtime/errors"
 )
 
 var bigIntSize = BigIntByteLength(new(big.Int))
@@ -46,11 +48,34 @@ const minBigIntLength = 4 * BigIntWordSize
 
 // OverEstimateBigIntFromString is an approximate inverse of `interpreter.OverEstimateBigIntStringLength`.
 // Returns the estimated size in bytes.
-func OverEstimateBigIntFromString(s string) int {
+func OverEstimateBigIntFromString(s string, literalKind IntegerLiteralKind) int {
 	l := len(s)
 
-	// Use 6804/2028 to over estimate log_2(10)
-	bitLen := (l*6804)>>11 + 1
+	// By definition: log_b(v) = log_2(v) / log_2(b)
+	// i.e: log_2(v) = log_b(v) * log_2(b)
+
+	// Each digit in base 'b' requires 'log_2(b)' number of digits to represent in binary.
+	// Therefore, to get the number of digits in base 'b', we could multiply by 'log_2(b)'.
+
+	var bitLen int
+	switch literalKind {
+	case IntegerLiteralKindBinary:
+		// Already in binary, hence 'bitLen' is same as length of the string. i.e: 'l'
+		// Also from: bitLen = l * log_2(2)
+		bitLen = l
+	case IntegerLiteralKindOctal:
+		// bitLen = l * log_2(8)
+		bitLen = l * 3
+	case IntegerLiteralKindDecimal:
+		// bitLen = l * log_2(10) + 1
+		// Use 6804/2028 to over estimate log_2(10)
+		bitLen = (l*6804)>>11 + 1
+	case IntegerLiteralKindHexadecimal:
+		// bitLen = l * log_2(16)
+		bitLen = l * 4
+	default:
+		panic(errors.NewUnreachableError())
+	}
 
 	// Calculate amount of bytes.
 	// First convert to word, and then find the size,
