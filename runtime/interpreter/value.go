@@ -15218,8 +15218,9 @@ func (v *CompositeValue) forEachAttachment(interpreter *Interpreter, locationRan
 		panic(errors.NewExternalError(err))
 	}
 
-	interpreter.SharedState.inAttachmentIteration[v] = struct{}{}
-	defer delete(interpreter.SharedState.inAttachmentIteration, v)
+	old_shared_state := interpreter.SharedState.inAttachmentIteration[v]
+	interpreter.SharedState.inAttachmentIteration[v] = true
+	defer func() { interpreter.SharedState.inAttachmentIteration[v] = old_shared_state }()
 
 	for {
 		key, value, err := iterator.Next()

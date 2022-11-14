@@ -413,7 +413,7 @@ func (interpreter *Interpreter) VisitRemoveStatement(removeStatement *ast.Remove
 		HasPosition: removeStatement,
 	}
 
-	if _, inIteration := interpreter.SharedState.inAttachmentIteration[base]; inIteration {
+	if inIteration := interpreter.SharedState.inAttachmentIteration[base]; inIteration {
 		panic(AttachmentIterationMutationError{
 			Value:         base,
 			LocationRange: locationRange,
