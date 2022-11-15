@@ -1,6 +1,6 @@
 package main
 
-// compare-parsing.py parses all programs in a CSV files with header location,code
+// Parses all programs in a CSV file with header location,code
 // using am old and new runtime/cmd/parse program.
 //
 // It reports already broken programs, programs that are broken with the new parser,
