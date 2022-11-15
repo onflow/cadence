@@ -1020,6 +1020,14 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 
 		switch p.current.Type {
 		case lexer.TokenIdentifier:
+			if previousIdentifierToken != nil {
+				return nil, NewSyntaxError(
+					previousIdentifierToken.StartPos,
+					"unexpected %s",
+					previousIdentifierToken.Type,
+				)
+			}
+
 			switch string(p.currentTokenSource()) {
 			case keywordLet, keywordVar:
 				return parseFieldWithVariableKind(p, access, accessPos, docString)
@@ -1051,10 +1059,6 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				continue
 
 			default:
-				if previousIdentifierToken != nil {
-					return nil, p.syntaxError("unexpected %s", p.current.Type)
-				}
-
 				t := p.current
 				previousIdentifierToken = &t
 				// Skip the identifier
