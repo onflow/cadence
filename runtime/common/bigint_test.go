@@ -33,7 +33,29 @@ func TestOverEstimateBigIntFromString_LowerBound(t *testing.T) {
 
 	t.Parallel()
 
-	require.Equal(t, 32, OverEstimateBigIntFromString("1", IntegerLiteralKindDecimal))
+	t.Run("base_10", func(t *testing.T) {
+		t.Parallel()
+
+		require.Equal(t, 8, OverEstimateBigIntFromString("1", IntegerLiteralKindDecimal))
+	})
+
+	t.Run("base_2", func(t *testing.T) {
+		t.Parallel()
+
+		require.Equal(t, 8, OverEstimateBigIntFromString("1", IntegerLiteralKindBinary))
+	})
+
+	t.Run("base_8", func(t *testing.T) {
+		t.Parallel()
+
+		require.Equal(t, 8, OverEstimateBigIntFromString("1", IntegerLiteralKindOctal))
+	})
+
+	t.Run("base_16", func(t *testing.T) {
+		t.Parallel()
+
+		require.Equal(t, 8, OverEstimateBigIntFromString("1", IntegerLiteralKindHexadecimal))
+	})
 }
 
 func TestOverEstimateBigIntFromString_OverEstimation(t *testing.T) {
@@ -199,4 +221,33 @@ func TestOverEstimateBigIntFromString_OverEstimation(t *testing.T) {
 			)
 		}
 	})
+}
+
+func TestOverEstimateBigIntFromStringWithLeadingZeros(t *testing.T) {
+
+	t.Parallel()
+
+	const literal = "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001"
+
+	test := func(literalKind IntegerLiteralKind) {
+		t.Run(fmt.Sprintf("base_%d", literalKind.Base()), func(tt *testing.T) {
+			tt.Parallel()
+
+			v, ok := new(big.Int).SetString(literal, literalKind.Base())
+			assert.True(tt, ok)
+
+			require.Equal(tt, 8, OverEstimateBigIntFromString(literal, literalKind))
+			require.Equal(tt, 8, BigIntByteLength(v))
+		})
+	}
+
+	for _, kind := range []IntegerLiteralKind{
+		IntegerLiteralKindBinary,
+		IntegerLiteralKindOctal,
+		IntegerLiteralKindDecimal,
+		IntegerLiteralKindHexadecimal,
+	} {
+		test(kind)
+	}
+
 }

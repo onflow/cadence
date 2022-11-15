@@ -44,18 +44,27 @@ func NewBigIntFromAbsoluteValue(gauge MemoryGauge, value *big.Int) *big.Int {
 	return new(big.Int).Abs(value)
 }
 
-const minBigIntLength = 4 * BigIntWordSize
+const bigIntWordBitSize = BigIntWordSize * 8
 
 // OverEstimateBigIntFromString is an approximate inverse of `interpreter.OverEstimateBigIntStringLength`.
 // Returns the estimated size in bytes.
 func OverEstimateBigIntFromString(s string, literalKind IntegerLiteralKind) int {
-	l := len(s)
+	leadingZeros := 0
+	for _, char := range s {
+		if char != '0' {
+			break
+		}
+		leadingZeros += 1
+	}
+
+	l := len(s) - leadingZeros
+
+	// An integer `v` requires `ceiling(log_b(v))` digits in base `b`,
+	// and `ceiling(log_2(v))` digits in base `2`.
 
 	// By definition: log_b(v) = log_2(v) / log_2(b)
 	// i.e: log_2(v) = log_b(v) * log_2(b)
-
-	// Each digit in base 'b' requires 'log_2(b)' number of digits to represent in binary.
-	// Therefore, to get the number of digits in base 'b', we could multiply by 'log_2(b)'.
+	// We can therefore overestimate `ceiling(log_2(v))` by `ceiling(log_b(v)) * ceiling(log_b(v))`.
 
 	var bitLen int
 	switch literalKind {
@@ -80,10 +89,11 @@ func OverEstimateBigIntFromString(s string, literalKind IntegerLiteralKind) int 
 	// Calculate amount of bytes.
 	// First convert to word, and then find the size,
 	// to be consistent with `common.BigIntByteLength`
-	wordLen := (bitLen + 63) / 64
-	result := wordLen * BigIntWordSize
-	if result < minBigIntLength {
-		return minBigIntLength
+	wordLen := (bitLen + bigIntWordBitSize - 1) / bigIntWordBitSize
+
+	if wordLen == 1 {
+		return BigIntWordSize
 	}
-	return result
+
+	return (wordLen + 4) * BigIntWordSize
 }
