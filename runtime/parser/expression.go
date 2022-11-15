@@ -1088,6 +1088,8 @@ func defineArrayExpression() {
 	setExprNullDenotation(
 		lexer.TokenBracketOpen,
 		func(p *parser, startToken lexer.Token) (ast.Expression, error) {
+			p.skipSpaceAndComments()
+
 			var values []ast.Expression
 			for !p.current.Is(lexer.TokenBracketClose) {
 				p.skipSpaceAndComments()
@@ -1127,6 +1129,8 @@ func defineDictionaryExpression() {
 	setExprNullDenotation(
 		lexer.TokenBraceOpen,
 		func(p *parser, startToken lexer.Token) (ast.Expression, error) {
+			p.skipSpaceAndComments()
+
 			var entries []ast.DictionaryEntry
 			for !p.current.Is(lexer.TokenBraceClose) {
 				p.skipSpaceAndComments()
