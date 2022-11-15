@@ -1877,7 +1877,7 @@ func TestExportTypeValue(t *testing.T) {
           pub struct S: SI {}
 
         `
-		program, err := parser.ParseProgram([]byte(code), nil)
+		program, err := parser.ParseProgram(nil, []byte(code), parser.Config{})
 		require.NoError(t, err)
 
 		checker, err := sema.NewChecker(
@@ -1975,7 +1975,7 @@ func TestExportCapabilityValue(t *testing.T) {
 		const code = `
           struct S {}
         `
-		program, err := parser.ParseProgram([]byte(code), nil)
+		program, err := parser.ParseProgram(nil, []byte(code), parser.Config{})
 		require.NoError(t, err)
 
 		checker, err := sema.NewChecker(
@@ -2095,7 +2095,7 @@ func TestExportLinkValue(t *testing.T) {
 		const code = `
           struct S {}
         `
-		program, err := parser.ParseProgram([]byte(code), nil)
+		program, err := parser.ParseProgram(nil, []byte(code), parser.Config{})
 		require.NoError(t, err)
 
 		checker, err := sema.NewChecker(

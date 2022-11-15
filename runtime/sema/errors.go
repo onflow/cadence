@@ -677,6 +677,40 @@ func (e *MissingAccessModifierError) EndPosition(common.MemoryGauge) ast.Positio
 	return e.Pos
 }
 
+// InvalidStaticModifierError
+
+type InvalidStaticModifierError struct {
+	ast.Range
+}
+
+var _ SemanticError = &InvalidStaticModifierError{}
+var _ errors.UserError = &InvalidStaticModifierError{}
+
+func (*InvalidStaticModifierError) isSemanticError() {}
+
+func (*InvalidStaticModifierError) IsUserError() {}
+
+func (e *InvalidStaticModifierError) Error() string {
+	return "invalid static modifier for declaration"
+}
+
+// InvalidNativeModifierError
+
+type InvalidNativeModifierError struct {
+	ast.Range
+}
+
+var _ SemanticError = &InvalidNativeModifierError{}
+var _ errors.UserError = &InvalidNativeModifierError{}
+
+func (*InvalidNativeModifierError) isSemanticError() {}
+
+func (*InvalidNativeModifierError) IsUserError() {}
+
+func (e *InvalidNativeModifierError) Error() string {
+	return "invalid native modifier for declaration"
+}
+
 // InvalidNameError
 
 type InvalidNameError struct {
