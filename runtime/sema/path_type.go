@@ -24,7 +24,6 @@ var PathType = &SimpleType{
 	QualifiedName:        "Path",
 	TypeID:               "Path",
 	tag:                  PathTypeTag,
-	IsInvalid:            false,
 	IsResource:           false,
 	Storable:             true,
 	Equatable:            true,

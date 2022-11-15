@@ -45,7 +45,6 @@ var StringType = &SimpleType{
 	QualifiedName:        "String",
 	TypeID:               "String",
 	tag:                  StringTypeTag,
-	IsInvalid:            false,
 	IsResource:           false,
 	Storable:             true,
 	Equatable:            true,
