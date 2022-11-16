@@ -815,8 +815,11 @@ func defineIdentifierExpression() {
 				), nil
 
 			case KeywordView:
+				p.skipSpaceAndComments()
+
 				// if `view` is followed by `fun`, then it denotes a view function expression
 				if p.isToken(p.current, lexer.TokenIdentifier, KeywordFun) {
+					// skip the `fun` keyword
 					p.nextSemanticToken()
 					return parseFunctionExpression(p, token, ast.FunctionPurityView)
 				}
