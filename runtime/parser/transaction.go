@@ -93,6 +93,8 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 				nil,
 				ast.FunctionPurityUnspecified,
 				nil,
+				nil,
+				nil,
 				identifier,
 			)
 			if err != nil {
@@ -229,7 +231,14 @@ func parseTransactionFields(p *parser) (fields []*ast.FieldDeclaration, err erro
 		case lexer.TokenIdentifier:
 			switch string(p.currentTokenSource()) {
 			case KeywordLet, KeywordVar:
-				field, err := parseFieldWithVariableKind(p, ast.AccessNotSpecified, nil, docString)
+				field, err := parseFieldWithVariableKind(
+					p,
+					ast.AccessNotSpecified,
+					nil,
+					nil,
+					nil,
+					docString,
+				)
 				if err != nil {
 					return nil, err
 				}
@@ -265,6 +274,8 @@ func parseTransactionExecute(p *parser) (*ast.SpecialFunctionDeclaration, error)
 			p.memoryGauge,
 			ast.AccessNotSpecified,
 			ast.FunctionPurityUnspecified,
+			false,
+			false,
 			identifier,
 			nil,
 			nil,

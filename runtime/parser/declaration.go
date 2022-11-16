@@ -70,6 +70,12 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 	purity := ast.FunctionPurityUnspecified
 	var purityPos *ast.Position
 
+	var staticPos *ast.Position
+	var nativePos *ast.Position
+
+	staticModifierEnabled := p.config.StaticModifierEnabled
+	nativeModifierEnabled := p.config.NativeModifierEnabled
+
 	for {
 		p.skipSpaceAndComments()
 
@@ -81,31 +87,73 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 			if access != ast.AccessNotSpecified {
 				return nil, NewSyntaxError(*accessPos, "invalid access modifier for pragma")
 			}
+			if staticModifierEnabled && staticPos != nil {
+				return nil, NewSyntaxError(*staticPos, "invalid static modifier for pragma")
+			}
+			if nativeModifierEnabled && nativePos != nil {
+				return nil, NewSyntaxError(*nativePos, "invalid native modifier for pragma")
+			}
 			return parsePragmaDeclaration(p)
+
 		case lexer.TokenIdentifier:
 			switch string(p.currentTokenSource()) {
+
 			case KeywordLet, KeywordVar:
+				if staticModifierEnabled && staticPos != nil {
+					return nil, NewSyntaxError(*staticPos, "invalid static modifier for variable")
+				}
+				if nativeModifierEnabled && nativePos != nil {
+					return nil, NewSyntaxError(*nativePos, "invalid native modifier for variable")
+				}
 				if purity != ast.FunctionPurityUnspecified {
 					return nil, NewSyntaxError(*purityPos, "invalid view modifier for variable")
 				}
 				return parseVariableDeclaration(p, access, accessPos, docString)
 
 			case KeywordFun:
-				return parseFunctionDeclaration(p, false, access, accessPos, purity, purityPos, docString)
+				return parseFunctionDeclaration(
+					p,
+					false,
+					access,
+					accessPos,
+					purity,
+					purityPos,
+					staticPos,
+					nativePos,
+					docString,
+				)
 
 			case KeywordImport:
+				if staticModifierEnabled && staticPos != nil {
+					return nil, NewSyntaxError(*staticPos, "invalid static modifier for import")
+				}
+				if nativeModifierEnabled && nativePos != nil {
+					return nil, NewSyntaxError(*nativePos, "invalid native modifier for import")
+				}
 				if purity != ast.FunctionPurityUnspecified {
 					return nil, NewSyntaxError(*purityPos, "invalid view modifier for import")
 				}
 				return parseImportDeclaration(p)
 
 			case KeywordEvent:
+				if staticModifierEnabled && staticPos != nil {
+					return nil, NewSyntaxError(*staticPos, "invalid static modifier for event")
+				}
+				if nativeModifierEnabled && nativePos != nil {
+					return nil, NewSyntaxError(*nativePos, "invalid native modifier for event")
+				}
 				if purity != ast.FunctionPurityUnspecified {
 					return nil, NewSyntaxError(*purityPos, "invalid view modifier for event")
 				}
 				return parseEventDeclaration(p, access, accessPos, docString)
 
 			case KeywordStruct, KeywordResource, KeywordContract, KeywordEnum:
+				if staticModifierEnabled && staticPos != nil {
+					return nil, NewSyntaxError(*staticPos, "invalid static modifier for composite")
+				}
+				if nativeModifierEnabled && nativePos != nil {
+					return nil, NewSyntaxError(*nativePos, "invalid native modifier for composite")
+				}
 				if purity != ast.FunctionPurityUnspecified {
 					return nil, NewSyntaxError(*purityPos, "invalid view modifier for composite")
 				}
@@ -114,6 +162,12 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 			case KeywordTransaction:
 				if access != ast.AccessNotSpecified {
 					return nil, NewSyntaxError(*accessPos, "invalid access modifier for transaction")
+				}
+				if staticModifierEnabled && staticPos != nil {
+					return nil, NewSyntaxError(*staticPos, "invalid static modifier for transaction")
+				}
+				if nativeModifierEnabled && nativePos != nil {
+					return nil, NewSyntaxError(*nativePos, "invalid native modifier for transaction")
 				}
 				if purity != ast.FunctionPurityUnspecified {
 					return nil, NewSyntaxError(*purityPos, "invalid view modifier for transaction")
@@ -135,6 +189,12 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 				if access != ast.AccessNotSpecified {
 					return nil, p.syntaxError("invalid second access modifier")
 				}
+				if staticModifierEnabled && staticPos != nil {
+					return nil, p.syntaxError("invalid access modifier after static modifier")
+				}
+				if nativeModifierEnabled && nativePos != nil {
+					return nil, p.syntaxError("invalid access modifier after native modifier")
+				}
 				pos := p.current.StartPos
 				accessPos = &pos
 				var err error
@@ -143,6 +203,35 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 					return nil, err
 				}
 
+				continue
+
+			case KeywordStatic:
+				if !staticModifierEnabled {
+					break
+				}
+
+				if staticPos != nil {
+					return nil, p.syntaxError("invalid second static modifier")
+				}
+				if nativeModifierEnabled && nativePos != nil {
+					return nil, p.syntaxError("invalid static modifier after native modifier")
+				}
+				pos := p.current.StartPos
+				staticPos = &pos
+				p.next()
+				continue
+
+			case KeywordNative:
+				if !nativeModifierEnabled {
+					break
+				}
+
+				if nativePos != nil {
+					return nil, p.syntaxError("invalid second native modifier")
+				}
+				pos := p.current.StartPos
+				nativePos = &pos
+				p.next()
 				continue
 			}
 		}
@@ -726,6 +815,8 @@ func parseEventDeclaration(
 			p.memoryGauge,
 			ast.AccessNotSpecified,
 			ast.FunctionPurityUnspecified,
+			false,
+			false,
 			ast.NewEmptyIdentifier(p.memoryGauge, ast.EmptyPosition),
 			parameterList,
 			nil,
@@ -791,13 +882,12 @@ func parseFieldWithVariableKind(
 	p *parser,
 	access ast.Access,
 	accessPos *ast.Position,
+	staticPos *ast.Position,
+	nativePos *ast.Position,
 	docString string,
 ) (*ast.FieldDeclaration, error) {
 
-	startPos := p.current.StartPos
-	if accessPos != nil {
-		startPos = *accessPos
-	}
+	startPos := ast.EarliestPosition(p.current.StartPos, accessPos, staticPos, nativePos)
 
 	var variableKind ast.VariableKind
 	switch string(p.currentTokenSource()) {
@@ -836,6 +926,8 @@ func parseFieldWithVariableKind(
 	return ast.NewFieldDeclaration(
 		p.memoryGauge,
 		access,
+		staticPos != nil,
+		nativePos != nil,
 		variableKind,
 		identifier,
 		typeAnnotation,
@@ -1049,38 +1141,88 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 	purity := ast.FunctionPurityUnspecified
 	var purityPos *ast.Position
 
+	var staticPos *ast.Position
+	var nativePos *ast.Position
+
 	var previousIdentifierToken *lexer.Token
+
+	staticModifierEnabled := p.config.StaticModifierEnabled
+	nativeModifierEnabled := p.config.NativeModifierEnabled
 
 	for {
 		p.skipSpaceAndComments()
 
 		switch p.current.Type {
 		case lexer.TokenIdentifier:
+
+			if previousIdentifierToken != nil {
+				return nil, NewSyntaxError(
+					previousIdentifierToken.StartPos,
+					"unexpected token: %s",
+					previousIdentifierToken.Type,
+				)
+			}
+
 			switch string(p.currentTokenSource()) {
 			case KeywordLet, KeywordVar:
 				if purity != ast.FunctionPurityUnspecified {
 					return nil, NewSyntaxError(*purityPos, "invalid view modifier for variable")
 				}
-				return parseFieldWithVariableKind(p, access, accessPos, docString)
+				return parseFieldWithVariableKind(
+					p,
+					access,
+					accessPos,
+					staticPos,
+					nativePos,
+					docString,
+				)
 
 			case KeywordCase:
 				if purity != ast.FunctionPurityUnspecified {
 					return nil, NewSyntaxError(*purityPos, "invalid view modifier for enum case")
 				}
+				if staticModifierEnabled && staticPos != nil {
+					return nil, NewSyntaxError(*staticPos, "invalid static modifier for enum case")
+				}
+				if nativeModifierEnabled && nativePos != nil {
+					return nil, NewSyntaxError(*nativePos, "invalid native modifier for enum case")
+				}
 				return parseEnumCase(p, access, accessPos, docString)
 
 			case KeywordFun:
-				return parseFunctionDeclaration(p, functionBlockIsOptional, access, accessPos, purity, purityPos, docString)
+				return parseFunctionDeclaration(
+					p,
+					functionBlockIsOptional,
+					access,
+					accessPos,
+					purity,
+					purityPos,
+					staticPos,
+					nativePos,
+					docString,
+				)
 
 			case KeywordEvent:
 				if purity != ast.FunctionPurityUnspecified {
 					return nil, NewSyntaxError(*purityPos, "invalid view modifier for event")
+				}
+				if staticModifierEnabled && staticPos != nil {
+					return nil, NewSyntaxError(*staticPos, "invalid static modifier for event")
+				}
+				if nativeModifierEnabled && nativePos != nil {
+					return nil, NewSyntaxError(*nativePos, "invalid native modifier for event")
 				}
 				return parseEventDeclaration(p, access, accessPos, docString)
 
 			case KeywordStruct, KeywordResource, KeywordContract, KeywordEnum:
 				if purity != ast.FunctionPurityUnspecified {
 					return nil, NewSyntaxError(*purityPos, "invalid view modifier for composite")
+				}
+				if staticModifierEnabled && staticPos != nil {
+					return nil, NewSyntaxError(*staticPos, "invalid static modifier for composite")
+				}
+				if nativeModifierEnabled && nativePos != nil {
+					return nil, NewSyntaxError(*nativePos, "invalid native modifier for composite")
 				}
 				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, docString)
 
@@ -1095,9 +1237,14 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 
 			case KeywordPriv, KeywordPub, KeywordAccess:
 				if access != ast.AccessNotSpecified {
-					return nil, p.syntaxError("unexpected access modifier")
+					return nil, p.syntaxError("invalid second access modifier")
 				}
-
+				if staticModifierEnabled && staticPos != nil {
+					return nil, p.syntaxError("invalid access modifier after static modifier")
+				}
+				if nativeModifierEnabled && nativePos != nil {
+					return nil, p.syntaxError("invalid access modifier after native modifier")
+				}
 				pos := p.current.StartPos
 				accessPos = &pos
 				var err error
@@ -1107,17 +1254,41 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				}
 				continue
 
-			default:
-				if previousIdentifierToken != nil {
-					return nil, p.syntaxError("unexpected %s", p.current.Type)
+			case KeywordStatic:
+				if !staticModifierEnabled {
+					break
 				}
 
-				t := p.current
-				previousIdentifierToken = &t
-				// Skip the identifier
+				if staticPos != nil {
+					return nil, p.syntaxError("invalid second static modifier")
+				}
+				if nativeModifierEnabled && nativePos != nil {
+					return nil, p.syntaxError("invalid static modifier after native modifier")
+				}
+				pos := p.current.StartPos
+				staticPos = &pos
+				p.next()
+				continue
+
+			case KeywordNative:
+				if !nativeModifierEnabled {
+					break
+				}
+
+				if nativePos != nil {
+					return nil, p.syntaxError("invalid second native modifier")
+				}
+				pos := p.current.StartPos
+				nativePos = &pos
 				p.next()
 				continue
 			}
+
+			t := p.current
+			previousIdentifierToken = &t
+			// Skip the identifier
+			p.next()
+			continue
 
 		case lexer.TokenColon:
 			if previousIdentifierToken == nil {
@@ -1127,7 +1298,15 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				return nil, NewSyntaxError(*purityPos, "invalid view modifier for variable")
 			}
 			identifier := p.tokenToIdentifier(*previousIdentifierToken)
-			return parseFieldDeclarationWithoutVariableKind(p, access, accessPos, identifier, docString)
+			return parseFieldDeclarationWithoutVariableKind(
+				p,
+				access,
+				accessPos,
+				staticPos,
+				nativePos,
+				identifier,
+				docString,
+			)
 
 		case lexer.TokenParenOpen:
 			if previousIdentifierToken == nil {
@@ -1135,7 +1314,17 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 			}
 
 			identifier := p.tokenToIdentifier(*previousIdentifierToken)
-			return parseSpecialFunctionDeclaration(p, functionBlockIsOptional, access, accessPos, purity, purityPos, identifier)
+			return parseSpecialFunctionDeclaration(
+				p,
+				functionBlockIsOptional,
+				access,
+				accessPos,
+				purity,
+				purityPos,
+				staticPos,
+				nativePos,
+				identifier,
+			)
 		}
 
 		return nil, nil
@@ -1146,14 +1335,13 @@ func parseFieldDeclarationWithoutVariableKind(
 	p *parser,
 	access ast.Access,
 	accessPos *ast.Position,
+	staticPos *ast.Position,
+	nativePos *ast.Position,
 	identifier ast.Identifier,
 	docString string,
 ) (*ast.FieldDeclaration, error) {
 
-	startPos := identifier.Pos
-	if accessPos != nil {
-		startPos = *accessPos
-	}
+	startPos := ast.EarliestPosition(identifier.Pos, accessPos, staticPos, nativePos)
 
 	_, err := p.mustOne(lexer.TokenColon)
 	if err != nil {
@@ -1170,6 +1358,8 @@ func parseFieldDeclarationWithoutVariableKind(
 	return ast.NewFieldDeclaration(
 		p.memoryGauge,
 		access,
+		staticPos != nil,
+		nativePos != nil,
 		ast.VariableKindNotSpecified,
 		identifier,
 		typeAnnotation,
@@ -1189,10 +1379,12 @@ func parseSpecialFunctionDeclaration(
 	accessPos *ast.Position,
 	purity ast.FunctionPurity,
 	purityPos *ast.Position,
+	staticPos *ast.Position,
+	nativePos *ast.Position,
 	identifier ast.Identifier,
 ) (*ast.SpecialFunctionDeclaration, error) {
 
-	startPos := *ast.EarlierPosition(ast.EarlierPosition(purityPos, accessPos), &identifier.Pos)
+	startPos := ast.EarliestPosition(identifier.Pos, accessPos, purityPos, staticPos, nativePos)
 
 	// TODO: switch to parseFunctionParameterListAndRest once old parser is deprecated:
 	//   allow a return type annotation while parsing, but reject later.
@@ -1237,6 +1429,8 @@ func parseSpecialFunctionDeclaration(
 			p.memoryGauge,
 			access,
 			purity,
+			staticPos != nil,
+			nativePos != nil,
 			identifier,
 			parameterList,
 			nil,

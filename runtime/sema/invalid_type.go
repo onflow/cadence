@@ -26,7 +26,6 @@ var InvalidType = &SimpleType{
 	QualifiedName:        "<<invalid>>",
 	TypeID:               "<<invalid>>",
 	tag:                  InvalidTypeTag,
-	IsInvalid:            true,
 	IsResource:           false,
 	Storable:             false,
 	Equatable:            false,
