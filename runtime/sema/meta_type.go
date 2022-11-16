@@ -35,15 +35,15 @@ const MetaTypeName = "Type"
 
 // MetaType represents the type of a type.
 var MetaType = &SimpleType{
-	Name:                 MetaTypeName,
-	QualifiedName:        MetaTypeName,
-	TypeID:               MetaTypeName,
-	tag:                  MetaTypeTag,
-	IsResource:           false,
-	Storable:             true,
-	Equatable:            true,
-	ExternallyReturnable: true,
-	Importable:           true,
+	Name:          MetaTypeName,
+	QualifiedName: MetaTypeName,
+	TypeID:        MetaTypeName,
+	tag:           MetaTypeTag,
+	IsResource:    false,
+	Storable:      true,
+	Equatable:     true,
+	Exportable:    true,
+	Importable:    true,
 }
 
 var MetaTypeIsSubtypeFunctionType = &FunctionType{

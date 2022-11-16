@@ -73,11 +73,7 @@ func TestExportValue(t *testing.T) {
 
 			if tt.invalid {
 				RequireError(t, err)
-				if tt.expected == nil {
-					assertInternalError(t, err)
-				} else {
-					assertUserError(t, err)
-				}
+				assertUserError(t, err)
 			} else {
 				require.NoError(t, err)
 				assert.Equal(t, tt.expected, actual)
@@ -494,11 +490,32 @@ func TestExportValue(t *testing.T) {
 					interpreter.AddressValue{},
 					interpreter.NewUnmeteredStringValue("C"),
 					interpreter.NewArrayValue(
-						newTestInterpreter(t),
+						inter,
 						interpreter.EmptyLocationRange,
 						interpreter.ByteArrayStaticType,
 						common.Address{},
 					),
+				)
+			},
+			invalid: true,
+		},
+		{
+			label: "Block (invalid)",
+			valueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
+				blockIDStaticType :=
+					interpreter.ConvertSemaToStaticType(nil, sema.BlockTypeIDFieldType).(interpreter.ArrayStaticType)
+
+				return interpreter.NewBlockValue(
+					inter,
+					interpreter.NewUnmeteredUInt64Value(1),
+					interpreter.NewUnmeteredUInt64Value(2),
+					interpreter.NewArrayValue(
+						inter,
+						interpreter.EmptyLocationRange,
+						blockIDStaticType,
+						common.Address{},
+					),
+					interpreter.NewUnmeteredUFix64ValueWithInteger(1),
 				)
 			},
 			invalid: true,
@@ -538,11 +555,7 @@ func TestImportValue(t *testing.T) {
 
 			if tt.expected == nil {
 				RequireError(t, err)
-				if _, ok := tt.value.(cadence.Link); ok {
-					assertInternalError(t, err)
-				} else {
-					assertUserError(t, err)
-				}
+				assertUserError(t, err)
 			} else {
 				require.NoError(t, err)
 				AssertValuesEqual(t, inter, tt.expected, actual)
@@ -814,6 +827,11 @@ func TestImportValue(t *testing.T) {
 			expected: nil,
 		},
 		{
+			label:    "Function (invalid)",
+			value:    cadence.Function{},
+			expected: nil,
+		},
+		{
 			label:    "Type<Int>()",
 			value:    cadence.NewTypeValue(cadence.IntType{}),
 			expected: interpreter.TypeValue{Type: interpreter.PrimitiveStaticTypeInt},
@@ -827,14 +845,6 @@ func assertUserError(t *testing.T, err error) {
 	require.True(t,
 		errors.IsUserError(err),
 		"Expected `UserError`, found `%T`",
-		err,
-	)
-}
-
-func assertInternalError(t *testing.T, err error) {
-	require.True(t,
-		errors.IsInternalError(err),
-		"Expected `InternalError`, found `%T`",
 		err,
 	)
 }

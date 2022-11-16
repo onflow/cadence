@@ -20,13 +20,13 @@ package sema
 
 // BoolType represents the boolean type
 var BoolType = &SimpleType{
-	Name:                 "Bool",
-	QualifiedName:        "Bool",
-	TypeID:               "Bool",
-	tag:                  BoolTypeTag,
-	IsResource:           false,
-	Storable:             true,
-	Equatable:            true,
-	ExternallyReturnable: true,
-	Importable:           true,
+	Name:          "Bool",
+	QualifiedName: "Bool",
+	TypeID:        "Bool",
+	tag:           BoolTypeTag,
+	IsResource:    false,
+	Storable:      true,
+	Equatable:     true,
+	Exportable:    true,
+	Importable:    true,
 }
