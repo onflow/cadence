@@ -29,7 +29,6 @@ var DeployedContractType = &SimpleType{
 	QualifiedName:        "DeployedContract",
 	TypeID:               "DeployedContract",
 	tag:                  DeployedContractTypeTag,
-	IsInvalid:            false,
 	IsResource:           false,
 	Storable:             false,
 	Equatable:            false,

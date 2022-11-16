@@ -62,7 +62,7 @@ var TestContractLocation = common.IdentifierLocation(testContractTypeName)
 
 var TestContractChecker = func() *sema.Checker {
 
-	program, err := parser.ParseProgram(contracts.TestContract, nil)
+	program, err := parser.ParseProgram(nil, contracts.TestContract, parser.Config{})
 	if err != nil {
 		panic(err)
 	}

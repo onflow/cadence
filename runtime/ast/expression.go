@@ -1395,6 +1395,8 @@ var functionExpressionEmptyBlockDoc prettier.Doc = prettier.Text(" {}")
 func FunctionDocument(
 	access Access,
 	purity FunctionPurity,
+	isStatic bool,
+	isNative bool,
 	includeKeyword bool,
 	identifier string,
 	parameterList *ParameterList,
@@ -1434,6 +1436,22 @@ func FunctionDocument(
 		doc = append(
 			doc,
 			prettier.Text(purity.Keyword()),
+			prettier.Space,
+		)
+	}
+
+	if isStatic {
+		doc = append(
+			doc,
+			staticKeywordDoc,
+			prettier.Space,
+		)
+	}
+
+	if isNative {
+		doc = append(
+			doc,
+			nativeKeywordDoc,
 			prettier.Space,
 		)
 	}
@@ -1478,6 +1496,8 @@ func (e *FunctionExpression) Doc() prettier.Doc {
 	return FunctionDocument(
 		AccessNotSpecified,
 		e.Purity,
+		false,
+		false,
 		true,
 		"",
 		e.ParameterList,
