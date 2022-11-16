@@ -413,10 +413,7 @@ func TestParseParameterList(t *testing.T) {
 							},
 							StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
 						},
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-							EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
-						},
+						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
 					},
 				},
 				Range: ast.Range{
@@ -454,10 +451,7 @@ func TestParseParameterList(t *testing.T) {
 							},
 							StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
 						},
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-							EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
-						},
+						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
 					},
 				},
 				Range: ast.Range{
@@ -495,10 +489,7 @@ func TestParseParameterList(t *testing.T) {
 							},
 							StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
 						},
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-							EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
-						},
+						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
 					},
 					{
 						Label: "",
@@ -516,10 +507,7 @@ func TestParseParameterList(t *testing.T) {
 							},
 							StartPos: ast.Position{Line: 1, Column: 18, Offset: 18},
 						},
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 14, Offset: 14},
-							EndPos:   ast.Position{Line: 1, Column: 20, Offset: 20},
-						},
+						StartPos: ast.Position{Line: 1, Column: 14, Offset: 14},
 					},
 				},
 				Range: ast.Range{
@@ -2009,10 +1997,7 @@ func TestParseEvent(t *testing.T) {
 													},
 													StartPos: ast.Position{Offset: 21, Line: 1, Column: 21},
 												},
-												Range: ast.Range{
-													StartPos: ast.Position{Offset: 17, Line: 1, Column: 17},
-													EndPos:   ast.Position{Offset: 23, Line: 1, Column: 23},
-												},
+												StartPos: ast.Position{Offset: 17, Line: 1, Column: 17},
 											},
 											{
 												Label: "",
@@ -2030,10 +2015,7 @@ func TestParseEvent(t *testing.T) {
 													},
 													StartPos: ast.Position{Offset: 31, Line: 1, Column: 31},
 												},
-												Range: ast.Range{
-													StartPos: ast.Position{Offset: 27, Line: 1, Column: 27},
-													EndPos:   ast.Position{Offset: 36, Line: 1, Column: 36},
-												},
+												StartPos: ast.Position{Offset: 27, Line: 1, Column: 27},
 											},
 										},
 										Range: ast.Range{
@@ -2560,10 +2542,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 													},
 													StartPos: ast.Position{Offset: 86, Line: 5, Column: 24},
 												},
-												Range: ast.Range{
-													StartPos: ast.Position{Offset: 81, Line: 5, Column: 19},
-													EndPos:   ast.Position{Offset: 88, Line: 5, Column: 26},
-												},
+												StartPos: ast.Position{Offset: 81, Line: 5, Column: 19},
 											},
 										},
 										Range: ast.Range{
@@ -2806,10 +2785,7 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 													},
 													StartPos: ast.Position{Offset: 96, Line: 5, Column: 24},
 												},
-												Range: ast.Range{
-													StartPos: ast.Position{Offset: 91, Line: 5, Column: 19},
-													EndPos:   ast.Position{Offset: 98, Line: 5, Column: 26},
-												},
+												StartPos: ast.Position{Offset: 91, Line: 5, Column: 19},
 											},
 										},
 										Range: ast.Range{
@@ -3180,10 +3156,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 											},
 											StartPos: ast.Position{Offset: 60, Line: 6, Column: 22},
 										},
-										Range: ast.Range{
-											StartPos: ast.Position{Offset: 52, Line: 6, Column: 14},
-											EndPos:   ast.Position{Offset: 70, Line: 6, Column: 32},
-										},
+										StartPos: ast.Position{Offset: 52, Line: 6, Column: 14},
 									},
 								},
 								Range: ast.Range{
@@ -3376,10 +3349,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 											},
 											StartPos: ast.Position{Offset: 60, Line: 6, Column: 22},
 										},
-										Range: ast.Range{
-											StartPos: ast.Position{Offset: 52, Line: 6, Column: 14},
-											EndPos:   ast.Position{Offset: 70, Line: 6, Column: 32},
-										},
+										StartPos: ast.Position{Offset: 52, Line: 6, Column: 14},
 									},
 								},
 								Range: ast.Range{
@@ -3616,10 +3586,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 											},
 											StartPos: ast.Position{Offset: 60, Line: 6, Column: 22},
 										},
-										Range: ast.Range{
-											StartPos: ast.Position{Offset: 52, Line: 6, Column: 14},
-											EndPos:   ast.Position{Offset: 70, Line: 6, Column: 32},
-										},
+										StartPos: ast.Position{Offset: 52, Line: 6, Column: 14},
 									},
 								},
 								Range: ast.Range{
@@ -3868,10 +3835,7 @@ func TestParseFunctionParameterWithoutLabel(t *testing.T) {
 								},
 								StartPos: ast.Position{Offset: 18, Line: 2, Column: 17},
 							},
-							Range: ast.Range{
-								StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
-								EndPos:   ast.Position{Offset: 20, Line: 2, Column: 19},
-							},
+							StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
 						},
 					},
 					Range: ast.Range{
@@ -3938,10 +3902,7 @@ func TestParseFunctionParameterWithLabel(t *testing.T) {
 								},
 								StartPos: ast.Position{Offset: 20, Line: 2, Column: 19},
 							},
-							Range: ast.Range{
-								StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
-								EndPos:   ast.Position{Offset: 22, Line: 2, Column: 21},
-							},
+							StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
 						},
 					},
 					Range: ast.Range{
@@ -4050,10 +4011,7 @@ func TestParseStructure(t *testing.T) {
 												},
 												StartPos: ast.Position{Offset: 80, Line: 5, Column: 22},
 											},
-											Range: ast.Range{
-												StartPos: ast.Position{Offset: 75, Line: 5, Column: 17},
-												EndPos:   ast.Position{Offset: 82, Line: 5, Column: 24},
-											},
+											StartPos: ast.Position{Offset: 75, Line: 5, Column: 17},
 										},
 									},
 									Range: ast.Range{
@@ -4276,10 +4234,7 @@ func TestParsePreAndPostConditions(t *testing.T) {
 								},
 								StartPos: ast.Position{Offset: 21, Line: 2, Column: 20},
 							},
-							Range: ast.Range{
-								StartPos: ast.Position{Offset: 18, Line: 2, Column: 17},
-								EndPos:   ast.Position{Offset: 23, Line: 2, Column: 22},
-							},
+							StartPos: ast.Position{Offset: 18, Line: 2, Column: 17},
 						},
 					},
 					Range: ast.Range{
@@ -4436,10 +4391,7 @@ func TestParseConditionMessage(t *testing.T) {
 								},
 								StartPos: ast.Position{Offset: 21, Line: 2, Column: 20},
 							},
-							Range: ast.Range{
-								StartPos: ast.Position{Offset: 18, Line: 2, Column: 17},
-								EndPos:   ast.Position{Offset: 23, Line: 2, Column: 22},
-							},
+							StartPos: ast.Position{Offset: 18, Line: 2, Column: 17},
 						},
 					},
 					Range: ast.Range{
@@ -4596,10 +4548,7 @@ func TestParseInterface(t *testing.T) {
 											},
 											StartPos: ast.Position{Offset: 89, Line: 5, Column: 26},
 										},
-										Range: ast.Range{
-											StartPos: ast.Position{Offset: 84, Line: 5, Column: 21},
-											EndPos:   ast.Position{Offset: 91, Line: 5, Column: 28},
-										},
+										StartPos: ast.Position{Offset: 84, Line: 5, Column: 21},
 									},
 								},
 								Range: ast.Range{
@@ -5074,10 +5023,7 @@ func TestParseEventDeclaration(t *testing.T) {
 												},
 												StartPos: ast.Position{Offset: 28, Line: 2, Column: 27},
 											},
-											Range: ast.Range{
-												StartPos: ast.Position{Offset: 24, Line: 2, Column: 23},
-												EndPos:   ast.Position{Offset: 34, Line: 2, Column: 33},
-											},
+											StartPos: ast.Position{Offset: 24, Line: 2, Column: 23},
 										},
 										{
 											Label: "",
@@ -5095,10 +5041,7 @@ func TestParseEventDeclaration(t *testing.T) {
 												},
 												StartPos: ast.Position{Offset: 43, Line: 2, Column: 42},
 											},
-											Range: ast.Range{
-												StartPos: ast.Position{Offset: 37, Line: 2, Column: 36},
-												EndPos:   ast.Position{Offset: 49, Line: 2, Column: 48},
-											},
+											StartPos: ast.Position{Offset: 37, Line: 2, Column: 36},
 										},
 									},
 									Range: ast.Range{
@@ -5347,10 +5290,7 @@ func TestParseResourceParameterType(t *testing.T) {
 								},
 								StartPos: ast.Position{Offset: 21, Line: 2, Column: 20},
 							},
-							Range: ast.Range{
-								StartPos: ast.Position{Offset: 18, Line: 2, Column: 17},
-								EndPos:   ast.Position{Offset: 22, Line: 2, Column: 21},
-							},
+							StartPos: ast.Position{Offset: 18, Line: 2, Column: 17},
 						},
 					},
 					Range: ast.Range{
@@ -5593,10 +5533,7 @@ func TestParseCompositeDeclarationWithSemicolonSeparatedMembers(t *testing.T) {
 												},
 												StartPos: ast.Position{Offset: 47, Line: 2, Column: 46},
 											},
-											Range: ast.Range{
-												StartPos: ast.Position{Offset: 43, Line: 2, Column: 42},
-												EndPos:   ast.Position{Offset: 49, Line: 2, Column: 48},
-											},
+											StartPos: ast.Position{Offset: 43, Line: 2, Column: 42},
 										},
 									},
 									Range: ast.Range{

@@ -1355,10 +1355,7 @@ func TestParseParametersAndArrayTypes(t *testing.T) {
 								},
 								StartPos: ast.Position{Offset: 19, Line: 2, Column: 18},
 							},
-							Range: ast.Range{
-								StartPos: ast.Position{Offset: 16, Line: 2, Column: 15},
-								EndPos:   ast.Position{Offset: 23, Line: 2, Column: 22},
-							},
+							StartPos: ast.Position{Offset: 16, Line: 2, Column: 15},
 						},
 						{
 							Identifier: ast.Identifier{
@@ -1390,10 +1387,7 @@ func TestParseParametersAndArrayTypes(t *testing.T) {
 								},
 								StartPos: ast.Position{Offset: 29, Line: 2, Column: 28},
 							},
-							Range: ast.Range{
-								StartPos: ast.Position{Offset: 26, Line: 2, Column: 25},
-								EndPos:   ast.Position{Offset: 38, Line: 2, Column: 37},
-							},
+							StartPos: ast.Position{Offset: 26, Line: 2, Column: 25},
 						},
 						{
 							Identifier: ast.Identifier{
@@ -1431,10 +1425,7 @@ func TestParseParametersAndArrayTypes(t *testing.T) {
 								},
 								StartPos: ast.Position{Offset: 44, Line: 2, Column: 43},
 							},
-							Range: ast.Range{
-								StartPos: ast.Position{Offset: 41, Line: 2, Column: 40},
-								EndPos:   ast.Position{Offset: 55, Line: 2, Column: 54},
-							},
+							StartPos: ast.Position{Offset: 41, Line: 2, Column: 40},
 						},
 					},
 					Range: ast.Range{
