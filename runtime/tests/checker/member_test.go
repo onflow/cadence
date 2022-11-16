@@ -273,11 +273,9 @@ func TestCheckFunctionTypeReceiverType(t *testing.T) {
 
 		assert.Equal(t,
 			&sema.FunctionType{
-				Purity:     sema.FunctionPurityImpure,
-				Parameters: []*sema.Parameter{},
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(
-					sema.VoidType,
-				),
+				Purity:               sema.FunctionPurityImpure,
+				Parameters:           []*sema.Parameter{},
+				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 			},
 			RequireGlobalValue(t, checker.Elaboration, "f"),
 		)

@@ -31,3 +31,5 @@ var NeverType = &SimpleType{
 	ExternallyReturnable: false,
 	Importable:           false,
 }
+
+var NeverTypeAnnotation = NewTypeAnnotation(NeverType)

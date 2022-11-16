@@ -31,11 +31,11 @@ NOTE: The use of this function is unsafe if not used correctly.
 Follow best practices to prevent security issues when using this function
 `
 
-var unsafeRandomFunctionType = &sema.FunctionType{
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		sema.UInt64Type,
-	),
-}
+var unsafeRandomFunctionType = sema.NewSimpleFunctionType(
+	sema.FunctionPurityImpure,
+	nil,
+	sema.UInt64TypeAnnotation,
+)
 
 type UnsafeRandomGenerator interface {
 	// UnsafeRandom returns a random uint64,

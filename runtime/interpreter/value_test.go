@@ -3717,14 +3717,15 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 
 		t.Parallel()
 
-		functionType := &sema.FunctionType{
-			Parameters: []*sema.Parameter{
+		functionType := sema.NewSimpleFunctionType(
+			sema.FunctionPurityImpure,
+			[]*sema.Parameter{
 				{
-					TypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
+					TypeAnnotation: sema.IntTypeAnnotation,
 				},
 			},
-			ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.BoolType),
-		}
+			sema.BoolTypeAnnotation,
+		)
 
 		for name, f := range map[string]Value{
 			"InterpretedFunctionValue": &InterpretedFunctionValue{

@@ -31,3 +31,5 @@ var BoolType = &SimpleType{
 	ExternallyReturnable: true,
 	Importable:           true,
 }
+
+var BoolTypeAnnotation = NewTypeAnnotation(BoolType)

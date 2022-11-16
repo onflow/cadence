@@ -54,7 +54,7 @@ const transactionArgsFieldName = "arguments"
 
 const accountAddressFieldName = "address"
 
-const matcherTestFunctionName = "test"
+const matcherTestFieldName = "test"
 
 const addressesFieldName = "addresses"
 
@@ -103,7 +103,7 @@ func NewTestContract(
 ) {
 	value, err := inter.InvokeFunctionValue(
 		constructor,
-		[]interpreter.Value{},
+		nil,
 		testContractInitializerTypes,
 		testContractInitializerTypes,
 		invocationRange,
@@ -186,7 +186,7 @@ var matcherType = func() *sema.CompositeType {
 	return compositeType
 }()
 
-var matcherTestFunctionType = compositeFunctionType(matcherType, matcherTestFunctionName)
+var matcherTestFieldType = compositeFunctionType(matcherType, matcherTestFieldName)
 
 func compositeFunctionType(parent *sema.CompositeType, funcName string) *sema.FunctionType {
 	testFunc, ok := parent.Members.Get(funcName)
@@ -324,24 +324,19 @@ Fails the test-case if the given condition is false, and reports a message which
 const testAssertFunctionName = "assert"
 
 var testAssertFunctionType = &sema.FunctionType{
+	Purity: sema.FunctionPurityView,
 	Parameters: []*sema.Parameter{
 		{
-			Label:      sema.ArgumentLabelNotRequired,
-			Identifier: "condition",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.BoolType,
-			),
+			Label:          sema.ArgumentLabelNotRequired,
+			Identifier:     "condition",
+			TypeAnnotation: sema.BoolTypeAnnotation,
 		},
 		{
-			Identifier: "message",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.StringType,
-			),
+			Identifier:     "message",
+			TypeAnnotation: sema.StringTypeAnnotation,
 		},
 	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		sema.VoidType,
-	),
+	ReturnTypeAnnotation:  sema.VoidTypeAnnotation,
 	RequiredArgumentCount: sema.RequiredArgumentCount(1),
 }
 
@@ -382,17 +377,14 @@ Fails the test-case with a message.
 const testFailFunctionName = "fail"
 
 var testFailFunctionType = &sema.FunctionType{
+	Purity: sema.FunctionPurityView,
 	Parameters: []*sema.Parameter{
 		{
-			Identifier: "message",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.StringType,
-			),
+			Identifier:     "message",
+			TypeAnnotation: sema.StringTypeAnnotation,
 		},
 	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		sema.VoidType,
-	),
+	ReturnTypeAnnotation:  sema.VoidTypeAnnotation,
 	RequiredArgumentCount: sema.RequiredArgumentCount(0),
 }
 
@@ -424,6 +416,10 @@ Expect function tests a value against a matcher, and fails the test if it's not 
 const testExpectFunctionName = "expect"
 
 var testExpectFunctionType = &sema.FunctionType{
+	Purity: matcherTestFunctionType.Purity,
+	TypeParameters: []*sema.TypeParameter{
+		typeParameter,
+	},
 	Parameters: []*sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
@@ -440,12 +436,7 @@ var testExpectFunctionType = &sema.FunctionType{
 			TypeAnnotation: sema.NewTypeAnnotation(matcherType),
 		},
 	},
-	TypeParameters: []*sema.TypeParameter{
-		typeParameter,
-	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		sema.VoidType,
-	),
+	ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 }
 
 var testExpectFunction = interpreter.NewUnmeteredHostFunctionValue(
@@ -485,14 +476,14 @@ func invokeMatcherTest(
 	testFunc := matcher.GetMember(
 		inter,
 		locationRange,
-		matcherTestFunctionName,
+		matcherTestFieldName,
 	)
 
 	funcValue, ok := testFunc.(interpreter.FunctionValue)
 	if !ok {
 		panic(errors.NewUnexpectedError(
-			"invalid type for '%s'. expected function",
-			matcherTestFunctionName,
+			"invalid value type for field '%s'. expected function value",
+			matcherTestFieldName,
 		))
 	}
 
@@ -526,20 +517,17 @@ Read a local file, and return the content as a string.
 
 const testReadFileFunctionName = "readFile"
 
-var testReadFileFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{
+var testReadFileFunctionType = sema.NewSimpleFunctionType(
+	sema.FunctionPurityImpure,
+	[]*sema.Parameter{
 		{
-			Label:      sema.ArgumentLabelNotRequired,
-			Identifier: "path",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.StringType,
-			),
+			Label:          sema.ArgumentLabelNotRequired,
+			Identifier:     "path",
+			TypeAnnotation: sema.StringTypeAnnotation,
 		},
 	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		sema.StringType,
-	),
-}
+	sema.StringTypeAnnotation,
+)
 
 func testReadFileFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
@@ -568,12 +556,13 @@ Creates a blockchain which is backed by a new emulator instance.
 
 const testNewEmulatorBlockchainFunctionName = "newEmulatorBlockchain"
 
-var testNewEmulatorBlockchainFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
+var testNewEmulatorBlockchainFunctionType = sema.NewSimpleFunctionType(
+	sema.FunctionPurityView,
+	nil,
+	sema.NewTypeAnnotation(
 		blockchainType,
 	),
-}
+)
 
 func testNewEmulatorBlockchainFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
@@ -646,37 +635,39 @@ The test function is of type '((T): Bool)', where 'T' is bound to 'AnyStruct'.
 
 const newMatcherFunctionName = "newMatcher"
 
+// Type of the Matcher.test function: ((T): Bool)
+var matcherTestFunctionType = sema.NewSimpleFunctionType(
+	sema.FunctionPurityImpure,
+	[]*sema.Parameter{
+		{
+			Label:      sema.ArgumentLabelNotRequired,
+			Identifier: "value",
+			TypeAnnotation: sema.NewTypeAnnotation(
+				&sema.GenericType{
+					TypeParameter: newMatcherFunctionTypeParameter,
+				},
+			),
+		},
+	},
+	sema.BoolTypeAnnotation,
+)
+
 var newMatcherFunctionType = &sema.FunctionType{
+	Purity:        sema.FunctionPurityView,
 	IsConstructor: true,
+	TypeParameters: []*sema.TypeParameter{
+		newMatcherFunctionTypeParameter,
+	},
 	Parameters: []*sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
 			Identifier: "test",
 			TypeAnnotation: sema.NewTypeAnnotation(
-				// Type of the 'test' function: ((T): Bool)
-				&sema.FunctionType{
-					Parameters: []*sema.Parameter{
-						{
-							Label:      sema.ArgumentLabelNotRequired,
-							Identifier: "value",
-							TypeAnnotation: sema.NewTypeAnnotation(
-								&sema.GenericType{
-									TypeParameter: newMatcherFunctionTypeParameter,
-								},
-							),
-						},
-					},
-					ReturnTypeAnnotation: sema.NewTypeAnnotation(
-						sema.BoolType,
-					),
-				},
+				matcherTestFunctionType,
 			),
 		},
 	},
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(matcherType),
-	TypeParameters: []*sema.TypeParameter{
-		newMatcherFunctionTypeParameter,
-	},
 }
 
 var newMatcherFunctionTypeParameter = &sema.TypeParameter{
@@ -694,7 +685,7 @@ var newMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
 
 		return newMatcherWithGenericTestFunction(invocation, test)
 	},
-	equalMatcherFunctionType,
+	newMatcherFunctionType,
 )
 
 // 'EmulatorBackend' struct.
@@ -1492,12 +1483,12 @@ func newMatcherWithGenericTestFunction(
 
 	inter := invocation.Interpreter
 
-	staticType, ok := testFunc.StaticType(inter).(interpreter.FunctionStaticType)
-	if !ok {
+	typeParameterPair := invocation.TypeParameterTypes.Oldest()
+	if typeParameterPair == nil {
 		panic(errors.NewUnreachableError())
 	}
 
-	parameters := staticType.Type.Parameters
+	parameterType := typeParameterPair.Value
 
 	// Wrap the user provided test function with a function that validates the argument types.
 	// i.e: create a closure that cast the arguments.
@@ -1515,15 +1506,14 @@ func newMatcherWithGenericTestFunction(
 		func(invocation interpreter.Invocation) interpreter.Value {
 			inter := invocation.Interpreter
 
-			for i, argument := range invocation.Arguments {
-				paramType := parameters[i].TypeAnnotation.Type
+			for _, argument := range invocation.Arguments {
 				argumentStaticType := argument.StaticType(inter)
 
-				if !inter.IsSubTypeOfSemaType(argumentStaticType, paramType) {
+				if !inter.IsSubTypeOfSemaType(argumentStaticType, parameterType) {
 					argumentSemaType := inter.MustConvertStaticToSemaType(argumentStaticType)
 
 					panic(interpreter.TypeMismatchError{
-						ExpectedType:  paramType,
+						ExpectedType:  parameterType,
 						ActualType:    argumentSemaType,
 						LocationRange: invocation.LocationRange,
 					})
@@ -1537,7 +1527,7 @@ func newMatcherWithGenericTestFunction(
 
 			return value
 		},
-		matcherTestFunctionType,
+		matcherTestFieldType,
 	)
 
 	matcherConstructor := getNestedTypeConstructorValue(
@@ -1557,4 +1547,67 @@ func newMatcherWithGenericTestFunction(
 	}
 
 	return matcher
+}
+
+func TestCheckerContractValueHandler(
+	checker *sema.Checker,
+	declaration *ast.CompositeDeclaration,
+	compositeType *sema.CompositeType,
+) sema.ValueDeclaration {
+	constructorType, constructorArgumentLabels := sema.CompositeConstructorType(
+		checker.Elaboration,
+		declaration,
+		compositeType,
+	)
+
+	return StandardLibraryValue{
+		Name:           declaration.Identifier.Identifier,
+		Type:           constructorType,
+		DocString:      declaration.DocString,
+		Kind:           declaration.DeclarationKind(),
+		Position:       &declaration.Identifier.Pos,
+		ArgumentLabels: constructorArgumentLabels,
+	}
+}
+
+func NewTestInterpreterContractValueHandler(
+	testFramework TestFramework,
+) interpreter.ContractValueHandlerFunc {
+	return func(
+		inter *interpreter.Interpreter,
+		compositeType *sema.CompositeType,
+		constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
+		invocationRange ast.Range,
+	) interpreter.ContractValue {
+
+		switch compositeType.Location {
+		case CryptoChecker.Location:
+			contract, err := NewCryptoContract(
+				inter,
+				constructorGenerator(common.Address{}),
+				invocationRange,
+			)
+			if err != nil {
+				panic(err)
+			}
+			return contract
+
+		case TestContractLocation:
+			contract, err := NewTestContract(
+				inter,
+				testFramework,
+				constructorGenerator(common.Address{}),
+				invocationRange,
+			)
+			if err != nil {
+				panic(err)
+			}
+			return contract
+
+		default:
+			// During tests, imported contracts can be constructed using the constructor,
+			// similar to structs. Therefore, generate a constructor function.
+			return constructorGenerator(common.Address{})
+		}
+	}
 }

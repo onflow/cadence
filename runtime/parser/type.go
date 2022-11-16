@@ -595,51 +595,6 @@ func parseNominalTypes(
 	return
 }
 
-// function types used to be written with a differing syntax, e.g. for a function
-//
-//	fun foo(x: Int, y: String): Bool {...}
-//
-// its type would be
-//
-//	foo: ((Int, String): Bool)
-//
-// this was changed in FLIP #43 to use the `fun` keyword in parsing and printing fn types:
-//
-//	foo: fun(Int, String): Bool
-//
-// but we still accept the old syntax to avoid breaking existing contracts
-func defineOldSyntaxFunctionType() {
-	setTypeNullDenotation(
-		lexer.TokenParenOpen,
-		func(p *parser, token lexer.Token) (ast.Type, error) {
-
-			purity := ast.FunctionPurityUnspecified
-			if p.isToken(p.current, lexer.TokenIdentifier, keywordView) {
-				purity = ast.FunctionPurityView
-				// skip the `view` keyword
-				p.nextSemanticToken()
-			}
-
-			// require an explicit return type annotation, since we rely on the ':' token
-			functionType, err := parseFunctionType(p, token.StartPos, purity, true)
-
-			if err != nil {
-				return nil, err
-			}
-
-			p.skipSpaceAndComments()
-			// find the matching end parenthesis and skip
-			_, err = p.mustOne(lexer.TokenParenClose)
-			if err != nil {
-				return nil, err
-			}
-
-			return functionType, nil
-
-		},
-	)
-}
-
 func parseParameterTypeAnnotations(p *parser) (typeAnnotations []*ast.TypeAnnotation, err error) {
 
 	p.skipSpaceAndComments()
@@ -784,6 +739,8 @@ func defaultTypeMetaLeftDenotation(
 }
 
 func parseTypeAnnotation(p *parser) (*ast.TypeAnnotation, error) {
+	p.skipSpaceAndComments()
+
 	startPos := p.current.StartPos
 
 	isResource := false
@@ -964,7 +921,7 @@ func defineIdentifierTypes() {
 		lexer.TokenIdentifier,
 		func(p *parser, token lexer.Token) (ast.Type, error) {
 			switch string(p.tokenSource(token)) {
-			case keywordAuth:
+			case KeywordAuth:
 				p.skipSpaceAndComments()
 
 				_, err := p.mustOne(lexer.TokenAmpersand)
@@ -984,11 +941,11 @@ func defineIdentifierTypes() {
 					token.StartPos,
 				), nil
 
-			case keywordFun:
+			case KeywordFun:
 				p.skipSpaceAndComments()
 				return parseFunctionType(p, token.StartPos, ast.FunctionPurityUnspecified, false)
 
-			case keywordView:
+			case KeywordView:
 
 				current := p.current
 				cursor := p.tokens.Cursor()
@@ -996,7 +953,7 @@ func defineIdentifierTypes() {
 				// look ahead for the `fun` keyword, if it exists
 				p.skipSpaceAndComments()
 
-				if p.isToken(p.current, lexer.TokenIdentifier, keywordFun) {
+				if p.isToken(p.current, lexer.TokenIdentifier, KeywordFun) {
 					// skip the `fun` keyword
 					p.nextSemanticToken()
 					return parseFunctionType(p, current.StartPos, ast.FunctionPurityView, false)
@@ -1011,6 +968,51 @@ func defineIdentifierTypes() {
 			}
 
 			return parseNominalTypeRemainder(p, token)
+		},
+	)
+}
+
+// function types used to be written with a differing syntax, e.g. for a function
+//
+//	fun foo(x: Int, y: String): Bool {...}
+//
+// its type would be
+//
+//	foo: ((Int, String): Bool)
+//
+// this was changed in FLIP #43 to use the `fun` keyword in parsing and printing fn types:
+//
+//	foo: fun(Int, String): Bool
+//
+// but we still accept the old syntax to avoid breaking existing contracts
+func defineOldSyntaxFunctionType() {
+	setTypeNullDenotation(
+		lexer.TokenParenOpen,
+		func(p *parser, token lexer.Token) (ast.Type, error) {
+
+			purity := ast.FunctionPurityUnspecified
+			if p.isToken(p.current, lexer.TokenIdentifier, KeywordView) {
+				purity = ast.FunctionPurityView
+				// skip the `view` keyword
+				p.nextSemanticToken()
+			}
+
+			// require an explicit return type annotation, since we rely on the ':' token
+			functionType, err := parseFunctionType(p, token.StartPos, purity, true)
+
+			if err != nil {
+				return nil, err
+			}
+
+			p.skipSpaceAndComments()
+			// find the matching end parenthesis and skip
+			_, err = p.mustOne(lexer.TokenParenClose)
+			if err != nil {
+				return nil, err
+			}
+
+			return functionType, nil
+
 		},
 	)
 }

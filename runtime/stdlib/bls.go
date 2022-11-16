@@ -67,23 +67,21 @@ The function returns nil if the array is empty or if decoding one of the signatu
 
 const blsAggregateSignaturesFunctionName = "aggregateSignatures"
 
-var blsAggregateSignaturesFunctionType = &sema.FunctionType{
-	Purity: sema.FunctionPurityView,
-	Parameters: []*sema.Parameter{
+var blsAggregateSignaturesFunctionType = sema.NewSimpleFunctionType(
+	sema.FunctionPurityView,
+	[]*sema.Parameter{
 		{
-			Label:      sema.ArgumentLabelNotRequired,
-			Identifier: "signatures",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.ByteArrayArrayType,
-			),
+			Label:          sema.ArgumentLabelNotRequired,
+			Identifier:     "signatures",
+			TypeAnnotation: sema.ByteArrayArrayTypeAnnotation,
 		},
 	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
+	sema.NewTypeAnnotation(
 		&sema.OptionalType{
 			Type: sema.ByteArrayType,
 		},
 	),
-}
+)
 
 const blsAggregatePublicKeysFunctionDocString = `
 Aggregates multiple BLS public keys into one.
@@ -95,23 +93,21 @@ The function returns nil if the array is empty or any of the input keys is not a
 
 const blsAggregatePublicKeysFunctionName = "aggregatePublicKeys"
 
-var blsAggregatePublicKeysFunctionType = &sema.FunctionType{
-	Purity: sema.FunctionPurityView,
-	Parameters: []*sema.Parameter{
+var blsAggregatePublicKeysFunctionType = sema.NewSimpleFunctionType(
+	sema.FunctionPurityView,
+	[]*sema.Parameter{
 		{
-			Label:      sema.ArgumentLabelNotRequired,
-			Identifier: "keys",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.PublicKeyArrayType,
-			),
+			Label:          sema.ArgumentLabelNotRequired,
+			Identifier:     "keys",
+			TypeAnnotation: sema.PublicKeyArrayTypeAnnotation,
 		},
 	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
+	sema.NewTypeAnnotation(
 		&sema.OptionalType{
 			Type: sema.PublicKeyType,
 		},
 	),
-}
+)
 
 type BLSPublicKeyAggregator interface {
 	PublicKeySignatureVerifier

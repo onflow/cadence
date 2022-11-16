@@ -32,33 +32,31 @@ const getCurrentBlockFunctionDocString = `
 Returns the current block, i.e. the block which contains the currently executed transaction
 `
 
-var getCurrentBlockFunctionType = &sema.FunctionType{
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		sema.BlockType,
-	),
-}
+var getCurrentBlockFunctionType = sema.NewSimpleFunctionType(
+	sema.FunctionPurityView,
+	nil,
+	sema.BlockTypeAnnotation,
+)
 
 const getBlockFunctionDocString = `
 Returns the block at the given height. If the given block does not exist the function returns nil
 `
 
-var getBlockFunctionType = &sema.FunctionType{
-	Purity: sema.FunctionPurityView,
-	Parameters: []*sema.Parameter{
+var getBlockFunctionType = sema.NewSimpleFunctionType(
+	sema.FunctionPurityView,
+	[]*sema.Parameter{
 		{
-			Label:      "at",
-			Identifier: "height",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.UInt64Type,
-			),
+			Label:          "at",
+			Identifier:     "height",
+			TypeAnnotation: sema.UInt64TypeAnnotation,
 		},
 	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
+	sema.NewTypeAnnotation(
 		&sema.OptionalType{
 			Type: sema.BlockType,
 		},
 	),
-}
+)
 
 const BlockHashLength = 32
 

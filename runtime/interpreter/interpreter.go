@@ -41,12 +41,13 @@ import (
 
 //
 
-var emptyFunctionType = &sema.FunctionType{
-	Purity: sema.FunctionPurityImpure,
-	ReturnTypeAnnotation: &sema.TypeAnnotation{
+var emptyImpureFunctionType = sema.NewSimpleFunctionType(
+	sema.FunctionPurityImpure,
+	nil,
+	&sema.TypeAnnotation{
 		Type: sema.VoidType,
 	},
-}
+)
 
 //
 
@@ -947,7 +948,6 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 		ReturnTypeAnnotation: &sema.TypeAnnotation{
 			Type: compositeType,
 		},
-		RequiredArgumentCount: nil,
 	}
 
 	var initializerFunction FunctionValue
@@ -1407,7 +1407,7 @@ func (interpreter *Interpreter) compositeDestructorFunction(
 	return NewInterpretedFunctionValue(
 		interpreter,
 		nil,
-		emptyFunctionType,
+		emptyImpureFunctionType,
 		lexicalScope,
 		beforeStatements,
 		preConditions,
@@ -2618,38 +2618,7 @@ func init() {
 		BaseActivation,
 		"DictionaryType",
 		NewUnmeteredHostFunctionValue(
-			func(invocation Invocation) Value {
-				keyTypeValue, ok := invocation.Arguments[0].(TypeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				valueTypeValue, ok := invocation.Arguments[1].(TypeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				keyType := keyTypeValue.Type
-				valueType := valueTypeValue.Type
-
-				// if the given key is not a valid dictionary key, it wouldn't make sense to create this type
-				if keyType == nil ||
-					!sema.IsValidDictionaryKeyType(invocation.Interpreter.MustConvertStaticToSemaType(keyType)) {
-					return Nil
-				}
-
-				return NewSomeValueNonCopying(
-					invocation.Interpreter,
-					NewTypeValue(
-						invocation.Interpreter,
-						NewDictionaryStaticType(
-							invocation.Interpreter,
-							keyType,
-							valueType,
-						),
-					),
-				)
-			},
+			dictionaryTypeFunction,
 			sema.DictionaryTypeFunctionType,
 		))
 
@@ -2657,26 +2626,7 @@ func init() {
 		BaseActivation,
 		"CompositeType",
 		NewUnmeteredHostFunctionValue(
-			func(invocation Invocation) Value {
-				typeIDValue, ok := invocation.Arguments[0].(*StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-				typeID := typeIDValue.Str
-
-				composite, err := lookupComposite(invocation.Interpreter, typeID)
-				if err != nil {
-					return Nil
-				}
-
-				return NewSomeValueNonCopying(
-					invocation.Interpreter,
-					NewTypeValue(
-						invocation.Interpreter,
-						ConvertSemaToStaticType(invocation.Interpreter, composite),
-					),
-				)
-			},
+			compositeTypeFunction,
 			sema.CompositeTypeFunctionType,
 		),
 	)
@@ -2685,26 +2635,7 @@ func init() {
 		BaseActivation,
 		"InterfaceType",
 		NewUnmeteredHostFunctionValue(
-			func(invocation Invocation) Value {
-				typeIDValue, ok := invocation.Arguments[0].(*StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-				typeID := typeIDValue.Str
-
-				interfaceType, err := lookupInterface(invocation.Interpreter, typeID)
-				if err != nil {
-					return Nil
-				}
-
-				return NewSomeValueNonCopying(
-					invocation.Interpreter,
-					NewTypeValue(
-						invocation.Interpreter,
-						ConvertSemaToStaticType(invocation.Interpreter, interfaceType),
-					),
-				)
-			},
+			interfaceTypeFunction,
 			sema.InterfaceTypeFunctionType,
 		),
 	)
@@ -2713,40 +2644,7 @@ func init() {
 		BaseActivation,
 		"FunctionType",
 		NewUnmeteredHostFunctionValue(
-			func(invocation Invocation) Value {
-				parameters, ok := invocation.Arguments[0].(*ArrayValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				typeValue, ok := invocation.Arguments[1].(TypeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				returnType := invocation.Interpreter.MustConvertStaticToSemaType(typeValue.Type)
-				parameterTypes := make([]*sema.Parameter, 0, parameters.Count())
-				parameters.Iterate(invocation.Interpreter, func(param Value) bool {
-					semaType := invocation.Interpreter.MustConvertStaticToSemaType(param.(TypeValue).Type)
-					parameterTypes = append(
-						parameterTypes,
-						&sema.Parameter{
-							TypeAnnotation: sema.NewTypeAnnotation(semaType),
-						},
-					)
-
-					// Continue iteration
-					return true
-				})
-				functionStaticType := NewFunctionStaticType(
-					invocation.Interpreter,
-					&sema.FunctionType{
-						ReturnTypeAnnotation: sema.NewTypeAnnotation(returnType),
-						Parameters:           parameterTypes,
-					},
-				)
-				return NewUnmeteredTypeValue(functionStaticType)
-			},
+			functionTypeFunction,
 			sema.FunctionTypeFunctionType,
 		),
 	)
@@ -2755,13 +2653,127 @@ func init() {
 		BaseActivation,
 		"RestrictedType",
 		NewUnmeteredHostFunctionValue(
-			RestrictedTypeFunction,
+			restrictedTypeFunction,
 			sema.RestrictedTypeFunctionType,
 		),
 	)
 }
 
-func RestrictedTypeFunction(invocation Invocation) Value {
+func dictionaryTypeFunction(invocation Invocation) Value {
+	keyTypeValue, ok := invocation.Arguments[0].(TypeValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	valueTypeValue, ok := invocation.Arguments[1].(TypeValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	keyType := keyTypeValue.Type
+	valueType := valueTypeValue.Type
+
+	// if the given key is not a valid dictionary key, it wouldn't make sense to create this type
+	if keyType == nil ||
+		!sema.IsValidDictionaryKeyType(invocation.Interpreter.MustConvertStaticToSemaType(keyType)) {
+		return Nil
+	}
+
+	return NewSomeValueNonCopying(
+		invocation.Interpreter,
+		NewTypeValue(
+			invocation.Interpreter,
+			NewDictionaryStaticType(
+				invocation.Interpreter,
+				keyType,
+				valueType,
+			),
+		),
+	)
+}
+
+func compositeTypeFunction(invocation Invocation) Value {
+	typeIDValue, ok := invocation.Arguments[0].(*StringValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+	typeID := typeIDValue.Str
+
+	composite, err := lookupComposite(invocation.Interpreter, typeID)
+	if err != nil {
+		return Nil
+	}
+
+	return NewSomeValueNonCopying(
+		invocation.Interpreter,
+		NewTypeValue(
+			invocation.Interpreter,
+			ConvertSemaToStaticType(invocation.Interpreter, composite),
+		),
+	)
+}
+
+func interfaceTypeFunction(invocation Invocation) Value {
+	typeIDValue, ok := invocation.Arguments[0].(*StringValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+	typeID := typeIDValue.Str
+
+	interfaceType, err := lookupInterface(invocation.Interpreter, typeID)
+	if err != nil {
+		return Nil
+	}
+
+	return NewSomeValueNonCopying(
+		invocation.Interpreter,
+		NewTypeValue(
+			invocation.Interpreter,
+			ConvertSemaToStaticType(invocation.Interpreter, interfaceType),
+		),
+	)
+}
+
+func functionTypeFunction(invocation Invocation) Value {
+	parameters, ok := invocation.Arguments[0].(*ArrayValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	typeValue, ok := invocation.Arguments[1].(TypeValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	returnType := invocation.Interpreter.MustConvertStaticToSemaType(typeValue.Type)
+	parameterTypes := make([]*sema.Parameter, 0, parameters.Count())
+	parameters.Iterate(invocation.Interpreter, func(param Value) bool {
+		semaType := invocation.Interpreter.MustConvertStaticToSemaType(param.(TypeValue).Type)
+		parameterTypes = append(
+			parameterTypes,
+			&sema.Parameter{
+				TypeAnnotation: sema.NewTypeAnnotation(semaType),
+			},
+		)
+
+		// Continue iteration
+		return true
+	})
+
+	return NewTypeValue(
+		invocation.Interpreter,
+		NewFunctionStaticType(
+			invocation.Interpreter,
+			sema.NewSimpleFunctionType(
+				sema.FunctionPurityImpure,
+				parameterTypes,
+				sema.NewTypeAnnotation(returnType),
+			),
+		),
+	)
+}
+
+func restrictedTypeFunction(invocation Invocation) Value {
 	restrictionIDs, ok := invocation.Arguments[1].(*ArrayValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -3059,10 +3071,7 @@ var typeFunction = NewUnmeteredHostFunctionValue(
 		staticType := ConvertSemaToStaticType(invocation.Interpreter, ty)
 		return NewTypeValue(invocation.Interpreter, staticType)
 	},
-	&sema.FunctionType{
-		Purity:               sema.FunctionPurityView,
-		ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.MetaType),
-	},
+	sema.MetaTypeFunctionType,
 )
 
 func defineTypeFunction(activation *VariableActivation) {

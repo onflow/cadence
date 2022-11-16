@@ -50,7 +50,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 			fooType,
 			"bar",
 			&sema.FunctionType{
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.UInt64Type),
+				ReturnTypeAnnotation: sema.UInt64TypeAnnotation,
 			},
 			"",
 		))
@@ -99,7 +99,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 								return interpreter.NewUnmeteredUInt64Value(42)
 							},
 							&sema.FunctionType{
-								ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.UIntType),
+								ReturnTypeAnnotation: sema.UIntTypeAnnotation,
 							},
 						),
 					}

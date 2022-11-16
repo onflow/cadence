@@ -1823,17 +1823,15 @@ func TestInterpretHostFunction(t *testing.T) {
 				{
 					Label:          sema.ArgumentLabelNotRequired,
 					Identifier:     "a",
-					TypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
+					TypeAnnotation: sema.IntTypeAnnotation,
 				},
 				{
 					Label:          sema.ArgumentLabelNotRequired,
 					Identifier:     "b",
-					TypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
+					TypeAnnotation: sema.IntTypeAnnotation,
 				},
 			},
-			ReturnTypeAnnotation: sema.NewTypeAnnotation(
-				sema.IntType,
-			),
+			ReturnTypeAnnotation: sema.IntTypeAnnotation,
 		},
 		``,
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -1907,12 +1905,10 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 				{
 					Label:          sema.ArgumentLabelNotRequired,
 					Identifier:     "value",
-					TypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
+					TypeAnnotation: sema.IntTypeAnnotation,
 				},
 			},
-			ReturnTypeAnnotation: sema.NewTypeAnnotation(
-				sema.VoidType,
-			),
+			ReturnTypeAnnotation:  sema.VoidTypeAnnotation,
 			RequiredArgumentCount: sema.RequiredArgumentCount(1),
 		},
 		``,
@@ -4711,16 +4707,12 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		getStorageReferenceFunctionType := &sema.FunctionType{
 			Parameters: []*sema.Parameter{
 				{
-					Label:      "authorized",
-					Identifier: "authorized",
-					TypeAnnotation: sema.NewTypeAnnotation(
-						sema.BoolType,
-					),
+					Label:          "authorized",
+					Identifier:     "authorized",
+					TypeAnnotation: sema.BoolTypeAnnotation,
 				},
 			},
-			ReturnTypeAnnotation: sema.NewTypeAnnotation(
-				sema.AnyStructType,
-			),
+			ReturnTypeAnnotation: sema.AnyStructTypeAnnotation,
 		}
 
 		valueDeclaration := stdlib.NewStandardLibraryFunction(
@@ -9122,12 +9114,10 @@ func TestInterpretNestedDestroy(t *testing.T) {
 				{
 					Label:          sema.ArgumentLabelNotRequired,
 					Identifier:     "value",
-					TypeAnnotation: sema.NewTypeAnnotation(sema.AnyStructType),
+					TypeAnnotation: sema.AnyStructTypeAnnotation,
 				},
 			},
-			ReturnTypeAnnotation: sema.NewTypeAnnotation(
-				sema.VoidType,
-			),
+			ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 		},
 		``,
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -9519,7 +9509,7 @@ func TestHostFunctionStaticType(t *testing.T) {
 				nil,
 				&sema.FunctionType{
 					Purity:               sema.FunctionPurityView,
-					ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.MetaType),
+					ReturnTypeAnnotation: sema.MetaTypeAnnotation,
 				},
 			),
 			value.StaticType(inter),
