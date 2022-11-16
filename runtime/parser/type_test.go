@@ -22,6 +22,8 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -2258,6 +2260,111 @@ func TestParseFunctionTypeWithFunctionReturnType(t *testing.T) {
 	)
 }
 
+func TestParseViewFunctionTypeWithNewSyntax(t *testing.T) {
+	t.Parallel()
+
+	code := `
+		let test: view     fun(Int8): fun(Int16): Int32 = nothing
+	`
+	result, errs := testParseProgram(code)
+	require.Empty(t, errs)
+
+	expected := []ast.Declaration{
+		&ast.VariableDeclaration{
+			IsConstant: true,
+			Identifier: ast.Identifier{
+				Identifier: "test",
+				Pos:        ast.Position{Offset: 7, Line: 2, Column: 6},
+			},
+			TypeAnnotation: &ast.TypeAnnotation{
+				Type: &ast.FunctionType{
+					PurityAnnotation: ast.FunctionPurityView,
+					ParameterTypeAnnotations: []*ast.TypeAnnotation{
+						{
+							Type: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "Int8",
+									Pos:        ast.Position{Offset: 26, Line: 2, Column: 25},
+								},
+							},
+							StartPos: ast.Position{Offset: 26, Line: 2, Column: 25},
+						},
+					},
+					ReturnTypeAnnotation: &ast.TypeAnnotation{
+						Type: &ast.FunctionType{
+							ParameterTypeAnnotations: []*ast.TypeAnnotation{
+								{
+									Type: &ast.NominalType{
+										Identifier: ast.Identifier{
+											Identifier: "Int16",
+											Pos:        ast.Position{Offset: 37, Line: 2, Column: 36},
+										},
+									},
+									StartPos: ast.Position{Offset: 37, Line: 2, Column: 36},
+								},
+							},
+							ReturnTypeAnnotation: &ast.TypeAnnotation{
+								Type: &ast.NominalType{
+									Identifier: ast.Identifier{
+										Identifier: "Int32",
+										Pos:        ast.Position{Offset: 45, Line: 2, Column: 44},
+									},
+								},
+								StartPos: ast.Position{Offset: 45, Line: 2, Column: 44},
+							},
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 33, Line: 2, Column: 32},
+								EndPos:   ast.Position{Offset: 50, Line: 2, Column: 49},
+							},
+						},
+						StartPos: ast.Position{Offset: 33, Line: 2, Column: 32},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 17, Line: 2, Column: 16},
+						EndPos:   ast.Position{Offset: 50, Line: 2, Column: 49},
+					},
+				},
+				StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
+			},
+			Value: &ast.IdentifierExpression{
+				Identifier: ast.Identifier{
+					Identifier: "nothing",
+					Pos:        ast.Position{Offset: 53, Line: 2, Column: 52},
+				},
+			},
+			Transfer: &ast.Transfer{
+				Operation: 1,
+				Pos:       ast.Position{Offset: 51, Line: 2, Column: 50},
+			},
+			StartPos: ast.Position{Offset: 3, Line: 2, Column: 2},
+		},
+	}
+	utils.AssertEqualWithDiff(t, expected, result.Declarations())
+}
+
+func TestNewSyntaxYieldsSameAST(t *testing.T) {
+	code1 := `
+		let test: fun(Int8): fun(Int16): fun(Int32): fun(Int64): Int128 = nothing
+	`
+
+	code2 := `
+		let test: ((Int8): ((Int16): ((Int32): ((Int64): Int128)))) = nothing
+	`
+
+	ast1, errs := testParseProgram(code1)
+	require.NoError(t, errs)
+
+	ast2, errs := testParseProgram(code2)
+	require.NoError(t, errs)
+
+	ignoreUnexported := cmpopts.IgnoreUnexported(ast.Program{})
+	ignorePositions := cmpopts.IgnoreTypes(ast.Position{})
+
+	difference := cmp.Diff(ast1, ast2, ignorePositions, ignoreUnexported)
+
+	require.Empty(t, difference, "ASTs differ")
+}
+
 func TestParseNewSyntaxFunctionType(t *testing.T) {
 	t.Parallel()
 
@@ -2338,6 +2445,7 @@ func TestParseNewSyntaxFunctionType(t *testing.T) {
 	}
 	utils.AssertEqualWithDiff(t, expected, result.Declarations())
 }
+
 func TestParseOptionalTypeDouble(t *testing.T) {
 
 	t.Parallel()
