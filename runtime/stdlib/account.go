@@ -1330,8 +1330,8 @@ func newAccountContractsBorrowFunction(
 			// Load the contract
 
 			contractLocation := common.NewAddressLocation(gauge, address, name)
-			subInterpreter := inter.EnsureLoaded(contractLocation)
-			contractValue, err := subInterpreter.GetContractComposite(contractLocation)
+			inter = inter.EnsureLoaded(contractLocation)
+			contractValue, err := inter.GetContractComposite(contractLocation)
 			if err != nil {
 				panic(err)
 			}
@@ -1347,7 +1347,8 @@ func newAccountContractsBorrowFunction(
 				inter,
 				false,
 				contractValue,
-				referenceType.Type)
+				referenceType.Type,
+			)
 
 			return interpreter.NewSomeValueNonCopying(
 				inter,
