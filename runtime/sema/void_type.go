@@ -24,7 +24,6 @@ var VoidType = &SimpleType{
 	QualifiedName:        "Void",
 	TypeID:               "Void",
 	tag:                  VoidTypeTag,
-	IsInvalid:            false,
 	IsResource:           false,
 	Storable:             false,
 	Equatable:            true,

@@ -35,6 +35,7 @@ func TestFunctionDeclaration_MarshalJSON(t *testing.T) {
 
 	decl := &FunctionDeclaration{
 		Access: AccessPublic,
+		Flags:  FunctionDeclarationFlagsIsStatic | FunctionDeclarationFlagsIsNative,
 		Identifier: Identifier{
 			Identifier: "xyz",
 			Pos:        Position{Offset: 37, Line: 38, Column: 39},
@@ -94,10 +95,13 @@ func TestFunctionDeclaration_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "FunctionDeclaration",
             "Access": "AccessPublic",
+            "IsStatic": true,
+            "IsNative": true,
             "Identifier": {
                 "Identifier": "xyz",
 				"StartPos": {"Offset": 37, "Line": 38, "Column": 39},
@@ -177,6 +181,7 @@ func TestFunctionDeclaration_Doc(t *testing.T) {
 	decl := &FunctionDeclaration{
 		Access: AccessPublic,
 		Purity: FunctionPurityView,
+		Flags:  FunctionDeclarationFlagsIsStatic | FunctionDeclarationFlagsIsNative,
 		Identifier: Identifier{
 			Identifier: "xyz",
 		},
@@ -217,6 +222,10 @@ func TestFunctionDeclaration_Doc(t *testing.T) {
 			prettier.Text("pub"),
 			prettier.Space,
 			prettier.Text("view"),
+			prettier.Space,
+			prettier.Text("static"),
+			prettier.Space,
+			prettier.Text("native"),
 			prettier.Space,
 			prettier.Text("fun "),
 			prettier.Text("xyz"),
@@ -309,6 +318,7 @@ func TestSpecialFunctionDeclaration_MarshalJSON(t *testing.T) {
 		Kind: common.DeclarationKindInitializer,
 		FunctionDeclaration: &FunctionDeclaration{
 			Access: AccessNotSpecified,
+			Flags:  FunctionDeclarationFlagsIsNative,
 			Identifier: Identifier{
 				Identifier: "xyz",
 				Pos:        Position{Offset: 37, Line: 38, Column: 39},
@@ -369,6 +379,7 @@ func TestSpecialFunctionDeclaration_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "SpecialFunctionDeclaration",
@@ -376,6 +387,8 @@ func TestSpecialFunctionDeclaration_MarshalJSON(t *testing.T) {
             "FunctionDeclaration": {
                 "Type": "FunctionDeclaration",
                 "Access": "AccessNotSpecified",
+                "IsStatic": false,
+                "IsNative": true,
                 "Identifier": {
                     "Identifier": "xyz",
 		    		"StartPos": {"Offset": 37, "Line": 38, "Column": 39},

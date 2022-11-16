@@ -64,6 +64,8 @@ const (
 	KeywordDefault     = "default"
 	KeywordEnum        = "enum"
 	KeywordView        = "view"
+	KeywordStatic      = "static"
+	KeywordNative      = "native"
 	// NOTE: ensure to update allKeywords when adding a new keyword
 )
 

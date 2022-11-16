@@ -185,10 +185,13 @@ func parseFunctionDeclaration(
 	accessPos *ast.Position,
 	purity ast.FunctionPurity,
 	purityPos *ast.Position,
+	staticPos *ast.Position,
+	nativePos *ast.Position,
 	docString string,
 ) (*ast.FunctionDeclaration, error) {
 
-	startPos := *ast.EarlierPosition(ast.EarlierPosition(purityPos, accessPos), &p.current.StartPos)
+	startPos := ast.EarliestPosition(p.current.StartPos, accessPos, purityPos, staticPos, nativePos)
+
 	// Skip the `fun` keyword
 	p.nextSemanticToken()
 
@@ -212,6 +215,8 @@ func parseFunctionDeclaration(
 		p.memoryGauge,
 		access,
 		purity,
+		staticPos != nil,
+		nativePos != nil,
 		identifier,
 		parameterList,
 		returnTypeAnnotation,

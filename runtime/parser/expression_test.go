@@ -329,7 +329,7 @@ func TestParseAdvancedExpression(t *testing.T) {
 			defer func() {
 				panicMsg = recover()
 			}()
-			ParseExpression([]byte("1 < 2"), gauge)
+			ParseExpression(gauge, []byte("1 < 2"), Config{})
 		})()
 
 		require.IsType(t, errors.MemoryError{}, panicMsg)
@@ -352,7 +352,7 @@ func TestParseAdvancedExpression(t *testing.T) {
 				panicMsg = recover()
 			}()
 
-			ParseExpression([]byte("1 < 2 > 3"), gauge)
+			ParseExpression(gauge, []byte("1 < 2 > 3"), Config{})
 		})()
 
 		require.IsType(t, errors.MemoryError{}, panicMsg)
@@ -2139,9 +2139,14 @@ func TestParseBlockComment(t *testing.T) {
 			input: []byte(`/*foo`),
 		}
 
-		_, errs := ParseTokenStream(nil, tokens, func(p *parser) (ast.Expression, error) {
-			return parseExpression(p, lowestBindingPower)
-		})
+		_, errs := ParseTokenStream(
+			nil,
+			tokens,
+			func(p *parser) (ast.Expression, error) {
+				return parseExpression(p, lowestBindingPower)
+			},
+			Config{},
+		)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{

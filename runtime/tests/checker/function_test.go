@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -414,4 +415,44 @@ func TestCheckFunctionNonExistingField(t *testing.T) {
 	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+}
+
+func TestCheckStaticFunctionDeclaration(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheckWithOptions(t,
+		`
+          static fun test() {}
+        `,
+		ParseAndCheckOptions{
+			ParseOptions: parser.Config{
+				StaticModifierEnabled: true,
+			},
+		},
+	)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.InvalidStaticModifierError{}, errs[0])
+}
+
+func TestCheckNativeFunctionDeclaration(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheckWithOptions(t,
+		`
+          native fun test() {}
+        `,
+		ParseAndCheckOptions{
+			ParseOptions: parser.Config{
+				NativeModifierEnabled: true,
+			},
+		},
+	)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.InvalidNativeModifierError{}, errs[0])
 }

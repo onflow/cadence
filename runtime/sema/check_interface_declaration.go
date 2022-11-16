@@ -69,7 +69,6 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 		declaration.Members.Initializers(),
 		declaration.Members.Fields(),
 		interfaceType,
-		declaration.DeclarationKind(),
 		declaration.DeclarationDocString(),
 		interfaceType.InitializerPurity,
 		interfaceType.InitializerParameters,
@@ -172,7 +171,7 @@ func (checker *Checker) checkInterfaceFunctions(
 	for _, function := range functions {
 		// NOTE: new activation, as function declarations
 		// shouldn't be visible in other function declarations,
-		// and `self` is is only visible inside function
+		// and `self` is only visible inside function
 
 		func() {
 			checker.enterValueScope()
