@@ -28,7 +28,7 @@ type Parameter struct {
 	Label          string
 	Identifier     Identifier
 	TypeAnnotation *TypeAnnotation
-	StartPos       Position
+	StartPos       Position `json:"-"`
 }
 
 func NewParameter(
@@ -71,10 +71,10 @@ func (p *Parameter) EndPosition(memoryGauge common.MemoryGauge) Position {
 func (p *Parameter) MarshalJSON() ([]byte, error) {
 	type Alias Parameter
 	return json.Marshal(&struct {
-		EndPos Position
+		Range
 		*Alias
 	}{
-		EndPos: p.EndPosition(nil),
-		Alias:  (*Alias)(p),
+		Range: NewUnmeteredRangeFromPositioned(p),
+		Alias: (*Alias)(p),
 	})
 }
