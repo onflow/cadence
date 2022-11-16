@@ -153,6 +153,8 @@ const (
 	MemoryKindFunctionBlock
 	MemoryKindParameter
 	MemoryKindParameterList
+	MemoryKindTypeParameter
+	MemoryKindTypeParameterList
 	MemoryKindTransfer
 	MemoryKindMembers
 	MemoryKindTypeAnnotation

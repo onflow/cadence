@@ -163,6 +163,12 @@ func parseFunctionDeclarationOrFunctionExpressionStatement(p *parser) (ast.State
 
 		p.next()
 
+		// TODO:
+		_, err := parseTypeParameterList(p)
+		if err != nil {
+			return nil, err
+		}
+
 		parameterList, returnTypeAnnotation, functionBlock, err :=
 			parseFunctionParameterListAndRest(p, false)
 
