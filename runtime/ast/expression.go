@@ -1395,13 +1395,24 @@ func FunctionDocument(
 	isNative bool,
 	includeKeyword bool,
 	identifier string,
+	typeParameterList *TypeParameterList,
 	parameterList *ParameterList,
 	returnTypeAnnotation *TypeAnnotation,
 	block *FunctionBlock,
 ) prettier.Doc {
 
 	var signatureDoc prettier.Concat
+	// NOTE: not all functions have a parameter list,
+	// e.g. the `destroy` special function
 	if parameterList != nil {
+
+		if typeParameterList != nil {
+			signatureDoc = append(
+				signatureDoc,
+				typeParameterList.Doc(),
+			)
+		}
+
 		signatureDoc = append(
 			signatureDoc,
 			parameterList.Doc(),
@@ -1487,6 +1498,7 @@ func (e *FunctionExpression) Doc() prettier.Doc {
 		false,
 		true,
 		"",
+		nil,
 		e.ParameterList,
 		e.ReturnTypeAnnotation,
 		e.FunctionBlock,

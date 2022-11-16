@@ -94,11 +94,13 @@ func (l *TypeParameterList) Doc() prettier.Doc {
 		typeParameterDocs = append(typeParameterDocs, parameterDoc)
 	}
 
-	return prettier.WrapParentheses(
+	return prettier.Wrap(
+		prettier.Text("<"),
 		prettier.Join(
 			parameterSeparatorDoc,
 			typeParameterDocs...,
 		),
+		prettier.Text(">"),
 		prettier.SoftLine{},
 	)
 }
