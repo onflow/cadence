@@ -624,6 +624,25 @@ func TestParseArrayExpression(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("empty, separated by newline", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseExpression("[\n]")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.ArrayExpression{
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 2, Column: 0, Offset: 2},
+				},
+			},
+			result,
+		)
+	})
+
 }
 
 func TestParseDictionaryExpression(t *testing.T) {
@@ -776,6 +795,24 @@ func TestParseDictionaryExpression(t *testing.T) {
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 13, Column: 1, Offset: 44},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("empty, separated by newline", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseExpression("{\n}")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.DictionaryExpression{
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 2, Column: 0, Offset: 2},
 				},
 			},
 			result,
