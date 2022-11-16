@@ -37,6 +37,7 @@ type FunctionDeclaration struct {
 	Access               Access
 	Flags                FunctionDeclarationFlags
 	Identifier           Identifier
+	TypeParameterList    *TypeParameterList `json:",omitempty"`
 	ParameterList        *ParameterList
 	ReturnTypeAnnotation *TypeAnnotation
 	FunctionBlock        *FunctionBlock
@@ -54,6 +55,7 @@ func NewFunctionDeclaration(
 	isStatic bool,
 	isNative bool,
 	identifier Identifier,
+	typeParameterList *TypeParameterList,
 	parameterList *ParameterList,
 	returnTypeAnnotation *TypeAnnotation,
 	functionBlock *FunctionBlock,
@@ -74,6 +76,7 @@ func NewFunctionDeclaration(
 		Access:               access,
 		Flags:                flags,
 		Identifier:           identifier,
+		TypeParameterList:    typeParameterList,
 		ParameterList:        parameterList,
 		ReturnTypeAnnotation: returnTypeAnnotation,
 		FunctionBlock:        functionBlock,

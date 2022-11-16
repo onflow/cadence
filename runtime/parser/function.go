@@ -317,10 +317,14 @@ func parseFunctionDeclaration(
 	// Skip the identifier
 	p.next()
 
-	// TODO:
-	_, err := parseTypeParameterList(p)
-	if err != nil {
-		return nil, err
+	var typeParameterList *ast.TypeParameterList
+
+	if p.config.TypeParametersEnabled {
+		var err error
+		typeParameterList, err = parseTypeParameterList(p)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	parameterList, returnTypeAnnotation, functionBlock, err :=
@@ -336,6 +340,7 @@ func parseFunctionDeclaration(
 		staticPos != nil,
 		nativePos != nil,
 		identifier,
+		typeParameterList,
 		parameterList,
 		returnTypeAnnotation,
 		functionBlock,

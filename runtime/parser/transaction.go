@@ -276,6 +276,7 @@ func parseTransactionExecute(p *parser) (*ast.SpecialFunctionDeclaration, error)
 			identifier,
 			nil,
 			nil,
+			nil,
 			ast.NewFunctionBlock(
 				p.memoryGauge,
 				block,

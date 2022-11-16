@@ -44,8 +44,10 @@ const lowestBindingPower = 0
 type Config struct {
 	// StaticModifierEnabled determines if the static modifier is enabled
 	StaticModifierEnabled bool
-	// NativeModifierEnabled determines if the static modifier is enabled
+	// NativeModifierEnabled determines if the native modifier is enabled
 	NativeModifierEnabled bool
+	// TypeParametersEnabled determines if type parameters are enabled
+	TypeParametersEnabled bool
 }
 
 type parser struct {
