@@ -2343,6 +2343,8 @@ func TestParseViewFunctionTypeWithNewSyntax(t *testing.T) {
 }
 
 func TestNewSyntaxYieldsSameAST(t *testing.T) {
+	t.Parallel()
+
 	code1 := `
 		let test: fun(Int8): fun(Int16): fun(Int32): fun(Int64): Int128 = nothing
 	`
