@@ -62,7 +62,7 @@ var TestContractLocation = common.IdentifierLocation(testContractTypeName)
 
 var TestContractChecker = func() *sema.Checker {
 
-	program, err := parser.ParseProgram(contracts.TestContract, nil)
+	program, err := parser.ParseProgram(nil, contracts.TestContract, parser.Config{})
 	if err != nil {
 		panic(err)
 	}
@@ -103,7 +103,7 @@ func NewTestContract(
 ) {
 	value, err := inter.InvokeFunctionValue(
 		constructor,
-		[]interpreter.Value{},
+		nil,
 		testContractInitializerTypes,
 		testContractInitializerTypes,
 		invocationRange,
@@ -693,7 +693,7 @@ var newMatcherFunction = interpreter.NewUnmeteredHostFunctionValue(
 
 		return newMatcherWithGenericTestFunction(invocation, test)
 	},
-	equalMatcherFunctionType,
+	newMatcherFunctionType,
 )
 
 // 'EmulatorBackend' struct.
@@ -1556,4 +1556,67 @@ func newMatcherWithGenericTestFunction(
 	}
 
 	return matcher
+}
+
+func TestCheckerContractValueHandler(
+	checker *sema.Checker,
+	declaration *ast.CompositeDeclaration,
+	compositeType *sema.CompositeType,
+) sema.ValueDeclaration {
+	constructorType, constructorArgumentLabels := sema.CompositeConstructorType(
+		checker.Elaboration,
+		declaration,
+		compositeType,
+	)
+
+	return StandardLibraryValue{
+		Name:           declaration.Identifier.Identifier,
+		Type:           constructorType,
+		DocString:      declaration.DocString,
+		Kind:           declaration.DeclarationKind(),
+		Position:       &declaration.Identifier.Pos,
+		ArgumentLabels: constructorArgumentLabels,
+	}
+}
+
+func NewTestInterpreterContractValueHandler(
+	testFramework TestFramework,
+) interpreter.ContractValueHandlerFunc {
+	return func(
+		inter *interpreter.Interpreter,
+		compositeType *sema.CompositeType,
+		constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
+		invocationRange ast.Range,
+	) interpreter.ContractValue {
+
+		switch compositeType.Location {
+		case CryptoChecker.Location:
+			contract, err := NewCryptoContract(
+				inter,
+				constructorGenerator(common.Address{}),
+				invocationRange,
+			)
+			if err != nil {
+				panic(err)
+			}
+			return contract
+
+		case TestContractLocation:
+			contract, err := NewTestContract(
+				inter,
+				testFramework,
+				constructorGenerator(common.Address{}),
+				invocationRange,
+			)
+			if err != nil {
+				panic(err)
+			}
+			return contract
+
+		default:
+			// During tests, imported contracts can be constructed using the constructor,
+			// similar to structs. Therefore, generate a constructor function.
+			return constructorGenerator(common.Address{})
+		}
+	}
 }

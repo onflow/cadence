@@ -173,6 +173,8 @@ func parseFunctionDeclarationOrFunctionExpressionStatement(p *parser) (ast.State
 		return ast.NewFunctionDeclaration(
 			p.memoryGauge,
 			ast.AccessNotSpecified,
+			false,
+			false,
 			identifier,
 			parameterList,
 			returnTypeAnnotation,

@@ -1813,7 +1813,7 @@ func TestInterpretHostFunction(t *testing.T) {
 	const code = `
       pub let a = test(1, 2)
     `
-	program, err := parser.ParseProgram([]byte(code), nil)
+	program, err := parser.ParseProgram(nil, []byte(code), parser.Config{})
 
 	require.NoError(t, err)
 
@@ -1895,7 +1895,7 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 	const code = `
       pub let nothing = test(1, true, "test")
     `
-	program, err := parser.ParseProgram([]byte(code), nil)
+	program, err := parser.ParseProgram(nil, []byte(code), parser.Config{})
 
 	require.NoError(t, err)
 
@@ -9047,6 +9047,7 @@ func newTestAuthAccountValue(gauge common.MemoryGauge, addressValue interpreter.
 				panicFunctionValue,
 				panicFunctionValue,
 				panicFunctionValue,
+				panicFunctionValue,
 				func(
 					inter *interpreter.Interpreter,
 					locationRange interpreter.LocationRange,
@@ -9113,6 +9114,7 @@ func newTestPublicAccountValue(gauge common.MemoryGauge, addressValue interprete
 			return interpreter.NewPublicAccountContractsValue(
 				gauge,
 				addressValue,
+				panicFunctionValue,
 				panicFunctionValue,
 				func(
 					inter *interpreter.Interpreter,

@@ -32,9 +32,13 @@ func TestBeforeExtractor(t *testing.T) {
 
 	t.Parallel()
 
-	expression, errs := parser.ParseExpression([]byte(`
+	expression, errs := parser.ParseExpression(
+		nil,
+		[]byte(`
         before(x + before(y)) + z
-    `), nil)
+    `),
+		parser.Config{},
+	)
 
 	require.Empty(t, errs)
 

@@ -101,7 +101,6 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 		declaration.Members.Initializers(),
 		declaration.Members.Fields(),
 		compositeType,
-		declaration.DeclarationKind(),
 		declaration.DeclarationDocString(),
 		compositeType.ConstructorParameters,
 		kind,
@@ -1560,6 +1559,9 @@ func (checker *Checker) defaultMembersAndOrigins(
 			)
 		}
 
+		checker.checkStaticModifier(field.IsStatic(), field.Identifier)
+		checker.checkNativeModifier(field.IsNative(), field.Identifier)
+
 		members.Set(
 			identifier,
 			&Member{
@@ -1778,7 +1780,6 @@ func (checker *Checker) checkInitializers(
 	initializers []*ast.SpecialFunctionDeclaration,
 	fields []*ast.FieldDeclaration,
 	containerType Type,
-	containerDeclarationKind common.DeclarationKind,
 	containerDocString string,
 	initializerParameters []Parameter,
 	containerKind ContainerKind,
@@ -1798,7 +1799,6 @@ func (checker *Checker) checkInitializers(
 	checker.checkSpecialFunction(
 		initializer,
 		containerType,
-		containerDeclarationKind,
 		containerDocString,
 		initializerParameters,
 		containerKind,
@@ -1819,7 +1819,7 @@ func (checker *Checker) checkInitializers(
 }
 
 // checkNoInitializerNoFields checks that if there are no initializers,
-// then there should also be no fields. Otherwise the fields will be uninitialized.
+// then there should also be no fields. Otherwise, the fields will be uninitialized.
 // In interfaces this is allowed.
 func (checker *Checker) checkNoInitializerNoFields(
 	fields []*ast.FieldDeclaration,
@@ -1851,7 +1851,6 @@ func (checker *Checker) checkNoInitializerNoFields(
 func (checker *Checker) checkSpecialFunction(
 	specialFunction *ast.SpecialFunctionDeclaration,
 	containerType Type,
-	containerDeclarationKind common.DeclarationKind,
 	containerDocString string,
 	parameters []Parameter,
 	containerKind ContainerKind,
@@ -1910,7 +1909,7 @@ func (checker *Checker) checkCompositeFunctions(
 	for _, function := range functions {
 		// NOTE: new activation, as function declarations
 		// shouldn't be visible in other function declarations,
-		// and `self` is is only visible inside function
+		// and `self` is only visible inside function
 
 		func() {
 			checker.enterValueScope()
@@ -2089,7 +2088,10 @@ func (checker *Checker) checkDestructors(
 
 			checker.report(
 				&InvalidDestructorError{
-					Range: ast.NewRangeFromPositioned(checker.memoryGauge, firstDestructor.FunctionDeclaration.Identifier),
+					Range: ast.NewRangeFromPositioned(
+						checker.memoryGauge,
+						firstDestructor.FunctionDeclaration.Identifier,
+					),
 				},
 			)
 		}
@@ -2106,7 +2108,6 @@ func (checker *Checker) checkDestructors(
 	checker.checkDestructor(
 		firstDestructor,
 		containerType,
-		containerDeclarationKind,
 		containerDocString,
 		containerKind,
 	)
@@ -2164,7 +2165,6 @@ func (checker *Checker) checkNoDestructorNoResourceFields(
 func (checker *Checker) checkDestructor(
 	destructor *ast.SpecialFunctionDeclaration,
 	containerType Type,
-	containerDeclarationKind common.DeclarationKind,
 	containerDocString string,
 	containerKind ContainerKind,
 ) {
@@ -2182,7 +2182,6 @@ func (checker *Checker) checkDestructor(
 	checker.checkSpecialFunction(
 		destructor,
 		containerType,
-		containerDeclarationKind,
 		containerDocString,
 		parameters,
 		containerKind,

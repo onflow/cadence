@@ -33,7 +33,7 @@ import (
 )
 
 func pretty(code string, maxLineWidth int) string {
-	program, err := parser.ParseProgram([]byte(code), nil)
+	program, err := parser.ParseProgram(nil, []byte(code), parser.Config{})
 	if err != nil {
 		return err.Error()
 	}
@@ -154,9 +154,9 @@ type Request struct {
 	MaxLineLength int    `json:"maxLineLength"`
 }
 
-var portFlag = flag.Int("port", 9090, "port")
-
 func main() {
+
+	portFlag := flag.Int("port", 9090, "port")
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(page))

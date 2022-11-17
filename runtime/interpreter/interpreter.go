@@ -2220,13 +2220,15 @@ func signedIntValueParser[ValueType Value, IntType any](
 	}
 }
 
-// No need to use metered constructors for values represented by big.Ints, since estimation is more granular than fixed-size types.
+// No need to use metered constructors for values represented by big.Ints,
+// since estimation is more granular than fixed-size types.
 func bigIntValueParser(convert func(*big.Int) (Value, bool)) stringValueParser {
 	return func(interpreter *Interpreter, input string) OptionalValue {
-		estimatedSize := common.OverEstimateBigIntFromString(input)
+		literalKind := common.IntegerLiteralKindDecimal
+		estimatedSize := common.OverEstimateBigIntFromString(input, literalKind)
 		common.UseMemory(interpreter, common.NewBigIntMemoryUsage(estimatedSize))
 
-		val, ok := new(big.Int).SetString(input, 10)
+		val, ok := new(big.Int).SetString(input, literalKind.Base())
 		if !ok {
 			return NilOptionalValue
 		}

@@ -62,4 +62,6 @@ const (
 	keywordSwitch      = "switch"
 	keywordDefault     = "default"
 	keywordEnum        = "enum"
+	keywordStatic      = "static"
+	keywordNative      = "native"
 )

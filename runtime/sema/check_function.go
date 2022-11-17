@@ -66,6 +66,16 @@ func (checker *Checker) visitFunctionDeclaration(
 		true,
 	)
 
+	checker.checkStaticModifier(
+		declaration.IsStatic(),
+		declaration.Identifier,
+	)
+
+	checker.checkNativeModifier(
+		declaration.IsNative(),
+		declaration.Identifier,
+	)
+
 	// global functions were previously declared, see `declareFunctionDeclaration`
 
 	functionType := checker.Elaboration.FunctionDeclarationFunctionTypes[declaration]

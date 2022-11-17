@@ -329,7 +329,7 @@ func TestParseAdvancedExpression(t *testing.T) {
 			defer func() {
 				panicMsg = recover()
 			}()
-			ParseExpression([]byte("1 < 2"), gauge)
+			ParseExpression(gauge, []byte("1 < 2"), Config{})
 		})()
 
 		require.IsType(t, errors.MemoryError{}, panicMsg)
@@ -352,7 +352,7 @@ func TestParseAdvancedExpression(t *testing.T) {
 				panicMsg = recover()
 			}()
 
-			ParseExpression([]byte("1 < 2 > 3"), gauge)
+			ParseExpression(gauge, []byte("1 < 2 > 3"), Config{})
 		})()
 
 		require.IsType(t, errors.MemoryError{}, panicMsg)
@@ -510,7 +510,7 @@ func TestParseArrayExpression(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("array expression", func(t *testing.T) {
+	t.Run("single line", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -577,13 +577,79 @@ func TestParseArrayExpression(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("multi line", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseExpression("[ 1 , \n 2 \n , \n\n 3 \n\n\n]")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.ArrayExpression{
+				Values: []ast.Expression{
+					&ast.IntegerExpression{
+						PositiveLiteral: []byte("1"),
+						Value:           big.NewInt(1),
+						Base:            10,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
+					},
+					&ast.IntegerExpression{
+						PositiveLiteral: []byte("2"),
+						Value:           big.NewInt(2),
+						Base:            10,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 2, Column: 1, Offset: 8},
+							EndPos:   ast.Position{Line: 2, Column: 1, Offset: 8},
+						},
+					},
+					&ast.IntegerExpression{
+						PositiveLiteral: []byte("3"),
+						Value:           big.NewInt(3),
+						Base:            10,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 5, Column: 1, Offset: 17},
+							EndPos:   ast.Position{Line: 5, Column: 1, Offset: 17},
+						},
+					},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 8, Column: 0, Offset: 22},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("empty, separated by newline", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseExpression("[\n]")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.ArrayExpression{
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 2, Column: 0, Offset: 2},
+				},
+			},
+			result,
+		)
+	})
+
 }
 
 func TestParseDictionaryExpression(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("dictionary expression", func(t *testing.T) {
+	t.Run("single line", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -649,6 +715,104 @@ func TestParseDictionaryExpression(t *testing.T) {
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 19, Offset: 19},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("multi line", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseExpression("{ 1 : 2 , \n 3 \n : \n 4 \n , \n\n 5 \n\n : \n\n 6 \n\n }")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.DictionaryExpression{
+				Entries: []ast.DictionaryEntry{
+					{
+						Key: &ast.IntegerExpression{
+							PositiveLiteral: []byte("1"),
+							Value:           big.NewInt(1),
+							Base:            10,
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+								EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+							},
+						},
+						Value: &ast.IntegerExpression{
+							PositiveLiteral: []byte("2"),
+							Value:           big.NewInt(2),
+							Base:            10,
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
+								EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+							},
+						},
+					},
+					{
+						Key: &ast.IntegerExpression{
+							PositiveLiteral: []byte("3"),
+							Value:           big.NewInt(3),
+							Base:            10,
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 2, Column: 1, Offset: 12},
+								EndPos:   ast.Position{Line: 2, Column: 1, Offset: 12},
+							},
+						},
+						Value: &ast.IntegerExpression{
+							PositiveLiteral: []byte("4"),
+							Value:           big.NewInt(4),
+							Base:            10,
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 4, Column: 1, Offset: 20},
+								EndPos:   ast.Position{Line: 4, Column: 1, Offset: 20},
+							},
+						},
+					},
+					{
+						Key: &ast.IntegerExpression{
+							PositiveLiteral: []byte("5"),
+							Value:           big.NewInt(5),
+							Base:            10,
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 7, Column: 1, Offset: 29},
+								EndPos:   ast.Position{Line: 7, Column: 1, Offset: 29},
+							},
+						},
+						Value: &ast.IntegerExpression{
+							PositiveLiteral: []byte("6"),
+							Value:           big.NewInt(6),
+							Base:            10,
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 11, Column: 1, Offset: 39},
+								EndPos:   ast.Position{Line: 11, Column: 1, Offset: 39},
+							},
+						},
+					},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 13, Column: 1, Offset: 44},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("empty, separated by newline", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseExpression("{\n}")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.DictionaryExpression{
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 2, Column: 0, Offset: 2},
 				},
 			},
 			result,
@@ -870,7 +1034,7 @@ func TestParseString(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message: "invalid end of string literal: missing '\"'",
-					Pos:     ast.Position{Line: 2, Column: 0, Offset: 2},
+					Pos:     ast.Position{Line: 1, Column: 1, Offset: 1},
 				},
 			},
 			errs,
@@ -923,7 +1087,7 @@ func TestParseString(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message: "invalid end of string literal: missing '\"'",
-					Pos:     ast.Position{Line: 2, Column: 0, Offset: 3},
+					Pos:     ast.Position{Line: 1, Column: 2, Offset: 2},
 				},
 			},
 			errs,
@@ -1928,11 +2092,11 @@ func TestParseBlockComment(t *testing.T) {
 			[]error{
 				// `true */ bar` is parsed as infix operation of path
 				&SyntaxError{
-					Message: "expected token '/'",
+					Message: "expected token identifier",
 					Pos: ast.Position{
-						Offset: 41,
+						Offset: 37,
 						Line:   1,
-						Column: 41,
+						Column: 37,
 					},
 				},
 			},
@@ -2012,9 +2176,14 @@ func TestParseBlockComment(t *testing.T) {
 			input: []byte(`/*foo`),
 		}
 
-		_, errs := ParseTokenStream(nil, tokens, func(p *parser) (ast.Expression, error) {
-			return parseExpression(p, lowestBindingPower)
-		})
+		_, errs := ParseTokenStream(
+			nil,
+			tokens,
+			func(p *parser) (ast.Expression, error) {
+				return parseExpression(p, lowestBindingPower)
+			},
+			Config{},
+		)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -2752,7 +2921,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 				},
 				&InvalidIntegerLiteralError{
 					Literal:                   "0b",
-					IntegerLiteralKind:        IntegerLiteralKindBinary,
+					IntegerLiteralKind:        common.IntegerLiteralKindBinary,
 					InvalidIntegerLiteralKind: InvalidNumberLiteralKindMissingDigits,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -2847,7 +3016,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 			[]error{
 				&InvalidIntegerLiteralError{
 					Literal:                   "0b_101010_101010",
-					IntegerLiteralKind:        IntegerLiteralKindBinary,
+					IntegerLiteralKind:        common.IntegerLiteralKindBinary,
 					InvalidIntegerLiteralKind: InvalidNumberLiteralKindLeadingUnderscore,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -2881,7 +3050,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 			[]error{
 				&InvalidIntegerLiteralError{
 					Literal:                   "0b101010_101010_",
-					IntegerLiteralKind:        IntegerLiteralKindBinary,
+					IntegerLiteralKind:        common.IntegerLiteralKindBinary,
 					InvalidIntegerLiteralKind: InvalidNumberLiteralKindTrailingUnderscore,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -2919,7 +3088,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 				},
 				&InvalidIntegerLiteralError{
 					Literal:                   `0o`,
-					IntegerLiteralKind:        IntegerLiteralKindOctal,
+					IntegerLiteralKind:        common.IntegerLiteralKindOctal,
 					InvalidIntegerLiteralKind: InvalidNumberLiteralKindMissingDigits,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -2995,7 +3164,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 			[]error{
 				&InvalidIntegerLiteralError{
 					Literal:                   "0o_32_45",
-					IntegerLiteralKind:        IntegerLiteralKindOctal,
+					IntegerLiteralKind:        common.IntegerLiteralKindOctal,
 					InvalidIntegerLiteralKind: InvalidNumberLiteralKindLeadingUnderscore,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -3029,7 +3198,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 			[]error{
 				&InvalidIntegerLiteralError{
 					Literal:                   "0o32_45_",
-					IntegerLiteralKind:        IntegerLiteralKindOctal,
+					IntegerLiteralKind:        common.IntegerLiteralKindOctal,
 					InvalidIntegerLiteralKind: InvalidNumberLiteralKindTrailingUnderscore,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -3105,7 +3274,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 			[]error{
 				&InvalidIntegerLiteralError{
 					Literal:                   "1_234_567_890_",
-					IntegerLiteralKind:        IntegerLiteralKindDecimal,
+					IntegerLiteralKind:        common.IntegerLiteralKindDecimal,
 					InvalidIntegerLiteralKind: InvalidNumberLiteralKindTrailingUnderscore,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -3143,7 +3312,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 				},
 				&InvalidIntegerLiteralError{
 					Literal:                   `0x`,
-					IntegerLiteralKind:        IntegerLiteralKindHexadecimal,
+					IntegerLiteralKind:        common.IntegerLiteralKindHexadecimal,
 					InvalidIntegerLiteralKind: InvalidNumberLiteralKindMissingDigits,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -3219,7 +3388,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 			[]error{
 				&InvalidIntegerLiteralError{
 					Literal:                   "0x_f2_09",
-					IntegerLiteralKind:        IntegerLiteralKindHexadecimal,
+					IntegerLiteralKind:        common.IntegerLiteralKindHexadecimal,
 					InvalidIntegerLiteralKind: InvalidNumberLiteralKindLeadingUnderscore,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -3253,7 +3422,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 			[]error{
 				&InvalidIntegerLiteralError{
 					Literal:                   `0xf2_09_`,
-					IntegerLiteralKind:        IntegerLiteralKindHexadecimal,
+					IntegerLiteralKind:        common.IntegerLiteralKindHexadecimal,
 					InvalidIntegerLiteralKind: InvalidNumberLiteralKindTrailingUnderscore,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -3375,7 +3544,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 				},
 				&InvalidIntegerLiteralError{
 					Literal:                   `0z123`,
-					IntegerLiteralKind:        IntegerLiteralKindUnknown,
+					IntegerLiteralKind:        common.IntegerLiteralKindUnknown,
 					InvalidIntegerLiteralKind: InvalidNumberLiteralKindUnknownPrefix,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},

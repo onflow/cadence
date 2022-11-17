@@ -36,16 +36,18 @@ func newUnmeteredInMemoryStorage() interpreter.InMemoryStorage {
 	return interpreter.NewInMemoryStorage(nil)
 }
 
-func testInterpreter(t *testing.T, code string, valueDeclaration StandardLibraryValue) *interpreter.Interpreter {
+func newInterpreter(t *testing.T, code string, valueDeclarations ...StandardLibraryValue) *interpreter.Interpreter {
 	program, err := parser.ParseProgram(
-		[]byte(code),
 		nil,
+		[]byte(code),
+		parser.Config{},
 	)
 	require.NoError(t, err)
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-
-	baseValueActivation.DeclareValue(valueDeclaration)
+	for _, valueDeclaration := range valueDeclarations {
+		baseValueActivation.DeclareValue(valueDeclaration)
+	}
 
 	checker, err := sema.NewChecker(
 		program,
@@ -64,7 +66,9 @@ func testInterpreter(t *testing.T, code string, valueDeclaration StandardLibrary
 	storage := newUnmeteredInMemoryStorage()
 
 	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
-	interpreter.Declare(baseActivation, valueDeclaration)
+	for _, valueDeclaration := range valueDeclarations {
+		interpreter.Declare(baseActivation, valueDeclaration)
+	}
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
@@ -86,7 +90,7 @@ func TestAssert(t *testing.T) {
 
 	t.Parallel()
 
-	inter := testInterpreter(t,
+	inter := newInterpreter(t,
 		`pub let test = assert`,
 		AssertFunction,
 	)
@@ -131,7 +135,7 @@ func TestPanic(t *testing.T) {
 
 	t.Parallel()
 
-	inter := testInterpreter(t,
+	inter := newInterpreter(t,
 		`pub let test = panic`,
 		PanicFunction,
 	)

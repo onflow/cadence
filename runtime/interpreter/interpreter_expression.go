@@ -557,20 +557,10 @@ func (interpreter *Interpreter) NewIntegerValueFromBigInt(value *big.Int, intege
 
 	switch integerSubType {
 	case sema.IntType, sema.IntegerType, sema.SignedIntegerType:
-		common.UseMemory(
-			memoryGauge,
-			common.NewBigIntMemoryUsage(
-				common.BigIntByteLength(value),
-			),
-		)
+		// BigInt value is already metered at parser.
 		return NewUnmeteredIntValueFromBigInt(value)
 	case sema.UIntType:
-		common.UseMemory(
-			memoryGauge,
-			common.NewBigIntMemoryUsage(
-				common.BigIntByteLength(value),
-			),
-		)
+		// BigInt value is already metered at parser.
 		return NewUnmeteredUIntValueFromBigInt(value)
 
 	// Int*
@@ -587,10 +577,10 @@ func (interpreter *Interpreter) NewIntegerValueFromBigInt(value *big.Int, intege
 		common.UseMemory(memoryGauge, Int64MemoryUsage)
 		return NewUnmeteredInt64Value(value.Int64())
 	case sema.Int128Type:
-		common.UseMemory(memoryGauge, Int128MemoryUsage)
+		// BigInt value is already metered at parser.
 		return NewUnmeteredInt128ValueFromBigInt(value)
 	case sema.Int256Type:
-		common.UseMemory(memoryGauge, Int256MemoryUsage)
+		// BigInt value is already metered at parser.
 		return NewUnmeteredInt256ValueFromBigInt(value)
 
 	// UInt*
@@ -607,10 +597,10 @@ func (interpreter *Interpreter) NewIntegerValueFromBigInt(value *big.Int, intege
 		common.UseMemory(memoryGauge, UInt64MemoryUsage)
 		return NewUnmeteredUInt64Value(value.Uint64())
 	case sema.UInt128Type:
-		common.UseMemory(memoryGauge, Uint128MemoryUsage)
+		// BigInt value is already metered at parser.
 		return NewUnmeteredUInt128ValueFromBigInt(value)
 	case sema.UInt256Type:
-		common.UseMemory(memoryGauge, Uint256MemoryUsage)
+		// BigInt value is already metered at parser.
 		return NewUnmeteredUInt256ValueFromBigInt(value)
 
 	// Word*

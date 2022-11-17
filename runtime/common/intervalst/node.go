@@ -54,7 +54,7 @@ func (MinPosition) Compare(other Position) int {
 	return -1
 }
 
-var minPosition = MinPosition{}
+var minPosition Position = MinPosition{}
 
 func (n *node[T]) Max() Position {
 	if n == nil {
