@@ -482,7 +482,7 @@ func (t *FunctionType) Doc() prettier.Doc {
 		)
 	}
 
-	result = append(result, functionTypeKeywordDoc)
+	result = append(result, functionTypeKeywordDoc, prettier.Space)
 
 	for i, parameterTypeAnnotation := range t.ParameterTypeAnnotations {
 		if i > 0 {

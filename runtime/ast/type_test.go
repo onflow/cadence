@@ -698,6 +698,7 @@ func TestFunctionType_Doc(t *testing.T) {
 			prettier.Text("view"),
 			prettier.Space,
 			prettier.Text("fun"),
+			prettier.Space,
 			prettier.Group{
 				Doc: prettier.Concat{
 					prettier.Text("("),
@@ -760,7 +761,7 @@ func TestFunctionType_String(t *testing.T) {
 	}
 
 	assert.Equal(t,
-		"fun(@AB, @CD): EF",
+		"fun (@AB, @CD): EF",
 		ty.String(),
 	)
 }
