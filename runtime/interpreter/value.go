@@ -14132,6 +14132,7 @@ func (v *CompositeValue) forEachAttachmentFunction(interpreter *Interpreter, loc
 			fn := func(attachment *CompositeValue) {
 
 				attachmentType := invocation.Interpreter.MustSemaTypeOfValue(attachment)
+				attachment.setBaseValue(invocation.Interpreter, v)
 
 				attachmentReference := NewEphemeralReferenceValue(
 					invocation.Interpreter,

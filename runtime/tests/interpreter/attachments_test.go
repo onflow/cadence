@@ -1554,6 +1554,43 @@ func TestInterpretForEachAttachment(t *testing.T) {
 		// order of interation over the attachment is not defined, but must be deterministic nonetheless
 		AssertValuesEqual(t, inter, interpreter.NewUnmeteredStringValue(" HelloWorld"), value)
 	})
+
+	t.Run("access field on unrestricted base", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			resource interface I {}
+			resource R: I {
+				fun onlyOnR(): Int {
+					return 3
+				}
+			}
+			attachment A for R {
+				fun foo(): Int {
+					return base.onlyOnR()
+				}
+			}
+			fun test(): Int {
+				let r <- attach A() to <-create R()
+				let i = &r as &{I}
+				var x = 0
+				i.forEachAttachment(fun(attachment: &AnyResourceAttachment) {
+					if let y = attachment.getFunction<((): Int)>("foo") {
+						x = y()
+					}
+				})
+				destroy r
+				return x
+			}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		// order of interation over the attachment is not defined, but must be deterministic nonetheless
+		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
+	})
 }
 
 func TestInterpretMutationDuringForEachAttachment(t *testing.T) {
