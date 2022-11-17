@@ -1190,7 +1190,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				var self MemberAccessibleValue = value
 				if declaration.Kind() == common.CompositeKindAttachment {
 					self = NewEphemeralReferenceValue(interpreter, false, value, interpreter.MustConvertStaticToSemaType(value.StaticType(interpreter)))
-					invocation.Base = interpreter.FindVariable(sema.BaseIdentifier).GetValue().(*EphemeralReferenceValue)
+					invocation.Base = interpreter.SharedState.deferredBaseValue
 				}
 				invocation.Self = &self
 

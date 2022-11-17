@@ -1206,20 +1206,17 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 
 	// the `base` value must be accessible during the attachment's constructor, but we cannot
 	// set it on the attachment's `CompositeValue` yet, because the value does not exist. Instead
-	// we directly declare `base` as a `&base` reference in the scope of the constructor's invocation,
-	// and remove it immediately afterwards.\
+	// we save the base value in the interpreter's shared state and set the variable directly inside the
+	// constructor to make it available
 	baseValue := NewEphemeralReferenceValue(
 		interpreter,
 		false,
 		base,
 		interpreter.MustSemaTypeOfValue(base).(*sema.CompositeType),
 	)
-	// technically this makes `base` available to the arguments to the attachment constructor, but we enforce statically
-	// that it cannot appear there, so it's ok
-	interpreter.declareVariable(sema.BaseIdentifier, baseValue)
 
+	interpreter.SharedState.deferredBaseValue = baseValue
 	attachment, ok := interpreter.VisitInvocationExpression(attachExpression.Attachment).(*CompositeValue)
-	interpreter.activations.Remove(sema.BaseIdentifier)
 
 	// we enforce this in the checker
 	if !ok {

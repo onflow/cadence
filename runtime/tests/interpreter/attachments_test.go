@@ -557,6 +557,44 @@ func TestAttachExecutionOrdering(t *testing.T) {
 	})
 }
 
+func TestInterpretAttachmentNestedBaseUse(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+		resource R {
+			let x: Int
+			init (x: Int) {
+				self.x = x
+			}
+		}
+		attachment A for R {
+			let y: Int 
+			init (y: Int) {
+				self.y = y
+			}
+			fun foo(): Int { 
+				let r <- create R(x: 10)
+				let r2 <- attach A(y: base.x) to <-r
+				let i = self.y + r2[A]?.y!
+				destroy r2
+				return i
+			}
+		}
+		fun test(): Int {
+			let r <- create R(x: 3)
+			let r2 <- attach A(y: 2) to <-r
+			let i = r2[A]?.foo()!
+			destroy r2
+			return i
+		}
+		`)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(5), value)
+}
+
 func TestInterpretAttachmentBaseUse(t *testing.T) {
 	t.Parallel()
 
