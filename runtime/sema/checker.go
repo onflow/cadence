@@ -320,7 +320,7 @@ func (checker *Checker) CheckProgram(program *ast.Program) {
 	}
 
 	for _, declaration := range program.CompositeDeclarations() {
-		checker.declareCompositeMembersAndValue(declaration, ContainerKindComposite)
+		checker.declareCompositeLikeMembersAndValue(declaration, ContainerKindComposite)
 	}
 
 	for _, declaration := range program.AttachmentDeclarations() {

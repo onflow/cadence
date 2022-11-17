@@ -1141,7 +1141,7 @@ type InitializerMismatch struct {
 //  use `InitializerMismatch`, `MissingMembers`, `MemberMismatches`, etc
 
 type ConformanceError struct {
-	CompositeDeclaration           *ast.CompositeDeclaration
+	CompositeDeclaration           ast.CompositeLikeDeclaration
 	CompositeType                  *CompositeType
 	InterfaceType                  *InterfaceType
 	InitializerMismatch            *InitializerMismatch

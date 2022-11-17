@@ -96,9 +96,8 @@ type Elaboration struct {
 	FunctionDeclarationFunctionTypes map[*ast.FunctionDeclaration]*FunctionType
 	VariableDeclarationTypes         map[*ast.VariableDeclaration]VariableDeclarationTypes
 	AssignmentStatementTypes         map[*ast.AssignmentStatement]AssignmentStatementTypes
-	CompositeDeclarationTypes        map[*ast.CompositeDeclaration]*CompositeType
-	CompositeTypeDeclarations        map[*CompositeType]*ast.CompositeDeclaration
-	AttachmentCompositeDeclarations  map[*ast.AttachmentDeclaration]*ast.CompositeDeclaration
+	CompositeDeclarationTypes        map[ast.CompositeLikeDeclaration]*CompositeType
+	CompositeTypeDeclarations        map[*CompositeType]ast.CompositeLikeDeclaration
 	InterfaceDeclarationTypes        map[*ast.InterfaceDeclaration]*InterfaceType
 	InterfaceTypeDeclarations        map[*InterfaceType]*ast.InterfaceDeclaration
 	ConstructorFunctionTypes         map[*ast.SpecialFunctionDeclaration]*FunctionType
@@ -120,7 +119,7 @@ type Elaboration struct {
 	// IsNestedResourceMoveExpression indicates if the access the index or member expression
 	// is implicitly moving a resource out of the container, e.g. in a shift or swap statement.
 	IsNestedResourceMoveExpression      map[ast.Expression]struct{}
-	CompositeNestedDeclarations         map[*ast.CompositeDeclaration]map[string]ast.Declaration
+	CompositeNestedDeclarations         map[ast.CompositeLikeDeclaration]map[string]ast.Declaration
 	InterfaceNestedDeclarations         map[*ast.InterfaceDeclaration]map[string]ast.Declaration
 	PostConditionsRewrite               map[*ast.Conditions]PostConditionsRewrite
 	EmitStatementEventTypes             map[*ast.EmitStatement]*CompositeType
@@ -152,9 +151,8 @@ func NewElaboration(gauge common.MemoryGauge, extendedElaboration bool) *Elabora
 		FunctionDeclarationFunctionTypes:    map[*ast.FunctionDeclaration]*FunctionType{},
 		VariableDeclarationTypes:            map[*ast.VariableDeclaration]VariableDeclarationTypes{},
 		AssignmentStatementTypes:            map[*ast.AssignmentStatement]AssignmentStatementTypes{},
-		CompositeDeclarationTypes:           map[*ast.CompositeDeclaration]*CompositeType{},
-		CompositeTypeDeclarations:           map[*CompositeType]*ast.CompositeDeclaration{},
-		AttachmentCompositeDeclarations:     map[*ast.AttachmentDeclaration]*ast.CompositeDeclaration{},
+		CompositeDeclarationTypes:           map[ast.CompositeLikeDeclaration]*CompositeType{},
+		CompositeTypeDeclarations:           map[*CompositeType]ast.CompositeLikeDeclaration{},
 		InterfaceDeclarationTypes:           map[*ast.InterfaceDeclaration]*InterfaceType{},
 		InterfaceTypeDeclarations:           map[*InterfaceType]*ast.InterfaceDeclaration{},
 		ConstructorFunctionTypes:            map[*ast.SpecialFunctionDeclaration]*FunctionType{},
@@ -174,7 +172,7 @@ func NewElaboration(gauge common.MemoryGauge, extendedElaboration bool) *Elabora
 		TransactionDeclarationTypes:         map[*ast.TransactionDeclaration]*TransactionType{},
 		SwapStatementTypes:                  map[*ast.SwapStatement]SwapStatementTypes{},
 		IsNestedResourceMoveExpression:      map[ast.Expression]struct{}{},
-		CompositeNestedDeclarations:         map[*ast.CompositeDeclaration]map[string]ast.Declaration{},
+		CompositeNestedDeclarations:         map[ast.CompositeLikeDeclaration]map[string]ast.Declaration{},
 		InterfaceNestedDeclarations:         map[*ast.InterfaceDeclaration]map[string]ast.Declaration{},
 		PostConditionsRewrite:               map[*ast.Conditions]PostConditionsRewrite{},
 		EmitStatementEventTypes:             map[*ast.EmitStatement]*CompositeType{},
