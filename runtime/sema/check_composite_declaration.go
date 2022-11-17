@@ -62,11 +62,11 @@ func (checker *Checker) checkAttachmentBaseType(attachmentType *CompositeType) {
 
 	switch ty := baseType.(type) {
 	case *InterfaceType:
-		if ty.CompositeKind == common.CompositeKindResource || ty.CompositeKind == common.CompositeKindStructure {
+		if ty.CompositeKind.SupportsAttachments() {
 			return
 		}
 	case *CompositeType:
-		if ty.Kind == common.CompositeKindResource || ty.Kind == common.CompositeKindStructure {
+		if ty.Kind.SupportsAttachments() {
 			return
 		}
 	case *SimpleType:
