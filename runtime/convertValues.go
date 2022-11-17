@@ -196,7 +196,7 @@ func exportValueWithInterpreter(
 			seenReferences,
 		)
 	case *interpreter.SimpleCompositeValue:
-		return exportSimpleCompositeValue(
+		return exportCompositeValue(
 			v,
 			inter,
 			locationRange,
@@ -246,7 +246,9 @@ func exportValueWithInterpreter(
 	case interpreter.FunctionValue:
 		return exportFunctionValue(v, inter), nil
 	default:
-		return nil, errors.NewUnexpectedError("cannot export value of type %T", value)
+		return nil, &ValueNotExportableError{
+			Type: v.StaticType(inter),
+		}
 	}
 }
 
@@ -328,7 +330,7 @@ func exportArrayValue(
 }
 
 func exportCompositeValue(
-	v *interpreter.CompositeValue,
+	v interpreter.Value,
 	inter *interpreter.Interpreter,
 	locationRange interpreter.LocationRange,
 	seenReferences seenReferences,
@@ -337,12 +339,20 @@ func exportCompositeValue(
 	error,
 ) {
 
-	staticType, err := inter.ConvertStaticToSemaType(v.StaticType(inter))
+	staticType := v.StaticType(inter)
+
+	semaType, err := inter.ConvertStaticToSemaType(staticType)
 	if err != nil {
 		return nil, err
 	}
 
-	compositeType, ok := staticType.(*sema.CompositeType)
+	if !semaType.IsExportable(map[*sema.Member]bool{}) {
+		return nil, &ValueNotExportableError{
+			Type: staticType,
+		}
+	}
+
+	compositeType, ok := semaType.(*sema.CompositeType)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
@@ -361,10 +371,23 @@ func exportCompositeValue(
 		for i, field := range fieldNames {
 			fieldName := field.Identifier
 
-			fieldValue := v.GetField(inter, locationRange, fieldName)
-			if fieldValue == nil && v.ComputedFields != nil {
-				if computedField, ok := v.ComputedFields[fieldName]; ok {
-					fieldValue = computedField(inter, locationRange)
+			var fieldValue interpreter.Value
+
+			switch v := v.(type) {
+			case *interpreter.SimpleCompositeValue:
+				fieldValue = v.Fields[fieldName]
+				computeField := v.ComputeField
+
+				if fieldValue == nil && computeField != nil {
+					fieldValue = computeField(fieldName, inter, locationRange)
+				}
+
+			case *interpreter.CompositeValue:
+				fieldValue = v.GetField(inter, locationRange, fieldName)
+				if fieldValue == nil && v.ComputedFields != nil {
+					if computedField, ok := v.ComputedFields[fieldName]; ok {
+						fieldValue = computedField(inter, locationRange)
+					}
 				}
 			}
 
@@ -383,10 +406,12 @@ func exportCompositeValue(
 		return fields, nil
 	}
 
+	compositeKind := compositeType.Kind
+
 	// NOTE: when modifying the cases below,
 	// also update the error message below!
 
-	switch compositeType.Kind {
+	switch compositeKind {
 	case common.CompositeKindStructure:
 		structure, err := cadence.NewMeteredStruct(
 			inter,
@@ -451,137 +476,7 @@ func exportCompositeValue(
 
 	return nil, errors.NewDefaultUserError(
 		"invalid composite kind `%s`, must be %s",
-		compositeType.Kind,
-		common.EnumerateWords(
-			[]string{
-				common.CompositeKindStructure.Name(),
-				common.CompositeKindResource.Name(),
-				common.CompositeKindEvent.Name(),
-				common.CompositeKindContract.Name(),
-				common.CompositeKindEnum.Name(),
-			},
-			"or",
-		),
-	)
-}
-
-func exportSimpleCompositeValue(
-	v *interpreter.SimpleCompositeValue,
-	inter *interpreter.Interpreter,
-	locationRange interpreter.LocationRange,
-	seenReferences seenReferences,
-) (
-	cadence.Value,
-	error,
-) {
-	staticType, err := inter.ConvertStaticToSemaType(v.StaticType(inter))
-	if err != nil {
-		return nil, err
-	}
-
-	compositeType, ok := staticType.(*sema.CompositeType)
-	if !ok {
-		return nil, errors.NewUnexpectedError(
-			"unexportable composite value: %s",
-			staticType,
-		)
-	}
-
-	// TODO: consider making the results map "global", by moving it up to exportValueWithInterpreter
-	t := exportCompositeType(inter, compositeType, map[sema.TypeID]cadence.Type{})
-
-	// NOTE: use the exported type's fields to ensure fields in type
-	// and value are in sync
-
-	fieldNames := t.CompositeFields()
-
-	makeFields := func() ([]cadence.Value, error) {
-		fields := make([]cadence.Value, len(fieldNames))
-
-		for i, field := range fieldNames {
-			fieldName := field.Identifier
-
-			fieldValue := v.Fields[fieldName]
-
-			computeField := v.ComputeField
-			if fieldValue == nil && computeField != nil {
-				fieldValue = computeField(fieldName, inter, locationRange)
-			}
-
-			exportedFieldValue, err := exportValueWithInterpreter(
-				fieldValue,
-				inter,
-				locationRange,
-				seenReferences,
-			)
-			if err != nil {
-				return nil, err
-			}
-			fields[i] = exportedFieldValue
-		}
-
-		return fields, nil
-	}
-
-	// NOTE: when modifying the cases below,
-	// also update the error message below!
-
-	switch compositeType.Kind {
-	case common.CompositeKindStructure:
-		structure, err := cadence.NewMeteredStruct(
-			inter,
-			len(fieldNames),
-			makeFields,
-		)
-		if err != nil {
-			return nil, err
-		}
-		return structure.WithType(t.(*cadence.StructType)), nil
-	case common.CompositeKindResource:
-		resource, err := cadence.NewMeteredResource(
-			inter,
-			len(fieldNames),
-			makeFields,
-		)
-		if err != nil {
-			return nil, err
-		}
-		return resource.WithType(t.(*cadence.ResourceType)), nil
-	case common.CompositeKindEvent:
-		event, err := cadence.NewMeteredEvent(
-			inter,
-			len(fieldNames),
-			makeFields,
-		)
-		if err != nil {
-			return nil, err
-		}
-		return event.WithType(t.(*cadence.EventType)), nil
-	case common.CompositeKindContract:
-		contract, err := cadence.NewMeteredContract(
-			inter,
-			len(fieldNames),
-			makeFields,
-		)
-		if err != nil {
-			return nil, err
-		}
-		return contract.WithType(t.(*cadence.ContractType)), nil
-	case common.CompositeKindEnum:
-		enum, err := cadence.NewMeteredEnum(
-			inter,
-			len(fieldNames),
-			makeFields,
-		)
-		if err != nil {
-			return nil, err
-		}
-		return enum.WithType(t.(*cadence.EnumType)), nil
-	}
-
-	return nil, errors.NewUnexpectedError(
-		"invalid composite kind `%s`, must be %s",
-		compositeType.Kind,
+		compositeKind,
 		common.EnumerateWords(
 			[]string{
 				common.CompositeKindStructure.Name(),
@@ -883,6 +778,12 @@ func (i valueImporter) importValue(value cadence.Value, expectedType sema.Type) 
 			v.Address,
 			v.BorrowType,
 		)
+	case cadence.Contract:
+		return nil, errors.NewDefaultUserError("cannot import contract")
+	case cadence.Function:
+		return nil, errors.NewDefaultUserError("cannot import function")
+	case cadence.Link:
+		return nil, errors.NewDefaultUserError("cannot import link")
 	default:
 		// This means the implementation has unhandled types.
 		// Hence, return an internal error

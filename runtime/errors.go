@@ -195,9 +195,7 @@ func (e *InvalidValueTypeError) Error() string {
 // InvalidScriptReturnTypeError is an error that is reported for
 // invalid script return types.
 //
-// For example, the type `Int` is valid,
-// whereas a function type is not,
-// because it cannot be exported/serialized.
+// A type is invalid if it cannot be exported / returned externally.
 type InvalidScriptReturnTypeError struct {
 	Type sema.Type
 }
@@ -210,6 +208,23 @@ func (e *InvalidScriptReturnTypeError) Error() string {
 	return fmt.Sprintf(
 		"invalid script return type: `%s`",
 		e.Type.QualifiedString(),
+	)
+}
+
+// ValueNotExportableError is an error that is reported for
+// values that cannot be exported.
+type ValueNotExportableError struct {
+	Type interpreter.StaticType
+}
+
+var _ errors.UserError = &ValueNotExportableError{}
+
+func (*ValueNotExportableError) IsUserError() {}
+
+func (e *ValueNotExportableError) Error() string {
+	return fmt.Sprintf(
+		"value of type `%s` cannot be exported",
+		e.Type.String(),
 	)
 }
 

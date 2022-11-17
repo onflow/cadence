@@ -30,6 +30,6 @@ var AnyType = &SimpleType{
 	Storable:  true,
 	Equatable: false,
 	// `Any` is never a valid type in user programs
-	ExternallyReturnable: false,
-	Importable:           false,
+	Exportable: false,
+	Importable: false,
 }

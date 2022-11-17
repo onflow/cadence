@@ -120,7 +120,7 @@ func (e *JuxtaposedUnaryOperatorsError) Error() string {
 
 type InvalidIntegerLiteralError struct {
 	Literal                   string
-	IntegerLiteralKind        IntegerLiteralKind
+	IntegerLiteralKind        common.IntegerLiteralKind
 	InvalidIntegerLiteralKind InvalidNumberLiteralKind
 	ast.Range
 }
@@ -133,7 +133,7 @@ func (*InvalidIntegerLiteralError) isParseError() {}
 func (*InvalidIntegerLiteralError) IsUserError() {}
 
 func (e *InvalidIntegerLiteralError) Error() string {
-	if e.IntegerLiteralKind == IntegerLiteralKindUnknown {
+	if e.IntegerLiteralKind == common.IntegerLiteralKindUnknown {
 		return fmt.Sprintf(
 			"invalid integer literal `%s`: %s",
 			e.Literal,
