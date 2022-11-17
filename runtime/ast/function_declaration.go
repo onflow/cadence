@@ -56,8 +56,16 @@ func (p FunctionPurity) MarshalJSON() ([]byte, error) {
 	}
 }
 
+type FunctionDeclarationFlags uint8
+
+const (
+	FunctionDeclarationFlagsIsStatic FunctionDeclarationFlags = 1 << iota
+	FunctionDeclarationFlagsIsNative
+)
+
 type FunctionDeclaration struct {
 	Access               Access
+	Flags                FunctionDeclarationFlags
 	Purity               FunctionPurity
 	Identifier           Identifier
 	ParameterList        *ParameterList
@@ -75,6 +83,8 @@ func NewFunctionDeclaration(
 	gauge common.MemoryGauge,
 	access Access,
 	purity FunctionPurity,
+	isStatic bool,
+	isNative bool,
 	identifier Identifier,
 	parameterList *ParameterList,
 	returnTypeAnnotation *TypeAnnotation,
@@ -84,9 +94,18 @@ func NewFunctionDeclaration(
 ) *FunctionDeclaration {
 	common.UseMemory(gauge, common.FunctionDeclarationMemoryUsage)
 
+	var flags FunctionDeclarationFlags
+	if isStatic {
+		flags |= FunctionDeclarationFlagsIsStatic
+	}
+	if isNative {
+		flags |= FunctionDeclarationFlagsIsNative
+	}
+
 	return &FunctionDeclaration{
 		Access:               access,
 		Purity:               purity,
+		Flags:                flags,
 		Identifier:           identifier,
 		ParameterList:        parameterList,
 		ReturnTypeAnnotation: returnTypeAnnotation,
@@ -161,6 +180,8 @@ func (d *FunctionDeclaration) Doc() prettier.Doc {
 	return FunctionDocument(
 		d.Access,
 		d.Purity,
+		d.IsStatic(),
+		d.IsNative(),
 		true,
 		d.Identifier.Identifier,
 		d.ParameterList,
@@ -172,18 +193,32 @@ func (d *FunctionDeclaration) Doc() prettier.Doc {
 func (d *FunctionDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias FunctionDeclaration
 	return json.Marshal(&struct {
-		Type string
+		Type     string
+		IsStatic bool
+		IsNative bool
+		Flags    FunctionDeclarationFlags `json:",omitempty"`
 		Range
 		*Alias
 	}{
-		Type:  "FunctionDeclaration",
-		Range: NewUnmeteredRangeFromPositioned(d),
-		Alias: (*Alias)(d),
+		Type:     "FunctionDeclaration",
+		Range:    NewUnmeteredRangeFromPositioned(d),
+		IsStatic: d.IsStatic(),
+		IsNative: d.IsNative(),
+		Alias:    (*Alias)(d),
+		Flags:    0,
 	})
 }
 
 func (d *FunctionDeclaration) String() string {
 	return Prettier(d)
+}
+
+func (d *FunctionDeclaration) IsStatic() bool {
+	return d.Flags&FunctionDeclarationFlagsIsStatic != 0
+}
+
+func (d *FunctionDeclaration) IsNative() bool {
+	return d.Flags&FunctionDeclarationFlagsIsNative != 0
 }
 
 // SpecialFunctionDeclaration
@@ -254,6 +289,8 @@ func (d *SpecialFunctionDeclaration) Doc() prettier.Doc {
 	return FunctionDocument(
 		d.FunctionDeclaration.Access,
 		d.FunctionDeclaration.Purity,
+		d.FunctionDeclaration.IsStatic(),
+		d.FunctionDeclaration.IsNative(),
 		false,
 		d.Kind.Keywords(),
 		d.FunctionDeclaration.ParameterList,

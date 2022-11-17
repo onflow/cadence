@@ -46,4 +46,8 @@ type Config struct {
 	MemberAccountAccessHandler MemberAccountAccessHandlerFunc
 	// ContractValueHandler is used to construct the contract variable
 	ContractValueHandler ContractValueHandlerFunc
+	// AllowNativeDeclarations determines if declarations may be native
+	AllowNativeDeclarations bool
+	// AllowStaticDeclarations determined if declarations may be static
+	AllowStaticDeclarations bool
 }

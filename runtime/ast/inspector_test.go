@@ -33,7 +33,11 @@ func TestInspector_Elements(t *testing.T) {
 
 	t.Parallel()
 
-	program, err := parser.ParseProgram([]byte(examples.FungibleTokenContractInterface), nil)
+	program, err := parser.ParseProgram(
+		nil,
+		[]byte(examples.FungibleTokenContractInterface),
+		parser.Config{},
+	)
 	require.NoError(t, err)
 
 	inspector := ast.NewInspector(program)
@@ -102,7 +106,11 @@ func TestInspectorTypeFiltering(t *testing.T) {
       }
     `
 
-	program, err := parser.ParseProgram([]byte(code), nil)
+	program, err := parser.ParseProgram(
+		nil,
+		[]byte(code),
+		parser.Config{},
+	)
 	require.NoError(t, err)
 
 	inspector := ast.NewInspector(program)

@@ -201,6 +201,8 @@ func parseFunctionDeclarationOrFunctionExpressionStatement(
 			p.memoryGauge,
 			ast.AccessNotSpecified,
 			purity,
+			false,
+			false,
 			identifier,
 			parameterList,
 			returnTypeAnnotation,
