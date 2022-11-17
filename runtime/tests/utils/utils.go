@@ -65,10 +65,14 @@ func AssertEqualWithDiff(t *testing.T, expected, actual any) {
 				s.WriteString("\n")
 			}
 
-			t.Errorf("Not equal: \n"+
-				"expected: %s\n"+
-				"actual  : %s\n\n"+
-				"%s", expected, actual, s.String(),
+			t.Errorf(
+				"Not equal: \n"+
+					"expected: %s\n"+
+					"actual  : %s\n\n"+
+					"%s",
+				expected,
+				actual,
+				s.String(),
 			)
 		}
 	}
