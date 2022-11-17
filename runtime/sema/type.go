@@ -6247,6 +6247,11 @@ func (t *RestrictedType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
+// restricted types must be type indexable, because this is how we handle access control for attachments.
+// Specifically, because in `v[A]`, `v` must be a subtype of `A`'s declared base,
+// if `v` is a restricted type `{I}`, only attachments declared for `I` or a supertype can be accessed on `v`.
+// Attachments declared for concrete types implementing `I` cannot be accessed.
+// A good elucidating example here is that an attachment declared for `Vault` cannot be accessed on a value of type `&{Provider}`
 func (t *RestrictedType) isTypeIndexableType() bool {
 	// resources and structs only can be indexed for attachments, but all restricted types
 	// are necessarily structs and resources, we return true
