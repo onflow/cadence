@@ -76,6 +76,18 @@ jobs:
       - name: Check capabilities of dependencies
         run: make check-capabilities
 
+  lint-json:
+    name: Lint JSON
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone
+        uses: actions/checkout@v3
+
+      - name: json-syntax-check
+        uses: limitusus/json-syntax-check@v1
+        with:
+          pattern: "\\.json$"
+
   semgrep:
     name: Semgrep
     runs-on: ubuntu-latest

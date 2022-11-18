@@ -20,15 +20,15 @@ package sema
 
 // VoidType represents the void type
 var VoidType = &SimpleType{
-	Name:                 "Void",
-	QualifiedName:        "Void",
-	TypeID:               "Void",
-	tag:                  VoidTypeTag,
-	IsResource:           false,
-	Storable:             false,
-	Equatable:            true,
-	ExternallyReturnable: true,
-	Importable:           false,
+	Name:          "Void",
+	QualifiedName: "Void",
+	TypeID:        "Void",
+	tag:           VoidTypeTag,
+	IsResource:    false,
+	Storable:      false,
+	Equatable:     true,
+	Exportable:    true,
+	Importable:    false,
 }
 
 var VoidTypeAnnotation = NewTypeAnnotation(VoidType)

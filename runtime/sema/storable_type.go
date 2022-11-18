@@ -33,11 +33,11 @@ var StorableType = &SimpleType{
 	// only used as e.g. a type bound, but is not accessible
 	// to user programs, i.e. can't be used in type annotations
 	// for e.g. parameters, return types, fields, etc.
-	IsResource:           false,
-	Storable:             true,
-	Equatable:            false,
-	ExternallyReturnable: false,
-	Importable:           false,
+	IsResource: false,
+	Storable:   true,
+	Equatable:  false,
+	Exportable: false,
+	Importable: false,
 	IsSuperTypeOf: func(subType Type) bool {
 		storableResults := map[*Member]bool{}
 		return subType.IsStorable(storableResults)

@@ -22,13 +22,13 @@ package sema
 // It is the result of type checking failing and
 // can't be expressed in programs.
 var InvalidType = &SimpleType{
-	Name:                 "<<invalid>>",
-	QualifiedName:        "<<invalid>>",
-	TypeID:               "<<invalid>>",
-	tag:                  InvalidTypeTag,
-	IsResource:           false,
-	Storable:             false,
-	Equatable:            false,
-	ExternallyReturnable: false,
-	Importable:           false,
+	Name:          "<<invalid>>",
+	QualifiedName: "<<invalid>>",
+	TypeID:        "<<invalid>>",
+	tag:           InvalidTypeTag,
+	IsResource:    false,
+	Storable:      false,
+	Equatable:     false,
+	Exportable:    false,
+	Importable:    false,
 }

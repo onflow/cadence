@@ -25,15 +25,15 @@ import (
 
 // DeployedContractType represents the type `DeployedContract`
 var DeployedContractType = &SimpleType{
-	Name:                 "DeployedContract",
-	QualifiedName:        "DeployedContract",
-	TypeID:               "DeployedContract",
-	tag:                  DeployedContractTypeTag,
-	IsResource:           false,
-	Storable:             false,
-	Equatable:            false,
-	ExternallyReturnable: false,
-	Importable:           false,
+	Name:          "DeployedContract",
+	QualifiedName: "DeployedContract",
+	TypeID:        "DeployedContract",
+	tag:           DeployedContractTypeTag,
+	IsResource:    false,
+	Storable:      false,
+	Equatable:     false,
+	Exportable:    false,
+	Importable:    false,
 	Members: func(t *SimpleType) map[string]MemberResolver {
 		return map[string]MemberResolver{
 			DeployedContractTypeAddressFieldName: {
