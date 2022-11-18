@@ -25,16 +25,15 @@ import (
 
 // BlockType
 var BlockType = &SimpleType{
-	Name:                 "Block",
-	QualifiedName:        "Block",
-	TypeID:               "Block",
-	tag:                  BlockTypeTag,
-	IsInvalid:            false,
-	IsResource:           false,
-	Storable:             false,
-	Equatable:            false,
-	ExternallyReturnable: false,
-	Importable:           false,
+	Name:          "Block",
+	QualifiedName: "Block",
+	TypeID:        "Block",
+	tag:           BlockTypeTag,
+	IsResource:    false,
+	Storable:      false,
+	Equatable:     false,
+	Exportable:    false,
+	Importable:    false,
 	Members: func(t *SimpleType) map[string]MemberResolver {
 		return map[string]MemberResolver{
 			BlockTypeHeightFieldName: {
@@ -80,7 +79,7 @@ var BlockType = &SimpleType{
 						memoryGauge,
 						t,
 						identifier,
-						blockIDFieldType,
+						BlockTypeIDFieldType,
 						blockTypeIDFieldDocString,
 					)
 				},
@@ -91,7 +90,7 @@ var BlockType = &SimpleType{
 
 const BlockIDSize = 32
 
-var blockIDFieldType = &ConstantSizedType{
+var BlockTypeIDFieldType = &ConstantSizedType{
 	Type: UInt8Type,
 	Size: BlockIDSize,
 }
@@ -112,17 +111,17 @@ The view of the block.
 It is a detail of the consensus algorithm. It is a monotonically increasing integer and counts rounds in the consensus algorithm. Since not all rounds result in a finalized block, the view number is strictly greater than or equal to the block height
 `
 
-const BlockTypeTimestampFieldName = "timestamp"
+const BlockTypeIDFieldName = "id"
 
-const blockTypeTimestampFieldDocString = `
+const blockTypeIDFieldDocString = `
 The ID of the block.
 
 It is essentially the hash of the block
 `
 
-const BlockTypeIDFieldName = "id"
+const BlockTypeTimestampFieldName = "timestamp"
 
-const blockTypeIDFieldDocString = `
+const blockTypeTimestampFieldDocString = `
 The timestamp of the block.
 
 Unix timestamp of when the proposer claims it constructed the block.

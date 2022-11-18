@@ -117,13 +117,13 @@ type Type interface {
 	// and pre-set before a recursive call.
 	IsStorable(results map[*Member]bool) bool
 
-	// IsExternallyReturnable returns true if a value of this type can be exported
+	// IsExportable returns true if a value of this type can be exported.
 	//
-	// The check if the type is externally returnable is recursive,
+	// The check if the type is exportable is recursive,
 	// the results parameter prevents cycles:
 	// it is checked at the start of the recursively called function,
 	// and pre-set before a recursive call.
-	IsExternallyReturnable(results map[*Member]bool) bool
+	IsExportable(results map[*Member]bool) bool
 
 	// IsImportable returns true if values of the type can be imported to a program as arguments
 	IsImportable(results map[*Member]bool) bool
@@ -586,8 +586,8 @@ func (t *OptionalType) IsStorable(results map[*Member]bool) bool {
 	return t.Type.IsStorable(results)
 }
 
-func (t *OptionalType) IsExternallyReturnable(results map[*Member]bool) bool {
-	return t.Type.IsExternallyReturnable(results)
+func (t *OptionalType) IsExportable(results map[*Member]bool) bool {
+	return t.Type.IsExportable(results)
 }
 
 func (t *OptionalType) IsImportable(results map[*Member]bool) bool {
@@ -764,7 +764,7 @@ func (*GenericType) IsStorable(_ map[*Member]bool) bool {
 	return false
 }
 
-func (*GenericType) IsExternallyReturnable(_ map[*Member]bool) bool {
+func (*GenericType) IsExportable(_ map[*Member]bool) bool {
 	return false
 }
 
@@ -1043,7 +1043,7 @@ func (*NumericType) IsStorable(_ map[*Member]bool) bool {
 	return true
 }
 
-func (*NumericType) IsExternallyReturnable(_ map[*Member]bool) bool {
+func (*NumericType) IsExportable(_ map[*Member]bool) bool {
 	return true
 }
 
@@ -1232,7 +1232,7 @@ func (*FixedPointNumericType) IsStorable(_ map[*Member]bool) bool {
 	return true
 }
 
-func (*FixedPointNumericType) IsExternallyReturnable(_ map[*Member]bool) bool {
+func (*FixedPointNumericType) IsExportable(_ map[*Member]bool) bool {
 	return true
 }
 
@@ -2160,8 +2160,8 @@ func (t *VariableSizedType) IsStorable(results map[*Member]bool) bool {
 	return t.Type.IsStorable(results)
 }
 
-func (t *VariableSizedType) IsExternallyReturnable(results map[*Member]bool) bool {
-	return t.Type.IsExternallyReturnable(results)
+func (t *VariableSizedType) IsExportable(results map[*Member]bool) bool {
+	return t.Type.IsExportable(results)
 }
 
 func (t *VariableSizedType) IsImportable(results map[*Member]bool) bool {
@@ -2299,7 +2299,7 @@ func (t *ConstantSizedType) IsStorable(results map[*Member]bool) bool {
 	return t.Type.IsStorable(results)
 }
 
-func (t *ConstantSizedType) IsExternallyReturnable(results map[*Member]bool) bool {
+func (t *ConstantSizedType) IsExportable(results map[*Member]bool) bool {
 	return t.Type.IsStorable(results)
 }
 
@@ -2755,7 +2755,7 @@ func (t *FunctionType) IsStorable(_ map[*Member]bool) bool {
 	return false
 }
 
-func (t *FunctionType) IsExternallyReturnable(_ map[*Member]bool) bool {
+func (t *FunctionType) IsExportable(_ map[*Member]bool) bool {
 	// Even though functions cannot be serialized,
 	// they are still treated as exportable,
 	// as values are simply omitted.
@@ -3733,8 +3733,8 @@ func (t *CompositeType) IsImportable(results map[*Member]bool) bool {
 	return true
 }
 
-func (t *CompositeType) IsExternallyReturnable(results map[*Member]bool) bool {
-	// Only structures, resources, attachments, and enums can be stored
+func (t *CompositeType) IsExportable(results map[*Member]bool) bool {
+	// Only structures, resources, attachment, and enums can be stored
 
 	switch t.Kind {
 	case common.CompositeKindStructure,
@@ -3746,11 +3746,11 @@ func (t *CompositeType) IsExternallyReturnable(results map[*Member]bool) bool {
 		return false
 	}
 
-	// If this composite type has a member which is not externally returnable,
-	// then the composite type is not externally returnable.
+	// If this composite type has a member which is not exportable,
+	// then the composite type is not exportable.
 
 	for p := t.Members.Oldest(); p != nil; p = p.Next() {
-		if !p.Value.IsExternallyReturnable(results) {
+		if !p.Value.IsExportable(results) {
 			return false
 		}
 	}
@@ -4126,10 +4126,10 @@ func (m *Member) IsStorable(results map[*Member]bool) (result bool) {
 	return m.testType(test, results)
 }
 
-// IsExternallyReturnable returns whether a member is externally returnable
-func (m *Member) IsExternallyReturnable(results map[*Member]bool) (result bool) {
+// IsExportable returns whether a member is exportable
+func (m *Member) IsExportable(results map[*Member]bool) (result bool) {
 	test := func(t Type) bool {
-		return t.IsExternallyReturnable(results)
+		return t.IsExportable(results)
 	}
 	return m.testType(test, results)
 }
@@ -4347,17 +4347,17 @@ func (t *InterfaceType) IsStorable(results map[*Member]bool) bool {
 	return true
 }
 
-func (t *InterfaceType) IsExternallyReturnable(results map[*Member]bool) bool {
+func (t *InterfaceType) IsExportable(results map[*Member]bool) bool {
 
 	if t.CompositeKind != common.CompositeKindStructure {
 		return false
 	}
 
-	// If this interface type has a member which is not externally returnable,
-	// then the interface type is not externally returnable.
+	// If this interface type has a member which is not exportable,
+	// then the interface type is not exportable.
 
 	for pair := t.Members.Oldest(); pair != nil; pair = pair.Next() {
-		if !pair.Value.IsExternallyReturnable(results) {
+		if !pair.Value.IsExportable(results) {
 			return false
 		}
 	}
@@ -4506,9 +4506,9 @@ func (t *DictionaryType) IsStorable(results map[*Member]bool) bool {
 		t.ValueType.IsStorable(results)
 }
 
-func (t *DictionaryType) IsExternallyReturnable(results map[*Member]bool) bool {
-	return t.KeyType.IsExternallyReturnable(results) &&
-		t.ValueType.IsExternallyReturnable(results)
+func (t *DictionaryType) IsExportable(results map[*Member]bool) bool {
+	return t.KeyType.IsExportable(results) &&
+		t.ValueType.IsExportable(results)
 }
 
 func (t *DictionaryType) IsImportable(results map[*Member]bool) bool {
@@ -4932,7 +4932,7 @@ func (t *ReferenceType) IsStorable(_ map[*Member]bool) bool {
 	return false
 }
 
-func (t *ReferenceType) IsExternallyReturnable(_ map[*Member]bool) bool {
+func (t *ReferenceType) IsExportable(_ map[*Member]bool) bool {
 	return true
 }
 
@@ -5086,7 +5086,7 @@ func (*AddressType) IsStorable(_ map[*Member]bool) bool {
 	return true
 }
 
-func (*AddressType) IsExternallyReturnable(_ map[*Member]bool) bool {
+func (*AddressType) IsExportable(_ map[*Member]bool) bool {
 	return true
 }
 
@@ -5957,7 +5957,7 @@ func (*TransactionType) IsStorable(_ map[*Member]bool) bool {
 	return false
 }
 
-func (*TransactionType) IsExternallyReturnable(_ map[*Member]bool) bool {
+func (*TransactionType) IsExportable(_ map[*Member]bool) bool {
 	return false
 }
 
@@ -6143,13 +6143,13 @@ func (t *RestrictedType) IsStorable(results map[*Member]bool) bool {
 	return true
 }
 
-func (t *RestrictedType) IsExternallyReturnable(results map[*Member]bool) bool {
-	if t.Type != nil && !t.Type.IsExternallyReturnable(results) {
+func (t *RestrictedType) IsExportable(results map[*Member]bool) bool {
+	if t.Type != nil && !t.Type.IsExportable(results) {
 		return false
 	}
 
 	for _, restriction := range t.Restrictions {
-		if !restriction.IsExternallyReturnable(results) {
+		if !restriction.IsExportable(results) {
 			return false
 		}
 	}
@@ -6247,6 +6247,11 @@ func (t *RestrictedType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
+// restricted types must be type indexable, because this is how we handle access control for attachments.
+// Specifically, because in `v[A]`, `v` must be a subtype of `A`'s declared base,
+// if `v` is a restricted type `{I}`, only attachments declared for `I` or a supertype can be accessed on `v`.
+// Attachments declared for concrete types implementing `I` cannot be accessed.
+// A good elucidating example here is that an attachment declared for `Vault` cannot be accessed on a value of type `&{Provider}`
 func (t *RestrictedType) isTypeIndexableType() bool {
 	// resources and structs only can be indexed for attachments, but all restricted types
 	// are necessarily structs and resources, we return true
@@ -6351,7 +6356,7 @@ func (*CapabilityType) IsStorable(_ map[*Member]bool) bool {
 	return true
 }
 
-func (*CapabilityType) IsExternallyReturnable(_ map[*Member]bool) bool {
+func (*CapabilityType) IsExportable(_ map[*Member]bool) bool {
 	return true
 }
 

@@ -24,28 +24,26 @@ var AnyResourceAttachmentType = &SimpleType{
 	QualifiedName: "AnyResourceAttachment",
 	TypeID:        "AnyResourceAttachment",
 	tag:           AnyResourceAttachmentTypeTag,
-	IsInvalid:     false,
 	IsResource:    true,
 	// The actual storability of a value is checked at run-time
 	Storable:  true,
 	Equatable: false,
 	// The actual returnability of a value is checked at run-time
-	ExternallyReturnable: true,
-	Importable:           false,
+	Exportable: true,
+	Importable: false,
 }
 
-// AnyStructAttachmentType represents the top type of all resource attachment types
+// AnyStructAttachmentType represents the top type of all struct attachment types
 var AnyStructAttachmentType = &SimpleType{
 	Name:          "AnyStructAttachment",
 	QualifiedName: "AnyStructAttachment",
 	TypeID:        "AnyStructAttachment",
 	tag:           AnyStructAttachmentTypeTag,
-	IsInvalid:     false,
 	IsResource:    false,
 	// The actual storability of a value is checked at run-time
 	Storable:  true,
 	Equatable: false,
 	// The actual returnability of a value is checked at run-time
-	ExternallyReturnable: true,
-	Importable:           false,
+	Exportable: true,
+	Importable: false,
 }

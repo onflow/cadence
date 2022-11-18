@@ -175,7 +175,7 @@ func runPath(path string, bench bool) (res result, succeeded bool) {
 			}
 		}()
 
-		program, err = parser.ParseProgram(code, nil)
+		program, err = parser.ParseProgram(nil, code, parser.Config{})
 		if !bench {
 			res.Program = program
 		}
@@ -189,7 +189,7 @@ func runPath(path string, bench bool) (res result, succeeded bool) {
 
 	if bench {
 		benchRes := benchParse(func() (err error) {
-			_, err = parser.ParseProgram(code, nil)
+			_, err = parser.ParseProgram(nil, code, parser.Config{})
 			return
 		})
 		res.Bench = &benchResult{

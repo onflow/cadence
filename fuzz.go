@@ -32,7 +32,7 @@ func Fuzz(data []byte) int {
 		return 0
 	}
 
-	program, err := parser.ParseProgram(data, nil)
+	program, err := parser.ParseProgram(nil, data, parser.Config{})
 
 	if err != nil {
 		return 0
