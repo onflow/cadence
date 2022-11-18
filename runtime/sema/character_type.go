@@ -27,16 +27,15 @@ import (
 
 // CharacterType represents the character type
 var CharacterType = &SimpleType{
-	Name:                 "Character",
-	QualifiedName:        "Character",
-	TypeID:               "Character",
-	tag:                  CharacterTypeTag,
-	IsInvalid:            false,
-	IsResource:           false,
-	Storable:             true,
-	Equatable:            true,
-	ExternallyReturnable: true,
-	Importable:           true,
+	Name:          "Character",
+	QualifiedName: "Character",
+	TypeID:        "Character",
+	tag:           CharacterTypeTag,
+	IsResource:    false,
+	Storable:      true,
+	Equatable:     true,
+	Exportable:    true,
+	Importable:    true,
 }
 
 func IsValidCharacter(s string) bool {

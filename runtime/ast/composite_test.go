@@ -35,6 +35,7 @@ func TestFieldDeclaration_MarshalJSON(t *testing.T) {
 
 	decl := &FieldDeclaration{
 		Access:       AccessPublic,
+		Flags:        FieldDeclarationFlagsIsStatic | FieldDeclarationFlagsIsNative,
 		VariableKind: VariableKindConstant,
 		Identifier: Identifier{
 			Identifier: "xyz",
@@ -61,10 +62,13 @@ func TestFieldDeclaration_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "FieldDeclaration",
             "Access": "AccessPublic",
+            "IsStatic": true,
+            "IsNative": true,
             "VariableKind": "VariableKindConstant",
             "Identifier": {
                 "Identifier": "xyz",
@@ -99,13 +103,14 @@ func TestFieldDeclaration_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("with access, with kind", func(t *testing.T) {
+	t.Run("with access, with kind, with static, with native", func(t *testing.T) {
 
 		t.Parallel()
 
 		decl := &FieldDeclaration{
 			Access:       AccessPublic,
 			VariableKind: VariableKindConstant,
+			Flags:        FieldDeclarationFlagsIsNative | FieldDeclarationFlagsIsStatic,
 			Identifier: Identifier{
 				Identifier: "xyz",
 			},
@@ -124,6 +129,10 @@ func TestFieldDeclaration_Doc(t *testing.T) {
 			prettier.Group{
 				Doc: prettier.Concat{
 					prettier.Text("pub"),
+					prettier.Text(" "),
+					prettier.Text("static"),
+					prettier.Text(" "),
+					prettier.Text("native"),
 					prettier.Text(" "),
 					prettier.Text("let"),
 					prettier.Text(" "),
@@ -403,6 +412,7 @@ func TestCompositeDeclaration_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "CompositeDeclaration",

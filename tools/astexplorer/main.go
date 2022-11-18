@@ -53,7 +53,7 @@ func main() {
 		}
 
 		var response Response
-		program, err := parser.ParseProgram([]byte(req.Code), nil)
+		program, err := parser.ParseProgram(nil, []byte(req.Code), parser.Config{})
 		if err != nil {
 			response.Error = err.Error()
 		} else {
