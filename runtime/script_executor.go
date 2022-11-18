@@ -149,7 +149,7 @@ func (executor *interpreterScriptExecutor) preprocess() (err error) {
 
 	// Ensure the entry point's return type is valid
 	returnType := functionEntryPointType.ReturnTypeAnnotation.Type
-	if !returnType.IsExternallyReturnable(map[*sema.Member]bool{}) {
+	if !returnType.IsExportable(map[*sema.Member]bool{}) {
 		err = &InvalidScriptReturnTypeError{
 			Type: returnType,
 		}

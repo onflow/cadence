@@ -68,29 +68,30 @@ func TestAttachmentDeclaration_MarshallJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "AttachmentDeclaration",
-			"Access": "AccessPublic",
+            "Access": "AccessPublic",
             "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
             "EndPos": {"Offset": 4, "Line": 5, "Column": 6},
-			"Identifier": {
+            "Identifier": {
                 "Identifier": "Foo",
-				"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
-				"EndPos": {"Offset": 3, "Line": 2, "Column": 5}
+                "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                "EndPos": {"Offset": 3, "Line": 2, "Column": 5}
             },
-			"BaseType": {
-				"Type": "NominalType",
+            "BaseType": {
+                "Type": "NominalType",
                 "Identifier": {
-					"Identifier": "Bar",
-					"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
-					"EndPos": {"Offset": 3, "Line": 2, "Column": 5}
-				},
-				"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
-				"EndPos": {"Offset": 3, "Line": 2, "Column": 5}
+                    "Identifier": "Bar",
+                    "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                    "EndPos": {"Offset": 3, "Line": 2, "Column": 5}
+                },
+                "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                "EndPos": {"Offset": 3, "Line": 2, "Column": 5}
             },
-			"DocString": "test",
-			"Conformances": [
+            "DocString": "test",
+            "Conformances": [
                 {
                     "Type": "NominalType",
                     "Identifier": {
@@ -210,31 +211,32 @@ func TestAttachExpressionMarshallJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "AttachExpression",
-			"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
-			"EndPos": {"Offset": 3, "Line": 2, "Column": 5},
-			"Base":  {
-				"Type": "IdentifierExpression",
-				"Identifier": { 
-					"Identifier": "foo",
-					"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
-					"EndPos": {"Offset": 3, "Line": 2, "Column": 5}
-				},
-				"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
-				"EndPos": {"Offset": 3, "Line": 2, "Column": 5}
-			},
-			"Attachment":  {
-				"Type": "IdentifierExpression",
-				"Identifier": { 
-					"Identifier": "bar",
-					"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
-					"EndPos": {"Offset": 3, "Line": 2, "Column": 5}
-				},
-				"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
-				"EndPos": {"Offset": 3, "Line": 2, "Column": 5}
-			}
+            "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+            "EndPos": {"Offset": 3, "Line": 2, "Column": 5},
+            "Base":  {
+                "Type": "IdentifierExpression",
+                "Identifier": { 
+                    "Identifier": "foo",
+                    "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                    "EndPos": {"Offset": 3, "Line": 2, "Column": 5}
+                },
+                "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                "EndPos": {"Offset": 3, "Line": 2, "Column": 5}
+            },
+            "Attachment":  {
+                "Type": "IdentifierExpression",
+                "Identifier": { 
+                    "Identifier": "bar",
+                    "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                    "EndPos": {"Offset": 3, "Line": 2, "Column": 5}
+                },
+                "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                "EndPos": {"Offset": 3, "Line": 2, "Column": 5}
+            }
         }
         `,
 		string(actual),
@@ -311,31 +313,32 @@ func TestRemoveStatement_MarshallJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "RemoveStatement",
-			"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
-			"EndPos": {"Offset": 3, "Line": 2, "Column": 5},
-			"Value":  {
-				"Type": "IdentifierExpression",
-				"Identifier": { 
-					"Identifier": "baz",
-					"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
-					"EndPos": {"Offset": 3, "Line": 2, "Column": 5}
-				},
-				"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
-				"EndPos": {"Offset": 3, "Line": 2, "Column": 5}
-			},
-			"Attachment": {
-				"Type": "NominalType",
-				"Identifier": { 
-					"Identifier": "E",
-					"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
-					"EndPos": {"Offset": 1, "Line": 2, "Column": 3}
-				},
-				"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
-				"EndPos": {"Offset": 1, "Line": 2, "Column": 3}
-			}
+            "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+            "EndPos": {"Offset": 3, "Line": 2, "Column": 5},
+            "Value":  {
+                "Type": "IdentifierExpression",
+                "Identifier": { 
+                    "Identifier": "baz",
+                    "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                    "EndPos": {"Offset": 3, "Line": 2, "Column": 5}
+                },
+                "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                "EndPos": {"Offset": 3, "Line": 2, "Column": 5}
+            },
+            "Attachment": {
+                "Type": "NominalType",
+                "Identifier": { 
+                    "Identifier": "E",
+                    "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                    "EndPos": {"Offset": 1, "Line": 2, "Column": 3}
+                },
+                "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                "EndPos": {"Offset": 1, "Line": 2, "Column": 3}
+            }
         }
         `,
 		string(actual),

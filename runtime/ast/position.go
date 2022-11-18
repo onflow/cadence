@@ -79,6 +79,16 @@ func EndPosition(memoryGauge common.MemoryGauge, startPosition Position, end int
 	return startPosition.Shifted(memoryGauge, length)
 }
 
+func EarliestPosition(p Position, ps ...*Position) (earliest Position) {
+	earliest = p
+	for _, pos := range ps {
+		if pos != nil && pos.Compare(earliest) < 0 {
+			earliest = *pos
+		}
+	}
+	return
+}
+
 // HasPosition
 
 type HasPosition interface {

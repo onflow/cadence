@@ -264,7 +264,7 @@ func (e *AttachExpression) EndPosition(memoryGauge common.MemoryGauge) Position 
 }
 
 func (*AttachExpression) precedence() precedence {
-	return precendenceAttach
+	return precedenceLiteral
 }
 
 func (e *AttachExpression) MarshalJSON() ([]byte, error) {

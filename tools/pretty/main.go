@@ -33,7 +33,7 @@ import (
 )
 
 func pretty(code string, maxLineWidth int) string {
-	program, err := parser.ParseProgram([]byte(code), nil)
+	program, err := parser.ParseProgram(nil, []byte(code), parser.Config{})
 	if err != nil {
 		return err.Error()
 	}

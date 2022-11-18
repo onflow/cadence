@@ -55,7 +55,7 @@ func (programs Programs) load(
 		return err
 	}
 
-	program, err := parser.ParseProgram(code, nil)
+	program, err := parser.ParseProgram(nil, code, parser.Config{})
 	if err != nil {
 		return wrapError(err)
 	}
