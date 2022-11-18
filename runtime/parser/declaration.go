@@ -1069,17 +1069,9 @@ func parseAttachmentDeclaration(
 		startPos = *accessPos
 	}
 
-	// Skip the attachment keyword
-	p.next()
+	// Skip the `attachment` keyword
+	p.nextSemanticToken()
 
-	p.skipSpaceAndComments()
-	if !p.current.Is(lexer.TokenIdentifier) {
-		return nil, p.syntaxError(
-			"expected %s, got %s",
-			lexer.TokenIdentifier,
-			p.current.Type,
-		)
-	}
 	identifier, err := p.mustIdentifier()
 	if err != nil {
 		return nil, err
@@ -1087,16 +1079,15 @@ func parseAttachmentDeclaration(
 
 	p.skipSpaceAndComments()
 
-	if string(p.tokenSource(p.current)) != keywordFor {
+	if !p.isToken(p.current, lexer.TokenIdentifier, keywordFor) {
 		return nil, p.syntaxError(
 			"expected 'for', got %s",
 			p.current.Type,
 		)
 	}
 
-	// skip the for keyword
-	p.next()
-	p.skipSpaceAndComments()
+	// skip the `for`` keyword
+	p.nextSemanticToken()
 
 	if !p.current.Is(lexer.TokenIdentifier) {
 		return nil, p.syntaxError(
