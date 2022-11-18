@@ -85,6 +85,7 @@ var (
 	// AST Expressions
 
 	BooleanExpressionMemoryUsage     = NewConstantMemoryUsage(MemoryKindBooleanExpression)
+	VoidExpressionMemoryUsage        = NewConstantMemoryUsage(MemoryKindVoidExpression)
 	NilExpressionMemoryUsage         = NewConstantMemoryUsage(MemoryKindNilExpression)
 	StringExpressionMemoryUsage      = NewConstantMemoryUsage(MemoryKindStringExpression)
 	IntegerExpressionMemoryUsage     = NewConstantMemoryUsage(MemoryKindIntegerExpression)
@@ -134,9 +135,6 @@ var (
 	ArrayValueBaseMemoryUsage           = NewConstantMemoryUsage(MemoryKindArrayValueBase)
 	CompositeValueBaseMemoryUsage       = NewConstantMemoryUsage(MemoryKindCompositeValueBase)
 	AddressValueMemoryUsage             = NewConstantMemoryUsage(MemoryKindAddressValue)
-	BoolValueMemoryUsage                = NewConstantMemoryUsage(MemoryKindBoolValue)
-	NilValueMemoryUsage                 = NewConstantMemoryUsage(MemoryKindNilValue)
-	VoidValueMemoryUsage                = NewConstantMemoryUsage(MemoryKindVoidValue)
 	BoundFunctionValueMemoryUsage       = NewConstantMemoryUsage(MemoryKindBoundFunctionValue)
 	HostFunctionValueMemoryUsage        = NewConstantMemoryUsage(MemoryKindHostFunctionValue)
 	InterpretedFunctionValueMemoryUsage = NewConstantMemoryUsage(MemoryKindInterpretedFunctionValue)
