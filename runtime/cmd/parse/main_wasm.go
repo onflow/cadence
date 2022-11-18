@@ -68,7 +68,7 @@ func parse(code string) string {
 			}
 		}()
 
-		res.Program, res.Error = parser.ParseProgram([]byte(code), nil)
+		res.Program, res.Error = parser.ParseProgram(nil, []byte(code), parser.Config{})
 	}()
 
 	serialized, err := json.Marshal(res)
