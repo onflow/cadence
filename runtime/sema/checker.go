@@ -1922,37 +1922,6 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 				false,
 				resourceUUIDFieldDocString,
 			)
-		case common.CompositeKindAttachment:
-			// all attachments contain `getField` and `getFunction`
-
-			addPredeclaredMember(
-				AttachmentGetFieldFunctionName,
-				AttachmentGetFieldFunctionType(),
-				common.DeclarationKindFunction,
-				ast.AccessPublic,
-				true,
-				attachmentGetFieldFunctionDocString,
-			)
-
-			addPredeclaredMember(
-				AttachmentGetFunctionFunctionName,
-				AttachmentGetFunctionFunctionType(),
-				common.DeclarationKindFunction,
-				ast.AccessPublic,
-				true,
-				attachmentGetFunctionFunctionDocString,
-			)
-		}
-
-		if compositeKindedType.GetCompositeKind().SupportsAttachments() {
-			addPredeclaredMember(
-				CompositeForEachAttachmentFunctionName,
-				CompositeForEachAttachmentFunctionType(compositeKindedType),
-				common.DeclarationKindFunction,
-				ast.AccessPublic,
-				true,
-				compositeForEachAttachmentFunctionDocString,
-			)
 		}
 	}
 

@@ -489,36 +489,6 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 		}
 	}
 
-	// all attachment types have a `getField` and a `getFunction` function
-
-	if IsSubType(ty, AnyResourceAttachmentType) || IsSubType(ty, AnyStructAttachmentType) {
-		members[AttachmentGetFieldFunctionName] = MemberResolver{
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicFunctionMember(
-					memoryGauge,
-					ty,
-					identifier,
-					AttachmentGetFieldFunctionType(),
-					attachmentGetFieldFunctionDocString,
-				)
-			},
-		}
-
-		members[AttachmentGetFunctionFunctionName] = MemberResolver{
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicFunctionMember(
-					memoryGauge,
-					ty,
-					identifier,
-					AttachmentGetFunctionFunctionType(),
-					attachmentGetFunctionFunctionDocString,
-				)
-			},
-		}
-	}
-
 	return members
 }
 
@@ -3847,117 +3817,6 @@ func (t *CompositeType) IsValidIndexingType(ty Type) bool {
 		attachmentType.IsResourceType() == t.IsResourceType()
 }
 
-const CompositeForEachAttachmentFunctionName = "forEachAttachment"
-
-const compositeForEachAttachmentFunctionDocString = `
-Iterates over the attachments present on the receiver, applying the function argument to each.
-The order of iteration is undefined. If a type argument is provided, only attachments that conform
-to the specified interface are iterated on, the others are filtered out. 
-`
-
-func CompositeForEachAttachmentFunctionType(t Type) *FunctionType {
-	attachmentSuperType := AnyStructAttachmentType
-	if t.IsResourceType() {
-		attachmentSuperType = AnyResourceAttachmentType
-	}
-
-	return &FunctionType{
-		Parameters: []*Parameter{
-			{
-				Label:      ArgumentLabelNotRequired,
-				Identifier: "f",
-				TypeAnnotation: NewTypeAnnotation(
-					&FunctionType{
-						Parameters: []*Parameter{
-							{
-								TypeAnnotation: NewTypeAnnotation(
-									&ReferenceType{
-										Type: attachmentSuperType,
-									},
-								),
-							},
-						},
-						ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
-					},
-				),
-			},
-		},
-		ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
-	}
-}
-
-const AttachmentGetFieldFunctionName = "getField"
-
-const attachmentGetFieldFunctionDocString = `
-Returns a reference to the field with the specified name and type on the receiver. If a field with the
-specified name does not exist on the receiver, or if the field exists but does not exactly match the provided type, 
-returns nil.
-`
-
-func AttachmentGetFieldFunctionType() *FunctionType {
-	typeParameter := &TypeParameter{
-		Name:      "T",
-		TypeBound: AnyType,
-	}
-
-	return &FunctionType{
-		TypeParameters: []*TypeParameter{
-			typeParameter,
-		},
-		Parameters: []*Parameter{
-			{
-				Label:          ArgumentLabelNotRequired,
-				Identifier:     "name",
-				TypeAnnotation: NewTypeAnnotation(StringType),
-			},
-		},
-		ReturnTypeAnnotation: NewTypeAnnotation(
-			&OptionalType{
-				Type: &ReferenceType{
-					Type: &GenericType{
-						TypeParameter: typeParameter,
-					},
-				},
-			},
-		),
-	}
-}
-
-const AttachmentGetFunctionFunctionName = "getFunction"
-
-const attachmentGetFunctionFunctionDocString = `
-Returns the method with the specified name and type on the receiver. If a method with the
-specified name does not exist on the receiver, or if the method exists but does not exactly match the provided type, 
-returns nil.
-`
-
-func AttachmentGetFunctionFunctionType() *FunctionType {
-	typeParameter := &TypeParameter{
-		Name:      "T",
-		TypeBound: AnyType,
-	}
-
-	return &FunctionType{
-		TypeParameters: []*TypeParameter{
-			typeParameter,
-		},
-		Parameters: []*Parameter{
-			{
-				Label:          ArgumentLabelNotRequired,
-				Identifier:     "name",
-				TypeAnnotation: NewTypeAnnotation(StringType),
-			},
-		},
-		ReturnTypeAnnotation: NewTypeAnnotation(
-			&OptionalType{
-				Type: &GenericType{
-					TypeParameter: typeParameter,
-				},
-			},
-		),
-	}
-}
-
 func (t *CompositeType) initializeMemberResolvers() {
 	t.memberResolversOnce.Do(func() {
 		members := make(map[string]MemberResolver, t.Members.Len())
@@ -3987,22 +3846,6 @@ func (t *CompositeType) initializeMemberResolvers() {
 					}
 				}
 			})
-
-		// resource and struct composites have the ability to iterate over their attachments
-		if t.Kind.SupportsAttachments() {
-			members[CompositeForEachAttachmentFunctionName] = MemberResolver{
-				Kind: common.DeclarationKindFunction,
-				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
-					return NewPublicFunctionMember(
-						memoryGauge,
-						t,
-						identifier,
-						CompositeForEachAttachmentFunctionType(t),
-						compositeForEachAttachmentFunctionDocString,
-					)
-				},
-			}
-		}
 
 		t.memberResolvers = withBuiltinMembers(t, members)
 	})

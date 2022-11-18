@@ -14120,125 +14120,12 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 	)
 }
 
-func (v *CompositeValue) forEachAttachmentFunction(interpreter *Interpreter, locationRange LocationRange) Value {
-	return NewHostFunctionValue(
-		interpreter,
-		func(invocation Invocation) Value {
-			functionValue, ok := invocation.Arguments[0].(FunctionValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			fn := func(attachment *CompositeValue) {
-
-				attachmentType := invocation.Interpreter.MustSemaTypeOfValue(attachment)
-				attachment.setBaseValue(invocation.Interpreter, v)
-
-				attachmentReference := NewEphemeralReferenceValue(
-					invocation.Interpreter,
-					false,
-					attachment,
-					attachmentType,
-				)
-
-				invocation := NewInvocation(
-					invocation.Interpreter,
-					nil,
-					nil,
-					[]Value{attachmentReference},
-					[]sema.Type{sema.NewReferenceType(interpreter, attachmentType, false)},
-					nil,
-					locationRange,
-				)
-				functionValue.invoke(invocation)
-			}
-
-			v.forEachAttachment(invocation.Interpreter, locationRange, fn)
-			return Void
-		},
-		sema.CompositeForEachAttachmentFunctionType(
-			interpreter.MustSemaTypeOfValue(v),
-		),
-	)
-}
-
-func (v *CompositeValue) reflectAttachmentFunction(interpreter *Interpreter, locationRange LocationRange, requireFunction bool) func(Invocation) Value {
-	return func(invocation Invocation) Value {
-		nameValue, ok := invocation.Arguments[0].(*StringValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-		name := nameValue.Str
-		inter := invocation.Interpreter
-
-		member := v.GetMember(inter, locationRange, name)
-
-		if member == nil {
-			return Nil
-		}
-
-		if _, isFunction := v.Functions[name]; isFunction != requireFunction {
-			return Nil
-		}
-
-		typeParameterPair := invocation.TypeParameterTypes.Oldest()
-		if typeParameterPair == nil {
-			panic(errors.NewUnreachableError())
-		}
-		ty := typeParameterPair.Value
-
-		if !ty.Equal(inter.MustSemaTypeOfValue(member)) {
-			return Nil
-		}
-
-		// We need to be sure that users cannot use reflection to access values that should not be visible
-		// from the callsite of the reflection functions.
-		// However, because doing the full check and properly handling cases like `access(contract)`,
-		// or more particularly `access(account)` requires the entire checker, which we do not want to
-		// add to the interpreter. Instead, we just require that the member being accessed here is `pub`
-		compositeType := interpreter.MustSemaTypeOfValue(v)
-		memberType := compositeType.GetMembers()[name].Resolve(inter, name, ast.Range{}, func(error) {})
-		if !inter.Program.AccessCheckMode.IsReadableAccess(memberType.Access) {
-			return Nil
-		}
-
-		// we must check that this member is accessible from this location
-
-		value := member
-		if !requireFunction {
-			value = NewEphemeralReferenceValue(inter, false, member, ty)
-		}
-
-		return NewSomeValueNonCopying(inter, value)
-	}
-}
-
 func (v *CompositeValue) getBuiltinMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
 
 	switch name {
 	case sema.ResourceOwnerFieldName:
 		if v.Kind == common.CompositeKindResource {
 			return v.OwnerValue(interpreter, locationRange)
-		}
-	case sema.CompositeForEachAttachmentFunctionName:
-		if v.Kind.SupportsAttachments() {
-			return v.forEachAttachmentFunction(interpreter, locationRange)
-		}
-	case sema.AttachmentGetFieldFunctionName:
-		if v.Kind == common.CompositeKindAttachment {
-			return NewHostFunctionValue(
-				interpreter,
-				v.reflectAttachmentFunction(interpreter, locationRange, false),
-				sema.AttachmentGetFieldFunctionType(),
-			)
-		}
-	case sema.AttachmentGetFunctionFunctionName:
-		if v.Kind == common.CompositeKindAttachment {
-			return NewHostFunctionValue(
-				interpreter,
-				v.reflectAttachmentFunction(interpreter, locationRange, true),
-				sema.AttachmentGetFunctionFunctionType(),
-			)
 		}
 	}
 
