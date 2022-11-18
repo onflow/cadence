@@ -832,7 +832,7 @@ func (t FunctionStaticType) ParameterTypes(interpreter *Interpreter) []StaticTyp
 
 func (t FunctionStaticType) ReturnType(interpreter *Interpreter) StaticType {
 	var returnType StaticType
-	if t.Type.ReturnTypeAnnotation != nil {
+	if t.Type.ReturnTypeAnnotation.Type != nil {
 		returnType = ConvertSemaToStaticType(interpreter, t.Type.ReturnTypeAnnotation.Type)
 	}
 

@@ -8694,7 +8694,7 @@ func TestInterpretValueStringConversion(t *testing.T) {
 		logFunction := stdlib.NewStandardLibraryFunction(
 			"log",
 			&sema.FunctionType{
-				Parameters: []*sema.Parameter{
+				Parameters: []sema.Parameter{
 					{
 						Label:          sema.ArgumentLabelNotRequired,
 						Identifier:     "value",
@@ -9038,7 +9038,7 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 		logFunction := stdlib.NewStandardLibraryFunction(
 			"log",
 			&sema.FunctionType{
-				Parameters: []*sema.Parameter{
+				Parameters: []sema.Parameter{
 					{
 						Label:          sema.ArgumentLabelNotRequired,
 						Identifier:     "value",

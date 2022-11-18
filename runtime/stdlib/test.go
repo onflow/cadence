@@ -324,7 +324,7 @@ Fails the test-case if the given condition is false, and reports a message which
 const testAssertFunctionName = "assert"
 
 var testAssertFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{
+	Parameters: []sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
 			Identifier: "condition",
@@ -382,7 +382,7 @@ Fails the test-case with a message.
 const testFailFunctionName = "fail"
 
 var testFailFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{
+	Parameters: []sema.Parameter{
 		{
 			Identifier: "message",
 			TypeAnnotation: sema.NewTypeAnnotation(
@@ -424,7 +424,7 @@ Expect function tests a value against a matcher, and fails the test if it's not 
 const testExpectFunctionName = "expect"
 
 var testExpectFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{
+	Parameters: []sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
 			Identifier: "value",
@@ -527,7 +527,7 @@ Read a local file, and return the content as a string.
 const testReadFileFunctionName = "readFile"
 
 var testReadFileFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{
+	Parameters: []sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
 			Identifier: "path",
@@ -569,7 +569,6 @@ Creates a blockchain which is backed by a new emulator instance.
 const testNewEmulatorBlockchainFunctionName = "newEmulatorBlockchain"
 
 var testNewEmulatorBlockchainFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{},
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(
 		blockchainType,
 	),
@@ -648,14 +647,14 @@ const newMatcherFunctionName = "newMatcher"
 
 var newMatcherFunctionType = &sema.FunctionType{
 	IsConstructor: true,
-	Parameters: []*sema.Parameter{
+	Parameters: []sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
 			Identifier: "test",
 			TypeAnnotation: sema.NewTypeAnnotation(
 				// Type of the 'test' function: ((T): Bool)
 				&sema.FunctionType{
-					Parameters: []*sema.Parameter{
+					Parameters: []sema.Parameter{
 						{
 							Label:      sema.ArgumentLabelNotRequired,
 							Identifier: "value",
@@ -1302,7 +1301,7 @@ var equalMatcherFunctionType = &sema.FunctionType{
 	TypeParameters: []*sema.TypeParameter{
 		typeParameter,
 	},
-	Parameters: []*sema.Parameter{
+	Parameters: []sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
 			Identifier: "value",

@@ -30,7 +30,7 @@ Constructs a new public key
 `
 
 var publicKeyConstructorFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{
+	Parameters: []sema.Parameter{
 		{
 			Identifier:     sema.PublicKeyPublicKeyField,
 			TypeAnnotation: sema.NewTypeAnnotation(sema.ByteArrayType),

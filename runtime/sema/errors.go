@@ -1167,8 +1167,8 @@ type MemberMismatch struct {
 }
 
 type InitializerMismatch struct {
-	CompositeParameters []*Parameter
-	InterfaceParameters []*Parameter
+	CompositeParameters []Parameter
+	InterfaceParameters []Parameter
 }
 
 // TODO: improve error message:
