@@ -33,7 +33,7 @@ var AnyResourceAttachmentType = &SimpleType{
 	Importable: false,
 }
 
-// AnyStructAttachmentType represents the top type of all resource attachment types
+// AnyStructAttachmentType represents the top type of all struct attachment types
 var AnyStructAttachmentType = &SimpleType{
 	Name:          "AnyStructAttachment",
 	QualifiedName: "AnyStructAttachment",
