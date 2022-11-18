@@ -3444,7 +3444,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 			},
 			"helloArg",
 			[]cadence.Value{
-				cadence.Capability{
+				cadence.StorageCapability{
 					BorrowType: cadence.AddressType{}, // this will error during `importValue`
 				},
 			},
@@ -6877,7 +6877,7 @@ func TestRuntimeGetCapability(t *testing.T) {
 
 		require.NoError(t, err)
 		require.Equal(t,
-			cadence.Capability{
+			cadence.StorageCapability{
 				Address: cadence.BytesToAddress([]byte{0x1}),
 				Path: cadence.Path{
 					Domain:     "public",

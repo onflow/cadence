@@ -47,7 +47,7 @@ func TestInterpretEquality(t *testing.T) {
 		capabilityValueDeclaration := stdlib.StandardLibraryValue{
 			Name: "cap",
 			Type: &sema.CapabilityType{},
-			Value: &interpreter.CapabilityValue{
+			Value: &interpreter.StorageCapabilityValue{
 				Address: interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
 				Path: interpreter.PathValue{
 					Domain:     common.PathDomainStorage,

@@ -2881,7 +2881,7 @@ func TestEncodeDecodePathValue(t *testing.T) {
 	})
 }
 
-func TestEncodeDecodeCapabilityValue(t *testing.T) {
+func TestEncodeDecodeStorageCapabilityValue(t *testing.T) {
 
 	t.Parallel()
 
@@ -2889,14 +2889,14 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := &CapabilityValue{
+		value := &StorageCapabilityValue{
 			Address: NewUnmeteredAddressValueFromBytes([]byte{0x2}),
 			Path:    privatePathValue,
 		}
 
 		encoded := []byte{
 			// tag
-			0xd8, CBORTagCapabilityValue,
+			0xd8, CBORTagStorageCapabilityValue,
 			// array, 3 items follow
 			0x83,
 			// tag for address
@@ -2931,7 +2931,7 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := &CapabilityValue{
+		value := &StorageCapabilityValue{
 			Address:    NewUnmeteredAddressValueFromBytes([]byte{0x2}),
 			Path:       privatePathValue,
 			BorrowType: PrimitiveStaticTypeBool,
@@ -2939,7 +2939,7 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 
 		encoded := []byte{
 			// tag
-			0xd8, CBORTagCapabilityValue,
+			0xd8, CBORTagStorageCapabilityValue,
 			// array, 3 items follow
 			0x83,
 			// tag for address
@@ -2976,14 +2976,14 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := &CapabilityValue{
+		value := &StorageCapabilityValue{
 			Address: NewUnmeteredAddressValueFromBytes([]byte{0x3}),
 			Path:    publicPathValue,
 		}
 
 		encoded := []byte{
 			// tag
-			0xd8, CBORTagCapabilityValue,
+			0xd8, CBORTagStorageCapabilityValue,
 			// array, 3 items follow
 			0x83,
 			// tag for address
@@ -3019,7 +3019,7 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := &CapabilityValue{
+		value := &StorageCapabilityValue{
 			Address:    NewUnmeteredAddressValueFromBytes([]byte{0x3}),
 			Path:       publicPathValue,
 			BorrowType: PrimitiveStaticTypeBool,
@@ -3027,7 +3027,7 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 
 		encoded := []byte{
 			// tag
-			0xd8, CBORTagCapabilityValue,
+			0xd8, CBORTagStorageCapabilityValue,
 			// array, 3 items follow
 			0x83,
 			// tag for address
@@ -3065,7 +3065,7 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 
 		t.Parallel()
 
-		capabilityValue := &CapabilityValue{
+		capabilityValue := &StorageCapabilityValue{
 			Address:    NewUnmeteredAddressValueFromBytes([]byte{0x3}),
 			Path:       publicPathValue,
 			BorrowType: PrimitiveStaticTypePublicAccount,
@@ -3073,7 +3073,7 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 
 		encoded := []byte{
 			// tag
-			0xd8, CBORTagCapabilityValue,
+			0xd8, CBORTagStorageCapabilityValue,
 			// array, 3 items follow
 			0x83,
 			// tag for address
@@ -3133,7 +3133,7 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 			}
 		}
 
-		expected := &CapabilityValue{
+		expected := &StorageCapabilityValue{
 			Path: path,
 		}
 
@@ -3177,7 +3177,7 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 			}
 		}
 
-		expected := &CapabilityValue{
+		expected := &StorageCapabilityValue{
 			Path: path,
 		}
 

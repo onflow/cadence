@@ -22,7 +22,7 @@ import (
 	"fmt"
 )
 
-func Capability(borrowType string, address string, path string) string {
+func StorageCapability(borrowType string, address string, path string) string {
 	var typeArgument string
 	if borrowType != "" {
 		typeArgument = fmt.Sprintf("<%s>", borrowType)

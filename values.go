@@ -1866,45 +1866,45 @@ func (v TypeValue) String() string {
 	return format.TypeValue(v.StaticType.ID())
 }
 
-// Capability
+// StorageCapability
 
-type Capability struct {
+type StorageCapability struct {
 	Path       Path
 	Address    Address
 	BorrowType Type
 }
 
-var _ Value = Capability{}
+var _ Value = StorageCapability{}
 
-func NewCapability(path Path, address Address, borrowType Type) Capability {
-	return Capability{
+func NewStorageCapability(path Path, address Address, borrowType Type) StorageCapability {
+	return StorageCapability{
 		Path:       path,
 		Address:    address,
 		BorrowType: borrowType,
 	}
 }
 
-func NewMeteredCapability(gauge common.MemoryGauge, path Path, address Address, borrowType Type) Capability {
-	common.UseMemory(gauge, common.CadenceCapabilityValueMemoryUsage)
-	return NewCapability(path, address, borrowType)
+func NewMeteredStorageCapability(gauge common.MemoryGauge, path Path, address Address, borrowType Type) StorageCapability {
+	common.UseMemory(gauge, common.CadenceStorageCapabilityValueMemoryUsage)
+	return NewStorageCapability(path, address, borrowType)
 }
 
-func (Capability) isValue() {}
+func (StorageCapability) isValue() {}
 
-func (v Capability) Type() Type {
+func (v StorageCapability) Type() Type {
 	return NewCapabilityType(v.BorrowType)
 }
 
-func (v Capability) MeteredType(gauge common.MemoryGauge) Type {
+func (v StorageCapability) MeteredType(gauge common.MemoryGauge) Type {
 	return NewMeteredCapabilityType(gauge, v.BorrowType)
 }
 
-func (Capability) ToGoValue() any {
+func (StorageCapability) ToGoValue() any {
 	return nil
 }
 
-func (v Capability) String() string {
-	return format.Capability(
+func (v StorageCapability) String() string {
+	return format.StorageCapability(
 		v.BorrowType.ID(),
 		v.Address.String(),
 		v.Path.String(),

@@ -195,7 +195,7 @@ const (
 	// Storage
 
 	CBORTagPathValue
-	CBORTagCapabilityValue
+	CBORTagStorageCapabilityValue
 	_ // DO NOT REPLACE! used to be used for storage references
 	CBORTagLinkValue
 	CBORTagPublishedValue
@@ -722,32 +722,32 @@ func (v PathValue) Encode(e *atree.Encoder) error {
 
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
-	// encodedCapabilityValueAddressFieldKey    uint64 = 0
-	// encodedCapabilityValuePathFieldKey       uint64 = 1
-	// encodedCapabilityValueBorrowTypeFieldKey uint64 = 2
+	// encodedStorageCapabilityValueAddressFieldKey    uint64 = 0
+	// encodedStorageCapabilityValuePathFieldKey       uint64 = 1
+	// encodedStorageCapabilityValueBorrowTypeFieldKey uint64 = 2
 
 	// !!! *WARNING* !!!
 	//
-	// encodedCapabilityValueLength MUST be updated when new element is added.
+	// encodedStorageCapabilityValueLength MUST be updated when new element is added.
 	// It is used to verify encoded capability length during decoding.
-	encodedCapabilityValueLength = 3
+	encodedStorageCapabilityValueLength = 3
 )
 
 // Encode encodes CapabilityStorable as
 //
 //	cbor.Tag{
-//				Number: CBORTagCapabilityValue,
+//				Number: CBORTagStorageCapabilityValue,
 //				Content: []any{
-//						encodedCapabilityValueAddressFieldKey:    AddressValue(v.Address),
-//						encodedCapabilityValuePathFieldKey:       PathValue(v.Path),
-//						encodedCapabilityValueBorrowTypeFieldKey: StaticType(v.BorrowType),
+//						encodedStorageCapabilityValueAddressFieldKey:    AddressValue(v.Address),
+//						encodedStorageCapabilityValuePathFieldKey:       PathValue(v.Path),
+//						encodedStorageCapabilityValueBorrowTypeFieldKey: StaticType(v.BorrowType),
 //					},
 //	}
-func (v *CapabilityValue) Encode(e *atree.Encoder) error {
+func (v *StorageCapabilityValue) Encode(e *atree.Encoder) error {
 	// Encode tag number and array head
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagCapabilityValue,
+		0xd8, CBORTagStorageCapabilityValue,
 		// array, 3 items follow
 		0x83,
 	})
@@ -755,19 +755,19 @@ func (v *CapabilityValue) Encode(e *atree.Encoder) error {
 		return err
 	}
 
-	// Encode address at array index encodedCapabilityValueAddressFieldKey
+	// Encode address at array index encodedStorageCapabilityValueAddressFieldKey
 	err = v.Address.Encode(e)
 	if err != nil {
 		return err
 	}
 
-	// Encode path at array index encodedCapabilityValuePathFieldKey
+	// Encode path at array index encodedStorageCapabilityValuePathFieldKey
 	err = v.Path.Encode(e)
 	if err != nil {
 		return err
 	}
 
-	// Encode borrow type at array index encodedCapabilityValueBorrowTypeFieldKey
+	// Encode borrow type at array index encodedStorageCapabilityValueBorrowTypeFieldKey
 	return EncodeStaticType(e.CBOR, v.BorrowType)
 }
 

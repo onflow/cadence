@@ -951,7 +951,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					RequireValuesEqual(
 						t,
 						inter,
-						&interpreter.CapabilityValue{
+						&interpreter.StorageCapabilityValue{
 							Address: address,
 							Path: interpreter.PathValue{
 								Domain:     capabilityDomain,
@@ -1000,7 +1000,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					RequireValuesEqual(
 						t,
 						inter,
-						&interpreter.CapabilityValue{
+						&interpreter.StorageCapabilityValue{
 							Address: address,
 							Path: interpreter.PathValue{
 								Domain:     capabilityDomain,
@@ -1103,7 +1103,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					RequireValuesEqual(
 						t,
 						inter,
-						&interpreter.CapabilityValue{
+						&interpreter.StorageCapabilityValue{
 							Address: address,
 							Path: interpreter.PathValue{
 								Domain:     capabilityDomain,
@@ -1138,7 +1138,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					require.IsType(t, &interpreter.SomeValue{}, value)
 
 					capability := value.(*interpreter.SomeValue).InnerValue(inter, interpreter.EmptyLocationRange)
-					require.IsType(t, &interpreter.CapabilityValue{}, capability)
+					require.IsType(t, &interpreter.StorageCapabilityValue{}, capability)
 
 					s2Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "S2")
 
@@ -1153,7 +1153,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					RequireValuesEqual(
 						t,
 						inter,
-						&interpreter.CapabilityValue{
+						&interpreter.StorageCapabilityValue{
 							Address: address,
 							Path: interpreter.PathValue{
 								Domain:     capabilityDomain,
@@ -1258,7 +1258,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 				RequireValuesEqual(
 					t,
 					inter,
-					&interpreter.CapabilityValue{
+					&interpreter.StorageCapabilityValue{
 						Address: address,
 						Path: interpreter.PathValue{
 							Domain:     capabilityDomain,
@@ -1338,7 +1338,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 				RequireValuesEqual(
 					t,
 					inter,
-					&interpreter.CapabilityValue{
+					&interpreter.StorageCapabilityValue{
 						Address: address,
 						Path: interpreter.PathValue{
 							Domain:     capabilityDomain,
@@ -1367,7 +1367,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 				RequireValuesEqual(
 					t,
 					inter,
-					&interpreter.CapabilityValue{
+					&interpreter.StorageCapabilityValue{
 						Address: address,
 						Path: interpreter.PathValue{
 							Domain:     capabilityDomain,
@@ -1780,9 +1780,9 @@ func TestInterpretAccount_getCapability(t *testing.T) {
 
 					require.NoError(t, err)
 
-					require.IsType(t, &interpreter.CapabilityValue{}, value)
+					require.IsType(t, &interpreter.StorageCapabilityValue{}, value)
 
-					actualBorrowType := value.(*interpreter.CapabilityValue).BorrowType
+					actualBorrowType := value.(*interpreter.StorageCapabilityValue).BorrowType
 
 					if typed {
 						expectedBorrowType := interpreter.ConvertSemaToStaticType(

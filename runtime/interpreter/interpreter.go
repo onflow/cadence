@@ -3545,7 +3545,7 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 
 			return NewSomeValueNonCopying(
 				invocation.Interpreter,
-				NewCapabilityValue(
+				NewStorageCapabilityValue(
 					invocation.Interpreter,
 					addressValue,
 					newCapabilityPath,
@@ -3650,7 +3650,7 @@ func (interpreter *Interpreter) capabilityBorrowFunction(
 			}
 
 			targetPath, authorized, err :=
-				interpreter.GetCapabilityFinalTargetPath(
+				interpreter.GetStorageCapabilityFinalTargetPath(
 					address,
 					pathValue,
 					borrowType,
@@ -3721,7 +3721,7 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 			}
 
 			targetPath, authorized, err :=
-				interpreter.GetCapabilityFinalTargetPath(
+				interpreter.GetStorageCapabilityFinalTargetPath(
 					address,
 					pathValue,
 					borrowType,
@@ -3757,7 +3757,7 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 	)
 }
 
-func (interpreter *Interpreter) GetCapabilityFinalTargetPath(
+func (interpreter *Interpreter) GetStorageCapabilityFinalTargetPath(
 	address common.Address,
 	path PathValue,
 	wantedBorrowType *sema.ReferenceType,
