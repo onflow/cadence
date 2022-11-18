@@ -6173,7 +6173,7 @@ const capabilityTypeCheckFunctionDocString = `
 Returns true if the capability currently targets an object that satisfies the given type, i.e. could be borrowed using the given type
 `
 
-const addressTypeCheckFunctionDocString = `
+const capabilityTypeAddressFieldDocString = `
 The address of the capability
 `
 
@@ -6221,7 +6221,7 @@ func (t *CapabilityType) initializeMemberResolvers() {
 						t,
 						identifier,
 						&AddressType{},
-						addressTypeCheckFunctionDocString,
+						capabilityTypeAddressFieldDocString,
 					)
 				},
 			},

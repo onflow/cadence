@@ -1808,6 +1808,8 @@ func (checker *Checker) withSelfResourceInvalidationAllowed(f func()) {
 const ResourceOwnerFieldName = "owner"
 const ResourceUUIDFieldName = "uuid"
 
+const ContractAccountFieldName = "account"
+
 const contractAccountFieldDocString = `
 The account where the contract is deployed in
 `
@@ -1876,7 +1878,7 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 			// which is ignored in serialization
 
 			addPredeclaredMember(
-				"account",
+				ContractAccountFieldName,
 				AuthAccountType,
 				common.DeclarationKindField,
 				ast.AccessPrivate,
