@@ -256,6 +256,7 @@ func NewPublicAccountValue(
 
 	var keys Value
 	var contracts Value
+	var forEachPublicFunction *HostFunctionValue
 
 	computeField := func(name string, inter *Interpreter, locationRange LocationRange) Value {
 		switch name {
@@ -264,25 +265,44 @@ func NewPublicAccountValue(
 				keys = keysConstructor()
 			}
 			return keys
+
 		case sema.PublicAccountContractsField:
 			if contracts == nil {
 				contracts = contractsConstructor()
 			}
 			return contracts
+
 		case sema.PublicAccountPathsField:
 			return inter.publicAccountPaths(address, locationRange)
+
 		case sema.PublicAccountForEachPublicField:
-			return inter.newStorageIterationFunction(address, common.PathDomainPublic, sema.PublicPathType)
+			if forEachPublicFunction == nil {
+				forEachPublicFunction = inter.newStorageIterationFunction(
+					address,
+					common.PathDomainPublic,
+					sema.PublicPathType,
+				)
+			}
+			return forEachPublicFunction
+
 		case sema.PublicAccountBalanceField:
 			return accountBalanceGet()
+
 		case sema.PublicAccountAvailableBalanceField:
 			return accountAvailableBalanceGet()
+
 		case sema.PublicAccountStorageUsedField:
 			return storageUsedGet(inter)
+
 		case sema.PublicAccountStorageCapacityField:
 			return storageCapacityGet(inter)
+
 		case sema.PublicAccountGetTargetLinkField:
-			return inter.accountGetLinkTargetFunction(address)
+			var getLinkTargetFunction *HostFunctionValue
+			if getLinkTargetFunction == nil {
+				getLinkTargetFunction = inter.accountGetLinkTargetFunction(address)
+			}
+			return getLinkTargetFunction
 		}
 
 		return nil
