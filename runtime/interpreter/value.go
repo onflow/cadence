@@ -14169,8 +14169,9 @@ func (v *CompositeValue) reflectAttachmentFunction(interpreter *Interpreter, loc
 			panic(errors.NewUnreachableError())
 		}
 		name := nameValue.Str
+		inter := invocation.Interpreter
 
-		member := v.GetMember(invocation.Interpreter, locationRange, name)
+		member := v.GetMember(inter, locationRange, name)
 
 		if member == nil {
 			return Nil
@@ -14186,16 +14187,29 @@ func (v *CompositeValue) reflectAttachmentFunction(interpreter *Interpreter, loc
 		}
 		ty := typeParameterPair.Value
 
-		if !ty.Equal(invocation.Interpreter.MustSemaTypeOfValue(member)) {
+		if !ty.Equal(inter.MustSemaTypeOfValue(member)) {
 			return Nil
 		}
 
-		value := member
-		if !requireFunction {
-			value = NewEphemeralReferenceValue(invocation.Interpreter, false, member, ty)
+		// We need to be sure that users cannot use reflection to access values that should not be visible
+		// from the callsite of the reflection functions.
+		// However, because doing the full check and properly handling cases like `access(contract)`,
+		// or more particularly `access(account)` requires the entire checker, which we do not want to
+		// add to the interpreter. Instead, we just require that the member being accessed here is `pub`
+		compositeType := interpreter.MustSemaTypeOfValue(v)
+		memberType := compositeType.GetMembers()[name].Resolve(inter, name, ast.Range{}, func(error) {})
+		if !inter.Program.AccessCheckMode.IsReadableAccess(memberType.Access) {
+			return Nil
 		}
 
-		return NewSomeValueNonCopying(invocation.Interpreter, value)
+		// we must check that this member is accessible from this location
+
+		value := member
+		if !requireFunction {
+			value = NewEphemeralReferenceValue(inter, false, member, ty)
+		}
+
+		return NewSomeValueNonCopying(inter, value)
 	}
 }
 

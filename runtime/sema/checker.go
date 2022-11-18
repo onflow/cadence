@@ -1762,8 +1762,8 @@ func (checker *Checker) checkCharacterLiteral(expression *ast.StringExpression) 
 	)
 }
 
-func (checker *Checker) isReadableAccess(access ast.Access) bool {
-	switch checker.Config.AccessCheckMode {
+func (mode AccessCheckMode) IsReadableAccess(access ast.Access) bool {
+	switch mode {
 	case AccessCheckModeStrict,
 		AccessCheckModeNotSpecifiedRestricted:
 
@@ -1784,8 +1784,8 @@ func (checker *Checker) isReadableAccess(access ast.Access) bool {
 	}
 }
 
-func (checker *Checker) isWriteableAccess(access ast.Access) bool {
-	switch checker.Config.AccessCheckMode {
+func (mode AccessCheckMode) IsWriteableAccess(access ast.Access) bool {
+	switch mode {
 	case AccessCheckModeStrict,
 		AccessCheckModeNotSpecifiedRestricted:
 
