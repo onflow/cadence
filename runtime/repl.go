@@ -193,7 +193,7 @@ func (r *REPL) Accept(code []byte) (inputIsComplete bool, err error) {
 	// TODO: detect if the input is complete
 	inputIsComplete = true
 
-	result, errs := parser.ParseStatements(code, nil)
+	result, errs := parser.ParseStatements(nil, code, parser.Config{})
 	if len(errs) > 0 {
 		err = parser.Error{
 			Code:   code,

@@ -66,4 +66,6 @@ const (
 	keywordAttach      = "attach"
 	keywordRemove      = "remove"
 	keywordTo          = "to"
+	keywordStatic      = "static"
+	keywordNative      = "native"
 )

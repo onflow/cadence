@@ -36,8 +36,9 @@ import (
 
 func newTestContractInterpreter(t *testing.T, code string) (*interpreter.Interpreter, error) {
 	program, err := parser.ParseProgram(
-		[]byte(code),
 		nil,
+		[]byte(code),
+		parser.Config{},
 	)
 	require.NoError(t, err)
 
