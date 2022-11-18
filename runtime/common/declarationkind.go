@@ -56,6 +56,7 @@ const (
 	DeclarationKindPragma
 	DeclarationKindEnum
 	DeclarationKindEnumCase
+	DeclarationKindAttachment
 )
 
 func DeclarationKindCount() int {
@@ -111,6 +112,8 @@ func (k DeclarationKind) Name() string {
 		return "initializer"
 	case DeclarationKindDestructor:
 		return "destructor"
+	case DeclarationKindAttachment:
+		return "attachment"
 	case DeclarationKindStructureInterface:
 		return "structure interface"
 	case DeclarationKindResourceInterface:
@@ -162,6 +165,8 @@ func (k DeclarationKind) Keywords() string {
 		return "init"
 	case DeclarationKindDestructor:
 		return "destroy"
+	case DeclarationKindAttachment:
+		return "attachment"
 	case DeclarationKindStructureInterface:
 		return "struct interface"
 	case DeclarationKindResourceInterface:
