@@ -36,6 +36,7 @@ const AuthAccountTypeField = "type"
 const AuthAccountCopyField = "copy"
 const AuthAccountBorrowField = "borrow"
 const AuthAccountLinkField = "link"
+const AuthAccountLinkAccountField = "linkAccount"
 const AuthAccountUnlinkField = "unlink"
 const AuthAccountGetCapabilityField = "getCapability"
 const AuthAccountGetLinkTargetField = "getLinkTarget"
@@ -51,6 +52,8 @@ const AuthAccountStoragePathsField = "storagePaths"
 const AuthAccountInboxPublishField = "publish"
 const AuthAccountInboxUnpublishField = "unpublish"
 const AuthAccountInboxClaimField = "claim"
+
+var AuthAccountTypeLinkAccountFunctionType *FunctionType
 
 // AuthAccountType represents the authorized access to an account.
 // Access to an AuthAccount means having full access to its storage, public keys, and code.
@@ -69,6 +72,25 @@ var AuthAccountType = func() *CompositeType {
 			nestedTypes.Set(AuthAccountInboxTypeName, AuthAccountInboxType)
 			return nestedTypes
 		}(),
+	}
+
+	AuthAccountTypeLinkAccountFunctionType = &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "newCapabilityPath",
+				TypeAnnotation: NewTypeAnnotation(CapabilityPathType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{
+				Type: &CapabilityType{
+					BorrowType: &ReferenceType{
+						Type: authAccountType,
+					},
+				},
+			},
+		),
 	}
 
 	var members = []*Member{
@@ -149,6 +171,12 @@ var AuthAccountType = func() *CompositeType {
 			AuthAccountLinkField,
 			AuthAccountTypeLinkFunctionType,
 			authAccountTypeLinkFunctionDocString,
+		),
+		NewUnmeteredPublicFunctionMember(
+			authAccountType,
+			AuthAccountLinkAccountField,
+			AuthAccountTypeLinkAccountFunctionType,
+			authAccountTypeLinkAccountFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			authAccountType,
@@ -568,6 +596,12 @@ Returns nil if a link for the given capability path already exists, or the newly
 It is not necessary for the target path to lead to a valid object; the target path could be empty, or could lead to an object which does not provide the necessary type interface:
 The link function does **not** check if the target path is valid/exists at the time the capability is created and does **not** check if the target value conforms to the given type.
 The link is latent. The target value might be stored after the link is created, and the target value might be moved out after the link has been created.
+`
+
+const authAccountTypeLinkAccountFunctionDocString = `
+Creates a capability at the given public or private path which targets this account.
+
+Returns nil if a link for the given capability path already exists, or the newly created capability if not.
 `
 
 var AuthAccountTypeUnlinkFunctionType = &FunctionType{

@@ -1113,6 +1113,46 @@ func TestCheckAccount_link(t *testing.T) {
 	}
 }
 
+func TestCheckAccount_linkAccount(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(domain common.PathDomain) {
+
+		t.Run(domain.String(), func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheckAccount(t,
+				fmt.Sprintf(
+					`
+                          resource R {}
+
+                          fun test(): Capability<&AuthAccount>? {
+                              return authAccount.linkAccount(/%s/r)
+                          }
+                        `,
+					domain.Identifier(),
+				),
+			)
+
+			switch domain {
+			case common.PathDomainPrivate, common.PathDomainPublic:
+				require.NoError(t, err)
+
+			default:
+				errs := RequireCheckerErrors(t, err, 1)
+
+				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			}
+		})
+	}
+
+	for _, domain := range common.AllPathDomainsByIdentifier {
+		test(domain)
+	}
+}
+
 func TestCheckAccount_unlink(t *testing.T) {
 
 	t.Parallel()
