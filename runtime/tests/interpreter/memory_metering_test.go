@@ -7539,7 +7539,7 @@ func TestInterpretPathValueMetering(t *testing.T) {
 	})
 }
 
-func TestInterpretCapabilityValueMetering(t *testing.T) {
+func TestInterpretStorageCapabilityValueMetering(t *testing.T) {
 	t.Parallel()
 
 	t.Run("creation", func(t *testing.T) {
@@ -7561,7 +7561,7 @@ func TestInterpretCapabilityValueMetering(t *testing.T) {
 		_, err := inter.Invoke("main", account)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCapabilityValue))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindStorageCapabilityValue))
 		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindPathValue))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindReferenceStaticType))
 	})
@@ -9578,7 +9578,7 @@ func TestInterpretValueStringConversion(t *testing.T) {
         `
 
 		testValueStringConversion(t, script,
-			interpreter.NewUnmeteredCapabilityValue(
+			interpreter.NewUnmeteredStorageCapabilityValue(
 				interpreter.AddressValue{1},
 				interpreter.PathValue{
 					Domain:     common.PathDomainPublic,

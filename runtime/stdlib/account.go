@@ -962,7 +962,7 @@ func accountInboxPublishFunction(
 	return interpreter.NewHostFunctionValue(
 		gauge,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			value, ok := invocation.Arguments[0].(*interpreter.CapabilityValue)
+			value, ok := invocation.Arguments[0].(*interpreter.StorageCapabilityValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}

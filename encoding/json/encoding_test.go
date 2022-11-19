@@ -2488,7 +2488,7 @@ func TestEncodeCapability(t *testing.T) {
 
 	testEncodeAndDecode(
 		t,
-		cadence.Capability{
+		cadence.StorageCapability{
 			Path:       cadence.NewPath("storage", "foo"),
 			Address:    cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
 			BorrowType: cadence.IntType{},

@@ -17696,7 +17696,7 @@ func accountGetCapabilityFunction(
 				borrowStaticType = ConvertSemaToStaticType(interpreter, borrowType)
 			}
 
-			return NewCapabilityValue(
+			return NewStorageCapabilityValue(
 				gauge,
 				addressValue,
 				path,
@@ -17962,88 +17962,88 @@ func (PathValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
-// CapabilityValue
+// StorageCapabilityValue
 
-type CapabilityValue struct {
+type StorageCapabilityValue struct {
 	Address    AddressValue
 	Path       PathValue
 	BorrowType StaticType
 }
 
-func NewUnmeteredCapabilityValue(address AddressValue, path PathValue, borrowType StaticType) *CapabilityValue {
-	return &CapabilityValue{address, path, borrowType}
+func NewUnmeteredStorageCapabilityValue(address AddressValue, path PathValue, borrowType StaticType) *StorageCapabilityValue {
+	return &StorageCapabilityValue{address, path, borrowType}
 }
 
-func NewCapabilityValue(
+func NewStorageCapabilityValue(
 	memoryGauge common.MemoryGauge,
 	address AddressValue,
 	path PathValue,
 	borrowType StaticType,
-) *CapabilityValue {
+) *StorageCapabilityValue {
 	// Constant because its constituents are already metered.
-	common.UseMemory(memoryGauge, common.CapabilityValueMemoryUsage)
-	return NewUnmeteredCapabilityValue(address, path, borrowType)
+	common.UseMemory(memoryGauge, common.StorageCapabilityValueMemoryUsage)
+	return NewUnmeteredStorageCapabilityValue(address, path, borrowType)
 }
 
-var _ Value = &CapabilityValue{}
-var _ atree.Storable = &CapabilityValue{}
-var _ EquatableValue = &CapabilityValue{}
-var _ MemberAccessibleValue = &CapabilityValue{}
+var _ Value = &StorageCapabilityValue{}
+var _ atree.Storable = &StorageCapabilityValue{}
+var _ EquatableValue = &StorageCapabilityValue{}
+var _ MemberAccessibleValue = &StorageCapabilityValue{}
 
-func (*CapabilityValue) IsValue() {}
+func (*StorageCapabilityValue) IsValue() {}
 
-func (v *CapabilityValue) Accept(interpreter *Interpreter, visitor Visitor) {
-	visitor.VisitCapabilityValue(interpreter, v)
+func (v *StorageCapabilityValue) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitStorageCapabilityValue(interpreter, v)
 }
 
-func (v *CapabilityValue) Walk(_ *Interpreter, walkChild func(Value)) {
+func (v *StorageCapabilityValue) Walk(_ *Interpreter, walkChild func(Value)) {
 	walkChild(v.Address)
 	walkChild(v.Path)
 }
 
-func (v *CapabilityValue) StaticType(inter *Interpreter) StaticType {
+func (v *StorageCapabilityValue) StaticType(inter *Interpreter) StaticType {
 	return NewCapabilityStaticType(
 		inter,
 		v.BorrowType,
 	)
 }
 
-func (v *CapabilityValue) IsImportable(_ *Interpreter) bool {
+func (v *StorageCapabilityValue) IsImportable(_ *Interpreter) bool {
 	return v.Path.Domain == common.PathDomainPublic
 }
 
-func (v *CapabilityValue) String() string {
+func (v *StorageCapabilityValue) String() string {
 	return v.RecursiveString(SeenReferences{})
 }
 
-func (v *CapabilityValue) RecursiveString(seenReferences SeenReferences) string {
+func (v *StorageCapabilityValue) RecursiveString(seenReferences SeenReferences) string {
 	var borrowType string
 	if v.BorrowType != nil {
 		borrowType = v.BorrowType.String()
 	}
-	return format.Capability(
+	return format.StorageCapability(
 		borrowType,
 		v.Address.RecursiveString(seenReferences),
 		v.Path.RecursiveString(seenReferences),
 	)
 }
 
-func (v *CapabilityValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
-	common.UseMemory(memoryGauge, common.CapabilityValueStringMemoryUsage)
+func (v *StorageCapabilityValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+	common.UseMemory(memoryGauge, common.StorageCapabilityValueStringMemoryUsage)
 
 	var borrowType string
 	if v.BorrowType != nil {
 		borrowType = v.BorrowType.MeteredString(memoryGauge)
 	}
 
-	return format.Capability(
+	return format.StorageCapability(
 		borrowType,
 		v.Address.MeteredString(memoryGauge, seenReferences),
 		v.Path.MeteredString(memoryGauge, seenReferences),
 	)
 }
 
-func (v *CapabilityValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
+func (v *StorageCapabilityValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
 	switch name {
 	case sema.CapabilityTypeBorrowField:
 		var borrowType *sema.ReferenceType
@@ -18068,17 +18068,17 @@ func (v *CapabilityValue) GetMember(interpreter *Interpreter, _ LocationRange, n
 	return nil
 }
 
-func (*CapabilityValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (*StorageCapabilityValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
 	// Capabilities have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (*CapabilityValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (*StorageCapabilityValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
 	// Capabilities have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (v *CapabilityValue) ConformsToStaticType(
+func (v *StorageCapabilityValue) ConformsToStaticType(
 	_ *Interpreter,
 	_ LocationRange,
 	_ TypeConformanceResults,
@@ -18086,8 +18086,8 @@ func (v *CapabilityValue) ConformsToStaticType(
 	return true
 }
 
-func (v *CapabilityValue) Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool {
-	otherCapability, ok := other.(*CapabilityValue)
+func (v *StorageCapabilityValue) Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool {
+	otherCapability, ok := other.(*StorageCapabilityValue)
 	if !ok {
 		return false
 	}
@@ -18106,11 +18106,11 @@ func (v *CapabilityValue) Equal(interpreter *Interpreter, locationRange Location
 		otherCapability.Path.Equal(interpreter, locationRange, v.Path)
 }
 
-func (*CapabilityValue) IsStorable() bool {
+func (*StorageCapabilityValue) IsStorable() bool {
 	return true
 }
 
-func (v *CapabilityValue) Storable(
+func (v *StorageCapabilityValue) Storable(
 	storage atree.SlabStorage,
 	address atree.Address,
 	maxInlineSize uint64,
@@ -18123,15 +18123,15 @@ func (v *CapabilityValue) Storable(
 	)
 }
 
-func (*CapabilityValue) NeedsStoreTo(_ atree.Address) bool {
+func (*StorageCapabilityValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (*CapabilityValue) IsResourceKinded(_ *Interpreter) bool {
+func (*StorageCapabilityValue) IsResourceKinded(_ *Interpreter) bool {
 	return false
 }
 
-func (v *CapabilityValue) Transfer(
+func (v *StorageCapabilityValue) Transfer(
 	interpreter *Interpreter,
 	_ LocationRange,
 	_ atree.Address,
@@ -18145,28 +18145,28 @@ func (v *CapabilityValue) Transfer(
 	return v
 }
 
-func (v *CapabilityValue) Clone(interpreter *Interpreter) Value {
-	return &CapabilityValue{
+func (v *StorageCapabilityValue) Clone(interpreter *Interpreter) Value {
+	return &StorageCapabilityValue{
 		Address:    v.Address.Clone(interpreter).(AddressValue),
 		Path:       v.Path.Clone(interpreter).(PathValue),
 		BorrowType: v.BorrowType,
 	}
 }
 
-func (v *CapabilityValue) DeepRemove(interpreter *Interpreter) {
+func (v *StorageCapabilityValue) DeepRemove(interpreter *Interpreter) {
 	v.Address.DeepRemove(interpreter)
 	v.Path.DeepRemove(interpreter)
 }
 
-func (v *CapabilityValue) ByteSize() uint32 {
+func (v *StorageCapabilityValue) ByteSize() uint32 {
 	return mustStorableSize(v)
 }
 
-func (v *CapabilityValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
+func (v *StorageCapabilityValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
-func (v *CapabilityValue) ChildStorables() []atree.Storable {
+func (v *StorageCapabilityValue) ChildStorables() []atree.Storable {
 	return []atree.Storable{
 		v.Address,
 		v.Path,
@@ -18319,10 +18319,10 @@ type PublishedValue struct {
 	Recipient AddressValue
 	// NB: If `publish` and `claim` are ever extended to support arbitrary values, rather than just capabilities,
 	// this will need to be changed to `Value`, and more storage-related operations must be implemented for `PublishedValue`
-	Value *CapabilityValue
+	Value *StorageCapabilityValue
 }
 
-func NewPublishedValue(memoryGauge common.MemoryGauge, recipient AddressValue, value *CapabilityValue) *PublishedValue {
+func NewPublishedValue(memoryGauge common.MemoryGauge, recipient AddressValue, value *StorageCapabilityValue) *PublishedValue {
 	common.UseMemory(memoryGauge, common.PublishedValueMemoryUsage)
 	return &PublishedValue{Recipient: recipient, Value: value}
 }
@@ -18420,7 +18420,7 @@ func (v *PublishedValue) Transfer(
 
 	if v.NeedsStoreTo(address) {
 
-		innerValue := v.Value.Transfer(interpreter, locationRange, address, remove, nil).(*CapabilityValue)
+		innerValue := v.Value.Transfer(interpreter, locationRange, address, remove, nil).(*StorageCapabilityValue)
 		addressValue := v.Recipient.Transfer(interpreter, locationRange, address, remove, nil).(AddressValue)
 
 		if remove {

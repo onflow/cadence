@@ -1267,7 +1267,7 @@ func (d *Decoder) decodeTypeValue(valueJSON any) cadence.TypeValue {
 	)
 }
 
-func (d *Decoder) decodeCapability(valueJSON any) cadence.Capability {
+func (d *Decoder) decodeCapability(valueJSON any) cadence.StorageCapability {
 	obj := toObject(valueJSON)
 
 	path, ok := d.decodeJSON(obj.Get(pathKey)).(cadence.Path)
@@ -1275,7 +1275,7 @@ func (d *Decoder) decodeCapability(valueJSON any) cadence.Capability {
 		panic(errors.NewDefaultUserError("invalid capability: missing or invalid path"))
 	}
 
-	return cadence.NewMeteredCapability(
+	return cadence.NewMeteredStorageCapability(
 		d.gauge,
 		path,
 		d.decodeAddress(obj.Get(addressKey)),
