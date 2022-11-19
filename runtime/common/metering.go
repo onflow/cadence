@@ -141,6 +141,7 @@ var (
 	HostFunctionValueMemoryUsage        = NewConstantMemoryUsage(MemoryKindHostFunctionValue)
 	InterpretedFunctionValueMemoryUsage = NewConstantMemoryUsage(MemoryKindInterpretedFunctionValue)
 	StorageCapabilityValueMemoryUsage   = NewConstantMemoryUsage(MemoryKindStorageCapabilityValue)
+	AccountCapabilityValueMemoryUsage   = NewConstantMemoryUsage(MemoryKindAccountCapabilityValue)
 	EphemeralReferenceValueMemoryUsage  = NewConstantMemoryUsage(MemoryKindEphemeralReferenceValue)
 	StorageReferenceValueMemoryUsage    = NewConstantMemoryUsage(MemoryKindStorageReferenceValue)
 	LinkValueMemoryUsage                = NewConstantMemoryUsage(MemoryKindLinkValue)
@@ -241,6 +242,7 @@ var (
 	PublicAccountKeysStringMemoryUsage      = NewRawStringMemoryUsage(len("PublicAccount.Keys()"))
 	AuthAccountInboxStringMemoryUsage       = NewRawStringMemoryUsage(len("AuthAccount.Inbox()"))
 	StorageCapabilityValueStringMemoryUsage = NewRawStringMemoryUsage(len("Capability<>(address: , path: )"))
+	AccountCapabilityValueStringMemoryUsage = NewRawStringMemoryUsage(len("Capability(address: )"))
 	LinkValueStringMemoryUsage              = NewRawStringMemoryUsage(len("Link<>()"))
 	PublishedValueStringMemoryUsage         = NewRawStringMemoryUsage(len("PublishedValue<>()"))
 

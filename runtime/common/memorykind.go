@@ -43,6 +43,7 @@ const (
 	MemoryKindTypeValue
 	MemoryKindPathValue
 	MemoryKindStorageCapabilityValue
+	MemoryKindAccountCapabilityValue
 	MemoryKindLinkValue
 	MemoryKindAccountLinkValue
 	MemoryKindStorageReferenceValue

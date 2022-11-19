@@ -200,7 +200,7 @@ const (
 	CBORTagLinkValue
 	CBORTagPublishedValue
 	CBORTagAccountLinkValue
-	_
+	CBORTagAccountCapabilityValue
 	_
 	_
 	_
@@ -769,6 +769,41 @@ func (v *StorageCapabilityValue) Encode(e *atree.Encoder) error {
 
 	// Encode borrow type at array index encodedStorageCapabilityValueBorrowTypeFieldKey
 	return EncodeStaticType(e.CBOR, v.BorrowType)
+}
+
+// NOTE: NEVER change, only add/increment; ensure uint64
+const (
+	// encodedAccountCapabilityValueAddressFieldKey    uint64 = 0
+
+	// !!! *WARNING* !!!
+	//
+	// encodedAccountCapabilityValueLength MUST be updated when new element is added.
+	// It is used to verify encoded capability length during decoding.
+	encodedAccountCapabilityValueLength = 1
+)
+
+// Encode encodes CapabilityStorable as
+//
+//	cbor.Tag{
+//				Number: CBORTagAccountCapabilityValue,
+//				Content: []any{
+//						encodedAccountCapabilityValueAddressFieldKey:    AddressValue(v.Address),
+//					},
+//	}
+func (v *AccountCapabilityValue) Encode(e *atree.Encoder) error {
+	// Encode tag number and array head
+	err := e.CBOR.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, CBORTagAccountCapabilityValue,
+		// array, 1 item follows
+		0x81,
+	})
+	if err != nil {
+		return err
+	}
+
+	// Encode address at array index encodedAccountCapabilityValueAddressFieldKey
+	return v.Address.Encode(e)
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64

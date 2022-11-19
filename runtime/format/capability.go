@@ -35,3 +35,10 @@ func StorageCapability(borrowType string, address string, path string) string {
 		path,
 	)
 }
+
+func AccountCapability(address string) string {
+	return fmt.Sprintf(
+		"Capability(address: %s)",
+		address,
+	)
+}
