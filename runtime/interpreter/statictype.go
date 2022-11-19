@@ -471,8 +471,10 @@ outer:
 // ReferenceStaticType
 
 type ReferenceStaticType struct {
-	Authorized     bool
-	BorrowedType   StaticType
+	Authorized bool
+	// BorrowedType is the type of the usage (T in &T)
+	BorrowedType StaticType
+	// ReferencedType is type of the referenced value (the type of the target)
 	ReferencedType StaticType
 }
 
@@ -481,15 +483,15 @@ var _ StaticType = ReferenceStaticType{}
 func NewReferenceStaticType(
 	memoryGauge common.MemoryGauge,
 	authorized bool,
-	staticType StaticType,
-	referenceType StaticType,
+	borrowedType StaticType,
+	referencedType StaticType,
 ) ReferenceStaticType {
 	common.UseMemory(memoryGauge, common.ReferenceStaticTypeMemoryUsage)
 
 	return ReferenceStaticType{
 		Authorized:     authorized,
-		BorrowedType:   staticType,
-		ReferencedType: referenceType,
+		BorrowedType:   borrowedType,
+		ReferencedType: referencedType,
 	}
 }
 
