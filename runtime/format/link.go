@@ -29,3 +29,5 @@ func Link(ty string, targetPath string) string {
 		targetPath,
 	)
 }
+
+const AccountLink = "AccountLink()"

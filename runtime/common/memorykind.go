@@ -44,6 +44,7 @@ const (
 	MemoryKindPathValue
 	MemoryKindCapabilityValue
 	MemoryKindLinkValue
+	MemoryKindAccountLinkValue
 	MemoryKindStorageReferenceValue
 	MemoryKindEphemeralReferenceValue
 	MemoryKindInterpretedFunctionValue

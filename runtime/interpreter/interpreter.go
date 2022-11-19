@@ -3558,6 +3558,51 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 	)
 }
 
+func (interpreter *Interpreter) authAccountLinkAccountFunction(addressValue AddressValue) *HostFunctionValue {
+
+	// Converted addresses can be cached and don't have to be recomputed on each function invocation
+	address := addressValue.ToAddress()
+
+	return NewHostFunctionValue(
+		interpreter,
+		func(invocation Invocation) Value {
+
+			newCapabilityPath, ok := invocation.Arguments[0].(PathValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			newCapabilityDomain := newCapabilityPath.Domain.Identifier()
+			newCapabilityIdentifier := newCapabilityPath.Identifier
+
+			if interpreter.storedValueExists(
+				address,
+				newCapabilityDomain,
+				newCapabilityIdentifier,
+			) {
+				return Nil
+			}
+
+			accountLinkValue := NewAccountLinkValue(interpreter)
+
+			interpreter.WriteStored(
+				address,
+				newCapabilityDomain,
+				newCapabilityIdentifier,
+				accountLinkValue,
+			)
+
+			return NewSomeValueNonCopying(
+				invocation.Interpreter,
+				// TODO:
+				nil,
+			)
+
+		},
+		sema.AuthAccountTypeLinkAccountFunctionType,
+	)
+}
+
 func (interpreter *Interpreter) accountGetLinkTargetFunction(addressValue AddressValue) *HostFunctionValue {
 
 	// Converted addresses can be cached and don't have to be recomputed on each function invocation

@@ -199,7 +199,7 @@ const (
 	_ // DO NOT REPLACE! used to be used for storage references
 	CBORTagLinkValue
 	CBORTagPublishedValue
-	_
+	CBORTagAccountLinkValue
 	_
 	_
 	_
@@ -294,7 +294,7 @@ var cborVoidValue = []byte{
 }
 
 // Encode writes a value of type Void to the encoder
-func (v VoidValue) Encode(e *atree.Encoder) error {
+func (VoidValue) Encode(e *atree.Encoder) error {
 
 	// TODO: optimize: use 0xf7, but decoded by github.com/fxamacker/cbor/v2 as Go `nil`:
 	//   https://github.com/fxamacker/cbor/blob/a6ed6ff68e99cbb076997a08d19f03c453851555/README.md#limitations
@@ -929,6 +929,24 @@ func (v LinkValue) Encode(e *atree.Encoder) error {
 	}
 	// Encode type at array index encodedLinkValueTypeFieldKey
 	return EncodeStaticType(e.CBOR, v.Type)
+}
+
+// cborAccountLinkValue represents the CBOR value:
+//
+//	cbor.Tag{
+//		Number: CBORTagAccountLinkValue,
+//		Content: nil
+//	}
+var cborAccountLinkValue = []byte{
+	// tag
+	0xd8, CBORTagAccountLinkValue,
+	// null
+	0xf6,
+}
+
+// Encode writes a value of type AccountValue to the encoder
+func (AccountLinkValue) Encode(e *atree.Encoder) error {
+	return e.CBOR.EncodeRawBytes(cborAccountLinkValue)
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64

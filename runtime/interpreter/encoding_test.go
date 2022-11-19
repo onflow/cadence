@@ -3692,6 +3692,23 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 	})
 }
 
+func TestEncodeDecodeAccountLinkValue(t *testing.T) {
+
+	t.Parallel()
+
+	testEncodeDecode(t,
+		encodeDecodeTest{
+			value: EmptyAccountLinkValue,
+			encoded: []byte{
+				// tag
+				0xd8, CBORTagAccountLinkValue,
+				// null
+				0xf6,
+			},
+		},
+	)
+}
+
 func TestEncodeDecodeTypeValue(t *testing.T) {
 
 	t.Parallel()

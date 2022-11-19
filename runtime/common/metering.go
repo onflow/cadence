@@ -144,6 +144,7 @@ var (
 	EphemeralReferenceValueMemoryUsage  = NewConstantMemoryUsage(MemoryKindEphemeralReferenceValue)
 	StorageReferenceValueMemoryUsage    = NewConstantMemoryUsage(MemoryKindStorageReferenceValue)
 	LinkValueMemoryUsage                = NewConstantMemoryUsage(MemoryKindLinkValue)
+	AccountLinkValueMemoryUsage         = NewConstantMemoryUsage(MemoryKindAccountLinkValue)
 	PathValueMemoryUsage                = NewConstantMemoryUsage(MemoryKindPathValue)
 	OptionalValueMemoryUsage            = NewConstantMemoryUsage(MemoryKindOptionalValue)
 	TypeValueMemoryUsage                = NewConstantMemoryUsage(MemoryKindTypeValue)

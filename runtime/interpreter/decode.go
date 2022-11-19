@@ -304,6 +304,14 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 		case CBORTagLinkValue:
 			storable, err = d.decodeLink()
 
+		case CBORTagAccountLinkValue:
+			common.UseMemory(d.memoryGauge, common.AccountLinkValueMemoryUsage)
+			err := d.decoder.Skip()
+			if err != nil {
+				return nil, err
+			}
+			storable = AccountLinkValue{}
+
 		case CBORTagPublishedValue:
 			storable, err = d.decodePublishedValue()
 

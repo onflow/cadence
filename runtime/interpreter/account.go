@@ -66,6 +66,7 @@ func NewAuthAccountValue(
 	var contracts Value
 	var keys Value
 	var inbox Value
+	var linkAccountFunction *HostFunctionValue
 
 	computeField := func(name string, inter *Interpreter, locationRange LocationRange) Value {
 		switch name {
@@ -116,6 +117,11 @@ func NewAuthAccountValue(
 			return inter.authAccountBorrowFunction(address)
 		case sema.AuthAccountLinkField:
 			return inter.authAccountLinkFunction(address)
+		case sema.AuthAccountLinkAccountField:
+			if linkAccountFunction == nil {
+				linkAccountFunction = inter.authAccountLinkAccountFunction(address)
+			}
+			return linkAccountFunction
 		case sema.AuthAccountUnlinkField:
 			return inter.authAccountUnlinkFunction(address)
 		case sema.AuthAccountGetLinkTargetField:

@@ -60,6 +60,7 @@ type Visitor interface {
 	VisitInterpretedFunctionValue(interpreter *Interpreter, value *InterpretedFunctionValue)
 	VisitHostFunctionValue(interpreter *Interpreter, value *HostFunctionValue)
 	VisitBoundFunctionValue(interpreter *Interpreter, value BoundFunctionValue)
+	VisitAccountLinkValue(interpreter *Interpreter, value AccountLinkValue)
 }
 
 type EmptyVisitor struct {
@@ -100,6 +101,7 @@ type EmptyVisitor struct {
 	PathValueVisitor                func(interpreter *Interpreter, value PathValue)
 	CapabilityValueVisitor          func(interpreter *Interpreter, value *CapabilityValue)
 	LinkValueVisitor                func(interpreter *Interpreter, value LinkValue)
+	AccountLinkValueVisitor         func(interpreter *Interpreter, value AccountLinkValue)
 	PublishedValueVisitor           func(interpreter *Interpreter, value *PublishedValue)
 	InterpretedFunctionValueVisitor func(interpreter *Interpreter, value *InterpretedFunctionValue)
 	HostFunctionValueVisitor        func(interpreter *Interpreter, value *HostFunctionValue)
@@ -365,6 +367,13 @@ func (v EmptyVisitor) VisitLinkValue(interpreter *Interpreter, value LinkValue) 
 		return
 	}
 	v.LinkValueVisitor(interpreter, value)
+}
+
+func (v EmptyVisitor) VisitAccountLinkValue(interpreter *Interpreter, value AccountLinkValue) {
+	if v.AccountLinkValueVisitor == nil {
+		return
+	}
+	v.AccountLinkValueVisitor(interpreter, value)
 }
 
 func (v EmptyVisitor) VisitPublishedValue(interpreter *Interpreter, value *PublishedValue) {
