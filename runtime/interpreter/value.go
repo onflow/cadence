@@ -482,6 +482,7 @@ func (v TypeValue) HashInput(interpreter *Interpreter, _ LocationRange, scratch 
 type VoidValue struct{}
 
 var Void Value = VoidValue{}
+var VoidStorable atree.Storable = VoidValue{}
 
 var _ Value = VoidValue{}
 var _ atree.Storable = VoidValue{}
@@ -16239,6 +16240,7 @@ type NilValue struct{}
 
 var Nil Value = NilValue{}
 var NilOptionalValue OptionalValue = NilValue{}
+var NilStorable atree.Storable = NilValue{}
 
 var _ Value = NilValue{}
 var _ atree.Storable = NilValue{}

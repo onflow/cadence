@@ -103,7 +103,7 @@ Returns the deployed contract.
 `
 
 var AuthAccountContractsTypeAddFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+	Parameters: []Parameter{
 		{
 			Identifier: "name",
 			TypeAnnotation: NewTypeAnnotation(
@@ -144,7 +144,7 @@ Returns the deployed contract for the updated contract.
 `
 
 var AuthAccountContractsTypeUpdateExperimentalFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+	Parameters: []Parameter{
 		{
 			Identifier: "name",
 			TypeAnnotation: NewTypeAnnotation(
@@ -172,7 +172,7 @@ Returns nil if no contract/contract interface with the given name exists in the 
 `
 
 var AuthAccountContractsTypeRemoveFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+	Parameters: []Parameter{
 		{
 			Identifier:     "name",
 			TypeAnnotation: NewTypeAnnotation(StringType),

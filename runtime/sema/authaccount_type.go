@@ -321,7 +321,7 @@ var AuthAccountForEachPrivateFunctionType = AccountForEachFunctionType(PrivatePa
 var AuthAccountForEachStoredFunctionType = AccountForEachFunctionType(StoragePathType)
 
 var AuthAccountTypeAddPublicKeyFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+	Parameters: []Parameter{
 		{
 			Label:      ArgumentLabelNotRequired,
 			Identifier: "key",
@@ -340,7 +340,7 @@ Adds the given byte representation of a public key to the account's keys
 `
 
 var AuthAccountTypeRemovePublicKeyFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+	Parameters: []Parameter{
 		{
 			Label:      ArgumentLabelNotRequired,
 			Identifier: "index",
@@ -369,7 +369,7 @@ var AuthAccountTypeSaveFunctionType = func() *FunctionType {
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:      ArgumentLabelNotRequired,
 				Identifier: "value",
@@ -409,7 +409,7 @@ var AuthAccountTypeLoadFunctionType = func() *FunctionType {
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:          "from",
 				Identifier:     "path",
@@ -435,7 +435,7 @@ The path must be a storage path, i.e., only the domain ` + "`storage`" + ` is al
 `
 
 var AuthAccountTypeTypeFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+	Parameters: []Parameter{
 		{
 			Label:          "at",
 			Identifier:     "path",
@@ -474,7 +474,7 @@ var AuthAccountTypeCopyFunctionType = func() *FunctionType {
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:          "from",
 				Identifier:     "path",
@@ -517,7 +517,7 @@ var AuthAccountTypeBorrowFunctionType = func() *FunctionType {
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:          "from",
 				Identifier:     "path",
@@ -562,7 +562,7 @@ var AuthAccountTypeLinkFunctionType = func() *FunctionType {
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "newCapabilityPath",
@@ -605,7 +605,7 @@ Returns nil if a link for the given capability path already exists, or the newly
 `
 
 var AuthAccountTypeUnlinkFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+	Parameters: []Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "capabilityPath",
@@ -633,7 +633,7 @@ var AuthAccountTypeGetCapabilityFunctionType = func() *FunctionType {
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "capabilityPath",
@@ -655,7 +655,7 @@ Returns the capability at the given private or public path, or nil if it does no
 `
 
 var AccountTypeGetLinkTargetFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+	Parameters: []Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "capabilityPath",
@@ -717,7 +717,7 @@ var AuthAccountKeysType = func() *CompositeType {
 }()
 
 var AuthAccountKeysTypeAddFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+	Parameters: []Parameter{
 		{
 			Identifier:     AccountKeyPublicKeyField,
 			TypeAnnotation: NewTypeAnnotation(PublicKeyType),
@@ -736,7 +736,7 @@ var AuthAccountKeysTypeAddFunctionType = &FunctionType{
 }
 
 var AccountKeysTypeGetFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+	Parameters: []Parameter{
 		{
 			Identifier:     AccountKeyKeyIndexField,
 			TypeAnnotation: NewTypeAnnotation(IntType),
@@ -750,7 +750,7 @@ var AccountKeysTypeGetFunctionType = &FunctionType{
 var AccountKeysTypeForEachFunctionType = func() *FunctionType {
 	// ((AccountKey): Bool)
 	iterFunctionType := &FunctionType{
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				TypeAnnotation: NewTypeAnnotation(AccountKeyType),
 			},
@@ -759,7 +759,7 @@ var AccountKeysTypeForEachFunctionType = func() *FunctionType {
 	}
 
 	return &FunctionType{
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "function",
@@ -773,7 +773,7 @@ var AccountKeysTypeForEachFunctionType = func() *FunctionType {
 var AccountKeysTypeCountFieldType = UInt64Type
 
 var AuthAccountKeysTypeRevokeFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+	Parameters: []Parameter{
 		{
 			Identifier:     AccountKeyKeyIndexField,
 			TypeAnnotation: NewTypeAnnotation(IntType),
@@ -853,7 +853,7 @@ Publishes the argument value under the given name, to be later claimed by the sp
 `
 
 var AuthAccountTypeInboxPublishFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+	Parameters: []Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "value",
@@ -888,7 +888,7 @@ var AuthAccountTypeInboxUnpublishFunctionType = func() *FunctionType {
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "name",
@@ -922,7 +922,7 @@ var AuthAccountTypeInboxClaimFunctionType = func() *FunctionType {
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "name",

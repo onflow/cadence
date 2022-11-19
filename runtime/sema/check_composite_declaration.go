@@ -866,7 +866,7 @@ func (checker *Checker) declareEnumConstructor(
 func EnumConstructorType(compositeType *CompositeType) *FunctionType {
 	return &FunctionType{
 		IsConstructor: true,
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Identifier:     EnumRawValueFieldName,
 				TypeAnnotation: NewTypeAnnotation(compositeType.EnumRawType),
@@ -902,9 +902,9 @@ func (checker *Checker) checkMemberStorability(members *StringMemberOrderedMap) 
 	})
 }
 
-func (checker *Checker) initializerParameters(initializers []*ast.SpecialFunctionDeclaration) []*Parameter {
+func (checker *Checker) initializerParameters(initializers []*ast.SpecialFunctionDeclaration) []Parameter {
 	// TODO: support multiple overloaded initializers
-	var parameters []*Parameter
+	var parameters []Parameter
 
 	initializerCount := len(initializers)
 	if initializerCount > 0 {
@@ -1260,8 +1260,8 @@ func (checker *Checker) memberSatisfied(compositeMember, interfaceMember *Member
 
 			// Functions are covariant in their return type
 
-			if compositeMemberFunctionType.ReturnTypeAnnotation != nil &&
-				interfaceMemberFunctionType.ReturnTypeAnnotation != nil {
+			if compositeMemberFunctionType.ReturnTypeAnnotation.Type != nil &&
+				interfaceMemberFunctionType.ReturnTypeAnnotation.Type != nil {
 
 				if !IsSubType(
 					compositeMemberFunctionType.ReturnTypeAnnotation.Type,
@@ -1271,10 +1271,10 @@ func (checker *Checker) memberSatisfied(compositeMember, interfaceMember *Member
 				}
 			}
 
-			if (compositeMemberFunctionType.ReturnTypeAnnotation != nil &&
-				interfaceMemberFunctionType.ReturnTypeAnnotation == nil) ||
-				(compositeMemberFunctionType.ReturnTypeAnnotation == nil &&
-					interfaceMemberFunctionType.ReturnTypeAnnotation != nil) {
+			if (compositeMemberFunctionType.ReturnTypeAnnotation.Type != nil &&
+				interfaceMemberFunctionType.ReturnTypeAnnotation.Type == nil) ||
+				(compositeMemberFunctionType.ReturnTypeAnnotation.Type == nil &&
+					interfaceMemberFunctionType.ReturnTypeAnnotation.Type != nil) {
 
 				return false
 			}
@@ -1781,7 +1781,7 @@ func (checker *Checker) checkInitializers(
 	fields []*ast.FieldDeclaration,
 	containerType Type,
 	containerDocString string,
-	initializerParameters []*Parameter,
+	initializerParameters []Parameter,
 	containerKind ContainerKind,
 	initializationInfo *InitializationInfo,
 ) {
@@ -1852,7 +1852,7 @@ func (checker *Checker) checkSpecialFunction(
 	specialFunction *ast.SpecialFunctionDeclaration,
 	containerType Type,
 	containerDocString string,
-	parameters []*Parameter,
+	parameters []Parameter,
 	containerKind ContainerKind,
 	initializationInfo *InitializationInfo,
 ) {

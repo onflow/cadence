@@ -57,7 +57,7 @@ func FunctionEntryPointDeclaration(program *ast.Program) *ast.FunctionDeclaratio
 // EntryPointParameters returns the parameters of the transaction or script, if any.
 //
 // Returns nil if the program specifies both a valid transaction and entry point function declaration.
-func (checker *Checker) EntryPointParameters() []*Parameter {
+func (checker *Checker) EntryPointParameters() []Parameter {
 	transactionDeclaration := checker.Program.SoleTransactionDeclaration()
 	if transactionDeclaration != nil {
 		transactionType := checker.Elaboration.TransactionDeclarationTypes[transactionDeclaration]

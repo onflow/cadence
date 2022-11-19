@@ -409,12 +409,6 @@ func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 			TypeInstance: cadence.Character("a"),
 		},
 		{
-			TypeName:     "Bool",
-			MemoryKind:   common.MemoryKindBoolValue,
-			Weight:       0,
-			TypeInstance: cadence.Bool(true),
-		},
-		{
 			TypeName:     "Address",
 			MemoryKind:   common.MemoryKindAddressValue,
 			Weight:       1,

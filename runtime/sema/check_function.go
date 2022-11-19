@@ -138,7 +138,7 @@ func (checker *Checker) checkFunction(
 
 	checker.checkParameters(parameterList, functionType.Parameters)
 
-	if functionType.ReturnTypeAnnotation != nil {
+	if functionType.ReturnTypeAnnotation.Type != nil {
 		checker.checkTypeAnnotation(functionType.ReturnTypeAnnotation, returnTypeAnnotation)
 	}
 
@@ -225,7 +225,7 @@ func (checker *Checker) checkFunctionExits(functionBlock *ast.FunctionBlock, ret
 	)
 }
 
-func (checker *Checker) checkParameters(parameterList *ast.ParameterList, parameters []*Parameter) {
+func (checker *Checker) checkParameters(parameterList *ast.ParameterList, parameters []Parameter) {
 	for i, parameter := range parameterList.Parameters {
 		parameterTypeAnnotation := parameters[i].TypeAnnotation
 
@@ -268,7 +268,7 @@ func (checker *Checker) checkArgumentLabels(parameterList *ast.ParameterList) {
 // ensuring names are unique and constants don't already exist
 func (checker *Checker) declareParameters(
 	parameterList *ast.ParameterList,
-	parameters []*Parameter,
+	parameters []Parameter,
 ) {
 	depth := checker.valueActivations.Depth()
 
@@ -360,7 +360,7 @@ func (checker *Checker) visitWithPostConditions(postConditions *ast.Conditions, 
 
 func (checker *Checker) visitFunctionBlock(
 	functionBlock *ast.FunctionBlock,
-	returnTypeAnnotation *TypeAnnotation,
+	returnTypeAnnotation TypeAnnotation,
 	checkResourceLoss bool,
 ) {
 	checker.enterValueScope()

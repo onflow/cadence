@@ -28,7 +28,6 @@ const (
 
 	// Values
 
-	MemoryKindBoolValue
 	MemoryKindAddressValue
 	MemoryKindStringValue
 	MemoryKindCharacterValue
@@ -38,8 +37,6 @@ const (
 	MemoryKindCompositeValueBase
 	MemoryKindSimpleCompositeValueBase
 	MemoryKindOptionalValue
-	MemoryKindNilValue
-	MemoryKindVoidValue
 	MemoryKindTypeValue
 	MemoryKindPathValue
 	MemoryKindStorageCapabilityValue
@@ -184,6 +181,7 @@ const (
 	MemoryKindWhileStatement
 
 	MemoryKindBooleanExpression
+	MemoryKindVoidExpression
 	MemoryKindNilExpression
 	MemoryKindStringExpression
 	MemoryKindIntegerExpression

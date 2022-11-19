@@ -54,7 +54,7 @@ var beforeType = func() *FunctionType {
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "value",
@@ -99,7 +99,7 @@ type Checker struct {
 	resources                          *Resources
 	typeActivations                    *VariableActivations
 	containerTypes                     map[Type]bool
-	functionActivations                *FunctionActivations
+	functionActivations                FunctionActivations
 	inCondition                        bool
 	isChecked                          bool
 	inCreate                           bool
@@ -135,7 +135,10 @@ func NewChecker(
 		return nil, errors.NewDefaultUserError("invalid default access check mode")
 	}
 
-	functionActivations := &FunctionActivations{}
+	functionActivations := FunctionActivations{
+		// Pre-allocate a common function depth
+		make([]FunctionActivation, 0, 2),
+	}
 	functionActivations.EnterFunction(&FunctionType{
 		ReturnTypeAnnotation: NewTypeAnnotation(VoidType)},
 		0,
@@ -1035,14 +1038,17 @@ func (checker *Checker) convertOptionalType(t *ast.OptionalType) Type {
 
 // convertFunctionType converts the given AST function type into a sema function type.
 //
-// NOTE: type annotations ar *NOT* checked!
+// NOTE: type annotations are *NOT* checked!
 func (checker *Checker) convertFunctionType(t *ast.FunctionType) Type {
-	var parameters []*Parameter
+	parameterTypeAnnotations := t.ParameterTypeAnnotations
 
-	for _, parameterTypeAnnotation := range t.ParameterTypeAnnotations {
+	parameters := make([]Parameter, 0, len(parameterTypeAnnotations))
+
+	for _, parameterTypeAnnotation := range parameterTypeAnnotations {
 		convertedParameterTypeAnnotation := checker.ConvertTypeAnnotation(parameterTypeAnnotation)
-		parameters = append(parameters,
-			&Parameter{
+		parameters = append(
+			parameters,
+			Parameter{
 				TypeAnnotation: convertedParameterTypeAnnotation,
 			},
 		)
@@ -1188,10 +1194,10 @@ func (checker *Checker) convertNominalType(t *ast.NominalType) Type {
 // ConvertTypeAnnotation converts an AST type annotation representation
 // to a sema type annotation
 //
-// NOTE: type annotations ar *NOT* checked!
-func (checker *Checker) ConvertTypeAnnotation(typeAnnotation *ast.TypeAnnotation) *TypeAnnotation {
+// NOTE: type annotations are *NOT* checked!
+func (checker *Checker) ConvertTypeAnnotation(typeAnnotation *ast.TypeAnnotation) TypeAnnotation {
 	convertedType := checker.ConvertType(typeAnnotation.Type)
-	return &TypeAnnotation{
+	return TypeAnnotation{
 		IsResource: typeAnnotation.IsResource,
 		Type:       convertedType,
 	}
@@ -1212,23 +1218,27 @@ func (checker *Checker) functionType(
 	}
 }
 
-func (checker *Checker) parameters(parameterList *ast.ParameterList) []*Parameter {
+func (checker *Checker) parameters(parameterList *ast.ParameterList) []Parameter {
 
-	parameters := make([]*Parameter, len(parameterList.Parameters))
+	var parameters []Parameter
 
-	for i, parameter := range parameterList.Parameters {
-		convertedParameterType := checker.ConvertType(parameter.TypeAnnotation.Type)
+	if len(parameterList.Parameters) > 0 {
+		parameters = make([]Parameter, len(parameterList.Parameters))
 
-		// NOTE: copying resource annotation from source type annotation as-is,
-		// so a potential error is properly reported
+		for i, parameter := range parameterList.Parameters {
+			convertedParameterType := checker.ConvertType(parameter.TypeAnnotation.Type)
 
-		parameters[i] = &Parameter{
-			Label:      parameter.Label,
-			Identifier: parameter.Identifier.Identifier,
-			TypeAnnotation: &TypeAnnotation{
-				IsResource: parameter.TypeAnnotation.IsResource,
-				Type:       convertedParameterType,
-			},
+			// NOTE: copying resource annotation from source type annotation as-is,
+			// so a potential error is properly reported
+
+			parameters[i] = Parameter{
+				Label:      parameter.Label,
+				Identifier: parameter.Identifier.Identifier,
+				TypeAnnotation: TypeAnnotation{
+					IsResource: parameter.TypeAnnotation.IsResource,
+					Type:       convertedParameterType,
+				},
+			}
 		}
 	}
 
@@ -1798,6 +1808,8 @@ func (checker *Checker) withSelfResourceInvalidationAllowed(f func()) {
 const ResourceOwnerFieldName = "owner"
 const ResourceUUIDFieldName = "uuid"
 
+const ContractAccountFieldName = "account"
+
 const contractAccountFieldDocString = `
 The account where the contract is deployed in
 `
@@ -1866,7 +1878,7 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 			// which is ignored in serialization
 
 			addPredeclaredMember(
-				"account",
+				ContractAccountFieldName,
 				AuthAccountType,
 				common.DeclarationKindField,
 				ast.AccessPrivate,
@@ -1999,7 +2011,7 @@ func (checker *Checker) rewritePostConditions(postConditions []*ast.Condition) P
 	}
 }
 
-func (checker *Checker) checkTypeAnnotation(typeAnnotation *TypeAnnotation, pos ast.HasPosition) {
+func (checker *Checker) checkTypeAnnotation(typeAnnotation TypeAnnotation, pos ast.HasPosition) {
 
 	switch typeAnnotation.TypeAnnotationState() {
 	case TypeAnnotationStateMissingResourceAnnotation:
@@ -2089,7 +2101,7 @@ func (checker *Checker) convertInstantiationType(t *ast.InstantiationType) Type 
 	// even if the instantiated type
 
 	typeArgumentCount := len(t.TypeArguments)
-	typeArgumentAnnotations := make([]*TypeAnnotation, typeArgumentCount)
+	typeArgumentAnnotations := make([]TypeAnnotation, typeArgumentCount)
 
 	for i, rawTypeArgument := range t.TypeArguments {
 		typeArgument := checker.ConvertTypeAnnotation(rawTypeArgument)

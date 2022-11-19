@@ -119,7 +119,7 @@ func cryptoAlgorithmEnumConstructorType[T sema.CryptoAlgorithm](
 
 	constructorType := &sema.FunctionType{
 		IsConstructor: true,
-		Parameters: []*sema.Parameter{
+		Parameters: []sema.Parameter{
 			{
 				Identifier:     sema.EnumRawValueFieldName,
 				TypeAnnotation: sema.NewTypeAnnotation(enumType.EnumRawType),

@@ -364,7 +364,7 @@ func validateArgumentParams(
 	decoder ArgumentDecoder,
 	locationRange interpreter.LocationRange,
 	arguments [][]byte,
-	parameters []*sema.Parameter,
+	parameters []sema.Parameter,
 ) (
 	[]interpreter.Value,
 	error,

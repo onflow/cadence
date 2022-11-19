@@ -765,7 +765,7 @@ func (e *interpreterEnvironment) newInjectedCompositeFieldsHandler() interpreter
 				)
 
 				return map[string]interpreter.Value{
-					"account": stdlib.NewAuthAccountValue(
+					sema.ContractAccountFieldName: stdlib.NewAuthAccountValue(
 						inter,
 						e,
 						addressValue,

@@ -66,7 +66,18 @@ func NewAuthAccountValue(
 	var contracts Value
 	var keys Value
 	var inbox Value
+	var forEachStoredFunction *HostFunctionValue
+	var forEachPublicFunction *HostFunctionValue
+	var forEachPrivateFunction *HostFunctionValue
+	var typeFunction *HostFunctionValue
+	var loadFunction *HostFunctionValue
+	var copyFunction *HostFunctionValue
+	var saveFunction *HostFunctionValue
+	var borrowFunction *HostFunctionValue
+	var linkFunction *HostFunctionValue
 	var linkAccountFunction *HostFunctionValue
+	var unlinkFunction *HostFunctionValue
+	var getLinkTargetFunction *HostFunctionValue
 
 	computeField := func(name string, inter *Interpreter, locationRange LocationRange) Value {
 		switch name {
@@ -85,47 +96,112 @@ func NewAuthAccountValue(
 				inbox = inboxConstructor()
 			}
 			return inbox
+
 		case sema.AuthAccountPublicPathsField:
 			return inter.publicAccountPaths(address, locationRange)
+
 		case sema.AuthAccountPrivatePathsField:
 			return inter.privateAccountPaths(address, locationRange)
+
 		case sema.AuthAccountStoragePathsField:
 			return inter.storageAccountPaths(address, locationRange)
+
 		case sema.AuthAccountForEachPublicField:
-			return inter.newStorageIterationFunction(address, common.PathDomainPublic, sema.PublicPathType)
+			if forEachPublicFunction == nil {
+				forEachPublicFunction = inter.newStorageIterationFunction(
+					address,
+					common.PathDomainPublic,
+					sema.PublicPathType,
+				)
+			}
+			return forEachPublicFunction
+
 		case sema.AuthAccountForEachPrivateField:
-			return inter.newStorageIterationFunction(address, common.PathDomainPrivate, sema.PrivatePathType)
+			if forEachPrivateFunction == nil {
+				forEachPrivateFunction = inter.newStorageIterationFunction(
+					address,
+					common.PathDomainPrivate,
+					sema.PrivatePathType,
+				)
+			}
+			return forEachPrivateFunction
+
 		case sema.AuthAccountForEachStoredField:
-			return inter.newStorageIterationFunction(address, common.PathDomainStorage, sema.StoragePathType)
+			if forEachStoredFunction == nil {
+				forEachStoredFunction = inter.newStorageIterationFunction(
+					address,
+					common.PathDomainStorage,
+					sema.StoragePathType,
+				)
+			}
+			return forEachStoredFunction
+
 		case sema.AuthAccountBalanceField:
 			return accountBalanceGet()
+
 		case sema.AuthAccountAvailableBalanceField:
 			return accountAvailableBalanceGet()
+
 		case sema.AuthAccountStorageUsedField:
 			return storageUsedGet(inter)
+
 		case sema.AuthAccountStorageCapacityField:
 			return storageCapacityGet(inter)
+
 		case sema.AuthAccountTypeField:
-			return inter.authAccountTypeFunction(address)
+			if typeFunction == nil {
+				typeFunction = inter.authAccountTypeFunction(address)
+			}
+			return typeFunction
+
 		case sema.AuthAccountLoadField:
-			return inter.authAccountLoadFunction(address)
+			if loadFunction == nil {
+				loadFunction = inter.authAccountLoadFunction(address)
+			}
+			return loadFunction
+
 		case sema.AuthAccountCopyField:
-			return inter.authAccountCopyFunction(address)
+			if copyFunction == nil {
+				copyFunction = inter.authAccountCopyFunction(address)
+			}
+			return copyFunction
+
 		case sema.AuthAccountSaveField:
-			return inter.authAccountSaveFunction(address)
+			if saveFunction == nil {
+				saveFunction = inter.authAccountSaveFunction(address)
+			}
+			return saveFunction
+
 		case sema.AuthAccountBorrowField:
-			return inter.authAccountBorrowFunction(address)
+			if borrowFunction == nil {
+				borrowFunction = inter.authAccountBorrowFunction(address)
+			}
+			return borrowFunction
+
 		case sema.AuthAccountLinkField:
-			return inter.authAccountLinkFunction(address)
+			if linkFunction == nil {
+				linkFunction = inter.authAccountLinkFunction(address)
+			}
+			return linkFunction
+
 		case sema.AuthAccountLinkAccountField:
 			if linkAccountFunction == nil {
 				linkAccountFunction = inter.authAccountLinkAccountFunction(address)
 			}
 			return linkAccountFunction
+
 		case sema.AuthAccountUnlinkField:
-			return inter.authAccountUnlinkFunction(address)
+			if unlinkFunction == nil {
+				unlinkFunction = inter.authAccountUnlinkFunction(address)
+			}
+			return unlinkFunction
+
 		case sema.AuthAccountGetLinkTargetField:
-			return inter.accountGetLinkTargetFunction(address)
+			if getLinkTargetFunction == nil {
+				getLinkTargetFunction = inter.accountGetLinkTargetFunction(address)
+			}
+			return getLinkTargetFunction
+
 		}
 
 		return nil
@@ -187,6 +263,7 @@ func NewPublicAccountValue(
 
 	var keys Value
 	var contracts Value
+	var forEachPublicFunction *HostFunctionValue
 
 	computeField := func(name string, inter *Interpreter, locationRange LocationRange) Value {
 		switch name {
@@ -195,25 +272,44 @@ func NewPublicAccountValue(
 				keys = keysConstructor()
 			}
 			return keys
+
 		case sema.PublicAccountContractsField:
 			if contracts == nil {
 				contracts = contractsConstructor()
 			}
 			return contracts
+
 		case sema.PublicAccountPathsField:
 			return inter.publicAccountPaths(address, locationRange)
+
 		case sema.PublicAccountForEachPublicField:
-			return inter.newStorageIterationFunction(address, common.PathDomainPublic, sema.PublicPathType)
+			if forEachPublicFunction == nil {
+				forEachPublicFunction = inter.newStorageIterationFunction(
+					address,
+					common.PathDomainPublic,
+					sema.PublicPathType,
+				)
+			}
+			return forEachPublicFunction
+
 		case sema.PublicAccountBalanceField:
 			return accountBalanceGet()
+
 		case sema.PublicAccountAvailableBalanceField:
 			return accountAvailableBalanceGet()
+
 		case sema.PublicAccountStorageUsedField:
 			return storageUsedGet(inter)
+
 		case sema.PublicAccountStorageCapacityField:
 			return storageCapacityGet(inter)
+
 		case sema.PublicAccountGetTargetLinkField:
-			return inter.accountGetLinkTargetFunction(address)
+			var getLinkTargetFunction *HostFunctionValue
+			if getLinkTargetFunction == nil {
+				getLinkTargetFunction = inter.accountGetLinkTargetFunction(address)
+			}
+			return getLinkTargetFunction
 		}
 
 		return nil

@@ -135,7 +135,7 @@ All the public paths of an account
 
 func AccountForEachFunctionType(pathType Type) *FunctionType {
 	iterFunctionType := &FunctionType{
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "path",
@@ -150,7 +150,7 @@ func AccountForEachFunctionType(pathType Type) *FunctionType {
 		ReturnTypeAnnotation: NewTypeAnnotation(BoolType),
 	}
 	return &FunctionType{
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "function",
@@ -226,7 +226,7 @@ var PublicAccountTypeGetCapabilityFunctionType = func() *FunctionType {
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "capabilityPath",
