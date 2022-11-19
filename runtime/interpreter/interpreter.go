@@ -3594,8 +3594,10 @@ func (interpreter *Interpreter) authAccountLinkAccountFunction(addressValue Addr
 
 			return NewSomeValueNonCopying(
 				invocation.Interpreter,
-				// TODO:
-				nil,
+				NewAccountCapabilityValue(
+					interpreter,
+					addressValue,
+				),
 			)
 
 		},
