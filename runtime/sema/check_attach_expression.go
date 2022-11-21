@@ -25,12 +25,20 @@ import (
 
 func (checker *Checker) VisitAttachExpression(expression *ast.AttachExpression) Type {
 	attachment := expression.Attachment
+	baseExpression := expression.Base
 
+	baseType := checker.VisitExpression(baseExpression, checker.expectedType)
 	ty := checker.checkInvocationExpression(attachment)
-	if ty.IsInvalidType() {
-		return ty
+
+	if ty.IsInvalidType() || baseType.IsInvalidType() {
+		return InvalidType
 	}
 
+	checker.checkVariableMove(baseExpression)
+	checker.checkResourceMoveOperation(baseExpression, ty)
+
+	// check that the attachment type is a valid attachment,
+	// and that it is a subtype of the declared base type
 	attachmentType, baseIsCompositeType := ty.(*CompositeType)
 	if !(baseIsCompositeType && attachmentType.Kind == common.CompositeKindAttachment) {
 		checker.report(
@@ -43,15 +51,18 @@ func (checker *Checker) VisitAttachExpression(expression *ast.AttachExpression) 
 	}
 
 	annotatedBaseType := attachmentType.baseType
-	baseExpression := expression.Base
 
-	visibleBaseType, actualBaseType := checker.visitExpression(baseExpression, annotatedBaseType)
-	if visibleBaseType.IsInvalidType() {
-		return visibleBaseType
+	if !IsSubType(baseType, annotatedBaseType) {
+		checker.report(
+			&TypeMismatchError{
+				ExpectedType: annotatedBaseType,
+				ActualType:   baseType,
+				Expression:   baseExpression,
+				Range:        checker.expressionRange(baseExpression),
+			},
+		)
+		return InvalidType
 	}
-
-	checker.checkVariableMove(baseExpression)
-	checker.checkResourceMoveOperation(baseExpression, ty)
 
 	reportInvalidBase := func(ty Type) *SimpleType {
 		checker.report(
@@ -65,21 +76,22 @@ func (checker *Checker) VisitAttachExpression(expression *ast.AttachExpression) 
 
 	// if the annotatedBaseType is a specific interface or composite, then the above code will already have
 	// checked that the type of the base expression is also a composite. However, if the annotatedBaseType is
-	// anyresource/anystruct, we need to enforce that actualBaseType is a resource or struct
+	// anyresource/anystruct, we need to enforce that actualBaseType is a resource or struct, to prevent
+	// permitting code like `attach A to 4`, if `A` was declared for `AnyStruct`
 	if _, annotatedIsCompositeType := annotatedBaseType.(CompositeKindedType); !annotatedIsCompositeType {
-		switch baseType := actualBaseType.(type) {
+		switch baseType := baseType.(type) {
 		case CompositeKindedType:
 			compositeKind := baseType.GetCompositeKind()
 			if !(compositeKind.SupportsAttachments()) {
-				return reportInvalidBase(actualBaseType)
+				return reportInvalidBase(baseType)
 			}
 		// these are always resource/structure types
 		case *RestrictedType:
 			break
 		default:
-			return reportInvalidBase(actualBaseType)
+			return reportInvalidBase(baseType)
 		}
 	}
 
-	return visibleBaseType
+	return baseType
 }

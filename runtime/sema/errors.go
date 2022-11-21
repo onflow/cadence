@@ -3840,21 +3840,21 @@ func (e *AttachToInvalidTypeError) Error() string {
 	)
 }
 
-// RemoveFromInvalidTypeError
-type RemoveFromInvalidTypeError struct {
+// InvalidAttachmentRemoveError
+type InvalidAttachmentRemoveError struct {
 	Attachment Type
 	BaseType   Type
 	ast.Range
 }
 
-var _ SemanticError = &RemoveFromInvalidTypeError{}
-var _ errors.UserError = &RemoveFromInvalidTypeError{}
+var _ SemanticError = &InvalidAttachmentRemoveError{}
+var _ errors.UserError = &InvalidAttachmentRemoveError{}
 
-func (*RemoveFromInvalidTypeError) isSemanticError() {}
+func (*InvalidAttachmentRemoveError) isSemanticError() {}
 
-func (*RemoveFromInvalidTypeError) IsUserError() {}
+func (*InvalidAttachmentRemoveError) IsUserError() {}
 
-func (e *RemoveFromInvalidTypeError) Error() string {
+func (e *InvalidAttachmentRemoveError) Error() string {
 	if e.BaseType == nil {
 		return fmt.Sprintf(
 			"cannot remove `%s`, as it is not an attachment type",
