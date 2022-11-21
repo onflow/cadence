@@ -3671,7 +3671,7 @@ func (interpreter *Interpreter) authAccountUnlinkFunction(addressValue AddressVa
 	)
 }
 
-func (interpreter *Interpreter) capabilityBorrowFunction(
+func (interpreter *Interpreter) storageCapabilityBorrowFunction(
 	addressValue AddressValue,
 	pathValue PathValue,
 	borrowType *sema.ReferenceType,
@@ -3742,7 +3742,7 @@ func (interpreter *Interpreter) capabilityBorrowFunction(
 	)
 }
 
-func (interpreter *Interpreter) capabilityCheckFunction(
+func (interpreter *Interpreter) storageCapabilityCheckFunction(
 	addressValue AddressValue,
 	pathValue PathValue,
 	borrowType *sema.ReferenceType,

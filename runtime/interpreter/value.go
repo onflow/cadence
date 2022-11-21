@@ -18061,7 +18061,7 @@ func (v *StorageCapabilityValue) GetMember(interpreter *Interpreter, _ LocationR
 			// this function will panic already if this conversion fails
 			borrowType, _ = interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
 		}
-		return interpreter.capabilityBorrowFunction(v.Address, v.Path, borrowType)
+		return interpreter.storageCapabilityBorrowFunction(v.Address, v.Path, borrowType)
 
 	case sema.CapabilityTypeCheckField:
 		var borrowType *sema.ReferenceType
@@ -18069,7 +18069,7 @@ func (v *StorageCapabilityValue) GetMember(interpreter *Interpreter, _ LocationR
 			// this function will panic already if this conversion fails
 			borrowType, _ = interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
 		}
-		return interpreter.capabilityCheckFunction(v.Address, v.Path, borrowType)
+		return interpreter.storageCapabilityCheckFunction(v.Address, v.Path, borrowType)
 
 	case sema.CapabilityTypeAddressField:
 		return v.Address
