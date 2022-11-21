@@ -3562,7 +3562,9 @@ func (t *CompositeType) getBaseCompositeKind() common.CompositeKind {
 
 func isAttachmentType(t Type) bool {
 	composite, ok := t.(*CompositeType)
-	return (ok && composite.Kind == common.CompositeKindAttachment) || t == AnyResourceAttachmentType || t == AnyStructAttachmentType
+	return (ok && composite.Kind == common.CompositeKindAttachment) ||
+		t == AnyResourceAttachmentType ||
+		t == AnyStructAttachmentType
 }
 
 func (t *CompositeType) GetBaseType() Type {
@@ -5623,6 +5625,13 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		// An interface type is a supertype of a restricted type if the restricted set contains
 		// that explicit interface type. Once interfaces can conform to interfaces, this should instead
 		// check that at least one value in the restriction set is a subtype of the interface supertype
+
+		// This particular case comes up when checking attachment access; enabling the following expression to typechecking:
+		// resource interface I { /* ... */ }
+		// attachment A for I { /* ... */ }
+		//
+		// let i : &{I} = ... // some operation constructing `i`
+		// let a = i[A] // must here check that `i`'s type is a subtype of `A`'s base type, or that {I} <: I
 		case *RestrictedType:
 			return typedSubType.RestrictionSet().Contains(typedSuperType)
 

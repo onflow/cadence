@@ -35,7 +35,7 @@ func (checker *Checker) VisitRemoveStatement(statement *ast.RemoveStatement) (_ 
 
 	if !isCompositeType || attachmentType.Kind != common.CompositeKindAttachment {
 		checker.report(
-			&RemoveFromInvalidTypeError{
+			&InvalidAttachmentRemoveError{
 				Attachment: nominalType,
 				Range:      ast.NewRangeFromPositioned(checker.memoryGauge, statement.Attachment),
 			},
@@ -50,7 +50,7 @@ func (checker *Checker) VisitRemoveStatement(statement *ast.RemoveStatement) (_ 
 		if !baseType.Kind.SupportsAttachments() ||
 			!IsSubType(baseType, attachmentType.baseType) {
 			checker.report(
-				&RemoveFromInvalidTypeError{
+				&InvalidAttachmentRemoveError{
 					Attachment: nominalType,
 					BaseType:   base,
 					Range:      ast.NewRangeFromPositioned(checker.memoryGauge, statement),
@@ -60,7 +60,7 @@ func (checker *Checker) VisitRemoveStatement(statement *ast.RemoveStatement) (_ 
 	case *RestrictedType:
 		if !IsSubType(baseType, attachmentType.baseType) {
 			checker.report(
-				&RemoveFromInvalidTypeError{
+				&InvalidAttachmentRemoveError{
 					Attachment: nominalType,
 					BaseType:   base,
 					Range:      ast.NewRangeFromPositioned(checker.memoryGauge, statement),
@@ -69,7 +69,7 @@ func (checker *Checker) VisitRemoveStatement(statement *ast.RemoveStatement) (_ 
 		}
 	default:
 		checker.report(
-			&RemoveFromInvalidTypeError{
+			&InvalidAttachmentRemoveError{
 				Attachment: nominalType,
 				BaseType:   base,
 				Range:      ast.NewRangeFromPositioned(checker.memoryGauge, statement),

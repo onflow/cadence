@@ -320,17 +320,17 @@ func (checker *Checker) visitIndexExpression(
 			)
 			return InvalidType
 		}
-		return checker.checkTypeIndexingExpression(typeIndexedType, reportError, indexExpression.IndexingExpression)
-	} else {
-		reportNonIndexable(targetType)
-		return InvalidType
+		return checker.checkTypeIndexingExpression(typeIndexedType, indexExpression.IndexingExpression, reportError)
 	}
+
+	reportNonIndexable(targetType)
+	return InvalidType
 }
 
 func (checker *Checker) checkTypeIndexingExpression(
 	base TypeIndexableType,
-	reportError func(indexedType Type),
 	indexingExpression ast.Expression,
+	reportError func(indexedType Type),
 ) Type {
 
 	expressionType := ast.ExpressionAsType(indexingExpression)

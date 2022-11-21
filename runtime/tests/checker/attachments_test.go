@@ -1816,10 +1816,11 @@ func TestCheckAttachNonAttachment(t *testing.T) {
 		`,
 		)
 
-		errs := RequireCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.MissingCreateError{}, errs[0])
-		assert.IsType(t, &sema.AttachNonAttachmentError{}, errs[1])
+		assert.IsType(t, &sema.MissingMoveOperationError{}, errs[1])
+		assert.IsType(t, &sema.AttachNonAttachmentError{}, errs[2])
 	})
 
 	t.Run("event", func(t *testing.T) {
@@ -1932,11 +1933,10 @@ func TestCheckAttachToNonComposite(t *testing.T) {
 		`,
 		)
 
-		errs := RequireCheckerErrors(t, err, 3)
+		errs := RequireCheckerErrors(t, err, 2)
 
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		assert.IsType(t, &sema.MissingMoveOperationError{}, errs[1])
-		assert.IsType(t, &sema.AttachToInvalidTypeError{}, errs[2])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+		assert.IsType(t, &sema.MissingMoveOperationError{}, errs[0])
 	})
 
 	t.Run("array", func(t *testing.T) {
@@ -2320,8 +2320,8 @@ func TestCheckAttach(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 2)
 
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		assert.IsType(t, &sema.MissingMoveOperationError{}, errs[1])
+		assert.IsType(t, &sema.MissingMoveOperationError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 	})
 
 	t.Run("resource struct mismatch", func(t *testing.T) {
@@ -2380,8 +2380,8 @@ func TestCheckAttach(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 2)
 
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		assert.IsType(t, &sema.MissingMoveOperationError{}, errs[1])
+		assert.IsType(t, &sema.MissingMoveOperationError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 	})
 
 	t.Run("attach struct interface", func(t *testing.T) {
@@ -2831,10 +2831,11 @@ func TestCheckAttachInvalidType(t *testing.T) {
 		}`,
 	)
 
-	errs := RequireCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 3)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	assert.IsType(t, &sema.InvalidBaseTypeError{}, errs[1])
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
 }
 
 func TestCheckAnyAttachmentTypes(t *testing.T) {
@@ -3063,7 +3064,7 @@ func TestCheckRemove(t *testing.T) {
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.RemoveFromInvalidTypeError{}, errs[0])
+		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
 	t.Run("resource with anyresource base", func(t *testing.T) {
@@ -3120,7 +3121,7 @@ func TestCheckRemove(t *testing.T) {
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.RemoveFromInvalidTypeError{}, errs[0])
+		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
 	t.Run("qualified type", func(t *testing.T) {
@@ -3157,7 +3158,7 @@ func TestCheckRemove(t *testing.T) {
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.RemoveFromInvalidTypeError{}, errs[0])
+		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
 	t.Run("cannot remove from anystruct", func(t *testing.T) {
@@ -3174,7 +3175,7 @@ func TestCheckRemove(t *testing.T) {
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.RemoveFromInvalidTypeError{}, errs[0])
+		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
 	t.Run("cannot remove from anyresource", func(t *testing.T) {
@@ -3192,7 +3193,7 @@ func TestCheckRemove(t *testing.T) {
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.RemoveFromInvalidTypeError{}, errs[0])
+		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
 	t.Run("noncomposite base anystruct declaration", func(t *testing.T) {
@@ -3209,7 +3210,7 @@ func TestCheckRemove(t *testing.T) {
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.RemoveFromInvalidTypeError{}, errs[0])
+		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
 	t.Run("remove non-attachment struct", func(t *testing.T) {
@@ -3227,7 +3228,7 @@ func TestCheckRemove(t *testing.T) {
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.RemoveFromInvalidTypeError{}, errs[0])
+		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
 	t.Run("remove non-attachment resource", func(t *testing.T) {
@@ -3246,7 +3247,7 @@ func TestCheckRemove(t *testing.T) {
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.RemoveFromInvalidTypeError{}, errs[0])
+		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
 	t.Run("remove nondeclared", func(t *testing.T) {
@@ -3282,7 +3283,7 @@ func TestCheckRemove(t *testing.T) {
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.RemoveFromInvalidTypeError{}, errs[0])
+		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
 	t.Run("remove contract", func(t *testing.T) {
@@ -3300,7 +3301,7 @@ func TestCheckRemove(t *testing.T) {
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.RemoveFromInvalidTypeError{}, errs[0])
+		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
 	t.Run("remove resource interface", func(t *testing.T) {
@@ -3318,7 +3319,7 @@ func TestCheckRemove(t *testing.T) {
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.RemoveFromInvalidTypeError{}, errs[0])
+		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
 	t.Run("remove struct interface", func(t *testing.T) {
@@ -3336,7 +3337,7 @@ func TestCheckRemove(t *testing.T) {
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.RemoveFromInvalidTypeError{}, errs[0])
+		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
 	t.Run("remove anystruct", func(t *testing.T) {
@@ -3353,7 +3354,7 @@ func TestCheckRemove(t *testing.T) {
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.RemoveFromInvalidTypeError{}, errs[0])
+		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
 	t.Run("remove anyresource", func(t *testing.T) {
@@ -3371,7 +3372,7 @@ func TestCheckRemove(t *testing.T) {
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.RemoveFromInvalidTypeError{}, errs[0])
+		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
 	t.Run("remove anystructattachment", func(t *testing.T) {
@@ -3388,7 +3389,7 @@ func TestCheckRemove(t *testing.T) {
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.RemoveFromInvalidTypeError{}, errs[0])
+		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
 	t.Run("remove anyresourceattachment", func(t *testing.T) {
@@ -3406,7 +3407,7 @@ func TestCheckRemove(t *testing.T) {
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.RemoveFromInvalidTypeError{}, errs[0])
+		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
 }
@@ -3507,7 +3508,7 @@ func TestCheckRemoveFromRestricted(t *testing.T) {
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.RemoveFromInvalidTypeError{}, errs[0])
+		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
 	t.Run("resource base anyresource restricted", func(t *testing.T) {
@@ -3527,7 +3528,7 @@ func TestCheckRemoveFromRestricted(t *testing.T) {
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.RemoveFromInvalidTypeError{}, errs[0])
+		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
 	t.Run("interface base anystruct restricted", func(t *testing.T) {
