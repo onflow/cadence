@@ -1544,7 +1544,20 @@ func (checker *Checker) checkTypeRequirement(
 	// as an interface, so we must enforce that the concrete attachment's base type is a compatible with the requirement's.
 	// Specifically, attachment base types are contravariant; if the contract interface requires a struct attachment with a base type
 	// of `S`, the concrete contract can fulfill this requirement by implementing an attachment with a base type of `AnyStruct`:
-	// if the attachment is valid on any structure, then clearly it is a valid attachment for `S`
+	// if the attachment is valid on any structure, then clearly it is a valid attachment for `S`. See the example below:
+	//
+	// resource interface RI { /* ... */ }
+	// resource R: RI { /* ... */ }
+	// contract interface CI {
+	//    attachment A for R { /* ... */ }
+	// }
+	// contract C: CI {
+	//    attachment A for RI { /* ... */ }
+	// }
+	//
+	// In this example, as long as `A` in `C` contains the expected member declarations as defined in `CI`, this is a valid
+	// implementation of the type requirement, as an `A` that can accept any `RI` as a base can clearly function for an `R` as well.
+	// It may also be helpful to conceptualize an attachment as a sort of implicit function that takes a `base` argument and returns a composite value.
 	if requiredCompositeType.Kind == common.CompositeKindAttachment && declaredCompositeType.Kind == common.CompositeKindAttachment {
 		if !IsSubType(requiredCompositeType.baseType, declaredCompositeType.baseType) {
 			checker.report(
@@ -2019,7 +2032,7 @@ func (checker *Checker) checkSpecialFunction(
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
-		checker.declareSuperValue(attachmentType.baseType, attachmentType.baseTypeDocString)
+		checker.declareBaseValue(attachmentType.baseType, attachmentType.baseTypeDocString)
 	}
 
 	functionType := &FunctionType{
@@ -2073,7 +2086,7 @@ func (checker *Checker) checkCompositeFunctions(
 
 			checker.declareSelfValue(selfType, selfDocString)
 			if selfType.GetCompositeKind() == common.CompositeKindAttachment {
-				checker.declareSuperValue(selfType.baseType, selfType.baseTypeDocString)
+				checker.declareBaseValue(selfType.baseType, selfType.baseTypeDocString)
 			}
 
 			checker.visitFunctionDeclaration(
@@ -2127,7 +2140,7 @@ func (checker *Checker) declareSelfValue(selfType Type, selfDocString string) {
 	checker.declareLowerScopedValue(selfType, selfDocString, SelfIdentifier, common.DeclarationKindSelf)
 }
 
-func (checker *Checker) declareSuperValue(baseType Type, superDocString string) {
+func (checker *Checker) declareBaseValue(baseType Type, superDocString string) {
 	superType := NewReferenceType(checker.memoryGauge, baseType, false)
 	checker.declareLowerScopedValue(superType, superDocString, BaseIdentifier, common.DeclarationKindBase)
 }
