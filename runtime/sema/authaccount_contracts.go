@@ -24,10 +24,8 @@ import (
 
 const AuthAccountContractsTypeName = "Contracts"
 const AuthAccountContractsTypeAddFunctionName = "add"
-const AuthAccountContractsTypeGetFunctionName = "get"
-const AuthAccountContractsTypeRemoveFunctionName = "remove"
 const AuthAccountContractsTypeUpdateExperimentalFunctionName = "update__experimental"
-const AuthAccountContractsTypeNamesField = "names"
+const AuthAccountContractsTypeRemoveFunctionName = "remove"
 
 // AuthAccountContractsType represents the type `AuthAccount.Contracts`
 var AuthAccountContractsType = func() *CompositeType {
@@ -53,9 +51,15 @@ var AuthAccountContractsType = func() *CompositeType {
 		),
 		NewUnmeteredPublicFunctionMember(
 			authAccountContractsType,
-			AuthAccountContractsTypeGetFunctionName,
-			AuthAccountContractsTypeGetFunctionType,
-			authAccountContractsTypeGetFunctionDocString,
+			AccountContractsTypeGetFunctionName,
+			AccountContractsTypeGetFunctionType,
+			accountContractsTypeGetFunctionDocString,
+		),
+		NewUnmeteredPublicFunctionMember(
+			authAccountContractsType,
+			AccountContractsTypeBorrowFunctionName,
+			AccountContractsTypeBorrowFunctionType,
+			accountContractsTypeBorrowFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			authAccountContractsType,
@@ -65,11 +69,9 @@ var AuthAccountContractsType = func() *CompositeType {
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			authAccountContractsType,
-			AuthAccountContractsTypeNamesField,
-			&VariableSizedType{
-				Type: StringType,
-			},
-			authAccountContractsTypeGetNamesDocString,
+			AccountContractsTypeNamesFieldName,
+			accountContractsTypeNamesFieldType,
+			accountContractsTypeNamesFieldDocString,
 		),
 	}
 
@@ -117,6 +119,12 @@ var AuthAccountContractsTypeAddFunctionType = &FunctionType{
 	RequiredArgumentCount: RequiredArgumentCount(2),
 }
 
+var OptionalDeployedContractTypeAnnotation = NewTypeAnnotation(
+	&OptionalType{
+		Type: DeployedContractType,
+	},
+)
+
 const authAccountContractsTypeUpdateExperimentalFunctionDocString = `
 **Experimental**
 
@@ -151,29 +159,6 @@ var AuthAccountContractsTypeUpdateExperimentalFunctionType = NewSimpleFunctionTy
 	DeployedContractTypeAnnotation,
 )
 
-const authAccountContractsTypeGetFunctionDocString = `
-Returns the deployed contract for the contract/contract interface with the given name in the account, if any.
-
-Returns nil if no contract/contract interface with the given name exists in the account.
-`
-
-var OptionalDeployedContractTypeAnnotation = NewTypeAnnotation(
-	&OptionalType{
-		Type: DeployedContractType,
-	},
-)
-
-var AuthAccountContractsTypeGetFunctionType = NewSimpleFunctionType(
-	FunctionPurityView,
-	[]*Parameter{
-		{
-			Identifier:     "name",
-			TypeAnnotation: StringTypeAnnotation,
-		},
-	},
-	OptionalDeployedContractTypeAnnotation,
-)
-
 const authAccountContractsTypeRemoveFunctionDocString = `
 Removes the contract/contract interface from the account which has the given name, if any.
 
@@ -192,7 +177,3 @@ var AuthAccountContractsTypeRemoveFunctionType = NewSimpleFunctionType(
 	},
 	OptionalDeployedContractTypeAnnotation,
 )
-
-const authAccountContractsTypeGetNamesDocString = `
-Names of all contracts deployed in the account.
-`

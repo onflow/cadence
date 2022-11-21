@@ -25,15 +25,15 @@ import (
 
 // BlockType
 var BlockType = &SimpleType{
-	Name:                 "Block",
-	QualifiedName:        "Block",
-	TypeID:               "Block",
-	tag:                  BlockTypeTag,
-	IsResource:           false,
-	Storable:             false,
-	Equatable:            false,
-	ExternallyReturnable: false,
-	Importable:           false,
+	Name:          "Block",
+	QualifiedName: "Block",
+	TypeID:        "Block",
+	tag:           BlockTypeTag,
+	IsResource:    false,
+	Storable:      false,
+	Equatable:     false,
+	Exportable:    false,
+	Importable:    false,
 	Members: func(t *SimpleType) map[string]MemberResolver {
 		return map[string]MemberResolver{
 			BlockTypeHeightFieldName: {
@@ -79,7 +79,7 @@ var BlockType = &SimpleType{
 						memoryGauge,
 						t,
 						identifier,
-						blockIDFieldType,
+						BlockTypeIDFieldType,
 						blockTypeIDFieldDocString,
 					)
 				},
@@ -92,7 +92,7 @@ var BlockTypeAnnotation = NewTypeAnnotation(BlockType)
 
 const BlockIDSize = 32
 
-var blockIDFieldType = &ConstantSizedType{
+var BlockTypeIDFieldType = &ConstantSizedType{
 	Type: UInt8Type,
 	Size: BlockIDSize,
 }
