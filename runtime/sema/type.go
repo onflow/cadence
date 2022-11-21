@@ -3543,7 +3543,7 @@ func (t *CompositeType) GetCompositeKind() common.CompositeKind {
 
 func (t *CompositeType) getBaseCompositeKind() common.CompositeKind {
 	if t.Kind != common.CompositeKindAttachment {
-		return t.Kind
+		return common.CompositeKindUnknown
 	}
 	switch base := t.baseType.(type) {
 	case *CompositeType:
@@ -3556,10 +3556,8 @@ func (t *CompositeType) getBaseCompositeKind() common.CompositeKind {
 		} else if base == AnyStructType {
 			return common.CompositeKindStructure
 		}
-		return common.CompositeKindUnknown
-	default:
-		return common.CompositeKindUnknown
 	}
+	return common.CompositeKindUnknown
 }
 
 func isAttachmentType(t Type) bool {
