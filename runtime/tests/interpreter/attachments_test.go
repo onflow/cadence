@@ -841,6 +841,77 @@ func TestInterpretAttachmentNameConflict(t *testing.T) {
 	})
 }
 
+func TestInterpretAttachmentRestrictedType(t *testing.T) {
+	t.Parallel()
+
+	t.Run("basic", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+        resource interface I {
+            fun foo(): Int
+        }
+        resource R: I {
+            fun foo(): Int {
+                return 3
+            }
+        }
+        attachment A for I {
+            fun foo(): Int {
+                return base.foo()
+            }
+        }
+        fun test(): Int {
+            let r <- attach A() to <-create R()
+            let ref = &r as &{I}
+            let i = ref[A]!.foo()
+            destroy r
+            return i
+        }
+    `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
+	})
+
+	t.Run("constructor", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+        resource interface I {
+            fun foo(): Int
+        }
+        resource R: I {
+            fun foo(): Int {
+                return 3
+            }
+        }
+        attachment A for I {
+            let x: Int 
+            init() {
+                self.x = base.foo()
+            }
+        }
+        fun test(): Int {
+            let r <- attach A() to <-create R()
+            let ref = &r as &{I}
+            let i = ref[A]!.x
+            destroy r
+            return i
+        }
+    `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
+	})
+}
+
 func TestInterpretAttachmentStorage(t *testing.T) {
 	t.Parallel()
 

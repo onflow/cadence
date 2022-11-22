@@ -15106,8 +15106,16 @@ func (v *CompositeValue) setBaseValue(interpreter *Interpreter, base *CompositeV
 		panic(errors.NewUnreachableError())
 	}
 
+	var baseType sema.Type
+	switch ty := attachmentType.GetBaseType().(type) {
+	case *sema.InterfaceType:
+		baseType, _ = ty.RewriteWithRestrictedTypes()
+	default:
+		baseType = ty
+	}
+
 	// the base reference can only be borrowed with the declared type of the attachment's base
-	v.base = NewEphemeralReferenceValue(interpreter, false, base, attachmentType.GetBaseType())
+	v.base = NewEphemeralReferenceValue(interpreter, false, base, baseType)
 }
 
 func (v *CompositeValue) getAttachmentValue(interpreter *Interpreter, locationRange LocationRange, ty sema.Type) Value {
