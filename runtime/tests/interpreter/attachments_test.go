@@ -925,14 +925,17 @@ func TestInterpretAttachmentRestrictedType(t *testing.T) {
             }
         }
         attachment A for I {
-            fun getBase(): &{I} {
-                return base
+            fun foo(): Int {
+                return base.foo()
+            }
+            fun getBaseFoo(): Int {
+                return base[A]!.foo()
             }
         }
         fun test(): Int {
             let r <- attach A() to <-create R()
             let ref = &r as &{I}
-            let i = ref[A]!.getBase().foo()
+            let i = ref[A]!.getBaseFoo()
             destroy r
             return i
         }
@@ -943,6 +946,7 @@ func TestInterpretAttachmentRestrictedType(t *testing.T) {
 
 		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
 	})
+
 }
 
 func TestInterpretAttachmentStorage(t *testing.T) {
