@@ -3889,19 +3889,3 @@ func (e *InvalidAttachmentAccessError) Error() string {
 		e.IndexingExpression.String(),
 	)
 }
-
-// InvalidAttachmentBaseFieldError
-type InvalidAttachmentBaseValueError struct {
-	ast.Range
-}
-
-var _ SemanticError = &InvalidAttachmentBaseValueError{}
-var _ errors.UserError = &InvalidAttachmentBaseValueError{}
-
-func (*InvalidAttachmentBaseValueError) isSemanticError() {}
-
-func (*InvalidAttachmentBaseValueError) IsUserError() {}
-
-func (e *InvalidAttachmentBaseValueError) Error() string {
-	return "cannot use `base` outside of a member expression"
-}
