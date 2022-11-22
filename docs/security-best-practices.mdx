@@ -4,11 +4,11 @@ title: Security Best Practices
 
 This is an opinionated list of best practices Cadence developers should follow to write more secure Cadence code.
 
-Some practices listed below might overlap with advice in the [Cadence Anti-Patterns](/cadence/design-patterns) section, which is a recommended read as well.
+Some practices listed below might overlap with advice in the [Cadence Anti-Patterns](design-patterns) section, which is a recommended read as well.
 
 ## References
 
-[References](/cadence/language/references) are ephemeral values and cannot be stored. If persistence is required, store a capability and borrow it when needed.
+[References](language/references) are ephemeral values and cannot be stored. If persistence is required, store a capability and borrow it when needed.
 
 Authorized references (references with the `auth` keyword) allow downcasting, e.g. a restricted type to its unrestricted type and should only be used in some specific cases.
 
@@ -18,9 +18,9 @@ Be aware that the subtype or unrestricted type could expose functionality that w
 
 ## Account Storage
 
-Don't trust a users’ [account storage](/cadence/language/accounts#account-storage). Users have full control over their data and may reorganize it as they see fit. Users may store values in any path, so paths may store values of “unexpected” types. These values may be instances of types in contracts that the user deployed.
+Don't trust a users’ [account storage](language/accounts#account-storage). Users have full control over their data and may reorganize it as they see fit. Users may store values in any path, so paths may store values of “unexpected” types. These values may be instances of types in contracts that the user deployed.
 
-Always [borrow](/cadence/language/capability-based-access-control) with the specific type that is expected. Or, check if the value is an instance of the expected type.
+Always [borrow](language/capability-based-access-control) with the specific type that is expected. Or, check if the value is an instance of the expected type.
 
 ## Auth Accounts
 
@@ -30,7 +30,7 @@ It is preferable to use capabilities over direct `AuthAccount` storage when expo
 
 ## Capabilities
 
-Don’t store anything under the [public capability storage](/cadence/language/capability-based-access-control) unless strictly required. Anyone can access your public capability using `AuthAccount.getCapability`. If something needs to be stored under `/public/`, make sure only read functionality is provided by restricting its type using either a resource interface or struct interface.
+Don’t store anything under the [public capability storage](language/capability-based-access-control) unless strictly required. Anyone can access your public capability using `AuthAccount.getCapability`. If something needs to be stored under `/public/`, make sure only read functionality is provided by restricting its type using either a resource interface or struct interface.
 
 When linking a capability, the link might already be present. In that case, Cadence will not panic with a runtime error but the link function will return `nil`.
 
@@ -42,7 +42,7 @@ Ensure capabilities cannot be accessed by unauthorized parties. For example, cap
 
 ## Transactions
 
-Audits of Cadence code should also include [transactions](/cadence/language/transactions), as they may contain arbitrary code, just, like in contracts. In addition, they are given full access to the accounts of the transaction’s signers, i.e. the transaction is allowed to manipulate the signers’ account storage, contracts, and keys.
+Audits of Cadence code should also include [transactions](language/transactions), as they may contain arbitrary code, just, like in contracts. In addition, they are given full access to the accounts of the transaction’s signers, i.e. the transaction is allowed to manipulate the signers’ account storage, contracts, and keys.
 
 Signing a transaction gives access to the `AuthAccount`, i.e. full access to the account’s storage, keys, and contracts.
 
@@ -50,13 +50,13 @@ Do not blindly sign a transaction. The transaction could for example change depl
 
 ## Types
 
-Use [restricted types and interfaces](/cadence/language/restricted-types). Always use the most specific type possible, following the principle of least privilege. Types should always be as restrictive as possible, especially for resource types.
+Use [restricted types and interfaces](language/restricted-types). Always use the most specific type possible, following the principle of least privilege. Types should always be as restrictive as possible, especially for resource types.
 
 If given a less-specific type, cast to the more specific type that is expected. For example, when implementing the fungible token standard, a user may deposit any fungible token, so the implementation should cast to the expected concrete fungible token type.
 
 ## Access Control
 
-Declaring a field as [`pub/access(all)`](/cadence/language/access-control) only protects from replacing the field’s value, but the value itself can still be mutated if it is mutable. Remember that containers, like dictionaries, and arrays, are mutable.
+Declaring a field as [`pub/access(all)`](language/access-control) only protects from replacing the field’s value, but the value itself can still be mutated if it is mutable. Remember that containers, like dictionaries, and arrays, are mutable.
 
 Prefer non-public access to a mutable state. That state may also be nested. For example, a child may still be mutated even if its parent exposes it through a field with non-settable access.
 
