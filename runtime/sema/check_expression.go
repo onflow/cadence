@@ -53,10 +53,6 @@ func (checker *Checker) VisitIdentifierExpression(expression *ast.IdentifierExpr
 func (checker *Checker) checkBaseVariableUseInAttachment(variable *Variable, expression *ast.IdentifierExpression) {
 	// Is this a use of `base`?
 
-	if variable.Identifier == "base" {
-		y := 3
-		_ = y + 1
-	}
 
 	if variable.DeclarationKind != common.DeclarationKindBase {
 		return
