@@ -39,12 +39,36 @@ func (checker *Checker) VisitIdentifierExpression(expression *ast.IdentifierExpr
 	}
 
 	checker.checkSelfVariableUseInInitializer(variable, identifier.Pos)
+	checker.checkBaseVariableUseInAttachment(variable, expression)
 
 	if checker.inInvocation {
 		checker.Elaboration.IdentifierInInvocationTypes[expression] = valueType
 	}
 
 	return valueType
+}
+
+// checkSelfVariableUseInInitializer checks uses of `base` in the initializer
+// and ensures it is not used outside of a member expression
+func (checker *Checker) checkBaseVariableUseInAttachment(variable *Variable, expression *ast.IdentifierExpression) {
+	// Is this a use of `base`?
+
+	if variable.Identifier == "base" {
+		y := 3
+		_ = y + 1
+	}
+
+	if variable.DeclarationKind != common.DeclarationKindBase {
+		return
+	}
+
+	if checker.currentMemberExpression == nil {
+		checker.report(
+			&InvalidAttachmentBaseValueError{
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, expression),
+			},
+		)
+	}
 }
 
 // checkSelfVariableUseInInitializer checks uses of `self` in the initializer

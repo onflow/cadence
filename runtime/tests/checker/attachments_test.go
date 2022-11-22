@@ -1173,7 +1173,8 @@ func TestCheckBase(t *testing.T) {
 			}`,
 		)
 
-		require.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAttachmentBaseValueError{}, errs[0])
 	})
 
 	t.Run("interface", func(t *testing.T) {
@@ -1190,7 +1191,8 @@ func TestCheckBase(t *testing.T) {
 			}`,
 		)
 
-		require.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAttachmentBaseValueError{}, errs[0])
 	})
 
 	t.Run("init", func(t *testing.T) {
@@ -1438,9 +1440,10 @@ func TestCheckBaseTyping(t *testing.T) {
 			}`,
 		)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 2)
 		// base is not auth
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+		assert.IsType(t, &sema.InvalidAttachmentBaseValueError{}, errs[0])
 	})
 
 	t.Run("resource cast", func(t *testing.T) {
@@ -1458,9 +1461,10 @@ func TestCheckBaseTyping(t *testing.T) {
 			}`,
 		)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 2)
 		// base is not auth
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+		assert.IsType(t, &sema.InvalidAttachmentBaseValueError{}, errs[0])
 	})
 
 	t.Run("struct return", func(t *testing.T) {
@@ -1477,7 +1481,8 @@ func TestCheckBaseTyping(t *testing.T) {
 			}`,
 		)
 
-		require.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAttachmentBaseValueError{}, errs[0])
 	})
 
 	t.Run("resource return", func(t *testing.T) {
@@ -1494,7 +1499,8 @@ func TestCheckBaseTyping(t *testing.T) {
 			}`,
 		)
 
-		require.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAttachmentBaseValueError{}, errs[0])
 	})
 }
 
@@ -4175,5 +4181,88 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 		)
 
 		require.NoError(t, err)
+	})
+}
+
+func TestInterpretAttachmentBaseNonMember(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("basic", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+		pub resource R {}
+		pub attachment A for R {
+			pub let base: &R
+			init() {
+				self.base = base
+			}
+		}
+	`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAttachmentBaseValueError{}, errs[0])
+	})
+
+	t.Run("array", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			pub resource R {}
+			pub attachment A for R {
+				pub let bases: [&R]
+				init() {
+					self.bases = [base]
+				}
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAttachmentBaseValueError{}, errs[0])
+	})
+
+	t.Run("array append", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			pub resource R {}
+			pub attachment A for R {
+				pub let bases: [&R]
+				init() {
+					self.bases = []
+					self.bases.append(base)
+				}
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAttachmentBaseValueError{}, errs[0])
+	})
+
+	t.Run("array index", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			pub resource R {}
+			pub attachment A for R {
+				pub let bases: [&R]
+				init() {
+					self.bases = []
+					self.bases[0] = base
+				}
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAttachmentBaseValueError{}, errs[0])
 	})
 }
