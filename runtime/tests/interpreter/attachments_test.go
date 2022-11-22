@@ -910,6 +910,39 @@ func TestInterpretAttachmentRestrictedType(t *testing.T) {
 
 		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
 	})
+
+	t.Run("base", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+        resource interface I {
+            fun foo(): Int
+        }
+        resource R: I {
+            fun foo(): Int {
+                return 3
+            }
+        }
+        attachment A for I {
+            fun getBase(): &{I} {
+                return base
+            }
+        }
+        fun test(): Int {
+            let r <- attach A() to <-create R()
+            let ref = &r as &{I}
+            let i = ref[A]!.getBase().foo()
+            destroy r
+            return i
+        }
+    `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
+	})
 }
 
 func TestInterpretAttachmentStorage(t *testing.T) {

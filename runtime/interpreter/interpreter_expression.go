@@ -1204,6 +1204,8 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 		})
 	}
 
+	base = base.Transfer(interpreter, locationRange, atree.Address{}, false, nil).(*CompositeValue)
+
 	// the `base` value must be accessible during the attachment's constructor, but we cannot
 	// set it on the attachment's `CompositeValue` yet, because the value does not exist. Instead
 	// we save the base value in the interpreter's shared state and set the variable directly inside the
@@ -1222,8 +1224,6 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
-
-	base = base.Transfer(interpreter, locationRange, atree.Address{}, false, nil).(*CompositeValue)
 
 	// when `v[A]` is executed, we set `A`'s base to `&v`
 	attachment.setBaseValue(interpreter, base)
