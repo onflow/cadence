@@ -15119,7 +15119,7 @@ func (v *CompositeValue) setBaseValue(interpreter *Interpreter, base *CompositeV
 }
 
 func (v *CompositeValue) getAttachmentValue(interpreter *Interpreter, locationRange LocationRange, ty sema.Type) Value {
-	return v.GetMember(interpreter, locationRange, attachmentNamePrefix+ty.QualifiedString())
+	return v.GetMember(interpreter, locationRange, attachmentNamePrefix+string(ty.ID()))
 }
 
 func (v *CompositeValue) forEachAttachment(interpreter *Interpreter, locationRange LocationRange, f func(*CompositeValue)) {
@@ -15170,7 +15170,7 @@ func (v *CompositeValue) SetTypeKey(
 	attachmentType sema.Type,
 	attachment Value,
 ) {
-	if v.SetMember(interpreter, locationRange, attachmentNamePrefix+attachmentType.QualifiedString(), attachment) {
+	if v.SetMember(interpreter, locationRange, attachmentNamePrefix+string(attachmentType.ID()), attachment) {
 		panic(DuplicateAttachmentError{
 			AttachmentType: attachmentType,
 			Value:          v,
@@ -15184,7 +15184,7 @@ func (v *CompositeValue) RemoveTypeKey(
 	locationRange LocationRange,
 	attachmentType sema.Type,
 ) Value {
-	return v.RemoveMember(interpreter, locationRange, attachmentNamePrefix+attachmentType.QualifiedString())
+	return v.RemoveMember(interpreter, locationRange, attachmentNamePrefix+string(attachmentType.ID()))
 }
 
 // DictionaryValue
