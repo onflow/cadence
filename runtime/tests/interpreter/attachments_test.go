@@ -934,6 +934,65 @@ func TestInterpretAttachmentSelfUse(t *testing.T) {
 
 		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
 	})
+
+	t.Run("return from function", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource R { }
+            attachment A for R {
+                fun self(): &A {
+                    return self
+                }
+                fun foo(): Int {
+                    return 3
+                }
+            }
+            fun test(): Int {
+                let r <- attach A() to <-create R()
+                let i = r[A]!.self().foo()
+                destroy r
+                return i
+            }
+    `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
+	})
+
+	t.Run("pass as argument", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource R { }
+            attachment A for R {
+                fun selfFn(): Int {
+                    return bar(self)
+                }
+                fun foo(): Int {
+                    return 3
+                }
+            }
+            fun bar(_ a: &A): Int {
+                return a.foo()
+            }
+            fun test(): Int {
+                let r <- attach A() to <-create R()
+                let i = r[A]!.selfFn()
+                destroy r
+                return i
+            }
+    `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
+	})
 }
 
 func TestInterpretAttachmentNameConflict(t *testing.T) {
