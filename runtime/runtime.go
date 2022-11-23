@@ -645,7 +645,7 @@ func (r *interpreterRuntime) ReadLinked(
 
 	pathValue := valueImporter{inter: inter}.importPathValue(path)
 
-	targetPath, _, err := inter.GetStorageCapabilityFinalTargetPath(
+	target, _, err := inter.GetStorageCapabilityFinalTarget(
 		address,
 		pathValue,
 		&sema.ReferenceType{
@@ -656,6 +656,12 @@ func (r *interpreterRuntime) ReadLinked(
 	if err != nil {
 		return nil, err
 	}
+
+	if target.Address != (common.Address{}) {
+		return nil, nil
+	}
+
+	targetPath := target.Path
 
 	if targetPath == interpreter.EmptyPathValue {
 		return nil, nil

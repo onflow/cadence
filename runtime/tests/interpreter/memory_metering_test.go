@@ -7062,7 +7062,7 @@ func TestInterpretAccountLinkValueMetering(t *testing.T) {
 
 		// Metered twice only when Atree validation is enabled.
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAccountLinkValue))
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindReferenceStaticType))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindReferenceStaticType))
 	})
 }
 
