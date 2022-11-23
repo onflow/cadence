@@ -3597,13 +3597,20 @@ func (interpreter *Interpreter) authAccountLinkAccountFunction(addressValue Addr
 				accountLinkValue,
 			)
 
+			inter := invocation.Interpreter
+
 			return NewSomeValueNonCopying(
-				invocation.Interpreter,
+				inter,
 				NewStorageCapabilityValue(
 					interpreter,
 					addressValue,
 					newCapabilityPath,
-					PrimitiveStaticTypeAuthAccount,
+					NewReferenceStaticType(
+						inter,
+						false,
+						PrimitiveStaticTypeAuthAccount,
+						PrimitiveStaticTypeAuthAccount,
+					),
 				),
 			)
 
@@ -3635,7 +3642,7 @@ func (interpreter *Interpreter) accountGetLinkTargetFunction(addressValue Addres
 				return Nil
 			}
 
-			link, ok := value.(LinkValue)
+			link, ok := value.(PathLinkValue)
 			if !ok {
 				return Nil
 			}
@@ -3849,7 +3856,7 @@ func (interpreter *Interpreter) GetStorageCapabilityFinalTargetPath(
 			return EmptyPathValue, false, nil
 		}
 
-		if link, ok := value.(LinkValue); ok {
+		if link, ok := value.(PathLinkValue); ok {
 
 			allowedType := interpreter.MustConvertStaticToSemaType(link.Type)
 
@@ -3866,6 +3873,72 @@ func (interpreter *Interpreter) GetStorageCapabilityFinalTargetPath(
 		}
 	}
 }
+
+//type CapabilityTarget struct {
+//	Path    PathValue
+//	Address AddressValue
+//}
+//
+//func (interpreter *Interpreter) GetStorageCapabilityFinalTarget(
+//	address common.Address,
+//	path PathValue,
+//	wantedBorrowType *sema.ReferenceType,
+//	locationRange LocationRange,
+//) (
+//	target CapabilityTarget,
+//	authorized bool,
+//	err error,
+//) {
+//	wantedReferenceType := wantedBorrowType
+//
+//	seenPaths := map[PathValue]struct{}{}
+//	paths := []PathValue{path}
+//
+//	for {
+//		// Detect cyclic links
+//
+//		if _, ok := seenPaths[path]; ok {
+//			return CapabilityTarget{}, false, CyclicLinkError{
+//				Address:       address,
+//				Paths:         paths,
+//				LocationRange: locationRange,
+//			}
+//		} else {
+//			seenPaths[path] = struct{}{}
+//		}
+//
+//		value := interpreter.ReadStored(
+//			address,
+//			path.Domain.Identifier(),
+//			path.Identifier,
+//		)
+//
+//		if value == nil {
+//			return CapabilityTarget{}, false, nil
+//		}
+//
+//		switch value := value.(type) {
+//		case PathLinkValue:
+//			allowedType := interpreter.MustConvertStaticToSemaType(value.Type)
+//
+//			if !sema.IsSubType(allowedType, wantedBorrowType) {
+//				return CapabilityTarget{}, false, nil
+//			}
+//
+//			targetPath := value.TargetPath
+//			paths = append(paths, targetPath)
+//			path = targetPath
+//
+//		case AccountLinkValue:
+//
+//		default:
+//			target := CapabilityTarget{
+//				Path: path,
+//			}
+//			return target, wantedReferenceType.Authorized, nil
+//		}
+//	}
+//}
 
 func (interpreter *Interpreter) ConvertStaticToSemaType(staticType StaticType) (sema.Type, error) {
 	config := interpreter.SharedState.Config
