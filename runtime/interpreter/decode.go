@@ -299,8 +299,8 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 		case CBORTagStorageCapabilityValue:
 			storable, err = d.decodeStorageCapability()
 
-		case CBORTagLinkValue:
-			storable, err = d.decodeLink()
+		case CBORTagPathLinkValue:
+			storable, err = d.decodePathLink()
 
 		case CBORTagAccountLinkValue:
 			common.UseMemory(d.memoryGauge, common.AccountLinkValueMemoryUsage)
@@ -951,50 +951,50 @@ func (d StorableDecoder) decodeStorageCapability() (*StorageCapabilityValue, err
 	return NewStorageCapabilityValue(d.memoryGauge, address, pathValue, borrowType), nil
 }
 
-func (d StorableDecoder) decodeLink() (LinkValue, error) {
+func (d StorableDecoder) decodePathLink() (PathLinkValue, error) {
 
-	const expectedLength = encodedLinkValueLength
+	const expectedLength = encodedPathLinkValueLength
 
 	size, err := d.decoder.DecodeArrayHead()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return EmptyLinkValue, errors.NewUnexpectedError(
+			return EmptyPathLinkValue, errors.NewUnexpectedError(
 				"invalid link encoding: expected [%d]any, got %s",
 				expectedLength,
 				e.ActualType.String(),
 			)
 		}
-		return EmptyLinkValue, err
+		return EmptyPathLinkValue, err
 	}
 
 	if size != expectedLength {
-		return EmptyLinkValue, errors.NewUnexpectedError(
+		return EmptyPathLinkValue, errors.NewUnexpectedError(
 			"invalid link encoding: expected [%d]any, got [%d]any",
 			expectedLength,
 			size,
 		)
 	}
 
-	// Decode path at array index encodedLinkValueTargetPathFieldKey
+	// Decode path at array index encodedPathLinkValueTargetPathFieldKey
 	num, err := d.decoder.DecodeTagNumber()
 	if err != nil {
-		return EmptyLinkValue, errors.NewUnexpectedError("invalid link target path encoding: %w", err)
+		return EmptyPathLinkValue, errors.NewUnexpectedError("invalid link target path encoding: %w", err)
 	}
 	if num != CBORTagPathValue {
-		return EmptyLinkValue, errors.NewUnexpectedError("invalid link target path encoding: expected CBOR tag %d, got %d", CBORTagPathValue, num)
+		return EmptyPathLinkValue, errors.NewUnexpectedError("invalid link target path encoding: expected CBOR tag %d, got %d", CBORTagPathValue, num)
 	}
 	pathValue, err := d.decodePath()
 	if err != nil {
-		return EmptyLinkValue, errors.NewUnexpectedError("invalid link target path encoding: %w", err)
+		return EmptyPathLinkValue, errors.NewUnexpectedError("invalid link target path encoding: %w", err)
 	}
 
-	// Decode type at array index encodedLinkValueTypeFieldKey
+	// Decode type at array index encodedPathLinkValueTypeFieldKey
 	staticType, err := d.DecodeStaticType()
 	if err != nil {
-		return EmptyLinkValue, errors.NewUnexpectedError("invalid link type encoding: %w", err)
+		return EmptyPathLinkValue, errors.NewUnexpectedError("invalid link type encoding: %w", err)
 	}
 
-	return NewLinkValue(d.memoryGauge, pathValue, staticType), nil
+	return NewPathLinkValue(d.memoryGauge, pathValue, staticType), nil
 }
 
 func (d StorableDecoder) decodePublishedValue() (*PublishedValue, error) {

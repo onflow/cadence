@@ -211,8 +211,8 @@ func exportValueWithInterpreter(
 		)
 	case interpreter.AddressValue:
 		return cadence.NewMeteredAddress(inter, v), nil
-	case interpreter.LinkValue:
-		return exportLinkValue(v, inter), nil
+	case interpreter.PathLinkValue:
+		return exportPathLinkValue(v, inter), nil
 	case interpreter.PathValue:
 		return exportPathValue(inter, v), nil
 	case interpreter.TypeValue:
@@ -557,7 +557,7 @@ func exportDictionaryValue(
 	return dictionary.WithType(exportType), err
 }
 
-func exportLinkValue(v interpreter.LinkValue, inter *interpreter.Interpreter) cadence.Link {
+func exportPathLinkValue(v interpreter.PathLinkValue, inter *interpreter.Interpreter) cadence.PathLink {
 	path := exportPathValue(inter, v.TargetPath)
 	ty := string(inter.MustConvertStaticToSemaType(v.Type).ID())
 	return cadence.NewMeteredLink(inter, path, ty)
@@ -782,7 +782,7 @@ func (i valueImporter) importValue(value cadence.Value, expectedType sema.Type) 
 		return nil, errors.NewDefaultUserError("cannot import contract")
 	case cadence.Function:
 		return nil, errors.NewDefaultUserError("cannot import function")
-	case cadence.Link:
+	case cadence.PathLink:
 		return nil, errors.NewDefaultUserError("cannot import link")
 	default:
 		// This means the implementation has unhandled types.

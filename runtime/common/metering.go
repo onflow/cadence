@@ -141,7 +141,7 @@ var (
 	StorageCapabilityValueMemoryUsage   = NewConstantMemoryUsage(MemoryKindStorageCapabilityValue)
 	EphemeralReferenceValueMemoryUsage  = NewConstantMemoryUsage(MemoryKindEphemeralReferenceValue)
 	StorageReferenceValueMemoryUsage    = NewConstantMemoryUsage(MemoryKindStorageReferenceValue)
-	LinkValueMemoryUsage                = NewConstantMemoryUsage(MemoryKindLinkValue)
+	PathLinkValueMemoryUsage            = NewConstantMemoryUsage(MemoryKindPathLinkValue)
 	AccountLinkValueMemoryUsage         = NewConstantMemoryUsage(MemoryKindAccountLinkValue)
 	PathValueMemoryUsage                = NewConstantMemoryUsage(MemoryKindPathValue)
 	OptionalValueMemoryUsage            = NewConstantMemoryUsage(MemoryKindOptionalValue)
@@ -193,7 +193,7 @@ var (
 	CadenceStorageCapabilityValueMemoryUsage = NewConstantMemoryUsage(MemoryKindCadenceStorageCapabilityValue)
 	CadenceFunctionValueMemoryUsage          = NewConstantMemoryUsage(MemoryKindCadenceFunctionValue)
 	CadenceKeyValuePairMemoryUsage           = NewConstantMemoryUsage(MemoryKindCadenceKeyValuePair)
-	CadenceLinkValueMemoryUsage              = NewConstantMemoryUsage(MemoryKindCadenceLinkValue)
+	CadencePathLinkValueMemoryUsage          = NewConstantMemoryUsage(MemoryKindCadencePathLinkValue)
 	CadenceOptionalValueMemoryUsage          = NewConstantMemoryUsage(MemoryKindCadenceOptionalValue)
 	CadencePathValueMemoryUsage              = NewConstantMemoryUsage(MemoryKindCadencePathValue)
 	CadenceVoidValueMemoryUsage              = NewConstantMemoryUsage(MemoryKindCadenceVoidValue)
@@ -239,7 +239,7 @@ var (
 	PublicAccountKeysStringMemoryUsage      = NewRawStringMemoryUsage(len("PublicAccount.Keys()"))
 	AuthAccountInboxStringMemoryUsage       = NewRawStringMemoryUsage(len("AuthAccount.Inbox()"))
 	StorageCapabilityValueStringMemoryUsage = NewRawStringMemoryUsage(len("Capability<>(address: , path: )"))
-	LinkValueStringMemoryUsage              = NewRawStringMemoryUsage(len("Link<>()"))
+	PathLinkValueStringMemoryUsage          = NewRawStringMemoryUsage(len("PathLink<>()"))
 	PublishedValueStringMemoryUsage         = NewRawStringMemoryUsage(len("PublishedValue<>()"))
 
 	// Static types string representations

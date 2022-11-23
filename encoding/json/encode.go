@@ -126,7 +126,7 @@ type jsonCompositeField struct {
 	Value jsonValue `json:"value"`
 }
 
-type jsonLinkValue struct {
+type jsonPathLinkValue struct {
 	TargetPath jsonValue `json:"targetPath"`
 	BorrowType string    `json:"borrowType"`
 }
@@ -319,7 +319,7 @@ func Prepare(v cadence.Value) jsonValue {
 		return prepareEvent(x)
 	case cadence.Contract:
 		return prepareContract(x)
-	case cadence.Link:
+	case cadence.PathLink:
 		return prepareLink(x)
 	case cadence.Path:
 		return preparePath(x)
@@ -600,10 +600,10 @@ func prepareComposite(kind, id string, fieldTypes []cadence.Field, fields []cade
 	}
 }
 
-func prepareLink(x cadence.Link) jsonValue {
+func prepareLink(x cadence.PathLink) jsonValue {
 	return jsonValueObject{
 		Type: linkTypeStr,
-		Value: jsonLinkValue{
+		Value: jsonPathLinkValue{
 			TargetPath: preparePath(x.TargetPath),
 			BorrowType: x.BorrowType,
 		},

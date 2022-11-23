@@ -3195,13 +3195,13 @@ func TestEncodeDecodeStorageCapabilityValue(t *testing.T) {
 	})
 }
 
-func TestEncodeDecodeLinkValue(t *testing.T) {
+func TestEncodeDecodePathLinkValue(t *testing.T) {
 
 	t.Parallel()
 
 	expectedLinkEncodingPrefix := []byte{
 		// tag
-		0xd8, CBORTagLinkValue,
+		0xd8, CBORTagPathLinkValue,
 		// array, 2 items follow
 		0x82,
 		0xd8, CBORTagPathValue,
@@ -3219,7 +3219,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := LinkValue{
+		value := PathLinkValue{
 			TargetPath: publicPathValue,
 			Type:       ConvertSemaToPrimitiveStaticType(nil, sema.BoolType),
 		}
@@ -3244,7 +3244,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := LinkValue{
+		value := PathLinkValue{
 			TargetPath: publicPathValue,
 			Type: OptionalStaticType{
 				Type: PrimitiveStaticTypeBool,
@@ -3277,7 +3277,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := LinkValue{
+		value := PathLinkValue{
 			TargetPath: publicPathValue,
 			Type: NewCompositeStaticTypeComputeTypeID(
 				nil,
@@ -3317,7 +3317,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := LinkValue{
+		value := PathLinkValue{
 			TargetPath: publicPathValue,
 			Type: InterfaceStaticType{
 				Location:            utils.TestLocation,
@@ -3356,7 +3356,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := LinkValue{
+		value := PathLinkValue{
 			TargetPath: publicPathValue,
 			Type: VariableSizedStaticType{
 				Type: PrimitiveStaticTypeBool,
@@ -3385,7 +3385,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := LinkValue{
+		value := PathLinkValue{
 			TargetPath: publicPathValue,
 			Type: ConstantSizedStaticType{
 				Type: PrimitiveStaticTypeBool,
@@ -3419,7 +3419,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := LinkValue{
+		value := PathLinkValue{
 			TargetPath: publicPathValue,
 			Type: ReferenceStaticType{
 				Authorized:   true,
@@ -3453,7 +3453,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := LinkValue{
+		value := PathLinkValue{
 			TargetPath: publicPathValue,
 			Type: ReferenceStaticType{
 				Authorized:   false,
@@ -3487,7 +3487,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := LinkValue{
+		value := PathLinkValue{
 			TargetPath: publicPathValue,
 			Type: DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeBool,
@@ -3522,7 +3522,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := LinkValue{
+		value := PathLinkValue{
 			TargetPath: publicPathValue,
 			Type: &RestrictedStaticType{
 				Type: NewCompositeStaticTypeComputeTypeID(
@@ -3608,7 +3608,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := LinkValue{
+		value := PathLinkValue{
 			TargetPath: publicPathValue,
 			Type:       CapabilityStaticType{},
 		}
@@ -3634,7 +3634,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := LinkValue{
+		value := PathLinkValue{
 			TargetPath: publicPathValue,
 			Type: CapabilityStaticType{
 				BorrowType: PrimitiveStaticTypeBool,
@@ -3671,7 +3671,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 			Identifier: identifier,
 		}
 
-		expected := LinkValue{
+		expected := PathLinkValue{
 			TargetPath: path,
 			Type:       PrimitiveStaticTypeNever,
 		}

@@ -1641,7 +1641,7 @@ func TestEncodeLink(t *testing.T) {
 
 	testEncodeAndDecode(
 		t,
-		cadence.NewLink(
+		cadence.NewPathLink(
 			cadence.NewPath("storage", "foo"),
 			"Bar",
 		),

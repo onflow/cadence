@@ -806,7 +806,7 @@ func TestImportValue(t *testing.T) {
 		},
 		{
 			label: "Link (invalid)",
-			value: cadence.Link{
+			value: cadence.PathLink{
 				TargetPath: cadence.Path{
 					Domain:     "storage",
 					Identifier: "test",
@@ -2067,13 +2067,13 @@ func TestExportStorageCapabilityValue(t *testing.T) {
 	})
 }
 
-func TestExportLinkValue(t *testing.T) {
+func TestExportPathLinkValue(t *testing.T) {
 
 	t.Parallel()
 
 	t.Run("Int", func(t *testing.T) {
 
-		link := interpreter.LinkValue{
+		link := interpreter.PathLinkValue{
 			TargetPath: interpreter.PathValue{
 				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
@@ -2089,7 +2089,7 @@ func TestExportLinkValue(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		expected := cadence.Link{
+		expected := cadence.PathLink{
 			TargetPath: cadence.Path{
 				Domain:     "storage",
 				Identifier: "foo",
@@ -2124,7 +2124,7 @@ func TestExportLinkValue(t *testing.T) {
 		inter := newTestInterpreter(t)
 		inter.Program = interpreter.ProgramFromChecker(checker)
 
-		capability := interpreter.LinkValue{
+		capability := interpreter.PathLinkValue{
 			TargetPath: interpreter.PathValue{
 				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
@@ -2140,7 +2140,7 @@ func TestExportLinkValue(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		expected := cadence.Link{
+		expected := cadence.PathLink{
 			TargetPath: cadence.Path{
 				Domain:     "storage",
 				Identifier: "foo",

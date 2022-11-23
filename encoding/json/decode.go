@@ -823,7 +823,7 @@ func (d *Decoder) decodeEnum(valueJSON any) cadence.Enum {
 	))
 }
 
-func (d *Decoder) decodeLink(valueJSON any) cadence.Link {
+func (d *Decoder) decodeLink(valueJSON any) cadence.PathLink {
 	obj := toObject(valueJSON)
 
 	targetPath, ok := d.decodeJSON(obj.Get(targetPathKey)).(cadence.Path)

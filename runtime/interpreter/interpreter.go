@@ -3539,13 +3539,13 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 			borrowStaticType := ConvertSemaToStaticType(invocation.Interpreter, borrowType)
 
 			// Note that this will be metered twice if Atree validation is enabled.
-			linkValue := NewLinkValue(interpreter, targetPath, borrowStaticType)
+			pathLink := NewPathLinkValue(interpreter, targetPath, borrowStaticType)
 
 			interpreter.WriteStored(
 				address,
 				newCapabilityDomain,
 				newCapabilityIdentifier,
-				linkValue,
+				pathLink,
 			)
 
 			return NewSomeValueNonCopying(

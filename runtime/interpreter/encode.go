@@ -197,7 +197,7 @@ const (
 	CBORTagPathValue
 	CBORTagStorageCapabilityValue
 	_ // DO NOT REPLACE! used to be used for storage references
-	CBORTagLinkValue
+	CBORTagPathLinkValue
 	CBORTagPublishedValue
 	CBORTagAccountLinkValue
 	_
@@ -892,42 +892,42 @@ func encodeLocation(e *cbor.StreamEncoder, l common.Location) error {
 
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
-	// encodedLinkValueTargetPathFieldKey uint64 = 0
-	// encodedLinkValueTypeFieldKey       uint64 = 1
+	// encodedPathLinkValueTargetPathFieldKey uint64 = 0
+	// encodedPathLinkValueTypeFieldKey       uint64 = 1
 
 	// !!! *WARNING* !!!
 	//
-	// encodedLinkValueLength MUST be updated when new element is added.
+	// encodedPathLinkValueLength MUST be updated when new element is added.
 	// It is used to verify encoded link length during decoding.
-	encodedLinkValueLength = 2
+	encodedPathLinkValueLength = 2
 )
 
-// Encode encodes LinkValue as
+// Encode encodes PathLinkValue as
 //
 //	cbor.Tag{
-//				Number: CBORTagLinkValue,
+//				Number: CBORTagPathLinkValue,
 //				Content: []any{
-//					encodedLinkValueTargetPathFieldKey: PathValue(v.TargetPath),
-//					encodedLinkValueTypeFieldKey:       StaticType(v.Type),
+//					encodedPathLinkValueTargetPathFieldKey: PathValue(v.TargetPath),
+//					encodedPathLinkValueTypeFieldKey:       StaticType(v.Type),
 //				},
 //	}
-func (v LinkValue) Encode(e *atree.Encoder) error {
+func (v PathLinkValue) Encode(e *atree.Encoder) error {
 	// Encode tag number and array head
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagLinkValue,
+		0xd8, CBORTagPathLinkValue,
 		// array, 2 items follow
 		0x82,
 	})
 	if err != nil {
 		return err
 	}
-	// Encode path at array index encodedLinkValueTargetPathFieldKey
+	// Encode path at array index encodedPathLinkValueTargetPathFieldKey
 	err = v.TargetPath.Encode(e)
 	if err != nil {
 		return err
 	}
-	// Encode type at array index encodedLinkValueTypeFieldKey
+	// Encode type at array index encodedPathLinkValueTypeFieldKey
 	return EncodeStaticType(e.CBOR, v.Type)
 }
 

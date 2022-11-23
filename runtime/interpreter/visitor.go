@@ -55,7 +55,7 @@ type Visitor interface {
 	VisitAddressValue(interpreter *Interpreter, value AddressValue)
 	VisitPathValue(interpreter *Interpreter, value PathValue)
 	VisitStorageCapabilityValue(interpreter *Interpreter, value *StorageCapabilityValue)
-	VisitLinkValue(interpreter *Interpreter, value LinkValue)
+	VisitPathLinkValue(interpreter *Interpreter, value PathLinkValue)
 	VisitPublishedValue(interpreter *Interpreter, value *PublishedValue)
 	VisitInterpretedFunctionValue(interpreter *Interpreter, value *InterpretedFunctionValue)
 	VisitHostFunctionValue(interpreter *Interpreter, value *HostFunctionValue)
@@ -100,7 +100,7 @@ type EmptyVisitor struct {
 	AddressValueVisitor             func(interpreter *Interpreter, value AddressValue)
 	PathValueVisitor                func(interpreter *Interpreter, value PathValue)
 	StorageCapabilityValueVisitor   func(interpreter *Interpreter, value *StorageCapabilityValue)
-	LinkValueVisitor                func(interpreter *Interpreter, value LinkValue)
+	PathLinkValueVisitor            func(interpreter *Interpreter, value PathLinkValue)
 	AccountLinkValueVisitor         func(interpreter *Interpreter, value AccountLinkValue)
 	PublishedValueVisitor           func(interpreter *Interpreter, value *PublishedValue)
 	InterpretedFunctionValueVisitor func(interpreter *Interpreter, value *InterpretedFunctionValue)
@@ -362,11 +362,11 @@ func (v EmptyVisitor) VisitStorageCapabilityValue(interpreter *Interpreter, valu
 	v.StorageCapabilityValueVisitor(interpreter, value)
 }
 
-func (v EmptyVisitor) VisitLinkValue(interpreter *Interpreter, value LinkValue) {
-	if v.LinkValueVisitor == nil {
+func (v EmptyVisitor) VisitPathLinkValue(interpreter *Interpreter, value PathLinkValue) {
+	if v.PathLinkValueVisitor == nil {
 		return
 	}
-	v.LinkValueVisitor(interpreter, value)
+	v.PathLinkValueVisitor(interpreter, value)
 }
 
 func (v EmptyVisitor) VisitAccountLinkValue(interpreter *Interpreter, value AccountLinkValue) {

@@ -7016,7 +7016,7 @@ func TestInterpretStorageCapabilityValueMetering(t *testing.T) {
 	})
 }
 
-func TestInterpretLinkValueMetering(t *testing.T) {
+func TestInterpretPathLinkValueMetering(t *testing.T) {
 	t.Parallel()
 
 	t.Run("creation", func(t *testing.T) {
@@ -7037,7 +7037,7 @@ func TestInterpretLinkValueMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		// Metered twice only when Atree validation is enabled.
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindLinkValue))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindPathLinkValue))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindReferenceStaticType))
 	})
 }

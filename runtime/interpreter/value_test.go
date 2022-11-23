@@ -1034,14 +1034,14 @@ func TestStringer(t *testing.T) {
 			expected: "y --> bar",
 		},
 		"Link": {
-			value: LinkValue{
+			value: PathLinkValue{
 				TargetPath: PathValue{
 					Domain:     common.PathDomainStorage,
 					Identifier: "foo",
 				},
 				Type: PrimitiveStaticTypeInt,
 			},
-			expected: "Link<Int>(/storage/foo)",
+			expected: "PathLink<Int>(/storage/foo)",
 		},
 		"Path": {
 			value: PathValue{
@@ -2241,7 +2241,7 @@ func TestPathValue_Equal(t *testing.T) {
 	})
 }
 
-func TestLinkValue_Equal(t *testing.T) {
+func TestPathLinkValue_Equal(t *testing.T) {
 
 	t.Parallel()
 
@@ -2252,7 +2252,7 @@ func TestLinkValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.True(t,
-			LinkValue{
+			PathLinkValue{
 				TargetPath: PathValue{
 					Domain:     common.PathDomainStorage,
 					Identifier: "test",
@@ -2261,7 +2261,7 @@ func TestLinkValue_Equal(t *testing.T) {
 			}.Equal(
 				inter,
 				EmptyLocationRange,
-				LinkValue{
+				PathLinkValue{
 					TargetPath: PathValue{
 						Domain:     common.PathDomainStorage,
 						Identifier: "test",
@@ -2279,7 +2279,7 @@ func TestLinkValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			LinkValue{
+			PathLinkValue{
 				TargetPath: PathValue{
 					Domain:     common.PathDomainStorage,
 					Identifier: "test1",
@@ -2288,7 +2288,7 @@ func TestLinkValue_Equal(t *testing.T) {
 			}.Equal(
 				inter,
 				EmptyLocationRange,
-				LinkValue{
+				PathLinkValue{
 					TargetPath: PathValue{
 						Domain:     common.PathDomainStorage,
 						Identifier: "test2",
@@ -2306,7 +2306,7 @@ func TestLinkValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			LinkValue{
+			PathLinkValue{
 				TargetPath: PathValue{
 					Domain:     common.PathDomainStorage,
 					Identifier: "test",
@@ -2315,7 +2315,7 @@ func TestLinkValue_Equal(t *testing.T) {
 			}.Equal(
 				inter,
 				EmptyLocationRange,
-				LinkValue{
+				PathLinkValue{
 					TargetPath: PathValue{
 						Domain:     common.PathDomainStorage,
 						Identifier: "test",
@@ -2333,7 +2333,7 @@ func TestLinkValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			LinkValue{
+			PathLinkValue{
 				TargetPath: PathValue{
 					Domain:     common.PathDomainStorage,
 					Identifier: "test",
