@@ -7042,6 +7042,30 @@ func TestInterpretPathLinkValueMetering(t *testing.T) {
 	})
 }
 
+func TestInterpretAccountLinkValueMetering(t *testing.T) {
+	t.Parallel()
+
+	t.Run("creation", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main(account: AuthAccount) {
+                account.linkAccount(/public/capo)
+            }
+        `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		account := newTestAuthAccountValue(meter, interpreter.AddressValue{})
+		_, err := inter.Invoke("main", account)
+		require.NoError(t, err)
+
+		// Metered twice only when Atree validation is enabled.
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAccountLinkValue))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindReferenceStaticType))
+	})
+}
+
 func TestInterpretTypeValueMetering(t *testing.T) {
 	t.Parallel()
 
