@@ -981,12 +981,12 @@ func (v *PublishedValue) Encode(e *atree.Encoder) error {
 	if err != nil {
 		return err
 	}
-	// Encode path at array index encodedLinkValueTargetPathFieldKey
+	// Encode path at array index encodedPublishedValueRecipientFieldKey
 	err = v.Recipient.Encode(e)
 	if err != nil {
 		return err
 	}
-	// Encode type at array index encodedLinkValueValueFieldKey
+	// Encode type at array index encodedPublishedValueValueFieldKey
 	return v.Value.Encode(e)
 }
 
