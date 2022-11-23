@@ -1068,13 +1068,15 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 			interpreter,
 			func(invocation Invocation) Value {
 
+				interpreter := invocation.Interpreter
+
 				// Check that the resource is constructed
 				// in the same location as it was declared
 
 				locationRange := invocation.LocationRange
 
 				if compositeType.Kind == common.CompositeKindResource &&
-					invocation.Interpreter.Location != compositeType.Location {
+					interpreter.Location != compositeType.Location {
 
 					panic(ResourceConstructionError{
 						CompositeType: compositeType,
@@ -3211,6 +3213,8 @@ func (interpreter *Interpreter) newStorageIterationFunction(addressValue Address
 	return NewHostFunctionValue(
 		interpreter,
 		func(invocation Invocation) Value {
+			interpreter := invocation.Interpreter
+
 			fn, ok := invocation.Arguments[0].(FunctionValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
@@ -3282,6 +3286,8 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 	return NewHostFunctionValue(
 		interpreter,
 		func(invocation Invocation) Value {
+			interpreter := invocation.Interpreter
+
 			value := invocation.Arguments[0]
 
 			path, ok := invocation.Arguments[1].(PathValue)
@@ -3336,6 +3342,8 @@ func (interpreter *Interpreter) authAccountTypeFunction(addressValue AddressValu
 	return NewHostFunctionValue(
 		interpreter,
 		func(invocation Invocation) Value {
+			interpreter := invocation.Interpreter
+
 			path, ok := invocation.Arguments[0].(PathValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
@@ -3351,10 +3359,10 @@ func (interpreter *Interpreter) authAccountTypeFunction(addressValue AddressValu
 			}
 
 			return NewSomeValueNonCopying(
-				invocation.Interpreter,
+				interpreter,
 				NewTypeValue(
-					invocation.Interpreter,
-					value.StaticType(invocation.Interpreter),
+					interpreter,
+					value.StaticType(interpreter),
 				),
 			)
 		},
@@ -3379,6 +3387,8 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 	return NewHostFunctionValue(
 		interpreter,
 		func(invocation Invocation) Value {
+			interpreter := invocation.Interpreter
+
 			path, ok := invocation.Arguments[0].(PathValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
@@ -3403,7 +3413,7 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 
 			ty := typeParameterPair.Value
 
-			valueStaticType := value.StaticType(invocation.Interpreter)
+			valueStaticType := value.StaticType(interpreter)
 
 			if !interpreter.IsSubTypeOfSemaType(valueStaticType, ty) {
 				valueSemaType := interpreter.MustConvertStaticToSemaType(valueStaticType)
@@ -3415,14 +3425,13 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 				})
 			}
 
-			inter := invocation.Interpreter
 			locationRange := invocation.LocationRange
 
 			// We could also pass remove=true and the storable stored in storage,
 			// but passing remove=false here and writing nil below has the same effect
 			// TODO: potentially refactor and get storable in storage, pass it and remove=true
 			transferredValue := value.Transfer(
-				inter,
+				interpreter,
 				locationRange,
 				atree.Address{},
 				false,
@@ -3451,6 +3460,8 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 	return NewHostFunctionValue(
 		interpreter,
 		func(invocation Invocation) Value {
+			interpreter := invocation.Interpreter
+
 			path, ok := invocation.Arguments[0].(PathValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
@@ -3469,7 +3480,7 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 			}
 
 			reference := NewStorageReferenceValue(
-				invocation.Interpreter,
+				interpreter,
 				referenceType.Authorized,
 				address,
 				path,
@@ -3488,7 +3499,7 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 				return Nil
 			}
 
-			return NewSomeValueNonCopying(invocation.Interpreter, reference)
+			return NewSomeValueNonCopying(interpreter, reference)
 		},
 		sema.AuthAccountTypeBorrowFunctionType,
 	)
@@ -3502,6 +3513,7 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 	return NewHostFunctionValue(
 		interpreter,
 		func(invocation Invocation) Value {
+			interpreter := invocation.Interpreter
 
 			typeParameterPair := invocation.TypeParameterTypes.Oldest()
 			if typeParameterPair == nil {
@@ -3536,7 +3548,7 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 
 			// Write new value
 
-			borrowStaticType := ConvertSemaToStaticType(invocation.Interpreter, borrowType)
+			borrowStaticType := ConvertSemaToStaticType(interpreter, borrowType)
 
 			// Note that this will be metered twice if Atree validation is enabled.
 			linkValue := NewLinkValue(interpreter, targetPath, borrowStaticType)
@@ -3549,9 +3561,9 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 			)
 
 			return NewSomeValueNonCopying(
-				invocation.Interpreter,
+				interpreter,
 				NewCapabilityValue(
-					invocation.Interpreter,
+					interpreter,
 					addressValue,
 					newCapabilityPath,
 					borrowStaticType,
@@ -3571,6 +3583,7 @@ func (interpreter *Interpreter) accountGetLinkTargetFunction(addressValue Addres
 	return NewHostFunctionValue(
 		interpreter,
 		func(invocation Invocation) Value {
+			interpreter := invocation.Interpreter
 
 			capabilityPath, ok := invocation.Arguments[0].(PathValue)
 			if !ok {
@@ -3591,7 +3604,10 @@ func (interpreter *Interpreter) accountGetLinkTargetFunction(addressValue Addres
 				return Nil
 			}
 
-			return NewSomeValueNonCopying(invocation.Interpreter, link.TargetPath)
+			return NewSomeValueNonCopying(
+				interpreter,
+				link.TargetPath,
+			)
 		},
 		sema.AccountTypeGetLinkTargetFunctionType,
 	)
@@ -3605,6 +3621,7 @@ func (interpreter *Interpreter) authAccountUnlinkFunction(addressValue AddressVa
 	return NewHostFunctionValue(
 		interpreter,
 		func(invocation Invocation) Value {
+			interpreter := invocation.Interpreter
 
 			capabilityPath, ok := invocation.Arguments[0].(PathValue)
 			if !ok {
@@ -4022,6 +4039,8 @@ func (interpreter *Interpreter) isInstanceFunction(self Value) *HostFunctionValu
 	return NewHostFunctionValue(
 		interpreter,
 		func(invocation Invocation) Value {
+			interpreter := invocation.Interpreter
+
 			firstArgument := invocation.Arguments[0]
 			typeValue, ok := firstArgument.(TypeValue)
 
@@ -4037,7 +4056,7 @@ func (interpreter *Interpreter) isInstanceFunction(self Value) *HostFunctionValu
 			}
 
 			// NOTE: not invocation.Self, as that is only set for composite values
-			selfType := self.StaticType(invocation.Interpreter)
+			selfType := self.StaticType(interpreter)
 			return AsBoolValue(
 				interpreter.IsSubType(selfType, staticType),
 			)
@@ -4050,8 +4069,9 @@ func (interpreter *Interpreter) getTypeFunction(self Value) *HostFunctionValue {
 	return NewHostFunctionValue(
 		interpreter,
 		func(invocation Invocation) Value {
-			staticType := self.StaticType(invocation.Interpreter)
-			return NewTypeValue(invocation.Interpreter, staticType)
+			interpreter := invocation.Interpreter
+			staticType := self.StaticType(interpreter)
+			return NewTypeValue(interpreter, staticType)
 		},
 		sema.GetTypeFunctionType,
 	)
