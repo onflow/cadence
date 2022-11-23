@@ -75,7 +75,7 @@ var AuthAccountType = func() *CompositeType {
 	}
 
 	AuthAccountTypeLinkAccountFunctionType = &FunctionType{
-		Parameters: []*Parameter{
+		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "newCapabilityPath",
