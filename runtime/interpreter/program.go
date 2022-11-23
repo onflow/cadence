@@ -24,15 +24,13 @@ import (
 )
 
 type Program struct {
-	Program         *ast.Program
-	Elaboration     *sema.Elaboration
-	AccessCheckMode sema.AccessCheckMode
+	Program     *ast.Program
+	Elaboration *sema.Elaboration
 }
 
 func ProgramFromChecker(checker *sema.Checker) *Program {
 	return &Program{
-		Program:         checker.Program,
-		Elaboration:     checker.Elaboration,
-		AccessCheckMode: checker.Config.AccessCheckMode,
+		Program:     checker.Program,
+		Elaboration: checker.Elaboration,
 	}
 }
