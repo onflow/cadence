@@ -1744,44 +1744,44 @@ func (v Contract) String() string {
 	return formatComposite(v.ContractType.ID(), v.ContractType.Fields, v.Fields)
 }
 
-// Link
+// PathLink
 
-type Link struct {
+type PathLink struct {
 	TargetPath Path
 	// TODO: a future version might want to export the whole type
 	BorrowType string
 }
 
-var _ Value = Link{}
+var _ Value = PathLink{}
 
-func NewLink(targetPath Path, borrowType string) Link {
-	return Link{
+func NewPathLink(targetPath Path, borrowType string) PathLink {
+	return PathLink{
 		TargetPath: targetPath,
 		BorrowType: borrowType,
 	}
 }
 
-func NewMeteredLink(gauge common.MemoryGauge, targetPath Path, borrowType string) Link {
-	common.UseMemory(gauge, common.CadenceLinkValueMemoryUsage)
-	return NewLink(targetPath, borrowType)
+func NewMeteredLink(gauge common.MemoryGauge, targetPath Path, borrowType string) PathLink {
+	common.UseMemory(gauge, common.CadencePathLinkValueMemoryUsage)
+	return NewPathLink(targetPath, borrowType)
 }
 
-func (Link) isValue() {}
+func (PathLink) isValue() {}
 
-func (v Link) Type() Type {
+func (v PathLink) Type() Type {
 	return nil
 }
 
-func (v Link) MeteredType(_ common.MemoryGauge) Type {
+func (v PathLink) MeteredType(_ common.MemoryGauge) Type {
 	return v.Type()
 }
 
-func (v Link) ToGoValue() any {
+func (v PathLink) ToGoValue() any {
 	return nil
 }
 
-func (v Link) String() string {
-	return format.Link(
+func (v PathLink) String() string {
+	return format.PathLink(
 		v.BorrowType,
 		v.TargetPath.String(),
 	)
