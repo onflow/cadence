@@ -3195,35 +3195,6 @@ func TestEncodeDecodeStorageCapabilityValue(t *testing.T) {
 	})
 }
 
-func TestEncodeDecodeAccountCapabilityValue(t *testing.T) {
-
-	t.Parallel()
-
-	value := &AccountCapabilityValue{
-		Address: NewUnmeteredAddressValueFromBytes([]byte{0x3}),
-	}
-
-	encoded := []byte{
-		// tag
-		0xd8, CBORTagAccountCapabilityValue,
-		// array, 1 item follows
-		0x81,
-		// tag for address
-		0xd8, CBORTagAddressValue,
-		// byte sequence, length 1
-		0x41,
-		// address
-		0x03,
-	}
-
-	testEncodeDecode(t,
-		encodeDecodeTest{
-			value:   value,
-			encoded: encoded,
-		},
-	)
-}
-
 func TestEncodeDecodeLinkValue(t *testing.T) {
 
 	t.Parallel()

@@ -299,9 +299,6 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 		case CBORTagStorageCapabilityValue:
 			storable, err = d.decodeStorageCapability()
 
-		case CBORTagAccountCapabilityValue:
-			storable, err = d.decodeAccountCapability()
-
 		case CBORTagLinkValue:
 			storable, err = d.decodeLink()
 
@@ -952,58 +949,6 @@ func (d StorableDecoder) decodeStorageCapability() (*StorageCapabilityValue, err
 	}
 
 	return NewStorageCapabilityValue(d.memoryGauge, address, pathValue, borrowType), nil
-}
-
-func (d StorableDecoder) decodeAccountCapability() (*AccountCapabilityValue, error) {
-
-	const expectedLength = encodedAccountCapabilityValueLength
-
-	size, err := d.decoder.DecodeArrayHead()
-	if err != nil {
-		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return nil, errors.NewUnexpectedError(
-				"invalid capability encoding: expected [%d]any, got %s",
-				expectedLength,
-				e.ActualType.String(),
-			)
-		}
-		return nil, err
-	}
-
-	if size != expectedLength {
-		return nil, errors.NewUnexpectedError(
-			"invalid capability encoding: expected [%d]any, got [%d]any",
-			expectedLength,
-			size,
-		)
-	}
-
-	// address
-
-	// Decode address at array index encodedAccountCapabilityValueAddressFieldKey
-	var num uint64
-	num, err = d.decoder.DecodeTagNumber()
-	if err != nil {
-		return nil, errors.NewUnexpectedError(
-			"invalid capability address: %w",
-			err,
-		)
-	}
-	if num != CBORTagAddressValue {
-		return nil, errors.NewUnexpectedError(
-			"invalid capability address: wrong tag %d",
-			num,
-		)
-	}
-	address, err := d.decodeAddress()
-	if err != nil {
-		return nil, errors.NewUnexpectedError(
-			"invalid capability address: %w",
-			err,
-		)
-	}
-
-	return NewAccountCapabilityValue(d.memoryGauge, address), nil
 }
 
 func (d StorableDecoder) decodeLink() (LinkValue, error) {

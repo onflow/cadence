@@ -3599,9 +3599,11 @@ func (interpreter *Interpreter) authAccountLinkAccountFunction(addressValue Addr
 
 			return NewSomeValueNonCopying(
 				invocation.Interpreter,
-				NewAccountCapabilityValue(
+				NewStorageCapabilityValue(
 					interpreter,
 					addressValue,
+					newCapabilityPath,
+					PrimitiveStaticTypeAuthAccount,
 				),
 			)
 
