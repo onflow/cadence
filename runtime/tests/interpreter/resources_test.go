@@ -87,7 +87,7 @@ func TestInterpretOptionalResourceBindingWithSecondValue(t *testing.T) {
 
 	result, err := inter.Invoke("test")
 	require.NoError(t, err)
-	require.Equal(t, interpreter.BoolValue(true), result)
+	require.Equal(t, interpreter.TrueValue, result)
 }
 
 func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {

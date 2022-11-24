@@ -62,8 +62,8 @@ func TestInterpretSwitchStatement(t *testing.T) {
 		require.NoError(t, err)
 
 		for argument, expected := range map[interpreter.Value]interpreter.Value{
-			interpreter.BoolValue(true):  interpreter.NewUnmeteredIntValueFromInt64(1),
-			interpreter.BoolValue(false): interpreter.NewUnmeteredIntValueFromInt64(2),
+			interpreter.TrueValue:  interpreter.NewUnmeteredIntValueFromInt64(1),
+			interpreter.FalseValue: interpreter.NewUnmeteredIntValueFromInt64(2),
 		} {
 
 			actual, err := inter.Invoke("test", argument)
@@ -189,7 +189,7 @@ func TestInterpretSwitchStatement(t *testing.T) {
 			actual, err := inter.Invoke("test", argument)
 			require.NoError(t, err)
 
-			require.IsType(t, actual, &interpreter.ArrayValue{})
+			require.IsType(t, &interpreter.ArrayValue{}, actual)
 			arrayValue := actual.(*interpreter.ArrayValue)
 
 			AssertValueSlicesEqual(

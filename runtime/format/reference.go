@@ -19,3 +19,4 @@
 package format
 
 const StorageReference = "StorageReference()"
+const AccountReference = "AccountReference()"

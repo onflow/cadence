@@ -166,7 +166,7 @@ func TestEncodeDecodeBool(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: BoolValue(false),
+				value: FalseValue,
 				encoded: []byte{
 					// false
 					0xf4,
@@ -181,7 +181,7 @@ func TestEncodeDecodeBool(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: BoolValue(true),
+				value: TrueValue,
 				encoded: []byte{
 					// true
 					0xf5,
@@ -309,7 +309,7 @@ func TestEncodeDecodeArray(t *testing.T) {
 			},
 			common.Address{},
 			expectedString,
-			BoolValue(true),
+			TrueValue,
 		)
 
 		testEncodeDecode(t,
@@ -373,7 +373,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 
 		fields := []CompositeField{
 			{Name: "string", Value: stringValue},
-			{Name: "true", Value: BoolValue(true)},
+			{Name: "true", Value: TrueValue},
 		}
 
 		expected := NewCompositeValue(
@@ -2416,7 +2416,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: NewUnmeteredSomeValueNonCopying(BoolValue(true)),
+				value: NewUnmeteredSomeValueNonCopying(TrueValue),
 				encoded: []byte{
 					// tag
 					0xd8, CBORTagSomeValue,

@@ -51,16 +51,17 @@ type Visitor interface {
 	VisitNilValue(interpreter *Interpreter, value NilValue)
 	VisitSomeValue(interpreter *Interpreter, value *SomeValue) bool
 	VisitStorageReferenceValue(interpreter *Interpreter, value *StorageReferenceValue)
+	VisitAccountReferenceValue(interpreter *Interpreter, value *AccountReferenceValue)
 	VisitEphemeralReferenceValue(interpreter *Interpreter, value *EphemeralReferenceValue)
 	VisitAddressValue(interpreter *Interpreter, value AddressValue)
 	VisitPathValue(interpreter *Interpreter, value PathValue)
 	VisitStorageCapabilityValue(interpreter *Interpreter, value *StorageCapabilityValue)
 	VisitPathLinkValue(interpreter *Interpreter, value PathLinkValue)
+	VisitAccountLinkValue(interpreter *Interpreter, value AccountLinkValue)
 	VisitPublishedValue(interpreter *Interpreter, value *PublishedValue)
 	VisitInterpretedFunctionValue(interpreter *Interpreter, value *InterpretedFunctionValue)
 	VisitHostFunctionValue(interpreter *Interpreter, value *HostFunctionValue)
 	VisitBoundFunctionValue(interpreter *Interpreter, value BoundFunctionValue)
-	VisitAccountLinkValue(interpreter *Interpreter, value AccountLinkValue)
 }
 
 type EmptyVisitor struct {
@@ -96,6 +97,7 @@ type EmptyVisitor struct {
 	NilValueVisitor                 func(interpreter *Interpreter, value NilValue)
 	SomeValueVisitor                func(interpreter *Interpreter, value *SomeValue) bool
 	StorageReferenceValueVisitor    func(interpreter *Interpreter, value *StorageReferenceValue)
+	AccountReferenceValueVisitor    func(interpreter *Interpreter, value *AccountReferenceValue)
 	EphemeralReferenceValueVisitor  func(interpreter *Interpreter, value *EphemeralReferenceValue)
 	AddressValueVisitor             func(interpreter *Interpreter, value AddressValue)
 	PathValueVisitor                func(interpreter *Interpreter, value PathValue)
@@ -332,6 +334,13 @@ func (v EmptyVisitor) VisitStorageReferenceValue(interpreter *Interpreter, value
 		return
 	}
 	v.StorageReferenceValueVisitor(interpreter, value)
+}
+
+func (v EmptyVisitor) VisitAccountReferenceValue(interpreter *Interpreter, value *AccountReferenceValue) {
+	if v.AccountReferenceValueVisitor == nil {
+		return
+	}
+	v.AccountReferenceValueVisitor(interpreter, value)
 }
 
 func (v EmptyVisitor) VisitEphemeralReferenceValue(interpreter *Interpreter, value *EphemeralReferenceValue) {

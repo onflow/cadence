@@ -16820,11 +16820,13 @@ func (v *StorageReferenceValue) StaticType(inter *Interpreter) StaticType {
 		panic(err)
 	}
 
+	self := *referencedValue
+
 	return NewReferenceStaticType(
 		inter,
 		v.Authorized,
 		ConvertSemaToStaticType(inter, v.BorrowedType),
-		(*referencedValue).StaticType(inter),
+		self.StaticType(inter),
 	)
 }
 
@@ -17034,13 +17036,15 @@ func (v *StorageReferenceValue) ConformsToStaticType(
 		return false
 	}
 
-	staticType := (*referencedValue).StaticType(interpreter)
+	self := *referencedValue
+
+	staticType := self.StaticType(interpreter)
 
 	if !interpreter.IsSubTypeOfSemaType(staticType, v.BorrowedType) {
 		return false
 	}
 
-	return (*referencedValue).ConformsToStaticType(
+	return self.ConformsToStaticType(
 		interpreter,
 		locationRange,
 		results,
@@ -17161,11 +17165,13 @@ func (v *EphemeralReferenceValue) StaticType(inter *Interpreter) StaticType {
 		panic(DereferenceError{})
 	}
 
+	self := *referencedValue
+
 	return NewReferenceStaticType(
 		inter,
 		v.Authorized,
 		ConvertSemaToStaticType(inter, v.BorrowedType),
-		(*referencedValue).StaticType(inter),
+		self.StaticType(inter),
 	)
 }
 
@@ -17361,7 +17367,9 @@ func (v *EphemeralReferenceValue) ConformsToStaticType(
 		return false
 	}
 
-	staticType := (*referencedValue).StaticType(interpreter)
+	self := *referencedValue
+
+	staticType := self.StaticType(interpreter)
 
 	if !interpreter.IsSubTypeOfSemaType(staticType, v.BorrowedType) {
 		return false
@@ -17380,7 +17388,7 @@ func (v *EphemeralReferenceValue) ConformsToStaticType(
 	// doesn't depend on this. It depends on the rest of values of the object tree.
 	results[entry] = true
 
-	result := (*referencedValue).ConformsToStaticType(
+	result := self.ConformsToStaticType(
 		interpreter,
 		locationRange,
 		results,

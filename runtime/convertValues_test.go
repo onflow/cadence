@@ -149,13 +149,13 @@ func TestExportValue(t *testing.T) {
 		},
 		{
 			label:    "Bool true",
-			value:    interpreter.BoolValue(true),
+			value:    interpreter.TrueValue,
 			expected: cadence.NewBool(true),
 		},
 
 		{
 			label:    "Bool false",
-			value:    interpreter.BoolValue(false),
+			value:    interpreter.FalseValue,
 			expected: cadence.NewBool(false),
 		},
 
@@ -586,11 +586,11 @@ func TestImportValue(t *testing.T) {
 		{
 			label:    "Bool true",
 			value:    cadence.NewBool(true),
-			expected: interpreter.BoolValue(true),
+			expected: interpreter.TrueValue,
 		},
 		{
 			label:    "Bool false",
-			expected: interpreter.BoolValue(false),
+			expected: interpreter.FalseValue,
 			value:    cadence.NewBool(false),
 		},
 		{

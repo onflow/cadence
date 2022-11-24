@@ -161,12 +161,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			value, err := inter.Invoke("singleR2")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				interpreter.Nil,
-				value,
-			)
+			require.Equal(t, interpreter.Nil, value)
 		})
 
 		t.Run("single S", func(t *testing.T) {
@@ -174,12 +169,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			value, err := inter.Invoke("singleS")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				interpreter.Nil,
-				value,
-			)
+			require.Equal(t, interpreter.Nil, value)
 		})
 
 		t.Run("single auth", func(t *testing.T) {
@@ -187,12 +177,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			value, err := inter.Invoke("singleAuth")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				interpreter.Nil,
-				value,
-			)
+			require.Equal(t, interpreter.Nil, value)
 		})
 
 		t.Run("double", func(t *testing.T) {
@@ -388,12 +373,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			value, err := inter.Invoke("singleS2")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				interpreter.Nil,
-				value,
-			)
+			require.Equal(t, interpreter.Nil, value)
 		})
 
 		t.Run("single R", func(t *testing.T) {
@@ -401,12 +381,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			value, err := inter.Invoke("singleR")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				interpreter.Nil,
-				value,
-			)
+			require.Equal(t, interpreter.Nil, value)
 		})
 
 		t.Run("single auth", func(t *testing.T) {
@@ -414,12 +389,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			value, err := inter.Invoke("singleAuth")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				interpreter.Nil,
-				value,
-			)
+			require.Equal(t, interpreter.Nil, value)
 		})
 
 		t.Run("double", func(t *testing.T) {
@@ -481,6 +451,89 @@ func TestInterpretCapability_borrow(t *testing.T) {
 		t.Run("single change after borrow", func(t *testing.T) {
 
 			_, err := inter.Invoke("singleChangeAfterBorrow")
+			RequireError(t, err)
+
+			require.ErrorAs(t, err, &interpreter.DereferenceError{})
+		})
+	})
+
+	t.Run("account", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(
+			t,
+			address,
+			true,
+			`
+              fun link() {
+                  account.linkAccount(/public/acct)
+              }
+
+              fun address(_ path: CapabilityPath): Address {
+                  return account.getCapability(path).borrow<&AuthAccount>()!.address
+              }
+
+              fun borrow(): Address {
+                  return address(/public/acct)
+              }
+
+              fun borrowAuth(): auth &AuthAccount? {
+                  return account.getCapability(/public/acct).borrow<auth &AuthAccount>()
+              }
+
+              fun nonExistent(): Address {
+                  return address(/public/nonExistent)
+              }
+
+              fun unlinkAfterBorrow(): Address {
+                 let ref = account.getCapability(/public/acct).borrow<&AuthAccount>()!
+
+                 account.unlink(/public/acct)
+
+                 return ref.address
+              }
+            `,
+		)
+
+		// link
+
+		_, err := inter.Invoke("link")
+		require.NoError(t, err)
+
+		t.Run("borrow", func(t *testing.T) {
+
+			value, err := inter.Invoke("borrow")
+			require.NoError(t, err)
+
+			RequireValuesEqual(t,
+				inter,
+				address,
+				value,
+			)
+		})
+
+		t.Run("borrowAuth", func(t *testing.T) {
+
+			value, err := inter.Invoke("borrowAuth")
+			require.NoError(t, err)
+
+			require.Equal(t, interpreter.NilValue{}, value)
+		})
+
+		t.Run("nonExistent", func(t *testing.T) {
+
+			_, err := inter.Invoke("nonExistent")
+			RequireError(t, err)
+
+			require.ErrorAs(t, err, &interpreter.ForceNilError{})
+		})
+
+		t.Run("unlink after borrow", func(t *testing.T) {
+
+			_, err := inter.Invoke("unlinkAfterBorrow")
 			RequireError(t, err)
 
 			require.ErrorAs(t, err, &interpreter.DereferenceError{})
@@ -595,12 +648,7 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("single")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				interpreter.BoolValue(true),
-				value,
-			)
+			require.Equal(t, interpreter.TrueValue, value)
 		})
 
 		t.Run("single auth", func(t *testing.T) {
@@ -608,12 +656,7 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("singleAuth")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				interpreter.BoolValue(false),
-				value,
-			)
+			require.Equal(t, interpreter.FalseValue, value)
 		})
 
 		t.Run("single R2", func(t *testing.T) {
@@ -621,12 +664,7 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("singleR2")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				interpreter.BoolValue(false),
-				value,
-			)
+			require.Equal(t, interpreter.FalseValue, value)
 		})
 
 		t.Run("single S", func(t *testing.T) {
@@ -634,12 +672,7 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("singleS")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				interpreter.BoolValue(false),
-				value,
-			)
+			require.Equal(t, interpreter.FalseValue, value)
 		})
 
 		t.Run("double", func(t *testing.T) {
@@ -647,12 +680,7 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("double")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				interpreter.BoolValue(true),
-				value,
-			)
+			require.Equal(t, interpreter.TrueValue, value)
 		})
 
 		t.Run("nonExistent", func(t *testing.T) {
@@ -660,12 +688,7 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("nonExistent")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				interpreter.BoolValue(false),
-				value,
-			)
+			require.Equal(t, interpreter.FalseValue, value)
 		})
 
 		t.Run("loop", func(t *testing.T) {
@@ -687,12 +710,7 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("singleTyped")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				interpreter.BoolValue(true),
-				value,
-			)
+			require.Equal(t, interpreter.TrueValue, value)
 		})
 
 		t.Run("r2", func(t *testing.T) {
@@ -700,12 +718,7 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("r2")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				interpreter.BoolValue(false),
-				value,
-			)
+			require.Equal(t, interpreter.FalseValue, value)
 		})
 	})
 
@@ -812,12 +825,7 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("single")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				interpreter.BoolValue(true),
-				value,
-			)
+			require.Equal(t, interpreter.TrueValue, value)
 		})
 
 		t.Run("single auth", func(t *testing.T) {
@@ -825,12 +833,7 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("singleAuth")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				interpreter.BoolValue(false),
-				value,
-			)
+			require.Equal(t, interpreter.FalseValue, value)
 		})
 
 		t.Run("single S2", func(t *testing.T) {
@@ -838,12 +841,7 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("singleS2")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				interpreter.BoolValue(false),
-				value,
-			)
+			require.Equal(t, interpreter.FalseValue, value)
 		})
 
 		t.Run("single R", func(t *testing.T) {
@@ -851,12 +849,7 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("singleR")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				interpreter.BoolValue(false),
-				value,
-			)
+			require.Equal(t, interpreter.FalseValue, value)
 		})
 
 		t.Run("double", func(t *testing.T) {
@@ -864,12 +857,7 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("double")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				interpreter.BoolValue(true),
-				value,
-			)
+			require.Equal(t, interpreter.TrueValue, value)
 		})
 
 		t.Run("nonExistent", func(t *testing.T) {
@@ -877,12 +865,7 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("nonExistent")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				interpreter.BoolValue(false),
-				value,
-			)
+			require.Equal(t, interpreter.FalseValue, value)
 		})
 
 		t.Run("loop", func(t *testing.T) {
@@ -904,12 +887,7 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("singleTyped")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				interpreter.BoolValue(true),
-				value,
-			)
+			require.Equal(t, interpreter.TrueValue, value)
 		})
 
 		t.Run("s2", func(t *testing.T) {
@@ -917,14 +895,73 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("s2")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				interpreter.BoolValue(false),
-				value,
-			)
+			require.Equal(t, interpreter.FalseValue, value)
 		})
 	})
+
+	t.Run("account", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(
+			t,
+			address,
+			true,
+			`
+              fun link() {
+                  account.linkAccount(/public/acct)
+              }
+
+              fun checkPath(_ path: CapabilityPath): Bool {
+                  return account.getCapability(path).check<&AuthAccount>()
+              }
+
+              fun check(): Bool {
+                  return checkPath(/public/acct)
+              }
+
+              fun checkAuth(): Bool {
+                  return account.getCapability(/public/acct).check<auth &AuthAccount>()
+              }
+
+              fun nonExistent(): Bool {
+                  return checkPath(/public/nonExistent)
+              }
+            `,
+		)
+
+		// link
+
+		_, err := inter.Invoke("link")
+		require.NoError(t, err)
+
+		t.Run("check", func(t *testing.T) {
+
+			value, err := inter.Invoke("check")
+			require.NoError(t, err)
+
+			require.Equal(t, interpreter.TrueValue, value)
+		})
+
+		t.Run("checkAuth", func(t *testing.T) {
+
+			value, err := inter.Invoke("checkAuth")
+			require.NoError(t, err)
+
+			require.Equal(t, interpreter.FalseValue, value)
+		})
+
+		t.Run("nonExistent", func(t *testing.T) {
+
+			value, err := inter.Invoke("nonExistent")
+			require.NoError(t, err)
+
+			require.Equal(t, interpreter.FalseValue, value)
+		})
+	})
+
 }
 
 func TestInterpretCapability_address(t *testing.T) {
@@ -946,7 +983,7 @@ func TestInterpretCapability_address(t *testing.T) {
 				return account.getCapability(/public/double).address
 			}
 
-			fun nonExistent() : Address {
+			fun nonExistent(): Address {
 				return account.getCapability(/public/nonExistent).address
 			}				
 		`,

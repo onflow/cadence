@@ -106,6 +106,9 @@ func testAccount(
 			Config: &interpreter.Config{
 				BaseActivation:       baseActivation,
 				ContractValueHandler: makeContractValueHandler(nil, nil, nil),
+				AuthAccountHandler: func(address interpreter.AddressValue) interpreter.Value {
+					return newTestAuthAccountValue(nil, address)
+				},
 			},
 		},
 	)

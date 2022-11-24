@@ -134,6 +134,12 @@ type ImportLocationHandlerFunc func(
 	location common.Location,
 ) Import
 
+// AuthAccountHandlerFunc is a function that handles retrieving an auth account at a given address.
+// The account returned must be of type `AuthAccount`.
+type AuthAccountHandlerFunc func(
+	address AddressValue,
+) Value
+
 // PublicAccountHandlerFunc is a function that handles retrieving a public account at a given address.
 // The account returned must be of type `PublicAccount`.
 type PublicAccountHandlerFunc func(
@@ -3723,10 +3729,14 @@ func (interpreter *Interpreter) storageCapabilityBorrowFunction(
 			}
 
 			if target.Address == address {
-				// TODO:
 				return NewSomeValueNonCopying(
 					interpreter,
-					nil,
+					NewAccountReferenceValue(
+						interpreter,
+						address,
+						pathValue,
+						borrowType.Type,
+					),
 				)
 			}
 

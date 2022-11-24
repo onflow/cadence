@@ -61,7 +61,7 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 				NewUnmeteredInt256ValueFromBigInt(largeBigInt),
 			),
 			NewUnmeteredUInt64Value(500),
-			BoolValue(true),
+			TrueValue,
 			NewUnmeteredStringValue("test"),
 		}
 

@@ -84,14 +84,14 @@ func TestInterpretEquality(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.BoolValue(true),
+			interpreter.TrueValue,
 			inter.Globals.Get("res1").GetValue(),
 		)
 
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.BoolValue(true),
+			interpreter.TrueValue,
 			inter.Globals.Get("res2").GetValue(),
 		)
 	})
@@ -112,14 +112,14 @@ func TestInterpretEquality(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.BoolValue(true),
+			interpreter.TrueValue,
 			inter.Globals.Get("res1").GetValue(),
 		)
 
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.BoolValue(true),
+			interpreter.TrueValue,
 			inter.Globals.Get("res2").GetValue(),
 		)
 	})
@@ -136,7 +136,7 @@ func TestInterpretEquality(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.BoolValue(false),
+			interpreter.FalseValue,
 			inter.Globals.Get("res").GetValue(),
 		)
 	})
@@ -202,10 +202,10 @@ func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
 					switch op {
 					case ast.OperationEqual:
 						require.NoError(t, err)
-						assert.Equal(t, interpreter.BoolValue(false), result)
+						assert.Equal(t, interpreter.FalseValue, result)
 					case ast.OperationNotEqual:
 						require.NoError(t, err)
-						assert.Equal(t, interpreter.BoolValue(true), result)
+						assert.Equal(t, interpreter.TrueValue, result)
 					default:
 						RequireError(t, err)
 
@@ -252,10 +252,10 @@ func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
 					switch op {
 					case ast.OperationEqual:
 						require.NoError(t, err)
-						assert.Equal(t, interpreter.BoolValue(false), result)
+						assert.Equal(t, interpreter.FalseValue, result)
 					case ast.OperationNotEqual:
 						require.NoError(t, err)
-						assert.Equal(t, interpreter.BoolValue(true), result)
+						assert.Equal(t, interpreter.TrueValue, result)
 					default:
 						RequireError(t, err)
 
@@ -302,10 +302,10 @@ func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
 					switch op {
 					case ast.OperationEqual:
 						require.NoError(t, err)
-						assert.Equal(t, interpreter.BoolValue(false), result)
+						assert.Equal(t, interpreter.FalseValue, result)
 					case ast.OperationNotEqual:
 						require.NoError(t, err)
-						assert.Equal(t, interpreter.BoolValue(true), result)
+						assert.Equal(t, interpreter.TrueValue, result)
 					default:
 						RequireError(t, err)
 

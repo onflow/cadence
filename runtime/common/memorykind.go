@@ -43,6 +43,7 @@ const (
 	MemoryKindPathLinkValue
 	MemoryKindAccountLinkValue
 	MemoryKindStorageReferenceValue
+	MemoryKindAccountReferenceValue
 	MemoryKindEphemeralReferenceValue
 	MemoryKindInterpretedFunctionValue
 	MemoryKindHostFunctionValue

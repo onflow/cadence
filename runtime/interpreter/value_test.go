@@ -932,15 +932,15 @@ func TestStringer(t *testing.T) {
 			expected: "()",
 		},
 		"true": {
-			value:    BoolValue(true),
+			value:    TrueValue,
 			expected: "true",
 		},
 		"false": {
-			value:    BoolValue(false),
+			value:    FalseValue,
 			expected: "false",
 		},
 		"some": {
-			value:    NewUnmeteredSomeValueNonCopying(BoolValue(true)),
+			value:    NewUnmeteredSomeValueNonCopying(TrueValue),
 			expected: "true",
 		},
 		"nil": {
@@ -1425,11 +1425,11 @@ func TestGetHashInput(t *testing.T) {
 			expected: []byte{byte(HashInputTypeFix64), 0x7f, 0xff, 0xff, 0xff, 0xfc, 0xbc, 0x30, 0x00},
 		},
 		"true": {
-			value:    BoolValue(true),
+			value:    TrueValue,
 			expected: []byte{byte(HashInputTypeBool), 1},
 		},
 		"false": {
-			value:    BoolValue(false),
+			value:    FalseValue,
 			expected: []byte{byte(HashInputTypeBool), 0},
 		},
 		"String": {
@@ -1897,10 +1897,10 @@ func TestBoolValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.True(t,
-			BoolValue(true).Equal(
+			TrueValue.Equal(
 				inter,
 				EmptyLocationRange,
-				BoolValue(true),
+				TrueValue,
 			),
 		)
 	})
@@ -1912,10 +1912,10 @@ func TestBoolValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.True(t,
-			BoolValue(false).Equal(
+			FalseValue.Equal(
 				inter,
 				EmptyLocationRange,
-				BoolValue(false),
+				FalseValue,
 			),
 		)
 	})
@@ -1927,10 +1927,10 @@ func TestBoolValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			BoolValue(true).Equal(
+			TrueValue.Equal(
 				inter,
 				EmptyLocationRange,
-				BoolValue(false),
+				FalseValue,
 			),
 		)
 	})
@@ -1942,7 +1942,7 @@ func TestBoolValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			BoolValue(true).Equal(
+			TrueValue.Equal(
 				inter,
 				EmptyLocationRange,
 				NewUnmeteredUInt8Value(1),
