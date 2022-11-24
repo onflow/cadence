@@ -227,7 +227,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			},
 			check: expectFailure(
 				"Execution failed:\n" +
-					"error: invalid argument 0: expected type `Int`, got `Bool`\n" +
+					"error: invalid argument at index 0: expected type `Int`, got `Bool`\n" +
 					" --> 0000000000000000000000000000000000000000000000000000000000000000:5:22\n" +
 					"  |\n" +
 					"5 |                       signer.contracts.add(name: \"Test\", code: \"0a202020202020202020202020202070756220636f6e74726163742054657374207b0a202020202020202020202020202020202020696e6974285f20783a20496e7429207b7d0a20202020202020202020202020207d0a202020202020202020202020\".decodeHex(), true)\n" +

@@ -29,6 +29,24 @@ import (
 	"github.com/onflow/cadence/runtime/pretty"
 )
 
+func ErrorMessageExpectedActualTypes(
+	expectedType Type,
+	actualType Type,
+) (
+	expected string,
+	actual string,
+) {
+	expected = expectedType.QualifiedString()
+	actual = actualType.QualifiedString()
+
+	if expected == actual {
+		expected = string(expectedType.ID())
+		actual = string(actualType.ID())
+	}
+
+	return
+}
+
 // astTypeConversionError
 
 type astTypeConversionError struct {
@@ -257,10 +275,15 @@ func (e *TypeMismatchError) Error() string {
 }
 
 func (e *TypeMismatchError) SecondaryError() string {
+	expected, actual := ErrorMessageExpectedActualTypes(
+		e.ExpectedType,
+		e.ActualType,
+	)
+
 	return fmt.Sprintf(
 		"expected `%s`, got `%s`",
-		e.ExpectedType.QualifiedString(),
-		e.ActualType.QualifiedString(),
+		expected,
+		actual,
 	)
 }
 
@@ -483,10 +506,15 @@ func (e *InvalidUnaryOperandError) Error() string {
 }
 
 func (e *InvalidUnaryOperandError) SecondaryError() string {
+	expected, actual := ErrorMessageExpectedActualTypes(
+		e.ExpectedType,
+		e.ActualType,
+	)
+
 	return fmt.Sprintf(
 		"expected `%s`, got `%s`",
-		e.ExpectedType.QualifiedString(),
-		e.ActualType.QualifiedString(),
+		expected,
+		actual,
 	)
 }
 
@@ -517,10 +545,15 @@ func (e *InvalidBinaryOperandError) Error() string {
 }
 
 func (e *InvalidBinaryOperandError) SecondaryError() string {
+	expected, actual := ErrorMessageExpectedActualTypes(
+		e.ExpectedType,
+		e.ActualType,
+	)
+
 	return fmt.Sprintf(
 		"expected `%s`, got `%s`",
-		e.ExpectedType.QualifiedString(),
-		e.ActualType.QualifiedString(),
+		expected,
+		actual,
 	)
 }
 
@@ -3552,11 +3585,16 @@ func (e *TypeParameterTypeMismatchError) Error() string {
 }
 
 func (e *TypeParameterTypeMismatchError) SecondaryError() string {
+	expected, actual := ErrorMessageExpectedActualTypes(
+		e.ExpectedType,
+		e.ActualType,
+	)
+
 	return fmt.Sprintf(
 		"type parameter %s is bound to `%s`, but got `%s` here",
 		e.TypeParameter.Name,
-		e.ExpectedType.QualifiedString(),
-		e.ActualType.QualifiedString(),
+		expected,
+		actual,
 	)
 }
 
