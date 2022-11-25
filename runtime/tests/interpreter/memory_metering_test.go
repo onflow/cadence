@@ -7054,10 +7054,21 @@ func TestInterpretAccountLinkValueMetering(t *testing.T) {
             }
         `
 		meter := newTestMemoryGauge()
-		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(
+			t,
+			script,
+			ParseCheckAndInterpretOptions{
+				CheckerConfig: &sema.Config{
+					AccountLinkingEnabled: true,
+				},
+			},
+			meter,
+		)
+		require.NoError(t, err)
 
 		account := newTestAuthAccountValue(meter, interpreter.AddressValue{})
-		_, err := inter.Invoke("main", account)
+		_, err = inter.Invoke("main", account)
 		require.NoError(t, err)
 
 		// Metered twice only when Atree validation is enabled.

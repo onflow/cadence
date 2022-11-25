@@ -36,7 +36,7 @@ const AuthAccountTypeField = "type"
 const AuthAccountCopyField = "copy"
 const AuthAccountBorrowField = "borrow"
 const AuthAccountLinkField = "link"
-const AuthAccountLinkAccountField = "linkAccount"
+const AuthAccountTypeLinkAccountFunctionName = "linkAccount"
 const AuthAccountUnlinkField = "unlink"
 const AuthAccountGetCapabilityField = "getCapability"
 const AuthAccountGetLinkTargetField = "getLinkTarget"
@@ -174,7 +174,7 @@ var AuthAccountType = func() *CompositeType {
 		),
 		NewUnmeteredPublicFunctionMember(
 			authAccountType,
-			AuthAccountLinkAccountField,
+			AuthAccountTypeLinkAccountFunctionName,
 			AuthAccountTypeLinkAccountFunctionType,
 			authAccountTypeLinkAccountFunctionDocString,
 		),

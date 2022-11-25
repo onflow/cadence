@@ -184,7 +184,7 @@ func NewAuthAccountValue(
 			}
 			return linkFunction
 
-		case sema.AuthAccountLinkAccountField:
+		case sema.AuthAccountTypeLinkAccountFunctionName:
 			if linkAccountFunction == nil {
 				linkAccountFunction = inter.authAccountLinkAccountFunction(address)
 			}

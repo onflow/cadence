@@ -157,6 +157,7 @@ func (e *interpreterEnvironment) newCheckerConfig() *sema.Config {
 		LocationHandler:                  e.newLocationHandler(),
 		ImportHandler:                    e.resolveImport,
 		CheckHandler:                     e.newCheckHandler(),
+		AccountLinkingEnabled:            e.config.AccountLinkingEnabled,
 	}
 }
 

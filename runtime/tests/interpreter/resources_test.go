@@ -2322,25 +2322,26 @@ func TestInterpretOptionalResourceReference(t *testing.T) {
 		address,
 		true,
 		`
-        resource R {
-            pub let id: Int
-    
-            init() {
-                self.id = 1
-            }
-        }
-    
-        fun test() {
-            account.save(<-{0 : <-create R()}, to: /storage/x)
-            let collection = account.borrow<&{Int: R}>(from: /storage/x)!
-    
-            let resourceRef = (&collection[0] as &R?)!
-            let token <- collection.remove(key: 0)
-			
-            let x = resourceRef.id
-            destroy token
-        }                
+          resource R {
+              pub let id: Int
+
+              init() {
+                  self.id = 1
+              }
+          }
+
+          fun test() {
+              account.save(<-{0 : <-create R()}, to: /storage/x)
+              let collection = account.borrow<&{Int: R}>(from: /storage/x)!
+
+              let resourceRef = (&collection[0] as &R?)!
+              let token <- collection.remove(key: 0)
+
+              let x = resourceRef.id
+              destroy token
+          }
         `,
+		sema.Config{},
 	)
 
 	_, err := inter.Invoke("test")
@@ -2358,25 +2359,26 @@ func TestInterpretArrayOptionalResourceReference(t *testing.T) {
 		address,
 		true,
 		`
-        resource R {
-            pub let id: Int
-    
-            init() {
-                self.id = 1
-            }
-        }
-    
-        fun test() {
-            account.save(<-[<-create R()], to: /storage/x)
-            let collection = account.borrow<&[R?]>(from: /storage/x)!
-    
-            let resourceRef = (&collection[0] as &R?)!
-            let token <- collection.remove(at: 0)
-			
-            let x = resourceRef.id
-            destroy token
-        }                
+          resource R {
+              pub let id: Int
+
+              init() {
+                  self.id = 1
+              }
+          }
+
+          fun test() {
+              account.save(<-[<-create R()], to: /storage/x)
+              let collection = account.borrow<&[R?]>(from: /storage/x)!
+
+              let resourceRef = (&collection[0] as &R?)!
+              let token <- collection.remove(at: 0)
+
+              let x = resourceRef.id
+              destroy token
+          }
         `,
+		sema.Config{},
 	)
 
 	_, err := inter.Invoke("test")

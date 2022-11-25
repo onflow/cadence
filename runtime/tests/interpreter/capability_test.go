@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/sema"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -136,6 +137,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
                  return ref.foo
               }
             `,
+			sema.Config{},
 		)
 
 		// save
@@ -348,6 +350,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
                  return ref.foo
               }
             `,
+			sema.Config{},
 		)
 
 		// save
@@ -496,6 +499,9 @@ func TestInterpretCapability_borrow(t *testing.T) {
                  return ref.address
               }
             `,
+			sema.Config{
+				AccountLinkingEnabled: true,
+			},
 		)
 
 		// link
@@ -636,6 +642,7 @@ func TestInterpretCapability_check(t *testing.T) {
                   return account.getCapability<&R2>(/public/r2).check()
               }
             `,
+			sema.Config{},
 		)
 
 		// save
@@ -813,6 +820,7 @@ func TestInterpretCapability_check(t *testing.T) {
                   return account.getCapability<&S2>(/public/s2).check()
               }
             `,
+			sema.Config{},
 		)
 
 		// save
@@ -930,6 +938,9 @@ func TestInterpretCapability_check(t *testing.T) {
                   return checkPath(/public/nonExistent)
               }
             `,
+			sema.Config{
+				AccountLinkingEnabled: true,
+			},
 		)
 
 		// link
@@ -987,6 +998,7 @@ func TestInterpretCapability_address(t *testing.T) {
 				return account.getCapability(/public/nonExistent).address
 			}				
 		`,
+		sema.Config{},
 	)
 
 	t.Run("single", func(t *testing.T) {
@@ -1056,6 +1068,7 @@ func TestInterpretCapabilityFunctionMultipleTypes(t *testing.T) {
                   return cap.check<&S2>()
               }
             `,
+			sema.Config{},
 		)
 
 		_, err := inter.Invoke("test")
@@ -1145,6 +1158,7 @@ func TestInterpretCapabilityFunctionMultipleTypes(t *testing.T) {
                   return cap.borrow<&S2>()!.what()
               }
             `,
+			sema.Config{},
 		)
 
 		_, err := inter.Invoke("test")

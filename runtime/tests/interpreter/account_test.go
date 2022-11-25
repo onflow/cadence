@@ -47,6 +47,7 @@ func testAccount(
 	address interpreter.AddressValue,
 	auth bool,
 	code string,
+	checkerConfig sema.Config,
 ) (
 	*interpreter.Interpreter,
 	func() map[storageKey]interpreter.Value,
@@ -86,13 +87,16 @@ func testAccount(
 	accountValueDeclaration.Name = "account"
 	valueDeclarations = append(valueDeclarations, accountValueDeclaration)
 
-	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	if checkerConfig.BaseValueActivation == nil {
+		checkerConfig.BaseValueActivation = sema.BaseValueActivation
+	}
+	baseValueActivation := sema.NewVariableActivation(checkerConfig.BaseValueActivation)
 	for _, valueDeclaration := range valueDeclarations {
 		baseValueActivation.DeclareValue(valueDeclaration)
 	}
+	checkerConfig.BaseValueActivation = baseValueActivation
 
 	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
-
 	for _, valueDeclaration := range valueDeclarations {
 		interpreter.Declare(baseActivation, valueDeclaration)
 	}
@@ -100,9 +104,7 @@ func testAccount(
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		code,
 		ParseCheckAndInterpretOptions{
-			CheckerConfig: &sema.Config{
-				BaseValueActivation: baseValueActivation,
-			},
+			CheckerConfig: &checkerConfig,
 			Config: &interpreter.Config{
 				BaseActivation:       baseActivation,
 				ContractValueHandler: makeContractValueHandler(nil, nil, nil),
@@ -168,6 +170,7 @@ func TestInterpretAuthAccount_save(t *testing.T) {
                   account.save(<-r, to: /storage/r)
               }
             `,
+			sema.Config{},
 		)
 
 		// Save first value
@@ -213,6 +216,7 @@ func TestInterpretAuthAccount_save(t *testing.T) {
                   account.save(s, to: /storage/s)
               }
             `,
+			sema.Config{},
 		)
 
 		// Save first value
@@ -262,20 +266,21 @@ func TestInterpretAuthAccount_type(t *testing.T) {
               resource R {}
 
               fun saveR() {
-				let r <- create R()
-				account.save(<-r, to: /storage/x)
+                let r <- create R()
+                account.save(<-r, to: /storage/x)
               }
 
-			  fun saveS() {
-				let s = S()
-				destroy account.load<@R>(from: /storage/x)
-			 	account.save(s, to: /storage/x)
-			  }
+              fun saveS() {
+                let s = S()
+                destroy account.load<@R>(from: /storage/x)
+                 account.save(s, to: /storage/x)
+              }
 
               fun typeAt(): AnyStruct {
-				return account.type(at: /storage/x)
+                return account.type(at: /storage/x)
               }
             `,
+			sema.Config{},
 		)
 
 		// type empty path is nil
@@ -365,6 +370,7 @@ func TestInterpretAuthAccount_load(t *testing.T) {
                   return <-account.load<@R2>(from: /storage/r)
               }
             `,
+			sema.Config{},
 		)
 
 		t.Run("save R and load R ", func(t *testing.T) {
@@ -447,6 +453,7 @@ func TestInterpretAuthAccount_load(t *testing.T) {
                   return account.load<S2>(from: /storage/s)
               }
             `,
+			sema.Config{},
 		)
 
 		t.Run("save S and load S", func(t *testing.T) {
@@ -536,6 +543,7 @@ func TestInterpretAuthAccount_copy(t *testing.T) {
 			address,
 			true,
 			code,
+			sema.Config{},
 		)
 
 		// save
@@ -576,6 +584,7 @@ func TestInterpretAuthAccount_copy(t *testing.T) {
 			address,
 			true,
 			code,
+			sema.Config{},
 		)
 
 		// save
@@ -657,6 +666,7 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
                  return ref.foo
               }
             `,
+			sema.Config{},
 		)
 
 		// save
@@ -797,6 +807,7 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
                   return borrowedS as! auth &S2?
               }
             `,
+			sema.Config{},
 		)
 
 		// save
@@ -902,25 +913,26 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					true,
 					fmt.Sprintf(
 						`
-	                      resource R {}
+                          resource R {}
 
-	                      resource R2 {}
+                          resource R2 {}
 
-	                      fun save() {
-	                          let r <- create R()
-	                          account.save(<-r, to: /storage/r)
-	                      }
+                          fun save() {
+                              let r <- create R()
+                              account.save(<-r, to: /storage/r)
+                          }
 
-	                      fun linkR(): Capability? {
-	                          return account.link<&R>(/%[1]s/rCap, target: /storage/r)
-	                      }
+                          fun linkR(): Capability? {
+                              return account.link<&R>(/%[1]s/rCap, target: /storage/r)
+                          }
 
-	                      fun linkR2(): Capability? {
-	                          return account.link<&R2>(/%[1]s/rCap2, target: /storage/r)
-	                      }
-	                    `,
+                          fun linkR2(): Capability? {
+                              return account.link<&R2>(/%[1]s/rCap2, target: /storage/r)
+                          }
+                        `,
 						capabilityDomain.Identifier(),
 					),
+					sema.Config{},
 				)
 
 				// save
@@ -1054,25 +1066,26 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					true,
 					fmt.Sprintf(
 						`
-	                      struct S {}
+                          struct S {}
 
-	                      struct S2 {}
+                          struct S2 {}
 
-	                      fun save() {
-	                          let s = S()
-	                          account.save(s, to: /storage/s)
-	                      }
+                          fun save() {
+                              let s = S()
+                              account.save(s, to: /storage/s)
+                          }
 
-	                      fun linkS(): Capability? {
-	                          return account.link<&S>(/%[1]s/sCap, target: /storage/s)
-	                      }
+                          fun linkS(): Capability? {
+                              return account.link<&S>(/%[1]s/sCap, target: /storage/s)
+                          }
 
-	                      fun linkS2(): Capability? {
-	                          return account.link<&S2>(/%[1]s/sCap2, target: /storage/s)
-	                      }
-	                    `,
+                          fun linkS2(): Capability? {
+                              return account.link<&S2>(/%[1]s/sCap2, target: /storage/s)
+                          }
+                        `,
 						capabilityDomain.Identifier(),
 					),
+					sema.Config{},
 				)
 
 				// save
@@ -1199,32 +1212,34 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 				t,
 				address,
 				true,
-				fmt.Sprintf(`
-                    struct S1 {}
+				fmt.Sprintf(
+					`
+                      struct S1 {}
 
-                    struct S2 {}
+                      struct S2 {}
 
-                    fun save() {
-                        let s1 = S1()
-                        account.save(s1, to: /storage/s1)
+                      fun save() {
+                          let s1 = S1()
+                          account.save(s1, to: /storage/s1)
 
-                        let s2 = S2()
-                        account.save(s2, to: /storage/s2)
-                    }
+                          let s2 = S2()
+                          account.save(s2, to: /storage/s2)
+                      }
 
-                    fun linkToSamePath(): Capability? {
-                        account.link<&S1>(/%[1]s/sCap, target: /storage/s1)
+                      fun linkToSamePath(): Capability? {
+                          account.link<&S1>(/%[1]s/sCap, target: /storage/s1)
 
-                        // link a different storage value to the same path.
-                        return account.link<&S2>(/%[1]s/sCap, target: /storage/s2)
-                    }
+                          // link a different storage value to the same path.
+                          return account.link<&S2>(/%[1]s/sCap, target: /storage/s2)
+                      }
 
-                    fun getCapability(): Capability? {
-                        return account.getCapability<&S1>(/%[1]s/sCap)
-                    }`,
-
+                      fun getCapability(): Capability? {
+                          return account.getCapability<&S1>(/%[1]s/sCap)
+                      }
+                    `,
 					capabilityDomain.Identifier(),
 				),
+				sema.Config{},
 			)
 
 			// Save
@@ -1290,27 +1305,29 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 				t,
 				address,
 				true,
-				fmt.Sprintf(`
-                    struct S {}
+				fmt.Sprintf(
+					`
+                      struct S {}
 
-                    fun save() {
-                        let s = S()
-                        account.save(s, to: /storage/s)
-                    }
+                      fun save() {
+                          let s = S()
+                          account.save(s, to: /storage/s)
+                      }
 
-                    fun linkSameStorage(): Capability? {
-                        account.link<&S>(/%[1]s/s1Cap, target: /storage/s)
+                      fun linkSameStorage(): Capability? {
+                          account.link<&S>(/%[1]s/s1Cap, target: /storage/s)
 
-                        // link an already linked storage value to a different path.
-                        return account.link<&S>(/%[1]s/s2Cap, target: /storage/s)
-                    }
+                          // link an already linked storage value to a different path.
+                          return account.link<&S>(/%[1]s/s2Cap, target: /storage/s)
+                      }
 
-                    fun getFirstCapability(): Capability? {
-                        return account.getCapability<&S>(/%[1]s/s1Cap)
-                    }`,
-
+                      fun getFirstCapability(): Capability? {
+                          return account.getCapability<&S>(/%[1]s/s1Cap)
+                      }
+                    `,
 					capabilityDomain.Identifier(),
 				),
+				sema.Config{},
 			)
 
 			// Save
@@ -1412,26 +1429,27 @@ func TestInterpretAuthAccount_unlink(t *testing.T) {
 					true,
 					fmt.Sprintf(
 						`
-	                      resource R {}
+                          resource R {}
 
-	                      resource R2 {}
+                          resource R2 {}
 
-	                      fun saveAndLinkR() {
-	                          let r <- create R()
-	                          account.save(<-r, to: /storage/r)
-	                          account.link<&R>(/%[1]s/r, target: /storage/r)
-	                      }
+                          fun saveAndLinkR() {
+                              let r <- create R()
+                              account.save(<-r, to: /storage/r)
+                              account.link<&R>(/%[1]s/r, target: /storage/r)
+                          }
 
-	                      fun unlinkR() {
-	                          account.unlink(/%[1]s/r)
-	                      }
+                          fun unlinkR() {
+                              account.unlink(/%[1]s/r)
+                          }
 
                           fun unlinkR2() {
-	                          account.unlink(/%[1]s/r2)
-	                      }
-	                    `,
+                              account.unlink(/%[1]s/r2)
+                          }
+                        `,
 						capabilityDomain.Identifier(),
 					),
+					sema.Config{},
 				)
 
 				// save and link
@@ -1483,26 +1501,27 @@ func TestInterpretAuthAccount_unlink(t *testing.T) {
 					true,
 					fmt.Sprintf(
 						`
-	                      struct S {}
+                          struct S {}
 
-	                      struct S2 {}
+                          struct S2 {}
 
-	                      fun saveAndLinkS() {
-	                          let s = S()
-	                          account.save(s, to: /storage/s)
-	                          account.link<&S>(/%[1]s/s, target: /storage/s)
-	                      }
+                          fun saveAndLinkS() {
+                              let s = S()
+                              account.save(s, to: /storage/s)
+                              account.link<&S>(/%[1]s/s, target: /storage/s)
+                          }
 
-	                      fun unlinkS() {
-	                          account.unlink(/%[1]s/s)
-	                      }
+                          fun unlinkS() {
+                              account.unlink(/%[1]s/s)
+                          }
 
                           fun unlinkS2() {
-	                          account.unlink(/%[1]s/s2)
-	                      }
-	                    `,
+                              account.unlink(/%[1]s/s2)
+                          }
+                        `,
 						capabilityDomain.Identifier(),
 					),
+					sema.Config{},
 				)
 
 				// save and link
@@ -1557,22 +1576,23 @@ func TestInterpretAccount_getLinkTarget(t *testing.T) {
 				auth,
 				fmt.Sprintf(
 					`
-	                  resource R {}
+                      resource R {}
 
-	                  fun link() {
-	                      authAccount.link<&R>(/%[1]s/r, target: /storage/r)
-	                  }
+                      fun link() {
+                          authAccount.link<&R>(/%[1]s/r, target: /storage/r)
+                      }
 
-	                  fun existing(): Path? {
-	                      return account.getLinkTarget(/%[1]s/r)
-	                  }
+                      fun existing(): Path? {
+                          return account.getLinkTarget(/%[1]s/r)
+                      }
 
                       fun nonExisting(): Path? {
-	                      return account.getLinkTarget(/%[1]s/r2)
-	                  }
-	                `,
+                          return account.getLinkTarget(/%[1]s/r2)
+                      }
+                    `,
 					capabilityDomain.Identifier(),
 				),
+				sema.Config{},
 			)
 
 			// link
@@ -1635,22 +1655,23 @@ func TestInterpretAccount_getLinkTarget(t *testing.T) {
 				auth,
 				fmt.Sprintf(
 					`
-	                  struct S {}
+                      struct S {}
 
-	                  fun link() {
-	                      authAccount.link<&S>(/%[1]s/s, target: /storage/s)
-	                  }
+                      fun link() {
+                          authAccount.link<&S>(/%[1]s/s, target: /storage/s)
+                      }
 
-	                  fun existing(): Path? {
-	                      return account.getLinkTarget(/%[1]s/s)
-	                  }
+                      fun existing(): Path? {
+                          return account.getLinkTarget(/%[1]s/s)
+                      }
 
                       fun nonExisting(): Path? {
-	                      return account.getLinkTarget(/%[1]s/s2)
-	                  }
-	                `,
+                          return account.getLinkTarget(/%[1]s/s2)
+                      }
+                    `,
 					capabilityDomain.Identifier(),
 				),
+				sema.Config{},
 			)
 
 			// link
@@ -1770,13 +1791,14 @@ func TestInterpretAccount_getCapability(t *testing.T) {
 						auth,
 						fmt.Sprintf(
 							`
-	                          fun test(): Capability%[1]s {
-	                              return account.getCapability%[1]s(/%[2]s/r)
-	                          }
-	                        `,
+                              fun test(): Capability%[1]s {
+                                  return account.getCapability%[1]s(/%[2]s/r)
+                              }
+                            `,
 							typeArguments,
 							domain.Identifier(),
 						),
+						sema.Config{},
 					)
 
 					value, err := inter.Invoke("test")
@@ -1834,10 +1856,10 @@ func TestInterpretAccount_BalanceFields(t *testing.T) {
 
 				code := fmt.Sprintf(
 					`
-	                      fun test(): UFix64 {
-	                          return account.%s
-	                      }
-	                    `,
+                          fun test(): UFix64 {
+                              return account.%s
+                          }
+                        `,
 					fieldName,
 				)
 				inter, _ := testAccount(
@@ -1845,6 +1867,7 @@ func TestInterpretAccount_BalanceFields(t *testing.T) {
 					address,
 					auth,
 					code,
+					sema.Config{},
 				)
 
 				value, err := inter.Invoke("test")
@@ -1884,10 +1907,10 @@ func TestInterpretAccount_StorageFields(t *testing.T) {
 
 				code := fmt.Sprintf(
 					`
-	                      fun test(): UInt64 {
-	                          return account.%s
-	                      }
-	                    `,
+                          fun test(): UInt64 {
+                              return account.%s
+                          }
+                        `,
 					fieldName,
 				)
 
@@ -1898,6 +1921,7 @@ func TestInterpretAccount_StorageFields(t *testing.T) {
 					address,
 					auth,
 					code,
+					sema.Config{},
 				)
 
 				value, err := inter.Invoke("test")
@@ -1928,37 +1952,47 @@ func TestInterpretAccount_iteration(t *testing.T) {
 			address,
 			true,
 			`
-            fun saveStorage() {
-				account.save(0, to:/storage/foo)
-			}
-			fun saveOtherStorage() {
-				account.save(0, to:/storage/bar)
-			}
-			fun loadStorage() {
-				account.load<Int>(from:/storage/foo)
-		  	}
-			fun linkPublic() {
-				account.link<&Int>(/public/foo, target:/storage/foo)
-			}
-			fun unlinkPublic() {
-				account.unlink(/public/foo)
-			}
-			fun linkPrivate() {
-				account.link<&Int>(/private/foo, target:/storage/foo)
-			}
-			fun unlinkPrivate() {
-				account.unlink(/private/foo)
-			}
-			fun getStoragePaths(): [StoragePath] {
-				return account.storagePaths
-			}
-			fun getPrivatePaths(): [PrivatePath] {
-				return account.privatePaths
-			}
-			fun getPublicPaths(): [PublicPath] {
-				return pubAccount.publicPaths
-			}
+              fun saveStorage() {
+                  account.save(0, to:/storage/foo)
+              }
+
+              fun saveOtherStorage() {
+                  account.save(0, to:/storage/bar)
+              }
+
+              fun loadStorage() {
+                  account.load<Int>(from:/storage/foo)
+                }
+
+              fun linkPublic() {
+                  account.link<&Int>(/public/foo, target:/storage/foo)
+              }
+
+              fun unlinkPublic() {
+                  account.unlink(/public/foo)
+              }
+
+              fun linkPrivate() {
+                  account.link<&Int>(/private/foo, target:/storage/foo)
+              }
+
+              fun unlinkPrivate() {
+                  account.unlink(/private/foo)
+              }
+
+              fun getStoragePaths(): [StoragePath] {
+                  return account.storagePaths
+              }
+
+              fun getPrivatePaths(): [PrivatePath] {
+                  return account.privatePaths
+              }
+
+              fun getPublicPaths(): [PublicPath] {
+                  return pubAccount.publicPaths
+              }
             `,
+			sema.Config{},
 		)
 
 		t.Run("before any save", func(t *testing.T) {
@@ -2165,33 +2199,34 @@ func TestInterpretAccount_iteration(t *testing.T) {
 			address,
 			true,
 			`
-			struct S {
-				let value: Int
-				init(value: Int) {
-					self.value = value
-				}
-			}
+              struct S {
+                  let value: Int
+                  init(value: Int) {
+                      self.value = value
+                  }
+              }
 
-			fun test(): Int {
-				account.save(S(value: 2), to: /storage/foo)
-				account.save("", to: /storage/bar)
-				account.link<&S>(/public/a, target:/storage/foo)
-				account.link<&String>(/public/b, target:/storage/bar)
-				account.link<&S>(/public/c, target:/storage/foo)
-				account.link<&S>(/public/d, target:/storage/foo)
-				account.link<&String>(/public/e, target:/storage/bar)
+              fun test(): Int {
+                  account.save(S(value: 2), to: /storage/foo)
+                  account.save("", to: /storage/bar)
+                  account.link<&S>(/public/a, target:/storage/foo)
+                  account.link<&String>(/public/b, target:/storage/bar)
+                  account.link<&S>(/public/c, target:/storage/foo)
+                  account.link<&S>(/public/d, target:/storage/foo)
+                  account.link<&String>(/public/e, target:/storage/bar)
 
-				var total = 0
-				pubAccount.forEachPublic(fun (path: PublicPath, type: Type): Bool {
-					if type == Type<Capability<&S>>() {
-						total = total + pubAccount.getCapability<&S>(path).borrow()!.value
-					}
-					return true
-				})
+                  var total = 0
+                  pubAccount.forEachPublic(fun (path: PublicPath, type: Type): Bool {
+                      if type == Type<Capability<&S>>() {
+                          total = total + pubAccount.getCapability<&S>(path).borrow()!.value
+                      }
+                      return true
+                  })
 
-				return total
-			}
+                  return total
+              }
             `,
+			sema.Config{},
 		)
 
 		value, err := inter.Invoke("test")
@@ -2212,31 +2247,32 @@ func TestInterpretAccount_iteration(t *testing.T) {
 			address,
 			true,
 			`
-			struct S {
-				let value: Int
-				init(value: Int) {
-					self.value = value
-				}
-			}
+              struct S {
+                  let value: Int
+                  init(value: Int) {
+                      self.value = value
+                  }
+              }
 
-			fun test(): Int {
-				account.save(S(value: 2), to: /storage/foo)
-				account.save("", to: /storage/bar)
-				account.link<&S>(/public/a, target:/storage/foo)
-				account.link<&String>(/public/b, target:/storage/bar)
-				account.link<&S>(/public/c, target:/storage/foo)
-				account.link<&S>(/public/d, target:/storage/foo)
-				account.link<&String>(/public/e, target:/storage/bar)
+              fun test(): Int {
+                  account.save(S(value: 2), to: /storage/foo)
+                  account.save("", to: /storage/bar)
+                  account.link<&S>(/public/a, target:/storage/foo)
+                  account.link<&String>(/public/b, target:/storage/bar)
+                  account.link<&S>(/public/c, target:/storage/foo)
+                  account.link<&S>(/public/d, target:/storage/foo)
+                  account.link<&String>(/public/e, target:/storage/bar)
 
-				var total = 0
-				pubAccount.forEachPublic(fun (path: PublicPath, type: Type): Bool {
-					total = total + 1
-					return true
-				})
+                  var total = 0
+                  pubAccount.forEachPublic(fun (path: PublicPath, type: Type): Bool {
+                      total = total + 1
+                      return true
+                  })
 
-				return total
-			}
+                  return total
+              }
             `,
+			sema.Config{},
 		)
 
 		value, err := inter.Invoke("test")
@@ -2257,33 +2293,34 @@ func TestInterpretAccount_iteration(t *testing.T) {
 			address,
 			true,
 			`
-			struct S {
-				let value: Int
-				init(value: Int) {
-					self.value = value
-				}
-			}
+              struct S {
+                  let value: Int
+                  init(value: Int) {
+                      self.value = value
+                  }
+              }
 
-			fun test(): Int {
-				account.save(S(value: 2), to: /storage/foo)
-				account.save("", to: /storage/bar)
-				account.link<&S>(/public/a, target:/storage/foo)
-				account.link<&String>(/public/b, target:/storage/bar)
-				account.link<&S>(/public/c, target:/storage/foo)
-				account.link<&S>(/public/d, target:/storage/foo)
-				account.link<&String>(/public/e, target:/storage/bar)
+              fun test(): Int {
+                  account.save(S(value: 2), to: /storage/foo)
+                  account.save("", to: /storage/bar)
+                  account.link<&S>(/public/a, target:/storage/foo)
+                  account.link<&String>(/public/b, target:/storage/bar)
+                  account.link<&S>(/public/c, target:/storage/foo)
+                  account.link<&S>(/public/d, target:/storage/foo)
+                  account.link<&String>(/public/e, target:/storage/bar)
 
-				var total = 0
-				account.forEachPublic(fun (path: PublicPath, type: Type): Bool {
-					if type == Type<Capability<&S>>() {
-						total = total + account.getCapability<&S>(path).borrow()!.value
-					}
-					return true
-				})
+                  var total = 0
+                  account.forEachPublic(fun (path: PublicPath, type: Type): Bool {
+                      if type == Type<Capability<&S>>() {
+                          total = total + account.getCapability<&S>(path).borrow()!.value
+                      }
+                      return true
+                  })
 
-				return total
-			}
+                  return total
+              }
             `,
+			sema.Config{},
 		)
 
 		value, err := inter.Invoke("test")
@@ -2304,33 +2341,34 @@ func TestInterpretAccount_iteration(t *testing.T) {
 			address,
 			true,
 			`
-			struct S {
-				let value: Int
-				init(value: Int) {
-					self.value = value
-				}
-			}
+              struct S {
+                  let value: Int
+                  init(value: Int) {
+                      self.value = value
+                  }
+              }
 
-			fun test(): Int {
-				account.save(S(value: 2), to: /storage/foo)
-				account.save("", to: /storage/bar)
-				account.link<&S>(/private/a, target:/storage/foo)
-				account.link<&String>(/private/b, target:/storage/bar)
-				account.link<&S>(/private/c, target:/storage/foo)
-				account.link<&S>(/public/d, target:/storage/foo)
-				account.link<&String>(/private/e, target:/storage/bar)
+              fun test(): Int {
+                  account.save(S(value: 2), to: /storage/foo)
+                  account.save("", to: /storage/bar)
+                  account.link<&S>(/private/a, target:/storage/foo)
+                  account.link<&String>(/private/b, target:/storage/bar)
+                  account.link<&S>(/private/c, target:/storage/foo)
+                  account.link<&S>(/public/d, target:/storage/foo)
+                  account.link<&String>(/private/e, target:/storage/bar)
 
-				var total = 0
-				account.forEachPrivate(fun (path: PrivatePath, type: Type): Bool {
-					if type == Type<Capability<&S>>() {
-						total = total + account.getCapability<&S>(path).borrow()!.value
-					}
-					return true
-				})
+                  var total = 0
+                  account.forEachPrivate(fun (path: PrivatePath, type: Type): Bool {
+                      if type == Type<Capability<&S>>() {
+                          total = total + account.getCapability<&S>(path).borrow()!.value
+                      }
+                      return true
+                  })
 
-				return total
-			}
+                  return total
+              }
             `,
+			sema.Config{},
 		)
 
 		value, err := inter.Invoke("test")
@@ -2351,31 +2389,32 @@ func TestInterpretAccount_iteration(t *testing.T) {
 			address,
 			true,
 			`
-			struct S {
-				let value: Int
-				init(value: Int) {
-					self.value = value
-				}
-			}
+              struct S {
+                  let value: Int
+                  init(value: Int) {
+                      self.value = value
+                  }
+              }
 
-			fun test(): Int {
-				account.save(S(value: 1), to: /storage/foo1)
-				account.save(S(value: 2), to: /storage/foo2)
-				account.save(S(value: 5), to: /storage/foo3)
-				account.save("", to: /storage/bar1)
-				account.save(4, to: /storage/bar2)
+              fun test(): Int {
+                  account.save(S(value: 1), to: /storage/foo1)
+                  account.save(S(value: 2), to: /storage/foo2)
+                  account.save(S(value: 5), to: /storage/foo3)
+                  account.save("", to: /storage/bar1)
+                  account.save(4, to: /storage/bar2)
 
-				var total = 0
-				account.forEachStored(fun (path: StoragePath, type: Type): Bool {
-					if type == Type<S>() {
-						total = total + account.borrow<&S>(from: path)!.value
-					}
-					return true
-				})
+                  var total = 0
+                  account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+                      if type == Type<S>() {
+                          total = total + account.borrow<&S>(from: path)!.value
+                      }
+                      return true
+                  })
 
-				return total
-			}
+                  return total
+              }
             `,
+			sema.Config{},
 		)
 
 		value, err := inter.Invoke("test")
@@ -2396,36 +2435,37 @@ func TestInterpretAccount_iteration(t *testing.T) {
 			address,
 			true,
 			`
-			struct S {
-				let value: Int
-				init(value: Int) {
-					self.value = value
-				}
-			}
+              struct S {
+                  let value: Int
+                  init(value: Int) {
+                      self.value = value
+                  }
+              }
 
-			fun before(): Int {
-				var total = 0
-				account.forEachStored(fun (path: StoragePath, type: Type): Bool {
-					total = total + 1
-					return true
-				})
-				
-				account.save(S(value: 1), to: /storage/foo1)
-				account.save(S(value: 2), to: /storage/foo2)
-				account.save(S(value: 5), to: /storage/foo3)
+              fun before(): Int {
+                  var total = 0
+                  account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+                      total = total + 1
+                      return true
+                  })
 
-				return total
-			}
+                  account.save(S(value: 1), to: /storage/foo1)
+                  account.save(S(value: 2), to: /storage/foo2)
+                  account.save(S(value: 5), to: /storage/foo3)
 
-			fun after(): Int {
-				var total = 0
-				account.forEachStored(fun (path: StoragePath, type: Type): Bool {
-					total = total + 1
-					return true
-				})
-				return total
-			}
+                  return total
+              }
+
+              fun after(): Int {
+                  var total = 0
+                  account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+                      total = total + 1
+                      return true
+                  })
+                  return total
+              }
             `,
+			sema.Config{},
 		)
 
 		value, err := inter.Invoke("before")
@@ -2455,40 +2495,41 @@ func TestInterpretAccount_iteration(t *testing.T) {
 			address,
 			true,
 			`
-			struct S {
-				var value: Int
-				init(value: Int) {
-					self.value = value
-				}
-				fun increment() {
-					self.value = self.value + 1
-				}
-			}
+              struct S {
+                  var value: Int
+                  init(value: Int) {
+                      self.value = value
+                  }
+                  fun increment() {
+                      self.value = self.value + 1
+                  }
+              }
 
-			fun test(): Int {
-				account.save(S(value: 1), to: /storage/foo1)
-				account.save(S(value: 2), to: /storage/foo2)
-				account.save(S(value: 5), to: /storage/foo3)
-				account.save("", to: /storage/bar1)
-				account.save(4, to: /storage/bar2)
+              fun test(): Int {
+                  account.save(S(value: 1), to: /storage/foo1)
+                  account.save(S(value: 2), to: /storage/foo2)
+                  account.save(S(value: 5), to: /storage/foo3)
+                  account.save("", to: /storage/bar1)
+                  account.save(4, to: /storage/bar2)
 
-				var total = 0
-				account.forEachStored(fun (path: StoragePath, type: Type): Bool {
-					if type == Type<S>() {
-						account.borrow<&S>(from: path)!.increment()
-					}
-					return true
-				})
-				account.forEachStored(fun (path: StoragePath, type: Type): Bool {
-					if type == Type<S>() {
-						total = total + account.borrow<&S>(from: path)!.value
-					}
-					return true
-				})
+                  var total = 0
+                  account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+                      if type == Type<S>() {
+                          account.borrow<&S>(from: path)!.increment()
+                      }
+                      return true
+                  })
+                  account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+                      if type == Type<S>() {
+                          total = total + account.borrow<&S>(from: path)!.value
+                      }
+                      return true
+                  })
 
-				return total
-			}
+                  return total
+              }
             `,
+			sema.Config{},
 		)
 
 		value, err := inter.Invoke("test")
@@ -2509,38 +2550,39 @@ func TestInterpretAccount_iteration(t *testing.T) {
 			address,
 			true,
 			`
-			struct S {
-				var value: Int
-				init(value: Int) {
-					self.value = value
-				}
-				fun increment() {
-					self.value = self.value + 1
-				}
-			}
+              struct S {
+                  var value: Int
+                  init(value: Int) {
+                      self.value = value
+                  }
+                  fun increment() {
+                      self.value = self.value + 1
+                  }
+              }
 
-			fun test(): Int {
-				account.save(S(value: 1), to: /storage/foo1)
-				account.save(S(value: 2), to: /storage/foo2)
-				account.save(S(value: 5), to: /storage/foo3)
-				account.save("qux", to: /storage/bar1)
-				account.save(4, to: /storage/bar2)
+              fun test(): Int {
+                  account.save(S(value: 1), to: /storage/foo1)
+                  account.save(S(value: 2), to: /storage/foo2)
+                  account.save(S(value: 5), to: /storage/foo3)
+                  account.save("qux", to: /storage/bar1)
+                  account.save(4, to: /storage/bar2)
 
-				var total = 0
-				account.forEachStored(fun (path: StoragePath, type: Type): Bool {
-					if type == Type<S>() {
-						total = total + account.borrow<&S>(from: path)!.value
-					}
-					if type == Type<String>() {
-						let id = account.load<String>(from: path)!
-						account.save(S(value:3), to: StoragePath(identifier: id)!)
-					}
-					return true
-				})
+                  var total = 0
+                  account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+                      if type == Type<S>() {
+                          total = total + account.borrow<&S>(from: path)!.value
+                      }
+                      if type == Type<String>() {
+                          let id = account.load<String>(from: path)!
+                          account.save(S(value:3), to: StoragePath(identifier: id)!)
+                      }
+                      return true
+                  })
 
-				return total
-			}
+                  return total
+              }
             `,
+			sema.Config{},
 		)
 
 		_, err := inter.Invoke("test")
@@ -2557,27 +2599,28 @@ func TestInterpretAccount_iteration(t *testing.T) {
 			address,
 			true,
 			`
-			fun test(): Int {
-				account.save(1, to: /storage/foo1)
-				account.save(2, to: /storage/foo2)
-				account.save(3, to: /storage/foo3)
-				account.save(4, to: /storage/bar1)
-				account.save(5, to: /storage/bar2)
+              fun test(): Int {
+                  account.save(1, to: /storage/foo1)
+                  account.save(2, to: /storage/foo2)
+                  account.save(3, to: /storage/foo3)
+                  account.save(4, to: /storage/bar1)
+                  account.save(5, to: /storage/bar2)
 
-				var seen = 0
-				var stuff: [&AnyStruct] = []
-				account.forEachStored(fun (path: StoragePath, type: Type): Bool {
-					if seen >= 3 {
-						return false
-					}
-					stuff.append(account.borrow<&AnyStruct>(from: path)!)
-					seen = seen + 1
-					return true
-				})
+                  var seen = 0
+                  var stuff: [&AnyStruct] = []
+                  account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+                      if seen >= 3 {
+                          return false
+                      }
+                      stuff.append(account.borrow<&AnyStruct>(from: path)!)
+                      seen = seen + 1
+                      return true
+                  })
 
-				return stuff.length
-			}
+                  return stuff.length
+              }
             `,
+			sema.Config{},
 		)
 
 		value, err := inter.Invoke("test")
@@ -2607,20 +2650,26 @@ func TestInterpretAccountIterationMutation(t *testing.T) {
 				t,
 				address,
 				true,
-				fmt.Sprintf(`fun test() {
-					account.save(1, to: /storage/foo1)
-					account.save(2, to: /storage/foo2)
-					account.save(3, to: /storage/foo3)
-					account.save("qux", to: /storage/foo4)
+				fmt.Sprintf(
+					`
+                      fun test() {
+                          account.save(1, to: /storage/foo1)
+                          account.save(2, to: /storage/foo2)
+                          account.save(3, to: /storage/foo3)
+                          account.save("qux", to: /storage/foo4)
 
-					account.forEachStored(fun (path: StoragePath, type: Type): Bool {
-						if type == Type<String>() {
-							account.save("bar", to: /storage/foo5)
-							return %t
-						}
-						return true
-					})
-				}`, continueAfterMutation),
+                          account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+                              if type == Type<String>() {
+                                  account.save("bar", to: /storage/foo5)
+                                  return %t
+                              }
+                              return true
+                          })
+                      }
+                    `,
+					continueAfterMutation,
+				),
+				sema.Config{},
 			)
 
 			_, err := inter.Invoke("test")
@@ -2641,20 +2690,26 @@ func TestInterpretAccountIterationMutation(t *testing.T) {
 				t,
 				address,
 				true,
-				fmt.Sprintf(`fun test() {
-					account.save(1, to: /storage/foo1)
-					account.save("", to: /storage/foo2)
-					account.link<&Int>(/public/foo1, target: /storage/foo1)
-					account.link<&String>(/public/foo2, target: /storage/foo2)
+				fmt.Sprintf(
+					`
+                      fun test() {
+                          account.save(1, to: /storage/foo1)
+                          account.save("", to: /storage/foo2)
+                          account.link<&Int>(/public/foo1, target: /storage/foo1)
+                          account.link<&String>(/public/foo2, target: /storage/foo2)
 
-					account.forEachPublic(fun (path: PublicPath, type: Type): Bool {
-						if type == Type<Capability<&String>>() {
-							account.save("bar", to: /storage/foo3)
-							return %t
-						}
-						return true
-					})
-				}`, continueAfterMutation),
+                          account.forEachPublic(fun (path: PublicPath, type: Type): Bool {
+                              if type == Type<Capability<&String>>() {
+                                  account.save("bar", to: /storage/foo3)
+                                  return %t
+                              }
+                              return true
+                          })
+                      }
+                    `,
+					continueAfterMutation,
+				),
+				sema.Config{},
 			)
 
 			_, err := inter.Invoke("test")
@@ -2675,20 +2730,26 @@ func TestInterpretAccountIterationMutation(t *testing.T) {
 				t,
 				address,
 				true,
-				fmt.Sprintf(`fun test() {
-					account.save(1, to: /storage/foo1)
-					account.save("", to: /storage/foo2)
-					account.link<&Int>(/private/foo1, target: /storage/foo1)
-					account.link<&String>(/private/foo2, target: /storage/foo2)
+				fmt.Sprintf(
+					`
+                      fun test() {
+                          account.save(1, to: /storage/foo1)
+                          account.save("", to: /storage/foo2)
+                          account.link<&Int>(/private/foo1, target: /storage/foo1)
+                          account.link<&String>(/private/foo2, target: /storage/foo2)
 
-					account.forEachPrivate(fun (path: PrivatePath, type: Type): Bool {
-						if type == Type<Capability<&String>>() {
-							account.save("bar", to: /storage/foo3)
-							return %t
-						}
-						return true
-					})
-				}`, continueAfterMutation),
+                          account.forEachPrivate(fun (path: PrivatePath, type: Type): Bool {
+                              if type == Type<Capability<&String>>() {
+                                  account.save("bar", to: /storage/foo3)
+                                  return %t
+                              }
+                              return true
+                          })
+                      }
+                    `,
+					continueAfterMutation,
+				),
+				sema.Config{},
 			)
 
 			_, err := inter.Invoke("test")
@@ -2709,24 +2770,30 @@ func TestInterpretAccountIterationMutation(t *testing.T) {
 				t,
 				address,
 				true,
-				fmt.Sprintf(`fun foo() {
-					account.save("bar", to: /storage/foo5)
-				}
-				
-				fun test() {
-					account.save(1, to: /storage/foo1)
-					account.save(2, to: /storage/foo2)
-					account.save(3, to: /storage/foo3)
-					account.save("qux", to: /storage/foo4)
+				fmt.Sprintf(
+					`
+                      fun foo() {
+                          account.save("bar", to: /storage/foo5)
+                      }
 
-					account.forEachStored(fun (path: StoragePath, type: Type): Bool {
-						if type == Type<String>() {
-							foo()
-							return %t
-						}
-						return true
-					})
-				}`, continueAfterMutation),
+                      fun test() {
+                          account.save(1, to: /storage/foo1)
+                          account.save(2, to: /storage/foo2)
+                          account.save(3, to: /storage/foo3)
+                          account.save("qux", to: /storage/foo4)
+
+                          account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+                              if type == Type<String>() {
+                                  foo()
+                                  return %t
+                              }
+                              return true
+                          })
+                      }
+                    `,
+					continueAfterMutation,
+				),
+				sema.Config{},
 			)
 
 			_, err := inter.Invoke("test")
@@ -2747,27 +2814,33 @@ func TestInterpretAccountIterationMutation(t *testing.T) {
 				t,
 				address,
 				true,
-				fmt.Sprintf(`fun foo() {
-					account.forEachStored(fun (path: StoragePath, type: Type): Bool {
-						return true
-					})
-					account.save("bar", to: /storage/foo5)
-				}
-				
-				fun test() {
-					account.save(1, to: /storage/foo1)
-					account.save(2, to: /storage/foo2)
-					account.save(3, to: /storage/foo3)
-					account.save("qux", to: /storage/foo4)
+				fmt.Sprintf(
+					`
+                      fun foo() {
+                          account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+                              return true
+                          })
+                          account.save("bar", to: /storage/foo5)
+                      }
 
-					account.forEachStored(fun (path: StoragePath, type: Type): Bool {
-						if type == Type<String>() {
-							foo()
-							return %t
-						}
-						return true
-					})
-				}`, continueAfterMutation),
+                      fun test() {
+                          account.save(1, to: /storage/foo1)
+                          account.save(2, to: /storage/foo2)
+                          account.save(3, to: /storage/foo3)
+                          account.save("qux", to: /storage/foo4)
+
+                          account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+                              if type == Type<String>() {
+                                  foo()
+                                  return %t
+                              }
+                              return true
+                          })
+                      }
+                    `,
+					continueAfterMutation,
+				),
+				sema.Config{},
 			)
 
 			_, err := inter.Invoke("test")
@@ -2788,20 +2861,26 @@ func TestInterpretAccountIterationMutation(t *testing.T) {
 				t,
 				address,
 				true,
-				fmt.Sprintf(`fun test() {
-					account.save(1, to: /storage/foo1)
-					account.save(2, to: /storage/foo2)
-					account.save(3, to: /storage/foo3)
-					account.save("qux", to: /storage/foo4)
+				fmt.Sprintf(
+					`
+                       fun test() {
+                           account.save(1, to: /storage/foo1)
+                           account.save(2, to: /storage/foo2)
+                           account.save(3, to: /storage/foo3)
+                           account.save("qux", to: /storage/foo4)
 
-					account.forEachStored(fun (path: StoragePath, type: Type): Bool {
-						if type == Type<String>() {
-							account.load<Int>(from: /storage/foo1)
-							return %t
-						}
-						return true
-					})
-				}`, continueAfterMutation),
+                           account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+                               if type == Type<String>() {
+                                   account.load<Int>(from: /storage/foo1)
+                                   return %t
+                               }
+                               return true
+                           })
+                       }
+                    `,
+					continueAfterMutation,
+				),
+				sema.Config{},
 			)
 
 			_, err := inter.Invoke("test")
@@ -2822,20 +2901,26 @@ func TestInterpretAccountIterationMutation(t *testing.T) {
 				t,
 				address,
 				true,
-				fmt.Sprintf(`fun test() {
-					account.save(1, to: /storage/foo1)
-					account.save("", to: /storage/foo2)
-					account.link<&Int>(/public/foo1, target: /storage/foo1)
-					account.link<&String>(/public/foo2, target: /storage/foo2)
+				fmt.Sprintf(
+					`
+                      fun test() {
+                          account.save(1, to: /storage/foo1)
+                          account.save("", to: /storage/foo2)
+                          account.link<&Int>(/public/foo1, target: /storage/foo1)
+                          account.link<&String>(/public/foo2, target: /storage/foo2)
 
-					account.forEachPublic(fun (path: PublicPath, type: Type): Bool {
-						if type == Type<Capability<&String>>() {
-							account.link<&Int>(/public/foo3, target: /storage/foo1)
-							return %t
-						}
-						return true
-					})
-				}`, continueAfterMutation),
+                          account.forEachPublic(fun (path: PublicPath, type: Type): Bool {
+                              if type == Type<Capability<&String>>() {
+                                  account.link<&Int>(/public/foo3, target: /storage/foo1)
+                                  return %t
+                              }
+                              return true
+                          })
+                      }
+                    `,
+					continueAfterMutation,
+				),
+				sema.Config{},
 			)
 
 			_, err := inter.Invoke("test")
@@ -2856,20 +2941,26 @@ func TestInterpretAccountIterationMutation(t *testing.T) {
 				t,
 				address,
 				true,
-				fmt.Sprintf(`fun test() {
-					account.save(1, to: /storage/foo1)
-					account.save("", to: /storage/foo2)
-					account.link<&Int>(/public/foo1, target: /storage/foo1)
-					account.link<&String>(/public/foo2, target: /storage/foo2)
+				fmt.Sprintf(
+					`
+                      fun test() {
+                          account.save(1, to: /storage/foo1)
+                          account.save("", to: /storage/foo2)
+                          account.link<&Int>(/public/foo1, target: /storage/foo1)
+                          account.link<&String>(/public/foo2, target: /storage/foo2)
 
-					account.forEachPublic(fun (path: PublicPath, type: Type): Bool {
-						if type == Type<Capability<&String>>() {
-							account.unlink(/public/foo1)
-							return %t
-						}
-						return true
-					})
-				}`, continueAfterMutation),
+                          account.forEachPublic(fun (path: PublicPath, type: Type): Bool {
+                              if type == Type<Capability<&String>>() {
+                                  account.unlink(/public/foo1)
+                                  return %t
+                              }
+                              return true
+                          })
+                      }
+                    `,
+					continueAfterMutation,
+				),
+				sema.Config{},
 			)
 
 			_, err := inter.Invoke("test")
@@ -2900,10 +2991,10 @@ func TestInterpretAccountIterationMutation(t *testing.T) {
 
 			importedChecker, err := checker.ParseAndCheckWithOptions(t,
 				`
-				  pub fun foo() {
-					account.save("bar", to: /storage/foo5)
-				  }
-				`,
+                  pub fun foo() {
+                      account.save("bar", to: /storage/foo5)
+                  }
+                `,
 				checker.ParseAndCheckOptions{
 					Location: common.AddressLocation{
 						Address: address,
@@ -2918,22 +3009,25 @@ func TestInterpretAccountIterationMutation(t *testing.T) {
 
 			inter, _ := parseCheckAndInterpretWithOptions(t,
 				fmt.Sprintf(`
-				import foo from 0x1
-				
-				fun test() {
-					account.save(1, to: /storage/foo1)
-					account.save(2, to: /storage/foo2)
-					account.save(3, to: /storage/foo3)
-					account.save("qux", to: /storage/foo4)
-	
-					account.forEachStored(fun (path: StoragePath, type: Type): Bool {
-						if type == Type<String>() {
-							foo()
-							return %t
-						}
-						return true
-					})
-				}`, continueAfterMutation),
+                      import foo from 0x1
+
+                      fun test() {
+                          account.save(1, to: /storage/foo1)
+                          account.save(2, to: /storage/foo2)
+                          account.save(3, to: /storage/foo3)
+                          account.save("qux", to: /storage/foo4)
+
+                          account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+                              if type == Type<String>() {
+                                  foo()
+                                  return %t
+                              }
+                              return true
+                          })
+                      }
+                    `,
+					continueAfterMutation,
+				),
 				ParseCheckAndInterpretOptions{
 					CheckerConfig: &sema.Config{
 						BaseValueActivation: baseValueActivation,
@@ -3017,25 +3111,28 @@ func TestInterpretAccountIterationMutation(t *testing.T) {
 			t,
 			address,
 			true,
-			`fun test() {
-				account.save(1, to: /storage/foo1)
-				account.save(2, to: /storage/foo2)
-				account.save(3, to: /storage/foo3)
-				account.save("qux", to: /storage/foo4)
+			`
+              fun test() {
+                  account.save(1, to: /storage/foo1)
+                  account.save(2, to: /storage/foo2)
+                  account.save(3, to: /storage/foo3)
+                  account.save("qux", to: /storage/foo4)
 
-				account.forEachStored(fun (path: StoragePath, type: Type): Bool {
-					return true
-				})
-				account.save("bar", to: /storage/foo5)
+                  account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+                      return true
+                  })
+                  account.save("bar", to: /storage/foo5)
 
-				account.forEachStored(fun (path: StoragePath, type: Type): Bool {
-					account.forEachStored(fun (path: StoragePath, type: Type): Bool {
-						return true
-					})
-					return true
-				})
-				account.save("baz", to: /storage/foo6)
-			}`,
+                  account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+                      account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+                          return true
+                      })
+                      return true
+                  })
+                  account.save("baz", to: /storage/foo6)
+              }
+            `,
+			sema.Config{},
 		)
 
 		_, err := inter.Invoke("test")
@@ -3051,12 +3148,15 @@ func TestInterpretAccountIterationMutation(t *testing.T) {
 			address,
 			true,
 			`
-			fun foo  (path: StoragePath, type: Type): Bool {
-				return true
-			}
-			fun test() {
-				account.forEachStored(foo)
-			}`,
+                fun foo  (path: StoragePath, type: Type): Bool {
+                    return true
+                }
+
+                fun test() {
+                    account.forEachStored(foo)
+                }
+            `,
+			sema.Config{},
 		)
 
 		_, err := inter.Invoke("test")
@@ -3072,15 +3172,18 @@ func TestInterpretAccountIterationMutation(t *testing.T) {
 			address,
 			true,
 			`
-			struct S {
-				fun foo(path: StoragePath, type: Type): Bool {
-					return true
-				}
-			}
-			fun test() {
-				let s = S()
-				account.forEachStored(s.foo)
-			}`,
+              struct S {
+                  fun foo(path: StoragePath, type: Type): Bool {
+                      return true
+                  }
+              }
+
+              fun test() {
+                  let s = S()
+                  account.forEachStored(s.foo)
+              }
+            `,
+			sema.Config{},
 		)
 
 		_, err := inter.Invoke("test")

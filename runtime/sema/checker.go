@@ -2369,3 +2369,14 @@ func (checker *Checker) checkNativeModifier(isNative bool, position ast.HasPosit
 		)
 	}
 }
+
+func (checker *Checker) isAvailableMember(expressionType Type, identifier string) bool {
+	if !checker.Config.AccountLinkingEnabled &&
+		expressionType == AuthAccountType &&
+		identifier == AuthAccountTypeLinkAccountFunctionName {
+
+		return false
+	}
+
+	return true
+}
