@@ -101,7 +101,7 @@ func NewAuthAccountConstructor(creator AccountCreator) StandardLibraryValue {
 			payerValue := payer.GetMember(
 				inter,
 				locationRange,
-				sema.AuthAccountAddressField,
+				sema.AuthAccountTypeAddressFieldName,
 			)
 			if payerValue == nil {
 				panic(errors.NewUnexpectedError("payer address is not set"))

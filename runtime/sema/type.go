@@ -6229,14 +6229,14 @@ func (t *CapabilityType) GetMembers() map[string]MemberResolver {
 	return t.memberResolvers
 }
 
-const CapabilityTypeBorrowField = "borrow"
-const CapabilityTypeCheckField = "check"
-const CapabilityTypeAddressField = "address"
+const CapabilityTypeBorrowFunctionName = "borrow"
+const CapabilityTypeCheckFunctionName = "check"
+const CapabilityTypeAddressFieldName = "address"
 
 func (t *CapabilityType) initializeMemberResolvers() {
 	t.memberResolversOnce.Do(func() {
 		t.memberResolvers = withBuiltinMembers(t, map[string]MemberResolver{
-			CapabilityTypeBorrowField: {
+			CapabilityTypeBorrowFunctionName: {
 				Kind: common.DeclarationKindFunction,
 				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicFunctionMember(
@@ -6248,7 +6248,7 @@ func (t *CapabilityType) initializeMemberResolvers() {
 					)
 				},
 			},
-			CapabilityTypeCheckField: {
+			CapabilityTypeCheckFunctionName: {
 				Kind: common.DeclarationKindFunction,
 				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicFunctionMember(
@@ -6260,7 +6260,7 @@ func (t *CapabilityType) initializeMemberResolvers() {
 					)
 				},
 			},
-			CapabilityTypeAddressField: {
+			CapabilityTypeAddressFieldName: {
 				Kind: common.DeclarationKindField,
 				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicConstantFieldMember(
@@ -6298,11 +6298,11 @@ func init() {
 }
 
 const AccountKeyTypeName = "AccountKey"
-const AccountKeyKeyIndexField = "keyIndex"
-const AccountKeyPublicKeyField = "publicKey"
-const AccountKeyHashAlgoField = "hashAlgorithm"
-const AccountKeyWeightField = "weight"
-const AccountKeyIsRevokedField = "isRevoked"
+const AccountKeyKeyIndexFieldName = "keyIndex"
+const AccountKeyPublicKeyFieldName = "publicKey"
+const AccountKeyHashAlgoFieldName = "hashAlgorithm"
+const AccountKeyWeightFieldName = "weight"
+const AccountKeyIsRevokedFieldName = "isRevoked"
 
 // AccountKeyType represents the key associated with an account.
 var AccountKeyType = func() *CompositeType {
@@ -6313,7 +6313,7 @@ var AccountKeyType = func() *CompositeType {
 		importable: false,
 	}
 
-	const accountKeyIndexFieldDocString = `The index of the account key`
+	const accountKeyKeyIndexFieldDocString = `The index of the account key`
 	const accountKeyPublicKeyFieldDocString = `The public key of the account`
 	const accountKeyHashAlgorithmFieldDocString = `The hash algorithm used by the public key`
 	const accountKeyWeightFieldDocString = `The weight assigned to the public key`
@@ -6322,31 +6322,31 @@ var AccountKeyType = func() *CompositeType {
 	var members = []*Member{
 		NewUnmeteredPublicConstantFieldMember(
 			accountKeyType,
-			AccountKeyKeyIndexField,
+			AccountKeyKeyIndexFieldName,
 			IntType,
-			accountKeyIndexFieldDocString,
+			accountKeyKeyIndexFieldDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			accountKeyType,
-			AccountKeyPublicKeyField,
+			AccountKeyPublicKeyFieldName,
 			PublicKeyType,
 			accountKeyPublicKeyFieldDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			accountKeyType,
-			AccountKeyHashAlgoField,
+			AccountKeyHashAlgoFieldName,
 			HashAlgorithmType,
 			accountKeyHashAlgorithmFieldDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			accountKeyType,
-			AccountKeyWeightField,
+			AccountKeyWeightFieldName,
 			UFix64Type,
 			accountKeyWeightFieldDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			accountKeyType,
-			AccountKeyIsRevokedField,
+			AccountKeyIsRevokedFieldName,
 			BoolType,
 			accountKeyIsRevokedFieldDocString,
 		),
@@ -6358,10 +6358,10 @@ var AccountKeyType = func() *CompositeType {
 }()
 
 const PublicKeyTypeName = "PublicKey"
-const PublicKeyPublicKeyField = "publicKey"
-const PublicKeySignAlgoField = "signatureAlgorithm"
-const PublicKeyVerifyFunction = "verify"
-const PublicKeyVerifyPoPFunction = "verifyPoP"
+const PublicKeyTypePublicKeyFieldName = "publicKey"
+const PublicKeyTypeSignAlgoFieldName = "signatureAlgorithm"
+const PublicKeyTypeVerifyFunctionName = "verify"
+const PublicKeyTypeVerifyPoPFunctionName = "verifyPoP"
 
 const publicKeyKeyFieldDocString = `
 The public key
@@ -6396,25 +6396,25 @@ var PublicKeyType = func() *CompositeType {
 	var members = []*Member{
 		NewUnmeteredPublicConstantFieldMember(
 			publicKeyType,
-			PublicKeyPublicKeyField,
+			PublicKeyTypePublicKeyFieldName,
 			ByteArrayType,
 			publicKeyKeyFieldDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			publicKeyType,
-			PublicKeySignAlgoField,
+			PublicKeyTypeSignAlgoFieldName,
 			SignatureAlgorithmType,
 			publicKeySignAlgoFieldDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			publicKeyType,
-			PublicKeyVerifyFunction,
+			PublicKeyTypeVerifyFunctionName,
 			PublicKeyVerifyFunctionType,
 			publicKeyVerifyFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			publicKeyType,
-			PublicKeyVerifyPoPFunction,
+			PublicKeyTypeVerifyPoPFunctionName,
 			PublicKeyVerifyPoPFunctionType,
 			publicKeyVerifyPoPFunctionDocString,
 		),
