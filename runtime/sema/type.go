@@ -391,7 +391,9 @@ func FromStringFunctionType(ty Type) *FunctionType {
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(
-			&OptionalType{ty},
+			&OptionalType{
+				Type: ty,
+			},
 		),
 	}
 }
@@ -486,7 +488,9 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 
 // OptionalType represents the optional variant of another type
 type OptionalType struct {
-	Type Type
+	Type                Type
+	memberResolvers     map[string]MemberResolver
+	memberResolversOnce sync.Once
 }
 
 func NewOptionalType(memoryGauge common.MemoryGauge, typ Type) *OptionalType {
@@ -612,36 +616,40 @@ Returns nil if this optional is nil
 const OptionalTypeMapFunctionName = "map"
 
 func (t *OptionalType) GetMembers() map[string]MemberResolver {
+	t.initializeMembers()
+	return t.memberResolvers
 
-	members := map[string]MemberResolver{
-		"map": {
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
+}
+func (t *OptionalType) initializeMembers() {
+	t.memberResolversOnce.Do(func() {
+		t.memberResolvers = withBuiltinMembers(t, map[string]MemberResolver{
+			OptionalTypeMapFunctionName: {
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
 
-				// It invalid for an optional of a resource to have a `map` function
+					// It's invalid for an optional of a resource to have a `map` function
 
-				if t.Type.IsResourceType() {
-					report(
-						&InvalidResourceOptionalMemberError{
-							Name:            identifier,
-							DeclarationKind: common.DeclarationKindFunction,
-							Range:           targetRange,
-						},
+					if t.Type.IsResourceType() {
+						report(
+							&InvalidResourceOptionalMemberError{
+								Name:            identifier,
+								DeclarationKind: common.DeclarationKindFunction,
+								Range:           targetRange,
+							},
+						)
+					}
+
+					return NewPublicFunctionMember(
+						memoryGauge,
+						t,
+						identifier,
+						OptionalTypeMapFunctionType(t.Type),
+						optionalTypeMapFunctionDocString,
 					)
-				}
-
-				return NewPublicFunctionMember(
-					memoryGauge,
-					t,
-					identifier,
-					OptionalTypeMapFunctionType(t.Type),
-					optionalTypeMapFunctionDocString,
-				)
+				},
 			},
-		},
-	}
-
-	return withBuiltinMembers(t, members)
+		})
+	})
 }
 
 func OptionalTypeMapFunctionType(typ Type) *FunctionType {
