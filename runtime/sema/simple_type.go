@@ -48,7 +48,6 @@ type SimpleType struct {
 	memberResolversOnce sync.Once
 	NestedTypes         *StringTypeOrderedMap
 	ValueIndexingInfo   ValueIndexingInfo
-	MemberAvailable     func(name string, config *Config) bool
 }
 
 func (*SimpleType) IsType() {}
