@@ -447,7 +447,7 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 
 	// All number types, addresses, and path types have a `toString` function
 
-	if IsSubType(ty, NumberType) || IsSubType(ty, &AddressType{}) || IsSubType(ty, PathType) {
+	if IsSubType(ty, NumberType) || IsSubType(ty, TheAddressType) || IsSubType(ty, PathType) {
 
 		members[ToStringFunctionName] = MemberResolver{
 			Kind: common.DeclarationKindFunction,
@@ -2988,7 +2988,7 @@ func init() {
 		BoolType,
 		CharacterType,
 		StringType,
-		&AddressType{},
+		TheAddressType,
 		AuthAccountType,
 		PublicAccountType,
 		PathType,
@@ -3266,7 +3266,7 @@ var AddressConversionFunctionType = &FunctionType{
 			TypeAnnotation: NewTypeAnnotation(IntegerType),
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(&AddressType{}),
+	ReturnTypeAnnotation: NewTypeAnnotation(TheAddressType),
 	ArgumentExpressionsCheck: func(checker *Checker, argumentExpressions []ast.Expression, _ ast.Range) {
 		if len(argumentExpressions) < 1 {
 			return
@@ -4774,6 +4774,8 @@ const AddressTypeName = "Address"
 // AddressType represents the address type
 type AddressType struct{}
 
+var TheAddressType = &AddressType{}
+
 var _ IntegerRangedType = &AddressType{}
 
 func (*AddressType) IsType() {}
@@ -6220,7 +6222,7 @@ func (t *CapabilityType) initializeMemberResolvers() {
 						memoryGauge,
 						t,
 						identifier,
-						&AddressType{},
+						TheAddressType,
 						capabilityTypeAddressFieldDocString,
 					)
 				},

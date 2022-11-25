@@ -174,7 +174,7 @@ func (checker *Checker) VisitIntegerExpression(expression *ast.IntegerExpression
 	// If the contextually expected type is a subtype of Integer or Address, then take that.
 	if IsSameTypeKind(expectedType, IntegerType) {
 		actualType = expectedType
-	} else if IsSameTypeKind(expectedType, &AddressType{}) {
+	} else if IsSameTypeKind(expectedType, TheAddressType) {
 		isAddress = true
 		CheckAddressLiteral(checker.memoryGauge, expression, checker.report)
 		actualType = expectedType

@@ -3377,7 +3377,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 			[]sema.Type{
 				sema.StringType,
 				sema.IntType,
-				&sema.AddressType{},
+				sema.TheAddressType,
 			},
 			Context{
 				Interface: runtimeInterface,

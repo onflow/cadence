@@ -463,7 +463,7 @@ func TestCheckDynamicCastingAddress(t *testing.T) {
 
 	types := []sema.Type{
 		sema.AnyStructType,
-		&sema.AddressType{},
+		sema.TheAddressType,
 	}
 
 	for _, operation := range dynamicCastingOperations {

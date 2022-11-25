@@ -55,7 +55,7 @@ var PublicAccountType = func() *CompositeType {
 		NewUnmeteredPublicConstantFieldMember(
 			publicAccountType,
 			PublicAccountAddressField,
-			&AddressType{},
+			TheAddressType,
 			accountTypeAddressFieldDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(

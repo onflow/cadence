@@ -434,7 +434,7 @@ func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueT
 
 			return true
 
-		} else if IsSameTypeKind(unwrappedTargetType, &AddressType{}) {
+		} else if IsSameTypeKind(unwrappedTargetType, TheAddressType) {
 			CheckAddressLiteral(checker.memoryGauge, typedExpression, checker.report)
 
 			return true

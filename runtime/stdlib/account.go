@@ -153,7 +153,7 @@ var getAuthAccountFunctionType = &sema.FunctionType{
 	Parameters: []sema.Parameter{{
 		Label:          sema.ArgumentLabelNotRequired,
 		Identifier:     "address",
-		TypeAnnotation: sema.NewTypeAnnotation(&sema.AddressType{}),
+		TypeAnnotation: sema.NewTypeAnnotation(sema.TheAddressType),
 	}},
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.AuthAccountType),
 }
@@ -1993,7 +1993,7 @@ var getAccountFunctionType = &sema.FunctionType{
 			Label:      sema.ArgumentLabelNotRequired,
 			Identifier: "address",
 			TypeAnnotation: sema.NewTypeAnnotation(
-				&sema.AddressType{},
+				sema.TheAddressType,
 			),
 		},
 	},
