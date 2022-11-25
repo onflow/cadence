@@ -1095,6 +1095,7 @@ func parseMembersAndNestedDeclarations(p *parser, endTokenType lexer.TokenType) 
 //	                          | compositeDeclaration
 //	                          | eventDeclaration
 //	                          | enumCase
+//	                          | pragmaDeclaration
 func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaration, error) {
 
 	const functionBlockIsOptional = true
@@ -1227,6 +1228,25 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 			// Skip the identifier
 			p.next()
 			continue
+
+		case lexer.TokenPragma:
+			if previousIdentifierToken != nil {
+				return nil, NewSyntaxError(
+					previousIdentifierToken.StartPos,
+					"unexpected token: %s",
+					previousIdentifierToken.Type,
+				)
+			}
+			if access != ast.AccessNotSpecified {
+				return nil, NewSyntaxError(*accessPos, "invalid access modifier for pragma")
+			}
+			if staticModifierEnabled && staticPos != nil {
+				return nil, NewSyntaxError(*staticPos, "invalid static modifier for pragma")
+			}
+			if nativeModifierEnabled && nativePos != nil {
+				return nil, NewSyntaxError(*nativePos, "invalid native modifier for pragma")
+			}
+			return parsePragmaDeclaration(p)
 
 		case lexer.TokenColon:
 			if previousIdentifierToken == nil {

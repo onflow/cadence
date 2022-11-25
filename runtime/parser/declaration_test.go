@@ -6187,3 +6187,221 @@ func TestParseTransactionWithModifier(t *testing.T) {
 		)
 	})
 }
+
+func TestParseNestedPragma(t *testing.T) {
+
+	t.Parallel()
+
+	parse := func(input string, config Config) (any, []error) {
+		return Parse(
+			nil,
+			[]byte(input),
+			func(p *parser) (any, error) {
+				return parseMemberOrNestedDeclaration(
+					p,
+					"",
+				)
+			},
+			config,
+		)
+	}
+
+	t.Run("native, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse(
+			"native #foo",
+			Config{
+				NativeModifierEnabled: true,
+			},
+		)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid native modifier for pragma",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("native, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse("native #pragma", Config{})
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: identifier",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("static", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse(
+			"static #pragma",
+			Config{
+				StaticModifierEnabled: true,
+			},
+		)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid static modifier for pragma",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("static, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse(
+			"static #pragma",
+			Config{},
+		)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: identifier",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("static native, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse(
+			"static native #pragma",
+			Config{
+				StaticModifierEnabled: true,
+				NativeModifierEnabled: true,
+			},
+		)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid static modifier for pragma",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("static native, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse("static native #pragma", Config{})
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: identifier",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("native static, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse(
+			"native static #pragma",
+			Config{
+				StaticModifierEnabled: true,
+				NativeModifierEnabled: true,
+			},
+		)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid static modifier after native modifier",
+					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("pub", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse("pub #pragma", Config{})
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid access modifier for pragma",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("pub static native, enabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse(
+			"pub static native #pragma",
+			Config{
+				StaticModifierEnabled: true,
+				NativeModifierEnabled: true,
+			},
+		)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid access modifier for pragma",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("pub static native, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse("pub static native #pragma", Config{})
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: identifier",
+					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+				},
+			},
+			errs,
+		)
+	})
+
+}
