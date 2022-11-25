@@ -489,6 +489,8 @@ type OptionalType struct {
 	Type Type
 }
 
+var _ Type = &OptionalType{}
+
 func NewOptionalType(memoryGauge common.MemoryGauge, typ Type) *OptionalType {
 	common.UseMemory(memoryGauge, common.OptionalSemaTypeMemoryUsage)
 	return &OptionalType{
@@ -687,6 +689,8 @@ func OptionalTypeMapFunctionType(typ Type) *FunctionType {
 type GenericType struct {
 	TypeParameter *TypeParameter
 }
+
+var _ Type = &GenericType{}
 
 func (*GenericType) IsType() {}
 
@@ -911,7 +915,9 @@ type NumericType struct {
 	isSuperType                bool
 }
 
+var _ Type = &NumericType{}
 var _ IntegerRangedType = &NumericType{}
+var _ SaturatingArithmeticType = &NumericType{}
 
 func NewNumericType(typeName string) *NumericType {
 	return &NumericType{name: typeName}
@@ -1083,7 +1089,10 @@ type FixedPointNumericType struct {
 	isSuperType                bool
 }
 
+var _ Type = &FixedPointNumericType{}
+var _ IntegerRangedType = &FixedPointNumericType{}
 var _ FractionalRangedType = &FixedPointNumericType{}
+var _ SaturatingArithmeticType = &FixedPointNumericType{}
 
 func NewFixedPointNumericType(typeName string) *FixedPointNumericType {
 	return &FixedPointNumericType{
@@ -2063,6 +2072,10 @@ type VariableSizedType struct {
 	memberResolversOnce sync.Once
 }
 
+var _ Type = &VariableSizedType{}
+var _ ArrayType = &VariableSizedType{}
+var _ ValueIndexableType = &VariableSizedType{}
+
 func NewVariableSizedType(memoryGauge common.MemoryGauge, typ Type) *VariableSizedType {
 	common.UseMemory(memoryGauge, common.VariableSizedSemaTypeMemoryUsage)
 	return &VariableSizedType{
@@ -2199,6 +2212,10 @@ type ConstantSizedType struct {
 	memberResolvers     map[string]MemberResolver
 	memberResolversOnce sync.Once
 }
+
+var _ Type = &ConstantSizedType{}
+var _ ArrayType = &ConstantSizedType{}
+var _ ValueIndexableType = &ConstantSizedType{}
 
 func NewConstantSizedType(memoryGauge common.MemoryGauge, typ Type, size int64) *ConstantSizedType {
 	common.UseMemory(memoryGauge, common.ConstantSizedSemaTypeMemoryUsage)
@@ -2520,6 +2537,8 @@ type FunctionType struct {
 	ArgumentExpressionsCheck ArgumentExpressionsCheck
 	Members                  *StringMemberOrderedMap
 }
+
+var _ Type = &FunctionType{}
 
 func RequiredArgumentCount(count int) *int {
 	return &count
@@ -3454,6 +3473,12 @@ type CompositeType struct {
 	cachedIdentifiersLock sync.RWMutex
 }
 
+var _ Type = &CompositeType{}
+var _ ContainerType = &CompositeType{}
+var _ ContainedType = &CompositeType{}
+var _ LocatedType = &CompositeType{}
+var _ CompositeKindedType = &CompositeType{}
+
 func (t *CompositeType) Tag() TypeTag {
 	return CompositeTypeTag
 }
@@ -3573,11 +3598,6 @@ func (t *CompositeType) Equal(other Type) bool {
 
 	return otherStructure.Kind == t.Kind &&
 		otherStructure.ID() == t.ID()
-}
-
-func (t *CompositeType) GetMembers() map[string]MemberResolver {
-	t.initializeMemberResolvers()
-	return t.memberResolvers
 }
 
 func (t *CompositeType) IsResourceType() bool {
@@ -3737,6 +3757,11 @@ func (t *CompositeType) IsContainerType() bool {
 
 func (t *CompositeType) GetNestedTypes() *StringTypeOrderedMap {
 	return t.NestedTypes
+}
+
+func (t *CompositeType) GetMembers() map[string]MemberResolver {
+	t.initializeMemberResolvers()
+	return t.memberResolvers
 }
 
 func (t *CompositeType) initializeMemberResolvers() {
@@ -3977,6 +4002,12 @@ type InterfaceType struct {
 	cachedIdentifiersLock sync.RWMutex
 }
 
+var _ Type = &InterfaceType{}
+var _ ContainerType = &InterfaceType{}
+var _ ContainedType = &InterfaceType{}
+var _ LocatedType = &InterfaceType{}
+var _ CompositeKindedType = &InterfaceType{}
+
 func (*InterfaceType) IsType() {}
 
 func (t *InterfaceType) Tag() TypeTag {
@@ -4207,6 +4238,9 @@ type DictionaryType struct {
 	memberResolvers     map[string]MemberResolver
 	memberResolversOnce sync.Once
 }
+
+var _ Type = &DictionaryType{}
+var _ ValueIndexableType = &DictionaryType{}
 
 func NewDictionaryType(memoryGauge common.MemoryGauge, keyType, valueType Type) *DictionaryType {
 	common.UseMemory(memoryGauge, common.DictionarySemaTypeMemoryUsage)
@@ -4623,6 +4657,11 @@ type ReferenceType struct {
 	Type       Type
 }
 
+var _ Type = &ReferenceType{}
+
+// Not all references are indexable, but some, depending on the references type
+var _ ValueIndexableType = &ReferenceType{}
+
 func NewReferenceType(memoryGauge common.MemoryGauge, typ Type, authorized bool) *ReferenceType {
 	common.UseMemory(memoryGauge, common.ReferenceSemaTypeMemoryUsage)
 	return &ReferenceType{
@@ -4774,6 +4813,7 @@ const AddressTypeName = "Address"
 // AddressType represents the address type
 type AddressType struct{}
 
+var _ Type = &AddressType{}
 var _ IntegerRangedType = &AddressType{}
 
 func (*AddressType) IsType() {}
@@ -5597,6 +5637,8 @@ type TransactionType struct {
 	Parameters        []Parameter
 }
 
+var _ Type = &TransactionType{}
+
 func (t *TransactionType) EntryPointFunctionType() *FunctionType {
 	return &FunctionType{
 		Parameters:           append(t.Parameters, t.PrepareParameters...),
@@ -5713,6 +5755,8 @@ type RestrictedType struct {
 	restrictionSet     *InterfaceSet
 	restrictionSetOnce sync.Once
 }
+
+var _ Type = &RestrictedType{}
 
 func NewRestrictedType(memoryGauge common.MemoryGauge, typ Type, restrictions []*InterfaceType) *RestrictedType {
 	common.UseMemory(memoryGauge, common.RestrictedSemaTypeMemoryUsage)
@@ -5952,6 +5996,9 @@ type CapabilityType struct {
 	memberResolvers     map[string]MemberResolver
 	memberResolversOnce sync.Once
 }
+
+var _ Type = &CapabilityType{}
+var _ ParameterizedType = &CapabilityType{}
 
 func NewCapabilityType(memoryGauge common.MemoryGauge, borrowType Type) *CapabilityType {
 	common.UseMemory(memoryGauge, common.CapabilitySemaTypeMemoryUsage)
