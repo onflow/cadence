@@ -303,12 +303,7 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 			storable, err = d.decodePathLink()
 
 		case CBORTagAccountLinkValue:
-			common.UseMemory(d.memoryGauge, common.AccountLinkValueMemoryUsage)
-			err := d.decoder.Skip()
-			if err != nil {
-				return nil, err
-			}
-			storable = AccountLinkValue{}
+			storable, err = d.decodeAccountLink()
 
 		case CBORTagPublishedValue:
 			storable, err = d.decodePublishedValue()
@@ -995,6 +990,16 @@ func (d StorableDecoder) decodePathLink() (PathLinkValue, error) {
 	}
 
 	return NewPathLinkValue(d.memoryGauge, pathValue, staticType), nil
+}
+
+func (d StorableDecoder) decodeAccountLink() (AccountLinkValue, error) {
+	common.UseMemory(d.memoryGauge, common.AccountLinkValueMemoryUsage)
+	err := d.decoder.Skip()
+	if err != nil {
+		return AccountLinkValue{}, err
+	}
+
+	return AccountLinkValue{}, nil
 }
 
 func (d StorableDecoder) decodePublishedValue() (*PublishedValue, error) {
