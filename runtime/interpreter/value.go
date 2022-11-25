@@ -16313,7 +16313,7 @@ var nilValueMapFunction = NewUnmeteredHostFunctionValue(
 
 func (v NilValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
 	switch name {
-	case "map":
+	case sema.OptionalTypeMapFunctionName:
 		return nilValueMapFunction
 	}
 
@@ -16498,7 +16498,7 @@ func (v *SomeValue) GetMember(interpreter *Interpreter, locationRange LocationRa
 		v.checkInvalidatedResourceUse(locationRange)
 	}
 	switch name {
-	case "map":
+	case sema.OptionalTypeMapFunctionName:
 		return NewHostFunctionValue(
 			interpreter,
 			func(invocation Invocation) Value {
