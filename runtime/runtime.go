@@ -657,31 +657,41 @@ func (r *interpreterRuntime) ReadLinked(
 		return nil, err
 	}
 
-	if target.Address != (common.Address{}) {
+	if target == nil {
 		return nil, nil
 	}
 
-	targetPath := target.Path
-
-	if targetPath == interpreter.EmptyPathValue {
+	switch target := target.(type) {
+	case interpreter.AccountCapabilityTarget:
 		return nil, nil
-	}
 
-	value := inter.ReadStored(
-		address,
-		targetPath.Domain.Identifier(),
-		targetPath.Identifier,
-	)
+	case interpreter.PathCapabilityTarget:
 
-	var exportedValue cadence.Value
-	if value != nil {
-		exportedValue, err = ExportValue(value, inter, interpreter.EmptyLocationRange)
-		if err != nil {
-			return nil, newError(err, location, codesAndPrograms)
+		targetPath := interpreter.PathValue(target)
+
+		if targetPath == interpreter.EmptyPathValue {
+			return nil, nil
 		}
-	}
 
-	return exportedValue, nil
+		value := inter.ReadStored(
+			address,
+			targetPath.Domain.Identifier(),
+			targetPath.Identifier,
+		)
+
+		var exportedValue cadence.Value
+		if value != nil {
+			exportedValue, err = ExportValue(value, inter, interpreter.EmptyLocationRange)
+			if err != nil {
+				return nil, newError(err, location, codesAndPrograms)
+			}
+		}
+
+		return exportedValue, nil
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
 }
 
 func (r *interpreterRuntime) SetDebugger(debugger *interpreter.Debugger) {

@@ -3728,7 +3728,12 @@ func (interpreter *Interpreter) storageCapabilityBorrowFunction(
 				panic(err)
 			}
 
-			if target.Address == address {
+			if target == nil {
+				return Nil
+			}
+
+			switch target := target.(type) {
+			case AccountCapabilityTarget:
 				return NewSomeValueNonCopying(
 					interpreter,
 					NewAccountReferenceValue(
@@ -3738,35 +3743,35 @@ func (interpreter *Interpreter) storageCapabilityBorrowFunction(
 						borrowType.Type,
 					),
 				)
+
+			case PathCapabilityTarget:
+				targetPath := PathValue(target)
+
+				reference := NewStorageReferenceValue(
+					interpreter,
+					authorized,
+					address,
+					targetPath,
+					borrowType.Type,
+				)
+
+				// Attempt to dereference,
+				// which reads the stored value
+				// and performs a dynamic type check
+
+				value, err := reference.dereference(interpreter, invocation.LocationRange)
+				if err != nil {
+					panic(err)
+				}
+				if value == nil {
+					return Nil
+				}
+
+				return NewSomeValueNonCopying(interpreter, reference)
+
+			default:
+				panic(errors.NewUnreachableError())
 			}
-
-			targetPath := target.Path
-
-			if targetPath == EmptyPathValue {
-				return Nil
-			}
-
-			reference := NewStorageReferenceValue(
-				interpreter,
-				authorized,
-				address,
-				targetPath,
-				borrowType.Type,
-			)
-
-			// Attempt to dereference,
-			// which reads the stored value
-			// and performs a dynamic type check
-
-			value, err := reference.dereference(interpreter, invocation.LocationRange)
-			if err != nil {
-				panic(err)
-			}
-			if value == nil {
-				return Nil
-			}
-
-			return NewSomeValueNonCopying(interpreter, reference)
 		},
 		sema.CapabilityTypeBorrowFunctionType(borrowType),
 	)
@@ -3814,39 +3819,39 @@ func (interpreter *Interpreter) storageCapabilityCheckFunction(
 				panic(err)
 			}
 
-			if target.Address == address {
-				return TrueValue
-			}
-
-			targetPath := target.Path
-
-			if targetPath == EmptyPathValue {
+			if target == nil {
 				return FalseValue
 			}
 
-			reference := NewStorageReferenceValue(
-				interpreter,
-				authorized,
-				address,
-				targetPath,
-				borrowType.Type,
-			)
+			switch target := target.(type) {
+			case AccountCapabilityTarget:
+				return TrueValue
 
-			// Attempt to dereference,
-			// which reads the stored value
-			// and performs a dynamic type check
+			case PathCapabilityTarget:
+				targetPath := PathValue(target)
 
-			return AsBoolValue(
-				reference.ReferencedValue(interpreter) != nil,
-			)
+				reference := NewStorageReferenceValue(
+					interpreter,
+					authorized,
+					address,
+					targetPath,
+					borrowType.Type,
+				)
+
+				// Attempt to dereference,
+				// which reads the stored value
+				// and performs a dynamic type check
+
+				return AsBoolValue(
+					reference.ReferencedValue(interpreter) != nil,
+				)
+
+			default:
+				panic(errors.NewUnreachableError())
+			}
 		},
 		sema.CapabilityTypeCheckFunctionType(borrowType),
 	)
-}
-
-type CapabilityTarget struct {
-	Path    PathValue
-	Address common.Address
 }
 
 func (interpreter *Interpreter) GetStorageCapabilityFinalTarget(
@@ -3868,7 +3873,7 @@ func (interpreter *Interpreter) GetStorageCapabilityFinalTarget(
 		// Detect cyclic links
 
 		if _, ok := seenPaths[path]; ok {
-			return CapabilityTarget{}, false, CyclicLinkError{
+			return nil, false, CyclicLinkError{
 				Address:       address,
 				Paths:         paths,
 				LocationRange: locationRange,
@@ -3884,7 +3889,7 @@ func (interpreter *Interpreter) GetStorageCapabilityFinalTarget(
 		)
 
 		if value == nil {
-			return CapabilityTarget{}, false, nil
+			return nil, false, nil
 		}
 
 		switch value := value.(type) {
@@ -3892,7 +3897,7 @@ func (interpreter *Interpreter) GetStorageCapabilityFinalTarget(
 			allowedType := interpreter.MustConvertStaticToSemaType(value.Type)
 
 			if !sema.IsSubType(allowedType, wantedBorrowType) {
-				return CapabilityTarget{}, false, nil
+				return nil, false, nil
 			}
 
 			targetPath := value.TargetPath
@@ -3904,17 +3909,15 @@ func (interpreter *Interpreter) GetStorageCapabilityFinalTarget(
 				authAccountReferenceStaticType,
 				wantedBorrowType,
 			) {
-				return CapabilityTarget{}, false, nil
+				return nil, false, nil
 			}
 
-			return CapabilityTarget{
-				Address: address,
-			}, false, nil
+			return AccountCapabilityTarget(address),
+				false,
+				nil
 
 		default:
-			return CapabilityTarget{
-					Path: path,
-				},
+			return PathCapabilityTarget(path),
 				wantedReferenceType.Authorized,
 				nil
 		}
