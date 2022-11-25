@@ -4782,7 +4782,10 @@ func (t *ReferenceType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 const AddressTypeName = "Address"
 
 // AddressType represents the address type
-type AddressType struct{}
+type AddressType struct {
+	memberResolvers     map[string]MemberResolver
+	memberResolversOnce sync.Once
+}
 
 var TheAddressType = &AddressType{}
 
@@ -4879,18 +4882,26 @@ Returns an array containing the byte representation of the address
 `
 
 func (t *AddressType) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, map[string]MemberResolver{
-		AddressTypeToBytesFunctionName: {
-			Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicFunctionMember(
-					memoryGauge,
-					t,
-					identifier,
-					AddressTypeToBytesFunctionType,
-					addressTypeToBytesFunctionDocString,
-				)
+	t.initializeMemberResolvers()
+	return t.memberResolvers
+}
+
+func (t *AddressType) initializeMemberResolvers() {
+	t.memberResolversOnce.Do(func() {
+		t.memberResolvers = withBuiltinMembers(t, map[string]MemberResolver{
+			AddressTypeToBytesFunctionName: {
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicFunctionMember(
+						memoryGauge,
+						t,
+						identifier,
+						AddressTypeToBytesFunctionType,
+						addressTypeToBytesFunctionDocString,
+					)
+				},
 			},
-		},
+		})
 	})
 }
 
