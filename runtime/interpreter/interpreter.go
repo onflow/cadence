@@ -3574,6 +3574,26 @@ var authAccountReferenceStaticType = ReferenceStaticType{
 	ReferencedType: PrimitiveStaticTypeAuthAccount,
 }
 
+// Linking
+//
+// When linking to a path with the `AuthAccount.link function`,
+// an interpreter.PathLink (formerly Link) is stored in storage.
+//
+// When linking to an account with the new AuthAccount.linkAccount function,
+// an interpreter.AccountLink is stored in the account.
+//
+// In both cases, when acquiring a capability, e.g. using getCapability,
+// a StorageCapabilityValue is returned.
+// This is because in both cases, we are looking up a path in an account.
+// Depending on what is stored in the path, PathLink or AccountLink,
+// we return a respective reference value, a StorageReferenceValue for PathLink
+// (after following the links to the final target),
+// or an AccountReferenceValue for an AccountLink.
+//
+// Again, in both cases for StorageReferenceValue and AccountReferenceValue,
+// for each use, e.g. member access,
+// we dereference/check that the link still exists after the capability was borrowed.
+
 func (interpreter *Interpreter) authAccountLinkAccountFunction(addressValue AddressValue) *HostFunctionValue {
 
 	// Converted addresses can be cached and don't have to be recomputed on each function invocation
