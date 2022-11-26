@@ -149,7 +149,6 @@ func init() {
 	defineReferenceType()
 	defineRestrictedOrDictionaryType()
 	defineInstantiationType()
-	defineOldSyntaxFunctionType()
 	defineIdentifierTypes()
 }
 
@@ -968,51 +967,6 @@ func defineIdentifierTypes() {
 			}
 
 			return parseNominalTypeRemainder(p, token)
-		},
-	)
-}
-
-// function types used to be written with a differing syntax, e.g. for a function
-//
-//	fun foo(x: Int, y: String): Bool {...}
-//
-// its type would be
-//
-//	foo: ((Int, String): Bool)
-//
-// this was changed in FLIP #43 to use the `fun` keyword in parsing and printing fn types:
-//
-//	foo: fun(Int, String): Bool
-//
-// but we still accept the old syntax to avoid breaking existing contracts
-func defineOldSyntaxFunctionType() {
-	setTypeNullDenotation(
-		lexer.TokenParenOpen,
-		func(p *parser, token lexer.Token) (ast.Type, error) {
-
-			purity := ast.FunctionPurityUnspecified
-			if p.isToken(p.current, lexer.TokenIdentifier, KeywordView) {
-				purity = ast.FunctionPurityView
-				// skip the `view` keyword
-				p.nextSemanticToken()
-			}
-
-			// require an explicit return type annotation, since we rely on the ':' token
-			functionType, err := parseFunctionType(p, token.StartPos, purity, true)
-
-			if err != nil {
-				return nil, err
-			}
-
-			p.skipSpaceAndComments()
-			// find the matching end parenthesis and skip
-			_, err = p.mustOne(lexer.TokenParenClose)
-			if err != nil {
-				return nil, err
-			}
-
-			return functionType, nil
-
 		},
 	)
 }
