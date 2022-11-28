@@ -1216,8 +1216,10 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 	)
 	interpreter.trackReferencedResourceKindedValue(base.StorageID(), base)
 
+	oldBaseValue := interpreter.SharedState.deferredBaseValue
 	interpreter.SharedState.deferredBaseValue = baseValue
 	attachment, ok := interpreter.VisitInvocationExpression(attachExpression.Attachment).(*CompositeValue)
+	interpreter.SharedState.deferredBaseValue = oldBaseValue
 
 	// Because `self` in attachments is a reference, we need to track the attachment if it's a resource
 	interpreter.trackReferencedResourceKindedValue(attachment.StorageID(), attachment)

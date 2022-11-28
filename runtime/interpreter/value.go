@@ -15128,9 +15128,9 @@ func (v *CompositeValue) forEachAttachment(interpreter *Interpreter, locationRan
 		panic(errors.NewExternalError(err))
 	}
 
-	old_shared_state := interpreter.SharedState.inAttachmentIteration[v]
+	oldSharedState := interpreter.SharedState.inAttachmentIteration[v]
 	interpreter.SharedState.inAttachmentIteration[v] = true
-	defer func() { interpreter.SharedState.inAttachmentIteration[v] = old_shared_state }()
+	defer func() { interpreter.SharedState.inAttachmentIteration[v] = oldSharedState }()
 
 	for {
 		key, value, err := iterator.Next()
