@@ -18042,7 +18042,7 @@ func (v *CapabilityValue) MeteredString(memoryGauge common.MemoryGauge, seenRefe
 
 func (v *CapabilityValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
 	switch name {
-	case sema.CapabilityTypeBorrowField:
+	case sema.CapabilityTypeBorrowFunctionName:
 		var borrowType *sema.ReferenceType
 		if v.BorrowType != nil {
 			// this function will panic already if this conversion fails
@@ -18050,7 +18050,7 @@ func (v *CapabilityValue) GetMember(interpreter *Interpreter, _ LocationRange, n
 		}
 		return interpreter.capabilityBorrowFunction(v.Address, v.Path, borrowType)
 
-	case sema.CapabilityTypeCheckField:
+	case sema.CapabilityTypeCheckFunctionName:
 		var borrowType *sema.ReferenceType
 		if v.BorrowType != nil {
 			// this function will panic already if this conversion fails
@@ -18058,7 +18058,7 @@ func (v *CapabilityValue) GetMember(interpreter *Interpreter, _ LocationRange, n
 		}
 		return interpreter.capabilityCheckFunction(v.Address, v.Path, borrowType)
 
-	case sema.CapabilityTypeAddressField:
+	case sema.CapabilityTypeAddressFieldName:
 		return v.Address
 	}
 
