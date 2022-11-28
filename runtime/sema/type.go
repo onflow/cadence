@@ -3551,11 +3551,7 @@ func (t *CompositeType) getBaseCompositeKind() common.CompositeKind {
 	case *InterfaceType:
 		return base.CompositeKind
 	case *SimpleType:
-		if base == AnyResourceType {
-			return common.CompositeKindResource
-		} else if base == AnyStructType {
-			return common.CompositeKindStructure
-		}
+		return base.CompositeKind()
 	}
 	return common.CompositeKindUnknown
 }
@@ -4787,7 +4783,7 @@ func (*ReferenceType) IsEquatable() bool {
 	return true
 }
 
-func (t *ReferenceType) TypeAnnotationState() TypeAnnotationState {
+func (*ReferenceType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
