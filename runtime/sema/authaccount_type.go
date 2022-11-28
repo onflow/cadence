@@ -23,34 +23,35 @@ import (
 )
 
 const AuthAccountTypeName = "AuthAccount"
-const AuthAccountAddressField = "address"
-const AuthAccountBalanceField = "balance"
-const AuthAccountAvailableBalanceField = "availableBalance"
-const AuthAccountStorageUsedField = "storageUsed"
-const AuthAccountStorageCapacityField = "storageCapacity"
-const AuthAccountAddPublicKeyField = "addPublicKey"
-const AuthAccountRemovePublicKeyField = "removePublicKey"
-const AuthAccountSaveField = "save"
-const AuthAccountLoadField = "load"
-const AuthAccountTypeField = "type"
-const AuthAccountCopyField = "copy"
-const AuthAccountBorrowField = "borrow"
-const AuthAccountLinkField = "link"
-const AuthAccountUnlinkField = "unlink"
-const AuthAccountGetCapabilityField = "getCapability"
-const AuthAccountGetLinkTargetField = "getLinkTarget"
-const AuthAccountForEachPublicField = "forEachPublic"
-const AuthAccountForEachPrivateField = "forEachPrivate"
-const AuthAccountForEachStoredField = "forEachStored"
-const AuthAccountContractsField = "contracts"
-const AuthAccountKeysField = "keys"
-const AuthAccountInboxField = "inbox"
-const AuthAccountPublicPathsField = "publicPaths"
-const AuthAccountPrivatePathsField = "privatePaths"
-const AuthAccountStoragePathsField = "storagePaths"
-const AuthAccountInboxPublishField = "publish"
-const AuthAccountInboxUnpublishField = "unpublish"
-const AuthAccountInboxClaimField = "claim"
+const AuthAccountTypeAddressFieldName = "address"
+const AuthAccountTypeBalanceFieldName = "balance"
+const AuthAccountTypeAvailableBalanceFieldName = "availableBalance"
+const AuthAccountTypeStorageUsedFieldName = "storageUsed"
+const AuthAccountTypeStorageCapacityFieldName = "storageCapacity"
+const AuthAccountTypeAddPublicKeyFunctionName = "addPublicKey"
+const AuthAccountTypeRemovePublicKeyFunctionName = "removePublicKey"
+const AuthAccountTypeSaveFunctionName = "save"
+const AuthAccountTypeLoadFunctionName = "load"
+const AuthAccountTypeTypeFunctionName = "type"
+const AuthAccountTypeCopyFunctionName = "copy"
+const AuthAccountTypeBorrowFunctionName = "borrow"
+const AuthAccountTypeLinkFunctionName = "link"
+const AuthAccountTypeLinkAccountFunctionName = "linkAccount"
+const AuthAccountTypeUnlinkFunctionName = "unlink"
+const AuthAccountTypeGetCapabilityFunctionName = "getCapability"
+const AuthAccountTypeGetLinkTargetFunctionName = "getLinkTarget"
+const AuthAccountTypeForEachPublicFunctionName = "forEachPublic"
+const AuthAccountTypeForEachPrivateFunctionName = "forEachPrivate"
+const AuthAccountTypeForEachStoredFunctionName = "forEachStored"
+const AuthAccountTypeContractsFieldName = "contracts"
+const AuthAccountTypeKeysFieldName = "keys"
+const AuthAccountTypeInboxFieldName = "inbox"
+const AuthAccountTypePublicPathsFieldName = "publicPaths"
+const AuthAccountTypePrivatePathsFieldName = "privatePaths"
+const AuthAccountTypeStoragePathsFieldName = "storagePaths"
+const AuthAccountTypeInboxPublishFunctionName = "publish"
+const AuthAccountTypeInboxUnpublishFunctionName = "unpublish"
+const AuthAccountTypeInboxClaimFunctionName = "claim"
 
 // AuthAccountType represents the authorized access to an account.
 // Access to an AuthAccount means having full access to its storage, public keys, and code.
@@ -74,151 +75,151 @@ var AuthAccountType = func() *CompositeType {
 	var members = []*Member{
 		NewUnmeteredPublicConstantFieldMember(
 			authAccountType,
-			AuthAccountAddressField,
+			AuthAccountTypeAddressFieldName,
 			&AddressType{},
 			accountTypeAddressFieldDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			authAccountType,
-			AuthAccountBalanceField,
+			AuthAccountTypeBalanceFieldName,
 			UFix64Type,
 			accountTypeAccountBalanceFieldDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			authAccountType,
-			AuthAccountAvailableBalanceField,
+			AuthAccountTypeAvailableBalanceFieldName,
 			UFix64Type,
 			accountTypeAccountAvailableBalanceFieldDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			authAccountType,
-			AuthAccountStorageUsedField,
+			AuthAccountTypeStorageUsedFieldName,
 			UInt64Type,
 			accountTypeStorageUsedFieldDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			authAccountType,
-			AuthAccountStorageCapacityField,
+			AuthAccountTypeStorageCapacityFieldName,
 			UInt64Type,
 			accountTypeStorageCapacityFieldDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			authAccountType,
-			AuthAccountAddPublicKeyField,
+			AuthAccountTypeAddPublicKeyFunctionName,
 			AuthAccountTypeAddPublicKeyFunctionType,
 			authAccountTypeAddPublicKeyFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			authAccountType,
-			AuthAccountRemovePublicKeyField,
+			AuthAccountTypeRemovePublicKeyFunctionName,
 			AuthAccountTypeRemovePublicKeyFunctionType,
 			authAccountTypeRemovePublicKeyFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			authAccountType,
-			AuthAccountSaveField,
+			AuthAccountTypeSaveFunctionName,
 			AuthAccountTypeSaveFunctionType,
 			authAccountTypeSaveFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			authAccountType,
-			AuthAccountTypeField,
+			AuthAccountTypeTypeFunctionName,
 			AuthAccountTypeTypeFunctionType,
 			authAccountTypeTypeFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			authAccountType,
-			AuthAccountLoadField,
+			AuthAccountTypeLoadFunctionName,
 			AuthAccountTypeLoadFunctionType,
 			authAccountTypeLoadFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			authAccountType,
-			AuthAccountCopyField,
+			AuthAccountTypeCopyFunctionName,
 			AuthAccountTypeCopyFunctionType,
 			authAccountTypeCopyFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			authAccountType,
-			AuthAccountBorrowField,
+			AuthAccountTypeBorrowFunctionName,
 			AuthAccountTypeBorrowFunctionType,
 			authAccountTypeBorrowFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			authAccountType,
-			AuthAccountLinkField,
+			AuthAccountTypeLinkFunctionName,
 			AuthAccountTypeLinkFunctionType,
 			authAccountTypeLinkFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			authAccountType,
-			AuthAccountUnlinkField,
+			AuthAccountTypeUnlinkFunctionName,
 			AuthAccountTypeUnlinkFunctionType,
 			authAccountTypeUnlinkFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			authAccountType,
-			AuthAccountGetCapabilityField,
+			AuthAccountTypeGetCapabilityFunctionName,
 			AuthAccountTypeGetCapabilityFunctionType,
 			authAccountTypeGetCapabilityFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			authAccountType,
-			AuthAccountGetLinkTargetField,
+			AuthAccountTypeGetLinkTargetFunctionName,
 			AccountTypeGetLinkTargetFunctionType,
 			accountTypeGetLinkTargetFunctionDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			authAccountType,
-			AuthAccountContractsField,
+			AuthAccountTypeContractsFieldName,
 			AuthAccountContractsType,
 			accountTypeContractsFieldDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			authAccountType,
-			AuthAccountKeysField,
+			AuthAccountTypeKeysFieldName,
 			AuthAccountKeysType,
 			accountTypeKeysFieldDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			authAccountType,
-			AuthAccountInboxField,
+			AuthAccountTypeInboxFieldName,
 			AuthAccountInboxType,
 			accountInboxDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			authAccountType,
-			AuthAccountPublicPathsField,
+			AuthAccountTypePublicPathsFieldName,
 			AuthAccountPublicPathsType,
 			authAccountTypePublicPathsFieldDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			authAccountType,
-			AuthAccountPrivatePathsField,
+			AuthAccountTypePrivatePathsFieldName,
 			AuthAccountPrivatePathsType,
 			authAccountTypePrivatePathsFieldDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			authAccountType,
-			AuthAccountStoragePathsField,
+			AuthAccountTypeStoragePathsFieldName,
 			AuthAccountStoragePathsType,
 			authAccountTypeStoragePathsFieldDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			authAccountType,
-			AuthAccountForEachPublicField,
+			AuthAccountTypeForEachPublicFunctionName,
 			AuthAccountForEachPublicFunctionType,
 			authAccountForEachPublicDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			authAccountType,
-			AuthAccountForEachPrivateField,
+			AuthAccountTypeForEachPrivateFunctionName,
 			AuthAccountForEachPrivateFunctionType,
 			authAccountForEachPrivateDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			authAccountType,
-			AuthAccountForEachStoredField,
+			AuthAccountTypeForEachStoredFunctionName,
 			AuthAccountForEachStoredFunctionType,
 			authAccountForEachStoredDocString,
 		),
@@ -647,19 +648,19 @@ var AuthAccountKeysType = func() *CompositeType {
 	var members = []*Member{
 		NewUnmeteredPublicFunctionMember(
 			accountKeys,
-			AccountKeysAddFunctionName,
+			AccountKeysTypeAddFunctionName,
 			AuthAccountKeysTypeAddFunctionType,
 			authAccountKeysTypeAddFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			accountKeys,
-			AccountKeysGetFunctionName,
+			AccountKeysTypeGetFunctionName,
 			AccountKeysTypeGetFunctionType,
 			accountKeysTypeGetFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			accountKeys,
-			AccountKeysRevokeFunctionName,
+			AccountKeysTypeRevokeFunctionName,
 			AuthAccountKeysTypeRevokeFunctionType,
 			authAccountKeysTypeRevokeFunctionDocString,
 		),
@@ -671,7 +672,7 @@ var AuthAccountKeysType = func() *CompositeType {
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			accountKeys,
-			AccountKeysCountFieldName,
+			AccountKeysTypeCountFieldName,
 			AccountKeysTypeCountFieldType,
 			accountKeysTypeCountFieldDocString,
 		),
@@ -685,15 +686,15 @@ var AuthAccountKeysType = func() *CompositeType {
 var AuthAccountKeysTypeAddFunctionType = &FunctionType{
 	Parameters: []Parameter{
 		{
-			Identifier:     AccountKeyPublicKeyField,
+			Identifier:     AccountKeyPublicKeyFieldName,
 			TypeAnnotation: NewTypeAnnotation(PublicKeyType),
 		},
 		{
-			Identifier:     AccountKeyHashAlgoField,
+			Identifier:     AccountKeyHashAlgoFieldName,
 			TypeAnnotation: NewTypeAnnotation(HashAlgorithmType),
 		},
 		{
-			Identifier:     AccountKeyWeightField,
+			Identifier:     AccountKeyWeightFieldName,
 			TypeAnnotation: NewTypeAnnotation(UFix64Type),
 		},
 	},
@@ -704,7 +705,7 @@ var AuthAccountKeysTypeAddFunctionType = &FunctionType{
 var AccountKeysTypeGetFunctionType = &FunctionType{
 	Parameters: []Parameter{
 		{
-			Identifier:     AccountKeyKeyIndexField,
+			Identifier:     AccountKeyKeyIndexFieldName,
 			TypeAnnotation: NewTypeAnnotation(IntType),
 		},
 	},
@@ -741,7 +742,7 @@ var AccountKeysTypeCountFieldType = UInt64Type
 var AuthAccountKeysTypeRevokeFunctionType = &FunctionType{
 	Parameters: []Parameter{
 		{
-			Identifier:     AccountKeyKeyIndexField,
+			Identifier:     AccountKeyKeyIndexFieldName,
 			TypeAnnotation: NewTypeAnnotation(IntType),
 		},
 	},
@@ -755,11 +756,11 @@ func init() {
 }
 
 const AccountKeysTypeName = "Keys"
-const AccountKeysAddFunctionName = "add"
-const AccountKeysGetFunctionName = "get"
+const AccountKeysTypeAddFunctionName = "add"
+const AccountKeysTypeGetFunctionName = "get"
 const AccountKeysTypeForEachFunctionName = "forEach"
-const AccountKeysRevokeFunctionName = "revoke"
-const AccountKeysCountFieldName = "count"
+const AccountKeysTypeRevokeFunctionName = "revoke"
+const AccountKeysTypeCountFieldName = "count"
 
 const accountTypeGetLinkTargetFunctionDocString = `
 Returns the target path of the capability at the given public or private path, or nil if there exists no capability at the given path.
@@ -927,19 +928,19 @@ var AuthAccountInboxType = func() *CompositeType {
 	var members = []*Member{
 		NewUnmeteredPublicFunctionMember(
 			accountInbox,
-			AuthAccountInboxClaimField,
+			AuthAccountTypeInboxClaimFunctionName,
 			AuthAccountTypeInboxClaimFunctionType,
 			authAccountTypeInboxClaimFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			accountInbox,
-			AuthAccountInboxPublishField,
+			AuthAccountTypeInboxPublishFunctionName,
 			AuthAccountTypeInboxPublishFunctionType,
 			authAccountTypeInboxPublishFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			accountInbox,
-			AuthAccountInboxUnpublishField,
+			AuthAccountTypeInboxUnpublishFunctionName,
 			AuthAccountTypeInboxUnpublishFunctionType,
 			authAccountTypeInboxUnpublishFunctionDocString,
 		),
