@@ -3760,8 +3760,8 @@ func (*InvalidBaseTypeError) IsUserError() {}
 func (e *InvalidBaseTypeError) Error() string {
 	return fmt.Sprintf(
 		"cannot use `%s` as the base type for attachment `%s`",
-		e.BaseType.String(),
-		e.Attachment.Identifier,
+		e.BaseType.QualifiedString(),
+		e.Attachment.QualifiedString(),
 	)
 }
 

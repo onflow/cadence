@@ -26,7 +26,7 @@ import (
 )
 
 // while strictly speaking attachment declarations are not strictly the same thing as composite declarations,
-// they are subject to many of the same checks. In order to avoid duplicating these checks, we create a mapping
+// they are subject to many of the same checks. In order to avoid duplicating the implementation of these checks, we create a mapping
 // between an attachment declaration and its composite "equivalent" that we can use for these composite checks
 func (checker *Checker) attachmentAsComposite(declaration *ast.AttachmentDeclaration) *ast.CompositeDeclaration {
 	compositeDelcaration, ok := checker.Elaboration.AttachmentCompositeDeclarations[declaration]
@@ -66,6 +66,9 @@ func (checker *Checker) checkAttachmentBaseType(attachmentType *CompositeType) {
 			return
 		}
 	case *CompositeType:
+		if ty.Location == nil {
+			break
+		}
 		if ty.Kind.SupportsAttachments() {
 			return
 		}
@@ -478,8 +481,9 @@ func (checker *Checker) declareNestedDeclarations(
 	// Declare nested interfaces
 
 	for _, nestedDeclaration := range nestedInterfaceDeclarations {
-		if _, exists := nestedDeclarations[nestedDeclaration.Identifier.Identifier]; !exists {
-			nestedDeclarations[nestedDeclaration.Identifier.Identifier] = nestedDeclaration
+		identifier := nestedDeclaration.Identifier.Identifier
+		if _, exists := nestedDeclarations[identifier]; !exists {
+			nestedDeclarations[identifier] = nestedDeclaration
 		}
 
 		nestedInterfaceType := checker.declareInterfaceType(nestedDeclaration)
@@ -489,8 +493,9 @@ func (checker *Checker) declareNestedDeclarations(
 	// Declare nested composites
 
 	for _, nestedDeclaration := range nestedCompositeDeclarations {
-		if _, exists := nestedDeclarations[nestedDeclaration.Identifier.Identifier]; !exists {
-			nestedDeclarations[nestedDeclaration.Identifier.Identifier] = nestedDeclaration
+		identifier := nestedDeclaration.Identifier.Identifier
+		if _, exists := nestedDeclarations[identifier]; !exists {
+			nestedDeclarations[identifier] = nestedDeclaration
 		}
 
 		nestedCompositeType := checker.declareCompositeType(nestedDeclaration)
@@ -500,8 +505,9 @@ func (checker *Checker) declareNestedDeclarations(
 	// Declare nested attachments
 
 	for _, nestedDeclaration := range nestedAttachmentDeclaration {
-		if _, exists := nestedDeclarations[nestedDeclaration.Identifier.Identifier]; !exists {
-			nestedDeclarations[nestedDeclaration.Identifier.Identifier] = nestedDeclaration
+		identifier := nestedDeclaration.Identifier.Identifier
+		if _, exists := nestedDeclarations[identifier]; !exists {
+			nestedDeclarations[identifier] = nestedDeclaration
 		}
 
 		nestedCompositeType := checker.declareAttachmentType(nestedDeclaration)
@@ -1176,8 +1182,8 @@ func (checker *Checker) checkCompositeConformance(
 	// Ensure the composite kinds match, e.g. a structure shouldn't be able
 	// to conform to a resource interface
 
-	if interfaceType.CompositeKind != compositeType.Kind &&
-		interfaceType.CompositeKind != compositeType.getBaseCompositeKind() {
+	if !(interfaceType.CompositeKind == compositeType.Kind ||
+		interfaceType.CompositeKind == compositeType.getBaseCompositeKind()) {
 		checker.report(
 			&CompositeKindMismatchError{
 				ExpectedKind: compositeType.Kind,
@@ -2109,14 +2115,16 @@ func (checker *Checker) checkCompositeFunctions(
 	}
 }
 
+// declares a value one scope lower than the current.
+// This is useful particularly in the cases of creating `self`
+// and `base` parameters to composite/attachment functions.
+
 func (checker *Checker) declareLowerScopedValue(
 	ty Type,
 	docString string,
 	identifier string,
 	kind common.DeclarationKind,
 ) {
-	// NOTE: declare value one depth lower ("inside" function),
-	// so it can't be re-declared by the function's parameters
 
 	depth := checker.valueActivations.Depth() + 1
 
@@ -2159,8 +2167,10 @@ func (checker *Checker) declareBaseValue(baseType Type, superDocString string) {
 		// to be referenced by `base`
 		baseType = NewRestrictedType(checker.memoryGauge, restrictedType, []*InterfaceType{typedBaseType})
 	}
-	superType := NewReferenceType(checker.memoryGauge, baseType, false)
-	checker.declareLowerScopedValue(superType, superDocString, BaseIdentifier, common.DeclarationKindBase)
+	// References to `base` should be non-auth, as the actual base type in practice may be any number of subtypes of the annotated base type,
+	// not all of which should be available to the writer of the attachment.
+	base := NewReferenceType(checker.memoryGauge, baseType, false)
+	checker.declareLowerScopedValue(base, superDocString, BaseIdentifier, common.DeclarationKindBase)
 }
 
 // checkNestedIdentifiers checks that nested identifiers, i.e. fields, functions,
