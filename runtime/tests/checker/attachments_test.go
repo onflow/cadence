@@ -304,6 +304,19 @@ func TestCheckBaseType(t *testing.T) {
 	})
 }
 
+func TestCheckBuiltin(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t,
+		`attachment Test for AuthAccount {}`,
+	)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.InvalidBaseTypeError{}, errs[0])
+}
+
 func TestCheckNestedBaseType(t *testing.T) {
 
 	t.Parallel()
