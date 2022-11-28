@@ -24,14 +24,17 @@ import (
 
 type callFrame struct {
 	parent   *callFrame
-	locals   []Value
+	locals   *Register
 	function *bbq.Function
 	ip       uint16
+
+	returnValueIndex uint16
+	returnToIndex    uint16
 }
 
-func (f *callFrame) getUint16() uint16 {
-	first := f.function.Code[f.ip]
-	last := f.function.Code[f.ip+1]
-	f.ip += 2
-	return uint16(first)<<8 | uint16(last)
-}
+//func (f *callFrame) getUint16() uint16 {
+//	first := f.function.Code[f.ip]
+//	last := f.function.Code[f.ip+1]
+//	f.ip += 2
+//	return uint16(first)<<8 | uint16(last)
+//}

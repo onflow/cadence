@@ -19,6 +19,8 @@
 package compiler
 
 import (
+	"fmt"
+	"github.com/onflow/cadence/runtime/bbq/registers"
 	"math"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -44,7 +46,7 @@ type Compiler struct {
 
 var _ ast.DeclarationVisitor[struct{}] = &Compiler{}
 var _ ast.StatementVisitor[struct{}] = &Compiler{}
-var _ ast.ExpressionVisitor[struct{}] = &Compiler{}
+var _ ast.ExpressionVisitor[uint16] = &Compiler{}
 
 func NewCompiler(
 	program *ast.Program,
@@ -61,20 +63,21 @@ func (c *Compiler) findGlobal(name string) *global {
 	return c.globals[name]
 }
 
-func (c *Compiler) addGlobal(name string) *global {
+func (c *Compiler) addGlobal(name string, registryType registers.RegistryType) *global {
 	count := len(c.globals)
 	if count >= math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid global declaration"))
 	}
 	global := &global{
-		index: uint16(count),
+		index:   uint16(count),
+		regType: registryType,
 	}
 	c.globals[name] = global
 	return global
 }
 
 func (c *Compiler) addFunction(name string, parameterCount uint16) *function {
-	c.addGlobal(name)
+	c.addGlobal(name, registers.Func)
 	function := newFunction(name, parameterCount)
 	c.functions = append(c.functions, function)
 	c.currentFunction = function
@@ -95,36 +98,53 @@ func (c *Compiler) addConstant(kind constantkind.Constant, data []byte) *constan
 	return constant
 }
 
-func (c *Compiler) emit(opcode opcode.Opcode, args ...byte) int {
-	return c.currentFunction.emit(opcode, args...)
+func (c *Compiler) emit(opcode opcode.Opcode) int {
+	return c.currentFunction.emit(opcode)
 }
 
-func (c *Compiler) emitUndefinedJump(opcode opcode.Opcode) int {
-	return c.emit(opcode, 0xff, 0xff)
+func (c *Compiler) emitAt(index int, opcode opcode.Opcode) {
+	c.currentFunction.emitAt(index, opcode)
 }
 
-func (c *Compiler) emitJump(opcode opcode.Opcode, target int) int {
-	if target >= math.MaxUint16 {
-		panic(errors.NewDefaultUserError("invalid jump"))
-	}
-	first, second := encodeUint16(uint16(target))
-	return c.emit(opcode, first, second)
+func (c *Compiler) emitEmpty() int {
+	return c.currentFunction.emit(nil)
 }
 
-func (c *Compiler) patchJump(opcodeOffset int) {
+func (c *Compiler) emitJump(target int) int {
+	return c.emit(opcode.Jump{
+		Target: uint16(target),
+	})
+}
+
+func (c *Compiler) lastInstructionIndex() int {
 	code := c.currentFunction.code
-	count := len(code)
-	if count == 0 {
-		panic(errors.NewUnreachableError())
-	}
-	if count >= math.MaxUint16 {
-		panic(errors.NewDefaultUserError("invalid jump"))
-	}
-	target := uint16(count)
-	first, second := encodeUint16(target)
-	code[opcodeOffset+1] = first
-	code[opcodeOffset+2] = second
+	return len(code)
 }
+
+//
+//func (c *Compiler) patchJump(opcodeOffset int) {
+//	code := c.currentFunction.code
+//	count := len(code)
+//	if count == 0 {
+//		panic(errors.NewUnreachableError())
+//	}
+//	if count >= math.MaxUint16 {
+//		panic(errors.NewDefaultUserError("invalid jump"))
+//	}
+//
+//	target := uint16(count)
+//	//first, second := encodeUint16(target)
+//
+//	switch jump := code[opcodeOffset].(type) {
+//	case opcode.Jump:
+//		jump.Target = target
+//	case opcode.JumpIfFalse:
+//		jump.Target = target
+//	default:
+//		panic(errors.NewUnreachableError())
+//
+//	}
+//}
 
 // encodeUint16 encodes the given uint16 in big-endian representation
 func encodeUint16(jump uint16) (byte, byte) {
@@ -141,12 +161,14 @@ func (c *Compiler) pushLoop(start int) {
 }
 
 func (c *Compiler) popLoop() {
+	loopEnd := c.lastInstructionIndex()
+
 	lastIndex := len(c.loops) - 1
 	l := c.loops[lastIndex]
 	c.loops[lastIndex] = nil
 	c.loops = c.loops[:lastIndex]
 
-	c.patchLoop(l)
+	c.patchLoop(l, loopEnd)
 
 	var previousLoop *loop
 	if lastIndex > 0 {
@@ -219,66 +241,114 @@ func (c *Compiler) compileStatement(statement ast.Statement) {
 	ast.AcceptStatement[struct{}](statement, c)
 }
 
-func (c *Compiler) compileExpression(expression ast.Expression) {
-	ast.AcceptExpression[struct{}](expression, c)
+func (c *Compiler) compileExpression(expression ast.Expression) uint16 {
+	return ast.AcceptExpression[uint16](expression, c)
 }
 
 func (c *Compiler) VisitReturnStatement(statement *ast.ReturnStatement) (_ struct{}) {
 	expression := statement.Expression
 	if expression != nil {
 		// TODO: copy
-		c.compileExpression(expression)
-		c.emit(opcode.ReturnValue)
+		index := c.compileExpression(expression)
+		c.emit(opcode.ReturnValue{
+			Index: index,
+		})
 	} else {
-		c.emit(opcode.Return)
+		c.emit(opcode.Return{})
 	}
 	return
 }
 
 func (c *Compiler) VisitBreakStatement(_ *ast.BreakStatement) (_ struct{}) {
-	offset := len(c.currentFunction.code)
+	offset := c.lastInstructionIndex()
 	c.currentLoop.breaks = append(c.currentLoop.breaks, offset)
-	c.emitUndefinedJump(opcode.Jump)
+	c.emitEmpty()
 	return
 }
 
 func (c *Compiler) VisitContinueStatement(_ *ast.ContinueStatement) (_ struct{}) {
-	c.emitJump(opcode.Jump, c.currentLoop.start)
+	c.emit(opcode.Jump{
+		// TODO (Supun): handle conversion properly
+		Target: uint16(c.currentLoop.start),
+	})
 	return
 }
 
 func (c *Compiler) VisitIfStatement(statement *ast.IfStatement) (_ struct{}) {
 	// TODO: scope
+
+	var condition uint16
 	switch test := statement.Test.(type) {
 	case ast.Expression:
-		c.compileExpression(test)
+		condition = c.compileExpression(test)
 	default:
 		// TODO:
 		panic(errors.NewUnreachableError())
 	}
-	elseJump := c.emitUndefinedJump(opcode.JumpIfFalse)
+
+	elseJump := c.emitEmpty()
+
 	c.compileBlock(statement.Then)
+
 	elseBlock := statement.Else
 	if elseBlock != nil {
-		thenJump := c.emit(opcode.Jump)
-		c.patchJump(elseJump)
+		thenJump := c.emitEmpty()
+
+		endOfThen := c.lastInstructionIndex()
+		c.emitAt(
+			elseJump,
+			opcode.JumpIfFalse{
+				Condition: condition,
+				Target:    uint16(endOfThen),
+			},
+		)
+
 		c.compileBlock(elseBlock)
-		c.patchJump(thenJump)
+
+		endOfElse := c.lastInstructionIndex()
+
+		c.emitAt(
+			thenJump,
+			opcode.Jump{
+				Target: uint16(endOfElse),
+			},
+		)
 	} else {
-		c.patchJump(elseJump)
+		endOfThen := c.lastInstructionIndex()
+		c.emitAt(
+			elseJump,
+			opcode.JumpIfFalse{
+				Condition: condition,
+				Target:    uint16(endOfThen),
+			},
+		)
 	}
+
 	return
 }
 
 func (c *Compiler) VisitWhileStatement(statement *ast.WhileStatement) (_ struct{}) {
-	testOffset := len(c.currentFunction.code)
-	c.pushLoop(testOffset)
-	c.compileExpression(statement.Test)
-	endJump := c.emitUndefinedJump(opcode.JumpIfFalse)
+	startOfLoop := c.lastInstructionIndex()
+	c.pushLoop(startOfLoop)
+
+	condition := c.compileExpression(statement.Test)
+
+	endJump := c.emitEmpty()
+
 	c.compileBlock(statement.Block)
-	c.emitJump(opcode.Jump, testOffset)
-	c.patchJump(endJump)
+	c.emitJump(startOfLoop)
+
+	endOfLoop := c.lastInstructionIndex()
+
+	c.emitAt(
+		endJump,
+		opcode.JumpIfFalse{
+			Condition: condition,
+			Target:    uint16(endOfLoop),
+		})
+
 	c.popLoop()
+
 	return
 }
 
@@ -299,24 +369,33 @@ func (c *Compiler) VisitSwitchStatement(_ *ast.SwitchStatement) (_ struct{}) {
 
 func (c *Compiler) VisitVariableDeclaration(declaration *ast.VariableDeclaration) (_ struct{}) {
 	// TODO: second value
-	c.compileExpression(declaration.Value)
-	local := c.currentFunction.declareLocal(declaration.Identifier.Identifier)
-	first, second := encodeUint16(local.index)
-	c.emit(opcode.SetLocal, first, second)
+	valueIndex := c.compileExpression(declaration.Value)
+	regType := c.VariableRegType(declaration.TypeAnnotation)
+	local := c.currentFunction.declareLocal(declaration.Identifier.Identifier, regType)
+
+	c.emit(opcode.MoveInt{
+		From: valueIndex,
+		To:   local.index,
+	})
+
 	return
 }
 
 func (c *Compiler) VisitAssignmentStatement(statement *ast.AssignmentStatement) (_ struct{}) {
-	c.compileExpression(statement.Value)
+	valueIndex := c.compileExpression(statement.Value)
+
 	switch target := statement.Target.(type) {
 	case *ast.IdentifierExpression:
 		local := c.currentFunction.findLocal(target.Identifier.Identifier)
-		first, second := encodeUint16(local.index)
-		c.emit(opcode.SetLocal, first, second)
+		c.emit(opcode.MoveInt{
+			From: valueIndex,
+			To:   local.index,
+		})
 	default:
 		// TODO:
 		panic(errors.NewUnreachableError())
 	}
+
 	return
 }
 
@@ -330,26 +409,31 @@ func (c *Compiler) VisitExpressionStatement(_ *ast.ExpressionStatement) (_ struc
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler) VisitVoidExpression(_ *ast.VoidExpression) (_ struct{}) {
+func (c *Compiler) VisitVoidExpression(_ *ast.VoidExpression) (_ uint16) {
 	//TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler) VisitBoolExpression(expression *ast.BoolExpression) (_ struct{}) {
+func (c *Compiler) VisitBoolExpression(expression *ast.BoolExpression) (_ uint16) {
+	nextIndex := c.nextLocalIndex(registers.Bool)
 	if expression.Value {
-		c.emit(opcode.True)
+		c.emit(opcode.True{
+			Index: nextIndex,
+		})
 	} else {
-		c.emit(opcode.False)
+		c.emit(opcode.False{
+			Index: nextIndex,
+		})
 	}
 	return
 }
 
-func (c *Compiler) VisitNilExpression(_ *ast.NilExpression) (_ struct{}) {
+func (c *Compiler) VisitNilExpression(_ *ast.NilExpression) (_ uint16) {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler) VisitIntegerExpression(expression *ast.IntegerExpression) (_ struct{}) {
+func (c *Compiler) VisitIntegerExpression(expression *ast.IntegerExpression) uint16 {
 	integerType := c.Elaboration.IntegerExpressionType[expression]
 	constantKind := constantkind.FromSemaType(integerType)
 
@@ -358,128 +442,251 @@ func (c *Compiler) VisitIntegerExpression(expression *ast.IntegerExpression) (_ 
 	data = leb128.AppendInt64(data, expression.Value.Int64())
 
 	constant := c.addConstant(constantKind, data)
-	first, second := encodeUint16(constant.index)
-	c.emit(opcode.GetConstant, first, second)
-	return
+	index := c.nextLocalIndex(registers.Int)
+
+	c.emit(opcode.GetIntConstant{
+		Index:  constant.index,
+		Target: index,
+	})
+
+	return index
 }
 
-func (c *Compiler) VisitFixedPointExpression(_ *ast.FixedPointExpression) (_ struct{}) {
+func (c *Compiler) VisitFixedPointExpression(_ *ast.FixedPointExpression) uint16 {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler) VisitArrayExpression(_ *ast.ArrayExpression) (_ struct{}) {
+func (c *Compiler) VisitArrayExpression(_ *ast.ArrayExpression) uint16 {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler) VisitDictionaryExpression(_ *ast.DictionaryExpression) (_ struct{}) {
+func (c *Compiler) VisitDictionaryExpression(_ *ast.DictionaryExpression) uint16 {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler) VisitIdentifierExpression(expression *ast.IdentifierExpression) (_ struct{}) {
+func (c *Compiler) VisitIdentifierExpression(expression *ast.IdentifierExpression) uint16 {
 	name := expression.Identifier.Identifier
 	local := c.currentFunction.findLocal(name)
+
 	if local != nil {
-		first, second := encodeUint16(local.index)
-		c.emit(opcode.GetLocal, first, second)
-		return
+		return local.index
 	}
+
 	global := c.findGlobal(name)
-	first, second := encodeUint16(global.index)
-	c.emit(opcode.GetGlobal, first, second)
-	return
-}
-
-func (c *Compiler) VisitInvocationExpression(expression *ast.InvocationExpression) (_ struct{}) {
-	// TODO: copy
-	for _, argument := range expression.Arguments {
-		c.compileExpression(argument.Expression)
+	if global == nil {
+		panic(errors.NewUnreachableError())
 	}
-	c.compileExpression(expression.InvokedExpression)
-	c.emit(opcode.Call)
-	return
+
+	varIndex := c.nextLocalIndex(global.regType)
+
+	//first, second := encodeUint16(global.index)
+	c.emit(opcode.GetGlobalFunc{
+		Index:  global.index,
+		Result: varIndex,
+	})
+
+	return varIndex
 }
 
-func (c *Compiler) VisitMemberExpression(_ *ast.MemberExpression) (_ struct{}) {
+func (c *Compiler) VisitInvocationExpression(expression *ast.InvocationExpression) uint16 {
+	params := make([]opcode.Argument, len(expression.Arguments))
+
+	invocationType, ok := c.Elaboration.InvocationExpressionTypes[expression]
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	// TODO: copy
+	for index, argument := range expression.Arguments {
+		regType := registers.RegistryTypeFromSemaType(invocationType.ArgumentTypes[index])
+		regIndex := c.compileExpression(argument.Expression)
+		params[index] = opcode.Argument{
+			Type:  regType,
+			Index: regIndex,
+		}
+	}
+
+	funcIndex := c.compileExpression(expression.InvokedExpression)
+
+	returnType := registers.RegistryTypeFromSemaType(invocationType.ReturnType)
+	returnValueIndex := c.nextLocalIndex(returnType)
+
+	c.emit(opcode.Call{
+		FuncIndex: funcIndex,
+		Arguments: params,
+		Result:    returnValueIndex,
+	})
+
+	return returnValueIndex
+}
+
+func (c *Compiler) VisitMemberExpression(_ *ast.MemberExpression) uint16 {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler) VisitIndexExpression(_ *ast.IndexExpression) (_ struct{}) {
+func (c *Compiler) VisitIndexExpression(_ *ast.IndexExpression) uint16 {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler) VisitConditionalExpression(_ *ast.ConditionalExpression) (_ struct{}) {
+func (c *Compiler) VisitConditionalExpression(_ *ast.ConditionalExpression) uint16 {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler) VisitUnaryExpression(_ *ast.UnaryExpression) (_ struct{}) {
+func (c *Compiler) VisitUnaryExpression(_ *ast.UnaryExpression) uint16 {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler) VisitBinaryExpression(expression *ast.BinaryExpression) (_ struct{}) {
-	c.compileExpression(expression.Left)
-	c.compileExpression(expression.Right)
+func (c *Compiler) VisitBinaryExpression(expression *ast.BinaryExpression) uint16 {
+	leftOp := c.compileExpression(expression.Left)
+	rightOp := c.compileExpression(expression.Right)
+
+	var opCode opcode.Opcode
+	var resultIndex uint16
+
 	// TODO: add support for other types
-	c.emit(intBinaryOpcodes[expression.Operation])
-	return
+	switch expression.Operation {
+	case ast.OperationPlus:
+		resultIndex = c.nextLocalIndex(registers.Int)
+		opCode = opcode.IntAdd{
+			LeftOperand:  leftOp,
+			RightOperand: rightOp,
+			Result:       resultIndex,
+		}
+	case ast.OperationMinus:
+		resultIndex = c.nextLocalIndex(registers.Int)
+		opCode = opcode.IntSubtract{
+			LeftOperand:  leftOp,
+			RightOperand: rightOp,
+			Result:       resultIndex,
+		}
+	//case ast.OperationMul:
+	//	opCode = opcode.IntMul{
+	//		LeftOperand:  leftOp,
+	//		RightOperand:  rightOp,
+	//		Result:       c.nextLocalIndex(registers.Int),
+	//	}
+	//case ast.OperationDiv:
+	//	opCode = opcode.IntDiv{
+	//		LeftOperand:  leftOp,
+	//		RightOperand:  rightOp,
+	//		Result:       c.nextLocalIndex(registers.Int),
+	//	}
+	//case ast.OperationMod:
+	//	opCode = opcode.IntMod{
+	//		LeftOperand:  leftOp,
+	//		RightOperand:  rightOp,
+	//		Result:       c.nextLocalIndex(registers.Int),
+	//	}
+
+	case ast.OperationEqual:
+		resultIndex = c.nextLocalIndex(registers.Bool)
+
+		opCode = opcode.IntEqual{
+			LeftOperand:  leftOp,
+			RightOperand: rightOp,
+			Result:       resultIndex,
+		}
+	case ast.OperationNotEqual:
+		resultIndex = c.nextLocalIndex(registers.Bool)
+		opCode = opcode.IntNotEqual{
+			LeftOperand:  leftOp,
+			RightOperand: rightOp,
+			Result:       resultIndex,
+		}
+	case ast.OperationLess:
+		resultIndex = c.nextLocalIndex(registers.Bool)
+		opCode = opcode.IntLess{
+			LeftOperand:  leftOp,
+			RightOperand: rightOp,
+			Result:       resultIndex,
+		}
+	case ast.OperationLessEqual:
+		resultIndex = c.nextLocalIndex(registers.Bool)
+		opCode = opcode.IntLessOrEqual{
+			LeftOperand:  leftOp,
+			RightOperand: rightOp,
+			Result:       resultIndex,
+		}
+	case ast.OperationGreater:
+		resultIndex = c.nextLocalIndex(registers.Bool)
+		opCode = opcode.IntGreater{
+			LeftOperand:  leftOp,
+			RightOperand: rightOp,
+			Result:       resultIndex,
+		}
+	case ast.OperationGreaterEqual:
+		resultIndex = c.nextLocalIndex(registers.Bool)
+		opCode = opcode.IntGreaterOrEqual{
+			LeftOperand:  leftOp,
+			RightOperand: rightOp,
+			Result:       resultIndex,
+		}
+	default:
+		panic(fmt.Errorf("unsupproted binary op '%s'", expression.Operation))
+	}
+
+	c.emit(opCode)
+
+	return resultIndex
 }
 
-var intBinaryOpcodes = [...]opcode.Opcode{
-	ast.OperationPlus:         opcode.IntAdd,
-	ast.OperationMinus:        opcode.IntSubtract,
-	ast.OperationMul:          opcode.IntMultiply,
-	ast.OperationDiv:          opcode.IntDivide,
-	ast.OperationMod:          opcode.IntMod,
-	ast.OperationEqual:        opcode.IntEqual,
-	ast.OperationNotEqual:     opcode.IntNotEqual,
-	ast.OperationLess:         opcode.IntLess,
-	ast.OperationLessEqual:    opcode.IntLessOrEqual,
-	ast.OperationGreater:      opcode.IntGreater,
-	ast.OperationGreaterEqual: opcode.IntGreaterOrEqual,
-}
+//var intBinaryOpcodes = [...]opcode.Opcode{
+//	ast.OperationPlus:         opcode.IntAdd,
+//	ast.OperationMinus:        opcode.IntSubtract,
+//	ast.OperationMul:          opcode.IntMultiply,
+//	ast.OperationDiv:          opcode.IntDivide,
+//	ast.OperationMod:          opcode.IntMod,
+//	ast.OperationEqual:        opcode.IntEqual,
+//	ast.OperationNotEqual:     opcode.IntNotEqual,
+//	ast.OperationLess:         opcode.IntLess,
+//	ast.OperationLessEqual:    opcode.IntLessOrEqual,
+//	ast.OperationGreater:      opcode.IntGreater,
+//	ast.OperationGreaterEqual: opcode.IntGreaterOrEqual,
+//}
 
-func (c *Compiler) VisitFunctionExpression(_ *ast.FunctionExpression) (_ struct{}) {
+func (c *Compiler) VisitFunctionExpression(_ *ast.FunctionExpression) uint16 {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler) VisitStringExpression(_ *ast.StringExpression) (_ struct{}) {
+func (c *Compiler) VisitStringExpression(_ *ast.StringExpression) uint16 {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler) VisitCastingExpression(_ *ast.CastingExpression) (_ struct{}) {
+func (c *Compiler) VisitCastingExpression(_ *ast.CastingExpression) uint16 {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler) VisitCreateExpression(_ *ast.CreateExpression) (_ struct{}) {
+func (c *Compiler) VisitCreateExpression(_ *ast.CreateExpression) uint16 {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler) VisitDestroyExpression(_ *ast.DestroyExpression) (_ struct{}) {
+func (c *Compiler) VisitDestroyExpression(_ *ast.DestroyExpression) uint16 {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler) VisitReferenceExpression(_ *ast.ReferenceExpression) (_ struct{}) {
+func (c *Compiler) VisitReferenceExpression(_ *ast.ReferenceExpression) uint16 {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler) VisitForceExpression(_ *ast.ForceExpression) (_ struct{}) {
+func (c *Compiler) VisitForceExpression(_ *ast.ForceExpression) uint16 {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler) VisitPathExpression(_ *ast.PathExpression) (_ struct{}) {
+func (c *Compiler) VisitPathExpression(_ *ast.PathExpression) uint16 {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
@@ -493,15 +700,22 @@ func (c *Compiler) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration
 	functionName := declaration.Identifier.Identifier
 	functionType := c.Elaboration.FunctionDeclarationFunctionTypes[declaration]
 	parameterCount := len(functionType.Parameters)
+
 	if parameterCount > math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid parameter count"))
 	}
+
 	function := c.addFunction(functionName, uint16(parameterCount))
+
 	for _, parameter := range declaration.ParameterList.Parameters {
 		parameterName := parameter.Identifier.Identifier
-		function.declareLocal(parameterName)
+
+		paramType := c.VariableRegType(parameter.TypeAnnotation)
+		function.declareLocal(parameterName, paramType)
 	}
+
 	c.compileFunctionBlock(declaration.FunctionBlock)
+
 	return
 }
 
@@ -540,8 +754,36 @@ func (c *Compiler) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclaration) (_ struc
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler) patchLoop(l *loop) {
+func (c *Compiler) patchLoop(l *loop, loopEnd int) {
 	for _, breakOffset := range l.breaks {
-		c.patchJump(breakOffset)
+		c.emitAt(
+			breakOffset,
+			opcode.Jump{
+				Target: uint16(loopEnd),
+			},
+		)
 	}
+}
+
+func (*Compiler) VariableRegType(typeAnnotation *ast.TypeAnnotation) registers.RegistryType {
+	// TODO: switch on semaType
+	switch typ := typeAnnotation.Type.(type) {
+	case *ast.FunctionType:
+		return registers.Func
+	case *ast.NominalType:
+		switch typ.Identifier.Identifier {
+		case "Int":
+			return registers.Int
+		case "Bool":
+			return registers.Bool
+		default:
+			panic(fmt.Errorf("Unsupported type '%s'", typ.Identifier))
+		}
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (c *Compiler) nextLocalIndex(registryType registers.RegistryType) uint16 {
+	return c.currentFunction.localCount.NextIndex(registryType)
 }

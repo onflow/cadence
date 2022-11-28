@@ -18,6 +18,11 @@
 
 package compiler
 
+import (
+	"github.com/onflow/cadence/runtime/bbq/registers"
+)
+
 type global struct {
-	index uint16
+	index   uint16
+	regType registers.RegistryType
 }

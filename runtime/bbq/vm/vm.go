@@ -32,7 +32,6 @@ type VM struct {
 	constants []Value
 	functions map[string]*bbq.Function
 	callFrame *callFrame
-	stack     []Value
 }
 
 func NewVM(program *bbq.Program) *VM {
@@ -61,42 +60,25 @@ func indexFunctions(functions []*bbq.Function) map[string]*bbq.Function {
 	return indexedFunctions
 }
 
-func (vm *VM) push(value Value) {
-	vm.stack = append(vm.stack, value)
-}
+func (vm *VM) pushCallFrame(function *bbq.Function, arguments []opcode.Argument, result uint16) {
 
-func (vm *VM) pop() Value {
-	lastIndex := len(vm.stack) - 1
-	value := vm.stack[lastIndex]
-	vm.stack[lastIndex] = nil
-	vm.stack = vm.stack[:lastIndex]
-	return value
-}
+	locals := NewRegister(function.LocalCount)
 
-func (vm *VM) dropN(count int) {
-	stackHeight := len(vm.stack)
-	for i := 1; i <= count; i++ {
-		vm.stack[stackHeight-i] = nil
+	vm.callFrame.locals.copyTo(locals, arguments)
+
+	callFrame := &callFrame{
+		parent:        vm.callFrame,
+		locals:        locals,
+		function:      function,
+		returnToIndex: result,
 	}
-	vm.stack = vm.stack[:stackHeight-count]
+	vm.callFrame = callFrame
 }
 
-func (vm *VM) peekPop() (Value, Value) {
-	lastIndex := len(vm.stack) - 1
-	return vm.stack[lastIndex-1], vm.pop()
-}
+func (vm *VM) pushCallFrameOld(function *bbq.Function, arguments []Value) {
 
-func (vm *VM) replaceTop(value Value) {
-	lastIndex := len(vm.stack) - 1
-	vm.stack[lastIndex] = value
-}
-
-func (vm *VM) pushCallFrame(function *bbq.Function, arguments []Value) {
-
-	locals := make([]Value, function.LocalCount)
-	for i, argument := range arguments {
-		locals[i] = argument
-	}
+	locals := NewRegister(function.LocalCount)
+	locals.initializeWithArguments(arguments)
 
 	callFrame := &callFrame{
 		parent:   vm.callFrame,
@@ -106,8 +88,19 @@ func (vm *VM) pushCallFrame(function *bbq.Function, arguments []Value) {
 	vm.callFrame = callFrame
 }
 
-func (vm *VM) popCallFrame() {
+func (vm *VM) popCallFrame(returnValueIndex uint16) {
+	if vm.callFrame.parent == nil {
+		vm.callFrame.returnValueIndex = returnValueIndex
+		return
+	}
+
+	returnValue := vm.callFrame.locals.ints[returnValueIndex]
+
+	returnToIndex := vm.callFrame.returnToIndex
+
 	vm.callFrame = vm.callFrame.parent
+
+	vm.callFrame.locals.ints[returnToIndex] = returnValue
 }
 
 func (vm *VM) Invoke(name string, arguments ...Value) (Value, error) {
@@ -120,130 +113,13 @@ func (vm *VM) Invoke(name string, arguments ...Value) (Value, error) {
 		return nil, errors.NewDefaultUserError("wrong number of arguments")
 	}
 
-	vm.pushCallFrame(function, arguments)
+	vm.pushCallFrameOld(function, arguments)
 
 	vm.run()
 
-	if len(vm.stack) == 0 {
-		return nil, nil
-	}
+	returnValue := vm.callFrame.locals.ints[vm.callFrame.returnValueIndex]
 
-	return vm.pop(), nil
-}
-
-type vmOp func(*VM)
-
-var vmOps = [...]vmOp{
-	opcode.ReturnValue: opReturnValue,
-	opcode.Jump:        opJump,
-	opcode.JumpIfFalse: opJumpIfFalse,
-	opcode.IntAdd:      opBinaryIntAdd,
-	opcode.IntSubtract: opBinaryIntSubtract,
-	opcode.IntLess:     opBinaryIntLess,
-	opcode.IntGreater:  opBinaryIntGreater,
-	opcode.True:        opTrue,
-	opcode.False:       opFalse,
-	opcode.GetConstant: opGetConstant,
-	opcode.GetLocal:    opGetLocal,
-	opcode.SetLocal:    opSetLocal,
-	opcode.GetGlobal:   opGetGlobal,
-	opcode.Call:        opCall,
-}
-
-func opReturnValue(vm *VM) {
-	value := vm.pop()
-	vm.popCallFrame()
-	vm.push(value)
-}
-
-func opJump(vm *VM) {
-	callFrame := vm.callFrame
-	target := callFrame.getUint16()
-	callFrame.ip = target
-}
-
-func opJumpIfFalse(vm *VM) {
-	callFrame := vm.callFrame
-	target := callFrame.getUint16()
-	value := vm.pop().(BoolValue)
-	if !value {
-		callFrame.ip = target
-	}
-}
-
-func opBinaryIntAdd(vm *VM) {
-	left, right := vm.peekPop()
-	leftNumber := left.(IntValue)
-	rightNumber := right.(IntValue)
-	vm.replaceTop(leftNumber.Add(rightNumber))
-}
-
-func opBinaryIntSubtract(vm *VM) {
-	left, right := vm.peekPop()
-	leftNumber := left.(IntValue)
-	rightNumber := right.(IntValue)
-	vm.replaceTop(leftNumber.Subtract(rightNumber))
-}
-
-func opBinaryIntLess(vm *VM) {
-	left, right := vm.peekPop()
-	leftNumber := left.(IntValue)
-	rightNumber := right.(IntValue)
-	vm.replaceTop(leftNumber.Less(rightNumber))
-}
-
-func opBinaryIntGreater(vm *VM) {
-	left, right := vm.peekPop()
-	leftNumber := left.(IntValue)
-	rightNumber := right.(IntValue)
-	vm.replaceTop(leftNumber.Greater(rightNumber))
-}
-
-func opTrue(vm *VM) {
-	vm.push(trueValue)
-}
-
-func opFalse(vm *VM) {
-	vm.push(falseValue)
-}
-
-func opGetConstant(vm *VM) {
-	callFrame := vm.callFrame
-	index := callFrame.getUint16()
-	constant := vm.constants[index]
-	if constant == nil {
-		constant = vm.initializeConstant(index)
-	}
-	vm.push(constant)
-}
-
-func opGetLocal(vm *VM) {
-	callFrame := vm.callFrame
-	index := callFrame.getUint16()
-	local := callFrame.locals[index]
-	vm.push(local)
-}
-
-func opSetLocal(vm *VM) {
-	callFrame := vm.callFrame
-	index := callFrame.getUint16()
-	callFrame.locals[index] = vm.pop()
-}
-
-func opGetGlobal(vm *VM) {
-	callFrame := vm.callFrame
-	index := callFrame.getUint16()
-	vm.push(vm.globals[index])
-}
-
-func opCall(vm *VM) {
-	// TODO: support any function value
-	value := vm.pop().(FunctionValue)
-	stackHeight := len(vm.stack)
-	parameterCount := int(value.Function.ParameterCount)
-	arguments := vm.stack[stackHeight-parameterCount:]
-	vm.pushCallFrame(value.Function, arguments)
-	vm.dropN(parameterCount)
+	return returnValue, nil
 }
 
 func (vm *VM) run() {
@@ -260,35 +136,35 @@ func (vm *VM) run() {
 		op := opcode.Opcode(callFrame.function.Code[callFrame.ip])
 		callFrame.ip++
 
-		switch op {
+		switch op := op.(type) {
 		case opcode.ReturnValue:
-			opReturnValue(vm)
+			vm.opReturnValue(op)
 		case opcode.Jump:
-			opJump(vm)
+			vm.opJump(op)
 		case opcode.JumpIfFalse:
-			opJumpIfFalse(vm)
+			vm.opJumpIfFalse(op)
 		case opcode.IntAdd:
-			opBinaryIntAdd(vm)
+			vm.opBinaryIntAdd(op)
 		case opcode.IntSubtract:
-			opBinaryIntSubtract(vm)
+			vm.opBinaryIntSubtract(op)
 		case opcode.IntLess:
-			opBinaryIntLess(vm)
+			vm.opBinaryIntLess(op)
 		case opcode.IntGreater:
-			opBinaryIntGreater(vm)
+			vm.opBinaryIntGreater(op)
 		case opcode.True:
-			opTrue(vm)
+			vm.opTrue(op)
 		case opcode.False:
-			opFalse(vm)
-		case opcode.GetConstant:
-			opGetConstant(vm)
-		case opcode.GetLocal:
-			opGetLocal(vm)
-		case opcode.SetLocal:
-			opSetLocal(vm)
-		case opcode.GetGlobal:
-			opGetGlobal(vm)
+			vm.opFalse(op)
+		case opcode.GetIntConstant:
+			vm.opGetConstant(op)
+		//case opcode.GetLocal:
+		//	vm.opGetLocalInt(op)
+		case opcode.MoveInt:
+			vm.opMoveInt(op)
+		case opcode.GetGlobalFunc:
+			vm.opGetGlobal(op)
 		case opcode.Call:
-			opCall(vm)
+			vm.opCall(op)
 		default:
 			panic(errors.NewUnreachableError())
 		}

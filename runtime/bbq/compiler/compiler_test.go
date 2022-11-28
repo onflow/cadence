@@ -19,6 +19,7 @@
 package compiler
 
 import (
+	"github.com/onflow/cadence/runtime/bbq/registers"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -48,30 +49,30 @@ func TestCompileRecursionFib(t *testing.T) {
 
 	require.Len(t, program.Functions, 1)
 	require.Equal(t,
-		[]byte{
+		[]opcode.Opcode{
 			// if n < 2
-			byte(opcode.GetLocal), 0, 0,
-			byte(opcode.GetConstant), 0, 0,
-			byte(opcode.IntLess),
-			byte(opcode.JumpIfFalse), 0, 14,
+			//byte(opcode.GetLocal), 0, 0,
+			opcode.GetIntConstant{0, 1},
+			opcode.IntLess{0, 1, 0},
+			opcode.JumpIfFalse{0, 4},
 			// then return n
-			byte(opcode.GetLocal), 0, 0,
-			byte(opcode.ReturnValue),
+			//opcode.GetLocal{}, 0, 0,
+			opcode.ReturnValue{0},
 			// fib(n - 1)
-			byte(opcode.GetLocal), 0, 0,
-			byte(opcode.GetConstant), 0, 1,
-			byte(opcode.IntSubtract),
-			byte(opcode.GetGlobal), 0, 0,
-			byte(opcode.Call),
-			// fib(n - 2)
-			byte(opcode.GetLocal), 0, 0,
-			byte(opcode.GetConstant), 0, 2,
-			byte(opcode.IntSubtract),
-			byte(opcode.GetGlobal), 0, 0,
-			byte(opcode.Call),
+			//opcode.GetLocal{}, 0, 0,
+			opcode.GetIntConstant{1, 2},
+			opcode.IntSubtract{0, 2, 3},
+			opcode.GetGlobalFunc{0, 0},
+			opcode.Call{0, []opcode.Argument{{registers.Int, 3}}, 4},
+			// fib(n - 2{}
+			//opcode.GetLocal{}, 0, 0,
+			opcode.GetIntConstant{2, 5},
+			opcode.IntSubtract{0, 5, 6},
+			opcode.GetGlobalFunc{0, 1},
+			opcode.Call{1, []opcode.Argument{{registers.Int, 6}}, 7},
 			// return sum
-			byte(opcode.IntAdd),
-			byte(opcode.ReturnValue),
+			opcode.IntAdd{4, 7, 8},
+			opcode.ReturnValue{8},
 		},
 		compiler.functions[0].code,
 	)
@@ -121,45 +122,36 @@ func TestCompileImperativeFib(t *testing.T) {
 
 	require.Len(t, program.Functions, 1)
 	require.Equal(t,
-		[]byte{
+		[]opcode.Opcode{
 			// var fib1 = 1
-			byte(opcode.GetConstant), 0, 0,
-			byte(opcode.SetLocal), 0, 1,
+			opcode.GetIntConstant{}, 0, 0,
+			opcode.MoveInt{}, 0, 1,
 			// var fib2 = 1
-			byte(opcode.GetConstant), 0, 1,
-			byte(opcode.SetLocal), 0, 2,
+			opcode.GetIntConstant{}, 0, 1,
+			opcode.MoveInt{}, 0, 2,
 			// var fibonacci = fib1
-			byte(opcode.GetLocal), 0, 1,
-			byte(opcode.SetLocal), 0, 3,
+			opcode.MoveInt{}, 0, 3,
 			// var i = 2
-			byte(opcode.GetConstant), 0, 2,
-			byte(opcode.SetLocal), 0, 4,
+			opcode.GetIntConstant{}, 0, 2,
+			opcode.MoveInt{}, 0, 4,
 			// while i < n
-			byte(opcode.GetLocal), 0, 4,
-			byte(opcode.GetLocal), 0, 0,
-			byte(opcode.IntLess),
-			byte(opcode.JumpIfFalse), 0, 69,
+			opcode.IntLess{},
+			opcode.JumpIfFalse{}, 0, 69,
 			// fibonacci = fib1 + fib2
-			byte(opcode.GetLocal), 0, 1,
-			byte(opcode.GetLocal), 0, 2,
-			byte(opcode.IntAdd),
-			byte(opcode.SetLocal), 0, 3,
+			opcode.IntAdd{},
+			opcode.MoveInt{}, 0, 3,
 			// fib1 = fib2
-			byte(opcode.GetLocal), 0, 2,
-			byte(opcode.SetLocal), 0, 1,
+			opcode.MoveInt{}, 0, 1,
 			// fib2 = fibonacci
-			byte(opcode.GetLocal), 0, 3,
-			byte(opcode.SetLocal), 0, 2,
+			opcode.MoveInt{}, 0, 2,
 			// i = i + 1
-			byte(opcode.GetLocal), 0, 4,
-			byte(opcode.GetConstant), 0, 3,
-			byte(opcode.IntAdd),
-			byte(opcode.SetLocal), 0, 4,
+			opcode.GetIntConstant{}, 0, 3,
+			opcode.IntAdd{},
+			opcode.MoveInt{}, 0, 4,
 			// continue loop
-			byte(opcode.Jump), 0, 24,
+			opcode.Jump{}, 0, 24,
 			// return fibonacci
-			byte(opcode.GetLocal), 0, 3,
-			byte(opcode.ReturnValue),
+			opcode.ReturnValue{},
 		},
 		compiler.functions[0].code,
 	)
@@ -210,30 +202,27 @@ func TestCompileBreak(t *testing.T) {
 
 	require.Len(t, program.Functions, 1)
 	require.Equal(t,
-		[]byte{
+		[]opcode.Opcode{
 			// var i = 0
-			byte(opcode.GetConstant), 0, 0,
-			byte(opcode.SetLocal), 0, 0,
+			opcode.GetIntConstant{}, 0, 0,
+			opcode.MoveInt{}, 0, 0,
 			// while true
-			byte(opcode.True),
-			byte(opcode.JumpIfFalse), 0, 36,
+			opcode.True{},
+			opcode.JumpIfFalse{}, 0, 36,
 			// if i > 3
-			byte(opcode.GetLocal), 0, 0,
-			byte(opcode.GetConstant), 0, 1,
-			byte(opcode.IntGreater),
-			byte(opcode.JumpIfFalse), 0, 23,
+			opcode.GetIntConstant{}, 0, 1,
+			opcode.IntGreater{},
+			opcode.JumpIfFalse{}, 0, 23,
 			// break
-			byte(opcode.Jump), 0, 36,
+			opcode.Jump{}, 0, 36,
 			// i = i + 1
-			byte(opcode.GetLocal), 0, 0,
-			byte(opcode.GetConstant), 0, 2,
-			byte(opcode.IntAdd),
-			byte(opcode.SetLocal), 0, 0,
+			opcode.GetIntConstant{}, 0, 2,
+			opcode.IntAdd{},
+			opcode.MoveInt{}, 0, 0,
 			// repeat
-			byte(opcode.Jump), 0, 6,
+			opcode.Jump{}, 0, 6,
 			// return i
-			byte(opcode.GetLocal), 0, 0,
-			byte(opcode.ReturnValue),
+			opcode.ReturnValue{},
 		},
 		compiler.functions[0].code,
 	)
@@ -281,32 +270,29 @@ func TestCompileContinue(t *testing.T) {
 
 	require.Len(t, program.Functions, 1)
 	require.Equal(t,
-		[]byte{
+		[]opcode.Opcode{
 			// var i = 0
-			byte(opcode.GetConstant), 0, 0,
-			byte(opcode.SetLocal), 0, 0,
+			opcode.GetIntConstant{}, 0, 0,
+			opcode.MoveInt{}, 0, 0,
 			// while true
-			byte(opcode.True),
-			byte(opcode.JumpIfFalse), 0, 39,
+			opcode.True{},
+			opcode.JumpIfFalse{}, 0, 39,
 			// i = i + 1
-			byte(opcode.GetLocal), 0, 0,
-			byte(opcode.GetConstant), 0, 1,
-			byte(opcode.IntAdd),
-			byte(opcode.SetLocal), 0, 0,
+			opcode.GetIntConstant{}, 0, 1,
+			opcode.IntAdd{},
+			opcode.MoveInt{}, 0, 0,
 			// if i < 3
-			byte(opcode.GetLocal), 0, 0,
-			byte(opcode.GetConstant), 0, 2,
-			byte(opcode.IntLess),
-			byte(opcode.JumpIfFalse), 0, 33,
+			opcode.GetIntConstant{}, 0, 2,
+			opcode.IntLess{},
+			opcode.JumpIfFalse{}, 0, 33,
 			// continue
-			byte(opcode.Jump), 0, 6,
+			opcode.Jump{}, 0, 6,
 			// break
-			byte(opcode.Jump), 0, 39,
+			opcode.Jump{}, 0, 39,
 			// repeat
-			byte(opcode.Jump), 0, 6,
+			opcode.Jump{}, 0, 6,
 			// return i
-			byte(opcode.GetLocal), 0, 0,
-			byte(opcode.ReturnValue),
+			opcode.ReturnValue{},
 		},
 		compiler.functions[0].code,
 	)

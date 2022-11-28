@@ -18,9 +18,14 @@
 
 package bbq
 
+import (
+	"github.com/onflow/cadence/runtime/bbq/opcode"
+	"github.com/onflow/cadence/runtime/bbq/registers"
+)
+
 type Function struct {
 	Name           string
-	Code           []byte
+	Code           []opcode.Opcode
 	ParameterCount uint16
-	LocalCount     uint16
+	LocalCount     registers.RegisterCounts
 }

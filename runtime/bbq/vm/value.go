@@ -26,8 +26,8 @@ type Value interface {
 	isValue()
 }
 
-var trueValue Value = BoolValue(true)
-var falseValue Value = BoolValue(false)
+var trueValue = BoolValue(true)
+var falseValue = BoolValue(false)
 
 type BoolValue bool
 
@@ -43,22 +43,22 @@ var _ Value = IntValue{}
 
 func (IntValue) isValue() {}
 
-func (v IntValue) Add(other IntValue) Value {
+func (v IntValue) Add(other IntValue) IntValue {
 	return IntValue{v.smallInt + other.smallInt}
 }
 
-func (v IntValue) Subtract(other IntValue) Value {
+func (v IntValue) Subtract(other IntValue) IntValue {
 	return IntValue{v.smallInt - other.smallInt}
 }
 
-func (v IntValue) Less(other IntValue) Value {
+func (v IntValue) Less(other IntValue) BoolValue {
 	if v.smallInt < other.smallInt {
 		return trueValue
 	}
 	return falseValue
 }
 
-func (v IntValue) Greater(other IntValue) Value {
+func (v IntValue) Greater(other IntValue) BoolValue {
 	if v.smallInt > other.smallInt {
 		return trueValue
 	}

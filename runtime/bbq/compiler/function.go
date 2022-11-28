@@ -19,18 +19,16 @@
 package compiler
 
 import (
-	"math"
-
 	"github.com/onflow/cadence/runtime/activations"
 	"github.com/onflow/cadence/runtime/bbq/opcode"
-	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/bbq/registers"
 )
 
 type function struct {
 	name       string
-	localCount uint16
+	localCount registers.RegisterCounts
 	// TODO: use byte.Buffer?
-	code           []byte
+	code           []opcode.Opcode
 	locals         *activations.Activations[*local]
 	parameterCount uint16
 }
@@ -43,21 +41,30 @@ func newFunction(name string, parameterCount uint16) *function {
 	}
 }
 
-func (f *function) emit(opcode opcode.Opcode, args ...byte) int {
+func (f *function) emit(opcode opcode.Opcode) int {
 	offset := len(f.code)
-	f.code = append(f.code, byte(opcode))
-	f.code = append(f.code, args...)
+	f.code = append(f.code, opcode)
 	return offset
 }
 
-func (f *function) declareLocal(name string) *local {
-	if f.localCount >= math.MaxUint16 {
-		panic(errors.NewDefaultUserError("invalid local declaration"))
+func (f *function) emitAt(index int, opcode opcode.Opcode) {
+	f.code[index] = opcode
+}
+
+func (f *function) declareLocal(name string, registryType registers.RegistryType) *local {
+	//if f.localCount >= math.MaxUint16 {
+	//	panic(errors.NewDefaultUserError("invalid local declaration"))
+	//}
+
+	index := f.localCount.NextIndex(registryType)
+
+	local := &local{
+		index:   index,
+		regType: registryType,
 	}
-	index := f.localCount
-	f.localCount++
-	local := &local{index: index}
+
 	f.locals.Set(name, local)
+
 	return local
 }
 
