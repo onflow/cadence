@@ -51,7 +51,7 @@ func (f *function) emitAt(index int, opcode opcode.Opcode) {
 	f.code[index] = opcode
 }
 
-func (f *function) declareLocal(name string, registryType registers.RegistryType) *local {
+func (f *function) declareLocal(name string, registryType registers.RegisterType) *local {
 	//if f.localCount >= math.MaxUint16 {
 	//	panic(errors.NewDefaultUserError("invalid local declaration"))
 	//}

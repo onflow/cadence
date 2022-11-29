@@ -22,5 +22,5 @@ import "github.com/onflow/cadence/runtime/bbq/registers"
 
 type local struct {
 	index   uint16
-	regType registers.RegistryType
+	regType registers.RegisterType
 }

@@ -24,5 +24,5 @@ import (
 
 type global struct {
 	index   uint16
-	regType registers.RegistryType
+	regType registers.RegisterType
 }

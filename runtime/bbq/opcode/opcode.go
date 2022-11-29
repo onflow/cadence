@@ -22,8 +22,6 @@ import (
 	"github.com/onflow/cadence/runtime/bbq/registers"
 )
 
-//go:generate go run golang.org/x/tools/cmd/stringer -type=Opcode
-
 type Opcode interface{}
 
 type Return struct{}
@@ -72,7 +70,7 @@ type IntGreaterOrEqual struct {
 	LeftOperand, RightOperand, Result uint16
 }
 
-type GetIntConstant struct {
+type IntConstantLoad struct {
 	Index  uint16
 	Target uint16
 }
@@ -91,7 +89,7 @@ type MoveInt struct {
 	From, To uint16
 }
 
-type GetGlobalFunc struct {
+type GlobalFuncLoad struct {
 	Index, Result uint16
 }
 
@@ -102,6 +100,6 @@ type Call struct {
 }
 
 type Argument struct {
-	Type  registers.RegistryType
+	Type  registers.RegisterType
 	Index uint16
 }

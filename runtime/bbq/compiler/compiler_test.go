@@ -19,7 +19,6 @@
 package compiler
 
 import (
-	"github.com/onflow/cadence/runtime/bbq/registers"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -27,6 +26,7 @@ import (
 	"github.com/onflow/cadence/runtime/bbq"
 	"github.com/onflow/cadence/runtime/bbq/constantkind"
 	"github.com/onflow/cadence/runtime/bbq/opcode"
+	"github.com/onflow/cadence/runtime/bbq/registers"
 	. "github.com/onflow/cadence/runtime/tests/checker"
 )
 
@@ -52,7 +52,7 @@ func TestCompileRecursionFib(t *testing.T) {
 		[]opcode.Opcode{
 			// if n < 2
 			//byte(opcode.GetLocal), 0, 0,
-			opcode.GetIntConstant{0, 1},
+			opcode.IntConstantLoad{0, 1},
 			opcode.IntLess{0, 1, 0},
 			opcode.JumpIfFalse{0, 4},
 			// then return n
@@ -60,15 +60,15 @@ func TestCompileRecursionFib(t *testing.T) {
 			opcode.ReturnValue{0},
 			// fib(n - 1)
 			//opcode.GetLocal{}, 0, 0,
-			opcode.GetIntConstant{1, 2},
+			opcode.IntConstantLoad{1, 2},
 			opcode.IntSubtract{0, 2, 3},
-			opcode.GetGlobalFunc{0, 0},
+			opcode.GlobalFuncLoad{0, 0},
 			opcode.Call{0, []opcode.Argument{{registers.Int, 3}}, 4},
 			// fib(n - 2{}
 			//opcode.GetLocal{}, 0, 0,
-			opcode.GetIntConstant{2, 5},
+			opcode.IntConstantLoad{2, 5},
 			opcode.IntSubtract{0, 5, 6},
-			opcode.GetGlobalFunc{0, 1},
+			opcode.GlobalFuncLoad{0, 1},
 			opcode.Call{1, []opcode.Argument{{registers.Int, 6}}, 7},
 			// return sum
 			opcode.IntAdd{4, 7, 8},
@@ -124,15 +124,15 @@ func TestCompileImperativeFib(t *testing.T) {
 	require.Equal(t,
 		[]opcode.Opcode{
 			// var fib1 = 1
-			opcode.GetIntConstant{}, 0, 0,
+			opcode.IntConstantLoad{}, 0, 0,
 			opcode.MoveInt{}, 0, 1,
 			// var fib2 = 1
-			opcode.GetIntConstant{}, 0, 1,
+			opcode.IntConstantLoad{}, 0, 1,
 			opcode.MoveInt{}, 0, 2,
 			// var fibonacci = fib1
 			opcode.MoveInt{}, 0, 3,
 			// var i = 2
-			opcode.GetIntConstant{}, 0, 2,
+			opcode.IntConstantLoad{}, 0, 2,
 			opcode.MoveInt{}, 0, 4,
 			// while i < n
 			opcode.IntLess{},
@@ -145,7 +145,7 @@ func TestCompileImperativeFib(t *testing.T) {
 			// fib2 = fibonacci
 			opcode.MoveInt{}, 0, 2,
 			// i = i + 1
-			opcode.GetIntConstant{}, 0, 3,
+			opcode.IntConstantLoad{}, 0, 3,
 			opcode.IntAdd{},
 			opcode.MoveInt{}, 0, 4,
 			// continue loop
@@ -204,19 +204,19 @@ func TestCompileBreak(t *testing.T) {
 	require.Equal(t,
 		[]opcode.Opcode{
 			// var i = 0
-			opcode.GetIntConstant{}, 0, 0,
+			opcode.IntConstantLoad{}, 0, 0,
 			opcode.MoveInt{}, 0, 0,
 			// while true
 			opcode.True{},
 			opcode.JumpIfFalse{}, 0, 36,
 			// if i > 3
-			opcode.GetIntConstant{}, 0, 1,
+			opcode.IntConstantLoad{}, 0, 1,
 			opcode.IntGreater{},
 			opcode.JumpIfFalse{}, 0, 23,
 			// break
 			opcode.Jump{}, 0, 36,
 			// i = i + 1
-			opcode.GetIntConstant{}, 0, 2,
+			opcode.IntConstantLoad{}, 0, 2,
 			opcode.IntAdd{},
 			opcode.MoveInt{}, 0, 0,
 			// repeat
@@ -272,17 +272,17 @@ func TestCompileContinue(t *testing.T) {
 	require.Equal(t,
 		[]opcode.Opcode{
 			// var i = 0
-			opcode.GetIntConstant{}, 0, 0,
+			opcode.IntConstantLoad{}, 0, 0,
 			opcode.MoveInt{}, 0, 0,
 			// while true
 			opcode.True{},
 			opcode.JumpIfFalse{}, 0, 39,
 			// i = i + 1
-			opcode.GetIntConstant{}, 0, 1,
+			opcode.IntConstantLoad{}, 0, 1,
 			opcode.IntAdd{},
 			opcode.MoveInt{}, 0, 0,
 			// if i < 3
-			opcode.GetIntConstant{}, 0, 2,
+			opcode.IntConstantLoad{}, 0, 2,
 			opcode.IntLess{},
 			opcode.JumpIfFalse{}, 0, 33,
 			// continue

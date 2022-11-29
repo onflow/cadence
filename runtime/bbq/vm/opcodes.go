@@ -72,7 +72,7 @@ func (vm *VM) opFalse(code opcode.False) {
 	vm.callFrame.locals.bools[code.Index] = falseValue
 }
 
-func (vm *VM) opGetConstant(code opcode.GetIntConstant) {
+func (vm *VM) opIntConstantLoad(code opcode.IntConstantLoad) {
 	constant := vm.constants[code.Index]
 	if constant == nil {
 		constant = vm.initializeConstant(code.Index)
@@ -87,7 +87,7 @@ func (vm *VM) opMoveInt(code opcode.MoveInt) {
 	intReg[code.To] = intReg[code.From]
 }
 
-func (vm *VM) opGetGlobal(code opcode.GetGlobalFunc) {
+func (vm *VM) opGlobalFuncLoad(code opcode.GlobalFuncLoad) {
 	value := vm.globals[code.Index].(FunctionValue)
 	funcReg := vm.callFrame.locals.funcs
 	funcReg[code.Result] = value

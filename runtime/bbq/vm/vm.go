@@ -94,12 +94,14 @@ func (vm *VM) popCallFrame(returnValueIndex uint16) {
 		return
 	}
 
-	returnValue := vm.callFrame.locals.ints[returnValueIndex]
+	// Copy the return value from callee to caller.
+	// TODO: Currently assumes the return value is always Integer.
+	//  Fix this to copy from/to the correct register based on the return value type.
 
+	returnValue := vm.callFrame.locals.ints[returnValueIndex]
 	returnToIndex := vm.callFrame.returnToIndex
 
 	vm.callFrame = vm.callFrame.parent
-
 	vm.callFrame.locals.ints[returnToIndex] = returnValue
 }
 
@@ -155,14 +157,14 @@ func (vm *VM) run() {
 			vm.opTrue(op)
 		case opcode.False:
 			vm.opFalse(op)
-		case opcode.GetIntConstant:
-			vm.opGetConstant(op)
+		case opcode.IntConstantLoad:
+			vm.opIntConstantLoad(op)
 		//case opcode.GetLocal:
 		//	vm.opGetLocalInt(op)
 		case opcode.MoveInt:
 			vm.opMoveInt(op)
-		case opcode.GetGlobalFunc:
-			vm.opGetGlobal(op)
+		case opcode.GlobalFuncLoad:
+			vm.opGlobalFuncLoad(op)
 		case opcode.Call:
 			vm.opCall(op)
 		default:

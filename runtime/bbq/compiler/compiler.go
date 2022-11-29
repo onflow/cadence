@@ -63,7 +63,7 @@ func (c *Compiler) findGlobal(name string) *global {
 	return c.globals[name]
 }
 
-func (c *Compiler) addGlobal(name string, registryType registers.RegistryType) *global {
+func (c *Compiler) addGlobal(name string, registryType registers.RegisterType) *global {
 	count := len(c.globals)
 	if count >= math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid global declaration"))
@@ -416,12 +416,12 @@ func (c *Compiler) VisitExpressionStatement(_ *ast.ExpressionStatement) (_ struc
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler) VisitVoidExpression(_ *ast.VoidExpression) (_ uint16) {
+func (c *Compiler) VisitVoidExpression(_ *ast.VoidExpression) uint16 {
 	//TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler) VisitBoolExpression(expression *ast.BoolExpression) (_ uint16) {
+func (c *Compiler) VisitBoolExpression(expression *ast.BoolExpression) uint16 {
 	nextIndex := c.nextLocalIndex(registers.Bool)
 	if expression.Value {
 		c.emit(opcode.True{
@@ -432,10 +432,11 @@ func (c *Compiler) VisitBoolExpression(expression *ast.BoolExpression) (_ uint16
 			Index: nextIndex,
 		})
 	}
-	return
+
+	return nextIndex
 }
 
-func (c *Compiler) VisitNilExpression(_ *ast.NilExpression) (_ uint16) {
+func (c *Compiler) VisitNilExpression(_ *ast.NilExpression) uint16 {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
@@ -451,7 +452,7 @@ func (c *Compiler) VisitIntegerExpression(expression *ast.IntegerExpression) uin
 	constant := c.addConstant(constantKind, data)
 	index := c.nextLocalIndex(registers.Int)
 
-	c.emit(opcode.GetIntConstant{
+	c.emit(opcode.IntConstantLoad{
 		Index:  constant.index,
 		Target: index,
 	})
@@ -490,7 +491,7 @@ func (c *Compiler) VisitIdentifierExpression(expression *ast.IdentifierExpressio
 	varIndex := c.nextLocalIndex(global.regType)
 
 	//first, second := encodeUint16(global.index)
-	c.emit(opcode.GetGlobalFunc{
+	c.emit(opcode.GlobalFuncLoad{
 		Index:  global.index,
 		Result: varIndex,
 	})
@@ -779,6 +780,6 @@ func (c *Compiler) patchLoop(l *loop, loopEnd int) {
 	}
 }
 
-func (c *Compiler) nextLocalIndex(registryType registers.RegistryType) uint16 {
+func (c *Compiler) nextLocalIndex(registryType registers.RegisterType) uint16 {
 	return c.currentFunction.localCount.NextIndex(registryType)
 }
