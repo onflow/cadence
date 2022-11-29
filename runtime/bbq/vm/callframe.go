@@ -24,7 +24,7 @@ import (
 
 type callFrame struct {
 	parent   *callFrame
-	locals   *Register
+	locals   Register
 	function *bbq.Function
 	ip       uint16
 

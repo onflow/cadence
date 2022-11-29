@@ -370,7 +370,14 @@ func (c *Compiler) VisitSwitchStatement(_ *ast.SwitchStatement) (_ struct{}) {
 func (c *Compiler) VisitVariableDeclaration(declaration *ast.VariableDeclaration) (_ struct{}) {
 	// TODO: second value
 	valueIndex := c.compileExpression(declaration.Value)
-	regType := c.VariableRegType(declaration.TypeAnnotation)
+
+	varType, ok := c.Elaboration.VariableDeclarationTypes[declaration]
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	regType := registers.RegistryTypeFromSemaType(varType.TargetType)
+
 	local := c.currentFunction.declareLocal(declaration.Identifier.Identifier, regType)
 
 	c.emit(opcode.MoveInt{
@@ -707,11 +714,18 @@ func (c *Compiler) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration
 
 	function := c.addFunction(functionName, uint16(parameterCount))
 
-	for _, parameter := range declaration.ParameterList.Parameters {
+	funcType, ok := c.Elaboration.FunctionDeclarationFunctionTypes[declaration]
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	for i, parameter := range declaration.ParameterList.Parameters {
 		parameterName := parameter.Identifier.Identifier
 
-		paramType := c.VariableRegType(parameter.TypeAnnotation)
-		function.declareLocal(parameterName, paramType)
+		paramType := funcType.Parameters[i].TypeAnnotation.Type
+		paramRegType := registers.RegistryTypeFromSemaType(paramType)
+
+		function.declareLocal(parameterName, paramRegType)
 	}
 
 	c.compileFunctionBlock(declaration.FunctionBlock)
@@ -762,25 +776,6 @@ func (c *Compiler) patchLoop(l *loop, loopEnd int) {
 				Target: uint16(loopEnd),
 			},
 		)
-	}
-}
-
-func (*Compiler) VariableRegType(typeAnnotation *ast.TypeAnnotation) registers.RegistryType {
-	// TODO: switch on semaType
-	switch typ := typeAnnotation.Type.(type) {
-	case *ast.FunctionType:
-		return registers.Func
-	case *ast.NominalType:
-		switch typ.Identifier.Identifier {
-		case "Int":
-			return registers.Int
-		case "Bool":
-			return registers.Bool
-		default:
-			panic(fmt.Errorf("Unsupported type '%s'", typ.Identifier))
-		}
-	default:
-		panic(errors.NewUnreachableError())
 	}
 }
 

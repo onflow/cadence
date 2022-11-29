@@ -11,7 +11,7 @@ type Register struct {
 	funcs []FunctionValue
 }
 
-func NewRegister(counts registers.RegisterCounts) *Register {
+func NewRegister(counts registers.RegisterCounts) Register {
 	var ints []IntValue
 	var bools []BoolValue
 	var funcs []FunctionValue
@@ -28,7 +28,7 @@ func NewRegister(counts registers.RegisterCounts) *Register {
 		funcs = make([]FunctionValue, counts.Funcs)
 	}
 
-	return &Register{
+	return Register{
 		ints:  ints,
 		bools: bools,
 		funcs: funcs,

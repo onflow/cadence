@@ -64,7 +64,7 @@ func (vm *VM) pushCallFrame(function *bbq.Function, arguments []opcode.Argument,
 
 	locals := NewRegister(function.LocalCount)
 
-	vm.callFrame.locals.copyTo(locals, arguments)
+	vm.callFrame.locals.copyTo(&locals, arguments)
 
 	callFrame := &callFrame{
 		parent:        vm.callFrame,
