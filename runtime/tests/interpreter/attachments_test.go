@@ -636,6 +636,52 @@ func TestInterpretNestedAttach(t *testing.T) {
 	AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
 }
 
+func TestInterpretNestedAttachFunction(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        resource X {
+            let i: Int 
+            init() {
+                self.i = 3
+            }
+        }
+        resource Y {
+            let i: Int 
+            init() {
+                self.i = 5
+            }
+        }
+        attachment A for X {
+            let y: @Y
+            let i: Int
+            init(_ y: @Y) {
+                self.y <- y
+                self.i = base.i
+            }
+            destroy() {
+                destroy self.y
+            }
+        }
+        attachment B for Y { }
+        fun foo(): @Y {
+            return <- attach B() to <- create Y()
+        }
+
+        fun test(): Int {
+            let v <- attach A(<-foo()) to <- create X()
+            let i = v[A]!.i
+            destroy v
+            return i
+        }
+        `)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
+}
+
 func TestInterpretAttachmentBaseUse(t *testing.T) {
 	t.Parallel()
 
