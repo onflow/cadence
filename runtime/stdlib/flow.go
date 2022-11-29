@@ -173,7 +173,7 @@ var HashType = &sema.ConstantSizedType{
 
 var AccountEventAddressParameter = sema.Parameter{
 	Identifier:     "address",
-	TypeAnnotation: sema.NewTypeAnnotation(&sema.AddressType{}),
+	TypeAnnotation: sema.NewTypeAnnotation(sema.TheAddressType),
 }
 
 var AccountEventCodeHashParameter = sema.Parameter{
@@ -233,12 +233,12 @@ var AccountContractRemovedEventType = newFlowEventType(
 
 var AccountEventProviderParameter = sema.Parameter{
 	Identifier:     "provider",
-	TypeAnnotation: sema.NewTypeAnnotation(&sema.AddressType{}),
+	TypeAnnotation: sema.NewTypeAnnotation(sema.TheAddressType),
 }
 
 var AccountEventRecipientParameter = sema.Parameter{
 	Identifier:     "recipient",
-	TypeAnnotation: sema.NewTypeAnnotation(&sema.AddressType{}),
+	TypeAnnotation: sema.NewTypeAnnotation(sema.TheAddressType),
 }
 
 var AccountEventNameParameter = sema.Parameter{

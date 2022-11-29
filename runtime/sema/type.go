@@ -391,7 +391,9 @@ func FromStringFunctionType(ty Type) *FunctionType {
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(
-			&OptionalType{ty},
+			&OptionalType{
+				Type: ty,
+			},
 		),
 	}
 }
@@ -447,7 +449,7 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 
 	// All number types, addresses, and path types have a `toString` function
 
-	if IsSubType(ty, NumberType) || IsSubType(ty, &AddressType{}) || IsSubType(ty, PathType) {
+	if IsSubType(ty, NumberType) || IsSubType(ty, TheAddressType) || IsSubType(ty, PathType) {
 
 		members[ToStringFunctionName] = MemberResolver{
 			Kind: common.DeclarationKindFunction,
@@ -486,7 +488,9 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 
 // OptionalType represents the optional variant of another type
 type OptionalType struct {
-	Type Type
+	Type                Type
+	memberResolvers     map[string]MemberResolver
+	memberResolversOnce sync.Once
 }
 
 var _ Type = &OptionalType{}
@@ -611,37 +615,43 @@ with the value of this optional when it is not nil.
 Returns nil if this optional is nil
 `
 
+const OptionalTypeMapFunctionName = "map"
+
 func (t *OptionalType) GetMembers() map[string]MemberResolver {
+	t.initializeMembers()
+	return t.memberResolvers
 
-	members := map[string]MemberResolver{
-		"map": {
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
+}
+func (t *OptionalType) initializeMembers() {
+	t.memberResolversOnce.Do(func() {
+		t.memberResolvers = withBuiltinMembers(t, map[string]MemberResolver{
+			OptionalTypeMapFunctionName: {
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
 
-				// It invalid for an optional of a resource to have a `map` function
+					// It's invalid for an optional of a resource to have a `map` function
 
-				if t.Type.IsResourceType() {
-					report(
-						&InvalidResourceOptionalMemberError{
-							Name:            identifier,
-							DeclarationKind: common.DeclarationKindFunction,
-							Range:           targetRange,
-						},
+					if t.Type.IsResourceType() {
+						report(
+							&InvalidResourceOptionalMemberError{
+								Name:            identifier,
+								DeclarationKind: common.DeclarationKindFunction,
+								Range:           targetRange,
+							},
+						)
+					}
+
+					return NewPublicFunctionMember(
+						memoryGauge,
+						t,
+						identifier,
+						OptionalTypeMapFunctionType(t.Type),
+						optionalTypeMapFunctionDocString,
 					)
-				}
-
-				return NewPublicFunctionMember(
-					memoryGauge,
-					t,
-					identifier,
-					OptionalTypeMapFunctionType(t.Type),
-					optionalTypeMapFunctionDocString,
-				)
+				},
 			},
-		},
-	}
-
-	return withBuiltinMembers(t, members)
+		})
+	})
 }
 
 func OptionalTypeMapFunctionType(typ Type) *FunctionType {
@@ -3007,7 +3017,7 @@ func init() {
 		BoolType,
 		CharacterType,
 		StringType,
-		&AddressType{},
+		TheAddressType,
 		AuthAccountType,
 		PublicAccountType,
 		PathType,
@@ -3285,7 +3295,7 @@ var AddressConversionFunctionType = &FunctionType{
 			TypeAnnotation: NewTypeAnnotation(IntegerType),
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(&AddressType{}),
+	ReturnTypeAnnotation: NewTypeAnnotation(TheAddressType),
 	ArgumentExpressionsCheck: func(checker *Checker, argumentExpressions []ast.Expression, _ ast.Range) {
 		if len(argumentExpressions) < 1 {
 			return
@@ -4811,7 +4821,12 @@ func (t *ReferenceType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 const AddressTypeName = "Address"
 
 // AddressType represents the address type
-type AddressType struct{}
+type AddressType struct {
+	memberResolvers     map[string]MemberResolver
+	memberResolversOnce sync.Once
+}
+
+var TheAddressType = &AddressType{}
 
 var _ Type = &AddressType{}
 var _ IntegerRangedType = &AddressType{}
@@ -4907,18 +4922,26 @@ Returns an array containing the byte representation of the address
 `
 
 func (t *AddressType) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, map[string]MemberResolver{
-		AddressTypeToBytesFunctionName: {
-			Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicFunctionMember(
-					memoryGauge,
-					t,
-					identifier,
-					AddressTypeToBytesFunctionType,
-					addressTypeToBytesFunctionDocString,
-				)
+	t.initializeMemberResolvers()
+	return t.memberResolvers
+}
+
+func (t *AddressType) initializeMemberResolvers() {
+	t.memberResolversOnce.Do(func() {
+		t.memberResolvers = withBuiltinMembers(t, map[string]MemberResolver{
+			AddressTypeToBytesFunctionName: {
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicFunctionMember(
+						memoryGauge,
+						t,
+						identifier,
+						AddressTypeToBytesFunctionType,
+						addressTypeToBytesFunctionDocString,
+					)
+				},
 			},
-		},
+		})
 	})
 }
 
@@ -6267,7 +6290,7 @@ func (t *CapabilityType) initializeMemberResolvers() {
 						memoryGauge,
 						t,
 						identifier,
-						&AddressType{},
+						TheAddressType,
 						capabilityTypeAddressFieldDocString,
 					)
 				},

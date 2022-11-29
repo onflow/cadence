@@ -98,7 +98,7 @@ var AuthAccountType = func() *CompositeType {
 		NewUnmeteredPublicConstantFieldMember(
 			authAccountType,
 			AuthAccountTypeAddressFieldName,
-			&AddressType{},
+			TheAddressType,
 			accountTypeAddressFieldDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
@@ -866,7 +866,7 @@ var AuthAccountTypeInboxPublishFunctionType = &FunctionType{
 		},
 		{
 			Identifier:     "recipient",
-			TypeAnnotation: NewTypeAnnotation(&AddressType{}),
+			TypeAnnotation: NewTypeAnnotation(TheAddressType),
 		},
 	},
 	ReturnTypeAnnotation: NewTypeAnnotation(
@@ -931,7 +931,7 @@ var AuthAccountTypeInboxClaimFunctionType = func() *FunctionType {
 			},
 			{
 				Identifier:     "provider",
-				TypeAnnotation: NewTypeAnnotation(&AddressType{}),
+				TypeAnnotation: NewTypeAnnotation(TheAddressType),
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(
