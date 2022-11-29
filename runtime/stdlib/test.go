@@ -1150,7 +1150,7 @@ func accountFromValue(
 	publicKeyVal, ok := accountValue.GetMember(
 		inter,
 		locationRange,
-		sema.AccountKeyPublicKeyField,
+		sema.AccountKeyPublicKeyFieldName,
 	).(interpreter.MemberAccessibleValue)
 
 	if !ok {

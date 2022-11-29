@@ -1339,7 +1339,7 @@ func (i valueImporter) importPublicKey(
 
 	for _, field := range fields {
 		switch field.Name {
-		case sema.PublicKeyPublicKeyField:
+		case sema.PublicKeyTypePublicKeyFieldName:
 			arrayValue, ok := field.Value.(*interpreter.ArrayValue)
 			if !ok {
 				return nil, errors.NewDefaultUserError(
@@ -1352,7 +1352,7 @@ func (i valueImporter) importPublicKey(
 
 			publicKeyValue = arrayValue
 
-		case sema.PublicKeySignAlgoField:
+		case sema.PublicKeyTypeSignAlgoFieldName:
 			compositeValue, ok := field.Value.(*interpreter.SimpleCompositeValue)
 			if !ok {
 				return nil, errors.NewDefaultUserError(
@@ -1379,7 +1379,7 @@ func (i valueImporter) importPublicKey(
 		return nil, errors.NewDefaultUserError(
 			"cannot import value of type '%s'. missing field '%s'",
 			ty,
-			sema.PublicKeyPublicKeyField,
+			sema.PublicKeyTypePublicKeyFieldName,
 		)
 	}
 
@@ -1387,7 +1387,7 @@ func (i valueImporter) importPublicKey(
 		return nil, errors.NewDefaultUserError(
 			"cannot import value of type '%s'. missing field '%s'",
 			ty,
-			sema.PublicKeySignAlgoField,
+			sema.PublicKeyTypeSignAlgoFieldName,
 		)
 	}
 
