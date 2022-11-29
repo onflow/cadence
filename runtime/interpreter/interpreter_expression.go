@@ -799,6 +799,10 @@ func (interpreter *Interpreter) VisitMemberExpression(expression *ast.MemberExpr
 }
 
 func (interpreter *Interpreter) VisitIndexExpression(expression *ast.IndexExpression) Value {
+	// note that this check in `AttachmentAccessTypes` must proceed the casting to the `TypeIndexableValue`
+	// or `ValueIndexableValue` interfaces. A `*EphemeralReferenceValue` value is both a `TypeIndexableValue`
+	// and a `ValueIndexableValue` statically, but at runtime can only be used as one or the other. Whether
+	// or not an expression is present in this map allows us to disambiguate between these two cases.
 	if attachmentType, ok := interpreter.Program.Elaboration.AttachmentAccessTypes[expression]; ok {
 		typedResult, ok := interpreter.evalExpression(expression.TargetExpression).(TypeIndexableValue)
 		if !ok {

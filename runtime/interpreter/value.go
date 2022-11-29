@@ -14061,7 +14061,11 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 	// if this type has attachments, destroy all of them before invoking the destructor
 	v.forEachAttachment(interpreter, locationRange, func(attachment *CompositeValue) {
 		// an attachment's destructor may make reference to `base`, so we must set the base value
-		// for the attachment before invoking its destructor
+		// for the attachment before invoking its destructor. For other functions, this happens
+		// automatically when the attachment is accessed with the access expression `v[A]`, which
+		// is a necessary pre-requisite for calling any members of the attachment. However, in
+		// the case of a destructor, this is called implicitly, and thus must have its `base`
+		// set manually
 		attachment.setBaseValue(interpreter, v)
 		attachment.Destroy(interpreter, locationRange)
 	})
