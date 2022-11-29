@@ -645,7 +645,7 @@ func (r *interpreterRuntime) ReadLinked(
 
 	pathValue := valueImporter{inter: inter}.importPathValue(path)
 
-	targetPath, _, err := inter.GetCapabilityFinalTargetPath(
+	target, _, err := inter.GetStorageCapabilityFinalTarget(
 		address,
 		pathValue,
 		&sema.ReferenceType{
@@ -657,25 +657,41 @@ func (r *interpreterRuntime) ReadLinked(
 		return nil, err
 	}
 
-	if targetPath == interpreter.EmptyPathValue {
+	if target == nil {
 		return nil, nil
 	}
 
-	value := inter.ReadStored(
-		address,
-		targetPath.Domain.Identifier(),
-		targetPath.Identifier,
-	)
+	switch target := target.(type) {
+	case interpreter.AccountCapabilityTarget:
+		return nil, nil
 
-	var exportedValue cadence.Value
-	if value != nil {
-		exportedValue, err = ExportValue(value, inter, interpreter.EmptyLocationRange)
-		if err != nil {
-			return nil, newError(err, location, codesAndPrograms)
+	case interpreter.PathCapabilityTarget:
+
+		targetPath := interpreter.PathValue(target)
+
+		if targetPath == interpreter.EmptyPathValue {
+			return nil, nil
 		}
-	}
 
-	return exportedValue, nil
+		value := inter.ReadStored(
+			address,
+			targetPath.Domain.Identifier(),
+			targetPath.Identifier,
+		)
+
+		var exportedValue cadence.Value
+		if value != nil {
+			exportedValue, err = ExportValue(value, inter, interpreter.EmptyLocationRange)
+			if err != nil {
+				return nil, newError(err, location, codesAndPrograms)
+			}
+		}
+
+		return exportedValue, nil
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
 }
 
 func (r *interpreterRuntime) SetDebugger(debugger *interpreter.Debugger) {

@@ -134,6 +134,12 @@ type ImportLocationHandlerFunc func(
 	location common.Location,
 ) Import
 
+// AuthAccountHandlerFunc is a function that handles retrieving an auth account at a given address.
+// The account returned must be of type `AuthAccount`.
+type AuthAccountHandlerFunc func(
+	address AddressValue,
+) Value
+
 // PublicAccountHandlerFunc is a function that handles retrieving a public account at a given address.
 // The account returned must be of type `PublicAccount`.
 type PublicAccountHandlerFunc func(
@@ -3539,18 +3545,18 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 			borrowStaticType := ConvertSemaToStaticType(invocation.Interpreter, borrowType)
 
 			// Note that this will be metered twice if Atree validation is enabled.
-			linkValue := NewLinkValue(interpreter, targetPath, borrowStaticType)
+			pathLink := NewPathLinkValue(interpreter, targetPath, borrowStaticType)
 
 			interpreter.WriteStored(
 				address,
 				newCapabilityDomain,
 				newCapabilityIdentifier,
-				linkValue,
+				pathLink,
 			)
 
 			return NewSomeValueNonCopying(
 				invocation.Interpreter,
-				NewCapabilityValue(
+				NewStorageCapabilityValue(
 					invocation.Interpreter,
 					addressValue,
 					newCapabilityPath,
@@ -3560,6 +3566,81 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 
 		},
 		sema.AuthAccountTypeLinkFunctionType,
+	)
+}
+
+var authAccountReferenceStaticType = ReferenceStaticType{
+	BorrowedType:   PrimitiveStaticTypeAuthAccount,
+	ReferencedType: PrimitiveStaticTypeAuthAccount,
+}
+
+// Linking
+//
+// When linking to a path with the `AuthAccount.link function`,
+// an interpreter.PathLink (formerly Link) is stored in storage.
+//
+// When linking to an account with the new AuthAccount.linkAccount function,
+// an interpreter.AccountLink is stored in the account.
+//
+// In both cases, when acquiring a capability, e.g. using getCapability,
+// a StorageCapabilityValue is returned.
+// This is because in both cases, we are looking up a path in an account.
+// Depending on what is stored in the path, PathLink or AccountLink,
+// we return a respective reference value, a StorageReferenceValue for PathLink
+// (after following the links to the final target),
+// or an AccountReferenceValue for an AccountLink.
+//
+// Again, in both cases for StorageReferenceValue and AccountReferenceValue,
+// for each use, e.g. member access,
+// we dereference/check that the link still exists after the capability was borrowed.
+
+func (interpreter *Interpreter) authAccountLinkAccountFunction(addressValue AddressValue) *HostFunctionValue {
+
+	// Converted addresses can be cached and don't have to be recomputed on each function invocation
+	address := addressValue.ToAddress()
+
+	return NewHostFunctionValue(
+		interpreter,
+		func(invocation Invocation) Value {
+			interpreter := invocation.Interpreter
+
+			newCapabilityPath, ok := invocation.Arguments[0].(PathValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			newCapabilityDomain := newCapabilityPath.Domain.Identifier()
+			newCapabilityIdentifier := newCapabilityPath.Identifier
+
+			if interpreter.storedValueExists(
+				address,
+				newCapabilityDomain,
+				newCapabilityIdentifier,
+			) {
+				return Nil
+			}
+
+			accountLinkValue := NewAccountLinkValue(interpreter)
+
+			interpreter.WriteStored(
+				address,
+				newCapabilityDomain,
+				newCapabilityIdentifier,
+				accountLinkValue,
+			)
+
+			return NewSomeValueNonCopying(
+				interpreter,
+				NewStorageCapabilityValue(
+					interpreter,
+					addressValue,
+					newCapabilityPath,
+					authAccountReferenceStaticType,
+				),
+			)
+
+		},
+		sema.AuthAccountTypeLinkAccountFunctionType,
 	)
 }
 
@@ -3586,7 +3667,7 @@ func (interpreter *Interpreter) accountGetLinkTargetFunction(addressValue Addres
 				return Nil
 			}
 
-			link, ok := value.(LinkValue)
+			link, ok := value.(PathLinkValue)
 			if !ok {
 				return Nil
 			}
@@ -3624,7 +3705,7 @@ func (interpreter *Interpreter) authAccountUnlinkFunction(addressValue AddressVa
 	)
 }
 
-func (interpreter *Interpreter) capabilityBorrowFunction(
+func (interpreter *Interpreter) storageCapabilityBorrowFunction(
 	addressValue AddressValue,
 	pathValue PathValue,
 	borrowType *sema.ReferenceType,
@@ -3636,6 +3717,8 @@ func (interpreter *Interpreter) capabilityBorrowFunction(
 	return NewHostFunctionValue(
 		interpreter,
 		func(invocation Invocation) Value {
+
+			interpreter := invocation.Interpreter
 
 			// NOTE: if a type argument is provided for the function,
 			// use it *instead* of the type of the value (if any)
@@ -3654,8 +3737,8 @@ func (interpreter *Interpreter) capabilityBorrowFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			targetPath, authorized, err :=
-				interpreter.GetCapabilityFinalTargetPath(
+			target, authorized, err :=
+				interpreter.GetStorageCapabilityFinalTarget(
 					address,
 					pathValue,
 					borrowType,
@@ -3665,37 +3748,56 @@ func (interpreter *Interpreter) capabilityBorrowFunction(
 				panic(err)
 			}
 
-			if targetPath == EmptyPathValue {
+			if target == nil {
 				return Nil
 			}
 
-			reference := NewStorageReferenceValue(
-				invocation.Interpreter,
-				authorized,
-				address,
-				targetPath,
-				borrowType.Type,
-			)
+			switch target := target.(type) {
+			case AccountCapabilityTarget:
+				return NewSomeValueNonCopying(
+					interpreter,
+					NewAccountReferenceValue(
+						interpreter,
+						address,
+						pathValue,
+						borrowType.Type,
+					),
+				)
 
-			// Attempt to dereference,
-			// which reads the stored value
-			// and performs a dynamic type check
+			case PathCapabilityTarget:
+				targetPath := PathValue(target)
 
-			value, err := reference.dereference(interpreter, invocation.LocationRange)
-			if err != nil {
-				panic(err)
+				reference := NewStorageReferenceValue(
+					interpreter,
+					authorized,
+					address,
+					targetPath,
+					borrowType.Type,
+				)
+
+				// Attempt to dereference,
+				// which reads the stored value
+				// and performs a dynamic type check
+
+				value, err := reference.dereference(interpreter, invocation.LocationRange)
+				if err != nil {
+					panic(err)
+				}
+				if value == nil {
+					return Nil
+				}
+
+				return NewSomeValueNonCopying(interpreter, reference)
+
+			default:
+				panic(errors.NewUnreachableError())
 			}
-			if value == nil {
-				return Nil
-			}
-
-			return NewSomeValueNonCopying(invocation.Interpreter, reference)
 		},
 		sema.CapabilityTypeBorrowFunctionType(borrowType),
 	)
 }
 
-func (interpreter *Interpreter) capabilityCheckFunction(
+func (interpreter *Interpreter) storageCapabilityCheckFunction(
 	addressValue AddressValue,
 	pathValue PathValue,
 	borrowType *sema.ReferenceType,
@@ -3707,6 +3809,7 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 	return NewHostFunctionValue(
 		interpreter,
 		func(invocation Invocation) Value {
+			interpreter := invocation.Interpreter
 
 			// NOTE: if a type argument is provided for the function,
 			// use it *instead* of the type of the value (if any)
@@ -3725,8 +3828,8 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			targetPath, authorized, err :=
-				interpreter.GetCapabilityFinalTargetPath(
+			target, authorized, err :=
+				interpreter.GetStorageCapabilityFinalTarget(
 					address,
 					pathValue,
 					borrowType,
@@ -3736,39 +3839,48 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 				panic(err)
 			}
 
-			if targetPath == EmptyPathValue {
+			if target == nil {
 				return FalseValue
 			}
 
-			reference := NewStorageReferenceValue(
-				invocation.Interpreter,
-				authorized,
-				address,
-				targetPath,
-				borrowType.Type,
-			)
+			switch target := target.(type) {
+			case AccountCapabilityTarget:
+				return TrueValue
 
-			// Attempt to dereference,
-			// which reads the stored value
-			// and performs a dynamic type check
+			case PathCapabilityTarget:
+				targetPath := PathValue(target)
 
-			if reference.ReferencedValue(interpreter) == nil {
-				return FalseValue
+				reference := NewStorageReferenceValue(
+					interpreter,
+					authorized,
+					address,
+					targetPath,
+					borrowType.Type,
+				)
+
+				// Attempt to dereference,
+				// which reads the stored value
+				// and performs a dynamic type check
+
+				return AsBoolValue(
+					reference.ReferencedValue(interpreter) != nil,
+				)
+
+			default:
+				panic(errors.NewUnreachableError())
 			}
-
-			return TrueValue
 		},
 		sema.CapabilityTypeCheckFunctionType(borrowType),
 	)
 }
 
-func (interpreter *Interpreter) GetCapabilityFinalTargetPath(
+func (interpreter *Interpreter) GetStorageCapabilityFinalTarget(
 	address common.Address,
 	path PathValue,
 	wantedBorrowType *sema.ReferenceType,
 	locationRange LocationRange,
 ) (
-	finalPath PathValue,
+	target CapabilityTarget,
 	authorized bool,
 	err error,
 ) {
@@ -3781,7 +3893,7 @@ func (interpreter *Interpreter) GetCapabilityFinalTargetPath(
 		// Detect cyclic links
 
 		if _, ok := seenPaths[path]; ok {
-			return EmptyPathValue, false, CyclicLinkError{
+			return nil, false, CyclicLinkError{
 				Address:       address,
 				Paths:         paths,
 				LocationRange: locationRange,
@@ -3797,23 +3909,37 @@ func (interpreter *Interpreter) GetCapabilityFinalTargetPath(
 		)
 
 		if value == nil {
-			return EmptyPathValue, false, nil
+			return nil, false, nil
 		}
 
-		if link, ok := value.(LinkValue); ok {
-
-			allowedType := interpreter.MustConvertStaticToSemaType(link.Type)
+		switch value := value.(type) {
+		case PathLinkValue:
+			allowedType := interpreter.MustConvertStaticToSemaType(value.Type)
 
 			if !sema.IsSubType(allowedType, wantedBorrowType) {
-				return EmptyPathValue, false, nil
+				return nil, false, nil
 			}
 
-			targetPath := link.TargetPath
+			targetPath := value.TargetPath
 			paths = append(paths, targetPath)
 			path = targetPath
 
-		} else {
-			return path, wantedReferenceType.Authorized, nil
+		case AccountLinkValue:
+			if !interpreter.IsSubTypeOfSemaType(
+				authAccountReferenceStaticType,
+				wantedBorrowType,
+			) {
+				return nil, false, nil
+			}
+
+			return AccountCapabilityTarget(address),
+				false,
+				nil
+
+		default:
+			return PathCapabilityTarget(path),
+				wantedReferenceType.Authorized,
+				nil
 		}
 	}
 }

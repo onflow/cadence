@@ -1122,7 +1122,7 @@ func randomStorableValue(inter *interpreter.Interpreter, currentDepth int) inter
 	case Composite:
 		return randomCompositeValue(inter, common.CompositeKindStructure, currentDepth)
 	case Capability:
-		return &interpreter.CapabilityValue{
+		return &interpreter.StorageCapabilityValue{
 			Address: randomAddressValue(),
 			Path:    randomPathValue(),
 			BorrowType: interpreter.ReferenceStaticType{
@@ -1209,9 +1209,9 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpre
 		return interpreter.NewUnmeteredStringValue(randomUTF8StringOfSize(size))
 
 	case Bool_True:
-		return interpreter.BoolValue(true)
+		return interpreter.TrueValue
 	case Bool_False:
-		return interpreter.BoolValue(false)
+		return interpreter.FalseValue
 
 	case Address:
 		return randomAddressValue()

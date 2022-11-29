@@ -161,6 +161,11 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 		if !ok {
 			return
 		}
+
+		if !checker.isAvailableMember(expressionType, identifier) {
+			return
+		}
+
 		targetRange := ast.NewRangeFromPositioned(checker.memoryGauge, expression.Expression)
 		member = resolver.Resolve(checker.memoryGauge, identifier, targetRange, checker.report)
 		if resolver.Mutating {
