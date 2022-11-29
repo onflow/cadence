@@ -20,7 +20,6 @@ package compiler
 
 import (
 	"fmt"
-	"github.com/onflow/cadence/runtime/bbq/registers"
 	"math"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -28,6 +27,7 @@ import (
 	"github.com/onflow/cadence/runtime/bbq/constantkind"
 	"github.com/onflow/cadence/runtime/bbq/leb128"
 	"github.com/onflow/cadence/runtime/bbq/opcode"
+	"github.com/onflow/cadence/runtime/bbq/registers"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -63,14 +63,14 @@ func (c *Compiler) findGlobal(name string) *global {
 	return c.globals[name]
 }
 
-func (c *Compiler) addGlobal(name string, registryType registers.RegisterType) *global {
+func (c *Compiler) addGlobal(name string, registerType registers.RegisterType) *global {
 	count := len(c.globals)
 	if count >= math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid global declaration"))
 	}
 	global := &global{
 		index:   uint16(count),
-		regType: registryType,
+		regType: registerType,
 	}
 	c.globals[name] = global
 	return global
@@ -147,10 +147,10 @@ func (c *Compiler) lastInstructionIndex() int {
 //}
 
 // encodeUint16 encodes the given uint16 in big-endian representation
-func encodeUint16(jump uint16) (byte, byte) {
-	return byte((jump >> 8) & 0xff),
-		byte(jump & 0xff)
-}
+//func encodeUint16(jump uint16) (byte, byte) {
+//	return byte((jump >> 8) & 0xff),
+//		byte(jump & 0xff)
+//}
 
 func (c *Compiler) pushLoop(start int) {
 	loop := &loop{
@@ -268,7 +268,6 @@ func (c *Compiler) VisitBreakStatement(_ *ast.BreakStatement) (_ struct{}) {
 
 func (c *Compiler) VisitContinueStatement(_ *ast.ContinueStatement) (_ struct{}) {
 	c.emit(opcode.Jump{
-		// TODO (Supun): handle conversion properly
 		Target: uint16(c.currentLoop.start),
 	})
 	return
@@ -376,11 +375,11 @@ func (c *Compiler) VisitVariableDeclaration(declaration *ast.VariableDeclaration
 		panic(errors.NewUnreachableError())
 	}
 
-	regType := registers.RegistryTypeFromSemaType(varType.TargetType)
+	regType := registers.RegisterTypeFromSemaType(varType.TargetType)
 
 	local := c.currentFunction.declareLocal(declaration.Identifier.Identifier, regType)
 
-	c.emit(opcode.MoveInt{
+	c.emit(opcode.IntMove{
 		From: valueIndex,
 		To:   local.index,
 	})
@@ -394,7 +393,7 @@ func (c *Compiler) VisitAssignmentStatement(statement *ast.AssignmentStatement) 
 	switch target := statement.Target.(type) {
 	case *ast.IdentifierExpression:
 		local := c.currentFunction.findLocal(target.Identifier.Identifier)
-		c.emit(opcode.MoveInt{
+		c.emit(opcode.IntMove{
 			From: valueIndex,
 			To:   local.index,
 		})
@@ -490,7 +489,6 @@ func (c *Compiler) VisitIdentifierExpression(expression *ast.IdentifierExpressio
 
 	varIndex := c.nextLocalIndex(global.regType)
 
-	//first, second := encodeUint16(global.index)
 	c.emit(opcode.GlobalFuncLoad{
 		Index:  global.index,
 		Result: varIndex,
@@ -509,7 +507,7 @@ func (c *Compiler) VisitInvocationExpression(expression *ast.InvocationExpressio
 
 	// TODO: copy
 	for index, argument := range expression.Arguments {
-		regType := registers.RegistryTypeFromSemaType(invocationType.ArgumentTypes[index])
+		regType := registers.RegisterTypeFromSemaType(invocationType.ArgumentTypes[index])
 		regIndex := c.compileExpression(argument.Expression)
 		params[index] = opcode.Argument{
 			Type:  regType,
@@ -519,7 +517,7 @@ func (c *Compiler) VisitInvocationExpression(expression *ast.InvocationExpressio
 
 	funcIndex := c.compileExpression(expression.InvokedExpression)
 
-	returnType := registers.RegistryTypeFromSemaType(invocationType.ReturnType)
+	returnType := registers.RegisterTypeFromSemaType(invocationType.ReturnType)
 	returnValueIndex := c.nextLocalIndex(returnType)
 
 	c.emit(opcode.Call{
@@ -724,7 +722,7 @@ func (c *Compiler) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration
 		parameterName := parameter.Identifier.Identifier
 
 		paramType := funcType.Parameters[i].TypeAnnotation.Type
-		paramRegType := registers.RegistryTypeFromSemaType(paramType)
+		paramRegType := registers.RegisterTypeFromSemaType(paramType)
 
 		function.declareLocal(parameterName, paramRegType)
 	}
@@ -780,6 +778,6 @@ func (c *Compiler) patchLoop(l *loop, loopEnd int) {
 	}
 }
 
-func (c *Compiler) nextLocalIndex(registryType registers.RegisterType) uint16 {
-	return c.currentFunction.localCount.NextIndex(registryType)
+func (c *Compiler) nextLocalIndex(registerType registers.RegisterType) uint16 {
+	return c.currentFunction.localCount.NextIndex(registerType)
 }

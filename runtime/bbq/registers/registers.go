@@ -19,7 +19,7 @@
 package registers
 
 import (
-	"fmt"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -29,8 +29,8 @@ type RegisterCounts struct {
 	Funcs uint16
 }
 
-func (c *RegisterCounts) NextIndex(registryType RegisterType) (index uint16) {
-	switch registryType {
+func (c *RegisterCounts) NextIndex(registerType RegisterType) (index uint16) {
+	switch registerType {
 	case Int:
 		index = c.Ints
 		c.Ints++
@@ -41,7 +41,7 @@ func (c *RegisterCounts) NextIndex(registryType RegisterType) (index uint16) {
 		index = c.Funcs
 		c.Funcs++
 	default:
-		panic(fmt.Errorf("unknown register type '%s'", registryType))
+		panic(errors.NewUnexpectedError("unknown register type '%s'", registerType))
 	}
 
 	return
@@ -55,7 +55,7 @@ const (
 	Func
 )
 
-func RegistryTypeFromSemaType(semaType sema.Type) RegisterType {
+func RegisterTypeFromSemaType(semaType sema.Type) RegisterType {
 	switch semaType := semaType.(type) {
 	case *sema.NumericType:
 		switch semaType {
@@ -71,5 +71,5 @@ func RegistryTypeFromSemaType(semaType sema.Type) RegisterType {
 		return Func
 	}
 
-	panic("Unknown registry type")
+	panic(errors.NewUnexpectedError("unknown registry type"))
 }

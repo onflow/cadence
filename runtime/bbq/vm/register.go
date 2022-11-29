@@ -3,6 +3,7 @@ package vm
 import (
 	"github.com/onflow/cadence/runtime/bbq/opcode"
 	"github.com/onflow/cadence/runtime/bbq/registers"
+	"github.com/onflow/cadence/runtime/errors"
 )
 
 type Register struct {
@@ -50,12 +51,12 @@ func (r *Register) initializeWithArguments(arguments []Value) {
 			r.funcs[regCounts.Funcs] = argument
 			regCounts.Funcs++
 		default:
-			panic("unknown type")
+			panic(errors.NewUnexpectedError("unknown type"))
 		}
 	}
 }
 
-func (r *Register) copyTo(otherRegister *Register, arguments []opcode.Argument) {
+func (r *Register) copyArguments(otherRegister *Register, arguments []opcode.Argument) {
 	var regCounts registers.RegisterCounts
 
 	for _, argument := range arguments {

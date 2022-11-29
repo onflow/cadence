@@ -51,21 +51,17 @@ func TestCompileRecursionFib(t *testing.T) {
 	require.Equal(t,
 		[]opcode.Opcode{
 			// if n < 2
-			//byte(opcode.GetLocal), 0, 0,
 			opcode.IntConstantLoad{0, 1},
 			opcode.IntLess{0, 1, 0},
 			opcode.JumpIfFalse{0, 4},
 			// then return n
-			//opcode.GetLocal{}, 0, 0,
 			opcode.ReturnValue{0},
 			// fib(n - 1)
-			//opcode.GetLocal{}, 0, 0,
 			opcode.IntConstantLoad{1, 2},
 			opcode.IntSubtract{0, 2, 3},
 			opcode.GlobalFuncLoad{0, 0},
 			opcode.Call{0, []opcode.Argument{{registers.Int, 3}}, 4},
-			// fib(n - 2{}
-			//opcode.GetLocal{}, 0, 0,
+			// fib(n - 2)
 			opcode.IntConstantLoad{2, 5},
 			opcode.IntSubtract{0, 5, 6},
 			opcode.GlobalFuncLoad{0, 1},
@@ -123,35 +119,40 @@ func TestCompileImperativeFib(t *testing.T) {
 	require.Len(t, program.Functions, 1)
 	require.Equal(t,
 		[]opcode.Opcode{
+			// intReg[0] is reserved for the param
+			// Hence int reg indexes for local values start from 1.
+
 			// var fib1 = 1
-			opcode.IntConstantLoad{}, 0, 0,
-			opcode.MoveInt{}, 0, 1,
+			opcode.IntConstantLoad{0, 1}, // load constant
+			opcode.IntMove{1, 2},         // copy to local variable
+			// these moves can be optimized later via a byte code optimizer.
+
 			// var fib2 = 1
-			opcode.IntConstantLoad{}, 0, 1,
-			opcode.MoveInt{}, 0, 2,
+			opcode.IntConstantLoad{1, 3}, // load constant
+			opcode.IntMove{3, 4},         // store to local variable
 			// var fibonacci = fib1
-			opcode.MoveInt{}, 0, 3,
+			opcode.IntMove{2, 5}, // copy to local variable
 			// var i = 2
-			opcode.IntConstantLoad{}, 0, 2,
-			opcode.MoveInt{}, 0, 4,
+			opcode.IntConstantLoad{2, 6}, // load constant
+			opcode.IntMove{6, 7},         // store to local variable
 			// while i < n
-			opcode.IntLess{},
-			opcode.JumpIfFalse{}, 0, 69,
+			opcode.IntLess{7, 0, 0},
+			opcode.JumpIfFalse{0, 17},
 			// fibonacci = fib1 + fib2
-			opcode.IntAdd{},
-			opcode.MoveInt{}, 0, 3,
+			opcode.IntAdd{2, 4, 8}, // add two numbers
+			opcode.IntMove{8, 5},   // store result in local variable
 			// fib1 = fib2
-			opcode.MoveInt{}, 0, 1,
+			opcode.IntMove{4, 2},
 			// fib2 = fibonacci
-			opcode.MoveInt{}, 0, 2,
+			opcode.IntMove{5, 4},
 			// i = i + 1
-			opcode.IntConstantLoad{}, 0, 3,
-			opcode.IntAdd{},
-			opcode.MoveInt{}, 0, 4,
+			opcode.IntConstantLoad{3, 9},
+			opcode.IntAdd{7, 9, 10},
+			opcode.IntMove{10, 7},
 			// continue loop
-			opcode.Jump{}, 0, 24,
+			opcode.Jump{7},
 			// return fibonacci
-			opcode.ReturnValue{},
+			opcode.ReturnValue{5},
 		},
 		compiler.functions[0].code,
 	)
@@ -204,25 +205,25 @@ func TestCompileBreak(t *testing.T) {
 	require.Equal(t,
 		[]opcode.Opcode{
 			// var i = 0
-			opcode.IntConstantLoad{}, 0, 0,
-			opcode.MoveInt{}, 0, 0,
+			opcode.IntConstantLoad{0, 0},
+			opcode.IntMove{0, 1},
 			// while true
-			opcode.True{},
-			opcode.JumpIfFalse{}, 0, 36,
+			opcode.True{0},
+			opcode.JumpIfFalse{0, 12},
 			// if i > 3
-			opcode.IntConstantLoad{}, 0, 1,
-			opcode.IntGreater{},
-			opcode.JumpIfFalse{}, 0, 23,
+			opcode.IntConstantLoad{1, 2},
+			opcode.IntGreater{1, 2, 1},
+			opcode.JumpIfFalse{1, 8},
 			// break
-			opcode.Jump{}, 0, 36,
+			opcode.Jump{12},
 			// i = i + 1
-			opcode.IntConstantLoad{}, 0, 2,
-			opcode.IntAdd{},
-			opcode.MoveInt{}, 0, 0,
+			opcode.IntConstantLoad{2, 3},
+			opcode.IntAdd{1, 3, 4},
+			opcode.IntMove{4, 1},
 			// repeat
-			opcode.Jump{}, 0, 6,
+			opcode.Jump{2},
 			// return i
-			opcode.ReturnValue{},
+			opcode.ReturnValue{1},
 		},
 		compiler.functions[0].code,
 	)
@@ -272,27 +273,27 @@ func TestCompileContinue(t *testing.T) {
 	require.Equal(t,
 		[]opcode.Opcode{
 			// var i = 0
-			opcode.IntConstantLoad{}, 0, 0,
-			opcode.MoveInt{}, 0, 0,
+			opcode.IntConstantLoad{0, 0},
+			opcode.IntMove{0, 1},
 			// while true
-			opcode.True{},
-			opcode.JumpIfFalse{}, 0, 39,
+			opcode.True{0},
+			opcode.JumpIfFalse{0, 13},
 			// i = i + 1
-			opcode.IntConstantLoad{}, 0, 1,
-			opcode.IntAdd{},
-			opcode.MoveInt{}, 0, 0,
+			opcode.IntConstantLoad{1, 2},
+			opcode.IntAdd{1, 2, 3},
+			opcode.IntMove{3, 1},
 			// if i < 3
-			opcode.IntConstantLoad{}, 0, 2,
-			opcode.IntLess{},
-			opcode.JumpIfFalse{}, 0, 33,
+			opcode.IntConstantLoad{2, 4},
+			opcode.IntLess{1, 4, 1},
+			opcode.JumpIfFalse{1, 11},
 			// continue
-			opcode.Jump{}, 0, 6,
+			opcode.Jump{2},
 			// break
-			opcode.Jump{}, 0, 39,
+			opcode.Jump{13},
 			// repeat
-			opcode.Jump{}, 0, 6,
+			opcode.Jump{2},
 			// return i
-			opcode.ReturnValue{},
+			opcode.ReturnValue{1},
 		},
 		compiler.functions[0].code,
 	)

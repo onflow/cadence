@@ -85,7 +85,7 @@ type False struct {
 
 //type GetLocal struct{}
 
-type MoveInt struct {
+type IntMove struct {
 	From, To uint16
 }
 

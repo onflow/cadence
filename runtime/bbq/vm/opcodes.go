@@ -82,7 +82,7 @@ func (vm *VM) opIntConstantLoad(code opcode.IntConstantLoad) {
 	intReg[code.Target] = constant.(IntValue)
 }
 
-func (vm *VM) opMoveInt(code opcode.MoveInt) {
+func (vm *VM) opMoveInt(code opcode.IntMove) {
 	intReg := vm.callFrame.locals.ints
 	intReg[code.To] = intReg[code.From]
 }

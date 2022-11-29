@@ -64,7 +64,7 @@ func (vm *VM) pushCallFrame(function *bbq.Function, arguments []opcode.Argument,
 
 	locals := NewRegister(function.LocalCount)
 
-	vm.callFrame.locals.copyTo(&locals, arguments)
+	vm.callFrame.locals.copyArguments(&locals, arguments)
 
 	callFrame := &callFrame{
 		parent:        vm.callFrame,
@@ -75,7 +75,7 @@ func (vm *VM) pushCallFrame(function *bbq.Function, arguments []opcode.Argument,
 	vm.callFrame = callFrame
 }
 
-func (vm *VM) pushCallFrameOld(function *bbq.Function, arguments []Value) {
+func (vm *VM) pushCallFrameExternal(function *bbq.Function, arguments []Value) {
 
 	locals := NewRegister(function.LocalCount)
 	locals.initializeWithArguments(arguments)
@@ -115,7 +115,7 @@ func (vm *VM) Invoke(name string, arguments ...Value) (Value, error) {
 		return nil, errors.NewDefaultUserError("wrong number of arguments")
 	}
 
-	vm.pushCallFrameOld(function, arguments)
+	vm.pushCallFrameExternal(function, arguments)
 
 	vm.run()
 
@@ -161,7 +161,7 @@ func (vm *VM) run() {
 			vm.opIntConstantLoad(op)
 		//case opcode.GetLocal:
 		//	vm.opGetLocalInt(op)
-		case opcode.MoveInt:
+		case opcode.IntMove:
 			vm.opMoveInt(op)
 		case opcode.GlobalFuncLoad:
 			vm.opGlobalFuncLoad(op)
