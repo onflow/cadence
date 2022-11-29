@@ -24,12 +24,11 @@ var AnyStructType = &SimpleType{
 	QualifiedName: "AnyStruct",
 	TypeID:        "AnyStruct",
 	tag:           AnyStructTypeTag,
-	IsInvalid:     false,
 	IsResource:    false,
 	// The actual storability of a value is checked at run-time
-	Storable:             true,
-	Equatable:            false,
-	ExternallyReturnable: true,
+	Storable:   true,
+	Equatable:  false,
+	Exportable: true,
 	// The actual importability is checked at runtime
 	Importable: true,
 }

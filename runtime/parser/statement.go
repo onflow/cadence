@@ -175,6 +175,8 @@ func parseFunctionDeclarationOrFunctionExpressionStatement(p *parser) (ast.State
 		return ast.NewFunctionDeclaration(
 			p.memoryGauge,
 			ast.AccessNotSpecified,
+			false,
+			false,
 			identifier,
 			parameterList,
 			returnTypeAnnotation,
@@ -789,15 +791,14 @@ func parseRemoveStatement(
 
 	p.skipSpaceAndComments()
 
-	// check and skip from keyword
-	if p.current.Type != lexer.TokenIdentifier || string(p.tokenSource(p.current)) != keywordFrom {
+	// check and skip `from` keyword
+	if !p.isToken(p.current, lexer.TokenIdentifier, keywordFrom) {
 		p.reportSyntaxError(
 			"expected from keyword, got %s",
 			p.current.Type,
 		)
 	}
-	p.next()
-	p.skipSpaceAndComments()
+	p.nextSemanticToken()
 
 	attached, err := parseExpression(p, lowestBindingPower)
 	if err != nil {

@@ -677,6 +677,40 @@ func (e *MissingAccessModifierError) EndPosition(common.MemoryGauge) ast.Positio
 	return e.Pos
 }
 
+// InvalidStaticModifierError
+
+type InvalidStaticModifierError struct {
+	ast.Range
+}
+
+var _ SemanticError = &InvalidStaticModifierError{}
+var _ errors.UserError = &InvalidStaticModifierError{}
+
+func (*InvalidStaticModifierError) isSemanticError() {}
+
+func (*InvalidStaticModifierError) IsUserError() {}
+
+func (e *InvalidStaticModifierError) Error() string {
+	return "invalid static modifier for declaration"
+}
+
+// InvalidNativeModifierError
+
+type InvalidNativeModifierError struct {
+	ast.Range
+}
+
+var _ SemanticError = &InvalidNativeModifierError{}
+var _ errors.UserError = &InvalidNativeModifierError{}
+
+func (*InvalidNativeModifierError) isSemanticError() {}
+
+func (*InvalidNativeModifierError) IsUserError() {}
+
+func (e *InvalidNativeModifierError) Error() string {
+	return "invalid native modifier for declaration"
+}
+
 // InvalidNameError
 
 type InvalidNameError struct {
@@ -3806,21 +3840,21 @@ func (e *AttachToInvalidTypeError) Error() string {
 	)
 }
 
-// RemoveFromInvalidTypeError
-type RemoveFromInvalidTypeError struct {
+// InvalidAttachmentRemoveError
+type InvalidAttachmentRemoveError struct {
 	Attachment Type
 	BaseType   Type
 	ast.Range
 }
 
-var _ SemanticError = &RemoveFromInvalidTypeError{}
-var _ errors.UserError = &RemoveFromInvalidTypeError{}
+var _ SemanticError = &InvalidAttachmentRemoveError{}
+var _ errors.UserError = &InvalidAttachmentRemoveError{}
 
-func (*RemoveFromInvalidTypeError) isSemanticError() {}
+func (*InvalidAttachmentRemoveError) isSemanticError() {}
 
-func (*RemoveFromInvalidTypeError) IsUserError() {}
+func (*InvalidAttachmentRemoveError) IsUserError() {}
 
-func (e *RemoveFromInvalidTypeError) Error() string {
+func (e *InvalidAttachmentRemoveError) Error() string {
 	if e.BaseType == nil {
 		return fmt.Sprintf(
 			"cannot remove `%s`, as it is not an attachment type",

@@ -25,12 +25,11 @@ func _() {
 	_ = x[precedenceUnaryPostfix-14]
 	_ = x[precedenceAccess-15]
 	_ = x[precedenceLiteral-16]
-	_ = x[precendenceAttach-17]
 }
 
-const _precedence_name = "precedenceUnknownprecedenceTernaryprecedenceLogicalOrprecedenceLogicalAndprecedenceComparisonprecedenceNilCoalescingprecedenceBitwiseOrprecedenceBitwiseXorprecedenceBitwiseAndprecedenceBitwiseShiftprecedenceAdditionprecedenceMultiplicationprecedenceCastingprecedenceUnaryPrefixprecedenceUnaryPostfixprecedenceAccessprecedenceLiteralprecendenceAttach"
+const _precedence_name = "precedenceUnknownprecedenceTernaryprecedenceLogicalOrprecedenceLogicalAndprecedenceComparisonprecedenceNilCoalescingprecedenceBitwiseOrprecedenceBitwiseXorprecedenceBitwiseAndprecedenceBitwiseShiftprecedenceAdditionprecedenceMultiplicationprecedenceCastingprecedenceUnaryPrefixprecedenceUnaryPostfixprecedenceAccessprecedenceLiteral"
 
-var _precedence_index = [...]uint16{0, 17, 34, 53, 73, 93, 116, 135, 155, 175, 197, 215, 239, 256, 277, 299, 315, 332, 349}
+var _precedence_index = [...]uint16{0, 17, 34, 53, 73, 93, 116, 135, 155, 175, 197, 215, 239, 256, 277, 299, 315, 332}
 
 func (i precedence) String() string {
 	if i >= precedence(len(_precedence_index)-1) {

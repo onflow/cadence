@@ -27,6 +27,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -2584,4 +2585,52 @@ func TestCheckInvalidMissingMember(t *testing.T) {
 			notDeclaredMemberErr.SecondaryError(),
 		)
 	})
+}
+
+func TestCheckStaticFieldDeclaration(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheckWithOptions(t,
+		`
+          struct S {
+              static let foo: Int
+          }
+        `,
+		ParseAndCheckOptions{
+			ParseOptions: parser.Config{
+				StaticModifierEnabled: true,
+			},
+		},
+	)
+
+	errs := RequireCheckerErrors(t, err, 2)
+
+	assert.IsType(t, &sema.InvalidStaticModifierError{}, errs[0])
+	// TODO: static fields must be native and need no initializer
+	assert.IsType(t, &sema.MissingInitializerError{}, errs[1])
+}
+
+func TestCheckNativeFieldDeclaration(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheckWithOptions(t,
+		`
+          struct S {
+              native let foo: Int
+          }
+        `,
+		ParseAndCheckOptions{
+			ParseOptions: parser.Config{
+				NativeModifierEnabled: true,
+			},
+		},
+	)
+
+	errs := RequireCheckerErrors(t, err, 2)
+
+	assert.IsType(t, &sema.InvalidNativeModifierError{}, errs[0])
+	// TODO: native fields need no initializer
+	assert.IsType(t, &sema.MissingInitializerError{}, errs[1])
 }

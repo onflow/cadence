@@ -1214,16 +1214,26 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 		base,
 		interpreter.MustSemaTypeOfValue(base).(*sema.CompositeType),
 	)
+	interpreter.trackReferencedResourceKindedValue(base.StorageID(), base)
 
 	interpreter.SharedState.deferredBaseValue = baseValue
 	attachment, ok := interpreter.VisitInvocationExpression(attachExpression.Attachment).(*CompositeValue)
+
+	// Because `self` in attachments is a reference, we need to track the attachment if it's a resource
+	interpreter.trackReferencedResourceKindedValue(attachment.StorageID(), attachment)
+
+	base = base.Transfer(
+		interpreter,
+		locationRange,
+		atree.Address{},
+		false,
+		nil,
+	).(*CompositeValue)
 
 	// we enforce this in the checker
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
-
-	base = base.Transfer(interpreter, locationRange, atree.Address{}, false, nil).(*CompositeValue)
 
 	// when `v[A]` is executed, we set `A`'s base to `&v`
 	attachment.setBaseValue(interpreter, base)

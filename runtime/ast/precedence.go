@@ -90,8 +90,6 @@ const (
 	// - IdentifierExpression
 	// - FunctionExpression
 	// - PathExpression
-	precedenceLiteral
-	// precendenceAttach is the precedence of
 	// - AttachExpression
-	precendenceAttach
+	precedenceLiteral
 )

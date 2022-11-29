@@ -1854,7 +1854,7 @@ func BenchmarkContractInterfaceFungibleToken(b *testing.B) {
 
 	const code = examples.FungibleTokenContractInterface
 
-	program, err := parser.ParseProgram([]byte(code), nil)
+	program, err := parser.ParseProgram(nil, []byte(code), parser.Config{})
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -1885,7 +1885,7 @@ func BenchmarkCheckContractInterfaceFungibleTokenConformance(b *testing.B) {
 
 	code := examples.FungibleTokenContractInterface + "\n" + examples.ExampleFungibleTokenContract
 
-	program, err := parser.ParseProgram([]byte(code), nil)
+	program, err := parser.ParseProgram(nil, []byte(code), parser.Config{})
 	if err != nil {
 		b.Fatal(err)
 	}

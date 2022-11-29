@@ -329,7 +329,7 @@ func TestParseAdvancedExpression(t *testing.T) {
 			defer func() {
 				panicMsg = recover()
 			}()
-			ParseExpression([]byte("1 < 2"), gauge)
+			ParseExpression(gauge, []byte("1 < 2"), Config{})
 		})()
 
 		require.IsType(t, errors.MemoryError{}, panicMsg)
@@ -352,7 +352,7 @@ func TestParseAdvancedExpression(t *testing.T) {
 				panicMsg = recover()
 			}()
 
-			ParseExpression([]byte("1 < 2 > 3"), gauge)
+			ParseExpression(gauge, []byte("1 < 2 > 3"), Config{})
 		})()
 
 		require.IsType(t, errors.MemoryError{}, panicMsg)
@@ -624,6 +624,25 @@ func TestParseArrayExpression(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("empty, separated by newline", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseExpression("[\n]")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.ArrayExpression{
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 2, Column: 0, Offset: 2},
+				},
+			},
+			result,
+		)
+	})
+
 }
 
 func TestParseDictionaryExpression(t *testing.T) {
@@ -776,6 +795,24 @@ func TestParseDictionaryExpression(t *testing.T) {
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 13, Column: 1, Offset: 44},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("empty, separated by newline", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseExpression("{\n}")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.DictionaryExpression{
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 2, Column: 0, Offset: 2},
 				},
 			},
 			result,
@@ -2139,9 +2176,14 @@ func TestParseBlockComment(t *testing.T) {
 			input: []byte(`/*foo`),
 		}
 
-		_, errs := ParseTokenStream(nil, tokens, func(p *parser) (ast.Expression, error) {
-			return parseExpression(p, lowestBindingPower)
-		})
+		_, errs := ParseTokenStream(
+			nil,
+			tokens,
+			func(p *parser) (ast.Expression, error) {
+				return parseExpression(p, lowestBindingPower)
+			},
+			Config{},
+		)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{

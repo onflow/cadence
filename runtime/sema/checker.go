@@ -1762,8 +1762,8 @@ func (checker *Checker) checkCharacterLiteral(expression *ast.StringExpression) 
 	)
 }
 
-func (checker *Checker) isReadableAccess(access ast.Access) bool {
-	switch checker.Config.AccessCheckMode {
+func (mode AccessCheckMode) IsReadableAccess(access ast.Access) bool {
+	switch mode {
 	case AccessCheckModeStrict,
 		AccessCheckModeNotSpecifiedRestricted:
 
@@ -1784,8 +1784,8 @@ func (checker *Checker) isReadableAccess(access ast.Access) bool {
 	}
 }
 
-func (checker *Checker) isWriteableAccess(access ast.Access) bool {
-	switch checker.Config.AccessCheckMode {
+func (mode AccessCheckMode) IsWriteableAccess(access ast.Access) bool {
+	switch mode {
 	case AccessCheckModeStrict,
 		AccessCheckModeNotSpecifiedRestricted:
 
@@ -1921,37 +1921,6 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 				ast.AccessPublic,
 				false,
 				resourceUUIDFieldDocString,
-			)
-		case common.CompositeKindAttachment:
-			// all attachments contain `getField` and `getFunction`
-
-			addPredeclaredMember(
-				AttachmentGetFieldFunctionName,
-				AttachmentGetFieldFunctionType(),
-				common.DeclarationKindFunction,
-				ast.AccessPublic,
-				true,
-				attachmentGetFieldFunctionDocString,
-			)
-
-			addPredeclaredMember(
-				AttachmentGetFunctionFunctionName,
-				AttachmentGetFunctionFunctionType(),
-				common.DeclarationKindFunction,
-				ast.AccessPublic,
-				true,
-				attachmentGetFunctionFunctionDocString,
-			)
-		}
-
-		if compositeKindedType.GetCompositeKind().SupportsAttachments() {
-			addPredeclaredMember(
-				CompositeForEachAttachmentFunctionName,
-				CompositeForEachAttachmentFunctionType(compositeKindedType),
-				common.DeclarationKindFunction,
-				ast.AccessPublic,
-				true,
-				compositeForEachAttachmentFunctionDocString,
 			)
 		}
 	}
@@ -2392,4 +2361,24 @@ func wrapWithOptionalIfNotNil(typ Type) Type {
 
 func (checker *Checker) CheckStatement(element ast.Statement) {
 	ast.AcceptStatement[struct{}](element, checker)
+}
+
+func (checker *Checker) checkStaticModifier(isStatic bool, position ast.HasPosition) {
+	if isStatic && !checker.Config.AllowStaticDeclarations {
+		checker.report(
+			&InvalidStaticModifierError{
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, position),
+			},
+		)
+	}
+}
+
+func (checker *Checker) checkNativeModifier(isNative bool, position ast.HasPosition) {
+	if isNative && !checker.Config.AllowNativeDeclarations {
+		checker.report(
+			&InvalidNativeModifierError{
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, position),
+			},
+		)
+	}
 }

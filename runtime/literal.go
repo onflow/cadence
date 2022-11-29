@@ -48,7 +48,7 @@ func ParseLiteral(
 ) {
 	code := []byte(literal)
 
-	expression, errs := parser.ParseExpression(code, inter)
+	expression, errs := parser.ParseExpression(inter, code, parser.Config{})
 	if len(errs) > 0 {
 		return nil, parser.Error{
 			Code:   code,
@@ -73,7 +73,7 @@ func ParseLiteralArgumentList(
 	error,
 ) {
 	code := []byte(argumentList)
-	arguments, errs := parser.ParseArgumentList(code, inter)
+	arguments, errs := parser.ParseArgumentList(inter, code, parser.Config{})
 	if len(errs) > 0 {
 		return nil, parser.Error{
 			Errors: errs,
