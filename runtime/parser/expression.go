@@ -358,7 +358,7 @@ func init() {
 				p,
 				literal,
 				literal[2:],
-				IntegerLiteralKindBinary,
+				common.IntegerLiteralKindBinary,
 				token.Range,
 			), nil
 		},
@@ -372,7 +372,7 @@ func init() {
 				p,
 				literal,
 				literal[2:],
-				IntegerLiteralKindOctal,
+				common.IntegerLiteralKindOctal,
 				token.Range,
 			), nil
 		},
@@ -386,7 +386,7 @@ func init() {
 				p,
 				literal,
 				literal,
-				IntegerLiteralKindDecimal,
+				common.IntegerLiteralKindDecimal,
 				token.Range,
 			), nil
 		},
@@ -400,7 +400,7 @@ func init() {
 				p,
 				literal,
 				literal[2:],
-				IntegerLiteralKindHexadecimal,
+				common.IntegerLiteralKindHexadecimal,
 				token.Range,
 			), nil
 		},
@@ -414,7 +414,7 @@ func init() {
 				p,
 				literal,
 				literal[2:],
-				IntegerLiteralKindUnknown,
+				common.IntegerLiteralKindUnknown,
 				token.Range,
 			), nil
 		},
@@ -1105,6 +1105,8 @@ func defineArrayExpression() {
 	setExprNullDenotation(
 		lexer.TokenBracketOpen,
 		func(p *parser, startToken lexer.Token) (ast.Expression, error) {
+			p.skipSpaceAndComments()
+
 			var values []ast.Expression
 			for !p.current.Is(lexer.TokenBracketClose) {
 				p.skipSpaceAndComments()
@@ -1144,6 +1146,8 @@ func defineDictionaryExpression() {
 	setExprNullDenotation(
 		lexer.TokenBraceOpen,
 		func(p *parser, startToken lexer.Token) (ast.Expression, error) {
+			p.skipSpaceAndComments()
+
 			var entries []ast.DictionaryEntry
 			for !p.current.Is(lexer.TokenBraceClose) {
 				p.skipSpaceAndComments()
@@ -1683,7 +1687,7 @@ func parseHex(r rune) rune {
 	return -1
 }
 
-func parseIntegerLiteral(p *parser, literal, text []byte, kind IntegerLiteralKind, tokenRange ast.Range) *ast.IntegerExpression {
+func parseIntegerLiteral(p *parser, literal, text []byte, kind common.IntegerLiteralKind, tokenRange ast.Range) *ast.IntegerExpression {
 
 	report := func(invalidKind InvalidNumberLiteralKind) {
 		p.report(
@@ -1715,7 +1719,7 @@ func parseIntegerLiteral(p *parser, literal, text []byte, kind IntegerLiteralKin
 	var value *big.Int
 	var base int
 
-	if kind == IntegerLiteralKindUnknown {
+	if kind == common.IntegerLiteralKindUnknown {
 		base = 1
 
 		report(InvalidNumberLiteralKindUnknownPrefix)
@@ -1725,6 +1729,9 @@ func parseIntegerLiteral(p *parser, literal, text []byte, kind IntegerLiteralKin
 		if withoutUnderscores == "" {
 			report(InvalidNumberLiteralKindMissingDigits)
 		} else {
+			estimatedSize := common.OverEstimateBigIntFromString(withoutUnderscores, kind)
+			common.UseMemory(p.memoryGauge, common.NewBigIntMemoryUsage(estimatedSize))
+
 			var ok bool
 			value, ok = new(big.Int).SetString(withoutUnderscores, base)
 			if !ok {
@@ -1734,6 +1741,8 @@ func parseIntegerLiteral(p *parser, literal, text []byte, kind IntegerLiteralKin
 	}
 
 	if value == nil {
+		common.UseMemory(p.memoryGauge, common.NewBigIntMemoryUsage(1))
+
 		value = new(big.Int)
 	}
 
@@ -1743,14 +1752,19 @@ func parseIntegerLiteral(p *parser, literal, text []byte, kind IntegerLiteralKin
 func parseFixedPointPart(gauge common.MemoryGauge, part string) (integer *big.Int, scale uint) {
 	withoutUnderscores := strings.ReplaceAll(part, "_", "")
 
+	base := common.IntegerLiteralKindDecimal
+
 	common.UseMemory(
 		gauge,
 		common.NewBigIntMemoryUsage(
-			common.OverEstimateBigIntFromString(withoutUnderscores),
+			common.OverEstimateBigIntFromString(withoutUnderscores, base),
 		),
 	)
 
-	integer, _ = new(big.Int).SetString(withoutUnderscores, 10)
+	estimatedSize := common.OverEstimateBigIntFromString(withoutUnderscores, base)
+	common.UseMemory(gauge, common.NewBigIntMemoryUsage(estimatedSize))
+
+	integer, _ = new(big.Int).SetString(withoutUnderscores, base.Base())
 	if integer == nil {
 		integer = new(big.Int)
 	}

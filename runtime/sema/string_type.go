@@ -41,15 +41,15 @@ Returns a string from the given array of characters
 
 // StringType represents the string type
 var StringType = &SimpleType{
-	Name:                 "String",
-	QualifiedName:        "String",
-	TypeID:               "String",
-	tag:                  StringTypeTag,
-	IsResource:           false,
-	Storable:             true,
-	Equatable:            true,
-	ExternallyReturnable: true,
-	Importable:           true,
+	Name:          "String",
+	QualifiedName: "String",
+	TypeID:        "String",
+	tag:           StringTypeTag,
+	IsResource:    false,
+	Storable:      true,
+	Equatable:     true,
+	Exportable:    true,
+	Importable:    true,
 	ValueIndexingInfo: ValueIndexingInfo{
 		IsValueIndexableType:          true,
 		AllowsValueIndexingAssignment: false,

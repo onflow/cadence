@@ -20,15 +20,15 @@ package sema
 
 // PathType
 var PathType = &SimpleType{
-	Name:                 "Path",
-	QualifiedName:        "Path",
-	TypeID:               "Path",
-	tag:                  PathTypeTag,
-	IsResource:           false,
-	Storable:             true,
-	Equatable:            true,
-	ExternallyReturnable: true,
-	Importable:           true,
+	Name:          "Path",
+	QualifiedName: "Path",
+	TypeID:        "Path",
+	tag:           PathTypeTag,
+	IsResource:    false,
+	Storable:      true,
+	Equatable:     true,
+	Exportable:    true,
+	Importable:    true,
 	IsSuperTypeOf: func(subType Type) bool {
 		return IsSubType(subType, StoragePathType) ||
 			IsSubType(subType, CapabilityPathType)
@@ -39,30 +39,30 @@ var PathTypeAnnotation = NewTypeAnnotation(PathType)
 
 // StoragePathType
 var StoragePathType = &SimpleType{
-	Name:                 "StoragePath",
-	QualifiedName:        "StoragePath",
-	TypeID:               "StoragePath",
-	tag:                  StoragePathTypeTag,
-	IsResource:           false,
-	Storable:             true,
-	Equatable:            true,
-	ExternallyReturnable: true,
-	Importable:           true,
+	Name:          "StoragePath",
+	QualifiedName: "StoragePath",
+	TypeID:        "StoragePath",
+	tag:           StoragePathTypeTag,
+	IsResource:    false,
+	Storable:      true,
+	Equatable:     true,
+	Exportable:    true,
+	Importable:    true,
 }
 
 var StoragePathTypeAnnotation = NewTypeAnnotation(StoragePathType)
 
 // CapabilityPathType
 var CapabilityPathType = &SimpleType{
-	Name:                 "CapabilityPath",
-	QualifiedName:        "CapabilityPath",
-	TypeID:               "CapabilityPath",
-	tag:                  CapabilityPathTypeTag,
-	IsResource:           false,
-	Storable:             true,
-	Equatable:            true,
-	ExternallyReturnable: true,
-	Importable:           true,
+	Name:          "CapabilityPath",
+	QualifiedName: "CapabilityPath",
+	TypeID:        "CapabilityPath",
+	tag:           CapabilityPathTypeTag,
+	IsResource:    false,
+	Storable:      true,
+	Equatable:     true,
+	Exportable:    true,
+	Importable:    true,
 	IsSuperTypeOf: func(subType Type) bool {
 		return IsSubType(subType, PrivatePathType) ||
 			IsSubType(subType, PublicPathType)
@@ -73,30 +73,30 @@ var CapabilityPathTypeAnnotation = NewTypeAnnotation(CapabilityPathType)
 
 // PublicPathType
 var PublicPathType = &SimpleType{
-	Name:                 "PublicPath",
-	QualifiedName:        "PublicPath",
-	TypeID:               "PublicPath",
-	tag:                  PublicPathTypeTag,
-	IsResource:           false,
-	Storable:             true,
-	Equatable:            true,
-	ExternallyReturnable: true,
-	Importable:           true,
+	Name:          "PublicPath",
+	QualifiedName: "PublicPath",
+	TypeID:        "PublicPath",
+	tag:           PublicPathTypeTag,
+	IsResource:    false,
+	Storable:      true,
+	Equatable:     true,
+	Exportable:    true,
+	Importable:    true,
 }
 
 var PublicPathTypeAnnotation = NewTypeAnnotation(PublicPathType)
 
 // PrivatePathType
 var PrivatePathType = &SimpleType{
-	Name:                 "PrivatePath",
-	QualifiedName:        "PrivatePath",
-	TypeID:               "PrivatePath",
-	tag:                  PrivatePathTypeTag,
-	IsResource:           false,
-	Storable:             true,
-	Equatable:            true,
-	ExternallyReturnable: true,
-	Importable:           true,
+	Name:          "PrivatePath",
+	QualifiedName: "PrivatePath",
+	TypeID:        "PrivatePath",
+	tag:           PrivatePathTypeTag,
+	IsResource:    false,
+	Storable:      true,
+	Equatable:     true,
+	Exportable:    true,
+	Importable:    true,
 }
 
 var PrivatePathTypeAnnotation = NewTypeAnnotation(PrivatePathType)

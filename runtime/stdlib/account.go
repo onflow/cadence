@@ -246,6 +246,11 @@ func newAuthAccountContractsValue(
 			handler,
 			addressValue,
 		),
+		newAccountContractsBorrowFunction(
+			gauge,
+			handler,
+			addressValue,
+		),
 		newAuthAccountContractsRemoveFunction(
 			gauge,
 			handler,
@@ -820,6 +825,11 @@ func newPublicAccountContractsValue(
 			handler,
 			addressValue,
 		),
+		newAccountContractsBorrowFunction(
+			gauge,
+			handler,
+			addressValue,
+		),
 		newAccountContractsGetNamesFunction(
 			handler,
 			addressValue,
@@ -1153,7 +1163,86 @@ func newAccountContractsGetFunction(
 				return interpreter.Nil
 			}
 		},
-		sema.AuthAccountContractsTypeGetFunctionType,
+		sema.AccountContractsTypeGetFunctionType,
+	)
+}
+
+func newAccountContractsBorrowFunction(
+	gauge common.MemoryGauge,
+	handler PublicAccountContractsHandler,
+	addressValue interpreter.AddressValue,
+) *interpreter.HostFunctionValue {
+
+	// Converted addresses can be cached and don't have to be recomputed on each function invocation
+	address := addressValue.ToAddress()
+
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		func(invocation interpreter.Invocation) interpreter.Value {
+
+			inter := invocation.Interpreter
+
+			nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+			name := nameValue.Str
+
+			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			if typeParameterPair == nil {
+				panic(errors.NewUnreachableError())
+			}
+			ty := typeParameterPair.Value
+
+			referenceType, ok := ty.(*sema.ReferenceType)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			// Check if the contract exists
+
+			var code []byte
+			var err error
+			wrapPanic(func() {
+				code, err = handler.GetAccountContractCode(address, name)
+			})
+			if err != nil {
+				panic(err)
+			}
+			if len(code) == 0 {
+				return interpreter.Nil
+			}
+
+			// Load the contract
+
+			contractLocation := common.NewAddressLocation(gauge, address, name)
+			inter = inter.EnsureLoaded(contractLocation)
+			contractValue, err := inter.GetContractComposite(contractLocation)
+			if err != nil {
+				panic(err)
+			}
+
+			// Check the type
+
+			staticType := contractValue.StaticType(inter)
+			if !inter.IsSubTypeOfSemaType(staticType, referenceType.Type) {
+				return interpreter.Nil
+			}
+
+			reference := interpreter.NewEphemeralReferenceValue(
+				inter,
+				false,
+				contractValue,
+				referenceType.Type,
+			)
+
+			return interpreter.NewSomeValueNonCopying(
+				inter,
+				reference,
+			)
+
+		},
+		sema.AccountContractsTypeBorrowFunctionType,
 	)
 }
 

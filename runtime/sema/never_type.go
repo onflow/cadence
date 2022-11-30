@@ -20,15 +20,15 @@ package sema
 
 // NeverType represents the bottom type
 var NeverType = &SimpleType{
-	Name:                 "Never",
-	QualifiedName:        "Never",
-	TypeID:               "Never",
-	tag:                  NeverTypeTag,
-	IsResource:           false,
-	Storable:             false,
-	Equatable:            false,
-	ExternallyReturnable: false,
-	Importable:           false,
+	Name:          "Never",
+	QualifiedName: "Never",
+	TypeID:        "Never",
+	tag:           NeverTypeTag,
+	IsResource:    false,
+	Storable:      false,
+	Equatable:     false,
+	Exportable:    false,
+	Importable:    false,
 }
 
 var NeverTypeAnnotation = NewTypeAnnotation(NeverType)
