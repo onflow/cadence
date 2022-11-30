@@ -359,6 +359,8 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ LocationRange, name str
 		return NewHostFunctionValue(
 			interpreter,
 			func(invocation Invocation) Value {
+				interpreter := invocation.Interpreter
+
 				staticType := v.Type
 				otherTypeValue, ok := invocation.Arguments[0].(TypeValue)
 				if !ok {
@@ -371,11 +373,9 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ LocationRange, name str
 					return FalseValue
 				}
 
-				inter := invocation.Interpreter
-
 				result := sema.IsSubType(
-					inter.MustConvertStaticToSemaType(staticType),
-					inter.MustConvertStaticToSemaType(otherStaticType),
+					interpreter.MustConvertStaticToSemaType(staticType),
+					interpreter.MustConvertStaticToSemaType(otherStaticType),
 				)
 				return AsBoolValue(result)
 			},
@@ -859,6 +859,8 @@ func (v CharacterValue) GetMember(interpreter *Interpreter, _ LocationRange, nam
 		return NewHostFunctionValue(
 			interpreter,
 			func(invocation Invocation) Value {
+				interpreter := invocation.Interpreter
+
 				memoryUsage := common.NewStringMemoryUsage(len(v))
 
 				return NewStringValue(
@@ -1122,6 +1124,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, _ LocationRange, name 
 		return NewHostFunctionValue(
 			interpreter,
 			func(invocation Invocation) Value {
+				interpreter := invocation.Interpreter
 				otherArray, ok := invocation.Arguments[0].(*StringValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
@@ -15623,13 +15626,15 @@ func (v *DictionaryValue) GetMember(
 		return NewHostFunctionValue(
 			interpreter,
 			func(invocation Invocation) Value {
+				interpreter := invocation.Interpreter
+
 				funcArgument, ok := invocation.Arguments[0].(FunctionValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
 
 				v.ForEachKey(
-					invocation.Interpreter,
+					interpreter,
 					invocation.LocationRange,
 					funcArgument,
 				)
@@ -17584,6 +17589,7 @@ func (v AddressValue) GetMember(interpreter *Interpreter, _ LocationRange, name 
 		return NewHostFunctionValue(
 			interpreter,
 			func(invocation Invocation) Value {
+				interpreter := invocation.Interpreter
 				address := common.Address(v)
 				return ByteSliceToByteArrayValue(interpreter, address[:])
 			},
