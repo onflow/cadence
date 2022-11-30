@@ -3674,7 +3674,7 @@ func TestInterpretResourceConstructorCast(t *testing.T) {
                   resource R {}
 
                   fun test(): AnyStruct {
-                      return R %s ((): @R)
+                      return R %s fun(): @R
                   }
                 `,
 				operation.Symbol(),
@@ -3701,7 +3701,7 @@ func TestInterpretFunctionTypeCasting(t *testing.T) {
 		inter := parseCheckAndInterpret(t, `
             fun test(): String {
                 let x: AnyStruct = foo
-                let y = x as! ((String):String)
+                let y = x as! fun(String):String
 
                 return y("hello")
             }
@@ -3721,7 +3721,7 @@ func TestInterpretFunctionTypeCasting(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
             fun test(): String {
-                let x = foo as ((String):String)
+                let x = foo as fun(String):String
                 return x("hello")
             }
 
@@ -3740,7 +3740,7 @@ func TestInterpretFunctionTypeCasting(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
             fun test(): String {
-                 let x = foo as! ((AnyStruct):String)
+                 let x = foo as! fun(AnyStruct):String
                  return x("hello")
             }
 
@@ -3760,7 +3760,7 @@ func TestInterpretFunctionTypeCasting(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
             fun test(): AnyStruct {
-                let x = foo as! ((String):AnyStruct)
+                let x = foo as! fun(String):AnyStruct
                 return x("hello")
             }
 
@@ -3779,7 +3779,7 @@ func TestInterpretFunctionTypeCasting(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
             fun test(): String {
-                let x = foo as! ((String):String)
+                let x = foo as! fun(String):String
                 return x("hello")
             }
 
@@ -3801,7 +3801,7 @@ func TestInterpretFunctionTypeCasting(t *testing.T) {
             fun test(): String {
                 let x = foo()
                 let y: AnyStruct = x.bar
-                let z = y as! ((String):String)
+                let z = y as! fun(String):String
                 return z("hello")
             }
 

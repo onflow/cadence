@@ -2564,7 +2564,6 @@ func formatFunctionType(
 ) string {
 
 	var builder strings.Builder
-	builder.WriteRune('(')
 
 	if len(purity) > 0 {
 		builder.WriteString(purity)
@@ -2572,6 +2571,8 @@ func formatFunctionType(
 			builder.WriteByte(' ')
 		}
 	}
+
+	builder.WriteString("fun")
 
 	if len(typeParameters) > 0 {
 		builder.WriteRune('<')
@@ -2601,7 +2602,6 @@ func formatFunctionType(
 		builder.WriteRune(' ')
 	}
 	builder.WriteString(returnTypeAnnotation)
-	builder.WriteRune(')')
 	return builder.String()
 }
 
