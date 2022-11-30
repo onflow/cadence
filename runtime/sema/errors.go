@@ -1250,11 +1250,17 @@ func (e *ConformanceError) SecondaryError() string {
 				builder.WriteString(", ")
 			}
 		}
-		return builder.String()
+		if len(e.MissingNestedCompositeTypes) > 0 {
+			builder.WriteString(". ")
+		}
 	}
 
 	if len(e.MissingNestedCompositeTypes) > 0 {
-		builder.WriteString(fmt.Sprintf("`%s` is missing definitions for types: ", e.CompositeType.QualifiedString()))
+		builder.WriteString(fmt.Sprintf("`%s` is", e.CompositeType.QualifiedString()))
+		if len(e.MissingMembers) > 0 {
+			builder.WriteString(" also")
+		}
+		builder.WriteString(" missing definitions for types: ")
 		for i, ty := range e.MissingNestedCompositeTypes {
 			builder.WriteString(fmt.Sprintf("`%s`", ty.QualifiedString()))
 			if i != len(e.MissingNestedCompositeTypes)-1 {

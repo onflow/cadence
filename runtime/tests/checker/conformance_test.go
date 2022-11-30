@@ -619,4 +619,25 @@ func TestCheckInitializerConformanceErrorMessages(t *testing.T) {
 		conformanceErr := errs[0].(*sema.ConformanceError)
 		require.Equal(t, "`C` is missing definitions for types: `I.S`, `I.R`", conformanceErr.SecondaryError())
 	})
+
+	t.Run("missing type and member", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+        pub contract interface I {
+            pub struct S {}
+            pub fun foo() 
+        }
+
+        pub contract C: I {
+        }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.ConformanceError{}, errs[0])
+		conformanceErr := errs[0].(*sema.ConformanceError)
+		require.Equal(t, "`C` is missing definitions for members: `foo`. `C` is also missing definitions for types: `I.S`", conformanceErr.SecondaryError())
+	})
 }
