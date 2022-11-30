@@ -363,8 +363,8 @@ func TestArrayMutation(t *testing.T) {
                 array[0] = foo
                 array[1] = bar
 
-                let callFoo = array[0] as! fun(): String;
-                let callBar = array[1] as! fun(): String;
+                let callFoo = array[0] as! fun(): String
+                let callBar = array[1] as! fun(): String
                 return [callFoo(), callBar()]
             }
 
@@ -421,8 +421,8 @@ func TestArrayMutation(t *testing.T) {
                 array[0] = a.foo
                 array[1] = b.bar
 
-                let callFoo = array[0] as! fun():String;
-                let callBar = array[1] as! fun():String;
+                let callFoo = array[0] as! fun():String
+                let callBar = array[1] as! fun():String
 
                 return [callFoo(), callBar()]
             }
@@ -725,7 +725,7 @@ func TestDictionaryMutation(t *testing.T) {
 
                 dict["test"] = log
 
-                let logger = dict["test"]! as! fun(AnyStruct): Void;
+                let logger = dict["test"]! as! fun(AnyStruct): Void
                 logger("hello")
             }`,
 			ParseCheckAndInterpretOptions{
@@ -756,8 +756,8 @@ func TestDictionaryMutation(t *testing.T) {
                dict["foo"] = foo
                dict["bar"] = bar
 
-               let callFoo = dict["foo"]! as! fun():String;
-               let callBar = dict["bar"]! as! fun():String;
+               let callFoo = dict["foo"]! as! fun():String
+               let callBar = dict["bar"]! as! fun():String
                return [callFoo(), callBar()]
            }
 

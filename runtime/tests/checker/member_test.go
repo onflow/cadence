@@ -291,7 +291,7 @@ func TestCheckFunctionTypeReceiverType(t *testing.T) {
           }
 
           let s = S()
-          let f = s.f as ((): Void)
+          let f = s.f as fun(): Void
         `)
 
 		require.NoError(t, err)

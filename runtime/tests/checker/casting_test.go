@@ -5905,7 +5905,7 @@ func TestCheckResourceConstructorCast(t *testing.T) {
 		`
           resource R {}
 
-          let c = R as ((): @R)
+          let c = R as fun(): @R
         `,
 	)
 
@@ -5922,7 +5922,7 @@ func TestCheckResourceConstructorReturn(t *testing.T) {
 		`
           resource R {}
 
-          fun test(): ((): @R) {
+          fun test(): fun(): @R {
               return R
           }
         `,
@@ -6621,7 +6621,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
                 let x =
                     fun (_ x: Int): Int {
                         return x * 2
-                    } as ((Int): Int)
+                    } as fun(Int): Int
             `)
 
 			require.NoError(t, err)

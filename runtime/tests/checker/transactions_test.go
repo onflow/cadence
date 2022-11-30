@@ -337,7 +337,7 @@ func TestCheckTransactions(t *testing.T) {
 	t.Run("InvalidNonStorableParameter", func(t *testing.T) {
 		test(t,
 			`
-		      transaction(x: ((Int): Int)) {
+		      transaction(x: fun(Int): Int) {
 				execute {
 				  x(0)
 				}

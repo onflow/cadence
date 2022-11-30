@@ -36,7 +36,7 @@ func TestCheckPuritySubtyping(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         view fun foo() {}
-        let x: ((): Void) = foo
+        let x: fun(): Void = foo
         `)
 
 		require.NoError(t, err)
@@ -46,7 +46,7 @@ func TestCheckPuritySubtyping(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         view fun foo() {}
-        let x: (view (): Void) = foo
+        let x: view fun(): Void = foo
         `)
 
 		require.NoError(t, err)
@@ -56,7 +56,7 @@ func TestCheckPuritySubtyping(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         fun foo() {}
-        let x: ((): Void) = foo
+        let x: fun(): Void = foo
         `)
 
 		require.NoError(t, err)
@@ -66,7 +66,7 @@ func TestCheckPuritySubtyping(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         fun foo() {}
-        let x: (view (): Void) = foo
+        let x: view fun(): Void = foo
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
@@ -77,8 +77,8 @@ func TestCheckPuritySubtyping(t *testing.T) {
 	t.Run("contravariant ok", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
-        view fun foo(x:((): Void)) {}
-        let x: (view ((view (): Void)): Void) = foo
+        view fun foo(x:fun(): Void) {}
+        let x: view fun(view fun(): Void): Void = foo
         `)
 
 		require.NoError(t, err)
@@ -87,8 +87,8 @@ func TestCheckPuritySubtyping(t *testing.T) {
 	t.Run("contravariant error", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
-        view fun foo(f:(view (): Void)) {}
-        let x: (view (((): Void)): Void) = foo
+        view fun foo(f:view fun(): Void) {}
+        let x: view fun(fun(): Void): Void = foo
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)

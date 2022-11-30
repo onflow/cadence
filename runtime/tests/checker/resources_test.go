@@ -1027,7 +1027,7 @@ func TestCheckFunctionTypeParameterWithoutResourceAnnotation(t *testing.T) {
 					`
                       %[1]s T%[2]s %[3]s
 
-                      let test: ((T): Void) = fun (r: %[4]sT) {
+                      let test: fun(T): Void = fun (r: %[4]sT) {
                           %[5]s r
                       }
                     `,
@@ -1092,7 +1092,7 @@ func TestCheckFunctionTypeReturnTypeWithResourceAnnotation(t *testing.T) {
 					`
                       %[1]s T%[2]s %[3]s
 
-                      let test: ((): @T) = fun (): @T {
+                      let test: fun(): @T = fun (): @T {
                           return %[4]s %[5]s T%[6]s
                       }
                     `,
@@ -1169,7 +1169,7 @@ func TestCheckFunctionTypeReturnTypeWithoutResourceAnnotation(t *testing.T) {
 					`
                       %[1]s T%[2]s %[3]s
 
-                      let test: ((): T) = fun (): T {
+                      let test: fun(): T = fun (): T {
                           return %[4]s %[5]s T%[6]s
                       }
                     `,

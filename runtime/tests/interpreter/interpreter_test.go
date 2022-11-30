@@ -6189,7 +6189,7 @@ func TestInterpretClosure(t *testing.T) {
 	// a variable each time it is invoked.
 
 	inter := parseCheckAndInterpret(t, `
-        fun makeCounter(): ((): Int) {
+        fun makeCounter(): fun(): Int {
             var count = 0
             return fun (): Int {
                 count = count + 1

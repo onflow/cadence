@@ -9016,7 +9016,7 @@ func TestInterpretASTMetering(t *testing.T) {
                 var d: [String] = []                               // variable sized type
                 var e: {Int: String} = {}                          // dictionary type
 
-                var f: ((String):Int) = fun(_a: String): Int {     // function type
+                var f: fun(String):Int = fun(_a: String): Int {     // function type
                     return 1
                 }
 
@@ -9720,7 +9720,7 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 			},
 			{
 				name:        "Function",
-				constructor: "((String): AnyStruct)",
+				constructor: "fun(String): AnyStruct",
 			},
 			{
 				name:        "Reference",
