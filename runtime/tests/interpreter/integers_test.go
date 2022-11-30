@@ -108,7 +108,7 @@ func TestInterpretIntegerConversions(t *testing.T) {
 			AssertValuesEqual(
 				t,
 				inter,
-				interpreter.BoolValue(true),
+				interpreter.TrueValue,
 				inter.Globals.Get("z").GetValue(),
 			)
 

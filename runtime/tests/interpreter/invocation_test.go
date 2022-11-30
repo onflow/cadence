@@ -40,7 +40,7 @@ func TestInterpretFunctionInvocationCheckArgumentTypes(t *testing.T) {
        }
    `)
 
-	_, err := inter.Invoke("test", interpreter.BoolValue(true))
+	_, err := inter.Invoke("test", interpreter.TrueValue)
 	RequireError(t, err)
 
 	require.ErrorAs(t, err, &interpreter.ValueTransferTypeError{})

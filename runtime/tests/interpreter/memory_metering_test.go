@@ -6964,7 +6964,7 @@ func TestInterpretPathValueMetering(t *testing.T) {
 	})
 }
 
-func TestInterpretCapabilityValueMetering(t *testing.T) {
+func TestInterpretStorageCapabilityValueMetering(t *testing.T) {
 	t.Parallel()
 
 	t.Run("creation", func(t *testing.T) {
@@ -6986,7 +6986,7 @@ func TestInterpretCapabilityValueMetering(t *testing.T) {
 		_, err := inter.Invoke("main", account)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCapabilityValue))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindStorageCapabilityValue))
 		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindPathValue))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindReferenceStaticType))
 	})
@@ -7016,7 +7016,7 @@ func TestInterpretCapabilityValueMetering(t *testing.T) {
 	})
 }
 
-func TestInterpretLinkValueMetering(t *testing.T) {
+func TestInterpretPathLinkValueMetering(t *testing.T) {
 	t.Parallel()
 
 	t.Run("creation", func(t *testing.T) {
@@ -7037,8 +7037,43 @@ func TestInterpretLinkValueMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		// Metered twice only when Atree validation is enabled.
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindLinkValue))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindPathLinkValue))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindReferenceStaticType))
+	})
+}
+
+func TestInterpretAccountLinkValueMetering(t *testing.T) {
+	t.Parallel()
+
+	t.Run("creation", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main(account: AuthAccount) {
+                account.linkAccount(/public/capo)
+            }
+        `
+		meter := newTestMemoryGauge()
+
+		inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(
+			t,
+			script,
+			ParseCheckAndInterpretOptions{
+				CheckerConfig: &sema.Config{
+					AccountLinkingEnabled: true,
+				},
+			},
+			meter,
+		)
+		require.NoError(t, err)
+
+		account := newTestAuthAccountValue(meter, interpreter.AddressValue{})
+		_, err = inter.Invoke("main", account)
+		require.NoError(t, err)
+
+		// Metered twice only when Atree validation is enabled.
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAccountLinkValue))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindReferenceStaticType))
 	})
 }
 
@@ -9000,7 +9035,7 @@ func TestInterpretValueStringConversion(t *testing.T) {
         `
 
 		testValueStringConversion(t, script,
-			interpreter.NewUnmeteredCapabilityValue(
+			interpreter.NewUnmeteredStorageCapabilityValue(
 				interpreter.AddressValue{1},
 				interpreter.PathValue{
 					Domain:     common.PathDomainPublic,

@@ -18,16 +18,5 @@
 
 package format
 
-import (
-	"fmt"
-)
-
-func PathLink(ty string, targetPath string) string {
-	return fmt.Sprintf(
-		"PathLink<%s>(%s)",
-		ty,
-		targetPath,
-	)
-}
-
-const AccountLink = "AccountLink()"
+const StorageReference = "StorageReference()"
+const AccountReference = "AccountReference()"

@@ -16,6 +16,22 @@
  * limitations under the License.
  */
 
-package format
+package interpreter
 
-const StorageReference = "StorageReference()"
+import "github.com/onflow/cadence/runtime/common"
+
+type CapabilityTarget interface {
+	isCapabilityTarget()
+}
+
+type PathCapabilityTarget PathValue
+
+func (PathCapabilityTarget) isCapabilityTarget() {}
+
+var _ CapabilityTarget = PathCapabilityTarget{}
+
+type AccountCapabilityTarget common.Address
+
+var _ CapabilityTarget = AccountCapabilityTarget{}
+
+func (AccountCapabilityTarget) isCapabilityTarget() {}

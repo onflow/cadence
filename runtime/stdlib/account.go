@@ -101,7 +101,7 @@ func NewAuthAccountConstructor(creator AccountCreator) StandardLibraryValue {
 			payerValue := payer.GetMember(
 				inter,
 				locationRange,
-				sema.AuthAccountAddressField,
+				sema.AuthAccountTypeAddressFieldName,
 			)
 			if payerValue == nil {
 				panic(errors.NewUnexpectedError("payer address is not set"))
@@ -153,7 +153,7 @@ var getAuthAccountFunctionType = &sema.FunctionType{
 	Parameters: []sema.Parameter{{
 		Label:          sema.ArgumentLabelNotRequired,
 		Identifier:     "address",
-		TypeAnnotation: sema.NewTypeAnnotation(&sema.AddressType{}),
+		TypeAnnotation: sema.NewTypeAnnotation(sema.TheAddressType),
 	}},
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.AuthAccountType),
 }
@@ -962,7 +962,7 @@ func accountInboxPublishFunction(
 	return interpreter.NewHostFunctionValue(
 		gauge,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			value, ok := invocation.Arguments[0].(*interpreter.CapabilityValue)
+			value, ok := invocation.Arguments[0].(*interpreter.StorageCapabilityValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
@@ -1792,6 +1792,30 @@ type DeployedContractConstructorInvocation struct {
 	ParameterTypes       []sema.Type
 }
 
+type InvalidContractArgumentError struct {
+	Index        int
+	ExpectedType sema.Type
+	ActualType   sema.Type
+}
+
+var _ errors.UserError = &InvalidContractArgumentError{}
+
+func (*InvalidContractArgumentError) IsUserError() {}
+
+func (e *InvalidContractArgumentError) Error() string {
+	expected, actual := sema.ErrorMessageExpectedActualTypes(
+		e.ExpectedType,
+		e.ActualType,
+	)
+
+	return fmt.Sprintf(
+		"invalid argument at index %d: expected type `%s`, got `%s`",
+		e.Index,
+		expected,
+		actual,
+	)
+}
+
 func instantiateContract(
 	handler AccountContractAdditionHandler,
 	location common.AddressLocation,
@@ -1830,16 +1854,16 @@ func instantiateContract(
 
 	// Check arguments match parameter
 
-	for i := 0; i < argumentCount; i++ {
-		argumentType := argumentTypes[i]
-		parameterTye := parameterTypes[i]
+	for argumentIndex := 0; argumentIndex < argumentCount; argumentIndex++ {
+		argumentType := argumentTypes[argumentIndex]
+		parameterTye := parameterTypes[argumentIndex]
 		if !sema.IsSubType(argumentType, parameterTye) {
-			return nil, errors.NewDefaultUserError(
-				"invalid argument %d: expected type `%s`, got `%s`",
-				i,
-				parameterTye,
-				argumentType,
-			)
+
+			return nil, &InvalidContractArgumentError{
+				Index:        argumentIndex,
+				ExpectedType: parameterTye,
+				ActualType:   argumentType,
+			}
 		}
 	}
 
@@ -1993,7 +2017,7 @@ var getAccountFunctionType = &sema.FunctionType{
 			Label:      sema.ArgumentLabelNotRequired,
 			Identifier: "address",
 			TypeAnnotation: sema.NewTypeAnnotation(
-				&sema.AddressType{},
+				sema.TheAddressType,
 			),
 		},
 	},

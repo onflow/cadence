@@ -740,7 +740,9 @@ func TestCommonSuperType(t *testing.T) {
 		_ = newTypeTagFromLowerMask(32)
 	})
 
-	nilType := &OptionalType{NeverType}
+	nilType := &OptionalType{
+		Type: NeverType,
+	}
 
 	resourceType := &CompositeType{
 		Location:   nil,

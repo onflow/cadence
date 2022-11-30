@@ -391,7 +391,9 @@ func FromStringFunctionType(ty Type) *FunctionType {
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(
-			&OptionalType{ty},
+			&OptionalType{
+				Type: ty,
+			},
 		),
 	}
 }
@@ -447,7 +449,7 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 
 	// All number types, addresses, and path types have a `toString` function
 
-	if IsSubType(ty, NumberType) || IsSubType(ty, &AddressType{}) || IsSubType(ty, PathType) {
+	if IsSubType(ty, NumberType) || IsSubType(ty, TheAddressType) || IsSubType(ty, PathType) {
 
 		members[ToStringFunctionName] = MemberResolver{
 			Kind: common.DeclarationKindFunction,
@@ -486,8 +488,12 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 
 // OptionalType represents the optional variant of another type
 type OptionalType struct {
-	Type Type
+	Type                Type
+	memberResolvers     map[string]MemberResolver
+	memberResolversOnce sync.Once
 }
+
+var _ Type = &OptionalType{}
 
 func NewOptionalType(memoryGauge common.MemoryGauge, typ Type) *OptionalType {
 	common.UseMemory(memoryGauge, common.OptionalSemaTypeMemoryUsage)
@@ -609,37 +615,43 @@ with the value of this optional when it is not nil.
 Returns nil if this optional is nil
 `
 
+const OptionalTypeMapFunctionName = "map"
+
 func (t *OptionalType) GetMembers() map[string]MemberResolver {
+	t.initializeMembers()
+	return t.memberResolvers
 
-	members := map[string]MemberResolver{
-		"map": {
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
+}
+func (t *OptionalType) initializeMembers() {
+	t.memberResolversOnce.Do(func() {
+		t.memberResolvers = withBuiltinMembers(t, map[string]MemberResolver{
+			OptionalTypeMapFunctionName: {
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
 
-				// It invalid for an optional of a resource to have a `map` function
+					// It's invalid for an optional of a resource to have a `map` function
 
-				if t.Type.IsResourceType() {
-					report(
-						&InvalidResourceOptionalMemberError{
-							Name:            identifier,
-							DeclarationKind: common.DeclarationKindFunction,
-							Range:           targetRange,
-						},
+					if t.Type.IsResourceType() {
+						report(
+							&InvalidResourceOptionalMemberError{
+								Name:            identifier,
+								DeclarationKind: common.DeclarationKindFunction,
+								Range:           targetRange,
+							},
+						)
+					}
+
+					return NewPublicFunctionMember(
+						memoryGauge,
+						t,
+						identifier,
+						OptionalTypeMapFunctionType(t.Type),
+						optionalTypeMapFunctionDocString,
 					)
-				}
-
-				return NewPublicFunctionMember(
-					memoryGauge,
-					t,
-					identifier,
-					OptionalTypeMapFunctionType(t.Type),
-					optionalTypeMapFunctionDocString,
-				)
+				},
 			},
-		},
-	}
-
-	return withBuiltinMembers(t, members)
+		})
+	})
 }
 
 func OptionalTypeMapFunctionType(typ Type) *FunctionType {
@@ -687,6 +699,8 @@ func OptionalTypeMapFunctionType(typ Type) *FunctionType {
 type GenericType struct {
 	TypeParameter *TypeParameter
 }
+
+var _ Type = &GenericType{}
 
 func (*GenericType) IsType() {}
 
@@ -911,7 +925,9 @@ type NumericType struct {
 	isSuperType                bool
 }
 
+var _ Type = &NumericType{}
 var _ IntegerRangedType = &NumericType{}
+var _ SaturatingArithmeticType = &NumericType{}
 
 func NewNumericType(typeName string) *NumericType {
 	return &NumericType{name: typeName}
@@ -1083,7 +1099,10 @@ type FixedPointNumericType struct {
 	isSuperType                bool
 }
 
+var _ Type = &FixedPointNumericType{}
+var _ IntegerRangedType = &FixedPointNumericType{}
 var _ FractionalRangedType = &FixedPointNumericType{}
+var _ SaturatingArithmeticType = &FixedPointNumericType{}
 
 func NewFixedPointNumericType(typeName string) *FixedPointNumericType {
 	return &FixedPointNumericType{
@@ -2063,6 +2082,10 @@ type VariableSizedType struct {
 	memberResolversOnce sync.Once
 }
 
+var _ Type = &VariableSizedType{}
+var _ ArrayType = &VariableSizedType{}
+var _ ValueIndexableType = &VariableSizedType{}
+
 func NewVariableSizedType(memoryGauge common.MemoryGauge, typ Type) *VariableSizedType {
 	common.UseMemory(memoryGauge, common.VariableSizedSemaTypeMemoryUsage)
 	return &VariableSizedType{
@@ -2199,6 +2222,10 @@ type ConstantSizedType struct {
 	memberResolvers     map[string]MemberResolver
 	memberResolversOnce sync.Once
 }
+
+var _ Type = &ConstantSizedType{}
+var _ ArrayType = &ConstantSizedType{}
+var _ ValueIndexableType = &ConstantSizedType{}
 
 func NewConstantSizedType(memoryGauge common.MemoryGauge, typ Type, size int64) *ConstantSizedType {
 	common.UseMemory(memoryGauge, common.ConstantSizedSemaTypeMemoryUsage)
@@ -2520,6 +2547,8 @@ type FunctionType struct {
 	ArgumentExpressionsCheck ArgumentExpressionsCheck
 	Members                  *StringMemberOrderedMap
 }
+
+var _ Type = &FunctionType{}
 
 func RequiredArgumentCount(count int) *int {
 	return &count
@@ -2988,7 +3017,7 @@ func init() {
 		BoolType,
 		CharacterType,
 		StringType,
-		&AddressType{},
+		TheAddressType,
 		AuthAccountType,
 		PublicAccountType,
 		PathType,
@@ -3266,7 +3295,7 @@ var AddressConversionFunctionType = &FunctionType{
 			TypeAnnotation: NewTypeAnnotation(IntegerType),
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(&AddressType{}),
+	ReturnTypeAnnotation: NewTypeAnnotation(TheAddressType),
 	ArgumentExpressionsCheck: func(checker *Checker, argumentExpressions []ast.Expression, _ ast.Range) {
 		if len(argumentExpressions) < 1 {
 			return
@@ -3454,6 +3483,12 @@ type CompositeType struct {
 	cachedIdentifiersLock sync.RWMutex
 }
 
+var _ Type = &CompositeType{}
+var _ ContainerType = &CompositeType{}
+var _ ContainedType = &CompositeType{}
+var _ LocatedType = &CompositeType{}
+var _ CompositeKindedType = &CompositeType{}
+
 func (t *CompositeType) Tag() TypeTag {
 	return CompositeTypeTag
 }
@@ -3573,11 +3608,6 @@ func (t *CompositeType) Equal(other Type) bool {
 
 	return otherStructure.Kind == t.Kind &&
 		otherStructure.ID() == t.ID()
-}
-
-func (t *CompositeType) GetMembers() map[string]MemberResolver {
-	t.initializeMemberResolvers()
-	return t.memberResolvers
 }
 
 func (t *CompositeType) IsResourceType() bool {
@@ -3737,6 +3767,11 @@ func (t *CompositeType) IsContainerType() bool {
 
 func (t *CompositeType) GetNestedTypes() *StringTypeOrderedMap {
 	return t.NestedTypes
+}
+
+func (t *CompositeType) GetMembers() map[string]MemberResolver {
+	t.initializeMemberResolvers()
+	return t.memberResolvers
 }
 
 func (t *CompositeType) initializeMemberResolvers() {
@@ -3977,6 +4012,12 @@ type InterfaceType struct {
 	cachedIdentifiersLock sync.RWMutex
 }
 
+var _ Type = &InterfaceType{}
+var _ ContainerType = &InterfaceType{}
+var _ ContainedType = &InterfaceType{}
+var _ LocatedType = &InterfaceType{}
+var _ CompositeKindedType = &InterfaceType{}
+
 func (*InterfaceType) IsType() {}
 
 func (t *InterfaceType) Tag() TypeTag {
@@ -4207,6 +4248,9 @@ type DictionaryType struct {
 	memberResolvers     map[string]MemberResolver
 	memberResolversOnce sync.Once
 }
+
+var _ Type = &DictionaryType{}
+var _ ValueIndexableType = &DictionaryType{}
 
 func NewDictionaryType(memoryGauge common.MemoryGauge, keyType, valueType Type) *DictionaryType {
 	common.UseMemory(memoryGauge, common.DictionarySemaTypeMemoryUsage)
@@ -4623,6 +4667,11 @@ type ReferenceType struct {
 	Type       Type
 }
 
+var _ Type = &ReferenceType{}
+
+// Not all references are indexable, but some, depending on the references type
+var _ ValueIndexableType = &ReferenceType{}
+
 func NewReferenceType(memoryGauge common.MemoryGauge, typ Type, authorized bool) *ReferenceType {
 	common.UseMemory(memoryGauge, common.ReferenceSemaTypeMemoryUsage)
 	return &ReferenceType{
@@ -4772,8 +4821,14 @@ func (t *ReferenceType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 const AddressTypeName = "Address"
 
 // AddressType represents the address type
-type AddressType struct{}
+type AddressType struct {
+	memberResolvers     map[string]MemberResolver
+	memberResolversOnce sync.Once
+}
 
+var TheAddressType = &AddressType{}
+
+var _ Type = &AddressType{}
 var _ IntegerRangedType = &AddressType{}
 
 func (*AddressType) IsType() {}
@@ -4867,18 +4922,26 @@ Returns an array containing the byte representation of the address
 `
 
 func (t *AddressType) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, map[string]MemberResolver{
-		AddressTypeToBytesFunctionName: {
-			Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicFunctionMember(
-					memoryGauge,
-					t,
-					identifier,
-					AddressTypeToBytesFunctionType,
-					addressTypeToBytesFunctionDocString,
-				)
+	t.initializeMemberResolvers()
+	return t.memberResolvers
+}
+
+func (t *AddressType) initializeMemberResolvers() {
+	t.memberResolversOnce.Do(func() {
+		t.memberResolvers = withBuiltinMembers(t, map[string]MemberResolver{
+			AddressTypeToBytesFunctionName: {
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicFunctionMember(
+						memoryGauge,
+						t,
+						identifier,
+						AddressTypeToBytesFunctionType,
+						addressTypeToBytesFunctionDocString,
+					)
+				},
 			},
-		},
+		})
 	})
 }
 
@@ -5597,6 +5660,8 @@ type TransactionType struct {
 	Parameters        []Parameter
 }
 
+var _ Type = &TransactionType{}
+
 func (t *TransactionType) EntryPointFunctionType() *FunctionType {
 	return &FunctionType{
 		Parameters:           append(t.Parameters, t.PrepareParameters...),
@@ -5713,6 +5778,8 @@ type RestrictedType struct {
 	restrictionSet     *InterfaceSet
 	restrictionSetOnce sync.Once
 }
+
+var _ Type = &RestrictedType{}
 
 func NewRestrictedType(memoryGauge common.MemoryGauge, typ Type, restrictions []*InterfaceType) *RestrictedType {
 	common.UseMemory(memoryGauge, common.RestrictedSemaTypeMemoryUsage)
@@ -5953,6 +6020,9 @@ type CapabilityType struct {
 	memberResolversOnce sync.Once
 }
 
+var _ Type = &CapabilityType{}
+var _ ParameterizedType = &CapabilityType{}
+
 func NewCapabilityType(memoryGauge common.MemoryGauge, borrowType Type) *CapabilityType {
 	common.UseMemory(memoryGauge, common.CapabilitySemaTypeMemoryUsage)
 	return &CapabilityType{
@@ -6182,14 +6252,14 @@ func (t *CapabilityType) GetMembers() map[string]MemberResolver {
 	return t.memberResolvers
 }
 
-const CapabilityTypeBorrowField = "borrow"
-const CapabilityTypeCheckField = "check"
-const CapabilityTypeAddressField = "address"
+const CapabilityTypeBorrowFunctionName = "borrow"
+const CapabilityTypeCheckFunctionName = "check"
+const CapabilityTypeAddressFieldName = "address"
 
 func (t *CapabilityType) initializeMemberResolvers() {
 	t.memberResolversOnce.Do(func() {
 		t.memberResolvers = withBuiltinMembers(t, map[string]MemberResolver{
-			CapabilityTypeBorrowField: {
+			CapabilityTypeBorrowFunctionName: {
 				Kind: common.DeclarationKindFunction,
 				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicFunctionMember(
@@ -6201,7 +6271,7 @@ func (t *CapabilityType) initializeMemberResolvers() {
 					)
 				},
 			},
-			CapabilityTypeCheckField: {
+			CapabilityTypeCheckFunctionName: {
 				Kind: common.DeclarationKindFunction,
 				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicFunctionMember(
@@ -6213,14 +6283,14 @@ func (t *CapabilityType) initializeMemberResolvers() {
 					)
 				},
 			},
-			CapabilityTypeAddressField: {
+			CapabilityTypeAddressFieldName: {
 				Kind: common.DeclarationKindField,
 				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicConstantFieldMember(
 						memoryGauge,
 						t,
 						identifier,
-						&AddressType{},
+						TheAddressType,
 						capabilityTypeAddressFieldDocString,
 					)
 				},
@@ -6251,11 +6321,11 @@ func init() {
 }
 
 const AccountKeyTypeName = "AccountKey"
-const AccountKeyKeyIndexField = "keyIndex"
-const AccountKeyPublicKeyField = "publicKey"
-const AccountKeyHashAlgoField = "hashAlgorithm"
-const AccountKeyWeightField = "weight"
-const AccountKeyIsRevokedField = "isRevoked"
+const AccountKeyKeyIndexFieldName = "keyIndex"
+const AccountKeyPublicKeyFieldName = "publicKey"
+const AccountKeyHashAlgoFieldName = "hashAlgorithm"
+const AccountKeyWeightFieldName = "weight"
+const AccountKeyIsRevokedFieldName = "isRevoked"
 
 // AccountKeyType represents the key associated with an account.
 var AccountKeyType = func() *CompositeType {
@@ -6266,7 +6336,7 @@ var AccountKeyType = func() *CompositeType {
 		importable: false,
 	}
 
-	const accountKeyIndexFieldDocString = `The index of the account key`
+	const accountKeyKeyIndexFieldDocString = `The index of the account key`
 	const accountKeyPublicKeyFieldDocString = `The public key of the account`
 	const accountKeyHashAlgorithmFieldDocString = `The hash algorithm used by the public key`
 	const accountKeyWeightFieldDocString = `The weight assigned to the public key`
@@ -6275,31 +6345,31 @@ var AccountKeyType = func() *CompositeType {
 	var members = []*Member{
 		NewUnmeteredPublicConstantFieldMember(
 			accountKeyType,
-			AccountKeyKeyIndexField,
+			AccountKeyKeyIndexFieldName,
 			IntType,
-			accountKeyIndexFieldDocString,
+			accountKeyKeyIndexFieldDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			accountKeyType,
-			AccountKeyPublicKeyField,
+			AccountKeyPublicKeyFieldName,
 			PublicKeyType,
 			accountKeyPublicKeyFieldDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			accountKeyType,
-			AccountKeyHashAlgoField,
+			AccountKeyHashAlgoFieldName,
 			HashAlgorithmType,
 			accountKeyHashAlgorithmFieldDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			accountKeyType,
-			AccountKeyWeightField,
+			AccountKeyWeightFieldName,
 			UFix64Type,
 			accountKeyWeightFieldDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			accountKeyType,
-			AccountKeyIsRevokedField,
+			AccountKeyIsRevokedFieldName,
 			BoolType,
 			accountKeyIsRevokedFieldDocString,
 		),
@@ -6311,10 +6381,10 @@ var AccountKeyType = func() *CompositeType {
 }()
 
 const PublicKeyTypeName = "PublicKey"
-const PublicKeyPublicKeyField = "publicKey"
-const PublicKeySignAlgoField = "signatureAlgorithm"
-const PublicKeyVerifyFunction = "verify"
-const PublicKeyVerifyPoPFunction = "verifyPoP"
+const PublicKeyTypePublicKeyFieldName = "publicKey"
+const PublicKeyTypeSignAlgoFieldName = "signatureAlgorithm"
+const PublicKeyTypeVerifyFunctionName = "verify"
+const PublicKeyTypeVerifyPoPFunctionName = "verifyPoP"
 
 const publicKeyKeyFieldDocString = `
 The public key
@@ -6349,25 +6419,25 @@ var PublicKeyType = func() *CompositeType {
 	var members = []*Member{
 		NewUnmeteredPublicConstantFieldMember(
 			publicKeyType,
-			PublicKeyPublicKeyField,
+			PublicKeyTypePublicKeyFieldName,
 			ByteArrayType,
 			publicKeyKeyFieldDocString,
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			publicKeyType,
-			PublicKeySignAlgoField,
+			PublicKeyTypeSignAlgoFieldName,
 			SignatureAlgorithmType,
 			publicKeySignAlgoFieldDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			publicKeyType,
-			PublicKeyVerifyFunction,
+			PublicKeyTypeVerifyFunctionName,
 			PublicKeyVerifyFunctionType,
 			publicKeyVerifyFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			publicKeyType,
-			PublicKeyVerifyPoPFunction,
+			PublicKeyTypeVerifyPoPFunctionName,
 			PublicKeyVerifyPoPFunctionType,
 			publicKeyVerifyPoPFunctionDocString,
 		),

@@ -131,6 +131,7 @@ func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
 		ContractValueHandler:                 e.newContractValueHandler(),
 		ImportLocationHandler:                e.newImportLocationHandler(),
 		PublicAccountHandler:                 e.newPublicAccountHandler(),
+		AuthAccountHandler:                   e.newAuthAccountHandler(),
 		OnRecordTrace:                        e.newOnRecordTraceHandler(),
 		OnResourceOwnerChange:                e.newResourceOwnerChangedHandler(),
 		TracingEnabled:                       e.config.TracingEnabled,
@@ -156,6 +157,7 @@ func (e *interpreterEnvironment) newCheckerConfig() *sema.Config {
 		LocationHandler:                  e.newLocationHandler(),
 		ImportHandler:                    e.resolveImport,
 		CheckHandler:                     e.newCheckHandler(),
+		AccountLinkingEnabled:            e.config.AccountLinkingEnabled,
 	}
 }
 
@@ -619,6 +621,12 @@ func (e *interpreterEnvironment) newOnRecordTraceHandler() interpreter.OnRecordT
 func (e *interpreterEnvironment) newPublicAccountHandler() interpreter.PublicAccountHandlerFunc {
 	return func(address interpreter.AddressValue) interpreter.Value {
 		return stdlib.NewPublicAccountValue(e, e, address)
+	}
+}
+
+func (e *interpreterEnvironment) newAuthAccountHandler() interpreter.AuthAccountHandlerFunc {
+	return func(address interpreter.AddressValue) interpreter.Value {
+		return stdlib.NewAuthAccountValue(e, e, address)
 	}
 }
 

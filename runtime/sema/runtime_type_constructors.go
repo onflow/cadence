@@ -71,7 +71,11 @@ var DictionaryTypeFunctionType = &FunctionType{
 			TypeAnnotation: NewTypeAnnotation(MetaType),
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(&OptionalType{MetaType}),
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&OptionalType{
+			Type: MetaType,
+		},
+	),
 }
 
 var CompositeTypeFunctionType = &FunctionType{
@@ -82,7 +86,11 @@ var CompositeTypeFunctionType = &FunctionType{
 			TypeAnnotation: NewTypeAnnotation(StringType),
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(&OptionalType{MetaType}),
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&OptionalType{
+			Type: MetaType,
+		},
+	),
 }
 
 var InterfaceTypeFunctionType = &FunctionType{
@@ -93,14 +101,22 @@ var InterfaceTypeFunctionType = &FunctionType{
 			TypeAnnotation: NewTypeAnnotation(StringType),
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(&OptionalType{MetaType}),
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&OptionalType{
+			Type: MetaType,
+		},
+	),
 }
 
 var FunctionTypeFunctionType = &FunctionType{
 	Parameters: []Parameter{
 		{
-			Identifier:     "parameters",
-			TypeAnnotation: NewTypeAnnotation(&VariableSizedType{Type: MetaType}),
+			Identifier: "parameters",
+			TypeAnnotation: NewTypeAnnotation(
+				&VariableSizedType{
+					Type: MetaType,
+				},
+			),
 		},
 		{
 			Identifier:     "return",
@@ -113,15 +129,27 @@ var FunctionTypeFunctionType = &FunctionType{
 var RestrictedTypeFunctionType = &FunctionType{
 	Parameters: []Parameter{
 		{
-			Identifier:     "identifier",
-			TypeAnnotation: NewTypeAnnotation(&OptionalType{StringType}),
+			Identifier: "identifier",
+			TypeAnnotation: NewTypeAnnotation(
+				&OptionalType{
+					Type: StringType,
+				},
+			),
 		},
 		{
-			Identifier:     "restrictions",
-			TypeAnnotation: NewTypeAnnotation(&VariableSizedType{Type: StringType}),
+			Identifier: "restrictions",
+			TypeAnnotation: NewTypeAnnotation(
+				&VariableSizedType{
+					Type: StringType,
+				},
+			),
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(&OptionalType{MetaType}),
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&OptionalType{
+			Type: MetaType,
+		},
+	),
 }
 
 var ReferenceTypeFunctionType = &FunctionType{
@@ -146,7 +174,11 @@ var CapabilityTypeFunctionType = &FunctionType{
 			TypeAnnotation: NewTypeAnnotation(MetaType),
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(&OptionalType{MetaType}),
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&OptionalType{
+			Type: MetaType,
+		},
+	),
 }
 
 var runtimeTypeConstructors = []*RuntimeTypeConstructor{

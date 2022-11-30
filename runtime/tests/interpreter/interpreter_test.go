@@ -249,7 +249,7 @@ func TestInterpretConstantAndVariableDeclarations(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 
@@ -263,7 +263,7 @@ func TestInterpretConstantAndVariableDeclarations(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("a").GetValue(),
 	)
 
@@ -1402,21 +1402,21 @@ func TestInterpretOrOperatorShortCircuitLeftSuccess(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("test").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("x").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 }
@@ -1445,21 +1445,21 @@ func TestInterpretOrOperatorShortCircuitLeftFailure(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("test").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("x").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 }
@@ -1530,21 +1530,21 @@ func TestInterpretAndOperatorShortCircuitLeftSuccess(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("test").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("x").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 }
@@ -1573,21 +1573,21 @@ func TestInterpretAndOperatorShortCircuitLeftFailure(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("test").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("x").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 }
@@ -1780,28 +1780,28 @@ func TestInterpretUnaryBooleanNegation(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("a").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("b").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("c").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("d").GetValue(),
 	)
 }
@@ -1939,7 +1939,7 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 			AssertValuesEqual(
 				t,
 				inter,
-				interpreter.BoolValue(true),
+				interpreter.TrueValue,
 				invocation.Arguments[1],
 			)
 
@@ -2421,8 +2421,8 @@ func TestInterpretStructCopyOnDeclaration(t *testing.T) {
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
 			common.Address{},
-			interpreter.BoolValue(false),
-			interpreter.BoolValue(true),
+			interpreter.FalseValue,
+			interpreter.TrueValue,
 		),
 		value,
 	)
@@ -2466,8 +2466,8 @@ func TestInterpretStructCopyOnDeclarationModifiedWithStructFunction(t *testing.T
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
 			common.Address{},
-			interpreter.BoolValue(false),
-			interpreter.BoolValue(true),
+			interpreter.FalseValue,
+			interpreter.TrueValue,
 		),
 		value,
 	)
@@ -2508,8 +2508,8 @@ func TestInterpretStructCopyOnIdentifierAssignment(t *testing.T) {
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
 			common.Address{},
-			interpreter.BoolValue(false),
-			interpreter.BoolValue(true),
+			interpreter.FalseValue,
+			interpreter.TrueValue,
 		),
 		value,
 	)
@@ -2550,8 +2550,8 @@ func TestInterpretStructCopyOnIndexingAssignment(t *testing.T) {
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
 			common.Address{},
-			interpreter.BoolValue(false),
-			interpreter.BoolValue(true),
+			interpreter.FalseValue,
+			interpreter.TrueValue,
 		),
 		value,
 	)
@@ -2599,8 +2599,8 @@ func TestInterpretStructCopyOnMemberAssignment(t *testing.T) {
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
 			common.Address{},
-			interpreter.BoolValue(false),
-			interpreter.BoolValue(true),
+			interpreter.FalseValue,
+			interpreter.TrueValue,
 		),
 		value,
 	)
@@ -2636,7 +2636,7 @@ func TestInterpretStructCopyOnPassing(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		value,
 	)
 }
@@ -2752,7 +2752,7 @@ func TestInterpretMutuallyRecursiveFunctions(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		value,
 	)
 
@@ -2762,7 +2762,7 @@ func TestInterpretMutuallyRecursiveFunctions(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		value,
 	)
 }
@@ -3201,14 +3201,14 @@ func TestInterpretNilCoalescingShortCircuitLeftSuccess(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("x").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 }
@@ -3244,14 +3244,14 @@ func TestInterpretNilCoalescingShortCircuitLeftFailure(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("x").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 }
@@ -3268,7 +3268,7 @@ func TestInterpretNilCoalescingOptionalAnyStructNil(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 }
@@ -3361,7 +3361,7 @@ func TestInterpretNilsComparison(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("x").GetValue(),
 	)
 }
@@ -3379,14 +3379,14 @@ func TestInterpretNonOptionalNilComparison(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("z").GetValue(),
 	)
 }
@@ -3403,7 +3403,7 @@ func TestInterpretOptionalNilComparison(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 }
@@ -3420,7 +3420,7 @@ func TestInterpretNestedOptionalNilComparison(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 }
@@ -3437,7 +3437,7 @@ func TestInterpretOptionalNilComparisonSwapped(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 }
@@ -3454,7 +3454,7 @@ func TestInterpretNestedOptionalNilComparisonSwapped(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 }
@@ -3472,7 +3472,7 @@ func TestInterpretNestedOptionalComparisonNils(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("z").GetValue(),
 	)
 }
@@ -3490,7 +3490,7 @@ func TestInterpretNestedOptionalComparisonValues(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("z").GetValue(),
 	)
 }
@@ -3508,7 +3508,7 @@ func TestInterpretNestedOptionalComparisonMixed(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("z").GetValue(),
 	)
 }
@@ -3525,7 +3525,7 @@ func TestInterpretOptionalSomeValueComparison(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 }
@@ -3542,7 +3542,7 @@ func TestInterpretOptionalNilValueComparison(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("y").GetValue(),
 	)
 }
@@ -3649,14 +3649,14 @@ func TestInterpretCompositeNilEquality(t *testing.T) {
 			AssertValuesEqual(
 				t,
 				inter,
-				interpreter.BoolValue(false),
+				interpreter.FalseValue,
 				inter.Globals.Get("y").GetValue(),
 			)
 
 			AssertValuesEqual(
 				t,
 				inter,
-				interpreter.BoolValue(false),
+				interpreter.FalseValue,
 				inter.Globals.Get("z").GetValue(),
 			)
 		})
@@ -5626,7 +5626,7 @@ func TestInterpretArrayContains(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		value,
 	)
 
@@ -5636,7 +5636,7 @@ func TestInterpretArrayContains(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		value,
 	)
 }
@@ -5669,7 +5669,7 @@ func TestInterpretDictionaryContainsKey(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		value,
 	)
 
@@ -5679,7 +5679,7 @@ func TestInterpretDictionaryContainsKey(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		value,
 	)
 }
@@ -6436,7 +6436,7 @@ func TestInterpretResourceDestroyExpressionDestructor(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("ranDestructor").GetValue(),
 	)
 
@@ -6446,7 +6446,7 @@ func TestInterpretResourceDestroyExpressionDestructor(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("ranDestructor").GetValue(),
 	)
 }
@@ -6488,14 +6488,14 @@ func TestInterpretResourceDestroyExpressionNestedResources(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("ranDestructorA").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		inter.Globals.Get("ranDestructorB").GetValue(),
 	)
 
@@ -6505,14 +6505,14 @@ func TestInterpretResourceDestroyExpressionNestedResources(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("ranDestructorA").GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		inter.Globals.Get("ranDestructorB").GetValue(),
 	)
 }
@@ -6909,13 +6909,13 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 			ty:    sema.CharacterType,
 		},
 		"Bool": {
-			value: interpreter.BoolValue(true),
+			value: interpreter.TrueValue,
 			ty:    sema.BoolType,
 		},
 		"Address": {
 			literal: `0x1`,
 			value:   interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
-			ty:      &sema.AddressType{},
+			ty:      sema.TheAddressType,
 		},
 		// Int*
 		"Int": {

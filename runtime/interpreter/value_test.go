@@ -932,15 +932,15 @@ func TestStringer(t *testing.T) {
 			expected: "()",
 		},
 		"true": {
-			value:    BoolValue(true),
+			value:    TrueValue,
 			expected: "true",
 		},
 		"false": {
-			value:    BoolValue(false),
+			value:    FalseValue,
 			expected: "false",
 		},
 		"some": {
-			value:    NewUnmeteredSomeValueNonCopying(BoolValue(true)),
+			value:    NewUnmeteredSomeValueNonCopying(TrueValue),
 			expected: "true",
 		},
 		"nil": {
@@ -1034,14 +1034,14 @@ func TestStringer(t *testing.T) {
 			expected: "y --> bar",
 		},
 		"Link": {
-			value: LinkValue{
+			value: PathLinkValue{
 				TargetPath: PathValue{
 					Domain:     common.PathDomainStorage,
 					Identifier: "foo",
 				},
 				Type: PrimitiveStaticTypeInt,
 			},
-			expected: "Link<Int>(/storage/foo)",
+			expected: "PathLink<Int>(/storage/foo)",
 		},
 		"Path": {
 			value: PathValue{
@@ -1055,7 +1055,7 @@ func TestStringer(t *testing.T) {
 			expected: "Type<Int>()",
 		},
 		"Capability with borrow type": {
-			value: &CapabilityValue{
+			value: &StorageCapabilityValue{
 				Path: PathValue{
 					Domain:     common.PathDomainStorage,
 					Identifier: "foo",
@@ -1066,7 +1066,7 @@ func TestStringer(t *testing.T) {
 			expected: "Capability<Int>(address: 0x0000000102030405, path: /storage/foo)",
 		},
 		"Capability without borrow type": {
-			value: &CapabilityValue{
+			value: &StorageCapabilityValue{
 				Path: PathValue{
 					Domain:     common.PathDomainStorage,
 					Identifier: "foo",
@@ -1425,11 +1425,11 @@ func TestGetHashInput(t *testing.T) {
 			expected: []byte{byte(HashInputTypeFix64), 0x7f, 0xff, 0xff, 0xff, 0xfc, 0xbc, 0x30, 0x00},
 		},
 		"true": {
-			value:    BoolValue(true),
+			value:    TrueValue,
 			expected: []byte{byte(HashInputTypeBool), 1},
 		},
 		"false": {
-			value:    BoolValue(false),
+			value:    FalseValue,
 			expected: []byte{byte(HashInputTypeBool), 0},
 		},
 		"String": {
@@ -1652,7 +1652,7 @@ func TestEphemeralReferenceTypeConformance(t *testing.T) {
 	assert.True(t, conforms)
 }
 
-func TestCapabilityValue_Equal(t *testing.T) {
+func TestStorageCapabilityValue_Equal(t *testing.T) {
 
 	t.Parallel()
 
@@ -1663,7 +1663,7 @@ func TestCapabilityValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.True(t,
-			(&CapabilityValue{
+			(&StorageCapabilityValue{
 				Address: AddressValue{0x1},
 				Path: PathValue{
 					Domain:     common.PathDomainStorage,
@@ -1673,7 +1673,7 @@ func TestCapabilityValue_Equal(t *testing.T) {
 			}).Equal(
 				inter,
 				EmptyLocationRange,
-				&CapabilityValue{
+				&StorageCapabilityValue{
 					Address: AddressValue{0x1},
 					Path: PathValue{
 						Domain:     common.PathDomainStorage,
@@ -1692,7 +1692,7 @@ func TestCapabilityValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.True(t,
-			(&CapabilityValue{
+			(&StorageCapabilityValue{
 				Address: AddressValue{0x1},
 				Path: PathValue{
 					Domain:     common.PathDomainStorage,
@@ -1701,7 +1701,7 @@ func TestCapabilityValue_Equal(t *testing.T) {
 			}).Equal(
 				inter,
 				EmptyLocationRange,
-				&CapabilityValue{
+				&StorageCapabilityValue{
 					Address: AddressValue{0x1},
 					Path: PathValue{
 						Domain:     common.PathDomainStorage,
@@ -1719,7 +1719,7 @@ func TestCapabilityValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			(&CapabilityValue{
+			(&StorageCapabilityValue{
 				Address: AddressValue{0x1},
 				Path: PathValue{
 					Domain:     common.PathDomainStorage,
@@ -1729,7 +1729,7 @@ func TestCapabilityValue_Equal(t *testing.T) {
 			}).Equal(
 				inter,
 				EmptyLocationRange,
-				&CapabilityValue{
+				&StorageCapabilityValue{
 					Address: AddressValue{0x1},
 					Path: PathValue{
 						Domain:     common.PathDomainStorage,
@@ -1748,7 +1748,7 @@ func TestCapabilityValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			(&CapabilityValue{
+			(&StorageCapabilityValue{
 				Address: AddressValue{0x1},
 				Path: PathValue{
 					Domain:     common.PathDomainStorage,
@@ -1758,7 +1758,7 @@ func TestCapabilityValue_Equal(t *testing.T) {
 			}).Equal(
 				inter,
 				EmptyLocationRange,
-				&CapabilityValue{
+				&StorageCapabilityValue{
 					Address: AddressValue{0x2},
 					Path: PathValue{
 						Domain:     common.PathDomainStorage,
@@ -1777,7 +1777,7 @@ func TestCapabilityValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			(&CapabilityValue{
+			(&StorageCapabilityValue{
 				Address: AddressValue{0x1},
 				Path: PathValue{
 					Domain:     common.PathDomainStorage,
@@ -1787,7 +1787,7 @@ func TestCapabilityValue_Equal(t *testing.T) {
 			}).Equal(
 				inter,
 				EmptyLocationRange,
-				&CapabilityValue{
+				&StorageCapabilityValue{
 					Address: AddressValue{0x1},
 					Path: PathValue{
 						Domain:     common.PathDomainStorage,
@@ -1806,7 +1806,7 @@ func TestCapabilityValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			(&CapabilityValue{
+			(&StorageCapabilityValue{
 				Address: AddressValue{0x1},
 				Path: PathValue{
 					Domain:     common.PathDomainStorage,
@@ -1897,10 +1897,10 @@ func TestBoolValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.True(t,
-			BoolValue(true).Equal(
+			TrueValue.Equal(
 				inter,
 				EmptyLocationRange,
-				BoolValue(true),
+				TrueValue,
 			),
 		)
 	})
@@ -1912,10 +1912,10 @@ func TestBoolValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.True(t,
-			BoolValue(false).Equal(
+			FalseValue.Equal(
 				inter,
 				EmptyLocationRange,
-				BoolValue(false),
+				FalseValue,
 			),
 		)
 	})
@@ -1927,10 +1927,10 @@ func TestBoolValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			BoolValue(true).Equal(
+			TrueValue.Equal(
 				inter,
 				EmptyLocationRange,
-				BoolValue(false),
+				FalseValue,
 			),
 		)
 	})
@@ -1942,7 +1942,7 @@ func TestBoolValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			BoolValue(true).Equal(
+			TrueValue.Equal(
 				inter,
 				EmptyLocationRange,
 				NewUnmeteredUInt8Value(1),
@@ -2241,7 +2241,7 @@ func TestPathValue_Equal(t *testing.T) {
 	})
 }
 
-func TestLinkValue_Equal(t *testing.T) {
+func TestPathLinkValue_Equal(t *testing.T) {
 
 	t.Parallel()
 
@@ -2252,7 +2252,7 @@ func TestLinkValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.True(t,
-			LinkValue{
+			PathLinkValue{
 				TargetPath: PathValue{
 					Domain:     common.PathDomainStorage,
 					Identifier: "test",
@@ -2261,7 +2261,7 @@ func TestLinkValue_Equal(t *testing.T) {
 			}.Equal(
 				inter,
 				EmptyLocationRange,
-				LinkValue{
+				PathLinkValue{
 					TargetPath: PathValue{
 						Domain:     common.PathDomainStorage,
 						Identifier: "test",
@@ -2279,7 +2279,7 @@ func TestLinkValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			LinkValue{
+			PathLinkValue{
 				TargetPath: PathValue{
 					Domain:     common.PathDomainStorage,
 					Identifier: "test1",
@@ -2288,7 +2288,7 @@ func TestLinkValue_Equal(t *testing.T) {
 			}.Equal(
 				inter,
 				EmptyLocationRange,
-				LinkValue{
+				PathLinkValue{
 					TargetPath: PathValue{
 						Domain:     common.PathDomainStorage,
 						Identifier: "test2",
@@ -2306,7 +2306,7 @@ func TestLinkValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			LinkValue{
+			PathLinkValue{
 				TargetPath: PathValue{
 					Domain:     common.PathDomainStorage,
 					Identifier: "test",
@@ -2315,7 +2315,7 @@ func TestLinkValue_Equal(t *testing.T) {
 			}.Equal(
 				inter,
 				EmptyLocationRange,
-				LinkValue{
+				PathLinkValue{
 					TargetPath: PathValue{
 						Domain:     common.PathDomainStorage,
 						Identifier: "test",
@@ -2333,7 +2333,7 @@ func TestLinkValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			LinkValue{
+			PathLinkValue{
 				TargetPath: PathValue{
 					Domain:     common.PathDomainStorage,
 					Identifier: "test",
@@ -3991,13 +3991,13 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		)
 	})
 
-	t.Run("CapabilityValue", func(t *testing.T) {
+	t.Run("StorageCapabilityValue", func(t *testing.T) {
 
 		t.Parallel()
 
 		test(
 			func(_ *Interpreter) Value {
-				return NewUnmeteredCapabilityValue(
+				return NewUnmeteredStorageCapabilityValue(
 					NewUnmeteredAddressValueFromBytes(testAddress.Bytes()),
 					NewUnmeteredPathValue(common.PathDomainStorage, "test"),
 					ReferenceStaticType{

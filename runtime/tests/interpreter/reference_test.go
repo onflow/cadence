@@ -54,7 +54,7 @@ func TestInterpretResourceReferenceInstanceOf(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		value,
 	)
 }
@@ -86,7 +86,7 @@ func TestInterpretResourceReferenceFieldComparison(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		value,
 	)
 }

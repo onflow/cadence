@@ -32,11 +32,11 @@ Constructs a new public key
 var publicKeyConstructorFunctionType = &sema.FunctionType{
 	Parameters: []sema.Parameter{
 		{
-			Identifier:     sema.PublicKeyPublicKeyField,
+			Identifier:     sema.PublicKeyTypePublicKeyFieldName,
 			TypeAnnotation: sema.NewTypeAnnotation(sema.ByteArrayType),
 		},
 		{
-			Identifier:     sema.PublicKeySignAlgoField,
+			Identifier:     sema.PublicKeyTypeSignAlgoFieldName,
 			TypeAnnotation: sema.NewTypeAnnotation(sema.SignatureAlgorithmType),
 		},
 	},
@@ -165,7 +165,7 @@ func NewPublicKeyFromValue(
 	error,
 ) {
 	// publicKey field
-	key := publicKey.GetMember(inter, locationRange, sema.PublicKeyPublicKeyField)
+	key := publicKey.GetMember(inter, locationRange, sema.PublicKeyTypePublicKeyFieldName)
 
 	byteArray, err := interpreter.ByteArrayValueToByteSlice(inter, key)
 	if err != nil {
@@ -173,7 +173,7 @@ func NewPublicKeyFromValue(
 	}
 
 	// sign algo field
-	signAlgoField := publicKey.GetMember(inter, locationRange, sema.PublicKeySignAlgoField)
+	signAlgoField := publicKey.GetMember(inter, locationRange, sema.PublicKeyTypeSignAlgoFieldName)
 	if signAlgoField == nil {
 		return nil, errors.NewUnexpectedError("sign algorithm is not set")
 	}
