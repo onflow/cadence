@@ -19,6 +19,7 @@
 package interpreter_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/onflow/cadence/runtime/activations"
@@ -327,11 +328,11 @@ func TestArrayMutation(t *testing.T) {
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
             fun test() {
-                let array: [AnyStruct] = [nil] as [((AnyStruct):Void)?]
+                let array: [AnyStruct] = [nil] as [fun(AnyStruct):Void?]
 
                 array[0] = log
 
-                let logger = array[0] as! ((AnyStruct):Void)
+                let logger = array[0] as! fun(AnyStruct): Void
                 logger("hello")
             }`,
 			ParseCheckAndInterpretOptions{
@@ -357,13 +358,13 @@ func TestArrayMutation(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
             fun test(): [String] {
-                let array: [AnyStruct] = [nil, nil] as [(():String)?]
+                let array: [AnyStruct] = [nil, nil] as [fun():String?]
 
                 array[0] = foo
                 array[1] = bar
 
-                let callFoo = array[0] as! (():String)
-                let callBar = array[1] as! (():String)
+                let callFoo = array[0] as! fun(): String;
+                let callBar = array[1] as! fun(): String;
                 return [callFoo(), callBar()]
             }
 
@@ -412,7 +413,7 @@ func TestArrayMutation(t *testing.T) {
             }
 
             fun test(): [String] {
-                let array: [AnyStruct] = [nil, nil] as [(():String)?]
+                let array: [AnyStruct] = [nil, nil] as [fun():String?]
 
                 let a = Foo()
                 let b = Bar()
@@ -420,8 +421,8 @@ func TestArrayMutation(t *testing.T) {
                 array[0] = a.foo
                 array[1] = b.bar
 
-                let callFoo = array[0] as! (():String)
-                let callBar = array[1] as! (():String)
+                let callFoo = array[0] as! fun():String;
+                let callBar = array[1] as! fun():String;
 
                 return [callFoo(), callBar()]
             }
@@ -468,7 +469,7 @@ func TestArrayMutation(t *testing.T) {
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
                 fun test() {
-                    let array: [AnyStruct] = [nil] as [(():Void)?]
+                    let array: [AnyStruct] = [nil] as [fun():Void?]
 
                     array[0] = log
                 }
@@ -483,6 +484,9 @@ func TestArrayMutation(t *testing.T) {
 			},
 		)
 
+		if err != nil {
+			fmt.Println(err)
+		}
 		require.NoError(t, err)
 
 		_, err = inter.Invoke("test")
@@ -721,7 +725,7 @@ func TestDictionaryMutation(t *testing.T) {
 
                 dict["test"] = log
 
-                let logger = dict["test"]! as! ((AnyStruct): Void)
+                let logger = dict["test"]! as! fun(AnyStruct): Void;
                 logger("hello")
             }`,
 			ParseCheckAndInterpretOptions{
@@ -752,8 +756,8 @@ func TestDictionaryMutation(t *testing.T) {
                dict["foo"] = foo
                dict["bar"] = bar
 
-               let callFoo = dict["foo"]! as! (():String)
-               let callBar = dict["bar"]! as! (():String)
+               let callFoo = dict["foo"]! as! fun():String;
+               let callBar = dict["bar"]! as! fun():String;
                return [callFoo(), callBar()]
            }
 
@@ -810,8 +814,8 @@ func TestDictionaryMutation(t *testing.T) {
                dict["foo"] = a.foo
                dict["bar"] = b.bar
 
-               let callFoo = dict["foo"]! as! (():String)
-               let callBar = dict["bar"]! as! (():String)
+               let callFoo = dict["foo"]! as! fun():String
+               let callBar = dict["bar"]! as! fun():String
 
                return [callFoo(), callBar()]
            }
@@ -858,7 +862,7 @@ func TestDictionaryMutation(t *testing.T) {
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
                fun test() {
-                   let dict: {String: AnyStruct} = {} as {String: (():Void)}
+                   let dict: {String: AnyStruct} = {} as {String: fun():Void}
 
                    dict["log"] = log
                }
@@ -910,7 +914,7 @@ func TestDictionaryMutation(t *testing.T) {
             struct S {}
 
             fun test(owner: PublicAccount) {
-                let funcs: {String: ((PublicAccount, [UInt64]): [S])} = {}
+                let funcs: {String: fun(PublicAccount, [UInt64]): [S]} = {}
 
                 funcs["test"] = fun (owner: PublicAccount, ids: [UInt64]): [S] { return [] }
 

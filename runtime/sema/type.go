@@ -2567,9 +2567,7 @@ func formatFunctionType(
 
 	if len(purity) > 0 {
 		builder.WriteString(purity)
-		if spaces {
-			builder.WriteByte(' ')
-		}
+		builder.WriteByte(' ')
 	}
 
 	builder.WriteString("fun")

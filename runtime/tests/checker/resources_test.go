@@ -964,7 +964,7 @@ func TestCheckFunctionTypeParameterWithResourceAnnotation(t *testing.T) {
 					`
                       %[1]s T%[2]s %[3]s
 
-                      let test: ((@T): Void) = fun (r: @T) {
+                      let test: fun(@T): Void = fun (r: @T) {
                           %[4]s r
                       }
                     `,

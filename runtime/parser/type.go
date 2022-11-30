@@ -1021,6 +1021,8 @@ func parseFunctionType(p *parser, startPos ast.Position, purity ast.FunctionPuri
 		)
 	}
 
+	p.skipSpaceAndComments()
+
 	return ast.NewFunctionType(
 		p.memoryGauge,
 		purity,
