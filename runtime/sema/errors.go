@@ -1203,10 +1203,6 @@ type InitializerMismatch struct {
 	CompositeParameters []Parameter
 	InterfaceParameters []Parameter
 }
-
-// TODO: improve error message:
-//  use `InitializerMismatch`, `MissingMembers`, `MemberMismatches`, etc
-
 type ConformanceError struct {
 	CompositeDeclaration           *ast.CompositeDeclaration
 	CompositeType                  *CompositeType
@@ -1244,6 +1240,32 @@ func (e *ConformanceError) Error() string {
 	)
 }
 
+func (e *ConformanceError) SecondaryError() string {
+	var builder strings.Builder
+	if len(e.MissingMembers) > 0 {
+		builder.WriteString(fmt.Sprintf("`%s` is missing definitions for members: ", e.CompositeType.QualifiedString()))
+		for i, member := range e.MissingMembers {
+			builder.WriteString(fmt.Sprintf("`%s`", member.Identifier.Identifier))
+			if i != len(e.MissingMembers)-1 {
+				builder.WriteString(", ")
+			}
+		}
+		return builder.String()
+	}
+
+	if len(e.MissingNestedCompositeTypes) > 0 {
+		builder.WriteString(fmt.Sprintf("`%s` is missing definitions for types: ", e.CompositeType.QualifiedString()))
+		for i, ty := range e.MissingNestedCompositeTypes {
+			builder.WriteString(fmt.Sprintf("`%s`", ty.QualifiedString()))
+			if i != len(e.MissingNestedCompositeTypes)-1 {
+				builder.WriteString(", ")
+			}
+		}
+	}
+
+	return builder.String()
+}
+
 func (e *ConformanceError) StartPosition() ast.Position {
 	return e.Pos
 }
@@ -1257,6 +1279,16 @@ func (e *ConformanceError) ErrorNotes() (notes []errors.ErrorNote) {
 	for _, memberMismatch := range e.MemberMismatches {
 		compositeMemberIdentifierRange :=
 			ast.NewUnmeteredRangeFromPositioned(memberMismatch.CompositeMember.Identifier)
+
+		notes = append(notes, &MemberMismatchNote{
+			Range: compositeMemberIdentifierRange,
+		})
+	}
+
+	if e.InitializerMismatch != nil && len(e.CompositeDeclaration.Members.Initializers()) > 0 {
+		compositeMemberIdentifierRange :=
+			//	right now we only support a single initializer
+			ast.NewUnmeteredRangeFromPositioned(e.CompositeDeclaration.Members.Initializers()[0].FunctionDeclaration.Identifier)
 
 		notes = append(notes, &MemberMismatchNote{
 			Range: compositeMemberIdentifierRange,
