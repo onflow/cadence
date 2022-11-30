@@ -84,7 +84,7 @@ pub attachment A for R {
 
 ```
 
-For the purposes of external mutation checks or [access control](/access-control), 
+For the purposes of external mutation checks or [access control](/language/access-control), 
 the attachment is considered a separate declaration from its base type. 
 A developer cannot, therefore, access any `priv` fields 
 (or `access(contract)` fields if the base was defined in a different contract to the attachment)
