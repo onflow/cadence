@@ -28,29 +28,29 @@ func (checker *Checker) VisitAttachExpression(expression *ast.AttachExpression) 
 	baseExpression := expression.Base
 
 	baseType := checker.VisitExpression(baseExpression, checker.expectedType)
-	ty := checker.checkInvocationExpression(attachment)
+	attachmentType := checker.checkInvocationExpression(attachment)
 
-	if ty.IsInvalidType() || baseType.IsInvalidType() {
+	if attachmentType.IsInvalidType() || baseType.IsInvalidType() {
 		return InvalidType
 	}
 
 	checker.checkVariableMove(baseExpression)
-	checker.checkResourceMoveOperation(baseExpression, ty)
+	checker.checkResourceMoveOperation(baseExpression, attachmentType)
 
 	// check that the attachment type is a valid attachment,
 	// and that it is a subtype of the declared base type
-	attachmentType, baseIsCompositeType := ty.(*CompositeType)
-	if !(baseIsCompositeType && attachmentType.Kind == common.CompositeKindAttachment) {
+	attachmentCompositeType, isCompositeType := attachmentType.(*CompositeType)
+	if !(isCompositeType && attachmentCompositeType.Kind == common.CompositeKindAttachment) {
 		checker.report(
 			&AttachNonAttachmentError{
-				Type:  ty,
+				Type:  attachmentType,
 				Range: ast.NewRangeFromPositioned(checker.memoryGauge, attachment),
 			},
 		)
 		return InvalidType
 	}
 
-	annotatedBaseType := attachmentType.baseType
+	annotatedBaseType := attachmentCompositeType.baseType
 
 	if !IsSubType(baseType, annotatedBaseType) {
 		checker.report(
@@ -76,7 +76,7 @@ func (checker *Checker) VisitAttachExpression(expression *ast.AttachExpression) 
 
 	// if the annotatedBaseType is a specific interface or composite, then the above code will already have
 	// checked that the type of the base expression is also a composite. However, if the annotatedBaseType is
-	// anyresource/anystruct, we need to enforce that actualBaseType is a resource or struct, to prevent
+	// anyresource/anystruct, we need to enforce that baseType is a resource or struct, to prevent
 	// permitting code like `attach A to 4`, if `A` was declared for `AnyStruct`
 	if _, annotatedIsCompositeType := annotatedBaseType.(CompositeKindedType); !annotatedIsCompositeType {
 		switch baseType := baseType.(type) {

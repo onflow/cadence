@@ -302,15 +302,6 @@ func (checker *Checker) visitIndexExpression(
 	typeIndexedType, isTypeIndexableType := targetType.(TypeIndexableType)
 
 	if isTypeIndexableType && typeIndexedType.isTypeIndexableType() {
-		reportError := func(indexedType Type) {
-			checker.report(
-				&InvalidAttachmentAccessError{
-					BaseType:           indexedType,
-					IndexingExpression: indexExpression.IndexingExpression,
-					Range:              ast.NewRangeFromPositioned(checker.memoryGauge, indexExpression.IndexingExpression),
-				},
-			)
-		}
 		if isAssignment {
 			checker.report(
 				&NotIndexingAssignableTypeError{
@@ -320,7 +311,17 @@ func (checker *Checker) visitIndexExpression(
 			)
 			return InvalidType
 		}
-		return checker.checkTypeIndexingExpression(typeIndexedType, indexExpression.IndexingExpression, reportError)
+		elementType := checker.checkTypeIndexingExpression(typeIndexedType, indexExpression.IndexingExpression)
+		if elementType == InvalidType {
+			checker.report(
+				&InvalidTypeIndexingError{
+					BaseType:           typeIndexedType,
+					IndexingExpression: indexExpression.IndexingExpression,
+					Range:              ast.NewRangeFromPositioned(checker.memoryGauge, indexExpression.IndexingExpression),
+				},
+			)
+		}
+		return elementType
 	}
 
 	reportNonIndexable(targetType)
@@ -330,23 +331,19 @@ func (checker *Checker) visitIndexExpression(
 func (checker *Checker) checkTypeIndexingExpression(
 	base TypeIndexableType,
 	indexingExpression ast.Expression,
-	reportError func(indexedType Type),
 ) Type {
 
 	expressionType := ast.ExpressionAsType(indexingExpression)
 	if expressionType == nil {
-		reportError(base)
 		return InvalidType
 	}
 	nominalTypeExpression, isNominalType := expressionType.(*ast.NominalType)
 	if !isNominalType {
-		reportError(base)
 		return InvalidType
 	}
 	nominalType := checker.convertNominalType(nominalTypeExpression)
 
 	if !base.IsValidIndexingType(nominalType) {
-		reportError(base)
 		return InvalidType
 	}
 
