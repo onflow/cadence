@@ -316,8 +316,8 @@ func TestCheckMemberNotDeclaredSecondaryError(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
-		memberErr := errs[0].(*sema.NotDeclaredMemberError)
+		var memberErr *sema.NotDeclaredMemberError
+		require.ErrorAs(t, errs[0], &memberErr)
 		assert.Equal(t, "did you mean `foo`?", memberErr.SecondaryError())
 	})
 
@@ -338,8 +338,8 @@ func TestCheckMemberNotDeclaredSecondaryError(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
-		memberErr := errs[0].(*sema.NotDeclaredMemberError)
+		var memberErr *sema.NotDeclaredMemberError
+		require.ErrorAs(t, errs[0], &memberErr)
 		assert.Equal(t, "did you mean `foo`?", memberErr.SecondaryError())
 	})
 
@@ -358,8 +358,8 @@ func TestCheckMemberNotDeclaredSecondaryError(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
-		memberErr := errs[0].(*sema.NotDeclaredMemberError)
+		var memberErr *sema.NotDeclaredMemberError
+		require.ErrorAs(t, errs[0], &memberErr)
 		assert.Equal(t, "unknown member", memberErr.SecondaryError())
 	})
 
@@ -378,8 +378,8 @@ func TestCheckMemberNotDeclaredSecondaryError(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
-		memberErr := errs[0].(*sema.NotDeclaredMemberError)
+		var memberErr *sema.NotDeclaredMemberError
+		require.ErrorAs(t, errs[0], &memberErr)
 		assert.Equal(t, "unknown member", memberErr.SecondaryError())
 	})
 }

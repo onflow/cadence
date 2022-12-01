@@ -925,7 +925,6 @@ func (e *NotDeclaredMemberError) findClosestMember() string {
 	members := maps.Keys(e.Type.GetMembers())
 	closestDistance := len(e.Name)
 	var closestMember string
-	// TODO: when attachments are merged to master, discount any members prefixed by the attachment prefix
 	for _, member := range members {
 		distance := levenshtein.DistanceForStrings([]rune(e.Name), []rune(member), levenshtein.DefaultOptions)
 		// don't update the closest member if the distance is greater than one already found, or if the edits
