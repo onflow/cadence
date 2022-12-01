@@ -2040,7 +2040,8 @@ func TestInterpretCompositeDeclaration(t *testing.T) {
 		switch compositeKind {
 		case common.CompositeKindContract,
 			common.CompositeKindEvent,
-			common.CompositeKindEnum:
+			common.CompositeKindEnum,
+			common.CompositeKindAttachment:
 
 			continue
 		}
@@ -3664,7 +3665,7 @@ func TestInterpretCompositeNilEquality(t *testing.T) {
 
 	for _, compositeKind := range common.AllCompositeKinds {
 
-		if compositeKind == common.CompositeKindEvent {
+		if compositeKind == common.CompositeKindEvent || compositeKind == common.CompositeKindAttachment {
 			continue
 		}
 

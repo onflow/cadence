@@ -25,8 +25,74 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
+// while strictly speaking attachment declarations are not strictly the same thing as composite declarations,
+// they are subject to many of the same checks. In order to avoid duplicating the implementation of these checks, we create a mapping
+// between an attachment declaration and its composite "equivalent" that we can use for these composite checks
+func (checker *Checker) attachmentAsComposite(declaration *ast.AttachmentDeclaration) *ast.CompositeDeclaration {
+	compositeDelcaration, ok := checker.Elaboration.AttachmentCompositeDeclarations[declaration]
+	if ok {
+		return compositeDelcaration
+	}
+
+	compositeDelcaration = ast.NewCompositeDeclaration(
+		checker.memoryGauge,
+		declaration.Access,
+		common.CompositeKindAttachment,
+		declaration.Identifier,
+		declaration.Conformances,
+		declaration.Members,
+		declaration.DocString,
+		declaration.Range,
+	)
+	checker.Elaboration.AttachmentCompositeDeclarations[declaration] = compositeDelcaration
+	return compositeDelcaration
+}
+
 func (checker *Checker) VisitCompositeDeclaration(declaration *ast.CompositeDeclaration) (_ struct{}) {
 	checker.visitCompositeDeclaration(declaration, ContainerKindComposite)
+	return
+}
+
+func (checker *Checker) checkAttachmentBaseType(attachmentType *CompositeType) {
+	baseType := attachmentType.baseType
+
+	if baseType == nil {
+		panic(errors.NewUnreachableError())
+	}
+
+	switch ty := baseType.(type) {
+	case *InterfaceType:
+		if ty.CompositeKind == common.CompositeKindResource || ty.CompositeKind == common.CompositeKindStructure {
+			return
+		}
+	case *CompositeType:
+		if ty.Location == nil {
+			break
+		}
+		if ty.Kind == common.CompositeKindResource || ty.Kind == common.CompositeKindStructure {
+			return
+		}
+	case *SimpleType:
+		if ty == AnyResourceType || ty == AnyStructType {
+			return
+		}
+	}
+
+	checker.report(&InvalidBaseTypeError{
+		BaseType:   baseType,
+		Attachment: attachmentType,
+	})
+}
+
+func (checker *Checker) VisitAttachmentDeclaration(declaration *ast.AttachmentDeclaration) (_ struct{}) {
+	return checker.visitAttachmentDeclaration(declaration, ContainerKindComposite)
+}
+
+func (checker *Checker) visitAttachmentDeclaration(declaration *ast.AttachmentDeclaration, kind ContainerKind) (_ struct{}) {
+	attachmentCompositeDeclaration := checker.attachmentAsComposite(declaration)
+	checker.visitCompositeDeclaration(attachmentCompositeDeclaration, kind)
+	attachmentType := checker.Elaboration.CompositeDeclarationTypes[attachmentCompositeDeclaration]
+	checker.checkAttachmentBaseType(attachmentType)
 	return
 }
 
@@ -138,6 +204,7 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 	checker.checkResourceFieldNesting(
 		compositeType.Members,
 		compositeType.Kind,
+		compositeType.baseType,
 		fieldPositionGetter,
 	)
 
@@ -203,6 +270,10 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 	for _, nestedComposite := range declaration.Members.Composites() {
 		ast.AcceptDeclaration[struct{}](nestedComposite, checker)
 	}
+
+	for _, nestedAttachments := range declaration.Members.Attachments() {
+		ast.AcceptDeclaration[struct{}](nestedAttachments, checker)
+	}
 }
 
 // declareCompositeNestedTypes declares the types nested in a composite,
@@ -254,8 +325,15 @@ func (checker *Checker) declareCompositeNestedTypes(
 			// for this nested declaration, but the value activation for it was only temporary,
 			// so that the constructor wouldn't be visible outside of the containing declaration
 
-			if nestedCompositeDeclaration, isCompositeDeclaration :=
-				nestedDeclaration.(*ast.CompositeDeclaration); isCompositeDeclaration {
+			nestedCompositeDeclaration, isCompositeDeclaration := nestedDeclaration.(*ast.CompositeDeclaration)
+			if !isCompositeDeclaration {
+				if nestedAttachmentDeclaration, isAttachmentDeclaration := nestedDeclaration.(*ast.AttachmentDeclaration); isAttachmentDeclaration {
+					nestedCompositeDeclaration = checker.attachmentAsComposite(nestedAttachmentDeclaration)
+					isCompositeDeclaration = true
+				}
+			}
+
+			if isCompositeDeclaration {
 
 				nestedCompositeType, ok := nestedType.(*CompositeType)
 				if !ok {
@@ -294,6 +372,7 @@ func (checker *Checker) declareNestedDeclarations(
 	containerCompositeKind common.CompositeKind,
 	containerDeclarationKind common.DeclarationKind,
 	nestedCompositeDeclarations []*ast.CompositeDeclaration,
+	nestedAttachmentDeclaration []*ast.AttachmentDeclaration,
 	nestedInterfaceDeclarations []*ast.InterfaceDeclaration,
 ) (
 	nestedDeclarations map[string]ast.Declaration,
@@ -332,6 +411,13 @@ func (checker *Checker) declareNestedDeclarations(
 				firstNestedInterfaceDeclaration.DeclarationKind(),
 				firstNestedInterfaceDeclaration.Identifier,
 			)
+		} else if len(nestedAttachmentDeclaration) > 0 {
+			firstNestedAttachmentDeclaration := nestedAttachmentDeclaration[0]
+
+			reportInvalidNesting(
+				firstNestedAttachmentDeclaration.DeclarationKind(),
+				firstNestedAttachmentDeclaration.Identifier,
+			)
 		}
 
 		// NOTE: don't return, so nested declarations / types are still declared
@@ -349,6 +435,7 @@ func (checker *Checker) declareNestedDeclarations(
 			switch nestedCompositeKind {
 			case common.CompositeKindResource,
 				common.CompositeKindStructure,
+				common.CompositeKindAttachment,
 				common.CompositeKindEvent,
 				common.CompositeKindEnum:
 				break
@@ -380,14 +467,23 @@ func (checker *Checker) declareNestedDeclarations(
 			)
 		}
 
+		for _, nestedDeclaration := range nestedAttachmentDeclaration {
+			checkNestedDeclaration(
+				common.CompositeKindAttachment,
+				nestedDeclaration.DeclarationKind(),
+				nestedDeclaration.Identifier,
+			)
+		}
+
 		// NOTE: don't return, so nested declarations / types are still declared
 	}
 
 	// Declare nested interfaces
 
 	for _, nestedDeclaration := range nestedInterfaceDeclarations {
-		if _, exists := nestedDeclarations[nestedDeclaration.Identifier.Identifier]; !exists {
-			nestedDeclarations[nestedDeclaration.Identifier.Identifier] = nestedDeclaration
+		identifier := nestedDeclaration.Identifier.Identifier
+		if _, exists := nestedDeclarations[identifier]; !exists {
+			nestedDeclarations[identifier] = nestedDeclaration
 		}
 
 		nestedInterfaceType := checker.declareInterfaceType(nestedDeclaration)
@@ -397,15 +493,34 @@ func (checker *Checker) declareNestedDeclarations(
 	// Declare nested composites
 
 	for _, nestedDeclaration := range nestedCompositeDeclarations {
-		if _, exists := nestedDeclarations[nestedDeclaration.Identifier.Identifier]; !exists {
-			nestedDeclarations[nestedDeclaration.Identifier.Identifier] = nestedDeclaration
+		identifier := nestedDeclaration.Identifier.Identifier
+		if _, exists := nestedDeclarations[identifier]; !exists {
+			nestedDeclarations[identifier] = nestedDeclaration
 		}
 
 		nestedCompositeType := checker.declareCompositeType(nestedDeclaration)
 		nestedCompositeTypes = append(nestedCompositeTypes, nestedCompositeType)
 	}
 
+	// Declare nested attachments
+
+	for _, nestedDeclaration := range nestedAttachmentDeclaration {
+		identifier := nestedDeclaration.Identifier.Identifier
+		if _, exists := nestedDeclarations[identifier]; !exists {
+			nestedDeclarations[identifier] = nestedDeclaration
+		}
+
+		nestedCompositeType := checker.declareAttachmentType(nestedDeclaration)
+		nestedCompositeTypes = append(nestedCompositeTypes, nestedCompositeType)
+	}
+
 	return
+}
+
+func (checker *Checker) declareAttachmentType(declaration *ast.AttachmentDeclaration) *CompositeType {
+	composite := checker.declareCompositeType(checker.attachmentAsComposite(declaration))
+	composite.baseType = checker.convertNominalType(declaration.BaseType)
+	return composite
 }
 
 // declareCompositeType declares the type for the given composite declaration
@@ -474,6 +589,7 @@ func (checker *Checker) declareCompositeType(declaration *ast.CompositeDeclarati
 			declaration.CompositeKind,
 			declaration.DeclarationKind(),
 			declaration.Members.Composites(),
+			declaration.Members.Attachments(),
 			declaration.Members.Interfaces(),
 		)
 
@@ -492,6 +608,10 @@ func (checker *Checker) declareCompositeType(declaration *ast.CompositeDeclarati
 	return compositeType
 }
 
+func (checker *Checker) declareAttachmentMembersAndValue(declaration *ast.AttachmentDeclaration, kind ContainerKind) {
+	checker.declareCompositeMembersAndValue(checker.attachmentAsComposite(declaration), kind)
+}
+
 // declareCompositeMembersAndValue declares the members and the value
 // (e.g. constructor function for non-contract types; instance for contracts)
 // for the given composite declaration, and recursively for all nested declarations.
@@ -508,7 +628,8 @@ func (checker *Checker) declareCompositeMembersAndValue(
 	}
 
 	nestedComposites := declaration.Members.Composites()
-	declarationMembers := orderedmap.New[StringMemberOrderedMap](len(nestedComposites))
+	nestedAttachments := declaration.Members.Attachments()
+	declarationMembers := orderedmap.New[StringMemberOrderedMap](len(nestedComposites) + len(nestedAttachments))
 
 	(func() {
 		// Activate new scopes for nested types
@@ -546,7 +667,7 @@ func (checker *Checker) declareCompositeMembersAndValue(
 		//   }
 		// }
 		// ```
-		for _, nestedCompositeDeclaration := range nestedComposites {
+		declareNestedComposite := func(nestedCompositeDeclaration *ast.CompositeDeclaration) {
 			checker.declareCompositeMembersAndValue(nestedCompositeDeclaration, kind)
 
 			// Declare nested composites' values (constructor/instance) as members of the containing composite
@@ -569,6 +690,12 @@ func (checker *Checker) declareCompositeMembersAndValue(
 					IgnoreInSerialization: true,
 					DocString:             nestedCompositeDeclaration.DocString,
 				})
+		}
+		for _, nestedCompositeDeclaration := range nestedComposites {
+			declareNestedComposite(nestedCompositeDeclaration)
+		}
+		for _, nestedAttachmentDeclaration := range nestedAttachments {
+			declareNestedComposite(checker.attachmentAsComposite(nestedAttachmentDeclaration))
 		}
 
 		// Declare implicit type requirement conformances, if any,
@@ -1055,7 +1182,8 @@ func (checker *Checker) checkCompositeConformance(
 	// Ensure the composite kinds match, e.g. a structure shouldn't be able
 	// to conform to a resource interface
 
-	if interfaceType.CompositeKind != compositeType.Kind {
+	if !(interfaceType.CompositeKind == compositeType.Kind ||
+		interfaceType.CompositeKind == compositeType.getBaseCompositeKind()) {
 		checker.report(
 			&CompositeKindMismatchError{
 				ExpectedKind: compositeType.Kind,
@@ -1354,7 +1482,7 @@ func (checker *Checker) checkTypeRequirement(
 	var compositeDeclaration *ast.CompositeDeclaration
 	var foundRedeclaration bool
 
-	for _, nestedCompositeDeclaration := range containerDeclaration.Members.Composites() {
+	findDeclaration := func(nestedCompositeDeclaration *ast.CompositeDeclaration) {
 		nestedCompositeIdentifier := nestedCompositeDeclaration.Identifier.Identifier
 		if nestedCompositeIdentifier == declaredCompositeType.Identifier {
 			// If we detected a second nested composite declaration with the same identifier,
@@ -1373,6 +1501,14 @@ func (checker *Checker) checkTypeRequirement(
 			// another (invalid) nested composite declaration with the same identifier,
 			// as the first found declaration is not necessarily the correct one
 		}
+	}
+
+	for _, nestedCompositeDeclaration := range containerDeclaration.Members.Composites() {
+		findDeclaration(nestedCompositeDeclaration)
+	}
+
+	for _, nestedAttachmentDeclaration := range containerDeclaration.Members.Attachments() {
+		findDeclaration(checker.attachmentAsComposite(nestedAttachmentDeclaration))
 	}
 
 	if foundRedeclaration {
@@ -1409,6 +1545,37 @@ func (checker *Checker) checkTypeRequirement(
 	// like a top-level composite declaration to an interface type
 
 	requiredInterfaceType := requiredCompositeType.InterfaceType()
+
+	// while attachments cannot be declared as interfaces, an attachment type requirement essentially functions
+	// as an interface, so we must enforce that the concrete attachment's base type is a compatible with the requirement's.
+	// Specifically, attachment base types are contravariant; if the contract interface requires a struct attachment with a base type
+	// of `S`, the concrete contract can fulfill this requirement by implementing an attachment with a base type of `AnyStruct`:
+	// if the attachment is valid on any structure, then clearly it is a valid attachment for `S`. See the example below:
+	//
+	// resource interface RI { /* ... */ }
+	// resource R: RI { /* ... */ }
+	// contract interface CI {
+	//    attachment A for R { /* ... */ }
+	// }
+	// contract C: CI {
+	//    attachment A for RI { /* ... */ }
+	// }
+	//
+	// In this example, as long as `A` in `C` contains the expected member declarations as defined in `CI`, this is a valid
+	// implementation of the type requirement, as an `A` that can accept any `RI` as a base can clearly function for an `R` as well.
+	// It may also be helpful to conceptualize an attachment as a sort of implicit function that takes a `base` argument and returns a composite value.
+	if requiredCompositeType.Kind == common.CompositeKindAttachment && declaredCompositeType.Kind == common.CompositeKindAttachment {
+		if !IsSubType(requiredCompositeType.baseType, declaredCompositeType.baseType) {
+			checker.report(
+				&ConformanceError{
+					CompositeDeclaration: compositeDeclaration,
+					CompositeType:        declaredCompositeType,
+					InterfaceType:        requiredCompositeType.InterfaceType(),
+					Pos:                  compositeDeclaration.Identifier.Pos,
+				},
+			)
+		}
+	}
 
 	checker.checkCompositeConformance(
 		compositeDeclaration,
@@ -1779,7 +1946,7 @@ func (checker *Checker) enumMembersAndOrigins(
 func (checker *Checker) checkInitializers(
 	initializers []*ast.SpecialFunctionDeclaration,
 	fields []*ast.FieldDeclaration,
-	containerType Type,
+	containerType CompositeKindedType,
 	containerDocString string,
 	initializerParameters []*Parameter,
 	containerKind ContainerKind,
@@ -1850,7 +2017,7 @@ func (checker *Checker) checkNoInitializerNoFields(
 // checkSpecialFunction checks special functions, like initializers and destructors
 func (checker *Checker) checkSpecialFunction(
 	specialFunction *ast.SpecialFunctionDeclaration,
-	containerType Type,
+	containerType CompositeKindedType,
 	containerDocString string,
 	parameters []*Parameter,
 	containerKind ContainerKind,
@@ -1865,6 +2032,14 @@ func (checker *Checker) checkSpecialFunction(
 	defer checker.leaveValueScope(specialFunction.EndPosition, checkResourceLoss)
 
 	checker.declareSelfValue(containerType, containerDocString)
+	if containerType.GetCompositeKind() == common.CompositeKindAttachment {
+		// attachments cannot be interfaces, so this cast must succeed
+		attachmentType, ok := containerType.(*CompositeType)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+		checker.declareBaseValue(attachmentType.baseType, attachmentType.baseTypeDocString)
+	}
 
 	functionType := &FunctionType{
 		Parameters:           parameters,
@@ -1916,6 +2091,9 @@ func (checker *Checker) checkCompositeFunctions(
 			defer checker.leaveValueScope(function.EndPosition, true)
 
 			checker.declareSelfValue(selfType, selfDocString)
+			if selfType.GetCompositeKind() == common.CompositeKindAttachment {
+				checker.declareBaseValue(selfType.baseType, selfType.baseTypeDocString)
+			}
 
 			checker.visitFunctionDeclaration(
 				function,
@@ -1937,27 +2115,44 @@ func (checker *Checker) checkCompositeFunctions(
 	}
 }
 
-func (checker *Checker) declareSelfValue(selfType Type, selfDocString string) {
+// declares a value one scope lower than the current.
+// This is useful particularly in the cases of creating `self`
+// and `base` parameters to composite/attachment functions.
 
-	// NOTE: declare `self` one depth lower ("inside" function),
-	// so it can't be re-declared by the function's parameters
+func (checker *Checker) declareLowerScopedValue(
+	ty Type,
+	docString string,
+	identifier string,
+	kind common.DeclarationKind,
+) {
 
 	depth := checker.valueActivations.Depth() + 1
 
-	self := &Variable{
-		Identifier:      SelfIdentifier,
+	variable := &Variable{
+		Identifier:      identifier,
 		Access:          ast.AccessPublic,
-		DeclarationKind: common.DeclarationKindSelf,
-		Type:            selfType,
+		DeclarationKind: kind,
+		Type:            ty,
 		IsConstant:      true,
 		ActivationDepth: depth,
 		Pos:             nil,
-		DocString:       selfDocString,
+		DocString:       docString,
 	}
-	checker.valueActivations.Set(SelfIdentifier, self)
+	checker.valueActivations.Set(identifier, variable)
 	if checker.PositionInfo != nil {
-		checker.recordVariableDeclarationOccurrence(SelfIdentifier, self)
+		checker.recordVariableDeclarationOccurrence(identifier, variable)
 	}
+}
+
+func (checker *Checker) declareSelfValue(selfType Type, selfDocString string) {
+	checker.declareLowerScopedValue(selfType, selfDocString, SelfIdentifier, common.DeclarationKindSelf)
+}
+
+func (checker *Checker) declareBaseValue(baseType Type, superDocString string) {
+	// References to `base` should be non-auth, as the actual base type in practice may be any number of subtypes of the annotated base type,
+	// not all of which should be available to the writer of the attachment.
+	base := NewReferenceType(checker.memoryGauge, baseType, false)
+	checker.declareLowerScopedValue(base, superDocString, BaseIdentifier, common.DeclarationKindBase)
 }
 
 // checkNestedIdentifiers checks that nested identifiers, i.e. fields, functions,
@@ -2072,7 +2267,7 @@ func (checker *Checker) checkDestructors(
 	destructors []*ast.SpecialFunctionDeclaration,
 	fields map[string]*ast.FieldDeclaration,
 	members *StringMemberOrderedMap,
-	containerType Type,
+	containerType CompositeKindedType,
 	containerDeclarationKind common.DeclarationKind,
 	containerDocString string,
 	containerKind ContainerKind,
@@ -2164,7 +2359,7 @@ func (checker *Checker) checkNoDestructorNoResourceFields(
 
 func (checker *Checker) checkDestructor(
 	destructor *ast.SpecialFunctionDeclaration,
-	containerType Type,
+	containerType CompositeKindedType,
 	containerDocString string,
 	containerKind ContainerKind,
 ) {

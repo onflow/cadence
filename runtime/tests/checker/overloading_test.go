@@ -37,6 +37,10 @@ func TestCheckInvalidCompositeInitializerOverloading(t *testing.T) {
 	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
 		for _, isInterface := range interfacePossibilities {
 
+			if isInterface && !kind.SupportsInterfaces() {
+				continue
+			}
+
 			interfaceKeyword := ""
 			body := ""
 			if isInterface {
@@ -50,12 +54,17 @@ func TestCheckInvalidCompositeInitializerOverloading(t *testing.T) {
 				interfaceKeyword,
 			)
 
+			var baseType string
+			if kind == common.CompositeKindAttachment {
+				baseType = "for AnyStruct"
+			}
+
 			t.Run(testName, func(t *testing.T) {
 
 				_, err := ParseAndCheck(t,
 					fmt.Sprintf(
 						`
-                          %[1]s %[2]s X {
+                          %[1]s %[2]s X %[4]s {
                               init() %[3]s
                               init(y: Int) %[3]s
                           }
@@ -63,6 +72,7 @@ func TestCheckInvalidCompositeInitializerOverloading(t *testing.T) {
 						kind.Keyword(),
 						interfaceKeyword,
 						body,
+						baseType,
 					),
 				)
 

@@ -253,6 +253,7 @@ func TestCheckStorable(t *testing.T) {
 				}
 
 				var interfaceKeyword string
+				var baseType string
 				var initializer string
 				var destructor string
 
@@ -291,6 +292,10 @@ func TestCheckStorable(t *testing.T) {
 					}
 				}
 
+				if compositeKind == common.CompositeKindAttachment {
+					baseType = "for AnyStruct"
+				}
+
 				var body string
 				if compositeKind == common.CompositeKindEvent {
 					body = fmt.Sprintf("(value: %s)", typeName)
@@ -325,10 +330,11 @@ func TestCheckStorable(t *testing.T) {
 
 					code := fmt.Sprintf(
 						`
-					      %[1]s %[2]s T %[3]s
+					      %[1]s %[2]s T %[3]s %[4]s
 					    `,
 						compositeKeyword,
 						interfaceKeyword,
+						baseType,
 						body,
 					)
 

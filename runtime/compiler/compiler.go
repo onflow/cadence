@@ -350,6 +350,11 @@ func (compiler *Compiler) VisitCompositeDeclaration(_ *ast.CompositeDeclaration)
 	panic(errors.NewUnreachableError())
 }
 
+func (compiler *Compiler) VisitAttachmentDeclaration(_ *ast.AttachmentDeclaration) ir.Stmt {
+	// TODO
+	panic(errors.NewUnreachableError())
+}
+
 func (compiler *Compiler) VisitInterfaceDeclaration(_ *ast.InterfaceDeclaration) ir.Stmt {
 	// TODO
 	panic(errors.NewUnreachableError())

@@ -34,6 +34,7 @@ import (
 
 const ArgumentLabelNotRequired = "_"
 const SelfIdentifier = "self"
+const BaseIdentifier = "base"
 const BeforeIdentifier = "before"
 const ResultIdentifier = "result"
 
@@ -303,6 +304,15 @@ func (checker *Checker) CheckProgram(program *ast.Program) {
 		VisitThisAndNested(compositeType, registerInElaboration)
 	}
 
+	for _, declaration := range program.AttachmentDeclarations() {
+		compositeType := checker.declareAttachmentType(declaration)
+
+		// NOTE: register types in elaboration
+		// *after* the full container chain is fully set up
+
+		VisitThisAndNested(compositeType, registerInElaboration)
+	}
+
 	// Declare interfaces' and composites' members
 
 	for _, declaration := range program.InterfaceDeclarations() {
@@ -311,6 +321,10 @@ func (checker *Checker) CheckProgram(program *ast.Program) {
 
 	for _, declaration := range program.CompositeDeclarations() {
 		checker.declareCompositeMembersAndValue(declaration, ContainerKindComposite)
+	}
+
+	for _, declaration := range program.AttachmentDeclarations() {
+		checker.declareAttachmentMembersAndValue(declaration, ContainerKindComposite)
 	}
 
 	// Declare events, functions, and transactions
@@ -1519,6 +1533,7 @@ func (checker *Checker) checkUnusedExpressionResourceLoss(expressionType Type, e
 func (checker *Checker) checkResourceFieldNesting(
 	members *StringMemberOrderedMap,
 	compositeKind common.CompositeKind,
+	baseType Type,
 	fieldPositionGetter func(name string) ast.Position,
 ) {
 	// Resource fields are only allowed in resources and contracts
@@ -1528,6 +1543,10 @@ func (checker *Checker) checkResourceFieldNesting(
 		common.CompositeKindContract:
 
 		return
+	case common.CompositeKindAttachment:
+		if baseType != nil && baseType.IsResourceType() {
+			return
+		}
 	}
 
 	// The field is not a resource or contract.
@@ -2012,6 +2031,12 @@ func (checker *Checker) checkTypeAnnotation(typeAnnotation *TypeAnnotation, pos 
 	case TypeAnnotationStateInvalidResourceAnnotation:
 		checker.report(
 			&InvalidResourceAnnotationError{
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, pos),
+			},
+		)
+	case TypeAnnotationStateDirectAttachmentTypeAnnotation:
+		checker.report(
+			&InvalidAttachmentAnnotationError{
 				Range: ast.NewRangeFromPositioned(checker.memoryGauge, pos),
 			},
 		)

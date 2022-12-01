@@ -3444,6 +3444,12 @@ type CompositeType struct {
 	// Only applicable for native composite types.
 	importable bool
 
+	// in a language with support for algebraic data types,
+	// we would implement this as an argument to the CompositeKind type constructor.
+	// Alas, this is Go, so for now these fields are only non-nil when Kind is CompositeKindAttachment
+	baseType          Type
+	baseTypeDocString string
+
 	cachedIdentifiers *struct {
 		TypeID              TypeID
 		QualifiedIdentifier string
@@ -3522,6 +3528,25 @@ func (t *CompositeType) GetCompositeKind() common.CompositeKind {
 	return t.Kind
 }
 
+func (t *CompositeType) getBaseCompositeKind() common.CompositeKind {
+	if t.Kind != common.CompositeKindAttachment {
+		return common.CompositeKindUnknown
+	}
+	switch base := t.baseType.(type) {
+	case *CompositeType:
+		return base.Kind
+	case *InterfaceType:
+		return base.CompositeKind
+	case *SimpleType:
+		return base.CompositeKind()
+	}
+	return common.CompositeKindUnknown
+}
+
+func (t *CompositeType) GetBaseType() Type {
+	return t.baseType
+}
+
 func (t *CompositeType) GetLocation() common.Location {
 	return t.Location
 }
@@ -3578,7 +3603,13 @@ func (t *CompositeType) GetMembers() map[string]MemberResolver {
 }
 
 func (t *CompositeType) IsResourceType() bool {
-	return t.Kind == common.CompositeKindResource
+	return t.Kind == common.CompositeKindResource ||
+		// attachments are always the same kind as their base type
+		(t.Kind == common.CompositeKindAttachment &&
+			// this check is necessary to prevent `attachment A for A {}`
+			// from causing an infinite recursion case here
+			t.baseType != t &&
+			t.baseType.IsResourceType())
 }
 
 func (*CompositeType) IsInvalidType() bool {
@@ -3590,12 +3621,13 @@ func (t *CompositeType) IsStorable(results map[*Member]bool) bool {
 		return false
 	}
 
-	// Only structures, resources, and enums can be stored
+	// Only structures, resources, attachments, and enums can be stored
 
 	switch t.Kind {
 	case common.CompositeKindStructure,
 		common.CompositeKindResource,
-		common.CompositeKindEnum:
+		common.CompositeKindEnum,
+		common.CompositeKindAttachment:
 		break
 	default:
 		return false
@@ -3630,6 +3662,9 @@ func (t *CompositeType) IsImportable(results map[*Member]bool) bool {
 	case common.CompositeKindStructure,
 		common.CompositeKindEnum:
 		break
+	// attachments can be imported iff they are attached to a structure
+	case common.CompositeKindAttachment:
+		return t.baseType.IsImportable(results)
 	default:
 		return false
 	}
@@ -3647,12 +3682,13 @@ func (t *CompositeType) IsImportable(results map[*Member]bool) bool {
 }
 
 func (t *CompositeType) IsExportable(results map[*Member]bool) bool {
-	// Only structures, resources, and enums can be stored
+	// Only structures, resources, attachment, and enums can be stored
 
 	switch t.Kind {
 	case common.CompositeKindStructure,
 		common.CompositeKindResource,
-		common.CompositeKindEnum:
+		common.CompositeKindEnum,
+		common.CompositeKindAttachment:
 		break
 	default:
 		return false
@@ -3675,7 +3711,10 @@ func (t *CompositeType) IsEquatable() bool {
 	return t.Kind == common.CompositeKindEnum
 }
 
-func (*CompositeType) TypeAnnotationState() TypeAnnotationState {
+func (c *CompositeType) TypeAnnotationState() TypeAnnotationState {
+	if c.Kind == common.CompositeKindAttachment {
+		return TypeAnnotationStateDirectAttachmentTypeAnnotation
+	}
 	return TypeAnnotationStateValid
 }
 

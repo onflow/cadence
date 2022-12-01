@@ -22,6 +22,7 @@ import (
 	"sync"
 
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 )
 
 type ValueIndexingInfo struct {
@@ -149,4 +150,12 @@ func (t *SimpleType) ElementType(isAssignment bool) Type {
 
 func (t *SimpleType) IndexingType() Type {
 	return t.ValueIndexingInfo.IndexingType
+}
+
+func (t *SimpleType) CompositeKind() common.CompositeKind {
+	if t.IsResource {
+		return common.CompositeKindResource
+	} else {
+		return common.CompositeKindStructure
+	}
 }

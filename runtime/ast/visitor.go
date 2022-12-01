@@ -33,6 +33,7 @@ type StatementDeclarationVisitor[T any] interface {
 	VisitFunctionDeclaration(*FunctionDeclaration) T
 	VisitSpecialFunctionDeclaration(*SpecialFunctionDeclaration) T
 	VisitCompositeDeclaration(*CompositeDeclaration) T
+	VisitAttachmentDeclaration(*AttachmentDeclaration) T
 	VisitInterfaceDeclaration(*InterfaceDeclaration) T
 	VisitTransactionDeclaration(*TransactionDeclaration) T
 }
@@ -72,6 +73,9 @@ func AcceptDeclaration[T any](declaration Declaration, visitor DeclarationVisito
 
 	case ElementTypeCompositeDeclaration:
 		return visitor.VisitCompositeDeclaration(declaration.(*CompositeDeclaration))
+
+	case ElementTypeAttachmentDeclaration:
+		return visitor.VisitAttachmentDeclaration(declaration.(*AttachmentDeclaration))
 
 	case ElementTypeInterfaceDeclaration:
 		return visitor.VisitInterfaceDeclaration(declaration.(*InterfaceDeclaration))
@@ -145,6 +149,9 @@ func AcceptStatement[T any](statement Statement, visitor StatementVisitor[T]) (_
 
 	case ElementTypeCompositeDeclaration:
 		return visitor.VisitCompositeDeclaration(statement.(*CompositeDeclaration))
+
+	case ElementTypeAttachmentDeclaration:
+		return visitor.VisitAttachmentDeclaration(statement.(*AttachmentDeclaration))
 
 	case ElementTypeInterfaceDeclaration:
 		return visitor.VisitInterfaceDeclaration(statement.(*InterfaceDeclaration))

@@ -531,6 +531,11 @@ func (interpreter *Interpreter) VisitProgram(program *ast.Program) {
 		interpreter.visitGlobalDeclaration(declaration)
 	}
 
+	// TODO: Add this
+	//for _, declaration := range program.AttachmentDeclarations() {
+	// interpreter.visitGlobalDeclaration(declaration)
+	//}
+
 	for _, declaration := range program.FunctionDeclarations() {
 		interpreter.visitGlobalDeclaration(declaration)
 	}
@@ -842,6 +847,11 @@ func (interpreter *Interpreter) VisitCompositeDeclaration(declaration *ast.Compo
 
 	_, _ = interpreter.declareCompositeValue(declaration, lexicalScope)
 
+	return nil
+}
+
+func (interpreter *Interpreter) VisitAttachmentDeclaration(declaration *ast.AttachmentDeclaration) StatementResult {
+	// TODO: fill this in
 	return nil
 }
 

@@ -3709,7 +3709,7 @@ func (e *InvalidEntryPointTypeError) Error() string {
 	)
 }
 
-// ImportedProgramError
+// ExternalMutationError
 
 type ExternalMutationError struct {
 	Name            string
@@ -3740,4 +3740,44 @@ func (e *ExternalMutationError) SecondaryError() string {
 		e.Name,
 		e.ContainerType.QualifiedString(),
 	)
+}
+
+// InvalidBaseTypeError
+
+type InvalidBaseTypeError struct {
+	BaseType   Type
+	Attachment *CompositeType
+	ast.Range
+}
+
+var _ SemanticError = &InvalidBaseTypeError{}
+var _ errors.UserError = &InvalidBaseTypeError{}
+
+func (*InvalidBaseTypeError) isSemanticError() {}
+
+func (*InvalidBaseTypeError) IsUserError() {}
+
+func (e *InvalidBaseTypeError) Error() string {
+	return fmt.Sprintf(
+		"cannot use `%s` as the base type for attachment `%s`",
+		e.BaseType.QualifiedString(),
+		e.Attachment.QualifiedString(),
+	)
+}
+
+// InvalidAttachmentAnnotationError
+
+type InvalidAttachmentAnnotationError struct {
+	ast.Range
+}
+
+var _ SemanticError = &InvalidAttachmentAnnotationError{}
+var _ errors.UserError = &InvalidAttachmentAnnotationError{}
+
+func (*InvalidAttachmentAnnotationError) isSemanticError() {}
+
+func (*InvalidAttachmentAnnotationError) IsUserError() {}
+
+func (e *InvalidAttachmentAnnotationError) Error() string {
+	return "cannot refer directly to attachment type"
 }
