@@ -920,7 +920,6 @@ func (e *NotDeclaredMemberError) SecondaryError() string {
 // findClosestMember searches the names of the members on the accessed type,
 // and finds the name with the smallest edit distance from the member the user
 // tried to access. In cases of typos, this should provide a helpful hint.
-
 func (e *NotDeclaredMemberError) findClosestMember() string {
 	members := maps.Keys(e.Type.GetMembers())
 	closestDistance := len(e.Name)
