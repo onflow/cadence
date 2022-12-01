@@ -27,6 +27,8 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/pretty"
+	"github.com/texttheater/golang-levenshtein/levenshtein"
+	"golang.org/x/exp/maps"
 )
 
 func ErrorMessageExpectedActualTypes(
@@ -909,7 +911,32 @@ func (e *NotDeclaredMemberError) SecondaryError() string {
 			return fmt.Sprintf("type is optional, consider optional-chaining: ?.%s", name)
 		}
 	}
+	if closestMember := e.findClosestMember(); closestMember != "" {
+		return fmt.Sprintf("did you mean `%s`?", closestMember)
+	}
 	return "unknown member"
+}
+
+// findClosestMember searches the names of the members on the accessed type,
+// and finds the name with the smallest edit distance from the member the user
+// tried to access. In cases of typos, this should provide a helpful hint.
+
+func (e *NotDeclaredMemberError) findClosestMember() string {
+	members := maps.Keys(e.Type.GetMembers())
+	closestDistance := len(e.Name)
+	var closestMember string
+	// TODO: when attachments are merged to master, discount any members prefixed by the attachment prefix
+	for _, member := range members {
+		distance := levenshtein.DistanceForStrings([]rune(e.Name), []rune(member), levenshtein.DefaultOptions)
+		// don't update the closest member if the distance is greater than one already found, or if the edits
+		// required would involve a complete replacement of the member's text
+		if distance < closestDistance && distance < len(member) {
+			closestMember = member
+			closestDistance = distance
+		}
+	}
+
+	return closestMember
 }
 
 // AssignmentToConstantMemberError
@@ -3598,7 +3625,7 @@ func (e *TypeParameterTypeMismatchError) SecondaryError() string {
 	)
 }
 
-// TypeMismatchWithDescriptionError
+// UnparameterizedTypeInstantiationError
 
 type UnparameterizedTypeInstantiationError struct {
 	ActualTypeArgumentCount int
