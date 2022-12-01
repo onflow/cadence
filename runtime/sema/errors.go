@@ -23,12 +23,13 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/texttheater/golang-levenshtein/levenshtein"
+	"golang.org/x/exp/maps"
+
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/pretty"
-	"github.com/texttheater/golang-levenshtein/levenshtein"
-	"golang.org/x/exp/maps"
 )
 
 func ErrorMessageExpectedActualTypes(
