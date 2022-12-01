@@ -244,7 +244,9 @@ func (e DereferenceError) Error() string {
 
 // OverflowError
 
-type OverflowError struct{}
+type OverflowError struct {
+	LocationRange
+}
 
 var _ errors.UserError = OverflowError{}
 
@@ -256,7 +258,9 @@ func (e OverflowError) Error() string {
 
 // UnderflowError
 
-type UnderflowError struct{}
+type UnderflowError struct {
+	LocationRange
+}
 
 var _ errors.UserError = UnderflowError{}
 
@@ -268,7 +272,9 @@ func (e UnderflowError) Error() string {
 
 // UnderflowError
 
-type DivisionByZeroError struct{}
+type DivisionByZeroError struct {
+	LocationRange
+}
 
 var _ errors.UserError = DivisionByZeroError{}
 

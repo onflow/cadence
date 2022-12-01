@@ -1192,12 +1192,13 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpre
 
 	// Fixed point
 	case Fix64:
-		return interpreter.NewUnmeteredFix64ValueWithInteger(int64(sign()) * rand.Int63n(sema.Fix64TypeMaxInt))
+		return interpreter.NewUnmeteredFix64ValueWithInteger(int64(sign())*rand.Int63n(sema.Fix64TypeMaxInt), interpreter.EmptyLocationRange)
 	case UFix64:
 		return interpreter.NewUnmeteredUFix64ValueWithInteger(
 			uint64(rand.Int63n(
 				int64(sema.UFix64TypeMaxInt),
 			)),
+			interpreter.EmptyLocationRange,
 		)
 
 	// String

@@ -461,7 +461,9 @@ func newAddPublicKeyFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			publicKey, err := interpreter.ByteArrayValueToByteSlice(gauge, publicKeyValue)
+			locationRange := invocation.LocationRange
+
+			publicKey, err := interpreter.ByteArrayValueToByteSlice(gauge, publicKeyValue, locationRange)
 			if err != nil {
 				panic("addPublicKey requires the first argument to be a byte array")
 			}
@@ -474,8 +476,6 @@ func newAddPublicKeyFunction(
 			}
 
 			inter := invocation.Interpreter
-			locationRange := invocation.LocationRange
-
 			handler.EmitEvent(
 				inter,
 				AccountKeyAddedEventType,
@@ -518,7 +518,7 @@ func newRemovePublicKeyFunction(
 			var publicKey []byte
 			var err error
 			wrapPanic(func() {
-				publicKey, err = handler.RevokeEncodedAccountKey(address, index.ToInt())
+				publicKey, err = handler.RevokeEncodedAccountKey(address, index.ToInt(invocation.LocationRange))
 			})
 			if err != nil {
 				panic(err)
@@ -588,7 +588,7 @@ func newAccountKeysAddFunction(
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
-			weight := weightValue.ToInt()
+			weight := weightValue.ToInt(locationRange)
 
 			var accountKey *AccountKey
 			wrapPanic(func() {
@@ -655,7 +655,8 @@ func newAccountKeysGetFunction(
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
-			index := indexValue.ToInt()
+			locationRange := invocation.LocationRange
+			index := indexValue.ToInt(locationRange)
 
 			var err error
 			var accountKey *AccountKey
@@ -675,7 +676,6 @@ func newAccountKeysGetFunction(
 			}
 
 			inter := invocation.Interpreter
-			locationRange := invocation.LocationRange
 
 			return interpreter.NewSomeValueNonCopying(
 				inter,
@@ -844,7 +844,8 @@ func newAccountKeysRevokeFunction(
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
-			index := indexValue.ToInt()
+			locationRange := invocation.LocationRange
+			index := indexValue.ToInt(locationRange)
 
 			var err error
 			var accountKey *AccountKey
@@ -863,7 +864,6 @@ func newAccountKeysRevokeFunction(
 			}
 
 			inter := invocation.Interpreter
-			locationRange := invocation.LocationRange
 
 			handler.EmitEvent(
 				inter,
@@ -1413,7 +1413,7 @@ func newAuthAccountContractsChangeFunction(
 			constructorArguments := invocation.Arguments[requiredArgumentCount:]
 			constructorArgumentTypes := invocation.ArgumentTypes[requiredArgumentCount:]
 
-			code, err := interpreter.ByteArrayValueToByteSlice(gauge, newCodeValue)
+			code, err := interpreter.ByteArrayValueToByteSlice(gauge, newCodeValue, locationRange)
 			if err != nil {
 				panic(errors.NewDefaultUserError("add requires the second argument to be an array"))
 			}
@@ -2106,6 +2106,7 @@ func NewAccountKeyValue(
 			inter, func() uint64 {
 				return uint64(accountKey.Weight)
 			},
+			locationRange,
 		),
 		interpreter.AsBoolValue(accountKey.IsRevoked),
 	)
@@ -2125,7 +2126,7 @@ func NewHashAlgorithmFromValue(
 
 	hashAlgoRawValue := rawValue.(interpreter.UInt8Value)
 
-	return sema.HashAlgorithm(hashAlgoRawValue.ToInt())
+	return sema.HashAlgorithm(hashAlgoRawValue.ToInt(locationRange))
 }
 
 func CodeToHashValue(inter *interpreter.Interpreter, code []byte) *interpreter.ArrayValue {

@@ -66,7 +66,7 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 		}
 
 		for _, value := range invalid {
-			_, err := ByteArrayValueToByteSlice(inter, value)
+			_, err := ByteArrayValueToByteSlice(inter, value, EmptyLocationRange)
 			RequireError(t, err)
 		}
 	})
@@ -107,7 +107,7 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 		}
 
 		for value, expected := range invalid {
-			result, err := ByteArrayValueToByteSlice(inter, value)
+			result, err := ByteArrayValueToByteSlice(inter, value, EmptyLocationRange)
 			require.NoError(t, err)
 			require.Equal(t, expected, result)
 		}
@@ -129,7 +129,7 @@ func TestByteValueToByte(t *testing.T) {
 		}
 
 		for _, value := range invalid {
-			_, err := ByteValueToByte(nil, value)
+			_, err := ByteValueToByte(nil, value, EmptyLocationRange)
 			RequireError(t, err)
 		}
 	})
@@ -147,7 +147,7 @@ func TestByteValueToByte(t *testing.T) {
 		}
 
 		for value, expected := range invalid {
-			result, err := ByteValueToByte(nil, value)
+			result, err := ByteValueToByte(nil, value, EmptyLocationRange)
 			require.NoError(t, err)
 			require.Equal(t, expected, result)
 		}

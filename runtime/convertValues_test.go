@@ -421,7 +421,7 @@ func TestExportValue(t *testing.T) {
 						nil,
 					),
 					hashAlgorithm,
-					interpreter.NewUnmeteredUFix64ValueWithInteger(10),
+					interpreter.NewUnmeteredUFix64ValueWithInteger(10, interpreter.EmptyLocationRange),
 					false,
 				)
 			},
@@ -515,7 +515,7 @@ func TestExportValue(t *testing.T) {
 						blockIDStaticType,
 						common.Address{},
 					),
-					interpreter.NewUnmeteredUFix64ValueWithInteger(1),
+					interpreter.NewUnmeteredUFix64ValueWithInteger(1, interpreter.EmptyLocationRange),
 				)
 			},
 			invalid: true,

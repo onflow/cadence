@@ -673,7 +673,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 	// Run validation scripts
 
-	sum := interpreter.NewUnmeteredUFix64ValueWithInteger(0)
+	sum := interpreter.NewUnmeteredUFix64ValueWithInteger(0, interpreter.EmptyLocationRange)
 
 	inter := newTestInterpreter(b)
 
@@ -699,9 +699,9 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 		value := interpreter.NewUnmeteredUFix64Value(uint64(result.(cadence.UFix64)))
 
-		require.True(b, bool(value.Less(inter, mintAmountValue)))
+		require.True(b, bool(value.Less(inter, mintAmountValue, interpreter.EmptyLocationRange)))
 
-		sum = sum.Plus(inter, value).(interpreter.UFix64Value)
+		sum = sum.Plus(inter, value, interpreter.EmptyLocationRange).(interpreter.UFix64Value)
 	}
 
 	utils.RequireValuesEqual(b, nil, mintAmountValue, sum)

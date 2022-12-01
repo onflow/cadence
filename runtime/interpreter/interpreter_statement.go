@@ -365,7 +365,7 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) S
 
 		if indexVariable != nil {
 			currentIndex := indexVariable.GetValue().(IntValue)
-			nextIndex := currentIndex.Plus(interpreter, intOne)
+			nextIndex := currentIndex.Plus(interpreter, intOne, locationRange)
 			indexVariable.SetValue(nextIndex)
 		}
 	}

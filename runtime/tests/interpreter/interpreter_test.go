@@ -5887,7 +5887,7 @@ func TestInterpretDictionaryForEachKey(t *testing.T) {
 				if !ok {
 					return 0, ok
 				}
-				return intVal.ToInt(), true
+				return intVal.ToInt(interpreter.EmptyLocationRange), true
 			}
 
 			entries, ok := dictionaryEntries(inter, dict, toInt, toInt)

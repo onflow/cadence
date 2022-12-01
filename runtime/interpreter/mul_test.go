@@ -166,7 +166,7 @@ func TestMulUInt8(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Mul(inter, test.b)
+			test.a.Mul(inter, test.b, EmptyLocationRange)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -315,7 +315,7 @@ func TestMulUInt16(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Mul(inter, test.b)
+			test.a.Mul(inter, test.b, EmptyLocationRange)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -464,7 +464,7 @@ func TestMulUInt32(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Mul(inter, test.b)
+			test.a.Mul(inter, test.b, EmptyLocationRange)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -624,7 +624,7 @@ func TestMulUInt64(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Mul(inter, test.b)
+			test.a.Mul(inter, test.b, EmptyLocationRange)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -786,7 +786,7 @@ func TestMulUInt128(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Mul(inter, test.b)
+			test.a.Mul(inter, test.b, EmptyLocationRange)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1457,7 +1457,7 @@ func TestMulUInt256(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Mul(inter, test.b)
+			test.a.Mul(inter, test.b, EmptyLocationRange)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1639,7 +1639,7 @@ func TestMulInt8(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Mul(inter, test.b)
+			test.a.Mul(inter, test.b, EmptyLocationRange)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1830,7 +1830,7 @@ func TestMulInt16(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Mul(inter, test.b)
+			test.a.Mul(inter, test.b, EmptyLocationRange)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -2004,7 +2004,7 @@ func TestMulInt32(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Mul(inter, test.b)
+			test.a.Mul(inter, test.b, EmptyLocationRange)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -2163,7 +2163,7 @@ func TestMulInt64(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Mul(inter, test.b)
+			test.a.Mul(inter, test.b, EmptyLocationRange)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -2324,7 +2324,7 @@ func TestMulInt128(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Mul(inter, test.b)
+			test.a.Mul(inter, test.b, EmptyLocationRange)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -2998,7 +2998,7 @@ func TestMulInt256(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Mul(inter, test.b)
+			test.a.Mul(inter, test.b, EmptyLocationRange)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
