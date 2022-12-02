@@ -84,7 +84,7 @@ pub attachment A for R {
 
 ```
 
-For the purposes of external mutation checks or [access control](/access-control), 
+For the purposes of external mutation checks or [access control](/language/access-control), 
 the attachment is considered a separate declaration from its base type. 
 A developer cannot, therefore, access any `priv` fields 
 (or `access(contract)` fields if the base was defined in a different contract to the attachment)
@@ -218,53 +218,3 @@ so users should take care not to design any attachments that rely on specific be
 as there is no to require that an attachment depend on another or to require that a type has a given attachment when another attachment is present. 
 
 If a resource containing attachments is `destroy`ed, all its attachments will be `destroy`ed in an arbitrary order. 
-
-### Iterating over Attachments
-
-All composite types contain a function `forEachAttachment` that iterates over all the attachments present on that composite. 
-On a resource-kinded composite, this function has the following signature:
-
-```cadence
-fun forEachAttachment(_ f: ((&AnyResourceAttachment): Void)): Void 
-```
-
-While on a struct-kinded composite, it has:
-
-```cadence
-fun forEachAttachment(_ f: ((&AnyStructAttachment): Void)): Void 
-```
-
-`AnyResourceAttachment`/`AnyStructAttachment` are express the supertypes of all struct/resource attachments.
-They contain two functions (that are implicitly present on all attachments): `getField` and `getFunction`, 
-with the following signatures:
-
-```cadence
-getField<T>(_  name: String): &T?
-getFunction<T>(_  name: String): T?
-```
-
-This functions takes the `name` of a member on an attachment and checks whether a member with that `name` exists on the attachment with the provided type argument.
-If it does, `getField` will return a reference to that member is it is a field, but `nil` if it is a function, 
-while `getFunction` will return that function if it is a function but `nil` if it is a field. 
-If the type does not match or the member is not present, then both will return nil. 
-
-So, for example, if the creator of a resource would like to have a function that returns the a descriptive string describing that resource and all its attachments, they may implement it this way:
-
-```
-pub resource R {
-    ...
-    priv let descriptionString: String
-    pub fun description(): String {
-        let description = descriptionString
-        self.forEachAttachment(f: fun (attachment: &AnyResourceAttachment) {
-            let descriptionFunction = attachment.getFunction<(():String)>("description")
-            if descriptionFunction != nil {
-                description.concat(descriptionFunction!())
-            }
-        }))
-    }
-}
-```
-
-Attempting to attach new attachments to a composite or remove attachments from it while iterating over it is a runtime error, 
-and the order of iteration over a composite's attachments is deterministic but undefined. 
