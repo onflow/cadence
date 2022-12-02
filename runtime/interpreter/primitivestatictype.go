@@ -178,7 +178,7 @@ const (
 	// Storage
 
 	PrimitiveStaticTypePath
-	PrimitiveStaticTypeCapability
+	_
 	PrimitiveStaticTypeStoragePath
 	PrimitiveStaticTypeCapabilityPath
 	PrimitiveStaticTypePublicPath
@@ -267,7 +267,6 @@ func (t PrimitiveStaticType) elementSize() uint {
 		return cborTagSize + 9
 
 	case PrimitiveStaticTypePath,
-		PrimitiveStaticTypeCapability,
 		PrimitiveStaticTypeStoragePath,
 		PrimitiveStaticTypeCapabilityPath,
 		PrimitiveStaticTypePublicPath,
@@ -403,8 +402,6 @@ func (i PrimitiveStaticType) SemaType() sema.Type {
 		return sema.PublicPathType
 	case PrimitiveStaticTypePrivatePath:
 		return sema.PrivatePathType
-	case PrimitiveStaticTypeCapability:
-		return &sema.CapabilityType{}
 	case PrimitiveStaticTypeAuthAccount:
 		return sema.AuthAccountType
 	case PrimitiveStaticTypePublicAccount:
@@ -560,10 +557,6 @@ func ConvertSemaToPrimitiveStaticType(
 	switch t.(type) {
 	case *sema.AddressType:
 		typ = PrimitiveStaticTypeAddress
-
-	// Storage
-	case *sema.CapabilityType:
-		typ = PrimitiveStaticTypeCapability
 	}
 
 	return NewPrimitiveStaticType(memoryGauge, typ) // default is 0 aka PrimitiveStaticTypeUnknown
