@@ -882,9 +882,10 @@ func (e *MissingInitializerError) EndPosition(memoryGauge common.MemoryGauge) as
 // NotDeclaredMemberError
 
 type NotDeclaredMemberError struct {
-	Name       string
-	Type       Type
-	Expression *ast.MemberExpression
+	Name          string
+	suggestMember bool
+	Type          Type
+	Expression    *ast.MemberExpression
 	ast.Range
 }
 
@@ -921,11 +922,13 @@ func (e *NotDeclaredMemberError) SecondaryError() string {
 // findClosestMember searches the names of the members on the accessed type,
 // and finds the name with the smallest edit distance from the member the user
 // tried to access. In cases of typos, this should provide a helpful hint.
-func (e *NotDeclaredMemberError) findClosestMember() string {
-	members := maps.Keys(e.Type.GetMembers())
+func (e *NotDeclaredMemberError) findClosestMember() (closestMember string) {
+	if !e.suggestMember {
+		return
+	}
+
 	closestDistance := len(e.Name)
-	var closestMember string
-	for _, member := range members {
+	for _, member := range maps.Keys(e.Type.GetMembers()) {
 		distance := levenshtein.DistanceForStrings([]rune(e.Name), []rune(member), levenshtein.DefaultOptions)
 		// don't update the closest member if the distance is greater than one already found, or if the edits
 		// required would involve a complete replacement of the member's text
@@ -935,7 +938,7 @@ func (e *NotDeclaredMemberError) findClosestMember() string {
 		}
 	}
 
-	return closestMember
+	return
 }
 
 // AssignmentToConstantMemberError

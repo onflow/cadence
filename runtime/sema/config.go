@@ -42,6 +42,9 @@ type Config struct {
 	// When enabled, the checker will stop running once it encounters an error.
 	// When disabled (the default), the checker reports the error then continues checking.
 	ErrorShortCircuitingEnabled bool
+	// SuggestionsEnabled determines if additional, potentially-computationally intensive,
+	// suggested fixes are calculated when producing type errors
+	SuggestionsEnabled bool
 	// MemberAccountAccessHandler is used to determine if the access of a member with account access modifier is valid.
 	MemberAccountAccessHandler MemberAccountAccessHandlerFunc
 	// ContractValueHandler is used to construct the contract variable
