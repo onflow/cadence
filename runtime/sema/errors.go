@@ -23,6 +23,9 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/texttheater/golang-levenshtein/levenshtein"
+	"golang.org/x/exp/maps"
+
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
@@ -879,9 +882,10 @@ func (e *MissingInitializerError) EndPosition(memoryGauge common.MemoryGauge) as
 // NotDeclaredMemberError
 
 type NotDeclaredMemberError struct {
-	Name       string
-	Type       Type
-	Expression *ast.MemberExpression
+	Name          string
+	suggestMember bool
+	Type          Type
+	Expression    *ast.MemberExpression
 	ast.Range
 }
 
@@ -909,7 +913,32 @@ func (e *NotDeclaredMemberError) SecondaryError() string {
 			return fmt.Sprintf("type is optional, consider optional-chaining: ?.%s", name)
 		}
 	}
+	if closestMember := e.findClosestMember(); closestMember != "" {
+		return fmt.Sprintf("did you mean `%s`?", closestMember)
+	}
 	return "unknown member"
+}
+
+// findClosestMember searches the names of the members on the accessed type,
+// and finds the name with the smallest edit distance from the member the user
+// tried to access. In cases of typos, this should provide a helpful hint.
+func (e *NotDeclaredMemberError) findClosestMember() (closestMember string) {
+	if !e.suggestMember {
+		return
+	}
+
+	closestDistance := len(e.Name)
+	for _, member := range maps.Keys(e.Type.GetMembers()) {
+		distance := levenshtein.DistanceForStrings([]rune(e.Name), []rune(member), levenshtein.DefaultOptions)
+		// don't update the closest member if the distance is greater than one already found, or if the edits
+		// required would involve a complete replacement of the member's text
+		if distance < closestDistance && distance < len(member) {
+			closestMember = member
+			closestDistance = distance
+		}
+	}
+
+	return
 }
 
 // AssignmentToConstantMemberError
@@ -3636,7 +3665,7 @@ func (e *TypeParameterTypeMismatchError) SecondaryError() string {
 	)
 }
 
-// TypeMismatchWithDescriptionError
+// UnparameterizedTypeInstantiationError
 
 type UnparameterizedTypeInstantiationError struct {
 	ActualTypeArgumentCount int
