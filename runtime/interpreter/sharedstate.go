@@ -32,7 +32,6 @@ type SharedState struct {
 	typeCodes                     TypeCodes
 	inStorageIteration            bool
 	storageMutatedDuringIteration bool
-	deferredBaseValue             *EphemeralReferenceValue
 	attachmentIterationMap        map[*CompositeValue]bool
 	// TODO: ideally this would be a weak map, but Go has no weak references
 	referencedResourceKindedValues ReferencedResourceKindedValues

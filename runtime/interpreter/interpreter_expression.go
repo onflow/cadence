@@ -840,6 +840,10 @@ func (interpreter *Interpreter) VisitConditionalExpression(expression *ast.Condi
 }
 
 func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *ast.InvocationExpression) Value {
+	return interpreter.visitInvocationExpressionWithImplicitArgument(invocationExpression, nil)
+}
+
+func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(invocationExpression *ast.InvocationExpression, implicitArg *Value) Value {
 	config := interpreter.SharedState.Config
 
 	// tracing
@@ -906,6 +910,12 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 	typeParameterTypes := invocationExpressionTypes.TypeArguments
 	argumentTypes := invocationExpressionTypes.ArgumentTypes
 	parameterTypes := invocationExpressionTypes.TypeParameterTypes
+
+	// add the implicit argument to the end of the argument list, if it exists
+	if implicitArg != nil {
+		arguments = append(arguments, *implicitArg)
+		argumentTypes = append(argumentTypes, interpreter.MustSemaTypeOfValue(*implicitArg))
+	}
 
 	interpreter.reportFunctionInvocation()
 
@@ -1210,9 +1220,8 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 
 	// the `base` value must be accessible during the attachment's constructor, but we cannot
 	// set it on the attachment's `CompositeValue` yet, because the value does not exist. Instead
-	// we save the base value in the interpreter's shared state and set the variable directly inside the
-	// constructor to make it available
-	baseValue := NewEphemeralReferenceValue(
+	// we create an implicit constructor argument containing a reference to the base
+	var baseValue Value = NewEphemeralReferenceValue(
 		interpreter,
 		false,
 		base,
@@ -1220,14 +1229,14 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 	)
 	interpreter.trackReferencedResourceKindedValue(base.StorageID(), base)
 
-	oldBaseValue := interpreter.SharedState.deferredBaseValue
-	interpreter.SharedState.deferredBaseValue = baseValue
-	attachment, ok := interpreter.VisitInvocationExpression(attachExpression.Attachment).(*CompositeValue)
+	attachment, ok := interpreter.visitInvocationExpressionWithImplicitArgument(
+		attachExpression.Attachment,
+		&baseValue,
+	).(*CompositeValue)
 	// attached expressions must be composite constructors, as enforced in the checker
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
-	interpreter.SharedState.deferredBaseValue = oldBaseValue
 
 	// Because `self` in attachments is a reference, we need to track the attachment if it's a resource
 	interpreter.trackReferencedResourceKindedValue(attachment.StorageID(), attachment)
