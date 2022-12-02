@@ -25,33 +25,44 @@ import (
 
 func (checker *Checker) VisitAttachExpression(expression *ast.AttachExpression) Type {
 	attachment := expression.Attachment
+	baseExpression := expression.Base
 
-	ty := checker.checkInvocationExpression(attachment)
-	if ty.IsInvalidType() {
-		return ty
+	baseType := checker.VisitExpression(baseExpression, checker.expectedType)
+	attachmentType := checker.checkInvocationExpression(attachment)
+
+	if attachmentType.IsInvalidType() || baseType.IsInvalidType() {
+		return InvalidType
 	}
 
-	attachmentType, baseIsCompositeType := ty.(*CompositeType)
-	if !(baseIsCompositeType && attachmentType.Kind == common.CompositeKindAttachment) {
+	checker.checkVariableMove(baseExpression)
+	checker.checkResourceMoveOperation(baseExpression, attachmentType)
+
+	// check that the attachment type is a valid attachment,
+	// and that it is a subtype of the declared base type
+	attachmentCompositeType, isCompositeType := attachmentType.(*CompositeType)
+	if !(isCompositeType && attachmentCompositeType.Kind == common.CompositeKindAttachment) {
 		checker.report(
 			&AttachNonAttachmentError{
-				Type:  ty,
+				Type:  attachmentType,
 				Range: ast.NewRangeFromPositioned(checker.memoryGauge, attachment),
 			},
 		)
 		return InvalidType
 	}
 
-	annotatedBaseType := attachmentType.baseType
-	baseExpression := expression.Base
+	declaredBaseType := attachmentCompositeType.baseType
 
-	visibleBaseType, actualBaseType := checker.visitExpression(baseExpression, annotatedBaseType)
-	if visibleBaseType.IsInvalidType() {
-		return visibleBaseType
+	if !IsSubType(baseType, declaredBaseType) {
+		checker.report(
+			&TypeMismatchError{
+				ExpectedType: declaredBaseType,
+				ActualType:   baseType,
+				Expression:   baseExpression,
+				Range:        checker.expressionRange(baseExpression),
+			},
+		)
+		return InvalidType
 	}
-
-	checker.checkVariableMove(baseExpression)
-	checker.checkResourceMoveOperation(baseExpression, ty)
 
 	reportInvalidBase := func(ty Type) *SimpleType {
 		checker.report(
@@ -65,21 +76,22 @@ func (checker *Checker) VisitAttachExpression(expression *ast.AttachExpression) 
 
 	// if the annotatedBaseType is a specific interface or composite, then the above code will already have
 	// checked that the type of the base expression is also a composite. However, if the annotatedBaseType is
-	// anyresource/anystruct, we need to enforce that actualBaseType is a resource or struct
-	if _, annotatedIsCompositeType := annotatedBaseType.(CompositeKindedType); !annotatedIsCompositeType {
-		switch baseType := actualBaseType.(type) {
+	// anyresource/anystruct, we need to enforce that baseType is a resource or struct, to prevent
+	// permitting code like `attach A to 4`, if `A` was declared for `AnyStruct`
+	if _, annotatedIsCompositeType := declaredBaseType.(CompositeKindedType); !annotatedIsCompositeType {
+		switch baseType := baseType.(type) {
 		case CompositeKindedType:
 			compositeKind := baseType.GetCompositeKind()
 			if !(compositeKind.SupportsAttachments()) {
-				return reportInvalidBase(actualBaseType)
+				return reportInvalidBase(baseType)
 			}
 		// these are always resource/structure types
 		case *RestrictedType:
 			break
 		default:
-			return reportInvalidBase(actualBaseType)
+			return reportInvalidBase(baseType)
 		}
 	}
 
-	return visibleBaseType
+	return baseType
 }

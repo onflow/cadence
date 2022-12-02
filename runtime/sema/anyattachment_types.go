@@ -18,34 +18,36 @@
 
 package sema
 
+const AnyResourceAttachmentTypeName = "AnyResourceAttachment"
+
 // AnyResourceAttachmentType represents the top type of all resource attachment types
 var AnyResourceAttachmentType = &SimpleType{
-	Name:          "AnyResourceAttachment",
-	QualifiedName: "AnyResourceAttachment",
-	TypeID:        "AnyResourceAttachment",
+	Name:          AnyResourceAttachmentTypeName,
+	QualifiedName: AnyResourceAttachmentTypeName,
+	TypeID:        AnyResourceAttachmentTypeName,
 	tag:           AnyResourceAttachmentTypeTag,
-	IsInvalid:     false,
 	IsResource:    true,
 	// The actual storability of a value is checked at run-time
 	Storable:  true,
 	Equatable: false,
 	// The actual returnability of a value is checked at run-time
-	ExternallyReturnable: true,
-	Importable:           false,
+	Exportable: true,
+	Importable: false,
 }
 
-// AnyStructAttachmentType represents the top type of all resource attachment types
+const AnyStructAttachmentTypeName = "AnyStructAttachment"
+
+// AnyStructAttachmentType represents the top type of all struct attachment types
 var AnyStructAttachmentType = &SimpleType{
-	Name:          "AnyStructAttachment",
-	QualifiedName: "AnyStructAttachment",
-	TypeID:        "AnyStructAttachment",
+	Name:          AnyStructAttachmentTypeName,
+	QualifiedName: AnyStructAttachmentTypeName,
+	TypeID:        AnyStructAttachmentTypeName,
 	tag:           AnyStructAttachmentTypeTag,
-	IsInvalid:     false,
 	IsResource:    false,
 	// The actual storability of a value is checked at run-time
 	Storable:  true,
 	Equatable: false,
 	// The actual returnability of a value is checked at run-time
-	ExternallyReturnable: true,
-	Importable:           false,
+	Exportable: true,
+	Importable: false,
 }

@@ -271,10 +271,20 @@ func (d *CompositeDeclaration) ConformanceList() []*NominalType {
 	return d.Conformances
 }
 
+// FieldDeclarationFlags
+
+type FieldDeclarationFlags uint8
+
+const (
+	FieldDeclarationFlagsIsStatic FieldDeclarationFlags = 1 << iota
+	FieldDeclarationFlagsIsNative
+)
+
 // FieldDeclaration
 
 type FieldDeclaration struct {
 	Access         Access
+	Flags          FieldDeclarationFlags
 	VariableKind   VariableKind
 	Identifier     Identifier
 	TypeAnnotation *TypeAnnotation
@@ -288,6 +298,8 @@ var _ Declaration = &FieldDeclaration{}
 func NewFieldDeclaration(
 	memoryGauge common.MemoryGauge,
 	access Access,
+	isStatic bool,
+	isNative bool,
 	variableKind VariableKind,
 	identifier Identifier,
 	typeAnnotation *TypeAnnotation,
@@ -296,8 +308,17 @@ func NewFieldDeclaration(
 ) *FieldDeclaration {
 	common.UseMemory(memoryGauge, common.FieldDeclarationMemoryUsage)
 
+	var flags FieldDeclarationFlags
+	if isStatic {
+		flags |= FieldDeclarationFlagsIsStatic
+	}
+	if isNative {
+		flags |= FieldDeclarationFlagsIsNative
+	}
+
 	return &FieldDeclaration{
 		Access:         access,
+		Flags:          flags,
 		VariableKind:   variableKind,
 		Identifier:     identifier,
 		TypeAnnotation: typeAnnotation,
@@ -340,11 +361,17 @@ func (d *FieldDeclaration) DeclarationDocString() string {
 func (d *FieldDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias FieldDeclaration
 	return json.Marshal(&struct {
-		Type string
+		Type     string
+		Flags    FieldDeclarationFlags `json:",omitempty"`
+		IsStatic bool
+		IsNative bool
 		*Alias
 	}{
-		Type:  "FieldDeclaration",
-		Alias: (*Alias)(d),
+		Type:     "FieldDeclaration",
+		Alias:    (*Alias)(d),
+		IsStatic: d.IsStatic(),
+		IsNative: d.IsNative(),
+		Flags:    0,
 	})
 }
 
@@ -360,6 +387,9 @@ func VariableKindDoc(kind VariableKind) prettier.Doc {
 		panic(errors.NewUnreachableError())
 	}
 }
+
+var staticKeywordDoc prettier.Doc = prettier.Text("static")
+var nativeKeywordDoc prettier.Doc = prettier.Text("native")
 
 func (d *FieldDeclaration) Doc() prettier.Doc {
 	identifierTypeDoc := prettier.Concat{
@@ -380,6 +410,20 @@ func (d *FieldDeclaration) Doc() prettier.Doc {
 		docs = append(
 			docs,
 			prettier.Text(d.Access.Keyword()),
+		)
+	}
+
+	if d.IsStatic() {
+		docs = append(
+			docs,
+			staticKeywordDoc,
+		)
+	}
+
+	if d.IsNative() {
+		docs = append(
+			docs,
+			nativeKeywordDoc,
 		)
 	}
 
@@ -414,6 +458,14 @@ func (d *FieldDeclaration) Doc() prettier.Doc {
 
 func (d *FieldDeclaration) String() string {
 	return Prettier(d)
+}
+
+func (d *FieldDeclaration) IsStatic() bool {
+	return d.Flags&FieldDeclarationFlagsIsStatic != 0
+}
+
+func (d *FieldDeclaration) IsNative() bool {
+	return d.Flags&FieldDeclarationFlagsIsNative != 0
 }
 
 // EnumCaseDeclaration

@@ -14061,7 +14061,11 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 	// if this type has attachments, destroy all of them before invoking the destructor
 	v.forEachAttachment(interpreter, locationRange, func(attachment *CompositeValue) {
 		// an attachment's destructor may make reference to `base`, so we must set the base value
-		// for the attachment before invoking its destructor
+		// for the attachment before invoking its destructor. For other functions, this happens
+		// automatically when the attachment is accessed with the access expression `v[A]`, which
+		// is a necessary pre-requisite for calling any members of the attachment. However, in
+		// the case of a destructor, this is called implicitly, and thus must have its `base`
+		// set manually
 		attachment.setBaseValue(interpreter, v)
 		attachment.Destroy(interpreter, locationRange)
 	})
@@ -14079,7 +14083,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 	var self MemberAccessibleValue = v
 	if v.Kind == common.CompositeKindAttachment {
 		base = v.getBaseValue(interpreter, locationRange)
-		self = NewEphemeralReferenceValue(interpreter, false, v, interpreter.MustConvertStaticToSemaType(v.StaticType(interpreter)))
+		self = NewEphemeralReferenceValue(interpreter, false, v, interpreter.MustSemaTypeOfValue(v))
 	}
 
 	if destructor != nil {
@@ -14120,110 +14124,12 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 	)
 }
 
-func (v *CompositeValue) forEachAttachmentFunction(interpreter *Interpreter, locationRange LocationRange) Value {
-	return NewHostFunctionValue(
-		interpreter,
-		func(invocation Invocation) Value {
-			functionValue, ok := invocation.Arguments[0].(FunctionValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			fn := func(attachment *CompositeValue) {
-
-				attachmentType := invocation.Interpreter.MustSemaTypeOfValue(attachment)
-
-				attachmentReference := NewEphemeralReferenceValue(
-					invocation.Interpreter,
-					false,
-					attachment,
-					attachmentType,
-				)
-
-				invocation := NewInvocation(
-					invocation.Interpreter,
-					nil,
-					nil,
-					[]Value{attachmentReference},
-					[]sema.Type{sema.NewReferenceType(interpreter, attachmentType, false)},
-					nil,
-					locationRange,
-				)
-				functionValue.invoke(invocation)
-			}
-
-			v.forEachAttachment(invocation.Interpreter, locationRange, fn)
-			return Void
-		},
-		sema.CompositeForEachAttachmentFunctionType(
-			interpreter.MustSemaTypeOfValue(v),
-		),
-	)
-}
-
-func (v *CompositeValue) reflectAttachmentFunction(interpreter *Interpreter, locationRange LocationRange, requireFunction bool) func(Invocation) Value {
-	return func(invocation Invocation) Value {
-		nameValue, ok := invocation.Arguments[0].(*StringValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-		name := nameValue.Str
-
-		member := v.GetMember(invocation.Interpreter, locationRange, name)
-
-		if member == nil {
-			return Nil
-		}
-
-		if _, isFunction := v.Functions[name]; isFunction != requireFunction {
-			return Nil
-		}
-
-		typeParameterPair := invocation.TypeParameterTypes.Oldest()
-		if typeParameterPair == nil {
-			panic(errors.NewUnreachableError())
-		}
-		ty := typeParameterPair.Value
-
-		if !ty.Equal(invocation.Interpreter.MustSemaTypeOfValue(member)) {
-			return Nil
-		}
-
-		value := member
-		if !requireFunction {
-			value = NewEphemeralReferenceValue(invocation.Interpreter, false, member, ty)
-		}
-
-		return NewSomeValueNonCopying(invocation.Interpreter, value)
-	}
-}
-
 func (v *CompositeValue) getBuiltinMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
 
 	switch name {
 	case sema.ResourceOwnerFieldName:
 		if v.Kind == common.CompositeKindResource {
 			return v.OwnerValue(interpreter, locationRange)
-		}
-	case sema.CompositeForEachAttachmentFunctionName:
-		if v.Kind.SupportsAttachments() {
-			return v.forEachAttachmentFunction(interpreter, locationRange)
-		}
-	case sema.AttachmentGetFieldFunctionName:
-		if v.Kind == common.CompositeKindAttachment {
-			return NewHostFunctionValue(
-				interpreter,
-				v.reflectAttachmentFunction(interpreter, locationRange, false),
-				sema.AttachmentGetFieldFunctionType(),
-			)
-		}
-	case sema.AttachmentGetFunctionFunctionName:
-		if v.Kind == common.CompositeKindAttachment {
-			return NewHostFunctionValue(
-				interpreter,
-				v.reflectAttachmentFunction(interpreter, locationRange, true),
-				sema.AttachmentGetFunctionFunctionType(),
-			)
 		}
 	}
 
@@ -14317,7 +14223,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 		if v.Kind == common.CompositeKindAttachment {
 			base = v.getBaseValue(interpreter, locationRange)
 			// in attachment functions, self is a reference value
-			self = NewEphemeralReferenceValue(interpreter, false, v, interpreter.MustConvertStaticToSemaType(v.StaticType(interpreter)))
+			self = NewEphemeralReferenceValue(interpreter, false, v, interpreter.MustSemaTypeOfValue(v))
 		}
 		return NewBoundFunctionValue(interpreter, function, &self, base)
 	}
@@ -15199,17 +15105,32 @@ func (v *CompositeValue) getBaseValue(interpreter *Interpreter, locationRange Lo
 }
 
 func (v *CompositeValue) setBaseValue(interpreter *Interpreter, base *CompositeValue) {
-	attachmentType, ok := interpreter.MustConvertStaticToSemaType(v.StaticType(interpreter)).(*sema.CompositeType)
+	attachmentType, ok := interpreter.MustSemaTypeOfValue(v).(*sema.CompositeType)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
+	var baseType sema.Type
+	switch ty := attachmentType.GetBaseType().(type) {
+	case *sema.InterfaceType:
+		baseType, _ = ty.RewriteWithRestrictedTypes()
+	default:
+		baseType = ty
+	}
+
 	// the base reference can only be borrowed with the declared type of the attachment's base
-	v.base = NewEphemeralReferenceValue(interpreter, false, base, attachmentType.GetBaseType())
+	v.base = NewEphemeralReferenceValue(interpreter, false, base, baseType)
 }
 
-func (v *CompositeValue) getAttachmentValue(interpreter *Interpreter, locationRange LocationRange, ty sema.Type) Value {
-	return v.GetMember(interpreter, locationRange, attachmentNamePrefix+ty.QualifiedString())
+func attachmentMemberName(ty sema.Type) string {
+	return attachmentNamePrefix + string(ty.ID())
+}
+
+func (v *CompositeValue) getAttachmentValue(interpreter *Interpreter, locationRange LocationRange, ty sema.Type) *CompositeValue {
+	if attachment := v.GetMember(interpreter, locationRange, attachmentMemberName(ty)); attachment != nil {
+		return attachment.(*CompositeValue)
+	}
+	return nil
 }
 
 func (v *CompositeValue) forEachAttachment(interpreter *Interpreter, locationRange LocationRange, f func(*CompositeValue)) {
@@ -15218,9 +15139,9 @@ func (v *CompositeValue) forEachAttachment(interpreter *Interpreter, locationRan
 		panic(errors.NewExternalError(err))
 	}
 
-	old_shared_state := interpreter.SharedState.inAttachmentIteration[v]
-	interpreter.SharedState.inAttachmentIteration[v] = true
-	defer func() { interpreter.SharedState.inAttachmentIteration[v] = old_shared_state }()
+	oldSharedState := interpreter.SharedState.inAttachmentIteration(v)
+	interpreter.SharedState.attachmentIterationMap[v] = true
+	defer func() { interpreter.SharedState.attachmentIterationMap[v] = oldSharedState }()
 
 	for {
 		key, value, err := iterator.Next()
@@ -15250,7 +15171,7 @@ func (v *CompositeValue) GetTypeKey(
 		return NilValue{}
 	}
 	// dynamically set the attachment's base to this composite
-	attachment.(*CompositeValue).setBaseValue(interpreter, v)
+	attachment.setBaseValue(interpreter, v)
 	return NewSomeValueNonCopying(interpreter, NewEphemeralReferenceValue(interpreter, false, attachment, ty))
 }
 
@@ -15260,7 +15181,7 @@ func (v *CompositeValue) SetTypeKey(
 	attachmentType sema.Type,
 	attachment Value,
 ) {
-	if v.SetMember(interpreter, locationRange, attachmentNamePrefix+attachmentType.QualifiedString(), attachment) {
+	if v.SetMember(interpreter, locationRange, attachmentMemberName(attachmentType), attachment) {
 		panic(DuplicateAttachmentError{
 			AttachmentType: attachmentType,
 			Value:          v,
@@ -15274,7 +15195,7 @@ func (v *CompositeValue) RemoveTypeKey(
 	locationRange LocationRange,
 	attachmentType sema.Type,
 ) Value {
-	return v.RemoveMember(interpreter, locationRange, attachmentNamePrefix+attachmentType.QualifiedString())
+	return v.RemoveMember(interpreter, locationRange, attachmentMemberName(attachmentType))
 }
 
 // DictionaryValue

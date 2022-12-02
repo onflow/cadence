@@ -41,7 +41,7 @@ func (interpreter *Interpreter) assignmentGetterSetter(expression ast.Expression
 		if attachmentType, ok := interpreter.Program.Elaboration.AttachmentAccessTypes[expression]; ok {
 			return interpreter.typeIndexExpressionGetterSetter(expression, attachmentType)
 		}
-		return interpreter.indexExpressionGetterSetter(expression)
+		return interpreter.valueIndexExpressionGetterSetter(expression)
 
 	case *ast.MemberExpression:
 		return interpreter.memberExpressionGetterSetter(expression)
@@ -103,9 +103,9 @@ func (interpreter *Interpreter) typeIndexExpressionGetterSetter(
 	}
 }
 
-// indexExpressionGetterSetter returns a getter/setter function pair
+// valueIndexExpressionGetterSetter returns a getter/setter function pair
 // for the target index expression
-func (interpreter *Interpreter) indexExpressionGetterSetter(indexExpression *ast.IndexExpression) getterSetter {
+func (interpreter *Interpreter) valueIndexExpressionGetterSetter(indexExpression *ast.IndexExpression) getterSetter {
 	target, ok := interpreter.evalExpression(indexExpression.TargetExpression).(ValueIndexableValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -799,6 +799,10 @@ func (interpreter *Interpreter) VisitMemberExpression(expression *ast.MemberExpr
 }
 
 func (interpreter *Interpreter) VisitIndexExpression(expression *ast.IndexExpression) Value {
+	// note that this check in `AttachmentAccessTypes` must proceed the casting to the `TypeIndexableValue`
+	// or `ValueIndexableValue` interfaces. A `*EphemeralReferenceValue` value is both a `TypeIndexableValue`
+	// and a `ValueIndexableValue` statically, but at runtime can only be used as one or the other. Whether
+	// or not an expression is present in this map allows us to disambiguate between these two cases.
 	if attachmentType, ok := interpreter.Program.Elaboration.AttachmentAccessTypes[expression]; ok {
 		typedResult, ok := interpreter.evalExpression(expression.TargetExpression).(TypeIndexableValue)
 		if !ok {
@@ -836,6 +840,10 @@ func (interpreter *Interpreter) VisitConditionalExpression(expression *ast.Condi
 }
 
 func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *ast.InvocationExpression) Value {
+	return interpreter.visitInvocationExpressionWithImplicitArgument(invocationExpression, nil)
+}
+
+func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(invocationExpression *ast.InvocationExpression, implicitArg *Value) Value {
 	config := interpreter.SharedState.Config
 
 	// tracing
@@ -902,6 +910,12 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 	typeParameterTypes := invocationExpressionTypes.TypeArguments
 	argumentTypes := invocationExpressionTypes.ArgumentTypes
 	parameterTypes := invocationExpressionTypes.TypeParameterTypes
+
+	// add the implicit argument to the end of the argument list, if it exists
+	if implicitArg != nil {
+		arguments = append(arguments, *implicitArg)
+		argumentTypes = append(argumentTypes, interpreter.MustSemaTypeOfValue(*implicitArg))
+	}
 
 	interpreter.reportFunctionInvocation()
 
@@ -1197,7 +1211,7 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 		HasPosition: attachExpression,
 	}
 
-	if inIteration := interpreter.SharedState.inAttachmentIteration[base]; inIteration {
+	if inIteration := interpreter.SharedState.inAttachmentIteration(base); inIteration {
 		panic(AttachmentIterationMutationError{
 			Value:         base,
 			LocationRange: locationRange,
@@ -1206,24 +1220,39 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 
 	// the `base` value must be accessible during the attachment's constructor, but we cannot
 	// set it on the attachment's `CompositeValue` yet, because the value does not exist. Instead
-	// we save the base value in the interpreter's shared state and set the variable directly inside the
-	// constructor to make it available
-	baseValue := NewEphemeralReferenceValue(
+	// we create an implicit constructor argument containing a reference to the base
+	var baseValue Value = NewEphemeralReferenceValue(
 		interpreter,
 		false,
 		base,
 		interpreter.MustSemaTypeOfValue(base).(*sema.CompositeType),
 	)
+	interpreter.trackReferencedResourceKindedValue(base.StorageID(), base)
 
-	interpreter.SharedState.deferredBaseValue = baseValue
-	attachment, ok := interpreter.VisitInvocationExpression(attachExpression.Attachment).(*CompositeValue)
+	attachment, ok := interpreter.visitInvocationExpressionWithImplicitArgument(
+		attachExpression.Attachment,
+		&baseValue,
+	).(*CompositeValue)
+	// attached expressions must be composite constructors, as enforced in the checker
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	// Because `self` in attachments is a reference, we need to track the attachment if it's a resource
+	interpreter.trackReferencedResourceKindedValue(attachment.StorageID(), attachment)
+
+	base = base.Transfer(
+		interpreter,
+		locationRange,
+		atree.Address{},
+		false,
+		nil,
+	).(*CompositeValue)
 
 	// we enforce this in the checker
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
-
-	base = base.Transfer(interpreter, locationRange, atree.Address{}, false, nil).(*CompositeValue)
 
 	// when `v[A]` is executed, we set `A`'s base to `&v`
 	attachment.setBaseValue(interpreter, base)

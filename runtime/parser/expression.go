@@ -940,16 +940,15 @@ func parseAttachExpressionRemainder(p *parser, token lexer.Token) (*ast.AttachEx
 
 	p.skipSpaceAndComments()
 
-	if p.current.Type != lexer.TokenIdentifier || string(p.tokenSource(p.current)) != keywordTo {
+	if !p.isToken(p.current, lexer.TokenIdentifier, keywordTo) {
 		return nil, p.syntaxError(
 			"expected 'to', got %s",
 			p.current.Type,
 		)
 	}
 
-	// consume the to token
-	p.next()
-	p.skipSpaceAndComments()
+	// consume the `to` token
+	p.nextSemanticToken()
 
 	base, err := parseExpression(p, lowestBindingPower)
 
@@ -1120,6 +1119,8 @@ func defineArrayExpression() {
 	setExprNullDenotation(
 		lexer.TokenBracketOpen,
 		func(p *parser, startToken lexer.Token) (ast.Expression, error) {
+			p.skipSpaceAndComments()
+
 			var values []ast.Expression
 			for !p.current.Is(lexer.TokenBracketClose) {
 				p.skipSpaceAndComments()
@@ -1159,6 +1160,8 @@ func defineDictionaryExpression() {
 	setExprNullDenotation(
 		lexer.TokenBraceOpen,
 		func(p *parser, startToken lexer.Token) (ast.Expression, error) {
+			p.skipSpaceAndComments()
+
 			var entries []ast.DictionaryEntry
 			for !p.current.Is(lexer.TokenBraceClose) {
 				p.skipSpaceAndComments()

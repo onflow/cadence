@@ -47,6 +47,7 @@ type ParseAndCheckOptions struct {
 	Location         common.Location
 	IgnoreParseError bool
 	Config           *sema.Config
+	ParseOptions     parser.Config
 }
 
 var checkConcurrently = flag.Int(
@@ -74,7 +75,7 @@ func ParseAndCheckWithOptionsAndMemoryMetering(
 		options.Location = utils.TestLocation
 	}
 
-	program, err := parser.ParseProgram([]byte(code), memoryGauge)
+	program, err := parser.ParseProgram(memoryGauge, []byte(code), options.ParseOptions)
 	if !options.IgnoreParseError && !assert.NoError(t, err) {
 		var sb strings.Builder
 		location := options.Location

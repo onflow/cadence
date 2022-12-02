@@ -18,7 +18,9 @@
 
 package interpreter
 
-import "github.com/onflow/cadence/runtime/common"
+import (
+	"github.com/onflow/cadence/runtime/common"
+)
 
 type Config struct {
 	// OnEventEmitted is triggered when an event is emitted by the program.

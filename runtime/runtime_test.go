@@ -7514,7 +7514,7 @@ func BenchmarkRuntimeScriptNoop(b *testing.B) {
 	}
 }
 
-func TestImportingTestStdlib(t *testing.T) {
+func TestRuntimeImportTestStdlib(t *testing.T) {
 
 	t.Parallel()
 
@@ -7545,4 +7545,32 @@ func TestImportingTestStdlib(t *testing.T) {
 	notDeclaredErr := &sema.NotDeclaredError{}
 	require.ErrorAs(t, errs[0], &notDeclaredErr)
 	assert.Equal(t, "Test", notDeclaredErr.Name)
+}
+
+func TestRuntime(t *testing.T) {
+
+	t.Parallel()
+
+	rt := newTestInterpreterRuntime()
+
+	runtimeInterface := &testRuntimeInterface{}
+
+	_, err := rt.ExecuteScript(
+		Script{
+			Source: []byte(`
+			    pub fun main(): AnyStruct {
+			        return getCurrentBlock()
+			    }
+			`),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  TestLocation,
+		},
+	)
+
+	RequireError(t, err)
+
+	var subErr *ValueNotExportableError
+	require.ErrorAs(t, err, &subErr)
 }

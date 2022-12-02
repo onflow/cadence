@@ -1762,48 +1762,6 @@ func (checker *Checker) checkCharacterLiteral(expression *ast.StringExpression) 
 	)
 }
 
-func (checker *Checker) isReadableAccess(access ast.Access) bool {
-	switch checker.Config.AccessCheckMode {
-	case AccessCheckModeStrict,
-		AccessCheckModeNotSpecifiedRestricted:
-
-		return access == ast.AccessPublic ||
-			access == ast.AccessPublicSettable
-
-	case AccessCheckModeNotSpecifiedUnrestricted:
-
-		return access == ast.AccessNotSpecified ||
-			access == ast.AccessPublic ||
-			access == ast.AccessPublicSettable
-
-	case AccessCheckModeNone:
-		return true
-
-	default:
-		panic(errors.NewUnreachableError())
-	}
-}
-
-func (checker *Checker) isWriteableAccess(access ast.Access) bool {
-	switch checker.Config.AccessCheckMode {
-	case AccessCheckModeStrict,
-		AccessCheckModeNotSpecifiedRestricted:
-
-		return access == ast.AccessPublicSettable
-
-	case AccessCheckModeNotSpecifiedUnrestricted:
-
-		return access == ast.AccessNotSpecified ||
-			access == ast.AccessPublicSettable
-
-	case AccessCheckModeNone:
-		return true
-
-	default:
-		panic(errors.NewUnreachableError())
-	}
-}
-
 func (checker *Checker) withSelfResourceInvalidationAllowed(f func()) {
 	allowSelfResourceFieldInvalidation := checker.allowSelfResourceFieldInvalidation
 	checker.allowSelfResourceFieldInvalidation = true
@@ -1921,37 +1879,6 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 				ast.AccessPublic,
 				false,
 				resourceUUIDFieldDocString,
-			)
-		case common.CompositeKindAttachment:
-			// all attachments contain `getField` and `getFunction`
-
-			addPredeclaredMember(
-				AttachmentGetFieldFunctionName,
-				AttachmentGetFieldFunctionType(),
-				common.DeclarationKindFunction,
-				ast.AccessPublic,
-				true,
-				attachmentGetFieldFunctionDocString,
-			)
-
-			addPredeclaredMember(
-				AttachmentGetFunctionFunctionName,
-				AttachmentGetFunctionFunctionType(),
-				common.DeclarationKindFunction,
-				ast.AccessPublic,
-				true,
-				attachmentGetFunctionFunctionDocString,
-			)
-		}
-
-		if compositeKindedType.GetCompositeKind().SupportsAttachments() {
-			addPredeclaredMember(
-				CompositeForEachAttachmentFunctionName,
-				CompositeForEachAttachmentFunctionType(compositeKindedType),
-				common.DeclarationKindFunction,
-				ast.AccessPublic,
-				true,
-				compositeForEachAttachmentFunctionDocString,
 			)
 		}
 	}
@@ -2392,4 +2319,24 @@ func wrapWithOptionalIfNotNil(typ Type) Type {
 
 func (checker *Checker) CheckStatement(element ast.Statement) {
 	ast.AcceptStatement[struct{}](element, checker)
+}
+
+func (checker *Checker) checkStaticModifier(isStatic bool, position ast.HasPosition) {
+	if isStatic && !checker.Config.AllowStaticDeclarations {
+		checker.report(
+			&InvalidStaticModifierError{
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, position),
+			},
+		)
+	}
+}
+
+func (checker *Checker) checkNativeModifier(isNative bool, position ast.HasPosition) {
+	if isNative && !checker.Config.AllowNativeDeclarations {
+		checker.report(
+			&InvalidNativeModifierError{
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, position),
+			},
+		)
+	}
 }

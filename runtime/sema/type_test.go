@@ -650,7 +650,7 @@ func TestIdentifierCacheUpdate(t *testing.T) {
           }
 	`
 
-	program, err := parser.ParseProgram([]byte(code), nil)
+	program, err := parser.ParseProgram(nil, []byte(code), parser.Config{})
 	require.NoError(t, err)
 
 	checker, err := NewChecker(
@@ -756,11 +756,6 @@ func TestCommonSuperType(t *testing.T) {
 
 	testLeastCommonSuperType := func(t *testing.T, tests []testCase) {
 		for _, test := range tests {
-			if test.name == "AnyResourceAttachment" {
-				x := 3
-				_ = x + 1
-			}
-
 			t.Run(test.name, func(t *testing.T) {
 				assert.Equal(
 					t,

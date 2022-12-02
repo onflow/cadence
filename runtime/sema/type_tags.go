@@ -644,15 +644,6 @@ func findSuperTypeFromLowerMask(joinedTypeTag TypeTag, types []Type) Type {
 	}
 }
 
-func allTypesAreAttachments(types []Type) bool {
-	for _, ty := range types {
-		if !isAttachmentType(ty) {
-			return false
-		}
-	}
-	return true
-}
-
 func findSuperTypeFromUpperMask(joinedTypeTag TypeTag, types []Type) Type {
 	switch joinedTypeTag.upperMask {
 
@@ -665,15 +656,9 @@ func findSuperTypeFromUpperMask(joinedTypeTag TypeTag, types []Type) Type {
 		transactionTypeMask:
 		return getSuperTypeOfDerivedTypes(types)
 	case anyResourceAttachmentMask:
-		if allTypesAreAttachments(types) {
-			return AnyResourceAttachmentType
-		}
-		return commonSuperTypeOfHeterogeneousTypes(types)
+		return AnyResourceAttachmentType
 	case anyStructAttachmentMask:
-		if allTypesAreAttachments(types) {
-			return AnyStructAttachmentType
-		}
-		return commonSuperTypeOfHeterogeneousTypes(types)
+		return AnyStructAttachmentType
 	default:
 		return nil
 	}

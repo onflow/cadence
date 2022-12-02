@@ -288,7 +288,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 // isReadableMember returns true if the given member can be read from
 // in the current location of the checker
 func (checker *Checker) isReadableMember(member *Member) bool {
-	if checker.isReadableAccess(member.Access) ||
+	if checker.Config.AccessCheckMode.IsReadableAccess(member.Access) ||
 		checker.containerTypes[member.ContainerType] {
 
 		return true
@@ -325,7 +325,7 @@ func (checker *Checker) isReadableMember(member *Member) bool {
 // isWriteableMember returns true if the given member can be written to
 // in the current location of the checker
 func (checker *Checker) isWriteableMember(member *Member) bool {
-	return checker.isWriteableAccess(member.Access) ||
+	return checker.Config.AccessCheckMode.IsWriteableAccess(member.Access) ||
 		checker.containerTypes[member.ContainerType]
 }
 
