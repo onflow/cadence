@@ -1201,7 +1201,7 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 		HasPosition: attachExpression,
 	}
 
-	if inIteration := interpreter.SharedState.inAttachmentIteration[base]; inIteration {
+	if inIteration := interpreter.SharedState.inAttachmentIteration(base); inIteration {
 		panic(AttachmentIterationMutationError{
 			Value:         base,
 			LocationRange: locationRange,

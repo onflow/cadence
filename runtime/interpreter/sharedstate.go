@@ -33,7 +33,7 @@ type SharedState struct {
 	inStorageIteration            bool
 	storageMutatedDuringIteration bool
 	deferredBaseValue             *EphemeralReferenceValue
-	inAttachmentIteration         map[*CompositeValue]bool
+	attachmentIterationMap        map[*CompositeValue]bool
 	// TODO: ideally this would be a weak map, but Go has no weak references
 	referencedResourceKindedValues ReferencedResourceKindedValues
 	resourceVariables              map[ResourceKindedValue]*Variable
@@ -51,8 +51,15 @@ func NewSharedState(config *Config) *SharedState {
 		},
 		inStorageIteration:             false,
 		storageMutatedDuringIteration:  false,
-		inAttachmentIteration:          map[*CompositeValue]bool{},
 		referencedResourceKindedValues: map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}{},
 		resourceVariables:              map[ResourceKindedValue]*Variable{},
 	}
+}
+
+func (s *SharedState) inAttachmentIteration(base *CompositeValue) bool {
+	if s.attachmentIterationMap == nil {
+		s.attachmentIterationMap = map[*CompositeValue]bool{}
+		return false
+	}
+	return s.attachmentIterationMap[base]
 }
