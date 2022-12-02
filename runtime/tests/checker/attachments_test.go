@@ -3650,7 +3650,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 					}`, sigil, destructor),
 			)
 			errs := RequireCheckerErrors(t, err, 1)
-			assert.IsType(t, &sema.InvalidAttachmentAccessError{}, errs[0])
+			assert.IsType(t, &sema.InvalidTypeIndexingError{}, errs[0])
 		})
 
 		t.Run(fmt.Sprintf("struct %s", suffix), func(t *testing.T) {
@@ -3666,7 +3666,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 					}`, sigil, destructor),
 			)
 			errs := RequireCheckerErrors(t, err, 1)
-			assert.IsType(t, &sema.InvalidAttachmentAccessError{}, errs[0])
+			assert.IsType(t, &sema.InvalidTypeIndexingError{}, errs[0])
 		})
 
 		t.Run(fmt.Sprintf("resource %s", suffix), func(t *testing.T) {
@@ -3683,7 +3683,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 				`, sigil, destructor),
 			)
 			errs := RequireCheckerErrors(t, err, 1)
-			assert.IsType(t, &sema.InvalidAttachmentAccessError{}, errs[0])
+			assert.IsType(t, &sema.InvalidTypeIndexingError{}, errs[0])
 		})
 
 		t.Run(fmt.Sprintf("contract %s", suffix), func(t *testing.T) {
@@ -3700,7 +3700,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 				`, sigil, destructor),
 			)
 			errs := RequireCheckerErrors(t, err, 1)
-			assert.IsType(t, &sema.InvalidAttachmentAccessError{}, errs[0])
+			assert.IsType(t, &sema.InvalidTypeIndexingError{}, errs[0])
 		})
 
 		t.Run(fmt.Sprintf("event %s", suffix), func(t *testing.T) {
@@ -3717,7 +3717,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 				`, sigil, destructor),
 			)
 			errs := RequireCheckerErrors(t, err, 1)
-			assert.IsType(t, &sema.InvalidAttachmentAccessError{}, errs[0])
+			assert.IsType(t, &sema.InvalidTypeIndexingError{}, errs[0])
 		})
 
 		t.Run(fmt.Sprintf("enum %s", suffix), func(t *testing.T) {
@@ -3734,7 +3734,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 				`, sigil, destructor),
 			)
 			errs := RequireCheckerErrors(t, err, 1)
-			assert.IsType(t, &sema.InvalidAttachmentAccessError{}, errs[0])
+			assert.IsType(t, &sema.InvalidTypeIndexingError{}, errs[0])
 		})
 
 		t.Run(fmt.Sprintf("AnyStructAttachment %s", suffix), func(t *testing.T) {
@@ -3750,7 +3750,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 				`, sigil, destructor),
 			)
 			errs := RequireCheckerErrors(t, err, 1)
-			assert.IsType(t, &sema.InvalidAttachmentAccessError{}, errs[0])
+			assert.IsType(t, &sema.InvalidTypeIndexingError{}, errs[0])
 		})
 
 		t.Run(fmt.Sprintf("AnyResourceAttachment %s", suffix), func(t *testing.T) {
@@ -3766,7 +3766,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 				`, sigil, destructor),
 			)
 			errs := RequireCheckerErrors(t, err, 1)
-			assert.IsType(t, &sema.InvalidAttachmentAccessError{}, errs[0])
+			assert.IsType(t, &sema.InvalidTypeIndexingError{}, errs[0])
 		})
 
 		t.Run(fmt.Sprintf("AnyStruct %s", suffix), func(t *testing.T) {
@@ -3782,7 +3782,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 				`, sigil, destructor),
 			)
 			errs := RequireCheckerErrors(t, err, 1)
-			assert.IsType(t, &sema.InvalidAttachmentAccessError{}, errs[0])
+			assert.IsType(t, &sema.InvalidTypeIndexingError{}, errs[0])
 		})
 
 		t.Run(fmt.Sprintf("AnyResource %s", suffix), func(t *testing.T) {
@@ -3798,7 +3798,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 				`, sigil, destructor),
 			)
 			errs := RequireCheckerErrors(t, err, 1)
-			assert.IsType(t, &sema.InvalidAttachmentAccessError{}, errs[0])
+			assert.IsType(t, &sema.InvalidTypeIndexingError{}, errs[0])
 		})
 
 		t.Run(fmt.Sprintf("AnyResource index %s", suffix), func(t *testing.T) {
@@ -3849,7 +3849,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 				`, sigil, destructor),
 			)
 			errs := RequireCheckerErrors(t, err, 1)
-			assert.IsType(t, &sema.InvalidAttachmentAccessError{}, errs[0])
+			assert.IsType(t, &sema.InvalidTypeIndexingError{}, errs[0])
 		})
 
 		t.Run(fmt.Sprintf("interface nonconforming %s", suffix), func(t *testing.T) {
@@ -3867,7 +3867,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 				`, sigil, destructor),
 			)
 			errs := RequireCheckerErrors(t, err, 1)
-			assert.IsType(t, &sema.InvalidAttachmentAccessError{}, errs[0])
+			assert.IsType(t, &sema.InvalidTypeIndexingError{}, errs[0])
 		})
 
 		t.Run(fmt.Sprintf("not writeable %s", suffix), func(t *testing.T) {
@@ -3937,7 +3937,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 		`,
 		)
 		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.InvalidAttachmentAccessError{}, errs[0])
+		assert.IsType(t, &sema.InvalidTypeIndexingError{}, errs[0])
 	})
 }
 
@@ -3975,7 +3975,7 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		`,
 		)
 		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.InvalidAttachmentAccessError{}, errs[0])
+		assert.IsType(t, &sema.InvalidTypeIndexingError{}, errs[0])
 	})
 
 	t.Run("restricted concrete base reference", func(t *testing.T) {
@@ -3992,7 +3992,7 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		`,
 		)
 		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.InvalidAttachmentAccessError{}, errs[0])
+		assert.IsType(t, &sema.InvalidTypeIndexingError{}, errs[0])
 	})
 
 	t.Run("restricted concrete base reference to interface", func(t *testing.T) {
@@ -4009,7 +4009,7 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		`,
 		)
 		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.InvalidAttachmentAccessError{}, errs[0])
+		assert.IsType(t, &sema.InvalidTypeIndexingError{}, errs[0])
 	})
 
 	t.Run("restricted anystruct base", func(t *testing.T) {
@@ -4057,7 +4057,7 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.InvalidAttachmentAccessError{}, errs[0])
+		assert.IsType(t, &sema.InvalidTypeIndexingError{}, errs[0])
 	})
 
 	t.Run("restricted multiply extended base", func(t *testing.T) {
@@ -4076,7 +4076,7 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.InvalidAttachmentAccessError{}, errs[0])
+		assert.IsType(t, &sema.InvalidTypeIndexingError{}, errs[0])
 	})
 
 	t.Run("restricted multiply restricted base", func(t *testing.T) {

@@ -3795,7 +3795,7 @@ func (*InvalidAttachmentUsageError) isSemanticError() {}
 
 func (*InvalidAttachmentUsageError) IsUserError() {}
 
-func (e *InvalidAttachmentUsageError) Error() string {
+func (*InvalidAttachmentUsageError) Error() string {
 	return "cannot construct attachment outside of an `attach` expression"
 }
 
@@ -3868,23 +3868,23 @@ func (e *InvalidAttachmentRemoveError) Error() string {
 	)
 }
 
-// InvalidAttachmentAccessError
-type InvalidAttachmentAccessError struct {
+// InvalidTypeIndexingError
+type InvalidTypeIndexingError struct {
 	IndexingExpression ast.Expression
 	BaseType           Type
 	ast.Range
 }
 
-var _ SemanticError = &InvalidAttachmentAccessError{}
-var _ errors.UserError = &InvalidAttachmentAccessError{}
+var _ SemanticError = &InvalidTypeIndexingError{}
+var _ errors.UserError = &InvalidTypeIndexingError{}
 
-func (*InvalidAttachmentAccessError) isSemanticError() {}
+func (*InvalidTypeIndexingError) isSemanticError() {}
 
-func (*InvalidAttachmentAccessError) IsUserError() {}
+func (*InvalidTypeIndexingError) IsUserError() {}
 
-func (e *InvalidAttachmentAccessError) Error() string {
+func (e *InvalidTypeIndexingError) Error() string {
 	return fmt.Sprintf(
-		"cannot index `%s` with `%s`, as it is not an valid attachment type for this base",
+		"cannot index `%s` with `%s`, as it is not an valid type index for this type",
 		e.BaseType.QualifiedString(),
 		e.IndexingExpression.String(),
 	)

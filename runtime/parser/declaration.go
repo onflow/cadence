@@ -1086,7 +1086,7 @@ func parseAttachmentDeclaration(
 		)
 	}
 
-	// skip the `for`` keyword
+	// skip the `for` keyword
 	p.nextSemanticToken()
 
 	if !p.current.Is(lexer.TokenIdentifier) {

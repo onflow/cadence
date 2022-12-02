@@ -1762,48 +1762,6 @@ func (checker *Checker) checkCharacterLiteral(expression *ast.StringExpression) 
 	)
 }
 
-func (mode AccessCheckMode) IsReadableAccess(access ast.Access) bool {
-	switch mode {
-	case AccessCheckModeStrict,
-		AccessCheckModeNotSpecifiedRestricted:
-
-		return access == ast.AccessPublic ||
-			access == ast.AccessPublicSettable
-
-	case AccessCheckModeNotSpecifiedUnrestricted:
-
-		return access == ast.AccessNotSpecified ||
-			access == ast.AccessPublic ||
-			access == ast.AccessPublicSettable
-
-	case AccessCheckModeNone:
-		return true
-
-	default:
-		panic(errors.NewUnreachableError())
-	}
-}
-
-func (mode AccessCheckMode) IsWriteableAccess(access ast.Access) bool {
-	switch mode {
-	case AccessCheckModeStrict,
-		AccessCheckModeNotSpecifiedRestricted:
-
-		return access == ast.AccessPublicSettable
-
-	case AccessCheckModeNotSpecifiedUnrestricted:
-
-		return access == ast.AccessNotSpecified ||
-			access == ast.AccessPublicSettable
-
-	case AccessCheckModeNone:
-		return true
-
-	default:
-		panic(errors.NewUnreachableError())
-	}
-}
-
 func (checker *Checker) withSelfResourceInvalidationAllowed(f func()) {
 	allowSelfResourceFieldInvalidation := checker.allowSelfResourceFieldInvalidation
 	checker.allowSelfResourceFieldInvalidation = true

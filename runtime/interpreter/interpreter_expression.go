@@ -41,7 +41,7 @@ func (interpreter *Interpreter) assignmentGetterSetter(expression ast.Expression
 		if attachmentType, ok := interpreter.Program.Elaboration.AttachmentAccessTypes[expression]; ok {
 			return interpreter.typeIndexExpressionGetterSetter(expression, attachmentType)
 		}
-		return interpreter.indexExpressionGetterSetter(expression)
+		return interpreter.valueIndexExpressionGetterSetter(expression)
 
 	case *ast.MemberExpression:
 		return interpreter.memberExpressionGetterSetter(expression)
@@ -103,9 +103,9 @@ func (interpreter *Interpreter) typeIndexExpressionGetterSetter(
 	}
 }
 
-// indexExpressionGetterSetter returns a getter/setter function pair
+// valueIndexExpressionGetterSetter returns a getter/setter function pair
 // for the target index expression
-func (interpreter *Interpreter) indexExpressionGetterSetter(indexExpression *ast.IndexExpression) getterSetter {
+func (interpreter *Interpreter) valueIndexExpressionGetterSetter(indexExpression *ast.IndexExpression) getterSetter {
 	target, ok := interpreter.evalExpression(indexExpression.TargetExpression).(ValueIndexableValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -1223,6 +1223,10 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 	oldBaseValue := interpreter.SharedState.deferredBaseValue
 	interpreter.SharedState.deferredBaseValue = baseValue
 	attachment, ok := interpreter.VisitInvocationExpression(attachExpression.Attachment).(*CompositeValue)
+	// attached expressions must be composite constructors, as enforced in the checker
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
 	interpreter.SharedState.deferredBaseValue = oldBaseValue
 
 	// Because `self` in attachments is a reference, we need to track the attachment if it's a resource

@@ -3626,6 +3626,8 @@ func (t *CompositeType) IsResourceType() bool {
 	return t.Kind == common.CompositeKindResource ||
 		// attachments are always the same kind as their base type
 		(t.Kind == common.CompositeKindAttachment &&
+			// this check is necessary to prevent `attachment A for A {}`
+			// from causing an infinite recursion case here
 			t.baseType != t &&
 			t.baseType.IsResourceType())
 }
