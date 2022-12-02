@@ -1446,6 +1446,41 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
 		AssertValuesEqual(t, inter, interpreter.NewUnmeteredStringValue("R"), inter.Globals.Get("lastDestructorRun").GetValue())
 	})
 
+	t.Run("base destructor cannot add mutate attachments mid-destroy", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource R {
+                fun foo() {
+                    remove B from self
+                }
+                destroy() {}
+            }
+            attachment A for R {
+                destroy() {
+                   
+                }
+            }
+            attachment B for R {
+                destroy() {}
+            }
+            attachment C for R {
+                destroy() {
+                    base.foo()
+                }
+            }
+            fun test() {
+                let r <- create R()
+                let r2 <- attach A() to <- attach B() to <- attach C() to <-r
+                destroy r2
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.ErrorAs(t, err, &interpreter.AttachmentIterationMutationError{})
+	})
+
 	t.Run("remove runs destroy", func(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
