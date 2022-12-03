@@ -91,18 +91,23 @@ type IndexExpressionTypes struct {
 	IndexingType Type
 }
 
+type NumberConversionArgumentTypes struct {
+	Type  Type
+	Range ast.Range
+}
+
 type Elaboration struct {
 	lock                             *sync.RWMutex
-	FunctionDeclarationFunctionTypes map[*ast.FunctionDeclaration]*FunctionType
-	VariableDeclarationTypes         map[*ast.VariableDeclaration]VariableDeclarationTypes
-	AssignmentStatementTypes         map[*ast.AssignmentStatement]AssignmentStatementTypes
-	CompositeDeclarationTypes        map[*ast.CompositeDeclaration]*CompositeType
-	CompositeTypeDeclarations        map[*CompositeType]*ast.CompositeDeclaration
-	InterfaceDeclarationTypes        map[*ast.InterfaceDeclaration]*InterfaceType
-	InterfaceTypeDeclarations        map[*InterfaceType]*ast.InterfaceDeclaration
-	ConstructorFunctionTypes         map[*ast.SpecialFunctionDeclaration]*FunctionType
-	FunctionExpressionFunctionType   map[*ast.FunctionExpression]*FunctionType
-	InvocationExpressionTypes        map[*ast.InvocationExpression]InvocationExpressionTypes
+	functionDeclarationFunctionTypes map[*ast.FunctionDeclaration]*FunctionType
+	variableDeclarationTypes         map[*ast.VariableDeclaration]VariableDeclarationTypes
+	assignmentStatementTypes         map[*ast.AssignmentStatement]AssignmentStatementTypes
+	compositeDeclarationTypes        map[*ast.CompositeDeclaration]*CompositeType
+	compositeTypeDeclarations        map[*CompositeType]*ast.CompositeDeclaration
+	interfaceDeclarationTypes        map[*ast.InterfaceDeclaration]*InterfaceType
+	interfaceTypeDeclarations        map[*InterfaceType]*ast.InterfaceDeclaration
+	constructorFunctionTypes         map[*ast.SpecialFunctionDeclaration]*FunctionType
+	functionExpressionFunctionTypes  map[*ast.FunctionExpression]*FunctionType
+	invocationExpressionTypes        map[*ast.InvocationExpression]InvocationExpressionTypes
 	CastingStaticValueTypes          map[*ast.CastingExpression]Type
 	CastingTargetTypes               map[*ast.CastingExpression]Type
 	ReturnStatementTypes             map[*ast.ReturnStatement]ReturnStatementTypes
@@ -135,27 +140,14 @@ type Elaboration struct {
 	IndexExpressionTypes                map[*ast.IndexExpression]IndexExpressionTypes
 	ForceExpressionTypes                map[*ast.ForceExpression]Type
 	StaticCastTypes                     map[*ast.CastingExpression]CastTypes
-	NumberConversionArgumentTypes       map[ast.Expression]struct {
-		Type  Type
-		Range ast.Range
-	}
-	RuntimeCastTypes map[*ast.CastingExpression]RuntimeCastTypes
+	NumberConversionArgumentTypes       map[ast.Expression]NumberConversionArgumentTypes
+	RuntimeCastTypes                    map[*ast.CastingExpression]RuntimeCastTypes
 }
 
 func NewElaboration(gauge common.MemoryGauge, extendedElaboration bool) *Elaboration {
 	common.UseMemory(gauge, common.ElaborationMemoryUsage)
 	elaboration := &Elaboration{
 		lock:                                new(sync.RWMutex),
-		FunctionDeclarationFunctionTypes:    map[*ast.FunctionDeclaration]*FunctionType{},
-		VariableDeclarationTypes:            map[*ast.VariableDeclaration]VariableDeclarationTypes{},
-		AssignmentStatementTypes:            map[*ast.AssignmentStatement]AssignmentStatementTypes{},
-		CompositeDeclarationTypes:           map[*ast.CompositeDeclaration]*CompositeType{},
-		CompositeTypeDeclarations:           map[*CompositeType]*ast.CompositeDeclaration{},
-		InterfaceDeclarationTypes:           map[*ast.InterfaceDeclaration]*InterfaceType{},
-		InterfaceTypeDeclarations:           map[*InterfaceType]*ast.InterfaceDeclaration{},
-		ConstructorFunctionTypes:            map[*ast.SpecialFunctionDeclaration]*FunctionType{},
-		FunctionExpressionFunctionType:      map[*ast.FunctionExpression]*FunctionType{},
-		InvocationExpressionTypes:           map[*ast.InvocationExpression]InvocationExpressionTypes{},
 		CastingStaticValueTypes:             map[*ast.CastingExpression]Type{},
 		CastingTargetTypes:                  map[*ast.CastingExpression]Type{},
 		ReturnStatementTypes:                map[*ast.ReturnStatement]ReturnStatementTypes{},
@@ -187,10 +179,7 @@ func NewElaboration(gauge common.MemoryGauge, extendedElaboration bool) *Elabora
 		elaboration.ForceExpressionTypes = map[*ast.ForceExpression]Type{}
 		elaboration.StaticCastTypes = map[*ast.CastingExpression]CastTypes{}
 		elaboration.RuntimeCastTypes = map[*ast.CastingExpression]RuntimeCastTypes{}
-		elaboration.NumberConversionArgumentTypes = map[ast.Expression]struct {
-			Type  Type
-			Range ast.Range
-		}{}
+		elaboration.NumberConversionArgumentTypes = map[ast.Expression]NumberConversionArgumentTypes{}
 	}
 	return elaboration
 
@@ -228,4 +217,180 @@ func (e *Elaboration) FunctionEntryPointType() (*FunctionType, error) {
 	}
 
 	return functionType, nil
+}
+
+func (e *Elaboration) FunctionDeclarationFunctionType(declaration *ast.FunctionDeclaration) *FunctionType {
+	if e.functionDeclarationFunctionTypes == nil {
+		return nil
+	}
+	return e.functionDeclarationFunctionTypes[declaration]
+}
+
+func (e *Elaboration) SetFunctionDeclarationFunctionType(
+	declaration *ast.FunctionDeclaration,
+	functionType *FunctionType,
+) {
+	if e.functionDeclarationFunctionTypes == nil {
+		e.functionDeclarationFunctionTypes = map[*ast.FunctionDeclaration]*FunctionType{}
+	}
+	e.functionDeclarationFunctionTypes[declaration] = functionType
+}
+
+func (e *Elaboration) VariableDeclarationTypes(declaration *ast.VariableDeclaration) (types VariableDeclarationTypes) {
+	if e.variableDeclarationTypes == nil {
+		return
+	}
+	return e.variableDeclarationTypes[declaration]
+}
+
+func (e *Elaboration) SetVariableDeclarationTypes(
+	declaration *ast.VariableDeclaration,
+	types VariableDeclarationTypes,
+) {
+	if e.variableDeclarationTypes == nil {
+		e.variableDeclarationTypes = map[*ast.VariableDeclaration]VariableDeclarationTypes{}
+	}
+	e.variableDeclarationTypes[declaration] = types
+}
+
+func (e *Elaboration) VariableDeclarationTypesCount() int {
+	return len(e.variableDeclarationTypes)
+}
+
+func (e *Elaboration) AssignmentStatementTypes(assignment *ast.AssignmentStatement) (types AssignmentStatementTypes) {
+	if e.assignmentStatementTypes == nil {
+		return
+	}
+	return e.assignmentStatementTypes[assignment]
+}
+
+func (e *Elaboration) SetAssignmentStatementTypes(
+	assignment *ast.AssignmentStatement,
+	types AssignmentStatementTypes,
+) {
+	if e.assignmentStatementTypes == nil {
+		e.assignmentStatementTypes = map[*ast.AssignmentStatement]AssignmentStatementTypes{}
+	}
+	e.assignmentStatementTypes[assignment] = types
+}
+
+func (e *Elaboration) CompositeDeclarationType(declaration *ast.CompositeDeclaration) *CompositeType {
+	if e.compositeDeclarationTypes == nil {
+		return nil
+	}
+	return e.compositeDeclarationTypes[declaration]
+}
+
+func (e *Elaboration) SetCompositeDeclarationType(
+	declaration *ast.CompositeDeclaration,
+	compositeType *CompositeType,
+) {
+	if e.compositeDeclarationTypes == nil {
+		e.compositeDeclarationTypes = map[*ast.CompositeDeclaration]*CompositeType{}
+	}
+	e.compositeDeclarationTypes[declaration] = compositeType
+}
+
+func (e *Elaboration) CompositeTypeDeclaration(compositeType *CompositeType) *ast.CompositeDeclaration {
+	if e.compositeTypeDeclarations == nil {
+		return nil
+	}
+	return e.compositeTypeDeclarations[compositeType]
+}
+
+func (e *Elaboration) SetCompositeTypeDeclaration(
+	compositeType *CompositeType,
+	declaration *ast.CompositeDeclaration,
+) {
+	if e.compositeTypeDeclarations == nil {
+		e.compositeTypeDeclarations = map[*CompositeType]*ast.CompositeDeclaration{}
+	}
+	e.compositeTypeDeclarations[compositeType] = declaration
+}
+
+func (e *Elaboration) InterfaceDeclarationType(declaration *ast.InterfaceDeclaration) *InterfaceType {
+	if e.interfaceDeclarationTypes == nil {
+		return nil
+	}
+	return e.interfaceDeclarationTypes[declaration]
+}
+
+func (e *Elaboration) SetInterfaceDeclarationType(
+	declaration *ast.InterfaceDeclaration,
+	interfaceType *InterfaceType,
+) {
+	if e.interfaceDeclarationTypes == nil {
+		e.interfaceDeclarationTypes = map[*ast.InterfaceDeclaration]*InterfaceType{}
+	}
+	e.interfaceDeclarationTypes[declaration] = interfaceType
+}
+
+func (e *Elaboration) InterfaceTypeDeclaration(interfaceType *InterfaceType) *ast.InterfaceDeclaration {
+	if e.interfaceTypeDeclarations == nil {
+		return nil
+	}
+	return e.interfaceTypeDeclarations[interfaceType]
+}
+
+func (e *Elaboration) SetInterfaceTypeDeclaration(
+	interfaceType *InterfaceType,
+	declaration *ast.InterfaceDeclaration,
+) {
+	if e.interfaceTypeDeclarations == nil {
+		e.interfaceTypeDeclarations = map[*InterfaceType]*ast.InterfaceDeclaration{}
+	}
+	e.interfaceTypeDeclarations[interfaceType] = declaration
+}
+
+func (e *Elaboration) ConstructorFunctionType(initializer *ast.SpecialFunctionDeclaration) *FunctionType {
+	if e.constructorFunctionTypes == nil {
+		return nil
+	}
+	return e.constructorFunctionTypes[initializer]
+}
+
+func (e *Elaboration) SetConstructorFunctionType(
+	initializer *ast.SpecialFunctionDeclaration,
+	functionType *FunctionType,
+) {
+	if e.constructorFunctionTypes == nil {
+		e.constructorFunctionTypes = map[*ast.SpecialFunctionDeclaration]*FunctionType{}
+	}
+	e.constructorFunctionTypes[initializer] = functionType
+}
+
+func (e *Elaboration) FunctionExpressionFunctionType(expression *ast.FunctionExpression) *FunctionType {
+	if e.functionExpressionFunctionTypes == nil {
+		return nil
+	}
+	return e.functionExpressionFunctionTypes[expression]
+}
+
+func (e *Elaboration) SetFunctionExpressionFunctionType(
+	expression *ast.FunctionExpression,
+	functionType *FunctionType,
+) {
+	if e.functionExpressionFunctionTypes == nil {
+		e.functionExpressionFunctionTypes = map[*ast.FunctionExpression]*FunctionType{}
+	}
+	e.functionExpressionFunctionTypes[expression] = functionType
+}
+
+func (e *Elaboration) InvocationExpressionTypes(
+	expression *ast.InvocationExpression,
+) (types InvocationExpressionTypes) {
+	if e.invocationExpressionTypes == nil {
+		return
+	}
+	return e.invocationExpressionTypes[expression]
+}
+
+func (e *Elaboration) SetInvocationExpressionTypes(
+	expression *ast.InvocationExpression,
+	types InvocationExpressionTypes,
+) {
+	if e.invocationExpressionTypes == nil {
+		e.invocationExpressionTypes = map[*ast.InvocationExpression]InvocationExpressionTypes{}
+	}
+	e.invocationExpressionTypes[expression] = types
 }

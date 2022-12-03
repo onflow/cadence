@@ -631,7 +631,7 @@ func (interpreter *Interpreter) VisitFunctionDeclaration(declaration *ast.Functi
 
 	identifier := declaration.Identifier.Identifier
 
-	functionType := interpreter.Program.Elaboration.FunctionDeclarationFunctionTypes[declaration]
+	functionType := interpreter.Program.Elaboration.FunctionDeclarationFunctionType(declaration)
 
 	// NOTE: find *or* declare, as the function might have not been pre-declared (e.g. in the REPL)
 	variable := interpreter.findOrDeclareVariable(identifier)
@@ -943,7 +943,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 		}
 	})()
 
-	compositeType := interpreter.Program.Elaboration.CompositeDeclarationTypes[declaration]
+	compositeType := interpreter.Program.Elaboration.CompositeDeclarationType(declaration)
 
 	constructorType := &sema.FunctionType{
 		IsConstructor: true,
@@ -1218,7 +1218,7 @@ func (interpreter *Interpreter) declareEnumConstructor(
 
 	lexicalScope.Set(identifier, variable)
 
-	compositeType := interpreter.Program.Elaboration.CompositeDeclarationTypes[declaration]
+	compositeType := interpreter.Program.Elaboration.CompositeDeclarationType(declaration)
 	qualifiedIdentifier := compositeType.QualifiedIdentifier()
 
 	location := interpreter.Location
@@ -1344,7 +1344,7 @@ func (interpreter *Interpreter) compositeInitializerFunction(
 	}
 
 	initializer = initializers[0]
-	functionType := interpreter.Program.Elaboration.ConstructorFunctionTypes[initializer]
+	functionType := interpreter.Program.Elaboration.ConstructorFunctionType(initializer)
 
 	parameterList := initializer.FunctionDeclaration.ParameterList
 
@@ -1479,7 +1479,7 @@ func (interpreter *Interpreter) functionWrappers(
 
 	for _, functionDeclaration := range members.Functions() {
 
-		functionType := interpreter.Program.Elaboration.FunctionDeclarationFunctionTypes[functionDeclaration]
+		functionType := interpreter.Program.Elaboration.FunctionDeclarationFunctionType(functionDeclaration)
 
 		name := functionDeclaration.Identifier.Identifier
 		functionWrapper := interpreter.functionConditionsWrapper(
@@ -1501,7 +1501,7 @@ func (interpreter *Interpreter) compositeFunction(
 	lexicalScope *VariableActivation,
 ) *InterpretedFunctionValue {
 
-	functionType := interpreter.Program.Elaboration.FunctionDeclarationFunctionTypes[functionDeclaration]
+	functionType := interpreter.Program.Elaboration.FunctionDeclarationFunctionType(functionDeclaration)
 
 	var preConditions ast.Conditions
 
@@ -1801,7 +1801,7 @@ func (interpreter *Interpreter) declareInterface(
 		}
 	})()
 
-	interfaceType := interpreter.Program.Elaboration.InterfaceDeclarationTypes[declaration]
+	interfaceType := interpreter.Program.Elaboration.InterfaceDeclarationType(declaration)
 	typeID := interfaceType.ID()
 
 	initializerFunctionWrapper := interpreter.initializerFunctionWrapper(declaration.Members, lexicalScope)
@@ -1837,7 +1837,7 @@ func (interpreter *Interpreter) declareTypeRequirement(
 		}
 	})()
 
-	compositeType := interpreter.Program.Elaboration.CompositeDeclarationTypes[declaration]
+	compositeType := interpreter.Program.Elaboration.CompositeDeclarationType(declaration)
 	typeID := compositeType.ID()
 
 	initializerFunctionWrapper := interpreter.initializerFunctionWrapper(declaration.Members, lexicalScope)

@@ -41,7 +41,7 @@ func (checker *Checker) VisitCompositeDeclaration(declaration *ast.CompositeDecl
 // through `declareCompositeMembersAndValue`.
 func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDeclaration, kind ContainerKind) {
 
-	compositeType := checker.Elaboration.CompositeDeclarationTypes[declaration]
+	compositeType := checker.Elaboration.CompositeDeclarationType(declaration)
 	if compositeType == nil {
 		panic(errors.NewUnreachableError())
 	}
@@ -219,7 +219,7 @@ func (checker *Checker) declareCompositeNestedTypes(
 	kind ContainerKind,
 	declareConstructors bool,
 ) {
-	compositeType := checker.Elaboration.CompositeDeclarationTypes[declaration]
+	compositeType := checker.Elaboration.CompositeDeclarationType(declaration)
 	nestedDeclarations := checker.Elaboration.CompositeNestedDeclarations[declaration]
 
 	compositeType.NestedTypes.Foreach(func(name string, nestedType Type) {
@@ -456,8 +456,8 @@ func (checker *Checker) declareCompositeType(declaration *ast.CompositeDeclarati
 
 	// Register in elaboration
 
-	checker.Elaboration.CompositeDeclarationTypes[declaration] = compositeType
-	checker.Elaboration.CompositeTypeDeclarations[compositeType] = declaration
+	checker.Elaboration.SetCompositeDeclarationType(declaration, compositeType)
+	checker.Elaboration.SetCompositeTypeDeclaration(compositeType, declaration)
 
 	// Activate new scope for nested declarations
 
@@ -502,7 +502,7 @@ func (checker *Checker) declareCompositeMembersAndValue(
 	declaration *ast.CompositeDeclaration,
 	kind ContainerKind,
 ) {
-	compositeType := checker.Elaboration.CompositeDeclarationTypes[declaration]
+	compositeType := checker.Elaboration.CompositeDeclarationType(declaration)
 	if compositeType == nil {
 		panic(errors.NewUnreachableError())
 	}
@@ -1454,12 +1454,14 @@ func CompositeConstructorType(
 		// NOTE: Don't use `constructorFunctionType`, as it has a return type.
 		//   The initializer itself has a `Void` return type.
 
-		elaboration.ConstructorFunctionTypes[firstInitializer] =
+		elaboration.SetConstructorFunctionType(
+			firstInitializer,
 			&FunctionType{
 				IsConstructor:        true,
 				Parameters:           constructorFunctionType.Parameters,
 				ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
-			}
+			},
+		)
 	}
 
 	return constructorFunctionType, argumentLabels

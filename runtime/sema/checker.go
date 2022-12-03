@@ -393,7 +393,7 @@ func (checker *Checker) checkTopLevelDeclarationValidity(declarations []ast.Decl
 
 func (checker *Checker) declareGlobalFunctionDeclaration(declaration *ast.FunctionDeclaration) {
 	functionType := checker.functionType(declaration.ParameterList, declaration.ReturnTypeAnnotation)
-	checker.Elaboration.FunctionDeclarationFunctionTypes[declaration] = functionType
+	checker.Elaboration.SetFunctionDeclarationFunctionType(declaration, functionType)
 	checker.declareFunctionDeclaration(declaration, functionType)
 }
 

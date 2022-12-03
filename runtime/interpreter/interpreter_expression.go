@@ -845,7 +845,7 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 
 	elaboration := interpreter.Program.Elaboration
 
-	invocationExpressionTypes := elaboration.InvocationExpressionTypes[invocationExpression]
+	invocationExpressionTypes := elaboration.InvocationExpressionTypes(invocationExpression)
 
 	typeParameterTypes := invocationExpressionTypes.TypeArguments
 	argumentTypes := invocationExpressionTypes.ArgumentTypes
@@ -909,7 +909,7 @@ func (interpreter *Interpreter) VisitFunctionExpression(expression *ast.Function
 	// lexical scope: variables in functions are bound to what is visible at declaration time
 	lexicalScope := interpreter.activations.CurrentOrNew()
 
-	functionType := interpreter.Program.Elaboration.FunctionExpressionFunctionType[expression]
+	functionType := interpreter.Program.Elaboration.FunctionExpressionFunctionType(expression)
 
 	var preConditions ast.Conditions
 	if expression.FunctionBlock.PreConditions != nil {

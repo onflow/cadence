@@ -169,12 +169,14 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 		}
 	}
 
-	checker.Elaboration.VariableDeclarationTypes[declaration] =
+	checker.Elaboration.SetVariableDeclarationTypes(
+		declaration,
 		VariableDeclarationTypes{
 			TargetType:      declarationType,
 			ValueType:       valueType,
 			SecondValueType: secondValueType,
-		}
+		},
+	)
 
 	// Finally, declare the variable in the current value activation
 

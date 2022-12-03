@@ -66,7 +66,7 @@ func (checker *Checker) EntryPointParameters() []Parameter {
 
 	functionDeclaration := FunctionEntryPointDeclaration(checker.Program)
 	if functionDeclaration != nil {
-		functionType := checker.Elaboration.FunctionDeclarationFunctionTypes[functionDeclaration]
+		functionType := checker.Elaboration.FunctionDeclarationFunctionType(functionDeclaration)
 		return functionType.Parameters
 	}
 

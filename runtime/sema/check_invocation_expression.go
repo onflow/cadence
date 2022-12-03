@@ -99,11 +99,13 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 			argumentTypes = append(argumentTypes, argumentType)
 		}
 
-		checker.Elaboration.InvocationExpressionTypes[invocationExpression] =
+		checker.Elaboration.SetInvocationExpressionTypes(
+			invocationExpression,
 			InvocationExpressionTypes{
 				ArgumentTypes: argumentTypes,
 				ReturnType:    checker.expectedType,
-			}
+			},
+		)
 
 		return InvalidType
 	}
@@ -470,12 +472,15 @@ func (checker *Checker) checkInvocation(
 
 	// Save types in the elaboration
 
-	checker.Elaboration.InvocationExpressionTypes[invocationExpression] = InvocationExpressionTypes{
-		TypeArguments:      typeArguments,
-		TypeParameterTypes: parameterTypes,
-		ReturnType:         returnType,
-		ArgumentTypes:      argumentTypes,
-	}
+	checker.Elaboration.SetInvocationExpressionTypes(
+		invocationExpression,
+		InvocationExpressionTypes{
+			TypeArguments:      typeArguments,
+			TypeParameterTypes: parameterTypes,
+			ReturnType:         returnType,
+			ArgumentTypes:      argumentTypes,
+		},
+	)
 
 	return argumentTypes, returnType
 }

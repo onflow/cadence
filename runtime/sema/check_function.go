@@ -78,7 +78,7 @@ func (checker *Checker) visitFunctionDeclaration(
 
 	// global functions were previously declared, see `declareFunctionDeclaration`
 
-	functionType := checker.Elaboration.FunctionDeclarationFunctionTypes[declaration]
+	functionType := checker.Elaboration.FunctionDeclarationFunctionType(declaration)
 	if functionType == nil {
 		functionType = checker.functionType(declaration.ParameterList, declaration.ReturnTypeAnnotation)
 
@@ -87,7 +87,7 @@ func (checker *Checker) visitFunctionDeclaration(
 		}
 	}
 
-	checker.Elaboration.FunctionDeclarationFunctionTypes[declaration] = functionType
+	checker.Elaboration.SetFunctionDeclarationFunctionType(declaration, functionType)
 
 	checker.checkFunction(
 		declaration.ParameterList,
@@ -407,7 +407,7 @@ func (checker *Checker) VisitFunctionExpression(expression *ast.FunctionExpressi
 	// TODO: infer
 	functionType := checker.functionType(expression.ParameterList, expression.ReturnTypeAnnotation)
 
-	checker.Elaboration.FunctionExpressionFunctionType[expression] = functionType
+	checker.Elaboration.SetFunctionExpressionFunctionType(expression, functionType)
 
 	checker.checkFunction(
 		expression.ParameterList,
