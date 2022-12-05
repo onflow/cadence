@@ -3347,7 +3347,7 @@ func numberFunctionArgumentExpressionsChecker(targetType Type) ArgumentExpressio
 					checker.Elaboration.SetNumberConversionArgumentTypes(
 						argument,
 						NumberConversionArgumentTypes{
-							Type: targetType,
+							Type:  targetType,
 							Range: invocationRange,
 						},
 					)
@@ -3360,7 +3360,7 @@ func numberFunctionArgumentExpressionsChecker(targetType Type) ArgumentExpressio
 					checker.Elaboration.SetNumberConversionArgumentTypes(
 						argument,
 						NumberConversionArgumentTypes{
-							Type: targetType,
+							Type:  targetType,
 							Range: invocationRange,
 						},
 					)
