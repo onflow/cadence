@@ -56,9 +56,12 @@ func NewSharedState(config *Config) *SharedState {
 }
 
 func (s *SharedState) inAttachmentIteration(base *CompositeValue) bool {
+	return s.attachmentIterationMap[base]
+}
+
+func (s *SharedState) setAttachmentIteration(base *CompositeValue, b bool) {
 	if s.attachmentIterationMap == nil {
 		s.attachmentIterationMap = map[*CompositeValue]bool{}
-		return false
 	}
-	return s.attachmentIterationMap[base]
+	s.attachmentIterationMap[base] = b
 }

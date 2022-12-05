@@ -15140,8 +15140,8 @@ func (v *CompositeValue) forEachAttachment(interpreter *Interpreter, locationRan
 	}
 
 	oldSharedState := interpreter.SharedState.inAttachmentIteration(v)
-	interpreter.SharedState.attachmentIterationMap[v] = true
-	defer func() { interpreter.SharedState.attachmentIterationMap[v] = oldSharedState }()
+	interpreter.SharedState.setAttachmentIteration(v, true)
+	defer func() { interpreter.SharedState.setAttachmentIteration(v, oldSharedState) }()
 
 	for {
 		key, value, err := iterator.Next()
