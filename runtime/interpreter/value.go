@@ -2856,6 +2856,118 @@ func plusUnsignedBigInt[V BoundedUnsignedValue[*big.Int]](interpreter *Interpret
 	)
 }
 
+func saturatingPlusSigned[T constraints.Signed, V BoundedSignedValue[T]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(V)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
+		})
+	}
+
+	underlying := v.Underlying()
+	otherUnderlying := o.Underlying()
+
+	valueGetter := func() T {
+		// INT32-C
+		if (otherUnderlying > 0) && (underlying > (v.MaxValue() - otherUnderlying)) {
+			return v.MaxValue()
+		} else if (otherUnderlying < 0) && (underlying < (v.MinValue() - otherUnderlying)) {
+			return v.MinValue()
+		}
+		return T(underlying + otherUnderlying)
+	}
+
+	return v.Constructor(interpreter, valueGetter)
+}
+
+// Given that this value is backed by an arbitrary size integer,
+// we can just add and check the range of the result.
+//
+// If Go gains a native type for int128 and int256, we can
+// switch them over to `saturatingPlusSigned`
+func saturatingPlusSignedBigInt[V BoundedSignedValue[*big.Int]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(V)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
+		})
+	}
+
+	underlying := v.Underlying()
+	otherUnderlying := o.Underlying()
+
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		res.Add(underlying, otherUnderlying)
+		if res.Cmp(v.MinValue()) < 0 {
+			return v.MinValue()
+		} else if res.Cmp(v.MaxValue()) > 0 {
+			return v.MaxValue()
+		}
+
+		return res
+	}
+
+	return v.Constructor(interpreter, valueGetter)
+}
+
+func saturatingPlusUnsigned[T constraints.Unsigned, V BoundedUnsignedValue[T]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(V)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
+		})
+	}
+
+	underlying := v.Underlying()
+	otherUnderlying := o.Underlying()
+
+	return v.Constructor(interpreter, func() T {
+		sum := underlying + otherUnderlying
+		// INT30-C
+		if sum < underlying {
+			return v.MaxValue()
+		}
+		return T(sum)
+	})
+}
+
+// Given that this value is backed by an arbitrary size integer,
+// we can just add and check the range of the result.
+//
+// If Go gains a native uint128 and uint256 type, then we can use the `saturatingPlusUnsigned` function
+func saturatingPlusUnsignedBigInt[V BoundedUnsignedValue[*big.Int]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(V)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
+			LeftType:     v.StaticType(interpreter),
+			RightType:    other.StaticType(interpreter),
+		})
+	}
+
+	underlying := v.Underlying()
+	otherUnderlying := o.Underlying()
+
+	return v.Constructor(
+		interpreter,
+		func() *big.Int {
+			sum := new(big.Int)
+			sum.Add(underlying, otherUnderlying)
+			if sum.Cmp(v.MaxValue()) > 0 {
+				return v.MaxValue()
+			}
+			return sum
+		},
+	)
+}
+
 func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, typ sema.Type, locationRange LocationRange) Value {
 	switch name {
 
@@ -3657,26 +3769,7 @@ func (v Int8Value) Plus(interpreter *Interpreter, other NumberValue, locationRan
 }
 
 func (v Int8Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Int8Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:     v.StaticType(interpreter),
-			RightType:    other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() int8 {
-		// INT32-C
-		if (o > 0) && (v > (math.MaxInt8 - o)) {
-			return math.MaxInt8
-		} else if (o < 0) && (v < (math.MinInt8 - o)) {
-			return math.MinInt8
-		}
-		return int8(v + o)
-	}
-
-	return NewInt8Value(interpreter, valueGetter)
+	return saturatingPlusSigned[int8](interpreter, v, other, locationRange)
 }
 
 func (v Int8Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -4231,26 +4324,7 @@ func (v Int16Value) Plus(interpreter *Interpreter, other NumberValue, locationRa
 }
 
 func (v Int16Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Int16Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:     v.StaticType(interpreter),
-			RightType:    other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() int16 {
-		// INT32-C
-		if (o > 0) && (v > (math.MaxInt16 - o)) {
-			return math.MaxInt16
-		} else if (o < 0) && (v < (math.MinInt16 - o)) {
-			return math.MinInt16
-		}
-		return int16(v + o)
-	}
-
-	return NewInt16Value(interpreter, valueGetter)
+	return saturatingPlusSigned[int16](interpreter, v, other, locationRange)
 }
 
 func (v Int16Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -4806,26 +4880,7 @@ func (v Int32Value) Plus(interpreter *Interpreter, other NumberValue, locationRa
 }
 
 func (v Int32Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Int32Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:     v.StaticType(interpreter),
-			RightType:    other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() int32 {
-		// INT32-C
-		if (o > 0) && (v > (math.MaxInt32 - o)) {
-			return math.MaxInt32
-		} else if (o < 0) && (v < (math.MinInt32 - o)) {
-			return math.MinInt32
-		}
-		return int32(v + o)
-	}
-
-	return NewInt32Value(interpreter, valueGetter)
+	return saturatingPlusSigned[int32](interpreter, v, other, locationRange)
 }
 
 func (v Int32Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -5379,26 +5434,7 @@ func (v Int64Value) Plus(interpreter *Interpreter, other NumberValue, locationRa
 }
 
 func (v Int64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Int64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:     v.StaticType(interpreter),
-			RightType:    other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() int64 {
-		// INT32-C
-		if (o > 0) && (v > (math.MaxInt64 - o)) {
-			return math.MaxInt64
-		} else if (o < 0) && (v < (math.MinInt64 - o)) {
-			return math.MinInt64
-		}
-		return int64(v + o)
-	}
-
-	return NewInt64Value(interpreter, valueGetter)
+	return saturatingPlusSigned[int64](interpreter, v, other, locationRange)
 }
 
 func (v Int64Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -5976,40 +6012,7 @@ func (v Int128Value) Plus(interpreter *Interpreter, other NumberValue, locationR
 }
 
 func (v Int128Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Int128Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:     v.StaticType(interpreter),
-			RightType:    other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() *big.Int {
-		// Given that this value is backed by an arbitrary size integer,
-		// we can just add and check the range of the result.
-		//
-		// If Go gains a native int128 type and we switch this value
-		// to be based on it, then we need to follow INT32-C:
-		//
-		//   if (o > 0) && (v > (Int128TypeMaxIntBig - o)) {
-		//       ...
-		//   } else if (o < 0) && (v < (Int128TypeMinIntBig - o)) {
-		//       ...
-		//   }
-		//
-		res := new(big.Int)
-		res.Add(v.BigInt, o.BigInt)
-		if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
-			return sema.Int128TypeMinIntBig
-		} else if res.Cmp(sema.Int128TypeMaxIntBig) > 0 {
-			return sema.Int128TypeMaxIntBig
-		}
-
-		return res
-	}
-
-	return NewInt128ValueFromBigInt(interpreter, valueGetter)
+	return saturatingPlusSignedBigInt(interpreter, v, other, locationRange)
 }
 
 func (v Int128Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -6635,40 +6638,7 @@ func (v Int256Value) Plus(interpreter *Interpreter, other NumberValue, locationR
 }
 
 func (v Int256Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Int256Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:     v.StaticType(interpreter),
-			RightType:    other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() *big.Int {
-		// Given that this value is backed by an arbitrary size integer,
-		// we can just add and check the range of the result.
-		//
-		// If Go gains a native int256 type and we switch this value
-		// to be based on it, then we need to follow INT32-C:
-		//
-		//   if (o > 0) && (v > (Int256TypeMaxIntBig - o)) {
-		//       ...
-		//   } else if (o < 0) && (v < (Int256TypeMinIntBig - o)) {
-		//       ...
-		//   }
-		//
-		res := new(big.Int)
-		res.Add(v.BigInt, o.BigInt)
-		if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
-			return sema.Int256TypeMinIntBig
-		} else if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
-			return sema.Int256TypeMaxIntBig
-		}
-
-		return res
-	}
-
-	return NewInt256ValueFromBigInt(interpreter, valueGetter)
+	return saturatingPlusSignedBigInt(interpreter, v, other, locationRange)
 }
 
 func (v Int256Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -7847,23 +7817,7 @@ func (v UInt8Value) Plus(interpreter *Interpreter, other NumberValue, locationRa
 }
 
 func (v UInt8Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(UInt8Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:     v.StaticType(interpreter),
-			RightType:    other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt8Value(interpreter, func() uint8 {
-		sum := v + o
-		// INT30-C
-		if sum < v {
-			return math.MaxUint8
-		}
-		return uint8(sum)
-	})
+	return saturatingPlusUnsigned[uint8](interpreter, v, other, locationRange)
 }
 
 func (v UInt8Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -8390,26 +8344,7 @@ func (v UInt16Value) Plus(interpreter *Interpreter, other NumberValue, locationR
 }
 
 func (v UInt16Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(UInt16Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:     v.StaticType(interpreter),
-			RightType:    other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt16Value(
-		interpreter,
-		func() uint16 {
-			sum := v + o
-			// INT30-C
-			if sum < v {
-				return math.MaxUint16
-			}
-			return uint16(sum)
-		},
-	)
+	return saturatingPlusUnsigned[uint16](interpreter, v, other, locationRange)
 }
 
 func (v UInt16Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -8895,26 +8830,7 @@ func (v UInt32Value) Plus(interpreter *Interpreter, other NumberValue, locationR
 }
 
 func (v UInt32Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(UInt32Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:     v.StaticType(interpreter),
-			RightType:    other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt32Value(
-		interpreter,
-		func() uint32 {
-			sum := v + o
-			// INT30-C
-			if sum < v {
-				return math.MaxUint32
-			}
-			return uint32(sum)
-		},
-	)
+	return saturatingPlusUnsigned[uint32](interpreter, v, other, locationRange)
 }
 
 func (v UInt32Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -9424,26 +9340,7 @@ func (v UInt64Value) Plus(interpreter *Interpreter, other NumberValue, locationR
 }
 
 func (v UInt64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(UInt64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:     v.StaticType(interpreter),
-			RightType:    other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt64Value(
-		interpreter,
-		func() uint64 {
-			sum := v + o
-			// INT30-C
-			if sum < v {
-				return math.MaxUint64
-			}
-			return uint64(sum)
-		},
-	)
+	return saturatingPlusUnsigned[uint64](interpreter, v, other, locationRange)
 }
 
 func (v UInt64Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -9957,36 +9854,7 @@ func (v UInt128Value) Plus(interpreter *Interpreter, other NumberValue, location
 }
 
 func (v UInt128Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(UInt128Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:     v.StaticType(interpreter),
-			RightType:    other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt128ValueFromBigInt(
-		interpreter,
-		func() *big.Int {
-			sum := new(big.Int)
-			sum.Add(v.BigInt, o.BigInt)
-			// Given that this value is backed by an arbitrary size integer,
-			// we can just add and check the range of the result.
-			//
-			// If Go gains a native uint128 type and we switch this value
-			// to be based on it, then we need to follow INT30-C:
-			//
-			//  if sum < v {
-			//      ...
-			//  }
-			//
-			if sum.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
-				return sema.UInt128TypeMaxIntBig
-			}
-			return sum
-		},
-	)
+	return saturatingPlusUnsignedBigInt(interpreter, v, other, locationRange)
 }
 
 func (v UInt128Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -10572,36 +10440,7 @@ func (v UInt256Value) Plus(interpreter *Interpreter, other NumberValue, location
 }
 
 func (v UInt256Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(UInt256Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:     v.StaticType(interpreter),
-			RightType:    other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt256ValueFromBigInt(
-		interpreter,
-		func() *big.Int {
-			sum := new(big.Int)
-			sum.Add(v.BigInt, o.BigInt)
-			// Given that this value is backed by an arbitrary size integer,
-			// we can just add and check the range of the result.
-			//
-			// If Go gains a native uint256 type and we switch this value
-			// to be based on it, then we need to follow INT30-C:
-			//
-			//  if sum < v {
-			//      ...
-			//  }
-			//
-			if sum.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
-				return sema.UInt256TypeMaxIntBig
-			}
-			return sum
-		},
-	)
+	return saturatingPlusUnsignedBigInt(interpreter, v, other, locationRange)
 }
 
 func (v UInt256Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -12878,26 +12717,7 @@ func (v Fix64Value) Plus(interpreter *Interpreter, other NumberValue, locationRa
 }
 
 func (v Fix64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Fix64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:     v.StaticType(interpreter),
-			RightType:    other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() int64 {
-		// INT32-C
-		if (o > 0) && (v > (math.MaxInt64 - o)) {
-			return math.MaxInt64
-		} else if (o < 0) && (v < (math.MinInt64 - o)) {
-			return math.MinInt64
-		}
-		return int64(v + o)
-	}
-
-	return NewFix64Value(interpreter, valueGetter)
+	return saturatingPlusSigned[int64](interpreter, v, other, locationRange)
 }
 
 func (v Fix64Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -13403,25 +13223,7 @@ func (v UFix64Value) Plus(interpreter *Interpreter, other NumberValue, locationR
 }
 
 func (v UFix64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(UFix64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:     v.StaticType(interpreter),
-			RightType:    other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() uint64 {
-		sum := v + o
-		// INT30-C
-		if sum < v {
-			return math.MaxUint64
-		}
-		return uint64(sum)
-	}
-
-	return NewUFix64Value(interpreter, valueGetter)
+	return saturatingPlusUnsigned[uint64](interpreter, v, other, locationRange)
 }
 
 func (v UFix64Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
