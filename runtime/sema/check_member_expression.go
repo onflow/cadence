@@ -234,9 +234,10 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 
 			checker.report(
 				&NotDeclaredMemberError{
-					Type:       accessedType,
-					Name:       identifier,
-					Expression: expression,
+					Type:          accessedType,
+					Name:          identifier,
+					suggestMember: checker.Config.SuggestionsEnabled,
+					Expression:    expression,
 					Range: ast.NewRange(
 						checker.memoryGauge,
 						identifierStartPosition,
