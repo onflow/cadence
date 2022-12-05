@@ -78,7 +78,7 @@ func (interpreter *Interpreter) VisitReturnStatement(statement *ast.ReturnStatem
 	} else {
 		value = interpreter.evalExpression(statement.Expression)
 
-		returnStatementTypes := interpreter.Program.Elaboration.ReturnStatementTypes[statement]
+		returnStatementTypes := interpreter.Program.Elaboration.ReturnStatementTypes(statement)
 		valueType := returnStatementTypes.ValueType
 		returnType := returnStatementTypes.ReturnType
 

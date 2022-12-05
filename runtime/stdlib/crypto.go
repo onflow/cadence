@@ -63,7 +63,7 @@ var CryptoChecker = func() *sema.Checker {
 }()
 
 var cryptoContractType = func() *sema.CompositeType {
-	variable, ok := CryptoChecker.Elaboration.GlobalTypes.Get("Crypto")
+	variable, ok := CryptoChecker.Elaboration.GetGlobalType("Crypto")
 	if !ok {
 		panic(errors2.NewUnreachableError())
 	}

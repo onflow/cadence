@@ -55,8 +55,6 @@ func TestCheckCastingIntLiteralToIntegerType(t *testing.T) {
 				integerType,
 				xType,
 			)
-
-			assert.NotEmpty(t, checker.Elaboration.CastingTargetTypes)
 		})
 	}
 
@@ -94,15 +92,13 @@ func TestCheckCastingIntLiteralToAnyStruct(t *testing.T) {
 		sema.AnyStructType,
 		xType,
 	)
-
-	assert.NotEmpty(t, checker.Elaboration.CastingTargetTypes)
 }
 
 func TestCheckCastingResourceToAnyResource(t *testing.T) {
 
 	t.Parallel()
 
-	checker, err := ParseAndCheck(t, `
+	_, err := ParseAndCheck(t, `
       resource R {}
 
       fun test() {
@@ -113,8 +109,6 @@ func TestCheckCastingResourceToAnyResource(t *testing.T) {
     `)
 
 	require.NoError(t, err)
-
-	assert.NotEmpty(t, checker.Elaboration.CastingTargetTypes)
 }
 
 func TestCheckCastingArrayLiteral(t *testing.T) {

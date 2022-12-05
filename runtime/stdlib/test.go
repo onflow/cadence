@@ -129,7 +129,7 @@ func NewTestContract(
 }
 
 var testContractType = func() *sema.CompositeType {
-	variable, ok := TestContractChecker.Elaboration.GlobalTypes.Get(testContractTypeName)
+	variable, ok := TestContractChecker.Elaboration.GetGlobalType(testContractTypeName)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}

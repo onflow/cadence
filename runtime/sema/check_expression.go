@@ -187,7 +187,7 @@ func (checker *Checker) VisitIntegerExpression(expression *ast.IntegerExpression
 		CheckIntegerLiteral(checker.memoryGauge, expression, actualType, checker.report)
 	}
 
-	checker.Elaboration.IntegerExpressionType[expression] = actualType
+	checker.Elaboration.SetIntegerExpressionType(expression, actualType)
 
 	return actualType
 }
@@ -227,7 +227,7 @@ func (checker *Checker) VisitStringExpression(expression *ast.StringExpression) 
 		actualType = expectedType
 	}
 
-	checker.Elaboration.StringExpressionType[expression] = actualType
+	checker.Elaboration.SetStringExpressionType(expression, actualType)
 
 	return actualType
 }

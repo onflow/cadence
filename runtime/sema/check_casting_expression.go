@@ -32,8 +32,6 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 
 	rightHandType := rightHandTypeAnnotation.Type
 
-	checker.Elaboration.CastingTargetTypes[expression] = rightHandType
-
 	// visit the expression
 
 	leftHandExpression := expression.Expression
@@ -50,7 +48,13 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 
 	hasErrors := len(checker.errors) > beforeErrors
 
-	checker.Elaboration.CastingStaticValueTypes[expression] = leftHandType
+	checker.Elaboration.SetCastingExpressionTypes(
+		expression,
+		CastingExpressionTypes{
+			StaticValueType: leftHandType,
+			TargetType:      rightHandType,
+		},
+	)
 
 	if leftHandType.IsResourceType() {
 		checker.recordResourceInvalidation(

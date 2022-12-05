@@ -232,6 +232,6 @@ func (checker *Checker) recordVariableDeclarationRange(
 func (checker *Checker) elaborateNestedResourceMoveExpression(expression ast.Expression) {
 	switch expression.(type) {
 	case *ast.IndexExpression, *ast.MemberExpression:
-		checker.Elaboration.IsNestedResourceMoveExpression[expression] = struct{}{}
+		checker.Elaboration.SetIsNestedResourceMoveExpression(expression)
 	}
 }

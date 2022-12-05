@@ -664,7 +664,7 @@ func (checker *Checker) declareGlobalValue(name string) {
 	if variable == nil {
 		return
 	}
-	checker.Elaboration.GlobalValues.Set(name, variable)
+	checker.Elaboration.SetGlobalValue(name, variable)
 }
 
 func (checker *Checker) declareGlobalType(name string) {
@@ -672,7 +672,7 @@ func (checker *Checker) declareGlobalType(name string) {
 	if ty == nil {
 		return
 	}
-	checker.Elaboration.GlobalTypes.Set(name, ty)
+	checker.Elaboration.SetGlobalType(name, ty)
 }
 
 func (checker *Checker) checkResourceMoveOperation(valueExpression ast.Expression, valueType Type) {
@@ -2273,11 +2273,11 @@ func (checker *Checker) declareGlobalRanges() {
 		return nil
 	})
 
-	checker.Elaboration.GlobalTypes.Foreach(func(name string, variable *Variable) {
+	checker.Elaboration.ForEachGlobalType(func(name string, variable *Variable) {
 		checker.PositionInfo.recordGlobalRange(memoryGauge, name, variable)
 	})
 
-	checker.Elaboration.GlobalValues.Foreach(func(name string, variable *Variable) {
+	checker.Elaboration.ForEachGlobalValue(func(name string, variable *Variable) {
 		checker.PositionInfo.recordGlobalRange(memoryGauge, name, variable)
 	})
 }

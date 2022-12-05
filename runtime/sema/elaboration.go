@@ -96,6 +96,11 @@ type NumberConversionArgumentTypes struct {
 	Range ast.Range
 }
 
+type CastingExpressionTypes struct {
+	StaticValueType Type
+	TargetType      Type
+}
+
 type Elaboration struct {
 	lock                             *sync.RWMutex
 	functionDeclarationFunctionTypes map[*ast.FunctionDeclaration]*FunctionType
@@ -108,22 +113,21 @@ type Elaboration struct {
 	constructorFunctionTypes         map[*ast.SpecialFunctionDeclaration]*FunctionType
 	functionExpressionFunctionTypes  map[*ast.FunctionExpression]*FunctionType
 	invocationExpressionTypes        map[*ast.InvocationExpression]InvocationExpressionTypes
-	CastingStaticValueTypes          map[*ast.CastingExpression]Type
-	CastingTargetTypes               map[*ast.CastingExpression]Type
-	ReturnStatementTypes             map[*ast.ReturnStatement]ReturnStatementTypes
-	BinaryExpressionTypes            map[*ast.BinaryExpression]BinaryExpressionTypes
+	castingExpressionTypes           map[*ast.CastingExpression]CastingExpressionTypes
+	returnStatementTypes             map[*ast.ReturnStatement]ReturnStatementTypes
+	binaryExpressionTypes            map[*ast.BinaryExpression]BinaryExpressionTypes
 	MemberExpressionMemberInfos      map[*ast.MemberExpression]MemberInfo
 	MemberExpressionExpectedTypes    map[*ast.MemberExpression]Type
-	ArrayExpressionTypes             map[*ast.ArrayExpression]ArrayExpressionTypes
-	DictionaryExpressionTypes        map[*ast.DictionaryExpression]DictionaryExpressionTypes
-	IntegerExpressionType            map[*ast.IntegerExpression]Type
-	StringExpressionType             map[*ast.StringExpression]Type
+	arrayExpressionTypes             map[*ast.ArrayExpression]ArrayExpressionTypes
+	dictionaryExpressionTypes        map[*ast.DictionaryExpression]DictionaryExpressionTypes
+	integerExpressionTypes           map[*ast.IntegerExpression]Type
+	stringExpressionTypes            map[*ast.StringExpression]Type
 	FixedPointExpression             map[*ast.FixedPointExpression]Type
 	TransactionDeclarationTypes      map[*ast.TransactionDeclaration]*TransactionType
 	SwapStatementTypes               map[*ast.SwapStatement]SwapStatementTypes
-	// IsNestedResourceMoveExpression indicates if the access the index or member expression
+	// nestedResourceMoveExpressions indicates the index or member expression
 	// is implicitly moving a resource out of the container, e.g. in a shift or swap statement.
-	IsNestedResourceMoveExpression      map[ast.Expression]struct{}
+	nestedResourceMoveExpressions       map[ast.Expression]struct{}
 	CompositeNestedDeclarations         map[*ast.CompositeDeclaration]map[string]ast.Declaration
 	InterfaceNestedDeclarations         map[*ast.InterfaceDeclaration]map[string]ast.Declaration
 	PostConditionsRewrite               map[*ast.Conditions]PostConditionsRewrite
@@ -132,8 +136,8 @@ type Elaboration struct {
 	InterfaceTypes                      map[TypeID]*InterfaceType
 	IdentifierInInvocationTypes         map[*ast.IdentifierExpression]Type
 	ImportDeclarationsResolvedLocations map[*ast.ImportDeclaration][]ResolvedLocation
-	GlobalValues                        *StringVariableOrderedMap
-	GlobalTypes                         *StringVariableOrderedMap
+	globalValues                        *StringVariableOrderedMap
+	globalTypes                         *StringVariableOrderedMap
 	TransactionTypes                    []*TransactionType
 	isChecking                          bool
 	ReferenceExpressionBorrowTypes      map[*ast.ReferenceExpression]Type
@@ -148,20 +152,11 @@ func NewElaboration(gauge common.MemoryGauge, extendedElaboration bool) *Elabora
 	common.UseMemory(gauge, common.ElaborationMemoryUsage)
 	elaboration := &Elaboration{
 		lock:                                new(sync.RWMutex),
-		CastingStaticValueTypes:             map[*ast.CastingExpression]Type{},
-		CastingTargetTypes:                  map[*ast.CastingExpression]Type{},
-		ReturnStatementTypes:                map[*ast.ReturnStatement]ReturnStatementTypes{},
-		BinaryExpressionTypes:               map[*ast.BinaryExpression]BinaryExpressionTypes{},
 		MemberExpressionMemberInfos:         map[*ast.MemberExpression]MemberInfo{},
 		MemberExpressionExpectedTypes:       map[*ast.MemberExpression]Type{},
-		ArrayExpressionTypes:                map[*ast.ArrayExpression]ArrayExpressionTypes{},
-		DictionaryExpressionTypes:           map[*ast.DictionaryExpression]DictionaryExpressionTypes{},
-		IntegerExpressionType:               map[*ast.IntegerExpression]Type{},
-		StringExpressionType:                map[*ast.StringExpression]Type{},
 		FixedPointExpression:                map[*ast.FixedPointExpression]Type{},
 		TransactionDeclarationTypes:         map[*ast.TransactionDeclaration]*TransactionType{},
 		SwapStatementTypes:                  map[*ast.SwapStatement]SwapStatementTypes{},
-		IsNestedResourceMoveExpression:      map[ast.Expression]struct{}{},
 		CompositeNestedDeclarations:         map[*ast.CompositeDeclaration]map[string]ast.Declaration{},
 		InterfaceNestedDeclarations:         map[*ast.InterfaceDeclaration]map[string]ast.Declaration{},
 		PostConditionsRewrite:               map[*ast.Conditions]PostConditionsRewrite{},
@@ -170,8 +165,6 @@ func NewElaboration(gauge common.MemoryGauge, extendedElaboration bool) *Elabora
 		InterfaceTypes:                      map[TypeID]*InterfaceType{},
 		IdentifierInInvocationTypes:         map[*ast.IdentifierExpression]Type{},
 		ImportDeclarationsResolvedLocations: map[*ast.ImportDeclaration][]ResolvedLocation{},
-		GlobalValues:                        &StringVariableOrderedMap{},
-		GlobalTypes:                         &StringVariableOrderedMap{},
 		ReferenceExpressionBorrowTypes:      map[*ast.ReferenceExpression]Type{},
 		IndexExpressionTypes:                map[*ast.IndexExpression]IndexExpressionTypes{},
 	}
@@ -202,7 +195,7 @@ func (e *Elaboration) setIsChecking(isChecking bool) {
 // Returns an error if no valid entry point function declaration exists.
 func (e *Elaboration) FunctionEntryPointType() (*FunctionType, error) {
 
-	entryPointValue, ok := e.GlobalValues.Get(FunctionEntryPointName)
+	entryPointValue, ok := e.GetGlobalValue(FunctionEntryPointName)
 	if !ok {
 		return nil, &MissingEntryPointError{
 			Expected: FunctionEntryPointName,
@@ -393,4 +386,187 @@ func (e *Elaboration) SetInvocationExpressionTypes(
 		e.invocationExpressionTypes = map[*ast.InvocationExpression]InvocationExpressionTypes{}
 	}
 	e.invocationExpressionTypes[expression] = types
+}
+
+func (e *Elaboration) CastingExpressionTypes(expression *ast.CastingExpression) (types CastingExpressionTypes) {
+	if e.castingExpressionTypes == nil {
+		return
+	}
+	return e.castingExpressionTypes[expression]
+}
+
+func (e *Elaboration) SetCastingExpressionTypes(
+	expression *ast.CastingExpression,
+	types CastingExpressionTypes,
+) {
+	if e.castingExpressionTypes == nil {
+		e.castingExpressionTypes = map[*ast.CastingExpression]CastingExpressionTypes{}
+	}
+	e.castingExpressionTypes[expression] = types
+}
+
+var defaultElaborationStringExpressionType = StringType
+
+func (e *Elaboration) StringExpressionType(expression *ast.StringExpression) Type {
+	if e.stringExpressionTypes != nil {
+		result, ok := e.stringExpressionTypes[expression]
+		if ok {
+			return result
+		}
+	}
+	// default, Elaboration.SetStringExpressionType
+	return defaultElaborationStringExpressionType
+}
+
+func (e *Elaboration) SetStringExpressionType(expression *ast.StringExpression, ty Type) {
+	if ty == defaultElaborationStringExpressionType {
+		// default, see Elaboration.StringExpressionType
+		return
+	}
+	if e.stringExpressionTypes == nil {
+		e.stringExpressionTypes = map[*ast.StringExpression]Type{}
+	}
+	e.stringExpressionTypes[expression] = ty
+}
+
+func (e *Elaboration) ReturnStatementTypes(statement *ast.ReturnStatement) (types ReturnStatementTypes) {
+	if e.returnStatementTypes == nil {
+		return
+	}
+	return e.returnStatementTypes[statement]
+}
+
+func (e *Elaboration) SetReturnStatementTypes(statement *ast.ReturnStatement, types ReturnStatementTypes) {
+	if e.returnStatementTypes == nil {
+		e.returnStatementTypes = map[*ast.ReturnStatement]ReturnStatementTypes{}
+	}
+	e.returnStatementTypes[statement] = types
+}
+
+func (e *Elaboration) BinaryExpressionTypes(expression *ast.BinaryExpression) (types BinaryExpressionTypes) {
+	if e.binaryExpressionTypes == nil {
+		return
+	}
+	return e.binaryExpressionTypes[expression]
+}
+
+func (e *Elaboration) SetBinaryExpressionTypes(expression *ast.BinaryExpression, types BinaryExpressionTypes) {
+	if e.binaryExpressionTypes == nil {
+		e.binaryExpressionTypes = map[*ast.BinaryExpression]BinaryExpressionTypes{}
+	}
+	e.binaryExpressionTypes[expression] = types
+}
+
+func (e *Elaboration) IsNestedResourceMoveExpression(expression ast.Expression) bool {
+	if e.nestedResourceMoveExpressions == nil {
+		return false
+	}
+	_, ok := e.nestedResourceMoveExpressions[expression]
+	return ok
+}
+
+func (e *Elaboration) SetIsNestedResourceMoveExpression(expression ast.Expression) {
+	if e.nestedResourceMoveExpressions == nil {
+		e.nestedResourceMoveExpressions = map[ast.Expression]struct{}{}
+	}
+	e.nestedResourceMoveExpressions[expression] = struct{}{}
+}
+
+func (e *Elaboration) GetGlobalType(name string) (*Variable, bool) {
+	if e.globalTypes == nil {
+		return nil, false
+	}
+	return e.globalTypes.Get(name)
+}
+
+func (e *Elaboration) GetGlobalValue(name string) (*Variable, bool) {
+	if e.globalValues == nil {
+		return nil, false
+	}
+	return e.globalValues.Get(name)
+}
+
+func (e *Elaboration) ForEachGlobalType(f func(name string, variable *Variable)) {
+	if e.globalTypes == nil {
+		return
+	}
+	e.globalTypes.Foreach(f)
+}
+
+func (e *Elaboration) ForEachGlobalValue(f func(name string, variable *Variable)) {
+	if e.globalValues == nil {
+		return
+	}
+	e.globalValues.Foreach(f)
+}
+
+func (e *Elaboration) SetGlobalValue(name string, variable *Variable) {
+	if e.globalValues == nil {
+		e.globalValues = &StringVariableOrderedMap{}
+	}
+	e.globalValues.Set(name, variable)
+}
+
+func (e *Elaboration) SetGlobalType(name string, variable *Variable) {
+	if e.globalTypes == nil {
+		e.globalTypes = &StringVariableOrderedMap{}
+	}
+	e.globalTypes.Set(name, variable)
+}
+
+func (e *Elaboration) ArrayExpressionTypes(expression *ast.ArrayExpression) (types ArrayExpressionTypes) {
+	if e.arrayExpressionTypes == nil {
+		return
+	}
+	return e.arrayExpressionTypes[expression]
+}
+
+func (e *Elaboration) SetArrayExpressionTypes(expression *ast.ArrayExpression, types ArrayExpressionTypes) {
+	if e.arrayExpressionTypes == nil {
+		e.arrayExpressionTypes = map[*ast.ArrayExpression]ArrayExpressionTypes{}
+	}
+	e.arrayExpressionTypes[expression] = types
+}
+
+func (e *Elaboration) DictionaryExpressionTypes(
+	expression *ast.DictionaryExpression,
+) (types DictionaryExpressionTypes) {
+	if e.dictionaryExpressionTypes == nil {
+		return
+	}
+	return e.dictionaryExpressionTypes[expression]
+}
+
+func (e *Elaboration) SetDictionaryExpressionTypes(
+	expression *ast.DictionaryExpression,
+	types DictionaryExpressionTypes,
+) {
+	if e.dictionaryExpressionTypes == nil {
+		e.dictionaryExpressionTypes = map[*ast.DictionaryExpression]DictionaryExpressionTypes{}
+	}
+	e.dictionaryExpressionTypes[expression] = types
+}
+
+var defaultElaborationIntegerExpressionType = IntType
+
+func (e *Elaboration) IntegerExpressionType(expression *ast.IntegerExpression) Type {
+	if e.integerExpressionTypes != nil {
+		result, ok := e.integerExpressionTypes[expression]
+		if ok {
+			return result
+		}
+	}
+	// default, see Elaboration.SetIntegerExpressionType
+	return defaultElaborationIntegerExpressionType
+}
+
+func (e *Elaboration) SetIntegerExpressionType(expression *ast.IntegerExpression, actualType Type) {
+	if actualType == defaultElaborationIntegerExpressionType {
+		// default, see Elaboration.IntegerExpressionType
+		return
+	}
+	if e.integerExpressionTypes == nil {
+		e.integerExpressionTypes = map[*ast.IntegerExpression]Type{}
+	}
+	e.integerExpressionTypes[expression] = actualType
 }

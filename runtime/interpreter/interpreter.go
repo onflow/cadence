@@ -356,7 +356,7 @@ func (interpreter *Interpreter) invokeVariable(
 		}
 	}
 
-	functionVariable, ok := interpreter.Program.Elaboration.GlobalValues.Get(functionName)
+	functionVariable, ok := interpreter.Program.Elaboration.GetGlobalValue(functionName)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}

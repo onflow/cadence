@@ -96,11 +96,13 @@ func (checker *Checker) VisitDictionaryExpression(expression *ast.DictionaryExpr
 		ValueType: valueType,
 	}
 
-	checker.Elaboration.DictionaryExpressionTypes[expression] =
+	checker.Elaboration.SetDictionaryExpressionTypes(
+		expression,
 		DictionaryExpressionTypes{
 			EntryTypes:     entryTypes,
 			DictionaryType: dictionaryType,
-		}
+		},
+	)
 
 	return dictionaryType
 }
