@@ -196,7 +196,7 @@ func (interpreter *Interpreter) checkMemberAccess(
 	target Value,
 	locationRange LocationRange,
 ) {
-	memberInfo := interpreter.Program.Elaboration.MemberExpressionMemberInfos[memberExpression]
+	memberInfo, _ := interpreter.Program.Elaboration.MemberExpressionMemberInfo(memberExpression)
 	expectedType := memberInfo.AccessedType
 
 	switch expectedType := expectedType.(type) {
@@ -625,7 +625,7 @@ func (interpreter *Interpreter) NewIntegerValueFromBigInt(value *big.Int, intege
 func (interpreter *Interpreter) VisitFixedPointExpression(expression *ast.FixedPointExpression) Value {
 	// TODO: adjust once/if we support more fixed point types
 
-	fixedPointSubType := interpreter.Program.Elaboration.FixedPointExpression[expression]
+	fixedPointSubType := interpreter.Program.Elaboration.FixedPointExpression(expression)
 
 	value := fixedpoint.ConvertToFixedPointBigInt(
 		expression.Negative,

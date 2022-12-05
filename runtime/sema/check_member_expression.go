@@ -96,18 +96,20 @@ func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) 
 }
 
 func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedType Type, member *Member, isOptional bool) {
-	memberInfo, ok := checker.Elaboration.MemberExpressionMemberInfos[expression]
+	memberInfo, ok := checker.Elaboration.MemberExpressionMemberInfo(expression)
 	if ok {
 		return memberInfo.AccessedType, memberInfo.Member, memberInfo.IsOptional
 	}
 
 	defer func() {
-		checker.Elaboration.MemberExpressionMemberInfos[expression] =
+		checker.Elaboration.SetMemberExpressionMemberInfo(
+			expression,
 			MemberInfo{
 				AccessedType: accessedType,
 				Member:       member,
 				IsOptional:   isOptional,
-			}
+			},
+		)
 	}()
 
 	accessedExpression := expression.Expression
@@ -230,7 +232,12 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 	if member == nil {
 		if !accessedType.IsInvalidType() {
 
-			checker.Elaboration.MemberExpressionExpectedTypes[expression] = checker.expectedType
+			if checker.Config.ExtendedElaborationEnabled {
+				checker.Elaboration.SetMemberExpressionExpectedType(
+					expression,
+					checker.expectedType,
+				)
+			}
 
 			checker.report(
 				&NotDeclaredMemberError{

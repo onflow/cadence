@@ -212,7 +212,7 @@ func (checker *Checker) VisitFixedPointExpression(expression *ast.FixedPointExpr
 
 	CheckFixedPointLiteral(checker.memoryGauge, expression, actualType, checker.report)
 
-	checker.Elaboration.FixedPointExpression[expression] = actualType
+	checker.Elaboration.SetFixedPointExpression(expression, actualType)
 
 	return actualType
 }

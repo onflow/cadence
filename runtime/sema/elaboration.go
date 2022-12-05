@@ -116,13 +116,13 @@ type Elaboration struct {
 	castingExpressionTypes           map[*ast.CastingExpression]CastingExpressionTypes
 	returnStatementTypes             map[*ast.ReturnStatement]ReturnStatementTypes
 	binaryExpressionTypes            map[*ast.BinaryExpression]BinaryExpressionTypes
-	MemberExpressionMemberInfos      map[*ast.MemberExpression]MemberInfo
-	MemberExpressionExpectedTypes    map[*ast.MemberExpression]Type
+	memberExpressionMemberInfos      map[*ast.MemberExpression]MemberInfo
+	memberExpressionExpectedTypes    map[*ast.MemberExpression]Type
 	arrayExpressionTypes             map[*ast.ArrayExpression]ArrayExpressionTypes
 	dictionaryExpressionTypes        map[*ast.DictionaryExpression]DictionaryExpressionTypes
 	integerExpressionTypes           map[*ast.IntegerExpression]Type
 	stringExpressionTypes            map[*ast.StringExpression]Type
-	FixedPointExpression             map[*ast.FixedPointExpression]Type
+	fixedPointExpressionTypes        map[*ast.FixedPointExpression]Type
 	TransactionDeclarationTypes      map[*ast.TransactionDeclaration]*TransactionType
 	SwapStatementTypes               map[*ast.SwapStatement]SwapStatementTypes
 	// nestedResourceMoveExpressions indicates the index or member expression
@@ -152,9 +152,6 @@ func NewElaboration(gauge common.MemoryGauge, extendedElaboration bool) *Elabora
 	common.UseMemory(gauge, common.ElaborationMemoryUsage)
 	elaboration := &Elaboration{
 		lock:                                new(sync.RWMutex),
-		MemberExpressionMemberInfos:         map[*ast.MemberExpression]MemberInfo{},
-		MemberExpressionExpectedTypes:       map[*ast.MemberExpression]Type{},
-		FixedPointExpression:                map[*ast.FixedPointExpression]Type{},
 		TransactionDeclarationTypes:         map[*ast.TransactionDeclaration]*TransactionType{},
 		SwapStatementTypes:                  map[*ast.SwapStatement]SwapStatementTypes{},
 		CompositeNestedDeclarations:         map[*ast.CompositeDeclaration]map[string]ast.Declaration{},
@@ -569,4 +566,58 @@ func (e *Elaboration) SetIntegerExpressionType(expression *ast.IntegerExpression
 		e.integerExpressionTypes = map[*ast.IntegerExpression]Type{}
 	}
 	e.integerExpressionTypes[expression] = actualType
+}
+
+func (e *Elaboration) MemberExpressionMemberInfo(expression *ast.MemberExpression) (memberInfo MemberInfo, ok bool) {
+	if e.memberExpressionMemberInfos == nil {
+		ok = false
+		return
+	}
+	memberInfo, ok = e.memberExpressionMemberInfos[expression]
+	return
+}
+
+func (e *Elaboration) SetMemberExpressionMemberInfo(expression *ast.MemberExpression, memberInfo MemberInfo) {
+	if e.memberExpressionMemberInfos == nil {
+		e.memberExpressionMemberInfos = map[*ast.MemberExpression]MemberInfo{}
+	}
+	e.memberExpressionMemberInfos[expression] = memberInfo
+}
+
+func (e *Elaboration) MemberExpressionExpectedType(expression *ast.MemberExpression) Type {
+	if e.memberExpressionExpectedTypes == nil {
+		return nil
+	}
+	return e.memberExpressionExpectedTypes[expression]
+}
+
+func (e *Elaboration) SetMemberExpressionExpectedType(expression *ast.MemberExpression, expectedType Type) {
+	if e.memberExpressionExpectedTypes == nil {
+		e.memberExpressionExpectedTypes = map[*ast.MemberExpression]Type{}
+	}
+	e.memberExpressionExpectedTypes[expression] = expectedType
+}
+
+var defaultElaborationFixedPointExpressionType = UFix64Type
+
+func (e *Elaboration) FixedPointExpression(expression *ast.FixedPointExpression) Type {
+	if e.fixedPointExpressionTypes != nil {
+		result, ok := e.fixedPointExpressionTypes[expression]
+		if ok {
+			return result
+		}
+	}
+	// default, Elaboration.SetFixedPointExpressionType
+	return defaultElaborationFixedPointExpressionType
+}
+
+func (e *Elaboration) SetFixedPointExpression(expression *ast.FixedPointExpression, ty Type) {
+	if ty == defaultElaborationFixedPointExpressionType {
+		// default, see Elaboration.FixedPointExpressionType
+		return
+	}
+	if e.fixedPointExpressionTypes == nil {
+		e.fixedPointExpressionTypes = map[*ast.FixedPointExpression]Type{}
+	}
+	e.fixedPointExpressionTypes[expression] = ty
 }
