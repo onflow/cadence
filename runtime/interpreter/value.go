@@ -32,6 +32,7 @@ import (
 
 	"github.com/onflow/atree"
 	"github.com/rivo/uniseg"
+	"golang.org/x/exp/constraints"
 	"golang.org/x/text/unicode/norm"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -40,10 +41,6 @@ import (
 	"github.com/onflow/cadence/runtime/format"
 	"github.com/onflow/cadence/runtime/sema"
 )
-
-type Unsigned interface {
-	~uint8 | ~uint16 | ~uint32 | ~uint64
-}
 
 type TypeConformanceResults map[typeConformanceResultEntry]bool
 
@@ -2695,6 +2692,57 @@ type NumberValue interface {
 	ToBigEndianBytes() []byte
 }
 
+type Unsigned interface {
+	constraints.Unsigned | ~*big.Int
+}
+
+type Signed interface {
+	constraints.Signed | ~*big.Int
+}
+
+type BoundedUnsignedValue[T Unsigned] interface {
+	NumberValue
+	MaxValue() T
+	Underlying() T
+	Constructor() func(common.MemoryGauge, func() T) NumberValue
+}
+
+type BoundedSignedValue[T Signed] interface {
+	NumberValue
+	MaxValue() T
+	MinValue() T
+	Underlying() T
+	Constructor(common.MemoryGauge, func() T) NumberValue
+}
+
+func negate[T constraints.Signed](interpreter *Interpreter, v BoundedSignedValue[T], locationRange LocationRange) NumberValue {
+	// INT32-C
+	underlying := v.Underlying()
+	if underlying == v.MinValue() {
+		panic(OverflowError{locationRange})
+	}
+
+	valueGetter := func() T {
+		return T(-underlying)
+	}
+
+	return v.Constructor(interpreter, valueGetter)
+}
+
+func negateBigInt(interpreter *Interpreter, v BoundedSignedValue[*big.Int], locationRange LocationRange) NumberValue {
+	// INT32-C
+	underlying := v.Underlying()
+	if underlying.Cmp(v.MinValue()) == 0 {
+		panic(OverflowError{locationRange})
+	}
+
+	valueGetter := func() *big.Int {
+		return new(big.Int).Neg(underlying)
+	}
+
+	return v.Constructor(interpreter, valueGetter)
+}
+
 func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, typ sema.Type, locationRange LocationRange) Value {
 	switch name {
 
@@ -3429,6 +3477,7 @@ var _ NumberValue = Int8Value(0)
 var _ IntegerValue = Int8Value(0)
 var _ EquatableValue = Int8Value(0)
 var _ HashableValue = Int8Value(0)
+var _ BoundedSignedValue[int8] = Int8Value(0)
 
 func (Int8Value) IsValue() {}
 
@@ -3470,17 +3519,24 @@ func (v Int8Value) ToInt(locationRange LocationRange) int {
 	return int(v)
 }
 
+func (v Int8Value) MaxValue() int8 {
+	return math.MaxInt8
+}
+
+func (v Int8Value) MinValue() int8 {
+	return math.MinInt8
+}
+
+func (v Int8Value) Underlying() int8 {
+	return int8(v)
+}
+
+func (v Int8Value) Constructor(gauge common.MemoryGauge, getter func() int8) NumberValue {
+	return NewInt8Value(gauge, getter)
+}
+
 func (v Int8Value) Negate(interpreter *Interpreter, locationRange LocationRange) NumberValue {
-	// INT32-C
-	if v == math.MinInt8 {
-		panic(OverflowError{locationRange})
-	}
-
-	valueGetter := func() int8 {
-		return int8(-v)
-	}
-
-	return NewInt8Value(interpreter, valueGetter)
+	return negate[int8](interpreter, v, locationRange)
 }
 
 func (v Int8Value) Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -4057,17 +4113,24 @@ func (v Int16Value) ToInt(locationRange LocationRange) int {
 	return int(v)
 }
 
+func (v Int16Value) MaxValue() int16 {
+	return math.MaxInt16
+}
+
+func (v Int16Value) MinValue() int16 {
+	return math.MinInt16
+}
+
+func (v Int16Value) Underlying() int16 {
+	return int16(v)
+}
+
+func (v Int16Value) Constructor(gauge common.MemoryGauge, getter func() int16) NumberValue {
+	return NewInt16Value(gauge, getter)
+}
+
 func (v Int16Value) Negate(interpreter *Interpreter, locationRange LocationRange) NumberValue {
-	// INT32-C
-	if v == math.MinInt16 {
-		panic(OverflowError{locationRange})
-	}
-
-	valueGetter := func() int16 {
-		return int16(-v)
-	}
-
-	return NewInt16Value(interpreter, valueGetter)
+	return negate[int16](interpreter, v, locationRange)
 }
 
 func (v Int16Value) Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -4645,17 +4708,24 @@ func (v Int32Value) ToInt(locationRange LocationRange) int {
 	return int(v)
 }
 
+func (v Int32Value) MaxValue() int32 {
+	return math.MaxInt32
+}
+
+func (v Int32Value) MinValue() int32 {
+	return math.MinInt32
+}
+
+func (v Int32Value) Underlying() int32 {
+	return int32(v)
+}
+
+func (v Int32Value) Constructor(gauge common.MemoryGauge, getter func() int32) NumberValue {
+	return NewInt32Value(gauge, getter)
+}
+
 func (v Int32Value) Negate(interpreter *Interpreter, locationRange LocationRange) NumberValue {
-	// INT32-C
-	if v == math.MinInt32 {
-		panic(OverflowError{locationRange})
-	}
-
-	valueGetter := func() int32 {
-		return int32(-v)
-	}
-
-	return NewInt32Value(interpreter, valueGetter)
+	return negate[int32](interpreter, v, locationRange)
 }
 
 func (v Int32Value) Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -5231,17 +5301,24 @@ func (v Int64Value) ToInt(locationRange LocationRange) int {
 	return int(v)
 }
 
+func (v Int64Value) MaxValue() int64 {
+	return math.MaxInt64
+}
+
+func (v Int64Value) MinValue() int64 {
+	return math.MinInt64
+}
+
+func (v Int64Value) Underlying() int64 {
+	return int64(v)
+}
+
+func (v Int64Value) Constructor(gauge common.MemoryGauge, getter func() int64) NumberValue {
+	return NewInt64Value(gauge, getter)
+}
+
 func (v Int64Value) Negate(interpreter *Interpreter, locationRange LocationRange) NumberValue {
-	// INT32-C
-	if v == math.MinInt64 {
-		panic(OverflowError{locationRange})
-	}
-
-	valueGetter := func() int64 {
-		return int64(-v)
-	}
-
-	return NewInt64Value(interpreter, valueGetter)
+	return negate[int64](interpreter, v, locationRange)
 }
 
 func safeAddInt64(a, b int64, locationRange LocationRange) int64 {
@@ -5844,20 +5921,24 @@ func (v Int128Value) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferen
 	return v.String()
 }
 
+func (v Int128Value) MaxValue() *big.Int {
+	return sema.Int128TypeMaxIntBig
+}
+
+func (v Int128Value) MinValue() *big.Int {
+	return sema.Int128TypeMinIntBig
+}
+
+func (v Int128Value) Underlying() *big.Int {
+	return v.BigInt
+}
+
+func (v Int128Value) Constructor(gauge common.MemoryGauge, getter func() *big.Int) NumberValue {
+	return NewInt128ValueFromBigInt(gauge, getter)
+}
+
 func (v Int128Value) Negate(interpreter *Interpreter, locationRange LocationRange) NumberValue {
-	// INT32-C
-	//   if v == Int128TypeMinIntBig {
-	//       ...
-	//   }
-	if v.BigInt.Cmp(sema.Int128TypeMinIntBig) == 0 {
-		panic(OverflowError{locationRange})
-	}
-
-	valueGetter := func() *big.Int {
-		return new(big.Int).Neg(v.BigInt)
-	}
-
-	return NewInt128ValueFromBigInt(interpreter, valueGetter)
+	return negateBigInt(interpreter, v, locationRange)
 }
 
 func (v Int128Value) Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -6532,22 +6613,25 @@ func (v Int256Value) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferen
 	return v.String()
 }
 
-func (v Int256Value) Negate(interpreter *Interpreter, locationRange LocationRange) NumberValue {
-	// INT32-C
-	//   if v == Int256TypeMinIntBig {
-	//       ...
-	//   }
-	if v.BigInt.Cmp(sema.Int256TypeMinIntBig) == 0 {
-		panic(OverflowError{locationRange})
-	}
-
-	valueGetter := func() *big.Int {
-		return new(big.Int).Neg(v.BigInt)
-	}
-
-	return NewInt256ValueFromBigInt(interpreter, valueGetter)
+func (v Int256Value) MaxValue() *big.Int {
+	return sema.Int256TypeMaxIntBig
 }
 
+func (v Int256Value) MinValue() *big.Int {
+	return sema.Int256TypeMinIntBig
+}
+
+func (v Int256Value) Underlying() *big.Int {
+	return v.BigInt
+}
+
+func (v Int256Value) Constructor(gauge common.MemoryGauge, getter func() *big.Int) NumberValue {
+	return NewInt256ValueFromBigInt(gauge, getter)
+}
+
+func (v Int256Value) Negate(interpreter *Interpreter, locationRange LocationRange) NumberValue {
+	return negateBigInt(interpreter, v, locationRange)
+}
 func (v Int256Value) Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int256Value)
 	if !ok {
@@ -8037,7 +8121,7 @@ func (v UInt8Value) HashInput(_ *Interpreter, _ LocationRange, scratch []byte) [
 	return scratch[:2]
 }
 
-func ConvertUnsigned[T Unsigned](
+func ConvertUnsigned[T constraints.Unsigned](
 	memoryGauge common.MemoryGauge,
 	value Value,
 	maxBigNumber *big.Int,
@@ -8068,7 +8152,7 @@ func ConvertUnsigned[T Unsigned](
 	}
 }
 
-func ConvertWord[T Unsigned](
+func ConvertWord[T constraints.Unsigned](
 	memoryGauge common.MemoryGauge,
 	value Value,
 	locationRange LocationRange,
@@ -12872,17 +12956,24 @@ func (v Fix64Value) ToInt(locationRange LocationRange) int {
 	return int(v / sema.Fix64Factor)
 }
 
+func (v Fix64Value) MaxValue() int64 {
+	return math.MaxInt64
+}
+
+func (v Fix64Value) MinValue() int64 {
+	return math.MinInt64
+}
+
+func (v Fix64Value) Underlying() int64 {
+	return int64(v)
+}
+
+func (v Fix64Value) Constructor(gauge common.MemoryGauge, getter func() int64) NumberValue {
+	return NewFix64Value(gauge, getter)
+}
+
 func (v Fix64Value) Negate(interpreter *Interpreter, locationRange LocationRange) NumberValue {
-	// INT32-C
-	if v == math.MinInt64 {
-		panic(OverflowError{locationRange})
-	}
-
-	valueGetter := func() int64 {
-		return int64(-v)
-	}
-
-	return NewFix64Value(interpreter, valueGetter)
+	return negate[int64](interpreter, v, locationRange)
 }
 
 func (v Fix64Value) Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
