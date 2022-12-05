@@ -123,8 +123,8 @@ type Elaboration struct {
 	integerExpressionTypes           map[*ast.IntegerExpression]Type
 	stringExpressionTypes            map[*ast.StringExpression]Type
 	fixedPointExpressionTypes        map[*ast.FixedPointExpression]Type
-	TransactionDeclarationTypes      map[*ast.TransactionDeclaration]*TransactionType
-	SwapStatementTypes               map[*ast.SwapStatement]SwapStatementTypes
+	transactionDeclarationTypes      map[*ast.TransactionDeclaration]*TransactionType
+	swapStatementTypes               map[*ast.SwapStatement]SwapStatementTypes
 	// nestedResourceMoveExpressions indicates the index or member expression
 	// is implicitly moving a resource out of the container, e.g. in a shift or swap statement.
 	nestedResourceMoveExpressions       map[ast.Expression]struct{}
@@ -152,8 +152,6 @@ func NewElaboration(gauge common.MemoryGauge, extendedElaboration bool) *Elabora
 	common.UseMemory(gauge, common.ElaborationMemoryUsage)
 	elaboration := &Elaboration{
 		lock:                                new(sync.RWMutex),
-		TransactionDeclarationTypes:         map[*ast.TransactionDeclaration]*TransactionType{},
-		SwapStatementTypes:                  map[*ast.SwapStatement]SwapStatementTypes{},
 		CompositeNestedDeclarations:         map[*ast.CompositeDeclaration]map[string]ast.Declaration{},
 		InterfaceNestedDeclarations:         map[*ast.InterfaceDeclaration]map[string]ast.Declaration{},
 		PostConditionsRewrite:               map[*ast.Conditions]PostConditionsRewrite{},
@@ -620,4 +618,32 @@ func (e *Elaboration) SetFixedPointExpression(expression *ast.FixedPointExpressi
 		e.fixedPointExpressionTypes = map[*ast.FixedPointExpression]Type{}
 	}
 	e.fixedPointExpressionTypes[expression] = ty
+}
+
+func (e *Elaboration) TransactionDeclarationType(declaration *ast.TransactionDeclaration) *TransactionType {
+	if e.transactionDeclarationTypes == nil {
+		return nil
+	}
+	return e.transactionDeclarationTypes[declaration]
+}
+
+func (e *Elaboration) SetTransactionDeclarationType(declaration *ast.TransactionDeclaration, ty *TransactionType) {
+	if e.transactionDeclarationTypes == nil {
+		e.transactionDeclarationTypes = map[*ast.TransactionDeclaration]*TransactionType{}
+	}
+	e.transactionDeclarationTypes[declaration] = ty
+}
+
+func (e *Elaboration) SetSwapStatementTypes(statement *ast.SwapStatement, types SwapStatementTypes) {
+	if e.swapStatementTypes == nil {
+		e.swapStatementTypes = map[*ast.SwapStatement]SwapStatementTypes{}
+	}
+	e.swapStatementTypes[statement] = types
+}
+
+func (e *Elaboration) SwapStatementTypes(statement *ast.SwapStatement) (types SwapStatementTypes) {
+	if e.swapStatementTypes == nil {
+		return
+	}
+	return e.swapStatementTypes[statement]
 }

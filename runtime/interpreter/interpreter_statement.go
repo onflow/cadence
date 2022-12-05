@@ -502,7 +502,7 @@ func (interpreter *Interpreter) VisitAssignmentStatement(assignment *ast.Assignm
 }
 
 func (interpreter *Interpreter) VisitSwapStatement(swap *ast.SwapStatement) StatementResult {
-	swapStatementTypes := interpreter.Program.Elaboration.SwapStatementTypes[swap]
+	swapStatementTypes := interpreter.Program.Elaboration.SwapStatementTypes(swap)
 	leftType := swapStatementTypes.LeftType
 	rightType := swapStatementTypes.RightType
 

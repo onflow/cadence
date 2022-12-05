@@ -60,7 +60,7 @@ func FunctionEntryPointDeclaration(program *ast.Program) *ast.FunctionDeclaratio
 func (checker *Checker) EntryPointParameters() []Parameter {
 	transactionDeclaration := checker.Program.SoleTransactionDeclaration()
 	if transactionDeclaration != nil {
-		transactionType := checker.Elaboration.TransactionDeclarationTypes[transactionDeclaration]
+		transactionType := checker.Elaboration.TransactionDeclarationType(transactionDeclaration)
 		return transactionType.Parameters
 	}
 
