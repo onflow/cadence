@@ -209,8 +209,8 @@ func (checker *Checker) checkMemberInvocationResourceInvalidation(invokedExpress
 	// Check that an entry for `IdentifierInInvocationTypes` exists,
 	// because the entry might be missing if the invocation was on a non-existent variable
 
-	valueType, ok := checker.Elaboration.IdentifierInInvocationTypes[invocationIdentifierExpression]
-	if !ok {
+	valueType := checker.Elaboration.IdentifierInInvocationType(invocationIdentifierExpression)
+	if valueType == nil {
 		return
 	}
 

@@ -4765,7 +4765,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 	t.Parallel()
 
 	program := interpreter.Program{
-		Elaboration: sema.NewElaboration(nil, false),
+		Elaboration: sema.NewElaboration(nil),
 	}
 
 	inter := newTestInterpreter(t)
@@ -4920,7 +4920,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 		t.Parallel()
 
 		program := interpreter.Program{
-			Elaboration: sema.NewElaboration(nil, false),
+			Elaboration: sema.NewElaboration(nil),
 		}
 
 		inter := newTestInterpreter(t)

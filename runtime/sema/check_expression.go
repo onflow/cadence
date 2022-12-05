@@ -41,7 +41,7 @@ func (checker *Checker) VisitIdentifierExpression(expression *ast.IdentifierExpr
 	checker.checkSelfVariableUseInInitializer(variable, identifier.Pos)
 
 	if checker.inInvocation {
-		checker.Elaboration.IdentifierInInvocationTypes[expression] = valueType
+		checker.Elaboration.SetIdentifierInInvocationType(expression, valueType)
 	}
 
 	return valueType
@@ -291,10 +291,13 @@ func (checker *Checker) visitIndexExpression(
 
 	checker.checkUnusedExpressionResourceLoss(elementType, targetExpression)
 
-	checker.Elaboration.IndexExpressionTypes[indexExpression] = IndexExpressionTypes{
-		IndexedType:  indexedType,
-		IndexingType: indexingType,
-	}
+	checker.Elaboration.SetIndexExpressionTypes(
+		indexExpression,
+		IndexExpressionTypes{
+			IndexedType:  indexedType,
+			IndexingType: indexingType,
+		},
+	)
 
 	return elementType
 }

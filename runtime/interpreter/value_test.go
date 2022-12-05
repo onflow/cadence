@@ -84,7 +84,7 @@ func TestOwnerNewArray(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration(nil, false)
+	elaboration := sema.NewElaboration(nil)
 	elaboration.SetCompositeType(
 		testCompositeValueType.ID(),
 		testCompositeValueType,
@@ -127,7 +127,7 @@ func TestOwnerArrayDeepCopy(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration(nil, false)
+	elaboration := sema.NewElaboration(nil)
 	elaboration.SetCompositeType(
 		testCompositeValueType.ID(),
 		testCompositeValueType,
@@ -194,7 +194,7 @@ func TestOwnerArrayElement(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration(nil, false)
+	elaboration := sema.NewElaboration(nil)
 	elaboration.SetCompositeType(
 		testCompositeValueType.ID(),
 		testCompositeValueType,
@@ -236,7 +236,7 @@ func TestOwnerArraySetIndex(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration(nil, false)
+	elaboration := sema.NewElaboration(nil)
 	elaboration.SetCompositeType(
 		testCompositeValueType.ID(),
 		testCompositeValueType,
@@ -288,7 +288,7 @@ func TestOwnerArrayAppend(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration(nil, false)
+	elaboration := sema.NewElaboration(nil)
 	elaboration.SetCompositeType(
 		testCompositeValueType.ID(),
 		testCompositeValueType,
@@ -334,7 +334,7 @@ func TestOwnerArrayInsert(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration(nil, false)
+	elaboration := sema.NewElaboration(nil)
 	elaboration.SetCompositeType(
 		testCompositeValueType.ID(),
 		testCompositeValueType,
@@ -380,7 +380,7 @@ func TestOwnerArrayRemove(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration(nil, false)
+	elaboration := sema.NewElaboration(nil)
 	elaboration.SetCompositeType(
 		testCompositeValueType.ID(),
 		testCompositeValueType,
@@ -424,7 +424,7 @@ func TestOwnerNewDictionary(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration(nil, false)
+	elaboration := sema.NewElaboration(nil)
 	elaboration.SetCompositeType(
 		testCompositeValueType.ID(),
 		testCompositeValueType,
@@ -471,7 +471,7 @@ func TestOwnerDictionary(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration(nil, false)
+	elaboration := sema.NewElaboration(nil)
 	elaboration.SetCompositeType(
 		testCompositeValueType.ID(),
 		testCompositeValueType,
@@ -518,7 +518,7 @@ func TestOwnerDictionaryCopy(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration(nil, false)
+	elaboration := sema.NewElaboration(nil)
 	elaboration.SetCompositeType(
 		testCompositeValueType.ID(),
 		testCompositeValueType,
@@ -589,7 +589,7 @@ func TestOwnerDictionarySetSome(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration(nil, false)
+	elaboration := sema.NewElaboration(nil)
 	elaboration.SetCompositeType(
 		testCompositeValueType.ID(),
 		testCompositeValueType,
@@ -643,7 +643,7 @@ func TestOwnerDictionaryInsertNonExisting(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration(nil, false)
+	elaboration := sema.NewElaboration(nil)
 	elaboration.SetCompositeType(
 		testCompositeValueType.ID(),
 		testCompositeValueType,
@@ -698,7 +698,7 @@ func TestOwnerDictionaryRemove(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration(nil, false)
+	elaboration := sema.NewElaboration(nil)
 	elaboration.SetCompositeType(
 		testCompositeValueType.ID(),
 		testCompositeValueType,
@@ -759,7 +759,7 @@ func TestOwnerDictionaryInsertExisting(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration(nil, false)
+	elaboration := sema.NewElaboration(nil)
 	elaboration.SetCompositeType(
 		testCompositeValueType.ID(),
 		testCompositeValueType,
@@ -3717,7 +3717,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		)
 		members.Set("foo", fooField)
 
-		elaboration := sema.NewElaboration(nil, false)
+		elaboration := sema.NewElaboration(nil)
 		elaboration.SetCompositeType(
 			compositeType.ID(),
 			compositeType,

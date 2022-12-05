@@ -134,37 +134,26 @@ type Elaboration struct {
 	emitStatementEventTypes             map[*ast.EmitStatement]*CompositeType
 	compositeTypes                      map[TypeID]*CompositeType
 	interfaceTypes                      map[TypeID]*InterfaceType
-	IdentifierInInvocationTypes         map[*ast.IdentifierExpression]Type
-	ImportDeclarationsResolvedLocations map[*ast.ImportDeclaration][]ResolvedLocation
+	identifierInInvocationTypes         map[*ast.IdentifierExpression]Type
+	importDeclarationsResolvedLocations map[*ast.ImportDeclaration][]ResolvedLocation
 	globalValues                        *StringVariableOrderedMap
 	globalTypes                         *StringVariableOrderedMap
 	TransactionTypes                    []*TransactionType
 	isChecking                          bool
-	ReferenceExpressionBorrowTypes      map[*ast.ReferenceExpression]Type
-	IndexExpressionTypes                map[*ast.IndexExpression]IndexExpressionTypes
-	ForceExpressionTypes                map[*ast.ForceExpression]Type
-	StaticCastTypes                     map[*ast.CastingExpression]CastTypes
-	NumberConversionArgumentTypes       map[ast.Expression]NumberConversionArgumentTypes
-	RuntimeCastTypes                    map[*ast.CastingExpression]RuntimeCastTypes
+	referenceExpressionBorrowTypes      map[*ast.ReferenceExpression]Type
+	indexExpressionTypes                map[*ast.IndexExpression]IndexExpressionTypes
+	forceExpressionTypes                map[*ast.ForceExpression]Type
+	staticCastTypes                     map[*ast.CastingExpression]CastTypes
+	runtimeCastTypes                    map[*ast.CastingExpression]RuntimeCastTypes
+	numberConversionArgumentTypes       map[ast.Expression]NumberConversionArgumentTypes
 }
 
-func NewElaboration(gauge common.MemoryGauge, extendedElaboration bool) *Elaboration {
+func NewElaboration(gauge common.MemoryGauge) *Elaboration {
 	common.UseMemory(gauge, common.ElaborationMemoryUsage)
 	elaboration := &Elaboration{
-		lock:                                new(sync.RWMutex),
-		IdentifierInInvocationTypes:         map[*ast.IdentifierExpression]Type{},
-		ImportDeclarationsResolvedLocations: map[*ast.ImportDeclaration][]ResolvedLocation{},
-		ReferenceExpressionBorrowTypes:      map[*ast.ReferenceExpression]Type{},
-		IndexExpressionTypes:                map[*ast.IndexExpression]IndexExpressionTypes{},
-	}
-	if extendedElaboration {
-		elaboration.ForceExpressionTypes = map[*ast.ForceExpression]Type{}
-		elaboration.StaticCastTypes = map[*ast.CastingExpression]CastTypes{}
-		elaboration.RuntimeCastTypes = map[*ast.CastingExpression]RuntimeCastTypes{}
-		elaboration.NumberConversionArgumentTypes = map[ast.Expression]NumberConversionArgumentTypes{}
+		lock: new(sync.RWMutex),
 	}
 	return elaboration
-
 }
 
 func (e *Elaboration) IsChecking() bool {
@@ -730,4 +719,130 @@ func (e *Elaboration) SetInterfaceType(typeID TypeID, ty *InterfaceType) {
 		e.interfaceTypes = map[TypeID]*InterfaceType{}
 	}
 	e.interfaceTypes[typeID] = ty
+}
+
+func (e *Elaboration) IdentifierInInvocationType(expression *ast.IdentifierExpression) Type {
+	if e.identifierInInvocationTypes == nil {
+		return nil
+	}
+	return e.identifierInInvocationTypes[expression]
+}
+
+func (e *Elaboration) SetIdentifierInInvocationType(expression *ast.IdentifierExpression, valueType Type) {
+	if e.identifierInInvocationTypes == nil {
+		e.identifierInInvocationTypes = map[*ast.IdentifierExpression]Type{}
+	}
+	e.identifierInInvocationTypes[expression] = valueType
+}
+
+func (e *Elaboration) ImportDeclarationsResolvedLocations(declaration *ast.ImportDeclaration) []ResolvedLocation {
+	if e.importDeclarationsResolvedLocations == nil {
+		return nil
+	}
+	return e.importDeclarationsResolvedLocations[declaration]
+}
+
+func (e *Elaboration) SetImportDeclarationsResolvedLocations(
+	declaration *ast.ImportDeclaration,
+	locations []ResolvedLocation,
+) {
+	if e.importDeclarationsResolvedLocations == nil {
+		e.importDeclarationsResolvedLocations = map[*ast.ImportDeclaration][]ResolvedLocation{}
+	}
+	e.importDeclarationsResolvedLocations[declaration] = locations
+}
+
+func (e *Elaboration) ReferenceExpressionBorrowType(expression *ast.ReferenceExpression) Type {
+	if e.referenceExpressionBorrowTypes == nil {
+		return nil
+	}
+	return e.referenceExpressionBorrowTypes[expression]
+}
+
+func (e *Elaboration) SetReferenceExpressionBorrowType(expression *ast.ReferenceExpression, ty Type) {
+	if e.referenceExpressionBorrowTypes == nil {
+		e.referenceExpressionBorrowTypes = map[*ast.ReferenceExpression]Type{}
+	}
+	e.referenceExpressionBorrowTypes[expression] = ty
+}
+
+func (e *Elaboration) IndexExpressionTypes(expression *ast.IndexExpression) (types IndexExpressionTypes) {
+	if e.indexExpressionTypes == nil {
+		return
+	}
+	return e.indexExpressionTypes[expression]
+}
+
+func (e *Elaboration) SetIndexExpressionTypes(expression *ast.IndexExpression, types IndexExpressionTypes) {
+	if e.indexExpressionTypes == nil {
+		e.indexExpressionTypes = map[*ast.IndexExpression]IndexExpressionTypes{}
+	}
+	e.indexExpressionTypes[expression] = types
+}
+
+func (e *Elaboration) ForceExpressionType(expression *ast.ForceExpression) Type {
+	if e.forceExpressionTypes == nil {
+		return nil
+	}
+	return e.forceExpressionTypes[expression]
+}
+
+func (e *Elaboration) SetForceExpressionType(expression *ast.ForceExpression, ty Type) {
+	if e.forceExpressionTypes == nil {
+		e.forceExpressionTypes = map[*ast.ForceExpression]Type{}
+	}
+	e.forceExpressionTypes[expression] = ty
+}
+
+func (e *Elaboration) AllStaticCastTypes() map[*ast.CastingExpression]CastTypes {
+	return e.staticCastTypes
+}
+
+func (e *Elaboration) StaticCastTypes(expression *ast.CastingExpression) (types CastTypes) {
+	if e.staticCastTypes == nil {
+		return
+	}
+	return e.staticCastTypes[expression]
+}
+
+func (e *Elaboration) SetStaticCastTypes(expression *ast.CastingExpression, types CastTypes) {
+	if e.staticCastTypes == nil {
+		e.staticCastTypes = map[*ast.CastingExpression]CastTypes{}
+	}
+	e.staticCastTypes[expression] = types
+}
+
+func (e *Elaboration) RuntimeCastTypes(expression *ast.CastingExpression) (types RuntimeCastTypes) {
+	if e.runtimeCastTypes == nil {
+		return
+	}
+	return e.runtimeCastTypes[expression]
+}
+
+func (e *Elaboration) SetRuntimeCastTypes(expression *ast.CastingExpression, types RuntimeCastTypes) {
+	if e.runtimeCastTypes == nil {
+		e.runtimeCastTypes = map[*ast.CastingExpression]RuntimeCastTypes{}
+	}
+	e.runtimeCastTypes[expression] = types
+}
+
+func (e *Elaboration) NumberConversionArgumentTypes(
+	expression ast.Expression,
+) (
+	types NumberConversionArgumentTypes,
+) {
+	if e.numberConversionArgumentTypes == nil {
+		return
+	}
+	return e.numberConversionArgumentTypes[expression]
+}
+
+func (e *Elaboration) SetNumberConversionArgumentTypes(
+	expression ast.Expression,
+	types NumberConversionArgumentTypes,
+) {
+	if e.numberConversionArgumentTypes == nil {
+		e.numberConversionArgumentTypes = map[ast.Expression]NumberConversionArgumentTypes{}
+	}
+	e.numberConversionArgumentTypes[expression] = types
 }

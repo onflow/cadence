@@ -144,10 +144,7 @@ func NewChecker(
 		0,
 	)
 
-	elaboration := NewElaboration(
-		memoryGauge,
-		config.ExtendedElaborationEnabled,
-	)
+	elaboration := NewElaboration(memoryGauge)
 
 	checker := &Checker{
 		Program:             program,

@@ -91,7 +91,7 @@ func (interpreter *Interpreter) indexExpressionGetterSetter(indexExpression *ast
 
 	elaboration := interpreter.Program.Elaboration
 
-	indexExpressionTypes := elaboration.IndexExpressionTypes[indexExpression]
+	indexExpressionTypes := elaboration.IndexExpressionTypes(indexExpression)
 	indexedType := indexExpressionTypes.IndexedType
 	indexingType := indexExpressionTypes.IndexingType
 
@@ -1021,7 +1021,7 @@ func (interpreter *Interpreter) VisitDestroyExpression(expression *ast.DestroyEx
 
 func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *ast.ReferenceExpression) Value {
 
-	borrowType := interpreter.Program.Elaboration.ReferenceExpressionBorrowTypes[referenceExpression]
+	borrowType := interpreter.Program.Elaboration.ReferenceExpressionBorrowType(referenceExpression)
 
 	result := interpreter.evalExpression(referenceExpression.Expression)
 
