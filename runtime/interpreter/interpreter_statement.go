@@ -377,7 +377,7 @@ func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement)
 		panic(errors.NewUnreachableError())
 	}
 
-	eventType := interpreter.Program.Elaboration.EmitStatementEventTypes[statement]
+	eventType := interpreter.Program.Elaboration.EmitStatementEventType(statement)
 
 	locationRange := LocationRange{
 		Location:    interpreter.Location,

@@ -280,9 +280,9 @@ func (checker *Checker) CheckProgram(program *ast.Program) {
 	registerInElaboration := func(ty Type) {
 		switch typedType := ty.(type) {
 		case *InterfaceType:
-			checker.Elaboration.InterfaceTypes[typedType.ID()] = typedType
+			checker.Elaboration.SetInterfaceType(typedType.ID(), typedType)
 		case *CompositeType:
-			checker.Elaboration.CompositeTypes[typedType.ID()] = typedType
+			checker.Elaboration.SetCompositeType(typedType.ID(), typedType)
 		default:
 			panic(errors.NewUnreachableError())
 		}

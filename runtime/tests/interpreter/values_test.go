@@ -1070,7 +1070,10 @@ func newCompositeValue(
 	}
 
 	// Add the type to the elaboration, to short-circuit the type-lookup
-	inter.Program.Elaboration.CompositeTypes[compositeType.ID()] = compositeType
+	inter.Program.Elaboration.SetCompositeType(
+		compositeType.ID(),
+		compositeType,
+	)
 
 	testComposite := interpreter.NewCompositeValue(
 		inter,
@@ -1242,7 +1245,10 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpre
 			Location:    location,
 		}
 
-		inter.Program.Elaboration.CompositeTypes[enumType.ID()] = enumType
+		inter.Program.Elaboration.SetCompositeType(
+			enumType.ID(),
+			enumType,
+		)
 
 		enum := interpreter.NewCompositeValue(
 			inter,
@@ -1393,7 +1399,10 @@ func randomCompositeValue(
 	}
 
 	// Add the type to the elaboration, to short-circuit the type-lookup
-	inter.Program.Elaboration.CompositeTypes[compositeType.ID()] = compositeType
+	inter.Program.Elaboration.SetCompositeType(
+		compositeType.ID(),
+		compositeType,
+	)
 
 	return interpreter.NewCompositeValue(
 		inter,

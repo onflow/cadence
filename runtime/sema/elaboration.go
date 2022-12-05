@@ -128,12 +128,12 @@ type Elaboration struct {
 	// nestedResourceMoveExpressions indicates the index or member expression
 	// is implicitly moving a resource out of the container, e.g. in a shift or swap statement.
 	nestedResourceMoveExpressions       map[ast.Expression]struct{}
-	CompositeNestedDeclarations         map[*ast.CompositeDeclaration]map[string]ast.Declaration
-	InterfaceNestedDeclarations         map[*ast.InterfaceDeclaration]map[string]ast.Declaration
-	PostConditionsRewrite               map[*ast.Conditions]PostConditionsRewrite
-	EmitStatementEventTypes             map[*ast.EmitStatement]*CompositeType
-	CompositeTypes                      map[TypeID]*CompositeType
-	InterfaceTypes                      map[TypeID]*InterfaceType
+	compositeNestedDeclarations         map[*ast.CompositeDeclaration]map[string]ast.Declaration
+	interfaceNestedDeclarations         map[*ast.InterfaceDeclaration]map[string]ast.Declaration
+	postConditionsRewrites              map[*ast.Conditions]PostConditionsRewrite
+	emitStatementEventTypes             map[*ast.EmitStatement]*CompositeType
+	compositeTypes                      map[TypeID]*CompositeType
+	interfaceTypes                      map[TypeID]*InterfaceType
 	IdentifierInInvocationTypes         map[*ast.IdentifierExpression]Type
 	ImportDeclarationsResolvedLocations map[*ast.ImportDeclaration][]ResolvedLocation
 	globalValues                        *StringVariableOrderedMap
@@ -152,12 +152,6 @@ func NewElaboration(gauge common.MemoryGauge, extendedElaboration bool) *Elabora
 	common.UseMemory(gauge, common.ElaborationMemoryUsage)
 	elaboration := &Elaboration{
 		lock:                                new(sync.RWMutex),
-		CompositeNestedDeclarations:         map[*ast.CompositeDeclaration]map[string]ast.Declaration{},
-		InterfaceNestedDeclarations:         map[*ast.InterfaceDeclaration]map[string]ast.Declaration{},
-		PostConditionsRewrite:               map[*ast.Conditions]PostConditionsRewrite{},
-		EmitStatementEventTypes:             map[*ast.EmitStatement]*CompositeType{},
-		CompositeTypes:                      map[TypeID]*CompositeType{},
-		InterfaceTypes:                      map[TypeID]*InterfaceType{},
 		IdentifierInInvocationTypes:         map[*ast.IdentifierExpression]Type{},
 		ImportDeclarationsResolvedLocations: map[*ast.ImportDeclaration][]ResolvedLocation{},
 		ReferenceExpressionBorrowTypes:      map[*ast.ReferenceExpression]Type{},
@@ -646,4 +640,94 @@ func (e *Elaboration) SwapStatementTypes(statement *ast.SwapStatement) (types Sw
 		return
 	}
 	return e.swapStatementTypes[statement]
+}
+
+func (e *Elaboration) CompositeNestedDeclarations(declaration *ast.CompositeDeclaration) map[string]ast.Declaration {
+	if e.compositeNestedDeclarations == nil {
+		return nil
+	}
+	return e.compositeNestedDeclarations[declaration]
+}
+
+func (e *Elaboration) SetCompositeNestedDeclarations(
+	declaration *ast.CompositeDeclaration,
+	nestedDeclaration map[string]ast.Declaration,
+) {
+	if e.compositeNestedDeclarations == nil {
+		e.compositeNestedDeclarations = map[*ast.CompositeDeclaration]map[string]ast.Declaration{}
+	}
+	e.compositeNestedDeclarations[declaration] = nestedDeclaration
+}
+
+func (e *Elaboration) InterfaceNestedDeclarations(declaration *ast.InterfaceDeclaration) map[string]ast.Declaration {
+	if e.interfaceNestedDeclarations == nil {
+		return nil
+	}
+	return e.interfaceNestedDeclarations[declaration]
+}
+
+func (e *Elaboration) SetInterfaceNestedDeclarations(
+	declaration *ast.InterfaceDeclaration,
+	nestedDeclaration map[string]ast.Declaration,
+) {
+	if e.interfaceNestedDeclarations == nil {
+		e.interfaceNestedDeclarations = map[*ast.InterfaceDeclaration]map[string]ast.Declaration{}
+	}
+	e.interfaceNestedDeclarations[declaration] = nestedDeclaration
+}
+
+func (e *Elaboration) PostConditionsRewrite(conditions *ast.Conditions) (rewrite PostConditionsRewrite) {
+	if e.postConditionsRewrites == nil {
+		return
+	}
+	return e.postConditionsRewrites[conditions]
+}
+
+func (e *Elaboration) SetPostConditionsRewrite(conditions *ast.Conditions, rewrite PostConditionsRewrite) {
+	if e.postConditionsRewrites == nil {
+		e.postConditionsRewrites = map[*ast.Conditions]PostConditionsRewrite{}
+	}
+	e.postConditionsRewrites[conditions] = rewrite
+}
+
+func (e *Elaboration) EmitStatementEventType(statement *ast.EmitStatement) *CompositeType {
+	if e.emitStatementEventTypes == nil {
+		return nil
+	}
+	return e.emitStatementEventTypes[statement]
+}
+
+func (e *Elaboration) SetEmitStatementEventType(statement *ast.EmitStatement, compositeType *CompositeType) {
+	if e.emitStatementEventTypes == nil {
+		e.emitStatementEventTypes = map[*ast.EmitStatement]*CompositeType{}
+	}
+	e.emitStatementEventTypes[statement] = compositeType
+}
+
+func (e *Elaboration) CompositeType(typeID common.TypeID) *CompositeType {
+	if e.compositeTypes == nil {
+		return nil
+	}
+	return e.compositeTypes[typeID]
+}
+
+func (e *Elaboration) SetCompositeType(typeID TypeID, ty *CompositeType) {
+	if e.compositeTypes == nil {
+		e.compositeTypes = map[TypeID]*CompositeType{}
+	}
+	e.compositeTypes[typeID] = ty
+}
+
+func (e *Elaboration) InterfaceType(typeID common.TypeID) *InterfaceType {
+	if e.interfaceTypes == nil {
+		return nil
+	}
+	return e.interfaceTypes[typeID]
+}
+
+func (e *Elaboration) SetInterfaceType(typeID TypeID, ty *InterfaceType) {
+	if e.interfaceTypes == nil {
+		e.interfaceTypes = map[TypeID]*InterfaceType{}
+	}
+	e.interfaceTypes[typeID] = ty
 }

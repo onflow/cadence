@@ -4847,7 +4847,10 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 		Fields:     []string{"dictionary"},
 	}
 
-	program.Elaboration.CompositeTypes[semaCompositeType.ID()] = semaCompositeType
+	program.Elaboration.SetCompositeType(
+		semaCompositeType.ID(),
+		semaCompositeType,
+	)
 
 	semaCompositeType.Members.Set(
 		"dictionary",
@@ -4923,7 +4926,10 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 		inter := newTestInterpreter(t)
 		inter.Program = &program
 
-		program.Elaboration.CompositeTypes[semaCompositeType.ID()] = semaCompositeType
+		program.Elaboration.SetCompositeType(
+			semaCompositeType.ID(),
+			semaCompositeType,
+		)
 
 		actual, err := ImportValue(
 			inter,

@@ -301,7 +301,10 @@ func init() {
 
 	// Enrich 'Test' contract elaboration with natively implemented composite types.
 	// e.g: 'EmulatorBackend' type.
-	TestContractChecker.Elaboration.CompositeTypes[EmulatorBackendType.ID()] = EmulatorBackendType
+	TestContractChecker.Elaboration.SetCompositeType(
+		EmulatorBackendType.ID(),
+		EmulatorBackendType,
+	)
 }
 
 var blockchainType = func() sema.Type {

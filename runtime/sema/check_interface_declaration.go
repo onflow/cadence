@@ -136,7 +136,7 @@ func (checker *Checker) declareInterfaceNestedTypes(
 ) {
 
 	interfaceType := checker.Elaboration.InterfaceDeclarationType(declaration)
-	nestedDeclarations := checker.Elaboration.InterfaceNestedDeclarations[declaration]
+	nestedDeclarations := checker.Elaboration.InterfaceNestedDeclarations(declaration)
 
 	interfaceType.NestedTypes.Foreach(func(name string, nestedType Type) {
 		nestedDeclaration := nestedDeclarations[name]
@@ -277,7 +277,7 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 			declaration.Members.Interfaces(),
 		)
 
-	checker.Elaboration.InterfaceNestedDeclarations[declaration] = nestedDeclarations
+	checker.Elaboration.SetInterfaceNestedDeclarations(declaration, nestedDeclarations)
 
 	for _, nestedInterfaceType := range nestedInterfaceTypes {
 		interfaceType.NestedTypes.Set(nestedInterfaceType.Identifier, nestedInterfaceType)

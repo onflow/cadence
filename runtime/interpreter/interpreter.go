@@ -669,7 +669,7 @@ func (interpreter *Interpreter) functionDeclarationValue(
 
 	if declaration.FunctionBlock.PostConditions != nil {
 		postConditionsRewrite :=
-			interpreter.Program.Elaboration.PostConditionsRewrite[declaration.FunctionBlock.PostConditions]
+			interpreter.Program.Elaboration.PostConditionsRewrite(declaration.FunctionBlock.PostConditions)
 
 		rewrittenPostConditions = postConditionsRewrite.RewrittenPostConditions
 		beforeStatements = postConditionsRewrite.BeforeStatements
@@ -1361,7 +1361,7 @@ func (interpreter *Interpreter) compositeInitializerFunction(
 	postConditions := initializer.FunctionDeclaration.FunctionBlock.PostConditions
 	if postConditions != nil {
 		postConditionsRewrite :=
-			interpreter.Program.Elaboration.PostConditionsRewrite[postConditions]
+			interpreter.Program.Elaboration.PostConditionsRewrite(postConditions)
 
 		beforeStatements = postConditionsRewrite.BeforeStatements
 		rewrittenPostConditions = postConditionsRewrite.RewrittenPostConditions
@@ -1404,7 +1404,7 @@ func (interpreter *Interpreter) compositeDestructorFunction(
 	postConditions := destructor.FunctionDeclaration.FunctionBlock.PostConditions
 	if postConditions != nil {
 		postConditionsRewrite :=
-			interpreter.Program.Elaboration.PostConditionsRewrite[postConditions]
+			interpreter.Program.Elaboration.PostConditionsRewrite(postConditions)
 
 		beforeStatements = postConditionsRewrite.BeforeStatements
 		rewrittenPostConditions = postConditionsRewrite.RewrittenPostConditions
@@ -1510,15 +1510,15 @@ func (interpreter *Interpreter) compositeFunction(
 	}
 
 	var beforeStatements []ast.Statement
-	var postConditions ast.Conditions
+	var rewrittenPostConditions ast.Conditions
 
 	if functionDeclaration.FunctionBlock.PostConditions != nil {
 
 		postConditionsRewrite :=
-			interpreter.Program.Elaboration.PostConditionsRewrite[functionDeclaration.FunctionBlock.PostConditions]
+			interpreter.Program.Elaboration.PostConditionsRewrite(functionDeclaration.FunctionBlock.PostConditions)
 
 		beforeStatements = postConditionsRewrite.BeforeStatements
-		postConditions = postConditionsRewrite.RewrittenPostConditions
+		rewrittenPostConditions = postConditionsRewrite.RewrittenPostConditions
 	}
 
 	parameterList := functionDeclaration.ParameterList
@@ -1532,7 +1532,7 @@ func (interpreter *Interpreter) compositeFunction(
 		beforeStatements,
 		preConditions,
 		statements,
-		postConditions,
+		rewrittenPostConditions,
 	)
 }
 
@@ -1915,7 +1915,7 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 	if declaration.FunctionBlock.PostConditions != nil {
 
 		postConditionsRewrite :=
-			interpreter.Program.Elaboration.PostConditionsRewrite[declaration.FunctionBlock.PostConditions]
+			interpreter.Program.Elaboration.PostConditionsRewrite(declaration.FunctionBlock.PostConditions)
 
 		beforeStatements = postConditionsRewrite.BeforeStatements
 		rewrittenPostConditions = postConditionsRewrite.RewrittenPostConditions
@@ -4040,7 +4040,7 @@ func (interpreter *Interpreter) getUserCompositeType(location common.Location, t
 		}
 	}
 
-	ty := elaboration.CompositeTypes[typeID]
+	ty := elaboration.CompositeType(typeID)
 	if ty == nil {
 		return nil, TypeLoadingError{
 			TypeID: typeID,
@@ -4075,7 +4075,7 @@ func (interpreter *Interpreter) getInterfaceType(location common.Location, quali
 		}
 	}
 
-	ty := elaboration.InterfaceTypes[typeID]
+	ty := elaboration.InterfaceType(typeID)
 	if ty == nil {
 		return nil, TypeLoadingError{
 			TypeID: typeID,

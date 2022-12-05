@@ -220,7 +220,7 @@ func (checker *Checker) declareCompositeNestedTypes(
 	declareConstructors bool,
 ) {
 	compositeType := checker.Elaboration.CompositeDeclarationType(declaration)
-	nestedDeclarations := checker.Elaboration.CompositeNestedDeclarations[declaration]
+	nestedDeclarations := checker.Elaboration.CompositeNestedDeclarations(declaration)
 
 	compositeType.NestedTypes.Foreach(func(name string, nestedType Type) {
 
@@ -477,7 +477,7 @@ func (checker *Checker) declareCompositeType(declaration *ast.CompositeDeclarati
 			declaration.Members.Interfaces(),
 		)
 
-	checker.Elaboration.CompositeNestedDeclarations[declaration] = nestedDeclarations
+	checker.Elaboration.SetCompositeNestedDeclarations(declaration, nestedDeclarations)
 
 	for _, nestedInterfaceType := range nestedInterfaceTypes {
 		compositeType.NestedTypes.Set(nestedInterfaceType.Identifier, nestedInterfaceType)

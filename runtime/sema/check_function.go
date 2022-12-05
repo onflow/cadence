@@ -320,7 +320,7 @@ func (checker *Checker) visitWithPostConditions(postConditions *ast.Conditions, 
 		rewriteResult := checker.rewritePostConditions(*postConditions)
 		rewrittenPostConditions = &rewriteResult
 
-		checker.Elaboration.PostConditionsRewrite[postConditions] = rewriteResult
+		checker.Elaboration.SetPostConditionsRewrite(postConditions, rewriteResult)
 
 		checker.visitStatements(rewriteResult.BeforeStatements)
 	}

@@ -921,7 +921,7 @@ func (interpreter *Interpreter) VisitFunctionExpression(expression *ast.Function
 
 	if expression.FunctionBlock.PostConditions != nil {
 		postConditionsRewrite :=
-			interpreter.Program.Elaboration.PostConditionsRewrite[expression.FunctionBlock.PostConditions]
+			interpreter.Program.Elaboration.PostConditionsRewrite(expression.FunctionBlock.PostConditions)
 
 		rewrittenPostConditions = postConditionsRewrite.RewrittenPostConditions
 		beforeStatements = postConditionsRewrite.BeforeStatements
