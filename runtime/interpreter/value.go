@@ -2704,7 +2704,7 @@ type BoundedUnsignedValue[T Unsigned] interface {
 	NumberValue
 	MaxValue() T
 	Underlying() T
-	Constructor() func(common.MemoryGauge, func() T) NumberValue
+	Constructor(common.MemoryGauge, func() T) NumberValue
 }
 
 type BoundedSignedValue[T Signed] interface {
@@ -2715,7 +2715,7 @@ type BoundedSignedValue[T Signed] interface {
 	Constructor(common.MemoryGauge, func() T) NumberValue
 }
 
-func negate[T constraints.Signed](interpreter *Interpreter, v BoundedSignedValue[T], locationRange LocationRange) NumberValue {
+func negateSigned[T constraints.Signed](interpreter *Interpreter, v BoundedSignedValue[T], locationRange LocationRange) NumberValue {
 	// INT32-C
 	underlying := v.Underlying()
 	if underlying == v.MinValue() {
@@ -2729,7 +2729,7 @@ func negate[T constraints.Signed](interpreter *Interpreter, v BoundedSignedValue
 	return v.Constructor(interpreter, valueGetter)
 }
 
-func negateBigInt(interpreter *Interpreter, v BoundedSignedValue[*big.Int], locationRange LocationRange) NumberValue {
+func negateSignedBigInt(interpreter *Interpreter, v BoundedSignedValue[*big.Int], locationRange LocationRange) NumberValue {
 	// INT32-C
 	underlying := v.Underlying()
 	if underlying.Cmp(v.MinValue()) == 0 {
@@ -2741,6 +2741,119 @@ func negateBigInt(interpreter *Interpreter, v BoundedSignedValue[*big.Int], loca
 	}
 
 	return v.Constructor(interpreter, valueGetter)
+}
+
+func plusSigned[T constraints.Signed, V BoundedSignedValue[T]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(V)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationPlus,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	underlying := v.Underlying()
+	otherUnderlying := o.Underlying()
+
+	// INT32-C
+	if (otherUnderlying > 0) && (underlying > (v.MaxValue() - otherUnderlying)) {
+		panic(OverflowError{locationRange})
+	} else if (otherUnderlying < 0) && (underlying < (v.MinValue() - otherUnderlying)) {
+		panic(UnderflowError{locationRange})
+	}
+
+	valueGetter := func() T {
+		return T(underlying + otherUnderlying)
+	}
+
+	return v.Constructor(interpreter, valueGetter)
+}
+
+// Given that this value is backed by an arbitrary size integer,
+// we can just add and check the range of the result.
+//
+// If Go gains a native type for int128 and int256, we can
+// switch them over to `plusSigned`
+func plusSignedBigInt[V BoundedSignedValue[*big.Int]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(V)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationPlus,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	underlying := v.Underlying()
+	otherUnderlying := o.Underlying()
+
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		res.Add(underlying, otherUnderlying)
+		if res.Cmp(v.MinValue()) < 0 {
+			panic(UnderflowError{locationRange})
+		} else if res.Cmp(v.MaxValue()) > 0 {
+			panic(OverflowError{locationRange})
+		}
+
+		return res
+	}
+
+	return v.Constructor(interpreter, valueGetter)
+}
+
+func plusUnsigned[T constraints.Unsigned, V BoundedUnsignedValue[T]](interpreter *Interpreter, v V, other NumberValue, checkOverflow bool, locationRange LocationRange) NumberValue {
+	o, ok := other.(V)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationPlus,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	underlying := v.Underlying()
+	otherUnderlying := o.Underlying()
+
+	return v.Constructor(interpreter, func() T {
+		sum := underlying + otherUnderlying
+		// INT30-C
+		if checkOverflow && sum < underlying {
+			panic(OverflowError{locationRange})
+		}
+		return T(sum)
+	})
+}
+
+// Given that this value is backed by an arbitrary size integer,
+// we can just add and check the range of the result.
+//
+// If Go gains a native uint128 and uint256 type, then we can use the `plusUnsigned` function
+func plusUnsignedBigInt[V BoundedUnsignedValue[*big.Int]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(V)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationPlus,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	underlying := v.Underlying()
+	otherUnderlying := o.Underlying()
+
+	return v.Constructor(
+		interpreter,
+		func() *big.Int {
+			sum := new(big.Int)
+			sum.Add(underlying, otherUnderlying)
+			if sum.Cmp(v.MaxValue()) > 0 {
+				panic(OverflowError{locationRange})
+			}
+			return sum
+		},
+	)
 }
 
 func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, typ sema.Type, locationRange LocationRange) Value {
@@ -3536,31 +3649,11 @@ func (v Int8Value) Constructor(gauge common.MemoryGauge, getter func() int8) Num
 }
 
 func (v Int8Value) Negate(interpreter *Interpreter, locationRange LocationRange) NumberValue {
-	return negate[int8](interpreter, v, locationRange)
+	return negateSigned[int8](interpreter, v, locationRange)
 }
 
 func (v Int8Value) Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Int8Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	// INT32-C
-	if (o > 0) && (v > (math.MaxInt8 - o)) {
-		panic(OverflowError{locationRange})
-	} else if (o < 0) && (v < (math.MinInt8 - o)) {
-		panic(UnderflowError{locationRange})
-	}
-
-	valueGetter := func() int8 {
-		return int8(v + o)
-	}
-
-	return NewInt8Value(interpreter, valueGetter)
+	return plusSigned[int8](interpreter, v, other, locationRange)
 }
 
 func (v Int8Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -4130,31 +4223,11 @@ func (v Int16Value) Constructor(gauge common.MemoryGauge, getter func() int16) N
 }
 
 func (v Int16Value) Negate(interpreter *Interpreter, locationRange LocationRange) NumberValue {
-	return negate[int16](interpreter, v, locationRange)
+	return negateSigned[int16](interpreter, v, locationRange)
 }
 
 func (v Int16Value) Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Int16Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	// INT32-C
-	if (o > 0) && (v > (math.MaxInt16 - o)) {
-		panic(OverflowError{locationRange})
-	} else if (o < 0) && (v < (math.MinInt16 - o)) {
-		panic(UnderflowError{locationRange})
-	}
-
-	valueGetter := func() int16 {
-		return int16(v + o)
-	}
-
-	return NewInt16Value(interpreter, valueGetter)
+	return plusSigned[int16](interpreter, v, other, locationRange)
 }
 
 func (v Int16Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -4725,31 +4798,11 @@ func (v Int32Value) Constructor(gauge common.MemoryGauge, getter func() int32) N
 }
 
 func (v Int32Value) Negate(interpreter *Interpreter, locationRange LocationRange) NumberValue {
-	return negate[int32](interpreter, v, locationRange)
+	return negateSigned[int32](interpreter, v, locationRange)
 }
 
 func (v Int32Value) Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Int32Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	// INT32-C
-	if (o > 0) && (v > (math.MaxInt32 - o)) {
-		panic(OverflowError{locationRange})
-	} else if (o < 0) && (v < (math.MinInt32 - o)) {
-		panic(UnderflowError{locationRange})
-	}
-
-	valueGetter := func() int32 {
-		return int32(v + o)
-	}
-
-	return NewInt32Value(interpreter, valueGetter)
+	return plusSigned[int32](interpreter, v, other, locationRange)
 }
 
 func (v Int32Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -5318,34 +5371,11 @@ func (v Int64Value) Constructor(gauge common.MemoryGauge, getter func() int64) N
 }
 
 func (v Int64Value) Negate(interpreter *Interpreter, locationRange LocationRange) NumberValue {
-	return negate[int64](interpreter, v, locationRange)
-}
-
-func safeAddInt64(a, b int64, locationRange LocationRange) int64 {
-	// INT32-C
-	if (b > 0) && (a > (math.MaxInt64 - b)) {
-		panic(OverflowError{locationRange})
-	} else if (b < 0) && (a < (math.MinInt64 - b)) {
-		panic(UnderflowError{locationRange})
-	}
-	return a + b
+	return negateSigned[int64](interpreter, v, locationRange)
 }
 
 func (v Int64Value) Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Int64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() int64 {
-		return safeAddInt64(int64(v), int64(o), locationRange)
-	}
-
-	return NewInt64Value(interpreter, valueGetter)
+	return plusSigned[int64](interpreter, v, other, locationRange)
 }
 
 func (v Int64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -5938,44 +5968,11 @@ func (v Int128Value) Constructor(gauge common.MemoryGauge, getter func() *big.In
 }
 
 func (v Int128Value) Negate(interpreter *Interpreter, locationRange LocationRange) NumberValue {
-	return negateBigInt(interpreter, v, locationRange)
+	return negateSignedBigInt(interpreter, v, locationRange)
 }
 
 func (v Int128Value) Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Int128Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() *big.Int {
-		// Given that this value is backed by an arbitrary size integer,
-		// we can just add and check the range of the result.
-		//
-		// If Go gains a native int128 type and we switch this value
-		// to be based on it, then we need to follow INT32-C:
-		//
-		//   if (o > 0) && (v > (Int128TypeMaxIntBig - o)) {
-		//       ...
-		//   } else if (o < 0) && (v < (Int128TypeMinIntBig - o)) {
-		//       ...
-		//   }
-		//
-		res := new(big.Int)
-		res.Add(v.BigInt, o.BigInt)
-		if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
-			panic(UnderflowError{locationRange})
-		} else if res.Cmp(sema.Int128TypeMaxIntBig) > 0 {
-			panic(OverflowError{locationRange})
-		}
-
-		return res
-	}
-
-	return NewInt128ValueFromBigInt(interpreter, valueGetter)
+	return plusSignedBigInt(interpreter, v, other, locationRange)
 }
 
 func (v Int128Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -6630,43 +6627,11 @@ func (v Int256Value) Constructor(gauge common.MemoryGauge, getter func() *big.In
 }
 
 func (v Int256Value) Negate(interpreter *Interpreter, locationRange LocationRange) NumberValue {
-	return negateBigInt(interpreter, v, locationRange)
+	return negateSignedBigInt(interpreter, v, locationRange)
 }
+
 func (v Int256Value) Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Int256Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() *big.Int {
-		// Given that this value is backed by an arbitrary size integer,
-		// we can just add and check the range of the result.
-		//
-		// If Go gains a native int256 type and we switch this value
-		// to be based on it, then we need to follow INT32-C:
-		//
-		//   if (o > 0) && (v > (Int256TypeMaxIntBig - o)) {
-		//       ...
-		//   } else if (o < 0) && (v < (Int256TypeMinIntBig - o)) {
-		//       ...
-		//   }
-		//
-		res := new(big.Int)
-		res.Add(v.BigInt, o.BigInt)
-		if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
-			panic(UnderflowError{locationRange})
-		} else if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
-			panic(OverflowError{locationRange})
-		}
-
-		return res
-	}
-
-	return NewInt256ValueFromBigInt(interpreter, valueGetter)
+	return plusSignedBigInt(interpreter, v, other, locationRange)
 }
 
 func (v Int256Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -7865,24 +7830,20 @@ func (v UInt8Value) Negate(*Interpreter, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v UInt8Value) Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(UInt8Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
+func (v UInt8Value) MaxValue() uint8 {
+	return math.MaxUint8
+}
 
-	return NewUInt8Value(interpreter, func() uint8 {
-		sum := v + o
-		// INT30-C
-		if sum < v {
-			panic(OverflowError{locationRange})
-		}
-		return uint8(sum)
-	})
+func (v UInt8Value) Underlying() uint8 {
+	return uint8(v)
+}
+
+func (v UInt8Value) Constructor(gauge common.MemoryGauge, getter func() uint8) NumberValue {
+	return NewUInt8Value(gauge, getter)
+}
+
+func (v UInt8Value) Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+	return plusUnsigned[uint8](interpreter, v, other, true, locationRange)
 }
 
 func (v UInt8Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -8412,27 +8373,20 @@ func (v UInt16Value) Negate(*Interpreter, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v UInt16Value) Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(UInt16Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
+func (v UInt16Value) MaxValue() uint16 {
+	return math.MaxUint16
+}
 
-	return NewUInt16Value(
-		interpreter,
-		func() uint16 {
-			sum := v + o
-			// INT30-C
-			if sum < v {
-				panic(OverflowError{locationRange})
-			}
-			return uint16(sum)
-		},
-	)
+func (v UInt16Value) Underlying() uint16 {
+	return uint16(v)
+}
+
+func (v UInt16Value) Constructor(gauge common.MemoryGauge, getter func() uint16) NumberValue {
+	return NewUInt16Value(gauge, getter)
+}
+
+func (v UInt16Value) Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+	return plusUnsigned[uint16](interpreter, v, other, true, locationRange)
 }
 
 func (v UInt16Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -8924,27 +8878,20 @@ func (v UInt32Value) Negate(*Interpreter, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v UInt32Value) Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(UInt32Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
+func (v UInt32Value) MaxValue() uint32 {
+	return math.MaxUint32
+}
 
-	return NewUInt32Value(
-		interpreter,
-		func() uint32 {
-			sum := v + o
-			// INT30-C
-			if sum < v {
-				panic(OverflowError{locationRange})
-			}
-			return uint32(sum)
-		},
-	)
+func (v UInt32Value) Underlying() uint32 {
+	return uint32(v)
+}
+
+func (v UInt32Value) Constructor(gauge common.MemoryGauge, getter func() uint32) NumberValue {
+	return NewUInt32Value(gauge, getter)
+}
+
+func (v UInt32Value) Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+	return plusUnsigned[uint32](interpreter, v, other, true, locationRange)
 }
 
 func (v UInt32Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -9460,31 +9407,20 @@ func (v UInt64Value) Negate(*Interpreter, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func safeAddUint64(a, b uint64, locationRange LocationRange) uint64 {
-	sum := a + b
-	// INT30-C
-	if sum < a {
-		panic(OverflowError{locationRange})
-	}
-	return sum
+func (v UInt64Value) MaxValue() uint64 {
+	return math.MaxUint64
+}
+
+func (v UInt64Value) Underlying() uint64 {
+	return uint64(v)
+}
+
+func (v UInt64Value) Constructor(gauge common.MemoryGauge, getter func() uint64) NumberValue {
+	return NewUInt64Value(gauge, getter)
 }
 
 func (v UInt64Value) Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(UInt64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt64Value(
-		interpreter,
-		func() uint64 {
-			return safeAddUint64(uint64(v), uint64(o), locationRange)
-		},
-	)
+	return plusUnsigned[uint64](interpreter, v, other, true, locationRange)
 }
 
 func (v UInt64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -10004,37 +9940,20 @@ func (v UInt128Value) Negate(*Interpreter, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v UInt128Value) Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(UInt128Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
+func (v UInt128Value) MaxValue() *big.Int {
+	return sema.UInt128TypeMaxIntBig
+}
 
-	return NewUInt128ValueFromBigInt(
-		interpreter,
-		func() *big.Int {
-			sum := new(big.Int)
-			sum.Add(v.BigInt, o.BigInt)
-			// Given that this value is backed by an arbitrary size integer,
-			// we can just add and check the range of the result.
-			//
-			// If Go gains a native uint128 type and we switch this value
-			// to be based on it, then we need to follow INT30-C:
-			//
-			//  if sum < v {
-			//      ...
-			//  }
-			//
-			if sum.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
-				panic(OverflowError{locationRange})
-			}
-			return sum
-		},
-	)
+func (v UInt128Value) Underlying() *big.Int {
+	return v.BigInt
+}
+
+func (v UInt128Value) Constructor(gauge common.MemoryGauge, getter func() *big.Int) NumberValue {
+	return NewUInt128ValueFromBigInt(gauge, getter)
+}
+
+func (v UInt128Value) Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+	return plusUnsignedBigInt(interpreter, v, other, locationRange)
 }
 
 func (v UInt128Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -10636,38 +10555,20 @@ func (v UInt256Value) Negate(*Interpreter, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
+func (v UInt256Value) MaxValue() *big.Int {
+	return sema.UInt256TypeMaxIntBig
+}
+
+func (v UInt256Value) Underlying() *big.Int {
+	return v.BigInt
+}
+
+func (v UInt256Value) Constructor(gauge common.MemoryGauge, getter func() *big.Int) NumberValue {
+	return NewUInt256ValueFromBigInt(gauge, getter)
+}
+
 func (v UInt256Value) Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(UInt256Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt256ValueFromBigInt(
-		interpreter,
-		func() *big.Int {
-			sum := new(big.Int)
-			sum.Add(v.BigInt, o.BigInt)
-			// Given that this value is backed by an arbitrary size integer,
-			// we can just add and check the range of the result.
-			//
-			// If Go gains a native uint256 type and we switch this value
-			// to be based on it, then we need to follow INT30-C:
-			//
-			//  if sum < v {
-			//      ...
-			//  }
-			//
-			if sum.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
-				panic(OverflowError{locationRange})
-			}
-			return sum
-		},
-	)
-
+	return plusUnsignedBigInt(interpreter, v, other, locationRange)
 }
 
 func (v UInt256Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -11238,21 +11139,20 @@ func (v Word8Value) Negate(*Interpreter, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
+func (v Word8Value) MaxValue() uint8 {
+	return math.MaxUint8
+}
+
+func (v Word8Value) Underlying() uint8 {
+	return uint8(v)
+}
+
+func (v Word8Value) Constructor(gauge common.MemoryGauge, getter func() uint8) NumberValue {
+	return NewWord8Value(gauge, getter)
+}
+
 func (v Word8Value) Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Word8Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() uint8 {
-		return uint8(v + o)
-	}
-
-	return NewWord8Value(interpreter, valueGetter)
+	return plusUnsigned[uint8](interpreter, v, other, false, locationRange)
 }
 
 func (v Word8Value) SaturatingPlus(*Interpreter, NumberValue, LocationRange) NumberValue {
@@ -11654,21 +11554,20 @@ func (v Word16Value) Negate(*Interpreter, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
+func (v Word16Value) MaxValue() uint16 {
+	return math.MaxUint16
+}
+
+func (v Word16Value) Underlying() uint16 {
+	return uint16(v)
+}
+
+func (v Word16Value) Constructor(gauge common.MemoryGauge, getter func() uint16) NumberValue {
+	return NewWord16Value(gauge, getter)
+}
+
 func (v Word16Value) Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Word16Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() uint16 {
-		return uint16(v + o)
-	}
-
-	return NewWord16Value(interpreter, valueGetter)
+	return plusUnsigned[uint16](interpreter, v, other, false, locationRange)
 }
 
 func (v Word16Value) SaturatingPlus(*Interpreter, NumberValue, LocationRange) NumberValue {
@@ -12073,21 +11972,20 @@ func (v Word32Value) Negate(*Interpreter, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
+func (v Word32Value) MaxValue() uint32 {
+	return math.MaxUint32
+}
+
+func (v Word32Value) Underlying() uint32 {
+	return uint32(v)
+}
+
+func (v Word32Value) Constructor(gauge common.MemoryGauge, getter func() uint32) NumberValue {
+	return NewWord32Value(gauge, getter)
+}
+
 func (v Word32Value) Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Word32Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() uint32 {
-		return uint32(v + o)
-	}
-
-	return NewWord32Value(interpreter, valueGetter)
+	return plusUnsigned[uint32](interpreter, v, other, false, locationRange)
 }
 
 func (v Word32Value) SaturatingPlus(*Interpreter, NumberValue, LocationRange) NumberValue {
@@ -12516,21 +12414,20 @@ func (v Word64Value) Negate(*Interpreter, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
+func (v Word64Value) MaxValue() uint64 {
+	return math.MaxUint64
+}
+
+func (v Word64Value) Underlying() uint64 {
+	return uint64(v)
+}
+
+func (v Word64Value) Constructor(gauge common.MemoryGauge, getter func() uint64) NumberValue {
+	return NewWord64Value(gauge, getter)
+}
+
 func (v Word64Value) Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Word64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() uint64 {
-		return uint64(v + o)
-	}
-
-	return NewWord64Value(interpreter, valueGetter)
+	return plusUnsigned[uint64](interpreter, v, other, false, locationRange)
 }
 
 func (v Word64Value) SaturatingPlus(*Interpreter, NumberValue, LocationRange) NumberValue {
@@ -12973,24 +12870,11 @@ func (v Fix64Value) Constructor(gauge common.MemoryGauge, getter func() int64) N
 }
 
 func (v Fix64Value) Negate(interpreter *Interpreter, locationRange LocationRange) NumberValue {
-	return negate[int64](interpreter, v, locationRange)
+	return negateSigned[int64](interpreter, v, locationRange)
 }
 
 func (v Fix64Value) Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Fix64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() int64 {
-		return safeAddInt64(int64(v), int64(o), locationRange)
-	}
-
-	return NewFix64Value(interpreter, valueGetter)
+	return plusSigned[int64](interpreter, v, other, locationRange)
 }
 
 func (v Fix64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -13502,21 +13386,20 @@ func (v UFix64Value) Negate(*Interpreter, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
+func (v UFix64Value) MaxValue() uint64 {
+	return math.MaxUint64
+}
+
+func (v UFix64Value) Underlying() uint64 {
+	return uint64(v)
+}
+
+func (v UFix64Value) Constructor(gauge common.MemoryGauge, getter func() uint64) NumberValue {
+	return NewUFix64Value(gauge, getter)
+}
+
 func (v UFix64Value) Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(UFix64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() uint64 {
-		return safeAddUint64(uint64(v), uint64(o), locationRange)
-	}
-
-	return NewUFix64Value(interpreter, valueGetter)
+	return plusUnsigned[uint64](interpreter, v, other, true, locationRange)
 }
 
 func (v UFix64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
