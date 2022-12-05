@@ -2968,6 +2968,115 @@ func saturatingPlusUnsignedBigInt[V BoundedUnsignedValue[*big.Int]](interpreter 
 	)
 }
 
+func minusSigned[T constraints.Signed, V BoundedSignedValue[T]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(V)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMinus,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	underlying := v.Underlying()
+	otherUnderlying := o.Underlying()
+
+	// INT32-C
+	if (otherUnderlying > 0) && (underlying < (v.MinValue() + otherUnderlying)) {
+		panic(OverflowError{locationRange})
+	} else if (otherUnderlying < 0) && (underlying > (v.MaxValue() + otherUnderlying)) {
+		panic(UnderflowError{locationRange})
+	}
+
+	valueGetter := func() T {
+		return T(underlying - otherUnderlying)
+	}
+
+	return v.Constructor(interpreter, valueGetter)
+}
+
+// Given that this value is backed by an arbitrary size integer,
+// we can just subtract and check the range of the result.
+//
+// If Go gains a native int128 and int256 type, we can switch them to use
+// minusSigned
+func minusSignedBigInt[V BoundedSignedValue[*big.Int]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(V)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMinus,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		res.Sub(v.Underlying(), o.Underlying())
+		if res.Cmp(v.MinValue()) < 0 {
+			panic(UnderflowError{locationRange})
+		} else if res.Cmp(v.MaxValue()) > 0 {
+			panic(OverflowError{locationRange})
+		}
+
+		return res
+	}
+
+	return v.Constructor(interpreter, valueGetter)
+}
+
+func minusUnsigned[T constraints.Unsigned, V BoundedUnsignedValue[T]](interpreter *Interpreter, v V, other NumberValue, checkOverflow bool, locationRange LocationRange) NumberValue {
+	o, ok := other.(V)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMinus,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return v.Constructor(
+		interpreter,
+		func() T {
+			underlying := v.Underlying()
+			otherUnderlying := o.Underlying()
+			diff := underlying - otherUnderlying
+			// INT30-C
+			if checkOverflow && diff > underlying {
+				panic(UnderflowError{locationRange})
+			}
+			return T(diff)
+		},
+	)
+}
+
+// Given that this value is backed by an arbitrary size integer,
+// we can just subtract and check the range of the result.
+//
+// If Go gains a native uint128 and uint256 type, we can switch this to `minusUnsigned`
+func minusUnsignedBigInt[V BoundedUnsignedValue[*big.Int]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(V)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMinus,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return v.Constructor(
+		interpreter,
+		func() *big.Int {
+			diff := new(big.Int)
+			diff.Sub(v.Underlying(), o.Underlying())
+			if diff.Cmp(sema.UIntTypeMin) < 0 {
+				panic(UnderflowError{locationRange})
+			}
+			return diff
+		},
+	)
+}
+
 func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, typ sema.Type, locationRange LocationRange) Value {
 	switch name {
 
@@ -3773,27 +3882,7 @@ func (v Int8Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, l
 }
 
 func (v Int8Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Int8Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	// INT32-C
-	if (o > 0) && (v < (math.MinInt8 + o)) {
-		panic(OverflowError{locationRange})
-	} else if (o < 0) && (v > (math.MaxInt8 + o)) {
-		panic(UnderflowError{locationRange})
-	}
-
-	valueGetter := func() int8 {
-		return int8(v - o)
-	}
-
-	return NewInt8Value(interpreter, valueGetter)
+	return minusSigned[int8](interpreter, v, other, locationRange)
 }
 
 func (v Int8Value) SaturatingMinus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -4328,27 +4417,7 @@ func (v Int16Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, 
 }
 
 func (v Int16Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Int16Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	// INT32-C
-	if (o > 0) && (v < (math.MinInt16 + o)) {
-		panic(OverflowError{locationRange})
-	} else if (o < 0) && (v > (math.MaxInt16 + o)) {
-		panic(UnderflowError{locationRange})
-	}
-
-	valueGetter := func() int16 {
-		return int16(v - o)
-	}
-
-	return NewInt16Value(interpreter, valueGetter)
+	return minusSigned[int16](interpreter, v, other, locationRange)
 }
 
 func (v Int16Value) SaturatingMinus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -4884,27 +4953,7 @@ func (v Int32Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, 
 }
 
 func (v Int32Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Int32Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	// INT32-C
-	if (o > 0) && (v < (math.MinInt32 + o)) {
-		panic(OverflowError{locationRange})
-	} else if (o < 0) && (v > (math.MaxInt32 + o)) {
-		panic(UnderflowError{locationRange})
-	}
-
-	valueGetter := func() int32 {
-		return int32(v - o)
-	}
-
-	return NewInt32Value(interpreter, valueGetter)
+	return minusSigned[int32](interpreter, v, other, locationRange)
 }
 
 func (v Int32Value) SaturatingMinus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -5438,27 +5487,7 @@ func (v Int64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, 
 }
 
 func (v Int64Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Int64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	// INT32-C
-	if (o > 0) && (v < (math.MinInt64 + o)) {
-		panic(OverflowError{locationRange})
-	} else if (o < 0) && (v > (math.MaxInt64 + o)) {
-		panic(UnderflowError{locationRange})
-	}
-
-	valueGetter := func() int64 {
-		return int64(v - o)
-	}
-
-	return NewInt64Value(interpreter, valueGetter)
+	return minusSigned[int64](interpreter, v, other, locationRange)
 }
 
 func (v Int64Value) SaturatingMinus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -6016,40 +6045,7 @@ func (v Int128Value) SaturatingPlus(interpreter *Interpreter, other NumberValue,
 }
 
 func (v Int128Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Int128Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() *big.Int {
-		// Given that this value is backed by an arbitrary size integer,
-		// we can just subtract and check the range of the result.
-		//
-		// If Go gains a native int128 type and we switch this value
-		// to be based on it, then we need to follow INT32-C:
-		//
-		//   if (o > 0) && (v < (Int128TypeMinIntBig + o)) {
-		// 	     ...
-		//   } else if (o < 0) && (v > (Int128TypeMaxIntBig + o)) {
-		//       ...
-		//   }
-		//
-		res := new(big.Int)
-		res.Sub(v.BigInt, o.BigInt)
-		if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
-			panic(UnderflowError{locationRange})
-		} else if res.Cmp(sema.Int128TypeMaxIntBig) > 0 {
-			panic(OverflowError{locationRange})
-		}
-
-		return res
-	}
-
-	return NewInt128ValueFromBigInt(interpreter, valueGetter)
+	return minusSignedBigInt(interpreter, v, other, locationRange)
 }
 
 func (v Int128Value) SaturatingMinus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -6642,40 +6638,7 @@ func (v Int256Value) SaturatingPlus(interpreter *Interpreter, other NumberValue,
 }
 
 func (v Int256Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Int256Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() *big.Int {
-		// Given that this value is backed by an arbitrary size integer,
-		// we can just subtract and check the range of the result.
-		//
-		// If Go gains a native int256 type and we switch this value
-		// to be based on it, then we need to follow INT32-C:
-		//
-		//   if (o > 0) && (v < (Int256TypeMinIntBig + o)) {
-		// 	     ...
-		//   } else if (o < 0) && (v > (Int256TypeMaxIntBig + o)) {
-		//       ...
-		//   }
-		//
-		res := new(big.Int)
-		res.Sub(v.BigInt, o.BigInt)
-		if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
-			panic(UnderflowError{locationRange})
-		} else if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
-			panic(OverflowError{locationRange})
-		}
-
-		return res
-	}
-
-	return NewInt256ValueFromBigInt(interpreter, valueGetter)
+	return minusSignedBigInt(interpreter, v, other, locationRange)
 }
 
 func (v Int256Value) SaturatingMinus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -7821,26 +7784,7 @@ func (v UInt8Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, 
 }
 
 func (v UInt8Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(UInt8Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt8Value(
-		interpreter,
-		func() uint8 {
-			diff := v - o
-			// INT30-C
-			if diff > v {
-				panic(UnderflowError{locationRange})
-			}
-			return uint8(diff)
-		},
-	)
+	return minusUnsigned[uint8](interpreter, v, other, true, locationRange)
 }
 
 func (v UInt8Value) SaturatingMinus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -8348,26 +8292,7 @@ func (v UInt16Value) SaturatingPlus(interpreter *Interpreter, other NumberValue,
 }
 
 func (v UInt16Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(UInt16Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt16Value(
-		interpreter,
-		func() uint16 {
-			diff := v - o
-			// INT30-C
-			if diff > v {
-				panic(UnderflowError{locationRange})
-			}
-			return uint16(diff)
-		},
-	)
+	return minusUnsigned[uint16](interpreter, v, other, true, locationRange)
 }
 
 func (v UInt16Value) SaturatingMinus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -8834,26 +8759,7 @@ func (v UInt32Value) SaturatingPlus(interpreter *Interpreter, other NumberValue,
 }
 
 func (v UInt32Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(UInt32Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt32Value(
-		interpreter,
-		func() uint32 {
-			diff := v - o
-			// INT30-C
-			if diff > v {
-				panic(UnderflowError{locationRange})
-			}
-			return uint32(diff)
-		},
-	)
+	return minusUnsigned[uint32](interpreter, v, other, true, locationRange)
 }
 
 func (v UInt32Value) SaturatingMinus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -9344,26 +9250,7 @@ func (v UInt64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue,
 }
 
 func (v UInt64Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(UInt64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt64Value(
-		interpreter,
-		func() uint64 {
-			diff := v - o
-			// INT30-C
-			if diff > v {
-				panic(UnderflowError{locationRange})
-			}
-			return uint64(diff)
-		},
-	)
+	return minusUnsigned[uint64](interpreter, v, other, true, locationRange)
 }
 
 func (v UInt64Value) SaturatingMinus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -9858,36 +9745,7 @@ func (v UInt128Value) SaturatingPlus(interpreter *Interpreter, other NumberValue
 }
 
 func (v UInt128Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(UInt128Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt128ValueFromBigInt(
-		interpreter,
-		func() *big.Int {
-			diff := new(big.Int)
-			diff.Sub(v.BigInt, o.BigInt)
-			// Given that this value is backed by an arbitrary size integer,
-			// we can just subtract and check the range of the result.
-			//
-			// If Go gains a native uint128 type and we switch this value
-			// to be based on it, then we need to follow INT30-C:
-			//
-			//   if diff > v {
-			// 	     ...
-			//   }
-			//
-			if diff.Cmp(sema.UInt128TypeMinIntBig) < 0 {
-				panic(UnderflowError{locationRange})
-			}
-			return diff
-		},
-	)
+	return minusUnsignedBigInt(interpreter, v, other, locationRange)
 }
 
 func (v UInt128Value) SaturatingMinus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -10444,36 +10302,7 @@ func (v UInt256Value) SaturatingPlus(interpreter *Interpreter, other NumberValue
 }
 
 func (v UInt256Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(UInt256Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt256ValueFromBigInt(
-		interpreter,
-		func() *big.Int {
-			diff := new(big.Int)
-			diff.Sub(v.BigInt, o.BigInt)
-			// Given that this value is backed by an arbitrary size integer,
-			// we can just subtract and check the range of the result.
-			//
-			// If Go gains a native uint256 type and we switch this value
-			// to be based on it, then we need to follow INT30-C:
-			//
-			//   if diff > v {
-			// 	     ...
-			//   }
-			//
-			if diff.Cmp(sema.UInt256TypeMinIntBig) < 0 {
-				panic(UnderflowError{locationRange})
-			}
-			return diff
-		},
-	)
+	return minusUnsignedBigInt(interpreter, v, other, locationRange)
 }
 
 func (v UInt256Value) SaturatingMinus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -10999,20 +10828,7 @@ func (v Word8Value) SaturatingPlus(*Interpreter, NumberValue, LocationRange) Num
 }
 
 func (v Word8Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Word8Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() uint8 {
-		return uint8(v - o)
-	}
-
-	return NewWord8Value(interpreter, valueGetter)
+	return minusUnsigned[uint8](interpreter, v, other, false, locationRange)
 }
 
 func (v Word8Value) SaturatingMinus(*Interpreter, NumberValue, LocationRange) NumberValue {
@@ -11414,20 +11230,7 @@ func (v Word16Value) SaturatingPlus(*Interpreter, NumberValue, LocationRange) Nu
 }
 
 func (v Word16Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Word16Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() uint16 {
-		return uint16(v - o)
-	}
-
-	return NewWord16Value(interpreter, valueGetter)
+	return minusUnsigned[uint16](interpreter, v, other, false, locationRange)
 }
 
 func (v Word16Value) SaturatingMinus(*Interpreter, NumberValue, LocationRange) NumberValue {
@@ -11832,20 +11635,7 @@ func (v Word32Value) SaturatingPlus(*Interpreter, NumberValue, LocationRange) Nu
 }
 
 func (v Word32Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Word32Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() uint32 {
-		return uint32(v - o)
-	}
-
-	return NewWord32Value(interpreter, valueGetter)
+	return minusUnsigned[uint32](interpreter, v, other, false, locationRange)
 }
 
 func (v Word32Value) SaturatingMinus(*Interpreter, NumberValue, LocationRange) NumberValue {
@@ -12274,20 +12064,7 @@ func (v Word64Value) SaturatingPlus(*Interpreter, NumberValue, LocationRange) Nu
 }
 
 func (v Word64Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Word64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() uint64 {
-		return uint64(v - o)
-	}
-
-	return NewWord64Value(interpreter, valueGetter)
+	return minusUnsigned[uint64](interpreter, v, other, false, locationRange)
 }
 
 func (v Word64Value) SaturatingMinus(*Interpreter, NumberValue, LocationRange) NumberValue {
@@ -12721,27 +12498,7 @@ func (v Fix64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, 
 }
 
 func (v Fix64Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Fix64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() int64 {
-		// INT32-C
-		if (o > 0) && (v < (math.MinInt64 + o)) {
-			panic(OverflowError{locationRange})
-		} else if (o < 0) && (v > (math.MaxInt64 + o)) {
-			panic(UnderflowError{locationRange})
-		}
-
-		return int64(v - o)
-	}
-
-	return NewFix64Value(interpreter, valueGetter)
+	return minusSigned[int64](interpreter, v, other, locationRange)
 }
 
 func (v Fix64Value) SaturatingMinus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -13227,26 +12984,7 @@ func (v UFix64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue,
 }
 
 func (v UFix64Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(UFix64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() uint64 {
-		diff := v - o
-
-		// INT30-C
-		if diff > v {
-			panic(UnderflowError{locationRange})
-		}
-		return uint64(diff)
-	}
-
-	return NewUFix64Value(interpreter, valueGetter)
+	return minusUnsigned[uint64](interpreter, v, other, true, locationRange)
 }
 
 func (v UFix64Value) SaturatingMinus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
