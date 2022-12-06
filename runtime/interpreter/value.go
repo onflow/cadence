@@ -2700,19 +2700,27 @@ type Signed interface {
 	constraints.Signed | ~*big.Int
 }
 
-type BoundedUnsignedValue[T Unsigned] interface {
+type NumericalWithoutBigInt interface {
+	constraints.Unsigned | constraints.Signed
+}
+
+type Numerical interface {
+	Unsigned | Signed
+}
+
+type BoundedValue[T Numerical] interface {
 	NumberValue
 	MaxValue() T
 	Underlying() T
 	Constructor(common.MemoryGauge, func() T) NumberValue
 }
+type BoundedUnsignedValue[T Unsigned] interface {
+	BoundedValue[T]
+}
 
 type BoundedSignedValue[T Signed] interface {
-	NumberValue
-	MaxValue() T
+	BoundedValue[T]
 	MinValue() T
-	Underlying() T
-	Constructor(common.MemoryGauge, func() T) NumberValue
 }
 
 func negateSigned[T constraints.Signed](interpreter *Interpreter, v BoundedSignedValue[T], locationRange LocationRange) NumberValue {
@@ -3181,6 +3189,56 @@ func saturatingMinusUnsignedBigInt[V BoundedUnsignedValue[*big.Int]](interpreter
 			return diff
 		},
 	)
+}
+
+func mod[T NumericalWithoutBigInt, V BoundedValue[T]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(V)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMod,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	underlying := v.Underlying()
+	otherUnderlying := o.Underlying()
+
+	// INT33-C
+	if otherUnderlying == 0 {
+		panic(DivisionByZeroError{locationRange})
+	}
+
+	valueGetter := func() T {
+		return T(underlying % otherUnderlying)
+	}
+
+	return v.Constructor(interpreter, valueGetter)
+}
+
+func modBigInt[V BoundedValue[*big.Int]](interpreter *Interpreter, v V, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(V)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMod,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		// INT33-C
+		otherUnderlying := o.Underlying()
+		if otherUnderlying.Cmp(res) == 0 {
+			panic(DivisionByZeroError{locationRange})
+		}
+		res.Rem(v.Underlying(), otherUnderlying)
+
+		return res
+	}
+
+	return v.Constructor(interpreter, valueGetter)
 }
 
 func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, typ sema.Type, locationRange LocationRange) Value {
@@ -3996,25 +4054,7 @@ func (v Int8Value) SaturatingMinus(interpreter *Interpreter, other NumberValue, 
 }
 
 func (v Int8Value) Mod(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Int8Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	// INT33-C
-	if o == 0 {
-		panic(DivisionByZeroError{locationRange})
-	}
-
-	valueGetter := func() int8 {
-		return int8(v % o)
-	}
-
-	return NewInt8Value(interpreter, valueGetter)
+	return mod[int8](interpreter, v, other, locationRange)
 }
 
 func (v Int8Value) Mul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -4512,25 +4552,7 @@ func (v Int16Value) SaturatingMinus(interpreter *Interpreter, other NumberValue,
 }
 
 func (v Int16Value) Mod(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Int16Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	// INT33-C
-	if o == 0 {
-		panic(DivisionByZeroError{locationRange})
-	}
-
-	valueGetter := func() int16 {
-		return int16(v % o)
-	}
-
-	return NewInt16Value(interpreter, valueGetter)
+	return mod[int16](interpreter, v, other, locationRange)
 }
 
 func (v Int16Value) Mul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -5029,25 +5051,7 @@ func (v Int32Value) SaturatingMinus(interpreter *Interpreter, other NumberValue,
 }
 
 func (v Int32Value) Mod(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Int32Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	// INT33-C
-	if o == 0 {
-		panic(DivisionByZeroError{locationRange})
-	}
-
-	valueGetter := func() int32 {
-		return int32(v % o)
-	}
-
-	return NewInt32Value(interpreter, valueGetter)
+	return mod[int32](interpreter, v, other, locationRange)
 }
 
 func (v Int32Value) Mul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -5544,25 +5548,7 @@ func (v Int64Value) SaturatingMinus(interpreter *Interpreter, other NumberValue,
 }
 
 func (v Int64Value) Mod(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Int64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	// INT33-C
-	if o == 0 {
-		panic(DivisionByZeroError{locationRange})
-	}
-
-	valueGetter := func() int64 {
-		return int64(v % o)
-	}
-
-	return NewInt64Value(interpreter, valueGetter)
+	return mod[int64](interpreter, v, other, locationRange)
 }
 
 func (v Int64Value) Mul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -6083,27 +6069,7 @@ func (v Int128Value) SaturatingMinus(interpreter *Interpreter, other NumberValue
 }
 
 func (v Int128Value) Mod(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Int128Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() *big.Int {
-		res := new(big.Int)
-		// INT33-C
-		if o.BigInt.Cmp(res) == 0 {
-			panic(DivisionByZeroError{locationRange})
-		}
-		res.Rem(v.BigInt, o.BigInt)
-
-		return res
-	}
-
-	return NewInt128ValueFromBigInt(interpreter, valueGetter)
+	return modBigInt(interpreter, v, other, locationRange)
 }
 
 func (v Int128Value) Mul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -6643,27 +6609,7 @@ func (v Int256Value) SaturatingMinus(interpreter *Interpreter, other NumberValue
 }
 
 func (v Int256Value) Mod(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Int256Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	valueGetter := func() *big.Int {
-		res := new(big.Int)
-		// INT33-C
-		if o.BigInt.Cmp(res) == 0 {
-			panic(DivisionByZeroError{locationRange})
-		}
-		res.Rem(v.BigInt, o.BigInt)
-
-		return res
-	}
-
-	return NewInt256ValueFromBigInt(interpreter, valueGetter)
+	return modBigInt(interpreter, v, other, locationRange)
 }
 
 func (v Int256Value) Mul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -7756,24 +7702,7 @@ func (v UInt8Value) SaturatingMinus(interpreter *Interpreter, other NumberValue,
 }
 
 func (v UInt8Value) Mod(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(UInt8Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt8Value(
-		interpreter,
-		func() uint8 {
-			if o == 0 {
-				panic(DivisionByZeroError{locationRange})
-			}
-			return uint8(v % o)
-		},
-	)
+	return mod[uint8](interpreter, v, other, locationRange)
 }
 
 func (v UInt8Value) Mul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -8245,24 +8174,7 @@ func (v UInt16Value) SaturatingMinus(interpreter *Interpreter, other NumberValue
 }
 
 func (v UInt16Value) Mod(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(UInt16Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt16Value(
-		interpreter,
-		func() uint16 {
-			if o == 0 {
-				panic(DivisionByZeroError{locationRange})
-			}
-			return uint16(v % o)
-		},
-	)
+	return mod[uint16](interpreter, v, other, locationRange)
 }
 
 func (v UInt16Value) Mul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -8693,24 +8605,7 @@ func (v UInt32Value) SaturatingMinus(interpreter *Interpreter, other NumberValue
 }
 
 func (v UInt32Value) Mod(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(UInt32Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt32Value(
-		interpreter,
-		func() uint32 {
-			if o == 0 {
-				panic(DivisionByZeroError{locationRange})
-			}
-			return uint32(v % o)
-		},
-	)
+	return mod[uint32](interpreter, v, other, locationRange)
 }
 
 func (v UInt32Value) Mul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -9165,24 +9060,7 @@ func (v UInt64Value) SaturatingMinus(interpreter *Interpreter, other NumberValue
 }
 
 func (v UInt64Value) Mod(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(UInt64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt64Value(
-		interpreter,
-		func() uint64 {
-			if o == 0 {
-				panic(DivisionByZeroError{locationRange})
-			}
-			return uint64(v % o)
-		},
-	)
+	return mod[uint64](interpreter, v, other, locationRange)
 }
 
 func (v UInt64Value) Mul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -9641,25 +9519,7 @@ func (v UInt128Value) SaturatingMinus(interpreter *Interpreter, other NumberValu
 }
 
 func (v UInt128Value) Mod(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(UInt128Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt128ValueFromBigInt(
-		interpreter,
-		func() *big.Int {
-			res := new(big.Int)
-			if o.BigInt.Cmp(res) == 0 {
-				panic(DivisionByZeroError{locationRange})
-			}
-			return res.Rem(v.BigInt, o.BigInt)
-		},
-	)
+	return modBigInt(interpreter, v, other, locationRange)
 }
 
 func (v UInt128Value) Mul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -10169,25 +10029,7 @@ func (v UInt256Value) SaturatingMinus(interpreter *Interpreter, other NumberValu
 }
 
 func (v UInt256Value) Mod(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(UInt256Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	return NewUInt256ValueFromBigInt(
-		interpreter,
-		func() *big.Int {
-			res := new(big.Int)
-			if o.BigInt.Cmp(res) == 0 {
-				panic(DivisionByZeroError{locationRange})
-			}
-			return res.Rem(v.BigInt, o.BigInt)
-		},
-	)
+	return modBigInt(interpreter, v, other, locationRange)
 }
 
 func (v UInt256Value) Mul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -10665,24 +10507,7 @@ func (v Word8Value) SaturatingMinus(*Interpreter, NumberValue, LocationRange) Nu
 }
 
 func (v Word8Value) Mod(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Word8Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	if o == 0 {
-		panic(DivisionByZeroError{locationRange})
-	}
-
-	valueGetter := func() uint8 {
-		return uint8(v % o)
-	}
-
-	return NewWord8Value(interpreter, valueGetter)
+	return mod[uint8](interpreter, v, other, locationRange)
 }
 
 func (v Word8Value) Mul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -11067,24 +10892,7 @@ func (v Word16Value) SaturatingMinus(*Interpreter, NumberValue, LocationRange) N
 }
 
 func (v Word16Value) Mod(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Word16Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	if o == 0 {
-		panic(DivisionByZeroError{locationRange})
-	}
-
-	valueGetter := func() uint16 {
-		return uint16(v % o)
-	}
-
-	return NewWord16Value(interpreter, valueGetter)
+	return mod[uint16](interpreter, v, other, locationRange)
 }
 
 func (v Word16Value) Mul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -11472,24 +11280,7 @@ func (v Word32Value) SaturatingMinus(*Interpreter, NumberValue, LocationRange) N
 }
 
 func (v Word32Value) Mod(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Word32Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	if o == 0 {
-		panic(DivisionByZeroError{locationRange})
-	}
-
-	valueGetter := func() uint32 {
-		return uint32(v % o)
-	}
-
-	return NewWord32Value(interpreter, valueGetter)
+	return mod[uint32](interpreter, v, other, locationRange)
 }
 
 func (v Word32Value) Mul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
@@ -11901,24 +11692,7 @@ func (v Word64Value) SaturatingMinus(*Interpreter, NumberValue, LocationRange) N
 }
 
 func (v Word64Value) Mod(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
-	o, ok := other.(Word64Value)
-	if !ok {
-		panic(InvalidOperandsError{
-			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(interpreter),
-			RightType: other.StaticType(interpreter),
-		})
-	}
-
-	if o == 0 {
-		panic(DivisionByZeroError{locationRange})
-	}
-
-	valueGetter := func() uint64 {
-		return uint64(v % o)
-	}
-
-	return NewWord64Value(interpreter, valueGetter)
+	return mod[uint64](interpreter, v, other, locationRange)
 }
 
 func (v Word64Value) Mul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
