@@ -1,4 +1,4 @@
-module github.com/onflow/cadence/tools/maprangecheck
+module github.com/onflow/cadence/tools/maprange
 
 go 1.18
 

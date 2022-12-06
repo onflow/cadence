@@ -29,7 +29,7 @@ import (
 )
 
 var Analyzer = &analysis.Analyzer{
-	Name:     "maprangecheck",
+	Name:     "maprange",
 	Doc:      "reports range statements over maps",
 	Requires: []*analysis.Analyzer{inspect.Analyzer},
 	Run:      run,

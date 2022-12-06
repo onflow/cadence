@@ -3803,7 +3803,7 @@ func (t *CompositeType) initializeMemberResolvers() {
 
 		t.ExplicitInterfaceConformanceSet().
 			ForEach(func(conformance *InterfaceType) {
-				for name, resolver := range conformance.GetMembers() { //nolint:maprangecheck
+				for name, resolver := range conformance.GetMembers() { //nolint:maprange
 					if _, ok := members[name]; !ok {
 						members[name] = resolver
 					}
@@ -5966,7 +5966,7 @@ func (t *RestrictedType) GetMembers() map[string]MemberResolver {
 	// but implicitly when the resource declaration's conformances are checked.
 
 	for _, restriction := range t.Restrictions {
-		for name, resolver := range restriction.GetMembers() { //nolint:maprangecheck
+		for name, resolver := range restriction.GetMembers() { //nolint:maprange
 			if _, ok := members[name]; !ok {
 				members[name] = resolver
 			}
@@ -5979,7 +5979,7 @@ func (t *RestrictedType) GetMembers() map[string]MemberResolver {
 	//
 	// The restricted type may be `AnyResource`, in which case there are no members.
 
-	for name, loopResolver := range t.Type.GetMembers() { //nolint:maprangecheck
+	for name, loopResolver := range t.Type.GetMembers() { //nolint:maprange
 
 		if _, ok := members[name]; ok {
 			continue

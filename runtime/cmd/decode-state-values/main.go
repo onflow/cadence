@@ -157,7 +157,7 @@ func (s *slabStorage) SlabIterator() (atree.SlabIterator, error) {
 	// NOTE: iteration over map is safe,
 	// as result is sorted below
 
-	for key := range storage { //nolint:maprangecheck
+	for key := range storage { //nolint:maprange
 
 		var address atree.Address
 		copy(address[:], key[0])
@@ -264,7 +264,7 @@ func load() {
 
 	var slabNotFoundErrCount int
 
-	for storageKey, data := range storage { //nolint:maprangecheck
+	for storageKey, data := range storage { //nolint:maprange
 		_ = bar.Add(1)
 
 		// Check the key is a non-root slab or a storage path
@@ -438,7 +438,7 @@ func main() {
 	}
 
 	if *printFlag {
-		for key, value := range storage { //nolint:maprangecheck
+		for key, value := range storage { //nolint:maprange
 			var keyParts []encodedKeyPart
 
 			for _, keyPart := range key {

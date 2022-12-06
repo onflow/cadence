@@ -268,7 +268,7 @@ func (r *REPL) Suggestions() (result []REPLSuggestion) {
 	// Iterating over the dictionary of names is safe,
 	// as the suggested entries are sorted afterwards
 
-	for name, description := range names { //nolint:maprangecheck
+	for name, description := range names { //nolint:maprange
 		result = append(result, REPLSuggestion{
 			Name:        name,
 			Description: description,

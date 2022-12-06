@@ -76,7 +76,7 @@ func (d *InteractiveDebugger) Show(names []string) {
 	current := d.debugger.CurrentActivation(d.stop.Interpreter)
 	switch len(names) {
 	case 0:
-		for name := range current.FunctionValues() { //nolint:maprangecheck
+		for name := range current.FunctionValues() { //nolint:maprange
 			fmt.Println(name)
 		}
 

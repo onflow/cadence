@@ -187,15 +187,15 @@ func (c TypeCodes) Merge(codes TypeCodes) {
 	// Iterating over the maps in a non-deterministic way is OK,
 	// we only copy the values over.
 
-	for typeID, code := range codes.CompositeCodes { //nolint:maprangecheck
+	for typeID, code := range codes.CompositeCodes { //nolint:maprange
 		c.CompositeCodes[typeID] = code
 	}
 
-	for typeID, code := range codes.InterfaceCodes { //nolint:maprangecheck
+	for typeID, code := range codes.InterfaceCodes { //nolint:maprange
 		c.InterfaceCodes[typeID] = code
 	}
 
-	for typeID, code := range codes.TypeRequirementCodes { //nolint:maprangecheck
+	for typeID, code := range codes.TypeRequirementCodes { //nolint:maprange
 		c.TypeRequirementCodes[typeID] = code
 	}
 }
@@ -1017,7 +1017,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 		// we only apply the function wrapper to each function,
 		// the order does not matter.
 
-		for name, function := range code.Functions { //nolint:maprangecheck
+		for name, function := range code.Functions { //nolint:maprange
 			if functions[name] != nil {
 				continue
 			}
@@ -1033,7 +1033,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 		// we only apply the function wrapper to each function,
 		// the order does not matter.
 
-		for name, functionWrapper := range code.FunctionWrappers { //nolint:maprangecheck
+		for name, functionWrapper := range code.FunctionWrappers { //nolint:maprange
 			functions[name] = functionWrapper(functions[name])
 		}
 	}
@@ -4425,7 +4425,7 @@ func (interpreter *Interpreter) updateReferencedResource(
 	if values == nil {
 		return
 	}
-	for value := range values { //nolint:maprangecheck
+	for value := range values { //nolint:maprange
 		updateFunc(value)
 	}
 	if newStorageID != currentStorageID {
