@@ -64,6 +64,7 @@ declaration
     | importDeclaration
     | eventDeclaration
     | transactionDeclaration
+    | pragmaDeclaration
     ;
 
 transactionDeclaration
@@ -147,6 +148,7 @@ memberOrNestedDeclaration
     | interfaceDeclaration
     | compositeDeclaration
     | eventDeclaration
+    | pragmaDeclaration
     ;
 
 compositeKind
@@ -173,6 +175,10 @@ functionDeclaration
 
 eventDeclaration
     : access Event identifier parameterList
+    ;
+
+pragmaDeclaration
+    : '#' expression
     ;
 
 parameterList
