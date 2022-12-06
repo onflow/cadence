@@ -262,7 +262,7 @@ func TestInterpretForStatementCapturing(t *testing.T) {
 
 	inter := parseCheckAndInterpret(t, `
        fun test(): [Int] {
-           let fs: [((): Int)] = []
+           let fs: [fun(): Int] = []
            for x in [1, 2, 3] {
                fs.append(fun (): Int {
                    return x

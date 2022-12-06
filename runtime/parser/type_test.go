@@ -2081,15 +2081,7 @@ func TestParseFunctionTypeWithFunctionReturnTypeInParentheses(t *testing.T) {
 	`
 	_, errs := testParseProgram(code)
 
-	err, ok := errs.(Error)
-	require.True(t, ok)
-
-	expected := &SyntaxError{
-		Pos:     ast.Position{Offset: 25, Line: 2, Column: 24},
-		Message: "unexpected token in type: '('",
-	}
-
-	utils.AssertEqualWithDiff(t, []error{expected}, err.Errors)
+	require.Empty(t, errs)
 }
 
 func TestParseFunctionTypeWithFunctionReturnType(t *testing.T) {
@@ -2269,6 +2261,7 @@ func TestParseNewSyntaxFunctionType(t *testing.T) {
 	code := `
 		let test: fun(Int8): fun(Int16): Int32 = nothing
 	`
+
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 

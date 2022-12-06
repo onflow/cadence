@@ -150,6 +150,20 @@ func init() {
 	defineRestrictedOrDictionaryType()
 	defineInstantiationType()
 	defineIdentifierTypes()
+	defineParenthesizedTypes()
+}
+
+func defineParenthesizedTypes() {
+	setTypeNullDenotation(lexer.TokenParenOpen, func(p *parser, token lexer.Token) (ast.Type, error) {
+		p.skipSpaceAndComments()
+		innerType, err := parseType(p, lowestBindingPower)
+		if err != nil {
+			return nil, err
+		}
+		p.skipSpaceAndComments()
+		_, err = p.mustOne(lexer.TokenParenClose)
+		return innerType, err
+	})
 }
 
 func parseNominalTypeRemainder(p *parser, token lexer.Token) (*ast.NominalType, error) {
@@ -653,7 +667,6 @@ func parseParameterTypeAnnotations(p *parser) (typeAnnotations []*ast.TypeAnnota
 }
 
 func parseType(p *parser, rightBindingPower int) (ast.Type, error) {
-
 	if p.typeDepth == typeDepthLimit {
 		return nil, TypeDepthLimitReachedError{
 			Pos: p.current.StartPos,
@@ -1020,8 +1033,6 @@ func parseFunctionType(p *parser, startPos ast.Position, purity ast.FunctionPuri
 			endPos,
 		)
 	}
-
-	p.skipSpaceAndComments()
 
 	return ast.NewFunctionType(
 		p.memoryGauge,

@@ -19,7 +19,6 @@
 package interpreter_test
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/onflow/cadence/runtime/activations"
@@ -328,11 +327,11 @@ func TestArrayMutation(t *testing.T) {
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
             fun test() {
-                let array: [AnyStruct] = [nil] as [fun(AnyStruct):Void?]
+                let array: [AnyStruct] = [nil] as [(fun(AnyStruct):Void)?]
 
                 array[0] = log
 
-                let logger = array[0] as! fun(AnyStruct): Void
+                let logger = array[0] as! (fun(AnyStruct): Void)
                 logger("hello")
             }`,
 			ParseCheckAndInterpretOptions{
@@ -469,7 +468,7 @@ func TestArrayMutation(t *testing.T) {
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
                 fun test() {
-                    let array: [AnyStruct] = [nil] as [fun():Void?]
+                    let array: [AnyStruct] = [nil] as [(fun():Void)?]
 
                     array[0] = log
                 }
@@ -484,9 +483,6 @@ func TestArrayMutation(t *testing.T) {
 			},
 		)
 
-		if err != nil {
-			fmt.Println(err)
-		}
 		require.NoError(t, err)
 
 		_, err = inter.Invoke("test")

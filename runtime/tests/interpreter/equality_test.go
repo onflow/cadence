@@ -103,8 +103,8 @@ func TestInterpretEquality(t *testing.T) {
 		inter := parseCheckAndInterpret(t, `
 		  fun func() {}
 
-          let maybeFuncNonNil: fun(): Void? = func
-          let maybeFuncNil: fun(): Void? = nil
+          let maybeFuncNonNil: (fun(): Void)? = func
+          let maybeFuncNil: (fun(): Void)? = nil
           let res1 = maybeFuncNonNil != nil
           let res2 = maybeFuncNil == nil
 		`)
