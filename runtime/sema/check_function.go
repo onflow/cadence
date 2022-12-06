@@ -362,9 +362,7 @@ func (checker *Checker) visitWithPostConditions(postConditions *ast.Conditions, 
 	}
 
 	if rewrittenPostConditions != nil {
-		checker.InNewPurityScope(true, func() {
-			checker.visitConditions(rewrittenPostConditions.RewrittenPostConditions)
-		})
+		checker.visitConditions(rewrittenPostConditions.RewrittenPostConditions)
 	}
 }
 
@@ -377,9 +375,7 @@ func (checker *Checker) visitFunctionBlock(
 	defer checker.leaveValueScope(functionBlock.EndPosition, checkResourceLoss)
 
 	if functionBlock.PreConditions != nil {
-		checker.InNewPurityScope(true, func() {
-			checker.visitConditions(*functionBlock.PreConditions)
-		})
+		checker.visitConditions(*functionBlock.PreConditions)
 	}
 
 	checker.visitWithPostConditions(
