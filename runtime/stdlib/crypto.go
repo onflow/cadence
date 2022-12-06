@@ -19,17 +19,45 @@
 package stdlib
 
 import (
+	"sync"
+
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	errors2 "github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/parser"
-	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib/contracts"
+
+	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
-var CryptoChecker = func() *sema.Checker {
+var cryptoOnce sync.Once
 
+// Deprecated: Use CryptoChecker instead
+var cryptoChecker *sema.Checker
+
+// Deprecated: Use CryptoContractType instead
+var cryptoContractType *sema.CompositeType
+
+// Deprecated: Use CryptoContractInitializerTypes
+var cryptoContractInitializerTypes []sema.Type
+
+func CryptoChecker() *sema.Checker {
+	cryptoOnce.Do(initCrypto)
+	return cryptoChecker
+}
+
+func CryptoContractType() *sema.CompositeType {
+	cryptoOnce.Do(initCrypto)
+	return cryptoContractType
+}
+
+func CryptoContractInitializerTypes() []sema.Type {
+	cryptoOnce.Do(initCrypto)
+	return cryptoContractInitializerTypes
+}
+
+func initCrypto() {
 	program, err := parser.ParseProgram(
 		nil,
 		contracts.Crypto,
@@ -41,8 +69,7 @@ var CryptoChecker = func() *sema.Checker {
 
 	location := common.IdentifierLocation("Crypto")
 
-	var checker *sema.Checker
-	checker, err = sema.NewChecker(
+	cryptoChecker, err = sema.NewChecker(
 		program,
 		location,
 		nil,
@@ -54,29 +81,22 @@ var CryptoChecker = func() *sema.Checker {
 		panic(err)
 	}
 
-	err = checker.Check()
+	err = cryptoChecker.Check()
 	if err != nil {
 		panic(err)
 	}
 
-	return checker
-}()
-
-var cryptoContractType = func() *sema.CompositeType {
-	variable, ok := CryptoChecker.Elaboration.GetGlobalType("Crypto")
+	variable, ok := cryptoChecker.Elaboration.GetGlobalType("Crypto")
 	if !ok {
-		panic(errors2.NewUnreachableError())
+		panic(errors.NewUnreachableError())
 	}
-	return variable.Type.(*sema.CompositeType)
-}()
+	cryptoContractType = variable.Type.(*sema.CompositeType)
 
-var cryptoContractInitializerTypes = func() (result []sema.Type) {
-	result = make([]sema.Type, len(cryptoContractType.ConstructorParameters))
+	cryptoContractInitializerTypes = make([]sema.Type, len(cryptoContractType.ConstructorParameters))
 	for i, parameter := range cryptoContractType.ConstructorParameters {
-		result[i] = parameter.TypeAnnotation.Type
+		cryptoContractInitializerTypes[i] = parameter.TypeAnnotation.Type
 	}
-	return result
-}()
+}
 
 func NewCryptoContract(
 	inter *interpreter.Interpreter,
@@ -86,11 +106,12 @@ func NewCryptoContract(
 	*interpreter.CompositeValue,
 	error,
 ) {
+	initializerTypes := CryptoContractInitializerTypes()
 	value, err := inter.InvokeFunctionValue(
 		constructor,
 		nil,
-		cryptoContractInitializerTypes,
-		cryptoContractInitializerTypes,
+		initializerTypes,
+		initializerTypes,
 		invocationRange,
 	)
 	if err != nil {

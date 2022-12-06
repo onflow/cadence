@@ -110,9 +110,10 @@ func (programs Programs) check(
 			) (sema.Import, error) {
 
 				var elaboration *sema.Elaboration
+				cryptoChecker := stdlib.CryptoChecker()
 				switch importedLocation {
-				case stdlib.CryptoChecker.Location:
-					elaboration = stdlib.CryptoChecker.Elaboration
+				case cryptoChecker.Location:
+					elaboration = cryptoChecker.Elaboration
 
 				default:
 					err := programs.load(config, importedLocation, location, importRange)

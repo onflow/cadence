@@ -99,9 +99,10 @@ func DefaultCheckerConfig(
 			importedLocation common.Location,
 			_ ast.Range,
 		) (sema.Import, error) {
-			if importedLocation == stdlib.CryptoChecker.Location {
+			cryptoChecker := stdlib.CryptoChecker()
+			if importedLocation == cryptoChecker.Location {
 				return sema.ElaborationImport{
-					Elaboration: stdlib.CryptoChecker.Elaboration,
+					Elaboration: cryptoChecker.Elaboration,
 				}, nil
 			}
 
